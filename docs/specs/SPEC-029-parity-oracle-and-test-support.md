@@ -2,8 +2,9 @@
 
 - **Wave:** W0. **Issue:** #22 (epic #1). **Context(s):** `repo` (`tools/parity-oracle/`), `deck-streak-coordination` (the reader's own tests).
 - **Decided by:** ADR-012 (testing and the parity oracle), ADR-002 (no crate outside the map), ADR-018 (no predecessor source copied), and this SPEC's ADR-029 (one reader included by path, a registry per SPEC, two digests per golden).
-- **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
-  `docs/specs/` with its tests and `docs/red-first/SPEC-029.md` (ADR-016).
+- **Status:** judged: delivered with its tests and the first golden, `goldens/study_day.json`,
+  generated at the predecessor's `27ee2bc`. The delivery amended R2 to R4 where the code made them
+  exact (§7).
 
 ## 1. The problem, measured
 
@@ -48,23 +49,27 @@ R1. The registry is one module per SPEC, `tools/parity-oracle/registry/spec_NNN.
     a `FUNCTIONS` mapping; `generate.py` loads every module in path order and refuses (exit 2,
     naming both modules) a golden name registered twice. `generate.py` itself registers nothing.
 R2. A registration is one of three kinds, and the golden records which (`kind`):
-    - `function`: a predecessor function by dotted path, called with the case's keyword arguments
-      (the existing behaviour);
-    - `adapter`: a function defined in the registry module that imports the predecessor's module
-      by name, builds the non-JSON arguments from the case's JSON input, calls the predecessor's
-      function, and returns JSON. The golden records `function` (the predecessor function the
+    - `function`: a predecessor function by dotted path, relative to the predecessor's package
+      (`generate.py --package`), called with the case's keyword arguments (the existing
+      behaviour);
+    - `adapter`: a function defined in the registry module that receives the predecessor's function
+      resolved, resolves any other predecessor object it needs by name, builds the non-JSON
+      arguments from the case's JSON input, calls the function, and returns what it returned (R3
+      writes it as JSON). The golden records `function` (the predecessor function the
       adapter drives), `adapter` (the adapter's name) and `note` (one sentence on what the adapter
       builds or patches);
     - `constants`: a list of dotted attribute paths; each case is `{"input": {"name": <path>},
       "output": <the attribute's value>}`, read from the predecessor's module, never typed.
 R3. No golden carries a calendar date or time string. An instant is epoch milliseconds, a day is
     its epoch day number (whole days since the Unix epoch), and a duration is a number of seconds
-    or milliseconds named in its key. An adapter converts a predecessor `date` to its epoch day
-    number; a `datetime` to epoch milliseconds.
-R4. Each golden records `generator_sha256` (of `generate.py`) and `registry_sha256` (of the registry
-    module that built it), beside the existing `source_commit`, `generator`, `seed`, `inputs` and
-    `schema`. A golden is stale when either digest differs from the committed file; editing one
-    registry module never stales another module's golden.
+    or milliseconds named in its key. The generator converts a returned `date` to its epoch day
+    number and an aware `datetime` to epoch milliseconds, for every kind of registration; an
+    adapter converts what the generator cannot name, such as a duration.
+R4. Each golden records `generator_sha256` (of `generate.py`), and `registry` with
+    `registry_sha256` (the path and digest of the registry module that built it), beside the
+    existing `source_commit`, `generator`, `seed`, `inputs` and `schema`. A golden is stale when
+    either digest differs from the committed file; editing one registry module never stales
+    another module's golden.
 R5. `tools/parity-oracle/test_goldens.py` reads every committed golden, prints
     `examined N golden(s)` and refuses zero, and fails a golden whose schema is not
     `phx.parity-golden.v1`, whose cases are empty, whose digests differ from the committed
@@ -184,3 +189,17 @@ golden from `crates/coordination/tests/fixtures/goldens/` and the committed `stu
   adapter.
 - **The reader diverges between crates.** It cannot: every crate compiles the same file, so a
   change to `golden.rs` is tested by every crate that includes it.
+
+## 7. Amendments at delivery
+
+- **R2: paths are relative to the predecessor's package, and an adapter receives its function.** A
+  full dotted path would write the predecessor's package name into every registry module and every
+  golden's `function`, while this repository cites the predecessor by `module.py:function` only.
+  `generate.py` takes the package as `--package` on the owner's machine and resolves each path
+  against it. It hands an adapter the function the registration names, already resolved, so the
+  golden's `function` is by construction the one the adapter called.
+- **R3: the generator converts dates, for every kind.** A `function` registration has no adapter to
+  convert the `date` it returns, and A5 and the manifest already put the conversion in
+  `generate.py`.
+- **R4: a golden records its module's path.** `test_goldens.py` needs the path, `registry`, to find
+  the committed module whose digest the golden records.
