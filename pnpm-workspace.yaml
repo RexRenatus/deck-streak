@@ -1,0 +1,7 @@
+# The JavaScript workspace. pnpm 11 reads its settings here and from the environment, and reads
+# only registry and auth settings from `.npmrc`.
+packages:
+  - web/app
+
+# Refuse to install on a Node that a package's `engines` rules out (the root pins Node 24).
+engineStrict: true
