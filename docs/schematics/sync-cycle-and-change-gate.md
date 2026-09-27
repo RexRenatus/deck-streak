@@ -98,3 +98,47 @@ sequenceDiagram
 clock runs from the `protoc` download to the built release probe, then the probe is stripped and
 sized, the budget tests run in the release profile the measured build compiled, and
 `cargo deny check licenses` runs over the lockfile. Its report is ADR-009's Confirmation table.
+
+## One sync run, and the census
+
+Kind: flow. Built by SPEC-022's phase 2 (A4 to A17), decided by ADR-037 (one scheduled sync per
+study day, the owner's triggers, never an upload), read at the predecessor's `27ee2bc`
+(`pipeline.py:GamifyPipeline._sync_attempts`, `sync.py:AnkiSyncer._sync_blocking`).
+
+```mermaid
+flowchart TD
+  cycle[coordination::sync_cycle: trigger] --> lock[take the collection lock, exclusive; wait for a running sync]
+  lock --> which{trigger}
+  which -->|scheduled| today{a scheduled run recorded this study day?}
+  today -->|yes| refused[RefusedToday: no request, no row]
+  which -->|owner| recent{a success finished under OWNER_SYNC_DEBOUNCE_SECS ago?}
+  recent -->|yes| debounced[Debounced: that success, no request, no row]
+  today -->|no| creds[load anki-sync-username and anki-sync-password]
+  recent -->|no| creds
+  creds -->|missing| failed
+  creds --> attempt[attempt n of the schedule, bounded by its timeout]
+  attempt -->|open finds the collection locked| reopen[wait, reopen: up to COLLECTION_OPEN_RETRIES]
+  reopen --> attempt
+  attempt -->|normal sync: synced or no change| ok[ok]
+  attempt -->|full sync demanded, the server has a collection| download[full download beside the copy, then the swap] --> ok
+  attempt -->|full sync demanded, the server is empty| upload[full_upload_required]
+  attempt -->|error or timeout| wait{attempts left?}
+  upload --> wait
+  wait -->|yes| backoff[wait base 2^n-1 plus jitter, on tokio's timer] --> attempt
+  wait -->|no| failed[one bounded reason code]
+  ok --> record[record one sync_runs row: trigger, study day, status, attempts, full download]
+  failed --> record
+  record --> unlock[explicit unlock, then close the lock file]
+```
+
+The census (A15) puts a recording layer between the syncer and the engine's server. It keeps
+every request, decompresses each body, and fails the test on `upload` or on any body that carries
+a local change: a note type, deck, deck configuration, tag, configuration or creation stamp in
+`applyChanges`, a grave in `applyGraves` or `start`, or a review, card or note in `applyChunk`.
+
+```mermaid
+flowchart LR
+  syncer[Syncer over RslibEngine] -->|HTTP| recording[recording layer: keeps each request, decodes its body]
+  recording -->|the same request| server[the engine's sync server, a child process]
+  server -->|the response, unchanged| recording --> syncer
+```

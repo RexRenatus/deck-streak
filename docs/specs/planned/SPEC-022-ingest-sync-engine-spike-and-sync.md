@@ -184,7 +184,7 @@ other test.
 
 | file | context | change |
 |---|---|---|
-| `crates/ingest/Cargo.toml` | `deck-streak-ingest` | changed: `anki` (git, pinned tag), kernel, tokio, thiserror, tracing; dev: tempfile, tokio (the tests' and the probe's runtime), serde, serde_json |
+| `crates/ingest/Cargo.toml` | `deck-streak-ingest` | changed: `anki` (git, pinned tag), kernel, sqlx (§7), tokio, thiserror, tracing; dev: tempfile, tokio (the tests' and the probe's runtime), serde, serde_json, zstd (§7) |
 | `crates/ingest/src/lib.rs` | `deck-streak-ingest` | changed |
 | `crates/ingest/src/engine.rs` | `deck-streak-ingest` | added: the `AnkiEngine` port and its adapter over the engine |
 | `crates/ingest/src/sync.rs` | `deck-streak-ingest` | added: `Syncer`, retries, the reason codes, the per-study-day refusal and the owner debounce |
@@ -199,7 +199,7 @@ other test.
 | `crates/coordination/Cargo.toml`, `crates/coordination/src/lib.rs`, `crates/coordination/src/sync_cycle.rs` | `deck-streak-coordination` | added or changed: the sync cycle use case |
 | `migrations/002201_ingest_sync_runs.sql` | `deck-streak-ingest` | added: `sync_runs`, its `trigger` checked to `scheduled` or `owner` |
 | `.sqlx/` | workspace | changed |
-| `Cargo.toml`, `Cargo.lock` | workspace | changed: `anki` admitted by ADR-022; `libsqlite3-sys` held at a version the engine and the kernel both accept (§7) |
+| `Cargo.toml`, `Cargo.lock` | workspace | changed: `anki` admitted by ADR-022; `zstd` for the census's tests (§7); `libsqlite3-sys` held at a version the engine and the kernel both accept (§7) |
 | `deny.toml` | workspace | changed: `allow-git` for Anki's repository and the fork its engine pins; any compatible licence the engine needs; the engine's advisories, each by id and reason (§7) |
 | `.github/workflows/engine-measure.yml` | repo | added: the cold-build and size measurement |
 | `.github/workflows/ci.yml` | repo | changed: the gate job installs the protobuf compiler the engine's build needs (§7) |
@@ -282,3 +282,24 @@ other test.
   0.34, and the kernel's `sqlx` 0.9 accepts 0.30.1 up to 0.37, so the lockfile holds 0.34.0, which
   both declare they accept (dev had locked 0.37.0). An upgrade of either must keep one version
   both accept.
+- **`crates/ingest/Cargo.toml`: sqlx.** The kernel's `Db` hands out sqlx types (a `BEGIN
+  IMMEDIATE` transaction, the read pool), and `sync_runs`' queries are compile-time checked into
+  `.sqlx/`, which the manifest already names. ADR-003 admits sqlx for the workspace; ingest inherits
+  it with no feature of its own.
+- **`crates/ingest/Cargo.toml`: a zstd dev-dependency.** A15's recording layer reads each request
+  the engine sends, and the engine compresses every request body with zstd; the census decompresses
+  it to prove no body carries a local change. It is the zstd the engine already brings (one copy in
+  the lockfile), a dev-dependency of ingest only.
+- **R8 and the tests: the retry schedule is a value.** `RetrySchedule::PREDECESSOR` holds the
+  golden-proved constants and is what production runs; a test of anything but timing runs the same
+  loop with `RetrySchedule::IMMEDIATE`, whose waits are zero-length waits on tokio's timer. A8 and
+  A10 run the predecessor's schedule on paused time.
+- **R10 and the tests: the run's record sits behind a port.** `SyncRunStore` is what the syncer
+  asks (was a scheduled run recorded this study day, the last success) and tells (record a run);
+  `SqliteSyncRuns` is its implementation over the kernel's `Db`. sqlx's pool times its acquire on
+  tokio's timer, and paused time jumps to a pending timer while the database answers on its own
+  thread, so the paused-time retry tests hand the syncer an in-memory store; every other test uses
+  the database.
+- **R10 and R15: `sync_runs` records the run's study day.** The refusal of a second scheduled run
+  reads the study day the kernel's rule gave the first when it started, so a row is found by its
+  day rather than by an instant range the rule would have to invert.
