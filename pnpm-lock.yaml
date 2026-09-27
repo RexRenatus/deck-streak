@@ -4,9 +4,19 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+catalogs:
+  default:
+    vitest:
+      specifier: ^4.1.11
+      version: 4.1.11
+
 importers:
 
-  .: {}
+  .:
+    devDependencies:
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.11(@types/node@24.19.0)(vite@8.3.1(@types/node@24.19.0)(jiti@2.7.0))
 
   web/app:
     devDependencies:
@@ -71,7 +81,7 @@ importers:
         specifier: ^8.0.16
         version: 8.3.1(@types/node@24.19.0)(jiti@2.7.0)
       vitest:
-        specifier: ^4.1.11
+        specifier: 'catalog:'
         version: 4.1.11(@types/node@24.19.0)(vite@8.3.1(@types/node@24.19.0)(jiti@2.7.0))
 
 packages:
