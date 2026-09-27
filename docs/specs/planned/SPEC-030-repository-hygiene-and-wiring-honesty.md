@@ -29,6 +29,22 @@
     that was to lift it and nobody learns the row is already green (`.packs/wiring.json` holds
     six deferred rows, sixteen pending packs and one deferred pack in the architect's working tree
     after `main` e05dfa5, counted by state).
+- **The box-pack runner judges nothing.** `scripts/box-packs.sh`, run at `dev` c1f53c1 with a phxd
+  built from the vendored phoenix-v2 commit, reported all ten cards RED for reasons unrelated to the
+  tree:
+  - every `pack probe` exited 4 with `skills/catalog.json not found`, because the runner never
+    passes `--skills-root`;
+  - four packs (web-security, cyber-pipeline, ux-laws, ui-styles) declare `phxd.pack.run.v1`, and
+    `pack probe` refuses them (`wrong_verb`); `pack run` needs a project row in a ledger;
+  - with the verbs corrected, web-security still read the vendored rule code as DeckStreak's own:
+    two false reds came from `.packs/scripts/privacy-gdpr-probe.py` and
+    `.packs/scripts/telegram-platform-probe.py`;
+  - the subscription-proxy client scan exits 2 (all VOID) while no settings document exists, and
+    the runner reports that as red.
+  With the verbs corrected and the vendored rules excluded, the same tree has 37 red rows in seven
+  packs. Some are real gaps with owners, such as a missing Content-Security-Policy (#21) and
+  unvalidated init data (#17); others need a built site (#59). Nothing records which reds are
+  expected.
 - **What the predecessor's CI did that DeckStreak's gate already does.** Lint, types, tests and a
   supply-chain audit (`ci.yml` at predecessor `27ee2bc`): SPEC-002's `check.sh` stages and its
   `audit` stage.
@@ -44,7 +60,7 @@ R1. `.github/workflows/ci.yml` runs on `pull_request` into `dev` and into `main`
 R2. `scripts/tests/test_temp_hygiene.py` reads every test file of the repository: Rust integration
     tests (`crates/*/tests/**/*.rs`), the repository's Python tests (`scripts/tests/*.py`,
     `tools/parity-oracle/test_*.py`) and the Mini App's tests (`web/app/src/**/*.test.ts`,
-    `web/app/e2e/**/*.ts`), prints `examined N test file(s)` and refuses zero.
+    `web/app/tests/**/*.ts`), prints `examined N test file(s)` and refuses zero.
 R3. The lint refuses, naming the file and line:
     - in Rust: `TempDir::into_path`, `TempDir::keep`, `NamedTempFile::keep`,
       `NamedTempFile::into_temp_path` followed by `keep`, `std::env::temp_dir()`, and a string
@@ -73,6 +89,27 @@ R8. Wherever R6 or R7 would refuse the tree this SPEC lands on, `.packs/wiring.j
 R9. SPEC-002's wiring tests keep passing: every vendored pack has a state, and every waiting pack or
     row names an issue in `docs/issues-manifest.json`.
 
+R10. `scripts/box-packs.sh` runs each phxd pack with the verb its catalog entry admits, read from
+    `phxd pack list` and never hard-coded:
+    - `phxd pack probe --skills-root <phoenix>/skills` for a pack declaring `phxd.pack.probe.v1`;
+    - `phxd --ledger <scratch> pack run --project <id> --skills-root <phoenix>/skills` for
+      `phxd.pack.run.v1`, against a scratch ledger it creates with `phxd init` and
+      `phxd project register` in a temporary directory outside both repositories;
+    - `phxd verify seo-pipeline` for the site once it is built (#59).
+R11. It judges the committed tree at `--rev` (default `HEAD`), exported with `git archive`, without
+    the vendored rule code: `.packs/` and the vendored methodology probes. A rule's own source is
+    never read as DeckStreak's code.
+R12. `.packs/wiring.json` names, for each phxd pack, every row expected red on the tree and the open
+    issue that builds that row's subject.
+    - A red row it does not name fails the run, naming the pack and the row.
+    - A named row that is no longer red is refused as stale, as in R6 and R7.
+    - An advisory row never fails the run.
+R13. The subscription-proxy client scan reads `pending` with its issue while it examines no
+    settings document (#29), and fails the run on any red. VOID is never reported as green.
+R14. The run prints one line per pack: its examined count, its unexpected, expected and stale rows.
+    It exits 0 only when every pack examined at least one row and no row is an unexpected red or a
+    stale expectation.
+
 ## 3. Acceptance criteria
 
 | id | criterion | decided by |
@@ -85,6 +122,11 @@ R9. SPEC-002's wiring tests keep passing: every vendored pack has a state, and e
 | A6 | the runner refuses a pending pack whose every blocking row passed | `test_pack_wiring.py` `a_pending_pack_whose_rows_all_pass_is_refused_as_stale` |
 | A7 | the runner refuses a deferred row that now passes | `test_pack_wiring.py` `a_deferred_row_that_passes_is_refused_as_stale` |
 | A8 | a deferred row that is still red stays deferred and fails nothing | `test_pack_wiring.py` `a_deferred_row_that_is_still_red_fails_nothing` |
+| A9 | each phxd pack runs with the verb its catalog entry admits, the run packs against a scratch ledger outside the repository | `test_box_packs.py` `each_pack_runs_with_the_verb_its_catalog_admits` |
+| A10 | the judged tree holds no vendored rule code | `test_box_packs.py` `the_judged_tree_holds_no_vendored_rule_code` |
+| A11 | a red row the wiring does not expect fails the run by name | `test_box_packs.py` `an_unexpected_red_row_fails_the_run_by_name` |
+| A12 | an expected red row that turns green is refused as stale | `test_box_packs.py` `an_expected_red_row_that_turns_green_is_refused_as_stale` |
+| A13 | the proxy scan with no settings document reads pending, never green | `test_box_packs.py` `the_proxy_scan_without_a_settings_document_reads_pending` |
 
 ```acceptance
 A1: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k the_ci_workflow_runs_on_pull_requests_into_dev_and_main
@@ -95,11 +137,21 @@ A5: python3 -m unittest discover -s scripts/tests -p test_temp_hygiene.py -k a_p
 A6: python3 -m unittest discover -s scripts/tests -p test_pack_wiring.py -k a_pending_pack_whose_rows_all_pass_is_refused_as_stale
 A7: python3 -m unittest discover -s scripts/tests -p test_pack_wiring.py -k a_deferred_row_that_passes_is_refused_as_stale
 A8: python3 -m unittest discover -s scripts/tests -p test_pack_wiring.py -k a_deferred_row_that_is_still_red_fails_nothing
+A9: python3 -m unittest discover -s scripts/tests -p test_box_packs.py -k each_pack_runs_with_the_verb_its_catalog_admits
+A10: python3 -m unittest discover -s scripts/tests -p test_box_packs.py -k the_judged_tree_holds_no_vendored_rule_code
+A11: python3 -m unittest discover -s scripts/tests -p test_box_packs.py -k an_unexpected_red_row_fails_the_run_by_name
+A12: python3 -m unittest discover -s scripts/tests -p test_box_packs.py -k an_expected_red_row_that_turns_green_is_refused_as_stale
+A13: python3 -m unittest discover -s scripts/tests -p test_box_packs.py -k the_proxy_scan_without_a_settings_document_reads_pending
 ```
 
 A6 to A8 run the runner over a copy of `.packs/` and `scripts/` in a `TemporaryDirectory`, with a
 synthetic pack whose rows are one-line probes that exit 0, 1 or 3 as the case needs; they never run
 the real packs, so they stay fast.
+
+A9 to A13 drive `scripts/box-packs.sh` with a fake phxd and a fake phoenix checkout, under
+`scripts/tests/fixtures/box-packs/`. The fake phxd records its argv and prints planted cards, so the
+tests need neither phxd nor the private phoenix-v2 checkout and run in CI. The real run stays on the
+maintainer's box.
 
 ## 4. File manifest
 
@@ -113,6 +165,10 @@ the real packs, so they stay fast.
 | `scripts/tests/test_pack_wiring.py` | repo | changed: A6 to A8; `TemporaryDirectory` |
 | `scripts/pack-rows.py` | repo | changed: the stale-pending refusal and the deferred-row pass |
 | `.packs/wiring.json` | repo | changed where R8 applies |
+| `scripts/box-packs.sh` | repo | changed: R10 to R14 |
+| `scripts/tests/test_box_packs.py` | repo | added: A9 to A13 |
+| `scripts/tests/fixtures/box-packs/fake-phxd` | repo | added: the fake phxd and its planted cards |
+| `scripts/tests/fixtures/box-packs/phoenix/skills/catalog.json` | repo | added: a fake catalog naming one probe pack and one run pack |
 | `docs/TESTING.md` | repo | changed: the temporary-file rule and the honest-state rule |
 | `docs/red-first/SPEC-030.md` | repo | added |
 | `changelog.d/` fragment | repo | added |
@@ -124,7 +180,8 @@ the real packs, so they stay fast.
   SPEC-002's, delivered (#23).
 - It enforces no pack whose subject is not built: each waits for the issue its wiring names, and
   the last of them are lifted by W7's work (#60).
-- It judges no phxd pack: those run on the maintainer's box by `scripts/box-packs.sh`
+- It builds no phxd and runs no phxd pack in CI: the maintainer builds phxd from the vendored
+  phoenix-v2 commit, and the phxd packs stay box-run until the open-source pack runner exists
   (#60).
 - It keeps no pytest retention setting: DeckStreak's Python tests are `unittest`, and the lint
   replaces the setting's purpose (#23).
