@@ -110,12 +110,10 @@
       "planned": true
     },
     {
-      "item": "dtcg-tokens",
-      "planned": true
+      "item": "dtcg-tokens"
     },
     {
-      "item": "svelte-runes-state",
-      "planned": true
+      "item": "svelte-runes-state"
     },
     {
       "item": "sveltekit-superforms",
