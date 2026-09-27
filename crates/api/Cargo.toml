@@ -16,3 +16,17 @@ deck-streak-kernel.workspace = true
 deck-streak-identity.workspace = true
 deck-streak-notifications.workspace = true
 deck-streak-coordination.workspace = true
+# ADR-003 and ADR-025: the HTTP adapter's stack (SPEC-025).
+axum.workspace = true
+thiserror.workspace = true
+tokio = { workspace = true, features = ["net"] }
+tower = { workspace = true, features = ["limit", "load-shed"] }
+tower-http = { workspace = true, features = ["catch-panic", "request-id", "sensitive-headers", "timeout", "trace"] }
+tracing.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+# The paused clock (test-util) drives the timeout and the bound without sleeping; io-util and net
+# drive the drain over a real loopback socket.
+tokio = { workspace = true, features = ["io-util", "macros", "net", "rt", "sync", "test-util", "time"] }
+tower = { workspace = true, features = ["util"] }
