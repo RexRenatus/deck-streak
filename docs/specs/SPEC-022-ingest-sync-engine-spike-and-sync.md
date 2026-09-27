@@ -2,8 +2,10 @@
 
 - **Wave:** W0. **Issue:** #15 (epic #1). **Context(s):** `deck-streak-ingest`, `deck-streak-coordination` (the sync cycle use case).
 - **Decided by:** ADR-009 (the engine, proposed until this spike), ADR-008 (the private copy, read-only reads), ADR-037 (one scheduled sync per study day plus the owner's triggers, and never an upload), ADR-038 (credentials from the secret manager at unit start, superseding ADR-010's storage), ADR-012 (goldens), ADR-018 (licence compatibility), and this SPEC's ADR-022 (the spike's fixed protocol and budgets).
-- **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
-  `docs/specs/` with its tests and `docs/red-first/SPEC-022.md` (ADR-016).
+- **Status:** judged: delivered with its tests, `docs/red-first/SPEC-022.md`, the measurement that
+  accepted ADR-009 (`engine-measure.yml` run 36357990387), and two goldens (`sync_retry`,
+  `sync.constants`) generated at the predecessor's `27ee2bc`. The delivery made R1, R3, R8, R10, the
+  manifest and §3 exact where the code decided them (§7).
 
 ## 1. The problem, measured
 
@@ -13,8 +15,18 @@
   choice depend on a measurement nobody has taken: build time and binary size in CI, and resident
   memory while opening a large collection and resolving its new-card queue.
 - **The budgets are fixed before the measurement** (ADR-022), so the numbers decide rather than
-  justify. At promotion this section gains the measured table: cold build minutes, stripped binary
-  MiB, peak RSS MiB for open and queue, peak RSS MiB for a full download, incremental-sync seconds.
+  justify. The spike measured the engine at tag `26.05` in `engine-measure.yml` run 36357990387, on
+  a GitHub-hosted `ubuntu-24.04` runner with 4 CPUs, and every budget held (ADR-009's
+  Confirmation):
+
+  | measure | budget | measured |
+  |---|---|---|
+  | cold build, the protoc download included | at most 20 minutes | 4.7 minutes |
+  | the stripped `engine_probe` | at most 100 MiB | 20.6 MiB |
+  | peak RSS, open and queue | at most 256 MiB | 29.4 MiB |
+  | peak RSS, full download | at most 256 MiB | 234.0 MiB |
+  | incremental sync of 100 reviews | at most 60 seconds | 0.12 seconds |
+  | `cargo deny check licenses` | pass | pass |
 - **The predecessor's sync, which the port keeps** (predecessor `27ee2bc`, names only):
   `sync.py:AnkiSyncer.sync_now` and `_sync_blocking` log in and call the engine's collection sync
   with media off; a full-sync demand is met by a full DOWNLOAD under a cross-process lock
@@ -172,7 +184,7 @@ A16: cargo test -p deck-streak-ingest --test sync -- --exact a_second_scheduled_
 A17: cargo test -p deck-streak-ingest --test sync -- --exact an_owner_trigger_within_five_minutes_of_a_success_returns_it_without_syncing
 ```
 
-The sync tests run the engine's own sync server in process on a loopback port, with a synthetic
+The sync tests run the engine's own sync server in a child process (§7) on a loopback port, with a synthetic
 user and a synthetic collection built by `crates/ingest/tests/support/synthetic.rs`; nothing
 reaches the owner's server. A15 puts a recording layer in front of that server
 (`crates/ingest/tests/support/recording.rs`) that keeps every request and fails the test on an
