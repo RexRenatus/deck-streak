@@ -15,7 +15,7 @@ cd "$ROOT" || exit 2
 LOG_DIR="${CHECK_LOG_DIR:-$(mktemp -d -t deckstreak-check.XXXXXX)}"
 mkdir -p "$LOG_DIR"
 
-STAGES_ALL=(toolchain fmt clippy test doctest web python packs scrub secrets)
+STAGES_ALL=(toolchain fmt clippy test doctest web python packs scrub audit secrets)
 if [ "$#" -gt 0 ]; then STAGES=("$@"); else STAGES=("${STAGES_ALL[@]}"); fi
 
 failed=()
@@ -36,6 +36,7 @@ stage_toolchain() {
     need pnpm "pnpm 11, pinned by packageManager in package.json; never corepack" || ok=1
     need python3 "Python 3.11 or later" || ok=1
     need gitleaks "https://github.com/gitleaks/gitleaks releases" || ok=1
+    need cargo-deny "https://github.com/EmbarkStudios/cargo-deny releases, or taiki-e/install-action" || ok=1
     python3 -c 'import sys; sys.exit(0 if sys.version_info >= (3, 11) else 1)' ||
         { echo "python3 is older than 3.11"; ok=1; }
     node -e 'process.exit(Number(process.versions.node.split(".")[0]) >= 24 ? 0 : 1)' ||
@@ -66,7 +67,22 @@ stage_python() {
 
 stage_packs() { python3 scripts/pack-rows.py; }
 
-stage_scrub() { python3 scripts/public-scrub.py --root .; }
+stage_scrub() {
+    python3 scripts/public-scrub.py --root . || return 1
+    # No apiKeyHelper in any Claude Code settings file (the subscription-proxy pack's rule). The
+    # scan is VOID with no settings file, so until the agent's settings template lands (SPEC-043)
+    # it reports pending by name rather than passing over nothing.
+    if git ls-files | grep -Eq '(^|/)(\.claude/)?settings(\.[a-z]+)?(\.template)?\.json$'; then
+        python3 scripts/no-apikeyhelper-scan.py --root .
+    else
+        echo "no-apikeyhelper: pending until the agent's settings template lands (SPEC-043)"
+    fi
+}
+
+stage_audit() {
+    cargo deny --locked check advisories bans licenses sources &&
+        pnpm audit --prod
+}
 
 stage_secrets() {
     # The working tree here; CI also scans the whole history (fetch-depth: 0).

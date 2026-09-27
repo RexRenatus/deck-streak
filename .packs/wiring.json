@@ -1,122 +1,132 @@
 {
   "schema": "deckstreak.pack-wiring.v1",
   "packs": {
-    "accessibility": {
-      "state": "pending",
-      "enforced_by": "TBD"
-    },
-    "ai-content-safety": {
-      "state": "pending",
-      "enforced_by": "TBD"
-    },
-    "cjk-typography": {
-      "state": "pending",
-      "enforced_by": "TBD"
-    },
-    "data-migration": {
-      "state": "pending",
-      "enforced_by": "TBD"
+    "sdd": {
+      "state": "enforced"
     },
     "ddd": {
-      "state": "pending",
-      "enforced_by": "TBD"
+      "state": "enforced",
+      "deferred_rows": {
+        "lexicon-locks": "{{issue:DS-W0-01}}"
+      },
+      "note": "lexicon-locks reads identifiers, and the skeleton declares none"
     },
-    "durable-services": {
-      "state": "deferred",
-      "enforced_by": "TBD",
-      "note": "reads no unit as a finding"
+    "tdd": {
+      "state": "enforced"
     },
-    "game-economy": {
-      "state": "pending",
-      "enforced_by": "TBD"
+    "stack-selection": {
+      "state": "enforced"
     },
-    "language-mentors": {
-      "state": "pending",
-      "enforced_by": "TBD"
+    "rust-service": {
+      "state": "enforced"
     },
-    "law-professors": {
-      "state": "pending",
-      "enforced_by": "TBD"
-    },
-    "learning-science": {
-      "state": "pending",
-      "enforced_by": "TBD"
-    },
-    "lsat-coach": {
-      "state": "pending",
-      "enforced_by": "TBD"
+    "telegram-platform": {
+      "state": "enforced",
+      "deferred_rows": {
+        "tg-retry-after": "{{issue:DS-W0-09}}",
+        "tg-callback-answer": "{{issue:DS-W0-09}}"
+      },
+      "note": "the probe reads the vendored probes as bot source until the real bot exists; reported as pack feedback"
     },
     "notifications-policy": {
-      "state": "pending",
-      "enforced_by": "TBD"
+      "state": "enforced",
+      "deferred_rows": {
+        "one-router": "{{issue:DS-W1-02}}"
+      }
     },
-    "nudge-duties": {
-      "state": "pending",
-      "enforced_by": "TBD"
-    },
-    "observability": {
-      "state": "pending",
-      "enforced_by": "TBD"
-    },
-    "pack-authoring": {
-      "state": "pending",
-      "enforced_by": "TBD"
-    },
-    "persona-core": {
-      "state": "pending",
-      "enforced_by": "TBD"
-    },
-    "privacy-gdpr": {
-      "state": "pending",
-      "enforced_by": "TBD"
+    "game-economy": {
+      "state": "enforced",
+      "deferred_rows": {
+        "odds-disclosed": "{{issue:session-chests}}"
+      }
     },
     "release-ops": {
       "state": "pending",
-      "enforced_by": "TBD"
+      "enforced_by": "{{issue:DS-W2-03}}",
+      "deferred_rows": {
+        "ro.rollback-entrypoint": "{{issue:DS-W2-03}}"
+      }
     },
-    "rust-service": {
+    "observability": {
       "state": "pending",
-      "enforced_by": "TBD"
+      "enforced_by": "{{issue:DS-W0-14}}"
     },
-    "sdd": {
-      "state": "pending",
-      "enforced_by": "TBD"
+    "durable-services": {
+      "state": "deferred",
+      "enforced_by": "{{issue:DS-W0-15}}",
+      "note": "it reads a tree with no unit as a finding, not as VOID"
     },
-    "stack-selection": {
+    "accessibility": {
       "state": "pending",
-      "enforced_by": "TBD"
+      "enforced_by": "{{issue:DS-W0-11}}"
+    },
+    "cjk-typography": {
+      "state": "pending",
+      "enforced_by": "{{issue:DS-W0-11}}"
+    },
+    "privacy-gdpr": {
+      "state": "pending",
+      "enforced_by": "{{issue:DS-W0-04}}"
+    },
+    "ai-content-safety": {
+      "state": "pending",
+      "enforced_by": "{{issue:DS-W1-04}}"
+    },
+    "pack-authoring": {
+      "state": "pending",
+      "enforced_by": "{{issue:DS-W1-04}}"
+    },
+    "persona-core": {
+      "state": "pending",
+      "enforced_by": "{{issue:DS-W1-05}}"
+    },
+    "language-mentors": {
+      "state": "pending",
+      "enforced_by": "{{issue:DS-W1-05}}"
+    },
+    "law-professors": {
+      "state": "pending",
+      "enforced_by": "{{issue:DS-W1-05}}"
     },
     "study-duties": {
       "state": "pending",
-      "enforced_by": "TBD"
+      "enforced_by": "{{issue:DS-W1-07}}"
     },
-    "tdd": {
+    "learning-science": {
       "state": "pending",
-      "enforced_by": "TBD"
+      "enforced_by": "{{issue:DS-W1-07}}"
     },
-    "telegram-platform": {
+    "lsat-coach": {
       "state": "pending",
-      "enforced_by": "TBD"
+      "enforced_by": "{{issue:DS-W6-07}}"
     },
-    "ui-styles": {
-      "state": "phxd",
-      "note": "built into phxd; run on the box (ADR-004)"
-    },
-    "ux-laws": {
-      "state": "phxd",
-      "note": "built into phxd; run on the box (ADR-004)"
+    "nudge-duties": {
+      "state": "pending",
+      "enforced_by": "{{issue:DS-W6-08}}"
     },
     "vault-duties": {
       "state": "pending",
-      "enforced_by": "TBD"
+      "enforced_by": "{{issue:DS-W6-04}}"
     },
-    "vibecode-polish": {
-      "state": "phxd",
-      "note": "built into phxd; run on the box (ADR-004)"
+    "data-migration": {
+      "state": "pending",
+      "enforced_by": "{{issue:DS-W8-01}}"
     },
     "web-launch": {
       "state": "phxd",
-      "note": "built into phxd; run on the box (ADR-004)"
+      "note": "built into phxd; run by scripts/box-packs.sh (ADR-004)"
+    },
+    "vibecode-polish": {
+      "state": "phxd",
+      "note": "built into phxd; run by scripts/box-packs.sh (ADR-004)"
+    },
+    "ux-laws": {
+      "state": "phxd",
+      "note": "built into phxd; run by scripts/box-packs.sh (ADR-004)"
+    },
+    "ui-styles": {
+      "state": "phxd",
+      "note": "built into phxd; run by scripts/box-packs.sh (ADR-004)"
     }
   }
 }
