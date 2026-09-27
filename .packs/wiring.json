@@ -131,10 +131,37 @@
   "box": {
     "note": "scripts/box-packs.sh runs these packs on the maintainer's box (ADR-004, ADR-030). Each red row a pack is expected to show on the tree names the open issue that builds that row's subject; a pack that examines nothing names the issue after which it examines a row.",
     "packs": {
-      "auth": {},
-      "cyber-pipeline": {},
-      "greenfield": {},
-      "ledger-sqlite": {},
+      "auth": {
+        "expected_red": {
+          "auth.sign-in-surface": "#17"
+        },
+        "note": "no sign-in surface is shipped until the Mini App's init data is validated"
+      },
+      "cyber-pipeline": {
+        "expected_red": {
+          "cp.threat-model-trace": "#60",
+          "ws.csp-present": "#21",
+          "ws.referrer-policy": "#25",
+          "ws.tg-init-data-verified": "#17"
+        },
+        "note": "the ws rows are web-security's; no planned SPEC writes the threat model cp.threat-model-trace reads, so #60, which brings every phxd pack to green, owns it"
+      },
+      "greenfield": {
+        "expected_red": {
+          "placeholders-filled": "#60"
+        },
+        "note": "it reads the notice markers in the verbatim AGPL text's own appendix (LICENSE, LICENSES/), which may not be changed; a re-pinned probe settles it (#60)"
+      },
+      "ledger-sqlite": {
+        "expected_red": {
+          "admission-through-bound": "#60",
+          "append-only-census-covers-every-table": "#60",
+          "applied-migration-is-immutable": "#60",
+          "created-at-everywhere": "#60",
+          "flock-explicit-unlock": "#60"
+        },
+        "note": "the five blocking rows run phoenix-v2's own cargo tests, which the pack's SKILL.md says a consuming repository cannot run at all; #60 decides how they read here"
+      },
       "seo-pipeline": {
         "pending": "#59",
         "note": "it verifies the built landing page, which no commit holds yet"
@@ -144,9 +171,45 @@
         "note": "every row is catalog-only, so every walk examines none by the pack's design"
       },
       "ux-laws": {},
-      "vibecode-polish": {},
-      "web-launch": {},
-      "web-security": {}
+      "vibecode-polish": {
+        "expected_red": {
+          "clickable-logo-phone-email": "#59",
+          "compress-images": "#59",
+          "favicon-titles-meta": "#59",
+          "footer-404-copyright": "#59",
+          "mobile-menu-overflow": "#59",
+          "success-error-messages": "#59"
+        },
+        "note": "public-site polish: the landing page builds its subject"
+      },
+      "web-launch": {
+        "expected_red": {
+          "alt-text": "#59",
+          "analytics": "#59",
+          "contrast": "#59",
+          "cookies": "#59",
+          "custom-404": "#59",
+          "form-validation": "#59",
+          "html-lang": "#21",
+          "image-compress": "#59",
+          "lcp-speed": "#59",
+          "meta-og-favicon": "#59",
+          "privacy-terms": "#59",
+          "single-cta": "#59",
+          "sitemap-robots": "#59",
+          "spam-protect": "#59",
+          "tg-sdk-script": "#21"
+        },
+        "note": "the public-site rows wait for the landing page; html-lang and tg-sdk-script read the Mini App's shell"
+      },
+      "web-security": {
+        "expected_red": {
+          "ws.csp-present": "#21",
+          "ws.referrer-policy": "#25",
+          "ws.tg-init-data-verified": "#17"
+        },
+        "note": "the Mini App's meta policy (#21), the Caddy block's headers (#25) and init data validated on the server (#17)"
+      }
     },
     "proxy-client-scan": {
       "pending": "#29",
