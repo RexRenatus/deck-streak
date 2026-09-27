@@ -3,11 +3,16 @@ import { sveltekit } from '@sveltejs/kit/vite';
 import tailwindcss from '@tailwindcss/vite';
 import { svelteTesting } from '@testing-library/svelte/vite';
 import { defineConfig } from 'vitest/config';
+import { writeTokens } from './scripts/build-tokens.ts';
 
 // SvelteKit's own configuration, runes mode included, lives in svelte.config.js, where
 // svelte-check and the language server read it too.
 export default defineConfig({
   plugins: [
+    // The design tokens compile into src/lib/design/tokens.css when a build or the dev server
+    // starts (ADR-028). Every buildStart hook finishes before any module is transformed, so the
+    // stylesheet exists when Tailwind resolves layout.css's import of it.
+    { name: 'deck-streak-tokens', buildStart: writeTokens },
     tailwindcss(),
     sveltekit(),
     paraglideVitePlugin({
