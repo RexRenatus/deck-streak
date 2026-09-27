@@ -15,16 +15,13 @@
       "planned": true
     },
     {
-      "item": "tokio",
-      "planned": true
+      "item": "tokio"
     },
     {
-      "item": "sqlx",
-      "planned": true
+      "item": "sqlx"
     },
     {
-      "item": "tracing",
-      "planned": true
+      "item": "tracing"
     },
     {
       "item": "sqlite"
