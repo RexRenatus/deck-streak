@@ -127,5 +127,30 @@
       "state": "phxd",
       "note": "built into phxd; run by scripts/box-packs.sh (ADR-004)"
     }
+  },
+  "box": {
+    "note": "scripts/box-packs.sh runs these packs on the maintainer's box (ADR-004, ADR-030). Each red row a pack is expected to show on the tree names the open issue that builds that row's subject; a pack that examines nothing names the issue after which it examines a row.",
+    "packs": {
+      "auth": {},
+      "cyber-pipeline": {},
+      "greenfield": {},
+      "ledger-sqlite": {},
+      "seo-pipeline": {
+        "pending": "#59",
+        "note": "it verifies the built landing page, which no commit holds yet"
+      },
+      "ui-styles": {
+        "pending": "#60",
+        "note": "every row is catalog-only, so every walk examines none by the pack's design"
+      },
+      "ux-laws": {},
+      "vibecode-polish": {},
+      "web-launch": {},
+      "web-security": {}
+    },
+    "proxy-client-scan": {
+      "pending": "#29",
+      "note": "it examines no settings document until the agent's settings template lands"
+    }
   }
 }
