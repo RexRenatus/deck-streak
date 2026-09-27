@@ -23,7 +23,7 @@ only for the skip day. Anki's Python package is itself a binding over Anki's Rus
 ## Considered Options (the alternatives it was chosen against)
 
 - Anki's `rslib` as a pinned git dependency of `ingest` — proposed: the same engine the predecessor's Python package wraps, native sync, the scheduler's queue and `set_due_date`, one language.
-- A native client of the sync protocol — rejected because reimplementing incremental sync is the unmaintainable option the predecessor's own ADR-002 rejected, and a full download every cycle would move the whole collection every 15 minutes.
+- A native client of the sync protocol — rejected because reimplementing incremental sync is the unmaintainable option the predecessor's own ADR-002 rejected, and a full download every cycle would move the whole collection on every sync.
 - A minimal Python sidecar running the predecessor's proven sync — kept as the fallback: proven today, but it keeps Python on the VM and a second language in the port; chosen only if the measurement below fails.
 - AnkiConnect — rejected because it needs a desktop Anki running.
 

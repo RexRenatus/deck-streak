@@ -198,7 +198,7 @@ D) that covers it.
 | `instant-loop-free-spin` | Instant loop: AnkiMobile-open acknowledgement and free spin | product | discipline | W5 | build | #105 |
 | `coin-wallet` | Coin wallet and economy rules | product | economy | W3 | build | #106 |
 | `coin-shop` | Coin shop (/shop) | product | economy | W3 | build | #107 |
-| `skip-day` | Skip / cheat day (the one Anki write path) | product | ingest | W3 | build | #108 |
+| `skip-day` | Skip / cheat day (recorded by DeckStreak, never written to Anki: ADR-037) | product | ingest | W3 | build | #108 |
 | `committed-windows` | Committed study windows | product | discipline | W5 | build | #109 |
 | `doomscroll-tripwire` | Doomscroll tripwire rail (sensor, verdicts, sprints, rung ladder, canary) | product | discipline | W5 | build | #110 |
 | `confess` | Honor-system confession (/confess) | product | discipline | W5 | build | #111 |
@@ -383,3 +383,19 @@ D) that covers it.
 | `DS-W8-03` | Cutover and the predecessor's retirement | deploy | W8 | per-wave | #63 |
 | `DS-W8-04` | Release v1.0.0 | repo | W8 | per-wave | #64 |
 | `DS-W9-01` | The vault to Anki flashcard bridge | vault | W9 | per-wave | #65 |
+
+## 14. Amendments
+
+Recorded when a later accepted decision changed what this campaign plan says. The earlier sections
+keep their original text where only these notes apply.
+
+- **Gate 6 (2026-09-27, ADR-037, ADR-038, ADR-054).**
+  - The agent's path through the subscription proxy (R4, section 8) is ONE adapter of an optional AI
+    route. No-AI mode is the default and a first-class path; the first deploy (W2) needs no device
+    key, no tunnel and no proxy. The agent's path (#43) and the first live reading (#45) wait for
+    gate 3 (#162), or for the owner's choice of an API key.
+  - DeckStreak syncs once per study day plus the owner's explicit `/sync`, and never uploads or
+    writes a local change (ADR-037). The skip day (#108) is therefore recorded in DeckStreak's own
+    database and never written to the collection.
+  - Credentials reach each unit from the secret manager at its start, through a root-only socket,
+    and never rest on the host (ADR-038). This supersedes ADR-010's encrypted storage.
