@@ -106,12 +106,12 @@ builders).
 | W0 | Foundation: kernel, config and secrets, database base, identity (Telegram initData), API and bot shells, Anki ingest, scheduler and cron ledger, data-rights framework, Mini App shell, parity-oracle harness | 15 | 0 | 1, then 6 |
 | W1 | Flagship: the daily pre-study readings, with the AI agent core, the vault adapter core, the XP grant port and the notification router core | 14 | 0 | 5, then 6 |
 | W2 | First deploy: readings live on the VM side by side with v9 (host scrub, units, HTTPS, the proxy tunnel, backups), behind owner gates | 6 | 0 | 2 (owner-gated) |
-| W3 | Game core parity: analytics and score, XP and levels, streaks, economy, quests and chests, focus, habits, skip day | 0 | 34 | 6 |
-| W4 | Curriculum and insight parity: Road to C2, law track, leeches, research instruments, client-side charts | 0 | 28 | 6 |
-| W5 | Engagement parity: the full celebration ladder, digests, nudges, comeback, discipline devices, prediction markets | 0 | 23 | 6 |
-| W6 | Second brain and the AI duties: drills, vault bridge, inbox, daily note, weekly synthesis, leech doctor, writing tutor, conversation partner, practice questions, digest coaching | 11 | 6 | 6 |
+| W3 | Game core parity: analytics and score, XP and levels, streaks, economy, quests and chests, focus, habits, skip day | 0 | 38 | 6 |
+| W4 | Curriculum and insight parity: Road to C2, law track, leeches, research instruments, client-side charts | 0 | 25 | 6 |
+| W5 | Engagement parity: the full celebration ladder, digests, nudges, comeback, discipline devices, prediction markets | 0 | 22 | 6 |
+| W6 | Second brain and the AI duties: drills, vault bridge, inbox, daily note, weekly synthesis, leech doctor, writing tutor, conversation partner, practice questions, digest coaching | 11 | 5 | 6 |
 | W7 | Surfaces and polish: settings, linked sign-in, landing page, public achievement page, share art, accessibility and CJK polish, every pack enforced | 4 | 3 | 4 |
-| W8 | Data migration and cutover: v9 schema 24 import, side-by-side verification, cutover, v1.0.0 | 4 | 0 | 2 |
+| W8 | Data migration and cutover: v9 schema 24 import, side-by-side verification, cutover, v1.0.0 | 4 | 1 | 2 |
 | W9 | After parity: the vault to Anki flashcard bridge | 1 | 0 | 1 |
 
 ## 8. The architecture, in one page
@@ -175,7 +175,7 @@ D) that covers it.
 | `law-streak` | Independent law-track streak | product | streaks | W3 | build | (issue pending) |
 | `habit-strength-governor` | Habit strength and the anti-abandonment governor | product | streaks | W3 | build | (issue pending) |
 | `relight-ritual` | Relight ritual (first day back after a lapse) | product | streaks | W3 | build | (issue pending) |
-| `road-to-c2` | Road to C2: per-language CEFR progress and band-up celebrations | product | curriculum | W4 | build | (issue pending) |
+| `road-to-c2` | Road to C2: per-language CEFR progress and band-up celebrations | product | curriculum | W3 | build | (issue pending) |
 | `forecast-velocity` | Road-to-C2 forecast (velocity and ETA to next band) | product | curriculum | W4 | build | (issue pending) |
 | `adaptive-daily-goal` | Adaptive daily review goal | product | curriculum | W4 | build | (issue pending) |
 | `skill-strands-weak-spots` | Skill strands and weak spots | product | curriculum | W4 | build | (issue pending) |
@@ -210,14 +210,14 @@ D) that covers it.
 | `evening-nudge-coordinator` | Evening nudge coordinator + stakes preview (streak risk) | product | notifications | W5 | build | (issue pending) |
 | `last-chance-nudge` | Last-chance deadline ping (22:00) | product | notifications | W5 | build | (issue pending) |
 | `self-prediction-markets` | Self-prediction markets and the Oracle ladder (/predict, /oracle) | product | markets | W5 | build | (issue pending) |
-| `celebration-ladder` | Celebration escalation ladder (T0-T5) with budgets, honesty cap, quiet-hour deferral and outage breakers | product | notifications | W5 | build | (issue pending) |
+| `celebration-ladder` | Celebration escalation ladder (T0-T5) with budgets, honesty cap, quiet-hour deferral and outage breakers | product | notifications | W3 | build | (issue pending) |
 | `quiet-hours` | Quiet hours | product | notifications | W1 | build | (issue pending) |
 | `pinned-widget` | Pinned daily widget (ambient dashboard) | product | notifications | W5 | build | (issue pending) |
 | `morning-brief` | Morning brief | product | notifications | W5 | build | (issue pending) |
 | `comeback-protocol` | Comeback protocol (lapse-mode morning messages and lapse digest) | product | notifications | W5 | build | (issue pending) |
 | `ghost-race` | Ghost-of-past-self weekly race (/race) | product | quests | W3 | build | (issue pending) |
 | `streak-share-cards` | Streak milestone share cards (AI art) | product | progression | W7 | build | (issue pending) |
-| `ai-keepsake-art` | AI keepsake art (Nano Banana Pro via OpenRouter) | product | progression | W7 | build | (issue pending) |
+| `ai-keepsake-art` | AI keepsake art for chapter ceremonies | product | progression | W7 | build | (issue pending) |
 | `historical-landmarks` | Historical landmarks (anniversaries and every 25th study day) | product | notifications | W5 | build | (issue pending) |
 | `milestone-pings` | Milestone pings (badges, level-ups, queue zero) | product | notifications | W5 | build | (issue pending) |
 | `daily-digest` | Daily digest (just-closed study day) | product | notifications | W5 | build | (issue pending) |
@@ -225,8 +225,8 @@ D) that covers it.
 | `session-debrief` | Felt-difficulty session debrief | product | notifications | W5 | build | (issue pending) |
 | `nudge-ablation` | Nudge ablation (holdout experiment) and withhold ledger | product | notifications | W5 | build | (issue pending) |
 | `leech-remediation` | Leech remediation workflow | product | curriculum | W4 | build | (issue pending) |
-| `law-track-summary` | Law-track summary block (dual-track display, law primary) | product | curriculum | W4 | build | (issue pending) |
-| `lsat-section-board` | LSAT section coverage board (/lsat) | product | curriculum | W4 | build | (issue pending) |
+| `law-track-summary` | Law-track summary block (dual-track display, law primary) | product | curriculum | W3 | build | (issue pending) |
+| `lsat-section-board` | Test-prep section coverage board | product | curriculum | W4 | build | (issue pending) |
 | `law-drills` | Law drills: browse, answer via Telegram, graded post-back XP | product | vault | W6 | build | (issue pending) |
 | `illusion-ledger` | The Illusion Ledger (recognition vs production retention gap) | product | insights | W4 | build | (issue pending) |
 | `echo-test` | The Echo Test (same-note sibling contamination) | product | insights | W4 | build | (issue pending) |
@@ -243,11 +243,11 @@ D) that covers it.
 | `deal-the-hand` | Deal the Hand (/hand) | product | insights | W4 | build | (issue pending) |
 | `sabbatical-clock` | Sabbatical Decay Clock (/park <lang>) | product | insights | W4 | build | (issue pending) |
 | `other-hand-census` | The Other Hand (/otherhand) due-date provenance census | product | insights | W4 | build | (issue pending) |
-| `charts-and-resources` | Charts (/chart) and MCP chart resources | product | insights | W4 | build | (issue pending) |
-| `vault-stats-bridge` | Vault stats bridge (nightly stats JSON into the second-brain vault) | product | vault | W6 | build | (issue pending) |
+| `charts-and-resources` | Charts (/chart) and MCP chart resources | product | insights | W3 | build | (issue pending) |
+| `vault-stats-bridge` | Vault stats bridge (nightly stats JSON into the second-brain vault) | product | vault | W8 | build | (issue pending) |
 | `inbox-capture` | Telegram media capture to the vault inbox | product | vault | W6 | build | (issue pending) |
 | `vaultops-trigger` | On-demand vault-ops run (/vaultops) | product | agent | W6 | build | (issue pending) |
-| `preread-lane` | Nightly pre-reading lane (AI primers into 12-Readings) with two-box tracking and health checks | product | readings | W1 | build | (issue pending) |
+| `preread-lane` | Nightly pre-study readings lane with two-box tracking and health checks | product | readings | W1 | build | (issue pending) |
 | `public-achievement-publish` | Public achievement publishing (scrubbed, opt-in) | product | publishing | W7 | build | (issue pending) |
 | `inert-churn-tax` | Churn Tax (same-day repeat-answer accounting) - INERT | inert | - | - | exclude: inert in v9 | (issue pending) |
 | `inert-latency-debt` | Latency Debt exam-clock audit - INERT | inert | - | - | exclude: inert in v9 | (issue pending) |
@@ -266,11 +266,11 @@ D) that covers it.
 | `data-export-erase` | Data export and erasure (data rights) with a privacy completeness gate | platform | privacy | W0 | build | (issue pending) |
 | `telegram-bot-runtime` | Telegram command bot runtime (long poll, owner gate, menu, safety caps) | platform | bot | W0 | build | (issue pending) |
 | `telegram-notifier` | Outbound Telegram notifier | platform | bot | W0 | build | (issue pending) |
-| `cron-ledger-and-scheduler` | Scheduler layout, shared sync guard and cron-fire ledger | ops | pipeline | W0 | build | (issue pending) |
-| `startup-catchup` | Startup catch-up of missed notification fires | ops | pipeline | W0 | build | (issue pending) |
-| `liveness-deadman-watch` | Hourly dead-man watch, rollover-drift and digest-window checks | ops | pipeline | W0 | build | (issue pending) |
-| `sync-failure-alerting` | Sync failure alerting and sync_runs history | ops | pipeline | W0 | build | (issue pending) |
-| `db-maintenance` | Daily DB maintenance | ops | pipeline | W0 | build | (issue pending) |
+| `cron-ledger-and-scheduler` | Scheduler layout, shared sync guard and cron-fire ledger | ops | coordination | W0 | build | (issue pending) |
+| `startup-catchup` | Startup catch-up of missed notification fires | ops | coordination | W0 | build | (issue pending) |
+| `liveness-deadman-watch` | Hourly dead-man watch, rollover-drift and digest-window checks | ops | coordination | W0 | build | (issue pending) |
+| `sync-failure-alerting` | Sync failure alerting and sync_runs history | ops | coordination | W0 | build | (issue pending) |
+| `db-maintenance` | Daily DB maintenance | ops | coordination | W0 | build | (issue pending) |
 | `sd-notify-watchdog` | systemd notify watchdog (liveness only) | ops | daemon | W0 | build | (issue pending) |
 | `offload-rails` | Offload rails and latency budget (keep blocking work off the event loop) | ops | kernel | W0 | build | (issue pending) |
 | `secrets-resolution` | Secret resolution (GCP Secret Manager via ADC, env fallback) and degraded-secret tracking | ops | kernel | W0 | build | (issue pending) |
