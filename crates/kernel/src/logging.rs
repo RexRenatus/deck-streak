@@ -4,11 +4,16 @@
 //!
 //! journald strips a line's `<N>` prefix and files the line at that priority
 //! (`SyslogLevelPrefix=` defaults to true), so `journalctl -p err` finds the errors; without it
-//! every line lands at the unit's `SyslogLevel`, info.
+//! every line lands at the unit's `SyslogLevel`, info. The JSON carries no timestamp: journald
+//! stamps every line it receives, and the system time is read by the kernel's clock alone.
 
-use tracing::Subscriber;
+use std::fmt;
+
+use tracing::{Event, Level, Subscriber};
 use tracing_subscriber::EnvFilter;
-use tracing_subscriber::fmt::MakeWriter;
+use tracing_subscriber::fmt::format::{FormatEvent, FormatFields, Writer};
+use tracing_subscriber::fmt::{FmtContext, MakeWriter};
+use tracing_subscriber::registry::LookupSpan;
 
 use crate::error::KernelError;
 use crate::redact::{RedactingMakeWriter, Redactor};
@@ -42,8 +47,34 @@ where
         .without_time();
     tracing_subscriber::fmt()
         .json()
-        .event_format(format)
+        .event_format(JournalPriority(format))
         .with_writer(RedactingMakeWriter::new(redactor, make_writer))
         .with_env_filter(filter)
         .finish()
+}
+
+/// Opens each line with its event's sd-daemon(3) priority, so journald files it at that level.
+struct JournalPriority<F>(F);
+
+impl<S, N, F> FormatEvent<S, N> for JournalPriority<F>
+where
+    S: Subscriber + for<'a> LookupSpan<'a>,
+    N: for<'a> FormatFields<'a> + 'static,
+    F: FormatEvent<S, N>,
+{
+    fn format_event(
+        &self,
+        ctx: &FmtContext<'_, S, N>,
+        mut writer: Writer<'_>,
+        event: &Event<'_>,
+    ) -> fmt::Result {
+        let priority = match *event.metadata().level() {
+            Level::ERROR => "<3>",
+            Level::WARN => "<4>",
+            Level::INFO => "<6>",
+            Level::DEBUG | Level::TRACE => "<7>",
+        };
+        writer.write_str(priority)?;
+        self.0.format_event(ctx, writer, event)
+    }
 }

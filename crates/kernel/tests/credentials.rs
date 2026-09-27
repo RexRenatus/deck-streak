@@ -14,7 +14,9 @@ use std::process::Command;
 
 use deck_streak_kernel::redact::REDACTED;
 use deck_streak_kernel::settings::CREDENTIALS_DIRECTORY;
-use deck_streak_kernel::{CredentialError, CredentialLoader, CredentialsDirectory, Redactor};
+use deck_streak_kernel::{
+    CredentialError, CredentialLoader, CredentialsDirectory, Redactor, Secret,
+};
 
 /// The credential the tests load, and synthetic values for it.
 const ID: &str = "sync-login";
@@ -52,7 +54,7 @@ fn a_secret_is_read_from_the_credentials_directory_and_never_from_the_environmen
     // The file's value, less its one trailing newline.
     let secret = loader.load(ID);
     assert_eq!(
-        secret.as_ref().map(|secret| secret.expose()).ok(),
+        secret.as_ref().map(Secret::expose).ok(),
         Some(FROM_THE_FILE)
     );
     // It was registered before it was returned: a line carrying it leaves as the marker.

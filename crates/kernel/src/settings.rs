@@ -12,7 +12,7 @@
 //! whitespace trimmed.
 
 use std::collections::BTreeMap;
-use std::ffi::OsString;
+use std::ffi::{OsStr, OsString};
 use std::fmt;
 use std::path::{Path, PathBuf};
 
@@ -33,7 +33,7 @@ pub const CREDENTIALS_DIRECTORY: &str = "CREDENTIALS_DIRECTORY";
 
 /// The digest hour when none is set, before the rollover hour raises it: the predecessor's
 /// `constants.py:DEFAULT_DIGEST_HOUR`, proved by `goldens/kernel.constants.json`.
-pub const DEFAULT_DIGEST_HOUR: u8 = 0;
+pub const DEFAULT_DIGEST_HOUR: u8 = 9;
 
 /// The most blocking operations the offload may run at once: tokio's default cap on its blocking
 /// threads, beyond which more permits could never run together anyway.
@@ -71,10 +71,8 @@ impl Environment {
     /// [`SettingsError::Missing`] when it is unset or blank, and [`SettingsError::Malformed`]
     /// when it does not have `T`'s shape.
     pub fn required<T: Setting>(&self, name: &'static str) -> Result<T, SettingsError> {
-        Err(SettingsError::Malformed {
-            setting: name,
-            expected: T::SHAPE,
-        })
+        self.optional(name)?
+            .ok_or(SettingsError::Missing { setting: name })
     }
 
     /// The setting `name`, or `None` when it is unset or blank.
@@ -83,8 +81,18 @@ impl Environment {
     ///
     /// [`SettingsError::Malformed`] when it is set and does not have `T`'s shape.
     pub fn optional<T: Setting>(&self, name: &'static str) -> Result<Option<T>, SettingsError> {
-        let _ = name;
-        Ok(None)
+        let malformed = SettingsError::Malformed {
+            setting: name,
+            expected: T::SHAPE,
+        };
+        let Some(value) = self.variables.get(OsStr::new(name)) else {
+            return Ok(None);
+        };
+        let text = value.to_str().ok_or(malformed)?.trim();
+        if text.is_empty() {
+            return Ok(None);
+        }
+        T::parse(text).map(Some).ok_or(malformed)
     }
 }
 

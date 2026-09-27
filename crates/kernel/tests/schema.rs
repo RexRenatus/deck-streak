@@ -119,7 +119,7 @@ fn contexts() -> BTreeSet<String> {
         .collect()
 }
 
-/// The ownership register's section for DeckStreak's own tables: table to owning context.
+/// The ownership register's section for the workspace's own tables: table to owning context.
 fn register() -> BTreeMap<String, String> {
     let map = fs::read_to_string(root().join("docs/CONTEXT-MAP.md")).expect("the context map");
     let Some(section) = map.split("### DeckStreak's own tables\n").nth(1) else {

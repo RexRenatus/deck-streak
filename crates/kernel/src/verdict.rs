@@ -32,6 +32,7 @@
 //! ```
 
 /// A check's outcome: it passed, or it refused for a reason the caller must handle.
+#[must_use = "a verdict is matched on: dropping one ignores a refusal"]
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Verdict<R> {
     /// The check passed.

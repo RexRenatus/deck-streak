@@ -5,7 +5,7 @@
 //! [`SystemClock`] is the only reader of the system time in the workspace's production code.
 
 use std::sync::atomic::{AtomicI64, Ordering};
-use std::time::Duration;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 /// An instant: whole milliseconds since the Unix epoch, in UTC.
 ///
@@ -41,7 +41,13 @@ pub struct SystemClock;
 
 impl Clock for SystemClock {
     fn now(&self) -> UtcMillis {
-        UtcMillis(0)
+        let millis = match SystemTime::now().duration_since(UNIX_EPOCH) {
+            Ok(since) => i64::try_from(since.as_millis()).unwrap_or(i64::MAX),
+            Err(before) => {
+                i64::try_from(before.duration().as_millis()).map_or(i64::MIN, |millis| -millis)
+            }
+        };
+        UtcMillis(millis)
     }
 }
 
@@ -67,12 +73,28 @@ impl ManualClock {
 
     /// Moves the clock forward by `by`, whole milliseconds, saturating at the last instant.
     pub fn advance(&self, by: Duration) {
-        let _ = by;
+        let millis = i64::try_from(by.as_millis()).unwrap_or(i64::MAX);
+        // The update never declines, so its result carries nothing to handle.
+        let _previous = self
+            .now
+            .fetch_update(Ordering::SeqCst, Ordering::SeqCst, |now| {
+                Some(now.saturating_add(millis))
+            });
     }
 }
 
 impl Clock for ManualClock {
     fn now(&self) -> UtcMillis {
         UtcMillis(self.now.load(Ordering::SeqCst))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Clock, SystemClock};
+
+    #[test]
+    fn the_system_clock_reads_an_instant_after_the_epoch() {
+        assert!(SystemClock.now().epoch_millis() > 0);
     }
 }

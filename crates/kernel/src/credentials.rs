@@ -8,6 +8,8 @@
 //! before the loader returns it, so no log line written after that can carry it.
 
 use std::fmt;
+use std::fs;
+use std::io;
 
 use crate::error::CredentialError;
 use crate::redact::Redactor;
@@ -55,7 +57,22 @@ impl CredentialLoader {
     /// [`CredentialError::Unreadable`] when it cannot be read, [`CredentialError::NotText`] when it
     /// is not UTF-8, and [`CredentialError::InvalidId`] when `id` is not a plain file name.
     pub fn load(&self, id: &'static str) -> Result<Secret, CredentialError> {
-        let _ = (id, &self.directory, &self.redactor);
-        Ok(Secret(String::new()))
+        if id.is_empty() || id == "." || id == ".." || id.contains(['/', '\0']) {
+            return Err(CredentialError::InvalidId { id });
+        }
+        let bytes = match fs::read(self.directory.path().join(id)) {
+            Ok(bytes) => bytes,
+            Err(error) if error.kind() == io::ErrorKind::NotFound => {
+                return Err(CredentialError::Missing { id });
+            }
+            Err(source) => return Err(CredentialError::Unreadable { id, source }),
+        };
+        let mut value = String::from_utf8(bytes).map_err(|_| CredentialError::NotText { id })?;
+        if value.ends_with('\n') {
+            value.pop();
+        }
+        // Registered before it is returned, so no line written after this can carry it.
+        self.redactor.register(&value);
+        Ok(Secret(value))
     }
 }

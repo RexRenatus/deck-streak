@@ -24,7 +24,7 @@ fn a_manual_clock_carries_a_study_day_across_the_rollover_without_sleeping() {
     let clock = ManualClock::new(evening);
     let studied = rule.study_day(clock.now());
 
-    clock.advance(Duration::from_secs(3 * 3_600));
+    clock.advance(Duration::from_hours(3));
     assert_eq!(
         rule.study_day(clock.now()),
         studied,

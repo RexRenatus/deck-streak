@@ -6,10 +6,11 @@
 //! exempt from both says why. The kernel refuses a declaration that names a table twice or exempts
 //! one without a reason; the privacy context (SPEC-021) runs the ports.
 
+use std::collections::BTreeSet;
 use std::future::Future;
 use std::pin::Pin;
 
-use serde_json::{Map, Value};
+use serde_json::{Map, Value, json};
 use sqlx::SqliteConnection;
 
 use crate::error::{DataRightsError, KernelError};
@@ -63,6 +64,23 @@ impl Declaration {
     /// [`DataRightsError::TableDeclaredTwice`] when a table is named twice, and
     /// [`DataRightsError::ExemptWithoutReason`] when a table is exempt with a blank reason.
     pub fn new(context: &'static str, tables: Vec<TableRights>) -> Result<Self, DataRightsError> {
+        let mut named = BTreeSet::new();
+        for rights in &tables {
+            if !named.insert(rights.table) {
+                return Err(DataRightsError::TableDeclaredTwice {
+                    context,
+                    table: rights.table,
+                });
+            }
+            if let Disposition::Exempt { reason } = rights.disposition
+                && reason.trim().is_empty()
+            {
+                return Err(DataRightsError::ExemptWithoutReason {
+                    context,
+                    table: rights.table,
+                });
+            }
+        }
         Ok(Self { context, tables })
     }
 
@@ -125,21 +143,65 @@ pub trait DataRights: Send + Sync {
 #[derive(Clone, Copy, Debug, Default)]
 pub struct KernelDataRights;
 
+/// Why the schema version table survives an erase.
+const SCHEMA_VERSION_EXEMPTION: &str = "sqlx's record of the applied migrations, the schema \
+    version table: emptied, it would make the next start apply every migration again over tables \
+    that already exist";
+
 impl DataRights for KernelDataRights {
     fn declaration(&self) -> Result<Declaration, DataRightsError> {
-        Declaration::new(KERNEL_CONTEXT, Vec::new())
+        let mut reset = Map::new();
+        reset.insert("generation".to_owned(), Value::from(0));
+        Declaration::new(
+            KERNEL_CONTEXT,
+            vec![
+                TableRights {
+                    table: SETTINGS_GENERATION_TABLE,
+                    disposition: Disposition::ResetInPlace { row: reset },
+                },
+                TableRights {
+                    table: SCHEMA_VERSION_TABLE,
+                    disposition: Disposition::Exempt {
+                        reason: SCHEMA_VERSION_EXEMPTION,
+                    },
+                },
+            ],
+        )
     }
 
     fn export<'a>(
         &'a self,
         connection: &'a mut SqliteConnection,
     ) -> PortFuture<'a, Vec<ExportedTable>> {
-        let _ = connection;
-        Box::pin(async { Ok(Vec::new()) })
+        Box::pin(async move {
+            let rows = sqlx::query!(
+                "SELECT id, generation, created_at FROM settings_generation ORDER BY id"
+            )
+            .fetch_all(connection)
+            .await?;
+            Ok(vec![ExportedTable {
+                table: SETTINGS_GENERATION_TABLE,
+                rows: rows
+                    .into_iter()
+                    .map(|row| {
+                        json!({
+                            "id": row.id,
+                            "generation": row.generation,
+                            "created_at": row.created_at,
+                        })
+                    })
+                    .collect(),
+            }])
+        })
     }
 
     fn erase<'a>(&'a self, connection: &'a mut SqliteConnection) -> PortFuture<'a, ()> {
-        let _ = connection;
-        Box::pin(async { Ok(()) })
+        Box::pin(async move {
+            // The declared reset row: the generation back to 0, the row itself kept.
+            sqlx::query!("UPDATE settings_generation SET generation = 0 WHERE id = 1")
+                .execute(connection)
+                .await?;
+            Ok(())
+        })
     }
 }

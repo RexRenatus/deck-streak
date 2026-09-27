@@ -1,7 +1,7 @@
 //! The repository base: the one place a `SQLite` connection is configured and opened (SPEC-020
 //! R15 to R19; ADR-008).
 //!
-//! [`Db::open`] opens DeckStreak's database with `journal_mode=WAL`, `synchronous=NORMAL`,
+//! [`Db::open`] opens the service's own database with `journal_mode=WAL`, `synchronous=NORMAL`,
 //! `foreign_keys=ON` and a busy timeout of [`DB_BUSY_TIMEOUT_MS`], the predecessor's pragmas
 //! (`database.py:GamifyStore.connect` at `27ee2bc`), then applies the embedded migrations before
 //! it returns. Every write goes through [`Db::write`], which begins with `BEGIN IMMEDIATE`, so two
@@ -11,16 +11,19 @@
 //! connect options or a pool (the ledger-sqlite pack's `connect-options-in-one-place`).
 
 use std::path::Path;
+use std::time::Duration;
 
 use sqlx::migrate::Migrator;
-use sqlx::sqlite::{SqliteConnectOptions, SqlitePool, SqlitePoolOptions};
+use sqlx::sqlite::{
+    SqliteConnectOptions, SqliteJournalMode, SqlitePool, SqlitePoolOptions, SqliteSynchronous,
+};
 use sqlx::{Sqlite, SqliteConnection, Transaction};
 
 use crate::error::KernelError;
 
 /// How long a connection waits for a lock before it gives up: the predecessor's
 /// `database.py:DB_BUSY_TIMEOUT_MS`.
-pub const DB_BUSY_TIMEOUT_MS: u64 = 0;
+pub const DB_BUSY_TIMEOUT_MS: u64 = 30_000;
 
 /// The connections a pool keeps: enough for one owner's traffic, few enough that each one's page
 /// cache stays inside a small host's memory budget.
@@ -30,7 +33,7 @@ pub const MAX_CONNECTIONS: u32 = 4;
 /// (ADR-020). `build.rs` makes the kernel rebuild when a migration is added.
 pub static MIGRATOR: Migrator = sqlx::migrate!("../../migrations");
 
-/// DeckStreak's own database: WAL, foreign keys, the busy timeout, and every migration applied.
+/// The service's own database: WAL, foreign keys, the busy timeout, and every migration applied.
 #[derive(Clone, Debug)]
 pub struct Db {
     pool: SqlitePool,
@@ -54,14 +57,18 @@ impl Db {
     ///
     /// As [`Db::open`].
     pub async fn open_with(path: &Path, migrator: &Migrator) -> Result<Self, KernelError> {
-        let _ = migrator;
         let options = SqliteConnectOptions::new()
             .filename(path)
-            .create_if_missing(true);
+            .create_if_missing(true)
+            .journal_mode(SqliteJournalMode::Wal)
+            .synchronous(SqliteSynchronous::Normal)
+            .foreign_keys(true)
+            .busy_timeout(Duration::from_millis(DB_BUSY_TIMEOUT_MS));
         let pool = SqlitePoolOptions::new()
             .max_connections(MAX_CONNECTIONS)
             .connect_with(options)
             .await?;
+        migrator.run(&pool).await?;
         Ok(Self { pool })
     }
 
@@ -72,7 +79,12 @@ impl Db {
     ///
     /// [`KernelError::Database`] when the file does not exist or cannot be opened.
     pub async fn open_foreign_read_only(path: &Path) -> Result<ForeignDb, KernelError> {
-        let options = SqliteConnectOptions::new().filename(path);
+        // No journal mode is set, so the file keeps the one its own program chose.
+        let options = SqliteConnectOptions::new()
+            .filename(path)
+            .read_only(true)
+            .pragma("query_only", "ON")
+            .busy_timeout(Duration::from_millis(DB_BUSY_TIMEOUT_MS));
         let pool = SqlitePoolOptions::new()
             .max_connections(MAX_CONNECTIONS)
             .connect_with(options)
@@ -88,7 +100,7 @@ impl Db {
     ///
     /// [`KernelError::Database`] when the write lock is not granted within the busy timeout.
     pub async fn write(&self) -> Result<Transaction<'static, Sqlite>, KernelError> {
-        Ok(self.pool.begin().await?)
+        Ok(self.pool.begin_with("BEGIN IMMEDIATE").await?)
     }
 
     /// The pool reads run on. A write never runs here: it goes through [`Db::write`].
@@ -103,7 +115,11 @@ impl Db {
     ///
     /// [`KernelError::Database`] when the read fails.
     pub async fn settings_generation(&self) -> Result<i64, KernelError> {
-        Ok(0)
+        let generation =
+            sqlx::query_scalar!("SELECT generation FROM settings_generation WHERE id = 1")
+                .fetch_one(&self.pool)
+                .await?;
+        Ok(generation)
     }
 
     /// Increments the owner-config generation inside the caller's write, the one that changed a
@@ -115,8 +131,13 @@ impl Db {
     pub async fn bump_settings_generation(
         write: &mut SqliteConnection,
     ) -> Result<i64, KernelError> {
-        let _ = write;
-        Ok(0)
+        let generation = sqlx::query_scalar!(
+            "UPDATE settings_generation SET generation = generation + 1 WHERE id = 1 \
+             RETURNING generation"
+        )
+        .fetch_one(write)
+        .await?;
+        Ok(generation)
     }
 
     /// Closes the pool, waiting for its connections to finish.

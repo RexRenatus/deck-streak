@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE settings_generation SET generation = 0 WHERE id = 1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": []
+  },
+  "hash": "f2c5f29b16201e7bddedd28502abfdce97c5d2af097027bf9b9757519b78abcb"
+}
