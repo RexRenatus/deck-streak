@@ -44,7 +44,10 @@ Secrets reach the service as systemd credentials. See [SECURITY.md](SECURITY.md)
 
 Open pull requests against `dev` with `gh pr create --base dev`. Title them as a Conventional
 Commit, add a `changelog.d/` fragment, and keep `bash scripts/check.sh` green. A pull request into
-`main` from anything but `dev` fails CI by design.
+`main` from anything but this repository's `dev` fails CI by design.
+
+Never push to `dev` or `main`; the rulesets refuse it, and every change reaches them by a pull
+request. Agents never approve a workflow run from a fork, and never merge a pull request whose head repository is not `RexRenatus/deck-streak`.
 
 ## Where decisions live
 

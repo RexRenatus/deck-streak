@@ -96,15 +96,19 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
-      - name: a pull request into main comes from dev
+      - name: a pull request into main comes from this repository's dev
         env:
           EVENT: ${{ github.event_name }}
           BASE: ${{ github.base_ref }}
           HEAD: ${{ github.head_ref }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          REPO: ${{ github.repository }}
         run: |
-          if [ "$EVENT" = "pull_request" ] && [ "$BASE" = "main" ] && [ "$HEAD" != "dev" ]; then
-            echo "base-is-dev: a pull request into main must come from dev (it comes from '$HEAD'). Open it against dev: gh pr create --base dev"
-            exit 1
+          if [ "$EVENT" = "pull_request" ] && [ "$BASE" = "main" ]; then
+            if [ "$HEAD" != "dev" ] || [ "$HEAD_REPO" != "$REPO" ]; then
+              echo "base-is-dev: a pull request into main must come from $REPO's dev (it comes from '$HEAD_REPO:$HEAD'). Open it against dev: gh pr create --base dev"
+              exit 1
+            fi
           fi
           echo "base-is-dev: ok ($EVENT into '${BASE:-push}')"
 

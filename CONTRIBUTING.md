@@ -9,7 +9,10 @@ travels from an idea to a release.
   merge commit, and every release is tagged there. It is the branch visitors see.
 - `dev` receives every other pull request. Open every pull request against `dev`:
   `gh pr create --base dev`.
-- A pull request into `main` whose head is not `dev` fails the `base-is-dev` check by design.
+- A pull request into `main` whose head is not this repository's `dev` fails the `base-is-dev`
+  check by design, whatever a fork names its branch.
+- Nothing is merged from `main` back into `dev`, and a hotfix is a pull request into `dev` like any
+  other change ([RELEASING.md](RELEASING.md)).
 - Nobody force-pushes or deletes either branch; required checks, not reviews, are the bar.
 
 ## Proposing a change
@@ -22,6 +25,13 @@ travels from an idea to a release.
 
 Outside contributions are welcome; for anything larger than a fix, open an issue first so the
 change can be specified before it is written.
+
+### Pull requests from forks
+
+A workflow run from a fork waits for a maintainer's approval, and the required checks count only
+when GitHub Actions produced them. An accepted outside contribution is re-landed by the maintainer
+from a branch of this repository, keeping its author's credit; the fork's pull request is then
+closed with a link to the one that landed. Agents never approve a workflow run from a fork, and never merge a pull request whose head repository is not `RexRenatus/deck-streak`.
 
 ## Running the checks
 
