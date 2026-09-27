@@ -59,3 +59,11 @@ The durable-services, rust-service, observability and release-ops rows over `dep
 ## More Information
 
 docs/schematics/deployment.md; the private deploy rail design in the maintainer's private operations notes; ADR-007; ADR-015.
+
+**Superseded in part by ADR-038.** ADR-038 replaces this ADR's credential storage: no credential is
+stored on the host with `systemd-creds encrypt` or loaded with `LoadCredentialEncrypted=`. Each unit
+loads each credential at every start as `LoadCredential=<id>:/run/deck-streak-credentials/socket`,
+fed from the secret manager by the private rail's fetch helper, so no value is ever written to the
+host's disk; the first item under "What would make this wrong" gives way to ADR-038's own (a systemd
+that cannot load a credential from a socket). The rest of this ADR stands: the units per role, the
+hardening, the budget, the deploy from a tag, the rollback and the backups.

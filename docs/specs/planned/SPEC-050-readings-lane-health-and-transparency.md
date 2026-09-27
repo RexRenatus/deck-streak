@@ -2,8 +2,9 @@
 
 - **Wave:** W1. **Issue:** #36 (epic #2). **Context(s):** `deck-streak-readings` (the verdict, the triage, the census); `deck-streak-coordination` (the check and its pages); `deck-streak-api` and the Mini App (the status panel).
 - **Decided by:** ADR-012 (the parity oracle, and `diverges` for an intended difference), ADR-019
-  (the last sync, not the file's age, decides; an absent owner is a pause), and ADR-050 (pages through
-  the router, once per state and study day, and the status panel).
+  (the last sync, not the file's age, decides; an absent owner is a pause), ADR-054 (an absent AI
+  route is shown as not enabled, never as a failure, and never pages), and ADR-050 (pages through the
+  router, once per state and study day, and the status panel).
 - **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
   `docs/specs/` with its tests and `docs/red-first/SPEC-050.md` (ADR-016).
 
@@ -39,7 +40,8 @@ R1. The health verdict is a pure function of the evidence it is given: whether t
     `armed_and_refusing` (no recent reading and a refusing topic). The window is 1 study day
     (`preread_health.py:FRESHNESS_WINDOW_DAYS`). It equals the golden of `preread_health.py:verdict`,
     with the predecessor's schema version mapped to "installed".
-R2. `could_not_tell` and `failed` topics refuse; `no_new_cards` and `paused` never do.
+R2. `could_not_tell` and `failed` topics refuse; `no_new_cards`, `paused` and `ai_route_absent` never
+    do.
 R3. Every could-not-tell reason has exactly one class, `rail_broken` or `config_fault` (SPEC-045's
     closed map), and a test over the reason enum proves the partition total. The mapping equals the
     golden of `undetermined_triage.py:classify_undetermined` for every reason both systems have.
@@ -62,6 +64,11 @@ R8. There is no spend cap; the panel's cost is information, and the agent's per-
     safety bound.
 R9. No identifier this delivery declares in the readings context says `lane` (the lexicon's lock for
     `topic`); the verdict is `ReadingsHealth`.
+R10. The route comes first (ADR-054): with the AI route absent, the check reports `not_enabled` in
+    place of the golden verdict, raises no alert from the generation or the hourly watch, and counts
+    no `ai_route_absent` topic as a refusal. The status route carries the route (`absent`, or the
+    configured adapter), and the status screen says "Readings are not enabled" rather than showing a
+    failure. A configured route that fails keeps every page of R4.
 
 ## 3. Acceptance criteria
 
@@ -77,6 +84,8 @@ R9. No identifier this delivery declares in the readings context says `lane` (th
 | A8 | the status screen shows the last run, each topic's state and thirty days of attempts, tokens and estimated cost | `shows the last run, the state of every topic and thirty days of cost` |
 | A9 | the census equals the golden of `preread_census.py:classify`, and a failed read is `unmeasured` | `the_root_census_matches_the_parity_golden` |
 | A10 | a page's payload carries no topic key, deck name or path (planted names refused) | `a_page_names_no_topic_deck_or_path` |
+| A11 | with the route absent, the check reports `not_enabled`, and neither the generation nor the hourly watch raises an alert however many nights pass | `an_absent_route_is_not_enabled_and_never_pages` |
+| A12 | with the route absent, the status screen says "Readings are not enabled" and shows no failure | `says readings are not enabled when the route is absent` |
 
 ```acceptance
 A1: cargo test -p deck-streak-readings --test health -- --exact the_health_verdict_matches_the_parity_golden
@@ -89,6 +98,8 @@ A7: cargo test -p deck-streak-api --test readings_status -- --exact the_status_r
 A8: pnpm exec vitest run web/app/src/routes/readings/status/status.test.ts -t "shows the last run, the state of every topic and thirty days of cost"
 A9: cargo test -p deck-streak-readings --test census -- --exact the_root_census_matches_the_parity_golden
 A10: cargo test -p deck-streak-coordination --test readings_health -- --exact a_page_names_no_topic_deck_or_path
+A11: cargo test -p deck-streak-coordination --test readings_health -- --exact an_absent_route_is_not_enabled_and_never_pages
+A12: pnpm exec vitest run web/app/src/routes/readings/status/status.test.ts -t "says readings are not enabled when the route is absent"
 ```
 
 ## 4. File manifest
@@ -102,7 +113,7 @@ A10: cargo test -p deck-streak-coordination --test readings_health -- --exact a_
 | `crates/readings/tests/health.rs` | `deck-streak-readings` | added |
 | `crates/readings/tests/triage.rs` | `deck-streak-readings` | added |
 | `crates/readings/tests/census.rs` | `deck-streak-readings` | added |
-| `crates/coordination/src/readings/health.rs` | `deck-streak-coordination` | added: the evidence, the check, the pages |
+| `crates/coordination/src/readings/health.rs` | `deck-streak-coordination` | added: the evidence, the check, the pages, and `not_enabled` for an absent route |
 | `crates/coordination/src/readings/status.rs` | `deck-streak-coordination` | added: the status view |
 | `crates/coordination/src/liveness.rs` | `deck-streak-coordination` | changed: the hourly watch runs the readings check |
 | `crates/coordination/tests/readings_health.rs` | `deck-streak-coordination` | added |

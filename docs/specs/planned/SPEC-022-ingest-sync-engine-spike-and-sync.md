@@ -1,7 +1,7 @@
 # SPEC-022: a measured spike settles the Anki engine, and ingest syncs a private copy that never uploads
 
 - **Wave:** W0. **Issue:** #15 (epic #1). **Context(s):** `deck-streak-ingest`, `deck-streak-coordination` (the sync cycle use case).
-- **Decided by:** ADR-009 (the engine, proposed until this spike), ADR-008 (the private copy, read-only reads), ADR-010 (credentials), ADR-012 (goldens), ADR-018 (licence compatibility), and this SPEC's ADR-022 (the spike's fixed protocol and budgets).
+- **Decided by:** ADR-009 (the engine, proposed until this spike), ADR-008 (the private copy, read-only reads), ADR-037 (one scheduled sync per study day plus the owner's triggers, and never an upload), ADR-038 (credentials from the secret manager at unit start, superseding ADR-010's storage), ADR-012 (goldens), ADR-018 (licence compatibility), and this SPEC's ADR-022 (the spike's fixed protocol and budgets).
 - **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
   `docs/specs/` with its tests and `docs/red-first/SPEC-022.md` (ADR-016).
 
@@ -25,6 +25,12 @@
   bounded code, never exception text; `sync.py:classify_open_error` retries only a locked
   collection (`COLLECTION_OPEN_RETRIES`). The cadence is 15 minutes plus once before each
   notification job.
+- **DeckStreak's rule is not the predecessor's cadence (ADR-037).** DeckStreak reuses the
+  predecessor's Anki login, which the owner approved at gate 6 on testable conditions: no upload
+  path, proven against a server that records every request, and at most one scheduled sync per study
+  day plus the owner's explicit triggers, so DeckStreak never contends with the predecessor's sync or
+  loads the owner's server. The scheduled sync runs once per study day, at the rollover hour, minute
+  7 (SPEC-027); the owner's trigger is the bot's `/sync` (SPEC-026); no other job syncs.
 - **What the parity oracle proves.** The retry schedule, against `goldens/sync_retry.json` (an
   adapter over `pipeline.py:GamifyPipeline._sync_attempts` with a failing stub syncer, a recording
   sleep and a fixed jitter draw); the constants, against `goldens/sync.constants.json`. Both are
@@ -72,8 +78,8 @@ R5. `ingest::Syncer` syncs a private copy of the collection from the configured 
 R6. A normal sync is incremental. When the server demands a full sync, the copy is replaced by a
     full DOWNLOAD, written beside the copy and swapped in only when complete. When the server holds
     no collection (a full upload would be needed), the sync is refused with `full_upload_required`
-    and the local copy is left as it was. No DeckStreak code path uploads a collection; the one
-    write back to Anki is the skip day, which is not built here.
+    and the local copy is left as it was. No DeckStreak code path uploads a collection or sends a
+    local change (R14); the skip day, the predecessor's one write back to Anki, is not built here.
 R7. Every sync, a full download and every open of the copy holds the collection lock
     (`<state directory>/collection.lock`, an exclusive `flock` for a sync, shared for a read),
     released by an explicit unlock before the file closes; a second sync waits for the first and
@@ -88,17 +94,41 @@ R9. A failed sync ends in one reason code from a closed set: `missing_credential
     `full_upload_required`, `collection_locked`, `open_failed`, `engine_failed`. No error text,
     path, endpoint or credential is stored or logged with it.
 R10. Each sync records one `sync_runs` row (`migrations/002201_ingest_sync_runs.sql`, `STRICT`,
-    `created_at`): when it started and finished, `ok` or `error`, the reason code, the attempts used
-    and whether it was a full download. `ingest` exposes the count of consecutive failures and the
-    instant of the last success, which the scheduler's alerting and the dead-man watch read
-    (SPEC-027). The change gate adds `skipped` rows (SPEC-023).
-R11. `coordination::sync_cycle` is the one use case that runs a sync and records it; the scheduler's
-    sync job and every notification job call it (SPEC-027).
+    `created_at`): when it started and finished, its `trigger` (`scheduled` or `owner`, held by a
+    `CHECK`, R16), `ok` or `error`, the reason code, the attempts used and whether it was a full
+    download. `ingest` exposes the count of consecutive failures, the instant of the last success,
+    and the study day's sync outcome (whether a sync that started in a given study day succeeded,
+    with its trigger). The scheduler's alerting and the dead-man watch read the first two
+    (SPEC-027); the jobs that need the study day's data read the outcome instead of syncing
+    (ADR-037). The change gate adds `skipped` rows, each with its cycle's trigger (SPEC-023).
+R11. `coordination::sync_cycle` is the one use case that runs a sync and records it. The scheduler's
+    daily `sync` job and the owner's `/sync` call it (SPEC-027, SPEC-026); no other job does
+    (ADR-037).
 R12. `ingest` implements the data-rights port: `sync_runs` is exported and erased. The table is
     registered in docs/CONTEXT-MAP.md's register of DeckStreak's own tables.
 R13. An endpoint whose scheme is `http:` sends the credential in the clear: the service logs one WARN
     at start naming the setting, never its value, and the transport is the owner's decision
     (docs/OWNER-SETUP.md).
+
+The cadence and the no-upload census (ADR-037)
+
+R14. The no-upload census: a recording fake sync server (the in-process sync server behind a layer
+    that keeps every request) drives every sync scenario: a normal sync, a sync with nothing new, a
+    full-sync demand and an empty server. It fails the test on any full-upload request and on any
+    request that carries a local change. On a full-sync demand the client downloads, or refuses with
+    `full_upload_required` when the server holds no collection (R6); it never uploads, in any
+    scenario.
+R15. A scheduled sync runs at most once per study day (the kernel's study day, SPEC-020), and a
+    second is refused before any request, recording no row. Once SPEC-027 lands, the claim that
+    holds this is its cron-fire ledger's: the `sync` job's fire is claimed per study day before the
+    sync is asked for. Until then the refusal reads `sync_runs` (a `scheduled` row that started in
+    the same study day), and that check remains the syncer's own guard afterwards.
+R16. `sync_runs` records each run's trigger: `scheduled` for the scheduler's daily `sync` job, and
+    `owner` for the owner's explicit trigger (the bot's `/sync`, SPEC-026, and any later Mini App
+    action that names itself one).
+R17. An owner trigger less than `OWNER_SYNC_DEBOUNCE_SECS` (300, ADR-037's 5 minutes) after a
+    successful sync finished returns that sync's result without syncing: no request and no row. A
+    later owner trigger syncs like any run, under the collection lock (R7).
 
 ## 3. Acceptance criteria
 
@@ -118,6 +148,9 @@ R13. An endpoint whose scheme is `http:` sends the credential in the clear: the 
 | A12 | a second sync waits for the collection lock and never overlaps the first | `lock` test |
 | A13 | the ingest port declares `sync_runs` exported and erased | `data_rights` test |
 | A14 | a missing sync endpoint refuses start by name | `settings` test |
+| A15 | a recording fake sync server sees no full-upload request and no request carrying a local change in any scenario: a normal sync, nothing new, a full-sync demand, an empty server | `sync` test against the recording server |
+| A16 | a second scheduled sync in one study day is refused before any request, and the first is recorded with the trigger `scheduled` | `sync` test on a manual clock |
+| A17 | an owner trigger less than 5 minutes after a successful sync returns that result with no request and no row, and one after 5 minutes syncs and is recorded with the trigger `owner` | `sync` test on a manual clock |
 
 ```acceptance
 A1: python3 -m unittest discover -s scripts/tests -p test_engine_spike_record.py -k adr_009_records_the_measured_numbers_and_a_final_status
@@ -134,12 +167,18 @@ A11: cargo test -p deck-streak-ingest --test retry -- --exact a_failed_sync_reco
 A12: cargo test -p deck-streak-ingest --test lock -- --exact a_second_sync_waits_for_the_collection_lock_and_never_overlaps
 A13: cargo test -p deck-streak-ingest --test data_rights -- --exact the_ingest_port_declares_sync_runs_exported_and_erased
 A14: cargo test -p deck-streak-ingest --test settings -- --exact a_missing_sync_endpoint_refuses_start_by_name
+A15: cargo test -p deck-streak-ingest --test sync -- --exact a_sync_run_sends_no_upload_and_no_local_change
+A16: cargo test -p deck-streak-ingest --test sync -- --exact a_second_scheduled_sync_in_one_study_day_is_refused
+A17: cargo test -p deck-streak-ingest --test sync -- --exact an_owner_trigger_within_five_minutes_of_a_success_returns_it_without_syncing
 ```
 
 The sync tests run the engine's own sync server in process on a loopback port, with a synthetic
 user and a synthetic collection built by `crates/ingest/tests/support/synthetic.rs`; nothing
-reaches the owner's server. The budget tests build ADR-022's collection with bulk inserts, so they
-finish in about a minute; they run in the gate like every other test.
+reaches the owner's server. A15 puts a recording layer in front of that server
+(`crates/ingest/tests/support/recording.rs`) that keeps every request and fails the test on an
+upload or a local change; A16 and A17 run on a manual clock. The budget tests build ADR-022's
+collection with bulk inserts, so they finish in about a minute; they run in the gate like every
+other test.
 
 ## 4. File manifest
 
@@ -148,18 +187,19 @@ finish in about a minute; they run in the gate like every other test.
 | `crates/ingest/Cargo.toml` | `deck-streak-ingest` | changed: `anki` (git, pinned tag), kernel, tokio, thiserror, tracing; dev: tempfile, tokio (the tests' and the probe's runtime), serde, serde_json |
 | `crates/ingest/src/lib.rs` | `deck-streak-ingest` | changed |
 | `crates/ingest/src/engine.rs` | `deck-streak-ingest` | added: the `AnkiEngine` port and its adapter over the engine |
-| `crates/ingest/src/sync.rs` | `deck-streak-ingest` | added: `Syncer`, retries, the reason codes |
+| `crates/ingest/src/sync.rs` | `deck-streak-ingest` | added: `Syncer`, retries, the reason codes, the per-study-day refusal and the owner debounce |
 | `crates/ingest/src/lock.rs` | `deck-streak-ingest` | added: the collection lock |
-| `crates/ingest/src/sync_runs.rs` | `deck-streak-ingest` | added: the record, consecutive failures, last success |
+| `crates/ingest/src/sync_runs.rs` | `deck-streak-ingest` | added: the record with its trigger, consecutive failures, last success, the study day's outcome |
 | `crates/ingest/src/settings.rs` | `deck-streak-ingest` | added: endpoint and paths |
 | `crates/ingest/src/data_rights.rs` | `deck-streak-ingest` | added |
 | `crates/ingest/examples/engine_probe.rs` | `deck-streak-ingest` | added: the binary the size budget measures |
-| `crates/ingest/tests/engine_budget.rs`, `crates/ingest/tests/sync.rs`, `crates/ingest/tests/retry.rs`, `crates/ingest/tests/lock.rs`, `crates/ingest/tests/data_rights.rs`, `crates/ingest/tests/settings.rs` | `deck-streak-ingest` | added: A2 to A14 |
+| `crates/ingest/tests/engine_budget.rs`, `crates/ingest/tests/sync.rs`, `crates/ingest/tests/retry.rs`, `crates/ingest/tests/lock.rs`, `crates/ingest/tests/data_rights.rs`, `crates/ingest/tests/settings.rs` | `deck-streak-ingest` | added: A2 to A17 |
 | `crates/ingest/tests/support/synthetic.rs`, `crates/ingest/tests/support/mod.rs` | `deck-streak-ingest` | added: the seeded synthetic collection and the local sync server |
+| `crates/ingest/tests/support/recording.rs` | `deck-streak-ingest` | added: the recording layer the no-upload census runs through |
 | `crates/coordination/Cargo.toml`, `crates/coordination/src/lib.rs`, `crates/coordination/src/sync_cycle.rs` | `deck-streak-coordination` | added or changed: the sync cycle use case |
-| `migrations/002201_ingest_sync_runs.sql` | `deck-streak-ingest` | added |
+| `migrations/002201_ingest_sync_runs.sql` | `deck-streak-ingest` | added: `sync_runs`, its `trigger` checked to `scheduled` or `owner` |
 | `.sqlx/` | workspace | changed |
-| `Cargo.toml`, `Cargo.lock` | workspace | changed: `anki` admitted by ADR-022 |
+| `Cargo.toml`, `Cargo.lock` | workspace | changed: `anki` admitted by ADR-022; `libsqlite3-sys` held at a version the engine and the kernel both accept (§7) |
 | `deny.toml` | workspace | changed: `allow-git` for Anki's repository and the fork its engine pins; any compatible licence the engine needs; the engine's advisories, each by id and reason (§7) |
 | `.github/workflows/engine-measure.yml` | repo | added: the cold-build and size measurement |
 | `.github/workflows/ci.yml` | repo | changed: the gate job installs the protobuf compiler the engine's build needs (§7) |
@@ -179,14 +219,16 @@ finish in about a minute; they run in the gate like every other test.
 ## 5. What this does NOT do
 
 - It reads no review or card from the copy and runs no change gate (#16).
-- It schedules nothing and pages nobody: the sync job, the failure alert and the dead-man watch are
-  the scheduler's (#20).
+- It schedules nothing and pages nobody: the daily sync job, the failure alert and the dead-man
+  watch are the scheduler's (#20).
 - It resolves no day set for the readings, though the spike measures the queue call they will use
   (#31).
-- It writes nothing back to Anki; the skip day is the only write and is built in W3
-  (#108).
+- It writes nothing back to Anki, ever. The predecessor's one write, the skip day, is recorded in
+  DeckStreak's own database instead and never reaches the collection (ADR-037, #108).
 - It copies no predecessor database: the v9 import is W8's (#61).
 - It provisions no credential on the host (#41).
+- It raises no sync cadence: one scheduled sync per study day holds until cutover decides otherwise
+  (#164).
 
 ## 6. Risks
 
@@ -203,6 +245,12 @@ finish in about a minute; they run in the gate like every other test.
 - **A full download fills the disk.** The download is written beside the copy before the swap, so
   it needs one collection's worth of free space; the host's disk headroom is the host inventory's (#40),
   and a failed write ends in `engine_failed` with the old copy intact.
+- **One sync a day makes a failed sync cost the day's data.** Its retries belong to its one run
+  (R8); the jobs that read the study day then record `sync_failed` (ADR-037), SPEC-027 pages on the
+  failure transitions, and the owner's `/sync` recovers the day, followed by a regeneration
+  (SPEC-048).
+- **An engine upgrade changes the requests a sync sends.** The tag is pinned (R1), so an upgrade is a
+  deliberate delivery, and it reruns the census (A15) against the recording server before it merges.
 
 ## 7. Amendments at delivery
 
@@ -222,3 +270,8 @@ finish in about a minute; they run in the gate like every other test.
   gate's clippy and test stages build the engine, so the gate job installs the same `protoc` the
   measurement does, and the toolchain stage names it, so a machine without it fails there by name
   rather than deep inside a build script.
+- **`Cargo.lock`: one bundled SQLite for the workspace.** A dependency graph may hold one crate
+  that links the native `sqlite3`. The engine's `rusqlite` 0.36 accepts only `libsqlite3-sys`
+  0.34, and the kernel's `sqlx` 0.9 accepts 0.30.1 up to 0.37, so the lockfile holds 0.34.0, which
+  both declare they accept (dev had locked 0.37.0). An upgrade of either must keep one version
+  both accept.

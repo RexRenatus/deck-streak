@@ -58,3 +58,11 @@ The subscription-proxy pack's client rows (vendored) over `agent/`; the ai-conte
 ## More Information
 
 The subscription-proxy pack; the ai-content-safety pack; the second brain's plan (private); ADR-010.
+
+**Amended by ADR-054.** The proxy is one adapter of an optional AI route, not a precondition. The
+route is `Absent` unless configured, and no-AI mode is the default and a first-class path: each duty
+records `ai_route_absent` without an alert or a retry, the digest goes out in its deterministic form
+with no coaching line and no "unavailable" line, and the first deploy needs no device key, no tunnel
+and no proxy. The runner decided here is the `Proxy` adapter, unchanged, and its fail-closed rule
+and single alert still apply to a configured route that fails. An `ApiKey` adapter would follow an
+amendment of this ADR; the choice between the subscription and an API key is the owner's.

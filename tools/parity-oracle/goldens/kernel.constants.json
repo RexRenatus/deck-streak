@@ -1,0 +1,62 @@
+{
+  "cases": [
+    {
+      "input": {
+        "name": "constants.DEFAULT_ROLLOVER_HOUR"
+      },
+      "output": 4
+    },
+    {
+      "input": {
+        "name": "constants.DEFAULT_DIGEST_HOUR"
+      },
+      "output": 9
+    },
+    {
+      "input": {
+        "name": "logging_redact._REDACTED"
+      },
+      "output": "***REDACTED***"
+    },
+    {
+      "input": {
+        "name": "logging_redact._TELEGRAM_TOKEN_RE.pattern"
+      },
+      "output": "\\d{6,}:[A-Za-z0-9_-]{30,}"
+    },
+    {
+      "input": {
+        "name": "logging_redact._MIN_SECRET_LEN"
+      },
+      "output": 4
+    },
+    {
+      "input": {
+        "name": "offload.OFFLOAD_MAX_WORKERS"
+      },
+      "output": 1
+    },
+    {
+      "input": {
+        "name": "offload.SLOW_OFFLOAD_MS"
+      },
+      "output": 1000
+    },
+    {
+      "input": {
+        "name": "database.DB_BUSY_TIMEOUT_MS"
+      },
+      "output": 30000
+    }
+  ],
+  "function": "kernel.constants",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "constants",
+  "registry": "tools/parity-oracle/registry/spec_020.py",
+  "registry_sha256": "d52ea86a9eebf02d6ca6cdcc2223a97f1a5acf8d57378b6ca434020c1a3907d8",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

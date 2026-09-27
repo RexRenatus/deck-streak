@@ -5,18 +5,20 @@ ADR-019, docs/schematics/streaks-and-governor-state-machine.md), at the predeces
 (`pipeline_layers/preread.py:PreReadLayer.run_preread_generation`, `reading_notes.py:roll_forward`,
 `preread_tracking.py:is_studied`, `undetermined_triage.py:classify_undetermined`), and at the packs
 vendored from `19bb0f3` (nudge-duties' comeback template, study-duties' daily reading). Added by
-SPEC-045; SPEC-046 to SPEC-053 act on it.
+SPEC-045; SPEC-046 to SPEC-053 act on it. The nightly run reads the study day's sync and never syncs
+(ADR-037), and an absent AI route is a state of its own (ADR-054).
 
 ## 1. A topic's end state for one study day
 
-Every topic of the taxonomy ends each study day in exactly one of five states (SPEC-045 R5). A
+Every topic of the taxonomy ends each study day in exactly one of six states (SPEC-045 R5). A
 could-not-tell state (the predecessor's "undetermined") carries its class and a closed reason; a
 failed state carries a closed reason.
 
 ```mermaid
 stateDiagram-v2
   [*] --> Gates: the generation job fires, or the owner taps Regenerate
-  Gates --> CouldNotTell: the last sync failed (rail_broken, sync_failed)
+  Gates --> AiRouteAbsent: no AI route is configured (ADR-054), checked first
+  Gates --> CouldNotTell: the nightly run finds the study day's sync did not succeed, or a tap finds the last sync failed (rail_broken, sync_failed)
   Gates --> Paused: nightly only, no qualifying review on the two study days before
   Gates --> Resolving: the sync succeeded, and the owner studied or tapped
   Resolving --> CouldNotTell: locked, open failed or resolve timeout (rail_broken); taxonomy missing or fetch saturated (config_fault)
@@ -24,12 +26,13 @@ stateDiagram-v2
   Resolving --> Ready: the digest equals the last ready reading's, so that reading is carried
   Resolving --> Generating: a new day set, under the topic's lock
   Generating --> Ready: every gate green on the first attempt or on the one repair
-  Generating --> Failed: the repair fails too (gate_failed), the agent is unavailable (agent_unavailable), or the seed or form is refused before any call
+  Generating --> Failed: the repair fails too (gate_failed), a configured route's agent is unavailable (agent_unavailable), or the seed or form is refused before any call
   Ready --> [*]
   NoNewCards --> [*]
   CouldNotTell --> [*]
   Paused --> [*]
   Failed --> [*]
+  AiRouteAbsent --> [*]
 ```
 
 | state | written | pages | the Mini App says |
@@ -40,6 +43,7 @@ stateDiagram-v2
 | CouldNotTell, config_fault | nothing | once per study day | the configuration's words |
 | Paused | nothing | never | "Paused after two days without study" |
 | Failed | an attempt row with its reason | through the health verdict | the closed reason |
+| AiRouteAbsent | the state only, no attempt | never | "Readings are not enabled" |
 
 ## 2. A reading, from its first generation
 

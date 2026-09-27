@@ -91,6 +91,10 @@ The measured numbers are ADR-009's Confirmation. What admitting the engine took:
   (RUSTSEC-2025-0094), `unic-ucd-version` (RUSTSEC-2025-0098), `rustls-pemfile`
   (RUSTSEC-2025-0134) and `bincode` (RUSTSEC-2025-0141). The sidecar would run the same engine
   with the same crates, so they do not separate the two options; an engine upgrade re-reads them.
+- **One bundled SQLite for the workspace.** A dependency graph may hold one crate that links the
+  native `sqlite3`. The engine's `rusqlite` 0.36 accepts only `libsqlite3-sys` 0.34 and the kernel's
+  `sqlx` 0.9 accepts 0.30.1 up to 0.37, so the lockfile holds 0.34.0, which both accept. An upgrade
+  of either keeps one version both accept, or it does not resolve.
 - **One build tool: `protoc` 31.1**, the version and archive digest Anki's own build pins, because
   the engine's build scripts compile its protobuf definitions. The measurement installs it inside
   the clock, and the gate job installs it too, because the gate builds the engine.

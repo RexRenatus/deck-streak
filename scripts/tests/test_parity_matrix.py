@@ -29,11 +29,15 @@ def section_rows(title_word):
 
 def contexts():
     fence = re.search(r"```context-map\n(.*?)```", MAP.read_text(encoding="utf-8"), re.S).group(1)
-    return {line.split()[0].removeprefix("deck-streak-") for line in fence.splitlines() if line.strip()}
+    return {
+        line.split()[0].removeprefix("deck-streak-") for line in fence.splitlines() if line.strip()
+    }
 
 
 def manifest_numbers():
-    data = json.loads(MANIFEST.read_text(encoding="utf-8")) if MANIFEST.is_file() else {"issues": {}}
+    data = (
+        json.loads(MANIFEST.read_text(encoding="utf-8")) if MANIFEST.is_file() else {"issues": {}}
+    )
     return {entry["number"] for entry in data["issues"].values()}
 
 
@@ -47,7 +51,11 @@ class ParityMatrixIsComplete(unittest.TestCase):
     def test_every_v9_feature_is_accounted_for_once(self):
         population = [line for line in IDS.read_text(encoding="utf-8").splitlines() if line]
         for fid in examined("predecessor feature ids", population):
-            self.assertEqual(len(self.by_id.get(fid, [])), 1, f"{fid} appears {len(self.by_id.get(fid, []))} times")
+            self.assertEqual(
+                len(self.by_id.get(fid, [])),
+                1,
+                f"{fid} appears {len(self.by_id.get(fid, []))} times",
+            )
         self.assertEqual(sorted(self.by_id), sorted(population))
 
     def test_every_exclusion_carries_its_reason(self):
@@ -70,12 +78,16 @@ class ParityMatrixIsComplete(unittest.TestCase):
             cited = [int(n) for n in re.findall(r"#(\d+)", row[6])]
             self.assertTrue(cited, f"{row[0]} names no issue")
             for number in cited:
-                self.assertIn(number, numbers, f"{row[0]} names #{number}, which is not in the manifest")
+                self.assertIn(
+                    number, numbers, f"{row[0]} names #{number}, which is not in the manifest"
+                )
 
     def test_every_second_brain_feature_is_accounted_for(self):
         rows = section_rows("Appendix B")
         ids = [row[0].strip("`") for row in rows]
-        self.assertEqual(sorted(examined("second-brain rows", ids)), sorted(f"SB-U{n}" for n in range(1, 23)))
+        self.assertEqual(
+            sorted(examined("second-brain rows", ids)), sorted(f"SB-U{n}" for n in range(1, 23))
+        )
         for row in rows:
             self.assertTrue(row[4] == "build" or row[4].startswith("exclude: "), row[0])
 

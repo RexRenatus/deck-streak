@@ -32,6 +32,8 @@ leech in deck-streak-curriculum: hardcard
 | study day | kernel | the day as the scheduler counts it: it turns over at 04:00 local, never at midnight, and every screen shows the server's study day |
 | track | kernel | `language` or `law`: a first-class dimension of XP, streaks and the daily rollup |
 | verdict | kernel | the outcome of a check or a transition, which a caller must match on (`#[must_use]`) |
+| settings generation | kernel | the owner-config generation: one counter, bumped inside every write that changes a runtime setting's value, which the change gate compares |
+| data-rights port | kernel | what every stateful context implements: each of its tables once, with what an export and an erase do to it, and its export and its erase |
 | review | ingest | one answer the owner gave in Anki: a revlog row of type 0 to 3 with ease 1 or more |
 | day set | readings | the new cards Anki's scheduler has queued for today, attributed to topics |
 | topic | readings | one reading subject: a law subject or a language, derived from the deck tree at run time, never hard-coded |

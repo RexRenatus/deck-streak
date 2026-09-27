@@ -1,7 +1,7 @@
 # SPEC-026: the bot long-polls Telegram, answers only the owner, sends valid chunked HTML through one transport, and waits out every 429
 
 - **Wave:** W0. **Issue:** #19 (epic #1). **Context(s):** `deck-streak-bot`, `deck-streak-daemon` (the `bot` role and the delivery marker's wiring).
-- **Decided by:** ADR-003 (frankenstein, tokio), ADR-006 (the bot's owner gate uses the same configured owner id), ADR-007 (no inbound port), ADR-010 (a `Type=notify` unit per role), ADR-025 (the shared lifecycle), and this SPEC's ADR-026 (updates by long polling, not a webhook).
+- **Decided by:** ADR-003 (frankenstein, tokio), ADR-006 (the bot's owner gate uses the same configured owner id), ADR-007 (no inbound port), ADR-010 (a `Type=notify` unit per role), ADR-025 (the shared lifecycle), ADR-037 (`/sync` is the owner's explicit sync trigger, with its 5-minute debounce), and this SPEC's ADR-026 (updates by long polling, not a webhook).
 - **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
   `docs/specs/` with its tests and `docs/red-first/SPEC-026.md` (ADR-016).
 
@@ -77,8 +77,11 @@ R11. At start the bot registers its commands for the owner's chat only (`setMyCo
     - `/export`: sends the export (`coordination::export_all`, SPEC-021) as a JSON document;
     - `/delete`: asks for confirmation with an inline button, and erases
       (`coordination::erase_all`) only on the owner's confirming callback;
-    - `/sync`: runs a sync cycle now with the rescore flag set (SPEC-023), and answers with the
-      outcome.
+    - `/sync`: the owner's explicit sync trigger (ADR-037), and at W0 the only sync besides the
+      daily scheduled one: it runs a sync cycle now with the trigger `owner` and the rescore flag set
+      (SPEC-023), and answers with the outcome. Less than 5 minutes after a successful sync it
+      contacts no server and answers with that sync's result (SPEC-022's debounce, R17 there); the
+      rescore flag still forces its one recompute.
     `/export` and `/sync` send the `typing` chat action before they work.
 R12. Every message the bot renders at W0 is committed as a golden,
     `crates/bot/tests/messages/<name>.msg.json`, in nudge-duties' envelope `phx.duty.message.v1`
@@ -110,7 +113,7 @@ R14. `.packs/wiring.json` loses the deferrals of `tg-retry-after` and `tg-callba
 | A12 | the delivery marker tells a failed send from a delivered one | `transport` test |
 | A13 | `/export` sends the owner's data as a JSON document | `commands` test |
 | A14 | `/delete` erases only after the owner's confirming callback | `commands` test |
-| A15 | `/sync` runs a cycle now and forces one recompute | `commands` test |
+| A15 | `/sync` runs a cycle now as the owner's trigger and forces one recompute | `commands` test |
 | A16 | every committed golden message parses as the Bot API would parse it | `test_bot_messages.py`; telegram-platform `payload-*` rows |
 
 ```acceptance

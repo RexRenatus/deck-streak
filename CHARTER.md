@@ -81,12 +81,14 @@ ADR before the code, never a builder's call.
 
 ### The AI agent
 
-16. **Claude Code through the owner's subscription proxy, fail closed.** The agent runs on the VM
-    with its own device key, reaches the proxy over a reverse tunnel opened from the maintainer's
-    machine, and never uses an `apiKeyHelper`. Each run is capped in turns and time. When the
-    proxy, the tunnel or the gate fails, the AI step says so and changes nothing: the digest goes
-    out in its deterministic form with a line saying coaching was unavailable, and the vault is
-    untouched. A silent skip is a defect.
+16. **An optional AI route, fail closed (ADR-015, ADR-054).** The AI route is off unless the owner
+    enables one, and DeckStreak is whole without it: every AI duty then records `ai_route_absent`,
+    the surfaces say readings are not enabled, and nothing alerts. When enabled through the owner's
+    subscription proxy, the agent runs on the VM with its own device key, reaches the proxy over a
+    reverse tunnel opened from the maintainer's machine, and never uses an `apiKeyHelper`. Each run
+    is capped in turns and time. When an enabled route, the tunnel or the gate fails, the AI step
+    says so and changes nothing: the digest goes out in its deterministic form with a line saying
+    coaching was unavailable, and the vault is untouched. A silent skip is a defect.
 17. **Every AI output is gated before delivery** by the packs' blocking checks (no dates, the
     scrubber, memory scope, no human claim, the output contract; citations for law). Untrusted
     text (cards, vault notes, the learner's writing) is fenced as data, and an agent reading it

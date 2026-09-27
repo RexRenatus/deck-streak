@@ -4,17 +4,16 @@ Kind: state machine. Read at DeckStreak `main` e05dfa5 (ADR-010, ADR-011,
 `docs/schematics/deployment.md`), and at the predecessor's `27ee2bc` for the semantics it ports
 (`database.py:GamifyStore.claim_cron_fire`, `release_cron_fire`, `record_cron_fire`,
 `scheduler.py:run_startup_catchup`, `pipeline_layers/ops.py:OpsLayer._check_deadman`). Decided by
-ADR-027; built by SPEC-027.
+ADR-027 and ADR-037 (no job syncs first: only `sync` syncs, once per study day, and every other job
+reads the study day's sync outcome); built by SPEC-027.
 
 ```mermaid
 stateDiagram-v2
   [*] --> Scheduled: the job's timer fires (or Persistent= at activation)
-  Scheduled --> Syncing: syncs_first (waits at most SYNC_GUARD_WAIT_SECS for the lock)
-  Scheduled --> Lateness: not syncs_first
-  Syncing --> Lateness: sync done, failed, or skipped (never gates the job)
+  Scheduled --> Lateness: every job (no job syncs first; a job that needs the day's data reads the study day's sync outcome)
   Lateness --> Missed: catch_up and more than CATCHUP_MAX_LATE_MIN late
   Missed --> [*]: record missed (unless evidence says the fire has a verdict), exit 0
-  Lateness --> Claiming: once a day
+  Lateness --> Claiming: once a day, sync included (its fire date is the study day it runs in)
   Lateness --> Acting: repeats within the day (no claim)
   Claiming --> Skipped: an attempt is already recorded for (job, fire date)
   Skipped --> [*]: exit 0

@@ -58,7 +58,6 @@ class TheCommittedRulesetsAreTheReleaseWorkflow(unittest.TestCase):
             self.assertEqual(ruleset["bypass_actors"], [], path.name)
             self.assertLessEqual(set(rules(ruleset)), ENFORCEABLE, path.name)
 
-
     def test_main_does_not_require_an_up_to_date_head(self):
         # Only this repository's dev reaches main, and one pull request per head and base can be
         # open, so main cannot move under a release pull request; strictness would only deadlock
@@ -84,6 +83,7 @@ class TheCommittedRulesetsAreTheReleaseWorkflow(unittest.TestCase):
         runbook = " ".join((REPO / "RELEASING.md").read_text(encoding="utf-8").split())
         self.assertIn("Nothing is merged back into dev", runbook)
         self.assertNotRegex(runbook, re.compile(r"git merge [^`]*origin/main"))
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,5 +1,6 @@
 """CI runs the whole gate on hosted runners with read-only tokens and pinned actions (SPEC-002 A9),
-and only this repository's dev reaches main (SPEC-034 A5 to A7)."""
+on pull requests into dev and main and pushes to both (SPEC-030 A1), and only this repository's dev
+reaches main (SPEC-034 A5 to A7)."""
 
 import os
 import re
@@ -61,6 +62,38 @@ class WorkflowsAreHardened(unittest.TestCase):
             self.assertIn(job, aggregate, f"the aggregate ci job does not need {job}")
 
 
+def triggers(workflow):
+    """{event: [branch, ...]} from a workflow's `on:` block, read without a YAML library. A branch
+    list may be a flow list (`branches: [dev, main]`) or a block list (`- dev` lines)."""
+    block = re.search(r"(?ms)^on:\n(.*?)(?=^\S|\Z)", workflow).group(1)
+    found = {}
+    for event, body in re.findall(r"(?m)^  ([a-z_]+):\n((?:^    .*\n?)*)", block):
+        flow = re.search(r"(?m)^    branches:\s*\[([^\]]*)\]", body)
+        listed = re.search(r"(?m)^    branches:\s*\n((?:^      - .*\n?)*)", body)
+        if flow:
+            names = flow.group(1).split(",")
+        elif listed:
+            names = [line.strip()[2:] for line in listed.group(1).splitlines()]
+        else:
+            names = []
+        found[event] = [name.strip().strip("'\"") for name in names if name.strip()]
+    return found
+
+
+class CiRunsOnDevAndMain(unittest.TestCase):
+    def test_the_ci_workflow_runs_on_pull_requests_into_dev_and_main(self):
+        ci = triggers((WORKFLOWS / "ci.yml").read_text(encoding="utf-8"))
+        for event in examined("ci triggers", ["pull_request", "push"]):
+            self.assertIn(event, ci, f"ci.yml does not run on {event}")
+            for branch in ("dev", "main"):
+                self.assertIn(branch, ci[event], f"ci.yml's {event} trigger leaves {branch}")
+        # The reader sees a branch leave: a planted workflow whose pull_request drops main.
+        planted = (
+            "on:\n  pull_request:\n    branches: [dev]\n"
+            "  push:\n    branches:\n      - dev\n      - main\npermissions: {}\n"
+        )
+        self.assertEqual(triggers(planted), {"pull_request": ["dev"], "push": ["dev", "main"]})
+
 
 def run_base_is_dev(context):
     """Run base-is-dev's own step from ci.yml under `bash -e`, its env taken from `context`."""
@@ -94,6 +127,7 @@ class OnlyThisRepositorysDevReachesMain(unittest.TestCase):
         done = run_base_is_dev(dict(INTO_MAIN, **{"github.head_ref": "feature/probe"}))
         self.assertEqual(done.returncode, 1, done.stdout)
         self.assertIn("feature/probe", done.stdout)
+
 
 if __name__ == "__main__":
     unittest.main()

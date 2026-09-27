@@ -2,8 +2,8 @@
 
 - **Wave:** W0. **Issue:** #21 (epic #1). **Context(s):** `miniapp` (`web/app/src`).
 - **Decided by:** ADR-005 (SvelteKit 2 SPA, runes, Tailwind 4, shadcn-svelte, Paraglide 2, the one wrapper), ADR-006 (initData sent raw, then a session), ADR-007 (same origin, `/api`), ADR-012 (Vitest and Playwright), ADR-018 (the source offer on the about screen), and this SPEC's ADR-028 (path routing with a closed startapp map, the token pipeline, the test packages).
-- **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
-  `docs/specs/` with its tests and `docs/red-first/SPEC-028.md` (ADR-016).
+- **Status:** judged: delivered with its tests and `docs/red-first/SPEC-028.md` (ADR-016). Four
+  statements and the manifest were amended in the delivery; section 7 gives each reason.
 
 ## 1. The problem, measured
 
@@ -50,8 +50,10 @@ R3. `web/app/src/lib/startapp.ts` maps a startapp token to a route through a clo
     `today` to `/`, `about` to `/about`). An empty, unknown or malformed token (not
     `[A-Za-z0-9_-]{1,64}`, or anything shaped like a path or a URL) opens Today, never a 404 and
     never a navigation to the token's text.
-R4. The app routes by path (`adapter-static`, `fallback: index.html`, `ssr = false`); the
-    wrapper reads the launch hash before the router starts, so a navigation never loses it.
+R4. The app routes by path (`adapter-static`, `fallback: index.html`, `ssr = false`). Telegram's
+    script, first in `<head>`, parses the launch hash and keeps it for the session before any app
+    code runs; the wrapper reads the script's object once, when it loads, which is before the
+    router's first navigation, so a navigation never loses the launch.
 R5. Design tokens are one DTCG file, `web/app/src/lib/design/tokens.json`, compiled at build by
     `web/app/scripts/build-tokens.ts` into CSS custom properties that Tailwind 4's `@theme` reads.
     Every colour token resolves to a `--tg-theme-*` variable with a fallback value, and every text
@@ -60,9 +62,10 @@ R5. Design tokens are one DTCG file, `web/app/src/lib/design/tokens.json`, compi
 R6. Paraglide JS 2 holds the UI strings (source locale `en`); `<html lang>` follows the active
     locale; a Chinese locale is written with its script subtag (`zh-Hans`, `zh-Hant`); the layout's
     stylesheet, `web/app/src/routes/layout.css`, imports the house CJK stylesheet
-    `web/app/src/lib/styles/cjk.css`, which carries the CJK rules the house stack names (`:lang()`
-    font stacks with `unicode-range`, `line-break: strict` for Japanese, `word-break: keep-all` for
-    Korean, `word-break: auto-phrase` behind `@supports`, never `break-all` on CJK).
+    `web/app/src/lib/styles/cjk.css`, which carries the CJK rules the house stack names (a `:lang()`
+    font stack per language, from the system or sliced by `unicode-range`, `line-break: strict` for
+    Japanese, `word-break: keep-all` for Korean, `word-break: auto-phrase` on Japanese and Korean
+    headings as a progressive enhancement, never `break-all` on CJK).
 R7. `web/app/src/lib/api.ts` is the one API client: at start it posts the raw `initData` string to
     `POST /api/session` once (never `initDataUnsafe`), then calls the API with the session cookie
     only (`credentials: "same-origin"`, same origin, no CORS). On a 401 it runs the handshake once
@@ -78,9 +81,9 @@ R11. The acceptance lines below run from the repository root as
     `pnpm exec vitest run web/app/src/<file>.test.ts -t "<title>"`; a root `vitest.config.ts` that
     names `web/app` as its project makes that shape run (the skeleton already has it; SPEC-002).
 R12. `.packs/wiring.json` moves `accessibility` and `cjk-typography` to `enforced`. A row with no
-    subject until the readings render CJK text or ruby (for example `furigana-ruby`,
-    `pinyin-tones`, `ruby-conformance`) is listed under `deferred_rows` with the readings screen's
-    issue; every other row is green.
+    subject until the readings render CJK text or ruby (`furigana-ruby` and `pinyin-tones`, which
+    judge mentor texts) is listed under `deferred_rows` with the readings screen's issue; every other
+    row is green.
 R13. The phxd packs that judge the built SPA (web-launch, vibecode-polish, ux-laws, ui-styles) run on
     the maintainer's box by `scripts/box-packs.sh`, and their verdicts are posted on the pull
     request (ADR-004).
@@ -150,6 +153,8 @@ Vitest line proves it covers the routes, and the audit itself runs in the gate's
 | `web/app/src/routes/today.test.ts`, `web/app/src/routes/about.test.ts` | `miniapp` | added: A11, A12 |
 | `web/app/src/lib/csp.test.ts` | `miniapp` | added: A13 |
 | `web/app/tests/a11y.spec.ts` | `miniapp` | changed: the skeleton's audit (from the accessibility pack's template) reads its routes from `routes.ts` |
+| `web/app/tests/telegram-palettes.ts` | `miniapp` | added (amended in delivery): Telegram's two default palettes, which the audit paints and A9 resolves |
+| `web/app/.gitignore` | `miniapp` | changed (amended in delivery): the compiled `src/lib/design/tokens.css` is build output |
 | `web/app/package.json`, `web/app/vite.config.ts`, `web/app/svelte.config.js`, `web/app/playwright.config.ts` | `miniapp` | changed |
 | `vitest.config.ts`, `package.json`, `pnpm-lock.yaml` | repo | changed or added: the root Vitest project and the packages ADR-028 admits |
 | `.packs/wiring.json` | repo | changed: accessibility and cjk-typography enforced, their subject-less rows deferred |
@@ -176,11 +181,44 @@ Vitest line proves it covers the routes, and the audit itself runs in the gate's
 - **Telegram's script changes under a pinned CSP.** The script is loaded from telegram.org by
   design, so the Caddy block's `script-src` names that origin (SPEC-032); a version change surfaces
   as a failing `isVersionAtLeast` gate in A7's stub matrix, never as a silent method call.
-- **The launch hash is lost to a navigation.** A4's audit and A2's routing tests start from a
-  hash-carrying URL; the wrapper reads the hash before `goto` can run.
+- **The launch is lost to a navigation.** Telegram's script parses the hash before any app code
+  runs and keeps it for the session, so even a reload after a navigation keeps it; the wrapper
+  reads the script's object once, when it loads (A7's companion test pins the launch data and the
+  start parameter it reads), and `+layout.ts` routes the startapp token once, only when the launch
+  carried one.
 - **Contrast passes in the fallback palette and fails inside Telegram.** A9 measures both of
   Telegram's default palettes, and the rendered audit (A4's Playwright spec) measures the painted
   pairs.
 - **The root Vitest project differs from the app's own config.** `vitest.config.ts` names the app's
   own `vite.config.ts` as its project, so both runs share one configuration; the skeleton's smoke
   test runs in both shapes.
+- **Testing Library's browser build reaches a server render.** Its Vite plugin gives every Vitest
+  environment Svelte's browser build, so a component that calls a Svelte lifecycle function while
+  it renders breaks the skeleton's server-rendered smoke test (`lifecycle_outside_component`).
+  Today loads in an `$effect`, which a server render skips; the smoke test names the failure if a
+  screen it renders calls `onMount`.
+
+## 7. Amended in delivery
+
+The code proved four statements of the planned SPEC imprecise and the manifest short by two files.
+Each is corrected above; the reasons are these.
+
+- **R4.** Telegram's script, first in `<head>`, already parses the launch hash and keeps it for the
+  session before any app code runs. The wrapper reads the script's object once; parsing the hash a
+  second time would duplicate Telegram's parser.
+- **R6.** The house stylesheet is the cjk-typography pack's template, byte for byte. It gives
+  `auto-phrase` as a progressive enhancement (a browser drops a value it does not know) rather than
+  behind `@supports`, and it uses the system's font stacks, with `unicode-range` slicing as the rule
+  for any web font; every row of the pack reads it green.
+- **R12.** `ruby-conformance` judges the app's own markup, which exists, and reads green (examined
+  4), so it stays enforced; only `furigana-ruby` and `pinyin-tones` wait on the readings (#37).
+- **Risks.** The launch risk now names the mechanism that was built, and the delivery found one new
+  risk, the Testing Library build above.
+- **The manifest.** `web/app/tests/telegram-palettes.ts` is added because the rendered audit and
+  A9's contrast proof must judge the same two palettes, and Vitest cannot import a Playwright spec;
+  `web/app/.gitignore` is changed because the compiled `tokens.css` is build output. Four listed
+  files needed no change: `web/app/playwright.config.ts`, `web/app/project.inlang/settings.json`,
+  the root `vitest.config.ts` and the root `package.json` already held what this delivery needs.
+- **What existed.** The skeleton on `dev` had grown past section 1's reading: it already loaded
+  Telegram's script first in `<head>`, compiled seven locales with `zh-Hans` and `zh-Hant`, set
+  `<html lang>` per locale and imported the CJK stylesheet. That is why A10 was not red first.
