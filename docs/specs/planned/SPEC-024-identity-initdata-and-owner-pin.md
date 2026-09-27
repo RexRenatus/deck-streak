@@ -131,7 +131,7 @@ under `crates/identity/tests/fixtures/`.
 | `crates/identity/src/settings.rs` | `deck-streak-identity` | added: the freshness bound |
 | `crates/identity/tests/init_data.rs`, `boundary.rs`, `owner.rs`, `session.rs` | `deck-streak-identity` | added: A1 to A8, A10, A11, A16 |
 | `crates/identity/tests/fixtures/planted_compare.rs.fixture` | `deck-streak-identity` | added: the planted comparison A6 refuses |
-| `crates/api/src/session_routes.rs`, `crates/api/src/router.rs`, `crates/api/Cargo.toml` | `deck-streak-api` | added or changed: the three routes, the CSRF bound, the handshake bound |
+| `crates/api/src/session_routes.rs`, `crates/api/src/router.rs`, `crates/api/src/lib.rs`, `crates/api/Cargo.toml` | `deck-streak-api` | added or changed: the three routes (the module declared in `lib.rs`), the CSRF bound, the handshake bound |
 | `crates/api/tests/session_routes.rs` | `deck-streak-api` | added: A9, A12 to A15 |
 | `crates/daemon/src/role_api.rs` | `deck-streak-daemon` | changed: loads identity's credentials at start |
 | `Cargo.toml`, `Cargo.lock` | workspace | changed: hmac, sha2, subtle (ADR-006), getrandom, form_urlencoded (ADR-024) |

@@ -29,8 +29,10 @@
 - **What the parity oracle proves.** `quiet_hours.py:in_quiet_hours` over minutes on both sides of
   each boundary, a wrapping window, a same-day window and a disabled one.
 - **Prerequisites.** SPEC-020 (the clock, the study day, typed configuration, the SQLite base),
-  SPEC-021 (export and erase), SPEC-025 (the API shell), SPEC-026 (the bot's notifier, which gains
-  the transport calls) and SPEC-027 (the scheduler whose post-sync step list calls the flush).
+  SPEC-021 (export and erase), SPEC-022 and SPEC-023 (the sync cycle, `coordination::sync_cycle`,
+  whose successful syncs the flush step follows), SPEC-024 (the owner session the feed route
+  requires), SPEC-025 (the API shell and its router), SPEC-026 (the bot's notifier, which gains the
+  transport calls) and SPEC-027 (the scheduler that runs the sync).
 
 ## 2. Requirements
 
@@ -67,7 +69,8 @@ R6. Every decision is recorded in the decision ledger in the pack's `phx.notific
 R7. Deferral holds at most 20 celebrations. A flush outside quiet hours renders at most 2 of them in
     full and collapses the rest into one rollup line; a celebration older than 720 minutes at the
     flush is abandoned and named in the recap line; nothing is dropped without being named.
-    Coordination calls `flush` as a step after every successful sync.
+    Coordination calls `flush` as a step of the sync cycle (`coordination::sync_cycle`) after every
+    successful sync.
 R8. A failed send is held on the queue with its first deferral time kept, retried by later flushes
     at most 2 times, and every send waits 60 seconds after a failure (the outage breaker). After its
     retries it is abandoned and named.
@@ -77,7 +80,8 @@ R9. The quiet window is evaluated on the kernel's clock at the configured local 
 R10. The policy gains the kind `reading_ready`: class `nudge`, tiers `["T2"]`, budget `null`, dedupe
     `per-study-day`, setting `reading_ready_enabled`. Its `deviations` records
     `{"key": "kinds.reading_ready", "adr": "docs/decisions/ADR-041-notification-router-core.md"}`.
-R11. Notifications owns five tables, each with `created_at`: `notification_decisions`,
+R11. Notifications owns five tables, each `STRICT` and with `created_at`, all created by
+    `migrations/004101_notifications_router.sql`: `notification_decisions`,
     `notification_deliveries` (unique on kind and scoped dedupe key), `notification_queue`,
     `in_app_feed` and `notification_settings`. Each is registered in the context map's ownership
     register (the predecessor's `notifications` and `celebration_log` map onto them), declared in
@@ -140,21 +144,22 @@ A14: cargo test -p deck-streak-notifications --test rights -- --exact the_notifi
 | `crates/notifications/src/ledger.rs` | `deck-streak-notifications` | added: decisions, deliveries, queue, feed, settings |
 | `crates/notifications/src/transport.rs` | `deck-streak-notifications` | added: the bot transport port |
 | `crates/notifications/src/rights.rs` | `deck-streak-notifications` | added: the data-rights port |
-| `crates/notifications/migrations/0001_router.sql` | `deck-streak-notifications` | added |
+| `migrations/004101_notifications_router.sql` | `deck-streak-notifications` | added |
 | `crates/notifications/tests/router.rs` | `deck-streak-notifications` | added |
 | `crates/notifications/tests/deferral.rs` | `deck-streak-notifications` | added |
 | `crates/notifications/tests/quiet_hours.rs` | `deck-streak-notifications` | added |
 | `crates/notifications/tests/comeback_budget.rs` | `deck-streak-notifications` | added |
 | `crates/notifications/tests/rights.rs` | `deck-streak-notifications` | added |
 | `crates/bot/src/transport.rs` | `deck-streak-bot` | changed: implements the bot transport calls |
-| `crates/api/src/routes/notifications.rs` | `deck-streak-api` | added: the feed route |
+| `crates/api/src/notifications_routes.rs` | `deck-streak-api` | added: the feed route |
+| `crates/api/src/router.rs`, `crates/api/src/lib.rs` | `deck-streak-api` | changed: mounts the feed route |
 | `crates/api/tests/notifications_feed.rs` | `deck-streak-api` | added |
-| `crates/coordination/src/post_sync.rs` | `deck-streak-coordination` | changed: the flush step after a successful sync |
+| `crates/coordination/src/sync_cycle.rs` | `deck-streak-coordination` | changed: the flush step after a successful sync |
 | `crates/daemon/src/wiring.rs` | `deck-streak-daemon` | changed: the bot transport joined to the router |
 | `notifications-policy.json` | repo | changed: the `reading_ready` kind and its deviation |
 | `.packs/wiring.json` | repo | changed: `one-router` is no longer deferred |
 | `scripts/tests/test_notifications_router_rows.py` | repo | added |
-| `tools/parity-oracle/generate.py` | repo | changed: registers `quiet_hours.py:in_quiet_hours` |
+| `tools/parity-oracle/registry/spec_041.py` | repo | added: registers `quiet_hours.py:in_quiet_hours` (SPEC-029's registry) |
 | `tools/parity-oracle/goldens/in_quiet_hours.json` | repo | added |
 | `docs/CONTEXT-MAP.md` | docs | changed: the ownership register's five notifications tables |
 | `privacy.json` | repo | changed: the notifications categories |
@@ -184,9 +189,9 @@ A14: cargo test -p deck-streak-notifications --test rights -- --exact the_notifi
 - **A delivery call appears outside the router**, for example a bot command reply written with
   `push_message`. Detected by the `one-router` row in the gate (A1, A2).
 - **The lapse context is empty until the governor exists**, so a nudge could reach an owner in a
-  real lapse. Detected by SPEC-049's and SPEC-052's lapse tests, which cannot pass without the
-  governor's lapse episode; the W1 kinds that nudge (`reading_ready`, `comeback`) declare that
-  prerequisite.
+  real lapse. Detected by SPEC-049's lapse tests, which run over the minimal lapse-episode slice
+  SPEC-049 builds in `streaks` ahead of W3's governor; the W1 kinds that nudge (`reading_ready`,
+  `comeback`) declare that prerequisite.
 - **The quiet window is read at the wrong offset.** Detected by the golden (A8) and by A4's
   injected clock.
 - **A background celebration reaches the bot while the Mini App is open** (the origin rule).

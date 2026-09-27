@@ -35,9 +35,10 @@ checked at promotion. How should the reader render, cache and be audited?
 
 Chosen option. `render.ts` is the only path from a reading to markup, and a test holds it to golden
 readings, ruby included. `offline.ts` keys each cached reading by the server's study day and removes
-earlier days when the server's study day changes. `web/app/vitest.config.ts` gains a browser project
-for `*.browser.test.ts` files, and the audit runs the WCAG 2.2 A and AA tag sets in both colour
-schemes.
+earlier days when the server's study day changes. The repository root's `vitest.config.ts`, which
+declares the Vitest projects, gains a browser project for `web/app/src/**/*.browser.test.ts`, and
+`web/app/vite.config.ts`'s own run keeps those files out of Node; the audit runs the WCAG 2.2 A and
+AA tag sets in both colour schemes.
 
 ### Consequences
 

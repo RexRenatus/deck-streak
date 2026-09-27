@@ -115,12 +115,13 @@ A13: cargo test -p deck-streak-coordination --test readings_views -- --exact the
 | `web/app/src/lib/startapp.ts` | miniapp | changed: the `r_` prefix |
 | `web/app/src/lib/startapp.test.ts` | miniapp | changed |
 | `web/app/messages/en.json` | miniapp | changed: the readings strings |
-| `web/app/vitest.config.ts` | miniapp | changed: a browser project for `*.browser.test.ts` |
+| `vitest.config.ts` | repo | changed: the root's Vitest projects gain a browser project (headless Chromium) for `web/app/src/**/*.browser.test.ts`, which the Node project excludes; the acceptance lines run from here |
+| `web/app/vite.config.ts` | miniapp | changed: the app's own Vitest run (`pnpm -r test`, the gate's web stage) keeps `*.browser.test.ts` out of Node and runs it in the same browser project |
 | `web/app/package.json` | miniapp | changed: dev dependencies `@vitest/browser-playwright` and `axe-core` (ADR-051) |
 | `pnpm-lock.yaml` | repo | changed |
 | `crates/coordination/src/readings/views.rs` | `deck-streak-coordination` | added: today, reading and history views |
 | `crates/coordination/tests/readings_views.rs` | `deck-streak-coordination` | added |
-| `crates/api/src/routes/readings.rs` | `deck-streak-api` | changed: the three read-only routes |
+| `crates/api/src/readings_routes.rs` | `deck-streak-api` | changed: the three read-only routes |
 | `crates/api/tests/readings_views.rs` | `deck-streak-api` | added |
 | `scripts/tests/test_readings_screens_rows.py` | repo | added |
 | `privacy.json` | repo | changed: the device cache |

@@ -36,11 +36,11 @@ tokens reach the CSS, and which test packages the shell's tests may use.
 ## Decision Outcome
 
 Chosen options as above. `web/app/src/lib/routes.ts` is the route table; `startapp.ts` maps
-tokens onto it and nothing else; `e2e/a11y.spec.ts` and A4's coverage test read the same table.
-`web/app/scripts/build-tokens.ts` runs before `vite build` and before the Vitest run that reads its
-output. The packages admitted, as `devDependencies` of `web/app`: `@testing-library/svelte`,
-`jsdom`, `@axe-core/playwright`. A root `vitest.config.ts` names `web/app` as its project so the
-acceptance commands run from the repository root.
+tokens onto it and nothing else; `web/app/tests/a11y.spec.ts` and A4's coverage test read the same
+table. `web/app/scripts/build-tokens.ts` runs before `vite build` and before the Vitest run that
+reads its output. The packages admitted, as `devDependencies` of `web/app`:
+`@testing-library/svelte`, `jsdom`, `@axe-core/playwright`. A root `vitest.config.ts` names `web/app`
+as its project so the acceptance commands run from the repository root.
 
 ### Consequences
 

@@ -98,10 +98,10 @@ A10: cargo test -p deck-streak-coordination --test readings_regenerate -- --exac
 | `crates/coordination/src/readings/regenerate.rs` | `deck-streak-coordination` | added |
 | `crates/coordination/src/readings/generate.rs` | `deck-streak-coordination` | changed: the nightly path takes the topic lock |
 | `crates/coordination/tests/readings_regenerate.rs` | `deck-streak-coordination` | added |
-| `crates/api/src/routes/readings.rs` | `deck-streak-api` | changed: the regenerate route |
+| `crates/api/src/readings_routes.rs` | `deck-streak-api` | changed: the regenerate route |
 | `crates/api/tests/readings_regenerate.rs` | `deck-streak-api` | added |
-| `crates/bot/src/callbacks/regenerate.rs` | `deck-streak-bot` | added: the `rg:` callback |
-| `crates/bot/src/callbacks/mod.rs` | `deck-streak-bot` | changed: registers it |
+| `crates/bot/src/commands/regenerate.rs` | `deck-streak-bot` | added: the `rg:` callback's handler |
+| `crates/bot/src/commands.rs` | `deck-streak-bot` | changed: registers the `rg:` callback beside the delete command's confirming callback |
 | `crates/bot/tests/regenerate_callback.rs` | `deck-streak-bot` | added |
 | `docs/specs/SPEC-048-readings-on-demand-regeneration.md` | docs | moved from `docs/specs/planned/` |
 | `docs/decisions/ADR-048-the-topic-lock-is-a-file-lock.md` | docs | added |

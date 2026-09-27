@@ -31,6 +31,7 @@ the predecessor, which still sends its own comeback messages, runs beside DeckSt
 - Choose a reading afresh for each comeback message — rejected because one lapse would name several readings, which the owner's decision and nudge-duties' `comeback-shape` refuse.
 - Send the comeback message from the new bot during side by side — rejected because the predecessor's own comeback messages already use the owner's cap, so the owner would get more than three.
 - Wait for the engagement wave's comeback protocol before offering anything — rejected because the first deploy would give a returning owner no comeback reading at all.
+- Wait for the W3 governor (#83) and deliver the comeback reading after it — rejected because the flagship comeback reading is an owner decision for W1 (ADR-019); W1 instead builds the one slice of the governor it needs, the open lapse episode and its id, in `streaks`, proven against the predecessor's lapse detection.
 
 ## Decision Outcome
 
@@ -38,15 +39,19 @@ Chosen option. `reading_comebacks` holds one row per lapse id. The morning readi
 `comeback` occasion with the lapse id and the reading id while the lapse is open and the reading
 unread; the router's cap and gap decide. The comeback protocol of the engagement wave later owns the
 messages' words and timing, and still names this one reading. The comeback message's setting defaults
-to `"0"` until the cutover checklist switches it on.
+to `"0"` until the cutover checklist switches it on. The open lapse and its id come from a minimal
+slice of the governor that SPEC-049 builds in `streaks`: a pure function over study days, their
+qualifying review counts and the skip days its caller supplies, proven by a golden of the
+predecessor's lapse detection. Coordination reads it, and the readings never depend on `streaks`;
+W3's governor (#83) builds the rest and keeps this episode and its id.
 
 ### Consequences
 
 - Good, because the reading a returning owner sees is the one they left, with its carried nights.
 - Good, because no path can spend the owner's cap twice during side by side.
 - Bad, because during side by side the comeback reading reaches the owner only in the Mini App.
-- Bad, because the lapse branch needs the governor's lapse id, which the wave plan builds later;
-  SPEC-049 names that prerequisite.
+- Bad, because W1 builds a slice of the governor (the open lapse episode and its id) ahead of W3's,
+  which must keep that episode and id; the slice's golden holds both to the predecessor's.
 
 ### Confirmation
 

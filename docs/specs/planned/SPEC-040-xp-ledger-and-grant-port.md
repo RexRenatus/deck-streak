@@ -29,7 +29,9 @@
 ## 2. Requirements
 
 R1. The progression context owns the table `xp_ledger` with the columns `id`, `study_day`,
-    `source`, `track`, `amount`, `scope` and `created_at`, created by a progression migration.
+    `source`, `track`, `amount`, `scope` and `created_at`, created by
+    `migrations/004001_progression_xp_ledger.sql` (`STRICT`), in the one migration directory the
+    kernel embeds and under its naming rule (SPEC-020 R15, R18).
 R2. A grant request carries a study day, a source, a track (`language` or `law`), an amount and a
     scope (`per-day` or `once`). The source is an opaque token matching
     `^[a-z0-9][a-z0-9:._-]{0,127}$`; any other source is refused before a write, with an error that
@@ -69,7 +71,7 @@ R10. The grant port is the only code that writes `xp_ledger`: no crate but progr
 | A6 | an amount built from a signed integer does not compile (a compile-fail fixture) | `a_signed_amount_does_not_compile` |
 | A7 | a raw insert of a negative amount is refused by the table's check | `the_ledger_refuses_a_negative_amount` |
 | A8 | a source outside the token grammar is refused before a write, and the error names the rule | `a_source_outside_the_token_grammar_is_refused` |
-| A9 | no crate but progression names `xp_ledger` in a query or migration; a planted fixture that does is refused (examined count reported) | `only_the_grant_port_writes_the_xp_ledger` |
+| A9 | no crate but progression names `xp_ledger` in a query, and no migration but progression's (the context its file name carries) names it; a planted fixture that does is refused (examined count reported) | `only_the_grant_port_writes_the_xp_ledger` |
 | A10 | progression's data-rights port lists `xp_ledger` as exported and erased, and an erase leaves it empty | `the_xp_ledger_is_exported_and_erased` |
 
 ```acceptance
@@ -95,7 +97,7 @@ A10: cargo test -p deck-streak-progression --test rights -- --exact the_xp_ledge
 | `crates/progression/src/grant.rs` | `deck-streak-progression` | added: the grant port, request, scope and answer |
 | `crates/progression/src/ledger.rs` | `deck-streak-progression` | added: the repository over `xp_ledger` |
 | `crates/progression/src/rights.rs` | `deck-streak-progression` | added: the data-rights port |
-| `crates/progression/migrations/0001_xp_ledger.sql` | `deck-streak-progression` | added |
+| `migrations/004001_progression_xp_ledger.sql` | `deck-streak-progression` | added |
 | `crates/progression/tests/grant.rs` | `deck-streak-progression` | added |
 | `crates/progression/tests/level.rs` | `deck-streak-progression` | added |
 | `crates/progression/tests/amount_type.rs` | `deck-streak-progression` | added |
@@ -103,7 +105,7 @@ A10: cargo test -p deck-streak-progression --test rights -- --exact the_xp_ledge
 | `crates/progression/tests/ui/signed_amount.stderr` | `deck-streak-progression` | added |
 | `crates/progression/tests/ledger_census.rs` | `deck-streak-progression` | added |
 | `crates/progression/tests/rights.rs` | `deck-streak-progression` | added |
-| `tools/parity-oracle/generate.py` | repo | changed: registers `gamification/xp.py:level_for_xp` with its threshold cases |
+| `tools/parity-oracle/registry/spec_040.py` | repo | added: registers `gamification/xp.py:level_for_xp` with its threshold cases (SPEC-029's registry) |
 | `tools/parity-oracle/goldens/level_for_xp.json` | repo | added: generated on the owner's checkout |
 | `Cargo.toml` | workspace | changed: `[workspace.dependencies]` gains `trybuild` (ADR-040) |
 | `Cargo.lock` | workspace | changed |
@@ -113,8 +115,9 @@ A10: cargo test -p deck-streak-progression --test rights -- --exact the_xp_ledge
 | `docs/decisions/ADR-040-xp-ledger-key-once-scope-and-unsigned-amount.md` | docs | added |
 | `docs/red-first/SPEC-040.md` | docs | added |
 
-The migration path follows the per-context layout of the kernel's SQLite base (SPEC-020). If that
-delivery placed migrations elsewhere, this file moves with it and nothing else changes.
+The migration lives in the one `migrations/` directory the kernel's `MIGRATOR` embeds, named by
+SPEC-020's rule (R15, R18): this SPEC's number in four digits, its sequence in two, the owning
+context and a slug.
 
 ## 5. What this does NOT do
 
@@ -135,5 +138,6 @@ delivery placed migrations elsewhere, this file moves with it and nothing else c
   toolchain bump; the stderr file is regenerated in the same change as the bump.
 - **Summing the ledger on every level read grows with the row count.** Detected by the API's
   latency SLO (SPEC-031); a cache is then a measured, separate delivery.
-- **The golden is regenerated from a different predecessor commit.** Detected by the golden
-  reader's generator-hash check (SPEC-029).
+- **The golden is regenerated from a different predecessor commit.** Each golden records the
+  predecessor commit it was generated at (SPEC-029), and review compares it with `27ee2bc`. Nothing
+  refuses it automatically; `test_goldens.py` checks the digests, not the commit.

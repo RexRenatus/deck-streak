@@ -71,8 +71,9 @@ R7. The resolution runs on the kernel's offload rail under a 30-second budget (t
     `preread.py:PREREAD_OFFLOAD_BUDGET_S`); past it, every unresolved root is `day_set_resolve_timeout`.
 R8. Readings owns `reading_topic_days` (one row per study day and topic: state, class, reason,
     digest, card ids, note ids, new-card count, run id, `created_at`) and `reading_runs` (one row per
-    run: trigger, study day, start, end, outcome, `created_at`). Both are registered in the context
-    map's ownership register (the predecessor's `preread_runs` maps onto them), declared in
+    run: trigger, study day, start, end, outcome, `created_at`), both created `STRICT` by
+    `migrations/004501_readings_topic_days_and_runs.sql`. Both are registered in the context map's
+    ownership register (the predecessor's `preread_runs` maps onto them), declared in
     `privacy.json`, and exported and erased by readings' data-rights port.
 R9. Decks with new cards that map to no topic are counted with the run, their names kept to the
     private log, and are never alerted as a failure.
@@ -128,7 +129,7 @@ A13: cargo test -p deck-streak-readings --test rights -- --exact the_topic_days_
 | `crates/readings/src/state.rs` | `deck-streak-readings` | added: the closed topic states |
 | `crates/readings/src/store.rs` | `deck-streak-readings` | added: `reading_topic_days` and `reading_runs` |
 | `crates/readings/src/rights.rs` | `deck-streak-readings` | added: the data-rights port |
-| `crates/readings/migrations/0001_topic_days_and_runs.sql` | `deck-streak-readings` | added |
+| `migrations/004501_readings_topic_days_and_runs.sql` | `deck-streak-readings` | added |
 | `crates/readings/tests/day_set.rs` | `deck-streak-readings` | added |
 | `crates/readings/tests/topics.rs` | `deck-streak-readings` | added |
 | `crates/readings/tests/gates.rs` | `deck-streak-readings` | added |
@@ -138,7 +139,7 @@ A13: cargo test -p deck-streak-readings --test rights -- --exact the_topic_days_
 | `crates/coordination/src/readings/resolve.rs` | `deck-streak-coordination` | added: resolve a study day's topics and record them |
 | `deploy/config/readings-taxonomy.example.json` | deploy | added: a synthetic taxonomy |
 | `scripts/tests/test_readings_taxonomy_scrub.py` | repo | added |
-| `tools/parity-oracle/generate.py` | repo | changed: registers the three functions with the synthetic-taxonomy adapter |
+| `tools/parity-oracle/registry/spec_045.py` | repo | added: registers the three functions with the synthetic-taxonomy adapter (SPEC-029's registry) |
 | `tools/parity-oracle/goldens/resolve_day_sets.json` | repo | added |
 | `tools/parity-oracle/goldens/_law_subject.json` | repo | added |
 | `tools/parity-oracle/goldens/_digest_for_card_ids.json` | repo | added |

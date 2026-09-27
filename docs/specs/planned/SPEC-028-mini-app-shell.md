@@ -58,10 +58,11 @@ R5. Design tokens are one DTCG file, `web/app/src/lib/design/tokens.json`, compi
     and background pair the tokens declare meets WCAG 2.2 AA contrast in both of Telegram's
     default palettes (the palettes of the accessibility pack's `templates/a11y.spec.ts`).
 R6. Paraglide JS 2 holds the UI strings (source locale `en`); `<html lang>` follows the active
-    locale; a Chinese locale is written with its script subtag (`zh-Hans`, `zh-Hant`); `src/app.css`
-    carries the CJK rules the house stack names (`:lang()` font stacks with `unicode-range`,
-    `line-break: strict` for Japanese, `word-break: keep-all` for Korean, `word-break: auto-phrase`
-    behind `@supports`, never `break-all` on CJK).
+    locale; a Chinese locale is written with its script subtag (`zh-Hans`, `zh-Hant`); the layout's
+    stylesheet, `web/app/src/routes/layout.css`, imports the house CJK stylesheet
+    `web/app/src/lib/styles/cjk.css`, which carries the CJK rules the house stack names (`:lang()`
+    font stacks with `unicode-range`, `line-break: strict` for Japanese, `word-break: keep-all` for
+    Korean, `word-break: auto-phrase` behind `@supports`, never `break-all` on CJK).
 R7. `web/app/src/lib/api.ts` is the one API client: at start it posts the raw `initData` string to
     `POST /api/session` once (never `initDataUnsafe`), then calls the API with the session cookie
     only (`credentials: "same-origin"`, same origin, no CORS). On a 401 it runs the handshake once
@@ -69,12 +70,13 @@ R7. `web/app/src/lib/api.ts` is the one API client: at start it posts the raw `i
 R8. Today shows the study day `GET /api/me` returns, never a date computed on the device.
 R9. `/about` links the privacy policy and the repository's source code (the AGPL network-use offer,
     ADR-018), both as links opened through the wrapper's `openLink` (web-launch `tg-links`).
-R10. `web/app/e2e/a11y.spec.ts` runs axe-core with the WCAG 2.2 A and AA tags on every route of the
-    route table, in both Telegram colour schemes, and runs in the gate's `pnpm -r test:e2e`; a
-    Vitest test holds its route list equal to the router's route table.
+R10. `web/app/tests/a11y.spec.ts` (the skeleton's rendered audit, from the accessibility pack's
+    template) runs axe-core with the WCAG 2.2 A and AA tags on every route of the route table, in
+    both Telegram colour schemes, and runs in the gate's `pnpm -r test:e2e`; a Vitest test holds its
+    route list equal to the router's route table.
 R11. The acceptance lines below run from the repository root as
     `pnpm exec vitest run web/app/src/<file>.test.ts -t "<title>"`; a root `vitest.config.ts` that
-    names `web/app` as its project makes that shape run (added here if the skeleton lacks it).
+    names `web/app` as its project makes that shape run (the skeleton already has it; SPEC-002).
 R12. `.packs/wiring.json` moves `accessibility` and `cjk-typography` to `enforced`. A row with no
     subject until the readings render CJK text or ruby (for example `furigana-ruby`,
     `pinyin-tones`, `ruby-conformance`) is listed under `deferred_rows` with the readings screen's
@@ -95,7 +97,7 @@ R14. `web/app/svelte.config.js` sets `kit.csp` in hash mode with `script-src 'se
 | A1 | only the wrapper touches `Telegram.WebApp`, `TelegramWebviewProxy` or `initData` (examined count) | `telegram-boundary.test.ts`; telegram-platform `tma-version-gate`, `tma-storage`, `tma-send-data` |
 | A2 | an unknown or empty startapp token opens Today | `startapp.test.ts` |
 | A3 | a token shaped like a path, a URL or longer than 64 characters opens Today | `startapp.test.ts` |
-| A4 | the accessibility audit covers every route in both colour schemes | `a11y-coverage.test.ts`; the Playwright `e2e/a11y.spec.ts` in `test:e2e`; accessibility markup rows |
+| A4 | the accessibility audit covers every route in both colour schemes | `a11y-coverage.test.ts`; the Playwright `web/app/tests/a11y.spec.ts` in `test:e2e`; accessibility markup rows |
 | A5 | the handshake sends initData raw once, and later calls carry only the session | `api.test.ts` against a mocked API |
 | A6 | an expired session re-handshakes once, then asks the owner to reopen | `api.test.ts` |
 | A7 | the wrapper calls `ready()` once and gates each version-dependent method | `telegram.test.ts`; web-launch `tg-ready` on the box |
@@ -124,30 +126,30 @@ A13: pnpm exec vitest run web/app/src/lib/csp.test.ts -t "the page policy admits
 
 The Vitest tests run in jsdom with a stubbed `window.Telegram.WebApp` (the shape of the
 accessibility pack's template stub) and a mocked `fetch`; none reaches a network. The rendered axe
-audit is Playwright's (`e2e/a11y.spec.ts`), which the tdd probe cannot resolve; A4's Vitest line
-proves it covers the routes, and the audit itself runs in the gate's web stage.
+audit is Playwright's (`web/app/tests/a11y.spec.ts`), which the tdd probe cannot resolve; A4's
+Vitest line proves it covers the routes, and the audit itself runs in the gate's web stage.
 
 ## 4. File manifest
 
 | file | context | change |
 |---|---|---|
 | `web/app/src/app.html` | `miniapp` | changed: the Telegram script first in `<head>` |
-| `web/app/src/app.css` | `miniapp` | changed: Tailwind 4 `@theme` from the tokens, the CJK rules |
+| `web/app/src/routes/layout.css` | `miniapp` | changed: Tailwind 4 `@theme` from the tokens; it keeps importing the CJK rules of `web/app/src/lib/styles/cjk.css` |
 | `web/app/src/lib/telegram.svelte.ts` | `miniapp` | added: the one wrapper |
 | `web/app/src/lib/startapp.ts` | `miniapp` | added: the closed token map |
 | `web/app/src/lib/api.ts` | `miniapp` | added: the handshake and the session client |
 | `web/app/src/lib/routes.ts` | `miniapp` | added: the route table the token map and the audit read |
 | `web/app/src/lib/design/tokens.json` | `miniapp` | added: DTCG tokens |
 | `web/app/scripts/build-tokens.ts` | `miniapp` | added: tokens to CSS custom properties |
-| `web/app/src/routes/+layout.svelte`, `+layout.ts` | `miniapp` | changed: the wrapper, the locale, `ssr = false` |
+| `web/app/src/routes/+layout.svelte`, `web/app/src/routes/+layout.ts` | `miniapp` | changed: the wrapper, the locale, `ssr = false` |
 | `web/app/src/routes/+page.svelte` | `miniapp` | changed: Today's frame with the server's study day |
 | `web/app/src/routes/about/+page.svelte` | `miniapp` | added |
-| `web/app/messages/en.json`, `web/app/project.inlang/settings.json` | `miniapp` | added: Paraglide 2 |
-| `web/app/src/lib/telegram-boundary.test.ts`, `telegram.test.ts`, `startapp.test.ts`, `a11y-coverage.test.ts`, `api.test.ts`, `i18n.test.ts` | `miniapp` | added: A1 to A7, A10 |
+| `web/app/messages/en.json`, `web/app/project.inlang/settings.json` | `miniapp` | changed: the shell's strings, in the skeleton's Paraglide 2 project |
+| `web/app/src/lib/telegram-boundary.test.ts`, `web/app/src/lib/telegram.test.ts`, `web/app/src/lib/startapp.test.ts`, `web/app/src/lib/a11y-coverage.test.ts`, `web/app/src/lib/api.test.ts`, `web/app/src/lib/i18n.test.ts` | `miniapp` | added: A1 to A7, A10 |
 | `web/app/src/lib/design/tokens.test.ts` | `miniapp` | added: A8, A9 |
-| `web/app/src/routes/today.test.ts`, `about.test.ts` | `miniapp` | added: A11, A12 |
+| `web/app/src/routes/today.test.ts`, `web/app/src/routes/about.test.ts` | `miniapp` | added: A11, A12 |
 | `web/app/src/lib/csp.test.ts` | `miniapp` | added: A13 |
-| `web/app/e2e/a11y.spec.ts` | `miniapp` | added: from the accessibility pack's template, routes from `routes.ts` |
+| `web/app/tests/a11y.spec.ts` | `miniapp` | changed: the skeleton's audit (from the accessibility pack's template) reads its routes from `routes.ts` |
 | `web/app/package.json`, `web/app/vite.config.ts`, `web/app/svelte.config.js`, `web/app/playwright.config.ts` | `miniapp` | changed |
 | `vitest.config.ts`, `package.json`, `pnpm-lock.yaml` | repo | changed or added: the root Vitest project and the packages ADR-028 admits |
 | `.packs/wiring.json` | repo | changed: accessibility and cjk-typography enforced, their subject-less rows deferred |

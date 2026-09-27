@@ -54,8 +54,9 @@ R6. XP: 40 on read with the source `reading:<reading id>:read` and 60 on studied
 R7. No streak is created: no readings use case names the streaks context, and no readings table or
     event is read by a streak.
 R8. The reading stores `read_at`, `studied_count`, `studied_verdict` (`open`, `studied` or `retired`),
-    `studied_at` and `vault_tick` (`none`, `written` or `pending`); the XP itself lives only in the
-    ledger.
+    `studied_at` and `vault_tick` (`none`, `written` or `pending`), columns that
+    `migrations/004701_readings_read_and_studied.sql` adds to `readings`; the XP itself lives only in
+    the ledger.
 R9. The reading view the API serves carries its `covered` and `studied` counts and its verdict, as
     of the last settle pass.
 
@@ -98,17 +99,17 @@ A11: cargo test -p deck-streak-api --test readings_read -- --exact the_read_rout
 | `crates/readings/src/reading.rs` | `deck-streak-readings` | changed: the read and studied state |
 | `crates/readings/src/store.rs` | `deck-streak-readings` | changed |
 | `crates/readings/src/lib.rs` | `deck-streak-readings` | changed |
-| `crates/readings/migrations/0003_read_and_studied.sql` | `deck-streak-readings` | added |
+| `migrations/004701_readings_read_and_studied.sql` | `deck-streak-readings` | added |
 | `crates/readings/tests/studied.rs` | `deck-streak-readings` | added |
 | `crates/coordination/src/readings/read_tap.rs` | `deck-streak-coordination` | added |
 | `crates/coordination/src/readings/settle.rs` | `deck-streak-coordination` | added |
 | `crates/coordination/tests/readings_read_tap.rs` | `deck-streak-coordination` | added |
 | `crates/coordination/tests/readings_settle.rs` | `deck-streak-coordination` | added |
 | `crates/coordination/tests/readings_census.rs` | `deck-streak-coordination` | added |
-| `crates/api/src/routes/readings.rs` | `deck-streak-api` | added: the read route |
-| `crates/api/src/routes/mod.rs` | `deck-streak-api` | changed: mounts the readings routes |
+| `crates/api/src/readings_routes.rs` | `deck-streak-api` | added: the read route |
+| `crates/api/src/router.rs`, `crates/api/src/lib.rs` | `deck-streak-api` | changed: mounts the readings routes |
 | `crates/api/tests/readings_read.rs` | `deck-streak-api` | added |
-| `tools/parity-oracle/generate.py` | repo | changed: registers `preread_tracking.py:is_studied` |
+| `tools/parity-oracle/registry/spec_047.py` | repo | added: registers `preread_tracking.py:is_studied` (SPEC-029's registry) |
 | `tools/parity-oracle/goldens/is_studied.json` | repo | added |
 | `Cargo.lock`, `.sqlx/` | workspace | changed |
 | `docs/specs/SPEC-047-readings-read-tap-studied-and-xp.md` | docs | moved from `docs/specs/planned/` |

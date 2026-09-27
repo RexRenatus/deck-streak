@@ -159,7 +159,7 @@ wait of A12 runs on tokio's paused time. A1 runs two runner tasks against one te
 | `crates/coordination/src/maintenance.rs` | `deck-streak-coordination` | added |
 | `crates/coordination/src/delivery.rs` | `deck-streak-coordination` | added: the `DeliveryMarker` port |
 | `crates/coordination/src/data_rights.rs`, `crates/coordination/src/lib.rs`, `crates/coordination/Cargo.toml` | `deck-streak-coordination` | added or changed |
-| `crates/coordination/tests/ledger.rs`, `runner.rs`, `liveness.rs`, `job_table.rs`, `maintenance.rs`, `data_rights.rs` | `deck-streak-coordination` | added: A1 to A15 |
+| `crates/coordination/tests/ledger.rs`, `crates/coordination/tests/runner.rs`, `crates/coordination/tests/liveness.rs`, `crates/coordination/tests/job_table.rs`, `crates/coordination/tests/maintenance.rs`, `crates/coordination/tests/data_rights.rs` | `deck-streak-coordination` | added: A1 to A15 |
 | `crates/daemon/src/role_job.rs`, `crates/daemon/src/main.rs` | `deck-streak-daemon` | added or changed: the `job` role |
 | `crates/daemon/tests/roles.rs` | `deck-streak-daemon` | changed: A16 |
 | `migrations/002701_coordination_cron_fires.sql` | `deck-streak-coordination` | added |

@@ -106,12 +106,12 @@ A10: cargo test -p deck-streak-coordination --test readings_health -- --exact a_
 | `crates/coordination/src/readings/status.rs` | `deck-streak-coordination` | added: the status view |
 | `crates/coordination/src/liveness.rs` | `deck-streak-coordination` | changed: the hourly watch runs the readings check |
 | `crates/coordination/tests/readings_health.rs` | `deck-streak-coordination` | added |
-| `crates/api/src/routes/readings.rs` | `deck-streak-api` | changed: the status route |
+| `crates/api/src/readings_routes.rs` | `deck-streak-api` | changed: the status route |
 | `crates/api/tests/readings_status.rs` | `deck-streak-api` | added |
 | `web/app/src/routes/readings/status/+page.svelte` | miniapp | added |
 | `web/app/src/routes/readings/status/status.test.ts` | miniapp | added |
 | `web/app/src/lib/readings/api.ts` | miniapp | changed: the status call |
-| `tools/parity-oracle/generate.py` | repo | changed: registers the three functions |
+| `tools/parity-oracle/registry/spec_050.py` | repo | added: registers the three functions (SPEC-029's registry) |
 | `tools/parity-oracle/goldens/verdict.json` | repo | added: `preread_health.py:verdict` |
 | `tools/parity-oracle/goldens/classify_undetermined.json` | repo | added |
 | `tools/parity-oracle/goldens/classify.json` | repo | added: `preread_census.py:classify` |
@@ -134,6 +134,6 @@ A10: cargo test -p deck-streak-coordination --test readings_health -- --exact a_
 - **The hourly watch and the job both page one state.** Deduplicated per state and study day (A3).
 - **The cost figure is read as money spent.** It is the CLI's estimate through the owner's
   subscription, labelled so on the panel.
-- **Golden file names collide.** The oracle names a golden by its function's last segment
-  (`verdict.json`, `classify.json`); a later wave porting a function of the same name must rename
-  one, which the golden reader's provenance check would expose.
+- **Golden file names collide.** This SPEC names its goldens by the function's last segment
+  (`verdict.json`, `classify.json`); a later wave registering the same name in its own registry
+  module is refused by `generate.py`, which names both modules (SPEC-029 R1), and must rename one.

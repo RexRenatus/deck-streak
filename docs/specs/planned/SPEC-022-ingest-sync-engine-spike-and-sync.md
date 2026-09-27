@@ -151,7 +151,7 @@ finish in about a minute; they run in the gate like every other test.
 | `crates/ingest/src/settings.rs` | `deck-streak-ingest` | added: endpoint and paths |
 | `crates/ingest/src/data_rights.rs` | `deck-streak-ingest` | added |
 | `crates/ingest/examples/engine_probe.rs` | `deck-streak-ingest` | added: the binary the size budget measures |
-| `crates/ingest/tests/engine_budget.rs`, `sync.rs`, `retry.rs`, `lock.rs`, `data_rights.rs`, `settings.rs` | `deck-streak-ingest` | added: A2 to A14 |
+| `crates/ingest/tests/engine_budget.rs`, `crates/ingest/tests/sync.rs`, `crates/ingest/tests/retry.rs`, `crates/ingest/tests/lock.rs`, `crates/ingest/tests/data_rights.rs`, `crates/ingest/tests/settings.rs` | `deck-streak-ingest` | added: A2 to A14 |
 | `crates/ingest/tests/support/synthetic.rs`, `crates/ingest/tests/support/mod.rs` | `deck-streak-ingest` | added: the seeded synthetic collection and the local sync server |
 | `crates/coordination/Cargo.toml`, `crates/coordination/src/lib.rs`, `crates/coordination/src/sync_cycle.rs` | `deck-streak-coordination` | added or changed: the sync cycle use case |
 | `migrations/002201_ingest_sync_runs.sql` | `deck-streak-ingest` | added |

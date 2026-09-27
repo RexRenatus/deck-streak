@@ -76,7 +76,8 @@ stateDiagram-v2
   instant is chosen once for that lapse id, whatever its studied verdict, and offered until it is read,
   inside the router's three-message cap (SPEC-049). No reading is generated for it.
 - **Pause and lapse.** The pause (two study days without study) is the readings'; the lapse (three
-  zero-review study days, with an id) is the governor's. A lapse always opens while the readings are
-  paused, and closes on a study day with three or more reviews; the pause ends at the first nightly
-  generation after a study day.
+  zero-review study days, with an id) is the governor's, and in W1 comes from the lapse-episode
+  slice SPEC-049 builds in `streaks`. A lapse always opens while the readings are paused, and closes
+  on the next study day with a qualifying review; the pause ends at the first nightly generation
+  after a study day.
 - **No path unticks** `I read it`, and only the owner's tap ticks it (SPEC-047).

@@ -149,7 +149,7 @@ A13: cargo test -p deck-streak-vault --test boxes -- --exact a_body_replacement_
 | `crates/vault/tests/runs/clean/duty-run.json` | `deck-streak-vault` | added: one synthetic run, green on every blocking vault-duties row |
 | `crates/vault/tests/runs/clean/` | `deck-streak-vault` | added: that run's staged notes |
 | `scripts/tests/test_vault_rails_rows.py` | repo | added |
-| `tools/parity-oracle/generate.py` | repo | changed: registers `reading_notes.py:_roll_note_text` and `reading_notes.py:_archive_dir` |
+| `tools/parity-oracle/registry/spec_042.py` | repo | added: registers `reading_notes.py:_roll_note_text` and `reading_notes.py:_archive_dir` (SPEC-029's registry) |
 | `tools/parity-oracle/goldens/_roll_note_text.json` | repo | added |
 | `tools/parity-oracle/goldens/_archive_dir.json` | repo | added |
 | `Cargo.lock` | workspace | changed |

@@ -94,9 +94,9 @@ R12. A run's verdict is `#[must_use]` and is one of: delivered (the output and i
     alert through the router.
 R13. The agent owns the table `agent_runs` (duty, persona template id, subject, verdict, cause or
     class, turns, input and output tokens, the CLI's cost estimate, duration, `created_at`),
-    registered in the context map's ownership register, declared in `privacy.json` with a retention
-    of 90 days (the predecessor's telemetry window), and exported and erased by the agent's
-    data-rights port.
+    created `STRICT` by `migrations/004301_agent_runs.sql`, registered in the context map's
+    ownership register, declared in `privacy.json` with a retention of 90 days (the predecessor's
+    telemetry window), and exported and erased by the agent's data-rights port.
 R14. `agent/redteam/` holds cases in the ai-content-safety template's shape, one per untrusted
     source, including an instruction override, a fence breakout and an exfiltration link. A test
     feeds each case through the engine with a fake runner that obeys the attack, and the gate
@@ -160,7 +160,7 @@ A13: cargo test -p deck-streak-agent --test rights -- --exact the_agent_runs_are
 | `crates/agent/src/verdict.rs` | `deck-streak-agent` | added: the verdict and its closed causes |
 | `crates/agent/src/runs.rs` | `deck-streak-agent` | added: the `agent_runs` repository |
 | `crates/agent/src/rights.rs` | `deck-streak-agent` | added: the data-rights port |
-| `crates/agent/migrations/0001_agent_runs.sql` | `deck-streak-agent` | added |
+| `migrations/004301_agent_runs.sql` | `deck-streak-agent` | added |
 | `crates/agent/tests/runner.rs` | `deck-streak-agent` | added |
 | `crates/agent/tests/compose.rs` | `deck-streak-agent` | added |
 | `crates/agent/tests/gate.rs` | `deck-streak-agent` | added |

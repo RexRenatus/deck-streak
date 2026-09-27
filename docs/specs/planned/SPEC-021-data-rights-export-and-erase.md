@@ -30,7 +30,8 @@
   data, refreshed from their sync server) and the journal; and, in memory only, the owner's
   Telegram id in a session (SPEC-024).
 
-**Order.** After SPEC-020 (the port), SPEC-022 and SPEC-023 (the ingest tables), SPEC-027
+**Order.** After SPEC-020 (the port), SPEC-022 and SPEC-023 (the ingest tables), SPEC-025 (the
+`deckstreakd` binary and its `roles` test target, which the `data` role joins), SPEC-027
 (`cron_fires`, whose exemption this proves on the real table) and SPEC-028 (the `/about` route this
 SPEC names as a policy entry point). SPEC-026 lands after it: the bot's `/export` and `/delete` call
 this SPEC's use cases, and add the bot's entry point to `privacy.json`. From here on, a delivery that
@@ -121,7 +122,8 @@ over a fully migrated temporary database.
 | `crates/privacy/tests/export.rs`, `erase.rs` | `deck-streak-privacy` | added: A3, A5 to A7 |
 | `crates/coordination/src/data_rights_registry.rs`, `crates/coordination/src/lib.rs` | `deck-streak-coordination` | added or changed: the registry, `export_all`, `erase_all` |
 | `crates/coordination/tests/data_rights_symmetry.rs` | `deck-streak-coordination` | added: A1, A2, A4, A8 |
-| `crates/daemon/src/role_data.rs`, `crates/daemon/src/main.rs`, `crates/daemon/tests/roles.rs` | `deck-streak-daemon` | added or changed: the `data` role, A10 |
+| `crates/daemon/src/role_data.rs`, `crates/daemon/src/main.rs` | `deck-streak-daemon` | added or changed: the `data` role |
+| `crates/daemon/tests/roles.rs` | `deck-streak-daemon` | changed: A10, in the roles test target SPEC-025 adds |
 | `privacy.json` | repo | added |
 | `PRIVACY.md` | repo | added |
 | `README.md` | repo | changed: a privacy section linking `PRIVACY.md` |

@@ -1,6 +1,6 @@
 # SPEC-053: the readings jobs run after the new study day's first successful sync, off the predecessor's slots, each claimed once, and never as a second writer of the vault
 
-- **Wave:** W1. **Issue:** #39 (epic #2). **Context(s):** `deck-streak-coordination` (the job table, the jobs, the post-sync settle step); `deck-streak-daemon` (the job dispatch); `deploy` (the unit and timer templates).
+- **Wave:** W1. **Issue:** #39 (epic #2). **Context(s):** `deck-streak-coordination` (the job table, the jobs, the settle step of the sync cycle); `deck-streak-daemon` (the `job` role's dispatch); `deploy` (the unit and timer templates).
 - **Decided by:** ADR-010 (scheduled jobs as systemd timers, units per role), ADR-011 (side by side:
   off the predecessor's slots, one writer per vault contract), ADR-019 (readings generate whenever
   the last sync succeeded), and ADR-053 (fixed slots that sync first, the settle after each sync, one
@@ -24,10 +24,12 @@
 - **One writer.** The predecessor's own readings job still fires every night. It has never written a
   note, but it would the first night its gate passes, so DeckStreak must not write the vault's readings
   folder until that job is disabled with the owner's go (the first live night, #45).
-- **Prerequisites.** SPEC-027 (the scheduler, the cron-fire ledger, the catch-up, the post-sync step
-  list and the tick function), SPEC-022 (the sync and its ledger), SPEC-032 (the unit templates and the
-  host budget), SPEC-041 (the router's flush and alert kind), SPEC-045 to SPEC-048 (the resolution, the
-  generation, the settle and the topic lock), SPEC-049 and SPEC-052 (the morning job's two branches).
+- **Prerequisites.** SPEC-027 (the job table, the `job` role, the cron-fire ledger, the catch-up and
+  the tick function), SPEC-022 and SPEC-023 (the sync, its ledger, and the sync cycle whose
+  successful syncs the settle step follows), SPEC-032 (the unit templates and the host budget),
+  SPEC-041 (the router's flush and alert kind), SPEC-045 to SPEC-048 (the resolution, the
+  generation, the settle and the topic lock), SPEC-052 and then SPEC-049 (the morning job's two
+  branches).
 
 ## 2. Requirements
 
@@ -100,11 +102,11 @@ A10: python3 -m unittest discover -s scripts/tests -p test_readings_units.py -k 
 | file | context | change |
 |---|---|---|
 | `crates/coordination/src/jobs/readings.rs` | `deck-streak-coordination` | added: the two jobs and their slots |
-| `crates/coordination/src/jobs/mod.rs` | `deck-streak-coordination` | changed: registers them and their catch-up |
-| `crates/coordination/src/post_sync.rs` | `deck-streak-coordination` | changed: the settle step |
+| `crates/coordination/src/jobs.rs` | `deck-streak-coordination` | changed: the job table registers them and their catch-up |
+| `crates/coordination/src/sync_cycle.rs` | `deck-streak-coordination` | changed: the settle step after a successful sync |
 | `crates/coordination/src/readings/generate.rs` | `deck-streak-coordination` | changed: sync first, the claim, the vault archive switch |
 | `crates/coordination/tests/readings_jobs.rs` | `deck-streak-coordination` | added |
-| `crates/daemon/src/jobs.rs` | `deck-streak-daemon` | changed: dispatches the two job ids |
+| `crates/daemon/src/role_job.rs` | `deck-streak-daemon` | changed: the `job` role dispatches the two job ids |
 | `deploy/systemd/deck-streak-readings-generate.service` | deploy | added |
 | `deploy/systemd/deck-streak-readings-generate.timer` | deploy | added |
 | `deploy/systemd/deck-streak-readings-morning.service` | deploy | added |

@@ -92,9 +92,10 @@ R13. `privacy.json` declares that a topic's card text is sent to the model provi
 R14. No reading carries an exam date, a target date, a countdown or any forward-looking timeline
     (the owner's rule, with no exception): persona-core's `no-dates` is in every reading's gate, and a
     reading it refuses is repaired once and otherwise fails like any other gate.
-R15. `readings` and `reading_attempts` are registered in the context map's ownership register (the
-    predecessor's `preread_notes` and `preread_run_events` map onto them) and in readings' data-rights
-    port.
+R15. `readings` and `reading_attempts` are created `STRICT` by
+    `migrations/004601_readings_and_attempts.sql`, and registered in the context map's ownership
+    register (the predecessor's `preread_notes` and `preread_run_events` map onto them) and in
+    readings' data-rights port.
 
 ## 3. Acceptance criteria
 
@@ -154,7 +155,7 @@ A18: cargo test -p deck-streak-coordination --test readings_generate -- --exact 
 | `crates/readings/src/rights.rs` | `deck-streak-readings` | changed: the two new tables |
 | `crates/readings/src/lib.rs` | `deck-streak-readings` | changed |
 | `crates/readings/Cargo.toml` | `deck-streak-readings` | changed: `unicode-normalization`, `html-escape`, `unicode-segmentation` |
-| `crates/readings/migrations/0002_readings_and_attempts.sql` | `deck-streak-readings` | added |
+| `migrations/004601_readings_and_attempts.sql` | `deck-streak-readings` | added |
 | `crates/readings/tests/form.rs` | `deck-streak-readings` | added |
 | `crates/readings/tests/coverage.rs` | `deck-streak-readings` | added |
 | `crates/readings/tests/minutes.rs` | `deck-streak-readings` | added |
@@ -168,7 +169,7 @@ A18: cargo test -p deck-streak-coordination --test readings_generate -- --exact 
 | `Cargo.lock`, `.sqlx/` | workspace | changed |
 | `scripts/tests/test_reading_rows.py` | repo | added |
 | `.packs/wiring.json` | repo | changed: study-duties and learning-science become `enforced` |
-| `tools/parity-oracle/generate.py` | repo | changed: registers the two anchor functions |
+| `tools/parity-oracle/registry/spec_046.py` | repo | added: registers the two anchor functions (SPEC-029's registry) |
 | `tools/parity-oracle/goldens/anchor_for_note.json` | repo | added |
 | `tools/parity-oracle/goldens/is_anchor_usable.json` | repo | added |
 | `docs/CONTEXT-MAP.md` | docs | changed: the ownership register gains `readings` and `reading_attempts` |

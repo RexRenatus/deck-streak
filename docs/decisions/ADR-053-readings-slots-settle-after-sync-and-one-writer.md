@@ -37,9 +37,10 @@ the vault?
 
 Chosen option. `readings-generate` fires at the rollover hour plus 40 minutes and `readings-morning` at
 08:10; a test proves both minutes free of every legal sync tick and of the predecessor's and the second
-brain's slots. The settle runs in the post-sync step list with the router's flush. The catch-up bound
-is SPEC-027's 360 minutes. `readings_vault_archive` defaults to off, and the first live night switches
-it on after the owner's go disables the predecessor's readings job.
+brain's slots. The settle runs as a step of the sync cycle (`coordination::sync_cycle`) after each
+successful sync, beside the router's flush. The catch-up bound is SPEC-027's 360 minutes.
+`readings_vault_archive` defaults to off, and the first live night switches it on after the owner's go
+disables the predecessor's readings job.
 
 ### Consequences
 

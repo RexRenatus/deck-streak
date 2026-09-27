@@ -128,7 +128,7 @@ socket; the child's environment is set on the `Command`, never on the test proce
 | `crates/daemon/src/lifecycle.rs` | `deck-streak-daemon` | added: sd_notify, the watchdog task, the shutdown signal |
 | `crates/daemon/src/role_api.rs` | `deck-streak-daemon` | added |
 | `crates/daemon/src/wiring.rs`, `crates/daemon/src/lib.rs` | `deck-streak-daemon` | added or changed |
-| `crates/daemon/tests/lifecycle.rs`, `roles.rs` | `deck-streak-daemon` | added: A11, A12, A14 |
+| `crates/daemon/tests/lifecycle.rs`, `crates/daemon/tests/roles.rs` | `deck-streak-daemon` | added: A11, A12, A14 |
 | `Cargo.toml`, `Cargo.lock` | workspace | changed: axum, tower-http, anyhow (ADR-003), tower (ADR-025) |
 | `tools/parity-oracle/registry/spec_025.py`, `tools/parity-oracle/goldens/watchdog.constants.json` | repo | added |
 | `.env.example` | repo | changed |
