@@ -72,7 +72,7 @@ stage_scrub() {
     # No apiKeyHelper in any Claude Code settings file (the subscription-proxy pack's rule). The
     # scan is VOID with no settings file, so until the agent's settings template lands (SPEC-043)
     # it reports pending by name rather than passing over nothing.
-    if git ls-files | grep -Eq '(^|/)(\.claude/)?settings(\.[a-z]+)?(\.template)?\.json$'; then
+    if git ls-files | grep -Eq '(^|/)\.claude/settings[^/]*\.json$|^agent/([^/]+/)*settings[^/]*\.json$|(^|/)managed-settings\.json$'; then
         python3 scripts/no-apikeyhelper-scan.py --root .
     else
         echo "no-apikeyhelper: pending until the agent's settings template lands (SPEC-043)"
@@ -86,8 +86,8 @@ stage_audit() {
 
 stage_secrets() {
     # The working tree here; CI also scans the whole history (fetch-depth: 0).
-    gitleaks dir --no-banner --redact . &&
-        if [ "${CHECK_HISTORY:-0}" = "1" ]; then gitleaks git --no-banner --redact .; fi
+    gitleaks dir --no-banner --redact --config .gitleaks.toml . &&
+        if [ "${CHECK_HISTORY:-0}" = "1" ]; then gitleaks git --no-banner --redact --config .gitleaks.toml .; fi
 }
 
 for stage in "${STAGES[@]}"; do

@@ -1,0 +1,16 @@
+# gitleaks: the default rules, scanning the project and never dependency or build output.
+title = "DeckStreak gitleaks configuration"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "dependencies and build output are not the project's files"
+paths = [
+  '''(^|/)node_modules/''',
+  '''(^|/)target/''',
+  '''(^|/)\.svelte-kit/''',
+  '''^web/app/build/''',
+  '''(^|/)test-results/''',
+  '''(^|/)playwright-report/''',
+]
