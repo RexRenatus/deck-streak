@@ -11,8 +11,7 @@
       "item": "rust"
     },
     {
-      "item": "axum",
-      "planned": true
+      "item": "axum"
     },
     {
       "item": "tokio"
@@ -95,8 +94,7 @@
       "item": "caddy"
     },
     {
-      "item": "tower-http",
-      "planned": true
+      "item": "tower-http"
     },
     {
       "item": "journald",
