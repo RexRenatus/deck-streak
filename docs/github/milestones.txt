@@ -1,0 +1,10 @@
+W0 Foundation|Foundation: kernel, config and secrets, database base, identity (Telegram initData), API and bot shells, Anki ingest, scheduler and cron ledger, data-rights framework, Mini App shell, parity-oracle harness
+W1 Flagship|Flagship: the daily pre-study readings, with the AI agent core, the vault adapter core, the XP grant port and the notification router core
+W2 First deploy|First deploy: readings live on the VM side by side with v9 (host scrub, units, HTTPS, the proxy tunnel, backups), behind owner gates
+W3 Game core parity|Game core parity: analytics and score, XP and levels, streaks, economy, quests and chests, focus, habits, skip day
+W4 Curriculum and insight parity|Curriculum and insight parity: Road to C2, law track, leeches, research instruments, client-side charts
+W5 Engagement parity|Engagement parity: the full celebration ladder, digests, nudges, comeback, discipline devices, prediction markets
+W6 Second brain and the AI duties|Second brain and the AI duties: drills, vault bridge, inbox, daily note, weekly synthesis, leech doctor, writing tutor, conversation partner, practice questions, digest coaching
+W7 Surfaces and polish|Surfaces and polish: settings, linked sign-in, landing page, public achievement page, share art, accessibility and CJK polish, every pack enforced
+W8 Data migration and cutover|Data migration and cutover: v9 schema 24 import, side-by-side verification, cutover, v1.0.0
+W9 After parity|After parity: the vault to Anki flashcard bridge
