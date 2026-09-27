@@ -18,8 +18,17 @@ PLANTED = ".".join(["10", "20", "30", "40"])
 BINARY = bytes([0, 255, 254]) + b"compiled" + bytes(8)
 # Temporary repositories are isolated from the machine's git configuration and hooks.
 GIT = [
-    "git", "-c", "user.name=scrub-test", "-c", "user.email=scrub-test@example.invalid",
-    "-c", "commit.gpgsign=false", "-c", "core.hooksPath=/dev/null", "-c", "init.defaultBranch=main",
+    "git",
+    "-c",
+    "user.name=scrub-test",
+    "-c",
+    "user.email=scrub-test@example.invalid",
+    "-c",
+    "commit.gpgsign=false",
+    "-c",
+    "core.hooksPath=/dev/null",
+    "-c",
+    "init.defaultBranch=main",
 ]
 
 
@@ -30,14 +39,27 @@ def scrub(text, private_literals=()):
         subject.mkdir()
         (subject / "note.md").write_text(text, encoding="utf-8")
         args = [
-            sys.executable, str(SCRUB), "--root", str(REPO), "--no-tree", "--subject", str(subject)
+            sys.executable,
+            str(SCRUB),
+            "--root",
+            str(REPO),
+            "--no-tree",
+            "--subject",
+            str(subject),
         ]
         if private_literals:
             deny = tmp / "private.json"
-            deny.write_text(json.dumps({
-                "schema": "phx.persona.deny.v1", "key_markers": [], "patterns": [],
-                "literals": list(private_literals), "journal_paths": [],
-            }))
+            deny.write_text(
+                json.dumps(
+                    {
+                        "schema": "phx.persona.deny.v1",
+                        "key_markers": [],
+                        "patterns": [],
+                        "literals": list(private_literals),
+                        "journal_paths": [],
+                    }
+                )
+            )
             args += ["--deny-list", str(deny)]
         return subprocess.run(args, capture_output=True, text=True, check=False)
 
@@ -64,10 +86,11 @@ class PublicScrubHoldsTheLine(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             done = subprocess.run(
                 [sys.executable, str(SCRUB), "--root", str(REPO), "--no-tree", "--subject", tmp],
-                capture_output=True, text=True, check=False,
+                capture_output=True,
+                text=True,
+                check=False,
             )
         self.assertEqual(done.returncode, 3, done.stdout)
-
 
 
 def new_repo(tmp):
@@ -86,16 +109,25 @@ def commit_all(root, message):
 def run_scrub(root, *extra):
     return subprocess.run(
         [sys.executable, str(SCRUB), "--root", str(root), *extra],
-        capture_output=True, text=True, check=False,
+        capture_output=True,
+        text=True,
+        check=False,
     )
 
 
 def private_list(directory, literals):
     deny = Path(directory) / "private.json"
-    deny.write_text(json.dumps({
-        "schema": "phx.persona.deny.v1", "key_markers": [], "patterns": [],
-        "literals": list(literals), "journal_paths": [],
-    }))
+    deny.write_text(
+        json.dumps(
+            {
+                "schema": "phx.persona.deny.v1",
+                "key_markers": [],
+                "patterns": [],
+                "literals": list(literals),
+                "journal_paths": [],
+            }
+        )
+    )
     return deny
 
 
@@ -173,7 +205,8 @@ class EveryPublishedBlobIsRead(unittest.TestCase):
             shallow = Path(tmp) / "shallow"
             subprocess.run(
                 [*GIT, "clone", "-q", "--depth", "1", root.as_uri(), str(shallow)],
-                capture_output=True, check=True,
+                capture_output=True,
+                check=True,
             )
             done = run_scrub(shallow, "--history")
             self.assertEqual(done.returncode, 3, done.stdout)
@@ -192,6 +225,7 @@ class EveryPublishedBlobIsRead(unittest.TestCase):
         text = (REPO / "scripts" / "check.sh").read_text(encoding="utf-8")
         body = re.search(r"(?ms)^stage_scrub\(\) \{\n(.*?)^\}", text).group(1)
         self.assertRegex(body, r"python3 scripts/public-scrub\.py --root \. --history\b")
+
 
 if __name__ == "__main__":
     unittest.main()

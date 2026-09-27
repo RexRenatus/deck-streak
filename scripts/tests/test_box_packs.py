@@ -54,8 +54,7 @@ QUIET = {
 }
 SCAN_ROWS = {
     "void-settings": (
-        "VOID settings-no-oauth-token: 0 settings document(s) examined; "
-        "no settings document found"
+        "VOID settings-no-oauth-token: 0 settings document(s) examined; no settings document found"
     ),
     "void-launch": "VOID launch-capped: 0 launch(es) examined; no headless launch found",
     "green-surface": "GREEN credential-not-on-argv: 3 surface file(s) examined, 0 finding(s)",
@@ -79,15 +78,11 @@ def scan_script(rows, exit_code):
         else f"print({('PROXY-CLIENT ' + SCAN_ROWS[row])!r})"
         for row in rows
     ]
-    return "\n".join(
-        ["import sys", *lines, f"print({summary!r})", f"sys.exit({exit_code})"]
-    )
+    return "\n".join(["import sys", *lines, f"print({summary!r})", f"sys.exit({exit_code})"])
 
 
 def git(*args):
-    return subprocess.run(
-        [*GIT, *args], capture_output=True, text=True, check=True
-    ).stdout.strip()
+    return subprocess.run([*GIT, *args], capture_output=True, text=True, check=True).stdout.strip()
 
 
 def commit(root, message):
@@ -130,9 +125,7 @@ class Box:
 
     def set_scan(self, rows, exit_code):
         """Plant the proxy scan's output, and re-pin the synthetic tree to the new checkout."""
-        write(
-            self.phoenix, {"scripts/proxy-client-scan.py": scan_script(rows, exit_code)}
-        )
+        write(self.phoenix, {"scripts/proxy-client-scan.py": scan_script(rows, exit_code)})
         self.repin()
 
     def swap_verbs(self, first, second):
@@ -150,9 +143,7 @@ class Box:
 
     def repin(self):
         sha = commit(self.phoenix, "the fake phoenix checkout")
-        files = [
-            {"path": name, "from": name.removeprefix(".packs/")} for name in VENDORED
-        ]
+        files = [{"path": name, "from": name.removeprefix(".packs/")} for name in VENDORED]
         vendored = {
             "schema": "deckstreak.vendored-packs.v1",
             "vendored_from": sha,
@@ -228,9 +219,7 @@ class TheBoxRunnerJudgesHonestly(unittest.TestCase):
         self.assertEqual(len(listing), 1, f"phxd pack list was called once: {calls}")
         self.assertEqual(option(listing[0]["argv"], "--skills-root"), skills)
         probes = calls_of(calls, ["pack", "probe"])
-        self.assertEqual(
-            [option(c["argv"], "--pack") for c in probes], ["alpha"], calls
-        )
+        self.assertEqual([option(c["argv"], "--pack") for c in probes], ["alpha"], calls)
         self.assertEqual(option(probes[0]["argv"], "--skills-root"), skills)
         runs = calls_of(calls, ["pack", "run"])
         self.assertEqual([option(c["argv"], "--pack") for c in runs], ["beta"], calls)
@@ -277,9 +266,7 @@ class TheBoxRunnerJudgesHonestly(unittest.TestCase):
         done, calls = box.run()
         verified = calls_of(calls, ["verify", "seo-pipeline"])
         self.assertEqual(len(verified), 1, calls)
-        self.assertTrue(
-            option(verified[0]["argv"], "--subject").endswith("/web/site/dist")
-        )
+        self.assertTrue(option(verified[0]["argv"], "--subject").endswith("/web/site/dist"))
         self.assertEqual(list(verified[0]["census"]), ["index.html"])
         self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
 
@@ -298,9 +285,7 @@ class TheBoxRunnerJudgesHonestly(unittest.TestCase):
         for call in examined("judged trees", judged):
             census = call["census"]
             for name in census:
-                self.assertFalse(
-                    name.startswith(".packs/"), f"{name} is vendored rule code"
-                )
+                self.assertFalse(name.startswith(".packs/"), f"{name} is vendored rule code")
             for name in VENDORED:
                 self.assertNotIn(name, census, f"{name} is vendored rule code")
             for name, text in OWN.items():
@@ -352,9 +337,7 @@ class TheBoxRunnerJudgesHonestly(unittest.TestCase):
         done, _ = box.run(red=["beta.first"])
         self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
         # A pack the wiring holds pending is stale once it examines a row.
-        box.set_box(
-            dict(box.box, packs=dict(box.box["packs"], alpha={"pending": "#23"}))
-        )
+        box.set_box(dict(box.box, packs=dict(box.box["packs"], alpha={"pending": "#23"})))
         done, _ = box.run()
         line = pack_line(done.stdout, "alpha")
         self.assertTrue(line.startswith("FAIL"), line)
