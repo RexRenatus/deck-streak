@@ -551,7 +551,7 @@ impl SyncRunStore for MemoryRuns {
 }
 
 /// A scratch deployment: a state directory, a credentials directory holding the synthetic
-/// account, and DeckStreak's database, all removed when the fixture drops.
+/// account, and the service's database, all removed when the fixture drops.
 pub struct Fixture {
     scratch: tempfile::TempDir,
     endpoint: String,
@@ -604,7 +604,7 @@ impl Fixture {
         self.settings().copy_path()
     }
 
-    /// DeckStreak's database for this deployment, migrated.
+    /// The service's database for this deployment, migrated.
     pub async fn db(&self) -> Db {
         Db::open(&self.scratch.path().join("deckstreak.db"))
             .await

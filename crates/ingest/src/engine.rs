@@ -184,8 +184,9 @@ impl AnkiEngine for RslibEngine {
         collection: &Path,
         login: &SyncLogin,
     ) -> Result<SyncOutcome, EngineError> {
-        let auth = log_in(login).await?;
+        // The copy opens before the login, so a locked copy fails before any request (R8).
         let mut col = open(collection)?;
+        let auth = log_in(login).await?;
         let before = col.sync_meta().map(|meta| meta.modified);
         let synced = col.normal_sync(auth, engine_client()).await;
         let after = col.sync_meta().map(|meta| meta.modified);
@@ -206,10 +207,11 @@ impl AnkiEngine for RslibEngine {
     }
 
     async fn full_download(&self, collection: &Path, login: &SyncLogin) -> Result<(), EngineError> {
-        let auth = log_in(login).await?;
         // The engine closes this collection, downloads beside it, checks the download's integrity
-        // and renames it over the copy; a copy that does not exist yet starts as an empty one.
+        // and renames it over the copy; a copy that does not exist yet starts as an empty one. It
+        // opens before the login, so a locked copy fails before any request (R8).
         let col = open(collection)?;
+        let auth = log_in(login).await?;
         col.full_download(auth, engine_client())
             .await
             .map_err(bounded)

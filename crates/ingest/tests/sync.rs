@@ -26,7 +26,8 @@ const OTHER_REVIEWS: usize = 10;
 
 /// The engine's sync server over a new scratch directory, serving `shape` (or no collection).
 fn start_server(test: &str, shape: Option<Shape>) -> (tempfile::TempDir, SyncServer) {
-    let scratch = tempfile::tempdir().expect("a scratch directory");
+    let scratch =
+        tempfile::tempdir().unwrap_or_else(|error| panic!("a scratch directory: {error}"));
     let base = scratch.path().join("server");
     let collection = support::server_collection(&base);
     if let Some(shape) = shape {
@@ -47,7 +48,7 @@ async fn rows(db: &Db) -> Vec<(String, i64)> {
     sqlx::query_as("SELECT trigger, study_day FROM sync_runs ORDER BY id")
         .fetch_all(db.reader())
         .await
-        .expect("the record is read")
+        .unwrap_or_else(|error| panic!("the record is read: {error}"))
 }
 
 #[test]
@@ -400,7 +401,7 @@ fn a_second_scheduled_sync_in_one_study_day_is_refused() {
     );
 
     // Three hours on, the same study day: refused before any request, and no row.
-    clock.advance(Duration::from_secs(3 * 3_600));
+    clock.advance(Duration::from_hours(3));
     let second = runtime
         .block_on(syncer.sync(Trigger::Scheduled))
         .expect("recorded");
@@ -413,7 +414,7 @@ fn a_second_scheduled_sync_in_one_study_day_is_refused() {
     );
 
     // The next study day's scheduled run syncs.
-    clock.advance(Duration::from_secs(24 * 3_600));
+    clock.advance(Duration::from_hours(24));
     let next = runtime
         .block_on(syncer.sync(Trigger::Scheduled))
         .expect("recorded");
@@ -446,7 +447,7 @@ fn an_owner_trigger_within_five_minutes_of_a_success_returns_it_without_syncing(
 
     // One millisecond short of five minutes: that success, with no request and no row.
     let debounce = Duration::from_secs(OWNER_SYNC_DEBOUNCE_SECS.unsigned_abs());
-    clock.advance(debounce - Duration::from_millis(1));
+    clock.advance(debounce.saturating_sub(Duration::from_millis(1)));
     let soon = runtime
         .block_on(syncer.sync(Trigger::Owner))
         .expect("recorded");

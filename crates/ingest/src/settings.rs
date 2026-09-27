@@ -38,7 +38,7 @@ impl SyncEndpoint {
     /// Whether the endpoint is plain `http:`, which sends the credential in the clear (R13).
     #[must_use]
     pub fn is_cleartext(&self) -> bool {
-        false
+        self.0.starts_with("http://")
     }
 }
 
@@ -88,11 +88,10 @@ impl SyncSettings {
     /// [`SettingsError::Missing`] naming [`SYNC_ENDPOINT`] or [`STATE_DIRECTORY`] when one is not
     /// set, and [`SettingsError::Malformed`] naming the setting when it has another shape.
     pub fn from_env(env: &Environment) -> Result<Self, SettingsError> {
-        let endpoint = env
-            .optional::<SyncEndpoint>(SYNC_ENDPOINT)?
-            .unwrap_or_else(|| SyncEndpoint(String::new()));
-        let state = env.required(STATE_DIRECTORY)?;
-        Ok(Self { endpoint, state })
+        Ok(Self {
+            endpoint: env.required(SYNC_ENDPOINT)?,
+            state: env.required(STATE_DIRECTORY)?,
+        })
     }
 
     /// The sync server's URL.
@@ -115,5 +114,13 @@ impl SyncSettings {
 
     /// Logs one WARN naming [`SYNC_ENDPOINT`], never its value, when the endpoint is plain
     /// `http:` (R13): the transport is the owner's decision, and the log says what it costs.
-    pub fn warn_if_cleartext(&self) {}
+    pub fn warn_if_cleartext(&self) {
+        if self.endpoint.is_cleartext() {
+            tracing::warn!(
+                setting = SYNC_ENDPOINT,
+                "the sync endpoint is plain http: the sync credential crosses the network in the \
+                 clear"
+            );
+        }
+    }
 }

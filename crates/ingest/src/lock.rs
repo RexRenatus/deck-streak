@@ -5,7 +5,7 @@
 //! The lock is released by an explicit unlock before the file closes, never by the close alone: a
 //! lock another handle to the same file still held would otherwise outlive its holder.
 
-use std::fs::File;
+use std::fs::{File, OpenOptions};
 use std::io;
 use std::path::{Path, PathBuf};
 
@@ -40,7 +40,7 @@ impl CollectionLock {
     ///
     /// The operating system's error when the file cannot be opened or locked.
     pub async fn exclusive(&self) -> io::Result<Held> {
-        Ok(Held { file: None })
+        self.take(File::lock).await
     }
 
     /// Takes the lock shared, waiting for an exclusive holder to release it.
@@ -49,7 +49,26 @@ impl CollectionLock {
     ///
     /// The operating system's error when the file cannot be opened or locked.
     pub async fn shared(&self) -> io::Result<Held> {
-        Ok(Held { file: None })
+        self.take(File::lock_shared).await
+    }
+
+    /// Opens the lock file and takes `lock` on it on tokio's blocking pool, where a wait for
+    /// another holder blocks a thread made for blocking rather than an async worker.
+    async fn take(&self, lock: fn(&File) -> io::Result<()>) -> io::Result<Held> {
+        let path = self.path.clone();
+        let file = tokio::task::spawn_blocking(move || {
+            let file = OpenOptions::new()
+                .read(true)
+                .write(true)
+                .create(true)
+                .truncate(false)
+                .open(&path)?;
+            lock(&file)?;
+            Ok::<_, io::Error>(file)
+        })
+        .await
+        .map_err(io::Error::other)??;
+        Ok(Held { file: Some(file) })
     }
 }
 

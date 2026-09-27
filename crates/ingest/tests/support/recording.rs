@@ -7,6 +7,7 @@
 //! connection. It runs on its own thread and runtime, so it answers whatever the test's runtime is
 //! doing.
 
+use std::fmt::Write as _;
 use std::io;
 use std::net::SocketAddr;
 use std::sync::{Arc, Mutex};
@@ -157,10 +158,11 @@ async fn relay(
             forwarded.push_str("\r\n");
         }
     }
-    forwarded.push_str(&format!(
+    let _ = write!(
+        forwarded,
         "content-length: {}\r\nconnection: close\r\n\r\n",
         body.len()
-    ));
+    );
     server.write_all(forwarded.as_bytes()).await?;
     server.write_all(&body).await?;
     let mut answer = Vec::new();

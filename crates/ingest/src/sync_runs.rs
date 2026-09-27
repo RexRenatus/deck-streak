@@ -165,14 +165,21 @@ impl SqliteSyncRuns {
         Self { db }
     }
 
-    /// How many runs have failed since the last success (R10): what the scheduler's alerting
-    /// reads (SPEC-027).
+    /// How many runs have failed since the last run that did not (R10): what the scheduler's
+    /// alerting reads (SPEC-027).
     ///
     /// # Errors
     ///
     /// [`KernelError::Database`] when the read fails.
     pub async fn consecutive_failures(&self) -> Result<u32, KernelError> {
-        Ok(0)
+        let failures = sqlx::query_scalar!(
+            r#"SELECT count(*) AS "failures!: i64" FROM sync_runs
+               WHERE status = 'error'
+                 AND id > coalesce((SELECT max(id) FROM sync_runs WHERE status != 'error'), 0)"#
+        )
+        .fetch_one(self.db.reader())
+        .await?;
+        Ok(u32::try_from(failures).unwrap_or(u32::MAX))
     }
 
     /// When the last successful run finished (R10): what the dead-man watch reads (SPEC-027).
@@ -181,33 +188,105 @@ impl SqliteSyncRuns {
     ///
     /// [`KernelError::Database`] when the read fails.
     pub async fn last_success_at(&self) -> Result<Option<UtcMillis>, KernelError> {
-        Ok(None)
+        let finished = sqlx::query_scalar!(
+            r#"SELECT max(finished_at) AS "finished: i64" FROM sync_runs WHERE status = 'ok'"#
+        )
+        .fetch_one(self.db.reader())
+        .await?;
+        Ok(finished.map(UtcMillis::from_epoch_millis))
     }
 
-    /// The outcome of the syncs that started in `day`, if any did (R10).
+    /// The outcome of the syncs that started in `day`, if any did (R10): the day's last success,
+    /// or else its last run.
     ///
     /// # Errors
     ///
     /// [`KernelError::Database`] when the read fails.
     pub async fn study_day_outcome(
         &self,
-        _day: StudyDay,
+        day: StudyDay,
     ) -> Result<Option<StudyDayOutcome>, KernelError> {
-        Ok(None)
+        let day = day.epoch_day();
+        let row = sqlx::query!(
+            "SELECT trigger, status FROM sync_runs WHERE study_day = ?1 \
+             ORDER BY status = 'error', id DESC LIMIT 1",
+            day
+        )
+        .fetch_optional(self.db.reader())
+        .await?;
+        Ok(row.and_then(|row| {
+            Some(StudyDayOutcome {
+                synced: row.status != "error",
+                trigger: Trigger::parse(&row.trigger)?,
+            })
+        }))
     }
 }
 
 impl SyncRunStore for SqliteSyncRuns {
-    async fn scheduled_run_on(&self, _day: StudyDay) -> Result<bool, KernelError> {
-        Ok(false)
+    async fn scheduled_run_on(&self, day: StudyDay) -> Result<bool, KernelError> {
+        let day = day.epoch_day();
+        let found = sqlx::query_scalar!(
+            r#"SELECT EXISTS(
+                   SELECT 1 FROM sync_runs WHERE trigger = 'scheduled' AND study_day = ?1
+               ) AS "found!: bool""#,
+            day
+        )
+        .fetch_one(self.db.reader())
+        .await?;
+        Ok(found)
     }
 
     async fn last_success(&self) -> Result<Option<SyncRun>, KernelError> {
-        Ok(None)
+        let row = sqlx::query!(
+            "SELECT trigger, study_day, started_at, finished_at, attempts, full_download \
+             FROM sync_runs WHERE status = 'ok' ORDER BY finished_at DESC, id DESC LIMIT 1"
+        )
+        .fetch_optional(self.db.reader())
+        .await?;
+        Ok(row.and_then(|row| {
+            Some(SyncRun {
+                trigger: Trigger::parse(&row.trigger)?,
+                started_at: UtcMillis::from_epoch_millis(row.started_at),
+                finished_at: UtcMillis::from_epoch_millis(row.finished_at),
+                study_day: StudyDay::from_epoch_day(row.study_day),
+                outcome: Ok(()),
+                attempts: u32::try_from(row.attempts).ok()?,
+                full_download: row.full_download != 0,
+            })
+        }))
     }
 
-    async fn record(&self, _run: &SyncRun) -> Result<(), KernelError> {
-        let _ = &self.db;
+    async fn record(&self, run: &SyncRun) -> Result<(), KernelError> {
+        let (status, reason) = match run.outcome {
+            Ok(()) => ("ok", None),
+            Err(code) => ("error", Some(code.as_str())),
+        };
+        let trigger = run.trigger.as_str();
+        let study_day = run.study_day.epoch_day();
+        let started_at = run.started_at.epoch_millis();
+        let finished_at = run.finished_at.epoch_millis();
+        let attempts = i64::from(run.attempts);
+        let full_download = i64::from(run.full_download);
+        let mut write = self.db.write().await?;
+        // The row is created when the run finishes, by the same clock.
+        sqlx::query!(
+            "INSERT INTO sync_runs \
+             (trigger, study_day, started_at, finished_at, status, reason, attempts, \
+              full_download, created_at) \
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?4)",
+            trigger,
+            study_day,
+            started_at,
+            finished_at,
+            status,
+            reason,
+            attempts,
+            full_download
+        )
+        .execute(&mut *write)
+        .await?;
+        write.commit().await?;
         Ok(())
     }
 }

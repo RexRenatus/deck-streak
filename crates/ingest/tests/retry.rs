@@ -26,15 +26,18 @@ fn paused() -> tokio::runtime::Runtime {
         .enable_all()
         .start_paused(true)
         .build()
-        .expect("a paused runtime")
+        .unwrap_or_else(|error| panic!("a paused runtime: {error}"))
 }
 
 fn seconds(value: &serde_json::Value) -> Vec<f64> {
     value
         .as_array()
-        .expect("a list of waits")
+        .unwrap_or_else(|| panic!("a list of waits: {value}"))
         .iter()
-        .map(|wait| wait.as_f64().expect("a wait in seconds"))
+        .map(|wait| {
+            wait.as_f64()
+                .unwrap_or_else(|| panic!("a wait in seconds: {wait}"))
+        })
         .collect()
 }
 
