@@ -1,0 +1,19 @@
+{
+  "name": "deck-streak",
+  "private": true,
+  "license": "AGPL-3.0-or-later",
+  "type": "module",
+  "packageManager": "pnpm@11.27.1",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "check": "pnpm -r check",
+    "test": "pnpm -r test",
+    "test:e2e": "pnpm -r test:e2e",
+    "build": "pnpm -r build"
+  },
+  "devDependencies": {
+    "vitest": "catalog:"
+  }
+}

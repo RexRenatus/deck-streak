@@ -1,0 +1,12 @@
+# SvelteKit and Vite output (node_modules and .env files are ignored at the repository root)
+/.svelte-kit
+/build
+vite.config.ts.timestamp-*
+
+# Playwright
+/test-results
+/playwright-report
+
+# Paraglide compiles the messages here on every build and test run
+/src/lib/paraglide
+/project.inlang/cache
