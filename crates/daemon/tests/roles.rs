@@ -16,8 +16,8 @@ use serde_json::Value;
 use tokio::sync::Barrier;
 
 /// Fresh databases the race test opens, two roles at a time. Opened with no lock, as at the
-/// red-first commit, one role failed with SQLITE_BUSY in 29 of 30 runs of 24 rounds, as late as the
-/// fifteenth round, and one run passed all 24; 64 rounds leave a regression no real chance.
+/// red-first commit, one role failed with `SQLITE_BUSY` in 29 of 30 runs of 24 rounds, as late as
+/// the fifteenth round, and one run passed all 24; 64 rounds leave a regression no real chance.
 const ROUNDS: usize = 64;
 
 /// Prints how many items a check examined and refuses zero (the tdd pack's examined contract).

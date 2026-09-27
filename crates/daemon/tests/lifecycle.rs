@@ -29,7 +29,7 @@ use deck_streak_kernel::Environment;
 use serde_json::{Value, json};
 
 /// The bound on the whole run: generous, because a loaded machine is slow.
-const DEADLINE: Duration = Duration::from_secs(120);
+const DEADLINE: Duration = Duration::from_mins(2);
 /// How long one read of the socket waits before the test looks at the child again.
 const POLL: Duration = Duration::from_millis(250);
 

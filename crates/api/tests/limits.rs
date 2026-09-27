@@ -152,7 +152,7 @@ async fn a_handler_past_the_timeout_answers_408() {
             .route(
                 "/api/test/in-time",
                 get(|| async {
-                    tokio::time::sleep(TIMEOUT - Duration::from_secs(1)).await;
+                    tokio::time::sleep(TIMEOUT.saturating_sub(Duration::from_secs(1))).await;
                     "in time"
                 }),
             ),

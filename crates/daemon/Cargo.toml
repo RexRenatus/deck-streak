@@ -43,7 +43,7 @@ deck-streak-bot.workspace = true
 # ADR-003: anyhow in the binary alone; the library's roles return thiserror types (SPEC-025).
 anyhow.workspace = true
 thiserror.workspace = true
-tokio = { workspace = true, features = ["rt-multi-thread", "signal", "sync", "time"] }
+tokio = { workspace = true, features = ["macros", "rt-multi-thread", "signal", "sync", "time"] }
 tracing.workspace = true
 
 [dev-dependencies]

@@ -18,7 +18,7 @@ use tokio::net::TcpStream;
 use tokio::sync::{mpsc, oneshot, watch};
 
 /// How long any one step may take on a loaded machine before the test fails naming it.
-const BOUND: Duration = Duration::from_secs(60);
+const BOUND: Duration = Duration::from_mins(1);
 
 async fn bounded<T>(step: &str, future: impl Future<Output = T>) -> T {
     tokio::time::timeout(BOUND, future)
@@ -88,8 +88,8 @@ async fn the_shutdown_signal_lets_an_in_flight_request_finish() {
     assert!(response.ends_with("\r\n\r\nfinished"), "{response:?}");
 
     // With the request finished, serve returns, and returns well.
-    let served = bounded("serve returning", server)
+    let outcome = bounded("serve returning", server)
         .await
         .expect("the serve task completes");
-    assert!(served.is_ok(), "{served:?}");
+    assert!(outcome.is_ok(), "{outcome:?}");
 }

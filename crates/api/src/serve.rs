@@ -1,6 +1,10 @@
-//! Serving the API on its loopback listener (SPEC-025 R6, R7).
+//! Serving the API on its loopback listener, and draining on the shutdown signal (SPEC-025 R6, R7).
 //!
-//! STUB for the red-first commit: `serve` drops every connection when the signal arrives.
+//! The daemon's `api` role binds first, tells systemd it is ready, then serves: binding is where a
+//! start can still fail, and readiness is sent only once the listener exists. On the shutdown
+//! signal, axum stops accepting, lets every request in flight finish (each is bounded by the
+//! router's request timeout), closes the connections, and `serve` returns (axum's graceful-shutdown
+//! example).
 
 use std::future::Future;
 
@@ -10,11 +14,12 @@ use tokio::net::TcpListener;
 use crate::ApiError;
 use crate::settings::{LISTEN, ListenAddress};
 
-/// Binds the listener on `address`.
+/// Binds the listener on `address`, which is loopback by construction.
 ///
 /// # Errors
 ///
-/// [`ApiError::Bind`] when the address cannot be bound.
+/// [`ApiError::Bind`] when the address cannot be bound (in use, or not permitted), naming the
+/// setting and never the address.
 pub async fn bind(address: ListenAddress) -> Result<TcpListener, ApiError> {
     TcpListener::bind(address.socket_address())
         .await
@@ -24,7 +29,8 @@ pub async fn bind(address: ListenAddress) -> Result<TcpListener, ApiError> {
         })
 }
 
-/// Serves `router` on `listener` until `shutdown` resolves.
+/// Serves `router` on `listener` until `shutdown` resolves, then drains: it stops accepting, lets
+/// every request in flight finish, and returns once their connections are closed.
 ///
 /// # Errors
 ///
@@ -33,8 +39,8 @@ pub async fn serve<F>(listener: TcpListener, router: Router, shutdown: F) -> Res
 where
     F: Future<Output = ()> + Send + 'static,
 {
-    let server = tokio::spawn(async move { axum::serve(listener, router).await });
-    shutdown.await;
-    server.abort();
-    Ok(())
+    axum::serve(listener, router)
+        .with_graceful_shutdown(shutdown)
+        .await
+        .map_err(ApiError::Serve)
 }

@@ -111,7 +111,7 @@ async fn panics() -> &'static str {
 }
 
 #[tokio::test]
-#[ignore = "a child process: every_response_carries_a_request_id_and_an_info_event_with_the_matched_route runs it"]
+#[ignore = "a child process: the A8 test, every_response_carries_a_request_id_..., runs it"]
 async fn child_serves_requests_under_the_layers() {
     logging::install(&Redactor::new()).expect("the first install in this process");
     let app = layered(
@@ -206,15 +206,20 @@ fn every_response_carries_a_request_id_and_an_info_event_with_the_matched_route(
 }
 
 #[tokio::test]
-#[ignore = "a child process: sensitive_header_values_never_reach_the_log runs it"]
+#[ignore = "a child process: the A9 test, sensitive_header_values_never_reach_the_log, runs it"]
 async fn child_logs_a_request_carrying_sensitive_headers() {
     logging::install(&Redactor::new()).expect("the first install in this process");
     // A route that logs every header it was given, as any handler, or a debug line, could.
     let app = layered(Router::new().route(
         "/api/test/headers",
         get(|headers: HeaderMap| async move {
-            tracing::info!(probe = "a9", headers = ?headers, "the route logged its request headers");
-            let session = format!("deckstreak_session={SET_COOKIE_SECRET}; Path=/; Secure; HttpOnly");
+            tracing::info!(
+                probe = "a9",
+                headers = ?headers,
+                "the route logged its request headers"
+            );
+            let session =
+                format!("deckstreak_session={SET_COOKIE_SECRET}; Path=/; Secure; HttpOnly");
             ([(SET_COOKIE, session)], "logged")
         }),
     ));
