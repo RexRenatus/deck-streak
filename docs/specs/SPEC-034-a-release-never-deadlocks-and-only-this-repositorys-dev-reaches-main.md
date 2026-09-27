@@ -114,7 +114,7 @@ A5 to A7 run `base-is-dev`'s own script, as extracted from `ci.yml`, under `bash
 ## 5. What this does NOT do
 
 - It builds no release workflow: the tag-triggered build and its draft release are the first
-  deploy's work (#40).
+  deploy's work (#42).
 - It does not tag v0.1.0 or merge the first release. That is the release pull request's work, and
   R6's probe runs between the two (#23).
 - It gives no bypass to anyone, including the owner's account: every ruleset keeps an empty bypass

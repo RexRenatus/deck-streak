@@ -52,3 +52,7 @@ The release-ops rows over `.github/rulesets/` and the workflows; cyber-pipeline'
 ## More Information
 
 CONTRIBUTING.md; RELEASING.md; the release-ops and cyber-pipeline packs.
+
+Superseded in part by ADR-034: `main` is never merged back into `dev`, `main` does not require an
+up-to-date head, `base-is-dev` is enforced through `ci`, and the rulesets were active on the
+private repository. ADR-035 pins the required checks to GitHub Actions and refuses a fork's `dev`.
