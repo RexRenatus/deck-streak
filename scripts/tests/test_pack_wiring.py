@@ -108,19 +108,20 @@ class PackWiringIsHonest(unittest.TestCase):
             self.assertIn(int(match.group(1)), numbers, f"{name} waits on {issue}, which is not in the manifest")
 
     def test_the_runner_refuses_a_wiring_that_forgets_a_pack(self):
-        tmp = Path(tempfile.mkdtemp())
-        shutil.copytree(REPO / ".packs", tmp / ".packs")
-        shutil.copytree(REPO / "scripts", tmp / "scripts")
-        data = json.loads((tmp / ".packs" / "wiring.json").read_text())
-        dropped = sorted(data["packs"])[0]
-        del data["packs"][dropped]
-        (tmp / ".packs" / "wiring.json").write_text(json.dumps(data))
-        done = subprocess.run(
-            [sys.executable, str(tmp / "scripts" / "pack-rows.py"), "--root", str(tmp)],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
+        with tempfile.TemporaryDirectory() as scratch:
+            tmp = Path(scratch)
+            shutil.copytree(REPO / ".packs", tmp / ".packs")
+            shutil.copytree(REPO / "scripts", tmp / "scripts")
+            data = json.loads((tmp / ".packs" / "wiring.json").read_text())
+            dropped = sorted(data["packs"])[0]
+            del data["packs"][dropped]
+            (tmp / ".packs" / "wiring.json").write_text(json.dumps(data))
+            done = subprocess.run(
+                [sys.executable, str(tmp / "scripts" / "pack-rows.py"), "--root", str(tmp)],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
         self.assertEqual(done.returncode, 2, done.stdout)
         self.assertIn(dropped, done.stdout)
 

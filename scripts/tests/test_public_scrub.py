@@ -24,19 +24,22 @@ GIT = [
 
 
 def scrub(text, private_literals=()):
-    tmp = Path(tempfile.mkdtemp())
-    subject = tmp / "subject"
-    subject.mkdir()
-    (subject / "note.md").write_text(text, encoding="utf-8")
-    args = [sys.executable, str(SCRUB), "--root", str(REPO), "--no-tree", "--subject", str(subject)]
-    if private_literals:
-        deny = tmp / "private.json"
-        deny.write_text(json.dumps({
-            "schema": "phx.persona.deny.v1", "key_markers": [], "patterns": [],
-            "literals": list(private_literals), "journal_paths": [],
-        }))
-        args += ["--deny-list", str(deny)]
-    return subprocess.run(args, capture_output=True, text=True, check=False)
+    with tempfile.TemporaryDirectory() as scratch:
+        tmp = Path(scratch)
+        subject = tmp / "subject"
+        subject.mkdir()
+        (subject / "note.md").write_text(text, encoding="utf-8")
+        args = [
+            sys.executable, str(SCRUB), "--root", str(REPO), "--no-tree", "--subject", str(subject)
+        ]
+        if private_literals:
+            deny = tmp / "private.json"
+            deny.write_text(json.dumps({
+                "schema": "phx.persona.deny.v1", "key_markers": [], "patterns": [],
+                "literals": list(private_literals), "journal_paths": [],
+            }))
+            args += ["--deny-list", str(deny)]
+        return subprocess.run(args, capture_output=True, text=True, check=False)
 
 
 class PublicScrubHoldsTheLine(unittest.TestCase):
@@ -58,11 +61,11 @@ class PublicScrubHoldsTheLine(unittest.TestCase):
         self.assertIn("examined 1 file(s)", done.stdout)
 
     def test_an_empty_subject_is_void(self):
-        tmp = Path(tempfile.mkdtemp())
-        done = subprocess.run(
-            [sys.executable, str(SCRUB), "--root", str(REPO), "--no-tree", "--subject", str(tmp)],
-            capture_output=True, text=True, check=False,
-        )
+        with tempfile.TemporaryDirectory() as tmp:
+            done = subprocess.run(
+                [sys.executable, str(SCRUB), "--root", str(REPO), "--no-tree", "--subject", tmp],
+                capture_output=True, text=True, check=False,
+            )
         self.assertEqual(done.returncode, 3, done.stdout)
 
 
