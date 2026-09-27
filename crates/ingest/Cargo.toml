@@ -12,4 +12,11 @@ publish.workspace = true
 workspace = true
 
 [dependencies]
+# ADR-022: the engine stays inside this crate, behind the AnkiEngine port (src/engine.rs).
+anki.workspace = true
 deck-streak-kernel.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+tokio = { workspace = true, features = ["rt"] }

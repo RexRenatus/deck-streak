@@ -45,6 +45,16 @@ deck-streak-daemon = { path = "crates/daemon" }
 # them; later ADRs cite ADR-029 rather than admitting them again.
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.151"
+# ADR-003: the backend stack, admitted by the kernel (SPEC-020). A member adds tokio's features as
+# it uses them.
+tokio = "~1.53"
+thiserror = "2.0.21"
+# ADR-020: a temporary database or collection, in tests only.
+tempfile = "3.27.0"
+# ADR-022 (SPEC-022): Anki's own Rust engine, for ingest only, pinned to the release tag of the line
+# the predecessor's pinned Python package comes from, with the TLS backend Anki's own Linux build
+# selects. An Anki upgrade is a deliberate delivery that re-runs ADR-022's measurement.
+anki = { git = "https://github.com/ankitects/anki.git", tag = "26.05", features = ["rustls"] }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"
