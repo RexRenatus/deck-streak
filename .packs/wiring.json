@@ -57,8 +57,7 @@
       "note": "it reads a tree with no unit as a finding, not as VOID"
     },
     "accessibility": {
-      "state": "pending",
-      "enforced_by": "#21"
+      "state": "enforced"
     },
     "cjk-typography": {
       "state": "pending",
