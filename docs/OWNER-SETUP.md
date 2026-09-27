@@ -35,11 +35,12 @@ DeckStreak reads your own Anki sync server; it never logs in to AnkiWeb. Store t
 URL, username and password as secrets. Serve the sync server over HTTPS if you can: a plain-HTTP
 sync server sends its credentials in the clear.
 
-## 4. The AI agent's device key
+## 4. The AI agent's device key (optional; only when you enable the AI route)
 
-The agent reaches your subscription proxy with its own device key. Create the key, add it to the
-proxy's device roster (which restarts the proxy), and store it as a secret. The agent reads it into
-its process environment at launch and never writes it to disk.
+DeckStreak runs whole without an AI route: the readings say they are not enabled, and nothing alerts
+(ADR-054). To enable the subscription route, create the agent's own device key, add it to the proxy's
+device roster (which restarts the proxy), and store it as a secret. It reaches the agent's unit
+through the credential socket at start and is never written to disk (ADR-038).
 
 ## 5. Hosting and HTTPS
 

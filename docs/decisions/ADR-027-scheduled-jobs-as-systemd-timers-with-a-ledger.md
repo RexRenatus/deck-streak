@@ -22,7 +22,8 @@ builds the scheduler; which mechanism runs the jobs, where the schedule lives, a
 - Each job needs its own memory ceiling, its own failure page (`OnFailure=`), its own hardening and
   its own journal identity (the durable-services and observability packs).
 - The predecessor's guards port verbatim (CHARTER 9): the claim before acting, the release after an
-  undelivered send, the six-hour cap, the allowlist, the sync first.
+  undelivered send, the six-hour cap, the allowlist. Its sync-first guard does not: since ADR-037 no
+  job but `sync` syncs, and a job reads the study day's sync outcome instead.
 - One schedule, not two that can drift.
 - ADR-011: while both run, DeckStreak's jobs keep off the predecessor's slots.
 
@@ -38,19 +39,20 @@ builds the scheduler; which mechanism runs the jobs, where the schedule lives, a
 Chosen option. The runner's rules are the predecessor's: a once-a-day job claims (job, local fire
 date) before acting (the claim succeeds only while no attempt is recorded); a catch-up job more than
 360 minutes late is recorded `missed`; a release follows only a positively failed delivery. A job
-that repeats within the day (the sync, the liveness watch) records its outcome without a claim,
-because running it twice changes nothing; a per-date claim on a 15-minute job would run it once a
-day. `Persistent=true` is set only on catch-up jobs' timers, as the predecessor replayed only its
-allowlist; none exists at W0.
+that repeats within the day (the liveness watch) records its outcome without a claim, because
+running it twice changes nothing. The sync is a once-a-day job (ADR-037), claimed like the others:
+its slot follows the rollover, so its fire date is the study day it runs in, and a second fire, a
+restart or a manual run that day does nothing. `Persistent=true` is set only on catch-up jobs'
+timers, as the predecessor replayed only its allowlist; none exists at W0.
 
-DeckStreak's slots, chosen to keep off the predecessor's minutes (its in-process slots and its three
-systemd timers) and off DeckStreak's own tick set:
+DeckStreak's slots, chosen to keep off the predecessor's minutes (its in-process slots, its sync
+ticks and its three systemd timers) and off one another:
 
 | job | slot | why here |
 |---|---|---|
-| `sync` | every 15 minutes at minutes 7, 22, 37, 52 (tick offset 7) | the predecessor's sync ticks are 2, 17, 32 and 47; 5 minutes after each gives its sync room to finish |
+| `sync` | daily at the rollover hour, minute 7 (ADR-037) | ADR-037 decides this row: one scheduled sync per study day. The predecessor's sync ticks are 2, 17, 32 and 47; 5 minutes after its first tick of the study day gives its sync room to finish |
 | `maintenance` | daily at the rollover hour, minute 28 | after the rollover, between the predecessor's 25 and 33 |
-| `liveness` | hourly at minute 14 | clear of every predecessor minute and 7 minutes after a sync tick |
+| `liveness` | hourly at minute 14 | clear of every predecessor minute, and 7 minutes after the daily sync slot |
 
 The timers' calendars are rendered in the owner's zone by the private deploy rail; the templates
 carry UTC as the neutral example, and the liveness job's drift check pages when a fire lands more
@@ -58,13 +60,13 @@ than 30 minutes off its slot, so a wrong zone is caught on the first day.
 
 ### Consequences
 
-- Good, because the sync's peak memory is released every 15 minutes, and each job's ceiling is its
-  own.
+- Good, because every run's peak memory, the sync's included, is released when the run exits, and
+  each job's ceiling is its own.
 - Good, because a failed job pages through the one alert path by failing its unit.
 - Bad, because the schedule exists twice, in the table and in the timer files; SPEC-032's test holds
   them equal, and the drift check watches the live host.
 - Bad, because each run starts a process and opens the database; for a Rust binary that is
-  milliseconds against a 15-minute interval.
+  milliseconds against the hourly liveness watch, the most frequent job.
 
 ### Confirmation
 
@@ -79,5 +81,5 @@ timer-versus-table test; durable-services' `timers.*` rows over `deploy/`.
 
 ## More Information
 
-ADR-010; ADR-011; SPEC-027; SPEC-032; `docs/schematics/deployment.md`;
+ADR-010; ADR-011; ADR-037 (the `sync` row); SPEC-027; SPEC-032; `docs/schematics/deployment.md`;
 `docs/schematics/cron-fire-ledger-and-catch-up.md`; the durable-services pack's timer rows.
