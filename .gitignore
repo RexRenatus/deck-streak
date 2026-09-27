@@ -20,3 +20,12 @@ build/
 .idea/
 .vscode/*
 !.vscode/extensions.json
+
+# Python caches and the gate's stage logs
+__pycache__/
+*.pyc
+.check-logs/
+
+# Playwright output
+test-results/
+playwright-report/

@@ -1,0 +1,42 @@
+# cargo-deny: RustSec advisories, licences, bans and sources (the web-security pack's
+# ws.dep-audit-config; run by scripts/check.sh's audit stage and by CI).
+
+[graph]
+all-features = true
+
+[advisories]
+# Every advisory in the RustSec database is an error; an exception names its advisory id and why.
+ignore = []
+
+[licenses]
+# Licences compatible with shipping inside an AGPL-3.0-or-later work.
+allow = [
+    "AGPL-3.0-or-later",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "BSL-1.0",
+    "CC0-1.0",
+    "CDLA-Permissive-2.0",
+    "ISC",
+    "MIT",
+    "MPL-2.0",
+    "Unicode-3.0",
+    "Zlib",
+]
+confidence-threshold = 0.9
+
+[licenses.private]
+# The workspace's own crates are unpublished; their licence is the repository's.
+ignore = true
+
+[bans]
+multiple-versions = "warn"
+wildcards = "deny"
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+allow-git = []
