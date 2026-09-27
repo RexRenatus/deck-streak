@@ -150,7 +150,8 @@ is a path, and `CREDENTIALS_DIRECTORY` itself is the interface systemd documents
   answers 408 itself (`TimeoutLayer::new` is deprecated).
 - The default body limit for `Bytes`, `String`, `Json` and `Form` is 2 MB. Raising it is
   `DefaultBodyLimit::max(n)`; switching it off without `RequestBodyLimitLayer` is
-  web-security's `ws.request-body-limit`.
+  web-security's `ws.request-body-limit`, which since d2227 also reads
+  `DefaultBodyLimit::max(usize::MAX)` as switched off (#2100).
 
 ### tokio on 2 vCPU
 

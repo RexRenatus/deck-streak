@@ -424,6 +424,26 @@
       "scope": "live"
     },
     {
+      "id": "security-scan",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "scripts/durable-service-probe.py",
+          "check",
+          "--job",
+          "security-scan",
+          "--root",
+          "{root}",
+          "--format",
+          "json"
+        ],
+        "timeout_seconds": 30
+      },
+      "stage": "durable-services",
+      "reason": "security-scan_red",
+      "scope": "live"
+    },
+    {
       "id": "aol-hook-deploy",
       "severity": "block",
       "probe": {
