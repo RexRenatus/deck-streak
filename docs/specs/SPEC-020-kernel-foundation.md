@@ -2,8 +2,9 @@
 
 - **Wave:** W0. **Issue:** #11, #12, #13 (epic #1). **Context(s):** `deck-streak-kernel`.
 - **Decided by:** ADR-002 (the kernel is the shared kernel), ADR-003 (sqlx, tokio, tracing, thiserror), ADR-008 (one SQLite database, WAL, `BEGIN IMMEDIATE`, sqlx migrations), ADR-010 (secrets as systemd credentials), ADR-012 (goldens), ADR-029 (the golden reader, `serde`), and this SPEC's ADR-020 (the study day as an epoch day under a fixed offset; one migration sequence; the logging setup in the kernel).
-- **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
-  `docs/specs/` with its tests and `docs/red-first/SPEC-020.md` (ADR-016).
+- **Status:** judged: delivered with its tests, `docs/red-first/SPEC-020.md`, and three goldens
+  (`digest_hour`, `redaction`, `kernel.constants`) generated at the predecessor's `27ee2bc`. The
+  delivery made R3 and R10 to R15 exact where the code decided them (§7).
 
 ## 1. The problem, measured
 
@@ -231,8 +232,8 @@ a temporary directory. Tests that read goldens include SPEC-029's reader with `#
 | `docs/LEXICON.md` | repo | changed: glossary rows for the settings generation and the data-rights port |
 | `.env.example` | repo | added: the kernel's settings, by name |
 | `.packs/wiring.json` | repo | changed: the ddd `lexicon-locks` deferral removed |
-| `docs/schematics/startup-settings-and-secrets.md` | repo | added |
-| `docs/decisions/ADR-020-kernel-time-schema-and-log-foundations.md` | repo | added |
+| `docs/schematics/startup-settings-and-secrets.md` | repo | changed: the order a role starts in, as built |
+| `docs/decisions/ADR-020-kernel-time-schema-and-log-foundations.md` | repo | changed: accepted, with the decisions the delivery made |
 | `docs/red-first/SPEC-020.md` | repo | added |
 | `changelog.d/` fragment | repo | added |
 
@@ -272,3 +273,36 @@ a temporary directory. Tests that read goldens include SPEC-029's reader with `#
 - **A migration is added without the kernel recompiling.** `build.rs`'s `rerun-if-changed` makes the
   kernel rebuild; if it did not, A21 would fail, because it holds the embedded versions equal to
   the files in `migrations/`.
+
+## 7. Amendments at delivery
+
+- **R3: a divergence is a case's class, and it covers Python-only spellings.** The generator writes
+  a case's `class` and has no `diverges` key to write, so the digest-hour golden marks ADR-020's
+  divergence as `class: unparsable` and `class: python-only`, and A4 holds each such case to a
+  refusal. Python's `int` also reads a digit separator (`1_0`) and digits outside ASCII; DeckStreak
+  refuses them as malformed, as it refuses every value that is not an optional sign and ASCII
+  digits. A4 decides the other cases by the predecessor's own value: equal where it resolved an hour
+  its validation accepts, refused by name where it resolved one before the rollover, refused as
+  malformed where it resolved one outside 0 to 23.
+- **R10: the environment map is `settings::Environment`, and A5's required setting is
+  `CREDENTIALS_DIRECTORY`.** The kernel's own four settings all have defaults; the credentials
+  directory is the setting a role that loads a credential cannot start without, so A5 refuses its
+  absence by name, and any context's required setting reads through the same parser.
+- **R11: "never from the environment" is measured on a child process** whose real environment
+  carries the credential's name and value while its credentials directory holds no such file; the
+  loader refuses the credential as missing. `rs.no-secret-env` holds the production code.
+- **R12: the token pattern is matched by hand, with Python's `\d`.** No regular-expression crate is
+  admitted, and Python's `re` reads `\d` as every Unicode decimal digit. The redaction golden holds
+  one token per run of decimal digits of the predecessor's interpreter (Unicode 15.0.0), and a test
+  holds the redactor's table equal to them character by character; numeric characters that are not
+  decimal digits (Roman numerals, superscripts) are proved not to make a token.
+- **R13: the writer also scrubs a secret as a JSON string or a Rust debug string escapes it,** so a
+  secret holding a quote or a backslash cannot pass inside a JSON line; `Redactor::redact` stays the
+  predecessor's exact scrub, and `Redactor::redact_line` is the writer's. A line carries no
+  timestamp: journald stamps each line, and the system time is read by `SystemClock` alone (R6).
+  A13 and A15 are measured on a child process that installs the logging, so the global subscriber
+  and the real stdout are a role's.
+- **R14: a call at `SLOW_OFFLOAD_MS` warns, and its duration counts the wait for a worker,** as the
+  predecessor's rail compared (`>=`) and timed it.
+- **R15: `Db::open_with`** opens with a migrator other than `MIGRATOR`, for the fixtures A20 and A22
+  apply; production opens with `Db::open`.
