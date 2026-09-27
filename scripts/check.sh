@@ -68,7 +68,9 @@ stage_python() {
 stage_packs() { python3 scripts/pack-rows.py; }
 
 stage_scrub() {
-    python3 scripts/public-scrub.py --root . || return 1
+    # The tree and every blob reachable from HEAD: a value that only history or a binary holds
+    # is still published (SPEC-033).
+    python3 scripts/public-scrub.py --root . --history || return 1
     # No apiKeyHelper in any Claude Code settings file (the subscription-proxy pack's rule). The
     # scan is VOID with no settings file, so until the agent's settings template lands (SPEC-043)
     # it reports pending by name rather than passing over nothing.

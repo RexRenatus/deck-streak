@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
-"""public-scrub: refuse any file or issue body that would disclose what a public repository must not.
+"""public-scrub: refuse any file, blob or issue body that would disclose what a public repository
+must not.
 
     python3 scripts/public-scrub.py --root .                      every tracked file
     python3 scripts/public-scrub.py --root . --subject DIR        also every file under DIR
     python3 scripts/public-scrub.py --root . --deny-list FILE     plus the maintainer's private list
+    python3 scripts/public-scrub.py --root . --history            plus every blob HEAD reaches
 
 The rules are the packs' own, composed and never copied (CHARTER constraint 11):
 
@@ -18,9 +20,17 @@ The rules are the packs' own, composed and never copied (CHARTER constraint 11):
   deck names, the project id, secret names, host names, study words. CI has no private list and
   judges by the public shapes.
 
-A finding names the rule, the file and the line, never the value (a literal is reported by its
-index in the private list). The deny lists themselves are skipped: they are the rules, not a
-disclosure. Exit 0 when clean, 1 on a finding, 2 on a usage error, 3 when nothing was examined.
+`--history` reads every blob reachable from `--rev` (HEAD by default) exactly once, so a value
+that only a deleted file or an old version still holds is found before it is pushed (SPEC-033). A
+binary file (a NUL byte in its first 8000 bytes, or bytes that are not UTF-8) is refused by the rule
+`binary` wherever it is, and its bytes are still searched for the private literals; a file over the
+size limit is refused by the rule `oversize`. A shallow repository makes `--history` VOID, because
+the history it would read is incomplete.
+
+A finding names the rule, the file (or `history:<path>@<blob>`) and the line, never the value (a
+literal is reported by its index in the private list). The deny lists themselves are skipped: they
+are the rules, not a disclosure. Exit 0 when clean, 1 on a finding, 2 on a usage error, 3 when
+nothing was examined or the history is shallow.
 """
 
 from __future__ import annotations
@@ -39,6 +49,8 @@ REPO = Path(__file__).resolve().parents[1]
 PACKS = REPO / ".packs" / "skills" / "packs"
 PROBE = REPO / ".packs" / "scripts" / "persona-core-probe.py"
 MAX_BYTES = 2_000_000
+# git's own binary heuristic reads the first 8000 bytes for a NUL.
+SNIFF_BYTES = 8000
 # The rule files themselves, and license texts, are not disclosures.
 SKIP_NAMES = {"deny-list.json", "LICENSE"}
 SKIP_PREFIXES = ("LICENSES/",)
@@ -100,7 +112,127 @@ def skipped(path: Path, root: Path) -> bool:
         rel = path.relative_to(root).as_posix()
     except ValueError:
         rel = path.name
-    return path.name in SKIP_NAMES or rel.startswith(SKIP_PREFIXES)
+    return skipped_name(rel)
+
+
+def skipped_name(rel: str) -> bool:
+    return Path(rel).name in SKIP_NAMES or rel.startswith(SKIP_PREFIXES)
+
+
+def is_binary(data: bytes) -> bool:
+    if b"\0" in data[:SNIFF_BYTES]:
+        return True
+    try:
+        data.decode("utf-8")
+    except UnicodeDecodeError:
+        return True
+    return False
+
+
+class UsageError(Exception):
+    """git could not answer: a usage or environment error, never a verdict on the content."""
+
+
+class Scan:
+    """Applies the composed shapes and literals, and collects findings that never carry a value."""
+
+    def __init__(self, rows: list, literals: list) -> None:
+        self.rows = rows
+        self.literals = literals
+        self.findings: list[str] = []
+
+    def text(self, shown: str, text: str) -> None:
+        normal = unicodedata.normalize("NFKC", text)
+        for number, line in enumerate(normal.splitlines(), start=1):
+            for rule, pattern in self.rows:
+                for match in pattern.finditer(line):
+                    if rule in ADDRESS_RULES and harmless_address(
+                        match.group(0),
+                        line[max(match.start() - 1, 0) : match.start()],
+                        line[match.end() : match.end() + 2],
+                    ):
+                        continue
+                    self.findings.append(f"{shown}:{number}: {rule}")
+        folded = normal.casefold()
+        for index, (origin, literal) in enumerate(self.literals):
+            if literal and literal in folded:
+                number = folded[: folded.index(literal)].count("\n") + 1
+                self.findings.append(f"{shown}:{number}: {origin} literal #{index}")
+
+    def binary(self, shown: str, data: bytes) -> None:
+        # Refused for being binary; its bytes are still searched, so the report says whether it
+        # also carried a private literal (a compiled cache embeds the paths it was built from).
+        self.findings.append(f"{shown}: binary")
+        folded = data.decode("latin-1").casefold()
+        for index, (origin, literal) in enumerate(self.literals):
+            if literal and literal in folded:
+                self.findings.append(f"{shown}: {origin} literal #{index}")
+
+
+def git(root: Path, *args: str, stdin: bytes | None = None) -> bytes:
+    done = subprocess.run(
+        ["git", "-C", str(root), *args], input=stdin, capture_output=True, check=False
+    )
+    if done.returncode != 0:
+        message = done.stderr.decode("utf-8", "replace").strip()[:200]
+        raise UsageError(f"git {args[0]} failed in {root}: {message}")
+    return done.stdout
+
+
+def read_blobs(root: Path, ids: list[str]) -> list[bytes]:
+    """Every blob's bytes through one `git cat-file --batch`, in the order asked."""
+    if not ids:
+        return []
+    out = git(root, "cat-file", "--batch", stdin=("\n".join(ids) + "\n").encode("ascii"))
+    contents, position = [], 0
+    for _ in ids:
+        end = out.index(b"\n", position)
+        size = int(out[position:end].split()[2])
+        contents.append(out[end + 1 : end + 1 + size])
+        position = end + 1 + size + 1
+    return contents
+
+
+def history(root: Path, rev: str, scan: Scan) -> int | None:
+    """Scan every blob reachable from `rev` once. None when the repository is shallow (VOID)."""
+    if git(root, "rev-parse", "--is-shallow-repository").strip() != b"false":
+        return None
+    try:
+        git(root, "rev-parse", "--verify", "--quiet", f"{rev}^{{commit}}")
+    except UsageError:
+        return 0
+    first_path: dict[str, str] = {}
+    for line in git(root, "rev-list", "--objects", rev).decode("utf-8", "replace").splitlines():
+        object_id, _, path = line.partition(" ")
+        if path and object_id not in first_path:
+            first_path[object_id] = path
+    if not first_path:
+        return 0
+    kinds = git(
+        root,
+        "cat-file",
+        "--batch-check=%(objectname) %(objecttype) %(objectsize)",
+        stdin=("\n".join(first_path) + "\n").encode("ascii"),
+    )
+    blobs, readable = 0, []
+    for line in kinds.decode("ascii").splitlines():
+        object_id, kind, size = line.split()
+        if kind != "blob":
+            continue
+        blobs += 1
+        shown = f"history:{first_path[object_id]}@{object_id[:9]}"
+        if int(size) > MAX_BYTES:
+            scan.findings.append(f"{shown}: oversize")
+        else:
+            readable.append((object_id, shown, first_path[object_id]))
+    for (object_id, shown, path), data in zip(
+        readable, read_blobs(root, [item[0] for item in readable]), strict=True
+    ):
+        if is_binary(data):
+            scan.binary(shown, data)
+        elif not skipped_name(path):
+            scan.text(shown, data.decode("utf-8"))
+    return blobs
 
 
 def main() -> int:
@@ -109,6 +241,10 @@ def main() -> int:
     parser.add_argument("--subject", action="append", default=[])
     parser.add_argument("--deny-list", default=os.environ.get("PERSONA_CORE_DENY_LIST"))
     parser.add_argument("--no-tree", action="store_true", help="scan only the --subject paths")
+    parser.add_argument(
+        "--history", action="store_true", help="also read every blob reachable from --rev"
+    )
+    parser.add_argument("--rev", default="HEAD", help="the revision whose history --history reads")
     args = parser.parse_args()
     root = Path(args.root).resolve()
     pc = load_persona_core()
@@ -125,39 +261,52 @@ def main() -> int:
     files = [] if args.no_tree else tracked(root)
     for subject in args.subject:
         files += under(Path(subject).resolve())
-    examined, findings = 0, []
+    scan = Scan(rows, literals)
+    examined = 0
     for path in files:
-        if skipped(path, root) or not path.is_file() or path.stat().st_size > MAX_BYTES:
+        if not path.is_file():
+            continue
+        shown = str(path.relative_to(root) if path.is_relative_to(root) else path)
+        if path.stat().st_size > MAX_BYTES:
+            examined += 1
+            scan.findings.append(f"{shown}: oversize")
             continue
         try:
-            text = path.read_text(encoding="utf-8")
-        except (OSError, UnicodeDecodeError):
+            data = path.read_bytes()
+        except OSError:
+            examined += 1
+            scan.findings.append(f"{shown}: unreadable")
+            continue
+        if is_binary(data):
+            examined += 1
+            scan.binary(shown, data)
+            continue
+        if skipped(path, root):
             continue
         examined += 1
-        shown = path.relative_to(root) if path.is_relative_to(root) else path
-        normal = unicodedata.normalize("NFKC", text)
-        for number, line in enumerate(normal.splitlines(), start=1):
-            for rule, pattern in rows:
-                for match in pattern.finditer(line):
-                    if rule in ADDRESS_RULES and harmless_address(
-                        match.group(0),
-                        line[max(match.start() - 1, 0) : match.start()],
-                        line[match.end() : match.end() + 2],
-                    ):
-                        continue
-                    findings.append(f"{shown}:{number}: {rule}")
-        folded = unicodedata.normalize("NFKC", text).casefold()
-        for index, (origin, literal) in enumerate(literals):
-            if literal and literal in folded:
-                number = folded[: folded.index(literal)].count("\n") + 1
-                findings.append(f"{shown}:{number}: {origin} literal #{index}")
-    for finding in findings:
+        scan.text(shown, data.decode("utf-8"))
+    blobs, void = 0, None
+    if args.history:
+        try:
+            counted = history(root, args.rev, scan)
+        except UsageError as error:
+            print(f"public-scrub: {error}")
+            return 2
+        if counted is None:
+            void = "the repository is shallow, so the history it would read is incomplete"
+        else:
+            blobs = counted
+    for finding in scan.findings:
         print(f"public-scrub: {finding}")
     scope = "public shapes and the private list" if private else "public shapes only"
-    print(f"examined {examined} file(s) against {scope}; {len(findings)} finding(s)")
-    if examined == 0:
+    read = f"{examined} file(s)" + (f" and {blobs} history blob(s)" if args.history else "")
+    print(f"examined {read} against {scope}; {len(scan.findings)} finding(s)")
+    if scan.findings:
+        return 1
+    if void is not None:
+        print(f"public-scrub: VOID: {void}")
         return 3
-    return 1 if findings else 0
+    return 3 if examined + blobs == 0 else 0
 
 
 if __name__ == "__main__":
