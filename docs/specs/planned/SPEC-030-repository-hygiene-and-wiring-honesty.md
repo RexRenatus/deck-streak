@@ -1,7 +1,7 @@
 # SPEC-030: tests leave no temporary files, and the pack wiring cannot lag the tree
 
 - **Wave:** W0. **Issue:** #23 (epic #1). **Context(s):** `repo` (`scripts/`, `.github/workflows/`, `.packs/wiring.json`).
-- **Decided by:** ADR-004 (the vendored packs and their wiring), ADR-012 (testing), ADR-017 (hosted CI on pull requests into `dev` and `main`).
+- **Decided by:** ADR-004 (the vendored packs and their wiring), ADR-012 (testing), ADR-017 (hosted CI on pull requests into `dev` and `main`), ADR-030 (this SPEC's own: the box-pack runner uses each pack's own verb, judges the committed tree without the vendored rules, and names every expected red).
 - **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
   `docs/specs/` with its tests and `docs/red-first/SPEC-030.md` (ADR-016).
 
@@ -24,6 +24,9 @@
     `scripts/tests/test_pack_wiring.py` and `tools/parity-oracle/test_generate.py` both call
     `tempfile.mkdtemp()` and never remove the directory (read at `main` e05dfa5; SPEC-029 repairs
     the second).
+    Amended by the delivery, measured at `dev` cb66427: `scripts/tests/test_public_scrub.py`,
+    added after e05dfa5, calls `tempfile.mkdtemp()` twice (its `scrub` helper and
+    `test_an_empty_subject_is_void`) and removes neither directory, so R5 repairs it too.
   - **Honest states.** `scripts/pack-rows.py` accepts a pack left `pending` after its subject
     exists and every row passes, and never runs a deferred row, so a deferral outlives the issue
     that was to lift it and nobody learns the row is already green (`.packs/wiring.json` holds
@@ -76,8 +79,9 @@ R4. The lint's own planted fixtures, one leaking file per language under
     `scripts/tests/fixtures/temp-hygiene/`, carry a `.fixture` suffix after their language's
     extension, so no test runner and no probe glob collects them; the lint reads them by the inner
     extension, refuses each, and excludes the directory from the tree census.
-R5. `scripts/tests/test_pack_wiring.py` creates its temporary directory with
-    `tempfile.TemporaryDirectory`, so the tree is clean under R3.
+R5. `scripts/tests/test_pack_wiring.py` and `scripts/tests/test_public_scrub.py` create their
+    temporary directories with `tempfile.TemporaryDirectory`, so the tree is clean under R3 (the
+    second amended in: it leaks the same way, and section 1's census predates it).
 R6. `scripts/pack-rows.py` refuses (exit 1, naming the pack) a `pending` pack whose every blocking
     row ran and passed with a non-zero examined count: the pack's subject exists and is green, so
     its state must say `enforced`.
@@ -107,8 +111,13 @@ R12. `.packs/wiring.json` names, for each phxd pack, every row expected red on t
 R13. The subscription-proxy client scan reads `pending` with its issue while it examines no
     settings document (#29), and fails the run on any red. VOID is never reported as green.
 R14. The run prints one line per pack: its examined count, its unexpected, expected and stale rows.
-    It exits 0 only when every pack examined at least one row and no row is an unexpected red or a
-    stale expectation.
+    It exits 0 only when every pack examined at least one row, or reads `pending` with the open
+    issue `.packs/wiring.json` names for it, and no row is an unexpected red or a stale expectation.
+    A `pending` pack that examines a row is a stale expectation. (Amended by the delivery: ui-styles
+    declares only catalog rows, so every `pack run` of it is VOID with `examined: 0` and exit 3, by
+    its own SKILL.md, whatever the tree holds; and the seo-pipeline pack has no built site to verify
+    until #59. As first written, R14 could exit 0 on no tree. Both read `pending`, as R13's proxy
+    scan does, and neither is ever reported green.)
 
 ## 3. Acceptance criteria
 
@@ -162,15 +171,18 @@ maintainer's box.
 | `scripts/tests/fixtures/temp-hygiene/leaks_tempdir.rs.fixture` | repo | added: planted Rust leak |
 | `scripts/tests/fixtures/temp-hygiene/leaks_mkdtemp.py.fixture` | repo | added: planted Python leak |
 | `scripts/tests/fixtures/temp-hygiene/leaks_mkdtemp.ts.fixture` | repo | added: planted TypeScript leak |
-| `scripts/tests/test_pack_wiring.py` | repo | changed: A6 to A8; `TemporaryDirectory` |
+| `scripts/tests/test_pack_wiring.py` | repo | changed: A6 to A8; `TemporaryDirectory`; the `box` expectations name manifest issues (R9) |
+| `scripts/tests/test_public_scrub.py` | repo | changed: `TemporaryDirectory` (R5, amended in: its census postdates section 1) |
 | `scripts/pack-rows.py` | repo | changed: the stale-pending refusal and the deferred-row pass |
-| `.packs/wiring.json` | repo | changed where R8 applies |
+| `.packs/wiring.json` | repo | changed where R8 applies, and the `box` section R12 and R13 read |
 | `scripts/box-packs.sh` | repo | changed: R10 to R14 |
 | `scripts/tests/test_box_packs.py` | repo | added: A9 to A13 |
 | `scripts/tests/fixtures/box-packs/fake-phxd` | repo | added: the fake phxd and its planted cards |
-| `scripts/tests/fixtures/box-packs/phoenix/skills/catalog.json` | repo | added: a fake catalog naming one probe pack and one run pack |
+| `scripts/tests/fixtures/box-packs/phoenix/skills/catalog.json` | repo | added: a fake catalog naming one probe pack, one run pack and one seo-pipeline pack (amended: A9 pins R10's third verb too) |
 | `docs/TESTING.md` | repo | changed: the temporary-file rule and the honest-state rule |
 | `docs/red-first/SPEC-030.md` | repo | added |
+| `docs/decisions/ADR-030-the-box-pack-runner-uses-each-packs-own-verb.md` | repo | added: R10 to R14's design and what it was chosen against |
+| `docs/schematics/box-pack-runner.md` | repo | added: the runner's data flow and each pack's verdict (amended in: CLAUDE.md asks for a schematic before a changed data flow) |
 | `changelog.d/` fragment | repo | added |
 
 
@@ -185,6 +197,12 @@ maintainer's box.
   (#60).
 - It keeps no pytest retention setting: DeckStreak's Python tests are `unittest`, and the lint
   replaces the setting's purpose (#23).
+- It runs no deferred PACK in R7's pass: durable-services reads a tree with no unit as a finding,
+  not as VOID, so its rows stay unrun until the deploy templates enforce it (#25). R7's pass runs
+  the deferred ROWS of packs whose rows run.
+- It builds no site for the seo-pipeline pack: the runner verifies `web/site/dist` only when the
+  judged commit holds it, and building the landing page for the run is the landing page's work
+  (#59).
 
 ## 6. Risks
 
