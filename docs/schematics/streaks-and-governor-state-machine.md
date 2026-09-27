@@ -34,3 +34,13 @@ discipline engine is silent, digests and morning messages switch to comeback mod
 id keys the comeback cap (three messages) and the one comeback reading. The law streak counts days
 with a law review, is bridged by skip days, has no freezes, and (unlike the predecessor, whose law
 row never decayed) decays on the same unsavable rule: the predecessor's defect is fixed, not ported.
+
+**W1 builds the lapse episode alone** (SPEC-049), ahead of this machine: a pure function in `streaks`
+over the study days, their qualifying review counts and the skip days its caller supplies. A lapse
+is open when the silent run that ends on the current study day holds three study days that are not
+skip days (a skip day neither counts nor ends the run); its id is the epoch day of the run's first
+such day, the predecessor's episode anchor; the next study day with a qualifying review closes it.
+A return day of one or two reviews therefore closes the lapse id with no relight, as in the
+predecessor, whose `pipeline_layers/governor.py:GovernorLayer._update_governor` ends the silent run
+at any study day and whose relight (`pipeline_layers/showcase.py:ShowcaseLayer._relight`) pays only
+at `constants.py:RELIGHT_CARDS` reviews. Strength, standby, decay and the relight stay W3's.
