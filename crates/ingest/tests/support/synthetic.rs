@@ -48,6 +48,29 @@ const SYLLABLES: [&str; 16] = [
     "ka", "lo", "mi", "ne", "ru", "sa", "te", "vi", "zo", "pa", "de", "fu", "gi", "ho", "ja", "be",
 ];
 
+/// How many cards and reviews a collection holds; its decks, texts and deck configuration are
+/// ADR-022's whatever its shape.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Shape {
+    /// Cards, one per note.
+    pub cards: usize,
+    /// Study reviews, two per studied card.
+    pub reviews: usize,
+}
+
+impl Shape {
+    /// ADR-022's collection: what the budget tests measure.
+    pub const ADR_022: Self = Self {
+        cards: CARDS,
+        reviews: REVIEWS,
+    };
+    /// A small collection with the same decks, for the tests that sync rather than measure.
+    pub const SMALL: Self = Self {
+        cards: 1_000,
+        reviews: 800,
+    };
+}
+
 /// Which side of a sync the collection is built for: the engine marks a server's collection.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Side {
@@ -134,6 +157,15 @@ struct Layout {
 /// When the engine cannot create the collection or a statement fails: a fixture that cannot be
 /// built must stop the test that needs it.
 pub fn build(path: &Path, side: Side) -> Counts {
+    build_shaped(path, side, Shape::ADR_022)
+}
+
+/// Builds a collection of `shape` at `path` for `side`, and returns what it holds.
+///
+/// # Panics
+///
+/// As [`build`].
+pub fn build_shaped(path: &Path, side: Side, shape: Shape) -> Counts {
     let mut col = CollectionBuilder::new(path)
         .set_server(side == Side::Server)
         .build()
@@ -182,8 +214,8 @@ pub fn build(path: &Path, side: Side) -> Counts {
     let mut draw = Draw(SEED);
     let db = col.storage.db();
     db.execute_batch("begin").expect("a transaction opens");
-    let studied = insert_notes_and_cards(&col, &layout, &mut draw);
-    insert_reviews(&col, &studied, now_ms, &mut draw);
+    let studied = insert_notes_and_cards(&col, &layout, shape.cards, &mut draw);
+    insert_reviews(&col, &studied, now_ms, shape.reviews, &mut draw);
     db.execute_batch("commit").expect("the transaction commits");
     db.execute("update col set mod = ?", (now_ms,))
         .expect("the modification stamp is set");
@@ -192,8 +224,13 @@ pub fn build(path: &Path, side: Side) -> Counts {
     counts
 }
 
-/// Inserts [`CARDS`] notes, each with one card, and returns the studied cards' ids.
-fn insert_notes_and_cards(col: &Collection, layout: &Layout, draw: &mut Draw) -> Vec<i64> {
+/// Inserts `count` notes, each with one card, and returns the studied cards' ids.
+fn insert_notes_and_cards(
+    col: &Collection,
+    layout: &Layout,
+    count: usize,
+    draw: &mut Draw,
+) -> Vec<i64> {
     let db = col.storage.db();
     let mut notes = db
         .prepare(
@@ -209,8 +246,8 @@ fn insert_notes_and_cards(col: &Collection, layout: &Layout, draw: &mut Draw) ->
         )
         .expect("the card statement prepares");
     let (mut front, mut back) = (String::new(), String::new());
-    let mut studied = Vec::with_capacity(CARDS / 5 * STUDIED_OF_FIVE);
-    for index in 0..CARDS {
+    let mut studied = Vec::with_capacity(count / 5 * STUDIED_OF_FIVE);
+    for index in 0..count {
         let id = layout.first_id + i64::try_from(index).unwrap();
         draw.field(&mut front);
         draw.field(&mut back);
@@ -249,11 +286,11 @@ fn insert_notes_and_cards(col: &Collection, layout: &Layout, draw: &mut Draw) ->
     studied
 }
 
-/// Inserts [`REVIEWS`] study reviews of the `studied` cards over the [`REVIEW_DAYS`] ending at
+/// Inserts `count` study reviews of the `studied` cards over the [`REVIEW_DAYS`] ending at
 /// `now_ms`. Each review gets its own slot of the span, so every review id (a millisecond stamp)
 /// is unique; a studied card's first answer (learning) falls in the span's first half and its
 /// second (review) in the second half.
-fn insert_reviews(col: &Collection, studied: &[i64], now_ms: i64, draw: &mut Draw) {
+fn insert_reviews(col: &Collection, studied: &[i64], now_ms: i64, count: usize, draw: &mut Draw) {
     let mut revlog = col
         .storage
         .db()
@@ -263,9 +300,9 @@ fn insert_reviews(col: &Collection, studied: &[i64], now_ms: i64, draw: &mut Dra
         )
         .expect("the review statement prepares");
     let span = REVIEW_DAYS * DAY_MS;
-    let slot = span / i64::try_from(REVIEWS).unwrap();
+    let slot = span / i64::try_from(count).unwrap();
     let start = now_ms - span;
-    for review in 0..REVIEWS {
+    for review in 0..count {
         let card = studied[review % studied.len()];
         let at = start
             + i64::try_from(review).unwrap() * slot
@@ -312,4 +349,22 @@ pub fn counts(path: &Path) -> Counts {
     let counts = counts_in(&col);
     col.close(None).expect("the engine closes the collection");
     counts
+}
+
+/// The collection's modified stamp (`col.mod`), which a sync that changed nothing leaves alone.
+///
+/// # Panics
+///
+/// When the engine cannot open the collection.
+pub fn modified(path: &Path) -> i64 {
+    let col = CollectionBuilder::new(path)
+        .build()
+        .expect("the engine opens the collection");
+    let stamp = col
+        .storage
+        .db()
+        .query_row("select mod from col", (), |row| row.get(0))
+        .expect("the modified stamp is read");
+    col.close(None).expect("the engine closes the collection");
+    stamp
 }

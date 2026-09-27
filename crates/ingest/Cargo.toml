@@ -15,8 +15,20 @@ workspace = true
 # ADR-022: the engine stays inside this crate, behind the AnkiEngine port (src/engine.rs).
 anki.workspace = true
 deck-streak-kernel.workspace = true
+# SPEC-022 section 7: the data-rights port's rows are JSON values.
+serde_json.workspace = true
+# SPEC-022 section 7: the kernel's Db hands out sqlx types, and sync_runs' queries are checked into
+# .sqlx/.
+sqlx.workspace = true
 thiserror.workspace = true
+tokio = { workspace = true, features = ["rt", "time"] }
+tracing.workspace = true
 
 [dev-dependencies]
+# ADR-029: the parity oracle's golden reader, included by path.
+serde.workspace = true
+serde_json.workspace = true
 tempfile.workspace = true
-tokio = { workspace = true, features = ["rt"] }
+tokio = { workspace = true, features = ["rt", "macros", "test-util", "net", "io-util", "sync"] }
+# SPEC-022 section 7: the census reads the engine's compressed request bodies.
+zstd.workspace = true

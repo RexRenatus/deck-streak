@@ -14,4 +14,9 @@
 #![deny(unused_must_use)]
 #![warn(missing_docs, clippy::all)]
 
+pub mod data_rights;
 pub mod engine;
+pub mod lock;
+pub mod settings;
+pub mod sync;
+pub mod sync_runs;

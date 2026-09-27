@@ -22,9 +22,10 @@
               only #[test] functions, not a support module's helpers"
 )]
 
+pub mod recording;
 pub mod synthetic;
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, VecDeque};
 use std::env;
 use std::ffi::OsStr;
 use std::fs;
@@ -32,6 +33,8 @@ use std::io::{BufRead, BufReader, Read};
 use std::net::Ipv4Addr;
 use std::path::{Path, PathBuf};
 use std::process::{Child, ChildStdin, ChildStdout, Command, Stdio};
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::{Arc, Mutex};
 use std::thread;
 
 use anki::collection::CollectionBuilder;
@@ -39,7 +42,19 @@ use anki::scheduler::answering::{CardAnswer, Rating};
 use anki::sync::http_server::{SimpleServer, SyncServerConfig, default_ip_header};
 use anki::sync::login::sync_login;
 use anki::timestamp::TimestampMillis;
+use deck_streak_ingest::engine::{AnkiEngine, EngineError, NewCardQueue, SyncLogin, SyncOutcome};
+use deck_streak_ingest::settings::{
+    STATE_DIRECTORY, SYNC_ENDPOINT, SYNC_PASSWORD, SYNC_USERNAME, SyncSettings,
+};
+use deck_streak_ingest::sync::{RetrySchedule, Syncer};
+use deck_streak_ingest::sync_runs::{SyncRun, SyncRunStore, Trigger};
+use deck_streak_kernel::{
+    Clock, CredentialLoader, CredentialsDirectory, Db, Environment, KernelError, ManualClock,
+    Redactor, StudyDay, StudyDayRule, UtcMillis,
+};
 use tokio::runtime::Runtime;
+use tokio::sync::Notify;
+use tokio::time::Instant;
 
 /// The environment variable that names a re-executed test binary's role.
 pub const ROLE: &str = "DECKSTREAK_TEST_ROLE";
@@ -385,4 +400,267 @@ pub fn review_on_another_client(
 /// A fresh HTTP client of the engine's own type, built by its `Default`, as the port builds one.
 fn engine_client<Client: Default>() -> Client {
     Client::default()
+}
+
+/// One step of a scripted engine's normal sync.
+#[derive(Clone)]
+pub enum Step {
+    /// Answer with this outcome at once.
+    Answer(SyncOutcome),
+    /// Fail with this kind at once.
+    Fail(EngineError),
+    /// Never answer: only the attempt's timeout ends it.
+    Hang,
+    /// Wait until the notify is released, then answer with the outcome.
+    Hold(Arc<Notify>, SyncOutcome),
+}
+
+#[derive(Default)]
+struct Script {
+    steps: Mutex<VecDeque<Step>>,
+    normal_syncs: AtomicUsize,
+    full_downloads: AtomicUsize,
+    active: AtomicUsize,
+    most_active: AtomicUsize,
+    started: Mutex<Vec<Instant>>,
+}
+
+/// An engine whose normal syncs follow a script, and that counts what it is asked: a request the
+/// syncer never made is a call this engine never saw. The last step repeats when the script runs
+/// out.
+#[derive(Clone, Default)]
+pub struct ScriptedEngine(Arc<Script>);
+
+impl ScriptedEngine {
+    /// An engine that plays `steps` in order.
+    #[must_use]
+    pub fn new(steps: impl IntoIterator<Item = Step>) -> Self {
+        let engine = Self::default();
+        engine.0.steps.lock().unwrap().extend(steps);
+        engine
+    }
+
+    /// The normal syncs it was asked for.
+    #[must_use]
+    pub fn normal_syncs(&self) -> usize {
+        self.0.normal_syncs.load(Ordering::SeqCst)
+    }
+
+    /// The full downloads it was asked for.
+    #[must_use]
+    pub fn full_downloads(&self) -> usize {
+        self.0.full_downloads.load(Ordering::SeqCst)
+    }
+
+    /// The most normal syncs that were running at one time.
+    #[must_use]
+    pub fn most_active(&self) -> usize {
+        self.0.most_active.load(Ordering::SeqCst)
+    }
+
+    /// When each normal sync started, on tokio's clock.
+    #[must_use]
+    pub fn started(&self) -> Vec<Instant> {
+        self.0.started.lock().unwrap().clone()
+    }
+
+    fn next(&self) -> Step {
+        let mut steps = self.0.steps.lock().unwrap();
+        if steps.len() > 1 {
+            steps.pop_front().unwrap()
+        } else {
+            steps
+                .front()
+                .cloned()
+                .unwrap_or(Step::Answer(SyncOutcome::NoChanges))
+        }
+    }
+}
+
+impl AnkiEngine for ScriptedEngine {
+    fn new_card_queue(&self, _collection: &Path) -> Result<NewCardQueue, EngineError> {
+        Ok(NewCardQueue::default())
+    }
+
+    async fn normal_sync(
+        &self,
+        _collection: &Path,
+        _login: &SyncLogin,
+    ) -> Result<SyncOutcome, EngineError> {
+        let step = self.next();
+        self.0.normal_syncs.fetch_add(1, Ordering::SeqCst);
+        self.0.started.lock().unwrap().push(Instant::now());
+        let active = self.0.active.fetch_add(1, Ordering::SeqCst) + 1;
+        self.0.most_active.fetch_max(active, Ordering::SeqCst);
+        let answer = match step {
+            Step::Answer(outcome) => Ok(outcome),
+            Step::Fail(kind) => Err(kind),
+            Step::Hang => std::future::pending().await,
+            Step::Hold(release, outcome) => {
+                release.notified().await;
+                Ok(outcome)
+            }
+        };
+        self.0.active.fetch_sub(1, Ordering::SeqCst);
+        answer
+    }
+
+    async fn full_download(
+        &self,
+        _collection: &Path,
+        _login: &SyncLogin,
+    ) -> Result<(), EngineError> {
+        self.0.full_downloads.fetch_add(1, Ordering::SeqCst);
+        Ok(())
+    }
+}
+
+/// A run record kept in memory: for the paused-time tests, which must not wait on the database
+/// while a timer is pending (SPEC-022 section 7).
+#[derive(Clone, Default)]
+pub struct MemoryRuns(Arc<Mutex<Vec<SyncRun>>>);
+
+impl MemoryRuns {
+    /// Every run recorded, in order.
+    #[must_use]
+    pub fn runs(&self) -> Vec<SyncRun> {
+        self.0.lock().unwrap().clone()
+    }
+}
+
+impl SyncRunStore for MemoryRuns {
+    async fn scheduled_run_on(&self, day: StudyDay) -> Result<bool, KernelError> {
+        Ok(self
+            .runs()
+            .iter()
+            .any(|run| run.trigger == Trigger::Scheduled && run.study_day == day))
+    }
+
+    async fn last_success(&self) -> Result<Option<SyncRun>, KernelError> {
+        Ok(self
+            .runs()
+            .into_iter()
+            .filter(|run| run.outcome.is_ok())
+            .max_by_key(|run| run.finished_at))
+    }
+
+    async fn record(&self, run: &SyncRun) -> Result<(), KernelError> {
+        self.0.lock().unwrap().push(run.clone());
+        Ok(())
+    }
+}
+
+/// A scratch deployment: a state directory, a credentials directory holding the synthetic
+/// account, and DeckStreak's database, all removed when the fixture drops.
+pub struct Fixture {
+    scratch: tempfile::TempDir,
+    endpoint: String,
+}
+
+impl Fixture {
+    /// A deployment that syncs from `endpoint`.
+    #[must_use]
+    pub fn new(endpoint: &str) -> Self {
+        let scratch = tempfile::tempdir().unwrap();
+        for folder in ["state", "credentials"] {
+            fs::create_dir_all(scratch.path().join(folder)).unwrap();
+        }
+        let credentials = scratch.path().join("credentials");
+        fs::write(credentials.join(SYNC_USERNAME), format!("{USERNAME}\n")).unwrap();
+        fs::write(credentials.join(SYNC_PASSWORD), format!("{PASSWORD}\n")).unwrap();
+        Self {
+            scratch,
+            endpoint: endpoint.to_owned(),
+        }
+    }
+
+    /// The scratch directory everything lives in.
+    #[must_use]
+    pub fn scratch(&self) -> &Path {
+        self.scratch.path()
+    }
+
+    /// The settings the service would read, for this deployment.
+    #[must_use]
+    pub fn settings(&self) -> SyncSettings {
+        let state = self.scratch.path().join("state");
+        SyncSettings::from_env(&Environment::from_vars([
+            (SYNC_ENDPOINT, OsStr::new(&self.endpoint)),
+            (STATE_DIRECTORY, state.as_os_str()),
+        ]))
+        .unwrap()
+    }
+
+    /// The kernel's loader over this deployment's credentials directory.
+    #[must_use]
+    pub fn credentials(&self) -> CredentialLoader {
+        let directory = CredentialsDirectory::new(self.scratch.path().join("credentials")).unwrap();
+        CredentialLoader::new(directory, Redactor::new())
+    }
+
+    /// The copy of the collection the syncer keeps.
+    #[must_use]
+    pub fn copy(&self) -> PathBuf {
+        self.settings().copy_path()
+    }
+
+    /// DeckStreak's database for this deployment, migrated.
+    pub async fn db(&self) -> Db {
+        Db::open(&self.scratch.path().join("deckstreak.db"))
+            .await
+            .unwrap()
+    }
+
+    /// A syncer for this deployment over `engine`, recording in `store`, on `clock`, with every
+    /// wait zero-length.
+    #[must_use]
+    pub fn syncer<E: AnkiEngine + Sync, S: SyncRunStore>(
+        &self,
+        engine: E,
+        store: S,
+        clock: Arc<dyn Clock>,
+    ) -> Syncer<E, S> {
+        Syncer::new(
+            engine,
+            store,
+            self.settings(),
+            self.credentials(),
+            clock,
+            StudyDayRule::default(),
+        )
+        .with_schedule(RetrySchedule::IMMEDIATE)
+    }
+}
+
+/// A manual clock at `millis` past the epoch.
+#[must_use]
+pub fn clock_at(millis: i64) -> Arc<ManualClock> {
+    Arc::new(ManualClock::new(UtcMillis::from_epoch_millis(millis)))
+}
+
+/// Plays the owner's other Anki client forcing a full sync, as a desktop does after a change of
+/// schema: marks its collection at `collection` changed in schema and uploads it whole to the
+/// server at `endpoint`. No code of this workspace runs here.
+///
+/// # Panics
+///
+/// When the engine fails.
+pub fn upload_from_another_client(runtime: &Runtime, collection: &Path, endpoint: &str) {
+    let mut col = CollectionBuilder::new(collection)
+        .build()
+        .unwrap_or_else(|error| panic!("the other client opens its collection: {error}"));
+    col.set_schema_modified()
+        .unwrap_or_else(|error| panic!("the other client changes its schema: {error}"));
+    let mut auth = runtime
+        .block_on(sync_login(
+            USERNAME,
+            PASSWORD,
+            Some(endpoint.to_owned()),
+            engine_client(),
+        ))
+        .unwrap_or_else(|error| panic!("the other client logs in: {error}"));
+    auth.endpoint = endpoint.parse().ok();
+    runtime
+        .block_on(col.full_upload(auth, engine_client()))
+        .unwrap_or_else(|error| panic!("the other client uploads its collection: {error}"));
 }
