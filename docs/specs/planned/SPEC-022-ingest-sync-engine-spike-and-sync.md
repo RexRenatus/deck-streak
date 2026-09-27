@@ -270,6 +270,13 @@ other test.
   gate's clippy and test stages build the engine, so the gate job installs the same `protoc` the
   measurement does, and the toolchain stage names it, so a machine without it fails there by name
   rather than deep inside a build script.
+- **§3: the tests' sync server runs in a child process, not in process.** The engine's server
+  reads its users only from `SYNC_USER1` in its process environment, and setting an environment
+  variable is `unsafe` in edition 2024, which this workspace forbids. A test that needs the server
+  re-executes its own test binary as the server with `Command::env`; the server exits when the
+  test closes its standard input (`crates/ingest/tests/support/mod.rs`). A budget test's measured
+  operation runs in a third process for the same reason the budgets need it: `VmHWM` is a process's
+  peak, so the fixture's build and the server stay out of the measured one.
 - **`Cargo.lock`: one bundled SQLite for the workspace.** A dependency graph may hold one crate
   that links the native `sqlite3`. The engine's `rusqlite` 0.36 accepts only `libsqlite3-sys`
   0.34, and the kernel's `sqlx` 0.9 accepts 0.30.1 up to 0.37, so the lockfile holds 0.34.0, which
