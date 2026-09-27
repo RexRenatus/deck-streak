@@ -31,7 +31,9 @@ Every criterion has one line in the fence, and every line names a test the deliv
 (red, for the criterion's reason) and then makes pass. A criterion two commands decide takes two
 lines. Commands in the fence are the shapes the tdd probe resolves: `cargo test -p ... --test ...
 -- --exact ...`, `cargo nextest run ... -E 'test(name)'`, `python3 -m unittest discover -s DIR -p
-FILE -k name`, `pnpm --dir web/app exec vitest run PATH -t "name"`.
+FILE -k name`, `pnpm exec vitest run web/app/src/PATH -t "name"` (from the repository root, which
+holds the Vitest projects config). The probe resolves no `pnpm --dir` form and no Playwright command:
+a browser criterion names its Playwright spec in the table and its fence line runs a Vitest test.
 
 ## 4. File manifest
 
