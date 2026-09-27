@@ -36,6 +36,9 @@ A13: green at 1d96f67
 ```
 
 At 53f1640 the maintainer-box run with a phxd built from the vendored phoenix-v2 commit printed
+`BOX PACKS OK: 11 pack(s), 3 pending`, with 35 expected red rows in seven packs. Once SPEC-028 was
+merged in (d27d4ee), the same run refused four expectations as stale, because the Mini App shell had
+made those rows green, and 880d303 removed them. The run there printed
 `BOX PACKS OK: 11 pack(s), 3 pending`: eight packs with no unexpected red and no stale expectation
-(35 expected red rows in seven packs), and seo-pipeline, ui-styles and the proxy scan pending on
-#59, #60 and #29.
+(31 expected red rows in six packs), and seo-pipeline, ui-styles and the proxy scan pending on #59,
+#60 and #29.
