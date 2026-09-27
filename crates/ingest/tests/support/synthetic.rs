@@ -16,7 +16,7 @@
 
 use std::path::Path;
 
-use anki::collection::CollectionBuilder;
+use anki::collection::{Collection, CollectionBuilder};
 use anki::deckconfig::DeckConfigId;
 use anki::timestamp::{TimestampMillis, TimestampSecs};
 
@@ -113,6 +113,20 @@ fn checksum(text: &str) -> i64 {
     i64::from(hash)
 }
 
+/// Where the bulk inserts put the cards, as the engine created the collection.
+struct Layout {
+    /// The stock Basic note type's id.
+    basic: i64,
+    /// The decks that hold the cards, below the two roots.
+    leaves: Vec<i64>,
+    /// Today, as the engine's scheduler counts days from the creation stamp.
+    today: i64,
+    /// Now, in epoch seconds.
+    now: i64,
+    /// The first note's id: a millisecond stamp from before the first review.
+    first_id: i64,
+}
+
 /// Builds ADR-022's collection at `path` for `side`, and returns what it holds.
 ///
 /// # Panics
@@ -134,7 +148,6 @@ pub fn build(path: &Path, side: Side) -> Counts {
         .execute("update col set crt = ?", (created,))
         .expect("the creation stamp is set");
     let today = i64::from(col.timing_today().expect("the engine's day").days_elapsed);
-
     let mut leaves = Vec::with_capacity(DECKS);
     for (root, word) in ROOTS {
         for number in 1..=DECKS / ROOTS.len() {
@@ -158,93 +171,19 @@ pub fn build(path: &Path, side: Side) -> Counts {
         .expect("the engine creates its stock Basic note type")
         .id
         .0;
+    let layout = Layout {
+        basic,
+        leaves,
+        today,
+        now,
+        first_id: now_ms - (REVIEW_DAYS + 1) * DAY_MS,
+    };
 
+    let mut draw = Draw(SEED);
     let db = col.storage.db();
     db.execute_batch("begin").expect("a transaction opens");
-    let mut draw = Draw(SEED);
-    let first_id = now_ms - (REVIEW_DAYS + 1) * DAY_MS;
-    let (mut front, mut back) = (String::new(), String::new());
-    let mut studied = Vec::with_capacity(CARDS / 5 * STUDIED_OF_FIVE);
-    {
-        let mut notes = db
-            .prepare(
-                "insert into notes (id, guid, mid, mod, usn, tags, flds, sfld, csum, flags, data) \
-                 values (?, ?, ?, ?, 0, '', ?, ?, ?, 0, '')",
-            )
-            .expect("the note statement prepares");
-        let mut cards = db
-            .prepare(
-                "insert into cards (id, nid, did, ord, mod, usn, type, queue, due, ivl, factor, \
-                 reps, lapses, left, odue, odid, flags, data) \
-                 values (?, ?, ?, 0, ?, 0, ?, ?, ?, ?, ?, ?, 0, 0, 0, 0, 0, '{}')",
-            )
-            .expect("the card statement prepares");
-        for index in 0..CARDS {
-            let id = first_id + i64::try_from(index).unwrap();
-            draw.field(&mut front);
-            draw.field(&mut back);
-            notes
-                .execute((
-                    id,
-                    format!("s{index:09}"),
-                    basic,
-                    now,
-                    format!("{front}\u{1f}{back}"),
-                    front.as_str(),
-                    checksum(&front),
-                ))
-                .expect("a note is inserted");
-            let deck = leaves[index % DECKS];
-            if index % 5 < STUDIED_OF_FIVE {
-                // A review card: due today one time in DUE_TODAY_ONE_IN, else within its interval.
-                let interval = 1 + draw.below(180);
-                let due = if draw.below(DUE_TODAY_ONE_IN) == 0 {
-                    today
-                } else {
-                    today + 1 + i64::try_from(draw.below(interval)).unwrap()
-                };
-                cards
-                    .execute((id, id, deck, now, 2, 2, due, interval, 2500, 2))
-                    .expect("a review card is inserted");
-                studied.push(id);
-            } else {
-                // A new card, in the order it was added.
-                let position = i64::try_from(index).unwrap() + 1;
-                cards
-                    .execute((id, id, deck, now, 0, 0, position, 0, 0, 0))
-                    .expect("a new card is inserted");
-            }
-        }
-        let mut revlog = db
-            .prepare(
-                "insert into revlog (id, cid, usn, ease, ivl, lastIvl, factor, time, type) \
-                 values (?, ?, 0, ?, ?, ?, 2500, ?, ?)",
-            )
-            .expect("the review statement prepares");
-        // Each review gets its own slot of the 400 days, so every review id (a millisecond
-        // stamp) is unique; a studied card's first answer (learning) falls in the first half of
-        // the span, and its second (review) in the second half.
-        let span = REVIEW_DAYS * DAY_MS;
-        let slot = span / i64::try_from(REVIEWS).unwrap();
-        let start = now_ms - span;
-        for review in 0..REVIEWS {
-            let card = studied[review % studied.len()];
-            let at = start
-                + i64::try_from(review).unwrap() * slot
-                + i64::try_from(draw.below(u64::try_from(slot).unwrap())).unwrap();
-            let taken = 2000 + draw.below(18_000);
-            if review < studied.len() {
-                revlog
-                    .execute((at, card, 3, -600, 0, taken, 0))
-                    .expect("a learning review is inserted");
-            } else {
-                let ease = 1 + draw.below(4);
-                revlog
-                    .execute((at, card, ease, 1 + draw.below(180), 1, taken, 1))
-                    .expect("a review is inserted");
-            }
-        }
-    }
+    let studied = insert_notes_and_cards(&col, &layout, &mut draw);
+    insert_reviews(&col, &studied, now_ms, &mut draw);
     db.execute_batch("commit").expect("the transaction commits");
     db.execute("update col set mod = ?", (now_ms,))
         .expect("the modification stamp is set");
@@ -253,7 +192,99 @@ pub fn build(path: &Path, side: Side) -> Counts {
     counts
 }
 
-fn counts_in(col: &anki::collection::Collection) -> Counts {
+/// Inserts [`CARDS`] notes, each with one card, and returns the studied cards' ids.
+fn insert_notes_and_cards(col: &Collection, layout: &Layout, draw: &mut Draw) -> Vec<i64> {
+    let db = col.storage.db();
+    let mut notes = db
+        .prepare(
+            "insert into notes (id, guid, mid, mod, usn, tags, flds, sfld, csum, flags, data) \
+             values (?, ?, ?, ?, 0, '', ?, ?, ?, 0, '')",
+        )
+        .expect("the note statement prepares");
+    let mut cards = db
+        .prepare(
+            "insert into cards (id, nid, did, ord, mod, usn, type, queue, due, ivl, factor, \
+             reps, lapses, left, odue, odid, flags, data) \
+             values (?, ?, ?, 0, ?, 0, ?, ?, ?, ?, ?, ?, 0, 0, 0, 0, 0, '{}')",
+        )
+        .expect("the card statement prepares");
+    let (mut front, mut back) = (String::new(), String::new());
+    let mut studied = Vec::with_capacity(CARDS / 5 * STUDIED_OF_FIVE);
+    for index in 0..CARDS {
+        let id = layout.first_id + i64::try_from(index).unwrap();
+        draw.field(&mut front);
+        draw.field(&mut back);
+        notes
+            .execute((
+                id,
+                format!("s{index:09}"),
+                layout.basic,
+                layout.now,
+                format!("{front}\u{1f}{back}"),
+                front.as_str(),
+                checksum(&front),
+            ))
+            .expect("a note is inserted");
+        let deck = layout.leaves[index % DECKS];
+        if index % 5 < STUDIED_OF_FIVE {
+            // A review card: due today one time in DUE_TODAY_ONE_IN, else within its interval.
+            let interval = 1 + draw.below(180);
+            let due = if draw.below(DUE_TODAY_ONE_IN) == 0 {
+                layout.today
+            } else {
+                layout.today + 1 + i64::try_from(draw.below(interval)).unwrap()
+            };
+            cards
+                .execute((id, id, deck, layout.now, 2, 2, due, interval, 2500, 2))
+                .expect("a review card is inserted");
+            studied.push(id);
+        } else {
+            // A new card, in the order it was added.
+            let position = i64::try_from(index).unwrap() + 1;
+            cards
+                .execute((id, id, deck, layout.now, 0, 0, position, 0, 0, 0))
+                .expect("a new card is inserted");
+        }
+    }
+    studied
+}
+
+/// Inserts [`REVIEWS`] study reviews of the `studied` cards over the [`REVIEW_DAYS`] ending at
+/// `now_ms`. Each review gets its own slot of the span, so every review id (a millisecond stamp)
+/// is unique; a studied card's first answer (learning) falls in the span's first half and its
+/// second (review) in the second half.
+fn insert_reviews(col: &Collection, studied: &[i64], now_ms: i64, draw: &mut Draw) {
+    let mut revlog = col
+        .storage
+        .db()
+        .prepare(
+            "insert into revlog (id, cid, usn, ease, ivl, lastIvl, factor, time, type) \
+             values (?, ?, 0, ?, ?, ?, 2500, ?, ?)",
+        )
+        .expect("the review statement prepares");
+    let span = REVIEW_DAYS * DAY_MS;
+    let slot = span / i64::try_from(REVIEWS).unwrap();
+    let start = now_ms - span;
+    for review in 0..REVIEWS {
+        let card = studied[review % studied.len()];
+        let at = start
+            + i64::try_from(review).unwrap() * slot
+            + i64::try_from(draw.below(u64::try_from(slot).unwrap())).unwrap();
+        let taken = 2000 + draw.below(18_000);
+        if review < studied.len() {
+            revlog
+                .execute((at, card, 3, -600, 0, taken, 0))
+                .expect("a learning review is inserted");
+        } else {
+            let ease = 1 + draw.below(4);
+            revlog
+                .execute((at, card, ease, 1 + draw.below(180), 1, taken, 1))
+                .expect("a review is inserted");
+        }
+    }
+}
+
+fn counts_in(col: &Collection) -> Counts {
     let db = col.storage.db();
     let count = |sql: &str| -> usize {
         let rows: i64 = db

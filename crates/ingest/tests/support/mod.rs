@@ -15,6 +15,12 @@
     dead_code,
     reason = "each test target includes this module and calls the part it needs"
 )]
+#![allow(
+    clippy::expect_used,
+    clippy::unwrap_used,
+    reason = "test support panics like a test (clippy.toml), but clippy's allow-*-in-tests reaches \
+              only #[test] functions, not a support module's helpers"
+)]
 
 pub mod synthetic;
 
@@ -303,8 +309,8 @@ pub fn serve() {
 
 /// Plays the owner's other Anki client: answers `reviews` cards of the first top-level deck's
 /// queue as Good in the collection at `collection`, then sends them to the server at `endpoint`
-/// with the engine's own normal sync. No DeckStreak code runs here; this is the review "made on
-/// another client" that a DeckStreak sync then pulls.
+/// with the engine's own normal sync. No code of this workspace runs here; this is the review
+/// "made on another client" that the port's sync then pulls.
 ///
 /// # Panics
 ///
@@ -351,13 +357,32 @@ pub fn review_on_another_client(
             USERNAME,
             PASSWORD,
             Some(endpoint.to_owned()),
-            Default::default(),
+            engine_client(),
         ))
         .unwrap_or_else(|error| panic!("the other client logs in: {error}"));
     auth.endpoint = endpoint.parse().ok();
+    let answered = col
+        .sync_meta()
+        .expect("the other client's sync stamps")
+        .modified;
     runtime
-        .block_on(col.normal_sync(auth, Default::default()))
+        .block_on(col.normal_sync(auth, engine_client()))
         .unwrap_or_else(|error| panic!("the other client syncs its reviews: {error}"));
+    // A completed exchange moves the modified stamp to the server's new one (the engine reports
+    // it as `NoChanges`, like a sync with nothing to do).
+    let synced = col
+        .sync_meta()
+        .expect("the other client's sync stamps")
+        .modified;
+    assert!(
+        synced.0 > answered.0,
+        "the other client's sync sends its {reviews} review(s) to the server"
+    );
     col.close(None)
         .unwrap_or_else(|error| panic!("the other client closes its collection: {error}"));
+}
+
+/// A fresh HTTP client of the engine's own type, built by its `Default`, as the port builds one.
+fn engine_client<Client: Default>() -> Client {
+    Client::default()
 }

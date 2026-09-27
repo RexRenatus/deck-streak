@@ -27,13 +27,14 @@ const INCREMENTAL_BUDGET_SECONDS: f64 = 60.0;
 /// ADR-022: the new reviews the incremental sync pulls.
 const NEW_REVIEWS: usize = 100;
 
+/// KiB as MiB. A resident set of 4 TiB or more reads as 4 TiB, far past any budget.
 fn mib(kib: u64) -> f64 {
-    f64::from(u32::try_from(kib).expect("a resident set under 4 TiB")) / 1024.0
+    f64::from(u32::try_from(kib).unwrap_or(u32::MAX)) / 1024.0
 }
 
 fn folder(scratch: &Path, name: &str) -> PathBuf {
     let folder = scratch.join(name);
-    fs::create_dir_all(&folder).expect("a scratch folder");
+    fs::create_dir_all(&folder).unwrap_or_else(|error| panic!("{}: {error}", folder.display()));
     folder
 }
 

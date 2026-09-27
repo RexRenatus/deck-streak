@@ -37,6 +37,13 @@ stage_toolchain() {
     need python3 "Python 3.11 or later" || ok=1
     need gitleaks "https://github.com/gitleaks/gitleaks releases" || ok=1
     need cargo-deny "https://github.com/EmbarkStudios/cargo-deny releases, or taiki-e/install-action" || ok=1
+    # Anki's engine compiles its protobuf definitions with prost-build, which runs protoc from
+    # PROTOC or PATH (ADR-022).
+    if [ -n "${PROTOC:-}" ]; then
+        [ -x "$PROTOC" ] || { echo "PROTOC names no executable protoc"; ok=1; }
+    else
+        need protoc "protoc 31.1 from github.com/protocolbuffers/protobuf releases, or set PROTOC" || ok=1
+    fi
     python3 -c 'import sys; sys.exit(0 if sys.version_info >= (3, 11) else 1)' ||
         { echo "python3 is older than 3.11"; ok=1; }
     node -e 'process.exit(Number(process.versions.node.split(".")[0]) >= 24 ? 0 : 1)' ||

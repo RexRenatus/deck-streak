@@ -1,4 +1,4 @@
-//! The engine port: the one door through which DeckStreak reaches Anki's own Rust engine.
+//! The engine port: the one door through which this workspace reaches Anki's own Rust engine.
 //!
 //! ADR-009 chose Anki's engine for ingest and ADR-022 measured it before the choice was final.
 //! Every engine type stays behind [`AnkiEngine`], so the rest of the workspace learns this crate's
@@ -11,6 +11,12 @@
 use std::fmt;
 use std::future::Future;
 use std::path::Path;
+
+use anki::card::CardQueueNumber;
+use anki::collection::{Collection, CollectionBuilder};
+use anki::error::{AnkiError, DbErrorKind, NetworkErrorKind, SyncErrorKind};
+use anki::sync::collection::normal::SyncActionRequired;
+use anki::sync::login::{SyncAuth, sync_login};
 
 /// How many queued cards the scheduler is asked for per top-level deck: the fetch limit the
 /// predecessor's day-set query passes (`preread.py:_query_root_queued`, predecessor `27ee2bc`).
@@ -84,7 +90,7 @@ pub enum SyncOutcome {
     /// The copy and the server exchanged their changes.
     Synced,
     /// The server demands a full sync. `download_ok` is false when the server holds no
-    /// collection, so only a full upload could satisfy it, which DeckStreak never performs.
+    /// collection, so only a full upload could satisfy it, which ingest never performs.
     FullSyncRequired {
         /// Whether a full download can satisfy the demand.
         download_ok: bool,
@@ -164,23 +170,132 @@ pub trait AnkiEngine {
 pub struct RslibEngine;
 
 impl AnkiEngine for RslibEngine {
-    fn new_card_queue(&self, _collection: &Path) -> Result<NewCardQueue, EngineError> {
-        Ok(NewCardQueue::default())
+    fn new_card_queue(&self, collection: &Path) -> Result<NewCardQueue, EngineError> {
+        let mut col = open(collection)?;
+        let queue = queue_of_every_root(&mut col);
+        let closed = col.close(None).map_err(bounded);
+        let queue = queue?;
+        closed?;
+        Ok(queue)
     }
 
     async fn normal_sync(
         &self,
-        _collection: &Path,
-        _login: &SyncLogin,
+        collection: &Path,
+        login: &SyncLogin,
     ) -> Result<SyncOutcome, EngineError> {
-        Ok(SyncOutcome::NoChanges)
+        let auth = log_in(login).await?;
+        let mut col = open(collection)?;
+        let before = col.sync_meta().map(|meta| meta.modified);
+        let synced = col.normal_sync(auth, engine_client()).await;
+        let after = col.sync_meta().map(|meta| meta.modified);
+        let closed = col.close(None).map_err(bounded);
+        let output = synced.map_err(bounded)?;
+        let moved = before.map_err(bounded)? != after.map_err(bounded)?;
+        closed?;
+        Ok(match output.required {
+            SyncActionRequired::FullSyncRequired { download_ok, .. } => {
+                SyncOutcome::FullSyncRequired { download_ok }
+            }
+            // The engine reports a completed exchange as `NoChanges` too (`normal_sync_inner`
+            // ends by setting it), so the collection's modified stamp tells the two apart: a
+            // completed exchange always moves it to the server's new stamp (`finalize_sync`).
+            _ if moved => SyncOutcome::Synced,
+            _ => SyncOutcome::NoChanges,
+        })
     }
 
-    async fn full_download(
-        &self,
-        _collection: &Path,
-        _login: &SyncLogin,
-    ) -> Result<(), EngineError> {
-        Ok(())
+    async fn full_download(&self, collection: &Path, login: &SyncLogin) -> Result<(), EngineError> {
+        let auth = log_in(login).await?;
+        // The engine closes this collection, downloads beside it, checks the download's integrity
+        // and renames it over the copy; a copy that does not exist yet starts as an empty one.
+        let col = open(collection)?;
+        col.full_download(auth, engine_client())
+            .await
+            .map_err(bounded)
+    }
+}
+
+/// A fresh HTTP client of the engine's own type, built by its `Default`: the HTTP/1 client of the
+/// engine's feature set, as the engine's backend builds one for the predecessor. The type is
+/// inferred from the engine's signature, so this crate names no HTTP library.
+fn engine_client<Client: Default>() -> Client {
+    Client::default()
+}
+
+/// Opens (or, when it does not exist yet, creates) the collection at `collection`.
+fn open(collection: &Path) -> Result<Collection, EngineError> {
+    CollectionBuilder::new(collection)
+        .build()
+        .map_err(|error| match bounded(error) {
+            EngineError::EngineFailed => EngineError::OpenFailed,
+            kind => kind,
+        })
+}
+
+/// Today's new-card queue of every top-level deck, as the predecessor's day-set query reads it:
+/// select the deck, ask the scheduler for its queue, keep the new cards and the scheduler's own
+/// new count (`preread.py:_query_root_queued`, predecessor `27ee2bc`).
+fn queue_of_every_root(col: &mut Collection) -> Result<NewCardQueue, EngineError> {
+    // `true` skips the engine's built-in default deck, which the predecessor skips by name.
+    let decks = col.get_all_deck_names(true).map_err(bounded)?;
+    let mut roots = Vec::new();
+    for (deck_id, name) in decks {
+        if name.contains("::") {
+            continue;
+        }
+        col.set_current_deck(deck_id).map_err(bounded)?;
+        let queued = col
+            .get_queued_cards(QUEUE_FETCH_LIMIT, false)
+            .map_err(bounded)?;
+        let new_cards = queued
+            .cards
+            .iter()
+            .filter(|entry| matches!(entry.card.queue_number(), CardQueueNumber::New))
+            .map(|entry| entry.card.id().0)
+            .collect();
+        roots.push(RootQueue {
+            deck_id: deck_id.0,
+            new_cards,
+            new_count: queued.new_count,
+        });
+    }
+    Ok(NewCardQueue { roots })
+}
+
+/// Logs in for a host key. The engine's login answers the key alone, so the endpoint is set
+/// here, normalised the way the engine's own settings conversion does (`join("./")`).
+async fn log_in(login: &SyncLogin) -> Result<SyncAuth, EngineError> {
+    let mut auth = sync_login(
+        login.username.as_str(),
+        login.password.as_str(),
+        Some(login.endpoint.clone()),
+        engine_client(),
+    )
+    .await
+    .map_err(bounded)?;
+    auth.endpoint = login.endpoint.parse().ok();
+    auth.endpoint = auth.endpoint.and_then(|endpoint| endpoint.join("./").ok());
+    if auth.endpoint.is_none() {
+        return Err(EngineError::EngineFailed);
+    }
+    Ok(auth)
+}
+
+/// The engine's error as one bounded kind; its text, which can hold a path, is dropped here.
+fn bounded(error: AnkiError) -> EngineError {
+    match error {
+        AnkiError::DbError { source } if source.kind == DbErrorKind::Locked => {
+            EngineError::CollectionLocked
+        }
+        AnkiError::SyncError { source } if source.kind == SyncErrorKind::AuthFailed => {
+            EngineError::AuthRejected
+        }
+        AnkiError::SyncError { .. } => EngineError::ServerError,
+        AnkiError::NetworkError { source } if source.kind == NetworkErrorKind::Timeout => {
+            EngineError::Timeout
+        }
+        AnkiError::NetworkError { .. } => EngineError::NetworkUnreachable,
+        _ => EngineError::EngineFailed,
     }
 }
