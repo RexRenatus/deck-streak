@@ -94,6 +94,7 @@ and A2 to A5 are red because the run exits 0.
 | `docs/decisions/ADR-039-vendoring-is-a-committed-script-that-scrubs-before-it-writes.md` | `repo` | added |
 | `docs/specs/SPEC-037-vendoring-refuses-excluded-and-deny-listed-files.md` | `repo` | added (moved from `docs/specs/planned/`) |
 | `docs/red-first/SPEC-037.md` | `repo` | added |
+| `docs/schematics/pack-vendoring.md` | `repo` | added: the run's data flow (an amendment: the order of work asks a schematic before a new data flow) |
 | `changelog.d/` fragment | `repo` | added |
 
 ## 5. What this does NOT do
