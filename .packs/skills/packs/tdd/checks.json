@@ -1,0 +1,87 @@
+{
+  "schema": "phx.skills.checks.v1",
+  "pack": "packs/tdd",
+  "spec": "SPEC-V2-2186",
+  "paths": [
+    "docs/specs/*",
+    "docs/red-first/*",
+    "scripts/tests/*",
+    "methodology.json",
+    "scripts/tdd-probe.py",
+    "scripts/methodology_probe.py"
+  ],
+  "checks": [
+    {
+      "id": "acceptance-has-a-test",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "scripts/tdd-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "acceptance-has-a-test"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "tdd",
+      "reason": "acceptance-has-a-test_red",
+      "scope": "tree"
+    },
+    {
+      "id": "red-first-recorded",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "scripts/tdd-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "red-first-recorded"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "tdd",
+      "reason": "red-first-recorded_red",
+      "scope": "tree"
+    },
+    {
+      "id": "absence-only-assertions",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "scripts/tdd-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "absence-only-assertions"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "tdd",
+      "reason": "absence-only-assertions_red",
+      "scope": "tree"
+    },
+    {
+      "id": "examined-counts",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "scripts/tdd-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "examined-counts"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "tdd",
+      "reason": "examined-counts_red",
+      "scope": "tree"
+    }
+  ]
+}

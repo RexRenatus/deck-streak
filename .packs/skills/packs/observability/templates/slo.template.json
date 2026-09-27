@@ -1,0 +1,92 @@
+{
+  "schema": "phx.slo.v1",
+  "slos": [
+    {
+      "id": "api-availability",
+      "unit": "deckstreak-server.service",
+      "sli": {
+        "kind": "availability",
+        "source": "journal",
+        "good": "a response event with status below 500",
+        "total": "every response event"
+      },
+      "objective": 0.995,
+      "window_days": 28,
+      "rationale": "a study session tolerates a rare retry; below this the day's reviews fail",
+      "expected_events_per_hour": 400,
+      "alerts": [
+        {
+          "severity": "page",
+          "long_window": "1h",
+          "short_window": "5m",
+          "burn_rate": 13.44,
+          "budget_consumed": 0.02,
+          "route": "telegram"
+        },
+        {
+          "severity": "page",
+          "long_window": "6h",
+          "short_window": "30m",
+          "burn_rate": 5.6,
+          "budget_consumed": 0.05,
+          "route": "telegram"
+        },
+        {
+          "severity": "ticket",
+          "long_window": "3d",
+          "short_window": "6h",
+          "burn_rate": 0.9333,
+          "budget_consumed": 0.1,
+          "route": "telegram"
+        }
+      ]
+    },
+    {
+      "id": "api-latency",
+      "unit": "deckstreak-server.service",
+      "sli": {
+        "kind": "latency",
+        "source": "journal",
+        "good": "a response event under the threshold",
+        "total": "every response event",
+        "threshold_ms": 300
+      },
+      "objective": 0.99,
+      "window_days": 28,
+      "rationale": "a card must turn without a visible wait on a mid-range phone",
+      "low_traffic": "longer-window",
+      "alerts": [
+        {
+          "severity": "page",
+          "long_window": "6h",
+          "short_window": "30m",
+          "burn_rate": 5.6,
+          "budget_consumed": 0.05,
+          "route": "telegram"
+        }
+      ]
+    }
+  ],
+  "error_budget_policy": {
+    "on_exhaustion": [
+      "freeze feature releases until the service is back within its SLO",
+      "work on reliability first"
+    ],
+    "escalation": "the owner decides a disputed calculation",
+    "postmortem_budget_fraction": 0.2
+  },
+  "alerting": {
+    "unit": "deckstreak-alert@.service",
+    "channel": "telegram"
+  },
+  "evaluator": {
+    "unit": "deckstreak-slo.service",
+    "timer": "deckstreak-slo.timer"
+  },
+  "memory_watch": {
+    "unit": "deckstreak-memory-watch.service",
+    "timer": "deckstreak-memory-watch.timer",
+    "units": "all"
+  },
+  "note": "deploy/slo.json, schema phx.slo.v1 (skills/packs/observability). Rename the units, restate each rationale in the product's own terms, and keep every burn rate equal to budget_consumed x window hours / long window hours."
+}

@@ -1,0 +1,74 @@
+// Logging and request tracing on the observability pack's rules
+// (skills/packs/observability/SKILL.md). Copy it beside a service's main.rs as `logging.rs`.
+//
+// Events are JSON on stdout, the house stack's journald path, and each line opens with its
+// sd-daemon(3) level (`<3>` error ... `<7>` debug). journald strips that prefix and files the
+// line at that PRIORITY (SyslogLevelPrefix= defaults to true), so `journalctl -p err` finds
+// errors. Without it every line lands at the unit's SyslogLevel, info. The level is RUST_LOG's.
+
+use std::fmt;
+
+use axum::extract::MatchedPath;
+use axum::http::Request;
+use tracing::{Event, Level, Span, Subscriber};
+use tracing_subscriber::fmt::format::{FormatEvent, FormatFields, Writer};
+use tracing_subscriber::fmt::FmtContext;
+use tracing_subscriber::registry::LookupSpan;
+use tracing_subscriber::EnvFilter;
+
+/// Prefix each JSON line with its sd-daemon(3) level, so journald files it at that PRIORITY.
+pub struct JournalPriority<F>(pub F);
+
+impl<S, N, F> FormatEvent<S, N> for JournalPriority<F>
+where
+    S: Subscriber + for<'a> LookupSpan<'a>,
+    N: for<'a> FormatFields<'a> + 'static,
+    F: FormatEvent<S, N>,
+{
+    fn format_event(
+        &self,
+        ctx: &FmtContext<'_, S, N>,
+        mut writer: Writer<'_>,
+        event: &Event<'_>,
+    ) -> fmt::Result {
+        let prefix = match *event.metadata().level() {
+            Level::ERROR => "<3>",
+            Level::WARN => "<4>",
+            Level::INFO => "<6>",
+            Level::DEBUG | Level::TRACE => "<7>",
+        };
+        writer.write_str(prefix)?;
+        self.0.format_event(ctx, writer, event)
+    }
+}
+
+/// Install the subscriber: JSON events on stdout at RUST_LOG's level, info when it is unset.
+pub fn init() {
+    tracing_subscriber::fmt()
+        .json()
+        .event_format(JournalPriority(tracing_subscriber::fmt::format().json()))
+        .with_env_filter(
+            EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")),
+        )
+        .init();
+}
+
+/// One span per request, at INFO so the response event that closes it carries its fields: the
+/// method, the MATCHED route (low-cardinality, and it carries no query string), and the request
+/// id. Never the raw URI, never a header value.
+pub fn request_span<B>(request: &Request<B>) -> Span {
+    let route = request
+        .extensions()
+        .get::<MatchedPath>()
+        .map(MatchedPath::as_str);
+    let request_id = request
+        .headers()
+        .get("x-request-id")
+        .and_then(|value| value.to_str().ok());
+    tracing::info_span!(
+        "request",
+        method = %request.method(),
+        route,
+        request_id,
+    )
+}

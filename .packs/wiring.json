@@ -1,0 +1,130 @@
+{
+  "schema": "deckstreak.pack-wiring.v1",
+  "packs": {
+    "accessibility": {
+      "state": "pending",
+      "enforced_by": "TBD"
+    },
+    "ai-content-safety": {
+      "state": "pending",
+      "enforced_by": "TBD"
+    },
+    "cjk-typography": {
+      "state": "pending",
+      "enforced_by": "TBD"
+    },
+    "data-migration": {
+      "state": "pending",
+      "enforced_by": "TBD"
+    },
+    "ddd": {
+      "state": "pending",
+      "enforced_by": "TBD"
+    },
+    "durable-services": {
+      "state": "deferred",
+      "enforced_by": "TBD",
+      "note": "reads no unit as a finding"
+    },
+    "game-economy": {
+      "state": "pending",
+      "enforced_by": "TBD"
+    },
+    "language-mentors": {
+      "state": "pending",
+      "enforced_by": "TBD"
+    },
+    "law-professors": {
+      "state": "pending",
+      "enforced_by": "TBD"
+    },
+    "learning-science": {
+      "state": "pending",
+      "enforced_by": "TBD"
+    },
+    "lsat-coach": {
+      "state": "pending",
+      "enforced_by": "TBD"
+    },
+    "notifications-policy": {
+      "state": "pending",
+      "enforced_by": "TBD"
+    },
+    "nudge-duties": {
+      "state": "pending",
+      "enforced_by": "TBD"
+    },
+    "observability": {
+      "state": "pending",
+      "enforced_by": "TBD"
+    },
+    "pack-authoring": {
+      "state": "pending",
+      "enforced_by": "TBD"
+    },
+    "persona-core": {
+      "state": "pending",
+      "enforced_by": "TBD"
+    },
+    "privacy-gdpr": {
+      "state": "pending",
+      "enforced_by": "TBD"
+    },
+    "release-ops": {
+      "state": "pending",
+      "enforced_by": "TBD"
+    },
+    "rust-service": {
+      "state": "pending",
+      "enforced_by": "TBD"
+    },
+    "sdd": {
+      "state": "pending",
+      "enforced_by": "TBD"
+    },
+    "stack-selection": {
+      "state": "pending",
+      "enforced_by": "TBD"
+    },
+    "study-duties": {
+      "state": "pending",
+      "enforced_by": "TBD"
+    },
+    "subscription-proxy": {
+      "state": "pending",
+      "enforced_by": "TBD",
+      "excluded_rows": {
+        "identity-injection": "tests phoenix-v2's own proxy crate (cargo test -p phx-subscription-proxy); DeckStreak is a client of the proxy, not the proxy",
+        "credential-strip": "tests phoenix-v2's own proxy crate; DeckStreak is a client of the proxy, not the proxy"
+      }
+    },
+    "tdd": {
+      "state": "pending",
+      "enforced_by": "TBD"
+    },
+    "telegram-platform": {
+      "state": "pending",
+      "enforced_by": "TBD"
+    },
+    "ui-styles": {
+      "state": "phxd",
+      "note": "built into phxd; run on the box (ADR-004)"
+    },
+    "ux-laws": {
+      "state": "phxd",
+      "note": "built into phxd; run on the box (ADR-004)"
+    },
+    "vault-duties": {
+      "state": "pending",
+      "enforced_by": "TBD"
+    },
+    "vibecode-polish": {
+      "state": "phxd",
+      "note": "built into phxd; run on the box (ADR-004)"
+    },
+    "web-launch": {
+      "state": "phxd",
+      "note": "built into phxd; run on the box (ADR-004)"
+    }
+  }
+}

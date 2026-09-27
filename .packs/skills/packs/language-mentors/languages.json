@@ -1,0 +1,1783 @@
+{
+  "schema": "phx.language-mentors.table.v1",
+  "spec": "SPEC-V2-2213",
+  "about": "The language-mentors pack's per-language rules, as data. scripts/language-mentors-probe.py interprets every entry and branches on no language code. The CEFR band-to-mode map is not here: it is read from skills/packs/persona-core/contract.json. Each entry names its source in SPEC-V2-2213's coverage matrix.",
+  "instruction_language": "en",
+  "material_sections": [
+    "reading",
+    "reply"
+  ],
+  "ratio": {
+    "about": "The target language's share of the instruction text, counted in word units, for each persona-core CEFR mode. The reading and the reply are target-language material and are not instruction. Blockquotes, code and headings are not measured.",
+    "english-led": {
+      "min": 0.0,
+      "max": 0.5
+    },
+    "bilingual": {
+      "min": 0.15,
+      "max": 0.85
+    },
+    "target-only": {
+      "min": 0.95,
+      "max": 1.0
+    }
+  },
+  "density": {
+    "about": "At most 5% of the reading is glossed new words: Laufer's 95% coverage (advisory).",
+    "max_new_share": 0.05
+  },
+  "focus": {
+    "about": "Focused written corrective feedback treats at most three error categories (advisory).",
+    "max_categories": 3
+  },
+  "template": {
+    "about": "What every language mentor template declares beyond persona-core's schema: the owner's four extras on the daily reading, and the writing habit folded in as the writing tutor.",
+    "duties": [
+      "daily-reading",
+      "writing-tutor"
+    ],
+    "sections": {
+      "daily-reading": [
+        "glosses",
+        "grammar",
+        "pronunciation",
+        "culture"
+      ],
+      "writing-tutor": [
+        "focus"
+      ]
+    }
+  },
+  "gloss": {
+    "separators": [
+      "—",
+      " – "
+    ]
+  },
+  "correction": {
+    "arrows": [
+      "→",
+      "->"
+    ],
+    "indirect": "?"
+  },
+  "english": {
+    "words": [
+      "the",
+      "be",
+      "to",
+      "of",
+      "and",
+      "a",
+      "in",
+      "that",
+      "have",
+      "i",
+      "it",
+      "for",
+      "not",
+      "on",
+      "with",
+      "he",
+      "as",
+      "you",
+      "do",
+      "at",
+      "this",
+      "but",
+      "his",
+      "by",
+      "from",
+      "they",
+      "we",
+      "say",
+      "her",
+      "she",
+      "or",
+      "an",
+      "will",
+      "my",
+      "one",
+      "all",
+      "would",
+      "there",
+      "their",
+      "what",
+      "so",
+      "up",
+      "out",
+      "if",
+      "about",
+      "who",
+      "get",
+      "which",
+      "go",
+      "me",
+      "when",
+      "make",
+      "can",
+      "like",
+      "time",
+      "no",
+      "just",
+      "him",
+      "know",
+      "take",
+      "people",
+      "into",
+      "your",
+      "good",
+      "some",
+      "could",
+      "them",
+      "see",
+      "other",
+      "than",
+      "then",
+      "now",
+      "look",
+      "only",
+      "come",
+      "its",
+      "over",
+      "think",
+      "also",
+      "back",
+      "after",
+      "use",
+      "two",
+      "how",
+      "our",
+      "work",
+      "first",
+      "well",
+      "way",
+      "even",
+      "new",
+      "want",
+      "because",
+      "any",
+      "these",
+      "give",
+      "most",
+      "us",
+      "is",
+      "are",
+      "was",
+      "were",
+      "been",
+      "has",
+      "had",
+      "did",
+      "does",
+      "said",
+      "says",
+      "means",
+      "mean",
+      "word",
+      "words",
+      "sentence",
+      "sentences",
+      "example",
+      "examples",
+      "here",
+      "where",
+      "why",
+      "read",
+      "reading",
+      "write",
+      "writing",
+      "learn",
+      "learning",
+      "grammar",
+      "verb",
+      "verbs",
+      "noun",
+      "nouns",
+      "adjective",
+      "adjectives",
+      "particle",
+      "particles",
+      "form",
+      "forms",
+      "tense",
+      "past",
+      "present",
+      "plural",
+      "singular",
+      "meaning",
+      "sound",
+      "sounds",
+      "letter",
+      "letters",
+      "used",
+      "using",
+      "try",
+      "again",
+      "very",
+      "more",
+      "much",
+      "many",
+      "each",
+      "every",
+      "both",
+      "same",
+      "different",
+      "part",
+      "often",
+      "usually",
+      "always",
+      "never",
+      "sometimes",
+      "before",
+      "while",
+      "between",
+      "through",
+      "without",
+      "under",
+      "next",
+      "such",
+      "too",
+      "s",
+      "t",
+      "d",
+      "ll",
+      "re",
+      "ve",
+      "m",
+      "it's",
+      "that's",
+      "don't",
+      "can't",
+      "isn't"
+    ]
+  },
+  "culture": {
+    "english_quantifiers": [
+      "all",
+      "every",
+      "no"
+    ],
+    "english_adverbs": [
+      "always",
+      "never",
+      "all"
+    ]
+  },
+  "languages": {
+    "zh": {
+      "name": "Mandarin Chinese",
+      "lang_tags": [
+        "zh-Hans",
+        "zh-Hant",
+        "zh-CN",
+        "zh-TW",
+        "zh"
+      ],
+      "script": {
+        "ranges": [
+          [
+            13312,
+            19903
+          ],
+          [
+            19968,
+            40959
+          ],
+          [
+            63744,
+            64255
+          ],
+          [
+            131072,
+            195103
+          ],
+          [
+            12293,
+            12295
+          ]
+        ],
+        "unit": "char",
+        "chars_per_word": 1.5
+      },
+      "method_terms": [
+        "pinyin",
+        "tone"
+      ],
+      "notations": [
+        "pinyin-tones"
+      ],
+      "required_notations": [
+        "pinyin-tones"
+      ],
+      "density_unit": "char",
+      "pinyin": {
+        "initials": [
+          "zh",
+          "ch",
+          "sh",
+          "b",
+          "p",
+          "m",
+          "f",
+          "d",
+          "t",
+          "n",
+          "l",
+          "g",
+          "k",
+          "h",
+          "j",
+          "q",
+          "x",
+          "r",
+          "z",
+          "c",
+          "s",
+          "y",
+          "w"
+        ],
+        "finals": [
+          "iang",
+          "iong",
+          "uang",
+          "ang",
+          "eng",
+          "ing",
+          "ong",
+          "iao",
+          "ian",
+          "uai",
+          "uan",
+          "üan",
+          "ai",
+          "ei",
+          "ao",
+          "ou",
+          "an",
+          "en",
+          "in",
+          "un",
+          "ün",
+          "ia",
+          "ie",
+          "iu",
+          "ua",
+          "uo",
+          "ui",
+          "üe",
+          "ue",
+          "er",
+          "a",
+          "o",
+          "e",
+          "ê",
+          "i",
+          "u",
+          "ü"
+        ],
+        "initialless": "aoeê",
+        "first": [
+          "a",
+          "e",
+          "ê"
+        ],
+        "pairs": {
+          "ou": "o"
+        },
+        "vowels": "aeiouüê",
+        "u_after": [
+          "j",
+          "q",
+          "x",
+          "y"
+        ],
+        "erhua": "r"
+      },
+      "taxonomy": [
+        {
+          "id": "spelling",
+          "treatable": true
+        },
+        {
+          "id": "punctuation",
+          "treatable": true
+        },
+        {
+          "id": "word-choice",
+          "treatable": false
+        },
+        {
+          "id": "collocation",
+          "treatable": false
+        },
+        {
+          "id": "word-order",
+          "treatable": false
+        },
+        {
+          "id": "missing-word",
+          "treatable": false
+        },
+        {
+          "id": "extra-word",
+          "treatable": false
+        },
+        {
+          "id": "register",
+          "treatable": false
+        },
+        {
+          "id": "measure-word",
+          "treatable": true
+        },
+        {
+          "id": "aspect-le",
+          "treatable": true
+        },
+        {
+          "id": "ba-construction",
+          "treatable": true
+        },
+        {
+          "id": "complement",
+          "treatable": true
+        },
+        {
+          "id": "character",
+          "treatable": true
+        },
+        {
+          "id": "de-particle",
+          "treatable": true
+        }
+      ],
+      "demonyms": [
+        "chinese"
+      ],
+      "generalizations": [
+        "所有中国人",
+        "中国人都",
+        "中国人总是",
+        "中国人从来"
+      ]
+    },
+    "ja": {
+      "name": "Japanese",
+      "lang_tags": [
+        "ja",
+        "ja-JP"
+      ],
+      "script": {
+        "ranges": [
+          [
+            13312,
+            19903
+          ],
+          [
+            19968,
+            40959
+          ],
+          [
+            63744,
+            64255
+          ],
+          [
+            131072,
+            195103
+          ],
+          [
+            12293,
+            12295
+          ],
+          [
+            12352,
+            12447
+          ],
+          [
+            12448,
+            12543
+          ],
+          [
+            12784,
+            12799
+          ],
+          [
+            65382,
+            65439
+          ]
+        ],
+        "unit": "char",
+        "chars_per_word": 2.0
+      },
+      "method_terms": [
+        "furigana",
+        "pitch accent"
+      ],
+      "notations": [
+        "ruby",
+        "pitch-accent"
+      ],
+      "required_notations": [
+        "ruby",
+        "pitch-accent"
+      ],
+      "density_unit": "char",
+      "kana": {
+        "ranges": [
+          [
+            12352,
+            12447
+          ],
+          [
+            12448,
+            12543
+          ],
+          [
+            12784,
+            12799
+          ],
+          [
+            65382,
+            65439
+          ]
+        ],
+        "small": "ぁぃぅぇぉゃゅょゎゕゖァィゥェォャュョヮヵヶ",
+        "special": "っッーｰんン",
+        "downstep": [
+          "＼",
+          "ꜜ"
+        ],
+        "kanji_extra": "々〆ヶ"
+      },
+      "taxonomy": [
+        {
+          "id": "spelling",
+          "treatable": true
+        },
+        {
+          "id": "punctuation",
+          "treatable": true
+        },
+        {
+          "id": "word-choice",
+          "treatable": false
+        },
+        {
+          "id": "collocation",
+          "treatable": false
+        },
+        {
+          "id": "word-order",
+          "treatable": false
+        },
+        {
+          "id": "missing-word",
+          "treatable": false
+        },
+        {
+          "id": "extra-word",
+          "treatable": false
+        },
+        {
+          "id": "register",
+          "treatable": false
+        },
+        {
+          "id": "particle",
+          "treatable": true
+        },
+        {
+          "id": "conjugation",
+          "treatable": true
+        },
+        {
+          "id": "politeness-level",
+          "treatable": true
+        },
+        {
+          "id": "kanji",
+          "treatable": true
+        },
+        {
+          "id": "okurigana",
+          "treatable": true
+        },
+        {
+          "id": "counter",
+          "treatable": true
+        },
+        {
+          "id": "kana-spelling",
+          "treatable": true
+        }
+      ],
+      "demonyms": [
+        "japanese"
+      ],
+      "generalizations": [
+        "日本人は皆",
+        "日本人はみんな",
+        "すべての日本人",
+        "日本人はいつも",
+        "日本人は必ず"
+      ]
+    },
+    "ko": {
+      "name": "Korean",
+      "lang_tags": [
+        "ko",
+        "ko-KR"
+      ],
+      "script": {
+        "ranges": [
+          [
+            44032,
+            55203
+          ],
+          [
+            4352,
+            4607
+          ],
+          [
+            12592,
+            12687
+          ],
+          [
+            13312,
+            19903
+          ],
+          [
+            19968,
+            40959
+          ],
+          [
+            63744,
+            64255
+          ],
+          [
+            131072,
+            195103
+          ],
+          [
+            12293,
+            12295
+          ]
+        ],
+        "unit": "token"
+      },
+      "method_terms": [
+        "batchim",
+        "Revised Romanization"
+      ],
+      "notations": [
+        "batchim",
+        "romanization"
+      ],
+      "required_notations": [
+        "batchim"
+      ],
+      "density_unit": "token",
+      "hangul": {
+        "finals": [
+          "",
+          "ㄱ",
+          "ㄲ",
+          "ㄳ",
+          "ㄴ",
+          "ㄵ",
+          "ㄶ",
+          "ㄷ",
+          "ㄹ",
+          "ㄺ",
+          "ㄻ",
+          "ㄼ",
+          "ㄽ",
+          "ㄾ",
+          "ㄿ",
+          "ㅀ",
+          "ㅁ",
+          "ㅂ",
+          "ㅄ",
+          "ㅅ",
+          "ㅆ",
+          "ㅇ",
+          "ㅈ",
+          "ㅊ",
+          "ㅋ",
+          "ㅌ",
+          "ㅍ",
+          "ㅎ"
+        ],
+        "representatives": [
+          "ㄱ",
+          "ㄴ",
+          "ㄷ",
+          "ㄹ",
+          "ㅁ",
+          "ㅂ",
+          "ㅇ"
+        ],
+        "batchim": {
+          "ㄱ": "ㄱ",
+          "ㄲ": "ㄱ",
+          "ㄳ": "ㄱ",
+          "ㄴ": "ㄴ",
+          "ㄵ": "ㄴ",
+          "ㄶ": "ㄴ",
+          "ㄷ": "ㄷ",
+          "ㄹ": "ㄹ",
+          "ㄺ": "ㄱ",
+          "ㄻ": "ㅁ",
+          "ㄼ": "ㄹ",
+          "ㄽ": "ㄹ",
+          "ㄾ": "ㄹ",
+          "ㄿ": "ㅂ",
+          "ㅀ": "ㄹ",
+          "ㅁ": "ㅁ",
+          "ㅂ": "ㅂ",
+          "ㅄ": "ㅂ",
+          "ㅅ": "ㄷ",
+          "ㅆ": "ㄷ",
+          "ㅇ": "ㅇ",
+          "ㅈ": "ㄷ",
+          "ㅊ": "ㄷ",
+          "ㅋ": "ㄱ",
+          "ㅌ": "ㄷ",
+          "ㅍ": "ㅂ",
+          "ㅎ": "ㄷ"
+        }
+      },
+      "romanization": {
+        "header": [
+          "romanization",
+          "romanisation",
+          "rr",
+          "로마자"
+        ],
+        "vowels": [
+          "yeo",
+          "yae",
+          "wae",
+          "eo",
+          "eu",
+          "ae",
+          "oe",
+          "wi",
+          "ya",
+          "yo",
+          "yu",
+          "ye",
+          "wa",
+          "wo",
+          "we",
+          "ui",
+          "a",
+          "o",
+          "u",
+          "i",
+          "e"
+        ],
+        "initials": [
+          "kk",
+          "tt",
+          "pp",
+          "jj",
+          "ss",
+          "ch",
+          "g",
+          "k",
+          "d",
+          "t",
+          "b",
+          "p",
+          "j",
+          "s",
+          "h",
+          "n",
+          "m",
+          "r",
+          "l"
+        ],
+        "finals": [
+          "ng",
+          "k",
+          "t",
+          "p",
+          "l",
+          "n",
+          "m"
+        ]
+      },
+      "taxonomy": [
+        {
+          "id": "spelling",
+          "treatable": true
+        },
+        {
+          "id": "punctuation",
+          "treatable": true
+        },
+        {
+          "id": "word-choice",
+          "treatable": false
+        },
+        {
+          "id": "collocation",
+          "treatable": false
+        },
+        {
+          "id": "word-order",
+          "treatable": false
+        },
+        {
+          "id": "missing-word",
+          "treatable": false
+        },
+        {
+          "id": "extra-word",
+          "treatable": false
+        },
+        {
+          "id": "register",
+          "treatable": false
+        },
+        {
+          "id": "particle",
+          "treatable": true
+        },
+        {
+          "id": "conjugation",
+          "treatable": true
+        },
+        {
+          "id": "speech-level",
+          "treatable": true
+        },
+        {
+          "id": "honorific",
+          "treatable": true
+        },
+        {
+          "id": "spacing",
+          "treatable": true
+        },
+        {
+          "id": "batchim-spelling",
+          "treatable": true
+        }
+      ],
+      "demonyms": [
+        "korean",
+        "koreans"
+      ],
+      "generalizations": [
+        "모든 한국인",
+        "한국인은 모두",
+        "한국 사람은 모두",
+        "한국인은 항상",
+        "한국 사람들은 항상"
+      ]
+    },
+    "fr": {
+      "name": "French",
+      "lang_tags": [
+        "fr",
+        "fr-FR",
+        "fr-CA",
+        "fr-BE",
+        "fr-CH"
+      ],
+      "script": {
+        "unit": "token"
+      },
+      "words": [
+        "le",
+        "la",
+        "les",
+        "l",
+        "un",
+        "une",
+        "des",
+        "du",
+        "de",
+        "d",
+        "au",
+        "aux",
+        "et",
+        "ou",
+        "mais",
+        "donc",
+        "car",
+        "ni",
+        "que",
+        "qu",
+        "qui",
+        "quoi",
+        "dont",
+        "où",
+        "ce",
+        "cet",
+        "cette",
+        "ces",
+        "c",
+        "ça",
+        "cela",
+        "ceci",
+        "celui",
+        "celle",
+        "ceux",
+        "celles",
+        "mon",
+        "ma",
+        "mes",
+        "ton",
+        "ta",
+        "tes",
+        "son",
+        "sa",
+        "ses",
+        "notre",
+        "nos",
+        "votre",
+        "vos",
+        "leur",
+        "leurs",
+        "je",
+        "j",
+        "tu",
+        "il",
+        "elle",
+        "on",
+        "nous",
+        "vous",
+        "ils",
+        "elles",
+        "me",
+        "m",
+        "te",
+        "t",
+        "se",
+        "s",
+        "lui",
+        "y",
+        "en",
+        "ne",
+        "n",
+        "pas",
+        "plus",
+        "très",
+        "bien",
+        "aussi",
+        "avec",
+        "sans",
+        "sous",
+        "sur",
+        "dans",
+        "pour",
+        "par",
+        "chez",
+        "entre",
+        "vers",
+        "avant",
+        "après",
+        "pendant",
+        "depuis",
+        "est",
+        "sont",
+        "être",
+        "avoir",
+        "ai",
+        "as",
+        "a",
+        "avons",
+        "avez",
+        "ont",
+        "suis",
+        "es",
+        "sommes",
+        "êtes",
+        "était",
+        "étaient",
+        "été",
+        "fait",
+        "faire",
+        "peut",
+        "veut",
+        "doit",
+        "dit",
+        "quand",
+        "comme",
+        "si",
+        "alors",
+        "encore",
+        "déjà",
+        "toujours",
+        "jamais",
+        "rien",
+        "tout",
+        "tous",
+        "toute",
+        "toutes",
+        "autre",
+        "autres",
+        "même",
+        "quel",
+        "quelle",
+        "quels",
+        "quelles",
+        "parce",
+        "lorsque",
+        "puis",
+        "ici",
+        "là",
+        "voici",
+        "voilà",
+        "oui",
+        "non",
+        "mot",
+        "mots",
+        "phrase",
+        "phrases",
+        "verbe",
+        "verbes",
+        "nom",
+        "noms",
+        "exemple",
+        "exemples",
+        "dire",
+        "lecture",
+        "sens",
+        "moins",
+        "beaucoup",
+        "peu",
+        "trop",
+        "assez",
+        "chaque"
+      ],
+      "letters": "éèêëàâîïôûùüÿçœæ",
+      "articles": [
+        "le",
+        "la",
+        "les",
+        "l",
+        "un",
+        "une",
+        "des",
+        "du",
+        "de",
+        "d"
+      ],
+      "method_terms": [
+        "liaison"
+      ],
+      "notations": [
+        "liaison"
+      ],
+      "required_notations": [
+        "liaison"
+      ],
+      "density_unit": "token",
+      "liaison": {
+        "categories": {
+          "obligatoire": [
+            "obligatoire",
+            "obligatory"
+          ],
+          "facultative": [
+            "facultative",
+            "optional"
+          ],
+          "interdite": [
+            "interdite",
+            "forbidden"
+          ]
+        },
+        "junctions": [
+          "‿",
+          " / "
+        ],
+        "rules": [
+          {
+            "category": "interdite",
+            "kind": "punctuation",
+            "source": "OQLF 1"
+          },
+          {
+            "category": "interdite",
+            "kind": "right-in",
+            "words": [
+              "hache",
+              "haie",
+              "haine",
+              "haïr",
+              "hall",
+              "halte",
+              "hamac",
+              "hameau",
+              "hamster",
+              "hanche",
+              "handball",
+              "handicap",
+              "hangar",
+              "hanter",
+              "harceler",
+              "hardi",
+              "hareng",
+              "haricot",
+              "harnais",
+              "harpe",
+              "hasard",
+              "hâte",
+              "hausse",
+              "haut",
+              "hauteur",
+              "havre",
+              "hérisson",
+              "héros",
+              "hibou",
+              "hiérarchie",
+              "hockey",
+              "hollandais",
+              "homard",
+              "hongrois",
+              "honte",
+              "honteux",
+              "hotte",
+              "houx",
+              "hublot",
+              "hurler",
+              "hutte"
+            ],
+            "source": "OQLF 5"
+          },
+          {
+            "category": "interdite",
+            "kind": "right-in",
+            "words": [
+              "yacht",
+              "yaourt",
+              "yogourt",
+              "yoga",
+              "yéti",
+              "week-end",
+              "whisky",
+              "webinaire",
+              "wagon",
+              "western",
+              "watt",
+              "ouistiti",
+              "oui",
+              "ouï-dire"
+            ],
+            "source": "OQLF 4"
+          },
+          {
+            "category": "interdite",
+            "kind": "right-in",
+            "words": [
+              "huit",
+              "huitième",
+              "onze",
+              "onzième"
+            ],
+            "source": "OQLF 6"
+          },
+          {
+            "category": "interdite",
+            "kind": "left-in",
+            "words": [
+              "et"
+            ],
+            "source": "OQLF 2"
+          },
+          {
+            "category": "interdite",
+            "kind": "left-in",
+            "words": [
+              "hors",
+              "vers",
+              "selon"
+            ],
+            "source": "OQLF 8"
+          },
+          {
+            "category": "interdite",
+            "kind": "left-after",
+            "words": [
+              "tu"
+            ],
+            "suffix": "s",
+            "source": "OQLF 9"
+          },
+          {
+            "category": "obligatoire",
+            "kind": "phrase-in",
+            "words": [
+              "de plus en plus",
+              "de moins en moins",
+              "petit à petit",
+              "tout à coup",
+              "tout à fait",
+              "de haut en bas",
+              "droit au but",
+              "quant à",
+              "porc épic",
+              "de temps en temps",
+              "mot à mot",
+              "pas à pas",
+              "c'est à dire",
+              "états unis",
+              "nations unies",
+              "comment allez vous"
+            ],
+            "source": "OQLF obligatoires 6"
+          },
+          {
+            "category": "obligatoire",
+            "kind": "left-in",
+            "words": [
+              "les",
+              "des",
+              "ces",
+              "mes",
+              "tes",
+              "ses",
+              "nos",
+              "vos",
+              "leurs",
+              "aux",
+              "un",
+              "aucun",
+              "deux",
+              "trois",
+              "six",
+              "dix",
+              "vingt",
+              "quels",
+              "quelles",
+              "plusieurs",
+              "certains",
+              "certaines",
+              "quelques",
+              "mon",
+              "ton",
+              "son"
+            ],
+            "source": "OQLF obligatoires 1"
+          },
+          {
+            "category": "obligatoire",
+            "kind": "left-in",
+            "words": [
+              "petit",
+              "petits",
+              "grand",
+              "grands",
+              "bon",
+              "bons",
+              "gros",
+              "premier",
+              "dernier",
+              "beaux",
+              "vieux",
+              "nouveaux",
+              "anciens"
+            ],
+            "source": "OQLF obligatoires 1"
+          },
+          {
+            "category": "obligatoire",
+            "kind": "left-in",
+            "words": [
+              "nous",
+              "vous",
+              "ils",
+              "elles",
+              "on",
+              "quand"
+            ],
+            "source": "OQLF obligatoires 2"
+          },
+          {
+            "category": "obligatoire",
+            "kind": "left-in",
+            "words": [
+              "dans",
+              "en",
+              "chez",
+              "sans",
+              "sous"
+            ],
+            "source": "OQLF obligatoires 4"
+          },
+          {
+            "category": "obligatoire",
+            "kind": "left-in",
+            "words": [
+              "très",
+              "moins",
+              "bien",
+              "plus",
+              "tout"
+            ],
+            "source": "OQLF obligatoires 5"
+          },
+          {
+            "category": "facultative",
+            "kind": "left-in",
+            "words": [
+              "est",
+              "sont",
+              "suis",
+              "es",
+              "était",
+              "étaient",
+              "sommes",
+              "êtes",
+              "ont",
+              "avons",
+              "avez",
+              "avait",
+              "avaient",
+              "pas",
+              "trop",
+              "jamais"
+            ],
+            "source": "OQLF facultatives"
+          },
+          {
+            "category": "facultative",
+            "kind": "left-suffix",
+            "suffix": "ment",
+            "source": "OQLF facultatives"
+          }
+        ]
+      },
+      "taxonomy": [
+        {
+          "id": "spelling",
+          "treatable": true
+        },
+        {
+          "id": "punctuation",
+          "treatable": true
+        },
+        {
+          "id": "word-choice",
+          "treatable": false
+        },
+        {
+          "id": "collocation",
+          "treatable": false
+        },
+        {
+          "id": "word-order",
+          "treatable": false
+        },
+        {
+          "id": "missing-word",
+          "treatable": false
+        },
+        {
+          "id": "extra-word",
+          "treatable": false
+        },
+        {
+          "id": "register",
+          "treatable": false
+        },
+        {
+          "id": "gender-agreement",
+          "treatable": true
+        },
+        {
+          "id": "verb-agreement",
+          "treatable": true
+        },
+        {
+          "id": "tense-mood",
+          "treatable": true
+        },
+        {
+          "id": "article",
+          "treatable": true
+        },
+        {
+          "id": "accent-mark",
+          "treatable": true
+        },
+        {
+          "id": "elision",
+          "treatable": true
+        },
+        {
+          "id": "preposition",
+          "treatable": false
+        }
+      ],
+      "demonyms": [
+        "french",
+        "frenchmen",
+        "parisians"
+      ],
+      "generalizations": [
+        "tous les français",
+        "les français sont tous",
+        "les français toujours",
+        "les français ne sont jamais"
+      ]
+    },
+    "es": {
+      "name": "Spanish",
+      "lang_tags": [
+        "es",
+        "es-ES",
+        "es-MX",
+        "es-419",
+        "es-AR",
+        "es-CO",
+        "es-US"
+      ],
+      "script": {
+        "unit": "token"
+      },
+      "words": [
+        "el",
+        "la",
+        "los",
+        "las",
+        "lo",
+        "un",
+        "una",
+        "unos",
+        "unas",
+        "de",
+        "del",
+        "a",
+        "al",
+        "en",
+        "con",
+        "por",
+        "para",
+        "sin",
+        "sobre",
+        "entre",
+        "hasta",
+        "desde",
+        "hacia",
+        "según",
+        "y",
+        "e",
+        "o",
+        "u",
+        "ni",
+        "pero",
+        "sino",
+        "que",
+        "qué",
+        "quien",
+        "quién",
+        "quienes",
+        "cual",
+        "cuál",
+        "cuales",
+        "como",
+        "cómo",
+        "cuando",
+        "cuándo",
+        "donde",
+        "dónde",
+        "porque",
+        "pues",
+        "si",
+        "sí",
+        "no",
+        "ya",
+        "muy",
+        "más",
+        "menos",
+        "también",
+        "tampoco",
+        "siempre",
+        "nunca",
+        "aquí",
+        "allí",
+        "ahí",
+        "yo",
+        "tú",
+        "él",
+        "ella",
+        "usted",
+        "nosotros",
+        "nosotras",
+        "vosotros",
+        "vosotras",
+        "ellos",
+        "ellas",
+        "ustedes",
+        "me",
+        "te",
+        "se",
+        "nos",
+        "os",
+        "le",
+        "les",
+        "mi",
+        "mis",
+        "tu",
+        "tus",
+        "su",
+        "sus",
+        "nuestro",
+        "nuestra",
+        "nuestros",
+        "nuestras",
+        "este",
+        "esta",
+        "estos",
+        "estas",
+        "ese",
+        "esa",
+        "esos",
+        "esas",
+        "eso",
+        "esto",
+        "aquel",
+        "aquella",
+        "es",
+        "son",
+        "está",
+        "están",
+        "ser",
+        "estar",
+        "hay",
+        "fue",
+        "era",
+        "eran",
+        "tiene",
+        "tienen",
+        "hace",
+        "puede",
+        "pueden",
+        "palabra",
+        "palabras",
+        "verbo",
+        "verbos",
+        "frase",
+        "frases",
+        "ejemplo",
+        "ejemplos",
+        "significa",
+        "quiere",
+        "decir",
+        "lectura",
+        "cada",
+        "todo",
+        "toda",
+        "todos",
+        "todas",
+        "otro",
+        "otra",
+        "otros",
+        "otras",
+        "mismo",
+        "misma",
+        "bien",
+        "mal",
+        "mucho",
+        "mucha",
+        "muchos",
+        "muchas",
+        "poco"
+      ],
+      "letters": "áéíóúñü¿¡",
+      "articles": [
+        "el",
+        "la",
+        "los",
+        "las",
+        "lo",
+        "un",
+        "una",
+        "unos",
+        "unas"
+      ],
+      "method_terms": [
+        "stress",
+        "tilde"
+      ],
+      "notations": [
+        "stress"
+      ],
+      "required_notations": [
+        "stress"
+      ],
+      "density_unit": "token",
+      "stress": {
+        "classes": {
+          "aguda": [
+            "aguda",
+            "agudas",
+            "oxítona"
+          ],
+          "llana": [
+            "llana",
+            "llanas",
+            "grave",
+            "paroxítona"
+          ],
+          "esdrújula": [
+            "esdrújula",
+            "esdrújulas",
+            "proparoxítona"
+          ],
+          "sobresdrújula": [
+            "sobresdrújula",
+            "sobresdrújulas"
+          ],
+          "monosílabo": [
+            "monosílabo",
+            "monosílaba"
+          ]
+        },
+        "strong": "aeoáéó",
+        "weak": "iuü",
+        "accented": {
+          "á": "a",
+          "é": "e",
+          "í": "i",
+          "ó": "o",
+          "ú": "u"
+        },
+        "open_ending": "aeiouns",
+        "diacritic": [
+          "él",
+          "tú",
+          "té",
+          "sí",
+          "mí",
+          "sé",
+          "dé",
+          "más",
+          "qué",
+          "quién",
+          "quiénes",
+          "cuál",
+          "cuáles",
+          "cuán",
+          "cómo",
+          "cuánto",
+          "cuánta",
+          "cuántos",
+          "cuántas",
+          "cuándo",
+          "dónde",
+          "adónde",
+          "aún"
+        ],
+        "optional_diacritic": [
+          "sólo",
+          "éste",
+          "ésta",
+          "éstos",
+          "éstas",
+          "ése",
+          "ésa",
+          "ésos",
+          "ésas",
+          "aquél",
+          "aquélla",
+          "aquéllos",
+          "aquéllas"
+        ],
+        "silent_u_before": "eiéí",
+        "unjudged_suffix": "mente"
+      },
+      "taxonomy": [
+        {
+          "id": "spelling",
+          "treatable": true
+        },
+        {
+          "id": "punctuation",
+          "treatable": true
+        },
+        {
+          "id": "word-choice",
+          "treatable": false
+        },
+        {
+          "id": "collocation",
+          "treatable": false
+        },
+        {
+          "id": "word-order",
+          "treatable": false
+        },
+        {
+          "id": "missing-word",
+          "treatable": false
+        },
+        {
+          "id": "extra-word",
+          "treatable": false
+        },
+        {
+          "id": "register",
+          "treatable": false
+        },
+        {
+          "id": "gender-agreement",
+          "treatable": true
+        },
+        {
+          "id": "verb-agreement",
+          "treatable": true
+        },
+        {
+          "id": "ser-estar",
+          "treatable": true
+        },
+        {
+          "id": "subjunctive",
+          "treatable": true
+        },
+        {
+          "id": "preterite-imperfect",
+          "treatable": true
+        },
+        {
+          "id": "por-para",
+          "treatable": true
+        },
+        {
+          "id": "article",
+          "treatable": true
+        },
+        {
+          "id": "accent-mark",
+          "treatable": true
+        },
+        {
+          "id": "preposition",
+          "treatable": false
+        }
+      ],
+      "demonyms": [
+        "spanish",
+        "spaniards",
+        "mexicans",
+        "latin americans",
+        "hispanics"
+      ],
+      "generalizations": [
+        "todos los españoles",
+        "los españoles siempre",
+        "los españoles nunca",
+        "todos los mexicanos",
+        "todos los latinoamericanos"
+      ]
+    }
+  }
+}

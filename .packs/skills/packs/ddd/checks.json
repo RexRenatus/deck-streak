@@ -1,0 +1,71 @@
+{
+  "schema": "phx.skills.checks.v1",
+  "pack": "packs/ddd",
+  "spec": "SPEC-V2-2186",
+  "paths": [
+    "docs/CONTEXT-MAP.md",
+    "docs/LEXICON.md",
+    "Cargo.toml",
+    "crates/*/Cargo.toml",
+    "crates/*/src/*",
+    "methodology.json",
+    "scripts/ddd-probe.py",
+    "scripts/methodology_probe.py"
+  ],
+  "checks": [
+    {
+      "id": "context-map-parses",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "scripts/ddd-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "context-map-parses"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "ddd",
+      "reason": "context-map-parses_red",
+      "scope": "tree"
+    },
+    {
+      "id": "declared-edges-match-imports",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "scripts/ddd-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "declared-edges-match-imports"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "ddd",
+      "reason": "declared-edges-match-imports_red",
+      "scope": "tree"
+    },
+    {
+      "id": "lexicon-locks",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "scripts/ddd-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "lexicon-locks"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "ddd",
+      "reason": "lexicon-locks_red",
+      "scope": "tree"
+    }
+  ]
+}

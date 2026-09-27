@@ -1,0 +1,63 @@
+{
+  "schema": "phx.persona.contract.v1",
+  "spec": "SPEC-V2-2212",
+  "note": "The vocabulary of the persona template schema and the persona output contract. scripts/persona-core-probe.py is the executable contract and reads every list here; SKILL.md is its prose. A sibling pack or an engine reads these lists from this file and never copies them.",
+  "documents": {
+    "template": "phx.persona.template.v1",
+    "output": "phx.persona.output.v1",
+    "rules": "phx.persona.rules.v1"
+  },
+  "kinds": ["language", "law", "test-prep", "general"],
+  "cefr": {
+    "A1": "english-led",
+    "A2": "english-led",
+    "B1": "bilingual",
+    "B2": "bilingual",
+    "C1": "target-only",
+    "C2": "target-only"
+  },
+  "memory_sources": ["leeches", "drill-grades", "lapses"],
+  "roster_slots": ["name", "bio", "voice", "personality"],
+  "template_sections": [
+    {"id": "identity", "slots": ["name", "bio"]},
+    {"id": "voice", "slots": ["voice"]},
+    {"id": "personality", "slots": ["personality"]},
+    {"id": "method", "slots": []},
+    {"id": "memory", "slots": []},
+    {"id": "duties", "slots": []},
+    {"id": "disclosure", "slots": ["name"]}
+  ],
+  "disclosure_token": "AI",
+  "duties": [
+    {
+      "id": "daily-reading",
+      "produces": "the day's pre-study reading",
+      "sections": ["reading"]
+    },
+    {
+      "id": "drill-coach",
+      "produces": "a drill, graded against the corpus",
+      "sections": ["drill"]
+    },
+    {
+      "id": "leech-doctor",
+      "produces": "an explanation, a mnemonic and a contrasting example for a card the learner keeps failing",
+      "sections": ["explanation", "mnemonic", "contrast"]
+    },
+    {
+      "id": "writing-tutor",
+      "produces": "corrections of a writing sample at the learner's CEFR level",
+      "sections": ["corrections"]
+    },
+    {
+      "id": "conversation-partner",
+      "produces": "one chat turn at the learner's level, corrected as it goes",
+      "sections": ["reply"]
+    },
+    {
+      "id": "practice-questions",
+      "produces": "a timed practice set with explanations",
+      "sections": ["questions", "explanations"]
+    }
+  ]
+}

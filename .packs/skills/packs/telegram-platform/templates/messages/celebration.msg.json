@@ -1,0 +1,23 @@
+{
+  "schema": "phx.duty.message.v1",
+  "duty": "celebration",
+  "kind": "celebration",
+  "tier": "T2",
+  "budget_key": "celebration",
+  "dedupe_key": "level:12",
+  "send": {
+    "text": "*Level 12* reached\\. Next: _13_ at 7200 XP\\.",
+    "parse_mode": "MarkdownV2",
+    "disable_notification": true,
+    "reply_markup": {
+      "inline_keyboard": [
+        [
+          {
+            "text": "See the ladder",
+            "url": "https://t.me/DeckStreakBot/app?startapp=levels"
+          }
+        ]
+      ]
+    }
+  }
+}

@@ -1,0 +1,471 @@
+{
+  "schema": "phx.skills.checks.v1",
+  "spec": "SPEC-V2-2215",
+  "pack": "packs/lsat-coach",
+  "walk": [
+    "format",
+    "taxonomy",
+    "logic",
+    "provenance",
+    "schema",
+    "safety",
+    "voice"
+  ],
+  "paths": [
+    "skills/packs/lsat-coach/*",
+    "scripts/lsat-coach-probe.py",
+    "skills/packs/persona-core/*",
+    "scripts/persona-core-probe.py"
+  ],
+  "note": "SPEC-V2-2215. Twenty-four tree rows. Sixteen run lsat-coach-probe.py, one per class, over the LSAT coach's template, its six worked examples and the pack's data: the format, the question-type taxonomy, the conditional logic and provenance. Eight, the persona-core.* rows, run persona-core-probe.py with --kind test-prep, reusing persona-core's classes rather than copying them. timed-set-pace, stem-cue, trap-named and voice are advisory: they report and never refuse.",
+  "checks": [
+    {
+      "id": "format-facts",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/lsat-coach-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "format-facts"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "format",
+      "reason": "format-fact-wrong",
+      "scope": "tree"
+    },
+    {
+      "id": "retired-section-taught",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/lsat-coach-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "retired-section-taught"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "format",
+      "reason": "retired-section-taught",
+      "scope": "tree"
+    },
+    {
+      "id": "timed-set",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/lsat-coach-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "timed-set"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "format",
+      "reason": "timed-set-invalid",
+      "scope": "tree"
+    },
+    {
+      "id": "timed-set-pace",
+      "severity": "advisory",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/lsat-coach-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "timed-set-pace"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "format",
+      "reason": "pace-off-official",
+      "scope": "tree"
+    },
+    {
+      "id": "score-claims",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/lsat-coach-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "score-claims"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "format",
+      "reason": "score-claim-invalid",
+      "scope": "tree"
+    },
+    {
+      "id": "taxonomy-complete",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/lsat-coach-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "taxonomy-complete"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "taxonomy",
+      "reason": "taxonomy-gap",
+      "scope": "tree"
+    },
+    {
+      "id": "question-taxonomy",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/lsat-coach-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "question-taxonomy"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "taxonomy",
+      "reason": "question-type-unknown",
+      "scope": "tree"
+    },
+    {
+      "id": "stem-cue",
+      "severity": "advisory",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/lsat-coach-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "stem-cue"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "taxonomy",
+      "reason": "stem-reads-as-other-type",
+      "scope": "tree"
+    },
+    {
+      "id": "every-choice-explained",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/lsat-coach-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "every-choice-explained"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "taxonomy",
+      "reason": "choice-unexplained",
+      "scope": "tree"
+    },
+    {
+      "id": "trap-named",
+      "severity": "advisory",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/lsat-coach-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "trap-named"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "taxonomy",
+      "reason": "trap-unnamed",
+      "scope": "tree"
+    },
+    {
+      "id": "logic-rules-sound",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/lsat-coach-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "logic-rules-sound"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "logic",
+      "reason": "logic-rule-unsound",
+      "scope": "tree"
+    },
+    {
+      "id": "logic-valid",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/lsat-coach-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "logic-valid"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "logic",
+      "reason": "logic-invalid",
+      "scope": "tree"
+    },
+    {
+      "id": "template-contract",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/lsat-coach-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "template-contract"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "provenance",
+      "reason": "template-incomplete",
+      "scope": "tree"
+    },
+    {
+      "id": "item-provenance",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/lsat-coach-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "item-provenance"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "provenance",
+      "reason": "provenance-invalid",
+      "scope": "tree"
+    },
+    {
+      "id": "sources-cited",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/lsat-coach-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "sources-cited"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "provenance",
+      "reason": "source-uncited",
+      "scope": "tree"
+    },
+    {
+      "id": "lsac-marks",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/lsat-coach-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "lsac-marks"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "provenance",
+      "reason": "lsac-mark-misused",
+      "scope": "tree"
+    },
+    {
+      "id": "persona-core.template-schema",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/persona-core-probe.py",
+          "--root",
+          "{root}",
+          "--kind",
+          "test-prep",
+          "check",
+          "template-schema"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "schema",
+      "reason": "template-invalid",
+      "scope": "tree"
+    },
+    {
+      "id": "persona-core.output-contract",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/persona-core-probe.py",
+          "--root",
+          "{root}",
+          "--kind",
+          "test-prep",
+          "check",
+          "output-contract"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "schema",
+      "reason": "output-invalid",
+      "scope": "tree"
+    },
+    {
+      "id": "persona-core.duty-composition",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/persona-core-probe.py",
+          "--root",
+          "{root}",
+          "--kind",
+          "test-prep",
+          "check",
+          "duty-composition"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "schema",
+      "reason": "duty-sections-missing",
+      "scope": "tree"
+    },
+    {
+      "id": "persona-core.no-dates",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/persona-core-probe.py",
+          "--root",
+          "{root}",
+          "--kind",
+          "test-prep",
+          "check",
+          "no-dates"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "safety",
+      "reason": "date-or-timeline",
+      "scope": "tree"
+    },
+    {
+      "id": "persona-core.scrubber",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/persona-core-probe.py",
+          "--root",
+          "{root}",
+          "--kind",
+          "test-prep",
+          "check",
+          "scrubber"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "safety",
+      "reason": "scrubber-denied",
+      "scope": "tree"
+    },
+    {
+      "id": "persona-core.memory-scope",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/persona-core-probe.py",
+          "--root",
+          "{root}",
+          "--kind",
+          "test-prep",
+          "check",
+          "memory-scope"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "safety",
+      "reason": "memory-out-of-scope",
+      "scope": "tree"
+    },
+    {
+      "id": "persona-core.no-human-claim",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/persona-core-probe.py",
+          "--root",
+          "{root}",
+          "--kind",
+          "test-prep",
+          "check",
+          "no-human-claim"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "safety",
+      "reason": "human-claim",
+      "scope": "tree"
+    },
+    {
+      "id": "persona-core.voice",
+      "severity": "advisory",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/persona-core-probe.py",
+          "--root",
+          "{root}",
+          "--kind",
+          "test-prep",
+          "check",
+          "voice"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "voice",
+      "reason": "voice-drift",
+      "scope": "tree"
+    }
+  ]
+}

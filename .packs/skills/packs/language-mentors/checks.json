@@ -1,0 +1,509 @@
+{
+  "schema": "phx.skills.checks.v1",
+  "spec": "SPEC-V2-2213",
+  "pack": "packs/language-mentors",
+  "walk": [
+    "schema",
+    "safety",
+    "voice",
+    "mentor",
+    "instruction",
+    "reading",
+    "pronunciation",
+    "culture",
+    "write"
+  ],
+  "paths": [
+    "skills/packs/language-mentors/*",
+    "scripts/language-mentors-probe.py",
+    "scripts/persona-core-probe.py",
+    "skills/packs/persona-core/*"
+  ],
+  "note": "SPEC-V2-2213. Twenty-six tree rows over the language persona documents of any --root. Eight reuse persona-core-probe.py's classes scoped with --kind language, and are never copied. Eighteen run language-mentors-probe.py, which parses through persona-core and reads every language rule from languages.json. The advisory rows (voice, i1-density, culture-anchor, culture-generalization, write-focus) report and never refuse.",
+  "checks": [
+    {
+      "id": "template-schema",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/persona-core-probe.py",
+          "--root",
+          "{root}",
+          "--kind",
+          "language",
+          "check",
+          "template-schema"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "schema",
+      "reason": "template-invalid",
+      "scope": "tree"
+    },
+    {
+      "id": "output-contract",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/persona-core-probe.py",
+          "--root",
+          "{root}",
+          "--kind",
+          "language",
+          "check",
+          "output-contract"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "schema",
+      "reason": "output-invalid",
+      "scope": "tree"
+    },
+    {
+      "id": "duty-composition",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/persona-core-probe.py",
+          "--root",
+          "{root}",
+          "--kind",
+          "language",
+          "check",
+          "duty-composition"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "schema",
+      "reason": "duty-sections-missing",
+      "scope": "tree"
+    },
+    {
+      "id": "no-dates",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/persona-core-probe.py",
+          "--root",
+          "{root}",
+          "--kind",
+          "language",
+          "check",
+          "no-dates"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "safety",
+      "reason": "date-or-timeline",
+      "scope": "tree"
+    },
+    {
+      "id": "scrubber",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/persona-core-probe.py",
+          "--root",
+          "{root}",
+          "--kind",
+          "language",
+          "check",
+          "scrubber"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "safety",
+      "reason": "scrubber-denied",
+      "scope": "tree"
+    },
+    {
+      "id": "memory-scope",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/persona-core-probe.py",
+          "--root",
+          "{root}",
+          "--kind",
+          "language",
+          "check",
+          "memory-scope"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "safety",
+      "reason": "memory-out-of-scope",
+      "scope": "tree"
+    },
+    {
+      "id": "no-human-claim",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/persona-core-probe.py",
+          "--root",
+          "{root}",
+          "--kind",
+          "language",
+          "check",
+          "no-human-claim"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "safety",
+      "reason": "human-claim",
+      "scope": "tree"
+    },
+    {
+      "id": "voice",
+      "severity": "advisory",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/persona-core-probe.py",
+          "--root",
+          "{root}",
+          "--kind",
+          "language",
+          "check",
+          "voice"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "voice",
+      "reason": "voice-drift",
+      "scope": "tree"
+    },
+    {
+      "id": "mentor-templates",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/language-mentors-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "mentor-templates"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "mentor",
+      "reason": "mentor-template-incomplete",
+      "scope": "tree"
+    },
+    {
+      "id": "rules-table",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/language-mentors-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "rules-table"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "mentor",
+      "reason": "rules-table-invalid",
+      "scope": "tree"
+    },
+    {
+      "id": "cefr-ratio",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/language-mentors-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "cefr-ratio"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "instruction",
+      "reason": "instruction-off-mode",
+      "scope": "tree"
+    },
+    {
+      "id": "i1-glosses",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/language-mentors-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "i1-glosses"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "reading",
+      "reason": "gloss-missing",
+      "scope": "tree"
+    },
+    {
+      "id": "i1-density",
+      "severity": "advisory",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/language-mentors-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "i1-density"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "reading",
+      "reason": "new-word-density-high",
+      "scope": "tree"
+    },
+    {
+      "id": "grammar-spotlight",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/language-mentors-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "grammar-spotlight"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "reading",
+      "reason": "spotlight-invalid",
+      "scope": "tree"
+    },
+    {
+      "id": "pronunciation-notation",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/language-mentors-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "pronunciation-notation"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "pronunciation",
+      "reason": "notation-missing",
+      "scope": "tree"
+    },
+    {
+      "id": "pinyin-tones",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/language-mentors-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "pinyin-tones"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "pronunciation",
+      "reason": "tone-mark-misplaced",
+      "scope": "tree"
+    },
+    {
+      "id": "furigana-ruby",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/language-mentors-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "furigana-ruby"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "pronunciation",
+      "reason": "ruby-invalid",
+      "scope": "tree"
+    },
+    {
+      "id": "pitch-accent",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/language-mentors-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "pitch-accent"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "pronunciation",
+      "reason": "pitch-accent-invalid",
+      "scope": "tree"
+    },
+    {
+      "id": "hangul-batchim",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/language-mentors-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "hangul-batchim"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "pronunciation",
+      "reason": "batchim-misstated",
+      "scope": "tree"
+    },
+    {
+      "id": "romanization-rr",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/language-mentors-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "romanization-rr"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "pronunciation",
+      "reason": "romanization-not-rr",
+      "scope": "tree"
+    },
+    {
+      "id": "french-liaison",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/language-mentors-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "french-liaison"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "pronunciation",
+      "reason": "liaison-miscategorised",
+      "scope": "tree"
+    },
+    {
+      "id": "spanish-stress",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/language-mentors-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "spanish-stress"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "pronunciation",
+      "reason": "stress-misstated",
+      "scope": "tree"
+    },
+    {
+      "id": "culture-anchor",
+      "severity": "advisory",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/language-mentors-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "culture-anchor"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "culture",
+      "reason": "culture-unanchored",
+      "scope": "tree"
+    },
+    {
+      "id": "culture-generalization",
+      "severity": "advisory",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/language-mentors-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "culture-generalization"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "culture",
+      "reason": "culture-overgeneralized",
+      "scope": "tree"
+    },
+    {
+      "id": "write-corrections",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/language-mentors-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "write-corrections"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "write",
+      "reason": "correction-off-policy",
+      "scope": "tree"
+    },
+    {
+      "id": "write-focus",
+      "severity": "advisory",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/language-mentors-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "write-focus"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "write",
+      "reason": "feedback-unfocused",
+      "scope": "tree"
+    }
+  ]
+}

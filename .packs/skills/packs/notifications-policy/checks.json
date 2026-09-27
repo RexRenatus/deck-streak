@@ -1,0 +1,313 @@
+{
+  "schema": "phx.skills.checks.v1",
+  "spec": "SPEC-V2-2219",
+  "pack": "packs/notifications-policy",
+  "walk": [
+    "policy",
+    "router",
+    "messages"
+  ],
+  "note": "SPEC-V2-2219. Fifteen tree rows, one per notifications-policy-probe.py class, each run from the skills directory against any --root and the pack's baseline.json. No paths: phoenix-v2 declares no notification policy (SPEC-V2-2219 section 6).",
+  "checks": [
+    {
+      "id": "policy-declared",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/notifications-policy-probe.py",
+          "--root",
+          "{root}",
+          "--baseline",
+          "{skills}/packs/notifications-policy/baseline.json",
+          "check",
+          "policy-declared"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "policy",
+      "reason": "policy-undeclared",
+      "scope": "tree"
+    },
+    {
+      "id": "policy-deviation-has-adr",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/notifications-policy-probe.py",
+          "--root",
+          "{root}",
+          "--baseline",
+          "{skills}/packs/notifications-policy/baseline.json",
+          "check",
+          "policy-deviation-has-adr"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "policy",
+      "reason": "deviation-without-adr",
+      "scope": "tree"
+    },
+    {
+      "id": "ladder-tiers",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/notifications-policy-probe.py",
+          "--root",
+          "{root}",
+          "--baseline",
+          "{skills}/packs/notifications-policy/baseline.json",
+          "check",
+          "ladder-tiers"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "policy",
+      "reason": "ladder-malformed",
+      "scope": "tree"
+    },
+    {
+      "id": "celebration-budgets",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/notifications-policy-probe.py",
+          "--root",
+          "{root}",
+          "--baseline",
+          "{skills}/packs/notifications-policy/baseline.json",
+          "check",
+          "celebration-budgets"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "policy",
+      "reason": "budget-malformed",
+      "scope": "tree"
+    },
+    {
+      "id": "streak-break-cap",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/notifications-policy-probe.py",
+          "--root",
+          "{root}",
+          "--baseline",
+          "{skills}/packs/notifications-policy/baseline.json",
+          "check",
+          "streak-break-cap"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "policy",
+      "reason": "streak-break-uncapped",
+      "scope": "tree"
+    },
+    {
+      "id": "dedupe",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/notifications-policy-probe.py",
+          "--root",
+          "{root}",
+          "--baseline",
+          "{skills}/packs/notifications-policy/baseline.json",
+          "check",
+          "dedupe"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "policy",
+      "reason": "dedupe-missing",
+      "scope": "tree"
+    },
+    {
+      "id": "quiet-hours",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/notifications-policy-probe.py",
+          "--root",
+          "{root}",
+          "--baseline",
+          "{skills}/packs/notifications-policy/baseline.json",
+          "check",
+          "quiet-hours"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "policy",
+      "reason": "quiet-hours-violated",
+      "scope": "tree"
+    },
+    {
+      "id": "deferral-bounds",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/notifications-policy-probe.py",
+          "--root",
+          "{root}",
+          "--baseline",
+          "{skills}/packs/notifications-policy/baseline.json",
+          "check",
+          "deferral-bounds"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "policy",
+      "reason": "deferral-unbounded",
+      "scope": "tree"
+    },
+    {
+      "id": "send-failure-hold",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/notifications-policy-probe.py",
+          "--root",
+          "{root}",
+          "--baseline",
+          "{skills}/packs/notifications-policy/baseline.json",
+          "check",
+          "send-failure-hold"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "policy",
+      "reason": "send-failure-burns",
+      "scope": "tree"
+    },
+    {
+      "id": "nudge-budgets",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/notifications-policy-probe.py",
+          "--root",
+          "{root}",
+          "--baseline",
+          "{skills}/packs/notifications-policy/baseline.json",
+          "check",
+          "nudge-budgets"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "policy",
+      "reason": "nudge-budget-malformed",
+      "scope": "tree"
+    },
+    {
+      "id": "comeback-cap",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/notifications-policy-probe.py",
+          "--root",
+          "{root}",
+          "--baseline",
+          "{skills}/packs/notifications-policy/baseline.json",
+          "check",
+          "comeback-cap"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "policy",
+      "reason": "comeback-uncapped",
+      "scope": "tree"
+    },
+    {
+      "id": "holdout",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/notifications-policy-probe.py",
+          "--root",
+          "{root}",
+          "--baseline",
+          "{skills}/packs/notifications-policy/baseline.json",
+          "check",
+          "holdout"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "policy",
+      "reason": "holdout-unsafe",
+      "scope": "tree"
+    },
+    {
+      "id": "withhold-ledger",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/notifications-policy-probe.py",
+          "--root",
+          "{root}",
+          "--baseline",
+          "{skills}/packs/notifications-policy/baseline.json",
+          "check",
+          "withhold-ledger"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "policy",
+      "reason": "withhold-unrecorded",
+      "scope": "tree"
+    },
+    {
+      "id": "one-router",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/notifications-policy-probe.py",
+          "--root",
+          "{root}",
+          "--baseline",
+          "{skills}/packs/notifications-policy/baseline.json",
+          "check",
+          "one-router"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "router",
+      "reason": "router-bypassed",
+      "scope": "tree"
+    },
+    {
+      "id": "message-metadata",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/notifications-policy-probe.py",
+          "--root",
+          "{root}",
+          "--baseline",
+          "{skills}/packs/notifications-policy/baseline.json",
+          "check",
+          "message-metadata"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "messages",
+      "reason": "metadata-nonconforming",
+      "scope": "tree"
+    }
+  ]
+}

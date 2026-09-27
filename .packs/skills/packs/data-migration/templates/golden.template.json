@@ -1,0 +1,15 @@
+{
+  "schema": "phx.parity-golden.v1",
+  "function": "v9.xp.review_xp",
+  "source_commit": "0000000000000000000000000000000000000000",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+  "inputs": "synthetic",
+  "seed": 20,
+  "cases": [
+    {"class": "tie", "input": {"ease": 3, "maturity": 1.25, "tier": 1}, "output": 12},
+    {"class": "negative", "input": {"delta": -7, "per": 25}, "output": -1},
+    {"class": "rollover", "input": {"answered_at": "04:00", "rollover_hour": 4}, "output": 10},
+    {"input": {"ease": 1, "maturity": 1.0, "tier": 1}, "output": 5, "note": "an ordinary case"}
+  ]
+}

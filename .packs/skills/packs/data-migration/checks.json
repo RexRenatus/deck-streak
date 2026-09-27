@@ -1,0 +1,374 @@
+{
+  "schema": "phx.skills.checks.v1",
+  "spec": "SPEC-V2-2221",
+  "pack": "packs/data-migration",
+  "walk": [
+    "plan",
+    "oracle",
+    "run"
+  ],
+  "paths": [],
+  "note": "SPEC-V2-2221. Twenty tree rows, one per data-migration-probe.py class, each run from the skills directory against any --root. `paths` is empty because phoenix-v2 carries no data port: SPEC-V2-2221's exclusion section records it. The three advisory rows report and never refuse.",
+  "checks": [
+    {
+      "id": "dm.manifest",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/data-migration-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "manifest"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "plan",
+      "reason": "plan-malformed",
+      "scope": "tree"
+    },
+    {
+      "id": "dm.source-pinned",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/data-migration-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "source-pinned"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "plan",
+      "reason": "source-unpinned",
+      "scope": "tree"
+    },
+    {
+      "id": "dm.tables-covered",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/data-migration-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "tables-covered"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "plan",
+      "reason": "table-unmapped",
+      "scope": "tree"
+    },
+    {
+      "id": "dm.targets-exist",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/data-migration-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "targets-exist"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "plan",
+      "reason": "target-table-missing",
+      "scope": "tree"
+    },
+    {
+      "id": "dm.count-rules",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/data-migration-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "count-rules"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "plan",
+      "reason": "count-rule-missing",
+      "scope": "tree"
+    },
+    {
+      "id": "dm.oracle-goldens",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/data-migration-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "oracle-goldens"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "oracle",
+      "reason": "golden-malformed",
+      "scope": "tree"
+    },
+    {
+      "id": "dm.oracle-provenance",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/data-migration-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "oracle-provenance"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "oracle",
+      "reason": "golden-stale",
+      "scope": "tree"
+    },
+    {
+      "id": "dm.oracle-consumed",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/data-migration-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "oracle-consumed"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "oracle",
+      "reason": "golden-unread",
+      "scope": "tree"
+    },
+    {
+      "id": "dm.oracle-synthetic",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/data-migration-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "oracle-synthetic"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "oracle",
+      "reason": "golden-not-synthetic",
+      "scope": "tree"
+    },
+    {
+      "id": "dm.oracle-divergences",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/data-migration-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "oracle-divergences"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "oracle",
+      "reason": "divergence-undecided",
+      "scope": "tree"
+    },
+    {
+      "id": "dm.oracle-edge-classes",
+      "severity": "advisory",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/data-migration-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "oracle-edge-classes"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "oracle",
+      "reason": "edge-class-uncovered",
+      "scope": "tree"
+    },
+    {
+      "id": "dm.oracle-float-roundtrip",
+      "severity": "advisory",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/data-migration-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "oracle-float-roundtrip"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "oracle",
+      "reason": "float-not-roundtrip",
+      "scope": "tree"
+    },
+    {
+      "id": "dm.dry-run-default",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/data-migration-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "dry-run-default"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "run",
+      "reason": "apply-without-dry-run",
+      "scope": "tree"
+    },
+    {
+      "id": "dm.source-read-only",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/data-migration-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "source-read-only"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "run",
+      "reason": "source-writable",
+      "scope": "tree"
+    },
+    {
+      "id": "dm.backup-before-apply",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/data-migration-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "backup-before-apply"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "run",
+      "reason": "apply-before-backup",
+      "scope": "tree"
+    },
+    {
+      "id": "dm.integrity-after",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/data-migration-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "integrity-after"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "run",
+      "reason": "integrity-unchecked",
+      "scope": "tree"
+    },
+    {
+      "id": "dm.idempotency-proved",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/data-migration-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "idempotency-proved"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "run",
+      "reason": "rerun-unproved",
+      "scope": "tree"
+    },
+    {
+      "id": "dm.rollback-proved",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/data-migration-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "rollback-proved"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "run",
+      "reason": "rollback-unproved",
+      "scope": "tree"
+    },
+    {
+      "id": "dm.counts-proved",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/data-migration-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "counts-proved"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "run",
+      "reason": "counts-unproved",
+      "scope": "tree"
+    },
+    {
+      "id": "dm.no-hot-file-copy",
+      "severity": "advisory",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/data-migration-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "no-hot-file-copy"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "run",
+      "reason": "hot-file-copied",
+      "scope": "tree"
+    }
+  ]
+}

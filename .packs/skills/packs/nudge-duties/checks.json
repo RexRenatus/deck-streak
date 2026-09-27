@@ -1,0 +1,309 @@
+{
+  "schema": "phx.skills.checks.v1",
+  "spec": "SPEC-V2-2217",
+  "pack": "packs/nudge-duties",
+  "walk": [
+    "contract",
+    "telegram",
+    "facts",
+    "lapse",
+    "ethics",
+    "voice"
+  ],
+  "paths": [
+    "skills/packs/nudge-duties/*",
+    "scripts/nudge-duties-probe.py",
+    "*.msg.json"
+  ],
+  "note": "SPEC-V2-2217. Sixteen tree rows, one per nudge-duties-probe.py class, each run from the skills directory against any --root: the message envelope v1 of the daily digest and the one-per-lapse comeback, the Telegram payload limits, the digest's facts, the lapse rules, and the owner's ethics rules. Twelve block and four advisory; the advisory rows report and never refuse. no-dates-or-countdowns, no-internals, no-shame-framing, digest-degraded, autonomy-language and near-miss-copy reuse persona-core's public load_patterns, load_deny and scan; no-journal-in-messages calls vault-duties' load_journal and journal_leaks.",
+  "checks": [
+    {
+      "id": "message-contract",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/nudge-duties-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "message-contract"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "contract",
+      "reason": "message-invalid",
+      "scope": "tree"
+    },
+    {
+      "id": "telegram-length",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/nudge-duties-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "telegram-length"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "telegram",
+      "reason": "message-too-long",
+      "scope": "tree"
+    },
+    {
+      "id": "telegram-entities",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/nudge-duties-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "telegram-entities"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "telegram",
+      "reason": "entities-invalid",
+      "scope": "tree"
+    },
+    {
+      "id": "telegram-keyboard",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/nudge-duties-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "telegram-keyboard"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "telegram",
+      "reason": "keyboard-invalid",
+      "scope": "tree"
+    },
+    {
+      "id": "digest-numbers",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/nudge-duties-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "digest-numbers"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "facts",
+      "reason": "digest-number-mismatch",
+      "scope": "tree"
+    },
+    {
+      "id": "digest-degraded",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/nudge-duties-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "digest-degraded"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "facts",
+      "reason": "degraded-digest-unsaid",
+      "scope": "tree"
+    },
+    {
+      "id": "no-internals",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/nudge-duties-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "no-internals"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "facts",
+      "reason": "internals-leaked",
+      "scope": "tree"
+    },
+    {
+      "id": "coaching-numbers",
+      "severity": "advisory",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/nudge-duties-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "coaching-numbers"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "facts",
+      "reason": "coaching-number-unsourced",
+      "scope": "tree"
+    },
+    {
+      "id": "comeback-shape",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/nudge-duties-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "comeback-shape"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "lapse",
+      "reason": "comeback-invalid",
+      "scope": "tree"
+    },
+    {
+      "id": "readings-paused",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/nudge-duties-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "readings-paused"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "lapse",
+      "reason": "readings-during-lapse",
+      "scope": "tree"
+    },
+    {
+      "id": "no-dates-or-countdowns",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/nudge-duties-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "no-dates-or-countdowns"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "ethics",
+      "reason": "date-or-countdown",
+      "scope": "tree"
+    },
+    {
+      "id": "no-shame-framing",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/nudge-duties-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "no-shame-framing"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "ethics",
+      "reason": "shame-or-loss-framing",
+      "scope": "tree"
+    },
+    {
+      "id": "no-journal-in-messages",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/nudge-duties-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "no-journal-in-messages"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "ethics",
+      "reason": "journal-leaked",
+      "scope": "tree"
+    },
+    {
+      "id": "autonomy-language",
+      "severity": "advisory",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/nudge-duties-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "autonomy-language"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "voice",
+      "reason": "controlling-language",
+      "scope": "tree"
+    },
+    {
+      "id": "shouting",
+      "severity": "advisory",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/nudge-duties-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "shouting"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "voice",
+      "reason": "shouting",
+      "scope": "tree"
+    },
+    {
+      "id": "near-miss-copy",
+      "severity": "advisory",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/nudge-duties-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "near-miss-copy"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "voice",
+      "reason": "near-miss-copy",
+      "scope": "tree"
+    }
+  ]
+}

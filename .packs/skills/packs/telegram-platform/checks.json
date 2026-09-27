@@ -1,0 +1,355 @@
+{
+  "schema": "phx.skills.checks.v1",
+  "spec": "SPEC-V2-2219",
+  "pack": "packs/telegram-platform",
+  "walk": [
+    "bot-api",
+    "mini-app",
+    "payload"
+  ],
+  "note": "SPEC-V2-2219. Nineteen tree rows, one per telegram-platform-probe.py class, each run from the skills directory against any --root. tg-poll-long and tg-allowed-updates are advisory. The Mini App's script placement, ready(), web-side deep links and CloudStorage key syntax are web-launch's tg-* rows, composed and not copied. No paths: the pack judges a Telegram product's tree, which phoenix-v2 is not (SPEC-V2-2219 section 6).",
+  "checks": [
+    {
+      "id": "tg-update-mode",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/telegram-platform-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "tg-update-mode"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "bot-api",
+      "reason": "update-mode-conflict",
+      "scope": "tree"
+    },
+    {
+      "id": "tg-webhook-endpoint",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/telegram-platform-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "tg-webhook-endpoint"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "bot-api",
+      "reason": "webhook-endpoint-invalid",
+      "scope": "tree"
+    },
+    {
+      "id": "tg-poll-offset",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/telegram-platform-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "tg-poll-offset"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "bot-api",
+      "reason": "poll-offset-missing",
+      "scope": "tree"
+    },
+    {
+      "id": "tg-poll-long",
+      "severity": "advisory",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/telegram-platform-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "tg-poll-long"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "bot-api",
+      "reason": "short-polling",
+      "scope": "tree"
+    },
+    {
+      "id": "tg-allowed-updates",
+      "severity": "advisory",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/telegram-platform-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "tg-allowed-updates"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "bot-api",
+      "reason": "allowed-updates-implicit",
+      "scope": "tree"
+    },
+    {
+      "id": "tg-retry-after",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/telegram-platform-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "tg-retry-after"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "bot-api",
+      "reason": "retry-after-ignored",
+      "scope": "tree"
+    },
+    {
+      "id": "tg-parse-mode",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/telegram-platform-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "tg-parse-mode"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "bot-api",
+      "reason": "legacy-markdown",
+      "scope": "tree"
+    },
+    {
+      "id": "tg-escape",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/telegram-platform-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "tg-escape"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "bot-api",
+      "reason": "markup-unescaped",
+      "scope": "tree"
+    },
+    {
+      "id": "tg-length-bound",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/telegram-platform-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "tg-length-bound"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "bot-api",
+      "reason": "length-unbounded",
+      "scope": "tree"
+    },
+    {
+      "id": "tg-callback-answer",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/telegram-platform-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "tg-callback-answer"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "bot-api",
+      "reason": "callback-unanswered",
+      "scope": "tree"
+    },
+    {
+      "id": "tg-callback-data",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/telegram-platform-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "tg-callback-data"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "bot-api",
+      "reason": "callback-data-size",
+      "scope": "tree"
+    },
+    {
+      "id": "tg-deep-link",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/telegram-platform-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "tg-deep-link"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "bot-api",
+      "reason": "deep-link-invalid",
+      "scope": "tree"
+    },
+    {
+      "id": "tg-replaced-fields",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/telegram-platform-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "tg-replaced-fields"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "bot-api",
+      "reason": "replaced-bot-api-field",
+      "scope": "tree"
+    },
+    {
+      "id": "tma-version-gate",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/telegram-platform-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "tma-version-gate"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "mini-app",
+      "reason": "version-ungated",
+      "scope": "tree"
+    },
+    {
+      "id": "tma-storage",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/telegram-platform-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "tma-storage"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "mini-app",
+      "reason": "storage-misused",
+      "scope": "tree"
+    },
+    {
+      "id": "tma-send-data",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/telegram-platform-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "tma-send-data"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "mini-app",
+      "reason": "send-data-unlaunchable",
+      "scope": "tree"
+    },
+    {
+      "id": "payload-length",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/telegram-platform-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "payload-length"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "payload",
+      "reason": "payload-length",
+      "scope": "tree"
+    },
+    {
+      "id": "payload-markup",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/telegram-platform-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "payload-markup"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "payload",
+      "reason": "payload-markup",
+      "scope": "tree"
+    },
+    {
+      "id": "payload-keyboard",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/telegram-platform-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "payload-keyboard"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "payload",
+      "reason": "payload-keyboard",
+      "scope": "tree"
+    }
+  ]
+}

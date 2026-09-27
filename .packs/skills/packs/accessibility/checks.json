@@ -1,0 +1,475 @@
+{
+  "schema": "phx.skills.checks.v1",
+  "spec": "SPEC-V2-2223",
+  "pack": "packs/accessibility",
+  "walk": [
+    "matrix",
+    "markup",
+    "script",
+    "style",
+    "toolchain"
+  ],
+  "note": "SPEC-V2-2223. Twenty-three tree rows, one per accessibility-probe.py class, each run from the skills directory against any --root. coverage.json maps every WCAG 2.2 A and AA success criterion to these rows, to the sibling packs' rows (named pack:row, never copied), to axe-core rules or to a person. The two matrix rows judge the pack's own data. The advisory rows report and never refuse.",
+  "checks": [
+    {
+      "id": "matrix-complete",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/accessibility-probe.py",
+          "--root",
+          "{root}",
+          "--skills",
+          "{skills}",
+          "check",
+          "matrix-complete"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "matrix",
+      "reason": "matrix-incomplete",
+      "scope": "tree"
+    },
+    {
+      "id": "matrix-rows-resolve",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/accessibility-probe.py",
+          "--root",
+          "{root}",
+          "--skills",
+          "{skills}",
+          "check",
+          "matrix-rows-resolve"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "matrix",
+      "reason": "matrix-row-unresolved",
+      "scope": "tree"
+    },
+    {
+      "id": "label-in-name",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/accessibility-probe.py",
+          "--root",
+          "{root}",
+          "--skills",
+          "{skills}",
+          "check",
+          "label-in-name"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "markup",
+      "reason": "name-hides-label",
+      "scope": "tree"
+    },
+    {
+      "id": "aria-valid",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/accessibility-probe.py",
+          "--root",
+          "{root}",
+          "--skills",
+          "{skills}",
+          "check",
+          "aria-valid"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "markup",
+      "reason": "aria-token-invalid",
+      "scope": "tree"
+    },
+    {
+      "id": "aria-hidden-focus",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/accessibility-probe.py",
+          "--root",
+          "{root}",
+          "--skills",
+          "{skills}",
+          "check",
+          "aria-hidden-focus"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "markup",
+      "reason": "hidden-yet-focusable",
+      "scope": "tree"
+    },
+    {
+      "id": "keyboard-operable",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/accessibility-probe.py",
+          "--root",
+          "{root}",
+          "--skills",
+          "{skills}",
+          "check",
+          "keyboard-operable"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "markup",
+      "reason": "pointer-only-handler",
+      "scope": "tree"
+    },
+    {
+      "id": "video-captions",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/accessibility-probe.py",
+          "--root",
+          "{root}",
+          "--skills",
+          "{skills}",
+          "check",
+          "video-captions"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "markup",
+      "reason": "captions-missing",
+      "scope": "tree"
+    },
+    {
+      "id": "meta-refresh",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/accessibility-probe.py",
+          "--root",
+          "{root}",
+          "--skills",
+          "{skills}",
+          "check",
+          "meta-refresh"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "markup",
+      "reason": "timed-refresh",
+      "scope": "tree"
+    },
+    {
+      "id": "context-change",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/accessibility-probe.py",
+          "--root",
+          "{root}",
+          "--skills",
+          "{skills}",
+          "check",
+          "context-change"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "markup",
+      "reason": "context-change-unasked",
+      "scope": "tree"
+    },
+    {
+      "id": "orientation-lock",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/accessibility-probe.py",
+          "--root",
+          "{root}",
+          "--skills",
+          "{skills}",
+          "check",
+          "orientation-lock"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "script",
+      "reason": "orientation-locked",
+      "scope": "tree"
+    },
+    {
+      "id": "auth-autofill",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/accessibility-probe.py",
+          "--root",
+          "{root}",
+          "--skills",
+          "{skills}",
+          "check",
+          "auth-autofill"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "markup",
+      "reason": "autofill-blocked",
+      "scope": "tree"
+    },
+    {
+      "id": "status-messages",
+      "severity": "advisory",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/accessibility-probe.py",
+          "--root",
+          "{root}",
+          "--skills",
+          "{skills}",
+          "check",
+          "status-messages"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "markup",
+      "reason": "status-not-announced",
+      "scope": "tree"
+    },
+    {
+      "id": "pointer-cancel",
+      "severity": "advisory",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/accessibility-probe.py",
+          "--root",
+          "{root}",
+          "--skills",
+          "{skills}",
+          "check",
+          "pointer-cancel"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "script",
+      "reason": "down-event-activation",
+      "scope": "tree"
+    },
+    {
+      "id": "motion-actuation",
+      "severity": "advisory",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/accessibility-probe.py",
+          "--root",
+          "{root}",
+          "--skills",
+          "{skills}",
+          "check",
+          "motion-actuation"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "script",
+      "reason": "motion-without-alternative",
+      "scope": "tree"
+    },
+    {
+      "id": "key-shortcuts",
+      "severity": "advisory",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/accessibility-probe.py",
+          "--root",
+          "{root}",
+          "--skills",
+          "{skills}",
+          "check",
+          "key-shortcuts"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "script",
+      "reason": "single-key-shortcut",
+      "scope": "tree"
+    },
+    {
+      "id": "inline-spacing",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/accessibility-probe.py",
+          "--root",
+          "{root}",
+          "--skills",
+          "{skills}",
+          "check",
+          "inline-spacing"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "style",
+      "reason": "spacing-locked",
+      "scope": "tree"
+    },
+    {
+      "id": "contrast-pairs",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/accessibility-probe.py",
+          "--root",
+          "{root}",
+          "--skills",
+          "{skills}",
+          "check",
+          "contrast-pairs"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "style",
+      "reason": "contrast-below-aa",
+      "scope": "tree"
+    },
+    {
+      "id": "focus-not-obscured",
+      "severity": "advisory",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/accessibility-probe.py",
+          "--root",
+          "{root}",
+          "--skills",
+          "{skills}",
+          "check",
+          "focus-not-obscured"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "style",
+      "reason": "focus-can-be-obscured",
+      "scope": "tree"
+    },
+    {
+      "id": "hover-reveal",
+      "severity": "advisory",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/accessibility-probe.py",
+          "--root",
+          "{root}",
+          "--skills",
+          "{skills}",
+          "check",
+          "hover-reveal"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "style",
+      "reason": "hover-only-reveal",
+      "scope": "tree"
+    },
+    {
+      "id": "flash-rate",
+      "severity": "advisory",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/accessibility-probe.py",
+          "--root",
+          "{root}",
+          "--skills",
+          "{skills}",
+          "check",
+          "flash-rate"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "style",
+      "reason": "may-flash",
+      "scope": "tree"
+    },
+    {
+      "id": "svelte-a11y-not-disabled",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/accessibility-probe.py",
+          "--root",
+          "{root}",
+          "--skills",
+          "{skills}",
+          "check",
+          "svelte-a11y-not-disabled"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "toolchain",
+      "reason": "a11y-warnings-disabled",
+      "scope": "tree"
+    },
+    {
+      "id": "svelte-a11y-fails-ci",
+      "severity": "advisory",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/accessibility-probe.py",
+          "--root",
+          "{root}",
+          "--skills",
+          "{skills}",
+          "check",
+          "svelte-a11y-fails-ci"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "toolchain",
+      "reason": "a11y-warnings-pass-ci",
+      "scope": "tree"
+    },
+    {
+      "id": "runtime-audit",
+      "severity": "advisory",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/accessibility-probe.py",
+          "--root",
+          "{root}",
+          "--skills",
+          "{skills}",
+          "check",
+          "runtime-audit"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "toolchain",
+      "reason": "runtime-audit-missing",
+      "scope": "tree"
+    }
+  ]
+}

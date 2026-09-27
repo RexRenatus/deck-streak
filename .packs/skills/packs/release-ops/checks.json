@@ -1,0 +1,412 @@
+{
+  "schema": "phx.skills.checks.v1",
+  "spec": "SPEC-V2-2221",
+  "pack": "packs/release-ops",
+  "walk": [
+    "protection",
+    "version",
+    "changelog",
+    "release",
+    "deploy"
+  ],
+  "paths": [],
+  "note": "SPEC-V2-2221. Twenty-two tree rows, one per release-ops-probe.py class, each run from the skills directory against any --root. `paths` is empty because phoenix-v2 has no dev to main tag release: SPEC-V2-2221's exclusion section records it. The eight advisory rows report and never refuse.",
+  "checks": [
+    {
+      "id": "ro.main-ruleset",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/release-ops-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "main-ruleset"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "protection",
+      "reason": "main-unprotected",
+      "scope": "tree"
+    },
+    {
+      "id": "ro.release-merge-method",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/release-ops-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "release-merge-method"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "protection",
+      "reason": "release-merge-rewrites",
+      "scope": "tree"
+    },
+    {
+      "id": "ro.required-checks-exist",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/release-ops-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "required-checks-exist"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "protection",
+      "reason": "required-check-unreported",
+      "scope": "tree"
+    },
+    {
+      "id": "ro.required-checks-not-skipped",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/release-ops-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "required-checks-not-skipped"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "protection",
+      "reason": "required-check-skippable",
+      "scope": "tree"
+    },
+    {
+      "id": "ro.tag-ruleset",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/release-ops-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "tag-ruleset"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "protection",
+      "reason": "release-tag-mutable",
+      "scope": "tree"
+    },
+    {
+      "id": "ro.ruleset-bypass",
+      "severity": "advisory",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/release-ops-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "ruleset-bypass"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "protection",
+      "reason": "bypass-always",
+      "scope": "tree"
+    },
+    {
+      "id": "ro.versions-semver",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/release-ops-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "versions-semver"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "version",
+      "reason": "version-not-semver",
+      "scope": "tree"
+    },
+    {
+      "id": "ro.changelog-has-version",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/release-ops-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "changelog-has-version"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "version",
+      "reason": "version-without-notes",
+      "scope": "tree"
+    },
+    {
+      "id": "ro.versions-agree",
+      "severity": "advisory",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/release-ops-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "versions-agree"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "version",
+      "reason": "versions-disagree",
+      "scope": "tree"
+    },
+    {
+      "id": "ro.fragment-shape",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/release-ops-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "fragment-shape"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "changelog",
+      "reason": "fragment-unparseable",
+      "scope": "tree"
+    },
+    {
+      "id": "ro.fragment-check-in-ci",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/release-ops-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "fragment-check-in-ci"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "changelog",
+      "reason": "fragment-unenforced",
+      "scope": "tree"
+    },
+    {
+      "id": "ro.release-runbook",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/release-ops-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "release-runbook"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "release",
+      "reason": "release-undocumented",
+      "scope": "tree"
+    },
+    {
+      "id": "ro.release-on-tag",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/release-ops-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "release-on-tag"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "release",
+      "reason": "release-off-tag",
+      "scope": "tree"
+    },
+    {
+      "id": "ro.tag-filter-semver",
+      "severity": "advisory",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/release-ops-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "tag-filter-semver"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "release",
+      "reason": "tag-filter-loose",
+      "scope": "tree"
+    },
+    {
+      "id": "ro.release-draft-first",
+      "severity": "advisory",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/release-ops-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "release-draft-first"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "release",
+      "reason": "release-published-before-assets",
+      "scope": "tree"
+    },
+    {
+      "id": "ro.hosted-runner-pinned",
+      "severity": "advisory",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/release-ops-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "hosted-runner-pinned"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "release",
+      "reason": "runner-unpinned",
+      "scope": "tree"
+    },
+    {
+      "id": "ro.deploy-from-tags",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/release-ops-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "deploy-from-tags"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "deploy",
+      "reason": "deploy-off-tag",
+      "scope": "tree"
+    },
+    {
+      "id": "ro.deploy-tag-on-main",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/release-ops-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "deploy-tag-on-main"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "deploy",
+      "reason": "deploy-ancestry-unchecked",
+      "scope": "tree"
+    },
+    {
+      "id": "ro.rollback-entrypoint",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/release-ops-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "rollback-entrypoint"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "deploy",
+      "reason": "rollback-missing",
+      "scope": "tree"
+    },
+    {
+      "id": "ro.deploy-environment",
+      "severity": "advisory",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/release-ops-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "deploy-environment"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "deploy",
+      "reason": "deploy-without-environment",
+      "scope": "tree"
+    },
+    {
+      "id": "ro.deploy-concurrency",
+      "severity": "advisory",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/release-ops-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "deploy-concurrency"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "deploy",
+      "reason": "deploy-races",
+      "scope": "tree"
+    },
+    {
+      "id": "ro.rollback-keeps-previous",
+      "severity": "advisory",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/release-ops-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "rollback-keeps-previous"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "deploy",
+      "reason": "rollback-rebuilds",
+      "scope": "tree"
+    }
+  ]
+}

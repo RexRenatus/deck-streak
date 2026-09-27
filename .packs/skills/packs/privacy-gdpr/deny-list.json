@@ -1,0 +1,88 @@
+{
+  "schema": "phx.persona.deny.v1",
+  "spec": "SPEC-V2-2222",
+  "note": "privacy-gdpr's PUBLIC-REPOSITORY shapes, in persona-core's deny-list schema and loaded by persona-core's own load_deny(). They add the infrastructure identifiers a public repository must not carry to persona-core's value shapes: IPv6 addresses, cloud project ids and secret names written in context, bucket and service hostnames, internal hostnames, home directories that name a user, and Telegram chat or user ids written in context. A placeholder ($VAR, {var}, <var>, %VAR%) is never matched. Nothing personal lives here: the owner's own ids and words belong in the private list.",
+  "key_markers": [],
+  "patterns": [
+    {
+      "id": "ipv6",
+      "flags": "i",
+      "regex": "(?<![\\w:.])(?=[0-9a-f:]*[0-9])[0-9a-f]{0,4}(?::[0-9a-f]{0,4}){2,7}(?![\\w:])",
+      "what": "an IPv6 address; the probe keeps only a text that parses as one"
+    },
+    {
+      "id": "cloud-project-flag",
+      "flags": "",
+      "regex": "--project(?:=|[ \\t]+)[\\\"']?(?![$<{%])(?!(?:my|your|example|sample|demo)-)(?=[a-z0-9-]*[-0-9])[a-z][a-z0-9-]{4,28}[a-z0-9](?![a-z0-9-])",
+      "what": "a cloud project id passed to a command line"
+    },
+    {
+      "id": "cloud-project-key",
+      "flags": "",
+      "regex": "\\b(?i:project_?id|project-id|gcp_?project|google_cloud_project|cloudsdk_core_project|gcloud_project)[\\\"']?[ \\t]*[:=][ \\t]*[\\\"']?(?![$<{%])(?!(?:my|your|example|sample|demo)-)(?=[a-z0-9-]*[-0-9])[a-z][a-z0-9-]{4,28}[a-z0-9](?![a-z0-9-])",
+      "what": "a cloud project id assigned to a project key"
+    },
+    {
+      "id": "cloud-resource-path",
+      "flags": "",
+      "regex": "\\bprojects/(?![$<{%])(?!(?:my|your|example|sample|demo)-)(?=[a-z0-9-]*[-0-9])[a-z][a-z0-9-]{4,28}[a-z0-9]/(?:secrets|locations|zones|regions|instances|topics|subscriptions|databases|serviceAccounts|buckets|global|keyRings)\\b",
+      "what": "a cloud resource name that carries a project id"
+    },
+    {
+      "id": "secret-name-flag",
+      "flags": "",
+      "regex": "--secret(?:=|[ \\t]+)[\\\"']?(?![$<{%])(?![A-Z_]+(?![A-Za-z0-9_-]))[A-Za-z0-9_-]{2,255}",
+      "what": "a secret manager secret name passed to a command line"
+    },
+    {
+      "id": "secret-name-path",
+      "flags": "",
+      "regex": "\\bsecrets/(?![$<{%])(?![A-Z_]+(?![A-Za-z0-9_-]))[A-Za-z0-9_-]{2,255}/versions\\b",
+      "what": "a secret manager resource path that names a secret"
+    },
+    {
+      "id": "secret-name-command",
+      "flags": "",
+      "regex": "\\bsecrets[ \\t]+(?:create|describe|delete|update|add-iam-policy-binding)[ \\t]+(?!-)(?![$<{%])(?![A-Z_]+(?![A-Za-z0-9_-]))[A-Za-z0-9_-]{2,255}",
+      "what": "a secret manager command that names a secret"
+    },
+    {
+      "id": "bucket-url",
+      "flags": "",
+      "regex": "\\b(?:gs|s3)://(?![$<{%])(?!(?:bucket|test-|my-|your-|sample|demo)|[a-z0-9._-]*example)[a-z0-9][a-z0-9._-]{2,62}",
+      "what": "a storage bucket name"
+    },
+    {
+      "id": "cloud-service-host",
+      "flags": "i",
+      "regex": "(?<=[a-z0-9-])\\.(?:a\\.run\\.app|run\\.app|appspot\\.com|cloudfunctions\\.net|firebaseio\\.com|firebaseapp\\.com)\\b",
+      "what": "a cloud-hosted service hostname"
+    },
+    {
+      "id": "internal-host",
+      "flags": "i",
+      "regex": "(?<=[a-z0-9-])\\.[a-z0-9-]+\\.(?:internal|intranet|corp|home\\.arpa)\\b",
+      "what": "an internal hostname"
+    },
+    {
+      "id": "home-directory",
+      "flags": "",
+      "regex": "(?<![\\w.~-])/(?:home|Users)/(?![$<{%.])(?!(?:runner|user|username|you|me|ubuntu|example|alice|bob)(?:/|\\b))[A-Za-z0-9._-]+",
+      "what": "a home directory that names a user"
+    },
+    {
+      "id": "telegram-id-in-context",
+      "flags": "i",
+      "regex": "(?:chat_?id|user_?id|telegram_?id|tg_?id|owner_?id|admin_?ids?|allowed_?users?)\\b[\\\"']?[ \\t]*(?::[ \\t]*[a-z0-9<>]+[ \\t]*)?[:=][ \\t]*[\\\"']?-?(?!(?:123456789|1234567890|987654321)\\b)[1-9][0-9]{6,15}\\b",
+      "what": "a Telegram chat or user id of seven or more digits written in context"
+    },
+    {
+      "id": "phone-in-context",
+      "flags": "i",
+      "regex": "(?:\\btel:|\\bphone(?:_?number)?[\"']?[ \\t]*[:=][ \\t]*[\"']?)\\+?[0-9][0-9 ().-]{6,18}[0-9]",
+      "what": "a telephone number written in context"
+    }
+  ],
+  "literals": [],
+  "journal_paths": []
+}

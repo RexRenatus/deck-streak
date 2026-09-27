@@ -1,0 +1,290 @@
+{
+  "schema": "phx.skills.checks.v1",
+  "spec": "SPEC-V2-2222",
+  "pack": "packs/privacy-gdpr",
+  "walk": [
+    "inventory",
+    "rights",
+    "design",
+    "public"
+  ],
+  "paths": [
+    "skills/packs/privacy-gdpr/*",
+    "scripts/privacy-gdpr-probe.py",
+    "scripts/persona-core-probe.py",
+    "skills/packs/persona-core/*"
+  ],
+  "note": "SPEC-V2-2222. Fifteen tree rows, one per privacy-gdpr-probe.py class, each run from the skills directory against any --root that holds a privacy.json inventory: the GDPR record (Arts 5, 6, 30), the data subject's rights (Arts 13, 15, 17, 20), privacy by design and default (Art. 25) with Telegram's data rules, and the public-repository scrubber, which composes with persona-core's deny list through its load_deny(). logs-pseudonymised is advisory: it reports and never refuses.",
+  "checks": [
+    {
+      "id": "inventory-valid",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/privacy-gdpr-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "inventory-valid"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "inventory",
+      "reason": "inventory-invalid",
+      "scope": "tree"
+    },
+    {
+      "id": "schema-covered",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/privacy-gdpr-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "schema-covered"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "inventory",
+      "reason": "personal-data-undeclared",
+      "scope": "tree"
+    },
+    {
+      "id": "retention-bounded",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/privacy-gdpr-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "retention-bounded"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "inventory",
+      "reason": "retention-unbounded",
+      "scope": "tree"
+    },
+    {
+      "id": "purpose-limited",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/privacy-gdpr-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "purpose-limited"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "inventory",
+      "reason": "purpose-unlimited",
+      "scope": "tree"
+    },
+    {
+      "id": "export-complete",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/privacy-gdpr-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "export-complete"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "rights",
+      "reason": "export-incomplete",
+      "scope": "tree"
+    },
+    {
+      "id": "erase-complete",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/privacy-gdpr-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "erase-complete"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "rights",
+      "reason": "erase-incomplete",
+      "scope": "tree"
+    },
+    {
+      "id": "erase-effective",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/privacy-gdpr-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "erase-effective"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "rights",
+      "reason": "erase-recoverable",
+      "scope": "tree"
+    },
+    {
+      "id": "policy-published",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/privacy-gdpr-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "policy-published"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "rights",
+      "reason": "policy-incomplete",
+      "scope": "tree"
+    },
+    {
+      "id": "purge-automated",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/privacy-gdpr-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "purge-automated"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "design",
+      "reason": "purge-not-automated",
+      "scope": "tree"
+    },
+    {
+      "id": "copies-bounded",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/privacy-gdpr-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "copies-bounded"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "design",
+      "reason": "copy-retention-unbounded",
+      "scope": "tree"
+    },
+    {
+      "id": "telegram-minimised",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/privacy-gdpr-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "telegram-minimised"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "design",
+      "reason": "telegram-overcollected",
+      "scope": "tree"
+    },
+    {
+      "id": "defaults-private",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/privacy-gdpr-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "defaults-private"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "design",
+      "reason": "default-exposes-data",
+      "scope": "tree"
+    },
+    {
+      "id": "logs-pseudonymised",
+      "severity": "advisory",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/privacy-gdpr-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "logs-pseudonymised"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "design",
+      "reason": "personal-data-logged",
+      "scope": "tree"
+    },
+    {
+      "id": "public-scrub",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/privacy-gdpr-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "public-scrub"
+        ],
+        "timeout_seconds": 300
+      },
+      "stage": "public",
+      "reason": "public-scrub-denied",
+      "scope": "tree"
+    },
+    {
+      "id": "private-list-committed",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/privacy-gdpr-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "private-list-committed"
+        ],
+        "timeout_seconds": 300
+      },
+      "stage": "public",
+      "reason": "private-list-exposed",
+      "scope": "tree"
+    }
+  ]
+}

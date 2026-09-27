@@ -1,0 +1,230 @@
+{
+  "schema": "phx.study.duties.v1",
+  "spec": "SPEC-V2-2216",
+  "note": "The data of scripts/study-duties-probe.py: the sections a study duty adds to persona-core's registry, the owner's reading band, the leech pair, the multiple-choice thresholds and the per-language label tables. A new language, label or threshold is a row here, never a code branch. The multiple-choice format itself is lsat-coach's phx.lsat.coach.v1 (d2215), adopted: its item marker and entry lines are read by the script, not restated here.",
+  "added_sections": {
+    "daily-reading": [
+      "retrieval"
+    ]
+  },
+  "templates": {
+    "suffix": ".duty.md",
+    "sections": [
+      "produces",
+      "sections",
+      "rules",
+      "fail-loud"
+    ]
+  },
+  "reading": {
+    "band": {
+      "kinds": [
+        "law"
+      ],
+      "min_words": 800,
+      "max_words": 1500,
+      "source": "the owner's recorded rule (ADR-PHX-009): a law reading is an 800-1500-word primer; answered again as 'Scale by cards, no cap'"
+    },
+    "new_cards_key": "x-new-cards",
+    "scale_tolerance": 0.1,
+    "retrieval_section": "retrieval"
+  },
+  "leech": {
+    "extension": "x-leech",
+    "fields": [
+      "card",
+      "confusable",
+      "answer"
+    ],
+    "mnemonic_max_words": 40,
+    "restated_share": 0.7
+  },
+  "questions": {
+    "min_choices": 2,
+    "advised_min_choices": 3,
+    "reason_min_words": 6,
+    "longest_key_ratio": 1.5,
+    "same_key_min_items": 3,
+    "all_or_none": [
+      {
+        "id": "all-of-the-above",
+        "regex": "\\ball\\s+of\\s+the\\s+above\\b|\\btoutes\\s+les\\s+réponses\\s+précédentes\\b|\\btodas\\s+las\\s+anteriores\\b|以上都[是对]|以上皆是",
+        "flags": "i",
+        "source": "Haladyna, Downing and Rodriguez (2002), guideline 26"
+      },
+      {
+        "id": "none-of-the-above",
+        "regex": "\\bnone\\s+of\\s+the\\s+above\\b|\\baucune\\s+des\\s+réponses\\s+précédentes\\b|\\bninguna\\s+de\\s+las\\s+anteriores\\b|以上都不[是对]|以上皆非",
+        "flags": "i",
+        "source": "Haladyna, Downing and Rodriguez (2002), guideline 25; the NBME guide's irrelevant-difficulty flaws"
+      }
+    ],
+    "absolute_terms": [
+      {
+        "id": "absolute-term",
+        "regex": "\\b(?:always|never|completely|absolutely)\\b",
+        "flags": "i",
+        "source": "Haladyna, Downing and Rodriguez (2002), guideline 28a; the NBME guide's absolute terms"
+      }
+    ],
+    "negative_stem": [
+      {
+        "id": "lowercase-except",
+        "regex": "\\bexcept\\b",
+        "flags": "",
+        "source": "Haladyna, Downing and Rodriguez (2002), guideline 17: a negative word is capitalized and bold"
+      }
+    ]
+  },
+  "labels": {
+    "answer": {
+      "en": [
+        "answer",
+        "answers",
+        "model answer",
+        "solution",
+        "key",
+        "correct answer"
+      ],
+      "fr": [
+        "réponse",
+        "réponses",
+        "corrigé",
+        "bonne réponse"
+      ],
+      "es": [
+        "respuesta",
+        "respuestas",
+        "solución",
+        "respuesta correcta"
+      ],
+      "zh": [
+        "答案",
+        "参考答案",
+        "正确答案"
+      ],
+      "ja": [
+        "答え",
+        "正解",
+        "解答"
+      ],
+      "ko": [
+        "정답",
+        "답",
+        "해답"
+      ]
+    },
+    "speaker": {
+      "en": [
+        "learner",
+        "student",
+        "user",
+        "you",
+        "me",
+        "human",
+        "tutor",
+        "teacher",
+        "mentor",
+        "coach",
+        "professor",
+        "assistant",
+        "ai"
+      ],
+      "fr": [
+        "élève",
+        "apprenant",
+        "apprenante",
+        "vous",
+        "toi",
+        "moi",
+        "professeur",
+        "tuteur",
+        "tutrice"
+      ],
+      "es": [
+        "alumno",
+        "alumna",
+        "estudiante",
+        "tú",
+        "usted",
+        "yo",
+        "profesor",
+        "profesora",
+        "tutora"
+      ],
+      "zh": [
+        "学生",
+        "学习者",
+        "你",
+        "我",
+        "老师",
+        "导师"
+      ],
+      "ja": [
+        "学習者",
+        "あなた",
+        "私",
+        "先生"
+      ],
+      "ko": [
+        "학생",
+        "학습자",
+        "당신",
+        "나",
+        "선생님"
+      ]
+    }
+  },
+  "placeholders": [
+    {
+      "id": "lorem-ipsum",
+      "regex": "\\blorem\\s+ipsum\\b",
+      "flags": "i"
+    },
+    {
+      "id": "bracket-fill-in",
+      "regex": "\\[\\s*(?:insert|add|your|placeholder|fill\\s+in|to\\s+be\\s+(?:added|written)|tbd)\\b[^\\]\\n]*\\](?!\\()",
+      "flags": "i"
+    },
+    {
+      "id": "angle-fill-in",
+      "regex": "<\\s*(?:insert|your|placeholder)\\b[^>\\n]*>",
+      "flags": "i"
+    },
+    {
+      "id": "tbd",
+      "regex": "(?<![\\w])TB[DA](?![\\w])",
+      "flags": ""
+    },
+    {
+      "id": "coming-soon",
+      "regex": "\\bcoming\\s+soon\\b",
+      "flags": "i"
+    },
+    {
+      "id": "goes-here",
+      "regex": "\\b(?:content|text|reading|example|explanation|answer)\\s+(?:goes|will\\s+go)\\s+here\\b",
+      "flags": "i"
+    },
+    {
+      "id": "unavailable",
+      "regex": "\\b(?:reading|content|explanation|mnemonic|drill|reply)\\s+(?:is\\s+)?(?:unavailable|not\\s+available)\\b",
+      "flags": "i"
+    },
+    {
+      "id": "generation-failed",
+      "regex": "\\b(?:generation|generating)\\s+failed\\b|\\bfailed\\s+to\\s+generate\\b|\\bcould\\s+not\\s+(?:be\\s+)?generated?\\b",
+      "flags": "i"
+    },
+    {
+      "id": "model-boilerplate",
+      "regex": "\\bas\\s+an\\s+AI\\s+language\\s+model\\b",
+      "flags": "i"
+    },
+    {
+      "id": "zh-to-be-added",
+      "regex": "待补充|待補充",
+      "flags": ""
+    }
+  ]
+}

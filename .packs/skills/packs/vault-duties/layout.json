@@ -1,0 +1,23 @@
+{
+  "schema": "phx.duty.vault.layout.v1",
+  "spec": "SPEC-V2-2218",
+  "note": "The PUBLIC default layout. It names only the documented agent folders (11-Drills, 12-Readings, 90-Inbox) and Obsidian's own defaults: new notes at the vault root, and daily notes named YYYY-MM-DD. The owner's real layout, with the daily-notes folder, the filing targets and the journal, is PRIVATE: the engine writes it into each run record's layout, or passes it with --layout, and it never enters this repository.",
+  "periodic": {
+    "daily": {"folder": "", "format": "YYYY-MM-DD"},
+    "weekly": {"folder": "", "format": "GGGG-[W]WW"}
+  },
+  "inbox": "90-Inbox",
+  "folders": {
+    "11-Drills": "title",
+    "12-Readings": "title",
+    "90-Inbox": "any"
+  },
+  "duties": {
+    "daily-note": {"writes": ["@daily"]},
+    "weekly-synthesis": {"writes": ["@weekly"]},
+    "inbox-curator": {"moves_from": ["90-Inbox"], "moves_to": ["11-Drills", "12-Readings"]},
+    "daily-reading": {"writes": ["12-Readings"]},
+    "drill-coach": {"writes": ["11-Drills"]}
+  },
+  "journal": []
+}

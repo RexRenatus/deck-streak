@@ -1,0 +1,39 @@
+{
+  "schema": "phx.ai.safety.v1",
+  "tasks": [
+    {
+      "id": "daily-reading",
+      "format": "persona",
+      "kind": "language",
+      "system": ["prompts/system/rules.md", "prompts/system/policy.md"],
+      "prompt": "prompts/daily-reading.prompt.md",
+      "inputs": [
+        {"slot": "persona", "source": "template"},
+        {"slot": "duty_rules", "source": "duty"},
+        {"slot": "leeches", "source": "memory"},
+        {"slot": "new_cards", "source": "cards"}
+      ],
+      "tools": ["Read(vault/12-Readings/**)", "Glob"],
+      "outputs": ["tests/golden/daily-reading/*.md"],
+      "gate": [
+        "ai-content-safety:output-links",
+        "ai-content-safety:output-invisible",
+        "ai-content-safety:output-marked",
+        "persona-core:output-contract",
+        "persona-core:no-dates",
+        "persona-core:scrubber",
+        "persona-core:no-human-claim",
+        "persona-core:memory-scope"
+      ],
+      "on_invalid": "withhold"
+    }
+  ],
+  "links": {"allow": ["deckstreak.example"]},
+  "disclosure": {
+    "key": "ai_disclosure",
+    "surfaces": ["crates/bot/src/start.rs", "web/src/routes/+layout.svelte"],
+    "messages": ["web/messages/*.json"]
+  },
+  "redteam": {"cases": "tests/ai-redteam", "tests": ["crates/engine/tests/redteam.rs"]},
+  "agent": {"settings": "agent/.claude/settings.json", "mcp_offline": []}
+}

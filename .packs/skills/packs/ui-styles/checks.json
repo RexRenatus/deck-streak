@@ -1,0 +1,380 @@
+{
+  "schema": "phx.skills.checks.v1",
+  "spec": "SPEC-V2-1204",
+  "pack": "packs/ui-styles",
+  "gate": "none",
+  "walk": [
+    "vocab",
+    "tokens",
+    "contrast",
+    "type-scale",
+    "spacing-scale",
+    "dark-mode",
+    "states",
+    "icons",
+    "telegram-theme"
+  ],
+  "note": "Twenty-six closed brief tokens (stage vocab), first `minimalism`, last `editorial`, plus the nineteen-row system layer every style needs (SPEC-V2-2192): design tokens, contrast, the type and spacing scales, dark-mode token pairs, component states, icons, and the Telegram theme mapping. Vocabulary only: naming a token never gates land, and `ui-styles` is never a gate.",
+  "checks": [
+    {
+      "id": "minimalism",
+      "stage": "vocab",
+      "severity": "catalog",
+      "reason": "catalog-only",
+      "probe": "minimalism",
+      "scope": "tree"
+    },
+    {
+      "id": "maximalism",
+      "stage": "vocab",
+      "severity": "catalog",
+      "reason": "catalog-only",
+      "probe": "maximalism",
+      "scope": "tree"
+    },
+    {
+      "id": "flat",
+      "stage": "vocab",
+      "severity": "catalog",
+      "reason": "catalog-only",
+      "probe": "flat",
+      "scope": "tree"
+    },
+    {
+      "id": "material",
+      "stage": "vocab",
+      "severity": "catalog",
+      "reason": "catalog-only",
+      "probe": "material",
+      "scope": "tree"
+    },
+    {
+      "id": "skeuomorphism",
+      "stage": "vocab",
+      "severity": "catalog",
+      "reason": "catalog-only",
+      "probe": "skeuomorphism",
+      "scope": "tree"
+    },
+    {
+      "id": "brutalism",
+      "stage": "vocab",
+      "severity": "catalog",
+      "reason": "catalog-only",
+      "probe": "brutalism",
+      "scope": "tree"
+    },
+    {
+      "id": "neo-brutalism",
+      "stage": "vocab",
+      "severity": "catalog",
+      "reason": "catalog-only",
+      "probe": "neo_brutalism",
+      "scope": "tree"
+    },
+    {
+      "id": "glassmorphism",
+      "stage": "vocab",
+      "severity": "catalog",
+      "reason": "catalog-only",
+      "probe": "glassmorphism",
+      "scope": "tree"
+    },
+    {
+      "id": "neumorphism",
+      "stage": "vocab",
+      "severity": "catalog",
+      "reason": "catalog-only",
+      "probe": "neumorphism",
+      "scope": "tree"
+    },
+    {
+      "id": "claymorphism",
+      "stage": "vocab",
+      "severity": "catalog",
+      "reason": "catalog-only",
+      "probe": "claymorphism",
+      "scope": "tree"
+    },
+    {
+      "id": "swiss",
+      "stage": "vocab",
+      "severity": "catalog",
+      "reason": "catalog-only",
+      "probe": "swiss",
+      "scope": "tree"
+    },
+    {
+      "id": "bauhaus",
+      "stage": "vocab",
+      "severity": "catalog",
+      "reason": "catalog-only",
+      "probe": "bauhaus",
+      "scope": "tree"
+    },
+    {
+      "id": "art-deco",
+      "stage": "vocab",
+      "severity": "catalog",
+      "reason": "catalog-only",
+      "probe": "art_deco",
+      "scope": "tree"
+    },
+    {
+      "id": "memphis",
+      "stage": "vocab",
+      "severity": "catalog",
+      "reason": "catalog-only",
+      "probe": "memphis",
+      "scope": "tree"
+    },
+    {
+      "id": "organic",
+      "stage": "vocab",
+      "severity": "catalog",
+      "reason": "catalog-only",
+      "probe": "organic",
+      "scope": "tree"
+    },
+    {
+      "id": "retro",
+      "stage": "vocab",
+      "severity": "catalog",
+      "reason": "catalog-only",
+      "probe": "retro",
+      "scope": "tree"
+    },
+    {
+      "id": "vintage",
+      "stage": "vocab",
+      "severity": "catalog",
+      "reason": "catalog-only",
+      "probe": "vintage",
+      "scope": "tree"
+    },
+    {
+      "id": "vaporwave",
+      "stage": "vocab",
+      "severity": "catalog",
+      "reason": "catalog-only",
+      "probe": "vaporwave",
+      "scope": "tree"
+    },
+    {
+      "id": "cyberpunk",
+      "stage": "vocab",
+      "severity": "catalog",
+      "reason": "catalog-only",
+      "probe": "cyberpunk",
+      "scope": "tree"
+    },
+    {
+      "id": "dark",
+      "stage": "vocab",
+      "severity": "catalog",
+      "reason": "catalog-only",
+      "probe": "dark",
+      "scope": "tree"
+    },
+    {
+      "id": "light",
+      "stage": "vocab",
+      "severity": "catalog",
+      "reason": "catalog-only",
+      "probe": "light",
+      "scope": "tree"
+    },
+    {
+      "id": "illustration-led",
+      "stage": "vocab",
+      "severity": "catalog",
+      "reason": "catalog-only",
+      "probe": "illustration_led",
+      "scope": "tree"
+    },
+    {
+      "id": "photographic",
+      "stage": "vocab",
+      "severity": "catalog",
+      "reason": "catalog-only",
+      "probe": "photographic",
+      "scope": "tree"
+    },
+    {
+      "id": "isometric",
+      "stage": "vocab",
+      "severity": "catalog",
+      "reason": "catalog-only",
+      "probe": "isometric",
+      "scope": "tree"
+    },
+    {
+      "id": "kinetic",
+      "stage": "vocab",
+      "severity": "catalog",
+      "reason": "catalog-only",
+      "probe": "kinetic",
+      "scope": "tree"
+    },
+    {
+      "id": "editorial",
+      "stage": "vocab",
+      "severity": "catalog",
+      "reason": "catalog-only",
+      "probe": "editorial",
+      "scope": "tree"
+    },
+    {
+      "id": "token-dollar-value",
+      "stage": "tokens",
+      "severity": "catalog",
+      "reason": "catalog-only",
+      "probe": "token_dollar_value",
+      "scope": "tree"
+    },
+    {
+      "id": "token-dollar-type",
+      "stage": "tokens",
+      "severity": "catalog",
+      "reason": "catalog-only",
+      "probe": "token_dollar_type",
+      "scope": "tree"
+    },
+    {
+      "id": "token-dollar-description",
+      "stage": "tokens",
+      "severity": "catalog",
+      "reason": "catalog-only",
+      "probe": "token_dollar_description",
+      "scope": "tree"
+    },
+    {
+      "id": "token-alias-reference",
+      "stage": "tokens",
+      "severity": "catalog",
+      "reason": "catalog-only",
+      "probe": "token_alias_reference",
+      "scope": "tree"
+    },
+    {
+      "id": "token-tiered-groups",
+      "stage": "tokens",
+      "severity": "catalog",
+      "reason": "catalog-only",
+      "probe": "token_tiered_groups",
+      "scope": "tree"
+    },
+    {
+      "id": "token-theming-extends",
+      "stage": "tokens",
+      "severity": "catalog",
+      "reason": "catalog-only",
+      "probe": "token_theming_extends",
+      "scope": "tree"
+    },
+    {
+      "id": "contrast-text-normal",
+      "stage": "contrast",
+      "severity": "catalog",
+      "reason": "catalog-only",
+      "probe": "contrast_text_normal",
+      "scope": "tree"
+    },
+    {
+      "id": "contrast-text-large",
+      "stage": "contrast",
+      "severity": "catalog",
+      "reason": "catalog-only",
+      "probe": "contrast_text_large",
+      "scope": "tree"
+    },
+    {
+      "id": "contrast-non-text",
+      "stage": "contrast",
+      "severity": "catalog",
+      "reason": "catalog-only",
+      "probe": "contrast_non_text",
+      "scope": "tree"
+    },
+    {
+      "id": "contrast-apca-emerging",
+      "stage": "contrast",
+      "severity": "catalog",
+      "reason": "catalog-only",
+      "probe": "contrast_apca_emerging",
+      "scope": "tree"
+    },
+    {
+      "id": "type-scale-named-roles",
+      "stage": "type-scale",
+      "severity": "catalog",
+      "reason": "catalog-only",
+      "probe": "type_scale_named_roles",
+      "scope": "tree"
+    },
+    {
+      "id": "type-scale-relative-units",
+      "stage": "type-scale",
+      "severity": "catalog",
+      "reason": "catalog-only",
+      "probe": "type_scale_relative_units",
+      "scope": "tree"
+    },
+    {
+      "id": "spacing-scale-closed-steps",
+      "stage": "spacing-scale",
+      "severity": "catalog",
+      "reason": "catalog-only",
+      "probe": "spacing_scale_closed_steps",
+      "scope": "tree"
+    },
+    {
+      "id": "dark-mode-token-pairs",
+      "stage": "dark-mode",
+      "severity": "catalog",
+      "reason": "catalog-only",
+      "probe": "dark_mode_token_pairs",
+      "scope": "tree"
+    },
+    {
+      "id": "dark-mode-pairing-mechanism",
+      "stage": "dark-mode",
+      "severity": "catalog",
+      "reason": "catalog-only",
+      "probe": "dark_mode_pairing_mechanism",
+      "scope": "tree"
+    },
+    {
+      "id": "states-interactive-set",
+      "stage": "states",
+      "severity": "catalog",
+      "reason": "catalog-only",
+      "probe": "states_interactive_set",
+      "scope": "tree"
+    },
+    {
+      "id": "states-focus-contrast",
+      "stage": "states",
+      "severity": "catalog",
+      "reason": "catalog-only",
+      "probe": "states_focus_contrast",
+      "scope": "tree"
+    },
+    {
+      "id": "icons-consistent-set",
+      "stage": "icons",
+      "severity": "catalog",
+      "reason": "catalog-only",
+      "probe": "icons_consistent_set",
+      "scope": "tree"
+    },
+    {
+      "id": "telegram-theme-params-mapped",
+      "stage": "telegram-theme",
+      "severity": "catalog",
+      "reason": "catalog-only",
+      "probe": "telegram_theme_params_mapped",
+      "scope": "tree"
+    }
+  ]
+}

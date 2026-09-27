@@ -1,0 +1,467 @@
+{
+  "schema": "phx.skills.checks.v1",
+  "spec": "SPEC-V2-2220",
+  "pack": "packs/observability",
+  "walk": [
+    "logs",
+    "traces",
+    "metrics",
+    "slo",
+    "alerts",
+    "memory"
+  ],
+  "paths": [],
+  "note": "SPEC-V2-2220. 25 tree rows, one per observability-probe.py class, each run from the skills directory against any --root: 13 blocking, 12 advisory. No path of phoenix-v2 is this pack's subject (a DeckStreak-only pack), so `paths` is empty; SPEC-V2-2220 section 5 records why (i1888).",
+  "checks": [
+    {
+      "id": "obs.subscriber-installed",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/observability-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "obs.subscriber-installed"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "logs",
+      "reason": "subscriber-missing",
+      "scope": "tree"
+    },
+    {
+      "id": "obs.structured-logs",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/observability-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "obs.structured-logs"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "logs",
+      "reason": "logs-unstructured",
+      "scope": "tree"
+    },
+    {
+      "id": "obs.journal-priority",
+      "severity": "advisory",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/observability-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "obs.journal-priority"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "logs",
+      "reason": "journal-priority-flat",
+      "scope": "tree"
+    },
+    {
+      "id": "obs.log-level",
+      "severity": "advisory",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/observability-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "obs.log-level"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "logs",
+      "reason": "log-level-fixed-or-verbose",
+      "scope": "tree"
+    },
+    {
+      "id": "obs.no-print-logging",
+      "severity": "advisory",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/observability-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "obs.no-print-logging"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "logs",
+      "reason": "print-logging",
+      "scope": "tree"
+    },
+    {
+      "id": "obs.no-secret-fields",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/observability-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "obs.no-secret-fields"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "logs",
+      "reason": "secret-logged",
+      "scope": "tree"
+    },
+    {
+      "id": "obs.sensitive-headers",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/observability-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "obs.sensitive-headers"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "logs",
+      "reason": "headers-logged-unmasked",
+      "scope": "tree"
+    },
+    {
+      "id": "obs.http-trace-layer",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/observability-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "obs.http-trace-layer"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "traces",
+      "reason": "requests-untraced",
+      "scope": "tree"
+    },
+    {
+      "id": "obs.request-events-visible",
+      "severity": "advisory",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/observability-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "obs.request-events-visible"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "traces",
+      "reason": "request-events-debug",
+      "scope": "tree"
+    },
+    {
+      "id": "obs.span-route",
+      "severity": "advisory",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/observability-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "obs.span-route"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "traces",
+      "reason": "span-route-missing",
+      "scope": "tree"
+    },
+    {
+      "id": "obs.request-id",
+      "severity": "advisory",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/observability-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "obs.request-id"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "traces",
+      "reason": "request-id-missing",
+      "scope": "tree"
+    },
+    {
+      "id": "obs.metric-names",
+      "severity": "advisory",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/observability-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "obs.metric-names"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "metrics",
+      "reason": "metric-name-nonstandard",
+      "scope": "tree"
+    },
+    {
+      "id": "obs.metric-labels",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/observability-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "obs.metric-labels"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "metrics",
+      "reason": "metric-label-unbounded",
+      "scope": "tree"
+    },
+    {
+      "id": "obs.slo-declared",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/observability-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "obs.slo-declared"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "slo",
+      "reason": "slo-undeclared",
+      "scope": "tree"
+    },
+    {
+      "id": "obs.error-budget-policy",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/observability-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "obs.error-budget-policy"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "slo",
+      "reason": "error-budget-policy-missing",
+      "scope": "tree"
+    },
+    {
+      "id": "obs.burn-rate-alerts",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/observability-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "obs.burn-rate-alerts"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "slo",
+      "reason": "burn-rate-alerts-incoherent",
+      "scope": "tree"
+    },
+    {
+      "id": "obs.slo-measurable",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/observability-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "obs.slo-measurable"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "slo",
+      "reason": "slo-unmeasured",
+      "scope": "tree"
+    },
+    {
+      "id": "obs.slo-window-weeks",
+      "severity": "advisory",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/observability-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "obs.slo-window-weeks"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "slo",
+      "reason": "slo-window-not-weeks",
+      "scope": "tree"
+    },
+    {
+      "id": "obs.alert-short-window",
+      "severity": "advisory",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/observability-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "obs.alert-short-window"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "slo",
+      "reason": "short-window-not-twelfth",
+      "scope": "tree"
+    },
+    {
+      "id": "obs.low-traffic",
+      "severity": "advisory",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/observability-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "obs.low-traffic"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "slo",
+      "reason": "low-traffic-pages",
+      "scope": "tree"
+    },
+    {
+      "id": "obs.alert-route",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/observability-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "obs.alert-route"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "alerts",
+      "reason": "alert-path-broken",
+      "scope": "tree"
+    },
+    {
+      "id": "obs.failure-alerts",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/observability-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "obs.failure-alerts"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "alerts",
+      "reason": "failure-unalerted",
+      "scope": "tree"
+    },
+    {
+      "id": "obs.alert-names-result",
+      "severity": "advisory",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/observability-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "obs.alert-names-result"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "alerts",
+      "reason": "alert-result-unnamed",
+      "scope": "tree"
+    },
+    {
+      "id": "obs.memory-watch",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/observability-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "obs.memory-watch"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "memory",
+      "reason": "memory-unwatched",
+      "scope": "tree"
+    },
+    {
+      "id": "obs.oom-policy",
+      "severity": "advisory",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/observability-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "obs.oom-policy"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "memory",
+      "reason": "oom-kill-silenced",
+      "scope": "tree"
+    }
+  ]
+}

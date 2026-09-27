@@ -1,0 +1,506 @@
+{
+  "schema": "phx.skills.checks.v1",
+  "spec": "SPEC-V2-2214",
+  "pack": "packs/law-professors",
+  "walk": [
+    "schema",
+    "safety",
+    "voice",
+    "areas",
+    "templates",
+    "irac",
+    "citations",
+    "socratic",
+    "hypos",
+    "grading"
+  ],
+  "paths": [
+    "skills/packs/law-professors/*",
+    "scripts/law-professors-probe.py",
+    "scripts/persona-core-probe.py",
+    "skills/packs/persona-core/*"
+  ],
+  "note": "SPEC-V2-2214. 24 tree rows, each run from the skills directory against any --root: persona-core's eight classes scoped with --kind law (its schema, safety and voice stages), and law-professors-probe.py's sixteen classes (areas, templates, irac, citations, socratic, hypos, grading). voice, irac-analysis, socratic-coverage, hypo-depth and grading-feedforward are advisory: they report and never refuse.",
+  "checks": [
+    {
+      "id": "law-template-schema",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/persona-core-probe.py",
+          "--root",
+          "{root}",
+          "--kind",
+          "law",
+          "check",
+          "template-schema"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "schema",
+      "reason": "template-invalid",
+      "scope": "tree"
+    },
+    {
+      "id": "law-output-contract",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/persona-core-probe.py",
+          "--root",
+          "{root}",
+          "--kind",
+          "law",
+          "check",
+          "output-contract"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "schema",
+      "reason": "output-invalid",
+      "scope": "tree"
+    },
+    {
+      "id": "law-duty-composition",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/persona-core-probe.py",
+          "--root",
+          "{root}",
+          "--kind",
+          "law",
+          "check",
+          "duty-composition"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "schema",
+      "reason": "duty-sections-missing",
+      "scope": "tree"
+    },
+    {
+      "id": "law-no-dates",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/persona-core-probe.py",
+          "--root",
+          "{root}",
+          "--kind",
+          "law",
+          "check",
+          "no-dates"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "safety",
+      "reason": "date-or-timeline",
+      "scope": "tree"
+    },
+    {
+      "id": "law-scrubber",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/persona-core-probe.py",
+          "--root",
+          "{root}",
+          "--kind",
+          "law",
+          "check",
+          "scrubber"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "safety",
+      "reason": "scrubber-denied",
+      "scope": "tree"
+    },
+    {
+      "id": "law-memory-scope",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/persona-core-probe.py",
+          "--root",
+          "{root}",
+          "--kind",
+          "law",
+          "check",
+          "memory-scope"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "safety",
+      "reason": "memory-out-of-scope",
+      "scope": "tree"
+    },
+    {
+      "id": "law-no-human-claim",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/persona-core-probe.py",
+          "--root",
+          "{root}",
+          "--kind",
+          "law",
+          "check",
+          "no-human-claim"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "safety",
+      "reason": "human-claim",
+      "scope": "tree"
+    },
+    {
+      "id": "law-voice",
+      "severity": "advisory",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/persona-core-probe.py",
+          "--root",
+          "{root}",
+          "--kind",
+          "law",
+          "check",
+          "voice"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "voice",
+      "reason": "voice-drift",
+      "scope": "tree"
+    },
+    {
+      "id": "law-area-registry",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/law-professors-probe.py",
+          "--root",
+          "{root}",
+          "--areas",
+          "{skills}/packs/law-professors/areas.json",
+          "check",
+          "law-area-registry"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "areas",
+      "reason": "area-registry-invalid",
+      "scope": "tree"
+    },
+    {
+      "id": "law-template-area",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/law-professors-probe.py",
+          "--root",
+          "{root}",
+          "--areas",
+          "{skills}/packs/law-professors/areas.json",
+          "check",
+          "law-template-area"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "areas",
+      "reason": "template-area-drift",
+      "scope": "tree"
+    },
+    {
+      "id": "law-template-methods",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/law-professors-probe.py",
+          "--root",
+          "{root}",
+          "--areas",
+          "{skills}/packs/law-professors/areas.json",
+          "check",
+          "law-template-methods"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "templates",
+      "reason": "law-methods-missing",
+      "scope": "tree"
+    },
+    {
+      "id": "irac-structure",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/law-professors-probe.py",
+          "--root",
+          "{root}",
+          "--areas",
+          "{skills}/packs/law-professors/areas.json",
+          "check",
+          "irac-structure"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "irac",
+      "reason": "irac-incomplete",
+      "scope": "tree"
+    },
+    {
+      "id": "irac-analysis",
+      "severity": "advisory",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/law-professors-probe.py",
+          "--root",
+          "{root}",
+          "--areas",
+          "{skills}/packs/law-professors/areas.json",
+          "check",
+          "irac-analysis"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "irac",
+      "reason": "irac-thin",
+      "scope": "tree"
+    },
+    {
+      "id": "rule-cites-corpus",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/law-professors-probe.py",
+          "--root",
+          "{root}",
+          "--areas",
+          "{skills}/packs/law-professors/areas.json",
+          "check",
+          "rule-cites-corpus"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "citations",
+      "reason": "rule-uncited",
+      "scope": "tree"
+    },
+    {
+      "id": "citations-resolve",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/law-professors-probe.py",
+          "--root",
+          "{root}",
+          "--areas",
+          "{skills}/packs/law-professors/areas.json",
+          "check",
+          "citations-resolve"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "citations",
+      "reason": "citation-unresolved",
+      "scope": "tree"
+    },
+    {
+      "id": "quotes-grounded",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/law-professors-probe.py",
+          "--root",
+          "{root}",
+          "--areas",
+          "{skills}/packs/law-professors/areas.json",
+          "check",
+          "quotes-grounded"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "citations",
+      "reason": "quote-ungrounded",
+      "scope": "tree"
+    },
+    {
+      "id": "authority-grounded",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/law-professors-probe.py",
+          "--root",
+          "{root}",
+          "--areas",
+          "{skills}/packs/law-professors/areas.json",
+          "check",
+          "authority-grounded"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "citations",
+      "reason": "authority-uncited",
+      "scope": "tree"
+    },
+    {
+      "id": "socratic-prompts",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/law-professors-probe.py",
+          "--root",
+          "{root}",
+          "--areas",
+          "{skills}/packs/law-professors/areas.json",
+          "check",
+          "socratic-prompts"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "socratic",
+      "reason": "socratic-malformed",
+      "scope": "tree"
+    },
+    {
+      "id": "socratic-coverage",
+      "severity": "advisory",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/law-professors-probe.py",
+          "--root",
+          "{root}",
+          "--areas",
+          "{skills}/packs/law-professors/areas.json",
+          "check",
+          "socratic-coverage"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "socratic",
+      "reason": "socratic-narrow",
+      "scope": "tree"
+    },
+    {
+      "id": "hypo-structure",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/law-professors-probe.py",
+          "--root",
+          "{root}",
+          "--areas",
+          "{skills}/packs/law-professors/areas.json",
+          "check",
+          "hypo-structure"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "hypos",
+      "reason": "hypo-malformed",
+      "scope": "tree"
+    },
+    {
+      "id": "hypo-anchored",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/law-professors-probe.py",
+          "--root",
+          "{root}",
+          "--areas",
+          "{skills}/packs/law-professors/areas.json",
+          "check",
+          "hypo-anchored"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "hypos",
+      "reason": "issue-unanchored",
+      "scope": "tree"
+    },
+    {
+      "id": "hypo-depth",
+      "severity": "advisory",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/law-professors-probe.py",
+          "--root",
+          "{root}",
+          "--areas",
+          "{skills}/packs/law-professors/areas.json",
+          "check",
+          "hypo-depth"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "hypos",
+      "reason": "hypo-shallow",
+      "scope": "tree"
+    },
+    {
+      "id": "grading-cites",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/law-professors-probe.py",
+          "--root",
+          "{root}",
+          "--areas",
+          "{skills}/packs/law-professors/areas.json",
+          "check",
+          "grading-cites"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "grading",
+      "reason": "grade-uncited",
+      "scope": "tree"
+    },
+    {
+      "id": "grading-feedforward",
+      "severity": "advisory",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/law-professors-probe.py",
+          "--root",
+          "{root}",
+          "--areas",
+          "{skills}/packs/law-professors/areas.json",
+          "check",
+          "grading-feedforward"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "grading",
+      "reason": "feedback-not-actionable",
+      "scope": "tree"
+    }
+  ]
+}

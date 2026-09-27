@@ -1,0 +1,54 @@
+name: deploy
+
+# Deploys a published release, or an earlier tag by hand: re-deploying the previous tag is the
+# rollback. Only a tag on main deploys.
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: the release tag to deploy; the previous tag rolls back
+        required: true
+
+# One deploy at a time; a deploy in flight is never cancelled.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    environment: production
+    steps:
+      - uses: actions/checkout@{{CHECKOUT_ACTION_SHA}}
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: the tag is a release tag on main
+        env:
+          TAG: ${{ inputs.tag || github.event.release.tag_name }}
+        run: |
+          printf '%s\n' "$TAG" | grep -Eqx 'v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)' || { echo "not a release tag: $TAG"; exit 1; }
+          git merge-base --is-ancestor "refs/tags/$TAG" origin/main
+      - name: fetch the artifact built at the tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag || github.event.release.tag_name }}
+        run: gh release download "$TAG" --pattern "app-$TAG.tar.gz*" --dir dist
+      - name: install beside the other releases and switch
+        env:
+          TAG: ${{ inputs.tag || github.event.release.tag_name }}
+          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+          DEPLOY_KNOWN_HOSTS: ${{ vars.DEPLOY_KNOWN_HOSTS }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy
+          chmod 600 ~/.ssh/deploy
+          scp -i ~/.ssh/deploy "dist/app-$TAG.tar.gz" "dist/app-$TAG.tar.gz.sha256" deploy/deploy.sh "deploy@$DEPLOY_HOST:/var/tmp/"
+          ssh -i ~/.ssh/deploy "deploy@$DEPLOY_HOST" "sh /var/tmp/deploy.sh '$TAG' '/var/tmp/app-$TAG.tar.gz'"

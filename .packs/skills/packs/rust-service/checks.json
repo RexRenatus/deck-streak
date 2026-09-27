@@ -1,0 +1,396 @@
+{
+  "schema": "phx.skills.checks.v1",
+  "spec": "SPEC-V2-2220",
+  "pack": "packs/rust-service",
+  "walk": [
+    "lints",
+    "errors",
+    "http",
+    "lifecycle",
+    "config",
+    "memory",
+    "runtime"
+  ],
+  "paths": [],
+  "note": "SPEC-V2-2220. 21 tree rows, one per rust-service-probe.py class, each run from the skills directory against any --root: 14 blocking, 7 advisory. No path of phoenix-v2 is this pack's subject (a DeckStreak-only pack), so `paths` is empty; SPEC-V2-2220 section 5 records why (i1888).",
+  "checks": [
+    {
+      "id": "rs.unsafe-forbidden",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/rust-service-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "rs.unsafe-forbidden"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "lints",
+      "reason": "unsafe-not-forbidden",
+      "scope": "tree"
+    },
+    {
+      "id": "rs.lints-inherited",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/rust-service-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "rs.lints-inherited"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "lints",
+      "reason": "lints-not-inherited",
+      "scope": "tree"
+    },
+    {
+      "id": "rs.lint-group-priority",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/rust-service-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "rs.lint-group-priority"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "lints",
+      "reason": "lint-group-priority-tie",
+      "scope": "tree"
+    },
+    {
+      "id": "rs.no-restriction-group",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/rust-service-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "rs.no-restriction-group"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "lints",
+      "reason": "restriction-group-enabled",
+      "scope": "tree"
+    },
+    {
+      "id": "rs.clippy-ci",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/rust-service-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "rs.clippy-ci"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "lints",
+      "reason": "clippy-not-denying-warnings",
+      "scope": "tree"
+    },
+    {
+      "id": "rs.fmt-ci",
+      "severity": "advisory",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/rust-service-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "rs.fmt-ci"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "lints",
+      "reason": "fmt-not-checked",
+      "scope": "tree"
+    },
+    {
+      "id": "rs.panic-lints",
+      "severity": "advisory",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/rust-service-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "rs.panic-lints"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "lints",
+      "reason": "unwrap-unlinted",
+      "scope": "tree"
+    },
+    {
+      "id": "rs.typed-lib-errors",
+      "severity": "advisory",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/rust-service-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "rs.typed-lib-errors"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "errors",
+      "reason": "anyhow-in-library-api",
+      "scope": "tree"
+    },
+    {
+      "id": "rs.catch-panic",
+      "severity": "advisory",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/rust-service-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "rs.catch-panic"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "errors",
+      "reason": "panic-not-caught",
+      "scope": "tree"
+    },
+    {
+      "id": "rs.axum-route-syntax",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/rust-service-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "rs.axum-route-syntax"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "http",
+      "reason": "axum-v07-route-syntax",
+      "scope": "tree"
+    },
+    {
+      "id": "rs.request-timeout",
+      "severity": "advisory",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/rust-service-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "rs.request-timeout"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "http",
+      "reason": "request-timeout-missing",
+      "scope": "tree"
+    },
+    {
+      "id": "rs.graceful-shutdown",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/rust-service-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "rs.graceful-shutdown"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "lifecycle",
+      "reason": "shutdown-not-graceful",
+      "scope": "tree"
+    },
+    {
+      "id": "rs.sigterm-handled",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/rust-service-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "rs.sigterm-handled"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "lifecycle",
+      "reason": "stop-signal-unhandled",
+      "scope": "tree"
+    },
+    {
+      "id": "rs.notify-ready",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/rust-service-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "rs.notify-ready"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "lifecycle",
+      "reason": "ready-never-sent",
+      "scope": "tree"
+    },
+    {
+      "id": "rs.watchdog-ping",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/rust-service-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "rs.watchdog-ping"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "lifecycle",
+      "reason": "watchdog-never-pinged",
+      "scope": "tree"
+    },
+    {
+      "id": "rs.no-secret-env",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/rust-service-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "rs.no-secret-env"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "config",
+      "reason": "secret-read-from-environment",
+      "scope": "tree"
+    },
+    {
+      "id": "rs.credentials-read",
+      "severity": "advisory",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/rust-service-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "rs.credentials-read"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "config",
+      "reason": "credential-never-read",
+      "scope": "tree"
+    },
+    {
+      "id": "rs.bounded-channels",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/rust-service-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "rs.bounded-channels"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "memory",
+      "reason": "unbounded-channel",
+      "scope": "tree"
+    },
+    {
+      "id": "rs.bounded-body-reads",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/rust-service-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "rs.bounded-body-reads"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "memory",
+      "reason": "unbounded-body-read",
+      "scope": "tree"
+    },
+    {
+      "id": "rs.concurrency-bound",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/rust-service-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "rs.concurrency-bound"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "memory",
+      "reason": "concurrency-unbounded",
+      "scope": "tree"
+    },
+    {
+      "id": "rs.no-blocking-in-async",
+      "severity": "advisory",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/rust-service-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "rs.no-blocking-in-async"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "runtime",
+      "reason": "blocking-in-async",
+      "scope": "tree"
+    }
+  ]
+}

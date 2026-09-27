@@ -1,0 +1,54 @@
+{
+  "schema": "phx.duty.vault.contract.v1",
+  "spec": "SPEC-V2-2218",
+  "note": "The vocabulary of DeckStreak's vault duties. scripts/vault-duties-probe.py is the executable contract and reads every list here; SKILL.md is its prose. An engine or a sibling pack reads these lists from this file and never copies them.",
+  "documents": {
+    "note": "phx.duty.vault.note.v1",
+    "run": "phx.duty.vault.run.v1",
+    "layout": "phx.duty.vault.layout.v1"
+  },
+  "note_keys": {
+    "schema": "text",
+    "duty": "text",
+    "tags": "tags",
+    "aliases": "list",
+    "cssclasses": "list",
+    "sources": "links"
+  },
+  "note_required": ["schema", "duty"],
+  "deprecated_keys": {
+    "tag": "tags",
+    "alias": "aliases",
+    "cssclass": "cssclasses"
+  },
+  "agent_claims": ["phx.duty.vault.", "phx.persona."],
+  "duties": [
+    {
+      "id": "daily-note",
+      "produces": "tomorrow's daily note, linking the readings, the drills and the captures the engine prepared for that day",
+      "writes_notes": true,
+      "sections": ["readings", "drills", "inbox"],
+      "claims": [],
+      "requires": []
+    },
+    {
+      "id": "weekly-synthesis",
+      "produces": "the week's synthesis: themes and connections across the week's notes, every claim linked to a note it synthesises, and questions left for the owner",
+      "writes_notes": true,
+      "sections": ["themes", "connections", "questions"],
+      "claims": ["themes", "connections"],
+      "requires": ["sources"]
+    },
+    {
+      "id": "inbox-curator",
+      "produces": "90-Inbox captures filed into their target folders, byte for byte, and never deleted",
+      "writes_notes": false,
+      "sections": [],
+      "claims": [],
+      "requires": []
+    }
+  ],
+  "connection_section": "connections",
+  "ops": ["create", "update", "move"],
+  "quote_window": 8
+}

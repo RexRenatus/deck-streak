@@ -1,0 +1,220 @@
+{
+  "schema": "phx.skills.checks.v1",
+  "spec": "SPEC-V2-2198",
+  "pack": "packs/stack-selection",
+  "walk": [
+    "stack",
+    "toolchain",
+    "radar"
+  ],
+  "paths": [
+    "stack.json",
+    "Cargo.toml",
+    "crates/*/Cargo.toml",
+    "skills/packs/stack-selection/*",
+    "scripts/stack-probe.py"
+  ],
+  "note": "SPEC-V2-2198. Ten tree rows, one per stack-probe.py class, each run from the skills directory against any --root. radar-fresh is advisory: it reports a radar past its monthly refresh and never refuses.",
+  "checks": [
+    {
+      "id": "stack-declared",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/stack-probe.py",
+          "--root",
+          "{root}",
+          "--radar",
+          "{skills}/packs/stack-selection/radar.json",
+          "check",
+          "stack-declared"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "stack",
+      "reason": "stack-undeclared",
+      "scope": "tree"
+    },
+    {
+      "id": "stack-matches-detected",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/stack-probe.py",
+          "--root",
+          "{root}",
+          "--radar",
+          "{skills}/packs/stack-selection/radar.json",
+          "check",
+          "stack-matches-detected"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "stack",
+      "reason": "stack-drifted",
+      "scope": "tree"
+    },
+    {
+      "id": "no-hold-items",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/stack-probe.py",
+          "--root",
+          "{root}",
+          "--radar",
+          "{skills}/packs/stack-selection/radar.json",
+          "check",
+          "no-hold-items"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "stack",
+      "reason": "held-item-used",
+      "scope": "tree"
+    },
+    {
+      "id": "deviation-has-adr",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/stack-probe.py",
+          "--root",
+          "{root}",
+          "--radar",
+          "{skills}/packs/stack-selection/radar.json",
+          "check",
+          "deviation-has-adr"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "stack",
+      "reason": "deviation-without-adr",
+      "scope": "tree"
+    },
+    {
+      "id": "pinned-majors",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/stack-probe.py",
+          "--root",
+          "{root}",
+          "--radar",
+          "{skills}/packs/stack-selection/radar.json",
+          "check",
+          "pinned-majors"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "toolchain",
+      "reason": "major-off-pin",
+      "scope": "tree"
+    },
+    {
+      "id": "svelte-runes",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/stack-probe.py",
+          "--root",
+          "{root}",
+          "--radar",
+          "{skills}/packs/stack-selection/radar.json",
+          "check",
+          "svelte-runes"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "toolchain",
+      "reason": "runes-not-forced",
+      "scope": "tree"
+    },
+    {
+      "id": "svelte-check-ci",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/stack-probe.py",
+          "--root",
+          "{root}",
+          "--radar",
+          "{skills}/packs/stack-selection/radar.json",
+          "check",
+          "svelte-check-ci"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "toolchain",
+      "reason": "svelte-check-not-in-ci",
+      "scope": "tree"
+    },
+    {
+      "id": "no-corepack",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/stack-probe.py",
+          "--root",
+          "{root}",
+          "--radar",
+          "{skills}/packs/stack-selection/radar.json",
+          "check",
+          "no-corepack"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "toolchain",
+      "reason": "corepack-used",
+      "scope": "tree"
+    },
+    {
+      "id": "radar-fresh",
+      "severity": "advisory",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/stack-probe.py",
+          "--root",
+          "{root}",
+          "--radar",
+          "{skills}/packs/stack-selection/radar.json",
+          "check",
+          "radar-fresh"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "radar",
+      "reason": "radar-stale",
+      "scope": "tree"
+    },
+    {
+      "id": "radar-approvals",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/stack-probe.py",
+          "--root",
+          "{root}",
+          "--radar",
+          "{skills}/packs/stack-selection/radar.json",
+          "check",
+          "radar-approvals"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "radar",
+      "reason": "approval-missing",
+      "scope": "tree"
+    }
+  ]
+}

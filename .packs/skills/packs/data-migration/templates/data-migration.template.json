@@ -1,0 +1,37 @@
+{
+  "schema": "phx.data-migration.v1",
+  "source": {
+    "system": "v9",
+    "user_version": 24,
+    "schema": "migration/source-schema.sql"
+  },
+  "target": {
+    "migrations": "migrations"
+  },
+  "tool": {
+    "path": "crates/v9-import",
+    "command": "cargo run --release -p v9-import --",
+    "apply_flag": "--apply"
+  },
+  "runbook": "docs/runbooks/v9-import.md",
+  "tables": [
+    {"source": "schema_versions", "action": "drop", "reason": "the target keeps its own migration history"},
+    {"source": "xp_ledger", "action": "copy", "target": "xp_ledger", "count": "equal"},
+    {"source": "daily_rollup", "action": "transform", "target": "study_day", "count": "equal"},
+    {"source": "settings_kv", "action": "split", "targets": ["setting", "runtime_state"], "count": "sum"}
+  ],
+  "oracle": {
+    "source_commit": "0000000000000000000000000000000000000000",
+    "generator": "tools/parity-oracle/generate.py",
+    "goldens": "crates/v9-import/tests/golden",
+    "consumers": ["crates/v9-import/tests/parity.rs"],
+    "functions": ["v9.xp.review_xp"],
+    "edge_classes": {"v9.xp.review_xp": ["tie", "negative", "rollover"]}
+  },
+  "proofs": {
+    "dry_run": "crates/v9-import/tests/run.rs::a_run_without_apply_writes_nothing",
+    "idempotency": "crates/v9-import/tests/run.rs::a_second_apply_changes_nothing",
+    "rollback": "crates/v9-import/tests/run.rs::rollback_restores_the_pre_migration_backup",
+    "counts": "crates/v9-import/tests/run.rs::counts_reconcile_per_table"
+  }
+}

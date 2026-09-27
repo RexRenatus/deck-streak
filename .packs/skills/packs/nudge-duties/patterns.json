@@ -1,0 +1,374 @@
+{
+  "schema": "phx.duty.nudge.patterns.v1",
+  "spec": "SPEC-V2-2217",
+  "note": "The pattern tables of nudge-duties-probe.py. Every row is matched per NFKC-normalised line through persona-core's scan(), and every row carries an example the test suite replays, so a row that stops matching its own example is red. The calendar-date and timeline rows are NOT here: no-dates reuses persona-core's patterns.json and adds only the nudge-scale countdowns below. Rows are English today; a digest in another language adds rows, never code.",
+  "countdowns": [
+    {
+      "id": "en-hours-left",
+      "lang": "en",
+      "flags": "i",
+      "regex": "\\b[0-9]+\\s+(?:more\\s+)?(?:hours?|hrs?|minutes?|mins?|seconds?|secs?)\\s+(?:left|remaining|to\\s+go)\\b",
+      "what": "an hour- or minute-scale countdown",
+      "example": "Only 3 hours left to study."
+    },
+    {
+      "id": "en-ends-in",
+      "lang": "en",
+      "flags": "i",
+      "regex": "\\b(?:ends?|expires?|closes?|resets?|runs?\\s+out|disappears?|is\\s+gone)\\s+in\\s+(?:[0-9]+|an?|one|two|three|a\\s+few)\\s+(?:hours?|minutes?|seconds?|hrs?|mins?)\\b",
+      "what": "something ends, expires or resets in a stated time",
+      "example": "Your bonus expires in 2 hours."
+    },
+    {
+      "id": "en-before-the-day-ends",
+      "lang": "en",
+      "flags": "i",
+      "regex": "\\bbefore\\s+(?:midnight|the\\s+day\\s+(?:ends|is\\s+over|rolls\\s+over|resets)|(?:the\\s+)?(?:rollover|reset|cutoff|cut-off)|tonight|it'?s\\s+too\\s+late|the\\s+clock\\s+runs\\s+out|time\\s+runs\\s+out)\\b",
+      "what": "a deadline at the end of the day",
+      "example": "Study before midnight."
+    },
+    {
+      "id": "en-ends-tonight",
+      "lang": "en",
+      "flags": "i",
+      "regex": "\\b(?:ends?|expires?|resets?|closes?|disappears?|vanish(?:es)?|runs?\\s+out)\\s+(?:tonight|at\\s+midnight|today|soon|any\\s+minute)\\b",
+      "what": "something ends or expires tonight",
+      "example": "The bonus expires tonight."
+    },
+    {
+      "id": "en-running-out",
+      "lang": "en",
+      "flags": "i",
+      "regex": "(?<!no\\s)(?<!any\\s)\\b(?:time\\s+is\\s+running\\s+out|running\\s+out\\s+of\\s+time|the\\s+clock\\s+is\\s+ticking|tick[\\s-]?tock|hurry(?:\\s+up)?|act\\s+now|now\\s+or\\s+never|while\\s+you\\s+still\\s+can)\\b",
+      "what": "urgency copy (the FTC's urgency pattern)",
+      "example": "Hurry up, time is running out."
+    },
+    {
+      "id": "en-clock-deadline",
+      "lang": "en",
+      "flags": "i",
+      "regex": "\\b(?:before|by|until|till|ends\\s+at|resets\\s+at|expires\\s+at|closes\\s+at|due\\s+at)\\s+(?:[01]?[0-9]|2[0-3])[:.][0-5][0-9]\\b",
+      "what": "a deadline at a clock time",
+      "example": "Finish by 23:59."
+    },
+    {
+      "id": "en-within-the-next",
+      "lang": "en",
+      "flags": "i",
+      "regex": "\\b(?:in|within)\\s+the\\s+next\\s+(?:[0-9]+|few)\\s+(?:hours?|minutes?)\\b",
+      "what": "a window measured in hours or minutes",
+      "example": "Review within the next 2 hours."
+    }
+  ],
+  "shame": [
+    {
+      "id": "en-streak-broken",
+      "lang": "en",
+      "flags": "i",
+      "regex": "\\byour\\s+(?:[a-z]+\\s+)?streak\\s+(?:is|was|has\\s+been|got|just)\\s+(?:broken|lost|reset|gone|over|dead|ended|wiped(?:\\s+out)?|snapped)\\b",
+      "what": "highlights a broken streak (Silverman and Barasch 2023)",
+      "example": "Your streak is broken."
+    },
+    {
+      "id": "en-you-broke",
+      "lang": "en",
+      "flags": "i",
+      "regex": "\\byou(?:'ve|\\s+have)?\\s+(?:broke|broken|lost|ruined|killed|ended|wasted|threw\\s+away|thrown\\s+away)\\s+(?:your|the|a|all\\s+your)\\s+(?:[a-z]+\\s+)?(?:streak|progress|chain|run|habit|momentum|work)\\b",
+      "what": "attributes the break to the learner",
+      "example": "You broke your streak."
+    },
+    {
+      "id": "en-dont-lose",
+      "lang": "en",
+      "flags": "i",
+      "regex": "\\b(?:don'?t|do\\s+not|never)\\s+(?:lose|break|miss|drop|waste|ruin|end|throw\\s+away)\\s+(?:your|the|this|a)\\s+(?:[a-z]+\\s+)?(?:streak|chain|progress|run|momentum)\\b",
+      "what": "frames study as not losing (an inhibitional goal)",
+      "example": "Don't lose your streak now."
+    },
+    {
+      "id": "en-you-will-lose",
+      "lang": "en",
+      "flags": "i",
+      "regex": "\\byou(?:'ll|\\s+will|\\s+could|\\s+might|\\s+may|\\s+are\\s+going\\s+to|'re\\s+going\\s+to|\\s+stand\\s+to)\\s+lose\\b",
+      "what": "a threatened loss",
+      "example": "You'll lose everything you built."
+    },
+    {
+      "id": "en-streak-at-risk",
+      "lang": "en",
+      "flags": "i",
+      "regex": "\\b(?:streak|progress|chain|run)\\s+(?:is\\s+|are\\s+)?(?:at\\s+risk|in\\s+danger|on\\s+the\\s+line|about\\s+to\\s+(?:end|break|die|reset|expire)|slipping(?:\\s+away)?)\\b",
+      "what": "a streak or progress framed as at risk",
+      "example": "Your streak is at risk."
+    },
+    {
+      "id": "en-last-chance",
+      "lang": "en",
+      "flags": "i",
+      "regex": "\\blast\\s+chance\\b|\\bfinal\\s+(?:warning|reminder|chance|call)\\b",
+      "what": "last-chance urgency",
+      "example": "Last chance to keep going."
+    },
+    {
+      "id": "en-save-your-streak",
+      "lang": "en",
+      "flags": "i",
+      "regex": "\\b(?:save|rescue|protect)\\s+your\\s+(?:[a-z]+\\s+)?streak\\b|\\bkeep\\s+(?:your|the)\\s+(?:[a-z]+\\s+)?streak\\s+alive\\b",
+      "what": "a rescue framed against a loss",
+      "example": "Save your streak with a quick review."
+    },
+    {
+      "id": "en-back-to-zero",
+      "lang": "en",
+      "flags": "i",
+      "regex": "(?<!no\\s)(?<!not\\s)\\b(?:back\\s+to\\s+(?:zero|square\\s+one|the\\s+start|day\\s+one)|start(?:ing)?\\s+(?:over|again\\s+from\\s+(?:zero|scratch)|from\\s+(?:zero|scratch))|reset\\s+to\\s+zero|all\\s+(?:your\\s+)?(?:progress|work|effort)\\s+(?:is\\s+|was\\s+|has\\s+been\\s+)?(?:lost|gone|wasted|for\\s+nothing))\\b",
+      "what": "all-or-nothing framing (the abstinence violation effect)",
+      "example": "You are back to zero."
+    },
+    {
+      "id": "en-shame-words",
+      "lang": "en",
+      "flags": "i",
+      "regex": "(?<!no\\s)(?<!without\\s)\\b(?:shame(?:ful)?|ashamed|embarrass(?:ing|ed)|pathetic|disgrace(?:ful)?|unacceptable|inexcusable|no\\s+excuses)\\b",
+      "what": "shame vocabulary",
+      "example": "Honestly, this is embarrassing."
+    },
+    {
+      "id": "en-lazy",
+      "lang": "en",
+      "flags": "i",
+      "regex": "\\byou(?:'re|\\s+are|\\s+were|'ve\\s+been|\\s+have\\s+been|\\s+seem)\\s+(?:so\\s+|being\\s+)?(?:lazy|slacking(?:\\s+off)?|a\\s+slacker|unmotivated|undisciplined|flaky)\\b",
+      "what": "a character judgement of the learner",
+      "example": "You've been slacking off."
+    },
+    {
+      "id": "en-disappointed",
+      "lang": "en",
+      "flags": "i",
+      "regex": "\\b(?:(?:i'?m|i\\s+am|we'?re|we\\s+are)\\s+(?:so\\s+|very\\s+|really\\s+|a\\s+little\\s+)?(?:disappointed|let\\s+down|sad\\s+to\\s+see)|disappointing|let\\s+(?:yourself|us|me|everyone)\\s+down)\\b",
+      "what": "a guilt appeal (O'Keefe 2002)",
+      "example": "I'm disappointed in you."
+    },
+    {
+      "id": "en-you-failed",
+      "lang": "en",
+      "flags": "i",
+      "regex": "\\byou(?:'ve|\\s+have)?\\s+(?:failed|given\\s+up|gave\\s+up|quit|abandoned|neglected|ignored|forgotten\\s+(?:about\\s+)?(?:us|me|your)|forgot\\s+(?:about\\s+)?(?:us|me|your))\\b",
+      "what": "names the lapse as failure or quitting",
+      "example": "You gave up on your cards."
+    },
+    {
+      "id": "en-guilt-trip",
+      "lang": "en",
+      "flags": "i",
+      "regex": "\\b(?:where\\s+(?:have\\s+you\\s+been|did\\s+you\\s+go)|what\\s+happened\\s+to\\s+you|we\\s+miss(?:ed)?\\s+you|(?:i|we)\\s+(?:haven'?t|have\\s+not)\\s+seen\\s+you|(?:your\\s+)?cards\\s+(?:miss|are\\s+missing)\\s+you|(?:they|we)\\s+(?:were|are)\\s+counting\\s+on\\s+you)\\b",
+      "what": "a guilt trip",
+      "example": "Where have you been?"
+    },
+    {
+      "id": "en-behind",
+      "lang": "en",
+      "flags": "i",
+      "regex": "\\byou(?:'re|\\s+are|'ve|\\s+have|\\s+keep)\\s+(?:fallen\\s+|falling\\s+|getting\\s+|now\\s+|so\\s+|way\\s+)?behind\\b",
+      "what": "a deficit comparison",
+      "example": "You're falling behind."
+    },
+    {
+      "id": "en-missed-days",
+      "lang": "en",
+      "flags": "i",
+      "regex": "\\byou(?:'ve|\\s+have)?\\s+(?:missed|skipped|lost)\\s+(?:[0-9]+|two|three|four|five|six|seven|eight|nine|ten|several|many|a\\s+few|all|a\\s+week\\s+of|a\\s+month\\s+of)\\s+(?:(?:straight|whole|full)\\s+)?(?:days?|sessions?|reviews?|weeks?)\\b",
+      "what": "counts the missed days back at the learner",
+      "example": "You've missed 5 days in a row."
+    },
+    {
+      "id": "en-confirmshaming",
+      "lang": "en",
+      "flags": "i",
+      "regex": "\\bno\\s+thanks?,?\\s+i(?:'d|\\s+would)?\\s+(?:rather|don'?t|do\\s+not|prefer|like|am\\s+happy|'m\\s+happy|enjoy)\\b|\\bi\\s+(?:don'?t|do\\s+not)\\s+(?:care|want\\s+to\\s+(?:learn|improve|get\\s+better|succeed|remember|grow))\\b|\\bi(?:'ll|\\s+will)\\s+(?:stay\\s+(?:lazy|behind)|give\\s+up|quit|fall\\s+behind)\\b",
+      "what": "confirmshaming: the decline option shames its chooser (Mathur et al. 2019)",
+      "example": "No thanks, I don't want to improve."
+    }
+  ],
+  "internals": [
+    {
+      "id": "traceback",
+      "lang": "*",
+      "flags": "",
+      "regex": "Traceback \\(most recent call last\\)",
+      "what": "a Python traceback",
+      "example": "Traceback (most recent call last): the coach failed."
+    },
+    {
+      "id": "exception-name",
+      "lang": "*",
+      "flags": "",
+      "regex": "\\b(?:[A-Z][a-z0-9]+)+(?:Error|Exception|Timeout)\\b",
+      "what": "an exception class name",
+      "example": "ConnectionRefusedError while coaching."
+    },
+    {
+      "id": "errno",
+      "lang": "*",
+      "flags": "i",
+      "regex": "\\bE(?:CONNREFUSED|CONNRESET|CONNABORTED|TIMEDOUT|HOSTUNREACH|NETUNREACH|PIPE|NOENT|ACCES|PERM|ADDRINUSE|AI_AGAIN|NOTFOUND)\\b|\\berrno\\s*=?\\s*[0-9]+",
+      "what": "an errno name or number",
+      "example": "ECONNREFUSED on the coaching step."
+    },
+    {
+      "id": "http-status",
+      "lang": "*",
+      "flags": "i",
+      "regex": "\\bHTTP(?:/[0-9](?:\\.[0-9])?)?\\s+[1-5][0-9]{2}\\b|\\b[45][0-9]{2}\\s+(?:Bad\\s+Request|Unauthorized|Forbidden|Not\\s+Found|Too\\s+Many\\s+Requests|Internal\\s+Server\\s+Error|Bad\\s+Gateway|Service\\s+Unavailable|Gateway\\s+Time-?out)\\b|\\bstatus(?:\\s+code)?\\s*[:=]\\s*[45][0-9]{2}\\b",
+      "what": "an HTTP status line",
+      "example": "The upstream answered HTTP 401."
+    },
+    {
+      "id": "host-port",
+      "lang": "*",
+      "flags": "i",
+      "regex": "\\b(?:localhost|(?:[a-z0-9-]+\\.)+[a-z]{2,}|(?:[0-9]{1,3}\\.){3}[0-9]{1,3}):[0-9]{2,5}\\b",
+      "what": "a host and port",
+      "example": "Could not reach localhost:8477."
+    },
+    {
+      "id": "unix-path",
+      "lang": "*",
+      "flags": "",
+      "regex": "(?<![A-Za-z0-9_./~-])/(?:opt|etc|var|home|tmp|usr|srv|root|proc|run|mnt|lib)/[A-Za-z0-9._/-]+",
+      "what": "a filesystem path on the host",
+      "example": "The log is at /var/log/agent.log."
+    },
+    {
+      "id": "panic",
+      "lang": "*",
+      "flags": "i",
+      "regex": "\\bpanicked\\s+at\\b|\\bthread\\s+'[^']*'\\s+panicked\\b|\\bstack\\s*(?:trace|backtrace)\\b|\\bRUST_BACKTRACE\\b|\\bsegmentation\\s+fault\\b|\\bcore\\s+dumped\\b",
+      "what": "a crash report",
+      "example": "thread 'main' panicked at the coach."
+    },
+    {
+      "id": "env-name",
+      "lang": "*",
+      "flags": "",
+      "regex": "\\b(?:ANTHROPIC_[A-Z0-9_]+|CLAUDE_CODE_[A-Z0-9_]+|CLAUDE_CONFIG_DIR|OPENAI_[A-Z0-9_]+|[A-Z][A-Z0-9]*_(?:TOKEN|SECRET|API_KEY|APIKEY|PASSWORD|PASSWD))\\b",
+      "what": "an environment variable that configures a credential or the model route",
+      "example": "ANTHROPIC_BASE_URL was unset."
+    },
+    {
+      "id": "secret-resource",
+      "lang": "*",
+      "flags": "",
+      "regex": "\\bprojects/[A-Za-z0-9_-]+/secrets/[A-Za-z0-9_-]+",
+      "what": "a secret manager resource name",
+      "example": "Reading projects/p/secrets/k failed."
+    },
+    {
+      "id": "exit-code",
+      "lang": "*",
+      "flags": "i",
+      "regex": "\\bexit(?:ed)?\\s+(?:with\\s+)?(?:code|status)\\s*[:=]?\\s*-?[0-9]+\\b|\\bnon-zero\\s+exit\\b|\\bSIG(?:KILL|TERM|SEGV|ABRT|PIPE|INT)\\b",
+      "what": "a process exit status or signal",
+      "example": "The agent exited with code 137."
+    },
+    {
+      "id": "json-error",
+      "lang": "*",
+      "flags": "i",
+      "regex": "\\{\\s*\"(?:error|message|detail|type)\"\\s*:",
+      "what": "a raw JSON error body",
+      "example": "The coach returned {\"error\": \"busy\"} again."
+    },
+    {
+      "id": "api-error-type",
+      "lang": "*",
+      "flags": "i",
+      "regex": "\\b(?:rate_limit_error|overloaded_error|api_error|authentication_error|permission_error|invalid_request_error|not_found_error|request_too_large)\\b",
+      "what": "a model API error type",
+      "example": "overloaded_error from upstream."
+    }
+  ],
+  "degraded_notice": [
+    {
+      "id": "en-coaching-unavailable",
+      "lang": "en",
+      "flags": "i",
+      "regex": "\\bcoaching\\s+(?:(?:is|was)\\s+(?:(?:currently|temporarily)\\s+)?(?:unavailable|offline|down)|(?:isn'?t|wasn'?t|is\\s+not|was\\s+not)\\s+(?:(?:currently|temporarily)\\s+)?available)\\b|\\bcoaching\\s+unavailable\\b",
+      "what": "coaching was unavailable",
+      "example": "Coaching was unavailable today."
+    },
+    {
+      "id": "en-no-coaching",
+      "lang": "en",
+      "flags": "i",
+      "regex": "\\bno\\s+(?:AI\\s+)?coaching\\s+(?:today|this\\s+time|in\\s+this\\s+digest|was\\s+available|could\\s+be\\s+written)\\b",
+      "what": "no coaching this time",
+      "example": "No coaching today."
+    },
+    {
+      "id": "en-coaching-could-not",
+      "lang": "en",
+      "flags": "i",
+      "regex": "\\b(?:could\\s+not|couldn'?t|was\\s+unable\\s+to|failed\\s+to)\\s+(?:write|generate|run|produce|add|prepare|reach)\\s+(?:the\\s+|today['\u2019]s\\s+|your\\s+)?(?:AI\\s+)?coach(?:ing)?\\b",
+      "what": "the coaching step could not run",
+      "example": "The agent could not write today's coaching."
+    }
+  ],
+  "controlling": [
+    {
+      "id": "en-should-must",
+      "lang": "en",
+      "flags": "i",
+      "regex": "\\byou\\s+(?:should|must|have\\s+to|need\\s+to|ought\\s+to|'ve\\s+got\\s+to|got\\s+to|had\\s+better|'d\\s+better)\\b",
+      "what": "controlling modal (Vansteenkiste et al. 2004)",
+      "example": "You should study now."
+    },
+    {
+      "id": "en-dont-forget",
+      "lang": "en",
+      "flags": "i",
+      "regex": "\\b(?:don'?t\\s+forget\\s+to|make\\s+sure\\s+(?:you|to)|be\\s+sure\\s+to)\\b",
+      "what": "a nagging reminder",
+      "example": "Don't forget to review."
+    },
+    {
+      "id": "en-pressure",
+      "lang": "en",
+      "flags": "i",
+      "regex": "\\b(?:no\\s+more\\s+excuses|get\\s+back\\s+to\\s+work|get\\s+to\\s+work|do\\s+it\\s+now|study\\s+now|right\\s+now|immediately)\\b",
+      "what": "a pressuring directive",
+      "example": "Get back to work."
+    }
+  ],
+  "near_miss": [
+    {
+      "id": "en-so-close",
+      "lang": "en",
+      "flags": "i",
+      "regex": "\\b(?:so\\s+close|almost\\s+(?:there|made\\s+it|had\\s+it|got\\s+it|won|unlocked|reached|hit|finished)|just\\s+(?:missed|short\\s+of)|nearly\\s+(?:there|made\\s+it|had\\s+it|won|unlocked|finished)|within\\s+reach|a\\s+whisker\\s+away)\\b",
+      "what": "near-miss copy (Clark et al. 2009)",
+      "example": "So close to the next level."
+    },
+    {
+      "id": "en-n-away",
+      "lang": "en",
+      "flags": "i",
+      "regex": "\\b(?:only|just)\\s+(?:[0-9]+|one|two|three|a\\s+few)\\s+(?:more\\s+)?(?:cards?|reviews?|xp|points?|days?|sessions?)\\s+(?:away|short|to\\s+go|from)\\b",
+      "what": "a gap framed as nearly closed",
+      "example": "Only 3 reviews away from a chest."
+    },
+    {
+      "id": "en-missed-by",
+      "lang": "en",
+      "flags": "i",
+      "regex": "\\b(?:missed|lost)\\s+(?:[a-z]+\\s+){0,3}by\\s+(?:just\\s+|only\\s+)?(?:[0-9]+|one|a\\s+hair|a\\s+little)\\b",
+      "what": "a loss framed as narrow",
+      "example": "You missed the chest by 2 cards."
+    }
+  ],
+  "acronyms": [
+    "AI", "API", "CEFR", "CREAC", "DALF", "DELE", "DELF", "EU", "FSRS", "HSK", "HTML", "ID", "IELTS",
+    "IRAC", "JLPT", "JSON", "LSAC", "LSAT", "MBE", "MEE", "MPT", "NCBE", "OK", "PDF", "SIELE", "SRS",
+    "TOEFL", "TOPIK", "UBE", "UI", "UK", "URL", "US", "USA", "UTC", "XP"
+  ]
+}

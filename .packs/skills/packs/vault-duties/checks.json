@@ -1,0 +1,292 @@
+{
+  "schema": "phx.skills.checks.v1",
+  "spec": "SPEC-V2-2218",
+  "pack": "packs/vault-duties",
+  "walk": [
+    "obsidian",
+    "rails",
+    "duty",
+    "privacy",
+    "practice"
+  ],
+  "paths": [
+    "skills/packs/vault-duties/*",
+    "scripts/vault-duties-probe.py",
+    "*duty-run.json",
+    "scripts/persona-core-probe.py",
+    "skills/packs/persona-core/*"
+  ],
+  "note": "SPEC-V2-2218. Fifteen tree rows, one per vault-duties-probe.py class, each run from the skills directory against any --root: the staged output of DeckStreak's daily note, weekly synthesis and inbox curator, judged before it reaches the owner's Obsidian vault. The practice rows are advisory: they report and never refuse.",
+  "checks": [
+    {
+      "id": "note-properties",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/vault-duties-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "note-properties"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "obsidian",
+      "reason": "properties-invalid",
+      "scope": "tree"
+    },
+    {
+      "id": "note-links",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/vault-duties-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "note-links"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "obsidian",
+      "reason": "link-unresolved",
+      "scope": "tree"
+    },
+    {
+      "id": "note-names",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/vault-duties-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "note-names"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "obsidian",
+      "reason": "name-off-rule",
+      "scope": "tree"
+    },
+    {
+      "id": "write-confinement",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/vault-duties-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "write-confinement"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "rails",
+      "reason": "write-outside-agent-folders",
+      "scope": "tree"
+    },
+    {
+      "id": "no-executable",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/vault-duties-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "no-executable"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "rails",
+      "reason": "executable-content",
+      "scope": "tree"
+    },
+    {
+      "id": "never-deletes",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/vault-duties-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "never-deletes"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "rails",
+      "reason": "destructive-op",
+      "scope": "tree"
+    },
+    {
+      "id": "daily-note",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/vault-duties-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "daily-note"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "duty",
+      "reason": "daily-note-incomplete",
+      "scope": "tree"
+    },
+    {
+      "id": "synthesis-cites",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/vault-duties-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "synthesis-cites"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "duty",
+      "reason": "claim-uncited",
+      "scope": "tree"
+    },
+    {
+      "id": "journal-never-leaks",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/vault-duties-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "journal-never-leaks"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "privacy",
+      "reason": "journal-leak",
+      "scope": "tree"
+    },
+    {
+      "id": "nothing-leaves",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/vault-duties-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "nothing-leaves"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "privacy",
+      "reason": "vault-egress",
+      "scope": "tree"
+    },
+    {
+      "id": "no-dates",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/vault-duties-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "no-dates"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "privacy",
+      "reason": "date-or-timeline",
+      "scope": "tree"
+    },
+    {
+      "id": "claim-sentences",
+      "severity": "advisory",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/vault-duties-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "claim-sentences"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "practice",
+      "reason": "sentence-uncited",
+      "scope": "tree"
+    },
+    {
+      "id": "synthesis-own-words",
+      "severity": "advisory",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/vault-duties-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "synthesis-own-words"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "practice",
+      "reason": "synthesis-copies-sources",
+      "scope": "tree"
+    },
+    {
+      "id": "orphan-notes",
+      "severity": "advisory",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/vault-duties-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "orphan-notes"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "practice",
+      "reason": "note-orphaned",
+      "scope": "tree"
+    },
+    {
+      "id": "inbox-zero",
+      "severity": "advisory",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/vault-duties-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "inbox-zero"
+        ],
+        "timeout_seconds": 120
+      },
+      "stage": "practice",
+      "reason": "inbox-left",
+      "scope": "tree"
+    }
+  ]
+}

@@ -1,0 +1,501 @@
+{
+  "schema": "phx.learning-science.pedagogy.v1",
+  "spec": "SPEC-V2-2224",
+  "note": "The shared pedagogy classes' data. scripts/learning-science-probe.py reads every list here and branches on no language code: a genre, a section id, a threshold or a language's pattern is a row, never a code branch. Duties are persona-core's registry ids; a duty pack calls these classes and never copies this table.",
+  "genres": [
+    "reading",
+    "drill",
+    "remediation",
+    "feedback",
+    "dialogue",
+    "practice"
+  ],
+  "duties": {
+    "daily-reading": "reading",
+    "drill-coach": "drill",
+    "leech-doctor": "remediation",
+    "writing-tutor": "feedback",
+    "conversation-partner": "dialogue",
+    "practice-questions": "practice"
+  },
+  "classes": {
+    "retrieval-prompts": {
+      "genres": [
+        "reading"
+      ]
+    },
+    "answers-hidden": {
+      "genres": [
+        "reading",
+        "drill",
+        "practice",
+        "remediation"
+      ]
+    },
+    "ask-before-tell": {
+      "genres": [
+        "drill",
+        "practice"
+      ]
+    },
+    "deep-questions": {
+      "genres": [
+        "reading"
+      ],
+      "kinds": [
+        "law",
+        "test-prep",
+        "general"
+      ]
+    },
+    "concrete-examples": {
+      "genres": [
+        "reading"
+      ],
+      "kinds": [
+        "law",
+        "test-prep",
+        "general"
+      ]
+    },
+    "interleaving": {
+      "genres": [
+        "drill",
+        "practice"
+      ],
+      "kinds": [
+        "law",
+        "test-prep",
+        "general"
+      ]
+    },
+    "worked-example-steps": {
+      "genres": [
+        "reading",
+        "drill",
+        "remediation",
+        "feedback",
+        "dialogue",
+        "practice"
+      ]
+    },
+    "study-advice": {
+      "genres": [
+        "reading",
+        "drill",
+        "remediation",
+        "feedback",
+        "dialogue",
+        "practice"
+      ]
+    },
+    "key-terms-defined": {
+      "genres": [
+        "reading"
+      ],
+      "kinds": [
+        "law",
+        "test-prep",
+        "general"
+      ]
+    },
+    "feedback-task-focused": {
+      "genres": [
+        "feedback",
+        "drill",
+        "practice",
+        "remediation",
+        "dialogue"
+      ]
+    },
+    "feedback-next-step": {
+      "genres": [
+        "feedback"
+      ]
+    }
+  },
+  "sections": {
+    "retrieval": "retrieval",
+    "reading": "reading",
+    "key_terms": "key-terms",
+    "worked_example": "worked-example",
+    "feed_forward": [
+      "next-step",
+      "next-steps",
+      "focus"
+    ],
+    "concrete": [
+      "worked-example",
+      "application",
+      "hypothetical",
+      "example",
+      "scenario"
+    ],
+    "drill": "drill",
+    "questions": "questions",
+    "explanations": "explanations",
+    "answer_bearing": {
+      "reading": [
+        "retrieval"
+      ],
+      "drill": [
+        "drill"
+      ],
+      "practice": [
+        "questions"
+      ],
+      "remediation": [
+        "retrieval"
+      ]
+    }
+  },
+  "thresholds": {
+    "retrieval_min_prompts": 2,
+    "interleaving_min_prompts": 4,
+    "interleaving_min_topics": 2,
+    "worked_example_min_steps": 2
+  },
+  "patterns": {
+    "retrieval_verbs": [
+      {
+        "id": "en-verb",
+        "lang": "en",
+        "flags": "i",
+        "regex": "^(?:recall|name|define|explain|describe|list|state|identify|give|translate|write|compare|distinguish|predict|summari[sz]e|apply)\\b",
+        "what": "a prompt that opens with a retrieval verb"
+      },
+      {
+        "id": "fr-verb",
+        "lang": "fr",
+        "flags": "i",
+        "regex": "^(?:rappelez|nommez|nomme|définissez|définis|expliquez|explique|décrivez|décris|citez|cite|donnez|donne|traduisez|traduis|écrivez|écris|comparez|compare)\\b",
+        "what": "a prompt that opens with a retrieval verb"
+      },
+      {
+        "id": "es-verb",
+        "lang": "es",
+        "flags": "i",
+        "regex": "^(?:recuerda|nombra|nombre|define|defina|explica|explique|describe|describa|menciona|mencione|traduce|traduzca|escribe|escriba|compara|compare)\\b",
+        "what": "a prompt that opens with a retrieval verb"
+      },
+      {
+        "id": "zh-verb",
+        "lang": "zh",
+        "flags": "",
+        "regex": "^(?:请)?(?:说出|說出|写出|寫出|列出|解释|解釋|翻译|翻譯|比较|比較|描述|回忆|回憶)",
+        "what": "a prompt that opens with a retrieval verb"
+      },
+      {
+        "id": "ja-verb",
+        "lang": "ja",
+        "flags": "",
+        "regex": "(?:答えなさい|答えてください|説明しなさい|説明してください|訳しなさい|訳してください|書きなさい|書いてください|挙げなさい|挙げてください)",
+        "what": "a prompt that closes with an imperative"
+      },
+      {
+        "id": "ko-verb",
+        "lang": "ko",
+        "flags": "",
+        "regex": "(?:설명하세요|설명하시오|쓰세요|쓰시오|번역하세요|번역하시오|말하세요|말하시오|고르세요|고르시오|답하세요|답하시오)",
+        "what": "a prompt that closes with an imperative"
+      }
+    ],
+    "answer_labels": [
+      {
+        "id": "en-answer",
+        "lang": "en",
+        "flags": "i",
+        "regex": "\\b(?:answer|ans|solution)s?\\s*:\\s*\\S",
+        "what": "an answer label with the answer after it"
+      },
+      {
+        "id": "fr-answer",
+        "lang": "fr",
+        "flags": "i",
+        "regex": "\\bréponses?\\s*:\\s*\\S",
+        "what": "an answer label with the answer after it"
+      },
+      {
+        "id": "es-answer",
+        "lang": "es",
+        "flags": "i",
+        "regex": "\\brespuestas?\\s*:\\s*\\S",
+        "what": "an answer label with the answer after it"
+      },
+      {
+        "id": "zh-answer",
+        "lang": "zh",
+        "flags": "",
+        "regex": "(?<!回)(?:答案|答)\\s*:\\s*\\S",
+        "what": "an answer label with the answer after it; 回答 (answer, the verb) is an instruction"
+      },
+      {
+        "id": "ja-answer",
+        "lang": "ja",
+        "flags": "",
+        "regex": "(?:答え|解答|正解)\\s*:\\s*\\S",
+        "what": "an answer label with the answer after it"
+      },
+      {
+        "id": "ko-answer",
+        "lang": "ko",
+        "flags": "",
+        "regex": "(?<![가-힣])(?:정답|답)\\s*:\\s*\\S",
+        "what": "an answer label with the answer after it"
+      }
+    ],
+    "explanatory": [
+      {
+        "id": "en-why-how",
+        "lang": "en",
+        "flags": "i",
+        "regex": "\\b(?:why|explain|how\\s+(?:does|do|did|would|could|can|might|should|is|are|was|were)|what\\s+would\\s+happen|what\\s+if|in\\s+what\\s+way)\\b",
+        "what": "a why, how or explain prompt"
+      },
+      {
+        "id": "fr-why-how",
+        "lang": "fr",
+        "flags": "i",
+        "regex": "\\b(?:pourquoi|comment|expliquez|explique|expliquer|en\\s+quoi)\\b",
+        "what": "a why, how or explain prompt"
+      },
+      {
+        "id": "es-why-how",
+        "lang": "es",
+        "flags": "i",
+        "regex": "(?:\\bpor\\s*qu[ée]\\b|\\bc[óo]mo\\b|\\bexpl[ií]ca|\\bexplique\\b)",
+        "what": "a why, how or explain prompt"
+      },
+      {
+        "id": "zh-why-how",
+        "lang": "zh",
+        "flags": "",
+        "regex": "(?:为什么|為什麼|为何|為何|怎么|怎麼|如何|解释|解釋)",
+        "what": "a why, how or explain prompt"
+      },
+      {
+        "id": "ja-why-how",
+        "lang": "ja",
+        "flags": "",
+        "regex": "(?:なぜ|どうして|どのように|どういう理由|説明)",
+        "what": "a why, how or explain prompt"
+      },
+      {
+        "id": "ko-why-how",
+        "lang": "ko",
+        "flags": "",
+        "regex": "(?:왜|어떻게|설명)",
+        "what": "a why, how or explain prompt"
+      }
+    ],
+    "example_markers": [
+      {
+        "id": "en-example",
+        "lang": "en",
+        "flags": "i",
+        "regex": "(?:\\bfor\\s+example\\b|\\bfor\\s+instance\\b|\\be\\.g\\.|\\bimagine\\b|\\bsuppose\\b)",
+        "what": "a concrete example follows"
+      },
+      {
+        "id": "fr-example",
+        "lang": "fr",
+        "flags": "i",
+        "regex": "(?:\\bpar\\s+exemple\\b|\\bimaginez\\b|\\bsupposons\\b|\\bprenons\\s+le\\s+cas\\b)",
+        "what": "a concrete example follows"
+      },
+      {
+        "id": "es-example",
+        "lang": "es",
+        "flags": "i",
+        "regex": "(?:\\bpor\\s+ejemplo\\b|\\bimagina\\b|\\bsupongamos\\b|\\bpensemos\\s+en\\b)",
+        "what": "a concrete example follows"
+      },
+      {
+        "id": "zh-example",
+        "lang": "zh",
+        "flags": "",
+        "regex": "(?:例如|比如|举例|舉例|譬如|假设|假設)",
+        "what": "a concrete example follows"
+      },
+      {
+        "id": "ja-example",
+        "lang": "ja",
+        "flags": "",
+        "regex": "(?:例えば|たとえば|例:|仮に)",
+        "what": "a concrete example follows"
+      },
+      {
+        "id": "ko-example",
+        "lang": "ko",
+        "flags": "",
+        "regex": "(?:예를\\s*들어|예컨대|예시|가령)",
+        "what": "a concrete example follows"
+      }
+    ],
+    "low_utility_advice": [
+      {
+        "id": "en-cram",
+        "lang": "en",
+        "flags": "i",
+        "regex": "\\b(?:cram(?:ming)?|binge[- ]stud(?:y|ying)|all\\s+in\\s+one\\s+sitting|the\\s+night\\s+before\\s+(?:the|your)\\s+(?:exam|test))\\b",
+        "what": "massed practice: cramming"
+      },
+      {
+        "id": "en-reread",
+        "lang": "en",
+        "flags": "i",
+        "regex": "\\b(?:just\\s+re-?read\\b|re-?read\\s+(?:it|this|them|the\\s+\\w+|your\\s+\\w+)\\s+(?:again\\s+and\\s+again|several\\s+times|many\\s+times|over\\s+and\\s+over|a\\s+few\\s+times))",
+        "what": "rereading as the study method"
+      },
+      {
+        "id": "en-highlight",
+        "lang": "en",
+        "flags": "i",
+        "regex": "\\bhighlight\\s+(?:the\\s+)?(?:key|important|main)\\s+(?:points|parts|ideas|sentences|words)\\b",
+        "what": "highlighting as the study method"
+      },
+      {
+        "id": "fr-cram",
+        "lang": "fr",
+        "flags": "i",
+        "regex": "(?:\\bbachot(?:er|age)\\b|\\bla\\s+veille\\s+de\\s+l'examen\\b|\\btout\\s+en\\s+une\\s+seule\\s+fois\\b|\\brelisez\\s+(?:plusieurs|de\\s+nombreuses)\\s+fois\\b)",
+        "what": "cramming or rereading as the study method"
+      },
+      {
+        "id": "es-cram",
+        "lang": "es",
+        "flags": "i",
+        "regex": "(?:\\bempoll(?:ar|a|ate)\\b|\\bdarse\\s+un\\s+atrac[óo]n\\b|\\btodo\\s+de\\s+una\\s+sentada\\b|\\bla\\s+noche\\s+antes\\s+del\\s+examen\\b|\\brel[ée]e(?:lo|la|los|las)?\\s+varias\\s+veces\\b)",
+        "what": "cramming or rereading as the study method"
+      },
+      {
+        "id": "zh-cram",
+        "lang": "zh",
+        "flags": "",
+        "regex": "(?:临时抱佛脚|臨時抱佛腳|死记硬背|死記硬背|考前突击|考前突擊|一口气学完|一口氣學完|多读几遍|多讀幾遍|反复阅读|反覆閱讀)",
+        "what": "cramming or rereading as the study method"
+      },
+      {
+        "id": "ja-cram",
+        "lang": "ja",
+        "flags": "",
+        "regex": "(?:一夜漬け|詰め込み|何度も読み返)",
+        "what": "cramming or rereading as the study method"
+      },
+      {
+        "id": "ko-cram",
+        "lang": "ko",
+        "flags": "",
+        "regex": "(?:벼락치기|몰아서\\s*공부|여러\\s*번\\s*다시\\s*읽)",
+        "what": "cramming or rereading as the study method"
+      }
+    ],
+    "person_focused": [
+      {
+        "id": "en-ability",
+        "lang": "en",
+        "flags": "i",
+        "regex": "\\byou(?:'re|’re|\\s+are)\\s+(?:so\\s+|really\\s+|very\\s+|such\\s+a\\s+|a\\s+)?(?:smart|clever|brilliant|gifted|talented|natural|genius|stupid|dumb|lazy|hopeless)\\b",
+        "what": "praise or blame of the person, not the work"
+      },
+      {
+        "id": "en-not-a-person",
+        "lang": "en",
+        "flags": "i",
+        "regex": "\\byou(?:'re|’re|\\s+are)\\s+(?:just\\s+)?not\\s+(?:a\\s+)?(?:language|math|maths|law|science)\\s+person\\b",
+        "what": "a fixed-ability label"
+      },
+      {
+        "id": "en-bad-at",
+        "lang": "en",
+        "flags": "i",
+        "regex": "\\byou(?:'re|’re|\\s+are)\\s+(?:so\\s+|really\\s+)?(?:bad|terrible|awful|hopeless)\\s+at\\b",
+        "what": "blame of the person, not the work"
+      },
+      {
+        "id": "en-compare",
+        "lang": "en",
+        "flags": "i",
+        "regex": "\\b(?:better|worse|faster|slower|smarter)\\s+than\\s+(?:most|other|many|the\\s+average|the\\s+other|all\\s+the\\s+other)\\s+(?:learners|students|people|users|classmates)\\b",
+        "what": "a comparison with other learners"
+      },
+      {
+        "id": "en-percentile",
+        "lang": "en",
+        "flags": "i",
+        "regex": "\\b(?:top|bottom)\\s+[0-9]{1,2}\\s*%\\s+of\\s+(?:learners|students|users|people)\\b",
+        "what": "a comparison with other learners"
+      },
+      {
+        "id": "fr-ability",
+        "lang": "fr",
+        "flags": "i",
+        "regex": "\\b(?:tu\\s+es|vous\\s+êtes)\\s+(?:si\\s+|très\\s+|vraiment\\s+|tellement\\s+)?(?:intelligente?s?|doué(?:e|s|es)?|brillante?s?|nul(?:le|s|les)?|un\\s+génie)\\b",
+        "what": "praise or blame of the person, not the work"
+      },
+      {
+        "id": "fr-compare",
+        "lang": "fr",
+        "flags": "i",
+        "regex": "\\bmieux\\s+que\\s+(?:la\\s+plupart\\s+des|les\\s+autres)\\s+(?:apprenants|élèves|étudiants)\\b",
+        "what": "a comparison with other learners"
+      },
+      {
+        "id": "es-ability",
+        "lang": "es",
+        "flags": "i",
+        "regex": "\\b(?:eres|es\\s+usted)\\s+(?:muy\\s+|tan\\s+|realmente\\s+)?(?:inteligente|list[oa]|brillante|un\\s+genio|una\\s+genia|torpe|negad[oa])\\b",
+        "what": "praise or blame of the person, not the work"
+      },
+      {
+        "id": "es-compare",
+        "lang": "es",
+        "flags": "i",
+        "regex": "\\bmejor\\s+que\\s+(?:la\\s+mayoría\\s+de\\s+los|los\\s+demás|otros)\\s+(?:estudiantes|alumnos|aprendices)\\b",
+        "what": "a comparison with other learners"
+      },
+      {
+        "id": "zh-ability",
+        "lang": "zh",
+        "flags": "",
+        "regex": "你(?:真是|就是|真|很|太|好|是)?(?:聪明|聰明|天才|笨|有天赋|有天賦|没天赋|沒天賦)",
+        "what": "praise or blame of the person, not the work"
+      },
+      {
+        "id": "zh-compare",
+        "lang": "zh",
+        "flags": "",
+        "regex": "比(?:大多数|大多數|大部分|其他)(?:人|学生|學生|学习者|學習者)",
+        "what": "a comparison with other learners"
+      },
+      {
+        "id": "ja-ability",
+        "lang": "ja",
+        "flags": "",
+        "regex": "(?:(?:あなた|君|きみ)は\\s*(?:本当に|とても)?\\s*(?:頭がいい|頭が良い|天才|才能がある|センスがある|頭が悪い)|(?:頭がいい|頭が良い|天才|才能があります|センスがあります)ね)",
+        "what": "praise or blame of the person, not the work"
+      },
+      {
+        "id": "ja-compare",
+        "lang": "ja",
+        "flags": "",
+        "regex": "(?:他の|ほとんどの)(?:人|学習者|生徒|学生)(?:たち)?より",
+        "what": "a comparison with other learners"
+      },
+      {
+        "id": "ko-ability",
+        "lang": "ko",
+        "flags": "",
+        "regex": "(?:똑똑하(?:네요|군요|시네요)|천재(?:네요|군요|예요|이에요)|재능이\\s*있(?:네요|으시네요)|머리가\\s*좋(?:네요|으시네요))",
+        "what": "praise or blame of the person, not the work"
+      },
+      {
+        "id": "ko-compare",
+        "lang": "ko",
+        "flags": "",
+        "regex": "(?:다른|대부분의)\\s*(?:사람|학생|학습자)(?:들)?보다",
+        "what": "a comparison with other learners"
+      }
+    ]
+  }
+}

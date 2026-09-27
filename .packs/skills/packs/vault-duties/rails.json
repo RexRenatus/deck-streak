@@ -1,0 +1,32 @@
+{
+  "schema": "phx.duty.vault.rails.v1",
+  "spec": "SPEC-V2-2218",
+  "note": "The rails that keep an agent-written note static text: no code a plugin runs, no view that renders other notes live, no link that acts, nothing fetched from outside the vault. A new rail is a row here, never a code branch.",
+  "fence_allow": ["", "text", "txt", "plain", "markdown", "md"],
+  "fence_known": {
+    "dataviewjs": "Dataview JavaScript, which runs with the plugin's file and network access",
+    "dataview": "a Dataview query, which renders other notes live",
+    "query": "an embedded search, which renders other notes live",
+    "base": "an embedded Bases view, which renders and edits other notes' properties",
+    "tasks": "a Tasks query, which renders other notes live",
+    "js-engine": "JS Engine JavaScript",
+    "button": "a Buttons block, which runs commands",
+    "meta-bind-js-view": "Meta Bind JavaScript"
+  },
+  "fence_prefixes": {
+    "run-": "an Execute Code block, which shows a run button in the preview"
+  },
+  "templater_open": "<%",
+  "inline_query_prefixes": ["=", "$="],
+  "html_allow": [
+    "abbr", "b", "br", "del", "details", "div", "em", "hr", "i", "ins", "kbd", "mark",
+    "rp", "rt", "ruby", "s", "small", "span", "strong", "sub", "summary", "sup", "u"
+  ],
+  "html_attributes_allow": ["class", "dir", "lang", "open", "title"],
+  "executable_schemes": ["javascript", "vbscript", "data", "obsidian"],
+  "egress_schemes": ["file"],
+  "remote_schemes": ["http", "https", "ftp", "ftps"],
+  "math_macros_refused": ["href", "url"],
+  "dynamic_embed_extensions": [".base"],
+  "publish_key": "publish"
+}

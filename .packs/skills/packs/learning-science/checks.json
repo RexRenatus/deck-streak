@@ -1,0 +1,232 @@
+{
+  "schema": "phx.skills.checks.v1",
+  "spec": "SPEC-V2-2224",
+  "pack": "packs/learning-science",
+  "walk": [
+    "contract",
+    "retrieval",
+    "elaboration",
+    "practice",
+    "comprehension",
+    "feedback"
+  ],
+  "note": "SPEC-V2-2224. Twelve tree rows, one per learning-science-probe.py class, each run from the skills directory against the persona outputs of any --root, parsed through persona-core. Six advisory rows report and never refuse. No paths: the subject is a project's generated study texts, which phoenix-v2 does not carry.",
+  "checks": [
+    {
+      "id": "pedagogy-contract",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/learning-science-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "pedagogy-contract"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "contract",
+      "reason": "pedagogy-contract-invalid",
+      "scope": "tree"
+    },
+    {
+      "id": "retrieval-prompts",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/learning-science-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "retrieval-prompts"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "retrieval",
+      "reason": "retrieval-missing",
+      "scope": "tree"
+    },
+    {
+      "id": "answers-hidden",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/learning-science-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "answers-hidden"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "retrieval",
+      "reason": "answer-revealed",
+      "scope": "tree"
+    },
+    {
+      "id": "ask-before-tell",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/learning-science-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "ask-before-tell"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "retrieval",
+      "reason": "told-before-asked",
+      "scope": "tree"
+    },
+    {
+      "id": "deep-questions",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/learning-science-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "deep-questions"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "elaboration",
+      "reason": "deep-question-missing",
+      "scope": "tree"
+    },
+    {
+      "id": "concrete-examples",
+      "severity": "advisory",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/learning-science-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "concrete-examples"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "elaboration",
+      "reason": "example-missing",
+      "scope": "tree"
+    },
+    {
+      "id": "interleaving",
+      "severity": "advisory",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/learning-science-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "interleaving"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "practice",
+      "reason": "practice-blocked",
+      "scope": "tree"
+    },
+    {
+      "id": "worked-example-steps",
+      "severity": "advisory",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/learning-science-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "worked-example-steps"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "practice",
+      "reason": "worked-example-incomplete",
+      "scope": "tree"
+    },
+    {
+      "id": "study-advice",
+      "severity": "advisory",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/learning-science-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "study-advice"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "practice",
+      "reason": "low-utility-advice",
+      "scope": "tree"
+    },
+    {
+      "id": "key-terms-defined",
+      "severity": "block",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/learning-science-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "key-terms-defined"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "comprehension",
+      "reason": "key-term-undefined",
+      "scope": "tree"
+    },
+    {
+      "id": "feedback-task-focused",
+      "severity": "advisory",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/learning-science-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "feedback-task-focused"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "feedback",
+      "reason": "feedback-person-focused",
+      "scope": "tree"
+    },
+    {
+      "id": "feedback-next-step",
+      "severity": "advisory",
+      "probe": {
+        "command": [
+          "python3",
+          "{skills}/../scripts/learning-science-probe.py",
+          "--root",
+          "{root}",
+          "check",
+          "feedback-next-step"
+        ],
+        "timeout_seconds": 60
+      },
+      "stage": "feedback",
+      "reason": "feed-forward-missing",
+      "scope": "tree"
+    }
+  ]
+}
