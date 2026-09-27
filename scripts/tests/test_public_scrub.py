@@ -75,7 +75,9 @@ def new_repo(tmp):
 
 def commit_all(root, message):
     subprocess.run([*GIT, "-C", str(root), "add", "-A"], capture_output=True, check=True)
-    subprocess.run([*GIT, "-C", str(root), "commit", "-q", "-m", message], capture_output=True, check=True)
+    subprocess.run(
+        [*GIT, "-C", str(root), "commit", "-q", "-m", message], capture_output=True, check=True
+    )
 
 
 def run_scrub(root, *extra):
@@ -121,7 +123,8 @@ class EveryPublishedBlobIsRead(unittest.TestCase):
     def test_a_private_literal_in_a_deleted_file_is_found_in_history(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = new_repo(tmp)
-            (root / "notes.md").write_text("line one\nthe deck is called Secret Deck Name\n", encoding="utf-8")
+            notes = "line one\nthe deck is called Secret Deck Name\n"
+            (root / "notes.md").write_text(notes, encoding="utf-8")
             commit_all(root, "add notes")
             (root / "notes.md").unlink()
             (root / "README.md").write_text("a clean readme\n", encoding="utf-8")
@@ -161,7 +164,8 @@ class EveryPublishedBlobIsRead(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = new_repo(tmp)
             for number in (1, 2):
-                (root / "README.md").write_text(f"a clean readme, version {number}\n", encoding="utf-8")
+                readme = f"a clean readme, version {number}\n"
+                (root / "README.md").write_text(readme, encoding="utf-8")
                 commit_all(root, f"write version {number}")
             shallow = Path(tmp) / "shallow"
             subprocess.run(

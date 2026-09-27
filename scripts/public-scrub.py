@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""public-scrub: refuse any file or issue body that would disclose what a public repository must not.
+"""public-scrub: refuse any file, blob or issue body that would disclose what a public repository
+must not.
 
     python3 scripts/public-scrub.py --root .                      every tracked file
     python3 scripts/public-scrub.py --root . --subject DIR        also every file under DIR
     python3 scripts/public-scrub.py --root . --deny-list FILE     plus the maintainer's private list
-    python3 scripts/public-scrub.py --root . --history            plus every blob reachable from HEAD
+    python3 scripts/public-scrub.py --root . --history            plus every blob HEAD reaches
 
 The rules are the packs' own, composed and never copied (CHARTER constraint 11):
 
