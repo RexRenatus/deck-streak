@@ -1,0 +1,66 @@
+"""A planted Python test for scripts/tests/test_temp_hygiene.py (SPEC-030 A4).
+
+The `.fixture` suffix keeps it out of unittest discovery and every probe glob; the lint reads it as
+Python by its inner extension. Each line the lint must refuse ends with a `planted` comment, and
+each form it must accept ends with an `accepted` comment.
+"""
+
+import os
+import shutil
+import tempfile
+import unittest
+from pathlib import Path
+from tempfile import mkdtemp as make_directory
+
+
+def scratch_file(text):
+    handle = tempfile.NamedTemporaryFile("w", delete=False, suffix=".txt")  # planted: delete=False
+    handle.write(text)
+    handle.close()
+    return handle.name
+
+
+class LeaksItsDirectories(unittest.TestCase):
+    def test_a_made_directory_is_never_removed(self):
+        tmp = Path(tempfile.mkdtemp())  # planted: mkdtemp with no removal
+        (tmp / "note.txt").write_text("x")
+        self.assertTrue((tmp / "note.txt").is_file())
+
+    def test_an_imported_mkdtemp_is_still_read(self):
+        tmp = Path(make_directory())  # planted: mkdtemp imported under another name
+        self.assertTrue(tmp.is_dir())
+
+    def test_a_made_file_is_never_removed(self):
+        handle, path = tempfile.mkstemp()  # planted: mkstemp with no removal
+        os.close(handle)
+        self.assertTrue(Path(path).is_file())
+
+    def test_a_removal_of_another_path_does_not_count(self):
+        tmp = tempfile.mkdtemp()  # planted: the cleanup below removes a different path
+        other = tempfile.mkdtemp()  # accepted: this one is removed
+        self.addCleanup(shutil.rmtree, other)
+        self.assertTrue(os.path.isdir(tmp))
+
+
+class RemovesWhatItMakes(unittest.TestCase):
+    def test_a_temporary_directory_is_removed_on_exit(self):
+        with tempfile.TemporaryDirectory() as tmp:  # accepted: removed on exit
+            self.assertTrue(os.path.isdir(tmp))
+
+    def test_a_cleanup_removes_the_made_directory(self):
+        tmp = Path(tempfile.mkdtemp())  # accepted: addCleanup removes it
+        self.addCleanup(shutil.rmtree, tmp)
+        self.assertTrue(tmp.is_dir())
+
+    def test_a_finally_removes_the_made_file(self):
+        handle, path = tempfile.mkstemp()  # accepted: the finally removes it
+        try:
+            os.close(handle)
+            self.assertTrue(os.path.isfile(path))
+        finally:
+            os.remove(path)
+
+    def test_a_kept_file_removed_by_a_cleanup(self):
+        with tempfile.NamedTemporaryFile(delete=False) as handle:  # accepted: addCleanup removes it
+            self.addCleanup(os.unlink, handle.name)
+        self.assertTrue(os.path.isfile(handle.name))

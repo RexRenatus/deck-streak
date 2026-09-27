@@ -68,9 +68,7 @@ REVIEW_XP = """
     FUNCTIONS = {"review_xp": {"kind": "function", "function": "xp.review_xp", "cases": cases}}
 """
 
-LOCAL_DAY_NOTE = (
-    "Builds a Clock from offset_minutes and passes instant_ms through unchanged."
-)
+LOCAL_DAY_NOTE = "Builds a Clock from offset_minutes and passes instant_ms through unchanged."
 LOCAL_DAY = """
     def with_clock(local_day, predecessor, *, instant_ms, offset_minutes):
         return local_day(instant_ms, predecessor("day.Clock")(offset_minutes=offset_minutes))
@@ -160,9 +158,7 @@ class GeneratorWritesGoldensFromTheRegistry(unittest.TestCase):
 
     @staticmethod
     def forget_stand_in():
-        for name in [
-            m for m in sys.modules if m == "v9stand" or m.startswith("v9stand.")
-        ]:
+        for name in [m for m in sys.modules if m == "v9stand" or m.startswith("v9stand.")]:
             del sys.modules[name]
 
     def register(self, module: str, source: str) -> Path:
@@ -254,9 +250,7 @@ class GeneratorWritesGoldensFromTheRegistry(unittest.TestCase):
         self.assertEqual(golden["function"], "day.local_day")
         self.assertEqual(golden["adapter"], "with_clock")
         interpreter = f"{platform.python_implementation()} {platform.python_version()}"
-        self.assertEqual(
-            golden["note"], f"{LOCAL_DAY_NOTE[:-1]}; cases drawn under {interpreter}."
-        )
+        self.assertEqual(golden["note"], f"{LOCAL_DAY_NOTE[:-1]}; cases drawn under {interpreter}.")
         # The stand-in's day at instant 0: the last day before the epoch at UTC-1, day 0 at UTC.
         self.assertEqual([case["output"] for case in golden["cases"]], [-1, 0])
         self.assertEqual(golden["cases"][0]["class"], "offset")
