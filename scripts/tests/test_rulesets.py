@@ -1,6 +1,8 @@
-"""The committed rulesets are the enforced dev-to-main release workflow (SPEC-033 A9 to A12)."""
+"""The committed rulesets are the enforced dev-to-main release workflow (SPEC-033 A9 to A12), and
+a release never deadlocks and takes checks only from GitHub Actions (SPEC-034 A1 to A4)."""
 
 import json
+import re
 import unittest
 
 from _support import REPO, examined
@@ -8,6 +10,8 @@ from _support import REPO, examined
 RULESETS = REPO / ".github" / "rulesets"
 # The rule types the plan enforces; GitHub refuses `tag_name_pattern` on it (HTTP 422).
 ENFORCEABLE = {"deletion", "non_fast_forward", "update", "pull_request", "required_status_checks"}
+# The GitHub Actions app: measured as the app id of every ci, fragment and base-is-dev run on dev.
+GITHUB_ACTIONS = 15368
 
 
 def load(name):
@@ -31,7 +35,6 @@ class TheCommittedRulesetsAreTheReleaseWorkflow(unittest.TestCase):
         found = rules(main)
         self.assertEqual(found["pull_request"]["allowed_merge_methods"], ["merge"])
         self.assertEqual(checks(main), ["ci", "fragment"])
-        self.assertTrue(found["required_status_checks"]["strict_required_status_checks_policy"])
         self.assertLessEqual({"deletion", "non_fast_forward"}, set(found))
 
     def test_dev_takes_pull_requests_only_after_ci_and_fragment(self):
@@ -55,6 +58,32 @@ class TheCommittedRulesetsAreTheReleaseWorkflow(unittest.TestCase):
             self.assertEqual(ruleset["bypass_actors"], [], path.name)
             self.assertLessEqual(set(rules(ruleset)), ENFORCEABLE, path.name)
 
+
+    def test_main_does_not_require_an_up_to_date_head(self):
+        # Only this repository's dev reaches main, and one pull request per head and base can be
+        # open, so main cannot move under a release pull request; strictness would only deadlock
+        # the next release (ADR-034).
+        found = rules(load("main"))["required_status_checks"]
+        self.assertIs(found["strict_required_status_checks_policy"], False)
+
+    def test_dev_requires_an_up_to_date_head(self):
+        found = rules(load("dev"))["required_status_checks"]
+        self.assertIs(found["strict_required_status_checks_policy"], True)
+
+    def test_every_required_check_comes_from_github_actions(self):
+        required = [
+            (name, check)
+            for name in ("main", "dev")
+            for check in rules(load(name))["required_status_checks"]["required_status_checks"]
+        ]
+        for name, check in examined("required check(s)", required):
+            where = f"{name}: {check['context']}"
+            self.assertEqual(check.get("integration_id"), GITHUB_ACTIONS, where)
+
+    def test_the_release_runbook_merges_nothing_back_into_dev(self):
+        runbook = " ".join((REPO / "RELEASING.md").read_text(encoding="utf-8").split())
+        self.assertIn("Nothing is merged back into dev", runbook)
+        self.assertNotRegex(runbook, re.compile(r"git merge [^`]*origin/main"))
 
 if __name__ == "__main__":
     unittest.main()
