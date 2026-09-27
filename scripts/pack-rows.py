@@ -14,15 +14,20 @@ runner until that runner exists; ADR-004 records the choice.
 * `enforced`: every row runs, and a blocking row that is RED, VOID or in ERROR fails the gate.
 * `pending`: every row runs; a blocking VOID row reads `pending` (its subject is not built yet,
   and `enforced_by` names the issue that builds it), but RED and ERROR still fail the gate: a pack
-  is pending only for the subject it has not got, never for a defect in what exists.
+  is pending only for the subject it has not got, never for a defect in what exists. A pending pack
+  whose every blocking row ran and passed has outgrown its state, and is refused as STALE: its
+  subject exists and is green, so its state must say `enforced` (SPEC-030 R6).
 * `deferred`: no row runs until `enforced_by` lands the subject. Used only where the pack reads
   an absent subject as a finding rather than as VOID.
 * `phxd`: the pack's rows are built into phxd and run on the maintainer's box (ADR-004); this
   runner lists them and runs none.
 
 A pack may also name `excluded_rows` (never run here, each with the reason it is not DeckStreak's
-subject) and `deferred_rows` (not run until the named issue). Every row that is not run is still
-counted and printed, so nothing leaves the report silently.
+subject) and `deferred_rows` (not judged until the named issue). Every excluded row is still
+counted and printed, so nothing leaves the report silently. Every deferred row runs in a separate
+pass after the others: one that passes is refused as STALE, because its deferral has outlived its
+reason, and one that is red, VOID or in error stays deferred and fails nothing (SPEC-030 R7). The
+summary line reports that pass's count and time.
 
 A row's exit is 0 green, 1 a finding, 2 a usage error, 3 VOID (nothing examined, never a pass).
 An advisory row never fails the gate. The runner exits 0 when no row fails, 1 when one does, 2
@@ -45,7 +50,9 @@ SKILLS = REPO / ".packs" / "skills"
 WIRING = REPO / ".packs" / "wiring.json"
 STATES = ("enforced", "pending", "deferred", "phxd")
 PACK_KEYS = {"state", "enforced_by", "excluded_rows", "deferred_rows", "note"}
-FAILING = ("RED", "VOID", "ERROR")
+FAILING = ("RED", "VOID", "ERROR", "STALE")
+# The verdicts of a row the main pass ran; a deferred row's pass is counted on its own.
+RAN = ("ok", "advisory", "pending", "RED", "VOID", "ERROR")
 
 
 class WiringError(Exception):
@@ -150,6 +157,7 @@ def main() -> int:
         return 2
     chosen = args.pack or vendored
     report: list[dict] = []
+    waiting: list[tuple[dict, Row, str]] = []
     for pack in chosen:
         entry = wiring[pack]
         state = entry["state"]
@@ -170,6 +178,7 @@ def main() -> int:
         for name in sorted((set(excluded) | set(deferred)) - {r.ident for r in rows}):
             print(f"pack-rows: wiring refused: {pack} names row {name}, which the pack lacks")
             return 2
+        ran_here = []
         for row in rows:
             if row.ident in excluded:
                 verdict, why, code, seconds, tail = "excluded", excluded[row.ident], None, 0.0, ""
@@ -179,25 +188,54 @@ def main() -> int:
             else:
                 code, seconds, tail = run(row, root)
                 verdict, why = judge(code, row.severity, state), ""
-            report.append(
-                {
-                    "pack": pack,
-                    "row": row.ident,
-                    "severity": row.severity,
-                    "state": state,
-                    "exit": code,
-                    "verdict": verdict,
-                    "seconds": round(seconds, 2),
-                    "tail": tail[:200],
-                    "why": why,
-                }
+            item = {
+                "pack": pack,
+                "row": row.ident,
+                "severity": row.severity,
+                "state": state,
+                "exit": code,
+                "verdict": verdict,
+                "seconds": round(seconds, 2),
+                "tail": tail[:200],
+                "why": why,
+            }
+            report.append(item)
+            if verdict == "deferred":
+                waiting.append((item, row, deferred[row.ident]))
+            elif verdict != "excluded":
+                ran_here.append(item)
+        blocking = [item for item in ran_here if item["severity"] == "block"]
+        if state == "pending" and blocking and all(item["exit"] == 0 for item in blocking):
+            why = (
+                f"pending on {entry['enforced_by']}, but every blocking row ran and passed "
+                f"({len(blocking)} row(s)): its state must say enforced"
             )
-    ran = [item for item in report if item["verdict"] in ("ok", "advisory", "pending", *FAILING)]
+            report.append({"pack": pack, "row": "*", "verdict": "STALE", "why": why})
+    started = time.monotonic()
+    for item, row, issue in waiting:
+        code, seconds, tail = run(row, root)
+        item.update(exit=code, seconds=round(seconds, 2), tail=tail[:200])
+        if code == 0:
+            item["verdict"] = "STALE"
+            item["why"] = f"deferred to {issue}, but the row passes: remove its deferral"
+        else:
+            still = "a timeout" if code is None else f"exit {code}"
+            item["why"] = f"deferred to {issue}; still {still}: {tail[:80]}"
+    deferred_pass = {
+        "ran": len(waiting),
+        "seconds": round(time.monotonic() - started, 2),
+        "stale": sum(1 for item, _, _ in waiting if item["verdict"] == "STALE"),
+    }
+    ran = [item for item in report if item["verdict"] in RAN]
     failures = [item for item in report if item["verdict"] in FAILING]
     if args.json:
-        print(
-            json.dumps({"examined": len(ran), "failures": len(failures), "rows": report}, indent=2)
-        )
+        payload = {
+            "examined": len(ran),
+            "failures": len(failures),
+            "deferred_pass": deferred_pass,
+            "rows": report,
+        }
+        print(json.dumps(payload, indent=2))
     else:
         for item in report:
             mark = "FAIL" if item["verdict"] in FAILING else "    "
@@ -207,7 +245,13 @@ def main() -> int:
         for item in report:
             counts[item["verdict"]] = counts.get(item["verdict"], 0) + 1
         summary = ", ".join(f"{key} {value}" for key, value in sorted(counts.items()))
-        print(f"PACK ROWS: examined {len(ran)} row(s) of {len(chosen)} pack(s): {summary}")
+        second = (
+            f"deferred pass: ran {deferred_pass['ran']} row(s) in {deferred_pass['seconds']}s, "
+            f"stale {deferred_pass['stale']}"
+        )
+        print(
+            f"PACK ROWS: examined {len(ran)} row(s) of {len(chosen)} pack(s): {summary}; {second}"
+        )
     if not ran:
         print("PACK ROWS VOID: no row was examined")
         return 3
