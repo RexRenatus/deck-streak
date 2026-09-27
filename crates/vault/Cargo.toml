@@ -11,5 +11,16 @@ publish.workspace = true
 [lints]
 workspace = true
 
+# The vault depends on the kernel only (docs/CONTEXT-MAP.md, ADR-002), and on the external crates
+# ADR-020 and ADR-029 admit: serde_json reads the vendored rails, the run record and the layout, and
+# thiserror types the refusals.
 [dependencies]
 deck-streak-kernel.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+
+# The parity oracle's golden reader, compiled into this crate's tests by path (ADR-029), and a
+# temporary vault for every test (ADR-020). Test support only.
+[dev-dependencies]
+serde.workspace = true
+tempfile.workspace = true
