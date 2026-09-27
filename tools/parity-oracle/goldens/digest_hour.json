@@ -1,0 +1,352 @@
+{
+  "adapter": "with_digest_variable",
+  "cases": [
+    {
+      "class": "unset",
+      "input": {
+        "raw": null,
+        "rollover_hour": 0
+      },
+      "output": 9
+    },
+    {
+      "class": "unset",
+      "input": {
+        "raw": null,
+        "rollover_hour": 1
+      },
+      "output": 9
+    },
+    {
+      "class": "unset",
+      "input": {
+        "raw": null,
+        "rollover_hour": 2
+      },
+      "output": 9
+    },
+    {
+      "class": "unset",
+      "input": {
+        "raw": null,
+        "rollover_hour": 3
+      },
+      "output": 9
+    },
+    {
+      "class": "unset",
+      "input": {
+        "raw": null,
+        "rollover_hour": 4
+      },
+      "output": 9
+    },
+    {
+      "class": "unset",
+      "input": {
+        "raw": null,
+        "rollover_hour": 5
+      },
+      "output": 9
+    },
+    {
+      "class": "unset",
+      "input": {
+        "raw": null,
+        "rollover_hour": 6
+      },
+      "output": 9
+    },
+    {
+      "class": "unset",
+      "input": {
+        "raw": null,
+        "rollover_hour": 7
+      },
+      "output": 9
+    },
+    {
+      "class": "unset",
+      "input": {
+        "raw": null,
+        "rollover_hour": 8
+      },
+      "output": 9
+    },
+    {
+      "class": "unset",
+      "input": {
+        "raw": null,
+        "rollover_hour": 9
+      },
+      "output": 9
+    },
+    {
+      "class": "unset",
+      "input": {
+        "raw": null,
+        "rollover_hour": 10
+      },
+      "output": 10
+    },
+    {
+      "class": "unset",
+      "input": {
+        "raw": null,
+        "rollover_hour": 11
+      },
+      "output": 11
+    },
+    {
+      "class": "unset",
+      "input": {
+        "raw": null,
+        "rollover_hour": 12
+      },
+      "output": 12
+    },
+    {
+      "class": "unset",
+      "input": {
+        "raw": null,
+        "rollover_hour": 13
+      },
+      "output": 13
+    },
+    {
+      "class": "unset",
+      "input": {
+        "raw": null,
+        "rollover_hour": 14
+      },
+      "output": 14
+    },
+    {
+      "class": "unset",
+      "input": {
+        "raw": null,
+        "rollover_hour": 15
+      },
+      "output": 15
+    },
+    {
+      "class": "unset",
+      "input": {
+        "raw": null,
+        "rollover_hour": 16
+      },
+      "output": 16
+    },
+    {
+      "class": "unset",
+      "input": {
+        "raw": null,
+        "rollover_hour": 17
+      },
+      "output": 17
+    },
+    {
+      "class": "unset",
+      "input": {
+        "raw": null,
+        "rollover_hour": 18
+      },
+      "output": 18
+    },
+    {
+      "class": "unset",
+      "input": {
+        "raw": null,
+        "rollover_hour": 19
+      },
+      "output": 19
+    },
+    {
+      "class": "unset",
+      "input": {
+        "raw": null,
+        "rollover_hour": 20
+      },
+      "output": 20
+    },
+    {
+      "class": "unset",
+      "input": {
+        "raw": null,
+        "rollover_hour": 21
+      },
+      "output": 21
+    },
+    {
+      "class": "unset",
+      "input": {
+        "raw": null,
+        "rollover_hour": 22
+      },
+      "output": 22
+    },
+    {
+      "class": "unset",
+      "input": {
+        "raw": null,
+        "rollover_hour": 23
+      },
+      "output": 23
+    },
+    {
+      "class": "blank",
+      "input": {
+        "raw": "",
+        "rollover_hour": 23
+      },
+      "output": 23
+    },
+    {
+      "class": "blank",
+      "input": {
+        "raw": "   ",
+        "rollover_hour": 21
+      },
+      "output": 21
+    },
+    {
+      "class": "blank",
+      "input": {
+        "raw": "\t",
+        "rollover_hour": 4
+      },
+      "output": 9
+    },
+    {
+      "class": "explicit",
+      "input": {
+        "raw": "0",
+        "rollover_hour": 0
+      },
+      "output": 0
+    },
+    {
+      "class": "explicit",
+      "input": {
+        "raw": "9",
+        "rollover_hour": 1
+      },
+      "output": 9
+    },
+    {
+      "class": "explicit",
+      "input": {
+        "raw": "23",
+        "rollover_hour": 10
+      },
+      "output": 23
+    },
+    {
+      "class": "explicit",
+      "input": {
+        "raw": " 7 ",
+        "rollover_hour": 2
+      },
+      "output": 7
+    },
+    {
+      "class": "explicit",
+      "input": {
+        "raw": "+7",
+        "rollover_hour": 0
+      },
+      "output": 7
+    },
+    {
+      "class": "explicit",
+      "input": {
+        "raw": "07",
+        "rollover_hour": 6
+      },
+      "output": 7
+    },
+    {
+      "class": "earlier",
+      "input": {
+        "raw": "3",
+        "rollover_hour": 4
+      },
+      "output": 3
+    },
+    {
+      "class": "earlier",
+      "input": {
+        "raw": "0",
+        "rollover_hour": 23
+      },
+      "output": 0
+    },
+    {
+      "class": "out-of-range",
+      "input": {
+        "raw": "24",
+        "rollover_hour": 13
+      },
+      "output": 24
+    },
+    {
+      "class": "out-of-range",
+      "input": {
+        "raw": "-1",
+        "rollover_hour": 2
+      },
+      "output": -1
+    },
+    {
+      "class": "unparsable",
+      "input": {
+        "raw": "nine",
+        "rollover_hour": 3
+      },
+      "output": 9
+    },
+    {
+      "class": "unparsable",
+      "input": {
+        "raw": "9.5",
+        "rollover_hour": 4
+      },
+      "output": 9
+    },
+    {
+      "class": "unparsable",
+      "input": {
+        "raw": "0x9",
+        "rollover_hour": 10
+      },
+      "output": 10
+    },
+    {
+      "class": "python-only",
+      "input": {
+        "raw": "1_0",
+        "rollover_hour": 15
+      },
+      "output": 10
+    },
+    {
+      "class": "python-only",
+      "input": {
+        "raw": "\u0667",
+        "rollover_hour": 18
+      },
+      "output": 7
+    }
+  ],
+  "function": "config._env_digest_hour",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Sets the predecessor's digest-hour variable to raw, or removes it when raw is null, for one call with rollover_hour, and restores the environment after it; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_020.py",
+  "registry_sha256": "e8ca736c5c16f785f7032e2d79e4f1fb1005a71505fb16b1c4845aa5339e4660",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}
