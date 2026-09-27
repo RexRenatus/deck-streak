@@ -57,9 +57,15 @@ Chosen option.
   - `sync_runs` records each run's trigger, `scheduled` or `owner`.
   - An owner trigger within 5 minutes of a successful sync returns that result without syncing.
   - The collection lock serialises every run (SPEC-022 R7).
-- **No other job syncs.** The readings generation (SPEC-053), the digest and the settle step read the
-  study day's sync outcome. When it did not succeed, they record `sync_failed`, and the owner can
-  trigger a sync and regenerate (SPEC-048).
+- **No job adds a sync.** The readings generation (SPEC-053), the digest and the settle step read the
+  study day's sync outcome: a sync that started in the study day and succeeded, scheduled or
+  owner-triggered.
+  - After a restart, the day's scheduled sync may not have run yet. The `sync` job is caught up
+    within the scheduler's lateness bound. A job that needs the outcome first runs that same one
+    scheduled sync itself, claimed for the study day under the collection lock, so the count never
+    exceeds one and the reader always follows the sync.
+  - When the outcome did not succeed, they record `sync_failed`, and the owner can trigger a sync and
+    regenerate (SPEC-048).
 - **No upload path.** A test drives every sync scenario (a normal sync, a full-sync demand, an empty
   server) through a recording fake sync server. It fails on any full-upload request, and on any
   request that carries a local change. On a full-sync demand the client downloads, or aborts with

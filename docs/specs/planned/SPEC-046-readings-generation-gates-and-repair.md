@@ -2,8 +2,9 @@
 
 - **Wave:** W1. **Issue:** #32 (epic #2). **Context(s):** `deck-streak-readings` (the seed, the form, the coverage gates, the repair rule, the reading and its telemetry); `deck-streak-coordination` (the generation use case).
 - **Decided by:** ADR-012 (the parity oracle), ADR-015 (the agent, fail closed), ADR-019 (the
-  readings' surface, the law primer and the language form), and ADR-046 (the word target, the
-  coverage gates on a persona output, the repair and the text crates).
+  readings' surface, the law primer and the language form), ADR-054 (the AI route is optional; with
+  it absent, no reading is generated and nothing pages), and ADR-046 (the word target, the coverage
+  gates on a persona output, the repair and the text crates).
 - **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
   `docs/specs/` with its tests and `docs/red-first/SPEC-046.md` (ADR-016).
 
@@ -26,8 +27,8 @@
 - **What the parity oracle proves.** `preread.py:anchor_for_note` and `preread.py:is_anchor_usable`
   over synthetic note texts with markup, entities, full-width characters and short fields.
 - **Prerequisites.** SPEC-045 (the day set and the topic states), SPEC-044 (the persona engine and the
-  golden readings), SPEC-043 (the runner, the gate and the verdict), SPEC-042 (the date tree),
-  SPEC-020 and SPEC-021. SPEC-047 to SPEC-053 build on it.
+  golden readings), SPEC-043 (the AI route, the runner, the gate and the verdict), SPEC-042 (the date
+  tree), SPEC-020 and SPEC-021. SPEC-047 to SPEC-053 build on it.
 
 ## 2. Requirements
 
@@ -66,7 +67,8 @@ R6. A reading is gated by the task's pack classes (SPEC-043) and by the readings
 R7. A topic whose first attempt fails a gate is regenerated once, with a repair instruction that
     names the failed gate and its finding lines and never quotes the rejected text. A second failure
     stores nothing, writes nothing and ends the topic `failed` with `gate_failed:<gate>`. An
-    unavailable verdict ends the topic `failed` with `agent_unavailable:<cause>`, with no retry.
+    unavailable verdict from a configured route ends the topic `failed` with
+    `agent_unavailable:<cause>`, with no retry; an absent route is R16's, never a failure.
 R8. Nothing is stored or written for a topic unless its output passed every gate, and no code path
     produces stand-in text; study-duties' `no-placeholder` class is in the gate.
 R9. A ready reading is stored in `readings`: its identity (topic, first generated study day,
@@ -82,13 +84,17 @@ R10. A topic whose digest equals its previous ready reading's (the same new card
     generates nothing and stays `ready` with that reading; it and every topic with no new cards,
     could not tell or paused is carried by the nightly roll-forward (SPEC-042), and a carried
     reading's carried nights rise by one.
-R11. Every topic with new cards gets a reading: there is no daily cap and no job-wide deadline that
-    skips a topic. Topics run one after another, each run under its own caps (SPEC-043).
+R11. With an AI route configured, every topic with new cards gets a reading: there is no daily cap
+    and no job-wide deadline that skips a topic. Topics run one after another, each run under its own
+    caps (SPEC-043).
 R12. Every attempt is recorded in `reading_attempts` (run, topic, study day, attempt number, repair
     gate, verdict, cause or class, turns, input and output tokens, the CLI's cost estimate, duration,
     `created_at`), kept 90 days (the predecessor's retention), and exported and erased.
-R13. `privacy.json` declares that a topic's card text is sent to the model provider through the
-    owner's subscription proxy to write its reading, with the provider named from configuration.
+R13. `privacy.json` declares the readings' processing by route (ADR-054). Only when an AI route is
+    configured is a topic's card text sent to the model provider to write its reading, through that
+    route (the owner's subscription proxy, for `Proxy`), with the provider named from configuration.
+    Under `Absent`, the default, it declares that no card text leaves the host for a reading and
+    that no reading is generated.
 R14. No reading carries an exam date, a target date, a countdown or any forward-looking timeline
     (the owner's rule, with no exception): persona-core's `no-dates` is in every reading's gate, and a
     reading it refuses is repaired once and otherwise fails like any other gate.
@@ -96,6 +102,11 @@ R15. `readings` and `reading_attempts` are created `STRICT` by
     `migrations/004601_readings_and_attempts.sql`, and registered in the context map's ownership
     register (the predecessor's `preread_notes` and `preread_run_events` map onto them) and in
     readings' data-rights port.
+R16. The generation reads the agent's AI route (SPEC-043) before it resolves anything. With the route
+    `Absent` (ADR-054), every topic of the taxonomy ends the study day `ai_route_absent` (SPEC-045):
+    no day set is resolved, no seed is built, no attempt is made or recorded in `reading_attempts`,
+    no reading or vault byte is stored, nothing is alerted, and the run records `ai_route_absent` as
+    its outcome. R7 and R8 stand: no stand-in text is produced, ever.
 
 ## 3. Acceptance criteria
 
@@ -119,6 +130,7 @@ R15. `readings` and `reading_attempts` are created `STRICT` by
 | A16 | reading minutes are words at 200 a minute, with Chinese and Japanese counted in characters | `reading_minutes_count_words_at_200_per_minute` |
 | A17 | readings' data-rights port exports and erases `readings` and `reading_attempts` | `the_readings_and_attempts_are_exported_and_erased` |
 | A18 | a reading that states a date or a countdown is withheld by persona-core's `no-dates`, repaired once, and never stored (fake runner) | persona-core `no-dates`; `a_reading_with_a_date_or_countdown_is_never_delivered` |
+| A19 | with the route absent, every topic ends `ai_route_absent`: no day set is resolved, the fake runner records no call, no attempt is recorded, nothing is stored or written, and no alert is raised | `an_absent_route_ends_every_topic_ai_route_absent_with_no_attempt` |
 
 ```acceptance
 A1: cargo test -p deck-streak-readings --test form -- --exact the_word_target_grows_with_new_cards_inside_the_band
@@ -139,6 +151,7 @@ A15: cargo test -p deck-streak-coordination --test readings_generate -- --exact 
 A16: cargo test -p deck-streak-readings --test minutes -- --exact reading_minutes_count_words_at_200_per_minute
 A17: cargo test -p deck-streak-readings --test rights -- --exact the_readings_and_attempts_are_exported_and_erased
 A18: cargo test -p deck-streak-coordination --test readings_generate -- --exact a_reading_with_a_date_or_countdown_is_never_delivered
+A19: cargo test -p deck-streak-coordination --test readings_generate -- --exact an_absent_route_ends_every_topic_ai_route_absent_with_no_attempt
 ```
 
 ## 4. File manifest
@@ -196,7 +209,8 @@ A18: cargo test -p deck-streak-coordination --test readings_generate -- --exact 
   all-unusable seed is refused before any call (A12).
 - **A heavy day takes long with no daily cap.** Each run is capped, every attempt's duration is
   recorded (A10), and the health check pages a run that did not finish in its window (SPEC-050).
-- **Card text leaves the host.** It is fenced as untrusted data, sent only through the owner's proxy,
-  and declared in the privacy policy (R13).
+- **Card text leaves the host.** It is fenced as untrusted data, sent only through a configured
+  route (the owner's proxy), never while the route is absent, and declared in the privacy policy
+  (R13).
 - **Two writers of the readings folder** while the predecessor's lane still fires. Prevented by the
   first live night's one-writer prerequisite (SPEC-053).

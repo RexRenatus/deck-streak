@@ -3,8 +3,9 @@
 - **Wave:** W1. **Issue:** #31 (epic #2). **Context(s):** `deck-streak-readings` (the rules and their tables); `deck-streak-coordination` (the resolve use case).
 - **Decided by:** ADR-009 (ingest syncs a private copy and asks Anki's own scheduler for the new-card
   queue), ADR-012 (the parity oracle), ADR-019 (readings generate whenever the last sync succeeded,
-  and pause after two days without study), and ADR-045 (the order of the gates, the pause's source,
-  the private taxonomy and the closed states).
+  and pause after two days without study), ADR-054 (an absent AI route is a state of its own, never
+  a failure), and ADR-045 (the order of the gates, the pause's source, the private taxonomy and the
+  closed states).
 - **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
   `docs/specs/` with its tests and `docs/red-first/SPEC-045.md` (ADR-016).
 
@@ -61,9 +62,10 @@ R4. The gates run before any collection work, in this order: (1) when the last s
     study days before this one, every topic is `paused`; (3) otherwise the day set is resolved. The
     collection file's age is never a reason to refuse.
 R5. Each topic of the taxonomy ends a study day in exactly one state: `ready`, `no_new_cards`,
-    `could_not_tell` with a class and a closed reason, `paused`, or `failed` with a closed reason
-    (`failed` and `ready` are set by SPEC-046). The state is one enum whose variants carry their
-    class and reason, so a topic cannot hold two states and an unknown reason cannot be written.
+    `could_not_tell` with a class and a closed reason, `paused`, `failed` with a closed reason, or
+    `ai_route_absent` (`failed`, `ready` and `ai_route_absent` are set by SPEC-046). The state is one
+    enum whose variants carry their class and reason, so a topic cannot hold two states and an
+    unknown reason cannot be written.
 R6. The `could_not_tell` reasons and their classes are closed: `sync_failed`, `collection_locked`,
     `collection_open_failed` and `day_set_resolve_timeout` are `rail_broken`; `taxonomy_missing` and
     `day_set_fetch_saturated` are `config_fault`.
@@ -81,6 +83,10 @@ R10. Pause is the readings' own rule, computed from ingest's reviews. It is not 
     it never mints, reads or stores a lapse id (docs/CONTEXT-MAP.md, "Overloaded words").
 R11. The rules live in the readings context, which depends on the kernel and ingest only; the
     use case that runs a resolution for a study day lives in coordination.
+R12. `ai_route_absent` is a state of its own (ADR-054), distinct from `failed` and from
+    `could_not_tell`: it carries no class and no reason, it is stored and read back as itself, and it
+    is never counted as a failure or a refusal. It records that no AI route is configured, which is a
+    setting, not a fault.
 
 ## 3. Acceptance criteria
 
@@ -99,6 +105,7 @@ R11. The rules live in the readings context, which depends on the kernel and ing
 | A11 | topics come only from the configured taxonomy: two synthetic taxonomies over one collection give two topic sets, and no taxonomy gives `config_fault` `taxonomy_missing` | `the_topics_come_only_from_the_configured_taxonomy` |
 | A12 | the public scrub is green over the tree, the example taxonomy included | the public scrub; `test_the_public_scrub_is_green_with_the_example_taxonomy` |
 | A13 | readings' data-rights port exports and erases `reading_topic_days` and `reading_runs` | `the_topic_days_and_runs_are_exported_and_erased` |
+| A14 | `ai_route_absent` is stored and read back as its own state with no class or reason, never as `failed` or `could_not_tell`, and it is not counted as a failure | `ai_route_absent_is_a_state_of_its_own_and_never_a_failure` |
 
 ```acceptance
 A1: cargo test -p deck-streak-readings --test day_set -- --exact the_day_set_is_the_schedulers_queue_per_root_attributed_by_original_deck
@@ -114,6 +121,7 @@ A10: cargo test -p deck-streak-readings --test day_set -- --exact a_resolution_p
 A11: cargo test -p deck-streak-readings --test topics -- --exact the_topics_come_only_from_the_configured_taxonomy
 A12: python3 -m unittest discover -s scripts/tests -p test_readings_taxonomy_scrub.py -k test_the_public_scrub_is_green_with_the_example_taxonomy
 A13: cargo test -p deck-streak-readings --test rights -- --exact the_topic_days_and_runs_are_exported_and_erased
+A14: cargo test -p deck-streak-readings --test states -- --exact ai_route_absent_is_a_state_of_its_own_and_never_a_failure
 ```
 
 ## 4. File manifest
@@ -126,7 +134,7 @@ A13: cargo test -p deck-streak-readings --test rights -- --exact the_topic_days_
 | `crates/readings/src/topic.rs` | `deck-streak-readings` | added: deck to topic |
 | `crates/readings/src/day_set.rs` | `deck-streak-readings` | added: roots, queue queries, attribution, digest, saturation |
 | `crates/readings/src/gates.rs` | `deck-streak-readings` | added: the last-sync and pause gates |
-| `crates/readings/src/state.rs` | `deck-streak-readings` | added: the closed topic states |
+| `crates/readings/src/state.rs` | `deck-streak-readings` | added: the closed topic states, `ai_route_absent` among them |
 | `crates/readings/src/store.rs` | `deck-streak-readings` | added: `reading_topic_days` and `reading_runs` |
 | `crates/readings/src/rights.rs` | `deck-streak-readings` | added: the data-rights port |
 | `migrations/004501_readings_topic_days_and_runs.sql` | `deck-streak-readings` | added |

@@ -1,13 +1,14 @@
 # SPEC-027: scheduled jobs run as timers through one runner that claims every daily fire, catches up at most six hours late, and pages when the sync stops
 
 - **Wave:** W0. **Issue:** #20 (epic #1). **Context(s):** `deck-streak-coordination` (the job table, the runner, the ledger, the watch), `deck-streak-daemon` (the `job` role).
-- **Decided by:** ADR-010 (scheduled jobs as timers, one binary), ADR-011 (DeckStreak's jobs keep off the predecessor's slots while both run), ADR-012 (goldens), ADR-020 (one migration sequence), and this SPEC's ADR-027 (systemd timers with a ledger-owning runner, the job table as the one schedule, DeckStreak's slots).
+- **Decided by:** ADR-010 (scheduled jobs as timers, one binary), ADR-011 (DeckStreak's jobs keep off the predecessor's slots while both run), ADR-012 (goldens), ADR-020 (one migration sequence), ADR-037 (one scheduled sync per study day, and no job but `sync` syncs), and this SPEC's ADR-027 (systemd timers with a ledger-owning runner, the job table as the one schedule, DeckStreak's slots).
 - **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
   `docs/specs/` with its tests and `docs/red-first/SPEC-027.md` (ADR-016).
 
 ## 1. The problem, measured
 
-- **The predecessor's guards, which port verbatim** (predecessor `27ee2bc`, names only):
+- **The predecessor's guards, which port verbatim except its sync layout** (predecessor `27ee2bc`,
+  names only):
   - the cron-fire ledger `cron_fires`, one row per (job, local fire date) with ok, error, catchup
     and missed counters and a last outcome (`database.py`, migration 18; `CRON_OUTCOMES`);
   - the claim: a conditional upsert that succeeds only while the row records no attempt (ok, error
@@ -22,9 +23,13 @@
   - the catch-up: only the allowlisted notification jobs are ever replayed, a fire more than
     `scheduler.py:CATCHUP_MAX_LATE_MIN` minutes late is recorded `missed` and not sent, replays run
     in fire order after the first sync (`scheduler.py:CATCHUP_JOB_IDS`, `run_startup_catchup`);
-  - the layout: fixed-minute jobs sit off the sync-tick set (`timebase.py:tick_minutes`,
-    `constants.py:SYNC_TICK_OFFSET_MIN`), and every notification job syncs first without gating its
-    send on the sync (`scheduler.py:_guarded_sync`, `SYNC_GUARD_WAIT_SECS`);
+    DeckStreak's replays run no sync first (ADR-037);
+  - the layout, which does NOT port: fixed-minute jobs sit off the sync-tick set
+    (`timebase.py:tick_minutes`, `constants.py:SYNC_TICK_OFFSET_MIN`), and every notification job
+    syncs first without gating its send on the sync (`scheduler.py:_guarded_sync`,
+    `SYNC_GUARD_WAIT_SECS`). DeckStreak syncs once per study day, and no job but `sync` syncs: a job
+    reads the study day's sync outcome instead (ADR-037). The tick function is kept only to name the
+    predecessor's sync minutes, which DeckStreak's slots keep off;
   - the dead-man watch and the drift check (`pipeline_layers/ops.py:OpsLayer._check_deadman`,
     `_check_rollover_drift`, `LIVENESS_STALE_INTERVAL_MULTIPLE`, `LIVENESS_MIN_STALE_SECS`,
     `LIVENESS_BOOT_GRACE_SECS`, `ROLLOVER_DRIFT_TOLERANCE_MIN`, `timebase.py:signed_skew_minutes`,
@@ -37,8 +42,9 @@
   the predecessor's store on a synthetic temporary database and runs each case's sequence of
   operations, returning every result and the row after each step); the catch-up decision
   (`goldens/catchup.json`, an adapter over `run_startup_catchup` with a stub scheduler holding one
-  cron trigger and a stub pipeline recording claims, records and invocations); the tick sets
-  (`goldens/tick_minutes.json`, `timebase.py:tick_minutes`); the skew arithmetic
+  cron trigger and a stub pipeline recording claims, records and invocations); the tick sets that
+  name the predecessor's sync minutes (`goldens/tick_minutes.json`, `timebase.py:tick_minutes`); the
+  skew arithmetic
   (`goldens/signed_skew.json`, `goldens/rollover_skew.json`); the predecessor's in-process schedule
   (`goldens/predecessor_schedule.json`, an adapter over `scheduler.py:create_scheduler` with
   default settings and a stub pipeline, listing each job's trigger fields); and the constants
@@ -54,15 +60,19 @@ writes the timers from this SPEC's job table, so both land after it.
 
 ## 2. Requirements
 
-R1. `coordination::jobs::TABLE` is the one schedule (ADR-027): each job has an id, a schedule
-    (every 15 minutes on DeckStreak's tick set, hourly at a minute, or daily at a local time), and
-    two flags: `syncs_first` and `catch_up`. At W0 it holds `sync` (every 15 minutes, ticks 7, 22,
-    37 and 52, the port of `tick_minutes` with offset 7), `maintenance` (daily at the rollover
-    hour, minute 28) and `liveness` (hourly at minute 14); none is `catch_up`.
-R2. No fixed-minute job fires on a minute of DeckStreak's tick set; and no DeckStreak job shares a
-    minute with the predecessor's schedule while both run: the in-process slots of
-    `goldens/predecessor_schedule.json` and the predecessor's three systemd timers (minutes 39, 25
-    and 0).
+R1. `coordination::jobs::TABLE` is the one schedule (ADR-027): each job has an id, a schedule (daily
+    at the rollover hour and a minute, daily at a local time, or hourly at a minute) and one flag,
+    `catch_up`. No job syncs first: only `sync` syncs, and every other job reads the study day's sync
+    outcome (SPEC-022, ADR-037). At W0 it holds `sync` (daily at the rollover hour, minute 7: the one
+    scheduled sync of the study day, claimed per study day like every once-a-day job, because its
+    slot follows the rollover and its fire date is the study day it runs in), `maintenance` (daily at
+    the rollover hour, minute 28) and `liveness` (hourly at minute 14). `sync` is `catch_up` (a fire
+    missed by at most `CATCHUP_MAX_LATE_MIN` minutes runs once at start, claimed for its study day);
+    the others are not.
+R2. No DeckStreak job shares a minute with the predecessor's schedule while both run: the in-process
+    slots of `goldens/predecessor_schedule.json`, the predecessor's sync ticks (its tick function at
+    its offset, `goldens/tick_minutes.json`), and its three systemd timers (minutes 39, 25 and 0);
+    and no other DeckStreak job shares the daily `sync` slot.
 R3. `cron_fires` (`migrations/002701_coordination_cron_fires.sql`, `STRICT`, `created_at`) keeps the
     predecessor's columns and constraint: `job_id`, `fire_date` (the LOCAL calendar date of the
     scheduled fire under the configured offset, which the predecessor called `fire_day`; a calendar
@@ -73,29 +83,34 @@ R4. `coordination::ledger` ports claim, release and record with the predecessor'
     one `BEGIN IMMEDIATE` write, and their results and rows equal `goldens/cron_ledger.json` for
     every case.
 R5. `coordination::runner::run(job)` is the one entrance every timer reaches (`deckstreakd job <id>`):
-    it finds the job's latest scheduled instant at or before now; a `syncs_first` job runs the sync
-    cycle first, waiting at most `SYNC_GUARD_WAIT_SECS` for a sync already holding the collection
-    lock and then proceeding without it, never gating its own work on the sync's result; a
-    `catch_up` job more than `CATCHUP_MAX_LATE_MIN` minutes late records `missed` (unless positive
-    evidence suppresses it) and exits without acting; a once-a-day job claims its (job, fire date)
-    and does nothing when the claim fails; after the job, the outcome is recorded; a job that
-    returned "not delivered" after the notifier reported an attempted send with no message id
-    releases its claim, and one that never engaged the notifier keeps it. The decision equals
-    `goldens/catchup.json` for every case.
+    it finds the job's latest scheduled instant at or before now; no job but `sync` runs the sync
+    cycle, and a job that needs the study day's data reads the study day's sync outcome and never
+    waits on a sync; a `catch_up` job more than `CATCHUP_MAX_LATE_MIN` minutes late records `missed`
+    (unless positive evidence suppresses it) and exits without acting; a once-a-day job, `sync`
+    included, claims its (job, fire date) and does nothing when the claim fails; after the job, the
+    outcome is recorded; a job that returned "not delivered" after the notifier reported an
+    attempted send with no message id releases its claim, and one that never engaged the notifier
+    keeps it. The decision equals `goldens/catchup.json` for every case.
 R6. The notifier's attempted and delivered counts reach the runner through a `DeliveryMarker` port of
     `coordination`, which the bot's transport implements in the composition root (SPEC-026).
 R7. The runner exits 0 when the job ran, skipped, or was recorded `missed`; it exits 1 to PAGE (the
     unit fails and `OnFailure=` sends the one alert, SPEC-031) only on a transition: the first error
-    of a job's error streak (a repeat only logs), the `SYNC_FAIL_ALERT_THRESHOLD`-th consecutive
-    sync failure, the first hard sync failure (`engine_failed`, `open_failed`) of a streak, the
+    of a job's error streak (a repeat only logs), the first failed scheduled sync of a study day (after
+    its bounded retries: with one scheduled sync a day the predecessor's
+    `SYNC_FAIL_ALERT_THRESHOLD` of consecutive failures would span days, so DeckStreak pages on the
+    first; an owner-triggered sync that fails never pages, because its reply shows the owner), the
+    first hard sync failure (`engine_failed`, `open_failed`) of a streak, the
     first liveness check that finds the sync dead, and the first drift beyond tolerance on a fire
     date. It exits 2 on an unknown job id. Its ERROR line carries reason codes and integers only.
 R8. The liveness job pages when no successful sync is newer than
-    `max(LIVENESS_STALE_INTERVAL_MULTIPLE * 15 * 60, LIVENESS_MIN_STALE_SECS)` seconds, or when no
-    sync has ever succeeded and the first recorded sync attempt is older than
-    `LIVENESS_BOOT_GRACE_SECS`; and when the maintenance job's last fire, read at the configured
-    offset, lies more than `ROLLOVER_DRIFT_TOLERANCE_MIN` minutes from its slot
-    (`signed_skew_minutes`, `rollover_skew_minutes`).
+    `SYNC_CADENCE_SECS + CATCHUP_MAX_LATE_MIN * 60` seconds (30 hours by default): one study day
+    (`SYNC_CADENCE_SECS`, 86400, ADR-037) plus the catch-up window. This is a recorded divergence
+    from the predecessor's `max(LIVENESS_STALE_INTERVAL_MULTIPLE * interval, LIVENESS_MIN_STALE_SECS)`,
+    whose multiple was sized for a 15-minute interval and would wait days at one sync a day; or when no sync has ever succeeded
+    and the first recorded sync attempt is older than `LIVENESS_BOOT_GRACE_SECS`; and when the
+    maintenance job's last fire, read at the configured offset, lies more than
+    `ROLLOVER_DRIFT_TOLERANCE_MIN` minutes from its slot (`signed_skew_minutes`,
+    `rollover_skew_minutes`).
 R9. The maintenance job runs `PRAGMA wal_checkpoint(TRUNCATE)` and `PRAGMA optimize`, and deletes
     `cron_fires` rows whose fire date is more than `CRON_FIRES_RETENTION_DAYS` days old.
 R10. `coordination`'s data-rights port declares `cron_fires` EXEMPT, with the reason that an erase
@@ -116,14 +131,15 @@ R11. The `job` role of `deckstreakd` runs one job and exits (a `oneshot` unit); 
 | A6 | an attempted send with no message id releases the claim; a job that never sent keeps it | `runner` test |
 | A7 | the dead-man watch pages when no sync succeeded within the window, once per episode | `liveness` test on a manual clock |
 | A8 | a drift of the maintenance fire beyond the tolerance pages | `liveness` test over `goldens/signed_skew.json` and `goldens/rollover_skew.json` |
-| A9 | every fixed-minute job keeps off the sync ticks, and the ticks equal the predecessor's function | `job_table` test over `goldens/tick_minutes.json` |
+| A9 | the daily `sync` slot keeps off the predecessor's sync ticks and every other job's slot, and those ticks equal the predecessor's function | `job_table` test over `goldens/tick_minutes.json` |
 | A10 | no job shares a minute with the predecessor's schedule | `job_table` test over `goldens/predecessor_schedule.json` |
 | A11 | the third consecutive sync failure pages once, and a repeat error only logs | `runner` test |
-| A12 | a job that syncs first proceeds after a bounded wait when a sync holds the lock | `runner` test |
+| A12 | no job but `sync` runs the sync cycle: every other job reads the study day's sync outcome, and a recording fake of the cycle sees no call from it | `runner` test |
 | A13 | maintenance checkpoints, optimises, and prunes ledger rows past the retention | `maintenance` test |
 | A14 | the ledger is declared exempt from export and erase, with its reason | `data_rights` test |
 | A15 | the scheduler's constants equal the predecessor's | `job_table` test over `goldens/scheduler.constants.json` |
 | A16 | the `job` role runs a job by id and refuses an unknown id with code 2 | daemon `roles` test |
+| A17 | the job table holds `sync` to one daily slot, the rollover hour at minute 7, claimed per study day like every once-a-day job | `job_table` test |
 
 ```acceptance
 A1: cargo test -p deck-streak-coordination --test ledger -- --exact two_concurrent_runs_of_one_daily_job_for_one_fire_date_act_once
@@ -134,32 +150,34 @@ A5: cargo test -p deck-streak-coordination --test runner -- --exact the_catch_up
 A6: cargo test -p deck-streak-coordination --test runner -- --exact an_attempted_send_without_a_message_id_releases_the_claim
 A7: cargo test -p deck-streak-coordination --test liveness -- --exact the_dead_man_watch_pages_once_when_no_sync_succeeded_within_the_window
 A8: cargo test -p deck-streak-coordination --test liveness -- --exact a_maintenance_fire_drifting_past_the_tolerance_pages
-A9: cargo test -p deck-streak-coordination --test job_table -- --exact every_fixed_minute_job_keeps_off_the_sync_ticks
+A9: cargo test -p deck-streak-coordination --test job_table -- --exact the_daily_sync_slot_keeps_off_the_predecessors_ticks_and_every_other_slot
 A10: cargo test -p deck-streak-coordination --test job_table -- --exact no_job_shares_a_minute_with_the_predecessors_schedule
 A11: cargo test -p deck-streak-coordination --test runner -- --exact the_third_consecutive_sync_failure_pages_once
-A12: cargo test -p deck-streak-coordination --test runner -- --exact a_job_that_syncs_first_proceeds_after_a_bounded_wait
+A12: cargo test -p deck-streak-coordination --test runner -- --exact no_job_but_sync_runs_the_sync_cycle
 A13: cargo test -p deck-streak-coordination --test maintenance -- --exact maintenance_checkpoints_optimises_and_prunes_the_ledger
 A14: cargo test -p deck-streak-coordination --test data_rights -- --exact the_cron_fire_ledger_is_declared_exempt_with_its_reason
 A15: cargo test -p deck-streak-coordination --test job_table -- --exact the_scheduler_constants_equal_the_predecessors
 A16: cargo test -p deck-streak-daemon --test roles -- --exact the_job_role_runs_a_job_by_id_and_refuses_an_unknown_one
+A17: cargo test -p deck-streak-coordination --test job_table -- --exact the_job_table_holds_sync_to_one_daily_slot_claimed_per_study_day
 ```
 
 The runner tests register a synthetic `catch_up` notification job with a fake `DeliveryMarker`,
-because no real notification job exists before W1; every clock is a `ManualClock`, and the bounded
-wait of A12 runs on tokio's paused time. A1 runs two runner tasks against one temporary database.
+because no real notification job exists before W1; every clock is a `ManualClock`, and A12 runs
+each job against a recording fake of the sync cycle. A1 runs two runner tasks against one temporary
+database.
 
 ## 4. File manifest
 
 | file | context | change |
 |---|---|---|
-| `crates/coordination/src/jobs.rs` | `deck-streak-coordination` | added: the job table and the tick port |
+| `crates/coordination/src/jobs.rs` | `deck-streak-coordination` | added: the job table, `sync` as one daily slot, and the port of the predecessor's tick function |
 | `crates/coordination/src/ledger.rs` | `deck-streak-coordination` | added: claim, release, record |
 | `crates/coordination/src/runner.rs` | `deck-streak-coordination` | added: the one entrance, the catch-up, the paging transitions |
 | `crates/coordination/src/liveness.rs` | `deck-streak-coordination` | added: the dead-man watch and the drift check |
 | `crates/coordination/src/maintenance.rs` | `deck-streak-coordination` | added |
 | `crates/coordination/src/delivery.rs` | `deck-streak-coordination` | added: the `DeliveryMarker` port |
 | `crates/coordination/src/data_rights.rs`, `crates/coordination/src/lib.rs`, `crates/coordination/Cargo.toml` | `deck-streak-coordination` | added or changed |
-| `crates/coordination/tests/ledger.rs`, `crates/coordination/tests/runner.rs`, `crates/coordination/tests/liveness.rs`, `crates/coordination/tests/job_table.rs`, `crates/coordination/tests/maintenance.rs`, `crates/coordination/tests/data_rights.rs` | `deck-streak-coordination` | added: A1 to A15 |
+| `crates/coordination/tests/ledger.rs`, `crates/coordination/tests/runner.rs`, `crates/coordination/tests/liveness.rs`, `crates/coordination/tests/job_table.rs`, `crates/coordination/tests/maintenance.rs`, `crates/coordination/tests/data_rights.rs` | `deck-streak-coordination` | added: A1 to A15, A17 |
 | `crates/daemon/src/role_job.rs`, `crates/daemon/src/main.rs` | `deck-streak-daemon` | added or changed: the `job` role |
 | `crates/daemon/tests/roles.rs` | `deck-streak-daemon` | changed: A16 |
 | `migrations/002701_coordination_cron_fires.sql` | `deck-streak-coordination` | added |
@@ -187,15 +205,24 @@ wait of A12 runs on tokio's paused time. A1 runs two runner tasks against one te
 - It adds no job for the vault bridge, drills, landmarks or the weekly report
   (#153, #136, #127,
   #130).
+- It raises no sync cadence: one scheduled sync per study day holds until cutover decides otherwise
+  (#164).
 
 ## 6. Risks
 
 - **The timers and the table disagree.** SPEC-032's test holds every timer's calendar equal to its
   job's table entry, and the drift check pages when the maintenance fire lands off its slot.
 - **A timer fires twice for one fire date** (a restart with `Persistent=`, a manual start). The
-  claim makes the second a no-op; A1 proves it under concurrency.
+  claim makes the second a no-op; A1 proves it under concurrency, and A17 holds `sync` to a claimed
+  daily slot.
 - **A `TRUNCATE` checkpoint meets Litestream's read lock.** The checkpoint then completes partially
   and returns busy, which is not an error; the predecessor ran the same statement beside
   Litestream. The restore drill (W2) proves the replica (#44).
-- **A paging job pages every 15 minutes.** R7 pages only on transitions recorded in the ledger and
-  `sync_runs`; A7 and A11 prove "once per episode".
+- **A paging job pages on every run.** R7 pages only on transitions recorded in the ledger and
+  `sync_runs`; the liveness job runs hourly, and A7 and A11 prove "once per episode".
+- **The host is down across the sync slot.** `sync` is not a catch-up job, so that study day has no
+  scheduled sync. The jobs that read it record `sync_failed`, and the owner's `/sync` (SPEC-026)
+  recovers the day (ADR-037).
+- **The sync fails once and the day waits.** With one scheduled sync a day, the failure alert pages
+  on R7's transitions, and the dead-man window is a multiple of a study day (R8); the owner's
+  `/sync` is the remedy in between (ADR-037).

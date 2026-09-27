@@ -1,7 +1,7 @@
 # SPEC-032: every unit, timer and the Caddy block exist as hardened templates inside a declared host budget, and none names a private value
 
 - **Wave:** W0. **Issue:** #25 (epic #1). **Context(s):** `deploy` (`deploy/`), `deck-streak-coordination` (the timer-versus-table test), `repo` (`.packs/wiring.json`).
-- **Decided by:** ADR-007 (one Caddy site block, loopback API, the security headers, `noindex`), ADR-010 (hardened units per role, credentials by `LoadCredentialEncrypted=`, `MemoryHigh` below `MemoryMax` from the host budget), ADR-011 (side by side with the predecessor), ADR-025 (health closed at the edge), ADR-027 (the timers and their slots), and this SPEC's ADR-032 (neutral, lint-valid templates the private rail fills; the host budget's numbers).
+- **Decided by:** ADR-007 (one Caddy site block, loopback API, the security headers, `noindex`), ADR-010 (hardened units per role, `MemoryHigh` below `MemoryMax` from the host budget), ADR-038 (credentials by `LoadCredential=` from the credential socket at each start, superseding ADR-010's `LoadCredentialEncrypted=`), ADR-011 (side by side with the predecessor), ADR-025 (health closed at the edge), ADR-027 (the timers and their slots), and this SPEC's ADR-032 (neutral, lint-valid templates the private rail fills; the host budget's numbers).
 - **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
   `docs/specs/` with its tests and `docs/red-first/SPEC-032.md` (ADR-016).
 
@@ -48,9 +48,11 @@ R2. Every service runs `deckstreakd <role>` from the release root's `current` li
     `CapabilityBoundingSet=`, the remaining hardening the pack's advisory rows score, `UMask=0077`,
     `SyslogIdentifier=` its own name, and `OnFailure=deck-streak-alert@%n.service` (the alert unit is
     SPEC-031's).
-R3. Secrets reach a unit only through `LoadCredentialEncrypted=<id>` with no path (systemd resolves
-    the credential store); no secret-named `Environment=` exists; non-secret settings come from one
-    required `EnvironmentFile=` (never the optional `-` form), whose committed example,
+R3. Secrets reach a unit only as `LoadCredential=<id>:/run/deck-streak-credentials/socket`
+    (ADR-038), `<id>` being one of DeckStreak's own credential ids and the path the credential socket
+    the private rail serves; never `LoadCredentialEncrypted=`, never a credential in an
+    `Environment=` line, and never a literal. Non-secret settings come from one required
+    `EnvironmentFile=` (never the optional `-` form), whose committed example,
     `deploy/deck-streak.env.example`, holds neutral values only.
 R4. Each timer's calendar equals its job's slot in coordination's job table, written in UTC as the
     neutral zone (the private rail renders the owner's zone, ADR-027); `Persistent=` is set only on
@@ -98,6 +100,7 @@ R10. No committed file writes a template instance name literally (a template, `@
 | A6 | no deploy template names a private value, and a planted one is refused | `test_deploy_templates.py`; the public scrub |
 | A7 | every timer's calendar equals its job's slot in the job table | coordination `job_table` test |
 | A8 | no unit passes a secret through its environment | `test_deploy_templates.py`; durable-services `secrets.*` |
+| A9 | every credential line of every template has the socket form, and a planted `LoadCredentialEncrypted=` line is refused (examined count reported) | `test_deploy_templates.py` |
 
 ```acceptance
 A1: python3 -m unittest discover -s scripts/tests -p test_deploy_templates.py -k the_durable_lint_finds_no_blocking_defect_in_the_templates
@@ -108,12 +111,15 @@ A5: python3 -m unittest discover -s scripts/tests -p test_deploy_templates.py -k
 A6: python3 -m unittest discover -s scripts/tests -p test_deploy_templates.py -k no_deploy_template_names_a_private_value
 A7: cargo test -p deck-streak-coordination --test job_table -- --exact every_timer_calendar_equals_its_job_table_entry
 A8: python3 -m unittest discover -s scripts/tests -p test_deploy_templates.py -k no_unit_passes_a_secret_through_its_environment
+A9: python3 -m unittest discover -s scripts/tests -p test_deploy_templates.py -k every_credential_line_has_the_socket_form_and_encrypted_is_refused
 ```
 
 A1 runs the vendored `durable-unit-lint.py lint --root . --format json` and asserts the examined
 units and zero blocking findings; A6 runs `scripts/public-scrub.py` over `deploy/`, and over a planted
 template the test writes at run time into a `TemporaryDirectory`, carrying a private-range address
-assembled from its octets in the test, so no address literal is ever committed.
+assembled from its octets in the test, so no address literal is ever committed. A9 reads every
+`LoadCredential*=` line of every template, reports how many it examined, and refuses a planted
+template written at run time into a `TemporaryDirectory`.
 
 ## 4. File manifest
 
@@ -127,7 +133,7 @@ assembled from its octets in the test, so no address literal is ever committed.
 | `deploy/host-budget.json` | deploy | added |
 | `deploy/caddy/deck-streak.caddy` | deploy | added |
 | `deploy/README.md` | deploy | added: what each template is, and that the private rail fills it |
-| `scripts/tests/test_deploy_templates.py` | repo | added: A1 to A6, A8 |
+| `scripts/tests/test_deploy_templates.py` | repo | added: A1 to A6, A8, A9 |
 | `crates/coordination/tests/job_table.rs` | `deck-streak-coordination` | changed: A7 |
 | `.packs/wiring.json` | repo | changed: durable-services enforced with three deferred rows; seven observability rows deferred |
 | `docs/schematics/deployment.md` | repo | changed: the budget per unit |
@@ -141,6 +147,9 @@ assembled from its octets in the test, so no address literal is ever committed.
   go (#42).
 - It writes no deploy or rollback script (#42).
 - It provisions no credential and no environment file on the host (#41).
+- It ships no credential fetch helper, no socket unit for it and no map of credential ids to secret
+  names: the templates name only the socket path, and those pieces are the private rail's, outside
+  this repository (ADR-038, #41).
 - It builds no daily backup, offsite copy or restore drill (#44).
 - It ships no alert unit, SLO, evaluator or memory watch (#24).
 - It opens no tunnel for the agent (#43).
@@ -163,3 +172,10 @@ assembled from its octets in the test, so no address literal is ever committed.
 - **A hardening option breaks a role.** `MemoryDenyWriteExecute=` and the system-call filter are
   exercised when W2 first starts the units; a denied call shows as the unit's failure with its
   result, paged through the alert unit.
+- **A credential cannot be fetched when a unit starts.** The unit does not start, and its
+  `OnFailure=` alert names the credential id, never a value (ADR-038); the service's restart policy
+  retries.
+- **A template's instances reach the socket under their instance names.** systemd names the unit in
+  the address it binds for each credential (ADR-038), and the job and alert templates run under a
+  new instance name each time, so the private rail's map must match an instance by its template
+  (#41); W2's rehearsal proves it on the host.

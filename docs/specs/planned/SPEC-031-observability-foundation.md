@@ -1,7 +1,7 @@
 # SPEC-031: every role logs one way, the API has an SLO with burn-rate pages, and every failure reaches the owner through one alert unit
 
 - **Wave:** W0. **Issue:** #24 (epic #1). **Context(s):** `deck-streak-daemon` (the roles' logging), `deploy` (the alert unit, the SLO evaluator, the memory watch, `deploy/slo.json`), `repo` (`.packs/wiring.json`).
-- **Decided by:** ADR-003 (tracing JSON to journald), ADR-010 (`OnFailure=` the Telegram alert template unit; credentials by `LoadCredentialEncrypted=`), ADR-020 (the kernel's one logging setup), ADR-025 (the API's trace layer), ADR-032 (the budget of these units), and this SPEC's ADR-031 (an SLO sized for one owner's traffic, and an alert path that never puts the token on a command line).
+- **Decided by:** ADR-003 (tracing JSON to journald), ADR-010 (`OnFailure=` the Telegram alert template unit), ADR-038 (credentials by `LoadCredential=` from the credential socket, superseding ADR-010's `LoadCredentialEncrypted=`), ADR-020 (the kernel's one logging setup), ADR-025 (the API's trace layer), ADR-032 (the budget of these units), and this SPEC's ADR-031 (an SLO sized for one owner's traffic, and an alert path that never puts the token on a command line).
 - **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
   `docs/specs/` with its tests and `docs/red-first/SPEC-031.md` (ADR-016).
 
@@ -59,9 +59,11 @@ R5. `deploy/scripts/memory-watch.sh`, run by `deck-streak-memory-watch.timer` ev
     `memory-watch.template.timer`), reads each DeckStreak unit's `memory.events`: a new `oom_kill` or
     `max` event pages (exit 1), a new `high` event and a usage above 90% of `memory.max` are logged;
     each event pages once, remembered in `$STATE_DIRECTORY`.
-R6. The three units carry the budget ADR-032 gives them, the hardening of SPEC-032's units, and
-    `LoadCredentialEncrypted=` for the alert unit's two credentials; `deploy/host-budget.json` gains
-    their entries.
+R6. The three units carry the budget ADR-032 gives them and the hardening of SPEC-032's units; the
+    alert unit loads each of its two credentials as
+    `LoadCredential=<id>:/run/deck-streak-credentials/socket` (ADR-038), never
+    `LoadCredentialEncrypted=` or an `Environment=` value; `deploy/host-budget.json` gains their
+    entries.
 R7. `.packs/wiring.json` moves observability to `enforced` and removes the seven deferrals SPEC-032
     placed on it; every observability row is green over the tree.
 
@@ -137,3 +139,6 @@ on the child process. A5 feeds the evaluator a synthetic journal export; A6 a sy
   loop in a failed state, which pages once; the evaluator and the watch page once per episode.
 - **Telegram is unreachable when a page is sent.** `curl` retries three times with a delay; a page
   that still fails leaves the alert unit failed, visible in `systemctl --failed` and the journal.
+- **The secret manager is unreachable when a page is due.** The alert unit fetches its two
+  credentials at each start (ADR-038), so it cannot start and the page is lost with it; the failure
+  stays visible in `systemctl --failed` and the journal, like a Telegram outage.
