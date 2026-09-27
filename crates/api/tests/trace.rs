@@ -65,11 +65,13 @@ fn child_stdout(child: &str, level: &str) -> Vec<String> {
     stdout.lines().map(str::to_owned).collect()
 }
 
-/// The response report a child printed for `probe`: its status and its request id.
+/// The response report a child printed for `probe`: its status and its request id. The test
+/// harness prints `test <name> ... ` on the line a child's first output lands on, so a report is
+/// found wherever it starts in a line.
 fn reported<'a>(lines: &'a [String], probe: &str) -> Option<(&'a str, &'a str)> {
-    let prefix = format!("response probe={probe} ");
+    let marker = format!("response probe={probe} ");
     lines.iter().find_map(|line| {
-        let rest = line.strip_prefix(&prefix)?;
+        let rest = &line[line.find(&marker)? + marker.len()..];
         let (status, id) = rest.split_once(' ')?;
         Some((
             status.strip_prefix("status=")?,
@@ -78,12 +80,19 @@ fn reported<'a>(lines: &'a [String], probe: &str) -> Option<(&'a str, &'a str)> 
     })
 }
 
-/// The event lines: each a JSON object after its journal priority.
+/// The event lines: each a JSON object after its journal priority, from wherever the priority
+/// starts in its line, for the same reason.
 fn events(lines: &[String]) -> Vec<&str> {
     lines
         .iter()
-        .filter(|line| line.len() > 3 && line.starts_with('<') && line[3..].starts_with('{'))
-        .map(String::as_str)
+        .filter_map(|line| {
+            line.match_indices('{').find_map(|(brace, _)| {
+                let start = brace.checked_sub(3)?;
+                let priority = line.get(start..brace)?.as_bytes();
+                (priority[0] == b'<' && priority[1].is_ascii_digit() && priority[2] == b'>')
+                    .then(|| &line[start..])
+            })
+        })
         .collect()
 }
 
@@ -119,20 +128,23 @@ async fn child_serves_requests_under_the_layers() {
         let request = Request::get(path)
             .body(Body::empty())
             .expect("a well-formed request");
-        let response = app
-            .clone()
-            .oneshot(request)
-            .await
-            .expect("the router is infallible");
-        let id = response
-            .headers()
-            .get("x-request-id")
-            .and_then(|value| value.to_str().ok())
-            .unwrap_or("none");
-        println!(
-            "response probe={probe} status={} request-id={id}",
-            response.status().as_u16()
-        );
+        // Served on a task of its own, so a panic no layer caught is reported rather than ending
+        // the child before it reports the other responses.
+        let served = tokio::spawn(app.clone().oneshot(request)).await;
+        let (status, id) = match served {
+            Ok(Ok(response)) => {
+                let id = response
+                    .headers()
+                    .get("x-request-id")
+                    .and_then(|value| value.to_str().ok())
+                    .unwrap_or("none")
+                    .to_owned();
+                (response.status().as_u16().to_string(), id)
+            }
+            Ok(Err(infallible)) => match infallible {},
+            Err(_) => ("escaped".to_owned(), "none".to_owned()),
+        };
+        println!("response probe={probe} status={status} request-id={id}");
     }
 }
 
@@ -257,7 +269,7 @@ fn sensitive_header_values_never_reach_the_log() {
     assert!(
         lines
             .iter()
-            .any(|line| line == "response probe=a9 status=200 set-cookie-sensitive=true"),
+            .any(|line| line.ends_with("response probe=a9 status=200 set-cookie-sensitive=true")),
         "{lines:#?}"
     );
 }
