@@ -1,7 +1,7 @@
 {
   "schema": "deckstreak.vendored-packs.v1",
   "source": "RexRenatus/phoenix-v2",
-  "vendored_from": "19bb0f328d914d844935846e4dc7758d0c00295b",
+  "vendored_from": "e54f39c5ad586fc59da33b56bd8e0044af277c25",
   "why": "DeckStreak runs the packs' standard-library probes in its own CI until the open-source pack runner exists (ADR-004). Four phxd packs (web-launch, vibecode-polish, ux-laws, ui-styles) are vendored as data only: the accessibility matrix names their rows.",
   "excluded": [
     {
@@ -246,7 +246,7 @@
     {
       "path": ".packs/skills/packs/durable-services/checks.json",
       "from": "skills/packs/durable-services/checks.json",
-      "sha256": "8fea45c9a7a792fda63245185c2053f5febe195d5ebf843ebfc8028fdaff258a"
+      "sha256": "02698d0425ce2cf24da9984e5f2ff6d172671e358d208c3fbabac2c63e799548"
     },
     {
       "path": ".packs/skills/packs/game-economy/SKILL.md",
@@ -696,7 +696,7 @@
     {
       "path": ".packs/skills/packs/rust-service/SKILL.md",
       "from": "skills/packs/rust-service/SKILL.md",
-      "sha256": "5b14589fa79e010c8030538b944842aa1ee1ddebfacce6be8acc8d47eb5af7c1"
+      "sha256": "c174dcf1ddb2a363984d3c6a6d9a4cc96544b7452022782f8fc1c15c8a9be8d8"
     },
     {
       "path": ".packs/skills/packs/rust-service/checks.json",
