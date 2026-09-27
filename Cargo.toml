@@ -45,6 +45,15 @@ deck-streak-daemon = { path = "crates/daemon" }
 # them; later ADRs cite ADR-029 rather than admitting them again.
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.151"
+# ADR-003: the backend stack, admitted by the kernel (SPEC-020). sqlx carries exactly the features
+# the kernel's repository base needs; a member adds tokio's features as it uses them.
+sqlx = { version = "0.9.0", default-features = false, features = ["runtime-tokio", "sqlite", "migrate", "macros"] }
+tokio = "~1.53"
+thiserror = "2.0.21"
+tracing = "0.1.44"
+tracing-subscriber = { version = "0.3.23", default-features = false, features = ["fmt", "json", "env-filter"] }
+# ADR-020: a temporary database or collection, in tests only.
+tempfile = "3.27.0"
 
 [workspace.lints.rust]
 unsafe_code = "forbid"
