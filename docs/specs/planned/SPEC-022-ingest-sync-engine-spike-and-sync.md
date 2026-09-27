@@ -45,7 +45,8 @@ The spike (settles ADR-009)
 R1. The engine is added to `ingest` only, as `anki` from Anki's repository pinned to the release tag
     of the line the predecessor's pinned Python package comes from, behind an `AnkiEngine` port that
     keeps every engine type inside `ingest` (the anti-corruption layer); `deny.toml`'s
-    `allow-git` names that repository and nothing else.
+    `allow-git` names that repository and the one fork the engine's own manifest pins by revision
+    (`ankitects/rust-url`, for `percent-encoding-iri`), and nothing else (§7).
 R2. The measurement follows ADR-022 exactly: the synthetic collection it defines, a cold build on a
     GitHub-hosted `ubuntu-24.04` runner by `.github/workflows/engine-measure.yml` (pull requests
     that change `crates/ingest/**` or `Cargo.lock`, read-only token, pinned actions), the stripped
@@ -55,7 +56,9 @@ R3. The spike passes only if every ADR-022 budget holds: cold build at most 20 m
     binary at most 100 MiB, peak RSS at most 256 MiB for opening the collection and resolving its
     new-card queue, peak RSS at most 256 MiB for a full download, an incremental sync of 100 new
     reviews within 60 seconds; and `cargo deny` passes, any licence added to `deny.toml`'s allow
-    list being compatible with AGPL-3.0-or-later (ADR-018) and named in ADR-022's outcome. A tool
+    list being compatible with AGPL-3.0-or-later (ADR-018) and named in ADR-022's outcome, and any
+    advisory the engine's tree brings being an exception `deny.toml` names by its id and reason
+    and ADR-022's outcome lists (§7). A tool
     the engine's build needs beyond the pinned toolchain (a protobuf compiler, say) is installed in
     the workflow and counted inside the build budget.
 R4. ADR-009 records the numbers in its Confirmation section and its status becomes `accepted`, or
@@ -142,7 +145,7 @@ finish in about a minute; they run in the gate like every other test.
 
 | file | context | change |
 |---|---|---|
-| `crates/ingest/Cargo.toml` | `deck-streak-ingest` | changed: `anki` (git, pinned tag), kernel, tokio, thiserror, tracing; dev: tempfile, serde, serde_json |
+| `crates/ingest/Cargo.toml` | `deck-streak-ingest` | changed: `anki` (git, pinned tag), kernel, tokio, thiserror, tracing; dev: tempfile, tokio (the tests' and the probe's runtime), serde, serde_json |
 | `crates/ingest/src/lib.rs` | `deck-streak-ingest` | changed |
 | `crates/ingest/src/engine.rs` | `deck-streak-ingest` | added: the `AnkiEngine` port and its adapter over the engine |
 | `crates/ingest/src/sync.rs` | `deck-streak-ingest` | added: `Syncer`, retries, the reason codes |
@@ -157,8 +160,10 @@ finish in about a minute; they run in the gate like every other test.
 | `migrations/002201_ingest_sync_runs.sql` | `deck-streak-ingest` | added |
 | `.sqlx/` | workspace | changed |
 | `Cargo.toml`, `Cargo.lock` | workspace | changed: `anki` admitted by ADR-022 |
-| `deny.toml` | workspace | changed: `allow-git` for Anki's repository; any compatible licence the engine needs |
+| `deny.toml` | workspace | changed: `allow-git` for Anki's repository and the fork its engine pins; any compatible licence the engine needs; the engine's advisories, each by id and reason (§7) |
 | `.github/workflows/engine-measure.yml` | repo | added: the cold-build and size measurement |
+| `.github/workflows/ci.yml` | repo | changed: the gate job installs the protobuf compiler the engine's build needs (§7) |
+| `scripts/check.sh` | repo | changed: the toolchain stage names the protobuf compiler (§7) |
 | `scripts/tests/test_engine_spike_record.py` | repo | added: A1 |
 | `tools/parity-oracle/registry/spec_022.py` | repo | added: the retry adapter and the sync constants |
 | `tools/parity-oracle/goldens/sync_retry.json`, `sync.constants.json` | repo | added |
@@ -198,3 +203,22 @@ finish in about a minute; they run in the gate like every other test.
 - **A full download fills the disk.** The download is written beside the copy before the swap, so
   it needs one collection's worth of free space; the host's disk headroom is the host inventory's (#40),
   and a failed write ends in `engine_failed` with the old copy intact.
+
+## 7. Amendments at delivery
+
+- **R1: two git sources, both Anki's.** The engine's own manifest at `26.05` takes
+  `percent-encoding-iri` from its fork `ankitects/rust-url`, pinned by revision, so a lockfile with
+  the engine holds a second git source and "that repository and nothing else" could not hold.
+  `deny.toml` names exactly the two, and `unknown-git` still refuses any third.
+- **R3: the engine's advisories are named exceptions.** The gate's audit stage runs
+  `cargo deny check advisories` over every crate in the lockfile. The engine's tree brings eight
+  RustSec "unmaintained" notices and no vulnerability: `paste` (RUSTSEC-2024-0436), five `unic-*`
+  crates (RUSTSEC-2025-0075, -0080, -0081, -0094, -0098), `rustls-pemfile` (RUSTSEC-2025-0134) and
+  `bincode` (RUSTSEC-2025-0141). Each is an exception with its reason, as `deny.toml` requires,
+  and ADR-022's outcome lists them; the predecessor's Python package carries the same engine and
+  the same crates.
+- **Manifest: `ci.yml` and `check.sh`.** The engine's build scripts compile Anki's protobuf
+  definitions with `prost-build`, which needs `protoc` (on `PATH`, or named by `PROTOC`). The
+  gate's clippy and test stages build the engine, so the gate job installs the same `protoc` the
+  measurement does, and the toolchain stage names it, so a machine without it fails there by name
+  rather than deep inside a build script.
