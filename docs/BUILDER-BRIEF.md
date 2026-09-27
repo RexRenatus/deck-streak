@@ -60,6 +60,15 @@ request into `dev`.
    gate's output.
 3. The orchestrator verifies by measurement (the gate on your head, the red-first record, the
    examined counts, the pack rows) and marks the pull request ready and merges it. Do not merge.
+4. `dev` requires an up-to-date head (ADR-034). When `dev` moves while you work, bring it into your
+   branch with `git fetch origin && git merge origin/dev`: a merge commit, never a rebase, so the
+   shas your red-first record cites survive. Then run the gate again.
+5. Scrub the pull request's body before you post it, because this repository is public:
+   `python3 scripts/public-scrub.py --root . --no-tree --subject <the directory holding the body>`,
+   with the body kept outside the repository.
+6. Never push to `dev` or `main`: every change reaches them by a pull request. Agents never approve
+   a workflow run from a fork, and never merge a pull request whose head repository is not
+   `RexRenatus/deck-streak` (ADR-035).
 
 ## Writing a DeckStreak skill pack (the pack-wave method)
 
