@@ -57,12 +57,15 @@
       "note": "it reads a tree with no unit as a finding, not as VOID"
     },
     "accessibility": {
-      "state": "pending",
-      "enforced_by": "#21"
+      "state": "enforced"
     },
     "cjk-typography": {
-      "state": "pending",
-      "enforced_by": "#21"
+      "state": "enforced",
+      "deferred_rows": {
+        "furigana-ruby": "#37",
+        "pinyin-tones": "#37"
+      },
+      "note": "language-mentors' two composed rows judge mentor texts, which arrive with the readings screen"
     },
     "privacy-gdpr": {
       "state": "pending",
