@@ -1,6 +1,6 @@
 # SPEC-002: the skeleton and the local gate
 
-- **Wave:** W0 (phase 1, the architect's delivery). **Issue:** {{issue:DS-W0-13}} (epic {{issue:EPIC-W0}}). **Context(s):** every crate (structure only), `repo`.
+- **Wave:** W0 (phase 1, the architect's delivery). **Issue:** #23 (epic #1). **Context(s):** every crate (structure only), `repo`.
 - **Decided by:** ADR-002, ADR-004, ADR-012, ADR-013, ADR-016, ADR-017.
 - **Status:** judged: delivered with its tests in phase 1.
 
@@ -84,10 +84,10 @@ A10: python3 -m unittest discover -s scripts/tests -p test_pack_wiring.py -k the
 ## 5. What this does NOT do
 
 - It writes no feature code: the kernel's types, the database base and every behaviour are W0's
-  deliveries ({{issue:DS-W0-01}}).
+  deliveries (#11).
 - It runs no phxd-built pack in CI: those run on the maintainer's box until the open-source pack
-  runner exists ({{issue:DS-W7-04}}).
-- It creates no landing page: the `landing` context stays planned until W7 ({{issue:DS-W7-03}}).
+  runner exists (#60).
+- It creates no landing page: the `landing` context stays planned until W7 (#59).
 
 ## 6. Risks
 

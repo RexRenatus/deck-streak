@@ -7,7 +7,7 @@
     "ddd": {
       "state": "enforced",
       "deferred_rows": {
-        "lexicon-locks": "{{issue:DS-W0-01}}"
+        "lexicon-locks": "#11"
       },
       "note": "lexicon-locks reads identifiers, and the skeleton declares none"
     },
@@ -23,94 +23,94 @@
     "telegram-platform": {
       "state": "enforced",
       "deferred_rows": {
-        "tg-retry-after": "{{issue:DS-W0-09}}",
-        "tg-callback-answer": "{{issue:DS-W0-09}}"
+        "tg-retry-after": "#19",
+        "tg-callback-answer": "#19"
       },
       "note": "the probe reads the vendored probes as bot source until the real bot exists; reported as pack feedback"
     },
     "notifications-policy": {
       "state": "enforced",
       "deferred_rows": {
-        "one-router": "{{issue:DS-W1-02}}"
+        "one-router": "#27"
       }
     },
     "game-economy": {
       "state": "enforced",
       "deferred_rows": {
-        "odds-disclosed": "{{issue:session-chests}}"
+        "odds-disclosed": "#102"
       }
     },
     "release-ops": {
       "state": "pending",
-      "enforced_by": "{{issue:DS-W2-03}}",
+      "enforced_by": "#42",
       "deferred_rows": {
-        "ro.rollback-entrypoint": "{{issue:DS-W2-03}}"
+        "ro.rollback-entrypoint": "#42"
       }
     },
     "observability": {
       "state": "pending",
-      "enforced_by": "{{issue:DS-W0-14}}"
+      "enforced_by": "#24"
     },
     "durable-services": {
       "state": "deferred",
-      "enforced_by": "{{issue:DS-W0-15}}",
+      "enforced_by": "#25",
       "note": "it reads a tree with no unit as a finding, not as VOID"
     },
     "accessibility": {
       "state": "pending",
-      "enforced_by": "{{issue:DS-W0-11}}"
+      "enforced_by": "#21"
     },
     "cjk-typography": {
       "state": "pending",
-      "enforced_by": "{{issue:DS-W0-11}}"
+      "enforced_by": "#21"
     },
     "privacy-gdpr": {
       "state": "pending",
-      "enforced_by": "{{issue:DS-W0-04}}"
+      "enforced_by": "#14"
     },
     "ai-content-safety": {
       "state": "pending",
-      "enforced_by": "{{issue:DS-W1-04}}"
+      "enforced_by": "#29"
     },
     "pack-authoring": {
       "state": "pending",
-      "enforced_by": "{{issue:DS-W1-04}}"
+      "enforced_by": "#29"
     },
     "persona-core": {
       "state": "pending",
-      "enforced_by": "{{issue:DS-W1-05}}"
+      "enforced_by": "#30"
     },
     "language-mentors": {
       "state": "pending",
-      "enforced_by": "{{issue:DS-W1-05}}"
+      "enforced_by": "#30"
     },
     "law-professors": {
       "state": "pending",
-      "enforced_by": "{{issue:DS-W1-05}}"
+      "enforced_by": "#30"
     },
     "study-duties": {
       "state": "pending",
-      "enforced_by": "{{issue:DS-W1-07}}"
+      "enforced_by": "#32"
     },
     "learning-science": {
       "state": "pending",
-      "enforced_by": "{{issue:DS-W1-07}}"
+      "enforced_by": "#32"
     },
     "lsat-coach": {
       "state": "pending",
-      "enforced_by": "{{issue:DS-W6-07}}"
+      "enforced_by": "#52"
     },
     "nudge-duties": {
       "state": "pending",
-      "enforced_by": "{{issue:DS-W6-08}}"
+      "enforced_by": "#53"
     },
     "vault-duties": {
       "state": "pending",
-      "enforced_by": "{{issue:DS-W6-04}}"
+      "enforced_by": "#49"
     },
     "data-migration": {
       "state": "pending",
-      "enforced_by": "{{issue:DS-W8-01}}"
+      "enforced_by": "#61"
     },
     "web-launch": {
       "state": "phxd",
