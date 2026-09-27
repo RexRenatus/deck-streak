@@ -6,7 +6,7 @@ packages:
 # One version for a tool that more than one package depends on. Vitest is a devDependency of the
 # root, which runs web/app's tests from the repository root, and of web/app itself.
 catalog:
-  vitest: ^4.1.11
+  vitest: ^5.0.1
 
 # Refuse to install on a Node that a package's `engines` rules out (the root pins Node 24).
 engineStrict: true
