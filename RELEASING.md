@@ -30,6 +30,13 @@ release pull request's checks and its merge. Those checks run on the pull reques
 which already contains `main` (ADR-034). `dev`'s ruleset does require an up-to-date head, because
 many pull requests land there.
 
+Measured before `v0.1.0` was tagged (SPEC-034 R6, probe pull request #193):
+- **The release pull request merges.** `dev` lacked `main`'s release merge commit (behind by 1,
+  ahead by 3), and a release pull request from `dev` still read mergeable and `CLEAN`, not
+  `BEHIND`.
+- **Update-branch is refused.** GitHub's update-branch on that pull request answered HTTP 422,
+  "Changes must be made through a pull request", and left `dev` unchanged. Nothing needs it.
+
 ```sh
 gh pr create --base main --head dev --title "release: vX.Y.Z" --body-file release-notes.md
 ```
