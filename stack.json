@@ -1,0 +1,137 @@
+{
+  "schema": "phx.stack.v1",
+  "radar": ".packs/skills/packs/stack-selection/radar.json",
+  "app_types": [
+    "backend-api",
+    "app-ui",
+    "webpage"
+  ],
+  "elements": [
+    {
+      "item": "rust"
+    },
+    {
+      "item": "axum",
+      "planned": true
+    },
+    {
+      "item": "tokio",
+      "planned": true
+    },
+    {
+      "item": "sqlx",
+      "planned": true
+    },
+    {
+      "item": "tracing",
+      "planned": true
+    },
+    {
+      "item": "sqlite"
+    },
+    {
+      "item": "litestream"
+    },
+    {
+      "item": "frankenstein",
+      "planned": true
+    },
+    {
+      "item": "tma-initdata-auth"
+    },
+    {
+      "item": "telegram-web-app-js"
+    },
+    {
+      "item": "sveltekit"
+    },
+    {
+      "item": "svelte"
+    },
+    {
+      "item": "typescript"
+    },
+    {
+      "item": "tailwindcss"
+    },
+    {
+      "item": "shadcn-svelte"
+    },
+    {
+      "item": "bits-ui",
+      "planned": true
+    },
+    {
+      "item": "tanstack-query",
+      "planned": true
+    },
+    {
+      "item": "paraglide-js"
+    },
+    {
+      "item": "chart-js",
+      "planned": true
+    },
+    {
+      "item": "pnpm"
+    },
+    {
+      "item": "node"
+    },
+    {
+      "item": "vitest"
+    },
+    {
+      "item": "playwright"
+    },
+    {
+      "item": "cargo-nextest"
+    },
+    {
+      "item": "insta",
+      "planned": true
+    },
+    {
+      "item": "systemd"
+    },
+    {
+      "item": "caddy"
+    },
+    {
+      "item": "tower-http",
+      "planned": true
+    },
+    {
+      "item": "journald",
+      "planned": true
+    },
+    {
+      "item": "web-vitals",
+      "planned": true
+    },
+    {
+      "item": "dtcg-tokens",
+      "planned": true
+    },
+    {
+      "item": "svelte-runes-state",
+      "planned": true
+    },
+    {
+      "item": "sveltekit-superforms",
+      "planned": true
+    },
+    {
+      "item": "formsnap",
+      "planned": true
+    },
+    {
+      "item": "zod",
+      "planned": true
+    },
+    {
+      "item": "astro",
+      "planned": true
+    }
+  ]
+}
