@@ -135,17 +135,11 @@
   "box": {
     "note": "scripts/box-packs.sh runs these packs on the maintainer's box (ADR-004, ADR-030). Each red row a pack is expected to show on the tree names the open issue that builds that row's subject; a pack that examines nothing names the issue after which it examines a row.",
     "packs": {
-      "auth": {
-        "expected_red": {
-          "auth.sign-in-surface": "#17"
-        },
-        "note": "no sign-in surface is shipped until the Mini App's init data is validated"
-      },
+      "auth": {},
       "cyber-pipeline": {
         "expected_red": {
           "cp.threat-model-trace": "#60",
-          "ws.csp-present": "#21",
-          "ws.referrer-policy": "#25",
+          "ws.csp-present": "#25",
           "ws.tg-init-data-verified": "#17"
         },
         "note": "the ws rows are web-security's; no planned SPEC writes the threat model cp.threat-model-trace reads, so #60, which brings every phxd pack to green, owns it"
@@ -194,25 +188,23 @@
           "cookies": "#59",
           "custom-404": "#59",
           "form-validation": "#59",
-          "html-lang": "#21",
+          "html-lang": "#60",
           "image-compress": "#59",
           "lcp-speed": "#59",
           "meta-og-favicon": "#59",
           "privacy-terms": "#59",
           "single-cta": "#59",
           "sitemap-robots": "#59",
-          "spam-protect": "#59",
-          "tg-sdk-script": "#21"
+          "spam-protect": "#59"
         },
-        "note": "the public-site rows wait for the landing page; html-lang and tg-sdk-script read the Mini App's shell"
+        "note": "the public-site rows wait for the landing page (#59); html-lang reads the Mini App's source template, whose lang is Paraglide's placeholder until the page renders, so only a pack change settles it (#60)"
       },
       "web-security": {
         "expected_red": {
-          "ws.csp-present": "#21",
-          "ws.referrer-policy": "#25",
+          "ws.csp-present": "#25",
           "ws.tg-init-data-verified": "#17"
         },
-        "note": "the Mini App's meta policy (#21), the Caddy block's headers (#25) and init data validated on the server (#17)"
+        "note": "the Caddy block serves the Content-Security-Policy a source tree cannot carry, since the page's meta policy is built with its hashes (#25); init data is validated on the server (#17)"
       }
     },
     "proxy-client-scan": {
