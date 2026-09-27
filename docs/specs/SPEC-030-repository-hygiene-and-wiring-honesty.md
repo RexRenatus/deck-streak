@@ -2,8 +2,7 @@
 
 - **Wave:** W0. **Issue:** #23 (epic #1). **Context(s):** `repo` (`scripts/`, `.github/workflows/`, `.packs/wiring.json`).
 - **Decided by:** ADR-004 (the vendored packs and their wiring), ADR-012 (testing), ADR-017 (hosted CI on pull requests into `dev` and `main`), ADR-030 (this SPEC's own: the box-pack runner uses each pack's own verb, judges the committed tree without the vendored rules, and names every expected red).
-- **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
-  `docs/specs/` with its tests and `docs/red-first/SPEC-030.md` (ADR-016).
+- **Status:** judged: delivered with its tests and `docs/red-first/SPEC-030.md` (ADR-016).
 
 ## 1. The problem, measured
 
