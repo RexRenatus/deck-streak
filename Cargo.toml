@@ -1,0 +1,62 @@
+# A virtual manifest: one crate per bounded context (docs/CONTEXT-MAP.md). The crate graph IS
+# the context map, so a dependency the map does not declare is a design question, not a fix.
+[workspace]
+members = ["crates/*"]
+# A virtual workspace has no edition to infer the resolver from, so it is set explicitly.
+resolver = "3"
+
+# Metadata every member inherits with `key.workspace = true`.
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.97.0"
+license = "AGPL-3.0-or-later"
+repository = "https://github.com/RexRenatus/deck-streak"
+publish = false
+
+# One home for every version. External crates are added here by the delivery whose ADR admits
+# them (docs/decisions); a member writes `name.workspace = true`.
+[workspace.dependencies]
+deck-streak-kernel = { path = "crates/kernel" }
+deck-streak-ingest = { path = "crates/ingest" }
+deck-streak-identity = { path = "crates/identity" }
+deck-streak-analytics = { path = "crates/analytics" }
+deck-streak-progression = { path = "crates/progression" }
+deck-streak-streaks = { path = "crates/streaks" }
+deck-streak-curriculum = { path = "crates/curriculum" }
+deck-streak-economy = { path = "crates/economy" }
+deck-streak-quests = { path = "crates/quests" }
+deck-streak-habits = { path = "crates/habits" }
+deck-streak-focus = { path = "crates/focus" }
+deck-streak-discipline = { path = "crates/discipline" }
+deck-streak-markets = { path = "crates/markets" }
+deck-streak-notifications = { path = "crates/notifications" }
+deck-streak-readings = { path = "crates/readings" }
+deck-streak-vault = { path = "crates/vault" }
+deck-streak-agent = { path = "crates/agent" }
+deck-streak-insights = { path = "crates/insights" }
+deck-streak-publishing = { path = "crates/publishing" }
+deck-streak-privacy = { path = "crates/privacy" }
+deck-streak-coordination = { path = "crates/coordination" }
+deck-streak-api = { path = "crates/api" }
+deck-streak-bot = { path = "crates/bot" }
+deck-streak-daemon = { path = "crates/daemon" }
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+unused_must_use = "deny"
+missing_docs = "warn"
+
+[workspace.lints.clippy]
+# A group sits at priority -1, so a single lint below it can override it (rs.lint-group-priority).
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+# Restriction lints are cherry-picked; the whole restriction group is never enabled.
+unwrap_used = "warn"
+expect_used = "warn"
+dbg_macro = "warn"
+print_stdout = "warn"
+# Pedantic lints this workspace allows, each for a reason.
+# A context's types are named for the context (readings::ReadingNote): the repetition is the
+# ubiquitous language, not noise.
+module_name_repetitions = "allow"

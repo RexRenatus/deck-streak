@@ -1,0 +1,16 @@
+[package]
+name = "deck-streak-analytics"
+description = "DeckStreak's analytics context. See docs/CONTEXT-MAP.md."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+deck-streak-kernel.workspace = true
+deck-streak-ingest.workspace = true

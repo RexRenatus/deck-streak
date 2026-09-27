@@ -1,0 +1,18 @@
+[package]
+name = "deck-streak-api"
+description = "DeckStreak's api context. See docs/CONTEXT-MAP.md."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+deck-streak-kernel.workspace = true
+deck-streak-identity.workspace = true
+deck-streak-notifications.workspace = true
+deck-streak-coordination.workspace = true
