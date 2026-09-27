@@ -1,78 +1,77 @@
-// DeckStreak's rendered accessibility audit (packs/accessibility, SPEC-V2-2223).
+// DeckStreak's rendered accessibility audit (packs/accessibility, SPEC-V2-2223; SPEC-028 R10).
 //
 // axe-core runs over every screen of the Mini App, in Telegram's light and dark themes, against the
 // WCAG 2.2 A and AA rules. The static rows of packs/accessibility cannot measure a rendered colour
 // pair, a target's size or a live region. This audit can, and the pack's `runtime-audit` row checks
 // that it exists, names the WCAG 2.2 AA tags and runs in CI.
 //
+// The screens come from the app's route table and the palettes from telegram-palettes.ts, so a new
+// screen is audited from the day it exists: src/lib/a11y-coverage.test.ts holds the route table
+// equal to the screens under src/routes.
+//
 // Install: pnpm add -D @playwright/test @axe-core/playwright
 // Run:     pnpm exec playwright test tests/a11y.spec.ts   (a CI workflow runs it on every change)
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
-
-// Every screen the Mini App routes to. Add a route here when a screen is added.
-const ROUTES = ['/'];
+import { ROUTES } from '../src/lib/routes';
+import { THEMES } from './telegram-palettes';
 
 // axe-core's tags for WCAG 2.0, 2.1 and 2.2 at levels A and AA. wcag22aa carries target-size (2.5.8).
 const WCAG_22_AA = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 
-// Telegram's own default palettes. The Mini App paints with --tg-theme-* variables, which exist only
-// inside Telegram, so the audit supplies both schemes and contrast is measured in each.
-const THEMES = {
-  light: {
-    bg_color: '#ffffff',
-    text_color: '#000000',
-    hint_color: '#707579',
-    link_color: '#3390ec',
-    button_color: '#3390ec',
-    button_text_color: '#ffffff',
-    secondary_bg_color: '#f4f4f5'
-  },
-  dark: {
-    bg_color: '#212121',
-    text_color: '#ffffff',
-    hint_color: '#aaaaaa',
-    link_color: '#8774e1',
-    button_color: '#8774e1',
-    button_text_color: '#ffffff',
-    secondary_bg_color: '#181818'
-  }
-} as const;
+const TELEGRAM_SDK = 'https://telegram.org/js/telegram-web-app.js';
+
+/**
+ * A stand-in for Telegram's script, served at the script's own URL, first in the head. It does what
+ * the real script does when a chat opens the Mini App in `scheme`: it sets the --tg-theme-*
+ * variables from the palette, which the design tokens read, and the Mini App object the wrapper
+ * reads. The audit so measures the colours Telegram would paint, and nothing reaches the network.
+ */
+function standIn(scheme: string, themeParams: Readonly<Record<string, string>>): string {
+  return `(() => {
+    const noop = () => {};
+    const inset = { top: 0, bottom: 0, left: 0, right: 0 };
+    const button = { show: noop, hide: noop, onClick: noop, offClick: noop, setText: noop };
+    const themeParams = ${JSON.stringify(themeParams)};
+    const style = document.documentElement.style;
+    for (const [key, value] of Object.entries(themeParams)) {
+      style.setProperty('--tg-theme-' + key.split('_').join('-'), value);
+    }
+    style.setProperty('--tg-color-scheme', ${JSON.stringify(scheme)});
+    window.Telegram = {
+      WebApp: {
+        initData: 'auth_date=1&hash=synthetic',
+        version: '9.0',
+        platform: 'unknown',
+        colorScheme: ${JSON.stringify(scheme)},
+        themeParams,
+        viewportStableHeight: window.innerHeight,
+        safeAreaInset: inset,
+        contentSafeAreaInset: inset,
+        isVersionAtLeast: () => true,
+        ready: noop,
+        expand: noop,
+        openLink: noop,
+        onEvent: noop,
+        offEvent: noop,
+        BackButton: button,
+        MainButton: button,
+        HapticFeedback: { impactOccurred: noop, notificationOccurred: noop, selectionChanged: noop }
+      }
+    };
+  })();`;
+}
 
 for (const [scheme, themeParams] of Object.entries(THEMES)) {
   test.describe(`${scheme} theme`, () => {
     test.beforeEach(async ({ page }) => {
-      // The Mini App reads Telegram.WebApp when it starts; this stub lets it render in a plain
-      // browser with the theme under test.
-      await page.addInitScript(
-        ({ scheme, themeParams }) => {
-          const noop = () => {};
-          const button = { show: noop, hide: noop, onClick: noop, offClick: noop, setText: noop };
-          Object.assign(window, {
-            Telegram: {
-              WebApp: {
-                initData: '',
-                initDataUnsafe: {},
-                colorScheme: scheme,
-                themeParams,
-                version: '9.0',
-                platform: 'unknown',
-                ready: noop,
-                expand: noop,
-                onEvent: noop,
-                offEvent: noop,
-                BackButton: button,
-                MainButton: button,
-                HapticFeedback: {
-                  impactOccurred: noop,
-                  notificationOccurred: noop,
-                  selectionChanged: noop
-                }
-              }
-            }
-          });
-        },
-        { scheme, themeParams }
+      await page.route(`${TELEGRAM_SDK}*`, (intercepted) =>
+        intercepted.fulfill({ contentType: 'text/javascript', body: standIn(scheme, themeParams) })
+      );
+      // The API, answered in place: a session, then the owner's study day.
+      await page.route('**/api/session', (intercepted) => intercepted.fulfill({ status: 200 }));
+      await page.route('**/api/me', (intercepted) =>
+        intercepted.fulfill({ json: { study_day: '2001-02-03' } })
       );
       await page.emulateMedia({ colorScheme: scheme as 'light' | 'dark' });
     });
@@ -80,6 +79,8 @@ for (const [scheme, themeParams] of Object.entries(THEMES)) {
     for (const route of ROUTES) {
       test(`${route} has no WCAG 2.2 AA violation axe can find`, async ({ page }) => {
         await page.goto(route);
+        // the screen has settled: Today's study day has arrived, or the screen made no call
+        await page.waitForLoadState('networkidle');
         const results = await new AxeBuilder({ page }).withTags(WCAG_22_AA).analyze();
         expect(results.violations).toEqual([]);
       });
