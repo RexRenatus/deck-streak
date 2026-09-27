@@ -32,3 +32,9 @@ deck-streak-agent.workspace = true
 deck-streak-insights.workspace = true
 deck-streak-publishing.workspace = true
 deck-streak-privacy.workspace = true
+
+# The parity oracle's golden reader, compiled into this crate's tests by path (ADR-029). Test
+# support only: no production dependency of this context changes.
+[dev-dependencies]
+serde.workspace = true
+serde_json.workspace = true

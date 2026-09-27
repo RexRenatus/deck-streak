@@ -1,0 +1,321 @@
+"""Every committed golden is current, synthetic and dated by numbers only (SPEC-029 R3 to R6, R9).
+
+The checks read the committed goldens and registry modules as data, so this file never imports the
+predecessor and runs in public CI. Each refusal is first proved on a planted tree in a temporary
+directory, then applied to the committed one.
+"""
+
+import hashlib
+import importlib.util
+import json
+import tempfile
+import unittest
+from pathlib import Path
+
+HERE = Path(__file__).resolve().parent
+ROOT = HERE.parents[1]
+spec = importlib.util.spec_from_file_location("parity_generate", HERE / "generate.py")
+generate = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(generate)
+
+ORACLE = Path("tools", "parity-oracle")
+GENERATOR = "tools/parity-oracle/generate.py"
+REGISTRY = "tools/parity-oracle/registry/"
+STUDY_DAY = ROOT / ORACLE / "goldens" / "study_day.json"
+DAY_MS = 86_400_000
+
+#: A golden as the generator writes one, minus the digests a planted tree computes for itself.
+PLANTED_GOLDEN = {
+    "cases": [{"input": {"ease": 3, "maturity": 1.25}, "output": 38}],
+    "function": "xp.review_xp",
+    "generator": GENERATOR,
+    "inputs": "synthetic",
+    "kind": "function",
+    "schema": "phx.parity-golden.v1",
+    "seed": 20,
+    "source_commit": "0" * 40,
+}
+
+#: A registry module for each way R6 forbids, and the one finding each must draw.
+PLANTED_READERS = {
+    "open": (
+        "def cases(rng):\n    return [(None, {'rows': open('rows.csv').read()})]\n",
+        "planted.py:2: calls open",
+    ),
+    "sqlite3": ("import sqlite3\n", "planted.py:1: imports sqlite3"),
+    "socket": (
+        "from socket import create_connection\n",
+        "planted.py:1: imports socket",
+    ),
+    "urllib": ("import urllib.request\n", "planted.py:1: imports urllib.request"),
+    "http": ("from http import client\n", "planted.py:1: imports http"),
+    "Path": (
+        "from pathlib import Path\n\nROWS = Path('rows.json').read_text()\n",
+        "planted.py:3: calls read_text",
+    ),
+}
+
+
+def examined(what, items):
+    """Print how many items a check examined and refuse zero (the tdd pack's contract)."""
+    items = list(items)
+    print(f"examined {len(items)} {what}")
+    if not items:
+        raise AssertionError(
+            f"examined 0 {what}: the population is empty, so nothing was judged"
+        )
+    return items
+
+
+def sha256(path):
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def goldens(root):
+    return examined("golden(s)", sorted((root / ORACLE / "goldens").glob("*.json")))
+
+
+def registry_modules(root):
+    return examined(
+        "registry module(s)", sorted((root / ORACLE / "registry").glob("*.py"))
+    )
+
+
+def strict(text):
+    """A golden parsed as strict JSON: a NaN, an Infinity or a key written twice is refused."""
+    return json.loads(text)
+
+
+def stale(root, name, golden):
+    """Why a golden no longer matches the generator or the registry module that built it (R4)."""
+    return []
+
+
+def provenance(name, golden):
+    """Why a golden does not record synthetic inputs, the generator's seed and a commit (R5)."""
+    return []
+
+
+def shape(name, golden, text):
+    """Why a golden is not a phx.parity-golden.v1 document as the generator writes one (R5)."""
+    return []
+
+
+def date_strings(name, golden):
+    """Every string in a golden that reads as a calendar date or a clock time (R3)."""
+    return []
+
+
+def registry_reads(where, source):
+    """Why a registry module's source reads a file, a database or the network (R6)."""
+    return []
+
+
+class Planted:
+    """An oracle tree in a temporary directory, removed when the test ends."""
+
+    def __init__(self, test):
+        scratch = tempfile.TemporaryDirectory()
+        test.addCleanup(scratch.cleanup)
+        self.root = Path(scratch.name)
+        (self.root / ORACLE / "registry").mkdir(parents=True)
+        (self.root / ORACLE / "goldens").mkdir()
+        self.write(GENERATOR, "SEED = 20\n")
+
+    def write(self, relative, text):
+        path = self.root / relative
+        path.write_text(text, encoding="utf-8")
+        return path
+
+    def edit(self, relative):
+        path = self.root / relative
+        path.write_text(
+            path.read_text(encoding="utf-8") + "# edited after its goldens\n"
+        )
+
+    def module(self, name):
+        return self.write(f"{REGISTRY}{name}", "FUNCTIONS = {}\n")
+
+    def golden(self, name, module):
+        golden = dict(
+            PLANTED_GOLDEN,
+            generator_sha256=hashlib.sha256(
+                (self.root / GENERATOR).read_bytes()
+            ).hexdigest(),
+            registry=f"{REGISTRY}{module.name}",
+            registry_sha256=hashlib.sha256(module.read_bytes()).hexdigest(),
+        )
+        text = json.dumps(golden, indent=2, sort_keys=True) + "\n"
+        self.write(f"tools/parity-oracle/goldens/{name}", text)
+
+    def stale(self):
+        found = []
+        for path in goldens(self.root):
+            found += stale(
+                self.root, path.name, strict(path.read_text(encoding="utf-8"))
+            )
+        return found
+
+
+class CommittedGoldensAreCurrent(unittest.TestCase):
+    def test_a_golden_whose_generator_digest_differs_is_refused(self):
+        tree = Planted(self)
+        tree.golden("one.json", tree.module("spec_001.py"))
+        self.assertEqual(tree.stale(), [])
+        tree.edit(GENERATOR)
+        self.assertEqual(
+            tree.stale(),
+            [
+                f"one.json: generator_sha256 differs from the committed {GENERATOR}: regenerate it"
+            ],
+        )
+        committed = sha256(ROOT / GENERATOR)
+        for path in goldens(ROOT):
+            golden = strict(path.read_text(encoding="utf-8"))
+            self.assertEqual(golden["generator_sha256"], committed, path.name)
+
+    def test_a_golden_whose_registry_digest_differs_is_refused_alone(self):
+        tree = Planted(self)
+        tree.golden("one.json", tree.module("spec_001.py"))
+        tree.golden("two.json", tree.module("spec_002.py"))
+        self.assertEqual(tree.stale(), [])
+        tree.edit(f"{REGISTRY}spec_001.py")
+        self.assertEqual(
+            tree.stale(),
+            [
+                f"one.json: registry_sha256 differs from the committed {REGISTRY}spec_001.py: "
+                "regenerate it"
+            ],
+        )
+        for path in goldens(ROOT):
+            golden = strict(path.read_text(encoding="utf-8"))
+            self.assertEqual(
+                golden["registry_sha256"], sha256(ROOT / golden["registry"]), path.name
+            )
+
+    def test_every_committed_golden_records_its_seed_and_synthetic_inputs(self):
+        planted = dict(PLANTED_GOLDEN, inputs="production", seed=7)
+        self.assertEqual(
+            provenance("planted.json", planted),
+            [
+                "planted.json: inputs is 'production', not 'synthetic'",
+                "planted.json: seed is 7, not the generator's 20",
+            ],
+        )
+        for path in goldens(ROOT):
+            golden = strict(path.read_text(encoding="utf-8"))
+            self.assertEqual(golden["inputs"], "synthetic", path.name)
+            self.assertEqual(golden["seed"], generate.SEED, path.name)
+            self.assertEqual(provenance(path.name, golden), [])
+
+    def test_a_registry_module_that_reads_a_file_is_refused(self):
+        for reason, (source, finding) in PLANTED_READERS.items():
+            with self.subTest(reason):
+                self.assertEqual(registry_reads("planted.py", source), [finding])
+        for path in registry_modules(ROOT):
+            self.assertEqual(
+                registry_reads(path.name, path.read_text(encoding="utf-8")), []
+            )
+
+    def test_no_committed_golden_holds_a_calendar_date(self):
+        planted = {
+            "function": "analytics.study_day",
+            "generator": "written 01/02/1970",
+            "note": "Builds a Clock; cases drawn under CPython 3.12.3.",
+            "cases": [
+                {
+                    "input": {"answered_at": "04:00", "instant_ms": 0},
+                    "output": "1970-01-02",
+                }
+            ],
+        }
+        self.assertEqual(
+            date_strings("planted.json", planted),
+            [
+                "planted.json: generator holds 'written 01/02/1970'",
+                "planted.json: cases[0].input.answered_at holds '04:00'",
+                "planted.json: cases[0].output holds '1970-01-02'",
+            ],
+        )
+        for path in goldens(ROOT):
+            golden = strict(path.read_text(encoding="utf-8"))
+            self.assertEqual(date_strings(path.name, golden), [])
+
+    def test_the_study_day_golden_carries_its_boundary_classes(self):
+        self.assertTrue(STUDY_DAY.is_file(), "the study-day golden is not committed")
+        golden = strict(STUDY_DAY.read_text(encoding="utf-8"))
+        self.assertEqual(
+            (golden["kind"], golden["function"]), ("adapter", "analytics.study_day")
+        )
+        by_class = {}
+        for case in golden["cases"]:
+            self.assertEqual(
+                sorted(case["input"]),
+                ["instant_ms", "rollover_hour", "utc_offset_minutes"],
+            )
+            by_class.setdefault(case.get("class"), []).append(case)
+        self.assertEqual(
+            sorted(name for name in by_class if name),
+            ["negative", "offset", "rollover"],
+        )
+        # One millisecond before, and exactly at, the rollover for each hour and offset R9 names.
+        pairs = {}
+        for case in by_class["rollover"]:
+            key = (case["input"]["rollover_hour"], case["input"]["utc_offset_minutes"])
+            pairs.setdefault(key, []).append(case)
+        self.assertEqual({hour for hour, _ in pairs}, {0, 4, 23})
+        self.assertEqual({offset for _, offset in pairs}, {-720, 0, 330, 840})
+        for key, pair in pairs.items():
+            self.assertEqual(len(pair), 2, key)
+            before, at = sorted(pair, key=lambda case: case["input"]["instant_ms"])
+            self.assertEqual(
+                at["input"]["instant_ms"] - before["input"]["instant_ms"], 1, key
+            )
+            # The predecessor's own outputs turn the day between the two instants.
+            self.assertEqual(at["output"] - before["output"], 1, key)
+        self.assertTrue(
+            any(case["input"]["instant_ms"] < 0 for case in by_class["negative"])
+        )
+        # An offset that moves the local day off the UTC day, with no rollover to blur it.
+        self.assertTrue(
+            any(
+                case["input"]["rollover_hour"] == 0
+                and case["output"] != case["input"]["instant_ms"] // DAY_MS
+                for case in by_class["offset"]
+            )
+        )
+
+    def test_every_committed_golden_is_current_and_well_formed(self):
+        wrong = dict(PLANTED_GOLDEN, schema="phx.parity-golden.v0", cases=[])
+        self.assertEqual(
+            shape(
+                "planted.json",
+                wrong,
+                json.dumps(wrong, indent=2, sort_keys=True) + "\n",
+            ),
+            [
+                "planted.json: schema is 'phx.parity-golden.v0', not 'phx.parity-golden.v1'",
+                "planted.json: holds no case",
+            ],
+        )
+        for path in goldens(ROOT):
+            text = path.read_text(encoding="utf-8")
+            golden = strict(text)
+            self.assertEqual(golden["schema"], "phx.parity-golden.v1", path.name)
+            findings = (
+                shape(path.name, golden, text)
+                + stale(ROOT, path.name, golden)
+                + provenance(path.name, golden)
+                + date_strings(path.name, golden)
+            )
+            self.assertEqual(findings, [])
+
+    def test_a_golden_that_is_not_strict_json_is_refused(self):
+        with self.assertRaisesRegex(ValueError, "NaN"):
+            strict('{"output": NaN}')
+        with self.assertRaisesRegex(ValueError, "repeats the key"):
+            strict('{"seed": 20, "seed": 21}')
+
+
+if __name__ == "__main__":
+    unittest.main()

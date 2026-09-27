@@ -70,7 +70,11 @@ def write(golden: dict, out: Path) -> Path:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    parser.add_argument("--source-checkout", required=True, help="v9's private checkout")
+    parser.add_argument(
+        "--source-checkout", required=True, help="v9's private checkout"
+    )
+    parser.add_argument("--package", help="the predecessor's top-level package")
+    parser.add_argument("--registry", help="the registry directory")
     parser.add_argument("--out", required=True, help="the goldens directory")
     args = parser.parse_args(argv)
     checkout = Path(args.source_checkout).resolve()
