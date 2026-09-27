@@ -10,9 +10,36 @@ process compiles the fragments into a new version section here.
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-09-27
+
 ### Added
 
+- The plan for waves W0 (the foundation) and W1 (the flagship readings): 27 planned SPECs in
+  `docs/specs/planned/`, 24 proposed ADRs and 15 schematics. Each planned SPEC names its issue, its
+  acceptance tests and its file manifest, and it moves to `docs/specs/` with its tests when its
+  delivery lands (ADR-016). The SPEC template now gives the Vitest command shape that the tdd probe
+  resolves.
+- The Mini App's web skeleton: a pnpm 11 workspace pinned to Node 24, and a SvelteKit 2 single-page
+  app in `web/app` (Svelte 5 in runes mode, TypeScript 6, Tailwind CSS 4, shadcn-svelte, Paraglide
+  JS 2 in seven locales with the house CJK stylesheet), with a Vitest smoke test and Playwright
+  smoke and accessibility tests.
 - The repository skeleton: the charter, the context map, the campaign plan, the decisions, the
   workspace with one crate per bounded context, the Mini App skeleton and the local gate.
 
-[Unreleased]: https://github.com/RexRenatus/deck-streak/commits/dev
+### Fixed
+
+- A second release can no longer deadlock. `main` does not require an up-to-date head, because only
+  this repository's `dev` reaches it, and nothing is merged back into `dev` (ADR-034).
+- The committed release-tag ruleset uses only rules that GitHub enforces on this repository's plan.
+  Dependabot now holds semver-major updates for cargo and npm until the house radar moves them.
+
+### Security
+
+- `ci` and `fragment` count only when GitHub Actions produced them.
+- `base-is-dev` refuses a fork's branch named `dev`.
+- The contributor and agent documents record the maintainer's fork rule (ADR-035).
+- The public scrub reads every blob of the history a change publishes. It refuses committed
+  binaries and oversize files, and a shallow checkout reads VOID instead of green (SPEC-033).
+
+[Unreleased]: https://github.com/RexRenatus/deck-streak/compare/v0.1.0...dev
+[0.1.0]: https://github.com/RexRenatus/deck-streak/releases/tag/v0.1.0

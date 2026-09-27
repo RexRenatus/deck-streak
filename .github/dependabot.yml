@@ -7,6 +7,10 @@ updates:
     cooldown:
       default-days: 7
     target-branch: dev
+    # A major moves only when the owner moves it on the house radar (stack.json pins it).
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: npm
     directory: /
     schedule:
@@ -14,6 +18,9 @@ updates:
     cooldown:
       default-days: 7
     target-branch: dev
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: github-actions
     directory: /
     schedule:

@@ -84,6 +84,8 @@ enforced and which wait for a named issue.
   value. Test fixtures are synthetic.
 - No forward-looking date or timeline in any public text or any AI output.
 - Private values live outside this repository and reach the VM through the private deploy rail.
+- Agents never approve a workflow run from a fork, and never merge a pull request whose head repository is not `RexRenatus/deck-streak`. The maintainer re-lands an accepted outside
+  contribution from a branch of this repository (ADR-035).
 
 ## Writing a DeckStreak skill pack (the pack-wave method)
 

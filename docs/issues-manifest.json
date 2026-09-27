@@ -3,1264 +3,1264 @@
   "issues": {
     "EPIC-W0": {
       "number": 1,
-      "id": 5605617084,
+      "id": 5605948955,
       "title": "Epic W0: Foundation",
       "body_sha256": "0c1c378e7a19fc39deaa1b5796b9344aabdee3f066e4b041bafc09691089c484"
     },
     "EPIC-W1": {
       "number": 2,
-      "id": 5605617443,
+      "id": 5605949288,
       "title": "Epic W1: Flagship",
       "body_sha256": "8955d755b907495356cdc60813867e5e56fc811cf49970a8fb49691c3701e7fe"
     },
     "EPIC-W2": {
       "number": 3,
-      "id": 5605617769,
+      "id": 5605949608,
       "title": "Epic W2: First deploy",
       "body_sha256": "d15a0d84de1140028e0a7bab50bc16d4d3d247c401ce82c64dbe44ba924204e4"
     },
     "EPIC-W3": {
       "number": 4,
-      "id": 5605618282,
+      "id": 5605949890,
       "title": "Epic W3: Game core parity",
       "body_sha256": "f14b36417e242a74ffa508604823dc7f67b3912dc03558bcd309861b5fcab714"
     },
     "EPIC-W4": {
       "number": 5,
-      "id": 5605618624,
+      "id": 5605950194,
       "title": "Epic W4: Curriculum and insight parity",
       "body_sha256": "975bca9d5df269df2ede21115adcb8391c1a23884e8566b0b6324496bcd505bf"
     },
     "EPIC-W5": {
       "number": 6,
-      "id": 5605619005,
+      "id": 5605950498,
       "title": "Epic W5: Engagement parity",
       "body_sha256": "9d3c528b90e2cbd5f81c4c69cbb84c2616d8251bebf432b3f8bcbb0e3508bf9f"
     },
     "EPIC-W6": {
       "number": 7,
-      "id": 5605619520,
+      "id": 5605950814,
       "title": "Epic W6: Second brain and the AI duties",
       "body_sha256": "7701b5e13c0cb4f271d6e35bc53a48119d92e10d9d823206e9a75a0a6eb6e0bc"
     },
     "EPIC-W7": {
       "number": 8,
-      "id": 5605619852,
+      "id": 5605951113,
       "title": "Epic W7: Surfaces and polish",
       "body_sha256": "10ca4cf419dd1a14f0fb9ac23b10e13369c7a55fc56859ab9f187346c5b7d97b"
     },
     "EPIC-W8": {
       "number": 9,
-      "id": 5605620190,
+      "id": 5605951442,
       "title": "Epic W8: Data migration and cutover",
       "body_sha256": "6490421b2d371b7d3475ed280458d9f8655d80a948158531045e92b0e3129594"
     },
     "EPIC-W9": {
       "number": 10,
-      "id": 5605620581,
+      "id": 5605951782,
       "title": "Epic W9: After parity",
       "body_sha256": "34f13f81724cc7ad57167b3ae26e7a73873e508a26440b82d845de4dd28d0047"
     },
     "DS-W0-01": {
       "number": 11,
-      "id": 5605621022,
+      "id": 5605952144,
       "title": "Kernel: study day, clock, ids, track and verdict",
       "body_sha256": "f096a310aae22d7847c150a38371902e08bc195b5d6cb14f0cf433f1fd11bd4e",
       "parent_linked": 1
     },
     "DS-W0-02": {
       "number": 12,
-      "id": 5605621389,
+      "id": 5605952498,
       "title": "Kernel: configuration, credentials and redacting logs",
       "body_sha256": "0dac7a631a521992e3cbcda68fc8b84ce7de0080223f50b3d4eb921ffe7c9904",
       "parent_linked": 1
     },
     "DS-W0-03": {
       "number": 13,
-      "id": 5605621774,
+      "id": 5605952827,
       "title": "Kernel: the SQLite base, migrations and the data-rights port",
       "body_sha256": "2d285308421e7b6f8d527521cffee1a8e7f83433536687bed56859890291464a",
       "parent_linked": 1
     },
     "DS-W0-04": {
       "number": 14,
-      "id": 5605622279,
+      "id": 5605953154,
       "title": "Privacy: export and erase, proved symmetric",
       "body_sha256": "36209c754cb9ef44f8fa487eb15605f9c0af731d5556a031a34078dc35efaa4a",
       "parent_linked": 1
     },
     "DS-W0-05": {
       "number": 15,
-      "id": 5605622630,
+      "id": 5605953495,
       "title": "Ingest: the measured sync engine spike and the Anki sync",
       "body_sha256": "ea5ed0e923605b9685cffb17794aa565d2a8832e63d7c62ac1e58ec64af7e540",
       "parent_linked": 1
     },
     "DS-W0-06": {
       "number": 16,
-      "id": 5605622970,
+      "id": 5605953820,
       "title": "Ingest: the read-only collection read, deck scope and change gate",
       "body_sha256": "8dfc7a77fac2b2ceea6dd1bf2060e7b0683dd54891ceed8903d3356420ad218f",
       "parent_linked": 1
     },
     "DS-W0-07": {
       "number": 17,
-      "id": 5605623421,
+      "id": 5605954157,
       "title": "Identity: Telegram initData validation and the owner pin",
       "body_sha256": "92ee03341aecaf1df1193a8f716a0958cd1aa5ad60003f6900fe99b03954c3cb",
       "parent_linked": 1
     },
     "DS-W0-08": {
       "number": 18,
-      "id": 5605623776,
+      "id": 5605954455,
       "title": "API: the axum service shell with health, limits and graceful shutdown",
       "body_sha256": "3cc3ae69a3ad84e44b0665b2e467ccc3f0779aa3108ed23b067eaeed751e805c",
       "parent_linked": 1
     },
     "DS-W0-09": {
       "number": 19,
-      "id": 5605624091,
+      "id": 5605954797,
       "title": "Bot: the Telegram transport, owner gate, menu and notifier",
       "body_sha256": "d198bec2dbff39c770ce726a1297019206e19c190a61be8dcc1c4eae8ad8f3a7",
       "parent_linked": 1
     },
     "DS-W0-10": {
       "number": 20,
-      "id": 5605624574,
+      "id": 5605955095,
       "title": "Coordination: the scheduler, cron-fire ledger, catch-up and liveness",
       "body_sha256": "039e13a5625d463d072774d10140ad9067d267be031a4826462293423be172fd",
       "parent_linked": 1
     },
     "DS-W0-11": {
       "number": 21,
-      "id": 5605624962,
+      "id": 5605955453,
       "title": "Mini App: the shell, the Telegram wrapper, tokens and the API handshake",
       "body_sha256": "aadee583f1b17c5f42b20c0bf316ca085658615c307c09c28fac8928a8495af9",
       "parent_linked": 1
     },
     "DS-W0-12": {
       "number": 22,
-      "id": 5605625281,
+      "id": 5605955808,
       "title": "Parity oracle: the golden generator, format and reader",
       "body_sha256": "592d1d2bed0da56f91c64476df1767405e7e2b34d6a62ef784574a581aac7615",
       "parent_linked": 1
     },
     "DS-W0-13": {
       "number": 23,
-      "id": 5605625750,
+      "id": 5605956095,
       "title": "Repository hygiene: CI, test hygiene and the pack runner",
       "body_sha256": "1727aa8727ac1c4ef2d2fc05828214176ae64032797ff068b82972d309d01264",
       "parent_linked": 1
     },
     "DS-W0-14": {
       "number": 24,
-      "id": 5605626122,
+      "id": 5605956419,
       "title": "Observability: logging, traces, the alert unit and the SLO skeleton",
       "body_sha256": "72f34ce12ff71ef5760ff7cfb9d4c710693cd04d79907ee1d27c1d6f018337f0",
       "parent_linked": 1
     },
     "DS-W0-15": {
       "number": 25,
-      "id": 5605626456,
+      "id": 5605956762,
       "title": "Deploy templates: units, the Caddy block, the host budget",
       "body_sha256": "0666c0a0bbeba18b99d7ef526d8114fd949ac7c800da97fe52b9e75a211868ba",
       "parent_linked": 1
     },
     "DS-W1-01": {
       "number": 26,
-      "id": 5605626915,
+      "id": 5605957045,
       "title": "Progression: the XP ledger and its idempotent grant port",
       "body_sha256": "963519c1abbc580407d4f5aced55b9af45743c3d0638cd3d60c63978892d451d",
       "parent_linked": 2
     },
     "DS-W1-02": {
       "number": 27,
-      "id": 5605627255,
+      "id": 5605957346,
       "title": "Notifications: the one router, quiet hours and the withhold ledger",
       "body_sha256": "b0c6928e534f1d092e76e925d8041b68b62c236848a8a3524dd58f3b2970fa79",
       "parent_linked": 2
     },
     "DS-W1-03": {
       "number": 28,
-      "id": 5605627601,
+      "id": 5605957660,
       "title": "Vault: the adapter core, atomic writes, rails and the readings date tree",
       "body_sha256": "2098fbdc1324ae29690392a17528143965768f347d96eb0dc038debe11438e9b",
       "parent_linked": 2
     },
     "DS-W1-04": {
       "number": 29,
-      "id": 5605628116,
+      "id": 5605957963,
       "title": "Agent: the headless runner, prompt composition, the output gate and fail-closed degradation",
       "body_sha256": "f98c7d7294e5c4688b3c6dd02b83939124687565a79389d65e9cdd70ed70ff1f",
       "parent_linked": 2
     },
     "DS-W1-05": {
       "number": 30,
-      "id": 5605628478,
+      "id": 5605958290,
       "title": "Agent: the persona engine, private roster and subject memory",
       "body_sha256": "68a186fe349cbecd2ddbaf51e70881b1c24b41ccc2ea8fe71d51ca10f128886c",
       "parent_linked": 2
     },
     "DS-W1-06": {
       "number": 31,
-      "id": 5605628840,
+      "id": 5605958624,
       "title": "Readings: the day set from the scheduler's queue, topics and honest states",
       "body_sha256": "d685fdb321429efed33d87e826a72e39a15bcfcef3606cfea9d435ec9cda6eaf",
       "parent_linked": 2
     },
     "DS-W1-07": {
       "number": 32,
-      "id": 5605629322,
+      "id": 5605958940,
       "title": "Readings: generation through the persona, the gates, and one repair retry",
       "body_sha256": "1a6e1d029ceb6b5a7cec92cf6801f93f4f566d094f582b299c30a3c99beb8e7c",
       "parent_linked": 2
     },
     "DS-W1-08": {
       "number": 33,
-      "id": 5605629699,
+      "id": 5605959241,
       "title": "Readings: the read tap, the studied measure and reading XP",
       "body_sha256": "acc5ef8314ad8c57372c8b5695f4fee25cd039c13a2d19c74f1b57ce858edf9b",
       "parent_linked": 2
     },
     "DS-W1-09": {
       "number": 34,
-      "id": 5605630025,
+      "id": 5605959551,
       "title": "Readings: on-demand regeneration, tap to pick, one lock",
       "body_sha256": "73a14e102f515371c4f709346eeadaa10e31a70b0bcb4aab99e04024c58192a7",
       "parent_linked": 2
     },
     "DS-W1-10": {
       "number": 35,
-      "id": 5605630511,
+      "id": 5605959875,
       "title": "Readings: the comeback reading, one per lapse",
       "body_sha256": "8167299ef82248a04b14554f5f02fda74eba24b8efe5817632660ba3f97edfde",
       "parent_linked": 2
     },
     "DS-W1-11": {
       "number": 36,
-      "id": 5605630868,
+      "id": 5605960171,
       "title": "Readings: lane health, triage and transparency",
       "body_sha256": "eae292f1dff9b947a0037f18e19c7b1412382da977234601a332a0e352e15d7f",
       "parent_linked": 2
     },
     "DS-W1-12": {
       "number": 37,
-      "id": 5605631263,
+      "id": 5605960494,
       "title": "Mini App: Today's readings, the reader and the history",
       "body_sha256": "258aa905db5f5e60965a304a5efbbc68dd334fdb90a8400d17f616df3ce7f953",
       "parent_linked": 2
     },
     "DS-W1-13": {
       "number": 38,
-      "id": 5605631790,
+      "id": 5605960832,
       "title": "Bot: the readings command and the morning readings line",
       "body_sha256": "0bd1aa91fd41495078b505b42e9c7d780efd0716ff1fa68b9fca9d03fc401a70",
       "parent_linked": 2
     },
     "DS-W1-14": {
       "number": 39,
-      "id": 5605632128,
+      "id": 5605961159,
       "title": "Coordination: the readings jobs",
       "body_sha256": "711b348bc6c7513fb44e55ea484130f31244df5ab5a7ff7ba8b114ded087ec4d",
       "parent_linked": 2
     },
     "DS-W2-01": {
       "number": 40,
-      "id": 5605632452,
+      "id": 5605961509,
       "title": "Host: inventory, backup and the scrub list for the owner",
       "body_sha256": "651f82c70c7ab5d18fabc6a93e678a9dbfcee6fe3b83d9ef51300298a5753a34",
       "parent_linked": 3
     },
     "DS-W2-02": {
       "number": 41,
-      "id": 5605632925,
+      "id": 5605961848,
       "title": "The private deploy rail: credentials, configuration and the guards",
       "body_sha256": "98ccb1b9cb08c71254f277faf6ef0425fa729cdd59a721bc401adfcf39bd88df",
       "parent_linked": 3
     },
     "DS-W2-03": {
       "number": 42,
-      "id": 5605633267,
+      "id": 5605962230,
       "title": "First deploy: units, the Caddy block and HTTPS",
       "body_sha256": "032f749d92d97913a8316648641755f0ab62374fd65abd0fb6820437836781fd",
       "parent_linked": 3
     },
     "DS-W2-04": {
       "number": 43,
-      "id": 5605633597,
+      "id": 5605962619,
       "title": "The agent's path: the reverse tunnel and its device key",
       "body_sha256": "f4961989c5328c3426773a0937b6f09451d211dacb0e793a923ed4a4dfda8c91",
       "parent_linked": 3
     },
     "DS-W2-05": {
       "number": 44,
-      "id": 5605633927,
+      "id": 5605962952,
       "title": "Backups: Litestream, the daily backup and the restore drill",
       "body_sha256": "634d9694e08f235765469e1125200caaff13165eb2c6f36a20b96d9b2072912d",
       "parent_linked": 3
     },
     "DS-W2-06": {
       "number": 45,
-      "id": 5605634266,
+      "id": 5605963426,
       "title": "Readings live: the vault folder, the first nightly run and the first reading",
       "body_sha256": "317f2cfd6fca8ff1ff93221dc433ba38a8befff016e71f3affed385a77fe9f4e",
       "parent_linked": 3
     },
     "DS-W6-01": {
       "number": 46,
-      "id": 5605634615,
+      "id": 5605963819,
       "title": "Agent duty: the drill coach (generation and grading)",
       "body_sha256": "059f139e6bfda7732b2eca12d21d18a78c19edf9065c69b15eb4be412e397ae5",
       "parent_linked": 7
     },
     "DS-W6-02": {
       "number": 47,
-      "id": 5605634953,
+      "id": 5605964174,
       "title": "Agent duty: the leech doctor",
       "body_sha256": "bf97956b8fe1e3f34ab9c5b4b08339f345a08b8984509a76b4d8138e7f4127d8",
       "parent_linked": 7
     },
     "DS-W6-03": {
       "number": 48,
-      "id": 5605635414,
+      "id": 5605964531,
       "title": "Agent duty: the writing tutor",
       "body_sha256": "a0bc1e767ddda19ac7239fa2a6b7f31824df32a3e59717de18e769172172dd99",
       "parent_linked": 7
     },
     "DS-W6-04": {
       "number": 49,
-      "id": 5605635782,
+      "id": 5605964903,
       "title": "Agent duties: the daily note and the weekly synthesis",
       "body_sha256": "e844505f27dfcb6b9e57ee74311694b9e2b96dd2446354ffe0e43e1fa5563750",
       "parent_linked": 7
     },
     "DS-W6-05": {
       "number": 50,
-      "id": 5605636139,
+      "id": 5605965273,
       "title": "Agent duty: the inbox curator",
       "body_sha256": "4e8beb862db7e18f3fc7e5128dd95befebf80fa453ced918b18c74a06013a1b6",
       "parent_linked": 7
     },
     "DS-W6-06": {
       "number": 51,
-      "id": 5605636622,
+      "id": 5605965578,
       "title": "Agent duty: the conversation partner, in the bot and the Mini App",
       "body_sha256": "d6c78bf9a67cca1ad96a3457f2ccb9d6b4cc02832f1886f02b3e420f3c97705b",
       "parent_linked": 7
     },
     "DS-W6-07": {
       "number": 52,
-      "id": 5605636946,
+      "id": 5605965910,
       "title": "Agent duty: practice questions",
       "body_sha256": "fce1e081709b73c7ca67c44ba37a435495b52b9081c052804904597894acb2f4",
       "parent_linked": 7
     },
     "DS-W6-08": {
       "number": 53,
-      "id": 5605637291,
+      "id": 5605966275,
       "title": "Agent duty: the daily digest's coaching",
       "body_sha256": "e7ecb63355827a98239cc87707a561630a0ebaa33a007d2e289e3ab62b55b6b2",
       "parent_linked": 7
     },
     "DS-W6-09": {
       "number": 54,
-      "id": 5605637757,
+      "id": 5605966637,
       "title": "Agent: the ported vault-ops skill and the on-demand run",
       "body_sha256": "7698f2d60a33a6aa4ff8be2895b9226ff3f71b608c2927c2321b36d1da29d8f1",
       "parent_linked": 7
     },
     "DS-W6-10": {
       "number": 55,
-      "id": 5605638107,
+      "id": 5605966971,
       "title": "Mini App: the drill workspace and the progress screens",
       "body_sha256": "3ab6356214a229813263192d8cb97353d3b5f231e0c6deaa564c7d64ed6a176e",
       "parent_linked": 7
     },
     "DS-W6-11": {
       "number": 56,
-      "id": 5605638447,
+      "id": 5605967319,
       "title": "Vault: journal-shaped capture through the inbox",
       "body_sha256": "6f30a3b4f38350bb41c7cc98cd1af30aea74e5582ed372111591927aea0b9428",
       "parent_linked": 7
     },
     "DS-W7-01": {
       "number": 57,
-      "id": 5605638892,
+      "id": 5605967652,
       "title": "Mini App: the settings screen for every runtime setting",
       "body_sha256": "f6af36e00edd0f0fb3c393f85ec0c68d76e9a87d8302204a6a04b7f43ea1a667",
       "parent_linked": 8
     },
     "DS-W7-02": {
       "number": 58,
-      "id": 5605639219,
+      "id": 5605967945,
       "title": "Identity: linked sign-in with Google, Apple and passkeys",
       "body_sha256": "133d11339c64a3ee985e956e949e75652bc0ee81c3d507ec50f5eff4b0583305",
       "parent_linked": 8
     },
     "DS-W7-03": {
       "number": 59,
-      "id": 5605639597,
+      "id": 5605968288,
       "title": "The public landing page",
       "body_sha256": "188e7ba2ce3658906845c1992610339a68082b980be2a72e78ad61046fa91f8f",
       "parent_linked": 8
     },
     "DS-W7-04": {
       "number": 60,
-      "id": 5605640037,
+      "id": 5605968588,
       "title": "Every pack enforced",
       "body_sha256": "2c6e0102da96854f0655129c2c87b48f19a36b049583840d5ea44cbad907b584",
       "parent_linked": 8
     },
     "DS-W8-01": {
       "number": 61,
-      "id": 5605640362,
+      "id": 5605968894,
       "title": "The v9 import: plan, oracle and runbook",
       "body_sha256": "4c82923813cd7dc9741f8530df3a4ec1603156ca69f936c96fa0f5f0bb823ba6",
       "parent_linked": 9
     },
     "DS-W8-02": {
       "number": 62,
-      "id": 5605640703,
+      "id": 5605969209,
       "title": "Side-by-side verification and the cutover checklist",
       "body_sha256": "d0e9fec6d6a5649af4a291ea96e21a04b2ab452aa6dddce2a34c304d5bfe0b70",
       "parent_linked": 9
     },
     "DS-W8-03": {
       "number": 63,
-      "id": 5605641167,
+      "id": 5605969545,
       "title": "Cutover and the predecessor's retirement",
       "body_sha256": "f7852d24d2276559fc20951ecb08b736dd60b809967d9929abe69194a066077b",
       "parent_linked": 9
     },
     "DS-W8-04": {
       "number": 64,
-      "id": 5605641524,
+      "id": 5605969862,
       "title": "Release v1.0.0",
       "body_sha256": "c485a551df9d7a7c6287fbc18902ecdf38d370743856a0bcaa71fc6cdcbbf497",
       "parent_linked": 9
     },
     "DS-W9-01": {
       "number": 65,
-      "id": 5605641882,
+      "id": 5605970200,
       "title": "The vault to Anki flashcard bridge",
       "body_sha256": "330124e2626a5100cf35dbeb8b8aace50d5b2ec89b4b4bd1e39745b2712473f2",
       "parent_linked": 10
     },
     "daily-rollup-metrics": {
       "number": 66,
-      "id": 5605642343,
+      "id": 5605970541,
       "title": "Daily metrics rollup + card-state snapshot",
       "body_sha256": "ed8b130cb0e01acb871c765c3e5f813622e27fa42114c7344d79eee9fc192731",
       "parent_linked": 4
     },
     "per-language-daily-stats": {
       "number": 67,
-      "id": 5605642676,
+      "id": 5605970862,
       "title": "Per-language daily Anki stats",
       "body_sha256": "b17dce3d5342b3f32fa31ac80dfd309f289e74ea2844606537fc824afcac9220",
       "parent_linked": 4
     },
     "daily-score": {
       "number": 68,
-      "id": 5605642993,
+      "id": 5605971183,
       "title": "Five-pillar daily score (0-100) and grade band",
       "body_sha256": "db4390e8c5c3fc7d328a2983fe86666bf86682e4ff1c063686aa550cf5c6f396",
       "parent_linked": 4
     },
     "today-snapshot": {
       "number": 69,
-      "id": 5605643461,
+      "id": 5605971521,
       "title": "Today snapshot (/today) and status reads",
       "body_sha256": "924f89bbe8604876ac6e517b2547ef20bee3a540c92187e4b68c6c0ab89ec634",
       "parent_linked": 4
     },
     "xp-ledger-and-levels": {
       "number": 70,
-      "id": 5605643809,
+      "id": 5605971836,
       "title": "XP ledger, per-review XP, daily bonuses, level curve and titles",
       "body_sha256": "2f50f33b319737e6067be985f75c3594e9fd038a288ac37698bf8807ea568ae0",
       "parent_linked": 4
     },
     "law-tier-xp": {
       "number": 71,
-      "id": 5605644118,
+      "id": 5605972173,
       "title": "Law-track Bloom-tier XP multiplier",
       "body_sha256": "2c6a91f46a3c2a485b9b1224ccf6d7fa9330a9231ecbdae3188f53ec015dbb02",
       "parent_linked": 4
     },
     "consistency-multiplier": {
       "number": 72,
-      "id": 5605644454,
+      "id": 5605972493,
       "title": "Consistency XP multiplier (on-pace run with tier-down)",
       "body_sha256": "d9c3df5688174cfebab5695497ee3a4a5f81d3ac853b2bc0d96dbcdc4ae7554f",
       "parent_linked": 4
     },
     "phoenix-ascendant-buff": {
       "number": 73,
-      "id": 5605644943,
+      "id": 5605972812,
       "title": "Phoenix Ascendant next-day buff",
       "body_sha256": "c61bfb4e761a4111ac7374fa628c3bfad15d86f653f540c8ea80562c9bfbee1c",
       "parent_linked": 4
     },
     "badges-catalog": {
       "number": 74,
-      "id": 5605645278,
+      "id": 5605973128,
       "title": "Badge catalog (40 static) + CEFR band-up badges",
       "body_sha256": "b0b278783bc1cb703b891645b7005809168459b08c7700b2907f346b878fa772",
       "parent_linked": 4
     },
     "personal-records": {
       "number": 75,
-      "id": 5605645610,
+      "id": 5605973437,
       "title": "Personal records (best score, most reviews, most minutes)",
       "body_sha256": "e36ca52d2c392c81571471b380ebe53bd4073cbf7377c4473eff5d25559c6533",
       "parent_linked": 4
     },
     "milestone-ladder": {
       "number": 76,
-      "id": 5605646089,
+      "id": 5605973781,
       "title": "Next milestone ladder",
       "body_sha256": "c1eb3c6ada9d6d23e7926a73692bd594ebdbe872ba6e14a3f5e71fd682d67bbc",
       "parent_linked": 4
     },
     "seasons-prestige-chapters": {
       "number": 77,
-      "id": 5605646474,
+      "id": 5605974115,
       "title": "Monthly seasons, prestige titles and chapter ceremonies",
       "body_sha256": "ff038e5cedad5e2709bdf53a99f48089dba8c26cd4f2644198b8726b6b4f87ba",
       "parent_linked": 4
     },
     "season-node-track": {
       "number": 78,
-      "id": 5605647033,
+      "id": 5605974430,
       "title": "Season node track (10 coin checkpoints per month)",
       "body_sha256": "84d0c30dc0c9611e481a28402b4bdb7d2d17722f66b3f320c5af55d26d801cc6",
       "parent_linked": 4
     },
     "leaderboard-personal": {
       "number": 79,
-      "id": 5605647535,
+      "id": 5605974736,
       "title": "Personal leaderboard read",
       "body_sha256": "415f2294c71c9e099484368371e99a17fcd0e85c8f9e7b22115b1afd7a8102a2",
       "parent_linked": 4
     },
     "xp-exchange-rates": {
       "number": 80,
-      "id": 5605648029,
+      "id": 5605975063,
       "title": "XP exchange-rate readout (XP per graduation by source)",
       "body_sha256": "5e4c91478f49b0fc83dea448e2b30740411b27ca096ab717741a04e078ae0804",
       "parent_linked": 4
     },
     "language-streak-freezes": {
       "number": 81,
-      "id": 5605648500,
+      "id": 5605975426,
       "title": "Language study streak with freezes, heat tiers and lapse decay",
       "body_sha256": "8c4ef5ed51ca01e8d78c8e4ee3b47f69fac8f18ff3a03527c9403b696e7d1287",
       "parent_linked": 4
     },
     "law-streak": {
       "number": 82,
-      "id": 5605648873,
+      "id": 5605975744,
       "title": "Independent law-track streak",
       "body_sha256": "43809f00b05fa8b43d68533890f5d9ee24f8d5b7c764ab85d99a3c996ffbc623",
       "parent_linked": 4
     },
     "habit-strength-governor": {
       "number": 83,
-      "id": 5605649367,
+      "id": 5605976080,
       "title": "Habit strength and the anti-abandonment governor",
       "body_sha256": "248eea75eea603aa4c4b045ddc6e903b22e7b623e25d7bfec480518bb507eb18",
       "parent_linked": 4
     },
     "relight-ritual": {
       "number": 84,
-      "id": 5605649871,
+      "id": 5605976442,
       "title": "Relight ritual (first day back after a lapse)",
       "body_sha256": "64fd620204b48bfe16e2c25618251599474081a08c3643fc2aaf15dbb961f239",
       "parent_linked": 4
     },
     "road-to-c2": {
       "number": 85,
-      "id": 5605650220,
+      "id": 5605976784,
       "title": "Road to C2: per-language CEFR progress and band-up celebrations",
       "body_sha256": "3a4e0c1914fe1d78f9432a5d1cf5abce50a074e91657116a458d8be53827af52",
       "parent_linked": 4
     },
     "forecast-velocity": {
       "number": 86,
-      "id": 5605650538,
+      "id": 5605977082,
       "title": "Road-to-C2 forecast (velocity and ETA to next band)",
       "body_sha256": "a90f4a03ac9665bfac04ee077275c28f978a33811f88f004103a62cffa944ffb",
       "parent_linked": 5
     },
     "adaptive-daily-goal": {
       "number": 87,
-      "id": 5605651145,
+      "id": 5605977390,
       "title": "Adaptive daily review goal",
       "body_sha256": "3b50398763360beb4ee50b537af9b683e168a08bef792d31edba149b2fc51256",
       "parent_linked": 5
     },
     "skill-strands-weak-spots": {
       "number": 88,
-      "id": 5605651480,
+      "id": 5605977751,
       "title": "Skill strands and weak spots",
       "body_sha256": "b23b6c3aea1921ebe8fb89e2398043fac6d4c1a3bc624cb4e42c5f046d3a3d72",
       "parent_linked": 5
     },
     "cross-language-balance": {
       "number": 89,
-      "id": 5605651832,
+      "id": 5605978089,
       "title": "Cross-language study balance",
       "body_sha256": "2c85c67db321a0d056319ffaa7473e87ce7372506aa43fc8866f31e2571a077f",
       "parent_linked": 5
     },
     "memory-health-calibration": {
       "number": 90,
-      "id": 5605652328,
+      "id": 5605978423,
       "title": "Memory health, retention calibration, input readiness, stability depth, mature trend",
       "body_sha256": "ea95c58c916b31491eecc3ea6bce2cd8f6670cb3917f0af49b2d4a4fe1a60a59",
       "parent_linked": 5
     },
     "forward-obligation-horizon": {
       "number": 91,
-      "id": 5605652830,
+      "id": 5605978763,
       "title": "Forward obligation horizon (the empty calendar)",
       "body_sha256": "a5ee8cf27295337b2c600a56d74884f6af77debaf7ffae3e2da0f0d904c8f706",
       "parent_linked": 5
     },
     "can-do-ladder": {
       "number": 92,
-      "id": 5605653216,
+      "id": 5605979106,
       "title": "Can-Do ladder (fine-grained reward ladder in the owner's own words)",
       "body_sha256": "04228ecee0a1bdd81a55cc2d2307a8c0c54762e307e02e9cada0a84960fda5a0",
       "parent_linked": 5
     },
     "reading-log": {
       "number": 93,
-      "id": 5605653602,
+      "id": 5605979443,
       "title": "Reading habit log (/read) with weekly goal and XP",
       "body_sha256": "3234c784f307c3854e9f6c73d5b85a22c7dd2b8876aa2aeb78e737974d97af40",
       "parent_linked": 4
     },
     "writing-log": {
       "number": 94,
-      "id": 5605653953,
+      "id": 5605979773,
       "title": "Writing habit (daily K/J/C confirmation)",
       "body_sha256": "3b54ed443e7f035600833e29569a6ace9df967084b6fede58c3fcfba847b472b",
       "parent_linked": 4
     },
     "habit-board": {
       "number": 95,
-      "id": 5605654564,
+      "id": 5605980125,
       "title": "Habit board (/habits) and habit digest block",
       "body_sha256": "9e1dd75fa10c53d3d95f4ae1465fd78c40490de5fccb5140a9014775022f99b2",
       "parent_linked": 4
     },
     "reading-analytics": {
       "number": 96,
-      "id": 5605654890,
+      "id": 5605980471,
       "title": "Reading analytics fused with Anki (/readstats, /readtrend, /correlate)",
       "body_sha256": "1084d109f17e0b161dbb641028bb195465844aa22c1e02dc37b617ccaddb7a21",
       "parent_linked": 4
     },
     "habit-nudge": {
       "number": 97,
-      "id": 5605655238,
+      "id": 5605980804,
       "title": "Evening habit check-in (with lapse back-off)",
       "body_sha256": "101e35fc25e67a7360e2449d59466af48e4ab9aa05f6bcff587225a05e3f69b3",
       "parent_linked": 6
     },
     "focus-timer": {
       "number": 98,
-      "id": 5605655687,
+      "id": 5605981174,
       "title": "Pomodoro focus timer with live countdown and auto cycles",
       "body_sha256": "e383574324c4917fdad9dd09dc03303de96f4c0c6fee91acab4921d5c2dfe8f3",
       "parent_linked": 4
     },
     "focus-xp-badges-stats": {
       "number": 99,
-      "id": 5605656191,
+      "id": 5605981512,
       "title": "Deep-work XP, streak, stats board and focus nudge",
       "body_sha256": "95178ebc60849587c0ea3aa55a5fc2ef14a182f466e60df98899b53d0f32ea83",
       "parent_linked": 4
     },
     "daily-quests": {
       "number": 100,
-      "id": 5605656514,
+      "id": 5605981831,
       "title": "Daily quest arc (Q1, sealed Q2, owner-picked Q3, crown days)",
       "body_sha256": "65bc0a6f538da719152544cf7c50c84bfa06ab8a788e576393278b7276f73820",
       "parent_linked": 4
     },
     "weekly-meta-quest": {
       "number": 101,
-      "id": 5605656966,
+      "id": 5605982160,
       "title": "Weekly meta-quest",
       "body_sha256": "342edba13f2ab5ab677c07ccd0028ef62adb772d0f7ec6acfb0d369d1a216b12",
       "parent_linked": 4
     },
     "session-chests": {
       "number": 102,
-      "id": 5605657433,
+      "id": 5605982519,
       "title": "Session chests (variable-ratio loot with pity) and the overnight vault",
       "body_sha256": "cc06bea7bd0ff30288267484c2ef725be530c051299913d5d4f8da056b4f3432",
       "parent_linked": 4
     },
     "double-xp-tokens": {
       "number": 103,
-      "id": 5605657784,
+      "id": 5605982866,
       "title": "Double-XP tokens",
       "body_sha256": "c931eaa7ec176d1ccd5964388ca4b59fc4cdb7e10017ad7d9f61818fa1c7a2fc",
       "parent_linked": 4
     },
     "smoke-bombs-perfect-week": {
       "number": 104,
-      "id": 5605658253,
+      "id": 5605983195,
       "title": "Perfect Week smoke bombs",
       "body_sha256": "df280862b405b5568c473523858669b5e64e58a3ac10d0b8ec6e57751438c72c",
       "parent_linked": 4
     },
     "instant-loop-free-spin": {
       "number": 105,
-      "id": 5605658588,
+      "id": 5605983511,
       "title": "Instant loop: AnkiMobile-open acknowledgement and free spin",
       "body_sha256": "e098a04f6e878657ee228964afef3bc9dc2b527916de62bd2613298a1f1bfda8",
       "parent_linked": 6
     },
     "coin-wallet": {
       "number": 106,
-      "id": 5605659246,
+      "id": 5605983829,
       "title": "Coin wallet and economy rules",
       "body_sha256": "d28f9d4bbd1ba6152895ad97763e42f78229815b9c9c13166d72376859f0f31a",
       "parent_linked": 4
     },
     "coin-shop": {
       "number": 107,
-      "id": 5605659579,
+      "id": 5605984186,
       "title": "Coin shop (/shop)",
       "body_sha256": "f388f4322aa3f46694884412697b149fde09ee2209132c247c57507ad9717576",
       "parent_linked": 4
     },
     "skip-day": {
       "number": 108,
-      "id": 5605660091,
+      "id": 5605984494,
       "title": "Skip / cheat day (the one Anki write path)",
       "body_sha256": "39bbd03d57fb2dc9e3225f6253fab5c2dc9e5b0b5f5f27e37ad62e36b4d18702",
       "parent_linked": 4
     },
     "committed-windows": {
       "number": 109,
-      "id": 5605660445,
+      "id": 5605984831,
       "title": "Committed study windows",
       "body_sha256": "7527df7cbabce4a6daa1c3bab8447d52e89a148a613c44b09963df37bb07f6b2",
       "parent_linked": 6
     },
     "doomscroll-tripwire": {
       "number": 110,
-      "id": 5605660963,
+      "id": 5605985137,
       "title": "Doomscroll tripwire rail (sensor, verdicts, sprints, rung ladder, canary)",
       "body_sha256": "705a0f03bcccd2b4662462327f60b2e5e448ce0f66744ef1371f3598435bd616",
       "parent_linked": 6
     },
     "confess": {
       "number": 111,
-      "id": 5605661466,
+      "id": 5605985472,
       "title": "Honor-system confession (/confess)",
       "body_sha256": "a4409da6fc8ec3afda0d8c3d713c6f109a137b1b4e0232fe536c1571a60fe7cd",
       "parent_linked": 6
     },
     "streak-wager": {
       "number": 112,
-      "id": 5605661802,
+      "id": 5605985770,
       "title": "Double-or-nothing streak wager (/wager)",
       "body_sha256": "a06791f081d2fdd8881d09554fb0918675fb79b9e64f1e66dac45b1b82489624",
       "parent_linked": 6
     },
     "commitment-contracts": {
       "number": 113,
-      "id": 5605662417,
+      "id": 5605986094,
       "title": "Commitment contracts with a weakening horizon and Sunday stake review",
       "body_sha256": "b9399394969e979c59ec67ad9f32df30267c9e4c3c1be090b7d8903297250f11",
       "parent_linked": 6
     },
     "panic-pardon-rearm": {
       "number": 114,
-      "id": 5605662742,
+      "id": 5605986436,
       "title": "Panic switch, monthly pardon and re-arm",
       "body_sha256": "24ee0f41ec8c6402726a7be2da907df059b02a4d3af6c71bb41a429e2c6561b0",
       "parent_linked": 6
     },
     "hard-mode": {
       "number": 115,
-      "id": 5605663095,
+      "id": 5605986752,
       "title": "Hard mode (Trial by Fire evening window)",
       "body_sha256": "cdd9c1932c6c8bd1e5a1f1419ae7200c3c204fc8ac61ce4f91355188efa9ced8",
       "parent_linked": 6
     },
     "beeminder-money-rung": {
       "number": 116,
-      "id": 5605663549,
+      "id": 5605987025,
       "title": "Beeminder real-money rung",
       "body_sha256": "8c2787d9944f74309b55918b3b9d6b5c58ffe5cca7811bb5a3459ccb30ad1274",
       "parent_linked": 6
     },
     "evening-nudge-coordinator": {
       "number": 117,
-      "id": 5605664036,
+      "id": 5605987352,
       "title": "Evening nudge coordinator + stakes preview (streak risk)",
       "body_sha256": "27521a8731cf96e1aa14f34a102c2cd2a39c6b02512c2a80e8795380681a1433",
       "parent_linked": 6
     },
     "last-chance-nudge": {
       "number": 118,
-      "id": 5605664500,
+      "id": 5605987665,
       "title": "Last-chance deadline ping (22:00)",
       "body_sha256": "11d111ba0f4e295cb84c0fdf24dc5f3bb376ba1b74f86c69ea8072ec4b69f282",
       "parent_linked": 6
     },
     "self-prediction-markets": {
       "number": 119,
-      "id": 5605664881,
+      "id": 5605988001,
       "title": "Self-prediction markets and the Oracle ladder (/predict, /oracle)",
       "body_sha256": "c13d6625b036c3fee49177e638b99c610210808cab89907a39672952fa522970",
       "parent_linked": 6
     },
     "celebration-ladder": {
       "number": 120,
-      "id": 5605665326,
+      "id": 5605988339,
       "title": "Celebration escalation ladder (T0-T5) with budgets, honesty cap, quiet-hour deferral and outage breakers",
       "body_sha256": "f88bdcd71d83808ab9a4b30ca93cb199544332090fc3bb2281be28f65821c0b8",
       "parent_linked": 4
     },
     "pinned-widget": {
       "number": 121,
-      "id": 5605665819,
+      "id": 5605988667,
       "title": "Pinned daily widget (ambient dashboard)",
       "body_sha256": "c24bd8861f0104938eded6723ddca2c291fa48f69d05ff5b5cf242f57b55e3a0",
       "parent_linked": 6
     },
     "morning-brief": {
       "number": 122,
-      "id": 5605666152,
+      "id": 5605988993,
       "title": "Morning brief",
       "body_sha256": "6ac2d1697d65107b9e553e90c5846a959a59713c10fb7815a002a9702426d17b",
       "parent_linked": 6
     },
     "comeback-protocol": {
       "number": 123,
-      "id": 5605666634,
+      "id": 5605989327,
       "title": "Comeback protocol (lapse-mode morning messages and lapse digest)",
       "body_sha256": "6cc11e676e0424cafd972f708e7e2031f93adf3f9a77ff88f85aac3987e9a22c",
       "parent_linked": 6
     },
     "ghost-race": {
       "number": 124,
-      "id": 5605666967,
+      "id": 5605989681,
       "title": "Ghost-of-past-self weekly race (/race)",
       "body_sha256": "7d17d4de1e215d9d8ea26f403e57c2acbcdd553375ae70abfc325449e414db0c",
       "parent_linked": 4
     },
     "streak-share-cards": {
       "number": 125,
-      "id": 5605667346,
+      "id": 5605990139,
       "title": "Streak milestone share cards (AI art)",
       "body_sha256": "2ef76ffe3d2653eb8523e0acda45da2276faa11f646471d15a3a90cc4f920359",
       "parent_linked": 8
     },
     "ai-keepsake-art": {
       "number": 126,
-      "id": 5605667739,
+      "id": 5605990515,
       "title": "AI keepsake art for chapter ceremonies",
       "body_sha256": "1d3f3d83c7f2cf3e182035acb466a8a76f241e858bddb3ecd9f3e29815ca5648",
       "parent_linked": 8
     },
     "historical-landmarks": {
       "number": 127,
-      "id": 5605668056,
+      "id": 5605990800,
       "title": "Historical landmarks (anniversaries and every 25th study day)",
       "body_sha256": "f31f2c2ce3c808fd183cd4bb77b7ab405fbb53cc0373e99b0bf1979a8459fff8",
       "parent_linked": 6
     },
     "milestone-pings": {
       "number": 128,
-      "id": 5605668533,
+      "id": 5605991262,
       "title": "Milestone pings (badges, level-ups, queue zero)",
       "body_sha256": "5e9826c5aab4c68e4c50f0eab8efdfd4518583f825c83852fae061376aae2f9d",
       "parent_linked": 6
     },
     "daily-digest": {
       "number": 129,
-      "id": 5605668869,
+      "id": 5605991626,
       "title": "Daily digest (just-closed study day)",
       "body_sha256": "3cb4ea34678a6b125ae9312495071b2c1a8384e8fae2a068b63f74a3b2ed7bf9",
       "parent_linked": 6
     },
     "weekly-report": {
       "number": 130,
-      "id": 5605669332,
+      "id": 5605992120,
       "title": "Weekly report (Sunday)",
       "body_sha256": "4639efb54a29738ab86f4666c00844b3ea48c454629cc956b8381b6cfc8c17a9",
       "parent_linked": 6
     },
     "session-debrief": {
       "number": 131,
-      "id": 5605669659,
+      "id": 5605992470,
       "title": "Felt-difficulty session debrief",
       "body_sha256": "76a923efe652ac67c410df7c8927b751f0fe87a038c740425c6887afeaf3100f",
       "parent_linked": 6
     },
     "nudge-ablation": {
       "number": 132,
-      "id": 5605670081,
+      "id": 5605992954,
       "title": "Nudge ablation (holdout experiment) and withhold ledger",
       "body_sha256": "06ec9e8dc1fe169a0334b3c2b6cec38c76e14f933f7682fbdc891f17c83060c5",
       "parent_linked": 6
     },
     "leech-remediation": {
       "number": 133,
-      "id": 5605670559,
+      "id": 5605993301,
       "title": "Leech remediation workflow",
       "body_sha256": "226ef741159b3db6da39415092ed6574089cf4eb95174f1d2a344b96185d2bbd",
       "parent_linked": 5
     },
     "law-track-summary": {
       "number": 134,
-      "id": 5605670878,
+      "id": 5605993629,
       "title": "Law-track summary block (dual-track display, law primary)",
       "body_sha256": "3048490de6ecd33090fdb95a43195222f3e7d34557681d16169f724b71ea6b53",
       "parent_linked": 4
     },
     "lsat-section-board": {
       "number": 135,
-      "id": 5605671410,
+      "id": 5605994093,
       "title": "Test-prep section coverage board",
       "body_sha256": "f03c04e21b4bae21a65b1aa7192173da48fedabd911a92ee19211daec8549d13",
       "parent_linked": 5
     },
     "law-drills": {
       "number": 136,
-      "id": 5605671800,
+      "id": 5605994432,
       "title": "Law drills: browse, answer via Telegram, graded post-back XP",
       "body_sha256": "84abf92abacc6cca5fc59591e4c351079219976f010d1369e48d5d4308ab5f0e",
       "parent_linked": 7
     },
     "illusion-ledger": {
       "number": 137,
-      "id": 5605672312,
+      "id": 5605994931,
       "title": "The Illusion Ledger (recognition vs production retention gap)",
       "body_sha256": "70de67465658df37709d4a2aba41324f8b08dcc5017c8ded1d7e51292adfb5a2",
       "parent_linked": 5
     },
     "echo-test": {
       "number": 138,
-      "id": 5605672636,
+      "id": 5605995248,
       "title": "The Echo Test (same-note sibling contamination)",
       "body_sha256": "4115081e112b660f619920485899da5d43d58cf22d1f4c8eebfbf2041f3db663",
       "parent_linked": 5
     },
     "price-of-a-day-off": {
       "number": 139,
-      "id": 5605673116,
+      "id": 5605995597,
       "title": "The Price of a Day Off (rest-day dose-response)",
       "body_sha256": "ad5bf8bcd3b7b0fa79e3ce6928b651cab17b87b1af6d3d1adbd84d2bdd2e6ef6",
       "parent_linked": 5
     },
     "hanzi-dividend": {
       "number": 140,
-      "id": 5605673615,
+      "id": 5605996120,
       "title": "The Hanzi Dividend (Chinese-Japanese character overlap)",
       "body_sha256": "7de9bb502ef239661ff20d1f98a55f34eef3ed3517def703d5d8f8c696200ed1",
       "parent_linked": 5
     },
     "instrument-bench-ii": {
       "number": 141,
-      "id": 5605673999,
+      "id": 5605996424,
       "title": "Instrument Bench II (Preset Audit, Lateness Ceiling, Bake-Off)",
       "body_sha256": "9e1eb90fa2f0f1550bef5329464ee484d1bbd1d70426b045a674e8c7f0ad24bb",
       "parent_linked": 5
     },
     "dark-fields": {
       "number": 142,
-      "id": 5605674520,
+      "id": 5605996912,
       "title": "Dark Fields (authored content no template renders)",
       "body_sha256": "4e9132f0bca855b0f621abfabf2fffe7951ae2ef673285d192fea4a26051d1e2",
       "parent_linked": 5
     },
     "dead-air": {
       "number": 143,
-      "id": 5605674885,
+      "id": 5605997334,
       "title": "Dead Air (idle time between cards)",
       "body_sha256": "7a9c39e6140e6e89af3d349c21734a91825e147a83e28ea477e4b0d1a85b3103",
       "parent_linked": 5
     },
     "the-runway": {
       "number": 144,
-      "id": 5605675339,
+      "id": 5605997855,
       "title": "The Runway (unseen pool in years)",
       "body_sha256": "28607227885e66c55510c9491ba433b937708a96e3449aed0dd5889d55ce9f24",
       "parent_linked": 5
     },
     "contradiction-docket": {
       "number": 145,
-      "id": 5605675699,
+      "id": 5605998222,
       "title": "The Contradiction Docket",
       "body_sha256": "cdadc3970da4b7989165493ec9b4e0933443f8a960b78a9017c78b9dfe5c879a",
       "parent_linked": 5
     },
     "fluency-trap-audit": {
       "number": 146,
-      "id": 5605676034,
+      "id": 5605998681,
       "title": "Fluency check (/fluency)",
       "body_sha256": "aaa011de32bc53b02e0d1380fe37d96613cc903198feccbffda0e775e751cd70",
       "parent_linked": 5
     },
     "divestment-day": {
       "number": 147,
-      "id": 5605676502,
+      "id": 5605999074,
       "title": "Divestment Day (/divest)",
       "body_sha256": "28e32af5a78dfbeccb1e7e891343d131c89888e767652983b0ddee4af8a43692",
       "parent_linked": 5
     },
     "tilt-test": {
       "number": 148,
-      "id": 5605676851,
+      "id": 5605999479,
       "title": "Tilt Test (/tilt)",
       "body_sha256": "2baa1ad0224c173bfcf5b13537b21edf4febb9b0c55124b9ae01d70afb799c6e",
       "parent_linked": 5
     },
     "deal-the-hand": {
       "number": 149,
-      "id": 5605677332,
+      "id": 5605999903,
       "title": "Deal the Hand (/hand)",
       "body_sha256": "fb6240b8e7c3bd7dd68f9b68a7d5a4747d8dab53557ec7b8e41377a2cc0610de",
       "parent_linked": 5
     },
     "sabbatical-clock": {
       "number": 150,
-      "id": 5605677670,
+      "id": 5606000322,
       "title": "Sabbatical Decay Clock (/park <lang>)",
       "body_sha256": "8980b597575212f67a7a12cd22d14b06880be68818d455cc5aa992a96fbd055e",
       "parent_linked": 5
     },
     "other-hand-census": {
       "number": 151,
-      "id": 5605678174,
+      "id": 5606000883,
       "title": "The Other Hand (/otherhand) due-date provenance census",
       "body_sha256": "874e2cd1add33dc77e4ed3ab6d83dc145b2455d05fc78385411d5450b4ed3c69",
       "parent_linked": 5
     },
     "charts-and-resources": {
       "number": 152,
-      "id": 5605678524,
+      "id": 5606001251,
       "title": "Charts (/chart) and MCP chart resources",
       "body_sha256": "2f24ee24e67cf40ea707df510e91bddd790dce7cb50fa8951e49882b75360d06",
       "parent_linked": 4
     },
     "vault-stats-bridge": {
       "number": 153,
-      "id": 5605678998,
+      "id": 5606001587,
       "title": "Vault stats bridge (nightly stats JSON into the second-brain vault)",
       "body_sha256": "d74305ae74a32e7b59d25c808b6f5b496f4ceb00af0e023fe3c5eee86595f5d6",
       "parent_linked": 9
     },
     "inbox-capture": {
       "number": 154,
-      "id": 5605679421,
+      "id": 5606002072,
       "title": "Telegram media capture to the vault inbox",
       "body_sha256": "c93a540b26f64d7761c61b25d4b35fc66c791e2e2037ca51ee973e7529c0bc84",
       "parent_linked": 7
     },
     "vaultops-trigger": {
       "number": 155,
-      "id": 5605679902,
+      "id": 5606002407,
       "title": "On-demand vault-ops run (/vaultops)",
       "body_sha256": "b3226ab585fdb631d13fdba3f869a906c8bccaab2fd0f1b3fcbdf88b4f1993c6",
       "parent_linked": 7
     },
     "public-achievement-publish": {
       "number": 156,
-      "id": 5605680410,
+      "id": 5606002843,
       "title": "Public achievement publishing (scrubbed, opt-in)",
       "body_sha256": "475476e53ee223f569ad738850c3f049c1e12bec9616c56fbdc17611d121e7a4",
       "parent_linked": 8
     },
     "mcp-server": {
       "number": 157,
-      "id": 5605680726,
+      "id": 5606003232,
       "title": "MCP server (FastMCP, Streamable HTTP)",
       "body_sha256": "cc60470945c1fe6e366431d9e9c7f7e422f8b8ffb80c5c2c012b19274df80f9f",
       "parent_linked": 7
     },
     "mcp-bearer-auth": {
       "number": 158,
-      "id": 5605681176,
+      "id": 5606003588,
       "title": "Fail-closed bearer auth for the law/drill MCP tools",
       "body_sha256": "93ad51d6cb5713a98d0a907f637cefb7f2b89ebef50a57f9e3e8470c2fec89df",
       "parent_linked": 7
     },
     "syllabus-band-export": {
       "number": 159,
-      "id": 5605681653,
+      "id": 5606004085,
       "title": "CEFR band syllabus export + parity gate",
       "body_sha256": "b2c606daf20bcf19eeddd82a980a888d2f5bd0bd740451ab23b9bc21bd2a1555",
       "parent_linked": 5
     },
     "OWN-G1": {
       "number": 160,
-      "id": 5605681992,
+      "id": 5606004398,
       "title": "Owner gate: review the public-readiness report and make the repository public",
       "body_sha256": "c8a52d53616097a929d962b01b773e93a0c7351da0adf4321eabff0dd6dfe7e7",
       "parent_linked": 1
     },
     "OWN-G2": {
       "number": 161,
-      "id": 5605682455,
+      "id": 5606004781,
       "title": "Owner gate: approve each first-time change on the host",
       "body_sha256": "d8287a8c63a1349f6dfff1ad0794acbac358fdd17e0b5fde2a1f2ac0aef5d205",
       "parent_linked": 3
     },
     "OWN-G3": {
       "number": 162,
-      "id": 5605682956,
+      "id": 5606005190,
       "title": "Owner gate: the AI agent's device key on the subscription proxy",
       "body_sha256": "c66111b254056c8419855b7d632209f457b9695f8de4f23d1eda2f47c4a44613",
       "parent_linked": 3
     },
     "OWN-G4": {
       "number": 163,
-      "id": 5605683266,
+      "id": 5606005506,
       "title": "Owner gate: approve the persona roster once",
       "body_sha256": "c82e1aa06951d20981a7350591ad529985623514593ca28a3bbee867dec5abfb",
       "parent_linked": 2
     },
     "OWN-G5": {
       "number": 164,
-      "id": 5605683754,
+      "id": 5606005971,
       "title": "Owner gate: cut over from the predecessor and retire it",
       "body_sha256": "ee1fb1a15cae7788615e3f560cac43f26a35a2c98b80ef1e397dcc4ad48a1f14",
       "parent_linked": 9
     },
     "OWN-G6": {
       "number": 165,
-      "id": 5605684113,
+      "id": 5606006282,
       "title": "Owner gate: store the new secret values",
       "body_sha256": "252e4e918bd654006ac68a8a089b5e6f36ac182f76ddf2c7a88189468ba46e09",
       "parent_linked": 3
     },
     "OWN-G7": {
       "number": 166,
-      "id": 5605684608,
+      "id": 5606006757,
       "title": "Owner gate: the offsite bucket for backups",
       "body_sha256": "3eeb3a249e6bc0ece77ffff5baeccc34c265c5b5a68ce1d186c5f66659d9148f",
       "parent_linked": 3
     },
     "OWN-G8": {
       "number": 167,
-      "id": 5605684956,
+      "id": 5606007108,
       "title": "Owner gate: infrastructure findings that need an owner decision",
       "body_sha256": "029b1e20a59d8a61edd5b23803008af9c7fb50e6bd4b69aea5d2219a8f0d5e88",
       "parent_linked": 3
     },
     "OWN-D1": {
       "number": 168,
-      "id": 5605685243,
+      "id": 5606007561,
       "title": "Owner decision: a domain for the landing page and the Mini App",
       "body_sha256": "7dbf5b51b4bd5c9f8b01c1e271e6b2213af55601c75fd7a250a14fc2bdb2c64b",
       "parent_linked": 8
     },
     "OWN-D2": {
       "number": 169,
-      "id": 5605685850,
+      "id": 5606007905,
       "title": "Owner decision: the image provider for share cards and keepsake art",
       "body_sha256": "a22e897ac3f03c6a16295382d97888a8d49b89674da911caaf19c23ee91b8f69",
       "parent_linked": 8
     },
     "OWN-D3": {
       "number": 170,
-      "id": 5605686188,
+      "id": 5606008261,
       "title": "Owner action: bind the tripwire channel to the new bot",
       "body_sha256": "c788365f3c84144bc92a2ac769497d587dafa8907a262addd1730a2d61d91805",
       "parent_linked": 6
     },
     "OWN-D4": {
       "number": 171,
-      "id": 5605686517,
+      "id": 5606008710,
       "title": "Owner action: register the Mini App with BotFather",
       "body_sha256": "d515c3fc77220c7229c41bd7d7fa145c1586ab00ebd15a177f42d7959814506e",
       "parent_linked": 3
     },
     "OWN-D5": {
       "number": 172,
-      "id": 5605687104,
+      "id": 5606009048,
       "title": "Campaign boundaries the owner set",
       "body_sha256": "ffa1afe5c53f28f11d31478b551e4f7dc53b6bfa483f3e1c3397fbef819608c0",
       "parent_linked": 1
     },
     "OWN-inert-churn-tax": {
       "number": 173,
-      "id": 5605687457,
+      "id": 5606009537,
       "title": "Owner decision: revive the predecessor's inert 'Churn Tax (same-day repeat-answer accounting)'?",
       "body_sha256": "64e275c5628fc9618942dcc8b57f1f8ee67d2539614106449b8e4268478c8520",
       "parent_linked": 5
     },
     "OWN-inert-latency-debt": {
       "number": 174,
-      "id": 5605687923,
+      "id": 5606009833,
       "title": "Owner decision: revive the predecessor's inert 'Latency Debt exam-clock audit'?",
       "body_sha256": "935ae287231a44e76bb01cc84434f445e0672710387132367bd418ee82a77504",
       "parent_linked": 5
     },
     "OWN-inert-two-button-grading": {
       "number": 175,
-      "id": 5605688239,
+      "id": 5606010264,
       "title": "Owner decision: revive the predecessor's inert 'Two-Button Grading audit (collapsed grade vocabulary)'?",
       "body_sha256": "7ec0bf38ebf11a0c5abe6a69fd8cb38ee80d96f736ff54b54a322f03c7b21c8b",
       "parent_linked": 5
     },
     "OWN-inert-shuffle-test": {
       "number": 176,
-      "id": 5605688580,
+      "id": 5606010626,
       "title": "Owner decision: revive the predecessor's inert 'Shuffle Test (blocked vs interleaved study order)'?",
       "body_sha256": "fecc52ce5741064bb12f5251c1e53a71720890457a1b358dd3ab83bc70e2468c",
       "parent_linked": 5
     },
     "OWN-inert-birth-cohort": {
       "number": 177,
-      "id": 5605689044,
+      "id": 5606010940,
       "title": "Owner decision: revive the predecessor's inert 'Birth Cohort (intake-day batch size vs lifetime cost)'?",
       "body_sha256": "67374b31533a5dc577c4b2c4b2964942baf21a1a12e030881a619edaff23585b",
       "parent_linked": 5
     },
     "OWN-inert-unclaimed-effort": {
       "number": 178,
-      "id": 5605689367,
+      "id": 5606011373,
       "title": "Owner decision: revive the predecessor's inert 'Unclaimed Effort Ledger (study the filters never saw)'?",
       "body_sha256": "e60479564b5709a63692a4b930a94737f0b678d92238b139a9369c925adb5629",
       "parent_linked": 5
     },
     "OWN-inert-track-crowdout": {
       "number": 179,
-      "id": 5605689874,
+      "id": 5606011690,
       "title": "Owner decision: revive the predecessor's inert 'Law vs language track crowd-out statistics'?",
       "body_sha256": "494d4719f7277960d34ff3752face74cb7238957a0ecb1431117a050bb71201a",
       "parent_linked": 5
     },
     "OWN-inert-cue-ledger": {
       "number": 180,
-      "id": 5605690203,
+      "id": 5606012051,
       "title": "Owner decision: revive the predecessor's inert 'Cue ledger (per-app cost of doomscrolling)'?",
       "body_sha256": "9c3ad0445218e99bf05c2305d6baec2369d6e0ba40602e27ca7acf40d58659bf",
       "parent_linked": 5
     },
     "OWN-inert-optimiser-ledger": {
       "number": 181,
-      "id": 5605690649,
+      "id": 5606012496,
       "title": "Owner decision: revive the predecessor's inert 'Optimiser Ledger + Preset Census (FSRS preset eligibility)'?",
       "body_sha256": "ab9ab476449324b62f5ec4c1ce3b8d5202cb3d4179f450558b2bfc02d1ff7c71",
       "parent_linked": 5
     },
     "OWN-inert-peak-day": {
       "number": 182,
-      "id": 5605690999,
+      "id": 5606013061,
       "title": "Owner decision: revive the predecessor's inert 'Peak Day taper (law retrievability at an exam date)'?",
       "body_sha256": "7719ad683ba0568f67cd0dda2ff09c4e39967f76007ec9620dad0d5b0e3d0622",
       "parent_linked": 5
