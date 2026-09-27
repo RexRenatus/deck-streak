@@ -90,14 +90,6 @@
       "state": "pending",
       "enforced_by": "TBD"
     },
-    "subscription-proxy": {
-      "state": "pending",
-      "enforced_by": "TBD",
-      "excluded_rows": {
-        "identity-injection": "tests phoenix-v2's own proxy crate (cargo test -p phx-subscription-proxy); DeckStreak is a client of the proxy, not the proxy",
-        "credential-strip": "tests phoenix-v2's own proxy crate; DeckStreak is a client of the proxy, not the proxy"
-      }
-    },
     "tdd": {
       "state": "pending",
       "enforced_by": "TBD"
