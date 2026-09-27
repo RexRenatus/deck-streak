@@ -189,9 +189,9 @@
       "class": "token",
       "input": {
         "secrets": [],
-        "text": "api/bot0033969:kUK4grWYYGa6l_ODzL5RWAgSrlVcp9E/getUpdates?offset=5"
+        "text": "api/bot0033969:kUK4grWYYGa6l_ODzL5RWAgSrlVcp9E/status?page=5"
       },
-      "output": "api/bot***REDACTED***/getUpdates?offset=5"
+      "output": "api/bot***REDACTED***/status?page=5"
     },
     {
       "class": "token",
@@ -954,7 +954,7 @@
   "kind": "adapter",
   "note": "Constructs the filter with secrets as its own values, runs one log record carrying text through it, and returns the record's message; cases drawn under CPython 3.12.12.",
   "registry": "tools/parity-oracle/registry/spec_020.py",
-  "registry_sha256": "e8ca736c5c16f785f7032e2d79e4f1fb1005a71505fb16b1c4845aa5339e4660",
+  "registry_sha256": "d52ea86a9eebf02d6ca6cdcc2223a97f1a5acf8d57378b6ca434020c1a3907d8",
   "schema": "phx.parity-golden.v1",
   "seed": 20,
   "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"

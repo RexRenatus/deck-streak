@@ -345,7 +345,7 @@
   "kind": "adapter",
   "note": "Sets the predecessor's digest-hour variable to raw, or removes it when raw is null, for one call with rollover_hour, and restores the environment after it; cases drawn under CPython 3.12.12.",
   "registry": "tools/parity-oracle/registry/spec_020.py",
-  "registry_sha256": "e8ca736c5c16f785f7032e2d79e4f1fb1005a71505fb16b1c4845aa5339e4660",
+  "registry_sha256": "d52ea86a9eebf02d6ca6cdcc2223a97f1a5acf8d57378b6ca434020c1a3907d8",
   "schema": "phx.parity-golden.v1",
   "seed": 20,
   "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"

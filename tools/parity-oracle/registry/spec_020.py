@@ -181,7 +181,7 @@ def redaction_cases(rng):
     long_id = token(rng, 11, 33)
     drawn.append(("token", redaction_case([], f"{long_id}.")))
     drawn.append(
-        ("token", redaction_case([], f"api/bot{token(rng, 7, 31)}/getUpdates?offset=5"))
+        ("token", redaction_case([], f"api/bot{token(rng, 7, 31)}/status?page=5"))
     )
     first, second = token(rng, 7, 30), token(rng, 6, 34)
     drawn.append(("token", redaction_case([], f"{first} and {second}")))
