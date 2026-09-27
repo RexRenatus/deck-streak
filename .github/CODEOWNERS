@@ -1,0 +1,5 @@
+# Code owners are requested for review on the pull requests that touch their paths.
+# The last matching pattern takes precedence. Keep this file on both long-lived branches,
+# because GitHub reads it from each pull request's base branch.
+*           @RexRenatus
+/.github/   @RexRenatus

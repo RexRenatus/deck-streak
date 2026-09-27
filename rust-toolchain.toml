@@ -1,0 +1,6 @@
+# Pins the Rust toolchain so a verdict is a property of the tree, not of the machine. rustup reads
+# this file on every cargo invocation in the repository.
+[toolchain]
+channel = "1.97.0"
+components = ["rustfmt", "clippy"]
+profile = "minimal"

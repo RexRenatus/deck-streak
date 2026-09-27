@@ -1,0 +1,22 @@
+# Rust build output (github/gitignore Rust.gitignore)
+/target/
+**/*.rs.bk
+rustc-ice-*.txt
+
+# Node and SvelteKit (github/gitignore Node.gitignore)
+node_modules/
+.svelte-kit/
+build/
+.vite/
+
+# Environment files hold real values and are never committed. `.env.example` names each
+# variable without a value, and is the one environment file that is.
+.env
+.env.*
+!.env.example
+
+# Editors and operating systems
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json

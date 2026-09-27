@@ -1,0 +1,9 @@
+# REUSE 3.3: licensing information for every file, without a header in each one.
+# https://reuse.software/spec-3.3/
+version = 1
+
+[[annotations]]
+path = "**"
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2026 DeckStreak contributors"
+SPDX-License-Identifier = "AGPL-3.0-or-later"
