@@ -72,7 +72,10 @@ security() {
 {"security_and_analysis": {"secret_scanning": {"status": "enabled"}, "secret_scanning_push_protection": {"status": "enabled"}}}
 JSON
     step "Dependabot alerts" gh api -X PUT "repos/$REPO/vulnerability-alerts"
-    step "Dependabot security updates" gh api -X PUT "repos/$REPO/automated-security-fixes"
+    # Security updates open against the default branch (main), which only a release pull request from
+    # dev may change, so they stay OFF; alerts stay on and are triaged into pull requests into dev
+    # (ADR-036). Deleting is idempotent, so a re-run never turns them back on.
+    step "Dependabot security updates stay off" gh api -X DELETE "repos/$REPO/automated-security-fixes"
     step "private vulnerability reporting" gh api -X PUT "repos/$REPO/private-vulnerability-reporting"
 }
 
