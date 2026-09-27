@@ -5,9 +5,11 @@ predecessor and runs in public CI. Each refusal is first proved on a planted tre
 directory, then applied to the committed one.
 """
 
+import ast
 import hashlib
 import importlib.util
 import json
+import re
 import tempfile
 import unittest
 from pathlib import Path
@@ -23,6 +25,46 @@ GENERATOR = "tools/parity-oracle/generate.py"
 REGISTRY = "tools/parity-oracle/registry/"
 STUDY_DAY = ROOT / ORACLE / "goldens" / "study_day.json"
 DAY_MS = 86_400_000
+SCHEMA = "phx.parity-golden.v1"
+#: Every key a golden may hold, and every key a case may hold (the data-migration pack's own).
+KEYS = {
+    "adapter",
+    "cases",
+    "function",
+    "generator",
+    "generator_sha256",
+    "inputs",
+    "kind",
+    "note",
+    "registry",
+    "registry_sha256",
+    "schema",
+    "seed",
+    "source_commit",
+}
+CASE_KEYS = {"class", "diverges", "input", "note", "output"}
+KINDS = ("adapter", "constants", "function")
+MODULE = re.compile(r"tools/parity-oracle/registry/spec_\d{3}\.py")
+COMMIT = re.compile(r"[0-9a-f]{40}")
+#: A calendar date, a clock time or a slashed date: what R3 keeps out of every golden.
+CALENDAR = re.compile(
+    r"\d{4}-\d{2}-\d{2}|(?<!\d)\d{1,2}:\d{2}(?!\d)|(?<!\d)\d{1,2}/\d{1,2}/\d{2,4}(?!\d)"
+)
+#: Calls that read a file or list a directory, whatever object they are made on (R6).
+READERS = {
+    "glob",
+    "iterdir",
+    "listdir",
+    "open",
+    "read_bytes",
+    "read_text",
+    "readlink",
+    "rglob",
+    "scandir",
+    "walk",
+}
+#: Modules that reach a database or the network (R6).
+REACHERS = {"aiosqlite", "http", "httpx", "requests", "socket", "sqlite3", "urllib"}
 
 #: A golden as the generator writes one, minus the digests a planted tree computes for itself.
 PLANTED_GOLDEN = {
@@ -83,32 +125,155 @@ def registry_modules(root):
 
 def strict(text):
     """A golden parsed as strict JSON: a NaN, an Infinity or a key written twice is refused."""
-    return json.loads(text)
+
+    def pairs(items):
+        keys = [key for key, _ in items]
+        twice = sorted({key for key in keys if keys.count(key) > 1})
+        if twice:
+            raise ValueError(f"repeats the key(s) {', '.join(twice)}")
+        return dict(items)
+
+    def constant(name):
+        raise ValueError(f"holds {name}, which strict JSON refuses")
+
+    return json.loads(text, object_pairs_hook=pairs, parse_constant=constant)
 
 
 def stale(root, name, golden):
     """Why a golden no longer matches the generator or the registry module that built it (R4)."""
-    return []
+    found = []
+    if golden.get("generator") != GENERATOR:
+        found.append(
+            f"{name}: names the generator {golden.get('generator')!r}, not {GENERATOR}"
+        )
+    elif golden.get("generator_sha256") != sha256(root / GENERATOR):
+        found.append(
+            f"{name}: generator_sha256 differs from the committed {GENERATOR}: regenerate it"
+        )
+    registry = golden.get("registry")
+    if not (isinstance(registry, str) and MODULE.fullmatch(registry)):
+        found.append(f"{name}: names no registry module, spec_NNN.py ({registry!r})")
+    elif not (root / registry).is_file():
+        found.append(f"{name}: names {registry}, which is not committed")
+    elif golden.get("registry_sha256") != sha256(root / registry):
+        found.append(
+            f"{name}: registry_sha256 differs from the committed {registry}: regenerate it"
+        )
+    return found
 
 
 def provenance(name, golden):
     """Why a golden does not record synthetic inputs, the generator's seed and a commit (R5)."""
-    return []
+    found = []
+    if golden.get("inputs") != "synthetic":
+        found.append(f"{name}: inputs is {golden.get('inputs')!r}, not 'synthetic'")
+    if golden.get("seed") != generate.SEED:
+        found.append(
+            f"{name}: seed is {golden.get('seed')!r}, not the generator's {generate.SEED}"
+        )
+    commit = golden.get("source_commit")
+    if not (isinstance(commit, str) and COMMIT.fullmatch(commit)):
+        found.append(f"{name}: source_commit {commit!r} is not a 40-hex commit")
+    return found
 
 
 def shape(name, golden, text):
     """Why a golden is not a phx.parity-golden.v1 document as the generator writes one (R5)."""
-    return []
+    found = []
+    if golden.get("schema") != SCHEMA:
+        found.append(f"{name}: schema is {golden.get('schema')!r}, not {SCHEMA!r}")
+    found += [
+        f"{name}: holds an unknown key {key!r}" for key in sorted(set(golden) - KEYS)
+    ]
+    kind = golden.get("kind")
+    if kind not in KINDS:
+        found.append(f"{name}: kind is {kind!r}, not one of {', '.join(KINDS)}")
+    if not (isinstance(golden.get("function"), str) and golden["function"]):
+        found.append(f"{name}: names no function")
+    glue = [key for key in ("adapter", "note") if key in golden]
+    if kind == "adapter" and not all(
+        isinstance(golden.get(key), str) and golden[key] for key in ("adapter", "note")
+    ):
+        found.append(
+            f"{name}: an adapter golden names its adapter and carries its note"
+        )
+    if kind != "adapter" and glue:
+        found.append(f"{name}: only an adapter golden carries {' and '.join(glue)}")
+    cases = golden.get("cases")
+    if not (isinstance(cases, list) and cases):
+        found.append(f"{name}: holds no case")
+        cases = []
+    for index, case in enumerate(cases):
+        if not (isinstance(case, dict) and "input" in case and "output" in case):
+            found.append(f"{name}: case {index} is not an input with its output")
+            continue
+        found += [
+            f"{name}: case {index} holds an unknown key {key!r}"
+            for key in sorted(set(case) - CASE_KEYS)
+        ]
+        if "class" in case and not (isinstance(case["class"], str) and case["class"]):
+            found.append(f"{name}: case {index} has an empty class")
+    if text != json.dumps(golden, indent=2, sort_keys=True, allow_nan=False) + "\n":
+        found.append(
+            f"{name}: is not in the generator's form (sorted keys, two-space indent)"
+        )
+    return found
 
 
 def date_strings(name, golden):
     """Every string in a golden that reads as a calendar date or a clock time (R3)."""
-    return []
+    found = []
+
+    def visit(value, where):
+        if isinstance(value, str):
+            if CALENDAR.search(value):
+                found.append(f"{name}: {where} holds {value!r}")
+        elif isinstance(value, dict):
+            for key, item in value.items():
+                here = f"{where}.{key}" if where else key
+                if CALENDAR.search(key):
+                    found.append(f"{name}: the key {here} reads as a date or a time")
+                visit(item, here)
+        elif isinstance(value, list):
+            for index, item in enumerate(value):
+                visit(item, f"{where}[{index}]")
+
+    visit(golden, "")
+    return found
 
 
 def registry_reads(where, source):
-    """Why a registry module's source reads a file, a database or the network (R6)."""
-    return []
+    """Why a registry module's source reads a file, a database or the network (R6): a static read
+    of its syntax tree, so nothing in the module runs."""
+    found = []
+    for node in ast.walk(ast.parse(source, filename=where)):
+        names = []
+        if isinstance(node, ast.Import):
+            names = [alias.name for alias in node.names]
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            names = [node.module]
+        elif isinstance(node, ast.Call):
+            func = node.func
+            called = (
+                func.attr
+                if isinstance(func, ast.Attribute)
+                else getattr(func, "id", None)
+            )
+            if called in READERS:
+                found.append((node.lineno, f"calls {called}"))
+            elif (
+                called in ("__import__", "import_module")
+                and node.args
+                and isinstance(node.args[0], ast.Constant)
+                and isinstance(node.args[0].value, str)
+            ):
+                names = [node.args[0].value]
+        found += [
+            (node.lineno, f"imports {name}")
+            for name in names
+            if name.split(".")[0] in REACHERS
+        ]
+    return [f"{where}:{line}: {what}" for line, what in sorted(found)]
 
 
 class Planted:
