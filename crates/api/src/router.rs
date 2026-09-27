@@ -28,7 +28,8 @@ use std::time::Duration;
 
 use axum::error_handling::HandleErrorLayer;
 use axum::extract::{DefaultBodyLimit, MatchedPath, Request};
-use axum::http::{HeaderName, StatusCode, header};
+use axum::http::header::{AUTHORIZATION, COOKIE, SET_COOKIE};
+use axum::http::{HeaderName, StatusCode};
 use axum::{BoxError, Router};
 use tower::ServiceBuilder;
 use tower::limit::GlobalConcurrencyLimitLayer;
@@ -127,7 +128,7 @@ pub fn layered(routes: Router) -> Router {
 /// The headers whose values never reach a log: the Mini App's `initData` travels as
 /// `Authorization`, and a session as a cookie.
 fn sensitive_headers() -> [HeaderName; 3] {
-    [header::AUTHORIZATION, header::COOKIE, header::SET_COOKIE]
+    [AUTHORIZATION, COOKIE, SET_COOKIE]
 }
 
 /// The answer to a request the bound refused: 503 at once, so the connection is released and the

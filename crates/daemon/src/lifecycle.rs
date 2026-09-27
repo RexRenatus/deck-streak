@@ -135,7 +135,7 @@ impl Notifier {
             Err(error) => {
                 if !self.warned.swap(true, Ordering::Relaxed) {
                     let state = state.message();
-                    tracing::warn!(%error, state, "an sd_notify message was not sent");
+                    tracing::warn!(%error, state, "an sd_notify datagram was not sent");
                 }
                 false
             }
