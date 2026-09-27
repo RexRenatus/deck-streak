@@ -53,7 +53,9 @@ def run_rows(tmp, state, rows, deferred=None):
             "scope": "tree",
             "probe": {
                 "command": [
-                    sys.executable, "-c", f"import sys; print('examined 1'); sys.exit({code})"
+                    sys.executable,
+                    "-c",
+                    f"import sys; print('examined 1'); sys.exit({code})",
                 ],
                 "timeout_seconds": 60,
             },
@@ -88,7 +90,9 @@ class PackWiringIsHonest(unittest.TestCase):
 
     def test_every_vendored_pack_has_a_wiring_state(self):
         vendored = [
-            p.name for p in (REPO / ".packs" / "skills" / "packs").iterdir() if (p / "checks.json").is_file()
+            p.name
+            for p in (REPO / ".packs" / "skills" / "packs").iterdir()
+            if (p / "checks.json").is_file()
         ]
         for pack in examined("vendored packs", vendored):
             self.assertIn(pack, self.wiring, f"{pack} has no wiring state")
@@ -105,7 +109,11 @@ class PackWiringIsHonest(unittest.TestCase):
         for name, issue in examined("waiting packs and rows", waiting):
             match = ISSUE.match(issue)
             self.assertIsNotNone(match, f"{name} waits on {issue!r}, which is not an issue number")
-            self.assertIn(int(match.group(1)), numbers, f"{name} waits on {issue}, which is not in the manifest")
+            self.assertIn(
+                int(match.group(1)),
+                numbers,
+                f"{name} waits on {issue}, which is not in the manifest",
+            )
 
     def test_the_runner_refuses_a_wiring_that_forgets_a_pack(self):
         with tempfile.TemporaryDirectory() as scratch:
@@ -150,7 +158,10 @@ class StaleStatesAreRefused(unittest.TestCase):
 
     def test_a_deferred_row_that_is_still_red_fails_nothing(self):
         rows = [
-            ("first", "block", 0), ("red", "block", 1), ("void", "block", 3), ("error", "block", 2)
+            ("first", "block", 0),
+            ("red", "block", 1),
+            ("void", "block", 3),
+            ("error", "block", 2),
         ]
         deferred = {"red": "#23", "void": "#23", "error": "#23"}
         with tempfile.TemporaryDirectory() as tmp:

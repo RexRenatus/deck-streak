@@ -67,9 +67,7 @@ PYTHON_CLEANUPS = {
 
 def census(root=REPO):
     """Every test file R2 names, without the planted fixtures (R4)."""
-    found = {
-        path for pattern in CENSUS for path in root.glob(pattern) if path.is_file()
-    }
+    found = {path for pattern in CENSUS for path in root.glob(pattern) if path.is_file()}
     return sorted(path for path in found if FIXTURES not in path.parents)
 
 
@@ -127,9 +125,7 @@ def blank_code(text, rust):
             blank(index, end)
             index = end
             continue
-        follows_word = index > 0 and (
-            text[index - 1].isalnum() or text[index - 1] == "_"
-        )
+        follows_word = index > 0 and (text[index - 1].isalnum() or text[index - 1] == "_")
         if rust and not follows_word:
             raw = RUST_RAW_STRING.match(text, index)
             if raw:
@@ -175,9 +171,7 @@ def script_leaks(text, rust):
     found = []
     for offset, contents in literals:
         if contents.startswith("/tmp/"):
-            found.append(
-                (line_of(text, offset), "a string literal that begins with /tmp/")
-            )
+            found.append((line_of(text, offset), "a string literal that begins with /tmp/"))
     if rust:
         for pattern, what in RUST_CALLS:
             found += [(line_of(code, m.start()), what) for m in pattern.finditer(code)]
@@ -185,18 +179,10 @@ def script_leaks(text, rust):
     for made in SCRIPT_MAKES.finditer(code):
         bound = SCRIPT_BINDS.search(code[: made.end()])
         name = bound.group(1) if bound and bound.end() == made.end() else None
-        removal = name and re.search(
-            rf"\b(?:rmSync|rm)\s*\(\s*{re.escape(name)}\b", code
-        )
+        removal = name and re.search(rf"\b(?:rmSync|rm)\s*\(\s*{re.escape(name)}\b", code)
         if not removal:
-            what = (
-                "is never removed"
-                if name
-                else "is bound to no name, so nothing removes it"
-            )
-            found.append(
-                (line_of(code, made.start()), f"a directory from mkdtemp {what}")
-            )
+            what = "is never removed" if name else "is bound to no name, so nothing removes it"
+            found.append((line_of(code, made.start()), f"a directory from mkdtemp {what}"))
     return found
 
 
@@ -210,9 +196,7 @@ def python_leaks(text):
         if isinstance(node, ast.ImportFrom) and node.module == "tempfile"
         for alias in node.names
     }
-    parents = {
-        child: node for node in ast.walk(tree) for child in ast.iter_child_nodes(node)
-    }
+    parents = {child: node for node in ast.walk(tree) for child in ast.iter_child_nodes(node)}
     found = []
     for node in ast.walk(tree):
         what = leaking_call(node, imported)
@@ -221,9 +205,7 @@ def python_leaks(text):
         scope = enclosing_function(node, parents) or tree
         names = bound_names(node, parents)
         if not (names and removes(scope, names)):
-            found.append(
-                (node.lineno, f"{what} and nothing in its function removes the path")
-            )
+            found.append((node.lineno, f"{what} and nothing in its function removes the path"))
     return found
 
 
@@ -231,10 +213,7 @@ def leaking_call(node, imported):
     if not isinstance(node, ast.Call):
         return None
     func = node.func
-    if (
-        isinstance(func, ast.Attribute)
-        and getattr(func.value, "id", None) == "tempfile"
-    ):
+    if isinstance(func, ast.Attribute) and getattr(func.value, "id", None) == "tempfile":
         name = func.attr
     elif isinstance(func, ast.Name) and func.id in imported:
         name = imported[func.id]
@@ -269,9 +248,7 @@ def bound_names(node, parents):
         if isinstance(parent, ast.withitem) and parent.optional_vars is not None:
             return {ast.unparse(parent.optional_vars)}
         if isinstance(parent, ast.Assign | ast.AnnAssign | ast.NamedExpr):
-            targets = (
-                parent.targets if isinstance(parent, ast.Assign) else [parent.target]
-            )
+            targets = parent.targets if isinstance(parent, ast.Assign) else [parent.target]
             return {name for target in targets for name in target_names(target)}
         if isinstance(parent, ast.stmt):
             return set()
@@ -331,9 +308,7 @@ class TestsLeaveNoTemporaryFiles(unittest.TestCase):
         planted = sorted(FIXTURES.glob("*.fixture"))
         self.assertEqual(len(planted), 3, "the three planted fixtures are present")
         for path in planted:
-            self.assertNotIn(
-                path, files, f"{path.name} is planted, never part of the census"
-            )
+            self.assertNotIn(path, files, f"{path.name} is planted, never part of the census")
         found = [leak for path in files for leak in leaks(path)]
         self.assertEqual(found, [], "\n".join(found))
 
@@ -347,9 +322,7 @@ class TestsLeaveNoTemporaryFiles(unittest.TestCase):
         lines = sorted({int(leak.split(":")[1]) for leak in found})
         self.assertEqual(lines, refused, "\n".join(found))
         for leak in found:
-            self.assertTrue(
-                leak.startswith(f"scripts/tests/fixtures/temp-hygiene/{name}:"), leak
-            )
+            self.assertTrue(leak.startswith(f"scripts/tests/fixtures/temp-hygiene/{name}:"), leak)
 
     def test_a_planted_rust_leak_is_refused(self):
         self.assert_planted_leaks_are_refused("leaks_tempdir.rs.fixture")

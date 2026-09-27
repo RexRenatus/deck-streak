@@ -62,7 +62,6 @@ class WorkflowsAreHardened(unittest.TestCase):
             self.assertIn(job, aggregate, f"the aggregate ci job does not need {job}")
 
 
-
 def triggers(workflow):
     """{event: [branch, ...]} from a workflow's `on:` block, read without a YAML library. A branch
     list may be a flow list (`branches: [dev, main]`) or a block list (`- dev` lines)."""
@@ -128,6 +127,7 @@ class OnlyThisRepositorysDevReachesMain(unittest.TestCase):
         done = run_base_is_dev(dict(INTO_MAIN, **{"github.head_ref": "feature/probe"}))
         self.assertEqual(done.returncode, 1, done.stdout)
         self.assertIn("feature/probe", done.stdout)
+
 
 if __name__ == "__main__":
     unittest.main()
