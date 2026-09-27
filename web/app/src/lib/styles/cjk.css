@@ -1,0 +1,81 @@
+/*
+ * The house CJK stylesheet (packs/cjk-typography, SPEC-V2-2223).
+ *
+ * Import it once, globally, after the base styles. Every rule keys on :lang(), so a CJK passage is
+ * styled only when it carries its lang (and Chinese names its script, zh-Hans or zh-Hant). The
+ * pack's cjk-lang and zh-script-subtag rows check that. Each rule below cites the requirement it
+ * follows.
+ */
+
+/* Fonts: one stack per language, system fonts first. Han unification means a Japanese-first stack
+ * draws Chinese in Japanese forms, so each language gets its own. Never ship a whole CJK font: use
+ * the system's, or unicode-range slices with font-display (CSS Fonts 4), as the example shows. */
+:lang(ja) {
+  font-family: 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', 'Yu Gothic', Meiryo,
+    sans-serif;
+}
+:lang(ko) {
+  font-family: 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+}
+:lang(zh-Hans) {
+  font-family: 'PingFang SC', 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
+}
+:lang(zh-Hant) {
+  font-family: 'PingFang TC', 'Noto Sans TC', 'Microsoft JhengHei', sans-serif;
+}
+/* A web font, when one is needed, is sliced:
+ * @font-face {
+ *   font-family: 'Deck JP';
+ *   src: url('/fonts/deck-jp-001.woff2') format('woff2');
+ *   unicode-range: U+3000-303F, U+3040-30FF;
+ *   font-display: swap;
+ * }
+ */
+
+/* Line breaking. JLREQ 3.1.7 keeps closing brackets, small kana and the prolonged sound mark off
+ * the start of a line; line-break: strict is the stringent set (CSS Text 3). KLREQ 7.1.1 lets
+ * Korean break by word, and keep-all breaks at the spaces between words. auto-phrase keeps a
+ * heading's phrases together where the browser supports it, and is plain normal elsewhere. */
+:lang(ja) {
+  line-break: strict;
+}
+:lang(ko) {
+  word-break: keep-all;
+}
+:lang(ja) :is(h1, h2, h3, h4, h5, h6),
+:lang(ko) :is(h1, h2, h3, h4, h5, h6) {
+  word-break: auto-phrase;
+}
+
+/* A long URL or a code token may break anywhere. Prose never takes word-break: break-all, which
+ * splits the Latin words inside CJK text. */
+a,
+code,
+.url {
+  overflow-wrap: anywhere;
+}
+
+/* Spacing. CJK text wants a line gap of half to a whole character (JLREQ; KLREQ's example is 160%),
+ * so line-height is 1.7. text-autospace adds the narrow space CLREQ 6.3.3 and JLREQ 3.2 ask for
+ * between CJK and Latin letters or numerals, so no hand-typed spaces are needed. */
+:lang(ja),
+:lang(ko),
+:lang(zh) {
+  line-height: 1.7;
+}
+:lang(ja),
+:lang(zh) {
+  text-autospace: normal;
+}
+
+/* Ruby. Annotations are half the base size (JLREQ 3.3.3), over horizontal text for kana and pinyin
+ * (CLREQ 5.5.4), and beside the base for bopomofo (CLREQ 5.5.3). */
+rt {
+  font-size: 50%;
+}
+ruby {
+  ruby-position: over;
+}
+.zhuyin {
+  ruby-position: inter-character;
+}
