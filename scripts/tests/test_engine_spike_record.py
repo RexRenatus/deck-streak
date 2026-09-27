@@ -92,9 +92,7 @@ def findings(adr_022, adr_009, tag):
     confirmation = section(adr_009, "Confirmation")
     rows = table(confirmation, MEASURED)
     if rows is None:
-        return [
-            "ADR-009's Confirmation holds no table of measure, budget, measured, verdict"
-        ]
+        return ["ADR-009's Confirmation holds no table of measure, budget, measured, verdict"]
     found = []
     if RUN.search(confirmation) is None:
         found.append("ADR-009's Confirmation names no `engine-measure.yml` run")
@@ -103,9 +101,7 @@ def findings(adr_022, adr_009, tag):
     recorded = [row[0] for row in rows]
     for measure in expected:
         if recorded.count(measure) != 1:
-            found.append(
-                f"{measure}: recorded {recorded.count(measure)} time(s), not once"
-            )
+            found.append(f"{measure}: recorded {recorded.count(measure)} time(s), not once")
     verdicts = []
     for row in rows:
         if len(row) != len(MEASURED) or row[0] not in expected:
@@ -128,9 +124,7 @@ def findings(adr_022, adr_009, tag):
     status = STATUS.search(adr_009)
     status = status.group(1) if status else None
     if status not in ("accepted", "superseded"):
-        found.append(
-            f"ADR-009's status is {status!r}, not final (accepted or superseded)"
-        )
+        found.append(f"ADR-009's status is {status!r}, not final (accepted or superseded)")
     elif status == "accepted" and "fail" in verdicts:
         found.append("ADR-009 is accepted although a budget failed")
     elif status == "superseded" and "fail" not in verdicts:
@@ -162,10 +156,7 @@ def planted(status="accepted", rows=HOLDING, run="`engine-measure.yml` run 1"):
 
 def replaced(measure, stated, measured, verdict):
     """HOLDING with `measure`'s row stating another budget, measurement or verdict."""
-    return [
-        (measure, stated, measured, verdict) if row[0] == measure else row
-        for row in HOLDING
-    ]
+    return [(measure, stated, measured, verdict) if row[0] == measure else row for row in HOLDING]
 
 
 def dropped(measure):
@@ -246,9 +237,7 @@ class TheSpikeIsRecorded(unittest.TestCase):
                 self.assertEqual(findings(adr_022, text, "0.0"), refusal)
         tag = ENGINE_TAG.search((REPO / "Cargo.toml").read_text(encoding="utf-8"))
         self.assertIsNotNone(tag, "Cargo.toml pins no engine tag (ADR-022)")
-        self.assertEqual(
-            findings(adr_022, ADR_009.read_text(encoding="utf-8"), tag.group(1)), []
-        )
+        self.assertEqual(findings(adr_022, ADR_009.read_text(encoding="utf-8"), tag.group(1)), [])
 
 
 if __name__ == "__main__":
