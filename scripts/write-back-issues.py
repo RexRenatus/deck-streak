@@ -29,7 +29,10 @@ def main(paths: list[str]) -> int:
         for key in TOKEN.findall(text):
             if key not in issues:
                 missing.add(key)
-        changed[path] = TOKEN.sub(lambda m: f"#{issues[m.group(1)]['number']}" if m.group(1) in issues else m.group(0), text)
+        changed[path] = TOKEN.sub(
+            lambda m: f"#{issues[m.group(1)]['number']}" if m.group(1) in issues else m.group(0),
+            text,
+        )
     if missing:
         print(f"write-back-issues: no issue for {sorted(missing)}; nothing written")
         return 1

@@ -1,4 +1,14 @@
 {
   "$schema": "https://inlang.com/schema/inlang-message-format",
-  "tagline": "Turn your daily Anki reviews into a streak worth keeping."
+  "tagline": "Turn your daily Anki reviews into a streak worth keeping.",
+  "study_day": "Study day",
+  "loading": "Loading…",
+  "reopen_from_telegram": "Reopen DeckStreak from Telegram to sign in again.",
+  "server_unavailable": "DeckStreak could not reach its server. Try again in a moment.",
+  "about": "About",
+  "about_title": "About DeckStreak",
+  "about_license": "DeckStreak is free software under the GNU Affero General Public License, version 3 or later, and its complete source code is public.",
+  "privacy_policy": "Privacy policy",
+  "source_code": "Source code",
+  "back_to_today": "Back to Today"
 }

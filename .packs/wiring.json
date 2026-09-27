@@ -57,12 +57,15 @@
       "note": "it reads a tree with no unit as a finding, not as VOID"
     },
     "accessibility": {
-      "state": "pending",
-      "enforced_by": "#21"
+      "state": "enforced"
     },
     "cjk-typography": {
-      "state": "pending",
-      "enforced_by": "#21"
+      "state": "enforced",
+      "deferred_rows": {
+        "furigana-ruby": "#37",
+        "pinyin-tones": "#37"
+      },
+      "note": "language-mentors' two composed rows judge mentor texts, which arrive with the readings screen"
     },
     "privacy-gdpr": {
       "state": "pending",
@@ -127,6 +130,86 @@
     "ui-styles": {
       "state": "phxd",
       "note": "built into phxd; run by scripts/box-packs.sh (ADR-004)"
+    }
+  },
+  "box": {
+    "note": "scripts/box-packs.sh runs these packs on the maintainer's box (ADR-004, ADR-030). Each red row a pack is expected to show on the tree names the open issue that builds that row's subject; a pack that examines nothing names the issue after which it examines a row.",
+    "packs": {
+      "auth": {},
+      "cyber-pipeline": {
+        "expected_red": {
+          "cp.threat-model-trace": "#60",
+          "ws.csp-present": "#25",
+          "ws.tg-init-data-verified": "#17"
+        },
+        "note": "the ws rows are web-security's; no planned SPEC writes the threat model cp.threat-model-trace reads, so #60, which brings every phxd pack to green, owns it"
+      },
+      "greenfield": {
+        "expected_red": {
+          "placeholders-filled": "#60"
+        },
+        "note": "it reads the notice markers in the verbatim AGPL text's own appendix (LICENSE, LICENSES/), which may not be changed; a re-pinned probe settles it (#60)"
+      },
+      "ledger-sqlite": {
+        "expected_red": {
+          "admission-through-bound": "#60",
+          "append-only-census-covers-every-table": "#60",
+          "applied-migration-is-immutable": "#60",
+          "created-at-everywhere": "#60",
+          "flock-explicit-unlock": "#60"
+        },
+        "note": "the five blocking rows run phoenix-v2's own cargo tests, which the pack's SKILL.md says a consuming repository cannot run at all; #60 decides how they read here"
+      },
+      "seo-pipeline": {
+        "pending": "#59",
+        "note": "it verifies the built landing page, which no commit holds yet"
+      },
+      "ui-styles": {
+        "pending": "#60",
+        "note": "every row is catalog-only, so every walk examines none by the pack's design"
+      },
+      "ux-laws": {},
+      "vibecode-polish": {
+        "expected_red": {
+          "clickable-logo-phone-email": "#59",
+          "compress-images": "#59",
+          "favicon-titles-meta": "#59",
+          "footer-404-copyright": "#59",
+          "mobile-menu-overflow": "#59",
+          "success-error-messages": "#59"
+        },
+        "note": "public-site polish: the landing page builds its subject"
+      },
+      "web-launch": {
+        "expected_red": {
+          "alt-text": "#59",
+          "analytics": "#59",
+          "contrast": "#59",
+          "cookies": "#59",
+          "custom-404": "#59",
+          "form-validation": "#59",
+          "html-lang": "#60",
+          "image-compress": "#59",
+          "lcp-speed": "#59",
+          "meta-og-favicon": "#59",
+          "privacy-terms": "#59",
+          "single-cta": "#59",
+          "sitemap-robots": "#59",
+          "spam-protect": "#59"
+        },
+        "note": "the public-site rows wait for the landing page (#59); html-lang reads the Mini App's source template, whose lang is Paraglide's placeholder until the page renders, so only a pack change settles it (#60)"
+      },
+      "web-security": {
+        "expected_red": {
+          "ws.csp-present": "#25",
+          "ws.tg-init-data-verified": "#17"
+        },
+        "note": "the Caddy block serves the Content-Security-Policy a source tree cannot carry, since the page's meta policy is built with its hashes (#25); init data is validated on the server (#17)"
+      }
+    },
+    "proxy-client-scan": {
+      "pending": "#29",
+      "note": "it examines no settings document until the agent's settings template lands"
     }
   }
 }

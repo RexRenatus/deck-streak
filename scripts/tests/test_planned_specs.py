@@ -30,7 +30,10 @@ def collisions(held):
 
 class PlannedSpecsNeverCollide(unittest.TestCase):
     def test_every_spec_file_is_named_by_the_convention(self):
-        for path in examined("SPEC files", list(SPECS.glob("SPEC-*.md")) + list((SPECS / "planned").glob("SPEC-*.md"))):
+        for path in examined(
+            "SPEC files",
+            list(SPECS.glob("SPEC-*.md")) + list((SPECS / "planned").glob("SPEC-*.md")),
+        ):
             self.assertRegex(path.name, NAME, f"{path.name} does not follow SPEC-NNN-slug.md")
 
     def test_no_number_is_held_twice_across_judged_and_planned(self):

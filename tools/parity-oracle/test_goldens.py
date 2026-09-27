@@ -103,9 +103,7 @@ def examined(what, items):
     items = list(items)
     print(f"examined {len(items)} {what}")
     if not items:
-        raise AssertionError(
-            f"examined 0 {what}: the population is empty, so nothing was judged"
-        )
+        raise AssertionError(f"examined 0 {what}: the population is empty, so nothing was judged")
     return items
 
 
@@ -118,9 +116,7 @@ def goldens(root):
 
 
 def registry_modules(root):
-    return examined(
-        "registry module(s)", sorted((root / ORACLE / "registry").glob("*.py"))
-    )
+    return examined("registry module(s)", sorted((root / ORACLE / "registry").glob("*.py")))
 
 
 def strict(text):
@@ -143,9 +139,7 @@ def stale(root, name, golden):
     """Why a golden no longer matches the generator or the registry module that built it (R4)."""
     found = []
     if golden.get("generator") != GENERATOR:
-        found.append(
-            f"{name}: names the generator {golden.get('generator')!r}, not {GENERATOR}"
-        )
+        found.append(f"{name}: names the generator {golden.get('generator')!r}, not {GENERATOR}")
     elif golden.get("generator_sha256") != sha256(root / GENERATOR):
         found.append(
             f"{name}: generator_sha256 differs from the committed {GENERATOR}: regenerate it"
@@ -168,9 +162,7 @@ def provenance(name, golden):
     if golden.get("inputs") != "synthetic":
         found.append(f"{name}: inputs is {golden.get('inputs')!r}, not 'synthetic'")
     if golden.get("seed") != generate.SEED:
-        found.append(
-            f"{name}: seed is {golden.get('seed')!r}, not the generator's {generate.SEED}"
-        )
+        found.append(f"{name}: seed is {golden.get('seed')!r}, not the generator's {generate.SEED}")
     commit = golden.get("source_commit")
     if not (isinstance(commit, str) and COMMIT.fullmatch(commit)):
         found.append(f"{name}: source_commit {commit!r} is not a 40-hex commit")
@@ -182,9 +174,7 @@ def shape(name, golden, text):
     found = []
     if golden.get("schema") != SCHEMA:
         found.append(f"{name}: schema is {golden.get('schema')!r}, not {SCHEMA!r}")
-    found += [
-        f"{name}: holds an unknown key {key!r}" for key in sorted(set(golden) - KEYS)
-    ]
+    found += [f"{name}: holds an unknown key {key!r}" for key in sorted(set(golden) - KEYS)]
     kind = golden.get("kind")
     if kind not in KINDS:
         found.append(f"{name}: kind is {kind!r}, not one of {', '.join(KINDS)}")
@@ -194,9 +184,7 @@ def shape(name, golden, text):
     if kind == "adapter" and not all(
         isinstance(golden.get(key), str) and golden[key] for key in ("adapter", "note")
     ):
-        found.append(
-            f"{name}: an adapter golden names its adapter and carries its note"
-        )
+        found.append(f"{name}: an adapter golden names its adapter and carries its note")
     if kind != "adapter" and glue:
         found.append(f"{name}: only an adapter golden carries {' and '.join(glue)}")
     cases = golden.get("cases")
@@ -214,9 +202,7 @@ def shape(name, golden, text):
         if "class" in case and not (isinstance(case["class"], str) and case["class"]):
             found.append(f"{name}: case {index} has an empty class")
     if text != json.dumps(golden, indent=2, sort_keys=True, allow_nan=False) + "\n":
-        found.append(
-            f"{name}: is not in the generator's form (sorted keys, two-space indent)"
-        )
+        found.append(f"{name}: is not in the generator's form (sorted keys, two-space indent)")
     return found
 
 
@@ -254,11 +240,7 @@ def registry_reads(where, source):
             names = [node.module]
         elif isinstance(node, ast.Call):
             func = node.func
-            called = (
-                func.attr
-                if isinstance(func, ast.Attribute)
-                else getattr(func, "id", None)
-            )
+            called = func.attr if isinstance(func, ast.Attribute) else getattr(func, "id", None)
             if called in READERS:
                 found.append((node.lineno, f"calls {called}"))
             elif (
@@ -269,9 +251,7 @@ def registry_reads(where, source):
             ):
                 names = [node.args[0].value]
         found += [
-            (node.lineno, f"imports {name}")
-            for name in names
-            if name.split(".")[0] in REACHERS
+            (node.lineno, f"imports {name}") for name in names if name.split(".")[0] in REACHERS
         ]
     return [f"{where}:{line}: {what}" for line, what in sorted(found)]
 
@@ -294,9 +274,7 @@ class Planted:
 
     def edit(self, relative):
         path = self.root / relative
-        path.write_text(
-            path.read_text(encoding="utf-8") + "# edited after its goldens\n"
-        )
+        path.write_text(path.read_text(encoding="utf-8") + "# edited after its goldens\n")
 
     def module(self, name):
         return self.write(f"{REGISTRY}{name}", "FUNCTIONS = {}\n")
@@ -304,9 +282,7 @@ class Planted:
     def golden(self, name, module):
         golden = dict(
             PLANTED_GOLDEN,
-            generator_sha256=hashlib.sha256(
-                (self.root / GENERATOR).read_bytes()
-            ).hexdigest(),
+            generator_sha256=hashlib.sha256((self.root / GENERATOR).read_bytes()).hexdigest(),
             registry=f"{REGISTRY}{module.name}",
             registry_sha256=hashlib.sha256(module.read_bytes()).hexdigest(),
         )
@@ -316,9 +292,7 @@ class Planted:
     def stale(self):
         found = []
         for path in goldens(self.root):
-            found += stale(
-                self.root, path.name, strict(path.read_text(encoding="utf-8"))
-            )
+            found += stale(self.root, path.name, strict(path.read_text(encoding="utf-8")))
         return found
 
 
@@ -330,9 +304,7 @@ class CommittedGoldensAreCurrent(unittest.TestCase):
         tree.edit(GENERATOR)
         self.assertEqual(
             tree.stale(),
-            [
-                f"one.json: generator_sha256 differs from the committed {GENERATOR}: regenerate it"
-            ],
+            [f"one.json: generator_sha256 differs from the committed {GENERATOR}: regenerate it"],
         )
         committed = sha256(ROOT / GENERATOR)
         for path in goldens(ROOT):
@@ -378,9 +350,7 @@ class CommittedGoldensAreCurrent(unittest.TestCase):
             with self.subTest(reason):
                 self.assertEqual(registry_reads("planted.py", source), [finding])
         for path in registry_modules(ROOT):
-            self.assertEqual(
-                registry_reads(path.name, path.read_text(encoding="utf-8")), []
-            )
+            self.assertEqual(registry_reads(path.name, path.read_text(encoding="utf-8")), [])
 
     def test_no_committed_golden_holds_a_calendar_date(self):
         planted = {
@@ -409,9 +379,7 @@ class CommittedGoldensAreCurrent(unittest.TestCase):
     def test_the_study_day_golden_carries_its_boundary_classes(self):
         self.assertTrue(STUDY_DAY.is_file(), "the study-day golden is not committed")
         golden = strict(STUDY_DAY.read_text(encoding="utf-8"))
-        self.assertEqual(
-            (golden["kind"], golden["function"]), ("adapter", "analytics.study_day")
-        )
+        self.assertEqual((golden["kind"], golden["function"]), ("adapter", "analytics.study_day"))
         by_class = {}
         for case in golden["cases"]:
             self.assertEqual(
@@ -433,14 +401,10 @@ class CommittedGoldensAreCurrent(unittest.TestCase):
         for key, pair in pairs.items():
             self.assertEqual(len(pair), 2, key)
             before, at = sorted(pair, key=lambda case: case["input"]["instant_ms"])
-            self.assertEqual(
-                at["input"]["instant_ms"] - before["input"]["instant_ms"], 1, key
-            )
+            self.assertEqual(at["input"]["instant_ms"] - before["input"]["instant_ms"], 1, key)
             # The predecessor's own outputs turn the day between the two instants.
             self.assertEqual(at["output"] - before["output"], 1, key)
-        self.assertTrue(
-            any(case["input"]["instant_ms"] < 0 for case in by_class["negative"])
-        )
+        self.assertTrue(any(case["input"]["instant_ms"] < 0 for case in by_class["negative"]))
         # An offset that moves the local day off the UTC day, with no rollover to blur it.
         self.assertTrue(
             any(

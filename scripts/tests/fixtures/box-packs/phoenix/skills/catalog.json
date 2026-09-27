@@ -1,0 +1,30 @@
+{
+  "schema": "phx.skills.catalog.v1",
+  "note": "A fake catalog for scripts/tests/test_box_packs.py (SPEC-030 A9 to A13): one pack for each verb scripts/box-packs.sh dispatches, and one row that is not a pack. A pack's name says nothing about its verb; only its requires_phxd_schema does, which is why the tests can swap two packs' verbs by editing this file.",
+  "skills": [
+    {
+      "id": "packs/alpha",
+      "kind": "pack",
+      "gate": "refuse-on-red",
+      "requires_phxd_schema": ["phxd.pack.probe.v1"]
+    },
+    {
+      "id": "packs/beta",
+      "kind": "pack",
+      "gate": "refuse-on-red",
+      "requires_phxd_schema": ["phxd.pack.run.v1"]
+    },
+    {
+      "id": "packs/seo-pipeline",
+      "kind": "pack",
+      "gate": "refuse-on-red",
+      "requires_phxd_schema": ["phxd.seo-pipeline.v1"]
+    },
+    {
+      "id": "roles/builder",
+      "kind": "path-executor",
+      "gate": "none",
+      "requires_phxd_schema": ["phxd.path.exec.v1"]
+    }
+  ]
+}
