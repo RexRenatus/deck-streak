@@ -5,11 +5,7 @@
       "state": "enforced"
     },
     "ddd": {
-      "state": "enforced",
-      "deferred_rows": {
-        "lexicon-locks": "#11"
-      },
-      "note": "lexicon-locks reads identifiers, and the skeleton declares none"
+      "state": "enforced"
     },
     "tdd": {
       "state": "enforced"

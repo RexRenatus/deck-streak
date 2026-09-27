@@ -172,6 +172,18 @@ hours and celebration intensity to `notifications`, chests per day and the vault
 the Mini App's settings screen. `cron_fires` stays exempt from export and erase, so an erasure can
 never re-arm the catch-up double-send guard.
 
+### DeckStreak's own tables
+
+The tables DeckStreak's own migrations create, each registered by the SPEC that creates it. Every
+migration lives in the one `migrations/` directory, named `<SPEC number, four digits><sequence, two
+digits>_<owning context>_<slug>.sql` (ADR-020), and `crates/kernel/tests/schema.rs` holds the
+context each migration names equal to the owner this register gives each table it creates.
+
+| table | owning context | created by | export and erase |
+|---|---|---|---|
+| `settings_generation` | `kernel` | `migrations/002001_kernel_settings_generation.sql` (SPEC-020) | reset in place: the generation back to 0 |
+| `_sqlx_migrations` | `kernel` | sqlx, when `Db::open` applies the migrations | exempt: the schema version table, which replaces the predecessor's `schema_versions` |
+
 ## Overloaded words, held apart
 
 | word | meaning here | never means |
