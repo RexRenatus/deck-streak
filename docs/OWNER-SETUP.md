@@ -74,8 +74,9 @@ bash scripts/github-setup.sh
 ```
 
 It sets the default branch, applies the rulesets for `main`, `dev` and release tags, and turns on
-secret scanning, push protection, Dependabot alerts and security updates, and private
-vulnerability reporting.
+secret scanning, push protection, Dependabot alerts and private vulnerability reporting.
+Dependabot's automated security fixes stay off, because they would open against `main` (ADR-036);
+each alert is triaged, and a fixable one becomes a pull request into `dev`.
 
 ## 9. Each deploy
 
