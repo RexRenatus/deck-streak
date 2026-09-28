@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createApi } from './api';
+import { createApi, type Answer, type Me } from './api';
 
 // SPEC-028 R7, A5, A6; ADR-006. The client opens a session by posting the raw, signed launch data
 // once, then calls with the session cookie alone. A synthetic launch string stands in for
@@ -43,6 +43,17 @@ function server(statuses: readonly number[]) {
 
 function lines(sent: readonly Sent[]): string[] {
   return sent.map((request) => `${request.method} ${request.url}`);
+}
+
+/** Runs `run` once `turns` more turns of the microtask queue have passed. */
+function after(turns: number, run: () => void): void {
+  if (turns === 0) run();
+  else queueMicrotask(() => after(turns - 1, run));
+}
+
+/** Yields `turns` turns of the microtask queue, so every call a test placed in it has started. */
+async function settle(turns = 64): Promise<void> {
+  for (let turn = 0; turn < turns; turn += 1) await Promise.resolve();
 }
 
 describe('the API client', () => {
@@ -243,6 +254,65 @@ describe('the API client', () => {
       'GET /api/me',
       'GET /api/me'
     ]);
+  });
+
+  it('a failed handshake forgets its own attempt, never a newer session another call opened', async () => {
+    // The first handshake is dropped by hand. At each offset of the microtask queue after the
+    // drop, one call joins the failing attempt and queues another call, which opens a newer
+    // session. Where the joining call resumes only after that newer session opened, it must leave
+    // the newer session alone, so a later call carries on in it and sends no handshake. The sweep
+    // must reach that interleaving at least once, or it proves nothing (SPEC-071 §10).
+    const ok = { kind: 'ok', value: { studyDay: STUDY_DAY } };
+    let interleaved = 0;
+    for (let offset = 0; offset < 8; offset += 1) {
+      const sent: string[] = [];
+      const late: { joined?: Promise<Answer<Me>>; opener?: Promise<Answer<Me>> } = {};
+      let drop: (reason: Error) => void = () => undefined;
+      const fetch = (input: RequestInfo | URL, init: RequestInit = {}): Promise<Response> => {
+        const line = `${init.method ?? 'GET'} ${String(input)}`;
+        sent.push(line);
+        if (sent.length > 1) {
+          return Promise.resolve(
+            line === 'GET /api/me'
+              ? Response.json({ study_day: STUDY_DAY })
+              : new Response(null, { status: 200 })
+          );
+        }
+        const dropped = new Promise<Response>((_resolve, reject) => {
+          drop = reject;
+        });
+        // attached before the handshake awaits the drop, so each offset counts from the drop
+        void dropped.catch(() =>
+          after(offset, () => {
+            queueMicrotask(() => {
+              late.opener = api.me();
+            });
+            late.joined = api.me();
+          })
+        );
+        return dropped;
+      };
+      const api = createApi({
+        launchData: () => LAUNCH,
+        fetch: fetch as unknown as typeof globalThis.fetch
+      });
+
+      const first = api.me();
+      drop(new TypeError('Failed to fetch'));
+      await settle();
+      expect(await first, `offset ${offset}`).toEqual({ kind: 'unavailable' });
+      const joined = await late.joined;
+      const opener = await late.opener;
+      if (joined?.kind === 'unavailable' && opener?.kind === 'ok') interleaved += 1;
+
+      const before = sent.length;
+      expect(await api.me(), `offset ${offset}`).toEqual(ok);
+      if (opener?.kind === 'ok') {
+        // a session is open, so the later call carries on in it
+        expect(sent.slice(before), `offset ${offset}`).toEqual(['GET /api/me']);
+      }
+    }
+    expect(interleaved, 'offsets that reached the interleaving').toBeGreaterThan(0);
   });
 
   it('a /api/me the server fails is unavailable, even when its body reads as a session', async () => {
