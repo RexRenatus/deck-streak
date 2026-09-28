@@ -171,6 +171,10 @@ class WorkflowsAreHardened(unittest.TestCase):
                 "plain is not read",
                 "secret-in-a-form-the-reader-refuses.yml:line 33: a flow list whose items are not "
                 "plain is not read",
+                "secret-in-a-form-the-reader-refuses.yml:line 34: a flow list whose items are not "
+                "plain is not read",
+                "secret-in-a-form-the-reader-refuses.yml:line 35: a flow list whose items are not "
+                "plain is not read",
                 "secret-in-a-larger-expression.yml:jobs.build.steps[0].env.EITHER: reads the "
                 "secret EXAMPLE_TOKEN",
                 "secret-in-a-larger-expression.yml:jobs.build.steps[0].env.FORMATTED: reads the "
@@ -181,6 +185,8 @@ class WorkflowsAreHardened(unittest.TestCase):
                 "is not read",
                 "secret-in-a-quoted-value.yml:jobs.build.steps[0].env.SINGLE: reads the secret "
                 "EXAMPLE_TOKEN",
+                "secret-in-a-quoted-value.yml:jobs.build.steps[0].env.FORMATTED: reads the secret "
+                "EXAMPLE_KEY",
                 "secret-in-any-spacing.yml:jobs.build.steps[0].env.SPACED: reads the secret "
                 "EXAMPLE_TOKEN",
                 "secret-in-any-spacing.yml:jobs.build.steps[0].env.UNSPACED: reads the secret "

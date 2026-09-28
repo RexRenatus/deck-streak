@@ -16,7 +16,8 @@ jobs:
       - uses: actions/checkout@0123456789abcdef0123456789abcdef01234567
         with:
           persist-credentials: false
-      - name: a branch and a tag from origin, each by a refspec
+      - name: branches and tags from origin, each by a refspec
         run: |
           git fetch origin main:refs/remotes/origin/main
           git fetch origin v1.0:refs/tags/v1.0
+          git fetch origin refs/tags/release.candidate:refs/tags/release.candidate
