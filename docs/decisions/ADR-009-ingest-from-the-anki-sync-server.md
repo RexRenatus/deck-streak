@@ -65,6 +65,24 @@ before it writes it beside the copy, so its peak grows with the collection. The 
 every memory and time budget on every run, in its test profile, so a regression past a budget is
 a red gate rather than a surprise on the host.
 
+SPEC-055 moved the engine to upstream tag `26.09.3`, which the root manifest's `[patch]` entry
+replaces with the maintainer's fork at `57382da085e6752738dc4bb617789be836a23300`: that tag plus
+the one fix for the engine's rebuild on every cargo command (ADR-058). ADR-022's protocol ran again
+at that commit, unchanged, in `engine-measure.yml` run 36386849300 at 4df16b0, on a GitHub-hosted
+`ubuntu-24.04` runner with 4 CPUs:
+
+| measure | budget | measured | verdict |
+|---|---|---|---|
+| cold build | at most 20 minutes | 4.4 minutes | pass |
+| binary size | at most 100 MiB | 19.3 MiB | pass |
+| open and queue | at most 256 MiB | 28.7 MiB | pass |
+| full download | at most 256 MiB | 232.2 MiB | pass |
+| incremental sync | at most 60 seconds | 0.14 seconds | pass |
+| licences | pass | pass | pass |
+
+Every budget holds at the pinned commit, and the status stands. The full download is still the
+tightest, at 90.7 % of its budget.
+
 ## What would make this wrong
 
 - The spike's resident memory or build time exceeds its budget.
@@ -75,6 +93,4 @@ a red gate rather than a surprise on the host.
 The predecessor's ADR-002 (sync via the Anki package, read via stdlib SQLite); the vm-survey's capacity figures; ADR-008.
 
 Amendment (2026-09-28): two passages describing the host's capacity and its other services, in a
-decision driver and a considered option, were redacted under the public-prose rule (ADR-059). This
-is a security redaction, the one kind of edit an accepted document's text may take; the originals
-remain in the repository's history.
+decision driver and a considered option, were redacted under the public-prose rule (ADR-059).

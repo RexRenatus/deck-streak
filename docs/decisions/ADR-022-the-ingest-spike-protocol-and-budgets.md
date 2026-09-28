@@ -155,5 +155,4 @@ change. They were run again at 26.09.3, where every budget held (`engine-measure
 Amendment (2026-09-28): passages describing the host's capacity and its other services, and another
 service's software version, in the decision drivers, a considered option, the record of what the
 engine brought and a condition that would make this wrong, were redacted under the public-prose rule
-(ADR-059). This is a security redaction, the one kind of edit an accepted document's text may take;
-the originals remain in the repository's history.
+(ADR-059).

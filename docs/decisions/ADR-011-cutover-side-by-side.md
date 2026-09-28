@@ -52,5 +52,4 @@ ADR-008; ADR-010; docs/schematics/data-flow.md.
 
 Amendment (2026-09-28): passages describing the predecessor as a running service and the host's
 memory, in the context, the outcome, a consequence and a condition that would make this wrong, were
-redacted under the public-prose rule (ADR-059). This is a security redaction, the one kind of edit
-an accepted document's text may take; the originals remain in the repository's history.
+redacted under the public-prose rule (ADR-059).

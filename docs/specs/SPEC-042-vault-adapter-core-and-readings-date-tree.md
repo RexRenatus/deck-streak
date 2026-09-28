@@ -248,6 +248,4 @@ walk from the root would find them and turn its rows red.
   on it.
 
 Amendment (2026-09-28): two passages describing co-hosted infrastructure and the predecessor as a
-running service, in two risks (section 6), were redacted under the public-prose rule (ADR-059). This
-is a security redaction, the one kind of edit an accepted document's text may take; the originals
-remain in the repository's history.
+running service, in two risks (section 6), were redacted under the public-prose rule (ADR-059).

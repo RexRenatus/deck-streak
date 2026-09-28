@@ -53,5 +53,4 @@ The data-migration pack's rows once `data-migration.json` lands (W8); ledger-sql
 The ledger-sqlite and data-migration packs; ADR-010 for backups; ADR-011 for cutover.
 
 Amendment (2026-09-28): one passage describing the predecessor as a running service, in the context,
-was redacted under the public-prose rule (ADR-059). This is a security redaction, the one kind of
-edit an accepted document's text may take; the original remains in the repository's history.
+was redacted under the public-prose rule (ADR-059).

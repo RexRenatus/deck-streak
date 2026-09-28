@@ -57,5 +57,4 @@ docs/schematics/deployment.md; OWNER-SETUP.md; ADR-010; ADR-014.
 
 Amendment (2026-09-28): passages throughout this record that described co-hosted infrastructure
 and the host's name were redacted under the public-prose rule (ADR-059); the title and the file
-name changed with them. This is a security redaction, the one kind of edit an accepted document's
-text may take; the originals remain in the repository's history.
+name changed with them.

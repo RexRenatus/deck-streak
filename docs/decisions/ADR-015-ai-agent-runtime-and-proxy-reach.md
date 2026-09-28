@@ -68,10 +68,7 @@ and single alert still apply to a configured route that fails. An `ApiKey` adapt
 amendment of this ADR; the choice between the subscription and an API key is the owner's.
 
 Amendment (2026-09-28): two passages describing co-hosted infrastructure, one in the context and one
-in a considered option, were redacted under the public-prose rule. This is a security redaction, the
-one kind of edit an accepted document's text may take; the originals remain in the repository's
-history.
+in a considered option, were redacted under the public-prose rule.
 
 Amendment (2026-09-28): a third passage describing co-hosted infrastructure, in the context, was
-redacted under the public-prose rule (ADR-059). This is a security redaction, the one kind of edit
-an accepted document's text may take; the original remains in the repository's history.
+redacted under the public-prose rule (ADR-059).

@@ -107,5 +107,4 @@ ADR-010 (partly superseded), ADR-037, SPEC-020 R11, SPEC-031, SPEC-032; systemd.
 `LoadCredential=` (AF_UNIX sockets) and the systemd credentials documentation.
 
 Amendment (2026-09-28): one passage stating a version of the host's software, in the decision
-outcome, was redacted under the public-prose rule (ADR-059). This is a security redaction, the one
-kind of edit an accepted document's text may take; the original remains in the repository's history.
+outcome, was redacted under the public-prose rule (ADR-059).
