@@ -358,18 +358,18 @@ fn the_watch_pages_just_past_each_of_its_boundaries() {
     };
     let now = at(DAY, 5, 14);
     let drift = |skew_min: i64| Reason::new("maintenance_drift").with("skew_min", skew_min);
-    let fires = [
+    let off_slot = [
         (at(DAY, 4, 58), vec![]),
         (at(DAY, 4, 59), vec![drift(31)]),
         (at(DAY, 3, 58), vec![]),
         (at(DAY, 3, 57), vec![drift(-31)]),
     ];
-    for (fired, expected) in &fires {
+    for (fired, expected) in &off_slot {
         assert_eq!(check(now, None, alive, Some(*fired), rule), *expected);
     }
     println!(
         "examined {} maintenance fire(s) against the tolerance",
-        fires.len()
+        off_slot.len()
     );
     let fired = at(DAY, 4, 59);
     assert_eq!(check(now, Some(fired), alive, Some(fired), rule), quiet);
