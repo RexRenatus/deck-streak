@@ -592,6 +592,33 @@ class AnEmptyCredentialFailsTheAlertUnit(unittest.TestCase):
             with tempfile.TemporaryDirectory() as scratch:
                 path = planted_template(Path(scratch), anchor, line, keep)
                 self.assertEqual(alert_template_refusals(path), [f"{name}: {refusal}"], line)
+        # A reset or an unknown value of Restart=, RestartMode= or CollectMode= is refused beside
+        # what it follows (SPEC-066 R3).
+        unread = "is empty or not a known value, which the check refuses"
+        reset = [
+            (
+                "ExecStart=",
+                "Restart=on-failure\nRestartSec=1d\nRestart=",
+                [f"Restart=on-failure {RESTARTS}", f"Restart= {unread}"],
+            ),
+            (
+                "ExecStart=",
+                "RestartMode=direct\nRestartMode=",
+                [f"RestartMode=direct {DIRECT}", f"RestartMode= {unread}"],
+            ),
+            (
+                "Description=",
+                "CollectMode=inactive-or-failed\nCollectMode=",
+                [f"CollectMode=inactive-or-failed {UNLOADS}", f"CollectMode= {unread}"],
+            ),
+            ("ExecStart=", "Restart=On-Failure", [f"Restart=On-Failure {unread}"]),
+        ]
+        for anchor, line, refusals in examined("planted alert template(s) with a reset", reset):
+            with tempfile.TemporaryDirectory() as scratch:
+                path = planted_template(Path(scratch), anchor, line, True)
+                self.assertEqual(
+                    alert_template_refusals(path), [f"{name}: {r}" for r in refusals], line
+                )
         # Planted lines the reader refuses, after ExecStart=, each refused whole with its line: one
         # ending in a backslash, a comment's included, and a control character other than a tab or
         # whitespace outside ASCII (SPEC-066 R3).

@@ -943,6 +943,17 @@ class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
                 f"{head}{run}SuccessExitStatus=2\nRestartForceExitStatus=2\n{loads}"
             ),
             "alert-oneshot.service": f"{head}{run}Type=oneshot\nRestartForceExitStatus=2\n{loads}",
+            "reset-mode.service": (
+                f"{head}{page}{run}Restart=on-failure\nRestartMode=direct\nRestartMode=\n{loads}"
+            ),
+            "unknown.service": f"{head}{page}{run}Restart=On-Failure\n{loads}",
+            "alert-reset-restart.service": (
+                f"{head}{run}Restart=on-failure\nRestartSec=1d\nRestart=\n{loads}"
+            ),
+            "alert-reset-collect.service": (
+                f"{head}CollectMode=inactive-or-failed\nCollectMode=\n{run}{loads}"
+            ),
+            "alert-unknown.service": f"{head}{run}RestartMode=Direct\n{loads}",
         }
         with tempfile.TemporaryDirectory() as scratch:
             folder = Path(scratch) / "deploy" / "systemd"
@@ -958,17 +969,22 @@ class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
                 "alert-condition.service",
                 "alert-forced.service",
                 "alert-oneshot.service",
+                "alert-reset-collect.service",
+                "alert-reset-restart.service",
                 "alert-restarts.service",
                 "alert-shaped.service",
                 "alert-spelled.service",
                 "alert-status.service",
+                "alert-unknown.service",
                 "condition.service",
                 "direct.service",
                 "ignored.service",
                 "pages.service",
+                "reset-mode.service",
                 "silent.service",
                 "spelled.service",
                 "success.service",
+                "unknown.service",
             ],
         )
         where = "deploy/systemd"
@@ -979,6 +995,8 @@ class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
             "ExecCondition=/bin/true can skip the start, which neither fails the unit nor starts "
             "OnFailure="
         )
+        # And a `Restart=`, `RestartMode=` or `CollectMode=` that is empty or not a known value.
+        unread = "is empty or not a known value, which the check refuses"
         self.assertEqual(
             [r for unit in planted_loading for r in refusal_page_refusals(unit)],
             [
@@ -987,6 +1005,10 @@ class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
                 f"{where}/alert-condition.service: {skip}",
                 f"{where}/alert-forced.service: OnFailure= does not name {ON_FAILURE}",
                 f"{where}/alert-oneshot.service: OnFailure= does not name {ON_FAILURE}",
+                f"{where}/alert-reset-collect.service: OnFailure= does not name {ON_FAILURE}",
+                f"{where}/alert-reset-collect.service: CollectMode= {unread}",
+                f"{where}/alert-reset-restart.service: OnFailure= does not name {ON_FAILURE}",
+                f"{where}/alert-reset-restart.service: Restart= {unread}",
                 f"{where}/alert-restarts.service: OnFailure= does not name {ON_FAILURE}",
                 f"{where}/alert-restarts.service: {direct_mode}",
                 f"{where}/alert-shaped.service: OnFailure= does not name {ON_FAILURE}",
@@ -994,12 +1016,17 @@ class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
                 f"{where}/alert-spelled.service: OnFailure= does not name {ON_FAILURE}",
                 f"{where}/alert-spelled.service: SuccessExitStatus=01 counts the refusal a success",
                 f"{where}/alert-status.service: OnFailure= does not name {ON_FAILURE}",
+                f"{where}/alert-unknown.service: OnFailure= does not name {ON_FAILURE}",
+                f"{where}/alert-unknown.service: RestartMode=Direct {unread}",
                 f"{where}/condition.service: {skip}",
                 f"{where}/direct.service: {direct_mode}",
                 f"{where}/ignored.service: ExecStart=-/bin/true counts a failure as a success",
+                f"{where}/reset-mode.service: {direct_mode}",
+                f"{where}/reset-mode.service: RestartMode= {unread}",
                 f"{where}/silent.service: OnFailure= does not name {ON_FAILURE}",
                 f"{where}/spelled.service: SuccessExitStatus=0x1 counts the refusal a success",
                 f"{where}/success.service: SuccessExitStatus=2 1 counts the refusal a success",
+                f"{where}/unknown.service: Restart=On-Failure {unread}",
             ],
         )
         # The alert template's own checks refuse each alert-shaped plant for what it breaks alone:
@@ -1031,6 +1058,16 @@ class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
                 [f"{where}/alert-oneshot.service: RestartForceExitStatus=2 {oneshot}"],
                 [],
             ),
+            "alert-reset-collect.service": (
+                [f"{where}/alert-reset-collect.service: CollectMode= {unread}"],
+                [],
+                [f"{where}/alert-reset-collect.service: CollectMode=inactive-or-failed {unloads}"],
+            ),
+            "alert-reset-restart.service": (
+                [f"{where}/alert-reset-restart.service: Restart= {unread}"],
+                [f"{where}/alert-reset-restart.service: Restart=on-failure restarts the refusal"],
+                [],
+            ),
             "alert-restarts.service": (
                 [f"{where}/alert-restarts.service: {direct_mode}"],
                 [f"{where}/alert-restarts.service: Restart=on-failure restarts the refusal"],
@@ -1049,6 +1086,11 @@ class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
             "alert-status.service": (
                 [f"{where}/alert-status.service: SuccessExitStatus=2 {named}"],
                 [f"{where}/alert-status.service: RestartForceExitStatus=2 {named}"],
+                [],
+            ),
+            "alert-unknown.service": (
+                [f"{where}/alert-unknown.service: RestartMode=Direct {unread}"],
+                [],
                 [],
             ),
         }
