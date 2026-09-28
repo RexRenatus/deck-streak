@@ -17,11 +17,21 @@ The lawful basis of each is the contract (GDPR Article 6(1)(b)): the service you
 is kept for a fixed period. Each is kept until you erase it, which is how an account is deleted here.
 
 Outside its database, DeckStreak holds a private copy of your collection, your own Anki data,
-refreshed from your sync server; and, in memory only, your Telegram user id in a signed-in session.
+refreshed from your sync server; and, in memory only, your Telegram user id in a signed-in session,
+and the bot's place in the queue of your messages. The bot reads the messages and button taps you
+send it to answer them, keeps none of their text, and answers nobody but you.
 
 ## Your copy of your data, and erasing it
 
-You export and erase on the host that runs DeckStreak:
+From Telegram, the bot answers two commands, and only yours:
+
+- `/export` sends you every category above as one JSON document, the same one the host writes
+  below. The document goes to your chat through Telegram, which keeps it there until you delete it
+  in Telegram.
+- `/delete` asks you to confirm with a button, and erases exactly as the host's erase below does
+  once you tap it. Only the button on the latest question erases, and only once.
+
+You can also export and erase on the host that runs DeckStreak:
 
 - `deckstreakd data export` writes every category above as one JSON document, whose `schema` is
   `deckstreak.export.v1`, with one key per table holding its rows.

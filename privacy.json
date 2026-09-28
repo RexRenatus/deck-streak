@@ -45,7 +45,8 @@
     "file": "PRIVACY.md",
     "entry": [
       {"file": "README.md", "text": "PRIVACY.md"},
-      {"file": "web/app/src/routes/about/+page.svelte", "text": "PRIVACY.md"}
+      {"file": "web/app/src/routes/about/+page.svelte", "text": "PRIVACY.md"},
+      {"file": "crates/bot/src/commands.rs", "text": "privacy"}
     ]
   },
   "public": {
