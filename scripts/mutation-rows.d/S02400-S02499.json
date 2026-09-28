@@ -36,6 +36,15 @@
         "            if self.owner.is(self.owner.user()) {",
         "owner::a_valid_payload_for_another_user_is_refused_with_403",
         "the gate compares the caller with the owner, not the owner with itself (CHARTER 14)"
+      ],
+      [
+        "S02406-THE-FUTURE-SKEW-IS-SIXTY-SECONDS",
+        "identity",
+        "src/settings.rs",
+        "pub const FUTURE_SKEW: Duration = Duration::from_mins(1);",
+        "pub const FUTURE_SKEW: Duration = Duration::from_secs(61);",
+        "init_data::an_auth_date_60_seconds_ahead_is_fresh_and_61_is_refused_with_401",
+        "launch data dated more than 60 seconds ahead of the server's clock is stale; the killer spells 60 and 61 literally, since dates built from FUTURE_SKEW move with its mutant, and cargo-mutants never mutates a constant"
       ]
     ],
     "CARGO_KILLED_SCRIPT_MUTATIONS": [
