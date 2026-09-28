@@ -55,5 +55,4 @@ every edge.
 docs/CONTEXT-MAP.md; the ddd pack; phoenix-v2's CONTEXT-MAP as the reference implementation.
 
 Amendment (2026-09-28): one passage stating the host's size, in a considered option, was redacted
-under the public-prose rule (ADR-059). This is a security redaction, the one kind of edit an
-accepted document's text may take; the original remains in the repository's history.
+under the public-prose rule (ADR-059).

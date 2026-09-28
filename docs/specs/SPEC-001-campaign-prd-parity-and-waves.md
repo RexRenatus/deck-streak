@@ -401,6 +401,5 @@ keep their original text where only these notes apply.
     and never rest on the host (ADR-038). This supersedes ADR-010's encrypted storage.
 - **Security redaction (2026-09-28, ADR-059).** Three passages that described the host and the
   predecessor as a running service, in a risk (section 6), the wave plan and the parity matrix,
-  were redacted under the public-prose rule. This is a security redaction, the one kind of edit an
-  accepted document's text may take; the originals remain in the repository's history. A tracking
-  issue's number changed: `DS-W2-01` is #239 (Appendix D).
+  were redacted under the public-prose rule. A tracking issue's number changed: `DS-W2-01` is #239
+  (Appendix D).

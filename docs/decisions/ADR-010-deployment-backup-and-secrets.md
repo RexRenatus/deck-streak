@@ -70,5 +70,4 @@ hardening, the budget, the deploy from a tag, the rollback and the backups.
 
 Amendment (2026-09-28): passages describing the host's other services and its capacity, in the
 context, a considered option, the outcome and a condition that would make this wrong, were redacted
-under the public-prose rule (ADR-059). This is a security redaction, the one kind of edit an
-accepted document's text may take; the originals remain in the repository's history.
+under the public-prose rule (ADR-059).

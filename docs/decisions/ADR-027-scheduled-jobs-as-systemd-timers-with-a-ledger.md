@@ -127,5 +127,4 @@ ADR-010; ADR-011; ADR-037 (the `sync` row); SPEC-027; SPEC-032; `docs/schematics
 
 Amendment (2026-09-28): passages describing the host's capacity and the predecessor's schedule as a
 running service, in a decision driver and the slot table with its introduction, were redacted under
-the public-prose rule (ADR-059). This is a security redaction, the one kind of edit an accepted
-document's text may take; the originals remain in the repository's history.
+the public-prose rule (ADR-059).
