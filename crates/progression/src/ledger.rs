@@ -10,7 +10,7 @@
 use deck_streak_kernel::{Db, KernelError, Track, UtcMillis};
 
 use crate::grant::{GrantAnswer, GrantPort, GrantRequest};
-use crate::xp::{Level, XpTotal, level_for};
+use crate::xp::{Level, XpAmount, XpTotal, level_for};
 
 /// The table the ledger lives in (`migrations/004001_progression_xp_ledger.sql`).
 pub const XP_LEDGER_TABLE: &str = "xp_ledger";
@@ -82,9 +82,11 @@ impl GrantPort for SqliteXpLedger {
         let scope = request.scope.as_str();
         let at = at.epoch_millis();
         let mut write = self.db.write().await?;
-        sqlx::query!(
+        // The insert's own conflict with the ledger's two unique indexes is the existence check, so
+        // the key lives in the migration alone (ADR-040); a conflict writes nothing.
+        let written = sqlx::query!(
             "INSERT INTO xp_ledger (study_day, source, track, amount, scope, created_at) \
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6) ON CONFLICT DO NOTHING",
             day,
             source,
             track,
@@ -93,8 +95,28 @@ impl GrantPort for SqliteXpLedger {
             at
         )
         .execute(&mut *write)
-        .await?;
+        .await?
+        .rows_affected();
+        let answer = if written == 1 {
+            GrantAnswer::Granted(request.amount)
+        } else {
+            // The row that holds the key, read in the same transaction: the same study day, source
+            // and track, or for a `once` request the `once` row of that source and track.
+            let held = sqlx::query_scalar!(
+                r#"SELECT amount AS "amount!: u32" FROM xp_ledger
+                   WHERE source = ?1 AND track = ?2
+                     AND (study_day = ?3 OR (?4 = 'once' AND scope = 'once'))
+                   ORDER BY id LIMIT 1"#,
+                source,
+                track,
+                day,
+                scope
+            )
+            .fetch_one(&mut *write)
+            .await?;
+            GrantAnswer::AlreadyGranted(XpAmount::new(held))
+        };
         write.commit().await?;
-        Ok(GrantAnswer::Granted(request.amount))
+        Ok(answer)
     }
 }

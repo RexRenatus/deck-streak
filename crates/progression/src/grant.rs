@@ -34,7 +34,11 @@ impl GrantSource {
     /// [`SourceRefused`] when `token` does not match [`SOURCE_GRAMMAR`]. The refusal names the rule
     /// and never the token.
     pub fn new(token: &str) -> Result<Self, SourceRefused> {
-        Ok(Self(token.to_owned()))
+        if is_source_token(token) {
+            Ok(Self(token.to_owned()))
+        } else {
+            Err(SourceRefused)
+        }
     }
 
     /// The token, as the ledger stores it.
@@ -42,6 +46,19 @@ impl GrantSource {
     pub fn as_str(&self) -> &str {
         &self.0
     }
+}
+
+/// Whether `token` matches [`SOURCE_GRAMMAR`]: a lowercase ASCII letter or a digit, then at most
+/// 127 more of those or of `:`, `.`, `_` and `-`.
+fn is_source_token(token: &str) -> bool {
+    let bytes = token.as_bytes();
+    bytes.len() <= SOURCE_MAX_LEN
+        && bytes
+            .first()
+            .is_some_and(|first| first.is_ascii_lowercase() || first.is_ascii_digit())
+        && bytes.iter().all(|byte| {
+            byte.is_ascii_lowercase() || byte.is_ascii_digit() || b":._-".contains(byte)
+        })
 }
 
 /// A text that is not a grant source. It names the rule and never the value, because a text that

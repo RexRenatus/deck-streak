@@ -19,18 +19,18 @@ pub const LEVEL_CURVE_LINEAR: u64 = 50;
 /// It is built only from an unsigned integer and offers no subtraction, so a penalty path that
 /// would debit XP does not compile (CHARTER 5; SPEC-040 A6).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct XpAmount(i64);
+pub struct XpAmount(u32);
 
 impl XpAmount {
     /// The amount `amount`.
     #[must_use]
-    pub const fn new(amount: i64) -> Self {
+    pub const fn new(amount: u32) -> Self {
         Self(amount)
     }
 
     /// The amount, as the ledger stores it.
     #[must_use]
-    pub const fn get(self) -> i64 {
+    pub const fn get(self) -> u32 {
         self.0
     }
 }
@@ -70,16 +70,27 @@ impl Level {
 
 /// The level of `total`: `(50 + isqrt(2500 + 200 × total)) / 100`, floor-divided, in 128-bit
 /// integers (R7).
+///
+/// The square root is an integer square root, never a floating-point one, which places the total
+/// one XP below a large threshold a level too high; and 128-bit, so `200 × total` cannot overflow
+/// for the widest total. The predecessor's `max(1, …)` never binds here: the least total, 0, gives
+/// `(50 + 50) / 100 = 1`.
 #[must_use]
 pub fn level_for(total: XpTotal) -> Level {
-    let _ = total;
-    Level(1)
+    let linear = u128::from(LEVEL_CURVE_LINEAR);
+    let quadratic = u128::from(LEVEL_CURVE_QUADRATIC);
+    let root = (linear * linear + 4 * quadratic * u128::from(total.get())).isqrt();
+    let level = (linear + root) / (2 * quadratic);
+    // The widest total, `u64::MAX`, is level 607,400,100, so the conversion never saturates.
+    Level(u32::try_from(level).unwrap_or(u32::MAX))
 }
 
 /// The XP at which `level` begins, `50L² − 50L`: 0 for level 1 (the predecessor's
 /// `gamification/xp.py:xp_to_reach`).
 #[must_use]
 pub fn xp_to_reach(level: Level) -> XpTotal {
-    let _ = level;
-    XpTotal(0)
+    let level = u64::from(level.get());
+    // `L × (50L − 50)`: a level is one a total reaches, so the product is at most that total and
+    // fits, and `50L − 50` is never negative from level 1.
+    XpTotal(level * (LEVEL_CURVE_QUADRATIC * level - LEVEL_CURVE_LINEAR))
 }
