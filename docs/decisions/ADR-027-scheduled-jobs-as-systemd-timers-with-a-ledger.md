@@ -17,8 +17,8 @@ builds the scheduler; which mechanism runs the jobs, where the schedule lives, a
 
 ## Decision Drivers
 
-- The host: 1.9 GiB shared with the predecessor; a long-running process keeps the memory of its
-  largest job, and the sync is the largest (ADR-022).
+- The host is small and shared with other services (CHARTER 3); a long-running process keeps the
+  memory of its largest job, and the sync is the largest (ADR-022).
 - Each job needs its own memory ceiling, its own failure page (`OnFailure=`), its own hardening and
   its own journal identity (the durable-services and observability packs).
 - The predecessor's guards port verbatim (CHARTER 9): the claim before acting, the release after an
@@ -46,13 +46,13 @@ restart or a manual run that day does nothing. `Persistent=true` is set only on 
 timers, as the predecessor replayed only its allowlist; at W0 that is `sync` alone (ADR-037, and
 SPEC-027 R1: a sync missed by at most six hours runs once when its timer activates).
 
-DeckStreak's slots, chosen to keep off the predecessor's minutes (its in-process slots, its sync
-ticks and its three systemd timers) and off one another:
+DeckStreak's slots, chosen to keep off every minute of the predecessor's schedule (SPEC-027 R2)
+and off one another:
 
 | job | slot | why here |
 |---|---|---|
-| `sync` | daily at the rollover hour, minute 7 (ADR-037) | ADR-037 decides this row: one scheduled sync per study day. The predecessor's sync ticks are 2, 17, 32 and 47; 5 minutes after its first tick of the study day gives its sync room to finish |
-| `maintenance` | daily at the rollover hour, minute 28 | after the rollover, between the predecessor's 25 and 33 |
+| `sync` | daily at the rollover hour, minute 7 (ADR-037) | ADR-037 decides this row: one scheduled sync per study day, clear of the predecessor's sync ticks |
+| `maintenance` | daily at the rollover hour, minute 28 | after the rollover, clear of every predecessor minute |
 | `liveness` | hourly at minute 14 | clear of every predecessor minute, and 7 minutes after the daily sync slot |
 
 The timers' calendars are rendered in the owner's zone by the private deploy rail; the templates
@@ -124,3 +124,7 @@ timer-versus-table test; durable-services' `timers.*` rows over `deploy/`.
 
 ADR-010; ADR-011; ADR-037 (the `sync` row); SPEC-027; SPEC-032; `docs/schematics/deployment.md`;
 `docs/schematics/cron-fire-ledger-and-catch-up.md`; the durable-services pack's timer rows.
+
+Amendment (2026-09-28): passages describing the host's capacity and the predecessor's schedule as a
+running service, in a decision driver and the slot table with its introduction, were redacted under
+the public-prose rule (ADR-059).

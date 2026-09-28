@@ -12,11 +12,10 @@
 
 ## 1. The problem, measured
 
-- **What runs when.** The predecessor fired its readings job at the rollover hour plus 33 minutes,
-  settled the studied box only at the next night's run, kept its paid generation out of the start-up
-  catch-up, and placed every fixed-minute job off every legal sync-tick set (`timebase.py:tick_minutes`,
-  tested exhaustively), with each fire recorded in the cron-fire ledger (its features
-  `cron-ledger-and-scheduler` and `startup-catchup`).
+- **What runs when.** The predecessor settled the studied box only at the next night's readings run,
+  kept its paid generation out of the start-up catch-up, and placed every fixed-minute job off every
+  legal sync-tick set (`timebase.py:tick_minutes`, tested exhaustively), with each fire recorded in
+  the cron-fire ledger (its features `cron-ledger-and-scheduler` and `startup-catchup`).
 - **DeckStreak's sync is not the predecessor's (ADR-037).** DeckStreak syncs once per study day, at
   the rollover hour, minute 7 (04:07 with the default rollover), plus the owner's explicit `/sync`;
   no other job syncs. A readings job therefore reads the study day's sync outcome; it never runs a
@@ -24,15 +23,13 @@
 - **No AI route is the default (ADR-054).** The first deploy has no device key, no tunnel and no
   proxy. Without the flagship's route, every night must be whole and quiet: an absent route is a
   configuration, never a failure or a page.
-- **Side by side.** The predecessor keeps its own schedule: the sync at :02, :17, :32 and :47; the
-  stats file at 04:05; the database maintenance at 04:21; its readings job at 04:33; the morning brief
-  at 08:00; the digest at 09:05; the weekly report at 09:10; the evening nudges at 20:00 and 22:00; the
-  landmarks at 22:43; the drill poll at :09 and :39 and the liveness watch at :51 every hour. The second
-  brain's own nightly pass runs at 04:00, its probe at 04:20 and its conflict scan at 04:30. DeckStreak
-  keeps off all of them (ADR-011).
-- **One writer.** The predecessor's own readings job still fires every night. It has never written a
-  note, but it would the first night its gate passes, so DeckStreak must not write the vault's readings
-  folder until that job is disabled with the owner's go (the first live night, #45).
+- **Side by side.** Until cutover, DeckStreak's jobs keep off every minute of the
+  predecessor's schedule as SPEC-027 R2 defines it from the predecessor's code, its sync minutes
+  included (ADR-011), and off every slot the private deploy rail reserves for the host's other
+  services, a list the rail supplies at deploy time.
+- **One writer.** The vault's readings folder has one writer at every moment (ADR-011), so
+  DeckStreak writes it only once the owner's go makes DeckStreak that writer (the first live
+  night, #45).
 - **Prerequisites.** SPEC-027 (the job table, the `job` role, the cron-fire ledger, the catch-up and
   the daily sync slot), SPEC-022 and SPEC-023 (the sync, its ledger and the study day's sync
   outcome, and the sync cycle whose successful syncs the settle step follows), SPEC-026 (the owner's
@@ -48,8 +45,10 @@ R1. Two readings jobs join SPEC-027's job table, each with its own service and t
     own.
 R2. The generation job fires at the rollover hour plus 40 minutes (04:40 with the default 04:00
     rollover) and the morning job at 08:10, outside the quiet hours. A test over the schedule proves
-    both slots are off the daily sync slot (the rollover hour, minute 7, SPEC-027) and off every
-    predecessor and second-brain slot listed in section 1, the predecessor's sync minutes included.
+    both slots are off the daily sync slot (the rollover hour, minute 7, SPEC-027), off every
+    minute of the predecessor's schedule that SPEC-027 R2 names, its sync minutes included, and
+    off every slot of the reserved-slot list the private deploy rail provides (ADR-053); CI proves
+    the logic with a synthetic list.
 R3. The generation job claims its fire for the study day in the cron-fire ledger before it acts; a
     second fire on the same study day does nothing. It never syncs (ADR-037). It then reads the AI
     route (SPEC-043): with the route `Absent`, every topic ends `ai_route_absent` (SPEC-046) and the
@@ -80,9 +79,9 @@ R7. Both jobs are in SPEC-027's catch-up: a fire missed by at most 360 minutes i
     up: the owner set no spend cap, and a reading generated late is still read that day (ADR-053).
 R8. The vault archive switch `readings_vault_archive` defaults to off. While it is off, the generation
     stores and serves every reading in the Mini App and writes nothing to the vault, recording
-    `vault_archive_off`. The first live night's checklist switches it on only after the predecessor's
-    readings job is disabled with the owner's go (#45), so the readings folder has one
-    writer at every moment.
+    `vault_archive_off`. The first live night's checklist switches it on only once the owner's go
+    makes DeckStreak the readings folder's writer (#45), so the folder has one writer at every
+    moment.
 R9. The templates `deploy/systemd/deck-streak-readings-generate.service` and `.timer`, and
     `deck-streak-readings-morning.service` and `.timer`, carry placeholder values only. As committed,
     the generation unit runs in no-AI mode (ADR-054): the runner's settings (the route setting and
@@ -105,7 +104,7 @@ R9. The templates `deploy/systemd/deck-streak-readings-generate.service` and `.t
 |---|---|---|
 | A1 | the generation reads the study day's sync outcome and never runs a sync: it generates after the study day's successful sync, and a recording fake of the sync cycle sees no call | `the_generation_reads_the_study_days_sync_and_never_syncs` |
 | A2 | two fires of the generation job on one study day generate once | `two_fires_of_the_generation_on_one_study_day_generate_once` |
-| A3 | every readings slot is off the daily sync slot and off the predecessor's slots, its sync minutes included, and the second brain's (examined count reported) | `every_readings_slot_is_off_the_daily_sync_slot_and_the_predecessors_slots` |
+| A3 | every readings slot is off the daily sync slot, off the predecessor's slots, its sync minutes included, and off every slot of the rail's reserved-slot list, proved on a synthetic list whose fixture this SPEC's delivery adds (examined count reported) | `every_readings_slot_is_off_the_daily_sync_slot_and_the_predecessors_slots` |
 | A4 | with a configured route, an unreachable agent is recorded per topic and alerted once for the run, and the readings already delivered, their read state and their vault notes are unchanged | `an_unreachable_agent_is_recorded_and_alerted_once_and_delivered_readings_stand` |
 | A5 | a study day whose sync did not succeed ends every topic `could_not_tell` with `sync_failed`, runs no sync and calls the agent zero times | `a_failed_sync_ends_every_topic_could_not_tell_without_generation` |
 | A6 | the morning job takes the comeback branch in a lapse and the ready line otherwise, never both | `the_morning_job_takes_one_branch` |
@@ -164,9 +163,8 @@ A12: python3 -m unittest discover -s scripts/tests -p test_readings_units.py -k 
 
 ## 6. Risks
 
-- **Two writers of the readings folder.** The predecessor's nightly readings job still fires, and it
-  would write the first night its gate passed. Prevented by R8: the vault archive stays off until the
-  first live night disables that job with the owner's go (#45), and tested by A9.
+- **Two writers of the readings folder.** Prevented by R8: the vault archive stays off until the
+  owner's go on the first live night makes DeckStreak the folder's writer (#45), and tested by A9.
 - **The sync slot moves.** A3 reads the daily sync slot from SPEC-027's job table, and the
   predecessor's minutes from its schedule's goldens, not from a copied list.
 - **The scheduled sync is still retrying at the generation's slot.** The generation reads the

@@ -26,7 +26,7 @@ that makes it pass. Assert a positive value, never only an absence. A test that 
 ## Temporary files
 
 A test removes every temporary file and directory it makes, whether it passes or fails, so a green
-run leaves nothing on the small shared host. Use a form that removes what it makes on drop or exit:
+run leaves nothing behind. Use a form that removes what it makes on drop or exit:
 
 - Rust: `tempfile::TempDir` and `tempfile::NamedTempFile`, dropped at the end of their scope.
 - Python: `tempfile.TemporaryDirectory`, or a `mkdtemp` whose removal the same function registers

@@ -18,13 +18,13 @@ only for the skip day. Anki's Python package is itself a binding over Anki's Rus
 
 - The owner's instruction: port to Rust, and measure before choosing.
 - The day set must be the scheduler's own answer, which only Anki's engine gives.
-- The VM has 1.9 GiB of RAM and never compiles; the binary must fit a memory budget.
+- The host is small and never compiles; the binary must fit a memory budget.
 
 ## Considered Options (the alternatives it was chosen against)
 
 - Anki's `rslib` as a pinned git dependency of `ingest` — chosen: the same engine the predecessor's Python package wraps, native sync, the scheduler's queue and `set_due_date`, one language.
 - A native client of the sync protocol — rejected because reimplementing incremental sync is the unmaintainable option the predecessor's own ADR-002 rejected, and a full download every cycle would move the whole collection on every sync.
-- A minimal Python sidecar running the predecessor's proven sync — kept as the fallback: proven today, but it keeps Python on the VM and a second language in the port; chosen only if the measurement below fails.
+- A minimal Python sidecar running the predecessor's proven sync — kept as the fallback: proven today, but it adds a Python runtime to DeckStreak's deployment and a second language to the port; chosen only if the measurement below fails.
 - AnkiConnect — rejected because it needs a desktop Anki running.
 
 ## Decision Outcome
@@ -91,3 +91,6 @@ tightest, at 90.7 % of its budget.
 ## More Information
 
 The predecessor's ADR-002 (sync via the Anki package, read via stdlib SQLite); the vm-survey's capacity figures; ADR-008.
+
+Amendment (2026-09-28): two passages describing the host's capacity and its other services, in a
+decision driver and a considered option, were redacted under the public-prose rule (ADR-059).

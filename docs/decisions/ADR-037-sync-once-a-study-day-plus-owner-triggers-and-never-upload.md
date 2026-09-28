@@ -47,8 +47,8 @@ without losing the flagship's morning readings (SPEC-022)?
 
 Chosen option.
 - **One scheduled sync per study day.** The scheduled `sync` job runs once per study day, at the
-  rollover hour, minute 7 (04:07 with the default rollover), 5 minutes after the predecessor's :02
-  tick.
+  rollover hour, minute 7 (04:07 with the default rollover), clear of the predecessor's sync ticks
+  (SPEC-027 R2).
   - It is claimed per study day in the cron-fire ledger, so a second fire, a catch-up or a restart
     does nothing (SPEC-027).
   - Its bounded retries (the predecessor's `SYNC_RETRY_ATTEMPTS`) belong to that one run.
@@ -108,3 +108,6 @@ scheduled sync, and a job that runs before it has caught up reads the study day'
 succeeded, unless an owner-triggered sync has succeeded that day, and records it, as its own SPEC
 says; the owner can trigger a sync and regenerate. The count of scheduled syncs per study day stays
 at most one.
+
+Amendment (2026-09-28): one passage stating the predecessor's schedule as a running service, in
+the decision outcome, was redacted under the public-prose rule (ADR-059).
