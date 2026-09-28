@@ -193,3 +193,53 @@ restoring the file byte for byte after each. The 102 of fix round 2: 102 of 102 
 by A10. The rider's 24: 24 of 24 killed, F5 by A13. And 11 of this round's, the walk into
 `parallel` blocks and the refusal of inputs that are not a mapping, each deleted, inverted or given
 back its earlier reading: 11 of 11 killed. The test file did not change after 2d7cb8f.
+
+## Fix round 4, 2026-09-28
+
+Fix round 4 refuses a `shell` that is not one of GitHub's built-in keywords, reads every string of
+a workflow for a clone or a fetch, and refuses git configured from the environment. `dev` was
+merged first, at 38e6e6d, with no conflict. No criterion was added, so the fences above are
+unchanged, and this round's runs are listed here. Each refusal was committed red, then green.
+SPEC-034's inserted text says so at 9fa2e40, after the green commits, because it states what the
+checker reads (R7, section 3, and the manifest's rows of planted workflows).
+
+- A10 red at 237176d: `AssertionError: Lists differ`: six planted shells were not yet refused: a
+  custom shell that clones another repository in the workflow's `defaults.run`, a job's, a step's
+  and a step's inside a `parallel` block, a keyword in another case, and a job's `defaults.run`
+  that is one `${{ }}` expression. Green at a1403a5, where the checker refuses a shell that is not
+  one of GitHub's built-in keywords, as written, and defaults it cannot read. A11 was green at
+  both: its admitted workflows gained each keyword at each of those places.
+- A10 red at 5447e5b: `AssertionError: Lists differ`: fourteen commands outside a run step's
+  script were not yet read: `BASH_ENV` in the workflow's, a job's and two steps' `env`, the four
+  custom shells' clones, three step names, and three values under keys the reader refuses. Each of
+  the twelve planted-character subtests expects the value under its refused key as well; they
+  follow the list's assertion, which stops the test at red, and each is red at 5447e5b run alone.
+  Green at 89f86ec, where the checker reads every string the workflow holds for those commands.
+- A10 red at 0994866: `AssertionError: Lists differ`: fourteen findings were missing: a variable
+  git reads, set as an `env` key of the workflow, a job, a job's container and a step, in any
+  case, or named in a container's options and in a script (eight); an `env` of the workflow, a
+  job, a job's container and a step, and a container, each one `${{ }}` expression (five); and an
+  `env` the reader refuses as a flow mapping (one). Green at e7fb4f5. A11 was green at both: its
+  admitted workflows gained names that hold the letters `GIT_` only inside a longer word, an empty
+  `env`, a container named by its image alone and a container whose `env` is a mapping.
+- 8274f9f pins four hand mutants and was green at once, because the checker already met each: a
+  job's `defaults` that is one expression (S7), an empty `defaults.run` and an empty `shell` (S8
+  and S4), and a script that names one variable twice (E7). Each is red against its mutant.
+
+DISCLOSURE: A10's body changed after its red commit, eeaa4e7, again in this round. Its committed
+list grew from 60 to 95 findings: 237176d (6), 5447e5b (14), 0994866 (14) and 8274f9f (1). It
+gained a local that holds the planted custom shell, and each of its twelve planted-character
+subtests gained one finding at 5447e5b. No finding that was in the list before this round changed
+or left: each new one follows its file's earlier ones, in the order the checker reads. A11's body
+did not change; its admitted workflows grew from six to eight, `built-in-shells.yml` (237176d, its
+empty forms at 8274f9f) and `environment-the-checker-reads.yml` (0994866). On the live workflows
+the checker reads 636 strings, 570 of them outside a run step's script: none names a clone, a
+fetch of a URL or a variable git reads, and none of the four workflows sets a `shell`, `defaults`,
+a container or an `env` that is not a mapping.
+
+At 8274f9f a hand sweep ran 41 mutants over this round's code, one at a time, on a scratch copy of
+the committed tree, restoring the file byte for byte after each: each built-in keyword dropped
+(six), the shell and defaults checks deleted or inverted (twelve), the reading of every string
+(four), and the variable pattern, the walk of keys and strings and the environment and container
+checks (nineteen). 41 of 41 were killed. At e7fb4f5, before the pins, the same 41 left S4, S7, S8
+and E7 alive.

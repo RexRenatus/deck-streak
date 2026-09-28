@@ -15,3 +15,7 @@
 - The checker judges every step of a job, a step inside a `parallel` block at any depth included,
   and refuses a checkout whose inputs are not a mapping, such as one `${{ }}` expression that
   GitHub evaluates when the step runs; an omitted or empty `with` is no inputs (SPEC-034 R7).
+- The checker refuses a `shell` that is not one of GitHub's built-in keywords, at a step, a job's
+  `defaults.run` and the workflow's, reads every string of a workflow for a clone or a fetch, and
+  refuses git configured from the environment: a key or a string that names a variable beginning
+  with `GIT_`, in any case, and an `env` or a container it cannot read (SPEC-034 R7).
