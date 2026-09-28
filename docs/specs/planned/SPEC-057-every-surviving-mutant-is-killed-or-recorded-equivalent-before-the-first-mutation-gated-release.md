@@ -362,6 +362,8 @@ R21. The first release into `main` that mutation testing judges waits until ever
 | A23 | the same, for the privacy's row | `test_mutation_campaign.py` |
 | A24 | the same, for the Mini App's row, whose sweep is the whole app (#240) | `test_mutation_campaign.py` |
 | A25 | every row reads unexplained 0 from one unscoped dispatch at the last delivery's head, and section 8 records the release rehearsal: that head, the merge's base, the run, and a listing whose every mutant was tested | `test_mutation_campaign.py` |
+| A26 | the same as A16, for the agent's row | `test_mutation_campaign.py` |
+| A27 | the same as A16, for the progression's row | `test_mutation_campaign.py` |
 
 ```acceptance
 A1: python3 -m unittest discover -s scripts/tests -p test_mutation_equivalent.py -k every_record_carries_its_mutant_anchor_reason_evidence_and_issue
@@ -389,6 +391,8 @@ A22: python3 -m unittest discover -s scripts/tests -p test_mutation_campaign.py 
 A23: python3 -m unittest discover -s scripts/tests -p test_mutation_campaign.py -k the_privacy_row_reads_no_unexplained_mutant
 A24: python3 -m unittest discover -s scripts/tests -p test_mutation_campaign.py -k the_miniapp_row_reads_no_unexplained_mutant
 A25: python3 -m unittest discover -s scripts/tests -p test_mutation_campaign.py -k every_row_and_the_release_rehearsal_read_no_unexplained_mutant
+A26: python3 -m unittest discover -s scripts/tests -p test_mutation_campaign.py -k the_agent_row_reads_no_unexplained_mutant
+A27: python3 -m unittest discover -s scripts/tests -p test_mutation_campaign.py -k the_progression_row_reads_no_unexplained_mutant
 ```
 
 - **A1 to A15** are the vault's machinery and riders. Each is committed red against a stub that
@@ -398,12 +402,12 @@ A25: python3 -m unittest discover -s scripts/tests -p test_mutation_campaign.py 
   fixtures in a temporary directory; A3 to A7, A10 and A13 run the verdict over synthetic listings
   and reports in cargo-mutants' and StrykerJS's own shapes; A8, A11, A12 and A15 read the tree and
   the workflows; A14 runs the stage against a planted lock.
-- **A16 to A24** read section 7 of this SPEC, wherever it then lives (`docs/specs/planned/` or
-  `docs/specs/`), and the row's fragment. Each is written by its row's delivery. It is red at the
-  commit that carries the row's opening sweep, whose unexplained count is above 0, and green at the
-  commit that carries its closing sweep; a row whose opening sweep already reads 0 is disclosed
-  `not red`, naming that run (R16). Its evidence is the pair of battery dispatches its red-first
-  lines name, and a verifier reads those runs.
+- **A16 to A24, A26 and A27** read section 7 of this SPEC, wherever it then lives
+  (`docs/specs/planned/` or `docs/specs/`), and the row's fragment. Each is written by its row's
+  delivery. It is red at the commit that carries the row's opening sweep, whose unexplained count
+  is above 0, and green at the commit that carries its closing sweep; a row whose opening sweep
+  already reads 0 is disclosed `not red`, naming that run (R16). Its evidence is the pair of
+  battery dispatches its red-first lines name, and a verifier reads those runs.
 - **A25** is the last delivery's. Its evidence is the rehearsal it records in section 8 and the
   dispatch that rehearsal names.
 
@@ -583,6 +587,12 @@ A delivery whose measurements prove this plan wrong records it here, dated, with
   the context list and section 4's manifest are edited in place. The two rows read their listing
   at 53184dd, equivalent 0 since no record exists, and `unmeasured` for what only a sweep counts,
   until their deliveries sweep them.
+- **2026-09-28, the vault's delivery: the two crates' criteria.** Rows 8 and 9, added by the
+  amendment above, had no criterion of their own, so no red-first line could close them. The
+  architect gave them A26 (`deck-streak-agent`) and A27 (`deck-streak-progression`), in the form
+  A17 to A24 give the other crates' rows: each reads its row and its crate's fragment, is written by
+  its row's delivery, and has no red-first line until that delivery's opening sweep. Section 3's
+  table, its `acceptance` fence and its note on A16 to A24 name them; A25 already reads every row.
 
 ## 10. References
 
