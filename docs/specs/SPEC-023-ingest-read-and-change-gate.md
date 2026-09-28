@@ -174,6 +174,7 @@ real deadlines exist yet. Every clock is a `ManualClock`.
 | `crates/coordination/src/sync_cycle.rs`, `crates/coordination/src/lib.rs` | `deck-streak-coordination` | changed: probe, gate, read or skip |
 | `crates/coordination/tests/change_gate.rs` | `deck-streak-coordination` | added: A18, A19 |
 | `crates/coordination/Cargo.toml`, `Cargo.lock` | `deck-streak-coordination` | changed: `thiserror`; dev `tokio` and `tempfile` (§7) |
+| `crates/daemon/src/role_job.rs` | `deck-streak-daemon` | changed: the `sync` job builds the whole cycle (§7) |
 | `migrations/002301_ingest_state.sql` | `deck-streak-ingest` | added |
 | `.sqlx/` | workspace | changed |
 | `tools/parity-oracle/registry/spec_023.py` | repo | added |
@@ -257,6 +258,12 @@ real deadlines exist yet. Every clock is a `ManualClock`.
   sync finds no change and a copy the engine itself created, with a synthetic source registered in
   `coordination::obligations`. Tests beyond the fence pin R8's order, R10's window, R8's unreadable
   anchor, R3's prefix and the settings' parse.
+- **R12: the cycle's parts, and the `sync` job.** `sync_cycle` runs over `CycleParts`: the syncer,
+  the reader, the gate, the obligations and the clock. SPEC-027's runner reaches the cycle through its
+  port `runner::SyncCycle`, which keeps that name; the daemon's `sync` job implements the port by
+  building the parts from the job's own settings when it runs (an empty registry until a feature
+  registers a source), and hands the port the cycle's sync report. A cycle that cannot run to its end
+  is recorded `sync_record_failed`, `obligations_unreadable` or `recompute_failed`.
 - **R2: the include list.** Unset, empty or blank reads every deck; the predecessor also read `ALL` as
   every deck, which R2 does not name, so it is read as a prefix.
 - **Goldens.** `change_probe`'s adapter writes the case's rows into a temporary collection through

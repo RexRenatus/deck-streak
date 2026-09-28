@@ -13,7 +13,7 @@ use std::path::Path;
 use std::sync::{Arc, Mutex, PoisonError};
 
 use deck_streak_coordination::obligations::{ObligationSource, Obligations};
-use deck_streak_coordination::sync_cycle::{Recompute, SyncCycle, sync_cycle};
+use deck_streak_coordination::sync_cycle::{CycleParts, Recompute, sync_cycle};
 use deck_streak_ingest::engine::{
     AnkiEngine, EngineError, NewCardQueue, RslibEngine, SyncLogin, SyncOutcome,
 };
@@ -99,7 +99,7 @@ struct Deployment {
     clock: Arc<ManualClock>,
     source: Synthetic,
     runs: SqliteSyncRuns,
-    cycle: SyncCycle<Unchanging>,
+    cycle: CycleParts<Unchanging>,
 }
 
 impl Deployment {
@@ -151,7 +151,7 @@ impl Deployment {
         let reader = CollectionReader::new(&settings, ScopeSettings::default(), offload);
         let gate = ChangeGate::new(db, StudyDayRule::default(), clock.clone());
         let source = Synthetic::default();
-        let cycle = SyncCycle::new(
+        let cycle = CycleParts::new(
             syncer,
             reader,
             gate,

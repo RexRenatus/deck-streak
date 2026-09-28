@@ -22,8 +22,9 @@ use deck_streak_kernel::{Clock, KernelError};
 use crate::obligations::Obligations;
 
 /// What one cycle needs: the syncer, the reader of its copy, the gate over the service's database,
-/// the registered obligations and the clock.
-pub struct SyncCycle<E> {
+/// the registered obligations and the clock. The runner's port for the `sync` job
+/// (`runner::SyncCycle`) is implemented over them in the composition root.
+pub struct CycleParts<E> {
     syncer: Syncer<E, SqliteSyncRuns>,
     reader: CollectionReader,
     gate: ChangeGate,
@@ -31,7 +32,7 @@ pub struct SyncCycle<E> {
     clock: Arc<dyn Clock>,
 }
 
-impl<E: AnkiEngine + Sync> SyncCycle<E> {
+impl<E: AnkiEngine + Sync> CycleParts<E> {
     /// A cycle over these parts. The syncer's record and the gate's are the same database.
     #[must_use]
     pub fn new(
@@ -115,7 +116,7 @@ pub enum CycleError {
 /// [`CycleError`] when a step's record, the copy or an obligation cannot be read or written. A
 /// failed sync is not an error: it is a recorded run, and the gate never skips after one.
 pub async fn sync_cycle<E>(
-    cycle: &SyncCycle<E>,
+    cycle: &CycleParts<E>,
     trigger: Trigger,
 ) -> Result<CycleReport, CycleError>
 where
