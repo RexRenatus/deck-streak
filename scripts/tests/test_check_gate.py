@@ -1,5 +1,6 @@
 """The local gate checks each stage's own tools, has no toolchain stage, splits its audit by
-toolchain, and times every stage it runs (SPEC-038 A5, A6 and A12)."""
+toolchain, times every stage it runs, and makes the stages that compile Anki's engine name protoc
+(SPEC-038 A5, A6, A12 and A15)."""
 
 import re
 import shutil
@@ -15,7 +16,8 @@ STAGES_ALL = re.compile(r"^STAGES_ALL=\(([^)]*)\)", re.M)
 STAGE_FUNCTION = re.compile(r"^stage_([a-z0-9_]+)\(\)", re.M)
 # What check.sh itself runs around its stages. A test's PATH holds these and its stubs, nothing else.
 SHELL_TOOLS = ("dirname", "mktemp", "mkdir", "date", "grep", "tail")
-# Every stage, and each tool it runs, in the order it checks them (SPEC-038 R4).
+# Every stage, and each tool it runs, in the order it checks them (SPEC-038 R4). protoc, which the
+# engine's build runs from PROTOC or PATH, is judged on its own below (A15).
 TOOLS = {
     "fmt": ["cargo"],
     "clippy": ["cargo"],
@@ -31,13 +33,17 @@ TOOLS = {
     "secrets": ["gitleaks"],
 }
 SUMMARY = re.compile(r"^(ok|FAILED) +\S+ +\d+s")
+# The stages that compile Anki's engine, and the tools each checks before protoc (SPEC-038 R4): the
+# engine's build scripts compile its protobuf definitions with prost-build (ADR-022).
+ENGINE_STAGES = {"clippy": ["cargo"], "test": ["cargo", "cargo-nextest"], "doctest": ["cargo"]}
 
 
-def run_gate(scratch, stages, stubs):
+def run_gate(scratch, stages, stubs, extra_env=None):
     """Run check.sh for `stages` with a PATH that holds only the shell tools check.sh needs and, for
-    each name in `stubs`, a stub that exits 0. Returns the process and its log directory."""
+    each name in `stubs`, a stub that exits 0, and any `extra_env`. Returns the process and its log
+    directory."""
     tools = scratch / "bin"
-    tools.mkdir()
+    tools.mkdir(parents=True)
     for tool in SHELL_TOOLS:
         found = shutil.which(tool)
         if found is None:
@@ -49,6 +55,7 @@ def run_gate(scratch, stages, stubs):
         stub.chmod(0o755)
     logs = scratch / "logs"
     env = {"PATH": str(tools), "CHECK_LOG_DIR": str(logs), "HOME": str(scratch)}
+    env.update(extra_env or {})
     done = subprocess.run(
         [shutil.which("bash"), str(CHECK), *stages],
         env=env,
@@ -90,6 +97,29 @@ class EachStageChecksItsOwnTools(unittest.TestCase):
             done, _ = run_gate(Path(scratch), ["toolchain"], [])
         self.assertEqual(done.returncode, 2, done.stdout)
         self.assertIn("check.sh: unknown stage 'toolchain'", done.stdout)
+
+
+class TheEngineStagesNeedProtoc(unittest.TestCase):
+    def test_the_stages_that_compile_the_engine_need_protoc(self):
+        stages = examined("stages that compile the engine", list(ENGINE_STAGES.items()))
+        for stage, before in stages:
+            with self.subTest(stage=stage), tempfile.TemporaryDirectory() as scratch:
+                where = Path(scratch)
+                # No protoc on PATH and no PROTOC: the stage fails by name, with its install hint.
+                done, _ = run_gate(where / "missing", [stage], before)
+                missing = rf"^FAILED +{stage} .*: missing tool: protoc \(\S.*\)$"
+                self.assertRegex(summary(done), missing, done.stdout)
+                # A PROTOC that names no executable fails the stage too.
+                absent = {"PROTOC": str(where / "no-such-protoc")}
+                done, _ = run_gate(where / "absent", [stage], before, absent)
+                named = rf"^FAILED +{stage} .*: PROTOC names no executable protoc$"
+                self.assertRegex(summary(done), named, done.stdout)
+                # A PROTOC that names an executable stands in for protoc on PATH.
+                protoc = where / "protoc-elsewhere"
+                protoc.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+                protoc.chmod(0o755)
+                done, _ = run_gate(where / "named", [stage], before, {"PROTOC": str(protoc)})
+                self.assertRegex(summary(done), rf"^ok +{stage} ", done.stdout)
 
 
 class EveryStageIsTimed(unittest.TestCase):

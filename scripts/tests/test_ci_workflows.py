@@ -1,7 +1,8 @@
 """CI runs the whole gate on hosted runners with read-only tokens and pinned actions (SPEC-002 A9),
 on pull requests into dev and main and pushes to both (SPEC-030 A1), and only this repository's dev
 reaches main (SPEC-034 A5 to A7). The gate runs in four parallel jobs, each stage in exactly one,
-and a cache is saved only by a push to dev or main (SPEC-038)."""
+a cache is saved only by a push to dev or main, and every job that compiles Rust installs the
+protoc Anki's engine needs (SPEC-038)."""
 
 import math
 import os
@@ -40,6 +41,14 @@ BROWSERS = ["~/.cache/ms-playwright"]
 # The stages that compile Rust: python's among them, because a guard test builds a Rust example
 # (SPEC-042's rails rows).
 COMPILES_RUST = {"clippy", "test", "doctest", "python"}
+# The one build tool Anki's engine needs: protoc 31.1, at the version and archive digest Anki's own
+# build pins (ADR-022).
+PROTOC_VERSION = "31.1"
+PROTOC_SHA256 = "96553041f1a91ea0efee963cb16f462f5985b4d65365f3907414c360044d8065"
+PROTOC_ARCHIVE = (
+    f"https://github.com/protocolbuffers/protobuf/releases/download/v{PROTOC_VERSION}/"
+    f"protoc-{PROTOC_VERSION}-linux-x86_64.zip"
+)
 # A `bash scripts/check.sh [stage...]` line of a step's script.
 GATE_CALL = re.compile(r"(?m)^[ \t]*bash scripts/check\.sh((?:[ \t]+[a-z][a-z0-9-]*)*)[ \t]*$")
 # Actions that save a cache by themselves, whatever the event (SPEC-038 R2).
@@ -762,6 +771,37 @@ class OnlyAPushSavesACache(unittest.TestCase):
             self.assertEqual(uploads[0].get("if"), "${{ always() }}", job_id)
             names.append(inputs["name"])
         self.assertEqual(sorted(set(names)), sorted(names), "two jobs upload one artifact name")
+
+
+class TheEngineBuildsInEveryRustJob(unittest.TestCase):
+    def test_every_job_that_compiles_rust_installs_the_pinned_protoc_first(self):
+        workflow = load("ci.yml")
+        compiling = sorted(
+            {job for job, named in stage_calls(workflow) if COMPILES_RUST & set(named)}
+        )
+        for job_id in examined("jobs that compile Rust", compiling):
+            steps = workflow["jobs"][job_id]["steps"]
+            gate = next(n for n, s in enumerate(steps) if GATE_CALL.search(str(s.get("run", ""))))
+            installs = [
+                (n, s)
+                for n, s in enumerate(steps)
+                if "protoc" in str(s.get("run", "")) and "sha256sum -c" in str(s.get("run", ""))
+            ]
+            self.assertEqual(len(installs), 1, f"{job_id} installs no checksum-verified protoc")
+            at, step = installs[0]
+            self.assertLess(at, gate, f"{job_id} installs protoc after its stages")
+            self.assertIn(PROTOC_ARCHIVE, step["run"], job_id)
+            self.assertEqual((step.get("env") or {}).get("PROTOC_SHA256"), PROTOC_SHA256, job_id)
+            self.assertIn('echo "$PROTOC_SHA256 ', step["run"], f"{job_id} checks another digest")
+            self.assertIn('>> "$GITHUB_PATH"', step["run"], f"{job_id} puts no protoc on PATH")
+        # Every workflow that pins protoc pins ADR-022's digest, engine-measure.yml's cold build too.
+        pins = [
+            (path.name, digest)
+            for path in sorted(WORKFLOWS.glob("*.yml"))
+            for digest in re.findall(r"PROTOC_SHA256: ([0-9a-f]+)", path.read_text())
+        ]
+        for name, digest in examined("protoc pins", pins):
+            self.assertEqual(digest, PROTOC_SHA256, name)
 
 
 def concurrency_problems(block):

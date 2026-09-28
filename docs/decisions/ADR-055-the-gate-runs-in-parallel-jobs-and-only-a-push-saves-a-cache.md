@@ -56,6 +56,11 @@ requests can come from forks?
 - `queue: max` for pushes: rejected, because it cannot be combined with `cancel-in-progress: true` in one block, and it would still hold each push behind the one before it for no benefit.
 - Caching Playwright's browser, keyed on the locked Playwright version, installed on a miss: chosen, because the owner asked for it, and the key moves exactly when the browser build does.
 - Downloading the browser on every run, as Playwright's own CI guide advises: rejected, because the owner chose the cache; the guide's reasons (a restore costs about what a download does, and the system libraries cannot be cached) are measured in SPEC-038 section 7.
+- The checksum-verified `protoc` 31.1 download #204 wrote for the gate job, carried into every job that compiles Rust, and its check carried into the stages that compile the engine: chosen, because ADR-022 pins that version and digest, the download takes about a second, and a build a guard test runs can reach the engine too.
+- `protoc` in the `rust` job only: rejected, because `hygiene`'s guard tests build Rust as well, and a job that compiles Rust without the engine's build tool fails only when a test first reaches the engine.
+- Ubuntu's `protobuf-compiler` package: rejected, because Ubuntu 24.04's is 3.21.12, not the 31.1 Anki's build pins (ADR-022).
+- A third-party action that installs `protoc`: rejected, because it adds an action with the job's token to do what a checked download already does.
+- Caching `protoc`: rejected, because its download takes about a second, less than a cache restore.
 - Stage logs under `${{ runner.temp }}/check-logs`: chosen, because `actions/upload-artifact` skips hidden paths by default, which is why `.check-logs/` never uploaded, and a directory outside the checkout is read by no stage's scan.
 - Keeping `.check-logs/` and setting `include-hidden-files: true`: rejected, because the logs would still sit inside the checkout, where `gitleaks dir` and the scrub walk the tree.
 
@@ -77,6 +82,9 @@ Chosen options, as SPEC-038's requirements state them:
   restores and never saves. The Rust job cleans the workspace's own artifacts before its save, and
   sets `CARGO_INCREMENTAL=0`. `hygiene`, whose python stage builds a Rust example (SPEC-042's rails
   test), restores the Rust cache too and never saves it.
+- **The engine's build tool.** `rust` and `hygiene` install `protoc` 31.1 before their stages,
+  checked against ADR-022's digest, and `clippy`, `test` and `doctest` check it (or `PROTOC`) by
+  name. `engine-measure.yml` is unchanged.
 - **The pool.** `pack-rows.py --jobs N`, by default the smaller of 8 and the CPUs available, with
   the same timeouts, verdicts, exit codes and row order as the serial runner.
 - **Concurrency.** Pull-request runs group by their ref and cancel the run they supersede; each push

@@ -54,11 +54,15 @@
   CHECK OK in 157 s): toolchain 0 s, fmt 0 s, clippy 17 s, test 17 s, doctest 1 s, web 35 s,
   python 8 s, packs 69 s, scrub 8 s, audit 2 s, secrets 0 s.
 
-**Order.** PR #204 (SPEC-022, Anki's engine) edits `ci.yml` and `check.sh` too: it adds a
-checksum-pinned `protoc` step to the gate job and a `protoc` check to the `toolchain` stage. When it
-lands, this delivery merges `dev` in, carries the `protoc` step into the one job that compiles Rust
-and the `protoc` check into the stages that compile, leaves `engine-measure.yml` as it is, and
-measures cold against warm with the engine in the workspace.
+**Order.** PR #204 (SPEC-022, Anki's engine) edited `ci.yml` and `check.sh` too: it added a
+checksum-pinned `protoc` 31.1 step to the gate job and a `protoc` check to the `toolchain` stage,
+because the engine's build scripts compile its protobuf definitions (ADR-022). It landed in `dev` as
+b1ce32d while this was built. This delivery merges `dev` in, carries the `protoc` step into every job
+that compiles Rust and the `protoc` check into the stages that compile the engine (R4, R12), leaves
+`engine-measure.yml` as #204 made it, and measures the gate with the engine in the workspace.
+ADR-022 records a finding that bears on the cache: the engine's `anki_proto` build script registers
+every file it generates as a rerun input and rewrites some of them on each run, so each cargo
+command that builds the engine compiles it again. Section 7 measures what that costs.
 
 ## 2. Requirements
 
@@ -93,8 +97,11 @@ R4. Each stage checks the tools it runs before it runs them, with the install hi
     stage gave: `cargo` for `fmt`, `clippy` and `doctest`; `cargo` then `cargo-nextest` for `test`;
     `cargo` then `cargo-deny` for `audit-rust`; `node` (24 or later) then `pnpm` for `web` and
     `audit-web`; `python3` (3.11 or later) then `cargo` for `python`, whose guard tests build a Rust
-    example; `python3` for `packs` and `scrub`; `gitleaks` for `secrets`. A missing tool fails that stage by name, locally and in CI. The `toolchain` stage is
-    removed.
+    example; `python3` for `packs` and `scrub`; `gitleaks` for `secrets`. The stages that compile
+    Anki's engine (`clippy`, `test` and `doctest`) then check `protoc`, which the engine's build
+    runs from `PROTOC` when it is set, which must then name an executable, and from `PATH`
+    otherwise (ADR-022). A missing tool fails that stage by name, locally and in CI. The
+    `toolchain` stage is removed.
 R5. The `audit` stage is split: `audit-rust` runs
     `cargo deny --locked check advisories bans licenses sources` in the `rust` job, and `audit-web`
     runs `pnpm audit --prod` in the `web` job.
@@ -121,6 +128,11 @@ R10. `check.sh` writes `timings.tsv` in its log directory: a header `stage secon
 R11. Every gate job uploads its stage logs, `timings.tsv` among them, with `if: always()`, from a
     directory outside the checkout that `actions/upload-artifact` does not skip as hidden
     (`${{ runner.temp }}/check-logs`), one artifact per job.
+R12. Every CI job that compiles Rust (`rust`, and `hygiene`, whose guard tests build a Rust
+    example) installs `protoc` 31.1 before its stages from the release archive, checked against the
+    digest ADR-022 pins, and puts it on `PATH`, as #204's gate job did. Every workflow that pins
+    `protoc` pins that digest, `engine-measure.yml` included, and that workflow is unchanged: its
+    cold build restores no cache, on purpose.
 
 ## 3. Acceptance criteria
 
@@ -139,6 +151,8 @@ R11. Every gate job uploads its stage logs, `timings.tsv` among them, with `if: 
 | A11 | the browser cache is keyed on the Playwright version the lockfile locks, and the browser is installed on a miss | `test_ci_workflows.py` `the_browser_cache_is_keyed_on_the_locked_playwright_version` |
 | A12 | each stage run is timed in timings.tsv with its verdict and exit | `test_check_gate.py` `each_stage_run_is_timed_in_timings_tsv` |
 | A13 | every gate job uploads its stage logs from a directory the upload does not skip | `test_ci_workflows.py` `every_job_uploads_its_stage_logs_from_a_visible_directory` |
+| A14 | every job that compiles Rust installs protoc 31.1, checked against ADR-022's digest, before its stages, and every workflow pins that digest | `test_ci_workflows.py` `every_job_that_compiles_rust_installs_the_pinned_protoc_first` |
+| A15 | the stages that compile the engine fail by name without protoc, and honour a `PROTOC` that names an executable | `test_check_gate.py` `the_stages_that_compile_the_engine_need_protoc` |
 
 ```acceptance
 A1: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k the_rust_cache_is_keyed_on_the_toolchain_pin_and_the_lockfile
@@ -154,6 +168,8 @@ A10: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k on
 A11: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k the_browser_cache_is_keyed_on_the_locked_playwright_version
 A12: python3 -m unittest discover -s scripts/tests -p test_check_gate.py -k each_stage_run_is_timed_in_timings_tsv
 A13: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k every_job_uploads_its_stage_logs_from_a_visible_directory
+A14: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k every_job_that_compiles_rust_installs_the_pinned_protoc_first
+A15: python3 -m unittest discover -s scripts/tests -p test_check_gate.py -k the_stages_that_compile_the_engine_need_protoc
 ```
 
 The workflow tests read `.github/workflows/*.yml` with a small reader of the block YAML the
@@ -223,6 +239,9 @@ they ever saw running at once.
   and the web stage fails loudly.
 - **Four jobs pay four start-ups.** Each checks out and sets up on its own; section 7 records each
   job's time beside the wall time.
+- **The engine compiles again in every cargo command.** ADR-022's finding: a warm cache saves every
+  dependency but the engine and what depends on it, which `clippy`, `test` and `doctest` each
+  compile once. Section 7 measures it; the fix belongs to the engine's build script, not to CI.
 
 ## 7. Measurements
 
