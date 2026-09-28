@@ -80,6 +80,118 @@
         "        if mutant in installed and False:\n",
         "a second row installing another row's mutant for its killer is refused by the census (SPEC-039 R11)",
         "test_mutation_rows.TheCensusRefusesARowThatCanProveNothing.test_the_census_refuses_a_row_that_can_prove_nothing"
+      ],
+      [
+        "S03911-A-RELEASE-IS-JUDGED-ON-ITS-MERGE-DIFF",
+        "scripts/mutation-verdict.py",
+        "            \"diff\",\n            \"a release pull request into main is judged on its merge diff, every change dev \"\n",
+        "            \"not-applicable\",\n            \"a release pull request into main is judged on its merge diff, every change dev \"\n",
+        "a release pull request into main is judged on its merge diff, never read not-applicable (SPEC-039 R3)",
+        "test_mutation_verdict.EachEventReadsItsCase.test_each_event_reads_its_case_by_name"
+      ],
+      [
+        "S03912-THE-SHARDS-FIT-THEIR-BOUND",
+        "scripts/mutation-verdict.py",
+        "        n for n in range(1, MAX_SHARDS + 1) if max(projected(costs, n)) <= SHARD_BOUND_SECONDS\n",
+        "        n for n in range(1, MAX_SHARDS + 1) if max(projected(costs, n)) <= 2 * SHARD_BOUND_SECONDS\n",
+        "the plan takes the fewest shards whose slowest is projected within the bound, never one past it (SPEC-039 R18)",
+        "test_mutation_verdict.TheShardsFitTheirBound.test_the_plan_shards_the_listed_mutants_within_their_bound"
+      ],
+      [
+        "S03913-A-DIFF-BEYOND-THE-MATRIX-IS-REFUSED",
+        "scripts/mutation-verdict.py",
+        "        return EXIT_FAIL\n    times = projected(costs, count)\n",
+        "        count = MAX_SHARDS\n    times = projected(costs, count)\n",
+        "a diff that needs more shards than a job matrix holds is refused with its projection, never capped (SPEC-039 R18)",
+        "test_mutation_verdict.TheShardsFitTheirBound.test_the_plan_shards_the_listed_mutants_within_their_bound"
+      ],
+      [
+        "S03914-EACH-MUTANT-IN-ITS-ROUND-ROBIN-SHARD",
+        "scripts/mutation-verdict.py",
+        "                    name for index, (name, _) in enumerate(mutants) if index % count == shard\n",
+        "                    name for index, (name, _) in enumerate(mutants) if index // count == shard\n",
+        "the plan gives mutant i to shard i mod n, as cargo-mutants' round-robin does, once each (SPEC-039 R18)",
+        "test_mutation_verdict.TheShardsFitTheirBound.test_the_plan_shards_the_listed_mutants_within_their_bound"
+      ],
+      [
+        "S03915-EVERY-PLANNED-SHARD-IS-COUNTED",
+        "scripts/mutation-verdict.py",
+        "        for shard in range(len(planned)):\n",
+        "        for shard in range(len(planned) - 1):\n",
+        "the verdict counts every shard the plan promised, the last one included, whatever reported (SPEC-039 R18)",
+        "test_mutation_verdict.TheVerdictCountsEveryShard.test_a_missing_or_partial_shard_report_is_void_by_name"
+      ],
+      [
+        "S03916-A-MUTANT-IN-TWO-SHARDS-FAILS",
+        "scripts/mutation-verdict.py",
+        "        if len(shards_of) > listed[name]:\n",
+        "        if len(shards_of) > listed[name] + 1:\n",
+        "a mutant tested in more shards than the listing named it fails the verdict, by name (SPEC-039 R18)",
+        "test_mutation_verdict.TheVerdictCountsEveryShard.test_the_shards_reports_hold_every_listed_mutant_once"
+      ],
+      [
+        "S03917-A-LISTED-MUTANT-IN-NO-SHARD-IS-VOID",
+        "scripts/mutation-verdict.py",
+        "            if len(tested.get(name, [])) < times:\n",
+        "            if len(tested.get(name, [])) < times - 1:\n",
+        "a listed mutant that no whole shard tested is VOID, by name (SPEC-039 R18)",
+        "test_mutation_verdict.TheVerdictCountsEveryShard.test_the_shards_reports_hold_every_listed_mutant_once"
+      ],
+      [
+        "S03918-ONLY-A-SHARD-OF-NO-MUTANT-OWES-NO-REPORT",
+        "scripts/mutation-verdict.py",
+        "        if report is None and code == 0 and mutants == 0:\n",
+        "        if report is None and code == 0:\n",
+        "only a shard the plan gave no mutant is excused a report; one that held mutants owes it (SPEC-039 R18)",
+        "test_mutation_verdict.TheVerdictCountsEveryShard.test_a_diff_the_tool_lists_no_mutant_of_needs_no_shard_report"
+      ],
+      [
+        "S03919-A-PLAN-WITH-NO-SHARDS-IS-VOID",
+        "scripts/mutation-verdict.py",
+        "            verdict.void(\"the plan names no shards, so no shard's report was promised\")\n",
+        "            verdict.say(\"the plan names no shards, so no shard's report was promised\")\n",
+        "a sharded verdict over a plan the shards were never sized for is VOID, by name (SPEC-039 R18)",
+        "test_mutation_verdict.TheVerdictCountsEveryShard.test_a_missing_or_partial_shard_report_is_void_by_name"
+      ],
+      [
+        "S03920-RUST-WITH-NO-LISTING-IS-VOID",
+        "scripts/mutation-verdict.py",
+        "                \"holds no cargo-mutants listing\"\n            )\n            return EXIT_VOID\n",
+        "                \"holds no cargo-mutants listing\"\n            )\n            listed = []\n",
+        "a Rust diff with no cargo-mutants listing is VOID, never one shard of nothing (SPEC-039 R18)",
+        "test_mutation_verdict.TheShardsFitTheirBound.test_the_plan_shards_the_listed_mutants_within_their_bound"
+      ],
+      [
+        "S03921-A-FILE-THAT-IS-NO-PLAN-IS-VOID",
+        "scripts/mutation-verdict.py",
+        "        print(f\"mutation: shards: VOID {plan_path} is not a mutation plan\")\n        return EXIT_VOID\n",
+        "        print(f\"mutation: shards: VOID {plan_path} is not a mutation plan\")\n        return EXIT_OK\n",
+        "the shards of a file that is no plan are VOID, never a matrix (SPEC-039 R18)",
+        "test_mutation_verdict.TheShardsFitTheirBound.test_the_plan_shards_the_listed_mutants_within_their_bound"
+      ],
+      [
+        "S03922-THE-MATRIX-NAMES-EVERY-SHARD",
+        "scripts/mutation-verdict.py",
+        "            sink.write(f\"matrix={json.dumps(list(range(count)))}\\n\")\n",
+        "            sink.write(f\"matrix={json.dumps(list(range(count - 1)))}\\n\")\n",
+        "the matrix names every shard from 0 to n-1, so none is planned and never run (SPEC-039 R18)",
+        "test_mutation_verdict.TheShardsFitTheirBound.test_the_plan_shards_the_listed_mutants_within_their_bound"
+      ],
+      [
+        "S03923-A-SHARDED-RUN-PROVES-ITS-PARTITION",
+        "scripts/mutation-verdict.py",
+        "    if args.shard_reports:\n        partition(verdict, plan, whole, complete=len(verdict.voids) == voids)\n",
+        "    if not args.shard_reports:\n        partition(verdict, plan, whole, complete=len(verdict.voids) == voids)\n",
+        "a sharded verdict proves the shards' reports hold every listed mutant once (SPEC-039 R18)",
+        "test_mutation_verdict.TheVerdictCountsEveryShard.test_the_shards_reports_hold_every_listed_mutant_once"
+      ],
+      [
+        "S03924-A-MISSING-SHARD-IS-NAMED-ONCE",
+        "scripts/mutation-verdict.py",
+        "    if complete:\n",
+        "    if True:\n",
+        "a missing shard is named once, never as each of its mutants unexamined (SPEC-039 R18)",
+        "test_mutation_verdict.TheVerdictCountsEveryShard.test_a_missing_or_partial_shard_report_is_void_by_name"
       ]
     ]
   }
