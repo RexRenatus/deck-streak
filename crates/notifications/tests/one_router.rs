@@ -598,7 +598,9 @@ fn shipped(name: &str) -> bool {
     };
     let python_test = extension == "py"
         && (stem.starts_with("test_") || stem.ends_with("_test") || stem == "conftest");
-    let script_test = stem.ends_with(".test") || stem.ends_with(".spec");
+    let script_test = Path::new(stem)
+        .extension()
+        .is_some_and(|inner| inner == "test" || inner == "spec");
     SHIPPED_EXTENSIONS.contains(&extension) && !python_test && !script_test
 }
 
