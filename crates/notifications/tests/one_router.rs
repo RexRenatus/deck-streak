@@ -425,7 +425,7 @@ def hold(database: str, now: int) -> None:
     ),
     (
         "crates/notifications/src/quiet.rs",
-        r#"use crate::ledger::hold as keep;
+        r"use crate::ledger::hold as keep;
 
 /// A celebration held on the queue beside the router, around its decision, and its retry latched
 /// without the router: the next flush delivers it.
@@ -433,17 +433,17 @@ async fn celebrate_on_the_queue(write: &mut SqliteConnection, row: &HeldRow, now
     keep(write, row, now).await?;
     crate::ledger::relatch(write, 1, 0).await
 }
-"#,
+",
     ),
     (
         "crates/notifications/src/lib.rs",
-        r#"pub mod ledger;
+        r"pub mod ledger;
 pub mod quiet;
 
 /// The ledger's hold, re-exported at the crate's root, so a module beside the router holds a
 /// celebration on the queue without naming the ledger.
 pub(crate) use ledger::hold;
-"#,
+",
     ),
 ];
 
