@@ -6,7 +6,7 @@
   **Context(s):** `repo` (`scripts/`, `.github/`, `.cargo/`, `docs/`), and every package the
   release's merge diff lists: `deck-streak-vault`, `deck-streak-ingest`, `deck-streak-kernel`,
   `deck-streak-identity`, `deck-streak-daemon`, `deck-streak-coordination`, `deck-streak-api`,
-  `deck-streak-privacy` and `miniapp`.
+  `deck-streak-agent`, `deck-streak-progression`, `deck-streak-privacy` and `miniapp`.
 - **Decided by:** ADR-070 (this SPEC's: the equivalence record excuses exactly a recorded mutant),
   ADR-057 (mutation testing on the diff and weekly; its D6 amended in part by ADR-070), ADR-016
   (planned SPECs), ADR-069 (a criterion retired insert-only), ADR-034 (`main` changes only by a
@@ -283,10 +283,11 @@ R14. `mutation-weekly.yml`'s `workflow_dispatch` takes a `package` input: a pack
 
 R15. One delivery per crate, in the owner's order: `deck-streak-vault` first, then
     `deck-streak-ingest`, `deck-streak-kernel`, `deck-streak-identity`, `deck-streak-daemon`,
-    `deck-streak-coordination` and `deck-streak-api`; then `deck-streak-privacy`, which no sweep has
-    measured; then the Mini App, which closes #240. Each delivery owns one row of section 7, its
-    crate's fragment and its ids in the band (R20). A mutant of its crate that the population gains
-    while the delivery runs is its own.
+    `deck-streak-coordination` and `deck-streak-api`; then `deck-streak-agent` and
+    `deck-streak-progression`, which gained their mutants after this plan's base (section 9); then
+    `deck-streak-privacy`, which no sweep has measured; then the Mini App, which closes #240. Each
+    delivery owns one row of section 7, its crate's fragment and its ids in the band (R20). A mutant
+    of its crate that the population gains while the delivery runs is its own.
 R16. Each delivery, before its first kill, re-lists its crate at its base
     (`cargo mutants --list --json --package <crate>`) and dispatches the battery scoped to it
     (R14); the vault's dispatches once R14 exists on its branch. That run's `table` line becomes
@@ -326,8 +327,8 @@ R20. A row that pins an invariant the tool cannot mutate (SPEC-039 R8) goes in
     `scripts/mutation-rows.d/S05700-S05799.json`, the one band this SPEC's deliveries share, with
     ids allotted so that no two deliveries collide: vault S05701 to S05719, ingest S05720 to S05729,
     kernel S05730 to S05739, identity S05740 to S05749, daemon S05750 to S05759, coordination
-    S05760 to S05769, api S05770 to S05779, privacy S05780 to S05789, and the Mini App S05790 to
-    S05799.
+    S05760 to S05764, agent S05765 to S05769, api S05770 to S05774, progression S05775 to S05779,
+    privacy S05780 to S05789, and the Mini App S05790 to S05799.
 R21. The first release into `main` that mutation testing judges waits until every row of section 7
     reads unexplained 0 (the owner's ruling), so that its `mutation-verdict` and `mutation-web` jobs
     find no unexplained mutant in its merge diff.
@@ -438,6 +439,8 @@ A25: python3 -m unittest discover -s scripts/tests -p test_mutation_campaign.py 
 | `crates/daemon/tests/`, `crates/daemon/src/` | daemon | the same |
 | `crates/coordination/tests/`, `crates/coordination/src/` | coordination | the same |
 | `crates/api/tests/`, `crates/api/src/` | api | the same |
+| `crates/agent/tests/`, `crates/agent/src/` | agent | the same |
+| `crates/progression/tests/`, `crates/progression/src/` | progression | the same |
 | `crates/privacy/tests/`, `crates/privacy/src/` | privacy | the same |
 | `web/app/src/` | the Mini App | its killing and covering Vitest tests, `*.test.ts` beside the code (R1, R2); production files only by a red-first fix (R3) |
 | `scripts/mutation-equivalent.d/deck-streak-vault.json` and one fragment per package, `miniapp.json` for the Mini App | each delivery | added when the delivery records its first equivalent (R4) |
@@ -503,7 +506,9 @@ last, the Mini App's, judges the whole release and moves this SPEC (R19).
 
 The opening rows are run 36384080819's whole shards, in which listed counts what they reported, so
 shard 21's 67 mutants, 6 of them known survivors and 19 never reached (section 1.1), are in no row;
-`deck-streak-privacy`, which no sweep has measured, shows its listing at `dev` 16ed8e2. Each
+`deck-streak-privacy`, which no sweep has measured, shows its listing at `dev` 16ed8e2, and
+`deck-streak-agent` and `deck-streak-progression`, which listed no mutant there, show theirs at
+`dev` 53184dd (section 9). Each
 delivery replaces its row with its own sweeps (R16): listed, killed (caught or timed out),
 equivalent, unexplained, which must read 0, unviable, and its pull request with its opening and
 closing runs.
@@ -517,8 +522,10 @@ closing runs.
 | 5 | `deck-streak-daemon` | 63 | 35 | 0 | 9 | 19 | open |
 | 6 | `deck-streak-coordination` | 282 | 240 | 0 | 5 | 37 | open |
 | 7 | `deck-streak-api` | 50 | 33 | 0 | 3 | 14 | open |
-| 8 | `deck-streak-privacy` | 29 | unmeasured | 0 | unmeasured | unmeasured | open |
-| 9 | `miniapp` | 274 | 193 | 0 | 81 | 0 | open (#240) |
+| 8 | `deck-streak-agent` | 146 | unmeasured | 0 | unmeasured | unmeasured | open |
+| 9 | `deck-streak-progression` | 57 | unmeasured | 0 | unmeasured | unmeasured | open |
+| 10 | `deck-streak-privacy` | 29 | unmeasured | 0 | unmeasured | unmeasured | open |
+| 11 | `miniapp` | 274 | 193 | 0 | 81 | 0 | open (#240) |
 
 A delivered row's PR cell reads `#<pull request> (runs <opening>, <closing>)`.
 
@@ -535,6 +542,8 @@ What each delivery meets first, from section 1:
 - **daemon**: 9 missed, 8 in `lifecycle.rs`; 24 mutants new since the run.
 - **coordination**: 5 missed in four files.
 - **api**: 3 missed, one each in `health.rs`, `session_routes.rs` and `settings.rs`.
+- **agent**: 146 mutants, never swept.
+- **progression**: 57 mutants, never swept.
 - **privacy**: 29 mutants, never swept.
 - **the Mini App**: #240 tracks its 53 survived and 28 uncovered mutants, each to be killed or
   recorded equivalent, with no mutant skipped. By this SPEC's rule (R1, R10), an uncovered mutant
@@ -562,6 +571,18 @@ A delivery whose measurements prove this plan wrong records it here, dated, with
   needed migrating. The manifest lacked SPEC-056, whose A18 holds its section 7 equal to every
   criterion the delivered SPECs retire, so R17's retirement of SPEC-039's A20 adds a row there,
   insert-only with a dated amendment; section 4 now names it.
+- **2026-09-28, the vault's delivery: two crates that no delivery owned.** At the vault's base,
+  `dev` 53184dd, cargo-mutants lists 2,410 mutants where this plan's base, `dev` 16ed8e2, listed
+  2,207: `deck-streak-agent` gained 146 and `deck-streak-progression` 57, two crates that listed
+  none at 16ed8e2, so neither R15 nor section 7 named them, no delivery owned their survivors, and
+  the band's ids were fully allotted. The architect placed them after the api: they are section
+  7's rows 8 and 9, `deck-streak-privacy` becomes row 10, and the Mini App stays last at row 11,
+  because the last delivery judges the whole release (R19). Their ids come from the upper halves
+  of two allotments: the agent takes S05765 to S05769 and the coordination keeps S05760 to S05764;
+  the progression takes S05775 to S05779 and the api keeps S05770 to S05774. R15, R20, section 7,
+  the context list and section 4's manifest are edited in place. The two rows read their listing
+  at 53184dd, equivalent 0 since no record exists, and `unmeasured` for what only a sweep counts,
+  until their deliveries sweep them.
 
 ## 10. References
 

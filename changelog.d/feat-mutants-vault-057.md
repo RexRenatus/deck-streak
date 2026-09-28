@@ -29,3 +29,6 @@
 - The builder brief, `.cargo/mutants.toml`, `web/app/stryker.config.json` and the survivors' issue
   drafts teach the record, and the weekly battery's header says that a dispatch runs at any branch
   that holds the workflow.
+- SPEC-057's plan gives `deck-streak-agent` and `deck-streak-progression`, which gained their
+  mutants after the plan's base, rows 8 and 9 of its table and their ids in the band;
+  `deck-streak-privacy` is row 10, and the Mini App stays last.
