@@ -112,6 +112,7 @@ outcome, was redacted under the public-prose rule (ADR-059).
 ## Note, 2026-09-28: the loader refuses an empty credential
 
 The kernel's loader, not the service manager, is what refuses an empty credential (ADR-067). A
-credential that holds no value, zero bytes or only the one trailing newline the loader trims, refuses
-start by its id as a missing one does, so the unit fails and its `OnFailure=` alert fires; the alert
-unit's own script refuses one the same way (SPEC-066).
+credential that holds no value, zero bytes or only the one trailing newline the loader trims, is
+refused by its id as a missing one is: a role refuses start, so its unit fails and its `OnFailure=`
+alert fires, and the `sync` job records the run as `missing_credentials`. The alert unit's own
+script refuses one the same way (SPEC-066).

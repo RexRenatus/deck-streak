@@ -41,6 +41,9 @@ when the data read is empty. Where is an empty credential refused, so that the u
 - The credential helper declining to answer: rejected, because declining is not a start failure the
   manual documents either. The service manager can still hand the unit an empty credential, so the
   refusal has to be where the value is read.
+- The loader refusing a blank value too, one of whitespace only: rejected, because the loader judges
+  presence and not shape: a value of one character loads by design (SPEC-066 R1), and each caller
+  refuses a blank one by its own check or at the far end.
 
 ## Decision Outcome
 
