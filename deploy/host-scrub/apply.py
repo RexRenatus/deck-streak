@@ -9,7 +9,8 @@ first failure, naming the item and the reason:
 
 - every health check of RULES is a read command of the inventory's allow list;
 - the list's own digest matches its content, so the list is the one the owner was shown, and RULES
-  are the rules the inventory read, which the list names by their digest;
+  are the rules the inventory read, which the list names by their digest: RULES are read once, and
+  that digest is taken over the very bytes the apply parsed and acts on;
 - there is an approval, and it carries the list's digest, the approver, the date and item ids the
   list holds;
 - it names a snapshot of the boot disk, with the instant it was taken, after the inventory and not
@@ -56,7 +57,6 @@ from inventory import (
     Usage,
     allowed,
     canonical,
-    file_digest,
     health_commands,
     inside_repository,
     load_json,
@@ -328,7 +328,7 @@ def main(argv: list[str] | None = None) -> int:
         except Refused as refused:
             reason = f"the health check `{refused}` is not on the read-only allow list"
             raise Refusal(reason) from refused
-        approval, items = approved_items(listing, args.approval, file_digest(args.rules))
+        approval, items = approved_items(listing, args.approval, rules["digest"])
         checked = {}
         for item in items:
             checked[item["id"]] = check_item(item, rules["protected"], runner)

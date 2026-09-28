@@ -18,8 +18,10 @@ link, which is never followed; empty for anything else). A directory's digest is
 sorted lines of every entry under it, itself included, joined by newlines. A package's digest is
 SHA-256 over its name, architecture, version and state. An item's `bytes` are what it frees when
 the whole list is applied: a file whose other links survive frees nothing, and a file linked from
-two items counts once. The list carries the total, the inventory's instant and its own digest,
-SHA-256 over the list as canonical JSON without its `digest` field.
+two items counts once. The list carries the total, the inventory's instant and digest, and its own
+digest, SHA-256 over the list as canonical JSON without its `digest` field. The inventory and the
+rules are each read once, and each digest the plan checks or records is taken over the bytes it
+parsed.
 
 The plan reads each candidate's content to digest it, so it runs where the candidates are. It
 deletes nothing and writes only its output, which is private and lies outside this repository
@@ -42,11 +44,10 @@ from pathlib import Path
 from inventory import (
     Usage,
     canonical,
-    file_digest,
     inside_repository,
-    load_json,
     load_rules,
     now_utc,
+    read_json,
     sha256_file,
     walk,
 )
@@ -252,12 +253,12 @@ def main(argv: list[str] | None = None) -> int:
         print(f"plan: {args.out} is inside this repository; write it to the private directory")
         return 2
     try:
-        inventory = load_json(args.inventory, "inventory")
+        inventory, inventory_digest = read_json(args.inventory, "inventory")
         rules = load_rules(args.rules)
     except Usage as error:
         print(f"plan: {error}")
         return 2
-    if inventory.get("rules_digest") != file_digest(args.rules):
+    if inventory.get("rules_digest") != rules["digest"]:
         print("plan: refused: these rules are not the ones the inventory read; run it again")
         return 1
     os.nice(max(0, 19 - os.nice(0)))
@@ -267,7 +268,7 @@ def main(argv: list[str] | None = None) -> int:
     listing = {
         "schema": SCHEMA,
         "made_at": now_utc().isoformat(),
-        "inventory": {"digest": file_digest(args.inventory), "taken_at": inventory["taken_at"]},
+        "inventory": {"digest": inventory_digest, "taken_at": inventory["taken_at"]},
         "rules_digest": inventory["rules_digest"],
         "items": items,
         "skipped": skipped,

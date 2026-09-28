@@ -372,7 +372,7 @@
       [
         "S06047-PLAN-READS-THE-INVENTORYS-RULES",
         "deploy/host-scrub/plan.py",
-        "    if inventory.get(\"rules_digest\") != file_digest(args.rules):\n",
+        "    if inventory.get(\"rules_digest\") != rules[\"digest\"]:\n",
         "    if False:\n",
         "the plan refuses rules other than the ones the inventory read (SPEC-060 R4, A3)",
         "test_host_scrub.Plan.test_the_plan_lists_rule_selected_items_and_deletes_nothing"

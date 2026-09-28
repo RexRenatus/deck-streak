@@ -21,8 +21,9 @@ totals, never listed file by file, and a root marked `sizes_only` gives its tota
 The output is private (R8): it must lie outside this repository.
 
 `plan.py` and `apply.py` import this file's allow list, runner, walk, rules and health reads, so
-each rule has one implementation. Exit 0 when written, 1 when a command was refused, 2 on a usage
-error.
+each rule has one implementation. A file a tool both parses and binds by its digest is read once,
+and the digest is taken over the bytes that were parsed. Exit 0 when written, 1 when a command was
+refused, 2 on a usage error.
 """
 
 from __future__ import annotations
@@ -235,21 +236,26 @@ def unique_keys(pairs: list[tuple]) -> dict:
     return found
 
 
-def load_json(path: str, what: str):
+def read_json(path: str, what: str) -> tuple[object, str]:
+    """A JSON file's content and the SHA-256 of the bytes it was parsed from. The file is read once,
+    so a digest a tool records or checks names exactly what that tool parsed, whatever the file
+    holds a moment later (R6)."""
     try:
-        with open(path, encoding="utf-8") as handle:
-            return json.load(handle, object_pairs_hook=unique_keys)
+        with open(path, "rb") as handle:
+            data = handle.read()
     except OSError as error:
         raise Usage(f"cannot read the {what} at {path}: {error.strerror}") from error
+    try:
+        content = json.loads(data.decode("utf-8"), object_pairs_hook=unique_keys)
     except HeldTwice as error:
         raise Usage(f"the {what} at {path} is refused: {error}") from error
     except ValueError as error:
         raise Usage(f"the {what} at {path} is not JSON: {error}") from error
+    return content, hashlib.sha256(data).hexdigest()
 
 
-def file_digest(path: str) -> str:
-    with open(path, "rb") as handle:
-        return hashlib.sha256(handle.read()).hexdigest()
+def load_json(path: str, what: str):
+    return read_json(path, what)[0]
 
 
 def canonical(path) -> bool:
@@ -272,8 +278,10 @@ def absolute(value, where: str) -> str:
 
 def load_rules(path: str) -> dict:
     """The rules, checked for their shape: roots, rules by class, protected paths, health checks
-    (R3, R7, R9). A health check is a read command of the allow list, or an http(s) address."""
-    rules = load_json(path, "rules")
+    (R3, R7, R9). A health check is a read command of the allow list, or an http(s) address. The
+    rules carry `digest`, the SHA-256 of the bytes they were parsed from in one read, so the digest
+    a tool records or checks names the very rules it acts on (R6)."""
+    rules, digest = read_json(path, "rules")
     if not isinstance(rules, dict) or rules.get("schema") != RULES_SCHEMA:
         raise Usage(f"the rules at {path} do not declare schema {RULES_SCHEMA}")
     roots = []
@@ -309,7 +317,13 @@ def load_rules(path: str) -> dict:
     ids = [check["id"] for check in health]
     if len(set(ids)) != len(ids):
         raise Usage("two health checks share an id")
-    return {"roots": roots, "rules": checked, "protected": protected, "health": health}
+    return {
+        "roots": roots,
+        "rules": checked,
+        "protected": protected,
+        "health": health,
+        "digest": digest,
+    }
 
 
 def check_rule(rule: dict, name: str, kind: str) -> dict:
@@ -729,7 +743,7 @@ def main(argv: list[str] | None = None) -> int:
     record = {
         "schema": SCHEMA,
         "taken_at": taken.isoformat(),
-        "rules_digest": file_digest(args.rules),
+        "rules_digest": rules["digest"],
         "health_before": health,
         "mounts": mounts(),
         **found,
