@@ -200,6 +200,30 @@
         "    wanted = list(args.row)\n",
         "a --row beside a --band adds its row and drops none of the band's (SPEC-039 R9)",
         "test_mutation_rows.TheRunnerProvesEverySelectedRow.test_every_row_its_selectors_name_is_proved_once"
+      ],
+      [
+        "S03926-A-SECOND-STRYKER-CONFIG-IS-REFUSED",
+        "scripts/mutation-verdict.py",
+        "        if name != \"stryker.config.json\" and (root / \"web\" / \"app\" / name).is_file():\n",
+        "        if name != \"stryker.config.json\" and (root / \"web\" / \"app\" / name).is_dir():\n",
+        "a second Stryker configuration StrykerJS would read first is refused by name (SPEC-039 R6)",
+        "test_mutation_workflows.TheConfigurationCheckSeesWhatStrykerReads.test_the_configuration_check_refuses_what_stryker_would_read_otherwise"
+      ],
+      [
+        "S03927-IGNORE-STATIC-NEEDS-PER-TEST-COVERAGE",
+        "scripts/mutation-verdict.py",
+        "    if document.get(\"ignoreStatic\") is True and coverage != \"perTest\":\n",
+        "    if document.get(\"ignoreStatic\") is True and coverage == \"perTest\":\n",
+        "ignoreStatic under a coverage analysis other than perTest is refused, as StrykerJS refuses it (SPEC-039 R6)",
+        "test_mutation_workflows.TheConfigurationCheckSeesWhatStrykerReads.test_the_configuration_check_refuses_what_stryker_would_read_otherwise"
+      ],
+      [
+        "S03928-MUTATE-IS-R2S-PRODUCTION-CODE",
+        "scripts/mutation-verdict.py",
+        "    if sorted(document.get(\"mutate\") or []) != sorted(STRYKER_MUTATE):\n",
+        "    if not document.get(\"mutate\"):\n",
+        "a mutate list other than R2's web production code is refused (SPEC-039 R2, R6)",
+        "test_mutation_workflows.TheConfigurationCheckSeesWhatStrykerReads.test_the_configuration_check_refuses_what_stryker_would_read_otherwise"
       ]
     ]
   }
