@@ -98,6 +98,69 @@
       "evidence": "When dot == name, path[name..dot] is empty, all(|byte| byte == b'.') holds over no bytes, and its negation makes the guard false under > and >= alike, so the extension is empty either way.",
       "reached_by": "rails::an_extension_is_read_from_the_last_component_as_splitext_reads_it",
       "issue": "#276"
+    },
+    {
+      "file": "crates/vault/src/sha256.rs",
+      "mutant": "replace | with ^ in parse_hex",
+      "anchor": "(high << 4) | low",
+      "reason": "The two operands share no set bit, so or and exclusive or give the same byte.",
+      "evidence": "hex_value returns a value in 0..=15 for every digit it accepts (digit - b'0', or digit - b'a' + 10), so high << 4 has its low four bits clear and low sets only those four bits.",
+      "reached_by": "lib::sha256::tests::a_hex_digest_reads_back_and_another_shape_is_refused",
+      "issue": "#276"
+    },
+    {
+      "file": "crates/vault/src/sha256.rs",
+      "mutant": "replace ^ with | in compress",
+      "anchor": "(e & f) ^ (!e & g)",
+      "reason": "The choose function's two terms share no set bit, so or and exclusive or agree.",
+      "evidence": "Every bit set in e & f has e's bit set and every bit set in !e & g has it clear, so (e & f) & (!e & g) is zero, and x | y equals x ^ y whenever x & y is zero.",
+      "reached_by": "lib::sha256::tests::the_digest_equals_the_standards_examples",
+      "issue": "#276"
+    },
+    {
+      "file": "crates/vault/src/sha256.rs",
+      "mutant": "replace ^ with | in compress",
+      "anchor": "(a & b) ^ (a & c)",
+      "reason": "The majority of three bits is unchanged when its first exclusive or becomes an or.",
+      "evidence": "Since ^ binds tighter than |, the mutant reads (a & b) | ((a & c) ^ (b & c)); it differs only at a bit where a & b and the exclusive or are both 1, and there a = b = 1 makes a & c equal b & c, so the exclusive or is 0.",
+      "reached_by": "lib::sha256::tests::the_digest_equals_the_standards_examples",
+      "issue": "#276"
+    },
+    {
+      "file": "crates/vault/src/sha256.rs",
+      "mutant": "replace ^ with | in compress",
+      "anchor": "(a & c) ^ (b & c)",
+      "reason": "The majority of three bits is unchanged when its second exclusive or becomes an or.",
+      "evidence": "The mutant reads ((a & b) ^ (a & c)) | (b & c); it differs only at a bit where the exclusive or and b & c are both 1, and there b = c = 1 makes a & b equal a & c, so the exclusive or is 0.",
+      "reached_by": "lib::sha256::tests::the_digest_equals_the_standards_examples",
+      "issue": "#276"
+    },
+    {
+      "file": "crates/vault/src/note.rs",
+      "mutant": "replace || with && in top_level_key",
+      "anchor": "content.is_empty() || content.starts_with",
+      "reason": "Every line the guard stops skipping is one key_line refuses anyway, so the same lines are read.",
+      "evidence": "Under && the guard is never true, since an empty content starts with nothing; the lines it skipped are empty or begin with a space, a tab or '-', and key_line returns None for each, through bytes.first()? or its first-byte test, which accepts only an ASCII letter or '_'.",
+      "reached_by": "roll::rolling_a_note_matches_the_parity_golden",
+      "issue": "#276"
+    },
+    {
+      "file": "crates/vault/src/note.rs",
+      "mutant": "replace || with && in parse_rolls",
+      "anchor": "digits.is_empty() || !digits",
+      "reason": "Every value the mutant lets past the pre-check still fails value.parse(), with the same error.",
+      "evidence": "Under && the pre-check never refuses (all() holds on no digits); i128's from_str accepts exactly an optional '+' or '-' and one or more ASCII digits, the shape the pre-check requires, and parse's map_err gives Malformed::RollsNotAWholeNumber as the pre-check did.",
+      "reached_by": "roll::rolling_a_note_matches_the_parity_golden",
+      "issue": "#276"
+    },
+    {
+      "file": "crates/vault/src/fs.rs",
+      "mutant": "replace <impl VaultFile for RealFile>::sync -> io::Result<()> with Ok(())",
+      "anchor": "self.0.sync_all()",
+      "reason": "An fsync's only effect is durability across a power loss, which no test in the process can observe.",
+      "evidence": "RealFile wraps only a file create_new has just made (O_CREAT | O_EXCL, opened for writing), so sync is fsync of a new regular file, which reports success on a working disk; atomic.rs's step log proves the write calls it before the rename.",
+      "reached_by": "atomic::a_write_lands_through_an_ignored_temp_name_then_fsync_rename_and_dir_fsync",
+      "issue": "#276"
     }
   ]
 }
