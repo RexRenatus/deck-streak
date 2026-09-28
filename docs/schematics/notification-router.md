@@ -48,8 +48,18 @@ flowchart TD
 ```
 
 A withhold after rule 2 deletes the claim inside the same write, so a key is claimed exactly when
-it was sent or held. Only the router module can make a `Pass`, and each bot transport call takes
-one, so a delivery call outside the module does not compile; `push_in_app` is private to it.
+it was sent or held. Three guards hold every delivery to the router, each on its own path:
+
+- **The port's call, by the compiler (SPEC-041 A2).** Only the router module can make a `Pass`, and
+  each bot transport call takes one, so a call of the port outside the module does not compile: the
+  pass has a private field, no `Default` and no `Clone`. `push_in_app` is private to the module.
+- **A delivery around the port, by a census (A15).** A source that never calls the port could still
+  reach the owner through the bot's own `send_html` or a raw request to the Bot API. A census of
+  every shipped source refuses both: outside `crates/bot/` nothing names the Bot API's host or a
+  send method, SPEC-031's alert path aside, and the bot's sends are called only at named call
+  sites: by `OwnerChat`, by the command replies and inside the transport's own requests.
+- **A call the policy names, by the box run (§3a B1).** The `one-router` row refuses a call of
+  `push_message`, `push_dice`, `push_reaction`, `push_pin` or `push_in_app` outside `router.rs`.
 
 ## A held celebration
 

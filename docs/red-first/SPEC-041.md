@@ -75,3 +75,68 @@ stub router sent a celebration it should have held: at 23:30, and after a failed
 it sent a nudge in quiet hours and in a lapse. In A7 it delivered one key on both surfaces. In A8 the
 stub window was never quiet. In A9 it sent every comeback, past the cap and inside the gap. In A13
 the stub route served the feed to callers with no session. In A14 the stub port declared no table.
+
+## Fix round
+
+The first review planted three defects the tests let through: a pass made by `Default` or kept by
+cloning a borrowed one, deliveries around the port that never take a pass, and a comeback's gap
+counted in UTC calendar days. The SPEC re-planned A2 and A9 and added A15 first (168e626). Then,
+for each fix, the new test was committed with the review's plant as its stub, red by assertion for
+its criterion and selecting one test, and the plant was removed in the next commit.
+
+- A2's two new cases, `tests/ui/pass_by_default.rs` and `tests/ui/pass_kept_by_a_clone.rs`, each
+  with the refusal its `.stderr` records, were committed with `Pass` deriving `Default` and `Clone`
+  (eb2a552), where both compiled. Green at 8cb1b11, without the derives.
+- A9's case across the rollover hour runs five hours west of UTC with the owner's quiet window off:
+  a comeback at noon on study day D, then one at 03:00 on the third calendar day (study day D+2,
+  before the 04:00 rollover) and one at 05:00 (study day D+3). It was committed with the claim's
+  study day and the gap both taken from the UTC calendar day of the clock (1e68374). Green at
+  5ad0c43.
+- A15 was committed with the review's three deliveries around the port in the tree, written so the
+  tree still builds (3380d04). Green at a331c8f, without them.
+
+A2's and A9's new cases are not criteria of their own, since the fence above records both
+criteria, so their record stands outside the `red-first` fence:
+
+```text
+A2 Default and clone cases: red at eb2a552: Expected test case to fail to compile, but it succeeded. (tests/ui/pass_by_default.rs, tests/ui/pass_kept_by_a_clone.rs)
+A2 Default and clone cases: green at 8cb1b11
+A9 rollover case: red at 1e68374: assertion `left == right` failed: a comeback at noon on day 0; at 03:00 on the third calendar day, before the rollover, the study day is 2 and inside the gap; at 05:00 it is 3 and past it; left: [(0, Sent { surface: Bot, tier: T2 }), (2, Sent { surface: Bot, tier: T2 }), (3, Withheld { surface: Bot, reason: BudgetSpent })], right: [(0, Sent { surface: Bot, tier: T2 }), (2, Withheld { surface: Bot, reason: BudgetSpent }), (3, Sent { surface: Bot, tier: T2 })]
+A9 rollover case: green at 5ad0c43
+```
+
+A15 is a new criterion:
+
+```red-first
+A15: red at 3380d04: assertion `left == right` failed: a delivery goes around the port; left: ["crates/api/src/notifications_routes.rs:44: names api.telegram.org", "crates/api/src/notifications_routes.rs:44: names sendMessage", "crates/daemon/src/role_bot.rs:59: calls send_html in celebrate_around_the_router, not a named call site", "crates/daemon/src/role_bot.rs:69: names api.telegram.org", "crates/daemon/src/role_bot.rs:69: names sendMessage"], right: []
+A15: green at a331c8f
+```
+
+Each plant was then installed again on a331c8f, alone and exactly as the review wrote it, and its
+criterion's test run selecting one test, with the file restored byte for byte after:
+
+- `#[derive(Debug, Default)]` on `Pass`: A2 red, `tests/ui/pass_by_default.rs` compiled.
+- `#[derive(Debug, Clone)]` on `Pass`: A2 red, `tests/ui/pass_kept_by_a_clone.rs` compiled.
+- The claim's study day and the gap from the UTC calendar day: A9 red, with the lines above.
+- A celebration through the bot's `send_html` in the bot's role: A15 red, `calls send_html in
+  celebrate_around_the_router, not a named call site`.
+- A raw request to the Bot API's `sendMessage` in the bot's role, and the same in the API: A15 red
+  for each, `names api.telegram.org` and `names sendMessage`.
+
+The census is test code, which cargo-mutants never mutates, so rows S04113 and S04114 hold its two
+refusals (da492cf). Both were proved on the committed tree with `mutation_rows.py prove`: examined
+2, killed 2, survived 0, VOID 0; each control selected one test and passed, each mutant selected
+one test and failed, and the target was restored byte for byte.
+
+DISCLOSURE, A2 (`a_delivery_call_outside_the_router_does_not_compile`): its criterion changed at
+168e626 and its body at eb2a552, after its green commit, b5b66ca. The body gained
+`cases.compile_fail("tests/ui/pass_by_default.rs");` and
+`cases.compile_fail("tests/ui/pass_kept_by_a_clone.rs");`, and the criterion names the three ways a
+pass could be had outside the router, its field, `Default` and a clone of a borrowed one, with one
+case each. The first case, and the refusal it records, are unchanged.
+
+DISCLOSURE, A9 (`a_comeback_past_the_cap_or_inside_the_gap_is_withheld`): its criterion changed at
+168e626 and its body at 1e68374, after its green commit, b5b66ca. The body gained the case across
+the rollover hour: a second router on a rule five hours west of UTC, three comebacks and one
+assertion. The criterion says the gap is counted in the owner's study days. The seven comebacks on
+a UTC rule, and what they assert, are unchanged.

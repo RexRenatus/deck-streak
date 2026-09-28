@@ -48,8 +48,9 @@ budgets and the holdout wait for the engagement wave.
 
 ### Consequences
 
-- Good, because the one-router row can hold the bot and the Mini App to one call site from the first
-  delivery.
+- Good, because the bot and the Mini App are held to one router from the first delivery: the
+  compiler holds the port's calls, SPEC-041 A15's census of every shipped source holds a delivery
+  around the port, and the one-router row holds the calls the policy names.
 - Good, because the readings line is honest about its kind and can be switched off on its own.
 - Bad, because a celebration raised by a background job while the app is open still arrives as a
   bot message; the decision ledger shows which surface was chosen.
@@ -58,18 +59,25 @@ budgets and the holdout wait for the engagement wave.
 
 ### Confirmation
 
-SPEC-041's tests in the gate, A2's compile-fail test among them; the notifications-policy pack's
-rows (`one-router`, `policy-deviation-has-adr`) in the box run (SPEC-041 §3a, ADR-069); and
-`notifications-policy.json`'s `deviations` entry citing this ADR.
+SPEC-041's tests in the gate, A2's compile-fail cases and A15's census among them; the
+notifications-policy pack's rows (`one-router`, `policy-deviation-has-adr`) in the box run
+(SPEC-041 §3a, ADR-069); and `notifications-policy.json`'s `deviations` entry citing this ADR.
 
 ### Decided at delivery (SPEC-041 §7)
 
 The delivery decided each question the SPEC left open against its alternatives:
 
-- **Only the router can call a transport, by type.** Each bot transport call takes a `Pass` that
-  only the router module can make, and `push_in_app` is private to that module. Chosen against
-  holding the rule by the box run's `one-router` row alone, which finds a stray call only after it
-  is written, and against a private trait, which the bot could not implement.
+- **Only the router delivers: the port's calls by type, every other way by a census.** Each bot
+  transport call takes a `Pass` that no other module can make, not by its field, `Default`, or a
+  clone of a borrowed one (SPEC-041 A2, the compiler), and `push_in_app` is private to the router
+  module. A delivery that never calls the port, through the bot's own `send_html` or a raw request
+  to the Bot API, is refused by A15's census of every shipped source: outside `crates/bot/` nothing
+  names the Bot API's host or a send method, SPEC-031's alert path aside, and the bot's sends are
+  called only at named call sites: by `OwnerChat`, by the command replies (#257) and inside the
+  transport's own requests. The box run's `one-router` row refuses a call the policy names (§3a
+  B1). Chosen against holding the rule by that row alone, which matches only the names the policy
+  lists and finds a stray call only after it is written, and against a private trait, which the bot
+  could not implement.
 - **The policy is compiled into the binary and parsed at start.** Chosen against reading a deployed
   copy of the file, which could drift from the one the box run judged, and against typing the values
   as constants, which would be a second policy the pack never reads.

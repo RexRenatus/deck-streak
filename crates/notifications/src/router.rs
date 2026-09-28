@@ -1,7 +1,9 @@
 //! The one router (SPEC-041 R1, R4 to R8, R13; ADR-041): every celebration, nudge, digest and alert
 //! of either surface is decided here, in the policy's order, recorded in the decision ledger, and
-//! delivered through the only calls that deliver: the bot transport's, which take this module's
-//! [`Pass`], and [`push_in_app`], which is private to it.
+//! delivered through the port's calls: the bot transport's, which take this module's [`Pass`], so a
+//! call of one elsewhere does not compile (SPEC-041 A2), and [`push_in_app`], which is private to
+//! it. Nothing delivers around the port: a census of every shipped source refuses the bot's own
+//! send outside its named call sites, and a raw request to the Bot API outside the bot (A15).
 //!
 //! [`Router::route`] decides one occasion inside one `BEGIN IMMEDIATE` write: the kind's switch;
 //! the claim of its key in its dedupe scope, which a later withhold releases; the lapse; the quiet
@@ -32,8 +34,9 @@ pub const WITHHELD_SUFFIX: &str = ":withheld";
 /// One minute, in milliseconds.
 const MINUTE_MS: i64 = 60_000;
 
-/// The router's pass. Every bot transport call takes one, and only this module can make one, so a
-/// delivery call outside the router does not compile (SPEC-041 A2).
+/// The router's pass. Every bot transport call takes one, and only this module can make one: its
+/// field is private, and it derives neither `Default` nor `Clone`. So a call of the port outside
+/// the router does not compile (SPEC-041 A2).
 #[derive(Debug)]
 pub struct Pass(());
 
