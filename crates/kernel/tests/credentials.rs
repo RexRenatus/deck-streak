@@ -77,6 +77,8 @@ fn a_secret_is_read_from_the_credentials_directory_and_never_from_the_environmen
         !format!("{secret:?}").contains(FROM_THE_FILE),
         "a secret's Debug shows its value"
     );
+    // What its Debug shows instead: the type, and never the value.
+    assert_eq!(format!("{secret:?}"), "Ok(Secret(..))");
     // One trailing newline is trimmed, and only one.
     fs::write(directory.path().join(ID), "two-newlines-value\n\n").expect("written");
     assert_eq!(
@@ -168,6 +170,23 @@ fn a_missing_credential_keeps_its_refusal_and_a_value_loads_unchanged() {
     assert!(
         matches!(refused, Err(CredentialError::Missing { id: ID })),
         "{refused:?}"
+    );
+    // A path of the id that exists and cannot be read as a file, here a directory, is refused as
+    // unreadable: neither missing nor empty takes its place.
+    fs::create_dir(directory.path().join(SIBLING)).expect("a directory at the id's path");
+    let unreadable = loader.load(SIBLING);
+    assert!(
+        matches!(
+            unreadable,
+            Err(CredentialError::Unreadable { id: SIBLING, .. })
+        ),
+        "{unreadable:?}"
+    );
+    assert_eq!(
+        unreadable
+            .map(|_| ())
+            .map_err(|refusal| refusal.to_string()),
+        Err(format!("the credential {SIBLING} cannot be read"))
     );
     // A value of one character or more loads unchanged, less one trailing newline: a lone
     // character, and a file of two newlines, which holds one newline as its value.
