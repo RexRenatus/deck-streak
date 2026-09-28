@@ -1025,7 +1025,8 @@ mod cycle {
     use std::sync::atomic::{AtomicBool, Ordering};
     use std::sync::{Arc, Mutex, PoisonError};
 
-    use deck_streak_analytics::rollup::RollupStore;
+    use deck_streak_analytics::rollup::{RollupStore, StoredDay, provenance};
+    use deck_streak_analytics::snapshot::CardState;
     use deck_streak_coordination::obligations::Obligations;
     use deck_streak_coordination::recompute::analytics_step::{ANALYTICS_STEP, AnalyticsStep};
     use deck_streak_coordination::recompute::{Fold, Phase};
@@ -1033,7 +1034,7 @@ mod cycle {
     use deck_streak_ingest::engine::{
         AnkiEngine, EngineError, NewCardQueue, RslibEngine, SyncLogin, SyncOutcome,
     };
-    use deck_streak_ingest::gate::ChangeGate;
+    use deck_streak_ingest::gate::{ChangeGate, RunReason};
     use deck_streak_ingest::reader::CollectionReader;
     use deck_streak_ingest::settings::{
         STATE_DIRECTORY, SYNC_ENDPOINT, SYNC_PASSWORD, SYNC_USERNAME, ScopeSettings, SyncSettings,
@@ -1348,6 +1349,175 @@ mod cycle {
             rolled(&db).await,
             [(day(D0 - 1), true), (day(D0), false)],
             "the sync that started after the close settled the day"
+        );
+        db.close().await;
+    }
+
+    /// The stored rollup of D0 - 1, the day that closes at D0's rollover, if it has one.
+    async fn closed_day(db: &Db) -> Option<StoredDay> {
+        RollupStore::new(db.clone())
+            .days(day(D0 - 1), day(D0 - 1))
+            .await
+            .expect("the rollups read")
+            .into_iter()
+            .next()
+    }
+
+    /// An instant of D0, `hour` hours and `minutes` minutes after 00:00 UTC.
+    const fn in_d0(hour: i64, minutes: i64) -> UtcMillis {
+        UtcMillis::from_epoch_millis(D0 * DAY_MS + hour * HOUR_MS + minutes * 60_000)
+    }
+
+    /// SPEC-071 R15, recorded under A18: the owner's sync across the rollover leaves the day that
+    /// closed owed, and the day's scheduled sync, which marks no rescore and finds nothing changed
+    /// in the collection, started after the close, so its recompute settles the day, once, with the
+    /// card state at that sync. The gate runs that recompute for the owed settle, and a second run
+    /// of the scheduled job that day skips.
+    #[tokio::test]
+    async fn the_scheduled_sync_after_a_sync_across_the_rollover_settles_the_owed_day() {
+        let scratch = tempfile::tempdir().expect("a scratch");
+        // D0 - 1 closes at D0's rollover, 04:00 UTC: the owner's sync starts ten minutes before it
+        // and finishes five minutes after it.
+        let started = in_d0(3, 50);
+        let finished = in_d0(4, 5);
+        let clock = Arc::new(ManualClock::new(started));
+        let engine = AcrossTheRollover {
+            clock: Arc::clone(&clock),
+            finish: Arc::new(Mutex::new(Some(finished))),
+        };
+        let (db, cycle) = deployment(scratch.path(), engine, &clock, None).await;
+
+        // The owner's /sync marks a rescore, as every owner's sync does.
+        SqliteIngestState::new(db.clone())
+            .request_rescore(started)
+            .await
+            .expect("the rescore is marked");
+        let across = sync_cycle(&cycle, Trigger::Owner)
+            .await
+            .expect("the cycle runs");
+        assert!(
+            matches!(across.recompute, Recompute::Ran { .. }),
+            "{:?}",
+            across.recompute
+        );
+        assert_eq!(
+            rolled(&db).await,
+            [(day(D0), false)],
+            "the sync across the rollover leaves the day that closed owed"
+        );
+
+        // The day's scheduled sync, at 06:00: no rescore is marked, and nothing changed.
+        let scheduled = in_d0(6, 0);
+        clock.set(scheduled);
+        let settling = sync_cycle(&cycle, Trigger::Scheduled)
+            .await
+            .expect("the cycle runs");
+        let SyncReport::Ran { run, .. } = &settling.sync else {
+            panic!("the scheduled sync ran: {:?}", settling.sync);
+        };
+        assert_eq!(
+            (run.started_at, run.outcome),
+            (scheduled, Ok(())),
+            "the scheduled sync started after the close and succeeded"
+        );
+        assert_eq!(
+            rolled(&db).await,
+            [(day(D0 - 1), true), (day(D0), false)],
+            "the scheduled sync, which started after the close, settled the day"
+        );
+        let settled = closed_day(&db).await.expect("the settled day has a rollup");
+        assert_eq!(
+            (
+                settled.settled_at,
+                settled.card_state,
+                settled.card_state_src.as_deref()
+            ),
+            (
+                Some(scheduled),
+                Some(CardState::default()),
+                Some(provenance(scheduled).as_str())
+            ),
+            "settled at that sync's recompute, with the card state it found"
+        );
+        assert_eq!(
+            settling.recompute,
+            Recompute::Ran {
+                reason: RunReason::DeadlineDue {
+                    label: "owed_settle"
+                },
+                reviews: 0,
+                cards: 0,
+            },
+            "the gate ran the recompute for the owed settle"
+        );
+
+        // A second run of the scheduled job that day is refused, and its gate skips: the owed
+        // settle cost one recompute, and the day keeps what that one recorded.
+        clock.set(in_d0(7, 0));
+        let again = sync_cycle(&cycle, Trigger::Scheduled)
+            .await
+            .expect("the cycle runs");
+        assert_eq!(
+            (again.sync, again.recompute),
+            (SyncReport::RefusedToday, Recompute::Skipped),
+            "no day is owed any more, and nothing changed"
+        );
+        assert_eq!(
+            closed_day(&db).await,
+            Some(settled),
+            "the day was settled once"
+        );
+        db.close().await;
+    }
+
+    /// SPEC-071 R15, the negative of the test above: the owner's sync after the rollover settles
+    /// the day that closed, so the day's scheduled sync finds no day owed and nothing changed in the
+    /// collection, and the gate still skips its recompute.
+    #[tokio::test]
+    async fn the_scheduled_sync_after_a_settle_still_skips_the_recompute() {
+        let scratch = tempfile::tempdir().expect("a scratch");
+        let owners = in_d0(4, 30);
+        let clock = Arc::new(ManualClock::new(owners));
+        let engine = Switched::default();
+        engine.0.store(true, Ordering::SeqCst);
+        let (db, cycle) = deployment(scratch.path(), engine, &clock, None).await;
+
+        SqliteIngestState::new(db.clone())
+            .request_rescore(owners)
+            .await
+            .expect("the rescore is marked");
+        let settling = sync_cycle(&cycle, Trigger::Owner)
+            .await
+            .expect("the cycle runs");
+        assert!(
+            matches!(settling.recompute, Recompute::Ran { .. }),
+            "{:?}",
+            settling.recompute
+        );
+        let settled = closed_day(&db).await.expect("the settled day has a rollup");
+        assert_eq!(
+            settled.settled_at,
+            Some(owners),
+            "the owner's sync, which started after the close, settled the day"
+        );
+
+        clock.set(in_d0(6, 0));
+        let quiet = sync_cycle(&cycle, Trigger::Scheduled)
+            .await
+            .expect("the cycle runs");
+        let SyncReport::Ran { run, .. } = &quiet.sync else {
+            panic!("the scheduled sync ran: {:?}", quiet.sync);
+        };
+        assert!(run.outcome.is_ok(), "the scheduled sync succeeded: {run:?}");
+        assert_eq!(
+            quiet.recompute,
+            Recompute::Skipped,
+            "no day is owed and nothing changed, so the gate skips the recompute"
+        );
+        assert_eq!(
+            closed_day(&db).await,
+            Some(settled),
+            "the day keeps its settle"
         );
         db.close().await;
     }
