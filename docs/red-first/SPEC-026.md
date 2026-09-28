@@ -68,7 +68,8 @@ A16: not red: it judges the committed golden messages, which were committed with
 
 The round-1 verifier asked for four fixes. The branch first took dev at b61851f (03b9459): the
 merge resolved one conflict, where both sides added a workspace dependency to `Cargo.toml`, and
-nothing else. Every test of the round was committed at 410ebfd, before any fix.
+nothing else. Every test of the round was committed at 410ebfd, before any fix, bar the drain's
+mutant killer below, which followed CI's mutation reading of the fixed head (7528cee).
 
 - `transport::the_api_url_names_no_path` (R11's base URL): red at 410ebfd: assertion `left == right`
   failed: https://api.telegram.org/x; left: Some(ApiUrl("https://api.telegram.org/x")), right: None.
@@ -91,6 +92,11 @@ nothing else. Every test of the round was committed at 410ebfd, before any fix.
   tags only as far as the chunk's own visible piece, so its bound never decided anything. The bound
   is gone (9011aff), and the mutant with it; the chunking tests pass as before, and no output of the
   chunker changed on any input a differential compared.
+- `poll::the_drain_asks_for_the_newest_queued_update_alone` is a mutant killer too, never red. CI's
+  mutation job on 9311048 read `delete -` in `DRAIN_OFFSET` (poll.rs:37:31) as missed: the other
+  tests compare the drain's offset with the constant itself. It asserts the predecessor's
+  `offset=-1&timeout=0` (`bot.py:CommandBot._drain_offset`) as the fake recorded them, and was
+  proved by hand at 7528cee: the mutant applied, the test failed, the file restored byte for byte.
 
 DISCLOSURE: A7, `the_poll_confirms_each_update_by_its_offset`. Its body changed at 410ebfd, after
 its red commit cdd51b4 and its green commit 19cf5bd. Old: `assert_eq!(polls.len(), 4, ...)`, beside
