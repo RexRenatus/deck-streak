@@ -50,6 +50,9 @@ fn synthetic_roster() -> Value {
     })
 }
 
+/// An edit that breaks one rule of the synthetic roster.
+type Edit = dyn Fn(&mut Value);
+
 /// The public templates, compiled into the engine.
 fn public() -> TemplateSet {
     TemplateSet::public().expect("the public templates load")
@@ -419,7 +422,7 @@ fn a_roster_outside_the_repository_fills_the_four_slots() {
     let shown = format!("{path:?} {persona:?} {roster:?}");
     assert_eq!(
         shown,
-        "RosterPath(..) Persona(..) Roster { personas: 2, topics: 2 }"
+        "RosterPath(..) Persona(..) Roster { templates: 18, personas: 2, topics: 2 }"
     );
     let relative = Environment::from_vars([(ROSTER, "agent/roster.json")]);
     assert!(matches!(
@@ -503,7 +506,7 @@ fn instantiation_refuses_an_incomplete_roster() {
 
 #[test]
 fn a_roster_that_breaks_its_schema_is_refused() {
-    let roster = |edit: &dyn Fn(&mut Value)| {
+    let roster = |edit: &Edit| {
         let mut roster = synthetic_roster();
         edit(&mut roster);
         match refusal(&roster) {
@@ -519,7 +522,7 @@ fn a_roster_that_breaks_its_schema_is_refused() {
         Roster::parse("[]", public()),
         Err(PersonaError::Roster("it is not a JSON object"))
     ));
-    let cases: [(&dyn Fn(&mut Value), &str); 12] = [
+    let cases: [(&Edit, &str); 12] = [
         (
             &|r| r["extra"] = json!(1),
             "it holds a key the schema does not name",
@@ -571,6 +574,10 @@ fn a_roster_that_breaks_its_schema_is_refused() {
     for (edit, reason) in cases {
         assert_eq!(roster(edit), reason);
     }
+}
+
+#[test]
+fn a_slot_that_is_not_one_line_of_plain_text_is_refused() {
     for (slot, value) in [
         (Slot::Name, "Two\nlines"),
         (Slot::Bio, "A\ttab"),

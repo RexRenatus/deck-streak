@@ -463,7 +463,13 @@ impl Template {
         duty: Duty,
         band: Option<CefrBand>,
     ) -> Result<Persona, PersonaError> {
-        let _ = slots;
+        if !self.duties.contains(&duty) {
+            return Err(PersonaError::DutyNotOffered);
+        }
+        let mut text = self.body.clone();
+        for slot in Slot::ALL {
+            text = text.replace(slot.token(), slots.value(slot));
+        }
         Ok(Persona {
             template: self.id.clone(),
             subject: self.subject.clone(),
@@ -471,7 +477,7 @@ impl Template {
             duty,
             memory: self.memory.clone(),
             band,
-            text: self.body.clone(),
+            text,
         })
     }
 }
@@ -496,8 +502,17 @@ impl Slots {
         voice: &str,
         personality: &str,
     ) -> Result<Self, PersonaError> {
+        let values = [name, bio, voice, personality];
+        for (slot, value) in Slot::ALL.into_iter().zip(values) {
+            if value.trim().is_empty() {
+                return Err(PersonaError::SlotUnfilled { slot: slot.name() });
+            }
+            if value.chars().any(char::is_control) || value.contains("{{") || value.contains("}}") {
+                return Err(PersonaError::SlotNotPlainText { slot: slot.name() });
+            }
+        }
         Ok(Self {
-            values: [name, bio, voice, personality].map(str::to_owned),
+            values: values.map(str::to_owned),
         })
     }
 
