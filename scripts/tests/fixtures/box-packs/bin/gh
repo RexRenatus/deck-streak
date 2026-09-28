@@ -1,0 +1,46 @@
+#!/usr/bin/env python3
+"""A fake gh for scripts/tests/test_box_packs.py (SPEC-054 R4).
+
+It answers the one verb scripts/box-packs.sh calls, as gh does, so the tests need neither gh nor
+the network:
+
+* `issue view N --json state` prints `{"state": "CLOSED"}` when FAKE_GH_CLOSED (comma-separated
+  issue numbers) names N, and `{"state": "OPEN"}` for any other issue;
+* FAKE_GH_FAIL makes it fail the ways gh fails: `auth` exits 4 with gh's login hint, as gh does
+  when it is not logged in; `offline` exits 1 with a connection error, as gh does when it cannot
+  reach GitHub; and `garbled` exits 0 having printed no state.
+
+Every call appends one JSON line to FAKE_GH_LOG, when it is set: its argv and its working
+directory, so a test can read which issues were asked, and where.
+"""
+
+import json
+import os
+import sys
+
+
+def main(argv):
+    log = os.environ.get("FAKE_GH_LOG")
+    if log:
+        with open(log, "a", encoding="utf-8") as handle:
+            handle.write(json.dumps({"argv": argv, "cwd": os.getcwd()}) + "\n")
+    failure = os.environ.get("FAKE_GH_FAIL", "")
+    if failure == "auth":
+        print("To get started with GitHub CLI, please run:  gh auth login", file=sys.stderr)
+        return 4
+    if failure == "offline":
+        print("error connecting to api.github.com: connection refused", file=sys.stderr)
+        return 1
+    if failure == "garbled":
+        print("a page that is not JSON")
+        return 0
+    if len(argv) != 5 or argv[:2] != ["issue", "view"] or argv[3:] != ["--json", "state"]:
+        print(f"fake gh: no verb {' '.join(argv)}", file=sys.stderr)
+        return 1
+    closed = {number for number in os.environ.get("FAKE_GH_CLOSED", "").split(",") if number}
+    print(json.dumps({"state": "CLOSED" if argv[2] in closed else "OPEN"}))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

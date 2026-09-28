@@ -118,9 +118,21 @@ stage_packs() { need_python && python3 scripts/pack-rows.py; }
 
 stage_python() {
     # cargo too: a guard test builds a Rust example (SPEC-042's rails rows).
-    need_python && need_cargo &&
-        python3 -m unittest discover -s scripts/tests -p 'test_*.py' &&
-        python3 -m unittest discover -s tools/parity-oracle -p 'test_*.py'
+    need_python && need_cargo || return 1
+    # Both suites run whatever the first found, and the last line gives each one's tests and exit,
+    # so a red suite never hides the other's result; a suite that ran no test fails (SPEC-054 R7).
+    local suite output code ran failed=0 verdicts=""
+    for suite in scripts/tests tools/parity-oracle; do
+        output=$(python3 -m unittest discover -s "$suite" -p 'test_*.py' 2>&1)
+        code=$?
+        printf '%s\n' "$output"
+        ran=$(printf '%s\n' "$output" | grep -Eo '^Ran [0-9]+' | tail -n 1)
+        ran=${ran#Ran }
+        if [ "$code" -ne 0 ] || [ "${ran:-0}" -eq 0 ]; then failed=1; fi
+        verdicts+="${verdicts:+; }$suite ran ${ran:-0} test(s), exit $code"
+    done
+    echo "python: $verdicts"
+    return "$failed"
 }
 
 stage_scrub() {

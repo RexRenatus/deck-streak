@@ -1,4 +1,6 @@
-"""Every committed golden is current, synthetic and dated by numbers only (SPEC-029 R3 to R6, R9).
+"""Every committed golden is current, synthetic and dated by numbers only (SPEC-029 R3 to R6, R9),
+and the README's example of the `{day:N}` token round-trips through the registry's own reader and
+writer of it (SPEC-054 R6).
 
 The checks read the committed goldens and registry modules as data, so this file never imports the
 predecessor and runs in public CI. Each refusal is first proved on a planted tree in a temporary
@@ -10,6 +12,7 @@ import hashlib
 import importlib.util
 import json
 import re
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -24,6 +27,14 @@ ORACLE = Path("tools", "parity-oracle")
 GENERATOR = "tools/parity-oracle/generate.py"
 REGISTRY = "tools/parity-oracle/registry/"
 STUDY_DAY = ROOT / ORACLE / "goldens" / "study_day.json"
+README = HERE / "README.md"
+#: The registry module whose adapter writes and reads the `{day:N}` token (SPEC-042).
+DAY_TOKEN_MODULE = HERE / "registry" / "spec_042.py"
+#: The README's section on the token. Each of its examples is a pair of `text` fences: a text in
+#: the golden's form, then the same text as the predecessor reads it.
+DAY_SECTION = "### A day inside a text"
+TEXT_FENCE = re.compile(r"^```text\n(.*?)^```$", re.MULTILINE | re.DOTALL)
+NEXT_HEADING = re.compile(r"^#{2,3} ", re.MULTILINE)
 DAY_MS = 86_400_000
 SCHEMA = "phx.parity-golden.v1"
 #: Every key a golden may hold, and every key a case may hold (the data-migration pack's own).
@@ -444,6 +455,44 @@ class CommittedGoldensAreCurrent(unittest.TestCase):
             strict('{"output": NaN}')
         with self.assertRaisesRegex(ValueError, "repeats the key"):
             strict('{"seed": 20, "seed": 21}')
+
+
+def day_token_examples(readme):
+    """Each (golden form, predecessor form) pair of text fences in the README's token section."""
+    _, found, rest = readme.partition(f"\n{DAY_SECTION}\n")
+    if not found:
+        return []
+    heading = NEXT_HEADING.search(rest)
+    fences = TEXT_FENCE.findall(rest[: heading.start()] if heading else rest)
+    return list(zip(fences[::2], fences[1::2], strict=False))
+
+
+def day_token_module():
+    """The registry module that reads and writes the token, loaded by the generator's own loader
+    and without writing bytecode."""
+    writes, sys.dont_write_bytecode = sys.dont_write_bytecode, True
+    try:
+        return generate.load_module(DAY_TOKEN_MODULE)
+    finally:
+        sys.dont_write_bytecode = writes
+
+
+class TheDayTokenIsDocumentedLosslessly(unittest.TestCase):
+    def test_the_readme_day_token_example_round_trips(self):
+        registry = day_token_module()
+        readme = README.read_text(encoding="utf-8")
+        pairs = examined("README day-token example(s)", day_token_examples(readme))
+        for golden_form, predecessor_form in pairs:
+            with self.subTest(golden_form):
+                self.assertRegex(golden_form, registry.DAY_TOKEN)
+                self.assertEqual(registry.expand(golden_form), predecessor_form)
+                self.assertEqual(registry.contract(predecessor_form), golden_form)
+                # The golden check admits the token's form and refuses the dates it stands for.
+                self.assertEqual(date_strings("README", {"text": golden_form}), [])
+                self.assertEqual(
+                    date_strings("README", {"text": predecessor_form}),
+                    [f"README: text holds {predecessor_form!r}"],
+                )
 
 
 if __name__ == "__main__":
