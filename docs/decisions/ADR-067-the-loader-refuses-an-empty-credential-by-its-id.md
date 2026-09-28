@@ -64,8 +64,10 @@ shares, and a refusal there fails the unit the way a missing credential does.
   `RestartMode=direct` (systemd.service(5)). A census over `deploy/` holds all four.
 - **The alert unit.** Its script refuses an empty credential of the two it loads by its id, with one
   line at error priority, before it reads the journal or makes a request, and exits 1. The unit then
-  stays failed, in `systemctl --failed` and the journal, because it names no `OnFailure=`. A page
-  about the alert unit's own failure needs a route that does not depend on the alert sender (#285).
+  stays failed, in `systemctl --failed` and the journal, because its template counts no refusal a
+  success and restarts no refused start (SPEC-066 R3's exit and restart conditions). It names no
+  `OnFailure=`, so its own failure pages nothing: a page about the alert unit's own failure needs a
+  route that does not depend on the alert sender (#285).
 
 ### Consequences
 
