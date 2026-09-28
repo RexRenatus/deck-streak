@@ -131,14 +131,15 @@ Confirmation section, and ADR-009's status changes with them.
 
 ADR-009; ADR-010; ADR-018; SPEC-022; SPEC-032; the vm-survey's capacity figures (private input).
 
-Amended in part on 2026-09-28: the engine's rebuild on every cargo invocation has a second cause,
-which the finding above did not name. `rslib/build.rs:13` in the pinned tag emits
-`cargo:rerun-if-changed=../out/buildhash`, a file that only Anki's own build runner creates. A
-watched path that is missing is stale on every build, so the `anki` library recompiles even once the
-first cause is fixed. Cargo reports only the first stale item of a unit, which is why the first
-cause hid it. Measured on the maintainer's machine with `cargo build -p deck-streak-ingest`: a no-op
-build took 38.7 to 40.5 s and about 72 s of CPU, of which the `anki` library took 34.4 s. With both
-causes patched in a scratch copy, the same no-op took 0.51 s. Both causes are in the latest upstream
-release. How to fix them, through an upstream change or a patched dependency carried until upstream
-releases one, is the maintainer's decision (#228). Once a fix lands, a follow-up caches the
-dependency checkouts in CI, because each job's fresh checkout otherwise forces one more rebuild.
+Amended in part on 2026-09-28: the finding above is the only rebuild cause that fires for this
+repository's pinned git dependency. `rslib/build.rs:13` in the pinned tag also emits
+`cargo:rerun-if-changed=../out/buildhash`, a file that only Anki's own build runner creates, and
+cargo re-runs a build script whose watched path is missing. For a git dependency that watch is
+inert: since 1.69 (rust-lang/cargo#11613), cargo skips mtime checks for paths under
+`$CARGO_HOME/git` and `$CARGO_HOME/registry`, where the checkout lives. It fires only for a consumer
+that takes the engine by path. Measured on the maintainer's machine with `cargo build -p
+deck-streak-ingest`: a no-op build took 38.7 to 40.5 s and about 72 s of CPU, and the `anki` library
+took 34.4 s of that wall time. With the first cause alone neutralised in a scratch target, the same
+no-op was fresh throughout in 0.48 to 0.63 s. Both are in the latest upstream release. How to fix
+the first cause, through an upstream change or a patched dependency carried until upstream releases
+one, is the maintainer's decision (#228).
