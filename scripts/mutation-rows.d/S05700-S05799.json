@@ -1,0 +1,70 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S05701-A-SQUASH-SUBJECT-ENDS-ITS-LINE",
+        "scripts/mutation-verdict.py",
+        "SQUASH_SUBJECT = re.compile(r\" \\(#(\\d+)\\)$\")\n",
+        "SQUASH_SUBJECT = re.compile(r\" \\(#(\\d+)\\)\")\n",
+        "a squash merge's number ends its subject's first line, so a number mid-title, or a title's own issue before it, never names the pull request (SPEC-057 R18)",
+        "test_mutation_verdict.ASquashMergeNamesItsPullRequest.test_a_squash_merge_subject_names_the_pull_request_it_merges"
+      ],
+      [
+        "S05702-A-MUTANT-AT-ITS-ANCHORS-START-IS-BOUND",
+        "scripts/mutation-verdict.py",
+        "    if window is None or at is None or not window[0] <= at < window[1]:\n",
+        "    if window is None or at is None or not window[0] < at < window[1]:\n",
+        "a mutant whose span starts on its anchor's first character is inside the anchor, so a whole-line anchor binds it (SPEC-057 R6)",
+        "test_mutation_verdict.TheVerdictReadsTheRecord.test_a_recorded_missed_mutant_is_equivalent_and_an_unrecorded_one_fails"
+      ],
+      [
+        "S05703-A-CAUGHT-MUTANT-REFUTES-ITS-RECORD",
+        "scripts/mutation-verdict.py",
+        "    if outcome in (\"CaughtMutant\", \"Killed\"):\n",
+        "    if outcome in (\"Killed\",):\n",
+        "a record whose Rust mutant a test caught fails as REFUTED, never stands as a claim a test disproved (SPEC-057 R9)",
+        "test_mutation_verdict.TheVerdictReadsTheRecord.test_a_record_whose_mutant_was_caught_is_refuted"
+      ],
+      [
+        "S05704-AN-UNCOVERED-MUTANT-IS-NEVER-EXCUSED",
+        "scripts/mutation-verdict.py",
+        "            if status == \"Survived\":\n                survived += 1\n",
+        "            if status in (\"Survived\", \"NoCoverage\"):\n                survived += 1\n",
+        "a record excuses a survived Mini App mutant only: an uncovered one is untested, and fails as UNCOVERED (SPEC-057 R10)",
+        "test_mutation_verdict.TheWebVerdictReadsTheRecord.test_a_web_record_excuses_a_survivor_and_never_an_uncovered_mutant"
+      ],
+      [
+        "S05705-REACHED-BY-NAMES-EXACTLY-ONE-TEST",
+        "scripts/mutation-verdict.py",
+        "            mutation_rows.resolve_killer(root, row)\n",
+        "            mutation_rows.locate_killer(root, row)\n",
+        "a Rust record's reached_by resolves to exactly one test of its package, as a row's killer does, not merely to a test target (SPEC-057 R7)",
+        "test_mutation_equivalent.TheCensusHoldsEveryRecordWhole.test_every_record_carries_its_mutant_anchor_reason_evidence_and_issue"
+      ],
+      [
+        "S05706-THE-LOCK-IS-JUDGED-BY-ITS-DIFF",
+        "scripts/check.sh",
+        "    git diff --exit-code -- Cargo.lock || {\n",
+        "    git diff -- Cargo.lock || {\n",
+        "the audit stage fails when the unlocked resolve rewrote the lock, which only git diff's exit code says (SPEC-057 R18)",
+        "test_check_gate.TheAuditHoldsTheLockCanonical.test_a_lock_an_unlocked_resolve_rewrites_fails_the_audit_stage"
+      ],
+      [
+        "S05707-AN-EMPTY-EXCLUSION-KEY-IS-REFUSED",
+        "scripts/mutation-verdict.py",
+        "            if key in document:\n",
+        "            if document.get(key):\n",
+        "an exclusion key is refused even when it lists nothing, so no key that could filter the listing stands in the configuration (SPEC-057 R11)",
+        "test_mutation_workflows.NoExclusionHidesAMutant.test_no_exclusion_hides_a_mutant_from_the_listing"
+      ],
+      [
+        "S05708-A-LISTED-MUTANT-NO-REPORT-TESTED-IS-VOID",
+        "scripts/mutation-verdict.py",
+        "                void(f\"never tested: {name}\")\n",
+        "                print(f\"never tested: {name}\")\n",
+        "a listed mutant that no report tested makes the table VOID, never a row that counts fewer mutants (SPEC-057 R13)",
+        "test_mutation_verdict.TheTableCountsTheCampaign.test_a_listed_mutant_no_report_tested_is_void_by_name"
+      ]
+    ]
+  }
+}
