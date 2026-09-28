@@ -52,7 +52,7 @@
     "/var/lib/deck-streak"
   ],
   "health": [
-    {"id": "example-service-active", "argv": ["systemctl", "is-active", "--quiet", "example.service"]},
+    {"id": "example-service-active", "argv": ["systemctl", "is-active", "--quiet", "--", "example.service"]},
     {"id": "example-service-ready", "url": "http://127.0.0.1:8080/health"}
   ]
 }

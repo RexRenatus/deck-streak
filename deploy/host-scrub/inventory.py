@@ -50,9 +50,10 @@ RULES_SCHEMA = "deck-streak-host-scrub-rules/1"
 NICE = ["nice", "-n", "19", "ionice", "-c3"]
 COMMAND_TIMEOUT = 300
 HEALTH_TIMEOUT = 10
+#: A unit's name begins with a letter or a digit (R2).
 UNIT = re.compile(
-    r"^[A-Za-z0-9:_.@\\-]+\.(?:service|socket|timer|target|path|mount|automount|swap|slice|scope"
-    r"|device)$"
+    r"^[A-Za-z0-9][A-Za-z0-9:_.@\\-]*\.(?:service|socket|timer|target|path|mount|automount|swap"
+    r"|slice|scope|device)$"
 )
 PACKAGE = re.compile(r"^[a-z0-9][a-z0-9+.-]+(?::[a-z0-9-]+)?$")
 #: The loaded units whose settings are read: what runs, and what fires it.
@@ -140,15 +141,16 @@ class Refused(Exception):
 
 def allowed(argv: list[str]) -> bool:
     """Whether `argv` is one of the read commands: the inventory's own reads, `systemctl show` and
-    `systemctl is-active` of named units, and `dpkg-query` of one named package (R2)."""
+    `systemctl is-active` of units named after `--`, and `dpkg-query` of one named package (R2)."""
     if argv in READS.values():
         return True
     if argv[: len(SHOW)] == SHOW:
         units = argv[len(SHOW) :]
         return bool(units) and all(UNIT.match(unit) for unit in units)
     if argv[:2] == ["systemctl", "is-active"]:
-        units = argv[3:] if argv[2:3] == ["--quiet"] else argv[2:]
-        return bool(units) and all(UNIT.match(unit) for unit in units)
+        rest = argv[3:] if argv[2:3] == ["--quiet"] else argv[2:]
+        units = rest[1:]
+        return rest[:1] == ["--"] and bool(units) and all(UNIT.match(unit) for unit in units)
     if argv[: len(DPKG_QUERY)] == DPKG_QUERY and len(argv) == len(DPKG_QUERY) + 1:
         return bool(PACKAGE.match(argv[-1]))
     return False
