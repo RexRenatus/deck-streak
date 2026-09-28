@@ -56,6 +56,7 @@ make the write so that the guardrails hold by construction?
 - Compose the wrapped search from the configured search's parsed terms — rejected because the engine renders parsed terms in its own form (the pinned engine's `rslib/src/search/writer.rs:45-47`), not as the golden's wrap that SPEC-083's A7 pins, while refusing a configured search that does not parse as one expression keeps every other search the golden's own wrap followed by SPEC-083 R3's holds.
 - Run the engine in the study day's zone and rollover — rejected because the engine's day in client mode is the collection's rollover hour in the process's own zone (the pinned engine's `rslib/src/scheduler/mod.rs:90-108`), so it holds only when the collection's rollover and configured UTC offset already equal the study day's, and otherwise needs a setting changed, which the push would carry whole (SPEC-083 R23), against guardrail (i); refusing covers the same cases and writes nothing.
 - Record a take whose push fails as `failed`, like any other failure — rejected because the engine's sync server commits a push only at `finish` (the pinned engine's `rslib/src/sync/collection/finish.rs:31-37`), so a failure after the push's first request may follow a committed push, and a `failed` row would free the study day and tell the owner that nothing was written while the moved cards stand, where no undo could reach them (SPEC-083 R1, R5, R25).
+- Refuse only near a transition of the zone's offset: rejected, because a write already running is never cancelled mid-sync (SPEC-083 R26), so the moment between a check and the engine's day computation has no bound that a window around a transition could cover.
 - Accepting the daylight-saving moment as a named risk: rejected, because a push could then carry a changed setting, which guardrail (i) forbids, and only the owner may relax an owner clause.
 
 ## Decision Outcome
@@ -85,10 +86,8 @@ Chosen option: "(a) an upload path for the skip day alone", the owner's decision
   the creation stamp that a sync carries whole once the working copy is newer, each as the server
   held it at the converge, the engine's own last-unburied day aside, and nothing else (guardrails i
   and v). It runs only when the engine's own day, the collection's rollover hour in the process's
-  zone, is the study day and the collection's configured UTC offset is present and is the process's
-  zone, checked before any request and again on the converged working copy: otherwise the engine
-  would count from another day or rewrite that offset (SPEC-083 R3, R23). The checks cannot hold a
-  rollover or a change of the zone's offset in the moment after one of them (SPEC-083 §6).
+  zone, is the study day, the collection's configured UTC offset is present and is the process's
+  zone, and the process's zone observes no daylight saving, checked before any request (the daylight-saving condition at every preview, take and undo, not only at the service's start) and, for the day and the offset, again on the converged working copy: otherwise the engine would count from another day or rewrite that offset (SPEC-083 R3, R23). The checks cannot hold a rollover in the moment after one of them (SPEC-083 §6); a daylight-saving change of the zone's offset there is prevented by the refusal.
 - **The undo compares before it writes.** It restores a card's recorded prior state only when the
   card, as its converge brings it, still carries the state the skip wrote and has no study event
   since the skip began. It lists every other card to the owner and never writes one. A change made
@@ -118,8 +117,7 @@ Chosen option: "(a) an upload path for the skip day alone", the owner's decision
   cannot keep the review's schedule, since the sync keeps the newer card. A suspension, a flag, a
   deck move or a setting made in that window is overwritten the same way when the restore is
   newer, and the read-back cannot see it (SPEC-083 §6).
-- Bad, because a review made on a device that syncs only after a take's or an undo's push can lose
-  its schedule to the newer card that push left, and nothing lists it: it reaches the server after
+- Bad, because a review or another change made on a device that syncs only after a take's or an undo's push can be lost to the newer card that push left, and nothing lists it: it reaches the server after
   the read-back (SPEC-083 §6).
 - Bad, because the private copy shows the moved cards as due until its next sync downloads the
   change.
@@ -141,8 +139,7 @@ Chosen option: "(a) an upload path for the skip day alone", the owner's decision
   once. The take's row stays `pending` until the private copy's next sync settles it, and the undo
   leaves its skip `applied` until a later undo, which counts the cards already restored as restored;
   neither answer says that nothing was written (SPEC-083 R25, R26, R32).
-- Bad, because the service skips nothing in a zone that observes daylight saving; such a deployment
-  refuses every skip until its zone is changed (SPEC-083 R3).
+- Bad, because the service skips nothing in a zone that observes daylight saving; such a deployment refuses every skip until its zone is changed. An owner whose devices observe daylight saving has the configured offset rewritten at each change, so no fixed zone matches it all year, and for some offsets no fixed zone exists in the tz database at all; ADR-020 assumes an owner without daylight saving (SPEC-083 R3).
 
 ### Confirmation
 
@@ -158,7 +155,7 @@ full-sync demand aborts a take or an undo, writing nothing (A25, A26, A32); only
 confirm reaches the take and the undo, once per confirm (A27); the preview lists the cards and
 binds the take (A28, A39); the prior state is recorded before any card changes (A29); a take lists
 a card reviewed on another client during its own window (A34); an undo restores exactly the prior
-state of exactly the moved cards (A30) and never writes a card changed before its converge (A31),
+state of exactly the moved cards (A30) and never writes a card whose change reached the server before its converge (A31),
 and lists a card reviewed on another client during its own window (A42); a take or an undo whose
 push's answer is lost says that its outcome is not
 known yet, never that nothing was written (A35, A41); and the recording layer records a planted
