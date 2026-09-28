@@ -1,9 +1,9 @@
 name: planted
 
 # A planted workflow (SPEC-034 A10): another repository reached in other forms: a checkout whose
-# action is named in another case, a clone after a git option, and a fetch through an ssh host and in
-# git's scp-like form. The names are synthetic. scripts/tests/test_ci_workflows.py judges it; nothing
-# runs it.
+# action is named in another case, a clone after a git option, a fetch through an ssh host and in
+# git's scp-like form, and a checkout whose input is named in another case. The names are synthetic.
+# scripts/tests/test_ci_workflows.py judges it; nothing runs it.
 on:
   pull_request:
     branches: [dev]
@@ -26,3 +26,13 @@ jobs:
         run: git fetch git@example-host:example-org/other-repository.git
       - name: a fetch in git's scp-like form
         run: git fetch github.com:example-org/other-repository.git main
+      - name: an input named in another case
+        uses: actions/checkout@0123456789abcdef0123456789abcdef01234567
+        with:
+          Repository: example-org/other-repository
+          persist-credentials: false
+      - name: an input named in capitals
+        uses: actions/checkout@0123456789abcdef0123456789abcdef01234567
+        with:
+          REPOSITORY: example-org/other-repository
+          persist-credentials: false

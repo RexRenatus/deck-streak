@@ -132,6 +132,10 @@ class WorkflowsAreHardened(unittest.TestCase):
                 "git fetch git@example-host:example-org/other-repository.git",
                 "another-repository-in-other-forms.yml:jobs.build.steps[3]: points git at a URL: "
                 "git fetch github.com:example-org/other-repository.git main",
+                "another-repository-in-other-forms.yml:jobs.build.steps[4]: checks out "
+                "example-org/other-repository, not this repository",
+                "another-repository-in-other-forms.yml:jobs.build.steps[5]: checks out "
+                "example-org/other-repository, not this repository",
                 "checkout-of-another-repository.yml:jobs.build.steps[0]: checks out "
                 "example-org/other-repository, not this repository",
                 "checkout-of-another-repository.yml:jobs.build.steps[1]: checks out "
