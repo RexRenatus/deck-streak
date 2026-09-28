@@ -12,6 +12,5 @@ use deck_streak_kernel::{StudyDay, StudyDayRule, UtcMillis};
 /// study day of `created_at`, under `rule`.
 #[must_use]
 pub fn collection_day_number(rule: StudyDayRule, created_at: UtcMillis, day: StudyDay) -> i64 {
-    let _ = (rule, created_at, day);
-    0
+    day.epoch_day() - rule.study_day(created_at).epoch_day()
 }

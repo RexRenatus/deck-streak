@@ -12,8 +12,11 @@
 //! A refusal names the setting and never a value: not the path, not a code, not a deck name. With
 //! the setting unset there are no courses, and [`Courses::load`] says so once.
 
+use std::collections::BTreeSet;
 use std::fmt;
 use std::path::PathBuf;
+
+use serde_json::{Map, Value, json};
 
 use crate::settings::{Environment, Setting};
 
@@ -25,6 +28,20 @@ pub const COURSES_SCHEMA: &str = "deckstreak.courses.v1";
 pub const CEFR_BANDS: [&str; 6] = ["A1", "A2", "B1", "B2", "C1", "C2"];
 /// The longest course code: a language code or a short subject code.
 pub const MAX_CODE_LEN: usize = 8;
+
+/// The shape a courses file must have, named in a refusal in place of any value.
+const FILE_SHAPE: &str = "a JSON object of the schema deckstreak.courses.v1 with a list of courses";
+/// The shape of one course.
+const COURSE_SHAPE: &str = "courses each with a code of 1 to 8 lowercase letters, digits or \
+    hyphens, a name, a flag, a deck root, a one-letter alias, a writing flag and unit bands";
+/// The shape of one focus subject.
+const SUBJECT_SHAPE: &str = "focus subjects each with a code, a name and a one-letter alias";
+/// The shape of a course's unit bands.
+const BANDS_SHAPE: &str = "unit bands keyed A1 to C2, each a pair of unit numbers";
+/// FNV-1a's 64-bit offset basis.
+const FNV_OFFSET: u64 = 0xcbf2_9ce4_8422_2325;
+/// FNV-1a's 64-bit prime.
+const FNV_PRIME: u64 = 0x0000_0100_0000_01b3;
 
 /// A course's code, as it travels with a card: 1 to [`MAX_CODE_LEN`] ASCII lowercase letters,
 /// digits or hyphens. It is `Copy`, so a card carries its course without an allocation.
@@ -135,8 +152,48 @@ impl Courses {
     /// [`CoursesError::Bands`] when a course's unit bands overlap, run backwards or come out of
     /// order.
     pub fn parse(text: &str) -> Result<Self, CoursesError> {
-        let _ = text;
-        Ok(Self::default())
+        let file: Value = serde_json::from_str(text).map_err(|_| malformed(FILE_SHAPE))?;
+        let file = file.as_object().ok_or_else(|| malformed(FILE_SHAPE))?;
+        if file.get("schema").and_then(Value::as_str) != Some(COURSES_SCHEMA) {
+            return Err(malformed(FILE_SHAPE));
+        }
+        let courses = file
+            .get("courses")
+            .and_then(Value::as_array)
+            .ok_or_else(|| malformed(FILE_SHAPE))?
+            .iter()
+            .map(course)
+            .collect::<Result<Vec<_>, _>>()?;
+        let focus_subjects = match file.get("focus_subjects") {
+            None | Some(Value::Null) => Vec::new(),
+            Some(subjects) => subjects
+                .as_array()
+                .ok_or_else(|| malformed(SUBJECT_SHAPE))?
+                .iter()
+                .map(focus_subject)
+                .collect::<Result<Vec<_>, _>>()?,
+        };
+        let codes = courses
+            .iter()
+            .map(|course| course.code)
+            .chain(focus_subjects.iter().map(|subject| subject.code));
+        refuse_duplicates("code", codes)?;
+        let aliases = courses
+            .iter()
+            .map(|course| course.alias)
+            .chain(focus_subjects.iter().map(|subject| subject.alias));
+        refuse_duplicates("alias", aliases)?;
+        refuse_duplicates("deck root", courses.iter().map(|course| &course.deck_root))?;
+        for course in &courses {
+            check_bands(&course.unit_bands)?;
+        }
+        let digest = (!courses.is_empty() || !focus_subjects.is_empty())
+            .then(|| content_digest(canonical(&courses, &focus_subjects).as_bytes()));
+        Ok(Self {
+            courses,
+            focus_subjects,
+            digest,
+        })
     }
 
     /// The courses of the file the environment's [`COURSES_FILE`] names, read once at start; none,
@@ -147,8 +204,20 @@ impl Courses {
     /// [`CoursesError::Unreadable`] when the file cannot be read, and every refusal of
     /// [`Courses::parse`].
     pub fn load(env: &Environment) -> Result<Self, CoursesError> {
-        let _ = env.optional::<CoursesPath>(COURSES_FILE);
-        Ok(Self::default())
+        let path = env
+            .optional::<CoursesPath>(COURSES_FILE)
+            .map_err(|_| malformed(CoursesPath::SHAPE))?;
+        let Some(CoursesPath(path)) = path else {
+            tracing::info!(
+                setting = COURSES_FILE,
+                "no courses file is configured: no card has a course"
+            );
+            return Ok(Self::default());
+        };
+        let text = std::fs::read_to_string(path).map_err(|_| CoursesError::Unreadable {
+            setting: COURSES_FILE,
+        })?;
+        Self::parse(&text)
     }
 
     /// Every course, in the file's order.
@@ -176,8 +245,186 @@ impl Courses {
 /// only has to move when the digested bytes do, on every toolchain.
 #[must_use]
 pub fn content_digest(bytes: &[u8]) -> String {
-    let _ = bytes;
-    String::new()
+    let mut hash = FNV_OFFSET;
+    for byte in bytes {
+        hash ^= u64::from(*byte);
+        hash = hash.wrapping_mul(FNV_PRIME);
+    }
+    format!("{hash:016x}")
+}
+
+/// The refusal of a file that does not have `expected`'s shape.
+const fn malformed(expected: &'static str) -> CoursesError {
+    CoursesError::Malformed {
+        setting: COURSES_FILE,
+        expected,
+    }
+}
+
+/// The text field `key` of `object`: present and not blank.
+fn text(
+    object: &Map<String, Value>,
+    key: &str,
+    shape: &'static str,
+) -> Result<String, CoursesError> {
+    object
+        .get(key)
+        .and_then(Value::as_str)
+        .filter(|value| !value.trim().is_empty())
+        .map(str::to_owned)
+        .ok_or_else(|| malformed(shape))
+}
+
+/// The code field of `object`.
+fn code(object: &Map<String, Value>, shape: &'static str) -> Result<CourseCode, CoursesError> {
+    object
+        .get("code")
+        .and_then(Value::as_str)
+        .and_then(CourseCode::new)
+        .ok_or_else(|| malformed(shape))
+}
+
+/// The alias field of `object`: exactly one letter.
+fn alias(object: &Map<String, Value>, shape: &'static str) -> Result<char, CoursesError> {
+    let alias = object
+        .get("alias")
+        .and_then(Value::as_str)
+        .ok_or_else(|| malformed(shape))?;
+    let mut letters = alias.chars();
+    match (letters.next(), letters.next()) {
+        (Some(letter), None) if letter.is_alphabetic() => Ok(letter),
+        _ => Err(malformed(shape)),
+    }
+}
+
+/// One course of the file.
+fn course(value: &Value) -> Result<Course, CoursesError> {
+    let object = value.as_object().ok_or_else(|| malformed(COURSE_SHAPE))?;
+    let writing = object
+        .get("writing")
+        .and_then(Value::as_bool)
+        .ok_or_else(|| malformed(COURSE_SHAPE))?;
+    Ok(Course {
+        code: code(object, COURSE_SHAPE)?,
+        name: text(object, "name", COURSE_SHAPE)?,
+        flag: text(object, "flag", COURSE_SHAPE)?,
+        deck_root: text(object, "deck_root", COURSE_SHAPE)?,
+        alias: alias(object, COURSE_SHAPE)?,
+        writing,
+        unit_bands: unit_bands(object.get("unit_bands"))?,
+    })
+}
+
+/// One focus subject of the file.
+fn focus_subject(value: &Value) -> Result<FocusSubject, CoursesError> {
+    let object = value.as_object().ok_or_else(|| malformed(SUBJECT_SHAPE))?;
+    Ok(FocusSubject {
+        code: code(object, SUBJECT_SHAPE)?,
+        name: text(object, "name", SUBJECT_SHAPE)?,
+        alias: alias(object, SUBJECT_SHAPE)?,
+    })
+}
+
+/// A course's unit bands, in the bands' order: each named once, from A1 to C2, as a pair of unit
+/// numbers.
+fn unit_bands(value: Option<&Value>) -> Result<Vec<UnitBand>, CoursesError> {
+    let bands = value
+        .and_then(Value::as_object)
+        .ok_or_else(|| malformed(BANDS_SHAPE))?;
+    let mut read = Vec::with_capacity(bands.len());
+    for (name, range) in bands {
+        let band = CEFR_BANDS
+            .iter()
+            .copied()
+            .find(|band| band == name)
+            .ok_or_else(|| malformed(BANDS_SHAPE))?;
+        let unit = |index: usize| {
+            range
+                .get(index)
+                .and_then(Value::as_u64)
+                .and_then(|unit| u32::try_from(unit).ok())
+        };
+        let pair = range.as_array().map_or(0, Vec::len);
+        let (Some(first), Some(last), 2) = (unit(0), unit(1), pair) else {
+            return Err(malformed(BANDS_SHAPE));
+        };
+        read.push(UnitBand { band, first, last });
+    }
+    read.sort_by_key(|band| CEFR_BANDS.iter().position(|name| *name == band.band));
+    Ok(read)
+}
+
+/// Refuses bands that run backwards, overlap or come out of the A1 to C2 order.
+fn check_bands(bands: &[UnitBand]) -> Result<(), CoursesError> {
+    let fault = |fault| CoursesError::Bands {
+        setting: COURSES_FILE,
+        fault,
+    };
+    if bands.iter().any(|band| band.first > band.last) {
+        return Err(fault("run backwards"));
+    }
+    for pair in bands.windows(2) {
+        let (before, after) = (pair[0], pair[1]);
+        if after.first <= before.last {
+            return Err(if after.last < before.first {
+                fault("come out of order")
+            } else {
+                fault("overlap")
+            });
+        }
+    }
+    Ok(())
+}
+
+/// Refuses two entries that share a `field`.
+fn refuse_duplicates<T: Ord>(
+    field: &'static str,
+    values: impl Iterator<Item = T>,
+) -> Result<(), CoursesError> {
+    let mut seen = BTreeSet::new();
+    for value in values {
+        if !seen.insert(value) {
+            return Err(CoursesError::Duplicate {
+                setting: COURSES_FILE,
+                field,
+            });
+        }
+    }
+    Ok(())
+}
+
+/// The courses in one fixed text, whatever the file's layout or key order: what the digest reads.
+fn canonical(courses: &[Course], focus_subjects: &[FocusSubject]) -> String {
+    let courses: Vec<Value> = courses
+        .iter()
+        .map(|course| {
+            let bands: Vec<Value> = course
+                .unit_bands
+                .iter()
+                .map(|band| json!([band.band, band.first, band.last]))
+                .collect();
+            json!([
+                course.code.as_str(),
+                course.name,
+                course.flag,
+                course.deck_root,
+                course.alias.to_string(),
+                course.writing,
+                bands,
+            ])
+        })
+        .collect();
+    let subjects: Vec<Value> = focus_subjects
+        .iter()
+        .map(|subject| {
+            json!([
+                subject.code.as_str(),
+                subject.name,
+                subject.alias.to_string()
+            ])
+        })
+        .collect();
+    json!([COURSES_SCHEMA, courses, subjects]).to_string()
 }
 
 /// The path the setting names: an absolute file path.

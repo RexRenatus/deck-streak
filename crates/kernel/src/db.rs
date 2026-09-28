@@ -162,8 +162,24 @@ impl Db {
     ///
     /// [`KernelError::Database`] when the write fails.
     pub async fn record_courses_digest(&self, digest: Option<&str>) -> Result<bool, KernelError> {
-        let _ = digest;
-        Ok(false)
+        let mut write = self.write().await?;
+        let recorded =
+            sqlx::query_scalar!("SELECT courses_digest FROM settings_generation WHERE id = 1")
+                .fetch_one(&mut *write)
+                .await?;
+        if recorded.as_deref() == digest {
+            // Nothing changed: the write is dropped, and rolls back having written nothing.
+            return Ok(false);
+        }
+        Self::bump_settings_generation(&mut write).await?;
+        sqlx::query!(
+            "UPDATE settings_generation SET courses_digest = ?1 WHERE id = 1",
+            digest
+        )
+        .execute(&mut *write)
+        .await?;
+        write.commit().await?;
+        Ok(true)
     }
 
     /// Closes the pool, waiting for its connections to finish.

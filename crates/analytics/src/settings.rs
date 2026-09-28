@@ -7,7 +7,7 @@ pub const LEECH_THRESHOLD: &str = "DECKSTREAK_LEECH_THRESHOLD";
 /// The leech threshold when none is set: the predecessor's `constants.DEFAULT_LEECH_THRESHOLD`,
 /// proved by `goldens/analytics.constants.json` and by the card snapshot's golden, whose cases
 /// without a threshold take the predecessor's default.
-pub const DEFAULT_LEECH_THRESHOLD: i64 = 0;
+pub const DEFAULT_LEECH_THRESHOLD: i64 = 8;
 /// The largest leech threshold a setting may name.
 pub const MAX_LEECH_THRESHOLD: i64 = 1_000;
 

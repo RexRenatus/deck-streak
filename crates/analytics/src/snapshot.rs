@@ -5,6 +5,8 @@
 
 use deck_streak_ingest::reader::Card;
 
+use crate::constants::MATURE_IVL_DAYS;
+
 /// Every field of the predecessor's `CardStateSnapshot`.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct CardSnapshot {
@@ -57,6 +59,33 @@ impl From<&CardSnapshot> for CardState {
 /// `leech_threshold` lapses.
 #[must_use]
 pub fn card_snapshot(cards: &[Card], leech_threshold: i64, day_number: i64) -> CardSnapshot {
-    let _ = (cards, leech_threshold, day_number);
-    CardSnapshot::default()
+    let mut snapshot = CardSnapshot::default();
+    for card in cards {
+        snapshot.total_cards += 1;
+        let suspended = card.queue == -1;
+        if suspended {
+            snapshot.suspended_count += 1;
+        }
+        if card.lapses >= leech_threshold && !suspended {
+            snapshot.leech_active += 1;
+        }
+        if card.kind == 2 && !suspended {
+            if card.interval >= MATURE_IVL_DAYS {
+                snapshot.mature_count += 1;
+            } else if 0 < card.interval && card.interval < MATURE_IVL_DAYS {
+                snapshot.young_count += 1;
+            }
+        }
+        if card.kind == 1 || card.kind == 3 {
+            snapshot.learning_count += 1;
+        }
+        if card.queue == 2 {
+            if card.due < day_number {
+                snapshot.backlog += 1;
+            } else if card.due == day_number {
+                snapshot.due_today += 1;
+            }
+        }
+    }
+    snapshot
 }

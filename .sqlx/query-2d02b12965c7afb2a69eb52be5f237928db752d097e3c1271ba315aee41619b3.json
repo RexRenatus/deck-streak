@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE daily_rollup SET mature_count = ?2, young_count = ?3, leech_active = ?4, backlog = ?5, due_today = ?6, card_state_src = ?7 WHERE study_day = ?1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 7
+    },
+    "nullable": []
+  },
+  "hash": "2d02b12965c7afb2a69eb52be5f237928db752d097e3c1271ba315aee41619b3"
+}

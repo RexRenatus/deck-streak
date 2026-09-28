@@ -6,43 +6,43 @@
 //! and is not one here: those live beside their function and are proved by that function's golden.
 
 /// Each answer's time is capped at this many seconds before it is summed.
-pub const ANSWER_TIME_CAP_SECONDS: f64 = 0.0;
+pub const ANSWER_TIME_CAP_SECONDS: f64 = 60.0;
 /// An interval of this many days or more is mature: the young and mature split, and graduation.
-pub const MATURE_IVL_DAYS: i64 = 0;
+pub const MATURE_IVL_DAYS: i64 = 21;
 /// The consistency pillar's weight in the total.
-pub const WEIGHT_CONSISTENCY: f64 = 0.0;
+pub const WEIGHT_CONSISTENCY: f64 = 0.30;
 /// The retention pillar's weight in the total.
-pub const WEIGHT_RETENTION: f64 = 0.0;
+pub const WEIGHT_RETENTION: f64 = 0.25;
 /// The workload pillar's weight in the total.
-pub const WEIGHT_WORKLOAD: f64 = 0.0;
+pub const WEIGHT_WORKLOAD: f64 = 0.20;
 /// The volume pillar's weight in the total.
-pub const WEIGHT_VOLUME: f64 = 0.0;
+pub const WEIGHT_VOLUME: f64 = 0.15;
 /// The mastery pillar's weight in the total.
-pub const WEIGHT_MASTERY: f64 = 0.0;
+pub const WEIGHT_MASTERY: f64 = 0.10;
 /// The true retention, in percent, at which the retention pillar starts to score.
-pub const RETENTION_FLOOR_PCT: f64 = 0.0;
+pub const RETENTION_FLOOR_PCT: f64 = 50.0;
 /// The true retention, in percent, at which the retention pillar is full.
-pub const RETENTION_CEIL_PCT: f64 = 0.0;
+pub const RETENTION_CEIL_PCT: f64 = 95.0;
 /// Below this many answered cards, the retention pillar is blended toward its target.
-pub const RETENTION_MIN_SAMPLE: i64 = 0;
+pub const RETENTION_MIN_SAMPLE: i64 = 5;
 /// What a small sample's retention pillar is blended toward.
-pub const RETENTION_BLEND_TARGET: f64 = 0.0;
+pub const RETENTION_BLEND_TARGET: f64 = 70.0;
 /// The reviews' share of the volume pillar.
-pub const VOLUME_REVIEW_WEIGHT: f64 = 0.0;
+pub const VOLUME_REVIEW_WEIGHT: f64 = 0.6;
 /// The minutes' share of the volume pillar.
-pub const VOLUME_TIME_WEIGHT: f64 = 0.0;
+pub const VOLUME_TIME_WEIGHT: f64 = 0.4;
 /// The ratio to the baseline at which the volume pillar is full.
-pub const VOLUME_CAP_RATIO: f64 = 0.0;
+pub const VOLUME_CAP_RATIO: f64 = 1.25;
 /// The graduations that fill the mastery pillar's reward.
-pub const MASTERY_GRADUATION_TARGET: i64 = 0;
+pub const MASTERY_GRADUATION_TARGET: i64 = 3;
 /// The mastery penalty of each active leech.
-pub const MASTERY_LEECH_PENALTY: f64 = 0.0;
+pub const MASTERY_LEECH_PENALTY: f64 = 3.0;
 /// The most the leeches take off the mastery pillar.
-pub const MASTERY_LEECH_PENALTY_CAP: f64 = 0.0;
+pub const MASTERY_LEECH_PENALTY_CAP: f64 = 30.0;
 /// The backlog is divided by this for the workload penalty.
-pub const WORKLOAD_BACKLOG_DIVISOR: f64 = 0.0;
+pub const WORKLOAD_BACKLOG_DIVISOR: f64 = 5.0;
 /// The most the backlog takes off the workload pillar.
-pub const WORKLOAD_BACKLOG_PENALTY_CAP: f64 = 0.0;
+pub const WORKLOAD_BACKLOG_PENALTY_CAP: f64 = 40.0;
 
 /// One grade band: a total at or above `threshold` takes its label and emoji.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -58,33 +58,33 @@ pub struct GradeBand {
 /// The grade bands, highest first: a total takes the first band it reaches.
 pub const GRADE_BANDS: [GradeBand; 6] = [
     GradeBand {
-        threshold: 0,
-        label: "",
-        emoji: "",
+        threshold: 90,
+        label: "LEGENDARY",
+        emoji: "\u{1f3c6}",
+    },
+    GradeBand {
+        threshold: 75,
+        label: "ON FIRE",
+        emoji: "\u{1f525}",
+    },
+    GradeBand {
+        threshold: 60,
+        label: "SOLID",
+        emoji: "\u{2705}",
+    },
+    GradeBand {
+        threshold: 40,
+        label: "SHAKY",
+        emoji: "\u{26a0}\u{fe0f}",
+    },
+    GradeBand {
+        threshold: 1,
+        label: "COLD",
+        emoji: "\u{1f976}",
     },
     GradeBand {
         threshold: 0,
-        label: "",
-        emoji: "",
-    },
-    GradeBand {
-        threshold: 0,
-        label: "",
-        emoji: "",
-    },
-    GradeBand {
-        threshold: 0,
-        label: "",
-        emoji: "",
-    },
-    GradeBand {
-        threshold: 0,
-        label: "",
-        emoji: "",
-    },
-    GradeBand {
-        threshold: 0,
-        label: "",
-        emoji: "",
+        label: "NO STUDY",
+        emoji: "\u{1f4a4}",
     },
 ];

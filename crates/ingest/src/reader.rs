@@ -163,8 +163,12 @@ pub fn allowed_deck_ids(deck_names: &BTreeMap<i64, String>, prefixes: &[String])
 /// does, so a deck in scope can belong to no course.
 #[must_use]
 pub fn course_of(courses: &Courses, name: &str) -> Option<CourseCode> {
-    let _ = (courses, name);
-    None
+    let root = top_level(name);
+    courses
+        .courses()
+        .iter()
+        .find(|course| course.deck_root == root)
+        .map(|course| course.code)
 }
 
 /// Whether a revlog row of type `kind` answered with `ease` is a study event (R2): a learn,

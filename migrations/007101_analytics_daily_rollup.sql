@@ -54,8 +54,7 @@ CREATE TABLE daily_rollup (
         AND (card_state_src IS NULL) = (leech_active IS NULL)
         AND (card_state_src IS NULL) = (backlog IS NULL)
         AND (card_state_src IS NULL) = (due_today IS NULL)
-    ),
-    CHECK (score_at_close IS NULL OR settled_at IS NOT NULL)
+    )
 ) STRICT;
 
 CREATE TABLE daily_lang_stats (
