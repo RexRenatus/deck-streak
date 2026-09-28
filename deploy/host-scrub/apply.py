@@ -255,6 +255,9 @@ def delete(item: dict, runner: Runner, checked: tuple | None) -> None:
         st = os.stat(name, dir_fd=parent, follow_symlinks=False)
         if (st.st_dev, st.st_ino, st.st_mtime_ns) != checked:
             raise OSError("it changed after its checks, so it was left as it was")
+        digest, _ = measure(item["path"])
+        if digest != item["digest"]:
+            raise OSError("its digest changed after its checks, so it was left as it was")
         if stat.S_ISDIR(st.st_mode):
             shutil.rmtree(name, dir_fd=parent)
         else:
