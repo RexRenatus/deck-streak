@@ -137,11 +137,20 @@ def judge(code: int | None, severity: str, state: str) -> str:
     return "ERROR"
 
 
+def jobs_bound(text: str) -> int:
+    """`--jobs`: the most rows that run at once, an integer of at least 1."""
+    value = int(text)
+    if value < 1:
+        raise argparse.ArgumentTypeError(f"--jobs must be at least 1, not {value}")
+    return value
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("--root", default=str(REPO))
     parser.add_argument("--pack", action="append", default=[])
     parser.add_argument("--json", action="store_true")
+    parser.add_argument("--jobs", type=jobs_bound, default=1)
     args = parser.parse_args()
     root = Path(args.root).resolve()
     try:
