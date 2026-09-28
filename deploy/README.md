@@ -22,17 +22,22 @@ a unit, reloads Caddy or touches a host; the first deploy is #42's.
 | `caddy/deck-streak.caddy` | the one site block: the Mini App, `/api/*`, the closed health routes, `robots.txt` and the security headers |
 | `deck-streak.env.example` | the non-secret settings every service reads, by name, with neutral values |
 | `host-budget.json` | DeckStreak's share of the host and each unit's `MemoryHigh=` and `MemoryMax=` (ADR-032) |
+| `rail-contract.json` | the neutral values the private rail overrides, by unit and key, with the name of its drop-in and the credential socket's path (SPEC-061, ADR-061) |
+| `scripts/credential-pairs.py`, `scripts/effective-check.py`, `scripts/guards-check.py` | the rail contract's three checks: the credential pairs the templates declare, a unit's effective configuration, and the pinned guards against their manifest (SPEC-061) |
 
 ## What the private rail fills
 
-Each neutral value below is valid as committed, and the rail supplies the deployment's own.
+Each neutral value below is valid as committed, and the rail supplies the deployment's own. The
+rail installs every template byte for byte, and a unit's own values reach it in one drop-in beside
+it, `<unit>.d/10-rail.conf`, which resets and then sets each value `rail-contract.json` lists for
+that unit (ADR-061).
 
 | neutral value | where | what the rail supplies |
 |---|---|---|
 | `/usr/local/lib/deck-streak/current/bin/deckstreakd` | every service's `ExecStart=` | the release root, whose `current` link switches by an atomic rename (ADR-010) |
 | `/etc/deck-streak/deck-streak.env` | every service's `EnvironmentFile=`, required | the settings file, from `deck-streak.env.example` |
 | `/usr/local/lib/deck-streak/current/deploy/` | the alert's, the evaluator's and the watch's `ExecStart=` | the release's copy of this directory's `scripts/` and `slo.json`, under the same root |
-| UTC, at the default rollover hour 4 | every job timer's `OnCalendar=` | the deployment's zone and rollover hour, rendered with the two settings that name them (ADR-027); the evaluator's and the watch's timers run every few minutes in any zone |
+| UTC, at the default rollover hour 4 | every timer's `OnCalendar=` | the deployment's zone, and each job timer's rollover hour, rendered with the two settings that name them (ADR-027); the evaluator's and the watch's timers fire every few minutes in any zone, and take the deployment's zone all the same, so no calendar is left in UTC |
 | `{$DECKSTREAK_HOST}`, `{$DECKSTREAK_WEB_ROOT}`, `{$DECKSTREAK_API_UPSTREAM}` | the Caddy block | the Mini App's host name, the release's web build, and the API's listen address |
 | the system user and group `deck-streak` | every service's `User=` and `Group=` | the user itself |
 | `/run/deck-streak-credentials/socket` | every `LoadCredential=` line | the credential socket, its fetch helper and its map (ADR-038) |
@@ -51,11 +56,41 @@ file, and no template carries a secret's value.
 |---|---|---|
 | `deck-streak-api.service` | `owner-user-id`, `telegram-bot-token` | the owner gate over Telegram's launch data (SPEC-024) |
 | `deck-streak-bot.service` | `owner-user-id`, `telegram-bot-token`, `anki-sync-username`, `anki-sync-password` | the transport and the owner gate, and the owner's `/sync`, which runs a sync cycle in this role (SPEC-026) |
-| `deck-streak-job@.service` | `anki-sync-username`, `anki-sync-password` | the `sync` job's account (SPEC-022); only that job reads it |
+| `deck-streak-job@.service` | `anki-sync-username`, `anki-sync-password` | the `sync` job's account (SPEC-022); only that job reads it, and the rail's map answers it to the `sync` instance alone |
 | `deck-streak-alert@.service` | `owner-user-id`, `telegram-bot-token` | the page: the bot's token, and the owner's id, which is the owner's private chat (SPEC-031) |
 
 systemd names the unit in the address it binds for each credential, so a job's credentials reach
-the socket under the job instance's name; the rail's map decides which instances it answers (#41).
+the socket under the job instance's name. The rail's map names the template, and an instance
+matches its template's row; a row is never a pattern over unit names (SPEC-061 R4). The sync
+login's rows name the `sync` instance instead, the one job that reads it: the other job instances
+still ask for it at every start, and the socket answers them nothing (SPEC-061 §8).
+
+## The rail's contract
+
+The private deploy rail lives outside this repository and is never published (SPEC-061). It holds
+the credential socket's fetch helper, its socket unit and its map of (unit, credential id) pairs
+(ADR-038); the settings file it renders from private configuration, installed root-owned with mode
+`0600`; the drop-ins; and, only with the AI route, the guards' pinned copies and their manifest
+(SPEC-063). No secret's value passes through the rail: a value travels from the secret manager,
+through the helper, into systemd's credentials directory for the unit that starts. This repository
+holds what the rail reads and the checks it runs:
+
+| check | what it reads | what it refuses |
+|---|---|---|
+| `scripts/credential-pairs.py --root <release> [--optional <set>]` | every unit template with its drop-ins, and each optional set it names | `LoadCredentialEncrypted=`, `SetCredential=`, `SetCredentialEncrypted=`, `ImportCredential=`, a `LoadCredential=` whose source is not the socket, and a line systemd would read otherwise |
+| `scripts/effective-check.py --root <release> [<output> ...]` | `systemctl cat` of installed units, from files or standard input | a neutral value left in force, a credential not from the socket, an `Environment=` variable whose name says it holds a secret, any other route a value takes into the unit (a secret-named `PassEnvironment=`, standard input written in the file or read from one, a second `EnvironmentFile=`), a line systemd would read otherwise, and a drop-in other than the rail's own |
+| `scripts/effective-check.py --root <release> --census` | `rail-contract.json` and the templates | a neutral value the contract does not name, and a row no template carries |
+| `scripts/guards-check.py <manifest>` | the guards' manifest and each file it names | a missing or changed file, a file anyone but root owns or could write, a mode other than the manifest's, and a manifest that names no file |
+
+`credential-pairs.py` prints its pairs as JSON, a template unit named as the template it is, with
+the files and lines it examined; the rail refuses to install when its map's pairs differ from that
+list in either direction. The contract names a job's timer by its template and its instance, and
+the checks join them. Each check reads a unit file line by line as systemd reads it, and refuses a
+construct systemd would read otherwise instead of guessing (SPEC-061 §8). Each check prints how much
+it examined and never a secret's value. `credential-pairs.py` and `effective-check.py` exit 0 when
+everything passes, 1 on a refusal, and 2 when they judged nothing; `guards-check.py` exits 0 or 1,
+since a manifest that is absent, unreadable or names no file is itself refused, and the agent's
+launch never starts on it (SPEC-061 R8).
 
 ## The schedule
 
@@ -129,5 +164,9 @@ instance as `<id>`, or build the name at run time, as the tests do.
 - The observability rows, judged on the maintainer's box (ADR-069), and SPEC-031's
   `test_slo_declaration.py`, `test_alert_unit.py`, `test_slo_evaluator.py` and
   `test_memory_watch.py`, which run the three scripts over synthetic credentials, journal and cgroups.
+- `scripts/tests/test_rail_contract.py` (SPEC-061's acceptance criteria), and
+  `effective-check.py --census`, which holds `rail-contract.json` equal to the neutral values the
+  templates carry. At each install the rail compares its map with `credential-pairs.py` and runs
+  `effective-check.py` over every installed unit.
 - The public scrub over every file here.
 - The web-security rows over the Caddy block, on the maintainer's box (`scripts/box-packs.sh`).
