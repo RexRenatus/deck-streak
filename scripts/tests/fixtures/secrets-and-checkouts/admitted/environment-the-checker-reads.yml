@@ -2,7 +2,8 @@ name: planted
 
 # A planted workflow (SPEC-034 A11): environments the checker reads that set no variable git
 # reads: names that hold the letters `GIT_` only inside a longer word, an empty `env`, a container
-# named by its image alone, and a container whose `env` is a mapping.
+# named by its image alone, a container whose `env` is a mapping, and a container whose `options`
+# are written out and name no variable git reads.
 # scripts/tests/test_ci_workflows.py judges it; nothing runs it.
 on:
   pull_request:
@@ -29,5 +30,12 @@ jobs:
       image: ubuntu:24.04
       env:
         MODE: fast
+    steps:
+      - run: echo ready
+  optioned:
+    runs-on: ubuntu-24.04
+    container:
+      image: ubuntu:24.04
+      options: --cpus 1
     steps:
       - run: echo ready

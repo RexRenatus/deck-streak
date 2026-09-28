@@ -224,6 +224,10 @@ class WorkflowsAreHardened(unittest.TestCase):
                 "environment the checker does not read",
                 "environment-the-checker-does-not-read.yml:jobs.contained.container.env: sets an "
                 "environment the checker does not read",
+                "environment-the-checker-does-not-read.yml:jobs.given-options.container.options: "
+                "runs in a container the checker does not read",
+                "environment-the-checker-does-not-read.yml:jobs.holding-options.container.options: "
+                "runs in a container the checker does not read",
                 "every-secret.yml:jobs.build.steps[0].env.CHOSEN: reads the whole secrets "
                 "context, or a secret named at run time",
                 "every-secret.yml:jobs.build.steps[0].run: reads the whole secrets context, or a "

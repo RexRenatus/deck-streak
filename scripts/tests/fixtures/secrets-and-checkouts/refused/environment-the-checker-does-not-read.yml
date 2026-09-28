@@ -2,8 +2,9 @@ name: planted
 
 # A planted workflow (SPEC-034 A10): an environment whose variables the checker cannot read, which
 # may configure git: an `env` of the workflow, a job, a job's container and a step, and a job's
-# container, each one `${{ }}` expression, which GitHub evaluates when the job or the step runs.
-# The names are synthetic. scripts/tests/test_ci_workflows.py judges it; nothing runs it.
+# container, each one `${{ }}` expression, which GitHub evaluates when the job or the step runs;
+# and a job's container whose `options` is one `${{ }}` expression, or holds one. The names are
+# synthetic. scripts/tests/test_ci_workflows.py judges it; nothing runs it.
 on:
   pull_request:
     branches: [dev]
@@ -26,5 +27,19 @@ jobs:
     container:
       image: ubuntu:24.04
       env: ${{ fromJSON(vars.PLANTED_ENV) }}
+    steps:
+      - run: echo ready
+  given-options:
+    runs-on: ubuntu-24.04
+    container:
+      image: ubuntu:24.04
+      options: ${{ vars.PLANTED_OPTIONS }}
+    steps:
+      - run: echo ready
+  holding-options:
+    runs-on: ubuntu-24.04
+    container:
+      image: ubuntu:24.04
+      options: --cpus 1 ${{ vars.PLANTED_OPTIONS }}
     steps:
       - run: echo ready
