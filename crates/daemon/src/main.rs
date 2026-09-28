@@ -1,11 +1,14 @@
 //! `deckstreakd`: the one release binary of the service (SPEC-025 R1; ADR-010). Its first argument
-//! names the role it runs, and each role is one systemd unit: `api`, `job` (SPEC-027: `deckstreakd
-//! job <id>` runs one job of the table and exits), and `bot` with SPEC-026.
+//! names the role it runs, and each role but `data` is one systemd unit: `api`, `job` (SPEC-027:
+//! `deckstreakd job <id>` runs one job of the table and exits), and `bot` with SPEC-026. `data` is
+//! the owner's, run by hand on the host (SPEC-021 R8): `deckstreakd data export` writes the export
+//! to standard output, and `deckstreakd data erase --confirm ERASE` erases.
 //!
 //! `main` installs the kernel's logging before anything else, so every line the process writes,
 //! even a refusal to start, is a JSON event with its journal priority (SPEC-031 R1); it is then the
 //! one reader of the process environment (SPEC-020 R10). A missing or unknown role exits 2 with a
-//! usage line naming the roles and the jobs; a role that refuses start or fails exits 1; a role that
+//! usage line naming the roles and the jobs, and so does a `data` erase without its confirmation
+//! word, before the database is opened; a role that refuses start or fails exits 1; a role that
 //! stops on its shutdown signal exits 0. The `job` role exits with its runner's code (R7).
 #![forbid(unsafe_code)]
 #![deny(unused_must_use)]
@@ -20,7 +23,10 @@ use deck_streak_coordination::jobs::{self, Job, TABLE};
 use deck_streak_daemon::role_api;
 use deck_streak_kernel::{Environment, Redactor, logging};
 
+mod role_data;
 mod role_job;
+
+use role_data::{CONFIRMATION, DataCommand};
 
 /// The exit code of a start with no role, an unknown one, or arguments the role does not take.
 const USAGE: u8 = 2;
@@ -36,17 +42,23 @@ enum Role {
     Api,
     /// One job of the table, run once by its timer (SPEC-027).
     Job(Job),
+    /// The owner's export or erase, run by hand (SPEC-021).
+    Data(DataCommand),
 }
 
 impl Role {
     /// Every role's name.
-    const NAMES: [&'static str; 2] = ["api", "job"];
+    const NAMES: [&'static str; 3] = ["api", "job", "data"];
 
-    /// The role `arguments` name: `api` alone, or `job` and the id of a job of the table.
+    /// The role `arguments` name: `api` alone, `job` and the id of a job of the table, or `data`
+    /// and its command.
     fn from_arguments(arguments: &[OsString]) -> Option<Self> {
         match arguments {
             [name] if name == "api" => Some(Self::Api),
             [name, id] if name == "job" => id.to_str().and_then(jobs::job).map(Self::Job),
+            [name, command @ ..] if name == "data" => {
+                DataCommand::from_arguments(command).map(Self::Data)
+            }
             _ => None,
         }
     }
@@ -71,7 +83,8 @@ fn main() -> ExitCode {
     let arguments: Vec<OsString> = std::env::args_os().skip(1).collect();
     let Some(role) = Role::from_arguments(&arguments) else {
         tracing::error!(
-            "usage: deckstreakd <role>, or deckstreakd job <id>; the roles are: {}; the jobs are: {}",
+            "usage: deckstreakd <role>, or deckstreakd job <id>, or deckstreakd data export, or \
+             deckstreakd data erase --confirm {CONFIRMATION}; the roles are: {}; the jobs are: {}",
             Role::names(),
             Role::jobs()
         );
@@ -113,5 +126,8 @@ async fn run(role: Role, environment: &Environment, redactor: &Redactor) -> anyh
         Role::Job(job) => role_job::run(environment, redactor, &job)
             .await
             .context("the job role"),
+        Role::Data(command) => role_data::run(environment, command)
+            .await
+            .context("the data role"),
     }
 }
