@@ -43,7 +43,11 @@ each of them. The round was first committed on a branch this one supersedes; her
 secret-named variable is built at run time from its parts from the red commit on, so no committed
 line reads to a secret scanner as a key, and every sha below is this branch's.
 
-DISCLOSURE: none. No criterion's test body changed after its red commit; the round changed
+DISCLOSURE: A14's test body changed after its red commit (26d09bb), at f5449e7: it pairs each job's
+name with its arm through one iterator instead of two stepped slices, whose text a privacy scrub
+reads as an address. Its assertions and the population it examines are unchanged, and it still
+fails on a planted maintenance arm that is handed the cycle and on a planted loader outside it. No
+other criterion's test body changed after its red commit, and the round changed
 `scripts/tests/test_deploy_templates.py` in one comment only (e68b8b6).
 
 ```red-first
