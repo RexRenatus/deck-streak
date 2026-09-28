@@ -1832,6 +1832,7 @@ def secret_and_checkout_problems(directory):
                 judged["expressions"].append((f"{path.name}:{where}", expression))
                 problems += [f"{path.name}:{where}: {read}" for read in secret_reads(expression)]
         problems += defaults_problems(workflow.get("defaults"), f"{path.name}:defaults")
+        scripts = set()
         for job_id, job in (workflow.get("jobs") or {}).items():
             # A job or step that is not a mapping is not judged: the reader has named its line, or
             # GitHub refuses the workflow.
@@ -1861,8 +1862,14 @@ def secret_and_checkout_problems(directory):
                         problems.append(f"{where}: checks out from another server: {server}")
                 if "run" in step:
                     judged["run steps"].append(where)
+                    scripts.add(f"{where}.run")
                     problems += [f"{where}: {reach}" for reach in reaches(str(step["run"]))]
                 problems += shell_problems(step.get("shell"), f"{where}.shell")
+        # Every other string is read for the same commands: a value a shell runs, such as
+        # `BASH_ENV`, which bash expands before a step's script, holds a command as a script does.
+        for where, text in strings(workflow):
+            if f"{path.name}:{where}" not in scripts:
+                problems += [f"{path.name}:{where}: {reach}" for reach in reaches(text)]
     return problems, judged
 
 
