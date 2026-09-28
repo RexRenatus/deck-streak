@@ -45,6 +45,36 @@ stateDiagram-v2
 | Failed | an attempt row with its reason | through the health verdict | the closed reason |
 | AiRouteAbsent | the state only, no attempt | never | "Readings are not enabled" |
 
+## 1a. How SPEC-045 resolves a study day's topics
+
+The order of the gates and where each could-not-tell reason arises. The review read is ingest's
+read-only read of the private copy; the collection work the gates hold back is the throwaway copy
+the queue needs, because the engine selects a deck to answer it. A run refused as a whole records
+its refusal and, when the read and the taxonomy named topics, one row per topic; each topic with a
+day set goes to the generation (SPEC-046), which ends it `ready`, `failed` or `ai_route_absent`.
+The copy, its query and its removal are one blocking operation on the offload that holds the shared
+lock from before the copy until the copy is whole, so a budget that passes stops the wait and never
+the work: the operation runs on to its end and removes its copy.
+
+```mermaid
+flowchart TD
+  start[resolve a study day: the clock gives the study day] --> read[ingest reads the private copy read-only: deck names, cards, reviews]
+  read --> sync{did the last sync succeed: its last run ok or skipped}
+  sync -- no --> syncfail[every topic the read and the taxonomy name: could_not_tell, rail_broken, sync_failed; the queue is never called]
+  sync -- yes --> tax{is the taxonomy loaded}
+  tax -- no --> taxmissing[the run: could_not_tell, config_fault, taxonomy_missing; no topic]
+  tax -- yes --> readok{did the read succeed}
+  readok -- no --> unread[the run: could_not_tell, rail_broken, collection_locked or collection_open_failed; no topic]
+  readok -- yes --> pause{a qualifying review, type 0 to 3 with ease 1 or more, on either of the two study days before}
+  pause -- no --> paused[every topic: paused]
+  pause -- yes --> queue[the queue port within 30 seconds: one blocking operation on the offload holds the shared lock, copies, queries the engine and removes the copy]
+  queue -- past the budget --> timeout[every topic: could_not_tell, rail_broken, day_set_resolve_timeout; the operation runs on and removes its copy]
+  queue -- the engine fails --> failed[every topic: could_not_tell, rail_broken, collection_locked or collection_open_failed]
+  queue -- an answer per root --> roots[a root with fewer new cards than its own count, or 1000 or more without one: day_set_fetch_saturated]
+  roots --> resolver[the resolver: each card by its original deck, a claimed card skipped, the digest of the sorted ids]
+  resolver --> topics[each topic: its day set for SPEC-046, no_new_cards, or its root's could_not_tell]
+```
+
 ## 2. A reading, from its first generation
 
 A reading exists only once every gate passed (SPEC-046 R8). Its identity is its topic, its first
