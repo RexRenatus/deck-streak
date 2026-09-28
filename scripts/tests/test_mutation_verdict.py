@@ -7,12 +7,14 @@ format: cargo-mutants 27.1.0's `outcomes.json`, the mutation-testing-elements `m
 StrykerJS writes, and the rows runner's report. No tool runs here.
 """
 
+import importlib.util
 import json
 import os
 import subprocess
 import sys
 import tempfile
 import unittest
+from collections import Counter
 from pathlib import Path
 
 from _support import REPO, examined
@@ -681,6 +683,131 @@ class EachEventReadsItsCase(unittest.TestCase):
             f"{LIB}, docs/notes.md",
             web.stdout,
         )
+
+
+def verdict_module():
+    """mutation-verdict.py loaded as a module, so a test reads its constants and never restates
+    them."""
+    sys.dont_write_bytecode = True
+    spec = importlib.util.spec_from_file_location("mutation_verdict_constants", VERDICT)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def listing(packages):
+    """cargo-mutants' `--list --json` over the fixture's diff: one mutant for each package given."""
+    return [
+        {
+            "name": f"{LIB}:3:5: replace double -> i64 with {index}",
+            "package": package,
+            "file": LIB,
+            "genre": "FnValue",
+        }
+        for index, package in enumerate(packages)
+    ]
+
+
+def run_shards(fixture, listed):
+    """`shards` over the fixture's plan and `listed`, as the plan's job runs it: (the run, the plan
+    it rewrote, the step outputs it wrote)."""
+    outputs = fixture.out / "github-output"
+    outputs.write_text("", encoding="utf-8")
+    args = [sys.executable, str(VERDICT), "shards", "--plan", str(fixture.out / "plan.json")]
+    if listed is not None:
+        args += ["--listed", str(fixture.report("listed.json", listed))]
+    done = subprocess.run(
+        args,
+        capture_output=True,
+        text=True,
+        env=dict(os.environ, PYTHONDONTWRITEBYTECODE="1", GITHUB_OUTPUT=str(outputs)),
+        timeout=300,
+        check=False,
+    )
+    plan = json.loads((fixture.out / "plan.json").read_text(encoding="utf-8"))
+    written = outputs.read_text(encoding="utf-8").splitlines()
+    return done, plan, dict(line.split("=", 1) for line in written if "=" in line)
+
+
+class TheShardsFitTheirBound(unittest.TestCase):
+    def test_the_plan_shards_the_listed_mutants_within_their_bound(self):
+        module = verdict_module()
+        costs = module.SECONDS_PER_MUTANT
+        highest = max(costs.values())
+        costly, cheap = max(costs, key=costs.get), min(costs, key=costs.get)
+        bound, baseline = module.SHARD_BOUND_SECONDS, module.BASELINE_SECONDS
+        fits = (bound - baseline) // highest
+        # Two shards' worth of the costliest package, then cheap mutants, then a package the table
+        # does not name, which costs the table's highest: three shards hold them.
+        packages = [costly] * (2 * fits) + [cheap] * 30 + ["deck-streak-unnamed"] * 3
+        listed = listing(packages)
+        fixture = Fixture(self)
+        fixture.head({LIB: LIB_TEXT.replace("x * 2", "x + x")})
+        fixture.plan()
+        done, plan, outputs = run_shards(fixture, listed)
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        sharding = plan.get("shards")
+        self.assertIsNotNone(sharding, f"the plan holds no shards: {done.stdout}")
+
+        def slowest(shards):
+            totals = [baseline] * shards
+            for index, package in enumerate(packages):
+                totals[index % shards] += costs.get(package, highest)
+            return max(totals)
+
+        count = sharding["count"]
+        self.assertEqual(count, 3, done.stdout)
+        # The fewest shards whose slowest is projected within the bound.
+        self.assertLessEqual(slowest(count), bound)
+        self.assertTrue(all(slowest(fewer) > bound for fewer in range(1, count)), count)
+        # Round-robin, as cargo-mutants assigns them: mutant i runs in shard i mod n, and only there.
+        self.assertEqual([shard["shard"] for shard in sharding["shards"]], list(range(count)))
+        held = Counter()
+        for shard in sharding["shards"]:
+            k = shard["shard"]
+            names = [mutant["name"] for index, mutant in enumerate(listed) if index % count == k]
+            self.assertEqual(shard["mutants"], names, k)
+            self.assertLessEqual(shard["projected_seconds"], bound, k)
+            held.update(shard["mutants"])
+        for name in examined("listed mutants", [mutant["name"] for mutant in listed]):
+            self.assertEqual(held[name], 1, name)
+        self.assertEqual(outputs.get("shards"), str(count))
+        self.assertEqual(json.loads(outputs.get("matrix", "null")), list(range(count)))
+        # A diff beyond the most shards a matrix holds is refused with its projection: never capped.
+        fixture.plan()
+        beyond = listing([costly] * (module.MAX_SHARDS * fits + 1))
+        refused, unsharded, none = run_shards(fixture, beyond)
+        self.assertEqual(refused.returncode, 1, refused.stdout + refused.stderr)
+        self.assertIn(f"REFUSED: {len(beyond)} mutant(s)", refused.stdout)
+        self.assertIn(f"more than {module.MAX_SHARDS} shards", refused.stdout)
+        self.assertNotIn("shards", unsharded)
+        self.assertNotIn("matrix", none)
+        # The Rust class applies and no listing came: VOID, never one shard of nothing.
+        fixture.plan()
+        unlisted, _, _ = run_shards(fixture, None)
+        self.assertEqual(unlisted.returncode, 3, unlisted.stdout + unlisted.stderr)
+        self.assertIn("holds no cargo-mutants listing", unlisted.stdout)
+        # A file that is no plan is VOID, never one shard of nothing.
+        bogus = fixture.report("bogus.json", {"not": "a plan"})
+        unplanned = subprocess.run(
+            [sys.executable, str(VERDICT), "shards", "--plan", str(bogus)],
+            capture_output=True,
+            text=True,
+            env=dict(os.environ, PYTHONDONTWRITEBYTECODE="1"),
+            timeout=300,
+            check=False,
+        )
+        self.assertEqual(unplanned.returncode, 3, unplanned.stdout + unplanned.stderr)
+        self.assertIn("is not a mutation plan", unplanned.stdout)
+        # A diff with no Rust to mutate runs one shard, which reads its case by name.
+        docs = Fixture(self)
+        docs.head({"docs/notes.md": "a note\n"})
+        docs.plan()
+        quiet, plan, outputs = run_shards(docs, None)
+        self.assertEqual(quiet.returncode, 0, quiet.stdout + quiet.stderr)
+        self.assertEqual(plan["shards"]["count"], 1)
+        self.assertEqual(json.loads(outputs.get("matrix", "null")), [0])
 
 
 if __name__ == "__main__":

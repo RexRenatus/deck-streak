@@ -518,6 +518,35 @@ def say_plan(plan: Plan) -> None:
             sink.write(f"mutate={','.join(plan.stryker_mutate)}\n")
 
 
+# --------------------------------------------------------------------------- the shards
+
+#: Seconds one mutant costs, its build and its tests, by package: the mean over the weekly
+#: battery's shards on GitHub's ubuntu-24.04 runners (R18). A package the table does not name costs
+#: the table's highest.
+SECONDS_PER_MUTANT = {
+    "deck-streak-ingest": 124,
+    "deck-streak-daemon": 84,
+    "deck-streak-api": 51,
+    "deck-streak-coordination": 40,
+    "deck-streak-kernel": 12,
+    "deck-streak-identity": 8,
+    "deck-streak-vault": 7,
+}
+#: The unmutated baseline each shard builds and tests before its first mutant: the mean over the
+#: 30 shards of run 36373915578.
+BASELINE_SECONDS = 346
+#: A shard's projected time may reach an hour, half its job's timeout-minutes of 120: measured
+#: shards took from 0.72 to 1.39 times their projection (R18).
+SHARD_BOUND_SECONDS = 3600
+#: The most jobs a matrix may generate in one workflow run (GitHub's workflow syntax).
+MAX_SHARDS = 256
+
+
+def shards(plan_path: pathlib.Path, listed_path: str | None) -> int:
+    """The red-first stub: it accepts the plan and the listing and sizes nothing."""
+    return EXIT_OK
+
+
 # --------------------------------------------------------------------------- the verdict
 
 
@@ -1049,7 +1078,8 @@ def exclusions(root: pathlib.Path) -> int:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument(
-        "verb", choices=["plan", "judge", "survivors", "battery", "configs", "exclusions"]
+        "verb",
+        choices=["plan", "shards", "judge", "survivors", "battery", "configs", "exclusions"],
     )
     parser.add_argument("--root", default=str(pathlib.Path(__file__).resolve().parents[1]))
     parser.add_argument("--base")
@@ -1067,6 +1097,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--base-ref", default="")
     parser.add_argument("--subject", default="")
     parser.add_argument("--shards", type=int)
+    parser.add_argument("--listed")
     args = parser.parse_args(argv)
     root = pathlib.Path(args.root).resolve()
     if args.verb == "plan":
@@ -1076,6 +1107,10 @@ def main(argv: list[str] | None = None) -> int:
         plan = plan_diff(root, args.base, args.head, pathlib.Path(args.out), scope)
         say_plan(plan)
         return EXIT_OK
+    if args.verb == "shards":
+        if not args.plan:
+            parser.error("shards needs --plan")
+        return shards(pathlib.Path(args.plan), args.listed)
     if args.verb == "judge":
         if not args.plan or not args.klass:
             parser.error("judge needs --plan and --class")
