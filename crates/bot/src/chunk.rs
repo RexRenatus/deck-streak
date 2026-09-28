@@ -129,13 +129,15 @@ fn cut(pieces: &[Piece<'_>], start: usize, limit: usize) -> usize {
         return end;
     }
     let chosen = breaks.into_iter().flatten().next().unwrap_or(end);
-    settle(pieces, start, chosen)
+    settle(pieces, chosen)
 }
 
 /// Moves a cut at `end` off an opening tag it would leave last, and past the closing tags that
-/// follow it, so no chunk ends by opening a tag or starts by closing one.
-fn settle(pieces: &[Piece<'_>], start: usize, mut end: usize) -> usize {
-    while end > start + 1 && matches!(pieces[end - 1], Piece::Open { .. }) {
+/// follow it, so no chunk ends by opening a tag or starts by closing one. The walk back needs no
+/// bound: [`cut`] ends a chunk after a visible piece of its own, which is no opening tag, so the
+/// walk stops there at the latest and never passes the chunk's start.
+fn settle(pieces: &[Piece<'_>], mut end: usize) -> usize {
+    while matches!(pieces[end - 1], Piece::Open { .. }) {
         end -= 1;
     }
     while end < pieces.len() && matches!(pieces[end], Piece::Close { .. }) {
