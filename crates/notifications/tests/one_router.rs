@@ -447,11 +447,14 @@ pub(crate) use ledger::hold;
     ),
 ];
 
-/// The second review's trees for the walker, each file as (path, text): a shipped module in a
-/// directory named as tests are, which the walker reads because it is under `src/`; the same text
-/// in a test directory outside `src/`, which the walker leaves out; a script with no extension but
-/// a `#!` first line; and a drop-in of the bot's unit.
-const WALKED: [(&str, &str); 4] = [
+/// The reviews' trees for the walker, each file as (path, text). The second review's: a shipped
+/// module in a directory named as tests are, which the walker reads because it is under `src/`; the
+/// same text in a test directory outside `src/`, which the walker leaves out; a script with no
+/// extension but a `#!` first line; and a drop-in of the bot's unit. The third review's kinds: a
+/// bash and a zsh script with no `#!` first line; a socket unit, a path unit and a mount unit; a
+/// service unit whose name reads as a test's; the Mini App's HTML shell with an inline script; and a
+/// CommonJS TypeScript module.
+const WALKED: [(&str, &str); 12] = [
     (
         "crates/daemon/src/fixtures/celebrate.rs",
         AROUND_THE_PORT_IN_A_MODULE,
@@ -471,7 +474,63 @@ curl -fsS "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" -d chat_id="${O
 ExecStartPost=/usr/bin/curl -fsS "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" -d chat_id=${OWNER_CHAT} -d text=celebrate
 "#,
     ),
+    ("deploy/scripts/celebrate.bash", A_SCRIPT_RUN_BY_ITS_SHELL),
+    ("deploy/scripts/celebrate.zsh", A_SCRIPT_RUN_BY_ITS_SHELL),
+    (
+        "deploy/systemd/deck-streak-celebrate.socket",
+        r#"[Unit]
+Description=A celebration around the router
+
+[Socket]
+ListenStream=%t/deck-streak/celebrate.sock
+ExecStartPost=/usr/bin/curl -fsS "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" -d chat_id=${OWNER_CHAT} -d text=celebrate
+"#,
+    ),
+    (
+        "deploy/systemd/deck-streak-celebrate.path",
+        "[Path]\nPathChanged=%t/deck-streak/celebrate\nUnit=deck-streak-celebrate.spec.service\n",
+    ),
+    (
+        "deploy/systemd/deck-streak-celebrate.mount",
+        "[Mount]\nWhat=tmpfs\nWhere=/deck/streak/celebrate\nType=tmpfs\n",
+    ),
+    (
+        "deploy/systemd/deck-streak-celebrate.spec.service",
+        r#"[Service]
+ExecStart=/usr/bin/curl -fsS "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" -d chat_id=${OWNER_CHAT} -d text=celebrate
+"#,
+    ),
+    (
+        "web/app/src/app.html",
+        r#"<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <script>
+      fetch('https://api.telegram.org/bot' + window.botToken + '/sendMessage', { method: 'POST' });
+    </script>
+  </head>
+  <body></body>
+</html>
+"#,
+    ),
+    (
+        "web/app/src/lib/celebrate.cts",
+        r#"// A celebration posted straight to the Bot API from a CommonJS TypeScript module, around the router.
+export async function celebrate(token: string, chat: number): Promise<void> {
+  await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+    method: 'POST',
+    body: JSON.stringify({ chat_id: chat, text: 'a celebration the router never decided' }),
+  });
+}
+"#,
+    ),
 ];
+
+/// A script a unit runs by its shell, with no `#!` first line, around the router.
+const A_SCRIPT_RUN_BY_ITS_SHELL: &str = r#"# A celebration paged straight to the owner, around the router; a unit runs it by its shell.
+curl -fsS "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" -d chat_id="${OWNER_CHAT}" -d text="a celebration"
+"#;
 
 /// A shipped module that sends through the bot's own send, around the router.
 const AROUND_THE_PORT_IN_A_MODULE: &str = r#"//! Shipped helpers, in a directory named as tests are.
@@ -1166,8 +1225,9 @@ fn no_delivery_goes_around_the_port() {
     );
 
     // The walker reads a shipped module in a directory named as tests are, because it is under
-    // `src/`, a script by its `#!` first line and a unit's drop-in, and leaves out a test directory
-    // outside `src/`.
+    // `src/`, a script by its extension or its `#!` first line, a unit of every type, whatever its
+    // name, and a unit's drop-in, and the Mini App's HTML, and leaves out a test directory outside
+    // `src/`.
     let tree = tempfile::tempdir().expect("a temporary tree");
     for (path, text) in WALKED {
         let file = tree.path().join(path);
@@ -1182,9 +1242,18 @@ fn no_delivery_goes_around_the_port() {
         [
             "crates/daemon/src/fixtures/celebrate.rs",
             "deploy/scripts/celebrate",
+            "deploy/scripts/celebrate.bash",
+            "deploy/scripts/celebrate.zsh",
             "deploy/systemd/deck-streak-bot.service.d/celebrate.conf",
+            "deploy/systemd/deck-streak-celebrate.mount",
+            "deploy/systemd/deck-streak-celebrate.path",
+            "deploy/systemd/deck-streak-celebrate.socket",
+            "deploy/systemd/deck-streak-celebrate.spec.service",
+            "web/app/src/app.html",
+            "web/app/src/lib/celebrate.cts",
         ],
-        "the walker reads every directory under src/, a script by its first line and a drop-in, \
+        "the walker reads every directory under src/, a script by its extension or its first line, \
+         a unit of every type and a drop-in, the Mini App's HTML and a CommonJS TypeScript module, \
          and no test directory outside src/"
     );
     assert_eq!(
@@ -1194,10 +1263,23 @@ fn no_delivery_goes_around_the_port() {
              celebrate_around_the_router, not a named call site",
             "deploy/scripts/celebrate:4: names api.telegram.org",
             "deploy/scripts/celebrate:4: names sendMessage",
+            "deploy/scripts/celebrate.bash:2: names api.telegram.org",
+            "deploy/scripts/celebrate.bash:2: names sendMessage",
+            "deploy/scripts/celebrate.zsh:2: names api.telegram.org",
+            "deploy/scripts/celebrate.zsh:2: names sendMessage",
             "deploy/systemd/deck-streak-bot.service.d/celebrate.conf:2: names api.telegram.org",
             "deploy/systemd/deck-streak-bot.service.d/celebrate.conf:2: names sendMessage",
+            "deploy/systemd/deck-streak-celebrate.socket:6: names api.telegram.org",
+            "deploy/systemd/deck-streak-celebrate.socket:6: names sendMessage",
+            "deploy/systemd/deck-streak-celebrate.spec.service:2: names api.telegram.org",
+            "deploy/systemd/deck-streak-celebrate.spec.service:2: names sendMessage",
+            "web/app/src/app.html:6: names api.telegram.org",
+            "web/app/src/app.html:6: names sendMessage",
+            "web/app/src/lib/celebrate.cts:3: names api.telegram.org",
+            "web/app/src/lib/celebrate.cts:3: names sendMessage",
         ],
-        "a send around the port in a shipped module under src/, a script and a drop-in"
+        "a send around the port in a shipped module under src/, scripts, units, a drop-in, the \
+         Mini App's HTML and a CommonJS TypeScript module"
     );
 
     // Every shipped source of the tree: nothing goes around the port, and each named call site is
