@@ -184,7 +184,7 @@ A18: python3 -m unittest discover -s scripts/tests -p test_box_only_packs.py -k 
 | `scripts/tests/test_public_scrub.py` | repo | changed: A9, A10 |
 | `web/app/src/lib/styles/cjk.css`, `web/app/tests/a11y.spec.ts`, `web/app/tests/telegram-palettes.ts` | repo | changed: comments name the box-run packs |
 | `CLAUDE.md`, `README.md`, `CONTRIBUTING.md`, `ARCHITECTURE.md`, `deploy/README.md`, `docs/BUILDER-BRIEF.md`, `docs/CONTEXT-MAP.md`, `docs/LEXICON.md`, `docs/TESTING.md` | repo | changed: the box-run packs (R13) |
-| `docs/specs/planned/SPEC-026-bot-transport-and-owner-gate.md`, `SPEC-031-observability-foundation.md`, `SPEC-041-notification-router-core.md`, `SPEC-043-agent-core-runner-gate-and-degradation.md`, `SPEC-044-persona-engine-and-private-roster.md`, `SPEC-046-readings-generation-gates-and-repair.md` | repo | changed in place: the box-run packs (R13) |
+| `docs/specs/planned/SPEC-026-bot-transport-and-owner-gate.md`, `SPEC-041-notification-router-core.md`, `SPEC-043-agent-core-runner-gate-and-degradation.md`, `SPEC-044-persona-engine-and-private-roster.md`, `SPEC-046-readings-generation-gates-and-repair.md` | repo | changed in place: the box-run packs (R13) |
 | `docs/decisions/ADR-043-shell-runner-pack-gate-and-duty-caps.md` | repo | changed in place (proposed) |
 | `docs/decisions/ADR-002`, `ADR-004`, `ADR-009`, `ADR-014`, `ADR-016`, `ADR-022`, `ADR-030`, `ADR-039`, `ADR-056` | repo | accepted: name replacement and one dated note (R13) |
 | `docs/specs/SPEC-002`, `SPEC-024`, `SPEC-028`, `SPEC-030`, `SPEC-032`, `SPEC-037`, `SPEC-038`, `SPEC-042`, `SPEC-054` | repo | delivered: name replacement and one dated note, and the insert-only retirement of each criterion whose test this delivery removes (R13, R14) |
@@ -204,9 +204,9 @@ A18: python3 -m unittest discover -s scripts/tests -p test_box_only_packs.py -k 
   would strand the pull requests opened before it (#60).
 - It renames no `phx.*` schema id: the box-run packs judge DeckStreak's outputs by them, and a
   later rename is the maintainer's (#60).
-- It changes no pack's rows. The private file carries today's wiring, with SPEC-021's change and
-  the apiKeyHelper scan's pending issue, less telegram-platform's two deferred rows, which only the
-  vendored files kept red; its expected reds keep their issues (#60).
+- It changes no pack's rows. The private file carries today's wiring, with SPEC-021's and
+  SPEC-031's changes and the apiKeyHelper scan's pending issue, less telegram-platform's two
+  deferred rows, which only the vendored files kept red; its expected reds keep their issues (#60).
 - It re-plans no planned SPEC's pack-row tests: SPEC-041, SPEC-043, SPEC-044, SPEC-046 and SPEC-051
   each plan a public test that runs a pack's rows, which the box run now judges, and each is
   re-planned when it is built (#60).
