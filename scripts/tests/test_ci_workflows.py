@@ -287,9 +287,11 @@ def read_workflow(text):
     the workflows here use: mappings keyed by plain names, `- ` sequences, `|` block scalars, flow
     lists of plain items, and plain or quoted one-line scalars, a quote doubled inside single
     quotes read as one. Blank lines, comment lines and a ` #` comment after a value are dropped.
-    It fails closed (SPEC-034 R7): a form it cannot read as YAML reads it is refused by its line,
-    never guessed at, and the file raises Unread once it is read; a line it cannot place refuses
-    the whole file at once."""
+    It fails closed (SPEC-034 R7). A double-quoted value that holds an escape, a quoted value that
+    does not end at its closing quote, an anchor, alias or tag, a flow mapping, a flow list whose
+    items are not plain, and a key that is not a plain name are each refused by their line, never
+    guessed at, and the file raises Unread once it is read. A line it cannot place refuses the
+    whole file at once."""
     lines, refused = text.splitlines(), []
     value, at = _mapping(lines, _skip(lines, 0), 0, refused)
     at = _skip(lines, at)
@@ -328,8 +330,9 @@ def _key(text):
 
 def _scalar(text):
     """A one-line scalar or flow list as YAML reads it, or ValueError naming a form the reader does
-    not read: an anchor, alias or tag, a flow mapping, or a flow list whose items are not plain (a
-    quoted or nested item, or a `#` inside it)."""
+    not read: an anchor, alias or tag, a flow mapping, a flow list whose items are not plain (a
+    quoted or nested item, or a `#`, `:` or `?` inside it), and a plain value that holds `: `, which
+    YAML reads as a key."""
     text = text.strip()
     if text[:1] in ("&", "*", "!"):
         raise ValueError("an anchor, alias or tag is not read")
@@ -338,11 +341,14 @@ def _scalar(text):
     if text[:1] == "{":
         raise ValueError("a flow mapping is not read")
     if text[:1] == "[":
-        items = re.fullmatch(r"\[([^\[\]{}'\"#]*)\](?:\s+#.*)?", text)
+        items = re.fullmatch(r"\[([^\[\]{}'\"#:?]*)\](?:\s+#.*)?", text)
         if not items:
             raise ValueError("a flow list whose items are not plain is not read")
         return [_scalar(part) for part in items.group(1).split(",") if part.strip()]
-    return re.sub(r"\s#.*$", "", text).strip()
+    text = re.sub(r"\s#.*$", "", text).strip()
+    if re.search(r":(?:\s|$)", text):
+        raise ValueError("a key that is not a plain name is not read")
+    return text
 
 
 def _quoted(text):
@@ -359,8 +365,14 @@ def _quoted(text):
     return quoted.group(1).replace("''", "'") if single else quoted.group(1)
 
 
+def _item(line, indent):
+    """Whether a line holds a sequence item at `indent`: a dash, then a space or nothing, as YAML
+    reads one. `-x: y` is a key."""
+    return re.match(r"-(?: |$)", line[indent:]) is not None
+
+
 def _block(lines, at, indent, refused):
-    if lines[at][indent:].startswith("-"):
+    if _item(lines[at], indent):
         return _sequence(lines, at, indent, refused)
     return _mapping(lines, at, indent, refused)
 
@@ -369,7 +381,7 @@ def _mapping(lines, at, indent, refused):
     found = {}
     while True:
         at = _skip(lines, at)
-        if at >= len(lines) or _indent(lines[at]) != indent or lines[at][indent:].startswith("-"):
+        if at >= len(lines) or _indent(lines[at]) != indent or _item(lines[at], indent):
             return found, at
         text = lines[at][indent:]
         if ": " in text:
@@ -403,11 +415,7 @@ def _sequence(lines, at, indent, refused):
     found = []
     while True:
         at = _skip(lines, at)
-        if (
-            at >= len(lines)
-            or _indent(lines[at]) != indent
-            or not lines[at][indent:].startswith("-")
-        ):
+        if at >= len(lines) or _indent(lines[at]) != indent or not _item(lines[at], indent):
             return found, at
         body = lines[at][indent + 1 :].lstrip(" ")
         inner = len(lines[at]) - len(body)
