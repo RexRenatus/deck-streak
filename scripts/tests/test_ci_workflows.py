@@ -201,6 +201,39 @@ class WorkflowsAreHardened(unittest.TestCase):
                 "it calls",
             ],
         )
+        # A character outside printable ASCII, planted from a Python escape so no committed file
+        # holds one: each line that holds one is refused by its line, and what YAML reads there is
+        # judged as well. The checker reads a script's space as a space and its break as the end of
+        # a command, so the two kinds name a clone's command apart.
+        clone = "#||git clone https://github.com/example-org/other-repository.git"
+        planted = [(name, c, "false ", "planted ") for name, c in PLANTED_SPACES.items()]
+        planted += [(name, c, "", "") for name, c in PLANTED_BREAKS.items()]
+        for name, character, run, block in planted:
+            with self.subTest(name):
+                self.assertEqual(
+                    planted_problems(PLANTED_CHARACTERS.replace("<C>", character)),
+                    [
+                        *(
+                            f"planted.yml:line {n}: a character the reader does not read"
+                            for n in (12, 13, 14, 15, 16, 17, 19, 22)
+                        ),
+                        "planted.yml:line 15: a flow list whose items are not plain is not read",
+                        "planted.yml:line 16: a quoted value that does not end at its closing "
+                        "quote is not read",
+                        "planted.yml:line 19: a key that is not a plain name is not read",
+                        "planted.yml:jobs.build.steps[0].env.AFTER: reads the secret EXAMPLE_TOKEN",
+                        "planted.yml:jobs.build.steps[0].env.BEFORE: reads the secret "
+                        "EXAMPLE_TOKEN",
+                        "planted.yml:jobs.build.steps[0].env.COLON: reads the secret EXAMPLE_TOKEN",
+                        f"planted.yml:jobs.build.steps[0]: clones a repository: {run}{clone}",
+                        f"planted.yml:jobs.build.steps[2]: clones a repository: {block}{clone}",
+                    ],
+                )
+        # A line the reader cannot place refuses the whole file at once, naming the line and why.
+        for form, (template, why) in PLANTED_UNPLACED_CHARACTERS.items():
+            for name, character in {**PLANTED_SPACES, **PLANTED_BREAKS}.items():
+                with self.subTest(f"{form}: {name}"), self.assertRaisesRegex(AssertionError, why):
+                    planted_problems(template.replace("<C>", character))
 
     def test_this_repositorys_token_and_checkout_are_admitted(self):
         problems, judged = secret_and_checkout_problems(PLANTED / "admitted")
@@ -1224,6 +1257,92 @@ class TheEngineSetRunsInSlices(unittest.TestCase):
 # The planted workflows: those the checker refuses (A10) and those it admits (A11).
 PLANTED = REPO / "scripts" / "tests" / "fixtures" / "secrets-and-checkouts"
 PLANTED_HARDENING = REPO / "scripts" / "tests" / "fixtures" / "workflow-hardening"
+# The characters the reader refuses (SPEC-034 R7), which A10 plants at test time from these escapes,
+# so no committed file holds one: white space that YAML reads as text, and characters that end a
+# line of a script where YAML reads none.
+PLANTED_SPACES = {
+    "no-break space": "\xa0",
+    "em space": "\N{EM SPACE}",
+    "narrow no-break space": "\N{NARROW NO-BREAK SPACE}",
+    "ideographic space": "\N{IDEOGRAPHIC SPACE}",
+}
+PLANTED_BREAKS = {
+    "form feed": "\x0c",
+    "line tabulation": "\x0b",
+    "file separator": "\x1c",
+    "group separator": "\x1d",
+    "record separator": "\x1e",
+    "next line": "\x85",
+    "line separator": "\N{LINE SEPARATOR}",
+    "paragraph separator": "\N{PARAGRAPH SEPARATOR}",
+}
+# A planted job's first lines; its steps follow.
+PLANTED_JOB = """\
+name: planted
+on:
+  pull_request:
+    branches: [dev]
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+"""
+# A planted workflow whose lines each hold <C>, one of the characters above: a secret or a clone
+# that YAML reads there, beside a flow list, a quoted value and a key that the character leaves
+# unread. The names are synthetic.
+PLANTED_CHARACTERS = (
+    PLANTED_JOB
+    + """\
+      - env:
+          AFTER: planted<C>#${{ secrets.EXAMPLE_TOKEN }}
+          BEFORE: <C>*${{ secrets.EXAMPLE_TOKEN }}
+          COLON: ${{ secrets.EXAMPLE_TOKEN }}:<C>
+          LISTED: [planted]<C># planted
+          QUOTED: 'planted'<C># ${{ secrets.EXAMPLE_TOKEN }}
+        run: false<C>#||git clone https://github.com/example-org/other-repository.git
+      - name: planted
+        run<C>: git clone https://github.com/example-org/other-repository.git
+      - run: |
+          echo planted
+          planted<C>#||git clone https://github.com/example-org/other-repository.git
+"""
+)
+# Planted workflows with a line the reader cannot place, and the refusal each raises: a continuation
+# line that begins with <C>, and a line of <C> alone in a mapping and in a block.
+PLANTED_UNPLACED_CHARACTERS = {
+    "a continuation": (
+        PLANTED_JOB
+        + """\
+      - env:
+          CONTINUED: planted
+            <C># ${{ secrets.EXAMPLE_TOKEN }}
+        run: echo planted
+""",
+        r"^line 13 was not read",
+    ),
+    "a line in a mapping": (
+        PLANTED_JOB
+        + """\
+      - env:
+          PLANTED: planted
+          <C>
+        run: echo planted
+""",
+        r"^line 13 is not a mapping entry",
+    ),
+    "a line in a block": (
+        PLANTED_JOB
+        + """\
+      - run: |
+          echo planted
+<C>
+          git clone https://github.com/example-org/other-repository.git
+""",
+        r"^line 13 is not a mapping entry",
+    ),
+}
 # The secrets context in an expression, in any case: `secrets.NAME` (group 1), `secrets['NAME']`
 # (group 2), or the context whole, which names no secret: `toJSON(secrets)`, `secrets.*`, or an
 # index computed at run time.
@@ -1347,6 +1466,14 @@ def secret_and_checkout_problems(directory):
                     judged["run steps"].append(where)
                     problems += [f"{where}: {reach}" for reach in reaches(str(step["run"]))]
     return problems, judged
+
+
+def planted_problems(text):
+    """What the checker finds in one planted workflow, written to a scratch directory at test time
+    (SPEC-034 A10)."""
+    with tempfile.TemporaryDirectory() as scratch:
+        (Path(scratch) / "planted.yml").write_text(text, encoding="utf-8")
+        return secret_and_checkout_problems(Path(scratch))[0]
 
 
 if __name__ == "__main__":
