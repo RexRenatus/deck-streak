@@ -41,6 +41,44 @@ def security_calls():
         return log.read_text(encoding="utf-8").splitlines() if log.exists() else []
 
 
+def settings_calls():
+    """The gh calls `github-setup.sh settings` makes, against the same recording stand-in."""
+    with tempfile.TemporaryDirectory() as tmp:
+        fake = Path(tmp) / "gh"
+        fake.write_text(FAKE_GH, encoding="utf-8")
+        fake.chmod(fake.stat().st_mode | stat.S_IXUSR)
+        log = Path(tmp) / "calls.log"
+        path = f"{tmp}:{os.environ['PATH']}"
+        env = dict(os.environ, PATH=path, FAKE_GH_LOG=str(log), REPO="owner/name")
+        done = subprocess.run(
+            ["bash", str(SETUP), "settings"],
+            env=env,
+            stdin=subprocess.DEVNULL,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=60,
+        )
+        if done.returncode != 0:
+            raise AssertionError(f"github-setup.sh settings failed: {done.stdout}{done.stderr}")
+        return log.read_text(encoding="utf-8").splitlines() if log.exists() else []
+
+
+class TheSettingsKeepBranchMessagesOutOfASquash(unittest.TestCase):
+    def test_a_squash_takes_the_pull_request_title_and_a_blank_body(self):
+        # A squash's default body copies every branch commit's message into the base branch, so a
+        # message a later commit replaced would still land. The title comes from the pull request
+        # and the body starts blank; a merge that wants a body passes one.
+        calls = [
+            call for call in settings_calls() if call.startswith("api -X PATCH repos/owner/name")
+        ]
+        self.assertEqual(len(calls), 1, calls)
+        fields = calls[0].split()
+        self.assertIn("squash_merge_commit_title=PR_TITLE", fields)
+        self.assertIn("squash_merge_commit_message=BLANK", fields)
+        self.assertNotIn("squash_merge_commit_message=COMMIT_MESSAGES", fields)
+
+
 class TheSecuritySetupKeepsTheWorkflowWhole(unittest.TestCase):
     def test_the_security_setup_turns_automated_security_fixes_off_and_never_on(self):
         calls = examined("gh call(s)", security_calls())
