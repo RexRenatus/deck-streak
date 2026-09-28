@@ -5,8 +5,9 @@
   (side by side: DeckStreak sends only kinds the predecessor does not), ADR-012 (the parity oracle),
   and ADR-041 (the surface rule, the pulled in-app feed, the lapse input and the `reading_ready`
   kind).
-- **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
-  `docs/specs/` with its tests and `docs/red-first/SPEC-041.md` (ADR-016).
+- **Status:** delivered with its tests, its hand-proved rows and `docs/red-first/SPEC-041.md`
+  (ADR-016). The delivery re-planned its criteria over pack rows and settled what the SPEC left open
+  (§7).
 
 ## 1. The problem, measured
 
@@ -170,14 +171,18 @@ the verdict of a run with that wiring is posted as the `box/packs` status at the
 | `crates/notifications/tests/ui/push_outside_the_router.rs`, `.stderr` | `deck-streak-notifications` | added: A2's compile-fail fixture and the refusal it records |
 | `crates/notifications/tests/support/mod.rs` | `deck-streak-notifications` | added: the tests' database, clock and recording transport |
 | `crates/bot/src/transport.rs` | `deck-streak-bot` | changed: implements the bot transport calls |
+| `crates/bot/src/lib.rs` | `deck-streak-bot` | changed: exports the owner's chat, the port's implementation |
+| `crates/bot/tests/transport.rs` | `deck-streak-bot` | changed: the router's pushes reach the owner's chat through the bot's transport |
 | `crates/api/src/notifications_routes.rs` | `deck-streak-api` | added: the feed route |
 | `crates/api/src/router.rs`, `crates/api/src/lib.rs` | `deck-streak-api` | changed: mounts the feed route |
+| `crates/api/src/session_routes.rs` | `deck-streak-api` | changed: the owner's access lends its clock to the feed route |
 | `crates/api/tests/notifications_feed.rs` | `deck-streak-api` | added |
 | `crates/coordination/src/sync_cycle.rs` | `deck-streak-coordination` | changed: the flush step after a successful sync |
+| `crates/coordination/tests/flush_step.rs` | `deck-streak-coordination` | added: a successful sync flushes, a failed one does not |
 | `crates/coordination/src/data_rights_registry.rs` | `deck-streak-coordination` | changed: registers the notifications port (SPEC-021's rule) |
 | `crates/coordination/tests/data_rights_symmetry.rs` | `deck-streak-coordination` | changed: a seeded row in each notifications table (SPEC-021's rule) |
 | `crates/daemon/src/wiring.rs` | `deck-streak-daemon` | changed: the bot transport joined to the router |
-| `crates/daemon/src/role_bot.rs`, `crates/daemon/src/role_job.rs` | `deck-streak-daemon` | changed: each role's sync cycle carries its router's flush |
+| `crates/daemon/src/role_bot.rs` | `deck-streak-daemon` | changed: reads the compiled policy at start, and the owner's sync flushes the router joined to the role's transport |
 | `notifications-policy.json` | repo | changed: the `reading_ready` kind and its deviation |
 | the box-run packs' private wiring (ADR-069) | the maintainer's | changed: `one-router` is no longer deferred |
 | `tools/parity-oracle/registry/spec_041.py` | repo | added: registers `quiet_hours.py:in_quiet_hours` (SPEC-029's registry) |
@@ -279,8 +284,14 @@ the verdict of a run with that wiring is posted as the `box/packs` status at the
   every switch shares. An absent key is the policy's default.
 - **R12: before the database opens.** The feed route answers 503 until the API's database is open,
   as readiness does.
-- **R13: the roles.** The bot role joins its transport to the router its owner's `/sync` flushes
-  through. The job role's scheduled cycle flushes through a router with no bot transport, which
-  does nothing until the first job that sends joins the transport (#39).
+- **R13: the roles.** The bot role reads the compiled policy at start and joins its transport to the
+  router its owner's `/sync` flushes. The job role's scheduled cycle carries no router yet: a flush
+  without a bot transport would do nothing, and the first job that sends joins one (#39).
 - **The port's name.** Notifications' data-rights port is `crates/notifications/src/data_rights.rs`,
   not `rights.rs`: `privacy.json`'s export and erase globs read that name (SPEC-021's rule).
+- **The manifest.** SPEC-021's rule adds the ports' registry, the symmetry probe's seeds and
+  `PRIVACY.md`. The feed route reads the time through the owner's access (`session_routes.rs`). The
+  bot exports its side of the port (`lib.rs`), and its transport's tests prove the join, since only
+  the router can make a push. The flush step has its own coordination test. A2 adds its test, its
+  compile-fail fixture and the refusal it records; the router's tests share one support module; and
+  the delivery adds its rows' band and its changelog fragment.

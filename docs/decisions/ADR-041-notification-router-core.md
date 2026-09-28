@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 date: "2026-09-27"
 decision-makers: "@RexRenatus (owner), the DeckStreak architect"
 ---
@@ -61,13 +61,6 @@ budgets and the holdout wait for the engagement wave.
 SPEC-041's tests and the notifications-policy pack's rows (`one-router`, `policy-deviation-has-adr`)
 in the gate; `notifications-policy.json`'s `deviations` entry citing this ADR.
 
-## What would make this wrong
-
-- The owner reports celebrations arriving in the bot while the app is open often enough to matter
-  (then a presence rule earns its constant).
-- The engagement wave's morning brief carries the readings line itself (then `reading_ready` is
-  retired and the deviation removed).
-
 ### Decided at delivery (SPEC-041 §7)
 
 The delivery decided each question the SPEC left open against its alternatives:
@@ -102,6 +95,13 @@ The delivery decided each question the SPEC left open against its alternatives:
 - **The owner's quiet window and switches are rows of `notification_settings`:** the predecessor's
   `quiet_start_min` and `quiet_end_min`, and a switch off at `"0"`. Chosen against new names, which
   the import of the predecessor's settings would have to translate.
+
+## What would make this wrong
+
+- The owner reports celebrations arriving in the bot while the app is open often enough to matter
+  (then a presence rule earns its constant).
+- The engagement wave's morning brief carries the readings line itself (then `reading_ready` is
+  retired and the deviation removed).
 
 ## More Information
 
