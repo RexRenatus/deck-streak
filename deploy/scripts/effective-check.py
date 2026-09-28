@@ -38,7 +38,9 @@ import json
 import re
 import shlex
 import sys
+from datetime import UTC, datetime
 from pathlib import Path, PurePosixPath
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 SCHEMA = "deckstreak.rail-contract.v1"
 CONTRACT = Path("deploy") / "rail-contract.json"
@@ -87,6 +89,14 @@ SECRET_NAME = re.compile(
 )
 # Keys whose value can hold a secret: a refusal names the key alone.
 SECRET_BEARING = frozenset({"Environment", "SetCredential", "SetCredentialEncrypted"})
+# A specifier systemd expands in a value, `%` and a letter; `%%` is a literal percent. Only the
+# unit's own names are left to systemd, `%i` (the instance), `%n` and `%N` (the unit's name), none
+# of which holds a slash; every other expands to a path, a user or a host value this check cannot
+# see, and could spell a neutral value (`%E` is /etc to the system manager).
+SPECIFIER = re.compile(r"%(?:%|([A-Za-z]))")
+UNIT_NAMES = frozenset("inN")
+# A `..` segment, which systemd keeps in a command's path and the kernel then follows.
+UP_LEVEL = re.compile(r"(?:^|[/\s])\.\.(?:[/\s]|$)")
 NAME = re.compile(r"^[A-Za-z][A-Za-z0-9-]*$")
 INSTANCE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 DROP_IN = re.compile(r"^[0-9]{2}-[a-z0-9-]+\.conf$")
@@ -158,11 +168,46 @@ def shown(key, value):
     return f"{key}=" if key in SECRET_BEARING else f"{key}={value}"
 
 
+def path_view(value):
+    """The value as systemd resolves the paths in it, to find a neutral one: quotes removed, and
+    repeated slashes and `.` segments collapsed (measured with `systemd-analyze verify`)."""
+    view = re.sub(r"/+", "/", value.replace('"', "").replace("'", ""))
+    while "/./" in view:
+        view = view.replace("/./", "/")
+    return re.sub(r"/\.(?=\s|$)", "", view)
+
+
+def zone_offsets(zone):
+    """The zone's offsets from UTC across a year, as the tz database has them, or None when this
+    check cannot read the zone."""
+    try:
+        info = ZoneInfo(zone)
+    except (ValueError, ZoneInfoNotFoundError, OSError):
+        return None
+    moments = (datetime(2025, month, 15, 12, tzinfo=UTC) for month in range(1, 13))
+    return {moment.astimezone(info).utcoffset() for moment in moments}
+
+
+def calendar_zone(value, neutral_zone):
+    """How systemd reads a calendar's zone, its last word (`systemd-analyze calendar`): "neutral"
+    when it fires at the neutral zone's instants all year (systemd reads ` UTC` in any case, and a
+    zone that keeps a zero offset fires at UTC's instants), "none" when it names no zone this check
+    can read, so that it fires in the host's own zone or one this check cannot compare, and None
+    for a zone of its own."""
+    if value.lower().endswith(" " + neutral_zone.lower()):
+        return "neutral"
+    offsets = zone_offsets(value.rpartition(" ")[2]) if " " in value else None
+    if offsets is None:
+        return "none"
+    return "neutral" if offsets == zone_offsets(neutral_zone) else None
+
+
 def carries_neutral(key, value, neutral):
-    """Whether a value still holds one of the contract's neutral values."""
-    if neutral["release_root"] in value or neutral["environment_file"] in value:
+    """Whether a value still holds one of the contract's neutral values, as systemd resolves it."""
+    view = path_view(value)
+    if neutral["release_root"] in view or neutral["environment_file"] in view:
         return True
-    return key == "OnCalendar" and value.split()[-1:] == [neutral["time_zone"]]
+    return key == "OnCalendar" and calendar_zone(value, neutral["time_zone"]) == "neutral"
 
 
 def load_contract(root):
@@ -273,10 +318,16 @@ def credential_refusal(key, value, socket):
 
 
 def spelling_refusal(key, value):
-    """A value written in a form systemd reads otherwise than this check: a backslash escape,
-    which systemd decodes by key (in quotes too), and this check never guesses at."""
+    """A value written in a form this check cannot read as systemd resolves it (SPEC-061 §8): a
+    backslash escape, which systemd decodes by key, in quotes too; a `..` segment, which the kernel
+    follows; and a specifier other than the unit's own names."""
     if "\\" in value:
         return f"{key}= is written with a backslash escape, which systemd decodes by key"
+    if UP_LEVEL.search(value):
+        return f"{key}= holds a `..` segment, which the kernel follows"
+    for match in SPECIFIER.finditer(value):
+        if match.group(1) and match.group(1) not in UNIT_NAMES:
+            return f"{key}= names the specifier %{match.group(1)}, which this check cannot expand"
     return None
 
 
@@ -342,10 +393,15 @@ def judge(unit_file, dropins, contract):
         for value in values:
             if value in in_force.get((section, key), []):
                 refuse(f"neutral value left in force: [{section}] {shown(key, value)}")
+    zone = contract["neutral"]["time_zone"]
     for (section, key), values in in_force.items():
         for value in values:
             if carries_neutral(key, value, contract["neutral"]):
                 refuse(f"neutral value left in force: [{section}] {shown(key, value)}")
+            elif key == "OnCalendar" and calendar_zone(value, zone) == "none":
+                refuse(
+                    f"a calendar that names no zone this check can read: [{section}] {key}={value}"
+                )
     return refusals
 
 
