@@ -769,6 +769,16 @@ class TheApiKeyHelperScanRunsOnTheBox(unittest.TestCase):
         line = pack_line(done.stdout, "no-apikeyhelper")
         self.assertTrue(line.startswith("FAIL"), line)
         self.assertIn("pending (#29 is closed)", line)
+        # A settings file at a path the removed gate step scanned, which the scan finds none of, is
+        # VOID and fails the run: it is never read as pending.
+        write(box.repo, {"agent/settings.json": '{"env": {}}\n'})
+        commit(box.repo, "a settings file the scan does not find")
+        done, _ = box.run()
+        line = pack_line(done.stdout, "no-apikeyhelper")
+        self.assertTrue(line.startswith("FAIL"), line)
+        self.assertIn("VOID", line)
+        self.assertIn("agent/settings.json", line)
+        self.assertEqual(done.returncode, 1, done.stdout)
         # The private file must name the scan's script.
         del box.wiring["scripts"]["no-apikeyhelper"]
         box.save()
