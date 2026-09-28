@@ -80,7 +80,8 @@ R2. `crates/ingest/src/review_reads.rs` reads, from the private copy and read-on
     its card, note, note type and ordinal; each study event's id, ease, last interval and type; the
     lateness bands' counts and passes; the in-band review-type answers and passes of each home deck;
     and the presets, the deck kinds and each home deck's card count. Each read returns its rows and
-    the name of every read that failed.
+    the name of every read that failed, and the preset and deck reads follow SPEC-094 R4's rule for
+    `unicase` name columns.
 R3. The lateness read bands each answer against its card's previous review over the whole scoped log,
     equal to `goldens/lateness_rows.json` (`bench2.py:read_lateness_rows` over a synthetic
     collection), so the first answer inside the window is never read as having no prior.

@@ -94,7 +94,9 @@ R4. `crates/ingest/src/structure.rs` reads, from the private copy and read-only:
     note type, ordinal, names and front and back formats; each note type's declared fields; the set
     of reviewed note ids; and each field's count of reviewed notes with content, 400 notes at a
     time. Each read returns its rows and the name of every read that failed, and keeps SPEC-023's
-    scope: only note types of cards in scope are read.
+    scope: only note types of cards in scope are read. Anki collates the name columns of templates,
+    fields and note types `unicase`; as SPEC-023's read does, no read registers a collation or
+    orders, groups or seeks on such a column, so a full scan is complete without it.
 R5. Every name a read returns has its control characters replaced before it leaves ingest, equal to
     `goldens/safe_name.json` (`darkfields.py:_safe_name`).
 
