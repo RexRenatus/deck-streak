@@ -54,8 +54,10 @@ The packs built into phxd run on the maintainer's box with `scripts/box-packs.sh
 wiring's `box` section names every red row expected on the tree with the open issue that builds its
 subject. A red row it does not name fails the run, and a named row that is no longer red is refused
 as stale. A pack that examines nothing reads `pending` with its issue, and is never reported green.
-The runner's own tests drive it with a fake phxd (`scripts/tests/test_box_packs.py`), so they run in
-CI.
+Before any pack runs, the runner reads each named issue's state with `gh`: an expectation whose
+issue is closed is stale, and a run that cannot read an issue's state is VOID, never green
+(SPEC-054). The runner's own tests drive it with a fake phxd and a fake `gh`
+(`scripts/tests/test_box_packs.py`), so they run in CI.
 
 ## Continuous integration
 
