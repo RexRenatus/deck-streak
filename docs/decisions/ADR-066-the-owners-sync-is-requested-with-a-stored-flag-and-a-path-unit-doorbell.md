@@ -19,7 +19,7 @@ owner asked, when the runner claims only scheduled fires?
 - ADR-037: one scheduled sync per study day, the owner's explicit triggers, no new schedule.
 - `systemd.path(5)`: `PathChanged=` fires on close after write and is edge triggered.
 
-## Considered Options
+## Considered Options (the alternatives it was chosen against)
 
 - Raise the bot's memory limit. Rejected: the bot then holds a sync's memory all day for one
   command, and the host budget has no room for it.
