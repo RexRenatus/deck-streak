@@ -3,7 +3,7 @@ apply that deletes only what the owner approved, all or nothing (SPEC-060; ADR-0
 
 Every test builds a synthetic host in a `TemporaryDirectory` at run time, with stub commands first
 on the tools' `PATH`, each recording its argument vector there, so no fixture holds a real path,
-size or name and no test reads the machine it runs on (SPEC-060 section 3). The expected digests are
+size or name and no test runs a real command (SPEC-060 section 3). The expected digests are
 computed here from the form SPEC-060 R4 and `docs/schematics/host-scrub.md` give, never read from
 the tools. Every enumerating test prints `examined N` and refuses zero, and every absence it asserts
 is paired with a positive one.
@@ -586,6 +586,13 @@ class Plan(unittest.TestCase):
             )
             self.assertEqual(tree(host.root), before)
             self.assertEqual(tree(host.outside), outside)
+            # Rules other than the ones the inventory read are refused, and no list is written.
+            other = host.rules("other.json", protected=[str(host.apps)])
+            refused = host.private / "refused-list.json"
+            done = host.run("plan.py", host.private / "inventory.json", other, "--out", refused)
+            self.assertEqual(done.returncode, 1, said(done))
+            self.assertIn("not the ones the inventory read", said(done))
+            self.assertFalse(refused.exists())
 
 
 class Apply(unittest.TestCase):
@@ -608,6 +615,24 @@ class Apply(unittest.TestCase):
                 self.assertIn("does not carry the list's digest", said(done))
             log = json.loads((host.private / "apply-log.json").read_text())
             self.assertIn("does not carry the list's digest", log["refused"]["reason"])
+            # An approval without its approver, its date or ids the list holds is refused.
+            for changes, reason in (
+                ({"approver": " "}, "names no approver"),
+                ({"date": "not a date"}, "date is not a date"),
+                ({"items": ["i999"]}, "i999, which the list does not hold"),
+            ):
+                done = host.apply(list_path, host.approve(listing, ids, **changes), "--apply")
+                self.assertEqual(tree(host.root), before)
+                self.assertEqual(done.returncode, 1, said(done))
+                self.assertIn(reason, said(done))
+            # A list edited after it was made no longer matches the digest it carries.
+            first = dict(listing["items"][0], path=str(host.apps / "keep.py"))
+            edited = dict(listing, items=[first, *listing["items"][1:]])
+            list_path.write_text(json.dumps(edited))
+            done = host.apply(list_path, host.approve(edited, ids), "--apply")
+            self.assertEqual(tree(host.root), before)
+            self.assertEqual(done.returncode, 1, said(done))
+            self.assertIn("the list changed after it was made", said(done))
 
     def test_apply_deletes_exactly_the_approved_items_or_nothing(self):
         with tempfile.TemporaryDirectory() as scratch:
@@ -658,6 +683,37 @@ class Apply(unittest.TestCase):
                     self.assertTrue(os.path.lexists(item["path"]), item["path"])
             log = json.loads((host.private / "apply-log.json").read_text())
             self.assertEqual(sorted(entry["id"] for entry in log["deleted"]), sorted(ids))
+        with tempfile.TemporaryDirectory() as scratch:
+            host = Host(scratch)
+            listing, list_path = host.plan()
+            package = by_path(listing)["example-unused-tool:amd64"]["id"]
+            approval = host.approve(listing, [package])
+            # A package whose version changed since the list is refused before any removal.
+            host.scenario["packages"][0][2] = "1.0-2"
+            host.write_scenario()
+            done = host.apply(list_path, approval, "--apply")
+            self.assertEqual(done.returncode, 1, said(done))
+            self.assertIn(f"{package} ", said(done))
+            self.assertIn("digest changed", said(done))
+            # A package dpkg would not remove alone is refused before any removal.
+            host.scenario["packages"][0][2] = "1.0-1"
+            host.scenario["dpkg_exit"] = {"example-unused-tool:amd64": 2}
+            host.write_scenario()
+            done = host.apply(list_path, approval, "--apply")
+            self.assertEqual(done.returncode, 1, said(done))
+            self.assertIn("would not be removed alone", said(done))
+            removals = [c for c in host.calls() if c[0] == "dpkg" and "--dry-run" not in c]
+            self.assertEqual(removals, [])
+            # The unchanged package that removes alone is removed by dpkg, and nothing else is.
+            host.scenario["dpkg_exit"] = {}
+            host.write_scenario()
+            done = host.apply(list_path, approval, "--apply")
+            self.assertEqual(done.returncode, 0, said(done))
+            self.assertIn(
+                ["dpkg", "--dry-run", "--remove", "example-unused-tool:amd64"], host.calls()
+            )
+            removals = [c for c in host.calls() if c[0] == "dpkg" and "--dry-run" not in c]
+            self.assertEqual(removals, [["dpkg", "--remove", "example-unused-tool:amd64"]])
 
     def test_apply_refuses_an_approval_without_a_later_snapshot(self):
         with tempfile.TemporaryDirectory() as scratch:
@@ -688,6 +744,29 @@ class Apply(unittest.TestCase):
                         snapshot={"name": "", "taken_at": taken.isoformat()},
                     ),
                     "names no snapshot",
+                ),
+                (
+                    host.approve(
+                        listing,
+                        ids,
+                        "same.json",
+                        snapshot={"name": "example-pre-scrub", "taken_at": taken.isoformat()},
+                    ),
+                    "taken before the inventory",
+                ),
+                (
+                    host.approve(
+                        listing,
+                        ids,
+                        "naive.json",
+                        snapshot={
+                            "name": "example-pre-scrub",
+                            "taken_at": (taken + timedelta(hours=1))
+                            .replace(tzinfo=None)
+                            .isoformat(),
+                        },
+                    ),
+                    "carries no offset",
                 ),
             )
             for approval, reason in cases:
@@ -858,6 +937,23 @@ class PrivateByConstruction(unittest.TestCase):
             "/usr/local/lib/deck-streak",
         ):
             self.assertIn(path, example["protected"])
+        # The example is a whole rules file, which the tools' own reader accepts.
+        done = subprocess.run(
+            [
+                sys.executable,
+                "-c",
+                "import sys, inventory; r = inventory.load_rules(sys.argv[1]); "
+                "print(sorted({x['class'] for x in r['rules']}), len(r['health']))",
+                str(EXAMPLE_RULES),
+            ],
+            cwd=TOOLS,
+            capture_output=True,
+            text=True,
+            check=False,
+            env=dict(os.environ, PYTHONDONTWRITEBYTECODE="1"),
+        )
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        self.assertIn("['backup', 'environment', 'loose', 'package'] 2", done.stdout)
         # A planted private value in a rules file is refused by name and line, never echoed.
         home = "/".join(["", "home", "scrub" + "keeper", "backups"])
         address = ".".join(str(octet) for octet in (10, 24, 36, 48))
