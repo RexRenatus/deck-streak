@@ -157,9 +157,10 @@ four. The 24th, F5, which stops the walk under a matching key, survived, and fix
 
 Fix round 3 judges every step inside a `parallel` block and refuses a checkout whose inputs are not
 a mapping. It also kills the three hand mutants that survived above and pins two more. `dev` had not
-moved since 07322ae merged it. SPEC-034's inserted text was corrected first, at 6533809. No
-criterion was added, so the fences above are unchanged, and this round's runs are listed here. Each
-fix was committed red, then green.
+moved since 07322ae merged it. SPEC-034's inserted text was corrected first, at 6533809, and its
+note of A10's block plants was made exact at c31ae47, after the plants. No criterion was added, so
+the fences above are unchanged, and this round's runs are listed here. Each fix was committed red,
+then green.
 
 - A10 red at 0b7f5b6: `AssertionError: Lists differ`: the checker walked a job's steps only, so
   three steps planted inside a `parallel` block, one of them two blocks deep, were not judged.
