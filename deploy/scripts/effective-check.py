@@ -56,6 +56,14 @@ OTHER_SOURCES = (
     "SetCredentialEncrypted",
     "ImportCredential",
 )
+# systemd's own reading of a unit file (conf-parser.c, and read_line() in fileio.c), measured with
+# `systemd-analyze verify` (SPEC-061 §8): a line ends at a newline, a carriage return or a NUL, and
+# a newline and a carriage return in either order, a NUL perhaps after them, end one line; a blank
+# is a space, a tab, a newline or a carriage return, nothing else; a line whose first non-blank
+# character is `#` or `;` is a comment, inside a continued line too; and a line that ends in an odd
+# run of backslashes goes on in the next, its last backslash read as a space.
+BLANK = " \t\n\r"
+LINE_END = re.compile(r"\n\r?\0?|\r\n?\0?|\0")
 # A `systemctl cat` file header: `# ` and the absolute path of the file that follows it.
 HEADER = re.compile(r"^# (/\S+)$")
 # A variable whose name says it carries a secret: SPEC-032's pattern (scripts/tests/_units.py),
@@ -76,38 +84,50 @@ class Unjudgeable(Exception):
     """The contract or the input cannot be read, so nothing was judged."""
 
 
+def physical_lines(text):
+    """The file's lines, ended as systemd's read_line() ends them."""
+    lines = LINE_END.split(text)
+    if lines[-1] == "":
+        lines.pop()
+    return lines
+
+
 def logical_lines(text):
-    """systemd.syntax(7): a trailing backslash joins the next line, a comment line inside the join
-    is skipped, and each logical line keeps the number it started on."""
-    pending, start = [], 0
-    for number, raw in enumerate(text.splitlines(), start=1):
-        stripped = raw.strip()
-        if pending and stripped.startswith(("#", ";")):
+    """(number, line) for each line systemd parses: comments skipped, continued lines joined,
+    blanks stripped, each numbered by the line it starts on."""
+    pending, start = None, 0
+    for number, raw in enumerate(physical_lines(text), start=1):
+        if raw.lstrip(BLANK)[:1] in ("#", ";"):
             continue
-        if not pending:
-            start = number
-        if stripped.endswith("\\"):
-            pending.append(stripped[:-1])
+        if pending is None:
+            pending, start = "", number
+        pending += raw
+        if (len(pending) - len(pending.rstrip("\\"))) % 2:
+            pending = pending[:-1] + " "
             continue
-        pending.append(stripped)
-        yield start, " ".join(part for part in pending if part).strip()
-        pending = []
-    if pending:
-        yield start, " ".join(pending).strip()
+        yield start, pending.strip(BLANK)
+        pending = None
+    if pending is not None:
+        yield start, pending.strip(BLANK)
 
 
-def assignments(text):
-    """Every `Key=Value` of one file, as (section, key, value), in order."""
+def read_unit(text, unit):
+    """Every assignment of one file of `unit` as systemd reads it, as (line, section, key, value),
+    and each construct systemd could read otherwise, as (line, reason): a byte-order mark, which
+    systemd skips where it first finds one."""
+    found, unread = [], []
+    for number, raw in enumerate(physical_lines(text), start=1):
+        if "\ufeff" in raw:
+            unread.append((number, "a byte-order mark, which systemd skips"))
     section = None
-    for _, line in logical_lines(text):
-        if not line or line.startswith(("#", ";")):
-            continue
+    for number, line in logical_lines(text):
         if line.startswith("[") and line.endswith("]"):
-            section = line[1:-1].strip()
+            section = line[1:-1].strip(BLANK)
             continue
         key, equals, value = line.partition("=")
         if equals:
-            yield section, key.strip(), value.strip()
+            found.append((number, section, key.strip(BLANK), value.strip(BLANK)))
+    return found, unread
 
 
 def shown(key, value):
@@ -182,32 +202,38 @@ def unit_of(row):
 
 
 def files_of(text):
-    """Each file of a `systemctl cat` output, in order, as (path, text). A header opens a file at
-    the start of the output or after a blank line, where systemctl prints one."""
+    """Each file of a `systemctl cat` output, in order, as (path, text, glued). systemctl prints a
+    file's `# <path>` line at the start of the output, or after an empty line when the file before
+    it ends in a newline. A header-shaped line elsewhere is kept in its file and named in `glued`:
+    either the file before it has no final newline or it is that file's own comment, and the two
+    cannot be told apart. The output is split at newlines alone, since the files' own line ends are
+    systemd's to read."""
     files, blank = [], True
-    for number, raw in enumerate(text.splitlines(), start=1):
+    for number, raw in enumerate(text.split("\n"), start=1):
         match = HEADER.match(raw)
         if match and blank:
-            files.append((match.group(1), []))
+            files.append((match.group(1), [], []))
         elif files:
             files[-1][1].append(raw)
-        elif raw.strip():
+            if match:
+                files[-1][2].append(match.group(1))
+        elif raw:
             raise Unjudgeable(f"line {number} comes before the first file's `# <path>` line")
-        blank = not raw.strip()
-    return [(path, "\n".join(lines)) for path, lines in files]
+        blank = raw == ""
+    return [(path, "\n".join(lines), glued) for path, lines, glued in files]
 
 
 def units_of(files):
     """The files grouped by unit, as (unit file, drop-ins): a file whose directory ends in `.d` is
     a drop-in of the unit whose file came before it."""
     units = []
-    for path, text in files:
-        if PurePosixPath(path).parent.name.endswith(".d"):
+    for file in files:
+        if PurePosixPath(file[0]).parent.name.endswith(".d"):
             if not units:
-                raise Unjudgeable(f"{path} is a drop-in shown before any unit's file")
-            units[-1][1].append((path, text))
+                raise Unjudgeable(f"{file[0]} is a drop-in shown before any unit's file")
+            units[-1][1].append(file)
         else:
-            units.append(((path, text), []))
+            units.append((file, []))
     return units
 
 
@@ -237,7 +263,7 @@ def environment_refusals(value):
 
 def judge(unit_file, dropins, contract):
     """Every refusal for one unit, each once, in the order found."""
-    path, _ = unit_file
+    path = unit_file[0]
     name = PurePosixPath(path).name
     own = str(PurePosixPath(path).parent / f"{name}.d" / contract["drop_in"])
     refusals = []
@@ -248,10 +274,15 @@ def judge(unit_file, dropins, contract):
             refusals.append(line)
 
     in_force = {}
-    for source, text in [unit_file, *dropins]:
+    for source, text, glued in [unit_file, *dropins]:
         if source not in (path, own):
             refuse(f"a drop-in that is not the rail's: {source}")
-        for section, key, value in assignments(text):
+        for header in glued:
+            refuse(f"a file header not after an empty line: {header}")
+        found, unread = read_unit(text, name)
+        for number, reason in unread:
+            refuse(f"{source}:{number}: {reason}; the check refuses what systemd reads otherwise")
+        for _, section, key, value in found:
             if not value:
                 # An empty assignment resets the key's list (systemd.unit(5), drop-ins).
                 in_force[(section, key)] = []
@@ -304,11 +335,14 @@ def census(root, contract):
             (path.name, drop) for drop in sorted((path.parent / f"{path.name}.d").glob("*.conf"))
         ]
     sources += [(optional_unit(p.name), p) for p in sorted(deploy.glob("optional/*/*.conf"))]
-    carried, files, lines = {}, 0, 0
+    carried, unreadable, files, lines = {}, [], 0, 0
     for unit, path in sources:
-        text = path.read_text(encoding="utf-8")
-        files, lines = files + 1, lines + len(text.splitlines())
-        for section, key, value in assignments(text):
+        text = path.read_bytes().decode("utf-8")
+        files, lines = files + 1, lines + len(physical_lines(text))
+        found, unread = read_unit(text, unit)
+        where = path.relative_to(root).as_posix()
+        unreadable += [f"REFUSE: {unit}: {where}:{number}: {reason}" for number, reason in unread]
+        for _, section, key, value in found:
             if value and carries_neutral(key, value, contract["neutral"]):
                 carried.setdefault((unit, section, key, value), None)
     named = {
@@ -317,7 +351,7 @@ def census(root, contract):
         for section, key, values in listed
         for value in values
     }
-    refusals = [
+    refusals = unreadable + [
         f"REFUSE: {unit}: the contract does not name [{section}] {shown(key, value)}"
         for unit, section, key, value in carried
         if (unit, section, key, value) not in named
@@ -340,13 +374,13 @@ def census(root, contract):
 def read_outputs(names):
     texts = []
     for name in names or ["-"]:
-        if name == "-":
-            texts.append(sys.stdin.read())
-        else:
-            try:
-                texts.append(Path(name).read_text(encoding="utf-8"))
-            except OSError as error:
-                raise Unjudgeable(f"{name}: {error.strerror}") from None
+        try:
+            data = sys.stdin.buffer.read() if name == "-" else Path(name).read_bytes()
+            texts.append(data.decode("utf-8"))
+        except OSError as error:
+            raise Unjudgeable(f"{name}: {error.strerror}") from None
+        except UnicodeDecodeError:
+            raise Unjudgeable(f"{name}: not UTF-8") from None
     return texts
 
 
