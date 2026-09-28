@@ -667,11 +667,12 @@ class Apply(unittest.TestCase):
             before = tree(host.root)
             taken = datetime.fromisoformat(listing["inventory"]["taken_at"])
             cases = (
-                (host.approve(listing, ids, snapshot=None), "names no snapshot"),
+                (host.approve(listing, ids, "none.json", snapshot=None), "names no snapshot"),
                 (
                     host.approve(
                         listing,
                         ids,
+                        "before.json",
                         snapshot={
                             "name": "example-pre-scrub",
                             "taken_at": (taken - timedelta(hours=1)).isoformat(),
@@ -681,7 +682,10 @@ class Apply(unittest.TestCase):
                 ),
                 (
                     host.approve(
-                        listing, ids, snapshot={"name": "", "taken_at": taken.isoformat()}
+                        listing,
+                        ids,
+                        "unnamed.json",
+                        snapshot={"name": "", "taken_at": taken.isoformat()},
                     ),
                     "names no snapshot",
                 ),
