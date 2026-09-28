@@ -96,7 +96,7 @@ A10: cargo test -p deck-streak-progression --test rights -- --exact the_xp_ledge
 | `crates/progression/src/xp.rs` | `deck-streak-progression` | added: the unsigned amount, the level curve |
 | `crates/progression/src/grant.rs` | `deck-streak-progression` | added: the grant port, request, scope and answer |
 | `crates/progression/src/ledger.rs` | `deck-streak-progression` | added: the repository over `xp_ledger` |
-| `crates/progression/src/rights.rs` | `deck-streak-progression` | added: the data-rights port |
+| `crates/progression/src/data_rights.rs` | `deck-streak-progression` | added: the data-rights port, named as every context's port is (§7) |
 | `migrations/004001_progression_xp_ledger.sql` | `deck-streak-progression` | added |
 | `crates/progression/tests/grant.rs` | `deck-streak-progression` | added |
 | `crates/progression/tests/level.rs` | `deck-streak-progression` | added |
@@ -112,8 +112,15 @@ A10: cargo test -p deck-streak-progression --test rights -- --exact the_xp_ledge
 | `.sqlx/` | workspace | changed: the offline query cache for the new queries |
 | `privacy.json` | repo | changed: the XP ledger category |
 | `docs/specs/SPEC-040-xp-ledger-and-grant-port.md` | docs | moved from `docs/specs/planned/` |
-| `docs/decisions/ADR-040-xp-ledger-key-once-scope-and-unsigned-amount.md` | docs | added |
+| `docs/decisions/ADR-040-xp-ledger-key-once-scope-and-unsigned-amount.md` | docs | changed: accepted |
 | `docs/red-first/SPEC-040.md` | docs | added |
+| `docs/schematics/xp-grant-port.md` | docs | added: the grant port's components, its write and its read (§7) |
+| `docs/CONTEXT-MAP.md` | docs | changed: the register of DeckStreak's own tables gains `xp_ledger` (§7) |
+| `crates/coordination/src/data_rights_registry.rs` | `deck-streak-coordination` | changed: the registry gains progression's port (§7) |
+| `crates/coordination/tests/data_rights_symmetry.rs` | `deck-streak-coordination` | changed: 101 seeded `xp_ledger` rows (§7) |
+| `PRIVACY.md` | repo | changed: the XP ledger category's line (§7) |
+| `scripts/mutation-rows.d/S04000-S04099.json` | repo | added: the hand-proved rows of the economy maths and the key (§7) |
+| `changelog.d/` fragment | repo | added |
 
 The migration lives in the one `migrations/` directory the kernel's `MIGRATOR` embeds, named by
 SPEC-020's rule (R15, R18): this SPEC's number in four digits, its sequence in two, the owning
@@ -141,3 +148,23 @@ context and a slug.
 - **The golden is regenerated from a different predecessor commit.** Each golden records the
   predecessor commit it was generated at (SPEC-029), and review compares it with `27ee2bc`. Nothing
   refuses it automatically; `test_goldens.py` checks the digests, not the commit.
+
+## 7. Amendments at delivery
+
+- **R9 and the manifest: the register's own section, the registry and the policy.** `xp_ledger` is
+  registered to progression in the register of the predecessor's tables, but the two tests that
+  hold every migrated table to its owner read only the register of DeckStreak's own tables
+  (`crates/kernel/tests/schema.rs`, and SPEC-021's A2), so that section gains its row and
+  `docs/CONTEXT-MAP.md` joins the manifest. SPEC-021 R1 keeps every stateful context's port in
+  coordination's registry, and its A1 seeds 101 rows into every table of the schema, so the
+  registry and the seeds join it too; and SPEC-021's A9 holds `PRIVACY.md` to one line per category
+  of `privacy.json`, so the policy names the new category with its basis and its retention.
+- **The manifest: the port is `data_rights.rs`.** `privacy.json`'s export and erase code is
+  `crates/*/src/data_rights.rs` (SPEC-021 §7, R5), and the privacy-gdpr pack's `export-complete` and
+  `erase-complete` rows read only those files, so a port in `rights.rs` would be read by neither.
+  A10's test target keeps its name, `rights`.
+- **The manifest: a schematic and the rows.** The grant port is a new component with a data flow,
+  so `docs/schematics/xp-grant-port.md` draws it before the code. The level's floor, the two keys
+  and the refusal of a source are invariants the diff's generated mutants cannot all reach: the keys
+  live in the migration and the refusal in a method named `new`. Each has a hand-proved row in this
+  SPEC's band (SPEC-039).

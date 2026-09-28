@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 date: "2026-09-27"
 decision-makers: "@RexRenatus (owner), the DeckStreak architect"
 ---
@@ -31,6 +31,7 @@ a debit are impossible by construction?
 - A per-feature guard table beside the ledger (the predecessor's `drill_xp_grants` pattern) for once-ever grants — rejected because the guard and the grant would live in two contexts and two transactions, so a crash between them either loses the grant or pays it twice.
 - A signed amount with a runtime check that refuses negatives — rejected because a penalty path would compile and the check would be the only barrier.
 - A stored level updated on each grant — rejected because it can drift from the ledger, and the predecessor derives it from the total.
+- A `SELECT` for the key before the insert, beside the unique indexes — rejected at acceptance because it states the key a second time, in code, where it can drift from the index; the insert's own conflict with the indexes is the existence check.
 
 ## Decision Outcome
 
@@ -39,6 +40,13 @@ with a partial unique index `(source, track) WHERE scope = 'once'`, an unsigned 
 with no signed constructor and a `CHECK (amount >= 0)` column, and the level computed from the
 total with the predecessor's integer formula. `trybuild` is admitted as a dev-dependency to prove
 the signed amount does not compile.
+
+At acceptance: a grant is one `INSERT ... ON CONFLICT DO NOTHING` inside the port's
+`BEGIN IMMEDIATE` write, so the key lives in the migration alone; when the insert writes nothing,
+the row that holds the key is read in the same transaction for the `AlreadyGranted` answer. The
+amount is an unsigned 32-bit newtype, the total an unsigned 64-bit one, and the level is computed in
+128-bit integers, so no total a ledger can hold overflows it
+(`docs/schematics/xp-grant-port.md`).
 
 ### Consequences
 
@@ -50,7 +58,9 @@ the signed amount does not compile.
 ### Confirmation
 
 SPEC-040's acceptance tests A1 to A10, in `crates/progression/tests/`; the golden of
-`gamification/xp.py:level_for_xp` in `tools/parity-oracle/goldens/level_for_xp.json`.
+`gamification/xp.py:level_for_xp` in `tools/parity-oracle/goldens/level_for_xp.json`; and the
+hand-proved rows of the level's floor, the two keys and the source's refusal in
+`scripts/mutation-rows.d/S04000-S04099.json`.
 
 ## What would make this wrong
 
