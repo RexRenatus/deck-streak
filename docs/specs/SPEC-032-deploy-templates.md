@@ -162,6 +162,11 @@ template written at run time into a `TemporaryDirectory`.
 - **The budget is wrong for the live host.** The numbers are ADR-032's design, sized beside the
   predecessor's ceiling; the memory watch (SPEC-031) and the first day of the W2 deploy measure them,
   and a resize is an owner decision (ADR-011).
+- **The owner's `/sync` meets the bot's ceiling.** SPEC-026 R11 runs the sync cycle inside the bot's
+  own process, whose `MemoryMax=` is 96M, while a full download may take the sync's whole budget of
+  256 MiB (ADR-022). An incremental sync fits; a full download there is killed at the ceiling, fails
+  the bot and pages. SPEC-026 decides whether `/sync` runs in the bot or starts the `sync` job, whose
+  ceiling is sized for it.
 - **A timer's zone is wrong on the host.** The templates carry UTC; the private rail renders the
   owner's zone, and the liveness job's drift check pages on the first maintenance fire that lands
   off its slot (SPEC-027).
@@ -212,5 +217,7 @@ corrected above; the reasons are these.
 - **ADR-032: decided at delivery.** The neutral release root and settings file, the daemons'
   processor and task caps, the job template's start timeout, and each unit's credentials, each
   recorded in ADR-032 with what it was chosen against.
+- **§6: one new risk.** Loading the sync's account into the bot's unit, for the owner's `/sync`,
+  showed that SPEC-026 runs the sync cycle inside the bot, beside ADR-032's bot ceiling.
 - **The manifest.** The `.packs/wiring.json` row names every change above, and ADR-032 is changed
   (accepted) rather than added, since the plan wrote it.
