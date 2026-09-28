@@ -1,0 +1,44 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S04001-THE-LEVEL-FLOORS-ITS-DIVISION",
+        "progression",
+        "src/xp.rs",
+        "    let level = (linear + root) / (2 * quadratic);",
+        "    let level = (linear + root).div_ceil(2 * quadratic);",
+        "level::the_level_of_a_total_matches_the_parity_golden",
+        "the level floor-divides 50 + isqrt(2500 + 200 x total) by 100, as the predecessor does, so the total one XP below a threshold keeps the level below it (SPEC-040 R7; CHARTER 8)"
+      ],
+      [
+        "S04002-A-SOURCE-OUTSIDE-THE-GRAMMAR-IS-REFUSED",
+        "progression",
+        "src/grant.rs",
+        "        if is_source_token(token) {",
+        "        if !token.is_empty() {",
+        "grant::a_source_outside_the_token_grammar_is_refused",
+        "a source outside the token grammar is refused when it is built, before any write (SPEC-040 R2); cargo-mutants never looks inside a method named new"
+      ]
+    ],
+    "CARGO_KILLED_SCRIPT_MUTATIONS": [
+      [
+        "S04003-THE-PER-DAY-KEY-IS-UNIQUE",
+        "migrations/004001_progression_xp_ledger.sql",
+        "CREATE UNIQUE INDEX xp_ledger_per_day ON xp_ledger (study_day, source, track);",
+        "CREATE INDEX xp_ledger_per_day ON xp_ledger (study_day, source, track);",
+        "progression",
+        "grant::a_grant_requested_twice_writes_one_row",
+        "the per-day key (study day, source, track) is a unique index, so a grant replayed on its study day writes nothing and answers with the amount held (SPEC-040 R3, R4)"
+      ],
+      [
+        "S04004-THE-ONCE-KEY-IS-UNIQUE",
+        "migrations/004001_progression_xp_ledger.sql",
+        "CREATE UNIQUE INDEX xp_ledger_once ON xp_ledger (source, track) WHERE scope = 'once';",
+        "CREATE INDEX xp_ledger_once ON xp_ledger (source, track) WHERE scope = 'once';",
+        "progression",
+        "grant::a_once_grant_requested_on_two_study_days_writes_one_row",
+        "the once key (source, track) is a unique index over the once rows, so a once grant replayed on a later study day writes nothing (SPEC-040 R4; ADR-040)"
+      ]
+    ]
+  }
+}

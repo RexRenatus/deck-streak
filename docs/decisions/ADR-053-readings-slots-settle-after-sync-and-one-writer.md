@@ -73,3 +73,7 @@ and the durable-services unit rows over the new templates.
 
 SPEC-053; ADR-010; ADR-011; ADR-019; ADR-037; the predecessor's `timebase.py:tick_minutes`;
 docs/schematics/readings-generation-flow.md.
+
+Met by ADR-065 (proposed): the owner's go makes DeckStreak the readings folder's one writer once the
+private rail has fenced every other writer it lists from the folder with a read-only mount, and has
+proved each fence by a refused write. The rest of this ADR stands.
