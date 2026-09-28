@@ -132,6 +132,10 @@ class WorkflowsAreHardened(unittest.TestCase):
 
     def test_each_planted_secret_or_foreign_repository_is_refused_by_name(self):
         problems, _ = secret_and_checkout_problems(PLANTED / "refused")
+        # The planted custom shell: it clones another repository before it runs the script.
+        custom = (
+            'bash -c "git clone https://github.com/example-org/other-repository.git && bash {0}"'
+        )
         self.assertEqual(
             problems,
             [
@@ -169,6 +173,18 @@ class WorkflowsAreHardened(unittest.TestCase):
                 "with inputs the checker does not read",
                 "checkout-whose-inputs-are-one-expression.yml:jobs.build.steps[3]: checks out "
                 "with inputs the checker does not read",
+                "clone-in-a-custom-shell.yml:defaults.run.shell: runs a shell the checker does "
+                f"not read: {custom}",
+                "clone-in-a-custom-shell.yml:jobs.build.defaults.run.shell: runs a shell the "
+                f"checker does not read: {custom}",
+                "clone-in-a-custom-shell.yml:jobs.build.steps[0].shell: runs a shell the checker "
+                f"does not read: {custom}",
+                "clone-in-a-custom-shell.yml:jobs.build.steps[1].parallel[0].shell: runs a shell "
+                f"the checker does not read: {custom}",
+                "clone-in-a-custom-shell.yml:jobs.build.steps[2].shell: runs a shell the checker "
+                "does not read: BASH",
+                "clone-in-a-custom-shell.yml:jobs.dynamic.defaults.run: runs a shell the checker "
+                "does not read: ${{ fromJSON(needs.build.outputs.defaults) }}",
                 "clone-of-another-repository.yml:jobs.build.steps[0]: clones a repository: "
                 "git clone --depth 1 https://github.com/example-org/other-repository.git",
                 "clone-of-another-repository.yml:jobs.build.steps[1]: clones a repository: "
