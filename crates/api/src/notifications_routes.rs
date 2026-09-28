@@ -39,6 +39,11 @@ impl FromRef<FeedState> for Sessions {
     }
 }
 
+/// A celebration's raw request to the Bot API from the API, around the router: its URL.
+fn celebrate_over_raw_http(token: &str) -> String {
+    format!("https://api.telegram.org/bot{token}/sendMessage")
+}
+
 /// The feed route over the owner's `access` and the API's `readiness`.
 pub(crate) fn routes(access: OwnerAccess, readiness: Readiness) -> Router {
     let clock = access.clock();
