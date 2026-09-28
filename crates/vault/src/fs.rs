@@ -215,3 +215,53 @@ fn kind_of(file_type: fs::FileType) -> EntryKind {
         EntryKind::Other
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{DirEntry, EntryKind, RealFile, RealFs, VaultFile, VaultFs};
+    use std::fs::OpenOptions;
+
+    /// Prints how many items a check examined and refuses zero: a listing that stopped finding its
+    /// entries must fail, never pass over the empty set (the tdd pack's examined contract).
+    fn examined<T>(what: &str, items: Vec<T>) -> Vec<T> {
+        println!("examined {} {what}", items.len());
+        assert!(
+            !items.is_empty(),
+            "examined 0 {what}: the population is empty, so nothing was judged"
+        );
+        items
+    }
+
+    #[test]
+    fn a_sync_the_system_refuses_is_reported() {
+        let file = OpenOptions::new()
+            .write(true)
+            .open("/dev/null")
+            .expect("the null device opens");
+        let mut real = RealFile(file);
+        assert!(real.sync().is_err(), "fsync on the null device is refused");
+    }
+
+    #[test]
+    fn a_listing_names_each_entry_and_its_kind_without_following_a_link() {
+        let dir = tempfile::tempdir().expect("a temporary folder");
+        std::fs::write(dir.path().join("note.md"), "x").expect("a file");
+        std::fs::create_dir(dir.path().join("day")).expect("a folder");
+        std::os::unix::fs::symlink("day", dir.path().join("link")).expect("a link");
+        let listed = RealFs.list(dir.path()).expect("the folder lists");
+        let mut entries = examined("entries the listing names", listed);
+        entries.sort_by(|a, b| a.name.cmp(&b.name));
+        let entry = |name: &str, kind| DirEntry {
+            name: name.into(),
+            kind,
+        };
+        assert_eq!(
+            entries,
+            [
+                entry("day", EntryKind::Dir),
+                entry("link", EntryKind::Symlink),
+                entry("note.md", EntryKind::File),
+            ]
+        );
+    }
+}

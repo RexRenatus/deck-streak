@@ -320,6 +320,12 @@ jobs:
       - name: the diff's mutants, as cargo-mutants itself lists them
         if: ${{ steps.plan.outputs.rust == 'true' }}
         run: cargo mutants --no-shuffle --list --json --in-diff "$RUNNER_TEMP/mutation/git.diff" --timeout 300 --build-timeout 600 > "$RUNNER_TEMP/mutation/listed.json"
+      # Every equivalence record is bound against the whole tree's mutants, not the diff's alone, so
+      # a change that moves or rewrites a recorded mutant's code is judged wherever it lands
+      # (SPEC-057 R8). Like the diff's, this listing builds nothing.
+      - name: the whole tree's mutants, which every record is bound against
+        if: ${{ steps.plan.outputs.rust == 'true' }}
+        run: cargo mutants --no-shuffle --list --json --timeout 300 --build-timeout 600 > "$RUNNER_TEMP/mutation/whole.json"
       - name: the shards, the fewest whose slowest is projected within its bound
         id: shards
         run: python3 scripts/mutation-verdict.py shards --plan "$RUNNER_TEMP/mutation/plan.json" --listed "$RUNNER_TEMP/mutation/listed.json"
@@ -499,7 +505,7 @@ jobs:
         run: |
           reports="$RUNNER_TEMP/reports"
           status=0
-          python3 scripts/mutation-verdict.py judge --plan "$reports/mutation-plan/plan.json" --class rust --shard-reports "$reports" --rows "$reports/mutation-rows/rows.json" || status=$?
+          python3 scripts/mutation-verdict.py judge --plan "$reports/mutation-plan/plan.json" --class rust --shard-reports "$reports" --rows "$reports/mutation-rows/rows.json" --whole "$reports/mutation-plan/whole.json" || status=$?
           oracle=0
           python3 scripts/mutation-verdict.py judge --plan "$reports/mutation-plan/plan.json" --class oracle --rows "$reports/mutation-rows/rows.json" || oracle=$?
           if [ "$status" -eq 0 ]; then status=$oracle; fi

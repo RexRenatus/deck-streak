@@ -599,3 +599,40 @@ impl<F: VaultFs> ReadingsTree<F> {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{civil_from_days, days_from_civil};
+
+    /// Epoch days and their civil dates, as Python's `datetime.date` counts them from 1970-01-01:
+    /// the days either side of the epoch, a leap day and the day after it, a century's last day of
+    /// February that is no leap day, and a day in each quarter of a year.
+    const DATES: [(i64, (i64, i64, i64)); 10] = [
+        (0, (1970, 1, 1)),
+        (-1, (1969, 12, 31)),
+        (11_016, (2000, 2, 29)),
+        (11_017, (2000, 3, 1)),
+        (19_753, (2024, 1, 31)),
+        (19_843, (2024, 4, 30)),
+        (19_908, (2024, 7, 4)),
+        (20_088, (2024, 12, 31)),
+        (-25_508, (1900, 3, 1)),
+        (-25_509, (1900, 2, 28)),
+    ];
+
+    #[test]
+    fn an_epoch_day_reads_as_its_civil_date_and_the_date_as_its_epoch_day() {
+        for (epoch_day, (year, month, day)) in DATES {
+            assert_eq!(
+                civil_from_days(epoch_day),
+                (year, month, day),
+                "epoch day {epoch_day}"
+            );
+            assert_eq!(
+                days_from_civil(year, month, day),
+                epoch_day,
+                "{year}-{month:02}-{day:02}"
+            );
+        }
+    }
+}
