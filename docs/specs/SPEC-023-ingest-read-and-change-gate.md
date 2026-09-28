@@ -21,7 +21,7 @@
   `INGEST_REBASE_DAYS`): only the last window of reviews is read each cycle; older study events are
   one persisted count, recounted in SQL whenever the floor is a rebase period stale, and a count
   that shrinks is logged as a self-check (cards deleted or the collection replaced). This bounded
-  window is what kept the predecessor's memory under its unit's ceiling.
+  window keeps the read inside DeckStreak's memory budget (ADR-032).
 - **The change gate** (`pipeline.py:GamifyPipeline._maybe_skip_recompute`,
   `anki_reader.py:probe_change_signal`): the sync always runs, but the recompute is skipped when a
   cheap probe proves nothing observable would change: the same newest review id, card count and
@@ -278,3 +278,6 @@ real deadlines exist yet. Every clock is a `ManualClock`.
 - **Goldens.** `change_probe`'s adapter writes the case's rows into a temporary collection through
   the `sqlite3` module the predecessor's reader already imports: the registry module imports no
   database module and reads nothing, and only the predecessor's probe reads the file back.
+
+Amendment (2026-09-28): a passage describing another service's operations was replaced with
+DeckStreak's own memory budget under the public-text rule (ADR-059).
