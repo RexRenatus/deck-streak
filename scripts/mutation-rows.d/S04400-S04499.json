@@ -1,0 +1,33 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S04401-ANOTHER-SUBJECTS-READ-IS-REFUSED",
+        "agent",
+        "src/memory.rs",
+        "        if *subject != self.subject {",
+        "        if false {",
+        "memory::a_read_of_another_subjects_memory_is_refused",
+        "a persona's reader refuses a read of another subject's memory before any port is asked (SPEC-044 R5, A5; CHARTER 18)"
+      ],
+      [
+        "S04402-THE-JOURNAL-IS-NEVER-A-SOURCE",
+        "agent",
+        "src/memory.rs",
+        "            \"journal\" | \"diary\" => Err(PersonaError::Journal),",
+        "            \"journal\" | \"diary\" => Ok(Self::Leeches),",
+        "memory::a_read_of_another_subjects_memory_is_refused",
+        "the journal is never a memory source, and a template that declares it does not load (SPEC-044 R5, A5; CHARTER 18)"
+      ],
+      [
+        "S04403-THE-LIVE-BAND-COMES-BEFORE-THE-ROSTERS",
+        "agent",
+        "src/memory.rs",
+        "    Ok(answered.or(persona.band()))",
+        "    Ok(persona.band().or(answered))",
+        "persona::the_cefr_band_comes_from_the_live_band_before_the_roster",
+        "a language output's band is the live band when its port answers one, and the roster's band otherwise (SPEC-044 R8, A8)"
+      ]
+    ]
+  }
+}
