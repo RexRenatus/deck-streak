@@ -1,0 +1,2632 @@
+{
+  "adapter": "resolved_under_the_synthetic_taxonomy",
+  "cases": [
+    {
+      "class": "empty",
+      "input": {
+        "deck_names": {
+          "1600000452651": "Casebook",
+          "1600001258429": "Casebook\u001fMethod",
+          "1600001703165": "Casebook\u001fEvidence",
+          "1600001732211": "Casebook\u001fEvidence\u001fUnit 01",
+          "1600002098447": "Casebook\u001fYear One",
+          "1600002536804": "Casebook\u001fYear One\u001fPublic Law",
+          "1600002841693": "Casebook\u001fYear One\u001fPublic Law\u001fConstitutional Law",
+          "1600003352359": "Casebook\u001fYear One\u001fPublic Law\u001fConstitutional Law\u001fUnit 02",
+          "1600003500610": "Casebook\u001fYear Two\u001fPrivate Law\u001fTorts",
+          "1600004359182": "Casebook\u001fYear Two\u001fPrivate Law\u001fProcedure & Proof",
+          "1600005316767": "Casebook\u001fYear Three\u001fSkills\u001fCivil_Procedure -- Practice",
+          "1600005354267": "Casebook\u001f  Contracts  ",
+          "1600005493309": "Tongue Alpha",
+          "1600005515362": "Tongue Alpha\u001fUnit 01",
+          "1600005629911": "Tongue Beta",
+          "1600006823970": "Tongue Beta\u001fUnit 03",
+          "1600006904212": "Composition",
+          "1600006911909": "Composition\u001fAlpha",
+          "1600007539694": "Composition\u001fBeta\u001fEssays",
+          "1600007959204": "Composition\u001fGamma",
+          "1600009612350": "Cram",
+          "1600009741952": "Misc"
+        },
+        "queries": [],
+        "undetermined": []
+      },
+      "output": {
+        "active_topics": [],
+        "no_new_today": [],
+        "undetermined": [],
+        "unmapped_decks": []
+      }
+    },
+    {
+      "class": "empty",
+      "input": {
+        "deck_names": {},
+        "queries": [],
+        "undetermined": []
+      },
+      "output": {
+        "active_topics": [],
+        "no_new_today": [],
+        "undetermined": [],
+        "unmapped_decks": []
+      }
+    },
+    {
+      "class": "every-track",
+      "input": {
+        "deck_names": {
+          "1600000452651": "Casebook",
+          "1600001258429": "Casebook\u001fMethod",
+          "1600001703165": "Casebook\u001fEvidence",
+          "1600001732211": "Casebook\u001fEvidence\u001fUnit 01",
+          "1600002098447": "Casebook\u001fYear One",
+          "1600002536804": "Casebook\u001fYear One\u001fPublic Law",
+          "1600002841693": "Casebook\u001fYear One\u001fPublic Law\u001fConstitutional Law",
+          "1600003352359": "Casebook\u001fYear One\u001fPublic Law\u001fConstitutional Law\u001fUnit 02",
+          "1600003500610": "Casebook\u001fYear Two\u001fPrivate Law\u001fTorts",
+          "1600004359182": "Casebook\u001fYear Two\u001fPrivate Law\u001fProcedure & Proof",
+          "1600005316767": "Casebook\u001fYear Three\u001fSkills\u001fCivil_Procedure -- Practice",
+          "1600005354267": "Casebook\u001f  Contracts  ",
+          "1600005493309": "Tongue Alpha",
+          "1600005515362": "Tongue Alpha\u001fUnit 01",
+          "1600005629911": "Tongue Beta",
+          "1600006823970": "Tongue Beta\u001fUnit 03",
+          "1600006904212": "Composition",
+          "1600006911909": "Composition\u001fAlpha",
+          "1600007539694": "Composition\u001fBeta\u001fEssays",
+          "1600007959204": "Composition\u001fGamma",
+          "1600009612350": "Cram",
+          "1600009741952": "Misc"
+        },
+        "queries": [
+          {
+            "cards": [
+              {
+                "did": 1600000452651,
+                "id": 1700000000000,
+                "odid": 0
+              },
+              {
+                "did": 1600000452651,
+                "id": 1700000000001,
+                "odid": 0
+              },
+              {
+                "did": 1600001258429,
+                "id": 1700000000002,
+                "odid": 0
+              },
+              {
+                "did": 1600001258429,
+                "id": 1700000000003,
+                "odid": 0
+              },
+              {
+                "did": 1600001703165,
+                "id": 1700000000004,
+                "odid": 0
+              },
+              {
+                "did": 1600001703165,
+                "id": 1700000000005,
+                "odid": 0
+              },
+              {
+                "did": 1600001732211,
+                "id": 1700000000006,
+                "odid": 0
+              },
+              {
+                "did": 1600001732211,
+                "id": 1700000000007,
+                "odid": 0
+              },
+              {
+                "did": 1600002098447,
+                "id": 1700000000008,
+                "odid": 0
+              },
+              {
+                "did": 1600002098447,
+                "id": 1700000000009,
+                "odid": 0
+              },
+              {
+                "did": 1600002536804,
+                "id": 1700000000010,
+                "odid": 0
+              },
+              {
+                "did": 1600002536804,
+                "id": 1700000000011,
+                "odid": 0
+              },
+              {
+                "did": 1600002841693,
+                "id": 1700000000012,
+                "odid": 0
+              },
+              {
+                "did": 1600002841693,
+                "id": 1700000000013,
+                "odid": 0
+              },
+              {
+                "did": 1600003352359,
+                "id": 1700000000014,
+                "odid": 0
+              },
+              {
+                "did": 1600003352359,
+                "id": 1700000000015,
+                "odid": 0
+              },
+              {
+                "did": 1600003500610,
+                "id": 1700000000016,
+                "odid": 0
+              },
+              {
+                "did": 1600003500610,
+                "id": 1700000000017,
+                "odid": 0
+              },
+              {
+                "did": 1600004359182,
+                "id": 1700000000018,
+                "odid": 0
+              },
+              {
+                "did": 1600004359182,
+                "id": 1700000000019,
+                "odid": 0
+              },
+              {
+                "did": 1600005316767,
+                "id": 1700000000020,
+                "odid": 0
+              },
+              {
+                "did": 1600005316767,
+                "id": 1700000000021,
+                "odid": 0
+              },
+              {
+                "did": 1600005354267,
+                "id": 1700000000022,
+                "odid": 0
+              },
+              {
+                "did": 1600005354267,
+                "id": 1700000000023,
+                "odid": 0
+              }
+            ],
+            "root_label": "Casebook"
+          },
+          {
+            "cards": [
+              {
+                "did": 1600005493309,
+                "id": 1700000000032,
+                "odid": 0
+              },
+              {
+                "did": 1600005493309,
+                "id": 1700000000033,
+                "odid": 0
+              },
+              {
+                "did": 1600005515362,
+                "id": 1700000000034,
+                "odid": 0
+              },
+              {
+                "did": 1600005515362,
+                "id": 1700000000035,
+                "odid": 0
+              }
+            ],
+            "root_label": "Tongue Alpha"
+          },
+          {
+            "cards": [
+              {
+                "did": 1600005629911,
+                "id": 1700000000036,
+                "odid": 0
+              },
+              {
+                "did": 1600005629911,
+                "id": 1700000000037,
+                "odid": 0
+              },
+              {
+                "did": 1600006823970,
+                "id": 1700000000038,
+                "odid": 0
+              },
+              {
+                "did": 1600006823970,
+                "id": 1700000000039,
+                "odid": 0
+              }
+            ],
+            "root_label": "Tongue Beta"
+          },
+          {
+            "cards": [
+              {
+                "did": 1600006904212,
+                "id": 1700000000040,
+                "odid": 0
+              },
+              {
+                "did": 1600006904212,
+                "id": 1700000000041,
+                "odid": 0
+              },
+              {
+                "did": 1600006911909,
+                "id": 1700000000042,
+                "odid": 0
+              },
+              {
+                "did": 1600006911909,
+                "id": 1700000000043,
+                "odid": 0
+              },
+              {
+                "did": 1600007539694,
+                "id": 1700000000044,
+                "odid": 0
+              },
+              {
+                "did": 1600007539694,
+                "id": 1700000000045,
+                "odid": 0
+              },
+              {
+                "did": 1600007959204,
+                "id": 1700000000046,
+                "odid": 0
+              },
+              {
+                "did": 1600007959204,
+                "id": 1700000000047,
+                "odid": 0
+              }
+            ],
+            "root_label": "Composition"
+          }
+        ],
+        "undetermined": []
+      },
+      "output": {
+        "active_topics": [
+          {
+            "deck_ids": [
+              1600005493309,
+              1600005515362,
+              1600006911909
+            ],
+            "digest": "bb71f873a8290bb8543304d019f028ed522786f6e164f65a9ad86c01f86a84b2",
+            "new_cards": [
+              1700000000032,
+              1700000000033,
+              1700000000034,
+              1700000000035,
+              1700000000042,
+              1700000000043
+            ],
+            "topic_key": "language/qaa"
+          },
+          {
+            "deck_ids": [
+              1600005629911,
+              1600006823970,
+              1600007539694
+            ],
+            "digest": "1946f50bf334862df6a430cc54e235ba7c1860702db0f3f41bbfd0e1510784d7",
+            "new_cards": [
+              1700000000036,
+              1700000000037,
+              1700000000038,
+              1700000000039,
+              1700000000044,
+              1700000000045
+            ],
+            "topic_key": "language/qab"
+          },
+          {
+            "deck_ids": [
+              1600005316767
+            ],
+            "digest": "2aa8010b40c65ddd4d50b74f448fd0ae8c190dd61d4200112a8022880888c00b",
+            "new_cards": [
+              1700000000020,
+              1700000000021
+            ],
+            "topic_key": "law/civil-procedure-practice"
+          },
+          {
+            "deck_ids": [
+              1600002841693,
+              1600003352359
+            ],
+            "digest": "a26639435e550fd6fafa638525ef8ce7294b42f233255d2f9ddaa360d207a52d",
+            "new_cards": [
+              1700000000012,
+              1700000000013,
+              1700000000014,
+              1700000000015
+            ],
+            "topic_key": "law/constitutional-law"
+          },
+          {
+            "deck_ids": [
+              1600005354267
+            ],
+            "digest": "17946a13064d655a7876effbc2a757cd0be662dc54e1b9523ea20b8023ffdc05",
+            "new_cards": [
+              1700000000022,
+              1700000000023
+            ],
+            "topic_key": "law/contracts"
+          },
+          {
+            "deck_ids": [
+              1600001703165,
+              1600001732211
+            ],
+            "digest": "0688c8927b5525802d8bc91c3403a3a639698215f18655aab5d47bd2f06d436e",
+            "new_cards": [
+              1700000000004,
+              1700000000005,
+              1700000000006,
+              1700000000007
+            ],
+            "topic_key": "law/evidence"
+          },
+          {
+            "deck_ids": [
+              1600001258429
+            ],
+            "digest": "ad7922110d4ccf07669a0829d1f3ef159a321ad012a259d50cdb06a689dea03a",
+            "new_cards": [
+              1700000000002,
+              1700000000003
+            ],
+            "topic_key": "law/method"
+          },
+          {
+            "deck_ids": [
+              1600002536804
+            ],
+            "digest": "775452f2f9dd991efe9aabc9354bb9993b09183940ed571ab4842c54a66027d2",
+            "new_cards": [
+              1700000000010,
+              1700000000011
+            ],
+            "topic_key": "law/public-law"
+          },
+          {
+            "deck_ids": [
+              1600003500610
+            ],
+            "digest": "0ce6270a73d2e002b311143604bfabf81bb87adeabf2a594995c43537e9bdb27",
+            "new_cards": [
+              1700000000016,
+              1700000000017
+            ],
+            "topic_key": "law/torts"
+          },
+          {
+            "deck_ids": [
+              1600002098447
+            ],
+            "digest": "8bae26222a0199a7495642e231d2d36e6d490dd3b21ee81f45da1da3ad9cb19d",
+            "new_cards": [
+              1700000000008,
+              1700000000009
+            ],
+            "topic_key": "law/year-one"
+          }
+        ],
+        "no_new_today": [],
+        "undetermined": [],
+        "unmapped_decks": [
+          {
+            "card_count": 2,
+            "deck_name": "Casebook"
+          },
+          {
+            "card_count": 2,
+            "deck_name": "Casebook\u001fYear Two\u001fPrivate Law\u001fProcedure & Proof"
+          },
+          {
+            "card_count": 2,
+            "deck_name": "Composition"
+          },
+          {
+            "card_count": 2,
+            "deck_name": "Composition\u001fGamma"
+          }
+        ]
+      }
+    },
+    {
+      "class": "shared-budget",
+      "input": {
+        "deck_names": {
+          "1600000452651": "Casebook",
+          "1600001258429": "Casebook\u001fMethod",
+          "1600001703165": "Casebook\u001fEvidence",
+          "1600001732211": "Casebook\u001fEvidence\u001fUnit 01",
+          "1600002098447": "Casebook\u001fYear One",
+          "1600002536804": "Casebook\u001fYear One\u001fPublic Law",
+          "1600002841693": "Casebook\u001fYear One\u001fPublic Law\u001fConstitutional Law",
+          "1600003352359": "Casebook\u001fYear One\u001fPublic Law\u001fConstitutional Law\u001fUnit 02",
+          "1600003500610": "Casebook\u001fYear Two\u001fPrivate Law\u001fTorts",
+          "1600004359182": "Casebook\u001fYear Two\u001fPrivate Law\u001fProcedure & Proof",
+          "1600005316767": "Casebook\u001fYear Three\u001fSkills\u001fCivil_Procedure -- Practice",
+          "1600005354267": "Casebook\u001f  Contracts  ",
+          "1600005493309": "Tongue Alpha",
+          "1600005515362": "Tongue Alpha\u001fUnit 01",
+          "1600005629911": "Tongue Beta",
+          "1600006823970": "Tongue Beta\u001fUnit 03",
+          "1600006904212": "Composition",
+          "1600006911909": "Composition\u001fAlpha",
+          "1600007539694": "Composition\u001fBeta\u001fEssays",
+          "1600007959204": "Composition\u001fGamma",
+          "1600009612350": "Cram",
+          "1600009741952": "Misc"
+        },
+        "queries": [
+          {
+            "cards": [
+              {
+                "did": 1600001703165,
+                "id": 1700000000024,
+                "odid": 0
+              },
+              {
+                "did": 1600001703165,
+                "id": 1700000000025,
+                "odid": 0
+              },
+              {
+                "did": 1600001703165,
+                "id": 1700000000026,
+                "odid": 0
+              },
+              {
+                "did": 1600000452651,
+                "id": 1700000000048,
+                "odid": 0
+              },
+              {
+                "did": 1600001258429,
+                "id": 1700000000049,
+                "odid": 0
+              }
+            ],
+            "root_label": "Casebook"
+          },
+          {
+            "cards": [
+              {
+                "did": 1600001703165,
+                "id": 1700000000024,
+                "odid": 0
+              },
+              {
+                "did": 1600001703165,
+                "id": 1700000000025,
+                "odid": 0
+              },
+              {
+                "did": 1600001703165,
+                "id": 1700000000026,
+                "odid": 0
+              }
+            ],
+            "root_label": "Casebook\u001fEvidence"
+          }
+        ],
+        "undetermined": []
+      },
+      "output": {
+        "active_topics": [
+          {
+            "deck_ids": [
+              1600001703165
+            ],
+            "digest": "a4c82e0d60a3f0284fc4dd1b6cba2c2a5ee0aa4c33c0efeb109d468187e77e88",
+            "new_cards": [
+              1700000000024,
+              1700000000025,
+              1700000000026
+            ],
+            "topic_key": "law/evidence"
+          },
+          {
+            "deck_ids": [
+              1600001258429
+            ],
+            "digest": "e0cfbf5285f81a60c918e345854ed3a02afda79ff7e0c99e24255e2c83159a79",
+            "new_cards": [
+              1700000000049
+            ],
+            "topic_key": "law/method"
+          }
+        ],
+        "no_new_today": [
+          "Casebook\u001fEvidence"
+        ],
+        "undetermined": [],
+        "unmapped_decks": [
+          {
+            "card_count": 1,
+            "deck_name": "Casebook"
+          }
+        ]
+      }
+    },
+    {
+      "class": "filtered",
+      "input": {
+        "deck_names": {
+          "1600000452651": "Casebook",
+          "1600001258429": "Casebook\u001fMethod",
+          "1600001703165": "Casebook\u001fEvidence",
+          "1600001732211": "Casebook\u001fEvidence\u001fUnit 01",
+          "1600002098447": "Casebook\u001fYear One",
+          "1600002536804": "Casebook\u001fYear One\u001fPublic Law",
+          "1600002841693": "Casebook\u001fYear One\u001fPublic Law\u001fConstitutional Law",
+          "1600003352359": "Casebook\u001fYear One\u001fPublic Law\u001fConstitutional Law\u001fUnit 02",
+          "1600003500610": "Casebook\u001fYear Two\u001fPrivate Law\u001fTorts",
+          "1600004359182": "Casebook\u001fYear Two\u001fPrivate Law\u001fProcedure & Proof",
+          "1600005316767": "Casebook\u001fYear Three\u001fSkills\u001fCivil_Procedure -- Practice",
+          "1600005354267": "Casebook\u001f  Contracts  ",
+          "1600005493309": "Tongue Alpha",
+          "1600005515362": "Tongue Alpha\u001fUnit 01",
+          "1600005629911": "Tongue Beta",
+          "1600006823970": "Tongue Beta\u001fUnit 03",
+          "1600006904212": "Composition",
+          "1600006911909": "Composition\u001fAlpha",
+          "1600007539694": "Composition\u001fBeta\u001fEssays",
+          "1600007959204": "Composition\u001fGamma",
+          "1600009612350": "Cram",
+          "1600009741952": "Misc"
+        },
+        "queries": [
+          {
+            "cards": [
+              {
+                "did": 1600009612350,
+                "id": 1700000000027,
+                "odid": 1600001258429
+              },
+              {
+                "did": 1600009612350,
+                "id": 1700000000028,
+                "odid": 1600005629911
+              },
+              {
+                "did": 1600009612350,
+                "id": 1700000000029,
+                "odid": 1600009741952
+              }
+            ],
+            "root_label": "Cram"
+          },
+          {
+            "cards": [],
+            "root_label": "Tongue Beta"
+          }
+        ],
+        "undetermined": []
+      },
+      "output": {
+        "active_topics": [
+          {
+            "deck_ids": [
+              1600005629911
+            ],
+            "digest": "26b39e9ce108ab2ed8faa6e3a396842afe587724d637454fabbfc1ed418ccf58",
+            "new_cards": [
+              1700000000028
+            ],
+            "topic_key": "language/qab"
+          },
+          {
+            "deck_ids": [
+              1600001258429
+            ],
+            "digest": "3bf9a4dd902a1c960bdd0a405aaead6bbfe8afff6230d6d70b0fdfff4bafc47b",
+            "new_cards": [
+              1700000000027
+            ],
+            "topic_key": "law/method"
+          }
+        ],
+        "no_new_today": [
+          "Tongue Beta"
+        ],
+        "undetermined": [],
+        "unmapped_decks": [
+          {
+            "card_count": 1,
+            "deck_name": "Misc"
+          }
+        ]
+      }
+    },
+    {
+      "class": "unmapped",
+      "input": {
+        "deck_names": {
+          "1600000452651": "Casebook",
+          "1600001258429": "Casebook\u001fMethod",
+          "1600001703165": "Casebook\u001fEvidence",
+          "1600001732211": "Casebook\u001fEvidence\u001fUnit 01",
+          "1600002098447": "Casebook\u001fYear One",
+          "1600002536804": "Casebook\u001fYear One\u001fPublic Law",
+          "1600002841693": "Casebook\u001fYear One\u001fPublic Law\u001fConstitutional Law",
+          "1600003352359": "Casebook\u001fYear One\u001fPublic Law\u001fConstitutional Law\u001fUnit 02",
+          "1600003500610": "Casebook\u001fYear Two\u001fPrivate Law\u001fTorts",
+          "1600004359182": "Casebook\u001fYear Two\u001fPrivate Law\u001fProcedure & Proof",
+          "1600005316767": "Casebook\u001fYear Three\u001fSkills\u001fCivil_Procedure -- Practice",
+          "1600005354267": "Casebook\u001f  Contracts  ",
+          "1600005493309": "Tongue Alpha",
+          "1600005515362": "Tongue Alpha\u001fUnit 01",
+          "1600005629911": "Tongue Beta",
+          "1600006823970": "Tongue Beta\u001fUnit 03",
+          "1600006904212": "Composition",
+          "1600006911909": "Composition\u001fAlpha",
+          "1600007539694": "Composition\u001fBeta\u001fEssays",
+          "1600007959204": "Composition\u001fGamma",
+          "1600009612350": "Cram",
+          "1600009741952": "Misc"
+        },
+        "queries": [
+          {
+            "cards": [
+              {
+                "did": 1600009741952,
+                "id": 1700000000050,
+                "odid": 0
+              },
+              {
+                "did": 1600009741952,
+                "id": 1700000000051,
+                "odid": 0
+              },
+              {
+                "did": 1600009741952,
+                "id": 1700000000052,
+                "odid": 0
+              }
+            ],
+            "root_label": "Misc"
+          },
+          {
+            "cards": [
+              {
+                "did": 1600000452651,
+                "id": 1700000000053,
+                "odid": 0
+              },
+              {
+                "did": 1600000452651,
+                "id": 1700000000054,
+                "odid": 0
+              },
+              {
+                "did": 1600004359182,
+                "id": 1700000000055,
+                "odid": 0
+              },
+              {
+                "did": 1600004359182,
+                "id": 1700000000056,
+                "odid": 0
+              }
+            ],
+            "root_label": "Casebook"
+          },
+          {
+            "cards": [
+              {
+                "did": 1600006904212,
+                "id": 1700000000057,
+                "odid": 0
+              },
+              {
+                "did": 1600006904212,
+                "id": 1700000000058,
+                "odid": 0
+              },
+              {
+                "did": 1600007959204,
+                "id": 1700000000059,
+                "odid": 0
+              },
+              {
+                "did": 1600007959204,
+                "id": 1700000000060,
+                "odid": 0
+              }
+            ],
+            "root_label": "Composition"
+          },
+          {
+            "cards": [
+              {
+                "did": 424242,
+                "id": 1700000000030,
+                "odid": 0
+              },
+              {
+                "did": 1600009612350,
+                "id": 1700000000031,
+                "odid": 434343
+              }
+            ],
+            "root_label": "Unknown"
+          }
+        ],
+        "undetermined": []
+      },
+      "output": {
+        "active_topics": [],
+        "no_new_today": [
+          "Casebook",
+          "Composition",
+          "Misc",
+          "Unknown"
+        ],
+        "undetermined": [],
+        "unmapped_decks": [
+          {
+            "card_count": 1,
+            "deck_name": "<unknown-deck-424242>"
+          },
+          {
+            "card_count": 1,
+            "deck_name": "<unknown-deck-434343>"
+          },
+          {
+            "card_count": 2,
+            "deck_name": "Casebook"
+          },
+          {
+            "card_count": 2,
+            "deck_name": "Casebook\u001fYear Two\u001fPrivate Law\u001fProcedure & Proof"
+          },
+          {
+            "card_count": 2,
+            "deck_name": "Composition"
+          },
+          {
+            "card_count": 2,
+            "deck_name": "Composition\u001fGamma"
+          },
+          {
+            "card_count": 3,
+            "deck_name": "Misc"
+          }
+        ]
+      }
+    },
+    {
+      "class": "undetermined",
+      "input": {
+        "deck_names": {
+          "1600000452651": "Casebook",
+          "1600001258429": "Casebook\u001fMethod",
+          "1600001703165": "Casebook\u001fEvidence",
+          "1600001732211": "Casebook\u001fEvidence\u001fUnit 01",
+          "1600002098447": "Casebook\u001fYear One",
+          "1600002536804": "Casebook\u001fYear One\u001fPublic Law",
+          "1600002841693": "Casebook\u001fYear One\u001fPublic Law\u001fConstitutional Law",
+          "1600003352359": "Casebook\u001fYear One\u001fPublic Law\u001fConstitutional Law\u001fUnit 02",
+          "1600003500610": "Casebook\u001fYear Two\u001fPrivate Law\u001fTorts",
+          "1600004359182": "Casebook\u001fYear Two\u001fPrivate Law\u001fProcedure & Proof",
+          "1600005316767": "Casebook\u001fYear Three\u001fSkills\u001fCivil_Procedure -- Practice",
+          "1600005354267": "Casebook\u001f  Contracts  ",
+          "1600005493309": "Tongue Alpha",
+          "1600005515362": "Tongue Alpha\u001fUnit 01",
+          "1600005629911": "Tongue Beta",
+          "1600006823970": "Tongue Beta\u001fUnit 03",
+          "1600006904212": "Composition",
+          "1600006911909": "Composition\u001fAlpha",
+          "1600007539694": "Composition\u001fBeta\u001fEssays",
+          "1600007959204": "Composition\u001fGamma",
+          "1600009612350": "Cram",
+          "1600009741952": "Misc"
+        },
+        "queries": [
+          {
+            "cards": [
+              {
+                "did": 1600000452651,
+                "id": 1700000000061,
+                "odid": 0
+              },
+              {
+                "did": 1600000452651,
+                "id": 1700000000062,
+                "odid": 0
+              },
+              {
+                "did": 1600001258429,
+                "id": 1700000000063,
+                "odid": 0
+              },
+              {
+                "did": 1600001258429,
+                "id": 1700000000064,
+                "odid": 0
+              },
+              {
+                "did": 1600001703165,
+                "id": 1700000000065,
+                "odid": 0
+              },
+              {
+                "did": 1600001703165,
+                "id": 1700000000066,
+                "odid": 0
+              }
+            ],
+            "root_label": "Casebook"
+          },
+          {
+            "cards": [
+              {
+                "did": 1600005493309,
+                "id": 1700000000067,
+                "odid": 0
+              },
+              {
+                "did": 1600005493309,
+                "id": 1700000000068,
+                "odid": 0
+              },
+              {
+                "did": 1600005515362,
+                "id": 1700000000069,
+                "odid": 0
+              },
+              {
+                "did": 1600005515362,
+                "id": 1700000000070,
+                "odid": 0
+              }
+            ],
+            "root_label": "Tongue Alpha"
+          }
+        ],
+        "undetermined": [
+          {
+            "reason": "day_set_fetch_saturated",
+            "root_label": "Casebook"
+          },
+          {
+            "reason": "collection_locked",
+            "root_label": "Composition"
+          }
+        ]
+      },
+      "output": {
+        "active_topics": [
+          {
+            "deck_ids": [
+              1600005493309,
+              1600005515362
+            ],
+            "digest": "2fbbfbd62addc96b564174aee4d7a9d20d8939ce803ef5aa9a5b65fc00643a8e",
+            "new_cards": [
+              1700000000067,
+              1700000000068,
+              1700000000069,
+              1700000000070
+            ],
+            "topic_key": "language/qaa"
+          }
+        ],
+        "no_new_today": [],
+        "undetermined": [
+          {
+            "reason": "day_set_fetch_saturated",
+            "root_label": "Casebook"
+          },
+          {
+            "reason": "collection_locked",
+            "root_label": "Composition"
+          }
+        ],
+        "unmapped_decks": []
+      }
+    },
+    {
+      "class": "undetermined",
+      "input": {
+        "deck_names": {
+          "1600000452651": "Casebook",
+          "1600001258429": "Casebook\u001fMethod",
+          "1600001703165": "Casebook\u001fEvidence",
+          "1600001732211": "Casebook\u001fEvidence\u001fUnit 01",
+          "1600002098447": "Casebook\u001fYear One",
+          "1600002536804": "Casebook\u001fYear One\u001fPublic Law",
+          "1600002841693": "Casebook\u001fYear One\u001fPublic Law\u001fConstitutional Law",
+          "1600003352359": "Casebook\u001fYear One\u001fPublic Law\u001fConstitutional Law\u001fUnit 02",
+          "1600003500610": "Casebook\u001fYear Two\u001fPrivate Law\u001fTorts",
+          "1600004359182": "Casebook\u001fYear Two\u001fPrivate Law\u001fProcedure & Proof",
+          "1600005316767": "Casebook\u001fYear Three\u001fSkills\u001fCivil_Procedure -- Practice",
+          "1600005354267": "Casebook\u001f  Contracts  ",
+          "1600005493309": "Tongue Alpha",
+          "1600005515362": "Tongue Alpha\u001fUnit 01",
+          "1600005629911": "Tongue Beta",
+          "1600006823970": "Tongue Beta\u001fUnit 03",
+          "1600006904212": "Composition",
+          "1600006911909": "Composition\u001fAlpha",
+          "1600007539694": "Composition\u001fBeta\u001fEssays",
+          "1600007959204": "Composition\u001fGamma",
+          "1600009612350": "Cram",
+          "1600009741952": "Misc"
+        },
+        "queries": [],
+        "undetermined": [
+          {
+            "reason": "collection_open_failed",
+            "root_label": "Tongue Beta"
+          },
+          {
+            "reason": "collection_open_failed",
+            "root_label": "Casebook"
+          },
+          {
+            "reason": "collection_locked",
+            "root_label": "Tongue Alpha"
+          }
+        ]
+      },
+      "output": {
+        "active_topics": [],
+        "no_new_today": [],
+        "undetermined": [
+          {
+            "reason": "collection_open_failed",
+            "root_label": "Casebook"
+          },
+          {
+            "reason": "collection_locked",
+            "root_label": "Tongue Alpha"
+          },
+          {
+            "reason": "collection_open_failed",
+            "root_label": "Tongue Beta"
+          }
+        ],
+        "unmapped_decks": []
+      }
+    },
+    {
+      "class": "drawn",
+      "input": {
+        "deck_names": {
+          "1600000452651": "Casebook",
+          "1600001258429": "Casebook\u001fMethod",
+          "1600001703165": "Casebook\u001fEvidence",
+          "1600001732211": "Casebook\u001fEvidence\u001fUnit 01",
+          "1600002098447": "Casebook\u001fYear One",
+          "1600002536804": "Casebook\u001fYear One\u001fPublic Law",
+          "1600002841693": "Casebook\u001fYear One\u001fPublic Law\u001fConstitutional Law",
+          "1600003352359": "Casebook\u001fYear One\u001fPublic Law\u001fConstitutional Law\u001fUnit 02",
+          "1600003500610": "Casebook\u001fYear Two\u001fPrivate Law\u001fTorts",
+          "1600004359182": "Casebook\u001fYear Two\u001fPrivate Law\u001fProcedure & Proof",
+          "1600005316767": "Casebook\u001fYear Three\u001fSkills\u001fCivil_Procedure -- Practice",
+          "1600005354267": "Casebook\u001f  Contracts  ",
+          "1600005493309": "Tongue Alpha",
+          "1600005515362": "Tongue Alpha\u001fUnit 01",
+          "1600005629911": "Tongue Beta",
+          "1600006823970": "Tongue Beta\u001fUnit 03",
+          "1600006904212": "Composition",
+          "1600006911909": "Composition\u001fAlpha",
+          "1600007539694": "Composition\u001fBeta\u001fEssays",
+          "1600007959204": "Composition\u001fGamma",
+          "1600009612350": "Cram",
+          "1600009741952": "Misc"
+        },
+        "queries": [
+          {
+            "cards": [
+              {
+                "did": 1600006904212,
+                "id": 1700000000071,
+                "odid": 0
+              },
+              {
+                "did": 1600006911909,
+                "id": 1700000000072,
+                "odid": 0
+              },
+              {
+                "did": 1600006911909,
+                "id": 1700000000073,
+                "odid": 0
+              }
+            ],
+            "root_label": "Composition"
+          },
+          {
+            "cards": [],
+            "root_label": "Casebook"
+          },
+          {
+            "cards": [
+              {
+                "did": 1600009741952,
+                "id": 1700000000074,
+                "odid": 0
+              },
+              {
+                "did": 1600006904212,
+                "id": 1700000000071,
+                "odid": 0
+              }
+            ],
+            "root_label": "Misc"
+          }
+        ],
+        "undetermined": [
+          {
+            "reason": "collection_open_failed",
+            "root_label": "Casebook"
+          }
+        ]
+      },
+      "output": {
+        "active_topics": [
+          {
+            "deck_ids": [
+              1600006911909
+            ],
+            "digest": "e28de56a3a5504d340b273d6bce19259c2d7a204dde91e07a52bea8d086e492b",
+            "new_cards": [
+              1700000000072,
+              1700000000073
+            ],
+            "topic_key": "language/qaa"
+          }
+        ],
+        "no_new_today": [
+          "Misc"
+        ],
+        "undetermined": [
+          {
+            "reason": "collection_open_failed",
+            "root_label": "Casebook"
+          }
+        ],
+        "unmapped_decks": [
+          {
+            "card_count": 1,
+            "deck_name": "Composition"
+          },
+          {
+            "card_count": 1,
+            "deck_name": "Misc"
+          }
+        ]
+      }
+    },
+    {
+      "class": "drawn",
+      "input": {
+        "deck_names": {
+          "1600000452651": "Casebook",
+          "1600001258429": "Casebook\u001fMethod",
+          "1600001703165": "Casebook\u001fEvidence",
+          "1600001732211": "Casebook\u001fEvidence\u001fUnit 01",
+          "1600002098447": "Casebook\u001fYear One",
+          "1600002536804": "Casebook\u001fYear One\u001fPublic Law",
+          "1600002841693": "Casebook\u001fYear One\u001fPublic Law\u001fConstitutional Law",
+          "1600003352359": "Casebook\u001fYear One\u001fPublic Law\u001fConstitutional Law\u001fUnit 02",
+          "1600003500610": "Casebook\u001fYear Two\u001fPrivate Law\u001fTorts",
+          "1600004359182": "Casebook\u001fYear Two\u001fPrivate Law\u001fProcedure & Proof",
+          "1600005316767": "Casebook\u001fYear Three\u001fSkills\u001fCivil_Procedure -- Practice",
+          "1600005354267": "Casebook\u001f  Contracts  ",
+          "1600005493309": "Tongue Alpha",
+          "1600005515362": "Tongue Alpha\u001fUnit 01",
+          "1600005629911": "Tongue Beta",
+          "1600006823970": "Tongue Beta\u001fUnit 03",
+          "1600006904212": "Composition",
+          "1600006911909": "Composition\u001fAlpha",
+          "1600007539694": "Composition\u001fBeta\u001fEssays",
+          "1600007959204": "Composition\u001fGamma",
+          "1600009612350": "Cram",
+          "1600009741952": "Misc"
+        },
+        "queries": [
+          {
+            "cards": [
+              {
+                "did": 1600009741952,
+                "id": 1700000000075,
+                "odid": 0
+              },
+              {
+                "did": 1600009741952,
+                "id": 1700000000076,
+                "odid": 0
+              },
+              {
+                "did": 1600009741952,
+                "id": 1700000000077,
+                "odid": 0
+              },
+              {
+                "did": 1600009741952,
+                "id": 1700000000078,
+                "odid": 0
+              },
+              {
+                "did": 1600009741952,
+                "id": 1700000000079,
+                "odid": 0
+              }
+            ],
+            "root_label": "Misc"
+          },
+          {
+            "cards": [
+              {
+                "did": 1600005629911,
+                "id": 1700000000080,
+                "odid": 0
+              },
+              {
+                "did": 1600005629911,
+                "id": 1700000000081,
+                "odid": 0
+              },
+              {
+                "did": 1600005629911,
+                "id": 1700000000082,
+                "odid": 0
+              },
+              {
+                "did": 1600005629911,
+                "id": 1700000000083,
+                "odid": 0
+              },
+              {
+                "did": 1600005629911,
+                "id": 1700000000084,
+                "odid": 0
+              }
+            ],
+            "root_label": "Tongue Beta"
+          },
+          {
+            "cards": [
+              {
+                "did": 1600009612350,
+                "id": 1700000000085,
+                "odid": 1600002098447
+              },
+              {
+                "did": 1600009612350,
+                "id": 1700000000086,
+                "odid": 1600009612350
+              },
+              {
+                "did": 1600009612350,
+                "id": 1700000000087,
+                "odid": 1600003500610
+              },
+              {
+                "did": 1600009612350,
+                "id": 1700000000088,
+                "odid": 1600006911909
+              },
+              {
+                "did": 1600009612350,
+                "id": 1700000000089,
+                "odid": 1600005515362
+              },
+              {
+                "did": 1600009741952,
+                "id": 1700000000076,
+                "odid": 0
+              }
+            ],
+            "root_label": "Cram"
+          }
+        ],
+        "undetermined": [
+          {
+            "reason": "collection_open_failed",
+            "root_label": "Tongue Beta"
+          }
+        ]
+      },
+      "output": {
+        "active_topics": [
+          {
+            "deck_ids": [
+              1600005515362,
+              1600006911909
+            ],
+            "digest": "3f550fb76800cec7b022c37df5ba2b299b3636dcccae14e00e763a8e59293e92",
+            "new_cards": [
+              1700000000088,
+              1700000000089
+            ],
+            "topic_key": "language/qaa"
+          },
+          {
+            "deck_ids": [
+              1600003500610
+            ],
+            "digest": "c46154d96d349774c1f760204d1ca4ee7ab27ddc3d7225726d4e4a78c43f160f",
+            "new_cards": [
+              1700000000087
+            ],
+            "topic_key": "law/torts"
+          },
+          {
+            "deck_ids": [
+              1600002098447
+            ],
+            "digest": "81ef5a2b02763356c6ab458265b26e52a4340cacd014f3c7d5526a6bba6b2369",
+            "new_cards": [
+              1700000000085
+            ],
+            "topic_key": "law/year-one"
+          }
+        ],
+        "no_new_today": [
+          "Misc"
+        ],
+        "undetermined": [
+          {
+            "reason": "collection_open_failed",
+            "root_label": "Tongue Beta"
+          }
+        ],
+        "unmapped_decks": [
+          {
+            "card_count": 1,
+            "deck_name": "Cram"
+          },
+          {
+            "card_count": 5,
+            "deck_name": "Misc"
+          }
+        ]
+      }
+    },
+    {
+      "class": "drawn",
+      "input": {
+        "deck_names": {
+          "1600000452651": "Casebook",
+          "1600001258429": "Casebook\u001fMethod",
+          "1600001703165": "Casebook\u001fEvidence",
+          "1600001732211": "Casebook\u001fEvidence\u001fUnit 01",
+          "1600002098447": "Casebook\u001fYear One",
+          "1600002536804": "Casebook\u001fYear One\u001fPublic Law",
+          "1600002841693": "Casebook\u001fYear One\u001fPublic Law\u001fConstitutional Law",
+          "1600003352359": "Casebook\u001fYear One\u001fPublic Law\u001fConstitutional Law\u001fUnit 02",
+          "1600003500610": "Casebook\u001fYear Two\u001fPrivate Law\u001fTorts",
+          "1600004359182": "Casebook\u001fYear Two\u001fPrivate Law\u001fProcedure & Proof",
+          "1600005316767": "Casebook\u001fYear Three\u001fSkills\u001fCivil_Procedure -- Practice",
+          "1600005354267": "Casebook\u001f  Contracts  ",
+          "1600005493309": "Tongue Alpha",
+          "1600005515362": "Tongue Alpha\u001fUnit 01",
+          "1600005629911": "Tongue Beta",
+          "1600006823970": "Tongue Beta\u001fUnit 03",
+          "1600006904212": "Composition",
+          "1600006911909": "Composition\u001fAlpha",
+          "1600007539694": "Composition\u001fBeta\u001fEssays",
+          "1600007959204": "Composition\u001fGamma",
+          "1600009612350": "Cram",
+          "1600009741952": "Misc"
+        },
+        "queries": [
+          {
+            "cards": [
+              {
+                "did": 1600009741952,
+                "id": 1700000000090,
+                "odid": 0
+              },
+              {
+                "did": 1600009741952,
+                "id": 1700000000091,
+                "odid": 0
+              },
+              {
+                "did": 1600009741952,
+                "id": 1700000000092,
+                "odid": 0
+              },
+              {
+                "did": 1600009741952,
+                "id": 1700000000093,
+                "odid": 0
+              }
+            ],
+            "root_label": "Misc"
+          },
+          {
+            "cards": [
+              {
+                "did": 1600000452651,
+                "id": 1700000000094,
+                "odid": 0
+              },
+              {
+                "did": 1600003500610,
+                "id": 1700000000095,
+                "odid": 0
+              },
+              {
+                "did": 1600001732211,
+                "id": 1700000000096,
+                "odid": 0
+              },
+              {
+                "did": 1600002841693,
+                "id": 1700000000097,
+                "odid": 0
+              }
+            ],
+            "root_label": "Casebook"
+          },
+          {
+            "cards": [
+              {
+                "did": 1600005493309,
+                "id": 1700000000098,
+                "odid": 0
+              },
+              {
+                "did": 1600009741952,
+                "id": 1700000000090,
+                "odid": 0
+              }
+            ],
+            "root_label": "Tongue Alpha"
+          }
+        ],
+        "undetermined": [
+          {
+            "reason": "collection_open_failed",
+            "root_label": "Casebook"
+          }
+        ]
+      },
+      "output": {
+        "active_topics": [
+          {
+            "deck_ids": [
+              1600005493309
+            ],
+            "digest": "778409d73856e46e6e007b76a37e1e16ce99b6f4c3a690e47b3dce574c16c2b4",
+            "new_cards": [
+              1700000000098
+            ],
+            "topic_key": "language/qaa"
+          }
+        ],
+        "no_new_today": [
+          "Misc"
+        ],
+        "undetermined": [
+          {
+            "reason": "collection_open_failed",
+            "root_label": "Casebook"
+          }
+        ],
+        "unmapped_decks": [
+          {
+            "card_count": 4,
+            "deck_name": "Misc"
+          }
+        ]
+      }
+    },
+    {
+      "class": "drawn",
+      "input": {
+        "deck_names": {
+          "1600000452651": "Casebook",
+          "1600001258429": "Casebook\u001fMethod",
+          "1600001703165": "Casebook\u001fEvidence",
+          "1600001732211": "Casebook\u001fEvidence\u001fUnit 01",
+          "1600002098447": "Casebook\u001fYear One",
+          "1600002536804": "Casebook\u001fYear One\u001fPublic Law",
+          "1600002841693": "Casebook\u001fYear One\u001fPublic Law\u001fConstitutional Law",
+          "1600003352359": "Casebook\u001fYear One\u001fPublic Law\u001fConstitutional Law\u001fUnit 02",
+          "1600003500610": "Casebook\u001fYear Two\u001fPrivate Law\u001fTorts",
+          "1600004359182": "Casebook\u001fYear Two\u001fPrivate Law\u001fProcedure & Proof",
+          "1600005316767": "Casebook\u001fYear Three\u001fSkills\u001fCivil_Procedure -- Practice",
+          "1600005354267": "Casebook\u001f  Contracts  ",
+          "1600005493309": "Tongue Alpha",
+          "1600005515362": "Tongue Alpha\u001fUnit 01",
+          "1600005629911": "Tongue Beta",
+          "1600006823970": "Tongue Beta\u001fUnit 03",
+          "1600006904212": "Composition",
+          "1600006911909": "Composition\u001fAlpha",
+          "1600007539694": "Composition\u001fBeta\u001fEssays",
+          "1600007959204": "Composition\u001fGamma",
+          "1600009612350": "Cram",
+          "1600009741952": "Misc"
+        },
+        "queries": [
+          {
+            "cards": [
+              {
+                "did": 1600003500610,
+                "id": 1700000000099,
+                "odid": 0
+              },
+              {
+                "did": 1600005354267,
+                "id": 1700000000100,
+                "odid": 0
+              },
+              {
+                "did": 1600000452651,
+                "id": 1700000000101,
+                "odid": 0
+              }
+            ],
+            "root_label": "Casebook"
+          },
+          {
+            "cards": [
+              {
+                "did": 1600005629911,
+                "id": 1700000000102,
+                "odid": 0
+              },
+              {
+                "did": 1600005629911,
+                "id": 1700000000103,
+                "odid": 0
+              },
+              {
+                "did": 1600006823970,
+                "id": 1700000000104,
+                "odid": 0
+              },
+              {
+                "did": 1600006823970,
+                "id": 1700000000105,
+                "odid": 0
+              },
+              {
+                "did": 1600005629911,
+                "id": 1700000000106,
+                "odid": 0
+              }
+            ],
+            "root_label": "Tongue Beta"
+          },
+          {
+            "cards": [
+              {
+                "did": 1600000452651,
+                "id": 1700000000101,
+                "odid": 0
+              }
+            ],
+            "root_label": "Composition"
+          }
+        ],
+        "undetermined": []
+      },
+      "output": {
+        "active_topics": [
+          {
+            "deck_ids": [
+              1600005629911,
+              1600006823970
+            ],
+            "digest": "65ee204e2b5c2d6669ca5e956415d74e74b2f36ba5a28f884cfafb467b5c6844",
+            "new_cards": [
+              1700000000102,
+              1700000000103,
+              1700000000104,
+              1700000000105,
+              1700000000106
+            ],
+            "topic_key": "language/qab"
+          },
+          {
+            "deck_ids": [
+              1600005354267
+            ],
+            "digest": "c619966aa1d2e6e7d68e81c0e3128d1203415dcdf2fbf2b55f31fe023522d734",
+            "new_cards": [
+              1700000000100
+            ],
+            "topic_key": "law/contracts"
+          },
+          {
+            "deck_ids": [
+              1600003500610
+            ],
+            "digest": "35ab1a321c417a2bfd42ccf4742cca79c01e8f84b0b44a2b017e30abf670dab3",
+            "new_cards": [
+              1700000000099
+            ],
+            "topic_key": "law/torts"
+          }
+        ],
+        "no_new_today": [
+          "Composition"
+        ],
+        "undetermined": [],
+        "unmapped_decks": [
+          {
+            "card_count": 1,
+            "deck_name": "Casebook"
+          }
+        ]
+      }
+    },
+    {
+      "class": "drawn",
+      "input": {
+        "deck_names": {
+          "1600000452651": "Casebook",
+          "1600001258429": "Casebook\u001fMethod",
+          "1600001703165": "Casebook\u001fEvidence",
+          "1600001732211": "Casebook\u001fEvidence\u001fUnit 01",
+          "1600002098447": "Casebook\u001fYear One",
+          "1600002536804": "Casebook\u001fYear One\u001fPublic Law",
+          "1600002841693": "Casebook\u001fYear One\u001fPublic Law\u001fConstitutional Law",
+          "1600003352359": "Casebook\u001fYear One\u001fPublic Law\u001fConstitutional Law\u001fUnit 02",
+          "1600003500610": "Casebook\u001fYear Two\u001fPrivate Law\u001fTorts",
+          "1600004359182": "Casebook\u001fYear Two\u001fPrivate Law\u001fProcedure & Proof",
+          "1600005316767": "Casebook\u001fYear Three\u001fSkills\u001fCivil_Procedure -- Practice",
+          "1600005354267": "Casebook\u001f  Contracts  ",
+          "1600005493309": "Tongue Alpha",
+          "1600005515362": "Tongue Alpha\u001fUnit 01",
+          "1600005629911": "Tongue Beta",
+          "1600006823970": "Tongue Beta\u001fUnit 03",
+          "1600006904212": "Composition",
+          "1600006911909": "Composition\u001fAlpha",
+          "1600007539694": "Composition\u001fBeta\u001fEssays",
+          "1600007959204": "Composition\u001fGamma",
+          "1600009612350": "Cram",
+          "1600009741952": "Misc"
+        },
+        "queries": [
+          {
+            "cards": [
+              {
+                "did": 1600005316767,
+                "id": 1700000000107,
+                "odid": 0
+              },
+              {
+                "did": 1600001258429,
+                "id": 1700000000108,
+                "odid": 0
+              }
+            ],
+            "root_label": "Casebook"
+          },
+          {
+            "cards": [
+              {
+                "did": 1600009741952,
+                "id": 1700000000109,
+                "odid": 0
+              },
+              {
+                "did": 1600009741952,
+                "id": 1700000000110,
+                "odid": 0
+              },
+              {
+                "did": 1600009741952,
+                "id": 1700000000111,
+                "odid": 0
+              },
+              {
+                "did": 1600009741952,
+                "id": 1700000000112,
+                "odid": 0
+              },
+              {
+                "did": 1600009741952,
+                "id": 1700000000113,
+                "odid": 0
+              }
+            ],
+            "root_label": "Misc"
+          },
+          {
+            "cards": [
+              {
+                "did": 1600005629911,
+                "id": 1700000000114,
+                "odid": 0
+              },
+              {
+                "did": 1600005629911,
+                "id": 1700000000115,
+                "odid": 0
+              },
+              {
+                "did": 1600005629911,
+                "id": 1700000000116,
+                "odid": 0
+              },
+              {
+                "did": 1600005629911,
+                "id": 1700000000117,
+                "odid": 0
+              },
+              {
+                "did": 1600001258429,
+                "id": 1700000000108,
+                "odid": 0
+              }
+            ],
+            "root_label": "Tongue Beta"
+          }
+        ],
+        "undetermined": [
+          {
+            "reason": "collection_open_failed",
+            "root_label": "Misc"
+          }
+        ]
+      },
+      "output": {
+        "active_topics": [
+          {
+            "deck_ids": [
+              1600005629911
+            ],
+            "digest": "8a29a8b5599316ce4148bd8058b908037489812b63b927aa0c12bda49c25617d",
+            "new_cards": [
+              1700000000114,
+              1700000000115,
+              1700000000116,
+              1700000000117
+            ],
+            "topic_key": "language/qab"
+          },
+          {
+            "deck_ids": [
+              1600005316767
+            ],
+            "digest": "d69758234847de6022e87530c9d9aefec0c3b5e5524452d5afc6e119b435ba29",
+            "new_cards": [
+              1700000000107
+            ],
+            "topic_key": "law/civil-procedure-practice"
+          },
+          {
+            "deck_ids": [
+              1600001258429
+            ],
+            "digest": "b01a3698c2f4434486be19c58dd7cd2ddd9cfe4ddc1e430d08aa48e460bce3f4",
+            "new_cards": [
+              1700000000108
+            ],
+            "topic_key": "law/method"
+          }
+        ],
+        "no_new_today": [],
+        "undetermined": [
+          {
+            "reason": "collection_open_failed",
+            "root_label": "Misc"
+          }
+        ],
+        "unmapped_decks": []
+      }
+    },
+    {
+      "class": "drawn",
+      "input": {
+        "deck_names": {
+          "1600000452651": "Casebook",
+          "1600001258429": "Casebook\u001fMethod",
+          "1600001703165": "Casebook\u001fEvidence",
+          "1600001732211": "Casebook\u001fEvidence\u001fUnit 01",
+          "1600002098447": "Casebook\u001fYear One",
+          "1600002536804": "Casebook\u001fYear One\u001fPublic Law",
+          "1600002841693": "Casebook\u001fYear One\u001fPublic Law\u001fConstitutional Law",
+          "1600003352359": "Casebook\u001fYear One\u001fPublic Law\u001fConstitutional Law\u001fUnit 02",
+          "1600003500610": "Casebook\u001fYear Two\u001fPrivate Law\u001fTorts",
+          "1600004359182": "Casebook\u001fYear Two\u001fPrivate Law\u001fProcedure & Proof",
+          "1600005316767": "Casebook\u001fYear Three\u001fSkills\u001fCivil_Procedure -- Practice",
+          "1600005354267": "Casebook\u001f  Contracts  ",
+          "1600005493309": "Tongue Alpha",
+          "1600005515362": "Tongue Alpha\u001fUnit 01",
+          "1600005629911": "Tongue Beta",
+          "1600006823970": "Tongue Beta\u001fUnit 03",
+          "1600006904212": "Composition",
+          "1600006911909": "Composition\u001fAlpha",
+          "1600007539694": "Composition\u001fBeta\u001fEssays",
+          "1600007959204": "Composition\u001fGamma",
+          "1600009612350": "Cram",
+          "1600009741952": "Misc"
+        },
+        "queries": [
+          {
+            "cards": [],
+            "root_label": "Tongue Beta"
+          },
+          {
+            "cards": [
+              {
+                "did": 1600001732211,
+                "id": 1700000000118,
+                "odid": 0
+              }
+            ],
+            "root_label": "Casebook"
+          },
+          {
+            "cards": [
+              {
+                "did": 1600006911909,
+                "id": 1700000000119,
+                "odid": 0
+              }
+            ],
+            "root_label": "Composition"
+          }
+        ],
+        "undetermined": [
+          {
+            "reason": "collection_open_failed",
+            "root_label": "Casebook"
+          }
+        ]
+      },
+      "output": {
+        "active_topics": [
+          {
+            "deck_ids": [
+              1600006911909
+            ],
+            "digest": "2d3924a76453c39db35b848f945fc47f0ab5ee92ce83eedadb52bdaf7ef4e48c",
+            "new_cards": [
+              1700000000119
+            ],
+            "topic_key": "language/qaa"
+          }
+        ],
+        "no_new_today": [
+          "Tongue Beta"
+        ],
+        "undetermined": [
+          {
+            "reason": "collection_open_failed",
+            "root_label": "Casebook"
+          }
+        ],
+        "unmapped_decks": []
+      }
+    },
+    {
+      "class": "drawn",
+      "input": {
+        "deck_names": {
+          "1600000452651": "Casebook",
+          "1600001258429": "Casebook\u001fMethod",
+          "1600001703165": "Casebook\u001fEvidence",
+          "1600001732211": "Casebook\u001fEvidence\u001fUnit 01",
+          "1600002098447": "Casebook\u001fYear One",
+          "1600002536804": "Casebook\u001fYear One\u001fPublic Law",
+          "1600002841693": "Casebook\u001fYear One\u001fPublic Law\u001fConstitutional Law",
+          "1600003352359": "Casebook\u001fYear One\u001fPublic Law\u001fConstitutional Law\u001fUnit 02",
+          "1600003500610": "Casebook\u001fYear Two\u001fPrivate Law\u001fTorts",
+          "1600004359182": "Casebook\u001fYear Two\u001fPrivate Law\u001fProcedure & Proof",
+          "1600005316767": "Casebook\u001fYear Three\u001fSkills\u001fCivil_Procedure -- Practice",
+          "1600005354267": "Casebook\u001f  Contracts  ",
+          "1600005493309": "Tongue Alpha",
+          "1600005515362": "Tongue Alpha\u001fUnit 01",
+          "1600005629911": "Tongue Beta",
+          "1600006823970": "Tongue Beta\u001fUnit 03",
+          "1600006904212": "Composition",
+          "1600006911909": "Composition\u001fAlpha",
+          "1600007539694": "Composition\u001fBeta\u001fEssays",
+          "1600007959204": "Composition\u001fGamma",
+          "1600009612350": "Cram",
+          "1600009741952": "Misc"
+        },
+        "queries": [
+          {
+            "cards": [
+              {
+                "did": 1600005493309,
+                "id": 1700000000120,
+                "odid": 0
+              }
+            ],
+            "root_label": "Tongue Alpha"
+          },
+          {
+            "cards": [
+              {
+                "did": 1600009612350,
+                "id": 1700000000121,
+                "odid": 1600002841693
+              },
+              {
+                "did": 1600009612350,
+                "id": 1700000000122,
+                "odid": 1600009612350
+              },
+              {
+                "did": 1600009612350,
+                "id": 1700000000123,
+                "odid": 1600004359182
+              }
+            ],
+            "root_label": "Cram"
+          },
+          {
+            "cards": [
+              {
+                "did": 1600006904212,
+                "id": 1700000000124,
+                "odid": 0
+              },
+              {
+                "did": 1600007539694,
+                "id": 1700000000125,
+                "odid": 0
+              },
+              {
+                "did": 1600006911909,
+                "id": 1700000000126,
+                "odid": 0
+              },
+              {
+                "did": 1600005493309,
+                "id": 1700000000120,
+                "odid": 0
+              }
+            ],
+            "root_label": "Composition"
+          }
+        ],
+        "undetermined": []
+      },
+      "output": {
+        "active_topics": [
+          {
+            "deck_ids": [
+              1600005493309,
+              1600006911909
+            ],
+            "digest": "567e16f1d2e23bee1ea2c5227e8f08e2ebe553523889fbfabfe4e0c91d2bf0e9",
+            "new_cards": [
+              1700000000120,
+              1700000000126
+            ],
+            "topic_key": "language/qaa"
+          },
+          {
+            "deck_ids": [
+              1600007539694
+            ],
+            "digest": "8073108a892b449e3144e8cbc8a6d92c1470c763844f6fdbec203936fd754c0b",
+            "new_cards": [
+              1700000000125
+            ],
+            "topic_key": "language/qab"
+          },
+          {
+            "deck_ids": [
+              1600002841693
+            ],
+            "digest": "26fe6b60ab5af601ab7496e8d5cef0d817cc4eea2d4bccd01207b7bbf3d24b7d",
+            "new_cards": [
+              1700000000121
+            ],
+            "topic_key": "law/constitutional-law"
+          }
+        ],
+        "no_new_today": [],
+        "undetermined": [],
+        "unmapped_decks": [
+          {
+            "card_count": 1,
+            "deck_name": "Casebook\u001fYear Two\u001fPrivate Law\u001fProcedure & Proof"
+          },
+          {
+            "card_count": 1,
+            "deck_name": "Composition"
+          },
+          {
+            "card_count": 1,
+            "deck_name": "Cram"
+          }
+        ]
+      }
+    },
+    {
+      "class": "drawn",
+      "input": {
+        "deck_names": {
+          "1600000452651": "Casebook",
+          "1600001258429": "Casebook\u001fMethod",
+          "1600001703165": "Casebook\u001fEvidence",
+          "1600001732211": "Casebook\u001fEvidence\u001fUnit 01",
+          "1600002098447": "Casebook\u001fYear One",
+          "1600002536804": "Casebook\u001fYear One\u001fPublic Law",
+          "1600002841693": "Casebook\u001fYear One\u001fPublic Law\u001fConstitutional Law",
+          "1600003352359": "Casebook\u001fYear One\u001fPublic Law\u001fConstitutional Law\u001fUnit 02",
+          "1600003500610": "Casebook\u001fYear Two\u001fPrivate Law\u001fTorts",
+          "1600004359182": "Casebook\u001fYear Two\u001fPrivate Law\u001fProcedure & Proof",
+          "1600005316767": "Casebook\u001fYear Three\u001fSkills\u001fCivil_Procedure -- Practice",
+          "1600005354267": "Casebook\u001f  Contracts  ",
+          "1600005493309": "Tongue Alpha",
+          "1600005515362": "Tongue Alpha\u001fUnit 01",
+          "1600005629911": "Tongue Beta",
+          "1600006823970": "Tongue Beta\u001fUnit 03",
+          "1600006904212": "Composition",
+          "1600006911909": "Composition\u001fAlpha",
+          "1600007539694": "Composition\u001fBeta\u001fEssays",
+          "1600007959204": "Composition\u001fGamma",
+          "1600009612350": "Cram",
+          "1600009741952": "Misc"
+        },
+        "queries": [
+          {
+            "cards": [],
+            "root_label": "Tongue Beta"
+          },
+          {
+            "cards": [
+              {
+                "did": 1600005493309,
+                "id": 1700000000127,
+                "odid": 0
+              },
+              {
+                "did": 1600005515362,
+                "id": 1700000000128,
+                "odid": 0
+              }
+            ],
+            "root_label": "Tongue Alpha"
+          },
+          {
+            "cards": [
+              {
+                "did": 1600005354267,
+                "id": 1700000000129,
+                "odid": 0
+              },
+              {
+                "did": 1600002098447,
+                "id": 1700000000130,
+                "odid": 0
+              }
+            ],
+            "root_label": "Casebook"
+          }
+        ],
+        "undetermined": []
+      },
+      "output": {
+        "active_topics": [
+          {
+            "deck_ids": [
+              1600005493309,
+              1600005515362
+            ],
+            "digest": "c903a140e7afe1f5341f41cdf34ab79b501effb34fcc6134bcb1e04442b36a0c",
+            "new_cards": [
+              1700000000127,
+              1700000000128
+            ],
+            "topic_key": "language/qaa"
+          },
+          {
+            "deck_ids": [
+              1600005354267
+            ],
+            "digest": "9680ef20fc0e7d82cfa8a43232b807e535363094605af0546e24e645aa210626",
+            "new_cards": [
+              1700000000129
+            ],
+            "topic_key": "law/contracts"
+          },
+          {
+            "deck_ids": [
+              1600002098447
+            ],
+            "digest": "074772edc576d2e37c86e67528ad72581dcb46f9f64f039a83a6d165fc372687",
+            "new_cards": [
+              1700000000130
+            ],
+            "topic_key": "law/year-one"
+          }
+        ],
+        "no_new_today": [
+          "Tongue Beta"
+        ],
+        "undetermined": [],
+        "unmapped_decks": []
+      }
+    },
+    {
+      "class": "drawn",
+      "input": {
+        "deck_names": {
+          "1600000452651": "Casebook",
+          "1600001258429": "Casebook\u001fMethod",
+          "1600001703165": "Casebook\u001fEvidence",
+          "1600001732211": "Casebook\u001fEvidence\u001fUnit 01",
+          "1600002098447": "Casebook\u001fYear One",
+          "1600002536804": "Casebook\u001fYear One\u001fPublic Law",
+          "1600002841693": "Casebook\u001fYear One\u001fPublic Law\u001fConstitutional Law",
+          "1600003352359": "Casebook\u001fYear One\u001fPublic Law\u001fConstitutional Law\u001fUnit 02",
+          "1600003500610": "Casebook\u001fYear Two\u001fPrivate Law\u001fTorts",
+          "1600004359182": "Casebook\u001fYear Two\u001fPrivate Law\u001fProcedure & Proof",
+          "1600005316767": "Casebook\u001fYear Three\u001fSkills\u001fCivil_Procedure -- Practice",
+          "1600005354267": "Casebook\u001f  Contracts  ",
+          "1600005493309": "Tongue Alpha",
+          "1600005515362": "Tongue Alpha\u001fUnit 01",
+          "1600005629911": "Tongue Beta",
+          "1600006823970": "Tongue Beta\u001fUnit 03",
+          "1600006904212": "Composition",
+          "1600006911909": "Composition\u001fAlpha",
+          "1600007539694": "Composition\u001fBeta\u001fEssays",
+          "1600007959204": "Composition\u001fGamma",
+          "1600009612350": "Cram",
+          "1600009741952": "Misc"
+        },
+        "queries": [
+          {
+            "cards": [
+              {
+                "did": 1600007959204,
+                "id": 1700000000131,
+                "odid": 0
+              },
+              {
+                "did": 1600006911909,
+                "id": 1700000000132,
+                "odid": 0
+              },
+              {
+                "did": 1600006904212,
+                "id": 1700000000133,
+                "odid": 0
+              },
+              {
+                "did": 1600006904212,
+                "id": 1700000000134,
+                "odid": 0
+              }
+            ],
+            "root_label": "Composition"
+          },
+          {
+            "cards": [
+              {
+                "did": 1600004359182,
+                "id": 1700000000135,
+                "odid": 0
+              },
+              {
+                "did": 1600002536804,
+                "id": 1700000000136,
+                "odid": 0
+              },
+              {
+                "did": 1600005354267,
+                "id": 1700000000137,
+                "odid": 0
+              },
+              {
+                "did": 1600000452651,
+                "id": 1700000000138,
+                "odid": 0
+              }
+            ],
+            "root_label": "Casebook"
+          },
+          {
+            "cards": [
+              {
+                "did": 1600009612350,
+                "id": 1700000000139,
+                "odid": 1600004359182
+              },
+              {
+                "did": 1600007959204,
+                "id": 1700000000131,
+                "odid": 0
+              }
+            ],
+            "root_label": "Cram"
+          }
+        ],
+        "undetermined": [
+          {
+            "reason": "collection_locked",
+            "root_label": "Casebook"
+          }
+        ]
+      },
+      "output": {
+        "active_topics": [
+          {
+            "deck_ids": [
+              1600006911909
+            ],
+            "digest": "2fa1d971271fe8ead35fc254b8ebea2be10ead1fae90c35da65257ca0d90a173",
+            "new_cards": [
+              1700000000132
+            ],
+            "topic_key": "language/qaa"
+          }
+        ],
+        "no_new_today": [
+          "Cram"
+        ],
+        "undetermined": [
+          {
+            "reason": "collection_locked",
+            "root_label": "Casebook"
+          }
+        ],
+        "unmapped_decks": [
+          {
+            "card_count": 1,
+            "deck_name": "Casebook\u001fYear Two\u001fPrivate Law\u001fProcedure & Proof"
+          },
+          {
+            "card_count": 2,
+            "deck_name": "Composition"
+          },
+          {
+            "card_count": 1,
+            "deck_name": "Composition\u001fGamma"
+          }
+        ]
+      }
+    },
+    {
+      "class": "drawn",
+      "input": {
+        "deck_names": {
+          "1600000452651": "Casebook",
+          "1600001258429": "Casebook\u001fMethod",
+          "1600001703165": "Casebook\u001fEvidence",
+          "1600001732211": "Casebook\u001fEvidence\u001fUnit 01",
+          "1600002098447": "Casebook\u001fYear One",
+          "1600002536804": "Casebook\u001fYear One\u001fPublic Law",
+          "1600002841693": "Casebook\u001fYear One\u001fPublic Law\u001fConstitutional Law",
+          "1600003352359": "Casebook\u001fYear One\u001fPublic Law\u001fConstitutional Law\u001fUnit 02",
+          "1600003500610": "Casebook\u001fYear Two\u001fPrivate Law\u001fTorts",
+          "1600004359182": "Casebook\u001fYear Two\u001fPrivate Law\u001fProcedure & Proof",
+          "1600005316767": "Casebook\u001fYear Three\u001fSkills\u001fCivil_Procedure -- Practice",
+          "1600005354267": "Casebook\u001f  Contracts  ",
+          "1600005493309": "Tongue Alpha",
+          "1600005515362": "Tongue Alpha\u001fUnit 01",
+          "1600005629911": "Tongue Beta",
+          "1600006823970": "Tongue Beta\u001fUnit 03",
+          "1600006904212": "Composition",
+          "1600006911909": "Composition\u001fAlpha",
+          "1600007539694": "Composition\u001fBeta\u001fEssays",
+          "1600007959204": "Composition\u001fGamma",
+          "1600009612350": "Cram",
+          "1600009741952": "Misc"
+        },
+        "queries": [
+          {
+            "cards": [
+              {
+                "did": 1600005493309,
+                "id": 1700000000140,
+                "odid": 0
+              },
+              {
+                "did": 1600005515362,
+                "id": 1700000000141,
+                "odid": 0
+              },
+              {
+                "did": 1600005515362,
+                "id": 1700000000142,
+                "odid": 0
+              },
+              {
+                "did": 1600005515362,
+                "id": 1700000000143,
+                "odid": 0
+              },
+              {
+                "did": 1600005493309,
+                "id": 1700000000144,
+                "odid": 0
+              }
+            ],
+            "root_label": "Tongue Alpha"
+          },
+          {
+            "cards": [
+              {
+                "did": 1600009741952,
+                "id": 1700000000145,
+                "odid": 0
+              },
+              {
+                "did": 1600009741952,
+                "id": 1700000000146,
+                "odid": 0
+              },
+              {
+                "did": 1600009741952,
+                "id": 1700000000147,
+                "odid": 0
+              },
+              {
+                "did": 1600009741952,
+                "id": 1700000000148,
+                "odid": 0
+              },
+              {
+                "did": 1600009741952,
+                "id": 1700000000149,
+                "odid": 0
+              }
+            ],
+            "root_label": "Misc"
+          },
+          {
+            "cards": [
+              {
+                "did": 1600005515362,
+                "id": 1700000000143,
+                "odid": 0
+              }
+            ],
+            "root_label": "Composition"
+          }
+        ],
+        "undetermined": [
+          {
+            "reason": "day_set_fetch_saturated",
+            "root_label": "Misc"
+          }
+        ]
+      },
+      "output": {
+        "active_topics": [
+          {
+            "deck_ids": [
+              1600005493309,
+              1600005515362
+            ],
+            "digest": "89850c07f84b4d4bdca8ec75cb507c3246719dafdfab879e8b3cd46e164aae51",
+            "new_cards": [
+              1700000000140,
+              1700000000141,
+              1700000000142,
+              1700000000143,
+              1700000000144
+            ],
+            "topic_key": "language/qaa"
+          }
+        ],
+        "no_new_today": [
+          "Composition"
+        ],
+        "undetermined": [
+          {
+            "reason": "day_set_fetch_saturated",
+            "root_label": "Misc"
+          }
+        ],
+        "unmapped_decks": []
+      }
+    },
+    {
+      "class": "drawn",
+      "input": {
+        "deck_names": {
+          "1600000452651": "Casebook",
+          "1600001258429": "Casebook\u001fMethod",
+          "1600001703165": "Casebook\u001fEvidence",
+          "1600001732211": "Casebook\u001fEvidence\u001fUnit 01",
+          "1600002098447": "Casebook\u001fYear One",
+          "1600002536804": "Casebook\u001fYear One\u001fPublic Law",
+          "1600002841693": "Casebook\u001fYear One\u001fPublic Law\u001fConstitutional Law",
+          "1600003352359": "Casebook\u001fYear One\u001fPublic Law\u001fConstitutional Law\u001fUnit 02",
+          "1600003500610": "Casebook\u001fYear Two\u001fPrivate Law\u001fTorts",
+          "1600004359182": "Casebook\u001fYear Two\u001fPrivate Law\u001fProcedure & Proof",
+          "1600005316767": "Casebook\u001fYear Three\u001fSkills\u001fCivil_Procedure -- Practice",
+          "1600005354267": "Casebook\u001f  Contracts  ",
+          "1600005493309": "Tongue Alpha",
+          "1600005515362": "Tongue Alpha\u001fUnit 01",
+          "1600005629911": "Tongue Beta",
+          "1600006823970": "Tongue Beta\u001fUnit 03",
+          "1600006904212": "Composition",
+          "1600006911909": "Composition\u001fAlpha",
+          "1600007539694": "Composition\u001fBeta\u001fEssays",
+          "1600007959204": "Composition\u001fGamma",
+          "1600009612350": "Cram",
+          "1600009741952": "Misc"
+        },
+        "queries": [
+          {
+            "cards": [
+              {
+                "did": 1600007539694,
+                "id": 1700000000150,
+                "odid": 0
+              }
+            ],
+            "root_label": "Composition"
+          },
+          {
+            "cards": [
+              {
+                "did": 1600006823970,
+                "id": 1700000000151,
+                "odid": 0
+              },
+              {
+                "did": 1600006823970,
+                "id": 1700000000152,
+                "odid": 0
+              },
+              {
+                "did": 1600005629911,
+                "id": 1700000000153,
+                "odid": 0
+              }
+            ],
+            "root_label": "Tongue Beta"
+          },
+          {
+            "cards": [
+              {
+                "did": 1600005493309,
+                "id": 1700000000154,
+                "odid": 0
+              },
+              {
+                "did": 1600005515362,
+                "id": 1700000000155,
+                "odid": 0
+              },
+              {
+                "did": 1600005493309,
+                "id": 1700000000156,
+                "odid": 0
+              },
+              {
+                "did": 1600005493309,
+                "id": 1700000000157,
+                "odid": 0
+              },
+              {
+                "did": 1600007539694,
+                "id": 1700000000150,
+                "odid": 0
+              }
+            ],
+            "root_label": "Tongue Alpha"
+          }
+        ],
+        "undetermined": [
+          {
+            "reason": "collection_locked",
+            "root_label": "Tongue Beta"
+          }
+        ]
+      },
+      "output": {
+        "active_topics": [
+          {
+            "deck_ids": [
+              1600005493309,
+              1600005515362
+            ],
+            "digest": "cf5c0dee28f3880909add1660af0fb7069e5768d9014e076a4ad5065ebec9ecf",
+            "new_cards": [
+              1700000000154,
+              1700000000155,
+              1700000000156,
+              1700000000157
+            ],
+            "topic_key": "language/qaa"
+          },
+          {
+            "deck_ids": [
+              1600007539694
+            ],
+            "digest": "4cdfb67863b1a81690fc8544d2608eabc53167ff183177aefdb8e67836f6dff8",
+            "new_cards": [
+              1700000000150
+            ],
+            "topic_key": "language/qab"
+          }
+        ],
+        "no_new_today": [],
+        "undetermined": [
+          {
+            "reason": "collection_locked",
+            "root_label": "Tongue Beta"
+          }
+        ],
+        "unmapped_decks": []
+      }
+    },
+    {
+      "class": "drawn",
+      "input": {
+        "deck_names": {
+          "1600000452651": "Casebook",
+          "1600001258429": "Casebook\u001fMethod",
+          "1600001703165": "Casebook\u001fEvidence",
+          "1600001732211": "Casebook\u001fEvidence\u001fUnit 01",
+          "1600002098447": "Casebook\u001fYear One",
+          "1600002536804": "Casebook\u001fYear One\u001fPublic Law",
+          "1600002841693": "Casebook\u001fYear One\u001fPublic Law\u001fConstitutional Law",
+          "1600003352359": "Casebook\u001fYear One\u001fPublic Law\u001fConstitutional Law\u001fUnit 02",
+          "1600003500610": "Casebook\u001fYear Two\u001fPrivate Law\u001fTorts",
+          "1600004359182": "Casebook\u001fYear Two\u001fPrivate Law\u001fProcedure & Proof",
+          "1600005316767": "Casebook\u001fYear Three\u001fSkills\u001fCivil_Procedure -- Practice",
+          "1600005354267": "Casebook\u001f  Contracts  ",
+          "1600005493309": "Tongue Alpha",
+          "1600005515362": "Tongue Alpha\u001fUnit 01",
+          "1600005629911": "Tongue Beta",
+          "1600006823970": "Tongue Beta\u001fUnit 03",
+          "1600006904212": "Composition",
+          "1600006911909": "Composition\u001fAlpha",
+          "1600007539694": "Composition\u001fBeta\u001fEssays",
+          "1600007959204": "Composition\u001fGamma",
+          "1600009612350": "Cram",
+          "1600009741952": "Misc"
+        },
+        "queries": [
+          {
+            "cards": [
+              {
+                "did": 1600006904212,
+                "id": 1700000000158,
+                "odid": 0
+              },
+              {
+                "did": 1600006911909,
+                "id": 1700000000159,
+                "odid": 0
+              }
+            ],
+            "root_label": "Composition"
+          },
+          {
+            "cards": [
+              {
+                "did": 1600005515362,
+                "id": 1700000000160,
+                "odid": 0
+              },
+              {
+                "did": 1600005515362,
+                "id": 1700000000161,
+                "odid": 0
+              },
+              {
+                "did": 1600005493309,
+                "id": 1700000000162,
+                "odid": 0
+              },
+              {
+                "did": 1600005493309,
+                "id": 1700000000163,
+                "odid": 0
+              },
+              {
+                "did": 1600005493309,
+                "id": 1700000000164,
+                "odid": 0
+              }
+            ],
+            "root_label": "Tongue Alpha"
+          },
+          {
+            "cards": [
+              {
+                "did": 1600009612350,
+                "id": 1700000000165,
+                "odid": 1600005493309
+              },
+              {
+                "did": 1600009612350,
+                "id": 1700000000166,
+                "odid": 1600006911909
+              },
+              {
+                "did": 1600009612350,
+                "id": 1700000000167,
+                "odid": 1600004359182
+              },
+              {
+                "did": 1600006911909,
+                "id": 1700000000159,
+                "odid": 0
+              }
+            ],
+            "root_label": "Cram"
+          }
+        ],
+        "undetermined": []
+      },
+      "output": {
+        "active_topics": [
+          {
+            "deck_ids": [
+              1600005493309,
+              1600005515362,
+              1600006911909
+            ],
+            "digest": "1885bcc0b0c13f7ba81d71cd1cdb63ed4fa20b2d4bd42ca38e596a297fb088af",
+            "new_cards": [
+              1700000000159,
+              1700000000160,
+              1700000000161,
+              1700000000162,
+              1700000000163,
+              1700000000164,
+              1700000000165,
+              1700000000166
+            ],
+            "topic_key": "language/qaa"
+          }
+        ],
+        "no_new_today": [],
+        "undetermined": [],
+        "unmapped_decks": [
+          {
+            "card_count": 1,
+            "deck_name": "Casebook\u001fYear Two\u001fPrivate Law\u001fProcedure & Proof"
+          },
+          {
+            "card_count": 1,
+            "deck_name": "Composition"
+          }
+        ]
+      }
+    }
+  ],
+  "function": "prereading.resolve_day_sets",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Replaces every private deck constant the predecessor reads with the synthetic taxonomy of the readings' example taxonomy file, builds its Card, DaySetQuery and UndeterminedRoot from the case, calls it with no new-card limit lookup, and returns the resolution's topics, unmapped decks, roots with no new card and undetermined roots; its limit-suppressed topics, none without a lookup, are left out; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_045.py",
+  "registry_sha256": "9485c5ea023fbd822a60c6e10d64bbe937aeb57330a74f85e3ae7951caaefafa",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

@@ -996,8 +996,17 @@ dependencies = [
 name = "deck-streak-readings"
 version = "0.1.0"
 dependencies = [
+ "anki",
  "deck-streak-ingest",
  "deck-streak-kernel",
+ "serde",
+ "serde_json",
+ "sha2 0.11.0",
+ "sqlx",
+ "tempfile",
+ "thiserror",
+ "tokio",
+ "tracing",
 ]
 
 [[package]]

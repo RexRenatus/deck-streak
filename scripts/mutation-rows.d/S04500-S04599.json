@@ -1,0 +1,123 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S04501-THE-SYNC-GATE-REFUSES-BEFORE-THE-QUEUE",
+        "readings",
+        "src/day_set.rs",
+        "    if !inputs.last_sync.succeeded() {",
+        "    if false {",
+        "gates::a_failed_last_sync_is_could_not_tell_before_any_collection_work",
+        "a last sync that did not succeed makes every topic could_not_tell sync_failed before the queue port is ever called (SPEC-045 R4, A6)"
+      ],
+      [
+        "S04502-THE-PAUSE-GATE-REFUSES-BEFORE-THE-QUEUE",
+        "readings",
+        "src/day_set.rs",
+        "    if !gates::studied_before(&data.reviews, inputs.today, inputs.rule) {",
+        "    if false {",
+        "gates::two_days_without_study_pause_every_topic",
+        "two study days without a qualifying review pause every topic before the queue port is called (SPEC-045 R4, A7)"
+      ],
+      [
+        "S04503-A-QUALIFYING-REVIEW-IS-A-STUDY-EVENT",
+        "readings",
+        "src/gates.rs",
+        "        .filter(|review| is_study_event(review.kind, review.ease))",
+        "        .filter(|review| review.ease >= 0)",
+        "gates::two_days_without_study_pause_every_topic",
+        "only a review of type 0 to 3 with ease 1 or more keeps the readings going: a manual entry or an unanswered review does not (SPEC-045 R4)"
+      ],
+      [
+        "S04504-THE-PAUSE-WINDOW-IS-THE-TWO-DAYS-BEFORE",
+        "readings",
+        "src/gates.rs",
+        "        StudyDay::from_epoch_day(today.epoch_day() - 2),",
+        "        StudyDay::from_epoch_day(today.epoch_day() - 1),",
+        "gates::two_days_without_study_pause_every_topic",
+        "a qualifying review on either of the TWO study days before today resumes the readings, the day before yesterday included (SPEC-045 R4, A7)"
+      ],
+      [
+        "S04505-SATURATION-IS-FEWER-THAN-THE-SCHEDULERS-COUNT",
+        "readings",
+        "src/day_set.rs",
+        "        Some(count) => new_cards < count,",
+        "        Some(count) => new_cards <= count,",
+        "day_set::a_saturated_root_is_a_config_fault",
+        "a root is saturated when its answer holds fewer new cards than the scheduler's own count, and complete when it holds as many (SPEC-045 R3, A9)"
+      ],
+      [
+        "S04506-WITHOUT-A-COUNT-A-THOUSAND-IS-SATURATED",
+        "readings",
+        "src/day_set.rs",
+        "        None => new_cards >= QUEUE_FETCH_LIMIT,",
+        "        None => new_cards > QUEUE_FETCH_LIMIT,",
+        "day_set::a_saturated_root_is_a_config_fault",
+        "without the scheduler's count, a root whose answer holds 1000 new cards or more is saturated (SPEC-045 R3, A9)"
+      ],
+      [
+        "S04507-THE-DIGEST-SORTS-BEFORE-THE-JOIN",
+        "readings",
+        "src/day_set.rs",
+        "    ids.sort_unstable();",
+        "    ids.reverse();",
+        "day_set::the_digest_matches_the_parity_golden",
+        "a day set's digest is the SHA-256 of its card ids sorted before they are joined, as the predecessor's _digest_for_card_ids (SPEC-045 R3, A4)"
+      ],
+      [
+        "S04508-AN-UNSAFE-SLUG-IS-REFUSED",
+        "readings",
+        "src/topic.rs",
+        "    if !is_slug(&slug) {",
+        "    if slug.is_empty() {",
+        "topics::topic_keys_match_the_parity_golden",
+        "a law subject whose slug is not lowercase letters and digits in hyphenated runs maps to no topic and is reported unmapped (SPEC-045 R2, A3)"
+      ],
+      [
+        "S04509-SATURATION-IS-A-CONFIG-FAULT",
+        "readings",
+        "src/state.rs",
+        "            Self::DaySetFetchSaturated => Class::ConfigFault,",
+        "            Self::DaySetFetchSaturated => Class::RailBroken,",
+        "day_set::a_saturated_root_is_a_config_fault",
+        "the closed map gives day_set_fetch_saturated the class config_fault (SPEC-045 R6, A9)"
+      ],
+      [
+        "S04510-A-MISSING-TAXONOMY-IS-A-CONFIG-FAULT",
+        "readings",
+        "src/state.rs",
+        "            Self::TaxonomyMissing => Class::ConfigFault,",
+        "            Self::TaxonomyMissing => Class::RailBroken,",
+        "topics::the_topics_come_only_from_the_configured_taxonomy",
+        "the closed map gives taxonomy_missing the class config_fault (SPEC-045 R6, A11)"
+      ],
+      [
+        "S04511-A-TIMEOUT-IS-A-BROKEN-RAIL",
+        "readings",
+        "src/state.rs",
+        "            Self::DaySetResolveTimeout => Class::RailBroken,",
+        "            Self::DaySetResolveTimeout => Class::ConfigFault,",
+        "day_set::a_resolution_past_its_budget_is_rail_broken",
+        "the closed map gives day_set_resolve_timeout the class rail_broken (SPEC-045 R6, A10)"
+      ],
+      [
+        "S04512-A-FAILED-SYNC-IS-A-BROKEN-RAIL",
+        "readings",
+        "src/state.rs",
+        "            Self::SyncFailed => Class::RailBroken,",
+        "            Self::SyncFailed => Class::ConfigFault,",
+        "gates::a_failed_last_sync_is_could_not_tell_before_any_collection_work",
+        "the closed map gives sync_failed the class rail_broken (SPEC-045 R6, A6)"
+      ],
+      [
+        "S04513-A-COPY-THE-BUDGET-PASSED-IS-STILL-REMOVED",
+        "readings",
+        "src/day_set.rs",
+        "        remove_collection(&self.0);",
+        "        let _ = &self.0;",
+        "day_set::a_budget_passed_during_the_copy_leaves_no_copy_behind",
+        "the throwaway copy is removed when the one blocking operation that made it ends, so a copy the budget passed during is removed once its work ends and none outlives it (SPEC-045 R7)"
+      ]
+    ]
+  }
+}
