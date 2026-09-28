@@ -394,7 +394,7 @@ impl Router {
             dedupe_key: occasion.key().as_str(),
             scope: &scope,
             surface,
-            study_day: now.epoch_millis().div_euclid(86_400_000),
+            study_day,
             lapse_id,
             created_at: now,
         };
