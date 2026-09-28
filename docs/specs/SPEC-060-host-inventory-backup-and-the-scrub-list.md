@@ -9,7 +9,7 @@
   Nothing here needs a device key (ADR-054).
 - **Status:** judged: delivered with its tests, `docs/red-first/SPEC-060.md`, the runbook and the
   tools' schematic. The delivery made R1, R4, R6, R7, R9 and the manifest exact where the code
-  decided them, and its review's fix round added A9 and the hand-proved rows (§8).
+  decided them, and its review's fix rounds added A9, A10 and the hand-proved rows (§8).
 
 ## 1. The problem, measured
 
@@ -99,6 +99,7 @@ R10. The only classes W2 deletes are the owner's: backups older than their reten
 | A7 | apply refuses an approved item under or holding a protected path however the item's path is written or reached, and never follows a symbolic link out of an item, including an item that is itself a link: the link goes, the target stays | `test_host_scrub.py` |
 | A8 | no host-scrub file names a private value, and a planted one is refused by the public scrub | `test_host_scrub.py`; `scripts/public-scrub.py` |
 | A9 | apply runs as health checks only the read commands of the inventory's allow list, from the rules the inventory read: a changing command given as a health check, or other rules, are refused before any command runs, with 0 package-tool calls | `test_host_scrub.py` |
+| A10 | each tool parses and binds a file from one read: the rules' digest the inventory records, the plan checks and the apply checks is taken over the rules each acts on, and the list names its inventory by the bytes the plan parsed, so a file that serves other bytes to a second read is refused or acted on exactly as its digest says, and nothing the list's rules protect is deleted | `test_host_scrub.py` |
 
 ```acceptance
 A1: python3 -m unittest discover -s scripts/tests -p test_host_scrub.py -k test_the_inventory_runs_only_its_read_only_allow_list
@@ -110,15 +111,18 @@ A6: python3 -m unittest discover -s scripts/tests -p test_host_scrub.py -k test_
 A7: python3 -m unittest discover -s scripts/tests -p test_host_scrub.py -k test_apply_refuses_protected_paths_and_symbolic_links_out
 A8: python3 -m unittest discover -s scripts/tests -p test_host_scrub.py -k test_no_host_scrub_file_names_a_private_value
 A9: python3 -m unittest discover -s scripts/tests -p test_host_scrub.py -k test_apply_runs_only_read_health_checks_from_the_listed_rules
+A10: python3 -m unittest discover -s scripts/tests -p test_host_scrub.py -k test_each_tool_binds_the_bytes_it_parsed
 ```
 
 A1 runs the inventory with stub commands first on its `PATH`, each recording its argument vector
-into a `TemporaryDirectory`. A2 to A7 and A9 build a synthetic host tree in a `TemporaryDirectory`
-at run time, and A7 a synthetic protected-path list; no fixture holds a real path, size or name.
-A5 and A7 change the synthetic tree while the apply reads a health check's address, which the test
-serves on the loopback, and A4, A6, A7 and A9 write lists the plan did not make, each with its own
-digest taken again, so the apply's own checks are what refuse them. A8 writes its planted value at
-run time, as SPEC-032's A6 does, so no private literal is ever committed.
+into a `TemporaryDirectory`. A2 to A7, A9 and A10 build a synthetic host tree in a
+`TemporaryDirectory` at run time, and A7 a synthetic protected-path list; no fixture holds a real
+path, size or name. A5 and A7 change the synthetic tree while the apply reads a health check's
+address, which the test serves on the loopback, and A4, A6, A7, A9 and A10 write lists the plan
+did not make, each with its own digest taken again, so the apply's own checks are what refuse them.
+A8 writes its planted value at run time, as SPEC-032's A6 does, so no private literal is ever
+committed. A10 runs each tool through a reader that serves a file's bytes differently on a second
+open, in either order, so a tool that parsed one read and bound another would show it.
 
 ## 4. The owner's gate and the evidence it records
 
@@ -143,8 +147,8 @@ only.
 | `deploy/host-scrub/rules.example.json` | deploy | added: neutral example rules and protected paths |
 | `docs/runbooks/host-scrub.md` | docs | added: the runbook, inventory to apply, and the rollback |
 | `docs/schematics/host-scrub.md` | docs | added at delivery: the tools' data flow and the apply's refusals (§8) |
-| `scripts/tests/test_host_scrub.py` | repo | added: A1 to A9 |
-| `scripts/mutation-rows.d/S06000-S06099.json` | repo | added in the fix round: the hand-proved rows of the checks that stand before a deletion (§8) |
+| `scripts/tests/test_host_scrub.py` | repo | added: A1 to A10 |
+| `scripts/mutation-rows.d/S06000-S06099.json` | repo | added in the fix rounds: the hand-proved rows of the checks that stand before a deletion (§8) |
 | `docs/specs/SPEC-060-host-inventory-backup-and-the-scrub-list.md` | docs | moved from `docs/specs/planned/` |
 | `docs/decisions/ADR-060-the-host-scrub-is-a-runbook-and-approval-gated-tools-behind-a-disk-snapshot.md` | docs | changed: accepted, with the decisions made at delivery |
 | `docs/red-first/SPEC-060.md` | docs | added |
@@ -238,7 +242,8 @@ The delivery's review (#289) asked for a fix round, which amended these statemen
   Each deletion reads its item again, as §7 says. A5, A6 and A7 name the cases the review's plants
   separated, and the red-first record's fix round lists them.
 - **R6, R9: the apply reads the rules the inventory read.** It refuses rules whose digest is not the
-  one the list names, as the plan does, and it runs as health checks only the read commands of the
+  one the list names, as the plan does, where that digest is taken over the very bytes it parsed
+  the rules from, in one read (A10), and it runs as health checks only the read commands of the
   inventory's allow list; the changing commands it admits run for a listed package's item alone
   (A9, which is new).
 - **R5, R6: a snapshot is not dated after the apply's own clock**, and a list, an approval or rules
@@ -251,3 +256,14 @@ The delivery's review (#289) asked for a fix round, which amended these statemen
 - **§5: the rows.** No mutation tool generates mutants of the Python under `deploy/`, so
   `scripts/mutation-rows.d/S06000-S06099.json` holds hand-proved rows (SPEC-039) for the checks
   that stand before a deletion, each proved with `scripts/mutation_rows.py prove`.
+
+Its second fix round amended these statements too:
+
+- **R4, R6: one read binds what is parsed.** A tool that both parses a file and binds it by its
+  digest reads the file once, and takes the digest over the bytes it parsed: the inventory records
+  the digest of the rules it read its health checks and roots from, the plan checks that digest
+  against the rules it lists from and names its inventory by the bytes it parsed, and the apply
+  checks the list's rules digest against the rules it acts on. Read twice, a file that changed
+  between the reads is parsed as one content and bound as another, so the apply could act on rules
+  the list does not name while its check passed. A10 is new, and a test beyond the criteria,
+  `test_each_tool_opens_each_file_it_binds_once`, pins one open of each such file per run.

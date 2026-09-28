@@ -43,8 +43,9 @@ inventory and the plan write their one output each, and the apply writes only it
 
 Every check below runs before the first deletion. One failure refuses the whole run, names the item
 and the reason, and deletes nothing (R6, R7). The rules are the ones the inventory read, bound by
-their digest, and the health checks run through the inventory's read allow list alone; the changing
-commands the apply admits run only for a listed package's item.
+their digest, which is taken over the very bytes the apply parsed them from in one read (A10), and
+the health checks run through the inventory's read allow list alone; the changing commands the
+apply admits run only for a listed package's item.
 
 ```mermaid
 flowchart TD

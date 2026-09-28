@@ -117,6 +117,19 @@ alternatives:
   digit.** Chosen against admitting every name the unit pattern allowed, which left the read to
   depend on how the command parses its words.
 
+### Decided in the second fix round (SPEC-060 §8)
+
+- **A file a tool both parses and binds by its digest is read once.** The tools' one JSON reader
+  returns a file's content with the SHA-256 of the bytes it was parsed from, and the rules carry
+  that digest, so the inventory records, and the plan and the apply check, the digest of exactly
+  the rules each acts on, and the plan names its inventory the same way. Chosen against reading the
+  file again to digest it, which binds whatever the file holds at the second read rather than what
+  was parsed, so rules changed between the two reads are acted on while the check passes; against
+  reading it twice and refusing a difference, which narrows that window without closing it, since
+  the bytes the tool acts on still come from one read and the bytes it compares from another; and
+  against a digest over the parsed content written out again, which no file tool the owner runs
+  would reproduce, where the digest of the file's bytes is what `sha256sum` gives.
+
 ### Consequences
 
 - Good, because the owner approves bytes, not descriptions, and a changed host is caught before the
@@ -132,7 +145,7 @@ alternatives:
 
 ### Confirmation
 
-SPEC-060's acceptance tests (A1 to A9) and its hand-proved mutation rows
+SPEC-060's acceptance tests (A1 to A10) and its hand-proved mutation rows
 (`scripts/mutation-rows.d/S06000-S06099.json`); the gate-2 evidence E1 to E4, recorded privately.
 
 ## What would make this wrong
