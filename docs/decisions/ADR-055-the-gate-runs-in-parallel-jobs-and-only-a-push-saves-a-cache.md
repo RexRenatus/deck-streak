@@ -122,7 +122,7 @@ SPEC-038; issue #207; ADR-017 (hosted CI); ADR-035 (required checks from GitHub 
 
 ## Note, 2026-09-28: the engine's slow tests run in a job of their own
 
-Recorded by SPEC-038's amendment (its section 8, R13 to R15, A16 to A18). This decision is
+Recorded by SPEC-038's amendment (its section 8, R13 to R16, A16 to A20). This decision is
 unchanged; the note adds a fifth gate job to it.
 
 With Anki's engine in the workspace (SPEC-022), a warm code pull request's `rust` job took 4m19s and
@@ -162,20 +162,20 @@ Chosen, and what each was chosen against:
   own slice, `m/N` with N the matrix's size, and `test-engine` passes it to nextest's
   `--partition slice:m/N`. It was chosen by measurement (SPEC-038 section 8). Measured twice each,
   one engine job took 3m39s and 3m38s, and the slower of two slices 2m32s both times, which took the
-  gate from 3m43s to 2m39s and 2m48s.
+  gate, measured without each job's wait for a runner, from 3m41s to 2m35s and 2m36s.
   - One engine job: rejected, because its run of the whole set, about 140 s, stayed the floor.
-  - Three or more slices: rejected, because a slice cannot finish before its slowest test, about
-    75 s, and each slice costs another runner.
+  - Three or more slices: rejected, because a slice cannot finish before its slowest test, 74 to
+    82 s, and each slice costs another runner.
   - A slice stated per job, in two job blocks: rejected, because the count would be written in two
     places; a matrix derives it (`strategy.job-total`), and A20 holds it to 1 to N.
 
 ### Consequences of the note
 
-- Good, because a warm code pull request's gate took 2m36s to 3m15s in five runs, not counting
-  `ci`'s wait for a runner, against 4m29s before the engine job and 3m43s with one, and every
+- Good, because a warm code pull request's gate took 2m35s to 3m09s in seven runs, measured without
+  each job's wait for a runner, against 4m26s before the engine job and 3m41s with one, and every
   test still decides `ci`.
 - Bad, because each run pays two more runners, each with its own setup, restore and test build: the
   Rust jobs took 6m23s and 7m00s of runner time together, against 4m22s for the single `rust` job,
-  for a gate 1m41s to 1m50s shorter.
+  for a gate 1m51s and 1m50s shorter.
 - Bad, because the local gate runs one more cargo command, which recompiles the engine once more
   (ADR-022's finding).
