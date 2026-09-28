@@ -40,6 +40,46 @@
         "            refused += 0\n",
         "a row that leaves while its target stays fails the job without a recorded approval (SPEC-039 R11)",
         "test_mutation_rows.NoRowLeavesWhileItsTargetStays.test_a_row_that_leaves_while_its_target_stays_is_refused"
+      ],
+      [
+        "S03906-A-PARTIAL-REPORT-IS-VOID",
+        "scripts/mutation-verdict.py",
+        "    if caught + missed + timeout + unviable != total:\n",
+        "    if caught + missed + timeout + unviable > total:\n",
+        "a report whose counts fall short of its total is partial, and VOID, whatever the tool's exit (SPEC-039 R4)",
+        "test_mutation_verdict.TheVerdictReadsTheToolsOwnReport.test_a_partial_report_is_void_never_complete"
+      ],
+      [
+        "S03907-A-MISSING-SHARD-FAILS-THE-BATTERY",
+        "scripts/mutation-verdict.py",
+        "            findings.append(f\"battery: MISSING {name}: no outcomes.json\")\n",
+        "            whole += 1\n",
+        "a shard that uploaded no report fails the battery by name, never reads as one with no survivor (SPEC-039 R12)",
+        "test_mutation_verdict.TheBatteryCountsEveryReport.test_a_missing_or_partial_battery_report_fails_by_name"
+      ],
+      [
+        "S03908-A-STRING-HOLDS-NO-COMMENT",
+        "scripts/mutation-verdict.py",
+        "                end = rust_literal(text, at)\n",
+        "                end = None\n",
+        "a comment opener inside a Rust string opens no comment, so a changed code line never reads as a comment (SPEC-039 R4)",
+        "test_mutation_verdict.ThePlanReadsTheDiff.test_a_comment_opener_inside_a_string_is_not_a_comment"
+      ],
+      [
+        "S03909-AN-UNKNOWN-KEY-IS-REFUSED",
+        "scripts/mutation-verdict.py",
+        "        kind = CARGO_MUTANTS_KEYS.get(key)\n",
+        "        kind = CARGO_MUTANTS_KEYS.get(key, \"strings\")\n",
+        "a key cargo-mutants 27.1.0 does not declare is refused, as the tool refuses the whole file (SPEC-039 R6)",
+        "test_mutation_workflows.TheToolsConfigurationsAreValid.test_the_tool_configurations_load_under_their_own_rules"
+      ],
+      [
+        "S03910-A-SECOND-ROW-OF-ONE-MUTANT-IS-REFUSED",
+        "scripts/mutation_rows.py",
+        "        if mutant in installed:\n",
+        "        if mutant in installed and False:\n",
+        "a second row installing another row's mutant for its killer is refused by the census (SPEC-039 R11)",
+        "test_mutation_rows.TheCensusRefusesARowThatCanProveNothing.test_the_census_refuses_a_row_that_can_prove_nothing"
       ]
     ]
   }
