@@ -31,7 +31,8 @@ this check refuses:
 * every other route a value takes into the unit's process: a `PassEnvironment=` whose name says it
   carries a secret, `StandardInputText=`, `StandardInputData=`, `StandardInput=file:`, and a second
   `EnvironmentFile=` in force (R6 gives a unit one);
-* a drop-in other than the rail's own, `<unit>.d/10-rail.conf` beside the unit's file.
+* a drop-in other than the rail's own, `<unit>.d/10-rail.conf` beside the unit's file, and a file
+  shown twice, since a drop-in whose name holds a newline can print another file's path.
 
 A refused line is named by its key and its variable, never its value.
 Exit 0 when every unit passes, 1 when one is refused, and 2 when the input held no unit or the
@@ -88,9 +89,11 @@ SECTIONS = {
     ".slice": "Slice",
     ".target": None,
 }
-# A `systemctl cat` file header: `# ` and the absolute path of the file that follows it, read to the
-# end of the line. A drop-in's file name may hold a blank, which systemd loads and systemctl prints
-# as it is (measured on systemd 255), so a path is never cut at one.
+# A `systemctl cat` file header: `# ` and the absolute path of the file that follows it. systemd
+# loads a drop-in whose file name holds a blank, and systemctl prints the name as it is (measured on
+# systemd 255), so the path is read to the end of the line, never cut at a space or a tab. A newline
+# in a name ends the printed line itself, and the header can then name another file's path: the
+# check refuses a file shown twice.
 HEADER = re.compile(r"^# (/.+)$")
 # A variable whose name says it carries a secret: SPEC-032's pattern (scripts/tests/_units.py),
 # with its `*_KEY` names widened to any KEY segment and PASS added, so that a device key or a short
@@ -400,8 +403,11 @@ def judge(unit_file, dropins, contract):
         if line not in refusals:
             refusals.append(line)
 
-    in_force = {}
+    in_force, seen = {}, set()
     for source, text, glued in [unit_file, *dropins]:
+        if source in seen:
+            refuse(f"a file shown twice: {source}; a name that holds a newline can print its path")
+        seen.add(source)
         if source not in (path, own):
             refuse(f"a drop-in that is not the rail's: {source}")
         for header in glued:
