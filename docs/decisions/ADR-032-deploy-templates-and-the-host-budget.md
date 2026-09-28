@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 date: "2026-09-27"
 decision-makers: "@RexRenatus (owner), the DeckStreak architect"
 ---
@@ -20,8 +20,8 @@ budget?
 
 - The packs read the templates as committed; a placeholder must still be a valid value.
 - CHARTER 11: nothing private enters the tree; the private deploy rail holds the concrete values.
-- The host: 1.9 GiB of RAM, the predecessor's unit and a co-hosted stack beside DeckStreak until
-  cutover (ADR-011); disk is the binding limit (ADR-010).
+- The host is small and shared with other services (CHARTER 3), and DeckStreak runs beside the
+  predecessor until cutover (ADR-011).
 - Each unit fails on its own ceiling rather than the kernel's global OOM killer choosing
   (durable-services `resources.budget`).
 
@@ -47,13 +47,52 @@ Chosen option. The budget, which `deploy/host-budget.json` records and every uni
 | `deck-streak-memory-watch.service` (SPEC-031) | 32M | 48M | a shell script over the units' memory accounting |
 
 The share is `"memory": "640M"`: the long-running units' ceilings (224 MiB) plus the largest oneshot's
-(384 MiB) are 608 MiB, which fits with room to spare. Why 640 MiB: with the predecessor's ceiling and
-the co-hosted stack beside it on a 1.9 GiB host, a larger share would leave the kernel no headroom
-when every ceiling is reached at once; the memory watch measures the real figures from the first
-deploy, and a change is a new ADR.
+(384 MiB) are 608 MiB, which fits with room to spare. Why 640 MiB: the host is small and shared
+(CHARTER 3), and DeckStreak runs beside the predecessor until cutover (ADR-011), so a larger share
+would leave the kernel no headroom when every ceiling is reached at once; the memory watch measures
+the real figures from the first deploy, and a change is a new ADR.
 
-Caddy's native `{$DECKSTREAK_HOST}`, `{$DECKSTREAK_WEB_ROOT}` and `{$DECKSTREAK_API_UPSTREAM}` read the
-unit environment Caddy runs with, which the private rail sets.
+Caddy substitutes its native `{$DECKSTREAK_HOST}`, `{$DECKSTREAK_WEB_ROOT}` and
+`{$DECKSTREAK_API_UPSTREAM}` from the environment when the block is adapted, and the private rail
+supplies their values when it installs the block (#41).
+
+### Decided at delivery (SPEC-032 §7)
+
+The delivery decided what this record left open, each against its alternatives:
+
+- **The neutral paths.** Every service runs `/usr/local/lib/deck-streak/current/bin/deckstreakd
+  <role>` and reads one required settings file, `/etc/deck-streak/deck-streak.env`: an example
+  release root under `/usr/local`, as chosen above, and the conventional place for a service's
+  configuration. Chosen against a path that names the deployment, which is private (CHARTER 11), and
+  against a placeholder such as `@ROOT@`, which systemd would not load.
+- **The daemons' processor and task caps.** The API runs with `CPUQuota=100%` and the bot with
+  `CPUQuota=50%`, together within the share's 2 CPUs, and each with `TasksMax=64`, a bound on a
+  thread or process leak well above what either role starts with its default settings. Chosen
+  against leaving them unset, which lets a runaway daemon take every processor from the other
+  services on the host and a leak grow without bound, and against one slice capping both, rejected
+  above for memory for the same reason. A job yields instead of being capped: `Nice=10` and the idle
+  IO class (SPEC-032 R1).
+- **The job template's start timeout.** `TimeoutStartSec=30min`. systemd gives a oneshot no start
+  timeout by default, so a hung run would hold its unit active and its timer could never start it
+  again; the hourly watch would fall silent. Thirty minutes is thirty times ADR-022's incremental
+  sync budget and shorter than the watch's hour, so a hung run is ended, and pages, before the watch
+  is due again. Chosen against no timeout, and against a timeout per job, which would need a
+  drop-in per instance whose name SPEC-032 R10 keeps out of committed files.
+- **The timers carry no random delay.** Each waives the pack's `timers.spread` with its why: the job
+  table places each job on its own minute, clear of the predecessor's and of one another (ADR-027),
+  and a random delay would move a fire off it. Chosen against `RandomizedDelaySec=`, which spreads
+  timers that share a minute, and none here do.
+- **Each unit's credentials.** The API loads `owner-user-id` and `telegram-bot-token`; the bot loads
+  those and the sync's `anki-sync-username` and `anki-sync-password`, because the owner's `/sync`
+  runs a sync cycle in its role (SPEC-026 R11); the job template loads the sync's pair, which only
+  the `sync` job reads, and the rail's map decides which instances it answers (ADR-038, #41). Chosen
+  against a drop-in carrying the pair for the `sync` instance alone, whose committed name would be a
+  template instance's (SPEC-032 R10), and against a job template that loads none, which would leave
+  the sync without its account.
+- **The journal's size cap stays the host's.** The pack's advisory `logging.journal-cap` reads a
+  `journald.conf.d` drop-in, which caps the journal of every service on the host, not DeckStreak's
+  alone, so no template sets it, and the advisory stays open. Chosen against shipping a journald
+  drop-in, which would change the other services' logging.
 
 ### Consequences
 
