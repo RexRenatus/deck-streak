@@ -97,8 +97,10 @@ R7. No workflow reads a secret other than `GITHUB_TOKEN`, and none checks out or
       commands it runs from such variables (`GIT_CONFIG_COUNT`, `GIT_CONFIG_KEY_<n>`,
       `GIT_CONFIG_VALUE_<n>`, `GIT_CONFIG_PARAMETERS` and `GIT_SSH_COMMAND` among them); and an
       environment the checker cannot read: an `env` of the workflow, a job, a job's container or
-      a step that is set and is not a mapping, such as one `${{ }}` expression, and a job's
-      `container` that is one;
+      a step that is set and is not a mapping, such as one `${{ }}` expression, a job's
+      `container` that is one, and a job's container whose `options`, `image`, `ports` or
+      `volumes` is or holds a `${{ }}` expression, as the runner creates the container from each.
+      A container's registry `credentials` are not read by its steps;
     - a character or a form the workflow reader does not read, named by its line: the reader fails
       closed on characters outside printable ASCII, quoting, escapes, anchors, aliases and tags
       (section 3).
@@ -194,10 +196,13 @@ white space, so a secret the block names over two lines keeps its indent.
 - It refuses git configured from the environment: a key or a string that names a variable whose
   name begins with `GIT_`, in any case, wherever it sits, as an `env` key, in a container's
   options or in a script that exports one. It refuses an environment it cannot read: an `env` of
-  the workflow, a job, a job's container or a step that is not a mapping, and a job's `container`
-  that is one `${{ }}` expression, since the steps of a job with a container run in its
-  environment. A name that holds those letters only inside a longer word, such as `DIGIT_COUNT`,
-  names no such variable, and a container named by its image alone sets none.
+  the workflow, a job, a job's container or a step that is not a mapping, a job's `container`
+  that is one `${{ }}` expression, and a job's container whose `options`, `image`, `ports` or
+  `volumes` is or holds one, since the steps of a job with a container run in its environment and
+  the runner creates the container from each of those. A name that holds those letters only
+  inside a longer word, such as `DIGIT_COUNT`, names no such variable, a container named by its
+  image alone sets none, and a container's registry `credentials`, read to pull its image, are
+  not read by its steps.
 
 A13 runs the three hardening tests, each through its own setUp, over
 `scripts/tests/fixtures/workflow-hardening/`, a hardened `.yml` control beside an unhardened
