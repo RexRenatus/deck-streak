@@ -15,7 +15,9 @@ arrangement as the state "until it exists". Several later documents lean on that
 - ADR-030 expects the runner to replace `scripts/box-packs.sh`;
 - ADR-039 expects it to end vendoring;
 - ADR-043 expects it to ship a proxy client with no private name;
-- SPEC-002, SPEC-030 and SPEC-033 exclude work "until the pack runner exists" (#60).
+- SPEC-002 and SPEC-030 exclude work "until the open-source pack runner exists" (#60).
+- `scripts/pack-rows.py` and `.packs/VENDORED.json` describe the vendored probes as standing in
+  for that runner until it exists.
 
 On 2026-09-28 the owner decided the question: the packs stay box-only. How does DeckStreak run its
 packs from now on?
@@ -51,11 +53,12 @@ Chosen option.
 - **#60** keeps its goal, every pack wired and green, reached through box runs rather than through a
   published runner.
 
-This supersedes ADR-004's premise that today's arrangement lasts "until the open-source runner
-exists". The rest of ADR-004 stands. It also retires the "what would make this wrong" premises of
-ADR-030, ADR-039 and ADR-043 that assumed a published runner, and the "until the pack runner exists"
-wording of the judged SPEC-002, SPEC-030 and SPEC-033: each now reads as "while the packs stay
-box-only".
+This supersedes ADR-004's premise that today's arrangement lasts "until it exists", meaning the
+runner. The rest of ADR-004 stands. It also retires the "what would make this wrong" premises of
+ADR-030, ADR-039 and ADR-043 that assumed a published runner, and the "until the open-source pack
+runner exists" wording of the judged SPEC-002 and SPEC-030: each now reads as "while the packs stay
+box-only". SPEC-033's exclusion, no private literal in CI, is unconditional and stands as written.
+`scripts/pack-rows.py` and `.packs/VENDORED.json` now state the box-only arrangement.
 
 ### Consequences
 
@@ -70,7 +73,9 @@ box-only".
 
 - `scripts/box-packs.sh` reads `BOX PACKS OK` on each pull request's head in the maintainer's
   verification.
-- `.github/workflows/` names no private build and no secret (`test_ci_workflows.py`).
+- `.github/workflows/` reads no secret and fetches no private build. Until the test #216 asks for
+  makes this mechanical, a pull request that changes a workflow is reviewed against ADR-017, which
+  allows no secret in a pull-request workflow.
 
 ## What would make this wrong
 
@@ -78,4 +83,4 @@ box-only".
 
 ## More Information
 
-ADR-004 (partly superseded), ADR-017, ADR-030, ADR-039, ADR-043; issue #60.
+ADR-004 (partly superseded), ADR-017, ADR-030, ADR-039, ADR-043; issues #60 and #216.
