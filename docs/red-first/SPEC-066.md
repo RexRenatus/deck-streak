@@ -23,7 +23,8 @@ A6: green at 2d3435c
 
 ## The commands
 
-Each criterion's fence line, run at the delivery's head:
+Each criterion's fence line. A1 to A5 were read at 2d76d49. A6 builds the sync engine, so it was
+read at 2d3435c, and its reading at the delivery's head is CI's `test` job:
 
 | id | command | result |
 |---|---|---|
