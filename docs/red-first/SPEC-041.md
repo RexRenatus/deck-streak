@@ -254,17 +254,19 @@ their refusals. All fourteen were proved with `mutation_rows.py prove` on the co
 mutant selected one test and failed, and the target was restored byte for byte. In a clean checkout
 the census examines 171 shipped sources: the first fix round's 170, and the journald drop-in it now
 reads. S04127 holds the held queue's refusal (307593d), and was proved with `mutation_rows.py prove
---row` on the committed tree at 307593d: examined 1, killed 1, survived 0, VOID 0; its control
-selected one test and passed, its mutant selected one test and failed, and the target was restored
-byte for byte.
+--row` on the committed tree at 307593d, and again at 935ae89, where two of the queue's plants
+lost the hashes clippy found needless on their raw strings: each time examined 1, killed 1,
+survived 0, VOID 0; its control selected one test and passed, its mutant selected one test and
+failed, and the target was restored byte for byte.
 
 DISCLOSURE, A15 (`no_delivery_goes_around_the_port`): its criterion changed at 00e8b6d and 08494fb
-and its body at 3b34e57, aa56871, afb644d and 9248ba2, after its green commit, a331c8f. The body
-gained the second review's planted cases, each with its expected refusal, the walker's tree and its
-two assertions, the seventh named send, and the held queue's planted cases with theirs; the second
-review's planted append to the feed gained a refusal, of the ledger's name. The census's helpers
-changed at 39ad254, cbcaa3e, 7db0ef0 and 40b6028, into the model the criterion now describes, and
-its module doc at 3ed6729 and 07d05d1. The first review's planted cases, their refusals, and the
+and its body at 3b34e57, aa56871, afb644d, 9248ba2 and 935ae89, after its green commit, a331c8f. The
+body gained the second review's planted cases, each with its expected refusal, the walker's tree and
+its two assertions, the seventh named send, and the held queue's planted cases with theirs; the
+second review's planted append to the feed gained a refusal, of the ledger's name. The census's
+helpers changed at 39ad254, cbcaa3e, 7db0ef0 and 40b6028, into the model the criterion now
+describes, and its module doc at 3ed6729 and 07d05d1. At 935ae89 only two raw strings' delimiters
+changed, and their text did not. The first review's planted cases, their refusals, and the
 assertions over the tree are unchanged.
 
 DISCLOSURE, A9 (`a_comeback_past_the_cap_or_inside_the_gap_is_withheld`): its criterion changed at
