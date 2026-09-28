@@ -271,3 +271,28 @@ fn a_fence_opens_within_three_spaces_and_closes_on_a_bare_run_as_long() {
         ],
     );
 }
+
+#[test]
+fn a_code_span_hides_its_code_from_the_prose_and_shows_it_to_the_query_rail() {
+    judge(
+        &vendored(),
+        "note(s) with a code span",
+        &[
+            // A span hides its code, whatever its run of backticks, and only its own: the scan
+            // resumes after its closing run.
+            ("A span ``<iframe>`` hides a tag.\n", &[]),
+            ("Then ```<p>``` shows.\n", &[]),
+            ("`a` <iframe> `b`\n", &[("html_allow", 1)]),
+            // A backtick that opens no span is prose.
+            ("`5 is not code <iframe>\n", &[("html_allow", 1)]),
+            // A run followed by another backtick closes nothing.
+            ("`<p>`` more\n", &[("html_allow", 1)]),
+            // The query rail reads a span's code, after a long line and at a line's end.
+            (
+                "Some text first: ``= x``\n",
+                &[("inline_query_prefixes:=", 1)],
+            ),
+            ("Run `=x`\n", &[("inline_query_prefixes:=", 1)]),
+        ],
+    );
+}
