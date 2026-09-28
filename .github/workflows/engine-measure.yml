@@ -1,0 +1,133 @@
+name: engine-measure
+
+# ADR-022's measurement of Anki's engine (SPEC-022 R2): a cold release build of the engine probe on
+# a GitHub-hosted runner with no cache restored, the probe's stripped size, the budget tests' own
+# numbers and the licence check. It runs on a pull request into dev that changes the ingest crate,
+# the lockfile or this workflow, and publishes one report, in the shape of ADR-009's Confirmation
+# table, as the run's summary and as the `engine-measure-report` artifact. No secret is used, the
+# token is read-only, and every action is pinned by its full commit SHA.
+on:
+  pull_request:
+    branches: [dev]
+    types: [opened, synchronize, reopened]
+    paths:
+      - "crates/ingest/**"
+      - "Cargo.lock"
+      - ".github/workflows/engine-measure.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: engine-measure-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  measure:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      REPORT: ${{ github.workspace }}/engine-measure-report
+      RUN_ID: ${{ github.run_id }}
+      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      # The protobuf compiler the engine's build needs, at the version and archive digest Anki's
+      # own build pins for it (build/ninja_gen/src/protobuf.rs at the engine's tag).
+      PROTOC_VERSION: "31.1"
+      PROTOC_SHA256: 96553041f1a91ea0efee963cb16f462f5985b4d65365f3907414c360044d8065
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: the pinned Rust toolchain (rust-toolchain.toml), before the clock starts
+        run: rustup show
+      - name: the cold build, clocked from the protoc download to the built probe
+        run: |
+          mkdir -p "$REPORT"
+          nproc > "$REPORT/runner-cpus"
+          started=$(date +%s)
+          curl -fsSL -o /tmp/protoc.zip "https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-x86_64.zip"
+          echo "$PROTOC_SHA256  /tmp/protoc.zip" | sha256sum -c -
+          mkdir -p "$HOME/.local/protoc"
+          unzip -q /tmp/protoc.zip -d "$HOME/.local/protoc"
+          export PROTOC="$HOME/.local/protoc/bin/protoc"
+          cargo build --release --locked --example engine_probe -p deck-streak-ingest
+          finished=$(date +%s)
+          echo "$((finished - started))" > "$REPORT/cold-build-seconds"
+          echo "$HOME/.local/protoc/bin" >> "$GITHUB_PATH"
+      - name: the stripped probe's size
+        run: |
+          strip --strip-all -o "$REPORT/engine_probe.stripped" target/release/examples/engine_probe
+          stat -c %s "$REPORT/engine_probe.stripped" > "$REPORT/binary-bytes"
+          rm "$REPORT/engine_probe.stripped"
+      - name: the budget tests, in the release profile the measured build compiled
+        run: |
+          set -o pipefail
+          cargo test --release --locked -p deck-streak-ingest --test engine_budget \
+            -- --nocapture --test-threads 1 2>&1 | tee "$REPORT/engine-budget.log"
+      - uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
+        if: ${{ always() }}
+        with:
+          tool: cargo-deny
+      - name: the licence check with the engine
+        if: ${{ always() }}
+        run: |
+          if cargo deny --locked check licenses 2> "$REPORT/licenses.log"; then
+            echo pass > "$REPORT/licenses"
+          else
+            echo fail > "$REPORT/licenses"
+          fi
+      - name: the report, in the shape of ADR-009's Confirmation table
+        if: ${{ always() }}
+        run: |
+          python3 - <<'PY'
+          import os, pathlib, re
+          report = pathlib.Path(os.environ["REPORT"])
+          def read(name):
+              path = report / name
+              return path.read_text().strip() if path.is_file() else ""
+          log = read("engine-budget.log")
+          def budget_line(name, key):
+              match = re.search(rf"engine-budget {name} .*?\b{key}=([0-9.]+)", log)
+              return float(match.group(1)) if match else None
+          def quantity(value, unit, digits=1):
+              return "not measured" if value is None else f"{value:.{digits}f} {unit}"
+          def verdict(value, limit):
+              return "fail" if value is None or value > limit else "pass"
+          seconds = read("cold-build-seconds")
+          minutes = int(seconds) / 60 if seconds else None
+          size = read("binary-bytes")
+          mib = int(size) / 1048576 if size else None
+          queue = budget_line("open-and-queue", "vm_hwm_mib")
+          download = budget_line("full-download", "vm_hwm_mib")
+          incremental = budget_line("incremental-sync", "seconds")
+          licences = read("licenses") or "fail"
+          tag = re.search(r'anki = \{ git = "[^"]+", tag = "([^"]+)"', pathlib.Path("Cargo.toml").read_text())
+          rows = [
+              ("cold build", "at most 20 minutes", quantity(minutes, "minutes"), verdict(minutes, 20)),
+              ("binary size", "at most 100 MiB", quantity(mib, "MiB"), verdict(mib, 100)),
+              ("open and queue", "at most 256 MiB", quantity(queue, "MiB"), verdict(queue, 256)),
+              ("full download", "at most 256 MiB", quantity(download, "MiB"), verdict(download, 256)),
+              ("incremental sync", "at most 60 seconds", quantity(incremental, "seconds", 2), verdict(incremental, 60)),
+              ("licences", "pass", licences, licences),
+          ]
+          lines = [
+              f"The engine at tag `{tag.group(1) if tag else 'unknown'}`, measured by "
+              f"`engine-measure.yml` run {os.environ['RUN_ID']} at {os.environ['HEAD_SHA'][:7]}, "
+              f"on a GitHub-hosted `ubuntu-24.04` runner with {read('runner-cpus')} CPUs:",
+              "",
+              "| measure | budget | measured | verdict |",
+              "|---|---|---|---|",
+          ] + [f"| {' | '.join(row)} |" for row in rows]
+          text = "\n".join(lines) + "\n"
+          (report / "report.md").write_text(text)
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as summary:
+              summary.write("## Engine measurement (ADR-022)\n\n" + text)
+          print(text)
+          PY
+      - name: upload the report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: engine-measure-report
+          path: engine-measure-report/
+          if-no-files-found: warn

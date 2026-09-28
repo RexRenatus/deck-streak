@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 date: "2026-09-27"
 decision-makers: "@RexRenatus (owner), the DeckStreak architect"
 ---
@@ -22,22 +22,22 @@ only for the skip day. Anki's Python package is itself a binding over Anki's Rus
 
 ## Considered Options (the alternatives it was chosen against)
 
-- Anki's `rslib` as a pinned git dependency of `ingest` — proposed: the same engine the predecessor's Python package wraps, native sync, the scheduler's queue and `set_due_date`, one language.
+- Anki's `rslib` as a pinned git dependency of `ingest` — chosen: the same engine the predecessor's Python package wraps, native sync, the scheduler's queue and `set_due_date`, one language.
 - A native client of the sync protocol — rejected because reimplementing incremental sync is the unmaintainable option the predecessor's own ADR-002 rejected, and a full download every cycle would move the whole collection on every sync.
 - A minimal Python sidecar running the predecessor's proven sync — kept as the fallback: proven today, but it keeps Python on the VM and a second language in the port; chosen only if the measurement below fails.
 - AnkiConnect — rejected because it needs a desktop Anki running.
 
 ## Decision Outcome
 
-Proposed option: `ingest` depends on `rslib` from Anki's repository at the tag matching the
+Chosen option: `ingest` depends on `rslib` from Anki's repository at the tag matching the
 collection's version, behind an `AnkiEngine` port so the rest of the workspace sees only its own
-types. The first W0 ingest delivery is a measured spike that makes this ADR final or selects the
-sidecar: it builds the dependency in CI and records the build time and the release binary's size,
-syncs a synthetic collection against a local sync server, and records resident memory while
-opening a large synthetic collection and resolving the new-card queue. The decision is accepted
-if resident memory stays inside the ingest budget in `deploy/host-budget.json` and the build fits
-the CI time budget; otherwise the sidecar is chosen and this ADR is superseded. Reads stay
-read-only SQLite over the copy (`mode=ro`), bounded to the 400-day window.
+types. The first W0 ingest delivery was a measured spike that would make this ADR final or select
+the sidecar: it built the dependency in CI and recorded the build time and the release binary's
+size, synced a synthetic collection against a local sync server, and recorded resident memory
+while opening a large synthetic collection and resolving the new-card queue, and during a full
+download. ADR-022 fixed every budget before the measurement; every one held (Confirmation), so the
+engine is chosen and the sidecar stays unbuilt. Reads stay read-only SQLite over the copy
+(`mode=ro`), bounded to the 400-day window.
 
 ### Consequences
 
@@ -46,7 +46,24 @@ read-only SQLite over the copy (`mode=ro`), bounded to the 400-day window.
 
 ### Confirmation
 
-The W0 ingest spike's measurements, recorded in its SPEC's problem section and in this ADR's status change.
+SPEC-022's spike measured the engine at tag `26.05` with ADR-022's protocol, in
+`engine-measure.yml` run 36357990387 at 0d8c102, on a GitHub-hosted `ubuntu-24.04` runner with 4
+CPUs: a cold build with no cache restored, the stripped `engine_probe`, the budget tests in the
+release profile that build compiled, and `cargo deny check licenses`.
+
+| measure | budget | measured | verdict |
+|---|---|---|---|
+| cold build | at most 20 minutes | 4.7 minutes | pass |
+| binary size | at most 100 MiB | 20.6 MiB | pass |
+| open and queue | at most 256 MiB | 29.4 MiB | pass |
+| full download | at most 256 MiB | 234.0 MiB | pass |
+| incremental sync | at most 60 seconds | 0.12 seconds | pass |
+| licences | pass | pass | pass |
+
+The full download is the tightest: the engine holds the whole downloaded collection in memory
+before it writes it beside the copy, so its peak grows with the collection. The gate re-asserts
+every memory and time budget on every run, in its test profile, so a regression past a budget is
+a red gate rather than a surprise on the host.
 
 ## What would make this wrong
 
