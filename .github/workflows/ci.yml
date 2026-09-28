@@ -228,6 +228,178 @@ jobs:
           path: ${{ runner.temp }}/check-logs/
           if-no-files-found: warn
 
+  # Mutation testing on the pull request's diff (SPEC-039 R3, ADR-057): cargo-mutants over the
+  # changed Rust, the hand-proved rows the diff selects, the retirement check, and the verdict read
+  # from the tools' own reports, where a class that applies and examined nothing is VOID. It runs on
+  # every event and says by name why it has nothing to do, because a skipped job reads as failed to
+  # ci. It restores the Rust cache and saves none.
+  mutation-rust:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    env:
+      CARGO_INCREMENTAL: "0"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The merge ref and its first parent, the base's tip: the diff is HEAD^1...HEAD.
+          fetch-depth: 2
+          persist-credentials: false
+      - name: the plan (the diff's classes, its changed lines and the rows it selects)
+        id: plan
+        env:
+          EVENT: ${{ github.event_name }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/mutation"
+          if [ "$EVENT" != "pull_request" ]; then
+            echo "mutation: not-applicable: a $EVENT was proved on its pull request; the weekly battery sweeps dev"
+            printf 'rust=false\noracle=false\nrows=false\n' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          python3 scripts/mutation-verdict.py plan --base HEAD^1 --head HEAD --out "$RUNNER_TEMP/mutation"
+      - name: the pinned Rust toolchain (rust-toolchain.toml)
+        if: ${{ steps.plan.outputs.rust == 'true' || steps.plan.outputs.rows == 'true' }}
+        run: rustup show
+      - name: protoc 31.1, checksum verified (Anki's engine compiles its protobuf definitions, ADR-022)
+        if: ${{ steps.plan.outputs.rust == 'true' || steps.plan.outputs.rows == 'true' }}
+        env:
+          PROTOC_SHA256: 96553041f1a91ea0efee963cb16f462f5985b4d65365f3907414c360044d8065
+        run: |
+          curl -fsSL -o /tmp/protoc.zip https://github.com/protocolbuffers/protobuf/releases/download/v31.1/protoc-31.1-linux-x86_64.zip
+          echo "$PROTOC_SHA256  /tmp/protoc.zip" | sha256sum -c -
+          mkdir -p "$HOME/.local/protoc" && unzip -q /tmp/protoc.zip -d "$HOME/.local/protoc"
+          echo "$HOME/.local/protoc/bin" >> "$GITHUB_PATH"
+      - name: restore the Rust cache, keyed on the toolchain pin and Cargo.lock
+        if: ${{ steps.plan.outputs.rust == 'true' || steps.plan.outputs.rows == 'true' }}
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: rust-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-${{ hashFiles('Cargo.lock') }}
+          restore-keys: |
+            rust-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-
+      - uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
+        if: ${{ steps.plan.outputs.rust == 'true' }}
+        with:
+          tool: cargo-mutants@27.1.0
+          fallback: none
+      - name: cargo-mutants over the diff, in place (its exit is recorded; the verdict reads its report)
+        if: ${{ steps.plan.outputs.rust == 'true' }}
+        run: |
+          rc=0
+          cargo mutants --no-shuffle -vV --in-place --in-diff "$RUNNER_TEMP/mutation/git.diff" --timeout 300 --output "$RUNNER_TEMP/mutation" || rc=$?
+          echo "$rc" > "$RUNNER_TEMP/mutation/cargo-mutants.exit"
+          echo "cargo-mutants exited $rc"
+      - name: the rows the diff selects (the verdict reads their report)
+        if: ${{ steps.plan.outputs.rows == 'true' }}
+        run: |
+          rc=0
+          python3 scripts/mutation_rows.py prove --rows-from "$RUNNER_TEMP/mutation/plan.json" --report "$RUNNER_TEMP/mutation/rows.json" || rc=$?
+          echo "the rows runner exited $rc"
+      - name: no row leaves while its target stays, unless the maintainer approved it
+        if: ${{ github.event_name == 'pull_request' }}
+        run: python3 scripts/mutation_rows.py retired --base HEAD^1
+      - name: the verdict, from the tools' own reports
+        env:
+          EVENT: ${{ github.event_name }}
+        run: |
+          if [ "$EVENT" != "pull_request" ]; then
+            echo "mutation: not-applicable: a $EVENT was proved on its pull request"
+            exit 0
+          fi
+          out="$RUNNER_TEMP/mutation"
+          tool=()
+          if [ -f "$out/cargo-mutants.exit" ]; then tool=(--tool-exit "$(cat "$out/cargo-mutants.exit")"); fi
+          status=0
+          python3 scripts/mutation-verdict.py judge --plan "$out/plan.json" --class rust --outcomes "$out/mutants.out/outcomes.json" "${tool[@]}" --rows "$out/rows.json" || status=$?
+          oracle=0
+          python3 scripts/mutation-verdict.py judge --plan "$out/plan.json" --class oracle --rows "$out/rows.json" || oracle=$?
+          if [ "$status" -eq 0 ]; then status=$oracle; fi
+          exit "$status"
+      - name: keep the plan and every report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: mutation-rust
+          path: ${{ runner.temp }}/mutation/
+          if-no-files-found: warn
+
+  # StrykerJS over every web production file the diff changes, whole, so a survivor already on a
+  # touched file is the pull request's own (SPEC-039 R3, ADR-057 D3). It restores the pnpm store
+  # and saves none.
+  mutation-web:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - name: the plan (the diff's classes and the web files it changes)
+        id: plan
+        env:
+          EVENT: ${{ github.event_name }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/mutation"
+          if [ "$EVENT" != "pull_request" ]; then
+            echo "mutation: not-applicable: a $EVENT was proved on its pull request; the weekly battery sweeps dev"
+            echo "web=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          python3 scripts/mutation-verdict.py plan --base HEAD^1 --head HEAD --out "$RUNNER_TEMP/mutation"
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        if: ${{ steps.plan.outputs.web == 'true' }}
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        if: ${{ steps.plan.outputs.web == 'true' }}
+        with:
+          node-version-file: .nvmrc
+          package-manager-cache: false
+      - name: the pnpm store's path
+        id: pnpm-store
+        if: ${{ steps.plan.outputs.web == 'true' }}
+        run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+      - name: restore the pnpm store, keyed on pnpm-lock.yaml
+        if: ${{ steps.plan.outputs.web == 'true' }}
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-${{ runner.os }}-
+      - name: the Mini App's dependencies, and the sources it generates
+        if: ${{ steps.plan.outputs.web == 'true' }}
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm --dir web/app exec paraglide-js compile --project ./project.inlang --outdir ./src/lib/paraglide --emit-ts-declarations --silent
+          pnpm --dir web/app exec svelte-kit sync
+      - name: StrykerJS over each changed file, whole (the verdict reads its report)
+        if: ${{ steps.plan.outputs.web == 'true' }}
+        env:
+          MUTATE: ${{ steps.plan.outputs.mutate }}
+        run: |
+          rc=0
+          pnpm --dir web/app exec stryker run --mutate "$MUTATE" || rc=$?
+          cp -r web/app/reports/mutation "$RUNNER_TEMP/mutation/stryker" || true
+          echo "StrykerJS exited $rc"
+      - name: the verdict, from Stryker's own report
+        env:
+          EVENT: ${{ github.event_name }}
+        run: |
+          if [ "$EVENT" != "pull_request" ]; then
+            echo "mutation: not-applicable: a $EVENT was proved on its pull request"
+            exit 0
+          fi
+          python3 scripts/mutation-verdict.py judge --plan "$RUNNER_TEMP/mutation/plan.json" --class web --stryker "$RUNNER_TEMP/mutation/stryker/mutation.json"
+      - name: keep the plan and the report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: mutation-web
+          path: ${{ runner.temp }}/mutation/
+          if-no-files-found: warn
+
   workflow-lint:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -263,7 +435,7 @@ jobs:
 
   ci:
     if: ${{ always() }}
-    needs: [rust, web, packs, hygiene, workflow-lint, base-is-dev]
+    needs: [rust, web, packs, hygiene, mutation-rust, mutation-web, workflow-lint, base-is-dev]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:

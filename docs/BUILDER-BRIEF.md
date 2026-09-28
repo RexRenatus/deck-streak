@@ -51,6 +51,38 @@ request into `dev`.
 - No `TODO`, `FIXME`, `HACK` or `XXX`.
 - Conventional commits (subject at most 72 characters), no attribution trailers, never `--no-verify`.
 
+## Mutation testing
+
+A test proves something only when it fails on code that is wrong (SPEC-039, ADR-057). Red first
+stays the rule; beyond it, every behaviour change proves that its tests kill mutants of the changed
+code.
+
+- **Two CI jobs judge every pull request,** each a need of `ci`. `mutation-rust` runs cargo-mutants
+  over the diff (`--in-diff`, `--in-place`), proves the hand-proved rows the diff selects, and
+  checks that no row left while its target stayed. `mutation-web` runs StrykerJS over every changed
+  Mini App file, whole. Read their counts, never only their colour: a class of production code the
+  diff changed that examined nothing is VOID, and VOID fails the job. A diff of comments and blank
+  lines reads `not-applicable`, by name.
+- **A surviving mutant is yours.** Kill it with a test that asserts the behaviour, or, when no test
+  can tell it apart, record it as `EQUIVALENT: <reason> (#N)`: one anchored `exclude_re` entry in
+  `.cargo/mutants.toml` with that comment on the line above, or a `// Stryker disable next-line
+  <mutator>: EQUIVALENT: <reason> (#N)` comment. Never `mutants::skip`. A survivor or a VOID already
+  on a file you touch is yours too.
+- **What the tool cannot mutate takes a row.** cargo-mutants never mutates a constant, an attribute
+  or a string, and never looks inside a method named `new`. An invariant there (a security check, a
+  parity comparison, a bound, streak and economy maths) gets a hand-proved row in
+  `scripts/mutation-rows.d/`, in your SPEC's band, `S<NNN>00-S<NNN>99.json`: an anchor that occurs
+  exactly once, one mutant, and a killer that names exactly one test (`<target>::<test path>`, or
+  `<module>.<Class>.<method>`). Prove it on a committed tree with
+  `python3 scripts/mutation_rows.py prove --band S<NNN>00-S<NNN>99`: every row KILLED, the file
+  restored byte for byte.
+- **Never weaken.** A row or a killing test leaves only with its target. Retiring one whose target
+  stays needs an entry in `scripts/mutation-rows.retired.json` with the reason and the maintainer's
+  approval, which the orchestrator relays.
+- **Locally, stay targeted:** one file (`cargo mutants --in-place -j 1 -f <file>`) or your diff
+  (`--in-diff`), on a committed tree, then `cargo clean`. Heavy runs belong in CI; the weekly
+  battery sweeps the whole repository and files each file's survivors as an issue.
+
 ## Land it
 
 1. Add a changelog fragment under `changelog.d/` (see its README).

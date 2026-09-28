@@ -1,0 +1,23 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "_comment": "StrykerJS 10.0.0 over the Mini App (SPEC-039 R1, R6; ADR-057). A pull request's mutation-web job mutates each changed production file whole with --mutate; the weekly battery mutates everything below. A survivor fails the run (break 100). An equivalent mutant is recorded beside it: // Stryker disable next-line <mutator>: EQUIVALENT: <reason> (#N).",
+  "testRunner": "vitest",
+  "plugins": ["@stryker-mutator/vitest-runner"],
+  "vitest": { "configFile": "vite.config.ts" },
+  "mutate": [
+    "src/**/*.ts",
+    "src/**/*.js",
+    "src/**/*.svelte",
+    "!src/**/*.test.ts",
+    "!src/**/*.spec.ts",
+    "!src/**/*.d.ts",
+    "!src/lib/paraglide/**"
+  ],
+  "reporters": ["json", "clear-text", "progress"],
+  "jsonReporter": { "fileName": "reports/mutation/mutation.json" },
+  "thresholds": { "high": 100, "low": 99, "break": 100 },
+  "concurrency": 2,
+  "timeoutMS": 10000,
+  "tempDirName": ".stryker-tmp",
+  "cleanTempDir": true
+}

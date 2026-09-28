@@ -100,7 +100,7 @@ no bytecode written, so no run reads another's compiled mutant.
 flowchart LR
   sched[schedule, weekly; workflow_dispatch] -->|live once the file is on main| checkout[checkout dev]
   prtrig[a pull request that changes the workflow] --> rehearsal[rehearsal: one file, one row, one Stryker file, the drafts; files nothing]
-  checkout --> shards[rust: cargo mutants --shard k/16, k = 0..15, --in-place --timeout 300]
+  checkout --> shards[rust: cargo mutants --sharding round-robin --shard k/32, k = 0..31, --in-place --timeout 300]
   checkout --> webfull[web: stryker run, whole]
   checkout --> rowsall[rows: prove every row]
   shards --> reports[(each shard's mutants.out)]

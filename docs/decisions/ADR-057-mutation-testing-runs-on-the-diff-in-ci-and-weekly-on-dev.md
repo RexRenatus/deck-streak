@@ -99,14 +99,17 @@ front end and a Python parity oracle, on GitHub-hosted runners (SPEC-039)?
   ...)` form needs the `mutants` crate as a dependency of every crate that uses it.
 
 **D7, the weekly battery.**
-- Sixteen shards: chosen, because 1,557 mutants at 10 to 20 s each is 4 to 9 hours serially, and
-  sixteen slice shards of `cargo mutants --in-place --timeout 300` over a matrix naming 0 to 15,
-  `timeout-minutes` 120, bring each under an hour; a shard's own baseline needs no separate test
-  job.
+- Thirty-two round-robin shards: chosen, because the engine's crates cost minutes a mutant. Anki's
+  engine re-runs its build script on every cargo command, about 26 to 28 s even warm, and
+  `ingest`'s 102 tests take about 140 s (SPEC-038's measurements), so each of `ingest`'s 168
+  mutants costs about 3 minutes, and the 1,721 mutants on `dev` about 14 hours serially.
+  Round-robin (`--sharding round-robin --shard k/32`, the matrix naming 0 to 31) spreads the
+  engine's mutants over every shard, about five each, and keeps each shard near 40 minutes under a
+  `timeout-minutes` of 120; `--timeout 300` bounds every cargo command, above the engine's 140 s.
+- Sixteen slice shards: rejected, because a slice keeps a crate's mutants together, and the shard
+  that holds `ingest`'s would run about five hours, past any job timeout.
 - `--baseline=skip` behind a test job: rejected, because it adds a job whose only purpose is the
-  baseline each shard can run itself, and it makes the timeout depend on a flag, not a
-  measurement.
-- Eight shards: rejected, because a shard of `rails.rs`'s mutants could pass the job's timeout.
+  baseline each shard can run itself, and each shard would then trust a baseline it never saw.
 - One issue per mutant: rejected as noise; one issue per file, deduplicated by title against the
   open issues, keeps a survivor's context together.
 
@@ -129,8 +132,9 @@ Chosen: D1 to D8's first options. SPEC-039 R1 to R17 state them as requirements.
 - Good, because a constant, a method named `new` or a guard that the tool cannot mutate is held
   by a row, and a row cannot leave while its target stays without the maintainer's approval.
 - Good, because the vendored probe judges the tools' configurations and the rows.
-- Bad, because a Rust pull request's CI time grows with its diff; `timeout-minutes` bounds it, and
-  a large diff will shard the job the way the battery is sharded.
+- Bad, because a Rust pull request's CI time grows with its diff, most in the engine's crates
+  (about 3 minutes a mutant in `ingest`); `timeout-minutes` bounds it, and a diff that reaches the
+  bound shards the job the way the battery is sharded.
 - Bad, because StrykerJS 10.0.0 has two open defects that read a kill as a survivor
   (stryker-js #6144, #6150). A false survivor fails loudly and is read by a person.
 - Bad, because the weekly battery starts only after a release carries it to `main`.

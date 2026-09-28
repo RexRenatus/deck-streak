@@ -5,8 +5,9 @@
   survivor the first measurement found (§1).
 - **Decided by:** ADR-057 (this SPEC's own: the tools, the diff-scoped jobs, the rows and the
   weekly battery), ADR-012 (the testing strategy and the parity oracle), ADR-017 (hosted CI on
-  pull requests into `dev`), ADR-004 and ADR-039 (the vendored packs and the script that vendors
-  them), and ADR-029 (the one golden reader).
+  pull requests into `dev`), ADR-055 (the gate's parallel CI jobs, beside which the mutation jobs
+  run), ADR-004, ADR-039 and ADR-056 (the vendored packs and the script that vendors them), and
+  ADR-029 (the one golden reader).
 - **Status:** written with its delivery (no planned copy existed), with its tests and
   `docs/red-first/SPEC-039.md` (ADR-016).
 
@@ -78,9 +79,18 @@ R3. **A diff-scoped run on every pull request into `dev` and `main`.** Two CI jo
       retirement check (R11), then the verdict (R4);
     - `mutation-web`: StrykerJS over every web production file the diff changes, whole, then the
       verdict.
-    On a push to `dev` or `main` each job reads `not-applicable` by name: the push was proved on
-    its pull request, and the weekly battery (R12) sweeps `dev`. Each uploads its report under
-    `if: always()`. A job restores caches and saves none.
+    Each job reads its event's case by name, from `scripts/mutation-verdict.py plan --event`, and
+    is never skipped, because `ci` reads a skipped need as failed:
+    - a pull request into `dev` is judged on its diff;
+    - a release pull request into `main` reads `not-applicable`: it carries `dev`'s changes, each
+      judged by these jobs on its own pull request into `dev`, and the weekly battery sweeps `dev`;
+    - a push whose subject names the pull request it merges (`Merge pull request #N`) reads
+      `not-applicable`, naming `#N`, whose jobs judged that same tree: `dev` and `main` accept a
+      pull request only with an up-to-date head (ADR-034);
+    - a push that names no pull request is judged on its first-parent diff, `HEAD^1...HEAD`.
+    A pull request whose diff holds no production path for a job's class reads `not-applicable`
+    and names the paths it changes. Each job uploads its report under `if: always()`, restores
+    caches and saves none.
 R4. **The verdict, `scripts/mutation-verdict.py judge`, per class the diff touches.**
     - It reads the tool's own report, never its exit alone: `mutants.out/outcomes.json` and
       Stryker's `mutation.json`.
@@ -149,9 +159,9 @@ R11. **No weakening.** A row whose id leaves the population while its target fil
 R12. **A weekly full-repository battery,** `.github/workflows/mutation-weekly.yml`, on
     GitHub-hosted runners, over `dev`:
     - `schedule` weekly, and `workflow_dispatch`;
-    - `rust`: cargo-mutants over the whole workspace in shards `--shard k/16`, the matrix
-      naming every `k` from 0 to 15, each with `--timeout` per mutant and a job
-      `timeout-minutes`;
+    - `rust`: cargo-mutants over the whole workspace in round-robin shards `--shard k/32`, the
+      matrix naming every `k` from 0 to 31, each with `--timeout` on every cargo command and a
+      job `timeout-minutes`;
     - `web`: a whole StrykerJS run; `rows`: every row proved;
     - every job keeps its report under `if: always()`;
     - `survivors`: files each surviving mutant's file as one issue, deduplicated against the open
@@ -207,6 +217,7 @@ R17. **The gate is proved red first.** The survivor in `SystemClock::now` (§1) 
 | A24 | the mutation jobs are needs of `ci`, install pinned tools and save no cache | `test_mutation_workflows.py` |
 | A25 | the builder brief teaches the mutation rules | `test_mutation_workflows.py` |
 | A26 | a time before the epoch reads as negative milliseconds | `cargo test -p deck-streak-kernel --test clock` |
+| A27 | each event reads its case by name, and a diff with no production path names its paths | `test_mutation_verdict.py` |
 
 ```acceptance
 A1: python3 -m unittest discover -s scripts/tests -p test_mutation_rows.py -k a_tracked_change_is_refused_before_any_mutant_is_installed
@@ -235,6 +246,7 @@ A23: python3 -m unittest discover -s scripts/tests -p test_mutation_workflows.py
 A24: python3 -m unittest discover -s scripts/tests -p test_mutation_workflows.py -k the_mutation_jobs_are_needs_of_ci_with_pinned_tools_and_no_saved_cache
 A25: python3 -m unittest discover -s scripts/tests -p test_mutation_workflows.py -k the_builder_brief_teaches_the_mutation_rules
 A26: cargo test -p deck-streak-kernel --test clock -- --exact a_time_before_the_epoch_reads_as_negative_milliseconds
+A27: python3 -m unittest discover -s scripts/tests -p test_mutation_verdict.py -k each_event_reads_its_case_by_name
 ```
 
 A1 to A8 run the runner against a fixture repository built at run time in a temporary directory:
@@ -271,13 +283,14 @@ and green are the `mutation-rust` job's two runs.
 | `scripts/mutation-rows.d/S03900-S03999.json` | `repo` | added: this SPEC's rows on its own runner and verdict (R16) |
 | `scripts/mutation-rows.d/S04200-S04299.json` | `repo` | added: SPEC-042's rows (R16) |
 | `scripts/tests/test_mutation_rows.py` | `repo` | added: A1 to A11 |
-| `scripts/tests/test_mutation_verdict.py` | `repo` | added: A12 to A19 |
+| `scripts/tests/test_mutation_verdict.py` | `repo` | added: A12 to A19, A27 |
 | `scripts/tests/test_mutation_workflows.py` | `repo` | added: A20 to A25 |
 | `.cargo/mutants.toml` | `repo` | added (R5, R6) |
 | `web/app/stryker.config.json` | `repo` | added (R6) |
 | `web/app/package.json`, `pnpm-lock.yaml` | `miniapp` | changed: StrykerJS 10.0.0 (R1) |
 | `.gitignore` | `repo` | changed: the tools' output directories |
 | `.github/workflows/ci.yml` | `repo` | changed: `mutation-rust` and `mutation-web`, needs of `ci` (R3) |
+| `scripts/tests/test_ci_workflows.py` | `repo` | changed: `ci` needs the two mutation jobs beside the gate's four (R3) |
 | `.github/workflows/mutation-weekly.yml` | `repo` | added (R12, R13) |
 | `.packs/VENDORED.json`, `.packs/wiring.json` | `repo` | changed: the mutation-rows pack (R14) |
 | `.packs/skills/packs/mutation-rows/SKILL.md`, `.packs/skills/packs/mutation-rows/checks.json`, `.packs/scripts/mutation-probe.py` | `repo` | added: vendored (R14) |
