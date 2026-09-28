@@ -1,0 +1,58 @@
+{
+  "schema": "deck-streak-host-scrub-rules/1",
+  "about": "Neutral example values only (SPEC-060 R3). The real rules are private: the private rail's protected-path and health-check lists feed them, and they live outside this repository (R8).",
+  "roots": [
+    {"path": "/srv/example-service"},
+    {"path": "/var/backups/example-service", "sizes_only": true}
+  ],
+  "rules": [
+    {
+      "name": "example-nightly-copies",
+      "class": "backup",
+      "dir": "/var/backups/example-service",
+      "pattern": "nightly-*.tar.gz",
+      "keep_copies": 7,
+      "reason": "a nightly copy beyond the seven newest"
+    },
+    {
+      "name": "example-weekly-copies",
+      "class": "backup",
+      "dir": "/var/backups/example-service",
+      "pattern": "weekly-*.tar.gz",
+      "keep_days": 60,
+      "rotation_keeps": 4,
+      "reason": "a weekly copy older than sixty days, beyond the four the service's own rotation makes again"
+    },
+    {
+      "name": "example-unused-environments",
+      "class": "environment",
+      "under": ["/srv/example-service"],
+      "reason": "a virtual environment or worktree that no loaded unit's command names"
+    },
+    {
+      "name": "example-probe-scripts",
+      "class": "loose",
+      "dir": "/srv/example-service",
+      "pattern": "probe-*.py",
+      "reason": "a one-off probe script left loose"
+    },
+    {
+      "name": "example-unused-package",
+      "class": "package",
+      "package": "example-unused-tool",
+      "reason": "a package the owner lists as unused"
+    }
+  ],
+  "protected": [
+    "/etc",
+    "/usr",
+    "/boot",
+    "/run/deck-streak-credentials",
+    "/usr/local/lib/deck-streak",
+    "/var/lib/deck-streak"
+  ],
+  "health": [
+    {"id": "example-service-active", "argv": ["systemctl", "is-active", "--quiet", "example.service"]},
+    {"id": "example-service-ready", "url": "http://127.0.0.1:8080/health"}
+  ]
+}
