@@ -96,8 +96,8 @@ R9. The templates `deploy/systemd/deck-streak-readings-generate.service` and `.t
     in `ReadWritePaths=`. `deploy/host-budget.json` gives both units their memory limits. The
     generation unit is ordered `After=` the `sync` job's unit (SPEC-032's job template): when both
     starts are queued together, as a boot that fires both missed timers can queue them, the
-    generation starts once the sync's `oneshot` run has ended (R3). `After=` does not hold back a
-    start of the generation queued while no start of the sync is pending.
+    generation starts once the sync's `oneshot` run has ended (R3). `After=` holds a start of the
+    generation back only while a start of the sync is pending.
 
 ## 3. Acceptance criteria
 
