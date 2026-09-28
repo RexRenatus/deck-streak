@@ -813,6 +813,12 @@ class Apply(unittest.TestCase):
             self.assertEqual(done.returncode, 1, said(done))
             self.assertIn(f"{probe} ", said(done))
             self.assertIn("protected path", said(done))
+            # A pattern in the protected list protects nothing as a path, so the rules are refused.
+            pattern = host.rules("pattern.json", protected=[str(host.apps / "probe-*.py")])
+            done = host.apply(list_path, host.approve(listing, [probe]), "--apply", rules=pattern)
+            self.assertEqual(tree(host.root), before)
+            self.assertEqual(done.returncode, 2, said(done))
+            self.assertIn("is a pattern", said(done))
             # An item that holds a protected path is refused the same way.
             checkout = paths[str(host.apps / "old-checkout")]["id"]
             inner = host.rules(
