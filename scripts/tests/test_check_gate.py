@@ -1,7 +1,7 @@
 """The local gate checks each stage's own tools, has no toolchain stage, splits its audit by
 toolchain, times every stage it runs, and makes the stages that compile Anki's engine name protoc
 (SPEC-038 A5, A6, A12 and A15). Its two test stages split the workspace's tests by one engine set,
-defined once (SPEC-038 A16 and A17)."""
+defined once, and test-engine runs the slice of it CI hands over (SPEC-038 A16, A17 and A19)."""
 
 import re
 import shutil
@@ -170,10 +170,11 @@ PACKAGE_NAME = re.compile(r'(?m)^name = "([^"]+)"$')
 CALL_END = "--end-of-cargo-call--"
 
 
-def run_recorded(check, stage, scratch):
+def run_recorded(check, stage, scratch, extra_env=None):
     """Run `check`, the text of a check.sh, as scripts/check.sh of a scratch tree for one stage,
-    with a PATH of check.sh's shell tools, a cargo that records its arguments and exits 0, and
-    stubs for cargo-nextest and protoc. Returns the process and cargo's calls, each a list."""
+    with a PATH of check.sh's shell tools, a cargo that records its arguments and exits 0, stubs
+    for cargo-nextest and protoc, and any `extra_env`. Returns the process and cargo's calls, each
+    a list."""
     tree = scratch / "tree"
     (tree / "scripts").mkdir(parents=True)
     (tree / "scripts" / "check.sh").write_text(check, encoding="utf-8")
@@ -200,6 +201,7 @@ def run_recorded(check, stage, scratch):
         "HOME": str(scratch),
         "CARGO_CALLS": str(record),
     }
+    env.update(extra_env or {})
     done = subprocess.run(
         [shutil.which("bash"), str(tree / "scripts" / "check.sh"), stage],
         env=env,
@@ -392,6 +394,40 @@ class TheEngineSetSplitsTheTests(unittest.TestCase):
             engine_binary_problems("binary_id(=deck-streak-nowhere::sync)"),
             ["deck-streak-nowhere::sync: no crate declares the package deck-streak-nowhere"],
         )
+
+
+# A slice of the engine set as the engine job hands it over, m/n, and what nextest must be given
+# for it (SPEC-038 R16); then slices that name none, which fail the stage before any build.
+SLICES = [
+    ("1/2", ["--partition", "slice:1/2"]),
+    ("2/2", ["--partition", "slice:2/2"]),
+    ("3/7", ["--partition", "slice:3/7"]),
+]
+NOT_SLICES = ["0/2", "3/2", "2", "a/b", "1/2/3", " 1/2", "01/2"]
+
+
+class TheEngineStageRunsItsSlice(unittest.TestCase):
+    def test_the_engine_stage_runs_the_slice_it_is_given(self):
+        check = CHECK.read_text(encoding="utf-8")
+        with tempfile.TemporaryDirectory() as scratch:
+            where = Path(scratch)
+            done, calls = run_recorded(check, "test-engine", where / "whole")
+            self.assertEqual((done.returncode, len(calls)), (0, 1), done.stdout)
+            whole = calls[0]
+            self.assertEqual(filtersets(whole)[0], [ENGINE_DEFINITION.findall(check)[0]])
+            self.assertNotIn("--partition", whole, "given no slice, test-engine slices the set")
+            for at, (given, added) in enumerate(examined("slices", SLICES)):
+                env = {"ENGINE_SLICE": given}
+                done, calls = run_recorded(check, "test-engine", where / f"slice-{at}", env)
+                self.assertEqual(calls, [whole + added], f"test-engine given the slice {given!r}")
+            for at, given in enumerate(NOT_SLICES):
+                env = {"ENGINE_SLICE": given}
+                done, calls = run_recorded(check, "test-engine", where / f"not-{at}", env)
+                self.assertEqual(calls, [], f"test-engine ran cargo with the slice {given!r}")
+                named = (
+                    rf"^FAILED +test-engine .*: ENGINE_SLICE names no slice m/n of n: '{given}'$"
+                )
+                self.assertRegex(summary(done), named, done.stdout)
 
 
 if __name__ == "__main__":

@@ -945,5 +945,65 @@ class TheEngineRunsBesideRust(unittest.TestCase):
         )
 
 
+# How a leg of the engine job names its slice of the engine set to test-engine (SPEC-038 R16): its
+# own number, of the matrix's size.
+LEG_SLICE = "${{ matrix.slice }}/${{ strategy.job-total }}"
+
+
+def slice_problems(workflow):
+    """What a workflow gets wrong about the engine set's slices (SPEC-038 R16): a matrix that is not
+    one `slice` dimension counting 1 to N, with N of at least 2; a leg that does not hand its own
+    slice to test-engine as m/N; or one leg's failure cancelling the others."""
+    job = (workflow.get("jobs") or {}).get(ENGINE_JOB) or {}
+    strategy = job.get("strategy") or {}
+    matrix = strategy.get("matrix") or {}
+    slices = matrix.get("slice") if isinstance(matrix, dict) else None
+    problems = []
+    if not isinstance(matrix, dict) or set(matrix) != {"slice"} or not isinstance(slices, list):
+        problems.append(f"the engine job's matrix is {matrix}, not one slice dimension")
+        slices = []
+    if len(slices) < 2 or [str(s) for s in slices] != [str(n) for n in range(1, len(slices) + 1)]:
+        problems.append(f"the engine job's slices are {slices}, not 1 to N with N of at least 2")
+    if str(strategy.get("fail-fast")) != "false":
+        problems.append("one slice's failure cancels the other slices")
+    gates = [s for s in job.get("steps") or [] if GATE_CALL.search(str(s.get("run", "")))]
+    handed = [(s.get("env") or {}).get("ENGINE_SLICE") for s in gates]
+    if handed != [LEG_SLICE]:
+        problems.append(f"the engine job hands test-engine the slices {handed}, not [{LEG_SLICE}]")
+    return problems
+
+
+PLANTED_SLICES = """\
+jobs:
+  engine:
+    strategy:
+      matrix:
+        slice: [1, 1, 3]
+    steps:
+      - env:
+          ENGINE_SLICE: ${{ matrix.slice }}/2
+        run: bash scripts/check.sh test-engine
+"""
+
+
+class TheEngineSetRunsInSlices(unittest.TestCase):
+    def test_the_engine_job_runs_each_slice_of_the_engine_set_once(self):
+        workflow = load("ci.yml")
+        self.assertEqual(slice_problems(workflow), [])
+        matrix = workflow["jobs"][ENGINE_JOB]["strategy"]["matrix"]
+        examined("slices of the engine set", matrix["slice"])
+        # The judge refuses a slice run twice and another never, a leg that names a slice of the
+        # wrong count, and a failure that cancels the other legs.
+        self.assertEqual(
+            slice_problems(read_workflow(PLANTED_SLICES)),
+            [
+                "the engine job's slices are ['1', '1', '3'], not 1 to N with N of at least 2",
+                "one slice's failure cancels the other slices",
+                "the engine job hands test-engine the slices ['${{ matrix.slice }}/2'], not "
+                "[${{ matrix.slice }}/${{ strategy.job-total }}]",
+            ],
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
