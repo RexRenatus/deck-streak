@@ -279,3 +279,28 @@ fn the_units_are_counted_after_entity_parsing() {
     assert_eq!(visible_units("a < b & c"), 9);
     assert_eq!(visible_units(""), 0);
 }
+
+#[test]
+fn a_paragraph_is_a_line_break_after_another() {
+    // The paragraph after `aa` and the line after `bb` both fit the bound; the cut takes the
+    // paragraph.
+    assert_eq!(chunks("aa\n\nbb\ncc dd", 9), vec!["aa\n\n", "bb\ncc dd"]);
+}
+
+#[test]
+fn a_tag_name_starts_with_a_letter() {
+    // `<3>` opens no tag, so each of its characters counts.
+    assert_eq!(visible_units("a <3> b"), 7);
+}
+
+#[test]
+fn a_closing_tag_name_starts_with_a_letter() {
+    // `</3>` closes no tag, so each of its characters counts.
+    assert_eq!(visible_units("a</3>b"), 6);
+}
+
+#[test]
+fn a_cut_takes_the_closing_tags_that_end_the_text() {
+    // The character goes alone, over the bound, with the tag that closes it at the text's end.
+    assert_eq!(chunks("<b>📚</b>", 1), vec!["<b>📚</b>"]);
+}

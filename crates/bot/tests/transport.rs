@@ -413,6 +413,25 @@ fn the_api_url_is_https_or_loopback_http() {
 }
 
 #[test]
+fn the_api_url_names_no_path() {
+    // The root is the base: its `/` is dropped, and the token is appended to the host alone.
+    assert_eq!(
+        ApiUrl::new("https://api.telegram.org/").map(|api| api.as_str().to_owned()),
+        Some("https://api.telegram.org".to_owned())
+    );
+    let refused = [
+        "https://api.telegram.org/x",
+        "https://api.telegram.org/x/y",
+        "https://api.telegram.org/x/",
+        "https://api.telegram.org//",
+        "http://127.0.0.1:8081/x",
+    ];
+    for text in refused {
+        assert_eq!(ApiUrl::new(text), None, "{text}");
+    }
+}
+
+#[test]
 fn the_constants_equal_the_predecessors() {
     let mut constants = golden::read(&golden::committed("bot.constants"))
         .expect("the golden reads")

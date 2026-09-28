@@ -15,6 +15,8 @@ mod fake_bot_api;
 mod golden;
 
 use std::cell::Cell;
+use std::future::poll_fn;
+use std::task::Poll;
 use std::time::Duration;
 
 use deck_streak_bot::poll::{DRAIN_OFFSET, LONG_POLL_SECONDS, backoff};
@@ -80,13 +82,21 @@ async fn the_poll_confirms_each_update_by_its_offset() {
         2,
         "the owner's two messages answered once each, the stranger's not at all"
     );
-    // The loop was stopped while waiting on its fourth poll: every handled update was already
-    // confirmed by it, so no confirmation followed.
+    // The loop was stopped while waiting on its fourth poll, which the fake holds unanswered: an
+    // offset stands confirmed only once the server answers, so the stop confirms it again.
     assert_eq!(
         polls.len(),
-        4,
+        5,
         "{:?}",
         polls.iter().map(|call| &call.body).collect::<Vec<_>>()
+    );
+    assert_eq!(
+        polls[4].body["offset"], 13,
+        "the stop confirms the offset past update 12"
+    );
+    assert_ne!(
+        polls[4].body["timeout"], LONG_POLL_SECONDS,
+        "without waiting"
     );
 }
 
@@ -116,9 +126,10 @@ async fn updates_queued_before_start_are_drained_and_not_replayed() {
             "deleteMyCommands",
             "setMyCommands",
             "getUpdates",
+            "getUpdates",
             "getUpdates"
         ],
-        "no webhook, the menu, the drain, then the first poll"
+        "no webhook, the menu, the drain, the first poll, then the stop's confirmation"
     );
     let drain = &calls[3].body;
     assert_eq!(
@@ -129,6 +140,12 @@ async fn updates_queued_before_start_are_drained_and_not_replayed() {
     assert_eq!(
         calls[4].body["offset"], 21,
         "the first poll confirms everything queued"
+    );
+    // The stop came while the first poll waited unanswered, so it confirms the same offset.
+    assert_eq!(calls[5].body["offset"], 21, "the stop confirms it again");
+    assert_ne!(
+        calls[5].body["timeout"], LONG_POLL_SECONDS,
+        "without waiting"
     );
     assert!(
         bench.fake.calls_of("sendMessage").is_empty(),
@@ -272,6 +289,57 @@ async fn a_shutdown_finishes_the_batch_in_hand_and_confirms_its_offset() {
     );
     assert_ne!(last.body["timeout"], LONG_POLL_SECONDS, "without waiting");
     assert_eq!(polls.len(), 3, "the drain, the poll, the confirmation");
+}
+
+#[tokio::test]
+async fn the_stop_confirms_the_offset_of_a_poll_it_abandoned() {
+    let bench = Bench::start().await;
+    // Queued before the start: the drain moves the offset past it without confirming it.
+    bench.fake.script(
+        "getUpdates",
+        [Answer::updates(vec![owner_says(50, "/privacy")])],
+    );
+    let mut commands = bench.commands(ScriptedSync::default());
+    let issued = Cell::new(false);
+    let mut turns = 0;
+    // The stop comes at the loop's next turn once the first long poll is issued: before any answer
+    // to it, and perhaps before its request has left the process.
+    let shutdown = poll_fn(|context| {
+        if !issued.get() {
+            return Poll::Pending;
+        }
+        turns += 1;
+        if turns == 1 {
+            context.waker().wake_by_ref();
+            return Poll::Pending;
+        }
+        Poll::Ready(())
+    });
+    run(&bench.transport, &mut commands, shutdown, || {
+        issued.set(true);
+    })
+    .await;
+
+    // Whether the abandoned poll reached the fake depends on how far its request got, so the
+    // count of polls is not asserted: the confirmation the stop owes is.
+    let calls = bench.fake.calls();
+    let confirmations = polls(&calls)
+        .into_iter()
+        .filter(|call| call.body["offset"] == 51 && call.body["timeout"] == 0)
+        .count();
+    assert_eq!(
+        confirmations,
+        1,
+        "the stop confirms the offset past update 50: {:?}",
+        polls(&calls)
+            .iter()
+            .map(|call| &call.body)
+            .collect::<Vec<_>>()
+    );
+    assert!(
+        bench.fake.calls_of("sendMessage").is_empty(),
+        "the queued update is never replayed"
+    );
 }
 
 #[tokio::test]
