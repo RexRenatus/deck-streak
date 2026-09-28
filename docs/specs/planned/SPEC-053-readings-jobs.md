@@ -25,7 +25,8 @@
   configuration, never a failure or a page.
 - **Side by side.** Until cutover, DeckStreak's jobs keep off every minute of the
   predecessor's schedule as SPEC-027 R2 defines it from the predecessor's code, its sync minutes
-  included (ADR-011).
+  included (ADR-011), and off every slot the private deploy rail reserves for the host's other
+  services, a list the rail supplies at deploy time.
 - **One writer.** The vault's readings folder has one writer at every moment (ADR-011), so
   DeckStreak writes it only once the owner's go makes DeckStreak that writer (the first live
   night, #45).
@@ -44,8 +45,10 @@ R1. Two readings jobs join SPEC-027's job table, each with its own service and t
     own.
 R2. The generation job fires at the rollover hour plus 40 minutes (04:40 with the default 04:00
     rollover) and the morning job at 08:10, outside the quiet hours. A test over the schedule proves
-    both slots are off the daily sync slot (the rollover hour, minute 7, SPEC-027) and off every
-    minute of the predecessor's schedule that SPEC-027 R2 names, its sync minutes included.
+    both slots are off the daily sync slot (the rollover hour, minute 7, SPEC-027), off every
+    minute of the predecessor's schedule that SPEC-027 R2 names, its sync minutes included, and
+    off every slot of the reserved-slot list the private deploy rail provides (ADR-053); CI proves
+    the logic with a synthetic list.
 R3. The generation job claims its fire for the study day in the cron-fire ledger before it acts; a
     second fire on the same study day does nothing. It never syncs (ADR-037). It then reads the AI
     route (SPEC-043): with the route `Absent`, every topic ends `ai_route_absent` (SPEC-046) and the
@@ -101,7 +104,7 @@ R9. The templates `deploy/systemd/deck-streak-readings-generate.service` and `.t
 |---|---|---|
 | A1 | the generation reads the study day's sync outcome and never runs a sync: it generates after the study day's successful sync, and a recording fake of the sync cycle sees no call | `the_generation_reads_the_study_days_sync_and_never_syncs` |
 | A2 | two fires of the generation job on one study day generate once | `two_fires_of_the_generation_on_one_study_day_generate_once` |
-| A3 | every readings slot is off the daily sync slot and off the predecessor's slots, its sync minutes included (examined count reported) | `every_readings_slot_is_off_the_daily_sync_slot_and_the_predecessors_slots` |
+| A3 | every readings slot is off the daily sync slot, off the predecessor's slots, its sync minutes included, and off every slot of the rail's reserved-slot list, proved on a synthetic list whose fixture this SPEC's delivery adds (examined count reported) | `every_readings_slot_is_off_the_daily_sync_slot_and_the_predecessors_slots` |
 | A4 | with a configured route, an unreachable agent is recorded per topic and alerted once for the run, and the readings already delivered, their read state and their vault notes are unchanged | `an_unreachable_agent_is_recorded_and_alerted_once_and_delivered_readings_stand` |
 | A5 | a study day whose sync did not succeed ends every topic `could_not_tell` with `sync_failed`, runs no sync and calls the agent zero times | `a_failed_sync_ends_every_topic_could_not_tell_without_generation` |
 | A6 | the morning job takes the comeback branch in a lapse and the ready line otherwise, never both | `the_morning_job_takes_one_branch` |

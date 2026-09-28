@@ -40,8 +40,9 @@ DeckStreak write the vault?
 ## Decision Outcome
 
 Chosen option. `readings-generate` fires at the rollover hour plus 40 minutes and `readings-morning` at
-08:10; a test proves both slots free of the daily sync slot and of the predecessor's slots, its sync
-ticks included. The generation never syncs: it reads the study day's sync
+08:10; a test proves both slots free of the daily sync slot, of the predecessor's slots, its sync
+ticks included, and of every slot the private deploy rail reserves for the host's other services,
+proved in CI on a synthetic list. The generation never syncs: it reads the study day's sync
 outcome, and when that did not succeed every topic is `could_not_tell` with `sync_failed` until the
 owner triggers a sync and regenerates (ADR-037, SPEC-048). The settle runs as a step of the sync
 cycle (`coordination::sync_cycle`) after each successful sync, scheduled or owner-triggered, beside
