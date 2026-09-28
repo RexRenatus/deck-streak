@@ -19,10 +19,10 @@ neutralised (SPEC-055 §7). The engine's second watch, `rslib/build.rs:13`, is i
 dependency, because cargo skips mtime checks for paths under `$CARGO_HOME` (rust-lang/cargo#11613).
 Both lines are unchanged at 26.09.3 and on upstream `main`, so a pin bump alone fixes nothing.
 
-The owner decided to move the engine to 26.09.3 together with the predecessor (SPEC-055), and to fix
-the rebuild both upstream and in DeckStreak: the maintainer submits the fix to Anki, and DeckStreak
-carries it on the maintainer's fork until an upstream release holds it. How does DeckStreak pin a
-patched engine without loosening ADR-022's supply-chain rule, and when does the carry end?
+The owner decided to move the engine to 26.09.3 (SPEC-055), and to fix the rebuild both upstream
+and in DeckStreak: the maintainer submits the fix to Anki, and DeckStreak carries it on the
+maintainer's fork until an upstream release holds it. How does DeckStreak pin a patched engine
+without loosening ADR-022's supply-chain rule, and when does the carry end?
 
 ## Decision Drivers
 
@@ -39,10 +39,10 @@ patched engine without loosening ADR-022's supply-chain rule, and when does the 
 
 - A `[patch."https://github.com/ankitects/anki.git"]` entry that replaces the engine with a commit of the fork, pinned by `rev`, while the dependency keeps naming the upstream tag — chosen: measured in a scratch resolution, it re-locks exactly the engine's five packages to the fork, and the dependency line keeps the upstream tag that SPEC-022's A1 check and `engine-measure.yml`'s report both read.
 - A direct `git` dependency on the fork pinned by `rev` — rejected because it breaks both readers of the dependency line (`test_engine_spike_record.py`'s engine-tag pattern and `engine-measure.yml:104`) and hides which upstream release DeckStreak runs, for a `Cargo.lock` byte-identical to the patch's.
-- Stay on 26.05 unpatched — rejected because it keeps paying 38 to 51 s of engine recompilation on every cargo command (#228) and leaves DeckStreak on a different release from the one the owner moves the predecessor to.
+- Stay on 26.05 unpatched — rejected because it keeps paying 38 to 51 s of engine recompilation on every cargo command (#228), and the owner decided to move the engine to 26.09.3.
 - Upgrade to 26.09.3 unpatched and wait for upstream — rejected because both causes are still in 26.09.3 and on upstream `main`, so the bump saves nothing measurable (31 to 35 s per no-op), and when upstream releases a fix is not DeckStreak's to decide.
 - Route C, a gate-side workaround that resets the generated files' mtimes after every cargo command — rejected by the maintainer because it edits cargo's build directory, depends on cargo's internal layout, must follow every ad-hoc cargo command, and a gate that edits mtimes is a new way for a gate to lie.
-- Vendor the engine's source into this repository — rejected because it copies a large AGPL tree into a public repository to change one hunk, hides the engine from the lockfile's view of dependencies, and turns every Anki bump into a re-vendoring.
+- Vendor the engine's source into this repository — rejected because it copies a large AGPL tree into a public repository to change one file, hides the engine from the lockfile's view of dependencies, and turns every Anki bump into a re-vendoring.
 
 ## Decision Outcome
 
@@ -57,17 +57,17 @@ Chosen option: a `[patch]` entry on the upstream source, pointing at a commit of
   `anki_i18n`, `anki_proto_gen`) come from the same commit of the fork: measured, those five
   packages are all the lockfile moves.
 - **The fork.** `RexRenatus/anki`, the same fork the upstream pull request comes from. It carries a
-  branch at upstream tag `26.09.3` plus exactly one commit: the `rslib/io/src/lib.rs` hunk that
-  stops `write_file_if_changed` registering a path under the running build script's `OUT_DIR`. The
-  other hunks drafted for upstream matter only to a consumer that takes the engine by path, and are
-  not carried. The pinned commit carries a tag on the fork, and neither the branch nor the tag is
-  force-pushed or deleted while DeckStreak pins it. The maintainer creates and pushes both (#233).
+  branch at upstream tag `26.09.3` plus exactly one commit, which changes only `rslib/io/src/lib.rs`
+  so that `write_file_if_changed` stops registering a path under the running build script's
+  `OUT_DIR`. Changes that matter only to a consumer that takes the engine by path are not carried.
+  The pinned commit carries a tag on the fork, and neither the branch nor the tag is force-pushed or
+  deleted while DeckStreak pins it. The maintainer creates and pushes both (#233).
 - **The sources.** `allow-git` names exactly `https://github.com/RexRenatus/anki.git` and
   `https://github.com/ankitects/rust-url.git`, and `unknown-git = "deny"` still refuses any other.
-  Measured, cargo still fetches the upstream repository to resolve the patch, but no package in the
-  graph comes from it, and `cargo deny` checks the graph: an upstream entry left in `allow-git`
-  raises its unmatched-source warning. If the patch were ever dropped by mistake, the audit would
-  then refuse the unpatched upstream source by name.
+  Measured, cargo loads the upstream repository only when it resolves the patch anew, never with a
+  committed `Cargo.lock`, and no package in the graph comes from it. `cargo deny` checks the graph,
+  so an upstream entry left in `allow-git` raises its unmatched-source warning. If the patch were
+  ever dropped by mistake, the audit would then refuse the unpatched upstream source by name.
 - **What the tag brings to `deny.toml`.** The two advisory exceptions whose crates leave the graph
   with `burn` (RUSTSEC-2024-0436 for `paste`, RUSTSEC-2025-0141 for `bincode`) are removed. So is
   the `Unlicense` allowance ADR-022 added for `systemstat`: the crates left under that licence all
@@ -82,7 +82,7 @@ Chosen option: a `[patch]` entry on the upstream source, pointing at a commit of
   1. check first whether the new tag carries the fix, and if it does, remove the fork instead;
   2. the maintainer applies the one commit to the new tag (`git apply --check`, then a cherry-pick),
      then pushes a new branch and tags it. `write_file_if_changed` has not changed since
-     ankitects/anki#4439, which added the registration, so the hunk has applied unchanged so far;
+     ankitects/anki#4439, which added the registration, so the change has applied unchanged so far;
   3. the delivery moves the dependency's `tag` and the patch's `rev` together.
 - **The removal condition.** The pinned upstream tag carries the fix, or an equivalent that stops
   registering `OUT_DIR` outputs. The check: with the engine at that tag, unpatched and consumed as a
@@ -101,8 +101,9 @@ Chosen option: a `[patch]` entry on the upstream source, pointing at a commit of
   is deleting the `[patch]` entry.
 - Bad, because DeckStreak trusts a second repository, the maintainer's fork, for the engine's
   source. The pin by revision and the one-file difference from the upstream tag bound that trust.
-- Bad, because a fresh checkout fetches both the upstream repository and the fork while the patch
-  holds.
+- Bad, because moving the pin (a tag or `rev` bump, or `cargo update`) needs the upstream
+  repository as well as the fork while the patch holds, although a committed `Cargo.lock` never
+  loads upstream.
 - Bad, because each Anki bump costs a cherry-pick and a tag until upstream releases the fix.
 
 ### Confirmation
@@ -110,7 +111,7 @@ Chosen option: a `[patch]` entry on the upstream source, pointing at a commit of
 SPEC-055's A1 (the tag, the patch by revision and the exact `allow-git`), A2 (a second build
 recompiles nothing), A3 (every advisory exception and allowed source is live) and A5. ADR-022's
 numbers at the pinned commit go below the spike's in ADR-009's Confirmation, which SPEC-022's A1
-judges (SPEC-055 R12). The delivery records here, for A5:
+judges (SPEC-055 R11). The delivery records here, for A5:
 
 - the pinned commit, and `git diff --stat 26.09.3 <rev>` on the fork: one file, `rslib/io/src/lib.rs`;
 - the no-op build before and after the pin, in cargo's own time;
@@ -121,7 +122,7 @@ judges (SPEC-055 R12). The delivery records here, for A5:
 ## What would make this wrong
 
 - An upstream release carries the fix. The removal delivery then supersedes this ADR (#233).
-- Upstream declines the fix, or reshapes the build scripts so that the hunk no longer applies. The
+- Upstream declines the fix, or reshapes the build scripts so that the change no longer applies. The
   fix is re-derived against the new code, and A2 is still the check.
 - Cargo stops judging build-script inputs by mtime alone, for example if checksum-based freshness
   covers them. The fix may then become unnecessary, and A2 on the unpatched tag would show it.
@@ -131,7 +132,7 @@ judges (SPEC-055 R12). The delivery records here, for A5:
 ## More Information
 
 ADR-022 (whose pin rule this amends), ADR-009, ADR-018, ADR-037, ADR-055; SPEC-022, SPEC-038,
-SPEC-055; #228, #233, #234, #235. The Cargo Book on `[patch]` and git dependencies
+SPEC-055; #228, #233, #235. The Cargo Book on `[patch]` and git dependencies
 (https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html), cargo-deny's sources check
 (https://embarkstudios.github.io/cargo-deny/checks/sources/cfg.html) and rust-lang/cargo#11613
 (https://github.com/rust-lang/cargo/pull/11613), each read on 2026-09-28.

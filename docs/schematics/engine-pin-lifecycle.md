@@ -16,7 +16,7 @@ flowchart LR
     main --> next
   end
   subgraph fork["RexRenatus/anki (the maintainer's fork)"]
-    branch["a branch at 26.09.3 plus one commit: the rslib/io/src/lib.rs hunk"]
+    branch["a branch at 26.09.3 plus one commit, changing only rslib/io/src/lib.rs"]
     pinned["the pinned commit, tagged, never force-pushed while pinned"]
     branch --> pinned
   end
@@ -39,19 +39,10 @@ flowchart LR
   end
   lock --> gate
   lock --> measure
-  subgraph pred["the predecessor (private plan, #234)"]
-    wheel["Anki's Python package at the same release"]
-    goldens["the parity goldens it generates"]
-    wheel --> goldens
-  end
-  tag -- "same release, same window" --> wheel
-  goldens -- "tools/parity-oracle/goldens" --> ingest
+  goldens["the parity goldens, tools/parity-oracle/goldens"] --> ingest
 ```
 
-The predecessor takes Anki's Python package from its release, not the fork, because the rebuild is a
-cargo consumer's problem and never reaches a built wheel. The goldens do not depend on the engine at
-all: regenerated with the package at 26.9.3 they are byte-identical, and the generator never imports
-it (SPEC-055 §1).
+The goldens do not depend on the engine: the generator never imports it (SPEC-055 §1).
 
 ## The pin's states
 
@@ -63,7 +54,7 @@ stateDiagram-v2
   Bump: an Anki bump while the fork is carried
   Removal: the removal delivery (#233)
 
-  UpstreamTag --> ForkPinned: SPEC-055's delivery, in the predecessor's window
+  UpstreamTag --> ForkPinned: SPEC-055's delivery
   ForkPinned --> Bump: a new upstream tag
   Bump --> Removal: the new tag, unpatched, passes A2
   Bump --> ForkPinned: A2 fails unpatched, so the fix is cherry-picked and tagged, and the tag and rev move together
@@ -72,7 +63,7 @@ stateDiagram-v2
 ```
 
 Every transition into a pinned state re-runs ADR-022's protocol in `engine-measure.yml` and
-SPEC-022's criteria, and it moves the predecessor to the same release in the same window.
+SPEC-022's criteria.
 
 ## What each check guards
 
