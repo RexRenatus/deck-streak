@@ -392,6 +392,46 @@
         "        if c.get(\"path\") is None or True\n",
         "a candidate inside another listed item is not listed again (SPEC-060 R10, A3)",
         "test_host_scrub.Plan.test_the_plan_lists_rule_selected_items_and_deletes_nothing"
+      ],
+      [
+        "S06050-A-FILE-IS-DIGESTED-FROM-THE-BYTES-PARSED",
+        "deploy/host-scrub/inventory.py",
+        "    return content, hashlib.sha256(data).hexdigest()\n",
+        "    return content, hashlib.sha256(Path(path).read_bytes()).hexdigest()\n",
+        "a file a tool parses and binds is read once, and its digest is taken over the bytes parsed (SPEC-060 R6, A10)",
+        "test_host_scrub.OneRead.test_each_tool_binds_the_bytes_it_parsed"
+      ],
+      [
+        "S06051-THE-INVENTORY-RECORDS-THE-RULES-IT-PARSED",
+        "deploy/host-scrub/inventory.py",
+        "        \"rules_digest\": rules[\"digest\"],\n",
+        "        \"rules_digest\": load_rules(args.rules)[\"digest\"],\n",
+        "the inventory records the digest of the rules it parsed, never of a second read (SPEC-060 R6, A10)",
+        "test_host_scrub.OneRead.test_each_tool_binds_the_bytes_it_parsed"
+      ],
+      [
+        "S06052-THE-PLAN-CHECKS-THE-RULES-IT-PARSED",
+        "deploy/host-scrub/plan.py",
+        "    if inventory.get(\"rules_digest\") != rules[\"digest\"]:\n",
+        "    if inventory.get(\"rules_digest\") != load_rules(args.rules)[\"digest\"]:\n",
+        "the plan checks the inventory's rules digest against the rules it parsed, never a second read (SPEC-060 R4, A10)",
+        "test_host_scrub.OneRead.test_each_tool_binds_the_bytes_it_parsed"
+      ],
+      [
+        "S06053-THE-PLAN-NAMES-THE-INVENTORY-IT-PARSED",
+        "deploy/host-scrub/plan.py",
+        "        \"inventory\": {\"digest\": inventory_digest, \"taken_at\": inventory[\"taken_at\"]},\n",
+        "        \"inventory\": {\"digest\": read_json(args.inventory, \"inventory\")[1], \"taken_at\": inventory[\"taken_at\"]},\n",
+        "the list names its inventory by the digest of the bytes the plan parsed (SPEC-060 R4, A10)",
+        "test_host_scrub.OneRead.test_each_tool_binds_the_bytes_it_parsed"
+      ],
+      [
+        "S06054-THE-APPLY-CHECKS-THE-RULES-IT-PARSED",
+        "deploy/host-scrub/apply.py",
+        "        approval, items = approved_items(listing, args.approval, rules[\"digest\"])\n",
+        "        approval, items = approved_items(listing, args.approval, load_rules(args.rules)[\"digest\"])\n",
+        "the apply checks the list's rules digest against the rules it parsed and acts on, never a second read (SPEC-060 R6, A10)",
+        "test_host_scrub.OneRead.test_each_tool_binds_the_bytes_it_parsed"
       ]
     ]
   }
