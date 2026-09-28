@@ -51,12 +51,13 @@ OWN = {
     "crates/sample/src/lib.rs": "//! A sample crate.\n",
     "web/app/src/app.html": "<!doctype html>\n",
 }
-# The checkout's methodology probes and proxy-client scan, by the paths the private file names.
+# The checkout's methodology probes and its two scans, by the paths the private file names.
 SCRIPTS = {
     "sdd": "scripts/spec-probe.py",
     "ddd": "scripts/domain-probe.py",
     "tdd": "scripts/test-probe.py",
     "proxy-client-scan": "scripts/client-scan.py",
+    "no-apikeyhelper": "scripts/helper-scan.py",
 }
 # Each methodology probe's verdict prefix and the classes its stand-in reports.
 PROBES = {
@@ -65,10 +66,11 @@ PROBES = {
     "tdd": ("TDD", ("acceptance-has-a-test", "red-first-recorded")),
 }
 # What each box pack expects, when a test says nothing else: no red row, the site not built yet,
-# and the proxy scan waiting for its settings document.
+# and both scans waiting for a settings document.
 QUIET = {
     "packs": {"alpha": {}, "beta": {}, "seo-pipeline": {"pending": "#59"}},
     "proxy-client-scan": {"pending": "#29"},
+    "no-apikeyhelper": {"pending": "#29"},
 }
 SCAN_ROWS = {
     "void-settings": (
@@ -98,7 +100,7 @@ with open(os.environ["FAKE_PROBE_LOG"], "a", encoding="utf-8") as handle:
 
 # The apiKeyHelper scan's stand-in, and the one verdict line and exit the scan gives for each thing
 # it can find: no settings file, clean files, a finding, or a file it cannot read (SPEC-056 R9).
-HELPER_SCRIPT = "scripts/helper-scan.py"
+HELPER_SCRIPT = SCRIPTS["no-apikeyhelper"]
 HELPER_VERDICTS = {
     "none": (2, "VOID 0 settings file(s) under <root>: a scan that examined nothing cannot say"),
     "clean": (0, "GREEN 2 settings file(s) scanned, none carries the shape"),
@@ -205,6 +207,7 @@ class Box:
             "owned": {},
         }
         self.set_probes()
+        self.set_helper("none")
         self.set_scan(["void-settings", "void-launch", "green-surface"], 2)
 
     @property

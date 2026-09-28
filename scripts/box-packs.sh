@@ -8,11 +8,11 @@
 #
 # * PACKS_WIRING names a private file, schema `deckstreak.box-wiring.v1`, that this repository never
 #   holds: the pin (the checkout's commit), the skills directory, the scripts of the sdd, ddd and
-#   tdd probes and of the proxy-client scan, the packs and their states, the box section's
-#   expectations, each owned file's source, and the variables the runner must not inherit.
-#   PACKS_CHECKOUT is the checkout at the pin, and PACKS_RUNNER the runner built from it. A variable
-#   that is unset or unusable, a file of another schema or a pin the checkout is not at makes the run
-#   VOID by name.
+#   tdd probes and of the proxy-client and apiKeyHelper scans, the packs and their states, the box
+#   section's expectations, each owned file's source, and the variables the runner must not
+#   inherit. PACKS_CHECKOUT is the checkout at the pin, and PACKS_RUNNER the runner built from it.
+#   A variable that is unset or unusable, a file of another schema or a pin the checkout is not at
+#   makes the run VOID by name.
 # * It judges the COMMITTED tree at REV (default HEAD) of ROOT (default this repository), exported
 #   with `git archive` into a scratch directory outside the repository and the checkout.
 # * The packs section: each pack runs through the runner with its catalog's probe verb and
@@ -32,12 +32,16 @@
 # * The sdd, ddd and tdd probes run from the checkout against the judged tree (`check all`): any
 #   class that is not OK fails its probe by name. The proxy-client scan is read by its rows, never
 #   its exit: any RED fails, and it reads `pending` while it examines no settings document.
+# * The apiKeyHelper scan (the subscription-proxy pack's `no-apikeyhelper` rule) is read by its one
+#   verdict line and its exit, with the refusals the public gate gave it: a finding fails, and so
+#   does a settings file it cannot read; while it finds no settings file it reads `pending` with
+#   the issue the box section names, and is VOID without one.
 # * Each owned file, a copy DeckStreak keeps of a pack's data (ADR-069), is compared with its source
 #   in the checkout over the fields it keeps: a kept field that differs fails by name, and so does a
 #   field the source gained that the copy neither keeps nor drops. A missing source makes the run
 #   VOID.
 # * Before any pack runs, it reads the state of every issue the box section names (each
-#   `expected_red` row's issue, each `pending`, and the proxy scan's `pending`) once, with
+#   `expected_red` row's issue, each `pending`, and each scan's `pending`) once, with
 #   `gh issue view <n> --json state` run in ROOT, so gh resolves the repository from ROOT's remotes
 #   or from $GH_REPO. An expectation whose issue is CLOSED is stale, and fails its pack by name.
 #   When gh is not on the path, is not logged in, cannot reach GitHub or answers no state, the run
@@ -76,9 +80,10 @@ SCHEMA = "deckstreak.box-wiring.v1"
 VERBS = {".pack.probe.v1": "probe", ".pack.run.v1": "run", ".seo-pipeline.v1": "verify"}
 SITE = "web/site/dist"
 SCAN = "proxy-client-scan"
+HELPER = "no-apikeyhelper"
 PROBES = ("sdd", "ddd", "tdd")
 WIRING_KEYS = {"schema", "pin", "skills", "scripts", "packs", "box", "owned", "unset_env", "note"}
-BOX_KEYS = {"packs", SCAN, "note"}
+BOX_KEYS = {"packs", SCAN, HELPER, "note"}
 PACK_KEYS = {"expected_red", "pending", "note"}
 SCAN_KEYS = {"pending", "note"}
 ROW_PACK_KEYS = {"state", "enforced_by", "excluded_rows", "deferred_rows", "note"}
@@ -91,6 +96,10 @@ SCAN_ROW = re.compile(r"^PROXY-CLIENT (GREEN|RED|ADVISORY|VOID) (\S+): (\d+) (.+
 SCAN_ALL = re.compile(r"^PROXY-CLIENT ALL \w+: blocking (\d+) green, (\d+) red, (\d+) void\b")
 SETTINGS = "settings document(s)"
 PROBE_LINE = re.compile(r"^([A-Z]+) ([a-z0-9-]+) (OK|REFUSED|VOID)\b")
+# The apiKeyHelper scan's verdict line, and the two shapes its rest takes.
+HELPER_LINE = re.compile(r"^NO-APIKEYHELPER (GREEN|RED|VOID) (.*)$")
+HELPER_FILES = re.compile(r"^(\d+) settings file\(s\)")
+HELPER_FINDINGS = re.compile(r"^(\d+) finding\(s\) in (\d+) file\(s\)")
 # The states `gh issue view --json state` answers, and its exit when it is not logged in.
 ISSUE_STATES = ("OPEN", "CLOSED")
 GH_NOT_LOGGED_IN = 4
@@ -194,7 +203,9 @@ def run(args: argparse.Namespace, root: Path, sha: str) -> list[Verdict]:
         )
     for path, entry in sorted(wiring["owned"].items()):
         if not (checkout / entry["source"]).is_file():
-            raise Refusal(f"the owned file {path}'s source {entry['source']} is not in the checkout")
+            raise Refusal(
+                f"the owned file {path}'s source {entry['source']} is not in the checkout"
+            )
     out = cards_directory()
     env = dict(os.environ, PYTHONDONTWRITEBYTECODE="1")
     for name in wiring["unset_env"]:
@@ -233,6 +244,8 @@ def run(args: argparse.Namespace, root: Path, sha: str) -> list[Verdict]:
             report(judge_probe(probe, script, tree, scratch, out, env))
         scan = checkout / wiring["scripts"][SCAN]
         report(judge_scan(box.get(SCAN, {}), scan, tree, scratch, out, closed, env))
+        helper = checkout / wiring["scripts"][HELPER]
+        report(judge_helper(box.get(HELPER, {}), helper, tree, scratch, out, closed, env))
         for path, entry in sorted(wiring["owned"].items()):
             report(judge_owned(path, entry, tree, checkout))
     print(f"cards: {out}", file=sys.stderr)
@@ -270,7 +283,7 @@ def read_wiring(path: Path) -> dict:
     if not isinstance(wiring.get("skills"), str) or not wiring["skills"]:
         raise Refusal("the private wiring file names no skills directory")
     scripts = wiring.get("scripts")
-    for name in (*PROBES, SCAN):
+    for name in (*PROBES, SCAN, HELPER):
         if not isinstance(scripts, dict) or not isinstance(scripts.get(name), str):
             raise Refusal(f"the private wiring file names no script for the {name} run")
     wiring["packs"] = packs_of(wiring.get("packs", {}))
@@ -322,11 +335,12 @@ def box_of(box: object) -> dict:
         for issue in issues:
             if not ISSUE.match(str(issue)):
                 raise Refusal(f"box.packs.{pack} waits on {issue!r}, not an issue")
-    scan = box.get(SCAN, {})
-    if not isinstance(scan, dict) or set(scan) - SCAN_KEYS:
-        raise Refusal(f"box.{SCAN} takes only {sorted(SCAN_KEYS)}")
-    if "pending" in scan and not ISSUE.match(str(scan["pending"])):
-        raise Refusal(f"box.{SCAN} waits on {scan['pending']!r}, not an issue")
+    for name in (SCAN, HELPER):
+        scan = box.get(name, {})
+        if not isinstance(scan, dict) or set(scan) - SCAN_KEYS:
+            raise Refusal(f"box.{name} takes only {sorted(SCAN_KEYS)}")
+        if "pending" in scan and not ISSUE.match(str(scan["pending"])):
+            raise Refusal(f"box.{name} waits on {scan['pending']!r}, not an issue")
     return box
 
 
@@ -350,8 +364,9 @@ def named_issues(box: dict) -> list[str]:
         named.update(entry.get("expected_red", {}).values())
         if "pending" in entry:
             named.add(entry["pending"])
-    if "pending" in box.get(SCAN, {}):
-        named.add(box[SCAN]["pending"])
+    for name in (SCAN, HELPER):
+        if "pending" in box.get(name, {}):
+            named.add(box[name]["pending"])
     return sorted(named, key=lambda issue: int(issue[1:]))
 
 
@@ -807,6 +822,56 @@ def judge_scan(
         verdict.mark, verdict.detail = "FAIL", f"VOID: {counts}"
     else:
         verdict.detail = counts
+    if verdict.stale:
+        verdict.mark = "FAIL"
+    return verdict
+
+
+def judge_helper(
+    expectation: dict, script: Path, tree: Path, scratch: Path, out: Path, closed: set[str],
+    env: dict,
+) -> Verdict:
+    """R9: the apiKeyHelper scan, read by its one verdict line and its exit (0 clean, 1 a finding,
+    2 VOID). Finding no settings file reads `pending` with the issue the box section names; once a
+    file is examined, or the issue closes, that expectation is stale (SPEC-054 R4)."""
+    verdict = Verdict(HELPER, "scan", counted=False, stale=closed_expectations(expectation, closed))
+    pending = expectation.get("pending")
+    if not script.is_file():
+        verdict.mark, verdict.detail = "FAIL", f"the checkout has no {script.name}"
+        return verdict
+    done = subprocess.run(
+        [sys.executable, str(script), "--root", str(tree)],
+        cwd=scratch,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    (out / f"{HELPER}.txt").write_text(done.stdout + done.stderr, encoding="utf-8")
+    lines = (done.stdout + "\n" + done.stderr).splitlines()
+    found = [match.groups() for match in map(HELPER_LINE.match, lines) if match]
+    if len(found) != 1:
+        verdict.mark = "FAIL"
+        verdict.detail = f"the scan printed no verdict it can read (exit {done.returncode})"
+        return verdict
+    word, rest = found[0]
+    files, findings = HELPER_FILES.match(rest), HELPER_FINDINGS.match(rest)
+    if word == "GREEN" and files and done.returncode == 0:
+        verdict.examined = int(files.group(1))
+        verdict.detail = f"{verdict.examined} settings file(s), none carries the shape"
+        if pending:
+            verdict.stale.append(f"pending {pending}, but a settings file was examined")
+    elif word == "RED" and findings and done.returncode == 1:
+        verdict.examined = int(findings.group(2))
+        verdict.mark, verdict.detail = "FAIL", f"{findings.group(1)} finding(s)"
+    elif word == "VOID" and files and int(files.group(1)) == 0 and done.returncode == 2:
+        if pending:
+            verdict.mark, verdict.detail = "pending", f"pending {pending}: 0 settings file(s)"
+        else:
+            verdict.mark = "FAIL"
+            verdict.detail = "VOID: 0 settings file(s), and the private file names no issue"
+    else:
+        verdict.mark, verdict.detail = "FAIL", f"{word} (exit {done.returncode})"
     if verdict.stale:
         verdict.mark = "FAIL"
     return verdict
