@@ -10,6 +10,10 @@ catalogs:
       specifier: ^4.1.11
       version: 4.1.11
 
+overrides:
+  '@sveltejs/kit@2>cookie': '>=0.7.0 <0.8'
+  typed-rest-client@2>qs: '>=6.16.0 <7'
+
 importers:
 
   .:
@@ -1260,8 +1264,8 @@ packages:
   convert-source-map@2.0.0:
     resolution: {integrity: sha512-Kvp459HrV2FEJ1CAsi1Ku+MY3kasH19TFykTz2xWmMeq6bk2NU3XXvfJ+Q61m0xktWwt+1HSYf3JZsTms3aRJg==}
 
-  cookie@0.6.0:
-    resolution: {integrity: sha512-U71cyTamuh1CRNCfpGY6to28lxvNwPG4Guz/EVjgf3Jmzv0vlDp1atT9eS5dDjMYHucpHbWns6Lwf3BKz6svdw==}
+  cookie@0.7.2:
+    resolution: {integrity: sha512-yki5XnKuf750l50uGTllt6kKILY4nQ1eNIQatoXEByZ5dWgnKqbnqmTrBE5B4N7lrMJKQ2ytWMiTO2o0v6Ew/w==}
     engines: {node: '>= 0.6'}
 
   cross-spawn@7.0.6:
@@ -1825,8 +1829,8 @@ packages:
     resolution: {integrity: sha512-vYt7UD1U9Wg6138shLtLOvdAu+8DsC/ilFtEVHcH+wydcSpNE20AfSOduf6MkRFahL5FY7X1oU7nKVZFtfq8Fg==}
     engines: {node: '>=6'}
 
-  qs@6.15.1:
-    resolution: {integrity: sha512-6YHEFRL9mfgcAvql/XhwTvf5jKcOiiupt2FiJxHkiX1z4j7WL8J/jRHYLluORvc1XxB5rV20KoeK00gVJamspg==}
+  qs@6.16.0:
+    resolution: {integrity: sha512-h6fhOIaRrID2CbEY2fqs+7t+UXZo+MLAnU5gRIq85uFtdiUPCdsApMlHhXogKVM4HM2DVbIjGNTTYH2OcmP1vA==}
     engines: {node: '>=0.6'}
 
   react-is@17.0.2:
@@ -2980,7 +2984,7 @@ snapshots:
       '@sveltejs/vite-plugin-svelte': 7.3.1(svelte@5.57.1)(vite@8.3.1(@types/node@24.19.0)(jiti@2.7.0))
       '@types/cookie': 0.6.0
       acorn: 8.18.0
-      cookie: 0.6.0
+      cookie: 0.7.2
       devalue: 5.9.4
       esm-env: 1.2.2
       kleur: 4.1.5
@@ -3257,7 +3261,7 @@ snapshots:
 
   convert-source-map@2.0.0: {}
 
-  cookie@0.6.0: {}
+  cookie@0.7.2: {}
 
   cross-spawn@7.0.6:
     dependencies:
@@ -3721,8 +3725,9 @@ snapshots:
 
   punycode@2.3.1: {}
 
-  qs@6.15.1:
+  qs@6.16.0:
     dependencies:
+      es-define-property: 1.0.1
       side-channel: 1.1.1
 
   react-is@17.0.2: {}
@@ -3914,7 +3919,7 @@ snapshots:
     dependencies:
       des.js: 1.1.0
       js-md4: 0.3.2
-      qs: 6.15.1
+      qs: 6.16.0
       tunnel: 0.0.6
       underscore: 1.13.8
 
