@@ -110,9 +110,9 @@ alternatives:
   closing it.
 - **A snapshot dated later than the apply's own clock is refused**, since it cannot have been taken
   yet. Chosen against trusting the approval's instant once it was ordered after the inventory's.
-- **A JSON file that holds a key twice is refused.** Chosen against Python's reading, which keeps the
-  last of the two, because another reader may keep the first, so the list the owner reads and the
-  list the apply reads could differ while their digests agree.
+- **A JSON file that holds a key twice is refused.** Chosen against Python's reading, which keeps
+  the last of the two, because another reader may keep the first, so the list the owner reads and
+  the list the apply reads could differ while their digests agree.
 - **An `is-active` read names its units after `--`, and a unit's name begins with a letter or a
   digit.** Chosen against admitting every name the unit pattern allowed, which left the read to
   depend on how the command parses its words.
