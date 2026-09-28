@@ -102,8 +102,8 @@ const BOT_CRATE: &str = "crates/bot/";
 /// Bot API.
 const ALERT_PATH: &str = "deploy/scripts/alert-telegram.sh";
 
-/// Every call of a send, and where it is made: (file, function, send). The census finds each once.
-const NAMED_SENDS: [(&str, &str, &str); 6] = [
+/// Every send, and where it is made: (file, function, send). The census finds each once.
+const NAMED_SENDS: [(&str, &str, &str); 7] = [
     // The bot's command replies (#257): the erase prompt, every other reply, and the export.
     (
         "crates/bot/src/commands.rs",
@@ -133,12 +133,21 @@ const NAMED_SENDS: [(&str, &str, &str); 6] = [
         "Transport::send_typing",
         "send_chat_action",
     ),
+    // The export's document, posted by the transport's own request.
+    (
+        "crates/bot/src/transport.rs",
+        "Transport::send_document",
+        "sendDocument",
+    ),
 ];
 
-/// The first review's three deliveries around the port, as it planted them: the bot's own send and
-/// a raw request to the Bot API in the bot's role, and a raw request in the API. The bot's role
-/// also carries a comment and a test module that name and call a send, which the census leaves out.
-const AROUND_THE_PORT: [(&str, &str); 2] = [
+/// The reviews' deliveries around the port, as they planted them. The first review's: the bot's own
+/// send and a raw request to the Bot API in the bot's role, and a raw request in the API; the bot's
+/// role also carries a comment and a test module that name and call a send, which the census leaves
+/// out. The second review's: the bot's own send after a field compiled for tests alone, beside a
+/// test module under stacked attributes, which the census leaves out; the bot's own send named
+/// through a variable; and a raw request from a new module of the bot.
+const AROUND_THE_PORT: [(&str, &str); 5] = [
     (
         "crates/daemon/src/role_bot.rs",
         r#"/// A celebration sent straight to the owner's chat through the bot's transport, around the router.
@@ -174,7 +183,76 @@ async fn celebrate_over_raw_http(token: &str, chat: i64) {
 }
 "#,
     ),
+    (
+        "crates/daemon/src/role_job.rs",
+        r#"/// A probe with a field compiled for tests alone.
+struct Probe {
+    #[cfg(test)]
+    calls: u8,
+    kept: u8,
+}
+
+/// A celebration sent straight to the owner's chat through the bot's transport, around the router.
+async fn celebrate_around_the_router(transport: &Transport, owner: Owner) {
+    let _sent = transport
+        .send_html(owner.user().get(), "a celebration the router never decided", None)
+        .await;
+}
+
+// A test module under stacked attributes may send.
+#[cfg(test)]
+#[allow(clippy::expect_used)]
+mod tests {
+    async fn a_test_sends(transport: &Transport) {
+        let _sent = transport.send_html(1, "synthetic", None).await;
+    }
+}
+"#,
+    ),
+    (
+        "crates/daemon/src/role_data.rs",
+        r#"/// A celebration through the bot's own send, the method named through a variable.
+async fn celebrate_through_a_variable(transport: &Transport, owner: Owner) {
+    let send = Transport::send_html;
+    let _sent = send(transport, owner.user().get(), "a celebration the router never decided", None).await;
+}
+"#,
+    ),
+    (
+        "crates/bot/src/celebrate.rs",
+        r#"//! A celebration from inside the bot crate, around the transport's named sends.
+
+/// A celebration posted straight to the Bot API by a new module of the bot, around the router.
+pub async fn celebrate(api_url: &str, token: &str, chat: i64) {
+    let url = format!("{api_url}/bot{token}/sendMessage");
+    let body = serde_json::json!({ "chat_id": chat, "text": "a celebration the router never decided" });
+    let _answer = reqwest::Client::new().post(url).json(&body).send().await;
+}
+"#,
+    ),
 ];
+
+/// The second review's trees for the walker, each file as (path, text): a shipped module in a
+/// directory named as tests are, which the walker reads because it is under `src/`; and the same
+/// text in a test directory outside `src/`, which the walker leaves out.
+const WALKED: [(&str, &str); 2] = [
+    (
+        "crates/daemon/src/fixtures/celebrate.rs",
+        AROUND_THE_PORT_IN_A_MODULE,
+    ),
+    ("crates/daemon/tests/around.rs", AROUND_THE_PORT_IN_A_MODULE),
+];
+
+/// A shipped module that sends through the bot's own send, around the router.
+const AROUND_THE_PORT_IN_A_MODULE: &str = r#"//! Shipped helpers, in a directory named as tests are.
+
+/// A celebration sent straight to the owner's chat through the bot's transport, around the router.
+pub async fn celebrate_around_the_router(transport: &Transport, owner: Owner) {
+    let _sent = transport
+        .send_html(owner.user().get(), "a celebration the router never decided", None)
+        .await;
+}
+"#;
 
 /// The attribute of an item that is compiled for tests alone.
 const CFG_TEST: &str = "#[cfg(test)]";
@@ -632,12 +710,43 @@ fn no_delivery_goes_around_the_port() {
         [
             "crates/api/src/notifications_routes.rs:3: names api.telegram.org",
             "crates/api/src/notifications_routes.rs:3: names sendMessage",
+            "crates/bot/src/celebrate.rs:5: names sendMessage in celebrate, not a named call site",
             "crates/daemon/src/role_bot.rs:4: calls send_html in celebrate_around_the_router, \
              not a named call site",
             "crates/daemon/src/role_bot.rs:10: names api.telegram.org",
             "crates/daemon/src/role_bot.rs:10: names sendMessage",
+            "crates/daemon/src/role_data.rs:3: uses send_html in celebrate_through_a_variable, \
+             not a named call site",
+            "crates/daemon/src/role_job.rs:11: calls send_html in celebrate_around_the_router, \
+             not a named call site",
         ],
-        "the bot's own send and two raw requests to the Bot API, around the port"
+        "the bot's own send, named or called, raw requests to the Bot API, and a raw request from \
+         inside the bot, around the port"
+    );
+
+    // The walker reads a shipped module in a directory named as tests are, because it is under
+    // `src/`, and leaves out a test directory outside `src/`.
+    let tree = tempfile::tempdir().expect("a temporary tree");
+    for (path, text) in WALKED {
+        let file = tree.path().join(path);
+        fs::create_dir_all(file.parent().expect("a planted file's directory"))
+            .expect("a planted directory");
+        fs::write(&file, text).expect("a planted source");
+    }
+    let walked = shipped_sources(tree.path());
+    let paths: Vec<&str> = walked.iter().map(|(path, _)| path.as_str()).collect();
+    assert_eq!(
+        paths,
+        ["crates/daemon/src/fixtures/celebrate.rs"],
+        "the walker reads every directory under src/, and no test directory outside it"
+    );
+    assert_eq!(
+        census(&walked).refused(),
+        [
+            "crates/daemon/src/fixtures/celebrate.rs:6: calls send_html in \
+             celebrate_around_the_router, not a named call site"
+        ],
+        "a send around the port in a shipped module under src/"
     );
 
     // Every shipped source of the tree: nothing goes around the port, and each named call site is
