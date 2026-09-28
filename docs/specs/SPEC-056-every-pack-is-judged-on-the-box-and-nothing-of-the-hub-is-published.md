@@ -295,8 +295,22 @@ and its SPEC's dated amendment section says why its subject is gone and what jud
 | SPEC-037 | A7 | every recorded exclusion is machine-applicable | nothing: the vendoring is removed (A1) |
 | SPEC-038 | A8 | the row runner's pool gives the serial verdicts | nothing: the row runner is removed (A1) |
 | SPEC-038 | A9 | the row runner's pool keeps its bound | nothing: the row runner is removed (A1) |
+| SPEC-039 | A20 | every exclusion names its reason and an issue, and no `mutants::skip` exists | SPEC-057 A8, which refuses every exclusion (ADR-070) |
 | SPEC-042 | A3 | the adapter's rails agree with the pack's `no-executable` class | the box run's vault-duties pack, and the drift check (A6, A14) |
 | SPEC-042 | A9 | the rails rows are green over the synthetic run | the box run's vault-duties pack |
 | SPEC-054 | A6 | the vendoring scans with the scrub's own rules | the scrub's own rules (A9, A10); the vendoring is removed (A1) |
 | SPEC-054 | A10 | a bounded command fails by name | the box run's vault-duties pack, which runs the rows it bounded |
 | SPEC-054 | A11 | the adapter's cargo run is bounded | the box run's vault-duties pack, which runs the rows it bounded |
+
+## 8. Amendment, 2026-09-28: a retirement SPEC-057 made
+
+Made by SPEC-057's first delivery, the vault's, insert-only under ruling (i) of SPEC-038 section 8:
+every earlier byte is kept in order. That delivery retired SPEC-039's A20 in R14's form, when
+ADR-070 replaced the exclusion A20 held to its reason with the equivalence record, and A18's test
+holds section 7 equal to every retirement the delivered SPECs hold. It inserts:
+
+- section 7: the row of SPEC-039's A20, in the table's order;
+- this section.
+
+Section 7's first sentence names this delivery's retirements; its table now also lists one a later
+delivery made, as A18 requires.

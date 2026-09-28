@@ -1,6 +1,6 @@
 {
   "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
-  "_comment": "StrykerJS 10.0.0 over the Mini App (SPEC-039 R1, R6; ADR-057). A pull request's mutation-web job mutates each changed production file whole with --mutate; the weekly battery mutates everything below. A survivor fails the run (break 100). An equivalent mutant is recorded beside it: // Stryker disable next-line <mutator>: EQUIVALENT: <reason> (#N).",
+  "_comment": "StrykerJS 10.0.0 over the Mini App (SPEC-039 R1, R6; ADR-057). A pull request's mutation-web job mutates each changed production file whole with --mutate; the weekly battery mutates everything below. A survivor fails the run (break 100). An equivalent mutant is recorded in scripts/mutation-equivalent.d/miniapp.json, bound by an anchor to the one survivor it excuses (SPEC-057, ADR-070), and no mutant is disabled, ignored or excluded.",
   "testRunner": "vitest",
   "plugins": ["@stryker-mutator/vitest-runner"],
   "vitest": { "configFile": "vite.config.ts" },
