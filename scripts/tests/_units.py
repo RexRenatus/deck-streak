@@ -1,8 +1,10 @@
-"""systemd unit syntax as systemd.syntax(7) reads it, for the deploy templates' tests (SPEC-032,
-SPEC-056 R5).
+"""The systemd unit syntax the deploy templates use (systemd.syntax(7)), for the templates' tests
+(SPEC-032, SPEC-056 R5).
 
-DeckStreak's own reader: it parses the templates the tests assert over, and judges nothing. The
-durable-services pack judges the templates on the maintainer's box (ADR-069).
+DeckStreak's own reader: it parses the templates the tests assert over, and judges nothing. It does
+not model systemd's parser: it reads the plain syntax the templates hold and refuses whatever else a
+line or an exit-status word holds (SPEC-066). The durable-services pack judges the templates on the
+maintainer's box (ADR-069).
 """
 
 import dataclasses
@@ -14,7 +16,7 @@ DEPLOY = "deploy"
 UNIT_KINDS = {".service": "service", ".timer": "timer", ".slice": "slice"}
 KEY_NAME = re.compile(r"^[A-Za-z0-9-]+$")
 SECTION = re.compile(r"\[[A-Za-z0-9-]+\]")
-# What the reader refuses rather than read a line otherwise than systemd reads it (SPEC-066).
+# Why the reader refuses a line: it reads no line it might read otherwise than systemd (SPEC-066).
 BACKSLASH = "ends in a backslash, which the reader refuses"
 CHARACTER = "a character the reader refuses"
 SHAPE = "is neither a section header nor an assignment in a section"
@@ -30,9 +32,6 @@ SIZE = re.compile(r"^(\d+(?:\.\d+)?)\s*([KMGTPE]?)$", re.IGNORECASE)
 WAIVE_KEY = "X-DurableServices-Waive"
 # The service types that keep running after they start (systemd.service(5), Type=).
 LONG_RUNNING_KINDS = {"simple", "exec", "notify", "notify-reload", "forking", "dbus", "idle"}
-# systemd's WHITESPACE: what it splits a list of exit statuses on, and what its safe_atou8() skips
-# before a number (SPEC-066).
-WHITESPACE = " \t\n\r"
 # The values each enum key the census reads may hold (systemd.service(5), systemd.unit(5)), with the
 # section it sits in. The census refuses an empty or any other value of one rather than decide
 # which earlier value it leaves in force (SPEC-066).
@@ -44,9 +43,81 @@ ENUMS = {
     "RestartMode": ("Service", {"normal", "direct"}),
     "CollectMode": ("Unit", {"inactive", "inactive-or-failed"}),
 }
-# The exit-status names systemd reads as 0 and 1. Every other name it knows is a status of 2 or
-# more (`systemd-analyze exit-status` lists them), never the refusal's 1, and reads as None here.
-EXIT_NAMES = {"SUCCESS": 0, "FAILURE": 1}
+# The exit-status names, each with its status, as `systemd-analyze exit-status` lists them and
+# systemd.exec(5) documents them. The census reads no other name (SPEC-066).
+EXIT_NAMES = {
+    "SUCCESS": 0,
+    "FAILURE": 1,
+    "INVALIDARGUMENT": 2,
+    "NOTIMPLEMENTED": 3,
+    "NOPERMISSION": 4,
+    "NOTINSTALLED": 5,
+    "NOTCONFIGURED": 6,
+    "NOTRUNNING": 7,
+    "USAGE": 64,
+    "DATAERR": 65,
+    "NOINPUT": 66,
+    "NOUSER": 67,
+    "NOHOST": 68,
+    "UNAVAILABLE": 69,
+    "SOFTWARE": 70,
+    "OSERR": 71,
+    "OSFILE": 72,
+    "CANTCREAT": 73,
+    "IOERR": 74,
+    "TEMPFAIL": 75,
+    "PROTOCOL": 76,
+    "NOPERM": 77,
+    "CONFIG": 78,
+    "CHDIR": 200,
+    "NICE": 201,
+    "FDS": 202,
+    "EXEC": 203,
+    "MEMORY": 204,
+    "LIMITS": 205,
+    "OOM_ADJUST": 206,
+    "SIGNAL_MASK": 207,
+    "STDIN": 208,
+    "STDOUT": 209,
+    "CHROOT": 210,
+    "IOPRIO": 211,
+    "TIMERSLACK": 212,
+    "SECUREBITS": 213,
+    "SETSCHEDULER": 214,
+    "CPUAFFINITY": 215,
+    "GROUP": 216,
+    "USER": 217,
+    "CAPABILITIES": 218,
+    "CGROUP": 219,
+    "SETSID": 220,
+    "CONFIRM": 221,
+    "STDERR": 222,
+    "PAM": 224,
+    "NETWORK": 225,
+    "NAMESPACE": 226,
+    "NO_NEW_PRIVILEGES": 227,
+    "SECCOMP": 228,
+    "SELINUX_CONTEXT": 229,
+    "PERSONALITY": 230,
+    "APPARMOR": 231,
+    "ADDRESS_FAMILIES": 232,
+    "RUNTIME_DIRECTORY": 233,
+    "CHOWN": 235,
+    "SMACK_PROCESS_LABEL": 236,
+    "KEYRING": 237,
+    "STATE_DIRECTORY": 238,
+    "CACHE_DIRECTORY": 239,
+    "LOGS_DIRECTORY": 240,
+    "CONFIGURATION_DIRECTORY": 241,
+    "NUMA_POLICY": 242,
+    "CREDENTIALS": 243,
+    "BPF": 244,
+    "KSM": 245,
+    "EXCEPTION": 255,
+}
+# The one spelling of a number the census reads as an exit status: a decimal with no sign and no
+# leading zero, of ASCII digits (SPEC-066).
+DECIMAL = re.compile(r"0|[1-9][0-9]{0,2}")
 
 
 class Refused(AssertionError):
@@ -64,7 +135,7 @@ class Assignment:
 
 @dataclasses.dataclass(slots=True)
 class Unit:
-    """One unit file and its drop-ins, as systemd reads them."""
+    """One unit file and its drop-ins, as the reader reads them."""
 
     name: str
     rel: str
@@ -215,67 +286,21 @@ def long_running(unit):
 
 
 def status_words(value):
-    """The words of a `SuccessExitStatus=` or `RestartForceExitStatus=` value as systemd splits
-    one, with extract_first_word() and no flags: on whitespace, where a backslash takes the next
-    character as it is and a quote is a plain character, so `\\1` is the word `1` and `"1"` stays
-    `"1"`. A trailing backslash ends the value there, as systemd's refusal of it does (SPEC-066)."""
-    words, word, escaped = [], None, False
-    for char in value:
-        if escaped:
-            word, escaped = word + char, False
-        elif char == "\\":
-            word, escaped = word or "", True
-        elif char in WHITESPACE:
-            if word is not None:
-                words.append(word)
-            word = None
-        else:
-            word = (word or "") + char
-    if word is not None and not escaped:
-        words.append(word)
-    return words
+    """The words of a `SuccessExitStatus=` or `RestartForceExitStatus=` value, split on spaces and
+    tabs alone. A backslash or a quote stays in its word, which `exit_status` then reads as no
+    status, so the census refuses it rather than decide how systemd would split it (SPEC-066)."""
+    return [word for word in re.split(r"[ \t]+", value) if word]
 
 
 def exit_status(word):
-    """The exit status systemd reads `word` as, or None where it reads none (SPEC-066): a name, else
-    a number as its safe_atou8() reads one. That skips leading whitespace, reads its own `0b`
-    (binary) and `0o` (octal) prefixes, and hands the rest to strtoul(3) in that base, or in base 0;
-    the whole word must be read, a negative number is refused unless it is 0, and a status is at
-    most 255. So 01, 0x1, +1, 0b1 and 0o1 read as 1 and 010 as 8, as `systemd-analyze exit-status`
-    reads them."""
+    """The exit status `word` names, or None for a word the census does not read: a status name
+    `EXIT_NAMES` lists, or a decimal of at most 255 with no sign and no leading zero. Every other
+    spelling reads as None, and the census refuses it (SPEC-066)."""
     if word in EXIT_NAMES:
         return EXIT_NAMES[word]
-    text, base = word.lstrip(WHITESPACE), 0
-    if text[:2] in ("0b", "0B"):
-        text, base = text[2:], 2
-    elif text[:2] in ("0o", "0O"):
-        text, base = text[2:], 8
-    number = strtoul(text, base)
-    if number is None:
-        return None
-    value, negative = number
-    if negative and value:
-        return None
-    return value if value <= 255 else None
-
-
-def strtoul(text, base):
-    """strtoul(3) over the whole of `text` as ISO C23 reads it, the most a C library reads: the
-    value and whether a `-` preceded it, or None when `text` is not one number. It skips leading C
-    whitespace and takes one sign; a `0x` before a hexadecimal digit names base 16 in base 0 or 16,
-    a `0b` before a binary digit names base 2 in base 0 or 2, and in base 0 a leading `0` is
-    octal."""
-    sign, digits = re.fullmatch(r"[ \t\n\v\f\r]*([+-]?)(.*)", text, re.DOTALL).groups()
-    if base in (0, 16) and re.match(r"0[xX][0-9a-fA-F]", digits):
-        base, digits = 16, digits[2:]
-    elif base in (0, 2) and re.match(r"0[bB][01]", digits):
-        base, digits = 2, digits[2:]
-    elif base == 0:
-        base = 8 if digits.startswith("0") else 10
-    allowed = "0123456789abcdef"[:base]
-    if not digits or any(char.lower() not in allowed for char in digits):
-        return None
-    return int(digits, base), sign == "-"
+    if DECIMAL.fullmatch(word) and int(word) <= 255:
+        return int(word)
+    return None
 
 
 def size_bytes(value):

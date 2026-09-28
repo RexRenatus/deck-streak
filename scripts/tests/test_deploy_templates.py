@@ -50,7 +50,8 @@ CREDENTIAL_KEYS = (
     "ImportCredential",
 )
 # The exit of a role that refuses start (SPEC-025 R1) and of the runner's page (SPEC-027 R7),
-# EXIT_FAILURE: no template counts it a success, in any spelling systemd reads as 1 (SPEC-066 R2).
+# EXIT_FAILURE: no template counts it a success, and the census reads no other spelling of a status
+# (SPEC-066 R2).
 REFUSAL_EXIT = 1
 # The prefixes systemd reads before an ExecStart= path; `-` counts a failure as a success
 # (systemd.service(5)).
@@ -229,7 +230,8 @@ WAIVED = {
 
 
 def subject(root=REPO):
-    """Every unit under `root`'s deploy/, parsed as systemd reads it."""
+    """Every unit under `root`'s deploy/, through the reader, which refuses a line it cannot
+    read."""
     return _units.load_subject(Path(root))
 
 
@@ -366,21 +368,37 @@ def loads_a_credential(unit):
 
 
 def names_the_refusal(statuses):
-    """Whether a `SuccessExitStatus=` or `RestartForceExitStatus=` value holds a word systemd reads
-    as the refusal's exit, 1, in any spelling: FAILURE, 01, 0x1, +1, 0b1 (`_units.exit_status`)."""
+    """Whether a `SuccessExitStatus=` or `RestartForceExitStatus=` value holds a word the census
+    reads as the refusal's exit, 1: `1` or `FAILURE` (`_units.exit_status`)."""
     return any(_units.exit_status(word) == REFUSAL_EXIT for word in _units.status_words(statuses))
+
+
+def unread_words(statuses):
+    """The words of a `SuccessExitStatus=` or `RestartForceExitStatus=` value the census does not
+    read as an exit status: neither a decimal of at most 255 nor a status name. Each is refused,
+    since the census reads no other spelling of a status (SPEC-066)."""
+    return [word for word in _units.status_words(statuses) if _units.exit_status(word) is None]
+
+
+def unread_refusal(key, statuses, word):
+    """The census's refusal of `word`, one of `unread_words(statuses)`."""
+    return (
+        f"{key}={statuses} holds {word}, which is neither a decimal of at most 255 nor a status "
+        "name, and is refused"
+    )
 
 
 def refusal_page_conditions(unit):
     """Why a start of `unit` that a credential refuses would not fail it and start its page
     (SPEC-066 R2), each refusal beside the directive it reads: no `OnFailure=` naming the alert
     template, a condition that can skip the start, an `ExecStart=` whose failure counts as a
-    success, a success exit that holds the refusal's in any spelling systemd reads as 1, or a
-    restart that skips the failed state, and with it `OnFailure=`. A condition that exits 1 to 254
-    skips the start, and the unit is not marked failed (systemd.service(5)); the census cannot tell
-    what a condition tests, so it refuses every one. A `RestartMode=direct` is refused wherever it
-    is assigned, and a `Restart=`, `RestartMode=` or `CollectMode=` that is empty or not a known
-    value is refused, so the census never decides which of two assignments is in force."""
+    success, a success exit that holds the refusal's, 1, or a word the census does not read as an
+    exit status, or a restart that skips the failed state, and with it `OnFailure=`. A condition
+    that exits 1 to 254 skips the start, and the unit is not marked failed (systemd.service(5));
+    the census cannot tell what a condition tests, so it refuses every one. A `RestartMode=direct`
+    is refused wherever it is assigned, and a `Restart=`, `RestartMode=` or `CollectMode=` that is
+    empty or not a known value is refused, so the census never decides which of two assignments is
+    in force."""
     refused = []
 
     def refuse(directive, why):
@@ -403,6 +421,8 @@ def refusal_page_conditions(unit):
             refuse(
                 "SuccessExitStatus", f"SuccessExitStatus={statuses} counts the refusal a success"
             )
+        for word in unread_words(statuses):
+            refuse("SuccessExitStatus", unread_refusal("SuccessExitStatus", statuses, word))
     for mode in unit.every("Service", "RestartMode"):
         if mode == "direct":
             refuse("RestartMode", "RestartMode=direct skips the failed state and OnFailure=")
@@ -422,13 +442,12 @@ def alert_exit_refusals(unit):
     """Why a refused start of the alert template would count as a success or skip its failed state
     (SPEC-066 R3): each of R2's conditions but `OnFailure=`, which the alert template must not
     name. They are told apart by the directive each refusal reads, never by the refusal's text,
-    since the restart mode's refusal names `OnFailure=` too. A `SuccessExitStatus=` that names no
-    1 is refused as well: the alert template names none, so no spelling of the refusal's exit can
-    count the refusal a success."""
+    since the restart mode's refusal names `OnFailure=` too. A `SuccessExitStatus=` whose every
+    word reads as a status other than 1 is refused as well: the alert template names none."""
     conditions = refusal_page_conditions(unit)
     refused = [refusal for directive, refusal in conditions if directive != "OnFailure"]
     for statuses in unit.values("Service", "SuccessExitStatus"):
-        if not names_the_refusal(statuses):
+        if not names_the_refusal(statuses) and not unread_words(statuses):
             refused.append(
                 f"{unit.rel}: SuccessExitStatus={statuses} is named, and the alert template names "
                 "none"
@@ -455,11 +474,17 @@ def restart_refusals(unit):
     for statuses in unit.values("Service", "RestartForceExitStatus"):
         if oneshot:
             why = "makes the service manager refuse the Type=oneshot unit outright"
-        elif names_the_refusal(statuses):
-            why = "restarts the refusal"
-        else:
+            refused.append(f"{unit.rel}: RestartForceExitStatus={statuses} {why}")
+            continue
+        unread = unread_words(statuses)
+        for word in unread:
+            why = unread_refusal("RestartForceExitStatus", statuses, word)
+            refused.append(f"{unit.rel}: {why}")
+        if names_the_refusal(statuses):
+            refused.append(f"{unit.rel}: RestartForceExitStatus={statuses} restarts the refusal")
+        elif not unread:
             why = "is named, and the alert template names none"
-        refused.append(f"{unit.rel}: RestartForceExitStatus={statuses} {why}")
+            refused.append(f"{unit.rel}: RestartForceExitStatus={statuses} {why}")
     return refused
 
 
