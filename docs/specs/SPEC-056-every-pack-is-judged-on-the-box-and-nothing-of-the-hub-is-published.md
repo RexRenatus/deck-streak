@@ -20,10 +20,31 @@ Measured at `22fb19a` (the redaction's head, which this delivery is stacked on).
 - **Names of the maintainer's private tooling.** 211 lines in 39 files outside `.packs/`, and two
   file paths, name that tooling: its project, its runner, its proxy and its paths, counted with the
   maintainer's private word list, which is not in this repository.
-- **Readers.** 65 files outside `.packs/` read or name a file this delivery removes (271 lines): the
-  gate (`scripts/check.sh`'s `packs` stage, 480 rows of 29 packs) and CI's `packs` job, 13 scripts
-  and tests, three vault crate files, 18 SPECs, 13 ADRs, 4 schematics, 4 red-first records, the
-  living docs, `stack.json` and `ruff.toml`.
+- **Readers.** 69 files outside `.packs/` read or name a file this delivery removes, in 279 lines,
+  as this command prints them, one file a line with its count:
+
+  ```
+  git grep -I -c -E '\.packs\b|pack-rows|vendor-packs|VENDORED\.json|methodology_probe\b|sdd-probe|ddd-probe|tdd-probe|no-apikeyhelper-scan' 22fb19a -- . ':(exclude).packs'
+  ```
+
+  They are:
+  - the gate, `scripts/check.sh`, whose `packs` stage ran 480 rows of 29 packs and which CI's
+    `packs` job ran;
+  - 8 scripts: the six this delivery removes, which name each other, `box-packs.sh` and
+    `public-scrub.py`;
+  - 6 tests;
+  - 3 vault crate files;
+  - 11 delivered SPECs and 7 planned ones;
+  - 11 ADRs, 4 schematics and 4 red-first records;
+  - 3 changelog fragments and 8 living docs;
+  - one web test's comment;
+  - `stack.json` and `ruff.toml`.
+- **Advisory departures.** `test_deploy_templates.py`'s
+  `test_every_departure_from_an_advisory_is_waived_with_its_why` read the vendored durable lint's
+  report. It held every advisory departure of the deploy templates to a waiver in its unit
+  (`X-DurableServices-Waive=`), with a why of more than five words, or to the one issue it waits on
+  (#44), and it pinned the set of waivers. The box driver reads a failing advisory row as advisory
+  and never fails on it, so removing that test without a port would lose the judgment.
 - **Code that reads vendored data.** The vault adapter compiles in the vault-duties pack's rails,
   layout and rows (`include_str!` in `crates/vault/src/rails.rs` and `staged.rs`); the public scrub
   composes its rules from two vendored deny lists through a vendored probe's loader; and the
@@ -101,6 +122,18 @@ R14. A criterion whose test this delivery removes is retired insert-only, every 
     record into a `` ```retired `` fence the same way. The SPEC's dated amendment section names each
     retired criterion, why its subject is gone and its box form, and section 7 lists every
     retirement.
+R15. The box run keeps the judgment of the removed advisory-waiver test. A pack whose entry in the
+    private file names an advisory lint (today durable-services, whose lint is in the checkout,
+    because the runner's card cuts each row's report short) runs that lint over the judged tree
+    and reads every advisory finding by its unit and reason. Each finding must be waived in its unit
+    (`X-DurableServices-Waive=<reason> <why>`, with a why of more than five words) or wait on an
+    open issue the private file names. An unwaived departure, and a thin why, fail the pack by
+    name. A waiver in a unit or a waiting entry that matches no finding is stale, and so is a
+    waiting entry whose issue is closed. Every other pack's advisory rows still never fail.
+R16. A public test reads every unit under `deploy/` with `scripts/tests/_units.py` and pins the set
+    of `X-DurableServices-Waive=` declarations by unit and reason, each with a why of more than five
+    words. Deleting or emptying a waiver therefore fails in public CI. Only the box run can see a
+    new departure that carries no waiver (R15).
 
 ## 3. Acceptance criteria
 
@@ -124,6 +157,8 @@ R14. A criterion whose test this delivery removes is retired insert-only, every 
 | A16 | the pull request template says a pack verdict comes from the box run | `test_box_only_packs.py` `test_the_pull_request_template_says_pack_verdicts_come_from_the_box_run` |
 | A17 | the apiKeyHelper scan runs from the checkout: pending while no settings file exists, and failing on a finding, an unreadable file, VOID without an issue, or a stale or closed expectation | `test_box_packs.py` `test_the_api_key_helper_scan_runs_from_the_checkout_and_waits_for_a_settings_file` |
 | A18 | every retired criterion is struck in its SPEC's table, fenced apart in its SPEC and its red-first record, and listed in section 7; a planted SPEC that breaks the rule is refused | `test_box_only_packs.py` `test_every_retired_criterion_is_struck_and_fenced_apart_in_its_spec_and_record` |
+| A19 | an advisory departure its unit does not waive, and a thin why, fail the pack by name; a departure that waits on an open issue passes; a waiver or waiting entry that matches no departure, or waits on a closed issue, is stale | `test_box_packs.py` `test_every_advisory_departure_is_waived_in_its_unit_or_waits_on_an_open_issue` |
+| A20 | the deploy templates' waivers are pinned by unit and reason, each with a why of more than five words | `test_deploy_templates.py` `test_every_advisory_waiver_is_pinned_with_its_why` |
 
 ```acceptance
 A1: python3 -m unittest discover -s scripts/tests -p test_box_only_packs.py -k test_no_vendored_pack_file_or_removed_script_is_in_the_tree
@@ -144,6 +179,8 @@ A15: python3 -m unittest discover -s scripts/tests -p test_box_packs.py -k test_
 A16: python3 -m unittest discover -s scripts/tests -p test_box_only_packs.py -k test_the_pull_request_template_says_pack_verdicts_come_from_the_box_run
 A17: python3 -m unittest discover -s scripts/tests -p test_box_packs.py -k test_the_api_key_helper_scan_runs_from_the_checkout_and_waits_for_a_settings_file
 A18: python3 -m unittest discover -s scripts/tests -p test_box_only_packs.py -k test_every_retired_criterion_is_struck_and_fenced_apart_in_its_spec_and_record
+A19: python3 -m unittest discover -s scripts/tests -p test_box_packs.py -k test_every_advisory_departure_is_waived_in_its_unit_or_waits_on_an_open_issue
+A20: python3 -m unittest discover -s scripts/tests -p test_deploy_templates.py -k test_every_advisory_waiver_is_pinned_with_its_why
 ```
 
 ## 4. File manifest
@@ -162,7 +199,7 @@ A18: python3 -m unittest discover -s scripts/tests -p test_box_only_packs.py -k 
 | `scripts/tests/fixtures/box-packs/fake-runner` | repo | renamed from the old fake runner: it answers the runner's verbs with synthetic cards |
 | `scripts/tests/fixtures/box-packs/checkout/skills/catalog.json` | repo | renamed from the old catalog fixture, with synthetic packs |
 | `scripts/tests/fixtures/box-packs/checkout/` | repo | added: the synthetic checkout's catalog; the tests plant its probes, scans and sources at run time, and none names a private tool |
-| `scripts/box-packs.sh` | repo | changed: the private-file driver, and the apiKeyHelper scan (R7 to R11) |
+| `scripts/box-packs.sh` | repo | changed: the private-file driver, the apiKeyHelper scan and the advisory waivers (R7 to R11, R15) |
 | `scripts/check.sh` | repo | changed: no `packs` stage, the scrub alone, the log directory off stdout (R3, R4) |
 | `.github/workflows/ci.yml` | repo | changed: no `packs` job or need (R3) |
 | `.github/pull_request_template.md` | repo | changed: the box run's pack verdict (R12) |
@@ -175,8 +212,8 @@ A18: python3 -m unittest discover -s scripts/tests -p test_box_only_packs.py -k 
 | `crates/vault/src/rails.rs`, `crates/vault/src/staged.rs`, `crates/vault/src/lib.rs` | `deck-streak-vault` | changed: read the crate's own data; A8's test; doc comments name the owned data |
 | `crates/vault/tests/owned_data.rs` | `deck-streak-vault` | added: A6, A7 |
 | `crates/vault/tests/staged.rs`, `crates/vault/tests/fixtures/gate/stand-in-probe.py` | `deck-streak-vault` | changed, and added: its red-class gate is a synthetic probe that judges only `note-links`; no assertion edited |
-| `scripts/tests/_units.py` | repo | added: systemd unit syntax, as systemd.syntax(7) reads it, for the deploy templates' tests |
-| `scripts/tests/test_deploy_templates.py` | repo | changed: reads units with `_units.py`; its two durable-lint tests are removed, because the box run's durable-services pack judges the templates |
+| `scripts/tests/_units.py` | repo | added: systemd unit syntax, as systemd.syntax(7) reads it, and each unit's waivers, for the deploy templates' tests |
+| `scripts/tests/test_deploy_templates.py` | repo | changed: reads units with `_units.py`; A20. Its test of the durable lint's blocking rows is removed, because the box run's durable-services pack fails on each of them; its advisory-waiver test moves to the box run (R15) and to a public pin of the waivers (R16) |
 | `scripts/tests/test_box_packs.py`, `scripts/tests/fixtures/box-packs/bin/gh` | repo | changed: the new interface, and A11 to A15 and A17; the fake gh answers `api --method POST` |
 | `scripts/tests/test_box_only_packs.py` | repo | added: A1 to A4, A16 and A18 |
 | `scripts/tests/test_check_gate.py` | repo | changed: the stage table, A5 |
@@ -213,6 +250,10 @@ A18: python3 -m unittest discover -s scripts/tests -p test_box_only_packs.py -k 
 - It re-pins no pack, and builds nothing the box runs: the checkout, the runner and the private
   file stay the maintainer's (#60).
 - It publishes no finding about a host: those stay with the owner gate that tracks them (#167).
+- It adds no name of the maintainer's private tooling to the scrub's private list. Those names are
+  checked by a separate private scan over the tree, the commit messages and the pull request body,
+  because the history scrub reads every blob of history, and its list takes only terms that no
+  historical blob holds (#60).
 
 ## 6. Risks
 
