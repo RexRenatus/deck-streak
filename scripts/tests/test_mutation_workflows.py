@@ -160,6 +160,44 @@ class TheToolsConfigurationsAreValid(unittest.TestCase):
         self.assertIn("configs: web/app/stryker.config.json: is not JSON", commented.stdout)
 
 
+class TheConfigurationCheckSeesWhatStrykerReads(unittest.TestCase):
+    def test_the_configuration_check_refuses_what_stryker_would_read_otherwise(self):
+        config = json.loads((REPO / "web/app/stryker.config.json").read_text(encoding="utf-8"))
+        with tempfile.TemporaryDirectory() as scratch:
+            root = Path(scratch)
+            (root / ".cargo").mkdir()
+            (root / ".cargo" / "mutants.toml").write_text('test_tool = "nextest"\n', "utf-8")
+            app = root / "web" / "app"
+            app.mkdir(parents=True)
+            (app / "stryker.config.json").write_text(json.dumps(config), encoding="utf-8")
+            clean = run(str(VERDICT), "configs", "--root", str(root))
+            # Planted: two configurations StrykerJS would find beside this one, ignoreStatic under
+            # a coverage analysis that cannot find static mutants, and a mutate list that drops
+            # R2's spec exclusion.
+            (app / "stryker.conf.mjs").write_text("export default {};\n", encoding="utf-8")
+            (app / ".stryker.config.json").write_text("{}", encoding="utf-8")
+            planted = dict(
+                config,
+                ignoreStatic=True,
+                coverageAnalysis="all",
+                mutate=[glob for glob in config["mutate"] if glob != "!src/**/*.spec.*"],
+            )
+            (app / "stryker.config.json").write_text(json.dumps(planted), encoding="utf-8")
+            refused = run(str(VERDICT), "configs", "--root", str(root))
+        self.assertEqual(clean.returncode, 0, clean.stdout + clean.stderr)
+        self.assertEqual(refused.returncode, 1, refused.stdout + refused.stderr)
+        for finding in examined(
+            "refusals",
+            [
+                "configs: web/app/stryker.conf.mjs: a second Stryker configuration",
+                "configs: web/app/.stryker.config.json: a second Stryker configuration",
+                "configs: web/app/stryker.config.json: ignoreStatic needs coverageAnalysis perTest",
+                "configs: web/app/stryker.config.json: mutate is not R2's web production code",
+            ],
+        ):
+            self.assertIn(finding, refused.stdout)
+
+
 class TheWeeklyBattery(unittest.TestCase):
     def test_the_weekly_shards_cover_their_denominator_and_keep_reports(self):
         text = workflow(WEEKLY)
