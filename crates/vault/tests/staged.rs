@@ -306,3 +306,280 @@ fn a_run_that_deletes_escapes_or_overwrites_is_refused_before_the_gate() {
         "no refused run changed the vault"
     );
 }
+
+/// A run record of `duty`, with `ops`, over `layout`.
+fn run_of(duty: &str, layout: Value, ops: &Value) -> Value {
+    let mut run = record(ops);
+    run["duty"] = json!(duty);
+    run["layout"] = layout;
+    run
+}
+
+/// The SHA-256 of `text`, as a run's record names it.
+fn hash(text: &str) -> String {
+    sha256::hex(&sha256::digest(text.as_bytes()))
+}
+
+/// What the executor did with `run`, staged with the files `staged` names, over `vault`, through a
+/// gate that finds every run green; and how many times it asked the gate.
+fn applied(vault: &Path, run: &Value, staged: &[(&str, &str)]) -> (RunOutcome, usize) {
+    let run = stage(run, staged);
+    let gate = CountingGate::default();
+    let executor = Executor::new(RealFs, rails(), vault, &gate).expect("the executor");
+    let outcome = executor.apply(run.path()).expect("the executor runs");
+    (outcome, gate.asked.get())
+}
+
+/// A capture in the inbox, as the owner's device left it.
+const CAPTURE: &str = "# A capture\n\nFiled by the curator.\n";
+
+/// `vault` with [`CAPTURE`] at the vault path `at`.
+fn capture_at(vault: &Path, at: &str) {
+    let file = vault.join(at);
+    fs::create_dir_all(file.parent().expect("a folder")).expect("an inbox folder");
+    fs::write(file, CAPTURE).expect("a capture");
+}
+
+#[test]
+fn a_capture_is_filed_unchanged_into_any_folder_its_duty_moves_to() {
+    let vault = vault();
+    capture_at(vault.path(), "90-Inbox/Capture.md");
+    // The curator moves to 11-Drills and to 12-Readings: the second is as much its own.
+    let run = run_of(
+        "inbox-curator",
+        layout(),
+        &json!([{
+            "op": "move",
+            "from": "90-Inbox/Capture.md",
+            "to": "12-Readings/Capture.md",
+            "sha256": hash(CAPTURE)
+        }]),
+    );
+
+    let (outcome, asked) = applied(vault.path(), &run, &[("12-Readings/Capture.md", CAPTURE)]);
+
+    assert!(
+        matches!(outcome, RunOutcome::Applied { ops: 1 }),
+        "the capture was not filed: {outcome:?}"
+    );
+    assert_eq!(asked, 1, "the gate judged the run once");
+    assert_eq!(
+        fs::read_to_string(vault.path().join("12-Readings/Capture.md")).expect("the filed capture"),
+        CAPTURE
+    );
+    assert!(
+        !vault.path().join("90-Inbox/Capture.md").exists(),
+        "the capture left the inbox"
+    );
+}
+
+#[test]
+fn an_update_over_the_bytes_the_agent_last_wrote_is_applied() {
+    let vault = vault();
+    let written = daily_note("Evidence primer");
+    fs::write(vault.path().join("Daily/Today.md"), &written).expect("the agent's note");
+    let rewritten = daily_note("Hearsay drill");
+    let run = record(&json!([{
+        "op": "update",
+        "path": "Daily/Today.md",
+        "sha256_before": hash(&written)
+    }]));
+
+    let (outcome, _) = applied(vault.path(), &run, &[("Daily/Today.md", &rewritten)]);
+
+    assert!(
+        matches!(outcome, RunOutcome::Applied { ops: 1 }),
+        "the update was not applied: {outcome:?}"
+    );
+    assert_eq!(
+        fs::read_to_string(vault.path().join("Daily/Today.md")).expect("the updated note"),
+        rewritten
+    );
+}
+
+#[test]
+fn a_write_into_a_folder_of_its_duty_that_does_not_exist_yet_creates_it() {
+    let vault = vault();
+    fs::create_dir(vault.path().join("Periodic")).expect("the periodic folder");
+    let mut nested = layout();
+    nested["periodic"]["daily"]["folder"] = json!("Periodic/Daily");
+    let note = daily_note("Evidence primer");
+    let run = run_of(
+        "daily-note",
+        nested,
+        &json!([{"op": "create", "path": "Periodic/Daily/Today.md"}]),
+    );
+
+    let (outcome, _) = applied(vault.path(), &run, &[("Periodic/Daily/Today.md", &note)]);
+
+    assert!(
+        matches!(outcome, RunOutcome::Applied { ops: 1 }),
+        "the write into a new daily-notes folder was not applied: {outcome:?}"
+    );
+    assert_eq!(
+        fs::read_to_string(vault.path().join("Periodic/Daily/Today.md")).expect("the applied note"),
+        note
+    );
+}
+
+#[test]
+fn a_changed_capture_a_move_back_into_the_inbox_and_a_drive_path_are_refused_before_the_gate() {
+    let vault = vault();
+    capture_at(vault.path(), "90-Inbox/Capture.md");
+    capture_at(vault.path(), "90-Inbox/New/Capture.md");
+    let as_read = "# A capture\n\nAs the agent read it.\n";
+    let mut sorter = layout();
+    sorter["duties"]["inbox-sorter"] =
+        json!({"moves_from": ["90-Inbox/New"], "moves_to": ["90-Inbox"]});
+    let curate = |sha: &str| {
+        run_of(
+            "inbox-curator",
+            layout(),
+            &json!([{
+                "op": "move",
+                "from": "90-Inbox/Capture.md",
+                "to": "12-Readings/Capture.md",
+                "sha256": sha
+            }]),
+        )
+    };
+    let cases: [RefusedRun; 4] = [
+        // The agent staged the capture as it read it, and the owner has edited it since.
+        (
+            curate(&hash(as_read)),
+            vec![("12-Readings/Capture.md", as_read)],
+            RunRefusal::Changed { op: 1 },
+        ),
+        // The capture is as the agent hashed it, but the staged copy is not.
+        (
+            curate(&hash(CAPTURE)),
+            vec![("12-Readings/Capture.md", as_read)],
+            RunRefusal::Changed { op: 1 },
+        ),
+        // A duty whose layout lets it move into the inbox still never files back into it.
+        (
+            run_of(
+                "inbox-sorter",
+                sorter,
+                &json!([{
+                    "op": "move",
+                    "from": "90-Inbox/New/Capture.md",
+                    "to": "90-Inbox/Capture-2.md",
+                    "sha256": hash(CAPTURE)
+                }]),
+            ),
+            vec![("90-Inbox/Capture-2.md", CAPTURE)],
+            RunRefusal::OutsideFolders { op: 1 },
+        ),
+        (
+            record(&json!([{"op": "create", "path": "C:/Daily/Today.md"}])),
+            vec![],
+            RunRefusal::UnsoundPath { op: 1 },
+        ),
+    ];
+    let before = snapshot(vault.path());
+    for (run, staged, expected) in cases {
+        let (outcome, asked) = applied(vault.path(), &run, &staged);
+        match outcome {
+            RunOutcome::Discarded(Discard::Refused(refusal)) => {
+                assert_eq!(refusal, expected, "the run {}", run["ops"]);
+            }
+            other => panic!("the run {} was not refused: {other:?}", run["ops"]),
+        }
+        assert_eq!(asked, 0, "the gate was asked about a refused run");
+    }
+    assert_eq!(
+        snapshot(vault.path()),
+        before,
+        "no refused run changed the vault"
+    );
+}
+
+/// The gate's verdict on a run, through a stand-in probe that does what the run's `probe-mode`
+/// file says: see the stand-in's own docstring.
+fn judged(mode: &str) -> Result<Verdict<RedClass>, GateError> {
+    let run = tempfile::tempdir().expect("a staging directory");
+    fs::write(run.path().join("probe-mode"), mode).expect("the stand-in's mode");
+    let probe =
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/gate/examined-nothing-probe.py");
+    ProbeGate::new("python3", probe)
+        .expect("the pack's blocking classes")
+        .judge(run.path())
+}
+
+#[test]
+fn a_class_that_examined_nothing_is_passed_over_and_any_other_exit_3_fails_closed() {
+    let passed = judged("examined-nothing");
+    assert!(
+        matches!(passed, Ok(Verdict::Pass)),
+        "a run one class judged green and the rest examined nothing: {passed:?}"
+    );
+    let failed = judged("no-verdict");
+    assert!(
+        matches!(failed, Err(GateError::NoVerdict { code: Some(3), .. })),
+        "an exit 3 without the examined-nothing line: {failed:?}"
+    );
+    let nothing = judged("nothing-judged");
+    assert!(
+        matches!(nothing, Err(GateError::NothingJudged)),
+        "a run no class examined: {nothing:?}"
+    );
+}
+
+#[test]
+fn the_gate_runs_every_blocking_class_of_the_vendored_rows_in_their_order() {
+    let rows: Value = serde_json::from_str(
+        &fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("data/gate-classes.json"))
+            .expect("the vendored rows"),
+    )
+    .expect("the rows are JSON");
+    let blocking: Vec<&str> = rows["checks"]
+        .as_array()
+        .expect("the rows are a list")
+        .iter()
+        .filter(|row| row["severity"] == "block")
+        .filter_map(|row| row["id"].as_str())
+        .collect();
+
+    let gate = ProbeGate::new("python3", "stand-in-probe.py").expect("the pack's blocking classes");
+
+    assert_eq!(
+        gate.classes().collect::<Vec<_>>(),
+        examined("blocking classes", blocking)
+    );
+    assert!(
+        gate.classes().any(|class| class == "no-executable"),
+        "the gate runs the class that refuses executable content"
+    );
+}
+
+#[test]
+fn a_discarded_run_reads_as_the_reason_it_was_discarded() {
+    let red = RedClass {
+        class: "note-links".to_owned(),
+    };
+    assert_eq!(
+        red.to_string(),
+        "the blocking class note-links is red on the run"
+    );
+    assert_eq!(
+        Discard::Red(red).to_string(),
+        "the blocking class note-links is red on the run"
+    );
+    assert_eq!(
+        Discard::Refused(RunRefusal::Verb { op: 2 }).to_string(),
+        "op 2 is not create, update or move"
+    );
+    assert_eq!(
+        Discard::Gate(GateError::NothingJudged).to_string(),
+        "no blocking class examined the run"
+    );
+    let vault = vault();
+    let gate = CountingGate::default();
+    let executor = Executor::new(RealFs, rails(), vault.path(), &gate).expect("the executor");
+    assert_eq!(
+        format!("{executor:?}"),
+        "Executor { .. }",
+        "the executor shows no host path"
+    );
+}
