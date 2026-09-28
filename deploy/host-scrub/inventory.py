@@ -266,6 +266,12 @@ def load_rules(path: str) -> dict:
             raise Usage(f"rule {name} needs a class of {RULE_CLASSES} and a reason")
         checked.append(check_rule(dict(rule), name, kind))
     protected = [absolute(p, "a protected path") for p in rules.get("protected") or []]
+    for guard in protected:
+        if any(mark in guard for mark in "*?["):
+            raise Usage(
+                f"the protected path {guard} is a pattern; a protected path is compared as a path "
+                "and protects everything under it, so name the directory instead"
+            )
     health = [check_health(check) for check in rules.get("health") or []]
     ids = [check["id"] for check in health]
     if len(set(ids)) != len(ids):
