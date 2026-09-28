@@ -322,7 +322,10 @@ def locate_killer(root: pathlib.Path, row: Row) -> Killer:
         if "::" not in row.killer:
             raise KillerUnresolved(f"the killer {row.killer!r} is not <target>::<test path>")
         target, path = row.killer.split("::", 1)
-        package = package_of(root, row.crate)
+        try:
+            package = package_of(root, row.crate)
+        except KillerUnresolved:
+            package = None
         crate = root / "crates" / row.crate
         if target == "lib":
             where = f"crates/{row.crate}/src"
@@ -501,6 +504,8 @@ def prove_row(root: pathlib.Path, row: Row, scratch: pathlib.Path) -> dict:
         return verdict("VOID", f"its anchor occurs {occurs} times in {row.target}")
     try:
         killer = locate_killer(root, row)
+        if killer.kind == "cargo" and killer.package is None:
+            raise KillerUnresolved(f"runs in crates/{row.crate}, which holds no Cargo package")
     except KillerUnresolved as refusal:
         return verdict("VOID", f"its killer {row.killer} {refusal}")
     control = run_killer(root, killer, scratch)
