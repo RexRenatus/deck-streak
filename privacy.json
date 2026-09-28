@@ -94,5 +94,6 @@
       "v1.2.3.4",
       "fences[1::2]"
     ]
-  }
+  },
+  "private": ["roster.json", "*/roster.json"]
 }
