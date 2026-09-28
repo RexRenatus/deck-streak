@@ -286,8 +286,9 @@ const NAMED_SENDS: [(&str, &str, &str); 8] = [
 /// and in the notifications crate, a macro the ledger exports to every crate, the ledger's macros
 /// handed to the modules beside it, the ledger compiled a second time by an escaped `#[path]`, the
 /// ledger's hold re-exported from the router under another name, and the held queue's table
-/// re-exported under another name.
-const AROUND_THE_PORT: [(&str, &str); 23] = [
+/// re-exported under another name; and in the bot's command handler, its reply sent, its dispatch
+/// run and its erase's prompt sent by callers of their own, which no update asked for.
+const AROUND_THE_PORT: [(&str, &str); 24] = [
     (
         "crates/daemon/src/role_bot.rs",
         r#"/// A celebration sent straight to the owner's chat through the bot's transport, around the router.
@@ -593,6 +594,26 @@ pub(crate) use crate::ledger::{HeldRow as Kept, hold as keep};
         r"/// The held queue's table, re-exported under another name for a caller outside the crate.
 pub use crate::ledger::QUEUE_TABLE as HELD_TABLE;
 ",
+    ),
+    (
+        "crates/bot/src/commands.rs",
+        r#"impl<S: OwnerSync> Commands<S> {
+    /// A celebration sent as a command's reply, around the router, though no update asked for it.
+    pub async fn celebrate(&self) {
+        self.send(Reply::from("You kept your streak!")).await;
+    }
+
+    /// A command's dispatch, run with an update the bot made up, beside the long poll.
+    pub async fn celebrate_by_a_command(&mut self, message: OwnerMessage) {
+        self.on_message(message).await;
+    }
+
+    /// The erase's prompt, sent by a path to the handler's own reply.
+    pub async fn celebrate_by_a_prompt(&mut self) {
+        Self::ask_erase(self).await;
+    }
+}
+"#,
     ),
 ];
 
@@ -1426,6 +1447,11 @@ fn no_delivery_goes_around_the_port() {
             "crates/api/src/notifications_routes.rs:3: names sendMessage",
             "crates/api/src/router.rs:6: names FEED_TABLE",
             "crates/bot/src/celebrate.rs:5: names sendMessage in celebrate, not a named call site",
+            "crates/bot/src/commands.rs:4: calls send in Commands::celebrate, not a named caller",
+            "crates/bot/src/commands.rs:9: calls on_message in Commands::celebrate_by_a_command, \
+             not a named caller",
+            "crates/bot/src/commands.rs:14: calls ask_erase in Commands::celebrate_by_a_prompt, \
+             not a named caller",
             "crates/bot/src/copy.rs:5: names copyMessage in celebrate, not a named call site",
             "crates/bot/src/transport.rs:9: names edit_message_text in \
              Transport::celebrate_by_an_edit, not a named call site",
@@ -1466,7 +1492,8 @@ fn no_delivery_goes_around_the_port() {
         "the bot's own send, named or called, its edit and its command handler, raw requests to \
          the Bot API and on its base URL, a raw request from inside the bot, writes to the Mini \
          App's feed and to the held queue, the Bot API's copy, edit, forward, pin and reaction, \
-         and the notifications crate's carrying attributes and re-exports, around the port"
+         the notifications crate's carrying attributes and re-exports, and the command handler's \
+         replies and dispatch, around the port"
     );
 
     // The walker reads a shipped module in a directory named as tests are, because it is under
