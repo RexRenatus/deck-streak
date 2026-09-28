@@ -220,8 +220,7 @@ database.
   claim makes the second a no-op; A1 proves it under concurrency, and A17 holds `sync` to a claimed
   daily slot.
 - **A `TRUNCATE` checkpoint meets Litestream's read lock.** The checkpoint then completes partially
-  and returns busy, which is not an error; the predecessor ran the same statement beside
-  Litestream. The restore drill (W2) proves the replica (#44).
+  and returns busy, which is not an error. The restore drill (W2) proves the replica (#44).
 - **A paging job pages on every run.** R7 pages only on transitions recorded in the ledger and
   `sync_runs`; the liveness job runs hourly, and A7 and A11 prove "once per episode".
 - **The host is down across the sync slot.** `sync` is a catch-up job (R1), so a sync missed by at
@@ -276,4 +275,4 @@ database.
   unchanged; A16 drives the role through the binary.
 
 Amendment (2026-09-28): passages describing another service's operations were replaced with neutral
-reserved minutes under the public-text rule (ADR-059).
+reserved minutes, or removed, under the public-text rule (ADR-059).

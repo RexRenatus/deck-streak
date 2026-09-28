@@ -30,8 +30,8 @@ stack decision: Rust-first, TypeScript at the UI, with an owner-approved golden 
 Chosen option: `web/app` is a SvelteKit 2 SPA (`adapter-static`, `fallback: index.html`,
 `ssr = false`), with `compilerOptions.runes = true`, Tailwind 4, shadcn-svelte and Bits UI,
 Paraglide JS 2 with the CJK locale rules (`zh-Hans`, `zh-Hant`), TanStack Query 6 against the
-axum API, and Chart.js 4 lazy-loaded for charts rendered on the client (the predecessor's server
-charts were its memory spikes). `telegram-web-app.js` is loaded first in `<head>`, and
+axum API, and Chart.js 4 lazy-loaded for charts rendered on the client (so no chart is drawn inside
+the API's memory budget, ADR-032). `telegram-web-app.js` is loaded first in `<head>`, and
 `src/lib/telegram.svelte.ts` is its one typed wrapper, gating each method with
 `isVersionAtLeast`. Caddy serves the build with an SPA fallback and proxies `/api/*` to axum on
 the same origin, so no CORS is needed.
@@ -39,7 +39,7 @@ the same origin, so no CORS is needed.
 ### Consequences
 
 - Good, because the golden path needs no deviation ADR.
-- Good, because charts move to the client, removing the predecessor's largest memory spikes.
+- Good, because charts move to the client, keeping chart rendering out of the API's memory budget.
 - Bad, because the team carries two languages; the boundary is the HTTPS API, typed on both sides.
 
 ### Confirmation
@@ -53,3 +53,6 @@ The stack-selection rows `svelte-runes`, `svelte-check-ci`, `pinned-majors`, `no
 ## More Information
 
 The stack-selection pack; the telegram-platform pack's Mini App rows; ADR-007 for the same-origin API.
+
+Amendment (2026-09-28): passages describing another service's operations were replaced with the
+API's own memory budget under the public-text rule (ADR-059).
