@@ -85,7 +85,20 @@ R7. No workflow reads a secret other than `GITHUB_TOKEN`, and none checks out or
       inputs;
     - a `run` step that clones a repository (`git clone`, `gh repo clone`) or points git at a URL
       (a `git fetch` of a URL, or of git's scp-like `user@host:path` or `host:path` whose host is
-      a dotted name);
+      a dotted name), and the same command in any other string the workflow holds, such as a
+      `BASH_ENV` that bash expands before it runs a step's script;
+    - a `shell` that is not one of GitHub's built-in keywords as written (`bash`, `sh`, `pwsh`,
+      `powershell`, `python`, `cmd`), at a step, a job's `defaults.run` or the workflow's: the
+      runner runs any other as a command template, a command the checker does not read. A
+      `defaults` or a `defaults.run` that is not a mapping, such as one `${{ }}` expression, is a
+      shell the checker cannot read. An omitted or empty `shell` is none;
+    - git configured from the environment: a key or a string, anywhere in the workflow, that names
+      a variable whose name begins with `GIT_`, in any case, as git reads its configuration and the
+      commands it runs from such variables (`GIT_CONFIG_COUNT`, `GIT_CONFIG_KEY_<n>`,
+      `GIT_CONFIG_VALUE_<n>`, `GIT_CONFIG_PARAMETERS` and `GIT_SSH_COMMAND` among them); and an
+      environment the checker cannot read: an `env` of the workflow, a job, a job's container or
+      a step that is set and is not a mapping, such as one `${{ }}` expression, and a job's
+      `container` that is one;
     - a character or a form the workflow reader does not read, named by its line: the reader fails
       closed on characters outside printable ASCII, quoting, escapes, anchors, aliases and tags
       (section 3).
@@ -168,6 +181,23 @@ white space, so a secret the block names over two lines keeps its indent.
 - It judges every step of a job, a step inside a `parallel` block at any depth included: GitHub's
   workflow schema reads a `parallel` step's list as steps, and one of them may be another `parallel`
   step.
+- It reads a shell as the runner does. A built-in keyword, as written, runs the script with the
+  keyword's own arguments; the runner runs any other `shell` as a command, its first word the
+  command and `{0}` the script's path, so the checker refuses it by its place: a step's `shell`,
+  a job's `defaults.run.shell` and the workflow's. A `defaults` or a `defaults.run` that is not a
+  mapping is refused too, as GitHub evaluates one `${{ }}` expression when the job runs. An
+  omitted or empty `shell` is none: the runner falls back to the defaults, judged where they are.
+- It reads every string the workflow holds for the commands it refuses in a `run` step's script,
+  as a value a shell runs holds a command as a script does: bash expands `BASH_ENV`, running each
+  command it substitutes, before a step's script. A string that only names such a command, such
+  as a step's name, is refused too, which errs toward refusing.
+- It refuses git configured from the environment: a key or a string that names a variable whose
+  name begins with `GIT_`, in any case, wherever it sits, as an `env` key, in a container's
+  options or in a script that exports one. It refuses an environment it cannot read: an `env` of
+  the workflow, a job, a job's container or a step that is not a mapping, and a job's `container`
+  that is one `${{ }}` expression, since the steps of a job with a container run in its
+  environment. A name that holds those letters only inside a longer word, such as `DIGIT_COUNT`,
+  names no such variable, and a container named by its image alone sets none.
 
 A13 runs the three hardening tests, each through its own setUp, over
 `scripts/tests/fixtures/workflow-hardening/`, a hardened `.yml` control beside an unhardened
@@ -205,8 +235,8 @@ function, `workflow_files`, which reads both extensions.
 | `docs/red-first/SPEC-034.md` | `repo` | added |
 | `changelog.d/fix-release-flow-and-forks.md` | `repo` | added |
 | `scripts/tests/test_ci_workflows.py` | `repo` | changed by the amendment (section 7): A9 to A13, the checker they run, its workflow reader, `workflow_files`, the SHA-pin pattern and the hardening tests' reading of each workflow |
-| `scripts/tests/fixtures/secrets-and-checkouts/refused/` | `repo` | added by the amendment: the sixteen planted workflows the checker refuses, `another-repository-in-other-forms.yml`, `checkout-of-another-repository.yml`, `checkout-whose-inputs-are-one-expression.yml`, `clone-of-another-repository.yml`, `every-secret.yml`, `fetch-of-a-url.yml`, `key-the-reader-refuses.yml`, `run-by-alias.yml`, `second-of-each.yml`, `secret-in-a-form-the-reader-refuses.yml`, `secret-in-a-larger-expression.yml`, `secret-in-a-quoted-value.yml`, `secret-in-any-spacing.yml`, `secret-in-brackets.yml`, `secrets-inherited.yaml` and `steps-in-a-parallel-block.yml` |
-| `scripts/tests/fixtures/secrets-and-checkouts/admitted/` | `repo` | added by the amendment: the six planted workflows it admits, `checkout-of-this-repository.yml`, `github-token.yml`, `not-the-secrets-context.yml`, `quoted-values.yml`, `refspec-of-this-repository.yml` and `secrets-github-token.yml` |
+| `scripts/tests/fixtures/secrets-and-checkouts/refused/` | `repo` | added by the amendment: the twenty planted workflows the checker refuses, `another-repository-in-other-forms.yml`, `checkout-of-another-repository.yml`, `checkout-whose-inputs-are-one-expression.yml`, `clone-in-a-custom-shell.yml`, `clone-of-another-repository.yml`, `clone-outside-a-run-step.yml`, `environment-the-checker-does-not-read.yml`, `every-secret.yml`, `fetch-of-a-url.yml`, `git-configured-from-the-environment.yml`, `key-the-reader-refuses.yml`, `run-by-alias.yml`, `second-of-each.yml`, `secret-in-a-form-the-reader-refuses.yml`, `secret-in-a-larger-expression.yml`, `secret-in-a-quoted-value.yml`, `secret-in-any-spacing.yml`, `secret-in-brackets.yml`, `secrets-inherited.yaml` and `steps-in-a-parallel-block.yml` |
+| `scripts/tests/fixtures/secrets-and-checkouts/admitted/` | `repo` | added by the amendment: the eight planted workflows it admits, `built-in-shells.yml`, `checkout-of-this-repository.yml`, `environment-the-checker-reads.yml`, `github-token.yml`, `not-the-secrets-context.yml`, `quoted-values.yml`, `refspec-of-this-repository.yml` and `secrets-github-token.yml` |
 | `scripts/tests/fixtures/workflow-hardening/` | `repo` | added by the amendment: A13's planted workflows, `hardened.yml` and `unhardened.yaml` |
 | `docs/specs/SPEC-034-a-release-never-deadlocks-and-only-this-repositorys-dev-reaches-main.md` | `repo` | changed by the amendment: the insertions section 7 lists |
 | `docs/red-first/SPEC-034.md` | `repo` | changed by the amendment: A9 to A13 |
