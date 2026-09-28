@@ -64,46 +64,70 @@ def run(*args, env=None):
     )
 
 
-class ExclusionsAreNeverSilent(unittest.TestCase):
-    def test_every_exclusion_names_its_reason_and_issue(self):
-        done = run(str(VERDICT), "exclusions", "--root", str(REPO))
-        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
-        self.assertRegex(done.stdout, r"(?m)^examined \d+ exclusion")
-        # Planted: an exclusion with no reason, a Stryker comment with no issue, and a skip
-        # attribute, each refused by name; a justified exclusion passes beside them.
+class NoExclusionHidesAMutant(unittest.TestCase):
+    """SPEC-057 A8 (R11): SPEC-039's A20, which held an exclusion to its reason, is retired by it."""
+
+    def test_no_exclusion_hides_a_mutant_from_the_listing(self):
+        # Planted: every form, even one with its reason and an issue, even an empty key.
         with tempfile.TemporaryDirectory() as scratch:
             root = Path(scratch)
             (root / ".cargo").mkdir()
             (root / ".cargo" / "mutants.toml").write_text(
-                "exclude_re = [\n"
-                "    # EQUIVALENT: the capacity hint changes no output (#1)\n"
-                '    "crates/a/src/lib\\\\.rs:1:1: replace with_capacity",\n'
-                '    "crates/a/src/lib\\\\.rs:9:9: replace && with \\\\|\\\\|",\n'
-                "]\n",
-                encoding="utf-8",
-            )
-            web = root / "web" / "app" / "src" / "lib"
-            web.mkdir(parents=True)
-            (web / "a.ts").write_text(
-                "// Stryker disable next-line EqualityOperator: EQUIVALENT: a is never b (#2)\n"
-                "export const one = (a: number, b: number) => a <= b;\n"
-                "// Stryker disable next-line all\n"
-                "export const two = 2;\n",
+                "# EQUIVALENT: the capacity hint changes no output (#1)\n"
+                'exclude_re = ["crates/a/src/lib\\\\.rs:1:1: replace with_capacity"]\n'
+                "exclude_globs = []\n"
+                'examine_re = ["double"]\n'
+                'examine_globs = ["crates/a/src/*.rs"]\n'
+                'skip_calls = ["with_capacity"]\n'
+                'test_tool = "nextest"\n',
                 encoding="utf-8",
             )
             src = root / "crates" / "a" / "src"
             src.mkdir(parents=True)
             (src / "lib.rs").write_text(
-                "#[mutants::skip]\npub fn skipped() -> bool {\n    true\n}\n", encoding="utf-8"
+                "#[mutants::skip]\n"
+                "pub fn skipped() -> bool {\n    true\n}\n\n"
+                '#[mutants::exclude_re("replace")]\n'
+                "pub fn narrowed() -> bool {\n    false\n}\n\n"
+                "// A comment that names mutants::skip is prose, not an attribute.\n",
+                encoding="utf-8",
+            )
+            web = root / "web" / "app"
+            (web / "src" / "lib").mkdir(parents=True)
+            (web / "src" / "lib" / "a.ts").write_text(
+                "// Stryker disable next-line EqualityOperator: EQUIVALENT: a is never b (#2)\n"
+                "export const one = (a: number, b: number) => a <= b;\n",
+                encoding="utf-8",
+            )
+            (web / "stryker.config.json").write_text(
+                json.dumps({"testRunner": "vitest", "mutator": {"excludedMutations": ["Regex"]}}),
+                encoding="utf-8",
             )
             planted = run(str(VERDICT), "exclusions", "--root", str(root))
         self.assertEqual(planted.returncode, 1, planted.stdout + planted.stderr)
         findings = [line for line in planted.stdout.splitlines() if line.startswith("exclusions: ")]
-        self.assertEqual(len(findings), 3, planted.stdout)
-        self.assertIn("replace && with", planted.stdout)
-        self.assertIn("web/app/src/lib/a.ts:3", planted.stdout)
-        self.assertIn("crates/a/src/lib.rs:1: mutants::skip", planted.stdout)
-        self.assertRegex(planted.stdout, r"(?m)^examined 5 exclusion")
+        refused = [
+            "exclusions: .cargo/mutants.toml: the exclude_re key",
+            "exclusions: .cargo/mutants.toml: the exclude_globs key",
+            "exclusions: .cargo/mutants.toml: the examine_re key",
+            "exclusions: .cargo/mutants.toml: the examine_globs key",
+            "exclusions: .cargo/mutants.toml: the skip_calls key",
+            "exclusions: crates/a/src/lib.rs:1: mutants::skip",
+            "exclusions: crates/a/src/lib.rs:6: mutants::exclude_re",
+            "exclusions: web/app/src/lib/a.ts:1: a Stryker disable comment",
+            "exclusions: web/app/stryker.config.json: excludes the mutator Regex",
+        ]
+        for finding in examined("planted exclusions", refused):
+            self.assertTrue(
+                any(line.startswith(finding) for line in findings), f"{finding}: {planted.stdout}"
+            )
+        self.assertEqual(len(findings), len(refused), planted.stdout)
+        self.assertRegex(planted.stdout, r"(?m)^examined 4 file\(s\)$")
+        # The tree holds none.
+        done = run(str(VERDICT), "exclusions", "--root", str(REPO))
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        self.assertNotIn("exclusions: ", done.stdout)
+        self.assertRegex(done.stdout, r"(?m)^examined [1-9]\d* file\(s\)$")
 
 
 class TheToolsConfigurationsAreValid(unittest.TestCase):
@@ -402,6 +426,235 @@ class CargoMutantsRunsTheGatesTestTool(unittest.TestCase):
                 r"(?m)^\s*tool: cargo-nextest@0\.9\.146$",
                 f"{workflow_name}:{name} runs cargo-mutants without the nextest it names",
             )
+
+
+# --------------------------------------------------------------------------- SPEC-057
+
+SCOPED = '${PACKAGE:+--package "$PACKAGE"}'
+LIB = "crates/fix/src/lib.rs"
+LIB_TEXT = "pub fn double(x: i64) -> i64 {\n    x * 2 * 1\n}\n"
+
+
+def listed(name, package="deck-streak-fix", column=7, description="replace * with + in double"):
+    """One mutant of LIB_TEXT's second line, as cargo-mutants lists and reports it."""
+    return {
+        "file": LIB,
+        "package": package,
+        "name": f"{LIB}:2:{column}: {description}{name}",
+        "span": {"start": {"line": 2, "column": column}, "end": {"line": 2, "column": column + 1}},
+    }
+
+
+def shard(reports, number, entries, code="2"):
+    """Shard `number`'s artifact: its exit and, unless `entries` is None, its outcomes.json."""
+    directory = reports / f"mutants-shard-{number}"
+    (directory / "mutants.out").mkdir(parents=True)
+    (directory / "cargo-mutants.exit").write_text(f"{code}\n", encoding="utf-8")
+    if entries is None:
+        return
+    outcomes = [{"scenario": "Baseline", "summary": "Success"}]
+    outcomes += [
+        {"scenario": {"Mutant": mutant}, "summary": summary} for mutant, summary in entries
+    ]
+    counted = {"caught": 0, "missed": 0, "timeout": 0, "unviable": 0}
+    for _, summary in entries:
+        counted[{"CaughtMutant": "caught", "MissedMutant": "missed"}[summary]] += 1
+    report = {"outcomes": outcomes, "total_mutants": len(entries), **counted}
+    (directory / "mutants.out" / "outcomes.json").write_text(json.dumps(report), encoding="utf-8")
+
+
+def recorded_tree(root, anchor="x * 2", description="replace * with + in double"):
+    """A tree holding LIB and one record of its mutant at column 7."""
+    (root / "crates" / "fix" / "src").mkdir(parents=True)
+    (root / LIB).write_text(LIB_TEXT, encoding="utf-8")
+    fragments = root / "scripts" / "mutation-equivalent.d"
+    fragments.mkdir(parents=True)
+    record = {
+        "file": LIB,
+        "mutant": description,
+        "anchor": anchor,
+        "reason": "the fixture's one caller cannot tell the products apart",
+        "evidence": "double is called as double(1) alone",
+        "reached_by": "double::one_doubles_to_two",
+        "issue": "#1",
+    }
+    (fragments / "deck-streak-fix.json").write_text(json.dumps({"records": [record]}), "utf-8")
+
+
+class TheBatteryTakesAScope(unittest.TestCase):
+    def test_a_dispatch_scoped_to_one_package_sweeps_only_its_mutants(self):
+        text = workflow(WEEKLY)
+        dispatch = re.search(r"(?ms)^  workflow_dispatch:\n(.*?)(?=^  [a-z_]+:\n)", text)
+        self.assertIsNotNone(dispatch, "the battery takes no dispatch")
+        package = re.search(
+            r"(?ms)^      package:\n(.*?)(?=^      [a-z_]+:\n|\Z)", dispatch.group(1)
+        )
+        self.assertIsNotNone(package, "the dispatch takes no package input")
+        self.assertRegex(package.group(1), r"(?m)^        type: string$")
+        self.assertRegex(package.group(1), r'(?m)^        default: ""$')
+        found = jobs(text)
+        # The rust shards sweep the package the input names, and none for the Mini App; the input
+        # reaches the shell through the environment, never interpolated into it.
+        rust = found.get("rust", "")
+        self.assertRegex(rust, r"(?m)^    if: \$\{\{ [^\n]*inputs\.package != 'miniapp'")
+        self.assertRegex(rust, r"(?m)^\s+PACKAGE: \$\{\{ inputs\.package \}\}$")
+        command = re.search(r"cargo mutants [^\n]*", rust).group(0)
+        self.assertIn(SCOPED, command)
+        self.assertRegex(command, r"--shard \$\{\{ matrix\.shard \}\}/32")
+        for name, job in examined("battery jobs", list(found.items())):
+            for block in re.findall(r"(?ms)^        run: [|]?\n?(.*?)(?=^      - |\Z)", job):
+                self.assertNotIn("inputs.package", block, f"{name} interpolates the input")
+        # The Mini App's sweep runs for no scope or for miniapp; the rows only for no scope.
+        self.assertRegex(
+            found.get("web", ""),
+            r"(?m)^    if: \$\{\{ [^\n]*\(!inputs\.package \|\| inputs\.package == 'miniapp'\)",
+        )
+        self.assertRegex(
+            found.get("rows", ""), r"(?m)^    if: \$\{\{ [^\n]*&& !inputs\.package \}\}"
+        )
+        # The survivors job ends by counting what the scope promised, then the scope's table.
+        last = steps(found.get("survivors", ""))[-1]
+        counted = re.search(r"mutation-verdict\.py battery [^\n]*", last)
+        tabled = re.search(r"mutation-verdict\.py table [^\n]*", last)
+        self.assertIsNotNone(counted, "the survivors job ends without the battery's count")
+        self.assertIsNotNone(tabled, "the survivors job ends without the table")
+        self.assertLess(counted.start(), tabled.start())
+        for line in (counted.group(0), tabled.group(0)):
+            self.assertIn(SCOPED, line)
+            self.assertIn('--listed "$reports/listing/whole.json"', line)
+        # Behaviour: three mutants of the scope over five shards owe reports from shards 0 to 2,
+        # and the table ends with the package's own line.
+        with tempfile.TemporaryDirectory() as scratch:
+            reports = Path(scratch) / "reports"
+            scope = [listed(f" ({n})") for n in range(3)]
+            other = [listed(f" ({n})", package="deck-streak-other") for n in range(4)]
+            (reports / "listing").mkdir(parents=True)
+            (reports / "listing" / "whole.json").write_text(json.dumps(other + scope), "utf-8")
+            for number, mutant in enumerate(scope):
+                shard(reports, number, [(mutant, "CaughtMutant")], code="0")
+            # Shard 3's run found no mutant of the scope: cargo-mutants exited 0 and wrote none.
+            shard(reports, 3, None, code="0")
+            listing = str(reports / "listing" / "whole.json")
+            args = ["--reports", str(reports), "--package", "deck-streak-fix", "--listed", listing]
+            battery = run(str(VERDICT), "battery", "--shards", "5", *args)
+            table = run(str(VERDICT), "table", "--root", scratch, *args)
+            unscoped = run(str(VERDICT), "battery", "--shards", "5", "--reports", str(reports))
+        self.assertEqual(battery.returncode, 0, battery.stdout + battery.stderr)
+        self.assertIn("battery: counted 4 of 4 reports whole", battery.stdout)
+        for number in examined("shards the scope gave no mutant", [3, 4]):
+            self.assertIn(
+                f"battery: mutants-shard-{number}: the scope lists no mutant", battery.stdout
+            )
+        self.assertEqual(table.returncode, 0, table.stdout + table.stderr)
+        self.assertEqual(
+            table.stdout.strip().splitlines()[-1],
+            "table: deck-streak-fix: listed 3, killed 3, equivalent 0, unexplained 0, unviable 0",
+        )
+        self.assertNotIn("deck-streak-other", table.stdout)
+        # Unscoped, the battery owes every shard, the rows and the Stryker sweep.
+        self.assertEqual(unscoped.returncode, 1, unscoped.stdout)
+        self.assertIn("battery: MISSING mutants-shard-4: no outcomes.json", unscoped.stdout)
+
+
+class TheVerdictBindsEveryRecord(unittest.TestCase):
+    def test_the_verdict_binds_every_record_against_the_whole_listing(self):
+        found = jobs(workflow(CI))
+        plan = steps(found.get("mutation-plan", ""))
+        diff = [step for step in plan if re.search(r"cargo mutants [^\n]*--in-diff", step)]
+        whole = [
+            step
+            for step in plan
+            if re.search(r"cargo mutants [^\n]*--list --json", step) and "--in-diff" not in step
+        ]
+        self.assertEqual(len(diff), 1, "the plan lists the diff's mutants once")
+        self.assertEqual(len(whole), 1, "the plan never lists the whole tree's mutants")
+        # Whenever the plan lists the diff's mutants it lists the whole tree's: the same condition.
+        condition = [re.search(r"(?m)^\s+if: (.*)$", step).group(1) for step in (*diff, *whole)]
+        self.assertEqual(condition[0], condition[1])
+        self.assertIn('> "$RUNNER_TEMP/mutation/whole.json"', whole[0])
+        self.assertRegex(
+            found.get("mutation-verdict", ""),
+            r'judge [^\n]*--class rust [^\n]*--whole "\$reports/mutation-plan/whole\.json"',
+        )
+        # The weekly battery lists the whole tree too, and its survivors job reads that listing.
+        weekly = jobs(workflow(WEEKLY))
+        listing = weekly.get("listing", "")
+        self.assertRegex(listing, r"cargo mutants [^\n]*--list --json [^\n]*> \"\$RUNNER_TEMP")
+        self.assertNotRegex(listing, r"cargo mutants [^\n]*--package")
+        self.assertRegex(listing, r"(?m)^\s+name: listing$")
+        needs = re.search(r"(?m)^    needs: \[([^\]]*)\]$", weekly.get("survivors", ""))
+        self.assertIsNotNone(needs, "the survivors job needs nothing")
+        self.assertIn("listing", needs.group(1).replace(" ", "").split(","))
+        # Behaviour: the battery drafts no issue for an equivalent mutant.
+        with tempfile.TemporaryDirectory() as scratch:
+            root = Path(scratch) / "tree"
+            recorded_tree(root)
+            reports = Path(scratch) / "reports"
+            equivalent = listed("")
+            unexplained = listed("", column=11, description="replace * with / in double")
+            shard(reports, 0, [(equivalent, "MissedMutant"), (unexplained, "MissedMutant")])
+            drafts = Path(scratch) / "drafts"
+            both = run(
+                str(VERDICT), "survivors", "--reports", str(reports), "--out", str(drafts),
+                "--root", str(root),
+            )  # fmt: skip
+            manifest = json.loads((drafts / "drafts.json").read_text(encoding="utf-8"))
+            body = (drafts / manifest[0]["body"]).read_text(encoding="utf-8") if manifest else ""
+            # With the unexplained mutant killed, the file's only survivor is equivalent.
+            only = Path(scratch) / "only"
+            shard(only, 0, [(equivalent, "MissedMutant"), (unexplained, "CaughtMutant")])
+            quiet = Path(scratch) / "quiet"
+            none = run(
+                str(VERDICT), "survivors", "--reports", str(only), "--out", str(quiet),
+                "--root", str(root),
+            )  # fmt: skip
+            silent = json.loads((quiet / "drafts.json").read_text(encoding="utf-8"))
+        self.assertEqual(both.returncode, 0, both.stdout + both.stderr)
+        self.assertEqual([entry["title"] for entry in manifest], [f"Mutation survivors: {LIB}"])
+        self.assertIn(unexplained["name"], body)
+        self.assertNotIn(equivalent["name"], body)
+        self.assertEqual(none.returncode, 0, none.stdout + none.stderr)
+        self.assertEqual(silent, [], none.stdout)
+
+
+class TheBriefTeachesTheRecord(unittest.TestCase):
+    def test_the_builder_brief_teaches_the_equivalence_record(self):
+        text = BRIEF.read_text(encoding="utf-8")
+        section = re.search(r"(?ms)^## Mutation testing\n(.*?)(?=^## |\Z)", text)
+        self.assertIsNotNone(section, "docs/BUILDER-BRIEF.md has no Mutation testing section")
+        taught = [
+            "scripts/mutation-equivalent.d/<package>.json",
+            "miniapp.json",
+            "ADR-070",
+            *(f"`{field}`" for field in ("file", "mutant", "anchor", "span", "reason")),
+            *(f"`{field}`" for field in ("evidence", "reached_by", "issue")),
+            "python3 scripts/mutation-verdict.py census",
+            "mutation-verdict.py table",
+            "STALE",
+            "REFUTED",
+            "UNCOVERED",
+        ]
+        for needle in examined("parts of the record the brief teaches", taught):
+            self.assertIn(needle, section.group(1))
+        # No exclusion is named as a way to record an equivalent, in any place that teaches it.
+        forms = ["exclude_re", "exclude_globs", "Stryker disable", "mutants::skip", "(#N)`:"]
+        config = (REPO / ".cargo" / "mutants.toml").read_text(encoding="utf-8")
+        stryker = json.loads((REPO / "web" / "app" / "stryker.config.json").read_text("utf-8"))
+        with tempfile.TemporaryDirectory() as scratch:
+            reports = Path(scratch) / "reports"
+            shard(reports, 0, [(listed(""), "MissedMutant")])
+            run(str(VERDICT), "survivors", "--reports", str(reports), "--out", f"{scratch}/d")
+            draft = (Path(scratch) / "d" / "draft-001.md").read_text(encoding="utf-8")
+        places = [
+            ("docs/BUILDER-BRIEF.md", section.group(1)),
+            (".cargo/mutants.toml", config),
+            ("web/app/stryker.config.json", stryker["_comment"]),
+            ("the survivors' draft", draft),
+        ]
+        for name, words in examined("places that teach the record", places):
+            self.assertIn("scripts/mutation-equivalent.d/", words, name)
+            for form in forms:
+                self.assertNotIn(form, words, f"{name} teaches {form}")
 
 
 if __name__ == "__main__":

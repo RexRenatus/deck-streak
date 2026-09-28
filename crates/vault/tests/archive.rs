@@ -12,11 +12,16 @@ mod golden;
 use std::ffi::OsString;
 use std::fs;
 use std::path::PathBuf;
+use std::sync::mpsc::{self, RecvTimeoutError};
+use std::thread;
+use std::time::Duration;
 
 use deck_streak_kernel::{Environment, StudyDay};
 use deck_streak_vault::config::{ARCHIVE_FOLDER, READINGS_FOLDER, VAULT_ROOT};
 use deck_streak_vault::readings_tree::archive_folder;
-use deck_streak_vault::{FolderName, Rails, ReadingsTree, RealFs, TopicKey, VaultSettings};
+use deck_streak_vault::{
+    FolderName, Rails, ReadingsTree, RealFs, TopicKey, VaultError, VaultSettings,
+};
 use tempfile::TempDir;
 
 const READINGS: &str = "12-Readings";
@@ -76,9 +81,35 @@ fn archive_paths_match_the_parity_golden() {
     );
 }
 
+/// How long one archive may run before a test calls it a hang. An archive ends in milliseconds, so
+/// one still running after this has stopped finding a free name: the test fails then, rather than
+/// walking every numeric suffix until the mutation tool's own timeout.
+const HANG: Duration = Duration::from_secs(5);
+
+/// `tree`'s archive of `topic`'s note of `day`, from a run on its own thread that must end within
+/// [`HANG`]; the tree comes back beside the archive path.
+fn archive_within(
+    tree: ReadingsTree<RealFs>,
+    day: StudyDay,
+    topic: &TopicKey,
+) -> (ReadingsTree<RealFs>, Result<PathBuf, VaultError>) {
+    let topic = topic.clone();
+    let (sender, receiver) = mpsc::channel();
+    thread::spawn(move || {
+        let archived = tree.archive(day, &topic);
+        // A send fails only once the test has stopped waiting, having failed on a hang.
+        let _ = sender.send((tree, archived));
+    });
+    match receiver.recv_timeout(HANG) {
+        Ok(done) => done,
+        Err(RecvTimeoutError::Timeout) => panic!("the archive ran past {HANG:?}"),
+        Err(RecvTimeoutError::Disconnected) => panic!("the archive panicked"),
+    }
+}
+
 #[test]
 fn a_taken_archive_name_gets_a_numeric_suffix_and_nothing_is_overwritten() {
-    let (dir, tree) = vault();
+    let (dir, mut tree) = vault();
     let day = StudyDay::from_epoch_day(20_000);
     let topic = TopicKey::new("law/evidence").expect("a topic key");
     let readings = FolderName::new(READINGS).expect("a folder name");
@@ -99,10 +130,9 @@ fn a_taken_archive_name_gets_a_numeric_suffix_and_nothing_is_overwritten() {
         }
         tree.create(day, &topic, DIGEST, body)
             .expect("a reading of the day");
-        archived.push(
-            tree.archive(day, &topic)
-                .expect("the superseded note is archived"),
-        );
+        let (returned, path) = archive_within(tree, day, &topic);
+        tree = returned;
+        archived.push(path.expect("the superseded note is archived"));
     }
 
     let names: Vec<String> = archived
