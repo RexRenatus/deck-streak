@@ -54,6 +54,14 @@ tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", default-features = false, features = ["fmt", "json", "env-filter"] }
 # ADR-020: a temporary database or collection, in tests only.
 tempfile = "3.27.0"
+# ADR-003 and ADR-025: the API service (SPEC-025). axum carries only what a loopback HTTP/1.1
+# service behind Caddy needs; tower brings the concurrency bound, the load shed and, for tests,
+# `ServiceExt::oneshot`; tower-http brings the layers ADR-003 names. A member adds features as it
+# uses them. anyhow is the binary's error type alone.
+axum = { version = "0.8.9", default-features = false, features = ["http1", "tokio", "matched-path"] }
+tower = { version = "0.5.3", default-features = false }
+tower-http = { version = "0.7.1", default-features = false }
+anyhow = "1.0.104"
 
 [workspace.lints.rust]
 unsafe_code = "forbid"
