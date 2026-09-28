@@ -256,12 +256,28 @@ impl ScopeSettings {
     /// law track is read.
     #[must_use]
     pub fn law_root_uncovered(&self) -> bool {
-        false
+        match &self.law_root {
+            Some(root) if !self.include.reads_every_deck() => !self
+                .include
+                .prefixes()
+                .iter()
+                .any(|prefix| root.as_str().starts_with(prefix.as_str())),
+            _ => false,
+        }
     }
 
     /// Logs one WARN naming [`INCLUDE_DECKS`] and [`LAW_DECK_ROOT`], never their values, when the
     /// include list covers no deck of the law root (R3, the predecessor's warning at
     /// `config.py:Settings.validate`): a language-only scope stays legal, and the log says what it
     /// costs.
-    pub fn warn_if_law_root_uncovered(&self) {}
+    pub fn warn_if_law_root_uncovered(&self) {
+        if self.law_root_uncovered() {
+            tracing::warn!(
+                include = INCLUDE_DECKS,
+                law_root = LAW_DECK_ROOT,
+                "no prefix of the include list covers the law root: no card of the law track is \
+                 read until one does"
+            );
+        }
+    }
 }

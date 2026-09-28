@@ -12,14 +12,28 @@
 
 use deck_streak_kernel::{KernelError, UtcMillis};
 
-use crate::reader::{CollectionData, CollectionReader, ReadError};
+use crate::reader::{
+    CollectionData, CollectionReader, ReadError, allowed_deck_ids, deck_names, read_failed,
+    scope_ids,
+};
 use crate::state::SqliteIngestState;
 
 /// The days of reviews each cycle reads (`constants.py:INGEST_WINDOW_DAYS`).
-pub const INGEST_WINDOW_DAYS: i64 = 0;
+pub const INGEST_WINDOW_DAYS: i64 = 400;
 /// How many days staler than a fresh floor a base may be before it is recounted
 /// (`constants.py:INGEST_REBASE_DAYS`).
-pub const INGEST_REBASE_DAYS: i64 = 0;
+pub const INGEST_REBASE_DAYS: i64 = 7;
+
+const DAY_MS: i64 = 86_400_000;
+
+/// The study events at or before the floor `?1` of the cards whose home deck is one of the ids in
+/// `?2`: the SQL mirror of `reader::is_study_event` and `reader::Card::home_deck_id`, as the
+/// predecessor's `anki_reader.py:count_study_reviews_before` wrote it. A card deleted since takes its
+/// reviews out of the count, which is what the self-check sees. `r.id <= ?1` is the exact complement
+/// of the read's `r.id > ?1`, so a read above the floor and this count partition the log.
+const STUDY_EVENTS_BEFORE: &str = "SELECT count(*) FROM revlog r JOIN cards c ON c.id = r.cid \
+     WHERE r.id <= ?1 AND r.type IN (0, 1, 2, 3) AND r.ease >= 1 \
+     AND (CASE WHEN c.odid != 0 THEN c.odid ELSE c.did END) IN (SELECT value FROM json_each(?2))";
 
 /// The window's base: the floor, a review id (which is epoch milliseconds), and the count of study
 /// events of the cards in scope at or before it.
@@ -56,23 +70,30 @@ pub struct SelfCheck {
 /// A fresh floor at `now`: [`INGEST_WINDOW_DAYS`] days before it, never before the epoch.
 #[must_use]
 pub fn fresh_floor(now: UtcMillis) -> i64 {
-    let _ = now;
-    0
+    now.epoch_millis()
+        .saturating_sub(INGEST_WINDOW_DAYS * DAY_MS)
+        .max(0)
 }
 
 /// The floor a read at `now` reads above: the base's, or a fresh one when there is none.
 #[must_use]
 pub fn read_floor(base: Option<WindowBase>, now: UtcMillis) -> i64 {
-    let _ = (base, now);
-    0
+    base.map_or_else(|| fresh_floor(now), |base| base.floor)
 }
 
 /// Whether the base at `now` is kept or recounted: it is recounted when there is none, or when it
 /// is more than [`INGEST_REBASE_DAYS`] days staler than a fresh floor.
 #[must_use]
 pub fn rebase(base: Option<WindowBase>, now: UtcMillis) -> Rebase {
-    let _ = now;
-    Rebase::Keep(base.unwrap_or(WindowBase { floor: 0, count: 0 }))
+    let limit = now
+        .epoch_millis()
+        .saturating_sub((INGEST_WINDOW_DAYS + INGEST_REBASE_DAYS) * DAY_MS);
+    match base {
+        Some(base) if base.floor >= limit => Rebase::Keep(base),
+        _ => Rebase::Recount {
+            floor: fresh_floor(now),
+        },
+    }
 }
 
 /// The base a recount of `count` study events at or before `floor` writes, and the self-check when
@@ -83,8 +104,21 @@ pub fn rebased(
     floor: i64,
     count: i64,
 ) -> (WindowBase, Option<SelfCheck>) {
-    let _ = previous;
-    (WindowBase { floor, count }, None)
+    let self_check = previous
+        .filter(|previous| count < previous.count)
+        .map(|previous| SelfCheck {
+            stored: previous.count,
+            recounted: count,
+        });
+    if let Some(check) = self_check {
+        tracing::warn!(
+            stored = check.stored,
+            recounted = check.recounted,
+            "ingest self-check: the study events before the window fell (cards deleted or the \
+             collection replaced)"
+        );
+    }
+    (WindowBase { floor, count }, self_check)
 }
 
 /// One cycle's read inside the window (R6): the data, the base the cycle kept or wrote, and the
@@ -122,11 +156,36 @@ pub async fn read_window(
     state: &SqliteIngestState,
     now: UtcMillis,
 ) -> Result<WindowRead, WindowError> {
-    let _ = state;
-    let data = reader.read(read_floor(None, now)).await?;
+    let stored = state.load().await?.window_base;
+    let data = reader.read(read_floor(stored, now)).await?;
+    let (base, self_check) = match rebase(stored, now) {
+        Rebase::Keep(base) => (base, None),
+        Rebase::Recount { floor } => {
+            let (base, self_check) = rebased(stored, floor, recount(reader, floor).await?);
+            state.write_window_base(base, now).await?;
+            (base, self_check)
+        }
+    };
     Ok(WindowRead {
         data,
-        base: WindowBase { floor: 0, count: 0 },
-        self_check: None,
+        base,
+        self_check,
     })
+}
+
+/// Counts the study events of the cards in `reader`'s scope at or before `floor`, in SQL, on the
+/// read-only copy: one indexed count, on the offload, once per rebase period.
+async fn recount(reader: &CollectionReader, floor: i64) -> Result<i64, ReadError> {
+    let prefixes = reader.scope().include().prefixes().to_vec();
+    reader
+        .with_copy("count_study_reviews_before", move |copy| async move {
+            let scope = scope_ids(&allowed_deck_ids(&deck_names(&copy).await?, &prefixes));
+            sqlx::query_scalar(STUDY_EVENTS_BEFORE)
+                .bind(floor)
+                .bind(scope)
+                .fetch_one(copy.reader())
+                .await
+                .map_err(read_failed)
+        })
+        .await
 }

@@ -62,8 +62,11 @@ impl Obligations {
     ///
     /// The first source's error: a cycle that cannot read an obligation cannot know it may skip.
     pub async fn collect(&self, now: UtcMillis) -> Result<Vec<Deadline>, KernelError> {
-        let _ = (&self.sources, now);
-        Ok(Vec::new())
+        let mut deadlines = Vec::new();
+        for source in &self.sources {
+            deadlines.extend(source.deadlines(now).await?);
+        }
+        Ok(deadlines)
     }
 }
 

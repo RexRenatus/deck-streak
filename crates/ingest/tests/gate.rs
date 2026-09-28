@@ -158,7 +158,7 @@ impl Bench {
         let first = bench.check(true).await;
         assert_eq!(first.decision, Decision::Run(RunReason::AnchorMissing));
         bench.recomputed(&first).await;
-        bench.clock.advance(Duration::from_secs(60));
+        bench.clock.advance(Duration::from_mins(1));
         bench
     }
 

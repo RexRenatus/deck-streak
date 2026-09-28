@@ -15,17 +15,33 @@
 use std::sync::Arc;
 
 use deck_streak_kernel::{Clock, Db, KernelError, StudyDay, StudyDayRule, UtcMillis};
+use sqlx::AssertSqlSafe;
 
-use crate::reader::{CollectionReader, ReadError};
+use crate::reader::{CollectionReader, ReadError, read_failed};
 use crate::state::SqliteIngestState;
-use crate::sync_runs::{RunHistory, SkippedRun, SqliteSyncRuns, Trigger};
+use crate::sync_runs::{RunHistory, RunStatus, SkippedRun, SqliteSyncRuns, Trigger};
 
 /// The weights of a card's `due`, `ivl`, `queue`, `factor`, `lapses`, `type` and `odid` in the
 /// fingerprint (`anki_reader.py:_CARD_FIELD_WEIGHTS`).
-pub const CARD_FIELD_WEIGHTS: [i64; 7] = [0; 7];
+pub const CARD_FIELD_WEIGHTS: [i64; 7] = [131, 137, 139, 149, 151, 157, 163];
 /// Each card's weighted term is reduced by this modulus before the sum, so the sum over a large
 /// collection stays far below `SQLite`'s 64-bit ceiling (`anki_reader.py:_CARDS_FINGERPRINT_MOD`).
-pub const CARD_FINGERPRINT_MODULUS: i64 = 1;
+pub const CARD_FINGERPRINT_MODULUS: i64 = 1_000_000_007;
+
+/// The newest revlog id, by the log's integer primary key.
+const NEWEST_REVIEW: &str = "SELECT max(id) FROM revlog";
+
+/// The cards' count and fingerprint: one scan of integer columns, each card's weighted term reduced
+/// by the modulus before the sum, built from the constants as the predecessor built its
+/// `_CARDS_FINGERPRINT_SQL`. Only these integer constants are written into it.
+fn card_fingerprint_sql() -> String {
+    let [due, ivl, queue, factor, lapses, kind, odid] = CARD_FIELD_WEIGHTS;
+    format!(
+        "SELECT count(id), coalesce(sum((due * {due} + ivl * {ivl} + queue * {queue} \
+         + factor * {factor} + lapses * {lapses} + type * {kind} + odid * {odid}) \
+         % {CARD_FINGERPRINT_MODULUS}), 0) FROM cards"
+    )
+}
 
 /// The copy's cheap change signal (R9).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -46,12 +62,25 @@ pub struct Probe {
 ///
 /// Every [`ReadError`] of the reader.
 pub async fn probe(reader: &CollectionReader) -> Result<Probe, ReadError> {
-    let _ = reader;
-    Ok(Probe {
-        newest_review_id: 0,
-        card_count: 0,
-        card_fingerprint: 0,
-    })
+    reader
+        .with_copy("probe_change_signal", |copy| async move {
+            let newest: Option<i64> = sqlx::query_scalar(NEWEST_REVIEW)
+                .fetch_one(copy.reader())
+                .await
+                .map_err(read_failed)?;
+            // Audited: the statement holds this module's integer constants and nothing else.
+            let (card_count, card_fingerprint): (i64, i64) =
+                sqlx::query_as(AssertSqlSafe(card_fingerprint_sql()))
+                    .fetch_one(copy.reader())
+                    .await
+                    .map_err(read_failed)?;
+            Ok(Probe {
+                newest_review_id: newest.unwrap_or(0),
+                card_count,
+                card_fingerprint,
+            })
+        })
+        .await
 }
 
 /// What the last full recompute saw (R11).
@@ -179,8 +208,47 @@ pub enum Decision {
 /// study day, or the probe's newest review id, card count or fingerprint changed, or when a deadline
 /// lies after the anchor's recompute and at or before now; otherwise it skips.
 pub fn decide(inputs: &GateInputs<'_>) -> Decision {
-    let _ = inputs;
-    Decision::Run(RunReason::AnchorMissing)
+    let reason = if inputs.rescore_pending {
+        Some(RunReason::RescorePending)
+    } else if !inputs.sync_ok {
+        Some(RunReason::SyncFailed)
+    } else if !inputs.history.any_success {
+        Some(RunReason::NoSuccessfulRun)
+    } else if inputs.history.last == Some(RunStatus::Error) {
+        Some(RunReason::LastRunFailed)
+    } else {
+        match inputs.anchor {
+            AnchorState::Missing => Some(RunReason::AnchorMissing),
+            AnchorState::Unreadable => Some(RunReason::AnchorUnreadable),
+            AnchorState::Present(anchor) => changed_since(&anchor, inputs),
+        }
+    };
+    reason.map_or(Decision::Skip, Decision::Run)
+}
+
+/// What changed since `anchor`, in R8's order, or `None` when nothing did. A deadline counts once:
+/// after the anchor's recompute, which saw every deadline at or before it, and at or before now,
+/// never earlier.
+fn changed_since(anchor: &Anchor, inputs: &GateInputs<'_>) -> Option<RunReason> {
+    if inputs.settings_generation != anchor.settings_generation {
+        Some(RunReason::SettingsChanged)
+    } else if inputs.study_day != anchor.study_day {
+        Some(RunReason::StudyDayChanged)
+    } else if inputs.probe.newest_review_id != anchor.probe.newest_review_id {
+        Some(RunReason::NewestReviewChanged)
+    } else if inputs.probe.card_count != anchor.probe.card_count {
+        Some(RunReason::CardCountChanged)
+    } else if inputs.probe.card_fingerprint != anchor.probe.card_fingerprint {
+        Some(RunReason::CardFingerprintChanged)
+    } else {
+        inputs
+            .deadlines
+            .iter()
+            .find(|deadline| anchor.recomputed_at < deadline.at && deadline.at <= inputs.now)
+            .map(|deadline| RunReason::DeadlineDue {
+                label: deadline.label,
+            })
+    }
 }
 
 /// Why the gate could not decide or record.

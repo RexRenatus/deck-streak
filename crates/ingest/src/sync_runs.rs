@@ -287,9 +287,15 @@ impl SqliteSyncRuns {
     ///
     /// [`KernelError::Database`] when the read fails.
     pub async fn history(&self) -> Result<RunHistory, KernelError> {
+        let row = sqlx::query!(
+            r#"SELECT (SELECT status FROM sync_runs ORDER BY id DESC LIMIT 1) AS "last?: String",
+                      EXISTS(SELECT 1 FROM sync_runs WHERE status = 'ok') AS "any_success!: bool""#
+        )
+        .fetch_one(self.db.reader())
+        .await?;
         Ok(RunHistory {
-            last: None,
-            any_success: false,
+            last: row.last.as_deref().and_then(RunStatus::parse),
+            any_success: row.any_success,
         })
     }
 
@@ -300,7 +306,25 @@ impl SqliteSyncRuns {
     ///
     /// [`KernelError::Database`] when the write fails.
     pub async fn record_skipped(&self, run: &SkippedRun) -> Result<(), KernelError> {
-        let _ = run;
+        let trigger = run.trigger.as_str();
+        let study_day = run.study_day.epoch_day();
+        let started_at = run.started_at.epoch_millis();
+        let finished_at = run.finished_at.epoch_millis();
+        let mut write = self.db.write().await?;
+        // The row is created when the gate ends, by the same clock.
+        sqlx::query!(
+            "INSERT INTO sync_runs \
+             (trigger, study_day, started_at, finished_at, status, reason, attempts, \
+              full_download, created_at) \
+             VALUES (?1, ?2, ?3, ?4, 'skipped', NULL, 0, 0, ?4)",
+            trigger,
+            study_day,
+            started_at,
+            finished_at
+        )
+        .execute(&mut *write)
+        .await?;
+        write.commit().await?;
         Ok(())
     }
 }

@@ -18,6 +18,7 @@ use std::future::Future;
 use std::path::PathBuf;
 
 use deck_streak_kernel::{Db, ForeignDb, KernelError, Offload, Track, UtcMillis};
+use sqlx::AssertSqlSafe;
 use tokio::runtime::Handle;
 
 use crate::lock::CollectionLock;
@@ -26,6 +27,30 @@ use crate::settings::{DECK_SEPARATOR, ScopeSettings, SyncSettings};
 /// `SQLite`'s primary result code for a write refused because the database is read-only
 /// (`SQLITE_READONLY`); every extended code of it keeps this in its low byte.
 const SQLITE_READONLY: i32 = 8;
+
+/// Every deck's id and stored name. The name is only ever read, by id: it is never compared,
+/// ordered or aggregated in SQL (R4).
+const DECK_NAMES: &str = "SELECT id, name FROM decks ORDER BY id";
+/// The cards whose home deck (the original deck while a filtered deck borrows the card) is one of
+/// the ids in `?1`, a JSON array: [`Card::home_deck_id`] in SQL, as the predecessor's recount
+/// wrote it.
+const CARDS: &str = "SELECT id, nid, did, odid, queue, type, due, ivl, factor, reps, lapses \
+     FROM cards WHERE (CASE WHEN odid != 0 THEN odid ELSE did END) IN (SELECT value FROM json_each(?1)) \
+     ORDER BY id";
+/// The revlog rows newer than the floor `?1` of the cards whose home deck is one of the ids in
+/// `?2`, oldest first. The study-event rule is applied to them here, not in SQL.
+const REVIEWS: &str = "SELECT r.id, r.cid, r.ease, r.ivl, r.lastIvl, r.factor, r.time, r.type \
+     FROM revlog r JOIN cards c ON c.id = r.cid \
+     WHERE r.id > ?1 AND (CASE WHEN c.odid != 0 THEN c.odid ELSE c.did END) \
+     IN (SELECT value FROM json_each(?2)) ORDER BY r.id";
+/// The collection's creation stamp, in epoch seconds (the predecessor's `read_config` reads
+/// `col.crt`); no rollover hour is read with it (R7).
+const CREATED: &str = "SELECT crt FROM col ORDER BY id LIMIT 1";
+
+/// A card row as [`CARDS`] selects it.
+type CardRow = (i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64);
+/// A review row as [`REVIEWS`] selects it.
+type ReviewRow = (i64, i64, i64, i64, i64, i64, i64, i64);
 
 /// One study review: a revlog row of type 0 to 3 with ease 1 or more (docs/LEXICON.md), whose card
 /// is in scope.
@@ -83,7 +108,11 @@ impl Card {
     /// sits in (the predecessor's `types.py:Card.true_did`). Scope and track are decided by it.
     #[must_use]
     pub const fn home_deck_id(&self) -> i64 {
-        self.deck_id
+        if self.original_deck_id != 0 {
+            self.original_deck_id
+        } else {
+            self.deck_id
+        }
     }
 }
 
@@ -111,8 +140,16 @@ pub fn top_level(name: &str) -> &str {
 /// `prefixes` is empty (the predecessor's `deck_filter.py:allowed_deck_ids`).
 #[must_use]
 pub fn allowed_deck_ids(deck_names: &BTreeMap<i64, String>, prefixes: &[String]) -> BTreeSet<i64> {
-    let _ = (deck_names, prefixes);
-    BTreeSet::new()
+    deck_names
+        .iter()
+        .filter(|(_, name)| {
+            prefixes.is_empty()
+                || prefixes
+                    .iter()
+                    .any(|prefix| top_level(name).starts_with(prefix.as_str()))
+        })
+        .map(|(id, _)| *id)
+        .collect()
 }
 
 /// Whether a revlog row of type `kind` answered with `ease` is a study event (R2): a learn,
@@ -120,16 +157,17 @@ pub fn allowed_deck_ids(deck_names: &BTreeMap<i64, String>, prefixes: &[String])
 /// (the predecessor's `types.py:Review.is_study_event`).
 #[must_use]
 pub const fn is_study_event(kind: i64, ease: i64) -> bool {
-    let _ = (kind, ease);
-    false
+    matches!(kind, 0..=3) && ease >= 1
 }
 
 /// The track of a card whose home deck's top-level name is `top_level_name` (R3): law when it
 /// starts with the law root, else language.
 #[must_use]
 pub fn track_of(top_level_name: &str, law_root: Option<&str>) -> Track {
-    let _ = (top_level_name, law_root);
-    Track::Language
+    match law_root {
+        Some(root) if top_level_name.starts_with(root) => Track::Law,
+        _ => Track::Language,
+    }
 }
 
 /// Why the copy could not be read.
@@ -183,13 +221,75 @@ impl CollectionReader {
     /// [`ReadError::Lock`] when the collection lock cannot be taken, and [`ReadError::Copy`] when
     /// the copy cannot be opened or read.
     pub async fn read(&self, floor: i64) -> Result<CollectionData, ReadError> {
-        let _ = floor;
-        Ok(CollectionData {
-            reviews: Vec::new(),
-            cards: Vec::new(),
-            created_at: UtcMillis::from_epoch_millis(0),
-            deck_names: BTreeMap::new(),
+        let prefixes = self.scope.include().prefixes().to_vec();
+        let law_root = self.scope.law_root().map(str::to_owned);
+        self.with_copy("read_collection", move |copy| async move {
+            let deck_names = deck_names(&copy).await?;
+            let scope = scope_ids(&allowed_deck_ids(&deck_names, &prefixes));
+            let cards: Vec<CardRow> = sqlx::query_as(CARDS)
+                .bind(&scope)
+                .fetch_all(copy.reader())
+                .await
+                .map_err(read_failed)?;
+            let reviews: Vec<ReviewRow> = sqlx::query_as(REVIEWS)
+                .bind(floor)
+                .bind(&scope)
+                .fetch_all(copy.reader())
+                .await
+                .map_err(read_failed)?;
+            let created: Option<i64> = sqlx::query_scalar(CREATED)
+                .fetch_optional(copy.reader())
+                .await
+                .map_err(read_failed)?;
+            let track = |home: i64| {
+                let name = deck_names.get(&home).map_or("", String::as_str);
+                track_of(top_level(name), law_root.as_deref())
+            };
+            let cards = cards
+                .into_iter()
+                .map(|row| {
+                    let (id, note_id, deck_id, original_deck_id, queue, kind) =
+                        (row.0, row.1, row.2, row.3, row.4, row.5);
+                    let mut card = Card {
+                        id,
+                        note_id,
+                        deck_id,
+                        original_deck_id,
+                        queue,
+                        kind,
+                        due: row.6,
+                        interval: row.7,
+                        factor: row.8,
+                        reps: row.9,
+                        lapses: row.10,
+                        track: Track::Language,
+                    };
+                    card.track = track(card.home_deck_id());
+                    card
+                })
+                .collect();
+            let reviews = reviews
+                .into_iter()
+                .filter(|row| is_study_event(row.7, row.2))
+                .map(|row| Review {
+                    id: row.0,
+                    card_id: row.1,
+                    ease: row.2,
+                    interval: row.3,
+                    last_interval: row.4,
+                    factor: row.5,
+                    taken_ms: row.6,
+                    kind: row.7,
+                })
+                .collect();
+            Ok(CollectionData {
+                reviews,
+                cards,
+                created_at: UtcMillis::from_epoch_millis(created.unwrap_or(0).saturating_mul(1000)),
+                deck_names,
+            })
         })
+        .await
     }
 
     /// Runs `statement` on the connection every read of this reader uses, open read-only under the
@@ -203,8 +303,17 @@ impl CollectionReader {
     /// [`ReadError::WriteRefused`] for a write, [`ReadError::Lock`] when the lock cannot be taken,
     /// and [`ReadError::Copy`] for any other failure of the statement or the copy.
     pub async fn execute_statement(&self, statement: &str) -> Result<u64, ReadError> {
-        let _ = statement;
-        Ok(0)
+        let statement = statement.to_owned();
+        self.with_copy("execute_statement", move |copy| async move {
+            // Audited: this door exists to run the caller's statement on the read-only connection,
+            // which refuses any write, and it returns no row.
+            sqlx::raw_sql(AssertSqlSafe(statement))
+                .execute(copy.reader())
+                .await
+                .map(|done| done.rows_affected())
+                .map_err(refusal)
+        })
+        .await
     }
 
     /// Runs `work` on the copy, open read-only, under the shared collection lock, on the offload
@@ -251,16 +360,37 @@ fn on_this_thread<T>(runtime: &Handle, read: impl Future<Output = T>) -> T {
     runtime.block_on(read)
 }
 
+/// Every deck's id and stored name, from the open copy.
+pub(crate) async fn deck_names(copy: &ForeignDb) -> Result<BTreeMap<i64, String>, ReadError> {
+    let decks: Vec<(i64, String)> = sqlx::query_as(DECK_NAMES)
+        .fetch_all(copy.reader())
+        .await
+        .map_err(read_failed)?;
+    Ok(decks.into_iter().collect())
+}
+
+/// The ids of the decks read, as the JSON array a query's `json_each` expands: the ids are bound,
+/// never written into the SQL.
+pub(crate) fn scope_ids(allowed: &BTreeSet<i64>) -> String {
+    let ids: Vec<String> = allowed.iter().map(i64::to_string).collect();
+    format!("[{}]", ids.join(","))
+}
+
+/// A read's failure: the copy could not be read.
+pub(crate) fn read_failed(error: sqlx::Error) -> ReadError {
+    ReadError::Copy(KernelError::Database(error))
+}
+
 /// A statement's failure: a write the read-only copy refused, or any other failure of the copy.
 fn refusal(error: sqlx::Error) -> ReadError {
     let read_only = error
         .as_database_error()
-        .and_then(|database| database.code())
+        .and_then(sqlx::error::DatabaseError::code)
         .and_then(|code| code.parse::<i32>().ok())
         .is_some_and(|code| code & 0xff == SQLITE_READONLY);
     if read_only {
         ReadError::WriteRefused
     } else {
-        ReadError::Copy(KernelError::Database(error))
+        read_failed(error)
     }
 }

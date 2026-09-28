@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO ingest_state (id, anchor_newest_review_id, anchor_card_count, anchor_card_fingerprint, anchor_study_day, anchor_recomputed_at, anchor_settings_generation, rescore_pending, created_at) VALUES (1, ?1, ?2, ?3, ?4, ?5, ?6, 0, ?7) ON CONFLICT (id) DO UPDATE SET anchor_newest_review_id = excluded.anchor_newest_review_id, anchor_card_count = excluded.anchor_card_count, anchor_card_fingerprint = excluded.anchor_card_fingerprint, anchor_study_day = excluded.anchor_study_day, anchor_recomputed_at = excluded.anchor_recomputed_at, anchor_settings_generation = excluded.anchor_settings_generation, rescore_pending = 0",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 7
+    },
+    "nullable": []
+  },
+  "hash": "361b658dc36778f849550aecd12c33e0f058dae31e5bdbc075dbf4bb155b9cd7"
+}

@@ -510,7 +510,7 @@ pub fn build_planned(
             let mut deck = col
                 .get_or_create_filtered_deck(anki::decks::DeckId(0))
                 .expect("a new filtered deck");
-            deck.human_name = FILTERED_DECK.to_owned();
+            FILTERED_DECK.clone_into(&mut deck.human_name);
             deck.config.search_terms.truncate(1);
             deck.config.search_terms[0].search = format!("cid:{}", borrowed.join(","));
             deck.config.search_terms[0].limit = 1000;
