@@ -8,7 +8,7 @@ concrete host name, address and secret name is private configuration; the units 
 
 ```mermaid
 flowchart TB
-  internet((internet)) -->|443 TLS, 80 redirect| caddy[Caddy, the host's reverse proxy]
+  internet((internet)) -->|HTTPS| caddy[Caddy, the host's reverse proxy]
   subgraph host[the VM]
     caddy -->|/api/* to loopback| apiUnit[deck-streak-api.service]
     caddy -->|static SPA with fallback| web[(release/current/web)]
@@ -21,7 +21,6 @@ flowchart TB
     runner -.->|loopback port| tunnelEnd[reverse tunnel endpoint]
     apiUnit & botUnit & jobs -. OnFailure .-> alert["deck-streak-alert@.service"]
     watch["deck-streak-memory-watch.timer"] -.->|memory.events| alert
-    predecessor[predecessor's units, until cutover]
   end
   socket -->|the host's identity, each named secret only| secrets[(secret manager)]
   tunnelEnd <-->|only with the proxy route: reverse SSH, opened from the maintainer's machine| proxy[subscription proxy on the maintainer's machine]

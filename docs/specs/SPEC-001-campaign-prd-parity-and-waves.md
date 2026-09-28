@@ -86,7 +86,7 @@ A5: python3 -m unittest discover -s scripts/tests -p test_parity_matrix.py -k ev
 
 - **A feature's parity is claimed, not proved.** Detected by the parity oracle's goldens and by
   closing each issue only with an evidence comment (the criterion, the command, its output).
-- **The host's memory or disk runs out beside the predecessor.** Detected by the memory watch and
+- **DeckStreak outgrows its memory or disk budget on the host.** Detected by the memory watch and
   the host budget (ADR-010); a resize is an owner decision.
 - **The agent's path to the proxy fails often.** Detected by the readings' lane health and the
   digest's degraded-coaching line; the deterministic fallbacks keep the owner informed.
@@ -105,7 +105,7 @@ builders).
 |---|---|---|---|---|
 | W0 | Foundation: kernel, config and secrets, database base, identity (Telegram initData), API and bot shells, Anki ingest, scheduler and cron ledger, data-rights framework, Mini App shell, parity-oracle harness | 15 | 0 | 1, then 6 |
 | W1 | Flagship: the daily pre-study readings, with the AI agent core, the vault adapter core, the XP grant port and the notification router core | 14 | 0 | 5, then 6 |
-| W2 | First deploy: readings live on the VM side by side with v9 (host scrub, units, HTTPS, the proxy tunnel, backups), behind owner gates | 6 | 0 | 2 (owner-gated) |
+| W2 | First deploy: DeckStreak's readings live on its host (host preparation, units, HTTPS, the agent's path, backups), behind owner gates | 6 | 0 | 2 (owner-gated) |
 | W3 | Game core parity: analytics and score, XP and levels, streaks, economy, quests and chests, focus, habits, skip day | 0 | 38 | 6 |
 | W4 | Curriculum and insight parity: Road to C2, law track, leeches, research instruments, client-side charts | 0 | 25 | 6 |
 | W5 | Engagement parity: the full celebration ladder, digests, nudges, comeback, discipline devices, prediction markets | 0 | 22 | 6 |
@@ -273,7 +273,7 @@ D) that covers it.
 | `db-maintenance` | Daily DB maintenance | ops | coordination | W0 | build | #20 |
 | `sd-notify-watchdog` | systemd notify watchdog (liveness only) | ops | daemon | W0 | build | #18 |
 | `offload-rails` | Offload rails and latency budget (keep blocking work off the event loop) | ops | kernel | W0 | build | #12 |
-| `secrets-resolution` | Secret resolution (GCP Secret Manager via ADC, env fallback) and degraded-secret tracking | ops | kernel | W0 | build | #12 |
+| `secrets-resolution` | Secret resolution and degraded-secret tracking | ops | kernel | W0 | build | #12 |
 | `logging-redaction` | Secret-redacting structured logging (journald JSON with syslog priorities) | ops | kernel | W0 | build | #12 |
 | `nightly-backup-offsite` | Nightly backup with offsite copy, dedup, Litestream age check and temp sweep | ops | deploy | W2 | build | #44 |
 | `litestream-replication` | Litestream continuous WAL replication | ops | deploy | W2 | build | #44 |
@@ -357,7 +357,7 @@ D) that covers it.
 | `DS-W1-12` | Mini App: Today's readings, the reader and the history | miniapp | W1 | SPEC-051 | #37 |
 | `DS-W1-13` | Bot: the readings command and the morning readings line | bot | W1 | SPEC-052 | #38 |
 | `DS-W1-14` | Coordination: the readings jobs | coordination | W1 | SPEC-053 | #39 |
-| `DS-W2-01` | Host: inventory, backup and the scrub list for the owner | deploy | W2 | per-wave | #40 |
+| `DS-W2-01` | Host: inventory, backup and the scrub list for the owner | deploy | W2 | per-wave | #239 |
 | `DS-W2-02` | The private deploy rail: credentials, configuration and the guards | deploy | W2 | per-wave | #41 |
 | `DS-W2-03` | First deploy: units, the Caddy block and HTTPS | deploy | W2 | per-wave | #42 |
 | `DS-W2-04` | The agent's path: the reverse tunnel and its device key | deploy | W2 | per-wave | #43 |
@@ -399,3 +399,7 @@ keep their original text where only these notes apply.
     database and never written to the collection.
   - Credentials reach each unit from the secret manager at its start, through a root-only socket,
     and never rest on the host (ADR-038). This supersedes ADR-010's encrypted storage.
+- **Security redaction (2026-09-28, ADR-059).** Three passages that described the host and the
+  predecessor as a running service, in a risk (section 6), the wave plan and the parity matrix,
+  were redacted under the public-prose rule. A tracking issue's number changed: `DS-W2-01` is #239
+  (Appendix D).

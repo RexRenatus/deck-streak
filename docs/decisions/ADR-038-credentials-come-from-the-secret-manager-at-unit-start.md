@@ -55,7 +55,7 @@ Chosen option.
   - It reads the peer's credentials (`SO_PEERCRED`) and serves only uid 0.
   - It reads the peer's name with `getpeername(2)`. systemd binds its end of the connection to the
     abstract address NUL, random, `/unit/`, the unit's name, `/`, the credential id (systemd.exec(5),
-    `LoadCredential=`, read in systemd 255, the release the host's distribution ships).
+    `LoadCredential=`).
   - It answers only a (unit, credential id) pair in the private rail's map, and closes the
     connection on anything else: a non-abstract peer, an unmapped unit, or a mapped unit asking for
     another row's id. A refusal is logged with the unit and the id, never a value.
@@ -105,3 +105,6 @@ This supersedes ADR-010's credential storage (`systemd-creds encrypt` and
 
 ADR-010 (partly superseded), ADR-037, SPEC-020 R11, SPEC-031, SPEC-032; systemd.exec(5)
 `LoadCredential=` (AF_UNIX sockets) and the systemd credentials documentation.
+
+Amendment (2026-09-28): one passage stating a version of the host's software, in the decision
+outcome, was redacted under the public-prose rule (ADR-059).

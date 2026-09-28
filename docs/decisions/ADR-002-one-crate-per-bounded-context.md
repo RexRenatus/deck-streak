@@ -23,7 +23,7 @@ that parallel builders cannot tangle them and a boundary violation is caught bef
 - One crate per bounded context, the crate graph equal to docs/CONTEXT-MAP.md — chosen: an undeclared edge is a compile error, the ddd probe holds manifests and map equal, and a builder edits inside one crate.
 - One crate with a module per context — rejected because Rust lets any module import any other, so the boundary would be a review comment, not a compile error.
 - A few large crates (domain, adapters, app) — rejected because they give no boundary between the contexts that matter (economy and progression, readings and habits) and every builder would edit the same crate.
-- Services per context (microservices) — rejected because a 1.9 GiB VM cannot afford twenty processes, and the domain has no independent scaling need.
+- Services per context (microservices) — rejected because one small host within a stated memory budget cannot afford twenty processes, and the domain has no independent scaling need.
 
 ## Decision Outcome
 
@@ -53,3 +53,6 @@ every edge.
 ## More Information
 
 docs/CONTEXT-MAP.md; the ddd pack; phoenix-v2's CONTEXT-MAP as the reference implementation.
+
+Amendment (2026-09-28): one passage stating the host's size, in a considered option, was redacted
+under the public-prose rule (ADR-059).

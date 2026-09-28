@@ -27,10 +27,9 @@ ADR before the code, never a builder's call.
    reason "inert" until the owner revives it.
 2. **Two surfaces, one policy.** The Mini App and the bot are two views of one service. Every
    celebration and nudge passes through ONE router, so an event can never celebrate twice.
-3. **One small host.** The backend runs as systemd units behind Caddy on one small VM (two vCPU,
-   under 2 GiB of RAM), beside the services already there, within a stated memory budget. The VM
-   never compiles: binaries are built elsewhere and deployed as artifacts, from a SemVer tag on
-   `main` only.
+3. **One small host.** The backend runs as systemd units behind Caddy on one small host shared
+   with other services, within a stated budget (ADR-032). The host never compiles: binaries are
+   built elsewhere and deployed as artifacts, from a SemVer tag on `main` only.
 4. **Pull, then read.** DeckStreak syncs a private copy of the collection and reads it read-only.
    The skip day is the ONLY write back to Anki.
 
@@ -115,3 +114,8 @@ ADR before the code, never a builder's call.
     DeckStreak consumes is wired into its gate or CI.
 21. **`main` changes only by a release pull request from `dev`.** Builders open pull requests into
     `dev`; required checks are the bar; nobody force-pushes or deletes a protected branch.
+
+## Amendments
+
+Amendment (2026-09-28): one passage of constraint 3, which described the host's size and its other
+services, was redacted under the public-prose rule (ADR-059).

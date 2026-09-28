@@ -152,7 +152,7 @@ sequenceDiagram
 | process | holds | why |
 |---|---|---|
 | the parent | the fixture's build, the checks | its memory is not the operation's |
-| `sync-server` | the engine's server over the synthetic collection | the owner's server is another machine; the engine reads its users only from the process environment, which safe Rust sets only for a child |
+| `sync-server` | the engine's server over the synthetic collection | the engine reads its users only from the process environment, which safe Rust sets only for a child |
 | `measure` | one port call, then `VmHWM` | its peak is the operation's peak |
 
 `engine-measure.yml` measures the rest on a hosted `ubuntu-24.04` runner with no cache: the

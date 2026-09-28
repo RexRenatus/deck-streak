@@ -212,5 +212,5 @@ A19: cargo test -p deck-streak-coordination --test readings_generate -- --exact 
 - **Card text leaves the host.** It is fenced as untrusted data, sent only through a configured
   route (the owner's proxy), never while the route is absent, and declared in the privacy policy
   (R13).
-- **Two writers of the readings folder** while the predecessor's lane still fires. Prevented by the
-  first live night's one-writer prerequisite (SPEC-053).
+- **Two writers of the readings folder** while both run side by side. Prevented by the first live
+  night's one-writer prerequisite (SPEC-053).
