@@ -20,7 +20,6 @@ WORKFLOWS = REPO / ".github" / "workflows"
 WEEKLY = WORKFLOWS / "mutation-weekly.yml"
 CI = WORKFLOWS / "ci.yml"
 VERDICT = REPO / "scripts" / "mutation-verdict.py"
-PROBE = REPO / ".packs" / "scripts" / "mutation-probe.py"
 BRIEF = REPO / "docs" / "BUILDER-BRIEF.md"
 EXAMINED = re.compile(r"^examined (\d+)", re.MULTILINE)
 INSTALL = re.compile(r"(?m)^\s*tool: cargo-mutants@27\.1\.0$")
@@ -109,11 +108,9 @@ class ExclusionsAreNeverSilent(unittest.TestCase):
 
 class TheToolsConfigurationsAreValid(unittest.TestCase):
     def test_the_tool_configurations_load_under_their_own_rules(self):
-        self.assertTrue(PROBE.is_file(), "the mutation-rows pack's probe is not vendored")
-        done = run(str(PROBE), "--root", str(REPO), "check", "tool-config-valid")
+        done = run(str(VERDICT), "configs", "--root", str(REPO))
         self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
-        counts = EXAMINED.findall(done.stdout)
-        self.assertTrue(counts and int(counts[-1]) >= 2, done.stdout)
+        self.assertRegex(done.stdout, r"(?m)^examined 2 configuration")
         stryker = json.loads((REPO / "web/app/stryker.config.json").read_text(encoding="utf-8"))
         self.assertEqual(stryker["testRunner"], "vitest")
         self.assertIn("json", stryker["reporters"])
@@ -121,6 +118,46 @@ class TheToolsConfigurationsAreValid(unittest.TestCase):
         package = json.loads((REPO / "web/app/package.json").read_text(encoding="utf-8"))
         for name in ("@stryker-mutator/core", "@stryker-mutator/vitest-runner"):
             self.assertEqual(package["devDependencies"].get(name), "10.0.0", name)
+        # Planted: what each tool itself refuses. cargo-mutants 27.1.0 denies an unknown key and a
+        # value of the wrong type; StrykerJS refuses a high threshold below the low one (80 and 60
+        # by default), a threshold out of 0 to 100, and a JSON file with a comment.
+        with tempfile.TemporaryDirectory() as scratch:
+            root = Path(scratch)
+            (root / ".cargo").mkdir()
+            (root / ".cargo" / "mutants.toml").write_text(
+                'exclude_glob = ["x"]\ntest_tool = "pytest"\ntimeout_multiplier = "2"\n'
+                'sharding = "round-robin"\n',
+                encoding="utf-8",
+            )
+            app = root / "web" / "app"
+            app.mkdir(parents=True)
+            (app / "stryker.config.json").write_text(
+                '{"testRunner": "vitest", "reporters": ["json"], '
+                '"thresholds": {"high": 50, "break": 101}}',
+                encoding="utf-8",
+            )
+            planted = run(str(VERDICT), "configs", "--root", str(root))
+            (app / "stryker.config.json").write_text(
+                '{\n  // a note\n  "testRunner": "vitest"\n}\n', encoding="utf-8"
+            )
+            commented = run(str(VERDICT), "configs", "--root", str(root))
+        self.assertEqual(planted.returncode, 1, planted.stdout + planted.stderr)
+        for finding in examined(
+            "refusals",
+            [
+                "configs: .cargo/mutants.toml: exclude_glob is not a cargo-mutants 27.1.0 key",
+                "configs: .cargo/mutants.toml: test_tool is 'pytest', not one of cargo, nextest",
+                "configs: .cargo/mutants.toml: timeout_multiplier is not a number",
+                "configs: web/app/stryker.config.json: thresholds.high 50 is below "
+                "thresholds.low 60",
+                "configs: web/app/stryker.config.json: thresholds.break 101 is outside 0 to 100",
+            ],
+        ):
+            self.assertIn(finding, planted.stdout)
+        self.assertNotIn("sharding", planted.stdout)
+        self.assertRegex(planted.stdout, r"(?m)^examined 2 configuration")
+        self.assertEqual(commented.returncode, 1, commented.stdout + commented.stderr)
+        self.assertIn("configs: web/app/stryker.config.json: is not JSON", commented.stdout)
 
 
 class TheWeeklyBattery(unittest.TestCase):
@@ -172,6 +209,26 @@ class TheWeeklyBattery(unittest.TestCase):
         self.assertRegex(body, r"gh issue list[^\n]*--state open[^\n]*--json title")
 
 
+    def test_the_battery_counts_every_report_its_jobs_promise(self):
+        found = jobs(workflow(WEEKLY))
+        matrix = re.search(r"(?m)^\s+shard: \[([0-9, ]+)\]$", found.get("rust", ""))
+        self.assertIsNotNone(matrix, "the rust job names no shard matrix")
+        shards = len(matrix.group(1).split(","))
+        for name, promised in examined(
+            "jobs that judge a battery", [("survivors", shards), ("rehearsal", 1)]
+        ):
+            counted = [
+                step
+                for step in steps(found.get(name, ""))
+                if "mutation-verdict.py battery" in step
+            ]
+            self.assertEqual(len(counted), 1, f"{name} never counts the battery's reports")
+            self.assertRegex(counted[0], rf"--shards {promised}\b", name)
+            # It runs whatever the jobs before it returned, and it is the job's last word.
+            self.assertRegex(counted[0], r"if: \$\{\{ always\(\) \}\}", name)
+            self.assertEqual(steps(found[name])[-1], counted[0], f"{name}: a step follows it")
+
+
 class TheMutationJobsGateEveryPullRequest(unittest.TestCase):
     def test_the_mutation_jobs_are_needs_of_ci_with_pinned_tools_and_no_saved_cache(self):
         text = workflow(CI)
@@ -196,6 +253,20 @@ class TheMutationJobsGateEveryPullRequest(unittest.TestCase):
         self.assertIn("mutation_rows.py prove", rust)
         self.assertIn("mutation_rows.py retired", rust)
         self.assertIn("stryker run", found["mutation-web"])
+
+
+class EveryRunIsBounded(unittest.TestCase):
+    def test_every_cargo_mutants_command_bounds_its_builds_and_its_tests(self):
+        # --timeout bounds each test run; under --in-place no build is bounded unless
+        # --build-timeout says so (the tool's own timeouts chapter).
+        commands = [
+            (path.name, command)
+            for path in sorted(WORKFLOWS.glob("*.yml"))
+            for command in re.findall(r"cargo mutants [^\n]*", path.read_text(encoding="utf-8"))
+        ]
+        for name, command in examined("cargo-mutants commands", commands):
+            self.assertRegex(command, r"--timeout \d+", f"{name}: {command}")
+            self.assertRegex(command, r"--build-timeout \d+", f"{name}: {command}")
 
 
 class TheBuilderBriefTeachesTheRules(unittest.TestCase):

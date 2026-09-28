@@ -204,7 +204,7 @@ R17. **The gate is proved red first.** The survivor in `SystemClock::now` (§1) 
 | A8 | a cargo killer is built first and selected exactly once; its kill restores the file | `test_mutation_rows.py` |
 | A9 | every committed row is anchored once and names exactly one test, inside its band | `test_mutation_rows.py` |
 | A10 | a row that leaves while its target stays is refused without a recorded approval | `test_mutation_rows.py` |
-| A11 | the vendored probe's row classes judge the rows through the reader | `test_mutation_rows.py` |
+| A11 | the census refuses a row that can prove nothing: a find equal to its replacement, a second row installing one row's mutant for its killer, an id outside its band or held twice | `test_mutation_rows.py` |
 | A12 | a diff's paths fall into exactly the production classes of R2 | `test_mutation_verdict.py` |
 | A13 | a production diff that examined nothing is VOID | `test_mutation_verdict.py` |
 | A14 | a diff of blank lines and comments reads not-applicable, by name | `test_mutation_verdict.py` |
@@ -214,7 +214,7 @@ R17. **The gate is proved red first.** The survivor in `SystemClock::now` (§1) 
 | A18 | a missing report on a class that applies is VOID | `test_mutation_verdict.py` |
 | A19 | the weekly battery's survivors become deduplicated, scrubbed issue drafts | `test_mutation_verdict.py` |
 | A20 | every exclusion names its reason and an issue, and no `mutants::skip` exists | `test_mutation_workflows.py` |
-| A21 | the tools' configurations load under their own rules | `test_mutation_workflows.py` |
+| A21 | the tools' configurations load under their own rules, judged by DeckStreak's own check | `test_mutation_workflows.py` |
 | A22 | the weekly battery's shards cover their denominator and keep every report | `test_mutation_workflows.py` |
 | A23 | only the survivors job may write issues, and never on a pull request | `test_mutation_workflows.py` |
 | A24 | the mutation jobs are needs of `ci`, install pinned tools and save no cache | `test_mutation_workflows.py` |
@@ -222,6 +222,11 @@ R17. **The gate is proved red first.** The survivor in `SystemClock::now` (§1) 
 | A26 | a time before the epoch reads as negative milliseconds | `cargo test -p deck-streak-kernel --test clock` |
 | A27 | each event reads its case by name, and a diff with no production path names its paths | `test_mutation_verdict.py` |
 | A28 | every job that runs cargo-mutants installs the nextest its configuration names | `test_mutation_workflows.py` |
+| A29 | the weekly battery fails, naming each shard, the rows report and the Stryker report it lacks or holds only in part | `test_mutation_verdict.py` |
+| A30 | a report the tool left partial is VOID: an exit other than 0, 2 or 3, or counts short of its total | `test_mutation_verdict.py` |
+| A31 | a comment opener inside a string, a raw string, a character, a template or a regular expression opens no comment | `test_mutation_verdict.py` |
+| A32 | every cargo-mutants command bounds its builds and its tests | `test_mutation_workflows.py` |
+| A33 | the survivors job counts every report its jobs promise, whatever they returned | `test_mutation_workflows.py` |
 
 ```acceptance
 A1: python3 -m unittest discover -s scripts/tests -p test_mutation_rows.py -k a_tracked_change_is_refused_before_any_mutant_is_installed
@@ -234,7 +239,7 @@ A7: python3 -m unittest discover -s scripts/tests -p test_mutation_rows.py -k a_
 A8: python3 -m unittest discover -s scripts/tests -p test_mutation_rows.py -k a_cargo_killer_is_built_first_and_selected_once
 A9: python3 -m unittest discover -s scripts/tests -p test_mutation_rows.py -k every_committed_row_is_anchored_once_and_names_one_test
 A10: python3 -m unittest discover -s scripts/tests -p test_mutation_rows.py -k a_row_that_leaves_while_its_target_stays_is_refused
-A11: python3 -m unittest discover -s scripts/tests -p test_mutation_rows.py -k the_vendored_probe_judges_the_rows_through_the_reader
+A11: python3 -m unittest discover -s scripts/tests -p test_mutation_rows.py -k the_census_refuses_a_row_that_can_prove_nothing
 A12: python3 -m unittest discover -s scripts/tests -p test_mutation_verdict.py -k the_production_classes_are_exact
 A13: python3 -m unittest discover -s scripts/tests -p test_mutation_verdict.py -k a_production_diff_that_examined_nothing_is_void
 A14: python3 -m unittest discover -s scripts/tests -p test_mutation_verdict.py -k a_diff_of_blanks_and_comments_reads_not_applicable
@@ -252,6 +257,11 @@ A25: python3 -m unittest discover -s scripts/tests -p test_mutation_workflows.py
 A26: cargo test -p deck-streak-kernel --test clock -- --exact a_time_before_the_epoch_reads_as_negative_milliseconds
 A27: python3 -m unittest discover -s scripts/tests -p test_mutation_verdict.py -k each_event_reads_its_case_by_name
 A28: python3 -m unittest discover -s scripts/tests -p test_mutation_workflows.py -k every_job_that_runs_cargo_mutants_installs_the_test_tool_it_names
+A29: python3 -m unittest discover -s scripts/tests -p test_mutation_verdict.py -k a_missing_or_partial_battery_report_fails_by_name
+A30: python3 -m unittest discover -s scripts/tests -p test_mutation_verdict.py -k a_partial_report_is_void_never_complete
+A31: python3 -m unittest discover -s scripts/tests -p test_mutation_verdict.py -k a_comment_opener_inside_a_string_is_not_a_comment
+A32: python3 -m unittest discover -s scripts/tests -p test_mutation_workflows.py -k every_cargo_mutants_command_bounds_its_builds_and_its_tests
+A33: python3 -m unittest discover -s scripts/tests -p test_mutation_workflows.py -k the_battery_counts_every_report_its_jobs_promise
 ```
 
 A1 to A8 run the runner against a fixture repository built at run time in a temporary directory:
@@ -288,8 +298,8 @@ and green are the `mutation-rust` job's two runs.
 | `scripts/mutation-rows.d/S03900-S03999.json` | `repo` | added: this SPEC's rows on its own runner and verdict (R16) |
 | `scripts/mutation-rows.d/S04200-S04299.json` | `repo` | added: SPEC-042's rows (R16) |
 | `scripts/tests/test_mutation_rows.py` | `repo` | added: A1 to A11 |
-| `scripts/tests/test_mutation_verdict.py` | `repo` | added: A12 to A19, A27 |
-| `scripts/tests/test_mutation_workflows.py` | `repo` | added: A20 to A25, A28 |
+| `scripts/tests/test_mutation_verdict.py` | `repo` | added: A12 to A19, A27, A29 to A31 |
+| `scripts/tests/test_mutation_workflows.py` | `repo` | added: A20 to A25, A28, A32, A33 |
 | `.cargo/mutants.toml` | `repo` | added (R5, R6) |
 | `web/app/stryker.config.json` | `repo` | added (R6) |
 | `web/app/package.json`, `pnpm-lock.yaml` | `miniapp` | changed: StrykerJS 10.0.0 (R1) |

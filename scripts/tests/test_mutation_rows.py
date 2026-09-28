@@ -5,7 +5,8 @@ A1 to A8 and A10 run the runner against a fixture repository built at run time i
 directory: a git repository with one committed target, one unittest module and, for A8, one crate
 with no dependency and its own lockfile, built into the fixture's own `target/`. The fixture's
 killers append what they observed to an untracked `observed.log`, so a test can see whether a
-killer ran, and against which bytes. A9 and A11 read the committed rows.
+killer ran, and against which bytes. A9 reads the committed rows, and A11 plants rows the census
+must refuse.
 """
 
 import hashlib
@@ -22,7 +23,6 @@ from pathlib import Path
 from _support import REPO, examined
 
 RUNNER = REPO / "scripts" / "mutation_rows.py"
-PROBE = REPO / ".packs" / "scripts" / "mutation-probe.py"
 EXAMINED = re.compile(r"^examined (\d+)", re.MULTILINE)
 #: The header every fixture carries: the pack's three tables and their declared spellings.
 HEADER = {
@@ -363,9 +363,9 @@ class NoRowLeavesWhileItsTargetStays(unittest.TestCase):
         self.assertIn("S00030-DOUBLE", alone.stdout)
 
 
-def probe(root, klass):
+def census(root):
     return subprocess.run(
-        [sys.executable, str(PROBE), "--root", str(root), "check", klass],
+        [sys.executable, str(RUNNER), "census", "--root", str(root)],
         capture_output=True,
         text=True,
         timeout=300,
@@ -373,23 +373,35 @@ def probe(root, klass):
     )
 
 
-class ThePacksProbeReadsTheRows(unittest.TestCase):
-    def test_the_vendored_probe_judges_the_rows_through_the_reader(self):
-        for klass in examined("row classes", ["find-differs", "band-ids", "mutants-distinct"]):
-            done = probe(REPO, klass)
-            self.assertEqual(done.returncode, 0, f"{klass}: {done.stdout}{done.stderr}")
-            counts = EXAMINED.findall(done.stdout)
-            self.assertTrue(counts and int(counts[-1]) > 0, f"{klass}: {done.stdout}")
-        # Through the reader, a planted row whose find equals its replacement is refused by name.
-        same = script_row(
-            "S00040-SAME", "x * 2", "x * 2", "test_fixmod.Double.test_two_doubles_to_four"
+class TheCensusRefusesARowThatCanProveNothing(unittest.TestCase):
+    def test_the_census_refuses_a_row_that_can_prove_nothing(self):
+        killer = "test_fixmod.Double.test_two_doubles_to_four"
+        # A find equal to its replacement installs the unchanged file, and a second row that
+        # installs the first row's mutant for the first row's killer adds no evidence.
+        same = script_row("S00040-SAME", "x * 2", "x * 2", killer)
+        first = script_row("S00041-FIRST", "x * 2", "x * 3", killer)
+        again = script_row("S00042-AGAIN", "x * 2", "x * 3", killer)
+        rows = [("SCRIPT_MUTATIONS", row) for row in (same, first, again)]
+        fixture = Fixture(self, rows)
+        refused = census(fixture.root)
+        self.assertEqual(refused.returncode, 1, refused.stdout + refused.stderr)
+        self.assertIn("census: S00040-SAME: its find is empty or equals its replacement", refused.stdout)
+        self.assertIn(
+            "census: S00042-AGAIN: installs the mutant S00041-FIRST installs, for the same killer",
+            refused.stdout,
         )
-        fixture = Fixture(self, [("SCRIPT_MUTATIONS", same)])
-        shutil.copy(REPO / "scripts" / "mutation_rows.py", fixture.root / "scripts")
-        shutil.copy(REPO / "scripts" / "row_target.py", fixture.root / "scripts")
-        planted = probe(fixture.root, "find-differs")
-        self.assertEqual(planted.returncode, 1, planted.stdout + planted.stderr)
-        self.assertIn("S00040-SAME", planted.stdout)
+        self.assertNotIn("S00041-FIRST:", refused.stdout)
+        self.assertRegex(refused.stdout, r"(?m)^examined 3 row")
+        # A row outside its fragment's band, and an id two fragments hold, stop the census by name.
+        outside = Fixture(self, [("SCRIPT_MUTATIONS", script_row("S00150-OUT", "x * 2", "x * 3", killer))])
+        void = census(outside.root)
+        self.assertEqual(void.returncode, 1, void.stdout + void.stderr)
+        self.assertIn("S00150-OUT lies outside S0-S99", void.stdout)
+        reused = script_row("S00041-FIRST", "x * 2", "x * 5", killer)
+        twice = Fixture(self, [("SCRIPT_MUTATIONS", first), ("SCRIPT_MUTATIONS", reused)])
+        held = census(twice.root)
+        self.assertEqual(held.returncode, 1, held.stdout + held.stderr)
+        self.assertIn("the row id S00041-FIRST is held twice", held.stdout)
 
 
 if __name__ == "__main__":

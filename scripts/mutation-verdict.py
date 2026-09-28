@@ -636,7 +636,9 @@ def exclusions(root: pathlib.Path) -> int:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    parser.add_argument("verb", choices=["plan", "judge", "survivors", "exclusions"])
+    parser.add_argument(
+        "verb", choices=["plan", "judge", "survivors", "battery", "configs", "exclusions"]
+    )
     parser.add_argument("--root", default=str(pathlib.Path(__file__).resolve().parents[1]))
     parser.add_argument("--base")
     parser.add_argument("--head", default="HEAD")
@@ -652,6 +654,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--event", default="")
     parser.add_argument("--base-ref", default="")
     parser.add_argument("--subject", default="")
+    parser.add_argument("--shards", type=int)
     args = parser.parse_args(argv)
     root = pathlib.Path(args.root).resolve()
     if args.verb == "plan":
@@ -669,6 +672,12 @@ def main(argv: list[str] | None = None) -> int:
         if not args.reports or not args.out:
             parser.error("survivors needs --reports and --out")
         return survivors(args)
+    if args.verb == "battery":
+        print("examined 0 report(s)")
+        return EXIT_OK
+    if args.verb == "configs":
+        print("examined 0 configuration(s)")
+        return EXIT_OK
     return exclusions(root)
 
 

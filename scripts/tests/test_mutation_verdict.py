@@ -142,8 +142,9 @@ class Fixture:
         )
 
 
-def outcomes(caught=0, missed=(), timeout=0, unviable=0, file=LIB):
-    """cargo-mutants 27.1.0's outcomes.json, with one entry per missed mutant."""
+def outcomes(caught=0, missed=(), timeout=0, unviable=0, file=LIB, total=None):
+    """cargo-mutants 27.1.0's outcomes.json, with one entry per missed mutant. `total` above the
+    counts is a report the tool wrote before it finished: it writes the file as it goes."""
     entries = [{"scenario": "Baseline", "summary": "Success"}]
     for name in missed:
         entries.append(
@@ -152,7 +153,8 @@ def outcomes(caught=0, missed=(), timeout=0, unviable=0, file=LIB):
                 "summary": "MissedMutant",
             }
         )
-    total = caught + len(missed) + timeout + unviable
+    counted = caught + len(missed) + timeout + unviable
+    total = counted if total is None else total
     return {
         "outcomes": entries,
         "total_mutants": total,
@@ -211,6 +213,65 @@ class ThePlanReadsTheDiff(unittest.TestCase):
         found = {entry["path"]: entry["class"] for entry in plan["files"]}
         for path in examined("classified paths", sorted(expected)):
             self.assertEqual(found.get(path), expected[path], path)
+
+
+    def test_a_comment_opener_inside_a_string_is_not_a_comment(self):
+        rust = (
+            'pub const MEMBERS: &str = "crates/*";\n'
+            'pub const RAW: &str = r#"a "*/" b /* c"#;\n'
+            "pub const OPEN: char = '/';\n"
+            "pub const STAR: char = '*';\n"
+            'pub const TEXT: &str = "first line\n'
+            "// second line, inside the string\n"
+            '";\n'
+            "\n"
+            "/// Big.\n"
+            "pub fn big(x: i64) -> bool {\n"
+            "    x > 3\n"
+            "}\n"
+        )
+        web = (
+            "export const GLOB = '/*';\n"
+            "export const DOC = `\n"
+            "// inside a template\n"
+            "${'/*'} still the template\n"
+            "`;\n"
+            "export const SHAPE = /[/*]x/;\n"
+            "export const next = (n: number): number => n + 1;\n"
+        )
+        lib, start = "crates/fix/src/strings.rs", "web/app/src/lib/strings.ts"
+        fixture = Fixture(self, files={lib: rust, start: web})
+        fixture.head(
+            {
+                lib: rust.replace("// second line, inside", "// the second line, inside")
+                .replace("/// Big.", "/// Big: past three.")
+                .replace("x > 3", "x > 4"),
+                start: web.replace("// inside a template", "// inside the template").replace(
+                    "n + 1", "n + 2"
+                ),
+            }
+        )
+        plan = fixture.plan()
+        files = {entry["path"]: entry for entry in plan["files"]}
+        # Code: a line inside a string, and a comparison after four literals that each hold a
+        # comment opener. Quiet: a doc comment.
+        self.assertEqual(files[lib]["code"], [6, 11])
+        self.assertEqual(files[lib]["quiet"], [9])
+        self.assertEqual(files[start]["code"], [3, 7])
+        self.assertTrue(plan["classes"]["rust"]["applies"])
+        self.assertTrue(plan["classes"]["web"]["applies"])
+        # The control: a genuine comment and a blank line stay quiet in both languages.
+        quiet = Fixture(self, files={lib: rust, start: web})
+        quiet.head(
+            {
+                lib: rust.replace("/// Big.", "/// Big.\n//\n\n/* a block */"),
+                start: web + "// the end\n/* a block\n   comment */\n",
+            }
+        )
+        still = {entry["path"]: entry for entry in quiet.plan()["files"]}
+        self.assertEqual(still[lib]["quiet"], [10, 11, 12])
+        self.assertEqual(still[start]["quiet"], [8, 9, 10])
+        self.assertEqual(still[lib]["code"] + still[start]["code"], [])
 
 
 class TheVerdictReadsTheToolsOwnReport(unittest.TestCase):
@@ -273,6 +334,43 @@ class TheVerdictReadsTheToolsOwnReport(unittest.TestCase):
         self.assertEqual(uncovered.returncode, 1, uncovered.stdout + uncovered.stderr)
         self.assertIn("NoCoverage", uncovered.stdout)
         self.assertRegex(uncovered.stdout, r"examined 2\b")
+
+    def test_a_partial_report_is_void_never_complete(self):
+        # cargo-mutants writes outcomes.json as it goes, so a run the runner killed leaves a report
+        # that counts only the mutants it reached: here 1 of 3, under a SIGKILL's exit 137.
+        fixture = Fixture(self, rows=[("MUTATIONS", ROW_ON_CONSTANT)])
+        fixture.head({LIB: LIB_TEXT.replace("x * 2", "x + x")})
+        plan = fixture.plan()
+        self.assertIn("S00050-LAST-HOUR", plan["rows"])
+        rows = fixture.report(
+            "rows.json", [{"id": "S00050-LAST-HOUR", "verdict": "KILLED", "target": LIB}]
+        )
+        partial = fixture.report("mutants.out/outcomes.json", outcomes(caught=1, total=3))
+        killed = fixture.judge(
+            "rust", "--outcomes", str(partial), "--tool-exit", "137", "--rows", str(rows)
+        )
+        self.assertEqual(killed.returncode, 3, killed.stdout)
+        self.assertIn("VOID cargo-mutants exit 137", killed.stdout)
+        # Exit 0 over a report short of its total is partial too: the counts decide, not the exit.
+        short = fixture.judge(
+            "rust", "--outcomes", str(partial), "--tool-exit", "0", "--rows", str(rows)
+        )
+        self.assertEqual(short.returncode, 3, short.stdout)
+        self.assertIn("VOID the report counts 1 of 3 mutants reported", short.stdout)
+        # The controls: a whole report reads as the tool left it, a survivor as a failure.
+        whole = fixture.report("mutants.out/outcomes.json", outcomes(caught=1, unviable=2))
+        green = fixture.judge(
+            "rust", "--outcomes", str(whole), "--tool-exit", "0", "--rows", str(rows)
+        )
+        self.assertEqual(green.returncode, 0, green.stdout)
+        self.assertIn("cargo-mutants examined 1 (caught 1, missed 0, timeout 0), unviable 2", green.stdout)
+        missed = "crates/fix/src/lib.rs:3:5: replace + with - in double"
+        survived = fixture.report("mutants.out/outcomes.json", outcomes(caught=1, missed=[missed]))
+        red = fixture.judge(
+            "rust", "--outcomes", str(survived), "--tool-exit", "2", "--rows", str(rows)
+        )
+        self.assertEqual(red.returncode, 1, red.stdout)
+        self.assertIn(f"MISSED {missed}", red.stdout)
 
     def test_a_proved_row_on_a_changed_line_carries_its_file(self):
         fixture = Fixture(self, rows=[("MUTATIONS", ROW_ON_CONSTANT)])
@@ -376,6 +474,84 @@ class TheVerdictReadsTheToolsOwnReport(unittest.TestCase):
         baseline = fixture.judge("rust", "--outcomes", str(report), "--tool-exit", "4")
         self.assertEqual(baseline.returncode, 3, baseline.stdout + baseline.stderr)
         self.assertIn("exit 4", baseline.stdout)
+
+
+def battery_reports(root, shards):
+    """A battery's downloaded artifacts: {shard: (exit, outcomes or None)}, then rows and Stryker."""
+    for shard, (code, report) in shards.items():
+        directory = root / f"mutants-shard-{shard}"
+        (directory / "mutants.out").mkdir(parents=True)
+        if code is not None:
+            (directory / "cargo-mutants.exit").write_text(f"{code}\n", encoding="utf-8")
+        if report is not None:
+            (directory / "mutants.out" / "outcomes.json").write_text(json.dumps(report), "utf-8")
+
+
+class TheBatteryCountsEveryReport(unittest.TestCase):
+    def battery(self, reports, shards):
+        return subprocess.run(
+            [
+                sys.executable,
+                str(VERDICT),
+                "battery",
+                "--reports",
+                str(reports),
+                "--shards",
+                str(shards),
+            ],
+            capture_output=True,
+            text=True,
+            env=dict(os.environ, PYTHONDONTWRITEBYTECODE="1"),
+            timeout=120,
+            check=False,
+        )
+
+    def test_a_missing_or_partial_battery_report_fails_by_name(self):
+        scratch = tempfile.TemporaryDirectory()
+        self.addCleanup(scratch.cleanup)
+        reports = Path(scratch.name) / "reports"
+        survivor = "crates/kernel/src/clock.rs:47:88: delete - in now"
+        battery_reports(
+            reports,
+            {
+                0: ("2", outcomes(caught=3, missed=[survivor])),
+                1: ("0", outcomes(caught=3, total=4)),
+                # Shard 2 uploaded nothing: its runner was shut down.
+                3: ("137", outcomes(caught=2, total=5)),
+                4: (None, outcomes(caught=1)),
+            },
+        )
+        stryker_report = reports / "stryker" / "stryker" / "mutation.json"
+        stryker_report.parent.mkdir(parents=True)
+        stryker_report.write_text(json.dumps(stryker(["Killed"])), encoding="utf-8")
+        done = self.battery(reports, 5)
+        self.assertEqual(done.returncode, 1, done.stdout + done.stderr)
+        for finding in examined(
+            "missing or partial reports",
+            [
+                "battery: PARTIAL mutants-shard-1: 3 of 4 mutants reported",
+                "battery: MISSING mutants-shard-2: no outcomes.json",
+                "battery: PARTIAL mutants-shard-3: cargo-mutants exit 137",
+                "battery: PARTIAL mutants-shard-4: no cargo-mutants exit recorded",
+                "battery: MISSING rows: no rows.json",
+            ],
+        ):
+            self.assertIn(finding, done.stdout)
+        self.assertNotIn("mutants-shard-0:", done.stdout)
+        self.assertIn("battery: counted 2 of 7 reports whole", done.stdout)
+        self.assertRegex(done.stdout, r"(?m)^examined 7 report")
+        # The control: every shard, the rows and the sweep reported whole.
+        whole = Path(scratch.name) / "whole"
+        battery_reports(whole, {0: ("2", outcomes(caught=3, missed=[survivor])), 1: ("0", outcomes())})
+        (whole / "rows").mkdir()
+        (whole / "rows" / "rows.json").write_text(
+            json.dumps([{"id": "S00050-LAST-HOUR", "verdict": "KILLED", "target": LIB}]), "utf-8"
+        )
+        (whole / "stryker").mkdir()
+        (whole / "stryker" / "mutation.json").write_text(json.dumps(stryker(["Killed"])), "utf-8")
+        green = self.battery(whole, 2)
+        self.assertEqual(green.returncode, 0, green.stdout + green.stderr)
+        self.assertIn("battery: counted 4 of 4 reports whole", green.stdout)
 
 
 class TheWeeklySurvivorsBecomeIssues(unittest.TestCase):
