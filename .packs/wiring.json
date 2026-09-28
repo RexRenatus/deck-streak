@@ -135,8 +135,7 @@
       "cyber-pipeline": {
         "expected_red": {
           "cp.threat-model-trace": "#60",
-          "ws.csp-present": "#25",
-          "ws.tg-init-data-verified": "#17"
+          "ws.csp-present": "#25"
         },
         "note": "the ws rows are web-security's; no planned SPEC writes the threat model cp.threat-model-trace reads, so #60, which brings every phxd pack to green, owns it"
       },
@@ -197,10 +196,9 @@
       },
       "web-security": {
         "expected_red": {
-          "ws.csp-present": "#25",
-          "ws.tg-init-data-verified": "#17"
+          "ws.csp-present": "#25"
         },
-        "note": "the Caddy block serves the Content-Security-Policy a source tree cannot carry, since the page's meta policy is built with its hashes (#25); init data is validated on the server (#17)"
+        "note": "the Caddy block serves the Content-Security-Policy a source tree cannot carry, since the page's meta policy is built with its hashes (#25)"
       }
     },
     "proxy-client-scan": {

@@ -18,6 +18,9 @@ deck-streak-notifications.workspace = true
 deck-streak-coordination.workspace = true
 # ADR-003 and ADR-025: the HTTP adapter's stack (SPEC-025).
 axum.workspace = true
+# ADR-029: the handshake's JSON body and the answers' JSON (SPEC-024).
+serde.workspace = true
+serde_json.workspace = true
 thiserror.workspace = true
 tokio = { workspace = true, features = ["net"] }
 tower = { workspace = true, features = ["limit", "load-shed"] }

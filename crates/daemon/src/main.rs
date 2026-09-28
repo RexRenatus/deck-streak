@@ -79,7 +79,7 @@ fn main() -> ExitCode {
             return ExitCode::FAILURE;
         }
     };
-    let outcome = runtime.block_on(run(role, &environment));
+    let outcome = runtime.block_on(run(role, &environment, &redactor));
     runtime.shutdown_timeout(EXIT_GRACE);
     match outcome {
         Ok(()) => ExitCode::SUCCESS,
@@ -93,9 +93,12 @@ fn main() -> ExitCode {
     }
 }
 
-/// Runs `role` to its end.
-async fn run(role: Role, environment: &Environment) -> anyhow::Result<()> {
+/// Runs `role` to its end. `redactor` is the log writer's: a role registers every credential it
+/// loads with it, so no later line can carry one (SPEC-020 R12).
+async fn run(role: Role, environment: &Environment, redactor: &Redactor) -> anyhow::Result<()> {
     match role {
-        Role::Api => role_api::run(environment).await.context("the api role"),
+        Role::Api => role_api::run(environment, redactor)
+            .await
+            .context("the api role"),
     }
 }
