@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO reading_topic_days (run_id, study_day, topic, state, class, reason, digest, card_ids, note_ids, new_cards, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11) ON CONFLICT (study_day, topic) DO UPDATE SET run_id = excluded.run_id, state = excluded.state, class = excluded.class, reason = excluded.reason, digest = excluded.digest, card_ids = excluded.card_ids, note_ids = excluded.note_ids, new_cards = excluded.new_cards",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 11
+    },
+    "nullable": []
+  },
+  "hash": "286236a1bd6c9680f05b5c7596fdf38a4f82b17094758dba8788f9a2b727171b"
+}
