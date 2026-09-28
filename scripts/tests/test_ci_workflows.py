@@ -3,7 +3,8 @@ on pull requests into dev and main and pushes to both (SPEC-030 A1), and only th
 reaches main (SPEC-034 A5 to A7). The gate runs in parallel jobs, each stage in exactly one, the
 engine's slow tests in a job of their own, a cache is saved only by a push to dev or main, and every
 job that compiles Rust installs the protoc Anki's engine needs (SPEC-038). No workflow reads a
-secret but the default token, or checks out or fetches another repository (SPEC-034 A9 to A12)."""
+secret but the default token, or checks out or fetches another repository (SPEC-034 A9 to A12), and
+a `.yaml` workflow is held to the hardening rules as a `.yml` one is (A13)."""
 
 import math
 import os
@@ -64,9 +65,14 @@ CACHE_BY_THEMSELVES = (
 )
 
 
+def workflow_files(directory):
+    """The workflow files of a directory, examined: none is VOID, never a pass."""
+    return examined("workflow files", sorted(directory.glob("*.yml")))
+
+
 class WorkflowsAreHardened(unittest.TestCase):
     def setUp(self):
-        self.files = examined("workflow files", sorted(WORKFLOWS.glob("*.yml")))
+        self.files = workflow_files(WORKFLOWS)
 
     def test_every_workflow_defaults_to_a_read_only_token(self):
         for path in self.files:
@@ -197,6 +203,20 @@ class WorkflowsAreHardened(unittest.TestCase):
             (Path(scratch) / "README.md").write_text("Not a workflow.\n", encoding="utf-8")
             with self.assertRaisesRegex(AssertionError, "examined 0 workflow files"):
                 secret_and_checkout_problems(Path(scratch))
+
+    def test_a_yaml_workflow_is_held_to_the_same_hardening_rules(self):
+        # GitHub reads a `.yaml` workflow as it reads a `.yml` one (SPEC-034 R7): each hardening test
+        # above refuses the planted `.yaml` workflow by its name, beside a hardened `.yml` control.
+        planted = workflow_files(PLANTED_HARDENING)
+        for test in (
+            "test_every_workflow_defaults_to_a_read_only_token",
+            "test_every_action_is_pinned_by_a_full_commit_sha",
+            "test_no_workflow_uses_a_self_hosted_runner_or_a_privileged_trigger",
+        ):
+            case = WorkflowsAreHardened(test)
+            case.files = planted
+            with self.subTest(test), self.assertRaisesRegex(AssertionError, r"unhardened\.yaml"):
+                getattr(case, test)()
 
 
 def triggers(workflow):
@@ -1180,6 +1200,7 @@ class TheEngineSetRunsInSlices(unittest.TestCase):
 
 # The planted workflows: those the checker refuses (A10) and those it admits (A11).
 PLANTED = REPO / "scripts" / "tests" / "fixtures" / "secrets-and-checkouts"
+PLANTED_HARDENING = REPO / "scripts" / "tests" / "fixtures" / "workflow-hardening"
 # The secrets context in an expression, in any case: `secrets.NAME` (group 1), `secrets['NAME']`
 # (group 2), or the context whole, which names no secret: `toJSON(secrets)`, `secrets.*`, or an
 # index computed at run time.
