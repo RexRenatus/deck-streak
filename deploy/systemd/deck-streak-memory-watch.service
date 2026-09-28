@@ -1,0 +1,11 @@
+# Runs memory-watch.template.sh every minute (memory-watch.template.timer). It exits 1 when a
+# service gains an OOM kill or hits MemoryMax, so OnFailure= pages through the one alert path.
+[Unit]
+Description=Watch every service's memory against MemoryHigh and MemoryMax
+OnFailure=deckstreak-alert@%n.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/deckstreak/deploy/memory-watch.sh deckstreak-server deckstreak-bot litestream
+StateDirectory=deckstreak-memory-watch
+MemoryMax=32M

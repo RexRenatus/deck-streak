@@ -1,10 +1,12 @@
 //! Every event leaves the process as one JSON line that opens with its journal priority, with each
 //! registered secret and every token shape replaced by the marker the predecessor's filter writes
-//! (SPEC-020 A13 to A15, R12, R13).
+//! (SPEC-020 A13 to A15, R12, R13), and so does a panic's message, which the logging's panic hook
+//! logs as one event instead of the default hook's plain text on stderr (SPEC-031 A8, R1).
 //!
 //! What leaves the process is measured on a child process: this test binary run again, running
 //! only an ignored test that installs the kernel's logging and emits events, so the global
-//! subscriber and the real stdout are the ones a role of the daemon would have.
+//! subscriber, the panic hook and the real stdout and stderr are the ones a role of the daemon
+//! would have.
 
 // An integration test is test code: its helpers panic on a failed child, and the golden reader
 // prints the examined count on purpose. clippy.toml's in-test allowances cover `#[test]` bodies.
@@ -25,10 +27,14 @@ const PLAIN: &str = "velvet-orchid-lantern";
 const QUOTED: &str = "quote\"and\\slash";
 /// A synthetic token of the predecessor's shape; seven digits, so never the public scrub's shape.
 const TOKEN: &str = "4815162:abcdefghijklmnopqrstuvwxyzABCDEF";
+/// A credential's synthetic value that a panic's message carries.
+const PANICKED: &str = "amber-kettle-signal";
+/// The name of the thread the panicking child panics on.
+const PANICKING_THREAD: &str = "probe-a8";
 
 /// Runs this test binary again, running only the ignored test `child` with `RUST_LOG` at `level`,
-/// and returns every event line it wrote to stdout.
-fn events_of(child: &str, level: &str) -> Vec<String> {
+/// checks that it passed, and returns what it wrote to stdout and to stderr.
+fn run_child(child: &str, level: &str) -> (String, String) {
     let output = Command::new(std::env::current_exe().expect("this test binary's path"))
         .args([
             "--exact",
@@ -41,13 +47,23 @@ fn events_of(child: &str, level: &str) -> Vec<String> {
         .output()
         .expect("the child process runs");
     let stdout = String::from_utf8(output.stdout).expect("stdout is UTF-8");
+    let stderr = String::from_utf8_lossy(&output.stderr).into_owned();
     assert!(
         output.status.success(),
-        "the child {child} failed:\n{stdout}\n{}",
-        String::from_utf8_lossy(&output.stderr)
+        "the child {child} failed:\n{stdout}\n{stderr}"
     );
-    // The test harness prints its own lines around the child's; an event is a JSON object, with
-    // its priority prefix when it has one.
+    (stdout, stderr)
+}
+
+/// Runs this test binary again, running only the ignored test `child` with `RUST_LOG` at `level`,
+/// and returns every event line it wrote to stdout.
+fn events_of(child: &str, level: &str) -> Vec<String> {
+    event_lines(&run_child(child, level).0)
+}
+
+/// Every event line of a child's stdout. The test harness prints its own lines around the child's;
+/// an event is a JSON object, with its priority prefix when it has one.
+fn event_lines(stdout: &str) -> Vec<String> {
     stdout
         .lines()
         .filter_map(|line| {
@@ -242,4 +258,63 @@ fn a_second_install_returns_an_error() {
     let events = probed(&lines, "second");
     assert_eq!(events.len(), 1, "{lines:#?}");
     assert_eq!(events[0]["refused"], true);
+}
+
+#[test]
+#[ignore = "a child process: a_panic_logs_one_redacted_json_event_and_never_the_value runs it"]
+fn child_panics_with_a_registered_secret() {
+    let redactor = Redactor::new();
+    logging::install(&redactor).expect("the first install in this process");
+    redactor.register(PANICKED);
+    // A thread of its own panics, as a role's task would, so the child itself passes and its parent
+    // reads everything the panic left on either stream.
+    let joined = std::thread::Builder::new()
+        .name(PANICKING_THREAD.to_owned())
+        .spawn(|| panic!("the credential {PANICKED} reached a panic"))
+        .expect("the thread starts")
+        .join();
+    assert!(joined.is_err(), "the thread did not panic");
+}
+
+#[test]
+fn a_panic_logs_one_redacted_json_event_and_never_the_value() {
+    let (stdout, stderr) = run_child("child_panics_with_a_registered_secret", "info");
+    let lines = event_lines(&stdout);
+    let panics: Vec<(Option<&str>, Value)> = lines
+        .iter()
+        .map(|line| parse(line))
+        .filter(|(_, event)| event["thread"] == PANICKING_THREAD)
+        .collect();
+    assert_eq!(
+        panics.len(),
+        1,
+        "one event must log the panic:\n{stdout}\nstderr:\n{stderr}"
+    );
+    let (prefix, event) = &panics[0];
+    // An ERROR event, which journald files at priority 3, so the alert quotes it.
+    assert_eq!(*prefix, Some("<3>"), "{event}");
+    assert_eq!(event["level"], "ERROR", "{event}");
+    assert_eq!(
+        event["panic"],
+        format!("the credential {REDACTED} reached a panic"),
+        "{event}"
+    );
+    assert!(
+        event["location"]
+            .as_str()
+            .is_some_and(|location| location.contains("logging.rs")),
+        "the event names no location: {event}"
+    );
+    // The value never leaves the process, on either stream, and nothing reaches stderr, where no
+    // redactor reads: the default hook's plain text is replaced, never chained.
+    for text in [&stdout, &stderr] {
+        assert!(
+            !text.contains(PANICKED),
+            "a secret left the process:\n{text}"
+        );
+    }
+    assert!(
+        !stderr.contains("panicked at"),
+        "the default panic hook wrote to stderr:\n{stderr}"
+    );
 }

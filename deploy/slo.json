@@ -1,0 +1,57 @@
+{
+  "schema": "phx.slo.v1",
+  "slos": [
+    {
+      "id": "api-availability",
+      "unit": "deck-streak-api.service",
+      "sli": {
+        "kind": "availability",
+        "source": "journal",
+        "good": "a response event whose status is below 500",
+        "total": "every response event"
+      },
+      "objective": 0.99,
+      "window_days": 28,
+      "rationale": "one owner's study sessions; a page must mean a failing API, not two unlucky requests",
+      "expected_events_per_hour": 20,
+      "low_traffic": "longer-window",
+      "alerts": [
+        {
+          "severity": "page",
+          "long_window": "6h",
+          "short_window": "30m",
+          "burn_rate": 6.0,
+          "budget_consumed": 0.05,
+          "route": "telegram"
+        },
+        {
+          "severity": "ticket",
+          "long_window": "3d",
+          "short_window": "6h",
+          "burn_rate": 1.0,
+          "budget_consumed": 0.1,
+          "route": "telegram"
+        }
+      ]
+    }
+  ],
+  "error_budget_policy": {
+    "on_exhaustion": [
+      "freeze feature releases until the API is back within its SLO"
+    ],
+    "escalation": "the owner decides a disputed count"
+  },
+  "alerting": {
+    "unit": "deck-streak-alert@.service",
+    "channel": "telegram"
+  },
+  "evaluator": {
+    "unit": "deck-streak-slo.service",
+    "timer": "deck-streak-slo.timer"
+  },
+  "memory_watch": {
+    "unit": "deck-streak-memory-watch.service",
+    "timer": "deck-streak-memory-watch.timer",
+    "units": "all"
+  }
+}
