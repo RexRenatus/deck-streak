@@ -31,6 +31,13 @@ constructors, with a test of the declared tier that kills one of them. All twelv
 the committed tree: every row KILLED, each target restored byte for byte. A test of the flush step
 that asserted only an absence gained its positive artifacts (b87946d).
 
+The diff's mutation run then missed six of the mutants it examined. Keys that tell the date
+matcher's year check apart (f082254), and tests of the in-app feed's read and of a recap naming both
+causes (dd09a39), kill three. The other three were equivalent: the quiet window's `<` after its
+equal-bounds return, and two fields of a held row that nothing read after a retry. Refactors removed
+them (c5fa6f3, 7591e5b), and a test of a quiet hold given up by failed sends pins the reason the
+abandonment now carries. No test changed what an acceptance criterion asserts.
+
 ```red-first
 A1: red at 04802ca: assertion `left == right` failed: every key of the file, and nothing else; left: the policy written back without ladder, celebration_budgets, streak_break and near_miss, right: the file with them
 A1: green at b5b66ca
