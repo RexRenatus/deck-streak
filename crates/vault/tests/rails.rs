@@ -1,6 +1,12 @@
 //! The content rails refuse every planted fixture by its own rail row and pass a clean reading note
 //! (SPEC-042 A2, R3), hold the vendored `rails.json` to the rail kinds the port reads, and refuse a
 //! control character with the adapter's own rail, naming the rail and the line and never the text.
+//!
+//! The cases after those read a note the way the pack's probe reads it, one reading rule each: where
+//! a fence opens and closes, what a code span, a comment, a tag, an attribute and each form of link
+//! take, how a path is decoded and where its extension starts, and the line each rail names. Each
+//! pins behaviour no planted fixture reached, so a mutant of `rails.rs` that breaks it is caught
+//! (SPEC-057 R1, R2).
 
 // An integration test is test code: its helpers panic on an unreadable fixture, and it prints the
 // examined count on purpose. clippy.toml's in-test allowances cover only `#[test]` bodies.
@@ -9,6 +15,9 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::sync::mpsc::{self, RecvTimeoutError};
+use std::thread;
+use std::time::Duration;
 
 use deck_streak_kernel::Verdict;
 use deck_streak_vault::Rails;
@@ -160,5 +169,73 @@ fn a_refusal_names_its_rail_and_line_and_never_the_text() {
     assert!(
         !shown.contains("private-marker"),
         "the refusal echoed the text: {shown}"
+    );
+}
+
+/// How long one scan may run before a test calls it a hang. A scan of a few short lines ends in
+/// microseconds, so one still running after this has stopped advancing its cursor: the test fails
+/// then, rather than letting the scan grow its memory until the mutation tool's own timeout.
+const HANG: Duration = Duration::from_secs(5);
+
+/// The vendored rails.
+fn vendored() -> Rails {
+    Rails::vendored().expect("the vendored rails.json reads as rails")
+}
+
+/// Every refusal `rails` make of `text`, as each one's row and line, in `refusals`' own order. The
+/// scan runs on its own thread, and one that panics or outlasts [`HANG`] fails the test.
+fn refused(rails: &Rails, text: &str) -> Vec<(String, usize)> {
+    let (sender, receiver) = mpsc::channel();
+    let (rails, note) = (rails.clone(), text.to_owned());
+    thread::spawn(move || {
+        let refusals = rails
+            .refusals(&note)
+            .into_iter()
+            .map(|refusal| (refusal.row.to_string(), refusal.line))
+            .collect::<Vec<_>>();
+        // A send fails only once the test has stopped waiting, having failed on a hang.
+        let _ = sender.send(refusals);
+    });
+    match receiver.recv_timeout(HANG) {
+        Ok(refusals) => refusals,
+        Err(RecvTimeoutError::Timeout) => panic!("the scan of {text:?} ran past {HANG:?}"),
+        Err(RecvTimeoutError::Disconnected) => panic!("the scan of {text:?} panicked"),
+    }
+}
+
+/// Holds each case's note to exactly the refusals it names, row and line, and prints how many
+/// cases it judged.
+fn judge(rails: &Rails, what: &str, cases: &[(&str, &[(&str, usize)])]) {
+    for (text, expected) in examined(what, cases.to_vec()) {
+        let expected: Vec<(String, usize)> = expected
+            .iter()
+            .map(|(row, line)| ((*row).to_owned(), *line))
+            .collect();
+        assert_eq!(refused(rails, text), expected, "{what}: {text:?}");
+    }
+}
+
+#[test]
+fn each_kind_of_rail_refuses_the_line_it_stands_on() {
+    // The raw scan, a tag in the prose, a fence's opening line and a code span each name their
+    // own line, never the one before it.
+    judge(
+        &vendored(),
+        "note(s) refused on their second line",
+        &[
+            (
+                "A clean line.\nSee obsidian://open here.\n",
+                &[("executable_schemes:obsidian", 2)],
+            ),
+            ("A clean line.\n<iframe>\n", &[("html_allow", 2)]),
+            (
+                "A clean line.\n```dataviewjs\nlet x = 1;\n```\n",
+                &[("fence_known:dataviewjs", 2)],
+            ),
+            (
+                "A clean line.\nThe count is `= this.file.name` today.\n",
+                &[("inline_query_prefixes:=", 2)],
+            ),
+        ],
     );
 }
