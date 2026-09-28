@@ -94,8 +94,12 @@ const SEND_METHODS: [&str; 22] = [
 /// The bot's own send, which takes no pass.
 const BOT_SEND: &str = "send_html";
 
-/// The bot's crate, where the Bot API is named.
-const BOT_CRATE: &str = "crates/bot/";
+/// The bot's sources, where the Bot API is named: a send method only by its own named send.
+const BOT_SOURCES: &str = "crates/bot/src/";
+
+/// The bot's own ways to reach the owner's chat that take no pass, each with the file that defines
+/// it: every use of one is its definition there or at a named call site.
+const GUARDED: [(&str, &str); 1] = [(BOT_SEND, "crates/bot/src/transport.rs")];
 
 /// SPEC-031's alert path: it pages the owner that a unit failed, the daemon among them, so it
 /// cannot go through the daemon's router. The one shipped source outside the bot that names the
@@ -288,7 +292,21 @@ fn census(sources: &[(String, String)]) -> Census {
         } else {
             (text.clone(), text.clone())
         };
-        if !path.starts_with(BOT_CRATE) && path != ALERT_PATH {
+        if path.starts_with(BOT_SOURCES) {
+            for (at, name) in names_of_a_send(&code) {
+                if defined(&structure, at) {
+                    continue;
+                }
+                let function = enclosing(&structure, at);
+                if !by_its_named_send(path, &function, &name) {
+                    found.refusals.push((
+                        path.clone(),
+                        line_of(&code, at),
+                        format!("names {name} in {function}, not a named call site"),
+                    ));
+                }
+            }
+        } else if path != ALERT_PATH {
             for (at, name) in names_of_the_bot_api(&code) {
                 found
                     .refusals
@@ -296,15 +314,28 @@ fn census(sources: &[(String, String)]) -> Census {
             }
         }
         if rust {
-            for (at, send) in send_calls(&structure) {
-                let function = enclosing(&structure, at);
-                if !NAMED_SENDS.contains(&(path.as_str(), function.as_str(), send.as_str())) {
-                    found.refusals.push((
-                        path.clone(),
-                        line_of(&code, at),
-                        format!("calls {send} in {function}, not a named call site"),
-                    ));
+            for (name, definer) in GUARDED {
+                for at in identifiers(&structure, name) {
+                    if path == definer && defined(&structure, at) {
+                        continue;
+                    }
+                    let function = enclosing(&structure, at);
+                    if !at_a_named_site(path, &function, name) {
+                        let how = if called(&structure, at, name) {
+                            "calls"
+                        } else {
+                            "uses"
+                        };
+                        found.refusals.push((
+                            path.clone(),
+                            line_of(&code, at),
+                            format!("{how} {name} in {function}, not a named call site"),
+                        ));
+                    }
                 }
+            }
+            for (at, send) in sends(&code, &structure) {
+                let function = enclosing(&structure, at);
                 found.sends.push((path.clone(), function, send));
             }
         }
@@ -312,6 +343,19 @@ fn census(sources: &[(String, String)]) -> Census {
     found.refusals.sort();
     found.sends.sort();
     found
+}
+
+/// Whether `name` is used in `function` of `path` at one of its named call sites.
+fn at_a_named_site(path: &str, function: &str, name: &str) -> bool {
+    NAMED_SENDS.contains(&(path, function, name))
+}
+
+/// Whether the Bot API method `name`, in either spelling, is named in `function` of `path` by the
+/// named send that makes that method's request.
+fn by_its_named_send(path: &str, function: &str, name: &str) -> bool {
+    NAMED_SENDS
+        .iter()
+        .any(|&(file, site, send)| file == path && site == function && snake(send) == snake(name))
 }
 
 /// What `code` names of the Bot API: its host, in any case, and its send methods in either
@@ -322,12 +366,36 @@ fn names_of_the_bot_api(code: &str) -> Vec<(usize, String)> {
         .match_indices(BOT_API_HOST)
         .map(|(at, host)| (at, host.to_owned()))
         .collect();
+    named.extend(names_of_a_send(code));
+    named
+}
+
+/// Each name of a Bot API send method in `code`, in either spelling, as the byte it starts at and
+/// the name.
+fn names_of_a_send(code: &str) -> Vec<(usize, String)> {
+    let mut named = Vec::new();
     for method in SEND_METHODS {
         for spelling in [method.to_owned(), snake(method)] {
             named.extend(identifiers(code, &spelling).map(|at| (at, spelling.clone())));
         }
     }
     named
+}
+
+/// Each send in a Rust source, as the byte it starts at and the send: a call of the bot's own or of
+/// a Bot API send method in a client's spelling, a definition aside, read from its `structure`; and
+/// a raw request, a send method in the Bot API's spelling right after a `/`, read from its `code`,
+/// where a request's URL is a literal.
+fn sends(code: &str, structure: &str) -> Vec<(usize, String)> {
+    let mut found = send_calls(structure);
+    for method in SEND_METHODS {
+        found.extend(
+            identifiers(code, method)
+                .filter(|&at| code[..at].ends_with('/'))
+                .map(|at| (at, method.to_owned())),
+        );
+    }
+    found
 }
 
 /// Each call of a send in `structure`, a definition aside, as the byte it starts at and the send:
@@ -337,17 +405,25 @@ fn send_calls(structure: &str) -> Vec<(usize, String)> {
     let mut calls = Vec::new();
     for send in sends {
         for at in identifiers(structure, &send) {
-            let called = structure[at + send.len()..].trim_start().starts_with('(');
-            let before = structure[..at].trim_end();
-            let defined = before
-                .strip_suffix("fn")
-                .is_some_and(|rest| rest.chars().next_back().is_none_or(|c| !ident(c)));
-            if called && !defined {
+            if called(structure, at, &send) && !defined(structure, at) {
                 calls.push((at, send.clone()));
             }
         }
     }
     calls
+}
+
+/// Whether the identifier `name` at the byte `at` of `structure` is called.
+fn called(structure: &str, at: usize, name: &str) -> bool {
+    structure[at + name.len()..].trim_start().starts_with('(')
+}
+
+/// Whether the identifier at the byte `at` of `structure` is the name a `fn` defines.
+fn defined(structure: &str, at: usize) -> bool {
+    structure[..at]
+        .trim_end()
+        .strip_suffix("fn")
+        .is_some_and(|rest| rest.chars().next_back().is_none_or(|c| !ident(c)))
 }
 
 /// A Bot API method's name as a client library spells it: `sendMessage` as `send_message`.
@@ -486,14 +562,19 @@ fn closing_angle(text: &str) -> usize {
     text.len()
 }
 
-/// A Rust source's code, its comments and `#[cfg(test)]` items blanked, and its structure, its
-/// string and character literals blanked too. Both keep the text's bytes and lines in place.
+/// A Rust source's code, its comments and `#[cfg(test)]` modules blanked, and its structure, its
+/// string and character literals blanked too. Both keep the text's bytes and lines in place. Only a
+/// module is left out: any other item compiled for tests alone, a field among them, is read.
 fn rust_code(text: &str) -> (String, String) {
     let (mut code, mut structure) = lex(text);
     let mut from = 0;
     while let Some(found) = structure[from..].find(CFG_TEST) {
         let start = from + found;
         let after = start + CFG_TEST.len();
+        if !a_module_follows(&structure[after..]) {
+            from = after;
+            continue;
+        }
         let end = body(&structure, after).map_or_else(
             || {
                 structure[after..]
@@ -507,6 +588,34 @@ fn rust_code(text: &str) -> (String, String) {
         from = end;
     }
     (code, structure)
+}
+
+/// Whether the item `rest` starts with is a module, any further attributes on it passed over.
+fn a_module_follows(rest: &str) -> bool {
+    let mut rest = rest.trim_start();
+    while rest.starts_with("#[") {
+        rest = rest[attribute_end(rest)..].trim_start();
+    }
+    rest.strip_prefix("mod")
+        .is_some_and(|name| name.starts_with(char::is_whitespace))
+}
+
+/// The byte past the `]` that closes the attribute `text` starts with.
+fn attribute_end(text: &str) -> usize {
+    let mut depth = 0_i64;
+    for (at, byte) in text.bytes().enumerate() {
+        match byte {
+            b'[' => depth += 1,
+            b']' => {
+                depth -= 1;
+                if depth == 0 {
+                    return at + 1;
+                }
+            }
+            _ => {}
+        }
+    }
+    text.len()
 }
 
 /// What a stretch of a Rust source is.
@@ -637,36 +746,43 @@ fn blank(text: &str, start: usize, end: usize) -> String {
     out
 }
 
-/// Every shipped source under `root`, as its path from the root and its text, in path order.
+/// Every shipped source under `root`, as its path from the root and its text, in path order. A
+/// directory under a `src/` is always entered, whatever its name; elsewhere the skipped and the
+/// test directories are left out.
 fn shipped_sources(root: &Path) -> Vec<(String, String)> {
     let mut found = Vec::new();
     let mut pending = vec![root.to_path_buf()];
     while let Some(directory) = pending.pop() {
+        let under_sources = relative(root, &directory).iter().any(|part| part == "src");
         for entry in fs::read_dir(&directory).expect("a readable directory") {
             let entry = entry.expect("a directory entry");
             let kind = entry.file_type().expect("a file type");
             let name = entry.file_name().to_string_lossy().into_owned();
             if kind.is_dir() {
-                let left_out = SKIPPED_DIRECTORIES.contains(&name.as_str())
-                    || TEST_DIRECTORIES.contains(&name.as_str());
+                let left_out = !under_sources
+                    && (SKIPPED_DIRECTORIES.contains(&name.as_str())
+                        || TEST_DIRECTORIES.contains(&name.as_str()));
                 if !left_out {
                     pending.push(entry.path());
                 }
             } else if kind.is_file() && shipped(&name) {
                 let path = entry.path();
-                let relative: Vec<String> = path
-                    .strip_prefix(root)
-                    .expect("a path under the root")
-                    .components()
-                    .map(|part| part.as_os_str().to_string_lossy().into_owned())
-                    .collect();
                 let text = fs::read_to_string(&path).expect("a shipped source is UTF-8");
-                found.push((relative.join("/"), text));
+                found.push((relative(root, &path).join("/"), text));
             }
         }
     }
     found.sort();
     found
+}
+
+/// The parts of `path` below `root`, each as text.
+fn relative(root: &Path, path: &Path) -> Vec<String> {
+    path.strip_prefix(root)
+        .expect("a path under the root")
+        .components()
+        .map(|part| part.as_os_str().to_string_lossy().into_owned())
+        .collect()
 }
 
 /// Whether a file named `name` is a shipped source: one of the shipped extensions, and no test.
