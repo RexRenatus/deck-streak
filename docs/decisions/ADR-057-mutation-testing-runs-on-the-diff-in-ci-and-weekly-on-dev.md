@@ -219,4 +219,13 @@ ADR-012 (testing), ADR-017 (CI), ADR-029 (the golden reader). cargo-mutants: mut
 (in-diff, in-place, shards, exit codes); StrykerJS: stryker-mutator.io and the stryker-js
 repository; GitHub: "Events that trigger workflows".
 
+Amended in part on 2026-09-28, by ADR-070 (proposed with SPEC-057): D6's form, an anchored
+`exclude_re` entry or a `Stryker disable` comment, hides the mutant it excuses from the listing,
+since cargo-mutants filters an excluded mutant out and StrykerJS never runs an ignored one, so no
+later run tests the claim and no count from the tools' reports sees it. An equivalent mutant is
+instead recorded in `scripts/mutation-equivalent.d/`, one fragment per package, bound by an anchor
+to exactly one listed mutant, and excused only while the tool keeps reporting it missed. This takes
+effect when SPEC-057's first delivery accepts ADR-070; until then D6 stands. The rest of this
+decision does not change.
+
 Note (2026-09-28): the Confirmation's criteria are SPEC-039's A1 to A40, not A1 to A37.

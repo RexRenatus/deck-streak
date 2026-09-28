@@ -38,10 +38,11 @@
   collection (`COLLECTION_OPEN_RETRIES`). The cadence is 15 minutes plus once before each
   notification job.
 - **DeckStreak's rule is not the predecessor's cadence (ADR-037).** DeckStreak reuses the
-  predecessor's Anki login, which the owner approved at gate 6 on testable conditions: no upload
+  owner's own Anki login, which the owner approved at gate 6 on testable conditions: no upload
   path, proven against a server that records every request, and at most one scheduled sync per study
-  day plus the owner's explicit triggers, so DeckStreak never contends with the predecessor's sync or
-  loads the owner's server. The scheduled sync runs once per study day, at the rollover hour, minute
+  day plus the owner's explicit triggers, so DeckStreak never contends with another client's sync
+  and never loads the sync server beyond one scheduled sync per study day (ADR-037). The scheduled
+  sync runs once per study day, at the rollover hour, minute
   7 (SPEC-027); the owner's trigger is the bot's `/sync` (SPEC-026); no other job syncs.
 - **What the parity oracle proves.** The retry schedule, against `goldens/sync_retry.json` (an
   adapter over `pipeline.py:GamifyPipeline._sync_attempts` with a failing stub syncer, a recording
@@ -318,3 +319,6 @@ other test.
 
 Amendment (2026-09-28): a tracking issue's number changed: the host inventory in section 6 is
 #239.
+
+Amendment (2026-09-28): passages describing another service's operations were replaced with
+DeckStreak's own sync requirement under the public-text rule (ADR-059).

@@ -12,10 +12,9 @@
   timers, the alert and memory-watch units) and the Caddy site; `deploy/` holds none of them (read
   at `main` e05dfa5). `.packs/wiring.json` DEFERS the whole durable-services pack to this issue,
   because it reads a tree with no unit as a finding rather than as VOID.
-- **The predecessor's unit, which set the pattern** (predecessor `27ee2bc`, `deploy/` and the
-  inventory's `sd-notify-watchdog` entry): `Type=notify`, `WatchdogSec=90`, `Restart=on-failure`,
-  `RestartSec=15`, a start limit of 5 in 300 seconds, `TimeoutStartSec=180`, a memory ceiling,
-  `OOMPolicy=kill`.
+- **The pattern the API and bot units carry** (ADR-010, R1 and R5): `Type=notify`,
+  `WatchdogSec=90`, `Restart=on-failure`, `RestartSec=15`, a start limit of 5 in 300 seconds,
+  `TimeoutStartSec=180`, a memory ceiling, `OOMPolicy=kill`.
 - **The budget.** DeckStreak's share of the host is ADR-032's, read from `deploy/host-budget.json`;
   the host's own capacity is private configuration.
 - **The rows that judge the templates:** durable-services' 35 blocking tree rows (the gate, once
@@ -197,9 +196,9 @@ SPEC. Each is corrected above; the reasons are these.
 
 - **§1, §6 and the schematic: reworded under the public-prose rule.** §1's host bullet is now the
   budget's: it names ADR-032's share and `deploy/host-budget.json`, and no figure or tenant of the
-  host. §6's Caddy risk and its budget risk name nothing of the host beyond that share. §1 keeps the
-  predecessor's unit pattern and drops the pack's findings over the predecessor's tree, and
-  `docs/schematics/deployment.md` labels the edge as the host's reverse proxy.
+  host. §6's Caddy risk and its budget risk name nothing of the host beyond that share. §1 states
+  the pattern the API and bot units carry, and `docs/schematics/deployment.md` labels the edge as
+  the host's reverse proxy.
 - **R4: `sync` is the one catch-up job.** SPEC-027's job table sets `catch_up` on `sync` (ADR-037),
   so its timer alone carries `Persistent=true`; the planned "none at W0" predated ADR-037's
   amendment of the plan. The `maintenance` and `liveness` timers waive `timers.catch-up`, and every
@@ -247,3 +246,6 @@ The retired criteria, why their subject is gone, and what judges it now:
 Amendment (2026-09-28): names of the maintainer's private tooling were replaced with 'the box-run
 packs' and neutral names for their repository, binary and checkout under the public-text rule
 (ADR-059).
+
+Amendment (2026-09-28): passages describing another service's operations were replaced with the
+pattern DeckStreak's units carry under the public-text rule (ADR-059).
