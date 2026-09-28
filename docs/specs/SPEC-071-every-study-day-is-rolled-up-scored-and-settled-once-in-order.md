@@ -202,7 +202,7 @@ R23. Analytics' data-rights port lists `daily_rollup` and `daily_lang_stats` as 
 | A10 | the grade band, the raw streak, the volume baseline and the baseline's window equal their goldens | `the_grade_raw_streak_and_baseline_match_their_goldens` |
 | A11 | the collection day number equals the golden of `analytics.py:today_day_number` | `the_collection_day_number_matches_the_predecessors_golden` |
 | A12 | a card's course is the course whose deck root equals its home deck's top-level name, or none | `a_cards_course_is_the_course_whose_root_is_its_top_level_name` |
-| A13 | the courses file loads the example, and refuses a duplicate code, alias or deck root and overlapping or unordered unit bands, naming the setting and never a value | `the_courses_file_refuses_a_duplicate_or_overlapping_course` |
+| A13 | the courses file loads the example, and refuses a file it cannot read, a malformed file, a duplicate code, alias or deck root and overlapping or unordered unit bands, each naming the setting and never a value | `the_courses_file_refuses_a_duplicate_or_overlapping_course` |
 | A14 | a changed courses file bumps the settings generation once at start, and an unchanged one does not | `a_changed_courses_file_bumps_the_settings_generation_once` |
 | A15 | a readings-taxonomy language deck mapped to another code than the courses file's refuses start | `a_taxonomy_language_mapped_to_another_code_refuses_start` |
 | A16 | the fold settles each closed day after the cursor exactly once, oldest first, and a second recompute settles no day | `the_fold_settles_each_closed_day_once_oldest_first` |
@@ -445,6 +445,8 @@ milliseconds (SPEC-029 R3).
 | `S07108-SETTLE-ONCE` | `crates/coordination/src/recompute/mod.rs` | the fold settles only the days after the cursor | `settle_fold::the_fold_settles_each_closed_day_once_oldest_first` |
 | `S07109-PHASE-ORDER` | `crates/coordination/src/recompute/mod.rs` | the declared order of the seven phases | `settle_fold::the_steps_run_in_their_phase_order` |
 | `S07110-ROLLUP-KEY` | `migrations/007101_analytics_daily_rollup.sql` | one row per study day, held by the table's key (a script mutation of the migration with a cargo killer) | `rollup_store::rerolling_a_day_with_the_same_reviews_writes_identical_rows` |
+| `S07111-SETTLE-ONE-WRITE` | `crates/coordination/src/recompute/mod.rs` | a settle records its cursor in the same write as its steps (added at delivery, §10) | `settle_fold::a_settle_whose_cursor_is_refused_commits_none_of_its_steps_work` |
+| `S07112-SYNC-START-DAY` | `crates/coordination/src/sync_cycle.rs` | the fold is handed the study day the latest successful sync started in (added at delivery, §10) | `settle_fold::cycle::a_sync_across_the_rollover_leaves_the_day_it_started_in_owed` |
 
 ## 10. Amendments at delivery
 
@@ -584,3 +586,38 @@ milliseconds (SPEC-029 R3).
   longer names it and still names the line's six other mutants. SPEC-057 (#277) replaces this
   form, and its delivery converts the entry. At 47172da the job read examined 465 (caught 461,
   missed 1, timeout 3), unviable 101, of 566; the missed one is this mutant.
+- **Fix round 1: six defects no test observed.** The first review planted six defects that every
+  test passed, on code that is right in all six places, so the round adds tests and no production
+  code. Each test is green on the real code and red under its plant (`docs/red-first/SPEC-071.md`,
+  "Fix round 1"), and each is recorded under the criterion it serves:
+  - R9, under A6: `settle_fold::a_late_review_rerolls_a_settled_day_and_keeps_what_it_closed_with`.
+    A late review re-rolls a settled day after its cards moved, and the day keeps the card state,
+    the provenance and the score it closed with; a backfilled day re-rolled the same way keeps no
+    card state. A6's own test holds analytics' store to this, and this one holds the fold's steps.
+  - R16, under A16: `settle_fold::a_settle_whose_cursor_is_refused_commits_none_of_its_steps_work`.
+    A trigger the test installs refuses the cursor's write, the one statement that names
+    `settled_at`. The settle then commits none of its steps' work, and the recompute that settles
+    the day at last commits it once. A failure inside a step could not tell the settle's one write
+    from two.
+  - R15, under A18: `settle_fold::cycle::a_sync_across_the_rollover_leaves_the_day_it_started_in_owed`.
+    A successful sync that started before the rollover and finished after it leaves the day that
+    closed owed, and the owner's next sync, which starts after the close, settles it.
+  - R18, under A21: `settle_fold::a_change_to_any_review_field_or_to_the_courses_rerolls_the_day`.
+    A change to any one of a review's eight fields, or to the courses file's digest, changes the
+    day's fingerprint, and the next recompute rolls the day up again. cargo-mutants never removes
+    one element of the list the fingerprint digests, so each field has its own row in the table.
+  - R1, in A13's own test: every malformed file's refusal names the setting and quotes none of the
+    file's values, as a contradiction's refusal already did. The malformed files grow from 11 to 19,
+    so that every place the reader refuses a file's shape is reached by one of them. The one value a
+    refusal may name is the schema's published name, `COURSES_SCHEMA`, as the shape it expects.
+    A13's text in §3 grows to say so, because its test now observes it; R1 is unchanged.
+  - R4, under A14: `settle_fold::cycle::cycles_with_an_unchanged_courses_file_leave_the_settings_generation_alone`.
+    Two runs of the sync job with the courses file unchanged each record the digest at their start
+    and run their cycle, and the settings generation stays where the first start put it.
+
+  Two of the six hold a settlement invariant that cargo-mutants cannot produce, and they take rows
+  (§9): S07111 holds R16's one write, and S07112 holds the start day R15 reads. The other four take
+  none. R9's and R4's defects each add a call, which no constant, string, attribute or `new` method
+  holds, and their tests hold them. A row for R18 would need its killer in analytics' own package,
+  where no fold test runs. R1's defect leaks a value into a `&'static str` through `Box::leak`,
+  which is contrived, and A13 itself now kills it.
