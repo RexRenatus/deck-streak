@@ -76,11 +76,6 @@
       "sha256": "1594af0e52b233222f02b226a9cf68ba92d506c63129794df692dfe2daba1172"
     },
     {
-      "path": ".packs/scripts/mutation-probe.py",
-      "from": "scripts/mutation-probe.py",
-      "sha256": "ebf8e44171f2536951bbc61ea9d6b321a402042302ef6bb073fe24f571cf2a60"
-    },
-    {
       "path": ".packs/scripts/notifications-policy-probe.py",
       "from": "scripts/notifications-policy-probe.py",
       "sha256": "efaba685b50153e1895cd175a62aee3829141791eca261c933bb56cb848b20c3"
@@ -444,16 +439,6 @@
       "path": ".packs/skills/packs/lsat-coach/templates/lsat-coach.persona.md",
       "from": "skills/packs/lsat-coach/templates/lsat-coach.persona.md",
       "sha256": "45081367dd1c13a4e9ac43accbc8caccfa6fcf7073cfa5d167629ab937ef7044"
-    },
-    {
-      "path": ".packs/skills/packs/mutation-rows/SKILL.md",
-      "from": "skills/packs/mutation-rows/SKILL.md",
-      "sha256": "dd9c4fb0822fe0602bb974cd9c497ce11d415007d55a45d8a53655b65c71555d"
-    },
-    {
-      "path": ".packs/skills/packs/mutation-rows/checks.json",
-      "from": "skills/packs/mutation-rows/checks.json",
-      "sha256": "140a5774ad308c383980218dec770ce9f74d54ab98fe177eef817a1f715dc99b"
     },
     {
       "path": ".packs/skills/packs/notifications-policy/SKILL.md",
