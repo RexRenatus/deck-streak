@@ -1,6 +1,7 @@
 """The deploy templates: every unit, timer and the Caddy block is hardened, fits the host budget,
 and names no private value (SPEC-032; ADR-007, ADR-010, ADR-025, ADR-032, ADR-038), SPEC-031's
-alert, SLO evaluator and memory watch included (SPEC-031 R6; ADR-031).
+alert, SLO evaluator and memory watch included (SPEC-031 R6; ADR-031); and every unit that loads
+a credential fails and pages when a credential refuses its start (SPEC-066 R2; ADR-067).
 
 The units are read with `_units.py`, DeckStreak's own reader of systemd unit syntax; the
 durable-services pack judges the templates on the maintainer's box (ADR-069, SPEC-056). Every
@@ -39,6 +40,21 @@ ENVIRONMENT_FILE = "/etc/deck-streak/deck-streak.env"
 SOCKET = "/run/deck-streak-credentials/socket"
 # The alert template every service pages through on failure (R2; SPEC-031 ships it).
 ON_FAILURE = "deck-streak-alert@%n.service"
+# The directives a unit loads a credential with (systemd.exec(5)). A unit holding any of them
+# fails and pages when a credential refuses its start, the alert template excepted (SPEC-066 R2).
+CREDENTIAL_KEYS = (
+    "LoadCredential",
+    "LoadCredentialEncrypted",
+    "SetCredential",
+    "SetCredentialEncrypted",
+    "ImportCredential",
+)
+# The exit of a role that refuses start (SPEC-025 R1) and of the runner's page (SPEC-027 R7), by
+# number and by the name systemd.exec(5) gives it, EXIT_FAILURE: no template counts it a success.
+REFUSAL_EXIT = {"1", "FAILURE"}
+# The prefixes systemd reads before an ExecStart= path; `-` counts a failure as a success
+# (systemd.service(5)).
+EXEC_PREFIX = re.compile(r"^[-@:+!|]*")
 # The job template, whose instances the timers start (R1).
 JOB_TEMPLATE = "deck-streak-job"
 # SPEC-031's units: the alert template, the SLO evaluator and the memory watch. Each runs a script
@@ -279,8 +295,7 @@ def env_example():
 
 def credential_lines(root):
     """Every credential directive of every template under `root`, as (file, line, key, value)."""
-    keys = ("LoadCredential", "LoadCredentialEncrypted", "SetCredential")
-    keys += ("SetCredentialEncrypted", "ImportCredential")
+    keys = CREDENTIAL_KEYS
     found = []
     for path in sorted(Path(root).rglob("*")):
         if path.suffix not in (".service", ".timer", ".conf") or not path.is_file():
@@ -314,6 +329,30 @@ def environment_refusals(unit, ids):
             variable = word.partition("=")[0].strip("\"'")
             if _units.SECRET_NAME.search(variable) or variable.lower().replace("_", "-") in ids:
                 refused.append(f"{unit.rel}: {variable} passes a secret through the environment")
+    return refused
+
+
+def loads_a_credential(unit):
+    """Whether `unit` holds a credential directive of any kind."""
+    return any(unit.values("Service", key) for key in CREDENTIAL_KEYS)
+
+
+def refusal_page_refusals(unit):
+    """Why a start of `unit` that a credential refuses would not fail it and start its page
+    (SPEC-066 R2): no `OnFailure=` naming the alert template, an `ExecStart=` whose failure counts
+    as a success, a success exit that holds the refusal's, or a restart that skips `OnFailure=`."""
+    refused = []
+    targets = [word for value in unit.values("Unit", "OnFailure") for word in value.split()]
+    if ON_FAILURE not in targets:
+        refused.append(f"{unit.rel}: OnFailure={' '.join(targets)} does not name {ON_FAILURE}")
+    for command in unit.values("Service", "ExecStart"):
+        if "-" in EXEC_PREFIX.match(command).group(0):
+            refused.append(f"{unit.rel}: ExecStart={command} counts a failure as a success")
+    for statuses in unit.values("Service", "SuccessExitStatus"):
+        if REFUSAL_EXIT & set(statuses.split()):
+            refused.append(f"{unit.rel}: SuccessExitStatus={statuses} counts the refusal a success")
+    if last(unit, "Service", "RestartMode") == "direct":
+        refused.append(f"{unit.rel}: RestartMode=direct skips OnFailure=")
     return refused
 
 
@@ -745,6 +784,69 @@ class TheServicesRunTheirRoles(unittest.TestCase):
                 )
             self.assertTrue(unit.assigned("Service", "CapabilityBoundingSet"), unit.rel)
             self.assertEqual(unit.values("Service", "AmbientCapabilities"), [], unit.rel)
+
+
+class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
+    def test_every_unit_that_loads_a_credential_fails_and_pages_on_a_refusal(self):
+        alert = f"{ALERT_TEMPLATE}@.service"
+        loading = examined(
+            "service unit(s) that load a credential",
+            sorted((unit for unit in subject().services if loads_a_credential(unit)), key=name),
+        )
+        # The roles that read a credential, and the alert template, which reads two (SPEC-031 R3).
+        self.assertEqual(
+            {unit.name for unit in loading},
+            {unit for unit, constants in ROLE_CREDENTIALS.items() if constants},
+        )
+        paging = [unit for unit in loading if unit.name != alert]
+        for unit in paging:
+            self.assertIn(ON_FAILURE, unit.values("Unit", "OnFailure"), unit.rel)
+        self.assertEqual([r for unit in paging for r in refusal_page_refusals(unit)], [])
+        # The alert template is the one exception: it cannot page about itself, so its own refusal
+        # is its failed state (SPEC-066 R3; test_alert_unit.py holds that route).
+        (template,) = [unit for unit in loading if unit.name == alert]
+        self.assertEqual(template.values("Unit", "OnFailure"), [])
+        # Planted templates: one for each condition, one that meets all four, and one that loads
+        # no credential and so is not examined.
+        head = "[Unit]\nDescription=planted\n"
+        page = f"OnFailure={ON_FAILURE}\n"
+        run = "[Service]\nExecStart=/bin/true\n"
+        loads = f"LoadCredential=telegram-bot-token:{SOCKET}\n"
+        plants = {
+            "pages.service": f"{head}{page}{run}{loads}",
+            "silent.service": f"{head}{run}{loads}",
+            "ignored.service": f"{head}{page}[Service]\nExecStart=-/bin/true\n{loads}",
+            "success.service": f"{head}{page}{run}SuccessExitStatus=2 1\n{loads}",
+            "direct.service": f"{head}{page}{run}Restart=on-failure\nRestartMode=direct\n{loads}",
+            "reads-none.service": f"{head}{run}",
+        }
+        with tempfile.TemporaryDirectory() as scratch:
+            folder = Path(scratch) / "deploy" / "systemd"
+            folder.mkdir(parents=True)
+            for file, content in plants.items():
+                (folder / file).write_text(content, encoding="utf-8")
+            planted = sorted(subject(scratch).services, key=name)
+        planted_loading = [unit for unit in planted if loads_a_credential(unit)]
+        self.assertEqual(
+            [unit.name for unit in planted_loading],
+            [
+                "direct.service",
+                "ignored.service",
+                "pages.service",
+                "silent.service",
+                "success.service",
+            ],
+        )
+        where = "deploy/systemd"
+        self.assertEqual(
+            [r for unit in planted_loading for r in refusal_page_refusals(unit)],
+            [
+                f"{where}/direct.service: RestartMode=direct skips OnFailure=",
+                f"{where}/ignored.service: ExecStart=-/bin/true counts a failure as a success",
+                f"{where}/silent.service: OnFailure= does not name {ON_FAILURE}",
+                f"{where}/success.service: SuccessExitStatus=2 1 counts the refusal a success",
+            ],
+        )
 
 
 if __name__ == "__main__":

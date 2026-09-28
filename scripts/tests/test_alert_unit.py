@@ -1,5 +1,6 @@
 """The one alert path: the alert template unit and its script (SPEC-031 A3, A4, A7; R3, R6;
-ADR-031, ADR-038).
+ADR-031, ADR-038), and the alert unit's own refusal of an empty credential (SPEC-066 A5,
+R3; ADR-067).
 
 The script runs as its unit runs it, with stubs first on its PATH. `curl` and `journalctl` record
 their argument vector, standard input and environment, and answer as the real ones would; every other
@@ -154,9 +155,10 @@ class Run:
         return [call for call in self.all_calls if call["command"] == command]
 
 
-def run_alert(instance, environment, journal=JOURNAL_LINES, script=SCRIPT):
+def run_alert(instance, environment, journal=JOURNAL_LINES, script=SCRIPT, planted=None):
     """Runs `script` as the alert unit runs it, `alert-telegram.sh %i`, with the stubs first on its
-    PATH and a credentials directory holding each credential the unit loads."""
+    PATH and a credentials directory holding each credential the unit loads: its synthetic value
+    and a newline, or exactly the content `planted` names for its id."""
     original = os.environ.get("PATH", "/usr/bin:/bin")
     with tempfile.TemporaryDirectory() as scratch:
         root = Path(scratch)
@@ -177,7 +179,8 @@ def run_alert(instance, environment, journal=JOURNAL_LINES, script=SCRIPT):
             )
             wrapper.chmod(0o755)
         for ident in loaded_credentials():
-            (credentials / ident).write_text(synthetic(ident) + "\n", encoding="utf-8")
+            content = (planted or {}).get(ident, synthetic(ident) + "\n")
+            (credentials / ident).write_text(content, encoding="utf-8")
         journal_file = root / "journal.txt"
         journal_file.write_text("".join(f"{line}\n" for line in journal), encoding="utf-8")
         env = {
@@ -474,6 +477,34 @@ class EveryUnitPagesThroughTheTemplate(unittest.TestCase):
                 f"bare.service names OnFailure=deck-streak-alert.service, not {ON_FAILURE}",
             ],
         )
+
+
+class AnEmptyCredentialFailsTheAlertUnit(unittest.TestCase):
+    def test_an_empty_credential_fails_the_alert_unit_before_any_request(self):
+        # The alert template names no OnFailure=, so it cannot page about itself (SPEC-031): its
+        # own refusal is its failed state, with one error line naming the credential (SPEC-066 R3).
+        # Each credential the template loads, empty in each form, the other holding its value.
+        environment = {"MONITOR_UNIT": FAILED_UNIT, "MONITOR_SERVICE_RESULT": RESULT}
+        cases = [(ident, form) for ident in loaded_credentials() for form in ("", "\n")]
+        for ident, form in examined("empty credential case(s)", cases):
+            where = f"{ident} holding {form!r}"
+            run = run_alert(FAILED_UNIT, environment, planted={ident: form})
+            self.assertEqual(run.returncode, 1, f"{where}: {run.stdout}{run.stderr}")
+            refusal = (
+                f"<3>the credential {ident} is empty in the credentials directory: no page is sent"
+            )
+            self.assertEqual(run.stderr.splitlines(), [refusal], where)
+            # Refused before anything is asked or sent: no journal read and no request.
+            asked = [call["command"] for call in run.all_calls]
+            self.assertEqual([c for c in asked if c in ("curl", "journalctl")], [], where)
+            # What it wrote names the id and carries no value of either credential.
+            for value in (TOKEN, OWNER):
+                self.assertNotIn(value, run.stdout + run.stderr, where)
+        # The route is the failed instance: the template still names no OnFailure=, and a page
+        # about it is a second route's (#285).
+        template = unit_file(SYSTEMD / ALERT_TEMPLATE)
+        self.assertEqual(values(template, "Unit", "OnFailure"), [])
+        self.assertEqual(len(values(template, "Service", "LoadCredential")), 2)
 
 
 if __name__ == "__main__":

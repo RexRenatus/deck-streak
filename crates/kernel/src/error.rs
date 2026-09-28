@@ -73,6 +73,13 @@ pub enum CredentialError {
         /// The credential's id.
         id: &'static str,
     },
+    /// The credential's file holds no value: no bytes, or only the one trailing newline the loader
+    /// trims. It refuses start as a missing credential does (SPEC-066 R1; ADR-067).
+    #[error("the credential {id} is empty in the credentials directory")]
+    Empty {
+        /// The credential's id.
+        id: &'static str,
+    },
     /// The credential's file exists and cannot be read.
     #[error("the credential {id} cannot be read")]
     Unreadable {
