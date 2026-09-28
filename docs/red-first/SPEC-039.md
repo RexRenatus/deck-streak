@@ -119,8 +119,12 @@ A18: red at d438d38: AssertionError: 0 != 3 : mutation: ok (a missing report rea
 A18: green at 73133a4
 A19: red at d438d38: AssertionError: False is not true : no drafts were written
 A19: green at 73133a4
+```
+```retired
 A20: red at d438d38: AssertionError: Regex didn't match: 'examined N exclusion' not found in 'mutation: ok'
 A20: green at 73133a4
+```
+```red-first
 A21: red at 4146198: AssertionError: Regex didn't match: 'examined 2 configuration' not found in 'examined 0 configuration(s)'
 A21: green at d1dde73
 A22: red at d438d38: AssertionError: .github/workflows/mutation-weekly.yml does not exist
@@ -185,3 +189,7 @@ and the job went GREEN.
   cargo-mutants over `clock.rs` examined 6 (5 caught, 1 missed, 3 unviable), row S02001 KILLED,
   StrykerJS ran 20 mutants over `startapp.ts`, and the drafts for the two files with survivors
   passed the scrub; nothing was filed.
+
+Amendment (2026-09-28): the lines of A20 moved into a `` ```retired `` fence, by inserted fence
+lines, because SPEC-057 retired that criterion when ADR-070 replaced the exclusion it held to its
+reason with the equivalence record; SPEC-057 A8 judges that no exclusion hides a mutant.

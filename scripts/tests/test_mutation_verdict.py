@@ -10,6 +10,7 @@ StrykerJS writes, and the rows runner's report. No tool runs here.
 import importlib.util
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -138,8 +139,16 @@ class Fixture:
         return path
 
     def judge(self, klass, *extra):
+        # The fixture's own root: the verdict reads the equivalence record there (SPEC-057 R4).
         return self.verdict(
-            "judge", "--plan", str(self.out / "plan.json"), "--class", klass, *extra
+            "judge",
+            "--plan",
+            str(self.out / "plan.json"),
+            "--class",
+            klass,
+            "--root",
+            str(self.root),
+            *extra,
         )
 
 
@@ -990,6 +999,858 @@ class TheVerdictCountsEveryShard(unittest.TestCase):
         usage = fixture.judge("rust", "--shard-reports", failed, "--rows", str(rows))
         self.assertEqual(usage.returncode, 3, usage.stdout + usage.stderr)
         self.assertIn("VOID mutation-rust-shard-0: no report", usage.stdout)
+
+
+# --------------------------------------------------------------------------- test-only lines (SPEC-057 R22)
+
+SPANS = "crates/fix/src/spans.rs"
+#: Production code around three test items: a `#[cfg(test)]` function under a second attribute, a
+#: free function under `#[tokio::test(...)]`, whose path ends in `test`, and a `#[cfg(test)]` module
+#: under an attribute of its own, whose two `#[test]` functions hold a string that holds a brace.
+#: Before them a string, a raw string, a character and two comments hold a brace, `#[cfg(test)]` or
+#: `#[test]`, and a `#[cfg(not(test))]` function is production code, which cargo-mutants mutates.
+SPANS_TEXT = (
+    "//! Production code around three test items.\n"
+    "\n"
+    "/// Doubles.\n"
+    "pub fn double(x: i64) -> i64 {\n"
+    "    x * 2\n"
+    "}\n"
+    "\n"
+    "/// The hour bound: a constant, which no tool mutates.\n"
+    "pub const LAST_HOUR: u8 = 23;\n"
+    "\n"
+    "/// A brace, a test mark and a test attribute in a literal open nothing.\n"
+    "pub fn braces() -> usize {\n"
+    '    "}".len() + r#"{ #[cfg(test)] mod t {"#.len() + \'{\'.len_utf8()\n'
+    "}\n"
+    "\n"
+    "// #[cfg(test)] in a comment marks nothing, /* nor { this */\n"
+    "/* #[test] fn not_a_test() { */\n"
+    "pub fn after_comments(x: i64) -> i64 {\n"
+    "    x + 1\n"
+    "}\n"
+    "\n"
+    "/// Compiled in production: `not(test)` is no test mark.\n"
+    "#[cfg(not(test))]\n"
+    "pub fn only_in_production(x: i64) -> i64 {\n"
+    "    x - 1\n"
+    "}\n"
+    "\n"
+    "#[cfg(test)]\n"
+    "#[allow(dead_code)]\n"
+    "fn helper() -> i64 {\n"
+    "    double(21)\n"
+    "}\n"
+    "\n"
+    '#[tokio::test(flavor = "multi_thread")]\n'
+    "async fn a_free_test() {\n"
+    "    assert_eq!(helper(), 42);\n"
+    "}\n"
+    "\n"
+    "#[allow(clippy::unwrap_used)]\n"
+    "#[cfg(test)]\n"
+    "mod tests {\n"
+    "    use super::double;\n"
+    "\n"
+    "    #[test]\n"
+    "    fn two_doubles_to_four() {\n"
+    "        assert_eq!(double(2), 4);\n"
+    '        assert_eq!("}".len(), 1);\n'
+    "    }\n"
+    "\n"
+    "    #[test]\n"
+    "    fn three_doubles_to_six() {\n"
+    "        assert_eq!(double(3), 6);\n"
+    "    }\n"
+    "}\n"
+    "\n"
+    "/// After the tests: production again.\n"
+    "pub fn big(x: i64) -> bool {\n"
+    "    x > 3\n"
+    "}\n"
+)
+#: Lines 31, 36, 43 (a test of one line, added), 47 and 53: each inside a test item.
+TEST_ONLY_HEAD = (
+    SPANS_TEXT.replace("double(21)", "double(20) + 2")
+    .replace("assert_eq!(helper(), 42);", "assert_eq!(helper(), 6 * 7);")
+    .replace("assert_eq!(double(2), 4);", "assert_eq!(double(2), 2 + 2);")
+    .replace("assert_eq!(double(3), 6);", "assert_eq!(double(3), 3 * 2);")
+    .replace(
+        "    use super::double;\n",
+        "    use super::double;\n"
+        '    #[test] fn a_brace_closes_nothing() { assert_eq!("{".len(), 1); }\n',
+    )
+)
+#: Line 46, in the test module, and line 58, `big`'s comparison after it.
+MIXED_HEAD = SPANS_TEXT.replace("x > 3", "x > 4").replace(
+    "assert_eq!(double(2), 4);", "assert_eq!(double(2), 2 + 2);"
+)
+#: Lines 13, 19, 25 and 54: after the literals, after the comments, under `cfg(not(test))`, and a
+#: constant on the line of the brace that closes the test module, which production code shares.
+PRODUCTION_HEAD = (
+    SPANS_TEXT.replace("'{'.len_utf8()", "'}'.len_utf8()")
+    .replace("x + 1", "x + 2")
+    .replace("x - 1", "x - 2")
+    .replace("}\n\n/// After the tests", "} pub const TAIL: u8 = 7;\n\n/// After the tests")
+)
+#: Line 9, a constant's: production code that cargo-mutants lists no mutant of.
+CONSTANT_HEAD = SPANS_TEXT.replace("LAST_HOUR: u8 = 23;", "LAST_HOUR: u8 = 24;")
+#: How the verdict names a test-only line.
+TEST_ONLY_WHY = (
+    "inside an item marked #[cfg(test)] or with a test attribute, which cargo-mutants never mutates"
+)
+
+
+def spans_listed(entries):
+    """cargo-mutants 27.1.0's `--list --json --in-diff` over one of SPANS_TEXT's diffs, as it listed
+    them in a workspace holding the fixture (a listing builds nothing): one entry for each
+    (line, column, end column, description, genre)."""
+    return [
+        {
+            "name": f"{SPANS}:{line}:{column}: {description}",
+            "package": "deck-streak-fix",
+            "file": SPANS,
+            "genre": genre,
+            "span": {
+                "start": {"line": line, "column": column},
+                "end": {"line": line, "column": end},
+            },
+        }
+        for line, column, end, description, genre in entries
+    ]
+
+
+#: The mixed diff's listing: `big`'s five mutants, all on line 58, none in the test module.
+MIXED_LISTED = spans_listed(
+    [
+        (58, 5, 10, "replace big -> bool with true", "FnValue"),
+        (58, 5, 10, "replace big -> bool with false", "FnValue"),
+        (58, 7, 8, "replace > with == in big", "BinaryOperator"),
+        (58, 7, 8, "replace > with < in big", "BinaryOperator"),
+        (58, 7, 8, "replace > with >= in big", "BinaryOperator"),
+    ]
+)
+#: The production-only diff's listing: sixteen mutants on lines 13, 19 and 25, none on line 54's
+#: constant.
+PRODUCTION_LISTED = spans_listed(
+    [
+        (13, 5, 67, "replace braces -> usize with 0", "FnValue"),
+        (13, 5, 67, "replace braces -> usize with 1", "FnValue"),
+        (13, 51, 52, "replace + with - in braces", "BinaryOperator"),
+        (13, 51, 52, "replace + with * in braces", "BinaryOperator"),
+        (13, 15, 16, "replace + with - in braces", "BinaryOperator"),
+        (13, 15, 16, "replace + with * in braces", "BinaryOperator"),
+        (19, 5, 10, "replace after_comments -> i64 with 0", "FnValue"),
+        (19, 5, 10, "replace after_comments -> i64 with 1", "FnValue"),
+        (19, 5, 10, "replace after_comments -> i64 with -1", "FnValue"),
+        (19, 7, 8, "replace + with - in after_comments", "BinaryOperator"),
+        (19, 7, 8, "replace + with * in after_comments", "BinaryOperator"),
+        (25, 5, 10, "replace only_in_production -> i64 with 0", "FnValue"),
+        (25, 5, 10, "replace only_in_production -> i64 with 1", "FnValue"),
+        (25, 5, 10, "replace only_in_production -> i64 with -1", "FnValue"),
+        (25, 7, 8, "replace - with + in only_in_production", "BinaryOperator"),
+        (25, 7, 8, "replace - with / in only_in_production", "BinaryOperator"),
+    ]
+)
+
+
+def spans_plan(fixture):
+    """`plan` over the fixture's diff: (the lines it printed, the plan, SPANS's record in it)."""
+    done = fixture.verdict(
+        "plan",
+        "--base",
+        fixture.base,
+        "--head",
+        "HEAD",
+        "--root",
+        str(fixture.root),
+        "--out",
+        str(fixture.out),
+    )
+    if done.returncode != 0:
+        raise AssertionError(f"plan failed: {done.stdout}{done.stderr}")
+    plan = json.loads((fixture.out / "plan.json").read_text(encoding="utf-8"))
+    return done.stdout, plan, next(entry for entry in plan["files"] if entry["path"] == SPANS)
+
+
+def spans_shards(fixture, listing):
+    """`shards` over the fixture's plan and a listing file holding `listing`, the listing step's
+    output as bytes, or none at all: (the run, the plan it rewrote, the step outputs it wrote)."""
+    outputs = fixture.out / "github-output"
+    outputs.write_text("", encoding="utf-8")
+    listed = fixture.out / "listed.json"
+    listed.unlink(missing_ok=True)
+    if listing is not None:
+        listed.write_bytes(listing)
+    done = subprocess.run(
+        [
+            sys.executable,
+            str(VERDICT),
+            "shards",
+            "--plan",
+            str(fixture.out / "plan.json"),
+            "--listed",
+            str(listed),
+        ],
+        capture_output=True,
+        text=True,
+        env=dict(os.environ, PYTHONDONTWRITEBYTECODE="1", GITHUB_OUTPUT=str(outputs)),
+        timeout=300,
+        check=False,
+    )
+    plan = json.loads((fixture.out / "plan.json").read_text(encoding="utf-8"))
+    written = outputs.read_text(encoding="utf-8").splitlines()
+    return done, plan, dict(line.split("=", 1) for line in written if "=" in line)
+
+
+def spans_caught(names):
+    """A shard's outcomes.json in which cargo-mutants caught every one of `names`, in SPANS."""
+    report = shard_outcomes(names)
+    for outcome in report["outcomes"][1:]:
+        outcome["scenario"]["Mutant"]["file"] = SPANS
+    return report
+
+
+class ATestOnlySrcDiffReadsNotApplicable(unittest.TestCase):
+    def test_a_test_only_src_diff_reads_not_applicable_and_a_production_line_still_applies(self):
+        # Four planted fixtures, one subtest each, each red before R22 for its own reason. The
+        # listings are cargo-mutants 27.1.0's own over these diffs: nothing at all for the
+        # test-only and the constant-only diffs, which it exits 0 on before it lists.
+        with self.subTest("a test-only diff reads the rust class not-applicable by name"):
+            fixture = Fixture(self, files={SPANS: SPANS_TEXT})
+            fixture.head({SPANS: TEST_ONLY_HEAD})
+            printed, plan, spans = spans_plan(fixture)
+            self.assertFalse(
+                plan["classes"]["rust"]["applies"],
+                f"the rust class applies on test lines {spans['code']}",
+            )
+            self.assertEqual(spans.get("test"), [31, 36, 43, 47, 53])
+            self.assertEqual(spans["code"], [])
+            self.assertIn(
+                "mutation: plan: rust does not apply: not-applicable: no production code line "
+                f"changed; 5 test-only line(s) in 1 file(s), {TEST_ONLY_WHY}",
+                printed,
+            )
+            done = fixture.judge("rust")
+            self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+            self.assertIn(
+                f"not-applicable: {SPANS}: 5 changed line(s): 5 test-only, {TEST_ONLY_WHY}",
+                done.stdout,
+            )
+            self.assertIn("verdict: ok", done.stdout)
+            self.assertNotIn("VOID", done.stdout)
+        with self.subTest("a mixed diff applies, and its listing names its production line's"):
+            fixture = Fixture(self, files={SPANS: SPANS_TEXT})
+            fixture.head({SPANS: MIXED_HEAD})
+            printed, plan, spans = spans_plan(fixture)
+            self.assertTrue(plan["classes"]["rust"]["applies"])
+            self.assertEqual(spans["code"], [58], "a test module's line is no production code")
+            self.assertEqual(spans.get("test"), [46])
+            self.assertIn(
+                "mutation: plan: rust applies: 1 production code line(s) in 1 file(s); 1 test-only "
+                f"line(s) set apart, {TEST_ONLY_WHY}",
+                printed,
+            )
+            listing = json.dumps(MIXED_LISTED).encode()
+            done, plan, _ = spans_shards(fixture, listing)
+            self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+            names = [entry["name"] for entry in MIXED_LISTED]
+            self.assertEqual(plan["shards"]["shards"][0]["mutants"], names)
+            for entry in examined("mutants the mixed diff lists", MIXED_LISTED):
+                self.assertIn(entry["span"]["start"]["line"], spans["code"], entry["name"])
+            reports = shard_reports(fixture.out / "caught", {0: ("0", spans_caught(names))})
+            judged = fixture.judge("rust", "--shard-reports", reports)
+            self.assertEqual(judged.returncode, 0, judged.stdout + judged.stderr)
+            self.assertIn(f"{SPANS}: 1 changed code line(s)", judged.stdout)
+            self.assertIn(f"{SPANS}: 1 test-only line(s) set apart, {TEST_ONLY_WHY}", judged.stdout)
+            self.assertIn("examined 5 by cargo-mutants and 0 by rows", judged.stdout)
+        with self.subTest("a production-only diff applies, and the plan names its lines"):
+            fixture = Fixture(self, files={SPANS: SPANS_TEXT})
+            fixture.head({SPANS: PRODUCTION_HEAD})
+            printed, plan, spans = spans_plan(fixture)
+            self.assertIn(
+                "mutation: plan: rust applies: 4 production code line(s) in 1 file(s)\n", printed
+            )
+            self.assertTrue(plan["classes"]["rust"]["applies"])
+            self.assertEqual(
+                spans["code"],
+                [13, 19, 25, 54],
+                "a line a test module's closing brace shares with a constant is production code",
+            )
+            self.assertEqual(spans.get("test"), [])
+            done, plan, outputs = spans_shards(fixture, json.dumps(PRODUCTION_LISTED).encode())
+            self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+            names = [entry["name"] for entry in PRODUCTION_LISTED]
+            self.assertEqual(plan["shards"]["shards"][0]["mutants"], names)
+            self.assertEqual(json.loads(outputs.get("matrix", "null")), [0])
+            for entry in examined("mutants the production-only diff lists", PRODUCTION_LISTED):
+                self.assertIn(entry["span"]["start"]["line"], spans["code"], entry["name"])
+            reports = shard_reports(fixture.out / "caught", {0: ("0", spans_caught(names))})
+            judged = fixture.judge("rust", "--shard-reports", reports)
+            self.assertEqual(judged.returncode, 0, judged.stdout + judged.stderr)
+            self.assertIn(f"{SPANS}: 4 changed code line(s)", judged.stdout)
+            self.assertIn("examined 16 by cargo-mutants and 0 by rows", judged.stdout)
+        with self.subTest("the empty --in-diff output is an empty listing, never a missing one"):
+            fixture = Fixture(self, files={SPANS: SPANS_TEXT})
+            fixture.head({SPANS: CONSTANT_HEAD})
+            printed, plan, spans = spans_plan(fixture)
+            self.assertTrue(plan["classes"]["rust"]["applies"])
+            self.assertEqual(spans["code"], [9])
+            done, plan, outputs = spans_shards(fixture, b"")
+            self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+            self.assertIn("mutation: shards: the listing is empty", done.stdout)
+            self.assertEqual(plan["shards"]["count"], 1)
+            self.assertEqual(plan["shards"]["shards"][0]["mutants"], [])
+            self.assertEqual(json.loads(outputs.get("matrix", "null")), [0])
+            # The constant's line examined nothing, and no row covers it: VOID, never passing.
+            nothing = shard_reports(fixture.out / "nothing", {0: ("0", None)})
+            void = fixture.judge("rust", "--shard-reports", nothing)
+            self.assertEqual(void.returncode, 3, void.stdout + void.stderr)
+            self.assertIn(
+                "mutation-rust-shard-0: no mutant listed, and cargo-mutants reports none",
+                void.stdout,
+            )
+            self.assertIn(
+                f"unexamined: {SPANS}: no mutant and no row covers its changed lines", void.stdout
+            )
+            self.assertIn("VOID production code changed and nothing was examined", void.stdout)
+            # A listing that is missing, rather than empty, is still VOID.
+            fixture.plan()
+            missing, unsharded, _ = spans_shards(fixture, None)
+            self.assertEqual(missing.returncode, 3, missing.stdout + missing.stderr)
+            self.assertIn("holds no cargo-mutants listing", missing.stdout)
+            self.assertIsNone(unsharded.get("shards"))
+
+
+# --------------------------------------------------------------------------- the record (SPEC-057)
+
+FRAGMENTS = "scripts/mutation-equivalent.d"
+#: The head the recorded tests judge: `double` gains a second product, so its one line holds two
+#: mutants of one description, and the diff changes a code line.
+RECORDED = LIB_TEXT.replace("    x * 2\n", "    x * 2 * 1\n")
+HOUR = "crates/fix/src/hour.rs"
+HOUR_TEXT = "/// The last hour.\npub fn last() -> u8 {\n    23\n}\n"
+WEB_FILE = "web/app/src/lib/start.ts"
+WEB_BASE = "export const ready = (a: boolean, b: boolean): boolean => a || b;\n"
+WEB_HEAD = (
+    "export const ready = (a: boolean, b: boolean): boolean => a && b;\n"
+    "export const positive = (n: number): boolean => n > 0;\n"
+    "export const label = (n: number): string => (n > 1 ? 'many' : 'one');\n"
+)
+
+
+def located(text, needle, occurrence=1, length=None):
+    """The 1-based (line, column) where the `occurrence`-th `needle` starts in `text`, and the
+    column just past it (or past `length` characters), as both tools report a span."""
+    at = -1
+    for _ in range(occurrence):
+        at = text.index(needle, at + 1)
+    line = text.count("\n", 0, at) + 1
+    column = at - (text.rfind("\n", 0, at) + 1) + 1
+    return line, column, column + (len(needle) if length is None else length)
+
+
+def cargo_mutant(text, needle, description, occurrence=1, file=LIB, package="deck-streak-fix"):
+    """One mutant as cargo-mutants 27.1.0 lists it (`--list --json`) and reports it (the
+    `scenario.Mutant` of `outcomes.json`): its span starts at `needle` and ends past it."""
+    line, column, end = located(text, needle, occurrence)
+    return {
+        "file": file,
+        "package": package,
+        "genre": "BinaryOperator",
+        "function": {"function_name": "double", "return_type": "-> i64"},
+        "name": f"{file}:{line}:{column}: {description}",
+        "replacement": description,
+        "span": {"start": {"line": line, "column": column}, "end": {"line": line, "column": end}},
+    }
+
+
+def cargo_report(entries):
+    """A shard's outcomes.json holding each (mutant, summary), counted as cargo-mutants counts."""
+    keys = {
+        "CaughtMutant": "caught",
+        "MissedMutant": "missed",
+        "Timeout": "timeout",
+        "Unviable": "unviable",
+    }
+    report = {
+        "outcomes": [{"scenario": "Baseline", "summary": "Success"}],
+        "total_mutants": len(entries),
+        "caught": 0,
+        "missed": 0,
+        "timeout": 0,
+        "unviable": 0,
+        "success": 0,
+        "cargo_mutants_version": "27.1.0",
+    }
+    for mutant, summary in entries:
+        report["outcomes"].append({"scenario": {"Mutant": mutant}, "summary": summary})
+        report[keys[summary]] += 1
+    return report
+
+
+def a_record(mutant, anchor, file=LIB, **changes):
+    """A whole record of `mutant` (the tool's description), anchored on `anchor`."""
+    record = {
+        "file": file,
+        "mutant": mutant,
+        "anchor": anchor,
+        "reason": "the fixture's one caller cannot tell this mutant apart",
+        "evidence": "the fixture's evidence, stated where a reviewer checks it",
+        "reached_by": "double::two_doubles_to_four",
+        "issue": "#1",
+    }
+    record.update(changes)
+    return {name: value for name, value in record.items() if value is not None}
+
+
+def write_records(root, records, fragment="deck-streak-fix.json"):
+    path = root / FRAGMENTS / fragment
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps({"records": records}, indent=2) + "\n", encoding="utf-8")
+
+
+def judge_recorded(test, head, listed, summaries, records, whole=None, files=None, name="run"):
+    """The rust class, judged over one shard holding `listed`, each with its summary, with
+    `records` in the fixture's fragment and `whole` (by default `listed`) as the whole tree's
+    listing. Returns the run."""
+    fixture = Fixture(test, files=files)
+    fixture.head({LIB: head})
+    fixture.plan()
+    done, plan, _ = run_shards(fixture, listed)
+    test.assertEqual(plan["shards"]["count"], 1, done.stdout + done.stderr)
+    write_records(fixture.root, records)
+    missed = "MissedMutant" in summaries
+    reports = shard_reports(
+        fixture.out / name,
+        {0: ("2" if missed else "0", cargo_report(list(zip(listed, summaries, strict=True))))},
+    )
+    listing = fixture.report(f"{name}-whole.json", listed if whole is None else whole)
+    return fixture.judge("rust", "--shard-reports", reports, "--whole", str(listing))
+
+
+class TheVerdictReadsTheRecord(unittest.TestCase):
+    def test_a_recorded_missed_mutant_is_equivalent_and_an_unrecorded_one_fails(self):
+        divide = cargo_mutant(RECORDED, "*", "replace * with / in double")
+        one = cargo_mutant(RECORDED, "x * 2 * 1", "replace double -> i64 with 1")
+        listed = examined("listed mutants", [divide, one])
+        recorded = a_record("replace * with / in double", "x * 2")
+        done = judge_recorded(self, RECORDED, listed, ["MissedMutant"] * 2, [recorded])
+        self.assertEqual(done.returncode, 1, done.stdout + done.stderr)
+        self.assertIn(f"mutation-rust-shard-0: EQUIVALENT {divide['name']}", done.stdout)
+        self.assertNotIn(f"MISSED {divide['name']}", done.stdout)
+        self.assertIn(f"mutation-rust-shard-0: MISSED {one['name']}", done.stdout)
+        self.assertIn("missed 2: equivalent 1, unexplained 1", done.stdout)
+        # The control: each missed mutant recorded, so none is unexplained.
+        both = judge_recorded(
+            self,
+            RECORDED,
+            listed,
+            ["MissedMutant"] * 2,
+            [recorded, a_record("replace double -> i64 with 1", "x * 2 * 1")],
+            name="both",
+        )
+        self.assertEqual(both.returncode, 0, both.stdout + both.stderr)
+        self.assertIn("missed 2: equivalent 2, unexplained 0", both.stdout)
+        self.assertIn(f"EQUIVALENT {one['name']}", both.stdout)
+        self.assertRegex(both.stdout, r"(?m)^examined 2$")
+
+    def test_a_record_binding_no_listed_mutant_is_stale_and_two_is_ambiguous(self):
+        first = cargo_mutant(RECORDED, "*", "replace * with + in double")
+        second = cargo_mutant(RECORDED, "*", "replace * with + in double", occurrence=2)
+        # A mutant of a file the diff never touched: only the whole tree's listing holds it.
+        far = cargo_mutant(HOUR_TEXT, "23", "replace last -> u8 with 0", file=HOUR)
+        records = [
+            a_record("replace * with - in double", "x * 2 * 1"),
+            a_record("replace * with + in double", "x * 2 * 1"),
+            a_record("replace last -> u8 with 0", "    23\n", file=HOUR),
+        ]
+        done = judge_recorded(
+            self,
+            RECORDED,
+            [first, second],
+            ["MissedMutant"] * 2,
+            records,
+            whole=[first, second, far],
+            files={HOUR: HOUR_TEXT},
+        )
+        self.assertEqual(done.returncode, 1, done.stdout + done.stderr)
+        stale = [line for line in done.stdout.splitlines() if "STALE " in line]
+        ambiguous = [line for line in done.stdout.splitlines() if "AMBIGUOUS " in line]
+        self.assertEqual(len(stale), 1, done.stdout)
+        self.assertIn("STALE deck-streak-fix.json record 1 (", stale[0])
+        self.assertIn("binds no listed mutant", stale[0])
+        self.assertEqual(len(ambiguous), 1, done.stdout)
+        self.assertIn("AMBIGUOUS deck-streak-fix.json record 2 (", ambiguous[0])
+        self.assertIn(first["name"], ambiguous[0])
+        self.assertIn(second["name"], ambiguous[0])
+        # An ambiguous record excuses neither mutant it binds.
+        for mutant in examined("mutants the ambiguous record binds", [first, second]):
+            self.assertIn(f"MISSED {mutant['name']}", done.stdout)
+        # The control: the window narrowed to the second product binds one mutant, and the record
+        # of the file the diff never touched binds its mutant in the whole listing.
+        narrowed = judge_recorded(
+            self,
+            RECORDED,
+            [first, second],
+            ["CaughtMutant", "MissedMutant"],
+            [records[2], a_record("replace * with + in double", "2 * 1")],
+            whole=[first, second, far],
+            files={HOUR: HOUR_TEXT},
+            name="narrowed",
+        )
+        self.assertEqual(narrowed.returncode, 0, narrowed.stdout + narrowed.stderr)
+        self.assertNotIn("STALE", narrowed.stdout)
+        self.assertNotIn("AMBIGUOUS", narrowed.stdout)
+        self.assertIn(f"EQUIVALENT {second['name']}", narrowed.stdout)
+
+    def test_a_record_whose_mutant_was_caught_is_refuted(self):
+        plus = cargo_mutant(RECORDED, "*", "replace * with + in double")
+        divide = cargo_mutant(RECORDED, "*", "replace * with / in double")
+        second = cargo_mutant(RECORDED, "*", "replace * with - in double", occurrence=2)
+        one = cargo_mutant(RECORDED, "x * 2 * 1", "replace double -> i64 with 1")
+        listed = [plus, divide, second, one]
+        records = [
+            a_record("replace * with + in double", "x * 2"),
+            a_record("replace * with / in double", "x * 2"),
+            a_record("replace * with - in double", "2 * 1"),
+            a_record("replace double -> i64 with 1", "x * 2 * 1"),
+        ]
+        summaries = ["CaughtMutant", "Timeout", "Unviable", "MissedMutant"]
+        done = judge_recorded(self, RECORDED, listed, summaries, records)
+        self.assertEqual(done.returncode, 1, done.stdout + done.stderr)
+        for finding in examined(
+            "records whose mutant no longer survives",
+            [
+                f"REFUTED deck-streak-fix.json record 1 ({LIB}: replace * with + in double): "
+                f"its mutant {plus['name']} was caught",
+                f"REFUTED deck-streak-fix.json record 2 ({LIB}: replace * with / in double): "
+                f"its mutant {divide['name']} timed out",
+                f"UNNEEDED deck-streak-fix.json record 3 ({LIB}: replace * with - in double): "
+                f"its mutant {second['name']} is unviable",
+            ],
+        ):
+            self.assertIn(finding, done.stdout)
+        self.assertIn(f"EQUIVALENT {one['name']}", done.stdout)
+        self.assertNotRegex(
+            done.stdout, r"(REFUTED|UNNEEDED|STALE|AMBIGUOUS) deck-streak-fix\.json record 4 "
+        )
+
+    def test_a_record_follows_its_mutant_when_lines_move_above_it(self):
+        record = a_record("replace * with + in double", "x * 2")
+        # Written against the base, where the mutant starts at line 3, column 7.
+        self.assertEqual(located(LIB_TEXT, "*")[:2], (3, 7))
+        above = "/// One.\npub fn one() -> i64 {\n    1\n}\n\n" + LIB_TEXT
+        moved = cargo_mutant(above, "*", "replace * with + in double")
+        self.assertIn(f"{LIB}:8:7: ", moved["name"])
+        done = judge_recorded(self, above, [moved], ["MissedMutant"], [record])
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        self.assertIn(f"EQUIVALENT {moved['name']}", done.stdout)
+        self.assertNotIn("STALE", done.stdout)
+        # Its anchored text changes: the record binds nothing, and its mutant is unexplained.
+        rewritten = above.replace("x * 2", "x * 3")
+        changed = cargo_mutant(rewritten, "*", "replace * with + in double")
+        stale = judge_recorded(self, rewritten, [changed], ["MissedMutant"], [record], name="new")
+        self.assertEqual(stale.returncode, 1, stale.stdout + stale.stderr)
+        self.assertIn("STALE deck-streak-fix.json record 1 (", stale.stdout)
+        self.assertIn(f"MISSED {changed['name']}", stale.stdout)
+        self.assertNotIn("EQUIVALENT", stale.stdout)
+
+
+def stryker_mutant(text, needle, mutator, replacement, status, occurrence=1, length=None):
+    """One mutant of a mutation-testing-elements report, as StrykerJS 10.0.0 writes it."""
+    line, column, end = located(text, needle, occurrence, length)
+    mutant = {
+        "id": f"{mutator}-{line}-{column}-{replacement}",
+        "mutatorName": mutator,
+        "replacement": replacement,
+        "location": {
+            "start": {"line": line, "column": column},
+            "end": {"line": line, "column": end},
+        },
+        "status": status,
+    }
+    if status == "Ignored":
+        mutant["statusReason"] = "EQUIVALENT: the fixture says so (#3)"
+    return mutant
+
+
+def web_report(mutants, source=WEB_HEAD):
+    return {
+        "schemaVersion": "1",
+        "thresholds": {"high": 100, "low": 99},
+        "files": {
+            "src/lib/start.ts": {"language": "typescript", "source": source, "mutants": mutants}
+        },
+    }
+
+
+class TheWebVerdictReadsTheRecord(unittest.TestCase):
+    def judged(self, mutants, records, name):
+        fixture = Fixture(self, files={WEB_FILE: WEB_BASE})
+        fixture.head({WEB_FILE: WEB_HEAD})
+        plan = fixture.plan()
+        self.assertTrue(plan["classes"]["web"]["applies"])
+        write_records(fixture.root, records, fragment="miniapp.json")
+        report = fixture.report(f"{name}.json", web_report(mutants))
+        return fixture.judge("web", "--stryker", str(report))
+
+    def test_a_web_record_excuses_a_survivor_and_never_an_uncovered_mutant(self):
+        # Two mutants of one description start at one position: the span tells them apart.
+        both = stryker_mutant(WEB_HEAD, "a && b", "ConditionalExpression", "true", "Survived")
+        left = stryker_mutant(
+            WEB_HEAD, "a && b", "ConditionalExpression", "true", "Killed", length=1
+        )
+        uncovered = stryker_mutant(WEB_HEAD, "n > 0", "EqualityOperator", "n >= 0", "NoCoverage")
+        killed = stryker_mutant(WEB_HEAD, "n > 0", "ConditionalExpression", "false", "Killed")
+        ignored = stryker_mutant(WEB_HEAD, "'many'", "StringLiteral", '""', "Ignored")
+        mutants = examined("Stryker mutants", [both, left, uncovered, killed, ignored])
+        records = [
+            a_record("ConditionalExpression: true", "a && b", file=WEB_FILE, span="a && b"),
+            a_record("EqualityOperator: n >= 0", "n > 0;", file=WEB_FILE),
+            a_record("ConditionalExpression: false", "n > 0;", file=WEB_FILE),
+            a_record('StringLiteral: ""', "'one'", file=WEB_FILE),
+        ]
+        done = self.judged(mutants, records, "mixed")
+        self.assertEqual(done.returncode, 1, done.stdout + done.stderr)
+        self.assertIn(f"EQUIVALENT {WEB_FILE}:1: ConditionalExpression -> 'true'", done.stdout)
+        self.assertNotIn(f"Survived {WEB_FILE}:1", done.stdout)
+        for finding in examined(
+            "web records that fail",
+            [
+                "UNCOVERED miniapp.json record 2 (",
+                "REFUTED miniapp.json record 3 (",
+                "STALE miniapp.json record 4 (",
+                f"NoCoverage {WEB_FILE}:2: EqualityOperator -> 'n >= 0'",
+                f"Ignored {WEB_FILE}:3: StringLiteral",
+            ],
+        ):
+            self.assertIn(finding, done.stdout)
+        # The control: the survivor alone, recorded, and every other mutant killed.
+        whole = self.judged(
+            [both, left, dict(uncovered, status="Killed"), killed], records[:1], "control"
+        )
+        self.assertEqual(whole.returncode, 0, whole.stdout + whole.stderr)
+        self.assertIn("equivalent 1", whole.stdout)
+        # Without its span the record binds both mutants that start there.
+        unspanned = {name: value for name, value in records[0].items() if name != "span"}
+        loose = self.judged([both, left], [unspanned], "loose")
+        self.assertEqual(loose.returncode, 1, loose.stdout + loose.stderr)
+        self.assertIn("AMBIGUOUS miniapp.json record 1 (", loose.stdout)
+
+
+def table(reports, root, *extra):
+    return subprocess.run(
+        [sys.executable, str(VERDICT), "table", "--reports", str(reports), "--root", str(root)]
+        + list(extra),
+        capture_output=True,
+        text=True,
+        env=dict(os.environ, PYTHONDONTWRITEBYTECODE="1"),
+        timeout=300,
+        check=False,
+    )
+
+
+TABLE_LINE = re.compile(
+    r"(?m)^table: (\S+): listed (\d+), killed (\d+), equivalent (\d+), unexplained (\d+), "
+    r"unviable (\d+)$"
+)
+
+
+class TheTableCountsTheCampaign(unittest.TestCase):
+    def setUp(self):
+        scratch = tempfile.TemporaryDirectory()
+        self.addCleanup(scratch.cleanup)
+        self.scratch = Path(scratch.name)
+        self.root = self.scratch / "tree"
+        for relative, text in {LIB: RECORDED, HOUR: HOUR_TEXT, WEB_FILE: WEB_HEAD}.items():
+            (self.root / relative).parent.mkdir(parents=True, exist_ok=True)
+            (self.root / relative).write_text(text, encoding="utf-8")
+        self.plus = cargo_mutant(RECORDED, "*", "replace * with + in double")
+        self.divide = cargo_mutant(RECORDED, "*", "replace * with / in double")
+        self.second = cargo_mutant(RECORDED, "*", "replace * with - in double", occurrence=2)
+        self.one = cargo_mutant(RECORDED, "x * 2 * 1", "replace double -> i64 with 1")
+        self.zero = cargo_mutant(RECORDED, "x * 2 * 1", "replace double -> i64 with 0")
+        self.last = cargo_mutant(
+            HOUR_TEXT, "23", "replace last -> u8 with 0", file=HOUR, package="deck-streak-hour"
+        )
+        self.first = cargo_mutant(
+            HOUR_TEXT, "23", "replace last -> u8 with 1", file=HOUR, package="deck-streak-hour"
+        )
+        self.survived = stryker_mutant(
+            WEB_HEAD, "a && b", "ConditionalExpression", "true", "Survived"
+        )
+        self.uncovered = stryker_mutant(
+            WEB_HEAD, "n > 0", "EqualityOperator", "n >= 0", "NoCoverage"
+        )
+        self.killed = stryker_mutant(WEB_HEAD, "n > 0", "ConditionalExpression", "false", "Killed")
+
+    def battery(self, name, shards, stryker_mutants=None):
+        """A battery's downloaded reports: {shard: (exit, [(mutant, summary)])}, and Stryker's."""
+        reports = self.scratch / name
+        for shard, (code, entries) in shards.items():
+            directory = reports / f"mutants-shard-{shard}"
+            (directory / "mutants.out").mkdir(parents=True)
+            (directory / "cargo-mutants.exit").write_text(f"{code}\n", encoding="utf-8")
+            if entries is not None:
+                (directory / "mutants.out" / "outcomes.json").write_text(
+                    json.dumps(cargo_report(entries)), encoding="utf-8"
+                )
+        if stryker_mutants is not None:
+            sweep = reports / "stryker" / "stryker"
+            sweep.mkdir(parents=True)
+            (sweep / "mutation.json").write_text(
+                json.dumps(web_report(stryker_mutants)), encoding="utf-8"
+            )
+        return reports
+
+    def the_run(self):
+        return self.battery(
+            "run",
+            {
+                0: ("2", [(self.plus, "CaughtMutant"), (self.divide, "MissedMutant")]),
+                1: ("2", [(self.second, "Unviable"), (self.one, "MissedMutant")]),
+                2: ("3", [(self.zero, "Timeout"), (self.last, "CaughtMutant")]),
+                3: ("0", [(self.first, "Unviable")]),
+            },
+            [self.survived, self.uncovered, self.killed],
+        )
+
+    def test_the_table_counts_each_package_in_the_campaigns_columns(self):
+        write_records(self.root, [a_record("replace * with / in double", "x * 2")])
+        write_records(
+            self.root,
+            [a_record("ConditionalExpression: true", "a && b", file=WEB_FILE, span="a && b")],
+            fragment="miniapp.json",
+        )
+        done = table(self.the_run(), self.root)
+        self.assertEqual(done.returncode, 1, done.stdout + done.stderr)
+        rows = {match[0]: tuple(map(int, match[1:])) for match in TABLE_LINE.findall(done.stdout)}
+        self.assertEqual(
+            rows,
+            {
+                "deck-streak-fix": (5, 2, 1, 1, 1),
+                "deck-streak-hour": (2, 1, 0, 0, 1),
+                "miniapp": (3, 1, 1, 1, 0),
+            },
+            done.stdout,
+        )
+        for package, (listed, killed, equivalent, unexplained, unviable) in examined(
+            "table lines", rows.items()
+        ):
+            self.assertEqual(listed, killed + equivalent + unexplained + unviable, package)
+        self.assertIn(f"table: deck-streak-fix: UNEXPLAINED {self.one['name']}", done.stdout)
+        self.assertIn(f"table: deck-streak-fix: EQUIVALENT {self.divide['name']}", done.stdout)
+        self.assertIn(f"table: miniapp: UNEXPLAINED {WEB_FILE}:2: NoCoverage", done.stdout)
+        # One package's table: its line alone, and last; with nothing unexplained it passes.
+        hour = table(self.the_run_again("hour"), self.root, "--package", "deck-streak-hour")
+        self.assertEqual(hour.returncode, 0, hour.stdout + hour.stderr)
+        self.assertEqual(
+            TABLE_LINE.findall(hour.stdout), [("deck-streak-hour", "2", "1", "0", "0", "1")]
+        )
+        self.assertRegex(hour.stdout.strip().splitlines()[-1], TABLE_LINE)
+        # A record that fails fails the table, though nothing is unexplained.
+        write_records(
+            self.root,
+            [a_record("replace last -> u8 with 0", "    23\n", file=HOUR)],
+            fragment="deck-streak-hour.json",
+        )
+        refuted = table(self.the_run_again("refuted"), self.root, "--package", "deck-streak-hour")
+        self.assertEqual(refuted.returncode, 1, refuted.stdout + refuted.stderr)
+        self.assertIn("REFUTED deck-streak-hour.json record 1 (", refuted.stdout)
+        self.assertIn("unexplained 0", refuted.stdout)
+
+    def the_run_again(self, name):
+        return self.battery(
+            name,
+            {
+                0: ("0", [(self.last, "CaughtMutant")]),
+                1: ("0", [(self.first, "Unviable")]),
+            },
+        )
+
+    def test_a_listed_mutant_no_report_tested_is_void_by_name(self):
+        write_records(self.root, [a_record("replace * with / in double", "x * 2")])
+        listing = self.scratch / "listed.json"
+        listed = [self.plus, self.divide, self.second, self.one, self.zero, self.last, self.first]
+        # A mutant the listing holds and no report tested: shard 4 never reported.
+        lost = cargo_mutant(RECORDED, "x * 2 * 1", "replace double -> i64 with -1")
+        listing.write_text(json.dumps([*listed, lost]), encoding="utf-8")
+        reports = self.battery(
+            "lost",
+            {
+                0: ("2", [(self.plus, "CaughtMutant"), (self.divide, "MissedMutant")]),
+                1: ("0", [(self.second, "Unviable"), (self.one, "CaughtMutant")]),
+                2: ("3", [(self.zero, "Timeout"), (self.last, "CaughtMutant")]),
+                3: ("0", [(self.first, "Unviable")]),
+            },
+        )
+        done = table(reports, self.root, "--package", "deck-streak-fix", "--listed", str(listing))
+        self.assertEqual(done.returncode, 3, done.stdout + done.stderr)
+        self.assertIn(f"table: VOID never tested: {lost['name']}", done.stdout)
+        self.assertEqual(
+            TABLE_LINE.findall(done.stdout), [("deck-streak-fix", "6", "3", "1", "0", "1")]
+        )
+        # A report cut short is VOID by name too, and so is every listed mutant it never reached.
+        partial = self.battery(
+            "partial",
+            {
+                0: ("137", [(self.plus, "CaughtMutant")]),
+                1: ("0", [(self.second, "Unviable"), (self.one, "CaughtMutant")]),
+                2: ("3", [(self.zero, "Timeout"), (self.last, "CaughtMutant")]),
+                3: ("0", [(self.first, "Unviable")]),
+            },
+        )
+        listing.write_text(json.dumps(listed), encoding="utf-8")
+        cut = table(partial, self.root, "--package", "deck-streak-fix", "--listed", str(listing))
+        self.assertEqual(cut.returncode, 3, cut.stdout + cut.stderr)
+        self.assertIn("table: VOID mutants-shard-0: cargo-mutants exit 137", cut.stdout)
+        self.assertIn(f"table: VOID never tested: {self.divide['name']}", cut.stdout)
+        # The control: every listed mutant tested, in reports whole.
+        whole = self.battery(
+            "whole",
+            {
+                0: ("2", [(self.plus, "CaughtMutant"), (self.divide, "MissedMutant")]),
+                1: ("0", [(self.second, "Unviable"), (self.one, "CaughtMutant")]),
+                2: ("3", [(self.zero, "Timeout"), (self.last, "CaughtMutant")]),
+                3: ("0", [(self.first, "Unviable")]),
+            },
+        )
+        green = table(whole, self.root, "--package", "deck-streak-fix", "--listed", str(listing))
+        self.assertEqual(green.returncode, 0, green.stdout + green.stderr)
+        self.assertNotIn("VOID", green.stdout)
+        self.assertEqual(
+            TABLE_LINE.findall(green.stdout), [("deck-streak-fix", "5", "3", "1", "0", "1")]
+        )
+
+
+class ASquashMergeNamesItsPullRequest(unittest.TestCase):
+    def test_a_squash_merge_subject_names_the_pull_request_it_merges(self):
+        fixture = Fixture(self)
+        fixture.head({LIB: LIB_TEXT.replace("x * 2", "x + x")})
+        cases = [
+            ("feat(vault): a title (#12)\n\n* a commit\n* another", "not-applicable", "merges #12"),
+            ("fix(api): a title that closes an issue (#5) (#77)", "not-applicable", "merges #77"),
+            ("Merge pull request #42 from RexRenatus/feat/x\n\nthe body", "not-applicable", "#42"),
+            ("chore: a subject that names (#12) mid-line", "diff", "names no pull request"),
+            ("chore: a subject that names none\n\nsee (#12)", "diff", "names no pull request"),
+        ]
+        for subject, decision, reason in examined("push subjects", cases):
+            with self.subTest(subject=subject):
+                plan = fixture.plan("--event", "push", "--subject", subject)
+                scope = plan.get("scope") or {}
+                self.assertEqual(scope.get("decision"), decision, scope)
+                self.assertIn(reason, scope.get("reason", ""))
+                # The title's own issue is never read as the pull request.
+                self.assertNotIn("#5", scope.get("reason", ""))
+                judged = fixture.judge("rust")
+                if decision == "not-applicable":
+                    self.assertEqual(judged.returncode, 0, judged.stdout)
+                    self.assertIn(f"not-applicable: {scope['reason']}", judged.stdout)
+                else:
+                    # The diff is judged: a changed code line with no report is VOID.
+                    self.assertEqual(judged.returncode, 3, judged.stdout)
 
 
 if __name__ == "__main__":

@@ -9,13 +9,15 @@
 use std::collections::BTreeMap;
 use std::ffi::OsString;
 use std::fs;
+use std::io;
 use std::os::unix::fs::{PermissionsExt, symlink};
 use std::path::{Path, PathBuf};
 
 use deck_streak_kernel::{Environment, SettingsError, StudyDay};
 use deck_streak_vault::config::{ARCHIVE_FOLDER, READINGS_FOLDER, VAULT_ROOT};
 use deck_streak_vault::{
-    Rails, ReadingsTree, RealFs, StartRefusal, TopicKey, VaultError, VaultSettings,
+    DirEntry, EntryKind, FolderName, Rails, ReadingsTree, RealFs, StartRefusal, TopicKey,
+    VaultError, VaultFile, VaultFs, VaultPaths, VaultSettings,
 };
 
 const READINGS: &str = "12-Readings";
@@ -301,5 +303,234 @@ fn a_readings_folder_the_service_cannot_write_refuses_start() {
             VaultError::Start(StartRefusal::ReadingsFolderNotWritable)
         ),
         "refused as {refused:?}"
+    );
+}
+
+#[test]
+fn a_missing_root_or_a_readings_link_to_nothing_refuses_start_by_name() {
+    let vault = tempfile::tempdir().expect("a temporary vault");
+
+    let refused =
+        ReadingsTree::open(&settings(&vault.path().join("absent")), RealFs, rails()).map(|_| ());
+    assert!(
+        matches!(
+            refused,
+            Err(VaultError::Start(StartRefusal::RootNotADirectory))
+        ),
+        "a root that does not exist started as {refused:?}"
+    );
+
+    symlink(vault.path().join("nowhere"), vault.path().join(READINGS)).expect("a link to nothing");
+    let refused = ReadingsTree::open(&settings(vault.path()), RealFs, rails()).map(|_| ());
+    assert!(
+        matches!(
+            refused,
+            Err(VaultError::Start(StartRefusal::ReadingsFolderMissing))
+        ),
+        "a readings folder that links to nothing started as {refused:?}"
+    );
+}
+
+#[test]
+fn a_readings_folder_that_resolves_to_the_root_or_outside_it_refuses_start() {
+    let vault = tempfile::tempdir().expect("a temporary vault");
+    let outside = tempfile::tempdir().expect("a folder outside the vault");
+    let link = vault.path().join(READINGS);
+
+    for target in [outside.path(), vault.path()] {
+        symlink(target, &link).expect("a planted link");
+        let refused = ReadingsTree::open(&settings(vault.path()), RealFs, rails()).map(|_| ());
+        assert!(
+            matches!(
+                refused,
+                Err(VaultError::Start(StartRefusal::ReadingsFolderOutsideRoot))
+            ),
+            "a readings folder linked to {} started as {refused:?}",
+            if target == vault.path() {
+                "the root"
+            } else {
+                "a folder outside the root"
+            }
+        );
+        fs::remove_file(&link).expect("the link is removed");
+    }
+}
+
+/// The start check's step that [`Failing`] makes fail.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Step {
+    ResolveRoot,
+    ResolveReadings,
+    CreateProbe,
+}
+
+/// The real file system, but one step of the start check fails with an error of `kind`.
+struct Failing {
+    step: Step,
+    kind: io::ErrorKind,
+}
+
+impl Failing {
+    fn fails(&self, step: Step) -> io::Result<()> {
+        if self.step == step {
+            Err(io::Error::from(self.kind))
+        } else {
+            Ok(())
+        }
+    }
+}
+
+impl VaultFs for Failing {
+    fn create_new(&self, path: &Path) -> io::Result<Box<dyn VaultFile>> {
+        self.fails(Step::CreateProbe)?;
+        RealFs.create_new(path)
+    }
+
+    fn rename(&self, from: &Path, to: &Path) -> io::Result<()> {
+        RealFs.rename(from, to)
+    }
+
+    fn sync_dir(&self, dir: &Path) -> io::Result<()> {
+        RealFs.sync_dir(dir)
+    }
+
+    fn remove_file(&self, path: &Path) -> io::Result<()> {
+        RealFs.remove_file(path)
+    }
+
+    fn read(&self, path: &Path) -> io::Result<Vec<u8>> {
+        RealFs.read(path)
+    }
+
+    fn kind(&self, path: &Path) -> io::Result<Option<EntryKind>> {
+        RealFs.kind(path)
+    }
+
+    fn list(&self, dir: &Path) -> io::Result<Vec<DirEntry>> {
+        RealFs.list(dir)
+    }
+
+    fn create_dir(&self, path: &Path) -> io::Result<()> {
+        RealFs.create_dir(path)
+    }
+
+    fn remove_dir(&self, path: &Path) -> io::Result<()> {
+        RealFs.remove_dir(path)
+    }
+
+    fn canonicalize(&self, path: &Path) -> io::Result<PathBuf> {
+        if path.ends_with(READINGS) {
+            self.fails(Step::ResolveReadings)?;
+        } else {
+            self.fails(Step::ResolveRoot)?;
+        }
+        RealFs.canonicalize(path)
+    }
+}
+
+#[test]
+fn a_start_check_step_that_fails_is_an_io_error_naming_the_step_and_never_a_refusal() {
+    let vault = tempfile::tempdir().expect("a temporary vault");
+    fs::create_dir(vault.path().join(READINGS)).expect("the readings folder");
+    let cases = [
+        (
+            Step::ResolveRoot,
+            io::ErrorKind::PermissionDenied,
+            "resolve the vault root",
+        ),
+        (
+            Step::ResolveReadings,
+            io::ErrorKind::PermissionDenied,
+            "resolve the readings folder",
+        ),
+        (
+            Step::CreateProbe,
+            io::ErrorKind::StorageFull,
+            "write in the readings folder",
+        ),
+    ];
+    for (step, kind, named) in examined("failing steps", cases.to_vec()) {
+        let failed = VaultPaths::check(&settings(vault.path()), &Failing { step, kind })
+            .expect_err("the start check cannot run");
+        assert!(
+            matches!(
+                failed,
+                VaultError::Io { step, ref source } if step == named && source.kind() == kind
+            ),
+            "{named} failing with {kind:?} ended as {failed:?}"
+        );
+    }
+    assert_eq!(
+        fs::read_dir(vault.path().join(READINGS))
+            .expect("the readings folder")
+            .count(),
+        0,
+        "no failed check left its probe file"
+    );
+}
+
+#[test]
+fn the_vault_paths_show_their_folder_names_and_never_the_hosts_paths() {
+    let vault = tempfile::tempdir().expect("a temporary vault");
+    fs::create_dir(vault.path().join(READINGS)).expect("the readings folder");
+
+    let paths = VaultPaths::check(&settings(vault.path()), &RealFs).expect("the vault's paths");
+
+    let shown = format!("{paths:?}");
+    assert_eq!(
+        shown,
+        format!(
+            "VaultPaths {{ readings: FolderName({READINGS:?}), archive: FolderName({ARCHIVE:?}), .. }}"
+        )
+    );
+    assert!(
+        !shown.contains(&vault.path().to_string_lossy().into_owned()),
+        "the vault's host path is private configuration: {shown}"
+    );
+    assert_eq!(paths.readings_name().to_string(), READINGS);
+    assert_eq!(
+        FolderName::new(ARCHIVE).expect("a folder name").to_string(),
+        ARCHIVE
+    );
+}
+
+#[test]
+fn a_reading_or_a_body_a_rail_refuses_is_never_written() {
+    let vault = tempfile::tempdir().expect("a temporary vault");
+    fs::create_dir(vault.path().join(READINGS)).expect("the readings folder");
+    let tree = ReadingsTree::open(&settings(vault.path()), RealFs, rails()).expect("the vault");
+    let topic = TopicKey::new("law/evidence").expect("a topic key");
+    let templated = "# Hearsay\n\n<% tp.file.title %>";
+
+    let fresh = StudyDay::from_epoch_day(20_010);
+    let refused = tree
+        .create(fresh, &topic, DIGEST, templated)
+        .expect_err("a reading a rail refuses");
+    assert!(
+        matches!(refused, VaultError::Rails(_)),
+        "refused as {refused:?}"
+    );
+    assert!(
+        !vault.path().join(tree.note_path(fresh, &topic)).exists(),
+        "the refused reading was never written"
+    );
+
+    let day = StudyDay::from_epoch_day(20_011);
+    let created = tree
+        .create(day, &topic, DIGEST, BODY)
+        .expect("a reading of the day");
+    let note = vault.path().join(&created.path);
+    let before = fs::read_to_string(&note).expect("the note");
+    let refused = tree
+        .replace_body(day, &topic, created.body, templated)
+        .expect_err("a body a rail refuses");
+    assert!(
+        matches!(refused, VaultError::Rails(_)),
+        "refused as {refused:?}"
+    );
+    assert_eq!(
+        fs::read_to_string(&note).expect("the note"),
+        before,
+        "the note keeps its bytes"
     );
 }

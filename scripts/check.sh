@@ -114,7 +114,26 @@ stage_doctest() { need_cargo && need_protoc && cargo test --doc --workspace --lo
 stage_audit_rust() {
     need_cargo &&
         need cargo-deny "https://github.com/EmbarkStudios/cargo-deny releases, or taiki-e/install-action" &&
-        cargo deny --locked check advisories bans licenses sources
+        need git "https://git-scm.com/downloads" &&
+        cargo deny --locked check advisories bans licenses sources &&
+        lock_is_canonical
+}
+
+lock_is_canonical() {
+    # --locked does not prove a lock canonical. A lock cargo may not write is compared by the
+    # resolve it encodes, not by its text, so a text merge's leftover (a version qualifier, #246)
+    # passes every --locked stage, while an unlocked resolve, as cargo-mutants runs one, rewrites
+    # it. The resolve below writes cargo's own form, and a lock it rewrote fails by name (SPEC-057
+    # R18). It judges the committed lock, so an uncommitted edit of it is named first.
+    git diff --quiet -- Cargo.lock || {
+        echo "audit-rust: Cargo.lock differs from its committed form; commit it, then run the stage"
+        return 1
+    }
+    cargo metadata --format-version 1 >/dev/null || return 1
+    git diff --exit-code -- Cargo.lock || {
+        echo "audit-rust: an unlocked resolve rewrote Cargo.lock, so it is not in cargo's canonical form; commit the rewritten lock"
+        return 1
+    }
 }
 
 stage_web() {

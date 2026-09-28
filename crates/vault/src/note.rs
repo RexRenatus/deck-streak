@@ -452,7 +452,7 @@ fn body_span(text: &str) -> Option<(usize, usize)> {
 
 #[cfg(test)]
 mod tests {
-    use super::{is_python_space, split_lines};
+    use super::{delimiter_newline, is_python_space, key_line, split_lines};
 
     #[test]
     fn lines_split_where_python_splits_them() {
@@ -481,5 +481,23 @@ mod tests {
         assert!(('\x1c'..='\x1f').all(is_python_space));
         assert!(is_python_space('\u{3000}'));
         assert!(!is_python_space('\u{180e}'));
+    }
+
+    #[test]
+    fn the_delimiter_newline_is_the_ending_of_the_first_line_feed_even_at_the_start() {
+        assert_eq!(delimiter_newline("---\r\nrolls: 1\n"), "\r\n");
+        assert_eq!(delimiter_newline("---\nrolls: 1\r\n"), "\n");
+        assert_eq!(delimiter_newline("\n---\r\n"), "\n");
+        assert_eq!(delimiter_newline("---"), "\n");
+    }
+
+    #[test]
+    fn a_key_line_is_a_letter_or_an_underscore_then_word_characters_then_a_colon() {
+        assert_eq!(key_line("rolls: 3"), Some(("rolls", " 3")));
+        assert_eq!(key_line("_private:x"), Some(("_private", "x")));
+        assert_eq!(key_line("2nd: x"), None);
+        assert_eq!(key_line("-rolls: 3"), None);
+        assert_eq!(key_line("rolls 3"), None);
+        assert_eq!(key_line(""), None);
     }
 }
