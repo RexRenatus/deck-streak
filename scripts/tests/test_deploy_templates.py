@@ -1051,20 +1051,21 @@ class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
         # reading `systemd-analyze exit-status` gives it, None where it reads no status; and a
         # value splits into words as a unit file's does, a backslash taking the next character.
         readings = [
-            ("1 FAILURE 01 0001 0x1 0X01 +1 +0x1 0b1 0B1 0o1 0O1 0b+1 +0b1 0b0b1", 1),
+            ("1 FAILURE 01 0001 0x1 0X01 +1 +0x1 0b1 0B1 0b+1 0B+1 +0b1 0b0b1 0o1 0O1", 1),
             ("0 SUCCESS -0 00 0x0", 0),
             ("010", 8),
             ("0x10", 16),
-            ("255 0xff 0377", 255),
-            ('failure -1 256 08 0x 0o8 +0o1 0x+1 1.0 1e0 "1"', None),
+            ("255 0xff 0xFF 0377", 255),
+            ('failure -1 256 08 0x 0b + 0o8 +0o1 0x+1 1.0 1e0 "1"', None),
         ]
         for words, reading in readings:
             for word in words.split():
                 self.assertEqual(_units.exit_status(word), reading, word)
-        self.assertEqual(
-            _units.status_words('\\1 F\\AILURE 0\\ 1 "1"  2'), ["1", "FAILURE", "0 1", '"1"', "2"]
-        )
-        self.assertIsNone(_units.exit_status("0 1"))
+        # A backslash takes the next character, a space included, and a quote stays a character;
+        # a tab separates as a space does; and a trailing backslash ends the value.
+        words = _units.status_words('\\1 F\\AILURE 0\\ 1 \\ 1 \\ 0o1 0b\\ 1 "1"\t2 3\\')
+        self.assertEqual(words, ["1", "FAILURE", "0 1", " 1", " 0o1", "0b 1", '"1"', "2"])
+        self.assertEqual([_units.exit_status(w) for w in words], [1, 1, None, 1, 1, 1, None, 2])
 
 
 if __name__ == "__main__":
