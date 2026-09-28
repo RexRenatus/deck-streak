@@ -32,3 +32,5 @@ reference to look something up, and explanation to understand why.
 - [Architecture decisions](decisions/)
 - [Specifications](specs/)
 - [Schematics](schematics/)
+
+<!-- A throwaway docs-only change that measures the CI of SPEC-038; this branch is never merged. -->
