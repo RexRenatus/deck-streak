@@ -1,12 +1,12 @@
 //! `deckstreakd`: the one release binary of the service (SPEC-025 R1; ADR-010). Its first argument
-//! names the role it runs, and each role is one systemd unit: `api` here, `bot` with SPEC-026 and
-//! `job` with SPEC-027.
+//! names the role it runs, and each role is one systemd unit: `api`, `job` (SPEC-027: `deckstreakd
+//! job <id>` runs one job of the table and exits), and `bot` with SPEC-026.
 //!
 //! `main` installs the kernel's logging before anything else, so every line the process writes,
 //! even a refusal to start, is a JSON event with its journal priority (SPEC-031 R1); it is then the
 //! one reader of the process environment (SPEC-020 R10). A missing or unknown role exits 2 with a
-//! usage line naming the roles; a role that refuses start or fails exits 1; a role that stops on
-//! its shutdown signal exits 0.
+//! usage line naming the roles and the jobs; a role that refuses start or fails exits 1; a role that
+//! stops on its shutdown signal exits 0. The `job` role exits with its runner's code (R7).
 #![forbid(unsafe_code)]
 #![deny(unused_must_use)]
 #![warn(missing_docs, clippy::all)]
@@ -16,8 +16,11 @@ use std::process::ExitCode;
 use std::time::Duration;
 
 use anyhow::Context;
+use deck_streak_coordination::jobs::{self, Job, TABLE};
 use deck_streak_daemon::role_api;
 use deck_streak_kernel::{Environment, Redactor, logging};
+
+mod role_job;
 
 /// The exit code of a start with no role, an unknown one, or arguments the role does not take.
 const USAGE: u8 = 2;
@@ -31,26 +34,31 @@ const EXIT_GRACE: Duration = Duration::from_secs(1);
 enum Role {
     /// The HTTP service the Mini App calls (SPEC-025).
     Api,
+    /// One job of the table, run once by its timer (SPEC-027).
+    Job(Job),
 }
 
 impl Role {
-    /// Every role, by name.
-    const ALL: [(&'static str, Self); 1] = [("api", Self::Api)];
+    /// Every role's name.
+    const NAMES: [&'static str; 2] = ["api", "job"];
 
-    /// The role `arguments` name: exactly one argument, a role's name.
+    /// The role `arguments` name: `api` alone, or `job` and the id of a job of the table.
     fn from_arguments(arguments: &[OsString]) -> Option<Self> {
-        let [name] = arguments else {
-            return None;
-        };
-        Self::ALL
-            .iter()
-            .find(|(known, _)| name == known)
-            .map(|&(_, role)| role)
+        match arguments {
+            [name] if name == "api" => Some(Self::Api),
+            [name, id] if name == "job" => id.to_str().and_then(jobs::job).map(Self::Job),
+            _ => None,
+        }
     }
 
     /// The roles' names, for the usage line.
     fn names() -> String {
-        Self::ALL.map(|(name, _)| name).join(", ")
+        Self::NAMES.join(", ")
+    }
+
+    /// The table's jobs, for the usage line.
+    fn jobs() -> String {
+        TABLE.map(|job| job.id).join(", ")
     }
 }
 
@@ -63,8 +71,9 @@ fn main() -> ExitCode {
     let arguments: Vec<OsString> = std::env::args_os().skip(1).collect();
     let Some(role) = Role::from_arguments(&arguments) else {
         tracing::error!(
-            "usage: deckstreakd <role>, the one argument; the roles are: {}",
-            Role::names()
+            "usage: deckstreakd <role>, or deckstreakd job <id>; the roles are: {}; the jobs are: {}",
+            Role::names(),
+            Role::jobs()
         );
         return ExitCode::from(USAGE);
     };
@@ -79,10 +88,10 @@ fn main() -> ExitCode {
             return ExitCode::FAILURE;
         }
     };
-    let outcome = runtime.block_on(run(role, &environment));
+    let outcome = runtime.block_on(run(role, &environment, &redactor));
     runtime.shutdown_timeout(EXIT_GRACE);
     match outcome {
-        Ok(()) => ExitCode::SUCCESS,
+        Ok(code) => ExitCode::from(code),
         Err(error) => {
             tracing::error!(
                 error = format!("{error:#}"),
@@ -93,9 +102,15 @@ fn main() -> ExitCode {
     }
 }
 
-/// Runs `role` to its end.
-async fn run(role: Role, environment: &Environment) -> anyhow::Result<()> {
+/// Runs `role` to its end, and returns the process's exit code.
+async fn run(role: Role, environment: &Environment, redactor: &Redactor) -> anyhow::Result<u8> {
     match role {
-        Role::Api => role_api::run(environment).await.context("the api role"),
+        Role::Api => role_api::run(environment)
+            .await
+            .context("the api role")
+            .map(|()| 0),
+        Role::Job(job) => role_job::run(environment, redactor, &job)
+            .await
+            .context("the job role"),
     }
 }

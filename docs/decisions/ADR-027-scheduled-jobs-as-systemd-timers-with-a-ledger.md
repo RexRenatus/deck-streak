@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 date: "2026-09-27"
 decision-makers: "@RexRenatus (owner), the DeckStreak architect"
 ---
@@ -43,7 +43,8 @@ that repeats within the day (the liveness watch) records its outcome without a c
 running it twice changes nothing. The sync is a once-a-day job (ADR-037), claimed like the others:
 its slot follows the rollover, so its fire date is the study day it runs in, and a second fire, a
 restart or a manual run that day does nothing. `Persistent=true` is set only on catch-up jobs'
-timers, as the predecessor replayed only its allowlist; none exists at W0.
+timers, as the predecessor replayed only its allowlist; at W0 that is `sync` alone (ADR-037, and
+SPEC-027 R1: a sync missed by at most six hours runs once when its timer activates).
 
 DeckStreak's slots, chosen to keep off the predecessor's minutes (its in-process slots, its sync
 ticks and its three systemd timers) and off one another:
@@ -57,6 +58,44 @@ ticks and its three systemd timers) and off one another:
 The timers' calendars are rendered in the owner's zone by the private deploy rail; the templates
 carry UTC as the neutral example, and the liveness job's drift check pages when a fire lands more
 than 30 minutes off its slot, so a wrong zone is caught on the first day.
+
+### How the runner decides (decided in SPEC-027's delivery)
+
+Each choice below is the runner's, and each names what it was chosen against.
+
+- **A catch-up job looks only at its fires of the local day it runs in.** With none elapsed it does
+  nothing, and more than 360 minutes late it records `missed`: the predecessor's
+  `scheduler.py:_latest_elapsed_fire_today`, which `goldens/catchup.json` holds it to. Chosen against
+  the latest scheduled instant at or before now alone, which would replay a 22:00 fire after
+  midnight, as the golden's `after_midnight` cases refuse.
+- **Every page is a transition read from rows that already exist.** The first error of a job's error
+  streak reads the job's last recorded outcome before the run; the first check to find the sync dead
+  compares the watch's previous check with the instant the sync died; the first check to see a
+  maintenance fire off its slot compares that fire with the previous check. Chosen against a table of
+  paging state, which would be a second record of what `cron_fires` and `sync_runs` already hold, and
+  against the predecessor's process-lifetime latch, which a `oneshot` process cannot keep.
+- **A failed scheduled sync is an error of the `sync` job.** Its first failure of an episode pages,
+  after its bounded retries, and a repeat only logs until a sync succeeds. That also covers the
+  predecessor's immediate page on a hard failure (`engine_failed`, `open_failed`), which existed only
+  because its other failures waited for three in a row. Chosen against a page every study day while
+  the sync fails, since the dead-man watch pages again once the episode outlives its window, and
+  against the predecessor's `SYNC_FAIL_ALERT_THRESHOLD` of three, which at one sync a day is three
+  days.
+- **The runner writes through ports**: `CronLedger`, `SyncCycle` and `DeliveryMarker`. The catch-up
+  decision then runs against the golden's recording stub exactly as against `cron_fires`, and the
+  `sync` job's cycle is SPEC-022's, through `coordination::sync_cycle`, built only when `sync` runs.
+  Chosen against calling SQLite and the syncer from the runner, which no stub could stand in for, and
+  against building the syncer for every job, which would refuse `maintenance` and `liveness` for want
+  of the sync's own settings.
+- **The drift check reads the timer's zone.** The offset that puts the maintenance fire on its slot
+  (`signed_skew_minutes`) is compared with the configured offset (`rollover_skew_minutes`), so a timer
+  rendered in the wrong zone reads as the skew between the two zones. Chosen against the
+  predecessor's comparison of its scheduler's zone with the collection's own rollover, which needs
+  the collection's configuration, and DeckStreak reads none at W0.
+- **The boot grace counts from the first recorded sync attempt** in `sync_runs`. Chosen against the
+  predecessor's process uptime, which a `oneshot` process does not have.
+- **The upkeep prunes, then optimises, then checkpoints.** Chosen against the predecessor's order,
+  checkpoint first, which leaves the prune's own frames in the write-ahead log until the next day.
 
 ### Consequences
 
