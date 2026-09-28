@@ -20,7 +20,8 @@ Group=deck-streak
 StateDirectory=deck-streak
 EnvironmentFile=/etc/deck-streak/deck-streak.env
 # The sync's account, read from the private rail's socket at every start and never stored
-# (ADR-038). Only the sync job reads it, and the rail's map decides which instances it answers.
+# (ADR-038). Only the sync job reads it, and the rail's map answers it to the sync instance alone
+# (SPEC-061 §8): the other instances ask for it too, are answered nothing, and never read it.
 LoadCredential=anki-sync-username:/run/deck-streak-credentials/socket
 LoadCredential=anki-sync-password:/run/deck-streak-credentials/socket
 # A job yields the processor and the disk to the long-running services.
