@@ -154,6 +154,27 @@ async fn updates_queued_before_start_are_drained_and_not_replayed() {
 }
 
 #[tokio::test]
+async fn the_drain_asks_for_the_newest_queued_update_alone() {
+    let bench = Bench::start().await;
+    let mut commands = bench.commands(ScriptedSync::default());
+    let fake = bench.fake.clone();
+    run(
+        &bench.transport,
+        &mut commands,
+        async move { fake.until(|calls| polls(calls).len() >= 2).await },
+        || {},
+    )
+    .await;
+    // The predecessor's drain (`bot.py:CommandBot._drain_offset`) asks for `offset=-1&timeout=0`:
+    // the Bot API answers a negative offset with the newest queued update alone and forgets every
+    // update before it, where a positive offset would page through the queue from its oldest.
+    let calls = bench.fake.calls();
+    let drain = &polls(&calls)[0].body;
+    assert_eq!(drain["offset"], -1, "the newest queued update: {drain}");
+    assert_eq!(drain["timeout"], 0, "and no wait: {drain}");
+}
+
+#[tokio::test]
 async fn the_poll_backoff_matches_the_predecessors_golden() {
     let golden = golden::read(&golden::committed("poll_backoff")).expect("the golden reads");
     println!(
