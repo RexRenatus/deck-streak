@@ -34,3 +34,4 @@ reference to look something up, and explanation to understand why.
 - [Schematics](schematics/)
 
 <!-- A throwaway docs-only change that measures the CI of SPEC-038; this branch is never merged. -->
+<!-- A second throwaway docs-only change: it supersedes the first run, which is cancelled. -->
