@@ -83,8 +83,9 @@ CREDENTIAL_SOURCES = {
 # Which credentials each service's role reads: the api's owner gate (SPEC-024, SPEC-025), the bot's
 # transport, owner gate and `/sync` (SPEC-026 R1, R11), and the `sync` job's syncer (SPEC-022,
 # SPEC-027). The job template carries the sync's pair for every instance, and the private rail's map
-# answers them for the `sync` instance alone (ADR-038). SPEC-031's alert reads the bot token and the
-# owner's id, whose private chat it pages (R3); the evaluator and the watch read none.
+# answers them for the `sync` instance alone, the one job that reads them (ADR-038; SPEC-061 §8,
+# A14). SPEC-031's alert reads the bot token and the owner's id, whose private chat it pages (R3);
+# the evaluator and the watch read none.
 ROLE_CREDENTIALS = {
     "deck-streak-api.service": ("OWNER_USER_ID", "TELEGRAM_BOT_TOKEN"),
     "deck-streak-bot.service": (
