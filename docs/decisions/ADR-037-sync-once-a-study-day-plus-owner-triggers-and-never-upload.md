@@ -103,6 +103,7 @@ ADR-008, ADR-009, ADR-011, ADR-027 (its `sync` row is superseded by this ADR), A
 Amended in part by SPEC-027 as delivered (#224, 2026-09-28): no job but `sync` runs the sync cycle.
 The sentence above that a job needing the outcome "first runs that same one scheduled sync itself"
 no longer holds: such a job reads the study day's sync outcome and never runs a sync (SPEC-027 R5,
-A12). After a restart, `sync` is the one catch-up job, and a job that runs before it has caught up
-finds no successful sync for the study day and records it, as its own SPEC says; the owner can
-trigger a sync and regenerate. The count of scheduled syncs per study day stays at most one.
+A12). After a restart, the `sync` job's own catch-up (SPEC-027 R1) is the only run of a missed
+scheduled sync, and a job that runs before it has caught up finds no successful sync for the study
+day and records it, as its own SPEC says; the owner can trigger a sync and regenerate. The count of
+scheduled syncs per study day stays at most one.
