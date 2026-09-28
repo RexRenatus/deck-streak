@@ -79,3 +79,6 @@ subscription-proxy client rows run by `scripts/box-packs.sh`; the ai-content-saf
 
 SPEC-043; ADR-015; ADR-038; ADR-054; the subscription-proxy pack (client rules 1 to 10), the
 ai-content-safety pack ("The gate", "Agency"); docs/schematics/agent-duty-run.md.
+
+Amended by ADR-056 (2026-09-28): no pack runner will be published, so its first "what would
+make this wrong" premise is retired.

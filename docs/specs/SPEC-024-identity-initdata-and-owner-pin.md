@@ -1,9 +1,10 @@
 # SPEC-024: the server validates Telegram initData, pins the caller to the owner, and opens a short session
 
-- **Wave:** W0. **Issue:** #17 (epic #1). **Context(s):** `deck-streak-identity`, `deck-streak-api` (the session routes).
-- **Decided by:** ADR-006 (Telegram initData first, pinned to the owner, a `__Host-` session cookie), ADR-007 (same origin), ADR-010 (credentials), ADR-025 (the API's layers), and this SPEC's ADR-024 (an in-memory bounded session store, its lifetimes, and the initData freshness bound).
-- **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
-  `docs/specs/` with its tests and `docs/red-first/SPEC-024.md` (ADR-016).
+- **Wave:** W0. **Issue:** #17 (epic #1). **Context(s):** `deck-streak-identity`, `deck-streak-api` (the session routes), `deck-streak-daemon` (the `api` role's credentials).
+- **Decided by:** ADR-006 (Telegram initData first, pinned to the owner, a `__Host-` session cookie), ADR-007 (same origin), ADR-010 and ADR-038 (credentials), ADR-025 (the API's layers), and this SPEC's ADR-024 (an in-memory bounded session store, its lifetimes, the initData freshness bound, and the decisions of §7).
+- **Status:** judged: delivered with its tests and `docs/red-first/SPEC-024.md`. The delivery made
+  R1, R3, R5, R6 and R8 exact where the code decided them, did not admit `form_urlencoded`, and
+  amended the manifest by three files and three dependencies, each with its reason (§7).
 
 ## 1. The problem, measured
 
@@ -123,21 +124,25 @@ under `crates/identity/tests/fixtures/`.
 
 | file | context | change |
 |---|---|---|
-| `crates/identity/Cargo.toml` | `deck-streak-identity` | changed: kernel, axum, hmac, sha2, subtle, getrandom, form_urlencoded, serde, serde_json, thiserror, tracing; dev: tower, tokio |
-| `crates/identity/src/lib.rs` | `deck-streak-identity` | changed |
-| `crates/identity/src/init_data.rs` | `deck-streak-identity` | added: the one validator |
-| `crates/identity/src/owner.rs` | `deck-streak-identity` | added: the owner pin and its credentials |
+| `crates/identity/Cargo.toml` | `deck-streak-identity` | changed: kernel, axum, hmac, sha2, subtle, getrandom, serde, serde_json, thiserror, tracing; dev: tempfile (§7), tower, tokio. `form_urlencoded` is not admitted (§7) |
+| `crates/identity/src/lib.rs` | `deck-streak-identity` | changed: the modules, and `Refusal` with its reason codes |
+| `crates/identity/src/init_data.rs` | `deck-streak-identity` | added: the one validator and its strict decoder |
+| `crates/identity/src/owner.rs` | `deck-streak-identity` | added: the owner pin, its credentials and the gate |
 | `crates/identity/src/session.rs` | `deck-streak-identity` | added: the store, the cookie, the extractor |
 | `crates/identity/src/settings.rs` | `deck-streak-identity` | added: the freshness bound |
-| `crates/identity/tests/init_data.rs`, `boundary.rs`, `owner.rs`, `session.rs` | `deck-streak-identity` | added: A1 to A8, A10, A11, A16 |
+| `crates/identity/tests/init_data.rs`, `boundary.rs`, `owner.rs`, `session.rs` | `deck-streak-identity` | added: A1 to A8, A10, A11, A16, and four tests of §7 |
 | `crates/identity/tests/fixtures/planted_compare.rs.fixture` | `deck-streak-identity` | added: the planted comparison A6 refuses |
-| `crates/api/src/session_routes.rs`, `crates/api/src/router.rs`, `crates/api/src/lib.rs`, `crates/api/Cargo.toml` | `deck-streak-api` | added or changed: the three routes (the module declared in `lib.rs`), the CSRF bound, the handshake bound |
-| `crates/api/tests/session_routes.rs` | `deck-streak-api` | added: A9, A12 to A15 |
-| `crates/daemon/src/role_api.rs` | `deck-streak-daemon` | changed: loads identity's credentials at start |
-| `Cargo.toml`, `Cargo.lock` | workspace | changed: hmac, sha2, subtle (ADR-006), getrandom, form_urlencoded (ADR-024) |
-| `.env.example` | repo | changed: the freshness bound |
-| `docs/schematics/owner-session.md` | repo | added |
-| `docs/decisions/ADR-024-owner-sessions-in-memory-behind-a-host-cookie.md` | repo | added |
+| `crates/api/src/session_routes.rs`, `crates/api/src/router.rs`, `crates/api/src/lib.rs` | `deck-streak-api` | added or changed: the three routes (the module declared in `lib.rs`), the CSRF bound, the handshake bound, `ApiState::with_owner` (§7) |
+| `crates/api/Cargo.toml` | `deck-streak-api` | changed: serde, serde_json (ADR-029; §7) |
+| `crates/api/tests/session_routes.rs` | `deck-streak-api` | added: A9, A12 to A15, and three tests of §7 |
+| `crates/daemon/src/role_api.rs` | `deck-streak-daemon` | changed: loads identity's credentials at start, and gives the router the owner's access |
+| `crates/daemon/src/main.rs` | `deck-streak-daemon` | changed (§7): hands the log writer's redactor to the role, so the credentials are registered with it |
+| `crates/daemon/tests/lifecycle.rs` | `deck-streak-daemon` | changed (§7): A11's run carries synthetic credentials, and the role refuses start by a missing one's id |
+| `Cargo.toml`, `Cargo.lock` | workspace | changed: hmac, sha2, subtle (ADR-006), getrandom (ADR-024) |
+| `.env.example` | repo | changed: the freshness bound, and the two credential ids |
+| `.packs/wiring.json` | repo | changed (§7): the box's `ws.tg-init-data-verified` expectations that waited on #17 are removed |
+| `docs/schematics/owner-session.md` | repo | changed: written at planning, redrawn as built with the parts and a handshake's order |
+| `docs/decisions/ADR-024-owner-sessions-in-memory-behind-a-host-cookie.md` | repo | changed: accepted, with the decisions the delivery made |
 | `docs/red-first/SPEC-024.md` | repo | added |
 | `changelog.d/` fragment | repo | added |
 
@@ -166,3 +171,70 @@ under `crates/identity/tests/fixtures/`.
   job's rollover-drift check.
 - **A fixture trips the public scrub.** R11 keeps token shapes and seven-digit ids out of the tests;
   the gate's scrub stage would name the file and rule if one slipped in.
+
+## 7. Amendments at delivery
+
+- **R1: one strict decoder, and `form_urlencoded` is not admitted.** `form_urlencoded` 1.2.2's
+  `parse` decodes bytes that are not UTF-8 lossily and keeps a malformed escape (`%zz`) as text
+  (`decode`, `decode_utf8_lossy`), so it cannot refuse "a field that does not decode"; a strict
+  check beside it would be a second parse of one input, which could disagree with the reading the
+  hash was checked against. `identity` decodes with one strict decoder: `+` is a space, `%` must be
+  followed by two hex digits, the bytes must be UTF-8; an empty segment, a segment with no `=` and
+  a repeated name are refused too. The malformed-payload test signs each of those cases over what a
+  lenient decoder reads, so only the strict reading refuses it (ADR-024, "Decided at delivery").
+- **R1: the key and the one comparison.** `WebAppKey::from_bot_token` keeps the HMAC-SHA-256 of the
+  token keyed with `WebAppData`, never the token. The comparison is hmac 0.13.0's
+  `Mac::verify_slice` (digest 0.11.3), which checks the length and compares through
+  `ctutils::CtEq`. A6's census reads `crates/identity/src/` with comments and literals blanked,
+  refuses a clause that names a hash and compares (`==`, `!=`, `.eq(`, `.ne(`, `.cmp(`,
+  `.partial_cmp(`, `ct_eq(`, `starts_with(`, `ends_with(`), and asserts exactly one `verify_slice`
+  and exactly one HMAC `finalize`, the key's derivation, so no MAC's bytes leave it to be compared
+  under another name. It refuses the planted fixture's two comparisons, on their lines, and not the
+  comment and the string beside them that say the same.
+- **R2: the setting's range** is 1 to 86400 whole seconds; outside it, or not a number, it refuses
+  start by name. The window is inclusive: launch data exactly as old as the bound, or exactly 60
+  seconds ahead, is fresh.
+- **R3: the reason codes and the answers.** identity answers `init_data_invalid` and
+  `init_data_stale` (401), `not_owner` (403) and the extractor's `no_session` (401), each as
+  `{"reason":"<code>"}`, logged by the code alone; the API's own refusals are `cross_site_request`
+  and `not_json` (403) and `too_many_handshakes` (429). `init_data_stale` covers both ends of the
+  window. A body that is not JSON carrying `init_data` is `init_data_invalid`.
+- **R3: the credentials.** `owner-user-id` must be a positive whole number and `telegram-bot-token`
+  must not be blank; either one missing or malformed refuses start by its id, never by its value.
+  The daemon's `main` now hands the log writer's redactor to the role, so both values are
+  registered with the one registry the writer reads (SPEC-020 R12;
+  `docs/schematics/startup-settings-and-secrets.md`): before, the role could not reach it, and a
+  loader over a redactor of its own would have registered them where no line is scrubbed.
+- **R5: rotation, eviction and the compare.** A successful handshake ends the session its request
+  carried, then opens a new one, so the carried id stops working; a refused handshake leaves a live
+  session alone. Opening a ninth session evicts the one that began first. A presented id is hashed
+  and compared with each live digest through `subtle` (ADR-006), in constant time.
+- **R6: the cookie is one literal.** `__Host-deckstreak_session=<id>; Path=/; Max-Age=28800;
+  Secure; HttpOnly; SameSite=Strict`, written whole beside `SET_COOKIE`, where the box's
+  web-security rows read a cookie; the logout's is the same, empty, with `Max-Age=0`. The handshake
+  answers 200, as both schematics draw it, and the logout 204.
+- **R8: `ApiState::with_owner`.** `ApiState::new(readiness)` serves the health routes alone, as
+  SPEC-025's tests build it; `with_owner(OwnerAccess)` adds the session routes under the same layers.
+  The `api` role always gives it and refuses start without the credentials, so the service always
+  serves them. Chosen against requiring the access in `new`, which would make every health-only
+  router hold a bot key and an owner id, and against session routes that answer 503 when
+  unconfigured, a mode the service never runs.
+- **R9, R10: the order.** The cross-site bound runs first, then the handshake bound, both before a
+  byte of the body is read; the handshake's own body limit is 16 KiB (ADR-024), inside the shell's
+  2 MiB. The bound counts every handshake it admits, forged ones included, which is what caps the
+  HMAC work; a 429 carries `Retry-After`, the whole seconds until the minute turns.
+- **Manifest amendments.** `crates/daemon/src/main.rs` (the redactor, above);
+  `crates/daemon/tests/lifecycle.rs` (the role now refuses start without its credentials, so A11's
+  run carries a synthetic credentials directory, and an added test proves the binary refuses start
+  by the missing id); `.packs/wiring.json` (the box's `ws.tg-init-data-verified` expectations in
+  web-security and cyber-pipeline waited on #17: the row reads green on this delivery, and
+  `scripts/box-packs.sh` refuses a green expectation as stale); identity's dev-dependency on
+  `tempfile` (ADR-020), for A16's credentials directory, since SPEC-030's temp hygiene refuses
+  `std::env::temp_dir()`; the API's dependencies on `serde` and `serde_json` (ADR-029), for the
+  handshake's body and the answers.
+- **Tests beyond the criteria.** identity: `a_malformed_payload_is_refused_with_401`,
+  `the_freshness_bound_is_read_from_its_setting`, `the_oldest_session_is_evicted_past_eight`,
+  `the_owner_session_extractor_admits_only_a_live_cookie`; api: `a_handshake_ends_the_session_it_carried`,
+  `the_mini_apps_own_requests_open_a_session_and_read_the_day` (the wire contract of SPEC-028,
+  sent as `web/app/src/lib/api.ts` sends it), `the_handshake_body_is_bounded_below_the_shells_limit`;
+  daemon: `the_api_role_refuses_start_without_an_identity_credential`.

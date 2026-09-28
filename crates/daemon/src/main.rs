@@ -102,10 +102,11 @@ fn main() -> ExitCode {
     }
 }
 
-/// Runs `role` to its end, and returns the process's exit code.
+/// Runs `role` to its end, and returns the process's exit code. `redactor` is the log writer's: a
+/// role registers every credential it loads with it, so no later line can carry one (SPEC-020 R12).
 async fn run(role: Role, environment: &Environment, redactor: &Redactor) -> anyhow::Result<u8> {
     match role {
-        Role::Api => role_api::run(environment)
+        Role::Api => role_api::run(environment, redactor)
             .await
             .context("the api role")
             .map(|()| 0),

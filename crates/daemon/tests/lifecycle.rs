@@ -1,11 +1,13 @@
 //! The binary tells systemd it is ready, keeps the watchdog fed and says when it stops, then exits
-//! 0; and the watchdog's interval is the predecessor's (SPEC-025 A11, A12, R8).
+//! 0; the watchdog's interval is the predecessor's (SPEC-025 A11, A12, R8); and the `api` role
+//! refuses to start without identity's credentials, by the missing one's id (SPEC-024 R3).
 //!
-//! A11 runs the built binary with a temporary state directory and a temporary datagram socket as
-//! its `NOTIFY_SOCKET`, sends SIGTERM with the system's `kill`, and reads the socket. It waits on
-//! the socket's messages, never on the passing of time, under one generous bound that fails with
-//! every message seen. The child's environment is set on its `Command` alone, and cleared first,
-//! so nothing of this process's environment (a `NOTIFY_SOCKET` of its own) reaches it.
+//! A11 runs the built binary with a temporary state directory, a temporary credentials directory
+//! holding synthetic credentials, and a temporary datagram socket as its `NOTIFY_SOCKET`, sends
+//! SIGTERM with the system's `kill`, and reads the socket. It waits on the socket's messages, never
+//! on the passing of time, under one generous bound that fails with every message seen. The child's
+//! environment is set on its `Command` alone, and cleared first, so nothing of this process's
+//! environment (a `NOTIFY_SOCKET` of its own) reaches it.
 
 // An integration test is test code: its helpers panic on a failed child, and the golden reader
 // prints the examined count on purpose.
@@ -17,6 +19,7 @@ mod golden;
 use std::collections::{BTreeMap, BTreeSet};
 use std::io::ErrorKind;
 use std::os::unix::net::UnixDatagram;
+use std::path::{Path, PathBuf};
 use std::process::{Command, Output, Stdio};
 use std::sync::mpsc;
 use std::time::{Duration, Instant};
@@ -32,6 +35,23 @@ use serde_json::{Value, json};
 const DEADLINE: Duration = Duration::from_mins(2);
 /// How long one read of the socket waits before the test looks at the child again.
 const POLL: Duration = Duration::from_millis(250);
+/// Identity's two credentials, each with a synthetic value: an owner id of fewer than seven digits
+/// and a token that never has the Bot API token's shape (SPEC-024 R11).
+const CREDENTIALS: [(&str, &str); 2] = [
+    ("owner-user-id", "4242"),
+    ("telegram-bot-token", "synthetic-webapp-signing-token"),
+];
+
+/// A credentials directory under `parent` holding `credentials`, each as systemd writes one: a
+/// file named by its id.
+fn credentials_directory(parent: &Path, credentials: &[(&str, &str)]) -> PathBuf {
+    let directory = parent.join("credentials");
+    std::fs::create_dir(&directory).expect("the credentials directory");
+    for (id, value) in credentials {
+        std::fs::write(directory.join(id), format!("{value}\n")).expect("a credential file");
+    }
+    directory
+}
 
 /// Reads the socket until it receives `wanted`, recording every message in `seen`.
 ///
@@ -85,6 +105,7 @@ fn the_binary_notifies_ready_watchdog_and_stopping_then_exits_zero() {
         .expect("a read timeout on the socket");
     let state = directory.path().join("state");
     std::fs::create_dir(&state).expect("the state directory");
+    let credentials = credentials_directory(directory.path(), &CREDENTIALS);
 
     let started = Instant::now();
     let child = Command::new(env!("CARGO_BIN_EXE_deckstreakd"))
@@ -92,6 +113,7 @@ fn the_binary_notifies_ready_watchdog_and_stopping_then_exits_zero() {
         .env_clear()
         .env("DECKSTREAK_API_LISTEN", "127.0.0.1:0")
         .env("STATE_DIRECTORY", &state)
+        .env("CREDENTIALS_DIRECTORY", &credentials)
         .env("NOTIFY_SOCKET", &socket_path)
         // The predecessor's floor, five seconds: the heartbeat is armed, and its first ping
         // follows READY=1 at once.
@@ -152,6 +174,60 @@ fn the_binary_notifies_ready_watchdog_and_stopping_then_exits_zero() {
         Some("STOPPING=1"),
         "{seen:?}"
     );
+}
+
+#[test]
+fn the_api_role_refuses_start_without_an_identity_credential() {
+    // Each of identity's credentials missing in turn: the role exits 1 before it binds, and its
+    // first line is an ERROR event naming the missing credential's id and no credential's value.
+    for (missing, _) in CREDENTIALS {
+        let directory = tempfile::tempdir().expect("a temporary directory");
+        let state = directory.path().join("state");
+        std::fs::create_dir(&state).expect("the state directory");
+        let present: Vec<(&str, &str)> = CREDENTIALS
+            .into_iter()
+            .filter(|(id, _)| *id != missing)
+            .collect();
+        let credentials = credentials_directory(directory.path(), &present);
+        let child = Command::new(env!("CARGO_BIN_EXE_deckstreakd"))
+            .arg("api")
+            .env_clear()
+            .env("DECKSTREAK_API_LISTEN", "127.0.0.1:0")
+            .env("STATE_DIRECTORY", &state)
+            .env("CREDENTIALS_DIRECTORY", &credentials)
+            .stdin(Stdio::null())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .expect("the binary starts");
+        let pid = child.id().to_string();
+        let (exit, exited) = mpsc::sync_channel(1);
+        let waiter = std::thread::spawn(move || {
+            let output = child.wait_with_output().expect("the binary is waited for");
+            exit.send(output).expect("the test is listening");
+        });
+        let Ok(output) = exited.recv_timeout(DEADLINE) else {
+            // It started instead of refusing: stop it, and fail naming the credential.
+            let _ = Command::new("kill").args(["-TERM", &pid]).status();
+            panic!("the api role started without the credential {missing}");
+        };
+        waiter.join().expect("the waiter thread");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert_eq!(output.status.code(), Some(1), "{missing}: {stdout}");
+        let first = stdout.lines().next().unwrap_or_default();
+        assert!(first.starts_with("<3>"), "{missing}: {stdout}");
+        assert!(
+            first.contains(missing),
+            "the refusal does not name {missing}: {first}"
+        );
+        for (_, value) in CREDENTIALS {
+            assert!(
+                !stdout.contains(value),
+                "a credential's value was logged: {stdout}"
+            );
+        }
+    }
 }
 
 #[test]
