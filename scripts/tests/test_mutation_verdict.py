@@ -387,7 +387,7 @@ class TheWeeklySurvivorsBecomeIssues(unittest.TestCase):
         shard.mkdir(parents=True)
         kernel = "crates/kernel/src/clock.rs:47:88: delete - in <impl Clock for SystemClock>::now"
         vault = "crates/vault/src/rails.rs:12:5: replace refuses -> bool with true"
-        rust = outcomes(caught=5, missed=[kernel])
+        rust = outcomes(caught=5, missed=[kernel], file="crates/kernel/src/clock.rs")
         rust["outcomes"].append(
             {
                 "scenario": {
