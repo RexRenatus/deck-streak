@@ -1,0 +1,22 @@
+{
+  "duty": "bot-commands",
+  "schema": "phx.duty.message.v1",
+  "send": {
+    "link_preview_options": {
+      "is_disabled": true
+    },
+    "parse_mode": "HTML",
+    "reply_markup": {
+      "inline_keyboard": [
+        [
+          {
+            "callback_data": "erase:confirm",
+            "text": "Erase my data"
+          }
+        ]
+      ]
+    },
+    "text": "<b>Erase your data?</b>\nThis erases everything DeckStreak keeps about your study, and it cannot be undone. /privacy says what an erase does not reach."
+  },
+  "x-message": "erase-prompt"
+}

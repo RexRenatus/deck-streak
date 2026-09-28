@@ -1,6 +1,7 @@
 //! `deckstreakd`: the one release binary of the service (SPEC-025 R1; ADR-010). Its first argument
-//! names the role it runs, and each role but `data` is one systemd unit: `api`, `job` (SPEC-027:
-//! `deckstreakd job <id>` runs one job of the table and exits), and `bot` with SPEC-026. `data` is
+//! names the role it runs, and each role but `data` is one systemd unit: `api`, `bot` (SPEC-026: the
+//! Telegram bot's long poll), and `job` (SPEC-027: `deckstreakd job <id>` runs one job of the table
+//! and exits). `data` is
 //! the owner's, run by hand on the host (SPEC-021 R8): `deckstreakd data export` writes the export
 //! to standard output, and `deckstreakd data erase --confirm ERASE` erases.
 //!
@@ -20,7 +21,7 @@ use std::time::Duration;
 
 use anyhow::Context;
 use deck_streak_coordination::jobs::{self, Job, TABLE};
-use deck_streak_daemon::role_api;
+use deck_streak_daemon::{role_api, role_bot};
 use deck_streak_kernel::{Environment, Redactor, logging};
 
 mod role_data;
@@ -40,6 +41,8 @@ const EXIT_GRACE: Duration = Duration::from_secs(1);
 enum Role {
     /// The HTTP service the Mini App calls (SPEC-025).
     Api,
+    /// The Telegram bot (SPEC-026).
+    Bot,
     /// One job of the table, run once by its timer (SPEC-027).
     Job(Job),
     /// The owner's export or erase, run by hand (SPEC-021).
@@ -48,13 +51,14 @@ enum Role {
 
 impl Role {
     /// Every role's name.
-    const NAMES: [&'static str; 3] = ["api", "job", "data"];
+    const NAMES: [&'static str; 4] = ["api", "bot", "job", "data"];
 
-    /// The role `arguments` name: `api` alone, `job` and the id of a job of the table, or `data`
-    /// and its command.
+    /// The role `arguments` name: `api` or `bot` alone, `job` and the id of a job of the table, or
+    /// `data` and its command.
     fn from_arguments(arguments: &[OsString]) -> Option<Self> {
         match arguments {
             [name] if name == "api" => Some(Self::Api),
+            [name] if name == "bot" => Some(Self::Bot),
             [name, id] if name == "job" => id.to_str().and_then(jobs::job).map(Self::Job),
             [name, command @ ..] if name == "data" => {
                 DataCommand::from_arguments(command).map(Self::Data)
@@ -122,6 +126,10 @@ async fn run(role: Role, environment: &Environment, redactor: &Redactor) -> anyh
         Role::Api => role_api::run(environment, redactor)
             .await
             .context("the api role")
+            .map(|()| 0),
+        Role::Bot => role_bot::run(environment, redactor)
+            .await
+            .context("the bot role")
             .map(|()| 0),
         Role::Job(job) => role_job::run(environment, redactor, &job)
             .await

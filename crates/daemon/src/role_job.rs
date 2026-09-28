@@ -6,10 +6,11 @@
 //! job ran, skipped or was recorded `missed`; 1 is a page, which fails the unit so `OnFailure=` sends
 //! the one alert; 2 is an id the table does not hold.
 //!
-//! The ports are joined here, in the composition root. The notifier's marker is `NoNotifier` until
-//! the bot's transport exists (SPEC-026), and the `sync` job's cycle builds its syncer, its reader and
-//! its change gate from the sync's own settings only when `sync` runs, so the other jobs start
-//! without them (SPEC-023 R12). No obligation source is registered yet: each deadline-bearing feature
+//! The ports are joined here, in the composition root. The notifier's marker is `NoNotifier`: no job
+//! of the W0 table sends a message, so the role builds no bot transport and loads no bot token, and
+//! the first job that sends joins wiring's `TransportMarker` (SPEC-026 R10; #20, #27). The `sync`
+//! job's cycle builds its syncer, its reader and its change gate from the sync's own settings only
+//! when `sync` runs, so the other jobs start without them (SPEC-023 R12). No obligation source is registered yet: each deadline-bearing feature
 //! registers its own.
 
 use std::sync::Arc;
