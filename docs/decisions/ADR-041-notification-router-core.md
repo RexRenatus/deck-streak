@@ -68,6 +68,41 @@ in the gate; `notifications-policy.json`'s `deviations` entry citing this ADR.
 - The engagement wave's morning brief carries the readings line itself (then `reading_ready` is
   retired and the deviation removed).
 
+### Decided at delivery (SPEC-041 §7)
+
+The delivery decided each question the SPEC left open against its alternatives:
+
+- **Only the router can call a transport, by type.** Each bot transport call takes a `Pass` that
+  only the router module can make, and `push_in_app` is private to that module. Chosen against
+  holding the rule by the box run's `one-router` row alone, which finds a stray call only after it
+  is written, and against a private trait, which the bot could not implement.
+- **The policy is compiled into the binary and parsed at start.** Chosen against reading a deployed
+  copy of the file, which could drift from the one the box run judged, and against typing the values
+  as constants, which would be a second policy the pack never reads.
+- **A decision is one write.** The key is claimed by inserting its delivery at the dedupe rule, and a
+  later withhold releases it in the same `BEGIN IMMEDIATE` write, so the unique index, not a read
+  before the write, is what holds a key to one delivery across both surfaces. A bot send commits
+  its claim before the call. Chosen against claiming after the send, which two surfaces raising one
+  event at once could both pass.
+- **A failed send holds only a celebration.** Anything else that fails is withheld with `no_notifier`
+  and its claim released, so the scheduler's catch-up can send it again; the breaker makes every
+  bot send wait 60 seconds after a failure. Chosen against queueing nudges beside celebrations,
+  which the flush would render as held celebrations, and against keeping a failed nudge's claim,
+  which would silence the catch-up's retry.
+- **Until the ladder, a celebration renders as a line, or as nothing at T0.** Chosen against
+  rendering T1 as nothing, which would drop it silently, and against holding tiers the router
+  cannot render yet, which would fill the queue with holds no flush could deliver.
+- **The queue's bound is kept at deferral.** Past 20 held celebrations the lowest-ranked is
+  abandoned and waits to be named, so the queue never holds more than 20. Chosen against letting the
+  table grow until a flush trims it, as the predecessor did, which holds its bound only at the
+  flush.
+- **An abandonment is a withhold under the policy's reasons:** `quiet_hours` for a quiet hold,
+  `no_notifier` for a failed send's. Chosen against new reasons outside the policy's vocabulary,
+  which the pack's withhold ledger would not recognise.
+- **The owner's quiet window and switches are rows of `notification_settings`:** the predecessor's
+  `quiet_start_min` and `quiet_end_min`, and a switch off at `"0"`. Chosen against new names, which
+  the import of the predecessor's settings would have to translate.
+
 ## More Information
 
 SPEC-041; SPEC-049, SPEC-050 and SPEC-052 (the W1 kinds routed through it); the notifications-policy

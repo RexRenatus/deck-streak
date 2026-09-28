@@ -99,9 +99,9 @@ R14. The typed policy reads every key of the file, and names the key `defer_fanf
 
 | id | criterion | decided by |
 |---|---|---|
-| A1 | every row of the notifications-policy pack is green over the tree, `one-router` included, with the row's deferral removed from the wiring | notifications-policy, every row; `test_every_notifications_policy_row_is_green_with_one_router_run` |
-| A2 | a delivery call planted outside the router module is refused by `one-router` | notifications-policy `one-router`; `test_a_transport_call_outside_the_router_is_refused` |
-| A3 | `reading_ready` differs from the baseline only through a deviation whose ADR names `kinds.reading_ready` | notifications-policy `policy-deviation-has-adr`; `test_the_reading_ready_kind_is_a_recorded_deviation` |
+| A1 | the typed policy reads every key of `notifications-policy.json`: written back, it equals the file | `the_typed_policy_reads_every_key_of_the_file` |
+| A2 | a delivery call outside the router module does not compile: each bot transport call takes the router's pass, which only the router module can make | `a_delivery_call_outside_the_router_does_not_compile` |
+| A3 | the typed policy reads `reading_ready` as a nudge of tier T2 with no budget, deduplicated per study day behind `reading_ready_enabled`, and its one deviation cites ADR-041, which names `kinds.reading_ready` | `the_reading_ready_kind_is_a_recorded_deviation` |
 | A4 | a celebration raised at 23:30 is deferred, is not sent by a flush at 07:29, and is delivered by the first flush at 07:30 (injected clock) | `a_celebration_raised_in_quiet_hours_is_delivered_when_the_window_ends` |
 | A5 | the same celebration, first flushed more than 720 minutes after it was raised, is abandoned and named in the recap line (injected clock) | `a_deferred_celebration_older_than_720_minutes_is_abandoned_by_name` |
 | A6 | a nudge raised in quiet hours is withheld with `quiet_hours` and recorded under its kind with `:withheld` | `a_nudge_in_quiet_hours_is_withheld_and_recorded` |
@@ -115,9 +115,9 @@ R14. The typed policy reads every key of the file, and names the key `defer_fanf
 | A14 | the notifications data-rights port lists its five tables as exported and erased, and an erase empties them | `the_notification_tables_are_exported_and_erased` |
 
 ```acceptance
-A1: python3 -m unittest discover -s scripts/tests -p test_notifications_router_rows.py -k test_every_notifications_policy_row_is_green_with_one_router_run
-A2: python3 -m unittest discover -s scripts/tests -p test_notifications_router_rows.py -k test_a_transport_call_outside_the_router_is_refused
-A3: python3 -m unittest discover -s scripts/tests -p test_notifications_router_rows.py -k test_the_reading_ready_kind_is_a_recorded_deviation
+A1: cargo test -p deck-streak-notifications --test policy -- --exact the_typed_policy_reads_every_key_of_the_file
+A2: cargo test -p deck-streak-notifications --test one_router -- --exact a_delivery_call_outside_the_router_does_not_compile
+A3: cargo test -p deck-streak-notifications --test policy -- --exact the_reading_ready_kind_is_a_recorded_deviation
 A4: cargo test -p deck-streak-notifications --test deferral -- --exact a_celebration_raised_in_quiet_hours_is_delivered_when_the_window_ends
 A5: cargo test -p deck-streak-notifications --test deferral -- --exact a_deferred_celebration_older_than_720_minutes_is_abandoned_by_name
 A6: cargo test -p deck-streak-notifications --test router -- --exact a_nudge_in_quiet_hours_is_withheld_and_recorded
@@ -131,6 +131,21 @@ A13: cargo test -p deck-streak-api --test notifications_feed -- --exact the_in_a
 A14: cargo test -p deck-streak-notifications --test rights -- --exact the_notification_tables_are_exported_and_erased
 ```
 
+## 3a. What the box run judges
+
+The box run (`scripts/box-packs.sh`, ADR-069) judges these over the committed tree. They have no
+line in the acceptance fence, because no public test can run a pack's row. When this delivery
+merges, the maintainer's private wiring stops deferring notifications-policy's `one-router` row, so
+that row, red, VOID or in error, fails the run like every other blocking row of the enforced pack;
+the verdict of a run with that wiring is posted as the `box/packs` status at the merge. The
+`message-metadata` row stays deferred on its own issue (#257).
+
+| id | criterion | decided by |
+|---|---|---|
+| B1 | every policy row of notifications-policy passes over `notifications-policy.json`, examining its 9 declared kinds, `reading_ready` among them, and every section; and `one-router` passes over every shipped source file of the tree, test directories left out, with `crates/notifications/src/router.rs` defining `route` | notifications-policy, its 13 policy rows and `one-router` |
+| B2 | every blocking row of privacy-gdpr passes over `privacy.json`, `PRIVACY.md`, the migrations and the data-rights ports, examining every table the migrations create, the five notifications tables among them | privacy-gdpr |
+| B3 | every blocking row of telegram-platform passes over the bot's sources, examining `crates/bot/src/transport.rs`, which gains the bot transport's call | telegram-platform |
+
 ## 4. File manifest
 
 | file | context | change |
@@ -143,30 +158,39 @@ A14: cargo test -p deck-streak-notifications --test rights -- --exact the_notifi
 | `crates/notifications/src/quiet.rs` | `deck-streak-notifications` | added: the quiet window |
 | `crates/notifications/src/ledger.rs` | `deck-streak-notifications` | added: decisions, deliveries, queue, feed, settings |
 | `crates/notifications/src/transport.rs` | `deck-streak-notifications` | added: the bot transport port |
-| `crates/notifications/src/rights.rs` | `deck-streak-notifications` | added: the data-rights port |
+| `crates/notifications/src/data_rights.rs` | `deck-streak-notifications` | added: the data-rights port |
 | `migrations/004101_notifications_router.sql` | `deck-streak-notifications` | added |
 | `crates/notifications/tests/router.rs` | `deck-streak-notifications` | added |
 | `crates/notifications/tests/deferral.rs` | `deck-streak-notifications` | added |
 | `crates/notifications/tests/quiet_hours.rs` | `deck-streak-notifications` | added |
 | `crates/notifications/tests/comeback_budget.rs` | `deck-streak-notifications` | added |
 | `crates/notifications/tests/rights.rs` | `deck-streak-notifications` | added |
+| `crates/notifications/tests/policy.rs` | `deck-streak-notifications` | added: A1, A3, and the policy's refusals |
+| `crates/notifications/tests/one_router.rs` | `deck-streak-notifications` | added: A2 |
+| `crates/notifications/tests/ui/push_outside_the_router.rs`, `.stderr` | `deck-streak-notifications` | added: A2's compile-fail fixture and the refusal it records |
+| `crates/notifications/tests/support/mod.rs` | `deck-streak-notifications` | added: the tests' database, clock and recording transport |
 | `crates/bot/src/transport.rs` | `deck-streak-bot` | changed: implements the bot transport calls |
 | `crates/api/src/notifications_routes.rs` | `deck-streak-api` | added: the feed route |
 | `crates/api/src/router.rs`, `crates/api/src/lib.rs` | `deck-streak-api` | changed: mounts the feed route |
 | `crates/api/tests/notifications_feed.rs` | `deck-streak-api` | added |
 | `crates/coordination/src/sync_cycle.rs` | `deck-streak-coordination` | changed: the flush step after a successful sync |
+| `crates/coordination/src/data_rights_registry.rs` | `deck-streak-coordination` | changed: registers the notifications port (SPEC-021's rule) |
+| `crates/coordination/tests/data_rights_symmetry.rs` | `deck-streak-coordination` | changed: a seeded row in each notifications table (SPEC-021's rule) |
 | `crates/daemon/src/wiring.rs` | `deck-streak-daemon` | changed: the bot transport joined to the router |
+| `crates/daemon/src/role_bot.rs`, `crates/daemon/src/role_job.rs` | `deck-streak-daemon` | changed: each role's sync cycle carries its router's flush |
 | `notifications-policy.json` | repo | changed: the `reading_ready` kind and its deviation |
 | the box-run packs' private wiring (ADR-069) | the maintainer's | changed: `one-router` is no longer deferred |
-| `scripts/tests/test_notifications_router_rows.py` | repo | added |
 | `tools/parity-oracle/registry/spec_041.py` | repo | added: registers `quiet_hours.py:in_quiet_hours` (SPEC-029's registry) |
 | `tools/parity-oracle/goldens/in_quiet_hours.json` | repo | added |
 | `docs/CONTEXT-MAP.md` | docs | changed: the ownership register's five notifications tables |
 | `privacy.json` | repo | changed: the notifications categories |
+| `PRIVACY.md` | repo | changed: one line per notifications category (SPEC-021's rule) |
 | `Cargo.lock`, `.sqlx/` | workspace | changed |
-| `docs/schematics/notification-router.md` | docs | added |
+| `scripts/mutation-rows.d/S04100-S04199.json` | repo | added: the hand-proved rows of quiet hours, the caps and dedupe |
+| `changelog.d/feat-router-041.md` | repo | added |
+| `docs/schematics/notification-router.md` | docs | changed: the design delivered, with a held celebration's states and the joins |
 | `docs/specs/SPEC-041-notification-router-core.md` | docs | moved from `docs/specs/planned/` |
-| `docs/decisions/ADR-041-notification-router-core.md` | docs | added |
+| `docs/decisions/ADR-041-notification-router-core.md` | docs | changed: accepted, with the decisions made at delivery |
 | `docs/red-first/SPEC-041.md` | docs | added |
 
 ## 5. What this does NOT do
@@ -198,3 +222,65 @@ A14: cargo test -p deck-streak-notifications --test rights -- --exact the_notifi
   Visible in the decision ledger's surface column; accepted by ADR-041.
 - **The flush never runs** because no sync succeeds. The dead-man watch (SPEC-027) pages on stopped
   syncs, and the queue's age cap names every abandoned celebration.
+- **The scheduled sync runs inside the default quiet window** (the rollover hour, minute 7, before
+  07:30), so the scheduled cycle's flush does nothing, and a held celebration reaches the owner only
+  through a later flush outside the window, such as the owner's `/sync`, or is abandoned by name at
+  the age cap. Visible in the decision ledger's withholds; a flush that runs after the window ends is
+  needed before a production path raises a celebration.
+
+## 7. Amendments at delivery
+
+- **The criteria over pack rows.** No public test can run a pack's row (ADR-069, SPEC-056), so A1 to
+  A3 are tests of DeckStreak's own behaviour: the typed policy reads every key (A1), a delivery call
+  outside the router module does not compile (A2), and the typed policy reads `reading_ready` and
+  its deviation (A3). The box run judges the rows themselves (§3a), and
+  `scripts/tests/test_notifications_router_rows.py` is not added.
+- **R1 and R13: the router's pass.** Each bot transport call takes a `Pass`, which only the router
+  module can make, so a call anywhere else is a compile error, not a finding (A2). The port carries
+  `push_message` alone: the router renders nothing beyond a line, and the dice, reaction and pin calls
+  arrive with the ladder's renders (§5). The bot implements it on its transport, sending to the
+  owner's chat as HTML, chunked as every bot message is.
+- **R2: the policy is compiled in.** The router's binary carries `notifications-policy.json` and parses
+  it at start, so the policy it runs is the policy the box run judged. A refusal names the section,
+  or `kinds.<kind>` for a kind, with serde's words for the field inside it. Start is also refused
+  when the holdout names an undeclared kind, when a kind names an undeclared budget, and when the
+  policy's withhold reasons lack one the router records.
+- **R3: the payload, the key and a comeback's lapse.** The payload is the message's text, as the bot's
+  HTML. The dedupe key is at most 128 bytes of the token grammar and holds no calendar date by the
+  pack's pattern. A kind on the `comeback` budget is refused without an open lapse, since its cap is
+  counted per lapse id.
+- **R4: one transaction per decision.** Rule 2 claims the key by inserting the delivery, and a later
+  withhold releases the claim, inside the one write that records the decision, so a key is claimed
+  exactly when it is sent or held. A Mini App send appends its feed item in that write. A bot send
+  commits its claim before the call and records the outcome after it.
+- **R4, rule 4: a digest.** Inside quiet hours only the policy's exempt classes pass; a celebration is
+  deferred, and a nudge or a digest is withheld with `quiet_hours`.
+- **R4, rule 6: no transport answers.** It holds when no bot transport is joined, while the outage
+  breaker is open (60 seconds after a failed bot send), and when a send of anything but a
+  celebration fails; that send's claim is released, so a caller's retry can still deliver it. A
+  celebration is deferred instead of withheld while the breaker is open, as the failed-send hold
+  requires (R8).
+- **The tier rendered.** A celebration that asks for T0 sends nothing; any other tier renders as a
+  line (T2) until the ladder's renders (§5). A deferral or a withhold renders T0, and the flush's
+  decision records the tier it rendered.
+- **R6 and R7: an abandonment is a decision.** A celebration the flush or the queue's bound abandons
+  is recorded as withheld: with `quiet_hours` when quiet hours held it, and with `no_notifier` when a
+  failed send did.
+- **R7: the bound is kept at deferral.** Past 20 held celebrations, the lowest-ranked (the lowest tier,
+  then the newest) is abandoned when the next is deferred, so the queue never holds more than 20.
+  Every abandoned celebration waits in the queue until a recap line names it: one that a failed recap
+  could not name is named by the next.
+- **R7: when the flush runs.** The sync cycle flushes after a sync that ran and succeeded. With no bot
+  transport a flush does nothing, as the predecessor's did; it also does nothing inside quiet hours
+  and while the breaker is open.
+- **R9 and R4: the owner's settings.** `notification_settings` holds the owner's overrides by key:
+  `quiet_start_min` and `quiet_end_min`, minutes of the day, the predecessor's names, override the
+  policy's window, and a kind's switch is off at `"0"`, the policy's `comeback.disable_value`, which
+  every switch shares. An absent key is the policy's default.
+- **R12: before the database opens.** The feed route answers 503 until the API's database is open,
+  as readiness does.
+- **R13: the roles.** The bot role joins its transport to the router its owner's `/sync` flushes
+  through. The job role's scheduled cycle flushes through a router with no bot transport, which
+  does nothing until the first job that sends joins the transport (#39).
+- **The port's name.** Notifications' data-rights port is `crates/notifications/src/data_rights.rs`,
+  not `rights.rs`: `privacy.json`'s export and erase globs read that name (SPEC-021's rule).
