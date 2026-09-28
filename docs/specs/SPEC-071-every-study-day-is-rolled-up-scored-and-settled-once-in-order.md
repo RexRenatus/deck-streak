@@ -357,13 +357,14 @@ privacy-gdpr and accessibility packs stay enforced, and no row is deferred for i
 | `crates/daemon/src/role_bot.rs` | `deck-streak-daemon` | changed at delivery (§10): the recompute loaded at start; the bot's clock and rule |
 | `crates/kernel/tests/data_rights.rs` | `deck-streak-kernel` | changed at delivery (§10): the pinned reset row names `courses_digest` |
 | `crates/readings/tests/support/mod.rs` | `deck-streak-readings` | changed at delivery (§10): a card literal names its `course` |
-| `web/app/src/lib/api.ts` | miniapp | changed at delivery (§10): `score()`, through the one session; a refusal stops the client in the call that met it, and a call with no answer reads null; its equivalent mutants recorded in place, each alone on its line |
+| `web/app/src/lib/api.ts` | miniapp | changed at delivery (§10): `score()`, through the one session; a refusal stops the client in the call that met it, and a call with no answer reads null; its equivalent mutants recorded in `scripts/mutation-equivalent.d/miniapp.json` |
 | `web/app/src/lib/api.test.ts` | miniapp | changed at delivery (§10): `score()`'s tests, and the tests that kill the client's older survivors, the failed handshake's interleaving among them |
 | `web/app/src/lib/score/score.test.ts` | miniapp | added at delivery (§10): the score body's reading |
 | `web/app/src/routes/score.test.ts` | miniapp | added at delivery (§10): the score screen's states |
-| `web/app/src/lib/startapp.ts` | miniapp | changed at delivery (§10): the `score` token; the shape check is `isToken`, tested on its own; the `today` entry's equivalent mutants recorded in place |
+| `web/app/src/lib/startapp.ts` | miniapp | changed at delivery (§10): the `score` token; the shape check is `isToken`, tested on its own; the `today` entry's equivalent mutants recorded in `scripts/mutation-equivalent.d/miniapp.json` |
 | `web/app/src/lib/startapp.test.ts` | miniapp | changed at delivery (§10): the token list names `score`; Today's own path; `isToken`'s own tests |
-| `.cargo/mutants.toml` | repo | changed at delivery (§10): the one Rust equivalent's anchored `exclude_re` record (#295) |
+| `scripts/mutation-equivalent.d/deck-streak-analytics.json` | repo | added at delivery (§10): the one Rust equivalent's record (#295), in SPEC-057's form |
+| `scripts/mutation-equivalent.d/miniapp.json` | repo | added at delivery (§10): the Mini App's equivalent mutants' records (#294), in SPEC-057's form |
 | `web/app/messages/en.json` | miniapp | changed at delivery (§10): the score screen's messages |
 | `web/app/tests/a11y.spec.ts` | miniapp | changed at delivery (§10): the score route answered, so the audit renders the breakdown |
 | `crates/ingest/src/sync_runs.rs` | `deck-streak-ingest` | changed at delivery (§10, Continuation): `first_success_in`, the start of a study day's first successful sync |
@@ -537,8 +538,9 @@ milliseconds (SPEC-029 R3).
   handshake and a call the network drops, a handshake refused with 403, two calls whose session
   ended together sharing one new handshake, a failed `/api/me` whose body reads as a session,
   `/api/me` bodies that are no JSON object or carry a malformed day, Today's own path, a failed
-  handshake's interleaving, and the token's shape. Six mutants no test can observe are recorded in
-  place as `EQUIVALENT (#294)`, each with its reason on its line: the `'open'` literal, which no
+  handshake's interleaving, and the token's shape. Six mutants no test can observe were recorded in
+  place as `EQUIVALENT (#294)`, each with its reason on its line, and are now records of
+  `scripts/mutation-equivalent.d/miniapp.json` ("Continuation: the equivalents" below): the `'open'` literal, which no
   caller compares with; `stopped` left unset after a refusal, since a refused session stays cached
   and a later call answers reopen and sends nothing either way; the `null` an unreadable body falls
   back to, which both parsers read as they read `undefined`; the `typeof` beside `body !== null`,
@@ -582,12 +584,12 @@ milliseconds (SPEC-029 R3).
   so its tie is proved by `py_min`'s own test rather than standing as an equivalent. The last one
   is a mutant no test can observe: in `card_snapshot`, the test `card.interval < MATURE_IVL_DAYS`
   sits inside the branch that only a card younger than `MATURE_IVL_DAYS` reaches, so `<=` there
-  admits no other card. It is recorded in the form SPEC-039 R5 holds in force: one `exclude_re`
+  admits no other card. It was recorded in the form SPEC-039 R5 held in force: one `exclude_re`
   entry in `.cargo/mutants.toml`, with `EQUIVALENT: <reason> (#295)` on the line above, anchored to
   the whole name cargo-mutants' listing prints,
   `crates/analytics/src/snapshot.rs:75:58: replace < with <= in card_snapshot`. The listing no
-  longer names it and still names the line's six other mutants. SPEC-057 (#277) replaces this
-  form, and its delivery converts the entry. At 47172da the job read examined 465 (caught 461,
+  longer named it and still named the line's six other mutants. SPEC-057 (#277) replaced this
+  form, and this delivery converts the entry ("Continuation: the equivalents" below). At 47172da the job read examined 465 (caught 461,
   missed 1, timeout 3), unviable 101, of 566; the missed one is this mutant.
 - **Fix round 1: six defects no test observed.** The first review planted six defects that every
   test passed, on code that is right in all six places, so the round adds tests and no production
@@ -654,3 +656,16 @@ milliseconds (SPEC-029 R3).
   first test observes. Chosen against the latest successful sync on record: it comes due again
   after every successful sync, so the day's scheduled sync after the owner's settle would recompute
   with nothing owed; planted in its place, the second test goes red.
+- **Continuation: the equivalents move to SPEC-057's record.** `dev` gained SPEC-057 (#277) while
+  this delivery was open, so the branch absorbs `dev` at dd98601 in a merge commit (ef80ba5) that
+  resolves its one conflict, `.cargo/mutants.toml`, with `dev`'s text: no `exclude_re` key. The
+  seven equivalents are then records under `scripts/mutation-equivalent.d/`, each with its file,
+  mutant, anchor, reason, evidence and issue: the #295 mutant in `deck-streak-analytics.json`
+  (reached by `rollup_metrics::the_card_snapshot_matches_the_predecessors_golden`), and the six
+  #294 mutants in `miniapp.json`, their `Stryker disable` comments removed from `api.ts` and
+  `startapp.ts`. `python3 scripts/mutation-verdict.py exclusions` refused those five comments on the
+  merge and reads no finding after the move; `census` reads each record whole. StrykerJS over
+  `api.ts` and `startapp.ts` now runs the six: 141 killed, 1 timed out and 6 survived, and each
+  survivor is bound by exactly one record, which binds no other mutant of the run. cargo-mutants'
+  listing of `snapshot.rs` names the #295 mutant again, and its record binds it alone, not the
+  line's other `replace < with <= in card_snapshot` at column 25.
