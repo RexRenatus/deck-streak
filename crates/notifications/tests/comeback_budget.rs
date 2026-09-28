@@ -1,15 +1,20 @@
 //! The comeback's cap and the lapse (SPEC-041 A9, A10; R4 rules 1, 3 and 5): at most 3 comebacks for
 //! one lapse id, at least 3 study days apart, then silence for the episode; a nudge in an open lapse
 //! is withheld while a comeback in it is sent; a comeback is raised only inside a lapse, and the
-//! owner switches it off with "0". Every clock is a `ManualClock`, at noon, outside quiet hours.
+//! owner switches it off with "0". Every clock is a `ManualClock`, at noon UTC outside quiet hours,
+//! but for A9's case across the rollover hour, which runs five hours west of UTC with the owner's
+//! quiet window off, so that only the gap decides.
 
 // An integration test is test code: its fixtures panic on a failed setup.
 #![allow(clippy::expect_used)]
 
 mod support;
 
+use std::sync::Arc;
+
+use deck_streak_kernel::{StudyDayRule, UtcMillis, UtcOffset};
 use deck_streak_notifications::{
-    Decision, DedupeKey, LapseContext, Occasion, OccasionError, Reason, Surface, Tier,
+    Decision, DedupeKey, LapseContext, Occasion, OccasionError, Reason, Router, Surface, Tier,
 };
 use support::{DAY, Harness, at, day};
 
@@ -27,6 +32,19 @@ const SPENT: Decision = Decision::Withheld {
     surface: Surface::Bot,
     reason: Reason::BudgetSpent,
 };
+
+/// Five hours west of UTC, where a study day turns over at the default rollover hour, 04:00.
+fn west() -> StudyDayRule {
+    StudyDayRule::new(
+        StudyDayRule::default().rollover_hour(),
+        UtcOffset::from_minutes(-300).expect("an offset in bounds"),
+    )
+}
+
+/// The instant of `hour:minute` local time, five hours west of UTC, on the calendar day `day`.
+fn west_of_utc(day: i64, hour: i64, minute: i64) -> UtcMillis {
+    at(day, hour + 5, minute)
+}
 
 /// Routes a comeback on the study day `on` in `lapse`.
 async fn comeback(harness: &Harness, on: i64, lapse: LapseContext) -> Decision {
@@ -78,6 +96,47 @@ async fn a_comeback_past_the_cap_or_inside_the_gap_is_withheld() {
         reasons.iter().flatten().collect::<Vec<_>>(),
         ["budget_spent"; 4],
         "every withhold is the budget's"
+    );
+
+    // Across the rollover hour: the gap counts the owner's study days, which the caller reads from
+    // the clock through the rule, not calendar days. The owner's quiet window is off (its start
+    // equals its end), since 03:00 and 05:00 are inside the default one, which withholds a nudge
+    // before the gap is counted.
+    let rollover = Harness::new(west_of_utc(DAY, 12, 0)).await;
+    rollover.set("quiet_start_min", "0").await;
+    rollover.set("quiet_end_min", "0").await;
+    let router = Router::new(
+        Arc::clone(&rollover.policy),
+        rollover.db.clone(),
+        rollover.clock.clone(),
+        west(),
+    )
+    .with_bot(rollover.bot.clone());
+    let mut across = Vec::new();
+    for raised in [
+        west_of_utc(DAY, 12, 0),
+        west_of_utc(DAY + 3, 3, 0),
+        west_of_utc(DAY + 3, 5, 0),
+    ] {
+        rollover.clock.set(raised);
+        let on = west().study_day(raised).epoch_day();
+        let occasion = rollover.occasion(
+            "comeback",
+            "comeback:reading",
+            Surface::Bot,
+            Tier::T2,
+            on,
+            LAPSE,
+        );
+        let decision = router.route(&occasion).await.expect("a decision");
+        across.push((on - DAY, decision));
+    }
+
+    assert_eq!(
+        across,
+        [(0, SENT), (2, SPENT), (3, SENT)],
+        "a comeback at noon on day 0; at 03:00 on the third calendar day, before the rollover, the \
+         study day is 2 and inside the gap; at 05:00 it is 3 and past it"
     );
 }
 
