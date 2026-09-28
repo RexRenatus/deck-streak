@@ -53,8 +53,8 @@ deadline). The daily-reading task holds no tool.
 - Good, because a launch that drifts (a remote URL, a key on an argv, an uncapped run) turns the box
   scan red before it merges.
 - Good, because a pack fix reaches the gate by re-vendoring, with no Rust change.
-- Bad, because the host must keep `python3` after the predecessor is retired, and a reading's gate
-  costs a few dozen short processes.
+- Bad, because DeckStreak's deployment needs `python3` on its host for the gate, and a reading's
+  gate costs a few dozen short processes.
 - Bad, because the runner's tests use fakes of `claude` and `curl` and a temporary credentials
   directory; the live proof is the agent's path (#43), after the owner's route choice (ADR-054).
 - Bad, because the subscription-proxy scanner's `credential-from-secret-manager` row accepts only a

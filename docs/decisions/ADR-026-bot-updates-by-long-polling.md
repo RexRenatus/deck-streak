@@ -8,15 +8,15 @@ decision-makers: "@RexRenatus (owner), the DeckStreak architect"
 
 ## Context and Problem Statement
 
-ADR-007 puts the API behind the shared Caddy on loopback and leaves the bot's transport open:
+ADR-007 puts the API behind Caddy on loopback and leaves the bot's transport open:
 "the API and the bot's webhook (if chosen over long polling in W0) listen on loopback only". The
 Bot API offers two exclusive ways to receive updates: a webhook Telegram calls over HTTPS, or
 `getUpdates` long polling the bot calls. SPEC-026 builds the bot; which does it use?
 
 ## Decision Drivers
 
-- The anti-goals: no tunnels, no opened inbound ports (CHARTER 10); the shared Caddy is shared
-  infrastructure, and every change to it is an owner gate (ADR-007).
+- The anti-goals: no tunnels, no opened inbound ports (CHARTER 10); every change to Caddy's
+  configuration is an owner gate (ADR-007).
 - One owner: a handful of updates a day, so latency and throughput are not constraints.
 - Secrets: every new credential is provisioned by the private rail and rotated by hand.
 - The predecessor's proven runtime long-polls, drains stale updates at start, and backs off on errors.
@@ -26,7 +26,7 @@ Bot API offers two exclusive ways to receive updates: a webhook Telegram calls o
 ## Considered Options (the alternatives it was chosen against)
 
 - Long polling from the bot's own unit: `deleteWebhook` at start, a drain of queued updates, `getUpdates` with a 50-second timeout, offset confirmation, the predecessor's backoff — chosen: no inbound path at all, no Caddy change, no new credential, and the predecessor's behaviour ports as it is.
-- A webhook behind the shared Caddy at a path on the Mini App's host — rejected because it adds a public route to shared infrastructure (an owner gate), a webhook secret as a new credential, and idempotency by `update_id` for Telegram's retries, to save one outbound connection that one owner's traffic never strains.
+- A webhook behind Caddy at a path on the Mini App's host — rejected because it adds a public route (an owner gate), a webhook secret as a new credential, and idempotency by `update_id` for Telegram's retries, to save one outbound connection that one owner's traffic never strains.
 - Long polling from inside the API process — rejected because the bot would then share the API's unit, memory ceiling and restarts; a bot fault would take the Mini App's API down with it.
 - Short polling (`getUpdates` with no timeout) — rejected because the Bot API documents it for testing only, and it would spend requests every few seconds for nothing.
 

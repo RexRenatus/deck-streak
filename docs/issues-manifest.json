@@ -264,13 +264,6 @@
       "body_sha256": "711b348bc6c7513fb44e55ea484130f31244df5ab5a7ff7ba8b114ded087ec4d",
       "parent_linked": 2
     },
-    "DS-W2-01": {
-      "number": 40,
-      "id": 5605961509,
-      "title": "Host: inventory, backup and the scrub list for the owner",
-      "body_sha256": "651f82c70c7ab5d18fabc6a93e678a9dbfcee6fe3b83d9ef51300298a5753a34",
-      "parent_linked": 3
-    },
     "DS-W2-02": {
       "number": 41,
       "id": 5605961848,
@@ -1264,6 +1257,13 @@
       "title": "Owner decision: revive the predecessor's inert 'Peak Day taper (law retrievability at an exam date)'?",
       "body_sha256": "7719ad683ba0568f67cd0dda2ff09c4e39967f76007ec9620dad0d5b0e3d0622",
       "parent_linked": 5
+    },
+    "DS-W2-01": {
+      "number": 239,
+      "id": 5609598126,
+      "title": "Host: inventory, backup and the scrub list for the owner",
+      "body_sha256": "a2756ce79470a8576ac824e143934d42314ef41d7648d9a7dec11f46a60714b7",
+      "parent_linked": 3
     }
   }
 }

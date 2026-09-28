@@ -6,7 +6,7 @@ The campaign's full requirements, parity matrix and wave plan are
 ## Problem
 
 The owner studies languages and law in Anki every day. Their existing gamification service works
-through a chat bot only, its charts spike the small host's memory, and its flagship idea (a short
+through a chat bot only, its charts are drawn on the server, and its flagship idea (a short
 reading before each day's new cards) has never reached them. They want the whole game, the second
 brain's daily study companions and an AI mentor per subject in one Telegram Mini App.
 

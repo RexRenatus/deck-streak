@@ -179,16 +179,15 @@ walk from the root would find them and turn its rows red.
 
 ## 6. Risks
 
-- **The owner's device changes a note while a roll reads it** (the sync bridge writes the replica).
-  Detected by the read-back comparison before the source is removed (R7): the roll fails loud and
-  the source stays.
+- **The owner's device changes a note while a roll reads it.** Detected by the read-back
+  comparison before the source is removed (R7): the roll fails loud and the source stays.
 - **The ported rails drift from the pack's `rails.json`.** Detected by A3, which runs the vendored
   probe on the same fixtures.
 - **The readings folder is missing on the first live night.** Detected at start (A11) and paged as a
   broken rail by the readings health check (SPEC-050); the folder is an operations prerequisite
   (#45).
-- **A second writer of the readings folder** (the predecessor's lane, which still fires nightly).
-  Prevented by the one-writer prerequisite of the first live night (SPEC-053).
+- **A second writer of the readings folder.** Prevented by the one-writer prerequisite of the
+  first live night (SPEC-053).
 - **A case-insensitive file system on a device** merges two names. Detected by the case-insensitive
   collision check (R4, R8).
 
@@ -247,3 +246,6 @@ walk from the root would find them and turn its rows red.
   synthesis. The committed run is a daily note, green on ten blocking rows, and `synthesis-cites`
   reads VOID, so the vault-duties pack stays `pending` on #49. A test also holds no blocking row red
   on it.
+
+Amendment (2026-09-28): two passages describing co-hosted infrastructure and the predecessor as a
+running service, in two risks (section 6), were redacted under the public-prose rule (ADR-059).
