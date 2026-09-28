@@ -597,6 +597,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--rows")
     parser.add_argument("--reports")
     parser.add_argument("--open-titles")
+    parser.add_argument("--event", default="")
+    parser.add_argument("--base-ref", default="")
+    parser.add_argument("--subject", default="")
     args = parser.parse_args(argv)
     root = pathlib.Path(args.root).resolve()
     if args.verb == "plan":

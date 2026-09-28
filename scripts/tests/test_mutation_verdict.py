@@ -113,7 +113,7 @@ class Fixture:
             check=False,
         )
 
-    def plan(self):
+    def plan(self, *extra):
         done = self.verdict(
             "plan",
             "--base",
@@ -124,6 +124,7 @@ class Fixture:
             str(self.root),
             "--out",
             str(self.out),
+            *extra,
         )
         if done.returncode != 0:
             raise AssertionError(f"plan failed: {done.stdout}{done.stderr}")
@@ -465,6 +466,41 @@ class TheWeeklySurvivorsBecomeIssues(unittest.TestCase):
         )
         self.assertEqual(scrubbed.returncode, 0, scrubbed.stdout + scrubbed.stderr)
         self.assertRegex(scrubbed.stdout, r"examined [1-9]\d* file")
+
+
+class EachEventReadsItsCase(unittest.TestCase):
+    def test_each_event_reads_its_case_by_name(self):
+        fixture = Fixture(self)
+        fixture.head({LIB: LIB_TEXT.replace("x * 2", "x + x"), "docs/notes.md": "a note\n"})
+        merge = "Merge pull request #42 from RexRenatus/feat/x\n\nthe body"
+        cases = [
+            ("pull_request", "dev", "", "diff", "the pull request into dev is judged on its diff"),
+            ("pull_request", "main", "", "not-applicable", "a release pull request into main"),
+            ("push", "", merge, "not-applicable", "this push merges #42"),
+            ("push", "", "chore: a push that merges nothing", "diff", "names no pull request"),
+        ]
+        for event, base_ref, subject, decision, reason in examined("events", cases):
+            plan = fixture.plan("--event", event, "--base-ref", base_ref, "--subject", subject)
+            scope = plan.get("scope") or {}
+            self.assertEqual(scope.get("decision"), decision, event)
+            self.assertIn(reason, scope.get("reason", ""), event)
+            judged = fixture.judge("rust")
+            if decision == "not-applicable":
+                self.assertEqual(judged.returncode, 0, judged.stdout)
+                self.assertIn(f"not-applicable: {scope['reason']}", judged.stdout)
+            else:
+                # The diff is judged: a changed code line with no report is VOID, never a pass.
+                self.assertEqual(judged.returncode, 3, judged.stdout)
+                self.assertIn("no report", judged.stdout)
+        # A pull request whose diff holds no web production path names the paths it changes.
+        fixture.plan("--event", "pull_request", "--base-ref", "dev", "--subject", "")
+        web = fixture.judge("web")
+        self.assertEqual(web.returncode, 0, web.stdout)
+        self.assertIn(
+            "not-applicable: the diff changes no web production file; it changes "
+            f"{LIB}, docs/notes.md",
+            web.stdout,
+        )
 
 
 if __name__ == "__main__":
