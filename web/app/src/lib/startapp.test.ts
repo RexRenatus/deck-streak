@@ -70,4 +70,10 @@ describe('the startapp token map', () => {
 
     expect(destinations).toEqual([...ROUTES].sort());
   });
+
+  // SPEC-071 §10: the tests above compare with TODAY itself, so they hold whatever it names.
+  it('Today is the root screen, and an unknown token opens it', () => {
+    expect(TODAY).toBe('/');
+    expect(routeFor('settings')).toBe('/');
+  });
 });
