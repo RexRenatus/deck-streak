@@ -8,9 +8,13 @@
 #
 # Each exclusion names one mutant, as an anchored `exclude_re` entry, with
 # `# EQUIVALENT: <why no test can tell it apart> (#N)` on the line above it. A test refuses any other
-# form, and any `mutants::skip` attribute (scripts/tests/test_mutation_workflows.py). Nothing is
-# excluded.
-exclude_re = []
+# form, and any `mutants::skip` attribute (scripts/tests/test_mutation_workflows.py). One mutant
+# is excluded, an equivalent SPEC-071 records (its section 10); SPEC-057 replaces this form, and its
+# delivery converts the entry.
+exclude_re = [
+    # EQUIVALENT: only a card younger than MATURE_IVL_DAYS reaches this test, so <= admits no other card (#295)
+    '^crates/analytics/src/snapshot\.rs:75:58: replace < with <= in card_snapshot$',
+]
 
 # Each mutant's tests run under cargo-nextest, the gate's own runner, a process per test. Under
 # cargo test, one process per binary, identity's log test failed the unmutated baseline on two of
