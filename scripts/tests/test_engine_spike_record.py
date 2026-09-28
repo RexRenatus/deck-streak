@@ -6,6 +6,10 @@ budget: the budget as ADR-022 states it, what `engine-measure.yml` measured, and
 follows from the number. It names the run and the engine tag it measured, and ADR-009's status
 follows from the verdicts: `accepted` when every budget holds, `superseded` when any fails. A
 status of `proposed` is not final, so it is refused.
+
+An engine upgrade appends a record below the last one, so the Confirmation can hold several. The
+latest is the engine that runs: its prose must name the tag the dependency pins and its run, and
+its table is the one judged (SPEC-055 R11).
 """
 
 import re
@@ -64,6 +68,23 @@ def section(text, heading):
     return match.group(1) if match else ""
 
 
+def records(text, header):
+    """Every record in `text`, oldest first: the prose since the previous table whose header row
+    is `header`, with that table, and the table's rows."""
+    lines = text.splitlines()
+    found, start, index = [], 0, 0
+    while index < len(lines):
+        if cells(lines[index]) != header:
+            index += 1
+            continue
+        end = index + 2
+        while end < len(lines) and cells(lines[end]) is not None:
+            end += 1
+        found.append(("\n".join(lines[start:end]), [cells(row) for row in lines[index + 2 : end]]))
+        start = index = end
+    return found
+
+
 def budget(text):
     """A budget cell as a comparable value: ("pass",), or (number, unit), or None."""
     if text.startswith("pass"):
@@ -87,17 +108,19 @@ def held(measured, expected):
 
 
 def findings(adr_022, adr_009, tag):
-    """Why ADR-009 does not record ADR-022's measurement and a final status; empty when it does."""
+    """Why ADR-009 does not record ADR-022's measurement and a final status; empty when it does.
+    The latest record is the one judged (SPEC-055 R11)."""
     expected = {row[0]: budget(row[2]) for row in table(adr_022, BUDGETS) or []}
     confirmation = section(adr_009, "Confirmation")
-    rows = table(confirmation, MEASURED)
-    if rows is None:
+    every = records(confirmation, MEASURED)
+    if not every:
         return ["ADR-009's Confirmation holds no table of measure, budget, measured, verdict"]
+    latest, rows = every[-1]
     found = []
-    if RUN.search(confirmation) is None:
-        found.append("ADR-009's Confirmation names no `engine-measure.yml` run")
-    if f"`{tag}`" not in confirmation:
-        found.append(f"ADR-009's Confirmation does not name the engine tag `{tag}`")
+    if RUN.search(latest) is None:
+        found.append("ADR-009's latest record names no `engine-measure.yml` run")
+    if f"`{tag}`" not in latest:
+        found.append(f"ADR-009's latest record does not name the engine tag `{tag}`")
     recorded = [row[0] for row in rows]
     for measure in expected:
         if recorded.count(measure) != 1:
@@ -143,14 +166,22 @@ HOLDING = [
 ]
 
 
-def planted(status="accepted", rows=HOLDING, run="`engine-measure.yml` run 1"):
-    """A planted ADR-009 at tag `0.0` whose Confirmation records `rows`."""
+def record(rows=HOLDING, run="`engine-measure.yml` run 1", tag="0.0"):
+    """One planted record: the prose naming its tag and its run, then its table of `rows`."""
     body = "\n".join(f"| {' | '.join(row)} |" for row in rows)
     return (
-        f"---\nstatus: {status}\n---\n\n# A planted ADR\n\n### Confirmation\n\n"
-        f"Measured at tag `0.0` in {run}:\n\n"
+        f"Measured at tag `{tag}` in {run}:\n\n"
         f"| measure | budget | measured | verdict |\n|---|---|---|---|\n{body}\n\n"
-        "## What would make this wrong\n"
+    )
+
+
+def planted(
+    status="accepted", rows=HOLDING, run="`engine-measure.yml` run 1", tag="0.0", earlier=""
+):
+    """A planted ADR-009 whose Confirmation records `rows` at `tag`, below the `earlier` records."""
+    return (
+        f"---\nstatus: {status}\n---\n\n# A planted ADR\n\n### Confirmation\n\n"
+        f"{earlier}{record(rows, run, tag)}## What would make this wrong\n"
     )
 
 
@@ -229,12 +260,27 @@ class TheSpikeIsRecorded(unittest.TestCase):
             ),
             "no run named": (
                 planted(run="a run"),
-                ["ADR-009's Confirmation names no `engine-measure.yml` run"],
+                ["ADR-009's latest record names no `engine-measure.yml` run"],
+            ),
+            # SPEC-055 R11: an engine upgrade appends a record, and only the latest is judged.
+            "a latest record over a budget, below one that held": (
+                planted(
+                    rows=replaced("full download", "at most 256 MiB", "300.0 MiB", "fail"),
+                    earlier=record(),
+                ),
+                ["ADR-009 is accepted although a budget failed"],
+            ),
+            "a latest record at another tag, below one at the pinned tag": (
+                planted(tag="0.1", earlier=record()),
+                ["ADR-009's latest record does not name the engine tag `0.0`"],
             ),
         }
         for name, (text, refusal) in examined("planted defect(s)", refusals.items()):
             with self.subTest(name):
                 self.assertEqual(findings(adr_022, text, "0.0"), refusal)
+        # A budget that failed in an earlier record does not decide: the latest record holds.
+        failed = record(rows=replaced("cold build", "at most 20 minutes", "21.0 minutes", "fail"))
+        self.assertEqual(findings(adr_022, planted(earlier=failed), "0.0"), [])
         tag = ENGINE_TAG.search((REPO / "Cargo.toml").read_text(encoding="utf-8"))
         self.assertIsNotNone(tag, "Cargo.toml pins no engine tag (ADR-022)")
         self.assertEqual(findings(adr_022, ADR_009.read_text(encoding="utf-8"), tag.group(1)), [])
