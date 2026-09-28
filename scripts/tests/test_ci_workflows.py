@@ -163,6 +163,12 @@ class WorkflowsAreHardened(unittest.TestCase):
                 "example-org/other-repository, not this repository",
                 "checkout-of-another-repository.yml:jobs.build.steps[1]: checks out "
                 "${{ github.event.pull_request.head.repo.full_name }}, not this repository",
+                "checkout-whose-inputs-are-one-expression.yml:jobs.build.steps[0]: checks out "
+                "with inputs the checker does not read",
+                "checkout-whose-inputs-are-one-expression.yml:jobs.build.steps[2]: checks out "
+                "with inputs the checker does not read",
+                "checkout-whose-inputs-are-one-expression.yml:jobs.build.steps[3]: checks out "
+                "with inputs the checker does not read",
                 "clone-of-another-repository.yml:jobs.build.steps[0]: clones a repository: "
                 "git clone --depth 1 https://github.com/example-org/other-repository.git",
                 "clone-of-another-repository.yml:jobs.build.steps[1]: clones a repository: "

@@ -1,8 +1,8 @@
 name: planted
 
 # A planted workflow (SPEC-034 A11): actions/checkout of this repository, without `repository`, with
-# `${{ github.repository }}` and with its own name, and from this server, named by
-# `${{ github.server_url }}` or left empty, and a fetch from origin.
+# an empty `with`, which is no inputs, with `${{ github.repository }}` and with its own name, and
+# from this server, named by `${{ github.server_url }}` or left empty, and a fetch from origin.
 # scripts/tests/test_ci_workflows.py judges it; nothing runs it.
 on:
   pull_request:
@@ -16,6 +16,9 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@0123456789abcdef0123456789abcdef01234567
+      - name: a checkout whose with is empty
+        uses: actions/checkout@0123456789abcdef0123456789abcdef01234567
+        with:
       - uses: actions/checkout@0123456789abcdef0123456789abcdef01234567
         with:
           repository: ${{ github.repository }}
