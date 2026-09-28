@@ -65,8 +65,8 @@ failing state names the record and fails its job; the census and the verdict pri
 | `reached_by` | Rust only: a test of the mutant's own package that runs the mutated code, `<target>::<test path>` | the census (resolves to exactly one test); the reviewer (it runs the code) |
 | `issue` | `#N`, the issue its delivery closes | the census |
 
-An anchor is a whole line where the line holds one mutant of that description, and a narrower
-window around the span's start where it holds two. Lines and columns are 1-based in both tools'
+An anchor is whole lines where they hold one mutant of that description, and a narrower window
+around the span's start where they hold more than one. Lines and columns are 1-based in both tools'
 reports.
 
 ## 3. One record across runs

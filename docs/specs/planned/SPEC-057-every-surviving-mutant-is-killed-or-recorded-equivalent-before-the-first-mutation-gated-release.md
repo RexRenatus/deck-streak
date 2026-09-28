@@ -153,8 +153,8 @@ The 310 missed mutants lie in 33 files, counted from the same 31 reports:
   reports cannot see it. StrykerJS reports a disabled mutant as `Ignored` and never runs it.
 - The name an `exclude_re` anchors on carries the line and the column, and 155 of the 310 names
   moved in one day's merges.
-- The tree holds no exclusion today: `mutation-verdict.py exclusions` examines 0, and no file holds a
-  `mutants::` attribute or a `Stryker disable` comment. Nothing needs migrating.
+- The tree holds no exclusion today: `mutation-verdict.py exclusions` examines 0, and no file
+  holds a `mutants::` attribute or a `Stryker disable` comment. Nothing needs migrating.
 
 ### 1.4 A record bound by an anchor, measured (ADR-070)
 
@@ -162,8 +162,9 @@ The 310 missed mutants lie in 33 files, counted from the same 31 reports:
   in the file and inside whose occurrence the mutant's span starts, together with the tool's own
   description of the mutation, such as cargo-mutants' `replace + with * in civil_from_days`.
 - **The Rust survivors.** A whole-line anchor binds 269 of the 310 to exactly one mutant, and a
-  narrower window around the span's start binds the other 41, whose line holds two mutants of one
-  description. All 310 bind at `4082551` and again at 16ed8e2, across the 155 moved names.
+  narrower window around the span's start binds the other 41, whose anchoring lines hold a second
+  mutant of the same description (37 on the mutant's own line, 4 on a line added to make the text
+  unique). All 310 bind at `4082551` and again at 16ed8e2, across the 155 moved names.
 - **The Mini App's 81 survived and uncovered mutants.** Lines bind 71 and windows 4. The other 6
   also need the mutated text, because a `ConditionalExpression` over `a && b` and the one over `a`
   start at one position. All 81 bind.
@@ -281,13 +282,14 @@ R15. One delivery per crate, in the owner's order: `deck-streak-vault` first, th
     crate's fragment and its ids in the band (R20). A mutant of its crate that the population gains
     while the delivery runs is its own.
 R16. Each delivery, before its first kill, re-lists its crate at its base
-    (`cargo mutants --list --json --package <crate>`) and dispatches the battery scoped to it (R14).
-    That run's `table` line becomes its opening row, committed with its row's test, which then reads
-    red. It kills or records every unexplained mutant of its crate, dispatches the scoped battery
-    again at its head, and fills its row from that run: listed, killed, equivalent, unexplained 0,
-    unviable, its pull request and both runs. It changes its own row of section 7 and nothing else
-    of this SPEC, unless its measurements prove the plan wrong, which it records in section 9 with
-    the reason.
+    (`cargo mutants --list --json --package <crate>`) and dispatches the battery scoped to it
+    (R14); the vault's dispatches once R14 exists on its branch. That run's `table` line becomes
+    its opening row, committed with its row's test, which then reads red; a crate whose opening
+    sweep already reads unexplained 0 records its criterion `not red`, naming that run. It kills or
+    records every unexplained mutant of its crate, dispatches the scoped battery again at its head,
+    and fills its row from that run: listed, killed, equivalent, unexplained 0, unviable, its pull
+    request and both runs. It changes its own row of section 7 and nothing else of this SPEC,
+    unless its measurements prove the plan wrong, which it records in section 9 with the reason.
 R17. The first delivery, the vault's, builds R4 to R14 before its first kill, each with its test red
     first. It also:
     - sets ADR-070 `accepted`;
@@ -312,8 +314,8 @@ R19. The last delivery, the Mini App's, judges the whole release at its head bef
       merge diff, and `table --listed` over that listing and the dispatch's reports;
     - every package reads unexplained 0, and every listed mutant was tested.
     It refills every row from that run, keeping each row's pull request; adds a row for any package
-    the listing holds and the table lacks; records the rehearsal in section 8; and moves this SPEC to
-    `docs/specs/` with `docs/red-first/SPEC-057.md` complete (ADR-016).
+    the listing holds and the table lacks; records the rehearsal in section 8; and moves this SPEC
+    to `docs/specs/` with `docs/red-first/SPEC-057.md` complete (ADR-016).
 R20. A row that pins an invariant the tool cannot mutate (SPEC-039 R8) goes in
     `scripts/mutation-rows.d/S05700-S05799.json`, the one band this SPEC's deliveries share, with
     ids allotted so that no two deliveries collide: vault S05701 to S05719, ingest S05720 to S05729,
@@ -392,8 +394,9 @@ A25: python3 -m unittest discover -s scripts/tests -p test_mutation_campaign.py 
 - **A16 to A24** read section 7 of this SPEC, wherever it then lives (`docs/specs/planned/` or
   `docs/specs/`), and the row's fragment. Each is written by its row's delivery. It is red at the
   commit that carries the row's opening sweep, whose unexplained count is above 0, and green at the
-  commit that carries its closing sweep. Its evidence is the pair of battery dispatches its
-  red-first lines name, and a verifier reads those runs.
+  commit that carries its closing sweep; a row whose opening sweep already reads 0 is disclosed
+  `not red`, naming that run (R16). Its evidence is the pair of battery dispatches its red-first
+  lines name, and a verifier reads those runs.
 - **A25** is the last delivery's. Its evidence is the rehearsal it records in section 8 and the
   dispatch that rehearsal names.
 
@@ -463,11 +466,11 @@ A25: python3 -m unittest discover -s scripts/tests -p test_mutation_campaign.py 
   lacks. A W1 pull request is judged on its own diff by the pull-request mutation jobs, so a new
   crate arrives with its survivors already killed or recorded.
 - **A hosted runner is shut down mid-shard** (SPEC-039 section 8), as shard 21 of run 36384080819
-  was. The battery names such a shard MISSING, and `table` reads VOID rather than a lower count (R13);
-  "Re-run failed jobs" runs that shard and the count again. A row is filled only from a run whose
-  every promised report is whole.
-- **The release's shards sit close to their bound.** At 16ed8e2 the slowest of 27 shards is projected
-  at 3,568 s of its 3,600 s bound, from SPEC-039 R18's costs, which name no cost for
+  was. The battery names such a shard MISSING, and `table` reads VOID rather than a lower count
+  (R13); "Re-run failed jobs" runs that shard and the count again. A row is filled only from a run
+  whose every promised report is whole.
+- **The release's shards sit close to their bound.** At 16ed8e2 the slowest of 27 shards is
+  projected at 3,568 s of its 3,600 s bound, from SPEC-039 R18's costs, which name no cost for
   `deck-streak-privacy` and charge it the highest. Tests the campaign adds make each mutant slower,
   so the plan may take a 28th shard, as R18 intends; a shard that still outruns its timeout is VOID
   by name, and the costs are measured again from the weekly battery's reports.
@@ -510,8 +513,8 @@ What each delivery meets first, from section 1:
 
 - **vault**: 218 missed, 145 of them in `rails.rs`, the rails that block executable content in the
   vault (SPEC-042); then `staged.rs` 29, `readings_tree.rs` 15, `note.rs` 12, `config.rs` 9, and
-  `fs.rs` and `sha256.rs` 4 each; 29 in shard 21 and 8 new at 16ed8e2. Its mutants cost about 8 s
-  each on GitHub's runners (SPEC-039 R18).
+  `fs.rs` and `sha256.rs` 4 each; 29 in shard 21, 4 of them annotated missed, and 8 new at 16ed8e2.
+  Its mutants cost about 8 s each on GitHub's runners (SPEC-039 R18).
 - **ingest**: 43 missed, 17 in `sync.rs` and 11 in `engine.rs`; each mutant costs about two minutes,
   so its 297 mutants are the campaign's costliest sweep, projected at 37,422 s serially.
 - **kernel**: 17 missed across seven files, 5 in `redact.rs`.
@@ -520,8 +523,11 @@ What each delivery meets first, from section 1:
 - **coordination**: 5 missed in four files.
 - **api**: 3 missed, one each in `health.rs`, `session_routes.rs` and `settings.rs`.
 - **privacy**: 29 mutants, never swept.
-- **the Mini App**: 53 survived and 28 uncovered (#240), the uncovered ones first gaining a test that
-  reaches them (R1).
+- **the Mini App**: 53 survived and 28 uncovered (#240), the uncovered ones first gaining a test
+  that reaches them (R1). #240 let an uncovered module that only the browser runs wait on an issue;
+  the ruling's no skip leaves no such path, so `hooks.server.ts`, `hooks.ts`, `+layout.ts` and
+  `+layout.svelte`, which no test reaches, each gain a Vitest test that imports and runs them, as
+  the route tests beside them already do.
 
 ## 8. The release rehearsal
 
