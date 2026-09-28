@@ -8,6 +8,7 @@ R6, R10, R12; ADR-057).
     python3 scripts/mutation-verdict.py shards --plan FILE [--listed FILE]
     python3 scripts/mutation-verdict.py judge --plan FILE --class rust|web|oracle
                                              [--outcomes FILE] [--tool-exit N]
+                                             [--shard-reports DIR]
                                              [--stryker FILE] [--rows FILE]
     python3 scripts/mutation-verdict.py survivors --reports DIR --out DIR [--open-titles FILE]
     python3 scripts/mutation-verdict.py battery --reports DIR --shards N
@@ -32,7 +33,8 @@ tool assigns them, and the fewest shards whose slowest is projected within the b
 into the plan, with each shard's mutants, and as the step outputs `shards` and `matrix`. A diff that
 needs more shards than a job matrix holds is refused with its projection, never capped.
 
-JUDGE reads a tool's own report, never its exit alone (R4). Examined is caught plus missed plus
+JUDGE reads a tool's own report, never its exit alone (R4); under `--shard-reports`, every shard's
+the plan promised, from `0` to `n-1`, each missing or partial one VOID by name (R18). Examined is caught plus missed plus
 timed out (Stryker: killed, survived, no coverage and timed out); an unviable mutant, a compile or
 runtime error, is not examined. A missed or uncovered mutant, or a selected row that was not
 KILLED, fails (exit 1). A class whose production files changed a code line and whose examined
@@ -657,7 +659,7 @@ class Verdict:
             self.say(f"verdict: FAIL: {len(self.failures)} finding(s)")
             code = EXIT_FAIL
         elif self.voids:
-            self.say("verdict: VOID: the class applies and nothing was measured")
+            self.say(f"verdict: VOID: {len(self.voids)} measurement(s) the class needs are missing")
             code = EXIT_VOID
         else:
             self.say("verdict: ok")
@@ -709,6 +711,60 @@ def judge_rows(verdict: Verdict, plan: dict, rows: object, klass: str) -> int:
     return carried
 
 
+def partial_reason(report: object, code: int | None, source: str) -> str | None:
+    """Why a cargo-mutants report cannot be read whole, or None when it can (R4): no report, an
+    exit other than 0, 2 or 3, or counts short of its total."""
+    if not isinstance(report, dict) or "caught" not in report:
+        return f"no report: {source} holds no cargo-mutants outcomes"
+    if code not in WHOLE_EXITS:
+        if code is None:
+            return "no cargo-mutants exit recorded, so its report may be partial"
+        return f"cargo-mutants exit {code}: {TOOL_EXITS.get(code, 'a run that stopped early')}"
+    caught, missed = int(report.get("caught", 0)), int(report.get("missed", 0))
+    timeout, unviable = int(report.get("timeout", 0)), int(report.get("unviable", 0))
+    total = int(report.get("total_mutants", 0))
+    if caught + missed + timeout + unviable != total:
+        # The tool writes its report as it goes: counts short of its total are a partial run.
+        return (
+            f"the report counts {caught + missed + timeout + unviable} of {total} mutants reported"
+        )
+    return None
+
+
+def whole_reports(verdict: Verdict, plan: dict, args: argparse.Namespace) -> list[tuple[str, dict]]:
+    """(where, report) for each whole cargo-mutants report the run promised; each one missing or
+    partial is VOID, by name. Under --shard-reports it promised every shard's, from 0 to n-1 (R18);
+    else the one --outcomes names."""
+    if not args.shard_reports:
+        promised = [
+            ("", read_json(args.outcomes), args.tool_exit, args.outcomes or "no --outcomes")
+        ]
+    else:
+        planned = (plan.get("shards") or {}).get("shards") or []
+        if not planned:
+            verdict.void("the plan names no shards, so no shard's report was promised")
+        root = pathlib.Path(args.shard_reports)
+        promised = []
+        for shard in range(len(planned)):
+            name = root / f"mutation-rust-shard-{shard}"
+            promised.append(
+                (
+                    f"mutation-rust-shard-{shard}: ",
+                    read_json(str(name / "mutants.out" / "outcomes.json")),
+                    read_exit(name / "cargo-mutants.exit"),
+                    "its outcomes.json",
+                )
+            )
+    whole = []
+    for where, report, code, source in promised:
+        reason = partial_reason(report, code, source)
+        if reason is None:
+            whole.append((where, report))
+        else:
+            verdict.void(f"{where}{reason}")
+    return whole
+
+
 def judge_rust(verdict: Verdict, plan: dict, args: argparse.Namespace) -> None:
     rows = read_json(args.rows)
     applies = plan["classes"]["rust"]["applies"]
@@ -719,42 +775,29 @@ def judge_rust(verdict: Verdict, plan: dict, args: argparse.Namespace) -> None:
     for entry in plan["files"]:
         if entry["class"] == "rust" and entry["code"]:
             verdict.say(f"{entry['path']}: {len(entry['code'])} changed code line(s)")
-    report = read_json(args.outcomes)
-    if not isinstance(report, dict) or "caught" not in report:
-        verdict.void(
-            f"no report: {args.outcomes or 'no --outcomes'} holds no cargo-mutants outcomes"
-        )
-        return
-    if args.tool_exit not in WHOLE_EXITS:
-        if args.tool_exit is None:
-            verdict.void("no cargo-mutants exit recorded, so its report may be partial")
-        else:
-            meaning = TOOL_EXITS.get(args.tool_exit, "a run that stopped before its last mutant")
-            verdict.void(f"cargo-mutants exit {args.tool_exit}: {meaning}")
-        return
-    caught, missed = int(report.get("caught", 0)), int(report.get("missed", 0))
-    timeout, unviable = int(report.get("timeout", 0)), int(report.get("unviable", 0))
-    total = int(report.get("total_mutants", 0))
-    if caught + missed + timeout + unviable != total:
-        # The tool writes its report as it goes: counts short of its total are a partial run.
-        verdict.void(
-            f"the report counts {caught + missed + timeout + unviable} of {total} mutants reported"
-        )
-        return
+    whole = whole_reports(verdict, plan, args)
+    caught, missed, timeout, unviable, total = (
+        sum(int(report.get(key, 0)) for _, report in whole)
+        for key in ("caught", "missed", "timeout", "unviable", "total_mutants")
+    )
     tool = caught + missed + timeout
     verdict.say(
         f"cargo-mutants examined {tool} (caught {caught}, missed {missed}, timeout {timeout}), "
-        f"unviable {unviable}, of {report.get('total_mutants', 0)} on the diff"
+        f"unviable {unviable}, of {total} on the diff"
     )
-    for outcome in report.get("outcomes", []):
-        scenario = outcome.get("scenario")
-        if outcome.get("summary") == "MissedMutant" and isinstance(scenario, dict):
-            verdict.fail(f"MISSED {scenario.get('Mutant', {}).get('name', '<unnamed mutant>')}")
-    if missed and not any(text.startswith("MISSED") for text in verdict.failures):
-        verdict.fail(f"MISSED {missed} mutant(s), unnamed in the report")
+    named = 0
+    for where, report in whole:
+        for outcome in report.get("outcomes", []):
+            scenario = outcome.get("scenario")
+            if outcome.get("summary") == "MissedMutant" and isinstance(scenario, dict):
+                named += 1
+                name = scenario.get("Mutant", {}).get("name", "<unnamed mutant>")
+                verdict.fail(f"{where}MISSED {name}")
+    if missed > named:
+        verdict.fail(f"MISSED {missed - named} mutant(s), unnamed in the report")
     verdict.examined = tool + carried
     verdict.say(f"examined {tool} by cargo-mutants and {carried} by rows")
-    touched = {mutated_file(o) for o in report.get("outcomes", [])} - {None}
+    touched = {mutated_file(o) for _, report in whole for o in report.get("outcomes", [])} - {None}
     for entry in plan["files"]:
         path = entry["path"]
         if entry["class"] == "rust" and entry["code"] and path not in touched:
