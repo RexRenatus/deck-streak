@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 date: "2026-09-27"
 decision-makers: "@RexRenatus (owner), the DeckStreak architect"
 ---
@@ -67,6 +67,45 @@ The engine is admitted as a git dependency of `ingest` pinned to a release tag, 
 `allow-git` naming Anki's repository only. If any budget fails, the delivery records the numbers,
 ADR-009 is superseded by a new ADR choosing the sidecar, and SPEC-022 is amended before its sync
 criteria are built.
+
+### What the engine brought, recorded at the spike
+
+The measured numbers are ADR-009's Confirmation. What admitting the engine took:
+
+- **The tag and its feature.** `26.05`: the predecessor's lockfile pins Anki's Python package at
+  `26.5`, and Anki tags that release `26.05`. The feature is `rustls`, the TLS backend Anki's own
+  build selects on Linux for the package the predecessor runs.
+- **Two git sources.** Anki's repository, and `ankitects/rust-url`, the fork the engine's own
+  manifest pins by revision for `percent-encoding-iri`. `allow-git` names exactly these two
+  (SPEC-022 §7).
+- **One licence added: `Unlicense`**, for `systemstat` (under the engine's `fsrs`, `burn` and
+  `burn-train`). It is a public-domain dedication with a permissive fallback, and the FSF's licence
+  list says "both public domain works and the lax license provided by the Unlicense are compatible
+  with the GNU GPL" (https://www.gnu.org/licenses/license-list.html#Unlicense, read 2026-09-27),
+  so it is compatible with AGPL-3.0-or-later (ADR-018). No other
+  licence was needed. Anki's own crates are AGPL-3.0-or-later and unpublished, so cargo-deny reads
+  them as private, like this workspace's crates.
+- **Eight advisories, all "unmaintained", none a vulnerability**, each a named exception in
+  `deny.toml`: `paste` (RUSTSEC-2024-0436), `unic-char-range` (RUSTSEC-2025-0075), `unic-common`
+  (RUSTSEC-2025-0080), `unic-char-property` (RUSTSEC-2025-0081), `unic-ucd-category`
+  (RUSTSEC-2025-0094), `unic-ucd-version` (RUSTSEC-2025-0098), `rustls-pemfile`
+  (RUSTSEC-2025-0134) and `bincode` (RUSTSEC-2025-0141). The sidecar would run the same engine
+  with the same crates, so they do not separate the two options; an engine upgrade re-reads them.
+- **One bundled SQLite for the workspace.** A dependency graph may hold one crate that links the
+  native `sqlite3`. The engine's `rusqlite` 0.36 accepts only `libsqlite3-sys` 0.34 and the kernel's
+  `sqlx` 0.9 accepts 0.30.1 up to 0.37, so the lockfile holds 0.34.0, which both accept. An upgrade
+  of either keeps one version both accept, or it does not resolve.
+- **One build tool: `protoc` 31.1**, the version and archive digest Anki's own build pins, because
+  the engine's build scripts compile its protobuf definitions. The measurement installs it inside
+  the clock, and the gate job installs it too, because the gate builds the engine.
+- **A finding for every later delivery: the engine rebuilds on every cargo invocation.** Its
+  `anki_proto` build script registers each file it generates as a rerun input
+  (`anki_io::write_file_if_changed`) and rewrites those files after cargo's invocation stamp, so
+  cargo always finds them newer and recompiles the engine. The cold build is unaffected; each
+  cargo command of the gate pays one engine compile.
+- **The engine's sync server reads its users only from its process environment** (`SYNC_USER1`).
+  Setting an environment variable is `unsafe` in edition 2024, which this workspace forbids, so the
+  tests run the server in a child process whose environment `Command::env` sets.
 
 ### Consequences
 

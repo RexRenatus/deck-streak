@@ -6,7 +6,19 @@ all-features = true
 
 [advisories]
 # Every advisory in the RustSec database is an error; an exception names its advisory id and why.
-ignore = []
+# The eight below are "unmaintained" notices (none is a vulnerability) on crates that reach this
+# workspace only through Anki's engine at the tag ADR-022 pins; the predecessor's Python package
+# carries the same engine and the same crates. An engine upgrade re-reads every one of them.
+ignore = [
+    { id = "RUSTSEC-2024-0436", reason = "paste: unmaintained, not vulnerable; the engine's fsrs -> burn-ndarray (ADR-022)" },
+    { id = "RUSTSEC-2025-0075", reason = "unic-char-range: unmaintained, not vulnerable; the engine's unic-ucd-category (ADR-022)" },
+    { id = "RUSTSEC-2025-0080", reason = "unic-common: unmaintained, not vulnerable; the engine's unic-ucd-category (ADR-022)" },
+    { id = "RUSTSEC-2025-0081", reason = "unic-char-property: unmaintained, not vulnerable; the engine's unic-ucd-category (ADR-022)" },
+    { id = "RUSTSEC-2025-0094", reason = "unic-ucd-category: unmaintained, not vulnerable; a direct dependency of the engine (ADR-022)" },
+    { id = "RUSTSEC-2025-0098", reason = "unic-ucd-version: unmaintained, not vulnerable; the engine's unic-ucd-category (ADR-022)" },
+    { id = "RUSTSEC-2025-0134", reason = "rustls-pemfile: unmaintained, not vulnerable; a direct dependency of the engine (ADR-022)" },
+    { id = "RUSTSEC-2025-0141", reason = "bincode: unmaintained, not vulnerable; the engine's fsrs -> burn-core (ADR-022)" },
+]
 
 [licenses]
 # Licences compatible with shipping inside an AGPL-3.0-or-later work.
@@ -23,6 +35,9 @@ allow = [
     "MIT",
     "MPL-2.0",
     "Unicode-3.0",
+    # ADR-022: systemstat, under the engine's fsrs -> burn -> burn-train. A public-domain dedication
+    # with a permissive fallback, which the FSF lists as compatible with the GNU GPL.
+    "Unlicense",
     "Zlib",
 ]
 confidence-threshold = 0.9
@@ -41,4 +56,9 @@ allow-wildcard-paths = true
 unknown-registry = "deny"
 unknown-git = "deny"
 allow-registry = ["https://github.com/rust-lang/crates.io-index"]
-allow-git = []
+# ADR-022: Anki's repository, whose engine is pinned by tag, and the one fork that engine's own
+# manifest pins by revision (ankitects/rust-url, for percent-encoding-iri). Nothing else.
+allow-git = [
+    "https://github.com/ankitects/anki.git",
+    "https://github.com/ankitects/rust-url.git",
+]

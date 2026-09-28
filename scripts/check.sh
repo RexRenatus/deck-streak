@@ -41,6 +41,16 @@ need_node() {
     need pnpm "pnpm 11, pinned by packageManager in package.json; never corepack"
 }
 
+need_protoc() {
+    # Anki's engine compiles its protobuf definitions with prost-build, which runs protoc from
+    # PROTOC or PATH (ADR-022).
+    if [ -n "${PROTOC:-}" ]; then
+        [ -x "$PROTOC" ] || { echo "PROTOC names no executable protoc"; return 1; }
+    else
+        need protoc "protoc 31.1 from github.com/protocolbuffers/protobuf releases, or set PROTOC"
+    fi
+}
+
 need_python() {
     need python3 "Python 3.11 or later" || return 1
     python3 -c 'import sys; sys.exit(0 if sys.version_info >= (3, 11) else 1)' ||
@@ -49,14 +59,17 @@ need_python() {
 
 stage_fmt() { need_cargo && cargo fmt --all --check; }
 
-stage_clippy() { need_cargo && cargo clippy --workspace --all-targets --locked -- -D warnings; }
+stage_clippy() {
+    need_cargo && need_protoc &&
+        cargo clippy --workspace --all-targets --locked -- -D warnings
+}
 
 stage_test() {
     need_cargo && need cargo-nextest "https://nexte.st, or taiki-e/install-action in CI" &&
-        cargo nextest run --workspace --locked --no-fail-fast
+        need_protoc && cargo nextest run --workspace --locked --no-fail-fast
 }
 
-stage_doctest() { need_cargo && cargo test --doc --workspace --locked; }
+stage_doctest() { need_cargo && need_protoc && cargo test --doc --workspace --locked; }
 
 stage_audit_rust() {
     need_cargo &&

@@ -2,8 +2,10 @@
 
 - **Wave:** W0. **Issue:** #15 (epic #1). **Context(s):** `deck-streak-ingest`, `deck-streak-coordination` (the sync cycle use case).
 - **Decided by:** ADR-009 (the engine, proposed until this spike), ADR-008 (the private copy, read-only reads), ADR-037 (one scheduled sync per study day plus the owner's triggers, and never an upload), ADR-038 (credentials from the secret manager at unit start, superseding ADR-010's storage), ADR-012 (goldens), ADR-018 (licence compatibility), and this SPEC's ADR-022 (the spike's fixed protocol and budgets).
-- **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
-  `docs/specs/` with its tests and `docs/red-first/SPEC-022.md` (ADR-016).
+- **Status:** judged: delivered with its tests, `docs/red-first/SPEC-022.md`, the measurement that
+  accepted ADR-009 (`engine-measure.yml` run 36357990387), and two goldens (`sync_retry`,
+  `sync.constants`) generated at the predecessor's `27ee2bc`. The delivery made R1, R3, R8, R10, the
+  manifest and §3 exact where the code decided them (§7).
 
 ## 1. The problem, measured
 
@@ -13,8 +15,18 @@
   choice depend on a measurement nobody has taken: build time and binary size in CI, and resident
   memory while opening a large collection and resolving its new-card queue.
 - **The budgets are fixed before the measurement** (ADR-022), so the numbers decide rather than
-  justify. At promotion this section gains the measured table: cold build minutes, stripped binary
-  MiB, peak RSS MiB for open and queue, peak RSS MiB for a full download, incremental-sync seconds.
+  justify. The spike measured the engine at tag `26.05` in `engine-measure.yml` run 36357990387, on
+  a GitHub-hosted `ubuntu-24.04` runner with 4 CPUs, and every budget held (ADR-009's
+  Confirmation):
+
+  | measure | budget | measured |
+  |---|---|---|
+  | cold build, the protoc download included | at most 20 minutes | 4.7 minutes |
+  | the stripped `engine_probe` | at most 100 MiB | 20.6 MiB |
+  | peak RSS, open and queue | at most 256 MiB | 29.4 MiB |
+  | peak RSS, full download | at most 256 MiB | 234.0 MiB |
+  | incremental sync of 100 reviews | at most 60 seconds | 0.12 seconds |
+  | `cargo deny check licenses` | pass | pass |
 - **The predecessor's sync, which the port keeps** (predecessor `27ee2bc`, names only):
   `sync.py:AnkiSyncer.sync_now` and `_sync_blocking` log in and call the engine's collection sync
   with media off; a full-sync demand is met by a full DOWNLOAD under a cross-process lock
@@ -51,7 +63,8 @@ The spike (settles ADR-009)
 R1. The engine is added to `ingest` only, as `anki` from Anki's repository pinned to the release tag
     of the line the predecessor's pinned Python package comes from, behind an `AnkiEngine` port that
     keeps every engine type inside `ingest` (the anti-corruption layer); `deny.toml`'s
-    `allow-git` names that repository and nothing else.
+    `allow-git` names that repository and the one fork the engine's own manifest pins by revision
+    (`ankitects/rust-url`, for `percent-encoding-iri`), and nothing else (§7).
 R2. The measurement follows ADR-022 exactly: the synthetic collection it defines, a cold build on a
     GitHub-hosted `ubuntu-24.04` runner by `.github/workflows/engine-measure.yml` (pull requests
     that change `crates/ingest/**` or `Cargo.lock`, read-only token, pinned actions), the stripped
@@ -61,7 +74,9 @@ R3. The spike passes only if every ADR-022 budget holds: cold build at most 20 m
     binary at most 100 MiB, peak RSS at most 256 MiB for opening the collection and resolving its
     new-card queue, peak RSS at most 256 MiB for a full download, an incremental sync of 100 new
     reviews within 60 seconds; and `cargo deny` passes, any licence added to `deny.toml`'s allow
-    list being compatible with AGPL-3.0-or-later (ADR-018) and named in ADR-022's outcome. A tool
+    list being compatible with AGPL-3.0-or-later (ADR-018) and named in ADR-022's outcome, and any
+    advisory the engine's tree brings being an exception `deny.toml` names by its id and reason
+    and ADR-022's outcome lists (§7). A tool
     the engine's build needs beyond the pinned toolchain (a protobuf compiler, say) is installed in
     the workflow and counted inside the build budget.
 R4. ADR-009 records the numbers in its Confirmation section and its status becomes `accepted`, or
@@ -169,7 +184,7 @@ A16: cargo test -p deck-streak-ingest --test sync -- --exact a_second_scheduled_
 A17: cargo test -p deck-streak-ingest --test sync -- --exact an_owner_trigger_within_five_minutes_of_a_success_returns_it_without_syncing
 ```
 
-The sync tests run the engine's own sync server in process on a loopback port, with a synthetic
+The sync tests run the engine's own sync server in a child process (§7) on a loopback port, with a synthetic
 user and a synthetic collection built by `crates/ingest/tests/support/synthetic.rs`; nothing
 reaches the owner's server. A15 puts a recording layer in front of that server
 (`crates/ingest/tests/support/recording.rs`) that keeps every request and fails the test on an
@@ -181,7 +196,7 @@ other test.
 
 | file | context | change |
 |---|---|---|
-| `crates/ingest/Cargo.toml` | `deck-streak-ingest` | changed: `anki` (git, pinned tag), kernel, tokio, thiserror, tracing; dev: tempfile, serde, serde_json |
+| `crates/ingest/Cargo.toml` | `deck-streak-ingest` | changed: `anki` (git, pinned tag), kernel, sqlx (§7), tokio, thiserror, tracing; dev: tempfile, tokio (the tests' and the probe's runtime), serde, serde_json, zstd (§7) |
 | `crates/ingest/src/lib.rs` | `deck-streak-ingest` | changed |
 | `crates/ingest/src/engine.rs` | `deck-streak-ingest` | added: the `AnkiEngine` port and its adapter over the engine |
 | `crates/ingest/src/sync.rs` | `deck-streak-ingest` | added: `Syncer`, retries, the reason codes, the per-study-day refusal and the owner debounce |
@@ -196,9 +211,11 @@ other test.
 | `crates/coordination/Cargo.toml`, `crates/coordination/src/lib.rs`, `crates/coordination/src/sync_cycle.rs` | `deck-streak-coordination` | added or changed: the sync cycle use case |
 | `migrations/002201_ingest_sync_runs.sql` | `deck-streak-ingest` | added: `sync_runs`, its `trigger` checked to `scheduled` or `owner` |
 | `.sqlx/` | workspace | changed |
-| `Cargo.toml`, `Cargo.lock` | workspace | changed: `anki` admitted by ADR-022 |
-| `deny.toml` | workspace | changed: `allow-git` for Anki's repository; any compatible licence the engine needs |
+| `Cargo.toml`, `Cargo.lock` | workspace | changed: `anki` admitted by ADR-022; `zstd` for the census's tests (§7); `libsqlite3-sys` held at a version the engine and the kernel both accept (§7) |
+| `deny.toml` | workspace | changed: `allow-git` for Anki's repository and the fork its engine pins; any compatible licence the engine needs; the engine's advisories, each by id and reason (§7) |
 | `.github/workflows/engine-measure.yml` | repo | added: the cold-build and size measurement |
+| `.github/workflows/ci.yml` | repo | changed: the gate job installs the protobuf compiler the engine's build needs (§7) |
+| `scripts/check.sh` | repo | changed: the toolchain stage names the protobuf compiler (§7) |
 | `scripts/tests/test_engine_spike_record.py` | repo | added: A1 |
 | `tools/parity-oracle/registry/spec_022.py` | repo | added: the retry adapter and the sync constants |
 | `tools/parity-oracle/goldens/sync_retry.json`, `sync.constants.json` | repo | added |
@@ -246,3 +263,55 @@ other test.
   (SPEC-048).
 - **An engine upgrade changes the requests a sync sends.** The tag is pinned (R1), so an upgrade is a
   deliberate delivery, and it reruns the census (A15) against the recording server before it merges.
+
+## 7. Amendments at delivery
+
+- **R1: two git sources, both Anki's.** The engine's own manifest at `26.05` takes
+  `percent-encoding-iri` from its fork `ankitects/rust-url`, pinned by revision, so a lockfile with
+  the engine holds a second git source and "that repository and nothing else" could not hold.
+  `deny.toml` names exactly the two, and `unknown-git` still refuses any third.
+- **R3: the engine's advisories are named exceptions.** The gate's audit stage runs
+  `cargo deny check advisories` over every crate in the lockfile. The engine's tree brings eight
+  RustSec "unmaintained" notices and no vulnerability: `paste` (RUSTSEC-2024-0436), five `unic-*`
+  crates (RUSTSEC-2025-0075, -0080, -0081, -0094, -0098), `rustls-pemfile` (RUSTSEC-2025-0134) and
+  `bincode` (RUSTSEC-2025-0141). Each is an exception with its reason, as `deny.toml` requires,
+  and ADR-022's outcome lists them; the predecessor's Python package carries the same engine and
+  the same crates.
+- **Manifest: `ci.yml` and `check.sh`.** The engine's build scripts compile Anki's protobuf
+  definitions with `prost-build`, which needs `protoc` (on `PATH`, or named by `PROTOC`). The
+  gate's clippy and test stages build the engine, so the gate job installs the same `protoc` the
+  measurement does, and the toolchain stage names it, so a machine without it fails there by name
+  rather than deep inside a build script.
+- **§3: the tests' sync server runs in a child process, not in process.** The engine's server
+  reads its users only from `SYNC_USER1` in its process environment, and setting an environment
+  variable is `unsafe` in edition 2024, which this workspace forbids. A test that needs the server
+  re-executes its own test binary as the server with `Command::env`; the server exits when the
+  test closes its standard input (`crates/ingest/tests/support/mod.rs`). A budget test's measured
+  operation runs in a third process for the same reason the budgets need it: `VmHWM` is a process's
+  peak, so the fixture's build and the server stay out of the measured one.
+- **`Cargo.lock`: one bundled SQLite for the workspace.** A dependency graph may hold one crate
+  that links the native `sqlite3`. The engine's `rusqlite` 0.36 accepts only `libsqlite3-sys`
+  0.34, and the kernel's `sqlx` 0.9 accepts 0.30.1 up to 0.37, so the lockfile holds 0.34.0, which
+  both declare they accept (dev had locked 0.37.0). An upgrade of either must keep one version
+  both accept.
+- **`crates/ingest/Cargo.toml`: sqlx.** The kernel's `Db` hands out sqlx types (a `BEGIN
+  IMMEDIATE` transaction, the read pool), and `sync_runs`' queries are compile-time checked into
+  `.sqlx/`, which the manifest already names. ADR-003 admits sqlx for the workspace; ingest inherits
+  it with no feature of its own.
+- **`crates/ingest/Cargo.toml`: a zstd dev-dependency.** A15's recording layer reads each request
+  the engine sends, and the engine compresses every request body with zstd; the census decompresses
+  it to prove no body carries a local change. It is the zstd the engine already brings (one copy in
+  the lockfile), a dev-dependency of ingest only.
+- **R8 and the tests: the retry schedule is a value.** `RetrySchedule::PREDECESSOR` holds the
+  golden-proved constants and is what production runs; a test of anything but timing runs the same
+  loop with `RetrySchedule::IMMEDIATE`, whose waits are zero-length waits on tokio's timer. A8 and
+  A10 run the predecessor's schedule on paused time.
+- **R10 and the tests: the run's record sits behind a port.** `SyncRunStore` is what the syncer
+  asks (was a scheduled run recorded this study day, the last success) and tells (record a run);
+  `SqliteSyncRuns` is its implementation over the kernel's `Db`. sqlx's pool times its acquire on
+  tokio's timer, and paused time jumps to a pending timer while the database answers on its own
+  thread, so the paused-time retry tests hand the syncer an in-memory store; every other test uses
+  the database.
+- **R10 and R15: `sync_runs` records the run's study day.** The refusal of a second scheduled run
+  reads the study day the kernel's rule gave the first when it started, so a row is found by its
+  day rather than by an instant range the rule would have to invert.

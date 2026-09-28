@@ -1,0 +1,134 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT id AS \"id!\", trigger, study_day, started_at, finished_at, status, reason,\n                          attempts, full_download, created_at\n                   FROM sync_runs ORDER BY id",
+  "describe": {
+    "columns": [
+      {
+        "name": "id!",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "sync_runs",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "name": "trigger",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "sync_runs",
+            "name": "trigger"
+          }
+        }
+      },
+      {
+        "name": "study_day",
+        "ordinal": 2,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "sync_runs",
+            "name": "study_day"
+          }
+        }
+      },
+      {
+        "name": "started_at",
+        "ordinal": 3,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "sync_runs",
+            "name": "started_at"
+          }
+        }
+      },
+      {
+        "name": "finished_at",
+        "ordinal": 4,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "sync_runs",
+            "name": "finished_at"
+          }
+        }
+      },
+      {
+        "name": "status",
+        "ordinal": 5,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "sync_runs",
+            "name": "status"
+          }
+        }
+      },
+      {
+        "name": "reason",
+        "ordinal": 6,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "sync_runs",
+            "name": "reason"
+          }
+        }
+      },
+      {
+        "name": "attempts",
+        "ordinal": 7,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "sync_runs",
+            "name": "attempts"
+          }
+        }
+      },
+      {
+        "name": "full_download",
+        "ordinal": 8,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "sync_runs",
+            "name": "full_download"
+          }
+        }
+      },
+      {
+        "name": "created_at",
+        "ordinal": 9,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "sync_runs",
+            "name": "created_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "6aff2ec574014acb03c07813dcbbae154d87318d6c421fb8b8838673ceb754dc"
+}
