@@ -7,11 +7,17 @@ durable-services pack judges the templates on the maintainer's box (ADR-069).
 
 import dataclasses
 import re
+import unicodedata
 from pathlib import Path
 
 DEPLOY = "deploy"
 UNIT_KINDS = {".service": "service", ".timer": "timer", ".slice": "slice"}
 KEY_NAME = re.compile(r"^[A-Za-z0-9-]+$")
+SECTION = re.compile(r"\[[A-Za-z0-9-]+\]")
+# What the reader refuses rather than read a line otherwise than systemd reads it (SPEC-066).
+BACKSLASH = "ends in a backslash, which the reader refuses"
+CHARACTER = "a character the reader refuses"
+SHAPE = "is neither a section header nor an assignment in a section"
 # A variable whose name says it carries a secret, which systemd.exec(5) keeps out of the environment.
 SECRET_NAME = re.compile(
     r"(?:^|_)(?:TOKEN|SECRET|PASSWORD|PASSWD|APIKEY|API_KEY|PRIVATE_KEY|ACCESS_KEY|SIGNING_KEY|"
@@ -88,39 +94,60 @@ class Subject:
         return [unit for unit in self.units.values() if unit.kind == "timer"]
 
 
-def logical_lines(text):
-    """systemd.syntax(7): comments start `#` or `;`, a trailing backslash joins the next line (a
-    comment line inside the join is skipped), and every line keeps the number it started on."""
-    pending, start = [], 0
-    for number, raw in enumerate(text.splitlines(), start=1):
-        stripped = raw.strip()
-        if pending and stripped.startswith(("#", ";")):
+def unit_text(path):
+    """A unit file's text, decoded from its bytes: `read_text` would turn a carriage return into a
+    line break before the reader could refuse it."""
+    return Path(path).read_bytes().decode("utf-8")
+
+
+def refused_character(line):
+    """The first character of `line` the reader refuses, or None: a control character other than a
+    tab, or whitespace outside ASCII (SPEC-066)."""
+    for char in line:
+        if char == "\t":
             continue
-        if not pending:
-            start = number
-        if stripped.endswith("\\"):
-            pending.append(stripped[:-1])
+        if unicodedata.category(char) == "Cc" or (char.isspace() and not char.isascii()):
+            return char
+    return None
+
+
+def logical_lines(text, source):
+    """Each line of `text` with its number, split on a line feed alone and stripped of spaces and
+    tabs. The reader models no more of systemd.syntax(7) than that: it refuses a line that ends in a
+    backslash, a comment's included, and one holding a character `refused_character` names, each
+    as `source` and the line's number (SPEC-066)."""
+    for number, raw in enumerate(text.split("\n"), start=1):
+        char = refused_character(raw)
+        if char is not None:
+            raise Refused(f"{source}:{number}: holds U+{ord(char):04X}, {CHARACTER}")
+        line = raw.strip(" \t")
+        if line.endswith("\\"):
+            raise Refused(f"{source}:{number}: {BACKSLASH}")
+        yield number, line
+
+
+def assignments(text, source):
+    """Each assignment of `text` in order, as (section, key, value, line). A line is blank, a
+    comment (`#` or `;`), a section header or a `Key=Value` inside a section, and the reader refuses
+    any other (SPEC-066)."""
+    section = None
+    for number, line in logical_lines(text, source):
+        if not line or line.startswith(("#", ";")):
             continue
-        pending.append(stripped)
-        yield start, " ".join(part for part in pending if part).strip()
-        pending = []
-    if pending:
-        yield start, " ".join(pending).strip()
+        if SECTION.fullmatch(line):
+            section = line[1:-1]
+            continue
+        key, equals, value = line.partition("=")
+        key = key.strip(" \t")
+        if not equals or section is None or not KEY_NAME.match(key):
+            raise Refused(f"{source}:{number}: {SHAPE}")
+        yield section, key, value.strip(" \t"), number
 
 
 def read_into(unit, path, source):
-    """Every `Key=Value` of `path` into `unit`, under its section; other lines are skipped."""
-    section = None
-    for number, line in logical_lines(path.read_text(encoding="utf-8")):
-        if not line or line.startswith(("#", ";")):
-            continue
-        if line.startswith("[") and line.endswith("]"):
-            section = line[1:-1].strip()
-            continue
-        key, equals, value = line.partition("=")
-        key = key.strip()
-        if equals and KEY_NAME.match(key) and section is not None:
-            unit.assignments.append(Assignment(section, key, value.strip(), number, source))
+    """Every assignment of `path` into `unit`, under its section, through `assignments`."""
+    for section, key, value, number in assignments(unit_text(path), source):
+        unit.assignments.append(Assignment(section, key, value, number, source))
 
 
 def parse_unit(root, path):

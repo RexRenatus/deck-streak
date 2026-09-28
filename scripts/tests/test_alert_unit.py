@@ -103,23 +103,14 @@ os.execv({real!r}, [{real!r}] + sys.argv[1:])
 
 
 def unit_file(path):
-    """A unit file as systemd reads it: each section's assignments in order, where an empty
-    assignment clears the list (systemd.syntax(7))."""
+    """A unit file through the census's reader, `_units.assignments`, which refuses a line it
+    cannot read: each section's assignments in order, where an empty assignment clears the list
+    (systemd.syntax(7))."""
     sections = {}
-    section = None
-    for number, raw in enumerate(Path(path).read_text(encoding="utf-8").splitlines(), start=1):
-        line = raw.strip()
-        if not line or line.startswith(("#", ";")):
-            continue
-        if line.startswith("[") and line.endswith("]"):
-            section = sections.setdefault(line[1:-1], {})
-            continue
-        key, equals, value = line.partition("=")
-        if not equals or section is None:
-            raise AssertionError(f"{path}:{number}: not an assignment in a section: {raw!r}")
-        values = section.setdefault(key.strip(), [])
-        if value.strip():
-            values.append(value.strip())
+    for section, key, value, _ in _units.assignments(_units.unit_text(path), Path(path).name):
+        values = sections.setdefault(section, {}).setdefault(key, [])
+        if value:
+            values.append(value)
         else:
             values.clear()
     return sections
