@@ -21,7 +21,7 @@ from _support import REPO, examined
 
 WORKFLOWS = REPO / ".github" / "workflows"
 USES = re.compile(r"^\s*-?\s*uses:\s*([^\s#]+)", re.M)
-PINNED = re.compile(r"^[\w.-]+/[\w./-]+@[0-9a-f]{40}$")
+PINNED = re.compile(r"^[\w.-]+/[\w.-]+(?:/[\w.-]+)*@[0-9a-f]{40}$")
 STAGES = re.compile(r"^STAGES_ALL=\(([^)]*)\)", re.M)
 THIS_REPOSITORY = "RexRenatus/deck-streak"
 # A pull request into main, as the github context presents it; each test changes what it needs.
@@ -1469,6 +1469,16 @@ def step_inputs(step):
     return {str(name).lower(): value for name, value in given.items()}
 
 
+def is_checkout(step):
+    """Whether a step uses actions/checkout, its `uses` read as the runner reads it: split at each
+    `/` and `\\`, empty parts dropped, and the owner and name in any case. An action at a path
+    inside that repository is a checkout too."""
+    parts = [
+        part for part in re.split(r"[/\\]", str(step.get("uses", "")).split("@", 1)[0]) if part
+    ]
+    return [part.lower() for part in parts[:2]] == ["actions", "checkout"]
+
+
 def checked_out(step):
     """The repository a checkout step checks out. An omitted or empty `repository`, and
     `${{ github.repository }}`, are this repository, as actions/checkout defaults it."""
@@ -1551,8 +1561,7 @@ def secret_and_checkout_problems(directory):
                 if not isinstance(step, dict):
                     continue
                 where = f"{path.name}:jobs.{job_id}.steps[{n}]"
-                # GitHub reads an action's owner and name in any case.
-                if action(step).lower() == "actions/checkout":
+                if is_checkout(step):
                     repository = checked_out(step)
                     judged["checkouts"].append((where, repository))
                     if repository != THIS_REPOSITORY:
