@@ -6,6 +6,10 @@
 //! readings' production queue port over Anki's engine, on a clock injected 40 and 400 days past the
 //! file's last write. Every deck, card and review is synthetic.
 
+// An integration test is test code: its helpers panic on a failed fixture, and it prints the
+// examined count on purpose.
+#![allow(clippy::expect_used, clippy::print_stdout)]
+
 mod support;
 
 use std::collections::BTreeSet;
@@ -14,7 +18,7 @@ use std::sync::Arc;
 
 use deck_streak_ingest::engine::RslibEngine;
 use deck_streak_ingest::sync_runs::RunStatus;
-use deck_streak_kernel::{ManualClock, Offload, OffloadWorkers, UtcMillis};
+use deck_streak_kernel::{ManualClock, Offload, OffloadWorkers, StudyDay, UtcMillis};
 use deck_streak_readings::day_set::{self, EngineQueue, ResolveInputs, StudyDayResolution};
 use deck_streak_readings::gates::{LastSync, pause_window, review_floor, studied_before};
 use deck_streak_readings::state::{Class, CouldNotTell, RunOutcome, TopicState};
@@ -180,7 +184,7 @@ async fn two_days_without_study_pause_every_topic() {
     let yesterday = TODAY - 1;
     let before_yesterday = TODAY - 2;
     assert_eq!(
-        pause_window(support::today()).map(|day| day.epoch_day()),
+        pause_window(support::today()).map(StudyDay::epoch_day),
         [yesterday, before_yesterday]
     );
     // Reviews that are no study of the two days before: none at all; one three days before; one

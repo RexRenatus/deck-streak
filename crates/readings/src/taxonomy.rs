@@ -147,12 +147,53 @@ impl Taxonomy {
     /// field included), [`TaxonomyError::OtherSchema`] for another schema, and
     /// [`TaxonomyError::Refused`] for a blank, split or repeated name, or a code that is no slug.
     pub fn parse(text: &str) -> Result<Self, TaxonomyError> {
-        let _ = text;
+        let file: TaxonomyFile =
+            serde_json::from_str(text).map_err(|error| TaxonomyError::Malformed {
+                line: error.line(),
+                column: error.column(),
+            })?;
+        if file.schema != TAXONOMY_SCHEMA {
+            return Err(TaxonomyError::OtherSchema);
+        }
+        names("law.roots", &file.law.roots)?;
+        names("law.bands", &file.law.bands)?;
+        names("writing_roots", &file.writing_roots)?;
+        let decks: Vec<String> = file.languages.iter().map(|l| l.deck.clone()).collect();
+        let displays: Vec<String> = file.languages.iter().map(|l| l.display.clone()).collect();
+        let codes: Vec<String> = file.languages.iter().map(|l| l.code.clone()).collect();
+        names("languages.deck", &decks)?;
+        names("languages.display", &displays)?;
+        names("languages.code", &codes)?;
+        if !codes.iter().all(|code| is_slug(code)) {
+            return Err(TaxonomyError::Refused {
+                field: "languages.code",
+                why: "a code must be lowercase letters and digits in hyphenated runs",
+            });
+        }
+        if file
+            .languages
+            .iter()
+            .any(|l| l.term_field.trim().is_empty())
+        {
+            return Err(TaxonomyError::Refused {
+                field: "languages.term_field",
+                why: "a term field must be named",
+            });
+        }
         Ok(Self {
-            law_roots: Vec::new(),
-            bands: Vec::new(),
-            languages: Vec::new(),
-            writing_roots: Vec::new(),
+            law_roots: file.law.roots,
+            bands: file.law.bands,
+            languages: file
+                .languages
+                .into_iter()
+                .map(|l| Language {
+                    deck: l.deck,
+                    code: l.code,
+                    display: l.display,
+                    term_field: l.term_field,
+                })
+                .collect(),
+            writing_roots: file.writing_roots,
         })
     }
 

@@ -30,15 +30,17 @@ impl LastSync {
     /// The last sync, from the status of ingest's last recorded run (`RunHistory::last`).
     #[must_use]
     pub const fn from_last_run(last: Option<RunStatus>) -> Self {
-        let _ = last;
-        Self::Succeeded
+        match last {
+            Some(RunStatus::Ok | RunStatus::Skipped) => Self::Succeeded,
+            Some(RunStatus::Error) => Self::Failed,
+            None => Self::Never,
+        }
     }
 
     /// Whether the readings may resolve: only after a sync that succeeded.
     #[must_use]
     pub const fn succeeded(self) -> bool {
-        let _ = self;
-        true
+        matches!(self, Self::Succeeded)
     }
 }
 
@@ -46,21 +48,26 @@ impl LastSync {
 /// readings going.
 #[must_use]
 pub const fn pause_window(today: StudyDay) -> [StudyDay; 2] {
-    [today, today]
+    [
+        StudyDay::from_epoch_day(today.epoch_day() - 1),
+        StudyDay::from_epoch_day(today.epoch_day() - 2),
+    ]
 }
 
 /// Whether the owner studied on either of the two study days before `today`: a qualifying review
 /// whose instant falls in one of them by `rule`. No such review pauses every topic (R4).
 #[must_use]
 pub fn studied_before(reviews: &[Review], today: StudyDay, rule: StudyDayRule) -> bool {
-    let _ = (reviews, today, rule);
-    true
+    let window = pause_window(today);
+    reviews
+        .iter()
+        .filter(|review| is_study_event(review.kind, review.ease))
+        .any(|review| window.contains(&rule.study_day(UtcMillis::from_epoch_millis(review.id))))
 }
 
 /// The floor the review read takes: three days before `now`, so every review of the two study days
 /// before the current one is newer than it, whatever the rollover hour and the offset.
 #[must_use]
 pub const fn review_floor(now: UtcMillis) -> i64 {
-    let _ = now;
-    0
+    now.epoch_millis().saturating_sub(3 * DAY_MS)
 }

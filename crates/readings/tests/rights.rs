@@ -3,6 +3,10 @@
 //!
 //! The test writes synthetic rows through the readings' store into a migrated temporary database.
 
+// An integration test is test code: its helpers panic on a failed fixture, and it prints the
+// examined count on purpose.
+#![allow(clippy::expect_used, clippy::print_stdout)]
+
 use deck_streak_kernel::{DataRights, Db, Disposition, StudyDay, UtcMillis};
 use deck_streak_readings::data_rights::{
     READING_RUNS_TABLE, READING_TOPIC_DAYS_TABLE, READINGS_CONTEXT, ReadingsDataRights,

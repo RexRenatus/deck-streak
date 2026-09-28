@@ -4,10 +4,9 @@
 //! Each test writes to a migrated temporary database through the readings' store. Every topic is
 //! synthetic.
 
-#![allow(
-    clippy::print_stdout,
-    reason = "the test prints its examined count (the tdd pack)"
-)]
+// An integration test is test code: its helpers panic on a failed fixture, and it prints the
+// examined count on purpose.
+#![allow(clippy::expect_used, clippy::print_stdout)]
 
 use std::collections::BTreeMap;
 

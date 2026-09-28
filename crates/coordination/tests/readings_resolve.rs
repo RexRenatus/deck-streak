@@ -7,6 +7,9 @@
 //! whose one language deck is that default deck, so the copy names one topic. Every clock is a
 //! `ManualClock`, and every value is synthetic.
 
+// An integration test is test code: its helpers panic on a failed fixture.
+#![allow(clippy::expect_used)]
+
 use std::ffi::OsStr;
 use std::fs;
 use std::path::{Path, PathBuf};

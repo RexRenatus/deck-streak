@@ -4,6 +4,10 @@
 //! Every deck name and both taxonomies are synthetic: the example file, and a second one written
 //! here that reads the same decks another way.
 
+// An integration test is test code: its helpers panic on a failed fixture, and it prints the
+// examined count on purpose.
+#![allow(clippy::expect_used, clippy::print_stdout)]
+
 mod support;
 
 #[path = "../../../tools/parity-oracle/golden.rs"]
@@ -170,12 +174,12 @@ async fn the_topics_come_only_from_the_configured_taxonomy() {
             &queue,
         )
         .await;
-        let named: BTreeSet<String> = resolution
+        let resolved_topics: BTreeSet<String> = resolution
             .topics
             .iter()
             .map(|topic| topic.topic.as_str().to_owned())
             .collect();
-        assert_eq!(named, expected);
+        assert_eq!(resolved_topics, expected);
         assert_eq!(resolution.outcome, RunOutcome::Paused);
     }
 

@@ -6,6 +6,10 @@
 //! resolves it through the readings' production queue port over the engine. A10 runs on tokio's
 //! paused clock. Every deck, card and review is synthetic.
 
+// An integration test is test code: its helpers panic on a failed fixture, and it prints the
+// examined count on purpose.
+#![allow(clippy::expect_used, clippy::print_stdout)]
+
 mod support;
 
 #[path = "../../../tools/parity-oracle/golden.rs"]
@@ -379,7 +383,8 @@ async fn a_resolution_past_its_budget_is_rail_broken() {
     assert_eq!(late.calls(), 1);
 
     // A queue that answers a millisecond inside the budget resolves.
-    let early = RecordingQueue::answering(answer).after(RESOLVE_BUDGET - Duration::from_millis(1));
+    let early = RecordingQueue::answering(answer)
+        .after(RESOLVE_BUDGET.saturating_sub(Duration::from_millis(1)));
     let resolution = day_set::resolve(inputs, &early).await;
     assert_eq!(resolution.outcome, RunOutcome::Resolved);
     assert_eq!(cards_of(&resolution, "law/evidence"), BTreeSet::from([1]));

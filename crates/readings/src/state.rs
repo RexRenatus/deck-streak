@@ -76,8 +76,14 @@ impl CouldNotTell {
         reason = "the closed map names each reason's class on its own line"
     )]
     pub const fn class(self) -> Class {
-        let _ = self;
-        Class::RailBroken
+        match self {
+            Self::SyncFailed => Class::RailBroken,
+            Self::CollectionLocked => Class::RailBroken,
+            Self::CollectionOpenFailed => Class::RailBroken,
+            Self::DaySetResolveTimeout => Class::RailBroken,
+            Self::TaxonomyMissing => Class::ConfigFault,
+            Self::DaySetFetchSaturated => Class::ConfigFault,
+        }
     }
 
     /// The reason as the readings' tables store it.
@@ -322,16 +328,14 @@ impl TopicState {
     /// Whether the state counts as a failure: `failed` alone. An absent AI route is a setting.
     #[must_use]
     pub const fn is_failure(self) -> bool {
-        let _ = self;
-        true
+        matches!(self, Self::Failed(_))
     }
 
     /// Whether the state is a refusal the health check counts (SPEC-050 R2): could-not-tell and
     /// failed, never an absent AI route, a pause or a quiet day.
     #[must_use]
     pub const fn refuses(self) -> bool {
-        let _ = self;
-        true
+        matches!(self, Self::CouldNotTell(_) | Self::Failed(_))
     }
 
     /// The state stored as `name`, `class` and `reason`, or `None` when the three do not name one
@@ -339,8 +343,16 @@ impl TopicState {
     /// reason on a state that carries none.
     #[must_use]
     pub fn from_stored(name: &str, class: Option<&str>, reason: Option<&str>) -> Option<Self> {
-        let _ = (name, class, reason);
-        None
+        let state = match (name, reason) {
+            ("ready", None) => Self::Ready,
+            ("no_new_cards", None) => Self::NoNewCards,
+            ("could_not_tell", Some(reason)) => Self::CouldNotTell(CouldNotTell::parse(reason)?),
+            ("paused", None) => Self::Paused,
+            ("failed", Some(reason)) => Self::Failed(FailedReason::parse(reason)?),
+            ("ai_route_absent", None) => Self::AiRouteAbsent,
+            _ => return None,
+        };
+        (state.class().map(Class::as_str) == class).then_some(state)
     }
 }
 
@@ -401,7 +413,14 @@ impl RunOutcome {
     /// outcome together.
     #[must_use]
     pub fn from_stored(name: &str, class: Option<&str>, reason: Option<&str>) -> Option<Self> {
-        let _ = (name, class, reason);
-        None
+        let outcome = match (name, reason) {
+            ("resolved", None) => Self::Resolved,
+            ("paused", None) => Self::Paused,
+            ("could_not_tell", Some(reason)) => Self::CouldNotTell(CouldNotTell::parse(reason)?),
+            ("ai_route_absent", None) => Self::AiRouteAbsent,
+            _ => return None,
+        };
+        let stored_class = outcome.reason().map(|reason| reason.class().as_str());
+        (stored_class == class).then_some(outcome)
     }
 }

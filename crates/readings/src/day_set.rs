@@ -57,7 +57,11 @@ impl QueuedCard {
     /// the deck it sits in (the predecessor's `types.py:Card.true_did`).
     #[must_use]
     pub const fn home_deck_id(&self) -> i64 {
-        self.deck_id
+        if self.original_deck_id != 0 {
+            self.original_deck_id
+        } else {
+            self.deck_id
+        }
     }
 
     /// The queued card `card` as ingest's read returned it.
@@ -143,8 +147,16 @@ pub struct DaySetResolution {
 /// sorted and joined by commas, in lowercase hexadecimal.
 #[must_use]
 pub fn digest(card_ids: &[i64]) -> String {
-    let _ = card_ids;
-    String::new()
+    let mut ids = card_ids.to_vec();
+    ids.sort_unstable();
+    let joined = ids.iter().map(i64::to_string).collect::<Vec<_>>().join(",");
+    let hash = Sha256::digest(joined.as_bytes());
+    let mut hex = String::with_capacity(64);
+    for byte in hash {
+        // Writing to a String cannot fail.
+        let _ = write!(hex, "{byte:02x}");
+    }
+    hex
 }
 
 /// Whether a root's answer is saturated (R3): it holds fewer new cards than the scheduler's own
@@ -152,8 +164,10 @@ pub fn digest(card_ids: &[i64]) -> String {
 /// root's read may be truncated, so it is never taken as complete.
 #[must_use]
 pub const fn saturated(new_cards: usize, new_count: Option<usize>) -> bool {
-    let _ = (new_cards, new_count);
-    false
+    match new_count {
+        Some(count) => new_cards < count,
+        None => new_cards >= QUEUE_FETCH_LIMIT,
+    }
 }
 
 /// The name a deck id gives in a report: its stored name, or `<unknown-deck-N>`.
@@ -169,6 +183,9 @@ fn root_of(deck_name: &str) -> &str {
     deck_name.split(DECK_SEPARATOR).next().unwrap_or(deck_name)
 }
 
+/// What the resolver gathers for one topic: its decks, its cards and their notes.
+type Gathered = (BTreeSet<i64>, Vec<i64>, BTreeSet<i64>);
+
 /// Resolves the day sets (`prereading.py:resolve_day_sets`): each query of a root that is not
 /// undetermined contributes its cards, each attributed by its original deck, a card an earlier query
 /// claimed skipped; a card of a deck that maps to no topic is counted against that deck; and a root
@@ -180,8 +197,64 @@ pub fn resolve_day_sets(
     taxonomy: &Taxonomy,
     undetermined: &[UndeterminedRoot],
 ) -> DaySetResolution {
-    let _ = (queries, deck_names, taxonomy, undetermined);
-    DaySetResolution::default()
+    let refused: BTreeSet<&str> = undetermined.iter().map(|root| root.root.as_str()).collect();
+    let mut seen = BTreeSet::new();
+    let mut topics: BTreeMap<TopicKey, Gathered> = BTreeMap::new();
+    let mut unmapped: BTreeMap<String, usize> = BTreeMap::new();
+    let mut no_new_today = Vec::new();
+    for query in queries {
+        if refused.contains(query.root.as_str()) {
+            continue;
+        }
+        let mut contributed = false;
+        for card in &query.cards {
+            if !seen.insert(card.id) {
+                continue;
+            }
+            let home = card.home_deck_id();
+            let name = deck_label(deck_names, home);
+            let Some(topic) = topic_of(&name, taxonomy) else {
+                *unmapped.entry(name).or_default() += 1;
+                continue;
+            };
+            let (decks, cards, notes) = topics.entry(topic).or_default();
+            decks.insert(home);
+            cards.push(card.id);
+            notes.extend(card.note_id);
+            contributed = true;
+        }
+        if !contributed {
+            no_new_today.push(query.root.clone());
+        }
+    }
+    let active = topics
+        .into_iter()
+        .map(|(topic, (decks, mut cards, notes))| {
+            cards.sort_unstable();
+            ActiveTopic {
+                digest: digest(&cards),
+                topic,
+                deck_ids: decks.into_iter().collect(),
+                card_ids: cards,
+                note_ids: notes.into_iter().collect(),
+            }
+        })
+        .collect();
+    no_new_today.sort();
+    let mut undetermined = undetermined.to_vec();
+    undetermined.sort_by(|left, right| left.root.cmp(&right.root));
+    DaySetResolution {
+        active,
+        unmapped: unmapped
+            .into_iter()
+            .map(|(deck_name, card_count)| UnmappedDeck {
+                deck_name,
+                card_count,
+            })
+            .collect(),
+        no_new_today,
+        undetermined,
+    }
 }
 
 /// Every topic the taxonomy maps a deck to, each with the roots whose decks map to it
@@ -191,8 +264,16 @@ pub fn universe(
     deck_names: &BTreeMap<i64, String>,
     taxonomy: &Taxonomy,
 ) -> BTreeMap<TopicKey, BTreeSet<String>> {
-    let _ = (deck_names, taxonomy);
-    BTreeMap::new()
+    let mut bound: BTreeMap<TopicKey, BTreeSet<String>> = BTreeMap::new();
+    for name in deck_names.values() {
+        if let Some(topic) = topic_of(name, taxonomy) {
+            bound
+                .entry(topic)
+                .or_default()
+                .insert(root_of(name).to_owned());
+        }
+    }
+    bound
 }
 
 /// The queries of ingest's answer, each card paired with the card ingest's read returned for it,
@@ -203,8 +284,29 @@ pub fn queries_of(
     cards: &[Card],
     deck_names: &BTreeMap<i64, String>,
 ) -> (Vec<DaySetQuery>, Vec<UndeterminedRoot>) {
-    let _ = (queue, cards, deck_names);
-    (Vec::new(), Vec::new())
+    let read: BTreeMap<i64, &Card> = cards.iter().map(|card| (card.id, card)).collect();
+    let mut queries = Vec::new();
+    let mut refused = Vec::new();
+    for root in &queue.roots {
+        let label = deck_label(deck_names, root.deck_id);
+        if saturated(root.new_cards.len(), Some(root.new_count)) {
+            refused.push(UndeterminedRoot {
+                root: label,
+                reason: CouldNotTell::DaySetFetchSaturated,
+            });
+            continue;
+        }
+        let cards = root
+            .new_cards
+            .iter()
+            .map(|id| {
+                read.get(id)
+                    .map_or_else(|| QueuedCard::unread(*id), |card| QueuedCard::of(card))
+            })
+            .collect();
+        queries.push(DaySetQuery { root: label, cards });
+    }
+    (queries, refused)
 }
 
 /// Why the queue could not be read: its could-not-tell reason is [`QueueFailure::reason`].
@@ -309,7 +411,36 @@ where
     E: AnkiEngine + Clone + Send + Sync + 'static,
 {
     async fn new_card_queue(&self) -> Result<NewCardQueue, QueueFailure> {
-        Ok(NewCardQueue::default())
+        let call = self.calls.fetch_add(1, Ordering::Relaxed);
+        let throwaway = self.scratch.join(format!("{THROWAWAY}-{call}.anki2"));
+        let held = self.lock.shared().await.map_err(|_| QueueFailure::Locked)?;
+        let (source, target) = (self.copy.clone(), throwaway.clone());
+        let copied = self
+            .offload
+            .run("readings_day_set_copy", move || {
+                copy_collection(&source, &target)
+            })
+            .await;
+        // An explicit unlock before the lock file closes (SPEC-022 R7); a failed unlock is released
+        // by the close that follows it.
+        let _ = held.release();
+        if !matches!(copied, Ok(Ok(()))) {
+            return Err(QueueFailure::OpenFailed);
+        }
+        let engine = self.engine.clone();
+        let answer = self
+            .offload
+            .run("readings_day_set", move || {
+                let answer = engine.new_card_queue(&throwaway);
+                remove_collection(&throwaway);
+                answer
+            })
+            .await;
+        match answer {
+            Ok(Ok(queue)) => Ok(queue),
+            Ok(Err(error)) => Err(QueueFailure::from(error)),
+            Err(_) => Err(QueueFailure::Locked),
+        }
     }
 }
 
@@ -457,11 +588,46 @@ impl StudyDayResolution {
 /// Resolves a study day's topics (R4): the last-sync gate, then a run with no taxonomy or no read
 /// refused whole, then the pause gate, and only then the queue, within [`RESOLVE_BUDGET`].
 pub async fn resolve<Q: QueuePort>(inputs: ResolveInputs<'_>, queue: &Q) -> StudyDayResolution {
-    let _ = (inputs, queue);
+    let universe = match (inputs.taxonomy, inputs.read) {
+        (Some(taxonomy), Ok(data)) => universe(&data.deck_names, taxonomy),
+        _ => BTreeMap::new(),
+    };
+    if !inputs.last_sync.succeeded() {
+        return StudyDayResolution::could_not_tell(universe, CouldNotTell::SyncFailed);
+    }
+    let Some(taxonomy) = inputs.taxonomy else {
+        return StudyDayResolution::could_not_tell(universe, CouldNotTell::TaxonomyMissing);
+    };
+    let data = match inputs.read {
+        Ok(data) => data,
+        Err(failure) => return StudyDayResolution::could_not_tell(universe, failure.reason()),
+    };
+    if !gates::studied_before(&data.reviews, inputs.today, inputs.rule) {
+        return StudyDayResolution::every_topic(universe, RunOutcome::Paused, TopicState::Paused);
+    }
+    let answer = match tokio::time::timeout(RESOLVE_BUDGET, queue.new_card_queue()).await {
+        Ok(Ok(answer)) => answer,
+        Ok(Err(failure)) => return StudyDayResolution::could_not_tell(universe, failure.reason()),
+        Err(_) => {
+            return StudyDayResolution::could_not_tell(
+                universe,
+                CouldNotTell::DaySetResolveTimeout,
+            );
+        }
+    };
+    let (queries, saturated_roots) = queries_of(&answer, &data.cards, &data.deck_names);
+    let resolution = resolve_day_sets(&queries, &data.deck_names, taxonomy, &saturated_roots);
+    for deck in &resolution.unmapped {
+        tracing::info!(
+            deck = %deck.deck_name,
+            new_cards = deck.card_count,
+            "a deck with new cards today maps to no topic"
+        );
+    }
     StudyDayResolution {
         outcome: RunOutcome::Resolved,
-        topics: Vec::new(),
-        unmapped: Vec::new(),
+        topics: topic_ends(universe, &resolution),
+        unmapped: resolution.unmapped,
     }
 }
 

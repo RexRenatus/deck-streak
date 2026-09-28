@@ -13,7 +13,7 @@
 use deck_streak_kernel::{Db, KernelError, StudyDay, UtcMillis};
 
 use crate::day_set::{StudyDayResolution, TopicEnd};
-use crate::state::{RunOutcome, TopicState};
+use crate::state::{Class, CouldNotTell, RunOutcome, TopicState};
 use crate::topic::TopicKey;
 
 /// What asked for a resolution.
@@ -157,8 +157,21 @@ impl SqliteReadings {
         run: &ReadingRun,
         resolution: &StudyDayResolution,
     ) -> Result<RunId, KernelError> {
-        let _ = (run, resolution);
-        Ok(RunId(0))
+        let mut write = self.db.write().await?;
+        let id = insert_run(&mut write, run).await?;
+        for topic in &resolution.topics {
+            if let TopicEnd::Ended(state) = topic.end {
+                let day = TopicDay {
+                    study_day: run.study_day,
+                    topic: topic.topic.clone(),
+                    state,
+                    day_set: None,
+                };
+                upsert_topic_day(&mut write, id, &day, run.finished_at).await?;
+            }
+        }
+        write.commit().await?;
+        Ok(id)
     }
 
     /// Records `run` alone, with no topic day.
@@ -167,8 +180,10 @@ impl SqliteReadings {
     ///
     /// [`KernelError::Database`] when the write fails.
     pub async fn record_run(&self, run: &ReadingRun) -> Result<RunId, KernelError> {
-        let _ = run;
-        Ok(RunId(0))
+        let mut write = self.db.write().await?;
+        let id = insert_run(&mut write, run).await?;
+        write.commit().await?;
+        Ok(id)
     }
 
     /// Records `day` for `run`, at `at`: the row of its study day and topic, or its new state.
@@ -182,7 +197,9 @@ impl SqliteReadings {
         day: &TopicDay,
         at: UtcMillis,
     ) -> Result<(), KernelError> {
-        let _ = (run, day, at);
+        let mut write = self.db.write().await?;
+        upsert_topic_day(&mut write, run, day, at).await?;
+        write.commit().await?;
         Ok(())
     }
 
@@ -193,7 +210,23 @@ impl SqliteReadings {
     /// [`StoreError::Kernel`] when the read fails, and [`StoreError::Unreadable`] for a row this
     /// context did not write.
     pub async fn runs(&self) -> Result<Vec<(RunId, ReadingRun)>, StoreError> {
-        Ok(Vec::new())
+        let rows = sqlx::query_as!(
+            RunRow,
+            r#"SELECT id AS "id!", trigger, study_day, started_at, finished_at, outcome, class,
+                      reason, unmapped_decks
+               FROM reading_runs ORDER BY id"#
+        )
+        .fetch_all(self.db.reader())
+        .await?;
+        rows.into_iter()
+            .map(|row| {
+                let id = row.id;
+                row.read().ok_or(StoreError::Unreadable {
+                    table: "reading_runs",
+                    id,
+                })
+            })
+            .collect()
     }
 
     /// Every topic day of `study_day`, by topic.
@@ -203,8 +236,25 @@ impl SqliteReadings {
     /// [`StoreError::Kernel`] when the read fails, and [`StoreError::Unreadable`] for a row this
     /// context did not write.
     pub async fn topic_days(&self, study_day: StudyDay) -> Result<Vec<StoredTopicDay>, StoreError> {
-        let _ = study_day;
-        Ok(Vec::new())
+        let day = study_day.epoch_day();
+        let rows = sqlx::query_as!(
+            TopicDayRow,
+            r#"SELECT id AS "id!", run_id, study_day, topic, state, class, reason, digest, card_ids,
+                      note_ids, new_cards
+               FROM reading_topic_days WHERE study_day = ?1 ORDER BY topic"#,
+            day
+        )
+        .fetch_all(self.db.reader())
+        .await?;
+        rows.into_iter()
+            .map(|row| {
+                let id = row.id;
+                row.read().ok_or(StoreError::Unreadable {
+                    table: "reading_topic_days",
+                    id,
+                })
+            })
+            .collect()
     }
 }
 
@@ -301,7 +351,7 @@ async fn insert_run(
     let outcome = run.outcome.name();
     let reason = run.outcome.reason();
     let class = reason.map(|reason| reason.class().as_str());
-    let reason = reason.map(|reason| reason.as_str());
+    let reason = reason.map(CouldNotTell::as_str);
     let unmapped = i64::from(run.unmapped_decks);
     let id = sqlx::query_scalar!(
         r#"INSERT INTO reading_runs
@@ -335,7 +385,7 @@ async fn upsert_topic_day(
     let study_day = day.study_day.epoch_day();
     let topic = day.topic.as_str();
     let state = day.state.name();
-    let class = day.state.class().map(|class| class.as_str());
+    let class = day.state.class().map(Class::as_str);
     let reason = day.state.reason();
     let digest = day.day_set.as_ref().map(|set| set.digest.as_str());
     let (cards, notes) = day.day_set.as_ref().map_or((&[][..], &[][..]), |set| {

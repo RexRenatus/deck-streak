@@ -65,15 +65,33 @@ const fn is_python_space(c: char) -> bool {
 /// subject holds nothing else, and it is a topic's slug only when [`is_slug`] holds.
 #[must_use]
 pub fn slug(subject: &str) -> String {
-    subject.to_owned()
+    let mut collapsed = String::with_capacity(subject.len());
+    let mut in_run = false;
+    for c in subject.trim_matches(is_python_space).chars() {
+        if is_python_space(c) || c == '_' || c == '-' {
+            if !in_run {
+                collapsed.push('-');
+            }
+            in_run = true;
+        } else {
+            collapsed.push(c);
+            in_run = false;
+        }
+    }
+    collapsed.trim_matches('-').to_lowercase()
 }
 
 /// Whether `text` is a slug: one or more runs of lowercase ASCII letters and digits, joined by
 /// single hyphens (`prereading.py:_SAFE_SLUG`).
 #[must_use]
 pub fn is_slug(text: &str) -> bool {
-    let _ = text;
-    true
+    !text.is_empty()
+        && text.split('-').all(|run| {
+            !run.is_empty()
+                && run
+                    .bytes()
+                    .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit())
+        })
 }
 
 /// The law subject of the deck named `deck_name` (`leeches.py:_law_subject`): `None` for a deck under
@@ -81,16 +99,27 @@ pub fn is_slug(text: &str) -> bool {
 /// last when the name is shorter; otherwise the second segment.
 #[must_use]
 pub fn law_subject<'a>(deck_name: &'a str, taxonomy: &Taxonomy) -> Option<&'a str> {
-    let _ = (deck_name, taxonomy);
-    None
+    let parts: Vec<&str> = deck_name.split(DECK_SEPARATOR).collect();
+    let root = *parts.first()?;
+    if !taxonomy.law_roots().iter().any(|law_root| law_root == root) {
+        return None;
+    }
+    let Some(second) = parts.get(1) else {
+        return Some(root);
+    };
+    if taxonomy.bands().iter().any(|band| band == second) {
+        return parts.get(3).or_else(|| parts.last()).copied();
+    }
+    Some(second)
 }
 
 /// The topic of the deck named `deck_name`, or `None` when it maps to none (R2): the law rule, then
 /// the language rule, then the writing rule.
 #[must_use]
 pub fn topic_of(deck_name: &str, taxonomy: &Taxonomy) -> Option<TopicKey> {
-    let _ = (deck_name, taxonomy);
-    None
+    law_topic(deck_name, taxonomy)
+        .or_else(|| language_topic(deck_name, taxonomy))
+        .or_else(|| writing_topic(deck_name, taxonomy))
 }
 
 /// A law deck's topic (`prereading.py:_law_topic_key`): none for a deck under no law root, for the
