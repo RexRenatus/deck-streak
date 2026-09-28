@@ -220,12 +220,29 @@ def inside_repository(path: str) -> bool:
     return target == repository or repository in target.parents
 
 
+class HeldTwice(ValueError):
+    """A JSON object that holds one key twice."""
+
+
+def unique_keys(pairs: list[tuple]) -> dict:
+    """A JSON object's members, each key held once: which of two a reader keeps is the reader's
+    choice, so a key held twice is refused (R6)."""
+    found: dict = {}
+    for key, value in pairs:
+        if key in found:
+            raise HeldTwice(f"the key {key!r} is held twice")
+        found[key] = value
+    return found
+
+
 def load_json(path: str, what: str):
     try:
         with open(path, encoding="utf-8") as handle:
-            return json.load(handle)
+            return json.load(handle, object_pairs_hook=unique_keys)
     except OSError as error:
         raise Usage(f"cannot read the {what} at {path}: {error.strerror}") from error
+    except HeldTwice as error:
+        raise Usage(f"the {what} at {path} is refused: {error}") from error
     except ValueError as error:
         raise Usage(f"the {what} at {path} is not JSON: {error}") from error
 
