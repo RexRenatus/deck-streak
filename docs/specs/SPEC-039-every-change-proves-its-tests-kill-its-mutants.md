@@ -579,4 +579,5 @@ kept in order. It inserts:
   cost", after the bullet on the costs measured on GitHub's runners;
 - this section.
 
-ADR-057 carries a note of its own: its Confirmation's range is A1 to A40.
+ADR-057 carries a note of its own: its Confirmation's range is A1 to A40, and D11's `ingest` cost
+is R18's 126 s.
