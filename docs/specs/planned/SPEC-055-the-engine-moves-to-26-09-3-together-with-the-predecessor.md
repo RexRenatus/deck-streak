@@ -52,12 +52,14 @@ What the tag diff changes, by the areas DeckStreak depends on (file:line at `26.
   at 26.9.3 installed beside the predecessor at `27ee2bc`, all 16 goldens are byte-identical to the
   committed ones, each under the interpreter its own note records, and the generator never imports
   the engine.
-- **The pin, measured.** A direct `git` dependency on the fork pinned by `rev`, and a
-  `[patch."https://github.com/ankitects/anki.git"]` entry pointing at the same commit, produce the
-  same `Cargo.lock`: both differ from the plain 26.09.3 tag only in the `source` of the engine's five
-  packages. Under `[patch]`, cargo still fetches the upstream repository although nothing in the
-  graph comes from it, and keeping upstream in `allow-git` raises cargo-deny's unmatched-source
-  warning. ADR-058 chooses the direct pin.
+- **The pin, measured.** A `[patch."https://github.com/ankitects/anki.git"]` entry that points at a
+  commit of the fork, and a direct `git` dependency on that commit, produce the same `Cargo.lock`:
+  both differ from the plain 26.09.3 tag only in the `source` of the engine's five packages. The
+  direct form breaks the two readers of the dependency line, SPEC-022's A1 check
+  (`test_engine_spike_record.py`) and `engine-measure.yml:104`, which both read the upstream tag
+  from it. Under `[patch]`, cargo still fetches the upstream repository although nothing in the
+  graph comes from it, and an upstream entry left in `allow-git` raises cargo-deny's unmatched-source
+  warning. ADR-058 chooses the `[patch]` entry, with `allow-git` naming the fork and `rust-url`.
 - **AnkiWeb.** DeckStreak never logs in to AnkiWeb; it syncs from the owner's own sync server
   (ADR-009). AnkiWeb's terms do not allow third-party clients: "AnkiWeb does not currently allow
   access from browser extensions or other third-party clients" (§9).
@@ -68,12 +70,13 @@ tagged the pinned commit (#233). The delivery merges in the same window as the p
 
 ## 2. Requirements
 
-R1. The engine is the workspace dependency
-    `anki = { git = "https://github.com/RexRenatus/anki.git", rev = "<the pinned commit>", features = ["rustls"] }`:
-    the fork's commit that is upstream tag `26.09.3` plus exactly the rebuild fix (ADR-058). Its
-    comment names ADR-058, the upstream tag it is based on and #233. Every engine package in
-    `Cargo.lock` comes from that commit, and the lockfile otherwise equals the plain 26.09.3
-    resolution.
+R1. The engine's workspace dependency names upstream tag `26.09.3`
+    (`anki = { git = "https://github.com/ankitects/anki.git", tag = "26.09.3", features = ["rustls"] }`),
+    and the root manifest patches it: `[patch."https://github.com/ankitects/anki.git"]` holds
+    `anki = { git = "https://github.com/RexRenatus/anki.git", rev = "<the pinned commit>" }`, the
+    fork's commit that is the upstream tag plus exactly the rebuild fix (ADR-058). The patch's
+    comment names ADR-058 and #233. Every engine package in `Cargo.lock` comes from that commit, and
+    the lockfile otherwise equals the plain 26.09.3 resolution.
 R2. The pinned commit carries the fix: with nothing changed, a second
     `cargo build --locked -p deck-streak-ingest` compiles no unit, reports no `Dirty` unit, and
     finishes within 10 seconds of cargo's own `Finished` time.
@@ -81,8 +84,8 @@ R3. `deny.toml`'s `allow-git` names exactly `https://github.com/RexRenatus/anki.
     `https://github.com/ankitects/rust-url.git`, and `unknown-git` still refuses any other source.
     The `paste` (RUSTSEC-2024-0436) and `bincode` (RUSTSEC-2025-0141) exceptions and the `Unlicense`
     allowance are removed with their comments, because nothing in the graph needs them at 26.09.3.
-    Every advisory exception that remains is one `cargo deny` still encounters, with its reason
-    re-read at the new tag.
+    `CC0-1.0` stays: it predates the engine. Every advisory exception that remains is one
+    `cargo deny` still encounters, with its reason re-read at the new tag.
 R4. The protoc pin does not move: 31.1 with ADR-022's archive digest in every job that compiles
     Rust, in `engine-measure.yml` and in the gate's toolchain stage, because the engine's own build
     pins the same at 26.09.3.
@@ -99,29 +102,30 @@ R7. Every SPEC-022 criterion passes at the new pin: A1 to A17, including the bud
 R8. The parity goldens stay byte-identical. A golden that changes is explained by a named upstream
     change before the delivery merges.
 R9. `crates/ingest/src/engine.rs`'s adapter keeps every engine type inside `ingest` (SPEC-022 R1).
-    Its documentation names the revision the manifest pins, not a tag. Any change the engine's API
-    forces stays in that file.
+    Its documentation names the upstream tag and the fork's revision that patches it. Any change
+    the engine's API forces stays in that file.
 R10. The predecessor moves to the same release in the same window, as the maintainer's act (#234).
     Its plan is private. The delivery is not merged until the maintainer reports that move.
 R11. The measured warm path goes to SPEC-038's amendment (#207), with its run ids.
-R12. The engine's record follows the pin. SPEC-022's A1 check (`test_engine_spike_record.py`) ties
-    ADR-009's Confirmation to the upstream `tag` that `Cargo.toml` pins, so a pin by `rev` turns it
-    red by construction (measured: red at 26.09.3 until the record names the new pin). ADR-009 is
-    accepted and is not rewritten: the check judges it against the tag its Confirmation records for
-    the spike, `26.05`, and A5 judges ADR-058's Confirmation, by the same rules, against the revision
-    `Cargo.toml` pins.
+R12. The engine's record follows the pin. SPEC-022's A1 check (`test_engine_spike_record.py`)
+    requires ADR-009's Confirmation to name the tag the dependency line pins, so at 26.09.3 it is red
+    by construction until the record names the new tag (measured). ADR-009 is accepted and no
+    existing line of it changes: the delivery appends to its Confirmation, below the spike's record,
+    ADR-022's numbers at 26.09.3 on the pinned commit, with the `engine-measure.yml` run and a table
+    of the same shape. The check judges that section's latest table against the budgets, so it
+    judges the numbers of the engine that runs.
 
 ## 3. Acceptance criteria
 
 | id | criterion | decided by |
 |---|---|---|
-| A1 | the engine is pinned by `rev` to a commit of the fork, every engine package in the lockfile comes from that commit, and `allow-git` names exactly the fork and `rust-url` | `test_engine_pin.py` `the_engine_is_pinned_by_rev_to_a_commit_of_the_fork` |
+| A1 | the engine's dependency names upstream tag 26.09.3, the root manifest patches it by `rev` to a commit of the fork, every engine package in the lockfile comes from that commit, and `allow-git` names exactly the fork and `rust-url` | `test_engine_pin.py` `the_engine_is_patched_by_rev_to_a_commit_of_the_fork` |
 | A2 | a second build of `deck-streak-ingest` with nothing changed compiles no unit, within cargo's own time bound | `test_engine_pin.py` `a_second_build_of_ingest_recompiles_nothing` |
 | A3 | every advisory exception in `deny.toml` is one `cargo deny` still encounters, and every allowed git source is in the graph | `test_engine_pin.py` `every_advisory_exception_and_git_source_in_deny_toml_is_live` |
 | A4 | every job that compiles Rust still installs protoc 31.1 at ADR-022's digest | `test_ci_workflows.py` `every_job_that_compiles_rust_installs_the_pinned_protoc_first` (SPEC-038) |
-| A5 | ADR-058 records the numbers measured at the new pin against ADR-022's budgets, with run ids, the no-op before and after, and a final status | `test_engine_pin.py` `adr_058_records_the_measured_numbers_and_a_final_status` |
+| A5 | ADR-058 records the pinned commit and its one-file difference from the upstream tag, the no-op build before and after, CI's warm path with its run, and a final status | `test_engine_pin.py` `adr_058_records_the_pinned_commit_and_what_it_saves` |
 | A6 | every committed golden is current and well formed | `test_goldens.py` `every_committed_golden_is_current_and_well_formed` (SPEC-029) |
-| A7 | SPEC-022's A1: ADR-009 records its measured numbers and a final status | `test_engine_spike_record.py` |
+| A7 | SPEC-022's A1: ADR-009's Confirmation names the pinned tag, and its latest record holds ADR-022's budgets, with a final status (R12) | `test_engine_spike_record.py` |
 | A8 | SPEC-022's A2: opening the large synthetic collection and resolving its new-card queue stays inside the memory budget | `engine_budget` test |
 | A9 | SPEC-022's A3: a full download of the large synthetic collection stays inside the memory budget | `engine_budget` test |
 | A10 | SPEC-022's A4: a sync pulls a review made on another client | `sync` test |
@@ -140,11 +144,11 @@ R12. The engine's record follows the pin. SPEC-022's A1 check (`test_engine_spik
 | A23 | SPEC-022's A17: an owner trigger within five minutes of a success returns it without syncing | `sync` test |
 
 ```acceptance
-A1: python3 -m unittest discover -s scripts/tests -p test_engine_pin.py -k the_engine_is_pinned_by_rev_to_a_commit_of_the_fork
+A1: python3 -m unittest discover -s scripts/tests -p test_engine_pin.py -k the_engine_is_patched_by_rev_to_a_commit_of_the_fork
 A2: python3 -m unittest discover -s scripts/tests -p test_engine_pin.py -k a_second_build_of_ingest_recompiles_nothing
 A3: python3 -m unittest discover -s scripts/tests -p test_engine_pin.py -k every_advisory_exception_and_git_source_in_deny_toml_is_live
 A4: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k every_job_that_compiles_rust_installs_the_pinned_protoc_first
-A5: python3 -m unittest discover -s scripts/tests -p test_engine_pin.py -k adr_058_records_the_measured_numbers_and_a_final_status
+A5: python3 -m unittest discover -s scripts/tests -p test_engine_pin.py -k adr_058_records_the_pinned_commit_and_what_it_saves
 A6: python3 -m unittest discover -s tools/parity-oracle -p test_goldens.py -k every_committed_golden_is_current_and_well_formed
 A7: python3 -m unittest discover -s scripts/tests -p test_engine_spike_record.py -k adr_009_records_the_measured_numbers_and_a_final_status
 A8: cargo test -p deck-streak-ingest --test engine_budget -- --exact opening_a_large_synthetic_collection_and_its_new_card_queue_stays_inside_the_memory_budget
@@ -170,22 +174,23 @@ lockfile and `deny.toml`. A2 runs `cargo build --locked -v -p deck-streak-ingest
 workspace's own target directory, and reads the second run's `Compiling`, `Dirty` and `Finished`
 lines. At the base it is red for its reason: the second run recompiles `anki_proto` and `anki`. A3
 runs `cargo deny --locked --format json check advisories sources`, and refuses a zero count of
-examined exceptions. A5 reads ADR-058's Confirmation with the rules SPEC-022's A1 applies to
-ADR-009's (R12). A4, A6 and A8 to A23 exist and must stay green at the new pin. A7 exists and turns
-green with R12's change. Each budget test runs alone in its own process, as SPEC-022 §6 requires.
+examined exceptions. A5 reads ADR-058's Confirmation. A4, A6 and A8 to A23 exist and must stay green
+at the new pin. A7 exists, and it turns green with R12's record. Each budget test runs alone in its
+own process, as SPEC-022 §6 requires.
 
 ## 4. File manifest
 
 | file | context | change |
 |---|---|---|
-| `Cargo.toml` | workspace | changed: the engine's dependency pins the fork by `rev` (R1) |
+| `Cargo.toml` | workspace | changed: the engine's tag becomes `26.09.3`, and a `[patch]` entry points it at the fork's commit by `rev` (R1) |
 | `Cargo.lock` | workspace | changed: the engine's packages from the fork's commit, and the packages the tag moves |
 | `deny.toml` | workspace | changed: `allow-git`, two advisory exceptions and the `Unlicense` allowance (R3) |
-| `crates/ingest/src/engine.rs` | `deck-streak-ingest` | changed: its documentation names the pinned revision, and any change the engine's API forces (R9) |
+| `crates/ingest/src/engine.rs` | `deck-streak-ingest` | changed: its documentation names the patched revision, and any change the engine's API forces (R9) |
 | `scripts/tests/test_engine_pin.py` | repo | added: A1, A2, A3, A5 |
-| `scripts/tests/test_engine_spike_record.py` | repo | changed: ADR-009 is judged against the spike's tag, and its judging rules are shared with A5 (R12) |
+| `scripts/tests/test_engine_spike_record.py` | repo | changed: the Confirmation's latest table is the one judged (R12) |
+| `docs/decisions/ADR-009-ingest-from-the-anki-sync-server.md` | repo | changed: its Confirmation gains the record at 26.09.3 below the spike's, with no existing line changed (R12) |
 | `.github/workflows/ci.yml` | repo | changed only if A2 cannot run where the gate's python stage runs in CI; the delivery measures both places and records its choice |
-| `docs/decisions/ADR-058-the-engine-pins-a-patched-fork-of-26-09-3-until-upstream-carries-the-fix.md` | repo | changed: status and the Confirmation's numbers |
+| `docs/decisions/ADR-058-the-engine-pins-a-patched-fork-of-26-09-3-until-upstream-carries-the-fix.md` | repo | changed: status, the pinned commit and the Confirmation's measurements |
 | `docs/specs/planned/SPEC-055-the-engine-moves-to-26-09-3-together-with-the-predecessor.md` | repo | moved to `docs/specs/`, with §7 filled |
 | `docs/red-first/SPEC-055.md` | repo | added |
 | `changelog.d/` fragment | repo | added |
@@ -215,6 +220,12 @@ green with R12's change. Each budget test runs alone in its own process, as SPEC
   it is pinned (ADR-058, #233).
 - **The fork carries more than the fix.** The delivery records `git diff --stat 26.09.3 <rev>` on
   the fork in ADR-058's Confirmation: one file, `rslib/io/src/lib.rs`. A2 proves the fix's effect.
+- **The patch is dropped and nobody notices.** Without the `[patch]` entry the engine resolves from
+  upstream, which `allow-git` no longer names, so the audit refuses it by name, and A1 fails on the
+  lockfile's sources.
+- **A fresh checkout fetches two repositories.** Cargo fetches upstream to resolve the patch as well
+  as the fork (measured). CI's Rust jobs already cache cargo's git database (`ci.yml`), which holds
+  both; the delivery's cold and warm runs show what the second fetch costs.
 - **The engine's API changed under ingest.** The build fails at the new pin, and the adapter keeps
   every engine type inside `ingest`, so the change stays in `engine.rs` (R9). The measurement table
   records whether the build needed one.
@@ -231,26 +242,30 @@ green with R12's change. Each budget test runs alone in its own process, as SPEC
 ## 7. Measurements
 
 ADR-022's protocol at 26.05 comes from `engine-measure.yml` run 36357990387 (SPEC-022 §1). At
-26.09.3 it comes from `engine-measure.yml` run 36374499584, on the same kind of GitHub-hosted runner,
-from a measurement pull request that changed only `Cargo.toml`'s tag and `Cargo.lock`, and was
-closed unmerged. The local numbers were measured on the maintainer's machine, in cargo's own
-`Finished` time. The delivery re-measures every row on the fork's commit (R6).
+26.09.3 it comes from `engine-measure.yml` run 36374499584, from a measurement pull request that
+changed only the engine's tag and `Cargo.lock` and was closed unmerged. Both ran on GitHub-hosted
+runners, whose build time varies from run to run, so a single cold-build sample is read as a range
+and only the deterministic outputs compare exactly. The local numbers were measured on the
+maintainer's machine, in cargo's own `Finished` time. The delivery re-measures on the fork's commit
+(R6).
 
 | measure | budget (ADR-022) | 26.05 | 26.09.3 | 26.09.3 with the fix |
 |---|---|---|---|---|
-| cold build, the protoc download included | at most 20 minutes | 4.7 minutes | 4.2 minutes (249 s) | the delivery measures it (R6) |
-| the stripped `engine_probe` | at most 100 MiB | 20.6 MiB | 19.3 MiB | the delivery measures it (R6) |
+| cold build, the protoc download included | at most 20 minutes | 4.7 minutes (282 s; 197 to 301 s over nine runs) | 4.2 minutes (249 s; 214 s in a second run) | the delivery measures it (R6) |
+| the stripped `engine_probe` | at most 100 MiB | 20.6 MiB (21,661,952 bytes) | 19.3 MiB (20,236,032 bytes, 6.6 % smaller) | the delivery measures it (R6) |
 | peak RSS, open and queue | at most 256 MiB | 29.4 MiB | 28.8 MiB | the delivery measures it (R6) |
-| peak RSS, full download | at most 256 MiB | 234.0 MiB | 232.1 MiB | the delivery measures it (R6) |
+| peak RSS, full download | at most 256 MiB | 234.0 MiB | 232.1 to 232.2 MiB (90.7 % of the budget) | the delivery measures it (R6) |
 | incremental sync of 100 reviews | at most 60 seconds | 0.12 seconds | 0.12 seconds | the delivery measures it (R6) |
 | `cargo deny check licenses` | pass | pass | pass | pass (a scratch resolution, §1) |
-| SPEC-022's A1 to A17, locally | all pass | all pass | A2 to A17 pass, the census A15 and A16 included; A1 is red by construction until the record follows the pin (R12) | the delivery runs them (R7) |
-| a no-op `cargo build -p deck-streak-ingest`, locally | none | 38 to 51 s | 31 to 35 s, with the same `Dirty` reasons | every unit Fresh, 0.33 s, with the first cause neutralised |
-| the lockfile | none | 685 packages | 477 packages; one `libsqlite3-sys`, 0.34.0 | the same, with five engine sources moved (§1) |
+| SPEC-022's A1 to A17, locally | all pass | all pass | A2 to A17 pass (16 of 16), the census A15 and A16 included; A1 is red by construction until the record follows the tag (R12) | the delivery runs them (R7) |
+| the parity oracle's tests | all pass | 20 pass, 16 goldens | 20 pass, the 16 goldens unchanged | unchanged (§1) |
+| a cold debug build of `deck-streak-ingest`, locally | none | 69 s, 435 units | 59.5 s, 373 units | not measured |
+| a no-op `cargo build -p deck-streak-ingest`, locally | none | 38 to 51 s | 31.4 to 34.5 s, with the same `Dirty` reasons | Fresh in 0.33 to 0.34 s with the first cause neutralised; the drafted fix consumed as a git source took 0.60 s and 0.53 s against 39.70 s and 43.00 s unpatched |
+| the lockfile | none | 685 packages; 34 duplicate warnings | 477 packages; one `libsqlite3-sys`, 0.34.0; 31 duplicate warnings, the new ones (`itertools`, `snafu`, `strum`, `rand`) through `fsrs` 6.6.2 | the same, with five engine sources moved (§1) |
 | CI's warm path | none | SPEC-038 §7 | not measured: only a push to `dev` saves a cache | the delivery measures it (R6, R11) |
 
-Every budget holds at 26.09.3 with room to spare, and no pin besides the engine's has to move: protoc
-stays 31.1 and the toolchain stays 1.97.0.
+Every budget holds at 26.09.3, and no pin besides the engine's has to move: protoc stays 31.1, the
+engine's declared MSRV stays 1.80, and the toolchain stays 1.97.0.
 
 ## 8. The owner's and the devices' checklist
 
