@@ -10,6 +10,492 @@ process compiles the fragments into a new version section here.
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-09-28
+
+### Added
+
+- The private deploy rail's public contract (SPEC-061, ADR-061). `deploy/rail-contract.json` lists
+  the neutral values the rail overrides, by unit and key, and names its one drop-in per unit and the
+  credential socket. `deploy/scripts/credential-pairs.py` prints every (unit, credential id) pair
+  the templates declare, a template named as the template it is, and refuses any credential that
+  does not come from the socket; the rail refuses to install when its map differs from that list.
+  `deploy/scripts/effective-check.py` reads `systemctl cat` and refuses a unit that still carries a
+  neutral value, a credential not from the socket, a secret-named `Environment=` variable, or a
+  drop-in other than the rail's own; its `--census` holds the contract equal to the neutral values
+  the templates carry. `deploy/scripts/guards-check.py` refuses a pinned guard that is missing,
+  changed, of another mode, or writable by anyone but root, and a manifest that names no file.
+  Both checks read a unit file line by line as systemd reads it, measured with `systemd-analyze`,
+  and refuse a construct systemd would read otherwise; the effective check also refuses a neutral
+  value in another spelling, a calendar that fires at UTC's instants or names no zone, and the other
+  routes a value can take into a unit (a secret-named `PassEnvironment=`, standard input written in
+  the file or read from one, a second `EnvironmentFile=`).
+- The equivalence record (SPEC-057, ADR-070, now accepted): a mutant no test can tell apart is
+  recorded in `scripts/mutation-equivalent.d/<package>.json`, `miniapp.json` for the Mini App, bound
+  by an anchor to exactly one listed mutant, with its reason, the evidence a reviewer checks, the
+  test that reaches it and its issue. The gate's `python` stage holds every record whole
+  (`mutation-verdict.py census`). The mutant keeps running: a pull request's verdict and the weekly
+  battery bind every record against the whole tree's listing, count a recorded missed or survived
+  mutant as equivalent, apart from unexplained, and fail a record whose mutant a test catches
+  (REFUTED), that binds no mutant (STALE) or two (AMBIGUOUS), whose mutant never builds (UNNEEDED)
+  or that excuses an uncovered Mini App mutant (UNCOVERED). The battery drafts no issue for an
+  equivalent mutant.
+- `mutation-verdict.py table` prints a battery's row per package, listed, killed, equivalent,
+  unexplained and unviable, and names every listed mutant no report tested. A dispatch of the weekly
+  battery takes a `package`, a crate of the workspace or `miniapp`, sweeps only it, counts only the
+  reports it promises, and ends with its table line.
+- The gate's `audit-rust` stage runs an unlocked resolve and fails, by name, when it rewrites
+  `Cargo.lock`, which `--locked` alone accepts though the lock is not in cargo's canonical form.
+- The vault's content rails gain tests of how the pack's probe reads a note: where a fence
+  opens and closes, what a code span, a comment, a tag and its attributes, and each form of
+  link take, how a path is percent-decoded, where its extension starts, and the line each
+  rail names. They kill 138 of the mutants of `crates/vault/src/rails.rs` that the opening
+  sweep left, unit tests of where a tag, a link's tail and an autolink end and of an attribute
+  with no value kill 6 more, and the file's 5 equivalent mutants are recorded in
+  `scripts/mutation-equivalent.d/deck-streak-vault.json`.
+- The vault's other six files gain tests of what they already do: the start check's refusals and
+  the failures it reports by step, the real file system's own errors, a sync the system refuses
+  among them, and its listing, a note's key, hash and body shape, the readings tree's calendar,
+  rails and emptied day folders, and the staged executor's moves, updates and new folders, the
+  gate's classes, the class that examined nothing and its time limit. They kill 70 more of the
+  vault's mutants, 6 more equivalent mutants are recorded (11 in all), and a test that rolls or
+  archives a note fails within seconds when a mutant stops its search for a free archive name.
+- The game core's parity (W3) is specified as sixteen planned SPECs, ten proposed ADRs and nine
+  schematics, one SPEC per bounded context or tight group, each naming its issues, its
+  prerequisites and its mutation band.
+  - SPEC-071: every study day is rolled up, scored and settled once, in order, with its end-of-day
+    state (ADR-071), and the owner's courses are private configuration (ADR-087).
+  - SPEC-072: XP is earned per review and per day, derived XP is settled into its own table beside
+    the grant ledger, and a closed day's XP never falls (ADR-072).
+  - SPEC-073: badges, records and the next milestone are awarded once and shown with their
+    progress.
+  - SPEC-074: each month is a season of the study day, with a node track and one ceremony
+    (ADR-074).
+  - SPEC-075: the personal board and the XP exchange readout are read from the ledgers.
+  - SPEC-076: the language and law streaks, freezes, the governor and the relight hold across every
+    study day, and the law streak decays (ADR-076).
+  - SPEC-077: Road to C2 bands each course, and the law block leads when law is active.
+  - SPEC-078: the reading and writing habits, the habit board and reading analytics.
+  - SPEC-079: a focus block runs on the service's clock, and deep work earns once (ADR-079).
+  - SPEC-080: daily quests, the weekly quest and the ghost race pay once and settle once, with the
+    reintroduction draw in the shared kernel (ADR-080).
+  - SPEC-081: session chests are rolled once with pity, and tokens and smoke bombs keep their word
+    (ADR-081).
+  - SPEC-082: coins are minted, spent and capped in one wallet, and the shop sells only for coins.
+  - SPEC-083: the skip day is recorded by DeckStreak and bridges the game without writing to Anki;
+    the write to the collection waits for the owner (ADR-083, #266).
+  - SPEC-084: the celebration ladder renders its tiers on the one router within weekly budgets.
+  - SPEC-085: charts are drawn on the client from JSON series, and the host renders none (ADR-085).
+  - SPEC-086: today is one snapshot for the home screen and the bot.
+- The readings' day set. Each study day, every reading topic's new cards come from Anki's own queue
+  of today's new cards: one query per top-level deck, so child decks share their parent's new-card
+  budget, and each card attributed to its original deck. Topics come from a private taxonomy file,
+  and each topic ends the day in exactly one state: no new cards, could not tell (with a class and a
+  closed reason), or paused after two study days without study. The readings resolve only after a
+  sync that succeeded, however old the collection file is, and a resolution has a 30-second budget.
+  The budget bounds the wait, never the work: the throwaway copy the queue reads is taken under the
+  collection lock and removed even when the budget passes during it.
+  Each run and each topic's state are exported and erased with the rest of the owner's data.
+- Two bounds that no test observed on its own are pinned, each by a test and a hand-proved mutation
+  row. An hour of the day stops at 23: `Hour::new` refuses 24 and every later value, so a rollover
+  or digest hour of 24 refuses start (SPEC-020, row S02005). Launch data may be dated at most 60
+  seconds ahead of the server's clock: the test spells 60 and 61 seconds literally, so a changed
+  skew can no longer move the test's dates with it (SPEC-024, row S02406).
+- The Telegram bot, `deckstreakd bot` (SPEC-026, ADR-026): it long-polls the Bot API as the one
+  poller of its token, removes any webhook, and drains the updates queued before it started instead
+  of replaying them; each poll confirms the updates before its offset, and a failed poll waits the
+  predecessor's backoff, 3 seconds doubling to a minute.
+- The owner gate: a message is answered only when it comes from the owner in the owner's private
+  chat, and a tap only when it is the owner's; anything else gets no reply, no answer and a log line
+  that names its kind and one reason code. A text over 4096 characters is dropped, and a tap whose
+  data is over 64 bytes is answered and not dispatched.
+- One transport for everything the bot sends: HTML with every dynamic value escaped and link
+  previews off, a long text split at a paragraph, a line or a word into chunks of at most 4096
+  UTF-16 units that each parse on their own, a 429 waited out for its `retry_after` before the same
+  request goes again, at most three attempts a chunk, and counts of the messages attempted and
+  delivered.
+- The owner's commands: `/start` says the coach is an AI and opens the Mini App; `/privacy` links
+  the privacy policy; `/export` sends the owner's data as one JSON document; `/delete` erases only
+  after the owner taps the latest question's button; `/sync` runs the owner's sync now and says what
+  it did. The menu is shown in the owner's chat alone.
+- The persona engine (SPEC-044): the public law and language templates in `agent/personas/`,
+  compiled into the agent and filled from a private roster that stays outside the repository; a
+  memory reader that reads only its persona's own subject and never the journal; the frontmatter
+  the engine writes on every output, which declares exactly the reads it made; and two synthetic
+  golden readings, one law and one language.
+- The first deploy (W2) is specified behind the owner's gates, as six planned SPECs, six proposed
+  ADRs and one schematic (`docs/schematics/first-deploy-and-gates.md`).
+  - SPEC-060: the host is inventoried and snapshotted before anything changes, and nothing on it is
+    deleted without the owner's approval of that exact item (ADR-060).
+  - SPEC-061: the private rail provisions every credential, setting and guard the public units need,
+    with host values applied as drop-ins (ADR-061).
+  - SPEC-062: DeckStreak's first tagged release is installed by one command and served from its own
+    Caddy site block over HTTPS, once every host finding tracked privately under gate 8 is closed,
+    and a deploy installs only a release whose provenance and digests verify (ADR-062).
+  - SPEC-063: with the owner's route enabled, the agent reaches the proxy over a supervised reverse
+    tunnel, with Claude Code from the vendor's signed package at one held version (ADR-063).
+  - SPEC-064: DeckStreak's database is replicated, copied daily and restored weekly by its own units
+    (ADR-064).
+  - SPEC-065: the readings folder exists with group write, and every other writer is fenced from it
+    before DeckStreak writes there (ADR-065).
+- RELEASING.md says what to do when a hosted runner shuts down in the middle of a mutation shard:
+  re-run the failed jobs, never the whole workflow, and never merge while a shard is missing.
+- The XP ledger and its grant port. Every XP grant is written once through one port: once per study
+  day, source and track, or once ever for a source and track, so a replayed grant writes nothing
+  and answers with the amount already granted. An amount cannot be negative, a grant's source is a
+  short token the port checks before any write, and the level is read from the ledger's total each
+  time, by the predecessor's integer level curve. The ledger is exported and erased with the rest
+  of the owner's data.
+- A plan for the first release that mutation testing judges (SPEC-057, planned): every surviving
+  mutant is killed by a test or recorded equivalent, one delivery per crate with the vault first,
+  and a table per crate that must read 0 unexplained before that release. Recounted from the weekly
+  battery's dispatch run 36384080819: 310 missed Rust mutants in 33 files, and in the Mini App 53
+  survived and 28 uncovered (#240). Re-listed at `dev` 16ed8e2, the release's merge diff holds all
+  2,207 of the tree's mutants, in 27 shards.
+- ADR-070 (proposed) records an equivalent mutant in a committed fragment per package, bound by an
+  anchor to exactly one listed mutant, and excused only while the tool keeps reporting it missed; it
+  rejects `exclude_re`, `mutants::skip`, a `Stryker disable` comment, a survivor budget and skipped
+  files. The schematic `docs/schematics/mutation-equivalence-record.md` shows the record's path to
+  the verdict, and ADR-057 carries a note pointing at ADR-070.
+- Every pull request is mutation tested on its diff, a release into `main` included.
+  `mutation-plan` lists the diff's mutants with cargo-mutants 27.1.0 and takes the fewest
+  round-robin shards each projected within an hour; `mutation-rust` runs one shard a job, in place;
+  `mutation-rows` proves the hand-proved rows the diff selects and refuses a row that leaves while
+  its target stays; `mutation-verdict` counts every shard the plan promised; `mutation-web` runs
+  StrykerJS 10.0.0 over each changed Mini App file. All five are needs of `ci`. The verdict reads
+  the tools' own reports: a missed mutant, or one tested in two shards, fails the job, and a class
+  of production code that examined nothing, a shard that never reported, or a report the tool left
+  partial, is VOID, never green. A comment opener inside a string opens no comment.
+- Hand-proved rows (`scripts/mutation-rows.d/`, one band per SPEC) hold the invariants the tool
+  cannot mutate: constants, methods named `new`, guards, the constant-time compare and the cookie
+  flags. `scripts/mutation_rows.py` censuses and proves them, restoring each file byte for byte.
+- A weekly battery (`.github/workflows/mutation-weekly.yml`) sweeps `dev` in 32 shards and files
+  each file's survivors as a scrubbed, deduplicated issue, then fails naming any shard, rows or
+  Stryker report that is missing or partial. It goes live once a release carries it to `main`; until
+  then a pull request that changes it runs a rehearsal.
+- The tools' configurations are judged by what each tool itself refuses
+  (`python3 scripts/mutation-verdict.py configs`), with no vendored pack file: a second Stryker
+  configuration it would read first, and a `mutate` list other than the production code, are
+  refused too.
+- The API has an availability objective sized for one owner's traffic, with burn-rate alerts: a
+  page when the error budget burns fast over hours, and a ticket when it burns slowly over days.
+- One alert path for every failure: any service, scheduled job, the SLO evaluator or the memory watch
+  that fails sends the owner one Telegram message naming the unit, its result and its last error
+  lines. The bot token never appears on a command line.
+- A memory watch pages on a new out-of-memory kill or a unit reaching its memory ceiling, and logs
+  throttling and usage past 90% of the ceiling. Each page is sent once per event or episode.
+- The owner's data rights: `deckstreakd data export` writes every table a context exports or resets
+  as one JSON document, and `deckstreakd data erase --confirm ERASE` erases them in one transaction
+  that zeroes the pages it frees, then rebuilds the database file and empties its write-ahead log.
+  A port that fails, or leaves a table as its declaration forbids, rolls the whole erase back, and
+  the cron-fire ledger and the schema table are never touched (SPEC-021).
+- One registry of every context's data-rights port, and tests that hold the tables the export
+  carries equal to the tables the erase clears or resets, and every table of the schema declared by
+  exactly one port, the one that owns it.
+- `privacy.json` and `PRIVACY.md`: each category of the owner's data with its lawful basis and its
+  retention, and every copy an erase cannot reach with its window; and the Litestream and journald
+  templates whose windows the policy states.
+- ADR-059: public text describes DeckStreak only.
+- A plan to move Anki's engine from 26.05 to 26.09.3 (SPEC-055, planned, #235). The engine keeps
+  naming the upstream tag, and a `[patch]` entry replaces it with a commit of the maintainer's fork
+  that carries the fix for the engine's rebuild on every cargo command, until an upstream release
+  does (ADR-058, proposed). The schematic `docs/schematics/engine-pin-lifecycle.md` shows the pin's
+  lifecycle and its removal path, and ADR-022 carries a note pointing at ADR-058.
+- Deploy templates for the API, the bot and the scheduled jobs: hardened systemd units, one timer
+  per job of the job table, the Caddy site block with the Mini App's security headers, the settings
+  example and DeckStreak's host budget. Each carries neutral values, and none is installed anywhere.
+- The parity oracle's README documents the lossless `{day:N}` token that a text golden uses for a
+  day, with an example that its tests round-trip.
+- The collection is read read-only inside the owner's deck scope: a card by its home deck's top-level
+  name, even while a filtered deck borrows it, and a review when it is a study event, with no
+  collation registered for the collection's name columns (SPEC-023).
+- Each cycle reads only the last 400 days of reviews, and every older study event is one count,
+  recounted once it is a rebase period stale; a recount that shrinks is logged as a self-check.
+- A change gate after every sync skips the recompute only when nothing it could observe changed,
+  records the skip as a `skipped` run, and runs it for a pending rescore, a failed sync or run, a new
+  study day, a settings change, a new review, a changed card, or a registered deadline that came due.
+- `DECKSTREAK_INCLUDE_DECKS` and `DECKSTREAK_LAW_DECK_ROOT`, with one warning at start when the
+  include list cannot reach the law root.
+- Scheduled jobs run as systemd timers through one runner, `deckstreakd job <id>`, over one job
+  table: the daily `sync` at the rollover hour, minute 7, the daily `maintenance` at minute 28, and
+  the hourly `liveness` watch at minute 14, all clear of the predecessor's minutes while both run
+  (SPEC-027, ADR-027).
+- The cron-fire ledger (`cron_fires`) claims every daily fire once, even when a timer fires twice,
+  records `missed` for a catch-up fire more than six hours late, and releases a claim only after a
+  failed delivery; its claim, release and record, and the catch-up decision, equal the predecessor's
+  goldens.
+- The liveness job pages once when no sync has succeeded for one study day plus the catch-up
+  window, and once when the maintenance fire drifts more than 30 minutes off its slot; a failing
+  scheduled sync pages on its first failure of an episode, and a repeat only logs.
+- The maintenance job prunes ledger rows past 90 days, refreshes the planner's statistics and
+  truncates the write-ahead log. The ledger is exempt from export and erase, so an erase can never
+  re-arm the double-send guard.
+- The owner signs in to the Mini App: `POST /api/session` takes Telegram's launch data, checks its
+  `WebAppData` HMAC on the server in constant time, refuses it when it is more than an hour old or
+  more than a minute ahead, pins its user to the owner, and opens a session behind a
+  `__Host-deckstreak_session` cookie (`Path=/`, `Secure`, `HttpOnly`, `SameSite=Strict`, eight
+  hours); `GET /api/me` answers the server's study day to that session alone; `DELETE /api/session`
+  ends the session on the server and clears the cookie.
+- Sessions live in memory, each id new at every sign-in and kept only as its SHA-256; one ends
+  after 30 minutes without a request or eight hours after it began, and at most eight are kept.
+- The `api` role reads the owner's user id and the bot token as credentials at start, and refuses
+  to start without either, naming the one that is missing.
+- The vault adapter's core: every file it writes lands through a temporary name the sync bridge
+  ignores, is synced, renamed over its target and its folder synced; passes the content rails the
+  vault-duties pack reads from its `rails.json`, plus a rail against control characters; stays inside
+  its folder after `..` and symbolic links; and never overwrites or deletes a note. The vault
+  features refuse to start, creating nothing, when the readings folder is missing or not writable.
+- The readings date tree: a reading's note in the predecessor's eight keys with `ai_generated: true`
+  and two box lines; the roll-forward that carries a note into the next study day patching exactly
+  three keys, proved byte for byte against the predecessor's golden, and archives the rest by year,
+  month and ISO week; the Studied stamp and the owner's read tick, each on its own line and never
+  unticked; and a body replacement that refuses a note the owner edited.
+- Staged duty runs: an executor of three verbs only, create, update and move, that checks a run
+  itself and applies it only when the vault-duties pack's blocking classes are green on it.
+- `scripts/vendor-packs.py` re-vendors the pack probes from the packs' checkout in one command. It
+  drops every file an exclusion names before reading it, scans every other file with the public
+  scrub's rules and the maintainer's private list, and writes nothing unless every file passed.
+- The `deckstreakd` binary and its `api` role: `/api/livez` and `/api/readyz` on a loopback
+  address, every request under a request id, a trace naming its matched route, sensitive headers
+  marked, a panic catcher, a 10-second timeout, a shed past 64 requests in flight and a 2 MiB body
+  limit; `READY=1`, the watchdog's heartbeat and `STOPPING=1` for systemd, and a drain on SIGTERM.
+- Every role opens the database under an open lock, so two roles starting together on a fresh
+  database both start.
+- Ingest reaches Anki's own Rust engine through one port, pinned to the release the predecessor's
+  package comes from. A measured spike records the engine's cold build, binary size, peak memory
+  and incremental sync time against budgets fixed before anything was measured, and every budget
+  held.
+- Ingest keeps a private copy of the collection from the configured sync server: one scheduled sync
+  per study day and the owner's own trigger, the predecessor's retries, a full download when the
+  server demands one, and a refusal when the server holds no collection. Nothing is ever uploaded,
+  and every run is recorded with one bounded reason code.
+- The kernel every context builds on: the study day, which turns over at the rollover hour in a
+  fixed UTC offset and renders as its ISO date; a clock tests drive by hand; typed settings that
+  refuse start by name and never by value; credentials read only from systemd's credentials
+  directory; one JSON log setup that opens each line with its journal priority and redacts every
+  loaded secret and token shape; a bounded rail for blocking work; and the SQLite base (WAL,
+  `BEGIN IMMEDIATE` writes, a read-only opener, embedded migrations) with the data-rights port.
+- A lint over every test file refuses, by file and line, a temporary file or directory that a test
+  never removes.
+- The pack runner refuses a pending pack whose rows all pass, and runs every deferred row in a pass
+  of its own, refusing one that passes.
+- The box-pack runner runs each runner-built pack with the verb its catalog admits, judges the
+  committed tree without the vendored rule code, and fails on any red row the wiring does not name.
+- The Mini App shell: one typed wrapper around Telegram's script, which reads the launch once, gates
+  each newer method by the client's version and says so when the page runs outside Telegram;
+  startapp links that open a screen only through a closed table, with anything else opening Today;
+  Today with the server's study day; an About screen linking the privacy policy and the source
+  code; and one API client that opens a session with Telegram's signed launch data and then sends
+  only the session cookie.
+- Design tokens in the DTCG format, compiled at build into Telegram's theme variables with
+  fallbacks, with every text colour proved to meet WCAG 2.2 AA in both of Telegram's default
+  palettes, and an axe audit of every screen in both.
+- The parity oracle takes one registry module per SPEC, of three kinds (a function, an adapter
+  that builds arguments JSON cannot carry, or constants), and its first golden: the predecessor's
+  study day over 50 seeded synthetic cases at the rollover, before the Unix epoch and across UTC
+  offsets. Every golden records the digests of the generator and of the registry module that
+  built it, so a stale golden fails the gate, and no golden holds a date string.
+- One Rust reader for the goldens, compiled into each proving crate's tests by path (ADR-029).
+  `serde` and `serde_json` enter the workspace as test dependencies only.
+
+### Changed
+
+- The private rail's map answers the sync login to the `sync` job alone, the one job that reads it
+  (SPEC-061 §8).
+
+- ADR-061 is accepted: a unit's host values reach it as a drop-in beside the template installed
+  byte for byte, and every timer's calendar, not only a job's, takes the deployment's zone.
+- No exclusion hides a mutant: `mutation-verdict.py exclusions` refuses every `exclude_re`,
+  `exclude_globs`, `examine_re`, `examine_globs` and `skip_calls` key, even an empty one, every
+  `mutants::skip` and `mutants::exclude_re` attribute, every `Stryker disable` comment, and an
+  excluded, ignored or static-ignored Stryker mutant. SPEC-039's A20, which let a justified
+  exclusion pass, is retired.
+- A push whose subject ends with a squash merge's ` (#N)` reads not-applicable, naming `#N`, the
+  last number when the title carries an issue's.
+- The builder brief, `.cargo/mutants.toml`, `web/app/stryker.config.json` and the survivors' issue
+  drafts teach the record, and the weekly battery's header says that a dispatch runs at any branch
+  that holds the workflow.
+- SPEC-057's plan gives `deck-streak-agent` and `deck-streak-progression`, which gained their
+  mutants after the plan's base, rows 8 and 9 of its table and their ids in the band;
+  `deck-streak-privacy` is row 10, and the Mini App stays last. Both rows have their own
+  criteria, A26 and A27, in the form the other crates' rows have.
+- SPEC-001, ADR-019, ADR-050 and SPEC-050 follow the public-text rule (ADR-059): they cite the
+  predecessor as the product DeckStreak reproduces, by the rules its code applied, and SPEC-001's
+  wave plan states the builders each wave runs at once.
+- SPEC-053's R8 cites ADR-065 for how the owner's go makes DeckStreak the readings folder's one
+  writer, with a section 7 bullet, and ADR-053 carries the matching note.
+- ADR-032 carries a note of the proposed ADR-061, which fills the Caddy block's placeholders by
+  rendering the block at install.
+- ADR-058's Confirmation records CI's warm path on `dev` after the engine's pin: the gate at 147
+  to 161 s on warm pushes, against 176 s before the fork.
+- The gate's `audit-web` stage audits every package the lockfile resolves, the development
+  dependencies too, prints how many it examined, and refuses a run that examined nothing. It fails
+  on any advisory at `low` or above, the bar `audit-rust` holds.
+- SPEC-027, the job table's comments and its A10 test state three reserved minutes, 0, 25 and 39
+  (ADR-011), under the public-text rule (ADR-059). No job's minute changes.
+- SPEC-022, SPEC-023, SPEC-027, SPEC-031, SPEC-032, ADR-005, ADR-025, ADR-037 and the ingest
+  window's module comment follow the same rule: they cite the predecessor as product, and state
+  DeckStreak's own memory budget, memory watch, unit pattern and sync requirement.
+- Every pack is judged on the maintainer's box, and public CI judges none. `scripts/box-packs.sh`
+  reads its wiring and pin from a private file (`PACKS_WIRING`), with the packs' checkout
+  (`PACKS_CHECKOUT`) and their runner (`PACKS_RUNNER`), and refuses VOID by name without them. It
+  keeps the removed row runner's judgment of enforced, pending and deferred packs, runs the sdd, ddd
+  and tdd probes and the proxy-client and apiKeyHelper scans from the checkout, and fails when a data
+  file DeckStreak keeps drifts from the pack it came from. `--post-status` posts one verdict-only
+  `box/packs` commit status on the judged commit; it is not a required check (ADR-069).
+- The box run holds every advisory departure the durable lint reports on the deploy templates to a
+  waiver in its unit, with a why of more than five words, or to an open issue the private file
+  names; an unwaived departure fails the durable-services pack by name, and a waiver that matches
+  nothing is stale. A public test pins the templates' waivers.
+- The gate and CI drop the `packs` stage and job; the scrub stage runs the public scrub alone.
+  `scripts/check.sh` names its log directory only on stderr, and never when a caller names one.
+- The vault adapter compiles in its own rails, default layout and gate classes
+  (`crates/vault/data/`), and the public scrub reads its own shapes (`scripts/scrub-rules/`), each
+  reduced to the fields its parser reads. Three hand-proved mutation rows hold the adapter to them.
+- A criterion of a delivered SPEC whose test this removal takes away is retired insert-only: its id
+  is struck, and its command and red-first lines sit in a `retired` fence (SPEC-056 R14).
+- A panic in any role is logged as one structured error event, with registered secrets redacted,
+  instead of plain text on standard error.
+- The observability pack's rows that waited for this work are enforced in the gate, except the one
+  that asks the bot for an SLO, which waits until the bot's traffic is measured.
+- Anki's engine moves from tag 26.05 to 26.09.3 (SPEC-055). The dependency keeps naming the
+  upstream tag, and a `[patch]` entry replaces it with a commit of the maintainer's fork, pinned by
+  revision: that tag plus one fix, so the engine's protobuf build script no longer reruns on every
+  cargo command. A cargo command with nothing to do now finishes in under a second instead of about
+  half a minute, and 685 locked packages become 477. ADR-022's budgets were measured again at the
+  pinned commit, and every one holds (ADR-058, accepted).
+- `deny.toml` allows exactly the fork and `ankitects/rust-url` as git sources, and drops the two
+  advisory exceptions and the `Unlicense` allowance that 26.09.3 no longer needs. A guard test
+  refuses any exception or allowed source the dependency graph no longer uses.
+- The charter, the decision records, the specifications and the schematics follow ADR-059.
+  ADR-007 is now `docs/decisions/ADR-007-hosting-and-https-behind-a-caddy-site-block.md`.
+- The W2 host inventory (`DS-W2-01`) is tracked as #239, and milestone W2 carries its current
+  description.
+- A squash merge now takes the pull request's title and a blank body, so no branch commit's message
+  reaches the base branch through a squash. `scripts/github-setup.sh settings` applies it.
+- ADR-015's wording follows the public-prose rule, and an appended amendment note records the
+  redaction.
+- The durable-services and observability packs are enforced in the gate. The rows that wait on the
+  backups and on the observability work are deferred to those issues.
+- The deny lists are composed once, in `public-scrub.py`'s `rules()`, which
+  `scripts/vendor-packs.py` calls; the vendoring's output is unchanged.
+- CI runs the engine's slow sync and budget tests, SPEC-022's two test binaries, in an `engine` job
+  of their own, beside the `rust` job that runs every other test. The aggregate `ci` check needs
+  both, so every test stays required. `scripts/check.sh` defines that set once, as a nextest
+  filterset: its `test` stage runs every test outside it, and its new `test-engine` stage runs it,
+  so each test runs in exactly one of the two. The `engine` job runs the set in two slices, one per
+  runner. A warm pull request's gate, measured without each job's wait for a runner, took 2m35s to
+  3m09s, against 4m26s with those tests in the `rust` job.
+- ADR-022 now records the engine's measured no-op rebuild, and why its watch on a build file that
+  never exists does not fire for a git dependency (#228). SPEC-027's red-first record keeps the
+  orchestrator's hand proofs of A7's and A13's behaviour and of the watch's boundary.
+- No scheduled job but the sync runs the sync cycle, even after a restart (SPEC-027). ADR-037 carries
+  the note, and the planned readings-jobs SPEC (SPEC-053) now reads a missed sync as not succeeded
+  instead of running it, with the generation unit ordered after the sync's.
+- The packs stay box-only, as the owner decided, and no pack runner is published (ADR-056). Public
+  CI keeps running DeckStreak's own gate, including the vendored probes. The packs built into the
+  maintainer's runner keep running on the maintainer's box against the pinned commit. The pack
+  runner script and the vendored manifest now say so.
+- CI runs the local gate in four jobs that start together: `rust` (fmt, clippy, the tests, the
+  doctests and the Rust audit), `web` (the Mini App and its audit), `packs` and `hygiene` (the guard
+  tests, the public scrub and the secret scan). Each calls `scripts/check.sh` with its own stages,
+  and a test holds every stage to exactly one job, so none can drop out of CI.
+- CI restores a cache of Rust's downloads and build (keyed on the toolchain pin and `Cargo.lock`),
+  the pnpm store and Playwright's browser (keyed on the Playwright version the lockfile locks). Only
+  a push to `dev` or `main` saves a cache; a pull request, a fork's included, restores and never
+  saves.
+- A newer push to a pull request cancels the CI run it supersedes. A push to `dev` or `main` is never
+  cancelled, nor replaced while it waits.
+- Each stage of `scripts/check.sh` checks its own tools, so a missing tool fails the stage that needs
+  it, by name. The `toolchain` stage is gone, and the `audit` stage is split into `audit-rust` and
+  `audit-web`.
+- `scripts/pack-rows.py` runs the pack rows in a bounded pool (`--jobs`, by default the smaller of 8
+  and the CPUs available), with each row's own timeout, the same verdicts and the rows in row order.
+- `scripts/check.sh` records each stage's seconds, verdict and exit in `timings.tsv` beside its logs.
+- The vendored-packs manifest records each exclusion as globs a tool applies, with its reason.
+- `stack.json` no longer marks `axum` and `tower-http` as planned; the API shell now uses them.
+- The vendored pack probes are re-pinned to the packs' commit e54f39c, which fixed four
+  web-security rows which read green on code they should refuse: the token signature, the session
+  cookie flags, the freshness of Telegram's launch data, and the request body limit. Two vendored
+  files changed: durable-services' checks, which gain a `security-scan` row still deferred to #25,
+  and rust-service's note on the body limit.
+- `stack.json` no longer marks `sqlx`, `tokio` and `tracing` as planned; the kernel now uses them.
+- The plan now follows the owner's gate-6 conditions (ADR-037, ADR-038, ADR-054).
+  - DeckStreak syncs the owner's collection once per study day plus on the owner's explicit
+    `/sync`, and never uploads or writes a local change, which a recording fake server will prove.
+  - Credentials reach each unit from the secret manager at its start through a root-only socket that
+    serves only systemd's mapped requests, and never rest on the host.
+  - The AI route is optional and off by default. With no route, every AI duty records
+    `ai_route_absent`, the surfaces say readings are not enabled, and nothing alerts.
+- The W0 and W1 planned SPECs, their ADRs and schematics, the charter's constraint 16, the
+  architecture overview and the owner setup are amended to match.
+- A `ruff.toml` sets 100-column Python lines. It keeps `ruff check --fix` from deleting an import
+  or a variable that a red-first stub leaves unused, and it excludes the files whose bytes are pinned
+  (the vendored probes, and the parity oracle's generator and registry), even when they are named
+  directly. The project's own scripts are formatted once, so a formatter run on an unchanged file is
+  now a no-op.
+- `stack.json` no longer marks `dtcg-tokens` and `svelte-runes-state` as planned. The Mini App shell
+  now uses both: design tokens in DTCG format, and Svelte 5 runes for state.
+- The accessibility pack is enforced: every one of its blocking rows passes.
+- `RELEASING.md` records the measurement taken before v0.1.0 was tagged. A release pull request
+  still merges while `dev` lacks `main`'s release merge commit, and GitHub's update-branch on it is
+  refused by `dev`'s ruleset.
+- The builder brief says how to keep a branch current with `dev` without losing its red-first
+  commits, how to scrub a pull request's body, and repeats the fork rule.
+
+### Removed
+
+- `.packs/` (the vendored skills, rows, probes, `VENDORED.json` and `wiring.json`),
+  `scripts/pack-rows.py`, `scripts/vendor-packs.py`, the four methodology probes and
+  `scripts/no-apikeyhelper-scan.py`, with the four tests that tested only them.
+- `methodology.json`'s `vendored_from`, and `ruff.toml`'s vendored excludes.
+
+### Fixed
+
+- A pull request whose only changes under `crates/*/src` are lines inside a `#[cfg(test)]` or
+  test-attribute item, which cargo-mutants never mutates, reads its Rust mutation class
+  not-applicable by name, where it read VOID; one that also changes a production line still
+  applies, and the plan prints each class's case by name. The empty output cargo-mutants prints
+  when no mutant overlaps a diff is read as an empty listing, so a changed production line that
+  no tool can mutate still reads VOID without a covering row.
+- SPEC-039's section 8 is corrected insert-only: 2,154 mutants at the battery's commit, the
+  projection's direction, an `ingest` mutant's 126 s, and a squash merge's push, which is judged
+  again on its first-parent diff; ADR-057 notes that its Confirmation's range is A1 to A40.
+- `Cargo.lock` is back in cargo's canonical form: an unlocked resolve no longer rewrites it, so a
+  tool that runs cargo without `--locked` leaves the tree clean.
+- `scripts/public-scrub.py --subject` takes a file as its own subject, refuses by name a subject
+  that does not exist, and reads VOID for a subject that examined nothing, even beside a tree it
+  did examine.
+- The scrub's email rule passes a systemd unit instance name, such as `getty@tty1.service`, and
+  still refuses every address, including one whose domain only holds a unit type's word.
+- A deny list the scrub cannot read stops it with exit 2 and the reason, never a traceback that
+  read as a finding.
+- `scripts/box-packs.sh` fails an expected red or a pending entry whose issue is closed, naming
+  the pack, the row and the issue, and reads VOID when `gh` cannot tell it an issue's state.
+- The vault rails guard bounds its `cargo run` at 900 s, and fails by name when the bound expires.
+- The gate's python stage runs both of its suites whatever the first one found, names each suite's
+  tests and exit on its last line, and fails a suite that ran no test.
+- The stage logs reach each CI run. They were written to a hidden directory, which the upload skips
+  by default, so no run ever held them.
+- Two guard tests no longer leave temporary directories behind.
+- The oracle's generator tests remove the temporary directories they create.
+
+### Security
+
+- The Mini App's development tools no longer resolve `cookie` 0.6.0 or `qs` 6.15.1. Two scoped pnpm
+  overrides move them to 0.7.2 and 6.16.0, which fix GHSA-pxg6-pf52-xh8x, and GHSA-q8mj-m7cp-5q26,
+  GHSA-4mjr-xmp4-gh2g and GHSA-x5fp-wj9c-mxmx, because no update inside SvelteKit's or StrykerJS's
+  major reaches them (ADR-005). Neither package reaches the built Mini App, whose output is
+  unchanged.
+- A state change that is cross-site or not JSON is refused, sign-ins are bounded at 30 a minute
+  and 16 KiB of body, and neither the launch data, its hash, the bot token nor a session id reaches
+  a log line: a refusal is logged by its reason code alone.
+- The Mini App's page carries its own Content-Security-Policy, which admits scripts only from
+  itself, from Telegram and by the hash of each inline script the build generates, and it sends no
+  referrer to another origin.
+- Dependabot's automated security fixes stay off, because they would open pull requests against
+  `main`, which only a release pull request from `dev` may change. Its alerts stay on, and each
+  fixable alert becomes a pull request into `dev` (ADR-036).
+
 ## [0.1.0] - 2026-09-27
 
 ### Added
@@ -41,5 +527,6 @@ process compiles the fragments into a new version section here.
 - The public scrub reads every blob of the history a change publishes. It refuses committed
   binaries and oversize files, and a shallow checkout reads VOID instead of green (SPEC-033).
 
-[Unreleased]: https://github.com/RexRenatus/deck-streak/compare/v0.1.0...dev
+[Unreleased]: https://github.com/RexRenatus/deck-streak/compare/v0.2.0...dev
+[0.2.0]: https://github.com/RexRenatus/deck-streak/releases/tag/v0.2.0
 [0.1.0]: https://github.com/RexRenatus/deck-streak/releases/tag/v0.1.0
