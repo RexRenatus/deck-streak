@@ -46,7 +46,9 @@ names each one it refuses by file and line, and proves itself on the planted lea
 refuses a state the tree has outgrown. A `pending` pack whose every blocking row passes must say
 `enforced`. Every deferred row runs in a pass of its own: one that passes must lose its deferral,
 and one that is still red, VOID or in error stays deferred and fails nothing
-(`scripts/pack-rows.py`).
+(`scripts/pack-rows.py`). The runner runs rows in a bounded pool, `--jobs N`, by default the
+smaller of 8 and the CPUs available, and reports them in row order with the verdicts one row at a
+time would give.
 
 The packs built into phxd run on the maintainer's box with `scripts/box-packs.sh` (ADR-030). The
 wiring's `box` section names every red row expected on the tree with the open issue that builds its
@@ -57,8 +59,28 @@ CI.
 
 ## Continuous integration
 
-CI runs `bash scripts/check.sh` on every pull request into `dev` and `main`, on GitHub-hosted
-runners, and requires the aggregate `ci` check.
+CI runs `bash scripts/check.sh` on every pull request into `dev` and `main` and every push to them,
+on GitHub-hosted runners, in four jobs that start together (ADR-055):
+
+| job | stages |
+|---|---|
+| `rust` | `fmt clippy test doctest audit-rust` |
+| `web` | `web audit-web` |
+| `packs` | `packs` |
+| `hygiene` | `python scrub secrets` |
+
+Every stage runs in exactly one job, and the aggregate `ci` check, which the rulesets require, needs
+all four with `workflow-lint` and `base-is-dev`. Each stage checks its own tools first, so a missing
+tool fails that stage by name wherever it runs.
+
+`rust` restores a cache of `~/.cargo`'s downloads and `target/`, keyed on the toolchain pin and
+`Cargo.lock`; `web` restores the pnpm store and Playwright's browser, keyed on `pnpm-lock.yaml` and
+the Playwright version it locks. Only a push to `dev` or `main` saves a cache, and only when it
+missed its key; a pull request, a fork's included, restores and never saves. A newer push to a pull
+request cancels the run it supersedes; a push to `dev` or `main` is never cancelled.
+
+`check.sh` writes each stage's log, and `timings.tsv` (each stage's seconds, verdict and exit), to
+`$CHECK_LOG_DIR`, and each CI job uploads them as its own artifact, whatever the verdict.
 
 ## Coverage and mutation
 

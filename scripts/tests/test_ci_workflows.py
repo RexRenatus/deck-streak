@@ -262,8 +262,13 @@ def action(step):
     return str(step.get("uses", "")).split("@", 1)[0]
 
 
+def lines_of(value):
+    """A block scalar's non-blank lines, stripped: a multi-line `path` or `restore-keys`."""
+    return [line.strip() for line in str(value or "").splitlines() if line.strip()]
+
+
 def paths(step):
-    return str((step.get("with") or {}).get("path", "")).split()
+    return lines_of((step.get("with") or {}).get("path"))
 
 
 def gate_stages():
@@ -625,7 +630,7 @@ class OnlyAPushSavesACache(unittest.TestCase):
             self.assertIn("${{ hashFiles('rust-toolchain.toml') }}", key)
             self.assertIn("${{ hashFiles('Cargo.lock') }}", key)
             fallback = key.split("${{ hashFiles('Cargo.lock') }}")[0]
-            self.assertEqual(restore["with"]["restore-keys"].split(), [fallback])
+            self.assertEqual(lines_of(restore["with"]["restore-keys"]), [fallback])
             saves = [
                 (n, s)
                 for n, s in enumerate(steps)

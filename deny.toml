@@ -1,5 +1,5 @@
 # cargo-deny: RustSec advisories, licences, bans and sources (the web-security pack's
-# ws.dep-audit-config; run by scripts/check.sh's audit stage and by CI).
+# ws.dep-audit-config; run by scripts/check.sh's audit-rust stage and by CI's rust job).
 
 [graph]
 all-features = true
