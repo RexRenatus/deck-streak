@@ -78,8 +78,8 @@ R1. The engine's workspace dependency names upstream tag `26.09.3`
     comment names ADR-058 and #233. Every engine package in `Cargo.lock` comes from that commit, and
     the lockfile otherwise equals the plain 26.09.3 resolution.
 R2. The pinned commit carries the fix: with nothing changed, a second
-    `cargo build --locked -p deck-streak-ingest` compiles no unit, reports no `Dirty` unit, and
-    finishes within 10 seconds of cargo's own `Finished` time.
+    `cargo build --locked -p deck-streak-ingest` compiles no unit and reports no `Dirty` unit, and
+    cargo's own `Finished` time for it is at most 10 seconds.
 R3. `deny.toml`'s `allow-git` names exactly `https://github.com/RexRenatus/anki.git` and
     `https://github.com/ankitects/rust-url.git`, and `unknown-git` still refuses any other source.
     The `paste` (RUSTSEC-2024-0436) and `bincode` (RUSTSEC-2025-0141) exceptions and the `Unlicense`
@@ -93,10 +93,10 @@ R5. `rust-toolchain.toml` stays at 1.97.0. If the engine fails to build with it,
     and records the failure; a toolchain change is its own decision, never a way to make something
     compile.
 R6. ADR-022's protocol runs again at the new pin, unchanged: the same synthetic collection, the same
-    budgets, the cold build in `engine-measure.yml` on the delivery's pull request. ADR-058's
-    Confirmation records each number with its run id, the no-op build before and after in cargo's own
-    time, and CI's warm path after the first push to `dev` saves a cache. A budget that fails stops
-    the delivery (ADR-022).
+    budgets, the cold build in `engine-measure.yml` on the delivery's pull request. ADR-009's
+    Confirmation records each number with its run (R12). ADR-058's Confirmation records the pinned
+    commit, the no-op build before and after in cargo's own time, and CI's warm path after the first
+    push to `dev` saves a cache. A budget that fails stops the delivery (ADR-022).
 R7. Every SPEC-022 criterion passes at the new pin: A1 to A17, including the budget tests (A2, A3)
     and the no-upload census (A15, A16).
 R8. The parity goldens stay byte-identical. A golden that changes is explained by a named upstream
