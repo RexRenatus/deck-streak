@@ -1698,6 +1698,10 @@ GIT_URL = re.compile(
 # template, its first word the command and `{0}` the script's path, so it runs a command the
 # checker does not read.
 SHELLS = ("bash", "sh", "pwsh", "powershell", "python", "cmd")
+# A variable git reads, named in any case: git takes configuration, and commands it runs, from
+# variables whose names begin with `GIT_`, such as `GIT_CONFIG_COUNT`, `GIT_CONFIG_KEY_<n>`,
+# `GIT_CONFIG_VALUE_<n>`, `GIT_CONFIG_PARAMETERS` and `GIT_SSH_COMMAND`.
+GIT_VARIABLE = re.compile(r"(?<![A-Za-z0-9_])GIT_[A-Za-z0-9_]*", re.I)
 
 
 def expressions_in(text):
@@ -1727,6 +1731,20 @@ def strings(value, where=""):
         ]
     if isinstance(value, list):
         return [found for n, item in enumerate(value) for found in strings(item, f"{where}[{n}]")]
+    return [(where, value)] if isinstance(value, str) else []
+
+
+def texts(value, where=""):
+    """(place, text) for every key and every string a read workflow holds, in its order, a key
+    placed as its value is, as in `jobs.build.steps[0].env.GIT_SSH_COMMAND`."""
+    if isinstance(value, dict):
+        found = []
+        for key, item in value.items():
+            place = f"{where}.{key}" if where else str(key)
+            found += [(place, str(key)), *texts(item, place)]
+        return found
+    if isinstance(value, list):
+        return [found for n, item in enumerate(value) for found in texts(item, f"{where}[{n}]")]
     return [(where, value)] if isinstance(value, str) else []
 
 
@@ -1838,6 +1856,32 @@ def defaults_problems(defaults, where):
     return shell_problems(run.get("shell"), f"{where}.run.shell")
 
 
+def environment_problems(env, where):
+    """An environment whose variables the checker cannot read: an `env` that is set and is not a
+    mapping, such as one `${{ }}` expression, which GitHub evaluates when the job or the step runs,
+    so no reading of the file names a variable git reads there. An omitted or empty `env` is no
+    variables."""
+    if env is None or isinstance(env, dict):
+        return []
+    return [f"{where}: sets an environment the checker does not read"]
+
+
+def container_problems(container, where):
+    """A job's container whose environment the checker cannot read: one `${{ }}` expression, or an
+    `env` that `environment_problems` refuses. The steps of a job with a container run inside it,
+    in its environment. A container named by its image alone sets no variable."""
+    if container is None or (isinstance(container, str) and "${{" not in container):
+        return []
+    if isinstance(container, dict):
+        return environment_problems(container.get("env"), f"{where}.env")
+    return [f"{where}: runs in a container the checker does not read"]
+
+
+def git_variables(text):
+    """Each variable git reads that a key or a string names, once, in the order it names them."""
+    return list(dict.fromkeys(GIT_VARIABLE.findall(text)))
+
+
 def secret_and_checkout_problems(directory):
     """Every read of a secret other than GITHUB_TOKEN, every `secrets: inherit`, and every checkout,
     clone or fetch of another repository in the workflows of `directory`, each named by its file
@@ -1860,6 +1904,7 @@ def secret_and_checkout_problems(directory):
                 judged["expressions"].append((f"{path.name}:{where}", expression))
                 problems += [f"{path.name}:{where}: {read}" for read in secret_reads(expression)]
         problems += defaults_problems(workflow.get("defaults"), f"{path.name}:defaults")
+        problems += environment_problems(workflow.get("env"), f"{path.name}:env")
         scripts = set()
         for job_id, job in (workflow.get("jobs") or {}).items():
             # A job or step that is not a mapping is not judged: the reader has named its line, or
@@ -1873,6 +1918,10 @@ def secret_and_checkout_problems(directory):
                 )
             problems += defaults_problems(
                 job.get("defaults"), f"{path.name}:jobs.{job_id}.defaults"
+            )
+            problems += environment_problems(job.get("env"), f"{path.name}:jobs.{job_id}.env")
+            problems += container_problems(
+                job.get("container"), f"{path.name}:jobs.{job_id}.container"
             )
             for where, step in steps_in(job.get("steps"), f"{path.name}:jobs.{job_id}.steps"):
                 if not isinstance(step, dict):
@@ -1893,11 +1942,18 @@ def secret_and_checkout_problems(directory):
                     scripts.add(f"{where}.run")
                     problems += [f"{where}: {reach}" for reach in reaches(str(step["run"]))]
                 problems += shell_problems(step.get("shell"), f"{where}.shell")
+                problems += environment_problems(step.get("env"), f"{where}.env")
         # Every other string is read for the same commands: a value a shell runs, such as
         # `BASH_ENV`, which bash expands before a step's script, holds a command as a script does.
         for where, text in strings(workflow):
             if f"{path.name}:{where}" not in scripts:
                 problems += [f"{path.name}:{where}: {reach}" for reach in reaches(text)]
+        # A variable git reads, set or named anywhere, configures git from the environment: an
+        # `env` key at any level, a container's options, or a script that exports one.
+        for where, text in texts(workflow):
+            problems += [
+                f"{path.name}:{where}: names a git variable: {name}" for name in git_variables(text)
+            ]
     return problems, judged
 
 
