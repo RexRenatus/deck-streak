@@ -5,7 +5,7 @@
 # zone and hour (deploy/README.md). With no Unit=, the timer starts the job instance of its own name.
 [Unit]
 Description=DeckStreak's daily sync, at the rollover hour, minute 7
-X-DurableServices-Waive=randomized-delay-missing the job table spreads its jobs across distinct minutes, clear of the predecessor's and of one another (ADR-027), and a random delay would move each fire off its minute
+X-DurableServices-Waive=randomized-delay-missing the job table places each job on its own minute (ADR-027), and a random delay would move each fire off its minute
 
 [Timer]
 OnCalendar=*-*-* 04:07:00 UTC

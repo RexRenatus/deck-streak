@@ -8,7 +8,7 @@ concrete host name, address and secret name is private configuration; the units 
 
 ```mermaid
 flowchart TB
-  internet((internet)) -->|443 TLS, 80 redirect| caddy[Caddy, shared with a co-hosted service]
+  internet((internet)) -->|443 TLS, 80 redirect| caddy[Caddy, the host's reverse proxy]
   subgraph host[the VM]
     caddy -->|/api/* to loopback| apiUnit[deck-streak-api.service]
     caddy -->|static SPA with fallback| web[(release/current/web)]

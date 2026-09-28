@@ -6,7 +6,7 @@
 [Unit]
 Description=DeckStreak's hourly liveness watch, at minute 14
 X-DurableServices-Waive=calendar-not-persistent the job table makes the watch no catch-up job (ADR-027): it runs every hour, so the next check replaces one missed while the host was down
-X-DurableServices-Waive=randomized-delay-missing the job table spreads its jobs across distinct minutes, clear of the predecessor's and of one another (ADR-027), and a random delay would move each fire off its minute
+X-DurableServices-Waive=randomized-delay-missing the job table places each job on its own minute (ADR-027), and a random delay would move each fire off its minute
 
 [Timer]
 OnCalendar=*-*-* *:14:00 UTC

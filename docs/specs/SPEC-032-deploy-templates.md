@@ -2,9 +2,8 @@
 
 - **Wave:** W0. **Issue:** #25 (epic #1). **Context(s):** `deploy` (`deploy/`), `deck-streak-coordination` (the timer-versus-table test), `repo` (`.packs/wiring.json`).
 - **Decided by:** ADR-007 (one Caddy site block, loopback API, the security headers, `noindex`), ADR-010 (hardened units per role, `MemoryHigh` below `MemoryMax` from the host budget), ADR-038 (credentials by `LoadCredential=` from the credential socket at each start, superseding ADR-010's `LoadCredentialEncrypted=`), ADR-011 (side by side with the predecessor), ADR-025 (health closed at the edge), ADR-027 (the timers and their slots), and this SPEC's ADR-032 (neutral, lint-valid templates the private rail fills; the host budget's numbers).
-- **Status:** judged: delivered with its tests and `docs/red-first/SPEC-032.md`. The delivery made
-  §1, R4, R8, A4's box reading, the manifest and ADR-032 exact where the code and the packs'
-  measurements decided them (§7).
+- **Status:** judged: delivered with its tests and `docs/red-first/SPEC-032.md`. The delivery
+  amended §1, R4, R8, A4's box reading, §6, the manifest and ADR-032, each for the reason §7 gives.
 
 ## 1. The problem, measured
 
@@ -17,8 +16,8 @@
   inventory's `sd-notify-watchdog` entry): `Type=notify`, `WatchdogSec=90`, `Restart=on-failure`,
   `RestartSec=15`, a start limit of 5 in 300 seconds, `TimeoutStartSec=180`, a memory ceiling,
   `OOMPolicy=kill`.
-- **The host.** One small host shared with other services, behind a Caddy they also use (CHARTER 3,
-  ADR-007); DeckStreak's share is ADR-032's. Host findings are #167's.
+- **The budget.** DeckStreak's share of the host is ADR-032's, read from `deploy/host-budget.json`;
+  the host's own capacity is private configuration.
 - **The rows that judge the templates:** durable-services' 35 blocking tree rows (the gate, once
   enforced), rust-service's unit-tied rows (`rs.notify-ready`, `rs.watchdog-ping`,
   `rs.sigterm-handled`, `rs.credentials-read`), web-security's header rows over the Caddy block (on
@@ -138,7 +137,7 @@ template written at run time into a `TemporaryDirectory`.
 | `scripts/tests/test_deploy_templates.py` | repo | added: A1 to A6, A8, A9 |
 | `crates/coordination/tests/job_table.rs` | `deck-streak-coordination` | changed: A7 |
 | `.packs/wiring.json` | repo | changed: durable-services enforced with three deferred rows; observability enforced with seven deferred rows; the box's web-security and cyber-pipeline expectations (§7) |
-| `docs/schematics/deployment.md` | repo | changed: the budget per unit |
+| `docs/schematics/deployment.md` | repo | changed: the budget per unit, and a neutral label for the edge |
 | `docs/decisions/ADR-032-deploy-templates-and-the-host-budget.md` | repo | changed: accepted, with the decisions made at delivery |
 | `docs/red-first/SPEC-032.md` | repo | added |
 | `changelog.d/` fragment | repo | added |
@@ -159,9 +158,9 @@ template written at run time into a `TemporaryDirectory`.
 
 ## 6. Risks
 
-- **The budget is wrong for the live host.** The numbers are ADR-032's design, sized beside the
-  predecessor's ceiling; the memory watch (SPEC-031) and the first day of the W2 deploy measure them,
-  and a resize is an owner decision (ADR-011).
+- **The budget is wrong for the live host.** The numbers are ADR-032's design; the memory watch
+  (SPEC-031) and the first day of the W2 deploy measure them, and a resize is an owner decision
+  (ADR-011).
 - **The owner's `/sync` meets the bot's ceiling.** SPEC-026 R11 runs the sync cycle inside the bot's
   own process, whose `MemoryMax=` is 96M, while a full download may take the sync's whole budget of
   256 MiB (ADR-022). An incremental sync fits; a full download there is killed at the ceiling, fails
@@ -170,7 +169,7 @@ template written at run time into a `TemporaryDirectory`.
 - **A timer's zone is wrong on the host.** The templates carry UTC; the private rail renders the
   owner's zone, and the liveness job's drift check pages on the first maintenance fire that lands
   off its slot (SPEC-027).
-- **The Caddy change affects the co-hosted service.** The block is its own site; installing it is the
+- **The Caddy change reaches beyond DeckStreak.** The block is its own site; installing it is the
   owner's gate in W2, and web-security's header rows are read on the box before that.
 - **An instance name trips the public scrub.** A literal such as a job template's instance name
   followed by `.timer` matches the scrub's email shape and fails the gate's scrub stage; R10 keeps
@@ -189,11 +188,14 @@ template written at run time into a `TemporaryDirectory`.
 
 ## 7. Amended in delivery
 
-The code and the packs' measurements made these statements of the planned SPEC exact. Each is
-corrected above; the reasons are these.
+The code, the packs' measurements and the public-prose rule changed these statements of the planned
+SPEC. Each is corrected above; the reasons are these.
 
-- **§1.** It names the host by CHARTER 3 alone and no longer describes the predecessor's deploy
-  tree, under the public repository's rule on describing a host; host findings are #167's.
+- **§1, §6 and the schematic: reworded under the public-prose rule.** §1's host bullet is now the
+  budget's: it names ADR-032's share and `deploy/host-budget.json`, and no figure or tenant of the
+  host. §6's Caddy risk and its budget risk name nothing of the host beyond that share. §1 keeps the
+  predecessor's unit pattern and drops the pack's findings over the predecessor's tree, and
+  `docs/schematics/deployment.md` labels the edge as the host's reverse proxy.
 - **R4: `sync` is the one catch-up job.** SPEC-027's job table sets `catch_up` on `sync` (ADR-037),
   so its timer alone carries `Persistent=true`; the planned "none at W0" predated ADR-037's
   amendment of the plan. The `maintenance` and `liveness` timers waive `timers.catch-up`, and every

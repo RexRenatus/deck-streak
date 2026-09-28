@@ -8,7 +8,7 @@
 [Unit]
 Description=DeckStreak's daily maintenance, at the rollover hour, minute 28
 X-DurableServices-Waive=calendar-not-persistent the job table makes maintenance no catch-up job (ADR-027): a run missed while the host was down waits for its next slot, where the drift check expects it
-X-DurableServices-Waive=randomized-delay-missing the job table spreads its jobs across distinct minutes, clear of the predecessor's and of one another (ADR-027), and a random delay would move each fire off its minute
+X-DurableServices-Waive=randomized-delay-missing the job table places each job on its own minute (ADR-027), and a random delay would move each fire off its minute
 
 [Timer]
 OnCalendar=*-*-* 04:28:00 UTC

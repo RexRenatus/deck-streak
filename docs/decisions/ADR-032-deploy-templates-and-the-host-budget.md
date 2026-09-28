@@ -20,8 +20,8 @@ budget?
 
 - The packs read the templates as committed; a placeholder must still be a valid value.
 - CHARTER 11: nothing private enters the tree; the private deploy rail holds the concrete values.
-- The host is small and shared with other services (CHARTER 3), and DeckStreak runs beside the
-  predecessor until cutover (ADR-011).
+- DeckStreak's share of the host is a stated budget (CHARTER 3), and it must hold through the
+  side-by-side cutover (ADR-011).
 - Each unit fails on its own ceiling rather than the kernel's global OOM killer choosing
   (durable-services `resources.budget`).
 
@@ -47,10 +47,9 @@ Chosen option. The budget, which `deploy/host-budget.json` records and every uni
 | `deck-streak-memory-watch.service` (SPEC-031) | 32M | 48M | a shell script over the units' memory accounting |
 
 The share is `"memory": "640M"`: the long-running units' ceilings (224 MiB) plus the largest oneshot's
-(384 MiB) are 608 MiB, which fits with room to spare. Why 640 MiB: the host is small and shared
-(CHARTER 3), and DeckStreak runs beside the predecessor until cutover (ADR-011), so a larger share
-would leave the kernel no headroom when every ceiling is reached at once; the memory watch measures
-the real figures from the first deploy, and a change is a new ADR.
+(384 MiB) are 608 MiB, which fits with room to spare. Why 640 MiB: the share must hold through the
+side-by-side cutover (ADR-011) and still leave the kernel headroom when every ceiling is reached at
+once; the memory watch measures the real figures from the first deploy, and a change is a new ADR.
 
 Caddy substitutes its native `{$DECKSTREAK_HOST}`, `{$DECKSTREAK_WEB_ROOT}` and
 `{$DECKSTREAK_API_UPSTREAM}` from the environment when the block is adapted, and the private rail
@@ -68,8 +67,8 @@ The delivery decided what this record left open, each against its alternatives:
 - **The daemons' processor and task caps.** The API runs with `CPUQuota=100%` and the bot with
   `CPUQuota=50%`, together within the share's 2 CPUs, and each with `TasksMax=64`, a bound on a
   thread or process leak well above what either role starts with its default settings. Chosen
-  against leaving them unset, which lets a runaway daemon take every processor from the other
-  services on the host and a leak grow without bound, and against one slice capping both, rejected
+  against leaving them unset, which lets a runaway daemon take every processor and a leak grow
+  without bound, and against one slice capping both, rejected
   above for memory for the same reason. A job yields instead of being capped: `Nice=10` and the idle
   IO class (SPEC-032 R1).
 - **The job template's start timeout.** `TimeoutStartSec=30min`. systemd gives a oneshot no start
@@ -79,8 +78,7 @@ The delivery decided what this record left open, each against its alternatives:
   is due again. Chosen against no timeout, and against a timeout per job, which would need a
   drop-in per instance whose name SPEC-032 R10 keeps out of committed files.
 - **The timers carry no random delay.** Each waives the pack's `timers.spread` with its why: the job
-  table places each job on its own minute, clear of the predecessor's and of one another (ADR-027),
-  and a random delay would move a fire off it. Chosen against `RandomizedDelaySec=`, which spreads
+  table places each job on its own minute (ADR-027), and a random delay would move a fire off it. Chosen against `RandomizedDelaySec=`, which spreads
   timers that share a minute, and none here do.
 - **Each unit's credentials.** The API loads `owner-user-id` and `telegram-bot-token`; the bot loads
   those and the sync's `anki-sync-username` and `anki-sync-password`, because the owner's `/sync`
@@ -90,9 +88,9 @@ The delivery decided what this record left open, each against its alternatives:
   template instance's (SPEC-032 R10), and against a job template that loads none, which would leave
   the sync without its account.
 - **The journal's size cap stays the host's.** The pack's advisory `logging.journal-cap` reads a
-  `journald.conf.d` drop-in, which caps the journal of every service on the host, not DeckStreak's
-  alone, so no template sets it, and the advisory stays open. Chosen against shipping a journald
-  drop-in, which would change the other services' logging.
+  `journald.conf.d` drop-in, which is host-wide configuration rather than a unit's, so no template
+  sets it, and the advisory stays open. Chosen against shipping a journald drop-in, whose cap would
+  apply to every unit's journal, not DeckStreak's alone.
 
 ### Consequences
 
@@ -110,7 +108,7 @@ week on the host (SPEC-031, W2).
 ## What would make this wrong
 
 - The memory watch shows a unit living at its `MemoryHigh` in normal use (its ceiling is too low), or
-  the host's available memory with both services running falls below the share (a resize is an
+  the host's available memory falls below the share when every ceiling is reached (a resize is an
   owner decision, ADR-011).
 - A pack gains a way to judge rendered templates, which would allow real placeholders.
 
