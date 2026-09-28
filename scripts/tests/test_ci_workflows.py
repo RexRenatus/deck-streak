@@ -263,17 +263,35 @@ class OnlyThisRepositorysDevReachesMain(unittest.TestCase):
 
 # ------------------------------------------------------------------ reading a workflow (SPEC-038)
 
+# A key the reader reads: a plain name, bare or in matching quotes (SPEC-034 R7).
+KEY = re.compile(r"(['\"]?)([\w.-]+)\1")
+
+
+class Unread(AssertionError):
+    """A workflow that holds forms the reader does not read, each refusal as `line N: why`. It
+    carries the rest of the workflow as read, each refused key or value read as '', so a checker
+    can name every refusal and still judge everything else (SPEC-034 R7)."""
+
+    def __init__(self, refused, workflow):
+        super().__init__("the reader does not read " + "; ".join(refused))
+        self.refused, self.workflow = refused, workflow
+
 
 def read_workflow(text):
     """A workflow as dicts, lists and strings, read without a YAML library. It reads the block YAML
-    the workflows here use: mappings, `- ` sequences, `|` block scalars, flow lists, and plain or
-    quoted scalars. Blank lines, comment lines and a ` #` comment after a plain value are dropped;
-    a line it cannot place refuses the whole file."""
-    lines = text.splitlines()
-    value, at = _mapping(lines, _skip(lines, 0), 0)
+    the workflows here use: mappings keyed by plain names, `- ` sequences, `|` block scalars, flow
+    lists of plain items, and plain or quoted one-line scalars, a quote doubled inside single
+    quotes read as one. Blank lines, comment lines and a ` #` comment after a value are dropped.
+    It fails closed (SPEC-034 R7): a form it cannot read as YAML reads it is refused by its line,
+    never guessed at, and the file raises Unread once it is read; a line it cannot place refuses
+    the whole file at once."""
+    lines, refused = text.splitlines(), []
+    value, at = _mapping(lines, _skip(lines, 0), 0, refused)
     at = _skip(lines, at)
     if at < len(lines):
         raise AssertionError(f"line {at + 1} was not read: {lines[at]!r}")
+    if refused:
+        raise Unread(refused, value)
     return value
 
 
@@ -287,24 +305,62 @@ def _skip(lines, at):
     return at
 
 
+def _read(reader, text, at, refused):
+    """What `reader` reads of line `at`'s text, or '' with its refusal recorded by the line."""
+    try:
+        return reader(text)
+    except ValueError as why:
+        refused.append(f"line {at + 1}: {why}")
+        return ""
+
+
+def _key(text):
+    key = KEY.fullmatch(text.strip())
+    if not key:
+        raise ValueError("a key that is not a plain name is not read")
+    return key.group(2)
+
+
 def _scalar(text):
+    """A one-line scalar or flow list as YAML reads it, or ValueError naming a form the reader does
+    not read: an anchor, alias or tag, a flow mapping, or a flow list whose items are not plain (a
+    quoted or nested item, or a `#` inside it)."""
     text = text.strip()
+    if text[:1] in ("&", "*", "!"):
+        raise ValueError("an anchor, alias or tag is not read")
     if text[:1] in ("'", '"'):
-        end = text.find(text[0], 1)
-        return text[1:end] if end > 0 else text
-    text = re.sub(r"\s#.*$", "", text).strip()
-    if text.startswith("[") and text.endswith("]"):
-        return [_scalar(part) for part in text[1:-1].split(",") if part.strip()]
-    return text
+        return _quoted(text)
+    if text[:1] == "{":
+        raise ValueError("a flow mapping is not read")
+    if text[:1] == "[":
+        items = re.fullmatch(r"\[([^\[\]{}'\"#]*)\](?:\s+#.*)?", text)
+        if not items:
+            raise ValueError("a flow list whose items are not plain is not read")
+        return [_scalar(part) for part in items.group(1).split(",") if part.strip()]
+    return re.sub(r"\s#.*$", "", text).strip()
 
 
-def _block(lines, at, indent):
+def _quoted(text):
+    """A quoted one-line scalar that ends at its closing quote, with at most a comment after it. A
+    quote doubled inside single quotes is one quote; a double-quoted value is read only when it
+    holds no escape, since YAML decodes one there."""
+    single = text[0] == "'"
+    body = r"'((?:[^']|'')*)'" if single else r'"((?:[^"\\]|\\.)*)"'
+    quoted = re.fullmatch(body + r"(?:\s+#.*)?", text)
+    if not quoted:
+        raise ValueError("a quoted value that does not end at its closing quote is not read")
+    if not single and "\\" in quoted.group(1):
+        raise ValueError("a double-quoted value that holds an escape is not read")
+    return quoted.group(1).replace("''", "'") if single else quoted.group(1)
+
+
+def _block(lines, at, indent, refused):
     if lines[at][indent:].startswith("-"):
-        return _sequence(lines, at, indent)
-    return _mapping(lines, at, indent)
+        return _sequence(lines, at, indent, refused)
+    return _mapping(lines, at, indent, refused)
 
 
-def _mapping(lines, at, indent):
+def _mapping(lines, at, indent, refused):
     found = {}
     while True:
         at = _skip(lines, at)
@@ -317,7 +373,7 @@ def _mapping(lines, at, indent):
             key, rest = text[:-1], ""
         else:
             raise AssertionError(f"line {at + 1} is not a mapping entry: {lines[at]!r}")
-        key, rest = key.strip().strip("'\""), rest.strip()
+        key, rest = _read(_key, key, at, refused), rest.strip()
         if rest in ("|", "|-"):
             at += 1
             body = []
@@ -331,14 +387,14 @@ def _mapping(lines, at, indent):
         elif not rest or rest.startswith("#"):
             child = _skip(lines, at + 1)
             if child < len(lines) and _indent(lines[child]) > indent:
-                found[key], at = _block(lines, child, _indent(lines[child]))
+                found[key], at = _block(lines, child, _indent(lines[child]), refused)
             else:
                 found[key], at = None, at + 1
         else:
-            found[key], at = _scalar(rest), at + 1
+            found[key], at = _read(_scalar, rest, at, refused), at + 1
 
 
-def _sequence(lines, at, indent):
+def _sequence(lines, at, indent, refused):
     found = []
     while True:
         at = _skip(lines, at)
@@ -353,9 +409,9 @@ def _sequence(lines, at, indent):
         if re.match(r"^['\"]?[\w.-]+['\"]?:(?: |$)", body):
             # A mapping item: its first entry sits on the dash's line, its others below it.
             lines[at] = " " * inner + body
-            item, at = _mapping(lines, at, inner)
+            item, at = _mapping(lines, at, inner, refused)
         else:
-            item, at = _scalar(body), at + 1
+            item, at = _read(_scalar, body, at, refused), at + 1
         found.append(item)
 
 
@@ -1194,8 +1250,9 @@ def reaches(script):
 def secret_and_checkout_problems(directory):
     """Every read of a secret other than GITHUB_TOKEN, every `secrets: inherit`, and every checkout,
     clone or fetch of another repository in the workflows of `directory`, each named by its file
-    and its place, with what was judged: (problems, {population: [...]}). A directory with no
-    workflow file is VOID, never a pass."""
+    and its place, with what was judged: (problems, {population: [...]}). A form the reader does
+    not read is a problem named by its line, and the rest of that file is judged as read. A
+    directory with no workflow file is VOID, never a pass."""
     files = examined(
         "workflow files",
         sorted(path for path in directory.iterdir() if path.suffix in (".yml", ".yaml")),
@@ -1203,7 +1260,11 @@ def secret_and_checkout_problems(directory):
     problems = []
     judged = {"expressions": [], "checkouts": [], "run steps": []}
     for path in files:
-        workflow = read_workflow(path.read_text(encoding="utf-8"))
+        try:
+            workflow, refused = read_workflow(path.read_text(encoding="utf-8")), []
+        except Unread as unread:
+            workflow, refused = unread.workflow, unread.refused
+        problems += [f"{path.name}:{why}" for why in refused]
         for where, text in strings(workflow):
             for expression in expressions_in(text):
                 judged["expressions"].append((f"{path.name}:{where}", expression))
