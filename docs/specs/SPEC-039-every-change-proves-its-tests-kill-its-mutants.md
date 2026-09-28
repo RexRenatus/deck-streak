@@ -156,7 +156,9 @@ R8. **Hand-proved rows** cover invariants generic mutants test weakly: a constan
       declared spelling. Its census refuses a row that can prove nothing: a find that is empty or
       equals its replacement, and a second row that installs another row's mutant for its killer;
       the reader refuses an id outside its band or held twice.
-R9. **The runner, `scripts/mutation_rows.py prove`,** proves each row it is given:
+R9. **The runner, `scripts/mutation_rows.py prove`,** proves each row it is given, every row its
+    selectors name together (`--all`, or a `--band`, each `--row` and a plan's `--rows-from`), each
+    once:
     - it refuses a tree with a tracked change (exit 2), naming the file;
     - it checks the anchor occurs exactly once, and records the target's sha256;
     - it runs the killer on the unmutated tree, which must pass, selecting exactly one test;
@@ -273,6 +275,7 @@ R18. **The shards, and their bound.** `scripts/mutation-verdict.py shards` sizes
 | A36 | a shard with no report, or a partial one, is VOID by name, and the other shards' survivors still fail by name | `test_mutation_verdict.py` |
 | A37 | the sharded job runs the plan's matrix at the plan's count, and the verdict's job counts every shard whatever the shards returned | `test_mutation_workflows.py` |
 | A38 | a shard the plan gave no mutant owes no report, and a proved row on the diff's changed line carries it; a shard given mutants still owes its report | `test_mutation_verdict.py` |
+| A39 | the runner proves every row its selectors name together, a band's, a row's by id and a plan's, each once | `test_mutation_rows.py` |
 
 ```acceptance
 A1: python3 -m unittest discover -s scripts/tests -p test_mutation_rows.py -k a_tracked_change_is_refused_before_any_mutant_is_installed
@@ -313,6 +316,7 @@ A35: python3 -m unittest discover -s scripts/tests -p test_mutation_verdict.py -
 A36: python3 -m unittest discover -s scripts/tests -p test_mutation_verdict.py -k a_missing_or_partial_shard_report_is_void_by_name
 A37: python3 -m unittest discover -s scripts/tests -p test_mutation_workflows.py -k the_sharded_job_runs_the_plans_matrix_and_the_verdict_counts_every_shard
 A38: python3 -m unittest discover -s scripts/tests -p test_mutation_verdict.py -k a_diff_the_tool_lists_no_mutant_of_needs_no_shard_report
+A39: python3 -m unittest discover -s scripts/tests -p test_mutation_rows.py -k every_row_its_selectors_name_is_proved_once
 ```
 
 A1 to A8 run the runner against a fixture repository built at run time in a temporary directory:
@@ -351,7 +355,7 @@ and green are the `mutation-rust` job's two runs.
 | `scripts/mutation-rows.d/S02900-S02999.json` | `repo` | added: SPEC-029's rows (R16) |
 | `scripts/mutation-rows.d/S03900-S03999.json` | `repo` | added: this SPEC's rows on its own runner and verdict (R16) |
 | `scripts/mutation-rows.d/S04200-S04299.json` | `repo` | added: SPEC-042's rows (R16) |
-| `scripts/tests/test_mutation_rows.py` | `repo` | added: A1 to A11 |
+| `scripts/tests/test_mutation_rows.py` | `repo` | added: A1 to A11, A39 |
 | `scripts/tests/test_mutation_verdict.py` | `repo` | added: A12 to A19, A27, A29 to A31, A34 to A36, A38 |
 | `scripts/tests/test_mutation_workflows.py` | `repo` | added: A20 to A25, A28, A32, A33, A37 |
 | `.cargo/mutants.toml` | `repo` | added (R5, R6) |
