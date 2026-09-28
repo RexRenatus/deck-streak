@@ -2,8 +2,12 @@
 //! of either surface is decided here, in the policy's order, recorded in the decision ledger, and
 //! delivered through the port's calls: the bot transport's, which take this module's [`Pass`], so a
 //! call of one elsewhere does not compile (SPEC-041 A2), and [`push_in_app`], which is private to
-//! it. Nothing delivers around the port: a census of every shipped source refuses the bot's own
-//! send outside its named call sites, and a raw request to the Bot API outside the bot (A15).
+//! it. A delivery around the port is held by a census (A15) of the shipped sources of the kinds it
+//! names: it refuses the bot's own send, edit or command handler outside their named call sites, a
+//! Bot API send method named anywhere but its named send, the Bot API's host named outside the
+//! bot's sources, and the in-app feed named outside this module, the ledger and the data-rights
+//! port. A request assembled from parts, which names neither the host nor a send method, is not
+//! read (#297).
 //!
 //! [`Router::route`] decides one occasion inside one `BEGIN IMMEDIATE` write: the kind's switch;
 //! the claim of its key in its dedupe scope, which a later withhold releases; the lapse; the quiet

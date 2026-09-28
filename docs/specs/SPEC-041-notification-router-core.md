@@ -169,13 +169,13 @@ the verdict of a run with that wiring is posted as the `box/packs` status at the
 | `crates/notifications/tests/comeback_budget.rs` | `deck-streak-notifications` | added |
 | `crates/notifications/tests/rights.rs` | `deck-streak-notifications` | added |
 | `crates/notifications/tests/policy.rs` | `deck-streak-notifications` | added: A1, A3, and the policy's refusals |
-| `crates/notifications/tests/one_router.rs` | `deck-streak-notifications` | added: A2, and A15's census of every shipped source |
+| `crates/notifications/tests/one_router.rs` | `deck-streak-notifications` | added: A2, and A15's census of the shipped sources of the kinds it reads |
 | `crates/notifications/tests/ui/push_outside_the_router.rs`, `.stderr` | `deck-streak-notifications` | added: A2's compile-fail fixture and the refusal it records |
 | `crates/notifications/tests/ui/pass_by_default.rs`, `.stderr`, `crates/notifications/tests/ui/pass_kept_by_a_clone.rs`, `.stderr` | `deck-streak-notifications` | added: A2's fixtures for a pass made by `Default` and one kept by cloning a borrowed pass, each with the refusal it records |
 | `crates/notifications/tests/support/mod.rs` | `deck-streak-notifications` | added: the tests' database, clock and recording transport |
-| `crates/bot/src/transport.rs` | `deck-streak-bot` | changed: implements the bot transport calls |
+| `crates/bot/src/transport.rs` | `deck-streak-bot` | changed: implements the bot transport calls, and keeps Telegram's own base URL (`DEFAULT_API_URL`) private to the bot's crate (A15) |
 | `crates/bot/src/lib.rs` | `deck-streak-bot` | changed: exports the owner's chat, the port's implementation |
-| `crates/bot/tests/transport.rs` | `deck-streak-bot` | changed: the router's pushes reach the owner's chat through the bot's transport |
+| `crates/bot/tests/transport.rs` | `deck-streak-bot` | changed: the router's pushes reach the owner's chat through the bot's transport, and the unset base URL is read as Telegram's own, whose constant no other crate can read |
 | `crates/api/src/notifications_routes.rs` | `deck-streak-api` | added: the feed route |
 | `crates/api/src/router.rs`, `crates/api/src/lib.rs` | `deck-streak-api` | changed: mounts the feed route |
 | `crates/api/src/session_routes.rs` | `deck-streak-api` | changed: the owner's access lends its clock to the feed route |
@@ -194,7 +194,7 @@ the verdict of a run with that wiring is posted as the `box/packs` status at the
 | `privacy.json` | repo | changed: the notifications categories |
 | `PRIVACY.md` | repo | changed: one line per notifications category (SPEC-021's rule) |
 | `Cargo.lock`, `.sqlx/` | workspace | changed |
-| `scripts/mutation-rows.d/S04100-S04199.json` | repo | added: the hand-proved rows of quiet hours, the caps and dedupe, and of A15's refusal |
+| `scripts/mutation-rows.d/S04100-S04199.json` | repo | added: the hand-proved rows of quiet hours, the caps and dedupe, and of A15's census |
 | `changelog.d/feat-router-041.md` | repo | added |
 | `docs/schematics/notification-router.md` | docs | changed: the design delivered, with a held celebration's states and the joins |
 | `docs/specs/SPEC-041-notification-router-core.md` | docs | moved from `docs/specs/planned/` |
@@ -215,13 +215,20 @@ the verdict of a run with that wiring is posted as the `box/packs` status at the
   (#83).
 - It builds no settings screen for quiet hours or a kind's switch (#57).
 - It pins and re-pins no widget (#121).
+- It holds no delivery the census cannot read, because a text census reads names, not requests: a
+  request whose URL or method is assembled from parts, so that neither the Bot API's host nor a
+  send method's name appears (outside the bot, on a base URL read through `ApiUrl::as_str`; inside
+  the bot's sources, with a method's name built from pieces); a write to the held queue from outside
+  the router's modules, which a flush would deliver; and a source of a kind the census does not
+  read (#297).
 
 ## 6. Risks
 
 - **A delivery call appears outside the router**, for example a bot command reply written with
   `push_message`. Detected by A2 (the compiler) for the port's call and by the box run's `one-router`
-  row (§3a B1) for a call the policy names, and by A15's census for a delivery around the port: the
-  bot's own send, or a raw request to the Bot API.
+  row (§3a B1) for a call the policy names, and by A15's census for a delivery around the port in
+  the sources it reads: the bot's own send, edit or command handler, a raw request to the Bot API,
+  or a write to the Mini App's feed.
 - **The lapse context is empty until the governor exists**, so a nudge could reach an owner in a
   real lapse. Detected by SPEC-049's lapse tests, which run over the minimal lapse-episode slice
   SPEC-049 builds in `streaks` ahead of W3's governor; the W1 kinds that nudge (`reading_ready`,
@@ -311,11 +318,38 @@ the verdict of a run with that wiring is posted as the `box/packs` status at the
     items too. Outside `crates/bot/` nothing may name `api.telegram.org` or one of the Bot API's
     send methods, in its own spelling (`sendMessage`) or a client's (`send_message`). SPEC-031's
     alert path, `deploy/scripts/alert-telegram.sh`, is the one exception, because it pages the
-    owner that a unit failed, the daemon among them. Every call of `Transport::send_html` or of a
-    Bot API send method is one of the named call sites, each found exactly once: `OwnerChat`'s
-    push, the bot's command replies (the erase prompt, every other reply and the export, #257), and
-    the transport's own requests. The test also refuses a planted source of each kind.
+    owner that a unit failed, the daemon among them. A call of `Transport::send_html`, or of a Bot
+    API send method in a client's spelling, was allowed only at the named call sites, each found
+    exactly once: `OwnerChat`'s push, the bot's command replies (the erase prompt, every other reply
+    and the export, #257), and the transport's own requests. That count saw calls alone, so it
+    missed the transport's raw `sendDocument` request, which the second review found (below). The
+    test also refuses a planted source of each kind.
   - The comeback's gap was tested only on a UTC rule at noon, where a calendar day and a study day
     agree. A9 gains a case on a rule five hours west of UTC, across the 04:00 rollover. The owner's
     quiet window is off in it (its start equal to its end), because 03:00 and 05:00 are inside the
     default window, where rule 4 withholds a nudge with `quiet_hours` before rule 5 counts the gap.
+- **The second fix round.** The second review planted ten deliveries around the port that A15's
+  census let through, and found a comeback A9 never exercised; each now reads red. A15's census
+  reads every shipped source of the kinds it names, and each claim that only the router delivers
+  (the pull request, ADR-041, the schematic and the module docs) says what its guard reads.
+  - Inside a source: only a `#[cfg(test)]` module is left out, any attributes stacked on it passed
+    over, so a field compiled for tests alone hides nothing after it; a directory under a `src/` is
+    always read, whatever its name; every use of the bot's `send_html` is read, not only a call;
+    inside the bot's sources a send method is named, in either spelling, only in the named send
+    that makes its request; and the transport's raw `sendDocument` request is the seventh named
+    send, which the census finds once.
+  - Its reach: a script with no extension is read by its `#!` first line, and a systemd drop-in
+    (`*.d/*.conf`) is read. The bot's `edit_html`, which no shipped source calls, has no named call
+    site, and its command handler is used only by the bot's entry, the long poll. Outside the bot's
+    sources nothing may name `DEFAULT_API_URL`, which is `pub(crate)`, so no other crate can build a
+    request on it; the bot's own test of the unset base URL reads Telegram's URL as written.
+  - The Mini App's feed: only the router's ledger, router and data-rights modules name its table,
+    `in_app_feed` in any case, the ledger's `FEED_TABLE` or its `append_feed`.
+  - `Transport::answer_callback` is not a delivery: it answers a callback query with no text, so the
+    owner's client stops its progress indicator.
+  - `Transport::set_chat_menu` is not a delivery: it registers the owner's command menu, which the
+    owner opens.
+  - A9 gains a case on the rule five hours west of UTC, with the owner's quiet window off: a
+    comeback sent at 03:00 on the calendar day after day 0 is recorded on study day 0, before the
+    rollover, so one at noon two calendar days later, on study day 3, is sent.
+  - What the census still cannot read is named in §5 (#297).

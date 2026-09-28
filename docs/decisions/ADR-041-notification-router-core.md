@@ -48,14 +48,20 @@ budgets and the holdout wait for the engagement wave.
 
 ### Consequences
 
-- Good, because the bot and the Mini App are held to one router from the first delivery: the
-  compiler holds the port's calls, SPEC-041 A15's census of every shipped source holds a delivery
-  around the port, and the one-router row holds the calls the policy names.
+- Good, because the bot and the Mini App are held to one router from the first delivery, each path
+  by a guard that says what it reads: the compiler holds the port's calls; SPEC-041 A15's census
+  holds a delivery around the port in every shipped source of the kinds it reads (the Rust, Python
+  and web sources, the shell scripts by extension or `#!` first line, and the systemd units and
+  their drop-ins); and the one-router row holds the calls the policy names.
 - Good, because the readings line is honest about its kind and can be switched off on its own.
 - Bad, because a celebration raised by a background job while the app is open still arrives as a
   bot message; the decision ledger shows which surface was chosen.
 - Bad, because the lapse context is only as good as the caller's lapse source; the kinds that
   depend on it name the governor as a prerequisite.
+- Bad, because a text census reads names, not requests: a request whose URL or method is
+  assembled from parts, so that neither the Bot API's host nor a send method's name appears; a
+  write to the held queue from outside the router's modules, which a flush would deliver; and a
+  source of a kind the census does not read, all go unread (#297).
 
 ### Confirmation
 
@@ -67,17 +73,21 @@ notifications-policy pack's rows (`one-router`, `policy-deviation-has-adr`) in t
 
 The delivery decided each question the SPEC left open against its alternatives:
 
-- **Only the router delivers: the port's calls by type, every other way by a census.** Each bot
-  transport call takes a `Pass` that no other module can make, not by its field, `Default`, or a
-  clone of a borrowed one (SPEC-041 A2, the compiler), and `push_in_app` is private to the router
-  module. A delivery that never calls the port, through the bot's own `send_html` or a raw request
-  to the Bot API, is refused by A15's census of every shipped source: outside `crates/bot/` nothing
-  names the Bot API's host or a send method, SPEC-031's alert path aside, and the bot's sends are
-  called only at named call sites: by `OwnerChat`, by the command replies (#257) and inside the
-  transport's own requests. The box run's `one-router` row refuses a call the policy names (§3a
-  B1). Chosen against holding the rule by that row alone, which matches only the names the policy
-  lists and finds a stray call only after it is written, and against a private trait, which the bot
-  could not implement.
+- **The port's calls by type, and a delivery around the port by a census of what it reads.** Each
+  bot transport call takes a `Pass` that no other module can make, not by its field, `Default`, or
+  a clone of a borrowed one (SPEC-041 A2, the compiler), and `push_in_app` is private to the router
+  module. A delivery that never calls the port is refused by A15's census, which reads every
+  shipped source of the kinds it names: outside the bot's sources nothing names the Bot API's host,
+  a send method or the bot's `DEFAULT_API_URL` (private to the bot's crate), SPEC-031's alert path
+  aside; inside them a send method is named only in the named send that makes its request; the
+  bot's `send_html`, `edit_html` and command handler are used only at named call sites (`OwnerChat`,
+  the command replies (#257) and the transport's own requests; none for `edit_html`; the long poll
+  for the handler); and only the router's modules name the Mini App's feed. The box run's
+  `one-router` row refuses a call the policy names (§3a B1). Chosen against holding the rule by that
+  row alone, which matches only the names the policy lists and finds a stray call only after it is
+  written; against a private trait, which the bot could not implement; and against parsing the
+  sources with a Rust parser, a new dependency, since a census that leaves out only
+  `#[cfg(test)]` modules fails closed.
 - **The policy is compiled into the binary and parsed at start.** Chosen against reading a deployed
   copy of the file, which could drift from the one the box run judged, and against typing the values
   as constants, which would be a second policy the pack never reads.

@@ -48,16 +48,22 @@ flowchart TD
 ```
 
 A withhold after rule 2 deletes the claim inside the same write, so a key is claimed exactly when
-it was sent or held. Three guards hold every delivery to the router, each on its own path:
+it was sent or held. Three guards hold the router's paths, each on its own and each reading only
+what it names:
 
 - **The port's call, by the compiler (SPEC-041 A2).** Only the router module can make a `Pass`, and
   each bot transport call takes one, so a call of the port outside the module does not compile: the
   pass has a private field, no `Default` and no `Clone`. `push_in_app` is private to the module.
 - **A delivery around the port, by a census (A15).** A source that never calls the port could still
-  reach the owner through the bot's own `send_html` or a raw request to the Bot API. A census of
-  every shipped source refuses both: outside `crates/bot/` nothing names the Bot API's host or a
-  send method, SPEC-031's alert path aside, and the bot's sends are called only at named call
-  sites: by `OwnerChat`, by the command replies and inside the transport's own requests.
+  reach the owner through the bot's own send, edit or command handler, a raw request to the Bot
+  API, or a write to the Mini App's feed. The census reads every shipped source of the kinds it
+  names (the Rust, Python and web sources, the shell scripts by extension or `#!` first line, and
+  the systemd units and their drop-ins) and refuses each: outside the bot's sources nothing names
+  the Bot API's host, a send method or the bot's `DEFAULT_API_URL`, SPEC-031's alert path aside;
+  inside them a send method is named only in the named send that makes its request; the bot's
+  `send_html`, `edit_html` and command handler are used only at named call sites; and only the
+  router's modules name the feed. A request assembled from parts, which names neither the host nor
+  a send method, is not read (#297).
 - **A call the policy names, by the box run (§3a B1).** The `one-router` row refuses a call of
   `push_message`, `push_dice`, `push_reaction`, `push_pin` or `push_in_app` outside `router.rs`.
 

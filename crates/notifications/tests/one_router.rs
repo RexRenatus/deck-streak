@@ -1,4 +1,5 @@
-//! Only the router delivers (SPEC-041 A2, A15; R1).
+//! The compiler holds the router's port, and a census reads the ways around it (SPEC-041 A2, A15;
+//! R1).
 //!
 //! A2: each bot transport call takes the router's `Pass`, which no other module can make, so a
 //! call of the port anywhere else does not compile. One compile-fail case for each way a pass
@@ -8,15 +9,20 @@
 //! with the pinned toolchain, and are regenerated in the change that bumps it
 //! (`TRYBUILD=overwrite`).
 //!
-//! A15: a delivery can go around the port and never take a pass, through the bot's own send or by
-//! a raw request to the Bot API. The census reads every shipped source of the tree: the Rust,
-//! Python and web source files, the shell scripts and the systemd units, with test directories and
-//! test files left out, and in a Rust file its comments and `#[cfg(test)]` items too. It refuses a
-//! source outside `crates/bot/` that names the Bot API's host or one of its send methods, in the
-//! API's spelling or a client's, SPEC-031's alert path aside; and a call of the bot's `send_html`
-//! or of a Bot API send method anywhere but at the named call sites, each of which it must find
-//! exactly once. The refusals are proved on the first review's three deliveries around the port,
-//! which the test holds as text.
+//! A15: a delivery can go around the port and never take a pass. The census reads every shipped
+//! source of these kinds: the Rust, Python and web source files and the shell scripts by their
+//! extensions, a script with none by its `#!` first line, and the systemd units and their drop-ins.
+//! It leaves out test files, test directories outside a `src/`, and in a Rust file its comments and
+//! `#[cfg(test)]` modules. Outside the bot's sources nothing may name the Bot API's host, one of its
+//! send methods, in the API's spelling or a client's, or the bot's `DEFAULT_API_URL`, SPEC-031's
+//! alert path aside; inside them a send method is named only in the named send that makes its
+//! request. The bot's `send_html`, its `edit_html` and its command handler are used only at named
+//! call sites, and each of the seven named sends is found exactly once. Only the router's ledger,
+//! router and data-rights modules name the Mini App's feed. The refusals are proved on the reviews'
+//! deliveries around the port, which the test holds as text, and on a tree it writes for the
+//! walker. A text census reads names, so a request assembled from parts, in which neither the Bot
+//! API's host nor a send method's name appears, and a source of a kind it does not read, go unread
+//! (#297).
 
 // An integration test is test code: its helpers panic on a failed fixture, and the examined count
 // is printed on purpose.
