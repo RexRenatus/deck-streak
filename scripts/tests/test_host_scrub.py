@@ -24,6 +24,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from types import SimpleNamespace
 
 from _support import REPO, examined
 
@@ -92,9 +93,11 @@ elif name == "dpkg":
     sys.exit(scenario.get("dpkg_exit", {{}}).get(package, 0))
 elif name == "ps":
     print("\n".join(scenario["ps"]))
+elif name == "timedatectl":
+    print(scenario.get("clock", "yes"))
 """
 
-COMMANDS = ("nice", "ionice", "systemctl", "dpkg-query", "dpkg", "ps", "apt-get")
+COMMANDS = ("nice", "ionice", "systemctl", "dpkg-query", "dpkg", "ps", "apt-get", "timedatectl")
 
 #: A reader that serves a file's bytes differently on a second read (A10). It runs a tool in its own
 #: process, as `python3 TOOL` runs it, with an audit hook that sees every open of the served path:
@@ -1481,6 +1484,104 @@ class OneRead(unittest.TestCase):
                 with self.subTest(read=read):
                     self.assertEqual(done.returncode, 0, said(done))
                     self.assertEqual(opens, 1)
+
+
+class Axes(unittest.TestCase):
+    """What the digests cannot see (SPEC-060 A11): the clock the approval's instants are read on,
+    and a file system mounted inside an item."""
+
+    def test_the_tools_refuse_a_clock_that_is_not_synchronised(self):
+        # The inventory records that the clock reads synchronised, and the list carries it.
+        with self.subTest("the inventory records it"), tempfile.TemporaryDirectory() as scratch:
+            host = Host(scratch)
+            listing, _ = host.plan()
+            record = json.loads((host.private / "inventory.json").read_text())
+            self.assertIs(record.get("clock_synchronised"), True)
+            self.assertIs(listing["inventory"].get("clock_synchronised"), True)
+        # A clock that does not read synchronised at the inventory refuses it, and writes nothing.
+        with self.subTest("the inventory refuses it"), tempfile.TemporaryDirectory() as scratch:
+            host = Host(scratch)
+            host.scenario["clock"] = "no"
+            host.write_scenario()
+            done, out = host.inventory()
+            self.assertEqual(done.returncode, 1, said(done))
+            self.assertIn("clock", said(done))
+            self.assertFalse(out.exists())
+        # A clock that does not read synchronised at the apply refuses it before any deletion.
+        with self.subTest("the apply refuses it"), tempfile.TemporaryDirectory() as scratch:
+            host = Host(scratch)
+            listing, list_path = host.plan()
+            probe = host.apps / "probe-1.py"
+            approval = host.approve(listing, [by_path(listing)[str(probe)]["id"]])
+            host.scenario["clock"] = "no"
+            host.write_scenario()
+            before = tree(host.root)
+            done = host.apply(list_path, approval, "--apply")
+            self.assertEqual(tree(host.root), before)
+            self.assertEqual(done.returncode, 1, said(done))
+            self.assertIn("clock", said(done))
+            host.scenario["clock"] = "yes"
+            host.write_scenario()
+            done = host.apply(list_path, approval, "--apply")
+            self.assertEqual(done.returncode, 0, said(done))
+            self.assertFalse(probe.exists())
+        # An inventory that did not record the clock is refused, whatever the clock reads now.
+        with self.subTest("the list does not carry it"), tempfile.TemporaryDirectory() as scratch:
+            host = Host(scratch)
+            listing, _ = host.plan()
+            named = {key: value for key, value in listing["inventory"].items()}
+            named.pop("clock_synchronised", None)
+            probe = host.apps / "probe-1.py"
+            crafted, list_path = host.relist(listing, inventory=named)
+            approval = host.approve(crafted, [by_path(crafted)[str(probe)]["id"]])
+            before = tree(host.root)
+            done = host.apply(list_path, approval, "--apply")
+            self.assertEqual(tree(host.root), before)
+            self.assertEqual(done.returncode, 1, said(done))
+            self.assertIn("clock", said(done))
+
+    def test_an_item_holding_another_device_is_never_digested_or_removed(self):
+        # Unprivileged mounts are blocked on the box that ran this, so a file system mounted inside
+        # an item is faked at the seam: the walk reports one entry under another device.
+        sys.path.insert(0, str(TOOLS))
+        try:
+            import apply as apply_tool
+            import plan as plan_tool
+        finally:
+            sys.path.remove(str(TOOLS))
+        real_walk = plan_tool.walk
+
+        def across(top, errors, descend=None):
+            for path, st in real_walk(top, errors, descend):
+                fields = {key: getattr(st, key) for key in dir(st) if key.startswith("st_")}
+                if os.path.basename(path) == "lib":
+                    fields["st_dev"] += 1
+                yield path, SimpleNamespace(**fields)
+
+        with tempfile.TemporaryDirectory() as scratch:
+            host = Host(scratch)
+            venv = str(host.apps / "idle" / ".venv")
+            digest, _ = plan_tool.measure(venv)
+            candidate = {
+                "class": "venv",
+                "rule": {"name": "idle-environments", "reason": "no unit names it"},
+                "path": venv,
+            }
+            item = {"id": "i001", "class": "venv", "path": venv, "digest": digest}
+            plan_tool.walk = across
+            try:
+                with self.assertRaises(OSError) as raised:
+                    plan_tool.measure(venv)
+                self.assertIn("device", str(raised.exception))
+                skipped = []
+                self.assertEqual(plan_tool.items_of([candidate], skipped), [])
+                self.assertEqual([entry["path"] for entry in skipped], [venv])
+                with self.assertRaises(apply_tool.Refusal):
+                    apply_tool.check_item(item, [], apply_tool.Runner())
+            finally:
+                plan_tool.walk = real_walk
+            self.assertEqual(plan_tool.measure(venv)[0], digest)
+            self.assertIsNotNone(apply_tool.check_item(item, [], apply_tool.Runner()))
 
 
 class Health(unittest.TestCase):
