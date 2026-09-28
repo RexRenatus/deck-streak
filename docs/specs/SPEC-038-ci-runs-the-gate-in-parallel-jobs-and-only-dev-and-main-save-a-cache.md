@@ -102,9 +102,14 @@ R4. Each stage checks the tools it runs before it runs them, with the install hi
     runs from `PROTOC` when it is set, which must then name an executable, and from `PATH`
     otherwise (ADR-022). A missing tool fails that stage by name, locally and in CI. The
     `toolchain` stage is removed.
+    Amended by SPEC-058 (section 10): `audit-web` then checks `python3` (3.11 or later), which runs
+    the verdict that reads pnpm's report.
 R5. The `audit` stage is split: `audit-rust` runs
     `cargo deny --locked check advisories bans licenses sources` in the `rust` job, and `audit-web`
-    runs `pnpm audit --prod` in the `web` job.
+    runs `pnpm audit --prod` in the `web` job. Amended by SPEC-058 (section 10): the audit covers
+    the development dependencies too, and refuses a run that examined nothing. `audit-web` runs
+    `pnpm audit --json --audit-level low`, which names no dependency class, and its verdict is read
+    from pnpm's report.
 R6. The jobs that read history check out all of it (`fetch-depth: 0`): `hygiene`, whose `secrets`
     stage scans every commit with `CHECK_HISTORY=1` and whose `scrub` stage reads every blob
     reachable from `HEAD`, and `packs`, whose sdd numbering row reads every branch. `rust` and `web`
@@ -596,3 +601,18 @@ The retired criteria, why their subject is gone, and what judges it now:
 - A8 and A9 (the row runner's pool gives the serial run's verdicts, and keeps its bound): SPEC-056
   removed the row runner and its tests (SPEC-056 A1). The box run runs each pack's rows through the
   packs' own binary.
+
+## 10. Amendment, 2026-09-28: the web audit covers the development dependencies too
+
+Made by SPEC-058 (#260) and ADR-055's note of 2026-09-28, insert-only under ruling (i) of section
+8: every earlier byte is kept in order. It inserts:
+
+- section 2: the sentence that ends R4, which adds `python3` to `audit-web`'s tools;
+- section 2: the sentences after "in the `web` job." in R5, which name SPEC-058's command;
+- this section.
+
+The audit covers the development dependencies too, and refuses a run that examined nothing.
+SPEC-058 decides the stage's command, its level and its verdict, and its tests judge them
+(`scripts/tests/test_audit_web.py`). Under ruling (ii) of section 8, SPEC-058's A5 grows this
+SPEC's table `TOOLS` in `test_check_gate.py` by one entry, `python3` after `pnpm` for `audit-web`,
+and changes no assertion, so A5 of this SPEC judges the new tool too.
