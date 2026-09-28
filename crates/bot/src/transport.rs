@@ -74,21 +74,25 @@ const TOO_MANY_REQUESTS: u64 = 429;
 const BAD_REQUEST: u64 = 400;
 
 /// The Bot API's base URL: `https:`, or `http:` to a loopback host, with no path, query or
-/// credentials of its own. The token is appended when the transport is built.
+/// credentials of its own. The token is appended when the transport is built, to the host's root
+/// and nowhere else.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ApiUrl(String);
 
 impl ApiUrl {
     /// `text` as a base URL, or `None` when it is not `https:` or loopback `http:`, names no host,
-    /// or carries a query, a fragment, credentials or whitespace. A trailing `/` is dropped.
+    /// or carries a path, a query, a fragment, credentials or whitespace. The root's `/` is dropped;
+    /// any path beyond it is refused.
     #[must_use]
     pub fn new(text: &str) -> Option<Self> {
-        let text = text.trim_end_matches('/');
-        let (scheme, rest) = text.split_once("://")?;
-        if rest.is_empty() || rest.contains(['?', '#', '@']) || rest.contains(char::is_whitespace) {
+        let text = text.strip_suffix('/').unwrap_or(text);
+        let (scheme, authority) = text.split_once("://")?;
+        if authority.is_empty()
+            || authority.contains(['/', '?', '#', '@'])
+            || authority.contains(char::is_whitespace)
+        {
             return None;
         }
-        let authority = rest.split('/').next().unwrap_or_default();
         let host = host_of(authority)?;
         let secure = scheme == "https";
         let local = scheme == "http" && is_loopback(host);
