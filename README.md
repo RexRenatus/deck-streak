@@ -47,8 +47,10 @@ Run one part while you work:
 cargo nextest run --workspace       # the Rust tests
 pnpm -r check                       # svelte-check, warnings fail
 pnpm -r test                        # the Mini App's unit tests
-python3 scripts/pack-rows.py        # every vendored pack's rows
 ```
+
+The packs are judged on the maintainer's box, not here: a pull request shows that verdict as its
+`box/packs` status (ADR-069).
 
 Deploying DeckStreak needs a Telegram bot, an Anki sync server you run yourself, and a host with
 HTTPS. [docs/OWNER-SETUP.md](docs/OWNER-SETUP.md) lists the steps. DeckStreak reads your own Anki

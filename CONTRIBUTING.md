@@ -40,7 +40,8 @@ bash scripts/check.sh
 ```
 
 It is the same script CI runs: formatting, clippy with warnings denied, the Rust tests and doctests,
-the Mini App's checks and tests, the parity oracle, every vendored pack's rows, and the secret scan.
+the Mini App's checks and tests, the parity oracle, the public scrub and the secret scan. The packs
+are judged on the maintainer's box, whose verdict a pull request shows as `box/packs`.
 
 ## Commit messages
 

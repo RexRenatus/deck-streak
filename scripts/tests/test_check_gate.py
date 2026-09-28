@@ -68,7 +68,7 @@ EMPTY_UNITTEST = (
 
 def run_gate(scratch, stages, stubs, extra_env=None, check=CHECK, real=(), bodies=None):
     """Run `check` (the repository's check.sh by default) for `stages` with a PATH that holds only
-    the shell tools check.sh needs, each tool `real` names as the machine has it, and, for each name
+    the shell tools check.sh needs, each tool `real` names as PATH finds it, and, for each name
     in `stubs`, a stub that exits 0 (or runs the shell body `bodies` gives it), and any
     `extra_env`. Returns the process and its log directory."""
     tools = scratch / "bin"
@@ -76,7 +76,7 @@ def run_gate(scratch, stages, stubs, extra_env=None, check=CHECK, real=(), bodie
     for tool in (*SHELL_TOOLS, *real):
         found = shutil.which(tool)
         if found is None:
-            raise AssertionError(f"this machine has no {tool}, which check.sh itself runs")
+            raise AssertionError(f"no {tool} is on PATH, and check.sh itself runs it")
         (tools / tool).symlink_to(found)
     for tool in stubs:
         stub = tools / tool
@@ -181,7 +181,7 @@ class EveryStageIsTimed(unittest.TestCase):
 
 
 class TheLogDirectoryStaysOffStdout(unittest.TestCase):
-    """SPEC-056 R4: stdout, which a reader quotes, never names the machine's log directory."""
+    """SPEC-056 R4: stdout, which a reader quotes, never names the log directory's path."""
 
     def test_the_log_directory_is_never_on_stdout_and_holds_every_stage_log(self):
         with tempfile.TemporaryDirectory() as scratch:
@@ -287,7 +287,7 @@ def run_recorded(check, stage, scratch, extra_env=None):
     for tool in SHELL_TOOLS:
         found = shutil.which(tool)
         if found is None:
-            raise AssertionError(f"this machine has no {tool}, which check.sh itself runs")
+            raise AssertionError(f"no {tool} is on PATH, and check.sh itself runs it")
         (tools / tool).symlink_to(found)
     stubs = {
         "cargo": f"#!/bin/sh\nprintf '%s\\n' \"$@\" '{CALL_END}' >> \"$CARGO_CALLS\"\nexit 0\n",

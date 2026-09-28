@@ -1,9 +1,9 @@
 # Lexicon
 
 The ubiquitous language: one name per concept, per context (docs/CONTEXT-MAP.md). Each fence
-line is `<the one name> [in <context>, ...]: <the words it replaces>`, and
-`scripts/ddd-probe.py check lexicon-locks` refuses an identifier declared in a scoped context that
-says a replaced word (split into snake and camel segments, singular or plural). Comments and
+line is `<the one name> [in <context>, ...]: <the words it replaces>`, and the box-run ddd
+probe's `lexicon-locks` class refuses an identifier declared in a scoped context that says a
+replaced word (split into snake and camel segments, singular or plural). Comments and
 string contents are prose, not declarations. A new term, or a new replaced word, is added in the
 SPEC that introduces the concept.
 

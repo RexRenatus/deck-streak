@@ -3,7 +3,7 @@
 DeckStreak's bounded contexts, the edges between them, the one name each concept has, and who
 owns every table. This document is **binding** (the ddd pack, ADR-002). The crate graph IS the
 map: each Rust context is one Cargo package, so an import the map does not allow is a compile
-error, and `scripts/ddd-probe.py` holds every manifest equal to the fence below in both
+error, and the box-run ddd probe holds every manifest equal to the fence below in both
 directions. A change that needs an edge the map lacks is a design question, answered by an ADR
 that amends this file in the same change. Never add an edge to make code compile.
 
@@ -85,7 +85,7 @@ Astro site (planned).
 ## Ubiquitous language
 
 One concept has one name in the code, the schema and the prose of the context that owns it. The
-lexicon is [LEXICON.md](LEXICON.md); `scripts/ddd-probe.py check lexicon-locks` refuses an
+lexicon is [LEXICON.md](LEXICON.md); the box-run ddd probe's `lexicon-locks` class refuses an
 identifier in a scoped context that says a replaced word.
 
 ## Ownership register

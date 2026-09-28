@@ -103,8 +103,8 @@ instance as `<id>`, or build the name at run time, as the tests do.
 
 ## How the templates are judged
 
-- The durable-services pack's rows (`python3 scripts/pack-rows.py --pack durable-services`), and the
-  rust-service rows that read the units beside `deckstreakd`'s code.
+- The durable-services pack's rows, and the rust-service rows that read the units beside
+  `deckstreakd`'s code, both judged on the maintainer's box (ADR-069).
 - `scripts/tests/test_deploy_templates.py` and the job table's timer test (SPEC-032's acceptance
   criteria).
 - The public scrub over every file here.
