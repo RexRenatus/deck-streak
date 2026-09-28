@@ -176,3 +176,63 @@ SPEC-057; SPEC-039 (R2, R3, R5, R8, R18); ADR-057 (D5, D6); ADR-069 (a criterion
 insert-only); #240. cargo-mutants: https://mutants.rs/filter_mutants.html,
 https://mutants.rs/skip.html, https://mutants.rs/attrs.html and https://mutants.rs/workspaces.html.
 StrykerJS: https://github.com/stryker-mutator/stryker-js/blob/master/docs/disable-mutants.md.
+
+## Note, 2026-09-28: a test-only `src` diff reads not-applicable
+
+Recorded by SPEC-057's vault delivery (its section 1.6, R22 and A28). This decision is unchanged;
+the note decides how SPEC-039's plan reads a change to a unit test in `src`, which the delivery's
+own diff measured.
+
+At dd734e5 the vault's diff changes three files under `crates/vault/src` only inside their
+`#[cfg(test)]` modules, which cargo-mutants never mutates. The plan read 71 of those lines as
+production code, so the Rust class applied. `cargo mutants --list --json --in-diff` printed
+nothing, since it exits 0 before it lists when no mutant overlaps the diff; `shards` read the empty
+file as no listing; and `mutation-plan` and `mutation-verdict` read VOID (runs 36461579108 and
+36463302615). Any pull request that adds a unit test in `src` and changes no production line reads
+the same. The architect ruled the defect the plan's, and this delivery fixes it.
+
+Chosen, and what each was chosen against:
+
+- The plan reads a changed line as test-only when every token of code on it lies inside an item
+  that cargo-mutants 27.1.0's own visitor skips for an attribute (`attrs_excluded`): a `fn`, `mod`,
+  `impl` or `trait` marked `#[cfg(test)]`, or with an attribute whose path ends in `test`. It finds
+  them with the lexer that already reads SPEC-039 R4's literals, and a class whose changed code
+  lines are all test-only reads `not-applicable` by name. It was chosen because it mirrors the
+  tool's own rule, errs toward applying wherever it meets a shape it does not read, and decides the
+  case before `mutation-plan` installs any Rust tool.
+  - Moving the three test modules into `crates/vault/tests/`: rejected, because they test private
+    functions, and `staged.rs` 517:64's mutant is observable quickly only from `src`. The public
+    `ProbeGate::new` reads its classes from the vendored `data/gate-classes.json`, whose 11
+    blocking classes each allow 120 s, while a test in `src` can build a class of one second.
+  - Making those private items public so that `tests/` can reach them: rejected, because it widens
+    the crate's interface only to test it, and every other crate's unit tests in `src` would meet
+    the same VOID.
+  - "No listing means not-applicable", deciding from cargo-mutants' empty listing alone: rejected,
+    because a production line that no tool can mutate, a constant's, lists no mutant either, and it
+    must still read VOID without a covering row (SPEC-039 R8). A28 plants that constant.
+  - Deciding from the listing and the spans together, listing every `src` change first: rejected,
+    because an empty listing cannot tell a test module from a constant, so the span reading is
+    needed anyway, and the listing would cost a tool install on every test-only diff.
+  - Finding test items with a regular expression over the text: rejected, because a brace,
+    `#[cfg(test)]` or `#[test]` inside a string, raw string, character literal or comment would open
+    or close an item, and a misread span can hide a production line, the one error that passes.
+  - Reading every `cfg` that names `test` as test-only, `not(test)` and `any(test, ...)` among them:
+    rejected, because cargo-mutants mutates those items, so the plan would pass a change the tool
+    would have tested. A28 plants a `#[cfg(not(test))]` function.
+- `shards` reads the listing step's empty output as an empty listing, one shard of no mutant. It
+  was chosen because an empty file there is the tool's own answer: a listing step that fails stops
+  its job before `shards` runs. A missing listing stays VOID.
+  - Writing `[]` into the file from the workflow when the tool prints nothing: rejected, because
+    the reading would then live in the workflow's shell, where no test of the plan holds it.
+
+### Consequences of the note
+
+- Good, because a pull request that changes only unit tests in `src` reads not-applicable by name,
+  installs no Rust tool in `mutation-plan`, and plans no Rust work.
+- Good, because no shape the plan does not read can pass: it applies and, with no mutant listed,
+  reads VOID without a row, which is loud.
+- Bad, because a test item of such a shape (an inner `#![cfg(test)]`, a module file that
+  `#[cfg(test)] mod name;` declares, a `#[cfg(test)]` statement) reads VOID until its reader is
+  widened, with a fixture of its own.
+- Bad, because the plan's lexer now matches brackets as well as literals: more of DeckStreak's own
+  code, which A28's four fixtures hold.

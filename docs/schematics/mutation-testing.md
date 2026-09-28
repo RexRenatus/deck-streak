@@ -24,11 +24,13 @@ flowchart TD
   classes -->|anything else| other([not production: counted, never mutated])
   plan --> lines{each production file's changed lines}
   lines -->|all blank or comments, or only deletions| nap([not-applicable: its count, by file])
-  lines -->|a code line| applies[the class applies]
+  lines -->|Rust: every code line inside an item marked cfg-test or with a test attribute| testonly([not-applicable, test-only: its count, by file, and no tool installed])
+  lines -->|a production code line| applies[the class applies]
   plan --> rows[the rows it selects: on its paths, added or changed, on a killer's file]
   rust --> list[cargo mutants --list --json --in-diff git.diff: the diff's mutants, nothing built]
   rust --> wholelist[cargo mutants --list --json: the whole tree's mutants, whole.json, nothing built]
   list --> shards[mutation-verdict.py shards: the fewest round-robin shards, each projected within an hour]
+  list -->|no mutant overlaps the diff: it prints nothing, read as an empty listing| shards
   shards -->|more than 256 shards| refused([REFUSED with its projection, never capped])
   shards --> matrix[the matrix 0 to n-1, and the plan artifact every job reads]
 
@@ -86,7 +88,7 @@ the ones that happened to report.
 |---|---|---|
 | plan | the diff, `git diff HEAD^1...HEAD`, written to `git.diff` | the new side of the diff is the checked-out tree, so cargo-mutants never exits 5 on a mismatch |
 | classes | each changed path | R2's globs, exactly; a test, a script or a document is never production |
-| lines | each production file's new-side changed lines | blank and comment lines are counted apart; a file whose hunks only delete reads not-applicable with its count |
+| lines | each production file's new-side changed lines | blank and comment lines are counted apart; a file whose hunks only delete reads not-applicable with its count; in Rust, a line whose every token lies inside an item cargo-mutants never mutates for a test attribute (`#[cfg(test)]`, `#[test]`, `#[tokio::test]`) is test-only, counted apart and never a code line (SPEC-057 R22) |
 | shards | cargo-mutants' own listing of the diff's mutants, `--list --json` | each shard's projected time, the baseline's 346 s and each of its mutants' package cost, within an hour; the fewest shards that fit; more than 256 refused, never capped |
 | cargo-mutants | the diff, the tree, the shard `k/n` | `--in-place` on the checkout, round-robin as the plan projected, `--timeout 300` on each mutant's tests and `--build-timeout 600` on its build, the shard job's `timeout-minutes` of 120; its exit is recorded, never trusted alone |
 | Stryker | every changed web production file, whole | the whole file, so a survivor already there is the pull request's (rule 5); `thresholds.break` 100 |

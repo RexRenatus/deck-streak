@@ -191,6 +191,20 @@ The 310 missed mutants lie in 33 files, counted from the same 31 reports:
   rows' runner refuses a dirty tree. Every gate stage passes `--locked`, so nothing in the gate
   refuses that lock; #246 left the guard to the next mutation delivery.
 
+### 1.6 A third rider, measured on the vault's own diff
+
+The vault's diff at dd734e5, against `dev` f5322b2, changes three files under `crates/vault/src`,
+`note.rs`, `readings_tree.rs` and `staged.rs`, and only inside their `#[cfg(test)] mod tests`
+items: 86 added lines, 71 of them code. SPEC-039's `plan` counts every such line as a production
+code line (its R2 and R4), so the Rust class applied. cargo-mutants 27.1.0 never mutates an item
+marked `#[cfg(test)]`, or one with an attribute whose path ends in `test` (its `visit.rs`), and
+when no mutant overlaps a diff it exits 0 before it lists, so `--list --json --in-diff` printed
+nothing at all, not `[]`. `shards` read that empty file as no listing and was VOID, and the
+verdict was VOID because the plan named no shards (runs 36461579108 and 36463302615). Any pull
+request that adds a unit test in `src` and changes no production line reads the same. The
+architect ruled it a defect of the plan rather than of the delivery, and gave the vault's delivery
+a third rider (R22, A28).
+
 ## 2. Requirements
 
 **The rule**
@@ -333,6 +347,30 @@ R21. The first release into `main` that mutation testing judges waits until ever
     reads unexplained 0 (the owner's ruling), so that its `mutation-verdict` and `mutation-web` jobs
     find no unexplained mutant in its merge diff.
 
+**The plan's test-only lines (the third rider, section 1.6)**
+
+R22. In the Rust class, a changed line is **test-only** when every token of code on it lies inside
+    an item that cargo-mutants 27.1.0 never mutates for an attribute: a `fn`, `mod`, `impl` or
+    `trait` whose outer attributes hold `#[cfg(test)]`, or an attribute whose path ends in `test`
+    (`#[test]`, `#[tokio::test]`), from its first attribute to the `}` or `;` that ends it.
+    SPEC-039's `plan` finds those items with the lexer that reads SPEC-039 R4's literals, so a
+    brace, `#[cfg(test)]` or `#[test]` inside a string, raw string, character literal or comment
+    opens and closes nothing, and it records each file's test-only lines apart from its code
+    lines and its blank or comment lines.
+    - A diff whose changed Rust code lines are all test-only reads the class `not-applicable` by
+      name, naming its test-only lines, and never VOID: it lists no mutant and plans no Rust work.
+    - A diff that also changes a production code line applies as before, and cargo-mutants' own
+      listing names that line's mutants: the tool lists none inside a test item.
+    - `shards` reads the listing step's empty output as an empty listing, because cargo-mutants
+      exits 0 before it prints when no mutant overlaps the diff; a missing listing stays VOID. So a
+      production line that no tool can mutate, a constant's, still applies and reads VOID without
+      a covering row (SPEC-039 R8): an empty listing never makes a class not-applicable.
+    - Every other shape stays production code: a `cfg` that joins `test` to another predicate
+      (`not(test)`, `any(test, ...)`), which the tool mutates; an inner `#![cfg(test)]`; a
+      `#[cfg(test)]` statement or expression; a `#[cfg(test)]` item of another kind; and a module
+      file that `#[cfg(test)] mod name;` declares. Each errs toward applying, which reads VOID
+      without a row, never toward passing.
+
 ## 3. Acceptance criteria
 
 | id | criterion | decided by |
@@ -364,6 +402,7 @@ R21. The first release into `main` that mutation testing judges waits until ever
 | A25 | every row reads unexplained 0 from one unscoped dispatch at the last delivery's head, and section 8 records the release rehearsal: that head, the merge's base, the run, and a listing whose every mutant was tested | `test_mutation_campaign.py` |
 | A26 | the same as A16, for the agent's row | `test_mutation_campaign.py` |
 | A27 | the same as A16, for the progression's row | `test_mutation_campaign.py` |
+| A28 | four planted fixtures, each red against the plan before R22 for its own reason: a test-only diff reads the Rust class not-applicable by name and never VOID; a mixed diff applies on its production line alone, and cargo-mutants' own listing of it names only that line's mutants; a production-only diff applies and the plan names its production lines, a brace, `#[cfg(test)]` and `#[test]` inside literals and comments and a `#[cfg(not(test))]` function all read as production; and cargo-mutants' empty `--in-diff` output is an empty listing, whose constant-only diff still reads VOID without a row | `test_mutation_verdict.py` |
 
 ```acceptance
 A1: python3 -m unittest discover -s scripts/tests -p test_mutation_equivalent.py -k every_record_carries_its_mutant_anchor_reason_evidence_and_issue
@@ -393,6 +432,7 @@ A24: python3 -m unittest discover -s scripts/tests -p test_mutation_campaign.py 
 A25: python3 -m unittest discover -s scripts/tests -p test_mutation_campaign.py -k every_row_and_the_release_rehearsal_read_no_unexplained_mutant
 A26: python3 -m unittest discover -s scripts/tests -p test_mutation_campaign.py -k the_agent_row_reads_no_unexplained_mutant
 A27: python3 -m unittest discover -s scripts/tests -p test_mutation_campaign.py -k the_progression_row_reads_no_unexplained_mutant
+A28: python3 -m unittest discover -s scripts/tests -p test_mutation_verdict.py -k a_test_only_src_diff_reads_not_applicable_and_a_production_line_still_applies
 ```
 
 - **A1 to A15** are the vault's machinery and riders. Each is committed red against a stub that
@@ -410,19 +450,24 @@ A27: python3 -m unittest discover -s scripts/tests -p test_mutation_campaign.py 
   battery dispatches its red-first lines name, and a verifier reads those runs.
 - **A25** is the last delivery's. Its evidence is the rehearsal it records in section 8 and the
   dispatch that rehearsal names.
+- **A28** is the vault's third rider (R22). Its one test plants four fixtures, each in a subtest of
+  its own, and each committed red against the plan as it stood at dd734e5, failing by assertion
+  for its own reason. The listings it plants are cargo-mutants 27.1.0's own `--list --json
+  --in-diff` output over the fixtures' diffs, which builds nothing: nothing at all for the
+  test-only and the constant-only diffs.
 
 ## 4. File manifest
 
 | file | delivery | change |
 |---|---|---|
 | `docs/specs/planned/SPEC-057-every-surviving-mutant-is-killed-or-recorded-equivalent-before-the-first-mutation-gated-release.md` | this plan | added; each delivery fills its own row of section 7 (R16), and the last moves it to `docs/specs/` (R19) |
-| `docs/decisions/ADR-070-the-equivalence-record-excuses-exactly-a-recorded-mutant.md` | this plan | added, `proposed`; the vault's delivery sets it `accepted` (R17) |
+| `docs/decisions/ADR-070-the-equivalence-record-excuses-exactly-a-recorded-mutant.md` | this plan | added, `proposed`; the vault's delivery sets it `accepted` (R17) and appends a dated note on its third rider (R22) |
 | `docs/decisions/ADR-057-mutation-testing-runs-on-the-diff-in-ci-and-weekly-on-dev.md` | this plan | changed: a note appended that points at ADR-070 |
 | `docs/schematics/mutation-equivalence-record.md` | this plan | added: the record's path to the verdict, one record across runs, the deliveries and the rehearsal |
 | `changelog.d/docs-mutant-campaign-057.md` | this plan | added |
-| `scripts/mutation-verdict.py` | vault | changed: the reader, the census, the binding and its failures (R4 to R10), the exclusions (R11), the battery's records and drafts (R12), `table` (R13), the squash subject (R18) |
+| `scripts/mutation-verdict.py` | vault | changed: the reader, the census, the binding and its failures (R4 to R10), the exclusions (R11), the battery's records and drafts (R12), `table` (R13), the squash subject (R18), and the plan's test-only lines and the listing's empty output (R22) |
 | `scripts/tests/test_mutation_equivalent.py` | vault | added: A1, A2 |
-| `scripts/tests/test_mutation_verdict.py` | vault | changed: A3 to A7, A9, A10, A13 |
+| `scripts/tests/test_mutation_verdict.py` | vault | changed: A3 to A7, A9, A10, A13, A28 |
 | `scripts/tests/test_mutation_workflows.py` | vault | changed: A8, A11, A12, A15; SPEC-039's A20 retired |
 | `scripts/tests/test_check_gate.py` | vault | changed: A14 |
 | `scripts/tests/test_mutation_campaign.py` | vault, then each delivery | added by the vault's delivery, with the reader of section 7 and A16; each later delivery adds its own row's test (A17 to A25) |
@@ -432,8 +477,8 @@ A27: python3 -m unittest discover -s scripts/tests -p test_mutation_campaign.py 
 | `.cargo/mutants.toml` | vault | changed: its comment names the record; it holds no exclusion key (R11, R17) |
 | `web/app/stryker.config.json` | vault | changed: its `_comment` names the record (R17) |
 | `docs/BUILDER-BRIEF.md` | vault | changed: the mutation section teaches the record (R17, A15) |
-| `docs/schematics/mutation-testing.md` | vault | changed: the verdict's step binds the record, and points at `docs/schematics/mutation-equivalence-record.md` |
-| `docs/specs/SPEC-039-every-change-proves-its-tests-kill-its-mutants.md` | vault | changed insert-only: A20 struck and set apart in a `retired` fence, and a dated amendment naming ADR-070 (R17) |
+| `docs/schematics/mutation-testing.md` | vault | changed: the verdict's step binds the record, and points at `docs/schematics/mutation-equivalence-record.md`; the plan's test-only arm and the listing's empty output (R22) |
+| `docs/specs/SPEC-039-every-change-proves-its-tests-kill-its-mutants.md` | vault | changed insert-only: A20 struck and set apart in a `retired` fence, and a dated amendment naming ADR-070 (R17); a second dated amendment, its section 11, for the plan's test-only lines and the listing's empty output (R22) |
 | `docs/red-first/SPEC-039.md` | vault | changed insert-only: A20's lines set apart in a `retired` fence |
 | `docs/specs/SPEC-056-every-pack-is-judged-on-the-box-and-nothing-of-the-hub-is-published.md` | vault | changed insert-only: section 7 lists SPEC-039's A20, since SPEC-056 A18 holds that table equal to every retirement the delivered SPECs hold (section 9) |
 | `crates/vault/tests/`, `crates/vault/src/` | vault | the killing tests (R2); the source only by a red-first fix (R3) |
@@ -501,6 +546,11 @@ A27: python3 -m unittest discover -s scripts/tests -p test_mutation_campaign.py 
   disjoint ids (R20), the collision ADR-070 D1 cites for one shared file. A delivery merges `dev`
   before its push, and a conflict resolves by keeping both sides' rows, which
   `mutation_rows.py prove` then checks again.
+- **A test item of a shape the plan does not read.** R22 reads four item kinds under two
+  attribute forms, the ones cargo-mutants' own visitor skips. A change inside any other shape,
+  such as a module file that `#[cfg(test)] mod name;` declares, applies, lists no mutant and reads
+  VOID without a row. That is loud, never a pass, and the reader is widened in the change that
+  first meets the shape, with a fixture of its own.
 
 ## 7. The campaign plan and its table
 
@@ -593,14 +643,27 @@ A delivery whose measurements prove this plan wrong records it here, dated, with
   A17 to A24 give the other crates' rows: each reads its row and its crate's fragment, is written by
   its row's delivery, and has no red-first line until that delivery's opening sweep. Section 3's
   table, its `acceptance` fence and its note on A16 to A24 name them; A25 already reads every row.
+- **2026-09-28, the vault's delivery: a third rider (R22, A28).** Section 1.6 records the
+  measurement: at dd734e5 the plan read 71 changed lines inside three `#[cfg(test)]` modules as
+  production code, and the pull request's `mutation-plan` and `mutation-verdict` jobs read VOID on
+  a diff that changes no production line. SPEC-039 R2 and R4 count every changed code line of a
+  `crates/*/src` file as production code, and nothing in this plan changed that. The architect
+  ruled the plan wrong rather than the delivery, and chose to fix the plan in this delivery
+  rather than move the three test modules into `crates/vault/tests/` or make the private items
+  they test public. ADR-070's note of this date records the decision and what it was chosen
+  against, and SPEC-039 section 11 records the amendment to that SPEC's plan. Section 1.6, R22,
+  A28, section 3's table, fence and notes, section 4's manifest, section 6's risks and section
+  10's references are edited in place.
 
 ## 10. References
 
-- SPEC-039 (sections 1, 3 and 8; R2, R3, R5, R8, R12, R18), ADR-057, ADR-070, ADR-069, ADR-016,
-  ADR-034; #221, #240, #245, #246.
+- SPEC-039 (sections 1, 3, 8 and 11; R2, R3, R4, R5, R8, R12, R18), ADR-057, ADR-070, ADR-069,
+  ADR-016, ADR-034; #221, #240, #245, #246.
 - cargo-mutants: filtering by name (https://mutants.rs/filter_mutants.html), skipping code
-  (https://mutants.rs/skip.html, https://mutants.rs/attrs.html) and the tests it runs for a mutant
-  in a workspace (https://mutants.rs/workspaces.html).
+  (https://mutants.rs/skip.html, https://mutants.rs/attrs.html), the tests it runs for a mutant
+  in a workspace (https://mutants.rs/workspaces.html), the functions it never mutates
+  (https://mutants.rs/mutants.html) and testing a diff (https://mutants.rs/in-diff.html); for
+  R22, 27.1.0's own `src/visit.rs` (`attrs_excluded`), `src/in_diff.rs` and `src/main.rs`.
 - StrykerJS: disabling mutants
   (https://github.com/stryker-mutator/stryker-js/blob/master/docs/disable-mutants.md) and its
   per-test coverage, which tells `Survived` from `NoCoverage`
