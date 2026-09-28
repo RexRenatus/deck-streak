@@ -1,7 +1,8 @@
-//! The persona engine's templates and roster: the public templates load with their four slots
-//! unfilled, a filled slot is refused, a roster outside the repository fills the slots, and an
-//! incomplete roster is refused; every template and roster rule refuses by name (SPEC-044 A1 to
-//! A3, A7).
+//! The persona engine's templates, roster and outputs: the public templates load with their four
+//! slots unfilled, a filled slot is refused, a roster outside the repository fills the slots, an
+//! incomplete roster is refused, the golden readings open with the frontmatter the engine writes,
+//! and a language output's band is the live band before the roster's; every template and roster
+//! rule refuses by name (SPEC-044 A1 to A3, A6 to A8).
 
 // An integration test is test code: its helpers panic on an unreadable fixture, and it prints the
 // examined count on purpose. clippy.toml's in-test allowances cover only `#[test]` bodies.
@@ -9,12 +10,14 @@
 
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 use deck_streak_agent::{
-    CefrBand, Duty, MemorySource, PersonaError, ROSTER, Roster, RosterPath, Slot, Slots, Subject,
-    SubjectKind, Template, TemplateId, TemplateSet, TopicKey,
+    CefrBand, Duty, Frontmatter, LiveBand, MemoryPort, MemoryPorts, MemoryReader, MemorySource,
+    PersonaError, ROSTER, Roster, RosterPath, Slot, Slots, Subject, SubjectKind, Template,
+    TemplateId, TemplateSet, TopicKey, resolve_band,
 };
-use deck_streak_kernel::{Environment, SettingsError};
+use deck_streak_kernel::{Environment, PortFuture, SettingsError};
 use serde_json::{Value, json};
 
 /// A synthetic professor, obviously invented; the bio carries `&` and `<` to show no escaping.
@@ -652,4 +655,143 @@ fn the_example_roster_reads_against_the_public_templates() {
         .persona(&topic("example/language-topic"), Duty::WritingTutor)
         .expect("the example binds its language topic");
     assert_eq!(mentor.band(), Some(CefrBand::A2));
+}
+
+/// A fake source's port: it answers one synthetic entry for any subject.
+struct FakeSource;
+
+impl MemoryPort for FakeSource {
+    fn read<'a>(&'a self, _subject: &'a Subject) -> PortFuture<'a, Vec<String>> {
+        Box::pin(async { Ok(vec!["a synthetic entry".to_owned()]) })
+    }
+}
+
+/// A fake live band's port: it answers its band for any subject.
+struct FakeBand(Option<CefrBand>);
+
+impl LiveBand for FakeBand {
+    fn band<'a>(&'a self, _subject: &'a Subject) -> PortFuture<'a, Option<CefrBand>> {
+        let band = self.0;
+        Box::pin(async move { Ok(band) })
+    }
+}
+
+#[tokio::test]
+async fn the_golden_readings_open_with_the_frontmatter_the_engine_writes() {
+    let directory = repo().join("agent").join("golden").join("daily-reading");
+    let mut goldens = Vec::new();
+    for kind in fs::read_dir(&directory).expect("the golden readings' directory") {
+        let kind = kind.expect("a directory entry").path();
+        for file in fs::read_dir(&kind).expect("a kind's directory") {
+            let path = file.expect("a directory entry").path();
+            if path.extension().is_some_and(|extension| extension == "md") {
+                goldens.push(path);
+            }
+        }
+    }
+    goldens.sort();
+    let goldens = examined("golden readings in agent/golden/daily-reading", goldens);
+    let names: Vec<String> = goldens
+        .iter()
+        .map(|path| {
+            path.strip_prefix(&directory)
+                .expect("a golden under its directory")
+                .to_string_lossy()
+                .into_owned()
+        })
+        .collect();
+    assert_eq!(
+        names,
+        [
+            "language/language-mentor-es.output.md",
+            "law/law-evidence.output.md"
+        ],
+        "each golden reading is held to the engine's frontmatter below"
+    );
+    let roster =
+        Roster::parse(&synthetic_roster().to_string(), public()).expect("the roster reads");
+    // The law reading: the engine read the leeches and the lapses wired for it.
+    let professor = roster
+        .persona(&topic("synthetic/law-topic"), Duty::DailyReading)
+        .expect("the professor");
+    let ports = MemoryPorts::none()
+        .wired(MemorySource::Leeches, Arc::new(FakeSource))
+        .wired(MemorySource::Lapses, Arc::new(FakeSource));
+    let mut reader = MemoryReader::new(&professor, &ports);
+    reader
+        .read_declared()
+        .await
+        .expect("the wired sources read");
+    let band = resolve_band(&professor, None)
+        .await
+        .expect("no band to read");
+    let law = Frontmatter::new(&professor, band, reader.reads());
+    // The language reading: no source wired, and the roster's band.
+    let mentor = roster
+        .persona(&topic("synthetic/language-topic"), Duty::DailyReading)
+        .expect("the mentor");
+    let none = MemoryPorts::none();
+    let mut empty = MemoryReader::new(&mentor, &none);
+    empty.read_declared().await.expect("nothing to read");
+    let band = resolve_band(&mentor, None)
+        .await
+        .expect("the roster's band");
+    let language = Frontmatter::new(&mentor, band, empty.reads());
+    for (path, frontmatter) in [(&goldens[1], law), (&goldens[0], language)] {
+        let golden = fs::read_to_string(path).expect("a golden reading");
+        let opening = format!("---\n{}", frontmatter.lines());
+        assert!(
+            golden.starts_with(&opening),
+            "{} opens with the engine's frontmatter:\n{opening}",
+            path.display()
+        );
+    }
+}
+
+#[tokio::test]
+async fn the_cefr_band_comes_from_the_live_band_before_the_roster() {
+    let roster =
+        Roster::parse(&synthetic_roster().to_string(), public()).expect("the roster reads");
+    let mentor = roster
+        .persona(&topic("synthetic/language-topic"), Duty::DailyReading)
+        .expect("the mentor");
+    let live = FakeBand(Some(CefrBand::B1));
+    let band = resolve_band(&mentor, Some(&live))
+        .await
+        .expect("the live band");
+    assert_eq!(
+        band,
+        Some(CefrBand::B1),
+        "the live band, when its port is wired and answers"
+    );
+    assert_eq!(
+        resolve_band(&mentor, None)
+            .await
+            .expect("the roster's band"),
+        Some(CefrBand::A2),
+        "the roster's band, when no port is wired"
+    );
+    assert_eq!(
+        resolve_band(&mentor, Some(&FakeBand(None)))
+            .await
+            .expect("the roster's band"),
+        Some(CefrBand::A2),
+        "the roster's band, when the port has none for the subject"
+    );
+    // The output names the band it used.
+    let lines = Frontmatter::new(&mentor, band, &[]).lines();
+    assert!(lines.contains("\ncefr: \"B1\"\nlang: \"es\"\n"), "{lines}");
+    // A law persona carries no band, whether a live port or a caller offers one.
+    let professor = roster
+        .persona(&topic("synthetic/law-topic"), Duty::DailyReading)
+        .expect("the professor");
+    assert_eq!(
+        resolve_band(&professor, Some(&live))
+            .await
+            .expect("no band"),
+        None
+    );
+    let law = Frontmatter::new(&professor, Some(CefrBand::B1), &[]).lines();
+    assert!(law.starts_with("schema: \"phx.persona.output.v1\"\npersona: \"law-evidence\"\n"));
+    assert!(!law.contains("cefr") && !law.contains("lang"), "{law}");
 }

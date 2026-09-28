@@ -20,10 +20,15 @@
 #![warn(missing_docs, clippy::all)]
 
 pub mod memory;
+pub mod output;
 pub mod persona;
 pub mod roster;
 
-pub use memory::MemorySource;
+pub use memory::{
+    LiveBand, MemoryError, MemoryPort, MemoryPorts, MemoryRead, MemoryReader, MemorySource, Recall,
+    resolve_band,
+};
+pub use output::{Frontmatter, OUTPUT_SCHEMA};
 pub use persona::{
     CefrBand, Duty, Persona, PersonaError, Slot, Slots, Subject, SubjectKind, TEMPLATE_SCHEMA,
     Template, TemplateId, TemplateSet,
