@@ -56,3 +56,9 @@ fn a_system_time_after_the_epoch_reads_as_its_milliseconds() {
     let time = UNIX_EPOCH + Duration::from_millis(1_234);
     assert_eq!(UtcMillis::from_system_time(time).epoch_millis(), 1_234);
 }
+
+#[test]
+fn a_time_before_the_epoch_reads_as_negative_milliseconds() {
+    let time = UNIX_EPOCH - Duration::from_millis(1_234);
+    assert_eq!(UtcMillis::from_system_time(time).epoch_millis(), -1_234);
+}
