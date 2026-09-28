@@ -7,7 +7,8 @@ red failed by assertion. The alert script's refusal (6e68804) turned A5 green, a
 refusal (2d3435c) turned A1, A3 and A6 green. A1, A3 and A5 were read red on 00e0bd0's tree. A6 was
 read red at 6e68804, whose `crates/` tree is 00e0bd0's byte for byte: the one commit between them
 changes only the alert script. A2 and A4 pin what the base already did, so each is disclosed.
-R6 and R3's exit came after, in three commits of their own, recorded below the commands.
+R6 and R3's exit came after, in three commits of their own, and R3's restart after those, in three
+more; each is recorded below the commands.
 
 ```red-first
 A1: red at 00e0bd0: "" was not refused as an empty sync-login: Ok(Secret(..)) (a credential of zero bytes loaded as an empty value)
@@ -15,7 +16,7 @@ A1: green at 2d3435c
 A2: not red: it pins what the refusal must leave as it was, a missing credential refused as Missing, an unreadable one as Unreadable, and a value of one character or more loaded less one trailing newline, all of which the base already did; row S06604 is its killing case, a refusal that reaches past an empty value
 A3: red at 00e0bd0: assertion `left == right` failed: left: Ok(()) right: Err(("the credential sync-login is empty in the credentials directory", "Empty { id: \"sync-login\" }"))
 A3: green at 2d3435c
-A4: not red: the three templates that load a credential beside the alert template already name OnFailure= the alert template and carry no `-` ExecStart= prefix, no SuccessExitStatus= naming 1 and no RestartMode=direct, and the alert template already counts no refusal a success (examined 4 service units); its six planted templates are its killing cases, one refused for each condition, one admitted, and one alert-shaped, naming no OnFailure=, that the alert template's check refuses for its SuccessExitStatus=1 alone
+A4: not red: the three templates that load a credential beside the alert template already name OnFailure= the alert template and carry no `-` ExecStart= prefix, no SuccessExitStatus= naming 1 and no RestartMode=direct, and the alert template already counts no refusal a success and restarts none (examined 4 service units); its eight planted templates are its killing cases, one refused for each condition, one admitted, and three alert-shaped, naming no OnFailure=, that the alert template's checks refuse each for what it breaks: SuccessExitStatus=1, RestartMode=direct beside Restart=on-failure, and RestartForceExitStatus=1
 A5: red at 00e0bd0: AssertionError: 0 != 1 : owner-user-id holding '' (the script exited 0: it went on to the journal and the request)
 A5: green at 6e68804
 A6: red at 00e0bd0: assertion `left == right` failed: anki-sync-username "" left: Ok(()) right: Err(MissingCredentials) (the scripted engine was asked to sync, and the run was recorded as a success)
@@ -24,8 +25,8 @@ A6: green at 2d3435c
 
 ## The commands
 
-Each criterion's fence line. A1 to A5 were read at c916846. A6 builds the sync engine, so it was
-read at 2d3435c, and its reading at the delivery's head is CI's `test` job:
+Each criterion's fence line. A1 to A3 were read at c916846, and A4 and A5 at 3f6dd77. A6 builds the
+sync engine, so it was read at 2d3435c, and its reading at the delivery's head is CI's `test` job:
 
 | id | command | result |
 |---|---|---|
@@ -56,6 +57,38 @@ R6, the criteria's text and §4), e099e2d adds the tests, and c916846 changes th
 |---|---|---|
 | `SuccessExitStatus=1` after `ExecStart=` | fails: `deck-streak-alert@.service: SuccessExitStatus=1 counts the refusal a success` | fails: `Items in the first set but not the second: '1'` |
 | a `-` prefix on `ExecStart=` | fails: `deck-streak-alert@.service: ExecStart=-… counts a failure as a success` | fails: `'-' unexpectedly found in '-'` |
+
+## R3's restart
+
+Three commits carry it, the SPEC first: 7d9e2e3 amends SPEC-066 (R3's third exit condition,
+`RestartMode=direct`, and its restart, the criteria's text, §3 and §7), 572bc1d adds the plants and
+A5's reads, and 3f6dd77 tells the alert template's conditions apart by name and writes its restart
+check.
+
+- **The plants were committed red.** At 572bc1d, A4's alert check still dropped every refusal whose
+  text named `OnFailure=`, and the restart check was a stub that refused nothing. A4 failed by
+  assertion where it reads its three alert-shaped plants: `alert-restarts.service` came back refused
+  for nothing where its `RestartMode=direct skips OnFailure=` line was expected, since that line
+  names `OnFailure=` too, and neither it nor `alert-forced.service` had its restart refused. 3f6dd77
+  turned A4 green, and it reads green there with its fence command.
+- **The additions are disclosed not red.** Each pins what the alert template already declares: no
+  `RestartMode=`, no `Restart=` and no `RestartForceExitStatus=`. A4 stays disclosed not red in the
+  fence, and A5's three reads passed when they were committed; A5 keeps the red and green lines of
+  its route. The killing cases were measured on `git archive` exports of 3f6dd77 and of 916c7dd, the
+  head before these commits, one plant at a time after `ExecStart=` in
+  `deploy/systemd/deck-streak-alert@.service`, the template restored by its sha256 after each. At
+  3f6dd77 the two plants of the table above fail A4 and A5 with the same lines.
+
+| plant | A4 at 3f6dd77 | A5 at 3f6dd77 | 916c7dd |
+|---|---|---|---|
+| `Restart=on-failure`, `RestartSec=30` and `RestartMode=direct` | fails: `deck-streak-alert@.service: RestartMode=direct skips the failed state and OnFailure=` | fails: `'direct' unexpectedly found in ['direct']` | A4 and A5 pass |
+| `RestartMode=direct` alone | fails: the same line | fails: the same | A4 and A5 pass |
+| `Restart=on-failure` and `RestartSec=30` | fails: `deck-streak-alert@.service: Restart=on-failure restarts the refusal` | fails: `Lists differ: ['on-failure'] != []` | A4 and A5 pass |
+| `RestartForceExitStatus=1` alone | fails: `deck-streak-alert@.service: RestartForceExitStatus=1 restarts the refusal` | fails: `Items in the first set but not the second: '1'` | A4 and A5 pass |
+
+A5 is the killer of rows S06605 to S06608, so each was proved again at 3f6dd77 with `python3
+scripts/mutation_rows.py prove --row <id>`: each KILLED, its killer passing without the mutant and
+failing with it, and the script restored byte for byte.
 
 ## Mutants of the changed code
 
