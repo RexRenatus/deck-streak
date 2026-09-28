@@ -33,6 +33,17 @@
       "retention": {"until": "account-deletion"},
       "export": true,
       "erase": "anonymise"
+    },
+    {
+      "id": "xp-ledger",
+      "data": "every XP grant: the study day it pays for, an opaque token of what it was for, the track, the amount, whether it pays once a study day or once ever, and when it was written",
+      "source": "derived",
+      "stores": ["xp_ledger.*"],
+      "purpose": "keeping the owner's XP total and level, and paying each award at most once",
+      "lawful_basis": "contract",
+      "retention": {"until": "account-deletion"},
+      "export": true,
+      "erase": "delete"
     }
   ],
   "sql": ["migrations/*.sql"],
