@@ -47,8 +47,8 @@ front end and a Python parity oracle, on GitHub-hosted runners (SPEC-039)?
 **D2, where cargo-mutants builds.**
 - `--in-place`, locally and in CI: chosen. Measured on `clock.rs`, with `-j 1` for the copy and
   serial in place: 17 s warm and 34 s cold in place, against 41 s for the default copy, which paid
-  a 21 s cold build in a temporary directory. A CI checkout is disposable and its `target/` is the restored cache; a local run
-  reuses the target the gate already built.
+  a 21 s cold build in a temporary directory. A CI checkout is disposable and its `target/` is the
+  restored cache; a local run reuses the target the gate already built.
 - The default copy into a temporary directory: rejected for DeckStreak, because each run pays a
   cold build, and with the engine that is minutes and a whole target of temporary disk. Its one
   advantage, never touching the working tree, is kept another way: runs are on a committed tree
@@ -145,9 +145,35 @@ front end and a Python parity oracle, on GitHub-hosted runners (SPEC-039)?
 - Vendoring the pack's probe and wiring its rows into the gate: rejected, by that decision. A check
   CI needs lives in this repository's own scripts, where its tests can hold it.
 
+**D11, the release's run, and its shards.**
+- A release pull request into `main` judged on its merge diff, in shards the plan sizes: chosen,
+  by the owner's directive ("deckstreak will need per merge diff mutation testing", "dev to main").
+  The plan lists the diff's mutants with cargo-mutants itself (`--list --json --in-diff`, which
+  builds nothing), projects each round-robin shard's time from the unmutated baseline and each
+  mutant's package cost, measured on the weekly battery's GitHub runners, and takes the fewest
+  shards whose slowest is projected within an hour, half the shard job's timeout. The matrix is the
+  plan's output, and the verdict counts every shard the plan promised, from `0` to `n-1`, as the
+  battery does (D7), and checks that the shards' reports hold every listed mutant once. One path
+  judges every diff: a pull request into `dev` whose diff fits one shard runs one.
+- The release read `not-applicable`: rejected by the directive, though each of its changes was
+  judged on its own pull request into `dev`. It is also the weaker proof: the diff that ships is
+  the merge of every change, and the weekly battery sweeps `dev` only once a week.
+- A fixed shard count, such as the battery's 32: rejected, because a release's diff and a pull
+  request's range from a handful of mutants to the whole repository's 2,154 (the release diff at
+  `dev` 32bf1e1 holds every one of them). A fixed count wastes runners on a small diff and can
+  overrun on a large one; the projection sizes each run to its own diff.
+- A separate release-only job pair, leaving `mutation-rust` unsharded for `dev`: rejected, because
+  two paths would judge one rule, the release's rows and retirement check would need a second
+  home, and a pull request into `dev` meets the same bound: at 124 s a mutant, about fifty of
+  `ingest`'s mutants fill the job's 120 minutes.
+- A shard count from the changed lines, without the tool: rejected, because mutants per line vary
+  by kind of code (a method named `new` gives none), and only the tool's own listing is exact.
+- Capping the shards, or the mutants a run examines: rejected; a run that needs more than the
+  256 jobs a matrix holds is refused with its projection, never capped, and the change is split.
+
 ## Decision Outcome
 
-Chosen: D1 to D10's first options. SPEC-039 R1 to R17 state them as requirements.
+Chosen: D1 to D11's first options. SPEC-039 R1 to R18 state them as requirements.
 
 ### Consequences
 
@@ -157,24 +183,33 @@ Chosen: D1 to D10's first options. SPEC-039 R1 to R17 state them as requirements
   by a row, and a row cannot leave while its target stays without the maintainer's approval.
 - Good, because DeckStreak's own census and configuration check judge the rows and the tools'
   configurations, and no vendored file is needed.
-- Bad, because a Rust pull request's CI time grows with its diff, most in the engine's crates
-  (about 3 minutes a mutant in `ingest`); `timeout-minutes` bounds it, and a diff that reaches the
-  bound shards the job the way the battery is sharded.
+- Good, because the release is judged on the diff that ships, and a diff of any size runs in
+  shards sized to it, each projected within half its job's timeout.
+- Bad, because a release's run costs runner time: the whole repository's mutants, about as many
+  runner-hours as the weekly battery. A newer push to the release pull request cancels the run it
+  supersedes, so only the head that merges pays in full.
+- Bad, because the projection's costs are means measured on GitHub's runners, and they go stale
+  as the tests grow. A shard that outruns its bound leaves a partial report or none, which the
+  verdict names VOID; the table is then measured again from the weekly battery's reports.
 - Bad, because StrykerJS 10.0.0 has two open defects that read a kill as a survivor
   (stryker-js #6144, #6150). A false survivor fails loudly and is read by a person.
 - Bad, because the weekly battery starts only after a release carries it to `main`.
 
 ### Confirmation
 
-SPEC-039's A1 to A33; the `mutation-rust` job's red run and green run on the delivery's pull
-request (R17); the census and the configuration check in the gate's `python` stage.
+SPEC-039's A1 to A37; the `mutation-rust` job's red run and green run on the delivery's pull
+request (R17); the census and the configuration check in the gate's `python` stage; the release's
+plan measured on a synthetic merge of `dev` into `main` (SPEC-039 section 8).
 
 ## What would make this wrong
 
 - A cargo-mutants release that mutates methods named `new` or constants: the rows that exist only
   because it did not would then duplicate generated mutants, and retire with the maintainer's
   approval (R11).
-- A pull request whose diff reaches the job's timeout: the job then shards.
+- A shard whose measured time nears its bound: the cost table is stale, or a crate's tests
+  outgrew it, and the table is measured again.
+- A cargo-mutants release that assigns round-robin shards differently: the verdict's partition
+  check then names a mutant in two shards or in none, and the plan follows the tool.
 
 ## More Information
 
