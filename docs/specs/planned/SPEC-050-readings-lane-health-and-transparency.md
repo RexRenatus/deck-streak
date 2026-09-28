@@ -10,10 +10,10 @@
 
 ## 1. The problem, measured
 
-- **The predecessor reported an absent owner as a failure.** Every night its lane refused on the
-  stale-snapshot gate, and by code path it sent a coalesced "topics failed tonight" message that
-  ignored quiet hours, plus a health page, although the refusal was correct and the owner was simply
-  not studying (the second-brain inventory, private). Its health verdict itself was sound
+- **The predecessor reported an absent owner as a failure.** When its lane refused on the
+  stale-snapshot gate, by code path it sent a coalesced failure message that ignored quiet hours,
+  plus a health page, although the refusal was correct and the owner was simply not studying (the
+  second-brain inventory, private). Its health verdict itself was sound
   (`preread_health.py:verdict`: not installed, dark, quiet, healthy, stale, armed and refusing, one
   page per state per day), and so was its triage of every could-not-tell reason
   (`undetermined_triage.py:classify_undetermined`) and its census of deck roots
