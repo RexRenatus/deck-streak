@@ -185,6 +185,8 @@ class WorkflowsAreHardened(unittest.TestCase):
                 "does not read: BASH",
                 "clone-in-a-custom-shell.yml:jobs.dynamic.defaults.run: runs a shell the checker "
                 "does not read: ${{ fromJSON(needs.build.outputs.defaults) }}",
+                "clone-in-a-custom-shell.yml:jobs.unread.defaults: runs a shell the checker does "
+                "not read: ${{ fromJSON(vars.PLANTED_DEFAULTS) }}",
                 f"clone-in-a-custom-shell.yml:defaults.run.shell: clones a repository: {custom}",
                 "clone-in-a-custom-shell.yml:jobs.build.defaults.run.shell: clones a repository: "
                 f"{custom}",

@@ -3,7 +3,7 @@ name: planted
 # A planted workflow (SPEC-034 A10): git configured from the environment, which can point git at
 # another repository or have it run a command. A variable git reads, in any case, set as an `env`
 # key of the workflow, a job, a job's container and a step, and named in a value: a container's
-# options and a script that exports one. The names are synthetic.
+# options and a script that exports one and reads it, named once. The names are synthetic.
 # scripts/tests/test_ci_workflows.py judges it; nothing runs it.
 on:
   pull_request:
@@ -31,4 +31,4 @@ jobs:
       - run: echo ready
         env:
           git_ssh_command: planted
-      - run: export GIT_ASKPASS=planted
+      - run: export GIT_ASKPASS=planted && echo "$GIT_ASKPASS"

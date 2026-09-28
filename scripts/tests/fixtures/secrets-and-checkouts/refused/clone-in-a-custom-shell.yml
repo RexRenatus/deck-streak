@@ -4,8 +4,9 @@ name: planted
 # runner runs as a command template with the script's path in place of `{0}`. A custom shell that
 # clones another repository, in the workflow's defaults, a job's defaults, a step and a step inside
 # a `parallel` block, and shells the checker cannot read: a keyword in another case, and a job's
-# `defaults.run` that is one `${{ }}` expression, which GitHub evaluates when the job runs.
-# The names are synthetic. scripts/tests/test_ci_workflows.py judges it; nothing runs it.
+# `defaults.run` and `defaults` that are each one `${{ }}` expression, which GitHub evaluates when
+# the job runs. The names are synthetic. scripts/tests/test_ci_workflows.py judges it; nothing
+# runs it.
 on:
   pull_request:
     branches: [dev]
@@ -35,5 +36,10 @@ jobs:
     runs-on: ubuntu-24.04
     defaults:
       run: ${{ fromJSON(needs.build.outputs.defaults) }}
+    steps:
+      - run: echo ready
+  unread:
+    runs-on: ubuntu-24.04
+    defaults: ${{ fromJSON(vars.PLANTED_DEFAULTS) }}
     steps:
       - run: echo ready

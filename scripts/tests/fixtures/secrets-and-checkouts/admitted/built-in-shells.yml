@@ -2,7 +2,8 @@ name: planted
 
 # A planted workflow (SPEC-034 A11): each of GitHub's built-in shell keywords, which the runner runs
 # with its own arguments, in the workflow's defaults, a job's defaults, a step and a step inside a
-# `parallel` block. scripts/tests/test_ci_workflows.py judges it; nothing runs it.
+# `parallel` block, and a shell omitted or empty, which is none: the runner falls back to the
+# defaults. scripts/tests/test_ci_workflows.py judges it; nothing runs it.
 on:
   pull_request:
     branches: [dev]
@@ -36,3 +37,12 @@ jobs:
       - parallel:
           - run: echo planted
             shell: bash
+  empty:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+    steps:
+      - run: echo planted
+        shell:
+      - run: echo planted
+        shell: ''
