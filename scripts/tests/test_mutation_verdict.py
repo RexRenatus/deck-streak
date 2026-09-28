@@ -1001,6 +1001,321 @@ class TheVerdictCountsEveryShard(unittest.TestCase):
         self.assertIn("VOID mutation-rust-shard-0: no report", usage.stdout)
 
 
+# --------------------------------------------------------------------------- test-only lines (SPEC-057 R22)
+
+SPANS = "crates/fix/src/spans.rs"
+#: Production code around three test items: a `#[cfg(test)]` function under a second attribute, a
+#: free function under `#[tokio::test(...)]`, whose path ends in `test`, and a `#[cfg(test)]` module
+#: under an attribute of its own, whose two `#[test]` functions hold a string that holds a brace.
+#: Before them a string, a raw string, a character and two comments hold a brace, `#[cfg(test)]` or
+#: `#[test]`, and a `#[cfg(not(test))]` function is production code, which cargo-mutants mutates.
+SPANS_TEXT = (
+    "//! Production code around three test items.\n"
+    "\n"
+    "/// Doubles.\n"
+    "pub fn double(x: i64) -> i64 {\n"
+    "    x * 2\n"
+    "}\n"
+    "\n"
+    "/// The hour bound: a constant, which no tool mutates.\n"
+    "pub const LAST_HOUR: u8 = 23;\n"
+    "\n"
+    "/// A brace, a test mark and a test attribute in a literal open nothing.\n"
+    "pub fn braces() -> usize {\n"
+    '    "}".len() + r#"{ #[cfg(test)] mod t {"#.len() + \'{\'.len_utf8()\n'
+    "}\n"
+    "\n"
+    "// #[cfg(test)] in a comment marks nothing, /* nor { this */\n"
+    "/* #[test] fn not_a_test() { */\n"
+    "pub fn after_comments(x: i64) -> i64 {\n"
+    "    x + 1\n"
+    "}\n"
+    "\n"
+    "/// Compiled in production: `not(test)` is no test mark.\n"
+    "#[cfg(not(test))]\n"
+    "pub fn only_in_production(x: i64) -> i64 {\n"
+    "    x - 1\n"
+    "}\n"
+    "\n"
+    "#[cfg(test)]\n"
+    "#[allow(dead_code)]\n"
+    "fn helper() -> i64 {\n"
+    "    double(21)\n"
+    "}\n"
+    "\n"
+    '#[tokio::test(flavor = "multi_thread")]\n'
+    "async fn a_free_test() {\n"
+    "    assert_eq!(helper(), 42);\n"
+    "}\n"
+    "\n"
+    "#[allow(clippy::unwrap_used)]\n"
+    "#[cfg(test)]\n"
+    "mod tests {\n"
+    "    use super::double;\n"
+    "\n"
+    "    #[test]\n"
+    "    fn two_doubles_to_four() {\n"
+    "        assert_eq!(double(2), 4);\n"
+    '        assert_eq!("}".len(), 1);\n'
+    "    }\n"
+    "\n"
+    "    #[test]\n"
+    "    fn three_doubles_to_six() {\n"
+    "        assert_eq!(double(3), 6);\n"
+    "    }\n"
+    "}\n"
+    "\n"
+    "/// After the tests: production again.\n"
+    "pub fn big(x: i64) -> bool {\n"
+    "    x > 3\n"
+    "}\n"
+)
+#: Lines 31, 36, 43 (a test of one line, added), 47 and 53: each inside a test item.
+TEST_ONLY_HEAD = (
+    SPANS_TEXT.replace("double(21)", "double(20) + 2")
+    .replace("assert_eq!(helper(), 42);", "assert_eq!(helper(), 6 * 7);")
+    .replace("assert_eq!(double(2), 4);", "assert_eq!(double(2), 2 + 2);")
+    .replace("assert_eq!(double(3), 6);", "assert_eq!(double(3), 3 * 2);")
+    .replace(
+        "    use super::double;\n",
+        "    use super::double;\n"
+        '    #[test] fn a_brace_closes_nothing() { assert_eq!("{".len(), 1); }\n',
+    )
+)
+#: Line 46, in the test module, and line 58, `big`'s comparison after it.
+MIXED_HEAD = SPANS_TEXT.replace("x > 3", "x > 4").replace(
+    "assert_eq!(double(2), 4);", "assert_eq!(double(2), 2 + 2);"
+)
+#: Lines 13, 19 and 25: after the literals, after the comments, and under `cfg(not(test))`.
+PRODUCTION_HEAD = (
+    SPANS_TEXT.replace("'{'.len_utf8()", "'}'.len_utf8()")
+    .replace("x + 1", "x + 2")
+    .replace("x - 1", "x - 2")
+)
+#: Line 9, a constant's: production code that cargo-mutants lists no mutant of.
+CONSTANT_HEAD = SPANS_TEXT.replace("LAST_HOUR: u8 = 23;", "LAST_HOUR: u8 = 24;")
+#: How the verdict names a test-only line.
+TEST_ONLY_WHY = (
+    "inside an item marked #[cfg(test)] or with a test attribute, which cargo-mutants never mutates"
+)
+
+
+def spans_listed(entries):
+    """cargo-mutants 27.1.0's `--list --json --in-diff` over one of SPANS_TEXT's diffs, as it listed
+    them in a workspace holding the fixture (a listing builds nothing): one entry for each
+    (line, column, end column, description, genre)."""
+    return [
+        {
+            "name": f"{SPANS}:{line}:{column}: {description}",
+            "package": "deck-streak-fix",
+            "file": SPANS,
+            "genre": genre,
+            "span": {
+                "start": {"line": line, "column": column},
+                "end": {"line": line, "column": end},
+            },
+        }
+        for line, column, end, description, genre in entries
+    ]
+
+
+#: The mixed diff's listing: `big`'s five mutants, all on line 58, none in the test module.
+MIXED_LISTED = spans_listed(
+    [
+        (58, 5, 10, "replace big -> bool with true", "FnValue"),
+        (58, 5, 10, "replace big -> bool with false", "FnValue"),
+        (58, 7, 8, "replace > with == in big", "BinaryOperator"),
+        (58, 7, 8, "replace > with < in big", "BinaryOperator"),
+        (58, 7, 8, "replace > with >= in big", "BinaryOperator"),
+    ]
+)
+#: The production-only diff's listing: sixteen mutants on lines 13, 19 and 25.
+PRODUCTION_LISTED = spans_listed(
+    [
+        (13, 5, 67, "replace braces -> usize with 0", "FnValue"),
+        (13, 5, 67, "replace braces -> usize with 1", "FnValue"),
+        (13, 51, 52, "replace + with - in braces", "BinaryOperator"),
+        (13, 51, 52, "replace + with * in braces", "BinaryOperator"),
+        (13, 15, 16, "replace + with - in braces", "BinaryOperator"),
+        (13, 15, 16, "replace + with * in braces", "BinaryOperator"),
+        (19, 5, 10, "replace after_comments -> i64 with 0", "FnValue"),
+        (19, 5, 10, "replace after_comments -> i64 with 1", "FnValue"),
+        (19, 5, 10, "replace after_comments -> i64 with -1", "FnValue"),
+        (19, 7, 8, "replace + with - in after_comments", "BinaryOperator"),
+        (19, 7, 8, "replace + with * in after_comments", "BinaryOperator"),
+        (25, 5, 10, "replace only_in_production -> i64 with 0", "FnValue"),
+        (25, 5, 10, "replace only_in_production -> i64 with 1", "FnValue"),
+        (25, 5, 10, "replace only_in_production -> i64 with -1", "FnValue"),
+        (25, 7, 8, "replace - with + in only_in_production", "BinaryOperator"),
+        (25, 7, 8, "replace - with / in only_in_production", "BinaryOperator"),
+    ]
+)
+
+
+def spans_plan(fixture):
+    """`plan` over the fixture's diff: (the lines it printed, the plan, SPANS's record in it)."""
+    done = fixture.verdict(
+        "plan",
+        "--base",
+        fixture.base,
+        "--head",
+        "HEAD",
+        "--root",
+        str(fixture.root),
+        "--out",
+        str(fixture.out),
+    )
+    if done.returncode != 0:
+        raise AssertionError(f"plan failed: {done.stdout}{done.stderr}")
+    plan = json.loads((fixture.out / "plan.json").read_text(encoding="utf-8"))
+    return done.stdout, plan, next(entry for entry in plan["files"] if entry["path"] == SPANS)
+
+
+def spans_shards(fixture, listing):
+    """`shards` over the fixture's plan and a listing file holding `listing`, the listing step's
+    output as bytes, or none at all: (the run, the plan it rewrote, the step outputs it wrote)."""
+    outputs = fixture.out / "github-output"
+    outputs.write_text("", encoding="utf-8")
+    listed = fixture.out / "listed.json"
+    listed.unlink(missing_ok=True)
+    if listing is not None:
+        listed.write_bytes(listing)
+    done = subprocess.run(
+        [
+            sys.executable,
+            str(VERDICT),
+            "shards",
+            "--plan",
+            str(fixture.out / "plan.json"),
+            "--listed",
+            str(listed),
+        ],
+        capture_output=True,
+        text=True,
+        env=dict(os.environ, PYTHONDONTWRITEBYTECODE="1", GITHUB_OUTPUT=str(outputs)),
+        timeout=300,
+        check=False,
+    )
+    plan = json.loads((fixture.out / "plan.json").read_text(encoding="utf-8"))
+    written = outputs.read_text(encoding="utf-8").splitlines()
+    return done, plan, dict(line.split("=", 1) for line in written if "=" in line)
+
+
+def spans_caught(names):
+    """A shard's outcomes.json in which cargo-mutants caught every one of `names`, in SPANS."""
+    report = shard_outcomes(names)
+    for outcome in report["outcomes"][1:]:
+        outcome["scenario"]["Mutant"]["file"] = SPANS
+    return report
+
+
+class ATestOnlySrcDiffReadsNotApplicable(unittest.TestCase):
+    def test_a_test_only_src_diff_reads_not_applicable_and_a_production_line_still_applies(self):
+        # Four planted fixtures, one subtest each, each red before R22 for its own reason. The
+        # listings are cargo-mutants 27.1.0's own over these diffs: nothing at all for the
+        # test-only and the constant-only diffs, which it exits 0 on before it lists.
+        with self.subTest("a test-only diff reads the rust class not-applicable by name"):
+            fixture = Fixture(self, files={SPANS: SPANS_TEXT})
+            fixture.head({SPANS: TEST_ONLY_HEAD})
+            printed, plan, spans = spans_plan(fixture)
+            self.assertFalse(
+                plan["classes"]["rust"]["applies"],
+                f"the rust class applies on test lines {spans['code']}",
+            )
+            self.assertEqual(spans.get("test"), [31, 36, 43, 47, 53])
+            self.assertEqual(spans["code"], [])
+            self.assertIn(
+                "mutation: plan: rust does not apply: not-applicable: no production code line "
+                f"changed; 5 test-only line(s) in 1 file(s), {TEST_ONLY_WHY}",
+                printed,
+            )
+            done = fixture.judge("rust")
+            self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+            self.assertIn(
+                f"not-applicable: {SPANS}: 5 changed line(s): 5 test-only, {TEST_ONLY_WHY}",
+                done.stdout,
+            )
+            self.assertIn("verdict: ok", done.stdout)
+            self.assertNotIn("VOID", done.stdout)
+        with self.subTest("a mixed diff applies, and its listing names its production line's"):
+            fixture = Fixture(self, files={SPANS: SPANS_TEXT})
+            fixture.head({SPANS: MIXED_HEAD})
+            printed, plan, spans = spans_plan(fixture)
+            self.assertTrue(plan["classes"]["rust"]["applies"])
+            self.assertEqual(spans["code"], [58], "a test module's line is no production code")
+            self.assertEqual(spans.get("test"), [46])
+            self.assertIn(
+                "mutation: plan: rust applies: 1 production code line(s) in 1 file(s); 1 test-only "
+                f"line(s) set apart, {TEST_ONLY_WHY}",
+                printed,
+            )
+            listing = json.dumps(MIXED_LISTED).encode()
+            done, plan, _ = spans_shards(fixture, listing)
+            self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+            names = [entry["name"] for entry in MIXED_LISTED]
+            self.assertEqual(plan["shards"]["shards"][0]["mutants"], names)
+            for entry in examined("mutants the mixed diff lists", MIXED_LISTED):
+                self.assertIn(entry["span"]["start"]["line"], spans["code"], entry["name"])
+            reports = shard_reports(fixture.out / "caught", {0: ("0", spans_caught(names))})
+            judged = fixture.judge("rust", "--shard-reports", reports)
+            self.assertEqual(judged.returncode, 0, judged.stdout + judged.stderr)
+            self.assertIn(f"{SPANS}: 1 changed code line(s)", judged.stdout)
+            self.assertIn(f"{SPANS}: 1 test-only line(s) set apart, {TEST_ONLY_WHY}", judged.stdout)
+            self.assertIn("examined 5 by cargo-mutants and 0 by rows", judged.stdout)
+        with self.subTest("a production-only diff applies, and the plan names its lines"):
+            fixture = Fixture(self, files={SPANS: SPANS_TEXT})
+            fixture.head({SPANS: PRODUCTION_HEAD})
+            printed, plan, spans = spans_plan(fixture)
+            self.assertIn(
+                "mutation: plan: rust applies: 3 production code line(s) in 1 file(s)\n", printed
+            )
+            self.assertTrue(plan["classes"]["rust"]["applies"])
+            self.assertEqual(spans["code"], [13, 19, 25])
+            self.assertEqual(spans.get("test"), [])
+            done, plan, outputs = spans_shards(fixture, json.dumps(PRODUCTION_LISTED).encode())
+            self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+            names = [entry["name"] for entry in PRODUCTION_LISTED]
+            self.assertEqual(plan["shards"]["shards"][0]["mutants"], names)
+            self.assertEqual(json.loads(outputs.get("matrix", "null")), [0])
+            for entry in examined("mutants the production-only diff lists", PRODUCTION_LISTED):
+                self.assertIn(entry["span"]["start"]["line"], spans["code"], entry["name"])
+            reports = shard_reports(fixture.out / "caught", {0: ("0", spans_caught(names))})
+            judged = fixture.judge("rust", "--shard-reports", reports)
+            self.assertEqual(judged.returncode, 0, judged.stdout + judged.stderr)
+            self.assertIn(f"{SPANS}: 3 changed code line(s)", judged.stdout)
+            self.assertIn("examined 16 by cargo-mutants and 0 by rows", judged.stdout)
+        with self.subTest("the empty --in-diff output is an empty listing, never a missing one"):
+            fixture = Fixture(self, files={SPANS: SPANS_TEXT})
+            fixture.head({SPANS: CONSTANT_HEAD})
+            printed, plan, spans = spans_plan(fixture)
+            self.assertTrue(plan["classes"]["rust"]["applies"])
+            self.assertEqual(spans["code"], [9])
+            done, plan, outputs = spans_shards(fixture, b"")
+            self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+            self.assertIn("mutation: shards: the listing is empty", done.stdout)
+            self.assertEqual(plan["shards"]["count"], 1)
+            self.assertEqual(plan["shards"]["shards"][0]["mutants"], [])
+            self.assertEqual(json.loads(outputs.get("matrix", "null")), [0])
+            # The constant's line examined nothing, and no row covers it: VOID, never passing.
+            nothing = shard_reports(fixture.out / "nothing", {0: ("0", None)})
+            void = fixture.judge("rust", "--shard-reports", nothing)
+            self.assertEqual(void.returncode, 3, void.stdout + void.stderr)
+            self.assertIn(
+                "mutation-rust-shard-0: no mutant listed, and cargo-mutants reports none",
+                void.stdout,
+            )
+            self.assertIn(
+                f"unexamined: {SPANS}: no mutant and no row covers its changed lines", void.stdout
+            )
+            self.assertIn("VOID production code changed and nothing was examined", void.stdout)
+            # A listing that is missing, rather than empty, is still VOID.
+            fixture.plan()
+            missing, unsharded, _ = spans_shards(fixture, None)
+            self.assertEqual(missing.returncode, 3, missing.stdout + missing.stderr)
+            self.assertIn("holds no cargo-mutants listing", missing.stdout)
+            self.assertIsNone(unsharded.get("shards"))
+
+
 # --------------------------------------------------------------------------- the record (SPEC-057)
 
 FRAGMENTS = "scripts/mutation-equivalent.d"
