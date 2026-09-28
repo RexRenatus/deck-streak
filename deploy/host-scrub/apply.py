@@ -7,10 +7,15 @@ given --apply (SPEC-060 R5, R6, R7, R9; ADR-060).
 Before its first deletion, the apply checks everything below and refuses the whole run at the
 first failure, naming the item and the reason:
 
-- the list's own digest matches its content, so the list is the one the owner was shown;
+- every health check of RULES is a read command of the inventory's allow list;
+- the list's own digest matches its content, so the list is the one the owner was shown, and RULES
+  are the rules the inventory read, which the list names by their digest;
 - there is an approval, and it carries the list's digest, the approver, the date and item ids the
   list holds;
-- it names a snapshot of the boot disk, with the instant it was taken, after the inventory;
+- it names a snapshot of the boot disk, with the instant it was taken, after the inventory and not
+  later than the apply's own clock;
+- each approved item's path is absolute and canonical, the only form the apply compares or
+  deletes;
 - no approved item lies under a protected path of RULES, or holds one, whatever the approval says;
 - no approved item is reached through a symbolic link;
 - each approved item's digest, computed again now, equals the listed one;
@@ -20,12 +25,16 @@ first failure, naming the item and the reason:
 Without --apply it stops there, deletes nothing, and logs what would go. With --apply it reads
 every health check of RULES, deletes each approved item (a file or a link is unlinked, never its
 target; a directory is removed without following a link inside it; a package is removed with
-`dpkg --remove`, which keeps its configuration files), and reads the health checks again. A check
-red after the apply stops the scrub, and the log says which checks turned.
+`dpkg --remove`, which keeps its configuration files), and reads the health checks again. Each
+item is read again immediately before its deletion, through directories opened without following
+a link, and goes only while it is what its checks read; otherwise the apply stops there. A check
+red after the apply stops the scrub, and the log says which checks turned. A JSON file that holds
+a key twice is refused, and a directory item needs Python 3.11 or later.
 
 The log is private and lies outside this repository (R8). Exit 0 when done, or after a clean dry
-run; 1 when refused, with nothing deleted; 2 on a usage error; 3 when a deletion failed part way,
-the log naming what went; 4 when a health check is red after the apply.
+run; 1 when refused, with nothing deleted; 2 on a usage error; 3 when the apply stopped part way,
+because a deletion failed or an item changed after its checks, the log naming what went; 4 when
+a health check is red after the apply.
 """
 
 from __future__ import annotations

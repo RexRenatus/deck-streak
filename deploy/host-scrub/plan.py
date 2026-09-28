@@ -8,9 +8,9 @@ R3, R4, R10; ADR-060).
 The candidates are the stale copies of each backup family and the loose files each rule matched,
 as the inventory recorded them; the virtual environments and worktrees under a rule's directories
 that no loaded unit's commands or working directory name; and the installed packages the owner
-lists. Nothing under a protected path, or holding one, is ever listed, and neither is an item
-inside another listed item. The inventory already kept back the newest copies a service's own
-rotation would make again.
+lists. Nothing under a protected path, or holding one, is ever listed, and neither is a path
+that is not absolute and canonical, nor an item inside another listed item. The inventory already
+kept back the newest copies a service's own rotation would make again.
 
 A file's digest is SHA-256 over `path NUL size NUL mtime_ns NUL mode NUL content`, where `mode`
 is `st_mode` in octal and `content` the hex SHA-256 of its bytes (of its target, for a symbolic

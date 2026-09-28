@@ -8,8 +8,8 @@
 - **Waits for:** owner gate 2 (#161) for the inventory's first run, the snapshot and every deletion.
   Nothing here needs a device key (ADR-054).
 - **Status:** judged: delivered with its tests, `docs/red-first/SPEC-060.md`, the runbook and the
-  tools' schematic. The delivery made R1, R4, R6, R7 and the manifest exact where the code decided
-  them (§8).
+  tools' schematic. The delivery made R1, R4, R6, R7, R9 and the manifest exact where the code
+  decided them, and its review's fix round added A9 and the hand-proved rows (§8).
 
 ## 1. The problem, measured
 
@@ -92,12 +92,13 @@ R10. The only classes W2 deletes are the owner's: backups older than their reten
 |---|---|---|
 | A1 | the inventory runs only the commands of its read-only allow list, and a planted changing command is refused before it runs (examined count reported) | `test_host_scrub.py` |
 | A2 | the inventory of a synthetic host root reports the free space, each root's sizes with a hard-linked file counted once, the stale backup copies, the virtual environments and the worktrees (examined count reported) | `test_host_scrub.py` |
-| A3 | the plan lists only the items its rules select, each with its reason and digest, and leaves the synthetic tree byte for byte as it was | `test_host_scrub.py` |
-| A4 | apply with no approval, or an approval that does not carry the list's digest, deletes nothing and names the reason | `test_host_scrub.py` |
-| A5 | apply deletes exactly the approved items when every digest matches, and deletes nothing when one approved item changed after the list was made | `test_host_scrub.py` |
-| A6 | apply refuses an approval that names no snapshot, or a snapshot taken before the inventory | `test_host_scrub.py` |
-| A7 | apply refuses an approved item under a protected path of a synthetic list, and never follows a symbolic link out of an item | `test_host_scrub.py` |
+| A3 | the plan lists only the items its rules select, each with its reason and digest, never a path it does not read canonically, and leaves the synthetic tree byte for byte as it was | `test_host_scrub.py` |
+| A4 | apply with no approval, an approval that does not carry the list's digest, or a list that holds a key twice, deletes nothing and names the reason | `test_host_scrub.py` |
+| A5 | apply deletes exactly the approved items when every digest matches, and deletes nothing when one approved item changed after the list was made: a file changed at the same size and modification time, or an entry added inside an approved directory; an item that changes after the apply's checks is not deleted | `test_host_scrub.py` |
+| A6 | apply refuses an approval that names no snapshot, a snapshot taken at or before the inventory's instant, compared as instants whatever offset each is written in, or one dated later than the apply's own clock | `test_host_scrub.py` |
+| A7 | apply refuses an approved item under or holding a protected path however the item's path is written or reached, and never follows a symbolic link out of an item, including an item that is itself a link: the link goes, the target stays | `test_host_scrub.py` |
 | A8 | no host-scrub file names a private value, and a planted one is refused by the public scrub | `test_host_scrub.py`; `scripts/public-scrub.py` |
+| A9 | apply runs as health checks only the read commands of the inventory's allow list, from the rules the inventory read: a changing command given as a health check, or other rules, are refused before any command runs, with 0 package-tool calls | `test_host_scrub.py` |
 
 ```acceptance
 A1: python3 -m unittest discover -s scripts/tests -p test_host_scrub.py -k test_the_inventory_runs_only_its_read_only_allow_list
@@ -108,12 +109,16 @@ A5: python3 -m unittest discover -s scripts/tests -p test_host_scrub.py -k test_
 A6: python3 -m unittest discover -s scripts/tests -p test_host_scrub.py -k test_apply_refuses_an_approval_without_a_later_snapshot
 A7: python3 -m unittest discover -s scripts/tests -p test_host_scrub.py -k test_apply_refuses_protected_paths_and_symbolic_links_out
 A8: python3 -m unittest discover -s scripts/tests -p test_host_scrub.py -k test_no_host_scrub_file_names_a_private_value
+A9: python3 -m unittest discover -s scripts/tests -p test_host_scrub.py -k test_apply_runs_only_read_health_checks_from_the_listed_rules
 ```
 
 A1 runs the inventory with stub commands first on its `PATH`, each recording its argument vector
-into a `TemporaryDirectory`. A2 to A7 build a synthetic host tree in a `TemporaryDirectory` at run
-time, and A7 a synthetic protected-path list; no fixture holds a real path, size or name. A8 writes
-its planted value at run time, as SPEC-032's A6 does, so no private literal is ever committed.
+into a `TemporaryDirectory`. A2 to A7 and A9 build a synthetic host tree in a `TemporaryDirectory`
+at run time, and A7 a synthetic protected-path list; no fixture holds a real path, size or name.
+A5 and A7 change the synthetic tree while the apply reads a health check's address, which the test
+serves on the loopback, and A4, A6, A7 and A9 write lists the plan did not make, each with its own
+digest taken again, so the apply's own checks are what refuse them. A8 writes its planted value at
+run time, as SPEC-032's A6 does, so no private literal is ever committed.
 
 ## 4. The owner's gate and the evidence it records
 
@@ -138,7 +143,8 @@ only.
 | `deploy/host-scrub/rules.example.json` | deploy | added: neutral example rules and protected paths |
 | `docs/runbooks/host-scrub.md` | docs | added: the runbook, inventory to apply, and the rollback |
 | `docs/schematics/host-scrub.md` | docs | added at delivery: the tools' data flow and the apply's refusals (§8) |
-| `scripts/tests/test_host_scrub.py` | repo | added: A1 to A8 |
+| `scripts/tests/test_host_scrub.py` | repo | added: A1 to A9 |
+| `scripts/mutation-rows.d/S06000-S06099.json` | repo | added in the fix round: the hand-proved rows of the checks that stand before a deletion (§8) |
 | `docs/specs/SPEC-060-host-inventory-backup-and-the-scrub-list.md` | docs | moved from `docs/specs/planned/` |
 | `docs/decisions/ADR-060-the-host-scrub-is-a-runbook-and-approval-gated-tools-behind-a-disk-snapshot.md` | docs | changed: accepted, with the decisions made at delivery |
 | `docs/red-first/SPEC-060.md` | docs | added |
@@ -156,6 +162,12 @@ only.
 
 - **An item changes between the list and the apply.** The digest is computed again at apply time,
   and one changed item refuses the whole run (A5).
+- **An item, or a directory above it, changes between the apply's checks and its deletion.** The
+  health checks are read between the two, so the window holds every health read. Each deletion
+  reads its item again immediately before it deletes, through directories opened one at a time
+  without following a link, and deletes it only while its device, inode and modification time are
+  the ones its checks read; otherwise the apply stops there, and the log names what went (A5,
+  A7).
 - **A deletion breaks another service.** The protected-path list refuses that service's paths
   whatever the approval says (A7), the health-check list is read after each apply (R9), and the
   snapshot restores any item.
@@ -217,3 +229,25 @@ reasons are these, and ADR-060 records each decision with what it was chosen aga
   `rotation_keeps`, and none of that many newest copies is ever listed, whatever the retention says.
 - **§3: two tests beyond the criteria.** `test_no_tool_writes_its_output_inside_the_repository` pins
   R8's refusal, and `test_a_health_check_red_after_an_apply_stops_the_scrub` pins R9's stop.
+
+The delivery's review (#289) asked for a fix round, which amended these statements too:
+
+- **R6, R7: a path read canonically, and nothing deleted that was not checked.** The tools refuse
+  a path that is not absolute and canonical: in the rules by the path's key, never its value; in
+  the plan, which leaves such a candidate out and says why; and in the apply, by the item's id.
+  Each deletion reads its item again, as §7 says. A5, A6 and A7 name the cases the review's plants
+  separated, and the red-first record's fix round lists them.
+- **R6, R9: the apply reads the rules the inventory read.** It refuses rules whose digest is not the
+  one the list names, as the plan does, and it runs as health checks only the read commands of the
+  inventory's allow list; the changing commands it admits run for a listed package's item alone
+  (A9, which is new).
+- **R5, R6: a snapshot is not dated after the apply's own clock**, and a list, an approval or rules
+  that hold a JSON key twice are refused (A4, A6).
+- **R2, R9: an `is-active` read names its units after `--`**, and a unit's name begins with a letter
+  or a digit.
+- **R6: the Python the apply needs.** A directory item is removed through its parent's descriptor,
+  which Python's `shutil.rmtree` takes from 3.11, so the apply refuses a directory item under an
+  older Python; the runbook names 3.11 as the tools' floor.
+- **§5: the rows.** No mutation tool generates mutants of the Python under `deploy/`, so
+  `scripts/mutation-rows.d/S06000-S06099.json` holds hand-proved rows (SPEC-039) for the checks
+  that stand before a deletion, each proved with `scripts/mutation_rows.py prove`.

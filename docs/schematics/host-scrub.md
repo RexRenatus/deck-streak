@@ -42,22 +42,30 @@ inventory and the plan write their one output each, and the apply writes only it
 ## 2. The apply's checks, in order
 
 Every check below runs before the first deletion. One failure refuses the whole run, names the item
-and the reason, and deletes nothing (R6, R7).
+and the reason, and deletes nothing (R6, R7). The rules are the ones the inventory read, bound by
+their digest, and the health checks run through the inventory's read allow list alone; the changing
+commands the apply admits run only for a listed package's item.
 
 ```mermaid
 flowchart TD
-  start(["apply.py LIST APPROVAL"]) --> selfd{"the list's own digest recomputed"}
-  selfd -->|"differs"| refuse(["refused: nothing deleted, the reason named"])
-  selfd --> present{"an approval is there"}
+  start(["apply.py LIST APPROVAL"]) --> reads{"every health check a read command of the allow list"}
+  reads -->|"no"| refuse(["refused: nothing deleted, the reason named"])
+  reads --> selfd{"the list's own digest recomputed"}
+  selfd -->|"differs"| refuse
+  selfd --> bound{"the rules are the ones the inventory read (the list names their digest)"}
+  bound -->|"no"| refuse
+  bound --> present{"an approval is there"}
   present -->|"no"| refuse
   present --> carries{"it carries the list's digest"}
   carries -->|"no"| refuse
   carries --> names{"approver, date, and item ids the list holds"}
   names -->|"no"| refuse
-  names --> snapshot{"a snapshot, taken after the inventory"}
-  snapshot -->|"none, or taken before"| refuse
+  names --> snapshot{"a snapshot, taken after the inventory and not dated after the apply's clock"}
+  snapshot -->|"none, taken before, or dated later"| refuse
   snapshot --> each["each approved item"]
-  each --> prot{"under a protected path, or holding one"}
+  each --> canon{"its path absolute and canonical"}
+  canon -->|"no: named by its id"| refuse
+  canon --> prot{"under a protected path, or holding one"}
   prot -->|"yes"| refuse
   prot --> link{"reached through a symbolic link"}
   link -->|"yes"| refuse
@@ -67,11 +75,17 @@ flowchart TD
   pkg -->|"no"| refuse
   pkg --> mode{"--apply given"}
   mode -->|"no"| dry(["dry run: what would go, and the bytes, in the log"])
-  mode -->|"yes"| before["health checks read"] --> del["delete each item: a file or link is unlinked, a directory removed without following a link, a package removed"]
-  del --> after["health checks read again"]
+  mode -->|"yes"| before["health checks read"] --> again{"each item read again, through directories opened without following a link: still what its checks read"}
+  again -->|"no"| stopped(["stopped part way: the log names what went"])
+  again -->|"yes"| del["delete it: a file or link is unlinked, a directory removed without following a link, a package removed"]
+  del -->|"the next item"| again
+  del -->|"after the last"| after["health checks read again"]
   after -->|"any red"| stop(["the scrub stops: the log names each check, and which turned"])
   after -->|"all green"| done(["done: the log holds every deletion and its bytes"])
 ```
+
+The health read before the first deletion lies between the checks and the deletions, so each
+deletion reads its item again immediately before it deletes (SPEC-060 §7).
 
 ## 3. The digest
 

@@ -19,6 +19,9 @@ refusals.
 | the rules, the inventory, each list, each approval, each apply log | the directory the private rail names, never this repository: each tool refuses an output inside it (R8) |
 | the backup | one snapshot of the host's boot disk, taken from the maintainer's machine (R5) |
 
+The tools are standard-library Python and need Python 3.11 or later: the apply removes a directory
+item through its parent's directory descriptor, which `shutil.rmtree` takes from 3.11.
+
 The rules hold the roots to read (a root marked `sizes_only` gives its totals and no entries), the
 rules by class, the protected paths and the health checks. A rule has a `name`, a `class` and a
 `reason`:
@@ -37,8 +40,11 @@ never a pattern: it protects everything under it, and the tools refuse a pattern
 a path would protect nothing. Nothing under a protected path, or holding one, is ever listed, and
 the apply refuses it whatever an approval says.
 A health check is `{"id", "argv"}`, a read command of the inventory's allow list such as
-`systemctl is-active --quiet <unit>`, or `{"id", "url"}`, one GET that is green on a 2xx answer;
-the private rail's health-check list covers each service on the host (R9).
+`systemctl is-active --quiet -- <unit>` (the units after `--`, each name beginning with a letter or
+a digit), or `{"id", "url"}`, one GET that is green on a 2xx answer; the private rail's
+health-check list covers each service on the host (R9). Every path the rules hold is absolute and
+canonical, or the tools refuse the rules and name the path's key; a rules file, list or approval
+that holds a JSON key twice is refused too.
 
 ## When
 
@@ -131,20 +137,24 @@ sudo nice -n 19 ionice -c3 python3 apply.py list.json approval.json --rules rule
 
 Without `--apply` nothing is deleted: the run checks everything and logs what would go. Every
 check stands before the first deletion, and one failure refuses the whole run, naming the item and
-the reason: a list whose digest does not match its content; no approval, or one without the list's
-digest, the approver, the date or ids the list holds; no snapshot, or one taken before the
-inventory; an item under a protected path or holding one; an item reached through a symbolic link;
-an item whose digest changed since the list was made; a package that `dpkg --dry-run --remove`
-would not remove alone. A file or link is unlinked, never its target; a directory is removed
-without following a link inside it; a package is removed with `dpkg --remove`, which keeps its
-configuration files.
+the reason: a health check that is not a read command of the allow list; a list whose digest does
+not match its content, or rules other than the ones the inventory read, which the list names; no
+approval, or one without the list's digest, the approver, the date or ids the list holds; no
+snapshot, one taken at or before the inventory, or one dated later than the apply's own clock; an
+item whose path the apply does not read canonically (named by its id); an item under a protected
+path or holding one; an item reached through a symbolic link; an item whose digest changed since
+the list was made; a package that `dpkg --dry-run --remove` would not remove alone. A file or link
+is unlinked, never its target; a directory is removed without following a link inside it; a
+package is removed with `dpkg --remove`, which keeps its configuration files. Each item is read
+again immediately before its deletion, through directories opened without following a link, and
+goes only while it is what its checks read: the apply deletes nothing it did not check.
 
 | exit | meaning | what to do |
 |---|---|---|
 | 0 | done, or a clean dry run | read the log; the health checks and `df -h /` again |
 | 1 | refused: nothing was deleted | the reason names the item; make a new list if the host changed |
-| 2 | a usage error | a file is missing, malformed, or inside this repository |
-| 3 | a deletion failed part way | the log names what went and what failed; stop, and restore if a service needs it |
+| 2 | a usage error | a file is missing, malformed (a JSON key held twice included), or inside this repository; or the rules hold a path that is not absolute and canonical |
+| 3 | the apply stopped part way: a deletion failed, or an item changed after its checks | the log names what went and what stopped it; stop, and restore if a service needs it |
 | 4 | a health check is red after the apply | the scrub stops: the log's `turned` names each check that was green before |
 
 Copy the log back to the private directory, and remove the temporary directory.

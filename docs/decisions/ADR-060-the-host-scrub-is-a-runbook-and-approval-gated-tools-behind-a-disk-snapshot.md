@@ -85,6 +85,38 @@ The delivery decided what this record left open, each against its alternatives:
   copies the service keeps and makes again, and none of them is listed. Chosen against leaving that
   family out of the rules altogether, which would also hide the copies beyond the rotation.
 
+### Decided in the fix round (SPEC-060 §8)
+
+The delivery's review (#289) asked for a fix round, which decided these, each against its
+alternatives:
+
+- **The apply reads the rules the inventory read.** It refuses rules whose digest is not the one
+  the list names, as the plan does, and it checks and runs its health checks through the
+  inventory's read allow list alone; the changing commands it admits run only for a listed
+  package's item. Chosen against rules read unbound at run time, because the owner approves a list
+  made under one set of rules, and rules edited after that approval would change what the apply
+  protects and what it runs while the list still matched; and against one allow list shared by the
+  health checks and a package's removal, which would admit a changing command where a read belongs.
+- **A path is refused unless it is absolute and canonical.** The rules name the refused path by its
+  key, the apply by the item's id, and the plan leaves such a candidate out. Chosen against
+  normalising a path before comparing it, since a spelling a tool normalises and the file the system
+  reaches can differ, so a normalised comparison could protect one file and delete another.
+- **Each deletion reads its item again, through directory descriptors.** Immediately before it
+  deletes, the apply opens the directories above the item one at a time without following a link,
+  and deletes through the last of them only while the item's device, inode and modification time are
+  the ones its checks read; otherwise it stops. Chosen against deleting by path after checks made
+  earlier, since the health read between them leaves a window in which a path can come to reach
+  something else, and against checking again by path alone, which narrows that window without
+  closing it.
+- **A snapshot dated later than the apply's own clock is refused**, since it cannot have been taken
+  yet. Chosen against trusting the approval's instant once it was ordered after the inventory's.
+- **A JSON file that holds a key twice is refused.** Chosen against Python's reading, which keeps the
+  last of the two, because another reader may keep the first, so the list the owner reads and the
+  list the apply reads could differ while their digests agree.
+- **An `is-active` read names its units after `--`, and a unit's name begins with a letter or a
+  digit.** Chosen against admitting every name the unit pattern allowed, which left the read to
+  depend on how the command parses its words.
+
 ### Consequences
 
 - Good, because the owner approves bytes, not descriptions, and a changed host is caught before the
@@ -92,13 +124,16 @@ The delivery decided what this record left open, each against its alternatives:
 - Good, because the snapshot restores any item, or the whole disk, without room on the host.
 - Bad, because the snapshot is billed while it is kept; the runbook keeps it until the owner releases
   it after W2's first week.
+- Bad, because a directory item needs Python 3.11 or later, whose `shutil.rmtree` takes a directory
+  descriptor; the runbook names that floor.
 - Bad, because the digest reads each candidate's content once; the tools run niced,
   off the predecessor's schedule as SPEC-027 R2 defines it, its sync minutes included, off every
   reserved slot, and off DeckStreak's own job slots.
 
 ### Confirmation
 
-SPEC-060's acceptance tests (A1 to A8); the gate-2 evidence E1 to E4, recorded privately.
+SPEC-060's acceptance tests (A1 to A9) and its hand-proved mutation rows
+(`scripts/mutation-rows.d/S06000-S06099.json`); the gate-2 evidence E1 to E4, recorded privately.
 
 ## What would make this wrong
 
