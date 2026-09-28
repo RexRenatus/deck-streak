@@ -6,16 +6,17 @@
   and pause after two days without study), ADR-054 (an absent AI route is a state of its own, never
   a failure), and ADR-045 (the order of the gates, the pause's source, the private taxonomy and the
   closed states).
-- **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
-  `docs/specs/` with its tests and `docs/red-first/SPEC-045.md` (ADR-016).
+- **Status:** judged: delivered with its tests, `docs/red-first/SPEC-045.md`, and three goldens
+  (`resolve_day_sets`, `law_subject`, `digest_for_card_ids`) generated at the predecessor's
+  `27ee2bc`. The delivery made §1, R3 to R9, R12 and the manifest exact where the code decided them
+  (§7).
 
 ## 1. The problem, measured
 
-- **No reading has ever reached the owner.** The predecessor's lane fired every night and refused
-  every topic on a freshness gate that judged the collection file's age, while its own sync ledger
-  showed a healthy rail (ADR-019; the second-brain inventory, private). The owner decided that a
-  reading generates whenever the last sync succeeded, and that after two or more days without study
-  the daily readings pause.
+- **A freshness gate refuses a healthy rail.** A gate that judges the collection file's age refuses
+  every topic whenever the file has not changed, even when the last sync succeeded, so a day without
+  study reads as a broken rail (ADR-019). The owner decided that a reading generates whenever the
+  last sync succeeded, and that after two or more days without study the daily readings pause.
 - **What is ported.** The day set is the scheduler's own queue of today's new cards, one query per
   top-level deck because children share their parent's new-card budget, each card attributed by its
   original deck (`pipeline_layers/preread.py:PreReadLayer._resolve_day_set`,
@@ -136,28 +137,36 @@ A14: cargo test -p deck-streak-readings --test states -- --exact ai_route_absent
 | `crates/readings/src/gates.rs` | `deck-streak-readings` | added: the last-sync and pause gates |
 | `crates/readings/src/state.rs` | `deck-streak-readings` | added: the closed topic states, `ai_route_absent` among them |
 | `crates/readings/src/store.rs` | `deck-streak-readings` | added: `reading_topic_days` and `reading_runs` |
-| `crates/readings/src/rights.rs` | `deck-streak-readings` | added: the data-rights port |
+| `crates/readings/src/data_rights.rs` | `deck-streak-readings` | added: the data-rights port, named as every context's port is (§7) |
 | `migrations/004501_readings_topic_days_and_runs.sql` | `deck-streak-readings` | added |
 | `crates/readings/tests/day_set.rs` | `deck-streak-readings` | added |
 | `crates/readings/tests/topics.rs` | `deck-streak-readings` | added |
 | `crates/readings/tests/gates.rs` | `deck-streak-readings` | added |
 | `crates/readings/tests/states.rs` | `deck-streak-readings` | added |
 | `crates/readings/tests/rights.rs` | `deck-streak-readings` | added |
+| `crates/readings/tests/support/mod.rs` | `deck-streak-readings` | added: the tests' synthetic taxonomy, collection and fakes (§7) |
 | `crates/coordination/src/readings/mod.rs` | `deck-streak-coordination` | added |
 | `crates/coordination/src/readings/resolve.rs` | `deck-streak-coordination` | added: resolve a study day's topics and record them |
+| `crates/coordination/src/lib.rs` | `deck-streak-coordination` | changed: the readings module (§7) |
+| `crates/coordination/tests/readings_resolve.rs` | `deck-streak-coordination` | added: the use case's runs, recorded (§7) |
+| `crates/coordination/src/data_rights_registry.rs` | `deck-streak-coordination` | changed: the registry gains readings' port (§7) |
+| `crates/coordination/tests/data_rights_symmetry.rs` | `deck-streak-coordination` | changed: 101 seeded rows in each of the two tables (§7) |
 | `deploy/config/readings-taxonomy.example.json` | deploy | added: a synthetic taxonomy |
 | `scripts/tests/test_readings_taxonomy_scrub.py` | repo | added |
 | `tools/parity-oracle/registry/spec_045.py` | repo | added: registers the three functions with the synthetic-taxonomy adapter (SPEC-029's registry) |
 | `tools/parity-oracle/goldens/resolve_day_sets.json` | repo | added |
-| `tools/parity-oracle/goldens/_law_subject.json` | repo | added |
-| `tools/parity-oracle/goldens/_digest_for_card_ids.json` | repo | added |
+| `tools/parity-oracle/goldens/law_subject.json` | repo | added: named without the leading `_` (§7) |
+| `tools/parity-oracle/goldens/digest_for_card_ids.json` | repo | added: named without the leading `_` (§7) |
 | `docs/CONTEXT-MAP.md` | docs | changed: the ownership register gains `reading_topic_days` and `reading_runs` |
 | `privacy.json` | repo | changed: the readings day-set categories |
+| `PRIVACY.md` | repo | changed: one line per category (§7) |
 | `Cargo.lock`, `.sqlx/` | workspace | changed |
 | `docs/schematics/reading-lifecycle.md` | docs | added: the reading's and the topic day's state machines |
 | `docs/specs/SPEC-045-readings-day-set-and-honest-states.md` | docs | moved from `docs/specs/planned/` |
-| `docs/decisions/ADR-045-day-set-gates-pause-source-and-taxonomy.md` | docs | added |
+| `docs/decisions/ADR-045-day-set-gates-pause-source-and-taxonomy.md` | docs | changed: accepted |
 | `docs/red-first/SPEC-045.md` | docs | added |
+| `scripts/mutation-rows.d/S04500-S04599.json` | repo | added: the hand-proved rows of the readings' invariants (§7) |
+| `changelog.d/feat-readings-045.md` | repo | added |
 
 ## 5. What this does NOT do
 
@@ -180,3 +189,77 @@ A14: cargo test -p deck-streak-readings --test states -- --exact ai_route_absent
 - **Reviews arrive late** (the sync that carries yesterday's reviews fails), so a pause is judged on
   missing data. The last-sync gate runs first, so a failed sync is `could_not_tell`, never `paused`;
   and the owner's tap regenerates on demand whatever the gates say (SPEC-048).
+
+## 7. Amendments at delivery
+
+- **§1: the product rule (ADR-059).** The first bullet states the product rule the owner's decision
+  answers, and this SPEC and ADR-045 cite the predecessor as the product only: its behaviour, its
+  functions and its goldens, never a schedule, a unit, a job, a host or its runtime state.
+- **The manifest: the port is `data_rights.rs`.** `privacy.json`'s export and erase code is
+  `crates/*/src/data_rights.rs` (SPEC-021 §7, R5), and the privacy-gdpr pack's export and erase rows
+  read only those files, so a port in `rights.rs` would be read by neither. A13's test target keeps
+  its name, `rights`.
+- **The manifest: SPEC-021's files for a new table.** R8's two tables join the register of
+  DeckStreak's own tables in `docs/CONTEXT-MAP.md`, which `crates/kernel/tests/schema.rs` and
+  SPEC-021's A2 read; coordination's registry gains readings' port (SPEC-021 R1); the symmetry probe
+  seeds 101 rows in each table (SPEC-021 A1); `privacy.json` names each table in one category
+  (SPEC-021 A8); and `PRIVACY.md` gives each category its line (SPEC-021 A9).
+- **The manifest: the goldens' names and kinds.** The generator refuses a golden name that starts
+  with `_`, so the goldens of `leeches.py:_law_subject` and `prereading.py:_digest_for_card_ids` are
+  `law_subject.json` and `digest_for_card_ids.json`. `_law_subject` and `resolve_day_sets` are called
+  through the adapter, which replaces every private deck constant they read with the synthetic
+  taxonomy of `deploy/config/readings-taxonomy.example.json`; the digest reads no deck constant, so
+  its golden is a plain function's. A2 and A3 read the example file as their taxonomy, so the
+  example and the adapter's constants cannot drift apart.
+- **The manifest: the tests' support, the use case's test and the rows.** The readings tests share
+  one support module (the synthetic taxonomy, the collection, the fakes), and the use case in
+  coordination has its own test, since the diff's mutants of it must be killed there (SPEC-039).
+  The gates' order, the pause, the saturation threshold, the digest's sort, the slug's refusal and
+  the reason-to-class map are invariants, and each has a hand-proved row in this SPEC's band.
+- **R1: the taxonomy file.** Its fields are `schema`, `law` (`roots` and `bands`), `languages` (each
+  `deck`, `code`, `display` and `term_field`) and `writing_roots`; its path is the setting
+  `DECKSTREAK_READINGS_TAXONOMY`, read at each resolution. A file that is unset, absent, unreadable,
+  not JSON, of another schema, with an unknown field, a blank or repeated name, a name holding the
+  deck separator, or a code that is not a slug gives `taxonomy_missing`, and a refusal never quotes
+  the file.
+- **R2: several law roots.** The predecessor has one law root; the taxonomy lists any number, each
+  parsed by the predecessor's rule with the bands shared by all. A slug's whitespace is the
+  predecessor's (`str.isspace`), which also counts U+001C to U+001F.
+- **R3: each queued card's decks.** Ingest's queue answers the card ids of each root. Each card is
+  attributed by the card ingest's read returns for it (`Card::home_deck_id`, the predecessor's
+  `true_did`), which also gives its note; a card the read did not return is attributed to deck 0,
+  so it is reported unmapped and never dropped. The engine always answers its own new count, so the
+  saturation rule's branch for an absent count is reached only by the rule's own tests.
+- **R3 and R4: where the day set is read.** The engine selects a deck to answer the queue, a write,
+  so the queue runs on a throwaway copy of the private copy, taken under the shared collection lock,
+  queried on the offload and removed. That copy is the collection work R4 keeps behind the gates.
+  The review read, ingest's read-only read of the private copy, comes first: it gives the pause its
+  reviews and the resolution its deck names and cards.
+- **R4: the order, and the refusals of a whole run.** The last sync is ingest's record's last run:
+  `ok` or `skipped` succeeded, and `error` or no run did not. After the last-sync gate, a missing
+  taxonomy (`config_fault`, `taxonomy_missing`) and a private copy the read cannot open (`rail_broken`,
+  `collection_locked` or `collection_open_failed`) refuse the whole run before the pause, because
+  without them no topic exists to pause; such a run records its refusal and no topic.
+- **R5, R8 and R12: what a resolution records.** The use case records the run and every topic that
+  ends the day in the resolution (`no_new_cards`, `could_not_tell`, `paused`), and returns each topic
+  with a day set, which SPEC-046 ends `ready`, `failed` or `ai_route_absent`. The store takes every
+  state; one row holds each study day and topic, and a later run that day replaces its state.
+  `failed` carries the closed reasons SPEC-046 names (`form_unregistered`, `seed_empty`,
+  `anchor_unusable_all`, `gate_failed:<gate>` for its six gates, and `agent_unavailable:<cause>` for
+  SPEC-043's nine causes), so the table's checks hold every state from the first migration.
+- **R6: the whole queue's failures.** Ingest answers every root in one call. A lock that cannot be
+  taken, and the engine's `collection_locked`, give `collection_locked`; a copy that cannot be made,
+  and the engine's open failure, give `collection_open_failed`; any other failure of the engine or
+  the offload gives `collection_locked`, as the predecessor classed a root whose read failed.
+- **R7: the budget covers the whole call.** The 30 seconds run from the port's call through the
+  lock, the copy and the engine's query. Past them the query's blocking work finishes on the offload
+  and removes its copy, and every root is `day_set_resolve_timeout`.
+- **R8 and R9: the run's columns.** `reading_runs` also holds the class and reason of a run refused
+  as a whole, and `unmapped_decks`, the count R9 keeps with the run. Its outcome is `resolved`,
+  `paused`, `could_not_tell`, or SPEC-046's `ai_route_absent`. The unmapped decks' names are logged
+  to the service's journal and never stored.
+- **R11: the queue's adapter.** The adapter over ingest's engine port uses ingest and the kernel's
+  offload only, so it lives in readings beside the rules, where A1 proves it on a synthetic
+  collection; coordination composes the use case (ADR-045, at acceptance).
+- **A10: paused time.** A10 runs on tokio's paused clock (`start_paused`), and its queue answers
+  after 31 seconds of that clock, so the budget passes without a real 30-second wait.
