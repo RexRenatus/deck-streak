@@ -21,7 +21,7 @@ use std::time::Duration;
 
 use deck_streak_kernel::Verdict;
 use deck_streak_vault::Rails;
-use deck_streak_vault::rails::{CONTROL_CHARACTER, KNOWN_KEYS, VENDORED};
+use deck_streak_vault::rails::{CONTROL_CHARACTER, KNOWN_KEYS, RailRefusal, VENDORED};
 
 /// Prints how many items a check examined and refuses zero: a fixture set that stopped matching
 /// must fail, never pass over the empty set (the tdd pack's examined contract).
@@ -69,12 +69,11 @@ fn index() -> Index {
     Index { rows, clean }
 }
 
-/// Every rail row that refuses `text`.
+/// Every rail row that refuses `text`, from a scan bounded by [`HANG`].
 fn rows_refusing(rails: &Rails, text: &str) -> BTreeSet<String> {
-    rails
-        .refusals(text)
+    refused(rails, text)
         .into_iter()
-        .map(|refusal| refusal.row.to_string())
+        .map(|(row, _)| row)
         .collect()
 }
 
@@ -97,7 +96,7 @@ fn every_rail_refuses_its_planted_fixture_and_a_clean_note_passes() {
             BTreeSet::from([row.clone()]),
             "the planted fixture {file} is refused by its own rail row {row}, and by no other"
         );
-        match rails.check(&text) {
+        match checked(&rails, &text) {
             Verdict::Refuse(refusal) => assert_eq!(refusal.row.as_str(), row, "{file}"),
             Verdict::Pass => panic!("the planted fixture {file} passed the rails"),
         }
@@ -110,10 +109,10 @@ fn every_rail_refuses_its_planted_fixture_and_a_clean_note_passes() {
     );
     let clean = fixture(&index.clean);
     assert_eq!(
-        rails.check(&clean),
+        checked(&rails, &clean),
         Verdict::Pass,
         "the clean reading note passes the rails: {:?}",
-        rails.refusals(&clean)
+        rows_refusing(&rails, &clean)
     );
 }
 
@@ -139,18 +138,17 @@ fn a_control_character_is_refused_by_the_adapters_own_rail_and_a_tab_passes() {
     for code in [0x00_u32, 0x07, 0x0b, 0x0c, 0x1b, 0x7f, 0x85] {
         let control = char::from_u32(code).expect("a control character");
         let text = format!("A clean first line.\nA second line with {control} in it.\n");
-        let refusals = rails.refusals(&text);
         assert_eq!(
-            refusals
-                .iter()
-                .map(|refusal| (refusal.row.as_str(), refusal.line))
-                .collect::<Vec<_>>(),
-            vec![(CONTROL_CHARACTER, 2)],
+            refused(&rails, &text),
+            vec![(CONTROL_CHARACTER.to_owned(), 2)],
             "U+{code:04X} is refused on its own line"
         );
     }
     assert_eq!(
-        rails.check("A tab\tseparates these.\r\nA Windows line ends here.\n"),
+        checked(
+            &rails,
+            "A tab\tseparates these.\r\nA Windows line ends here.\n"
+        ),
         Verdict::Pass,
         "a tab, a carriage return and a line feed pass"
     );
@@ -160,7 +158,7 @@ fn a_control_character_is_refused_by_the_adapters_own_rail_and_a_tab_passes() {
 fn a_refusal_names_its_rail_and_line_and_never_the_text() {
     let rails = Rails::vendored().expect("the vendored rails.json reads as rails");
     let text = "A first line.\nA planted private-marker <% tp.user.command() %> line.\n";
-    let Verdict::Refuse(refusal) = rails.check(text) else {
+    let Verdict::Refuse(refusal) = checked(&rails, text) else {
         panic!("a Templater command passed the rails");
     };
     assert_eq!((refusal.row.as_str(), refusal.line), ("templater_open", 2));
@@ -182,25 +180,40 @@ fn vendored() -> Rails {
     Rails::vendored().expect("the vendored rails.json reads as rails")
 }
 
-/// Every refusal `rails` make of `text`, as each one's row and line, in `refusals`' own order. The
-/// scan runs on its own thread, and one that panics or outlasts [`HANG`] fails the test.
-fn refused(rails: &Rails, text: &str) -> Vec<(String, usize)> {
+/// What `scan` returns, from a run on its own thread that must end within [`HANG`]: one that
+/// panics or outlasts it fails the test. A mutant that stops a cursor loops for ever, and one that
+/// also pushes as it loops grows its memory until the mutation tool's timeout ends it; bounded
+/// here, it fails in seconds.
+fn within<T: Send + 'static>(text: &str, scan: impl FnOnce() -> T + Send + 'static) -> T {
     let (sender, receiver) = mpsc::channel();
-    let (rails, note) = (rails.clone(), text.to_owned());
     thread::spawn(move || {
-        let refusals = rails
-            .refusals(&note)
-            .into_iter()
-            .map(|refusal| (refusal.row.to_string(), refusal.line))
-            .collect::<Vec<_>>();
         // A send fails only once the test has stopped waiting, having failed on a hang.
-        let _ = sender.send(refusals);
+        let _ = sender.send(scan());
     });
     match receiver.recv_timeout(HANG) {
-        Ok(refusals) => refusals,
+        Ok(found) => found,
         Err(RecvTimeoutError::Timeout) => panic!("the scan of {text:?} ran past {HANG:?}"),
         Err(RecvTimeoutError::Disconnected) => panic!("the scan of {text:?} panicked"),
     }
+}
+
+/// Every refusal `rails` make of `text`, as each one's row and line, in `refusals`' own order,
+/// from a scan bounded by [`HANG`].
+fn refused(rails: &Rails, text: &str) -> Vec<(String, usize)> {
+    let (rails, note) = (rails.clone(), text.to_owned());
+    within(text, move || {
+        rails
+            .refusals(&note)
+            .into_iter()
+            .map(|refusal| (refusal.row.to_string(), refusal.line))
+            .collect()
+    })
+}
+
+/// The rails' verdict on `text`, from a scan bounded by [`HANG`].
+fn checked(rails: &Rails, text: &str) -> Verdict<RailRefusal> {
+    let (rails, note) = (rails.clone(), text.to_owned());
+    within(text, move || rails.check(&note))
 }
 
 /// Holds each case's note to exactly the refusals it names, row and line, and prints how many
