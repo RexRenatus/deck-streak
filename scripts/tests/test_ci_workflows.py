@@ -1720,6 +1720,10 @@ SHELLS = ("bash", "sh", "pwsh", "powershell", "python", "cmd")
 # variables whose names begin with `GIT_`, such as `GIT_CONFIG_COUNT`, `GIT_CONFIG_KEY_<n>`,
 # `GIT_CONFIG_VALUE_<n>`, `GIT_CONFIG_PARAMETERS` and `GIT_SSH_COMMAND`.
 GIT_VARIABLE = re.compile(r"(?<![A-Za-z0-9_])GIT_[A-Za-z0-9_]*", re.I)
+# The properties of a job's container, in GitHub's workflow schema, that the runner creates the
+# container from, besides its `env`: its `image`, `options`, `ports` and `volumes`. Its registry
+# `credentials` are read to pull the image, and no step reads them.
+CONTAINER_CREATED_WITH = ("image", "options", "ports", "volumes")
 
 
 def expressions_in(text):
@@ -1886,17 +1890,17 @@ def environment_problems(env, where):
 
 def container_problems(container, where):
     """A job's container whose environment the checker cannot read: one `${{ }}` expression, an
-    `env` that `environment_problems` refuses, or `options` that are or hold a `${{ }}` expression,
-    which GitHub evaluates when the job runs and the runner passes whole to the container it
-    creates. The steps of a job with a container run inside it, in its environment. A container
-    named by its image alone sets no variable."""
+    `env` that `environment_problems` refuses, or one of `CONTAINER_CREATED_WITH` that is or holds
+    a `${{ }}` expression, which GitHub evaluates when the job runs. The steps of a job with a
+    container run inside it, in its environment. A container named by its image alone sets no
+    variable."""
     if container is None or (isinstance(container, str) and "${{" not in container):
         return []
     if isinstance(container, dict):
         problems = environment_problems(container.get("env"), f"{where}.env")
-        options = container.get("options")
-        if options is not None and "${{" in str(options):
-            problems.append(f"{where}.options: runs in a container the checker does not read")
+        for name in CONTAINER_CREATED_WITH:
+            if "${{" in str(container.get(name, "")):
+                problems.append(f"{where}.{name}: runs in a container the checker does not read")
         return problems
     return [f"{where}: runs in a container the checker does not read"]
 
