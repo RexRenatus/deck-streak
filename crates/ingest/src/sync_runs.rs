@@ -1,6 +1,7 @@
 //! The record of every sync (SPEC-022 R9, R10, R15 to R17): one `sync_runs` row per run, with its
 //! trigger, its study day, `ok` or `error` with one bounded reason code, the attempts it used and
-//! whether it was a full download.
+//! whether it was a full download. The change gate adds a `skipped` row for a cycle whose recompute
+//! it skipped, and reads the record as a cycle found it (SPEC-023 R8, R11).
 //!
 //! [`SyncRunStore`] is what the syncer asks and tells; [`SqliteSyncRuns`] keeps it in the service's
 //! database, owned by this context (docs/CONTEXT-MAP.md). A reason code is the whole account of a
@@ -152,6 +153,63 @@ pub struct StudyDayOutcome {
     pub trigger: Trigger,
 }
 
+/// A run's status as `sync_runs` records it: the sync's `ok` or `error`, or the change gate's
+/// `skipped` (SPEC-023 R11).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum RunStatus {
+    /// The sync succeeded.
+    Ok,
+    /// The sync failed, with its reason code.
+    Error,
+    /// The sync succeeded and the change gate skipped the recompute.
+    Skipped,
+}
+
+impl RunStatus {
+    /// The status as `sync_runs` stores it.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Ok => "ok",
+            Self::Error => "error",
+            Self::Skipped => "skipped",
+        }
+    }
+
+    /// The status `sync_runs` stored as `text`.
+    #[must_use]
+    pub fn parse(text: &str) -> Option<Self> {
+        [Self::Ok, Self::Error, Self::Skipped]
+            .into_iter()
+            .find(|status| status.as_str() == text)
+    }
+}
+
+/// The record as a cycle finds it before its own sync (SPEC-023 R8): what the change gate's run-
+/// history term reads, as the predecessor's gate read the run before its own cycle's.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct RunHistory {
+    /// The last run's status, or `None` when no run is on record.
+    pub last: Option<RunStatus>,
+    /// Whether any run on record succeeded.
+    pub any_success: bool,
+}
+
+/// A cycle whose recompute the change gate skipped, as `sync_runs` records it (SPEC-023 R11): its
+/// trigger, the study day it decided in, and when the gate began and ended. It made no attempt and
+/// no download.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct SkippedRun {
+    /// What asked for the cycle.
+    pub trigger: Trigger,
+    /// When the gate began, by the kernel's clock.
+    pub started_at: UtcMillis,
+    /// When the gate ended, by the kernel's clock.
+    pub finished_at: UtcMillis,
+    /// The study day the gate decided in.
+    pub study_day: StudyDay,
+}
+
 /// `sync_runs` in the service's own database.
 #[derive(Clone, Debug)]
 pub struct SqliteSyncRuns {
@@ -220,6 +278,54 @@ impl SqliteSyncRuns {
                 trigger: Trigger::parse(&row.trigger)?,
             })
         }))
+    }
+
+    /// The record as it stands (SPEC-023 R8): the last run's status and whether any run succeeded.
+    /// A cycle reads it before its own sync records a row.
+    ///
+    /// # Errors
+    ///
+    /// [`KernelError::Database`] when the read fails.
+    pub async fn history(&self) -> Result<RunHistory, KernelError> {
+        let row = sqlx::query!(
+            r#"SELECT (SELECT status FROM sync_runs ORDER BY id DESC LIMIT 1) AS "last?: String",
+                      EXISTS(SELECT 1 FROM sync_runs WHERE status = 'ok') AS "any_success!: bool""#
+        )
+        .fetch_one(self.db.reader())
+        .await?;
+        Ok(RunHistory {
+            last: row.last.as_deref().and_then(RunStatus::parse),
+            any_success: row.any_success,
+        })
+    }
+
+    /// Records the change gate's skip (SPEC-023 R11): a `skipped` row with no reason, no attempt
+    /// and no download.
+    ///
+    /// # Errors
+    ///
+    /// [`KernelError::Database`] when the write fails.
+    pub async fn record_skipped(&self, run: &SkippedRun) -> Result<(), KernelError> {
+        let trigger = run.trigger.as_str();
+        let study_day = run.study_day.epoch_day();
+        let started_at = run.started_at.epoch_millis();
+        let finished_at = run.finished_at.epoch_millis();
+        let mut write = self.db.write().await?;
+        // The row is created when the gate ends, by the same clock.
+        sqlx::query!(
+            "INSERT INTO sync_runs \
+             (trigger, study_day, started_at, finished_at, status, reason, attempts, \
+              full_download, created_at) \
+             VALUES (?1, ?2, ?3, ?4, 'skipped', NULL, 0, 0, ?4)",
+            trigger,
+            study_day,
+            started_at,
+            finished_at
+        )
+        .execute(&mut *write)
+        .await?;
+        write.commit().await?;
+        Ok(())
     }
 }
 

@@ -7,19 +7,24 @@
 //! the one alert; 2 is an id the table does not hold.
 //!
 //! The ports are joined here, in the composition root. The notifier's marker is `NoNotifier` until
-//! the bot's transport exists (SPEC-026), and the `sync` job's cycle builds its syncer from the
-//! sync's own settings only when `sync` runs, so the other jobs start without them.
+//! the bot's transport exists (SPEC-026), and the `sync` job's cycle builds its syncer, its reader and
+//! its change gate from the sync's own settings only when `sync` runs, so the other jobs start
+//! without them (SPEC-023 R12). No obligation source is registered yet: each deadline-bearing feature
+//! registers its own.
 
 use std::sync::Arc;
 
 use deck_streak_coordination::delivery::NoNotifier;
 use deck_streak_coordination::jobs::Job;
 use deck_streak_coordination::ledger::SqliteCronLedger;
+use deck_streak_coordination::obligations::Obligations;
 use deck_streak_coordination::runner::{Reason, Runner, SyncCycle};
-use deck_streak_coordination::sync_cycle::sync_cycle;
+use deck_streak_coordination::sync_cycle::{CycleError, CycleParts, sync_cycle};
 use deck_streak_daemon::wiring::{self, StateDirectory, WiringError};
 use deck_streak_ingest::engine::RslibEngine;
-use deck_streak_ingest::settings::SyncSettings;
+use deck_streak_ingest::gate::ChangeGate;
+use deck_streak_ingest::reader::CollectionReader;
+use deck_streak_ingest::settings::{ScopeSettings, SyncSettings};
 use deck_streak_ingest::sync::{SyncReport, Syncer};
 use deck_streak_ingest::sync_runs::{SqliteSyncRuns, Trigger};
 use deck_streak_kernel::{
@@ -62,6 +67,7 @@ pub async fn run(env: &Environment, redactor: &Redactor, job: &Job) -> Result<u8
         env,
         redactor,
         db: &db,
+        offload: offload.clone(),
         rule,
     };
     let report = runner.run_job(job.id, &cycle, &db).await;
@@ -69,12 +75,14 @@ pub async fn run(env: &Environment, redactor: &Redactor, job: &Job) -> Result<u8
     Ok(report.map_err(JobRoleError::Ledger)?.exit_code())
 }
 
-/// The `sync` job's cycle in production: SPEC-022's syncer over Anki's engine, built from the
-/// sync's settings and credentials when the job runs, through `coordination::sync_cycle`.
+/// The `sync` job's cycle in production: SPEC-022's syncer over Anki's engine, SPEC-023's reader and
+/// change gate, built from the sync's settings and credentials when the job runs, through
+/// `coordination::sync_cycle`.
 struct ScheduledSync<'a> {
     env: &'a Environment,
     redactor: &'a Redactor,
     db: &'a Db,
+    offload: Offload,
     rule: StudyDayRule,
 }
 
@@ -88,16 +96,111 @@ impl SyncCycle for ScheduledSync<'_> {
             tracing::error!(%refusal, "the sync's credentials directory refuses it");
             Reason::new("credentials_directory_refused")
         })?;
+        let scope = ScopeSettings::from_env(self.env).map_err(|refusal| {
+            tracing::error!(%refusal, "the read's scope refuses it");
+            Reason::new("scope_settings_refused")
+        })?;
+        let clock = Arc::new(SystemClock);
+        let reader = CollectionReader::new(&settings, scope, self.offload.clone());
         let syncer = Syncer::new(
             RslibEngine,
             SqliteSyncRuns::new(self.db.clone()),
             settings,
             CredentialLoader::new(directory, self.redactor.clone()),
-            Arc::new(SystemClock),
+            clock.clone(),
             self.rule,
         );
-        sync_cycle(&syncer, Trigger::Scheduled)
+        let gate = ChangeGate::new(self.db.clone(), self.rule, clock.clone());
+        let parts = CycleParts::new(syncer, reader, gate, Obligations::new(), clock);
+        sync_cycle(&parts, Trigger::Scheduled)
             .await
-            .map_err(|_| Reason::new("sync_record_failed"))
+            .map(|report| report.sync)
+            .map_err(|error| cycle_failed(&error))
+    }
+}
+
+/// The reason a cycle that could not run to its end is recorded with: the sync's record, an
+/// obligation, or the recompute after the sync. A failed sync is not one: it is a recorded run.
+fn cycle_failed(error: &CycleError) -> Reason {
+    tracing::error!(%error, "the sync cycle could not run to its end");
+    Reason::new(match error {
+        CycleError::History(_) | CycleError::Sync(_) => "sync_record_failed",
+        CycleError::Obligations(_) => "obligations_unreadable",
+        CycleError::Gate(_) | CycleError::Window(_) => "recompute_failed",
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::BTreeSet;
+
+    use deck_streak_coordination::runner::Reason;
+    use deck_streak_coordination::sync_cycle::CycleError;
+    use deck_streak_ingest::gate::GateError;
+    use deck_streak_ingest::reader::ReadError;
+    use deck_streak_ingest::sync::SyncError;
+    use deck_streak_ingest::window::WindowError;
+    use deck_streak_kernel::KernelError;
+
+    use super::cycle_failed;
+
+    /// A cause no step of a cycle names: the mapping reads the step, never the cause.
+    const fn cause() -> KernelError {
+        KernelError::LoggingInstalled
+    }
+
+    /// One failure of every kind a cycle can stop with, each inner kind of the gate and the window
+    /// included, and the reason code the `sync` job records it with.
+    fn every_failure() -> Vec<(CycleError, &'static str)> {
+        vec![
+            (CycleError::History(cause()), "sync_record_failed"),
+            (
+                CycleError::Sync(SyncError::Store(cause())),
+                "sync_record_failed",
+            ),
+            (CycleError::Obligations(cause()), "obligations_unreadable"),
+            (
+                CycleError::Gate(GateError::Read(ReadError::WriteRefused)),
+                "recompute_failed",
+            ),
+            (
+                CycleError::Gate(GateError::Record(cause())),
+                "recompute_failed",
+            ),
+            (
+                CycleError::Window(WindowError::Read(ReadError::WriteRefused)),
+                "recompute_failed",
+            ),
+            (
+                CycleError::Window(WindowError::State(cause())),
+                "recompute_failed",
+            ),
+        ]
+    }
+
+    /// The failure's kind. The match is exhaustive, so a kind added to `CycleError` does not compile
+    /// here until `every_failure` gives it a case and a code.
+    const fn kind(error: &CycleError) -> &'static str {
+        match error {
+            CycleError::History(_) => "history",
+            CycleError::Sync(_) => "sync",
+            CycleError::Obligations(_) => "obligations",
+            CycleError::Gate(_) => "gate",
+            CycleError::Window(_) => "window",
+        }
+    }
+
+    #[test]
+    fn a_cycle_that_cannot_finish_is_recorded_with_its_steps_reason_code() {
+        let failures = every_failure();
+        let kinds: BTreeSet<&str> = failures.iter().map(|(error, _)| kind(error)).collect();
+        assert_eq!(
+            kinds,
+            BTreeSet::from(["gate", "history", "obligations", "sync", "window"]),
+            "every kind of failure has a case"
+        );
+        for (error, code) in &failures {
+            assert_eq!(cycle_failed(error), Reason::new(code), "{error:?}");
+        }
     }
 }

@@ -19,5 +19,6 @@ pub mod jobs;
 pub mod ledger;
 pub mod liveness;
 pub mod maintenance;
+pub mod obligations;
 pub mod runner;
 pub mod sync_cycle;
