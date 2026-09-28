@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 date: "2026-09-27"
 decision-makers: "@RexRenatus (owner), the DeckStreak architect"
 ---
@@ -38,6 +38,51 @@ deploy, as the predecessor's default did. The telegram-platform rows `tg-poll-of
 `tg-poll-long`, `tg-allowed-updates` and `tg-update-mode` judge the loop; `ws.tg-webhook-secret` has
 no subject.
 
+### Decided at delivery (SPEC-026 §7)
+
+The delivery measured what this record had assumed, and decided each open question against its
+alternatives:
+
+- **The bot's waits go through a `Waits` the transport holds: tokio's timer in the service, a
+  recorder in the tests.** Chosen against running the tests on tokio's paused time, as SPEC-026's
+  plan had it: every request to the loopback fake failed after exactly 60 virtual seconds, while the
+  same request completed in about a millisecond in real time, because the paused runtime moves its
+  clock to the next timer whenever it parks, a request in flight included, and the HTTP client's own
+  timeout was that timer. Also against sleeping for real, which would make the golden's 30-second
+  waits real ones. A test on paused time with no socket holds `TokioTimer` to its duration.
+- **The export is uploaded from memory.** frankenstein's `sendDocument` uploads only from a path, so
+  the transport builds the `multipart/form-data` body from the bytes with frankenstein's own client
+  and its re-export of reqwest. Chosen against writing the owner's export to a temporary file to hand
+  frankenstein a path, which would put the owner's whole data on the host's disk to send it, and
+  against adding reqwest as a dependency of its own, a crate this record does not name.
+- **`getUpdates` is read update by update.** Each update is decoded by frankenstein in turn, so one it
+  cannot read is still confirmed by its `update_id`. Chosen against frankenstein's `Vec<Update>`, with
+  which one unreadable update fails the whole batch, and the poll, which confirms nothing it could
+  not read, would fetch the same batch forever.
+- **A `/delete` confirmation is single-use and the latest question's alone.** The button erases only
+  when it is on the latest `/delete` question the bot sent in this process, and only once. Chosen
+  against erasing on any tap of the confirming button, which would let a stale question, tapped by
+  mistake, erase everything; and against a time window, which would put a clock on a command the
+  owner takes in their own time.
+- **`/sync` marks the owner's rescore first.** The flag is set before the sync's settings are read,
+  so the next cycle serves the owner's request even when this one cannot run. Chosen against setting
+  it only once the cycle can start, which would drop the owner's request on a failed start.
+- **The Bot API's base URL is a setting**, `DECKSTREAK_BOT_API_URL`: `https:`, or `http:` to a
+  loopback host only, defaulting to Telegram's own. Chosen against a base URL fixed in the code and a
+  test-only build, either of which would mean the tested binary is not the shipped one, and against
+  any `http:` host, which would send the token in the clear.
+- **frankenstein's licence is admitted for frankenstein alone.** Its licence is WTFPL, a permissive
+  licence compatible with the GNU GPL, and `deny.toml` admits it by one exception naming the crate.
+  Chosen against adding WTFPL to the workspace's allow list, which would admit it for any crate
+  unseen. The TLS stack frankenstein's client brings, reqwest's rustls with its aws-lc-rs provider,
+  passes the allow list as it stands.
+- **The golden replies carry no notification kind.** Each is `phx.duty.message.v1` with `duty`
+  `bot-commands` and no `kind`: a command reply is not a notification. notifications-policy's
+  `message-metadata` row reads every envelope as one, so the box run defers that row to #257 until
+  it judges notifications only. Chosen against naming a kind the policy declares, which would make
+  a reply look like an alert or a nudge, and against moving the replies out of `*.msg.json`, which
+  the telegram-platform payload rows read.
+
 ### Consequences
 
 - Good, because nothing new listens on the host, and the Caddy block serves only the Mini App and its
@@ -48,7 +93,7 @@ no subject.
 
 ### Confirmation
 
-SPEC-026's A7 and A8; the telegram-platform bot-api rows in `scripts/check.sh`.
+SPEC-026's A7 and A8; the telegram-platform bot-api rows in the box run (ADR-069).
 
 ## What would make this wrong
 
