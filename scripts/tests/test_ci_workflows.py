@@ -66,8 +66,12 @@ CACHE_BY_THEMSELVES = (
 
 
 def workflow_files(directory):
-    """The workflow files of a directory, examined: none is VOID, never a pass."""
-    return examined("workflow files", sorted(directory.glob("*.yml")))
+    """The workflow files of a directory: every `.yml` and `.yaml` file in it, as GitHub reads both
+    (SPEC-034 R7). A directory with none is VOID, never a pass."""
+    return examined(
+        "workflow files",
+        sorted(path for path in directory.iterdir() if path.suffix in (".yml", ".yaml")),
+    )
 
 
 class WorkflowsAreHardened(unittest.TestCase):
@@ -1287,10 +1291,7 @@ def secret_and_checkout_problems(directory):
     and its place, with what was judged: (problems, {population: [...]}). A form the reader does
     not read is a problem named by its line, and the rest of that file is judged as read. A
     directory with no workflow file is VOID, never a pass."""
-    files = examined(
-        "workflow files",
-        sorted(path for path in directory.iterdir() if path.suffix in (".yml", ".yaml")),
-    )
+    files = workflow_files(directory)
     problems = []
     judged = {"expressions": [], "checkouts": [], "run steps": []}
     for path in files:
