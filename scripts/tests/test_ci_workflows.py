@@ -363,12 +363,19 @@ def read_workflow(text):
     the workflows here use: mappings keyed by plain names, `- ` sequences, `|` block scalars, flow
     lists of plain items, and plain or quoted one-line scalars, a quote doubled inside single
     quotes read as one. Blank lines, comment lines and a ` #` comment after a value are dropped.
-    It fails closed (SPEC-034 R7). A double-quoted value that holds an escape, a quoted value that
-    does not end at its closing quote, an anchor, alias or tag, a flow mapping, a flow list whose
-    items are not plain, and a key that is not a plain name are each refused by their line, never
-    guessed at, and the file raises Unread once it is read. A line it cannot place refuses the
-    whole file at once."""
-    lines, refused = text.splitlines(), []
+    It ends a line only at a line feed or a carriage return, and reads a space or a tab as white
+    space and nothing else, as YAML does.
+    It fails closed (SPEC-034 R7). A line that holds a character other than a tab or printable
+    ASCII, a double-quoted value that holds an escape, a quoted value that does not end at its
+    closing quote, an anchor, alias or tag, a flow mapping, a flow list whose items are not plain,
+    and a key that is not a plain name are each refused by their line, never guessed at, and the
+    file raises Unread once it is read. A line it cannot place refuses the whole file at once."""
+    lines = re.split(r"\r\n|\r|\n", text)
+    refused = [
+        f"line {at + 1}: a character the reader does not read"
+        for at, line in enumerate(lines)
+        if re.search(r"[^\t\x20-\x7e]", line)
+    ]
     value, at = _mapping(lines, _skip(lines, 0), 0, refused)
     at = _skip(lines, at)
     if at < len(lines):
@@ -383,7 +390,9 @@ def _indent(line):
 
 
 def _skip(lines, at):
-    while at < len(lines) and (not lines[at].strip() or lines[at].lstrip().startswith("#")):
+    while at < len(lines) and (
+        not lines[at].strip(" \t") or lines[at].lstrip(" \t").startswith("#")
+    ):
         at += 1
     return at
 
@@ -398,7 +407,7 @@ def _read(reader, text, at, refused):
 
 
 def _key(text):
-    key = KEY.fullmatch(text.strip())
+    key = KEY.fullmatch(text.strip(" \t"))
     if not key:
         raise ValueError("a key that is not a plain name is not read")
     return key.group(2)
@@ -409,7 +418,7 @@ def _scalar(text):
     not read: an anchor, alias or tag, a flow mapping, a flow list whose items are not plain (a
     quoted or nested item, or a `#`, `:` or `?` inside it), and a plain value that holds `: `, which
     YAML reads as a key."""
-    text = text.strip()
+    text = text.strip(" \t")
     if text[:1] in ("&", "*", "!"):
         raise ValueError("an anchor, alias or tag is not read")
     if text[:1] in ("'", '"'):
@@ -417,12 +426,12 @@ def _scalar(text):
     if text[:1] == "{":
         raise ValueError("a flow mapping is not read")
     if text[:1] == "[":
-        items = re.fullmatch(r"\[([^\[\]{}'\"#:?]*)\](?:\s+#.*)?", text)
+        items = re.fullmatch(r"\[([^\[\]{}'\"#:?]*)\](?:[ \t]+#.*)?", text)
         if not items:
             raise ValueError("a flow list whose items are not plain is not read")
         return [_scalar(part) for part in items.group(1).split(",") if part.strip()]
-    text = re.sub(r"\s#.*$", "", text).strip()
-    if re.search(r":(?:\s|$)", text):
+    text = re.sub(r"[ \t]#.*$", "", text).strip(" \t")
+    if re.search(r":(?:[ \t]|$)", text):
         raise ValueError("a key that is not a plain name is not read")
     return text
 
@@ -433,7 +442,7 @@ def _quoted(text):
     holds no escape, since YAML decodes one there."""
     single = text[0] == "'"
     body = r"'((?:[^']|'')*)'" if single else r'"((?:[^"\\]|\\.)*)"'
-    quoted = re.fullmatch(body + r"(?:\s+#.*)?", text)
+    quoted = re.fullmatch(body + r"(?:[ \t]+#.*)?", text)
     if not quoted:
         raise ValueError("a quoted value that does not end at its closing quote is not read")
     if not single and "\\" in quoted.group(1):
@@ -466,16 +475,16 @@ def _mapping(lines, at, indent, refused):
             key, rest = text[:-1], ""
         else:
             raise AssertionError(f"line {at + 1} is not a mapping entry: {lines[at]!r}")
-        key, rest = _read(_key, key, at, refused), rest.strip()
+        key, rest = _read(_key, key, at, refused), rest.strip(" \t")
         if rest in ("|", "|-"):
             at += 1
             body = []
-            while at < len(lines) and (not lines[at].strip() or _indent(lines[at]) > indent):
+            while at < len(lines) and (not lines[at].strip(" \t") or _indent(lines[at]) > indent):
                 body.append(lines[at])
                 at += 1
-            while body and not body[-1].strip():
+            while body and not body[-1].strip(" \t"):
                 body.pop()
-            width = min(_indent(line) for line in body if line.strip())
+            width = min(_indent(line) for line in body if line.strip(" \t"))
             found[key] = "\n".join(line[width:] for line in body) + "\n"
         elif not rest or rest.startswith("#"):
             child = _skip(lines, at + 1)
