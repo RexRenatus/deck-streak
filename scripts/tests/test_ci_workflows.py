@@ -579,8 +579,14 @@ class TheGateRunsInParallelJobs(unittest.TestCase):
         for job in OWNER_LAYOUT:
             self.assertIsNone(workflow["jobs"][job].get("needs"), f"{job} waits on another job")
         needs = workflow["jobs"]["ci"]["needs"]
-        # SPEC-039 adds the two mutation jobs beside the gate's four, each a need of ci.
-        mutation = ["mutation-rust", "mutation-web"]
+        # SPEC-039 adds the five mutation jobs beside the gate's five, each a need of ci.
+        mutation = [
+            "mutation-plan",
+            "mutation-rust",
+            "mutation-rows",
+            "mutation-verdict",
+            "mutation-web",
+        ]
         self.assertEqual(
             sorted(needs), sorted([*OWNER_LAYOUT, *mutation, "workflow-lint", "base-is-dev"])
         )

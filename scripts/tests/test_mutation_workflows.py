@@ -231,25 +231,72 @@ class TheMutationJobsGateEveryPullRequest(unittest.TestCase):
         text = workflow(CI)
         found = jobs(text)
         aggregate = found.get("ci", "")
-        for name in examined("mutation jobs", ["mutation-rust", "mutation-web"]):
+        names = ["mutation-plan", "mutation-rust", "mutation-rows", "mutation-verdict"]
+        for name in examined("mutation jobs", [*names, "mutation-web"]):
             self.assertIn(name, found, f"ci.yml has no {name} job")
             job = found[name]
             self.assertRegex(aggregate, rf"needs: \[[^\]]*\b{name}\b", f"ci does not need {name}")
-            self.assertTrue(uploads_always(job), f"{name} keeps no report when it fails")
             self.assertNotRegex(job, r"actions/cache@|actions/cache/save@", name)
-            self.assertNotRegex(
-                job, r"(?m)^    if:", f"{name} is skipped, which ci reads as failed"
+            # A job-level if may only make a job run: ci reads a skipped need as failed.
+            conditions = re.findall(r"(?m)^    if: (.*)$", job)
+            allowed = ["${{ always() }}"] if name == "mutation-verdict" else []
+            self.assertEqual(
+                conditions, allowed, f"{name} may be skipped, which ci reads as failed"
             )
-            self.assertIn("mutation-verdict.py judge", job, name)
-        rust = found["mutation-rust"]
-        self.assertTrue(INSTALL.search(rust), "mutation-rust does not pin cargo-mutants 27.1.0")
-        self.assertRegex(rust, r"(?m)^\s+fallback: none$")
-        command = re.search(r"cargo mutants[^\n]*", rust).group(0)
+            if name != "mutation-verdict":
+                self.assertTrue(uploads_always(job), f"{name} keeps no report when it fails")
+        for name in ("mutation-verdict", "mutation-web"):
+            self.assertIn("mutation-verdict.py judge", found[name], name)
+        for name in ("mutation-plan", "mutation-rust"):
+            self.assertTrue(
+                INSTALL.search(found[name]), f"{name} does not pin cargo-mutants 27.1.0"
+            )
+            self.assertRegex(found[name], r"(?m)^\s+fallback: none$", name)
+        command = re.search(r"cargo mutants[^\n]*", found["mutation-rust"]).group(0)
         for flag in ("--in-diff", "--in-place", "--timeout "):
             self.assertIn(flag, command)
-        self.assertIn("mutation_rows.py prove", rust)
-        self.assertIn("mutation_rows.py retired", rust)
+        self.assertIn("mutation_rows.py prove", found["mutation-rows"])
+        self.assertIn("mutation_rows.py retired", found["mutation-rows"])
         self.assertIn("stryker run", found["mutation-web"])
+
+
+class TheShardsAreThePlans(unittest.TestCase):
+    def test_the_sharded_job_runs_the_plans_matrix_and_the_verdict_counts_every_shard(self):
+        found = jobs(workflow(CI))
+        plan, rust, verdict = (
+            found.get(name, "") for name in ("mutation-plan", "mutation-rust", "mutation-verdict")
+        )
+        # The plan lists the diff's mutants with cargo-mutants itself and sizes the shards from them.
+        self.assertRegex(plan, r"cargo mutants [^\n]*--list --json --in-diff ")
+        self.assertRegex(plan, r"mutation-verdict\.py shards --plan ")
+        for output in examined("plan outputs", ["shards", "matrix"]):
+            self.assertRegex(
+                plan, rf"(?m)^      {output}: \$\{{\{{ steps\.shards\.outputs\.{output} \}}\}}$"
+            )
+        # Each shard is one entry of the plan's matrix, and runs as one of the plan's count.
+        self.assertRegex(rust, r"(?m)^    needs: \[mutation-plan\]$")
+        self.assertRegex(rust, r"(?m)^      fail-fast: false$")
+        self.assertRegex(
+            rust,
+            r"(?m)^        shard: \$\{\{ fromJSON\(needs\.mutation-plan\.outputs\.matrix\) \}\}$",
+        )
+        self.assertRegex(rust, r"(?m)^\s+SHARD: \$\{\{ matrix\.shard \}\}$")
+        self.assertRegex(
+            rust, r"(?m)^\s+SHARDS: \$\{\{ needs\.mutation-plan\.outputs\.shards \}\}$"
+        )
+        command = re.search(r"cargo mutants [^\n]*", rust)
+        self.assertIsNotNone(command, "mutation-rust runs no cargo-mutants")
+        self.assertIn("--sharding round-robin", command.group(0))
+        self.assertIn('--shard "$SHARD/$SHARDS"', command.group(0))
+        self.assertRegex(rust, r"(?m)^\s+name: mutation-rust-shard-\$\{\{ matrix\.shard \}\}$")
+        # The verdict runs whatever the shards returned, reads every artifact, and counts the
+        # shards the plan promised rather than the ones that reported.
+        self.assertRegex(
+            verdict, r"(?m)^    needs: \[mutation-plan, mutation-rust, mutation-rows\]$"
+        )
+        self.assertRegex(verdict, r"(?m)^    if: \$\{\{ always\(\) \}\}$")
+        self.assertRegex(verdict, r"(?m)^\s+pattern: mutation-\*$")
+        self.assertRegex(verdict, r"judge [^\n]*--class rust [^\n]*--shard-reports ")
 
 
 class EveryRunIsBounded(unittest.TestCase):
