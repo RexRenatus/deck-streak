@@ -1,4 +1,4 @@
-"""The private rail's public contract (SPEC-061 A1 to A7; ADR-038, ADR-061).
+"""The private rail's public contract (SPEC-061 A1 to A14; ADR-038, ADR-061).
 
 The rail itself (the credential socket's helper, its socket unit, the map, the rendered settings
 file, the drop-ins and the guards' copies) is private and never committed (SPEC-061 R1). This
@@ -16,6 +16,7 @@ import hashlib
 import importlib.util
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -171,6 +172,17 @@ def scrub(*subjects):
     )
 
 
+def rust_block(text, opening):
+    """The text inside the braces that open after `opening` in a Rust source, matched by depth."""
+    start = text.index("{", text.index(opening))
+    depth = 0
+    for index in range(start, len(text)):
+        depth += {"{": 1, "}": -1}.get(text[index], 0)
+        if depth == 0:
+            return text[start + 1 : index]
+    raise AssertionError(f"no closing brace after {opening!r}")
+
+
 # A synthetic template tree: two services, a template unit and a timer, and one optional set.
 SYNTHETIC = {
     "deploy/systemd/deck-streak-api.service": (
@@ -290,6 +302,36 @@ class ThePairLister(unittest.TestCase):
         examined(
             "credential pair(s) the committed templates declare", json.loads(done.stdout)["pairs"]
         )
+
+    def test_the_pair_lister_reads_each_line_as_systemd_does(self):
+        # systemd's own reading, measured with `systemd-analyze verify` (SPEC-061 §8): a line ends
+        # at a newline, a carriage return or a NUL; it continues only when it ends in an odd run
+        # of backslashes; a comment line never continues. A credential line systemd reads on its
+        # own is never hidden from the lister in the line before it.
+        off_socket = "LoadCredential=telegram-bot-token:/etc/credstore/telegram-bot-token"
+        hidden = {
+            "after a double backslash": f"Description=a synthetic unit \\\\\n{off_socket}\n",
+            "after a backslash and a space": f"Description=a synthetic unit \\ \n{off_socket}\n",
+            "after a comment's backslash": f"# a synthetic comment \\\n{off_socket}\n",
+            "after a NUL": f"Description=a synthetic unit\0{off_socket}\n",
+        }
+        for where, lines in hidden.items():
+            with self.subTest(hidden=where), tempfile.TemporaryDirectory() as scratch:
+                write_tree(scratch, {"deploy/systemd/planted.service": f"[Service]\n{lines}"})
+                done = run(PAIRS, "--root", scratch)
+                self.assertEqual(done.returncode, 1, done.stdout + done.stderr)
+                self.assertEqual(done.stdout, "")
+                self.assertIn("REFUSE: deploy/systemd/planted.service:3:", done.stderr)
+                self.assertIn("not the socket", done.stderr)
+        # systemd skips a byte-order mark where it first finds one, so a line behind it is read;
+        # the lister refuses the mark instead of guessing.
+        with tempfile.TemporaryDirectory() as scratch:
+            planted = f"[Service]\n﻿{off_socket}\n"
+            write_tree(scratch, {"deploy/systemd/planted.service": planted})
+            done = run(PAIRS, "--root", scratch)
+        self.assertEqual(done.returncode, 1, done.stdout + done.stderr)
+        self.assertIn("REFUSE: deploy/systemd/planted.service:2:", done.stderr)
+        self.assertIn("byte-order mark", done.stderr)
 
 
 class TheRailContract(unittest.TestCase):
@@ -454,6 +496,172 @@ class TheEffectiveCheck(unittest.TestCase):
                     done.stdout,
                 )
 
+    def refused(self, output, unit="deck-streak-api.service"):
+        """The check's run on `output`, asserted refused for `unit` without echoing a value."""
+        done = self.check(output)
+        self.assertEqual(done.returncode, 1, done.stdout + done.stderr)
+        self.assertIn(f"REFUSE: {unit}:", done.stdout)
+        self.assertNotIn("planted-secret", done.stdout + done.stderr)
+        return done
+
+    def test_the_effective_check_reads_each_line_as_systemd_does(self):
+        api = template("deck-streak-api.service")
+        # systemd's own reading, measured with `systemd-analyze verify` (SPEC-061 §8): a line ends
+        # at a newline, a carriage return or a NUL; it continues only when it ends in an odd run
+        # of backslashes; a comment line never continues; a byte-order mark is skipped. A line
+        # systemd reads on its own is never hidden in the line before it.
+        secret = "Environment=TELEGRAM_BOT_TOKEN=planted-secret"
+        hidden = {
+            "after a double backslash": f"Description=a synthetic unit \\\\\n{secret}\n",
+            "after a backslash and a space": f"Description=a synthetic unit \\ \n{secret}\n",
+            "after a comment's backslash": f"# a synthetic comment \\\n{secret}\n",
+            "after a NUL": f"Description=a synthetic unit\0{secret}\n",
+            "after a byte-order mark": f"﻿{secret}\n",
+        }
+        for where, lines in hidden.items():
+            with self.subTest(hidden=where):
+                self.refused(cat(self.API, api, (self.API_RAIL, self.API_DROPIN + lines)))
+        # A reset systemd does not read is never taken for one: a form feed and a no-break space
+        # are no line end and no blank to systemd, and a newline then a carriage return end one
+        # line, not two, so the continuation goes on.
+        unread = {
+            "after a form feed": "Description=a synthetic unit\x0cExecStart=\n",
+            "after a no-break space": "\xa0ExecStart=\n",
+            "after a newline and a carriage return": "Description=a synthetic unit \\\n\rExecStart=\n",
+        }
+        left = (
+            "REFUSE: deck-streak-api.service: neutral value left in force: [Service] "
+            f"ExecStart={RELEASE_ROOT}/bin/deckstreakd api"
+        )
+        for where, reset in unread.items():
+            with self.subTest(reset=where):
+                dropin = (
+                    f"[Service]\n{reset}ExecStart={EXAMPLE_ROOT}/bin/deckstreakd api\n"
+                    f"EnvironmentFile=\nEnvironmentFile={EXAMPLE_SETTINGS}\n"
+                )
+                done = self.refused(cat(self.API, api, (self.API_RAIL, dropin)))
+                self.assertIn(left, done.stdout)
+        # systemctl prints a file's `# <path>` line after an empty line; one glued to the file
+        # before it, which has no final newline, cannot be told from that file's own comment.
+        override = f"{UNIT_DIR}/deck-streak-api.service.d/override.conf"
+        glued = cat(self.API, api, (self.API_RAIL, self.API_DROPIN))
+        done = self.refused(glued + f"# {override}\n[Service]\nNice=5\n")
+        self.assertIn(f"a file header not after an empty line: {override}", done.stdout)
+
+    def test_the_effective_check_reads_a_variables_name_as_systemd_does(self):
+        api = template("deck-streak-api.service")
+        # systemd decodes C escapes, in single and double quotes too, and expands specifiers before
+        # it reads a variable's name (measured with `systemd-analyze verify`; SPEC-061 §8): each
+        # line below sets a secret-named variable, and none may pass.
+        written = {
+            "a hex escape": "Environment=TELEGRAM_BOT_TOK\\x45N=planted-secret",
+            "a hex escape in double quotes": 'Environment="TELEGRAM_BOT_TOK\\x45N=planted-secret"',
+            "a hex escape in single quotes": "Environment='TELEGRAM_BOT_TOK\\x45N=planted-secret'",
+            "an octal escape": "Environment=TELEGRAM_BOT_TOK\\105N=planted-secret",
+            "a specifier": "Environment=%iTOKEN=planted-secret",
+        }
+        for how, line in written.items():
+            with self.subTest(written=how):
+                dropin = self.API_DROPIN + line + "\n"
+                done = self.refused(cat(self.API, api, (self.API_RAIL, dropin)))
+                self.assertIn("Environment=", done.stdout)
+        # Quotes inside a word are removed as systemd removes them, and the name is judged.
+        dropin = self.API_DROPIN + 'Environment=TELEGRAM_BOT_"TOK"EN=planted-secret\n'
+        done = self.refused(cat(self.API, api, (self.API_RAIL, dropin)))
+        self.assertIn("TELEGRAM_BOT_TOKEN", done.stdout)
+
+    def test_the_checks_refuse_a_section_systemd_reads_as_another(self):
+        api = template("deck-streak-api.service")
+        # systemd reads a header's text whole: `[ Service ]` names an unknown section, whose lines
+        # it ignores (measured with `systemd-analyze verify`; SPEC-061 §8), so the rail's resets
+        # under it reset nothing.
+        for header in ("[ Service ]", "[Service ]"):
+            with self.subTest(header=header):
+                dropin = self.API_DROPIN.replace("[Service]", header, 1)
+                done = self.refused(cat(self.API, api, (self.API_RAIL, dropin)))
+                self.assertIn("section", done.stdout)
+        # The pair lister refuses it as well: systemd would load no credential under it.
+        with tempfile.TemporaryDirectory() as scratch:
+            planted = f"[ Service ]\nLoadCredential=owner-user-id:{SOCKET}\n"
+            write_tree(scratch, {"deploy/systemd/planted.service": planted})
+            done = run(PAIRS, "--root", scratch)
+        self.assertEqual(done.returncode, 1, done.stdout + done.stderr)
+        self.assertEqual(done.stdout, "")
+        self.assertIn("REFUSE: deploy/systemd/planted.service:1:", done.stderr)
+
+    def test_the_effective_check_reads_a_neutral_value_as_systemd_resolves_it(self):
+        api = template("deck-streak-api.service")
+        # A drop-in that sets a neutral value again in another spelling leaves it in force: systemd
+        # collapses `//` and `/./`, decodes escapes and quotes in ExecStart=, and expands
+        # specifiers, and the kernel follows `..` (measured with `systemd-analyze verify`).
+        binary = f"{RELEASE_ROOT}/bin/deckstreakd api"
+        head, _, tail = RELEASE_ROOT.rpartition("/deck-streak/")
+        spelled = {
+            "a double slash": ("ExecStart", binary.replace("/current/", "//current/")),
+            "a dot segment": ("ExecStart", binary.replace("/current/", "/./current/")),
+            "a hex escape": ("ExecStart", binary.replace("/deck-streak/", "/d\\x65ck-streak/")),
+            "quotes inside a word": (
+                "ExecStart",
+                binary.replace("/deck-streak/", '/"deck-streak"/'),
+            ),
+            "a dot-dot segment": (
+                "ExecStart",
+                f"{head}/rail/../deck-streak/{tail}/bin/deckstreakd",
+            ),
+            "a settings file with a double slash": (
+                "EnvironmentFile",
+                SETTINGS_FILE.replace("/deck-streak/", "//deck-streak/"),
+            ),
+            "a settings file through a specifier": (
+                "EnvironmentFile",
+                SETTINGS_FILE.replace("/etc/", "%E/", 1),
+            ),
+        }
+        for how, (key, value) in spelled.items():
+            with self.subTest(spelled=how):
+                values = {
+                    "ExecStart": f"{EXAMPLE_ROOT}/bin/deckstreakd api",
+                    "EnvironmentFile": EXAMPLE_SETTINGS,
+                }
+                values[key] = value
+                dropin = rail_dropin("Service", *values.items())
+                self.refused(cat(self.API, api, (self.API_RAIL, dropin)))
+        # A calendar fires at the neutral zone's instants in any zone systemd reads as UTC (`utc`
+        # and `Utc` are UTC to it) or that keeps a zero offset all year, as `systemd-analyze
+        # calendar` shows; one that names no zone fires in the host's own zone.
+        timer = template(SYNC_TIMER)
+        path = f"{UNIT_DIR}/{SYNC_TIMER}"
+        zones = ("utc", "Utc", "Etc/UTC", "UCT", "Zulu", "GMT", "Universal", "Africa/Abidjan")
+        for zone in zones:
+            with self.subTest(zone=zone):
+                dropin = rail_dropin("Timer", ("OnCalendar", f"*-*-* 04:07:00 {zone}"))
+                self.refused(cat(path, timer, (f"{path}.d/10-rail.conf", dropin)), SYNC_TIMER)
+        dropin = rail_dropin("Timer", ("OnCalendar", "*-*-* 04:07:00"))
+        done = self.refused(cat(path, timer, (f"{path}.d/10-rail.conf", dropin)), SYNC_TIMER)
+        self.assertIn("names no zone", done.stdout)
+
+    def test_the_effective_check_refuses_every_other_secret_route(self):
+        api = template("deck-streak-api.service")
+        # A value can reach a unit's process without a credential: from the manager's environment,
+        # from its standard input, or from a second settings file (R6 names one). Each is refused
+        # by its key, and a value is never echoed.
+        routes = {
+            "PassEnvironment=TELEGRAM_BOT_TOKEN": "PassEnvironment=",
+            "StandardInputText=planted-secret": "StandardInputText=",
+            "StandardInputData=cGxhbnRlZC1zZWNyZXQ=": "StandardInputData=",
+            "StandardInput=file:/etc/credstore/planted-secret": "StandardInput=",
+            f"EnvironmentFile={EXAMPLE_SETTINGS}.planted-secret": "EnvironmentFile=",
+        }
+        for line, key in routes.items():
+            with self.subTest(line=key):
+                dropin = self.API_DROPIN + line + "\n"
+                done = self.refused(cat(self.API, api, (self.API_RAIL, dropin)))
+                self.assertIn(key, done.stdout)
+        # A variable of the manager's environment whose name carries no secret passes.
+        dropin = self.API_DROPIN + "PassEnvironment=LANG\n"
+        done = self.check(cat(self.API, api, (self.API_RAIL, dropin)))
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+
 
 class TheGuardCheck(unittest.TestCase):
     def test_the_guard_check_refuses_missing_changed_and_writable_files(self):
@@ -534,6 +742,51 @@ class TheGuardCheck(unittest.TestCase):
             self.assertEqual(code, 1, out)
             self.assertIn(f"REFUSE: {manifest}: names no file", out)
             self.assertIn("examined 0 file(s)", out)
+
+
+class TheSyncLogin(unittest.TestCase):
+    def test_only_the_sync_job_reads_the_sync_login(self):
+        # The private rail's map answers the sync login to the `sync` job's instance alone
+        # (SPEC-061 §8, R4), which is right only while no other job of the table reads it: the
+        # runner hands the sync cycle to the `sync` job's work alone, the job role builds its
+        # credential loader inside that cycle alone, and no other job's work names a credential.
+        crates = REPO / "crates"
+        jobs = (crates / "coordination" / "src" / "jobs.rs").read_text(encoding="utf-8")
+        table = re.search(r"pub const TABLE: \[Job; \d+\] = \[([A-Z_, ]+)\];", jobs)
+        self.assertIsNotNone(table, "the job table")
+        names = examined(
+            "job(s) of the table", [name.strip() for name in table.group(1).split(",")]
+        )
+        ids = dict(re.findall(r'pub const ([A-Z_]+): Job = Job \{\s*id: "([a-z-]+)"', jobs))
+        self.assertEqual(ids.get("SYNC"), "sync")
+
+        runner = (crates / "coordination" / "src" / "runner.rs").read_text(encoding="utf-8")
+        parts = re.split(
+            r"Some\(job\) if job == jobs::([A-Z_]+) =>", rust_block(runner, "fn run_job")
+        )
+        arms = dict(zip(parts[1::2], parts[2::2], strict=True))
+        self.assertEqual(sorted(arms), sorted(names), "run_job's arms are the table's jobs")
+        works = {
+            work: module for module, work in re.findall(r"use crate::(\w+)::(\w+Work);", runner)
+        }
+        for name, arm in arms.items():
+            with self.subTest(job=ids.get(name, name)):
+                self.assertEqual("cycle" in arm, name == "SYNC", "only sync's work gets the cycle")
+                for work in re.findall(r"(\w+Work)::new", arm):
+                    if work in works:
+                        source = crates / "coordination" / "src" / f"{works[work]}.rs"
+                        self.assertNotIn("Credential", source.read_text(encoding="utf-8"), work)
+
+        role = (crates / "daemon" / "src" / "role_job.rs").read_text(encoding="utf-8")
+        cycle = rust_block(role, "fn run_scheduled")
+        loaders = examined(
+            "credential loader call(s) in the job role",
+            re.findall(r"CredentialsDirectory::from_env|CredentialLoader::new", role),
+        )
+        inside = re.findall(r"CredentialsDirectory::from_env|CredentialLoader::new", cycle)
+        self.assertEqual(
+            len(inside), len(loaders), "the job role loads credentials in sync's cycle alone"
+        )
 
 
 class NoPrivateValue(unittest.TestCase):

@@ -114,6 +114,13 @@ R11. The login reuse conditions are each shown before the first scheduled sync: 
 | A5 | the effective check refuses an effective `LoadCredentialEncrypted=` line, a secret-named `Environment=` assignment, and a drop-in that is not the rail's | `test_rail_contract.py` |
 | A6 | the guard check refuses a missing, changed or group-writable guard file and an empty manifest, and passes a matching manifest (examined count reported) | `test_rail_contract.py` |
 | A7 | no rail-contract file names a private value, and a planted one is refused by the public scrub | `test_rail_contract.py`; `scripts/public-scrub.py` |
+| A8 | the pair lister reads each line as systemd does, so a credential line systemd reads on its own is never hidden in the line before it, and a byte-order mark is refused | `test_rail_contract.py` |
+| A9 | the effective check reads each line as systemd does: no line systemd reads is hidden in the one before it, no reset systemd does not read counts, and a file's header glued to the file before it is refused | `test_rail_contract.py` |
+| A10 | the effective check reads an `Environment=` variable's name as systemd does, and refuses a name written with an escape or a specifier | `test_rail_contract.py` |
+| A11 | both checks refuse a section header systemd reads as another section | `test_rail_contract.py` |
+| A12 | the effective check reads a neutral value as systemd resolves it: a path spelled with `//`, `/./` or quotes is still the neutral value, one written with an escape, a `..` segment or a specifier is refused, a calendar in a zone that fires at the neutral zone's instants is neutral, and a calendar that names no zone is refused | `test_rail_contract.py` |
+| A13 | the effective check refuses the other routes a value can take into a unit: a secret-named `PassEnvironment=`, `StandardInputText=`, `StandardInputData=`, `StandardInput=file:` and a second `EnvironmentFile=` in force | `test_rail_contract.py` |
+| A14 | the sync login is read by the `sync` job alone, the one instance the rail's map answers it to (§8, R4) | `test_rail_contract.py` |
 
 ```acceptance
 A1: python3 -m unittest discover -s scripts/tests -p test_rail_contract.py -k test_the_pair_lister_prints_each_unit_and_credential_id
@@ -123,10 +130,19 @@ A4: python3 -m unittest discover -s scripts/tests -p test_rail_contract.py -k te
 A5: python3 -m unittest discover -s scripts/tests -p test_rail_contract.py -k test_the_effective_check_refuses_encrypted_secret_env_and_foreign_drop_ins
 A6: python3 -m unittest discover -s scripts/tests -p test_rail_contract.py -k test_the_guard_check_refuses_missing_changed_and_writable_files
 A7: python3 -m unittest discover -s scripts/tests -p test_rail_contract.py -k test_no_rail_contract_file_names_a_private_value
+A8: python3 -m unittest discover -s scripts/tests -p test_rail_contract.py -k test_the_pair_lister_reads_each_line_as_systemd_does
+A9: python3 -m unittest discover -s scripts/tests -p test_rail_contract.py -k test_the_effective_check_reads_each_line_as_systemd_does
+A10: python3 -m unittest discover -s scripts/tests -p test_rail_contract.py -k test_the_effective_check_reads_a_variables_name_as_systemd_does
+A11: python3 -m unittest discover -s scripts/tests -p test_rail_contract.py -k test_the_checks_refuse_a_section_systemd_reads_as_another
+A12: python3 -m unittest discover -s scripts/tests -p test_rail_contract.py -k test_the_effective_check_reads_a_neutral_value_as_systemd_resolves_it
+A13: python3 -m unittest discover -s scripts/tests -p test_rail_contract.py -k test_the_effective_check_refuses_every_other_secret_route
+A14: python3 -m unittest discover -s scripts/tests -p test_rail_contract.py -k test_only_the_sync_job_reads_the_sync_login
 ```
 
-A4 and A5 feed the check synthetic `systemctl cat` outputs written at run time; A6 builds its guard
-files and manifest in a `TemporaryDirectory`. None of them reads a host.
+A4, A5 and A8 to A13 feed the checks synthetic `systemctl cat` outputs and template trees written at
+run time; A6 builds its guard files and manifest in a `TemporaryDirectory`; A14 reads the job
+table and the job role's source. None of them reads a host. A12's calendars are read against the
+tz database of the machine that runs them.
 
 ## 4. The owner's gates and the evidence they record
 
