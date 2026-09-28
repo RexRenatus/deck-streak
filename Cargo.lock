@@ -1504,6 +1504,8 @@ dependencies = [
  "deck-streak-identity",
  "deck-streak-kernel",
  "deck-streak-notifications",
+ "serde",
+ "serde_json",
  "tempfile",
  "thiserror 2.0.21",
  "tokio",
@@ -1630,7 +1632,19 @@ dependencies = [
 name = "deck-streak-identity"
 version = "0.1.0"
 dependencies = [
+ "axum",
  "deck-streak-kernel",
+ "getrandom 0.4.3",
+ "hmac 0.13.0",
+ "serde",
+ "serde_json",
+ "sha2 0.11.0",
+ "subtle",
+ "tempfile",
+ "thiserror 2.0.21",
+ "tokio",
+ "tower",
+ "tracing",
 ]
 
 [[package]]

@@ -1,12 +1,17 @@
 """CI runs the whole gate on hosted runners with read-only tokens and pinned actions (SPEC-002 A9),
 on pull requests into dev and main and pushes to both (SPEC-030 A1), and only this repository's dev
-reaches main (SPEC-034 A5 to A7)."""
+reaches main (SPEC-034 A5 to A7). The gate runs in four parallel jobs, each stage in exactly one,
+a cache is saved only by a push to dev or main, and every job that compiles Rust installs the
+protoc Anki's engine needs (SPEC-038)."""
 
+import math
 import os
 import re
 import subprocess
+import tempfile
 import textwrap
 import unittest
+from pathlib import Path
 
 from _support import REPO, examined
 
@@ -23,6 +28,38 @@ INTO_MAIN = {
     "github.event.pull_request.head.repo.full_name": THIS_REPOSITORY,
     "github.repository": THIS_REPOSITORY,
 }
+# The owner's layout of the gate (SPEC-038 R3): each job and the stages it runs, in order.
+OWNER_LAYOUT = {
+    "rust": ["fmt", "clippy", "test", "doctest", "audit-rust"],
+    "web": ["web", "audit-web"],
+    "packs": ["packs"],
+    "hygiene": ["python", "scrub", "secrets"],
+}
+# What the Rust cache holds (SPEC-038 R1): the crates Cargo downloaded, and the build.
+RUST_CACHE = ["~/.cargo/registry/index/", "~/.cargo/registry/cache/", "~/.cargo/git/db/", "target/"]
+BROWSERS = ["~/.cache/ms-playwright"]
+# The stages that compile Rust: python's among them, because a guard test builds a Rust example
+# (SPEC-042's rails rows).
+COMPILES_RUST = {"clippy", "test", "doctest", "python"}
+# The one build tool Anki's engine needs: protoc 31.1, at the version and archive digest Anki's own
+# build pins (ADR-022).
+PROTOC_VERSION = "31.1"
+PROTOC_SHA256 = "96553041f1a91ea0efee963cb16f462f5985b4d65365f3907414c360044d8065"
+PROTOC_ARCHIVE = (
+    f"https://github.com/protocolbuffers/protobuf/releases/download/v{PROTOC_VERSION}/"
+    f"protoc-{PROTOC_VERSION}-linux-x86_64.zip"
+)
+# A `bash scripts/check.sh [stage...]` line of a step's script.
+GATE_CALL = re.compile(r"(?m)^[ \t]*bash scripts/check\.sh((?:[ \t]+[a-z][a-z0-9-]*)*)[ \t]*$")
+# Actions that save a cache by themselves, whatever the event (SPEC-038 R2).
+CACHE_BY_THEMSELVES = (
+    "Swatinem/rust-cache",
+    "actions/setup-go",
+    "actions/setup-java",
+    "actions/setup-python",
+    "astral-sh/setup-uv",
+    "ruby/setup-ruby",
+)
 
 
 class WorkflowsAreHardened(unittest.TestCase):
@@ -51,7 +88,8 @@ class WorkflowsAreHardened(unittest.TestCase):
         stages = STAGES.search((REPO / "scripts" / "check.sh").read_text()).group(1).split()
         ci = (WORKFLOWS / "ci.yml").read_text()
         for stage in examined("gate stages", stages):
-            self.assertRegex(ci, rf"bash scripts/check\.sh [a-z ]*\b{stage}\b", stage)
+            named = rf"bash scripts/check\.sh [a-z -]*(?<![\w-]){re.escape(stage)}(?![\w-])"
+            self.assertRegex(ci, named, stage)
 
     def test_the_aggregate_check_needs_every_job_and_always_runs(self):
         ci = (WORKFLOWS / "ci.yml").read_text()
@@ -127,6 +165,687 @@ class OnlyThisRepositorysDevReachesMain(unittest.TestCase):
         done = run_base_is_dev(dict(INTO_MAIN, **{"github.head_ref": "feature/probe"}))
         self.assertEqual(done.returncode, 1, done.stdout)
         self.assertIn("feature/probe", done.stdout)
+
+
+# ------------------------------------------------------------------ reading a workflow (SPEC-038)
+
+
+def read_workflow(text):
+    """A workflow as dicts, lists and strings, read without a YAML library. It reads the block YAML
+    the workflows here use: mappings, `- ` sequences, `|` block scalars, flow lists, and plain or
+    quoted scalars. Blank lines, comment lines and a ` #` comment after a plain value are dropped;
+    a line it cannot place refuses the whole file."""
+    lines = text.splitlines()
+    value, at = _mapping(lines, _skip(lines, 0), 0)
+    at = _skip(lines, at)
+    if at < len(lines):
+        raise AssertionError(f"line {at + 1} was not read: {lines[at]!r}")
+    return value
+
+
+def _indent(line):
+    return len(line) - len(line.lstrip(" "))
+
+
+def _skip(lines, at):
+    while at < len(lines) and (not lines[at].strip() or lines[at].lstrip().startswith("#")):
+        at += 1
+    return at
+
+
+def _scalar(text):
+    text = text.strip()
+    if text[:1] in ("'", '"'):
+        end = text.find(text[0], 1)
+        return text[1:end] if end > 0 else text
+    text = re.sub(r"\s#.*$", "", text).strip()
+    if text.startswith("[") and text.endswith("]"):
+        return [_scalar(part) for part in text[1:-1].split(",") if part.strip()]
+    return text
+
+
+def _block(lines, at, indent):
+    if lines[at][indent:].startswith("-"):
+        return _sequence(lines, at, indent)
+    return _mapping(lines, at, indent)
+
+
+def _mapping(lines, at, indent):
+    found = {}
+    while True:
+        at = _skip(lines, at)
+        if at >= len(lines) or _indent(lines[at]) != indent or lines[at][indent:].startswith("-"):
+            return found, at
+        text = lines[at][indent:]
+        if ": " in text:
+            key, rest = text.split(": ", 1)
+        elif text.endswith(":"):
+            key, rest = text[:-1], ""
+        else:
+            raise AssertionError(f"line {at + 1} is not a mapping entry: {lines[at]!r}")
+        key, rest = key.strip().strip("'\""), rest.strip()
+        if rest in ("|", "|-"):
+            at += 1
+            body = []
+            while at < len(lines) and (not lines[at].strip() or _indent(lines[at]) > indent):
+                body.append(lines[at])
+                at += 1
+            while body and not body[-1].strip():
+                body.pop()
+            width = min(_indent(line) for line in body if line.strip())
+            found[key] = "\n".join(line[width:] for line in body) + "\n"
+        elif not rest or rest.startswith("#"):
+            child = _skip(lines, at + 1)
+            if child < len(lines) and _indent(lines[child]) > indent:
+                found[key], at = _block(lines, child, _indent(lines[child]))
+            else:
+                found[key], at = None, at + 1
+        else:
+            found[key], at = _scalar(rest), at + 1
+
+
+def _sequence(lines, at, indent):
+    found = []
+    while True:
+        at = _skip(lines, at)
+        if (
+            at >= len(lines)
+            or _indent(lines[at]) != indent
+            or not lines[at][indent:].startswith("-")
+        ):
+            return found, at
+        body = lines[at][indent + 1 :].lstrip(" ")
+        inner = len(lines[at]) - len(body)
+        if re.match(r"^['\"]?[\w.-]+['\"]?:(?: |$)", body):
+            # A mapping item: its first entry sits on the dash's line, its others below it.
+            lines[at] = " " * inner + body
+            item, at = _mapping(lines, at, inner)
+        else:
+            item, at = _scalar(body), at + 1
+        found.append(item)
+
+
+def load(name):
+    return read_workflow((WORKFLOWS / name).read_text(encoding="utf-8"))
+
+
+def action(step):
+    """The action a step uses, without its ref: `actions/cache/restore`, or '' for a run step."""
+    return str(step.get("uses", "")).split("@", 1)[0]
+
+
+def lines_of(value):
+    """A block scalar's non-blank lines, stripped: a multi-line `path` or `restore-keys`."""
+    return [line.strip() for line in str(value or "").splitlines() if line.strip()]
+
+
+def paths(step):
+    return lines_of((step.get("with") or {}).get("path"))
+
+
+def gate_stages():
+    return STAGES.search((REPO / "scripts" / "check.sh").read_text()).group(1).split()
+
+
+def stage_calls(workflow):
+    """[(job, [stage, ...])] for every `bash scripts/check.sh` a job's steps run. A bare call names
+    no stage, which check.sh reads as every stage."""
+    calls = []
+    for job, body in (workflow.get("jobs") or {}).items():
+        for step in (body or {}).get("steps") or []:
+            for call in GATE_CALL.finditer(re.sub(r"(?m)#.*$", "", str(step.get("run", "")))):
+                calls.append((job, call.group(1).split()))
+    return calls
+
+
+def stage_problems(workflow, stages):
+    """Every stage of `stages` that runs in no job or in more than one, and every stage a job names
+    that check.sh does not define."""
+    jobs = {stage: [] for stage in stages}
+    problems = []
+    for job, named in stage_calls(workflow):
+        for stage in named or stages:
+            if stage in jobs:
+                jobs[stage].append(job)
+            else:
+                problems.append(f"{job} runs {stage}, which check.sh does not define")
+    for stage, found in jobs.items():
+        if len(found) != 1:
+            problems.append(f"{stage} runs in {len(found)} job(s): {', '.join(found) or 'none'}")
+    return problems
+
+
+# ------------------------------------------------ GitHub's expression rules (SPEC-038 A2, A10, A11)
+
+EXPRESSION = re.compile(r"\$\{\{\s*(.*?)\s*\}\}")
+TOKEN = re.compile(r"\s*(?:(==|!=|&&|\|\||!|\(|\))|'((?:[^']|'')*)'|([A-Za-z_][\w.-]*))")
+
+
+def truthy(value):
+    """GitHub's truthiness: false, null, '', 0 and NaN are falsy; everything else is truthy."""
+    if value is None or value is False or value == "":
+        return False
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        return not math.isnan(value) and value != 0
+    return True
+
+
+def number(value):
+    if value is None:
+        return 0.0
+    if isinstance(value, (bool, int, float)):
+        return float(value)
+    try:
+        return float(value.strip()) if value.strip() else 0.0
+    except ValueError:
+        return math.nan
+
+
+def equal(left, right):
+    """GitHub's `==`: strings compare without case; other mixed types compare as numbers."""
+    if isinstance(left, str) and isinstance(right, str):
+        return left.casefold() == right.casefold()
+    if type(left) is type(right):
+        return left == right
+    return number(left) == number(right)
+
+
+def evaluate(expression, context):
+    """The value of one expression (without `${{ }}`) over `context`, {dotted name: value}. `&&`
+    and `||` return an operand, as GitHub's do. A `github.` name no scenario models refuses, and a
+    step's output nobody set is null. Only the forms the workflows use are read."""
+    tokens, at, text = [], 0, expression.strip()
+    while at < len(text):
+        match = TOKEN.match(text, at)
+        if match is None or match.end() == at:
+            raise AssertionError(f"this reader models no such expression: {expression!r}")
+        operator, string, name = match.groups()
+        if operator:
+            tokens.append(("op", operator))
+        elif string is not None:
+            tokens.append(("str", string.replace("''", "'")))
+        else:
+            tokens.append(("name", name))
+        at = match.end()
+    position = 0
+
+    def take():
+        nonlocal position
+        if position >= len(tokens):
+            raise AssertionError(f"an expression that ends early: {expression!r}")
+        position += 1
+        return tokens[position - 1]
+
+    def peek():
+        return tokens[position] if position < len(tokens) else (None, None)
+
+    def primary():
+        kind, value = take()
+        if (kind, value) == ("op", "("):
+            inner = disjunction()
+            if take() != ("op", ")"):
+                raise AssertionError(f"an unclosed parenthesis: {expression!r}")
+            return inner
+        if (kind, value) == ("op", "!"):
+            return not truthy(primary())
+        if kind == "str":
+            return value
+        if kind == "name" and value in ("true", "false", "null"):
+            return {"true": True, "false": False, "null": None}[value]
+        if kind == "name" and value.startswith("steps."):
+            return context.get(value)
+        if kind == "name" and value in context:
+            return context[value]
+        raise AssertionError(f"{expression!r} reads {value}, which no scenario models")
+
+    def comparison():
+        left = primary()
+        if peek() in (("op", "=="), ("op", "!=")):
+            operator = take()[1]
+            same = equal(left, primary())
+            return same if operator == "==" else not same
+        return left
+
+    def conjunction():
+        left = comparison()
+        while peek() == ("op", "&&"):
+            take()
+            right = comparison()
+            left = right if truthy(left) else left
+        return left
+
+    def disjunction():
+        left = conjunction()
+        while peek() == ("op", "||"):
+            take()
+            right = conjunction()
+            left = left if truthy(left) else right
+        return left
+
+    value = disjunction()
+    if position != len(tokens):
+        raise AssertionError(f"this reader models no such expression: {expression!r}")
+    return value
+
+
+def condition(value, context):
+    """Whether a condition holds: `${{ expr }}`, a bare `if:` expression, or a literal."""
+    text = str(value).strip()
+    whole = re.fullmatch(r"\$\{\{\s*(.*?)\s*\}\}", text)
+    return truthy(evaluate(whole.group(1) if whole else text, context))
+
+
+def rendered(template, context):
+    """A value with `${{ }}` inside it, as GitHub renders it."""
+
+    def text(match):
+        value = evaluate(match.group(1), context)
+        if value is None:
+            return ""
+        if isinstance(value, bool):
+            return "true" if value else "false"
+        return str(value)
+
+    return EXPRESSION.sub(text, str(template))
+
+
+def push(ref, run_id="201"):
+    return {
+        "github.event_name": "push",
+        "github.ref": ref,
+        "github.run_id": run_id,
+        "github.repository": THIS_REPOSITORY,
+        "github.workflow": "ci",
+    }
+
+
+def pull_request(base, number="7", run_id="101", head_repository=THIS_REPOSITORY):
+    return {
+        "github.event_name": "pull_request",
+        "github.ref": f"refs/pull/{number}/merge",
+        "github.base_ref": base,
+        "github.head_ref": "feat/probe",
+        "github.run_id": run_id,
+        "github.repository": THIS_REPOSITORY,
+        "github.workflow": "ci",
+        "github.event.pull_request.number": number,
+        "github.event.pull_request.head.repo.full_name": head_repository,
+    }
+
+
+# (scenario, context, whether a cache that missed its key may be saved there)
+SAVE_SCENARIOS = [
+    ("a push to dev", push("refs/heads/dev"), True),
+    ("a push to main", push("refs/heads/main"), True),
+    ("a pull request into dev", pull_request("dev"), False),
+    ("a pull request into main", pull_request("main"), False),
+    ("a fork's pull request into dev", pull_request("dev", head_repository="someone/fork"), False),
+    ("a push to another branch", push("refs/heads/feature"), False),
+    ("a pushed tag", push("refs/tags/v1.0.0"), False),
+]
+
+
+def cache_problems(name, workflow):
+    """Every way a workflow could save a cache other than from a push to dev or main that missed its
+    key, and the save steps it examined."""
+    problems, saves = [], []
+    for job_id, job in (workflow.get("jobs") or {}).items():
+        for step in (job or {}).get("steps") or []:
+            uses, inputs = action(step), step.get("with") or {}
+            where = f"{name}:{job_id}:{step.get('name') or step.get('id') or uses}"
+            if uses == "actions/cache":
+                problems.append(f"{where}: actions/cache saves in its post step on every event")
+            elif uses in CACHE_BY_THEMSELVES:
+                problems.append(f"{where}: {uses} saves a cache by itself")
+            elif uses == "actions/setup-node" and (
+                "cache" in inputs or inputs.get("package-manager-cache") != "false"
+            ):
+                why = "it has a cache input or package-manager-cache is not false"
+                problems.append(f"{where}: setup-node saves a cache, because {why}")
+            elif uses == "pnpm/action-setup" and str(inputs.get("cache", "false")) != "false":
+                problems.append(f"{where}: pnpm/action-setup saves its store when cache is on")
+            elif uses == "actions/cache/save":
+                saves.append(where)
+                problems += save_problems(where, step)
+    return problems, saves
+
+
+def save_problems(where, step):
+    """A save step that saves where it must not, or never saves where it must."""
+    problems = []
+    restore = re.fullmatch(
+        r"\$\{\{ steps\.([\w-]+)\.outputs\.cache-primary-key \}\}",
+        str((step.get("with") or {}).get("key", "")),
+    )
+    scenarios = list(SAVE_SCENARIOS)
+    if restore:
+        hit = dict(
+            push("refs/heads/dev"), **{f"steps.{restore.group(1)}.outputs.cache-hit": "true"}
+        )
+        scenarios.append(("a push to dev that hit its key exactly", hit, False))
+    for scenario, context, allowed in scenarios:
+        saves = "if" not in step or condition(step["if"], context)
+        if saves and not allowed:
+            problems.append(f"{where}: saves on {scenario}")
+        if allowed and not saves:
+            problems.append(f"{where}: never saves on {scenario}, so the cache never warms")
+    return problems
+
+
+PLANTED_CACHES = """\
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: combined
+        uses: actions/cache@0123456789abcdef0123456789abcdef01234567
+        with:
+          path: target/
+          key: build
+      - name: node
+        uses: actions/setup-node@0123456789abcdef0123456789abcdef01234567
+        with:
+          cache: pnpm
+      - id: restored
+        uses: actions/cache/restore@0123456789abcdef0123456789abcdef01234567
+        with:
+          path: target/
+          key: build
+      - name: unconditional
+        uses: actions/cache/save@0123456789abcdef0123456789abcdef01234567
+        with:
+          path: target/
+          key: ${{ steps.restored.outputs.cache-primary-key }}
+      - name: any push
+        if: ${{ github.event_name == 'push' }}
+        uses: actions/cache/save@0123456789abcdef0123456789abcdef01234567
+        with:
+          path: target/
+          key: build
+"""
+
+
+class TheGateRunsInParallelJobs(unittest.TestCase):
+    def test_the_gate_runs_in_four_parallel_jobs(self):
+        workflow = load("ci.yml")
+        layout = {}
+        calls = examined("check.sh calls", stage_calls(workflow))
+        for job, named in calls:
+            layout.setdefault(job, []).extend(named or ["every stage"])
+        self.assertEqual(layout, OWNER_LAYOUT)
+        self.assertEqual(len(calls), len(OWNER_LAYOUT), "a job calls check.sh more than once")
+        for job in OWNER_LAYOUT:
+            self.assertIsNone(workflow["jobs"][job].get("needs"), f"{job} waits on another job")
+        needs = workflow["jobs"]["ci"]["needs"]
+        self.assertEqual(sorted(needs), sorted([*OWNER_LAYOUT, "workflow-lint", "base-is-dev"]))
+
+    def test_every_stage_runs_in_exactly_one_ci_job(self):
+        stages = examined("gate stages", gate_stages())
+        self.assertEqual(stage_problems(load("ci.yml"), stages), [])
+        # A planted workflow that drops a stage, doubles another and names an unknown one.
+        planted = read_workflow(
+            "jobs:\n  a:\n    steps:\n      - run: bash scripts/check.sh fmt clippy\n"
+            "  b:\n    steps:\n      - run: |\n          bash scripts/check.sh clippy lint\n"
+        )
+        self.assertEqual(
+            stage_problems(planted, ["fmt", "clippy", "test"]),
+            [
+                "b runs lint, which check.sh does not define",
+                "clippy runs in 2 job(s): a, b",
+                "test runs in 0 job(s): none",
+            ],
+        )
+        # A bare call runs every stage, so beside one other call it doubles that call's stages.
+        bare = read_workflow(
+            "jobs:\n  a:\n    steps:\n      - run: bash scripts/check.sh\n"
+            "  b:\n    steps:\n      - run: bash scripts/check.sh test\n"
+        )
+        self.assertEqual(stage_problems(bare, ["fmt", "test"]), ["test runs in 2 job(s): a, b"])
+
+    def test_the_jobs_that_read_history_fetch_all_of_it(self):
+        workflow = load("ci.yml")
+        readers = [
+            (stage, job)
+            for job, named in stage_calls(workflow)
+            for stage in named
+            if stage in ("secrets", "scrub", "packs")
+        ]
+        for stage, job_id in examined("stages that read history", readers):
+            job = workflow["jobs"][job_id]
+            checkout = next(s for s in job["steps"] if action(s) == "actions/checkout")
+            depth = (checkout.get("with") or {}).get("fetch-depth")
+            self.assertEqual(depth, "0", f"{job_id} runs {stage} on a shallow checkout")
+            if stage == "secrets":
+                gate = next(s for s in job["steps"] if GATE_CALL.search(str(s.get("run", ""))))
+                env = dict(job.get("env") or {}, **(gate.get("env") or {}))
+                self.assertEqual(env.get("CHECK_HISTORY"), "1", f"{job_id} scans no history")
+
+
+class OnlyAPushSavesACache(unittest.TestCase):
+    def test_the_rust_cache_is_keyed_on_the_toolchain_pin_and_the_lockfile(self):
+        workflow = load("ci.yml")
+        compiling = sorted(
+            {job for job, named in stage_calls(workflow) if COMPILES_RUST & set(named)}
+        )
+        restored = {}
+        for job_id in examined("jobs that compile Rust", compiling):
+            steps = workflow["jobs"][job_id]["steps"]
+            gate = next(n for n, s in enumerate(steps) if GATE_CALL.search(str(s.get("run", ""))))
+            toolchain = [
+                n for n, s in enumerate(steps) if str(s.get("run", "")).strip() == "rustup show"
+            ]
+            self.assertTrue(
+                toolchain and toolchain[0] < gate, f"{job_id} installs no pinned toolchain"
+            )
+            restores = [
+                (n, s)
+                for n, s in enumerate(steps)
+                if action(s) == "actions/cache/restore" and paths(s) == RUST_CACHE
+            ]
+            self.assertEqual(len(restores), 1, f"{job_id} restores no Rust cache before its stages")
+            at, restore = restores[0]
+            self.assertLess(at, gate, f"{job_id} restores the Rust cache after its stages")
+            key = restore["with"]["key"]
+            self.assertIn("${{ hashFiles('rust-toolchain.toml') }}", key)
+            self.assertIn("${{ hashFiles('Cargo.lock') }}", key)
+            fallback = key.split("${{ hashFiles('Cargo.lock') }}")[0]
+            self.assertEqual(lines_of(restore["with"]["restore-keys"]), [fallback])
+            restored[job_id] = (gate, restore)
+        # One job saves it: the one that builds every target, after its stages.
+        saves = [
+            (job_id, n, s)
+            for job_id, job in workflow["jobs"].items()
+            for n, s in enumerate(job.get("steps") or [])
+            if action(s) == "actions/cache/save" and paths(s) == RUST_CACHE
+        ]
+        self.assertEqual(len(saves), 1, f"the Rust cache is saved by {len(saves)} steps")
+        job_id, at, save = saves[0]
+        self.assertIn(job_id, restored, f"{job_id} saves a Rust cache it never restored")
+        gate, restore = restored[job_id]
+        self.assertIn("clippy", dict(stage_calls(workflow))[job_id], f"{job_id} builds no target")
+        self.assertGreater(at, gate, f"{job_id} saves the Rust cache before its stages")
+        primary = "${{ steps." + restore["id"] + ".outputs.cache-primary-key }}"
+        self.assertEqual(save["with"]["key"], primary)
+        # The workspace's own artifacts are rebuilt from any fresh checkout: clean them first.
+        clean = workflow["jobs"][job_id]["steps"][at - 1]
+        self.assertEqual(str(clean.get("run", "")).strip(), "cargo clean --workspace")
+        self.assertEqual(clean.get("if"), save.get("if"))
+
+    def test_a_cache_is_saved_only_by_a_push_to_dev_or_main(self):
+        saves = []
+        for path in examined("workflow files", sorted(WORKFLOWS.glob("*.yml"))):
+            problems, found = cache_problems(path.name, load(path.name))
+            self.assertEqual(problems, [], path.name)
+            saves += found
+        examined("cache saves", saves)
+        problems, _ = cache_problems("planted.yml", read_workflow(PLANTED_CACHES))
+        self.assertEqual(
+            [problem.split(": ", 1)[0] for problem in problems],
+            [
+                "planted.yml:build:combined",
+                "planted.yml:build:node",
+                *["planted.yml:build:unconditional"] * 6,
+                "planted.yml:build:any push",
+                "planted.yml:build:any push",
+            ],
+        )
+        self.assertIn(
+            "planted.yml:build:unconditional: saves on a fork's pull request into dev", problems
+        )
+        self.assertIn("planted.yml:build:any push: saves on a pushed tag", problems)
+
+    def test_only_a_superseded_pull_request_run_is_cancelled(self):
+        ci = (WORKFLOWS / "ci.yml").read_text(encoding="utf-8")
+        self.assertEqual(
+            len(re.findall(r"(?m)^\s*concurrency:", ci)), 1, "a job sets its own group"
+        )
+        judged = examined("concurrency blocks", [load("ci.yml")["concurrency"]])[0]
+        self.assertEqual(concurrency_problems(judged), [])
+        # The old block let two pushes to dev share a group, and cancelled no pull-request run.
+        old = {"group": "ci-${{ github.ref }}", "cancel-in-progress": "false"}
+        self.assertEqual(
+            concurrency_problems(old),
+            [
+                "two pushes to dev share a group, so a third would cancel the pending one",
+                "a newer run of a pull request leaves the superseded one running",
+            ],
+        )
+
+    def test_the_browser_cache_is_keyed_on_the_locked_playwright_version(self):
+        workflow = load("ci.yml")
+        caches = [
+            (job_id, at, step)
+            for job_id, job in workflow["jobs"].items()
+            for at, step in enumerate(job.get("steps") or [])
+            if action(step) == "actions/cache/restore" and paths(step) == BROWSERS
+        ]
+        lockfile = (REPO / "pnpm-lock.yaml").read_text(encoding="utf-8")
+        locked = re.search(
+            r"(?m)^      '@playwright/test':\n        specifier: .*\n        version: ([0-9.]+)$",
+            lockfile,
+        ).group(1)
+        for job_id, at, restore in examined("browser caches", caches):
+            steps = workflow["jobs"][job_id]["steps"]
+            source = re.search(
+                r"\$\{\{ steps\.([\w-]+)\.outputs\.([\w-]+) \}\}", restore["with"]["key"]
+            )
+            self.assertIsNotNone(source, "the browser cache's key reads no step's output")
+            step = next(s for s in steps if s.get("id") == source.group(1))
+            code, outputs = run_step(step, lockfile)
+            self.assertEqual((code, outputs.get(source.group(2))), (0, locked))
+            moved = lockfile.replace(f"playwright-core@{locked}", "playwright-core@9.8.7")
+            self.assertEqual(run_step(step, moved), (0, {source.group(2): "9.8.7"}))
+            # A lockfile that locks no Playwright, or two, fails the step: no key from nothing.
+            self.assertEqual(run_step(step, "lockfileVersion: '9.0'\n")[0], 1)
+            two = moved + f"\n  playwright-core@{locked}:\n    resolution: {{}}\n"
+            self.assertEqual(run_step(step, two)[0], 1)
+            installs = [
+                s
+                for s in steps[at + 1 :]
+                if "playwright install chromium --only-shell" in str(s.get("run", ""))
+            ]
+            self.assertEqual(len(installs), 1, f"{job_id} installs no browser after the restore")
+            hit = {f"steps.{restore['id']}.outputs.cache-hit": "true"}
+            self.assertTrue(condition(installs[0]["if"], pull_request("dev")))
+            self.assertFalse(condition(installs[0]["if"], dict(pull_request("dev"), **hit)))
+
+    def test_every_job_uploads_its_stage_logs_from_a_visible_directory(self):
+        workflow = load("ci.yml")
+        names = []
+        gate_jobs = sorted({job for job, _ in stage_calls(workflow)})
+        for job_id in examined("jobs that run check.sh", gate_jobs):
+            job = workflow["jobs"][job_id]
+            steps = job["steps"]
+            at = next(n for n, s in enumerate(steps) if GATE_CALL.search(str(s.get("run", ""))))
+            env = dict(job.get("env") or {}, **(steps[at].get("env") or {}))
+            logs = str(env.get("CHECK_LOG_DIR", "")).rstrip("/")
+            self.assertTrue(logs, f"{job_id} writes its logs to a temporary directory nobody reads")
+            uploads = [s for s in steps[at + 1 :] if action(s) == "actions/upload-artifact"]
+            self.assertEqual(len(uploads), 1, f"{job_id} uploads no stage logs")
+            inputs = uploads[0]["with"]
+            hidden = [part for part in logs.split("/") if part.startswith(".")]
+            if inputs.get("include-hidden-files") != "true":
+                self.assertEqual(hidden, [], f"{job_id}: upload-artifact skips {hidden}")
+            uploaded = str(inputs["path"]).rstrip("/").replace("${{ github.workspace }}/", "")
+            self.assertEqual(uploaded, logs.replace("${{ github.workspace }}/", ""), job_id)
+            self.assertEqual(uploads[0].get("if"), "${{ always() }}", job_id)
+            names.append(inputs["name"])
+        self.assertEqual(sorted(set(names)), sorted(names), "two jobs upload one artifact name")
+
+
+class TheEngineBuildsInEveryRustJob(unittest.TestCase):
+    def test_every_job_that_compiles_rust_installs_the_pinned_protoc_first(self):
+        workflow = load("ci.yml")
+        compiling = sorted(
+            {job for job, named in stage_calls(workflow) if COMPILES_RUST & set(named)}
+        )
+        for job_id in examined("jobs that compile Rust", compiling):
+            steps = workflow["jobs"][job_id]["steps"]
+            gate = next(n for n, s in enumerate(steps) if GATE_CALL.search(str(s.get("run", ""))))
+            installs = [
+                (n, s)
+                for n, s in enumerate(steps)
+                if "protoc" in str(s.get("run", "")) and "sha256sum -c" in str(s.get("run", ""))
+            ]
+            self.assertEqual(len(installs), 1, f"{job_id} installs no checksum-verified protoc")
+            at, step = installs[0]
+            self.assertLess(at, gate, f"{job_id} installs protoc after its stages")
+            self.assertIn(PROTOC_ARCHIVE, step["run"], job_id)
+            self.assertEqual((step.get("env") or {}).get("PROTOC_SHA256"), PROTOC_SHA256, job_id)
+            self.assertIn('echo "$PROTOC_SHA256 ', step["run"], f"{job_id} checks another digest")
+            self.assertIn('>> "$GITHUB_PATH"', step["run"], f"{job_id} puts no protoc on PATH")
+        # Every workflow that pins protoc pins ADR-022's digest, engine-measure.yml's cold build too.
+        pins = [
+            (path.name, digest)
+            for path in sorted(WORKFLOWS.glob("*.yml"))
+            for digest in re.findall(r"PROTOC_SHA256: ([0-9a-f]+)", path.read_text())
+        ]
+        for name, digest in examined("protoc pins", pins):
+            self.assertEqual(digest, PROTOC_SHA256, name)
+
+
+def concurrency_problems(block):
+    """What a workflow-level concurrency block gets wrong, judged in scenarios: two runs of one pull
+    request, two of another, pushes to dev and main, and a pull request beside a push."""
+    group = block.get("group", "")
+    cancel = block.get("cancel-in-progress", "false")
+    first, newer = pull_request("dev", run_id="101"), pull_request("dev", run_id="102")
+    other = pull_request("dev", number="8", run_id="103")
+    dev, dev_again = push("refs/heads/dev", run_id="201"), push("refs/heads/dev", run_id="202")
+    main = push("refs/heads/main", run_id="301")
+    problems = []
+    if rendered(group, dev) == rendered(group, dev_again):
+        problems.append("two pushes to dev share a group, so a third would cancel the pending one")
+    if condition(cancel, dev) or condition(cancel, main):
+        problems.append("a push cancels the run before it")
+    if rendered(group, first) != rendered(group, newer) or not condition(cancel, newer):
+        problems.append("a newer run of a pull request leaves the superseded one running")
+    if rendered(group, first) == rendered(group, other):
+        problems.append("two pull requests share a group, so one cancels the other")
+    if rendered(group, first) in (rendered(group, dev), rendered(group, main)):
+        problems.append("a pull request shares a push's group")
+    return problems
+
+
+def run_step(step, lockfile):
+    """Run a step's own script under GitHub's default bash, in a directory holding `lockfile` as
+    pnpm-lock.yaml. Returns its exit code and the outputs it wrote."""
+    with tempfile.TemporaryDirectory() as scratch:
+        where = Path(scratch)
+        (where / "pnpm-lock.yaml").write_text(lockfile, encoding="utf-8")
+        output = where / "github-output"
+        output.write_text("", encoding="utf-8")
+        env = {"PATH": os.environ["PATH"], "GITHUB_OUTPUT": str(output)}
+        done = subprocess.run(
+            ["bash", "--noprofile", "--norc", "-e", "-o", "pipefail", "-c", step["run"]],
+            cwd=where,
+            env=env,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        pairs = [line.split("=", 1) for line in output.read_text().splitlines() if "=" in line]
+    return done.returncode, dict(pairs)
 
 
 if __name__ == "__main__":
