@@ -158,6 +158,10 @@ fn malformed_files() -> Vec<(&'static str, String)> {
             edited(|file| file["courses"][0]["alias"] = json!("1")),
         ),
         (
+            "a course with no alias",
+            edited(|file| file["courses"][1]["alias"] = Value::Null),
+        ),
+        (
             "an upper-case code",
             edited(|file| file["courses"][0]["code"] = json!("QAA")),
         ),
