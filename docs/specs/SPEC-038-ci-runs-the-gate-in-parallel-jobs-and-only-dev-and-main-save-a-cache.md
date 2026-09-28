@@ -281,8 +281,47 @@ Each job of run 36361746236, and its stages from the job's own `timings.tsv`:
   default there) 15.1 s, with all 410 report lines identical; `--jobs 4` took 20.0 s and `--jobs 16`
   13.1 s on another tree, identical to each other. Past 8, the longest row and the deferred pass set
   the time.
+
+### With Anki's engine in the workspace (#204, merged into `dev` as b1ce32d)
+
+| case | before: one `gate` job | after: four parallel jobs, every cache missed |
+|---|---|---|
+| a code pull request | 7m11s, run 36363375903, #204's last (`gate` 7m04s: clippy 93 s, test 171 s, doctest 19 s) | 7m38s, run 36366758034 at f68bce5 (this delivery's own) |
+| a push to `dev` | 9m09s, run 36366072041 at b1ce32d (`gate` 9m00s: clippy 107 s, test 228 s, doctest 23 s) | measured after the merge |
+| a docs-only pull request | no docs-only run went through the old job with the engine in; with no path filter and no cache its time never depended on the change, so it cost what a code pull request did | measured after the merge |
+
+Each job of run 36366758034, and its stages from the job's own `timings.tsv`:
+
+| job | job time | stages |
+|---|---|---|
+| `rust` | 7m25s | fmt 1 s, clippy 136 s, test 259 s (the build 118 s, the run 141 s), doctest 27 s, audit-rust 4 s |
+| `hygiene` | 1m57s | python 89 s (the vault example built cold), scrub 9 s, secrets 1 s |
+| `web` | 56 s | web 31 s, audit-web 1 s |
+| `packs` | 26 s | packs 19 s |
+
+A second cold sample, the `rust` job of the same run re-run (attempt 2): 7m21s, with clippy 126 s,
+test 264 s (the build 124 s, the run 140 s), doctest 29 s. Both samples ran about 30% slower than
+the old job's Rust stages in every stage, `doctest` included, whose cost is recompiling `anki`, a git
+dependency that `CARGO_INCREMENTAL` never touches; the runners, not the split, account for it. Cold,
+the split is no faster with the engine in: its gain is the warm run.
+
+- **The engine compiles again in every cargo command, measured.** With nothing changed, `clippy`,
+  `test` and `doctest` each recompiled the same 14 units: `anki_proto`, `anki`, `deck-streak-ingest`
+  and the 11 workspace crates that depend on it. On the maintainer's machine, run unchanged at
+  f68bce5, they took 17 s, 151 s and 62 s, against 36 s, 158 s and 53 s the first time. In CI, the
+  `doctest` stage of run 36366758034 recompiled exactly those 14 after nextest had built everything,
+  in 25.99 s: the price of ADR-022's finding for each cargo command on a 4-CPU runner.
+- **The engine's own tests set a floor.** Run 36366758034 ran 102 tests in 141 s; the slowest are
+  SPEC-022's sync and budget tests, at 81, 72, 66, 60, 41 and 39 s. A warm cache removes the
+  dependencies' compile, but neither that run nor the engine's recompile in each of the three
+  commands. Estimated from those measurements, a warm code pull request's `rust` job takes about 4
+  to 4.5 minutes, so the target of about a minute and a half cannot be met while these tests run in
+  the gate in a debug build. Moving them, or building the engine optimised for tests, is a decision
+  about SPEC-022's tests, which this delivery leaves to the owner.
+- **The local gate with the engine**, one run on the maintainer's machine at f68bce5
+  (`timings.tsv`): fmt 0 s, clippy 36 s, test 158 s, doctest 53 s, audit-rust 3 s, web 54 s,
+  audit-web 1 s, packs 18 s, python 38 s, scrub 11 s, secrets 1 s; CHECK OK in 373 s.
 - **Still to measure, after this merges** (the orchestrator): the merge's own push to `dev` (every
-  cache missed, then saved), a code pull request and a docs-only pull request that restore them, and
-  a later push to `dev` with the same lockfile (an exact hit that saves nothing). The target is a
-  warm code pull request in about a minute and a half. With the engine of #204 in the workspace:
-  a new "before", and the cold and warm Rust job.
+  cache missed, then saved; the save step names the Rust entry's size), a code pull request and a
+  docs-only pull request that restore them, and a later push to `dev` with the same lockfile (an
+  exact hit that saves nothing).
