@@ -34,7 +34,6 @@ OWNER_LAYOUT = {
     "rust": ["fmt", "clippy", "test", "doctest", "audit-rust"],
     "engine": ["test-engine"],
     "web": ["web", "audit-web"],
-    "packs": ["packs"],
     "hygiene": ["python", "scrub", "secrets"],
 }
 # What the Rust cache holds (SPEC-038 R1): the crates Cargo downloaded, and the build.
@@ -610,7 +609,7 @@ class TheGateRunsInParallelJobs(unittest.TestCase):
             (stage, job)
             for job, named in stage_calls(workflow)
             for stage in named
-            if stage in ("secrets", "scrub", "packs")
+            if stage in ("secrets", "scrub")
         ]
         for stage, job_id in examined("stages that read history", readers):
             job = workflow["jobs"][job_id]

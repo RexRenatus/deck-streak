@@ -33,7 +33,6 @@ TOOLS = {
     "audit-web": ["node", "pnpm"],
     # A guard test builds a Rust example (SPEC-042's rails rows), so the stage runs cargo too.
     "python": ["python3", "cargo"],
-    "packs": ["python3"],
     "scrub": ["python3"],
     "secrets": ["gitleaks"],
 }

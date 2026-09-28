@@ -1,4 +1,4 @@
-// DeckStreak's rendered accessibility audit (packs/accessibility, SPEC-V2-2223; SPEC-028 R10).
+// DeckStreak's rendered accessibility audit (the accessibility pack; SPEC-028 R10).
 //
 // axe-core runs over every screen of the Mini App, in Telegram's light and dark themes, against the
 // WCAG 2.2 A and AA rules. The static rows of packs/accessibility cannot measure a rendered colour

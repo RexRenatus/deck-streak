@@ -2,18 +2,11 @@
 # relies on (`ruff check --fix` must not remove an import or a variable a stub leaves unused).
 #
 # Excluded, and skipped even when passed by name (`force-exclude`), because their bytes are pinned:
-# the vendored probes (their digests are in .packs/VENDORED.json) and the parity oracle's generator
-# and registry modules (each golden records their digests; SPEC-029).
+# the parity oracle's generator and registry modules (each golden records their digests; SPEC-029).
 line-length = 100
 target-version = "py311"
 force-exclude = true
 extend-exclude = [
-    ".packs",
-    "scripts/ddd-probe.py",
-    "scripts/methodology_probe.py",
-    "scripts/no-apikeyhelper-scan.py",
-    "scripts/sdd-probe.py",
-    "scripts/tdd-probe.py",
     "tools/parity-oracle/generate.py",
     "tools/parity-oracle/registry",
 ]

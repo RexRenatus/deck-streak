@@ -32,7 +32,7 @@ REMOVED_SCRIPTS = [
 # manifest's pin.
 VENDORED_READS = re.compile(
     "|".join(
-        re.escape(token)
+        re.escape(token) + (r"\b" if token.endswith("_probe") else "")
         for token in (
             PACKS_DIR + "/",
             "pack" + "-rows",

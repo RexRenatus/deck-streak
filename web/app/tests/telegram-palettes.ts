@@ -1,5 +1,5 @@
-// Telegram's two default palettes, as the accessibility pack's template audit writes them
-// (.packs/skills/packs/accessibility/templates/a11y.spec.ts). The Mini App paints with the
+// Telegram's two default palettes, as the accessibility pack's template audit writes them (a
+// box-run pack, ADR-069). The Mini App paints with the
 // --tg-theme-* variables Telegram sets from these parameters, which exist only inside Telegram.
 //
 // One module holds them so that the rendered audit (a11y.spec.ts, which paints each palette) and
