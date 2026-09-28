@@ -20,65 +20,11 @@
     },
     {
       "file": "crates/vault/src/rails.rs",
-      "mutant": "replace + with * in tag_at",
-      "anchor": "Some((Tag { name, attrs }, close + 1))",
-      "reason": "The returned index only resumes html_tags' scan, and resuming at close finds no tag there.",
-      "evidence": "tag_at returns None when chars[close] == '<', so a returned close holds '>', where tag_at's first check (chars[start] != '<') returns None and html_tags steps to close + 1, the original's resume point.",
-      "reached_by": "rails::a_closing_tag_and_each_attribute_name_are_read_as_the_probe_reads_them",
-      "issue": "#276"
-    },
-    {
-      "file": "crates/vault/src/rails.rs",
-      "mutant": "replace + with - in tag_at",
-      "anchor": "Some((Tag { name, attrs }, close + 1))",
-      "reason": "Resuming html_tags' scan at close - 1 reads one character that opens no tag, then the '>' at close.",
-      "evidence": "close is the first '<' or '>' at or after name_end, and the characters from start + 1 to name_end are '/', letters, digits and '-', so chars[close - 1] is not '<'; close - 1 >= name_start > start, so the scan advances and reaches close + 1 with no new tag.",
-      "reached_by": "rails::a_closing_tag_and_each_attribute_name_are_read_as_the_probe_reads_them",
-      "issue": "#276"
-    },
-    {
-      "file": "crates/vault/src/rails.rs",
       "mutant": "replace + with * in attribute_names",
       "anchor": "let mut end = at + 1;",
       "reason": "end = at makes the name loop take chars[at] first, and it ends where the original's loop ends.",
       "evidence": "chars[at] passed the start check (an ASCII letter, '_' or ':'), and the loop's condition accepts each of those (is_ascii_alphanumeric() or '-', '_', ':', '.'), so its first step sets end = at + 1.",
       "reached_by": "rails::a_closing_tag_and_each_attribute_name_are_read_as_the_probe_reads_them",
-      "issue": "#276"
-    },
-    {
-      "file": "crates/vault/src/rails.rs",
-      "mutant": "replace > with >= in attribute_value",
-      "anchor": "(length > 0).then_some(length)",
-      "reason": "Where the mutant consumes rest[..start] instead of nothing, those characters start no attribute name either way.",
-      "evidence": "The bare arm gives length 0 only when rest[start] is '=' or '`' ('<' and '>' never reach a tag's attrs); rest[..start] then holds only spaces and one '=', none an ASCII letter, '_' or ':', so attribute_names resumes its name scan at the same character.",
-      "reached_by": "rails::a_closing_tag_and_each_attribute_name_are_read_as_the_probe_reads_them",
-      "issue": "#276"
-    },
-    {
-      "file": "crates/vault/src/rails.rs",
-      "mutant": "replace + with * in link_tail",
-      "anchor": "(chars.get(at) == Some(&')')).then_some(at + 1)",
-      "reason": "The returned index only resumes the markdown scan, and resuming at the closing ')' finds no link there.",
-      "evidence": "links() sets at to the returned index; markdown_link_at at a ')' reads embed false and chars[open] != '[' and returns None, so the scan steps to at + 1, the original's resume point.",
-      "reached_by": "rails::a_markdown_links_destination_title_and_embed_are_read_as_the_probe_reads_them",
-      "issue": "#276"
-    },
-    {
-      "file": "crates/vault/src/rails.rs",
-      "mutant": "replace + with * in autolink_at",
-      "anchor": "Some((link, close + 1))",
-      "reason": "The returned index only resumes the autolink scan, and resuming at the closing '>' finds no autolink there.",
-      "evidence": "chars[close] is '>' by the check just above, and autolink_at returns None when chars[start] != '<', so links() steps to close + 1, the original's resume point.",
-      "reached_by": "rails::an_autolinks_scheme_is_read_between_its_angle_brackets",
-      "issue": "#276"
-    },
-    {
-      "file": "crates/vault/src/rails.rs",
-      "mutant": "replace + with - in autolink_at",
-      "anchor": "Some((link, close + 1))",
-      "reason": "Resuming the autolink scan at close - 1 reads the URL's last character and the '>', neither of which opens an autolink.",
-      "evidence": "The take_while that finds close stops at '<', '>' and whitespace, so chars[close - 1] is not '<'; close - 1 >= colon > start, so the scan advances and reaches close + 1 with no new link.",
-      "reached_by": "rails::an_autolinks_scheme_is_read_between_its_angle_brackets",
       "issue": "#276"
     },
     {
@@ -151,15 +97,6 @@
       "reason": "Every value the mutant lets past the pre-check still fails value.parse(), with the same error.",
       "evidence": "Under && the pre-check never refuses (all() holds on no digits); i128's from_str accepts exactly an optional '+' or '-' and one or more ASCII digits, the shape the pre-check requires, and parse's map_err gives Malformed::RollsNotAWholeNumber as the pre-check did.",
       "reached_by": "roll::rolling_a_note_matches_the_parity_golden",
-      "issue": "#276"
-    },
-    {
-      "file": "crates/vault/src/fs.rs",
-      "mutant": "replace <impl VaultFile for RealFile>::sync -> io::Result<()> with Ok(())",
-      "anchor": "self.0.sync_all()",
-      "reason": "An fsync's only effect is durability across a power loss, which no test in the process can observe.",
-      "evidence": "RealFile wraps only a file create_new has just made (O_CREAT | O_EXCL, opened for writing), so sync is fsync of a new regular file, which reports success on a working disk; atomic.rs's step log proves the write calls it before the rename.",
-      "reached_by": "atomic::a_write_lands_through_an_ignored_temp_name_then_fsync_rename_and_dir_fsync",
       "issue": "#276"
     }
   ]
