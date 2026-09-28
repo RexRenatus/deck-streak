@@ -197,11 +197,11 @@ fn a_missing_credential_keeps_its_refusal_and_a_value_loads_unchanged() {
         (FROM_THE_FILE, FROM_THE_FILE),
     ] {
         fs::write(directory.path().join(ID), content).expect("written");
-        let loaded = loader.load(ID);
+        let secret = loader.load(ID);
         assert_eq!(
-            loaded.as_ref().map(Secret::expose).ok(),
+            secret.as_ref().map(Secret::expose).ok(),
             Some(value),
-            "{content:?}: {loaded:?}"
+            "{content:?}: {secret:?}"
         );
     }
 }

@@ -30,10 +30,9 @@ when the data read is empty. Where is an empty credential refused, so that the u
 
 ## Considered Options (the alternatives it was chosen against)
 
-- The loader refuses an empty credential with `CredentialError::Empty`, and the alert unit's script
-  refuses one the same way: chosen, because every role reads through the loader, so no unit or
-  credential can be left out, and the refusal takes the path a missing credential already takes, to
-  a failed unit and a page that quotes its error line.
+- The loader refuses an empty credential, and the alert script the same way: chosen, because every
+  role reads through the loader, so no unit or credential can be left out, and the refusal takes the
+  path a missing credential already takes, to a failed unit and a page that quotes its error line.
 - Relying on the service manager to refuse the start: rejected, because its manual promises no start
   failure when a credential source answers with nothing. systemd.exec(5) reads a socket's credential
   as the data read from the connection, and states an upper bound on its size and no lower one.
