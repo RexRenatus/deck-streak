@@ -4,7 +4,8 @@
 //!
 //! A1 builds its collection with ingest's own synthetic builder, which drives Anki's engine, and
 //! resolves it through the readings' production queue port over the engine. A10 runs on tokio's
-//! paused clock. Every deck, card and review is synthetic.
+//! paused clock. R7's throwaway copy is held mid-copy by a named pipe, on real time, so the budget
+//! passes during the blocking work. Every deck, card and review is synthetic.
 
 // An integration test is test code: its helpers panic on a failed fixture, and it prints the
 // examined count on purpose.
@@ -16,23 +17,30 @@ mod support;
 mod golden;
 
 use std::collections::{BTreeMap, BTreeSet};
-use std::fs;
-use std::sync::Arc;
+use std::fs::{self, File, TryLockError};
+use std::io::Read as _;
+use std::path::Path;
+use std::process::Command;
+use std::sync::{Arc, mpsc};
+use std::thread;
 use std::time::Duration;
 
-use deck_streak_ingest::engine::{EngineError, RslibEngine};
+use deck_streak_ingest::engine::{
+    AnkiEngine, EngineError, NewCardQueue, RslibEngine, SyncLogin, SyncOutcome,
+};
 use deck_streak_ingest::reader::ReadError;
 use deck_streak_kernel::{ManualClock, Offload, OffloadWorkers};
 use deck_streak_readings::day_set::{
-    self, DaySetQuery, EngineQueue, QueueFailure, QueuedCard, RESOLVE_BUDGET, ReadFailure,
-    ResolveInputs, StudyDayResolution, TopicEnd, UndeterminedRoot, digest, resolve_day_sets,
-    saturated,
+    self, DaySetQuery, EngineQueue, QueueFailure, QueuePort, QueuedCard, RESOLVE_BUDGET,
+    ReadFailure, ResolveInputs, StudyDayResolution, TopicEnd, UndeterminedRoot, digest,
+    resolve_day_sets, saturated,
 };
 use deck_streak_readings::gates::{LastSync, review_floor};
 use deck_streak_readings::state::{Class, CouldNotTell, RunOutcome, TopicState};
 use serde_json::{Value, json};
 use support::synthetic::{self, PlannedCard, PlannedReview};
 use support::{RecordingQueue, TODAY, card, collection, deck_names, id_of, root, studied};
+use tokio::sync::oneshot;
 
 /// A1's decks, as ingest's builder names them: two subjects under one law root, a language deck,
 /// and a deck of no topic.
@@ -393,6 +401,120 @@ async fn a_resolution_past_its_budget_is_rail_broken() {
     assert_eq!(
         resolution.state_of("language/qaa"),
         Some(TopicState::NoNewCards)
+    );
+}
+
+/// An engine that answers an empty queue without opening the collection it is given: R7's test
+/// holds its throwaway copy as a named pipe, which is no collection.
+#[derive(Clone, Copy, Debug)]
+struct Unread;
+
+impl AnkiEngine for Unread {
+    fn new_card_queue(&self, _collection: &Path) -> Result<NewCardQueue, EngineError> {
+        Ok(NewCardQueue::default())
+    }
+
+    async fn normal_sync(
+        &self,
+        _collection: &Path,
+        _login: &SyncLogin,
+    ) -> Result<SyncOutcome, EngineError> {
+        Err(EngineError::EngineFailed)
+    }
+
+    async fn full_download(
+        &self,
+        _collection: &Path,
+        _login: &SyncLogin,
+    ) -> Result<(), EngineError> {
+        Err(EngineError::EngineFailed)
+    }
+}
+
+/// R7: the budget stops the wait for the queue, never the blocking work. The throwaway copy is
+/// held part-way: a named pipe stands at its path, so the copy blocks once the pipe is full, until
+/// the test drains it. The budget passes while the copy is held, and the port's future is dropped,
+/// as `resolve` drops it past `RESOLVE_BUDGET`. Once the blocking work has ended, nothing is left
+/// in the scratch directory, and the shared collection lock was held through the copy.
+#[tokio::test]
+async fn a_budget_passed_during_the_copy_leaves_no_copy_behind() {
+    let dir = tempfile::tempdir().expect("a scratch directory");
+    let state = dir.path().join("state");
+    let scratch = dir.path().join("scratch");
+    for folder in [&state, &scratch] {
+        fs::create_dir_all(folder).expect("a folder");
+    }
+    let settings = support::settings(&state);
+    // A private copy larger than any pipe's buffer, so the copy cannot finish until it is drained.
+    let size: usize = 4 << 20;
+    fs::write(settings.copy_path(), vec![0_u8; size]).expect("the private copy");
+    // The port's first throwaway copy, as a named pipe.
+    let throwaway = scratch.join("readings-day-set-0.anki2");
+    let made = Command::new("mkfifo")
+        .arg(&throwaway)
+        .status()
+        .expect("mkfifo runs");
+    assert!(
+        made.success(),
+        "a named pipe stands at the throwaway's path"
+    );
+
+    let (began, copying) = oneshot::channel();
+    let (release, released) = mpsc::channel::<()>();
+    let pipe = throwaway.clone();
+    let reader = thread::spawn(move || {
+        // The open waits for the copy to open the pipe, and the first byte proves it is copying.
+        let mut pipe = File::open(&pipe).expect("the copy opens the pipe");
+        let mut first = [0_u8; 1];
+        pipe.read_exact(&mut first).expect("the copy writes");
+        began.send(()).expect("the test waits for the copy");
+        released.recv().expect("the test releases the copy");
+        let mut rest = Vec::new();
+        pipe.read_to_end(&mut rest)
+            .expect("the copy runs to its end");
+        first.len() + rest.len()
+    });
+
+    let clock = Arc::new(ManualClock::new(support::now()));
+    let offload = Offload::new(OffloadWorkers::new(1).expect("one worker"), clock);
+    let queue = EngineQueue::new(Unread, &settings, scratch.clone(), offload.clone());
+    let mut answering = Box::pin(queue.new_card_queue());
+    tokio::select! {
+        answer = &mut answering => panic!("the port answered while its copy was held: {answer:?}"),
+        began = copying => began.expect("the copy began"),
+    }
+    let budget = Duration::from_millis(10);
+    assert!(
+        tokio::time::timeout(budget, answering).await.is_err(),
+        "the budget passed while the copy was held"
+    );
+    // Past the budget, with the copy still held: is the shared lock still taken?
+    let lock = File::open(settings.lock_path()).expect("the lock file");
+    let locked = match lock.try_lock() {
+        Ok(()) => {
+            lock.unlock().expect("the test's own lock is released");
+            false
+        }
+        Err(TryLockError::WouldBlock) => true,
+        Err(TryLockError::Error(error)) => panic!("the lock could not be tried: {error}"),
+    };
+    release.send(()).expect("the reader waits");
+    let copied = reader.join().expect("the reader");
+    // The offload runs one operation at a time, so its next one starts once the copy's has ended.
+    offload
+        .run("probe", || ())
+        .await
+        .expect("the offload is free");
+
+    assert_eq!(copied, size, "the copy ran to its end past the budget");
+    let left: Vec<_> = fs::read_dir(&scratch)
+        .expect("the scratch directory")
+        .map(|entry| entry.expect("an entry").file_name())
+        .collect();
+    assert!(left.is_empty(), "a copy outlived its budget: {left:?}");
+    assert!(
+        locked,
+        "the shared lock was held through the copy, past the budget"
     );
 }
 
