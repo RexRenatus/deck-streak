@@ -6,8 +6,9 @@
 The vendored packs live in `.packs/skills/packs/<pack>/`, each with its own `checks.json`, and
 their standard-library probes in `.packs/scripts/` (the methodology probes in `scripts/`, where
 their rows name them). This runner reads each pack's rows and runs them exactly as the pack
-declares them, substituting `{skills}` and `{root}`. It stands in for the open-source pack
-runner until that runner exists; ADR-004 records the choice.
+declares them, substituting `{skills}` and `{root}`. The packs stay box-only, so this runner is how
+the vendored rows run in CI and in the local gate, while the runner-built packs run on the
+maintainer's box through `scripts/box-packs.sh`; ADR-004 and ADR-056 record the choice.
 
 `.packs/wiring.json` gives each pack a state:
 

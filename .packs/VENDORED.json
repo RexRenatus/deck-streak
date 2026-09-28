@@ -2,7 +2,7 @@
   "schema": "deckstreak.vendored-packs.v1",
   "source": "RexRenatus/phoenix-v2",
   "vendored_from": "e54f39c5ad586fc59da33b56bd8e0044af277c25",
-  "why": "DeckStreak runs the packs' standard-library probes in its own CI until the open-source pack runner exists (ADR-004). Four phxd packs (web-launch, vibecode-polish, ux-laws, ui-styles) are vendored as data only: the accessibility matrix names their rows.",
+  "why": "DeckStreak runs the packs' standard-library probes in its own CI, and the runner-built packs on the maintainer's box, because the packs stay box-only (ADR-004, ADR-056). Four phxd packs (web-launch, vibecode-polish, ux-laws, ui-styles) are vendored as data only: the accessibility matrix names their rows.",
   "excluded": [
     {
       "globs": [
