@@ -36,7 +36,10 @@ Measured at `dev` 53184dd.
   - The api refuses an empty owner id or token already, in the application: identity's owner gate
     (`crates/identity/src/owner.rs`) passes a refusal of the loader on as
     `IdentityError::Credential`, and refuses a blank value by its own shape check as
-    `IdentityError::Malformed` (SPEC-024). This SPEC adds nothing to that check.
+    `IdentityError::Malformed` (SPEC-024). The bot role, which `dev` gained with SPEC-026 while
+    this delivery was open (merged at f5322b2), reads the same two credentials through the
+    loader and holds the same shape checks (`crates/daemon/src/role_bot.rs`). This SPEC adds
+    nothing to either check.
   - The sync's login (`crates/ingest/src/sync.rs`, `Syncer::login`) reads both of its credentials
     through the loader, records every refusal of the loader as the run's `missing_credentials`
     outcome with no attempt made (SPEC-022 R9), and hands any value the loader returns to the
@@ -57,9 +60,9 @@ R1. `CredentialLoader::load(id)` refuses an EMPTY credential, a file of zero byt
     a file of two newlines loads as one newline.
 R2. The refusal fails the unit that loads the credential, and that unit's `OnFailure=` starts the
     one page, which quotes the failed run's error lines (SPEC-031 R3):
-    - the `api` role, and the `bot` role when SPEC-026 builds it, read their credentials before
-      they bind; a role that refuses start writes the refusal, which names the id, at error
-      priority and exits 1 (SPEC-025 R1);
+    - the `api` role reads its credentials before it binds, and the `bot` role before its first
+      request to the Bot API (SPEC-026); a role that refuses start writes the refusal, which
+      names the id, at error priority and exits 1 (SPEC-025 R1);
     - the `sync` job's login records the refusal as the run's `missing_credentials` outcome, with
       no attempt made, so an empty login never reaches the sync engine (SPEC-022 R9), and the
       runner exits 1 to page, with that reason code, when the failure opens the job's error streak
