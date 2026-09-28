@@ -198,6 +198,26 @@ const LEDGER: (&str, &str, &str) = (
     "ledger",
 );
 
+/// The attributes the notifications crate carries none of, because each hands code where the
+/// census does not look for it: `path` compiles a file, the ledger among them, under another
+/// module's name, `macro_export` hands a macro to every crate, and `macro_use` hands a module's
+/// macros to the modules after it.
+const CARRYING_ATTRIBUTES: [&str; 3] = ["path", "macro_export", "macro_use"];
+
+/// The names no `pub` or `pub(...)` re-export in the notifications crate carries, whatever it is
+/// renamed to: the ledger, its constants for the feed's and the held queue's tables, and its writes
+/// to the feed (`append_feed`) and to the queue (`hold`, `abandon`, `relatch`, `settle`).
+const LEDGER_NAMES: [&str; 8] = [
+    "ledger",
+    "FEED_TABLE",
+    "QUEUE_TABLE",
+    "append_feed",
+    "hold",
+    "abandon",
+    "relatch",
+    "settle",
+];
+
 /// SPEC-031's alert path: it pages the owner that a unit failed, the daemon among them, so it
 /// cannot go through the daemon's router. The one shipped source outside the bot that names the
 /// Bot API.
@@ -766,6 +786,16 @@ fn census(sources: &[(String, String)]) -> Census {
                 let function = enclosing(&structure, at);
                 found.sends.push((path.clone(), function, send));
             }
+            if path.starts_with(LEDGER.0) {
+                for (at, what) in carrying_attributes(&structure)
+                    .into_iter()
+                    .chain(re_exports(&structure))
+                {
+                    found
+                        .refusals
+                        .push((path.clone(), line_of(&code, at), what));
+                }
+            }
         }
     }
     found.refusals.sort();
@@ -834,6 +864,62 @@ fn names_of_the_queue(path: &str, code: &str, structure: &str) -> Vec<(usize, St
         );
     }
     named
+}
+
+/// Each carrying attribute in `structure`, outer or inner, as the byte its `#` starts at and the
+/// refusal: an attribute carries one if it holds that name anywhere, `cfg_attr` among them.
+fn carrying_attributes(structure: &str) -> Vec<(usize, String)> {
+    let mut found = Vec::new();
+    for (at, _) in structure.match_indices('#') {
+        let rest = &structure[at + 1..];
+        let Some(open) = rest.strip_prefix('!').unwrap_or(rest).strip_prefix('[') else {
+            continue;
+        };
+        let attribute = &open[..attribute_end(&format!("[{open}")) - 1];
+        for name in CARRYING_ATTRIBUTES {
+            if identifiers(attribute, name).next().is_some() {
+                found.push((at, format!("carries #[{name}]")));
+            }
+        }
+    }
+    found
+}
+
+/// Each name of the ledger a visible `use` in `structure` carries, `pub` or `pub(...)`, as the byte
+/// the name starts at and the refusal; the whole statement is read, to its `;`, so a rename or a
+/// group hides nothing it names.
+fn re_exports(structure: &str) -> Vec<(usize, String)> {
+    let mut found = Vec::new();
+    for at in identifiers(structure, "use") {
+        if !visible(&structure[..at]) {
+            continue;
+        }
+        let end = structure[at..]
+            .find(';')
+            .map_or(structure.len(), |to| at + to);
+        let statement = &structure[at..end];
+        for name in LEDGER_NAMES {
+            found.extend(
+                identifiers(statement, name).map(|from| (at + from, format!("re-exports {name}"))),
+            );
+        }
+    }
+    found
+}
+
+/// Whether the item whose keyword follows `before` is visible outside its module: `pub`, or
+/// `pub(...)` with any path.
+fn visible(before: &str) -> bool {
+    let mut before = before.trim_end();
+    if let Some(rest) = before.strip_suffix(')') {
+        let Some(open) = rest.rfind('(') else {
+            return false;
+        };
+        before = rest[..open].trim_end();
+    }
+    before
+        .strip_suffix("pub")
+        .is_some_and(|rest| rest.chars().next_back().is_none_or(|c| !ident(c)))
 }
 
 /// The Bot API's methods the census holds: its send methods and its other delivery methods.
