@@ -2,18 +2,24 @@
 """mutation-verdict: a pull request's mutation plan and verdict, the weekly battery's survivors as
 issue drafts, and the census of exclusions (SPEC-039 R2 to R5, R10, R12; ADR-057).
 
-    python3 scripts/mutation-verdict.py plan --base REF [--head REF] [--root DIR] [--out DIR]
+    python3 scripts/mutation-verdict.py plan --base REF [--head REF] [--root DIR] --out DIR
+                                            [--event E --base-ref B --subject S]
     python3 scripts/mutation-verdict.py judge --plan FILE --class rust|web|oracle
                                              [--outcomes FILE] [--tool-exit N]
                                              [--stryker FILE] [--rows FILE]
     python3 scripts/mutation-verdict.py survivors --reports DIR --out DIR [--open-titles FILE]
     python3 scripts/mutation-verdict.py exclusions [--root DIR]
 
-PLAN reads the diff `git diff BASE...HEAD` (on a pull request's merge ref, BASE is `HEAD^1`) and
-writes `plan.json` and `git.diff` into `--out`: every changed path with its class (R2), each
-production file's changed lines split into code lines and blank or comment lines, the rows the
-diff selects (R10), and the web files Stryker mutates whole. Under GitHub Actions it also writes
-the step outputs `rust`, `web`, `oracle` and `rows` (`true` or `false`) and `mutate`.
+PLAN first decides the run's scope from the event that started it (R3), because a job is never
+skipped: `ci` reads a skipped need as failed. A pull request into `dev` is judged on its diff; a
+release pull request into `main` is not-applicable, since each of its changes was judged on its
+own pull request into `dev`; a push that merges a pull request (`Merge pull request #N`) is
+not-applicable, naming `#N`, whose jobs judged that same tree; a push that names none is judged
+on its first-parent diff. For a diff it reads `git diff BASE...HEAD` (on a pull request's merge
+ref, BASE is `HEAD^1`) and writes `plan.json` and `git.diff` into `--out`: every changed path with
+its class (R2), each production file's changed lines split into code lines and blank or comment
+lines, the rows the diff selects (R10), and the web files Stryker mutates whole. Under GitHub
+Actions it writes the step outputs `scope`, `rust`, `web`, `oracle`, `rows` and `mutate`.
 
 JUDGE reads a tool's own report, never its exit alone (R4). Examined is caught plus missed plus
 timed out (Stryker: killed, survived, no coverage and timed out); an unviable mutant, a compile or
@@ -67,6 +73,32 @@ TOOL_EXITS = {
     70: "an internal error",
 }
 REASON = re.compile(r"EQUIVALENT: \S.*\(#\d+\)")
+#: The subject GitHub writes for a pull request's merge commit.
+MERGE_SUBJECT = re.compile(r"Merge pull request #(\d+) from ")
+
+
+def scope_of(event: str, base_ref: str, subject: str) -> tuple[str, str]:
+    """(`diff` or `not-applicable`, why) for the event that started the run (SPEC-039 R3). A job is
+    never skipped, because `ci` reads a skipped need as failed, so each case says why by name."""
+    if event == "pull_request" and base_ref == "main":
+        return (
+            "not-applicable",
+            "a release pull request into main carries dev's changes, each judged by these jobs "
+            "on its own pull request into dev; the weekly battery sweeps dev",
+        )
+    if event == "pull_request":
+        return "diff", f"the pull request into {base_ref or 'its base'} is judged on its diff"
+    if event == "push":
+        merged = MERGE_SUBJECT.match(subject)
+        if merged:
+            return (
+                "not-applicable",
+                f"this push merges #{merged.group(1)}, whose mutation jobs judged this tree on its "
+                "merge ref; dev and main accept a pull request only with an up-to-date head "
+                "(ADR-034)",
+            )
+        return "diff", "this push names no pull request, so its first-parent diff is judged"
+    return "diff", f"the {event or 'local'} run is judged on its diff"
 TITLE = "Mutation survivors: {}"
 
 
@@ -176,6 +208,7 @@ class Plan:
     rows: list[str] = field(default_factory=list)
     row_overlaps: dict[str, str] = field(default_factory=dict)
     stryker_mutate: list[str] = field(default_factory=list)
+    scope: dict = field(default_factory=dict)
 
 
 def selected_rows(root, base, head, changed, plan):
@@ -211,14 +244,22 @@ def selected_rows(root, base, head, changed, plan):
     plan.rows = sorted(chosen)
 
 
-def plan_diff(root: pathlib.Path, base: str, head: str, out: pathlib.Path) -> Plan:
+def plan_diff(
+    root: pathlib.Path, base: str, head: str, out: pathlib.Path, scope: tuple[str, str]
+) -> Plan:
+    out.mkdir(parents=True, exist_ok=True)
+    decision, reason = scope
+    if decision == "not-applicable":
+        plan = Plan(base="", head="", scope={"decision": decision, "reason": reason})
+        plan.classes = {name: {"applies": False, "files": []} for name in ("rust", "web", "oracle")}
+        (out / "plan.json").write_text(json.dumps(plan.__dict__, indent=2) + "\n", "utf-8")
+        return plan
     base_sha = git(root, "rev-parse", "--verify", f"{base}^{{commit}}").strip()
     head_sha = git(root, "rev-parse", "--verify", f"{head}^{{commit}}").strip()
-    out.mkdir(parents=True, exist_ok=True)
     full = git(root, "diff", "--no-color", "--no-ext-diff", "--no-renames", f"{base}...{head}")
     (out / "git.diff").write_text(full, encoding="utf-8")
     changed = changed_lines(root, base, head)
-    plan = Plan(base=base_sha, head=head_sha)
+    plan = Plan(base=base_sha, head=head_sha, scope={"decision": decision, "reason": reason})
     classes = {name: {"applies": False, "files": []} for name in ("rust", "web", "oracle")}
     for path in sorted(changed):
         entry = changed[path]
@@ -247,6 +288,7 @@ def plan_diff(root: pathlib.Path, base: str, head: str, out: pathlib.Path) -> Pl
 
 
 def say_plan(plan: Plan) -> None:
+    print(f"mutation: plan: {plan.scope['decision']}: {plan.scope['reason']}")
     counts = defaultdict(int)
     for entry in plan.files:
         counts[entry["class"]] += 1
@@ -264,6 +306,7 @@ def say_plan(plan: Plan) -> None:
             for name, klass in plan.classes.items():
                 sink.write(f"{name}={'true' if klass['applies'] else 'false'}\n")
             sink.write(f"rows={'true' if plan.rows else 'false'}\n")
+            sink.write(f"scope={plan.scope['decision']}\n")
             sink.write(f"mutate={','.join(plan.stryker_mutate)}\n")
 
 
@@ -316,7 +359,12 @@ class Verdict:
 def not_applicable(verdict: Verdict, plan: dict, klass: str) -> None:
     files = [entry for entry in plan["files"] if entry["class"] == klass]
     if not files:
-        verdict.say(f"not-applicable: the diff changes no {klass} production file")
+        paths = [entry["path"] for entry in plan["files"]]
+        shown = ", ".join(paths[:20]) + (f", and {len(paths) - 20} more" if len(paths) > 20 else "")
+        verdict.say(
+            f"not-applicable: the diff changes no {klass} production file; it changes "
+            f"{shown or 'nothing'}"
+        )
     for entry in files:
         if entry["added"]:
             verdict.say(
@@ -454,6 +502,10 @@ def judge(args: argparse.Namespace) -> int:
     verdict = Verdict(args.klass)
     if not isinstance(plan, dict) or "classes" not in plan:
         verdict.void(f"no plan: {args.plan} is not a mutation plan")
+        return verdict.close()
+    scope = plan.get("scope") or {}
+    if scope.get("decision") == "not-applicable":
+        verdict.say(f"not-applicable: {scope.get('reason')}")
         return verdict.close()
     {"rust": judge_rust, "web": judge_web, "oracle": judge_oracle}[args.klass](verdict, plan, args)
     return verdict.close()
@@ -605,7 +657,8 @@ def main(argv: list[str] | None = None) -> int:
     if args.verb == "plan":
         if not args.base or not args.out:
             parser.error("plan needs --base and --out")
-        plan = plan_diff(root, args.base, args.head, pathlib.Path(args.out))
+        scope = scope_of(args.event, args.base_ref, args.subject)
+        plan = plan_diff(root, args.base, args.head, pathlib.Path(args.out), scope)
         say_plan(plan)
         return EXIT_OK
     if args.verb == "judge":

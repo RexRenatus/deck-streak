@@ -244,18 +244,13 @@ jobs:
           # The merge ref and its first parent, the base's tip: the diff is HEAD^1...HEAD.
           fetch-depth: 2
           persist-credentials: false
-      - name: the plan (the diff's classes, its changed lines and the rows it selects)
+      - name: the plan (the event's case, the diff's classes, its changed lines, its rows)
         id: plan
         env:
           EVENT: ${{ github.event_name }}
-        run: |
-          mkdir -p "$RUNNER_TEMP/mutation"
-          if [ "$EVENT" != "pull_request" ]; then
-            echo "mutation: not-applicable: a $EVENT was proved on its pull request; the weekly battery sweeps dev"
-            printf 'rust=false\noracle=false\nrows=false\n' >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          python3 scripts/mutation-verdict.py plan --base HEAD^1 --head HEAD --out "$RUNNER_TEMP/mutation"
+          BASE_REF: ${{ github.base_ref }}
+          SUBJECT: ${{ github.event.head_commit.message }}
+        run: python3 scripts/mutation-verdict.py plan --base HEAD^1 --head HEAD --out "$RUNNER_TEMP/mutation" --event "$EVENT" --base-ref "$BASE_REF" --subject "$SUBJECT"
       - name: the pinned Rust toolchain (rust-toolchain.toml)
         if: ${{ steps.plan.outputs.rust == 'true' || steps.plan.outputs.rows == 'true' }}
         run: rustup show
@@ -299,16 +294,10 @@ jobs:
           python3 scripts/mutation_rows.py prove --rows-from "$RUNNER_TEMP/mutation/plan.json" --report "$RUNNER_TEMP/mutation/rows.json" || rc=$?
           echo "the rows runner exited $rc"
       - name: no row leaves while its target stays, unless the maintainer approved it
-        if: ${{ github.event_name == 'pull_request' }}
+        if: ${{ steps.plan.outputs.scope == 'diff' }}
         run: python3 scripts/mutation_rows.py retired --base HEAD^1
-      - name: the verdict, from the tools' own reports
-        env:
-          EVENT: ${{ github.event_name }}
+      - name: the verdict, from the tools' own reports (the plan names a not-applicable case)
         run: |
-          if [ "$EVENT" != "pull_request" ]; then
-            echo "mutation: not-applicable: a $EVENT was proved on its pull request"
-            exit 0
-          fi
           out="$RUNNER_TEMP/mutation"
           tool=()
           if [ -f "$out/cargo-mutants.exit" ]; then tool=(--tool-exit "$(cat "$out/cargo-mutants.exit")"); fi
@@ -337,18 +326,13 @@ jobs:
         with:
           fetch-depth: 2
           persist-credentials: false
-      - name: the plan (the diff's classes and the web files it changes)
+      - name: the plan (the event's case, the diff's classes, the web files it changes)
         id: plan
         env:
           EVENT: ${{ github.event_name }}
-        run: |
-          mkdir -p "$RUNNER_TEMP/mutation"
-          if [ "$EVENT" != "pull_request" ]; then
-            echo "mutation: not-applicable: a $EVENT was proved on its pull request; the weekly battery sweeps dev"
-            echo "web=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          python3 scripts/mutation-verdict.py plan --base HEAD^1 --head HEAD --out "$RUNNER_TEMP/mutation"
+          BASE_REF: ${{ github.base_ref }}
+          SUBJECT: ${{ github.event.head_commit.message }}
+        run: python3 scripts/mutation-verdict.py plan --base HEAD^1 --head HEAD --out "$RUNNER_TEMP/mutation" --event "$EVENT" --base-ref "$BASE_REF" --subject "$SUBJECT"
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
         if: ${{ steps.plan.outputs.web == 'true' }}
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
@@ -383,15 +367,8 @@ jobs:
           pnpm --dir web/app exec stryker run --mutate "$MUTATE" || rc=$?
           cp -r web/app/reports/mutation "$RUNNER_TEMP/mutation/stryker" || true
           echo "StrykerJS exited $rc"
-      - name: the verdict, from Stryker's own report
-        env:
-          EVENT: ${{ github.event_name }}
-        run: |
-          if [ "$EVENT" != "pull_request" ]; then
-            echo "mutation: not-applicable: a $EVENT was proved on its pull request"
-            exit 0
-          fi
-          python3 scripts/mutation-verdict.py judge --plan "$RUNNER_TEMP/mutation/plan.json" --class web --stryker "$RUNNER_TEMP/mutation/stryker/mutation.json"
+      - name: the verdict, from Stryker's own report (the plan names a not-applicable case)
+        run: python3 scripts/mutation-verdict.py judge --plan "$RUNNER_TEMP/mutation/plan.json" --class web --stryker "$RUNNER_TEMP/mutation/stryker/mutation.json"
       - name: keep the plan and the report
         if: ${{ always() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
