@@ -1,17 +1,21 @@
-# SPEC-083: the skip day is recorded by DeckStreak and bridges the game without writing to Anki
+# SPEC-083: the skip day is recorded by DeckStreak, bridges the game, and writes its reschedule back to Anki with an exact undo
 
 - **Wave:** W3. **Issue:** #108 (epic #4). **Context(s):** `deck-streak-ingest` (the skip record, its
-  once-per-study-day key, its undo and its summary; no write to the collection);
-  `deck-streak-economy` (the tariff's price, read from `economy.json`); `deck-streak-coordination`
-  (the preview, the take and the undo, the tariff's purchase and refund, and the skip set every
-  recompute step reads); `deck-streak-api`, `deck-streak-bot` and the Mini App (`web/app`).
+  once-per-study-day key, the card snapshot, the write and its undo on a working copy, and the
+  summary); `deck-streak-economy` (the tariff's price, read from `economy.json`);
+  `deck-streak-coordination` (the preview, the take and the undo, the tariff's purchase and refund,
+  and the skip set every recompute step reads); `deck-streak-api`, `deck-streak-bot` and the Mini
+  App (`web/app`).
 - **Decided by:** ADR-012 (the parity oracle proves the math), ADR-037 (one daily sync plus the
-  owner's triggers, never an upload), ADR-071 (the recompute settles each study day once, in order),
-  and ADR-083 (the skip day's write to the collection waits for the owner, and DeckStreak records
-  the skip without one).
-- **Prerequisites:** SPEC-071 (the rollup whose `due_today` the preview shows, and the recompute's
-  step order), SPEC-072 (the consistency run and Ascendant's arming, which read the skip set),
-  SPEC-076 (both streaks and the governor, which read it), SPEC-082 (the wallet's purchase and
+  owner's triggers; its no-upload condition is superseded for this path only by ADR-089), ADR-071
+  (the recompute settles each study day once, in order), ADR-083 (the owner's option (a), made on a
+  working copy with incremental syncs only), and ADR-089 (the owner's decision at #266: the skip day
+  writes its reschedule back to Anki under the owner's guardrails and an exact undo, and every other
+  path never uploads).
+- **Prerequisites:** SPEC-022 (the syncer, the collection lock and the recording layer), SPEC-023
+  (the study-event rule), SPEC-071 (the rollup whose `due_today` the preview shows, and the
+  recompute's step order), SPEC-072 (the consistency run and Ascendant's arming, which read the skip
+  set), SPEC-076 (both streaks and the governor, which read it), SPEC-082 (the wallet's purchase and
   credit ports). SPEC-080 and SPEC-081 read the skip set when they land. **Mutation band:**
   `S08300-S08399`.
 - **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
@@ -19,10 +23,18 @@
 
 ## 1. The problem, measured
 
-- **What exists at `dev` c3d769b.** `crates/ingest/src/` syncs the private copy and reads it, and
-  holds no skip; no table records a declared day off. SPEC-049's lapse episode takes its skip days
-  from its caller, which passes an empty set "until the skip day exists (#108)" (SPEC-049 R15), and
-  SPEC-072's consistency run and SPEC-076's streaks take theirs the same way.
+- **What exists at `dev` 53184dd.** `crates/ingest/src/` syncs the private copy and reads it, and
+  holds no skip; no table records a declared day off. The engine port (`crates/ingest/src/engine.rs`)
+  offers a normal sync and a full download, and no card write. SPEC-049's lapse episode takes its
+  skip days from its caller, which passes an empty set "until the skip day exists (#108)" (SPEC-049
+  R15), and SPEC-072's consistency run and SPEC-076's streaks take theirs the same way.
+- **The recording layer, measured at the same commit.** SPEC-022's recording layer
+  (`crates/ingest/tests/support/recording.rs`) keeps every request the syncer sends, its body
+  decoded, and relays it to the engine's own sync server. The census's classifier (`local_change`,
+  private to `crates/ingest/tests/sync.rs`) marks an `upload`, and any change, grave or chunk that
+  carries a card, note or review-log row. No test drives a write through the layer: the one planted
+  upload (`support::upload_from_another_client`) posts to the server's own endpoint, beside the
+  layer. Nothing yet proves that the layer would see an upload, so this SPEC proves it first (A33).
 - **What the predecessor does** (`27ee2bc`). `pipeline_layers/skip.py:SkipDaysLayer.skip_preview`
   shows today's due review count (the day's rollup `due_today`), whether a skip is already active,
   the day spec and this month's tariff. `SkipDaysLayer.take_skip_day` records a row and, through
@@ -33,32 +45,57 @@
   skips, clipped to the wallet and outside the daily loss cap, and a skip it cannot fund still
   applies. `skip.py:summarize_skips` shows counts only. Every other context reads the set of
   applied, not-undone skip days (`database.py:GamifyStore.skip_days_set`).
-- **What is not ported, and why.** DeckStreak never uploads (ADR-037), and the owner reused the Anki
-  login only on the condition that no upload path exists, proven by a recording fake server
-  (SPEC-022 R14). ADR-083 lays out the options for the write and recommends (b): DeckStreak records
-  the skip and applies its effects, and the owner reschedules in Anki with the search and day spec
-  DeckStreak shows. The owner decides at #266. Under (b) the converge, the card snapshot, the
-  reschedule, the upload, the revert on a failed upload, the write's timeout and its background
-  reconciliation have no work to do and are not built, and the 5,000-card guard
-  (`constants.SKIP_MAX_CARDS`, recorded in `goldens/skip.constants.json`) guards nothing, because
-  DeckStreak moves no card. Every criterion below holds under (b).
-- **Corrections to the issue.** #108's first criterion (the reschedule under the 5,000-card guard)
-  and its second (the card snapshot and its exact restore) describe the write that ADR-083 leaves to
-  the owner: here the wrapped search and the day spec are shown to the owner, never run (R3), and
-  undo reverses DeckStreak's record (R5). The preview's due count is absent when the study day has no
-  rollup yet, where the predecessor showed 0 (R7). Its third criterion's golden of
-  `EconomyLayer._charge_skip_tariff` is kept (R8), and its fourth holds as R11 and R18.
-- **An inert switch and cap.** The predecessor reads a skip-day switch it never checks, and defines a
-  monthly cap of skip-day bridges (`constants.SKIP_BRIDGE_MONTHLY_CAP`) it never enforces; both are
-  excluded, inert in v9 (#269). `economy.json` keeps the cap declared
+- **The owner's decision** (#266, ADR-089). The owner chose option (a): "Upload the skip day". It
+  "writes the reschedule back to Anki, as the old app did". ADR-037's no-upload condition is
+  superseded for this path only, and CHARTER constraint 4 stands as written. Each of the owner's
+  guardrails, and each of the undo's rules, is a criterion below whose test is planned red first:
+  - (i) the only writes ever made are the skip day's reschedule of that day's due review cards, and
+    its exact inverse; every other path records zero uploads against the recording fake sync server
+    (A5, A6, A24);
+  - (ii) incremental sync only: a full or one-way sync demand aborts, writes nothing and tells the
+    owner (A25, A26);
+  - (iii) the write runs only on the owner's explicit skip declaration, inside ADR-037's
+    owner-trigger rule, with no new scheduled sync (A27);
+  - (iv) a preview of the cards to be rescheduled is shown before the write, and their prior due
+    dates are recorded so the skip can be undone (A28, A29);
+  - (v) the recording-server proof covers both the skip day's exact changes and the zero-upload
+    paths (A5, A6, A30), and the recorder is proved to see a planted upload (A33);
+  - the undo restores exactly the recorded prior due dates of exactly those cards (A30); it is
+    owner-triggered, incremental only, and aborts on any full-sync demand (A27, A32); it carries the
+    same recording-server proof (A30, A31); and it writes only cards whose current state still
+    equals what the skip wrote, listing every card reviewed or changed since (A31, A34).
+- **Where DeckStreak's write differs from the predecessor's**, by those guardrails:
+  - the predecessor's converge resolves a full-sync demand by a full download
+    (`sync.py:AnkiSyncer._converge`); here any full or one-way demand aborts the skip (ii);
+  - the predecessor writes its own copy and reverts that copy in place when the upload fails
+    (`AnkiSyncer._restore_cards`), which leaves the reverted cards as local changes; here the write
+    runs on a working copy beside the private copy, discarded when the run ends, so no later sync
+    has a local change to send (i);
+  - the predecessor's preview shows a due count (`SkipDaysLayer.skip_preview`); here it also lists
+    the cards and binds the take to them (iv);
+  - the predecessor's undo restores every snapshotted card (`AnkiSyncer.undo_skip`); here it writes
+    only cards still as the skip left them (the undo's rules).
+- **Corrections to the issue.** #108's first criterion (the wrapped search, the reschedule under the
+  5,000-card guard) holds as R3 and R21. Its second (the card snapshot, once per study day,
+  serialised with undo, bounded by the timeout with background reconciliation) holds as R2, R22 and
+  R26, with the undo's compare (R31) where the predecessor restored every card. The preview's due
+  count is absent when the study day has no rollup yet, where the predecessor showed 0 (R7). Its
+  third criterion's golden of `EconomyLayer._charge_skip_tariff` is kept (R8), and its fourth holds
+  as R11 and R18.
+- **An inert switch and cap.** The predecessor reads a skip-day switch it never checks
+  (`config.py:Settings.skip_enabled`), and defines a monthly cap of skip-day bridges
+  (`constants.SKIP_BRIDGE_MONTHLY_CAP`) it never enforces. Both stay unenforced here: the owner
+  decided at #269 to enforce both, and #280 (W5) does. `economy.json` keeps the cap declared
   (`streak.skip_bridge_monthly_cap`), unenforced, as the game-economy pack's reference requires.
 - **What the parity oracle proves.** The day spec (`skip.py:skip_spec`); the search as the write path
   wraps it (`sync.py:AnkiSyncer._skip_day_blocking`, driven through a stand-in collection that
   records the search and holds no card, so nothing is written); the preview
   (`SkipDaysLayer.skip_preview`); the charge and the refund (`EconomyLayer._charge_skip_tariff`,
   `EconomyLayer._refund_skip_tariff`); the summary (`skip.py:summarize_skips`); and the constants.
-- **Prerequisites.** SPEC-071, SPEC-072, SPEC-076 and SPEC-082, as the header lists. SPEC-080 and
-  SPEC-081 read this SPEC's skip set and prove their own reactions to it.
+  The reschedule itself is the engine's own Set Due Date, proved against the recording layer (A5),
+  not against a golden.
+- **Prerequisites.** SPEC-022, SPEC-023, SPEC-071, SPEC-072, SPEC-076 and SPEC-082, as the header
+  lists. SPEC-080 and SPEC-081 read this SPEC's skip set and prove their own reactions to it.
 
 ## 2. Requirements
 
@@ -66,55 +103,64 @@ The record (#108)
 
 R1. `deck-streak-ingest` owns `skip_days` (`migrations/008301_ingest_skip_days.sql`, `STRICT`,
     `created_at`): one row per skip taken, with its study day (an epoch day), the due review count
-    the preview showed (absent when the day had no rollup), whether its tariff went unfunded, and
-    whether and when it was undone. A partial unique index on the study day over the rows not undone
-    holds the once-per-study-day rule in the migration (the predecessor's guard,
-    `database.py:GamifyStore.get_active_skip_day`).
-R2. Taking a skip on a study day that already holds one not undone is refused with
-    `already_skipped` and writes nothing; after an undo the day can be skipped again. Take and undo
-    run inside the kernel's `BEGIN IMMEDIATE` write (SPEC-020 R16), so two concurrent takes write one
-    row and a take never interleaves with an undo.
-R3. The skip record takes the service's database only: it opens no collection, calls no engine and
-    sends no request to the sync server. What it gives the owner to use in Anki is the configured
-    search (`DECKSTREAK_SKIP_SEARCH`, defaulting to the predecessor's `constants.SKIP_DEFAULT_SEARCH`)
-    wrapped exactly as the golden of `sync.py:AnkiSyncer._skip_day_blocking` wraps it, and the day
-    spec of the golden of `skip.py:skip_spec`, which carries no `!`, so Anki's Set Due Date keeps
-    each card's interval.
-R4. The skip set is exactly the study days that hold a skip not undone
-    (`database.py:GamifyStore.skip_days_set`), read through one port in coordination that every
-    consumer calls; no other module queries `skip_days`.
-R5. Undo reverses the most recent skip not undone (`database.py:GamifyStore.latest_undoable_skip`),
-    marking it undone at the undo's instant; with none it answers `nothing_to_undo`.
+    the preview showed (absent when the day had no rollup), the write's state (`pending`, `applied`
+    or `failed`, with one bounded reason when failed), the number of cards the write moved, whether
+    its tariff went unfunded, and whether and when it was undone. A partial unique index on the
+    study day over the rows `pending` or `applied` and not undone holds the once-per-study-day rule
+    in the migration (the predecessor's guard, `database.py:GamifyStore.get_active_skip_day`), so a
+    `failed` take leaves the day free.
+R2. Taking a skip on a study day that already holds one `pending` or `applied` and not undone is
+    refused with `already_skipped`: it writes no row and sends no request. After an undo the day
+    can be skipped again. The record's writes run inside the kernel's `BEGIN IMMEDIATE` write
+    (SPEC-020 R16), and the collection work of a take or an undo holds the exclusive collection lock
+    (SPEC-022 R7), so two concurrent takes write one row, and a take never interleaves with an undo
+    or a sync.
+R3. The search and the day spec: the configured search (`DECKSTREAK_SKIP_SEARCH`, defaulting to the
+    predecessor's `constants.SKIP_DEFAULT_SEARCH`) wrapped exactly as the golden of
+    `sync.py:AnkiSyncer._skip_day_blocking` wraps it, so no new or learning card is ever selected,
+    and the day spec of the golden of `skip.py:skip_spec`, which carries no `!`, so the engine's Set
+    Due Date keeps each review card's interval. The preview shows both, and the write runs them.
+R4. The skip set is exactly the study days that hold an `applied` skip not undone
+    (`database.py:GamifyStore.skip_days_set`); a `pending` or `failed` skip is not in it. It is read
+    through one port in coordination that every consumer calls; no other module queries
+    `skip_days`.
+R5. Undo targets the most recent `applied` skip not undone
+    (`database.py:GamifyStore.latest_undoable_skip`); with none it answers `nothing_to_undo`. The
+    skip is marked undone, at the undo's instant, only when the undo's write was accepted or had no
+    card to write (R29 to R32).
 R6. The summary shows counts only, equal to the golden of `skip.py:summarize_skips`: the skips in the
-    current study day's calendar month, all time, and the last skip's study day. The predecessor's
-    `cards_moved_all_time` becomes the due review counts at the skips, labelled as due at the skip,
-    never as moved.
+    current study day's calendar month, all time, the last skip's study day, and the cards the
+    writes moved, all time.
 
 The preview, the tariff and undo (#108)
 
-R7. The preview, a coordination use case, shows the current study day's due review count (SPEC-071's
-    rollup `due_today`, or absent, never 0, when the day has no rollup yet), whether a skip is active
-    today, the search and the day spec (R3), the tariff, and whether the balance covers it; it equals
-    the golden of `SkipDaysLayer.skip_preview` for every case, the cases with no rollup (class
-    `no-rollup`) compared as absent.
+R7. The preview, a coordination use case, shows the current study day's due review count
+    (SPEC-071's rollup `due_today`, or absent, never 0, when the day has no rollup yet), whether a
+    skip is active today, the search and the day spec (R3), the tariff, and whether the balance
+    covers it; these equal the golden of `SkipDaysLayer.skip_preview` for every case, the cases with
+    no rollup (class `no-rollup`) compared as absent. It also lists the cards the write would move
+    (R20), which the golden does not hold.
 R8. The tariff is `economy.json`'s `streak.skip_tariff_coins`, which equals the golden constant
     `constants.SKIP_TARIFF_LADDER` (0, 50 and 100 coins), indexed by the skips already applied and not
     undone in the study day's calendar month, the last price repeating. The charge is a purchase
-    through economy's port, clipped to the wallet and outside the daily loss cap; a skip whose tariff
-    the wallet cannot cover still applies and its row records the shortfall. The price and the
-    amount paid equal the golden of `EconomyLayer._charge_skip_tariff`.
-R9. Undo refunds exactly the coins the skip paid, as a credit on the undo's study day; a free skip
-    refunds nothing (the golden of `EconomyLayer._refund_skip_tariff`).
+    through economy's port, made only when the take's write is `applied` (R24, R26), clipped to the
+    wallet and outside the daily loss cap; a skip whose tariff the wallet cannot cover still applies
+    and its row records the shortfall. The price and the amount paid equal the golden of
+    `EconomyLayer._charge_skip_tariff`.
+R9. Undo refunds exactly the coins the skip paid, as a credit on the undo's study day, only when the
+    undo is accepted (R32); a free skip refunds nothing (the golden of
+    `EconomyLayer._refund_skip_tariff`).
 R10. The tariff's price is economy's function, reading the ladder from `economy.json` once at start;
     no tariff number is typed in code.
 
 What a skip changes, at the next recompute (#108)
 
-R11. From the recompute that follows a take, each context that reads the skip set applies its own
-    rule to the day: the language streak bridges it and consumes no freeze (`skip.py:real_misses`,
-    SPEC-076); the law streak bridges it (`analytics.py:bridged_streak`, SPEC-076); the consistency
-    run leaves it unchanged (`gamification/governor.py:tier_down_run`, SPEC-072); Ascendant never
-    arms on it (`pipeline_layers/governor.py:GovernorLayer._maybe_grant_ascendant`, SPEC-072); and the
+R11. From the recompute that follows an applied take, each context that reads the skip set applies
+    its own rule to the day: the language streak bridges it and consumes no freeze
+    (`skip.py:real_misses`, SPEC-076); the law streak bridges it (`analytics.py:bridged_streak`,
+    SPEC-076); the consistency run leaves it unchanged (`gamification/governor.py:tier_down_run`,
+    SPEC-072); Ascendant never arms on it
+    (`pipeline_layers/governor.py:GovernorLayer._maybe_grant_ascendant`, SPEC-072); and the
     governor's silent run neither counts it nor ends at it (SPEC-049, SPEC-076).
 R12. The day's quests are voided, never failed (`pipeline_layers/loot.py:LootLayer._update_quests`
     returns before minting or evaluating them), no session chest is rolled on it
@@ -131,38 +177,132 @@ R13. An undo changes only what the next recompute reads: from then on the day is
 The surfaces (#108)
 
 R14. The bot keeps `/skip`, with `/cheat` dispatched as its alias and not listed in the menu, and
-    `/skipundo` and `/skipstats`: `/skip` answers the preview with Confirm and Cancel buttons
-    (callback data `sk:go` and `sk:no`), `/skipundo` asks before undoing (`sk:undo`), and
-    `/skipstats` shows the summary. Each answers the owner only (SPEC-026).
-R15. The API serves `GET /api/skip/preview`, `POST /api/skip`, `POST /api/skip/undo` and
-    `GET /api/skip/stats` to the owner's session only (SPEC-024).
-R16. The Mini App's `/skip` route shows the preview, the tariff and whether the balance covers it,
-    with one confirm; after a take it shows the search and the day spec with the steps to reschedule
-    in Anki, and says that an undo in DeckStreak does not undo a reschedule made in Anki. The route
-    joins `ROUTES`. Its copy names the skip as a day off the tariff prices, and threatens no loss.
+    `/skipundo` and `/skipstats`, each answering the owner only (SPEC-026). `/skip` answers the
+    preview: the due count, the cards the write would move counted per top-level deck, the tariff,
+    and Confirm and Cancel buttons (callback data `sk:go:<digest>` and `sk:no`, within the Bot
+    API's 64 bytes). After a confirm it answers the take's outcome: the cards moved, `pending`, or
+    why nothing was written, with every card left alone listed. `/skipundo` asks before undoing
+    (`sk:undo`) and answers with the cards restored and every card left alone. `/skipstats` shows
+    the summary.
+R15. The API serves `GET /api/skip/preview`, `POST /api/skip` (carrying the preview's digest),
+    `POST /api/skip/undo` and `GET /api/skip/stats` to the owner's session only (SPEC-024).
+R16. The Mini App's `/skip` route shows the preview (the due count, the cards the write would move,
+    the tariff and whether the balance covers it) with one confirm, then the outcome: the cards
+    moved, or why nothing was written, with every card left alone listed. The undo's confirmation
+    says that it restores only cards unchanged since the skip. The route joins `ROUTES`. Its copy
+    names the skip as a day off the tariff prices, and threatens no loss.
 
 Privacy and the collection (#108)
 
-R17. `skip_days` is declared once in ingest's data-rights port as exported and erased, in
-    `privacy.json` as the category `skip-days`, and with one line in `PRIVACY.md`; the ownership
-    register gains its row.
-R18. A reschedule the owner makes in Anki writes review-log rows of type 4 with ease 0, and the read
-    never counts one as a study event (SPEC-023's rule): a skip day on which the owner rescheduled
-    stays a day with no study.
+R17. `skip_days` and `skip_card_snapshot` are declared once in ingest's data-rights port as exported
+    and erased, in `privacy.json` as the category `skip-days`, and with one line in `PRIVACY.md`;
+    the register of DeckStreak's own tables gains both rows.
+R18. The engine's Set Due Date writes one review-log row of type 4 with ease 0 for each card it
+    moves, and the read never counts one as a study event (SPEC-023 R2): a skip day stays a day with
+    no study. An undo removes no review-log row, because an incremental sync carries none away, so
+    those rows stay, still never study events.
+
+The write to the collection (#266, ADR-089)
+
+R19. Owner triggers only (guardrail iii). A take's write runs only when the owner confirms a skip:
+    the bot's `sk:go`, or the Mini App's confirm through `POST /api/skip`, each owner-only, as an
+    owner trigger under ADR-037. No scheduled job, recompute step, restart catch-up, startup path or
+    agent tool calls the take or the undo, and neither adds a scheduled sync: the `sync` job keeps
+    its one daily slot (SPEC-027). Their syncs are recorded on the skip's own row, never in
+    `sync_runs` (SPEC-022 R16), and ADR-037's five-minute reuse of a recent sync does not apply to
+    them: a write always follows its own converge.
+R20. The preview binds the take (guardrail iv). The preview lists the cards the wrapped search (R3)
+    selects in the private copy, read under the shared collection lock: each card's id, its
+    top-level deck and its current due, with a digest of the listed ids. The confirm carries the
+    digest. The take first lists the cards again from the private copy, and when the digest
+    differs it writes nothing, sends no request, and answers `preview_changed` with the new preview.
+R21. The working copy and the converge (guardrails i and ii). Under the exclusive collection lock,
+    the take copies the private copy to a working copy beside it and converges the working copy with
+    one normal (incremental) sync. The cards it moves are the previewed cards that the wrapped
+    search still selects in the converged working copy. A previewed card no longer due, and a card
+    due that the preview did not list, are left alone and listed in the answer. More cards than
+    `SKIP_MAX_CARDS` (5,000, the golden constant) are refused with `too_many_cards` before any
+    change; with no card to move, the skip is recorded `applied` with none moved, and no card is
+    written and no second sync runs (the predecessor's `noop`).
+R22. The prior state first (guardrail iv). Before any card changes, the take commits one
+    `skip_card_snapshot` row per card to be moved (`migrations/008302_ingest_skip_card_snapshot.sql`,
+    `STRICT`, `created_at`, keyed to its skip): the card's id, its prior due date, and the rest of
+    its prior scheduling state (at least the predecessor's snapshot, `sync.py:AnkiSyncer._snapshot`:
+    queue, type, interval, ease factor, original deck and original due). After the reschedule and
+    before the push, it commits the state the reschedule left each card in, with the card's
+    modification time.
+R23. The reschedule (guardrail i). The engine's own Set Due Date moves exactly those cards in the
+    working copy, with the day spec (R3). It changes no other card, and no note, deck, notetype, tag
+    or setting.
+R24. The push (guardrails i, ii and v). A second normal sync pushes the working copy's change:
+    exactly the moved cards and the review-log rows the engine wrote for them. When the server
+    accepts it, the skip is recorded `applied` with the cards moved, and then the tariff is charged
+    (R8). The working copy is discarded when the take ends, applied or not, so the private copy is
+    written by SPEC-022's syncer alone and never holds a local change.
+R25. Incremental only (guardrail ii). When the server demands a full or one-way sync at the converge
+    or at the push, the take aborts: it resolves the demand neither by a download nor by an upload,
+    the working copy is discarded, the skip is recorded `failed` with `full_sync_required`, no tariff
+    is charged, and the answer tells the owner that a full sync is needed and that nothing was
+    written. Any other failure before the server accepts the push ends the same way, with its own
+    bounded reason. A take retries no failed step: the owner takes the skip again.
+R26. An outcome the answer cannot wait for (#108's reconciliation). The take's answer waits for the
+    write within the syncer's bounded timeout (SPEC-022 R8). A write still running then is never
+    cancelled mid-sync: the answer says `pending`, and the write's own outcome settles the row, as
+    the predecessor's reconciliation does (`SkipDaysLayer._reconcile_later`). A row still `pending`
+    when the service starts is settled after the private copy's next successful sync: `applied`
+    when any of its recorded cards carries the due date the skip wrote, and `failed` otherwise. The
+    tariff is charged only when a row settles `applied`.
+R27. The read-back (the undo's rules). After the push, the take reads each moved card back from the
+    synced working copy. A card whose state differs from what the skip wrote, or whose review log
+    holds a study event after the take's converge (a review on another client that the sync's merge
+    kept or overwrote), is listed to the owner in the answer, and the undo leaves it alone (R31).
+R28. Every other path uploads nothing (guardrail i). Only the take's and the undo's write
+    (`crates/ingest/src/skip_write.rs`) reaches the engine's card writes (Set Due Date and the card
+    update) or pushes a local change. Every other path, from a scheduled or owner sync to a preview,
+    a refused take and an aborted or failed one, records zero uploads and zero local changes through
+    the recording layer, and leaves the private copy's bytes as its own sync left them.
+
+The undo's write (#266, ADR-089)
+
+R29. Owner-triggered (the undo's rules). The undo runs only on the owner's explicit undo: the bot's
+    `sk:undo`, or `POST /api/skip/undo`, each owner-only, as an owner trigger under ADR-037 (R19).
+R30. Incremental only (the undo's rules). The undo works on its own working copy under the exclusive
+    collection lock, and converges it with one normal sync. A full or one-way sync demand at its
+    converge or at its push aborts it: nothing is pushed, the working copy is discarded, the skip
+    stays `applied` with its record and its tariff unchanged, and the answer tells the owner.
+R31. Only cards still as the skip left them (the undo's rules). The undo writes a card only when its
+    current scheduling state and modification time equal what the skip wrote (R22), and its review
+    log holds no study event after the take's converge. A card reviewed or changed since the skip is
+    left as it is and listed to the owner, never overwritten; a card deleted since is listed as gone.
+R32. The exact inverse (guardrail i and the undo's rules). For each card it writes, the undo restores
+    exactly its recorded prior due date and the rest of its recorded prior state, through the
+    engine's card update, and nothing else: no other card, no note, deck, notetype, tag or setting,
+    and no review-log row. The push carries exactly those cards. When the server accepts it, or when
+    no card needed writing, the skip is marked undone (R5) and its tariff refunded (R9); the working
+    copy is discarded either way.
+
+The recorder's own proof (#266, ADR-089)
+
+R33. The recording layer is proved to see a write before any proof rests on it. Another synthetic
+    client's full upload, driven through the layer, is recorded as an `upload`, and its normal sync
+    of one review is recorded as a chunk carrying that card and its review-log row; the census's
+    classifier marks both. The classifier moves from `crates/ingest/tests/sync.rs` into
+    `crates/ingest/tests/support/recording.rs`, beside a reader of the cards and review-log rows
+    each request carries, so SPEC-022's census and this SPEC's proofs share one classifier.
 
 ## 3. Acceptance criteria
 
 | id | criterion | decided by |
 |---|---|---|
-| A1 | a skip is recorded once per study day, a second take is refused with `already_skipped` writing nothing, and after an undo the day can be skipped again | `a_skip_is_recorded_once_per_study_day_and_again_after_an_undo` |
-| A2 | a raw insert of a second skip not undone for one study day is refused by the migration's key | `the_migration_refuses_a_second_skip_not_undone_for_one_study_day` |
-| A3 | undo reverses the most recent skip not undone, and with none answers `nothing_to_undo` | `undo_reverses_the_most_recent_skip_not_undone` |
-| A4 | the skip set holds exactly the study days with a skip not undone | `the_skip_set_holds_exactly_the_days_with_a_skip_not_undone` |
-| A5 | taking and undoing a skip sends no request through a recording layer in front of the sync endpoint, and leaves the collection copy's bytes unchanged | `taking_and_undoing_a_skip_sends_no_request_and_leaves_the_copy_unchanged` |
-| A6 | no skip module names an engine write or a sync call, and a planted fixture that does is refused (examined count reported, zero refused) | `no_skip_module_names_an_engine_write_or_a_sync_call` |
-| A7 | the search and the day spec shown to the owner equal the goldens of the wrap and of `skip.py:skip_spec` | `the_search_and_day_spec_shown_equal_the_parity_goldens` |
-| A8 | the summary shows counts only and equals the golden of `skip.py:summarize_skips` | `the_summary_shows_counts_equal_to_the_parity_golden` |
-| A9 | a reschedule made with the engine's own Set Due Date on a skip day writes rows the read does not count as study events | `a_reschedule_in_anki_on_a_skip_day_is_not_a_study_event` |
+| A1 | a skip is recorded once per study day, a second take is refused with `already_skipped` writing nothing and sending no request, and after an undo the day can be skipped again | `a_skip_is_recorded_once_per_study_day_and_again_after_an_undo` |
+| A2 | a raw insert of a second skip `pending` or `applied` and not undone for one study day is refused by the migration's key, and a `failed` row leaves the day free | `the_migration_refuses_a_second_skip_not_undone_for_one_study_day` |
+| A3 | undo targets the most recent applied skip not undone, and with none answers `nothing_to_undo` | `undo_reverses_the_most_recent_skip_not_undone` |
+| A4 | the skip set holds exactly the study days with an applied skip not undone, and no `pending` or `failed` one | `the_skip_set_holds_exactly_the_days_with_an_applied_skip_not_undone` |
+| A5 | (i, v) a take's push, through the recording layer, carries exactly the previewed cards still due, each as the reschedule left it, and one review-log row of type 4 with ease 0 for each; it carries no other card, note, grave, deck, notetype, tag or setting, and no upload; and the private copy's bytes are unchanged | `a_take_pushes_exactly_the_previewed_cards_and_their_review_log_rows` |
+| A6 | (i, v) every other path records zero uploads and zero local changes through the recording layer: a scheduled sync, an owner sync, a preview, each refused take (`already_skipped`, `preview_changed`, `too_many_cards`), an aborted take and a failed one, and the sync that follows each; the private copy's bytes stay as its own sync left them | `every_path_but_the_take_and_the_undo_records_zero_uploads` |
+| A7 | the search and the day spec the preview shows and the write runs equal the goldens of the wrap and of `skip.py:skip_spec` | `the_search_and_day_spec_equal_the_parity_goldens` |
+| A8 | the summary shows counts only, with the cards the writes moved, and equals the golden of `skip.py:summarize_skips` | `the_summary_shows_counts_equal_to_the_parity_golden` |
+| A9 | the engine's Set Due Date writes review-log rows the read does not count as study events | `a_reschedule_by_the_engine_is_not_a_study_event` |
 | A10 | the preview equals the golden of `SkipDaysLayer.skip_preview`, and its due count is absent when the study day has no rollup | `the_preview_matches_the_parity_golden_and_is_absent_without_a_rollup` |
 | A11 | the tariff charged equals the golden of `EconomyLayer._charge_skip_tariff` for every count of prior skips in the month, and never counts against the daily loss cap | `the_tariff_charged_matches_the_parity_golden_outside_the_loss_cap` |
 | A12 | a skip the wallet cannot fund still applies, the wallet stops at zero, and the row records the shortfall | `an_unfunded_skip_still_applies_and_records_the_shortfall` |
@@ -172,22 +312,36 @@ R18. A reschedule the owner makes in Anki writes review-log rows of type 4 with 
 | A16 | a skip day leaves the consistency run unchanged and arms no Ascendant | `a_skip_day_leaves_the_consistency_run_unchanged_and_arms_no_ascendant` |
 | A17 | a skip day neither counts toward nor ends the governor's silent run | `a_skip_day_neither_counts_nor_ends_the_governors_silent_run` |
 | A18 | after an undo, the next recompute treats the day as a missed day, and transitions already settled stay as they were | `after_an_undo_the_day_is_a_missed_day_at_the_next_recompute` |
-| A19 | `/skip` and `/cheat` answer the preview with Confirm and Cancel, and only for the owner | `skip_and_cheat_answer_the_preview_with_confirm_and_cancel` |
-| A20 | `/skipundo` asks before undoing, and `/skipstats` shows counts only | `skipundo_asks_before_undoing_and_skipstats_shows_counts_only` |
+| A19 | `/skip` and `/cheat` answer the preview, the cards to move counted per deck and the tariff, with Confirm and Cancel, and only for the owner | `skip_and_cheat_answer_the_preview_with_confirm_and_cancel` |
+| A20 | `/skipundo` asks before undoing and lists every card left alone, and `/skipstats` shows counts only | `skipundo_asks_before_undoing_and_skipstats_shows_counts_only` |
 | A21 | the four skip routes answer the owner's session and refuse any other caller with no data | `the_skip_routes_answer_only_the_owner` |
-| A22 | the Mini App's skip sheet shows the due count, the tariff and whether the balance covers it, then the search and the steps to reschedule in Anki | `shows the due count, the tariff and the steps to reschedule in Anki` |
-| A23 | ingest's data-rights port lists `skip_days` as exported and erased, and an erase empties it | `the_skip_days_table_is_exported_and_erased` |
+| A22 | the Mini App's skip sheet shows the due count, the cards to move, the tariff and whether the balance covers it, then the outcome with every card left alone | `shows the due count, the cards to move and the tariff, then the outcome` |
+| A23 | ingest's data-rights port lists `skip_days` and `skip_card_snapshot` as exported and erased, and an erase empties both | `the_skip_tables_are_exported_and_erased` |
+| A24 | (i) only the skip's write module reaches the engine's card writes or pushes a local change, and a planted fixture that does elsewhere is refused (examined count reported, zero refused) | `only_the_skip_write_reaches_an_engine_write_or_a_push` |
+| A25 | (ii) a full or one-way sync demand at a take's converge aborts it: no request carries a card, the private copy's bytes are unchanged, the row is `failed` with `full_sync_required`, and the answer tells the owner | `a_full_sync_demand_at_the_converge_aborts_the_take_writing_nothing` |
+| A26 | (ii) a full-sync demand at a take's push, forced by another client after the converge, aborts it the same way, and the working copy is discarded | `a_full_sync_demand_at_the_push_aborts_the_take_writing_nothing` |
+| A27 | (iii, undo) only the owner's confirm reaches the take and the undo: the bot's skip callbacks and the API's two skip routes are their only callers, no scheduler job, recompute step or startup path names them, and a planted caller is refused (examined count reported) | `only_the_owners_confirm_reaches_the_take_and_the_undo` |
+| A28 | (iv) the preview lists the cards the write would move with their digest, and a take whose list has changed writes nothing, sends no request and answers `preview_changed` with the new preview | `the_preview_lists_the_cards_and_a_changed_list_writes_nothing` |
+| A29 | (iv) each moved card's prior due date and prior state are committed before any card changes: a take stopped between that commit and the reschedule leaves the snapshot rows and no request carrying a card | `the_prior_state_is_recorded_before_any_card_changes` |
+| A30 | (undo, v) after a take and its undo each moved card's row equals its pre-skip row in every field but its modification time and sync number, and the undo's push, through the recording layer, carries exactly those cards and no review-log row | `an_undo_restores_exactly_the_prior_state_of_the_moved_cards` |
+| A31 | (undo) a card reviewed or changed since the skip, one reviewed on another client during the take included, is left as it is and listed to the owner, and no request of the undo carries it | `an_undo_never_overwrites_a_card_changed_since_the_skip` |
+| A32 | (undo) a full or one-way sync demand at the undo's converge or push aborts it: no request carries a card, the skip stays applied, and nothing is refunded | `a_full_sync_demand_aborts_the_undo_writing_nothing` |
+| A33 | (v) the recording layer records a planted upload and a planted local change: another client's full upload through it is recorded as `upload`, and that client's normal sync of one review as a chunk carrying the card and its review-log row, and the classifier marks both | `the_recorder_sees_a_planted_upload_and_a_planted_local_change` |
+| A34 | a card reviewed on another client between the take's converge and its push is listed to the owner in the take's answer | `a_card_reviewed_during_the_take_is_listed_to_the_owner` |
+| A35 | a take whose write outlives the answer's wait answers `pending`, its write's own outcome settles the row, a row still `pending` at start is settled after the next successful sync, and the tariff is charged only when a row settles `applied` | `a_write_that_outlives_the_answer_settles_its_own_row` |
+| A36 | more cards than the golden 5,000 are refused with `too_many_cards` before any change or request, and a day with no card to move records the skip with no card written | `the_card_guard_refuses_a_large_set_and_an_empty_set_writes_nothing` |
+| A37 | a take that is refused, aborts or fails charges no tariff and puts no day in the skip set, and an applied take charges once | `a_take_that_does_not_apply_charges_nothing` |
 
 ```acceptance
 A1: cargo test -p deck-streak-ingest --test skip_record -- --exact a_skip_is_recorded_once_per_study_day_and_again_after_an_undo
 A2: cargo test -p deck-streak-ingest --test skip_record -- --exact the_migration_refuses_a_second_skip_not_undone_for_one_study_day
 A3: cargo test -p deck-streak-ingest --test skip_record -- --exact undo_reverses_the_most_recent_skip_not_undone
-A4: cargo test -p deck-streak-ingest --test skip_record -- --exact the_skip_set_holds_exactly_the_days_with_a_skip_not_undone
-A5: cargo test -p deck-streak-ingest --test skip_no_write -- --exact taking_and_undoing_a_skip_sends_no_request_and_leaves_the_copy_unchanged
-A6: cargo test -p deck-streak-ingest --test skip_census -- --exact no_skip_module_names_an_engine_write_or_a_sync_call
-A7: cargo test -p deck-streak-ingest --test skip_record -- --exact the_search_and_day_spec_shown_equal_the_parity_goldens
+A4: cargo test -p deck-streak-ingest --test skip_record -- --exact the_skip_set_holds_exactly_the_days_with_an_applied_skip_not_undone
+A5: cargo test -p deck-streak-ingest --test skip_write -- --exact a_take_pushes_exactly_the_previewed_cards_and_their_review_log_rows
+A6: cargo test -p deck-streak-ingest --test skip_zero_upload -- --exact every_path_but_the_take_and_the_undo_records_zero_uploads
+A7: cargo test -p deck-streak-ingest --test skip_record -- --exact the_search_and_day_spec_equal_the_parity_goldens
 A8: cargo test -p deck-streak-ingest --test skip_record -- --exact the_summary_shows_counts_equal_to_the_parity_golden
-A9: cargo test -p deck-streak-ingest --test skip_no_write -- --exact a_reschedule_in_anki_on_a_skip_day_is_not_a_study_event
+A9: cargo test -p deck-streak-ingest --test skip_write -- --exact a_reschedule_by_the_engine_is_not_a_study_event
 A10: cargo test -p deck-streak-coordination --test skip_flow -- --exact the_preview_matches_the_parity_golden_and_is_absent_without_a_rollup
 A11: cargo test -p deck-streak-coordination --test skip_flow -- --exact the_tariff_charged_matches_the_parity_golden_outside_the_loss_cap
 A12: cargo test -p deck-streak-coordination --test skip_flow -- --exact an_unfunded_skip_still_applies_and_records_the_shortfall
@@ -200,15 +354,35 @@ A18: cargo test -p deck-streak-coordination --test skip_effects -- --exact after
 A19: cargo test -p deck-streak-bot --test skip_commands -- --exact skip_and_cheat_answer_the_preview_with_confirm_and_cancel
 A20: cargo test -p deck-streak-bot --test skip_commands -- --exact skipundo_asks_before_undoing_and_skipstats_shows_counts_only
 A21: cargo test -p deck-streak-api --test skip_routes -- --exact the_skip_routes_answer_only_the_owner
-A22: pnpm exec vitest run web/app/src/lib/skip/skip-sheet.test.ts -t "shows the due count, the tariff and the steps to reschedule in Anki"
-A23: cargo test -p deck-streak-ingest --test skip_rights -- --exact the_skip_days_table_is_exported_and_erased
+A22: pnpm exec vitest run web/app/src/lib/skip/skip-sheet.test.ts -t "shows the due count, the cards to move and the tariff, then the outcome"
+A23: cargo test -p deck-streak-ingest --test skip_rights -- --exact the_skip_tables_are_exported_and_erased
+A24: cargo test -p deck-streak-ingest --test skip_census -- --exact only_the_skip_write_reaches_an_engine_write_or_a_push
+A25: cargo test -p deck-streak-ingest --test skip_write -- --exact a_full_sync_demand_at_the_converge_aborts_the_take_writing_nothing
+A26: cargo test -p deck-streak-ingest --test skip_write -- --exact a_full_sync_demand_at_the_push_aborts_the_take_writing_nothing
+A27: cargo test -p deck-streak-coordination --test skip_callers -- --exact only_the_owners_confirm_reaches_the_take_and_the_undo
+A28: cargo test -p deck-streak-ingest --test skip_write -- --exact the_preview_lists_the_cards_and_a_changed_list_writes_nothing
+A29: cargo test -p deck-streak-ingest --test skip_write -- --exact the_prior_state_is_recorded_before_any_card_changes
+A30: cargo test -p deck-streak-ingest --test skip_undo -- --exact an_undo_restores_exactly_the_prior_state_of_the_moved_cards
+A31: cargo test -p deck-streak-ingest --test skip_undo -- --exact an_undo_never_overwrites_a_card_changed_since_the_skip
+A32: cargo test -p deck-streak-ingest --test skip_undo -- --exact a_full_sync_demand_aborts_the_undo_writing_nothing
+A33: cargo test -p deck-streak-ingest --test recorder_control -- --exact the_recorder_sees_a_planted_upload_and_a_planted_local_change
+A34: cargo test -p deck-streak-ingest --test skip_write -- --exact a_card_reviewed_during_the_take_is_listed_to_the_owner
+A35: cargo test -p deck-streak-coordination --test skip_flow -- --exact a_write_that_outlives_the_answer_settles_its_own_row
+A36: cargo test -p deck-streak-ingest --test skip_write -- --exact the_card_guard_refuses_a_large_set_and_an_empty_set_writes_nothing
+A37: cargo test -p deck-streak-coordination --test skip_flow -- --exact a_take_that_does_not_apply_charges_nothing
 ```
 
-A5 starts the recording layer SPEC-022 built (`crates/ingest/tests/support/recording.rs`) in front of
-an upstream nobody listens on, points the fixture's sync endpoint at it, takes and undoes a skip, and
-asserts that the layer kept no request and that the copy's SHA-256 is unchanged. A9 builds a small
-collection with the engine, as the reader's tests do, and reschedules one due review card with the
-engine's own Set Due Date, which writes the same kind of row the owner's Anki writes.
+The write's tests run the engine's own sync server in a child process with SPEC-022's recording
+layer in front of it (SPEC-022 §3 and §7), on a synthetic collection built by
+`crates/ingest/tests/support/synthetic.rs` that holds review cards due today, new and learning cards
+the wrap must exclude, and cards due on other days; nothing reaches the owner's server. A second
+synthetic client plays the owner's other device. A26, A29, A31 and A34 act between the take's steps
+through a seam the skip write offers its tests: a hook called after the converge, after the
+snapshot's commit and before the push, which does nothing in production. A30 compares every field
+of each moved card's row before the take and after the undo. A33 is the control every other proof
+rests on, and it fails when the layer records nothing. Every test that enumerates reports its
+examined count and refuses zero. The red-first record gives each of A5, A6 and A24 to A34 a red
+commit whose failure is the criterion's own reason.
 
 ## 3a. What the box run judges
 
@@ -219,54 +393,66 @@ delivery changes no pack's state.
 
 | id | criterion | decided by |
 |---|---|---|
-| B1 | the privacy inventory declares the new category, over `privacy.json`, `PRIVACY.md` and `crates/ingest/src/data_rights.rs`, examining the `skip-days` category and the `skip_days` table | the privacy-gdpr pack |
+| B1 | the privacy inventory declares the new category, over `privacy.json`, `PRIVACY.md` and `crates/ingest/src/data_rights.rs`, examining the `skip-days` category and the `skip_days` and `skip_card_snapshot` tables | the privacy-gdpr pack |
 | B2 | the economy stays equal to its reference, over `economy.json`, examining the skip tariff as a rising list of coin prices and the unenforced bridge cap as declared | the game-economy pack |
 | B3 | the skip sheet's copy shames no choice and threatens no streak loss, over `web/app/src/routes/skip/` and `web/app/src/lib/skip/` | the ux-laws pack |
 | B4 | the `/skip` route passes the audit in both Telegram colour schemes, over `web/app/src/routes/skip/+page.svelte` | the accessibility pack |
-| B5 | the skip commands keep their callback data within the Bot API's limit and answer the owner only, over `crates/bot/src/skip_commands.rs` and `crates/bot/src/commands.rs` | the telegram-platform pack |
+| B5 | the skip commands keep their callback data, the preview's digest included, within the Bot API's limit and answer the owner only, over `crates/bot/src/skip_commands.rs` and `crates/bot/src/commands.rs` | the telegram-platform pack |
 
 ## 4. File manifest
 
 | file | context | change |
 |---|---|---|
-| `crates/ingest/src/skip.rs` | `deck-streak-ingest` | added: the record, its once-per-study-day take, the undo, the skip set, the summary, the search and day spec shown |
+| `crates/ingest/src/skip.rs` | `deck-streak-ingest` | added: the record, its once-per-study-day take, the snapshot's rows, the undo's compare, the skip set, the summary, the search and the day spec |
+| `crates/ingest/src/skip_write.rs` | `deck-streak-ingest` | added: the take's and the undo's write on a working copy: the preview's list and digest, the converge, the snapshot's commits, the reschedule or the restore, the push and the read-back, incremental syncs only, and the test seam between steps |
+| `crates/ingest/src/engine.rs` | `deck-streak-ingest` | changed: the port gains the wrapped search's cards with their scheduling state, Set Due Date over a card list, and the card update that writes recorded fields back; `RslibEngine` implements them over the engine |
 | `crates/ingest/src/settings.rs` | `deck-streak-ingest` | changed: `DECKSTREAK_SKIP_SEARCH`, defaulting to the golden constant |
-| `crates/ingest/src/data_rights.rs` | `deck-streak-ingest` | changed: `skip_days`, exported and erased |
-| `crates/ingest/src/lib.rs` | `deck-streak-ingest` | changed: the skip module |
+| `crates/ingest/src/data_rights.rs` | `deck-streak-ingest` | changed: `skip_days` and `skip_card_snapshot`, exported and erased |
+| `crates/ingest/src/lib.rs` | `deck-streak-ingest` | changed: the skip modules |
 | `crates/ingest/tests/skip_record.rs` | `deck-streak-ingest` | added: A1 to A4, A7, A8 |
-| `crates/ingest/tests/skip_no_write.rs` | `deck-streak-ingest` | added: A5, A9 |
-| `crates/ingest/tests/skip_census.rs` | `deck-streak-ingest` | added: A6, with its planted fixture |
+| `crates/ingest/tests/skip_write.rs` | `deck-streak-ingest` | added: A5, A9, A25, A26, A28, A29, A34, A36 |
+| `crates/ingest/tests/skip_undo.rs` | `deck-streak-ingest` | added: A30 to A32 |
+| `crates/ingest/tests/skip_zero_upload.rs` | `deck-streak-ingest` | added: A6 |
+| `crates/ingest/tests/skip_census.rs` | `deck-streak-ingest` | added: A24, with its planted fixture |
+| `crates/ingest/tests/recorder_control.rs` | `deck-streak-ingest` | added: A33 |
 | `crates/ingest/tests/skip_rights.rs` | `deck-streak-ingest` | added: A23 |
+| `crates/ingest/tests/support/recording.rs` | `deck-streak-ingest` | changed: the census's classifier moves here, beside a reader of the cards and review-log rows each request carries (R33) |
+| `crates/ingest/tests/support/mod.rs` | `deck-streak-ingest` | changed: another client's normal sync and full upload through a given endpoint (R33) |
+| `crates/ingest/tests/support/synthetic.rs` | `deck-streak-ingest` | changed: review cards due today, new and learning cards, cards due on other days, and a second client's review |
+| `crates/ingest/tests/sync.rs` | `deck-streak-ingest` | changed: the census calls the shared classifier; SPEC-022's A15 is unchanged |
 | `crates/economy/src/tariff.rs` | `deck-streak-economy` | added: the skip tariff's price, from `economy.json`'s ladder |
 | `crates/economy/src/lib.rs` | `deck-streak-economy` | changed: the tariff module |
 | `crates/economy/Cargo.toml` | `deck-streak-economy` | changed: `serde` and `serde_json` as dev-dependencies for the golden reader, when SPEC-082 has not added them (SPEC-029 R8) |
 | `crates/economy/tests/skip_tariff.rs` | `deck-streak-economy` | added: A14 |
-| `crates/coordination/src/skip/mod.rs` | `deck-streak-coordination` | added: the preview, the take and the undo, the tariff's purchase and refund |
+| `crates/coordination/src/skip/mod.rs` | `deck-streak-coordination` | added: the preview, the take and the undo, the tariff's purchase after an applied take and its refund after an accepted undo, and the settlement of a pending row |
 | `crates/coordination/src/skip/days.rs` | `deck-streak-coordination` | added: the skip-set port every recompute step reads, in place of the empty set SPEC-071's recompute passes |
 | `crates/coordination/src/recompute/` | `deck-streak-coordination` | changed: the steps that take skip days read them from `skip/days.rs` |
 | `crates/coordination/src/lib.rs` | `deck-streak-coordination` | changed: the skip module |
-| `crates/coordination/tests/skip_flow.rs` | `deck-streak-coordination` | added: A10 to A13 |
+| `crates/coordination/tests/skip_flow.rs` | `deck-streak-coordination` | added: A10 to A13, A35, A37 |
 | `crates/coordination/tests/skip_effects.rs` | `deck-streak-coordination` | added: A15 to A18 |
-| `crates/coordination/tests/data_rights_symmetry.rs` | `deck-streak-coordination` | changed: a seeded `skip_days` row |
+| `crates/coordination/tests/skip_callers.rs` | `deck-streak-coordination` | added: A27, with its planted caller |
+| `crates/coordination/tests/data_rights_symmetry.rs` | `deck-streak-coordination` | changed: seeded `skip_days` and `skip_card_snapshot` rows |
 | `crates/coordination/src/data_rights_registry.rs` | `deck-streak-coordination` | unchanged: ingest's port is registered already (SPEC-021); listed under SPEC-021's six-file rule |
-| `crates/api/src/skip_routes.rs` | `deck-streak-api` | added: the four skip routes |
+| `crates/api/src/skip_routes.rs` | `deck-streak-api` | added: the four skip routes, the take carrying the preview's digest |
 | `crates/api/src/router.rs` | `deck-streak-api` | changed: mounts the skip routes |
 | `crates/api/tests/skip_routes.rs` | `deck-streak-api` | added: A21 |
 | `crates/bot/src/skip_commands.rs` | `deck-streak-bot` | added: the skip, cheat, skipundo and skipstats commands, and the `sk:` callbacks |
 | `crates/bot/src/commands.rs` | `deck-streak-bot` | changed: the command table, and the owner's menu gains the skip, skipundo and skipstats commands |
 | `crates/bot/tests/skip_commands.rs` | `deck-streak-bot` | added: A19, A20 |
-| `crates/daemon/src/wiring.rs` | `deck-streak-daemon` | changed: the skip use cases joined to the record, the rollup and the wallet |
+| `crates/daemon/src/wiring.rs` | `deck-streak-daemon` | changed: the skip use cases joined to the record, the write, the rollup and the wallet, and the settlement of a pending row at start |
 | `web/app/src/routes/skip/+page.svelte` | miniapp | added: the skip sheet's screen |
-| `web/app/src/lib/skip/SkipSheet.svelte` | miniapp | added: the preview, the confirm and the steps for Anki |
+| `web/app/src/lib/skip/SkipSheet.svelte` | miniapp | added: the preview with the cards to move, the confirm, and the outcome with every card left alone |
 | `web/app/src/lib/skip/api.ts` | miniapp | added: the skip routes' client |
 | `web/app/src/lib/skip/skip-sheet.test.ts` | miniapp | added: A22 |
 | `web/app/src/lib/routes.ts` | miniapp | changed: the skip route joins `ROUTES` |
-| `migrations/008301_ingest_skip_days.sql` | `deck-streak-ingest` | added: `skip_days`, `STRICT`, with the partial unique index on the study day for rows not undone |
+| `migrations/008301_ingest_skip_days.sql` | `deck-streak-ingest` | added: `skip_days`, `STRICT`, with the write's state and the partial unique index on the study day over rows `pending` or `applied` and not undone |
+| `migrations/008302_ingest_skip_card_snapshot.sql` | `deck-streak-ingest` | added: `skip_card_snapshot`, `STRICT`, keyed to its skip, with each card's prior state and the state the reschedule left it in |
 | `.sqlx/` | workspace | changed: the offline cache for the new queries |
 | `Cargo.lock` | workspace | changed |
 | `.env.example` | repo | changed: `DECKSTREAK_SKIP_SEARCH`, empty, with the default named in its comment |
-| `docs/CONTEXT-MAP.md` | docs | changed: the register of DeckStreak's own tables gains `skip_days` |
-| `privacy.json` | repo | changed: the `skip-days` category |
+| `docs/CONTEXT-MAP.md` | docs | changed: the register of DeckStreak's own tables gains `skip_days` and `skip_card_snapshot` |
+| `docs/OWNER-SETUP.md` | docs | changed: the sync server's section says that the skip day's reschedule and its undo are DeckStreak's only writes to the owner's server (ADR-089) |
+| `privacy.json` | repo | changed: the `skip-days` category, over both tables |
 | `PRIVACY.md` | repo | changed: the `skip-days` line |
 | `tools/parity-oracle/registry/spec_083.py` | repo | added: this SPEC's registrations (SPEC-029's registry) |
 | `tools/parity-oracle/goldens/skip_spec.json` | repo | added: the golden of `skip.py:skip_spec` (function) |
@@ -278,16 +464,17 @@ delivery changes no pack's state.
 | `tools/parity-oracle/goldens/skip.constants.json` | repo | added: the skip constants (constants) |
 | `scripts/mutation-rows.d/S08300-S08399.json` | repo | added: the hand-proved rows of §9 |
 | `docs/specs/SPEC-083-the-skip-day-is-recorded-by-deckstreak-and-bridges-the-game-without-writing-to-anki.md` | docs | moved from `docs/specs/planned/` |
-| `docs/decisions/ADR-083-the-skip-days-write-to-the-collection-waits-for-the-owner.md` | docs | changed: accepted with the owner's decision at #266 |
+| `docs/decisions/ADR-083-the-skip-days-write-to-the-collection-waits-for-the-owner.md` | docs | changed: accepted at this delivery, with the owner's decision at #266 (ADR-089) |
 | `docs/red-first/SPEC-083.md` | docs | added |
 | `changelog.d/` fragment | repo | added |
 
 ## 5. What this does NOT do
 
-- It reschedules no card in the collection and uploads nothing: the write waits for the owner's
-  decision (#266).
 - It enforces neither the predecessor's unchecked skip switch nor its unenforced monthly cap of
-  skip-day bridges, both inert in v9 (#269).
+  skip-day bridges: the owner decided at #269 to enforce both, and #280 (W5) does.
+- It resolves no full-sync demand inside a take or an undo: either aborts, and the owner's `/sync`
+  downloads as SPEC-022 R6 says (#266).
+- It retries no failed write: the owner takes the skip again, or undoes it again (#266).
 - It proves no quest void, chest pause or race-week exemption itself: the quests, the chests and the
   race read this SPEC's port and prove each when they land (#100, #102, #124).
 - It pauses no committed-window verdict (#109), no contract breach (#113) and no fine (#110), and
@@ -297,24 +484,35 @@ delivery changes no pack's state.
 - It publishes no skip badge or public skip count (#156).
 - It serves no agent tool that takes, undoes or lists skips (#157).
 - It imports none of the predecessor's skip rows (#61).
-- It amends no charter constraint: CHARTER constraint 4's sentence waits for the owner's decision
-  (#266).
+- It amends no charter constraint: CHARTER constraint 4 stands as written, and ADR-089 records the
+  owner's decision (#266).
 
 ## 6. Risks
 
-- **The owner expects a skip to empty today's Anki queue**, as the predecessor's did. Detected by the
-  sheet's steps (A22) and the bot's preview (A19); the owner's decision at #266 settles it.
+- **A defect in the write reaches the owner's collection.** Prevented by the working copy, the
+  incremental-only rule and the undo's compare (R21 to R32); detected by A5, A6 and A24 to A34, each
+  red first against the recording layer, whose own control runs first (A33).
+- **A review on another client during a take loses its schedule to the reschedule**, because the
+  newer change wins the sync's merge. Detected by the read-back (A34): the owner sees the card
+  listed, and the undo leaves it alone (A31).
+- **The owner's server demands a full sync**, so a take aborts. Visible: the answer says why, and the
+  owner's `/sync` resolves a download (SPEC-022 R6). A server that only a full upload could satisfy
+  keeps the skip from writing, which is guardrail (ii) working (ADR-089).
+- **The private copy shows the moved cards as due until its next sync.** Visible: the take's answer
+  counts the cards moved, and the owner's `/sync` refreshes the copy (ADR-037).
 - **A consumer reads the skip days its own way** and drifts from the port. Detected by A4 and the
-  census's rule that no other module queries `skip_days`, and by each consumer's own criteria over
-  the port (SPEC-072, SPEC-076, SPEC-080, SPEC-081).
-- **A retried take charges the tariff twice.** Prevented by the once-per-study-day key (A2) and the
-  coin ledger's unique (day, source, ref) key (SPEC-082); detected by A11.
+  rule that no other module queries `skip_days`, and by each consumer's own criteria over the port
+  (SPEC-072, SPEC-076, SPEC-080, SPEC-081).
+- **A retried take charges the tariff twice.** Prevented by the once-per-study-day key (A2), the
+  charge on an applied take only (A37) and the coin ledger's unique (day, source, ref) key
+  (SPEC-082); detected by A11.
 - **An undo of an old skip surprises the owner** by turning a bridged day into a missed one at the
   next recompute. Detected by A18; the preview and the undo's confirmation say so first.
-- **Someone adds an upload path for the skip without the owner's decision.** Detected by A5 and A6,
-  and by SPEC-022's no-upload census.
-- **The preview's due count is as old as the study day's last recompute.** Visible: the count is the
-  rollup's, and the owner's `/sync` refreshes it (ADR-037).
+- **Someone adds a write on another path.** Detected by A6 and A24, and by SPEC-022's no-upload
+  census.
+- **The preview's due count is as old as the study day's last recompute, and its card list as old as
+  the private copy's last sync.** Visible: the take converges first and moves only previewed cards
+  still due (R21), and the owner's `/sync` refreshes both (ADR-037).
 
 ## 7. Parity goldens
 
@@ -335,17 +533,29 @@ instant epoch milliseconds (SPEC-029 R3).
 
 | table | owner | created by | from the predecessor's | export and erase |
 |---|---|---|---|---|
-| `skip_days` | `ingest` | `migrations/008301_ingest_skip_days.sql` (SPEC-083) | `skip_days`: each applied row maps to one row with its day, its undone flag and instant, and its moved count as the due count; rows never applied are not imported; `skip_card_snapshot` has no DeckStreak table, because DeckStreak moves no card (ADR-083) | exported and erased |
+| `skip_days` | `ingest` | `migrations/008301_ingest_skip_days.sql` (SPEC-083) | `skip_days`: each applied row maps to one `applied` row with its day, its undone flag and instant, and its moved count; rows never applied are not imported | exported and erased |
+| `skip_card_snapshot` | `ingest` | `migrations/008302_ingest_skip_card_snapshot.sql` (SPEC-083) | `skip_card_snapshot`: each row of an imported skip maps to one row with its prior fields; the predecessor recorded no state the reschedule left, so an undo writes no imported card and lists each to the owner (R31) | exported and erased |
 
 ## 9. Mutation rows
 
 | row | target | what it guards | killer |
 |---|---|---|---|
-| `S08301-ONE-SKIP-PER-STUDY-DAY` | `migrations/008301_ingest_skip_days.sql` | the partial unique index on the study day over rows not undone (a script-mutation row) | `skip_record::the_migration_refuses_a_second_skip_not_undone_for_one_study_day` |
-| `S08302-THE-SET-EXCLUDES-UNDONE` | `crates/ingest/src/skip.rs` | the skip set's filter on rows not undone | `skip_record::the_skip_set_holds_exactly_the_days_with_a_skip_not_undone` |
+| `S08301-ONE-SKIP-PER-STUDY-DAY` | `migrations/008301_ingest_skip_days.sql` | the partial unique index on the study day over rows `pending` or `applied` and not undone (a script-mutation row) | `skip_record::the_migration_refuses_a_second_skip_not_undone_for_one_study_day` |
+| `S08302-THE-SET-EXCLUDES-UNDONE` | `crates/ingest/src/skip.rs` | the skip set's filter on applied rows not undone | `skip_record::the_skip_set_holds_exactly_the_days_with_an_applied_skip_not_undone` |
 | `S08303-UNDO-TAKES-THE-LATEST` | `crates/ingest/src/skip.rs` | the undo's order, the most recent skip first | `skip_record::undo_reverses_the_most_recent_skip_not_undone` |
-| `S08304-THE-SEARCH-IS-WRAPPED` | `crates/ingest/src/skip.rs` | the wrap that keeps new and learning cards out of the search | `skip_record::the_search_and_day_spec_shown_equal_the_parity_goldens` |
+| `S08304-THE-SEARCH-IS-WRAPPED` | `crates/ingest/src/skip.rs` | the wrap that keeps new and learning cards out of the search | `skip_record::the_search_and_day_spec_equal_the_parity_goldens` |
 | `S08305-THE-LAST-PRICE-REPEATS` | `crates/economy/src/tariff.rs` | the ladder's index clamped to its last price | `skip_tariff::the_tariff_ladder_is_read_from_economy_json_and_equals_the_golden` |
 | `S08306-THE-TARIFF-IS-A-PURCHASE` | `crates/coordination/src/skip/mod.rs` | the charge taken through the purchase port, outside the daily loss cap | `skip_flow::the_tariff_charged_matches_the_parity_golden_outside_the_loss_cap` |
 | `S08307-AN-UNFUNDED-SKIP-APPLIES` | `crates/coordination/src/skip/mod.rs` | the amount paid clipped to the balance while the skip stands | `skip_flow::an_unfunded_skip_still_applies_and_records_the_shortfall` |
 | `S08308-THE-REFUND-LANDS-ON-THE-UNDO-DAY` | `crates/coordination/src/skip/mod.rs` | the refund credited on the undo's study day | `skip_flow::undo_refunds_what_the_skip_paid_on_the_undo_day` |
+| `S08309-A-FULL-SYNC-DEMAND-ABORTS` | `crates/ingest/src/skip_write.rs` | the abort on a full or one-way sync demand at the take's converge | `skip_write::a_full_sync_demand_at_the_converge_aborts_the_take_writing_nothing` |
+| `S08310-ONLY-PREVIEWED-CARDS-MOVE` | `crates/ingest/src/skip_write.rs` | the moved set held to the previewed cards still due | `skip_write::a_take_pushes_exactly_the_previewed_cards_and_their_review_log_rows` |
+| `S08311-THE-PRIOR-STATE-FIRST` | `crates/ingest/src/skip_write.rs` | the snapshot's commit before the reschedule | `skip_write::the_prior_state_is_recorded_before_any_card_changes` |
+| `S08312-THE-CARD-GUARD` | `crates/ingest/src/skip_write.rs` | the refusal above `SKIP_MAX_CARDS` before any change | `skip_write::the_card_guard_refuses_a_large_set_and_an_empty_set_writes_nothing` |
+| `S08313-A-CHANGED-PREVIEW-WRITES-NOTHING` | `crates/ingest/src/skip_write.rs` | the digest's comparison before any request | `skip_write::the_preview_lists_the_cards_and_a_changed_list_writes_nothing` |
+| `S08314-THE-UNDO-WRITES-ONLY-UNCHANGED` | `crates/ingest/src/skip_write.rs` | the undo's comparison with the state the skip wrote | `skip_undo::an_undo_never_overwrites_a_card_changed_since_the_skip` |
+| `S08315-THE-UNDO-RESTORES-THE-PRIOR-STATE` | `crates/ingest/src/skip_write.rs` | the restore of every recorded field | `skip_undo::an_undo_restores_exactly_the_prior_state_of_the_moved_cards` |
+| `S08316-THE-UNDO-ABORTS-ON-A-FULL-SYNC` | `crates/ingest/src/skip_write.rs` | the undo's abort on a full or one-way sync demand | `skip_undo::a_full_sync_demand_aborts_the_undo_writing_nothing` |
+| `S08317-THE-TARIFF-AFTER-APPLY` | `crates/coordination/src/skip/mod.rs` | the charge made only on an applied take | `skip_flow::a_take_that_does_not_apply_charges_nothing` |
+| `S08318-THE-WORKING-COPY-IS-DISCARDED` | `crates/ingest/src/skip_write.rs` | the private copy left to SPEC-022's syncer | `skip_zero_upload::every_path_but_the_take_and_the_undo_records_zero_uploads` |
+| `S08319-THE-READ-BACK-LISTS` | `crates/ingest/src/skip_write.rs` | the read-back's listing of a card changed during the take | `skip_write::a_card_reviewed_during_the_take_is_listed_to_the_owner` |
