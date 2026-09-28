@@ -430,6 +430,7 @@ A25: python3 -m unittest discover -s scripts/tests -p test_mutation_campaign.py 
 | `docs/schematics/mutation-testing.md` | vault | changed: the verdict's step binds the record, and points at `docs/schematics/mutation-equivalence-record.md` |
 | `docs/specs/SPEC-039-every-change-proves-its-tests-kill-its-mutants.md` | vault | changed insert-only: A20 struck and set apart in a `retired` fence, and a dated amendment naming ADR-070 (R17) |
 | `docs/red-first/SPEC-039.md` | vault | changed insert-only: A20's lines set apart in a `retired` fence |
+| `docs/specs/SPEC-056-every-pack-is-judged-on-the-box-and-nothing-of-the-hub-is-published.md` | vault | changed insert-only: section 7 lists SPEC-039's A20, since SPEC-056 A18 holds that table equal to every retirement the delivered SPECs hold (section 9) |
 | `crates/vault/tests/`, `crates/vault/src/` | vault | the killing tests (R2); the source only by a red-first fix (R3) |
 | `crates/ingest/tests/`, `crates/ingest/src/` | ingest | the same |
 | `crates/kernel/tests/`, `crates/kernel/src/` | kernel | the same |
@@ -552,8 +553,15 @@ dispatch's run, the listing per package, and `table --listed`'s lines.
 
 ## 9. Amendments
 
-None. A delivery whose measurements prove this plan wrong records it here, dated, with the reason
+A delivery whose measurements prove this plan wrong records it here, dated, with the reason
 (R16).
+
+- **2026-09-28, the vault's delivery.** Section 1.3 read the tree as holding no exclusion, since
+  `mutation-verdict.py exclusions` then examined no entry, but `.cargo/mutants.toml` held an empty
+  `exclude_re = []` key, which R11 refuses as a key: the delivery removed it, and nothing else
+  needed migrating. The manifest lacked SPEC-056, whose A18 holds its section 7 equal to every
+  criterion the delivered SPECs retire, so R17's retirement of SPEC-039's A20 adds a row there,
+  insert-only with a dated amendment; section 4 now names it.
 
 ## 10. References
 
