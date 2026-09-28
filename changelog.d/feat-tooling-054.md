@@ -10,6 +10,8 @@
 - `scripts/box-packs.sh` fails an expected red or a pending entry whose issue is closed, naming
   the pack, the row and the issue, and reads VOID when `gh` cannot tell it an issue's state.
 - The vault rails guard bounds its `cargo run` at 900 s, and fails by name when the bound expires.
+- The gate's python stage runs both of its suites whatever the first one found, names each suite's
+  tests and exit on its last line, and fails a suite that ran no test.
 
 ### Changed
 

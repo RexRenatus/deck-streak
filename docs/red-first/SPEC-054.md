@@ -3,8 +3,10 @@
 The SPEC was committed alone (a117bcf), then the tests (ff25fe2), with one stub: the rails guard's
 cargo call moved into a helper, `bounded()`, that still passed no timeout, as the base did. Every
 other criterion ran against the base's own code. Each was run at ff25fe2 for its own reason, and
-again at the implementation (3a03c5d). Both shas were re-run from a `git archive` export, with the
-maintainer's private list dropped, so each verdict rests on the public shapes alone.
+again at the implementation (3a03c5d). R7 and A13 came later in the delivery (SPEC §7): A13 was
+committed red against the unchanged `scripts/check.sh` (c8ffe05), and green with the stage's fix
+(c81eac7). Every sha was re-run from a `git archive` export, with the maintainer's private list
+dropped, so each verdict rests on the public shapes alone; at c81eac7 all thirteen criteria pass.
 
 ```red-first
 A1: red at ff25fe2: AssertionError: 3 != 1 : examined 0 file(s) against public shapes only; 0 finding(s) (the file given as its subject was walked as a directory, and examined nothing)
@@ -30,7 +32,14 @@ A11: red at ff25fe2: AssertionError: None != 900 (the cargo call passed no timeo
 A11: green at 3a03c5d
 A12: red at ff25fe2: AssertionError: examined 0 README day-token example(s): the population is empty, so nothing was judged
 A12: green at 3a03c5d
+A13: red at c8ffe05: AssertionError: 'Ran 2 tests' not found in the python stage's log, which held only the planted guard suite's `Ran 1 test` and `FAILED (failures=1)` (the stage stopped before the oracle suite ran)
+A13: green at c81eac7
 ```
+
+A13's case of a suite that exits 0 having run no test, as Python 3.11's unittest does, was added
+with the fix: Python 3.12's unittest exits 5 on an empty run, so without that case a mutant that
+drops the stage's own no-test check survived. On the base that case is red too, because the stage
+passes both empty suites.
 
 ## The vendoring is byte-identical (R3)
 
@@ -46,9 +55,9 @@ and exited 2 before and after (sha256 `451098db…300cd095` and `27eb3bbb…348d
 ## Mutants of the changed code
 
 No mutation runner judges this repository's Python yet (#217, #218), so the changed code's mutants
-were proved by hand at 3a03c5d, on an export. Each mutant replaced an anchor that occurs exactly
+were proved by hand at c81eac7, on an export. Each mutant replaced an anchor that occurs exactly
 once, and one criterion's test selected alone was green on the unmutated file and red on the
-mutant. The file was restored byte for byte after each. All 30 were killed:
+mutant. The file was restored byte for byte after each. All 37 were killed:
 
 | requirement | mutant | killed by |
 |---|---|---|
@@ -61,3 +70,4 @@ mutant. The file was restored byte for byte after each. All 30 were killed:
 | R5 | no timeout; a failure that names nothing | A10 |
 | R5 | the cargo call unbounded | A11 |
 | R6 | the example's token off by one day | A12 |
+| R7 | a red suite passing; a suite that ran nothing passing; the first red suite stopping the stage; only the first suite run; the suites' output not logged; no verdict line; the stage always passing | A13 |
