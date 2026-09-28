@@ -42,28 +42,23 @@ def examined_count(report: object) -> int | None:
     return total
 
 
-def failing(advisory: object, level: str) -> bool:
+def failing(advisory: dict, level: str) -> bool:
     """Whether an advisory fails the stage: its grade is at or above the level, or is none of
     pnpm's, because a grade the verdict cannot place is never read as clean."""
-    severity = advisory.get("severity") if isinstance(advisory, dict) else None
+    severity = advisory.get("severity")
     if severity not in GRADES:
         return True
     return GRADES.index(severity) >= GRADES.index(level)
 
 
-def describe(advisory: object) -> str:
-    """One line naming an advisory: its severity, package, versions found, id and range."""
-    fields = advisory if isinstance(advisory, dict) else {}
-    findings = fields.get("findings")
-    versions = sorted(
-        {str(found.get("version")) for found in findings if isinstance(found, dict)}
-        if isinstance(findings, list)
-        else set()
-    )
-    ident = fields.get("github_advisory_id") or fields.get("id")
+def describe(advisory: dict) -> str:
+    """One line naming an advisory: its severity, its package and each version the report found it
+    at, its advisory id and its vulnerable range."""
+    versions = ",".join(found["version"] for found in advisory.get("findings", ()))
     return (
-        f"{fields.get('severity')} {fields.get('module_name')} {','.join(versions)} {ident} "
-        f"(vulnerable {fields.get('vulnerable_versions')}): {fields.get('title')}"
+        f"{advisory.get('severity')} {advisory.get('module_name')} {versions} "
+        f"{advisory.get('github_advisory_id')} (vulnerable {advisory.get('vulnerable_versions')}):"
+        f" {advisory.get('title')}"
     )
 
 
@@ -79,7 +74,7 @@ def verdict(text: str, pnpm_exit: int, level: str) -> tuple[int, list[str]]:
         first = next((line.strip() for line in text.splitlines() if line.strip()), "no output")
         return EXIT_VOID, [
             "audit-web: VOID: pnpm audit gave no report with a package count "
-            f"(exit {pnpm_exit}): {first[:120]}"
+            f"(exit {pnpm_exit}): {first}"
         ]
     if total == 0:
         return EXIT_VOID, ["audit-web: VOID: examined 0 package(s), so nothing was judged"]
