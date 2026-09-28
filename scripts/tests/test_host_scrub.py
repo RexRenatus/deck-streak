@@ -917,6 +917,52 @@ class Apply(unittest.TestCase):
             self.assertEqual(probe.read_text(), "written after the checks\n")
             log = json.loads((host.private / "apply-log.json").read_text())
             self.assertEqual(log["deleted"], [])
+        # An item that changes after the apply's checks, at its own entry or anywhere below it, is
+        # not deleted: each case changes it while the apply reads its health checks.
+        def under_venv(host):
+            venv = host.apps / "idle" / ".venv"
+            return venv, lambda: write(venv / "lib" / "added-late.txt", text="not approved\n")
+
+        def inside_venv(host):
+            venv = host.apps / "idle" / ".venv"
+            return venv, lambda: (venv / "lib" / "site.py").write_bytes(b"x" * 3000)
+
+        def put_back(host):
+            probe = host.apps / "probe-1.py"
+
+            def change():
+                st = os.lstat(probe)
+                data = bytearray(probe.read_bytes())
+                data[0] ^= 0xFF
+                probe.write_bytes(bytes(data))
+                os.utime(probe, ns=(st.st_atime_ns, st.st_mtime_ns))
+
+            return probe, change
+
+        def rewritten(host):
+            probe = host.apps / "probe-1.py"
+            return probe, lambda: probe.write_bytes(b"rewritten after the checks\n")
+
+        for label, case in (
+            ("an entry added below a directory item's top entry", under_venv),
+            ("a file inside a directory item rewritten in place", inside_venv),
+            ("a file item rewritten in place, its time put back", put_back),
+            ("a file item rewritten in place", rewritten),
+        ):
+            with self.subTest(label), tempfile.TemporaryDirectory() as scratch:
+                host = Host(scratch)
+                item, change = case(host)
+                with Window(change) as window:
+                    rules = host.rules(health=[{"id": "window", "url": window.url}])
+                    listing, list_path = host.plan(rules)
+                    approval = host.approve(listing, [by_path(listing)[str(item)]["id"]])
+                    window.armed.set()
+                    done = host.apply(list_path, approval, "--apply", rules=rules)
+                self.assertTrue(window.spent.is_set())
+                self.assertEqual(done.returncode, 3, said(done))
+                self.assertTrue(os.path.lexists(item), said(done))
+                log = json.loads((host.private / "apply-log.json").read_text())
+                self.assertEqual(log["deleted"], [])
 
     def test_apply_refuses_an_approval_without_a_later_snapshot(self):
         with tempfile.TemporaryDirectory() as scratch:
