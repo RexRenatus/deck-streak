@@ -192,5 +192,5 @@ A12: python3 -m unittest discover -s scripts/tests -p test_readings_units.py -k 
   the generation unit is ordered `After=` the `sync` job's unit, so that when both starts are queued
   together the sync's run ends first (R9, A12). ADR-037 carries the matching note.
 - **Section 6 (2026-09-28): the host-down risk.** It said SPEC-027 does not catch the sync up;
-  SPEC-027 as delivered makes `sync` its catch-up job (R1). The risk now names what the catch-up
+  SPEC-027 as delivered makes `sync` its catch-up job (its R1). The risk now names what the catch-up
   recovers and what still ends `sync_failed`.
