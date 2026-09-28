@@ -1,0 +1,29 @@
+{
+  "schema": "phx.privacy.v1",
+  "categories": [
+    {
+      "id": "sync-history",
+      "data": "the record of each sync of the owner's collection: when it ran, what started it, its outcome and reason code, how many attempts it took, and whether it downloaded the whole collection",
+      "source": "derived",
+      "stores": ["sync_runs.*"],
+      "purpose": "running the daily sync, showing the owner its outcome, and paging when it stops",
+      "lawful_basis": "contract",
+      "retention": {"until": "account-deletion"},
+      "export": true,
+      "erase": "delete"
+    }
+  ],
+  "sql": ["migrations/*.sql"],
+  "code": ["crates/*/src/**/*.rs", "web/app/src/**/*.ts", "web/app/src/**/*.svelte"],
+  "export": {"code": ["crates/*/src/data_rights.rs", "crates/privacy/src/export.rs"], "format": "json"},
+  "erase": {"code": ["crates/*/src/data_rights.rs", "crates/privacy/src/erase.rs"]},
+  "backups": {"config": "deploy/litestream.yml", "retention": "P3D"},
+  "logs": {"config": "deploy/journald.conf.d/deck-streak.conf", "retention": "P14D"},
+  "policy": {
+    "file": "PRIVACY.md",
+    "entry": [
+      {"file": "README.md", "text": "PRIVACY.md"},
+      {"file": "web/app/src/routes/about/+page.svelte", "text": "PRIVACY.md"}
+    ]
+  }
+}

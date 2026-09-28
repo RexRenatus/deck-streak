@@ -2,7 +2,8 @@
 //! two roles that open one fresh database at the same moment both start (SPEC-025 A14, A15, R1,
 //! R11), and the `job` role runs a job of the table by its id and refuses an unknown one with code 2
 //! (SPEC-027 A16, R7, R11); the `sync` job stops on a malformed scope before it syncs, paging with
-//! the scope's reason code (SPEC-023 R2, R12).
+//! the scope's reason code (SPEC-023 R2, R12); and the `data` role erases only with the confirmation
+//! word and writes the export as one line of standard output (SPEC-021 A10, R8).
 
 // An integration test is test code: its helpers panic on a failed child, and the examined count
 // is printed on purpose.
@@ -16,8 +17,10 @@ use std::sync::Arc;
 use deck_streak_coordination::ledger::{CronLedger, Outcome, SqliteCronLedger};
 use deck_streak_daemon::wiring::{DATABASE_FILE, StateDirectory, open_database};
 use deck_streak_ingest::settings::{LAW_DECK_ROOT, SYNC_PASSWORD, SYNC_USERNAME};
-use deck_streak_ingest::sync_runs::{RunHistory, SqliteSyncRuns};
-use deck_streak_kernel::{Clock, Db, Offload, OffloadWorkers, SystemClock};
+use deck_streak_ingest::sync_runs::{
+    ReasonCode, RunHistory, SqliteSyncRuns, SyncRun, SyncRunStore, Trigger,
+};
+use deck_streak_kernel::{Clock, Db, Offload, OffloadWorkers, StudyDay, SystemClock, UtcMillis};
 use serde_json::Value;
 use tokio::sync::Barrier;
 
@@ -93,7 +96,7 @@ fn the_binary_runs_a_role_by_name_and_refuses_an_unknown_one() {
         );
         let usage = first.1["message"].as_str().unwrap_or_default().to_owned();
         assert!(usage.starts_with("usage: deckstreakd <role>"), "{usage}");
-        assert!(usage.contains("the roles are: api, job;"), "{usage}");
+        assert!(usage.contains("the roles are: api, job, data;"), "{usage}");
     }
 
     // A known role runs: the api role refuses to start without its listen address, naming the
@@ -307,4 +310,128 @@ async fn the_sync_job_pages_on_a_malformed_scope_before_it_syncs() {
         }
     );
     db.close().await;
+}
+
+/// A database in `directory`, where a role finds it, holding one synthetic sync run: the owner's
+/// data an erase removes.
+async fn with_one_sync_run(directory: &std::path::Path) {
+    let db = Db::open(&directory.join(DATABASE_FILE))
+        .await
+        .expect("the role's database opens");
+    SqliteSyncRuns::new(db.clone())
+        .record(&SyncRun {
+            trigger: Trigger::Owner,
+            started_at: UtcMillis::from_epoch_millis(1_000),
+            finished_at: UtcMillis::from_epoch_millis(2_000),
+            study_day: StudyDay::from_epoch_day(20_000),
+            outcome: Err(ReasonCode::ServerError),
+            attempts: 3,
+            full_download: false,
+        })
+        .await
+        .expect("a synthetic run is recorded");
+    db.close().await;
+}
+
+/// The sync record of the role's database in `directory`.
+async fn sync_record(directory: &std::path::Path) -> RunHistory {
+    let db = Db::open(&directory.join(DATABASE_FILE))
+        .await
+        .expect("the role's database opens");
+    let history = SqliteSyncRuns::new(db.clone())
+        .history()
+        .await
+        .expect("the sync record reads");
+    db.close().await;
+    history
+}
+
+#[tokio::test]
+async fn the_data_role_erases_only_with_the_confirmation_word() {
+    let directory = tempfile::tempdir().expect("a temporary directory");
+    with_one_sync_run(directory.path()).await;
+    let state = [("STATE_DIRECTORY", directory.path().as_os_str())];
+
+    // Every other form of the erase exits 2 before the database is touched, and its first line is
+    // an ERROR event whose usage names the one form that erases.
+    let refusals: [&[&str]; 5] = [
+        &["data", "erase"],
+        &["data", "erase", "--confirm"],
+        &["data", "erase", "--confirm", "erase"],
+        &["data", "erase", "ERASE"],
+        &["data", "erase", "--confirm", "ERASE", "extra"],
+    ];
+    for arguments in examined("unconfirmed erase(s)", refusals.to_vec()) {
+        let output = deckstreakd(arguments, &state);
+        assert_eq!(
+            output.status.code(),
+            Some(2),
+            "{arguments:?}: {}",
+            describe(&output)
+        );
+        let lines = events(&output);
+        let first = lines.first().cloned().unwrap_or((None, Value::Null));
+        assert_eq!(first.0.as_deref(), Some("<3>"), "{}", describe(&output));
+        let usage = first.1["message"].as_str().unwrap_or_default().to_owned();
+        assert!(
+            usage.contains("deckstreakd data erase --confirm ERASE"),
+            "{arguments:?}: {usage}"
+        );
+    }
+    let kept = sync_record(directory.path()).await;
+    assert!(
+        kept.last.is_some(),
+        "a refused erase erased the sync record"
+    );
+
+    // With the word, the role erases: it exits 0, logs what it did, and the record is empty.
+    let output = deckstreakd(&["data", "erase", "--confirm", "ERASE"], &state);
+    assert_eq!(output.status.code(), Some(0), "{}", describe(&output));
+    let erased = events(&output)
+        .into_iter()
+        .find(|(_, event)| event["message"] == "the owner's data was erased")
+        .unwrap_or_else(|| panic!("the erase is logged: {}", describe(&output)));
+    assert_eq!(erased.0.as_deref(), Some("<6>"), "{}", describe(&output));
+    assert_eq!(
+        sync_record(directory.path()).await,
+        RunHistory {
+            last: None,
+            any_success: false,
+        }
+    );
+}
+
+#[tokio::test]
+async fn the_data_role_writes_the_export_as_one_line_of_standard_output() {
+    let directory = tempfile::tempdir().expect("a temporary directory");
+    with_one_sync_run(directory.path()).await;
+    let state = [("STATE_DIRECTORY", directory.path().as_os_str())];
+    let output = deckstreakd(&["data", "export"], &state);
+    assert_eq!(output.status.code(), Some(0), "{}", describe(&output));
+    // The export is the one line that does not open with a journal priority, and the only line.
+    let stdout = String::from_utf8_lossy(&output.stdout).into_owned();
+    let lines: Vec<&str> = examined("line(s) of standard output", stdout.lines().collect());
+    assert_eq!(lines.len(), 1, "{}", describe(&output));
+    let document: Value = serde_json::from_str(lines[0]).expect("the line is one JSON object");
+    assert_eq!(document["schema"], "deckstreak.export.v1");
+    let runs = document["sync_runs"]
+        .as_array()
+        .cloned()
+        .unwrap_or_default();
+    assert_eq!(runs.len(), 1, "{document}");
+    assert_eq!(
+        (
+            &runs[0]["trigger"],
+            &runs[0]["reason"],
+            &runs[0]["attempts"]
+        ),
+        (
+            &Value::from("owner"),
+            &Value::from("server_error"),
+            &Value::from(3)
+        )
+    );
+    // A singleton's one row is in it, and an exempt table is not.
+    assert_eq!(document["settings_generation"][0]["generation"], 0);
+    assert!(document.get("cron_fires").is_none(), "{document}");
 }
