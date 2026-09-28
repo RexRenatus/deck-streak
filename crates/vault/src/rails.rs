@@ -889,6 +889,11 @@ mod tests {
 
     #[test]
     fn an_equals_sign_with_no_value_after_it_takes_nothing() {
+        assert_eq!(
+            attribute_value(&chars("=x")),
+            2,
+            "an equals sign and its value"
+        );
         assert_eq!(attribute_value(&chars("==x")), 0);
     }
 
