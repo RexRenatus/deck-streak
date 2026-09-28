@@ -1,0 +1,103 @@
+{
+  "schema": "deckstreak.rail-contract.v1",
+  "note": "The neutral values the private deploy rail overrides, by unit and key (SPEC-061 R7, ADR-061). The rail installs each template byte for byte and writes one drop-in per unit, <unit>.d/10-rail.conf, which resets each key listed here and sets the deployment's own value: its release root, its settings file, and its zone with the rollover hour the calendars are written at. deploy/scripts/effective-check.py refuses a unit whose effective configuration still carries a neutral value, and its --census holds this list equal to the neutral values the templates carry. A job's timer is named by its template and its instance, which the checks join, so no committed file writes an instance name whole (SPEC-032 R10).",
+  "neutral": {
+    "release_root": "/usr/local/lib/deck-streak/current",
+    "environment_file": "/etc/deck-streak/deck-streak.env",
+    "time_zone": "UTC",
+    "rollover_hour": 4
+  },
+  "drop_in": "10-rail.conf",
+  "socket": "/run/deck-streak-credentials/socket",
+  "values": [
+    {
+      "unit": "deck-streak-alert@.service",
+      "section": "Service",
+      "key": "ExecStart",
+      "neutral": ["/usr/local/lib/deck-streak/current/deploy/scripts/alert-telegram.sh %i"]
+    },
+    {
+      "unit": "deck-streak-api.service",
+      "section": "Service",
+      "key": "ExecStart",
+      "neutral": ["/usr/local/lib/deck-streak/current/bin/deckstreakd api"]
+    },
+    {
+      "unit": "deck-streak-api.service",
+      "section": "Service",
+      "key": "EnvironmentFile",
+      "neutral": ["/etc/deck-streak/deck-streak.env"]
+    },
+    {
+      "unit": "deck-streak-bot.service",
+      "section": "Service",
+      "key": "ExecStart",
+      "neutral": ["/usr/local/lib/deck-streak/current/bin/deckstreakd bot"]
+    },
+    {
+      "unit": "deck-streak-bot.service",
+      "section": "Service",
+      "key": "EnvironmentFile",
+      "neutral": ["/etc/deck-streak/deck-streak.env"]
+    },
+    {
+      "unit": "deck-streak-job@.service",
+      "section": "Service",
+      "key": "ExecStart",
+      "neutral": ["/usr/local/lib/deck-streak/current/bin/deckstreakd job %i"]
+    },
+    {
+      "unit": "deck-streak-job@.service",
+      "section": "Service",
+      "key": "EnvironmentFile",
+      "neutral": ["/etc/deck-streak/deck-streak.env"]
+    },
+    {
+      "unit": "deck-streak-job@.timer",
+      "instance": "liveness",
+      "section": "Timer",
+      "key": "OnCalendar",
+      "neutral": ["*-*-* *:14:00 UTC"]
+    },
+    {
+      "unit": "deck-streak-job@.timer",
+      "instance": "maintenance",
+      "section": "Timer",
+      "key": "OnCalendar",
+      "neutral": ["*-*-* 04:28:00 UTC"]
+    },
+    {
+      "unit": "deck-streak-job@.timer",
+      "instance": "sync",
+      "section": "Timer",
+      "key": "OnCalendar",
+      "neutral": ["*-*-* 04:07:00 UTC"]
+    },
+    {
+      "unit": "deck-streak-memory-watch.service",
+      "section": "Service",
+      "key": "ExecStart",
+      "neutral": ["/usr/local/lib/deck-streak/current/deploy/scripts/memory-watch.sh"]
+    },
+    {
+      "unit": "deck-streak-memory-watch.timer",
+      "section": "Timer",
+      "key": "OnCalendar",
+      "neutral": ["*-*-* *:*:00 UTC"]
+    },
+    {
+      "unit": "deck-streak-slo.service",
+      "section": "Service",
+      "key": "ExecStart",
+      "neutral": [
+        "/usr/bin/python3 /usr/local/lib/deck-streak/current/deploy/scripts/slo-evaluate.py /usr/local/lib/deck-streak/current/deploy/slo.json"
+      ]
+    },
+    {
+      "unit": "deck-streak-slo.timer",
+      "section": "Timer",
+      "key": "OnCalendar",
+      "neutral": ["*-*-* *:00/5:00 UTC"]
+    }
+  ]
+}
