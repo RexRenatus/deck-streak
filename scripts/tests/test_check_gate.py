@@ -52,13 +52,17 @@ PLANTED_ORACLE = (
     "    def test_two(self):\n"
     "        self.assertEqual(2, 2)\n"
 )
+# A python3 whose unittest runs nothing and exits 0, as Python 3.11's does; any other call passes.
+EMPTY_UNITTEST = (
+    "case \"$*\" in *unittest*) printf 'Ran 0 tests in 0.000s\\n\\nOK\\n' ;; esac\nexit 0\n"
+)
 
 
-def run_gate(scratch, stages, stubs, extra_env=None, check=CHECK, real=()):
+def run_gate(scratch, stages, stubs, extra_env=None, check=CHECK, real=(), bodies=None):
     """Run `check` (the repository's check.sh by default) for `stages` with a PATH that holds only
     the shell tools check.sh needs, each tool `real` names as the machine has it, and, for each name
-    in `stubs`, a stub that exits 0, and any `extra_env`. Returns the process and its log
-    directory."""
+    in `stubs`, a stub that exits 0 (or runs the shell body `bodies` gives it), and any
+    `extra_env`. Returns the process and its log directory."""
     tools = scratch / "bin"
     tools.mkdir(parents=True)
     for tool in (*SHELL_TOOLS, *real):
@@ -68,7 +72,7 @@ def run_gate(scratch, stages, stubs, extra_env=None, check=CHECK, real=()):
         (tools / tool).symlink_to(found)
     for tool in stubs:
         stub = tools / tool
-        stub.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+        stub.write_text("#!/bin/sh\n" + (bodies or {}).get(tool, "exit 0\n"), encoding="utf-8")
         stub.chmod(0o755)
     logs = scratch / "logs"
     env = {"PATH": str(tools), "CHECK_LOG_DIR": str(logs), "HOME": str(scratch)}
@@ -189,6 +193,14 @@ class ThePythonStageRunsEverySuite(unittest.TestCase):
             check = python_tree(where, PLANTED_ORACLE, None)
             done, _ = run_gate(where, ["python"], ["cargo"], check=check, real=["python3"])
         self.assertRegex(summary(done), r"^FAILED +python .*tools/parity-oracle ran 0 test\(s\)")
+        self.assertEqual(done.returncode, 1, done.stdout)
+        # So does a suite whose unittest exits 0 having run nothing, as Python 3.11's does.
+        with tempfile.TemporaryDirectory() as scratch:
+            where = Path(scratch)
+            check = python_tree(where, PLANTED_ORACLE, PLANTED_ORACLE)
+            bodies = {"python3": EMPTY_UNITTEST}
+            done, _ = run_gate(where, ["python"], ["cargo", "python3"], check=check, bodies=bodies)
+        self.assertRegex(summary(done), r"^FAILED +python .*scripts/tests ran 0 test\(s\), exit 0;")
         self.assertEqual(done.returncode, 1, done.stdout)
         # Both suites green, the stage is green.
         with tempfile.TemporaryDirectory() as scratch:
