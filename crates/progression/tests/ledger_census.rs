@@ -217,7 +217,8 @@ fn only_the_grant_port_writes_the_xp_ledger() {
         refused.refused,
         [
             "crates/quests/src/chest.rs names xp_ledger, and only progression's code may",
-            "migrations/999901_quests_debit.sql names xp_ledger, and only progression's migrations may",
+            "migrations/999901_quests_debit.sql names xp_ledger, and only progression's \
+             migrations may",
         ]
     );
 }

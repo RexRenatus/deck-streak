@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO xp_ledger (study_day, source, track, amount, scope, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 6
+    },
+    "nullable": []
+  },
+  "hash": "0f342059009cdd502d2b7a826bb6fd63f76b17865bd12d4ceec518dd8a035a44"
+}

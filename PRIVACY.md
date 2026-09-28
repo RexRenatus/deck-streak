@@ -12,6 +12,7 @@ inventory, in the form the repository's privacy checks read.
 | `sync-history` | the record of each sync of your collection: when it ran, what started it, its outcome and its attempts | running your daily sync, and telling you when it stops | contract | until account deletion |
 | `ingest-state` | what the last recompute of your reviews saw, whether you asked for a rescore, and the base of the review window | recomputing your scores only when your collection or your settings changed | contract | until account deletion |
 | `service-counters` | one counter of how many times your settings changed | telling the recompute that a setting changed | contract | until account deletion |
+| `xp-ledger` | every XP grant: the study day it pays for, what it was for, the track, the amount, and whether it pays once a day or once ever | keeping your XP total and level, and paying each award at most once | contract | until account deletion |
 
 The lawful basis of each is the contract (GDPR Article 6(1)(b)): the service you run needs it. None
 is kept for a fixed period. Each is kept until you erase it, which is how an account is deleted here.
