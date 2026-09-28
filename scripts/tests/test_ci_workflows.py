@@ -1425,6 +1425,14 @@ def checked_out(step):
     return given
 
 
+def checked_out_from(step):
+    """The server a checkout step checks out from when it is another, else ''. An omitted or empty
+    `github-server-url`, and `${{ github.server_url }}`, are this server, as actions/checkout
+    defaults it."""
+    given = str(step_inputs(step).get("github-server-url") or "").strip()
+    return "" if re.fullmatch(r"\$\{\{\s*github\.server_url\s*\}\}", given) else given
+
+
 def secret_reads(expression):
     """What an expression reads from the secrets context, other than GITHUB_TOKEN. GitHub reads a
     secret's name without case, so `secrets.github_token` is the default token too."""
@@ -1496,6 +1504,8 @@ def secret_and_checkout_problems(directory):
                     judged["checkouts"].append((where, repository))
                     if repository != THIS_REPOSITORY:
                         problems.append(f"{where}: checks out {repository}, not this repository")
+                    if server := checked_out_from(step):
+                        problems.append(f"{where}: checks out from another server: {server}")
                 if "run" in step:
                     judged["run steps"].append(where)
                     problems += [f"{where}: {reach}" for reach in reaches(str(step["run"]))]
