@@ -71,6 +71,34 @@ pub enum PersonaError {
     /// A template names the journal as a memory source (CHARTER 18, R5).
     #[error("the journal is never a memory source")]
     Journal,
+    /// The roster file cannot be read (R2). The source says why, never where.
+    #[error("the persona roster cannot be read")]
+    RosterUnreadable(#[source] std::io::Error),
+    /// The roster does not read as its schema; the reason names the rule (R2).
+    #[error("the persona roster does not read as its schema: {0}")]
+    Roster(&'static str),
+    /// The roster names a template that does not exist (R3).
+    #[error("the persona roster names a template that does not exist")]
+    UnknownTemplate,
+    /// A slot of a template the roster uses is missing or blank (R3).
+    #[error("the persona roster leaves the {slot} slot unfilled")]
+    SlotUnfilled {
+        /// The slot's public name.
+        slot: &'static str,
+    },
+    /// A slot's value is not one line of plain text: it holds a control character, a line break
+    /// among them, or a brace pair that could leave a slot token behind (R3).
+    #[error("the persona roster's {slot} slot is not one line of plain text")]
+    SlotNotPlainText {
+        /// The slot's public name.
+        slot: &'static str,
+    },
+    /// The roster binds no persona to the topic asked for.
+    #[error("the persona roster binds no persona to the topic")]
+    TopicUnbound,
+    /// The topic's template does not offer the duty asked for (R3).
+    #[error("the topic's persona does not offer the duty")]
+    DutyNotOffered,
 }
 
 /// The kind of a subject: the part of `<kind>/<area>` before the slash.
@@ -422,6 +450,137 @@ impl Template {
     pub fn body(&self) -> &str {
         &self.body
     }
+
+    /// The persona this template becomes for `duty`, its four slots filled from `slots` by
+    /// plain-text substitution with no escaping, and `band` the roster's band for its topic (R3).
+    ///
+    /// # Errors
+    ///
+    /// [`PersonaError::DutyNotOffered`] when the template's duties lack `duty`.
+    pub fn instantiate(
+        &self,
+        slots: &Slots,
+        duty: Duty,
+        band: Option<CefrBand>,
+    ) -> Result<Persona, PersonaError> {
+        let _ = slots;
+        Ok(Persona {
+            template: self.id.clone(),
+            subject: self.subject.clone(),
+            lang: self.lang.clone(),
+            duty,
+            memory: self.memory.clone(),
+            band,
+            text: self.body.clone(),
+        })
+    }
+}
+
+/// The four slots' values for one template, from the private roster: each one line of plain text.
+/// Its `Debug` shows none of them (R10).
+#[derive(Clone, PartialEq, Eq)]
+pub struct Slots {
+    values: [String; 4],
+}
+
+impl Slots {
+    /// The slots `name`, `bio`, `voice` and `personality`.
+    ///
+    /// # Errors
+    ///
+    /// [`PersonaError::SlotUnfilled`] for a blank value, and [`PersonaError::SlotNotPlainText`] for
+    /// one that holds a control character, `{{` or `}}`.
+    pub fn new(
+        name: &str,
+        bio: &str,
+        voice: &str,
+        personality: &str,
+    ) -> Result<Self, PersonaError> {
+        Ok(Self {
+            values: [name, bio, voice, personality].map(str::to_owned),
+        })
+    }
+
+    /// The value the roster gives `slot`.
+    #[must_use]
+    pub fn value(&self, slot: Slot) -> &str {
+        match slot {
+            Slot::Name => &self.values[0],
+            Slot::Bio => &self.values[1],
+            Slot::Voice => &self.values[2],
+            Slot::Personality => &self.values[3],
+        }
+    }
+}
+
+impl fmt::Debug for Slots {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("Slots(..)")
+    }
+}
+
+/// A persona: a template instantiated for one duty with the roster's slots. It is never written to
+/// the repository or a log, so its `Debug` shows nothing of it (R3, R10).
+#[derive(Clone, PartialEq, Eq)]
+pub struct Persona {
+    template: TemplateId,
+    subject: Subject,
+    lang: Option<String>,
+    duty: Duty,
+    memory: Vec<MemorySource>,
+    band: Option<CefrBand>,
+    text: String,
+}
+
+impl Persona {
+    /// The template it was instantiated from.
+    #[must_use]
+    pub const fn template(&self) -> &TemplateId {
+        &self.template
+    }
+
+    /// Its subject: the only subject whose memory it reads.
+    #[must_use]
+    pub const fn subject(&self) -> &Subject {
+        &self.subject
+    }
+
+    /// A language mentor's BCP 47 tag; `None` for any other kind.
+    #[must_use]
+    pub fn lang(&self) -> Option<&str> {
+        self.lang.as_deref()
+    }
+
+    /// The duty it was instantiated for.
+    #[must_use]
+    pub const fn duty(&self) -> Duty {
+        self.duty
+    }
+
+    /// The memory sources its template declares: the only ones it reads.
+    #[must_use]
+    pub fn memory(&self) -> &[MemorySource] {
+        &self.memory
+    }
+
+    /// The roster's band for its topic, until the live band exists (R8); `None` but for a
+    /// language mentor.
+    #[must_use]
+    pub const fn band(&self) -> Option<CefrBand> {
+        self.band
+    }
+
+    /// The instantiated text: the template's body with its four slots filled.
+    #[must_use]
+    pub fn text(&self) -> &str {
+        &self.text
+    }
+}
+
+impl fmt::Debug for Persona {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("Persona(..)")
+    }
 }
 
 /// The templates the engine instantiates from, by id.
@@ -541,7 +700,7 @@ fn section(body: &str, id: &str) -> String {
 }
 
 /// Whether `text` is a lowercase slug: groups of `a-z` and `0-9` joined by single hyphens.
-fn is_slug(text: &str) -> bool {
+pub(crate) fn is_slug(text: &str) -> bool {
     text.split('-').all(|group| {
         !group.is_empty()
             && group

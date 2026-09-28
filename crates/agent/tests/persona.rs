@@ -1,5 +1,7 @@
 //! The persona engine's templates and roster: the public templates load with their four slots
-//! unfilled, a filled slot is refused, and every template rule refuses by name (SPEC-044 A1, A3).
+//! unfilled, a filled slot is refused, a roster outside the repository fills the slots, and an
+//! incomplete roster is refused; every template and roster rule refuses by name (SPEC-044 A1 to
+//! A3, A7).
 
 // An integration test is test code: its helpers panic on an unreadable fixture, and it prints the
 // examined count on purpose. clippy.toml's in-test allowances cover only `#[test]` bodies.
@@ -9,9 +11,59 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use deck_streak_agent::{
-    CefrBand, Duty, MemorySource, PersonaError, Slot, Subject, SubjectKind, Template, TemplateId,
-    TemplateSet,
+    CefrBand, Duty, MemorySource, PersonaError, ROSTER, Roster, RosterPath, Slot, Slots, Subject,
+    SubjectKind, Template, TemplateId, TemplateSet, TopicKey,
 };
+use deck_streak_kernel::{Environment, SettingsError};
+use serde_json::{Value, json};
+
+/// A synthetic professor, obviously invented; the bio carries `&` and `<` to show no escaping.
+const LAW_NAME: &str = "Professor Quill Testwell";
+const LAW_BIO: &str = "A synthetic bio of an invented professor, evidence & procedure <plain>.";
+const LAW_VOICE: &str = "A synthetic voice, measured and exact.";
+const LAW_PERSONALITY: &str = "A synthetic personality that asks before it tells.";
+/// A synthetic mentor, obviously invented.
+const MENTOR_NAME: &str = "Mentor Vela Sample";
+
+/// A synthetic roster: two invented personas, and two synthetic topics.
+fn synthetic_roster() -> Value {
+    json!({
+        "schema": "deckstreak.agent.roster.v1",
+        "personas": {
+            "law-evidence": {
+                "name": LAW_NAME,
+                "bio": LAW_BIO,
+                "voice": LAW_VOICE,
+                "personality": LAW_PERSONALITY
+            },
+            "language-mentor-es": {
+                "name": MENTOR_NAME,
+                "bio": "A synthetic bio of an invented mentor.",
+                "voice": "A synthetic voice, warm and clear.",
+                "personality": "A synthetic personality that praises what went right."
+            }
+        },
+        "topics": {
+            "synthetic/law-topic": {"template": "law-evidence"},
+            "synthetic/language-topic": {"template": "language-mentor-es", "cefr": "A2"}
+        }
+    })
+}
+
+/// The public templates, compiled into the engine.
+fn public() -> TemplateSet {
+    TemplateSet::public().expect("the public templates load")
+}
+
+/// The topic `key`.
+fn topic(key: &str) -> TopicKey {
+    TopicKey::parse(key).expect("a synthetic topic key")
+}
+
+/// The refusal of the roster `roster`, or `None` when it reads.
+fn refusal(roster: &Value) -> Option<PersonaError> {
+    Roster::parse(&roster.to_string(), public()).err()
+}
 
 /// The repository's root, two levels above this crate.
 fn repo() -> PathBuf {
@@ -328,4 +380,269 @@ fn the_vocabulary_reads_back_by_its_names() {
     }
     assert!(Duty::parse("chores").is_none() && CefrBand::parse("D1").is_none());
     assert!(Slot::parse("age").is_none() && SubjectKind::parse("lore").is_none());
+}
+
+#[test]
+fn a_roster_outside_the_repository_fills_the_four_slots() {
+    let outside = tempfile::tempdir().expect("a temporary directory outside the repository");
+    let file = outside.path().join("roster.json");
+    fs::write(&file, synthetic_roster().to_string()).expect("the synthetic roster is written");
+    let env = Environment::from_vars([(ROSTER, file.as_os_str())]);
+    let path: RosterPath = env
+        .required(ROSTER)
+        .expect("the setting names the roster by an absolute path");
+    let persona = Roster::load(&path, public())
+        .and_then(|roster| roster.persona(&topic("synthetic/law-topic"), Duty::DailyReading));
+    assert!(
+        persona
+            .as_ref()
+            .is_ok_and(|persona| persona.text().contains(LAW_NAME)),
+        "the roster fills the name: {persona:?}"
+    );
+    let persona = persona.expect("the synthetic law topic has a persona");
+    let text = persona.text();
+    for value in [LAW_BIO, LAW_VOICE, LAW_PERSONALITY] {
+        assert!(text.contains(value), "the roster fills {value}, unescaped");
+    }
+    assert!(
+        text.contains(&format!("{LAW_NAME} is an AI teaching persona")),
+        "the disclosure names the persona"
+    );
+    assert!(!text.contains("{{"), "no slot token remains");
+    assert!(text.starts_with(&format!("# {LAW_NAME}, Evidence\n")));
+    assert_eq!(persona.template().as_str(), "law-evidence");
+    assert_eq!(persona.subject().as_str(), "law/evidence");
+    assert_eq!(persona.duty(), Duty::DailyReading);
+    assert_eq!(persona.memory(), MemorySource::ALL);
+    // Nothing of the roster reaches a line a log could print.
+    let roster = Roster::load(&path, public()).expect("the roster reads");
+    let shown = format!("{path:?} {persona:?} {roster:?}");
+    assert_eq!(
+        shown,
+        "RosterPath(..) Persona(..) Roster { personas: 2, topics: 2 }"
+    );
+    let relative = Environment::from_vars([(ROSTER, "agent/roster.json")]);
+    assert!(matches!(
+        relative.required::<RosterPath>(ROSTER),
+        Err(SettingsError::Malformed { .. })
+    ));
+}
+
+#[test]
+fn instantiation_refuses_an_incomplete_roster() {
+    let mut fifth = synthetic_roster();
+    fifth["personas"]["law-evidence"]["age"] = json!("an invented age");
+    assert!(
+        matches!(refusal(&fifth), Some(PersonaError::UnknownSlot)),
+        "a slot that is not one of the four is refused"
+    );
+    for slot in Slot::ALL {
+        let mut missing = synthetic_roster();
+        missing["personas"]["law-evidence"]
+            .as_object_mut()
+            .expect("an entry")
+            .remove(slot.name());
+        let mut blank = synthetic_roster();
+        blank["personas"]["law-evidence"][slot.name()] = json!("   ");
+        for unfilled in [missing, blank] {
+            let refused = refusal(&unfilled);
+            assert!(
+                matches!(&refused, Some(PersonaError::SlotUnfilled { slot: name }) if *name == slot.name()),
+                "{} unfilled: {refused:?}",
+                slot.name()
+            );
+        }
+    }
+    let mut unfilled = synthetic_roster();
+    unfilled["personas"]
+        .as_object_mut()
+        .expect("the personas")
+        .remove("language-mentor-es");
+    assert!(
+        matches!(
+            refusal(&unfilled),
+            Some(PersonaError::SlotUnfilled { slot: "name" })
+        ),
+        "a topic whose template the roster fills no slot of is refused"
+    );
+    let mut stray = synthetic_roster();
+    stray["personas"]["law-invented"] = stray["personas"]["law-evidence"].clone();
+    assert!(matches!(
+        refusal(&stray),
+        Some(PersonaError::UnknownTemplate)
+    ));
+    let mut unbound = synthetic_roster();
+    unbound["topics"]["synthetic/law-topic"]["template"] = json!("law-invented");
+    assert!(matches!(
+        refusal(&unbound),
+        Some(PersonaError::UnknownTemplate)
+    ));
+    let message = refusal(&unbound)
+        .expect("the roster is refused")
+        .to_string();
+    assert!(message.contains("template") && !message.contains("law-invented"));
+    // A duty the topic's template does not offer: the language mentor sets no practice set.
+    let roster =
+        Roster::parse(&synthetic_roster().to_string(), public()).expect("the roster reads");
+    let language = topic("synthetic/language-topic");
+    assert!(matches!(
+        roster.persona(&language, Duty::PracticeQuestions),
+        Err(PersonaError::DutyNotOffered)
+    ));
+    assert!(matches!(
+        roster.persona(&topic("synthetic/elsewhere"), Duty::DailyReading),
+        Err(PersonaError::TopicUnbound)
+    ));
+    let mentor = roster
+        .persona(&language, Duty::DailyReading)
+        .expect("the mentor offers the daily reading");
+    assert_eq!(mentor.band(), Some(CefrBand::A2));
+    assert_eq!(mentor.lang(), Some("es"));
+    assert!(mentor.text().contains(MENTOR_NAME));
+}
+
+#[test]
+fn a_roster_that_breaks_its_schema_is_refused() {
+    let roster = |edit: &dyn Fn(&mut Value)| {
+        let mut roster = synthetic_roster();
+        edit(&mut roster);
+        match refusal(&roster) {
+            Some(PersonaError::Roster(reason)) => reason,
+            other => panic!("refused by a schema rule, not {other:?}"),
+        }
+    };
+    assert!(matches!(
+        Roster::parse("{not json", public()),
+        Err(PersonaError::Roster("it is not JSON"))
+    ));
+    assert!(matches!(
+        Roster::parse("[]", public()),
+        Err(PersonaError::Roster("it is not a JSON object"))
+    ));
+    let cases: [(&dyn Fn(&mut Value), &str); 12] = [
+        (
+            &|r| r["extra"] = json!(1),
+            "it holds a key the schema does not name",
+        ),
+        (
+            &|r| r["schema"] = json!("deckstreak.agent.roster.v2"),
+            "schema is not deckstreak.agent.roster.v1",
+        ),
+        (&|r| r["personas"] = json!([]), "personas is not an object"),
+        (
+            &|r| r["personas"]["law-evidence"] = json!("a name"),
+            "a persona entry is not an object",
+        ),
+        (&|r| r["topics"] = json!(7), "topics is not an object"),
+        (
+            &|r| r["topics"]["Synthetic/Law"] = json!({"template": "law-evidence"}),
+            "a topic key is not a lowercase slug",
+        ),
+        (
+            &|r| r["topics"]["synthetic/law-topic"] = json!(["law-evidence"]),
+            "a topic entry is not an object",
+        ),
+        (
+            &|r| r["topics"]["synthetic/law-topic"]["weight"] = json!(1),
+            "a topic entry holds a key the schema does not name",
+        ),
+        (
+            &|r| r["topics"]["synthetic/law-topic"] = json!({}),
+            "a topic names no template",
+        ),
+        (
+            &|r| {
+                r["topics"]["synthetic/language-topic"]
+                    .as_object_mut()
+                    .expect("a topic")
+                    .remove("cefr");
+            },
+            "a language topic names no cefr band",
+        ),
+        (
+            &|r| r["topics"]["synthetic/law-topic"]["cefr"] = json!("B1"),
+            "only a language topic names a cefr band",
+        ),
+        (
+            &|r| r["topics"]["synthetic/language-topic"]["cefr"] = json!("D1"),
+            "a topic's cefr is not a band from A1 to C2",
+        ),
+    ];
+    for (edit, reason) in cases {
+        assert_eq!(roster(edit), reason);
+    }
+    for (slot, value) in [
+        (Slot::Name, "Two\nlines"),
+        (Slot::Bio, "A\ttab"),
+        (Slot::Voice, "A {{name}} token"),
+        (Slot::Personality, "An opening {{ alone"),
+        (Slot::Personality, "A closing }} alone"),
+    ] {
+        let mut roster = synthetic_roster();
+        roster["personas"]["law-evidence"][slot.name()] = json!(value);
+        let refused = refusal(&roster);
+        assert!(
+            matches!(&refused, Some(PersonaError::SlotNotPlainText { slot: name }) if *name == slot.name()),
+            "{value:?}: {refused:?}"
+        );
+    }
+    let mut numeric = synthetic_roster();
+    numeric["personas"]["law-evidence"]["bio"] = json!(7);
+    assert!(matches!(
+        refusal(&numeric),
+        Some(PersonaError::SlotUnfilled { slot: "bio" })
+    ));
+    let slots = Slots::new("A", "B", "C", "D").expect("four one-line slots");
+    assert_eq!(format!("{slots:?}"), "Slots(..)");
+    assert_eq!(
+        Slot::ALL.map(|slot| slots.value(slot)),
+        ["A", "B", "C", "D"]
+    );
+    let gone = tempfile::tempdir().expect("a temporary directory");
+    let path = RosterPath::new(gone.path().join("roster.json")).expect("an absolute path");
+    assert!(matches!(
+        Roster::load(&path, public()),
+        Err(PersonaError::RosterUnreadable(_))
+    ));
+    assert!(RosterPath::new("roster.json").is_none());
+    assert_eq!(path.path(), gone.path().join("roster.json"));
+    for refused in [
+        "",
+        "law/",
+        "/law",
+        "Law/evidence",
+        "law//evidence",
+        "law/evi dence",
+    ] {
+        assert_eq!(
+            TopicKey::parse(refused),
+            None,
+            "{refused:?} is not a topic key"
+        );
+    }
+    assert_eq!(topic("law/evidence-2").as_str(), "law/evidence-2");
+}
+
+#[test]
+fn the_example_roster_reads_against_the_public_templates() {
+    let example = repo().join("agent").join("roster.example.json");
+    let path = RosterPath::new(
+        example
+            .canonicalize()
+            .expect("agent/roster.example.json exists"),
+    )
+    .expect("an absolute path");
+    let roster = Roster::load(&path, public()).expect("the example reads as the roster schema");
+    let professor = roster
+        .persona(&topic("example/law-topic"), Duty::DailyReading)
+        .expect("the example binds its law topic");
+    assert!(
+        professor
+            .text()
+            .contains("Example Professor is the professor of Evidence.")
+    );
+    let mentor = roster
+        .persona(&topic("example/language-topic"), Duty::WritingTutor)
+        .expect("the example binds its language topic");
+    assert_eq!(mentor.band(), Some(CefrBand::A2));
 }

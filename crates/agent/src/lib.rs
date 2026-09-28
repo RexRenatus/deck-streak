@@ -21,9 +21,11 @@
 
 pub mod memory;
 pub mod persona;
+pub mod roster;
 
 pub use memory::MemorySource;
 pub use persona::{
-    CefrBand, Duty, PersonaError, Slot, Subject, SubjectKind, TEMPLATE_SCHEMA, Template,
-    TemplateId, TemplateSet,
+    CefrBand, Duty, Persona, PersonaError, Slot, Slots, Subject, SubjectKind, TEMPLATE_SCHEMA,
+    Template, TemplateId, TemplateSet,
 };
+pub use roster::{ROSTER, ROSTER_SCHEMA, Roster, RosterPath, TopicKey};
