@@ -45,6 +45,19 @@ when the data read is empty. Where is an empty credential refused, so that the u
   presence and not shape: a value of one character loads by design (SPEC-066 R1), and each caller
   refuses a blank one by its own check or at the far end.
 
+The census that holds the templates to the units' conditions (below) needs a reading of each
+template, and two were considered for it:
+
+- A census that reads the plain syntax the templates hold and refuses the rest: chosen, because no
+  template under `deploy/` holds a continued line, a control character, an exit-status word other
+  than a decimal or a status name, an empty or unknown restart or collect value, or a `[Unit]`
+  condition, so each refusal gives up nothing the templates need, and what the census admits it
+  reads the one way it can.
+- Modelling systemd's unit-file reader and number parser in the census: rejected, because each
+  review of a model found a spelling the model read otherwise than systemd, and a census that reads
+  a word otherwise than systemd can admit what it means to refuse. A refusal holds for every
+  spelling it does not read; a model holds only until its next divergence.
+
 ## Decision Outcome
 
 Chosen option: the loader refuses an empty credential, because it is the one reader every role
@@ -61,15 +74,20 @@ shares, and a refusal there fails the unit the way a missing credential does.
   R7). Every template that loads a credential, the alert template excepted, names `OnFailure=` the
   alert template, and none carries a setting that would skip the refused start, count it as a
   success or skip `OnFailure=`: an `ExecCondition=`, which skips the start when it exits 1 to 254,
-  an `ExecStart=` with the `-` prefix, a `SuccessExitStatus=` naming 1 in any spelling systemd
-  reads as 1, or `RestartMode=direct` (systemd.service(5)). A census over `deploy/` holds all five,
-  and reads an exit status as systemd does.
+  a `[Unit]` condition or assertion, which can stop the start before it runs, an `ExecStart=` with
+  the `-` prefix, a `SuccessExitStatus=` word that reads as 1, or `RestartMode=direct`
+  (systemd.service(5), systemd.unit(5)). A census over `deploy/` holds all six. It does not model
+  how systemd reads a unit file: it reads the plain syntax the templates hold and refuses the rest,
+  a line it does not read, an exit-status word other than a decimal of at most 255 or a status
+  name, and an empty or unknown `Restart=`, `RestartMode=` or `CollectMode=`, each read at every
+  assignment (SPEC-066 R2).
 - **The alert unit.** Its script refuses an empty credential of the two it loads by its id, with one
   line at error priority, before it reads the journal or makes a request, and exits 1. The unit then
   stays failed, in `systemctl --failed` and the journal, because its template counts no refusal a
-  success, restarts no refused start and is never unloaded while failed (SPEC-066 R3's exit, restart
-  and collection conditions). It names no `OnFailure=`, so its own failure pages nothing: a page
-  about the alert unit's own failure needs a route that does not depend on the alert sender (#285).
+  success, names no `[Unit]` condition or assertion, restarts no refused start and is never unloaded
+  while failed (SPEC-066 R3's exit, restart and collection conditions). It names no `OnFailure=`, so
+  its own failure pages nothing: a page about the alert unit's own failure needs a route that does
+  not depend on the alert sender (#285).
 
 ### Consequences
 
@@ -82,11 +100,15 @@ shares, and a refusal there fails the unit the way a missing credential does.
   visible in `systemctl --failed` and the journal only.
 - Bad, because a credential that is present but blank (spaces, or a carriage return) still loads;
   its caller's shape check refuses it, as identity's owner gate does.
+- Bad, because a template that needs what the census refuses, such as a continued line, an
+  exit-status word the census does not read or a `[Unit]` condition, is refused until a delivery
+  of its own widens the census and says why.
 
 ### Confirmation
 
 SPEC-066's acceptance tests: the loader's refusal in each empty form and its message (A1 to A3),
-the census of the templates (A4), the alert unit's route (A5), and the sync's login, which reads
+the census of the templates (A4), which plants each refusal and a cross-check corpus of exit-status
+words and admits none of the corpus, the alert unit's route (A5), and the sync's login, which reads
 through the loader, never reaching the engine with an empty value (A6). Hand-proved rows S06601
 to S06608 kill the mutants cargo-mutants does not make.
 
@@ -104,6 +126,6 @@ SPEC-031, SPEC-066, #284, #285. systemd.exec(5), `LoadCredential=`, at
 <https://www.freedesktop.org/software/systemd/man/latest/systemd.exec.html>; systemd.service(5),
 `ExecCondition=`, `ExecStart=`, `SuccessExitStatus=`, `Restart=`, `RestartForceExitStatus=` and
 `RestartMode=`, at <https://www.freedesktop.org/software/systemd/man/latest/systemd.service.html>;
-systemd.unit(5), `CollectMode=`, at
+systemd.unit(5), `CollectMode=` and the `[Unit]` conditions and assertions, at
 <https://www.freedesktop.org/software/systemd/man/latest/systemd.unit.html>; systemd-analyze(1),
 `exit-status`, at <https://www.freedesktop.org/software/systemd/man/latest/systemd-analyze.html>.

@@ -8,8 +8,8 @@ refusal (2d3435c) turned A1, A3 and A6 green. A1, A3 and A5 were read red on 00e
 read red at 6e68804, whose `crates/` tree is 00e0bd0's byte for byte: the one commit between them
 changes only the alert script. A2 and A4 pin what the base already did, so each is disclosed.
 R6 and R3's exit came after, in three commits of their own, R3's restart after those, in three
-more, and the reading of an exit status as systemd reads it, with R2's condition and R3's pins,
-after those, in four more; each is recorded below the commands.
+more, an exit-status reader with R2's condition and R3's pins after those, in four more, and round
+4's refusals, which replaced that reader, last; each is recorded below the commands.
 
 ```red-first
 A1: red at 00e0bd0: "" was not refused as an empty sync-login: Ok(Secret(..)) (a credential of zero bytes loaded as an empty value)
@@ -17,7 +17,7 @@ A1: green at 2d3435c
 A2: not red: it pins what the refusal must leave as it was, a missing credential refused as Missing, an unreadable one as Unreadable, and a value of one character or more loaded less one trailing newline, all of which the base already did; row S06604 is its killing case, a refusal that reaches past an empty value
 A3: red at 00e0bd0: assertion `left == right` failed: left: Ok(()) right: Err(("the credential sync-login is empty in the credentials directory", "Empty { id: \"sync-login\" }"))
 A3: green at 2d3435c
-A4: not red: the three templates that load a credential beside the alert template already name OnFailure= the alert template and carry no ExecCondition=, no `-` ExecStart= prefix, no SuccessExitStatus= naming 1 in any spelling systemd reads as 1 and no RestartMode=direct, and the alert template already counts no refusal a success, restarts none and is never unloaded while failed (examined 4 service units); its fifteen planted templates that load a credential are its killing cases, one refused for each condition and a second for the exit status, spelled 0x1, one admitted, and eight alert-shaped, naming no OnFailure=, that the alert template's checks refuse each for what it breaks: SuccessExitStatus=1, SuccessExitStatus=01, RestartMode=direct beside Restart=on-failure, RestartForceExitStatus=1, an ExecCondition=, CollectMode=inactive-or-failed, SuccessExitStatus=2 beside RestartForceExitStatus=2, and RestartForceExitStatus=2 on Type=oneshot
+A4: not red: the three templates that load a credential beside the alert template already name OnFailure= the alert template and carry no ExecCondition=, no [Unit] condition or assertion, no `-` ExecStart= prefix, no SuccessExitStatus= and no RestartMode=direct, and the alert template already counts no refusal a success, restarts none and is never unloaded while failed (examined 4 service units); no template holds a line the reader refuses, an exit-status word the census does not read, or an empty or unknown Restart=, RestartMode= or CollectMode=; its planted templates are its killing cases, 29 that load a credential, one refused for each condition and each refusal and alert-shaped ones, naming no OnFailure=, that the alert template's checks refuse each for what it breaks, 24 that the reader refuses by file and line, and a cross-check corpus of 22,113 planted exit-status words, of which it admits none
 A5: red at 00e0bd0: AssertionError: 0 != 1 : owner-user-id holding '' (the script exited 0: it went on to the journal and the request)
 A5: green at 6e68804
 A6: red at 00e0bd0: assertion `left == right` failed: anki-sync-username "" left: Ok(()) right: Err(MissingCredentials) (the scripted engine was asked to sync, and the run was recorded as a success)
@@ -26,17 +26,17 @@ A6: green at 2d3435c
 
 ## The commands
 
-Each criterion's fence line. A1 to A3 were read at c916846, and A4 and A5 at 75360a9, the branch's
-merge of dev after its last test commit. A6 builds the sync engine, so it was read at 2d3435c, and
-its reading at the delivery's head is CI's `test` job:
+Each criterion's fence line. A1 to A3 were read at c916846, and A4 and A5 at 27499ab, the last
+commit that changes a test. A6 builds the sync engine, so it was read at 2d3435c, and its reading
+at the delivery's head is CI's `test` job:
 
 | id | command | result |
 |---|---|---|
 | A1 | `cargo test -p deck-streak-kernel --test credentials -- --exact an_empty_credential_refuses_start_by_its_id` | ok |
 | A2 | `cargo test -p deck-streak-kernel --test credentials -- --exact a_missing_credential_keeps_its_refusal_and_a_value_loads_unchanged` | ok |
 | A3 | `cargo test -p deck-streak-kernel --test credentials -- --exact an_empty_refusal_names_the_id_and_never_a_value` | ok |
-| A4 | `python3 -m unittest discover -s scripts/tests -p test_deploy_templates.py -k every_unit_that_loads_a_credential_fails_and_pages_on_a_refusal` | OK, `examined 4 service unit(s) that load a credential` |
-| A5 | `python3 -m unittest discover -s scripts/tests -p test_alert_unit.py -k an_empty_credential_fails_the_alert_unit_before_any_request` | OK, `examined 4 empty credential case(s)` |
+| A4 | `python3 -m unittest discover -s scripts/tests -p test_deploy_templates.py -k every_unit_that_loads_a_credential_fails_and_pages_on_a_refusal` | OK, `examined 4 service unit(s) that load a credential`, `examined 22113 cross-check plant(s)`, `examined 24 planted template(s) the reader refuses` |
+| A5 | `python3 -m unittest discover -s scripts/tests -p test_alert_unit.py -k an_empty_credential_fails_the_alert_unit_before_any_request` | OK, `examined 4 empty credential case(s)`, then 9, 4, 3 and 7 planted alert templates |
 | A6 | `cargo test -p deck-streak-ingest --test retry -- --exact an_empty_sync_credential_is_recorded_missing_and_never_reaches_the_engine` | ok |
 
 ## R6 and R3's exit
@@ -100,13 +100,14 @@ A5 is the killer of rows S06605 to S06608, so each was proved again at 3f6dd77 w
 scripts/mutation_rows.py prove --row <id>`: each KILLED, its killer passing without the mutant and
 failing with it, and the script restored byte for byte.
 
-## An exit status read as systemd reads it, R2's condition and R3's pins
+## An exit-status reader, R2's condition and R3's pins
 
 Four commits carry them, the SPEC first: abe449f amends SPEC-066 (R2's census refuses an
-`ExecCondition=` and reads its exit status in any spelling systemd reads as 1; R3's four exit
-conditions, its restart and its collection; the criteria's text, §4 and §7) and ADR-067's bullets
-and references, 667ef04 adds the plants, A4's table of readings and A5's reads, on stubs, 7e6cf6d
-writes the reader in `_units.py` and the census's checks, and 02e4d83 strengthens A4's table.
+`ExecCondition=` and reads its exit status in spellings beside `1`, a reading round 4 replaced with
+a refusal, below; R3's four exit conditions, its restart and its collection; the criteria's text, §4
+and §7) and ADR-067's bullets and references, 667ef04 adds the plants, A4's table of readings and
+A5's reads, on stubs, 7e6cf6d writes the reader in `_units.py` and the census's checks, and 02e4d83
+strengthens A4's table.
 
 - **The plants were committed red.** At 667ef04 `_units.exit_status` was a stub that read a word
   as its text (the two names, `0` and `1` alone), `status_words` split on whitespace alone, the
@@ -154,20 +155,106 @@ refuse the Type=oneshot unit outright`, R3's reason for it.
   whose third list, the collection's, is empty; 02e4d83 added words to the table, and reads the
   status of each word the split gives, where 667ef04 read that of `0 1` alone. No expected refusal
   of an earlier plant was removed or weakened. A5's reads of a literal `1` or `FAILURE` in
-  `SuccessExitStatus=` and `RestartForceExitStatus=` became a reading of every word as systemd
-  reads it, beside a check that the template names neither directive at all.
-- **The reader.** `_units.exit_status` agrees with `systemd-analyze exit-status` on 922 generated
-  words, each of 37 prefixes (signs, bases, spaces) before each of 25 bodies, and 11 names and
-  quoted or escaped words. systemd reads 85 of them as 1, and the two differ on one word alone, by
-  design: `INVALIDARGUMENT`, systemd's name of status 2, which the reader reads as no status, since
-  the census asks of a word only whether it is 1. 25 hand mutants of the reader (`status_words`,
-  `exit_status` and `strtoul`), each run against A4's fence command on an export with `_units.py`
-  restored by its sha256 after each, are all killed at 02e4d83; A4's table at 7e6cf6d killed 17 of
-  them, and 02e4d83 added the words that kill the other 8. The reader takes no hand-proved row:
-  `_units.py` is test code, and A4 kills each of the 25 hand mutants on every run.
+  `SuccessExitStatus=` and `RestartForceExitStatus=` became a reading of every word as the reader
+  then read it, beside a check that the template names neither directive at all.
+- **The reader.** At 02e4d83 `_units.exit_status` modelled how systemd reads an exit-status word,
+  held to a table of 922 generated words, and A4 killed each of 25 hand mutants of it. Round 4
+  (below) replaced the model with a refusal: the census reads a word only as a decimal of at most
+  255 or a status name, and refuses every other word, so the claim is what the census refuses, not
+  an agreement with systemd.
 - **The rows.** A5 is the killer of rows S06605 to S06608, so each was proved again at 75360a9
   with `python3 scripts/mutation_rows.py prove --row <id>`: each KILLED, its killer selecting one
   test, passing without the mutant and failing with it, and the script restored byte for byte.
+
+## Round 4: the readers refuse what they do not read
+
+Round 4 takes a refusal wherever the census had read a unit file or an exit status by modelling
+systemd's reader. dev was merged first, at 98ea4af, with no conflict. 67aa3b9 moves A5's reads of
+the alert template into one check. Four rules follow, each in a red commit and a green one, with
+the red commit's plants in A4 and, for the alert template, in A5. Both whole files ran at every
+red commit, and only the criterion's own test failed: A4 in `test_deploy_templates.py` (11 tests,
+1 failure), and A5 in `test_alert_unit.py` (7 tests, 1 failure) where the rule reaches A5. Both
+pass at every green commit (11 and 7 tests). A red commit's A4 stops at its first failing
+assertion, so its later lists, the cross-check corpus among them, were first read green. e4b4c20
+adds three reader plants that hand mutants showed missing, and 27499ab renames three plants and
+rewords comments, with no change to what any check refuses. The SPEC, ADR-067 and this record were
+amended last, in one commit. No green commit changes a test's body: each changes the checks the
+tests call, in `_units.py`, or beside the test in its file.
+
+- **67aa3b9, A5's body.** A5's separate reads of the alert template, no `-` prefix, no
+  `ExecCondition=`, no `SuccessExitStatus=`, no `RestartMode=direct`, no `Restart=` other than
+  `no`, no `RestartForceExitStatus=` and no `CollectMode=` other than `inactive`, became one check,
+  `alert_template_refusals`, which refuses each and also a second `ExecStart=` and an
+  `OnFailure=`. A5 asserts it refuses nothing in the template, and refuses nine planted templates,
+  each for what it breaks. No read was removed: each became a line of the check. Both whole files
+  pass there.
+- **Lines: 9872eb3 red, e40af64 green.** The readers split lines at a newline alone, and refuse a
+  line that ends in a backslash, a control character other than a tab, whitespace outside ASCII,
+  and a line that is neither blank, a comment, a section header nor an assignment in a section.
+  At 9872eb3 both readers were round 3's, which refuse no such line; only the `Refused` class the
+  tests name was declared. A4 failed where it reads its planted templates the reader refuses, each
+  read as if it held nothing wrong (`{..., 'alert-continued.service': None, ...} != {...}`). A5
+  failed at its first plant, a comment ending in a backslash before `ExecCondition=/bin/true`,
+  refused for its condition where A5 expects the backslash. e40af64 writes one reader in
+  `_units.py` (`logical_lines`, `assignments`), and A5's `unit_file` reads through it. A4's plants:
+  a continued comment, a continued line after an escaped backslash, an alert-shaped continued line,
+  a spaced section header, a key with no `=`, a bare key, a spaced key, a line before any section,
+  and fifteen control or non-ASCII whitespace characters in a value, and one more on an
+  alert-shaped template; a tab and a `§` in a comment are read. A5's: two continued lines and five
+  characters.
+- **Restart and collect values: a6c9d96 red, 27b1ef5 green.** `Restart=`, `RestartMode=` and
+  `CollectMode=` are read at every assignment, with no reset applied, and a value that is empty or
+  not one their manuals list is refused, on every template that loads a credential. At a6c9d96 the
+  checks were round 3's. A4 failed where it reads its planted templates, the first missing line
+  `alert-reset-collect.service`'s empty `CollectMode=`; A5 failed at its first plant,
+  `Restart=on-failure` with `RestartSec=1d` and then an empty `Restart=`, refused for nothing where
+  A5 expects the restart and the empty value. 27b1ef5 adds `Unit.every` and the known values. A4's
+  plants: `RestartMode=direct` then an empty one, `Restart=On-Failure`, and alert-shaped a
+  `Restart=` and a `CollectMode=` each set and then emptied, and `RestartMode=Direct`. A5's: the
+  same three resets and `Restart=On-Failure`.
+- **Exit-status words: e641821 red, 49c269f green.** A word is read only as a decimal of at most
+  255, with no sign and no leading zero, or as a status name `systemd-analyze exit-status` lists,
+  in a value split at spaces and tabs, and the census refuses every other word in a
+  `SuccessExitStatus=` or a `RestartForceExitStatus=`. At e641821 the reader was round 3's model.
+  A4 failed where it reads its planted templates, first at `alert-spelled.service`, whose
+  `SuccessExitStatus=01` the model read as 1 where A4 now expects it refused as a word the census
+  does not read. A5 passed its 7 tests: it refuses every `SuccessExitStatus=` and
+  `RestartForceExitStatus=` on the alert template, so no A5 plant can be red for this rule.
+  49c269f writes the refusal and removes the model. A4's plants: a large octal and a large binary
+  magnitude after a prefix, on a paging template, the octal again on an alert-shaped one, and
+  `RestartForceExitStatus=0x1` on an alert-shaped one; the table of readings, now a decimal, a
+  name or none; and the cross-check corpus, 7,371 words, small and large magnitudes in every base
+  with prefixes, signs and whitespace around them, each planted as a paging template's
+  `SuccessExitStatus=` and as an alert-shaped one's `SuccessExitStatus=` and
+  `RestartForceExitStatus=`: 22,113 plants, 0 admitted. Two earlier plants' expected lines change,
+  and the red depends on one of them: `spelled.service`'s `0x1` and `alert-spelled.service`'s `01`
+  are now refused as words the census does not read, not as the refusal counted a success.
+- **`[Unit]` conditions and assertions: d4d81e3 red, f52bb52 green.** Every `Condition*=` and
+  `Assert*=` in `[Unit]`, an empty one included, is refused on every template that loads a
+  credential. At d4d81e3 the census refused none. A4 failed where it reads its planted templates,
+  the first missing line `unit-assert.service`'s assertion; A5 failed at its first plant,
+  `ConditionPathExists=/nonexistent`, refused for nothing. f52bb52 adds the refusal. A4's plants:
+  a condition, a condition and then an empty one, an assertion, and alert-shaped a condition and an
+  assertion. A5's: the same three.
+- **Measured on the templates.** Each rule's plants were also planted in the templates themselves,
+  one at a time in its section, on full-tree `git archive` exports, the template restored by its
+  sha256 after each. Each passes A4 on the export before its rule's green commit and fails A4 on
+  the green commit's, and each fails A4 at e4b4c20; each on the alert template fails A5 at e4b4c20.
+  On an export before a green commit, a plant on the alert template can fail A5 for a reason the
+  rule does not change, another line the plant carries or A5's own planted templates, which copy
+  the template, so A4 is the rule's measure there.
+- **Hand mutants.** 40 hand mutants of the round's refusals, in `_units.py` (18),
+  `test_deploy_templates.py` (14) and `test_alert_unit.py` (8), each run against both whole files
+  on an export of e4b4c20 with the file restored by its sha256 after each: 39
+  killed, and one equivalent, which strips a section header's name that the header's pattern
+  already admits only without spaces. At f52bb52 three survived, a key with no `=`, a key name that
+  is not a plain name, and a digit outside ASCII in a decimal; e4b4c20 adds the plants that kill
+  each. The checks are test code and take no hand-proved row.
+- **The rows.** A5 is the killer of rows S06605 to S06608, so each was proved again with `python3
+  scripts/mutation_rows.py prove --row <id>` at f52bb52, whose A5 and alert script are the head's:
+  each KILLED, its killer selecting one test, passing without the mutant and failing with it, and
+  the script restored byte for byte. No refusal the round adds is in a row's target, and no row is
+  added.
 
 ## Mutants of the changed code
 
