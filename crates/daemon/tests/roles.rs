@@ -1,6 +1,7 @@
 //! The binary runs a role by the name its first argument gives and refuses any other with code 2,
-//! and two roles that open one fresh database at the same moment both start (SPEC-025 A14, A15,
-//! R1, R11).
+//! two roles that open one fresh database at the same moment both start (SPEC-025 A14, A15, R1,
+//! R11), and the `job` role runs a job of the table by its id and refuses an unknown one with code 2
+//! (SPEC-027 A16, R7, R11).
 
 // An integration test is test code: its helpers panic on a failed child, and the examined count
 // is printed on purpose.
@@ -10,8 +11,9 @@ use std::ffi::OsStr;
 use std::process::{Command, Output};
 use std::sync::Arc;
 
-use deck_streak_daemon::wiring::{StateDirectory, open_database};
-use deck_streak_kernel::{Offload, OffloadWorkers, SystemClock};
+use deck_streak_coordination::ledger::{CronLedger, Outcome, SqliteCronLedger};
+use deck_streak_daemon::wiring::{DATABASE_FILE, StateDirectory, open_database};
+use deck_streak_kernel::{Db, Offload, OffloadWorkers, SystemClock};
 use serde_json::Value;
 use tokio::sync::Barrier;
 
@@ -87,7 +89,7 @@ fn the_binary_runs_a_role_by_name_and_refuses_an_unknown_one() {
         );
         let usage = first.1["message"].as_str().unwrap_or_default().to_owned();
         assert!(usage.starts_with("usage: deckstreakd <role>"), "{usage}");
-        assert!(usage.ends_with("the roles are: api"), "{usage}");
+        assert!(usage.contains("the roles are: api, job;"), "{usage}");
     }
 
     // A known role runs: the api role refuses to start without its listen address, naming the
@@ -139,5 +141,66 @@ async fn two_roles_opening_one_fresh_database_at_once_both_start() {
             assert_eq!(generation.ok(), Some(0), "round {round}: role {role}");
             database.close().await;
         }
+    }
+}
+
+#[tokio::test]
+async fn the_job_role_runs_a_job_by_id_and_refuses_an_unknown_one() {
+    // A job of the table runs by its id, once, and exits 0: each leaves its outcome in the ledger.
+    // The watch runs first: on a fresh database it finds no sync attempt to call dead and no
+    // maintenance fire to call off its slot, whatever the time; a maintenance run started by hand
+    // off its slot is a drift the next check pages on, once.
+    let directory = tempfile::tempdir().expect("a temporary directory");
+    let state = [("STATE_DIRECTORY", directory.path().as_os_str())];
+    for id in examined("job(s) run by id", vec!["liveness", "maintenance"]) {
+        let output = deckstreakd(&["job", id], &state);
+        assert_eq!(output.status.code(), Some(0), "{id}: {}", describe(&output));
+    }
+    let db = Db::open(&directory.path().join(DATABASE_FILE))
+        .await
+        .expect("the role's database opens");
+    let ledger = SqliteCronLedger::new(db.clone());
+    for id in ["maintenance", "liveness"] {
+        let row = ledger
+            .latest(id)
+            .await
+            .expect("the ledger reads")
+            .unwrap_or_else(|| panic!("{id} ran and recorded its fire"));
+        assert_eq!(
+            (row.ok_count, row.last_outcome),
+            (1, Outcome::Ok),
+            "{id}: {row:?}"
+        );
+    }
+    db.close().await;
+
+    // An id the table does not hold, a missing id, and an extra argument: each exits 2, and its
+    // first line is an ERROR event whose usage names every job of the table.
+    let refusals: [&[&str]; 3] = [
+        &["job", "frobnicate"],
+        &["job"],
+        &["job", "maintenance", "extra"],
+    ];
+    for arguments in examined("refused job invocation(s)", refusals.to_vec()) {
+        let output = deckstreakd(arguments, &state);
+        assert_eq!(
+            output.status.code(),
+            Some(2),
+            "{arguments:?}: {}",
+            describe(&output)
+        );
+        let lines = events(&output);
+        let first = lines.first().cloned().unwrap_or((None, Value::Null));
+        assert_eq!(
+            first.0.as_deref(),
+            Some("<3>"),
+            "{arguments:?}: {}",
+            describe(&output)
+        );
+        let usage = first.1["message"].as_str().unwrap_or_default().to_owned();
+        assert!(
+            usage.ends_with("the jobs are: sync, maintenance, liveness"),
+            "{arguments:?}: {usage}"
+        );
     }
 }

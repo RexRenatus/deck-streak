@@ -1550,6 +1550,10 @@ dependencies = [
  "deck-streak-vault",
  "serde",
  "serde_json",
+ "sqlx",
+ "tempfile",
+ "tokio",
+ "tracing",
 ]
 
 [[package]]
