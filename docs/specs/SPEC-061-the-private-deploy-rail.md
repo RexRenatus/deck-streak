@@ -12,8 +12,9 @@
 - **Waits for:** owner gate 2 (#161) for the socket, the helper, the host identity's grant and the
   first install; gate 6 (#165) for the values the owner stores. The device key and the guards wait
   for gate 3 (#162) and are installed by SPEC-063.
-- **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
-  `docs/specs/` with its tests and `docs/red-first/SPEC-061.md` (ADR-016).
+- **Status:** judged: delivered with its tests and `docs/red-first/SPEC-061.md` (ADR-016). The
+  delivery made R5, R7 and R8 exact where the code decided them (§8). The rail's private pieces
+  wait for owner gate 2 (#161).
 
 ## 1. The problem, measured
 
@@ -185,3 +186,34 @@ copies and manifest, and the rail's tests are private: they are named here and n
   on the maintainer's machine before every install; the seven proofs run on the host.
 - **A grant broader than the named secrets.** R9 records the bindings as read back; anything broader
   joins the host findings, tracked privately (gate 8, #167).
+
+## 8. Amendments at delivery
+
+- **R5: the pair lister's output and its refusals.** It prints JSON: `pairs`, each
+  `{"unit", "credential"}` once and sorted; `optional`, the sets it added; and `examined`, its files
+  and lines. It reads each template with the drop-ins of the `<unit>.d/` directory beside it, and
+  honours the empty assignment that resets a list. An optional set's drop-in `<unit>.conf` applies
+  to that unit, and `<name>.conf` to `<name>.service`, the names SPEC-063 and SPEC-065 give theirs.
+  Besides `LoadCredentialEncrypted=` and a `LoadCredential=` off the socket, it refuses
+  `SetCredential=`, `SetCredentialEncrypted=` and `ImportCredential=`, each of which gives a unit a
+  credential the socket did not serve (ADR-038). A refused run prints no list, and a tree with no
+  unit, or an optional set that does not exist, exits 2.
+- **R7: the contract's shape and the census.** `deploy/rail-contract.json` holds ADR-032's four
+  neutral values (the release root, the settings file, the zone, and the rollover hour the calendars
+  are written at), the drop-in's name, the socket's path, and one row per unit and key with its
+  neutral values. A job's timer is named by its template and an `instance` field, which the checks
+  join, so no committed file writes an instance's name whole (SPEC-032 R10). Every timer's calendar
+  is listed, the evaluator's and the watch's included: the zone does not move their fires, and every
+  calendar in UTC then counts as a neutral value, with no exception. `effective-check.py --census`
+  refuses a neutral value the contract does not name and a row no template carries (A3). The
+  effective check also refuses a value that still carries a neutral value where the contract names
+  no row for it, and a credential not from the socket in any of the unit's files; the rail's own
+  drop-in is the one beside the unit's file. A refused `Environment=` assignment is named by its
+  variable, never its value, and its secret-name rule is SPEC-032's pattern widened to any `KEY`
+  segment and to `PASS`.
+- **R8: the manifest's shape and the directory.** The manifest is JSON: `schema`
+  `deckstreak.guards-manifest.v1`, and `files`, each with its `path`, `sha256` and `mode`. Beyond
+  the four refusals R8 names, the check refuses a file whose mode is not the manifest's, a symbolic
+  link, a file in a directory anyone but root could write, and a manifest anyone but root could
+  rewrite, because each would let someone other than root replace what the manifest vouches for. Its
+  command line judges ownership against root's uid; the tests judge it in process with their own.
