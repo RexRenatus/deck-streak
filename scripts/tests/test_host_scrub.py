@@ -917,6 +917,7 @@ class Apply(unittest.TestCase):
             self.assertEqual(probe.read_text(), "written after the checks\n")
             log = json.loads((host.private / "apply-log.json").read_text())
             self.assertEqual(log["deleted"], [])
+
         # An item that changes after the apply's checks, at its own entry or anywhere below it, is
         # not deleted: each case changes it while the apply reads its health checks.
         def under_venv(host):
@@ -1338,6 +1339,28 @@ class OneRead(unittest.TestCase):
             self.assertEqual(done.returncode, 0, said(done))
             self.assertFalse(probe.exists())
             self.assertEqual([entry["id"] for entry in json.loads(log.read_text())["deleted"]], ids)
+        # The apply's protected check reads the rules it bound: rules that name the guarded path
+        # first are the ones it acts on, so the guarded environment stays.
+        with (
+            self.subTest(tool="apply", order="the rules first, a guarded item"),
+            tempfile.TemporaryDirectory() as s,
+        ):
+            host = Host(s)
+            path = host.rules()
+            listing, _ = host.plan(path)
+            guarded = host.srv / "guarded"
+            crafted, list_path = host.craft(listing, str(guarded / ".venv"), "venv")
+            rules = path.read_bytes()
+            other = host.rules("other.json", protected=[]).read_bytes()
+            served, log = host.private / "served-rules.json", host.private / "apply-log.json"
+            served.write_bytes(rules)
+            kept = tree(guarded)
+            approval = host.approve(crafted, ["x001"])
+            flags = ("--rules", served, "--log", log, "--apply")
+            done, _ = host.served("apply.py", served, other, list_path, approval, *flags)
+            self.assertTrue((guarded / ".venv").is_dir(), said(done))
+            self.assertEqual(tree(guarded), kept)
+            self.assertEqual(done.returncode, 1, said(done))
         with (
             self.subTest(tool="apply", order="other rules first"),
             tempfile.TemporaryDirectory() as s,
@@ -1359,6 +1382,57 @@ class OneRead(unittest.TestCase):
             self.assertEqual(tree(guarded), kept)
             self.assertEqual(done.returncode, 1, said(done))
             self.assertIn("not the ones the inventory read", said(done))
+        # The plan lists from the inventory it named: an inventory that differs in a candidate on
+        # a second open is never listed from.
+        with self.subTest(tool="plan", order="the inventory, a candidate differing"):
+            with tempfile.TemporaryDirectory() as s:
+                host = Host(s)
+                path = host.rules()
+                done, written = host.inventory(path)
+                self.assertEqual(done.returncode, 0, said(done))
+                inventory = written.read_bytes()
+                moved = json.loads(inventory)
+                for package in moved["packages"]:
+                    if package["name"] == "example-unused-tool":
+                        package["version"] = "9.9-9"
+                served, out = host.private / "served-inventory.json", host.private / "list.json"
+                served.write_bytes(inventory)
+                second = json.dumps(moved, indent=1).encode()
+                done, _ = host.served("plan.py", served, second, served, path, "--out", out)
+                self.assertEqual(done.returncode, 0, said(done))
+                versions = {
+                    item["package"]: item["version"]
+                    for item in json.loads(out.read_text())["items"]
+                    if item.get("package")
+                }
+                self.assertEqual(versions, {"example-unused-tool:amd64": "1.0-1"})
+        # The apply deletes the items of the list it bound and approved: a list that maps the
+        # approved id to another file on a second open never sends that file.
+        with self.subTest(tool="apply", order="the list, an approved id remapped"):
+            with tempfile.TemporaryDirectory() as s:
+                host = Host(s)
+                path = host.rules()
+                listing, list_path = host.plan(path)
+                paths = by_path(listing)
+                probe, other = host.apps / "probe-1.py", host.apps / "keep.py"
+                ids = [paths[str(probe)]["id"]]
+                remapped = [dict(item) for item in listing["items"]]
+                for item in remapped:
+                    if item["id"] == ids[0]:
+                        item["path"], item["digest"] = str(other), item_digest(other)
+                _, second = host.relist(listing, "second-list.json", items=remapped)
+                served, log = host.private / "served-list.json", host.private / "apply-log.json"
+                served.write_bytes(list_path.read_bytes())
+                approval = host.approve(listing, ids)
+                flags = ("--rules", path, "--log", log, "--apply")
+                done, _ = host.served(
+                    "apply.py", served, second.read_bytes(), served, approval, *flags
+                )
+                self.assertEqual(done.returncode, 0, said(done))
+                self.assertFalse(probe.exists())
+                self.assertTrue(other.exists())
+                deleted = [entry["id"] for entry in json.loads(log.read_text())["deleted"]]
+                self.assertEqual(deleted, ids)
 
     def test_each_tool_opens_each_file_it_binds_once(self):
         # Beside A10: the rules in each tool, and the inventory in the plan, are opened once a run.
@@ -1390,6 +1464,18 @@ class OneRead(unittest.TestCase):
             flags = ("--rules", served, "--log", host.private / "apply-log.json")
             runs["the apply's rules"] = host.served(
                 "apply.py", served, rules, out, approval, *flags
+            )
+            listed_copy, approval_copy = (
+                host.private / "served-list.json",
+                host.private / "served-approval.json",
+            )
+            listed_copy.write_bytes(out.read_bytes())
+            approval_copy.write_bytes(approval.read_bytes())
+            runs["the apply's list"] = host.served(
+                "apply.py", listed_copy, out.read_bytes(), listed_copy, approval, *flags
+            )
+            runs["the apply's approval"] = host.served(
+                "apply.py", approval_copy, approval.read_bytes(), out, approval_copy, *flags
             )
             for read, (done, opens) in runs.items():
                 with self.subTest(read=read):
