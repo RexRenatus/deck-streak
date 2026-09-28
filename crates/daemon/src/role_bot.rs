@@ -73,31 +73,37 @@ pub async fn run(env: &Environment, redactor: &Redactor) -> Result<(), BotRoleEr
         }
         .into());
     }
-    let _ = (
-        kernel,
-        state,
-        app,
-        api,
-        owner,
-        token,
-        Transport::new,
-        Commands::<OwnerSyncCycle>::new,
-        deck_streak_bot::run::<OwnerSyncCycle, std::future::Ready<()>, fn()>,
+    let transport = Arc::new(Transport::new(&api, &token)?);
+    let notifier = Notifier::from_env(env);
+    let shutdown = ShutdownSignal::install().map_err(BotRoleError::Signals)?;
+
+    let clock: Arc<dyn Clock> = Arc::new(SystemClock);
+    let offload = Offload::new(kernel.offload_workers, clock);
+    let db = wiring::open_database(&offload, &state)
+        .await
+        .map_err(BotRoleError::Database)?;
+    let sync = OwnerSyncCycle::new(
+        env.clone(),
+        redactor.clone(),
+        db.clone(),
+        offload,
+        kernel.study_day_rule,
     );
-    let _ = (
-        Cell::new(0),
-        Arc::new(0),
-        Notifier::from_env,
-        NotifyState::Ready,
-        ShutdownSignal::install,
-        lifecycle::spawn_heartbeat,
-        wiring::open_database,
-        Offload::new,
-        SystemClock,
-    );
-    let _: Option<Arc<dyn Clock>> = None;
-    let _: Option<WiringError> = None;
-    let _ = BotRoleError::Signals;
-    let _ = BotRoleError::Database;
+    let mut commands = Commands::new(Arc::clone(&transport), owner, app, db.clone(), sync);
+
+    let heartbeat = Cell::new(None);
+    deck_streak_bot::run(&transport, &mut commands, shutdown.received(), || {
+        tracing::info!("the bot role serves");
+        notifier.notify(NotifyState::Ready);
+        heartbeat.set(lifecycle::spawn_heartbeat(notifier.clone(), env));
+    })
+    .await;
+
+    notifier.notify(NotifyState::Stopping);
+    if let Some(heartbeat) = heartbeat.take() {
+        heartbeat.abort();
+    }
+    db.close().await;
+    tracing::info!("the bot role stopped");
     Ok(())
 }

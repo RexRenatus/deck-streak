@@ -49,13 +49,10 @@ const BACKOFF_MAX_EXPONENT: u32 = 10;
 /// The wait after `consecutive_failures` failed requests in a row: 3 s, doubling, held at 60 s.
 #[must_use]
 pub fn backoff(consecutive_failures: u32) -> Duration {
-    let _ = (
-        consecutive_failures,
-        BACKOFF_BASE_SECONDS,
-        BACKOFF_CEILING_SECONDS,
-        BACKOFF_MAX_EXPONENT,
-    );
-    Duration::ZERO
+    let exponent = consecutive_failures
+        .saturating_sub(1)
+        .min(BACKOFF_MAX_EXPONENT);
+    Duration::from_secs((BACKOFF_BASE_SECONDS << exponent).min(BACKOFF_CEILING_SECONDS))
 }
 
 /// The poll's state: the offset, the last one a request carried, and the failures in a row.
@@ -75,7 +72,9 @@ impl Poller {
 
     /// Moves the offset past `update_id`, once that update is handled.
     pub fn handled(&mut self, update_id: Option<i64>) {
-        let _ = update_id;
+        if let Some(update_id) = update_id {
+            self.offset = self.offset.max(update_id.saturating_add(1));
+        }
     }
 
     /// Counts a failed request, and returns the wait before the next.
@@ -95,7 +94,20 @@ impl Poller {
     ///
     /// The request's [`TransportError`].
     pub async fn drain(&mut self, transport: &Transport) -> Result<(), TransportError> {
-        let _ = (transport, DRAIN_OFFSET);
+        let queued = transport
+            .get_updates(DRAIN_OFFSET, NO_WAIT, None, &ALLOWED_UPDATES)
+            .await?;
+        if let Some(newest) = queued
+            .iter()
+            .filter_map(|incoming| incoming.update_id)
+            .max()
+        {
+            self.offset = newest.saturating_add(1);
+            tracing::info!(
+                offset = self.offset,
+                "the updates queued before the start were drained"
+            );
+        }
         Ok(())
     }
 
@@ -114,7 +126,19 @@ impl Poller {
     /// Confirms the offset, when an update was handled since the last request carried it: one
     /// request that waits for nothing, whose answer is not handled.
     pub async fn confirm(&mut self, transport: &Transport) {
-        let _ = (transport, CONFIRM_LIMIT, self.confirmed);
+        if self.offset <= self.confirmed {
+            return;
+        }
+        match transport
+            .get_updates(self.offset, NO_WAIT, Some(CONFIRM_LIMIT), &ALLOWED_UPDATES)
+            .await
+        {
+            Ok(_) => {
+                self.confirmed = self.offset;
+                tracing::info!(offset = self.offset, "the offset was confirmed");
+            }
+            Err(error) => tracing::warn!(%error, "the offset could not be confirmed"),
+        }
     }
 }
 

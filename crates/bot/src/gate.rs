@@ -85,28 +85,56 @@ fn dropped(kind: &'static str, reason: &'static str) -> Admission {
 }
 
 fn admit_message(message: &Message, owner: Owner) -> Admission {
-    let _ = owner;
+    let from_owner = message
+        .from
+        .as_deref()
+        .is_some_and(|user| is_owner(user, owner));
+    if !from_owner {
+        return dropped("message", "not_owner");
+    }
+    let private_chat = message.chat.type_field == ChatType::Private;
+    let owners_chat = message.chat.id == owner.user().get();
+    if !(private_chat && owners_chat) {
+        return dropped("message", "not_owners_private_chat");
+    }
     let Some(text) = &message.text else {
         return dropped("message", "no_text");
     };
+    if text.chars().count() > MAX_INBOUND_TEXT {
+        return dropped("message", "text_over_cap");
+    }
     Admission::Message(OwnerMessage { text: text.clone() })
 }
 
 fn admit_callback(callback: &CallbackQuery, owner: Owner) -> Admission {
-    let _ = owner;
+    if !is_owner(&callback.from, owner) {
+        return dropped("callback_query", "not_owner");
+    }
+    let data = callback.data.clone();
+    if data
+        .as_ref()
+        .is_some_and(|data| data.len() > MAX_CALLBACK_DATA_BYTES)
+    {
+        return Admission::AnswerOnly {
+            callback_id: callback.id.clone(),
+            dropped: Dropped {
+                kind: "callback_query",
+                reason: "data_over_cap",
+            },
+        };
+    }
     let message_id = callback.message.as_ref().map(|message| match message {
         MaybeInaccessibleMessage::Message(message) => message.message_id,
         MaybeInaccessibleMessage::InaccessibleMessage(message) => message.message_id,
     });
     Admission::Callback(OwnerCallback {
         id: callback.id.clone(),
-        data: callback.data.clone(),
+        data,
         message_id,
     })
 }
 
 /// Whether `user` is the owner.
 fn is_owner(user: &User, owner: Owner) -> bool {
-    let _ = (user, owner, ChatType::Private, TelegramUserId::new(0));
-    true
+    i64::try_from(user.id).is_ok_and(|id| owner.is(TelegramUserId::new(id)))
 }

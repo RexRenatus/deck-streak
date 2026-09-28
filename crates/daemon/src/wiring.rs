@@ -155,8 +155,11 @@ impl TransportMarker {
 
 impl DeliveryMarker for TransportMarker {
     fn counts(&self) -> DeliveryCounts {
-        let _ = &self.0;
-        DeliveryCounts::default()
+        let counts = self.0.counts();
+        DeliveryCounts {
+            attempted: counts.attempted,
+            delivered: counts.delivered,
+        }
     }
 }
 
@@ -196,36 +199,32 @@ impl OwnerSyncCycle {
     }
 
     async fn run(&self) -> Result<SyncAnswer, SyncRefusal> {
-        let _ = (
-            &self.env,
-            &self.redactor,
-            &self.db,
-            &self.offload,
+        let clock = Arc::new(SystemClock);
+        let gate = ChangeGate::new(self.db.clone(), self.rule, clock.clone());
+        gate.state()
+            .request_rescore(clock.now())
+            .await
+            .map_err(|error| refused("rescore_unrecorded", &error))?;
+        let settings = SyncSettings::from_env(&self.env)
+            .map_err(|error| refused("sync_settings_refused", &error))?;
+        let directory = CredentialsDirectory::from_env(&self.env)
+            .map_err(|error| refused("credentials_directory_refused", &error))?;
+        let scope = ScopeSettings::from_env(&self.env)
+            .map_err(|error| refused("scope_settings_refused", &error))?;
+        let reader = CollectionReader::new(&settings, scope, self.offload.clone());
+        let syncer = Syncer::new(
+            RslibEngine,
+            SqliteSyncRuns::new(self.db.clone()),
+            settings,
+            CredentialLoader::new(directory, self.redactor.clone()),
+            clock.clone(),
             self.rule,
         );
-        let _ = (
-            ChangeGate::new,
-            SyncSettings::from_env,
-            CredentialsDirectory::from_env,
-            ScopeSettings::from_env,
-            CollectionReader::new,
-            Syncer::<RslibEngine, SqliteSyncRuns>::new,
-            CycleParts::<RslibEngine>::new,
-            Obligations::new,
-            Trigger::Owner,
-        );
-        let _ = (
-            SystemClock,
-            CredentialLoader::new,
-            refused,
-            cycle_reason,
-            answer_of,
-        );
-        let _ = sync_cycle::<RslibEngine>;
-        let _: Option<Arc<dyn Clock>> = None;
-        Err(SyncRefusal {
-            reason: "sync_settings_refused",
-        })
+        let parts = CycleParts::new(syncer, reader, gate, Obligations::new(), clock);
+        let report = sync_cycle(&parts, Trigger::Owner)
+            .await
+            .map_err(|error| refused(cycle_reason(&error), &error))?;
+        Ok(answer_of(&report))
     }
 }
 
@@ -245,18 +244,32 @@ fn refused(reason: &'static str, error: &dyn std::fmt::Display) -> SyncRefusal {
 /// The reason code of a cycle that could not run to its end: the `sync` job's own
 /// (`role_job.rs`). A failed sync is not one: it is a recorded run, answered as such.
 const fn cycle_reason(error: &CycleError) -> &'static str {
-    let _ = error;
-    "sync_record_failed"
+    match error {
+        CycleError::History(_) | CycleError::Sync(_) => "sync_record_failed",
+        CycleError::Obligations(_) => "obligations_unreadable",
+        CycleError::Gate(_) | CycleError::Window(_) => "recompute_failed",
+    }
 }
 
 /// What the owner is told of `report`: the sync, then the recompute.
 fn answer_of(report: &CycleReport) -> SyncAnswer {
-    let _ = (report, Recompute::Skipped, Scores::Unchanged);
-    let _: Option<&SyncReport> = None;
-    SyncAnswer {
-        sync: SyncOutcome::Synced,
-        scores: Scores::Recomputed,
-    }
+    let sync = match &report.sync {
+        SyncReport::Ran { run, .. } => match run.outcome {
+            Ok(()) => SyncOutcome::Synced,
+            Err(reason) => SyncOutcome::Failed {
+                reason: reason.as_str().to_owned(),
+            },
+        },
+        SyncReport::Debounced { .. } => SyncOutcome::Reused,
+        SyncReport::RefusedToday => SyncOutcome::NotRun {
+            reason: "refused_today".to_owned(),
+        },
+    };
+    let scores = match report.recompute {
+        Recompute::Ran { .. } => Scores::Recomputed,
+        Recompute::Skipped => Scores::Unchanged,
+    };
+    SyncAnswer { sync, scores }
 }
 
 #[cfg(test)]

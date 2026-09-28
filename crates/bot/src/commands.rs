@@ -201,67 +201,139 @@ fn command_lines() -> String {
 /// App's button.
 #[must_use]
 pub fn start_reply(app: &MiniAppUrl) -> Reply {
-    let _ = app;
-    Reply::text("Hello.".to_owned())
+    let text = format!(
+        "Your coach here is an AI, not a person.\n\nDeckStreak reads the reviews you do in Anki \
+         from a private copy of your collection. Open the app to see your study.\n\n{}",
+        command_lines()
+    );
+    let open = InlineKeyboardButton::builder()
+        .text("Open DeckStreak")
+        .web_app(WebAppInfo::builder().url(app.as_str()).build())
+        .build();
+    Reply {
+        text,
+        keyboard: Some(
+            InlineKeyboardMarkup::builder()
+                .inline_keyboard(vec![vec![open]])
+                .build(),
+        ),
+    }
 }
 
 /// `/privacy`: how the owner's data is kept, and the link to the published policy.
 #[must_use]
 pub fn privacy_reply() -> Reply {
-    let _ = escape_attribute(PRIVACY_POLICY_URL);
-    Reply::text("Privacy.".to_owned())
+    Reply::text(format!(
+        "<b>Your data</b>\nDeckStreak keeps only what it needs to run your study, in its own \
+         database. <a href=\"{}\">The privacy policy</a> says what that is, why, and for how \
+         long.\n\n/export sends you a copy of your data, and /delete erases it.",
+        escape_attribute(PRIVACY_POLICY_URL)
+    ))
 }
 
 /// The answer to a message that is no command: the commands.
 #[must_use]
 pub fn help_reply() -> Reply {
-    let _ = command_lines();
-    Reply::text("Help.".to_owned())
+    Reply::text(format!(
+        "These are the commands I answer:\n{}",
+        command_lines()
+    ))
 }
 
 /// The caption of `/export`'s document.
 #[must_use]
 pub fn export_caption() -> String {
-    String::new()
+    "Your DeckStreak data, as one JSON document.".to_owned()
 }
 
 /// The answer when the export could not be made.
 #[must_use]
 pub fn export_failed_reply() -> Reply {
-    Reply::text("Failed.".to_owned())
+    Reply::text(
+        "The export could not be made, so nothing was sent. Send /export to try again.".to_owned(),
+    )
 }
 
 /// `/delete`'s question, with the button that confirms it.
 #[must_use]
 pub fn erase_prompt() -> Reply {
-    Reply::text("Erase?".to_owned())
+    let confirm = InlineKeyboardButton::builder()
+        .text("Erase my data")
+        .callback_data(CONFIRM_ERASE)
+        .build();
+    Reply {
+        text: "<b>Erase your data?</b>\nThis erases everything DeckStreak keeps about your \
+               study, and it cannot be undone. /privacy says what an erase does not reach."
+            .to_owned(),
+        keyboard: Some(
+            InlineKeyboardMarkup::builder()
+                .inline_keyboard(vec![vec![confirm]])
+                .build(),
+        ),
+    }
 }
 
 /// The answer once the erase is done; `log_held` when a reader held the database's log, so older
 /// copies of some pages stay in it until the next maintenance.
 #[must_use]
 pub fn erase_done_reply(log_held: bool) -> Reply {
-    let _ = log_held;
-    Reply::text("Done.".to_owned())
+    let mut text = "Your DeckStreak data was erased.".to_owned();
+    if log_held {
+        text.push_str(
+            "\nOlder copies of some of it stay in the database's log until its next maintenance.",
+        );
+    }
+    Reply::text(text)
 }
 
 /// The answer when the erase stopped with an error.
 #[must_use]
 pub fn erase_failed_reply() -> Reply {
-    Reply::text("Failed.".to_owned())
+    Reply::text(
+        "The erase stopped with an error, so some of your data may remain. Send /export to see \
+         what DeckStreak keeps, or /delete to try again."
+            .to_owned(),
+    )
 }
 
 /// The answer to a tap on a confirmation that is not the latest `/delete`'s, or was used.
 #[must_use]
 pub fn erase_expired_reply() -> Reply {
-    Reply::text("Expired.".to_owned())
+    Reply::text(
+        "That confirmation is no longer valid, so nothing was erased. Send /delete to start \
+         again."
+            .to_owned(),
+    )
 }
 
 /// `/sync`'s answer: what the sync did, then what the recompute did.
 #[must_use]
 pub fn sync_reply(answer: &Result<SyncAnswer, SyncRefusal>) -> Reply {
-    let _ = (answer, escape_html(""));
-    Reply::text("Synced.".to_owned())
+    let answer = match answer {
+        Ok(answer) => answer,
+        Err(refusal) => {
+            return Reply::text(format!(
+                "The sync could not run (<code>{}</code>), so nothing was changed.",
+                escape_html(refusal.reason)
+            ));
+        }
+    };
+    let sync = match &answer.sync {
+        SyncOutcome::Synced => "Synced with your Anki sync server.".to_owned(),
+        SyncOutcome::Failed { reason } => format!(
+            "The sync failed (<code>{}</code>), so the copy here was not refreshed.",
+            escape_html(reason)
+        ),
+        SyncOutcome::Reused => "A sync had just succeeded, so no new one ran.".to_owned(),
+        SyncOutcome::NotRun { reason } => {
+            format!("No sync ran (<code>{}</code>).", escape_html(reason))
+        }
+    };
+    let scores = match answer.scores {
+        Scores::Recomputed => "Your scores were recomputed from the copy here.",
+        Scores::Unchanged => "Nothing they read had changed, so your scores stand.",
+    };
+    Reply::text(format!("{sync}\n{scores}"))
 }
 
 /// The command a message names: its first word without its `/`, and without the `@bot` a group
@@ -312,6 +384,7 @@ impl<S: OwnerSync> Commands<S> {
     /// Registers the menu for the owner's chat alone, after deleting the default scope's. Best
     /// effort: the transport logs a request that gives up, and the bot runs on.
     pub async fn register_menu(&self) {
+        self.transport.delete_default_menu().await;
         let commands = MENU
             .iter()
             .map(|entry| {
@@ -327,12 +400,37 @@ impl<S: OwnerSync> Commands<S> {
     /// Handles one update: the gate decides, and the owner's message or callback is dispatched.
     pub async fn handle(&mut self, incoming: Incoming) {
         let Some(update) = incoming.update else {
+            tracing::info!(
+                kind = "update",
+                reason = "unreadable",
+                "an update was dropped"
+            );
             return;
         };
         match gate::admit(&update.content, self.owner) {
             Admission::Message(message) => self.on_message(message).await,
-            Admission::Callback(callback) => self.on_callback(callback).await,
-            Admission::AnswerOnly { .. } | Admission::Dropped(_) => {}
+            Admission::Callback(callback) => {
+                self.transport.answer_callback(&callback.id).await;
+                self.on_callback(callback).await;
+            }
+            Admission::AnswerOnly {
+                callback_id,
+                dropped,
+            } => {
+                tracing::info!(
+                    kind = dropped.kind,
+                    reason = dropped.reason,
+                    "an update was dropped"
+                );
+                self.transport.answer_callback(&callback_id).await;
+            }
+            Admission::Dropped(dropped) => {
+                tracing::info!(
+                    kind = dropped.kind,
+                    reason = dropped.reason,
+                    "an update was dropped"
+                );
+            }
         }
     }
 
@@ -341,36 +439,89 @@ impl<S: OwnerSync> Commands<S> {
             Some("start") => self.send(start_reply(&self.app)).await,
             Some("privacy") => self.send(privacy_reply()).await,
             Some("export") => self.export().await,
-            Some("delete") => {
-                let _ = erase_all(&self.db).await;
-                self.send(erase_done_reply(false)).await;
-            }
-            Some("sync") => {
-                self.send(sync_reply(&Err(SyncRefusal { reason: "stub" })))
-                    .await;
-            }
+            Some("delete") => self.ask_erase().await,
+            Some("sync") => self.sync().await,
             _ => self.send(help_reply()).await,
         }
     }
 
     async fn on_callback(&mut self, callback: OwnerCallback) {
-        let _ = (callback, &self.pending_erase, &self.sync);
+        if callback.data.as_deref() != Some(CONFIRM_ERASE) {
+            tracing::info!(
+                kind = "callback_query",
+                reason = "data_unknown",
+                "a callback did nothing"
+            );
+            return;
+        }
+        let latest = self.pending_erase.is_some() && self.pending_erase == callback.message_id;
+        if !latest {
+            tracing::info!(
+                kind = "callback_query",
+                reason = "confirmation_stale",
+                "nothing was erased"
+            );
+            self.send(erase_expired_reply()).await;
+            return;
+        }
+        self.pending_erase = None;
+        match erase_all(&self.db).await {
+            Ok(erasure) => {
+                tracing::info!(
+                    emptied = erasure.emptied.len(),
+                    reset = erasure.reset.len(),
+                    kept = erasure.kept.len(),
+                    checkpoint_busy = erasure.checkpoint_busy,
+                    "the owner's data was erased"
+                );
+                self.send(erase_done_reply(erasure.checkpoint_busy)).await;
+            }
+            Err(error) => {
+                tracing::error!(%error, "the owner's erase stopped");
+                self.send(erase_failed_reply()).await;
+            }
+        }
     }
 
     async fn export(&self) {
-        let _ = export_all(&self.db).await;
-        let _ = self
-            .transport
-            .send_document(self.chat(), EXPORT_FILE_NAME, b"", &export_caption())
-            .await;
+        self.transport.send_typing(self.chat()).await;
+        match export_all(&self.db).await {
+            Ok(export) => {
+                let document = export.to_line();
+                // A document that gives up is logged by the transport, with its method.
+                let _ = self
+                    .transport
+                    .send_document(
+                        self.chat(),
+                        EXPORT_FILE_NAME,
+                        document.as_bytes(),
+                        &export_caption(),
+                    )
+                    .await;
+            }
+            Err(error) => {
+                tracing::error!(%error, "the owner's export could not be made");
+                self.send(export_failed_reply()).await;
+            }
+        }
     }
 
     async fn ask_erase(&mut self) {
-        let _ = erase_prompt();
+        let prompt = erase_prompt();
+        self.pending_erase = match self
+            .transport
+            .send_html(self.chat(), &prompt.text, prompt.keyboard)
+            .await
+        {
+            Sent::Delivered { message_id } => Some(message_id),
+            Sent::Failed => None,
+        };
     }
 
     async fn sync(&self) {
-        let _ = self.sync.sync_now().await;
+        self.transport.send_typing(self.chat()).await;
+        let answer = self.sync.sync_now().await;
+        self.send(sync_reply(&answer)).await;
     }
 
     /// Sends `reply` to the owner. A reply that gives up is logged by the transport, with its

@@ -144,7 +144,16 @@ fn is_loopback(host: &str) -> bool {
 /// what escaping `&` first does in a chain of replacements.
 #[must_use]
 pub fn escape_html(text: &str) -> String {
-    text.to_owned()
+    let mut escaped = String::with_capacity(text.len());
+    for character in text.chars() {
+        match character {
+            '&' => escaped.push_str("&amp;"),
+            '<' => escaped.push_str("&lt;"),
+            '>' => escaped.push_str("&gt;"),
+            other => escaped.push(other),
+        }
+    }
+    escaped
 }
 
 /// Escapes `value` for a double-quoted attribute of Telegram's HTML, such as a link's `href`: what
@@ -365,7 +374,10 @@ impl Transport {
     /// The counts now.
     #[must_use]
     pub fn counts(&self) -> SendCounts {
-        SendCounts::default()
+        SendCounts {
+            attempted: self.attempted.load(Ordering::Relaxed),
+            delivered: self.delivered.load(Ordering::Relaxed),
+        }
     }
 
     /// Runs `attempt` at most [`SEND_ATTEMPTS`] times, until one succeeds: a 429 waits its
@@ -376,11 +388,32 @@ impl Transport {
         F: FnMut() -> A,
         A: Future<Output = Attempt<T>>,
     {
-        let _ = method;
-        match attempt().await {
-            Attempt::Done(value) => Some(value),
-            Attempt::RateLimited(_) | Attempt::Failed(_) => None,
+        for number in 1..=SEND_ATTEMPTS {
+            match attempt().await {
+                Attempt::Done(value) => return Some(value),
+                Attempt::RateLimited(wait) => {
+                    let wait_ms = u64::try_from(wait.as_millis()).unwrap_or(u64::MAX);
+                    tracing::warn!(
+                        method,
+                        attempt = number,
+                        wait_ms,
+                        "the Bot API asked for a wait"
+                    );
+                    if number < SEND_ATTEMPTS {
+                        self.wait(wait).await;
+                    }
+                }
+                Attempt::Failed(code) => {
+                    tracing::warn!(method, attempt = number, code, "a Bot API request failed");
+                }
+            }
         }
+        tracing::error!(
+            method,
+            attempts = SEND_ATTEMPTS,
+            "a Bot API request gave up"
+        );
+        None
     }
 
     /// Sends `html` to `chat` as HTML with link previews off, split into chunks of at most
@@ -392,26 +425,45 @@ impl Transport {
         html: &str,
         keyboard: Option<InlineKeyboardMarkup>,
     ) -> Sent {
-        let params = SendMessageParams::builder()
-            .chat_id(chat)
-            .text(html)
-            .parse_mode(ParseMode::Html)
-            .link_preview_options(no_preview())
-            .maybe_reply_markup(keyboard.map(ReplyMarkup::InlineKeyboardMarkup))
-            .build();
-        let (bot, params) = (&self.bot, &params);
-        match self
-            .with_attempts("sendMessage", move || async move {
-                match bot.send_message(params).await {
-                    Ok(answer) => Attempt::Done(answer.result.message_id),
-                    Err(error) => Attempt::from_error(&error),
-                }
-            })
-            .await
-        {
-            Some(message_id) => Sent::Delivered { message_id },
-            None => Sent::Failed,
+        self.attempted.fetch_add(1, Ordering::Relaxed);
+        let chunks = chunk::chunks(html, MAX_TEXT_UTF16);
+        let last = chunks.len().saturating_sub(1);
+        let mut first = None;
+        for (index, text) in chunks.into_iter().enumerate() {
+            let markup = (index == last)
+                .then(|| keyboard.clone())
+                .flatten()
+                .map(ReplyMarkup::InlineKeyboardMarkup);
+            let params = SendMessageParams::builder()
+                .chat_id(chat)
+                .text(text)
+                .parse_mode(ParseMode::Html)
+                .link_preview_options(no_preview())
+                .maybe_reply_markup(markup)
+                .build();
+            let (bot, params) = (&self.bot, &params);
+            let sent = self
+                .with_attempts("sendMessage", move || async move {
+                    match bot.send_message(params).await {
+                        Ok(answer) => Attempt::Done(answer.result.message_id),
+                        Err(error) => Attempt::from_error(&error),
+                    }
+                })
+                .await;
+            let Some(message_id) = sent else {
+                return Sent::Failed;
+            };
+            first.get_or_insert(message_id);
         }
+        let Some(message_id) = first else {
+            tracing::warn!(
+                method = "sendMessage",
+                "a message with no visible text was not sent"
+            );
+            return Sent::Failed;
+        };
+        self.delivered.fetch_add(1, Ordering::Relaxed);
+        Sent::Delivered { message_id }
     }
 
     /// Replaces the text of the message `message_id` in `chat` with `html`, link previews off.
@@ -419,6 +471,14 @@ impl Transport {
     /// request. An answer of "message is not modified" counts as delivered (R8). Counted as
     /// [`Transport::send_html`] counts.
     pub async fn edit_html(&self, chat: i64, message_id: i32, html: &str) -> Sent {
+        self.attempted.fetch_add(1, Ordering::Relaxed);
+        if chunk::chunks(html, MAX_TEXT_UTF16).len() != 1 {
+            tracing::warn!(
+                method = "editMessageText",
+                "an edit that is not one chunk was not sent"
+            );
+            return Sent::Failed;
+        }
         let params = EditMessageTextParams::builder()
             .chat_id(chat)
             .message_id(message_id)
@@ -426,10 +486,23 @@ impl Transport {
             .parse_mode(ParseMode::Html)
             .link_preview_options(no_preview())
             .build();
-        match self.bot.edit_message_text(&params).await {
-            Ok(_) => Sent::Delivered { message_id },
-            Err(_) => Sent::Failed,
+        let (bot, params) = (&self.bot, &params);
+        let edited = self
+            .with_attempts("editMessageText", move || async move {
+                match bot.edit_message_text(params).await {
+                    Ok(_) => Attempt::Done(message_id),
+                    Err(frankenstein::Error::Api(answer)) if not_modified(&answer) => {
+                        Attempt::Done(message_id)
+                    }
+                    Err(error) => Attempt::from_error(&error),
+                }
+            })
+            .await;
+        if edited.is_none() {
+            return Sent::Failed;
         }
+        self.delivered.fetch_add(1, Ordering::Relaxed);
+        Sent::Delivered { message_id }
     }
 
     /// Sends `bytes` to `chat` as the document `file_name`, with the HTML caption `caption` when it
@@ -443,15 +516,34 @@ impl Transport {
         bytes: &[u8],
         caption: &str,
     ) -> Sent {
-        let _ = (
-            chat,
-            file_name,
-            bytes,
-            caption,
-            &self.attempted,
-            &self.delivered,
-        );
-        Sent::Failed
+        self.attempted.fetch_add(1, Ordering::Relaxed);
+        let caption = if chunk::visible_units(caption) <= MAX_CAPTION_UTF16 {
+            caption
+        } else {
+            tracing::warn!(
+                method = "sendDocument",
+                "a caption over its bound was left off"
+            );
+            ""
+        };
+        let url = format!("{}/sendDocument", self.bot.api_url);
+        let (client, url) = (&self.bot.client, url.as_str());
+        let sent = self
+            .with_attempts("sendDocument", move || async move {
+                let Ok(form) = document_form(chat, file_name, bytes, caption) else {
+                    return Attempt::Failed(NO_ANSWER);
+                };
+                match client.post(url).multipart(form).send().await {
+                    Ok(answer) => message_id_of(answer).await,
+                    Err(_) => Attempt::Failed(NO_ANSWER),
+                }
+            })
+            .await;
+        let Some(message_id) = sent else {
+            return Sent::Failed;
+        };
+        self.delivered.fetch_add(1, Ordering::Relaxed);
+        Sent::Delivered { message_id }
     }
 
     /// Answers the callback query `callback_id`, so the client stops its progress indicator (R9).
@@ -487,17 +579,36 @@ impl Transport {
     /// Registers `commands` as the menu of `chat` alone (the chat scope), so nobody else sees them.
     /// Whether the Bot API took them.
     pub async fn set_chat_menu(&self, chat: i64, commands: Vec<BotCommand>) -> bool {
-        let _ = chat;
+        let scope = BotCommandScope::Chat(BotCommandScopeChat::builder().chat_id(chat).build());
         let params = SetMyCommandsParams::builder()
             .commands(commands)
-            .scope(BotCommandScope::Default)
+            .scope(scope)
             .build();
-        self.bot.set_my_commands(&params).await.is_ok()
+        let (bot, params) = (&self.bot, &params);
+        self.with_attempts("setMyCommands", move || async move {
+            match bot.set_my_commands(params).await {
+                Ok(_) => Attempt::Done(()),
+                Err(error) => Attempt::from_error(&error),
+            }
+        })
+        .await
+        .is_some()
     }
 
     /// Deletes the default-scope menu, the one every chat sees. Whether the Bot API took it.
     pub async fn delete_default_menu(&self) -> bool {
-        true
+        let params = DeleteMyCommandsParams::builder()
+            .scope(BotCommandScope::Default)
+            .build();
+        let (bot, params) = (&self.bot, &params);
+        self.with_attempts("deleteMyCommands", move || async move {
+            match bot.delete_my_commands(params).await {
+                Ok(_) => Attempt::Done(()),
+                Err(error) => Attempt::from_error(&error),
+            }
+        })
+        .await
+        .is_some()
     }
 
     /// Removes any webhook, so `getUpdates` is answered (ADR-026). One request.
