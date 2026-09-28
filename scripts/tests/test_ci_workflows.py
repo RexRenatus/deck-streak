@@ -130,10 +130,29 @@ class WorkflowsAreHardened(unittest.TestCase):
                 "https://github.com/example-org/other-repository.git main",
                 "fetch-of-a-url.yml:jobs.build.steps[2]: points git at a URL: git pull --ff-only "
                 "https://github.com/example-org/other-repository.git main",
+                "key-the-reader-refuses.yml:line 18: a key that is not a plain name is not read",
+                "key-the-reader-refuses.yml:line 20: a key that is not a plain name is not read",
+                "key-the-reader-refuses.yml:line 22: a key that is not a plain name is not read",
+                "key-the-reader-refuses.yml:line 25: a key that is not a plain name is not read",
+                "run-by-alias.yml:line 17: an anchor, alias or tag is not read",
+                "run-by-alias.yml:line 19: an anchor, alias or tag is not read",
+                "secret-in-a-form-the-reader-refuses.yml:line 20: a quoted value that does not end "
+                "at its closing quote is not read",
+                "secret-in-a-form-the-reader-refuses.yml:line 24: an anchor, alias or tag is not "
+                "read",
+                "secret-in-a-form-the-reader-refuses.yml:line 25: a flow list whose items are not "
+                "plain is not read",
+                "secret-in-a-form-the-reader-refuses.yml:line 28: a flow mapping is not read",
                 "secret-in-a-larger-expression.yml:jobs.build.steps[0].env.EITHER: reads the "
                 "secret EXAMPLE_TOKEN",
                 "secret-in-a-larger-expression.yml:jobs.build.steps[0].env.FORMATTED: reads the "
                 "secret EXAMPLE_KEY",
+                "secret-in-a-quoted-value.yml:line 21: a double-quoted value that holds an escape "
+                "is not read",
+                "secret-in-a-quoted-value.yml:line 22: a double-quoted value that holds an escape "
+                "is not read",
+                "secret-in-a-quoted-value.yml:jobs.build.steps[0].env.SINGLE: reads the secret "
+                "EXAMPLE_TOKEN",
                 "secret-in-any-spacing.yml:jobs.build.steps[0].env.SPACED: reads the secret "
                 "EXAMPLE_TOKEN",
                 "secret-in-any-spacing.yml:jobs.build.steps[0].env.UNSPACED: reads the secret "

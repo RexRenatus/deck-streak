@@ -1,0 +1,25 @@
+name: planted
+
+# A planted workflow (SPEC-034 A10): a run step and `secrets: inherit` under keys the reader refuses
+# rather than read, a key written with an escape, behind an anchor and behind a tag. The names are
+# synthetic. scripts/tests/test_ci_workflows.py judges it; nothing runs it.
+on:
+  pull_request:
+    branches: [dev]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: a key written with an escape
+        "r\x75n": git clone https://github.com/example-org/other-repository.git
+      - name: a key behind an anchor
+        &planted run: git clone https://github.com/example-org/other-repository.git
+      - name: a key behind a tag
+        !!str run: git clone https://github.com/example-org/other-repository.git
+  call:
+    uses: ./.github/workflows/reusable.yml
+    "secr\x65ts": inherit

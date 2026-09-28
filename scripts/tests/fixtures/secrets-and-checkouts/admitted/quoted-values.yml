@@ -1,0 +1,23 @@
+"name": planted
+
+# A planted workflow (SPEC-034 A11): quoted forms the reader reads as YAML does, a quoted key, a
+# quote doubled inside single quotes, a backslash, which single quotes keep as written, and a
+# comment after a quoted value and after a flow list. scripts/tests/test_ci_workflows.py judges it;
+# nothing runs it.
+on:
+  pull_request:
+    branches: [dev] # the planted trigger
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: 'quoted values'
+        env:
+          DOUBLED: 'it''s ${{ github.token }}'
+          KEPT: 'planted\path' # a comment after a single-quoted value
+          PLAIN: "the token, ${{ github.token }}" # a comment after a double-quoted value
+        run: echo planted
