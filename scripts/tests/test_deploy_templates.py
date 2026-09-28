@@ -49,9 +49,9 @@ CREDENTIAL_KEYS = (
     "SetCredentialEncrypted",
     "ImportCredential",
 )
-# The exit of a role that refuses start (SPEC-025 R1) and of the runner's page (SPEC-027 R7), by
-# number and by the name systemd.exec(5) gives it, EXIT_FAILURE: no template counts it a success.
-REFUSAL_EXIT = {"1", "FAILURE"}
+# The exit of a role that refuses start (SPEC-025 R1) and of the runner's page (SPEC-027 R7),
+# EXIT_FAILURE: no template counts it a success, in any spelling systemd reads as 1 (SPEC-066 R2).
+REFUSAL_EXIT = 1
 # The prefixes systemd reads before an ExecStart= path; `-` counts a failure as a success
 # (systemd.service(5)).
 EXEC_PREFIX = re.compile(r"^[-@:+!|]*")
@@ -337,6 +337,12 @@ def loads_a_credential(unit):
     return any(unit.values("Service", key) for key in CREDENTIAL_KEYS)
 
 
+def names_the_refusal(statuses):
+    """Whether a `SuccessExitStatus=` or `RestartForceExitStatus=` value holds a word systemd reads
+    as the refusal's exit, 1, in any spelling: FAILURE, 01, 0x1, +1, 0b1 (`_units.exit_status`)."""
+    return any(_units.exit_status(word) == REFUSAL_EXIT for word in _units.status_words(statuses))
+
+
 def refusal_page_conditions(unit):
     """Why a start of `unit` that a credential refuses would not fail it and start its page
     (SPEC-066 R2), each refusal beside the directive it reads: no `OnFailure=` naming the alert
@@ -354,7 +360,7 @@ def refusal_page_conditions(unit):
         if "-" in EXEC_PREFIX.match(command).group(0):
             refuse("ExecStart", f"ExecStart={command} counts a failure as a success")
     for statuses in unit.values("Service", "SuccessExitStatus"):
-        if REFUSAL_EXIT & set(statuses.split()):
+        if names_the_refusal(statuses):
             refuse(
                 "SuccessExitStatus", f"SuccessExitStatus={statuses} counts the refusal a success"
             )
@@ -390,9 +396,15 @@ def restart_refusals(unit):
     if restart not in (None, "", "no"):
         refused.append(f"{unit.rel}: Restart={restart} restarts the refusal")
     for statuses in unit.values("Service", "RestartForceExitStatus"):
-        if REFUSAL_EXIT & set(statuses.split()):
+        if names_the_refusal(statuses):
             refused.append(f"{unit.rel}: RestartForceExitStatus={statuses} restarts the refusal")
     return refused
+
+
+def collect_refusals(unit):
+    """Why the failed alert instance would leave `systemctl --failed` (SPEC-066 R3): a stub that
+    refuses nothing."""
+    return []
 
 
 # --- the Caddyfile, read as Caddy's lexer reads it -------------------------------------------
@@ -844,29 +856,43 @@ class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
         # The alert template is the one exception: it cannot page about itself, so its own refusal
         # is its failed state (SPEC-066 R3; test_alert_unit.py holds that route). Its refused start
         # must still fail it and stay failed: every condition but OnFailure= holds for it, told
-        # apart by the directive each refusal reads and never by its text, and it restarts none.
+        # apart by the directive each refusal reads and never by its text, it restarts none, and it
+        # is never unloaded while failed.
         (template,) = [unit for unit in loading if unit.name == alert]
         self.assertEqual(template.values("Unit", "OnFailure"), [])
         self.assertEqual(alert_exit_refusals(template), [])
         self.assertEqual(restart_refusals(template), [])
-        # Planted templates: one for each condition, one that meets all four, one that loads no
-        # credential and so is not examined, and three shaped as the alert template is, which name
-        # no OnFailure=, each breaking one thing the alert template must not: its exit status, a
-        # restart mode that skips the failed state beside a restart, and a forced restart.
+        self.assertEqual(collect_refusals(template), [])
+        # Planted templates: one for each condition, and a second exit status in a spelling systemd
+        # reads as 1; one that meets all five; one that loads no credential and so is not examined;
+        # and eight shaped as the alert template is, which name no OnFailure=, each breaking one
+        # thing the alert template must not: its exit status in two spellings, a restart mode that
+        # skips the failed state beside a restart, a forced restart, a condition, its collection, a
+        # success status and a forced restart that name no 1, and a forced restart on Type=oneshot.
         head = "[Unit]\nDescription=planted\n"
         page = f"OnFailure={ON_FAILURE}\n"
         run = "[Service]\nExecStart=/bin/true\n"
         loads = f"LoadCredential=telegram-bot-token:{SOCKET}\n"
+        condition = "ExecCondition=/bin/true\n"
         plants = {
             "pages.service": f"{head}{page}{run}{loads}",
             "silent.service": f"{head}{run}{loads}",
+            "condition.service": f"{head}{page}{run}{condition}{loads}",
             "ignored.service": f"{head}{page}[Service]\nExecStart=-/bin/true\n{loads}",
             "success.service": f"{head}{page}{run}SuccessExitStatus=2 1\n{loads}",
+            "spelled.service": f"{head}{page}{run}SuccessExitStatus=0x1\n{loads}",
             "direct.service": f"{head}{page}{run}Restart=on-failure\nRestartMode=direct\n{loads}",
             "reads-none.service": f"{head}{run}",
             "alert-shaped.service": f"{head}{run}SuccessExitStatus=1\n{loads}",
+            "alert-spelled.service": f"{head}{run}SuccessExitStatus=01\n{loads}",
             "alert-restarts.service": f"{head}{run}Restart=on-failure\nRestartMode=direct\n{loads}",
             "alert-forced.service": f"{head}{run}RestartForceExitStatus=1\n{loads}",
+            "alert-condition.service": f"{head}{run}{condition}{loads}",
+            "alert-collected.service": f"{head}CollectMode=inactive-or-failed\n{run}{loads}",
+            "alert-status.service": (
+                f"{head}{run}SuccessExitStatus=2\nRestartForceExitStatus=2\n{loads}"
+            ),
+            "alert-oneshot.service": f"{head}{run}Type=oneshot\nRestartForceExitStatus=2\n{loads}",
         }
         with tempfile.TemporaryDirectory() as scratch:
             folder = Path(scratch) / "deploy" / "systemd"
@@ -878,57 +904,133 @@ class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
         self.assertEqual(
             [unit.name for unit in planted_loading],
             [
+                "alert-collected.service",
+                "alert-condition.service",
                 "alert-forced.service",
+                "alert-oneshot.service",
                 "alert-restarts.service",
                 "alert-shaped.service",
+                "alert-spelled.service",
+                "alert-status.service",
+                "condition.service",
                 "direct.service",
                 "ignored.service",
                 "pages.service",
                 "silent.service",
+                "spelled.service",
                 "success.service",
             ],
         )
         where = "deploy/systemd"
         # The restart mode's refusal: it skips a paging unit's OnFailure=, and the alert template's
-        # failed state.
+        # failed state; and the condition's: a skipped start neither fails the unit nor pages.
         direct_mode = "RestartMode=direct skips the failed state and OnFailure="
+        skip = (
+            "ExecCondition=/bin/true can skip the start, which neither fails the unit nor starts "
+            "OnFailure="
+        )
         self.assertEqual(
             [r for unit in planted_loading for r in refusal_page_refusals(unit)],
             [
+                f"{where}/alert-collected.service: OnFailure= does not name {ON_FAILURE}",
+                f"{where}/alert-condition.service: OnFailure= does not name {ON_FAILURE}",
+                f"{where}/alert-condition.service: {skip}",
                 f"{where}/alert-forced.service: OnFailure= does not name {ON_FAILURE}",
+                f"{where}/alert-oneshot.service: OnFailure= does not name {ON_FAILURE}",
                 f"{where}/alert-restarts.service: OnFailure= does not name {ON_FAILURE}",
                 f"{where}/alert-restarts.service: {direct_mode}",
                 f"{where}/alert-shaped.service: OnFailure= does not name {ON_FAILURE}",
                 f"{where}/alert-shaped.service: SuccessExitStatus=1 counts the refusal a success",
+                f"{where}/alert-spelled.service: OnFailure= does not name {ON_FAILURE}",
+                f"{where}/alert-spelled.service: SuccessExitStatus=01 counts the refusal a success",
+                f"{where}/alert-status.service: OnFailure= does not name {ON_FAILURE}",
+                f"{where}/condition.service: {skip}",
                 f"{where}/direct.service: {direct_mode}",
                 f"{where}/ignored.service: ExecStart=-/bin/true counts a failure as a success",
                 f"{where}/silent.service: OnFailure= does not name {ON_FAILURE}",
+                f"{where}/spelled.service: SuccessExitStatus=0x1 counts the refusal a success",
                 f"{where}/success.service: SuccessExitStatus=2 1 counts the refusal a success",
             ],
         )
         # The alert template's own checks refuse each alert-shaped plant for what it breaks alone:
-        # the exit conditions for its exit status or its restart mode, and the restart check for
-        # its restart. `alert-restarts` is refused by the exit conditions with exactly its
-        # RestartMode= line, though that line, like its OnFailure= one, names OnFailure=.
+        # the exit conditions for its exit status, its restart mode or its condition, the restart
+        # check for its restart, and the collection check for its collection. `alert-restarts` is
+        # refused by the exit conditions with exactly its RestartMode= line, though that line, like
+        # its OnFailure= one, names OnFailure=. A success status and a forced restart that name no
+        # 1 are refused too, since the alert template names neither; and on Type=oneshot the
+        # service manager refuses a forced restart outright.
         shaped = [unit for unit in planted_loading if unit.name.startswith("alert-")]
+        counts = "counts the refusal a success"
+        named = "is named, and the alert template names none"
+        oneshot = "makes the service manager refuse the Type=oneshot unit outright"
+        unloads = "can unload the failed instance, which systemctl --failed then no longer lists"
         refused = {
+            "alert-collected.service": (
+                [],
+                [],
+                [f"{where}/alert-collected.service: CollectMode=inactive-or-failed {unloads}"],
+            ),
+            "alert-condition.service": ([f"{where}/alert-condition.service: {skip}"], [], []),
             "alert-forced.service": (
                 [],
                 [f"{where}/alert-forced.service: RestartForceExitStatus=1 restarts the refusal"],
+                [],
+            ),
+            "alert-oneshot.service": (
+                [],
+                [f"{where}/alert-oneshot.service: RestartForceExitStatus=2 {oneshot}"],
+                [],
             ),
             "alert-restarts.service": (
                 [f"{where}/alert-restarts.service: {direct_mode}"],
                 [f"{where}/alert-restarts.service: Restart=on-failure restarts the refusal"],
+                [],
             ),
             "alert-shaped.service": (
-                [f"{where}/alert-shaped.service: SuccessExitStatus=1 counts the refusal a success"],
+                [f"{where}/alert-shaped.service: SuccessExitStatus=1 {counts}"],
+                [],
+                [],
+            ),
+            "alert-spelled.service": (
+                [f"{where}/alert-spelled.service: SuccessExitStatus=01 {counts}"],
+                [],
+                [],
+            ),
+            "alert-status.service": (
+                [f"{where}/alert-status.service: SuccessExitStatus=2 {named}"],
+                [f"{where}/alert-status.service: RestartForceExitStatus=2 {named}"],
                 [],
             ),
         }
         self.assertEqual(
-            {unit.name: (alert_exit_refusals(unit), restart_refusals(unit)) for unit in shaped},
+            {
+                unit.name: (
+                    alert_exit_refusals(unit),
+                    restart_refusals(unit),
+                    collect_refusals(unit),
+                )
+                for unit in shaped
+            },
             refused,
         )
+        # The census reads an exit status as systemd does (`_units.py`): each word below has the
+        # reading `systemd-analyze exit-status` gives it, None where it reads no status; and a
+        # value splits into words as a unit file's does, a backslash taking the next character.
+        readings = [
+            ("1 FAILURE 01 0001 0x1 0X01 +1 +0x1 0b1 0B1 0o1 0O1 0b+1 +0b1 0b0b1", 1),
+            ("0 SUCCESS -0 00 0x0", 0),
+            ("010", 8),
+            ("0x10", 16),
+            ("255 0xff 0377", 255),
+            ('failure -1 256 08 0x 0o8 +0o1 0x+1 1.0 1e0 "1"', None),
+        ]
+        for words, reading in readings:
+            for word in words.split():
+                self.assertEqual(_units.exit_status(word), reading, word)
+        self.assertEqual(
+            _units.status_words('\\1 F\\AILURE 0\\ 1 "1"  2'), ["1", "FAILURE", "0 1", '"1"', "2"]
+        )
+        self.assertIsNone(_units.exit_status("0 1"))
 
 
 if __name__ == "__main__":

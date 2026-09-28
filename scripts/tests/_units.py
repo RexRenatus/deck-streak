@@ -162,6 +162,17 @@ def long_running(unit):
     return unit.kind == "service" and service_type(unit) in LONG_RUNNING_KINDS
 
 
+def status_words(value):
+    """The words of a `SuccessExitStatus=` or `RestartForceExitStatus=` value (SPEC-066): a stub
+    that splits on whitespace alone."""
+    return value.split()
+
+
+def exit_status(word):
+    """The exit status a word names (SPEC-066): a stub that reads the word as text."""
+    return {"SUCCESS": 0, "FAILURE": 1, "0": 0, "1": 1}.get(word)
+
+
 def size_bytes(value):
     """A byte size in bytes; None for a percentage, `infinity` or anything unreadable."""
     if value is None:

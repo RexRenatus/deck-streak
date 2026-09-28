@@ -20,6 +20,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import _units
 from _support import REPO, examined
 
 SYSTEMD = REPO / "deploy" / "systemd"
@@ -114,6 +115,17 @@ def unit_file(path):
 
 def values(unit, section, key):
     return unit.get(section, {}).get(key, [])
+
+
+def reading_one(assignments):
+    """Each word of `assignments` that systemd reads as the refusal's exit, 1, in any spelling:
+    FAILURE, 01, 0x1, +1, 0b1 (SPEC-066 R3; `_units.exit_status`)."""
+    return [
+        word
+        for value in assignments
+        for word in _units.status_words(value)
+        if _units.exit_status(word) == 1
+    ]
 
 
 def identity_ids():
@@ -506,24 +518,32 @@ class AnEmptyCredentialFailsTheAlertUnit(unittest.TestCase):
         self.assertEqual(values(template, "Unit", "OnFailure"), [])
         self.assertEqual(len(values(template, "Service", "LoadCredential")), 2)
         # It counts no refusal a success, so the refusal leaves the instance failed: no `-` prefix
-        # on its one ExecStart= and no SuccessExitStatus= naming 1 or FAILURE (systemd.service(5)).
+        # on its one ExecStart=; no ExecCondition=, since one that exits 1 to 254 skips the start
+        # and leaves the instance inactive, not failed; and no SuccessExitStatus= at all, none
+        # holding a word systemd reads as 1 in any spelling and none named (systemd.service(5)).
         (start,) = values(template, "Service", "ExecStart")
         self.assertNotIn("-", re.match(r"[-@:+!|]*", start).group(0), start)
-        statuses = [s for v in values(template, "Service", "SuccessExitStatus") for s in v.split()]
-        self.assertEqual({"1", "FAILURE"} & set(statuses), set(), statuses)
+        self.assertEqual(values(template, "Service", "ExecCondition"), [])
+        statuses = values(template, "Service", "SuccessExitStatus")
+        self.assertEqual(reading_one(statuses), [], statuses)
+        self.assertEqual(statuses, [], "the alert template names no SuccessExitStatus=")
         # And nothing moves the refused instance out of the failed state: no RestartMode=direct,
         # which skips that state on a restart, and no restart at all, since a restart at the default
         # mode only passes through it and waits for the next start activating: no Restart= other
-        # than `no`, and no RestartForceExitStatus= naming 1 or FAILURE, which forces a restart
-        # whatever Restart= says (systemd.service(5)).
+        # than `no`, and no RestartForceExitStatus= at all, none holding a word systemd reads as 1
+        # and none named: on its Type=oneshot the service manager refuses the unit outright, and on
+        # another type one naming 1 forces a restart whatever Restart= says (systemd.service(5)).
         modes = [m.strip() for m in values(template, "Service", "RestartMode")]
         self.assertNotIn("direct", modes, modes)
         restarts = [r for r in values(template, "Service", "Restart") if r != "no"]
         self.assertEqual(restarts, [], restarts)
-        forced = [
-            s for v in values(template, "Service", "RestartForceExitStatus") for s in v.split()
-        ]
-        self.assertEqual({"1", "FAILURE"} & set(forced), set(), forced)
+        forced = values(template, "Service", "RestartForceExitStatus")
+        self.assertEqual(reading_one(forced), [], forced)
+        self.assertEqual(forced, [], "the alert template names no RestartForceExitStatus=")
+        # Nor is the failed instance unloaded: no CollectMode= other than `inactive`, since
+        # `inactive-or-failed` drops it from systemctl --failed (systemd.unit(5)).
+        collected = [m for m in values(template, "Unit", "CollectMode") if m != "inactive"]
+        self.assertEqual(collected, [], collected)
 
 
 if __name__ == "__main__":
