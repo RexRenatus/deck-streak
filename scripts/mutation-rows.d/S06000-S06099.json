@@ -432,6 +432,14 @@
         "        approval, items = approved_items(listing, args.approval, load_rules(args.rules)[\"digest\"])\n",
         "the apply checks the list's rules digest against the rules it parsed and acts on, never a second read (SPEC-060 R6, A10)",
         "test_host_scrub.OneRead.test_each_tool_binds_the_bytes_it_parsed"
+      ],
+      [
+        "S06055-THE-DELETION-MEASURES-THE-ITEM-AGAIN",
+        "deploy/host-scrub/apply.py",
+        "        digest, _ = measure(item[\"path\"])\n        if digest != item[\"digest\"]:\n            raise OSError(\"its digest",
+        "        digest, _ = measure(item[\"path\"])\n        if False:\n            raise OSError(\"its digest",
+        "the deletion measures the item's digest again, at its own entry and everywhere below it, and refuses a change (SPEC-060 R6, A5)",
+        "test_host_scrub.Apply.test_apply_deletes_exactly_the_approved_items_or_nothing"
       ]
     ]
   }
