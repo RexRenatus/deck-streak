@@ -273,11 +273,14 @@ and never committed.
   as `systemctl cat` does); a drop-in's file name may hold any blank, and systemd loads such a
   drop-in. So a header is a `# /` line at the start of the output or after an empty line, its path
   read to the end of the line, and a header-shaped line that follows no empty line can only be a
-  file's own comment, which the check refuses rather than read a comment as a file. A byte-order
-  mark, which systemd skips where it first finds one, is refused. Chosen against stripping and
-  joining lines as Python reads them, which hid a line systemd reads inside the one before it and
-  counted a reset systemd never reads, and against cutting a header's path at a blank, which read
-  a drop-in named with one as part of the file before it.
+  file's own comment, which the check refuses rather than read a comment as a file. A newline in a
+  drop-in's name ends the printed line itself: the rest of the name reads as the file's first line,
+  and the header can name the rail's own drop-in, which sorts before it, so the check refuses a
+  unit whose output shows one file twice. A byte-order mark, which systemd skips where it first
+  finds one, is refused. Chosen against stripping and joining lines as Python reads them, which hid
+  a line systemd reads inside the one before it and counted a reset systemd never reads, and
+  against a header whose path holds no blank, which read a drop-in named with one as part of the
+  file before it.
 - **Variables' names (A10): quotes read exactly, escapes and specifiers refused.** Quotes are
   removed as systemd removes them. A value written with a backslash escape is refused whole, since
   systemd decodes escapes key by key, in single and double quotes too, and a name holding a

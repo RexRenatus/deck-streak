@@ -75,18 +75,26 @@ failed by assertion on its two new drop-ins, one named with a space and one with
 loads such a drop-in, and `systemctl cat` prints its name as it is (measured on systemd 255 with
 `systemd-analyze verify` and `systemd-analyze cat-config`). Every other criterion passed there, run
 over the whole test file. The effective check then read a file's `# <path>` line to its end
-(12ac03a), and A5 went green. Both were re-run from a `git archive` export of the sha each cites.
-These lines stand outside the `red-first` fence, which records each criterion once; A5's own red
-and green are in the first fence.
+(12ac03a), and A5 went green.
+
+A newline, a blank too, ends the line systemctl prints a path on: the rest of a drop-in's name then
+reads as its first line, and its header can name the rail's own drop-in, which sorts before it
+(measured the same way). That case was committed alone next (3e45c49), where A5 failed by assertion
+on it and every other criterion passed, and the check then refused a unit whose output shows one
+file twice (d549cee), where A5 went green. Each red and green below was re-run from a `git archive`
+export of the sha it cites. These lines stand outside the `red-first` fence, which records each
+criterion once; A5's own red and green are in the first fence.
 
 ```text
-A5, a drop-in whose file name holds a blank: red at 11093cb: AssertionError: 0 != 1 : effective-check: examined 1 unit(s), 2 file(s); 0 refusal(s) (a drop-in named with a space, and one named with a tab, each passed)
-A5, a drop-in whose file name holds a blank: green at 12ac03a
+A5, a drop-in whose file name holds a space or a tab: red at 11093cb: AssertionError: 0 != 1 : effective-check: examined 1 unit(s), 2 file(s); 0 refusal(s) (a drop-in named with a space, and one named with a tab, each passed)
+A5, a drop-in whose file name holds a space or a tab: green at 12ac03a
+A5, a drop-in whose file name holds a newline: red at 3e45c49: AssertionError: 0 != 1 : effective-check: examined 1 unit(s), 3 file(s); 0 refusal(s) (a drop-in shown under the rail's own drop-in's path passed, whether the rest of its name read as a line or as a comment)
+A5, a drop-in whose file name holds a newline: green at d549cee
 ```
 
 The round's other cases hold rules both checks already kept, so each passed when it was committed,
 and each was shown red with its rule removed. Each removal replaced an anchor that occurs once in
-an export of 12ac03a, ran the criterion's test alone, and restored the file byte for byte. At
+an export of d549cee, ran the criterion's test alone, and restored the file byte for byte. At
 805d769, which lacks this round's cases, each of the seven removals left its criterion's test green.
 
 | case added | rule removed | the test with the rule removed |
@@ -99,13 +107,15 @@ an export of 12ac03a, ran the criterion's test alone, and restored the file byte
 | A5: an effective `ImportCredential=` line | they leave out `ImportCredential` | red on that case alone, with the same line |
 | A2: the planted `SetCredential=` and `SetCredentialEncrypted=` values, a string found nowhere else, asserted absent from the whole output | the lister's refusal prints the line's value mid-line | red on those two cases alone: `AssertionError: 'value-never-echoed' unexpectedly found in 'REFUSE: …'` |
 
-With the header rule's old form put back at 12ac03a, which cut a path at its first blank, A5 is red
-again on its two new drop-ins alone.
+The same way at d549cee, A5 is red on its two drop-ins named with a space or a tab alone when a
+header whose path holds a blank is no longer read as one, and on its two drop-ins named with a
+newline alone when a file shown twice is no longer refused.
 
 DISCLOSURE: the test bodies of A2, A5, A8 and A9 changed after their red commits (936a51e for A2
-and A5, 26d09bb for A8 and A9), at 11093cb and nowhere else: each gained this round's cases, above.
-Two changes came with them. A2's planted `SetCredential=` and `SetCredentialEncrypted=` values
-became a string found nowhere else, and its assertion that the value is absent now reads the whole
-output, where it read the value at a line's end. A9's comment on a header-shaped line now says why,
-on systemd 255, such a line can only be a file's own comment. Every other case and assertion of the
-four is unchanged, and no other criterion's test body changed in this round.
+and A5, 26d09bb for A8 and A9), at 11093cb, and A5's once more at 3e45c49: each gained this round's
+cases, above, and nothing else changed in them bar two things. A2's planted `SetCredential=` and
+`SetCredentialEncrypted=` values became a string found nowhere else, and its assertion that the
+value is absent now reads the whole output, where it read the value at a line's end. A9's comment
+on a header-shaped line now says why, on systemd 255, such a line can only be a file's own comment.
+Every other case and assertion of the four is unchanged, and no other criterion's test body changed
+in this round.
