@@ -1,0 +1,29 @@
+name: planted
+
+# A planted workflow (SPEC-034 A10): each read or clone comes second, in a second job: a secret after
+# the default token in one expression, a secret in a value's second expression, and a clone on a
+# script's second line. The names are synthetic. scripts/tests/test_ci_workflows.py judges it;
+# nothing runs it.
+on:
+  pull_request:
+    branches: [dev]
+
+permissions:
+  contents: read
+
+jobs:
+  first:
+    runs-on: ubuntu-24.04
+    steps:
+      - run: echo planted
+  second:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: a secret after the default token, and in a second expression
+        env:
+          EITHER: ${{ secrets.GITHUB_TOKEN || secrets.EXAMPLE_TOKEN }}
+        run: echo ${{ github.sha }} ${{ secrets.EXAMPLE_TOKEN }}
+      - name: a clone on the script's second line
+        run: |
+          echo planted
+          git clone https://github.com/example-org/other-repository.git

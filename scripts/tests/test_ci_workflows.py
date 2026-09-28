@@ -124,6 +124,14 @@ class WorkflowsAreHardened(unittest.TestCase):
         self.assertEqual(
             problems,
             [
+                "another-repository-in-other-forms.yml:jobs.build.steps[0]: checks out "
+                "example-org/other-repository, not this repository",
+                "another-repository-in-other-forms.yml:jobs.build.steps[1]: clones a repository: "
+                "git -C work clone https://github.com/example-org/other-repository.git",
+                "another-repository-in-other-forms.yml:jobs.build.steps[2]: points git at a URL: "
+                "git fetch git@example-host:example-org/other-repository.git",
+                "another-repository-in-other-forms.yml:jobs.build.steps[3]: points git at a URL: "
+                "git fetch github.com:example-org/other-repository.git main",
                 "checkout-of-another-repository.yml:jobs.build.steps[0]: checks out "
                 "example-org/other-repository, not this repository",
                 "checkout-of-another-repository.yml:jobs.build.steps[1]: checks out "
@@ -147,6 +155,11 @@ class WorkflowsAreHardened(unittest.TestCase):
                 "key-the-reader-refuses.yml:line 31: a key that is not a plain name is not read",
                 "run-by-alias.yml:line 17: an anchor, alias or tag is not read",
                 "run-by-alias.yml:line 19: an anchor, alias or tag is not read",
+                "second-of-each.yml:jobs.second.steps[0].env.EITHER: reads the secret "
+                "EXAMPLE_TOKEN",
+                "second-of-each.yml:jobs.second.steps[0].run: reads the secret EXAMPLE_TOKEN",
+                "second-of-each.yml:jobs.second.steps[1]: clones a repository: git clone "
+                "https://github.com/example-org/other-repository.git",
                 "secret-in-a-form-the-reader-refuses.yml:line 20: a quoted value that does not end "
                 "at its closing quote is not read",
                 "secret-in-a-form-the-reader-refuses.yml:line 24: an anchor, alias or tag is not "
