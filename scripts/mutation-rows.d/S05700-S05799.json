@@ -64,6 +64,14 @@
         "                print(f\"never tested: {name}\")\n",
         "a listed mutant that no report tested makes the table VOID, never a row that counts fewer mutants (SPEC-057 R13)",
         "test_mutation_verdict.TheTableCountsTheCampaign.test_a_listed_mutant_no_report_tested_is_void_by_name"
+      ],
+      [
+        "S05709-A-LINE-OUTSIDE-A-TEST-ITEM-IS-PRODUCTION",
+        "scripts/mutation-verdict.py",
+        "    return inside - outside\n",
+        "    return inside\n",
+        "a line holding any token outside every test item is production code, even beside the brace that closes a test module, so a production change there never reads not-applicable (SPEC-057 R22)",
+        "test_mutation_verdict.ATestOnlySrcDiffReadsNotApplicable.test_a_test_only_src_diff_reads_not_applicable_and_a_production_line_still_applies"
       ]
     ]
   }
