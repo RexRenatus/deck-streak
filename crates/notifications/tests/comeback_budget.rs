@@ -2,8 +2,8 @@
 //! one lapse id, at least 3 study days apart, then silence for the episode; a nudge in an open lapse
 //! is withheld while a comeback in it is sent; a comeback is raised only inside a lapse, and the
 //! owner switches it off with "0". Every clock is a `ManualClock`, at noon UTC outside quiet hours,
-//! but for A9's case across the rollover hour, which runs five hours west of UTC with the owner's
-//! quiet window off, so that only the gap decides.
+//! but for A9's two cases across the rollover hour, which run five hours west of UTC with the
+//! owner's quiet window off, so that only the gap decides.
 
 // An integration test is test code: its fixtures panic on a failed setup.
 #![allow(clippy::expect_used)]
@@ -137,6 +137,42 @@ async fn a_comeback_past_the_cap_or_inside_the_gap_is_withheld() {
         [(0, SENT), (2, SPENT), (3, SENT)],
         "a comeback at noon on day 0; at 03:00 on the third calendar day, before the rollover, the \
          study day is 2 and inside the gap; at 05:00 it is 3 and past it"
+    );
+
+    // A comeback sent before the rollover hour is recorded on its study day, and the gap counts
+    // from there: one at 03:00 on the calendar day after day 0 is still on study day 0, so one at
+    // noon two calendar days later is on study day 3 and past the gap.
+    let early = Harness::new(west_of_utc(DAY + 1, 3, 0)).await;
+    early.set("quiet_start_min", "0").await;
+    early.set("quiet_end_min", "0").await;
+    let early_router = Router::new(
+        Arc::clone(&early.policy),
+        early.db.clone(),
+        early.clock.clone(),
+        west(),
+    )
+    .with_bot(early.bot.clone());
+    let mut sent_early = Vec::new();
+    for raised in [west_of_utc(DAY + 1, 3, 0), west_of_utc(DAY + 3, 12, 0)] {
+        early.clock.set(raised);
+        let on = west().study_day(raised).epoch_day();
+        let occasion = early.occasion(
+            "comeback",
+            "comeback:reading",
+            Surface::Bot,
+            Tier::T2,
+            on,
+            LAPSE,
+        );
+        let decision = early_router.route(&occasion).await.expect("a decision");
+        sent_early.push((on - DAY, decision));
+    }
+
+    assert_eq!(
+        sent_early,
+        [(0, SENT), (3, SENT)],
+        "a comeback sent at 03:00 on the calendar day after day 0, before the rollover, is on study \
+         day 0, so one at noon two calendar days later is 3 study days after it and past the gap"
     );
 }
 
