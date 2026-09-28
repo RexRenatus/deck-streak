@@ -1013,7 +1013,7 @@ WEB_FILE = "web/app/src/lib/start.ts"
 WEB_BASE = "export const ready = (a: boolean, b: boolean): boolean => a || b;\n"
 WEB_HEAD = (
     "export const ready = (a: boolean, b: boolean): boolean => a && b;\n"
-    "export const busy = (n: number): boolean => n > 0;\n"
+    "export const positive = (n: number): boolean => n > 0;\n"
     "export const label = (n: number): string => (n > 1 ? 'many' : 'one');\n"
 )
 
