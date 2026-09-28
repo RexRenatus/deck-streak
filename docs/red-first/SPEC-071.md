@@ -89,3 +89,95 @@ the current day, and settled nothing; left: [], right: [(StudyDay(20000), false)
 sync. A22 and A23 were run at 5c8ab5d with their test target whole
 (`--test rollup_routes`, its two tests) and A24 with its target's one test, each failing by its own
 assertion; A25 was run with its fenced command.
+
+## Fix round 1
+
+The first review planted six defects, S1 to S6, that every test passed. The code is right in all
+six places, so the round adds tests and changes no production code. The order of work: `dev` at
+c96c8eb absorbed by a merge commit that resolved nothing, since no file of #292 is one of this
+delivery's (b3c71ce); A13's own test widened (b41cef0, and one more malformed file at 504eaff); five
+tests of the fold and the sync cycle (892d904); rows S07111 and S07112 (ed31396); SPEC-071's §3,
+§9 and §10 (c9920c8); and this record.
+
+None of the six can be red first, because the code each one observes was already right. Each was
+run green on the real code instead, and red under its defect, planted on an export: the committed
+head, written out with `git archive` into a scratch directory, the defect applied at an anchor that
+occurs exactly once, the test run alone with `--exact`, and the file restored, its sha256 the same
+before the plant and after the restore. The defects are the review's own, verbatim. Under each one
+the whole test target ran as well, and the new test was the only one to fail, which is the gap the
+review measured. None of the six is a criterion of §3, so their record stands outside the
+`red-first` fence:
+
+```text
+S1, R9, recorded under A6: settle_fold::a_late_review_rerolls_a_settled_day_and_keeps_what_it_closed_with
+  green at 892d904
+  red under P3a-step (a revisit that re-rolls a day records its card state), export of ed31396:
+  assertion `left == right` failed: the card state it closed with
+  left: Some(CardState { mature_count: 2, young_count: 1, leech_active: 1, backlog: 0, due_today: 0 })
+  right: Some(CardState { mature_count: 2, young_count: 1, leech_active: 1, backlog: 1, due_today: 1 })
+S2, R16, recorded under A16: settle_fold::a_settle_whose_cursor_is_refused_commits_none_of_its_steps_work
+  green at 892d904
+  red under P3c (the steps' write commits before the cursor's write opens), export of ed31396:
+  assertion `left == right` failed: the refused settle committed none of its steps' work
+  left: 1, right: 0
+S3, R15, recorded under A18: settle_fold::cycle::a_sync_across_the_rollover_leaves_the_day_it_started_in_owed
+  green at 892d904
+  red under P3d (the fold is handed the day the sync finished in), export of ed31396:
+  assertion `left == right` failed: the fold rolled the current day up, and the day that closed stays owed
+  left: [(StudyDay(19999), true), (StudyDay(20000), false)], right: [(StudyDay(20000), false)]
+S4, R18, recorded under A21: settle_fold::a_change_to_any_review_field_or_to_the_courses_rerolls_the_day
+  green at 892d904
+  red under P3f (the fingerprint omits `ease`), export of ed31396:
+  assertion `left != right` failed: the fingerprint digests a review's ease
+  left: "9353b43f58d25e3d", right: "9353b43f58d25e3d"
+S5, R1, A13's own test: courses_config::the_courses_file_refuses_a_duplicate_or_overlapping_course
+  green at b41cef0 and at 504eaff
+  red under P5a (a malformed code's refusal quotes the code), exports of ed31396 and 504eaff:
+  an upper-case code: the setting DECKSTREAK_COURSES_FILE is malformed: it must be courses each
+  with a code of 1 to 8 lowercase letters, digits or hyphens, a name, a flag, a deck root, a
+  one-letter alias, a writing flag and unit bands, not "QAA" quotes QAA
+S6, R4, recorded under A14: settle_fold::cycle::cycles_with_an_unchanged_courses_file_leave_the_settings_generation_alone
+  green at 892d904
+  red under P5c (each recompute records another digest, then the file's own), export of ed31396:
+  assertion `left == right` failed: run 0: the generation stays where the first start put it
+  left: 3, right: 1
+```
+
+Each planted file read the same sha256 after its restore as before its plant:
+`recompute/analytics_step.rs` 35fe311db55052bb, `recompute/mod.rs` 132b02cd2202c5db,
+`sync_cycle.rs` b52b99ce74d72341 (twice), `rollup.rs` 581053c8f09564d5 and `courses.rs`
+08a5ce966bddd3ca (twice), each the first sixteen hex digits. They are the digests the review read
+before its own plants, so no production file changed between its round and this one.
+
+DISCLOSURE, A13 (`the_courses_file_refuses_a_duplicate_or_overlapping_course`): its body changed at
+b41cef0 and 504eaff, after its green commit 83f3a78. The loop over the malformed files asserted
+each refusal's variant and setting. It now also asserts that the refusal's text names the setting
+and quotes none of the file's string values longer than one character, as the loop over the
+contradictions already did. A text that is no JSON may not be quoted whole, and the schema's
+published name, `COURSES_SCHEMA`, is the one value a refusal may name, as the shape it expects.
+`malformed_files()` grew from 11 files to 19, so that every place the reader refuses a file's shape
+is reached by one of them. The eight added are a list, a course that is no object, unit bands that
+are no object, focus subjects that are no list, a focus subject that is no object, a focus
+subject's upper-case code, a focus subject's two-letter alias, and a course with no alias. The
+refusals of a missing file and of a relative path are held to naming the setting and not the path.
+Why: R1 refuses start "with an error naming the setting and never a value" at every refusal, and
+the test held only the contradictions to it, so a malformed code's refusal that quoted the code
+passed it (the review's S5). Nothing it asserted before was removed. A13's text in SPEC-071 §3 grew
+with it, from "refuses a duplicate code, alias or deck root and overlapping or unordered unit
+bands, naming the setting and never a value" to "refuses a file it cannot read, a malformed file, a
+duplicate code, alias or deck root and overlapping or unordered unit bands, each naming the setting
+and never a value".
+
+No other criterion's test changed in this round. The five other tests are new functions, and the
+tests of A6, A14, A16, A18 and A21 read as they did.
+
+Two of the six hold a settlement invariant that cargo-mutants cannot produce, and they take rows
+in SPEC-071's band. S07111-SETTLE-ONE-WRITE inserts a commit between a settle's steps and its
+cursor, and S2's test kills it. S07112-SYNC-START-DAY hands the fold the day the sync finished in,
+and S3's test kills it. `python3 scripts/mutation_rows.py prove --band S07100-S07199` at c9920c8 reads
+`rows: examined 12: killed 12, survived 0, void 0`: each killer selected its one test with
+and without the mutant, and each target was restored byte for byte. The other four take no row. R9's (S1) and R4's (S6) defects
+each add a call, which no constant, string, attribute or `new` method holds, and their tests hold
+them. A row for R18 (S4) would run its killer in analytics' own package, where no fold test runs.
+R1's (S5) defect leaks a value into a `&'static str` through `Box::leak`, which is contrived, and
+A13 itself now kills it.
