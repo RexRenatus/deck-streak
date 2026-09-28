@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE cron_fires SET catchup_count = max(catchup_count - 1, 0), ok_count = max(ok_count - 1, 0), updated_at = ?3 WHERE job_id = ?1 AND fire_date = ?2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "5769f379fb552eb74f8bc0de22ba85b9cef6c10ec935286a98d3076a7da57e26"
+}

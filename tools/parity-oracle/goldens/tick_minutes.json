@@ -1,0 +1,358 @@
+{
+  "cases": [
+    {
+      "class": "alignable",
+      "input": {
+        "interval_min": 5,
+        "offset_min": 2
+      },
+      "output": [
+        2,
+        7,
+        12,
+        17,
+        22,
+        27,
+        32,
+        37,
+        42,
+        47,
+        52,
+        57
+      ]
+    },
+    {
+      "class": "alignable",
+      "input": {
+        "interval_min": 6,
+        "offset_min": 2
+      },
+      "output": [
+        2,
+        8,
+        14,
+        20,
+        26,
+        32,
+        38,
+        44,
+        50,
+        56
+      ]
+    },
+    {
+      "class": "alignable",
+      "input": {
+        "interval_min": 10,
+        "offset_min": 2
+      },
+      "output": [
+        2,
+        12,
+        22,
+        32,
+        42,
+        52
+      ]
+    },
+    {
+      "class": "alignable",
+      "input": {
+        "interval_min": 12,
+        "offset_min": 2
+      },
+      "output": [
+        2,
+        14,
+        26,
+        38,
+        50
+      ]
+    },
+    {
+      "class": "alignable",
+      "input": {
+        "interval_min": 15,
+        "offset_min": 2
+      },
+      "output": [
+        2,
+        17,
+        32,
+        47
+      ]
+    },
+    {
+      "class": "alignable",
+      "input": {
+        "interval_min": 20,
+        "offset_min": 2
+      },
+      "output": [
+        2,
+        22,
+        42
+      ]
+    },
+    {
+      "class": "alignable",
+      "input": {
+        "interval_min": 30,
+        "offset_min": 2
+      },
+      "output": [
+        2,
+        32
+      ]
+    },
+    {
+      "class": "alignable",
+      "input": {
+        "interval_min": 60,
+        "offset_min": 2
+      },
+      "output": [
+        2
+      ]
+    },
+    {
+      "class": "unalignable",
+      "input": {
+        "interval_min": -15,
+        "offset_min": 2
+      },
+      "output": []
+    },
+    {
+      "class": "unalignable",
+      "input": {
+        "interval_min": 0,
+        "offset_min": 2
+      },
+      "output": []
+    },
+    {
+      "class": "unalignable",
+      "input": {
+        "interval_min": 1,
+        "offset_min": 2
+      },
+      "output": []
+    },
+    {
+      "class": "unalignable",
+      "input": {
+        "interval_min": 4,
+        "offset_min": 2
+      },
+      "output": []
+    },
+    {
+      "class": "unalignable",
+      "input": {
+        "interval_min": 7,
+        "offset_min": 2
+      },
+      "output": []
+    },
+    {
+      "class": "unalignable",
+      "input": {
+        "interval_min": 45,
+        "offset_min": 2
+      },
+      "output": []
+    },
+    {
+      "class": "unalignable",
+      "input": {
+        "interval_min": 61,
+        "offset_min": 2
+      },
+      "output": []
+    },
+    {
+      "class": "negative",
+      "input": {
+        "interval_min": 15,
+        "offset_min": -1
+      },
+      "output": [
+        14,
+        29,
+        44,
+        59
+      ]
+    },
+    {
+      "class": "negative",
+      "input": {
+        "interval_min": 15,
+        "offset_min": -7
+      },
+      "output": [
+        8,
+        23,
+        38,
+        53
+      ]
+    },
+    {
+      "class": "negative",
+      "input": {
+        "interval_min": 15,
+        "offset_min": -60
+      },
+      "output": [
+        0,
+        15,
+        30,
+        45
+      ]
+    },
+    {
+      "class": "offset",
+      "input": {
+        "interval_min": 15,
+        "offset_min": 7
+      },
+      "output": [
+        7,
+        22,
+        37,
+        52
+      ]
+    },
+    {
+      "class": "offset",
+      "input": {
+        "interval_min": 15,
+        "offset_min": 15
+      },
+      "output": [
+        0,
+        15,
+        30,
+        45
+      ]
+    },
+    {
+      "class": "offset",
+      "input": {
+        "interval_min": 15,
+        "offset_min": 61
+      },
+      "output": [
+        1,
+        16,
+        31,
+        46
+      ]
+    },
+    {
+      "input": {
+        "interval_min": 20,
+        "offset_min": -54
+      },
+      "output": [
+        6,
+        26,
+        46
+      ]
+    },
+    {
+      "input": {
+        "interval_min": 13,
+        "offset_min": 103
+      },
+      "output": []
+    },
+    {
+      "input": {
+        "interval_min": 42,
+        "offset_min": 26
+      },
+      "output": []
+    },
+    {
+      "input": {
+        "interval_min": 22,
+        "offset_min": -114
+      },
+      "output": []
+    },
+    {
+      "input": {
+        "interval_min": 53,
+        "offset_min": -16
+      },
+      "output": []
+    },
+    {
+      "input": {
+        "interval_min": 10,
+        "offset_min": -94
+      },
+      "output": [
+        6,
+        16,
+        26,
+        36,
+        46,
+        56
+      ]
+    },
+    {
+      "input": {
+        "interval_min": 17,
+        "offset_min": -39
+      },
+      "output": []
+    },
+    {
+      "input": {
+        "interval_min": 61,
+        "offset_min": 28
+      },
+      "output": []
+    },
+    {
+      "input": {
+        "interval_min": 58,
+        "offset_min": -15
+      },
+      "output": []
+    },
+    {
+      "input": {
+        "interval_min": 27,
+        "offset_min": -69
+      },
+      "output": []
+    },
+    {
+      "input": {
+        "interval_min": 41,
+        "offset_min": 40
+      },
+      "output": []
+    },
+    {
+      "input": {
+        "interval_min": 43,
+        "offset_min": -36
+      },
+      "output": []
+    }
+  ],
+  "function": "timebase.tick_minutes",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "function",
+  "registry": "tools/parity-oracle/registry/spec_027.py",
+  "registry_sha256": "ac5bdf68d64e1d17d9f6b93a5f237600e878d693b9d4c61f9655dbd37d8d6540",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}
