@@ -13,11 +13,14 @@ mod golden;
 use std::collections::{BTreeMap, BTreeSet};
 
 use deck_streak_analytics::metrics::{LanguageDay, daily_metrics, language_metrics};
-use deck_streak_analytics::settings::LeechThreshold;
-use deck_streak_analytics::snapshot::card_snapshot;
+use deck_streak_analytics::score::ScoreState;
+use deck_streak_analytics::settings::{AnalyticsSettings, LEECH_THRESHOLD, LeechThreshold};
+use deck_streak_analytics::snapshot::{CardSnapshot, CardState, card_snapshot};
 use deck_streak_ingest::reader::{Card, Review, course_of};
 use deck_streak_ingest::settings::DECK_SEPARATOR;
-use deck_streak_kernel::{CourseCode, Courses, Hour, StudyDay, StudyDayRule, Track, UtcOffset};
+use deck_streak_kernel::{
+    CourseCode, Courses, Environment, Hour, StudyDay, StudyDayRule, Track, UtcOffset,
+};
 use serde_json::{Value, json};
 
 fn integer(value: &Value) -> i64 {
@@ -344,5 +347,53 @@ fn a_review_with_no_course_adds_no_language_row() {
         rows(&languages),
         [json!([20_000, "qaa", 2, 20.0, 2, 2])],
         "only the course's two reviews make a row"
+    );
+}
+
+/// SPEC-071 §10: a snapshot's counts reach the stored card state and the score's inputs unchanged.
+#[test]
+fn a_snapshots_counts_reach_the_card_state_and_the_scores_inputs() {
+    let snapshot = CardSnapshot {
+        total_cards: 90,
+        mature_count: 40,
+        young_count: 30,
+        learning_count: 11,
+        suspended_count: 9,
+        leech_active: 3,
+        backlog: 7,
+        due_today: 12,
+    };
+    let state = CardState::from(&snapshot);
+    assert_eq!(
+        state,
+        CardState {
+            mature_count: 40,
+            young_count: 30,
+            leech_active: 3,
+            backlog: 7,
+            due_today: 12,
+        }
+    );
+    let inputs = ScoreState {
+        due_today: 12,
+        backlog: 7,
+        leech_active: 3,
+    };
+    assert_eq!(ScoreState::from(&snapshot), inputs);
+    assert_eq!(ScoreState::from(&state), inputs);
+}
+
+/// SPEC-071 R8: the leech threshold is read from its setting, and defaults when it is unset.
+#[test]
+fn the_leech_threshold_is_read_from_its_setting() {
+    let set = AnalyticsSettings::from_env(&Environment::from_vars([(LEECH_THRESHOLD, "12")]))
+        .expect("a threshold of 12 lapses");
+    assert_eq!(set.leech_threshold.get(), 12);
+    let unset = AnalyticsSettings::from_env(&Environment::default()).expect("no setting");
+    assert_eq!(unset.leech_threshold, LeechThreshold::default());
+    assert_ne!(
+        LeechThreshold::default().get(),
+        12,
+        "the set value differs from the default"
     );
 }

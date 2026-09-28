@@ -337,3 +337,22 @@ fn rounded(value: f64) -> i64 {
 const fn float(value: i64) -> f64 {
     value as f64
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{py_max, py_min};
+
+    /// Of two equal values Python's `min` and `max` return the first, so a tie between the two
+    /// zeros keeps the first one's sign.
+    #[test]
+    fn py_min_and_py_max_keep_the_first_of_two_equal_values() {
+        assert!(py_min(0.0, -0.0).is_sign_positive());
+        assert!(py_min(-0.0, 0.0).is_sign_negative());
+        assert!(py_max(0.0, -0.0).is_sign_positive());
+        assert!(py_max(-0.0, 0.0).is_sign_negative());
+        // and the smaller or larger of two different values wins either way round
+        let bits = |pair: (f64, f64)| (pair.0.to_bits(), pair.1.to_bits());
+        assert_eq!(bits((py_min(1.0, 2.0), py_min(2.0, 1.0))), bits((1.0, 1.0)));
+        assert_eq!(bits((py_max(1.0, 2.0), py_max(2.0, 1.0))), bits((2.0, 2.0)));
+    }
+}

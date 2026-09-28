@@ -281,3 +281,16 @@ fn count<T>(items: impl Iterator<Item = T>) -> i64 {
 const fn float(value: i64) -> f64 {
     value as f64
 }
+
+#[cfg(test)]
+mod tests {
+    use super::python_sum;
+
+    /// `CPython` adds the compensation only while it is finite, so a sum that overflows stays
+    /// infinite rather than turning into NaN (`builtin_sum_impl`'s `Py_IS_FINITE(c)`).
+    #[test]
+    fn an_overflowing_python_sum_stays_infinite() {
+        let sum = python_sum([f64::MAX, f64::MAX]);
+        assert!(sum.is_infinite() && sum.is_sign_positive(), "{sum}");
+    }
+}

@@ -524,6 +524,178 @@ async fn a_recompute_rerolls_only_changed_settling_and_current_days() {
 /// settles the day that closed before it. The deployment is a scratch one: an engine the test
 /// switches from failing to succeeding, an empty copy the engine itself created, and the service's
 /// database.
+/// SPEC-071 R16, R17: which evaluations run the today-only rules, and which roll a day up again.
+#[test]
+fn each_evaluation_says_whether_it_runs_todays_rules_and_rolls_the_day_up_again() {
+    let table = examined(
+        "evaluations",
+        vec![
+            (
+                Evaluation::Backfill {
+                    reviews_changed: false,
+                },
+                false,
+                false,
+            ),
+            (
+                Evaluation::Backfill {
+                    reviews_changed: true,
+                },
+                false,
+                true,
+            ),
+            (Evaluation::Settle { end_of_day: false }, true, true),
+            (Evaluation::Settle { end_of_day: true }, true, true),
+            (Evaluation::Current, true, true),
+            (
+                Evaluation::Revisit {
+                    reviews_changed: false,
+                },
+                false,
+                false,
+            ),
+            (
+                Evaluation::Revisit {
+                    reviews_changed: true,
+                },
+                false,
+                true,
+            ),
+        ],
+    );
+    for (evaluation, today_only, rerolls) in table {
+        assert_eq!(
+            (evaluation.runs_today_only_rules(), evaluation.rerolls()),
+            (today_only, rerolls),
+            "{evaluation:?}"
+        );
+    }
+}
+
+/// SPEC-071 R19: a fold lists its steps in the phases' order and, within a phase, in the order they
+/// were registered; a phase reads as its number and its name.
+#[test]
+fn a_fold_lists_its_steps_by_phase_then_by_registration() {
+    let log = Log::default();
+    let mut fold = Fold::default();
+    fold.register(Phase::BaseXp, probe(Phase::BaseXp, "probe.first", &log))
+        .expect("the probe is phase 2's");
+    fold.register(
+        Phase::RollupAndScore,
+        Box::new(AnalyticsStep::new(AnalyticsSettings::default())),
+    )
+    .expect("analytics' step is phase 1's");
+    fold.register(Phase::BaseXp, probe(Phase::BaseXp, "probe.second", &log))
+        .expect("the probe is phase 2's");
+
+    let steps = vec![
+        (Phase::RollupAndScore, "analytics.rollup_and_score"),
+        (Phase::BaseXp, "probe.first"),
+        (Phase::BaseXp, "probe.second"),
+    ];
+    assert_eq!(fold.steps(), steps);
+    assert_eq!(format!("{fold:?}"), format!("{steps:?}"));
+    assert_eq!(
+        Phase::RollupAndScore.to_string(),
+        "phase 1 (RollupAndScore)"
+    );
+    assert_eq!(Phase::BaseXp.to_string(), "phase 2 (BaseXp)");
+}
+
+/// SPEC-071 R14, R16: a clock stepped back to the last settled day evaluates it as the current
+/// day, and never again as a past day to revisit.
+#[tokio::test]
+async fn a_clock_stepped_back_to_a_settled_day_evaluates_it_only_as_the_current_day() {
+    let scratch = tempfile::tempdir().expect("a scratch");
+    let db = database(&scratch).await;
+    let log = Log::default();
+    let fold = fold(&log);
+    let data = collection(reviews_on(&[D0 - 3, D0 - 2, D0 - 1]), Vec::new());
+
+    let first = recompute(&fold, &db, &data, at(D0, 12), D0).await;
+    assert_eq!(first.settled, days(&[D0 - 1]), "{first:?}");
+    log.lock().unwrap_or_else(PoisonError::into_inner).clear();
+
+    let again = recompute(&fold, &db, &data, at(D0 - 1, 12), D0).await;
+    let last: Vec<Evaluation> = seen(&log)
+        .iter()
+        .filter(|seen| seen.day == day(D0 - 1))
+        .map(|seen| seen.evaluation)
+        .collect();
+    assert_eq!(last, [Evaluation::Current], "{again:?}");
+}
+
+/// The ERROR events this crate logs on the test's thread.
+#[derive(Clone, Default)]
+struct Errors(Arc<Mutex<Vec<String>>>);
+
+impl Errors {
+    fn logged(&self) -> Vec<String> {
+        self.0
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .clone()
+    }
+}
+
+impl tracing::Subscriber for Errors {
+    fn enabled(&self, _metadata: &tracing::Metadata<'_>) -> bool {
+        true
+    }
+
+    fn new_span(&self, _span: &tracing::span::Attributes<'_>) -> tracing::span::Id {
+        tracing::span::Id::from_u64(1)
+    }
+
+    fn record(&self, _span: &tracing::span::Id, _values: &tracing::span::Record<'_>) {}
+
+    fn record_follows_from(&self, _span: &tracing::span::Id, _follows: &tracing::span::Id) {}
+
+    fn event(&self, event: &tracing::Event<'_>) {
+        let metadata = event.metadata();
+        if *metadata.level() == tracing::Level::ERROR
+            && metadata.target().starts_with("deck_streak_coordination")
+        {
+            self.0
+                .lock()
+                .unwrap_or_else(PoisonError::into_inner)
+                .push(metadata.target().to_owned());
+        }
+    }
+
+    fn enter(&self, _span: &tracing::span::Id) {}
+
+    fn exit(&self, _span: &tracing::span::Id) {}
+}
+
+/// SPEC-071 R16: settling a day that no step of phase 1 rolled up is logged as an error, once, and
+/// a fold whose phase 1 rolls the day up settles it without one.
+#[tokio::test]
+async fn settling_a_day_no_step_rolled_up_logs_one_error() {
+    let errors = Errors::default();
+    let _logging = tracing::subscriber::set_default(errors.clone());
+    let data = collection(reviews_on(&[D0 - 1]), Vec::new());
+    let log = Log::default();
+
+    let scratch = tempfile::tempdir().expect("a scratch");
+    let mut bare = Fold::default();
+    bare.register(Phase::BaseXp, probe(Phase::BaseXp, "probe.base_xp", &log))
+        .expect("the probe is phase 2's");
+    let report = recompute(&bare, &database(&scratch).await, &data, at(D0, 12), D0).await;
+    assert_eq!(report.settled, days(&[D0 - 1]));
+    assert_eq!(errors.logged().len(), 1, "{:?}", errors.logged());
+
+    let rolled = tempfile::tempdir().expect("a scratch");
+    let report = recompute(&fold(&log), &database(&rolled).await, &data, at(D0, 12), D0).await;
+    assert_eq!(report.settled, days(&[D0 - 1]));
+    assert_eq!(
+        errors.logged().len(),
+        1,
+        "no further error: {:?}",
+        errors.logged()
+    );
+}
+
 mod cycle {
     use std::ffi::OsStr;
     use std::fs;
@@ -533,7 +705,7 @@ mod cycle {
 
     use deck_streak_analytics::rollup::RollupStore;
     use deck_streak_coordination::obligations::Obligations;
-    use deck_streak_coordination::recompute::analytics_step::AnalyticsStep;
+    use deck_streak_coordination::recompute::analytics_step::{ANALYTICS_STEP, AnalyticsStep};
     use deck_streak_coordination::recompute::{Fold, Phase};
     use deck_streak_coordination::sync_cycle::{CycleParts, Recompute, sync_cycle};
     use deck_streak_ingest::engine::{
@@ -643,6 +815,11 @@ mod cycle {
             .expect("phase 1's step");
         let cycle = CycleParts::new(syncer, reader, gate, Obligations::new(), clock.clone())
             .with_fold(Arc::new(fold), db.clone(), StudyDayRule::default(), None);
+        assert_eq!(
+            cycle.fold().map(Fold::steps),
+            Some(vec![(Phase::RollupAndScore, ANALYTICS_STEP)]),
+            "the cycle holds the fold it was handed"
+        );
 
         // The sync fails, and no sync ever succeeded: the recompute still runs, and the fold rolls
         // the current day up, but the day that closed stays owed.

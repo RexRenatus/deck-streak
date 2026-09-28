@@ -442,3 +442,52 @@ async fn the_analytics_routes_answer_only_the_owner() {
     );
     db.close().await;
 }
+
+/// SPEC-071 §10: a range the days route refuses answers 400 with its reason code alone, and a read
+/// that fails answers 500 with its own, so no refusal reads as an empty success.
+#[tokio::test]
+async fn a_refused_range_and_a_failed_read_answer_their_status_and_reason() {
+    let scratch = tempfile::tempdir().expect("a temporary directory");
+    let (db, app) = app(&scratch).await;
+    let cookie = cookie_of(&handshake(&app, OWNER_PAYLOAD).await);
+    let refusals = examined(
+        "refused range(s)",
+        vec![
+            (
+                "/api/analytics/days?from=2025-01-14&to=2025-01-12",
+                "range_invalid",
+            ),
+            (
+                "/api/analytics/days?from=2024-01-01&to=2025-06-01",
+                "range_too_long",
+            ),
+        ],
+    );
+    for (path, reason) in refusals {
+        let refused = get(&app, path, Some(&cookie)).await;
+        assert_eq!(refused.status, StatusCode::BAD_REQUEST, "{path}");
+        assert_eq!(refused.json(), json!({ "reason": reason }), "{path}");
+    }
+
+    // Once the rollups' table is out of reach, both reads fail, and say so.
+    let mut write = db.write().await.expect("a write");
+    sqlx::query("ALTER TABLE daily_rollup RENAME TO daily_rollup_out_of_reach")
+        .execute(&mut *write)
+        .await
+        .expect("the table is renamed");
+    write.commit().await.expect("the commit");
+    for path in [DAYS_PATH, SCORE_PATH] {
+        let failed = get(&app, path, Some(&cookie)).await;
+        assert_eq!(
+            failed.status,
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "{path}: {}",
+            failed.body
+        );
+        assert_eq!(
+            failed.json(),
+            json!({ "reason": "rollups_unreadable" }),
+            "{path}"
+        );
+    }
+}

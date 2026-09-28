@@ -11,7 +11,7 @@
 use std::path::{Path, PathBuf};
 
 use deck_streak_kernel::courses::{COURSES_FILE, content_digest};
-use deck_streak_kernel::{Courses, CoursesError, Db, Environment};
+use deck_streak_kernel::{CourseCode, Courses, CoursesError, Db, Environment};
 use serde_json::{Value, json};
 use tempfile::TempDir;
 
@@ -109,6 +109,13 @@ fn planted_contradictions() -> Vec<(&'static str, String, CoursesError)> {
             }),
             bands_fault("come out of order"),
         ),
+        (
+            "a band that ends where the band before it starts",
+            edited(|file| {
+                file["courses"][1]["unit_bands"] = json!({"A1": [9, 16], "A2": [1, 9]});
+            }),
+            bands_fault("overlap"),
+        ),
     ];
     planted
 }
@@ -134,6 +141,10 @@ fn malformed_files() -> Vec<(&'static str, String)> {
             edited(|file| file["courses"][0]["alias"] = json!("ab")),
         ),
         (
+            "a one-character alias that is no letter",
+            edited(|file| file["courses"][0]["alias"] = json!("1")),
+        ),
+        (
             "an upper-case code",
             edited(|file| file["courses"][0]["code"] = json!("QAA")),
         ),
@@ -155,6 +166,50 @@ fn malformed_files() -> Vec<(&'static str, String)> {
         ),
     ];
     malformed
+}
+
+/// SPEC-071 §10: the boundaries of the file's reading that no test above pinned.
+#[test]
+fn a_one_unit_band_loads_and_any_course_or_focus_subject_is_digested() {
+    let one_unit =
+        edited(|file| file["courses"][1]["unit_bands"] = json!({"A1": [1, 1], "A2": [2, 8]}));
+    let loaded = Courses::parse(&one_unit).expect("a band of one unit runs forwards");
+    let band = &loaded.courses()[1].unit_bands[0];
+    assert_eq!((band.band, band.first, band.last), ("A1", 1, 1));
+
+    let lists = examined(
+        "course lists",
+        vec![
+            ("courses and a focus subject", example().to_string(), true),
+            (
+                "courses alone",
+                edited(|file| file["focus_subjects"] = json!([])),
+                true,
+            ),
+            (
+                "a focus subject alone",
+                edited(|file| file["courses"] = json!([])),
+                true,
+            ),
+            (
+                "neither",
+                edited(|file| {
+                    file["courses"] = json!([]);
+                    file["focus_subjects"] = json!([]);
+                }),
+                false,
+            ),
+        ],
+    );
+    for (what, text, digested) in lists {
+        let loaded = Courses::parse(&text).expect(what);
+        assert_eq!(loaded.digest().is_some(), digested, "{what}");
+    }
+
+    // A code reads as itself, and debugs as its type around it.
+    let code = CourseCode::new("qaa").expect("a code");
+    assert_eq!(format!("{code}"), "qaa");
+    assert_eq!(format!("{code:?}"), "CourseCode(\"qaa\")");
 }
 
 #[test]

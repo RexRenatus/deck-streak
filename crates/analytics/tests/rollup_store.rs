@@ -11,9 +11,10 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use deck_streak_analytics::metrics::{daily_metrics, language_metrics};
 use deck_streak_analytics::rollup::{
-    RolledDay, RollupStore, StoredDay, fingerprint, record_card_state, record_close,
-    record_settled, roll_up,
+    self, RolledDay, RollupStore, StoredDay, fingerprint, fingerprints, recent_volumes,
+    record_card_state, record_close, record_score, record_settled, roll_up, settle_cursor,
 };
+use deck_streak_analytics::score::Score;
 use deck_streak_analytics::score::{Baseline, compute_score};
 use deck_streak_analytics::snapshot::CardState;
 use deck_streak_ingest::reader::Review;
@@ -203,4 +204,113 @@ async fn rerolling_a_settled_day_keeps_its_card_state_and_provenance() {
     assert_eq!(row.card_state_src, None);
     assert_eq!(row.score_at_close, None);
     assert_eq!(row.settled_at, None);
+}
+
+/// SPEC-071 §10: each read of the store answers what its writes recorded, so the fold's reads are
+/// proved in this package too, whose tests are the only ones cargo-mutants runs on it.
+#[tokio::test]
+async fn the_stores_reads_answer_what_its_writes_recorded() {
+    let scratch = TempDir::new().expect("a scratch directory");
+    let db = database(&scratch).await;
+    let day_reviews = reviews(DAY, 3);
+    assert!(roll(&db, DAY, &day_reviews, 1_000).await, "a new row");
+    let day = StudyDay::from_epoch_day(DAY);
+    let missing = StudyDay::from_epoch_day(DAY + 1);
+    let mut write = db.write().await.expect("a write");
+
+    let rolled = rollup::stored(&mut write, day)
+        .await
+        .expect("the day reads")
+        .expect("the rolled day is stored");
+    assert_eq!(rolled.metrics.reviews, 3, "the day's three reviews");
+    let absent = rollup::stored(&mut write, missing)
+        .await
+        .expect("the day reads");
+    assert!(
+        absent.is_none(),
+        "a day never rolled up is none: {absent:?}"
+    );
+    assert_eq!(
+        fingerprints(&mut write)
+            .await
+            .expect("the fingerprints read"),
+        BTreeMap::from([(day, fingerprint(&day_reviews, Some(DIGEST)))])
+    );
+    let volumes: Vec<(StudyDay, i64, u64)> = recent_volumes(&mut write, day)
+        .await
+        .expect("the volumes read")
+        .iter()
+        .map(|volume| (volume.day, volume.reviews, volume.seconds.to_bits()))
+        .collect();
+    assert_eq!(volumes, [(day, 3, rolled.metrics.seconds.to_bits())]);
+
+    // A new score replaces the day's.
+    let rescored = Score {
+        total: rolled.score.total + 1,
+        consistency: rolled.score.consistency + 1.0,
+        mastery: rolled.score.mastery + 1.0,
+        ..rolled.score
+    };
+    record_score(&mut write, day, &rescored)
+        .await
+        .expect("the score records");
+    let read = rollup::stored(&mut write, day)
+        .await
+        .expect("the day reads")
+        .expect("the day is stored")
+        .score;
+    assert_eq!(
+        (
+            read.total,
+            read.consistency.to_bits(),
+            read.mastery.to_bits()
+        ),
+        (
+            rescored.total,
+            rescored.consistency.to_bits(),
+            rescored.mastery.to_bits()
+        )
+    );
+
+    // Settling a day with no rollup records nothing; settling the day moves the cursor to it.
+    let at = UtcMillis::from_epoch_millis(2_000);
+    assert_eq!(
+        settle_cursor(&mut write).await.expect("the cursor reads"),
+        None
+    );
+    assert!(
+        !record_settled(&mut write, missing, at)
+            .await
+            .expect("the settle runs"),
+        "no row to settle"
+    );
+    assert!(
+        record_settled(&mut write, day, at)
+            .await
+            .expect("the settle records"),
+        "the day's row settles"
+    );
+    assert_eq!(
+        settle_cursor(&mut write).await.expect("the cursor reads"),
+        Some(day)
+    );
+}
+
+/// SPEC-071 R18: a fingerprint moves with every review and with the courses' digest.
+#[test]
+fn a_fingerprint_changes_with_the_reviews_and_the_courses() {
+    let two = reviews(DAY, 2);
+    let prints = [
+        fingerprint(&two, Some(DIGEST)),
+        fingerprint(&reviews(DAY, 3), Some(DIGEST)),
+        fingerprint(&two, None),
+        fingerprint(&two, Some("")),
+    ];
+    let distinct: BTreeSet<&String> = prints.iter().collect();
+    assert_eq!(distinct.len(), prints.len(), "{prints:?}");
+    assert_eq!(
+        fingerprint(&reviews(DAY, 2), Some(DIGEST)),
+        prints[0],
+        "the same reviews print the same"
+    );
 }
