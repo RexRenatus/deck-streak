@@ -133,6 +133,34 @@ R12. Every CI job that compiles Rust (`rust`, and `hygiene`, whose guard tests b
     digest ADR-022 pins, and puts it on `PATH`, as #204's gate job did. Every workflow that pins
     `protoc` pins that digest, `engine-measure.yml` included, and that workflow is unchanged: its
     cold build restores no cache, on purpose.
+R13. The engine set is one nextest filterset, `ENGINE_TESTS` in `scripts/check.sh`, stated nowhere
+    else: SPEC-022's two test binaries that drive Anki's engine end to end,
+    `binary_id(=deck-streak-ingest::sync) | binary_id(=deck-streak-ingest::engine_budget)`. The
+    `test` stage runs `cargo nextest run --workspace --locked --no-fail-fast -E 'not (<the set>)'`,
+    and a new `test-engine` stage runs the same command with `-E '<the set>'`. The two commands
+    differ only in the filterset, so every test of the workspace runs in exactly one of them, under
+    one build scope and one feature resolution. `test-engine` checks `cargo`, `cargo-nextest` and
+    then `protoc`, as `test` does (R4), and `check.sh` with no arguments runs both (section 8).
+R14. A fifth gate job, `engine`, runs `bash scripts/check.sh test-engine` beside R3's four. It needs
+    nothing and has no job-level condition, so it starts with them on every event. It installs the
+    pinned toolchain, `cargo-nextest` and R12's `protoc` before its stage, restores the Rust cache
+    under R1's key with `actions/cache/restore` and never saves it (only `rust` saves: two jobs
+    saving one key race, and `rust` builds every target), sets `CARGO_INCREMENTAL=0`, uploads its
+    stage logs under R11, and has a `timeout-minutes` sized from section 8's measurements. The
+    aggregate `ci` needs it beside R3's needs, so the engine's tests stay required (section 8).
+R15. The target of a warm code pull request is revised in writing: the engine set's run bounds its
+    critical path, which is the `engine` job. Section 8 states that path and the `rust` job's, each
+    as its measured components, and holds them to it, with the gate measured from the first job's
+    start to the end of `ci`, excluding each job's wait for a runner. A change that lengthens
+    either past its bound says so in its pull request, with the run that measured it.
+R16. The `engine` job runs the engine set in two slices, one per runner, from a matrix whose one
+    dimension counts the slices from 1 to N (`slice: [1, 2]`). Each leg hands `test-engine` its own
+    slice as `ENGINE_SLICE=<m>/<N>`, N being the matrix's size (`strategy.job-total`), and
+    `test-engine` passes it to nextest as `--partition slice:<m>/<N>`. That is nextest's
+    cross-binary round robin over the one list the filterset selects, so the slices hold every test
+    of the set once. Without `ENGINE_SLICE`, as in the local gate, `test-engine` runs the whole set.
+    A value that names no slice m/n with 1 <= m <= n fails the stage by name before any build.
+    `fail-fast` is false, so each slice runs to its end. Section 8's measurement chose two slices.
 
 ## 3. Acceptance criteria
 
@@ -153,6 +181,11 @@ R12. Every CI job that compiles Rust (`rust`, and `hygiene`, whose guard tests b
 | A13 | every gate job uploads its stage logs from a directory the upload does not skip | `test_ci_workflows.py` `every_job_uploads_its_stage_logs_from_a_visible_directory` |
 | A14 | every job that compiles Rust installs protoc 31.1, checked against ADR-022's digest, before its stages, and every workflow pins that digest | `test_ci_workflows.py` `every_job_that_compiles_rust_installs_the_pinned_protoc_first` |
 | A15 | the stages that compile the engine fail by name without protoc, and honour a `PROTOC` that names an executable | `test_check_gate.py` `the_stages_that_compile_the_engine_need_protoc` |
+| A16 | the engine set is defined once, `test` runs its complement and `test-engine` runs it, and their commands differ only in the filterset; a stage holding its own copy of the set, a `test` that runs the set itself, a second build scope and a second definition are refused | `test_check_gate.py` `both_test_stages_take_the_engine_set_from_its_one_definition` |
+| A17 | the engine set is a union of whole test binaries, each a test target of a workspace crate that holds tests; a set naming nothing, a missing target and an unknown package are refused | `test_check_gate.py` `the_engine_set_names_test_binaries_that_hold_tests` |
+| A18 | the `engine` job runs `test-engine` alone, starts with the other jobs on every event and is a need of `ci`; it installs `cargo-nextest` before its stage, restores the Rust cache and saves none, builds without incremental state, and has a timeout in its measured band; a planted job that breaks each rule is refused | `test_ci_workflows.py` `the_engine_job_runs_the_engine_set_beside_the_rust_job` |
+| A19 | `test-engine` hands nextest the slice it is given, adding only `--partition slice:<m>/<n>` to its command; given none, it runs the whole set; given a value that names no slice, it fails by name and builds nothing | `test_check_gate.py` `the_engine_stage_runs_the_slice_it_is_given` |
+| A20 | the `engine` job's matrix counts its slices from 1 to N once each, N at least 2, each leg hands `test-engine` its own slice of the matrix's size, and no leg's failure cancels another; a slice run twice, a leg that names the wrong count and a cancelling matrix are refused | `test_ci_workflows.py` `the_engine_job_runs_each_slice_of_the_engine_set_once` |
 
 ```acceptance
 A1: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k the_rust_cache_is_keyed_on_the_toolchain_pin_and_the_lockfile
@@ -170,6 +203,11 @@ A12: python3 -m unittest discover -s scripts/tests -p test_check_gate.py -k each
 A13: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k every_job_uploads_its_stage_logs_from_a_visible_directory
 A14: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k every_job_that_compiles_rust_installs_the_pinned_protoc_first
 A15: python3 -m unittest discover -s scripts/tests -p test_check_gate.py -k the_stages_that_compile_the_engine_need_protoc
+A16: python3 -m unittest discover -s scripts/tests -p test_check_gate.py -k both_test_stages_take_the_engine_set_from_its_one_definition
+A17: python3 -m unittest discover -s scripts/tests -p test_check_gate.py -k the_engine_set_names_test_binaries_that_hold_tests
+A18: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k the_engine_job_runs_the_engine_set_beside_the_rust_job
+A19: python3 -m unittest discover -s scripts/tests -p test_check_gate.py -k the_engine_stage_runs_the_slice_it_is_given
+A20: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k the_engine_job_runs_each_slice_of_the_engine_set_once
 ```
 
 The workflow tests read `.github/workflows/*.yml` with a small reader of the block YAML the
@@ -185,6 +223,20 @@ that exits 0 for each tool the case provides, so they run no cargo, pnpm or gitl
 the runner over a copy of `.packs/` and `scripts/` with a synthetic pack, as SPEC-030's A6 to A8 do.
 A9's rows are probes that register themselves in a directory while they run and record the most
 they ever saw running at once.
+
+A16 runs `check.sh`'s `test` and `test-engine` stages the same way, with a `cargo` that records the
+arguments it is given, twice: once as written, and once with a planted set written in the
+definition's place. A stage that states the set itself, rather than reading the one definition,
+keeps the old set in the second run and is refused. A17 resolves each binary the set names to its
+crate's `tests/<target>.rs` and counts the tests there. A19 runs `test-engine` with and without
+`ENGINE_SLICE`, over slices and over values that name none, and A20 judges the `engine` job's
+matrix and each leg's slice beside a planted matrix that runs a slice twice. Since the amendment,
+the populations of A1, A3 to A6 and A13 to A15 include the new stage and the new job: A3's layout
+holds five gate jobs, A5 and A15 judge `test-engine`'s tools and `protoc`, and A1, A13 and A14
+judge the `engine` job's toolchain, cache, logs and `protoc` like any job that compiles Rust. They
+grow through the tables those tests read, each extended by one entry and no assertion changed:
+`OWNER_LAYOUT` and `COMPILES_RUST` in `test_ci_workflows.py`, and `TOOLS` and `ENGINE_STAGES` in
+`test_check_gate.py`.
 
 ## 4. File manifest
 
@@ -202,6 +254,15 @@ they ever saw running at once.
 | `docs/schematics/ci-jobs-and-caches.md` | repo | added: the jobs, the caches and who reads and writes them |
 | `docs/red-first/SPEC-038.md` | repo | added |
 | `changelog.d/feat-ci-speed-038.md` | repo | added |
+| `.github/workflows/ci.yml` | repo | changed by the amendment (section 8): R14 and R16, the `engine` job, its two slices and its `ci` need |
+| `scripts/check.sh` | repo | changed by the amendment: R13 and R16, the engine set, the `test` stage's filterset and the `test-engine` stage with its slice |
+| `scripts/tests/test_check_gate.py` | repo | changed by the amendment: A16, A17 and A19; A5, A6 and A15 judge `test-engine` too |
+| `scripts/tests/test_ci_workflows.py` | repo | changed by the amendment: A18 and A20; A1, A3, A13 and A14 judge the `engine` job too |
+| `docs/TESTING.md` | repo | changed by the amendment: the `engine` job and the engine set |
+| `docs/schematics/ci-jobs-and-caches.md` | repo | changed by the amendment: the `engine` job, and the engine set split between two stages |
+| `docs/decisions/ADR-055-the-gate-runs-in-parallel-jobs-and-only-a-push-saves-a-cache.md` | repo | changed by the amendment: a note at its end (the ADR is accepted, so it is appended to) |
+| `docs/red-first/SPEC-038.md` | repo | changed by the amendment: A16 to A20 |
+| `changelog.d/feat-ci-engine-038.md` | repo | added by the amendment: its own fragment, beside the delivery's |
 
 ## 5. What this does NOT do
 
@@ -217,6 +278,19 @@ they ever saw running at once.
   `ci` still needs every job (#207).
 - It does not measure the warm runs. Only a push to `dev` saves a cache, so the warm numbers exist
   only after this merges, and the orchestrator measures them (#207).
+- The amendment moves no test out of the gate and skips none: `ci` needs the `engine` job, which
+  runs on every event, and the local gate runs both test stages (#207).
+- The amendment changes none of SPEC-022's tests and builds none of them optimised, so the engine
+  set's run stays the floor of a warm pull request; shortening it is a decision about SPEC-022's
+  tests (#15).
+- The amendment does not stop a cargo command from recompiling the engine. That is ADR-022's
+  finding about the engine's build script, and each cargo command that builds the engine still
+  pays it: three in `rust`, and one in each `engine` leg (#228).
+- The amendment narrows no build: `test-engine` builds the workspace's scope, as `test` does,
+  because a build of the ingest package alone resolves other features than the build the cache
+  holds, and would recompile what the cache already has (section 8) (#207).
+- The amendment runs the engine set in two slices, not three or more: a slice cannot finish
+  before its slowest test, 74 to 82 s, and each slice costs another runner (section 8) (#207).
 
 ## 6. Risks
 
@@ -242,6 +316,15 @@ they ever saw running at once.
 - **The engine compiles again in every cargo command.** ADR-022's finding: a warm cache saves every
   dependency but the engine and what depends on it, which `clippy`, `test` and `doctest` each
   compile once. Section 7 measures it; the fix belongs to the engine's build script, not to CI.
+- **A slow test outside the engine set.** The set holds whole binaries, so a test added to
+  SPEC-022's sync or budget binary goes with it. A slow test added to any other binary runs in
+  `rust` and lengthens it, and R15 has its pull request say so.
+- **A stale engine set.** A renamed binary would leave the set naming a target that is gone. Its
+  tests would still run, in `rust`, because the complement drops none; A17 refuses a set that names
+  a missing target, and nextest fails a run that selects no test.
+- **The engine job repeats the test build.** `engine` builds the same workspace scope that `rust`'s
+  `test` stage builds, one forced engine recompile included. Section 8 measures it and says why a
+  narrower build would cost more than it saves.
 
 ## 7. Measurements
 
@@ -325,3 +408,171 @@ the split is no faster with the engine in: its gain is the warm run.
   cache missed, then saved; the save step names the Rust entry's size), a code pull request and a
   docs-only pull request that restore them, and a later push to `dev` with the same lockfile (an
   exact hit that saves nothing).
+
+## 8. Amendment, 2026-09-28: the engine's slow tests run in a job of their own
+
+Made after the delivery, under the owner's delegation, on issue #207. It inserts, and changes no
+earlier byte:
+
+- section 2: R13 to R16, after R12;
+- section 3: rows A16 to A20 of the criteria table, lines A16 to A20 of the acceptance fence, and
+  the paragraph that begins "A16 runs";
+- section 4: the nine rows marked "by the amendment";
+- section 5: the five bullets that begin "The amendment";
+- section 6: the three risks "A slow test outside the engine set", "A stale engine set" and "The
+  engine job repeats the test build";
+- this section.
+
+The title and R3 still say four jobs: the layout A3 pins now holds five gate jobs, `engine` among
+them. ADR-055 carries a note at its end. Two rulings on the amendment's form, made by the
+orchestrator under the owner's delegation:
+
+- (i) A delivered SPEC may be amended insert-only: every existing byte kept in order, and each insertion listed in the dated amendment section. A byte-wise append is impossible, because the sdd probe's acceptance-fenced class reads the criteria from section 3 only.
+- (ii) Growing `TOOLS`, `COMPILES_RUST` and `ENGINE_STAGES` is accepted: they extend tables the amendment needs, no assertion changed, and each is disclosed (section 3's paragraph that begins "A16 runs", and the red-first record).
+
+### The gate, as this section measures it
+
+The gate is measured from the first job's start to the end of `ci`, excluding each job's wait for a
+runner, which this workflow does not control (1 to 144 s in the runs below). The gate jobs need
+nothing and `ci` needs them all, so the gate is the longest gate job's run time plus `ci`'s own.
+Every gate time in this section is that one, taken from the jobs' start and end times.
+
+### The problem, measured
+
+Section 7 left the warm numbers to be measured. `dev`'s caches were saved by run 36369172368, the
+push of #212 at `dev` 63e6671, whose Rust entry is 1,005.3 MB (1,005,277,540 bytes). A code pull
+request that restored them by exact key still spent most of its `rust` job in one nextest run:
+
+| run | what it is | `rust` job, and the gate | stages (`timings.tsv`) |
+|---|---|---|---|
+| 36368711222, attempt 2 | #212's last pull-request run, its `rust` job re-run: its merge commit holds `dev` 63e6671's tree exactly | 4m19s; only `rust` re-ran, so no gate | fmt 0 s, clippy 16 s, test 186 s (the build 45.7 s, the run 139.4 s), doctest 28 s, audit-rust 3 s |
+| 36371239856 | this amendment's red commit, whose workflow was still the single `rust` job | 4m22s; the gate 4m26s | fmt 1 s, clippy 17 s, test 186 s (the build 46.9 s, the run 139.3 s), doctest 28 s, audit-rust 4 s |
+
+A push to `dev` in that layout came after #224 had changed `Cargo.lock`: run 36372781643, at `dev`
+c0dbf2a, restored the 63e6671 entry by its fallback key. Its `rust` job took 4m44s (test 194 s: the
+build 54.8 s, 145 tests in 139.0 s) and its gate 4m46s, and it saved a new entry of 1,005.2 MB
+(1,005,227,749 bytes) under the new key.
+
+The run of 126 tests took 139 s, and ten of them set it: SPEC-022's `sync` and `engine_budget`
+binaries. The other 116 took 5.8 s together, none over 1.5 s. It was decided, under the owner's
+delegation: "A parallel `engine` job runs SPEC-022's slow sync and budget tests, and `rust` runs
+the rest. Every test stays required: `ci` needs both." And: "revise the target in writing: the warm
+critical path is bounded by the engine floor."
+
+### The engine set (R13), chosen by the measured runtimes
+
+| test | binary | seconds, one job (36368711222 attempt 2) |
+|---|---|---|
+| `an_incremental_sync_of_one_hundred_new_reviews_stays_inside_the_time_budget` | `engine_budget` | 80.8 |
+| `a_full_sync_demand_downloads_and_never_uploads` | `sync` | 73.5 |
+| `a_sync_run_sends_no_upload_and_no_local_change` | `sync` | 64.4 |
+| `a_full_download_of_the_large_synthetic_collection_stays_inside_the_memory_budget` | `engine_budget` | 59.6 |
+| `a_second_sync_with_no_change_pulls_nothing` | `sync` | 44.0 |
+| `a_sync_pulls_a_review_made_on_another_client` | `sync` | 40.1 |
+| `a_server_with_no_collection_is_refused_with_full_upload_required` | `sync` | 33.0 |
+| `opening_a_large_synthetic_collection_and_its_new_card_queue_stays_inside_the_memory_budget` | `engine_budget` | 20.4 |
+| `a_second_scheduled_sync_in_one_study_day_is_refused`, `an_owner_trigger_within_five_minutes_of_a_success_returns_it_without_syncing` | `sync` | under 0.1 each |
+| the other 116 tests of the workspace, in 61 binaries | | 5.8 together, at most 1.5 |
+
+The set holds the two binaries whole. Each of their slow tests builds a large synthetic collection
+or starts the engine's sync server, so a test added to either binary is likely to be slow as well,
+and it goes with the binary; a renamed test cannot slip out. The two fast tests ride along at no
+cost. The rest of the ingest package stays in `test`, because its tests take under a second.
+
+`test-engine` builds the workspace's scope, as `test` does. Cargo unifies features over the packages
+it builds, so an ingest-only build resolves `tokio` and what depends on it differently from the
+`--workspace` build the cache holds. Measured on the maintainer's machine, in a target warm from the
+workspace's own test build: `cargo nextest run -p deck-streak-ingest --no-run` recompiled 22
+dependencies (`anki` and `anki_proto`, `burn` and `fsrs`, `prost`, `reqwest`, `axum`, `tower`
+among them) and took 58.6 s, where `test-engine`'s own build of the whole workspace took 46.1 s.
+
+### Two slices (R16), measured
+
+Sharding lowers the floor only as far as the slowest test allows, so it was measured: one `engine`
+job at c8b1d3e, then two slices at 25b102c, each run twice (the second attempt a re-run), and the
+two slices five more times on this branch's later heads. A leg's time is its job's run time; its
+`test-engine` stage is given with the stage's test build and its tests' run.
+
+| run | layout | the slower `engine` leg, then the other | `rust` | the gate |
+|---|---|---|---|---|
+| 36371536468, attempt 1 | one engine job | 3m39s: test-engine 194 s (the build 48.6 s, the run 141.3 s) | 2m17s | 3m41s |
+| 36371536468, attempt 2 | one engine job | 3m38s: test-engine 193 s (the build 46.3 s, the run 142.0 s) | 2m01s | 3m41s |
+| 36372201275, attempt 1 | two slices | slice 1 2m32s: test-engine 128 s (the build 47.3 s, the run 75.3 s); slice 2 1m59s: 83 s (32.9 s, 44.2 s) | 1m52s | 2m35s |
+| 36372201275, attempt 2 | two slices | slice 1 2m32s: 126 s (46.7 s, 75.3 s); slice 2 2m24s: 118 s (45.8 s, 67.8 s) | 2m04s | 2m36s |
+| 36373161165 | two slices, `dev` c0dbf2a merged in, restored by the fallback key | slice 1 2m38s: 132 s (52.8 s, 74.4 s); slice 2 2m36s: 117 s (53.7 s, 60.2 s) | 2m22s | 2m41s |
+| 36373786208 | two slices at f607dcd, restoring c0dbf2a's entry by exact key | slice 1 2m46s: 133 s (55.0 s, 74.3 s); slice 2 2m40s: 127 s (53.9 s, 69.1 s) | 2m19s | 2m48s |
+| 36374302129 | two slices at 2bc6350, the same key | slice 2 3m07s: 152 s (67 s, 80.6 s); slice 1 2m51s: 137 s (56.6 s, 76.2 s) | 2m17s | 3m09s |
+| 36374807751 | two slices at c12bc7e, the same key | slice 1 2m49s: 140 s (54.5 s, 82.2 s); slice 2 2m39s: 126 s (52.8 s, 68.7 s) | 2m15s | 2m51s; 3m37s with the gate jobs' waits for a runner in it, and 3m50s with `ci`'s 13 s wait too |
+| 36379817026 | two slices at 094260f, `dev` 3f5470e merged in, restored by the fallback key | slice 1 2m57s: 142 s (62 s, 76.0 s); slice 2 2m43s: 136 s (62 s, 69.0 s) | 2m31s | 3m00s |
+
+Each slice ran five tests. Slice 1's run, 74.3 to 82.2 s in the seven sliced runs, is the time of
+its slowest test, `a_sync_run_sends_no_upload_and_no_local_change`. Two slices took 66 s and 65 s
+off the gate in the two pairs of runs of one tree (3m41s to 2m35s and 2m36s), so the engine set
+runs in two. A third slice would still wait for that test, and would cost another runner for a
+gain the two samples do not show.
+
+The later runs build a larger workspace, because both test stages build all of it. With #224 merged
+in (c0dbf2a), an `engine` leg's test build took 52.8 to 56.6 s, once 67 s on a slower runner,
+against 32.9 to 48.6 s at 63e6671; with `dev` 3f5470e merged in, 62 s. #224 also brought two tests
+(`deck-streak-coordination::ledger`) of 0.3 to 13.6 s each, outside the engine set, which run in
+`rust`: its 135 tests took 2.1 to 14.5 s, and at 3f5470e its 163 tests 5.5 s.
+
+The price is runner time. Each slice pays its own setup, restore and test build, so in run
+36372201275's two attempts the Rust jobs took 6m23s and 7m00s of runner time together (`rust` and
+both slices), against 4m22s for the single `rust` job before the amendment, for a gate 1m51s and
+1m50s shorter.
+
+The `rust` job's stages in the first four runs, at 63e6671's workspace: fmt 0 to 1 s, clippy 14 to
+16 s, test 44 to 51 s (the build 30.3 to 45.8 s, the 116 tests 2.0 to 12.9 s), doctest 18 to 27 s,
+audit-rust 2 to 4 s; its restore took 14 to 25 s, and each `engine` leg's 11 to 22 s. On the
+maintainer's machine, run at c8b1d3e with its own build: fmt 1 s, clippy 48 s, test 91 s (116
+tests), doctest 85 s, audit-rust 6 s, test-engine 150 s (the build 46 s, the run of the whole set
+103 s).
+
+### The revised target (R15)
+
+The warm code pull request's target of about a minute and a half is revised. The engine set's run
+bounds it: its slowest test takes 74 to 82 s in a slice, after a test build that recompiles the
+engine once (ADR-022's finding, #228), 33 to 67 s with the workspace. Measured over the seven
+sliced runs, the warm critical path is the slower `engine` leg:
+
+- **an `engine` leg:** 13 to 18 s of setup and upload (the checkout, `rustup show` 7 to 10 s,
+  `cargo-nextest`, `protoc`, the stage logs), the restore 11 to 22 s, and `test-engine` 83 to 152 s
+  (the workspace's test build 33 to 67 s, one forced engine recompile among it, and the slice's run
+  44 to 82 s). The slower leg took 2m32s, 2m32s, 2m38s, 2m46s, 3m07s, 2m49s and 2m57s: about 2m46s,
+  **held to 3m15s**.
+- **the `rust` job:** 14 to 20 s of setup and upload, the restore 11 to 25 s, and four cargo
+  commands, three of them recompiling the engine: clippy 14 to 17 s, test 44 to 65 s, doctest 18 to
+  31 s, audit-rust 2 to 4 s. In the nine runs since the split it took 1m52s to 2m31s: about 2m13s,
+  **held to 2m30s**.
+- **the gate:** the slower of the two, then the aggregate `ci`, which runs in 2 to 4 s. It took
+  2m35s, 2m36s, 2m41s, 2m48s, 3m09s, 2m51s and 3m00s, against 4m26s before the amendment and 3m41s
+  with one engine job: about 2m49s, **held to 3m20s**.
+
+One run broke a bound, and R15 has it said here: in run 36379817026, with `dev` 3f5470e merged in
+and the cache restored by its fallback key, `rust` took 2m31s, 1 s past its 2m30s. Its test build
+took 59.0 s for 163 tests in 72 binaries, against 30.3 to 55.0 s before; the gate held at 3m00s,
+because the slower `engine` leg is the critical path. The bound is kept, and this run is recorded
+against it.
+
+The engine legs and `rust` build the whole workspace, so their builds grow as it does; a delivery
+that takes a job past its bound says so (R15), and the fix is then the test build, not the split.
+
+These bounds are for the gate's five jobs. SPEC-039's mutation jobs, when they are needs of `ci`,
+state their own.
+
+The `engine` job's `timeout-minutes` is 20, sized from these runs: a warm leg took 1m59s to 3m07s,
+and a cold one repeats the test stage's cold build (102 s and 126 s in runs 36368711222 and
+36369172368) before a slice of at most 82 s, about 4 minutes. Twenty minutes holds five cold legs,
+and a hung sync test is stopped in a twentieth of GitHub's default six hours.
+
+### What remains for the orchestrator
+
+- The merge's own push to `dev`. This pull request leaves `Cargo.lock` as `dev` has it, so the push
+  restores the entry `dev`'s own push saved for that lockfile (1,005.2 MB, 1,005,229,631 bytes) by
+  exact key, and saves nothing: the first warm push measured in five jobs.
+- A cold run of this layout. A change to `Cargo.lock` still restores the newest entry of the same
+  toolchain, so only a new toolchain pin or an evicted entry runs cold, and its first push to `dev`
+  saves the new key.
+- A docs-only pull request, which does the same work as a code pull request, since no job is
+  skipped by path (section 5).

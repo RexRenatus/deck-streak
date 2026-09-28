@@ -8,7 +8,7 @@
 # its full output to a log under $CHECK_LOG_DIR (a fresh temporary directory by default), prints
 # one summary line, and adds a row to timings.tsv there. Each stage first checks the tools it runs:
 # a missing tool FAILS that stage by name, with its install hint, because a gate that silently
-# skipped a stage would report green having examined nothing. CI runs these stages in four parallel
+# skipped a stage would report green having examined nothing. CI runs these stages in five parallel
 # jobs, each stage in exactly one of them (ADR-055).
 set -uo pipefail
 
@@ -18,9 +18,16 @@ LOG_DIR="${CHECK_LOG_DIR:-$(mktemp -d -t deckstreak-check.XXXXXX)}"
 mkdir -p "$LOG_DIR"
 TIMINGS="$LOG_DIR/timings.tsv"
 
-# In CI's order: the rust job, the web job, the packs job, the hygiene job.
-STAGES_ALL=(fmt clippy test doctest audit-rust web audit-web packs python scrub secrets)
+# In CI's order: the rust job, the engine job, the web job, the packs job, the hygiene job.
+STAGES_ALL=(fmt clippy test doctest audit-rust test-engine web audit-web packs python scrub secrets)
 if [ "$#" -gt 0 ]; then STAGES=("$@"); else STAGES=("${STAGES_ALL[@]}"); fi
+
+# The engine set (SPEC-038 R13), defined here and nowhere else: SPEC-022's two test binaries that
+# drive Anki's engine end to end, whose tests take between 20 and 83 s each on a CI runner while
+# every other test of the workspace takes under 2 s. `test` runs every test outside the set and
+# `test-engine` runs the set, with one command that differs only in this filterset, so each test
+# runs in exactly one of the two, and a test added to either binary goes with it.
+ENGINE_TESTS='binary_id(=deck-streak-ingest::sync) | binary_id(=deck-streak-ingest::engine_budget)'
 
 failed=()
 
@@ -33,6 +40,8 @@ need() {
 }
 
 need_cargo() { need cargo "rustup, then rustup show in this repository"; }
+
+need_nextest() { need cargo-nextest "https://nexte.st, or taiki-e/install-action in CI"; }
 
 need_node() {
     need node "Node 24, see .nvmrc" || return 1
@@ -65,8 +74,25 @@ stage_clippy() {
 }
 
 stage_test() {
-    need_cargo && need cargo-nextest "https://nexte.st, or taiki-e/install-action in CI" &&
-        need_protoc && cargo nextest run --workspace --locked --no-fail-fast
+    need_cargo && need_nextest && need_protoc &&
+        cargo nextest run --workspace --locked --no-fail-fast -E "not ($ENGINE_TESTS)"
+}
+
+stage_test_engine() {
+    # The engine set alone, with test's own command: CI runs it in a job beside rust (R13, R14),
+    # one slice per runner when ENGINE_SLICE names one, m/n (R16). Unset, it runs the whole set.
+    local slice=()
+    if [ -n "${ENGINE_SLICE:-}" ]; then
+        if [[ ! "$ENGINE_SLICE" =~ ^([1-9][0-9]*)/([1-9][0-9]*)$ ]] ||
+            [ "${BASH_REMATCH[1]}" -gt "${BASH_REMATCH[2]}" ]; then
+            echo "ENGINE_SLICE names no slice m/n of n: '$ENGINE_SLICE'"
+            return 1
+        fi
+        slice=(--partition "slice:$ENGINE_SLICE")
+    fi
+    need_cargo && need_nextest && need_protoc &&
+        cargo nextest run --workspace --locked --no-fail-fast -E "$ENGINE_TESTS" \
+            ${slice[@]+"${slice[@]}"}
 }
 
 stage_doctest() { need_cargo && need_protoc && cargo test --doc --workspace --locked; }
