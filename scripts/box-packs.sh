@@ -20,13 +20,21 @@
 #   row never fails. A pack that examines nothing reads `pending` with the issue the wiring names,
 #   is VOID without one, and is stale once it examines a row. The proxy scan is read by its rows,
 #   never its exit: any RED fails, and it reads `pending` while it examines no settings document.
+# * Before any pack runs, it reads the state of every issue the `box` section names (each
+#   `expected_red` row's issue, each `pending`, and the proxy scan's `pending`) once, with
+#   `gh issue view <n> --json state` run in ROOT, so gh resolves the repository from ROOT's remotes
+#   or from $GH_REPO. An expectation whose issue is CLOSED is stale, and fails its pack by name.
+#   When gh is not on the path, is not logged in, cannot reach GitHub or answers no state, the run
+#   is VOID with that reason and runs no pack: it never passes on an issue it could not read
+#   (SPEC-054 R4).
 #
 # It prints one line per pack (its examined count, its unexpected, expected and stale rows) and a
 # summary, and exits 0 when no pack failed, 1 when one did, and 2 when it cannot judge (an unset
-# variable, a pin that does not match, a malformed wiring). PHXD must be built from the phoenix-v2
-# commit `.packs/VENDORED.json` names, because a prebuilt phxd embeds an older catalog. The scratch
-# directory (the exported tree and the ledger) is removed when the run ends; each pack's card is
-# kept under $BOX_PACKS_OUT (a fresh temporary directory by default) for the pull request.
+# variable, a pin that does not match, a malformed wiring, an issue whose state gh cannot read).
+# PHXD must be built from the phoenix-v2 commit `.packs/VENDORED.json` names, because a prebuilt
+# phxd embeds an older catalog. The scratch directory (the exported tree and the ledger) is removed
+# when the run ends; each pack's card is kept under $BOX_PACKS_OUT (a fresh temporary directory by
+# default) for the pull request.
 set -euo pipefail
 BOX_PACKS_SELF="${BASH_SOURCE[0]}" exec python3 - "$@" <<'PY'
 """The box-pack runner: this file's opening comment is its documentation (ADR-030)."""
@@ -65,6 +73,9 @@ REGISTERED = re.compile(r"registered\s+\D*(\d+)")
 SCAN_ROW = re.compile(r"^PROXY-CLIENT (GREEN|RED|ADVISORY|VOID) (\S+): (\d+) (.+?) examined\b")
 SCAN_ALL = re.compile(r"^PROXY-CLIENT ALL \w+: blocking (\d+) green, (\d+) red, (\d+) void\b")
 SETTINGS = "settings document(s)"
+# The states `gh issue view --json state` answers, and its exit when it is not logged in.
+STATES = ("OPEN", "CLOSED")
+GH_NOT_LOGGED_IN = 4
 
 
 class Refusal(Exception):
@@ -151,6 +162,12 @@ def run(args: argparse.Namespace) -> int:
                 "re-pin one of them"
             )
         strip(tree, vendored)
+        issues = named_issues(box)
+        states = issue_states(root, issues)
+        listed = ", ".join(f"{issue} {states[issue]}" for issue in issues)
+        named = f"box-packs: {len(issues)} issue(s) the wiring names"
+        print(named + (f": {listed}" if listed else ""), flush=True)
+        closed = {issue for issue, state in states.items() if state == "CLOSED"}
         print(
             f"box-packs: judging {sha[:12]} ({args.rev}) without the vendored rule code, "
             f"with phoenix-v2 {have[:12]}",
@@ -159,9 +176,9 @@ def run(args: argparse.Namespace) -> int:
         driver = Phxd(phxd, scratch, tree, phoenix / "skills")
         catalog = driver.pack_list()
         for pack, expectation in sorted(box["packs"].items()):
-            verdicts.append(judge_pack(driver, pack, expectation, catalog, out))
+            verdicts.append(judge_pack(driver, pack, expectation, catalog, out, closed))
             print(verdicts[-1].line(), flush=True)
-        verdicts.append(judge_scan(box.get(SCAN, {}), phoenix, tree, scratch, out))
+        verdicts.append(judge_scan(box.get(SCAN, {}), phoenix, tree, scratch, out, closed))
         print(verdicts[-1].line(), flush=True)
     print(f"cards: {out}")
     failed = [verdict.pack for verdict in verdicts if verdict.mark == "FAIL"]
@@ -259,6 +276,71 @@ def box_of(wiring: dict) -> dict:
     return box
 
 
+def named_issues(box: dict) -> list[str]:
+    """Every issue the box section names, once each, in number order (SPEC-054 R4)."""
+    named = set()
+    for entry in box["packs"].values():
+        named.update(entry.get("expected_red", {}).values())
+        if "pending" in entry:
+            named.add(entry["pending"])
+    if "pending" in box.get(SCAN, {}):
+        named.add(box[SCAN]["pending"])
+    return sorted(named, key=lambda issue: int(issue[1:]))
+
+
+def issue_states(root: Path, issues: list[str]) -> dict[str, str]:
+    """Each issue's state, OPEN or CLOSED, as `gh issue view <n> --json state` answers in ROOT.
+    An issue gh cannot answer for makes the run VOID: a refusal (exit 2) naming why, because an
+    expectation whose issue may be closed cannot be judged (SPEC-054 R4)."""
+    if not issues:
+        return {}
+    gh = shutil.which("gh")
+    if gh is None:
+        raise Refusal(
+            f"VOID: gh is not on the path, so the state of {', '.join(issues)} cannot be read"
+        )
+    states = {}
+    for issue in issues:
+        done = subprocess.run(
+            [gh, "issue", "view", issue.removeprefix("#"), "--json", "state"],
+            cwd=root,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if done.returncode == GH_NOT_LOGGED_IN:
+            raise Refusal(
+                f"VOID: gh is not logged in (exit {GH_NOT_LOGGED_IN}), so the state of {issue} "
+                "cannot be read"
+            )
+        if done.returncode != 0:
+            raise Refusal(
+                f"VOID: gh could not read the state of {issue} (exit {done.returncode}): "
+                f"{tail(done.stderr)}"
+            )
+        try:
+            state = json.loads(done.stdout).get("state")
+        except (json.JSONDecodeError, AttributeError):
+            state = None
+        if state not in STATES:
+            raise Refusal(f"VOID: gh answered no state for {issue}: {tail(done.stdout)}")
+        states[issue] = state
+    return states
+
+
+def closed_expectations(expectation: dict, closed: set[str]) -> list[str]:
+    """Each expectation whose issue is closed, by its row (or `pending`) and its issue: stale,
+    because a closed issue builds nothing more (SPEC-054 R4)."""
+    found = [
+        f"{row} ({issue} is closed)"
+        for row, issue in sorted(expectation.get("expected_red", {}).items())
+        if issue in closed
+    ]
+    if expectation.get("pending") in closed:
+        found.append(f"pending ({expectation['pending']} is closed)")
+    return found
+
+
 def strip(tree: Path, vendored: dict) -> None:
     """Remove the vendored rule code before any pack reads the tree (R11)."""
     shutil.rmtree(tree / ".packs", ignore_errors=True)
@@ -326,19 +408,24 @@ class Phxd:
         return self.ledger, self.project
 
 
-def judge_pack(driver: Phxd, pack: str, expectation: dict, catalog: dict, out: Path) -> Verdict:
+def judge_pack(
+    driver: Phxd, pack: str, expectation: dict, catalog: dict, out: Path, closed: set[str]
+) -> Verdict:
+    stale = closed_expectations(expectation, closed)
     declared = catalog.get(pack)
     if declared is None:
-        return Verdict(pack, "?", "FAIL", detail="phxd pack list names no such pack")
+        detail = "phxd pack list names no such pack"
+        return Verdict(pack, "?", "FAIL", stale=stale, detail=detail)
     verbs = sorted({VERBS[schema] for schema in declared if schema in VERBS})
     if len(verbs) != 1:
-        return Verdict(pack, "?", "FAIL", detail=f"no single verb admits {declared}")
+        return Verdict(pack, "?", "FAIL", stale=stale, detail=f"no single verb admits {declared}")
     verb = verbs[0]
     tree = driver.tree
     if verb == "verify":
         site = tree / SITE
         if not site.is_dir():
-            return judged(pack, verb, expectation, None, f"{SITE} is not in the judged tree")
+            why = f"{SITE} is not in the judged tree"
+            return judged(pack, verb, expectation, None, why, closed)
         done = driver.call("verify", "seo-pipeline", "--subject", site, "--format", "json")
     elif verb == "probe":
         done = driver.call(
@@ -356,8 +443,8 @@ def judge_pack(driver: Phxd, pack: str, expectation: dict, catalog: dict, out: P
     card = read_card(verb, done.stdout)
     if card is None:
         why = f"phxd gave no card (exit {done.returncode}): {tail(done.stderr)}"
-        return Verdict(pack, verb, "FAIL", detail=why)
-    return judged(pack, verb, expectation, card, "the walk examined no row")
+        return Verdict(pack, verb, "FAIL", stale=stale, detail=why)
+    return judged(pack, verb, expectation, card, "the walk examined no row", closed)
 
 
 def read_card(verb: str, stdout: str) -> Card | None:
@@ -389,9 +476,13 @@ def state(word: object, row: dict) -> str:
     return {"red": "red", "green": "green", "ok": "green"}.get(str(word), str(word))
 
 
-def judged(pack: str, verb: str, expectation: dict, card: Card | None, void: str) -> Verdict:
-    """R12 and R14: unexpected reds, expected reds, stale expectations, and a pending VOID."""
+def judged(
+    pack: str, verb: str, expectation: dict, card: Card | None, void: str, closed: set[str]
+) -> Verdict:
+    """R12 and R14: unexpected reds, expected reds, stale expectations, and a pending VOID; and an
+    expectation whose issue is closed is stale whatever the card says (SPEC-054 R4)."""
     verdict = Verdict(pack, verb, examined=card.examined if card else 0)
+    verdict.stale = closed_expectations(expectation, closed)
     expected = expectation.get("expected_red", {})
     pending = expectation.get("pending")
     if card is None or card.examined == 0:
@@ -399,12 +490,14 @@ def judged(pack: str, verb: str, expectation: dict, card: Card | None, void: str
             verdict.mark, verdict.detail = "pending", f"pending {pending}: {void}"
         else:
             verdict.mark, verdict.detail = "FAIL", f"VOID: {void}, and the wiring names no issue"
+        if verdict.stale:
+            verdict.mark = "FAIL"
         return verdict
     reds = sorted(row for row, word in card.rows.items() if word == "red")
     verdict.unexpected = [row for row in reds if row not in expected]
     verdict.expected = [row for row in reds if row in expected]
     for row, issue in sorted(expected.items()):
-        if card.rows.get(row) != "red":
+        if issue not in closed and card.rows.get(row) != "red":
             verdict.stale.append(f"{row} ({issue})")
     if pending:
         verdict.stale.append(f"pending {pending}, but the pack examined {card.examined} row(s)")
@@ -413,9 +506,13 @@ def judged(pack: str, verb: str, expectation: dict, card: Card | None, void: str
     return verdict
 
 
-def judge_scan(expectation: dict, phoenix: Path, tree: Path, scratch: Path, out: Path) -> Verdict:
-    """R13: the proxy scan, read by its row lines, because `check all` exits VOID over RED."""
-    verdict = Verdict(SCAN, "scan")
+def judge_scan(
+    expectation: dict, phoenix: Path, tree: Path, scratch: Path, out: Path, closed: set[str]
+) -> Verdict:
+    """R13: the proxy scan, read by its row lines, because `check all` exits VOID over RED. A
+    pending issue that is closed fails it (SPEC-054 R4)."""
+    verdict = Verdict(SCAN, "scan", stale=closed_expectations(expectation, closed))
+    pending = expectation.get("pending")
     script = phoenix / "scripts" / "proxy-client-scan.py"
     if not script.is_file():
         verdict.mark, verdict.detail = "FAIL", "the phoenix-v2 checkout has no proxy-client-scan.py"
@@ -448,7 +545,6 @@ def judge_scan(expectation: dict, phoenix: Path, tree: Path, scratch: Path, out:
         return verdict
     green, red, void = summary
     counts = f"{settings} settings document(s); blocking {green} green, {red} red, {void} void"
-    pending = expectation.get("pending")
     verdict.unexpected = sorted(ident for ident, word in rows.items() if word == "RED")
     if verdict.unexpected or red:
         verdict.mark, verdict.detail = "FAIL", counts
@@ -463,6 +559,8 @@ def judge_scan(expectation: dict, phoenix: Path, tree: Path, scratch: Path, out:
         verdict.mark, verdict.detail = "FAIL", f"VOID: {counts}"
     else:
         verdict.detail = counts
+    if verdict.stale:
+        verdict.mark = "FAIL"
     return verdict
 
 

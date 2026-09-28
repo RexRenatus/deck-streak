@@ -1,6 +1,6 @@
 """The box-pack runner judges the committed tree with each pack's own verb, and names every red row
 it does not expect (SPEC-030 R10 to R14, ADR-030). It reads the state of every issue the wiring
-names, fails an expectation whose issue is closed, and is VOID when it cannot read one (SPEC-054 R4).
+names, fails an expectation whose issue is closed, and reads VOID when it cannot (SPEC-054 R4).
 
 `scripts/box-packs.sh` is driven here with a fake phxd, a fake phoenix checkout and a fake gh
 (`scripts/tests/fixtures/box-packs/`), so these tests need neither phxd, phoenix-v2 nor GitHub, and

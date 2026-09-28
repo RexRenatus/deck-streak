@@ -12,7 +12,7 @@ one golden per registration. The Rust tests read the goldens through one reader,
 | `goldens/<name>.json` | the goldens, in the schema `phx.parity-golden.v1` | committed, and read by the tests |
 | `golden.rs` | the one Rust reader, included by path | every proving crate's integration tests |
 | `test_generate.py` | the generator's tests, over a synthetic stand-in | the gate's python stage |
-| `test_goldens.py` | every committed golden is current, synthetic and free of date strings; no registry module reads a file | the gate's python stage |
+| `test_goldens.py` | every committed golden is current, synthetic and free of date strings; no registry module reads a file; the day token's example below round-trips | the gate's python stage |
 
 ## Register a golden
 
@@ -105,6 +105,50 @@ one function, so its `function` is its own name.
 No golden holds a calendar date or a time string. A returned `date` is written as its epoch day
 number (whole days since the Unix epoch), an aware `datetime` as epoch milliseconds, and a
 duration by an adapter as a number whose key names its unit.
+
+### A day inside a text
+
+A day the predecessor reads or writes inside a text, such as a note's frontmatter, cannot become a
+number the way a returned `date` does, because the text itself is the case's input or output. Such
+a golden writes each day in its text as the token `{day:N}`, where N is the day's epoch day number:
+whole days since 1970-01-01, and negative before it. `registry/spec_042.py` does this for the
+reading note's roll (SPEC-042).
+
+The token is lossless. Each day has exactly one token and each token exactly one day, so nothing
+is rounded or dropped in either direction. The adapter holds both directions: it refuses a case
+whose text holds a raw date, so every day in a golden is a token, and it refuses a date the
+predecessor returns that does not read back as itself, so a token always names exactly the date
+the predecessor wrote.
+
+A registry module emits the token through its adapter, which calls the predecessor and never
+computes the rule (ADR-029):
+
+1. `expand` writes every token of the case's text as the ISO date of its day, and the adapter
+   refuses the case when writing those dates back does not give the case's text;
+2. the adapter calls the predecessor's function on the expanded text, passing any other day the
+   case names as a `date`;
+3. `contract` writes every ISO date of the returned text back as its token.
+
+`with_days_as_numbers`, with its `expand` and `contract`, in `registry/spec_042.py` is the pattern.
+A module that needs the token writes its own in the same shape, because a SPEC never edits another
+SPEC's module. For example, a synthetic note's text as its golden holds it:
+
+```text
+date: {day:11016}
+last_rolled: {day:-1}
+rolls: 0
+```
+
+and the same text as the predecessor reads it:
+
+```text
+date: 2000-02-29
+last_rolled: 1969-12-31
+rolls: 0
+```
+
+`test_goldens.py` round-trips this example through `registry/spec_042.py`'s own `expand` and
+`contract`, and holds the golden's form free of dates while the golden check refuses the other.
 
 ## Regenerate
 

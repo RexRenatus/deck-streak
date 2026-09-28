@@ -35,7 +35,10 @@ RAILS_ROWS = ("write-confinement", "no-executable", "never-deletes")
 #: The private inputs the probe reads from the environment, dropped so it judges the public shapes.
 PRIVATE_INPUTS = ("PERSONA_CORE_DENY_LIST", "VAULT_DUTIES_LAYOUT")
 EXAMINED = re.compile(r"^examined (\d+)$", re.MULTILINE)
-#: The bound on the adapter's build and run, in seconds (SPEC-054 R5).
+#: The bound on the adapter's build and run, in seconds (SPEC-054 R5). A cold build and run of the
+#: example took 21.1 s on the maintainer's machine. The bound is over 40 times that, so a slower
+#: runner, a cache miss or a wait for a build slot still fits, and inside CI's 30-minute hygiene
+#: job, so a hung build fails here by name before the runner kills the job.
 CARGO_BOUND_S = 900
 
 
@@ -128,14 +131,23 @@ def judged_by_the_pack(fixture, rails):
 
 
 def bounded(command, timeout, what):
-    """`command`, run from the repository root with its output captured."""
-    return subprocess.run(command, cwd=REPO, capture_output=True, text=True, check=False)
+    """`command`, run from the repository root with its output captured, and killed once it
+    outlives `timeout` seconds. `what` then fails by name, with the bound and the command, rather
+    than holding the gate's python stage with no reason given (SPEC-054 R5)."""
+    try:
+        return subprocess.run(
+            command, cwd=REPO, capture_output=True, text=True, timeout=timeout, check=False
+        )
+    except subprocess.TimeoutExpired as expired:
+        raise AssertionError(
+            f"{what} did not finish within {timeout} s: {' '.join(command)}"
+        ) from expired
 
 
 def judged_by_the_adapter(fixtures):
     """The adapter's rail rows for each fixture, by file name, from its `rails_verdicts` example.
 
-    cargo may wait for a build slot on a shared machine, so the build has no time limit here.
+    cargo may wait for a build slot on a shared machine, so the build's bound is generous.
     """
     done = bounded(
         [

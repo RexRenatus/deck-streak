@@ -458,7 +458,7 @@ class CommittedGoldensAreCurrent(unittest.TestCase):
 
 
 def day_token_examples(readme):
-    """Each (golden form, predecessor form) pair of text fences in the README's day-token section."""
+    """Each (golden form, predecessor form) pair of text fences in the README's token section."""
     _, found, rest = readme.partition(f"\n{DAY_SECTION}\n")
     if not found:
         return []
