@@ -90,6 +90,12 @@ jobs:
   engine:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
+    strategy:
+      # Every slice runs to its end, so one run names every red slice, as check.sh names every red.
+      fail-fast: false
+      matrix:
+        # The engine set in two slices, one per runner (R16): nextest deals its tests out in turn.
+        slice: [1, 2]
     env:
       CARGO_INCREMENTAL: "0"
     steps:
@@ -121,15 +127,16 @@ jobs:
           key: rust-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-${{ hashFiles('Cargo.lock') }}
           restore-keys: |
             rust-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-
-      - name: test-engine (nextest over the engine set, SPEC-022's sync and budget tests)
+      - name: test-engine, one slice of the engine set (SPEC-022's sync and budget tests)
         env:
           CHECK_LOG_DIR: ${{ runner.temp }}/check-logs
+          ENGINE_SLICE: ${{ matrix.slice }}/${{ strategy.job-total }}
         run: bash scripts/check.sh test-engine
       - name: upload stage logs
         if: ${{ always() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: check-stage-logs-engine
+          name: check-stage-logs-engine-${{ matrix.slice }}
           path: ${{ runner.temp }}/check-logs/
           if-no-files-found: warn
 

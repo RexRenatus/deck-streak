@@ -79,9 +79,20 @@ stage_test() {
 }
 
 stage_test_engine() {
-    # The engine set alone, with test's own command: CI runs it in a job beside rust (R13, R14).
+    # The engine set alone, with test's own command: CI runs it in a job beside rust (R13, R14),
+    # one slice per runner when ENGINE_SLICE names one, m/n (R16). Unset, it runs the whole set.
+    local slice=()
+    if [ -n "${ENGINE_SLICE:-}" ]; then
+        if [[ ! "$ENGINE_SLICE" =~ ^([1-9][0-9]*)/([1-9][0-9]*)$ ]] ||
+            [ "${BASH_REMATCH[1]}" -gt "${BASH_REMATCH[2]}" ]; then
+            echo "ENGINE_SLICE names no slice m/n of n: '$ENGINE_SLICE'"
+            return 1
+        fi
+        slice=(--partition "slice:$ENGINE_SLICE")
+    fi
     need_cargo && need_nextest && need_protoc &&
-        cargo nextest run --workspace --locked --no-fail-fast -E "$ENGINE_TESTS"
+        cargo nextest run --workspace --locked --no-fail-fast -E "$ENGINE_TESTS" \
+            ${slice[@]+"${slice[@]}"}
 }
 
 stage_doctest() { need_cargo && need_protoc && cargo test --doc --workspace --locked; }
