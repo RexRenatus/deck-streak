@@ -106,7 +106,6 @@ TOOL_EXITS = {
     6: "a diff it could not read",
     70: "an internal error",
 }
-REASON = re.compile(r"EQUIVALENT: \S.*\(#\d+\)")
 #: The subject GitHub writes for a pull request's merge commit.
 MERGE_SUBJECT = re.compile(r"Merge pull request #(\d+) from ")
 #: The first line GitHub writes for a squash merge: the pull request's title, then ` (#N)`. A title
@@ -819,6 +818,7 @@ def judge_rust(verdict: Verdict, plan: dict, args: argparse.Namespace) -> None:
     for entry in plan["files"]:
         if entry["class"] == "rust" and entry["code"]:
             verdict.say(f"{entry['path']}: {len(entry['code'])} changed code line(s)")
+    excuses = rust_excuses(verdict, args)
     voids = len(verdict.voids)
     whole = whole_reports(verdict, plan, args)
     caught, missed, timeout, unviable, total = (
@@ -830,16 +830,30 @@ def judge_rust(verdict: Verdict, plan: dict, args: argparse.Namespace) -> None:
         f"cargo-mutants examined {tool} (caught {caught}, missed {missed}, timeout {timeout}), "
         f"unviable {unviable}, of {total} on the diff"
     )
-    named = 0
+    named = equivalent = 0
     for where, report in whole:
         for outcome in report.get("outcomes", []):
             scenario = outcome.get("scenario")
-            if outcome.get("summary") == "MissedMutant" and isinstance(scenario, dict):
+            if not isinstance(scenario, dict):
+                continue
+            name = scenario.get("Mutant", {}).get("name", "<unnamed mutant>")
+            excused = excuses.of(cargo_mutant(scenario.get("Mutant")))
+            if outcome.get("summary") == "MissedMutant":
                 named += 1
-                name = scenario.get("Mutant", {}).get("name", "<unnamed mutant>")
-                verdict.fail(f"{where}MISSED {name}")
+                # R9: a missed mutant exactly one record binds is equivalent, counted apart.
+                if len(excused) == 1:
+                    equivalent += 1
+                    verdict.say(f"{where}EQUIVALENT {name}: {excuse_line(excused[0])}")
+                else:
+                    verdict.fail(f"{where}MISSED {name}{held_twice(excused)}")
+                continue
+            for record in excused:
+                refuted = refutation(record, name, outcome.get("summary"))
+                if refuted is not None:
+                    verdict.fail(f"{where}{refuted}")
     if missed > named:
         verdict.fail(f"MISSED {missed - named} mutant(s), unnamed in the report")
+    verdict.say(f"missed {missed}: equivalent {equivalent}, unexplained {missed - equivalent}")
     if args.shard_reports:
         partition(verdict, plan, whole, complete=len(verdict.voids) == voids)
     verdict.examined = tool + carried
@@ -888,22 +902,55 @@ def judge_web(verdict: Verdict, plan: dict, args: argparse.Namespace) -> None:
     if not isinstance(report, dict) or not isinstance(report.get("files"), dict):
         verdict.void(f"no report: {args.stryker or 'no --stryker'} holds no mutation report")
         return
+    root = pathlib.Path(args.root)
+    records, problems = load_records(root)
+    for problem in problems:
+        verdict.fail(f"the record: {problem}")
+    excuses = Excuses(root, records, "web")
     counts: dict[str, int] = defaultdict(int)
+    survived = equivalent = 0
     for path, entry in sorted(report["files"].items()):
-        for mutant in entry.get("mutants", []):
+        file = f"{WEB_ROOT}{path}"
+        if isinstance(entry.get("source"), str):
+            excuses.sources.put(file, entry["source"])
+        mutants = [(mutant, stryker_mutant(file, mutant)) for mutant in entry.get("mutants", [])]
+        # R10: a record of a file the run mutated binds exactly one of that file's mutants.
+        mine = [record for record in excuses.records if record.get("file") == file]
+        parsed = [mutant for _, mutant in mutants if mutant]
+        excuses.bind(parsed, verdict.fail, records=mine, noun=f"mutant of {file}")
+        for mutant, bound in mutants:
             status = mutant.get("status", "Pending")
             counts[status] += 1
             where = f"{WEB_ROOT}{path}:{mutant.get('location', {}).get('start', {}).get('line')}"
             what = f"{mutant.get('mutatorName')} -> {mutant.get('replacement')!r}"
-            if status in ("Survived", "NoCoverage"):
+            excused = excuses.of(bound)
+            if status == "Survived":
+                survived += 1
+                if len(excused) == 1:
+                    equivalent += 1
+                    verdict.say(f"EQUIVALENT {where}: {what}: {excuse_line(excused[0])}")
+                else:
+                    verdict.fail(f"{status} {where}: {what}{held_twice(excused)}")
+                continue
+            if status == "NoCoverage":
                 verdict.fail(f"{status} {where}: {what}")
-            elif status == "Ignored" and not REASON.search(str(mutant.get("statusReason", ""))):
-                verdict.fail(f"Ignored {where} with no EQUIVALENT reason and issue: {what}")
+            elif status == "Ignored":
+                verdict.fail(
+                    f"Ignored {where}: {what}: no mutant may be ignored, by a disable comment, an "
+                    "ignorer or an excluded mutator (SPEC-057 R10, R11)"
+                )
             elif status == "Pending":
                 verdict.void(f"Pending {where}: never run")
+            for record in excused:
+                refuted = refutation(record, f"{where}: {what}", status)
+                if refuted is not None:
+                    verdict.fail(refuted)
     verdict.examined = sum(counts[status] for status in STRYKER_EXAMINED)
     summary = ", ".join(f"{status} {counts[status]}" for status in sorted(counts))
     verdict.say(f"Stryker examined {verdict.examined} ({summary or 'no mutant'})")
+    verdict.say(
+        f"survived {survived}: equivalent {equivalent}, unexplained {survived - equivalent}"
+    )
     if verdict.examined == 0:
         verdict.void("production code changed and nothing was examined")
 
@@ -1217,69 +1264,640 @@ def configs(root: pathlib.Path) -> int:
 
 # --------------------------------------------------------------------------- the exclusions
 
+#: What hides a mutant from cargo-mutants' listing or from StrykerJS's run (SPEC-057 R11, ADR-070 D1
+#: and D6): the keys that filter the listing, the attributes that skip an item's mutants, a disable
+#: comment, and the Stryker options that leave a mutant ignored.
+EXCLUDING_KEYS = ("exclude_re", "exclude_globs", "examine_re", "examine_globs", "skip_calls")
+EXCLUDING_ATTRIBUTE = re.compile(r"\bmutants::(?:skip|exclude_re)\b")
+WEB_SOURCES = frozenset({".ts", ".js", ".svelte", ".mts", ".cts", ".mjs", ".cjs", ".tsx", ".jsx"})
+
 
 def exclusions(root: pathlib.Path) -> int:
-    findings, examined = [], 0
+    """No exclusion hides a mutant (R11): each form is refused by name, with a reason or without,
+    and a key even when it is empty. It counts the files it reads, and a tree of none is VOID."""
+    findings: list[str] = []
+    examined = 0
     config = root / ".cargo" / "mutants.toml"
     if config.is_file():
-        text = config.read_text(encoding="utf-8")
-        lines = text.splitlines()
-        document = tomllib.loads(text)
-        for key in ("exclude_re", "exclude_globs", "skip_calls"):
-            for entry in document.get(key, []):
-                examined += 1
-                literal = json.dumps(entry)[1:-1]
-                numbers = [n for n, line in enumerate(lines) if literal in line or entry in line]
-                justified = any(
-                    REASON.search(lines[n]) or (n > 0 and REASON.search(lines[n - 1]))
-                    for n in numbers
+        examined += 1
+        try:
+            document = tomllib.loads(config.read_text(encoding="utf-8"))
+        except tomllib.TOMLDecodeError as error:
+            document = {}
+            findings.append(
+                f"exclusions: .cargo/mutants.toml: not TOML, so no key is read: {error}"
+            )
+        for key in EXCLUDING_KEYS:
+            if key in document:
+                findings.append(
+                    f"exclusions: .cargo/mutants.toml: the {key} key hides mutants from "
+                    "cargo-mutants' listing (SPEC-057 R11)"
                 )
-                if not justified:
-                    findings.append(
-                        f"exclusions: .cargo/mutants.toml: {key} {entry!r} names no EQUIVALENT "
-                        "reason and issue"
-                    )
-    web = root / "web" / "app" / "src"
-    for path in sorted(web.rglob("*")) if web.is_dir() else []:
-        if path.suffix not in (".ts", ".js", ".svelte") or not path.is_file():
-            continue
-        for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
-            if "Stryker disable" in line:
-                examined += 1
-                if not REASON.search(line):
-                    where = path.relative_to(root).as_posix()
-                    findings.append(
-                        f"exclusions: {where}:{number}: a Stryker disable names no EQUIVALENT "
-                        "reason and issue"
-                    )
     crates = root / "crates"
     for path in sorted(crates.glob("*/src/**/*.rs")) if crates.is_dir() else []:
+        examined += 1
+        where = path.relative_to(root).as_posix()
         for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
-            if "mutants::skip" in line and not line.strip().startswith("//"):
-                examined += 1
-                where = path.relative_to(root).as_posix()
+            attribute = EXCLUDING_ATTRIBUTE.search(line)
+            if attribute and not line.strip().startswith("//"):
                 findings.append(
-                    f"exclusions: {where}:{number}: mutants::skip skips every mutant of its item "
-                    "(ADR-057 D6)"
+                    f"exclusions: {where}:{number}: {attribute.group(0)} hides its item's mutants "
+                    "from cargo-mutants' listing (SPEC-057 R11)"
                 )
+    web = root / "web" / "app" / "src"
+    for path in sorted(web.rglob("*")) if web.is_dir() else []:
+        if path.suffix not in WEB_SOURCES or not path.is_file():
+            continue
+        examined += 1
+        where = path.relative_to(root).as_posix()
+        for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+            if "Stryker disable" in line:
+                findings.append(
+                    f"exclusions: {where}:{number}: a Stryker disable comment leaves a mutant "
+                    "ignored, never run (SPEC-057 R11)"
+                )
+    stryker = root / "web" / "app" / "stryker.config.json"
+    if stryker.is_file():
+        examined += 1
+        document = read_json(str(stryker))
+        if not isinstance(document, dict):
+            document = {}
+            findings.append("exclusions: web/app/stryker.config.json: not JSON, so nothing is read")
+        mutator = document.get("mutator") if isinstance(document.get("mutator"), dict) else {}
+        for name in mutator.get("excludedMutations") or []:
+            findings.append(
+                f"exclusions: web/app/stryker.config.json: excludes the mutator {name} "
+                "(SPEC-057 R11)"
+            )
+        for name in document.get("ignorers") or []:
+            findings.append(
+                f"exclusions: web/app/stryker.config.json: the ignorer {name} leaves mutants "
+                "ignored (SPEC-057 R11)"
+            )
+        if document.get("ignoreStatic") is True:
+            findings.append(
+                "exclusions: web/app/stryker.config.json: ignoreStatic leaves every static "
+                "mutant ignored (SPEC-057 R11)"
+            )
     for finding in findings:
         print(finding)
-    print(f"examined {examined} exclusion(s)")
-    return EXIT_FAIL if findings else EXIT_OK
+    print(f"examined {examined} file(s)")
+    if findings:
+        return EXIT_FAIL
+    return EXIT_OK if examined else EXIT_VOID
 
 
 # --------------------------------------------------------------------------- the equivalence record
 
+#: The equivalence record (SPEC-057 R4, ADR-070 D1): one fragment per Cargo package, named for it,
+#: and one for the Mini App, each `{"records": [...]}`.
+RECORDS = "scripts/mutation-equivalent.d"
+MINIAPP = "miniapp"
+#: What every record carries (R5). A Rust record also names `reached_by`; `span` is written only when
+#: two mutants of one description start at one position inside the anchor.
+RECORD_FIELDS = ("file", "mutant", "anchor", "reason", "evidence", "issue")
+ISSUE = re.compile(r"#[1-9][0-9]*")
+
+
+@dataclass(frozen=True)
+class Record:
+    """One equivalence claim, and where it is held."""
+
+    fragment: str
+    index: int
+    fields: dict
+
+    @property
+    def klass(self) -> str:
+        return "web" if self.fragment == f"{MINIAPP}.json" else "rust"
+
+    @property
+    def package(self) -> str:
+        return self.fragment.removesuffix(".json")
+
+    def get(self, name: str) -> str | None:
+        """The field's text, or None when it is absent, not a text or blank."""
+        value = self.fields.get(name)
+        return value if isinstance(value, str) and value.strip() else None
+
+    @property
+    def named(self) -> str:
+        return f"record {self.index} ({self.get('file') or '?'}: {self.get('mutant') or '?'})"
+
+    def __str__(self) -> str:
+        return f"{self.fragment} {self.named}"
+
+
+def load_records(root: pathlib.Path) -> tuple[list[Record], list[str]]:
+    """Every record of every fragment, and each fragment that holds no records list, by name."""
+    records: list[Record] = []
+    problems: list[str] = []
+    directory = root / RECORDS
+    for path in sorted(directory.glob("*.json")) if directory.is_dir() else []:
+        document = read_json(str(path))
+        entries = document.get("records") if isinstance(document, dict) else None
+        if not isinstance(entries, list):
+            problems.append(f'{path.name}: holds no records list, {{"records": [...]}}')
+            continue
+        for index, entry in enumerate(entries, start=1):
+            records.append(Record(path.name, index, entry if isinstance(entry, dict) else {}))
+    return records, problems
+
+
+class Sources:
+    """Each file a record or a mutant names: its text, and the offset where each line starts."""
+
+    def __init__(self, root: pathlib.Path) -> None:
+        self.root = root
+        self.texts: dict[str, str | None] = {}
+        self.starts: dict[str, list[int]] = {}
+
+    def put(self, file: str, text: str) -> None:
+        """Read `file` as `text`: the Stryker report's copy of what it mutated."""
+        self.texts[file] = text
+        self.starts.pop(file, None)
+
+    def text(self, file: str) -> str | None:
+        if file not in self.texts:
+            path = self.root / file
+            try:
+                self.texts[file] = path.read_text(encoding="utf-8") if path.is_file() else None
+            except (OSError, UnicodeDecodeError):
+                self.texts[file] = None
+        return self.texts[file]
+
+    def offset(self, file: str, line: int, column: int) -> int | None:
+        """The offset of a 1-based line and column, as cargo-mutants and StrykerJS report them."""
+        text = self.text(file)
+        if text is None:
+            return None
+        if file not in self.starts:
+            self.starts[file] = [0] + [at + 1 for at, char in enumerate(text) if char == "\n"]
+        starts = self.starts[file]
+        if not 1 <= line <= len(starts) or column < 1:
+            return None
+        return starts[line - 1] + column - 1
+
+    def window(self, file: str, anchor: str) -> tuple[int, int] | None:
+        """Where `anchor` lies in `file`, when it occurs there exactly once."""
+        text = self.text(file)
+        if text is None or not anchor or text.count(anchor) != 1:
+            return None
+        start = text.index(anchor)
+        return start, start + len(anchor)
+
+
+@dataclass(frozen=True)
+class Mutant:
+    """A mutant as a record binds it: its file, the tool's own description, and its span."""
+
+    file: str
+    description: str
+    start: tuple[int, int]
+    end: tuple[int, int]
+    name: str
+
+
+def span_of(location: object) -> tuple[tuple[int, int], tuple[int, int]] | None:
+    try:
+        start, end = location["start"], location["end"]
+        return (int(start["line"]), int(start["column"])), (
+            int(end["line"]),
+            int(end["column"]),
+        )
+    except (KeyError, TypeError, ValueError):
+        return None
+
+
+def cargo_mutant(entry: object) -> Mutant | None:
+    """A mutant of cargo-mutants' listing (`--list --json`) or of an outcome's `scenario.Mutant`,
+    whose description is its name after `<file>:<line>:<column>: `."""
+    if not isinstance(entry, dict):
+        return None
+    span, file, name = span_of(entry.get("span")), entry.get("file"), entry.get("name")
+    if span is None or not isinstance(file, str) or not isinstance(name, str):
+        return None
+    prefix = f"{file}:{span[0][0]}:{span[0][1]}: "
+    if not name.startswith(prefix):
+        return None
+    return Mutant(file, name[len(prefix) :], span[0], span[1], name)
+
+
+def stryker_mutant(file: str, entry: object) -> Mutant | None:
+    """A mutant of a Stryker report, whose description is `<mutatorName>: <replacement>`."""
+    if not isinstance(entry, dict):
+        return None
+    span = span_of(entry.get("location"))
+    if span is None:
+        return None
+    description = f"{entry.get('mutatorName')}: {entry.get('replacement')}"
+    return Mutant(file, description, span[0], span[1], f"{file}:{span[0][0]}: {description}")
+
+
+def outcome_mutant(outcome: object) -> dict | None:
+    """The mutant a cargo-mutants outcome tested, or None for the baseline."""
+    scenario = outcome.get("scenario") if isinstance(outcome, dict) else None
+    mutant = scenario.get("Mutant") if isinstance(scenario, dict) else None
+    return mutant if isinstance(mutant, dict) else None
+
+
+def binds(record: Record, mutant: Mutant, sources: Sources) -> bool:
+    """R6: the record's file and description, a span that starts inside the anchor's one
+    occurrence, and, when the record names one, the mutated text."""
+    if record.get("file") != mutant.file or record.get("mutant") != mutant.description:
+        return False
+    window = sources.window(mutant.file, str(record.fields.get("anchor") or ""))
+    at = sources.offset(mutant.file, *mutant.start)
+    if window is None or at is None or not window[0] <= at < window[1]:
+        return False
+    if "span" not in record.fields:
+        return True
+    end = sources.offset(mutant.file, *mutant.end)
+    return end is not None and sources.text(mutant.file)[at:end] == record.fields["span"]
+
+
+class Excuses:
+    """One class's records, each held to exactly one mutant of the population it is bound against
+    (ADR-070 D4): the whole tree's listing (R8), or else the mutants the run reports. A record that
+    binds none is STALE and one that binds two AMBIGUOUS, and neither excuses a mutant."""
+
+    def __init__(self, root: pathlib.Path, records: list[Record], klass: str) -> None:
+        self.sources = Sources(root)
+        self.records = [record for record in records if record.klass == klass]
+        self.valid: list[Record] = []
+
+    def bind(self, population, fail, records=None, noun: str = "listed mutant") -> None:
+        for record in self.records if records is None else records:
+            bound = [mutant for mutant in population if binds(record, mutant, self.sources)]
+            if len(bound) == 1:
+                self.valid.append(record)
+            elif not bound:
+                fail(f"STALE {record}: binds no {noun}")
+            else:
+                named = "; ".join(mutant.name for mutant in bound)
+                fail(f"AMBIGUOUS {record}: binds {len(bound)} {noun}s: {named}")
+
+    def of(self, mutant: Mutant | None) -> list[Record]:
+        """The records that excuse `mutant`: more than one is a record held twice."""
+        if mutant is None:
+            return []
+        return [record for record in self.valid if binds(record, mutant, self.sources)]
+
+
+def held_twice(records: list[Record]) -> str:
+    if len(records) < 2:
+        return ""
+    return f": held twice, by {' and '.join(map(str, records))}, so neither excuses it"
+
+
+def refutation(record: Record, name: str, outcome: str) -> str | None:
+    """What an outcome other than missed or survived makes of the record bound to it (R9, R10)."""
+    if outcome in ("CaughtMutant", "Killed"):
+        return f"REFUTED {record}: its mutant {name} was caught"
+    if outcome == "Timeout":
+        return f"REFUTED {record}: its mutant {name} timed out"
+    if outcome == "Unviable":
+        return f"UNNEEDED {record}: its mutant {name} is unviable"
+    if outcome in ("CompileError", "RuntimeError"):
+        return f"UNNEEDED {record}: its mutant {name} is a {outcome}"
+    if outcome == "NoCoverage":
+        return (
+            f"UNCOVERED {record}: its mutant {name} is uncovered: no test reaches it, so it is "
+            "untested, not equivalent"
+        )
+    return None
+
+
+def excuse_line(record: Record) -> str:
+    return f"{record.get('reason')} ({record.get('issue')})"
+
+
+def rust_excuses(verdict: Verdict, args: argparse.Namespace) -> Excuses:
+    """The Rust records, bound against the whole tree's listing the plan made (R8)."""
+    root = pathlib.Path(args.root)
+    records, problems = load_records(root)
+    for problem in problems:
+        verdict.fail(f"the record: {problem}")
+    excuses = Excuses(root, records, "rust")
+    if not excuses.records:
+        return excuses
+    listing = read_json(args.whole)
+    if not isinstance(listing, list):
+        verdict.void(
+            f"{len(excuses.records)} Rust record(s) and no whole-tree listing to bind them "
+            f"against: {args.whole or 'no --whole'} holds none (SPEC-057 R8)"
+        )
+        return excuses
+    excuses.bind([mutant for mutant in map(cargo_mutant, listing) if mutant], verdict.fail)
+    return excuses
+
+
+def workspace_packages(root: pathlib.Path) -> dict[str, str]:
+    """{package name: its directory under crates/}."""
+    found = {}
+    for manifest in sorted((root / "crates").glob("*/Cargo.toml")):
+        try:
+            name = tomllib.loads(manifest.read_text(encoding="utf-8"))["package"]["name"]
+        except (OSError, KeyError, TypeError, tomllib.TOMLDecodeError):
+            continue
+        found[name] = manifest.parent.name
+    return found
+
+
+def same_words(one: str, other: str) -> bool:
+    return " ".join(one.split()).casefold() == " ".join(other.split()).casefold()
+
+
+def record_problems(
+    root: pathlib.Path, record: Record, crate: str | None, sources: Sources
+) -> list[str]:
+    """What the census refuses in one record (R7), each by name."""
+    fields = RECORD_FIELDS + (("reached_by",) if record.klass == "rust" else ())
+    problems = [f"lacks {name}" for name in fields if record.get(name) is None]
+    if "span" in record.fields and record.get("span") is None:
+        problems.append("its span is not a text: leave it out, or give the mutated text")
+    reason, evidence, issue = (
+        record.get("reason"),
+        record.get("evidence"),
+        record.get("issue"),
+    )
+    file, anchor = record.get("file"), record.get("anchor")
+    if reason and len(reason.strip().splitlines()) > 1:
+        problems.append(f"its reason spans {len(reason.strip().splitlines())} lines")
+    if reason and evidence and same_words(reason, evidence):
+        problems.append("its evidence repeats its reason")
+    if issue and not ISSUE.fullmatch(issue):
+        problems.append(f"its issue {issue!r} is not #N")
+    if file:
+        if record.klass == "web":
+            inside = classify(file) == "web"
+        else:
+            inside = classify(file) == "rust" and file.startswith(f"crates/{crate}/src/")
+        if not inside:
+            problems.append(
+                f"its file {file} lies outside {record.package}'s production code (SPEC-039 R2)"
+            )
+        text = sources.text(file)
+        if text is None:
+            problems.append(f"its file {file} does not exist")
+        elif anchor and text.count(record.fields["anchor"]) != 1:
+            problems.append(
+                f"its anchor occurs {text.count(record.fields['anchor'])} times in {file}"
+            )
+    reached = record.get("reached_by")
+    if record.klass == "rust" and reached:
+        row = mutation_rows.Row(
+            id=f"{record.fragment}:{record.index}",
+            table="MUTATIONS",
+            target=file or "",
+            find="",
+            replace="",
+            killer=reached,
+            crate=crate,
+            description="",
+        )
+        try:
+            mutation_rows.resolve_killer(root, row)
+        except mutation_rows.KillerUnresolved as refusal:
+            problems.append(f"reached_by: {refusal}")
+    return problems
+
 
 def census(root: pathlib.Path) -> int:
-    """The equivalence record's census (SPEC-057 R7): examines nothing yet."""
-    print("examined 0 record(s)")
-    return EXIT_OK
+    """Every record held whole, with no mutation tool (R7): each field, a one-line reason, evidence
+    that is not the reason again, an issue, an anchor that occurs once in its file, a file of its
+    fragment's package, a `reached_by` that resolves to one test of that package, a fragment named
+    for a package, and no record held twice. A tree may hold none."""
+    records, problems = load_records(root)
+    findings = [f"census: {problem}" for problem in problems]
+    packages = workspace_packages(root)
+    sources = Sources(root)
+    unnamed: set[str] = set()
+    held: dict[str, Record] = {}
+    for record in records:
+        if record.klass == "rust" and record.package not in packages:
+            if record.fragment not in unnamed:
+                unnamed.add(record.fragment)
+                findings.append(
+                    f"census: {record.fragment}: named for no package of the workspace, nor "
+                    f"{MINIAPP}"
+                )
+            continue
+        crate = packages.get(record.package)
+        for problem in record_problems(root, record, crate, sources):
+            findings.append(f"census: {record.fragment}: {record.named}: {problem}")
+        key = json.dumps([record.fields.get(name) for name in ("file", "mutant", "anchor", "span")])
+        if key in held:
+            findings.append(
+                f"census: {record.fragment}: {record.named}: held twice, as record "
+                f"{held[key].index}"
+            )
+        else:
+            held[key] = record
+    for finding in findings:
+        print(finding)
+    print(f"examined {len(records)} record(s)")
+    return EXIT_FAIL if findings else EXIT_OK
+
+
+# --------------------------------------------------------------------------- the table
+
+
+@dataclass
+class Tally:
+    """One package's row of the campaign's table (SPEC-057 section 7)."""
+
+    listed: int | None = None
+    killed: int = 0
+    equivalent: int = 0
+    unexplained: int = 0
+    unviable: int = 0
+
+    def line(self, package: str) -> str:
+        counted = self.killed + self.equivalent + self.unexplained + self.unviable
+        listed = counted if self.listed is None else self.listed
+        return (
+            f"table: {package}: listed {listed}, killed {self.killed}, equivalent "
+            f"{self.equivalent}, unexplained {self.unexplained}, unviable {self.unviable}"
+        )
 
 
 def table(args: argparse.Namespace) -> int:
-    """The campaign's table (SPEC-057 R13): prints no line yet."""
-    return EXIT_OK
+    """R13: one line per package of a battery's reports, in section 7's columns."""
+    root, reports, scope = (
+        pathlib.Path(args.root),
+        pathlib.Path(args.reports),
+        args.package,
+    )
+    findings: list[str] = []
+    voids: list[str] = []
+
+    def fail(text: str) -> None:
+        findings.append(text)
+        print(f"table: {text}")
+
+    def void(text: str) -> None:
+        voids.append(text)
+        print(f"table: VOID {text}")
+
+    records, problems = load_records(root)
+    for problem in problems:
+        fail(f"the record: {problem}")
+    tallies: dict[str, Tally] = defaultdict(Tally)
+    read = 0
+    if scope != MINIAPP:
+        read += table_rust(root, reports, scope, records, args.listed, tallies, fail, void)
+    if scope in (None, MINIAPP):
+        read += table_web(root, reports, records, tallies[MINIAPP], fail, void)
+    if scope is not None and scope not in tallies:
+        void(f"no listing or report holds a mutant of {scope}")
+    if voids:
+        print(f"table: verdict: VOID: {len(voids)} measurement(s) the table needs are missing")
+    elif findings:
+        print(f"table: verdict: FAIL: {len(findings)} finding(s)")
+    else:
+        print("table: verdict: ok")
+    counted = sum(
+        tally.killed + tally.equivalent + tally.unexplained + tally.unviable
+        for tally in tallies.values()
+    )
+    print(f"examined {counted} mutant(s) in {read} report(s)")
+    for package in sorted(tallies, key=lambda name: (name == MINIAPP, name)):
+        print(tallies[package].line(package))
+    if voids:
+        return EXIT_VOID
+    return EXIT_FAIL if findings else EXIT_OK
+
+
+def table_rust(root, reports, scope, records, listed_path, tallies, fail, void) -> int:
+    """The Rust packages' rows: every shard's report read, each one missing or partial VOID by
+    name, and with a listing, each listed mutant no report tested VOID by name. Returns the
+    reports read."""
+    shards = {path.parent for path in reports.rglob("cargo-mutants.exit")}
+    shards |= {path.parent.parent for path in reports.rglob("outcomes.json")}
+    outcomes: list[tuple[str, dict]] = []
+    read = 0
+    for directory in sorted(shards):
+        where = directory.relative_to(reports).as_posix()
+        report = read_json(str(directory / "mutants.out" / "outcomes.json"))
+        code = read_exit(directory / "cargo-mutants.exit")
+        if report is None and code == 0:
+            continue
+        read += 1
+        reason = partial_reason(report, code, "its outcomes.json")
+        if reason is not None:
+            void(f"{where}: {reason}")
+        if isinstance(report, dict):
+            outcomes += [(where, outcome) for outcome in report.get("outcomes", [])]
+
+    def in_scope(package: object) -> bool:
+        return scope is None or package == scope
+
+    excuses = Excuses(root, records, "rust")
+    listing = read_json(listed_path) if listed_path else None
+    listed = (
+        [entry for entry in listing if isinstance(entry, dict)] if isinstance(listing, list) else []
+    )
+    if listed_path and not isinstance(listing, list):
+        void(f"{listed_path} holds no cargo-mutants listing")
+    if isinstance(listing, list):
+        # Every record, of every package, against the whole tree's listing (R8, R12).
+        excuses.bind([mutant for mutant in map(cargo_mutant, listed) if mutant], fail)
+    else:
+        tested = [cargo_mutant(outcome_mutant(outcome)) for _, outcome in outcomes]
+        mine = [record for record in excuses.records if in_scope(record.package)]
+        excuses.bind([mutant for mutant in tested if mutant], fail, records=mine)
+    for entry in listed:
+        if in_scope(entry.get("package")):
+            tally = tallies[str(entry.get("package"))]
+            tally.listed = (tally.listed or 0) + 1
+    seen: Counter = Counter()
+    for where, outcome in outcomes:
+        entry = outcome_mutant(outcome)
+        if entry is None or not in_scope(entry.get("package")):
+            continue
+        package, name, summary = (
+            str(entry.get("package")),
+            entry.get("name"),
+            outcome.get("summary"),
+        )
+        seen[name] += 1
+        tally = tallies[package]
+        excused = excuses.of(cargo_mutant(entry))
+        if summary == "MissedMutant":
+            if len(excused) == 1:
+                tally.equivalent += 1
+                print(f"table: {package}: EQUIVALENT {name}: {excuse_line(excused[0])}")
+            else:
+                tally.unexplained += 1
+                fail(f"{package}: UNEXPLAINED {name}{held_twice(excused)}")
+            continue
+        if summary in ("CaughtMutant", "Timeout"):
+            tally.killed += 1
+        elif summary == "Unviable":
+            tally.unviable += 1
+        else:
+            void(f"{where}: {name}: an outcome this table does not know, {summary}")
+            continue
+        for record in excused:
+            fail(f"{package}: {refutation(record, name, summary)}")
+    if isinstance(listing, list):
+        times = Counter(entry.get("name") for entry in listed if in_scope(entry.get("package")))
+        for name in sorted(set(times) | set(seen), key=str):
+            if seen[name] < times[name]:
+                void(f"never tested: {name}")
+            elif seen[name] > times[name]:
+                fail(f"{name}: tested {seen[name]} time(s), listed {times[name]} time(s)")
+    return read
+
+
+def table_web(root, reports, records, tally, fail, void) -> int:
+    """The Mini App's row, from the sweep's one Stryker report: a survived mutant one record binds
+    is equivalent; a survived mutant with none, an uncovered one and an ignored one are unexplained
+    (R10). Returns the reports read."""
+    found = sorted(reports.rglob("mutation.json"))
+    document = read_json(str(found[0])) if len(found) == 1 else None
+    if not isinstance(document, dict) or not isinstance(document.get("files"), dict):
+        void(f"stryker: {len(found)} mutation.json, not one whole report")
+        return 0
+    excuses = Excuses(root, records, "web")
+    swept = set()
+    for path, entry in sorted(document["files"].items()):
+        file = f"{WEB_ROOT}{path}"
+        swept.add(file)
+        if isinstance(entry.get("source"), str):
+            excuses.sources.put(file, entry["source"])
+        mutants = [(mutant, stryker_mutant(file, mutant)) for mutant in entry.get("mutants", [])]
+        mine = [record for record in excuses.records if record.get("file") == file]
+        bound = [mutant for _, mutant in mutants if mutant]
+        excuses.bind(bound, fail, records=mine, noun=f"mutant of {file}")
+        for mutant, parsed in mutants:
+            status = mutant.get("status", "Pending")
+            where = f"{file}:{mutant.get('location', {}).get('start', {}).get('line')}"
+            what = f"{mutant.get('mutatorName')} -> {mutant.get('replacement')!r}"
+            excused = excuses.of(parsed)
+            if status == "Survived" and len(excused) == 1:
+                tally.equivalent += 1
+                print(f"table: {MINIAPP}: EQUIVALENT {where}: {what}: {excuse_line(excused[0])}")
+                continue
+            if status in ("Survived", "NoCoverage", "Ignored"):
+                tally.unexplained += 1
+                fail(f"{MINIAPP}: UNEXPLAINED {where}: {status}: {what}{held_twice(excused)}")
+            elif status in ("Killed", "Timeout"):
+                tally.killed += 1
+            elif status in ("CompileError", "RuntimeError"):
+                tally.unviable += 1
+            else:
+                void(f"{where}: {status}: never run")
+                continue
+            for record in excused if status != "Survived" else []:
+                refuted = refutation(record, f"{where}: {what}", status)
+                if refuted is not None:
+                    fail(f"{MINIAPP}: {refuted}")
+    for record in excuses.records:
+        if record.get("file") not in swept:
+            fail(f"STALE {record}: the sweep mutated no such file")
+    return 1
 
 
 # --------------------------------------------------------------------------- the command line
