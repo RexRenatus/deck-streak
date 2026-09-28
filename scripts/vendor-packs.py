@@ -135,7 +135,7 @@ def read_manifest(root: Path) -> dict:
     files, excluded = manifest.get("files"), manifest.get("excluded")
     if not isinstance(files, list) or not isinstance(excluded, list):
         raise Refusal(f"{MANIFEST} needs a `files` list and an `excluded` list")
-    seen: set[str] = set()
+    seen: set[tuple[str, str]] = set()
     for number, entry in enumerate(files):
         if not isinstance(entry, dict) or not isinstance(entry.get("sha256"), str):
             raise Refusal(f"{MANIFEST}: files[{number}] needs a path, a from and a sha256")
