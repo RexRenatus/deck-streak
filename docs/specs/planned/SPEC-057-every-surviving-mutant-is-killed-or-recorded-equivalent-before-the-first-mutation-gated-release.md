@@ -403,7 +403,7 @@ R22. In the Rust class, a changed line is **test-only** when every token of code
 | A25 | every row reads unexplained 0 from one unscoped dispatch at the last delivery's head, and section 8 records the release rehearsal: that head, the merge's base, the run, and a listing whose every mutant was tested | `test_mutation_campaign.py` |
 | A26 | the same as A16, for the agent's row | `test_mutation_campaign.py` |
 | A27 | the same as A16, for the progression's row | `test_mutation_campaign.py` |
-| A28 | four planted fixtures, each red against the plan before R22 for its own reason: a test-only diff reads the Rust class not-applicable by name and never VOID; a mixed diff applies on its production line alone, and cargo-mutants' own listing of it names only that line's mutants; a production-only diff applies and the plan names its production lines, a brace, `#[cfg(test)]` and `#[test]` inside literals and comments and a `#[cfg(not(test))]` function all read as production; and cargo-mutants' empty `--in-diff` output is an empty listing, whose constant-only diff still reads VOID without a row | `test_mutation_verdict.py` |
+| A28 | four planted fixtures, each red against the plan before R22 for its own reason: a test-only diff reads the Rust class not-applicable by name and never VOID; a mixed diff applies on its production line alone, and cargo-mutants' own listing of it names only that line's mutants; a production-only diff applies and the plan names its production lines, a brace, `#[cfg(test)]` and `#[test]` inside literals and comments, a `#[cfg(not(test))]` function and a constant on the line of the brace that closes a test module all read as production; and cargo-mutants' empty `--in-diff` output is an empty listing, whose constant-only diff still reads VOID without a row | `test_mutation_verdict.py` |
 
 ```acceptance
 A1: python3 -m unittest discover -s scripts/tests -p test_mutation_equivalent.py -k every_record_carries_its_mutant_anchor_reason_evidence_and_issue
@@ -455,7 +455,12 @@ A28: python3 -m unittest discover -s scripts/tests -p test_mutation_verdict.py -
   its own, and each committed red against the plan as it stood at dd734e5, failing by assertion
   for its own reason. The listings it plants are cargo-mutants 27.1.0's own `--list --json
   --in-diff` output over the fixtures' diffs, which builds nothing: nothing at all for the
-  test-only and the constant-only diffs.
+  test-only and the constant-only diffs. The production-only fixture's line 54, a constant on the
+  line of the brace that closes the test module, came in the delivery's fix round with row S05709.
+  cargo-mutants' listing of that diff is unchanged by it, since the constant lists no mutant, and
+  the plan at dd734e5 read every line as production, so the line adds no red of its own; the row
+  proves that the test fails when the plan reads a line that holds a test item's closing brace and
+  production code as test-only.
 
 ## 4. File manifest
 
