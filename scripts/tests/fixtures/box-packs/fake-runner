@@ -1,22 +1,26 @@
 #!/usr/bin/env python3
-"""A fake phxd for scripts/tests/test_box_packs.py (SPEC-030 A9 to A13).
+"""A fake pack runner for scripts/tests/test_box_packs.py (SPEC-030 A9 to A13, SPEC-054 R4,
+SPEC-056 A11 to A15).
 
-It answers the verbs scripts/box-packs.sh calls the way phxd does, from the fake phoenix checkout
-beside it and the planted cards below, so the tests need neither phxd nor phoenix-v2:
+It answers the verbs scripts/box-packs.sh calls the way the maintainer's runner does, from the
+synthetic checkout beside it and the planted cards below, so the tests need neither the runner nor
+its checkout. Its card schemas carry a synthetic prefix, `runner.`, because the driver reads a card
+by the suffix of its schema and never by its prefix:
 
 * `pack list --skills-root DIR` lists the packs DIR/catalog.json names, each with its schemas;
-* `pack probe --pack P --root R --skills-root DIR` prints P's planted probe card, or refuses
-  `wrong_verb` (exit 4, no card) when P's catalog row declares another schema;
+* `pack probe --pack P --root R --skills-root DIR [--scope tree]` prints P's planted probe card, or
+  refuses `wrong_verb` (exit 4, no card) when P's catalog row declares another schema;
 * `--ledger L init` creates L, and `--ledger L project register --slug S --name N --repo R` records
   project 1 in L and prints `registered project#1 as ...`;
 * `--ledger L pack run --pack P --project ID --skills-root DIR` prints P's planted run card, and
-  refuses as phxd does without that ledger, that project or that verb;
+  refuses as the runner does without that ledger, that project or that verb;
 * `verify seo-pipeline --subject DIR` prints a planted seo-pipeline card.
 
-A planted row is red when FAKE_PHXD_RED (comma-separated row ids) names it. Every call appends one
-JSON line to FAKE_PHXD_LOG: its argv, its working directory, and, for a verb given a tree (`--root`,
-`--repo` or `--subject`), the census of that tree as {path: sha256 of the contents}, so a test can
-read what was judged after the runner has removed it.
+A planted row exits 1 (red) when FAKE_RUNNER_RED names it, 3 (VOID) when FAKE_RUNNER_VOID does and 2
+(an error) when FAKE_RUNNER_ERROR does, each a comma-separated list of row ids. Every call appends
+one JSON line to FAKE_RUNNER_LOG: its argv, its working directory, and, for a verb given a tree
+(`--root`, `--repo` or `--subject`), the census of that tree as {path: sha256 of the contents}, so a
+test can read what was judged after the driver has removed it.
 """
 
 import hashlib
@@ -38,21 +42,41 @@ PLANTED = {
         ("beta.heuristic", "advisory"),
         ("beta.vocabulary", "catalog"),
     ),
+    "gamma": (
+        ("gamma.first", "block"),
+        ("gamma.second", "block"),
+        ("gamma.later", "block"),
+        ("gamma.outside", "block"),
+        ("gamma.heuristic", "advisory"),
+    ),
+    "delta": (
+        ("delta.first", "block"),
+        ("delta.second", "block"),
+    ),
+    "epsilon": (("epsilon.first", "block"),),
 }
 SEO_STAGES = ("technical", "on-page", "social")
 SCHEMAS = {
-    "probe": "phxd.pack.probe.v1",
-    "run": "phxd.pack.run.v1",
-    "verify": "phxd.seo-pipeline.v1",
+    "probe": "runner.pack.probe.v1",
+    "run": "runner.pack.run.v1",
+    "verify": "runner.seo-pipeline.v1",
 }
 
 
+def planted(name):
+    return {row for row in os.environ.get(name, "").split(",") if row}
+
+
 def main(argv):
-    log = os.environ.get("FAKE_PHXD_LOG")
+    log = os.environ.get("FAKE_RUNNER_LOG")
     if not log:
-        print("fake phxd: FAKE_PHXD_LOG is not set", file=sys.stderr)
+        print("fake runner: FAKE_RUNNER_LOG is not set", file=sys.stderr)
         return 2
-    red = {row for row in os.environ.get("FAKE_PHXD_RED", "").split(",") if row}
+    exits = {
+        **{row: 2 for row in planted("FAKE_RUNNER_ERROR")},
+        **{row: 3 for row in planted("FAKE_RUNNER_VOID")},
+        **{row: 1 for row in planted("FAKE_RUNNER_RED")},
+    }
     ledger = None
     if argv[:1] == ["--ledger"]:
         ledger, argv = Path(argv[1]), argv[2:]
@@ -70,12 +94,12 @@ def main(argv):
     if words == ["pack", "list"]:
         return pack_list(options)
     if words == ["pack", "probe"]:
-        return pack_card("probe", options, red)
+        return pack_card("probe", options, exits)
     if words == ["pack", "run"]:
-        return pack_run(ledger, options, red)
+        return pack_run(ledger, options, exits)
     if words == ["verify", "seo-pipeline"]:
-        return seo_card(options, red)
-    print(f"fake phxd: no verb {' '.join(words)}", file=sys.stderr)
+        return seo_card(options, exits)
+    print(f"fake runner: no verb {' '.join(words)}", file=sys.stderr)
     return 2
 
 
@@ -103,7 +127,7 @@ def census(tree):
 
 def init(ledger):
     if ledger is None:
-        print("phxd: init needs a ledger", file=sys.stderr)
+        print("runner: init needs a ledger", file=sys.stderr)
         return 2
     ledger.write_text("", encoding="utf-8")
     print(f"ledger ready at {ledger}")
@@ -112,7 +136,7 @@ def init(ledger):
 
 def register(ledger, options):
     if ledger is None or not ledger.is_file():
-        print("phxd: no ledger; run init first", file=sys.stderr)
+        print("runner: no ledger; run init first", file=sys.stderr)
         return 1
     row = {"project": 1, "slug": options["--slug"], "repo": options["--repo"]}
     with open(ledger, "a", encoding="utf-8") as handle:
@@ -122,11 +146,11 @@ def register(ledger, options):
 
 
 def catalog(options):
-    """The catalog's rows, or None when no --skills-root names one (phxd then walks its cwd)."""
+    """The catalog's rows, or None when no --skills-root names one."""
     root = options.get("--skills-root")
     path = Path(root) / "catalog.json" if root else None
     if path is None or not path.is_file():
-        print("phxd: skills/catalog.json not found", file=sys.stderr)
+        print("runner: skills/catalog.json not found", file=sys.stderr)
         return None
     return json.loads(path.read_text(encoding="utf-8"))["skills"]
 
@@ -136,11 +160,7 @@ def pack_list(options):
     if skills is None:
         return 4
     packs = [
-        {
-            "id": skill["id"],
-            "gate": skill["gate"],
-            "requires_phxd_schema": skill["requires_phxd_schema"],
-        }
+        {"id": skill["id"], "gate": skill["gate"], "requires_schema": skill["requires_schema"]}
         for skill in skills
         if skill["kind"] == "pack"
     ]
@@ -149,19 +169,19 @@ def pack_list(options):
 
 
 def admits(verb, options):
-    """phxd's admission rule: a verb runs a pack iff its catalog row declares that verb's card."""
+    """The runner's admission rule: a verb runs a pack iff its catalog row declares its card."""
     pack = options.get("--pack", "seo-pipeline")
     skills = catalog(options)
     if skills is None:
         return False
     rows = [skill for skill in skills if skill["id"] == f"packs/{pack}"]
     if not rows:
-        print(f"phxd: unknown_pack catalog row: {pack}", file=sys.stderr)
+        print(f"runner: unknown_pack catalog row: {pack}", file=sys.stderr)
         return False
-    declared = rows[0]["requires_phxd_schema"]
+    declared = rows[0]["requires_schema"]
     if SCHEMAS[verb] not in declared:
         print(
-            f"phxd: wrong_verb: packs/{pack} declares {declared[0]}; "
+            f"runner: wrong_verb: packs/{pack} declares {declared[0]}; "
             f"this verb admits rows declaring {SCHEMAS[verb]}",
             file=sys.stderr,
         )
@@ -169,24 +189,31 @@ def admits(verb, options):
     return True
 
 
-def pack_card(verb, options, red):
+def row_of(ident, severity, exits):
+    advisory = severity == "advisory"
+    code = exits.get(ident, 0)
+    if code == 0:
+        color = "green"
+    elif advisory:
+        color = "advisory"
+    else:
+        color = {1: "red", 3: "void"}.get(code, "error")
+    row = {"id": ident, "ran": True, "exit": code, "color": color}
+    if advisory:
+        row["severity"] = "advisory"
+    return row
+
+
+def pack_card(verb, options, exits):
     if not admits(verb, options):
         return 4
     pack = options["--pack"]
-    rows = []
-    failed = False
-    for ident, severity in PLANTED[pack]:
-        advisory = severity == "advisory"
-        planted = ident in red
-        failed = failed or (planted and not advisory)
-        color = ("advisory" if advisory else "red") if planted else "green"
-        row = {"id": ident, "ran": True, "exit": 1 if planted else 0, "color": color}
-        if advisory:
-            row["severity"] = "advisory"
-        rows.append(row)
+    rows = [row_of(ident, severity, exits) for ident, severity in PLANTED[pack]]
+    failed = any(row["color"] in ("red", "error") for row in rows)
     card = {
         "schema": SCHEMAS["probe"],
         "pack": pack,
+        "scope": options.get("--scope"),
         "examined": len(rows),
         "color": "red" if failed else "green",
         "checks": rows,
@@ -195,13 +222,13 @@ def pack_card(verb, options, red):
     return 4 if failed else 0
 
 
-def pack_run(ledger, options, red):
+def pack_run(ledger, options, exits):
     if ledger is None or not ledger.is_file():
-        print("phxd: pack run: no ledger", file=sys.stderr)
+        print("runner: pack run: no ledger", file=sys.stderr)
         return 1
     projects = [json.loads(line) for line in ledger.read_text(encoding="utf-8").splitlines()]
     if str(options.get("--project")) not in {str(row["project"]) for row in projects}:
-        print(f"phxd: pack run: unknown project {options.get('--project')}", file=sys.stderr)
+        print(f"runner: pack run: unknown project {options.get('--project')}", file=sys.stderr)
         return 1
     if not admits("run", options):
         return 4
@@ -214,9 +241,9 @@ def pack_run(ledger, options, red):
             rows.append({"id": ident, "severity": severity, "verdict": "catalog"})
             continue
         examined += 1
-        planted = ident in red
+        red = exits.get(ident) == 1
         verdict = "ok"
-        if planted:
+        if red:
             verdict = "advisory" if severity == "advisory" else "red"
         failed = failed or verdict == "red"
         rows.append({"id": ident, "severity": severity, "verdict": verdict})
@@ -232,13 +259,14 @@ def pack_run(ledger, options, red):
     return 4 if failed else 0
 
 
-def seo_card(options, red):
+def seo_card(options, exits):
     subject = Path(options["--subject"])
     if not subject.is_dir():
-        print(f"phxd: verify seo-pipeline: subject is not a directory: {subject}", file=sys.stderr)
+        print(f"runner: verify seo-pipeline: subject is not a directory: {subject}", file=sys.stderr)
         return 4
     stages = [
-        {"id": stage, "verdict": "red" if stage in red else "green"} for stage in SEO_STAGES
+        {"id": stage, "verdict": "red" if exits.get(stage) == 1 else "green"}
+        for stage in SEO_STAGES
     ]
     failed = any(stage["verdict"] == "red" for stage in stages)
     card = {

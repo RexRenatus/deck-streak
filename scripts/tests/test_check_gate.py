@@ -181,6 +181,38 @@ class EveryStageIsTimed(unittest.TestCase):
         self.assertEqual(done.returncode, 1, done.stdout)
 
 
+class TheLogDirectoryStaysOffStdout(unittest.TestCase):
+    """SPEC-056 R4: stdout, which a reader quotes, never names the machine's log directory."""
+
+    def test_the_log_directory_is_never_on_stdout_and_holds_every_stage_log(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            # A caller that names the directory, as every CI job does: nothing names it, and it
+            # holds each stage's log and the timings, which the job's upload step reads.
+            named = Path(scratch) / "named"
+            done, logs = run_gate(named, ["fmt", "web"], ["cargo"])
+            self.assertNotIn(str(logs), done.stdout)
+            self.assertNotIn(str(logs), done.stderr)
+            self.assertEqual([line for line in done.stdout.splitlines() if "logs" in line], [])
+            held = examined("files in the named log directory", sorted(logs.iterdir()))
+            self.assertEqual([path.name for path in held], ["fmt.log", "timings.tsv", "web.log"])
+            self.assertTrue(summary(done), done.stdout)
+            # A caller that names none: the fresh directory is named once, on stderr alone.
+            fresh = Path(scratch) / "fresh"
+            temp = fresh / "tmp"
+            temp.mkdir(parents=True)
+            done, _ = run_gate(
+                fresh, ["fmt"], ["cargo"], extra_env={"CHECK_LOG_DIR": "", "TMPDIR": str(temp)}
+            )
+            made = examined("fresh log directories", sorted(temp.iterdir()))
+            self.assertEqual(len(made), 1, made)
+            self.assertNotIn(str(made[0]), done.stdout)
+            self.assertEqual(done.stderr.splitlines(), [f"logs: {made[0]}"])
+            self.assertEqual(
+                sorted(path.name for path in made[0].iterdir()), ["fmt.log", "timings.tsv"]
+            )
+            self.assertIn("CHECK OK: 1 stage(s)", done.stdout)
+
+
 class ThePythonStageRunsEverySuite(unittest.TestCase):
     def test_a_red_guard_suite_leaves_the_oracle_suite_run_and_named(self):
         with tempfile.TemporaryDirectory() as scratch:

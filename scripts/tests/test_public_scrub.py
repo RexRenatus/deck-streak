@@ -1,8 +1,11 @@
 """The public scrub refuses private shapes and literals and passes harmless ones (SPEC-002 A7),
 reads every blob a push publishes, and refuses binaries and oversize files (SPEC-033 A1 to A8).
 It takes a file as its own subject, refuses a subject that does not exist or examines nothing,
-passes a systemd unit instance name, and composes its rules once (SPEC-054 A1 to A5, A7)."""
+passes a systemd unit instance name, and composes its rules once (SPEC-054 A1 to A5, A7). Its
+public shapes are its own files, each family still found, and its loader still reads the private
+list's schema (SPEC-056 A9, A10)."""
 
+import importlib.util
 import json
 import os
 import re
@@ -12,9 +15,39 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from _support import REPO
+from _support import REPO, examined
 
 SCRUB = REPO / "scripts" / "public-scrub.py"
+# The scrub's own public shapes (SPEC-056 R5).
+RULES = REPO / "scripts" / "scrub-rules"
+# One planted value for each public shape, by the rule that must find it. Each is assembled at run
+# time from parts, so this file holds none of them for the tree scan to find.
+PLANTED_SHAPES = {
+    "ipv4": ".".join(["10", "20", "30", "40"]),
+    "ip-hostname": "-".join(["10", "20", "30", "40"]) + ".ss" + "lip.io",
+    "github-token": "gh" + "p_" + "A1b2" * 6,
+    "sk-key": "s" + "k-" + "a1B2" * 6,
+    "google-key": "AI" + "za" + "b2C3" * 6,
+    "aws-key-id": "AK" + "IA" + "C3D4" * 4,
+    "slack-token": "xo" + "xb-" + "12345678901",
+    "telegram-bot-token": "123456789" + ":" + "A1b2" * 8 + "Cde",
+    "telegram-chat-id": "-100" + "1234567890",
+    "private-key": "-----BEGIN " + "RSA PRIVATE " + "KEY-----",
+    "email": "ops" + "@" + "corp-mail" + ".com",
+    "ipv6": ":".join(["fd12", "3456", "789a", "bcde"]) + "::" + "1",
+    "cloud-project-flag": "--pro" + "ject " + "acme-prod-42",
+    "cloud-project-key": "project" + "_id: " + "acme-prod-42",
+    "cloud-resource-path": "pro" + "jects/" + "acme-prod-42" + "/secrets",
+    "secret-name-flag": "--sec" + "ret " + "db-password",
+    "secret-name-path": "sec" + "rets/" + "db-password" + "/versions",
+    "secret-name-command": "sec" + "rets create " + "db-password",
+    "bucket-url": "g" + "s://" + "acme-backups-42",
+    "cloud-service-host": "acme-api" + ".a.run" + ".app",
+    "internal-host": "db" + ".lan" + ".internal",
+    "home-directory": "/ho" + "me/" + "rexdev",
+    "telegram-id-in-context": "chat" + "_id = " + "73" + "51642980",
+    "phone-in-context": "pho" + "ne: " + "+1 415 555 0199",
+}
 # Built at run time, so this file itself carries no address for the tree scan to find.
 PLANTED = ".".join(["10", "20", "30", "40"])
 # A unit instance name of each type SPEC-054 R2 admits: a template, its instance and the type.
@@ -393,6 +426,73 @@ def scrub_public_text(text):
         subject.mkdir()
         (subject / "note.md").write_text(text, encoding="utf-8")
         return public_scrub(REPO, "--no-tree", "--subject", str(subject))
+
+
+def scrub_module():
+    """The scrub, imported as a module, to read its loader."""
+    spec = importlib.util.spec_from_file_location("public_scrub", SCRUB)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+class TheScrubOwnsItsShapes(unittest.TestCase):
+    def test_each_public_shape_family_is_found_from_the_scrubs_own_rules(self):
+        files = sorted(path.name for path in RULES.glob("*.json")) if RULES.is_dir() else []
+        self.assertEqual(files, ["persona-core.json", "privacy-gdpr.json"])
+        ids = [
+            row["id"]
+            for name in files
+            for row in json.loads((RULES / name).read_text(encoding="utf-8"))["patterns"]
+        ]
+        self.assertEqual(sorted(ids), sorted(PLANTED_SHAPES), "every public shape is planted")
+        for rule, value in examined("public shapes", sorted(PLANTED_SHAPES.items())):
+            with self.subTest(rule=rule):
+                done = scrub(f"a planted value: {value}\n")
+                self.assertEqual(done.returncode, 1, done.stdout)
+                self.assertIn(f"note.md:1: {rule}", done.stdout)
+                self.assertNotIn(value, done.stdout)
+
+    def test_the_loader_reads_a_synthetic_private_list_in_its_schema(self):
+        module = scrub_module()
+        self.assertTrue(hasattr(module, "load_deny"), "the scrub reads its lists with its own loader")
+        word = "zebra" + "-canary"
+        shape = "quokka" + "-[0-9]{3}"
+        with tempfile.TemporaryDirectory() as tmp:
+            private = Path(tmp) / "private.json"
+            private.write_text(
+                json.dumps(
+                    {
+                        "schema": "phx.persona.deny.v1",
+                        "key_markers": ["marker"],
+                        "patterns": [{"id": "planted-shape", "flags": "i", "regex": shape}],
+                        "literals": [word.upper()],
+                        "journal_paths": ["diary"],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            loaded = module.load_deny(private, "private")
+            self.assertEqual([(o, i) for o, i, _ in loaded["patterns"]], [("private", "planted-shape")])
+            self.assertTrue(loaded["patterns"][0][2].search("QUOKKA-123"), "the flags are read")
+            self.assertEqual(loaded["literals"], [("private", word)], "literals are casefolded")
+            subject = Path(tmp) / "subject"
+            subject.mkdir()
+            (subject / "note.md").write_text(f"{word} and quokka-042\n", encoding="utf-8")
+            done = public_scrub(
+                REPO, "--no-tree", "--subject", str(subject), "--deny-list", str(private)
+            )
+            self.assertEqual(done.returncode, 1, done.stdout + done.stderr)
+            self.assertIn("note.md:1: planted-shape", done.stdout)
+            self.assertIn("note.md:1: private literal #0", done.stdout)
+            self.assertNotIn(word, done.stdout)
+            # A list in another schema is refused by name.
+            private.write_text(json.dumps({"schema": "another.schema.v1"}), encoding="utf-8")
+            done = public_scrub(
+                REPO, "--no-tree", "--subject", str(subject), "--deny-list", str(private)
+            )
+            self.assertEqual(done.returncode, 2, done.stdout + done.stderr)
+            self.assertIn("schema is not phx.persona.deny.v1", done.stdout)
 
 
 if __name__ == "__main__":

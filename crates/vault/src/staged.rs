@@ -1064,3 +1064,74 @@ fn allowed_folders(
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use serde_json::Value;
+
+    use super::{VENDORED_CHECKS, blocking_classes};
+
+    /// SPEC-056 A8: the owned classes keep every field the gate's parser reads.
+    #[test]
+    fn the_gate_class_parser_refuses_the_owned_classes_without_a_field_it_reads() {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("data")
+            .join("gate-classes.json");
+        let text = std::fs::read_to_string(&path).expect("the owned gate classes can be read");
+        assert_eq!(
+            VENDORED_CHECKS, text,
+            "the gate compiles in the owned classes"
+        );
+        let classes = blocking_classes(&text).expect("the owned classes read as classes");
+        assert!(
+            !classes.is_empty(),
+            "the owned classes name a blocking class"
+        );
+        let document: Value = serde_json::from_str(&text).expect("the owned classes are JSON");
+        let first_blocking = |document: &mut Value| -> Option<usize> {
+            document
+                .get("checks")
+                .and_then(Value::as_array)?
+                .iter()
+                .position(|row| row.get("severity").and_then(Value::as_str) == Some("block"))
+        };
+        // Without its rows, the file names no class.
+        let mut rowless = document.clone();
+        rowless
+            .as_object_mut()
+            .expect("the owned classes are an object")
+            .remove("checks");
+        assert!(blocking_classes(&rowless.to_string()).is_err());
+        // Without a blocking row's id, its class cannot be named.
+        let mut nameless = document.clone();
+        let at = first_blocking(&mut nameless).expect("a blocking row");
+        nameless["checks"][at]
+            .as_object_mut()
+            .expect("a row is an object")
+            .remove("id");
+        assert!(blocking_classes(&nameless.to_string()).is_err());
+        // Without the severities, no row is blocking.
+        let mut unranked = document.clone();
+        for row in unranked["checks"]
+            .as_array_mut()
+            .expect("the rows are a list")
+        {
+            row.as_object_mut()
+                .expect("a row is an object")
+                .remove("severity");
+        }
+        assert!(blocking_classes(&unranked.to_string()).is_err());
+        // A row's time limit is read: a changed limit changes its class's.
+        let mut slower = document.clone();
+        let at = first_blocking(&mut slower).expect("a blocking row");
+        let limit = slower["checks"][at]["probe"]["timeout_seconds"]
+            .as_u64()
+            .expect("a blocking row names its time limit");
+        slower["checks"][at]["probe"]["timeout_seconds"] = Value::from(limit + 1);
+        assert_ne!(
+            blocking_classes(&slower.to_string()).expect("the slower classes read"),
+            classes,
+            "the parser reads each row's time limit"
+        );
+    }
+}
