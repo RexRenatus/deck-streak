@@ -20,6 +20,8 @@ SECRET_NAME = re.compile(
 )
 # A byte size with a base-1024 suffix (systemd.resource-control(5)).
 SIZE = re.compile(r"^(\d+(?:\.\d+)?)\s*([KMGTPE]?)$", re.IGNORECASE)
+# The key a unit waives an advisory departure with; systemd ignores an `X-` key (SPEC-056 R16).
+WAIVE_KEY = "X-DurableServices-Waive"
 # The service types that keep running after they start (systemd.service(5), Type=).
 LONG_RUNNING_KINDS = {"simple", "exec", "notify", "notify-reload", "forking", "dbus", "idle"}
 
@@ -147,8 +149,13 @@ def service_type(unit):
 
 def waivers(unit):
     """Each `X-DurableServices-Waive=<reason> <why>` of the unit's `[Unit]` section, as (reason,
-    why): the advisory departures the unit declares on purpose (SPEC-056 R16)."""
-    return []
+    why): the advisory departures the unit declares on purpose (SPEC-056 R16). A waiver with no
+    why is kept with an empty one, so a test can refuse it."""
+    found = []
+    for value in unit.values("Unit", WAIVE_KEY):
+        reason, _, why = value.strip().partition(" ")
+        found.append((reason, why.strip()))
+    return found
 
 
 def long_running(unit):
