@@ -272,6 +272,20 @@ class WorkflowsAreHardened(unittest.TestCase):
                         f"planted.yml:jobs.build.steps[2]: clones a repository: {block}{clone}",
                     ],
                 )
+        # A block's end and its indent read only a space or a tab as white space: a line of one of
+        # the characters above is refused by its line and is still the block's text, so the secret
+        # the block names over two lines keeps the indent that line sets.
+        for form, (template, line, secret) in PLANTED_BLOCK_LINES.items():
+            for name, character in {**PLANTED_SPACES, **PLANTED_BREAKS}.items():
+                with self.subTest(f"{form}: {name}"):
+                    self.assertEqual(
+                        planted_problems(template.replace("<C>", character)),
+                        [
+                            f"planted.yml:line {line}: a character the reader does not read",
+                            "planted.yml:jobs.build.steps[0].run: reads the secret "
+                            + secret.replace("<C>", character),
+                        ],
+                    )
         # A line the reader cannot place refuses the whole file at once, naming the line and why.
         for form, (template, why) in PLANTED_UNPLACED_CHARACTERS.items():
             for name, character in {**PLANTED_SPACES, **PLANTED_BREAKS}.items():
@@ -350,6 +364,12 @@ class WorkflowsAreHardened(unittest.TestCase):
                     case.setUp()
                     with self.assertRaisesRegex(AssertionError, refusal):
                         getattr(case, test)()
+        # The walk the SHA-pin and runner tests read through collects every value a key holds,
+        # wherever it sits: a `uses` nested in a `uses` is collected after the value that holds it.
+        nested = read_workflow(PLANTED_JOB + "      - uses:\n          uses: actions/checkout@v4\n")
+        self.assertEqual(
+            entries(nested, "uses"), [{"uses": "actions/checkout@v4"}, "actions/checkout@v4"]
+        )
 
 
 def triggers(workflow):
@@ -1547,6 +1567,36 @@ PLANTED_UNPLACED_CHARACTERS = {
           git clone https://github.com/example-org/other-repository.git
 """,
         r"^line 13 is not a mapping entry",
+    ),
+}
+# Planted `|` blocks that each hold a line of <C> alone, one column less indented than the block's
+# other lines, and a secret whose name the block writes over two lines, as (the planted workflow,
+# the line of <C>, the secret's name as the checker reports it). The character check refuses the
+# line, and the block's end and indent read only a space or a tab as white space, so the line is the
+# block's text: at the block's end and inside it, it sets the indent the name keeps. The names are
+# synthetic.
+PLANTED_BLOCK_LINES = {
+    "a line of <C> at a block's end": (
+        PLANTED_JOB
+        + """\
+      - run: |
+          echo ${{ secrets['EXAMPLE
+          TOKEN'] }}
+         <C>
+""",
+        14,
+        "EXAMPLE\n TOKEN",
+    ),
+    "a line of <C> inside a block": (
+        PLANTED_JOB
+        + """\
+      - run: |
+          echo ${{ secrets['EXAMPLE
+         <C>
+          TOKEN'] }}
+""",
+        13,
+        "EXAMPLE\n<C>\n TOKEN",
     ),
 }
 # The secrets context in an expression, in any case: `secrets.NAME` (group 1), `secrets['NAME']`
