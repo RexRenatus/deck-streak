@@ -684,8 +684,12 @@ impl OwnerChat {
 
 impl BotTransport for OwnerChat {
     fn push_message<'a>(&'a self, _pass: &'a Pass, text: &'a str) -> PushFuture<'a> {
-        let _message = (&self.transport, self.chat, text);
-        Box::pin(async { Pushed::Failed })
+        Box::pin(async move {
+            match self.transport.send_html(self.chat, text, None).await {
+                Sent::Delivered { .. } => Pushed::Delivered,
+                Sent::Failed => Pushed::Failed,
+            }
+        })
     }
 }
 

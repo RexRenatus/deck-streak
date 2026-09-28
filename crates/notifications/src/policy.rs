@@ -56,13 +56,9 @@ pub struct Policy {
     surfaces: Vec<Surface>,
     router: RouterSection,
     kinds: BTreeMap<String, KindSpec>,
-    #[serde(skip_serializing)]
     ladder: Ladder,
-    #[serde(skip_serializing)]
     celebration_budgets: CelebrationBudgets,
-    #[serde(skip_serializing)]
     streak_break: StreakBreak,
-    #[serde(skip_serializing)]
     near_miss: NearMiss,
     pub(crate) quiet_hours: QuietHours,
     digest: Digest,

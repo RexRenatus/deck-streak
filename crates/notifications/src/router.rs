@@ -35,7 +35,7 @@ const MINUTE_MS: i64 = 60_000;
 /// The router's pass. Every bot transport call takes one, and only this module can make one, so a
 /// delivery call outside the router does not compile (SPEC-041 A2).
 #[derive(Debug)]
-pub struct Pass(pub ());
+pub struct Pass(());
 
 /// The pass the router hands a transport for each call.
 const PASS: Pass = Pass(());
@@ -287,24 +287,41 @@ impl Router {
     /// [`KernelError::Database`] when the ledger cannot be read or written.
     pub async fn route(&self, occasion: &Occasion) -> Result<Decision, KernelError> {
         let now = self.clock.now();
-        let surface = if occasion.origin() == Surface::MiniApp {
+        let celebration = occasion.kind().class() == Class::Celebration;
+        let surface = if celebration && occasion.origin() == Surface::MiniApp {
             Surface::MiniApp
         } else {
             Surface::Bot
         };
         let subject = Subject::routed(occasion, surface);
         let rendered = rendered(occasion.tier());
-        if surface == Surface::MiniApp {
-            let mut write = self.db.write().await?;
-            push_in_app(&mut write, &subject, rendered, occasion.text(), now).await?;
-            write.commit().await?;
-        } else {
-            let _pushed = self.push(occasion.text(), rendered).await;
-        }
-        Ok(Decision::Sent {
-            surface,
-            tier: rendered,
-        })
+        let mut write = self.db.write().await?;
+        let decision = match self.decide(&mut write, occasion, surface, now).await? {
+            Verdict::Withhold(reason) => {
+                ledger::record(&mut write, &subject.withheld(reason, now)).await?;
+                Decision::Withheld { surface, reason }
+            }
+            Verdict::Defer(hold) => {
+                self.hold(&mut write, &held_row(occasion, surface, hold, 0, now), now)
+                    .await?;
+                ledger::record(&mut write, &subject.deferred(hold, now)).await?;
+                Decision::Deferred { surface, hold }
+            }
+            Verdict::SendInApp => {
+                push_in_app(&mut write, &subject, rendered, occasion.text(), now).await?;
+                ledger::record(&mut write, &subject.sent(rendered, now)).await?;
+                Decision::Sent {
+                    surface,
+                    tier: rendered,
+                }
+            }
+            Verdict::SendBot(claim) => {
+                write.commit().await?;
+                return self.send_bot(occasion, &subject, claim).await;
+            }
+        };
+        write.commit().await?;
+        Ok(decision)
     }
 
     /// Sends `occasion` to the bot after its claim was committed, and records what that came to.
@@ -452,7 +469,80 @@ impl Router {
     ///
     /// [`KernelError::Database`] when the ledger cannot be read or written.
     pub async fn flush(&self) -> Result<Flushed, KernelError> {
-        Ok(Flushed::Ran { sends: 0 })
+        let Some(bot) = &self.bot else {
+            return Ok(Flushed::NoNotifier);
+        };
+        let now = self.clock.now();
+        let mut write = self.db.write().await?;
+        if self.in_quiet_window(&mut write, now).await? {
+            return Ok(Flushed::QuietHours);
+        }
+        if self.breaker_open(now) {
+            return Ok(Flushed::BreakerOpen);
+        }
+        let max_age = i64::from(self.policy.deferral.max_age_minutes) * MINUTE_MS;
+        let mut full = Vec::new();
+        for row in ledger::held(&mut write).await? {
+            if now.epoch_millis() - row.deferred_at > max_age {
+                self.abandon(&mut write, &row, now).await?;
+            } else {
+                full.push(row);
+            }
+        }
+        write.commit().await?;
+        let flush_max = usize::try_from(self.policy.deferral.flush_max).unwrap_or(usize::MAX);
+        let rolled = full.split_off(full.len().min(flush_max));
+        full.sort_by_key(|row| row.id);
+        let mut sends = 0;
+        for row in &full {
+            let pushed = match row.surface {
+                Surface::MiniApp => Pushed::Delivered,
+                Surface::Bot => self.push(&row.text, row.tier_pending).await,
+            };
+            let now = self.clock.now();
+            let mut write = self.db.write().await?;
+            if pushed == Pushed::Failed {
+                self.trip(now);
+                self.retry_or_abandon(&mut write, row, now).await?;
+                write.commit().await?;
+                return Ok(Flushed::Ran { sends });
+            }
+            let subject = Subject::held(row);
+            if row.surface == Surface::MiniApp {
+                push_in_app(&mut write, &subject, row.tier_pending, &row.text, now).await?;
+            }
+            ledger::settle(&mut write, row.id).await?;
+            ledger::record(&mut write, &subject.sent(row.tier_pending, now)).await?;
+            write.commit().await?;
+            sends += 1;
+        }
+        let mut read = self.db.write().await?;
+        let abandoned = ledger::abandoned(&mut read).await?;
+        drop(read);
+        if rolled.is_empty() && abandoned.is_empty() {
+            return Ok(Flushed::Ran { sends });
+        }
+        let pushed = bot.push_message(&PASS, &recap(&rolled, &abandoned)).await;
+        let now = self.clock.now();
+        let mut write = self.db.write().await?;
+        if pushed == Pushed::Delivered {
+            for row in &rolled {
+                let tier = row.tier_pending.min(Tier::T2);
+                ledger::settle(&mut write, row.id).await?;
+                ledger::record(&mut write, &Subject::held(row).sent(tier, now)).await?;
+            }
+            for (id, _, _) in &abandoned {
+                ledger::settle(&mut write, *id).await?;
+            }
+            sends += 1;
+        } else {
+            self.trip(now);
+            for row in &rolled {
+                self.retry_or_abandon(&mut write, row, now).await?;
+            }
+        }
+        write.commit().await?;
+        Ok(Flushed::Ran { sends })
     }
 
     /// Holds `row` on the queue, then keeps the queue's bound: past the policy's count of held

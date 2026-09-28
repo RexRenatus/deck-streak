@@ -19,8 +19,15 @@ const MINUTE_MS: i64 = 60_000;
 /// first, so a minute before 0 or past the day's last names a minute of the day before or after.
 #[must_use]
 pub fn in_quiet_hours(local_minutes: i64, start_min: i64, end_min: i64) -> bool {
-    let _window = (local_minutes, start_min, end_min);
-    false
+    if start_min == end_min {
+        return false;
+    }
+    let minute = local_minutes.rem_euclid(MINUTES_PER_DAY);
+    if start_min < end_min {
+        start_min <= minute && minute < end_min
+    } else {
+        minute >= start_min || minute < end_min
+    }
 }
 
 /// The minute of the local day, at `offset`, that `instant` falls in: 0 to 1439.

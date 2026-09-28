@@ -20,18 +20,59 @@ pub struct NotificationsDataRights;
 
 impl DataRights for NotificationsDataRights {
     fn declaration(&self) -> Result<Declaration, DataRightsError> {
-        Declaration::new(NOTIFICATIONS_CONTEXT, Vec::new())
+        Declaration::new(
+            NOTIFICATIONS_CONTEXT,
+            [
+                DECISIONS_TABLE,
+                DELIVERIES_TABLE,
+                QUEUE_TABLE,
+                FEED_TABLE,
+                SETTINGS_TABLE,
+            ]
+            .into_iter()
+            .map(|table| TableRights {
+                table,
+                disposition: Disposition::ExportAndErase,
+            })
+            .collect(),
+        )
     }
 
     fn export<'a>(
         &'a self,
-        _connection: &'a mut SqliteConnection,
+        connection: &'a mut SqliteConnection,
     ) -> PortFuture<'a, Vec<ExportedTable>> {
-        Box::pin(async { Ok(Vec::new()) })
+        Box::pin(async move {
+            Ok(vec![
+                decisions(connection).await?,
+                deliveries(connection).await?,
+                queue(connection).await?,
+                feed(connection).await?,
+                settings(connection).await?,
+            ])
+        })
     }
 
-    fn erase<'a>(&'a self, _connection: &'a mut SqliteConnection) -> PortFuture<'a, ()> {
-        Box::pin(async { Ok(()) })
+    fn erase<'a>(&'a self, connection: &'a mut SqliteConnection) -> PortFuture<'a, ()> {
+        Box::pin(async move {
+            // Every row of every table, inside the caller's transaction.
+            sqlx::query!("DELETE FROM notification_decisions")
+                .execute(&mut *connection)
+                .await?;
+            sqlx::query!("DELETE FROM notification_deliveries")
+                .execute(&mut *connection)
+                .await?;
+            sqlx::query!("DELETE FROM notification_queue")
+                .execute(&mut *connection)
+                .await?;
+            sqlx::query!("DELETE FROM in_app_feed")
+                .execute(&mut *connection)
+                .await?;
+            sqlx::query!("DELETE FROM notification_settings")
+                .execute(&mut *connection)
+                .await?;
+            Ok(())
+        })
     }
 }
 

@@ -52,7 +52,7 @@ pub(crate) fn routes(access: OwnerAccess, readiness: Readiness) -> Router {
 }
 
 /// `GET /api/notifications/feed`: the unseen items, oldest first, for the owner's live session.
-async fn feed(State(state): State<FeedState>) -> Response {
+async fn feed(_owner: OwnerSession, State(state): State<FeedState>) -> Response {
     let Some(db) = state.readiness.database() else {
         return StatusCode::SERVICE_UNAVAILABLE.into_response();
     };

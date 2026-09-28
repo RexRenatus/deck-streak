@@ -136,7 +136,11 @@ where
 {
     let history = cycle.gate.history().await.map_err(CycleError::History)?;
     let sync = cycle.syncer.sync(trigger).await?;
-    let _flush = (&cycle.router, flush);
+    if let (Some(router), SyncReport::Ran { run, .. }) = (&cycle.router, &sync)
+        && run.outcome.is_ok()
+    {
+        flush(router).await;
+    }
     let sync_ok = match &sync {
         SyncReport::Ran { run, .. } => run.outcome.is_ok(),
         // A refusal or a debounce made no request: the copy is the last sync's, and the record's
