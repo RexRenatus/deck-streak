@@ -75,3 +75,57 @@ re-expressed against the fix round's code, 11 from the review (V1, V3, V6 to V9,
 four forms) and 23 of the reader's branches. 62 were killed and none survived. The first run, at
 ac103f6, left five survivors: b0e917c's planted workflows kill four, and 7f9e423 removed the fifth's
 branch, which read a bare dash as an empty item and which no test could tell apart.
+
+## Fix round 2, 2026-09-28
+
+The second review found forms the checker still admitted: white space and controls that YAML, or
+GitHub's parser, reads as text, a checkout's input named in another case, a checkout from another
+server, and actions/checkout written as the runner reads it apart. The checker failed on an empty
+block and on a step that is not a mapping, and three hand mutants survived. `dev` had not moved
+since 07322ae merged it. SPEC-034's inserted text was corrected first, at 0bec186. No criterion was
+added, so the fences above are unchanged, and this round's runs are listed here. Each fix was
+committed red, then green.
+
+- A10 red at 34e669a: 48 of its subtests failed. 36 read `AssertionError: AssertionError not
+  raised`: a planted line the reader cannot place was read. Four read `AssertionError: Lists
+  differ` and eight `line 15 is not a mapping entry`: no line holding one of twelve characters
+  outside printable ASCII was refused by its line, and for eight of them the reader split the line
+  at the character. Green at 6ddbfb9.
+- A10 red at d068a61: `AttributeError: 'str' object has no attribute 'get'`: the checker judged a
+  step the reader had refused. A11 red at d068a61: `ValueError: min() iterable argument is empty`:
+  the reader failed on an empty block. Both green at 36f9402.
+- A10 red at e3b6f7a: `AssertionError: Lists differ`: two checkouts of another repository, their
+  input named in another case, were admitted. Green at ce3cf5f.
+- A10 red at 9e0828f: `AssertionError: Lists differ`: two checkouts from another server were
+  admitted. Green at 18e3eac.
+- A10 red at 9ee09d1: `AssertionError: Lists differ`: four checkouts of another repository, their
+  action written as the runner reads actions/checkout, were admitted. A13 red at 9ee09d1:
+  `AssertionError: AssertionError not raised`, in two of its three new subtests: the SHA-pin test
+  admitted an action written with an empty part or a trailing slash. Both green at 5c12427.
+- 94edf64 kills three hand mutants and was green at once, because the checker already met each.
+  A13 runs each hardening test through its own setUp: Y0, whose setUp read `.yml` files only,
+  survived until then. A10 plants a block the reader does not read before a clone, and a plain value
+  over two lines (Y1, the final unplaced-line check deleted), and a secret after a `#` that no space
+  precedes (Y5, a bare `#` read as a comment). 34e669a's planted characters already killed Y1 and
+  Y5; with those subtests switched off, 94edf64's plants kill each.
+
+DISCLOSURE: A10's body changed after its red commit, eeaa4e7, again in this round. Its committed
+list grew from 42 to 53 findings: d068a61 (2), e3b6f7a (2), 9e0828f (2), 94edf64 (1) and 9ee09d1
+(4). 34e669a added its planted characters and lines (48 subtests), and 94edf64 its two unplaced
+forms. No finding that was in the list before this round changed or left. A11's body did not
+change; its admitted workflows gained an empty block (d068a61) and two checkouts from this server
+(9e0828f). A13's body changed after its red commit, 403d9ce: at 94edf64 its three subtests run
+through their own setUp rather than being handed their files, and at 9ee09d1 it gained three
+subtests for the SHA-pin test's forms. Its criterion now also says that an action is pinned only in
+its plain form.
+
+At 5c12427 a hand sweep ran 102 mutants over the checker, its reader and the SHA-pin pattern, one at
+a time, on a scratch copy of the committed tree, restoring the file byte for byte after each: the 62
+of the first fix round, re-expressed against this round's code, the second review's six (Y0 to Y3,
+Y5 and Y6), and 34 of this round's: the character check and the line ends, each white-space site,
+the empty block, the job, step and input guards, the reading of `uses`, inputs in any case, the
+server, the SHA-pin pattern, and the quoted and flow-list dispatches. 100 were killed. Two are
+equivalent: W12 and W13 read a block's trailing lines and its indent with white space other than a
+space or a tab, which only a line the character check refuses can hold, and no finding reads white
+space. Y2, which the second review recorded as equivalent, is killed: each planted line asserts the
+reason its refusal gives.
