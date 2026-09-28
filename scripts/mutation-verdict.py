@@ -5,6 +5,7 @@ R6, R10, R12; ADR-057).
 
     python3 scripts/mutation-verdict.py plan --base REF [--head REF] [--root DIR] --out DIR
                                             [--event E --base-ref B --subject S]
+    python3 scripts/mutation-verdict.py shards --plan FILE [--listed FILE]
     python3 scripts/mutation-verdict.py judge --plan FILE --class rust|web|oracle
                                              [--outcomes FILE] [--tool-exit N]
                                              [--stryker FILE] [--rows FILE]
@@ -22,7 +23,14 @@ diff. For a diff it reads `git diff BASE...HEAD` (on a pull request's merge
 ref, BASE is `HEAD^1`) and writes `plan.json` and `git.diff` into `--out`: every changed path with
 its class (R2), each production file's changed lines split into code lines and blank or comment
 lines, the rows the diff selects (R10), and the web files Stryker mutates whole. Under GitHub
-Actions it writes the step outputs `scope`, `rust`, `web`, `oracle`, `rows` and `mutate`.
+Actions it writes the step outputs `scope`, `case`, `rust`, `web`, `oracle`, `rows` and `mutate`.
+
+SHARDS sizes the Rust run from cargo-mutants' own listing of the diff's mutants (`--list --json
+--in-diff`), so no shard reaches its job's timeout (R18). Each round-robin shard's time is projected
+as the unmutated baseline's plus its mutants' measured costs, mutant `i` in shard `i mod n` as the
+tool assigns them, and the fewest shards whose slowest is projected within the bound are written
+into the plan, with each shard's mutants, and as the step outputs `shards` and `matrix`. A diff that
+needs more shards than a job matrix holds is refused with its projection, never capped.
 
 JUDGE reads a tool's own report, never its exit alone (R4). Examined is caught plus missed plus
 timed out (Stryker: killed, survived, no coverage and timed out); an unviable mutant, a compile or
@@ -515,6 +523,7 @@ def say_plan(plan: Plan) -> None:
                 sink.write(f"{name}={'true' if klass['applies'] else 'false'}\n")
             sink.write(f"rows={'true' if plan.rows else 'false'}\n")
             sink.write(f"scope={plan.scope['decision']}\n")
+            sink.write(f"case={plan.scope['decision']}: {plan.scope['reason']}\n")
             sink.write(f"mutate={','.join(plan.stryker_mutate)}\n")
 
 
@@ -542,8 +551,72 @@ SHARD_BOUND_SECONDS = 3600
 MAX_SHARDS = 256
 
 
+def projected(costs: list[int], count: int) -> list[int]:
+    """Each of `count` round-robin shards' projected seconds: the baseline, then mutant `i` in
+    shard `i mod count`, as cargo-mutants assigns them."""
+    totals = [BASELINE_SECONDS] * count
+    for index, cost in enumerate(costs):
+        totals[index % count] += cost
+    return totals
+
+
 def shards(plan_path: pathlib.Path, listed_path: str | None) -> int:
-    """The red-first stub: it accepts the plan and the listing and sizes nothing."""
+    """The fewest round-robin shards whose slowest is projected within the bound (R18), written
+    into the plan with each shard's mutants and, under GitHub Actions, as the matrix's outputs."""
+    plan = read_json(str(plan_path))
+    if not isinstance(plan, dict) or "classes" not in plan:
+        print(f"mutation: shards: VOID {plan_path} is not a mutation plan")
+        return EXIT_VOID
+    mutants: list[tuple[str, str]] = []
+    if plan["classes"]["rust"]["applies"]:
+        listed = read_json(listed_path)
+        if not isinstance(listed, list):
+            print(
+                f"mutation: shards: VOID the rust class applies and {listed_path or 'no --listed'} "
+                "holds no cargo-mutants listing"
+            )
+            return EXIT_VOID
+        mutants = [(str(entry.get("name")), str(entry.get("package"))) for entry in listed]
+    highest = max(SECONDS_PER_MUTANT.values())
+    costs = [SECONDS_PER_MUTANT.get(package, highest) for _, package in mutants]
+    fitting = (
+        n for n in range(1, MAX_SHARDS + 1) if max(projected(costs, n)) <= SHARD_BOUND_SECONDS
+    )
+    count = next(fitting, None)
+    if count is None:
+        print(
+            f"mutation: shards: REFUSED: {len(mutants)} mutant(s), projected at {sum(costs)} s "
+            f"serially, need more than {MAX_SHARDS} shards within {SHARD_BOUND_SECONDS} s each, the "
+            "most a job matrix holds: split the change, since a run is never capped"
+        )
+        return EXIT_FAIL
+    times = projected(costs, count)
+    plan["shards"] = {
+        "count": count,
+        "bound_seconds": SHARD_BOUND_SECONDS,
+        "baseline_seconds": BASELINE_SECONDS,
+        "serial_seconds": sum(costs),
+        "shards": [
+            {
+                "shard": shard,
+                "mutants": [
+                    name for index, (name, _) in enumerate(mutants) if index % count == shard
+                ],
+                "projected_seconds": times[shard],
+            }
+            for shard in range(count)
+        ],
+    }
+    plan_path.write_text(json.dumps(plan, indent=2) + "\n", encoding="utf-8")
+    print(
+        f"mutation: shards: {count} shard(s) for {len(mutants)} listed mutant(s), projected at "
+        f"{sum(costs)} s serially; the slowest at {max(times)} s of its {SHARD_BOUND_SECONDS} s bound"
+    )
+    output = os.environ.get("GITHUB_OUTPUT")
+    if output:
+        with open(output, "a", encoding="utf-8") as sink:
+            sink.write(f"shards={count}\n")
+            sink.write(f"matrix={json.dumps(list(range(count)))}\n")
     return EXIT_OK
 
 
