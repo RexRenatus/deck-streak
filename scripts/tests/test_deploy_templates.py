@@ -391,11 +391,13 @@ def unread_refusal(key, statuses, word):
 def refusal_page_conditions(unit):
     """Why a start of `unit` that a credential refuses would not fail it and start its page
     (SPEC-066 R2), each refusal beside the directive it reads: no `OnFailure=` naming the alert
-    template, a condition that can skip the start, an `ExecStart=` whose failure counts as a
-    success, a success exit that holds the refusal's, 1, or a word the census does not read as an
-    exit status, or a restart that skips the failed state, and with it `OnFailure=`. A condition
-    that exits 1 to 254 skips the start, and the unit is not marked failed (systemd.service(5));
-    the census cannot tell what a condition tests, so it refuses every one. A `RestartMode=direct`
+    template, a `[Unit]` condition or assertion or an `ExecCondition=`, any of which can stop the
+    start, an `ExecStart=` whose failure counts as a success, a success exit that holds the
+    refusal's, 1, or a word the census does not read as an exit status, or a restart that skips
+    the failed state, and with it `OnFailure=`. A condition that exits 1 to 254 skips the start,
+    and the unit is not marked failed, and an unmet `[Unit]` condition or assertion leaves it
+    inactive (systemd.service(5), systemd.unit(5)); the census cannot tell what a condition or an
+    assertion tests, so it refuses every one, an empty one included. A `RestartMode=direct`
     is refused wherever it is assigned, and a `Restart=`, `RestartMode=` or `CollectMode=` that is
     empty or not a known value is refused, so the census never decides which of two assignments is
     in force."""
@@ -407,6 +409,14 @@ def refusal_page_conditions(unit):
     targets = [word for value in unit.values("Unit", "OnFailure") for word in value.split()]
     if ON_FAILURE not in targets:
         refuse("OnFailure", f"OnFailure={' '.join(targets)} does not name {ON_FAILURE}")
+    for assignment in unit.assignments:
+        if assignment.section == "Unit" and assignment.key.startswith(_units.STOPS_A_START):
+            refuse(
+                "Condition",
+                f"{assignment.key}={assignment.value} is refused, as every condition and "
+                "assertion is, since one can stop the start without failing the unit or starting "
+                "OnFailure=",
+            )
     for command in unit.values("Service", "ExecCondition"):
         refuse(
             "ExecCondition",

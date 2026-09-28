@@ -43,6 +43,8 @@ ENUMS = {
     "RestartMode": ("Service", {"normal", "direct"}),
     "CollectMode": ("Unit", {"inactive", "inactive-or-failed"}),
 }
+# The prefixes of a `[Unit]` condition's key and of an assertion's (systemd.unit(5)).
+STOPS_A_START = ("Condition", "Assert")
 # The exit-status names, each with its status, as `systemd-analyze exit-status` lists them and
 # systemd.exec(5) documents them. The census reads no other name (SPEC-066).
 EXIT_NAMES = {

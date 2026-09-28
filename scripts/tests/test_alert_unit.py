@@ -44,6 +44,10 @@ DIRECT = "skips the failed state on a restart"
 RESTARTS = "restarts the refusal"
 UNLOADS = "can unload the failed instance, which systemctl --failed then no longer lists"
 UNREAD = "is empty or not a known value, which the check refuses"
+STOPS = (
+    "is refused, as every condition and assertion is, since one can stop the start and leave the "
+    "instance inactive, not failed"
+)
 
 # Synthetic values: a token of the Bot API's shape whose id has seven digits, never the public
 # scrub's shape; the scrub's own placeholder id for the owner; and another for any credential the
@@ -319,12 +323,14 @@ def alert_template_refusals(path):
     counts no refusal a success: one `ExecStart=`, with no `-` prefix; no `ExecCondition=`, since
     one that exits 1 to 254 skips the start and leaves the instance inactive, not failed; no
     `SuccessExitStatus=` at all; and no `RestartMode=direct`, which skips the failed state on a
-    restart. It restarts none: no `Restart=` other than `no`, and no `RestartForceExitStatus=` at
-    all. And it is never unloaded while failed: no `CollectMode=` other than `inactive`
-    (systemd.service(5), systemd.unit(5)). Each of `RestartMode=`, `Restart=` and `CollectMode=` is
-    read at every assignment, with no reset applied, and one that is empty or not a known value is
-    refused, so the check never decides which of two is in force. A template the reader refuses is
-    refused whole, with the reader's line."""
+    restart. It names no `[Unit]` condition or assertion, an empty one included, since an unmet one
+    stops the start and leaves the instance inactive, not failed. It restarts none: no `Restart=`
+    other than `no`, and no `RestartForceExitStatus=` at all. And it is never unloaded while
+    failed: no `CollectMode=` other than `inactive` (systemd.service(5), systemd.unit(5)). Each of
+    `RestartMode=`, `Restart=` and `CollectMode=` is read at every assignment, with no reset
+    applied, and one that is empty or not a known value is refused, so the check never decides
+    which of two is in force. A template the reader refuses is refused whole, with the reader's
+    line."""
     name = Path(path).name
     try:
         read = list(_units.assignments(_units.unit_text(path), name))
@@ -342,6 +348,9 @@ def alert_template_refusals(path):
 
     for target in values(template, "Unit", "OnFailure"):
         refuse(f"OnFailure={target} {PAGES}")
+    for section, key, value, _ in read:
+        if section == "Unit" and key.startswith(_units.STOPS_A_START):
+            refuse(f"{key}={value} {STOPS}")
     starts = values(template, "Service", "ExecStart")
     if len(starts) != 1:
         refuse(f"{len(starts)} ExecStart= lines, {ONE_START}")
