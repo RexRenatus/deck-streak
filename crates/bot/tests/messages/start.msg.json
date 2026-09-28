@@ -1,0 +1,24 @@
+{
+  "duty": "bot-commands",
+  "schema": "phx.duty.message.v1",
+  "send": {
+    "link_preview_options": {
+      "is_disabled": true
+    },
+    "parse_mode": "HTML",
+    "reply_markup": {
+      "inline_keyboard": [
+        [
+          {
+            "text": "Open DeckStreak",
+            "web_app": {
+              "url": "https://deckstreak.example/app"
+            }
+          }
+        ]
+      ]
+    },
+    "text": "Your coach here is an AI, not a person.\n\nDeckStreak reads the reviews you do in Anki from a private copy of your collection. Open the app to see your study.\n\n/sync syncs your collection now\n/export sends you a copy of your data\n/delete erases your data\n/privacy says how your data is kept"
+  },
+  "x-message": "start"
+}

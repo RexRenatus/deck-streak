@@ -1,0 +1,12 @@
+{
+  "duty": "bot-commands",
+  "schema": "phx.duty.message.v1",
+  "send": {
+    "link_preview_options": {
+      "is_disabled": true
+    },
+    "parse_mode": "HTML",
+    "text": "These are the commands I answer:\n/sync syncs your collection now\n/export sends you a copy of your data\n/delete erases your data\n/privacy says how your data is kept"
+  },
+  "x-message": "help"
+}
