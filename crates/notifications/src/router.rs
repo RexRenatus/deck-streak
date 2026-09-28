@@ -34,7 +34,7 @@ const MINUTE_MS: i64 = 60_000;
 
 /// The router's pass. Every bot transport call takes one, and only this module can make one, so a
 /// delivery call outside the router does not compile (SPEC-041 A2).
-#[derive(Debug, Default, Clone)]
+#[derive(Debug)]
 pub struct Pass(());
 
 /// The pass the router hands a transport for each call.
