@@ -218,6 +218,44 @@ they ever saw running at once.
 
 ## 7. Measurements
 
-Recorded by the delivery: the CI runs before and after, per job and in wall time, for a code pull
-request, a docs-only pull request and a push to `dev`, with each cache's hit or miss; the run that
-passed the end-to-end tests without `--with-deps`; and one run of the local gate's `timings.tsv`.
+Recorded by the delivery. Every run after this change is cold: only a push to `dev` saves a cache,
+so until this merges every pull request misses the Rust, pnpm and Playwright caches alike.
+
+| case | before: one `gate` job | after: four parallel jobs, every cache missed |
+|---|---|---|
+| a code pull request | 4m57s, run 36356940848 (`gate` 3m46s) | 1m45s, run 36361746236 (this delivery's own) |
+| a docs-only pull request | 2m43s, run 36356754966 (`gate` 2m35s) | 2m00s, run 36361940482, of which 24 s queued behind the run it cancelled; its jobs took 1m35s |
+| a push to `dev` | 3m53s, run 36357723675 (`gate` 3m45s) | measured after the merge, whose push saves the caches |
+
+Each job of run 36361746236, and its stages from the job's own `timings.tsv`:
+
+| job | job time | stages |
+|---|---|---|
+| `rust` | 1m34s | fmt 0 s, clippy 37 s, test 37 s, doctest 1 s, audit-rust 1 s (every dependency compiled) |
+| `web` | 60 s | web 31 s, audit-web 0 s; the browser installed in 6 s |
+| `packs` | 32 s | packs 25 s, 398 rows at most 4 at once |
+| `hygiene` | 22 s | python 11 s, scrub 4 s, secrets 1 s |
+| `workflow-lint`, `base-is-dev`, `ci` | 4 s, 3 s, 3 s | |
+
+- **`--with-deps` is dropped (R9).** Run 36361746236's `web` job installed Chromium's headless shell
+  without it, in 6 s against 21 to 30 s before, into `~/.cache/ms-playwright`, and its web stage
+  passed the end-to-end tests on `ubuntu-24.04` (Playwright: 7 passed).
+- **A superseded run is cancelled (R8).** On the throwaway docs-only pull request #213, a second
+  docs-only commit cancelled run 36361916181 mid-flight (`rust`, `web`, `packs` and `hygiene`
+  cancelled), and run 36361940482 ran to the end.
+- **No pull request saved a cache (R2).** GitHub's cache list held no entry for either pull request's
+  merge ref after both ran, while the old workflow's `setup-node` cache had saved four from other
+  pull requests' merge refs.
+- **The local gate**, one run on the maintainer's machine at 4145df2 (`timings.tsv`): fmt 0 s,
+  clippy 1 s, test 1 s, doctest 2 s, audit-rust 1 s, web 32 s, audit-web 1 s, packs 15 s, python
+  14 s, scrub 9 s, secrets 1 s; CHECK OK in 77 s, against 157 s at `dev` 8f91667. Its Rust stages
+  reused that checkout's own build.
+- **The pool** on the maintainer's machine, over one tree: `--jobs 1` took 70.8 s and `--jobs 8` (the
+  default there) 15.1 s, with all 410 report lines identical; `--jobs 4` took 20.0 s and `--jobs 16`
+  13.1 s on another tree, identical to each other. Past 8, the longest row and the deferred pass set
+  the time.
+- **Still to measure, after this merges** (the orchestrator): the merge's own push to `dev` (every
+  cache missed, then saved), a code pull request and a docs-only pull request that restore them, and
+  a later push to `dev` with the same lockfile (an exact hit that saves nothing). The target is a
+  warm code pull request in about a minute and a half. With the engine of #204 in the workspace:
+  a new "before", and the cold and warm Rust job.
