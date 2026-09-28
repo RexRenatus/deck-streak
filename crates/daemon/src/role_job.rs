@@ -129,3 +129,78 @@ fn cycle_failed(error: &CycleError) -> Reason {
         CycleError::Gate(_) | CycleError::Window(_) => "recompute_failed",
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use std::collections::BTreeSet;
+
+    use deck_streak_coordination::runner::Reason;
+    use deck_streak_coordination::sync_cycle::CycleError;
+    use deck_streak_ingest::gate::GateError;
+    use deck_streak_ingest::reader::ReadError;
+    use deck_streak_ingest::sync::SyncError;
+    use deck_streak_ingest::window::WindowError;
+    use deck_streak_kernel::KernelError;
+
+    use super::cycle_failed;
+
+    /// A cause no step of a cycle names: the mapping reads the step, never the cause.
+    const fn cause() -> KernelError {
+        KernelError::LoggingInstalled
+    }
+
+    /// One failure of every kind a cycle can stop with, each inner kind of the gate and the window
+    /// included, and the reason code the `sync` job records it with.
+    fn every_failure() -> Vec<(CycleError, &'static str)> {
+        vec![
+            (CycleError::History(cause()), "sync_record_failed"),
+            (
+                CycleError::Sync(SyncError::Store(cause())),
+                "sync_record_failed",
+            ),
+            (CycleError::Obligations(cause()), "obligations_unreadable"),
+            (
+                CycleError::Gate(GateError::Read(ReadError::WriteRefused)),
+                "recompute_failed",
+            ),
+            (
+                CycleError::Gate(GateError::Record(cause())),
+                "recompute_failed",
+            ),
+            (
+                CycleError::Window(WindowError::Read(ReadError::WriteRefused)),
+                "recompute_failed",
+            ),
+            (
+                CycleError::Window(WindowError::State(cause())),
+                "recompute_failed",
+            ),
+        ]
+    }
+
+    /// The failure's kind. The match is exhaustive, so a kind added to `CycleError` does not compile
+    /// here until `every_failure` gives it a case and a code.
+    const fn kind(error: &CycleError) -> &'static str {
+        match error {
+            CycleError::History(_) => "history",
+            CycleError::Sync(_) => "sync",
+            CycleError::Obligations(_) => "obligations",
+            CycleError::Gate(_) => "gate",
+            CycleError::Window(_) => "window",
+        }
+    }
+
+    #[test]
+    fn a_cycle_that_cannot_finish_is_recorded_with_its_steps_reason_code() {
+        let failures = every_failure();
+        let kinds: BTreeSet<&str> = failures.iter().map(|(error, _)| kind(error)).collect();
+        assert_eq!(
+            kinds,
+            BTreeSet::from(["gate", "history", "obligations", "sync", "window"]),
+            "every kind of failure has a case"
+        );
+        for (error, code) in &failures {
+            assert_eq!(cycle_failed(error), Reason::new(code), "{error:?}");
+        }
+    }
+}
