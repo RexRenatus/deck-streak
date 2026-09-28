@@ -161,8 +161,8 @@ A18: python3 -m unittest discover -s scripts/tests -p test_box_only_packs.py -k 
 | `scripts/tests/test_vault_rails_rows.py` | repo | removed: it runs only the vendored vault-duties probe, and bounds the build that run needs; the box run judges the rails rows |
 | `scripts/tests/fixtures/box-packs/fake-runner` | repo | renamed from the old fake runner: it answers the runner's verbs with synthetic cards |
 | `scripts/tests/fixtures/box-packs/checkout/skills/catalog.json` | repo | renamed from the old catalog fixture, with synthetic packs |
-| `scripts/tests/fixtures/box-packs/checkout/` | repo | added: a synthetic checkout (packs, probes, scan, sources) that names no private tool |
-| `scripts/box-packs.sh` | repo | changed: the private-file driver (R7 to R11) |
+| `scripts/tests/fixtures/box-packs/checkout/` | repo | added: the synthetic checkout's catalog; the tests plant its probes, scans and sources at run time, and none names a private tool |
+| `scripts/box-packs.sh` | repo | changed: the private-file driver, and the apiKeyHelper scan (R7 to R11) |
 | `scripts/check.sh` | repo | changed: no `packs` stage, the scrub alone, the log directory off stdout (R3, R4) |
 | `.github/workflows/ci.yml` | repo | changed: no `packs` job or need (R3) |
 | `.github/pull_request_template.md` | repo | changed: the box run's pack verdict (R12) |
@@ -172,28 +172,29 @@ A18: python3 -m unittest discover -s scripts/tests -p test_box_only_packs.py -k 
 | `scripts/public-scrub.py` | repo | changed: its own rules and loader (R5, R6) |
 | `scripts/scrub-rules/persona-core.json`, `scripts/scrub-rules/privacy-gdpr.json` | repo | added: the scrub's public shapes (R5) |
 | `crates/vault/data/rails.json`, `crates/vault/data/layout.json`, `crates/vault/data/gate-classes.json` | `deck-streak-vault` | added: the adapter's rails, default layout and gate classes (R5) |
-| `crates/vault/src/rails.rs`, `crates/vault/src/staged.rs` | `deck-streak-vault` | changed: read the crate's own data; A8's test |
+| `crates/vault/src/rails.rs`, `crates/vault/src/staged.rs`, `crates/vault/src/lib.rs` | `deck-streak-vault` | changed: read the crate's own data; A8's test; doc comments name the owned data |
 | `crates/vault/tests/owned_data.rs` | `deck-streak-vault` | added: A6, A7 |
-| `crates/vault/tests/staged.rs` | `deck-streak-vault` | changed: its red-class gate is a synthetic probe; no assertion edited |
+| `crates/vault/tests/staged.rs`, `crates/vault/tests/fixtures/gate/stand-in-probe.py` | `deck-streak-vault` | changed, and added: its red-class gate is a synthetic probe that judges only `note-links`; no assertion edited |
 | `scripts/tests/_units.py` | repo | added: systemd unit syntax, as systemd.syntax(7) reads it, for the deploy templates' tests |
 | `scripts/tests/test_deploy_templates.py` | repo | changed: reads units with `_units.py`; its two durable-lint tests are removed, because the box run's durable-services pack judges the templates |
-| `scripts/tests/test_box_packs.py` | repo | changed: the new interface, and A11 to A15 |
-| `scripts/tests/test_box_only_packs.py` | repo | added: A1 to A4, A16 |
+| `scripts/tests/test_box_packs.py`, `scripts/tests/fixtures/box-packs/bin/gh` | repo | changed: the new interface, and A11 to A15 and A17; the fake gh answers `api --method POST` |
+| `scripts/tests/test_box_only_packs.py` | repo | added: A1 to A4, A16 and A18 |
 | `scripts/tests/test_check_gate.py` | repo | changed: the stage table, A5 |
 | `scripts/tests/test_ci_workflows.py` | repo | changed: the job and stage tables |
 | `scripts/tests/test_public_scrub.py` | repo | changed: A9, A10 |
 | `web/app/src/lib/styles/cjk.css`, `web/app/tests/a11y.spec.ts`, `web/app/tests/telegram-palettes.ts` | repo | changed: comments name the box-run packs |
-| `CLAUDE.md`, `README.md`, `ARCHITECTURE.md`, `deploy/README.md`, `docs/BUILDER-BRIEF.md`, `docs/CONTEXT-MAP.md`, `docs/LEXICON.md`, `docs/TESTING.md` | repo | changed: the box-run packs (R13) |
-| `docs/specs/planned/SPEC-021-data-rights-export-and-erase.md`, `SPEC-026-bot-transport-and-owner-gate.md`, `SPEC-031-observability-foundation.md`, `SPEC-041-notification-router-core.md`, `SPEC-043-agent-core-runner-gate-and-degradation.md`, `SPEC-044-persona-engine-and-private-roster.md`, `SPEC-046-readings-generation-gates-and-repair.md` | repo | changed in place: the box-run packs (R13) |
+| `CLAUDE.md`, `README.md`, `CONTRIBUTING.md`, `ARCHITECTURE.md`, `deploy/README.md`, `docs/BUILDER-BRIEF.md`, `docs/CONTEXT-MAP.md`, `docs/LEXICON.md`, `docs/TESTING.md` | repo | changed: the box-run packs (R13) |
+| `docs/specs/planned/SPEC-026-bot-transport-and-owner-gate.md`, `SPEC-031-observability-foundation.md`, `SPEC-041-notification-router-core.md`, `SPEC-043-agent-core-runner-gate-and-degradation.md`, `SPEC-044-persona-engine-and-private-roster.md`, `SPEC-046-readings-generation-gates-and-repair.md` | repo | changed in place: the box-run packs (R13) |
 | `docs/decisions/ADR-043-shell-runner-pack-gate-and-duty-caps.md` | repo | changed in place (proposed) |
-| `docs/decisions/ADR-001`, `ADR-002`, `ADR-003`, `ADR-004`, `ADR-013`, `ADR-014`, `ADR-016`, `ADR-030`, `ADR-033`, `ADR-039`, `ADR-055`, `ADR-056` | repo | accepted: name replacement and one dated note (R13) |
-| `docs/specs/SPEC-001`, `SPEC-002`, `SPEC-020`, `SPEC-024`, `SPEC-025`, `SPEC-028`, `SPEC-030`, `SPEC-032`, `SPEC-037`, `SPEC-038`, `SPEC-054` | repo | delivered: name replacement, one dated note, and an insert-only amendment where an acceptance command runs a removed file (R13) |
-| `docs/schematics/agent-duty-run.md`, `box-pack-runner.md`, `ci-jobs-and-caches.md`, `pack-vendoring.md` | repo | accepted schematics: name replacement and one dated note |
-| `docs/red-first/SPEC-030.md`, `SPEC-037.md`, `SPEC-038.md`, `SPEC-054.md` | repo | accepted records: name replacement and one dated note |
-| `changelog.d/chore-repin-packs-e54f39c.md`, `feat-ci-speed-038.md`, `feat-repo-hygiene-030.md`, `feat-tooling-054.md`, `feat-vendor-packs-037.md` | repo | changed: unreleased fragments name the box-run packs |
+| `docs/decisions/ADR-002`, `ADR-004`, `ADR-009`, `ADR-014`, `ADR-016`, `ADR-022`, `ADR-030`, `ADR-039`, `ADR-056` | repo | accepted: name replacement and one dated note (R13) |
+| `docs/specs/SPEC-002`, `SPEC-024`, `SPEC-028`, `SPEC-030`, `SPEC-032`, `SPEC-037`, `SPEC-038`, `SPEC-042`, `SPEC-054` | repo | delivered: name replacement and one dated note, and the insert-only retirement of each criterion whose test this delivery removes (R13, R14) |
+| `docs/schematics/box-pack-runner.md`, `pack-vendoring.md` | repo | accepted schematics: name replacement and one dated note |
+| `docs/red-first/SPEC-002.md`, `SPEC-030.md`, `SPEC-032.md`, `SPEC-037.md`, `SPEC-038.md`, `SPEC-042.md`, `SPEC-054.md` | repo | accepted records: the retired criteria's lines set apart insert-only, and one dated note (R14); SPEC-030's, SPEC-037's and SPEC-054's also a name replacement |
+| `changelog.d/chore-repin-packs-e54f39c.md`, `feat-repo-hygiene-030.md`, `feat-vendor-packs-037.md` | repo | changed: unreleased fragments name the box-run packs |
 | `docs/specs/SPEC-056-every-pack-is-judged-on-the-box-and-nothing-of-the-hub-is-published.md` | repo | added: this SPEC |
 | `docs/decisions/ADR-069-the-public-tree-carries-no-vendored-hub-files.md` | repo | added |
 | `docs/schematics/pack-judgment-on-the-box.md` | repo | added: the gate, CI and the box run after the change |
+| `scripts/mutation-rows.d/S05600-S05699.json` | repo | added: three hand-proved rows, one per owned vault data file, each killed by its parser test (A6 to A8) |
 | `docs/red-first/SPEC-056.md` | repo | added |
 | `changelog.d/chore-box-only-packs-056.md` | repo | added |
 
@@ -203,8 +204,12 @@ A18: python3 -m unittest discover -s scripts/tests -p test_box_only_packs.py -k 
   would strand the pull requests opened before it (#60).
 - It renames no `phx.*` schema id: the box-run packs judge DeckStreak's outputs by them, and a
   later rename is the maintainer's (#60).
-- It changes no pack's rows and no expectation: the private file carries today's wiring, and its
-  expected reds keep their issues (#60).
+- It changes no pack's rows. The private file carries today's wiring, with SPEC-021's change and
+  the apiKeyHelper scan's pending issue, less telegram-platform's two deferred rows, which only the
+  vendored files kept red; its expected reds keep their issues (#60).
+- It re-plans no planned SPEC's pack-row tests: SPEC-041, SPEC-043, SPEC-044, SPEC-046 and SPEC-051
+  each plan a public test that runs a pack's rows, which the box run now judges, and each is
+  re-planned when it is built (#60).
 - It re-pins no pack, and builds nothing the box runs: the checkout, the runner and the private
   file stay the maintainer's (#60).
 - It publishes no finding about a host: those stay with the owner gate that tracks them (#167).
