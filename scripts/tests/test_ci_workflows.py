@@ -409,9 +409,9 @@ def _quoted(text):
 
 
 def _item(line, indent):
-    """Whether a line holds a sequence item at `indent`: a dash, then a space or nothing, as YAML
-    reads one. `-x: y` is a key."""
-    return re.match(r"-(?: |$)", line[indent:]) is not None
+    """Whether a line holds a sequence item at `indent`: a dash and a space, as YAML reads one.
+    `-x: y` is a key, and a bare dash is a line the reader cannot place."""
+    return line[indent:].startswith("- ")
 
 
 def _block(lines, at, indent, refused):
