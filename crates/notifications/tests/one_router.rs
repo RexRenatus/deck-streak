@@ -190,8 +190,11 @@ const NAMED_SENDS: [(&str, &str, &str); 7] = [
 /// fabricated update handed to the bot's command handler; a raw request built on the bot's base
 /// URL, its method assembled from parts; and three writes to the Mini App's feed around the router:
 /// through the ledger's table name from the API, in SQL from a script, and through the ledger's
-/// append from a module beside the router.
-const AROUND_THE_PORT: [(&str, &str); 11] = [
+/// append from a module beside the router. The architect's ruling on the second review: four writes
+/// to the held queue around the router, which a flush delivers: through the ledger's table name
+/// from the flush step's crate, in SQL from a script, through the ledger's own writes from a module
+/// beside the router, and through one of them re-exported at the crate's root.
+const AROUND_THE_PORT: [(&str, &str); 15] = [
     (
         "crates/daemon/src/role_bot.rs",
         r#"/// A celebration sent straight to the owner's chat through the bot's transport, around the router.
@@ -350,6 +353,68 @@ def celebrate(database: str, now: int) -> None:
 async fn celebrate_beside_the_router(write: &mut SqliteConnection, now: UtcMillis) -> Result<(), KernelError> {
     ledger::append_feed(write, "celebration:around", "celebration", Tier::T2, "a celebration", now).await
 }
+"#,
+    ),
+    (
+        "crates/coordination/src/sync_cycle.rs",
+        r#"/// A celebration held straight on the queue from the flush step's crate, around the router: the
+/// next flush delivers it as if the router had held it.
+async fn celebrate_on_the_queue(db: &Db, now: i64) -> Result<(), sqlx::Error> {
+    let insert = format!(
+        "INSERT INTO {} (kind, dedupe_key, surface, tier_requested, tier_pending, text, hold, tries, state, deferred_at, study_day, created_at) VALUES (?, ?, 'bot', 'T2', 'T2', ?, 'quiet', 0, 'held', ?, 0, ?)",
+        deck_streak_notifications::ledger::QUEUE_TABLE
+    );
+    let mut write = db.write().await.map_err(|_| sqlx::Error::PoolClosed)?;
+    sqlx::query(&insert)
+        .bind("celebration")
+        .bind("celebration:around")
+        .bind("a celebration the router never decided")
+        .bind(now)
+        .bind(now)
+        .execute(&mut *write)
+        .await?;
+    write.commit().await
+}
+"#,
+    ),
+    (
+        "deploy/scripts/hold.py",
+        r#""""A celebration held straight on the queue from a script, around the router."""
+
+import sqlite3
+
+
+def hold(database: str, now: int) -> None:
+    with sqlite3.connect(database) as db:
+        db.execute(
+            "INSERT INTO Notification_Queue (kind, dedupe_key, surface, tier_requested,"
+            " tier_pending, text, hold, tries, state, deferred_at, study_day, created_at)"
+            " VALUES ('celebration', 'celebration:around', 'bot', 'T2', 'T2', 'a celebration',"
+            " 'quiet', 0, 'held', ?, 0, ?)",
+            (now, now),
+        )
+"#,
+    ),
+    (
+        "crates/notifications/src/quiet.rs",
+        r#"use crate::ledger::hold as keep;
+
+/// A celebration held on the queue beside the router, around its decision, and its retry latched
+/// without the router: the next flush delivers it.
+async fn celebrate_on_the_queue(write: &mut SqliteConnection, row: &HeldRow, now: UtcMillis) -> Result<(), KernelError> {
+    keep(write, row, now).await?;
+    crate::ledger::relatch(write, 1, 0).await
+}
+"#,
+    ),
+    (
+        "crates/notifications/src/lib.rs",
+        r#"pub mod ledger;
+pub mod quiet;
+
+/// The ledger's hold, re-exported at the crate's root, so a module beside the router holds a
+/// celebration on the queue without naming the ledger.
+pub(crate) use ledger::hold;
 "#,
     ),
 ];
@@ -1007,6 +1072,7 @@ fn no_delivery_goes_around_the_port() {
             "crates/api/src/notifications_routes.rs:3: names sendMessage",
             "crates/api/src/router.rs:6: names FEED_TABLE",
             "crates/bot/src/celebrate.rs:5: names sendMessage in celebrate, not a named call site",
+            "crates/coordination/src/sync_cycle.rs:6: names QUEUE_TABLE",
             "crates/daemon/src/lifecycle.rs:4: calls edit_html in celebrate_by_an_edit, \
              not a named call site",
             "crates/daemon/src/main.rs:6: calls handle in celebrate_by_a_fabricated_command, \
@@ -1020,12 +1086,17 @@ fn no_delivery_goes_around_the_port() {
             "crates/daemon/src/role_job.rs:11: calls send_html in celebrate_around_the_router, \
              not a named call site",
             "crates/daemon/src/wiring.rs:4: names DEFAULT_API_URL",
+            "crates/notifications/src/lib.rs:6: names ledger",
             "crates/notifications/src/occasion.rs:3: names append_feed",
+            "crates/notifications/src/occasion.rs:3: names ledger",
+            "crates/notifications/src/quiet.rs:1: names ledger",
+            "crates/notifications/src/quiet.rs:7: names ledger",
             "deploy/scripts/celebrate.py:9: names in_app_feed",
+            "deploy/scripts/hold.py:9: names notification_queue",
         ],
         "the bot's own send, named or called, its edit and its command handler, raw requests to \
          the Bot API and on its base URL, a raw request from inside the bot, and writes to the \
-         Mini App's feed, around the port"
+         Mini App's feed and to the held queue, around the port"
     );
 
     // The walker reads a shipped module in a directory named as tests are, because it is under
