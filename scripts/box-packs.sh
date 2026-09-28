@@ -29,6 +29,13 @@
 #   by name, a named row that is no longer red is refused as stale, and an advisory row never fails.
 #   A pack that examines nothing reads `pending` with the issue the file names, is VOID without one,
 #   and is stale once it examines a row.
+# * A packs-section pack whose entry names an `advisory_waivers` lint (durable-services: the lint in
+#   the checkout, because the runner's card cuts each row's report short) runs it over the judged
+#   tree, `lint --format json`, and reads every advisory finding by unit and reason. Each must be
+#   waived in its unit (`X-DurableServices-Waive=<reason> <why>`, a why of more than five words) or
+#   wait on an issue the entry names. An unwaived departure or a thin why fails the pack by name; a
+#   waiver or waiting entry that matches no finding, or waits on a closed issue, is stale. Other
+#   packs' advisory rows never fail (SPEC-056 R15).
 # * The sdd, ddd and tdd probes run from the checkout against the judged tree (`check all`): any
 #   class that is not OK fails its probe by name. The proxy-client scan is read by its rows, never
 #   its exit: any RED fails, and it reads `pending` while it examines no settings document.
@@ -43,7 +50,8 @@
 #   field the source gained that the copy neither keeps nor drops. A missing source makes the run
 #   VOID.
 # * Before any pack runs, it reads the state of every issue the box section names (each
-#   `expected_red` row's issue, each `pending`, and each scan's `pending`) once, with
+#   `expected_red` row's issue, each `pending`, each scan's `pending`, and each advisory waiting
+#   entry's issue) once, with
 #   `gh issue view <n> --json state` run in ROOT, so gh resolves the repository from ROOT's remotes
 #   or from $GH_REPO. An expectation whose issue is CLOSED is stale, and fails its pack by name.
 #   When gh is not on the path, is not logged in, cannot reach GitHub or answers no state, the run
@@ -88,7 +96,14 @@ WIRING_KEYS = {"schema", "pin", "skills", "scripts", "packs", "box", "owned", "u
 BOX_KEYS = {"packs", SCAN, HELPER, "note"}
 PACK_KEYS = {"expected_red", "pending", "note"}
 SCAN_KEYS = {"pending", "note"}
-ROW_PACK_KEYS = {"state", "enforced_by", "excluded_rows", "deferred_rows", "note"}
+ROW_PACK_KEYS = {
+    "state", "enforced_by", "excluded_rows", "deferred_rows", "advisory_waivers", "note",
+}
+WAIVER_KEYS = {"lint", "waiting", "note"}
+# How a unit waives an advisory departure (the durable lint's key, which systemd ignores), and the
+# unit files and drop-ins it may sit in (SPEC-056 R15).
+WAIVE_KEY = "X-DurableServices-Waive"
+UNIT_SUFFIXES = (".service", ".timer", ".slice")
 STATES = ("enforced", "pending", "deferred")
 OWNED_KEYS = {"source", "dropped"}
 PIN = re.compile(r"^[0-9a-f]{40}$")
@@ -213,12 +228,16 @@ def run(args: argparse.Namespace, root: Path, sha: str) -> list[Verdict]:
             raise Refusal(
                 f"the owned file {path}'s source {entry['source']} is not in the checkout"
             )
+    for pack, entry in sorted(wiring["packs"].items()):
+        lint = entry.get("advisory_waivers", {}).get("lint")
+        if lint and not (checkout / lint).is_file():
+            raise Refusal(f"packs.{pack}'s advisory lint {lint} is not in the checkout")
     out = cards_directory()
     env = dict(os.environ, PYTHONDONTWRITEBYTECODE="1")
     for name in wiring["unset_env"]:
         env.pop(name, None)
     box = wiring["box"]
-    issues = named_issues(box)
+    issues = named_issues(box, wiring["packs"])
     states = issue_states(root, issues)
     listed = ", ".join(f"{issue} {states[issue]}" for issue in issues)
     named = f"box-packs: {len(issues)} issue(s) the wiring names"
@@ -243,7 +262,12 @@ def run(args: argparse.Namespace, root: Path, sha: str) -> list[Verdict]:
             print(verdict.line(), flush=True)
 
         for pack, entry in sorted(wiring["packs"].items()):
-            report(judge_rows(driver, pack, entry, catalog, out))
+            verdict = judge_rows(driver, pack, entry, catalog, out)
+            waivers = entry.get("advisory_waivers")
+            if waivers and verdict.mark != "deferred":
+                lint = checkout / waivers["lint"]
+                judge_waivers(verdict, waivers, lint, tree, scratch, out, closed, env)
+            report(verdict)
         for pack, expectation in sorted(box["packs"].items()):
             report(judge_pack(driver, pack, expectation, catalog, out, closed))
         for probe in PROBES:
@@ -322,7 +346,24 @@ def packs_of(packs: object) -> dict:
             rows = entry.get(key, {})
             if not isinstance(rows, dict) or not all(str(why).strip() for why in rows.values()):
                 raise Refusal(f"packs.{name}.{key}: every row needs a reason or an issue")
+        if "advisory_waivers" in entry:
+            waivers_of(name, entry["advisory_waivers"])
     return packs
+
+
+def waivers_of(name: str, waivers: object) -> None:
+    """An `advisory_waivers` entry: its lint's path in the checkout, and each departure that waits
+    on an issue, by unit, then reason (SPEC-056 R15)."""
+    lint = waivers.get("lint") if isinstance(waivers, dict) else None
+    if not isinstance(lint, str) or not lint or set(waivers) - WAIVER_KEYS:
+        raise Refusal(f"packs.{name}.advisory_waivers takes a lint and its waiting departures")
+    waiting = waivers.get("waiting", {})
+    shaped = isinstance(waiting, dict) and all(
+        isinstance(reasons, dict) and all(ISSUE.match(str(issue)) for issue in reasons.values())
+        for reasons in waiting.values()
+    )
+    if not shaped:
+        raise Refusal(f"packs.{name}.advisory_waivers.waiting maps a unit and a reason to an issue")
 
 
 def box_of(box: object) -> dict:
@@ -364,9 +405,13 @@ def owned_of(owned: object) -> dict:
     return owned
 
 
-def named_issues(box: dict) -> list[str]:
-    """Every issue the box section names, once each, in number order (SPEC-054 R4)."""
+def named_issues(box: dict, packs: dict) -> list[str]:
+    """Every issue the box section and the advisory waiting entries name, once each, in number
+    order (SPEC-054 R4, SPEC-056 R15)."""
     named = set()
+    for entry in packs.values():
+        for reasons in entry.get("advisory_waivers", {}).get("waiting", {}).values():
+            named.update(reasons.values())
     for entry in box["packs"].values():
         named.update(entry.get("expected_red", {}).values())
         if "pending" in entry:
@@ -742,6 +787,91 @@ def judged(
     if verdict.unexpected or verdict.stale:
         verdict.mark = "FAIL"
     return verdict
+
+
+def judge_waivers(
+    verdict: Verdict, waivers: dict, lint: Path, tree: Path, scratch: Path, out: Path,
+    closed: set[str], env: dict,
+) -> None:
+    """R15: every advisory finding of the lint's report, by unit and reason, is waived in its unit
+    with a why of more than five words, or waits on an open issue the entry names. An unwaived
+    departure or a thin why fails the pack by name; a waiver or waiting entry that matches no
+    finding, or waits on a closed issue, is stale. The rows' own verdict stands beside it."""
+    done = subprocess.run(
+        [sys.executable, str(lint), "lint", "--root", str(tree), "--format", "json"],
+        cwd=scratch,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    (out / f"{verdict.pack}.lint.json").write_text(done.stdout + done.stderr, encoding="utf-8")
+    try:
+        checks = [c for c in json.loads(done.stdout)["checks"] if c["severity"] == "advisory"]
+        departures = {(f["unit"], c["reason"]) for c in checks for f in c["findings"]}
+        waived = {
+            (Path(item["unit"]).name, c["reason"]): str(item["why"])
+            for c in checks
+            for item in c["waived"]
+        }
+    except (json.JSONDecodeError, KeyError, TypeError) as error:
+        verdict.mark = "FAIL"
+        verdict.detail = "; ".join(filter(None, (verdict.detail, (
+            f"the advisory lint gave no report it can read (exit {done.returncode}): {error}"
+        ))))
+        return
+    waiting = {
+        (unit, reason): issue
+        for unit, reasons in waivers.get("waiting", {}).items()
+        for reason, issue in reasons.items()
+    }
+    problems = [f"unwaived {unit} {reason}" for unit, reason in sorted(departures - set(waiting))]
+    problems += [
+        f"thin why {unit} {reason}" for (unit, reason), why in sorted(waived.items())
+        if len(why.split()) <= 5
+    ]
+    stale = [
+        f"waiting {unit} {reason} matches no departure"
+        for unit, reason in sorted(set(waiting) - departures)
+    ]
+    stale += [
+        f"waiting {unit} {reason} ({issue} is closed)"
+        for (unit, reason), issue in sorted(waiting.items()) if issue in closed
+    ]
+    stale += [
+        f"waiver {unit} {reason} matches no departure"
+        for unit, reason in sorted(declared_waivers(tree) - set(waived))
+    ]
+    parts = [f"waivers: {len(waived)} waived, {len(waiting)} waiting", *problems]
+    parts += [f"STALE {entry}" for entry in stale]
+    verdict.detail = "; ".join(filter(None, (verdict.detail, *parts)))
+    if problems or stale:
+        verdict.mark = "FAIL"
+
+
+def declared_waivers(tree: Path) -> set[tuple[str, str]]:
+    """Every waiver with a why that the judged tree's units declare in `[Unit]`, by unit and
+    reason; a drop-in's waiver is its unit's (SPEC-056 R15). A waiver is one line."""
+    found: set[tuple[str, str]] = set()
+    deploy = tree / "deploy"
+    for path in sorted(deploy.rglob("*")) if deploy.is_dir() else []:
+        folder = path.parent.name
+        if path.suffix in UNIT_SUFFIXES and not folder.endswith(".d"):
+            unit = path.name
+        elif path.suffix == ".conf" and folder[:-2].endswith(UNIT_SUFFIXES) and folder[-2:] == ".d":
+            unit = folder[:-2]
+        else:
+            continue
+        section = None
+        for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+            line = line.strip()
+            if line.startswith("[") and line.endswith("]"):
+                section = line[1:-1].strip()
+            elif section == "Unit" and line.startswith(WAIVE_KEY + "="):
+                reason, _, why = line.split("=", 1)[1].strip().partition(" ")
+                if reason and why.strip():
+                    found.add((unit, reason))
+    return found
 
 
 def judge_probe(
