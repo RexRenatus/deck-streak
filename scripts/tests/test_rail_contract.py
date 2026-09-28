@@ -507,6 +507,23 @@ class TheEffectiveCheck(unittest.TestCase):
                     f"REFUSE: deck-streak-api.service: a drop-in that is not the rail's: {path}",
                     done.stdout,
                 )
+        # A newline in a drop-in's name ends the line systemctl prints its path on, so the rest of
+        # the name reads as the file's first line, and the header can name the rail's own drop-in,
+        # which sorts before it (measured on systemd 255). The check refuses a file shown twice.
+        for rest in ("x.conf", "# x.conf"):
+            with self.subTest(rest=rest):
+                output = cat(
+                    self.API,
+                    api,
+                    (self.API_RAIL, self.API_DROPIN),
+                    (f"{self.API_RAIL}\n{rest}", "[Service]\nNice=5\n"),
+                )
+                done = self.check(output)
+                self.assertEqual(done.returncode, 1, done.stdout + done.stderr)
+                self.assertIn(
+                    f"REFUSE: deck-streak-api.service: a file shown twice: {self.API_RAIL}",
+                    done.stdout,
+                )
 
     def refused(self, output, unit="deck-streak-api.service"):
         """The check's run on `output`, asserted refused for `unit` without echoing a value."""
