@@ -478,6 +478,7 @@ jobs:
       - name: the rows the diff selects (the verdict reads their report)
         if: ${{ needs.mutation-plan.outputs.rows == 'true' }}
         run: |
+          mkdir -p "$RUNNER_TEMP/rows"
           rc=0
           python3 scripts/mutation_rows.py prove --rows-from "$RUNNER_TEMP/mutation/plan.json" --report "$RUNNER_TEMP/rows/rows.json" || rc=$?
           echo "the rows runner exited $rc"
