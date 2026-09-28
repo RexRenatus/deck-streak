@@ -45,6 +45,11 @@
 - **The `toolchain` stage cannot live in one job of four.** It checks every tool of every stage
   (cargo, cargo-nextest, cargo-deny, node, pnpm, python3, gitleaks), and no single job will hold
   them all. The `audit` stage runs `cargo deny` and `pnpm audit`, which two different jobs hold.
+- **A guard test compiles Rust.** SPEC-042's `scripts/tests/test_vault_rails_rows.py`, merged into
+  `dev` while this was built, runs `cargo run -p deck-streak-vault --example rails_verdicts` from the
+  python stage. In CI that put a toolchain install and a cold vault build into `hygiene`: its python
+  stage took 57 s, twice (run 36362357632 and its re-run), against 11 to 16 s before it (runs
+  36361746236 and 36362157262). Amended in by the delivery, with R1 and R4.
 - **The gate itself, on the maintainer's machine** (`bash scripts/check.sh` at `dev` 8f91667,
   CHECK OK in 157 s): toolchain 0 s, fmt 0 s, clippy 17 s, test 17 s, doctest 1 s, web 35 s,
   python 8 s, packs 69 s, scrub 8 s, audit 2 s, secrets 0 s.
@@ -63,7 +68,10 @@ R1. The `rust` job restores `~/.cargo/registry/index/`, `~/.cargo/registry/cache
     falling back to the newest entry of the same toolchain pin. After its stages it saves the same
     paths under the same key with `actions/cache/save`, only when R2 allows it, and only after
     `cargo clean --workspace` has left the dependencies' artifacts alone in `target/`. It sets
-    `CARGO_INCREMENTAL=0`, because incremental state is rebuilt from a fresh checkout anyway.
+    `CARGO_INCREMENTAL=0`, because incremental state is rebuilt from a fresh checkout anyway. The
+    `hygiene` job, whose python stage builds a Rust example, installs the pinned toolchain and
+    restores the same cache under the same key, and never saves it: only the `rust` job, which
+    builds every target, saves (amended by the delivery, after SPEC-042's test).
 R2. Every cache in every workflow is saved only by a push to `dev` or `main` that missed its exact
     key. A pull request, from this repository or a fork, restores and never saves. No step uses an
     action that saves a cache by itself: `actions/cache` (which saves in its post step on any
@@ -84,8 +92,8 @@ R3. The gate runs in four jobs that need nothing and so start together, each cal
 R4. Each stage checks the tools it runs before it runs them, with the install hint the `toolchain`
     stage gave: `cargo` for `fmt`, `clippy` and `doctest`; `cargo` then `cargo-nextest` for `test`;
     `cargo` then `cargo-deny` for `audit-rust`; `node` (24 or later) then `pnpm` for `web` and
-    `audit-web`; `python3` (3.11 or later) for `python`, `packs` and `scrub`; `gitleaks` for
-    `secrets`. A missing tool fails that stage by name, locally and in CI. The `toolchain` stage is
+    `audit-web`; `python3` (3.11 or later) then `cargo` for `python`, whose guard tests build a Rust
+    example; `python3` for `packs` and `scrub`; `gitleaks` for `secrets`. A missing tool fails that stage by name, locally and in CI. The `toolchain` stage is
     removed.
 R5. The `audit` stage is split: `audit-rust` runs
     `cargo deny --locked check advisories bans licenses sources` in the `rust` job, and `audit-web`
@@ -118,7 +126,7 @@ R11. Every gate job uploads its stage logs, `timings.tsv` among them, with `if: 
 
 | id | criterion | decided by |
 |---|---|---|
-| A1 | the Rust cache is restored before the Rust stages under a key of the toolchain pin and the lockfile, and saved from the same paths after the workspace's own artifacts are cleaned | `test_ci_workflows.py` `the_rust_cache_is_keyed_on_the_toolchain_pin_and_the_lockfile` |
+| A1 | every job that compiles Rust installs the pinned toolchain and restores the Rust cache before its stages, under a key of the toolchain pin and the lockfile; one job, the one that builds every target, saves it after the workspace's own artifacts are cleaned | `test_ci_workflows.py` `the_rust_cache_is_keyed_on_the_toolchain_pin_and_the_lockfile` |
 | A2 | every cache save runs only on a push to dev or main that missed its key, and no step saves a cache by itself; planted defects are refused | `test_ci_workflows.py` `a_cache_is_saved_only_by_a_push_to_dev_or_main` |
 | A3 | the stages run in the four jobs the owner named, which need nothing | `test_ci_workflows.py` `the_gate_runs_in_four_parallel_jobs` |
 | A4 | every stage check.sh defines runs in exactly one CI job; a dropped or doubled stage is refused | `test_ci_workflows.py` `every_stage_runs_in_exactly_one_ci_job` |

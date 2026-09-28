@@ -78,7 +78,8 @@ stage_audit_web() { need_node && pnpm audit --prod; }
 stage_packs() { need_python && python3 scripts/pack-rows.py; }
 
 stage_python() {
-    need_python &&
+    # cargo too: a guard test builds a Rust example (SPEC-042's rails rows).
+    need_python && need_cargo &&
         python3 -m unittest discover -s scripts/tests -p 'test_*.py' &&
         python3 -m unittest discover -s tools/parity-oracle -p 'test_*.py'
 }

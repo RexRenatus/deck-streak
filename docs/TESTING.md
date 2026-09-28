@@ -74,7 +74,7 @@ all four with `workflow-lint` and `base-is-dev`. Each stage checks its own tools
 tool fails that stage by name wherever it runs.
 
 `rust` restores a cache of `~/.cargo`'s downloads and `target/`, keyed on the toolchain pin and
-`Cargo.lock`; `web` restores the pnpm store and Playwright's browser, keyed on `pnpm-lock.yaml` and
+`Cargo.lock`, and `hygiene` restores it too, because a guard test builds a Rust example; `web` restores the pnpm store and Playwright's browser, keyed on `pnpm-lock.yaml` and
 the Playwright version it locks. Only a push to `dev` or `main` saves a cache, and only when it
 missed its key; a pull request, a fork's included, restores and never saves. A newer push to a pull
 request cancels the run it supersedes; a push to `dev` or `main` is never cancelled.

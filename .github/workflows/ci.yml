@@ -166,13 +166,31 @@ jobs:
 
   hygiene:
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 30
+    env:
+      CARGO_INCREMENTAL: "0"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # secrets scans every commit, and scrub reads every blob reachable from HEAD.
           fetch-depth: 0
           persist-credentials: false
+      # A guard test builds a Rust example (SPEC-042's rails rows): the pinned toolchain, and the
+      # rust job's cache, restored only. Only the rust job, which builds every target, saves it.
+      - name: the pinned Rust toolchain (rust-toolchain.toml)
+        run: rustup show
+      - name: restore the Rust cache, keyed on the toolchain pin and Cargo.lock
+        id: rust-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: rust-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-${{ hashFiles('Cargo.lock') }}
+          restore-keys: |
+            rust-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-
       - name: gitleaks 8.30.1, checksum verified
         env:
           GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
@@ -181,7 +199,7 @@ jobs:
           echo "$GITLEAKS_SHA256  /tmp/gitleaks.tgz" | sha256sum -c -
           mkdir -p "$HOME/.local/bin" && tar -xzf /tmp/gitleaks.tgz -C "$HOME/.local/bin" gitleaks
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
-      - name: python, scrub and secrets (the guard tests, the public deny-list, gitleaks)
+      - name: python, scrub and secrets (the guard tests, one of them a cargo build; the public deny-list; gitleaks)
         env:
           CHECK_LOG_DIR: ${{ runner.temp }}/check-logs
           CHECK_HISTORY: "1"

@@ -75,7 +75,8 @@ Chosen options, as SPEC-038's requirements state them:
   the locked Playwright version) are each restored with `actions/cache/restore` and saved with
   `actions/cache/save` only when a push to `dev` or `main` missed its exact key. A pull request
   restores and never saves. The Rust job cleans the workspace's own artifacts before its save, and
-  sets `CARGO_INCREMENTAL=0`.
+  sets `CARGO_INCREMENTAL=0`. `hygiene`, whose python stage builds a Rust example (SPEC-042's rails
+  test), restores the Rust cache too and never saves it.
 - **The pool.** `pack-rows.py --jobs N`, by default the smaller of 8 and the CPUs available, with
   the same timeouts, verdicts, exit codes and row order as the serial runner.
 - **Concurrency.** Pull-request runs group by their ref and cancel the run they supersede; each push
