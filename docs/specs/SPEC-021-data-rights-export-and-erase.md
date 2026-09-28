@@ -2,8 +2,8 @@
 
 - **Wave:** W0. **Issue:** #14 (epic #1). **Context(s):** `deck-streak-privacy` (the engine), `deck-streak-coordination` (the registry of every port, the export and erase use cases), `deck-streak-daemon` (the `data` role), `repo` (`privacy.json`, `PRIVACY.md`, the Litestream and journald templates).
 - **Decided by:** ADR-008 (one database, each context owns its tables), ADR-010 (backups), ADR-002 (the registry crosses contexts, so it lives in coordination), ADR-020 (the data-rights port, one migration sequence).
-- **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
-  `docs/specs/` with its tests and `docs/red-first/SPEC-021.md` (ADR-016).
+- **Status:** in delivery: moved from `docs/specs/planned/` by the delivery that builds it, with its
+  tests and `docs/red-first/SPEC-021.md` (ADR-016). §7 records what the delivery made exact.
 
 ## 1. The problem, measured
 
@@ -154,9 +154,16 @@ over a fully migrated temporary database.
 - **`VACUUM` on a live database.** It needs free disk equal to the database's size and holds the
   write lock while it runs; DeckStreak's database holds derived rows, never the collection,
   so it stays small, and an erase is a rare owner action.
-- **The journald drop-in is host-wide.** `MaxRetentionSec` applies to every service's journal on
-  the host, including the co-hosted ones; installing it is a shared-infrastructure change the first
-  deploy makes only with the owner's go (#42).
+- **The journald drop-in is host-wide.** `MaxRetentionSec` and `SystemMaxUse` are journald's own
+  settings, not one unit's, so installing the drop-in is a change on the host that is the owner's
+  gate (#161); the first deploy makes it only with the owner's go (#42).
 - **An erase while a sync job runs.** Both write through `BEGIN IMMEDIATE`, so they serialise on the
   write lock; the erase then resets `ingest_state`, and the next cycle recomputes from an empty
   anchor, which is the intended result.
+
+## 7. Amendments at delivery
+
+- **§6: the journald risk is reworded under the public-prose rule.** The planned text described what
+  else a host runs; the risk now says only that the drop-in's settings are journald's own and that
+  installing it is a change on the host behind the owner's gate (#161), which the first deploy makes
+  with the owner's go (#42).
