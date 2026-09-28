@@ -36,6 +36,15 @@
         "pub const MIN_SECRET_LEN: usize = 5;",
         "constants::the_kernel_constants_equal_the_predecessors",
         "a secret of four characters is registered and redacted, as the predecessor registers it"
+      ],
+      [
+        "S02005-THE-DAY-HAS-NO-HOUR-24",
+        "kernel",
+        "src/study_day.rs",
+        "        if hour <= 23 { Some(Self(hour)) } else { None }",
+        "        if hour <= 24 { Some(Self(hour)) } else { None }",
+        "study_day::every_hour_past_23_is_refused_and_23_is_admitted",
+        "24 is no hour of the day: Hour::new refuses it, so a rollover or digest hour of 24 refuses start; the study-day golden stops at 23, and cargo-mutants never looks inside a method named new"
       ]
     ]
   }
