@@ -160,6 +160,11 @@ def approved_items(listing: dict, approval_path: str, rules_digest: str) -> tupl
             f"the snapshot {snapshot['name']} was taken before the inventory "
             f"({taken.isoformat()} is not after {inventory.isoformat()})"
         )
+    if taken > now_utc():
+        raise Refusal(
+            f"the snapshot {snapshot['name']} is dated later than the apply's clock "
+            f"({taken.isoformat()}), so it cannot have been taken yet"
+        )
     return approval, [item for item in listing["items"] if item["id"] in set(ids)]
 
 
