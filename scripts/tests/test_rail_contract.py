@@ -55,6 +55,15 @@ UNIT_DIR = "/etc/systemd/system"
 UNIT_SUFFIXES = (".service", ".timer", ".socket")
 
 
+def instance(template_name, ident, kind):
+    """A template instance's name, built at run time: no committed file writes one whole
+    (SPEC-032 R10)."""
+    return f"{template_name}@{ident}.{kind}"
+
+
+SYNC_TIMER = instance("deck-streak-job", "sync", "timer")
+
+
 def run(script, *args, stdin=None):
     return subprocess.run(
         [sys.executable, str(script), *map(str, args)],
@@ -86,6 +95,14 @@ def rail_dropin(section, *assignments):
     for key, value in assignments:
         lines += [f"{key}=", f"{key}={value}"]
     return "\n".join(lines) + "\n"
+
+
+def joined(row):
+    """The unit a contract row names: its template joined with its instance, when it has one."""
+    if "instance" not in row:
+        return row["unit"]
+    name, _, kind = row["unit"].partition("@.")
+    return instance(name, row["instance"], kind)
 
 
 def template(name):
@@ -165,7 +182,7 @@ SYNTHETIC = {
     "deploy/systemd/deck-streak-job@.service": (
         f"[Service]\nType=oneshot\nLoadCredential=anki-sync-username:{SOCKET}\n"
     ),
-    "deploy/systemd/deck-streak-job@sync.timer": "[Timer]\nOnCalendar=*-*-* 04:07:00 UTC\n",
+    f"deploy/systemd/{SYNC_TIMER}": "[Timer]\nOnCalendar=*-*-* 04:07:00 UTC\n",
 }
 OPTIONAL = {
     "deploy/optional/ai-route/deck-streak-readings-generate.conf": (
@@ -283,7 +300,7 @@ class TheRailContract(unittest.TestCase):
         self.assertEqual(contract["drop_in"], "10-rail.conf")
         self.assertEqual(contract["socket"], SOCKET)
         named = {
-            (row["unit"], row["section"], row["key"], value)
+            (joined(row), row["section"], row["key"], value)
             for row in contract["values"]
             for value in row["neutral"]
         }
@@ -355,12 +372,12 @@ class TheEffectiveCheck(unittest.TestCase):
         self.assertNotIn(f"{left}ExecStart=", done.stdout)
 
         # A timer's calendar in UTC is left in force until the drop-in resets it.
-        timer = template("deck-streak-job@sync.timer")
-        path = f"{UNIT_DIR}/deck-streak-job@sync.timer"
+        timer = template(SYNC_TIMER)
+        path = f"{UNIT_DIR}/{SYNC_TIMER}"
         done = self.check(cat(path, timer))
         self.assertEqual(done.returncode, 1, done.stdout + done.stderr)
         self.assertIn(
-            "REFUSE: deck-streak-job@sync.timer: neutral value left in force: [Timer] "
+            f"REFUSE: {SYNC_TIMER}: neutral value left in force: [Timer] "
             "OnCalendar=*-*-* 04:07:00 UTC",
             done.stdout,
         )

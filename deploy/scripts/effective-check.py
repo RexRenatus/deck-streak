@@ -68,6 +68,7 @@ SECRET_NAME = re.compile(
 # Keys whose value can hold a secret: a refusal names the key alone.
 SECRET_BEARING = frozenset({"Environment", "SetCredential", "SetCredentialEncrypted"})
 NAME = re.compile(r"^[A-Za-z][A-Za-z0-9-]*$")
+INSTANCE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 DROP_IN = re.compile(r"^[0-9]{2}-[a-z0-9-]+\.conf$")
 
 
@@ -147,7 +148,7 @@ def load_contract(root):
     for row in data.get("values") or []:
         if not (
             isinstance(row, dict)
-            and set(row) == {"unit", "section", "key", "neutral"}
+            and set(row) - {"instance"} == {"unit", "section", "key", "neutral"}
             and str(row["unit"]).endswith(UNIT_TYPES)
             and NAME.match(str(row["section"]))
             and NAME.match(str(row["key"]))
@@ -156,13 +157,28 @@ def load_contract(root):
             and all(isinstance(value, str) and value for value in row["neutral"])
         ):
             raise Unjudgeable(f"{path}: a row is not a unit, a section, a key and its values")
-        listed = rows.setdefault(row["unit"], [])
+        unit = unit_of(row)
+        if unit is None:
+            raise Unjudgeable(f"{path}: {row['unit']} is not a template its instance can join")
+        listed = rows.setdefault(unit, [])
         if any(row["section"] == s and row["key"] == k for s, k, _ in listed):
-            raise Unjudgeable(f"{path}: {row['unit']} lists [{row['section']}] {row['key']} twice")
+            raise Unjudgeable(f"{path}: {unit} lists [{row['section']}] {row['key']} twice")
         listed.append((row["section"], row["key"], row["neutral"]))
     if not rows:
         raise Unjudgeable(f"{path} lists no neutral value")
     return {**data, "rows": rows}
+
+
+def unit_of(row):
+    """The unit a row names: its `unit`, or, with an `instance`, that instance of the template
+    `unit` names. A committed file never writes an instance's name whole (SPEC-032 R10), so the
+    contract names a job's timer by its template and its instance, and this joins them."""
+    if "instance" not in row:
+        return row["unit"]
+    template, instance = str(row["unit"]), str(row["instance"])
+    if template.count("@.") != 1 or not INSTANCE.match(instance):
+        return None
+    return template.replace("@.", f"@{instance}.")
 
 
 def files_of(text):

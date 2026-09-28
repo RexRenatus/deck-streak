@@ -1,6 +1,6 @@
 {
   "schema": "deckstreak.rail-contract.v1",
-  "note": "The neutral values the private deploy rail overrides, by unit and key (SPEC-061 R7, ADR-061). The rail installs each template byte for byte and writes one drop-in per unit, <unit>.d/10-rail.conf, which resets each key listed here and sets the deployment's own value: its release root, its settings file, and its zone with the rollover hour the calendars are written at. deploy/scripts/effective-check.py refuses a unit whose effective configuration still carries a neutral value, and its --census holds this list equal to the neutral values the templates carry.",
+  "note": "The neutral values the private deploy rail overrides, by unit and key (SPEC-061 R7, ADR-061). The rail installs each template byte for byte and writes one drop-in per unit, <unit>.d/10-rail.conf, which resets each key listed here and sets the deployment's own value: its release root, its settings file, and its zone with the rollover hour the calendars are written at. deploy/scripts/effective-check.py refuses a unit whose effective configuration still carries a neutral value, and its --census holds this list equal to the neutral values the templates carry. A job's timer is named by its template and its instance, which the checks join, so no committed file writes an instance name whole (SPEC-032 R10).",
   "neutral": {
     "release_root": "/usr/local/lib/deck-streak/current",
     "environment_file": "/etc/deck-streak/deck-streak.env",
@@ -53,19 +53,22 @@
       "neutral": ["/etc/deck-streak/deck-streak.env"]
     },
     {
-      "unit": "deck-streak-job@liveness.timer",
+      "unit": "deck-streak-job@.timer",
+      "instance": "liveness",
       "section": "Timer",
       "key": "OnCalendar",
       "neutral": ["*-*-* *:14:00 UTC"]
     },
     {
-      "unit": "deck-streak-job@maintenance.timer",
+      "unit": "deck-streak-job@.timer",
+      "instance": "maintenance",
       "section": "Timer",
       "key": "OnCalendar",
       "neutral": ["*-*-* 04:28:00 UTC"]
     },
     {
-      "unit": "deck-streak-job@sync.timer",
+      "unit": "deck-streak-job@.timer",
+      "instance": "sync",
       "section": "Timer",
       "key": "OnCalendar",
       "neutral": ["*-*-* 04:07:00 UTC"]
