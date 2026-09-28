@@ -115,6 +115,9 @@ R4. **The verdict, `scripts/mutation-verdict.py judge`, per class the diff touch
     - A class whose changed lines are all blank or comments reads
       `not-applicable: N changed line(s), all blank or comments` and passes, naming each file. A
       file whose change only deletes lines reads the same way, with its count of deleted lines.
+    - *Inserted by section 11:* in the Rust class, a changed line inside an item that
+      cargo-mutants never mutates for a test attribute is test-only, not a code line, and a class
+      whose changed code lines are all test-only reads `not-applicable` by name (SPEC-057 R22).
     - A missing or unreadable report on a class that applies is VOID, never zero. So is a partial
       one: cargo-mutants writes its report as it goes, so a report is read only when the tool's
       exit is 0, 2 or 3 and its caught, missed, timed-out and unviable counts sum to its
@@ -234,6 +237,9 @@ R18. **The shards, and their bound.** `scripts/mutation-verdict.py shards` sizes
       VOID by name, and the shards' reports hold every listed mutant once: one in two shards fails,
       and one in none is VOID, each by name. A shard the plan gave no mutant owes no report, since
       cargo-mutants exits 0 and writes none when it has nothing to test.
+    - *Inserted by section 11:* the listing step's empty output, which cargo-mutants leaves when
+      no mutant overlaps the diff (it exits 0 before it prints), is an empty listing, one shard of
+      no mutant; a missing listing is VOID (SPEC-057 R22).
     The mutation jobs' own bounds (SPEC-038 section 8): `mutation-plan` 15 minutes, each
     `mutation-rust` shard 120, `mutation-rows` 90, `mutation-verdict` 10 and `mutation-web` 60.
     Section 8 records the release's measured plan.
@@ -261,7 +267,7 @@ R18. **The shards, and their bound.** `scripts/mutation-verdict.py shards` sizes
 | A17 | a diff selects the rows on its paths, its added rows and its rows' killers | `test_mutation_verdict.py` |
 | A18 | a missing report on a class that applies is VOID | `test_mutation_verdict.py` |
 | A19 | the weekly battery's survivors become deduplicated, scrubbed issue drafts | `test_mutation_verdict.py` |
-| A20 | every exclusion names its reason and an issue, and no `mutants::skip` exists | `test_mutation_workflows.py` |
+| ~~A20~~ | every exclusion names its reason and an issue, and no `mutants::skip` exists | `test_mutation_workflows.py` |
 | A21 | the tools' configurations load under their own rules, judged by DeckStreak's own check | `test_mutation_workflows.py` |
 | A22 | the weekly battery's shards cover their denominator and keep every report | `test_mutation_workflows.py` |
 | A23 | only the survivors job may write issues, and never on a pull request | `test_mutation_workflows.py` |
@@ -303,7 +309,11 @@ A16: python3 -m unittest discover -s scripts/tests -p test_mutation_verdict.py -
 A17: python3 -m unittest discover -s scripts/tests -p test_mutation_verdict.py -k a_diff_selects_its_rows
 A18: python3 -m unittest discover -s scripts/tests -p test_mutation_verdict.py -k a_missing_report_is_void_never_zero
 A19: python3 -m unittest discover -s scripts/tests -p test_mutation_verdict.py -k survivors_become_deduplicated_scrubbed_drafts
+```
+```retired
 A20: python3 -m unittest discover -s scripts/tests -p test_mutation_workflows.py -k every_exclusion_names_its_reason_and_issue
+```
+```acceptance
 A21: python3 -m unittest discover -s scripts/tests -p test_mutation_workflows.py -k the_tool_configurations_load_under_their_own_rules
 A22: python3 -m unittest discover -s scripts/tests -p test_mutation_workflows.py -k the_weekly_shards_cover_their_denominator_and_keep_reports
 A23: python3 -m unittest discover -s scripts/tests -p test_mutation_workflows.py -k only_the_survivors_job_writes_issues_and_never_on_a_pull_request
@@ -581,3 +591,71 @@ kept in order. It inserts:
 
 ADR-057 carries a note of its own: its Confirmation's range is A1 to A40, and D11's `ingest` cost
 is R18's 126 s.
+
+## 10. Amendment, 2026-09-28: A20 retired by ADR-070, and the battery's dispatch
+
+Made by SPEC-057's first delivery, the vault's, insert-only under ruling (i) of SPEC-038 section 8:
+every earlier byte is kept in order. It inserts:
+
+- section 3: `~~` around A20 in the criteria table, so the table no longer states it;
+- section 3: the fence lines that set A20 apart in a `` ```retired `` fence between A19 and A21,
+  splitting the acceptance fence where its line stood;
+- this section.
+
+The retired criterion, why its subject is gone, and what judges it now:
+
+- A20 (every exclusion names its reason and an issue, and no `mutants::skip` exists): ADR-070,
+  accepted with this delivery, amends R5 and ADR-057 D6. An equivalent mutant is no longer an
+  anchored `exclude_re` entry or a `Stryker disable` comment, each of which hides its mutant from
+  the listing or the run, so no later run tests the claim. It is a record in
+  `scripts/mutation-equivalent.d/`, bound by an anchor to exactly one listed mutant that keeps
+  running. A20 planted a justified exclusion and a justified comment as passing, and SPEC-057 R11
+  now refuses every exclusion, justified or not. SPEC-057 A8 judges it, and its test replaced
+  A20's in `scripts/tests/test_mutation_workflows.py`.
+
+Two facts measured since section 8, recorded here rather than in it:
+
+- **A dispatch runs at a feature branch.** Section 1, R13 and the weekly battery's header said
+  that `workflow_dispatch` runs only a workflow on the default branch. Run 36384080819 was a
+  dispatch of `mutation-weekly.yml` at this SPEC's delivery branch, while `main` held no copy of
+  the file: once GitHub has registered a workflow, a dispatch runs it at any ref that holds it.
+  `schedule` still runs only on the default branch. The header now says so, and SPEC-057 R14's
+  scoped dispatch relies on it.
+- **The squash form is read.** The correction in section 8 on a squash merge's push is delivered:
+  a push whose subject's first line ends with ` (#N)` reads `not-applicable`, naming `#N`
+  (SPEC-057 R18, A13).
+
+## 11. Amendment, 2026-09-28: a test-only `src` diff reads not-applicable
+
+Made by SPEC-057's first delivery, the vault's, insert-only under ruling (i) of SPEC-038 section 8:
+every earlier byte is kept in order. It inserts:
+
+- R4: the bullet "*Inserted by section 11:* in the Rust class, ...", after the bullet on a class
+  whose changed lines are all blank or comments;
+- R18: the bullet "*Inserted by section 11:* the listing step's empty output, ...", after the
+  bullet on the verdict's count of the shards;
+- this section.
+
+What it amends, and why:
+
+- **R2 and R4 counted a unit test as production code.** R2 names `crates/*/src/**/*.rs` production
+  code by path, and R4 counts every changed line of such a file that is neither blank nor a comment
+  as a code line. A unit test in a `#[cfg(test)]` module lives on that path, and cargo-mutants never
+  mutates it: 27.1.0's visitor skips an item marked `#[cfg(test)]`, or one with an attribute whose
+  path ends in `test` (`attrs_excluded` in its `src/visit.rs`; https://mutants.rs/mutants.html).
+  SPEC-057's vault delivery measured the cost at 8b18276 and again at dd734e5, whose `crates/` are
+  the same: its diff changes only three such modules, the plan read 71 of their lines as code,
+  cargo-mutants listed nothing, and `mutation-plan` and `mutation-verdict` read VOID (run
+  36461579108 at 8b18276, and run 36463302615 at dd734e5). SPEC-057 R22 now reads such a
+  line as test-only. A class whose changed code lines are all test-only reads `not-applicable` by
+  name; one that also changes a production code line applies as before. R2's paths are unchanged.
+- **R18 read the tool's empty answer as no listing.** `cargo mutants --list --json --in-diff`
+  prints nothing, not `[]`, when no mutant overlaps the diff: 27.1.0 exits 0 before it lists
+  (`src/main.rs` and `src/in_diff.rs`). `shards` read that empty file as a missing listing, VOID.
+  It now reads it as an empty listing, one shard of no mutant, whose verdict still reads VOID when
+  a production code line changed and no row covers it (R4, R8). A listing step that fails stops
+  its job before `shards` runs, so the empty file is the tool's own answer; a missing file stays
+  VOID.
+
+ADR-070 carries a note of this date that records the decision and what it was chosen against;
+SPEC-057 A28 decides it.

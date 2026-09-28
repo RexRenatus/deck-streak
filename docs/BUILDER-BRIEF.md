@@ -61,16 +61,27 @@ code.
   `mutation-plan` reads the diff and sizes the shards from cargo-mutants' own listing;
   `mutation-rust` runs cargo-mutants over the diff (`--in-diff`, `--in-place`), one job per shard;
   `mutation-rows` proves the hand-proved rows the diff selects and checks that no row left while
-  its target stayed; `mutation-verdict` counts every shard's report and judges; `mutation-web` runs
-  StrykerJS over every changed Mini App file, whole. Read the verdict's counts, never only its
-  colour: a class of production code the diff changed that examined nothing is VOID, a shard that
-  never reported is VOID by name, and VOID fails the job. A diff of comments and blank lines reads
-  `not-applicable`, by name.
-- **A surviving mutant is yours.** Kill it with a test that asserts the behaviour, or, when no test
-  can tell it apart, record it as `EQUIVALENT: <reason> (#N)`: one anchored `exclude_re` entry in
-  `.cargo/mutants.toml` with that comment on the line above, or a `// Stryker disable next-line
-  <mutator>: EQUIVALENT: <reason> (#N)` comment. Never `mutants::skip`. A survivor or a VOID already
-  on a file you touch is yours too.
+  its target stayed; `mutation-verdict` counts every shard's report, binds every equivalence record
+  against the whole tree's listing, and judges; `mutation-web` runs StrykerJS over every changed Mini
+  App file, whole. Read the verdict's counts, never only its colour: a class of production code the
+  diff changed that examined nothing is VOID, a shard that never reported is VOID by name, and VOID
+  fails the job. A diff of comments and blank lines reads `not-applicable`, by name.
+- **A surviving mutant is yours.** Kill it with a test that asserts the behaviour: in the mutated
+  crate's own tests, since cargo-mutants runs a mutant against its own package's tests only, or a
+  Vitest test beside the Mini App file. When no test can tell it apart, record it EQUIVALENT in
+  `scripts/mutation-equivalent.d/<package>.json`, `miniapp.json` for the Mini App (SPEC-057,
+  ADR-070). A record holds its `file`; its `mutant`, the tool's own description without the
+  location (cargo-mutants' name after `<file>:<line>:<column>: `, or Stryker's
+  `<mutatorName>: <replacement>`); an `anchor`, a text that occurs once in the file, inside which
+  the mutant's span starts; a `span`, the mutated text, only when two mutants of that description
+  start at one position there; a one-line `reason`; the `evidence`, the code fact a reviewer checks
+  it against; for a Rust mutant, `reached_by`, a test of its package that runs the mutated code;
+  and the `issue`. `python3 scripts/mutation-verdict.py census` holds every record whole in the
+  gate. The mutant keeps running, so its claim is tested again: a record whose mutant a test
+  catches is REFUTED, one that binds no listed mutant STALE and one that binds two AMBIGUOUS, and
+  an uncovered Mini App mutant is UNCOVERED, never excused, until a test reaches it. Nothing is
+  excluded or skipped: `mutation-verdict.py exclusions` refuses every form that would hide a
+  mutant. A survivor or a VOID already on a file you touch is yours too.
 - **What the tool cannot mutate takes a row.** cargo-mutants never mutates a constant, an attribute
   or a string, and never looks inside a method named `new`. An invariant there (a security check, a
   parity comparison, a bound, streak and economy maths) gets a hand-proved row in
@@ -85,7 +96,9 @@ code.
 - **Locally, stay targeted:** one file (`cargo mutants --in-place -f <file>`) or your diff
   (`--in-diff`), on a committed tree, then `cargo clean`. `--in-place` runs one mutant at a time,
   the rule's `-j 1`, and cargo-mutants refuses a `-j` flag beside it. Heavy runs belong in CI; the
-  weekly battery sweeps the whole repository and files each file's survivors as an issue.
+  weekly battery sweeps the whole repository and files each file's survivors as an issue, and a
+  dispatch of it with `package` set sweeps one crate, or `miniapp`, and ends with that scope's
+  `python3 scripts/mutation-verdict.py table` line (SPEC-057 R13, R14).
 
 ## Land it
 

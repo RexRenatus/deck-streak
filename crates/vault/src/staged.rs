@@ -1069,7 +1069,9 @@ fn allowed_folders(
 mod tests {
     use serde_json::Value;
 
-    use super::{VENDORED_CHECKS, blocking_classes};
+    use std::path::PathBuf;
+
+    use super::{GateClass, GateError, ProbeGate, VENDORED_CHECKS, blocking_classes};
 
     /// SPEC-056 A8: the owned classes keep every field the gate's parser reads.
     #[test]
@@ -1132,6 +1134,33 @@ mod tests {
             blocking_classes(&slower.to_string()).expect("the slower classes read"),
             classes,
             "the parser reads each row's time limit"
+        );
+    }
+
+    /// A class that outlives its time limit is stopped at the limit its row names. The limit is
+    /// counted in polls, so no clock is read: a class of one second whose process would run far
+    /// longer ends as a timeout, and a limit counted wrong lets the process run to its end.
+    #[test]
+    fn a_class_that_outlives_its_time_limit_is_stopped_as_a_timeout() {
+        let dir = tempfile::tempdir().expect("a staging directory");
+        let probe = dir.path().join("slow-probe.sh");
+        std::fs::write(&probe, "exec sleep 20\n").expect("a probe that outlives its limit");
+        let gate = ProbeGate {
+            python: PathBuf::from("sh"),
+            probe,
+            vault: None,
+            deny_list: None,
+            classes: vec![GateClass {
+                id: "slow".to_owned(),
+                timeout_seconds: 1,
+            }],
+        };
+
+        let ended = gate.run_class(&gate.classes[0], dir.path());
+
+        assert!(
+            matches!(ended, Err(GateError::Timeout { ref class }) if class == "slow"),
+            "the one-second class ended as {ended:?}"
         );
     }
 }
