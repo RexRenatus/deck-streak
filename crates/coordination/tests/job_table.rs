@@ -27,14 +27,8 @@ const MINUTE_MS: i64 = 60_000;
 const HOUR_MS: i64 = 3_600_000;
 const DAY_MS: i64 = 86_400_000;
 
-/// The predecessor's three systemd timers outside its in-process schedule, by what each does and
-/// the minute of the hour it fires at (its `deploy/` units at `27ee2bc`). A registry module reads
-/// no file, so SPEC-027 names them here.
-const PREDECESSOR_TIMERS: [(&str, i64); 3] = [
-    ("the daily backup", 39),
-    ("the daily publish", 25),
-    ("the weekly restore drill", 0),
-];
+/// The reserved minutes (ADR-011): minutes of the hour at which no job of the table may fire.
+const RESERVED_MINUTES: [i64; 3] = [0, 25, 39];
 
 /// Prints how many items a check examined and refuses zero (the tdd pack's examined contract).
 fn examined<T>(what: &str, items: Vec<T>) -> Vec<T> {
@@ -208,27 +202,27 @@ fn the_daily_sync_slot_keeps_off_the_predecessors_ticks_and_every_other_slot() {
 #[test]
 fn no_job_shares_a_minute_with_the_predecessors_schedule() {
     let (interval, schedule) = predecessor_schedule();
-    let mut theirs: Vec<(String, i64)> = Vec::new();
+    let mut kept_off: Vec<(String, i64)> = Vec::new();
     for (id, field) in &schedule {
         for minute in minutes_of(field) {
-            theirs.push((format!("in-process job {id}"), minute));
+            kept_off.push((format!("the predecessor's in-process job {id}"), minute));
         }
     }
     for tick in tick_minutes(interval, SYNC_TICK_OFFSET_MIN) {
-        theirs.push(("sync tick".to_owned(), tick));
+        kept_off.push(("the predecessor's sync tick".to_owned(), tick));
     }
-    for (timer, minute) in PREDECESSOR_TIMERS {
-        theirs.push((timer.to_owned(), minute));
+    for minute in RESERVED_MINUTES {
+        kept_off.push(("a reserved minute (ADR-011)".to_owned(), minute));
     }
-    let theirs = examined("minute(s) the predecessor fires at", theirs);
+    let kept_off = examined("minute(s) the table keeps off", kept_off);
 
     let mut ours = BTreeSet::new();
     for job in examined("job(s) of the table", TABLE.to_vec()) {
         let minute = i64::from(job.schedule.minute());
-        for (what, taken) in &theirs {
+        for (what, taken) in &kept_off {
             assert!(
                 minute != *taken,
-                "{} fires at minute {minute}, which the predecessor's {what} takes",
+                "{} fires at minute {minute}, which {what} takes",
                 job.id
             );
         }
