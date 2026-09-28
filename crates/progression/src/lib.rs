@@ -9,6 +9,15 @@
 //!
 //! The context map (docs/CONTEXT-MAP.md) is binding: this crate depends only on what its line
 //! there declares, and a new edge is an ADR, never a fix to make code compile.
+//!
+//! The XP ledger (SPEC-040, ADR-040): [`xp`] holds the unsigned amount, the total and the level
+//! curve; [`grant`] the grant port every use case grants through; [`ledger`] the repository over
+//! `xp_ledger` that answers it; and [`data_rights`] the ledger's export and erase.
 #![forbid(unsafe_code)]
 #![deny(unused_must_use)]
 #![warn(missing_docs, clippy::all)]
+
+pub mod data_rights;
+pub mod grant;
+pub mod ledger;
+pub mod xp;

@@ -11,5 +11,16 @@ publish.workspace = true
 [lints]
 workspace = true
 
+# The agent depends on the kernel only (docs/CONTEXT-MAP.md, ADR-002), and on the external crates
+# ADR-003 and ADR-029 admit: serde_json reads a template's frontmatter values and the private
+# roster, and writes an output's frontmatter; thiserror types the refusals.
 [dependencies]
 deck-streak-kernel.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+
+# A temporary directory outside the repository for the roster (ADR-020), and the async runtime for
+# the ports' tests (ADR-003). Test support only.
+[dev-dependencies]
+tempfile.workspace = true
+tokio = { workspace = true, features = ["macros", "rt"] }
