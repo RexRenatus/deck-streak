@@ -143,3 +143,13 @@ took 34.4 s of that wall time. With the first cause alone neutralised in a scrat
 no-op was fresh throughout in 0.48 to 0.63 s. Both are in the latest upstream release. How to fix
 the first cause, through an upstream change or a patched dependency carried until upstream releases
 one, is the maintainer's decision (#228).
+
+Amended in part on 2026-09-28, by ADR-058 (proposed with SPEC-055): the maintainer decided both
+routes the paragraph above leaves open. The fix goes upstream as a pull request, and until an
+upstream release carries it the engine's dependency keeps naming an upstream release tag while a
+`[patch]` entry in the root manifest replaces it with a commit of the maintainer's fork, that tag
+plus the one fix. `allow-git` then names that fork and `ankitects/rust-url`, and no longer Anki's
+repository, from which no package comes while the patch holds. This takes effect when SPEC-055's
+delivery accepts ADR-058; until then the pin rule above stands. The protocol and the budgets do not
+change. They were run again at 26.09.3, where every budget held (`engine-measure.yml` run
+36374499584, SPEC-055 §7). The fork is removed when an upstream release carries the fix (#233).
