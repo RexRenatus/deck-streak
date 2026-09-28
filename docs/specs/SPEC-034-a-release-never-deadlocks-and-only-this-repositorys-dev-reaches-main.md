@@ -80,12 +80,17 @@ R7. No workflow reads a secret other than `GITHUB_TOKEN`, and none checks out or
       server. An omitted or empty `repository`, `${{ github.repository }}` and this repository's
       own name are this repository when `github-server-url` is unset: omitted, empty or
       `${{ github.server_url }}`;
+    - an `actions/checkout` whose inputs are not a mapping, such as a `with` that is one `${{ }}`
+      expression, which GitHub evaluates when the step runs. An omitted or empty `with` is no
+      inputs;
     - a `run` step that clones a repository (`git clone`, `gh repo clone`) or points git at a URL
       (a `git fetch` of a URL, or of git's scp-like `user@host:path` or `host:path` whose host is
       a dotted name);
     - a character or a form the workflow reader does not read, named by its line: the reader fails
       closed on characters outside printable ASCII, quoting, escapes, anchors, aliases and tags
       (section 3).
+    The checker judges every step of a job, a step inside a `parallel` block at any depth
+    included, as GitHub's workflow schema defines a job's steps.
     `GITHUB_TOKEN` is admitted in either form and any case, because GitHub reads a secret's name
     without case. The checker reports how many workflow files, expressions, checkouts and run steps
     it examined, and a directory with no workflow file is VOID, never a pass.
@@ -134,7 +139,9 @@ A9 to A12 run one checker, `secret_and_checkout_problems`, over a directory: A9 
 `scripts/tests/fixtures/secrets-and-checkouts/refused/` and `admitted/`, and A12 over a directory
 that holds no workflow. A10 also writes planted workflows to a scratch directory at test time: each
 character the reader refuses, from a Python escape so that no committed file holds one, and lines
-the reader cannot place, each of which refuses its whole file.
+the reader cannot place, each of which refuses its whole file. Among them is a `|` block that holds
+a line of a form feed: the block's end and its indent read only a space or a tab as white space, so
+a secret the block names over two lines keeps its indent.
 - It reads each workflow with the test file's own reader (`read_workflow`), chosen over a YAML
   library the repository does not depend on: the guard tests run on the standard library alone,
   and a library would be the repository's first Python dependency, with a pin, an install step in
@@ -154,21 +161,27 @@ the reader cannot place, each of which refuses its whole file.
   named `secrets` of another context, such as a step's output, and a longer word that begins with
   it, such as `secrets-scan.toml`, are not the secrets context.
 - It reads a checkout's `uses` and its inputs as the runner reads them, the owner, the name and each
-  input's name in any case. A job, a step or a step's inputs that are not a mapping are not judged:
-  the reader has named its line, or GitHub refuses the workflow.
+  input's name in any case. A checkout whose inputs are not a mapping is refused: GitHub evaluates a
+  `with` that is one `${{ }}` expression when the step runs, so no reading of the file names the
+  repository it checks out. An omitted or empty `with` is no inputs. A job or a step that is not a
+  mapping is not judged: the reader has named its line, or GitHub refuses the workflow.
+- It judges every step of a job, a step inside a `parallel` block at any depth included: GitHub's
+  workflow schema reads a `parallel` step's list as steps, and one of them may be another `parallel`
+  step.
 
 A13 runs the three hardening tests, each through its own setUp, over
 `scripts/tests/fixtures/workflow-hardening/`, a hardened `.yml` control beside an unhardened
 `.yaml` workflow, and each refuses the `.yaml` one by its name. It then runs the SHA-pin test over
-the control with its action written in forms other than its plain one, and the test refuses each:
-an action is pinned only as its owner, its name and any path, each joined by a single slash, then
-a full commit SHA. The tests and the checker take their files from one function, `workflow_files`,
-which reads both extensions.
+the control with its action written in forms other than its plain one, and with its SHA cut short,
+and the test refuses each: an action is pinned only as its owner, its name and any path, each joined
+by a single slash, then a full commit SHA. The tests and the checker take their files from one
+function, `workflow_files`, which reads both extensions.
 - The hardening tests read keys the way the checker does. Each reads a workflow through
   `read_workflow`, the checker's reader, and a form the reader does not read, or a line it cannot
   place, fails the test by the file's name. The token test reads the default permissions as the
   reader reads them, the SHA-pin test every `uses` the reader reads, and the runner test every
-  `runs-on`.
+  `runs-on`. The last two read through one walk, `entries`, which collects every value a key holds
+  wherever it sits, a value under the same key nested in it included.
 - A13 plants keys in the control, one line at a time, and judges it beside the live workflows:
   keys the reader reads, a trigger, and forms the reader does not read. The test that judges each
   plant refuses it by the file's name.
@@ -192,7 +205,7 @@ which reads both extensions.
 | `docs/red-first/SPEC-034.md` | `repo` | added |
 | `changelog.d/fix-release-flow-and-forks.md` | `repo` | added |
 | `scripts/tests/test_ci_workflows.py` | `repo` | changed by the amendment (section 7): A9 to A13, the checker they run, its workflow reader, `workflow_files`, the SHA-pin pattern and the hardening tests' reading of each workflow |
-| `scripts/tests/fixtures/secrets-and-checkouts/refused/` | `repo` | added by the amendment: the fourteen planted workflows the checker refuses, `another-repository-in-other-forms.yml`, `checkout-of-another-repository.yml`, `clone-of-another-repository.yml`, `every-secret.yml`, `fetch-of-a-url.yml`, `key-the-reader-refuses.yml`, `run-by-alias.yml`, `second-of-each.yml`, `secret-in-a-form-the-reader-refuses.yml`, `secret-in-a-larger-expression.yml`, `secret-in-a-quoted-value.yml`, `secret-in-any-spacing.yml`, `secret-in-brackets.yml` and `secrets-inherited.yaml` |
+| `scripts/tests/fixtures/secrets-and-checkouts/refused/` | `repo` | added by the amendment: the sixteen planted workflows the checker refuses, `another-repository-in-other-forms.yml`, `checkout-of-another-repository.yml`, `checkout-whose-inputs-are-one-expression.yml`, `clone-of-another-repository.yml`, `every-secret.yml`, `fetch-of-a-url.yml`, `key-the-reader-refuses.yml`, `run-by-alias.yml`, `second-of-each.yml`, `secret-in-a-form-the-reader-refuses.yml`, `secret-in-a-larger-expression.yml`, `secret-in-a-quoted-value.yml`, `secret-in-any-spacing.yml`, `secret-in-brackets.yml`, `secrets-inherited.yaml` and `steps-in-a-parallel-block.yml` |
 | `scripts/tests/fixtures/secrets-and-checkouts/admitted/` | `repo` | added by the amendment: the six planted workflows it admits, `checkout-of-this-repository.yml`, `github-token.yml`, `not-the-secrets-context.yml`, `quoted-values.yml`, `refspec-of-this-repository.yml` and `secrets-github-token.yml` |
 | `scripts/tests/fixtures/workflow-hardening/` | `repo` | added by the amendment: A13's planted workflows, `hardened.yml` and `unhardened.yaml` |
 | `docs/specs/SPEC-034-a-release-never-deadlocks-and-only-this-repositorys-dev-reaches-main.md` | `repo` | changed by the amendment: the insertions section 7 lists |
