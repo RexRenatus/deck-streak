@@ -1,0 +1,80 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S04102-A-WITHHOLD-IS-RECORDED-UNDER-ITS-SUFFIXED-KIND",
+        "notifications",
+        "src/router.rs",
+        "pub const WITHHELD_SUFFIX: &str = \":withheld\";",
+        "pub const WITHHELD_SUFFIX: &str = \":held\";",
+        "router::a_nudge_in_quiet_hours_is_withheld_and_recorded",
+        "a withheld occasion is recorded under its kind with :withheld appended, so it never stands for a delivery of its key (SPEC-041 R6); cargo-mutants never mutates a constant"
+      ],
+      [
+        "S04103-THE-OWNERS-QUIET-START-IS-READ",
+        "notifications",
+        "src/router.rs",
+        "pub const QUIET_START_SETTING: &str = \"quiet_start_min\";",
+        "pub const QUIET_START_SETTING: &str = \"quiet_begin_min\";",
+        "router::the_quiet_window_follows_the_owners_settings",
+        "the quiet window follows the owner's settings, read under the predecessor's key (SPEC-041 R9); cargo-mutants never mutates a constant"
+      ],
+      [
+        "S04104-THE-DEFERRAL-AGE-CAP-IS-IN-MINUTES",
+        "notifications",
+        "src/router.rs",
+        "const MINUTE_MS: i64 = 60_000;",
+        "const MINUTE_MS: i64 = 1_000;",
+        "deferral::a_deferred_celebration_of_exactly_720_minutes_is_delivered",
+        "a held celebration is abandoned only past the policy's 720 minutes, so one held exactly that long is delivered (SPEC-041 R7); cargo-mutants never mutates a constant"
+      ],
+      [
+        "S04105-THE-COMEBACK-BUDGET-IS-NAMED-ONCE",
+        "notifications",
+        "src/occasion.rs",
+        "pub const COMEBACK_BUDGET: &str = \"comeback\";",
+        "pub const COMEBACK_BUDGET: &str = \"comebacks\";",
+        "comeback_budget::a_nudge_in_a_lapse_is_withheld_and_a_comeback_is_not",
+        "a kind on the comeback budget is exempt from the lapse's suppression and capped per lapse id (SPEC-041 R4 rules 3 and 5); cargo-mutants never mutates a constant"
+      ],
+      [
+        "S04106-A-DEDUPE-KEY-IS-AT-MOST-128-BYTES",
+        "notifications",
+        "src/occasion.rs",
+        "pub const DEDUPE_KEY_MAX_LEN: usize = 128;",
+        "pub const DEDUPE_KEY_MAX_LEN: usize = 129;",
+        "router::a_dedupe_key_is_an_opaque_token_that_holds_no_calendar_date",
+        "a dedupe key is an opaque token of at most 128 bytes (SPEC-041 R3); cargo-mutants never mutates a constant"
+      ],
+      [
+        "S04107-THE-QUIET-MINUTE-IS-TAKEN-MODULO-A-DAY",
+        "notifications",
+        "src/quiet.rs",
+        "pub const MINUTES_PER_DAY: i64 = 24 * 60;",
+        "pub const MINUTES_PER_DAY: i64 = 23 * 60;",
+        "quiet_hours::the_quiet_window_matches_the_parity_golden",
+        "the quiet window takes the minute modulo a day, as the predecessor's in_quiet_hours does (SPEC-041 R9, A8); cargo-mutants never mutates a constant"
+      ],
+      [
+        "S04108-THE-LOCAL-MINUTE-IS-A-WHOLE-MINUTE",
+        "notifications",
+        "src/quiet.rs",
+        "const MINUTE_MS: i64 = 60_000;",
+        "const MINUTE_MS: i64 = 1_000;",
+        "quiet_hours::the_local_minute_is_read_at_the_configured_offset",
+        "the quiet window is read at the local minute of the kernel's clock at the configured offset (SPEC-041 R9); cargo-mutants never mutates a constant"
+      ]
+    ],
+    "CARGO_KILLED_SCRIPT_MUTATIONS": [
+      [
+        "S04101-ONE-KEY-IS-DELIVERED-ONCE-ACROSS-BOTH-SURFACES",
+        "migrations/004101_notifications_router.sql",
+        "CREATE UNIQUE INDEX notification_deliveries_scoped_key",
+        "CREATE INDEX notification_deliveries_scoped_key",
+        "notifications",
+        "router::the_same_event_from_both_surfaces_is_delivered_once",
+        "the delivery's scoped key is a unique index, so the router's claim writes nothing on a conflict and one key is delivered at most once across the bot and the Mini App (SPEC-041 R4 rule 2, R5); a key held in SQL is proved by a script mutation"
+      ]
+    ]
+  }
+}
