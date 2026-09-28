@@ -575,7 +575,7 @@ closing runs.
 
 | order | crate | listed | killed | equivalent | unexplained | unviable | PR |
 |---|---|---|---|---|---|---|---|
-| 1 | `deck-streak-vault` | 939 | 854 | 18 | 0 | 67 | #277 (runs 36438243392, 36461589655) |
+| 1 | `deck-streak-vault` | 939 | 861 | 11 | 0 | 67 | #277 (runs 36438243392, 36479539295) |
 | 2 | `deck-streak-ingest` | 288 | 182 | 0 | 43 | 63 | open |
 | 3 | `deck-streak-kernel` | 355 | 292 | 0 | 17 | 46 | open |
 | 4 | `deck-streak-identity` | 139 | 94 | 0 | 15 | 30 | open |
