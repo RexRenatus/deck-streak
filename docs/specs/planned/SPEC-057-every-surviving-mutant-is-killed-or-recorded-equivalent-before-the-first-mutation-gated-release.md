@@ -33,11 +33,13 @@ by the pinned tools (cargo-mutants 27.1.0, StrykerJS 10.0.0), never copied.
   GitHub's runners.
 - **Shard 21's mutants are known by name.** cargo-mutants lists 2,154 mutants at `4082551`, and each
   reported shard `k` holds exactly the listing's mutants `k`, `k + 32`, `k + 64` and so on. Shard 21
-  held 67 that no report holds: `vault` 29, `kernel` 12, `coordination` 10, `ingest` 9, `identity`
-  4, `daemon` 2 and `api` 1. Before its runner stopped, about 54 minutes in, the shard's job
-  annotated 6 of them as missed: `vault` 4 (`rails.rs` 2, `note.rs` and `config.rs` 1 each),
-  `ingest` 1 (`sync.rs`) and `identity` 1 (`session.rs`). So at least 316 mutants survived at
-  `4082551`, and 61 were never measured; the counts below are the 31 reports' and a floor.
+  held 67, and no report holds any of them: `vault` 29, `kernel` 12, `coordination` 10, `ingest` 9,
+  `identity` 4, `daemon` 2 and `api` 1. Its job log records an outcome for 48 of them before the
+  runner's shutdown signal, about 54 minutes in: 37 caught, 5 unviable and 6 missed, the 6 its
+  annotations name (`vault` 4, `rails.rs` 2 with `note.rs` and `config.rs` 1 each; `ingest` 1,
+  `sync.rs`; `identity` 1, `session.rs`). The other 19, all `vault`'s, from `rails.rs:594:18` on,
+  were never reached. So at least 316 mutants survived at `4082551`, and 19 were never measured;
+  the counts below are the 31 reports' and a floor.
 
 | package | listed | reported | caught | timed out | missed | unviable | in shard 21 |
 |---|---|---|---|---|---|---|---|
@@ -123,7 +125,7 @@ The 310 missed mutants lie in 33 files, counted from the same 31 reports:
   `shards` takes 27 shards, projected at 82,934 s serially and the slowest at 3,568 s of its
   3,600 s bound.
 - **Per package.** A mutant at 16ed8e2 is the same as one at `4082551` when its file, function,
-  genre, replacement and mutated text match, counted as a multiset.
+  genre, replacement and the source lines its mutation replaces match, counted as a multiset.
 
 | package | listed at `4082551` | listed at 16ed8e2 | the same | new since the run | gone since the run |
 |---|---|---|---|---|---|
@@ -138,10 +140,12 @@ The 310 missed mutants lie in 33 files, counted from the same 31 reports:
 | total | 2,154 | 2,207 | 2,140 | 67 | 14 |
 
 - **What no sweep has measured.** The 67 new mutants, `deck-streak-privacy`'s 29 among them (#245
-  added the crate after the run), and the 61 of shard 21's that its annotations did not name.
-- **The survivors moved.** Every one of the 310 is still listed at 16ed8e2, and 155 of them under a
-  different `file:line:column` name, because lines above them moved: `vault` 143, `ingest` 11 and
-  `daemon` 1.
+  added the crate after the run), and the 19 of shard 21's that its job never reached.
+- **The survivors moved.** Every one of the 310 is still listed at 16ed8e2, and 157 of them under a
+  different `file:line:column` name, counted by binding each to its mutant (section 1.4), because
+  lines above them moved: `vault` 145, `ingest` 11 and `daemon` 1. Two old names now belong to other
+  survivors: in `unquote`, the pair at `rails.rs:846:16` moved up three lines, and the pair from
+  `849:16` took their name, so a count of old names missing from the new listing finds only 155.
 
 ### 1.3 How an equivalent is recorded today, and why the campaign cannot use it
 
@@ -151,8 +155,8 @@ The 310 missed mutants lie in 33 files, counted from the same 31 reports:
 - cargo-mutants filters every `exclude_re` match out of its listing, so an excluded mutant is never
   listed, sharded, run or reported: no later run tests the claim, and a count taken from the tool's
   reports cannot see it. StrykerJS reports a disabled mutant as `Ignored` and never runs it.
-- The name an `exclude_re` anchors on carries the line and the column, and 155 of the 310 names
-  moved in one day's merges.
+- The name an `exclude_re` anchors on carries the line and the column: 157 of the 310 names moved in
+  one day's merges, and two of the old names now name a different survivor.
 - The tree holds no exclusion today: `mutation-verdict.py exclusions` examines 0, and no file
   holds a `mutants::` attribute or a `Stryker disable` comment. Nothing needs migrating.
 
@@ -164,12 +168,14 @@ The 310 missed mutants lie in 33 files, counted from the same 31 reports:
 - **The Rust survivors.** A whole-line anchor binds 269 of the 310 to exactly one mutant, and a
   narrower window around the span's start binds the other 41, whose anchoring lines hold a second
   mutant of the same description (37 on the mutant's own line, 4 on a line added to make the text
-  unique). All 310 bind at `4082551` and again at 16ed8e2, across the 155 moved names.
+  unique). All 310 bind at `4082551` and again at 16ed8e2, across the 157 moved names.
 - **The Mini App's 81 survived and uncovered mutants.** Lines bind 71 and windows 4. The other 6
   also need the mutated text, because a `ConditionalExpression` over `a && b` and the one over `a`
   start at one position. All 81 bind.
-- **Without a position** no record could say which mutant it excuses: 298 of the 2,207 mutants at
-  16ed8e2 share their file, function, genre, replacement and mutated text with another mutant.
+- **Without a position** no record could say which mutant it excuses. Keyed by the file and the
+  tool's description, the fields R5 gives a record besides its anchor, 667 of the 2,207 mutants at
+  16ed8e2 share their key with another mutant, in 188 shared keys; adding the mutated span's text
+  still leaves 665.
 
 ### 1.5 Two riders the first delivery carries
 
@@ -481,6 +487,12 @@ A25: python3 -m unittest discover -s scripts/tests -p test_mutation_campaign.py 
   the pin (ADR-070).
 - **A killing test is later deleted.** Nothing in a pull request names which ordinary test killed a
   mutant (#220); the weekly battery finds the mutant alive again.
+- **Deliveries in flight together share one band file.** `scripts/mutation_rows.py` refuses a
+  fragment that is not a whole SPEC's band, so every delivery that pins a row writes
+  `scripts/mutation-rows.d/S05700-S05799.json`, and two open at once conflict in that file even with
+  disjoint ids (R20), the collision ADR-070 D1 cites for one shared file. A delivery merges `dev`
+  before its push, and a conflict resolves by keeping both sides' rows, which
+  `mutation_rows.py prove` then checks again.
 
 ## 7. The campaign plan and its table
 
@@ -489,7 +501,7 @@ verdict's reading, the table and the battery's scope, and carries the two riders
 last, the Mini App's, judges the whole release and moves this SPEC (R19).
 
 The opening rows are run 36384080819's whole shards, in which listed counts what they reported, so
-shard 21's 67 mutants, 6 of them known survivors (section 1.1), are in no row;
+shard 21's 67 mutants, 6 of them known survivors and 19 never reached (section 1.1), are in no row;
 `deck-streak-privacy`, which no sweep has measured, shows its listing at `dev` 16ed8e2. Each
 delivery replaces its row with its own sweeps (R16): listed, killed (caught or timed out),
 equivalent, unexplained, which must read 0, unviable, and its pull request with its opening and
@@ -513,8 +525,8 @@ What each delivery meets first, from section 1:
 
 - **vault**: 218 missed, 145 of them in `rails.rs`, the rails that block executable content in the
   vault (SPEC-042); then `staged.rs` 29, `readings_tree.rs` 15, `note.rs` 12, `config.rs` 9, and
-  `fs.rs` and `sha256.rs` 4 each; 29 in shard 21, 4 of them annotated missed, and 8 new at 16ed8e2.
-  Its mutants cost about 8 s each on GitHub's runners (SPEC-039 R18).
+  `fs.rs` and `sha256.rs` 4 each; 29 in shard 21, 4 of them missed and 19 never reached, and 8 new
+  at 16ed8e2. Its mutants cost about 8 s each on GitHub's runners (SPEC-039 R18).
 - **ingest**: 43 missed, 17 in `sync.rs` and 11 in `engine.rs`; each mutant costs about two minutes,
   so its 297 mutants are the campaign's costliest sweep, projected at 37,422 s serially.
 - **kernel**: 17 missed across seven files, 5 in `redact.rs`.
@@ -523,11 +535,12 @@ What each delivery meets first, from section 1:
 - **coordination**: 5 missed in four files.
 - **api**: 3 missed, one each in `health.rs`, `session_routes.rs` and `settings.rs`.
 - **privacy**: 29 mutants, never swept.
-- **the Mini App**: 53 survived and 28 uncovered (#240), the uncovered ones first gaining a test
-  that reaches them (R1). #240 let an uncovered module that only the browser runs wait on an issue;
-  the ruling's no skip leaves no such path, so `hooks.server.ts`, `hooks.ts`, `+layout.ts` and
-  `+layout.svelte`, which no test reaches, each gain a Vitest test that imports and runs them, as
-  the route tests beside them already do.
+- **the Mini App**: #240 tracks its 53 survived and 28 uncovered mutants, each to be killed or
+  recorded equivalent, with no mutant skipped. By this SPEC's rule (R1, R10), an uncovered mutant
+  first gains a test that reaches it in the Vitest run that StrykerJS measures, stubbing the
+  browser where it must, since the Playwright suite under `web/app/tests/` is not part of that run:
+  `hooks.server.ts`, `hooks.ts`, `+layout.ts` and `+layout.svelte`, which no Vitest test reaches,
+  each gain one that imports and runs them, as the route tests beside them already do.
 
 ## 8. The release rehearsal
 

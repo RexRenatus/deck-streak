@@ -26,10 +26,12 @@ excuses exactly the recorded mutant and a reviewer can audit every claim?
   a disabled mutant: it reports it `Ignored`.
 - **Exactness.** One record excuses one mutant: never a pattern, a file or a count.
 - **Stability.** A claim should break when its own code changes, not when unrelated lines move.
-  Between the run's tree, 4082551, and `dev` 16ed8e2, 155 of the 310 survivors changed their
-  `file:line:column` name, every one because lines moved, and none left the listing (SPEC-057 §1).
-- **Uniqueness without the line.** 298 of the 2,207 mutants at `dev` 16ed8e2 share a line-free
-  identity (file, function, genre, replacement and mutated text) with another mutant.
+  Between the run's tree, 4082551, and `dev` 16ed8e2, 157 of the 310 survivors changed their
+  `file:line:column` name, counted by binding each to its mutant, every one because lines moved,
+  and none left the listing (SPEC-057 §1).
+- **Uniqueness without a position.** Keyed by the file and the tool's description, the fields a
+  record carries besides its anchor, 667 of the 2,207 mutants at `dev` 16ed8e2 share their key with
+  another mutant, in 188 shared keys; adding the mutated span's text still leaves 665.
 - **A countable table.** The table per crate is counted from the tool's own reports and one
   committed record.
 - **No collisions.** Deliveries that run at the same time must not write one file, the reason
@@ -50,8 +52,8 @@ excuses exactly the recorded mutant and a reviewer can audit every claim?
   claim would append to the same file, the collision ADR-057 D5 ended for the rows.
 - cargo-mutants' `exclude_re` in `.cargo/mutants.toml` (ADR-057 D6): rejected, because it hides the
   mutant from the listing, so the plan, the shards, the reports and the table never see it, and no
-  run tests the claim again. A pattern that carries the line breaks when lines move (155 of 310
-  names moved in one day), and one without the line can excuse more than one mutant.
+  run tests the claim again. A pattern that carries the line breaks when lines move (157 of 310
+  survivors moved in one day), and one without the line can excuse more than one mutant.
 - `#[mutants::skip]` or `#[mutants::exclude_re]` on the item: rejected, because each hides its
   mutants from the listing too, `skip` hides every mutant of the item at once, and either puts the
   claim in production code with the `mutants` crate as a dependency.
@@ -73,11 +75,15 @@ excuses exactly the recorded mutant and a reviewer can audit every claim?
   needed the mutated text, because a `ConditionalExpression` over `a && b` starts where the one over
   `a` starts. It is the rows' anchor rule (SPEC-039 R8), so the reader's code and the reviewer's
   habit carry over.
-- The tool's full name, `file:line:column: description`: rejected by measurement, because half the
-  survivors' names moved in one day with no change to their code, and each move would break a claim
-  the move did not touch. The repair would be a mechanical re-key that re-examines nothing.
-- The file and the description, with no position: rejected by measurement, because 298 of 2,207
-  mutants share such an identity with another, so a record could not say which one it excuses.
+- The tool's full name, `file:line:column: description`: rejected by measurement, because 157 of the
+  310 survivors' names moved in one day with no change to their code, and each move would break a
+  claim the move did not touch. The repair would be a mechanical re-key that re-examines nothing.
+  Worse than breaking, a move can re-bind: in `unquote` the two survivors at `rails.rs:846:16` moved
+  up three lines and the two from `849:16` took their name, so a record keyed `846:16` would
+  silently excuse a different survivor.
+- The file and the description, with no position: rejected by measurement, because 667 of the
+  2,207 mutants at `dev` 16ed8e2 share that key with another mutant, in 188 shared keys, so a
+  record could not say which one it excuses; adding the mutated span's text still leaves 665.
 
 **D3, what a claim carries.**
 
@@ -119,9 +125,9 @@ excuses exactly the recorded mutant and a reviewer can audit every claim?
 - Nothing skipped: chosen, by the owner's ruling (no skip). `.cargo/mutants.toml` holds no
   `exclude_globs`, `examine_globs`, `examine_re` or `skip_calls` key, and SPEC-039 R2's production
   classes stay whole.
-- Skipping a file whose survivors are hard to kill (`rails.rs` holds 145 of the 310): rejected,
-  because it hides every mutant of the file, the killable ones included, while the file stays
-  production code that the release ships.
+- Skipping a hard file, such as `rails.rs` with 145 of the 310: rejected, because it hides every
+  mutant of the file, the killable ones included, while the file stays production code that the
+  release ships.
 
 ## Decision Outcome
 
