@@ -6,7 +6,8 @@ on the tools' `PATH`, each recording its argument vector there, so no fixture ho
 size or name and no test runs a real command (SPEC-060 section 3). The expected digests are
 computed here from the form SPEC-060 R4 and `docs/schematics/host-scrub.md` give, never read from
 the tools. Every enumerating test prints `examined N` and refuses zero, and every absence it asserts
-is paired with a positive one.
+is paired with a positive one. A10 runs a tool through a reader (`READER`) that serves a file's
+bytes differently on a second open, so a tool that parses one read and digests another shows it.
 """
 
 import hashlib
@@ -94,6 +95,36 @@ elif name == "ps":
 """
 
 COMMANDS = ("nice", "ionice", "systemctl", "dpkg-query", "dpkg", "ps", "apt-get")
+
+#: A reader that serves a file's bytes differently on a second read (A10). It runs a tool in its own
+#: process, as `python3 TOOL` runs it, with an audit hook that sees every open of the served path:
+#: each open is recorded, and just before the second one the path takes the other file's bytes, so
+#: a tool that opens the file twice parses one content and digests another.
+READER = r"""
+import os
+import runpy
+import sys
+
+served, other, record, tool, *args = sys.argv[1:]
+opens = []
+
+
+def serve(event, details):
+    if event != "open" or not details or not isinstance(details[0], (str, bytes, os.PathLike)):
+        return
+    if os.path.abspath(os.fsdecode(details[0])) != served:
+        return
+    opens.append(served)
+    with open(record, "a", encoding="utf-8") as log:
+        log.write("open\n")
+    if len(opens) == 2:
+        os.replace(other, served)
+
+
+sys.addaudithook(serve)
+sys.argv, sys.path[0] = [tool, *args], os.path.dirname(tool)
+runpy.run_path(tool, run_name="__main__")
+"""
 
 
 def write(path, size=None, *, text=None, mtime=None):
@@ -307,7 +338,7 @@ class Host:
         path.write_text(json.dumps(document, indent=2))
         return path
 
-    def run(self, tool, *args, cwd=None):
+    def run(self, tool, *args, cwd=None, through=()):
         env = dict(
             os.environ,
             PATH=f"{self.bin}{os.pathsep}{os.environ.get('PATH', '')}",
@@ -319,7 +350,7 @@ class Host:
             NO_PROXY="",
         )
         return subprocess.run(
-            [sys.executable, str(TOOLS / tool), *map(str, args)],
+            [sys.executable, *map(str, through), str(TOOLS / tool), *map(str, args)],
             capture_output=True,
             text=True,
             env=env,
@@ -399,6 +430,19 @@ class Host:
             *flags,
             cwd=cwd,
         )
+
+    def served(self, tool, path, second, *args):
+        """`tool` run with `args` through the reader: `path` serves the tool its own bytes at the
+        first open and `second` from the second open on (A10). Returns the run, and how many times
+        the tool opened `path`."""
+        reader = self.base / "reader.py"
+        other, record = path.with_name(f"{path.name}.second"), path.with_name(f"{path.name}.opens")
+        reader.write_text(READER)
+        other.write_bytes(second)
+        record.unlink(missing_ok=True)
+        done = self.run(tool, *args, through=(reader, path, other, record))
+        opens = record.read_text().splitlines() if record.exists() else []
+        return done, len(opens)
 
 
 def said(done):
@@ -1143,6 +1187,168 @@ class Apply(unittest.TestCase):
             self.assertIn("is not on the read-only allow list", said(done))
             self.assertEqual(tree(host.root), before)
             self.assertEqual(host.calls(), [])
+
+
+class OneRead(unittest.TestCase):
+    """What a tool binds by a digest is what it parsed: a file it both parses and binds is read
+    once (SPEC-060 A10). Each case runs a tool through the reader, which serves the file's bytes
+    differently on a second open, in either order."""
+
+    def test_each_tool_binds_the_bytes_it_parsed(self):
+        other_check = {
+            "id": "example-other",
+            "argv": ["systemctl", "is-active", "--quiet", "--", "other.service"],
+        }
+        # The inventory records the digest of the rules its health checks were read from.
+        for order in ("the rules first", "other rules first"):
+            with self.subTest(tool="inventory", order=order), tempfile.TemporaryDirectory() as s:
+                host = Host(s)
+                rules = host.rules().read_bytes()
+                checks = [*json.loads(rules)["health"], other_check]
+                other = host.rules("other.json", health=checks).read_bytes()
+                first, second = (rules, other) if order == "the rules first" else (other, rules)
+                served, out = host.private / "served-rules.json", host.private / "inventory.json"
+                served.write_bytes(first)
+                done, _ = host.served("inventory.py", served, second, served, "--out", out)
+                self.assertEqual(done.returncode, 0, said(done))
+                record = json.loads(out.read_text())
+                self.assertEqual(record["rules_digest"], hashlib.sha256(first).hexdigest())
+                self.assertEqual(
+                    [check["id"] for check in record["health_before"]],
+                    [check["id"] for check in json.loads(first)["health"]],
+                )
+        # The plan lists from the rules whose digest it checked: rules naming one more item are
+        # refused, and the rules the inventory read are listed from.
+        needed = {
+            "name": "needed-tool",
+            "class": "package",
+            "package": "example-needed-tool",
+            "reason": "a package the inventory's rules never name",
+        }
+        for order in ("the rules first", "other rules first"):
+            with self.subTest(tool="plan", order=order), tempfile.TemporaryDirectory() as s:
+                host = Host(s)
+                path = host.rules()
+                done, inventory = host.inventory(path)
+                self.assertEqual(done.returncode, 0, said(done))
+                rules = path.read_bytes()
+                named = [*json.loads(rules)["rules"], needed]
+                other = host.rules("other.json", rules=named).read_bytes()
+                first, second = (rules, other) if order == "the rules first" else (other, rules)
+                served, out = host.private / "served-rules.json", host.private / "list.json"
+                served.write_bytes(first)
+                done, _ = host.served("plan.py", served, second, inventory, served, "--out", out)
+                listed = json.loads(out.read_text())["items"] if out.exists() else []
+                packages = {item.get("package") for item in listed}
+                self.assertNotIn("example-needed-tool:amd64", packages, said(done))
+                if order == "the rules first":
+                    self.assertEqual(done.returncode, 0, said(done))
+                    self.assertIn("example-unused-tool:amd64", packages)
+                else:
+                    self.assertEqual(done.returncode, 1, said(done))
+                    self.assertIn("not the ones the inventory read", said(done))
+                    self.assertFalse(out.exists())
+        # The plan names the inventory it listed from by the digest of the bytes it parsed.
+        for order in ("the inventory first", "another inventory first"):
+            with self.subTest(tool="plan", order=order), tempfile.TemporaryDirectory() as s:
+                host = Host(s)
+                path = host.rules()
+                done, written = host.inventory(path)
+                self.assertEqual(done.returncode, 0, said(done))
+                inventory = written.read_bytes()
+                moved = json.loads(inventory)
+                earlier = datetime.fromisoformat(moved["taken_at"]) - timedelta(minutes=1)
+                moved["taken_at"] = earlier.isoformat()
+                another = json.dumps(moved, indent=1).encode()
+                first, second = (inventory, another)
+                if order == "another inventory first":
+                    first, second = (another, inventory)
+                served, out = host.private / "served-inventory.json", host.private / "list.json"
+                served.write_bytes(first)
+                done, _ = host.served("plan.py", served, second, served, path, "--out", out)
+                self.assertEqual(done.returncode, 0, said(done))
+                named = json.loads(out.read_text())["inventory"]
+                self.assertEqual(named["digest"], hashlib.sha256(first).hexdigest())
+                self.assertEqual(named["taken_at"], json.loads(first)["taken_at"])
+        # The apply acts on the rules whose digest it checked against the list's: the rules the
+        # inventory read delete the approved item, and rules that drop a protected path are
+        # refused, so the item that path protects stays.
+        with (
+            self.subTest(tool="apply", order="the rules first"),
+            tempfile.TemporaryDirectory() as s,
+        ):
+            host = Host(s)
+            path = host.rules()
+            listing, list_path = host.plan(path)
+            probe = host.apps / "probe-1.py"
+            ids = [by_path(listing)[str(probe)]["id"]]
+            rules = path.read_bytes()
+            other = host.rules("other.json", protected=[]).read_bytes()
+            served, log = host.private / "served-rules.json", host.private / "apply-log.json"
+            served.write_bytes(rules)
+            approval = host.approve(listing, ids)
+            flags = ("--rules", served, "--log", log, "--apply")
+            done, _ = host.served("apply.py", served, other, list_path, approval, *flags)
+            self.assertEqual(done.returncode, 0, said(done))
+            self.assertFalse(probe.exists())
+            self.assertEqual([entry["id"] for entry in json.loads(log.read_text())["deleted"]], ids)
+        with (
+            self.subTest(tool="apply", order="other rules first"),
+            tempfile.TemporaryDirectory() as s,
+        ):
+            host = Host(s)
+            path = host.rules()
+            listing, _ = host.plan(path)
+            guarded = host.srv / "guarded"
+            crafted, list_path = host.craft(listing, str(guarded / ".venv"), "venv")
+            rules = path.read_bytes()
+            other = host.rules("other.json", protected=[]).read_bytes()
+            served, log = host.private / "served-rules.json", host.private / "apply-log.json"
+            served.write_bytes(other)
+            kept = tree(guarded)
+            approval = host.approve(crafted, ["x001"])
+            flags = ("--rules", served, "--log", log, "--apply")
+            done, _ = host.served("apply.py", served, rules, list_path, approval, *flags)
+            self.assertTrue((guarded / ".venv").is_dir(), said(done))
+            self.assertEqual(tree(guarded), kept)
+            self.assertEqual(done.returncode, 1, said(done))
+            self.assertIn("not the ones the inventory read", said(done))
+
+    def test_each_tool_opens_each_file_it_binds_once(self):
+        # Beside A10: the rules in each tool, and the inventory in the plan, are opened once a run.
+        with tempfile.TemporaryDirectory() as scratch:
+            host = Host(scratch)
+            path = host.rules()
+            rules = path.read_bytes()
+            served = host.private / "served-rules.json"
+            inventory, out = host.private / "inventory.json", host.private / "list.json"
+            runs = {}
+            served.write_bytes(rules)
+            runs["the inventory's rules"] = host.served(
+                "inventory.py", served, rules, served, "--out", inventory
+            )
+            served.write_bytes(rules)
+            runs["the plan's rules"] = host.served(
+                "plan.py", served, rules, inventory, served, "--out", out
+            )
+            copy = host.private / "served-inventory.json"
+            copy.write_bytes(inventory.read_bytes())
+            runs["the plan's inventory"] = host.served(
+                "plan.py", copy, inventory.read_bytes(), copy, path, "--out", out
+            )
+            listing = json.loads(out.read_text())
+            approval = host.approve(
+                listing, [by_path(listing)[str(host.apps / "probe-1.py")]["id"]]
+            )
+            served.write_bytes(rules)
+            flags = ("--rules", served, "--log", host.private / "apply-log.json")
+            runs["the apply's rules"] = host.served(
+                "apply.py", served, rules, out, approval, *flags
+            )
+            for read, (done, opens) in runs.items():
+                with self.subTest(read=read):
+                    self.assertEqual(done.returncode, 0, said(done))
+                    self.assertEqual(opens, 1)
 
 
 class Health(unittest.TestCase):
