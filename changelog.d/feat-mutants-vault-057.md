@@ -46,3 +46,12 @@
   mutants after the plan's base, rows 8 and 9 of its table and their ids in the band;
   `deck-streak-privacy` is row 10, and the Mini App stays last. Both rows have their own
   criteria, A26 and A27, in the form the other crates' rows have.
+
+### Fixed
+
+- A pull request whose only changes under `crates/*/src` are lines inside a `#[cfg(test)]` or
+  test-attribute item, which cargo-mutants never mutates, reads its Rust mutation class
+  not-applicable by name, where it read VOID; one that also changes a production line still
+  applies, and the plan prints each class's case by name. The empty output cargo-mutants prints
+  when no mutant overlaps a diff is read as an empty listing, so a changed production line that
+  no tool can mutate still reads VOID without a covering row.

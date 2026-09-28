@@ -54,6 +54,8 @@ A15: red at e43dae8: AssertionError: 'scripts/mutation-equivalent.d/<package>.js
 A15: green at 5c4d6b6
 A16: red at bfae431: AssertionError: 225 != 0 : deck-streak-vault: 225 unexplained mutant(s) in its row (the opening sweep, run 36438243392 at 5767fbe, read listed 939, killed 647, equivalent 0, unexplained 225, unviable 67)
 A16: green at 18cff1c
+A28: red at e260627: AssertionError in each of its four subtests, each for its own reason: 'True is not false : the rust class applies on test lines [31, 36, 43, 47, 53]' (the test-only diff); 'Lists differ: [46, 58] != [58]' (the mixed diff counted its test module's line as production code); "'mutation: plan: rust applies: 3 production code line(s) in 1 file(s)' not found" (the production-only diff's plan named no production line); and '3 != 0 : mutation: shards: VOID the rust class applies and ... holds no cargo-mutants listing' (cargo-mutants' empty --in-diff output read as no listing)
+A28: green at 8c87e5b
 ```
 
 | requirement | the behaviour a wrong implementation would get wrong | criterion |
@@ -68,6 +70,7 @@ A16: green at 18cff1c
 | R14 | a scoped dispatch sweeping the whole workspace, owing a report from a shard its scope gave no mutant, or ending without its table line | A11 |
 | R17 | the brief, the configurations' comments or the drafts teaching an exclusion | A15 |
 | R18 | a squash merge's push judged again, the title's issue read as the pull request; a lock only `--locked` accepts passing the gate | A13, A14 |
+| R22 | a line inside a `#[cfg(test)]` module read as production code, so a test-only diff reads VOID; a test line counted beside a production line; a `cfg(not(test))` function, or a brace or test mark inside a literal or a comment, read as a test item; cargo-mutants' empty listing read as a missing one, or as not-applicable | A28 |
 
 A16 is the vault's row of section 7. Its opening sweep, the weekly battery dispatched with
 `package=deck-streak-vault` at 5767fbe (run 36438243392), reported every one of its 32 shards whole
@@ -85,3 +88,23 @@ of 33 reports whole, and its table read `listed 939, killed 854, equivalent 18, 
 unviable 67`.
 That line is the row committed at 18cff1c, where A16's test, re-run from a `git archive` export of
 that sha, passes.
+
+## The vault's delivery: the third rider (A28)
+
+SPEC-057 R22 came to this delivery after its closing sweep, when its own diff read VOID in
+`mutation-plan` and `mutation-verdict` (SPEC-057 section 1.6). A28's one test plants four
+fixtures, one subtest each, and was committed (e260627) against the plan as it stood at
+dd734e5, before the fix (8c87e5b). Each subtest failed by assertion for its own reason: the
+test-only diff applied the Rust class on its five test lines; the mixed diff counted its test
+module's line 46 among its production code lines; the production-only diff's plan printed
+`rust applies` and named no production line; and `shards` read cargo-mutants' empty `--in-diff`
+output as no listing, VOID. The listings the test plants are cargo-mutants 27.1.0's own
+`--list --json --in-diff` output over the fixtures' diffs, in a workspace that holds the
+fixture: a listing parses and builds nothing. Both shas were re-run from a `git archive` export
+of that sha: four failures at e260627, and a pass at 8c87e5b.
+
+The fix was also read against the tool's own listing of the whole tree. The listing
+`mutation-plan` kept at dd734e5 (run 36463302615) names 2,887 mutants over the 105 files under
+`crates/*/src`, and none of them lies on any of the 662 lines the fixed plan reads as test-only,
+in the 11 files that hold a `#[cfg(test)]` module; each of those modules reads test-only whole,
+from its attribute to its closing brace.
