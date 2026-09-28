@@ -73,21 +73,31 @@ R2. **Production code** is exactly:
     Everything else (tests, `scripts/`, the golden reader `tools/parity-oracle/golden.rs`, the
     registry modules, documents and workflows) is not production code. A row (R8) may still guard
     it.
-R3. **A diff-scoped run on every pull request into `dev` and `main`.** Two CI jobs, each a need of
-    the aggregate `ci` job, run on every event and decide from the diff what applies:
-    - `mutation-rust`: `cargo mutants --in-place --in-diff` over the pull request's diff
-      (`HEAD^1...HEAD` of the merge ref), then the rows the diff selects (R10), then the
-      retirement check (R11), then the verdict (R4);
+R3. **A diff-scoped run on every pull request into `dev` and `main`, the release's included.** Five
+    CI jobs, each a need of the aggregate `ci` job, run on every event and decide from the diff what
+    applies. The diff is the merge ref's, `HEAD^1...HEAD`, written once to `git.diff`:
+    - `mutation-plan`: `scripts/mutation-verdict.py plan --event` reads the event's case and the
+      diff into `plan.json`; when the Rust class applies, `cargo mutants --list --json --in-diff`
+      lists the diff's mutants, and `mutation-verdict.py shards` sizes the shards (R18);
+    - `mutation-rust`: one job per shard `k` of the plan's `n`, its matrix the plan's, each running
+      `cargo mutants --in-place --in-diff --sharding round-robin --shard k/n` over the same
+      `git.diff`;
+    - `mutation-rows`: the rows the diff selects (R10), then the retirement check (R11);
+    - `mutation-verdict`: under `if: always()`, the verdict (R4) over every shard's report and the
+      rows' report, for the Rust class and the oracle's;
     - `mutation-web`: StrykerJS over every web production file the diff changes, whole, then the
-      verdict.
-    Each job reads its event's case by name, from `scripts/mutation-verdict.py plan --event`, and
-    is never skipped, because `ci` reads a skipped need as failed:
-    - a pull request into `dev` is judged on its diff;
-    - a release pull request into `main` reads `not-applicable`: it carries `dev`'s changes, each
-      judged by these jobs on its own pull request into `dev`, and the weekly battery sweeps `dev`;
+      verdict. A release's Mini App changes run in this one job (R18).
+    Each job prints its event's case by name and is never skipped, because `ci` reads a skipped
+    need as failed:
+    - a pull request into `dev` is judged on its diff. `dev` accepts a pull request only with an
+      up-to-date head (ADR-034), so that diff is the merge's own;
+    - a release pull request into `main` is judged on its merge diff, every change `dev` carries
+      since the last release, in as many shards as fit (R18). The oracle's Python is judged, as on
+      `dev`, by the rows the diff selects (R8; #219);
     - a push whose subject names the pull request it merges (`Merge pull request #N`) reads
-      `not-applicable`, naming `#N`, whose jobs judged that same tree: `dev` and `main` accept a
-      pull request only with an up-to-date head (ADR-034);
+      `not-applicable`, naming `#N`, whose jobs judged that same tree: `dev` accepts a pull request
+      only with an up-to-date head, and `main` cannot move under a release pull request, since only
+      `dev` reaches it and one pull request per head and base can be open (ADR-034);
     - a push that names no pull request is judged on its first-parent diff, `HEAD^1...HEAD`.
     A pull request whose diff holds no production path for a job's class reads `not-applicable`
     and names the paths it changes. Each job uploads its report under `if: always()`, restores
@@ -159,10 +169,10 @@ R9. **The runner, `scripts/mutation_rows.py prove`,** proves each row it is give
     - it prints one line per row and `examined N`, and exits 0 when every row was KILLED, 1 on a
       survivor, 3 on a VOID with no survivor.
 R10. **The rows a diff selects:** every row whose target the diff changes, every row the diff adds
-    or changes, and every row whose killer's file the diff changes. The `mutation-rust` job proves
-    each; a row that is not KILLED fails the job.
+    or changes, and every row whose killer's file the diff changes. The `mutation-rows` job proves
+    each, and a row that is not KILLED fails the verdict.
 R11. **No weakening.** A row whose id leaves the population while its target file stays fails the
-    `mutation-rust` job (`scripts/mutation_rows.py retired --base <ref>`), unless
+    `mutation-rows` job (`scripts/mutation_rows.py retired --base <ref>`), unless
     `scripts/mutation-rows.retired.json` records its id with a reason and the maintainer's
     approval. A census test (`scripts/tests/test_mutation_rows.py`) holds every committed row:
     its target exists, its anchor occurs exactly once, its killer resolves to exactly one test,
@@ -190,7 +200,8 @@ R13. **The known lag.** The schedule and the dispatch go live only when a releas
 R14. **No vendored pack.** The packs stay box-only (ADR-056, and the owner's decision for this
     delivery), so no file of the mutation-rows pack is vendored. What CI needs of it is
     DeckStreak's own code: the census (R8, R11) and the configuration check (R6).
-R15. **`docs/BUILDER-BRIEF.md` gains a mutation section,** so every builder inherits R3 to R11.
+R15. **`docs/BUILDER-BRIEF.md` gains a mutation section,** so every builder inherits R3 to R11 and
+    R18.
 R16. **The first rows** guard invariants that exist on `dev`: the kernel's 04:00 rollover and
     the redactor's constants (SPEC-020), ingest's once-a-study-day refusal and its no-upload rule
     (SPEC-022), identity's constant-time compare, the `auth_date` bound, the owner pin and the
@@ -200,6 +211,25 @@ R17. **The gate is proved red first.** The survivor in `SystemClock::now` (§1) 
     pure conversion, `UtcMillis::from_system_time`, beside a test that leaves it alive: the
     `mutation-rust` job goes RED on the pull request. A test that a time before the epoch reads as
     negative milliseconds then kills it, and the job goes GREEN. Both run ids are recorded.
+R18. **The shards, and their bound.** `scripts/mutation-verdict.py shards` sizes a diff's Rust run
+    from cargo-mutants' own listing of its mutants, so that no shard reaches its job's timeout:
+    - a shard's projected time is the unmutated baseline's (346 s, the mean over run
+      36373915578's 30 shards) plus, for each mutant round-robin gives it (mutant `i` in shard
+      `i mod n`, as cargo-mutants assigns them), its package's cost: the mean build and test time
+      of one mutant over the weekly battery's shards on GitHub's `ubuntu-24.04` runners, held in
+      `mutation-verdict.py`'s table. A package the table does not name costs the table's highest;
+    - it takes the fewest shards whose slowest is projected within 60 minutes, half the shard
+      job's `timeout-minutes` of 120: over run 36373915578's 30 shards, the measured time ran from
+      0.72 to 1.39 times the projection;
+    - a diff that needs more than 256 shards, the most a job matrix holds, is refused with its
+      projection, never capped;
+    - the verdict counts every shard from `0` to `n-1`: one with no report, or a partial one, is
+      VOID by name, and the shards' reports hold every listed mutant once: one in two shards fails,
+      and one in none is VOID, each by name. A shard the plan gave no mutant owes no report, since
+      cargo-mutants exits 0 and writes none when it has nothing to test.
+    The mutation jobs' own bounds (SPEC-038 section 8): `mutation-plan` 15 minutes, each
+    `mutation-rust` shard 120, `mutation-rows` 90, `mutation-verdict` 10 and `mutation-web` 60.
+    Section 8 records the release's measured plan.
 
 ## 3. Acceptance criteria
 
@@ -228,16 +258,21 @@ R17. **The gate is proved red first.** The survivor in `SystemClock::now` (§1) 
 | A21 | the tools' configurations load under their own rules, judged by DeckStreak's own check | `test_mutation_workflows.py` |
 | A22 | the weekly battery's shards cover their denominator and keep every report | `test_mutation_workflows.py` |
 | A23 | only the survivors job may write issues, and never on a pull request | `test_mutation_workflows.py` |
-| A24 | the mutation jobs are needs of `ci`, install pinned tools and save no cache | `test_mutation_workflows.py` |
+| A24 | the mutation jobs are needs of `ci`, install pinned tools and save no cache, and only the verdict's job has a job-level `if`, `always()` | `test_mutation_workflows.py` |
 | A25 | the builder brief teaches the mutation rules | `test_mutation_workflows.py` |
 | A26 | a time before the epoch reads as negative milliseconds | `cargo test -p deck-streak-kernel --test clock` |
-| A27 | each event reads its case by name, and a diff with no production path names its paths | `test_mutation_verdict.py` |
+| A27 | each event reads its case by name, a release pull request into `main` is judged on its merge diff, and a diff with no production path names its paths | `test_mutation_verdict.py` |
 | A28 | every job that runs cargo-mutants installs the nextest its configuration names | `test_mutation_workflows.py` |
 | A29 | the weekly battery fails, naming each shard, the rows report and the Stryker report it lacks or holds only in part | `test_mutation_verdict.py` |
 | A30 | a report the tool left partial is VOID: an exit other than 0, 2 or 3, or counts short of its total | `test_mutation_verdict.py` |
 | A31 | a comment opener inside a string, a raw string, a character, a template or a regular expression opens no comment | `test_mutation_verdict.py` |
 | A32 | every cargo-mutants command bounds its builds and its tests | `test_mutation_workflows.py` |
 | A33 | the survivors job counts every report its jobs promise, whatever they returned | `test_mutation_workflows.py` |
+| A34 | the plan shards the listed mutants round-robin, each in exactly one shard, in the fewest shards whose projected time fits the bound, and refuses a diff beyond 256 shards | `test_mutation_verdict.py` |
+| A35 | the shards' reports hold every listed mutant once: one in two shards fails, and one in none is VOID, each by name | `test_mutation_verdict.py` |
+| A36 | a shard with no report, or a partial one, is VOID by name, and the other shards' survivors still fail by name | `test_mutation_verdict.py` |
+| A37 | the sharded job runs the plan's matrix at the plan's count, and the verdict's job counts every shard whatever the shards returned | `test_mutation_workflows.py` |
+| A38 | a shard the plan gave no mutant owes no report, and a proved row on the diff's changed line carries it; a shard given mutants still owes its report | `test_mutation_verdict.py` |
 
 ```acceptance
 A1: python3 -m unittest discover -s scripts/tests -p test_mutation_rows.py -k a_tracked_change_is_refused_before_any_mutant_is_installed
@@ -273,19 +308,27 @@ A30: python3 -m unittest discover -s scripts/tests -p test_mutation_verdict.py -
 A31: python3 -m unittest discover -s scripts/tests -p test_mutation_verdict.py -k a_comment_opener_inside_a_string_is_not_a_comment
 A32: python3 -m unittest discover -s scripts/tests -p test_mutation_workflows.py -k every_cargo_mutants_command_bounds_its_builds_and_its_tests
 A33: python3 -m unittest discover -s scripts/tests -p test_mutation_workflows.py -k the_battery_counts_every_report_its_jobs_promise
+A34: python3 -m unittest discover -s scripts/tests -p test_mutation_verdict.py -k the_plan_shards_the_listed_mutants_within_their_bound
+A35: python3 -m unittest discover -s scripts/tests -p test_mutation_verdict.py -k the_shards_reports_hold_every_listed_mutant_once
+A36: python3 -m unittest discover -s scripts/tests -p test_mutation_verdict.py -k a_missing_or_partial_shard_report_is_void_by_name
+A37: python3 -m unittest discover -s scripts/tests -p test_mutation_workflows.py -k the_sharded_job_runs_the_plans_matrix_and_the_verdict_counts_every_shard
+A38: python3 -m unittest discover -s scripts/tests -p test_mutation_verdict.py -k a_diff_the_tool_lists_no_mutant_of_needs_no_shard_report
 ```
 
 A1 to A8 run the runner against a fixture repository built at run time in a temporary directory:
 a git repository with one committed target, one unittest module, and (for A8) one crate with no
 dependency and its own `Cargo.lock`, built into the fixture's own `target/`. A13 to A19 run the
 verdict over synthetic diffs and reports written by the test, never over a real tool run, and so
-do A27 and A29 to A31. A9 reads the committed rows, and A11 plants rows the census must refuse. A21
-runs the configuration check over the tree and over planted configurations, and reads its examined
-count.
+do A27, A29 to A31, A34 to A36 and A38; those four also write a listing in cargo-mutants' own
+`--list --json` shape, and shard reports. A9 reads the committed rows, and A11 plants rows the
+census must refuse. A21 runs the configuration check over the tree and over planted
+configurations, and reads its examined count. A22 to A25, A28, A32, A33 and A37 read the
+workflows.
 
 The red stubs, committed with the tests, keep every entry point and do nothing: the runner reads
 every row KILLED without running anything, the census and the retirement check examine nothing,
-and the verdict reads every class green. So each criterion fails by assertion for its own reason.
+and the verdict reads every class green; the `shards` verb writes no shard, and the judge reads no
+shard's report. So each criterion fails by assertion for its own reason.
 A26 pins behaviour the code already had (R17): it is recorded `not red`, and the gate's own red
 and green are the `mutation-rust` job's two runs.
 
@@ -299,7 +342,7 @@ and green are the `mutation-rust` job's two runs.
 | `docs/red-first/SPEC-039.md` | `repo` | added |
 | `docs/BUILDER-BRIEF.md` | `repo` | changed: the mutation section (R15) |
 | `scripts/mutation_rows.py` | `repo` | added: the reader and target resolver, the census, the runner and the retirement check (R8 to R11) |
-| `scripts/mutation-verdict.py` | `repo` | added: the plan, the verdict, the survivors' drafts, the battery's count and the configuration check (R3, R4, R6, R12) |
+| `scripts/mutation-verdict.py` | `repo` | added: the plan, the shards, the verdict, the survivors' drafts, the battery's count and the configuration check (R3, R4, R6, R12, R18) |
 | `scripts/mutation-rows.json` | `repo` | added: the header (R8) |
 | `scripts/mutation-rows.retired.json` | `repo` | added: the retirement record, empty (R11) |
 | `scripts/mutation-rows.d/S02000-S02099.json` | `repo` | added: SPEC-020's rows (R16) |
@@ -309,14 +352,14 @@ and green are the `mutation-rust` job's two runs.
 | `scripts/mutation-rows.d/S03900-S03999.json` | `repo` | added: this SPEC's rows on its own runner and verdict (R16) |
 | `scripts/mutation-rows.d/S04200-S04299.json` | `repo` | added: SPEC-042's rows (R16) |
 | `scripts/tests/test_mutation_rows.py` | `repo` | added: A1 to A11 |
-| `scripts/tests/test_mutation_verdict.py` | `repo` | added: A12 to A19, A27, A29 to A31 |
-| `scripts/tests/test_mutation_workflows.py` | `repo` | added: A20 to A25, A28, A32, A33 |
+| `scripts/tests/test_mutation_verdict.py` | `repo` | added: A12 to A19, A27, A29 to A31, A34 to A36, A38 |
+| `scripts/tests/test_mutation_workflows.py` | `repo` | added: A20 to A25, A28, A32, A33, A37 |
 | `.cargo/mutants.toml` | `repo` | added (R5, R6) |
 | `web/app/stryker.config.json` | `repo` | added (R6) |
 | `web/app/package.json`, `pnpm-lock.yaml` | `miniapp` | changed: StrykerJS 10.0.0 (R1) |
 | `.gitignore` | `repo` | changed: the tools' output directories |
-| `.github/workflows/ci.yml` | `repo` | changed: `mutation-rust` and `mutation-web`, needs of `ci` (R3) |
-| `scripts/tests/test_ci_workflows.py` | `repo` | changed: `ci` needs the two mutation jobs beside the gate's four (R3) |
+| `.github/workflows/ci.yml` | `repo` | changed: `mutation-plan`, `mutation-rust` (one job per shard), `mutation-rows`, `mutation-verdict` and `mutation-web`, needs of `ci` (R3, R18) |
+| `scripts/tests/test_ci_workflows.py` | `repo` | changed: `ci` needs the five mutation jobs beside the gate's five (R3) |
 | `.github/workflows/mutation-weekly.yml` | `repo` | added (R12, R13) |
 | `crates/kernel/src/clock.rs` | `deck-streak-kernel` | changed: `UtcMillis::from_system_time` (R17) |
 | `crates/kernel/tests/clock.rs` | `deck-streak-kernel` | changed: A26 (R17) |
@@ -354,17 +397,22 @@ and green are the `mutation-rust` job's two runs.
   a test file that fails to load is reported as Survived with zero tests (stryker-js #6150), and a
   global test filter misreads static mutants (#6144; this repository sets no `testFiles`). A false
   survivor fails the job loudly, which a person then reads.
-- **The Rust run's time grows with the diff.** One serial `--in-place` run pays about 10 to 20 s a
-  mutant, and `--in-place` cannot run jobs in parallel. `timeout-minutes` bounds it, and the job's
-  log names the count it reached. A diff large enough to reach the bound shards the job the way the
-  weekly battery is sharded, every shard reading the same diff.
+- **A shard can outrun its projection.** The costs are means measured on GitHub's runners; a
+  crate whose tests grow, a new crate the table does not name, or a slow runner makes a shard
+  slower than projected. The bound is half the job's timeout, above the measured error (R18). A
+  shard that still times out uploads a partial report or none, the verdict names it VOID, and the
+  table is measured again from the weekly battery's reports.
+- **A release costs runner time.** Its merge diff holds about every mutant in the repository, so
+  its run is about the weekly battery's size. A newer push to the release pull request cancels the
+  run it supersedes, so only the head that merges pays in full.
 - **A flaky test makes a survivor or a kill flaky.** cargo-mutants refuses a red baseline (exit
   4, VOID here), and the runner's control run refuses a killer red without its mutant (R9).
 - **The weekly battery files noise.** Each issue is one file's survivors, titled by the file, and
   a title already open is not filed twice.
 - **A shard that never reports reads as a shard with no survivor.** A runner shut down mid-run
   uploads nothing, and a run stopped early leaves a partial report. The survivors job counts every
-  report the battery's jobs promise and fails naming each one missing or partial (A29, A33).
+  report the battery's jobs promise and fails naming each one missing or partial (A29, A33), and
+  a pull request's verdict counts every shard its plan promised (A36).
 
 ## 7. The known lag
 
