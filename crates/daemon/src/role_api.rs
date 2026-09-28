@@ -1,18 +1,26 @@
-//! The `api` role: the HTTP service the Mini App calls through the reverse proxy (SPEC-025;
-//! ADR-007, ADR-010, ADR-025).
+//! The `api` role: the HTTP service the Mini App calls through the reverse proxy (SPEC-025,
+//! SPEC-024; ADR-007, ADR-010, ADR-025, ADR-038).
 //!
 //! It starts in the order `docs/schematics/service-lifecycle.md` draws. The settings are read, and
-//! a missing or malformed one refuses start by name. The shutdown signal's handlers are installed.
-//! The loopback listener is bound; systemd hears `READY=1`, and the heartbeat starts. The database
-//! then opens under the open lock while the API already answers readiness with 503, and 200 once it
-//! is open. On SIGTERM the role says `STOPPING=1`, drains, closes the database and returns. A
-//! database that fails to open stops the role the same way, and the role returns the failure.
+//! a missing or malformed one refuses start by name. Identity's two credentials, the owner's user id
+//! and the bot token, are read through the kernel's loader with the redactor the log writer reads,
+//! so neither value can reach a later line; a missing or malformed one refuses start by its id
+//! (`docs/schematics/startup-settings-and-secrets.md`). The shutdown signal's handlers are
+//! installed. The loopback listener is bound; systemd hears `READY=1`, and the heartbeat starts. The
+//! database then opens under the open lock while the API already answers readiness with 503, and
+//! 200 once it is open. On SIGTERM the role says `STOPPING=1`, drains, closes the database and
+//! returns. A database that fails to open stops the role the same way, and the role returns the
+//! failure.
 
 use std::sync::Arc;
 
 use deck_streak_api::settings::LISTEN;
-use deck_streak_api::{ApiError, ApiState, ListenAddress, Readiness};
-use deck_streak_kernel::{Environment, KernelSettings, Offload, SettingsError, SystemClock};
+use deck_streak_api::{ApiError, ApiState, ListenAddress, OwnerAccess, Readiness};
+use deck_streak_identity::{Freshness, IdentityError, OwnerGate};
+use deck_streak_kernel::{
+    Clock, CredentialLoader, CredentialsDirectory, Environment, KernelSettings, Offload, Redactor,
+    SettingsError, SystemClock,
+};
 use tokio::sync::oneshot;
 
 use crate::lifecycle::{self, Notifier, NotifyState, ShutdownSignal};
@@ -24,6 +32,9 @@ pub enum ApiRoleError {
     /// A setting refused start.
     #[error(transparent)]
     Settings(#[from] SettingsError),
+    /// One of identity's credentials refused start, by its id.
+    #[error(transparent)]
+    Identity(#[from] IdentityError),
     /// The API refused start or stopped serving.
     #[error(transparent)]
     Api(#[from] ApiError),
@@ -44,17 +55,24 @@ enum Stop {
 }
 
 /// Runs the `api` role until SIGTERM (or SIGINT), and returns once every request in flight has
-/// finished.
+/// finished. `redactor` is the one the process's log writer reads: every credential the role
+/// loads is registered with it.
 ///
 /// # Errors
 ///
-/// Every refusal of [`ApiRoleError`]: a setting refuses start before anything is bound, and a
-/// database that fails to open stops the role after a drain.
-pub async fn run(env: &Environment) -> Result<(), ApiRoleError> {
+/// Every refusal of [`ApiRoleError`]: a setting or a credential refuses start before anything is
+/// bound, and a database that fails to open stops the role after a drain.
+pub async fn run(env: &Environment, redactor: &Redactor) -> Result<(), ApiRoleError> {
     // Every role reads the kernel's settings, so a malformed one refuses start in each of them.
     let kernel = KernelSettings::from_env(env)?;
     let listen = ListenAddress::from_env(env)?;
     let state = StateDirectory::from_env(env)?;
+    let freshness = Freshness::from_env(env)?;
+    let credentials = CredentialsDirectory::from_env(env)?;
+    let gate = OwnerGate::load(
+        &CredentialLoader::new(credentials, redactor.clone()),
+        freshness,
+    )?;
     let notifier = Notifier::from_env(env);
     let shutdown = ShutdownSignal::install().map_err(ApiRoleError::Signals)?;
 
@@ -63,13 +81,15 @@ pub async fn run(env: &Environment) -> Result<(), ApiRoleError> {
         setting: LISTEN,
         source,
     })?;
+    let clock: Arc<dyn Clock> = Arc::new(SystemClock);
     let readiness = Readiness::new();
-    let router = deck_streak_api::router(ApiState::new(readiness.clone()));
+    let access = OwnerAccess::new(gate, Arc::clone(&clock), kernel.study_day_rule);
+    let router = deck_streak_api::router(ApiState::new(readiness.clone()).with_owner(access));
     tracing::info!(listen = %bound, "the api role serves");
     notifier.notify(NotifyState::Ready);
     let heartbeat = lifecycle::spawn_heartbeat(notifier.clone(), env);
 
-    let offload = Offload::new(kernel.offload_workers, Arc::new(SystemClock));
+    let offload = Offload::new(kernel.offload_workers, clock);
     let (failed, failure) = oneshot::channel();
     let opener = {
         let readiness = readiness.clone();

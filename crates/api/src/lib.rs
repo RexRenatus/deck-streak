@@ -9,7 +9,9 @@
 //! SPEC-025 builds its shell: the health routes ([`health`]), the one stack of layers every route
 //! is served under ([`router`]), the loopback listen address ([`settings`]) and the serve that
 //! drains on the shutdown signal ([`serve`]). The daemon's `api` role binds, serves and signals
-//! systemd; this crate holds no process lifecycle of its own.
+//! systemd; this crate holds no process lifecycle of its own. SPEC-024 adds the owner's session
+//! routes ([`session_routes`]): the handshake, the logout and the owner's day, over identity's
+//! gate, sessions and extractor.
 //!
 //! The context map (docs/CONTEXT-MAP.md) is binding: this crate depends only on what its line
 //! there declares, and a new edge is an ADR, never a fix to make code compile.
@@ -20,6 +22,7 @@
 pub mod health;
 pub mod router;
 pub mod serve;
+pub mod session_routes;
 pub mod settings;
 
 use deck_streak_kernel::SettingsError;
@@ -27,6 +30,7 @@ use deck_streak_kernel::SettingsError;
 pub use health::Readiness;
 pub use router::{ApiState, layered, router};
 pub use serve::{bind, serve};
+pub use session_routes::OwnerAccess;
 pub use settings::ListenAddress;
 
 /// Why the API could not start or keep serving. It names a setting and never its value.

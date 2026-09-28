@@ -45,6 +45,7 @@ use tower_http::trace::{DefaultOnResponse, TraceLayer};
 use tracing::Level;
 
 use crate::health::{self, Readiness};
+use crate::session_routes::{self, OwnerAccess};
 
 /// Requests served at once, the rust-service pack's reference value. Each holds its buffers until
 /// it answers, so this bounds the service's memory; one owner's Mini App never reaches it.
@@ -62,13 +63,24 @@ pub const REQUEST_ID_HEADER: &str = "x-request-id";
 #[derive(Clone, Debug)]
 pub struct ApiState {
     readiness: Readiness,
+    owner: Option<OwnerAccess>,
 }
 
 impl ApiState {
     /// The state over `readiness`, which the daemon's `api` role records the opened database in.
     #[must_use]
     pub const fn new(readiness: Readiness) -> Self {
-        Self { readiness }
+        Self {
+            readiness,
+            owner: None,
+        }
+    }
+
+    /// This state, serving the owner's session routes over `access` too (SPEC-024).
+    #[must_use]
+    pub fn with_owner(mut self, access: OwnerAccess) -> Self {
+        self.owner = Some(access);
+        self
     }
 
     /// Whether the API can answer from its database.
@@ -78,9 +90,18 @@ impl ApiState {
     }
 }
 
-/// The API: every route the Mini App's backend serves, under the layers.
+/// The API: every route the Mini App's backend serves, under the layers. The health routes are
+/// always served; the owner's session routes are served when the state carries the owner's
+/// access, which the daemon's `api` role always gives, since it refuses to start without the
+/// owner's credentials. A router built for the health routes alone needs none.
 pub fn router(state: ApiState) -> Router {
-    layered(health::routes().with_state(state))
+    let owner = state.owner.clone();
+    let routes = health::routes().with_state(state);
+    let routes = match owner {
+        Some(access) => routes.merge(session_routes::routes(access)),
+        None => routes,
+    };
+    layered(routes)
 }
 
 /// `routes` under the service's layers, as listed in this module's documentation. The production
