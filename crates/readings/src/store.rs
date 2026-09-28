@@ -314,15 +314,12 @@ impl TopicDayRow {
         if i64::try_from(card_ids.len()).ok()? != self.new_cards {
             return None;
         }
-        let day_set = match self.digest {
-            Some(digest) => Some(DaySetRecord {
-                digest,
-                card_ids,
-                note_ids,
-            }),
-            None if card_ids.is_empty() && note_ids.is_empty() => None,
-            None => return None,
-        };
+        // A row with no digest holds no card (the table's checks), so it holds no day set.
+        let day_set = self.digest.map(|digest| DaySetRecord {
+            digest,
+            card_ids,
+            note_ids,
+        });
         Some(StoredTopicDay {
             run: RunId(self.run_id),
             day: TopicDay {

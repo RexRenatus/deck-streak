@@ -264,3 +264,16 @@ async fn two_days_without_study_pause_every_topic() {
     // The floor the review read takes keeps every review of the two days before.
     assert!(review_floor(support::now()) < during(before_yesterday, 0));
 }
+
+#[test]
+fn the_review_read_reaches_three_days_back() {
+    // Three whole days before the instant: every review of the two study days before is newer.
+    assert_eq!(
+        review_floor(UtcMillis::from_epoch_millis(10 * DAY_MS)),
+        7 * DAY_MS
+    );
+    assert_eq!(
+        review_floor(support::now()),
+        support::now().epoch_millis() - 3 * DAY_MS
+    );
+}

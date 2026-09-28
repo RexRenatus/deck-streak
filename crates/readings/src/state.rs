@@ -33,12 +33,6 @@ impl Class {
             Self::ConfigFault => "config_fault",
         }
     }
-
-    /// The class stored as `text`.
-    #[must_use]
-    pub fn parse(text: &str) -> Option<Self> {
-        Self::ALL.into_iter().find(|class| class.as_str() == text)
-    }
 }
 
 /// Why a topic could not tell whether it has new cards today (R6): six reasons, each of one class.
@@ -103,12 +97,6 @@ impl CouldNotTell {
     #[must_use]
     pub fn parse(text: &str) -> Option<Self> {
         Self::ALL.into_iter().find(|reason| reason.as_str() == text)
-    }
-}
-
-impl fmt::Display for CouldNotTell {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(self.as_str())
     }
 }
 

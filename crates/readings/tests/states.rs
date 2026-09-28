@@ -129,7 +129,7 @@ async fn every_state_and_class_is_stored_and_read_back_distinctly() {
             } else {
                 Class::RailBroken
             };
-            assert_eq!(reason.class(), expected, "{reason}");
+            assert_eq!(reason.class(), expected, "{reason:?}");
         }
     }
     assert_eq!(collapsed(&states, stored), Vec::<String>::new());

@@ -10,8 +10,6 @@
 //! underscores and hyphens collapsed to one hyphen, and one that is not lowercase letters and digits
 //! in hyphenated runs maps to no topic, so the deck is reported unmapped and never forced into a key.
 
-use std::fmt;
-
 use deck_streak_ingest::settings::DECK_SEPARATOR;
 
 use crate::taxonomy::Taxonomy;
@@ -22,7 +20,7 @@ const LAW: &str = "law/";
 const LANGUAGE: &str = "language/";
 
 /// A topic's key: `law/<slug>` or `language/<code>`, whose second part is a slug.
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct TopicKey(String);
 
 impl TopicKey {
@@ -39,18 +37,6 @@ impl TopicKey {
     #[must_use]
     pub fn as_str(&self) -> &str {
         &self.0
-    }
-}
-
-impl fmt::Display for TopicKey {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(&self.0)
-    }
-}
-
-impl fmt::Debug for TopicKey {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "TopicKey({})", self.0)
     }
 }
 

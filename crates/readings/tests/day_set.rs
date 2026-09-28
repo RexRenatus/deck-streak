@@ -20,11 +20,13 @@ use std::fs;
 use std::sync::Arc;
 use std::time::Duration;
 
-use deck_streak_ingest::engine::RslibEngine;
+use deck_streak_ingest::engine::{EngineError, RslibEngine};
+use deck_streak_ingest::reader::ReadError;
 use deck_streak_kernel::{ManualClock, Offload, OffloadWorkers};
 use deck_streak_readings::day_set::{
-    self, DaySetQuery, EngineQueue, QueuedCard, RESOLVE_BUDGET, ResolveInputs, StudyDayResolution,
-    TopicEnd, UndeterminedRoot, digest, resolve_day_sets, saturated,
+    self, DaySetQuery, EngineQueue, QueueFailure, QueuedCard, RESOLVE_BUDGET, ReadFailure,
+    ResolveInputs, StudyDayResolution, TopicEnd, UndeterminedRoot, digest, resolve_day_sets,
+    saturated,
 };
 use deck_streak_readings::gates::{LastSync, review_floor};
 use deck_streak_readings::state::{Class, CouldNotTell, RunOutcome, TopicState};
@@ -156,7 +158,7 @@ async fn the_day_set_is_the_schedulers_queue_per_root_attributed_by_original_dec
     // Each card's note came from ingest's read: the builder gives a card its own id's note.
     for resolved in &resolution.topics {
         if let TopicEnd::DaySet(day_set) = &resolved.end {
-            assert_eq!(day_set.note_ids, day_set.card_ids, "{}", resolved.topic);
+            assert_eq!(day_set.note_ids, day_set.card_ids, "{:?}", resolved.topic);
         }
     }
     // The deck of no topic is counted, not attributed, and the filtered deck is never a topic's.
@@ -392,4 +394,74 @@ async fn a_resolution_past_its_budget_is_rail_broken() {
         resolution.state_of("language/qaa"),
         Some(TopicState::NoNewCards)
     );
+}
+
+#[tokio::test]
+async fn a_queue_or_a_read_that_fails_is_could_not_tell_for_the_whole_run() {
+    // The engine's open failure is an open failure; every other failure is a locked collection.
+    for (error, failure) in [
+        (EngineError::OpenFailed, QueueFailure::OpenFailed),
+        (EngineError::CollectionLocked, QueueFailure::Locked),
+        (EngineError::EngineFailed, QueueFailure::Locked),
+        (EngineError::Timeout, QueueFailure::Locked),
+    ] {
+        assert_eq!(QueueFailure::from(error), failure, "{error:?}");
+    }
+    assert_eq!(
+        QueueFailure::Locked.reason(),
+        CouldNotTell::CollectionLocked
+    );
+    // An answer that holds more new cards than its count is not saturated: only fewer is.
+    assert!(!saturated(6, Some(5)));
+
+    let names = deck_names(&[&["Casebook", "Evidence"], &["Tongue Alpha"]]);
+    let data = collection(names, Vec::new(), vec![studied(TODAY - 1, 1)]);
+    let taxonomy = support::example_taxonomy();
+    let failing = RecordingQueue::failing(QueueFailure::OpenFailed);
+    let resolution = day_set::resolve(
+        ResolveInputs {
+            today: support::today(),
+            rule: support::rule(),
+            last_sync: LastSync::Succeeded,
+            taxonomy: Some(&taxonomy),
+            read: Ok(&data),
+        },
+        &failing,
+    )
+    .await;
+    let open_failed = CouldNotTell::CollectionOpenFailed;
+    assert_eq!(resolution.outcome, RunOutcome::CouldNotTell(open_failed));
+    for topic in ["language/qaa", "law/evidence"] {
+        assert_eq!(
+            resolution.state_of(topic),
+            Some(TopicState::CouldNotTell(open_failed)),
+            "{topic}"
+        );
+    }
+    assert_eq!(failing.calls(), 1);
+
+    // A private copy the read could not open names no topic: the whole run could not tell.
+    for (error, reason) in [
+        (
+            ReadError::Lock(std::io::Error::other("held")),
+            CouldNotTell::CollectionLocked,
+        ),
+        (ReadError::WriteRefused, CouldNotTell::CollectionOpenFailed),
+    ] {
+        let queue = RecordingQueue::answering(Vec::new());
+        let resolution = day_set::resolve(
+            ResolveInputs {
+                today: support::today(),
+                rule: support::rule(),
+                last_sync: LastSync::Succeeded,
+                taxonomy: Some(&taxonomy),
+                read: Err(ReadFailure::from(&error)),
+            },
+            &queue,
+        )
+        .await;
+        assert_eq!(resolution.outcome, RunOutcome::CouldNotTell(reason));
+        assert_eq!(resolution.topics.len(), 0);
+        assert_eq!(queue.calls(), 0);
+    }
 }

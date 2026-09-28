@@ -15,12 +15,13 @@ mod golden;
 
 use std::collections::BTreeSet;
 
+use deck_streak_kernel::{Environment, SettingsError};
 use deck_streak_readings::day_set::{
     self, DaySetQuery, QueuedCard, ResolveInputs, resolve_day_sets, universe,
 };
 use deck_streak_readings::gates::LastSync;
 use deck_streak_readings::state::{Class, CouldNotTell, RunOutcome, TopicState};
-use deck_streak_readings::taxonomy::{Taxonomy, TaxonomyError};
+use deck_streak_readings::taxonomy::{READINGS_TAXONOMY, Taxonomy, TaxonomyError, TaxonomyPath};
 use deck_streak_readings::topic::{TopicKey, law_subject, slug, topic_of};
 use serde_json::Value;
 use support::{RecordingQueue, TODAY, collection, deck, deck_names, studied};
@@ -222,4 +223,115 @@ async fn the_topics_come_only_from_the_configured_taxonomy() {
     assert!(matches!(refused, TaxonomyError::Malformed { .. }));
     let refused = Taxonomy::parse(&OTHER.replace(".v1", ".v2")).expect_err("a schema");
     assert!(matches!(refused, TaxonomyError::OtherSchema));
+}
+
+#[test]
+fn a_taxonomy_file_that_names_a_deck_badly_is_refused_whole_and_never_quoted() {
+    let example = support::example_taxonomy();
+    assert_eq!(example.law_roots(), ["Casebook"]);
+    assert_eq!(example.bands(), ["Year One", "Year Two", "Year Three"]);
+    assert_eq!(example.writing_roots(), ["Composition"]);
+    let languages: Vec<(&str, &str, &str, &str)> = example
+        .languages()
+        .iter()
+        .map(|language| {
+            (
+                language.deck(),
+                language.code(),
+                language.display(),
+                language.term_field(),
+            )
+        })
+        .collect();
+    assert_eq!(
+        languages,
+        [
+            ("Tongue Alpha", "qaa", "Alpha", "Headword"),
+            ("Tongue Beta", "qab", "Beta", "Headword")
+        ]
+    );
+    // Its debug form counts the names and prints none.
+    assert_eq!(
+        format!("{example:?}"),
+        "Taxonomy(1 law root(s), 3 band(s), 2 language(s), 1 writing root(s))"
+    );
+    assert_eq!(format!("{:?}", example.languages()[0]), "Language { .. }");
+
+    // A blank name, a name holding the deck separator, a name given twice, and a blank term field
+    // are each refused by the field, and the refusal quotes nothing of the file.
+    let planted = [
+        (OTHER.replace("\"Ledger\"", "\"   \""), "law.roots"),
+        (
+            OTHER.replace("\"Ledger\"", "\"Led\\u001fger\""),
+            "law.roots",
+        ),
+        (
+            OTHER.replace("\"bands\": []", "\"bands\": [\"Tier\", \"Tier\"]"),
+            "law.bands",
+        ),
+        (
+            OTHER.replace("\"Composition\"]", "\"Composition\", \"Composition\"]"),
+            "writing_roots",
+        ),
+        (
+            OTHER.replace("\"display\": \"Alpha\"", "\"display\": \"\""),
+            "languages.display",
+        ),
+        (
+            OTHER.replace("\"deck\": \"Casebook\"", "\"deck\": \"\""),
+            "languages.deck",
+        ),
+        (
+            OTHER.replace("\"term_field\": \"Headword\"", "\"term_field\": \" \""),
+            "languages.term_field",
+        ),
+    ];
+    for (text, field) in planted {
+        let refused = Taxonomy::parse(&text).expect_err(field);
+        assert!(
+            matches!(refused, TaxonomyError::Refused { field: named, .. } if named == field),
+            "{field}: {refused:?}"
+        );
+        assert!(!refused.to_string().contains("Ledger"), "{refused}");
+    }
+    let doubled = OTHER.replace(
+        "\"term_field\": \"Headword\"}",
+        "\"term_field\": \"Headword\"}, {\"deck\": \"Casebook\", \"code\": \"qad\", \
+         \"display\": \"Delta\", \"term_field\": \"Headword\"}",
+    );
+    assert!(matches!(
+        Taxonomy::parse(&doubled).expect_err("a deck given twice"),
+        TaxonomyError::Refused {
+            field: "languages.deck",
+            ..
+        }
+    ));
+
+    // The file's path is a setting: absolute when set, and unset means no taxonomy.
+    let directory = tempfile::tempdir().expect("a temporary directory");
+    let file = directory.path().join("taxonomy.json");
+    let env = Environment::from_vars([(READINGS_TAXONOMY, file.as_os_str())]);
+    let path = TaxonomyPath::from_env(&env)
+        .expect("an absolute path")
+        .expect("the setting is set");
+    assert_eq!(path.as_path(), file.as_path());
+    let relative = Environment::from_vars([(READINGS_TAXONOMY, "taxonomy.json")]);
+    assert!(matches!(
+        TaxonomyPath::from_env(&relative),
+        Err(SettingsError::Malformed {
+            setting: READINGS_TAXONOMY,
+            ..
+        })
+    ));
+    assert_eq!(TaxonomyPath::from_env(&Environment::default()), Ok(None));
+    // A file that is not there cannot be read; one that is reads as the taxonomy it holds.
+    assert!(matches!(
+        Taxonomy::load(&file),
+        Err(TaxonomyError::Unreadable(_))
+    ));
+    std::fs::write(&file, OTHER).expect("the file is written");
+    assert_eq!(
+        Taxonomy::load(path.as_path()).expect("the taxonomy"),
+        Taxonomy::parse(OTHER).expect("the taxonomy")
+    );
 }
