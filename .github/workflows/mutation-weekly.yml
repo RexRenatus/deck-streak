@@ -116,11 +116,12 @@ jobs:
           pnpm --dir web/app exec paraglide-js compile --project ./project.inlang --outdir ./src/lib/paraglide --emit-ts-declarations --silent
           pnpm --dir web/app exec svelte-kit sync
       - name: StrykerJS over the whole Mini App
+        working-directory: web/app
         run: |
           mkdir -p "$RUNNER_TEMP/mutation"
           rc=0
-          pnpm --dir web/app exec stryker run || rc=$?
-          cp -r web/app/reports/mutation "$RUNNER_TEMP/mutation/stryker" || true
+          pnpm exec stryker run || rc=$?
+          cp -r reports/mutation "$RUNNER_TEMP/mutation/stryker" || true
           echo "StrykerJS exited $rc"
           exit "$rc"
       - name: keep the report
@@ -273,13 +274,14 @@ jobs:
           node-version-file: .nvmrc
           package-manager-cache: false
       - name: StrykerJS over one file, as the web job runs it
+        working-directory: web/app
         run: |
           pnpm install --frozen-lockfile
-          pnpm --dir web/app exec paraglide-js compile --project ./project.inlang --outdir ./src/lib/paraglide --emit-ts-declarations --silent
-          pnpm --dir web/app exec svelte-kit sync
+          pnpm exec paraglide-js compile --project ./project.inlang --outdir ./src/lib/paraglide --emit-ts-declarations --silent
+          pnpm exec svelte-kit sync
           rc=0
-          pnpm --dir web/app exec stryker run --mutate src/lib/startapp.ts || rc=$?
-          cp -r web/app/reports/mutation "$RUNNER_TEMP/mutation/stryker"
+          pnpm exec stryker run --mutate src/lib/startapp.ts || rc=$?
+          cp -r reports/mutation "$RUNNER_TEMP/mutation/stryker"
           echo "StrykerJS exited $rc"
       - name: each tool measured something, and the drafts pass the scrub; nothing is filed
         run: |

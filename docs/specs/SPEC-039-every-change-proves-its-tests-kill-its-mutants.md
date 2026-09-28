@@ -346,7 +346,7 @@ The weekly battery's `schedule` and `workflow_dispatch` take effect only once th
 on `main` (§1), that is, after the next release. Until then its `rehearsal` job proves the
 machinery on every pull request that changes the workflow (R13), and GitHub's documented
 exception, a dispatch of a workflow that has already run once, is measured on this delivery's
-branch and recorded in its red-first record.
+branch and recorded in its pull request.
 
 ## 8. Amendments at delivery
 

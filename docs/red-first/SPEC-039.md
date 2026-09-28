@@ -96,3 +96,18 @@ moved into a pure function, `UtcMillis::from_system_time`, beside a test that pi
 epoch and leaves the pre-epoch branch alive. The pull request's `mutation-rust` job then went RED on
 the survivor; a test that a time before the epoch reads as negative milliseconds (A26) killed it,
 and the job went GREEN.
+
+- **RED at 8fb5cd0:** `ci` run 36371069680, `mutation-rust` job 108767357218. cargo-mutants found 3
+  mutants on the diff: 1 missed (`crates/kernel/src/clock.rs:39:88: delete - in
+  UtcMillis::from_system_time`), 2 unviable, 0 caught; the verdict read `examined 1 by
+  cargo-mutants and 0 by rows` and `FAIL: 1 finding(s)`. The 22 rows were all KILLED in the same
+  job.
+- **GREEN at 9503a63:** `ci` run 36371649918, `mutation-rust` job 108769091236. The same 3 mutants:
+  1 caught, 2 unviable; the verdict read `examined 1` and ok, the 22 rows KILLED, and `ci` green.
+- The same diff was run locally first, in place on the committed tree: 1 missed at 8fb5cd0, and 1
+  caught once the test was committed. The first local attempt passed `-j 1` beside `--in-place`,
+  which cargo-mutants 27.1.0 refuses (exit 1), and the verdict read it as VOID (R7's amendment).
+- The weekly battery's `rehearsal` ran on this pull request (run 36370506694 at fcb226b):
+  cargo-mutants over `clock.rs` examined 6 (5 caught, 1 missed, 3 unviable), row S02001 KILLED,
+  StrykerJS ran 20 mutants over `startapp.ts`, and the drafts for the two files with survivors
+  passed the scrub; nothing was filed.

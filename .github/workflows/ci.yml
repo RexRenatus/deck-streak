@@ -360,12 +360,13 @@ jobs:
           pnpm --dir web/app exec svelte-kit sync
       - name: StrykerJS over each changed file, whole (the verdict reads its report)
         if: ${{ steps.plan.outputs.web == 'true' }}
+        working-directory: web/app
         env:
           MUTATE: ${{ steps.plan.outputs.mutate }}
         run: |
           rc=0
-          pnpm --dir web/app exec stryker run --mutate "$MUTATE" || rc=$?
-          cp -r web/app/reports/mutation "$RUNNER_TEMP/mutation/stryker" || true
+          pnpm exec stryker run --mutate "$MUTATE" || rc=$?
+          cp -r reports/mutation "$RUNNER_TEMP/mutation/stryker" || true
           echo "StrykerJS exited $rc"
       - name: the verdict, from Stryker's own report (the plan names a not-applicable case)
         run: python3 scripts/mutation-verdict.py judge --plan "$RUNNER_TEMP/mutation/plan.json" --class web --stryker "$RUNNER_TEMP/mutation/stryker/mutation.json"
