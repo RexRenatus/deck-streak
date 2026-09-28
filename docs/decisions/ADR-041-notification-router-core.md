@@ -58,8 +58,9 @@ budgets and the holdout wait for the engagement wave.
 
 ### Confirmation
 
-SPEC-041's tests and the notifications-policy pack's rows (`one-router`, `policy-deviation-has-adr`)
-in the gate; `notifications-policy.json`'s `deviations` entry citing this ADR.
+SPEC-041's tests in the gate, A2's compile-fail test among them; the notifications-policy pack's
+rows (`one-router`, `policy-deviation-has-adr`) in the box run (SPEC-041 §3a, ADR-069); and
+`notifications-policy.json`'s `deviations` entry citing this ADR.
 
 ### Decided at delivery (SPEC-041 §7)
 
