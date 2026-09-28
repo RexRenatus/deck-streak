@@ -153,6 +153,37 @@ const GUARDED: [(&str, &str); 3] = [
     ("handle", "crates/bot/src/commands.rs"),
 ];
 
+/// The bot's command handler's module, as (its file, its directory): the handler's replies and its
+/// dispatch are private to it, so only it can call them.
+const COMMANDS: (&str, &str) = ("crates/bot/src/commands.rs", "crates/bot/src/commands/");
+
+/// The command handler's replies, `send` and the three that send one (`export`, `ask_erase` and
+/// `sync`), and its dispatch, `on_message` and `on_callback`.
+const COMMAND_REPLIES: [&str; 6] = [
+    "send",
+    "export",
+    "ask_erase",
+    "sync",
+    "on_message",
+    "on_callback",
+];
+
+/// Each named caller of the command handler's replies and dispatch, as (the caller, what it calls):
+/// the handler, which dispatches an update the long poll hands it, and the dispatch, which answers
+/// it. A call anywhere else in the handler's module sends a reply the router never decides, though
+/// no update asked for it.
+const COMMAND_CALLERS: [(&str, &str); 9] = [
+    ("Commands::handle", "on_message"),
+    ("Commands::handle", "on_callback"),
+    ("Commands::on_message", "send"),
+    ("Commands::on_message", "export"),
+    ("Commands::on_message", "ask_erase"),
+    ("Commands::on_message", "sync"),
+    ("Commands::on_callback", "send"),
+    ("Commands::export", "send"),
+    ("Commands::sync", "send"),
+];
+
 /// The one use of the bot's command handler: the bot's entry, the long poll, hands it each update
 /// the Bot API delivers to the bot.
 const HANDLER_ENTRY: (&str, &str, &str) = ("crates/bot/src/poll.rs", "run", "handle");
@@ -723,6 +754,9 @@ struct Census {
     refusals: Vec<(String, usize, String)>,
     /// Each call of a send, as (path, function, send), in order.
     sends: Vec<(String, String, String)>,
+    /// Each named caller of the command handler's replies and dispatch found, as (path, function,
+    /// what it calls), in order and once.
+    callers: Vec<(String, String, String)>,
 }
 
 impl Census {
@@ -807,6 +841,9 @@ fn census(sources: &[(String, String)]) -> Census {
                 let function = enclosing(&structure, at);
                 found.sends.push((path.clone(), function, send));
             }
+            if path == COMMANDS.0 || path.starts_with(COMMANDS.1) {
+                command_callers(&mut found, path, &code, &structure);
+            }
             if path.starts_with(LEDGER.0) {
                 for (at, what) in carrying_attributes(&structure)
                     .into_iter()
@@ -821,7 +858,33 @@ fn census(sources: &[(String, String)]) -> Census {
     }
     found.refusals.sort();
     found.sends.sort();
+    found.callers.sort();
+    found.callers.dedup();
     found
+}
+
+/// Each use of the command handler's replies and dispatch in the handler's module at `path`, found
+/// in `found`: a caller it names, or a refusal.
+fn command_callers(found: &mut Census, path: &str, code: &str, structure: &str) {
+    for (at, name) in command_calls(structure) {
+        let function = enclosing(structure, at);
+        if COMMAND_CALLERS.contains(&(function.as_str(), name)) {
+            found
+                .callers
+                .push((path.to_owned(), function, name.to_owned()));
+        } else {
+            let how = if called(structure, at, name) {
+                "calls"
+            } else {
+                "uses"
+            };
+            found.refusals.push((
+                path.to_owned(),
+                line_of(code, at),
+                format!("{how} {name} in {function}, not a named caller"),
+            ));
+        }
+    }
 }
 
 /// Whether `name` is used in `function` of `path` at one of its named call sites: a named send, or
@@ -885,6 +948,25 @@ fn names_of_the_queue(path: &str, code: &str, structure: &str) -> Vec<(usize, St
         );
     }
     named
+}
+
+/// Each use of the command handler's replies or dispatch in `structure`, as the byte it starts at
+/// and the name: a method call, `.name(`, or a path that ends in one, `::name`, called or not; a
+/// module on a longer path, such as `std::sync`, is not one.
+fn command_calls(structure: &str) -> Vec<(usize, &'static str)> {
+    let mut calls = Vec::new();
+    for name in COMMAND_REPLIES {
+        for at in identifiers(structure, name) {
+            let before = structure[..at].trim_end();
+            let after = structure[at + name.len()..].trim_start();
+            let method = before.ends_with('.') && called(structure, at, name);
+            let path = before.ends_with("::") && !after.starts_with("::");
+            if method || path {
+                calls.push((at, name));
+            }
+        }
+    }
+    calls
 }
 
 /// Each carrying attribute in `structure`, outer or inner, as the byte its `#` starts at and the
@@ -1554,8 +1636,8 @@ fn no_delivery_goes_around_the_port() {
          Mini App's HTML and a CommonJS TypeScript module"
     );
 
-    // Every shipped source of the tree: nothing goes around the port, and each named call site is
-    // found where it is named, once.
+    // Every shipped source of the tree: nothing goes around the port, each named call site is
+    // found where it is named, once, and each named caller of the command handler is found.
     let root = Path::new(env!("CARGO_MANIFEST_DIR"))
         .ancestors()
         .nth(2)
@@ -1575,6 +1657,15 @@ fn no_delivery_goes_around_the_port() {
     assert_eq!(
         tree.sends, named,
         "every call of a send, at its named call site"
+    );
+    let mut callers: Vec<(String, String, String)> = COMMAND_CALLERS
+        .iter()
+        .map(|&(function, name)| (COMMANDS.0.to_owned(), function.to_owned(), name.to_owned()))
+        .collect();
+    callers.sort();
+    assert_eq!(
+        tree.callers, callers,
+        "every named caller of the command handler's replies and dispatch calls it"
     );
 
     // The one exception is needed: the alert path's text is refused anywhere else.
