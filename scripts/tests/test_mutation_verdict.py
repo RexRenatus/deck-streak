@@ -651,17 +651,19 @@ class EachEventReadsItsCase(unittest.TestCase):
         fixture = Fixture(self)
         fixture.head({LIB: LIB_TEXT.replace("x * 2", "x + x"), "docs/notes.md": "a note\n"})
         merge = "Merge pull request #42 from RexRenatus/feat/x\n\nthe body"
+        release = "a release pull request into main is judged on its merge diff"
         cases = [
             ("pull_request", "dev", "", "diff", "the pull request into dev is judged on its diff"),
-            ("pull_request", "main", "", "not-applicable", "a release pull request into main"),
+            ("pull_request", "main", "", "diff", release),
             ("push", "", merge, "not-applicable", "this push merges #42"),
             ("push", "", "chore: a push that merges nothing", "diff", "names no pull request"),
         ]
         for event, base_ref, subject, decision, reason in examined("events", cases):
             plan = fixture.plan("--event", event, "--base-ref", base_ref, "--subject", subject)
             scope = plan.get("scope") or {}
-            self.assertEqual(scope.get("decision"), decision, event)
-            self.assertIn(reason, scope.get("reason", ""), event)
+            case = f"{event} {base_ref}".strip()
+            self.assertEqual(scope.get("decision"), decision, case)
+            self.assertIn(reason, scope.get("reason", ""), case)
             judged = fixture.judge("rust")
             if decision == "not-applicable":
                 self.assertEqual(judged.returncode, 0, judged.stdout)
