@@ -22,7 +22,9 @@ without its approver, its date or ids the list holds, an edited list, a snapshot
 instant or without an offset, rules the inventory did not read, and a package end to end (57652b4);
 then two links to one file listed together, a note inside a listed worktree, and a proxy the
 environment names (de71b3c). SPEC-060's amendments and ADR-060's delivery decisions followed
-(8523555), and the fixture's in-use unit was given a plain name (e67aec8).
+(8523555), and the fixture's in-use unit was given a plain name (e67aec8). Last, a pattern given as
+a protected path was refused, test first: its case in A7 was red at 82bbaa9, where the apply deleted
+the approved item the pattern was meant to protect, and green at 6d513bb.
 
 ```red-first
 A1: red at 3bd0f96: AssertionError: Lists differ: [] != [['dpkg-query', '-W'], ['ps', '-eo', ...]] (no command ran under nice and ionice -c3)
@@ -52,9 +54,9 @@ inventory), and `test_no_tool_writes_its_output_inside_the_repository` pins R8's
 ## Mutants of the changed code
 
 No mutation runner generates mutants of this repository's Python (#218), so the changed code's
-mutants were proved by hand at e67aec8, on the committed tree. Each mutant replaced an anchor that
+mutants were proved by hand at 6d513bb, on the committed tree. Each mutant replaced an anchor that
 occurs exactly once, and its killer, one test selected alone, was green on the unmutated file and
-red on the mutant. The file was restored byte for byte after each, checked by its sha256. All 62
+red on the mutant. The file was restored byte for byte after each, checked by its sha256. All 63
 were killed:
 
 | requirement | mutant | killed by |
@@ -69,7 +71,7 @@ were killed:
 | R6 | a digest not computed again; the dry run skipped; the item checks skipped; a package's digest not computed again; a package's dry removal ignored; a directory unlinked rather than removed | A5 |
 | R6 | a snapshot with no name; a snapshot at the inventory's instant; a snapshot before it; an instant with no offset | A6 |
 | R7 | an item under a protected path listed | A3 |
-| R7 | an item holding a protected path; the apply's protected check skipped; a link above an item not checked; the link check stopping short of the item's own directory | A7 |
+| R7 | an item holding a protected path; a pattern accepted as a protected path; the apply's protected check skipped; a link above an item not checked; the link check stopping short of the item's own directory | A7 |
 | R8 | the repository check answering no; the plan's refusal skipped; the apply's refusal skipped | `test_no_tool_writes_its_output_inside_the_repository` |
 | R9 | a command check's verdict inverted; a GET's verdict inverted; no health read before the inventory; a GET sent through the environment's proxy; the turned checks left out; a red check exiting 0 | `test_a_health_check_red_after_an_apply_stops_the_scrub` |
 | R10 | the service's own rotation ignored | A2 |

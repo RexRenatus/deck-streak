@@ -32,8 +32,10 @@ rules by class, the protected paths and the health checks. A rule has a `name`, 
 
 The protected paths come from the private rail's protected-path list, which holds every path of
 the host's other services and their data; the example protects `/etc`, `/usr`, `/boot`, the
-credential socket's directory and DeckStreak's release and state directories. Nothing under a
-protected path, or holding one, is ever listed, and the apply refuses it whatever an approval says.
+credential socket's directory and DeckStreak's release and state directories. Each is a path,
+never a pattern: it protects everything under it, and the tools refuse a pattern, which compared as
+a path would protect nothing. Nothing under a protected path, or holding one, is ever listed, and
+the apply refuses it whatever an approval says.
 A health check is `{"id", "argv"}`, a read command of the inventory's allow list such as
 `systemctl is-active --quiet <unit>`, or `{"id", "url"}`, one GET that is green on a 2xx answer;
 the private rail's health-check list covers each service on the host (R9).

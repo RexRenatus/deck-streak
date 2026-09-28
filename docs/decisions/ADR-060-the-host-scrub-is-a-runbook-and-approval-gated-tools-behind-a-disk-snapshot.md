@@ -56,9 +56,11 @@ The delivery decided what this record left open, each against its alternatives:
 
 - **One private rules file.** It holds the roots, the rules by class, the protected paths and the
   health checks, which the private rail's lists feed, in the shape `rules.example.json` gives, and
-  the apply reads the protected paths and health checks from it at run time. Chosen against a file
-  per list, which each tool would be handed separately, and against the list carrying its own
-  protected paths, which an edited list could drop.
+  the apply reads the protected paths and health checks from it at run time. A protected entry is
+  a path, which protects everything under it, and a pattern is refused. Chosen against a file per
+  list, which each tool would be handed separately; against the list carrying its own protected
+  paths, which an edited list could drop; and against matching protected patterns, where a pattern
+  a tool read as a path would protect nothing and say so nowhere.
 - **The plan runs where the files are.** The digest reads each candidate's content, so the plan runs
   on the host, niced, over the candidates only. Chosen against digesting on the maintainer's
   machine, which holds no content, and against content hashes in the inventory, which would read

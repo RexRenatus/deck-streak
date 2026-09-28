@@ -204,7 +204,9 @@ reasons are these, and ADR-060 records each decision with what it was chosen aga
   `--log`; it exits 1 on a refusal, 3 when a deletion failed part way and 4 when a health check is
   red after the apply.
 - **R7: an item holding a protected path.** Deleting a directory deletes what it holds, so an item
-  that holds a protected path is refused as an item under one is.
+  that holds a protected path is refused as an item under one is. A protected entry is a path, never
+  a pattern: compared as a path, a pattern would protect nothing, so the tools refuse rules that
+  hold one.
 - **R8: no output inside this repository.** Each tool refuses an output path inside the repository
   it was run from, before it reads anything.
 - **R9: the health checks' form.** A check is a read command of the inventory's allow list, or one
