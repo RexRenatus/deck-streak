@@ -260,12 +260,16 @@ class ThePairLister(unittest.TestCase):
     def test_the_pair_lister_refuses_encrypted_and_off_socket_credentials(self):
         # Every way to give a unit a credential but the socket is refused by file and line, and a
         # refused run prints no list for the rail to compare.
+        # A SetCredential= line holds its value in the file. The planted value is a string found
+        # nowhere else in the input or the output, so its absence shows that no refusal printed
+        # it, whole or mid-line.
+        unseen = "value-never-echoed"
         planted = {
             f"LoadCredentialEncrypted=telegram-bot-token:{SOCKET}": "LoadCredentialEncrypted=",
             "LoadCredential=telegram-bot-token:/etc/credstore/telegram-bot-token": "not the socket",
             "LoadCredential=telegram-bot-token": "not the socket",
-            "SetCredential=telegram-bot-token:planted": "SetCredential=",
-            "SetCredentialEncrypted=telegram-bot-token:planted": "SetCredentialEncrypted=",
+            f"SetCredential=telegram-bot-token:{unseen}": "SetCredential=",
+            f"SetCredentialEncrypted=telegram-bot-token:{unseen}": "SetCredentialEncrypted=",
             "ImportCredential=telegram-*": "ImportCredential=",
         }
         for line, reason in planted.items():
@@ -276,7 +280,7 @@ class ThePairLister(unittest.TestCase):
                 self.assertEqual(done.stdout, "")
                 self.assertIn("REFUSE: deploy/systemd/planted.service:2:", done.stderr)
                 self.assertIn(reason, done.stderr)
-                self.assertNotIn("planted\n", done.stderr)
+                self.assertNotIn(unseen, done.stdout + done.stderr)
         # An optional set's drop-in is held to the same rule.
         with tempfile.TemporaryDirectory() as scratch:
             write_tree(scratch, SYNTHETIC)
@@ -314,6 +318,7 @@ class ThePairLister(unittest.TestCase):
             "after a backslash and a space": f"Description=a synthetic unit \\ \n{off_socket}\n",
             "after a comment's backslash": f"# a synthetic comment \\\n{off_socket}\n",
             "after a NUL": f"Description=a synthetic unit\0{off_socket}\n",
+            "after a carriage return": f"Description=a synthetic unit\r{off_socket}\n",
         }
         for where, lines in hidden.items():
             with self.subTest(hidden=where), tempfile.TemporaryDirectory() as scratch:
@@ -462,6 +467,9 @@ class TheEffectiveCheck(unittest.TestCase):
         self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
         refused = {
             f"LoadCredentialEncrypted=telegram-bot-token:{SOCKET}": "LoadCredentialEncrypted=",
+            "SetCredential=telegram-bot-token:planted": "SetCredential=",
+            "SetCredentialEncrypted=telegram-bot-token:planted": "SetCredentialEncrypted=",
+            "ImportCredential=telegram-*": "ImportCredential=",
             "Environment=TELEGRAM_BOT_TOKEN=planted": "TELEGRAM_BOT_TOKEN",
             'Environment="RUST_LOG=info" DECKSTREAK_AGENT_DEVICE_KEY=planted': (
                 "DECKSTREAK_AGENT_DEVICE_KEY"
@@ -477,12 +485,16 @@ class TheEffectiveCheck(unittest.TestCase):
                 self.assertIn(reason, done.stdout)
                 # A value is never echoed.
                 self.assertNotIn("planted", done.stdout + done.stderr)
-        # Only the rail's own drop-in, beside the unit, may change a unit.
+        # Only the rail's own drop-in, beside the unit, may change a unit. A drop-in's file name
+        # may hold a blank: systemd loads such a drop-in, and systemctl prints its name as it is
+        # (measured on systemd 255), so the check reads its header whole.
         foreign = (
             f"{UNIT_DIR}/deck-streak-api.service.d/override.conf",
             "/run/systemd/system/deck-streak-api.service.d/10-rail.conf",
             f"{UNIT_DIR}/service.d/10-rail.conf",
             f"{UNIT_DIR}/deck-streak-.service.d/10-rail.conf",
+            f"{UNIT_DIR}/deck-streak-api.service.d/20 foreign.conf",
+            f"{UNIT_DIR}/deck-streak-api.service.d/20\tforeign.conf",
         )
         for path in foreign:
             with self.subTest(path=path):
@@ -517,6 +529,11 @@ class TheEffectiveCheck(unittest.TestCase):
             "after a comment's backslash": f"# a synthetic comment \\\n{secret}\n",
             "after a NUL": f"Description=a synthetic unit\0{secret}\n",
             "after a byte-order mark": f"﻿{secret}\n",
+            "after a carriage return": f"Description=a synthetic unit\r{secret}\n",
+            # A line with no `=` is one systemd skips, and an even run of backslashes does not
+            # continue it, so the next line is read on its own.
+            "after a line of two backslashes": f"\\\\\n{secret}\n",
+            "after a line with no `=` and two backslashes": f"X-Planted \\\\\n{secret}\n",
         }
         for where, lines in hidden.items():
             with self.subTest(hidden=where):
@@ -541,8 +558,10 @@ class TheEffectiveCheck(unittest.TestCase):
                 )
                 done = self.refused(cat(self.API, api, (self.API_RAIL, dropin)))
                 self.assertIn(left, done.stdout)
-        # systemctl prints a file's `# <path>` line after an empty line; one glued to the file
-        # before it, which has no final newline, cannot be told from that file's own comment.
+        # systemctl prints every line of a file newline-terminated, its last included, and an
+        # empty line before each later file's `# <path>` line (measured on systemd 255), so a line
+        # shaped like a header that follows no empty line is a file's own comment: the check
+        # refuses it rather than read a comment as a file.
         override = f"{UNIT_DIR}/deck-streak-api.service.d/override.conf"
         glued = cat(self.API, api, (self.API_RAIL, self.API_DROPIN))
         done = self.refused(glued + f"# {override}\n[Service]\nNice=5\n")
