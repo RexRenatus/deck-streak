@@ -136,6 +136,10 @@ class WorkflowsAreHardened(unittest.TestCase):
                 "example-org/other-repository, not this repository",
                 "another-repository-in-other-forms.yml:jobs.build.steps[5]: checks out "
                 "example-org/other-repository, not this repository",
+                "another-repository-in-other-forms.yml:jobs.build.steps[6]: checks out from "
+                "another server: https://example-host.example",
+                "another-repository-in-other-forms.yml:jobs.build.steps[7]: checks out from "
+                "another server: https://example-host.example",
                 "checkout-of-another-repository.yml:jobs.build.steps[0]: checks out "
                 "example-org/other-repository, not this repository",
                 "checkout-of-another-repository.yml:jobs.build.steps[1]: checks out "

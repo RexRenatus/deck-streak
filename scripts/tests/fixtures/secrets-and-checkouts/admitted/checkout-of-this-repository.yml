@@ -1,7 +1,8 @@
 name: planted
 
 # A planted workflow (SPEC-034 A11): actions/checkout of this repository, without `repository`, with
-# `${{ github.repository }}` and with its own name, and a fetch from origin.
+# `${{ github.repository }}` and with its own name, and from this server, named by
+# `${{ github.server_url }}` or left empty, and a fetch from origin.
 # scripts/tests/test_ci_workflows.py judges it; nothing runs it.
 on:
   pull_request:
@@ -25,3 +26,11 @@ jobs:
           persist-credentials: false
       - name: this repository's dev, from origin
         run: git fetch --depth 1 origin dev
+      - uses: actions/checkout@0123456789abcdef0123456789abcdef01234567
+        with:
+          github-server-url: ${{ github.server_url }}
+          persist-credentials: false
+      - uses: actions/checkout@0123456789abcdef0123456789abcdef01234567
+        with:
+          github-server-url: ''
+          persist-credentials: false
