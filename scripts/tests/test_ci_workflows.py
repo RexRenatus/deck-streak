@@ -185,12 +185,33 @@ class WorkflowsAreHardened(unittest.TestCase):
                 "does not read: BASH",
                 "clone-in-a-custom-shell.yml:jobs.dynamic.defaults.run: runs a shell the checker "
                 "does not read: ${{ fromJSON(needs.build.outputs.defaults) }}",
+                f"clone-in-a-custom-shell.yml:defaults.run.shell: clones a repository: {custom}",
+                "clone-in-a-custom-shell.yml:jobs.build.defaults.run.shell: clones a repository: "
+                f"{custom}",
+                "clone-in-a-custom-shell.yml:jobs.build.steps[0].shell: clones a repository: "
+                f"{custom}",
+                "clone-in-a-custom-shell.yml:jobs.build.steps[1].parallel[0].shell: clones a "
+                f"repository: {custom}",
                 "clone-of-another-repository.yml:jobs.build.steps[0]: clones a repository: "
                 "git clone --depth 1 https://github.com/example-org/other-repository.git",
                 "clone-of-another-repository.yml:jobs.build.steps[1]: clones a repository: "
                 "gh repo clone example-org/other-repository",
                 "clone-of-another-repository.yml:jobs.build.steps[2]: clones a repository: "
                 "git clone https://github.com/example-org/other-repository.git",
+                "clone-of-another-repository.yml:jobs.build.steps[0].name: clones a repository: "
+                "git clone",
+                "clone-of-another-repository.yml:jobs.build.steps[1].name: clones a repository: "
+                "gh repo clone",
+                "clone-of-another-repository.yml:jobs.build.steps[2].name: clones a repository: "
+                "git clone after an empty env",
+                "clone-outside-a-run-step.yml:env.BASH_ENV: clones a repository: "
+                "$(git clone https://github.com/example-org/other-repository.git)",
+                "clone-outside-a-run-step.yml:jobs.build.env.BASH_ENV: clones a repository: "
+                "$(git clone https://github.com/example-org/other-repository.git)",
+                "clone-outside-a-run-step.yml:jobs.build.steps[0].env.BASH_ENV: clones a "
+                "repository: $(git clone https://github.com/example-org/other-repository.git)",
+                "clone-outside-a-run-step.yml:jobs.build.steps[1].env.BASH_ENV: points git at a "
+                "URL: $(git fetch https://github.com/example-org/other-repository.git main)",
                 "every-secret.yml:jobs.build.steps[0].env.CHOSEN: reads the whole secrets "
                 "context, or a secret named at run time",
                 "every-secret.yml:jobs.build.steps[0].run: reads the whole secrets context, or a "
@@ -204,6 +225,12 @@ class WorkflowsAreHardened(unittest.TestCase):
                 "key-the-reader-refuses.yml:line 22: a key that is not a plain name is not read",
                 "key-the-reader-refuses.yml:line 25: a key that is not a plain name is not read",
                 "key-the-reader-refuses.yml:line 31: a key that is not a plain name is not read",
+                "key-the-reader-refuses.yml:jobs.build.steps[0].: clones a repository: git clone "
+                "https://github.com/example-org/other-repository.git",
+                "key-the-reader-refuses.yml:jobs.build.steps[1].: clones a repository: git clone "
+                "https://github.com/example-org/other-repository.git",
+                "key-the-reader-refuses.yml:jobs.build.steps[2].: clones a repository: git clone "
+                "https://github.com/example-org/other-repository.git",
                 "run-by-alias.yml:line 17: an anchor, alias or tag is not read",
                 "run-by-alias.yml:line 19: an anchor, alias or tag is not read",
                 "run-by-alias.yml:line 20: an anchor, alias or tag is not read",
@@ -288,6 +315,9 @@ class WorkflowsAreHardened(unittest.TestCase):
                         "planted.yml:jobs.build.steps[0].env.COLON: reads the secret EXAMPLE_TOKEN",
                         f"planted.yml:jobs.build.steps[0]: clones a repository: {run}{clone}",
                         f"planted.yml:jobs.build.steps[2]: clones a repository: {block}{clone}",
+                        # The clone the refused key holds is still read, as every string is.
+                        "planted.yml:jobs.build.steps[1].: clones a repository: git clone "
+                        "https://github.com/example-org/other-repository.git",
                     ],
                 )
         # A block's end and its indent read only a space or a tab as white space: a line of one of
