@@ -1,8 +1,8 @@
 name: planted
 
 # A planted workflow (SPEC-034 A10): a run step that clones another repository, with git and with
-# the GitHub CLI. The names are synthetic. scripts/tests/test_ci_workflows.py judges it; nothing
-# runs it.
+# the GitHub CLI, and one whose empty `env` comes first, so the `run` below it is the step's own.
+# The names are synthetic. scripts/tests/test_ci_workflows.py judges it; nothing runs it.
 on:
   pull_request:
     branches: [dev]
@@ -20,3 +20,6 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh repo clone example-org/other-repository
+      - name: git clone after an empty env
+        env:
+        run: git clone https://github.com/example-org/other-repository.git

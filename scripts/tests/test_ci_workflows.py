@@ -173,6 +173,8 @@ class WorkflowsAreHardened(unittest.TestCase):
                 "git clone --depth 1 https://github.com/example-org/other-repository.git",
                 "clone-of-another-repository.yml:jobs.build.steps[1]: clones a repository: "
                 "gh repo clone example-org/other-repository",
+                "clone-of-another-repository.yml:jobs.build.steps[2]: clones a repository: "
+                "git clone https://github.com/example-org/other-repository.git",
                 "every-secret.yml:jobs.build.steps[0].env.CHOSEN: reads the whole secrets "
                 "context, or a secret named at run time",
                 "every-secret.yml:jobs.build.steps[0].run: reads the whole secrets context, or a "
@@ -336,16 +338,23 @@ class WorkflowsAreHardened(unittest.TestCase):
                 with self.assertRaisesRegex(AssertionError, r"unhardened\.yaml"):
                     getattr(case, test)()
         # The SHA-pin test admits an action only in its plain form: the hardened control, its action
-        # written with an empty part, a trailing slash or a backslash, is refused by that reference.
+        # written with an empty part, a trailing slash or a backslash, or its SHA cut short, is
+        # refused by that reference.
         control = (PLANTED_HARDENING / "hardened.yml").read_text(encoding="utf-8")
-        for written in ("actions//checkout", "actions/checkout/", "actions\\checkout"):
+        pinned = CONTROL_STEP.split("uses: ", 1)[1]
+        for written in (
+            pinned.replace("actions/checkout@", "actions//checkout@"),
+            pinned.replace("actions/checkout@", "actions/checkout/@"),
+            pinned.replace("actions/checkout@", "actions\\checkout@"),
+            pinned[: pinned.index("@") + 8],
+        ):
             with self.subTest(written), tempfile.TemporaryDirectory() as scratch:
-                planted = control.replace("actions/checkout@", f"{written}@")
+                planted = control.replace(pinned, written)
                 (Path(scratch) / "planted.yml").write_text(planted, encoding="utf-8")
                 with mock.patch.object(sys.modules[__name__], "WORKFLOWS", Path(scratch)):
                     case = WorkflowsAreHardened("test_every_action_is_pinned_by_a_full_commit_sha")
                     case.setUp()
-                    with self.assertRaisesRegex(AssertionError, re.escape(f"uses {written}@")):
+                    with self.assertRaisesRegex(AssertionError, re.escape(f"uses {written}") + "$"):
                         case.test_every_action_is_pinned_by_a_full_commit_sha()
         # The hardening tests read keys the way the checker does (SPEC-034 R7): the control, one line
         # rewritten by each planted key, is judged beside the live workflows, and the test named
