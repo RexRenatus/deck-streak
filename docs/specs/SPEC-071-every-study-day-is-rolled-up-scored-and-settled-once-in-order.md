@@ -338,6 +338,32 @@ privacy-gdpr and accessibility packs stay enforced, and no row is deferred for i
 | `docs/decisions/ADR-087-the-owners-courses-are-private-configuration-passed-to-the-predecessors-own-codes.md` | docs | changed: accepted |
 | `docs/red-first/SPEC-071.md` | docs | added |
 | `changelog.d/` fragment | repo | added |
+| `crates/coordination/src/score.rs` | `deck-streak-coordination` | added at delivery (§10): the score reads the API and the bot share |
+| `crates/api/src/session_routes.rs` | `deck-streak-api` | changed at delivery (§10): the owner's study day, `OwnerAccess::study_day` |
+| `crates/api/src/lib.rs` | `deck-streak-api` | changed at delivery (§10): the analytics routes' module |
+| `crates/api/Cargo.toml` | `deck-streak-api` | changed at delivery (§10): `sqlx` as a dev-dependency |
+| `crates/bot/src/lib.rs` | `deck-streak-bot` | changed at delivery (§10): the /score module |
+| `crates/bot/Cargo.toml` | `deck-streak-bot` | changed at delivery (§10): `sqlx` as a dev-dependency |
+| `crates/bot/tests/commands.rs` | `deck-streak-bot` | changed at delivery (§10): the menu of five, and the score's goldens covered |
+| `crates/bot/tests/support/fake_bot_api.rs` | `deck-streak-bot` | changed at delivery (§10): the bench's clock |
+| `crates/bot/tests/messages/start.msg.json` | `deck-streak-bot` | changed at delivery (§10): the command lines name /score |
+| `crates/bot/tests/messages/help.msg.json` | `deck-streak-bot` | changed at delivery (§10): the command lines name /score |
+| `crates/bot/tests/messages/score.msg.json` | `deck-streak-bot` | added at delivery (§10): /score's golden |
+| `crates/bot/tests/messages/score-no-retention.msg.json` | `deck-streak-bot` | added at delivery (§10): /score's golden for an absent retention |
+| `crates/bot/tests/messages/score-none.msg.json` | `deck-streak-bot` | added at delivery (§10): /score's golden for a day with no score |
+| `crates/bot/tests/messages/score-failed.msg.json` | `deck-streak-bot` | added at delivery (§10): /score's golden for a failed read |
+| `crates/daemon/src/role_job.rs` | `deck-streak-daemon` | changed at delivery (§10): the sync job loads its recompute; the new error's reason |
+| `crates/daemon/src/role_bot.rs` | `deck-streak-daemon` | changed at delivery (§10): the recompute loaded at start; the bot's clock and rule |
+| `crates/kernel/tests/data_rights.rs` | `deck-streak-kernel` | changed at delivery (§10): the pinned reset row names `courses_digest` |
+| `crates/readings/tests/support/mod.rs` | `deck-streak-readings` | changed at delivery (§10): a card literal names its `course` |
+| `web/app/src/lib/api.ts` | miniapp | changed at delivery (§10): `score()`, through the one session |
+| `web/app/src/lib/api.test.ts` | miniapp | changed at delivery (§10): `score()`'s tests |
+| `web/app/src/lib/score/score.test.ts` | miniapp | added at delivery (§10): the score body's reading |
+| `web/app/src/routes/score.test.ts` | miniapp | added at delivery (§10): the score screen's states |
+| `web/app/src/lib/startapp.ts` | miniapp | changed at delivery (§10): the `score` token |
+| `web/app/src/lib/startapp.test.ts` | miniapp | changed at delivery (§10): the token list names `score` |
+| `web/app/messages/en.json` | miniapp | changed at delivery (§10): the score screen's messages |
+| `web/app/tests/a11y.spec.ts` | miniapp | changed at delivery (§10): `/api/score` answered, so the audit renders the breakdown |
 
 ## 5. What this does NOT do
 
@@ -417,3 +443,74 @@ milliseconds (SPEC-029 R3).
 | `S07108-SETTLE-ONCE` | `crates/coordination/src/recompute/mod.rs` | the fold settles only the days after the cursor | `settle_fold::the_fold_settles_each_closed_day_once_oldest_first` |
 | `S07109-PHASE-ORDER` | `crates/coordination/src/recompute/mod.rs` | the declared order of the seven phases | `settle_fold::the_steps_run_in_their_phase_order` |
 | `S07110-ROLLUP-KEY` | `migrations/007101_analytics_daily_rollup.sql` | one row per study day, held by the table's key (a script mutation of the migration with a cargo killer) | `rollup_store::rerolling_a_day_with_the_same_reviews_writes_identical_rows` |
+
+## 10. Amendments at delivery
+
+- **The score reads are one coordination use case** (`crates/coordination/src/score.rs`). The API's
+  routes and the bot's `/score` both call `day_score`, and the days route calls `day_rollups`, so the
+  two surfaces cannot show two scores for one study day (A23, A24). Chosen against each surface
+  reading analytics' repository itself: `api` and `bot` depend on coordination and never on
+  analytics (docs/CONTEXT-MAP.md), and two reads could drift. The use case says what is absent: a
+  card state no recompute recorded, and, on a day with no answered review, both the day's true
+  retention and its retention pillar (R10, R22). Chosen against rendering the pillar's stored 0,
+  which would claim a measurement nobody made.
+- **The routes (R20).** `GET /api/analytics/days?from=<ISO date>&to=<ISO date>` answers the rollups
+  of the days that have one, oldest first, and refuses a range that ends before it starts
+  (`range_invalid`) or spans more than the window's 400 study days (`range_too_long`) with 400.
+  `GET /api/score` answers `{"study_day": ..., "score": ...}`, whose `score` is null while no
+  recompute rolled the day up. The session is checked before anything else, so a request without
+  the owner's live session learns nothing, not even whether the database is open (503
+  `database_not_open` answers the owner alone). The owner's study day comes from
+  `OwnerAccess::study_day`, which `GET /api/me` now reads too.
+- **`/score` (R21).** The bot's handlers take the study-day rule and a clock, so `/score` names the
+  current study day as `GET /api/score` does. It answers the total, the grade, the reviews and the
+  true retention to one decimal, or says the retention is absent; a day with no rollup yet is said to
+  have no score, naming `/sync`. `/score` joins the owner's menu and the command lines `/start` and
+  the help answer list, so their goldens change, and each of its four messages has a golden.
+- **The score screen (R22).** `/score` joins the route table and the startapp token map (token
+  `score`), which `a11y-coverage.test.ts` and `startapp.test.ts` hold equal to the screens, and the
+  audit answers `/api/score` with a day whose retention is absent, so both colour schemes audit the
+  breakdown. The client reads the score through the one session (`api.ts`), sharing one read with
+  `GET /api/me`. Each pillar shows its name, its value as text and a `<meter>` named by the text; an
+  absent retention shows its name and a sentence, and no value or bar.
+- **R15: the fold runs after a sync.** `CycleParts::with_fold` gives the cycle a fold shared by every
+  cycle of a role, and the recompute runs it after the window read with the study day of the latest
+  successful sync on record (`SyncRunStore::last_success`), then writes the anchor; a fold that fails
+  is `CycleError::Recompute`, recorded as `recompute_failed`, and leaves the anchor as it was, so the
+  next cycle recomputes. No test of A16 to A21 runs a sync cycle, so the cycle's own test,
+  `settle_fold::cycle::a_sync_cycle_runs_the_fold_and_settles_only_after_a_successful_sync`, is
+  recorded under A18 in `docs/red-first/SPEC-071.md`: a cycle whose sync fails evaluates the current
+  day and settles nothing, and the next one, whose sync succeeds, settles the day that closed.
+- **The courses load where a cycle runs.** The daemon's `RecomputeSetup` loads the courses (R1),
+  checks them against the readings taxonomy (R3), records their digest (R4) and builds the fold, at
+  the `bot` role's start and when the `sync` job runs, and hands the reader its courses. Chosen
+  against loading them at every job's start, because the other jobs start without the sync's
+  settings (SPEC-023 R12), and a malformed courses file would then refuse the maintenance jobs too.
+- **How a step registers (R19).** A later SPEC implements `DayStep` in its own file under
+  `crates/coordination/src/recompute/` and registers it in `crates/daemon/src/wiring.rs`'s
+  `recompute_fold` with `Fold::register(phase, step)`; the fold refuses a step registered outside its
+  phase (A20), and no later SPEC edits the fold. Chosen against a registry the fold discovers, which
+  would hide the order of registration from the composition root that owns it.
+- **Two privacy categories.** `daily_rollup` is the category `daily-rollups` and `daily_lang_stats`
+  the category `daily-course-stats`, each with its line in `PRIVACY.md`; §3a B1's one category over
+  both tables is refused by the data-rights symmetry census, whose planted check removes the first
+  table's category and expects exactly one refusal. Chosen against one category, which that census
+  cannot judge table by table.
+- **No CHECK ties `score_at_close` to `settled_at`.** The closing day's step records the score it
+  closed with before the fold records the settle, in the same write, and SQLite checks a CHECK at
+  each statement, not at the commit. Chosen against recording the settle before the steps, because
+  the cursor moves only once every step of the day ran (R16).
+- **The first recompute's backfill (R17).** It rolls up, in the historical form, the past study days
+  of the window before the most recently closed day; that day is then settled with its end-of-day
+  state, the current day is evaluated, and a revisit re-rolls every past day whose fingerprint changed
+  and re-scores every past study day of the window (R14, R18).
+- **Two parity traps.** The predecessor's `sum` of floats is CPython's compensated summation
+  (Neumaier's, since 3.12), so the seconds are summed by `metrics.rs`'s port of it, never by a
+  running sum, which the bit-exact goldens reject in the last place; and serde_json's default float
+  parser can land one unit in the last place away, so analytics' tests parse the goldens with its
+  `float_roundtrip` feature.
+- **The manifest.** Beside the files above, the pinned reset row of `crates/kernel/tests/data_rights.rs`
+  names `courses_digest: null`, a card literal of `crates/readings/tests/support/mod.rs` names
+  `course: None`, and the API's and the bot's tests write synthetic rollup rows through the kernel's
+  `Db`, which hands out sqlx types, so both crates take `sqlx` as a dev-dependency: no new crate and
+  no new edge of the context map.

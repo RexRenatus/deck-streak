@@ -60,6 +60,7 @@ describe('the score body', () => {
       ['a number', 72],
       ['no study day', defect((copy) => delete copy.study_day)],
       ['a numeric study day', defect((copy) => (copy.study_day = 20102))],
+      ['a study day in an array', defect((copy) => (copy.study_day = ['2001-02-03']))],
       ...[
         'x2001-02-03',
         '2001-02-03x',

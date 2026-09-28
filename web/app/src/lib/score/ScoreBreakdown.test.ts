@@ -66,7 +66,7 @@ describe('ScoreBreakdown', () => {
     ] as const) {
       const row = shown.find((candidate) => candidate.name === name);
       expect(row?.text).toBe(`${name} ${text}`);
-      const meter = screen.getByRole('meter', { name });
+      const meter = screen.getByRole('meter', { name }) as HTMLMeterElement;
       expect([meter.min, meter.max, meter.value]).toEqual([0, 100, value]);
     }
   });
@@ -76,7 +76,7 @@ describe('ScoreBreakdown', () => {
 
     const retention = rows()[1];
     expect(retention.text).toBe('Retention 85');
-    expect(screen.getByRole('meter', { name: 'Retention' }).value).toBe(85);
+    expect((screen.getByRole('meter', { name: 'Retention' }) as HTMLMeterElement).value).toBe(85);
     expect(screen.getAllByRole('meter')).toHaveLength(5);
   });
 });

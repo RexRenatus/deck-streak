@@ -32,10 +32,6 @@ export interface ScoreToday {
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
-}
-
 /** A pillar's value: a number, or null for the retention of a day with no answered review. */
 function pillarValue(pillar: Pillar, value: unknown): number | null | undefined {
   if (typeof value === 'number') return value;
@@ -44,17 +40,16 @@ function pillarValue(pillar: Pillar, value: unknown): number | null | undefined 
 
 /** The score `value` holds, or undefined when it is not one. */
 function dayScore(value: unknown): DayScore | undefined {
-  if (!isRecord(value) || typeof value.total !== 'number') return undefined;
-  const { grade, pillars } = value;
-  if (!isRecord(grade) || typeof grade.label !== 'string' || typeof grade.emoji !== 'string') {
-    return undefined;
-  }
-  if (!isRecord(pillars)) return undefined;
-  const values = PILLARS.map((pillar) => pillarValue(pillar, pillars[pillar]));
+  const { total, grade, pillars } = (value ?? {}) as Record<string, unknown>;
+  if (typeof total !== 'number') return undefined;
+  const { label, emoji } = (grade ?? {}) as Record<string, unknown>;
+  if (typeof label !== 'string' || typeof emoji !== 'string') return undefined;
+  const given = (pillars ?? {}) as Record<string, unknown>;
+  const values = PILLARS.map((pillar) => pillarValue(pillar, given[pillar]));
   if (values.includes(undefined)) return undefined;
   return {
-    total: value.total,
-    grade: { label: grade.label, emoji: grade.emoji },
+    total,
+    grade: { label, emoji },
     pillars: Object.fromEntries(PILLARS.map((pillar, at) => [pillar, values[at]])) as Record<
       Pillar,
       number | null
@@ -64,10 +59,9 @@ function dayScore(value: unknown): DayScore | undefined {
 
 /** The body of `GET /api/score`, or null when it is not one. */
 export function parseScore(body: unknown): ScoreToday | null {
-  if (!isRecord(body) || typeof body.study_day !== 'string' || !ISO_DATE.test(body.study_day)) {
-    return null;
-  }
-  if (body.score === null) return { studyDay: body.study_day, score: null };
-  const score = dayScore(body.score);
-  return score === undefined ? null : { studyDay: body.study_day, score };
+  const { study_day: day, score } = (body ?? {}) as Record<string, unknown>;
+  if (typeof day !== 'string' || !ISO_DATE.test(day)) return null;
+  if (score === null) return { studyDay: day, score: null };
+  const parsed = dayScore(score);
+  return parsed === undefined ? null : { studyDay: day, score: parsed };
 }
