@@ -76,35 +76,36 @@ export function createApi(options: ApiOptions): Api {
 
   /** The session being opened or already open; concurrent calls share one handshake. */
   function opening(): Promise<Opened> {
-    session ??= handshake().then((opened) => {
-      // Stryker disable next-line ConditionalExpression,StringLiteral,BooleanLiteral: EQUIVALENT: a refused session stays cached, so a later call answers reopen and sends nothing whether or not this sets stopped (#294)
-      if (opened === 'refused') stopped = true;
-      return opened;
-    });
+    session ??= handshake();
     return session;
   }
 
-  /** A same-origin GET that carries the session cookie alone. */
-  async function get(path: string): Promise<Response | 'reopen' | 'unavailable'> {
+  /**
+   * A same-origin GET that carries the session cookie alone: its response, `'reopen'` when only
+   * reopening the app can help, or null when no answer came.
+   */
+  async function get(path: string): Promise<Response | 'reopen' | null> {
     let renewed = false;
     for (;;) {
       if (stopped) return 'reopen';
       const used = opening();
       const opened = await used;
-      if (opened === 'refused') return 'reopen';
+      if (opened === 'refused') {
+        // the launch data is refused: the client stops calling until the owner reopens the app
+        // Stryker disable next-line BooleanLiteral: EQUIVALENT: a refused session stays cached, so a later call answers reopen and sends nothing whether or not this sets stopped (#294)
+        stopped = true;
+        return 'reopen';
+      }
       if (opened === 'failed') {
         // no session came of it: forget the attempt, so the next call tries again
-        // Stryker disable next-line ConditionalExpression: EQUIVALENT: only a microtask-timed call, never an order of calls and answers, can open a newer session between this handshake failing and this line (#294)
         if (session === used) session = null;
-        // Stryker disable next-line StringLiteral: EQUIVALENT: read() answers unavailable for any answer without ok, so this literal's value changes no answer (#294)
-        return 'unavailable';
+        return null;
       }
       let response: Response;
       try {
         response = await send(path, { credentials: 'same-origin' });
       } catch {
-        // Stryker disable next-line StringLiteral: EQUIVALENT: read() answers unavailable for any answer without ok, so this literal's value changes no answer (#294)
-        return 'unavailable';
+        return null;
       }
       if (response.status !== 401) return response;
       if (renewed) {
@@ -122,8 +123,7 @@ export function createApi(options: ApiOptions): Api {
   async function read<T>(path: string, parse: (body: unknown) => T | null): Promise<Answer<T>> {
     const response = await get(path);
     if (response === 'reopen') return { kind: 'reopen' };
-    // Stryker disable next-line ConditionalExpression,StringLiteral: EQUIVALENT: a string answer has no ok, so !response.ok alone answers unavailable for it (#294)
-    if (response === 'unavailable' || !response.ok) {
+    if (response === null || !response.ok) {
       return { kind: 'unavailable' };
     }
     // Stryker disable next-line ArrowFunction: EQUIVALENT: parseMe and parseScore read an undefined body as they read null (#294)
