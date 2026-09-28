@@ -1,0 +1,34 @@
+{
+  "tables": {
+    "CARGO_KILLED_SCRIPT_MUTATIONS": [
+      [
+        "S02901-EVERY-CASE-OF-A-GOLDEN-IS-CHECKED",
+        "tools/parity-oracle/golden.rs",
+        "    for case in &golden.cases {\n        check(case);\n    }",
+        "    for case in golden.cases.iter().take(1) {\n        check(case);\n    }",
+        "kernel",
+        "constants::the_kernel_constants_equal_the_predecessors",
+        "the golden comparison checks every case, not the first (ADR-029)"
+      ],
+      [
+        "S02902-A-GOLDEN-WITH-NO-CASE-IS-REFUSED",
+        "tools/parity-oracle/golden.rs",
+        "    if golden.cases.is_empty() {",
+        "    if golden.cases.len() > 1_000_000 {",
+        "coordination",
+        "golden_reader::a_golden_with_no_case_is_refused",
+        "a golden that holds no case proves nothing and is refused (SPEC-029)"
+      ]
+    ],
+    "SCRIPT_MUTATIONS": [
+      [
+        "S02903-A-BUILDER-DRAWS-ONLY-FROM-ITS-SEED",
+        "tools/parity-oracle/generate.py",
+        "    if first != second:\n",
+        "    if first is not first:\n",
+        "a case builder whose second draw differs from its first is refused, so every golden can be regenerated",
+        "test_generate.GeneratorWritesGoldensFromTheRegistry.test_a_builder_that_draws_outside_its_seed_is_refused"
+      ]
+    ]
+  }
+}

@@ -27,6 +27,19 @@ impl UtcMillis {
     pub const fn epoch_millis(self) -> i64 {
         self.0
     }
+
+    /// The instant `time` names: whole milliseconds since the Unix epoch, negative before it,
+    /// saturating at the ends of an `i64`. [`SystemClock`] reads the system time through it, and it
+    /// is apart from that read so a test can hand it any time, one before the epoch too.
+    #[must_use]
+    pub fn from_system_time(time: SystemTime) -> Self {
+        Self(match time.duration_since(UNIX_EPOCH) {
+            Ok(since) => i64::try_from(since.as_millis()).unwrap_or(i64::MAX),
+            Err(before) => {
+                i64::try_from(before.duration().as_millis()).map_or(i64::MIN, |millis| -millis)
+            }
+        })
+    }
 }
 
 /// The source of the current instant, injected wherever a rule depends on the time.
@@ -41,13 +54,7 @@ pub struct SystemClock;
 
 impl Clock for SystemClock {
     fn now(&self) -> UtcMillis {
-        let millis = match SystemTime::now().duration_since(UNIX_EPOCH) {
-            Ok(since) => i64::try_from(since.as_millis()).unwrap_or(i64::MAX),
-            Err(before) => {
-                i64::try_from(before.duration().as_millis()).map_or(i64::MIN, |millis| -millis)
-            }
-        };
-        UtcMillis(millis)
+        UtcMillis::from_system_time(SystemTime::now())
     }
 }
 

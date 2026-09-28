@@ -1,0 +1,23 @@
+# DeckStreak's Litestream 0.5 replication template (SPEC-021 R6; ADR-010). A template with neutral
+# values that the private rail fills (deploy/README.md); nothing in it is one host's value, and
+# nothing in this repository installs it or starts a replica.
+#
+# The global snapshot settings bound how long an erased row can survive in the replica: Litestream
+# 0.5 keeps each snapshot for the global retention and ignores a retention under a replica, so an
+# erased row leaves the replica within the interval plus the retention, 72 hours. That is inside the
+# backups window privacy.json declares, P3D, and PRIVACY.md tells the owner so.
+snapshot:
+  interval: 24h
+  retention: 48h
+
+# Litestream's periodic integrity check of the replica's files.
+validation:
+  interval: 24h
+
+dbs:
+  # The database in the directory systemd gives the units (StateDirectory=deck-streak).
+  - path: /var/lib/deck-streak/deck_streak.db
+    replica:
+      # The replica's destination: a placeholder the private rail fills, expanded by Litestream from
+      # the environment when it starts.
+      url: ${DECKSTREAK_REPLICA_URL}
