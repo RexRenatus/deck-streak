@@ -9,5 +9,6 @@
   key in a form it does not read as YAML does, a quoted escape, an anchor, alias or tag among them,
   are refused by its line. A checkout of another repository named in any case, its action and its
   inputs read as the runner reads them, a checkout from another server, and a fetch in git's
-  scp-like form are refused too. Every workflow test reads `.yml` and `.yaml` files, and an action
-  is pinned only in its plain form (SPEC-034 A13).
+  scp-like form are refused too. Every workflow test reads `.yml` and `.yaml` files, an action is
+  pinned only in its plain form, and the hardening tests read keys the way the checker does
+  (SPEC-034 A13).

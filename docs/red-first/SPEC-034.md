@@ -129,3 +129,28 @@ equivalent: W12 and W13 read a block's trailing lines and its indent with white 
 space or a tab, which only a line the character check refuses can hold, and no finding reads white
 space. Y2, which the second review recorded as equivalent, is killed: each planted line asserts the
 reason its refusal gives.
+
+Rider, 2026-09-28: the hardening tests read keys the way the checker does. `dev` had not moved
+since 07322ae merged it. No criterion was added, so the fences above are unchanged.
+
+- A13 red at 216aa16: `AssertionError: AssertionError not raised`, in nine of its ten new
+  subtests: the hardening tests did not yet read keys the way the checker does. Green at 3c3acaa,
+  where each reads a workflow through the checker's reader and fails closed on a form it does not
+  read. The tenth, a trigger, was green at once: it pins the trigger check, whose deletion no test
+  killed before, and it is red against that mutant.
+- On the four live workflows the reader finds what the earlier reading found: the same 70 action
+  references and 19 runners, in the same order, and each default token as `contents: read`.
+
+DISCLOSURE: A13's body changed after its red commit, 403d9ce, again: at 216aa16 it gained ten
+subtests that plant keys in the control and judge it beside the live workflows. Its criterion, and
+R7, now also say that the hardening tests read keys the way the checker does: SPEC-034's inserted
+text says so at dd3ba90, after the green commit, because it states how the tests read.
+
+At 3c3acaa a hand sweep ran 24 mutants over the hardening tests and the two functions they read
+through, one at a time, on a scratch copy of the committed tree, restoring the file byte for byte
+after each: each new refusal and condition deleted or inverted, each test given back its earlier
+reading, and each test made to skip a workflow the reader refuses. 23 were killed, each by A13, and
+nine of them by a hardening test on the live workflows as well: the five inversions and the walk's
+four. One is equivalent: F5 stops the walk under a matching key, and a key nested there sits
+inside that key's value, a mapping or a list, which each test refuses first with the same outcome;
+only the examined count, which no test asserts, differs.
