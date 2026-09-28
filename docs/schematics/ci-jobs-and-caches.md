@@ -1,13 +1,15 @@
 # Schematic: the CI jobs, and the caches each one reads and writes
 
 Kind: component and data flow. Read at DeckStreak `dev` 8f91667 (`.github/workflows/ci.yml`,
-`scripts/check.sh`, `scripts/pack-rows.py`). Decided by ADR-055; built by SPEC-038.
+`scripts/check.sh`, `scripts/pack-rows.py`), and again at `dev` 63e6671 for SPEC-038's amendment
+(section 8), which added the `engine` job. Decided by ADR-055; built by SPEC-038.
 
 ## The jobs
 
 ```mermaid
 flowchart LR
   event{{a pull request into dev or main, or a push to dev or main}} --> rust
+  event --> engine
   event --> web
   event --> packs
   event --> hygiene
@@ -15,11 +17,13 @@ flowchart LR
   event --> base[base-is-dev]
   subgraph gate[check.sh stages, each in exactly one job]
     rust[rust: fmt clippy test doctest audit-rust]
+    engine[engine, two slices: test-engine, one slice each]
     web[web: web audit-web]
     packs[packs: packs, a bounded pool of pack rows]
     hygiene[hygiene: python scrub secrets]
   end
   rust --> ci{ci: every need succeeded}
+  engine --> ci
   web --> ci
   packs --> ci
   hygiene --> ci
@@ -28,11 +32,34 @@ flowchart LR
   ci --> required([the required check ci])
 ```
 
-The four gate jobs need nothing, so they start together; the run's wall time is the slowest of
+The five gate jobs need nothing, so they start together; the run's wall time is the slowest of
 them plus the aggregate. Each calls `bash scripts/check.sh <its stages>` once. `hygiene` and `packs`
 check out the whole history (`fetch-depth: 0`): `secrets` scans every commit, `scrub` reads every
-blob reachable from `HEAD`, and the sdd numbering row reads every branch. `rust` and `web` check out
-one commit.
+blob reachable from `HEAD`, and the sdd numbering row reads every branch. `rust`, `engine` and `web`
+check out one commit.
+
+## The engine set, split between two stages
+
+```mermaid
+flowchart LR
+  def[["ENGINE_TESTS in check.sh: the engine set E, defined once"]]
+  def -->|"-E 'not (E)'"| test[test stage, in the rust job]
+  def -->|"-E 'E'"| eng[test-engine stage, in the engine job]
+  ws[(every test of the workspace)] --> test
+  ws --> eng
+  test --> one([each test runs in exactly one of the two])
+  eng --> one
+```
+
+Both stages run `cargo nextest run --workspace --locked --no-fail-fast`, and differ only in the
+filterset, so their build scopes, features and flags are one; E negated and E itself cover the
+workspace once. E holds whole test binaries, SPEC-022's `sync` and `engine_budget`, so a test added
+to either goes with it. The local gate with no arguments runs both stages.
+
+In CI the `engine` job runs E in two slices, a matrix leg each: a leg hands `test-engine`
+`ENGINE_SLICE=<m>/<N>` (N is the matrix's size) and the stage adds `--partition slice:<m>/<N>`,
+nextest's round robin over the one list E selects, so the slices hold every test of E once.
+Without `ENGINE_SLICE` the stage runs the whole set.
 
 ## The caches
 
@@ -56,7 +83,7 @@ flowchart TB
 
 | cache | paths | key | restored by | saved by |
 |---|---|---|---|---|
-| Rust | `~/.cargo/registry/index/`, `~/.cargo/registry/cache/`, `~/.cargo/git/db/`, `target/` | `rust-<os>-<hash of rust-toolchain.toml>-<hash of Cargo.lock>`, falling back to the same toolchain | `rust`, and `hygiene`, whose guard tests build a Rust example | `rust` only, on a push that missed, after `cargo clean --workspace` |
+| Rust | `~/.cargo/registry/index/`, `~/.cargo/registry/cache/`, `~/.cargo/git/db/`, `target/` | `rust-<os>-<hash of rust-toolchain.toml>-<hash of Cargo.lock>`, falling back to the same toolchain | `rust`; `engine`, which builds the same workspace scope for its stage; and `hygiene`, whose guard tests build a Rust example | `rust` only, on a push that missed, after `cargo clean --workspace`: two jobs saving one key race |
 | pnpm store | the path `pnpm store path` prints | `pnpm-<os>-<hash of pnpm-lock.yaml>`, falling back to any | `web` | `web`, on a push that missed |
 | Playwright's browser | `~/.cache/ms-playwright` | `playwright-<os>-<the locked Playwright version>-chromium-headless-shell` | `web` | `web`, on a push that missed, right after the install |
 

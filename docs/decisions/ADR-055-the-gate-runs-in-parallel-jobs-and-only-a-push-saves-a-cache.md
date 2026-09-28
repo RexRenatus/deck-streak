@@ -119,3 +119,62 @@ Chosen options, as SPEC-038's requirements state them:
 
 SPEC-038; issue #207; ADR-017 (hosted CI); ADR-035 (required checks from GitHub Actions); ADR-004
 (the pack runner); ADR-022 (the engine's build budget).
+
+## Note, 2026-09-28: the engine's slow tests run in a job of their own
+
+Recorded by SPEC-038's amendment (its section 8, R13 to R15, A16 to A18). This decision is
+unchanged; the note adds a fifth gate job to it.
+
+With Anki's engine in the workspace (SPEC-022), a warm code pull request's `rust` job took 4m19s and
+4m22s (runs 36368711222, attempt 2, and 36371239856), and 139 s of each was one run: SPEC-022's sync
+and budget tests, eight of them taking 20 to 81 s each. The other 116 tests of the workspace took
+under 6 s together. It was decided, under the owner's delegation, that a parallel `engine` job runs
+those tests and `rust` runs the rest, and that every test stays required, because `ci` needs both.
+
+Chosen, and what each was chosen against:
+
+- One nextest filterset, `ENGINE_TESTS` in `scripts/check.sh`, defined once: `test` runs
+  `not (<the set>)` and a new `test-engine` stage runs the set, with commands that differ in nothing
+  else. It was chosen because the partition is then complementary by construction, and one test
+  proves that both stages read the one definition (A16).
+  - A nextest profile per stage, each with its own `default-filter`: rejected, because the set
+    would be written twice, once negated, and the copies could drift apart.
+  - A test group assigned by an override, selected with `group(engine)`: rejected, because a test
+    group also caps its tests' concurrency, and `group()` cannot be judged per binary, so every
+    binary would be run to list its tests.
+  - Building `test-engine` for `deck-streak-ingest` alone (`-p`): rejected, because Cargo unifies
+    features over the packages it builds. That build resolves `tokio` and what depends on it
+    differently from the `--workspace` build the cache holds, so it would recompile them on every
+    warm run (SPEC-038 section 8).
+  - Naming the eight slow tests one by one: rejected, because a test added to those binaries would
+    land in `rust`, and a renamed one would move without a word. Whole binaries keep their tests.
+  - The whole `deck-streak-ingest` package: rejected, because its other tests take under a second
+    and gain nothing from a second runner.
+- A fifth gate job, `engine`, that starts with the other four, restores the Rust cache and never
+  saves it, and is a need of `ci`. It was chosen because a warm pull request then waits for the
+  slower of `rust` and `engine`, not for their sum.
+  - Leaving the tests in `rust`: rejected, because that is the 4m19s path.
+  - Skipping `engine` when a pull request leaves the engine alone, or moving its tests out of the
+    gate: rejected, because every test stays required, and `ci` fails on a skipped need.
+  - Letting `engine` save the cache as well: rejected, because two jobs saving one key race, and
+    `rust` builds every target, so its save already holds what `engine` restores.
+- Two slices of the engine set, one per runner, from one matrix: each leg hands `test-engine` its
+  own slice, `m/N` with N the matrix's size, and `test-engine` passes it to nextest's
+  `--partition slice:m/N`. It was chosen by measurement (SPEC-038 section 8). Measured twice each,
+  one engine job took 3m39s and 3m38s, and the slower of two slices 2m32s both times, which took the
+  gate from 3m43s to 2m39s and 2m48s.
+  - One engine job: rejected, because its run of the whole set, about 140 s, stayed the floor.
+  - Three or more slices: rejected, because a slice cannot finish before its slowest test, about
+    75 s, and each slice costs another runner.
+  - A slice stated per job, in two job blocks: rejected, because the count would be written in two
+    places; a matrix derives it (`strategy.job-total`), and A20 holds it to 1 to N.
+
+### Consequences of the note
+
+- Good, because a warm code pull request's gate took 2m39s and 2m48s, against 4m29s before the
+  engine job and 3m43s with one, and every test still decides `ci`.
+- Bad, because each run pays two more runners, each with its own setup, restore and test build: the
+  Rust jobs took 6m23s and 7m00s of runner time together, against 4m22s for the single `rust` job,
+  for a gate 1m41s to 1m50s shorter.
+- Bad, because the local gate runs one more cargo command, which recompiles the engine once more
+  (ADR-022's finding).
