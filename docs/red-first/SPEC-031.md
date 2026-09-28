@@ -39,6 +39,13 @@ responses; the fixture holds the API's trace event shape; a new `max` event page
 logs once; a cgroup made since the last run counts every event as new; the fixture's ceilings are the
 host budget's; and SPEC-032's template tests extended to the three units.
 
+After the delivery, a514d7d added tests for the paths those left undriven, each green where it was
+written and none a criterion's: a JSON error line reaches the page as written, and real `curl` reads
+the script's configuration as the tests' parser does; a unit's first sight is its baseline; a watch
+that finds no unit pages once; the 90% line is crossed only past it; a unit with no ceiling or
+unreadable events is passed over; a declaration or a record the evaluator cannot read, and a missing
+state directory; and a response event is read flattened or nested and nothing else.
+
 ```red-first
 A1: not red: main already installed the kernel's logging as its first statement (SPEC-025, SPEC-027), so every role's first line was already a JSON event with its priority at 55ac95e; the test reads the roles and the jobs from the binary's own usage line, so it guards every role, and a role added later, against a line written before the logging
 A2: red at 55ac95e: AssertionError: Lists differ: ['api-availability page 6h/30m: burn rate 6.0 does not spend 0.05 of the budget in 6h (that is 5.6000)', 'api-availability ticket 3d/6h: burn rate 1.0 does not spend 0.1 of the budget in 3d (that is 0.9333)'] != []
