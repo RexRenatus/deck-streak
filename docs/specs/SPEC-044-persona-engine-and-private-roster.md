@@ -96,11 +96,11 @@ A8: cargo test -p deck-streak-agent --test persona -- --exact the_cefr_band_come
 
 ## 3a. What the box run judges
 
-The box run (`scripts/box-packs.sh`, ADR-069) judges these over the committed tree and posts its
-verdict on the pull request as the `box/packs` status. They have no line in the acceptance fence,
-because no public test can run a pack's row. When this delivery merges, the maintainer's private
-wiring makes persona-core, law-professors and language-mentors `enforced`, so a blocking row of
-theirs that is red, VOID or in error fails the run.
+The box run (`scripts/box-packs.sh`, ADR-069) judges these over the committed tree. They have no
+line in the acceptance fence, because no public test can run a pack's row. When this delivery
+merges, the maintainer's private wiring makes persona-core, law-professors and language-mentors
+`enforced`, so a blocking row of theirs that is red, VOID or in error fails the run; the verdict of
+a run with that wiring is posted as the `box/packs` status at the merge.
 
 | id | criterion | decided by |
 |---|---|---|

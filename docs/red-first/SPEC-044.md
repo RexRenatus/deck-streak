@@ -28,9 +28,22 @@ A8: red at ca1b92a: assertion `left == right` failed: the live band, when its po
 A8: green at 43c7503
 ```
 
+Two criteria's tests changed between their red and green commits. Neither change weakens a test,
+and the assertion each red line records is unchanged. At fd126bc, A1's test gained
+`assert!(!public.is_empty() && TemplateSet::default().is_empty());` before the assertion its red
+line records; it fails at 5e89e7e too, where the stub's set held no template. At 742ef31, A2's test
+changed the `Debug` line it expects from
+`RosterPath(..) Persona(..) Roster { personas: 2, topics: 2 }` to
+`RosterPath(..) Persona(..) Roster { templates: 18, personas: 2, topics: 2 }`, because the roster's
+`Debug` also counts the templates it was read against; the assertion A2's red line records comes
+before it. After their green commit, d5a1362 replaced `MemoryPorts::none()`, which returned the
+default ports, with `MemoryPorts::default()` in the tests of A4, A5 and A6, and changed no
+assertion. The tests of A3, A7 and A8 are the same at their red commit, their green commit and the
+head.
+
 The five rows of `scripts/mutation-rows.d/S04400-S04499.json` (the subject filter, the journal
 exclusion, the band's source, the one-line slot and the band on a language output only) were proved
 KILLED on d5a1362, each target restored byte for byte.
 
 B1 and B2 (SPEC-044 §3a) have no line here: the box run judges them over the committed tree, and
-its verdict is the pull request's `box/packs` status (ADR-069).
+its verdict is posted as the `box/packs` status when the pull request merges (ADR-069).
