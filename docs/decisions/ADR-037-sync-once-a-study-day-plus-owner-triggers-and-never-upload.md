@@ -114,3 +114,8 @@ the decision outcome, was redacted under the public-prose rule (ADR-059).
 
 Amendment (2026-09-28): passages describing another service's operations were replaced with
 DeckStreak's own sync requirement, or removed, under the public-text rule (ADR-059).
+
+Amendment (2026-09-28): condition (a) is superseded for the skip-day path only, by ADR-089, the
+owner's decision at #266. On that path the only writes are the skip day's reschedule of the study
+day's due review cards and its exact inverse, each proven against the recording fake sync server
+(SPEC-083). Every other path keeps condition (a) whole, and conditions (b), (c) and (d) stand.
