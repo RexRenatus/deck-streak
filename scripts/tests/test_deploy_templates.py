@@ -1250,7 +1250,8 @@ class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
             ("255 EXCEPTION", 255),
             (
                 "01 0001 0x1 0X01 +1 +0x1 0b1 0B1 0o1 0O1 010 00 -0 0x0 -1 256 1000 08 1.0 1e0 "
-                '"1" \\1 failure Failure SIGKILL KILL \u0661 \u00b9 \uff11 0x 0b + -',
+                '"1" \\1 failure Failure SIGKILL KILL \u0661 \u00b9 \uff11 1\u0661 1\uff10 0x 0b '
+                "+ -",
                 None,
             ),
         ]
@@ -1334,6 +1335,11 @@ class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
             ),
             "no-equals.service": (
                 f"{head}{page}{run}ExecCondition /bin/true\n{loads}",
+                f"6: {shape}",
+            ),
+            "bare-key.service": (f"{head}{page}{run}ExecCondition\n{loads}", f"6: {shape}"),
+            "spaced-key.service": (
+                f"{head}{page}{run}Exec Condition=/bin/true\n{loads}",
                 f"6: {shape}",
             ),
             "no-section.service": (f"{page}{head}{run}{loads}", f"1: {shape}"),
