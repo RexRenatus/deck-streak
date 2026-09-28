@@ -163,6 +163,7 @@ class Host:
         self.file(self.apps / "serving" / "app.py", 800)
         self.file(self.apps / "probe-1.py", 120)
         self.file(self.apps / "probe-2.py", 130)
+        os.link(self.apps / "probe-2.py", self.apps / "probe-3.py")
         self.file(self.apps / "keep.py", 140)
         self.file(self.srv / "cache" / "old-1.log", 150)
         self.file(self.var / "log" / "journal.bin", 2500)
@@ -274,6 +275,13 @@ class Host:
                     "reason": "a one-off log left loose",
                 },
                 {
+                    "name": "tree-notes",
+                    "class": "loose",
+                    "dir": str(self.apps / "linked-tree"),
+                    "pattern": "notes*.txt",
+                    "reason": "a note left in a worktree",
+                },
+                {
                     "name": "unused-tool",
                     "class": "package",
                     "package": "example-unused-tool",
@@ -304,6 +312,11 @@ class Host:
             os.environ,
             PATH=f"{self.bin}{os.pathsep}{os.environ.get('PATH', '')}",
             PYTHONDONTWRITEBYTECODE="1",
+            # A proxy the environment names is never used for a health check's GET.
+            http_proxy="http://127.0.0.1:9",
+            HTTP_PROXY="http://127.0.0.1:9",
+            no_proxy="",
+            NO_PROXY="",
         )
         return subprocess.run(
             [sys.executable, str(TOOLS / tool), *map(str, args)],
@@ -556,6 +569,7 @@ class Plan(unittest.TestCase):
                     ("worktree", str(apps / "linked-tree")),
                     ("loose", str(apps / "probe-1.py")),
                     ("loose", str(apps / "probe-2.py")),
+                    ("loose", str(apps / "probe-3.py")),
                     ("loose", str(host.srv / "cache" / "old-1.log")),
                     ("package", "example-unused-tool:amd64"),
                 },
@@ -577,6 +591,11 @@ class Plan(unittest.TestCase):
             nightly = b / "nightly-1.tar"
             self.assertEqual(paths[str(nightly)]["bytes"], os.lstat(nightly).st_blocks * 512)
             self.assertEqual(paths[str(b / "nightly-2.tar")]["bytes"], 0)
+            # Two listed links to one file free its blocks once; a note inside a listed worktree
+            # goes with it and is not listed again.
+            pair = [paths[str(apps / name)]["bytes"] for name in ("probe-2.py", "probe-3.py")]
+            self.assertEqual(sorted(pair), [0, os.lstat(apps / "probe-2.py").st_blocks * 512])
+            self.assertIn("tree-notes", {rule["name"] for rule in rules.values()})
             self.assertEqual(listing["bytes"], sum(item["bytes"] for item in items))
             self.assertEqual(listing["digest"], list_digest(listing))
             # The plan wrote only its output and left the synthetic tree byte for byte.
