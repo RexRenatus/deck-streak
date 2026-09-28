@@ -99,6 +99,15 @@
         "                    .map(|run| fold.rule.study_day(run.finished_at));",
         "settle_fold::cycle::a_sync_across_the_rollover_leaves_the_day_it_started_in_owed",
         "the fold is handed the study day in which the latest successful sync started, so a sync that ran across the rollover never settles the day it started in (SPEC-071 R15, A18)"
+      ],
+      [
+        "S07113-OWED-SETTLE-DUE",
+        "coordination",
+        "src/sync_cycle.rs",
+        "        self.obligations.register(owed);",
+        "        drop(owed);",
+        "settle_fold::cycle::the_scheduled_sync_after_a_sync_across_the_rollover_settles_the_owed_day",
+        "a cycle that runs the fold collects the settle a closed day is owed as an obligation, so the scheduled sync after a sync that ran across the rollover settles the day that closed, even when nothing in the collection changed (SPEC-071 R15)"
       ]
     ],
     "CARGO_KILLED_SCRIPT_MUTATIONS": [
