@@ -133,8 +133,12 @@ R6. **The configurations** load under their tools' own rules: `.cargo/mutants.to
     cargo-mutants 27.1.0's keys, and `web/app/stryker.config.json` sets `testRunner` `vitest`, the
     `json` reporter and `thresholds` whose `break` is 100. `scripts/mutation-verdict.py configs`
     judges both by what each tool itself refuses: a key cargo-mutants' `Config` does not declare or
-    a value of the wrong type, and a Stryker threshold outside 0 to 100, `high` below `low`, or JSON
-    that does not parse.
+    a value of the wrong type, and a Stryker threshold outside 0 to 100, `high` below `low`, JSON
+    that does not parse, or `ignoreStatic` without `coverageAnalysis` `perTest`. It also refuses a
+    second Stryker configuration in `web/app` under any of the tool's sixteen default names
+    (`stryker.conf` or `stryker.config`, with or without a leading dot, in `.json`, `.js`, `.mjs` or
+    `.cjs`), since StrykerJS reads the first it finds, and a `mutate` list other than R2's web
+    production code.
 R7. **Local runs** stay targeted (one file, `-f`, or the diff, `--in-diff`), `--in-place` on a
     committed tree, one mutant at a time, then `cargo clean`. `--in-place` is the rule's `-j 1`:
     cargo-mutants 27.1.0 refuses any `-j` beside it (exit 1, measured). Heavy runs belong in CI.
@@ -276,6 +280,7 @@ R18. **The shards, and their bound.** `scripts/mutation-verdict.py shards` sizes
 | A37 | the sharded job runs the plan's matrix at the plan's count, and the verdict's job counts every shard whatever the shards returned | `test_mutation_workflows.py` |
 | A38 | a shard the plan gave no mutant owes no report, and a proved row on the diff's changed line carries it; a shard given mutants still owes its report | `test_mutation_verdict.py` |
 | A39 | the runner proves every row its selectors name together, a band's, a row's by id and a plan's, each once | `test_mutation_rows.py` |
+| A40 | the configuration check refuses a second Stryker configuration, `ignoreStatic` without per-test coverage, and a `mutate` list other than R2's | `test_mutation_workflows.py` |
 
 ```acceptance
 A1: python3 -m unittest discover -s scripts/tests -p test_mutation_rows.py -k a_tracked_change_is_refused_before_any_mutant_is_installed
@@ -317,6 +322,7 @@ A36: python3 -m unittest discover -s scripts/tests -p test_mutation_verdict.py -
 A37: python3 -m unittest discover -s scripts/tests -p test_mutation_workflows.py -k the_sharded_job_runs_the_plans_matrix_and_the_verdict_counts_every_shard
 A38: python3 -m unittest discover -s scripts/tests -p test_mutation_verdict.py -k a_diff_the_tool_lists_no_mutant_of_needs_no_shard_report
 A39: python3 -m unittest discover -s scripts/tests -p test_mutation_rows.py -k every_row_its_selectors_name_is_proved_once
+A40: python3 -m unittest discover -s scripts/tests -p test_mutation_workflows.py -k the_configuration_check_refuses_what_stryker_would_read_otherwise
 ```
 
 A1 to A8 run the runner against a fixture repository built at run time in a temporary directory:
@@ -357,7 +363,7 @@ and green are the `mutation-rust` job's two runs.
 | `scripts/mutation-rows.d/S04200-S04299.json` | `repo` | added: SPEC-042's rows (R16) |
 | `scripts/tests/test_mutation_rows.py` | `repo` | added: A1 to A11, A39 |
 | `scripts/tests/test_mutation_verdict.py` | `repo` | added: A12 to A19, A27, A29 to A31, A34 to A36, A38 |
-| `scripts/tests/test_mutation_workflows.py` | `repo` | added: A20 to A25, A28, A32, A33, A37 |
+| `scripts/tests/test_mutation_workflows.py` | `repo` | added: A20 to A25, A28, A32, A33, A37, A40 |
 | `.cargo/mutants.toml` | `repo` | added (R5, R6) |
 | `web/app/stryker.config.json` | `repo` | added (R6) |
 | `web/app/package.json`, `pnpm-lock.yaml` | `miniapp` | changed: StrykerJS 10.0.0 (R1) |
