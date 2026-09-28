@@ -4,8 +4,8 @@
 //! Each job has an id, a schedule in the configured local time (the kernel's rollover hour and
 //! fixed offset), and one flag, `catch_up`. No job syncs first: only `sync` syncs, once per study
 //! day, and every other job reads the study day's sync outcome. While the predecessor still runs,
-//! the slots keep off its minutes (ADR-011): its in-process slots, its sync ticks (named by the port
-//! of its tick function below), and its three systemd timers.
+//! the slots keep off its minutes (its in-process slots and its sync ticks, named by the port of
+//! its tick function below) and off the reserved minutes (ADR-011).
 
 use deck_streak_kernel::{Hour, StudyDayRule, UtcMillis, UtcOffset};
 
@@ -68,8 +68,8 @@ pub const SYNC: Job = Job {
     catch_up: true,
 };
 
-/// The database's daily upkeep, after the day turns over: between the predecessor's minutes 25 and
-/// 33 (ADR-027).
+/// The database's daily upkeep, after the day turns over: between the reserved minute 25 (ADR-011)
+/// and the predecessor's minute 33 (ADR-027).
 pub const MAINTENANCE: Job = Job {
     id: "maintenance",
     schedule: Schedule::DailyAtRollover { minute: 28 },

@@ -9,11 +9,12 @@ decision-makers: "@RexRenatus (owner, through the maintainer at gate 6), the Dec
 ## Context and Problem Statement
 
 DeckStreak reads the owner's Anki collection by syncing a private copy from the owner's sync server,
-with the same Anki login the predecessor uses (ADR-008, ADR-009, SPEC-022). At gate 6 the owner, by
+with the owner's own Anki login (ADR-008, ADR-009, SPEC-022). At gate 6 the owner, by
 the maintainer's decision, approved reusing that login on four testable conditions:
 - (a) no upload path, proven against a fake sync server that records every request;
 - (b) at most one sync per day, plus the owner's explicit triggers, so DeckStreak never contends
-  with the predecessor's sync or loads the server;
+  with another client's sync and never loads the sync server beyond one scheduled sync per study
+  day;
 - (c) the credentials read from the secret manager at run time (ADR-038);
 - (d) the grant that lets the runtime read them, decided with the host changes at gate 2.
 
@@ -24,8 +25,7 @@ without losing the flagship's morning readings (SPEC-022)?
 ## Decision Drivers
 
 - The owner's real collection must be untouchable by construction, not by convention.
-- The predecessor keeps syncing the same account until cutover (ADR-011), so DeckStreak must stay
-  out of its way.
+- Other clients sync the same account, so DeckStreak must stay out of their way.
 - The morning readings and the digest need the whole previous study day, once, before they run.
 
 ## Considered Options (the alternatives it was chosen against)
@@ -35,7 +35,7 @@ without losing the flagship's morning readings (SPEC-022)?
   scheduled sync runs per study day after the rollover; the owner's explicit triggers add syncs on
   demand; a recording test proves no upload leaves; the cadence is a setting raised only at cutover.
 - The predecessor's 15-minute cadence on offset ticks (the W0 plan): rejected because it breaks
-  condition (b) and doubles the load on the owner's server while the predecessor still syncs.
+  condition (b).
 - A sync each time the Mini App opens: rejected because opening the app is not an explicit trigger,
   and it would put the sync count in the viewer's hands.
 - Jobs that sync before they run (`syncs_first`): rejected because each such job would add a sync
@@ -71,12 +71,12 @@ Chosen option.
   request that carries a local change. On a full-sync demand the client downloads, or aborts with
   `full_upload_required` when the server holds no collection; it never uploads.
 - **The cadence is a setting whose default is one per study day.** Raising it is decided at
-  cutover (#164), when the predecessor stops syncing, and never before.
+  cutover (#164), and never before.
 
 ### Consequences
 
-- Good, because the owner's collection cannot be replaced by DeckStreak, and the predecessor's
-  sync is never contended.
+- Good, because the owner's collection cannot be replaced by DeckStreak, and another client's sync
+  is never contended.
 - Good, because each morning job reads one complete study day.
 - Bad, because intra-day views (today's reviews, a celebration when a session ends) wait for the
   owner's trigger, or for the next day. During side-by-side the predecessor still serves those
@@ -111,3 +111,6 @@ at most one.
 
 Amendment (2026-09-28): one passage stating the predecessor's schedule as a running service, in
 the decision outcome, was redacted under the public-prose rule (ADR-059).
+
+Amendment (2026-09-28): passages describing another service's operations were replaced with
+DeckStreak's own sync requirement, or removed, under the public-text rule (ADR-059).
