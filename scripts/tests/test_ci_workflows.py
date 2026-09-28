@@ -1222,9 +1222,14 @@ PLANTED_HARDENING = REPO / "scripts" / "tests" / "fixtures" / "workflow-hardenin
 # (group 2), or the context whole, which names no secret: `toJSON(secrets)`, `secrets.*`, or an
 # index computed at run time.
 SECRET = re.compile(r"(?<![\w.-])secrets(?![\w-])(?:\.([A-Za-z_][\w-]*)|\['([^']*)'\])?", re.I)
-# A command that clones a repository, and a git command given a URL.
+# A command that clones a repository, and a git command given a URL: one with a scheme, or git's
+# scp-like form, `user@host:path`, or `host:path` whose host is a dotted name. A refspec, such as
+# `main:refs/heads/main` or `v1.0:refs/tags/v1.0`, names no host.
 CLONE = re.compile(r"\bgit\b[^;&|]*?\bclone\b|\bgh\s+repo\s+clone\b")
-GIT_URL = re.compile(r"\bgit\b[^;&|]*?(?:\w+://|\bgit@)")
+GIT_URL = re.compile(
+    r"\bgit\b[^;&|]*?(?:\w+://|(?<![\w/.:@-])"
+    r"(?:[\w.-]+@[\w.-]+|[\w-]+(?:\.[\w-]+)*\.[A-Za-z][\w-]*):)"
+)
 
 
 def expressions_in(text):
@@ -1326,7 +1331,8 @@ def secret_and_checkout_problems(directory):
                 )
             for n, step in enumerate(job.get("steps") or []):
                 where = f"{path.name}:jobs.{job_id}.steps[{n}]"
-                if action(step) == "actions/checkout":
+                # GitHub reads an action's owner and name in any case.
+                if action(step).lower() == "actions/checkout":
                     repository = checked_out(step)
                     judged["checkouts"].append((where, repository))
                     if repository != THIS_REPOSITORY:
