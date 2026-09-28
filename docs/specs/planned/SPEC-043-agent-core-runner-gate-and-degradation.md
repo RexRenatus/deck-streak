@@ -1,7 +1,7 @@
 # SPEC-043: the agent checks its optional AI route first, runs each duty capped through the proxy when that route is configured, fences what it reads, and delivers only what the packs pass
 
 - **Wave:** W1. **Issue:** #29 (epic #2). **Context(s):** `deck-streak-agent`; the public `agent/` directory; `ai-safety.json`.
-- **Decided by:** ADR-004 (vendored probes in CI, the proxy client rows on the box), ADR-010
+- **Decided by:** ADR-069 (every pack, the proxy client rows among them, judged on the box), ADR-010
   (units), ADR-015 (headless Claude Code through the subscription proxy, fail closed), ADR-038 (the
   device key as a credential from the credential socket), ADR-054 (the AI route is optional, and
   no-AI mode is the default and a first-class path), and ADR-043 (a shell runner, the gate as the
@@ -12,12 +12,12 @@
 ## 1. The problem, measured
 
 - **No agent exists.** `crates/agent/src/` holds only `lib.rs`; there is no `agent/` directory and no
-  `ai-safety.json`. The gate's scrub stage prints that the apiKeyHelper scan is pending "until the
-  agent's settings template lands (SPEC-043)" (`scripts/check.sh`), and the ai-content-safety pack
-  waits on this issue (`.packs/wiring.json`).
+  `ai-safety.json`. The box run reads the apiKeyHelper scan as pending on this issue until the
+  agent's settings template lands (SPEC-056 R9), and the ai-content-safety pack waits on this issue
+  (the box-run packs' wiring, ADR-069).
 - **The reference client cannot be copied.** The subscription-proxy pack's reference runner and its
-  scanner name the maintainer's private secret, so neither is vendored (`.packs/VENDORED.json`,
-  `excluded`). Its scanner reads shell and reads a runner written in Rust or Python as no launch,
+  scanner name the maintainer's private secret, so neither may be copied into this public tree
+  (ADR-059). Its scanner reads shell and reads a runner written in Rust or Python as no launch,
   which is VOID. DeckStreak therefore writes its own generic shell runner under `agent/`.
 - **What must not be repeated.** An AI pass that fails night after night with a message that names
   no cause, or stops mid-request when its provider's credit runs out, tells the owner nothing. The
@@ -90,10 +90,10 @@ R10. `ai-safety.json` at the repository root declares the tasks `daily-reading-l
     `disclosure` names the bot's `/start` reply and the Mini App's first screen, `redteam` names
     `agent/redteam/` and the test that runs it, and `agent.settings` names `agent/settings.json`.
 R11. The output gate runs every class a task's gate names, on each output, before anything is
-    delivered, by running the vendored probes (`.packs/scripts/`) as subprocesses with `--subject`
-    naming the output and its template, outside the model. It also runs `output-invisible` on each
-    untrusted input before the input is fenced. Only an output every blocking class passes is
-    delivered.
+    delivered, by running the box-run packs' probes as subprocesses with `--subject` naming the
+    output and its template, outside the model. The public tree holds no probe (ADR-069), so the
+    deploy supplies their path. It also runs `output-invisible` on each untrusted input before the
+    input is fenced. Only an output every blocking class passes is delivered.
 R12. A run's verdict is `#[must_use]` and is one of: delivered (the output and its telemetry);
     withheld (the failing class and its finding lines, never the output's text); unavailable,
     with a closed cause: `key_missing`, `refused_shape`, `key_rejected`, `capacity_exhausted`,
@@ -132,7 +132,7 @@ R17. None of R1 to R14's proxy-runner criteria is a precondition for the crate's
 | A1 | the runner hands the key to `claude` only in its environment: a fake `claude` records an argv without it and an environment with it, and no file the run leaves holds it | subscription-proxy client rows (on the box, ADR-004); `test_the_runner_keeps_the_key_off_argv_and_disk` |
 | A2 | a non-loopback base URL, `--bare` and a bypass flag each refuse with exit 2 and one `REFUSE:` line | subscription-proxy `launch-base-url-loopback`, `launch-no-bare`, `launch-no-bypass`; `test_the_runner_refuses_a_remote_url_bare_and_bypass` |
 | A3 | the preflight reads the status word: `exhausted` exits 4 with the retry instant, a 401 exits 3, an unknown answer exits 5, and the key never reaches curl's argv | subscription-proxy `launch-preflight-reads-status`; `test_the_preflight_reads_the_status_word` |
-| A4 | no settings file in the tree names an `apiKeyHelper` (the scan examines `agent/settings.json`) | `scripts/no-apikeyhelper-scan.py`; `test_no_settings_file_names_an_api_key_helper` |
+| A4 | no settings file in the tree names an `apiKeyHelper` (the scan examines `agent/settings.json`, which declares the settings `$schema` so the scan finds it) | the box run's apiKeyHelper scan (SPEC-056 R9); `test_no_settings_file_names_an_api_key_helper` |
 | A5 | every ai-content-safety row is green over `ai-safety.json`, none VOID | ai-content-safety, every row; `test_every_ai_content_safety_row_is_green` |
 | A6 | each red-team case (instruction override, fence breakout, exfiltration link) is withheld by the gate | ai-content-safety `redteam-present`; `every_redteam_case_is_withheld_by_the_gate` |
 | A7 | a run that reaches its turn cap is stopped and delivers nothing, and its verdict names `turn_cap` | `a_run_past_its_turn_cap_delivers_nothing` |
@@ -182,7 +182,7 @@ A14: cargo test -p deck-streak-agent --test runner -- --exact an_absent_route_re
 | `crates/agent/src/compose.rs` | `deck-streak-agent` | added: prompt composition |
 | `crates/agent/src/fence.rs` | `deck-streak-agent` | added: the untrusted fence and its encoding |
 | `crates/agent/src/runner.rs` | `deck-streak-agent` | added: the runner port and the process runner |
-| `crates/agent/src/gate.rs` | `deck-streak-agent` | added: the output gate over the vendored probes |
+| `crates/agent/src/gate.rs` | `deck-streak-agent` | added: the output gate over the box-run packs' probes |
 | `crates/agent/src/verdict.rs` | `deck-streak-agent` | added: the verdict and its closed causes |
 | `crates/agent/src/runs.rs` | `deck-streak-agent` | added: the `agent_runs` repository |
 | `crates/agent/src/rights.rs` | `deck-streak-agent` | added: the data-rights port |
@@ -195,7 +195,7 @@ A14: cargo test -p deck-streak-agent --test runner -- --exact an_absent_route_re
 | `crates/agent/tests/fixtures/` | `deck-streak-agent` | added: the fake runner and its canned replies |
 | `scripts/tests/test_ai_safety_rows.py` | repo | added |
 | `scripts/check.sh` | repo | changed: the python stage also discovers `agent/tests` |
-| `.packs/wiring.json` | repo | changed: ai-content-safety becomes `enforced` |
+| the box-run packs' private wiring (ADR-069) | the maintainer's | changed: ai-content-safety becomes `enforced` |
 | `docs/CONTEXT-MAP.md` | docs | changed: the ownership register gains `agent_runs` |
 | `privacy.json` | repo | changed: the agent-run category |
 | `.env.example` | repo | changed: the AI route setting, by name, unset |

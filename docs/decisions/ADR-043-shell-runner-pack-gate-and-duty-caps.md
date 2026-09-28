@@ -12,7 +12,7 @@ ADR-015 decided that the agent is headless Claude Code on the host, reaching the
 subscription proxy over a reverse tunnel with its own device key, fail closed; ADR-054 makes that
 route optional, with no-AI mode the default. Three things ADR-015 did not settle decide whether the
 proxy route holds in code. The subscription-proxy pack's reference runner cannot
-be vendored (it and its scanner name the maintainer's private secret), and its scanner reads a
+be copied into this public tree (it and its scanner name the maintainer's private secret), and its scanner reads a
 runner written in anything but shell as no launch at all. The packs' blocking classes, which the
 charter requires on every output before delivery, are standard-library Python probes. And the caps
 each run carries need values with a source.
@@ -29,9 +29,9 @@ each run carries need values with a source.
 
 ## Considered Options (the alternatives it was chosen against)
 
-- A shell runner of DeckStreak's own in `agent/run-headless.sh`, reading the device key at launch from its systemd credential (`$CREDENTIALS_DIRECTORY`, fed by ADR-038's socket) and passing it only in `claude`'s environment; the output gate running every class a task's gate names by spawning the vendored probes on the output; caps declared per duty with the reference defaults and the predecessor's per-topic deadline for the daily reading — chosen: the box scanner judges the launch, the packs remain the one definition of each check, every cap has a source, and the key is never read from the secret manager by the application.
+- A shell runner of DeckStreak's own in `agent/run-headless.sh`, reading the device key at launch from its systemd credential (`$CREDENTIALS_DIRECTORY`, fed by ADR-038's socket) and passing it only in `claude`'s environment; the output gate running every class a task's gate names by spawning the box-run packs' probes on the output, from a path the deploy supplies (ADR-069); caps declared per duty with the reference defaults and the predecessor's per-topic deadline for the daily reading — chosen: the box scanner judges the launch, the packs remain the one definition of each check, every cap has a source, and the key is never read from the secret manager by the application.
 - Spawn `claude` directly from Rust with no shell runner — rejected because the proxy client scanner reads it as no launch (VOID), so the credential, loopback and cap rows would judge nothing.
-- Copy the reference client and edit out the private secret's name — rejected because a vendored file must stay byte-identical to its source (ADR-004), and an edited copy is neither vendored nor ours.
+- Copy the reference client and edit out the private secret's name — rejected because an edited copy is neither the pack's nor ours, and the public tree carries no copy of a pack's files (ADR-069).
 - Re-implement the gate's classes in Rust — rejected because two copies of each of about twenty classes would drift from the packs, which the packs themselves forbid ("reuses them and never copies them").
 - Gate only in CI, over golden outputs — rejected because the text actually delivered each night would go unchecked.
 - Read the device key with `gcloud secrets versions access` in the runner, as this ADR first chose — rejected because ADR-038 keeps every secret-manager read in one helper outside the application: the runner would need the client and the grant, and the key's secret name would have to reach the unit.
@@ -64,9 +64,8 @@ deadline). The daily-reading task holds no tool.
 
 ### Confirmation
 
-SPEC-043's tests; `python3 scripts/no-apikeyhelper-scan.py --root .` in the gate's scrub stage; the
-subscription-proxy client rows run by `scripts/box-packs.sh`; the ai-content-safety rows over
-`ai-safety.json`.
+SPEC-043's tests; the box run's apiKeyHelper scan and the subscription-proxy client rows, both run
+by `scripts/box-packs.sh` (SPEC-056); the ai-content-safety rows over `ai-safety.json`.
 
 ## What would make this wrong
 

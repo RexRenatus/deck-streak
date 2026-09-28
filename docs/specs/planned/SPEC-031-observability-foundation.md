@@ -1,6 +1,6 @@
 # SPEC-031: every role logs one way, the API has an SLO with burn-rate pages, and every failure reaches the owner through one alert unit
 
-- **Wave:** W0. **Issue:** #24 (epic #1). **Context(s):** `deck-streak-daemon` (the roles' logging), `deploy` (the alert unit, the SLO evaluator, the memory watch, `deploy/slo.json`), `repo` (`.packs/wiring.json`).
+- **Wave:** W0. **Issue:** #24 (epic #1). **Context(s):** `deck-streak-daemon` (the roles' logging), `deploy` (the alert unit, the SLO evaluator, the memory watch, `deploy/slo.json`), the box-run packs' private wiring (ADR-069).
 - **Decided by:** ADR-003 (tracing JSON to journald), ADR-010 (`OnFailure=` the Telegram alert template unit), ADR-038 (credentials by `LoadCredential=` from the credential socket, superseding ADR-010's `LoadCredentialEncrypted=`), ADR-020 (the kernel's one logging setup), ADR-025 (the API's trace layer), ADR-032 (the budget of these units), and this SPEC's ADR-031 (an SLO sized for one owner's traffic, and an alert path that never puts the token on a command line).
 - **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
   `docs/specs/` with its tests and `docs/red-first/SPEC-031.md` (ADR-016).
@@ -10,7 +10,7 @@
 - **What exists at this SPEC's base.** The kernel's `logging::install` (SPEC-020), the API's trace
   layer with the matched route and request id (SPEC-025), and the unit templates with
   `OnFailure=deck-streak-alert@%n.service` naming a unit that does not exist yet (SPEC-032).
-  `.packs/wiring.json` holds observability pending on this issue, with seven rows (`obs.slo-declared`,
+  The box-run packs' wiring holds observability pending on this issue, with seven rows (`obs.slo-declared`,
   `obs.error-budget-policy`, `obs.burn-rate-alerts`, `obs.slo-measurable`, `obs.alert-route`,
   `obs.failure-alerts`, `obs.memory-watch`) deferred to it by SPEC-032.
 - **The predecessor's operations this carries** (predecessor `27ee2bc`, names only): logs as one JSON
@@ -64,8 +64,8 @@ R6. The three units carry the budget ADR-032 gives them and the hardening of SPE
     `LoadCredential=<id>:/run/deck-streak-credentials/socket` (ADR-038), never
     `LoadCredentialEncrypted=` or an `Environment=` value; `deploy/host-budget.json` gains their
     entries.
-R7. `.packs/wiring.json` moves observability to `enforced` and removes the seven deferrals SPEC-032
-    placed on it; every observability row is green over the tree.
+R7. The box-run packs' private wiring (ADR-069) moves observability to `enforced` and removes the
+    seven deferrals SPEC-032 placed on it; every observability row is green over the tree.
 
 ## 3. Acceptance criteria
 
@@ -111,7 +111,7 @@ on the child process. A5 feeds the evaluator a synthetic journal export; A6 a sy
 | `deploy/host-budget.json` | deploy | changed: the three units' entries |
 | `scripts/tests/test_slo_declaration.py`, `test_alert_unit.py`, `test_slo_evaluator.py`, `test_memory_watch.py` | repo | added: A2 to A7 |
 | `scripts/tests/fixtures/journal/`, `scripts/tests/fixtures/cgroup/` | repo | added: synthetic journal export and memory accounting |
-| `.packs/wiring.json` | repo | changed: observability enforced, SPEC-032's deferrals removed |
+| the box-run packs' private wiring (ADR-069) | the maintainer's | changed: observability enforced, SPEC-032's deferrals removed |
 | `docs/schematics/alert-and-slo-path.md` | repo | added |
 | `docs/decisions/ADR-031-an-slo-sized-for-one-owner.md` | repo | added |
 | `docs/red-first/SPEC-031.md` | repo | added |

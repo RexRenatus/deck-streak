@@ -19,7 +19,7 @@
   `settings_generation` (kernel, reset in place), `_sqlx_migrations` (kernel, exempt),
   `sync_runs` (ingest, exported and erased), `ingest_state` (ingest, reset in place), `cron_fires`
   (coordination, exempt). No engine runs the ports, no `privacy.json` exists, and the privacy-gdpr
-  pack is pending on this issue in `.packs/wiring.json`.
+  pack is pending on this issue in the box-run packs' wiring (ADR-069).
 - **What the pack demands once `privacy.json` exists** (the privacy-gdpr pack; every row runs, and
   a red one fails the gate): the inventory rows (`inventory-valid`, `schema-covered`,
   `retention-bounded`, `purpose-limited`), and also the rights, design and public rows over the
@@ -76,8 +76,9 @@ R7. `PRIVACY.md` gives one line per category naming its id, basis and retention;
 R8. `deckstreakd data export` writes the export to standard output; `deckstreakd data erase` erases
     only with `--confirm ERASE` (the predecessor's confirmation word) and refuses otherwise with code
     2.
-R9. `.packs/wiring.json` moves `privacy-gdpr` to `enforced`; `defaults-private`, whose subject is
-    the settings screen's default file, is listed under `deferred_rows` with that screen's issue.
+R9. The box-run packs' wiring, the maintainer's private file (ADR-069), moves `privacy-gdpr` to
+    `enforced`; `defaults-private`, whose subject is the settings screen's default file, is listed
+    under `deferred_rows` with that screen's issue.
 
 ## 3. Acceptance criteria
 
@@ -130,7 +131,7 @@ over a fully migrated temporary database.
 | `deploy/litestream.yml` | repo | added: template |
 | `deploy/journald.conf.d/deck-streak.conf` | repo | added: template |
 | `scripts/tests/test_privacy_policy.py` | repo | added: A9 |
-| `.packs/wiring.json` | repo | changed: privacy-gdpr enforced, one row deferred |
+| the box-run packs' private wiring (ADR-069) | the maintainer's | changed: privacy-gdpr enforced, one row deferred |
 | `docs/schematics/data-rights-export-and-erase.md` | repo | added |
 | `docs/red-first/SPEC-021.md` | repo | added |
 | `changelog.d/` fragment | repo | added |

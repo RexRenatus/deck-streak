@@ -13,7 +13,7 @@
   names, bios, the subjects run and every weak spot stay private; a persona reads its own subject's
   memory only, never the journal (constraint 18). There is no persona in the tree, so the
   persona-core, law-professors and language-mentors packs wait on this issue with every row VOID
-  (`.packs/wiring.json`).
+  (the box-run packs' wiring, ADR-069).
 - **What the packs fix.** persona-core's template schema (seven sections, four roster slots,
   `{{name}}`, `{{bio}}`, `{{voice}}` and `{{personality}}`), its output contract (`phx.persona.output.v1`,
   with `memory` as `<source>@<subject>` tokens), and its prompt order; law-professors' thirteen area
@@ -104,7 +104,7 @@ A8: cargo test -p deck-streak-agent --test persona -- --exact the_cefr_band_come
 | `crates/agent/tests/persona.rs` | `deck-streak-agent` | added |
 | `crates/agent/tests/memory.rs` | `deck-streak-agent` | added |
 | `scripts/tests/test_persona_rows.py` | repo | added |
-| `.packs/wiring.json` | repo | changed: persona-core, law-professors and language-mentors become `enforced` |
+| the box-run packs' private wiring (ADR-069) | the maintainer's | changed: persona-core, law-professors and language-mentors become `enforced` |
 | `privacy.json` | repo | changed: the roster's file name under `private` |
 | `Cargo.lock` | workspace | changed |
 | `docs/specs/SPEC-044-persona-engine-and-private-roster.md` | docs | moved from `docs/specs/planned/` |
