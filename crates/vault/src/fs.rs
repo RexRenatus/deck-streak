@@ -215,3 +215,19 @@ fn kind_of(file_type: fs::FileType) -> EntryKind {
         EntryKind::Other
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{RealFile, VaultFile};
+    use std::fs::OpenOptions;
+
+    #[test]
+    fn a_sync_the_system_refuses_is_reported() {
+        let file = OpenOptions::new()
+            .write(true)
+            .open("/dev/null")
+            .expect("the null device opens");
+        let mut real = RealFile(file);
+        assert!(real.sync().is_err(), "fsync on the null device is refused");
+    }
+}
