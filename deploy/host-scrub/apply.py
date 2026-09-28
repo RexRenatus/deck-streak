@@ -47,6 +47,7 @@ from inventory import (
     Usage,
     allowed,
     canonical,
+    file_digest,
     health_commands,
     inside_repository,
     load_json,
@@ -115,10 +116,12 @@ def linked_ancestor(path: str) -> str | None:
     return None
 
 
-def approved_items(listing: dict, approval_path: str) -> tuple[dict, list[dict]]:
+def approved_items(listing: dict, approval_path: str, rules_digest: str) -> tuple[dict, list[dict]]:
     """The approval and the items it names, or the refusal that stops the run (R5, R6)."""
     if listing.get("digest") != list_digest(listing):
         raise Refusal("the list changed after it was made: its digest does not match its content")
+    if listing.get("rules_digest") != rules_digest:
+        raise Refusal("these rules are not the ones the inventory read, which the list names")
     if not os.path.exists(approval_path):
         raise Refusal(f"no approval at {approval_path}")
     try:
@@ -262,10 +265,16 @@ def main(argv: list[str] | None = None) -> int:
         print(f"apply: {error}")
         return 2
     log = Log(args.log, "apply" if args.apply else "dry", listing)
-    runner = Runner(allow=admitted)
+    # The health checks are read commands of the inventory's allow list; the changing commands
+    # the apply admits are a listed package's, and run for its items alone (R6, R9).
+    reads, runner = Runner(), Runner(allow=admitted)
     try:
-        runner.check(health_commands(rules["health"]))
-        approval, items = approved_items(listing, args.approval)
+        try:
+            reads.check(health_commands(rules["health"]))
+        except Refused as refused:
+            reason = f"the health check `{refused}` is not on the read-only allow list"
+            raise Refusal(reason) from refused
+        approval, items = approved_items(listing, args.approval, file_digest(args.rules))
         for item in items:
             check_item(item, rules["protected"], runner)
     except (Refusal, Refused) as refusal:
@@ -282,7 +291,7 @@ def main(argv: list[str] | None = None) -> int:
             "nothing was deleted (give --apply to delete)"
         )
         return 0
-    before = read_health(rules["health"], runner)
+    before = read_health(rules["health"], reads)
     log.write(health_before=before)
     deleted = []
     for item in items:
@@ -291,13 +300,13 @@ def main(argv: list[str] | None = None) -> int:
         except OSError as error:
             log.write(failed={"id": item["id"], "error": str(error)})
             print(f"apply: stopped: {item['id']} ({target(item)}) could not be deleted: {error}")
-            after = read_health(rules["health"], runner)
+            after = read_health(rules["health"], reads)
             log.write(health_after=after, red=[c["id"] for c in after if not c["green"]])
             return 3
         deleted.append(entry(item))
         log.write(deleted=deleted)
         print(f"apply: deleted {item['id']} ({target(item)}), {item['bytes']} bytes")
-    after = read_health(rules["health"], runner)
+    after = read_health(rules["health"], reads)
     green_before = {check["id"] for check in before if check["green"]}
     red = [check["id"] for check in after if not check["green"]]
     turned = [check_id for check_id in red if check_id in green_before]
