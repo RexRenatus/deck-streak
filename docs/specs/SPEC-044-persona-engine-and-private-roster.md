@@ -6,7 +6,7 @@
   ADR-044 (the roster file, the topic binding, the band fallback, and memory read through a
   subject-scoped reader).
 - **Status:** judged: delivered with its tests, its hand-proved rows and `docs/red-first/SPEC-044.md`
-  (ADR-016). The delivery made R1 to R3, R5, R8 and R9 exact where the code decided them (§7).
+  (ADR-016). The delivery made R1 to R3, R5 and R7 to R10 exact where the code decided them (§7).
 
 ## 1. The problem, measured
 
