@@ -5,8 +5,9 @@
 - **Decided by:** ADR-055 (the gate's stages, whose audit it split into `audit-rust` and
   `audit-web`), with its note of 2026-09-28, which decides the dependency classes the web audit
   judges, its level, and how its verdict is read from pnpm's report.
-- **Status:** planned: written by the delivery that builds it, because it had no planned copy. The
-  delivery moves it to `docs/specs/` with its tests and `docs/red-first/SPEC-058.md` (ADR-016).
+- **Status:** judged: written at delivery, because it had no planned copy, and delivered with its
+  tests and `docs/red-first/SPEC-058.md` (ADR-016). It waited in `docs/specs/planned/` from its own
+  commit until its tests were green.
 
 ## 1. The problem, measured
 
@@ -80,7 +81,7 @@ R5. SPEC-038 takes an insert-only amendment (its section 10) at R4 and R5, where
 |---|---|---|
 | A1 | the stage's one pnpm call audits every dependency class at the stated level: `audit --json --audit-level low`, with no flag that narrows the classes | `test_audit_web.py` `the_web_audit_covers_the_development_dependencies_too` |
 | A2 | a report that examined 0 packages reads VOID and the stage exits non-zero; so does a run that gave no report: a text that is not JSON, a report with no count, and a count that is not a whole number | `test_audit_web.py` `a_web_audit_that_examined_nothing_is_void` |
-| A3 | an advisory at or above the level fails the stage and is named, whatever pnpm's exit; an advisory of no known grade fails too, and one below the level does not; a pnpm that exited non-zero never passes | `test_audit_web.py` `an_advisory_at_the_failing_level_fails_the_web_audit` |
+| A3 | an advisory at or above the level fails the stage and is named, whatever pnpm's exit; an advisory of no known grade fails too, and one below the level does not; a pnpm that exited non-zero never passes; the verdict judges at each level `--audit-level` takes, and refuses one it does not | `test_audit_web.py` `an_advisory_at_the_failing_level_fails_the_web_audit` |
 | A4 | a clean report passes, and the verdict line names how many packages were examined, in each class | `test_audit_web.py` `a_clean_web_audit_passes_and_prints_its_examined_count` |
 | A5 | the stage fails by name without each tool it runs, python3 among them | `test_check_gate.py` `every_stage_fails_by_name_without_each_tool_it_runs` |
 
@@ -95,9 +96,10 @@ A5: python3 -m unittest discover -s scripts/tests -p test_check_gate.py -k every
 A1 to A4 run `check.sh`'s `audit-web` stage as SPEC-038's A5 does: a `PATH` of the shell tools
 `check.sh` needs, a `node` stub, the real `python3` and `cat`, and a `pnpm` stub that records the
 arguments it is given, prints a planted report and exits with a planted code. They make no registry
-query. Their reports are synthetic, with planted package names and advisory ids. A5 grows
-SPEC-038's table `TOOLS` in `test_check_gate.py` by one entry, `python3` after `pnpm` for
-`audit-web`, and changes no assertion (SPEC-038 section 10).
+query. Their reports are synthetic, with planted package names and advisory ids. A3 also runs the
+verdict itself at each of the four levels, over one report holding an advisory of each grade, and
+with a level or an option it refuses. A5 grows SPEC-038's table `TOOLS` in `test_check_gate.py` by
+one entry, `python3` after `pnpm` for `audit-web`, and changes no assertion (SPEC-038 section 10).
 
 ## 4. File manifest
 
@@ -143,5 +145,25 @@ SPEC-038's table `TOOLS` in `test_check_gate.py` by one entry, `python3` after `
 
 ## 7. Measurements
 
-Recorded by the delivery: the stage on the real tree before and after `dev` with #259 is merged in,
-each with its examined count, and the pull request's `web` job.
+The stage on the real tree, `bash scripts/check.sh audit-web` with pnpm 11.27.1, before and after
+`dev` with #259 was merged in:
+
+| tree | the stage | its verdict line |
+|---|---|---|
+| 4ad713c, the last commit on `dev` 16ed8e2's lockfile, run from a `git archive` export | `FAILED`, exit 1 | `audit-web: examined 428 package(s) (dependencies 0, devDependencies 428, optionalDependencies 87), advisories at or above low: 4` |
+| 355bbb7, `dev` c3d769b merged in, which holds #259's overrides | `ok` | `audit-web: examined 428 package(s) (dependencies 0, devDependencies 428, optionalDependencies 87), advisories at or above low: 0` |
+
+On the first, the stage named each of the four advisories on a line of its own before its verdict:
+the advisories #254 and #255 track, which #259 fixes. Both runs examined the same 428 packages,
+because #259 moves two versions and adds none.
+
+## 8. Amendments at delivery
+
+- **A2 and A3 grew after the green,** from reading the verdict's mutants (4ad713c). A2 gained a
+  registry error after a blank line; A3 gained an advisory found at two versions, one with no
+  findings, the verdict run at each of the four levels over one advisory of each grade, and its
+  usage errors. Each kills a mutant the first cases left alive, and each was green on arrival; the
+  red-first record names them.
+- **The verdict reads an advisory's fields directly** (c4f16f9). pnpm writes every advisory as an
+  object, so the guards that read a malformed one were dropped: a malformed advisory stops the
+  verdict with a traceback, and the stage fails with it.
