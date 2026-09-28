@@ -1,5 +1,7 @@
 //! SPEC-059: the owner's `/sync` is a request for the sync job, never a cycle in the bot.
 
+#![allow(clippy::expect_used)]
+
 use std::collections::VecDeque;
 use std::future::Future;
 use std::io;
@@ -50,26 +52,23 @@ impl Script {
         }
     }
     fn polls(&self) -> usize {
-        *self.polls.lock().unwrap()
+        *self.polls.lock().expect("the lock is not poisoned")
     }
 }
 
 impl RequestLedger for Script {
-    fn request(&self, _at: UtcMillis) -> impl Future<Output = Result<(), KernelError>> + Send {
-        async { Ok(()) }
+    async fn request(&self, _at: UtcMillis) -> Result<(), KernelError> {
+        Ok(())
     }
-    fn progress(
-        &self,
-        _since: UtcMillis,
-    ) -> impl Future<Output = Result<Progress, KernelError>> + Send {
-        *self.polls.lock().unwrap() += 1;
+    async fn progress(&self, _since: UtcMillis) -> Result<Progress, KernelError> {
+        *self.polls.lock().expect("the poll count locks") += 1;
         let next = self
             .steps
             .lock()
-            .unwrap()
+            .expect("the script locks")
             .pop_front()
             .unwrap_or(Progress::Waiting);
-        async move { Ok(next) }
+        Ok(next)
     }
 }
 
@@ -89,7 +88,7 @@ impl Bell {
         }
     }
     fn rings(&self) -> Vec<i64> {
-        self.rings.lock().unwrap().clone()
+        self.rings.lock().expect("the lock is not poisoned").clone()
     }
 }
 
@@ -100,7 +99,7 @@ impl Doorbell for Bell {
         }
         self.rings
             .lock()
-            .unwrap()
+            .expect("the ring is recorded")
             .push(self.clock.now().epoch_millis());
         Ok(())
     }

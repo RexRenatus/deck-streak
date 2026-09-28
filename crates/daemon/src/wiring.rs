@@ -275,7 +275,7 @@ fn answer_of(report: &CycleReport) -> SyncAnswer {
 mod tests {
     use std::sync::Arc;
 
-    use deck_streak_bot::{ApiUrl, OwnerSync, Scores, Sent, SyncOutcome, SyncRefusal, Transport};
+    use deck_streak_bot::{ApiUrl, Scores, Sent, SyncOutcome, SyncRefusal, Transport};
     use deck_streak_coordination::delivery::{DeliveryCounts, DeliveryMarker};
     use deck_streak_coordination::sync_cycle::{CycleError, CycleReport, Recompute};
     use deck_streak_ingest::gate::RunReason;
