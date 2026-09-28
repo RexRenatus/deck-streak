@@ -5,6 +5,8 @@
 //! later than the end (the policy's 23:00 to 07:30), and a start equal to its end disables it. The
 //! golden `in_quiet_hours.json` holds the port to the predecessor's own answers (A8).
 
+use std::cmp::Ordering;
+
 use deck_streak_kernel::{UtcMillis, UtcOffset};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
@@ -19,14 +21,11 @@ const MINUTE_MS: i64 = 60_000;
 /// first, so a minute before 0 or past the day's last names a minute of the day before or after.
 #[must_use]
 pub fn in_quiet_hours(local_minutes: i64, start_min: i64, end_min: i64) -> bool {
-    if start_min == end_min {
-        return false;
-    }
     let minute = local_minutes.rem_euclid(MINUTES_PER_DAY);
-    if start_min < end_min {
-        start_min <= minute && minute < end_min
-    } else {
-        minute >= start_min || minute < end_min
+    match start_min.cmp(&end_min) {
+        Ordering::Equal => false,
+        Ordering::Less => start_min <= minute && minute < end_min,
+        Ordering::Greater => minute >= start_min || minute < end_min,
     }
 }
 

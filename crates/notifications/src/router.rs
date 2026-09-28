@@ -591,7 +591,6 @@ impl Router {
         let tries = row.tries + 1;
         ledger::relatch(write, row.id, tries).await?;
         let row = HeldRow {
-            tries,
             hold: Hold::Send.as_str().to_owned(),
             ..row.clone()
         };
