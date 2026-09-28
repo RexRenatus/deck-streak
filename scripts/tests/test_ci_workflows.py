@@ -134,6 +134,7 @@ class WorkflowsAreHardened(unittest.TestCase):
                 "key-the-reader-refuses.yml:line 20: a key that is not a plain name is not read",
                 "key-the-reader-refuses.yml:line 22: a key that is not a plain name is not read",
                 "key-the-reader-refuses.yml:line 25: a key that is not a plain name is not read",
+                "key-the-reader-refuses.yml:line 31: a key that is not a plain name is not read",
                 "run-by-alias.yml:line 17: an anchor, alias or tag is not read",
                 "run-by-alias.yml:line 19: an anchor, alias or tag is not read",
                 "secret-in-a-form-the-reader-refuses.yml:line 20: a quoted value that does not end "
@@ -143,6 +144,10 @@ class WorkflowsAreHardened(unittest.TestCase):
                 "secret-in-a-form-the-reader-refuses.yml:line 25: a flow list whose items are not "
                 "plain is not read",
                 "secret-in-a-form-the-reader-refuses.yml:line 28: a flow mapping is not read",
+                "secret-in-a-form-the-reader-refuses.yml:line 32: a flow list whose items are not "
+                "plain is not read",
+                "secret-in-a-form-the-reader-refuses.yml:line 33: a flow list whose items are not "
+                "plain is not read",
                 "secret-in-a-larger-expression.yml:jobs.build.steps[0].env.EITHER: reads the "
                 "secret EXAMPLE_TOKEN",
                 "secret-in-a-larger-expression.yml:jobs.build.steps[0].env.FORMATTED: reads the "
