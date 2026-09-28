@@ -615,6 +615,12 @@ fn a_dedupe_key_is_an_opaque_token_that_holds_no_calendar_date() {
         "1899-01-01",
         "2100-01-01",
         "2025-1-15",
+        "20ab0101",
+        "1a.2.25",
+        "1.2x25",
+        "1x2.34",
+        "x.2.34",
+        "x.x.34",
         longest.as_str(),
     ];
     let dates = [
@@ -626,6 +632,7 @@ fn a_dedupe_key_is_an_opaque_token_that_holds_no_calendar_date() {
         "level:12.1.2025",
         "1.12.99",
         "12.1.09",
+        "notes:2025-01-15",
     ];
     let not_tokens = [
         "",
