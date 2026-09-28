@@ -714,7 +714,7 @@ async fn the_golden_readings_open_with_the_frontmatter_the_engine_writes() {
     let professor = roster
         .persona(&topic("synthetic/law-topic"), Duty::DailyReading)
         .expect("the professor");
-    let ports = MemoryPorts::none()
+    let ports = MemoryPorts::default()
         .wired(MemorySource::Leeches, Arc::new(FakeSource))
         .wired(MemorySource::Lapses, Arc::new(FakeSource));
     let mut reader = MemoryReader::new(&professor, &ports);
@@ -730,7 +730,7 @@ async fn the_golden_readings_open_with_the_frontmatter_the_engine_writes() {
     let mentor = roster
         .persona(&topic("synthetic/language-topic"), Duty::DailyReading)
         .expect("the mentor");
-    let none = MemoryPorts::none();
+    let none = MemoryPorts::default();
     let mut empty = MemoryReader::new(&mentor, &none);
     empty.read_declared().await.expect("nothing to read");
     let band = resolve_band(&mentor, None)

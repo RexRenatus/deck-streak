@@ -27,6 +27,24 @@
         "    Ok(persona.band().or(answered))",
         "persona::the_cefr_band_comes_from_the_live_band_before_the_roster",
         "a language output's band is the live band when its port answers one, and the roster's band otherwise (SPEC-044 R8, A8)"
+      ],
+      [
+        "S04404-A-SLOT-IS-ONE-LINE-OF-PLAIN-TEXT",
+        "agent",
+        "src/persona.rs",
+        "            if value.chars().any(char::is_control) || value.contains(\"{{\") || value.contains(\"}}\") {",
+        "            if value.contains(\"{{\") || value.contains(\"}}\") {",
+        "persona::a_slot_that_is_not_one_line_of_plain_text_is_refused",
+        "a roster slot with a line break is refused, so no slot can open a section of its own in the persona (SPEC-044 R3); cargo-mutants never looks inside Slots::new"
+      ],
+      [
+        "S04405-ONLY-A-LANGUAGE-OUTPUT-CARRIES-A-BAND",
+        "agent",
+        "src/output.rs",
+        "        let language = persona.subject().kind() == SubjectKind::Language;",
+        "        let language = true;",
+        "persona::the_cefr_band_comes_from_the_live_band_before_the_roster",
+        "only a language output carries a cefr band, as persona-core's output contract requires (SPEC-044 R6, A8); cargo-mutants never looks inside Frontmatter::new"
       ]
     ]
   }

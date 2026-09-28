@@ -143,19 +143,13 @@ pub trait LiveBand: Send + Sync {
     fn band<'a>(&'a self, subject: &'a Subject) -> PortFuture<'a, Option<CefrBand>>;
 }
 
-/// The wired memory sources. None is wired by default, and then a persona reads nothing (R7).
+/// The wired memory sources. The default wires none, and then a persona reads nothing (R7).
 #[derive(Clone, Default)]
 pub struct MemoryPorts {
     ports: BTreeMap<MemorySource, Arc<dyn MemoryPort>>,
 }
 
 impl MemoryPorts {
-    /// No source wired.
-    #[must_use]
-    pub fn none() -> Self {
-        Self::default()
-    }
-
     /// These ports, with `port` serving `source`.
     #[must_use]
     pub fn wired(mut self, source: MemorySource, port: Arc<dyn MemoryPort>) -> Self {

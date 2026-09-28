@@ -106,7 +106,7 @@ async fn the_declared_memory_equals_the_reads_made() {
     let persona = professor();
     let leeches = FakeSource::new(&["a synthetic leech: an invented card"]);
     let lapses = FakeSource::new(&["a synthetic lapse"]);
-    let ports = MemoryPorts::none()
+    let ports = MemoryPorts::default()
         .wired(MemorySource::Leeches, leeches.clone())
         .wired(MemorySource::Lapses, lapses.clone());
     let mut reader = MemoryReader::new(&persona, &ports);
@@ -141,7 +141,7 @@ async fn the_declared_memory_equals_the_reads_made() {
     let again = Frontmatter::new(&persona, None, reader.reads()).render();
     assert_eq!(declared(&again), made);
     // With no source wired, nothing is read and the output declares exactly that.
-    let none = MemoryPorts::none();
+    let none = MemoryPorts::default();
     let mut empty = MemoryReader::new(&persona, &none);
     let nothing = empty.read_declared().await.expect("nothing to read");
     assert_eq!(nothing.len(), 0);
@@ -154,7 +154,7 @@ async fn the_declared_memory_equals_the_reads_made() {
 async fn a_read_of_another_subjects_memory_is_refused() {
     let persona = professor();
     let leeches = FakeSource::new(&["a synthetic leech"]);
-    let ports = MemoryPorts::none().wired(MemorySource::Leeches, leeches.clone());
+    let ports = MemoryPorts::default().wired(MemorySource::Leeches, leeches.clone());
     let mut reader = MemoryReader::new(&persona, &ports);
     let other = Subject::parse("language/es").expect("another subject");
     let refused = reader.read(MemorySource::Leeches, &other).await;
@@ -203,7 +203,7 @@ async fn a_source_the_template_does_not_declare_is_refused() {
     let persona = persona_of(&narrow);
     assert_eq!(persona.memory(), [MemorySource::Leeches]);
     let lapses = FakeSource::new(&["a synthetic lapse"]);
-    let ports = MemoryPorts::none().wired(MemorySource::Lapses, lapses.clone());
+    let ports = MemoryPorts::default().wired(MemorySource::Lapses, lapses.clone());
     let mut reader = MemoryReader::new(&persona, &ports);
     assert_eq!(reader.subject().as_str(), "law/evidence");
     let refused = reader.read(MemorySource::Lapses, persona.subject()).await;
@@ -222,7 +222,7 @@ async fn a_source_the_template_does_not_declare_is_refused() {
 async fn a_source_that_fails_records_no_read() {
     let persona = professor();
     let lapses = FakeSource::new(&["a synthetic lapse"]);
-    let ports = MemoryPorts::none()
+    let ports = MemoryPorts::default()
         .wired(MemorySource::Leeches, Arc::new(FailingSource))
         .wired(MemorySource::Lapses, lapses.clone());
     let mut reader = MemoryReader::new(&persona, &ports);
