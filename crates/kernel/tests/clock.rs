@@ -1,7 +1,7 @@
 //! A manual clock carries the study day across the rollover, and never across midnight, without
 //! sleeping (SPEC-020 A9).
 
-use std::time::Duration;
+use std::time::{Duration, UNIX_EPOCH};
 
 use deck_streak_kernel::{Clock, Hour, ManualClock, StudyDayRule, UtcMillis, UtcOffset};
 
@@ -49,4 +49,10 @@ fn a_manual_clock_carries_a_study_day_across_the_rollover_without_sleeping() {
     clock.set(evening);
     assert_eq!(clock.now(), evening);
     assert_eq!(rule.study_day(clock.now()), studied);
+}
+
+#[test]
+fn a_system_time_after_the_epoch_reads_as_its_milliseconds() {
+    let time = UNIX_EPOCH + Duration::from_millis(1_234);
+    assert_eq!(UtcMillis::from_system_time(time).epoch_millis(), 1_234);
 }
