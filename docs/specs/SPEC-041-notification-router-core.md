@@ -220,17 +220,17 @@ the verdict of a run with that wiring is posted as the `box/packs` status at the
   not requests, statements or what the compiler resolves, so these go unread (#297):
   - a request whose method's name is assembled from parts: outside the bot's sources on a base URL
     read through `ApiUrl::as_str`, and inside them beside the Bot API's host or on
-    `DEFAULT_API_URL`;
+    `DEFAULT_API_URL` (#297);
   - a statement whose table's name is assembled from parts, by `format!` or `concat!`, and a source
-    that `include!` pulls in from a file of a kind the census does not read;
-  - a source of a kind the census does not read, such as SQL;
-  - a symlink, which the walker neither reads nor follows;
+    that `include!` pulls in from a file of a kind the census does not read (#297);
+  - a source of a kind the census does not read, such as SQL (#297);
+  - a symlink, which the walker neither reads nor follows (#297);
   - a test file, or a file in a test directory outside a `src/`, that a shipped crate pulls in by
-    `#[path]` (outside the notifications crate) or a unit runs;
+    `#[path]` (outside the notifications crate) or a unit runs (#297);
   - a re-export under another name from one of the router's modules other than by a `pub use`, and
     a `pub` wrapper: a function, a macro or a constant that hands out a write to the feed or the
     held queue, or a table's name, under a name the census does not hold, or a reply of the bot's
-    command handler made `pub` and called from outside the handler's module.
+    command handler made `pub` and called from outside the handler's module (#297).
 
 ## 6. Risks
 
