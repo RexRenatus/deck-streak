@@ -1,6 +1,6 @@
 # Schematic: the first deploy, gate by gate
 
-Kind: sequence and data flow. Read at DeckStreak `dev` 16ed8e2, with this change's own edits of
+Kind: sequence and data flow. Read at DeckStreak `dev` c3621a4, with this change's own edits of
 SPEC-053, ADR-053 and RELEASING.md. It draws W2's six units (SPEC-060 to SPEC-065) in the order they
 run, every owner gate they wait for, the rehearsal each gate sees before it says go, and the
 rollback of every change. The exact commands, names, paths and the private rail's lists are in the
@@ -14,7 +14,7 @@ maintainer's private gate packet; this page names each step only. What each step
 | credentials | the seven rehearsal proofs on the host | `docs/decisions/ADR-038-credentials-come-from-the-secret-manager-at-unit-start.md:86-94` |
 | the grant | the host's grant, on each named secret only, decided at gate 2 | `docs/decisions/ADR-038-credentials-come-from-the-secret-manager-at-unit-start.md:64` |
 | the Caddy block | one site block, the API on loopback | `docs/decisions/ADR-007-hosting-and-https-behind-a-caddy-site-block.md:31-38` |
-| the Caddy template | its placeholders and headers | `docs/specs/SPEC-032-deploy-templates.md:63-72` |
+| the Caddy template | its placeholders and headers | `docs/specs/SPEC-032-deploy-templates.md:62-71` |
 | the neutral values | the rail replaces them at deploy | `docs/decisions/ADR-032-deploy-templates-and-the-host-budget.md:30` |
 | the deploy | tag on `main`, digests, side by side, `current`, readiness | `RELEASING.md:63-74` |
 | the tunnel and the key | owner gates 3 and 2 | `docs/decisions/ADR-015-ai-agent-runtime-and-proxy-reach.md:42-43` |
@@ -22,8 +22,8 @@ maintainer's private gate packet; this page names each step only. What each step
 | one writer | the vault archive switch stays off until the owner's go makes DeckStreak the readings folder's one writer; SPEC-053 R8 cites ADR-065, which decides how | `docs/decisions/ADR-053-readings-slots-settle-after-sync-and-one-writer.md:49-51`, `docs/specs/planned/SPEC-053-readings-jobs.md:80-84` |
 | the folder | the adapter refuses a missing or unwritable readings folder and never creates it | `docs/specs/SPEC-042-vault-adapter-core-and-readings-date-tree.md:40-44` |
 | the replica | Litestream 0.5, 24 h interval, 48 h retention, inside `P3D` | `docs/specs/SPEC-021-data-rights-export-and-erase.md:67-69` |
-| the drill's debt | the restore drill proves the replica | `docs/specs/SPEC-027-scheduler-and-cron-fire-ledger.md:225-227` |
-| the disk's debt | the headroom a full download needs is the inventory's to measure | `docs/specs/SPEC-022-ingest-sync-engine-spike-and-sync.md:257-259` |
+| the drill's debt | the restore drill proves the replica | `docs/specs/SPEC-027-scheduler-and-cron-fire-ledger.md:222-223` |
+| the disk's debt | the headroom a full download needs is the inventory's to measure | `docs/specs/SPEC-022-ingest-sync-engine-spike-and-sync.md:258-260` |
 | the runner's live proof | the agent's path is the runner's live proof | `docs/decisions/ADR-043-shell-runner-pack-gate-and-duty-caps.md:58-59` |
 
 ## 1. The order of W2
