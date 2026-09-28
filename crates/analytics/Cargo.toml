@@ -14,3 +14,15 @@ workspace = true
 [dependencies]
 deck-streak-kernel.workspace = true
 deck-streak-ingest.workspace = true
+# SPEC-071 section 4: the rollup's queries run through the kernel's Db and are checked into .sqlx/;
+# the data-rights port's rows are JSON values.
+serde_json.workspace = true
+sqlx.workspace = true
+
+# The parity oracle's golden reader, compiled into this crate's tests by path (ADR-029), and the
+# store's tests over a temporary database on tokio's runtime (SPEC-029 R8). Test support only.
+[dev-dependencies]
+serde.workspace = true
+serde_json.workspace = true
+tempfile.workspace = true
+tokio = { workspace = true, features = ["macros", "rt"] }

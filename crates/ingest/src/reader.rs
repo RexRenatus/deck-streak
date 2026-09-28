@@ -17,7 +17,9 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::future::Future;
 use std::path::PathBuf;
 
-use deck_streak_kernel::{Db, ForeignDb, KernelError, Offload, Track, UtcMillis};
+use deck_streak_kernel::{
+    CourseCode, Courses, Db, ForeignDb, KernelError, Offload, Track, UtcMillis,
+};
 use sqlx::AssertSqlSafe;
 use tokio::runtime::Handle;
 
@@ -101,6 +103,9 @@ pub struct Card {
     pub lapses: i64,
     /// The card's track, from its home deck's top-level name (R3).
     pub track: Track,
+    /// The card's course: the course whose deck root is its home deck's top-level name, or none
+    /// (SPEC-071 R2). Only the code travels with the card.
+    pub course: Option<CourseCode>,
 }
 
 impl Card {
@@ -152,6 +157,16 @@ pub fn allowed_deck_ids(deck_names: &BTreeMap<i64, String>, prefixes: &[String])
         .collect()
 }
 
+/// The course of a card whose home deck is named `name` (SPEC-071 R2): the course whose deck root
+/// EQUALS the name's top-level name, never one it only starts with (the predecessor's
+/// `progress.py:language_of`), or none. The read's scope matches by prefix (R2 above); a course never
+/// does, so a deck in scope can belong to no course.
+#[must_use]
+pub fn course_of(courses: &Courses, name: &str) -> Option<CourseCode> {
+    let _ = (courses, name);
+    None
+}
+
 /// Whether a revlog row of type `kind` answered with `ease` is a study event (R2): a learn,
 /// review, relearn or filtered answer of ease 1 or more, and never a manual or rescheduling entry
 /// (the predecessor's `types.py:Review.is_study_event`).
@@ -191,6 +206,7 @@ pub struct CollectionReader {
     lock: CollectionLock,
     offload: Offload,
     scope: ScopeSettings,
+    courses: Courses,
 }
 
 impl CollectionReader {
@@ -204,7 +220,22 @@ impl CollectionReader {
             lock: CollectionLock::new(settings.lock_path()),
             offload,
             scope,
+            courses: Courses::default(),
         }
+    }
+
+    /// This reader, giving each card it reads its course from `courses` (SPEC-071 R2), which the
+    /// kernel loaded once at start.
+    #[must_use]
+    pub fn with_courses(mut self, courses: Courses) -> Self {
+        self.courses = courses;
+        self
+    }
+
+    /// The courses this reader gives each card its course from.
+    #[must_use]
+    pub const fn courses(&self) -> &Courses {
+        &self.courses
     }
 
     /// The scope this reader reads inside.
@@ -223,6 +254,7 @@ impl CollectionReader {
     pub async fn read(&self, floor: i64) -> Result<CollectionData, ReadError> {
         let prefixes = self.scope.include().prefixes().to_vec();
         let law_root = self.scope.law_root().map(str::to_owned);
+        let courses = self.courses.clone();
         self.with_copy("read_collection", move |copy| async move {
             let deck_names = deck_names(&copy).await?;
             let scope = scope_ids(&allowed_deck_ids(&deck_names, &prefixes));
@@ -241,10 +273,8 @@ impl CollectionReader {
                 .fetch_optional(copy.reader())
                 .await
                 .map_err(read_failed)?;
-            let track = |home: i64| {
-                let name = deck_names.get(&home).map_or("", String::as_str);
-                track_of(top_level(name), law_root.as_deref())
-            };
+            let name_of = |home: i64| deck_names.get(&home).map_or("", String::as_str);
+            let track = |home: i64| track_of(top_level(name_of(home)), law_root.as_deref());
             let cards = cards
                 .into_iter()
                 .map(|row| {
@@ -263,8 +293,10 @@ impl CollectionReader {
                         reps: row.9,
                         lapses: row.10,
                         track: Track::Language,
+                        course: None,
                     };
                     card.track = track(card.home_deck_id());
+                    card.course = course_of(&courses, name_of(card.home_deck_id()));
                     card
                 })
                 .collect();
