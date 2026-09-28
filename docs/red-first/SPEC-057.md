@@ -53,7 +53,7 @@ A14: green at 621842f
 A15: red at e43dae8: AssertionError: 'scripts/mutation-equivalent.d/<package>.json' not found (the brief's mutation section taught the exclusion form)
 A15: green at 5c4d6b6
 A16: red at bfae431: AssertionError: 225 != 0 : deck-streak-vault: 225 unexplained mutant(s) in its row (the opening sweep, run 36438243392 at 5767fbe, read listed 939, killed 647, equivalent 0, unexplained 225, unviable 67)
-A16: green at 18cff1c
+A16: green at 0227889
 A28: red at e260627: AssertionError in each of its four subtests, each for its own reason: 'True is not false : the rust class applies on test lines [31, 36, 43, 47, 53]' (the test-only diff); 'Lists differ: [46, 58] != [58]' (the mixed diff counted its test module's line as production code); "'mutation: plan: rust applies: 3 production code line(s) in 1 file(s)' not found" (the production-only diff's plan named no production line); and '3 != 0 : mutation: shards: VOID the rust class applies and ... holds no cargo-mutants listing' (cargo-mutants' empty --in-diff output read as no listing)
 A28: green at 8c87e5b
 ```
@@ -70,7 +70,7 @@ A28: green at 8c87e5b
 | R14 | a scoped dispatch sweeping the whole workspace, owing a report from a shard its scope gave no mutant, or ending without its table line | A11 |
 | R17 | the brief, the configurations' comments or the drafts teaching an exclusion | A15 |
 | R18 | a squash merge's push judged again, the title's issue read as the pull request; a lock only `--locked` accepts passing the gate | A13, A14 |
-| R22 | a line inside a `#[cfg(test)]` module read as production code, so a test-only diff reads VOID; a test line counted beside a production line; a `cfg(not(test))` function, or a brace or test mark inside a literal or a comment, read as a test item; cargo-mutants' empty listing read as a missing one, or as not-applicable | A28 |
+| R22 | a line inside a `#[cfg(test)]` module read as production code, so a test-only diff reads VOID; a test line counted beside a production line; a `cfg(not(test))` function, or a brace or test mark inside a literal or a comment, read as a test item; a line that holds a test item's closing brace and production code read as test-only; cargo-mutants' empty listing read as a missing one, or as not-applicable | A28 |
 
 A16 is the vault's row of section 7. Its opening sweep, the weekly battery dispatched with
 `package=deck-streak-vault` at 5767fbe (run 36438243392), reported every one of its 32 shards whole
@@ -78,16 +78,16 @@ and tested every listed vault mutant; its `table` line became the row, committed
 (bfae431), which reads red on the 225 unexplained mutants. It turns green at the commit that carries
 the closing sweep's row.
 
-Its closing sweep, the battery dispatched with `package=deck-streak-vault` at 8b18276 (run
-36461589655), came after every kill and record of the vault's delivery: 138 of `rails.rs`'s
+Its first closing sweep, the battery dispatched with `package=deck-streak-vault` at 8b18276 (run
+36461589655), came after the delivery's first kills and records: 138 of `rails.rs`'s
 unexplained mutants killed and 11 recorded (9dbdc70), and the other six files' 69 killed and 7
 recorded (8b18276). Every one of its 32 shards reported whole: 16 exited 0, 13 exited 2 on missed
 mutants, and 3 exited 3, each on one `rails.rs` mutant that ran to the tool's timeout, which counts
-killed; the 18 missed mutants, in 14 shards, are the fragment's 18 records. The battery counted 33
-of 33 reports whole, and its table read `listed 939, killed 854, equivalent 18, unexplained 0,
-unviable 67`.
-That line is the row committed at 18cff1c, where A16's test, re-run from a `git archive` export of
-that sha, passes.
+killed; the 18 missed mutants, in 14 shards, are the 18 records the fragment then held. The battery
+counted 33 of 33 reports whole, and its table read `listed 939, killed 854, equivalent 18,
+unexplained 0, unviable 67`.
+That line was the row committed at 18cff1c, where A16's test, re-run from a `git archive` export
+of that sha, passed. The fix round below refilled the row from a second closing sweep.
 
 ## The vault's delivery: the third rider (A28)
 
@@ -108,3 +108,42 @@ The fix was also read against the tool's own listing of the whole tree. The list
 `crates/*/src`, and none of them lies on any of the 662 lines the fixed plan reads as test-only,
 in the 11 files that hold a `#[cfg(test)]` module; each of those modules reads test-only whole,
 from its attribute to its closing brace.
+
+## The vault's delivery: its first fix round (seven records, the second closing sweep, S05709)
+
+The first verification found seven of the 18 records short of the record's bar, that no test can
+tell the mutant apart (R5): each argued from the function's callers, while a unit test in `src`
+observes the function itself. They were `rails.rs` 563:38 (`+` to `*` and to `-` in `tag_at`),
+622:21 (`>` to `>=` in `attribute_value`), 755:48 (`+` to `*` in `link_tail`) and 809:23 (`+` to
+`*` and to `-` in `autolink_at`), and `fs.rs` 145:9 (`RealFile::sync` to `Ok(())`: a sync of the
+null device fails, and the mutant reports success). Five unit tests, four in `rails.rs` and one in
+`fs.rs`, came first (3af5212). On a `git archive` export of that sha, `cargo mutants --in-place`
+over exactly those seven mutants read 7 caught, each log naming its own new test as the only
+failure, with both files restored byte for byte; then the seven records were deleted (726bbe5),
+leaving 11: `rails.rs` 5, `sha256.rs` 4 and `note.rs` 2.
+
+The second closing sweep, the battery dispatched with `package=deck-streak-vault` and
+`file_issues=false` at 726bbe5 (run 36479539295), reported every one of its 32 shards whole: 20
+exited 0, 9 exited 2 on missed mutants, and 3 exited 3 (shards 0, 13 and 23), each on one of the
+same three `rails.rs` mutants that ran to the tool's timeout, which count killed; shard 0 also
+missed one. It tested 939 mutants: 858 caught, 3 timed out, 11 missed and 67 unviable. The 11
+missed mutants are the fragment's 11 records, and each of the seven was caught. The battery counted
+33 of 33 reports whole, and its table read `listed 939, killed 861, equivalent 11, unexplained 0,
+unviable 67` and `table: verdict: ok`. At 726bbe5 A16 reads `18 != 11 : deck-streak-vault:
+equivalent against its fragment`, since the row still named the first sweep; the row refilled from
+this sweep (0227889) turns it green, re-run from a `git archive` export of that sha, so the fence's
+A16 green line names 0227889 in place of 18cff1c, because a criterion carries one green line.
+`crates/` and the fragment are byte-identical between 726bbe5 and the delivery's head.
+
+The verification also found that no test read the plan's `inside - outside` (R22): cutting it to
+`inside`, which reads a line that holds a test item's closing brace and production code as
+test-only, passed A28 and every test of `test_mutation_verdict.py`. A28's production-only fixture
+gained line 54, a constant after the brace that closes the test module (5db9a52), and cargo-mutants
+27.1.0's own `--list --json --in-diff` output over the changed diff is the same sixteen mutants,
+since the constant lists none. Under that hand mutant, on a `git archive` export of 5db9a52, A28
+failed in its production-only subtest alone, `'mutation: plan: rust applies: 4 production code
+line(s) in 1 file(s)\n' not found` (the plan set line 54 apart as test-only), and passed again once
+the script's sha256 matched. Row S05709 pins it (793e95e): `mutation_rows.py prove` read it KILLED,
+its killer passing without the mutant and failing with it, with the file restored byte for byte.
+A28's own red and green lines stand, since the plan at dd734e5 read every line as production and
+the new line adds no red of its own.
