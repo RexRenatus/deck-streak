@@ -88,7 +88,7 @@ sha256 before the next row.
 | H2 | the same file: the prune's cutoff moves 1,000 times further back | A13 | killed: 0 rows pruned of 369 |
 | H3 | `crates/coordination/src/liveness.rs`: the dead-man check pages while the sync is alive, not when it is dead | A7 | killed: it paged at each of the 29 hourly checks before the sync died and at none of the 18 after |
 | H4 | the same file: the drift tolerance compares `>=` instead of `>` | `the_watch_pages_just_past_each_of_its_boundaries` | killed: a skew of exactly 30 minutes paged |
-| H4b | the same mutant as H4 | A8 | survived: A8's fires drift 29 and 32 minutes, either side of 30 but never on it |
+| H4b | the same mutant as H4 | A8 | survived: A8's fires drift 45, 0, 29 and 32 minutes, never exactly 30 |
 
 H4b is why the boundary test added after green matters: without it, the tolerance's boundary is
 unguarded. H2's output also confirms A13's disclosed change: a successful TRUNCATE checkpoint reports
