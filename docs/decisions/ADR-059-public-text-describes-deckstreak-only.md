@@ -41,8 +41,9 @@ Chosen option. Public text means the tree, every commit message and every pull r
   `deploy/host-budget.json`).
 - It never names or describes another service on the host, the predecessor included as a running
   service: not its schedule, its users, its units, its ports or its services.
-- It never states the size, load, memory or any other capacity figure of any machine, the machine
-  that builds DeckStreak included.
+- It never states the capacity, load or state of a host that runs DeckStreak, or of the
+  maintainer's own machines. The published specifications of hosted CI runners are public facts,
+  and may be stated.
 - It never describes a weakness of a host or of a service.
 - It never states the version of a service reachable from outside the host.
 - It may state a dependency version DeckStreak itself pins, and it may cite the predecessor as code:
