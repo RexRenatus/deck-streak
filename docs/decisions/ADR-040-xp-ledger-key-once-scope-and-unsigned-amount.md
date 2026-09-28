@@ -32,6 +32,7 @@ a debit are impossible by construction?
 - A signed amount with a runtime check that refuses negatives — rejected because a penalty path would compile and the check would be the only barrier.
 - A stored level updated on each grant — rejected because it can drift from the ledger, and the predecessor derives it from the total.
 - A `SELECT` for the key before the insert, beside the unique indexes — rejected at acceptance because it states the key a second time, in code, where it can drift from the index; the insert's own conflict with the indexes is the existence check.
+- A rustdoc `compile_fail` doctest on `XpAmount::new` instead of `trybuild`, which needs no dependency — rejected because rustdoc passes a `compile_fail` block that fails to compile for any reason, so a typo or a moved path would read as the proof (measured on the pinned toolchain: a misspelt type, E0433, and a missing module, E0432, both pass, and stable ignores an error code written after `compile_fail`), while `trybuild` compares the compiler's refusal with the recorded `.stderr`, so A6 fails unless the refusal is the u32/i64 mismatch.
 
 ## Decision Outcome
 
