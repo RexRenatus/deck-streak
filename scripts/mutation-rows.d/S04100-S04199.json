@@ -225,6 +225,15 @@
         "        if false && !FEED_MODULES.contains(&path.as_str()) {",
         "one_router::no_delivery_goes_around_the_port",
         "only the router's ledger, router and data-rights modules name the Mini App's feed, its table in any case, FEED_TABLE or append_feed (SPEC-041 A15); the census is test code, which cargo-mutants never mutates, and the mutant lets the planted writes to the feed through"
+      ],
+      [
+        "S04127-ONLY-THE-ROUTERS-MODULES-NAME-THE-HELD-QUEUE",
+        "notifications",
+        "tests/one_router.rs",
+        "        if !QUEUE_MODULES.contains(&path.as_str()) {",
+        "        if false && !QUEUE_MODULES.contains(&path.as_str()) {",
+        "one_router::no_delivery_goes_around_the_port",
+        "only the modules that own the held queue's writes, the router's ledger, router and data-rights modules, name it, its table in any case or QUEUE_TABLE, and in the notifications crate only they name the ledger, whose writes to the queue are private to the crate (SPEC-041 A15); the census is test code, which cargo-mutants never mutates, and the mutant lets the planted writes to the queue through"
       ]
     ],
     "CARGO_KILLED_SCRIPT_MUTATIONS": [
