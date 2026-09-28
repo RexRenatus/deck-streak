@@ -113,7 +113,7 @@ R6. **The day token, documented.** `tools/parity-oracle/README.md` documents `{d
 | A1 | a file given as `--subject` is its own subject: an address planted in it is refused by path and rule, and a clean one passes having examined 1 file | `test_public_scrub.py` |
 | A2 | a subject that does not exist stops the scrub with exit 2, by name | `test_public_scrub.py` |
 | A3 | a subject that examines nothing is VOID by name, although the tree beside it was examined | `test_public_scrub.py` |
-| A4 | a unit instance name of each of the eight types passes the email rule | `test_public_scrub.py` |
+| A4 | a unit instance name of each of the eight types passes the email rule, also beside an address on the same line, which is still refused | `test_public_scrub.py` |
 | A5 | an address that only looks like a unit name is still refused by `email`, never by value | `test_public_scrub.py` |
 | A6 | the vendoring scans with the scrub's own `rules()`, holds no second composition, and refuses an unreadable private list as before | `test_vendor_packs.py` |
 | A7 | a private list the rules cannot read stops the scrub with exit 2, by name | `test_public_scrub.py` |

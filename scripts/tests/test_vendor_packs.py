@@ -1,4 +1,5 @@
-"""Vendoring refuses excluded and deny-listed files by construction (SPEC-037 A1 to A6).
+"""Vendoring refuses excluded and deny-listed files by construction (SPEC-037 A1 to A6), and scans
+with the public scrub's own composition of its rules, holding no copy of it (SPEC-054 A6).
 
 Each test runs scripts/vendor-packs.py against a fixture built at run time in a temporary
 directory: an upstream git repository with one commit, shaped like phoenix-v2 in miniature (a few
@@ -9,7 +10,9 @@ A1 proves them against the names upstream ships today. The planted address and t
 literal are assembled at run time, so this file itself holds neither. Nothing here reads phoenix-v2.
 """
 
+import ast
 import hashlib
+import importlib.util
 import json
 import os
 import subprocess
@@ -21,7 +24,10 @@ from pathlib import Path
 from _support import REPO, examined
 
 SCRIPT = REPO / "scripts" / "vendor-packs.py"
+SCRUB = REPO / "scripts" / "public-scrub.py"
 REAL_MANIFEST = REPO / ".packs" / "VENDORED.json"
+# The packs whose deny lists the scrub composes: a second composition would have to name them.
+COMPOSED_PACKS = ("persona-core", "privacy-gdpr")
 # Assembled at run time, so this file carries no address and no literal for the scrub to find.
 PLANTED_ADDRESS = ".".join(["10", "20", "30", "40"])
 PLANTED_LITERAL = "-".join(["xq7", "vendor", "mark"])
@@ -361,6 +367,75 @@ class VendoringRefusesByConstruction(unittest.TestCase):
             done = fixture.vendor()
             self.assertEqual(done.returncode, 3, done.stdout + done.stderr)
             self.assertEqual(last_line(done), summary(0, 0, 0, 1, fixture.head))
+            self.assertEqual(fixture.snapshot(), before)
+
+
+def calls_and_strings(path):
+    """Every call `path` makes, as `owner.name` or `name`, and every string constant it holds: a
+    static read of its syntax tree, so nothing in it runs."""
+    called, strings = [], []
+    for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"), filename=str(path))):
+        if isinstance(node, ast.Call):
+            func = node.func
+            if isinstance(func, ast.Attribute):
+                owner = func.value.id if isinstance(func.value, ast.Name) else "?"
+                called.append(f"{owner}.{func.attr}")
+            elif isinstance(func, ast.Name):
+                called.append(func.id)
+        elif isinstance(node, ast.Constant) and isinstance(node.value, str):
+            strings.append(node.value)
+    return called, strings
+
+
+def load_scrub():
+    """scripts/public-scrub.py as a module, loaded without writing bytecode into the tree."""
+    writes, sys.dont_write_bytecode = sys.dont_write_bytecode, True
+    try:
+        spec = importlib.util.spec_from_file_location("public_scrub_under_test", SCRUB)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+    finally:
+        sys.dont_write_bytecode = writes
+    return module
+
+
+class VendoringReusesTheScrubsRules(unittest.TestCase):
+    def test_the_vendoring_scans_with_the_scrubs_own_rules_and_holds_no_copy(self):
+        called, strings = calls_and_strings(SCRIPT)
+        examined("call(s) in vendor-packs.py", called)
+        # The composition is the scrub's: the vendoring asks for it once and builds none itself.
+        self.assertEqual([name for name in called if name.endswith(".rules")], ["scrub.rules"])
+        builders = ("load_deny", "load_persona_core", "Scan")
+        copies = [name for name in called if name.rsplit(".", 1)[-1] in builders]
+        self.assertEqual(copies, [], "the vendoring composes the deny lists itself")
+        self.assertEqual([text for text in strings if text in COMPOSED_PACKS], [])
+        # That one composition holds both packs' shapes and the private list's literals.
+        with tempfile.TemporaryDirectory() as tmp:
+            scan = load_scrub().rules(private_list(tmp, [PLANTED_LITERAL]))
+        rules = {rule for rule, _pattern in scan.rows}
+        self.assertLessEqual({"email", "ipv4"}, rules, "persona-core's shapes")
+        self.assertLessEqual({"ipv6", "home-directory"}, rules, "privacy-gdpr's shapes")
+        self.assertIn(("private", PLANTED_LITERAL), scan.literals)
+        # Its refusals read as the vendoring's always did, and nothing is written.
+        with tempfile.TemporaryDirectory() as tmp:
+            fixture = Fixture(tmp)
+            before = fixture.snapshot()
+            missing = Path(tmp) / "no-such-list.json"
+            done = fixture.vendor("--deny-list", str(missing))
+            self.assertEqual(done.returncode, 2, done.stdout + done.stderr)
+            self.assertEqual(
+                lines(done),
+                [f"vendor-packs: the private list {missing} is not a file; nothing was written"],
+            )
+            malformed = Path(tmp) / "malformed.json"
+            malformed.write_text("{ a list that is not JSON\n", encoding="utf-8")
+            done = fixture.vendor("--deny-list", str(malformed))
+            self.assertEqual(done.returncode, 2, done.stdout + done.stderr)
+            refusal = last_line(done)
+            self.assertTrue(
+                refusal.startswith("vendor-packs: a deny list cannot be read: "), refusal
+            )
+            self.assertTrue(refusal.endswith("; nothing was written"), refusal)
             self.assertEqual(fixture.snapshot(), before)
 
 
