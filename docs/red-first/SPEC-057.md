@@ -53,7 +53,7 @@ A14: green at 621842f
 A15: red at e43dae8: AssertionError: 'scripts/mutation-equivalent.d/<package>.json' not found (the brief's mutation section taught the exclusion form)
 A15: green at 5c4d6b6
 A16: red at bfae431: AssertionError: 225 != 0 : deck-streak-vault: 225 unexplained mutant(s) in its row (the opening sweep, run 36438243392 at 5767fbe, read listed 939, killed 647, equivalent 0, unexplained 225, unviable 67)
-A16: green at 0227889
+A16: green at 6abff4a
 A28: red at e260627: AssertionError in each of its four subtests, each for its own reason: 'True is not false : the rust class applies on test lines [31, 36, 43, 47, 53]' (the test-only diff); 'Lists differ: [46, 58] != [58]' (the mixed diff counted its test module's line as production code); "'mutation: plan: rust applies: 3 production code line(s) in 1 file(s)' not found" (the production-only diff's plan named no production line); and '3 != 0 : mutation: shards: VOID the rust class applies and ... holds no cargo-mutants listing' (cargo-mutants' empty --in-diff output read as no listing)
 A28: green at 8c87e5b
 ```
@@ -87,7 +87,7 @@ killed; the 18 missed mutants, in 14 shards, are the 18 records the fragment the
 counted 33 of 33 reports whole, and its table read `listed 939, killed 854, equivalent 18,
 unexplained 0, unviable 67`.
 That line was the row committed at 18cff1c, where A16's test, re-run from a `git archive` export
-of that sha, passed. The fix round below refilled the row from a second closing sweep.
+of that sha, passed. The fix round below refilled the row from its later closing sweeps.
 
 ## The vault's delivery: the third rider (A28)
 
@@ -109,7 +109,7 @@ The fix was also read against the tool's own listing of the whole tree. The list
 in the 11 files that hold a `#[cfg(test)]` module; each of those modules reads test-only whole,
 from its attribute to its closing brace.
 
-## The vault's delivery: its first fix round (seven records, the second closing sweep, S05709)
+## The vault's delivery: its first fix round (seven records, two more closing sweeps, S05709)
 
 The first verification found seven of the 18 records short of the record's bar, that no test can
 tell the mutant apart (R5): each argued from the function's callers, while a unit test in `src`
@@ -127,13 +127,24 @@ The second closing sweep, the battery dispatched with `package=deck-streak-vault
 exited 0, 9 exited 2 on missed mutants, and 3 exited 3 (shards 0, 13 and 23), each on one of the
 same three `rails.rs` mutants that ran to the tool's timeout, which count killed; shard 0 also
 missed one. It tested 939 mutants: 858 caught, 3 timed out, 11 missed and 67 unviable. The 11
-missed mutants are the fragment's 11 records, and each of the seven was caught. The battery counted
-33 of 33 reports whole, and its table read `listed 939, killed 861, equivalent 11, unexplained 0,
-unviable 67` and `table: verdict: ok`. At 726bbe5 A16 reads `18 != 11 : deck-streak-vault:
-equivalent against its fragment`, since the row still named the first sweep; the row refilled from
-this sweep (0227889) turns it green, re-run from a `git archive` export of that sha, so the fence's
-A16 green line names 0227889 in place of 18cff1c, because a criterion carries one green line.
-`crates/` and the fragment are byte-identical between 726bbe5 and the delivery's head.
+missed mutants were the fragment's 11 records, and each of the seven was caught. Its table read
+`listed 939, killed 861, equivalent 11, unexplained 0, unviable 67`, and its row was committed at
+0227889. At 726bbe5 A16 reads `18 != 11 : deck-streak-vault: equivalent against its fragment`,
+since the row still named the first sweep.
+
+The box run's tdd probe then refused two of the five tests as written: `absence-only-assertions`,
+since `an_equals_sign_with_no_value_after_it_takes_nothing` asserted only a 0, and
+`examined-counts`, since `fs.rs`, whose `RealFs::list` reads a folder, now held a test and reported
+no examined count. The test gained a positive control, `=x` taking 2, and `fs.rs`'s test module a
+test of the listing that counts the entries it examined (c2bf6d3). On a `git archive` export of that
+sha the seven mutants again read 7 caught, each log naming its own test, and the closing sweep ran
+once more there (run 36483219611): its 32 shards reported whole, with the same exits (20 exited 0, 9
+exited 2 and 3 exited 3, shards 0, 13 and 23), the same 939 mutants tested (858 caught, 3 timed out,
+11 missed, 67 unviable), each of the seven caught, 33 of 33 reports whole, and the same table line
+with `table: verdict: ok`. Its table line is the row committed at 6abff4a, where A16's test, re-run
+from a `git archive` export of that sha, passes; so the fence's A16 green line names 6abff4a in
+place of 18cff1c, since a criterion carries one green line. `crates/` and the fragment are
+byte-identical between c2bf6d3 and the delivery's head.
 
 The verification also found that no test read the plan's `inside - outside` (R22): cutting it to
 `inside`, which reads a line that holds a test item's closing brace and production code as
