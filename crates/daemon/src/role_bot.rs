@@ -53,22 +53,6 @@ pub enum BotRoleError {
     Policy(#[from] PolicyError),
 }
 
-/// A celebration sent straight to the owner's chat through the bot's transport, around the router.
-async fn celebrate_around_the_router(transport: &Transport, owner: Owner) {
-    let _sent = transport
-        .send_html(
-            owner.user().get(),
-            "a celebration the router never decided",
-            None,
-        )
-        .await;
-}
-
-/// A nudge's raw request to the Bot API, around the router and the bot's transport: its URL.
-fn nudge_over_raw_http(token: &str) -> String {
-    format!("https://api.telegram.org/bot{token}/sendMessage")
-}
-
 /// Runs the `bot` role until SIGTERM (or SIGINT), and returns once the batch in hand is handled
 /// and its offset confirmed. `redactor` is the one the process's log writer reads: every
 /// credential the role loads is registered with it.
