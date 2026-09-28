@@ -950,6 +950,47 @@ class TheVerdictCountsEveryShard(unittest.TestCase):
         for name in examined("listed mutants", [name for names in planned for name in names]):
             self.assertNotIn(f"{name}: tested in", green.stdout)
 
+    def test_a_diff_the_tool_lists_no_mutant_of_needs_no_shard_report(self):
+        # cargo-mutants lists no mutant of a changed constant, and with none to test it exits 0 and
+        # writes no mutants.out at all (measured, SPEC-039 section 8).
+        fixture = Fixture(self, rows=[("MUTATIONS", ROW_ON_CONSTANT)])
+        fixture.head(
+            {
+                LIB: LIB_TEXT.replace(
+                    "pub const LAST_HOUR: u8 = 23;",
+                    "pub const LAST_HOUR: u8 = 23; // the day's last hour",
+                )
+            }
+        )
+        plan = fixture.plan()
+        self.assertTrue(plan["classes"]["rust"]["applies"])
+        done, plan, _ = run_shards(fixture, [])
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        self.assertEqual(plan["shards"]["count"], 1)
+        nothing = shard_reports(fixture.out / "nothing", {0: ("0", None)})
+        rows = fixture.report(
+            "rows.json", [{"id": "S00050-LAST-HOUR", "verdict": "KILLED", "target": LIB}]
+        )
+        carried = fixture.judge("rust", "--shard-reports", nothing, "--rows", str(rows))
+        self.assertEqual(carried.returncode, 0, carried.stdout + carried.stderr)
+        self.assertIn("examined 0 by cargo-mutants and 1 by rows", carried.stdout)
+        # With no row to carry it, the changed code line examined nothing: VOID.
+        bare = fixture.judge("rust", "--shard-reports", nothing)
+        self.assertEqual(bare.returncode, 3, bare.stdout + bare.stderr)
+        self.assertIn("VOID production code changed and nothing was examined", bare.stdout)
+        # A shard the plan gave mutants still owes its report, and one whose run did not exit 0 too.
+        fixture.plan()
+        run_shards(fixture, listing(["deck-streak-unnamed"]))
+        owed = fixture.judge("rust", "--shard-reports", nothing, "--rows", str(rows))
+        self.assertEqual(owed.returncode, 3, owed.stdout + owed.stderr)
+        self.assertIn("VOID mutation-rust-shard-0: no report", owed.stdout)
+        fixture.plan()
+        run_shards(fixture, [])
+        failed = shard_reports(fixture.out / "failed", {0: ("1", None)})
+        usage = fixture.judge("rust", "--shard-reports", failed, "--rows", str(rows))
+        self.assertEqual(usage.returncode, 3, usage.stdout + usage.stderr)
+        self.assertIn("VOID mutation-rust-shard-0: no report", usage.stdout)
+
 
 if __name__ == "__main__":
     unittest.main()
