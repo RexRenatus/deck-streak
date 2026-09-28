@@ -431,6 +431,14 @@ impl AnkiEngine for Unread {
     }
 }
 
+/// Prints how many entries a check examined, where the count it expects may be zero (the tdd
+/// pack's examined contract, in its form that may be empty): R7's scratch directory is judged by
+/// what is left in it once the blocking work has ended.
+fn examined_may_be_empty<T>(what: &str, items: Vec<T>) -> Vec<T> {
+    println!("examined {} {what}", items.len());
+    items
+}
+
 /// R7: the budget stops the wait for the queue, never the blocking work. The throwaway copy is
 /// held part-way: a named pipe stands at its path, so the copy blocks once the pipe is full, until
 /// the test drains it. The budget passes while the copy is held, and the port's future is dropped,
@@ -507,10 +515,13 @@ async fn a_budget_passed_during_the_copy_leaves_no_copy_behind() {
         .expect("the offload is free");
 
     assert_eq!(copied, size, "the copy ran to its end past the budget");
-    let left: Vec<_> = fs::read_dir(&scratch)
-        .expect("the scratch directory")
-        .map(|entry| entry.expect("an entry").file_name())
-        .collect();
+    let left = examined_may_be_empty(
+        "entries left in the scratch directory",
+        fs::read_dir(&scratch)
+            .expect("the scratch directory")
+            .map(|entry| entry.expect("an entry").file_name())
+            .collect(),
+    );
     assert!(left.is_empty(), "a copy outlived its budget: {left:?}");
     assert!(
         locked,
