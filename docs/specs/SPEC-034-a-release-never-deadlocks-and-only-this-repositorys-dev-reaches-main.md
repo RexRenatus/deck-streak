@@ -127,7 +127,8 @@ that holds no workflow.
   one.
 - It reads each expression's text and errs toward refusing: any mention of the secrets context that
   does not name `GITHUB_TOKEN` is refused, a mention inside a quoted string included. A property
-  named `secrets` of another context, such as a step's output, is not the secrets context.
+  named `secrets` of another context, such as a step's output, and a longer word that begins with
+  it, such as `secrets-scan.toml`, are not the secrets context.
 
 ## 4. File manifest
 
@@ -149,7 +150,7 @@ that holds no workflow.
 | `changelog.d/fix-release-flow-and-forks.md` | `repo` | added |
 | `scripts/tests/test_ci_workflows.py` | `repo` | changed by the amendment (section 7): A9 to A12, and the checker they run |
 | `scripts/tests/fixtures/secrets-and-checkouts/refused/` | `repo` | added by the amendment: the eight planted workflows the checker refuses, `checkout-of-another-repository.yml`, `clone-of-another-repository.yml`, `every-secret.yml`, `fetch-of-a-url.yml`, `secret-in-a-larger-expression.yml`, `secret-in-any-spacing.yml`, `secret-in-brackets.yml` and `secrets-inherited.yaml` |
-| `scripts/tests/fixtures/secrets-and-checkouts/admitted/` | `repo` | added by the amendment: the four planted workflows it admits, `an-output-named-secrets.yml`, `checkout-of-this-repository.yml`, `github-token.yml` and `secrets-github-token.yml` |
+| `scripts/tests/fixtures/secrets-and-checkouts/admitted/` | `repo` | added by the amendment: the four planted workflows it admits, `checkout-of-this-repository.yml`, `github-token.yml`, `not-the-secrets-context.yml` and `secrets-github-token.yml` |
 | `docs/specs/SPEC-034-a-release-never-deadlocks-and-only-this-repositorys-dev-reaches-main.md` | `repo` | changed by the amendment: the insertions section 7 lists |
 | `docs/red-first/SPEC-034.md` | `repo` | changed by the amendment: A9 to A12 |
 | `changelog.d/test-ci-no-secrets-216.md` | `repo` | added by the amendment |
