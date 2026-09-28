@@ -16,6 +16,12 @@
   reports it promises, and ends with its table line.
 - The gate's `audit-rust` stage runs an unlocked resolve and fails, by name, when it rewrites
   `Cargo.lock`, which `--locked` alone accepts though the lock is not in cargo's canonical form.
+- The vault's content rails gain tests of how the pack's probe reads a note: where a fence
+  opens and closes, what a code span, a comment, a tag and its attributes, and each form of
+  link take, how a path is percent-decoded, where its extension starts, and the line each
+  rail names. They kill 138 of the mutants of `crates/vault/src/rails.rs` that the opening
+  sweep left, and the file's 11 equivalent mutants are recorded in
+  `scripts/mutation-equivalent.d/deck-streak-vault.json`.
 
 ### Changed
 

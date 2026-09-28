@@ -1,0 +1,103 @@
+{
+  "records": [
+    {
+      "file": "crates/vault/src/rails.rs",
+      "mutant": "replace + with * in span_at",
+      "anchor": "ticks + 1..=chars.len()",
+      "reason": "The mutant only puts end = start + ticks at the front of the search, a candidate no input can accept.",
+      "evidence": "Since ticks <= run, chars[start + ticks - 1] is a backtick of the opening run, so the closure's first test, chars[end - 1] != '`', is false there and short-circuits before any other index; find_map returns the same (ticks, end) as over the original range.",
+      "reached_by": "rails::a_code_span_hides_its_code_from_the_prose_and_shows_it_to_the_query_rail",
+      "issue": "#276"
+    },
+    {
+      "file": "crates/vault/src/rails.rs",
+      "mutant": "replace += with *= in tag_at",
+      "anchor": "let name_start = at;\n    at += 1;",
+      "reason": "at *= 1 leaves at on the name's first letter, and the name loop's first step moves it where at += 1 did.",
+      "evidence": "chars[name_start] passed is_ascii_alphabetic just above, so the while condition (is_ascii_alphanumeric() or '-') holds for it and the loop consumes it: name_end is the same for every input.",
+      "reached_by": "rails::a_closing_tag_and_each_attribute_name_are_read_as_the_probe_reads_them",
+      "issue": "#276"
+    },
+    {
+      "file": "crates/vault/src/rails.rs",
+      "mutant": "replace + with * in tag_at",
+      "anchor": "Some((Tag { name, attrs }, close + 1))",
+      "reason": "The returned index only resumes html_tags' scan, and resuming at close finds no tag there.",
+      "evidence": "tag_at returns None when chars[close] == '<', so a returned close holds '>', where tag_at's first check (chars[start] != '<') returns None and html_tags steps to close + 1, the original's resume point.",
+      "reached_by": "rails::a_closing_tag_and_each_attribute_name_are_read_as_the_probe_reads_them",
+      "issue": "#276"
+    },
+    {
+      "file": "crates/vault/src/rails.rs",
+      "mutant": "replace + with - in tag_at",
+      "anchor": "Some((Tag { name, attrs }, close + 1))",
+      "reason": "Resuming html_tags' scan at close - 1 reads one character that opens no tag, then the '>' at close.",
+      "evidence": "close is the first '<' or '>' at or after name_end, and the characters from start + 1 to name_end are '/', letters, digits and '-', so chars[close - 1] is not '<'; close - 1 >= name_start > start, so the scan advances and reaches close + 1 with no new tag.",
+      "reached_by": "rails::a_closing_tag_and_each_attribute_name_are_read_as_the_probe_reads_them",
+      "issue": "#276"
+    },
+    {
+      "file": "crates/vault/src/rails.rs",
+      "mutant": "replace + with * in attribute_names",
+      "anchor": "let mut end = at + 1;",
+      "reason": "end = at makes the name loop take chars[at] first, and it ends where the original's loop ends.",
+      "evidence": "chars[at] passed the start check (an ASCII letter, '_' or ':'), and the loop's condition accepts each of those (is_ascii_alphanumeric() or '-', '_', ':', '.'), so its first step sets end = at + 1.",
+      "reached_by": "rails::a_closing_tag_and_each_attribute_name_are_read_as_the_probe_reads_them",
+      "issue": "#276"
+    },
+    {
+      "file": "crates/vault/src/rails.rs",
+      "mutant": "replace > with >= in attribute_value",
+      "anchor": "(length > 0).then_some(length)",
+      "reason": "Where the mutant consumes rest[..start] instead of nothing, those characters start no attribute name either way.",
+      "evidence": "The bare arm gives length 0 only when rest[start] is '=' or '`' ('<' and '>' never reach a tag's attrs); rest[..start] then holds only spaces and one '=', none an ASCII letter, '_' or ':', so attribute_names resumes its name scan at the same character.",
+      "reached_by": "rails::a_closing_tag_and_each_attribute_name_are_read_as_the_probe_reads_them",
+      "issue": "#276"
+    },
+    {
+      "file": "crates/vault/src/rails.rs",
+      "mutant": "replace + with * in link_tail",
+      "anchor": "(chars.get(at) == Some(&')')).then_some(at + 1)",
+      "reason": "The returned index only resumes the markdown scan, and resuming at the closing ')' finds no link there.",
+      "evidence": "links() sets at to the returned index; markdown_link_at at a ')' reads embed false and chars[open] != '[' and returns None, so the scan steps to at + 1, the original's resume point.",
+      "reached_by": "rails::a_markdown_links_destination_title_and_embed_are_read_as_the_probe_reads_them",
+      "issue": "#276"
+    },
+    {
+      "file": "crates/vault/src/rails.rs",
+      "mutant": "replace + with * in autolink_at",
+      "anchor": "Some((link, close + 1))",
+      "reason": "The returned index only resumes the autolink scan, and resuming at the closing '>' finds no autolink there.",
+      "evidence": "chars[close] is '>' by the check just above, and autolink_at returns None when chars[start] != '<', so links() steps to close + 1, the original's resume point.",
+      "reached_by": "rails::an_autolinks_scheme_is_read_between_its_angle_brackets",
+      "issue": "#276"
+    },
+    {
+      "file": "crates/vault/src/rails.rs",
+      "mutant": "replace + with - in autolink_at",
+      "anchor": "Some((link, close + 1))",
+      "reason": "Resuming the autolink scan at close - 1 reads the URL's last character and the '>', neither of which opens an autolink.",
+      "evidence": "The take_while that finds close stops at '<', '>' and whitespace, so chars[close - 1] is not '<'; close - 1 >= colon > start, so the scan advances and reaches close + 1 with no new link.",
+      "reached_by": "rails::an_autolinks_scheme_is_read_between_its_angle_brackets",
+      "issue": "#276"
+    },
+    {
+      "file": "crates/vault/src/rails.rs",
+      "mutant": "delete match arm b'a'..= b'f' in hex_value",
+      "anchor": "b'a'..=b'f' => digit - b'a' + 10,",
+      "reason": "Without the lowercase arm a lowercase hexadecimal letter falls to the last arm, which gives it the same value.",
+      "evidence": "For b'a'..=b'f', to_ascii_lowercase() is the identity, so digit.to_ascii_lowercase().wrapping_sub(b'a').wrapping_add(10) equals digit - b'a' + 10 (10 to 15) with no wrap; unquote calls hex_value only on digits its guard proved hexadecimal.",
+      "reached_by": "rails::a_markdown_paths_percent_escapes_are_decoded_before_its_extension_is_read",
+      "issue": "#276"
+    },
+    {
+      "file": "crates/vault/src/rails.rs",
+      "mutant": "replace > with >= in extension",
+      "anchor": "if dot > name",
+      "reason": "The guards differ only when dot == name, and there the second clause fails under both.",
+      "evidence": "When dot == name, path[name..dot] is empty, all(|byte| byte == b'.') holds over no bytes, and its negation makes the guard false under > and >= alike, so the extension is empty either way.",
+      "reached_by": "rails::an_extension_is_read_from_the_last_component_as_splitext_reads_it",
+      "issue": "#276"
+    }
+  ]
+}
