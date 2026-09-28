@@ -312,3 +312,25 @@ fn a_comment_hides_what_it_holds_and_keeps_the_notes_lines() {
         ],
     );
 }
+
+#[test]
+fn a_closing_tag_and_each_attribute_name_are_read_as_the_probe_reads_them() {
+    judge(
+        &vendored(),
+        "note(s) with a tag",
+        &[
+            // A closing tag is a tag.
+            ("</iframe>\n", &[("html_allow", 1)]),
+            // An attribute name may start with a colon, and is then no allowed name.
+            ("<span :class=\"x\">\n", &[("html_attributes_allow", 1)]),
+            // A value, after spaces or none, quoted or bare, is never read as a name, and the
+            // name after it is.
+            ("<span title= \"onclick\">\n", &[]),
+            ("<span title=onclick>\n", &[]),
+            (
+                "<span title=x onclick=y>\n",
+                &[("html_attributes_allow", 1)],
+            ),
+        ],
+    );
+}
