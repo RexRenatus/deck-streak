@@ -66,7 +66,8 @@
     undoes (A43); it carries the same recording-server proof (A6, A30, A31); and it writes only
     cards whose current state still equals what the skip wrote, listing every card reviewed or
     changed before its converge and every card reviewed during its own window (A31, A34, A42); a
-    change other than a review made during the take's or the undo's window is not seen (§6).
+    change other than a review made during the take's or the undo's window is not seen (§6) when
+    the write is newer than it, and one newer than the write wins the merge.
 - **Where DeckStreak's write differs from the predecessor's**, by those guardrails:
   - the predecessor's wrap keeps only new and learning cards out of a configured search
     (`sync.py:AnkiSyncer._skip_day_blocking`); here a configured search that does not parse as one
@@ -218,8 +219,9 @@ R12. The day's quests are voided, never failed (`pipeline_layers/loot.py:LootLay
     (`pipeline_layers/ghost_race.py:GhostRaceLayer._update_ghost_race` and
     `GhostRaceLayer._settle_due_races`). SPEC-080 and SPEC-081 read this SPEC's port and prove
     each when they land.
-R13. An undo changes only what the next recompute reads: from then on the day is a missed day
-    wherever a rule counts one. Transitions already settled stay as they were, as the predecessor's
+R13. In the game, an undo changes only what the next recompute reads: from then on the day is a
+    missed day wherever a rule counts one. Transitions already settled stay as they were, as the
+    predecessor's
     persisted transitions do (`pipeline.py:GamifyPipeline._advance_streak`), and no settled XP of a
     closed day is lowered (ADR-071).
 
@@ -287,7 +289,7 @@ R23. The reschedule (guardrail i). The engine's own Set Due Date moves exactly t
     working copy, with the day spec (R3). It changes no other card, and no note, deck, notetype or
     tag. It changes no setting either. In a client-mode collection whose configured UTC offset
     differs from the process's zone, the engine rewrites that offset at its first day computation
-    (`rslib/src/scheduler/mod.rs:102-104`; every normal sync makes one,
+    (`rslib/src/scheduler/mod.rs:102-104`; every normal sync that exchanges changes makes one,
     `rslib/src/sync/collection/normal.rs:87`), and every push after a reschedule carries the whole
     config table and the creation stamp (`rslib/src/sync/collection/changes.rs:131-134`,
     `meta.rs:81`), which the server stores in place of its own (`changes.rs:237-240`).
@@ -347,8 +349,8 @@ R31. Only cards still as the skip left them (the undo's rules). The undo writes 
     (R22), and its review log there holds no study event after the take's converge. A card its
     converge shows reviewed or changed since the skip is left as it is and listed to the owner,
     never written; a card deleted since is listed as gone. A card changed on another client after
-    the undo's converge is not seen by this compare: R32's read-back lists it when the change was
-    a review, and §6 names the rest.
+    the undo's converge is not seen by this compare: R32's read-back lists it when it holds a
+    review or no longer equals what the undo wrote, and §6 names the rest.
 R32. The exact inverse (guardrail i and the undo's rules). For each card it writes, the undo restores
     exactly its recorded prior due date and the rest of its recorded prior state, through the
     engine's card update, and nothing else: no other card, no note, deck, notetype, tag or setting,
@@ -671,7 +673,7 @@ delivery changes no pack's state.
 - **A rollover, or a change of the process's zone offset, between a check and the engine's next
   day computation.** R3 checks before any request and again on the converged working copy, and
   the engine computes its day again at the reschedule (the pinned engine's
-  `rslib/src/scheduler/reviews.rs:136`) and at the start of each normal sync
+  `rslib/src/scheduler/reviews.rs:136`) and at the start of each normal sync that exchanges changes
   (`rslib/src/sync/collection/normal.rs:87`). A rollover in that moment makes the reschedule count
   the day spec's range from the next day, so the cards land a day later than R3 intends. A
   change of the zone's offset in that moment, a daylight-saving change, makes the engine rewrite

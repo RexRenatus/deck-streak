@@ -8,7 +8,8 @@ Added by SPEC-083, under ADR-083's option (a), the owner's decision at #266 (ADR
 
 It extends `docs/schematics/data-flow.md`, whose dashed arrow from coordination to the sync server
 is the skip day's write. That arrow carries only the skip day's reschedule of the study day's due
-review cards and its exact inverse, each pushed by a normal (incremental) sync of a working copy
+review cards and its exact inverse, beside the settings a push carries whole (below), each pushed
+by a normal (incremental) sync of a working copy
 that is discarded afterwards. The private collection copy stays SPEC-022's: no step below writes
 it, so it never holds a local change for another sync to send.
 
