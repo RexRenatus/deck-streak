@@ -155,6 +155,8 @@ class WorkflowsAreHardened(unittest.TestCase):
                 "key-the-reader-refuses.yml:line 31: a key that is not a plain name is not read",
                 "run-by-alias.yml:line 17: an anchor, alias or tag is not read",
                 "run-by-alias.yml:line 19: an anchor, alias or tag is not read",
+                "run-by-alias.yml:line 20: an anchor, alias or tag is not read",
+                "run-by-alias.yml:line 21: an anchor, alias or tag is not read",
                 "second-of-each.yml:jobs.second.steps[0].env.EITHER: reads the secret "
                 "EXAMPLE_TOKEN",
                 "second-of-each.yml:jobs.second.steps[0].run: reads the secret EXAMPLE_TOKEN",

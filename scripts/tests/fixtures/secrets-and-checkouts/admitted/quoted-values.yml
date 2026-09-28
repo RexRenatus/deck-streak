@@ -2,7 +2,7 @@
 
 # A planted workflow (SPEC-034 A11): forms the reader reads as YAML does: a quoted key, a quote
 # doubled inside single quotes, a backslash, which single quotes keep as written, a comment after a
-# quoted value and after a flow list, and a key that begins with a dash.
+# quoted value and after a flow list, a key that begins with a dash, and an empty block.
 # scripts/tests/test_ci_workflows.py judges it; nothing runs it.
 on:
   pull_request:
@@ -20,6 +20,7 @@ jobs:
           DOUBLED: 'it''s ${{ github.token }}'
           KEPT: 'planted\path' # a comment after a single-quoted value
           PLAIN: "the token, ${{ github.token }}" # a comment after a double-quoted value
+          EMPTY: |
         run: echo planted
       - uses: actions/checkout@0123456789abcdef0123456789abcdef01234567
         with:
