@@ -290,6 +290,304 @@ jobs:
           path: ${{ runner.temp }}/check-logs/
           if-no-files-found: warn
 
+  # Mutation testing on the diff (SPEC-039 R3 and R18, ADR-057): a plan, one job per shard of the
+  # diff's Rust mutants, the hand-proved rows, and a verdict read from the tools' own reports, where
+  # a class that applies and examined nothing is VOID. A release pull request into main is judged on
+  # its merge diff like any other. Every job runs on every event and says by name why it has
+  # nothing to do, because a skipped job reads as failed to ci; each restores caches and saves none.
+  #
+  # The plan: the event's case, the diff, and, when Rust changed, the shards. cargo-mutants lists
+  # the diff's mutants (building nothing) and the plan takes the fewest round-robin shards whose
+  # slowest is projected within an hour, half a shard's timeout.
+  mutation-plan:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    outputs:
+      case: ${{ steps.plan.outputs.case }}
+      scope: ${{ steps.plan.outputs.scope }}
+      rust: ${{ steps.plan.outputs.rust }}
+      rows: ${{ steps.plan.outputs.rows }}
+      shards: ${{ steps.shards.outputs.shards }}
+      matrix: ${{ steps.shards.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The merge ref and its first parent, the base's tip: the diff is HEAD^1...HEAD.
+          fetch-depth: 2
+          persist-credentials: false
+      - name: the plan (the event's case, the diff's classes, its changed lines, its rows)
+        id: plan
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+          SUBJECT: ${{ github.event.head_commit.message }}
+        run: python3 scripts/mutation-verdict.py plan --base HEAD^1 --head HEAD --out "$RUNNER_TEMP/mutation" --event "$EVENT" --base-ref "$BASE_REF" --subject "$SUBJECT"
+      - name: the pinned Rust toolchain (rust-toolchain.toml)
+        if: ${{ steps.plan.outputs.rust == 'true' }}
+        run: rustup show
+      - uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
+        if: ${{ steps.plan.outputs.rust == 'true' }}
+        with:
+          tool: cargo-mutants@27.1.0
+          fallback: none
+      # cargo-mutants reads .cargo/mutants.toml, whose test tool is nextest; the listing runs no
+      # test and builds nothing, but it carries the same tool and bounds as every other command.
+      - uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
+        if: ${{ steps.plan.outputs.rust == 'true' }}
+        with:
+          tool: cargo-nextest@0.9.146
+          fallback: none
+      - name: the diff's mutants, as cargo-mutants itself lists them
+        if: ${{ steps.plan.outputs.rust == 'true' }}
+        run: cargo mutants --no-shuffle --list --json --in-diff "$RUNNER_TEMP/mutation/git.diff" --timeout 300 --build-timeout 600 > "$RUNNER_TEMP/mutation/listed.json"
+      - name: the shards, the fewest whose slowest is projected within its bound
+        id: shards
+        run: python3 scripts/mutation-verdict.py shards --plan "$RUNNER_TEMP/mutation/plan.json" --listed "$RUNNER_TEMP/mutation/listed.json"
+      - name: keep the plan, the diff and the listing for every job after it
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: mutation-plan
+          path: ${{ runner.temp }}/mutation/
+          if-no-files-found: warn
+
+  # One job per shard of the plan: cargo-mutants over the same diff, in place, the shard's mutants
+  # round-robin as the plan projected them. Its exit is recorded and its report kept; the verdict's
+  # job reads them.
+  mutation-rust:
+    needs: [mutation-plan]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ${{ fromJSON(needs.mutation-plan.outputs.matrix) }}
+    env:
+      CARGO_INCREMENTAL: "0"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: mutation-plan
+          path: ${{ runner.temp }}/mutation
+      - name: this shard's case, by name
+        env:
+          CASE: ${{ needs.mutation-plan.outputs.case }}
+          SHARD: ${{ matrix.shard }}
+          SHARDS: ${{ needs.mutation-plan.outputs.shards }}
+        run: |
+          echo "mutation-rust: shard $SHARD of $SHARDS: $CASE"
+      - name: the pinned Rust toolchain (rust-toolchain.toml)
+        if: ${{ needs.mutation-plan.outputs.rust == 'true' }}
+        run: rustup show
+      - name: protoc 31.1, checksum verified (Anki's engine compiles its protobuf definitions, ADR-022)
+        if: ${{ needs.mutation-plan.outputs.rust == 'true' }}
+        env:
+          PROTOC_SHA256: 96553041f1a91ea0efee963cb16f462f5985b4d65365f3907414c360044d8065
+        run: |
+          curl -fsSL -o /tmp/protoc.zip https://github.com/protocolbuffers/protobuf/releases/download/v31.1/protoc-31.1-linux-x86_64.zip
+          echo "$PROTOC_SHA256  /tmp/protoc.zip" | sha256sum -c -
+          mkdir -p "$HOME/.local/protoc" && unzip -q /tmp/protoc.zip -d "$HOME/.local/protoc"
+          echo "$HOME/.local/protoc/bin" >> "$GITHUB_PATH"
+      - name: restore the Rust cache, keyed on the toolchain pin and Cargo.lock
+        if: ${{ needs.mutation-plan.outputs.rust == 'true' }}
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: rust-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-${{ hashFiles('Cargo.lock') }}
+          restore-keys: |
+            rust-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-
+      - uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
+        if: ${{ needs.mutation-plan.outputs.rust == 'true' }}
+        with:
+          tool: cargo-mutants@27.1.0
+          fallback: none
+      - uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
+        if: ${{ needs.mutation-plan.outputs.rust == 'true' }}
+        with:
+          tool: cargo-nextest@0.9.146
+          fallback: none
+      - name: cargo-mutants, one shard of the diff, in place (its exit is recorded; the verdict reads its report)
+        if: ${{ needs.mutation-plan.outputs.rust == 'true' }}
+        env:
+          SHARD: ${{ matrix.shard }}
+          SHARDS: ${{ needs.mutation-plan.outputs.shards }}
+        run: |
+          out="$RUNNER_TEMP/shard"
+          mkdir -p "$out"
+          rc=0
+          cargo mutants --no-shuffle -vV --in-place --in-diff "$RUNNER_TEMP/mutation/git.diff" --sharding round-robin --shard "$SHARD/$SHARDS" --timeout 300 --build-timeout 600 --output "$out" || rc=$?
+          echo "$rc" > "$out/cargo-mutants.exit"
+          echo "cargo-mutants exited $rc"
+      - name: keep the shard's report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: mutation-rust-shard-${{ matrix.shard }}
+          path: ${{ runner.temp }}/shard/
+          if-no-files-found: warn
+
+  # The hand-proved rows the diff selects, and the retirement check: no row leaves while its target
+  # stays, unless the maintainer approved it.
+  mutation-rows:
+    needs: [mutation-plan]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      CARGO_INCREMENTAL: "0"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The retirement check compares the rows at HEAD^1, the base's tip, with HEAD's.
+          fetch-depth: 2
+          persist-credentials: false
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: mutation-plan
+          path: ${{ runner.temp }}/mutation
+      - name: the rows' case, by name
+        env:
+          CASE: ${{ needs.mutation-plan.outputs.case }}
+          ROWS: ${{ needs.mutation-plan.outputs.rows }}
+        run: |
+          echo "mutation-rows: rows selected $ROWS: $CASE"
+      - name: the pinned Rust toolchain (rust-toolchain.toml)
+        if: ${{ needs.mutation-plan.outputs.rows == 'true' }}
+        run: rustup show
+      - name: protoc 31.1, checksum verified (Anki's engine compiles its protobuf definitions, ADR-022)
+        if: ${{ needs.mutation-plan.outputs.rows == 'true' }}
+        env:
+          PROTOC_SHA256: 96553041f1a91ea0efee963cb16f462f5985b4d65365f3907414c360044d8065
+        run: |
+          curl -fsSL -o /tmp/protoc.zip https://github.com/protocolbuffers/protobuf/releases/download/v31.1/protoc-31.1-linux-x86_64.zip
+          echo "$PROTOC_SHA256  /tmp/protoc.zip" | sha256sum -c -
+          mkdir -p "$HOME/.local/protoc" && unzip -q /tmp/protoc.zip -d "$HOME/.local/protoc"
+          echo "$HOME/.local/protoc/bin" >> "$GITHUB_PATH"
+      - name: restore the Rust cache, keyed on the toolchain pin and Cargo.lock
+        if: ${{ needs.mutation-plan.outputs.rows == 'true' }}
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: rust-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-${{ hashFiles('Cargo.lock') }}
+          restore-keys: |
+            rust-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-
+      - name: the rows the diff selects (the verdict reads their report)
+        if: ${{ needs.mutation-plan.outputs.rows == 'true' }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/rows"
+          rc=0
+          python3 scripts/mutation_rows.py prove --rows-from "$RUNNER_TEMP/mutation/plan.json" --report "$RUNNER_TEMP/rows/rows.json" || rc=$?
+          echo "the rows runner exited $rc"
+      - name: no row leaves while its target stays, unless the maintainer approved it
+        if: ${{ needs.mutation-plan.outputs.scope == 'diff' }}
+        run: python3 scripts/mutation_rows.py retired --base HEAD^1
+      - name: keep the rows' report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: mutation-rows
+          path: ${{ runner.temp }}/rows/
+          if-no-files-found: warn
+
+  # The verdict, whatever the shards returned: every shard the plan promised, from 0 to n-1, is
+  # counted, one missing or partial is VOID by name, and the shards' reports must hold every listed
+  # mutant once; then the rows, for the Rust class and the oracle's.
+  mutation-verdict:
+    needs: [mutation-plan, mutation-rust, mutation-rows]
+    if: ${{ always() }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: mutation-*
+          path: ${{ runner.temp }}/reports
+      - name: the verdict, from every shard's report and the rows' (the plan names a not-applicable case)
+        run: |
+          reports="$RUNNER_TEMP/reports"
+          status=0
+          python3 scripts/mutation-verdict.py judge --plan "$reports/mutation-plan/plan.json" --class rust --shard-reports "$reports" --rows "$reports/mutation-rows/rows.json" || status=$?
+          oracle=0
+          python3 scripts/mutation-verdict.py judge --plan "$reports/mutation-plan/plan.json" --class oracle --rows "$reports/mutation-rows/rows.json" || oracle=$?
+          if [ "$status" -eq 0 ]; then status=$oracle; fi
+          exit "$status"
+
+  # StrykerJS over every web production file the diff changes, whole, so a survivor already on a
+  # touched file is the pull request's own (SPEC-039 R3, ADR-057 D3). It restores the pnpm store
+  # and saves none.
+  mutation-web:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - name: the plan (the event's case, the diff's classes, the web files it changes)
+        id: plan
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+          SUBJECT: ${{ github.event.head_commit.message }}
+        run: python3 scripts/mutation-verdict.py plan --base HEAD^1 --head HEAD --out "$RUNNER_TEMP/mutation" --event "$EVENT" --base-ref "$BASE_REF" --subject "$SUBJECT"
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        if: ${{ steps.plan.outputs.web == 'true' }}
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        if: ${{ steps.plan.outputs.web == 'true' }}
+        with:
+          node-version-file: .nvmrc
+          package-manager-cache: false
+      - name: the pnpm store's path
+        id: pnpm-store
+        if: ${{ steps.plan.outputs.web == 'true' }}
+        run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+      - name: restore the pnpm store, keyed on pnpm-lock.yaml
+        if: ${{ steps.plan.outputs.web == 'true' }}
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-${{ runner.os }}-
+      - name: the Mini App's dependencies, and the sources it generates
+        if: ${{ steps.plan.outputs.web == 'true' }}
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm --dir web/app exec paraglide-js compile --project ./project.inlang --outdir ./src/lib/paraglide --emit-ts-declarations --silent
+          pnpm --dir web/app exec svelte-kit sync
+      - name: StrykerJS over each changed file, whole (the verdict reads its report)
+        if: ${{ steps.plan.outputs.web == 'true' }}
+        working-directory: web/app
+        env:
+          MUTATE: ${{ steps.plan.outputs.mutate }}
+        run: |
+          rc=0
+          pnpm exec stryker run --mutate "$MUTATE" || rc=$?
+          cp -r reports/mutation "$RUNNER_TEMP/mutation/stryker" || true
+          echo "StrykerJS exited $rc"
+      - name: the verdict, from Stryker's own report (the plan names a not-applicable case)
+        run: python3 scripts/mutation-verdict.py judge --plan "$RUNNER_TEMP/mutation/plan.json" --class web --stryker "$RUNNER_TEMP/mutation/stryker/mutation.json"
+      - name: keep the plan and the report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: mutation-web
+          path: ${{ runner.temp }}/mutation/
+          if-no-files-found: warn
+
   workflow-lint:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -325,7 +623,7 @@ jobs:
 
   ci:
     if: ${{ always() }}
-    needs: [rust, engine, web, packs, hygiene, workflow-lint, base-is-dev]
+    needs: [rust, engine, web, packs, hygiene, mutation-plan, mutation-rust, mutation-rows, mutation-verdict, mutation-web, workflow-lint, base-is-dev]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:

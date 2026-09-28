@@ -1,0 +1,53 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S02401-THE-HASH-IS-COMPARED-IN-CONSTANT-TIME",
+        "identity",
+        "src/init_data.rs",
+        "    mac.verify_slice(&hash)\n        .map_err(|_| Refusal::InitDataInvalid)?;",
+        "    if mac.finalize().into_bytes().as_slice() != hash.as_slice() {\n        return Err(Refusal::InitDataInvalid);\n    }",
+        "boundary::the_hash_is_compared_only_through_verify_slice",
+        "launch data's hash is compared only through verify_slice, in constant time; a plain comparison accepts and refuses the same payloads, so only the boundary scan can tell"
+      ],
+      [
+        "S02402-THE-FRESHNESS-BOUND-IS-AT-MOST-A-DAY",
+        "identity",
+        "src/settings.rs",
+        "        if max_age.subsec_nanos() == 0 && seconds >= 1 && seconds <= LONGEST_MAX_AGE.as_secs() {",
+        "        if max_age.subsec_nanos() == 0 && seconds >= 1 && seconds <= LONGEST_MAX_AGE.as_secs() + 1 {",
+        "init_data::the_freshness_bound_is_read_from_its_setting",
+        "the auth_date bound is at most 86400 seconds; cargo-mutants never looks inside Freshness::new"
+      ],
+      [
+        "S02403-LAUNCH-DATA-IS-FRESH-FOR-AN-HOUR",
+        "identity",
+        "src/settings.rs",
+        "pub const DEFAULT_MAX_AGE: Duration = Duration::from_hours(1);",
+        "pub const DEFAULT_MAX_AGE: Duration = Duration::from_hours(2);",
+        "init_data::a_stale_or_future_auth_date_is_refused_with_401",
+        "launch data older than the default hour is stale"
+      ],
+      [
+        "S02404-THE-CALLER-IS-PINNED-TO-THE-OWNER",
+        "identity",
+        "src/owner.rs",
+        "            if self.owner.is(caller.user()) {",
+        "            if self.owner.is(self.owner.user()) {",
+        "owner::a_valid_payload_for_another_user_is_refused_with_403",
+        "the gate compares the caller with the owner, not the owner with itself (CHARTER 14)"
+      ]
+    ],
+    "CARGO_KILLED_SCRIPT_MUTATIONS": [
+      [
+        "S02405-THE-SESSION-COOKIE-IS-HTTPONLY",
+        "crates/identity/src/session.rs",
+        "            \"__Host-deckstreak_session={}; Path=/; Max-Age={}; Secure; HttpOnly; SameSite=Strict\",",
+        "            \"__Host-deckstreak_session={}; Path=/; Max-Age={}; Secure; SameSite=Strict\",",
+        "api",
+        "session_routes::the_session_cookie_is_host_prefixed_secure_httponly_and_strict",
+        "the session cookie a handshake sets is HttpOnly, so no script can read it; cargo-mutants never mutates a string"
+      ]
+    ]
+  }
+}

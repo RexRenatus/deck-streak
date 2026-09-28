@@ -1,0 +1,230 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S03901-A-RUST-DIFF-THAT-EXAMINED-NOTHING-IS-VOID",
+        "scripts/mutation-verdict.py",
+        "    if verdict.examined == 0:\n        verdict.void(\"production code changed and nothing was examined\")\n\n\ndef klass_rows",
+        "    if verdict.examined < 0:\n        verdict.void(\"production code changed and nothing was examined\")\n\n\ndef klass_rows",
+        "a production diff whose tool examined nothing is VOID, never green (SPEC-039 R4)",
+        "test_mutation_verdict.TheVerdictReadsTheToolsOwnReport.test_a_production_diff_that_examined_nothing_is_void"
+      ],
+      [
+        "S03902-AN-UNVIABLE-MUTANT-IS-NOT-EXAMINED",
+        "scripts/mutation-verdict.py",
+        "    tool = caught + missed + timeout\n",
+        "    tool = caught + missed + timeout + unviable\n",
+        "a mutant that does not build is not examined, so it cannot carry a class (SPEC-039 R4)",
+        "test_mutation_verdict.TheVerdictReadsTheToolsOwnReport.test_a_missed_mutant_fails_and_an_unviable_one_is_not_examined"
+      ],
+      [
+        "S03903-A-TRACKED-CHANGE-IS-REFUSED",
+        "scripts/mutation_rows.py",
+        "    dirty = tracked_changes(root)\n",
+        "    dirty = []\n",
+        "the runner refuses a tree with a tracked change before it installs any mutant (SPEC-039 R9)",
+        "test_mutation_rows.TheRunnerProvesARowTheWayThePackDoes.test_a_tracked_change_is_refused_before_any_mutant_is_installed"
+      ],
+      [
+        "S03904-A-KILLER-SELECTS-EXACTLY-ONE-TEST",
+        "scripts/mutation_rows.py",
+        "    if control.selected != 1:\n",
+        "    if control.selected < 1:\n",
+        "a killer that selects more than one test is VOID (SPEC-039 R9)",
+        "test_mutation_rows.TheRunnerProvesARowTheWayThePackDoes.test_a_killer_that_selects_other_than_one_test_is_void"
+      ],
+      [
+        "S03905-A-ROW-LEAVES-ONLY-WITH-APPROVAL",
+        "scripts/mutation_rows.py",
+        "            refused += 1\n",
+        "            refused += 0\n",
+        "a row that leaves while its target stays fails the job without a recorded approval (SPEC-039 R11)",
+        "test_mutation_rows.NoRowLeavesWhileItsTargetStays.test_a_row_that_leaves_while_its_target_stays_is_refused"
+      ],
+      [
+        "S03906-A-PARTIAL-REPORT-IS-VOID",
+        "scripts/mutation-verdict.py",
+        "    if caught + missed + timeout + unviable != total:\n",
+        "    if caught + missed + timeout + unviable > total:\n",
+        "a report whose counts fall short of its total is partial, and VOID, whatever the tool's exit (SPEC-039 R4)",
+        "test_mutation_verdict.TheVerdictReadsTheToolsOwnReport.test_a_partial_report_is_void_never_complete"
+      ],
+      [
+        "S03907-A-MISSING-SHARD-FAILS-THE-BATTERY",
+        "scripts/mutation-verdict.py",
+        "            findings.append(f\"battery: MISSING {name}: no outcomes.json\")\n",
+        "            whole += 1\n",
+        "a shard that uploaded no report fails the battery by name, never reads as one with no survivor (SPEC-039 R12)",
+        "test_mutation_verdict.TheBatteryCountsEveryReport.test_a_missing_or_partial_battery_report_fails_by_name"
+      ],
+      [
+        "S03908-A-STRING-HOLDS-NO-COMMENT",
+        "scripts/mutation-verdict.py",
+        "                end = rust_literal(text, at)\n",
+        "                end = None\n",
+        "a comment opener inside a Rust string opens no comment, so a changed code line never reads as a comment (SPEC-039 R4)",
+        "test_mutation_verdict.ThePlanReadsTheDiff.test_a_comment_opener_inside_a_string_is_not_a_comment"
+      ],
+      [
+        "S03909-AN-UNKNOWN-KEY-IS-REFUSED",
+        "scripts/mutation-verdict.py",
+        "        kind = CARGO_MUTANTS_KEYS.get(key)\n",
+        "        kind = CARGO_MUTANTS_KEYS.get(key, \"strings\")\n",
+        "a key cargo-mutants 27.1.0 does not declare is refused, as the tool refuses the whole file (SPEC-039 R6)",
+        "test_mutation_workflows.TheToolsConfigurationsAreValid.test_the_tool_configurations_load_under_their_own_rules"
+      ],
+      [
+        "S03910-A-SECOND-ROW-OF-ONE-MUTANT-IS-REFUSED",
+        "scripts/mutation_rows.py",
+        "        if mutant in installed:\n",
+        "        if mutant in installed and False:\n",
+        "a second row installing another row's mutant for its killer is refused by the census (SPEC-039 R11)",
+        "test_mutation_rows.TheCensusRefusesARowThatCanProveNothing.test_the_census_refuses_a_row_that_can_prove_nothing"
+      ],
+      [
+        "S03911-A-RELEASE-IS-JUDGED-ON-ITS-MERGE-DIFF",
+        "scripts/mutation-verdict.py",
+        "            \"diff\",\n            \"a release pull request into main is judged on its merge diff, every change dev \"\n",
+        "            \"not-applicable\",\n            \"a release pull request into main is judged on its merge diff, every change dev \"\n",
+        "a release pull request into main is judged on its merge diff, never read not-applicable (SPEC-039 R3)",
+        "test_mutation_verdict.EachEventReadsItsCase.test_each_event_reads_its_case_by_name"
+      ],
+      [
+        "S03912-THE-SHARDS-FIT-THEIR-BOUND",
+        "scripts/mutation-verdict.py",
+        "        n for n in range(1, MAX_SHARDS + 1) if max(projected(costs, n)) <= SHARD_BOUND_SECONDS\n",
+        "        n for n in range(1, MAX_SHARDS + 1) if max(projected(costs, n)) <= 2 * SHARD_BOUND_SECONDS\n",
+        "the plan takes the fewest shards whose slowest is projected within the bound, never one past it (SPEC-039 R18)",
+        "test_mutation_verdict.TheShardsFitTheirBound.test_the_plan_shards_the_listed_mutants_within_their_bound"
+      ],
+      [
+        "S03913-A-DIFF-BEYOND-THE-MATRIX-IS-REFUSED",
+        "scripts/mutation-verdict.py",
+        "        return EXIT_FAIL\n    times = projected(costs, count)\n",
+        "        count = MAX_SHARDS\n    times = projected(costs, count)\n",
+        "a diff that needs more shards than a job matrix holds is refused with its projection, never capped (SPEC-039 R18)",
+        "test_mutation_verdict.TheShardsFitTheirBound.test_the_plan_shards_the_listed_mutants_within_their_bound"
+      ],
+      [
+        "S03914-EACH-MUTANT-IN-ITS-ROUND-ROBIN-SHARD",
+        "scripts/mutation-verdict.py",
+        "                    name for index, (name, _) in enumerate(mutants) if index % count == shard\n",
+        "                    name for index, (name, _) in enumerate(mutants) if index // count == shard\n",
+        "the plan gives mutant i to shard i mod n, as cargo-mutants' round-robin does, once each (SPEC-039 R18)",
+        "test_mutation_verdict.TheShardsFitTheirBound.test_the_plan_shards_the_listed_mutants_within_their_bound"
+      ],
+      [
+        "S03915-EVERY-PLANNED-SHARD-IS-COUNTED",
+        "scripts/mutation-verdict.py",
+        "        for shard in range(len(planned)):\n",
+        "        for shard in range(len(planned) - 1):\n",
+        "the verdict counts every shard the plan promised, the last one included, whatever reported (SPEC-039 R18)",
+        "test_mutation_verdict.TheVerdictCountsEveryShard.test_a_missing_or_partial_shard_report_is_void_by_name"
+      ],
+      [
+        "S03916-A-MUTANT-IN-TWO-SHARDS-FAILS",
+        "scripts/mutation-verdict.py",
+        "        if len(shards_of) > listed[name]:\n",
+        "        if len(shards_of) > listed[name] + 1:\n",
+        "a mutant tested in more shards than the listing named it fails the verdict, by name (SPEC-039 R18)",
+        "test_mutation_verdict.TheVerdictCountsEveryShard.test_the_shards_reports_hold_every_listed_mutant_once"
+      ],
+      [
+        "S03917-A-LISTED-MUTANT-IN-NO-SHARD-IS-VOID",
+        "scripts/mutation-verdict.py",
+        "            if len(tested.get(name, [])) < times:\n",
+        "            if len(tested.get(name, [])) < times - 1:\n",
+        "a listed mutant that no whole shard tested is VOID, by name (SPEC-039 R18)",
+        "test_mutation_verdict.TheVerdictCountsEveryShard.test_the_shards_reports_hold_every_listed_mutant_once"
+      ],
+      [
+        "S03918-ONLY-A-SHARD-OF-NO-MUTANT-OWES-NO-REPORT",
+        "scripts/mutation-verdict.py",
+        "        if report is None and code == 0 and mutants == 0:\n",
+        "        if report is None and code == 0:\n",
+        "only a shard the plan gave no mutant is excused a report; one that held mutants owes it (SPEC-039 R18)",
+        "test_mutation_verdict.TheVerdictCountsEveryShard.test_a_diff_the_tool_lists_no_mutant_of_needs_no_shard_report"
+      ],
+      [
+        "S03919-A-PLAN-WITH-NO-SHARDS-IS-VOID",
+        "scripts/mutation-verdict.py",
+        "            verdict.void(\"the plan names no shards, so no shard's report was promised\")\n",
+        "            verdict.say(\"the plan names no shards, so no shard's report was promised\")\n",
+        "a sharded verdict over a plan the shards were never sized for is VOID, by name (SPEC-039 R18)",
+        "test_mutation_verdict.TheVerdictCountsEveryShard.test_a_missing_or_partial_shard_report_is_void_by_name"
+      ],
+      [
+        "S03920-RUST-WITH-NO-LISTING-IS-VOID",
+        "scripts/mutation-verdict.py",
+        "                \"holds no cargo-mutants listing\"\n            )\n            return EXIT_VOID\n",
+        "                \"holds no cargo-mutants listing\"\n            )\n            listed = []\n",
+        "a Rust diff with no cargo-mutants listing is VOID, never one shard of nothing (SPEC-039 R18)",
+        "test_mutation_verdict.TheShardsFitTheirBound.test_the_plan_shards_the_listed_mutants_within_their_bound"
+      ],
+      [
+        "S03921-A-FILE-THAT-IS-NO-PLAN-IS-VOID",
+        "scripts/mutation-verdict.py",
+        "        print(f\"mutation: shards: VOID {plan_path} is not a mutation plan\")\n        return EXIT_VOID\n",
+        "        print(f\"mutation: shards: VOID {plan_path} is not a mutation plan\")\n        return EXIT_OK\n",
+        "the shards of a file that is no plan are VOID, never a matrix (SPEC-039 R18)",
+        "test_mutation_verdict.TheShardsFitTheirBound.test_the_plan_shards_the_listed_mutants_within_their_bound"
+      ],
+      [
+        "S03922-THE-MATRIX-NAMES-EVERY-SHARD",
+        "scripts/mutation-verdict.py",
+        "            sink.write(f\"matrix={json.dumps(list(range(count)))}\\n\")\n",
+        "            sink.write(f\"matrix={json.dumps(list(range(count - 1)))}\\n\")\n",
+        "the matrix names every shard from 0 to n-1, so none is planned and never run (SPEC-039 R18)",
+        "test_mutation_verdict.TheShardsFitTheirBound.test_the_plan_shards_the_listed_mutants_within_their_bound"
+      ],
+      [
+        "S03923-A-SHARDED-RUN-PROVES-ITS-PARTITION",
+        "scripts/mutation-verdict.py",
+        "    if args.shard_reports:\n        partition(verdict, plan, whole, complete=len(verdict.voids) == voids)\n",
+        "    if not args.shard_reports:\n        partition(verdict, plan, whole, complete=len(verdict.voids) == voids)\n",
+        "a sharded verdict proves the shards' reports hold every listed mutant once (SPEC-039 R18)",
+        "test_mutation_verdict.TheVerdictCountsEveryShard.test_the_shards_reports_hold_every_listed_mutant_once"
+      ],
+      [
+        "S03924-A-MISSING-SHARD-IS-NAMED-ONCE",
+        "scripts/mutation-verdict.py",
+        "    if complete:\n",
+        "    if True:\n",
+        "a missing shard is named once, never as each of its mutants unexamined (SPEC-039 R18)",
+        "test_mutation_verdict.TheVerdictCountsEveryShard.test_a_missing_or_partial_shard_report_is_void_by_name"
+      ],
+      [
+        "S03925-EVERY-SELECTOR-IS-PROVED",
+        "scripts/mutation_rows.py",
+        "    wanted += list(args.row)\n",
+        "    wanted = list(args.row)\n",
+        "a --row beside a --band adds its row and drops none of the band's (SPEC-039 R9)",
+        "test_mutation_rows.TheRunnerProvesEverySelectedRow.test_every_row_its_selectors_name_is_proved_once"
+      ],
+      [
+        "S03926-A-SECOND-STRYKER-CONFIG-IS-REFUSED",
+        "scripts/mutation-verdict.py",
+        "        if name != \"stryker.config.json\" and (root / \"web\" / \"app\" / name).is_file():\n",
+        "        if name != \"stryker.config.json\" and (root / \"web\" / \"app\" / name).is_dir():\n",
+        "a second Stryker configuration StrykerJS would read first is refused by name (SPEC-039 R6)",
+        "test_mutation_workflows.TheConfigurationCheckSeesWhatStrykerReads.test_the_configuration_check_refuses_what_stryker_would_read_otherwise"
+      ],
+      [
+        "S03927-IGNORE-STATIC-NEEDS-PER-TEST-COVERAGE",
+        "scripts/mutation-verdict.py",
+        "    if document.get(\"ignoreStatic\") is True and coverage != \"perTest\":\n",
+        "    if document.get(\"ignoreStatic\") is True and coverage == \"perTest\":\n",
+        "ignoreStatic under a coverage analysis other than perTest is refused, as StrykerJS refuses it (SPEC-039 R6)",
+        "test_mutation_workflows.TheConfigurationCheckSeesWhatStrykerReads.test_the_configuration_check_refuses_what_stryker_would_read_otherwise"
+      ],
+      [
+        "S03928-MUTATE-IS-R2S-PRODUCTION-CODE",
+        "scripts/mutation-verdict.py",
+        "    if sorted(document.get(\"mutate\") or []) != sorted(STRYKER_MUTATE):\n",
+        "    if not document.get(\"mutate\"):\n",
+        "a mutate list other than R2's web production code is refused (SPEC-039 R2, R6)",
+        "test_mutation_workflows.TheConfigurationCheckSeesWhatStrykerReads.test_the_configuration_check_refuses_what_stryker_would_read_otherwise"
+      ]
+    ]
+  }
+}

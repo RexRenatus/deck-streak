@@ -1,0 +1,7 @@
+{
+  "_": [
+    "Each row retired while its target file stayed (SPEC-039 R11): its id, the reason, and the",
+    "maintainer's approval as the orchestrator relayed it. A row whose target leaves with it needs no entry."
+  ],
+  "retired": []
+}
