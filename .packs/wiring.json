@@ -10,6 +10,19 @@
     "tdd": {
       "state": "enforced"
     },
+    "mutation-rows": {
+      "state": "enforced",
+      "excluded_rows": {
+        "anchor-audit": "it runs the pack author's own anchor audit over the author's own manifest; DeckStreak's census, scripts/tests/test_mutation_rows.py, holds every anchor here (SPEC-039 A9)",
+        "killer-selection": "it runs the pack author's own guard; DeckStreak's census resolves each killer to exactly one test (A9), and the runner counts what a killer selects from its output (A3, A8)",
+        "one-selection-policy": "it runs the pack author's own runner's test; DeckStreak's runner is scripts/mutation_rows.py (A3, A8)",
+        "rows-reader": "it runs the pack author's own reader guard; scripts/mutation_rows.py is DeckStreak's one reader, and find-differs, band-ids and mutants-distinct read the rows through it (A11)",
+        "seal-digest-anchors": "it guards the pack author's sealed manifest; DeckStreak's rows have no seal",
+        "mutant-viability": "it runs the pack author's own viability guard; DeckStreak's runner builds or parses each mutant and reads one that fails as VOID, never a kill (A6, A8)",
+        "manifest-bytes": "it round-trips the pack author's own monolithic manifest; DeckStreak's rows are band fragments with a header of their own (SPEC-039 R8)"
+      },
+      "note": "the practice rows judge the mutation tools' configurations and CI jobs, tool-config-valid blocking; find-differs, band-ids and mutants-distinct judge DeckStreak's rows (SPEC-039 R14)"
+    },
     "stack-selection": {
       "state": "enforced"
     },
