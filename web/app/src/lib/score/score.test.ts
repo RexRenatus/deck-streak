@@ -96,6 +96,8 @@ describe('the score body', () => {
         defect((copy) => (copy.score.pillars[pillar] = null))
       ])
     ];
+    // the control: the body every defect is planted in reads whole
+    expect(parseScore(body())?.studyDay).toBe('2001-02-03');
     for (const [name, candidate] of examined('refused bodies', refused)) {
       expect(parseScore(candidate), name).toBeNull();
     }

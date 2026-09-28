@@ -363,7 +363,7 @@ privacy-gdpr and accessibility packs stay enforced, and no row is deferred for i
 | `web/app/src/lib/startapp.ts` | miniapp | changed at delivery (§10): the `score` token |
 | `web/app/src/lib/startapp.test.ts` | miniapp | changed at delivery (§10): the token list names `score` |
 | `web/app/messages/en.json` | miniapp | changed at delivery (§10): the score screen's messages |
-| `web/app/tests/a11y.spec.ts` | miniapp | changed at delivery (§10): `/api/score` answered, so the audit renders the breakdown |
+| `web/app/tests/a11y.spec.ts` | miniapp | changed at delivery (§10): the score route answered, so the audit renders the breakdown |
 
 ## 5. What this does NOT do
 
