@@ -22,6 +22,9 @@ TIMINGS="$LOG_DIR/timings.tsv"
 STAGES_ALL=(fmt clippy test doctest audit-rust web audit-web packs python scrub secrets)
 if [ "$#" -gt 0 ]; then STAGES=("$@"); else STAGES=("${STAGES_ALL[@]}"); fi
 
+# The engine set (SPEC-038 R13), stubbed: a filterset no test is in, read by no stage yet.
+ENGINE_TESTS='none()'
+
 failed=()
 
 need() {

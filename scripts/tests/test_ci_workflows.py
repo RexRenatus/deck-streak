@@ -1,8 +1,8 @@
 """CI runs the whole gate on hosted runners with read-only tokens and pinned actions (SPEC-002 A9),
 on pull requests into dev and main and pushes to both (SPEC-030 A1), and only this repository's dev
-reaches main (SPEC-034 A5 to A7). The gate runs in four parallel jobs, each stage in exactly one,
-a cache is saved only by a push to dev or main, and every job that compiles Rust installs the
-protoc Anki's engine needs (SPEC-038)."""
+reaches main (SPEC-034 A5 to A7). The gate runs in parallel jobs, each stage in exactly one, the
+engine's slow tests in a job of their own, a cache is saved only by a push to dev or main, and every
+job that compiles Rust installs the protoc Anki's engine needs (SPEC-038)."""
 
 import math
 import os
@@ -28,9 +28,11 @@ INTO_MAIN = {
     "github.event.pull_request.head.repo.full_name": THIS_REPOSITORY,
     "github.repository": THIS_REPOSITORY,
 }
-# The owner's layout of the gate (SPEC-038 R3): each job and the stages it runs, in order.
+# The owner's layout of the gate (SPEC-038 R3): each job and the stages it runs, in order. The engine
+# job, which runs the engine set beside rust, joined it by the amendment of section 8 (R14).
 OWNER_LAYOUT = {
     "rust": ["fmt", "clippy", "test", "doctest", "audit-rust"],
+    "engine": ["test-engine"],
     "web": ["web", "audit-web"],
     "packs": ["packs"],
     "hygiene": ["python", "scrub", "secrets"],
@@ -39,8 +41,8 @@ OWNER_LAYOUT = {
 RUST_CACHE = ["~/.cargo/registry/index/", "~/.cargo/registry/cache/", "~/.cargo/git/db/", "target/"]
 BROWSERS = ["~/.cache/ms-playwright"]
 # The stages that compile Rust: python's among them, because a guard test builds a Rust example
-# (SPEC-042's rails rows).
-COMPILES_RUST = {"clippy", "test", "doctest", "python"}
+# (SPEC-042's rails rows), and test-engine, which builds the engine set's tests (R13).
+COMPILES_RUST = {"clippy", "test", "doctest", "python", "test-engine"}
 # The one build tool Anki's engine needs: protoc 31.1, at the version and archive digest Anki's own
 # build pins (ADR-022).
 PROTOC_VERSION = "31.1"
@@ -846,6 +848,101 @@ def run_step(step, lockfile):
         )
         pairs = [line.split("=", 1) for line in output.read_text().splitlines() if "=" in line]
     return done.returncode, dict(pairs)
+
+
+# ------------------------------------------------------- the engine job (SPEC-038 A18, R14)
+
+# The job that runs the engine set, SPEC-022's slow sync and budget tests, beside rust.
+ENGINE_JOB = "engine"
+# The engine job's timeout, sized from its measured runs (SPEC-038 section 8): a cold run, which
+# compiles every dependency before about 140 s of tests, takes about five minutes, so the timeout
+# holds at least two cold runs and ends a hung sync test within half an hour, not six hours.
+ENGINE_TIMEOUT_MINUTES = range(10, 31)
+
+
+def engine_job_problems(workflow):
+    """What a workflow gets wrong about the engine job (SPEC-038 R14): test-engine run anywhere but
+    the engine job alone, an engine job that waits on another or can be skipped, a ci that does not
+    need it, no cargo-nextest before its stage, a cache it saves or a Rust cache it does not
+    restore, incremental builds, or a timeout outside the measured band."""
+    jobs = workflow.get("jobs") or {}
+    runs = [(job, named) for job, named in stage_calls(workflow) if "test-engine" in named]
+    problems = []
+    if runs != [(ENGINE_JOB, ["test-engine"])]:
+        problems.append(f"test-engine runs in {runs}, not in the engine job alone")
+    job = jobs.get(ENGINE_JOB)
+    if job is None:
+        return [*problems, "there is no engine job"]
+    if job.get("needs") is not None:
+        problems.append("the engine job waits on another job")
+    if "if" in job:
+        problems.append("the engine job can be skipped, and a skipped need fails ci")
+    if ENGINE_JOB not in ((jobs.get("ci") or {}).get("needs") or []):
+        problems.append("ci does not need the engine job, so the engine's tests are not required")
+    steps = job.get("steps") or []
+    gate = next((n for n, s in enumerate(steps) if GATE_CALL.search(str(s.get("run", "")))), None)
+    nextest = [
+        n
+        for n, s in enumerate(steps)
+        if action(s) == "taiki-e/install-action"
+        and "cargo-nextest"
+        in [t.strip() for t in str((s.get("with") or {}).get("tool")).split(",")]
+    ]
+    if gate is None or not nextest or nextest[0] > gate:
+        problems.append("the engine job installs no cargo-nextest before its stage")
+    caches = [(action(s), paths(s)) for s in steps if action(s).startswith("actions/cache")]
+    if caches != [("actions/cache/restore", RUST_CACHE)]:
+        problems.append(
+            f"the engine job's caches are {[c for c, _ in caches]}: it restores the Rust cache, "
+            "and saves none"
+        )
+    if str((job.get("env") or {}).get("CARGO_INCREMENTAL")) != "0":
+        problems.append("the engine job builds incrementally")
+    minutes = str(job.get("timeout-minutes") or "")
+    if not minutes.isdigit() or int(minutes) not in ENGINE_TIMEOUT_MINUTES:
+        band = f"{ENGINE_TIMEOUT_MINUTES.start} to {ENGINE_TIMEOUT_MINUTES.stop - 1}"
+        problems.append(f"the engine job's timeout is {minutes or 'unset'}, not {band} minutes")
+    return problems
+
+
+PLANTED_ENGINE = """\
+jobs:
+  engine:
+    runs-on: ubuntu-24.04
+    if: ${{ github.event_name == 'push' }}
+    needs: [rust]
+    steps:
+      - uses: actions/cache@0123456789abcdef0123456789abcdef01234567
+        with:
+          path: target/
+          key: build
+      - run: bash scripts/check.sh test-engine test
+  ci:
+    needs: [rust]
+"""
+
+
+class TheEngineRunsBesideRust(unittest.TestCase):
+    def test_the_engine_job_runs_the_engine_set_beside_the_rust_job(self):
+        workflow = load("ci.yml")
+        examined("check.sh calls", stage_calls(workflow))
+        self.assertEqual(engine_job_problems(workflow), [])
+        # The judge refuses an engine job that breaks every rule at once.
+        self.assertEqual(
+            engine_job_problems(read_workflow(PLANTED_ENGINE)),
+            [
+                "test-engine runs in [('engine', ['test-engine', 'test'])], not in the engine job "
+                "alone",
+                "the engine job waits on another job",
+                "the engine job can be skipped, and a skipped need fails ci",
+                "ci does not need the engine job, so the engine's tests are not required",
+                "the engine job installs no cargo-nextest before its stage",
+                "the engine job's caches are ['actions/cache']: it restores the Rust cache, and "
+                "saves none",
+                "the engine job builds incrementally",
+                "the engine job's timeout is unset, not 10 to 30 minutes",
+            ],
+        )
 
 
 if __name__ == "__main__":
