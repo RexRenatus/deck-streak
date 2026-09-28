@@ -3,7 +3,8 @@
 Kind: data flow, with the refusals that leave the tree unchanged. Read at DeckStreak `dev` 8f91667
 (`.packs/VENDORED.json`, `methodology.json`, `scripts/public-scrub.py`, ADR-004, ADR-033), and at
 the vendored phoenix-v2 commit for the shape of what it ships. Decided by ADR-039; built by
-SPEC-037.
+SPEC-037. Since SPEC-054 R3, the scan's rules are composed in one place, the scrub's
+`rules(private)`, which the vendoring calls and never copies.
 
 ```mermaid
 flowchart TD
@@ -21,7 +22,7 @@ flowchart TD
   match -->|no| lacks{does the commit hold it?}
   lacks -->|no: exit 2| refused([refused: the tree is byte-identical])
   lacks -->|yes| read[git cat-file --batch: the bytes, in memory only]
-  read --> scan{the public scrub's rules and the private list}
+  read --> scan{the scrub's rules and the private list, composed once by the scrub}
   scan -->|a finding, a binary or an oversize file: exit 1| refused
   scan -->|nothing examined: exit 3| void([VOID: the tree is byte-identical])
   scan -->|every file passed| write[write the changed and new files]
@@ -43,7 +44,7 @@ untracked. The script sets `sys.dont_write_bytecode` before it loads the scrub, 
 | candidates | the listed files, and every unlisted file of a pack already vendored | a pack that is not vendored is a wiring decision: it is named and left out, never vendored |
 | exclusion | the source path only | `fnmatch` over the path, where `*` and `**` both cross `/`; a match is dropped before its bytes are read |
 | a listed file an exclusion matches | its entry | the entry is dropped from the manifest and named on the output; the script deletes no file, so a person removes a copy the tree still holds, which the vendored-packs test names |
-| scan | each file's bytes, in memory | `public-scrub.py`'s own `Scan`, binary rule, size limit and skipped rule files, over persona-core's and privacy-gdpr's shapes and the private list; a finding names the source path and the rule, never the value |
+| scan | each file's bytes, in memory | the `Scan` that `public-scrub.py`'s `rules(private)` composes over persona-core's and privacy-gdpr's shapes and the private list, never a copy of it, with the scrub's binary rule, size limit and skipped rule files; a finding names the source path and the rule, never the value |
 | write | the files whose bytes or executable bit differ | only after every candidate passed; a file already equal is not touched, so a run with nothing to change leaves the tree byte-identical |
 | pin | the digests and the commit | `VENDORED.json` and `methodology.json` are written only when their content changes |
 
