@@ -16,11 +16,12 @@ once in its target, one mutant, and a killer that names exactly one test (SPEC-0
 THE POPULATION is the mutation-rows pack's shape. `scripts/mutation-rows.json` holds the header
 alone (`_`, `arities`, and empty `tables`), and each SPEC's rows live in its own band fragment,
 `scripts/mutation-rows.d/S<NNN>00-S<NNN>99.json`, holding `{"tables": {...}}` and nothing else.
-This module is the one reader. It keeps the interface the vendored pack's probe calls
-(`load_tree`, `PopulationRefused`), so the probe's `find-differs`, `band-ids` and
-`mutants-distinct` classes judge these rows through it. The assembly refuses, naming the file: a
-fragment not named for one SPEC's band, a fragment with any key but `tables`, a table the header
-does not declare, a row whose id lies outside its band, and an id held twice.
+This module is the one reader (`load_tree`, `load_revision`). The assembly refuses, naming the
+file: a fragment not named for one SPEC's band, a fragment with any key but `tables`, a table the
+header does not declare, a row whose id lies outside its band, and an id held twice. A row's target
+is read by its table's declared spelling: the header's `_` states, one line per table,
+`target spelling: <table> is crate-relative, crates/{cell 1}/{cell 2}` or `... is repo-rooted,
+{cell 1}`, and a table with no such line is refused rather than read under a guess.
 
 A KILLER names one test. A cargo killer is `<target>::<test path>`: an integration-test target of
 the row's crate (`crates/<crate>/tests/<target>.rs`), or `lib` for the crate's unit tests, then the
@@ -36,9 +37,12 @@ lines or unittest's `Ran N test` line; reads a failure as KILLED and a pass as S
 writes the saved bytes back and checks the sha256 before anything else runs. Exit 0 when every row
 was KILLED, 1 on a survivor, 2 on a refusal, 3 on a VOID with no survivor, 4 when a restore failed.
 
-CENSUS (R11) holds every committed row without running anything, and exits 3 when it examined no
-row. RETIRED (R11) refuses a row that left the population while its target file stayed, unless
-`scripts/mutation-rows.retired.json` records its id with a reason and the maintainer's approval.
+CENSUS (R11) holds every committed row without running anything: its target exists, its find is
+not empty and differs from its replacement, its anchor occurs exactly once, its killer names exactly
+one test, and no second row installs a mutant another row installs for the same killer. It exits 3
+when it examined no row. RETIRED (R11) refuses a row that left the population while its target file
+stayed, unless `scripts/mutation-rows.retired.json` records its id with a reason and the
+maintainer's approval.
 """
 
 from __future__ import annotations
@@ -49,6 +53,7 @@ import hashlib
 import json
 import os
 import pathlib
+import posixpath
 import re
 import subprocess
 import sys
@@ -57,9 +62,6 @@ import tomllib
 from dataclasses import dataclass
 
 sys.dont_write_bytecode = True
-sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
-
-import row_target  # noqa: E402
 
 MONOLITH = "scripts/mutation-rows.json"
 FRAGMENTS = "scripts/mutation-rows.d"
@@ -235,6 +237,51 @@ def load_revision(root: pathlib.Path | str, revision: str) -> object | None:
     return assemble(monolith, fragments)
 
 
+SPELLING_PREFIX = "target spelling: "
+CRATE_RELATIVE = "crate-relative"
+REPO_ROOTED = "repo-rooted"
+
+
+class UnresolvableTarget(ValueError):
+    """A table declares no target spelling, or a row lacks a cell its spelling reads."""
+
+
+def declared_spellings(document: object) -> dict[str, str]:
+    """`{table: spelling}` as the header's `_` declares it, for every table the document carries."""
+    legend = document.get("_") if isinstance(document, dict) else None
+    spellings: dict[str, str] = {}
+    for line in legend if isinstance(legend, list) else []:
+        if not isinstance(line, str) or not line.startswith(SPELLING_PREFIX):
+            continue
+        table, separator, rest = line[len(SPELLING_PREFIX) :].partition(" is ")
+        word = rest.split(",", 1)[0].strip()
+        if not separator or not table or word not in (CRATE_RELATIVE, REPO_ROOTED):
+            raise UnresolvableTarget(f"the line {line!r} declares no spelling this reader knows")
+        if table in spellings:
+            raise UnresolvableTarget(f"table {table} declares its spelling twice")
+        spellings[table] = word
+    tables = document.get("tables") if isinstance(document, dict) else None
+    for table in tables if isinstance(tables, dict) else ():
+        if table not in spellings:
+            raise UnresolvableTarget(f"table {table} declares no target spelling")
+    return spellings
+
+
+def row_target(table: str, row: list, spellings: dict[str, str]) -> str:
+    """A row's target, from the repository's root, lexically normalised."""
+    spelling = spellings.get(table)
+    if spelling is None:
+        raise UnresolvableTarget(f"table {table} declares no target spelling")
+    identifier = row[0] if row else "<no id>"
+    if spelling == CRATE_RELATIVE:
+        if len(row) < 3:
+            raise UnresolvableTarget(f"{table} row {identifier!r} carries no crate and path")
+        return posixpath.normpath(f"crates/{row[1]}/{row[2]}")
+    if len(row) < 2:
+        raise UnresolvableTarget(f"{table} row {identifier!r} carries no path")
+    return posixpath.normpath(row[1])
+
+
 # --------------------------------------------------------------------------- rows and killers
 
 
@@ -266,7 +313,7 @@ class Killer:
 
 def rows_of(population: object) -> list[Row]:
     """Every row of the population, in its table's layout, arity checked against the header."""
-    spellings = row_target.declared_spellings(population)
+    spellings = declared_spellings(population)
     arities = population.get("arities", {})
     found = []
     for table, rows in population["tables"].items():
@@ -282,7 +329,7 @@ def rows_of(population: object) -> list[Row]:
                 Row(
                     id=row[0],
                     table=table,
-                    target=row_target.row_target(table, row, spellings),
+                    target=row_target(table, row, spellings),
                     find=row[cells["find"]],
                     replace=row[cells["replace"]],
                     killer=row[cells["killer"]],
@@ -382,7 +429,7 @@ def census(root: pathlib.Path) -> tuple[list[str], int]:
     try:
         population = load_tree(root)
         rows = rows_of(population)
-    except (OSError, json.JSONDecodeError, PopulationRefused, row_target.UnresolvableTarget) as e:
+    except (OSError, json.JSONDecodeError, PopulationRefused, UnresolvableTarget) as e:
         return [f"census: the population does not assemble: {e}"], 0
     findings = []
     # One mutant, for one killer, is one piece of evidence: a second row that installs it adds none.
@@ -572,7 +619,7 @@ def prove(root: pathlib.Path, args: argparse.Namespace) -> int:
         return EXIT_REFUSED
     try:
         rows = chosen(rows_of(load_tree(root)), args)
-    except (OSError, json.JSONDecodeError, PopulationRefused, row_target.UnresolvableTarget) as e:
+    except (OSError, json.JSONDecodeError, PopulationRefused, UnresolvableTarget) as e:
         print(f"prove: REFUSED: {e}")
         return EXIT_REFUSED
     report = []
@@ -653,7 +700,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.verb in ("count", "ids"):
         try:
             rows = rows_of(load_tree(root))
-        except (OSError, json.JSONDecodeError, PopulationRefused) as refusal:
+        except (OSError, json.JSONDecodeError, PopulationRefused, UnresolvableTarget) as refusal:
             print(f"mutation_rows: REFUSED: {refusal}", file=sys.stderr)
             return EXIT_REFUSED
         print(len(rows) if args.verb == "count" else "\n".join(row.id for row in rows))
