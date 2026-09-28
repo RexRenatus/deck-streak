@@ -229,15 +229,8 @@ class ThePairLister(unittest.TestCase):
             self.assertEqual(done.stdout, "")
 
     def test_the_pair_lister_refuses_encrypted_and_off_socket_credentials(self):
-        # The committed templates list without a refusal.
-        done = run(PAIRS, "--root", REPO)
-        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
-        self.assertEqual(done.stderr, "")
-        examined(
-            "credential pair(s) the committed templates declare", json.loads(done.stdout)["pairs"]
-        )
-        # Every other way to give a unit a credential is refused by file and line, and a refused
-        # run prints no list for the rail to compare.
+        # Every way to give a unit a credential but the socket is refused by file and line, and a
+        # refused run prints no list for the rail to compare.
         planted = {
             f"LoadCredentialEncrypted=telegram-bot-token:{SOCKET}": "LoadCredentialEncrypted=",
             "LoadCredential=telegram-bot-token:/etc/credstore/telegram-bot-token": "not the socket",
@@ -272,6 +265,13 @@ class ThePairLister(unittest.TestCase):
         self.assertEqual(done.returncode, 1, done.stdout + done.stderr)
         self.assertIn(
             "REFUSE: deploy/optional/ai-route/deck-streak-readings-generate.conf:2:", done.stderr
+        )
+        # The committed templates list without a refusal.
+        done = run(PAIRS, "--root", REPO)
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        self.assertEqual(done.stderr, "")
+        examined(
+            "credential pair(s) the committed templates declare", json.loads(done.stdout)["pairs"]
         )
 
 

@@ -1,0 +1,12 @@
+{
+  "schema": "deckstreak.rail-contract.v1",
+  "neutral": {
+    "release_root": "/usr/local/lib/deck-streak/current",
+    "environment_file": "/etc/deck-streak/deck-streak.env",
+    "time_zone": "UTC",
+    "rollover_hour": 4
+  },
+  "drop_in": "10-rail.conf",
+  "socket": "/run/deck-streak-credentials/socket",
+  "values": []
+}
