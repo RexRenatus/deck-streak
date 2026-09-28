@@ -16,7 +16,7 @@ DEPLOY = "deploy"
 UNIT_KINDS = {".service": "service", ".timer": "timer", ".slice": "slice"}
 KEY_NAME = re.compile(r"^[A-Za-z0-9-]+$")
 SECTION = re.compile(r"\[[A-Za-z0-9-]+\]")
-# Why the reader refuses a line: it reads no line it might read otherwise than systemd (SPEC-066).
+# Why the reader refuses a line: it reads only the plain syntax the templates hold (SPEC-066).
 BACKSLASH = "ends in a backslash, which the reader refuses"
 CHARACTER = "a character the reader refuses"
 SHAPE = "is neither a section header nor an assignment in a section"

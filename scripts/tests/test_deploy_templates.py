@@ -968,12 +968,14 @@ class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
         self.assertEqual(alert_exit_refusals(template), [])
         self.assertEqual(restart_refusals(template), [])
         self.assertEqual(collect_refusals(template), [])
-        # Planted templates: one for each condition, and a second exit status in a spelling systemd
-        # reads as 1; one that meets all five; one that loads no credential and so is not examined;
-        # and eight shaped as the alert template is, which name no OnFailure=, each breaking one
-        # thing the alert template must not: its exit status in two spellings, a restart mode that
-        # skips the failed state beside a restart, a forced restart, a condition, its collection, a
-        # success status and a forced restart that name no 1, and a forced restart on Type=oneshot.
+        # Planted templates: one for each condition, and exit statuses the census does not read;
+        # one that meets all five; one that loads no credential and so is not examined; a restart
+        # value that is empty or unknown; a [Unit] condition or assertion; and templates shaped as
+        # the alert template is, which name no OnFailure=, each breaking one thing the alert
+        # template must not: its exit status, a restart mode that skips the failed state beside a
+        # restart, a forced restart, a condition, its collection, a success status and a forced
+        # restart that name no 1, a forced restart on Type=oneshot, an empty or unknown restart or
+        # collect value, and a [Unit] condition or assertion.
         head = "[Unit]\nDescription=planted\n"
         page = f"OnFailure={ON_FAILURE}\n"
         run = "[Service]\nExecStart=/bin/true\n"
@@ -1013,9 +1015,9 @@ class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
                 f"{head}CollectMode=inactive-or-failed\nCollectMode=\n{run}{loads}"
             ),
             "alert-unknown.service": f"{head}{run}RestartMode=Direct\n{loads}",
-            "wrapped.service": f"{head}{page}{run}SuccessExitStatus={octal}\n{loads}",
-            "wrapped-binary.service": f"{head}{page}{run}SuccessExitStatus={binary}\n{loads}",
-            "alert-wrapped.service": f"{head}{run}SuccessExitStatus={octal}\n{loads}",
+            "wide-octal.service": f"{head}{page}{run}SuccessExitStatus={octal}\n{loads}",
+            "wide-binary.service": f"{head}{page}{run}SuccessExitStatus={binary}\n{loads}",
+            "alert-wide-octal.service": f"{head}{run}SuccessExitStatus={octal}\n{loads}",
             "alert-forced-spelled.service": f"{head}{run}RestartForceExitStatus=0x1\n{loads}",
             "unit-condition.service": f"{head}{unmet}{page}{run}{loads}",
             "unit-condition-reset.service": (
@@ -1049,7 +1051,7 @@ class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
                 "alert-unit-assert.service",
                 "alert-unit-condition.service",
                 "alert-unknown.service",
-                "alert-wrapped.service",
+                "alert-wide-octal.service",
                 "condition.service",
                 "direct.service",
                 "ignored.service",
@@ -1062,8 +1064,8 @@ class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
                 "unit-condition-reset.service",
                 "unit-condition.service",
                 "unknown.service",
-                "wrapped-binary.service",
-                "wrapped.service",
+                "wide-binary.service",
+                "wide-octal.service",
             ],
         )
         where = "deploy/systemd"
@@ -1109,9 +1111,9 @@ class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
                 f"{where}/alert-unit-condition.service: ConditionPathExists=/nonexistent {stops}",
                 f"{where}/alert-unknown.service: OnFailure= does not name {ON_FAILURE}",
                 f"{where}/alert-unknown.service: RestartMode=Direct {unread}",
-                f"{where}/alert-wrapped.service: OnFailure= does not name {ON_FAILURE}",
-                f"{where}/alert-wrapped.service: SuccessExitStatus={octal} holds 0o\\, {word}",
-                f"{where}/alert-wrapped.service: SuccessExitStatus={octal} holds "
+                f"{where}/alert-wide-octal.service: OnFailure= does not name {ON_FAILURE}",
+                f"{where}/alert-wide-octal.service: SuccessExitStatus={octal} holds 0o\\, {word}",
+                f"{where}/alert-wide-octal.service: SuccessExitStatus={octal} holds "
                 f"{octal[4:]}, {word}",
                 f"{where}/condition.service: {skip}",
                 f"{where}/direct.service: {direct_mode}",
@@ -1126,11 +1128,11 @@ class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
                 f"{where}/unit-condition-reset.service: ConditionPathExists= {stops}",
                 f"{where}/unit-condition.service: ConditionPathExists=/nonexistent {stops}",
                 f"{where}/unknown.service: Restart=On-Failure {unread}",
-                f"{where}/wrapped-binary.service: SuccessExitStatus={binary} holds 0b\\, {word}",
-                f"{where}/wrapped-binary.service: SuccessExitStatus={binary} holds "
+                f"{where}/wide-binary.service: SuccessExitStatus={binary} holds 0b\\, {word}",
+                f"{where}/wide-binary.service: SuccessExitStatus={binary} holds "
                 f"{binary[4:]}, {word}",
-                f"{where}/wrapped.service: SuccessExitStatus={octal} holds 0o\\, {word}",
-                f"{where}/wrapped.service: SuccessExitStatus={octal} holds {octal[4:]}, {word}",
+                f"{where}/wide-octal.service: SuccessExitStatus={octal} holds 0o\\, {word}",
+                f"{where}/wide-octal.service: SuccessExitStatus={octal} holds {octal[4:]}, {word}",
             ],
         )
         # The alert template's own checks refuse each alert-shaped plant for what it breaks alone:
@@ -1215,10 +1217,11 @@ class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
                 [],
                 [],
             ),
-            "alert-wrapped.service": (
+            "alert-wide-octal.service": (
                 [
-                    f"{where}/alert-wrapped.service: SuccessExitStatus={octal} holds 0o\\, {word}",
-                    f"{where}/alert-wrapped.service: SuccessExitStatus={octal} holds "
+                    f"{where}/alert-wide-octal.service: SuccessExitStatus={octal} holds "
+                    f"0o\\, {word}",
+                    f"{where}/alert-wide-octal.service: SuccessExitStatus={octal} holds "
                     f"{octal[4:]}, {word}",
                 ],
                 [],
@@ -1266,8 +1269,8 @@ class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
         # A cross-check corpus, refused whole: each word planted as the SuccessExitStatus= of a
         # paging unit and of an alert-shaped one, and as the RestartForceExitStatus= of an
         # alert-shaped one, as written and with each space or tab after a backslash, is refused by
-        # the reader or by the census. The words: a vertical tab or a form feed before a word,
-        # whitespace after each prefix and sign, and magnitudes that wrap in every base.
+        # the reader or by the census. The words: small and large magnitudes in every base, with
+        # prefixes, signs and whitespace around them.
         magnitudes = [
             "1",
             "01",
@@ -1308,11 +1311,11 @@ class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
             if not planted_refusals(f"{shape}{status}\n{loads}", check)
         ]
         self.assertEqual(admitted, [])
-        # The reader refuses a line it would read otherwise than systemd does, one planted template
-        # at a time, naming the file and the line: a line that ends in a backslash, a comment's
-        # included; a control character other than tab and newline, or whitespace outside ASCII;
-        # and a line that is neither blank, a comment, a section header nor an assignment inside a
-        # section. A tab, and a `§` in a comment, are read.
+        # The reader refuses a line outside the plain syntax the templates hold, one planted
+        # template at a time, naming the file and the line: a line that ends in a backslash, a
+        # comment's included; a control character other than tab and newline, or whitespace outside
+        # ASCII; and a line that is neither blank, a comment, a section header nor an assignment
+        # inside a section. A tab, and a `§` in a comment, are read.
         backslash = "ends in a backslash, which the reader refuses"
         character = "a character the reader refuses"
         shape = "is neither a section header nor an assignment in a section"
