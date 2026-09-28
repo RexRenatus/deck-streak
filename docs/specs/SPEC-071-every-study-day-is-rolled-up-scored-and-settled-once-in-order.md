@@ -15,8 +15,8 @@
   owner's session), SPEC-026 (the bot's command table), SPEC-027 (the sync job), SPEC-029 (the
   golden reader); SPEC-045 when the readings taxonomy is configured (R3). **Mutation band:**
   `S07100-S07199`.
-- **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
-  `docs/specs/` with its tests and `docs/red-first/SPEC-071.md` (ADR-016).
+- **Status:** in delivery: moved to `docs/specs/` with its tests and `docs/red-first/SPEC-071.md`
+  (ADR-016).
 
 ## 1. The problem, measured
 
