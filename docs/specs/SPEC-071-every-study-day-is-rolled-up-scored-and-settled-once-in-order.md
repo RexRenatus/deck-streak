@@ -339,6 +339,7 @@ privacy-gdpr and accessibility packs stay enforced, and no row is deferred for i
 | `docs/red-first/SPEC-071.md` | docs | added |
 | `changelog.d/` fragment | repo | added |
 | `crates/coordination/src/score.rs` | `deck-streak-coordination` | added at delivery (§10): the score reads the API and the bot share |
+| `crates/coordination/tests/score_reads.rs` | `deck-streak-coordination` | added at delivery (§10): the score reads' own tests, the ones cargo-mutants runs on this package |
 | `crates/api/src/session_routes.rs` | `deck-streak-api` | changed at delivery (§10): the owner's study day, `OwnerAccess::study_day` |
 | `crates/api/src/lib.rs` | `deck-streak-api` | changed at delivery (§10): the analytics routes' module |
 | `crates/api/Cargo.toml` | `deck-streak-api` | changed at delivery (§10): `sqlx` as a dev-dependency |
@@ -356,12 +357,12 @@ privacy-gdpr and accessibility packs stay enforced, and no row is deferred for i
 | `crates/daemon/src/role_bot.rs` | `deck-streak-daemon` | changed at delivery (§10): the recompute loaded at start; the bot's clock and rule |
 | `crates/kernel/tests/data_rights.rs` | `deck-streak-kernel` | changed at delivery (§10): the pinned reset row names `courses_digest` |
 | `crates/readings/tests/support/mod.rs` | `deck-streak-readings` | changed at delivery (§10): a card literal names its `course` |
-| `web/app/src/lib/api.ts` | miniapp | changed at delivery (§10): `score()`, through the one session |
-| `web/app/src/lib/api.test.ts` | miniapp | changed at delivery (§10): `score()`'s tests |
+| `web/app/src/lib/api.ts` | miniapp | changed at delivery (§10): `score()`, through the one session; its equivalent mutants recorded in place |
+| `web/app/src/lib/api.test.ts` | miniapp | changed at delivery (§10): `score()`'s tests, and the tests that kill the client's older survivors |
 | `web/app/src/lib/score/score.test.ts` | miniapp | added at delivery (§10): the score body's reading |
 | `web/app/src/routes/score.test.ts` | miniapp | added at delivery (§10): the score screen's states |
-| `web/app/src/lib/startapp.ts` | miniapp | changed at delivery (§10): the `score` token |
-| `web/app/src/lib/startapp.test.ts` | miniapp | changed at delivery (§10): the token list names `score` |
+| `web/app/src/lib/startapp.ts` | miniapp | changed at delivery (§10): the `score` token; its equivalent mutants recorded in place |
+| `web/app/src/lib/startapp.test.ts` | miniapp | changed at delivery (§10): the token list names `score`; Today's own path |
 | `web/app/messages/en.json` | miniapp | changed at delivery (§10): the score screen's messages |
 | `web/app/tests/a11y.spec.ts` | miniapp | changed at delivery (§10): the score route answered, so the audit renders the breakdown |
 
@@ -514,3 +515,42 @@ milliseconds (SPEC-029 R3).
   `course: None`, and the API's and the bot's tests write synthetic rollup rows through the kernel's
   `Db`, which hands out sqlx types, so both crates take `sqlx` as a dev-dependency: no new crate and
   no new edge of the context map.
+- **Commit b822d12 carries code under a `docs(analytics)` subject.** Beside the amendments, the
+  red-first lines and the changelog fragment, it refactors the score body's reader
+  (`web/app/src/lib/score/score.ts`: the `isRecord` guard becomes destructuring over `?? {}`) and
+  changes two tests: `ScoreBreakdown.test.ts` casts the meter it reads to `HTMLMeterElement`, a type
+  alone, and `score.test.ts` gains the case of a study day in an array. The history is kept as it is.
+  The refactor reads every body as before: a JSON value that is not an object answers `undefined`
+  for any field, so `null` is the one value that needed the default, and the reader before it
+  (2f51341) and the reader after it pass the same 24 tests of the score module, the score screen and
+  the client; StrykerJS kills all 56 of its mutants.
+- **The mutation jobs' survivors (SPEC-039).** The diff-scoped jobs mutate every file the delivery
+  changed, whole, so the survivors of the three older client modules it touched are its own.
+  `mutation-web` found 31 at 97823b2: 19 survived and 4 uncovered in `api.ts`, 7 in `startapp.ts`
+  and 1 in `routes.ts`. 13 are killed by new tests: a handshake and a call the network drops, a
+  handshake refused with 403, two calls whose session ended together sharing one new handshake, a
+  failed `/api/me` whose body reads as a session, `/api/me` bodies that are no JSON object or carry
+  a malformed day, and Today's own path. The 18 that no test can observe are recorded in place as
+  `EQUIVALENT (#294)`, each with its reason on its line: a guard a later check already implies (the
+  token map's type and shape guard and its anchors, a string answer's missing `ok`, the `typeof`
+  beside `body !== null`, a refused session that stays cached, a newer session only microtask timing
+  could open) or a literal whose value changes no answer. StrykerJS disables by mutator and line, so
+  the records also keep seven mutants from running that the tests killed at 97823b2: the other side
+  of three recorded conditions, both sides of the `read` refusal's condition, and two narrowed forms
+  of the token pattern. So that no killable mutant shares a recorded line, `parseMe` tests
+  `body !== null` before `typeof body`, the refusal's `return` has its own line, and the `today`
+  token names `TODAY`; each reads as before.
+- **`mutation-rust`** missed 51 mutants at 97823b2, and timed out 3, which it counts as examined.
+  cargo-mutants runs only the mutated package's tests, and several functions were tested only
+  through their callers in other packages, so 49 of them are now killed by a test in their own
+  package: analytics' store reads and writes, fingerprint, conversions and leech setting, and
+  its Python ports' ties and overflow (unit tests in `metrics.rs` and `score.rs`); coordination's
+  score reads (`tests/score_reads.rs`) and the fold's evaluations, step order, `Debug` and
+  `Display`, a clock stepped back, its error log and the cycle's fold; the courses file's
+  boundaries and a course code's formatting; and the API's refusals. `seconds_of` caps each answer
+  with the crate's one port of Python's `min`, `score.rs`'s `py_min`, which it matched line for line,
+  so its tie is proved by `py_min`'s own test rather than standing as an equivalent. The last one
+  is a mutant no test can observe, and it is not recorded here: in `card_snapshot`, the test
+  `card.interval < MATURE_IVL_DAYS` sits inside the branch that only a card younger than
+  `MATURE_IVL_DAYS` reaches, so `<=` there admits no other card; its record waits for an issue that
+  tracks Rust equivalents.
