@@ -5,11 +5,13 @@ pnpm that records its arguments, prints a planted report and exits with a plante
 asks the registry. The reports are synthetic, in pnpm 11's JSON shape."""
 
 import json
+import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
 
-from _support import examined
+from _support import REPO, examined
 from test_check_gate import run_gate, summary
 
 # The level SPEC-058 R2 states, and the one pnpm call R1 allows: no flag that narrows the
@@ -43,22 +45,27 @@ def report(total=428, dependencies=0, dev=428, optional=87, advisories=()):
     )
 
 
-def advisory(severity, name="planted-package"):
-    """A synthetic advisory of one grade against one planted package version."""
-    return {
+def advisory(severity, name="planted-package", versions=("1.0.0",)):
+    """A synthetic advisory of one grade against a planted package, found at each version given
+    (with no findings at all when `versions` is None)."""
+    planted = {
         "module_name": name,
         "severity": severity,
         "github_advisory_id": "GHSA-0000-0000-0001",
         "vulnerable_versions": "<2.0.0",
         "title": "a planted advisory",
-        "findings": [{"version": "1.0.0", "paths": [f"web__app>{name}"], "dev": True}],
     }
+    if versions is not None:
+        planted["findings"] = [
+            {"version": version, "paths": [f"web__app>{name}"], "dev": True} for version in versions
+        ]
+    return planted
 
 
-def named(severity, name="planted-package"):
+def named(severity, name="planted-package", versions="1.0.0"):
     """The line the stage's log names a failing planted advisory with."""
-    planted = "1.0.0 GHSA-0000-0000-0001 (vulnerable <2.0.0): a planted advisory"
-    return f"audit-web: {severity} {name} {planted}"
+    planted = "GHSA-0000-0000-0001 (vulnerable <2.0.0): a planted advisory"
+    return f"audit-web: {severity} {name} {versions} {planted}"
 
 
 def audit(scratch, text, code):
@@ -96,8 +103,8 @@ EMPTY = [
         "audit-web: VOID: examined 0 package(s), so nothing was judged",
     ),
     (
-        "a registry error in place of a report",
-        "ERR_PNPM_AUDIT_BAD_RESPONSE  The audit endpoint responded with 503",
+        "a registry error in place of a report, after a blank line",
+        "\n ERR_PNPM_AUDIT_BAD_RESPONSE  The audit endpoint responded with 503\n",
         1,
         f"{NO_REPORT} (exit 1): ERR_PNPM_AUDIT_BAD_RESPONSE  The audit endpoint responded with 503",
     ),
@@ -157,18 +164,25 @@ ADVISORIES = [
         [named("moderate"), f"{EXAMINED_428}: 1"],
     ),
     (
-        "an advisory of none of pnpm's grades",
-        [advisory("unknown")],
+        "an advisory of none of pnpm's grades, with no findings",
+        [advisory("unknown", versions=None)],
         0,
         1,
-        [named("unknown"), f"{EXAMINED_428}: 1"],
+        [named("unknown", versions=""), f"{EXAMINED_428}: 1"],
     ),
     (
-        "every failing advisory, each named",
-        [advisory("high", "first-package"), advisory("low", "second-package")],
+        "every failing advisory, each named at every version found",
+        [
+            advisory("high", "first-package", versions=("1.0.0", "2.0.0")),
+            advisory("low", "second-package"),
+        ],
         1,
         1,
-        [named("high", "first-package"), named("low", "second-package"), f"{EXAMINED_428}: 2"],
+        [
+            named("high", "first-package", versions="1.0.0,2.0.0"),
+            named("low", "second-package"),
+            f"{EXAMINED_428}: 2",
+        ],
     ),
     (
         "an advisory below the level only",
@@ -185,6 +199,18 @@ ADVISORIES = [
         [f"{EXAMINED_428}: 0, but pnpm audit exited 1"],
     ),
 ]
+# One report holding an advisory of each of pnpm's grades, lowest first, and the grades the verdict
+# names and fails at each level `--audit-level` takes: it judges at the level it is given.
+GRADED = [advisory(grade, f"{grade}-package") for grade in ("info", "low", "moderate", "high")]
+GRADED.append(advisory("critical", "critical-package"))
+AT_OR_ABOVE = {
+    "low": ["low", "moderate", "high", "critical"],
+    "moderate": ["moderate", "high", "critical"],
+    "high": ["high", "critical"],
+    "critical": ["critical"],
+}
+VERDICT = REPO / "scripts" / "audit-web-verdict.py"
+USAGE_ERRORS = [["--level", "info", "--pnpm-exit", "0"], ["--pnpm-exit", "0"], ["--level", "low"]]
 
 
 class TheWebAuditFailsOnAnAdvisory(unittest.TestCase):
@@ -199,6 +225,32 @@ class TheWebAuditFailsOnAnAdvisory(unittest.TestCase):
                 else:
                     self.assertRegex(summary(done), r"^ok +audit-web ")
                     self.assertEqual(done.returncode, 0, done.stdout)
+        for level, grades in examined("levels", list(AT_OR_ABOVE.items())):
+            with self.subTest(level=level):
+                done = subprocess.run(
+                    [sys.executable, str(VERDICT), "--level", level, "--pnpm-exit", "1"],
+                    input=report(advisories=GRADED),
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+                lines = done.stdout.splitlines()
+                self.assertEqual([line.split()[1] for line in lines[:-1]], grades, done.stdout)
+                verdict_line = EXAMINED_428.replace("above low", f"above {level}")
+                self.assertEqual(lines[-1:], [f"{verdict_line}: {len(grades)}"], done.stderr)
+                self.assertEqual(done.returncode, 1, done.stderr)
+        # A level `--audit-level` does not take, and a missing option, are usage errors.
+        for argv in examined("usage errors", USAGE_ERRORS):
+            with self.subTest(argv=argv):
+                done = subprocess.run(
+                    [sys.executable, str(VERDICT), *argv],
+                    input=report(),
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+                self.assertEqual(done.returncode, 2, done.stdout)
+                self.assertIn("usage: ", done.stderr)
 
 
 class TheWebAuditPrintsItsCount(unittest.TestCase):
