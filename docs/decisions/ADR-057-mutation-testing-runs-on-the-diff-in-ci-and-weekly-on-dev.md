@@ -28,9 +28,10 @@ front end and a Python parity oracle, on GitHub-hosted runners (SPEC-039)?
 ## Considered Options (the alternatives it was chosen against)
 
 **D1, the tools.**
-- cargo-mutants 27.1.0 for Rust, StrykerJS 10.0.0 with its Vitest runner for the Mini App, and
-  hand-proved rows for the oracle's Python: chosen. Each generator is its ecosystem's maintained
-  tool, pinned exactly, and installed by a SHA-pinned action or the lockfile.
+- Each ecosystem's tool: chosen, because each generator is its ecosystem's maintained tool:
+  cargo-mutants 27.1.0 for Rust, StrykerJS 10.0.0 with its Vitest runner for the Mini App, and
+  hand-proved rows for the oracle's Python, each pinned exactly and installed by a SHA-pinned
+  action or the lockfile.
 - mutmut 3.8.0 for the oracle's Python: rejected by measurement. It refused the oracle's layout,
   and with the test's module name changed it reported 415 of 415 mutants as "no tests" and exited
   0. Fitting it would mean moving the oracle into an importable package, which changes the
@@ -91,17 +92,17 @@ front end and a Python parity oracle, on GitHub-hosted runners (SPEC-039)?
   it, and a second reader is a second place for a rule to drift.
 
 **D6, recording an equivalent mutant.**
-- One anchored `exclude_re` entry in `.cargo/mutants.toml`, and a `Stryker disable next-line`
-  comment, each with its reason and an issue: chosen. Each names one mutant, and a test holds the
-  form.
+- One named mutant per exclusion: chosen, because each names one mutant, and a test holds the
+  form: one anchored `exclude_re` entry in `.cargo/mutants.toml`, or one `Stryker disable
+  next-line` comment, each with its reason and an issue.
 - `#[mutants::skip]`: rejected, because it skips every mutant of the item, and a `cfg_attr(test,
   ...)` form needs the `mutants` crate as a dependency of every crate that uses it.
 
 **D7, the weekly battery.**
-- Sixteen slice shards of `cargo mutants --in-place --timeout 300`, each with its own baseline,
-  over a matrix naming 0 to 15, `timeout-minutes` 120: chosen. 1,557 mutants at 10 to 20 s each is
-  4 to 9 hours serially; sixteen shards bring each under an hour, and a shard's own baseline needs
-  no separate test job.
+- Sixteen shards: chosen, because 1,557 mutants at 10 to 20 s each is 4 to 9 hours serially, and
+  sixteen slice shards of `cargo mutants --in-place --timeout 300` over a matrix naming 0 to 15,
+  `timeout-minutes` 120, bring each under an hour; a shard's own baseline needs no separate test
+  job.
 - `--baseline=skip` behind a test job: rejected, because it adds a job whose only purpose is the
   baseline each shard can run itself, and it makes the timeout depend on a flag, not a
   measurement.
@@ -110,10 +111,10 @@ front end and a Python parity oracle, on GitHub-hosted runners (SPEC-039)?
   open issues, keeps a survivor's context together.
 
 **D8, proving the battery before it reaches main.**
-- A `pull_request` trigger filtered to the workflow's own file, running a `rehearsal` job (one
-  file, one row, one Stryker file, and the survivors' drafting and scrub, filing nothing), and
-  one dispatch measured on the delivery's branch: chosen, because `schedule` and
-  `workflow_dispatch` run only for a workflow on `main`.
+- A rehearsal on the pull request: chosen, because `schedule` and `workflow_dispatch` run only
+  for a workflow on `main`. A `pull_request` trigger filtered to the workflow's own file runs a
+  `rehearsal` job (one file, one row, one Stryker file, and the survivors' drafting and scrub,
+  filing nothing), and one dispatch is measured on the delivery's branch.
 - Wait for a release: rejected, because the battery would first run unproved, on a schedule
   nobody watches.
 
