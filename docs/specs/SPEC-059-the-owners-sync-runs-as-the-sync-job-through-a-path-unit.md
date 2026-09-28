@@ -6,8 +6,8 @@
 - **Decided by:** ADR-066 (the doorbell is a path unit and the request is a stored flag); ADR-037
   (one scheduled sync per study day plus the owner's triggers) and ADR-026 (the owner gate) hold.
 - **Mutation band:** `S05900-S05999`.
-- **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
-  `docs/specs/` with its tests and `docs/red-first/SPEC-059.md` (ADR-016).
+- **Status:** delivered (moved from `docs/specs/planned/` with its tests and
+  `docs/red-first/SPEC-059.md`, ADR-016).
 
 ## 1. The problem, measured
 
@@ -90,7 +90,9 @@ A6: cargo test -p deck-streak-coordination --test job_table -- --exact the_job_t
 | `crates/bot/src/commands.rs` | `deck-streak-bot` | changed: the `StillRunning` outcome and reply |
 | `crates/bot/tests/messages/` | `deck-streak-bot` | changed: the golden for that reply |
 | `crates/ingest/src/sync_runs.rs` | `deck-streak-ingest` | changed: `owner_run_since` |
+| `crates/ingest/tests/owner_run.rs` | `deck-streak-ingest` | changed: the owner's latest run since an instant is read |
 | `.sqlx/` | `deck-streak-ingest` | changed: the refreshed query cache |
+| `scripts/tests/test_deploy_templates.py` | tests | changed: the bot reads no sync credential |
 | `deploy/systemd/deck-streak-job@sync.path` | deploy | added |
 | `deploy/systemd/deck-streak-bot.service` | deploy | changed: request directory, no sync login |
 | `deploy/tmpfiles.d/deck-streak-sync-request.conf` | deploy | added |
