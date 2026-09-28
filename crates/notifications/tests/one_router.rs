@@ -120,6 +120,23 @@ const SEND_METHODS: [&str; 22] = [
     "sendMessageDraft",
 ];
 
+/// The Bot API's other methods that put a message before the owner, in its own spelling: a copy, a
+/// forward, an edit, a pin and a reaction. The census holds them as it holds a send method.
+const DELIVERY_METHODS: [&str; 12] = [
+    "copyMessage",
+    "copyMessages",
+    "forwardMessage",
+    "forwardMessages",
+    "editMessageText",
+    "editMessageCaption",
+    "editMessageMedia",
+    "editMessageLiveLocation",
+    "editMessageChecklist",
+    "editMessageReplyMarkup",
+    "pinChatMessage",
+    "setMessageReaction",
+];
+
 /// The bot's own send, which takes no pass.
 const BOT_SEND: &str = "send_html";
 
@@ -187,7 +204,7 @@ const LEDGER: (&str, &str, &str) = (
 const ALERT_PATH: &str = "deploy/scripts/alert-telegram.sh";
 
 /// Every send, and where it is made: (file, function, send). The census finds each once.
-const NAMED_SENDS: [(&str, &str, &str); 7] = [
+const NAMED_SENDS: [(&str, &str, &str); 8] = [
     // The bot's command replies (#257): the erase prompt, every other reply, and the export.
     (
         "crates/bot/src/commands.rs",
@@ -216,6 +233,12 @@ const NAMED_SENDS: [(&str, &str, &str); 7] = [
         "crates/bot/src/transport.rs",
         "Transport::send_typing",
         "send_chat_action",
+    ),
+    // The transport's edit of a message, which no shipped source calls.
+    (
+        "crates/bot/src/transport.rs",
+        "Transport::edit_html",
+        "edit_message_text",
     ),
     // The export's document, posted by the transport's own request.
     (
@@ -763,11 +786,16 @@ fn names_of_the_queue(path: &str, code: &str, structure: &str) -> Vec<(usize, St
     named
 }
 
-/// Each name of a Bot API send method in `code`, in either spelling, as the byte it starts at and
-/// the name.
+/// The Bot API's methods the census holds: its send methods and its other delivery methods.
+fn methods() -> impl Iterator<Item = &'static str> {
+    SEND_METHODS.into_iter().chain(DELIVERY_METHODS)
+}
+
+/// Each name of a Bot API send or other delivery method in `code`, in either spelling, as the byte
+/// it starts at and the name.
 fn names_of_a_send(code: &str) -> Vec<(usize, String)> {
     let mut named = Vec::new();
-    for method in SEND_METHODS {
+    for method in methods() {
         for spelling in [method.to_owned(), snake(method)] {
             named.extend(identifiers(code, &spelling).map(|at| (at, spelling.clone())));
         }
@@ -781,7 +809,7 @@ fn names_of_a_send(code: &str) -> Vec<(usize, String)> {
 /// where a request's URL is a literal.
 fn sends(code: &str, structure: &str) -> Vec<(usize, String)> {
     let mut found = send_calls(structure);
-    for method in SEND_METHODS {
+    for method in methods() {
         found.extend(
             identifiers(code, method)
                 .filter(|&at| code[..at].ends_with('/'))
@@ -794,7 +822,7 @@ fn sends(code: &str, structure: &str) -> Vec<(usize, String)> {
 /// Each call of a send in `structure`, a definition aside, as the byte it starts at and the send:
 /// the bot's own, and the Bot API's in a client's spelling.
 fn send_calls(structure: &str) -> Vec<(usize, String)> {
-    let sends = std::iter::once(BOT_SEND.to_owned()).chain(SEND_METHODS.map(snake));
+    let sends = std::iter::once(BOT_SEND.to_owned()).chain(methods().map(snake));
     let mut calls = Vec::new();
     for send in sends {
         for at in identifiers(structure, &send) {
