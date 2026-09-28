@@ -22,6 +22,13 @@
   rail names. They kill 138 of the mutants of `crates/vault/src/rails.rs` that the opening
   sweep left, and the file's 11 equivalent mutants are recorded in
   `scripts/mutation-equivalent.d/deck-streak-vault.json`.
+- The vault's other six files gain tests of what they already do: the start check's refusals and
+  the failures it reports by step, the real file system's own errors, a note's key, hash and body
+  shape, the readings tree's calendar, rails and emptied day folders, and the staged executor's
+  moves, updates and new folders, the gate's classes, the class that examined nothing and its
+  time limit. They kill 69 more of the vault's mutants, 7 more equivalent mutants are recorded (18
+  in all), and a test that rolls or archives a note fails within seconds when a mutant stops its
+  search for a free archive name.
 
 ### Changed
 
@@ -37,4 +44,5 @@
   that holds the workflow.
 - SPEC-057's plan gives `deck-streak-agent` and `deck-streak-progression`, which gained their
   mutants after the plan's base, rows 8 and 9 of its table and their ids in the band;
-  `deck-streak-privacy` is row 10, and the Mini App stays last.
+  `deck-streak-privacy` is row 10, and the Mini App stays last. Both rows have their own
+  criteria, A26 and A27, in the form the other crates' rows have.
