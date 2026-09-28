@@ -46,15 +46,9 @@
     "observability": {
       "state": "enforced",
       "deferred_rows": {
-        "obs.slo-declared": "#24",
-        "obs.error-budget-policy": "#24",
-        "obs.burn-rate-alerts": "#24",
-        "obs.slo-measurable": "#24",
-        "obs.alert-route": "#24",
-        "obs.failure-alerts": "#24",
-        "obs.memory-watch": "#24"
+        "obs.slo-declared": "#42"
       },
-      "note": "the seven deferred rows judge the SLO declaration, the alert unit and the memory watch, which the observability issue ships (SPEC-032 R8)"
+      "note": "SPEC-031 shipped the SLO declaration, the alert unit and the memory watch, and lifted six of the seven rows SPEC-032 R8 deferred to the observability issue. obs.slo-declared asks an SLO of every long-running unit that runs deckstreakd, since the probe reads the one binary's roles as one HTTP service; the bot's unit has none, and its SLO waits for its traffic measured on the host (#42)"
     },
     "durable-services": {
       "state": "enforced",

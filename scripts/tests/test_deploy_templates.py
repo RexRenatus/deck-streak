@@ -1,5 +1,6 @@
 """The deploy templates: every unit, timer and the Caddy block is hardened, fits the host budget,
-and names no private value (SPEC-032; ADR-007, ADR-010, ADR-025, ADR-032, ADR-038).
+and names no private value (SPEC-032; ADR-007, ADR-010, ADR-025, ADR-032, ADR-038), SPEC-031's
+alert, SLO evaluator and memory watch included (SPEC-031 R6; ADR-031).
 
 The units are read through the vendored durable lint's own parser, so the tests and the pack read
 a unit exactly the same way. Every enumerating test prints `examined N` and refuses zero, and every
@@ -31,6 +32,8 @@ ADR = REPO / "docs" / "decisions" / "ADR-032-deploy-templates-and-the-host-budge
 
 # The one release binary every service runs, from the release root's `current` link (R2).
 BINARY = "/usr/local/lib/deck-streak/current/bin/deckstreakd"
+# The release root, whose deploy/ scripts SPEC-031's units run (ADR-032's neutral root).
+RELEASE = "/usr/local/lib/deck-streak/current"
 # The one required settings file of every service (R3), named without the optional `-`.
 ENVIRONMENT_FILE = "/etc/deck-streak/deck-streak.env"
 # The credential socket the private rail serves (ADR-038).
@@ -39,6 +42,37 @@ SOCKET = "/run/deck-streak-credentials/socket"
 ON_FAILURE = "deck-streak-alert@%n.service"
 # The job template, whose instances the timers start (R1).
 JOB_TEMPLATE = "deck-streak-job"
+# SPEC-031's units: the alert template, the SLO evaluator and the memory watch. Each runs a script
+# of the release, not a role of the binary (SPEC-031 R3 to R5).
+ALERT_TEMPLATE = "deck-streak-alert"
+SLO_SERVICE = "deck-streak-slo.service"
+WATCH_SERVICE = "deck-streak-memory-watch.service"
+SCRIPTS = {
+    f"{ALERT_TEMPLATE}@.service": f"{RELEASE}/deploy/scripts/alert-telegram.sh %i",
+    SLO_SERVICE: (
+        f"/usr/bin/python3 {RELEASE}/deploy/scripts/slo-evaluate.py {RELEASE}/deploy/slo.json"
+    ),
+    WATCH_SERVICE: f"{RELEASE}/deploy/scripts/memory-watch.sh",
+}
+# Their lifecycle: a oneshot each, ended before its timer is due again; the two a timer starts
+# yield to the daemons as a job does (resources.batch-priority), and the alert pages at once.
+OBSERVABILITY_SERVICE = {
+    f"{ALERT_TEMPLATE}@.service": {"Type": "oneshot", "TimeoutStartSec": "3min"},
+    SLO_SERVICE: {
+        "Type": "oneshot",
+        "TimeoutStartSec": "4min",
+        "Nice": "10",
+        "IOSchedulingClass": "idle",
+    },
+    WATCH_SERVICE: {
+        "Type": "oneshot",
+        "TimeoutStartSec": "50s",
+        "Nice": "10",
+        "IOSchedulingClass": "idle",
+    },
+}
+# The timers that start SPEC-031's units, each the service of its own name.
+OBSERVABILITY_TIMERS = {"deck-streak-slo.timer", "deck-streak-memory-watch.timer"}
 
 # Where the code declares each credential id a role reads, by the constant's name.
 CREDENTIAL_SOURCES = {
@@ -50,7 +84,8 @@ CREDENTIAL_SOURCES = {
 # Which credentials each service's role reads: the api's owner gate (SPEC-024, SPEC-025), the bot's
 # transport, owner gate and `/sync` (SPEC-026 R1, R11), and the `sync` job's syncer (SPEC-022,
 # SPEC-027). The job template carries the sync's pair for every instance, and the private rail's map
-# answers them for the `sync` instance alone (ADR-038).
+# answers them for the `sync` instance alone (ADR-038). SPEC-031's alert reads the bot token and the
+# owner's id, whose private chat it pages (R3); the evaluator and the watch read none.
 ROLE_CREDENTIALS = {
     "deck-streak-api.service": ("OWNER_USER_ID", "TELEGRAM_BOT_TOKEN"),
     "deck-streak-bot.service": (
@@ -60,6 +95,9 @@ ROLE_CREDENTIALS = {
         "SYNC_PASSWORD",
     ),
     f"{JOB_TEMPLATE}@.service": ("SYNC_USERNAME", "SYNC_PASSWORD"),
+    f"{ALERT_TEMPLATE}@.service": ("OWNER_USER_ID", "TELEGRAM_BOT_TOKEN"),
+    SLO_SERVICE: (),
+    WATCH_SERVICE: (),
 }
 # The role each service runs (R2); the job template's `%i` is its instance, the job's id.
 ROLES = {
@@ -99,7 +137,6 @@ DAEMON_CAPS = {
 HARDENING = {
     "User": "deck-streak",
     "Group": "deck-streak",
-    "StateDirectory": "deck-streak",
     "UMask": "0077",
     "ProtectSystem": "strict",
     "ProtectHome": "yes",
@@ -108,7 +145,6 @@ HARDENING = {
     "NoNewPrivileges": "yes",
     "SystemCallFilter": "@system-service",
     "SystemCallArchitectures": "native",
-    "RestrictAddressFamilies": "AF_UNIX AF_INET AF_INET6",
     "CapabilityBoundingSet": "",
     "ProtectKernelTunables": "yes",
     "ProtectKernelModules": "yes",
@@ -123,8 +159,29 @@ HARDENING = {
     "RestrictSUIDSGID": "yes",
     "LockPersonality": "yes",
     "MemoryDenyWriteExecute": "yes",
-    "EnvironmentFile": ENVIRONMENT_FILE,
 }
+# R2, R3 and SPEC-031 R6, per service: the one directory it may write, the settings file it reads,
+# the address families it may open, and the journal it may read. The roles share the state
+# directory and the settings file; SPEC-031's units read no settings, so the alert path never waits
+# on a settings file; the alert writes nothing, the evaluator and the watch each keep their episodes
+# in a directory of their own and open no network socket, and only the two that quote or count
+# journal lines join the journal's group.
+ROLES_NETWORK = "AF_UNIX AF_INET AF_INET6"
+PER_SERVICE = {
+    # service: (StateDirectory, EnvironmentFile, RestrictAddressFamilies, SupplementaryGroups)
+    "deck-streak-api.service": ("deck-streak", ENVIRONMENT_FILE, ROLES_NETWORK, None),
+    "deck-streak-bot.service": ("deck-streak", ENVIRONMENT_FILE, ROLES_NETWORK, None),
+    f"{JOB_TEMPLATE}@.service": ("deck-streak", ENVIRONMENT_FILE, ROLES_NETWORK, None),
+    f"{ALERT_TEMPLATE}@.service": (None, None, ROLES_NETWORK, "systemd-journal"),
+    SLO_SERVICE: ("deck-streak-slo", None, "AF_UNIX", "systemd-journal"),
+    WATCH_SERVICE: ("deck-streak-memory-watch", None, "AF_UNIX", None),
+}
+PER_SERVICE_KEYS = (
+    "StateDirectory",
+    "EnvironmentFile",
+    "RestrictAddressFamilies",
+    "SupplementaryGroups",
+)
 # The security headers R6 names, at the values the Caddy block sends.
 HEADERS = {
     "Content-Security-Policy": (
@@ -138,12 +195,15 @@ HEADERS = {
 KEEPS_URLS = {"no-referrer", "same-origin", "strict-origin", "strict-origin-when-cross-origin"}
 ONE_YEAR = 31_536_000
 # Every advisory the templates depart from, by unit and reason, each waived with its why (R4).
+# SPEC-031's two timers catch up on nothing: each run reads the same rolling state a missed one would.
 WAIVED = {
     (f"{JOB_TEMPLATE}@sync.timer", "randomized-delay-missing"),
     (f"{JOB_TEMPLATE}@maintenance.timer", "randomized-delay-missing"),
     (f"{JOB_TEMPLATE}@maintenance.timer", "calendar-not-persistent"),
     (f"{JOB_TEMPLATE}@liveness.timer", "randomized-delay-missing"),
     (f"{JOB_TEMPLATE}@liveness.timer", "calendar-not-persistent"),
+    ("deck-streak-slo.timer", "calendar-not-persistent"),
+    ("deck-streak-memory-watch.timer", "calendar-not-persistent"),
 }
 # Every advisory whose subject waits on an open issue, by where the lint reports it and its reason:
 # SPEC-021's Litestream template is committed before the unit that runs `litestream replicate`,
@@ -207,8 +267,12 @@ def budget():
 
 
 def adr_budget():
-    """ADR-032's budget table, by unit: (memory_high, memory_max)."""
-    rows = re.findall(r"(?m)^\| `([^`]+)` \| (\d+M) \| (\d+M) \|", ADR.read_text(encoding="utf-8"))
+    """ADR-032's budget table, by unit: (memory_high, memory_max). A row may name the SPEC that
+    ships its unit after the unit's name, as SPEC-031's three rows do."""
+    rows = re.findall(
+        r"(?m)^\| `([^`]+)`(?: \(SPEC-\d{3}\))? \| (\d+M) \| (\d+M) \|",
+        ADR.read_text(encoding="utf-8"),
+    )
     return {unit: (high, ceiling) for unit, high, ceiling in rows}
 
 
@@ -504,9 +568,12 @@ class TheTemplatesFitTheHostBudget(unittest.TestCase):
         daemons = [u.name for u in units if lint.long_running(u)]
         oneshots = [u.name for u in units if not lint.long_running(u)]
         self.assertEqual(daemons, ["deck-streak-api.service", "deck-streak-bot.service"])
-        self.assertEqual(oneshots, [f"{JOB_TEMPLATE}@.service"])
+        self.assertEqual(
+            oneshots,
+            [f"{ALERT_TEMPLATE}@.service", f"{JOB_TEMPLATE}@.service", WATCH_SERVICE, SLO_SERVICE],
+        )
         worst = sum(ceilings[unit] for unit in daemons) + max(ceilings[unit] for unit in oneshots)
-        # ADR-032's arithmetic: 128 + 96 for the daemons, and the job's 384.
+        # ADR-032's arithmetic: 128 + 96 for the daemons, and the job's 384, still the largest.
         self.assertEqual(worst, size("608M"))
         self.assertLessEqual(worst, size(share), "the worst case exceeds DeckStreak's share")
         # The daemons' CPU quotas fit the share's CPUs.
@@ -678,11 +745,25 @@ class CredentialsComeFromTheSocket(unittest.TestCase):
 class TheServicesRunTheirRoles(unittest.TestCase):
     def test_every_service_runs_its_role_with_the_lifecycle_r1_names(self):
         for unit in services():
+            identifier = unit.name.removesuffix(".service") if "@" not in unit.name else "%N"
+            self.assertEqual(last(unit, "Service", "SyslogIdentifier"), identifier, unit.rel)
+            if unit.name in SCRIPTS:
+                # SPEC-031's units run their script; the alert names no OnFailure=, since a page
+                # that fails must not start a page about the page.
+                self.assertEqual(
+                    unit.values("Service", "ExecStart"), [SCRIPTS[unit.name]], unit.rel
+                )
+                alert = unit.name == f"{ALERT_TEMPLATE}@.service"
+                self.assertEqual(
+                    last(unit, "Unit", "OnFailure"), None if alert else ON_FAILURE, unit.rel
+                )
+                for key, value in OBSERVABILITY_SERVICE[unit.name].items():
+                    self.assertEqual(last(unit, "Service", key), value, f"{unit.rel} {key}")
+                self.assertEqual(unit.values("Install", "WantedBy"), [], "a timer or a failure")
+                continue
             role = ROLES[unit.name]
             self.assertEqual(unit.values("Service", "ExecStart"), [f"{BINARY} {role}"], unit.rel)
             self.assertEqual(last(unit, "Unit", "OnFailure"), ON_FAILURE, unit.rel)
-            identifier = unit.name.removesuffix(".service") if "@" not in unit.name else "%N"
-            self.assertEqual(last(unit, "Service", "SyslogIdentifier"), identifier, unit.rel)
             if role.startswith("job"):
                 for key, value in JOB_SERVICE.items():
                     self.assertEqual(last(unit, "Service", key), value, f"{unit.rel} {key}")
@@ -695,16 +776,23 @@ class TheServicesRunTheirRoles(unittest.TestCase):
             for key, value in DAEMON_CAPS[unit.name].items():
                 self.assertEqual(last(unit, "Service", key), value, f"{unit.rel} {key}")
             self.assertEqual(unit.values("Install", "WantedBy"), ["multi-user.target"], unit.rel)
-        timers = examined("job timer(s)", subject().timers)
+        timers = examined("timer(s)", subject().timers)
         for timer in timers:
-            self.assertTrue(timer.name.startswith(f"{JOB_TEMPLATE}@"), timer.rel)
+            # A job's timer, or one of SPEC-031's two, which start the evaluator and the watch.
+            if timer.name not in OBSERVABILITY_TIMERS:
+                self.assertTrue(timer.name.startswith(f"{JOB_TEMPLATE}@"), timer.rel)
             self.assertEqual(timer.values("Install", "WantedBy"), ["timers.target"], timer.rel)
             # R10: a timer starts the service of its own name, which systemd's default Unit= is.
             self.assertIsNone(last(timer, "Timer", "Unit"), timer.rel)
+        self.assertLessEqual(OBSERVABILITY_TIMERS, {timer.name for timer in timers})
 
     def test_every_service_carries_the_hardening_r2_names(self):
         for unit in services():
             for key, value in HARDENING.items():
+                self.assertEqual(
+                    unit.values("Service", key), [value] if value else [], f"{unit.rel} {key}"
+                )
+            for key, value in zip(PER_SERVICE_KEYS, PER_SERVICE[unit.name], strict=True):
                 self.assertEqual(
                     unit.values("Service", key), [value] if value else [], f"{unit.rel} {key}"
                 )
