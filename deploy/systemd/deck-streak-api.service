@@ -1,0 +1,13 @@
+# SPEC-032's red-first stub: the api role's unit, with credentials as ADR-010 first stored them.
+[Unit]
+Description=DeckStreak API
+
+[Service]
+Type=notify
+ExecStart=/usr/local/lib/deck-streak/current/bin/deckstreakd api
+EnvironmentFile=/etc/deck-streak/deck-streak.env
+LoadCredentialEncrypted=owner-user-id:/etc/credstore.encrypted/owner-user-id
+LoadCredentialEncrypted=telegram-bot-token:/etc/credstore.encrypted/telegram-bot-token
+
+[Install]
+WantedBy=multi-user.target

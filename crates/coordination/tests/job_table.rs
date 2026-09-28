@@ -9,7 +9,9 @@
 #[path = "../../../tools/parity-oracle/golden.rs"]
 mod golden;
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
+use std::fs;
+use std::path::Path;
 
 use deck_streak_coordination::jobs::{
     self, CATCHUP_MAX_LATE_MIN, FireDate, Job, SYNC_TICK_OFFSET_MIN, Schedule, TABLE,
@@ -397,4 +399,112 @@ fn every_schedule_answers_its_latest_fire_at_every_offset() {
     }
     println!("examined {answered} instant(s) of five schedules");
     assert_eq!(answered, 5 * 3 * 5 * 6 * 4);
+}
+
+/// The job template each job's timer starts an instance of (SPEC-032 R1). An instance's name is
+/// built from it at run time and never written whole, because the public scrub reads that shape as
+/// an email address (SPEC-032 R10).
+const JOB_TEMPLATE: &str = "deck-streak-job";
+
+/// The `[Timer]` section of a unit file: each key's values, in the order they appear.
+fn timer_section(text: &str) -> BTreeMap<String, Vec<String>> {
+    let mut section = String::new();
+    let mut values: BTreeMap<String, Vec<String>> = BTreeMap::new();
+    for line in text.lines().map(str::trim) {
+        if line.is_empty() || line.starts_with(['#', ';']) {
+            continue;
+        }
+        if let Some(name) = line
+            .strip_prefix('[')
+            .and_then(|rest| rest.strip_suffix(']'))
+        {
+            name.clone_into(&mut section);
+        } else if section == "Timer"
+            && let Some((key, value)) = line.split_once('=')
+        {
+            values
+                .entry(key.trim().to_owned())
+                .or_default()
+                .push(value.trim().to_owned());
+        }
+    }
+    values
+}
+
+/// The calendar a job's timer carries in the templates: the job's slot in the table at `rule`'s
+/// rollover hour, written in UTC, the neutral zone the private rail replaces (ADR-027).
+fn neutral_calendar(schedule: Schedule, rule: StudyDayRule) -> String {
+    match schedule.daily_slot(rule.rollover_hour()) {
+        Some((hour, minute)) => format!("*-*-* {hour:02}:{minute:02}:00 UTC"),
+        None => {
+            let minute = schedule.minute();
+            format!("*-*-* *:{minute:02}:00 UTC")
+        }
+    }
+}
+
+#[test]
+fn every_timer_calendar_equals_its_job_table_entry() {
+    let systemd = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../deploy/systemd");
+    let prefix = format!("{JOB_TEMPLATE}@");
+    let mut found = Vec::new();
+    for entry in fs::read_dir(&systemd).expect("deploy/systemd is readable") {
+        let path = entry.expect("a directory entry").path();
+        let name = path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .unwrap_or_default()
+            .to_owned();
+        if let Some(id) = name
+            .strip_prefix(&prefix)
+            .and_then(|rest| rest.strip_suffix(".timer"))
+        {
+            let text = fs::read_to_string(&path).expect("a readable timer");
+            found.push((id.to_owned(), timer_section(&text)));
+        }
+    }
+    let timers: BTreeMap<String, BTreeMap<String, Vec<String>>> =
+        examined("job timer(s) under deploy/systemd", found)
+            .into_iter()
+            .collect();
+
+    // One timer per job of the table, and none for a job the table does not hold.
+    let ids: BTreeSet<&str> = TABLE.iter().map(|job| job.id).collect();
+    let named: BTreeSet<&str> = timers.keys().map(String::as_str).collect();
+    assert_eq!(
+        named, ids,
+        "the timers under deploy/systemd against the job table"
+    );
+
+    // The templates are the neutral example: the default rollover hour, at UTC.
+    let rule = StudyDayRule::default();
+    assert_eq!(
+        rule.utc_offset(),
+        UtcOffset::UTC,
+        "the neutral example's offset"
+    );
+    for job in TABLE {
+        let timer = &timers[job.id];
+        assert_eq!(
+            timer.get("OnCalendar"),
+            Some(&vec![neutral_calendar(job.schedule, rule)]),
+            "the {} job's timer against its slot in the table",
+            job.id
+        );
+        // Only a catch-up job's timer replays a fire missed while the host was down (R4, ADR-027).
+        let persistent = timer
+            .get("Persistent")
+            .is_some_and(|values| values == &["true"]);
+        assert_eq!(
+            persistent, job.catch_up,
+            "the {} job's timer: Persistent= against the table's catch_up",
+            job.id
+        );
+        // The timer starts the service of its own name, which is systemd's default (R10).
+        assert!(
+            !timer.contains_key("Unit"),
+            "the {} job's timer names its unit",
+            job.id
+        );
+    }
 }

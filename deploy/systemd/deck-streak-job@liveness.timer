@@ -1,0 +1,9 @@
+# SPEC-032's red-first stub: the liveness job's timer, at midnight until the job table decides it.
+[Unit]
+Description=DeckStreak liveness job
+
+[Timer]
+OnCalendar=*-*-* 00:00:00 UTC
+
+[Install]
+WantedBy=timers.target

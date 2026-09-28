@@ -1,0 +1,5 @@
+# SPEC-032's red-first stub: the site block serves files and nothing else.
+{$DECKSTREAK_HOST} {
+	root * {$DECKSTREAK_WEB_ROOT}
+	file_server
+}

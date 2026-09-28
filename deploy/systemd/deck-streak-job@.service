@@ -1,0 +1,10 @@
+# SPEC-032's red-first stub: one job of the table, with credentials as ADR-010 first stored them.
+[Unit]
+Description=DeckStreak job %i
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/lib/deck-streak/current/bin/deckstreakd job %i
+EnvironmentFile=/etc/deck-streak/deck-streak.env
+LoadCredentialEncrypted=anki-sync-username:/etc/credstore.encrypted/anki-sync-username
+LoadCredentialEncrypted=anki-sync-password:/etc/credstore.encrypted/anki-sync-password
