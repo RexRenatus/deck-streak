@@ -84,9 +84,16 @@ R3. The alert template unit cannot page through itself: it names no `OnFailure=`
     makes a request. It writes one line at error priority to standard error,
     `<3>the credential <id> is empty in the credentials directory: no page is sent`, which the
     journal keeps under the unit's identifier, and exits 1. The alert template counts no refusal a
-    success: no `-` prefix and no `SuccessExitStatus=` naming 1 or FAILURE (systemd.service(5)), so
-    the instance is `failed` and listed by `systemctl --failed`. No page reports it: a second route
-    that does not depend on the alert sender is #285.
+    success and leaves it failed, by three exit conditions: no `-` prefix and no
+    `SuccessExitStatus=` naming 1 or FAILURE, either of which would count the refusal a success,
+    and no `RestartMode=direct`, which skips the failed state on a restart (systemd.service(5)). It
+    also restarts no refused start: no `Restart=` other than `no`, and no `RestartForceExitStatus=`
+    naming 1 or FAILURE, which forces a restart whatever `Restart=` says. A restart at the default
+    mode only passes through the failed state, and the instance waits for its next start
+    activating, not failed (systemd.service(5)), so a loop of restarts settles failed only when its
+    start limit ends it (SPEC-031). The instance is therefore `failed` and listed by
+    `systemctl --failed`. No page reports it: a second route that does not depend on the alert
+    sender is #285.
 R4. ADR-067 records the decision and what it was chosen against. ADR-038 takes one dated note at its
     end, a pure append, naming the loader, not the service manager, as what refuses an empty
     credential.
@@ -106,8 +113,8 @@ R6. The engine probe (`crates/ingest/examples/engine_probe.rs`) reads the sync's
 | A1 | a credential of zero bytes, and one holding only a newline, each refuse to load with `CredentialError::Empty` naming the id, and the refusal says the credential is empty | `credentials.rs` `an_empty_credential_refuses_start_by_its_id` |
 | A2 | beside them, a missing credential keeps its `Missing` refusal, an unreadable one (a directory at its path) its `Unreadable` refusal, and a value loads unchanged less one trailing newline: one character, and a file of two newlines as one newline | `credentials.rs` `a_missing_credential_keeps_its_refusal_and_a_value_loads_unchanged` |
 | A3 | the refusal's `Display` and `Debug` carry the id only: a sentinel planted as the directory's name, and as a sibling credential the same loader read first, is in neither | `credentials.rs` `an_empty_refusal_names_the_id_and_never_a_value` |
-| A4 | every unit template that loads a credential, the alert template excepted, fails and pages on a refused start (R2's four conditions), and the alert template counts no refusal a success (R3); the census prints its examined count, refuses zero, and refuses a planted template for each condition, and an alert-shaped one, which names no `OnFailure=`, for its exit status | `test_deploy_templates.py` `every_unit_that_loads_a_credential_fails_and_pages_on_a_refusal` |
-| A5 | the alert unit's route (R3): each credential the template loads, empty in each form, makes the script exit 1 with the one line naming it, before any journal read or request; the template names no `OnFailure=`, and counts no refusal a success: no `-` prefix and no `SuccessExitStatus=` naming 1 or FAILURE | `test_alert_unit.py` `an_empty_credential_fails_the_alert_unit_before_any_request` |
+| A4 | every unit template that loads a credential, the alert template excepted, fails and pages on a refused start (R2's four conditions), and the alert template counts no refusal a success and restarts none (R3's three exit conditions, told from `OnFailure=` by the condition and never by a refusal's text, and its restart); the census prints its examined count, refuses zero, and refuses a planted template for each condition, and three alert-shaped ones, which name no `OnFailure=`, each for what it breaks: `SuccessExitStatus=1`, `RestartMode=direct` beside `Restart=on-failure`, and `RestartForceExitStatus=1` | `test_deploy_templates.py` `every_unit_that_loads_a_credential_fails_and_pages_on_a_refusal` |
+| A5 | the alert unit's route (R3): each credential the template loads, empty in each form, makes the script exit 1 with the one line naming it, before any journal read or request; the template names no `OnFailure=`, counts no refusal a success and restarts none: no `-` prefix, no `SuccessExitStatus=` naming 1 or FAILURE and no `RestartMode=direct`, no `Restart=` other than `no` and no `RestartForceExitStatus=` naming 1 or FAILURE | `test_alert_unit.py` `an_empty_credential_fails_the_alert_unit_before_any_request` |
 | A6 | the sync's login reads through the loader (R2): each of its two credentials, empty in each form, records the run as `missing_credentials` with no attempt, and the engine is never asked to sync | `retry.rs` `an_empty_sync_credential_is_recorded_missing_and_never_reaches_the_engine` |
 
 ```acceptance
@@ -121,16 +128,21 @@ A6: cargo test -p deck-streak-ingest --test retry -- --exact an_empty_sync_crede
 
 A1 to A3 write synthetic credentials to a temporary directory and read them through the loader.
 A4 reads the templates with `_units.py`, as the rest of the census does, and plants one template for
-each of R2's four conditions. It holds the alert template to R3's two exit conditions, the
-`ExecStart=` prefix and `SuccessExitStatus=`, and plants a template shaped as the alert template
-is, loading a credential and naming no `OnFailure=`, that its `SuccessExitStatus=1` alone refuses.
+each of R2's four conditions. It holds the alert template to R3's three exit conditions, the
+`ExecStart=` prefix, `SuccessExitStatus=` and `RestartMode=`, which are R2's conditions but
+`OnFailure=`, told apart by the condition each refusal names and never by its text, and to R3's
+restart, `Restart=` and `RestartForceExitStatus=`. It plants three templates shaped as the alert
+template is, each loading a credential and naming no `OnFailure=`: one that its
+`SuccessExitStatus=1` alone refuses, one holding `Restart=on-failure` and `RestartMode=direct`,
+which the exit conditions refuse for its `RestartMode=` alone and the restart for its `Restart=`,
+and one that its `RestartForceExitStatus=1` alone refuses.
 A5 runs the script as its unit runs it, with the recording stubs of SPEC-031's tests first on its
 `PATH`, once for each credential the template loads and each empty form, zero bytes and a lone
-newline, the other credential holding its synthetic value, and reads the same two exit conditions
-in the template. A6 runs the syncer over SPEC-022's scripted engine and in-memory record, which
-count every sync the engine is asked for, with one of the fixture's two credentials rewritten
-empty. R6 takes no criterion of its own: the engine probe is an example a person runs by hand,
-with no test, and the refusal it takes is the loader's, which A1 to A3 hold.
+newline, the other credential holding its synthetic value, and reads the same three exit conditions
+and the restart in the template. A6 runs the syncer over SPEC-022's scripted engine and in-memory
+record, which count every sync the engine is asked for, with one of the fixture's two credentials
+rewritten empty. R6 takes no criterion of its own: the engine probe is an example a person runs by
+hand, with no test, and the refusal it takes is the loader's, which A1 to A3 hold.
 
 The pull request's mutation jobs decide #284's last criterion, and no command here does: the
 diff-scoped jobs (SPEC-039 R3, R4) must read the `rust` class examined, with a count above zero and
@@ -213,8 +225,11 @@ is proved with `python3 scripts/mutation_rows.py prove --band S06600-S06699`.
 - **A fourth reader, and R6.** The engine probe reads the sync's two credentials, so §1 counts it,
   R6 moves its read onto the loader, and §4 lists its file. It takes no criterion: the loader's A1
   to A3 hold the refusal it now takes.
-- **R3 names the alert template's exit.** The alert template cannot page, but a refused start must
-  still leave it failed, so R3 states that it counts no refusal a success. A4 holds R3's two exit
-  conditions on it, with a planted alert-shaped template as the killing case, and A5 reads the same
-  two in the template. Each addition pins what the template already declares, so each is disclosed
-  not red (`docs/red-first/SPEC-066.md`).
+- **R3 names the alert template's exit, and its restart.** The alert template cannot page, but a
+  refused start must still leave it failed, so R3 states that it counts no refusal a success and
+  restarts none. A4 holds R3's three exit conditions on it, told from `OnFailure=` by the condition
+  each refusal names rather than by its text, and its restart, with three planted alert-shaped
+  templates as the killing cases, and A5 reads the same in the template. The restart is pinned
+  whole, not `RestartMode=direct` alone, since a restart at the default mode also leaves the
+  instance activating, not failed, between its attempts. Each addition pins what the template
+  already declares, so each is disclosed not red (`docs/red-first/SPEC-066.md`).
