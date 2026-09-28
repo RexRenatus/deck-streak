@@ -63,6 +63,42 @@
         "const MINUTE_MS: i64 = 1_000;",
         "quiet_hours::the_local_minute_is_read_at_the_configured_offset",
         "the quiet window is read at the local minute of the kernel's clock at the configured offset (SPEC-041 R9); cargo-mutants never mutates a constant"
+      ],
+      [
+        "S04109-AN-OCCASION-ASKS-FOR-A-DECLARED-TIER",
+        "notifications",
+        "src/occasion.rs",
+        "        if !kind.tiers().contains(&tier) {",
+        "        if kind.tiers().contains(&tier) {",
+        "router::an_occasion_asks_for_a_tier_its_kind_declares",
+        "an occasion asks for one of its kind's tiers, refused when it is built (SPEC-041 R3); cargo-mutants never looks inside a method named new"
+      ],
+      [
+        "S04110-A-COMEBACK-IS-RAISED-ONLY-IN-A-LAPSE",
+        "notifications",
+        "src/occasion.rs",
+        "        if kind.is_comeback() && lapse == LapseContext::NoLapse {",
+        "        if kind.is_comeback() && lapse != LapseContext::NoLapse {",
+        "comeback_budget::a_comeback_is_raised_only_inside_a_lapse",
+        "a comeback exists only inside a lapse, since its cap is counted per lapse id (SPEC-041 R3, R4 rule 5); cargo-mutants never looks inside a method named new"
+      ],
+      [
+        "S04111-A-DEDUPE-KEY-IS-A-TOKEN",
+        "notifications",
+        "src/occasion.rs",
+        "        if !is_token(text) {",
+        "        if is_token(text) {",
+        "router::a_dedupe_key_is_an_opaque_token_that_holds_no_calendar_date",
+        "a dedupe key is an opaque token of the grammar, refused when it is built (SPEC-041 R3); cargo-mutants never looks inside a method named new"
+      ],
+      [
+        "S04112-A-DEDUPE-KEY-HOLDS-NO-CALENDAR-DATE",
+        "notifications",
+        "src/occasion.rs",
+        "        if holds_calendar_date(text.as_bytes()) {",
+        "        if !holds_calendar_date(text.as_bytes()) {",
+        "router::a_dedupe_key_is_an_opaque_token_that_holds_no_calendar_date",
+        "a dedupe key never holds a calendar date, refused when it is built (SPEC-041 R3); cargo-mutants never looks inside a method named new"
       ]
     ],
     "CARGO_KILLED_SCRIPT_MUTATIONS": [

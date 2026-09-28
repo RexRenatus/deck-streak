@@ -684,3 +684,38 @@ async fn the_router_shows_its_rule_and_whether_a_bot_is_joined() {
     assert!(shown.0.ends_with("bot: true, .. }"), "{}", shown.0);
     assert!(shown.1.ends_with("bot: false, .. }"), "{}", shown.1);
 }
+
+#[tokio::test]
+async fn an_occasion_asks_for_a_tier_its_kind_declares() {
+    use deck_streak_notifications::{DedupeKey, Occasion, OccasionError};
+
+    let harness = Harness::new(at(DAY, 12, 0)).await;
+    let asking = |kind: &str, tier: Tier| {
+        Occasion::new(
+            harness.policy.kind(kind).expect("a declared kind"),
+            DedupeKey::new("tier:asked").expect("a key"),
+            Surface::Bot,
+            tier,
+            "synthetic",
+            support::day(DAY),
+            LapseContext::NoLapse,
+        )
+        .map(|occasion| occasion.tier())
+    };
+
+    assert_eq!(
+        [
+            asking("celebration", Tier::T4),
+            asking("habit", Tier::T2),
+            asking("habit", Tier::T4),
+            asking("alert", Tier::T0),
+        ],
+        [
+            Ok(Tier::T4),
+            Ok(Tier::T2),
+            Err(OccasionError::TierNotDeclared),
+            Err(OccasionError::TierNotDeclared)
+        ],
+        "a nudge and an alert declare T2 alone; a celebration declares T0 to T5"
+    );
+}
