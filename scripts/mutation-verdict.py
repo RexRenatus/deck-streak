@@ -56,8 +56,9 @@ survivor.
 
 CONFIGS judges `.cargo/mutants.toml` and `web/app/stryker.config.json` by what each tool itself
 refuses (cargo-mutants 27.1.0 denies an unknown key or a mistyped value; StrykerJS refuses a
-threshold out of 0 to 100, `high` below `low`, and JSON it cannot parse), and by what the verdict
-needs of Stryker's: the Vitest runner and the json report.
+threshold out of 0 to 100, `high` below `low`, JSON it cannot parse, and `ignoreStatic` without
+per-test coverage), by what the verdict needs of Stryker's (the Vitest runner, the json report and
+R2's production code as its `mutate`), and refuses a second Stryker configuration it would read.
 
 EXCLUSIONS holds every exclusion to its reason and issue (R5): an `exclude_re`, `exclude_globs` or
 `skip_calls` entry in `.cargo/mutants.toml` needs `# EQUIVALENT: <reason> (#N)` on its line or the
@@ -1078,6 +1079,25 @@ CARGO_MUTANTS_KEYS: dict[str, object] = {
 #: `additionalProperties: false`): each a percentage from 0 to 100, `break` also null; the options
 #: validator refuses `high` below `low` once these defaults apply.
 STRYKER_THRESHOLDS = {"high": 80, "low": 60, "break": None}
+#: The names StrykerJS reads a configuration from in its working directory, the first it finds
+#: winning: `stryker.conf` or `stryker.config`, with or without a leading dot, in `.json`, `.js`,
+#: `.mjs` or `.cjs` (its config-file chapter).
+STRYKER_CONFIG_NAMES = tuple(
+    f"{dot}stryker.{stem}{extension}"
+    for dot in ("", ".")
+    for stem in ("conf", "config")
+    for extension in (".json", ".js", ".mjs", ".cjs")
+)
+#: R2's web production code as Stryker's `mutate` globs, from `web/app`.
+STRYKER_MUTATE = (
+    "src/**/*.ts",
+    "src/**/*.js",
+    "src/**/*.svelte",
+    "!src/**/*.test.*",
+    "!src/**/*.spec.*",
+    "!src/**/*.d.ts",
+    "!src/lib/paraglide/**",
+)
 
 
 def takes(value: object, kind: object) -> bool:
@@ -1129,6 +1149,14 @@ def stryker_findings(text: str) -> list[str]:
         findings.append(f"configs: {where}: testRunner is not vitest (SPEC-039 R6)")
     if "json" not in (document.get("reporters") or []):
         findings.append(f"configs: {where}: no json reporter, so no verdict can read a report")
+    # StrykerJS finds a static mutant only by per-test coverage, and refuses ignoreStatic without it.
+    coverage = document.get("coverageAnalysis", "perTest")
+    if document.get("ignoreStatic") is True and coverage != "perTest":
+        findings.append(
+            f"configs: {where}: ignoreStatic needs coverageAnalysis perTest, not {coverage}"
+        )
+    if sorted(document.get("mutate") or []) != sorted(STRYKER_MUTATE):
+        findings.append(f"configs: {where}: mutate is not R2's web production code")
     thresholds = document.get("thresholds", {})
     if not isinstance(thresholds, dict):
         return [*findings, f"configs: {where}: thresholds is not an object"]
@@ -1167,6 +1195,12 @@ def configs(root: pathlib.Path) -> int:
             continue
         examined += 1
         findings += judge_text(path.read_text(encoding="utf-8"))
+    for name in STRYKER_CONFIG_NAMES:
+        if name != "stryker.config.json" and (root / "web" / "app" / name).is_file():
+            findings.append(
+                f"configs: web/app/{name}: a second Stryker configuration; StrykerJS reads the "
+                "first of its default names it finds, which may not be stryker.config.json"
+            )
     for finding in findings:
         print(finding)
     print(f"examined {examined} configuration(s)")
