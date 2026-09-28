@@ -12,6 +12,11 @@ The amended tests were committed first (c89191f) and were red there for their ow
 `Regex didn't match: '^FAILED +python .*: missing tool: cargo \(\S.*\)$' not found in 'ok python 0s'`
 (the python stage ran with no cargo on the path). Both were green at afa366e.
 
+A14 and A15 came with the engine (#204, merged into `dev` as b1ce32d). Their tests were committed
+before that merge (d50e90d), and the merge (34bf4fa) is their implementation: resolving its two
+conflicts carried #204's `protoc` step into both jobs that compile Rust, and its `protoc` check
+into the three stages that compile the engine.
+
 ```red-first
 A1: red at fa9dcfd: AssertionError: 0 != 1 : gate restores no Rust cache before its stages
 A1: green at 77107bf
@@ -36,4 +41,8 @@ A12: red at fa9dcfd: AssertionError: False is not true : no timings.tsv in the l
 A12: green at 77107bf
 A13: red at fa9dcfd: AssertionError: Lists differ: ['.check-logs'] != [] (the stage logs sat in a hidden directory the upload skips)
 A13: green at 77107bf
+A14: red at d50e90d: AssertionError: 0 != 1 : hygiene installs no checksum-verified protoc (no job installed the engine's build tool before #204 was merged in)
+A14: green at 34bf4fa
+A15: red at d50e90d: AssertionError: Regex didn't match: '^FAILED +clippy .*: missing tool: protoc \(\S.*\)$' not found in 'ok clippy 0s' (clippy, test and doctest each ran with no protoc on the path)
+A15: green at 34bf4fa
 ```
