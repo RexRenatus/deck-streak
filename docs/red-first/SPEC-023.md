@@ -18,6 +18,32 @@ refuses); the fixture gave each review its own instant before the red commit, an
 32e96dd, where it failed by its assertion. Five tests beyond the fence pin R8's order of terms, R10's
 deadline window at its boundaries, R8's unreadable anchor, R3's prefix, and the settings' parse.
 
+Two tests were added after the merge commit introduced the wiring (c6dde16, which built the `sync`
+job's reader, change gate and obligations in `crates/daemon/src/role_job.rs`); proved by mutation.
+They could not be red first, so each was proved on the committed tree (67eec68) by hand mutants of
+`role_job.rs`, each run against its one killing test with `--exact` and the file restored byte for byte
+(sha256 5f4f934a1d6c before and after every mutant, the tree clean):
+
+- `role_job::tests::a_cycle_that_cannot_finish_is_recorded_with_its_steps_reason_code` (the binary's
+  unit test: `cycle_failed` gives every kind of `CycleError` its exact reason code).
+  - M1, `CycleError::Obligations(_)` mapped to `recompute_failed`: killed, `Obligations(LoggingInstalled)`;
+    left `Reason { code: "recompute_failed" }`, right `Reason { code: "obligations_unreadable" }`.
+  - M2, `sync_record_failed` renamed `sync_failed`: killed, `History(LoggingInstalled)`; left
+    `sync_failed`, right `sync_record_failed`.
+  - M3, `CycleError::Window(_)` moved to the record's arm: killed, `Window(Read(WriteRefused))`; left
+    `sync_record_failed`, right `recompute_failed`.
+- `roles::the_sync_job_pages_on_a_malformed_scope_before_it_syncs` (`deckstreakd job sync` with a
+  valid endpoint and credentials directory and a law root holding the deck separator: exit 1, one
+  page `scope_settings_refused`, the fire recorded `error`, no sync run).
+  - M4, the refusal's code written `sync_settings_refused`: killed, the page read
+    `"reason":"sync_settings_refused"`.
+  - M5, a malformed scope read as the default scope: killed, the job synced against the dead port
+    (`the sync failed`, `network_unreachable`, 3 attempts) and paged
+    `"reason":"network_unreachable attempts=3"`, not `scope_settings_refused`.
+
+The probe's weights and modulus became bound parameters at b14015f (web-security's `ws.db-rules`
+refuses a query assembled with `format!`); A10 held all 16 cases of `change_probe` unchanged.
+
 ```red-first
 A1: red at 32e96dd: a write through the reader was not refused as read-only: INSERT INTO revlog (id, cid, usn, ease, ivl, lastIvl, factor, time, type) VALUES (1, 1001, 0, 3, 1, 0, 2500, 4000, 1): Ok(0)
 A1: green at 73e7b00

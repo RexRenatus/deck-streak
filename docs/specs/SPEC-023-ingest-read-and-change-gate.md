@@ -174,7 +174,8 @@ real deadlines exist yet. Every clock is a `ManualClock`.
 | `crates/coordination/src/sync_cycle.rs`, `crates/coordination/src/lib.rs` | `deck-streak-coordination` | changed: probe, gate, read or skip |
 | `crates/coordination/tests/change_gate.rs` | `deck-streak-coordination` | added: A18, A19 |
 | `crates/coordination/Cargo.toml`, `Cargo.lock` | `deck-streak-coordination` | changed: `thiserror`; dev `tokio` and `tempfile` (§7) |
-| `crates/daemon/src/role_job.rs` | `deck-streak-daemon` | changed: the `sync` job builds the whole cycle (§7) |
+| `crates/daemon/src/role_job.rs` | `deck-streak-daemon` | changed: the `sync` job builds the whole cycle, and a unit test of its reason codes (§7) |
+| `crates/daemon/tests/roles.rs` | `deck-streak-daemon` | changed: the `sync` job pages a malformed scope before it syncs (§7) |
 | `migrations/002301_ingest_state.sql` | `deck-streak-ingest` | added |
 | `.sqlx/` | workspace | changed |
 | `tools/parity-oracle/registry/spec_023.py` | repo | added |
@@ -263,7 +264,15 @@ real deadlines exist yet. Every clock is a `ManualClock`.
   port `runner::SyncCycle`, which keeps that name; the daemon's `sync` job implements the port by
   building the parts from the job's own settings when it runs (an empty registry until a feature
   registers a source), and hands the port the cycle's sync report. A cycle that cannot run to its end
-  is recorded `sync_record_failed`, `obligations_unreadable` or `recompute_failed`.
+  is recorded `sync_record_failed`, `obligations_unreadable` or `recompute_failed`. That wiring came
+  in the merge commit that absorbed SPEC-027, so its two tests followed it and were proved by hand
+  mutation instead of red first (`docs/red-first/SPEC-023.md`): a unit test holds every kind of
+  `CycleError` to its code, and a `roles` test runs `deckstreakd job sync` with a malformed scope and
+  reads the page `scope_settings_refused`, the fire recorded `error`, and no sync run.
+- **R9: the fingerprint's constants are bound.** The weights and the modulus are bound parameters
+  of one static statement, never formatted into it (web-security's `ws.db-rules`); bound integers
+  take the same integer arithmetic as the predecessor's literals, and A10's golden holds all 16
+  cases.
 - **R2: the include list.** Unset, empty or blank reads every deck; the predecessor also read `ALL` as
   every deck, which R2 does not name, so it is read as a prefix.
 - **Goldens.** `change_probe`'s adapter writes the case's rows into a temporary collection through
