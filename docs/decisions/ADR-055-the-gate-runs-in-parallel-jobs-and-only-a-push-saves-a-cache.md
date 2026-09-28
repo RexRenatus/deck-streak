@@ -179,3 +179,56 @@ Chosen, and what each was chosen against:
   for a gate 1m51s and 1m50s shorter.
 - Bad, because the local gate runs one more cargo command, which recompiles the engine once more
   (ADR-022's finding).
+
+## Note, 2026-09-28: the web audit judges every dependency the repository resolves
+
+Recorded by SPEC-058 (#260). This decision is unchanged; the note decides which dependencies
+`audit-web` judges, the bar it holds, and how its verdict is read.
+
+Every package of the JavaScript workspace is a development dependency, because the Mini App ships
+as a static build (ADR-005). At `dev` 16ed8e2, `pnpm audit --json` examined 428 packages and
+`pnpm audit --prod --json` examined 0. pnpm states that count only in its JSON report, as
+`metadata.totalDependencies`, and exits 0 when no advisory was found, a run that examined nothing
+included.
+
+Chosen, and what each was chosen against:
+
+- `pnpm audit` over every dependency class, with no flag that narrows them, so it audits the
+  dependencies, devDependencies and optionalDependencies alike. It was chosen because a class left
+  out is a class nobody audits, and pnpm's default already takes all three.
+  - `--prod`, as before: rejected, because this workspace declares no production dependency, so it
+    examines no package.
+  - `--dev` alone, or naming each class: rejected, because a flag that names classes audits only
+    the classes it names, and a runtime dependency added later would go unjudged.
+- The level `low`, stated on the command line and defined once in `check.sh`. It was chosen
+  because it is the bar `audit-rust` holds, where `deny.toml` makes every RustSec advisory an
+  error, and an advisory of any grade is fixed the same way, by an update or a scoped override.
+  - `moderate` or `high`: rejected, because the two audits would then hold different bars, and an
+    advisory below the chosen grade would never fail the gate.
+  - No level on the command line: rejected, because a workspace's `audit.level` then decides it.
+    Measured on a scratch copy of the workspace, `audit.level: critical` left the report with no
+    advisory and pnpm exited 0; `--audit-level low` on the command line restored every advisory.
+- A verdict read from pnpm's JSON report by `scripts/audit-web-verdict.py`, which prints the
+  examined count, reads 0 as VOID, and fails on every advisory at or above the level. It was
+  chosen because the count lives only in the report, and pnpm's exit cannot tell a run that found
+  nothing from one that examined nothing.
+  - pnpm's exit code alone: rejected, because it is 0 for a run that examined nothing.
+  - The verdict as a Node script: rejected, because the stage's tests run in the `hygiene` job,
+    whose Node is the runner image's own rather than the pinned Node 24 the stage checks for, so
+    no test could run the stage there. `python3` is on both jobs' runner images, and is the
+    language of the gate's other tools.
+  - pnpm's table output: rejected, because it prints no count.
+  - A verdict that also counts `metadata.vulnerabilities`: rejected, because that count ignores
+    `audit.ignore`, so it would refuse an exception the workspace records. None is recorded today,
+    and one would be a decision of its own.
+- `--ignore-registry-errors`: rejected, because it turns a registry failure into exit 0, a pass
+  that examined nothing. A registry failure reads VOID.
+
+### Consequences of the 2026-09-28 note
+
+- Good, because the audit covers the development dependencies too, and refuses a run that examined
+  nothing.
+- Good, because both halves of the audit hold one bar, every advisory.
+- Bad, because an advisory in a build or test tool fails every pull request until an update or an
+  override fixes it, as #259 does for #254 and #255.
+- Bad, because a registry outage fails the stage, VOID, until a re-run.

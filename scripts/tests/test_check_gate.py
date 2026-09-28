@@ -30,7 +30,8 @@ TOOLS = {
     # The engine set's own stage (SPEC-038 R13), which the engine job runs.
     "test-engine": ["cargo", "cargo-nextest"],
     "web": ["node", "pnpm"],
-    "audit-web": ["node", "pnpm"],
+    # The web audit's verdict reads pnpm's report in Python (SPEC-058 R4, A5).
+    "audit-web": ["node", "pnpm", "python3"],
     # A guard test builds the ingest crate twice (SPEC-055 A2), so the stage runs cargo too.
     "python": ["python3", "cargo"],
     "scrub": ["python3"],
