@@ -19,3 +19,7 @@
   `defaults.run` and the workflow's, reads every string of a workflow for a clone or a fetch, and
   refuses git configured from the environment: a key or a string that names a variable beginning
   with `GIT_`, in any case, and an `env` or a container it cannot read (SPEC-034 R7).
+- The checker refuses a job's container whose `options`, `image`, `ports` or `volumes` is or holds
+  a `${{ }}` expression, which GitHub evaluates when the job runs, as the runner creates the
+  container from each; a container's registry `credentials` are not read by its steps
+  (SPEC-034 R7).

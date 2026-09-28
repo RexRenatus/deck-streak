@@ -243,3 +243,58 @@ the committed tree, restoring the file byte for byte after each: each built-in k
 (four), and the variable pattern, the walk of keys and strings and the environment and container
 checks (nineteen). 41 of 41 were killed. At e7fb4f5, before the pins, the same 41 left S4, S7, S8
 and E7 alive.
+
+## Fix round 5, 2026-09-28
+
+Fix round 5 refuses a job's container whose `options`, `image`, `ports` or `volumes` is or holds a
+`${{ }}` expression, which GitHub evaluates when the job runs. `dev` was merged first, at aac4e70,
+with no conflict. No criterion was added, so the fences above are unchanged, and this round's runs
+are listed here. Each refusal was committed red, then green. SPEC-034's inserted text says so at
+b38cc14, after the green commits and the pin, because it states what the checker reads (R7 and
+section 3).
+
+Every property of a job's container in GitHub's workflow schema was read first, with the runner's
+use of each, and each has its verdict:
+
+| property | verdict |
+|---|---|
+| `image` | refused when it is or holds a `${{ }}` expression |
+| `options` | refused when it is or holds a `${{ }}` expression |
+| `ports` | refused when it is or holds a `${{ }}` expression |
+| `volumes` | refused when it is or holds a `${{ }}` expression |
+| `env` | refused when it is not a mapping or names a variable git reads (fix round 4) |
+| `credentials` | not read by steps |
+
+- A10 red at ec13211: `AssertionError: Lists differ`: two planted containers' `options`, one
+  `${{ }}` expression and a literal option beside one, were not yet refused. Green at a27e789,
+  where the checker refuses a container's `options` that is or holds a `${{ }}` expression. A11 was
+  green at both: its admitted workflows gained a container whose options are literal, `--cpus 1`.
+- A10 red at 6a31256: `AssertionError: Lists differ`: six planted containers' `image`, `ports` and
+  `volumes`, each one `${{ }}` expression and each holding one beside a literal value, were not yet
+  refused. Green at 1ae727b, where the checker refuses each of a container's `image`, `options`,
+  `ports` and `volumes` that is or holds one. A11 was green at both: its admitted workflows gained a
+  container with literal `ports` and `volumes` and registry `credentials` given by an expression.
+- 9f19b06 pins two hand mutants and was green at once, because the checker already met each: a
+  container given every property by an expression, which a refusal that stopped at the first
+  property it found (C14) or at the `env`'s finding (C19) would name only in part. Each is red
+  against its mutant.
+
+In each red run the whole test file ran and A10 alone failed.
+
+DISCLOSURE: A10's body changed after its red commit, eeaa4e7, again in this round. Its committed
+list grew from 95 to 108 findings: ec13211 (2), 6a31256 (6) and 9f19b06 (5). No finding that was in
+the list before this round changed or left: each new one follows its file's earlier ones, in the
+order the checker reads. A11's body did not change; its admitted workflows are still eight, and
+`environment-the-checker-reads.yml` gained two containers (ec13211 and 6a31256). The live workflows
+set no job's container. On them the checker reads 668 strings, 599 of them outside a run step's
+script, and none names a clone, a fetch of a URL or a variable git reads.
+
+At 9f19b06 the hand sweeps ran again, one mutant at a time, on a scratch copy of the committed
+tree, restoring the file byte for byte after each. The 102 of fix round 2: 102 of 102 killed. The
+rider's 24: 24 of 24. Fix round 3's 11: 11 of 11. Fix round 4's 41: 41 of 41, with E13, the
+container's `env` refusal dropped, anchored on the line this round rewrote. And 19 over this
+round's code: each property dropped from the refusal, and all four, `credentials` or `env` added to
+it, its condition deleted, inverted, widened or narrowed, a list read by its first item or not
+read, the walk cut short three ways, the finding's place changed, and the `env` refusal dropped or
+made the only one: 19 of 19 killed. At 1ae727b, before the pin, the same 19 left C14 and C19 alive.
+The test file did not change after 9f19b06.
