@@ -440,6 +440,30 @@
         "        digest, _ = measure(item[\"path\"])\n        if False:\n            raise OSError(\"its digest",
         "the deletion measures the item's digest again, at its own entry and everywhere below it, and refuses a change (SPEC-060 R6, A5)",
         "test_host_scrub.Apply.test_apply_deletes_exactly_the_approved_items_or_nothing"
+      ],
+      [
+        "S06056-THE-APPLY-DELETES-THE-ITEMS-OF-THE-LIST-IT-BOUND",
+        "deploy/host-scrub/apply.py",
+        "        approval, items = approved_items(listing, args.approval, rules[\"digest\"])\n",
+        "        approval, items = approved_items(listing, args.approval, rules[\"digest\"])\n        items = [i for i in load_json(args.list, \"list\")[\"items\"] if i[\"id\"] in approval[\"items\"]]\n",
+        "the apply takes the approved items from a second read of the list, not the one it bound (SPEC-060 R6, A10)",
+        "test_host_scrub.OneRead.test_each_tool_binds_the_bytes_it_parsed"
+      ],
+      [
+        "S06057-THE-APPLY-PROTECTS-BY-THE-RULES-IT-BOUND",
+        "deploy/host-scrub/apply.py",
+        "            checked[item[\"id\"]] = check_item(item, rules[\"protected\"], runner)\n",
+        "            checked[item[\"id\"]] = check_item(item, load_rules(args.rules)[\"protected\"], runner)\n",
+        "the apply's protected paths come from a second read of the rules, not the ones it bound (SPEC-060 R7, A10)",
+        "test_host_scrub.OneRead.test_each_tool_binds_the_bytes_it_parsed"
+      ],
+      [
+        "S06058-THE-PLAN-LISTS-FROM-THE-INVENTORY-IT-BOUND",
+        "deploy/host-scrub/plan.py",
+        "    chosen = select(candidates(inventory, rules), rules[\"protected\"], skipped)\n",
+        "    chosen = select(candidates(read_json(args.inventory, \"inventory\")[0], rules), rules[\"protected\"], skipped)\n",
+        "the plan takes its candidates from a second read of the inventory, not the one it bound (SPEC-060 R4, A10)",
+        "test_host_scrub.OneRead.test_each_tool_binds_the_bytes_it_parsed"
       ]
     ]
   }
