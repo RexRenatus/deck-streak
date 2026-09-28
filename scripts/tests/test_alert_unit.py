@@ -43,6 +43,7 @@ NAMED = "is named, and the alert template names none"
 DIRECT = "skips the failed state on a restart"
 RESTARTS = "restarts the refusal"
 UNLOADS = "can unload the failed instance, which systemctl --failed then no longer lists"
+UNREAD = "is empty or not a known value, which the check refuses"
 
 # Synthetic values: a token of the Bot API's shape whose id has seven digits, never the public
 # scrub's shape; the scrub's own placeholder id for the owner; and another for any credential the
@@ -320,14 +321,21 @@ def alert_template_refusals(path):
     `SuccessExitStatus=` at all; and no `RestartMode=direct`, which skips the failed state on a
     restart. It restarts none: no `Restart=` other than `no`, and no `RestartForceExitStatus=` at
     all. And it is never unloaded while failed: no `CollectMode=` other than `inactive`
-    (systemd.service(5), systemd.unit(5)). A template the reader refuses is refused whole, with the
-    reader's line."""
+    (systemd.service(5), systemd.unit(5)). Each of `RestartMode=`, `Restart=` and `CollectMode=` is
+    read at every assignment, with no reset applied, and one that is empty or not a known value is
+    refused, so the check never decides which of two is in force. A template the reader refuses is
+    refused whole, with the reader's line."""
     name = Path(path).name
     try:
-        template = unit_file(path)
+        read = list(_units.assignments(_units.unit_text(path), name))
     except _units.Refused as refusal:
         return [str(refusal)]
+    template = unit_file(path)
     refused = []
+
+    def every(key):
+        section, _ = _units.ENUMS[key]
+        return [value for at, named, value, _ in read if (at, named) == (section, key)]
 
     def refuse(why):
         refused.append(f"{name}: {why}")
@@ -345,15 +353,19 @@ def alert_template_refusals(path):
     for key in ("SuccessExitStatus", "RestartForceExitStatus"):
         for statuses in values(template, "Service", key):
             refuse(f"{key}={statuses} {NAMED}")
-    for mode in values(template, "Service", "RestartMode"):
-        if mode.strip() == "direct":
+    for mode in every("RestartMode"):
+        if mode == "direct":
             refuse(f"RestartMode={mode} {DIRECT}")
-    for restart in values(template, "Service", "Restart"):
-        if restart != "no":
+    for restart in every("Restart"):
+        if restart in _units.ENUMS["Restart"][1] and restart != "no":
             refuse(f"Restart={restart} {RESTARTS}")
-    for mode in values(template, "Unit", "CollectMode"):
-        if mode != "inactive":
+    for mode in every("CollectMode"):
+        if mode in _units.ENUMS["CollectMode"][1] and mode != "inactive":
             refuse(f"CollectMode={mode} {UNLOADS}")
+    for key, (_, known) in _units.ENUMS.items():
+        for value in every(key):
+            if value not in known:
+                refuse(f"{key}={value} {UNREAD}")
     return refused
 
 

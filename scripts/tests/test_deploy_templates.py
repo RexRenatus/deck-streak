@@ -366,7 +366,9 @@ def refusal_page_conditions(unit):
     success, a success exit that holds the refusal's in any spelling systemd reads as 1, or a
     restart that skips the failed state, and with it `OnFailure=`. A condition that exits 1 to 254
     skips the start, and the unit is not marked failed (systemd.service(5)); the census cannot tell
-    what a condition tests, so it refuses every one."""
+    what a condition tests, so it refuses every one. A `RestartMode=direct` is refused wherever it
+    is assigned, and a `Restart=`, `RestartMode=` or `CollectMode=` that is empty or not a known
+    value is refused, so the census never decides which of two assignments is in force."""
     refused = []
 
     def refuse(directive, why):
@@ -389,8 +391,13 @@ def refusal_page_conditions(unit):
             refuse(
                 "SuccessExitStatus", f"SuccessExitStatus={statuses} counts the refusal a success"
             )
-    if last(unit, "Service", "RestartMode") == "direct":
-        refuse("RestartMode", "RestartMode=direct skips the failed state and OnFailure=")
+    for mode in unit.every("Service", "RestartMode"):
+        if mode == "direct":
+            refuse("RestartMode", "RestartMode=direct skips the failed state and OnFailure=")
+    for key, (section, known) in _units.ENUMS.items():
+        for value in unit.every(section, key):
+            if value not in known:
+                refuse(key, f"{key}={value} is empty or not a known value, which the check refuses")
     return refused
 
 
@@ -421,16 +428,17 @@ def restart_refusals(unit):
     """Why a refused start of the alert template would not stay failed (SPEC-066 R3): a restart of
     it. At the default `RestartMode=` a restart only passes through the failed state, and the
     instance waits for its next start activating, so a loop of restarts settles failed only when
-    its start limit ends it (systemd.service(5), SPEC-031). So no `Restart=` other than `no`, the
-    default an empty assignment restores, and no `RestartForceExitStatus=` at all: on
+    its start limit ends it (systemd.service(5), SPEC-031). So no `Restart=` assigns a known value
+    other than `no`, wherever it is assigned, and no `RestartForceExitStatus=` at all: on
     `Type=oneshot` the service manager refuses a unit that names one outright, as a bad unit file
     setting, and on another type one naming the refusal's exit forces a restart whatever
     `Restart=` says. R2's units may restart: each failure a restart passes through still starts
-    their `OnFailure=` page (SPEC-031)."""
+    their `OnFailure=` page (SPEC-031). An empty or unknown `Restart=` is R2's refusal
+    (`refusal_page_conditions`)."""
     refused = []
-    restart = last(unit, "Service", "Restart")
-    if restart not in (None, "", "no"):
-        refused.append(f"{unit.rel}: Restart={restart} restarts the refusal")
+    for restart in unit.every("Service", "Restart"):
+        if restart in _units.ENUMS["Restart"][1] and restart != "no":
+            refused.append(f"{unit.rel}: Restart={restart} restarts the refusal")
     oneshot = _units.service_type(unit) == "oneshot"
     for statuses in unit.values("Service", "RestartForceExitStatus"):
         if oneshot:
@@ -445,15 +453,15 @@ def restart_refusals(unit):
 
 def collect_refusals(unit):
     """Why the failed alert instance would leave `systemctl --failed` (SPEC-066 R3): its unloading.
-    `CollectMode=inactive-or-failed` unloads a unit once it has failed, where the default,
-    `inactive`, which an empty assignment restores, keeps a failed unit loaded until its failed
-    state is reset (systemd.unit(5)). Any other value is refused too."""
-    mode = last(unit, "Unit", "CollectMode")
-    if mode in (None, "", "inactive"):
-        return []
+    `CollectMode=inactive-or-failed` unloads a unit once it has failed, where `inactive` keeps a
+    failed unit loaded until its failed state is reset (systemd.unit(5)). So no `CollectMode=`
+    assigns a known value other than `inactive`, wherever it is assigned; an empty or unknown one
+    is R2's refusal (`refusal_page_conditions`)."""
     return [
         f"{unit.rel}: CollectMode={mode} can unload the failed instance, which systemctl --failed "
         "then no longer lists"
+        for mode in unit.every("Unit", "CollectMode")
+        if mode in _units.ENUMS["CollectMode"][1] and mode != "inactive"
     ]
 
 

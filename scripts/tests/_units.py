@@ -33,6 +33,17 @@ LONG_RUNNING_KINDS = {"simple", "exec", "notify", "notify-reload", "forking", "d
 # systemd's WHITESPACE: what it splits a list of exit statuses on, and what its safe_atou8() skips
 # before a number (SPEC-066).
 WHITESPACE = " \t\n\r"
+# The values each enum key the census reads may hold (systemd.service(5), systemd.unit(5)), with the
+# section it sits in. The census refuses an empty or any other value of one rather than decide
+# which earlier value it leaves in force (SPEC-066).
+ENUMS = {
+    "Restart": (
+        "Service",
+        {"no", "on-success", "on-failure", "on-abnormal", "on-watchdog", "on-abort", "always"},
+    ),
+    "RestartMode": ("Service", {"normal", "direct"}),
+    "CollectMode": ("Unit", {"inactive", "inactive-or-failed"}),
+}
 # The exit-status names systemd reads as 0 and 1. Every other name it knows is a status of 2 or
 # more (`systemd-analyze exit-status` lists them), never the refusal's 1, and reads as None here.
 EXIT_NAMES = {"SUCCESS": 0, "FAILURE": 1}
@@ -73,6 +84,10 @@ class Unit:
                 else:
                     out.append(assignment.value)
         return out
+
+    def every(self, section, key):
+        """Every value in order, an empty one included, with no reset applied."""
+        return [a.value for a in self.assignments if a.section == section and a.key == key]
 
     def last(self, section, key):
         found = [a.value for a in self.assignments if a.section == section and a.key == key]
