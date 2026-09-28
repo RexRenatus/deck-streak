@@ -41,6 +41,13 @@ Measured before `v0.1.0` was tagged (SPEC-034 R6, probe pull request #193):
 gh pr create --base main --head dev --title "release: vX.Y.Z" --body-file release-notes.md
 ```
 
+**A shard that never reported.** A hosted runner can be shut down in the middle of a mutation shard:
+its log ends with "The runner has received a shutdown signal", and the shard's `always()` upload
+step never runs. The release pull request's `mutation-verdict` counts every shard the plan promised
+(SPEC-039 R18), so it names the missing shard, reads it VOID and fails. The remedy is "Re-run failed
+jobs", which runs that shard again and the jobs that need it. Never re-run the whole workflow, which
+repeats every shard of the release's run, and never merge while a shard is missing.
+
 ## 3. Tag it on main
 
 ```sh
