@@ -88,8 +88,10 @@ SECTIONS = {
     ".slice": "Slice",
     ".target": None,
 }
-# A `systemctl cat` file header: `# ` and the absolute path of the file that follows it.
-HEADER = re.compile(r"^# (/\S+)$")
+# A `systemctl cat` file header: `# ` and the absolute path of the file that follows it, read to the
+# end of the line. A drop-in's file name may hold a blank, which systemd loads and systemctl prints
+# as it is (measured on systemd 255), so a path is never cut at one.
+HEADER = re.compile(r"^# (/.+)$")
 # A variable whose name says it carries a secret: SPEC-032's pattern (scripts/tests/_units.py),
 # with its `*_KEY` names widened to any KEY segment and PASS added, so that a device key or a short
 # password name is caught as well.
@@ -291,12 +293,12 @@ def unit_of(row):
 
 
 def files_of(text):
-    """Each file of a `systemctl cat` output, in order, as (path, text, glued). systemctl prints a
-    file's `# <path>` line at the start of the output, or after an empty line when the file before
-    it ends in a newline. A header-shaped line elsewhere is kept in its file and named in `glued`:
-    either the file before it has no final newline or it is that file's own comment, and the two
-    cannot be told apart. The output is split at newlines alone, since the files' own line ends are
-    systemd's to read."""
+    """Each file of a `systemctl cat` output, in order, as (path, text, glued). systemctl prints
+    every line of a file newline-terminated, a last line without one included, and a file's
+    `# <path>` line at the start of the output or after an empty line (measured on systemd 255).
+    A header-shaped line elsewhere can then only be the file's own comment: it is kept in its file
+    and named in `glued`, which the check refuses rather than read a comment as a file. The output
+    is split at newlines alone, since the files' own line ends are systemd's to read."""
     files, blank = [], True
     for number, raw in enumerate(text.split("\n"), start=1):
         match = HEADER.match(raw)
