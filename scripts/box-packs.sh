@@ -35,7 +35,9 @@
 # * The apiKeyHelper scan (the subscription-proxy pack's `no-apikeyhelper` rule) is read by its one
 #   verdict line and its exit, with the refusals the public gate gave it: a finding fails, and so
 #   does a settings file it cannot read; while it finds no settings file it reads `pending` with
-#   the issue the box section names, and is VOID without one.
+#   the issue the box section names, and is VOID without one. A tree holding a file where the
+#   removed gate step looked for settings (`.claude/settings*.json`, `agent/**/settings*.json`,
+#   `managed-settings.json`) is never pending: a scan that finds none there is VOID.
 # * Each owned file, a copy DeckStreak keeps of a pack's data (ADR-069), is compared with its source
 #   in the checkout over the fields it keeps: a kept field that differs fails by name, and so does a
 #   field the source gained that the copy neither keeps nor drops. A missing source makes the run
@@ -100,6 +102,11 @@ PROBE_LINE = re.compile(r"^([A-Z]+) ([a-z0-9-]+) (OK|REFUSED|VOID)\b")
 HELPER_LINE = re.compile(r"^NO-APIKEYHELPER (GREEN|RED|VOID) (.*)$")
 HELPER_FILES = re.compile(r"^(\d+) settings file\(s\)")
 HELPER_FINDINGS = re.compile(r"^(\d+) finding\(s\) in (\d+) file\(s\)")
+# The paths the removed gate step read as settings files: a tree holding one is never pending.
+SETTINGS_PATHS = re.compile(
+    r"(^|/)\.claude/settings[^/]*\.json$|^agent/([^/]+/)*settings[^/]*\.json$"
+    r"|(^|/)managed-settings\.json$"
+)
 # The states `gh issue view --json state` answers, and its exit when it is not logged in.
 ISSUE_STATES = ("OPEN", "CLOSED")
 GH_NOT_LOGGED_IN = 4
@@ -865,7 +872,11 @@ def judge_helper(
         verdict.examined = int(findings.group(2))
         verdict.mark, verdict.detail = "FAIL", f"{findings.group(1)} finding(s)"
     elif word == "VOID" and files and int(files.group(1)) == 0 and done.returncode == 2:
-        if pending:
+        listed = settings_paths(tree)
+        if listed:
+            verdict.mark = "FAIL"
+            verdict.detail = f"VOID: the scan found no settings file in {', '.join(listed)}"
+        elif pending:
             verdict.mark, verdict.detail = "pending", f"pending {pending}: 0 settings file(s)"
         else:
             verdict.mark = "FAIL"
@@ -875,6 +886,12 @@ def judge_helper(
     if verdict.stale:
         verdict.mark = "FAIL"
     return verdict
+
+
+def settings_paths(tree: Path) -> list[str]:
+    """Every file of the judged tree at a path the removed gate step read as a settings file."""
+    files = (path.relative_to(tree).as_posix() for path in tree.rglob("*") if path.is_file())
+    return sorted(name for name in files if SETTINGS_PATHS.search(name))
 
 
 def drift(mine: object, theirs: object, dropped: set[str], where: str) -> tuple[str | None, int]:
