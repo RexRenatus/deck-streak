@@ -118,8 +118,9 @@ R13. Public text names none of the maintainer's private tooling. Living docs, pl
 R14. A criterion whose test this delivery removes is retired insert-only, every byte of its SPEC and
     its red-first record kept in order. Its id is struck (`~~A3~~`) in the SPEC's criteria table.
     Inserted fence lines move its command out of the `` ```acceptance `` fence into a
-    `` ```retired `` fence between the fence's two halves, and move its lines in the red-first
-    record into a `` ```retired `` fence the same way. The SPEC's dated amendment section names each
+    `` ```retired `` fence, splitting the acceptance fence where the command stood (a fence whose
+    first line is retired is closed empty before it), and move its lines in the red-first record
+    into a `` ```retired `` fence the same way. The SPEC's dated amendment section names each
     retired criterion, why its subject is gone and its box form, and section 7 lists every
     retirement.
 R15. The box run keeps the judgment of the removed advisory-waiver test. A pack whose entry in the
@@ -201,7 +202,7 @@ A20: python3 -m unittest discover -s scripts/tests -p test_deploy_templates.py -
 | `scripts/tests/fixtures/box-packs/checkout/` | repo | added: the synthetic checkout's catalog; the tests plant its probes, scans and sources at run time, and none names a private tool |
 | `scripts/box-packs.sh` | repo | changed: the private-file driver, the apiKeyHelper scan and the advisory waivers (R7 to R11, R15) |
 | `scripts/check.sh` | repo | changed: no `packs` stage, the scrub alone, the log directory off stdout (R3, R4) |
-| `.github/workflows/ci.yml` | repo | changed: no `packs` job or need (R3) |
+| `.github/workflows/ci.yml` | repo | changed: no `packs` job or need (R3); a comment names the guard test that still builds Rust |
 | `.github/pull_request_template.md` | repo | changed: the box run's pack verdict (R12) |
 | `methodology.json` | repo | changed: no `vendored_from` (R2) |
 | `ruff.toml` | repo | changed: no vendored excludes |
@@ -214,10 +215,10 @@ A20: python3 -m unittest discover -s scripts/tests -p test_deploy_templates.py -
 | `crates/vault/tests/staged.rs`, `crates/vault/tests/fixtures/gate/stand-in-probe.py` | `deck-streak-vault` | changed, and added: its red-class gate is a synthetic probe that judges only `note-links`; no assertion edited |
 | `scripts/tests/_units.py` | repo | added: systemd unit syntax, as systemd.syntax(7) reads it, and each unit's waivers, for the deploy templates' tests |
 | `scripts/tests/test_deploy_templates.py` | repo | changed: reads units with `_units.py`; A20. Its test of the durable lint's blocking rows is removed, because the box run's durable-services pack fails on each of them; its advisory-waiver test moves to the box run (R15) and to a public pin of the waivers (R16) |
-| `scripts/tests/test_box_packs.py`, `scripts/tests/fixtures/box-packs/bin/gh` | repo | changed: the new interface, and A11 to A15 and A17; the fake gh answers `api --method POST` |
+| `scripts/tests/test_box_packs.py`, `scripts/tests/fixtures/box-packs/bin/gh` | repo | changed: the new interface, and A11 to A15, A17 and A19; the fake gh answers `api --method POST` |
 | `scripts/tests/test_box_only_packs.py` | repo | added: A1 to A4, A16 and A18 |
-| `scripts/tests/test_check_gate.py` | repo | changed: the stage table, A5 |
-| `scripts/tests/test_ci_workflows.py` | repo | changed: the job and stage tables |
+| `scripts/tests/test_check_gate.py` | repo | changed: the stage table, A5, and a comment on the python stage's cargo |
+| `scripts/tests/test_ci_workflows.py` | repo | changed: the job and stage tables, and a comment on the stages that compile Rust |
 | `scripts/tests/test_public_scrub.py` | repo | changed: A9, A10 |
 | `web/app/src/lib/styles/cjk.css`, `web/app/tests/a11y.spec.ts`, `web/app/tests/telegram-palettes.ts` | repo | changed: comments name the box-run packs |
 | `CLAUDE.md`, `README.md`, `CONTRIBUTING.md`, `ARCHITECTURE.md`, `deploy/README.md`, `docs/BUILDER-BRIEF.md`, `docs/CONTEXT-MAP.md`, `docs/LEXICON.md`, `docs/TESTING.md` | repo | changed: the box-run packs (R13) |
@@ -226,6 +227,8 @@ A20: python3 -m unittest discover -s scripts/tests -p test_deploy_templates.py -
 | `docs/decisions/ADR-002`, `ADR-004`, `ADR-009`, `ADR-014`, `ADR-016`, `ADR-022`, `ADR-030`, `ADR-039`, `ADR-056` | repo | accepted: name replacement and one dated note (R13) |
 | `docs/specs/SPEC-002`, `SPEC-024`, `SPEC-028`, `SPEC-030`, `SPEC-032`, `SPEC-037`, `SPEC-038`, `SPEC-042`, `SPEC-054` | repo | delivered: name replacement and one dated note, and the insert-only retirement of each criterion whose test this delivery removes (R13, R14) |
 | `docs/schematics/box-pack-runner.md`, `pack-vendoring.md` | repo | accepted schematics: name replacement and one dated note |
+| `docs/schematics/ci-jobs-and-caches.md` | repo | accepted schematic: one dated note, the `packs` job removed |
+| `docs/schematics/agent-duty-run.md` | repo | changed in place (SPEC-043's, planned): the proxy's capacity endpoint named without its path |
 | `docs/red-first/SPEC-002.md`, `SPEC-030.md`, `SPEC-032.md`, `SPEC-037.md`, `SPEC-038.md`, `SPEC-042.md`, `SPEC-054.md` | repo | accepted records: the retired criteria's lines set apart insert-only, and one dated note (R14); SPEC-030's, SPEC-037's and SPEC-054's also a name replacement |
 | `changelog.d/chore-repin-packs-e54f39c.md`, `feat-repo-hygiene-030.md`, `feat-vendor-packs-037.md` | repo | changed: unreleased fragments name the box-run packs |
 | `docs/specs/SPEC-056-every-pack-is-judged-on-the-box-and-nothing-of-the-hub-is-published.md` | repo | added: this SPEC |

@@ -24,7 +24,7 @@ sequenceDiagram
     A->>A: compose: rules and policy (system), persona, duty, memory as data, fenced JSON-encoded inputs
     A->>R: prompt file on disk (private run directory), caps in the environment
     R->>R: key read from the credentials directory into a variable, competitors unset, loopback URL checked
-    R->>P: /phx/capacity, the key on curl's stdin
+    R->>P: the capacity endpoint (a configured path), the key on curl's stdin
     P-->>R: ready, exhausted, 401 or no word
     R->>P: claude, prompt on stdin, max turns, max budget, json output, dontAsk, strict MCP, settings, under timeout
     P-->>R: result JSON

@@ -7,6 +7,10 @@
   and tdd probes and the proxy-client and apiKeyHelper scans from the checkout, and fails when a data
   file DeckStreak keeps drifts from the pack it came from. `--post-status` posts one verdict-only
   `box/packs` commit status on the judged commit; it is not a required check (ADR-069).
+- The box run holds every advisory departure the durable lint reports on the deploy templates to a
+  waiver in its unit, with a why of more than five words, or to an open issue the private file
+  names; an unwaived departure fails the durable-services pack by name, and a waiver that matches
+  nothing is stale. A public test pins the templates' waivers.
 - The gate and CI drop the `packs` stage and job; the scrub stage runs the public scrub alone.
   `scripts/check.sh` names its log directory only on stderr, and never when a caller names one.
 - The vault adapter compiles in its own rails, default layout and gate classes

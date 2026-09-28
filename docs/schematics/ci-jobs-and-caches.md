@@ -107,3 +107,6 @@ stateDiagram-v2
 
 The stage logs and `timings.tsv` go to `${{ runner.temp }}/check-logs`, outside the checkout, and
 each job uploads them as its own artifact, whatever the verdict.
+
+Amendment (2026-09-28): SPEC-056 removed the `packs` job and stage this schematic draws, so
+four gate jobs run; every pack is judged on the maintainer's box run (ADR-069).

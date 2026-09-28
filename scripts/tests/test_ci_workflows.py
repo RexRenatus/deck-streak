@@ -39,8 +39,8 @@ OWNER_LAYOUT = {
 # What the Rust cache holds (SPEC-038 R1): the crates Cargo downloaded, and the build.
 RUST_CACHE = ["~/.cargo/registry/index/", "~/.cargo/registry/cache/", "~/.cargo/git/db/", "target/"]
 BROWSERS = ["~/.cache/ms-playwright"]
-# The stages that compile Rust: python's among them, because a guard test builds a Rust example
-# (SPEC-042's rails rows), and test-engine, which builds the engine set's tests (R13).
+# The stages that compile Rust: python's among them, because a guard test builds the ingest crate
+# twice (SPEC-055 A2), and test-engine, which builds the engine set's tests (R13).
 COMPILES_RUST = {"clippy", "test", "doctest", "python", "test-engine"}
 # The one build tool Anki's engine needs: protoc 31.1, at the version and archive digest Anki's own
 # build pins (ADR-022).

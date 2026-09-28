@@ -219,8 +219,8 @@ jobs:
           # secrets scans every commit, and scrub reads every blob reachable from HEAD.
           fetch-depth: 0
           persist-credentials: false
-      # A guard test builds a Rust example (SPEC-042's rails rows), and another builds the ingest
-      # crate twice (SPEC-055 A2): the pinned toolchain, and the rust job's cache, restored only.
+      # A guard test builds the ingest crate twice (SPEC-055 A2): the pinned toolchain, and the
+      # rust job's cache, restored only.
       # Only the rust job, which builds every target, saves it.
       - name: the pinned Rust toolchain (rust-toolchain.toml)
         run: rustup show

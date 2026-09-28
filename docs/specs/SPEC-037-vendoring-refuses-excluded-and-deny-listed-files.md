@@ -154,8 +154,8 @@ Made by SPEC-056 (ADR-069), insert-only under ruling (i) of SPEC-038 section 8: 
 is kept in order. It inserts:
 
 - section 3: `~~` around A1 to A7 in the criteria table, so the table no longer states them;
-- section 3: the fence lines that set their commands apart in a `` ```retired `` fence, between the
-  acceptance fence's two halves;
+- section 3: the fence lines that close the acceptance fence before its first line, which leaves it
+  empty, and set A1 to A7 apart in a `` ```retired `` fence after it;
 - this section.
 
 The retired criteria, why their subject is gone, and what judges it now:

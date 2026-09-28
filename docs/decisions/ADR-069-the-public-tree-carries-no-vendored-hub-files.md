@@ -39,6 +39,9 @@ maintainer's tooling in the public tree?
 - Leave those acceptance lines as they are — rejected because the tdd pack refuses the 21 lines that select no test, so the box run could never read green.
 - Delete those acceptance lines and their red-first lines — rejected because an accepted SPEC and its record change only insert-only (ruling (i)).
 - Keep the removed subjects' tests, run against synthetic stand-ins — rejected because they would test nothing DeckStreak ships.
+- For the deploy templates' advisory waivers, which a removed test judged, judge each advisory departure on the box by unit and reason, and pin the waivers in a public test — chosen: the judgment keeps its granularity, deleting a waiver fails in public CI, and a new unwaived departure fails the box run.
+- Accept the loss of that judgment — rejected because a departure could then ship with no reason, and a deleted waiver would pass everywhere.
+- Fail every advisory row, in every pack — rejected because the other packs' advisory rows are heuristics their packs chose not to enforce, and a repo-wide rule would redden them with no waiver form to answer it.
 
 ## Decision Outcome
 
@@ -71,6 +74,11 @@ Chosen option.
   that differs, so the rails DeckStreak enforces cannot drift from the pack that judges them.
 - **The `phx.*` ids** stay as opaque schema identifiers: the box-run packs require them, and the
   parity goldens' digests include them. A later rename is the maintainer's to make.
+- **The deploy templates' advisory waivers** keep the removed test's judgment (SPEC-056 R15,
+  R16). The box run runs the durable lint from the checkout, since the runner's card cuts each
+  row's report short, and holds every advisory departure, by unit and reason, to a waiver in its
+  unit with a why of more than five words, or to an open issue the private file names. A public test
+  pins the waivers themselves. Every other pack's advisory rows still never fail.
 - **A criterion whose test is removed** is retired insert-only (SPEC-056 R14): its id is struck in
   its SPEC's table, and inserted fence lines set its command and its red-first lines apart in
   `retired` fences. Its SPEC's dated amendment section says why its subject is gone and what
@@ -92,7 +100,7 @@ read from the judged commit). The rest of each stands.
 
 ### Confirmation
 
-SPEC-056's acceptance tests (A1 to A18); the box run through the new interface reading `BOX PACKS OK`
+SPEC-056's acceptance tests (A1 to A20); the box run through the new interface reading `BOX PACKS OK`
 with the sdd, ddd and tdd probes' lines, both scans' and the drift check's; and the scrub's counts,
 unchanged.
 

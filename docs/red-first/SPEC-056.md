@@ -50,11 +50,19 @@ A17: red at 991946f: AssertionError: False is not true : pending  no-apikeyhelpe
 A17: green at eaa3715
 A18: red at 9ad1fe5: AssertionError: examined 0 retired criteria: the population is empty, so nothing was judged
 A18: green at 2d42d0d
+A19: red at cb384f3: AssertionError: 2 != 0 : box-packs: VOID: packs.gamma takes only ['deferred_rows', 'enforced_by', 'excluded_rows', 'note', 'state'] (the driver knew no advisory lint)
+A19: green at 0b6c110
+A20: red at cb384f3: AssertionError: {} != {('planted.timer', 'calendar-not-persistent'): 'a planted why of six words'} (the unit reader's stub read no waiver)
+A20: green at 5ff9c08
 ```
 
 At 9ad1fe5, A17 was red for its first reason too: the driver refused VOID with `box has unknown
 key(s) ['no-apikeyhelper']`, since it ran no apiKeyHelper scan. A18's planted SPEC and record were
 refused by the checker at that sha exactly as the test states, so its red is the population alone.
+
+R15 and R16 came in a fix round: the SPEC's amendment (66f2f89) came before A19's and A20's tests,
+committed red together (cb384f3); A20's red rests on a stub of the unit reader's `waivers()` that
+read nothing, and A19's on the driver refusing the unknown key.
 
 The three mutation rows of the band S05600 to S05699 were proved at a9ff442: each killer passed
 without its mutant and failed with it (killed 3, survived 0, void 0).

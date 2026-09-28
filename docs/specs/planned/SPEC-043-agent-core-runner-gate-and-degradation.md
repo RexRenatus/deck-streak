@@ -53,8 +53,9 @@ R3. The base URL comes from the unit's environment and must be a loopback URL (`
     the IPv4 loopback address, or `http://[::1]`); any other refuses with exit 2. No file in the
     repository sets an `apiKeyHelper`, `--bare`, `bypassPermissions` or
     `--dangerously-skip-permissions`, and none sets `ANTHROPIC_API_KEY` or `ANTHROPIC_AUTH_TOKEN`.
-R4. Before a launch the runner asks `/phx/capacity`, with the key on curl's stdin, and reads the
-    status word: `ready` launches, `exhausted` exits 4, an HTTP 401 exits 3, and anything else exits 5.
+R4. Before a launch the runner asks the proxy's capacity endpoint (a configured path), with the key
+    on curl's stdin, and reads the status word: `ready` launches, `exhausted` exits 4, an HTTP 401
+    exits 3, and anything else exits 5.
 R5. Every launch passes `--max-turns`, `--max-budget-usd`, `--output-format json`,
     `--permission-mode dontAsk`, `--strict-mcp-config` and `--settings agent/settings.json`, under a
     `timeout` wall clock. The runner reads `subtype` and `is_error` before `result`, and maps a

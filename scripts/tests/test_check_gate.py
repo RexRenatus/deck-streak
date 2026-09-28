@@ -31,7 +31,7 @@ TOOLS = {
     "test-engine": ["cargo", "cargo-nextest"],
     "web": ["node", "pnpm"],
     "audit-web": ["node", "pnpm"],
-    # A guard test builds a Rust example (SPEC-042's rails rows), so the stage runs cargo too.
+    # A guard test builds the ingest crate twice (SPEC-055 A2), so the stage runs cargo too.
     "python": ["python3", "cargo"],
     "scrub": ["python3"],
     "secrets": ["gitleaks"],
