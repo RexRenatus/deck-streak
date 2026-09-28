@@ -631,6 +631,25 @@ class AnEmptyCredentialFailsTheAlertUnit(unittest.TestCase):
                 self.assertEqual(
                     alert_template_refusals(path), [f"{name}: {r}" for r in refusals], line
                 )
+        # Every [Unit] condition and assertion is refused, an empty one included (SPEC-066 R3).
+        stops = (
+            "is refused, as every condition and assertion is, since one can stop the start and "
+            "leave the instance inactive, not failed"
+        )
+        stopped = [
+            ("ConditionPathExists=/nonexistent", [f"ConditionPathExists=/nonexistent {stops}"]),
+            ("AssertPathExists=/nonexistent", [f"AssertPathExists=/nonexistent {stops}"]),
+            (
+                "ConditionPathExists=/nonexistent\nConditionPathExists=",
+                [f"ConditionPathExists=/nonexistent {stops}", f"ConditionPathExists= {stops}"],
+            ),
+        ]
+        for line, refusals in examined("planted alert template(s) with a condition", stopped):
+            with tempfile.TemporaryDirectory() as scratch:
+                path = planted_template(Path(scratch), "Description=", line, True)
+                self.assertEqual(
+                    alert_template_refusals(path), [f"{name}: {r}" for r in refusals], line
+                )
         # Planted lines the reader refuses, after ExecStart=, each refused whole with its line: one
         # ending in a backslash, a comment's included, and a control character other than a tab or
         # whitespace outside ASCII (SPEC-066 R3).

@@ -971,6 +971,8 @@ class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
         condition = "ExecCondition=/bin/true\n"
         octal = "0o\\ -1777777777777777777777"
         binary = "0b\\ -" + "1" * 64
+        unmet = "ConditionPathExists=/nonexistent\n"
+        asserted = "AssertPathExists=/nonexistent\n"
         plants = {
             "pages.service": f"{head}{page}{run}{loads}",
             "silent.service": f"{head}{run}{loads}",
@@ -1005,6 +1007,13 @@ class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
             "wrapped-binary.service": f"{head}{page}{run}SuccessExitStatus={binary}\n{loads}",
             "alert-wrapped.service": f"{head}{run}SuccessExitStatus={octal}\n{loads}",
             "alert-forced-spelled.service": f"{head}{run}RestartForceExitStatus=0x1\n{loads}",
+            "unit-condition.service": f"{head}{unmet}{page}{run}{loads}",
+            "unit-condition-reset.service": (
+                f"{head}{unmet}ConditionPathExists=\n{page}{run}{loads}"
+            ),
+            "unit-assert.service": f"{head}{asserted}{page}{run}{loads}",
+            "alert-unit-condition.service": f"{head}{unmet}{run}{loads}",
+            "alert-unit-assert.service": f"{head}{asserted}{run}{loads}",
         }
         with tempfile.TemporaryDirectory() as scratch:
             folder = Path(scratch) / "deploy" / "systemd"
@@ -1027,6 +1036,8 @@ class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
                 "alert-shaped.service",
                 "alert-spelled.service",
                 "alert-status.service",
+                "alert-unit-assert.service",
+                "alert-unit-condition.service",
                 "alert-unknown.service",
                 "alert-wrapped.service",
                 "condition.service",
@@ -1037,6 +1048,9 @@ class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
                 "silent.service",
                 "spelled.service",
                 "success.service",
+                "unit-assert.service",
+                "unit-condition-reset.service",
+                "unit-condition.service",
                 "unknown.service",
                 "wrapped-binary.service",
                 "wrapped.service",
@@ -1053,6 +1067,11 @@ class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
         # And a `Restart=`, `RestartMode=` or `CollectMode=` that is empty or not a known value, and
         # an exit-status word the census does not read.
         word = "which is neither a decimal of at most 255 nor a status name, and is refused"
+        # And every [Unit] condition and assertion, an empty one included.
+        stops = (
+            "is refused, as every condition and assertion is, since one can stop the start without "
+            "failing the unit or starting OnFailure="
+        )
         unread = "is empty or not a known value, which the check refuses"
         self.assertEqual(
             [r for unit in planted_loading for r in refusal_page_refusals(unit)],
@@ -1074,6 +1093,10 @@ class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
                 f"{where}/alert-spelled.service: OnFailure= does not name {ON_FAILURE}",
                 f"{where}/alert-spelled.service: SuccessExitStatus=01 holds 01, {word}",
                 f"{where}/alert-status.service: OnFailure= does not name {ON_FAILURE}",
+                f"{where}/alert-unit-assert.service: OnFailure= does not name {ON_FAILURE}",
+                f"{where}/alert-unit-assert.service: AssertPathExists=/nonexistent {stops}",
+                f"{where}/alert-unit-condition.service: OnFailure= does not name {ON_FAILURE}",
+                f"{where}/alert-unit-condition.service: ConditionPathExists=/nonexistent {stops}",
                 f"{where}/alert-unknown.service: OnFailure= does not name {ON_FAILURE}",
                 f"{where}/alert-unknown.service: RestartMode=Direct {unread}",
                 f"{where}/alert-wrapped.service: OnFailure= does not name {ON_FAILURE}",
@@ -1088,6 +1111,10 @@ class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
                 f"{where}/silent.service: OnFailure= does not name {ON_FAILURE}",
                 f"{where}/spelled.service: SuccessExitStatus=0x1 holds 0x1, {word}",
                 f"{where}/success.service: SuccessExitStatus=2 1 counts the refusal a success",
+                f"{where}/unit-assert.service: AssertPathExists=/nonexistent {stops}",
+                f"{where}/unit-condition-reset.service: ConditionPathExists=/nonexistent {stops}",
+                f"{where}/unit-condition-reset.service: ConditionPathExists= {stops}",
+                f"{where}/unit-condition.service: ConditionPathExists=/nonexistent {stops}",
                 f"{where}/unknown.service: Restart=On-Failure {unread}",
                 f"{where}/wrapped-binary.service: SuccessExitStatus={binary} holds 0b\\, {word}",
                 f"{where}/wrapped-binary.service: SuccessExitStatus={binary} holds "
@@ -1161,6 +1188,16 @@ class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
             "alert-status.service": (
                 [f"{where}/alert-status.service: SuccessExitStatus=2 {named}"],
                 [f"{where}/alert-status.service: RestartForceExitStatus=2 {named}"],
+                [],
+            ),
+            "alert-unit-assert.service": (
+                [f"{where}/alert-unit-assert.service: AssertPathExists=/nonexistent {stops}"],
+                [],
+                [],
+            ),
+            "alert-unit-condition.service": (
+                [f"{where}/alert-unit-condition.service: ConditionPathExists=/nonexistent {stops}"],
+                [],
                 [],
             ),
             "alert-unknown.service": (
