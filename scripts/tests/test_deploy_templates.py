@@ -252,6 +252,18 @@ def reader_refusal(files):
     return None
 
 
+def planted_refusals(text, check):
+    """What `check` refuses of a service unit planted as `text`, or the reader's refusal of it."""
+    rel = "deploy/systemd/planted.service"
+    unit = _units.Unit("planted.service", rel, "service", [])
+    try:
+        for section, key, value, number in _units.assignments(text, rel):
+            unit.assignments.append(_units.Assignment(section, key, value, number, rel))
+    except _units.Refused as refusal:
+        return [str(refusal)]
+    return check(unit)
+
+
 def name(unit):
     return unit.name
 
@@ -932,6 +944,8 @@ class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
         run = "[Service]\nExecStart=/bin/true\n"
         loads = f"LoadCredential=telegram-bot-token:{SOCKET}\n"
         condition = "ExecCondition=/bin/true\n"
+        octal = "0o\\ -1777777777777777777777"
+        binary = "0b\\ -" + "1" * 64
         plants = {
             "pages.service": f"{head}{page}{run}{loads}",
             "silent.service": f"{head}{run}{loads}",
@@ -962,6 +976,10 @@ class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
                 f"{head}CollectMode=inactive-or-failed\nCollectMode=\n{run}{loads}"
             ),
             "alert-unknown.service": f"{head}{run}RestartMode=Direct\n{loads}",
+            "wrapped.service": f"{head}{page}{run}SuccessExitStatus={octal}\n{loads}",
+            "wrapped-binary.service": f"{head}{page}{run}SuccessExitStatus={binary}\n{loads}",
+            "alert-wrapped.service": f"{head}{run}SuccessExitStatus={octal}\n{loads}",
+            "alert-forced-spelled.service": f"{head}{run}RestartForceExitStatus=0x1\n{loads}",
         }
         with tempfile.TemporaryDirectory() as scratch:
             folder = Path(scratch) / "deploy" / "systemd"
@@ -975,6 +993,7 @@ class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
             [
                 "alert-collected.service",
                 "alert-condition.service",
+                "alert-forced-spelled.service",
                 "alert-forced.service",
                 "alert-oneshot.service",
                 "alert-reset-collect.service",
@@ -984,6 +1003,7 @@ class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
                 "alert-spelled.service",
                 "alert-status.service",
                 "alert-unknown.service",
+                "alert-wrapped.service",
                 "condition.service",
                 "direct.service",
                 "ignored.service",
@@ -993,6 +1013,8 @@ class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
                 "spelled.service",
                 "success.service",
                 "unknown.service",
+                "wrapped-binary.service",
+                "wrapped.service",
             ],
         )
         where = "deploy/systemd"
@@ -1003,7 +1025,9 @@ class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
             "ExecCondition=/bin/true can skip the start, which neither fails the unit nor starts "
             "OnFailure="
         )
-        # And a `Restart=`, `RestartMode=` or `CollectMode=` that is empty or not a known value.
+        # And a `Restart=`, `RestartMode=` or `CollectMode=` that is empty or not a known value, and
+        # an exit-status word the census does not read.
+        word = "which is neither a decimal of at most 255 nor a status name, and is refused"
         unread = "is empty or not a known value, which the check refuses"
         self.assertEqual(
             [r for unit in planted_loading for r in refusal_page_refusals(unit)],
@@ -1011,6 +1035,7 @@ class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
                 f"{where}/alert-collected.service: OnFailure= does not name {ON_FAILURE}",
                 f"{where}/alert-condition.service: OnFailure= does not name {ON_FAILURE}",
                 f"{where}/alert-condition.service: {skip}",
+                f"{where}/alert-forced-spelled.service: OnFailure= does not name {ON_FAILURE}",
                 f"{where}/alert-forced.service: OnFailure= does not name {ON_FAILURE}",
                 f"{where}/alert-oneshot.service: OnFailure= does not name {ON_FAILURE}",
                 f"{where}/alert-reset-collect.service: OnFailure= does not name {ON_FAILURE}",
@@ -1022,19 +1047,28 @@ class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
                 f"{where}/alert-shaped.service: OnFailure= does not name {ON_FAILURE}",
                 f"{where}/alert-shaped.service: SuccessExitStatus=1 counts the refusal a success",
                 f"{where}/alert-spelled.service: OnFailure= does not name {ON_FAILURE}",
-                f"{where}/alert-spelled.service: SuccessExitStatus=01 counts the refusal a success",
+                f"{where}/alert-spelled.service: SuccessExitStatus=01 holds 01, {word}",
                 f"{where}/alert-status.service: OnFailure= does not name {ON_FAILURE}",
                 f"{where}/alert-unknown.service: OnFailure= does not name {ON_FAILURE}",
                 f"{where}/alert-unknown.service: RestartMode=Direct {unread}",
+                f"{where}/alert-wrapped.service: OnFailure= does not name {ON_FAILURE}",
+                f"{where}/alert-wrapped.service: SuccessExitStatus={octal} holds 0o\\, {word}",
+                f"{where}/alert-wrapped.service: SuccessExitStatus={octal} holds "
+                f"{octal[4:]}, {word}",
                 f"{where}/condition.service: {skip}",
                 f"{where}/direct.service: {direct_mode}",
                 f"{where}/ignored.service: ExecStart=-/bin/true counts a failure as a success",
                 f"{where}/reset-mode.service: {direct_mode}",
                 f"{where}/reset-mode.service: RestartMode= {unread}",
                 f"{where}/silent.service: OnFailure= does not name {ON_FAILURE}",
-                f"{where}/spelled.service: SuccessExitStatus=0x1 counts the refusal a success",
+                f"{where}/spelled.service: SuccessExitStatus=0x1 holds 0x1, {word}",
                 f"{where}/success.service: SuccessExitStatus=2 1 counts the refusal a success",
                 f"{where}/unknown.service: Restart=On-Failure {unread}",
+                f"{where}/wrapped-binary.service: SuccessExitStatus={binary} holds 0b\\, {word}",
+                f"{where}/wrapped-binary.service: SuccessExitStatus={binary} holds "
+                f"{binary[4:]}, {word}",
+                f"{where}/wrapped.service: SuccessExitStatus={octal} holds 0o\\, {word}",
+                f"{where}/wrapped.service: SuccessExitStatus={octal} holds {octal[4:]}, {word}",
             ],
         )
         # The alert template's own checks refuse each alert-shaped plant for what it breaks alone:
@@ -1056,6 +1090,14 @@ class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
                 [f"{where}/alert-collected.service: CollectMode=inactive-or-failed {unloads}"],
             ),
             "alert-condition.service": ([f"{where}/alert-condition.service: {skip}"], [], []),
+            "alert-forced-spelled.service": (
+                [],
+                [
+                    f"{where}/alert-forced-spelled.service: RestartForceExitStatus=0x1 holds 0x1, "
+                    f"{word}"
+                ],
+                [],
+            ),
             "alert-forced.service": (
                 [],
                 [f"{where}/alert-forced.service: RestartForceExitStatus=1 restarts the refusal"],
@@ -1087,7 +1129,7 @@ class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
                 [],
             ),
             "alert-spelled.service": (
-                [f"{where}/alert-spelled.service: SuccessExitStatus=01 {counts}"],
+                [f"{where}/alert-spelled.service: SuccessExitStatus=01 holds 01, {word}"],
                 [],
                 [],
             ),
@@ -1098,6 +1140,15 @@ class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
             ),
             "alert-unknown.service": (
                 [f"{where}/alert-unknown.service: RestartMode=Direct {unread}"],
+                [],
+                [],
+            ),
+            "alert-wrapped.service": (
+                [
+                    f"{where}/alert-wrapped.service: SuccessExitStatus={octal} holds 0o\\, {word}",
+                    f"{where}/alert-wrapped.service: SuccessExitStatus={octal} holds "
+                    f"{octal[4:]}, {word}",
+                ],
                 [],
                 [],
             ),
@@ -1113,25 +1164,77 @@ class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
             },
             refused,
         )
-        # The census reads an exit status as systemd does (`_units.py`): each word below has the
-        # reading `systemd-analyze exit-status` gives it, None where it reads no status; and a
-        # value splits into words as a unit file's does, a backslash taking the next character.
+        # The census reads an exit-status word only as a decimal of at most 255, with no sign and
+        # no leading zero, or as a status name `systemd-analyze exit-status` lists, and refuses
+        # every other word: each word below has the reading given, None where the census refuses
+        # it. A value splits into words on spaces and tabs alone, and a backslash or a quote stays
+        # in its word, which the census then refuses.
         readings = [
-            ("1 FAILURE 01 0001 0x1 0X01 +1 +0x1 0b1 0B1 0b+1 0B+1 +0b1 0b0b1 0o1 0O1", 1),
-            ("0 SUCCESS -0 00 0x0", 0),
-            ("010", 8),
-            ("0x10", 16),
-            ("255 0xff 0xFF 0377", 255),
-            ('failure -1 256 08 0x 0b + 0o8 +0o1 0x+1 1.0 1e0 "1"', None),
+            ("1 FAILURE", 1),
+            ("0 SUCCESS", 0),
+            ("2 INVALIDARGUMENT", 2),
+            ("78 CONFIG", 78),
+            ("200 CHDIR", 200),
+            ("255 EXCEPTION", 255),
+            (
+                "01 0001 0x1 0X01 +1 +0x1 0b1 0B1 0o1 0O1 010 00 -0 0x0 -1 256 1000 08 1.0 1e0 "
+                '"1" \\1 failure Failure SIGKILL KILL \u0661 \u00b9 \uff11 0x 0b + -',
+                None,
+            ),
         ]
         for words, reading in readings:
-            for word in words.split():
-                self.assertEqual(_units.exit_status(word), reading, word)
-        # A backslash takes the next character, a space included, and a quote stays a character;
-        # a tab separates as a space does; and a trailing backslash ends the value.
-        words = _units.status_words('\\1 F\\AILURE 0\\ 1 \\ 1 \\ 0o1 0b\\ 1 "1"\t2 3\\')
-        self.assertEqual(words, ["1", "FAILURE", "0 1", " 1", " 0o1", "0b 1", '"1"', "2"])
-        self.assertEqual([_units.exit_status(w) for w in words], [1, 1, None, 1, 1, 1, None, 2])
+            for status in words.split(" "):
+                self.assertEqual(_units.exit_status(status), reading, status)
+        words = _units.status_words('\\1 F\\AILURE 0\\ 1 "1"\t2  3\\')
+        self.assertEqual(words, ["\\1", "F\\AILURE", "0\\", "1", '"1"', "2", "3\\"])
+        self.assertEqual(
+            [_units.exit_status(w) for w in words], [None, None, None, 1, None, 2, None]
+        )
+        # A cross-check corpus, refused whole: each word planted as the SuccessExitStatus= of a
+        # paging unit and of an alert-shaped one, and as the RestartForceExitStatus= of an
+        # alert-shaped one, as written and with each space or tab after a backslash, is refused by
+        # the reader or by the census. The words: a vertical tab or a form feed before a word,
+        # whitespace after each prefix and sign, and magnitudes that wrap in every base.
+        magnitudes = [
+            "1",
+            "01",
+            "256",
+            str(2**32 + 1),
+            str(2**64 - 2),
+            str(2**64 - 1),
+            "100000001",
+            "fffffffffffffffe",
+            "ffffffffffffffff",
+            "1" * 63 + "0",
+            "1" * 64,
+            "1777777777777777777776",
+            "1777777777777777777777",
+        ]
+        corpus = [
+            f"{lead}{prefix}{gap}{sign}{magnitude}"
+            for lead in ("", "\x0b", "\x0c")
+            for prefix in ("", "+", "-", "0x", "0X", "0b", "0B", "0o", "0O")
+            for gap in ("", " ", "\t", "\x0b", "\x0c")
+            for sign in ("", "+", "-")
+            for magnitude in magnitudes
+        ]
+        corpus += [
+            status.replace(" ", "\\ ").replace("\t", "\\\t")
+            for status in corpus
+            if " " in status or "\t" in status
+        ]
+        shapes = [
+            (f"{head}{page}{run}SuccessExitStatus=", refusal_page_refusals),
+            (f"{head}{run}SuccessExitStatus=", alert_exit_refusals),
+            (f"{head}{run}RestartForceExitStatus=", restart_refusals),
+        ]
+        cases = [(shape, check, status) for shape, check in shapes for status in corpus]
+        admitted = [
+            (shape, status)
+            for shape, check, status in examined("cross-check plant(s)", cases)
+            if not planted_refusals(f"{shape}{status}\n{loads}", check)
+        ]
+        self.assertEqual(admitted, [])
         # The reader refuses a line it would read otherwise than systemd does, one planted template
         # at a time, naming the file and the line: a line that ends in a backslash, a comment's
         # included; a control character other than tab and newline, or whitespace outside ASCII;
