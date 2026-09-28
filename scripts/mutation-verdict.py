@@ -1171,6 +1171,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--subject", default="")
     parser.add_argument("--shards", type=int)
     parser.add_argument("--listed")
+    parser.add_argument("--shard-reports")
     args = parser.parse_args(argv)
     root = pathlib.Path(args.root).resolve()
     if args.verb == "plan":

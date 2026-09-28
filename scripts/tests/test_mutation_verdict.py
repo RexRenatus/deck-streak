@@ -810,5 +810,105 @@ class TheShardsFitTheirBound(unittest.TestCase):
         self.assertEqual(json.loads(outputs.get("matrix", "null")), [0])
 
 
+def sharded(test):
+    """A fixture whose diff lists three shards' worth of the costliest mutants: (the fixture, each
+    shard's planned mutants, in shard order)."""
+    module = verdict_module()
+    costs = module.SECONDS_PER_MUTANT
+    costly = max(costs, key=costs.get)
+    fits = (module.SHARD_BOUND_SECONDS - module.BASELINE_SECONDS) // costs[costly]
+    fixture = Fixture(test)
+    fixture.head({LIB: LIB_TEXT.replace("x * 2", "x + x")})
+    fixture.plan()
+    done, plan, _ = run_shards(fixture, listing([costly] * (2 * fits + 1)))
+    test.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+    return fixture, [shard["mutants"] for shard in plan["shards"]["shards"]]
+
+
+def shard_outcomes(names, missed=(), total=None):
+    """A shard's outcomes.json, as cargo-mutants writes it: every one of `names` caught but the
+    `missed` ones. `total` above the count is a report left partial."""
+    entries = [{"scenario": "Baseline", "summary": "Success"}]
+    for name in names:
+        entries.append(
+            {
+                "scenario": {"Mutant": {"name": name, "file": LIB, "package": "fix"}},
+                "summary": "MissedMutant" if name in missed else "CaughtMutant",
+            }
+        )
+    return {
+        "outcomes": entries,
+        "total_mutants": len(names) if total is None else total,
+        "caught": len(names) - len(missed),
+        "missed": len(missed),
+        "timeout": 0,
+        "unviable": 0,
+        "success": 0,
+        "cargo_mutants_version": "27.1.0",
+    }
+
+
+def shard_reports(root, reports):
+    """Each shard's artifact, as the verdict's job downloads it: {shard: (exit, outcomes or None)}.
+    A shard left out uploaded nothing."""
+    for shard, (code, report) in reports.items():
+        directory = root / f"mutation-rust-shard-{shard}"
+        directory.mkdir(parents=True)
+        (directory / "cargo-mutants.exit").write_text(f"{code}\n", encoding="utf-8")
+        if report is not None:
+            (directory / "mutants.out").mkdir()
+            (directory / "mutants.out" / "outcomes.json").write_text(json.dumps(report), "utf-8")
+    return str(root)
+
+
+class TheVerdictCountsEveryShard(unittest.TestCase):
+    def test_a_missing_or_partial_shard_report_is_void_by_name(self):
+        fixture, planned = sharded(self)
+        self.assertEqual(len(planned), 3)
+        survivor = planned[0][0]
+        broken = shard_reports(
+            fixture.out / "broken",
+            {
+                0: ("2", shard_outcomes(planned[0], missed=[survivor])),
+                # Shard 1 uploaded nothing: its runner was shut down.
+                2: ("137", shard_outcomes(planned[2], total=len(planned[2]) + 4)),
+            },
+        )
+        done = fixture.judge("rust", "--shard-reports", broken)
+        self.assertEqual(done.returncode, 1, done.stdout + done.stderr)
+        for finding in examined(
+            "shard findings",
+            [
+                f"mutation-rust-shard-0: MISSED {survivor}",
+                "VOID mutation-rust-shard-1: no report",
+                "VOID mutation-rust-shard-2: cargo-mutants exit 137",
+            ],
+        ):
+            self.assertIn(finding, done.stdout)
+        # The last shard missing alone fails the verdict, however much the others examined.
+        last = shard_reports(
+            fixture.out / "last",
+            {0: ("0", shard_outcomes(planned[0])), 1: ("0", shard_outcomes(planned[1]))},
+        )
+        missing = fixture.judge("rust", "--shard-reports", last)
+        self.assertEqual(missing.returncode, 3, missing.stdout + missing.stderr)
+        self.assertIn("VOID mutation-rust-shard-2: no report", missing.stdout)
+        # The missing shard is named once, not once for each mutant it held.
+        self.assertNotIn("never tested", missing.stdout)
+        # The control: every shard the plan promised reported whole.
+        whole = shard_reports(
+            fixture.out / "whole",
+            {shard: ("0", shard_outcomes(names)) for shard, names in enumerate(planned)},
+        )
+        green = fixture.judge("rust", "--shard-reports", whole)
+        self.assertEqual(green.returncode, 0, green.stdout + green.stderr)
+        self.assertRegex(green.stdout, rf"(?m)^examined {sum(map(len, planned))}$")
+        # A plan the shards were never sized for promises no report, and says so.
+        fixture.plan()
+        unsized = fixture.judge("rust", "--shard-reports", whole)
+        self.assertEqual(unsized.returncode, 3, unsized.stdout + unsized.stderr)
+        self.assertIn("VOID the plan names no shards", unsized.stdout)
+
+
 if __name__ == "__main__":
     unittest.main()
