@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 date: "2026-09-27"
 decision-makers: "@RexRenatus (owner), the DeckStreak architect"
 ---
@@ -38,6 +38,82 @@ deploy, as the predecessor's default did. The telegram-platform rows `tg-poll-of
 `tg-poll-long`, `tg-allowed-updates` and `tg-update-mode` judge the loop; `ws.tg-webhook-secret` has
 no subject.
 
+### Decided at delivery (SPEC-026 §7)
+
+The delivery measured what this record had assumed, and decided each open question against its
+alternatives:
+
+- **The bot's waits go through a `Waits` the transport holds: tokio's timer in the service, a
+  recorder in the tests.** Chosen against running the tests on tokio's paused time, as SPEC-026's
+  plan had it: every request to the loopback fake failed after exactly 60 virtual seconds, while the
+  same request completed in about a millisecond in real time, because the paused runtime moves its
+  clock to the next timer whenever it parks, a request in flight included, and the HTTP client's own
+  timeout was that timer. Also against sleeping for real, which would make the golden's 30-second
+  waits real ones. A test on paused time with no socket holds `TokioTimer` to its duration.
+- **The export is uploaded from memory.** frankenstein's `sendDocument` uploads only from a path, so
+  the transport builds the `multipart/form-data` body from the bytes with frankenstein's own client
+  and its re-export of reqwest. Chosen against writing the owner's export to a temporary file to hand
+  frankenstein a path, which would put the owner's whole data on the host's disk to send it, and
+  against adding reqwest as a dependency of its own, a crate this record does not name.
+- **`getUpdates` is read update by update.** Each update is decoded by frankenstein in turn, so one it
+  cannot read is still confirmed by its `update_id`. Chosen against frankenstein's `Vec<Update>`, with
+  which one unreadable update fails the whole batch, and the poll, which confirms nothing it could
+  not read, would fetch the same batch forever.
+- **A `/delete` confirmation is single-use and the latest question's alone.** The button erases only
+  when it is on the latest `/delete` question the bot sent in this process, and only once. Chosen
+  against erasing on any tap of the confirming button, which would let a stale question, tapped by
+  mistake, erase everything; and against a time window, which would put a clock on a command the
+  owner takes in their own time.
+- **`/sync` marks the owner's rescore first.** The flag is set before the sync's settings are read,
+  so the next cycle serves the owner's request even when this one cannot run. Chosen against setting
+  it only once the cycle can start, which would drop the owner's request on a failed start.
+- **The Bot API's base URL is a setting**, `DECKSTREAK_BOT_API_URL`: `https:`, or `http:` to a
+  loopback host only, defaulting to Telegram's own. Chosen against a base URL fixed in the code and a
+  test-only build, either of which would mean the tested binary is not the shipped one, and against
+  any `http:` host, which would send the token in the clear.
+- **frankenstein's licence is admitted for frankenstein alone.** Its licence is WTFPL, a permissive
+  licence compatible with the GNU GPL, and `deny.toml` admits it by one exception naming the crate.
+  Chosen against adding WTFPL to the workspace's allow list, which would admit it for any crate
+  unseen. The TLS stack frankenstein's client brings, reqwest's rustls with its aws-lc-rs provider,
+  passes the allow list as it stands.
+- **The golden replies carry no notification kind.** Each is `phx.duty.message.v1` with `duty`
+  `bot-commands` and no `kind`: a command reply is not a notification. notifications-policy's
+  `message-metadata` row reads every envelope as one, so the box run defers that row to #257 until
+  it judges notifications only. Chosen against naming a kind the policy declares, which would make
+  a reply look like an alert or a nudge, and against moving the replies out of `*.msg.json`, which
+  the telegram-platform payload rows read.
+- **frankenstein's async client, `client-reqwest`.** frankenstein 0.52.1 offers two clients:
+  `client-reqwest`, its `AsyncTelegramApi` over reqwest and tokio, and `client-ureq`, its blocking
+  `TelegramApi` over ureq. The bot runs in the daemon's tokio runtime, and the stop abandons a long
+  poll in flight by dropping its future (R13). Chosen against `client-ureq`, because each
+  `getUpdates` would then hold a thread for up to the 50-second long poll: called on the runtime, it
+  would block one of its worker threads for as long; moved to tokio's blocking pool, it would hold a
+  thread that cannot be aborted once it has started, so the stop could not abandon the poll and
+  would wait it out before it confirmed its offset and exited.
+- **The TLS provider is aws-lc-rs, the one frankenstein's client brings.** frankenstein 0.52.1
+  depends on reqwest 0.13 with its default features off and `rustls` on, and reqwest 0.13.5 defines
+  `rustls` as `__rustls-aws-lc-rs` plus `rustls-platform-verifier`: its client is built on
+  `rustls::crypto::aws_lc_rs::default_provider()`, and it has no ring feature, since a ring provider
+  takes `rustls-no-provider` and a provider the caller installs before it builds a client. Cargo's
+  features only add, so no setting of this workspace takes `rustls` back from frankenstein (measured
+  with `cargo tree -e features -i reqwest@0.13.5` and the two crates' published manifests). Chosen against
+  ring, which would need a fork of frankenstein that asks for `rustls-no-provider`, or reqwest as a
+  dependency of the bot's own, to hand frankenstein a client built around ring while aws-lc-rs is
+  still built beside it; this record declines both, the second as it declines reqwest for the
+  export. ring is in the bot's build all the same: the engine's reqwest 0.12.28, reached through
+  coordination, ingest and anki, turns on its `__rustls-ring`, and so rustls's own `ring` feature,
+  which also turns on rustls-webpki's; `rustls-platform-verifier` names no ring. This bullet declines
+  ring as the provider of frankenstein's client, not ring in the tree.
+- **An offset stands confirmed only once the server answers a request that carried it.** The poller
+  marks a long poll's offset confirmed on the server's answer, as the stop's confirmation already
+  did, never as the poll is issued. A stop that wins the race abandons a poll whose request may
+  never have left the process, and the stop's own confirming request then covers it, so R13's stop
+  confirms its offset in every interleaving, at the cost of one request, answered at once, when the
+  last poll was still waiting. Chosen against making the lifecycle test wait for the confirmed
+  offset before it sends SIGTERM and weakening R13's wording to match, which would fit the
+  requirement and the test to the defect, and leave the poller's state claiming a confirmation the
+  server may never have received.
+
 ### Consequences
 
 - Good, because nothing new listens on the host, and the Caddy block serves only the Mini App and its
@@ -48,7 +124,7 @@ no subject.
 
 ### Confirmation
 
-SPEC-026's A7 and A8; the telegram-platform bot-api rows in `scripts/check.sh`.
+SPEC-026's A7 and A8; the telegram-platform bot-api rows in the box run (ADR-069).
 
 ## What would make this wrong
 

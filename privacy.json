@@ -44,6 +44,28 @@
       "retention": {"until": "account-deletion"},
       "export": true,
       "erase": "delete"
+    },
+    {
+      "id": "reading-runs",
+      "data": "the record of each resolution of the owner's readings for a study day: what started it, the study day, when it ran, its outcome with its class and reason when it was refused as a whole, and how many decks with new cards mapped to no topic",
+      "source": "derived",
+      "stores": ["reading_runs.*"],
+      "purpose": "resolving the owner's daily readings, and showing the owner why a study day has none",
+      "lawful_basis": "contract",
+      "retention": {"until": "account-deletion"},
+      "export": true,
+      "erase": "delete"
+    },
+    {
+      "id": "reading-topic-days",
+      "data": "each reading topic's state for each study day, with its class and reason, and for a topic with new cards the ids of those cards and of their notes, their count and their digest",
+      "source": "derived",
+      "stores": ["reading_topic_days.*"],
+      "purpose": "giving each reading topic one honest state each study day, and the new cards its reading primes",
+      "lawful_basis": "contract",
+      "retention": {"until": "account-deletion"},
+      "export": true,
+      "erase": "delete"
     }
   ],
   "sql": ["migrations/*.sql"],
@@ -56,7 +78,8 @@
     "file": "PRIVACY.md",
     "entry": [
       {"file": "README.md", "text": "PRIVACY.md"},
-      {"file": "web/app/src/routes/about/+page.svelte", "text": "PRIVACY.md"}
+      {"file": "web/app/src/routes/about/+page.svelte", "text": "PRIVACY.md"},
+      {"file": "crates/bot/src/commands.rs", "text": "privacy"}
     ]
   },
   "public": {
