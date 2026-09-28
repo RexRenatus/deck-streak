@@ -101,19 +101,20 @@ R14. The typed policy reads every key of the file, and names the key `defer_fanf
 | id | criterion | decided by |
 |---|---|---|
 | A1 | the typed policy reads every key of `notifications-policy.json`: written back, it equals the file | `the_typed_policy_reads_every_key_of_the_file` |
-| A2 | a delivery call outside the router module does not compile: each bot transport call takes the router's pass, which only the router module can make | `a_delivery_call_outside_the_router_does_not_compile` |
+| A2 | a call of the port's delivery call outside the router module does not compile: it takes the router's pass, which no other module can make — not by its field, `Default`, or cloning a borrowed pass (one compile-fail case each) | `a_delivery_call_outside_the_router_does_not_compile` |
 | A3 | the typed policy reads `reading_ready` as a nudge of tier T2 with no budget, deduplicated per study day behind `reading_ready_enabled`, and its one deviation cites ADR-041, which names `kinds.reading_ready` | `the_reading_ready_kind_is_a_recorded_deviation` |
 | A4 | a celebration raised at 23:30 is deferred, is not sent by a flush at 07:29, and is delivered by the first flush at 07:30 (injected clock) | `a_celebration_raised_in_quiet_hours_is_delivered_when_the_window_ends` |
 | A5 | the same celebration, first flushed more than 720 minutes after it was raised, is abandoned and named in the recap line (injected clock) | `a_deferred_celebration_older_than_720_minutes_is_abandoned_by_name` |
 | A6 | a nudge raised in quiet hours is withheld with `quiet_hours` and recorded under its kind with `:withheld` | `a_nudge_in_quiet_hours_is_withheld_and_recorded` |
 | A7 | the same event raised from the bot and from the Mini App is delivered once, and the second decision is `already_recorded` | `the_same_event_from_both_surfaces_is_delivered_once` |
 | A8 | the quiet window equals the golden of `quiet_hours.py:in_quiet_hours`, wrapping and disabled windows included | `the_quiet_window_matches_the_parity_golden` |
-| A9 | a fourth comeback for one lapse id, and a second one inside 3 study days, are withheld with `budget_spent` | `a_comeback_past_the_cap_or_inside_the_gap_is_withheld` |
+| A9 | a fourth comeback for one lapse id, and a second one inside 3 study days — counted in the owner's study days, so one raised before the rollover hour on the third calendar day is inside the gap — are withheld with `budget_spent` | `a_comeback_past_the_cap_or_inside_the_gap_is_withheld` |
 | A10 | a nudge during an open lapse is withheld with `lapse`, and a comeback in the same lapse is sent | `a_nudge_in_a_lapse_is_withheld_and_a_comeback_is_not` |
 | A11 | a failed send is held with its first deferral time, retried at most twice, then abandoned by name | `a_failed_send_is_held_and_retried_twice` |
 | A12 | a flush renders at most 2 deferred celebrations in full and one rollup line naming the rest; the queue never exceeds 20 | `a_flush_renders_two_and_rolls_up_the_rest` |
 | A13 | the in-app feed serves its items to the owner's session and refuses any other caller with no item | `the_in_app_feed_answers_only_the_owner` |
 | A14 | the notifications data-rights port lists its five tables as exported and erased, and an erase empties them | `the_notification_tables_are_exported_and_erased` |
+| A15 | no delivery goes around the port: no shipped source outside `crates/bot/` names the Bot API's host or a send method, SPEC-031's alert path aside, and `Transport::send_html` and the Bot API's send methods are called only at named call sites: by `OwnerChat`, by the bot's command replies and inside the transport's own requests | `no_delivery_goes_around_the_port` |
 
 ```acceptance
 A1: cargo test -p deck-streak-notifications --test policy -- --exact the_typed_policy_reads_every_key_of_the_file
@@ -130,6 +131,7 @@ A11: cargo test -p deck-streak-notifications --test deferral -- --exact a_failed
 A12: cargo test -p deck-streak-notifications --test deferral -- --exact a_flush_renders_two_and_rolls_up_the_rest
 A13: cargo test -p deck-streak-api --test notifications_feed -- --exact the_in_app_feed_answers_only_the_owner
 A14: cargo test -p deck-streak-notifications --test rights -- --exact the_notification_tables_are_exported_and_erased
+A15: cargo test -p deck-streak-notifications --test one_router -- --exact no_delivery_goes_around_the_port
 ```
 
 ## 3a. What the box run judges
@@ -167,8 +169,9 @@ the verdict of a run with that wiring is posted as the `box/packs` status at the
 | `crates/notifications/tests/comeback_budget.rs` | `deck-streak-notifications` | added |
 | `crates/notifications/tests/rights.rs` | `deck-streak-notifications` | added |
 | `crates/notifications/tests/policy.rs` | `deck-streak-notifications` | added: A1, A3, and the policy's refusals |
-| `crates/notifications/tests/one_router.rs` | `deck-streak-notifications` | added: A2 |
+| `crates/notifications/tests/one_router.rs` | `deck-streak-notifications` | added: A2, and A15's census of every shipped source |
 | `crates/notifications/tests/ui/push_outside_the_router.rs`, `.stderr` | `deck-streak-notifications` | added: A2's compile-fail fixture and the refusal it records |
+| `crates/notifications/tests/ui/pass_by_default.rs`, `.stderr`, `crates/notifications/tests/ui/pass_kept_by_a_clone.rs`, `.stderr` | `deck-streak-notifications` | added: A2's fixtures for a pass made by `Default` and one kept by cloning a borrowed pass, each with the refusal it records |
 | `crates/notifications/tests/support/mod.rs` | `deck-streak-notifications` | added: the tests' database, clock and recording transport |
 | `crates/bot/src/transport.rs` | `deck-streak-bot` | changed: implements the bot transport calls |
 | `crates/bot/src/lib.rs` | `deck-streak-bot` | changed: exports the owner's chat, the port's implementation |
@@ -191,7 +194,7 @@ the verdict of a run with that wiring is posted as the `box/packs` status at the
 | `privacy.json` | repo | changed: the notifications categories |
 | `PRIVACY.md` | repo | changed: one line per notifications category (SPEC-021's rule) |
 | `Cargo.lock`, `.sqlx/` | workspace | changed |
-| `scripts/mutation-rows.d/S04100-S04199.json` | repo | added: the hand-proved rows of quiet hours, the caps and dedupe |
+| `scripts/mutation-rows.d/S04100-S04199.json` | repo | added: the hand-proved rows of quiet hours, the caps and dedupe, and of A15's refusal |
 | `changelog.d/feat-router-041.md` | repo | added |
 | `docs/schematics/notification-router.md` | docs | changed: the design delivered, with a held celebration's states and the joins |
 | `docs/specs/SPEC-041-notification-router-core.md` | docs | moved from `docs/specs/planned/` |
@@ -216,13 +219,15 @@ the verdict of a run with that wiring is posted as the `box/packs` status at the
 ## 6. Risks
 
 - **A delivery call appears outside the router**, for example a bot command reply written with
-  `push_message`. Detected by the `one-router` row in the gate (A1, A2).
+  `push_message`. Detected by A2 (the compiler) for the port's call and by the box run's `one-router`
+  row (§3a B1) for a call the policy names, and by A15's census for a delivery around the port: the
+  bot's own send, or a raw request to the Bot API.
 - **The lapse context is empty until the governor exists**, so a nudge could reach an owner in a
   real lapse. Detected by SPEC-049's lapse tests, which run over the minimal lapse-episode slice
   SPEC-049 builds in `streaks` ahead of W3's governor; the W1 kinds that nudge (`reading_ready`,
   `comeback`) declare that prerequisite.
-- **The quiet window is read at the wrong offset.** Detected by the golden (A8) and by A4's
-  injected clock.
+- **The quiet window is read at the wrong offset.** Detected by
+  `the_quiet_window_is_read_at_the_configured_offset`; the golden (A8) judges the window itself.
 - **A background celebration reaches the bot while the Mini App is open** (the origin rule).
   Visible in the decision ledger's surface column; accepted by ADR-041.
 - **The flush never runs** because no sync succeeds. The dead-man watch (SPEC-027) pages on stopped
@@ -236,12 +241,12 @@ the verdict of a run with that wiring is posted as the `box/packs` status at the
 ## 7. Amendments at delivery
 
 - **The criteria over pack rows.** No public test can run a pack's row (ADR-069, SPEC-056), so A1 to
-  A3 are tests of DeckStreak's own behaviour: the typed policy reads every key (A1), a delivery call
-  outside the router module does not compile (A2), and the typed policy reads `reading_ready` and
-  its deviation (A3). The box run judges the rows themselves (§3a), and
+  A3 are tests of DeckStreak's own behaviour: the typed policy reads every key (A1), a call of the
+  port's delivery call outside the router module does not compile (A2), and the typed policy reads
+  `reading_ready` and its deviation (A3). The box run judges the rows themselves (§3a), and
   `scripts/tests/test_notifications_router_rows.py` is not added.
 - **R1 and R13: the router's pass.** Each bot transport call takes a `Pass`, which only the router
-  module can make, so a call anywhere else is a compile error, not a finding (A2). The port carries
+  module can make, so a call of the port anywhere else is a compile error, not a finding (A2). The port carries
   `push_message` alone: the router renders nothing beyond a line, and the dice, reaction and pin calls
   arrive with the ladder's renders (§5). The bot implements it on its transport, sending to the
   owner's chat as HTML, chunked as every bot message is.
@@ -295,3 +300,22 @@ the verdict of a run with that wiring is posted as the `box/packs` status at the
   the router can make a push. The flush step has its own coordination test. A2 adds its test, its
   compile-fail fixture and the refusal it records; the router's tests share one support module; and
   the delivery adds its rows' band and its changelog fragment.
+- **The fix round.** The first review planted three defects the tests let through; each now reads
+  red.
+  - A pass made by `Default`, or kept by cloning a borrowed one, would have compiled outside the
+    router. A2 gains a compile-fail case for each, beside the one for the private field.
+  - A delivery could go around the port and never take a pass: through the bot's own `send_html`,
+    or by a raw request to the Bot API from the daemon or the API. A15's census reads every shipped
+    source: the Rust, Python and web source files, the shell scripts and the systemd units, with
+    test directories and test files left out, and in a Rust file its comments and `#[cfg(test)]`
+    items too. Outside `crates/bot/` nothing may name `api.telegram.org` or one of the Bot API's
+    send methods, in its own spelling (`sendMessage`) or a client's (`send_message`). SPEC-031's
+    alert path, `deploy/scripts/alert-telegram.sh`, is the one exception, because it pages the
+    owner that a unit failed, the daemon among them. Every call of `Transport::send_html` or of a
+    Bot API send method is one of the named call sites, each found exactly once: `OwnerChat`'s
+    push, the bot's command replies (the erase prompt, every other reply and the export, #257), and
+    the transport's own requests. The test also refuses a planted source of each kind.
+  - The comeback's gap was tested only on a UTC rule at noon, where a calendar day and a study day
+    agree. A9 gains a case on a rule five hours west of UTC, across the 04:00 rollover. The owner's
+    quiet window is off in it (its start equal to its end), because 03:00 and 05:00 are inside the
+    default window, where rule 4 withholds a nudge with `quiet_hours` before rule 5 counts the gap.
