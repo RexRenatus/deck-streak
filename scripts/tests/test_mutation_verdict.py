@@ -909,6 +909,47 @@ class TheVerdictCountsEveryShard(unittest.TestCase):
         self.assertEqual(unsized.returncode, 3, unsized.stdout + unsized.stderr)
         self.assertIn("VOID the plan names no shards", unsized.stdout)
 
+    def test_the_shards_reports_hold_every_listed_mutant_once(self):
+        fixture, planned = sharded(self)
+        whole = {shard: ("0", shard_outcomes(names)) for shard, names in enumerate(planned)}
+        # Shard 1 also tested shard 2's first mutant: one mutant in two shards.
+        stray = planned[2][0]
+        twice = shard_reports(
+            fixture.out / "twice", {**whole, 1: ("0", shard_outcomes(planned[1] + [stray]))}
+        )
+        doubled = fixture.judge("rust", "--shard-reports", twice)
+        self.assertEqual(doubled.returncode, 1, doubled.stdout + doubled.stderr)
+        self.assertIn(
+            f"{stray}: tested in 2 shard(s) (mutation-rust-shard-1, mutation-rust-shard-2), "
+            "listed 1 time(s)",
+            doubled.stdout,
+        )
+        # A mutant the listing never named fails the same way.
+        unlisted = f"{LIB}:3:5: replace double -> i64 with -1"
+        extra = shard_reports(
+            fixture.out / "extra", {**whole, 0: ("0", shard_outcomes(planned[0] + [unlisted]))}
+        )
+        surplus = fixture.judge("rust", "--shard-reports", extra)
+        self.assertEqual(surplus.returncode, 1, surplus.stdout + surplus.stderr)
+        self.assertIn(
+            f"{unlisted}: tested in 1 shard(s) (mutation-rust-shard-0), listed 0 time(s)",
+            surplus.stdout,
+        )
+        # Every shard whole, and one listed mutant in none: VOID, by name.
+        lost = planned[1][-1]
+        short = shard_reports(
+            fixture.out / "short", {**whole, 1: ("0", shard_outcomes(planned[1][:-1]))}
+        )
+        never = fixture.judge("rust", "--shard-reports", short)
+        self.assertEqual(never.returncode, 3, never.stdout + never.stderr)
+        self.assertIn(f"VOID never tested: {lost}, listed for mutation-rust-shard-1", never.stdout)
+        # The control: each shard holds exactly the mutants the plan gave it.
+        exact = shard_reports(fixture.out / "exact", whole)
+        green = fixture.judge("rust", "--shard-reports", exact)
+        self.assertEqual(green.returncode, 0, green.stdout + green.stderr)
+        for name in examined("listed mutants", [name for names in planned for name in names]):
+            self.assertNotIn(f"{name}: tested in", green.stdout)
+
 
 if __name__ == "__main__":
     unittest.main()
