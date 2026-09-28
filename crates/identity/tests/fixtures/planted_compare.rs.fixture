@@ -1,0 +1,22 @@
+// A planted validator that compares the launch data's hash by hand (SPEC-024 A6). It is never
+// compiled: A6's census must refuse exactly its two comparisons, on lines 16 and 21, and nothing
+// that only a comment or a string says.
+//
+// A comment saying `received_hash == computed_hash` is prose, and so is a string.
+
+use hmac::{Hmac, Mac};
+use sha2::Sha256;
+
+const NOTE: &str = "compare the received_hash != the computed_hash by hand";
+
+/// Compares the bytes: a timing leak.
+fn planted_bytes(mac: Hmac<Sha256>, received_hash: &[u8]) -> bool {
+    let computed_hash = mac.finalize().into_bytes();
+    // The comparison a timing attack reads, one byte at a time:
+    computed_hash.as_slice() == received_hash
+}
+
+/// Compares the hex text: the same leak, in another spelling.
+fn planted_hex(computed: &str, hash_hex: &str) -> bool {
+    hash_hex != computed
+}

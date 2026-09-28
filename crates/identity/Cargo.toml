@@ -13,3 +13,22 @@ workspace = true
 
 [dependencies]
 deck-streak-kernel.workspace = true
+# ADR-003: the extractor and the refusals speak axum's HTTP types (SPEC-024 R7).
+axum.workspace = true
+# ADR-006: Telegram's WebAppData HMAC; ADR-024: the session store and its ids.
+getrandom.workspace = true
+hmac.workspace = true
+sha2.workspace = true
+subtle.workspace = true
+# ADR-029: the launch data's user object is JSON, and so is a refusal's body.
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+# ADR-020's temporary directory holds A16's credentials; tower's oneshot and tokio drive the
+# extractor through a router.
+tempfile.workspace = true
+tokio = { workspace = true, features = ["macros", "rt"] }
+tower = { workspace = true, features = ["util"] }
