@@ -278,7 +278,7 @@ move with it. The owner checks three versions once, before the window, and one s
 | Anki desktop | Help, then About | any release that syncs with that server today | It writes the collection that everything else reads, at schema 18 and over protocol 11, and 26.09.3 changes neither. 26.09 carries security fixes for the desktop's editor, which the owner may want on their own merits. | Nothing changes for DeckStreak, which never talks to a device. |
 | AnkiDroid or AnkiMobile | the app's About screen | any release that syncs with that server today | The same reasons as the desktop. | Nothing changes for DeckStreak. A device that moves to a release with a new sync protocol may stop syncing until the server is updated, per the manual; DeckStreak's pinned engine is not involved. |
 | AnkiWeb | none | not used | DeckStreak syncs only from the owner's server, and AnkiWeb's terms do not allow third-party clients. | Not applicable. |
-| after the window | the predecessor's and DeckStreak's next sync | a normal sync | It shows that the move demanded no full sync (§1). | If any device ever asks for a full sync, the owner chooses its direction on that device. DeckStreak always downloads (ADR-037). |
+| after the window | the next scheduled sync of whatever syncs from that server with the new engine | a normal sync, not a full one | It shows that the move demanded no full sync (§1). | If any device ever asks for a full sync, the owner chooses its direction on that device. DeckStreak always downloads (ADR-037). |
 
 ## 9. References
 
