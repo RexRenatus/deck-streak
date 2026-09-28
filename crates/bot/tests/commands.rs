@@ -334,6 +334,10 @@ fn rendered() -> Vec<(&'static str, Reply)> {
             )),
         ),
         (
+            "sync-still-running",
+            sync_reply(&synced(SyncOutcome::StillRunning, Scores::Unchanged)),
+        ),
+        (
             "sync-refused",
             sync_reply(&Err(SyncRefusal {
                 reason: "nothing_scripted",
