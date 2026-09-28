@@ -37,6 +37,9 @@ OWNER_LAYOUT = {
 # What the Rust cache holds (SPEC-038 R1): the crates Cargo downloaded, and the build.
 RUST_CACHE = ["~/.cargo/registry/index/", "~/.cargo/registry/cache/", "~/.cargo/git/db/", "target/"]
 BROWSERS = ["~/.cache/ms-playwright"]
+# The stages that compile Rust: python's among them, because a guard test builds a Rust example
+# (SPEC-042's rails rows).
+COMPILES_RUST = {"clippy", "test", "doctest", "python"}
 # A `bash scripts/check.sh [stage...]` line of a step's script.
 GATE_CALL = re.compile(r"(?m)^[ \t]*bash scripts/check\.sh((?:[ \t]+[a-z][a-z0-9-]*)*)[ \t]*$")
 # Actions that save a cache by themselves, whatever the event (SPEC-038 R2).
@@ -613,11 +616,18 @@ class OnlyAPushSavesACache(unittest.TestCase):
     def test_the_rust_cache_is_keyed_on_the_toolchain_pin_and_the_lockfile(self):
         workflow = load("ci.yml")
         compiling = sorted(
-            {job for job, named in stage_calls(workflow) if {"clippy", "test"} & set(named)}
+            {job for job, named in stage_calls(workflow) if COMPILES_RUST & set(named)}
         )
+        restored = {}
         for job_id in examined("jobs that compile Rust", compiling):
             steps = workflow["jobs"][job_id]["steps"]
             gate = next(n for n, s in enumerate(steps) if GATE_CALL.search(str(s.get("run", ""))))
+            toolchain = [
+                n for n, s in enumerate(steps) if str(s.get("run", "")).strip() == "rustup show"
+            ]
+            self.assertTrue(
+                toolchain and toolchain[0] < gate, f"{job_id} installs no pinned toolchain"
+            )
             restores = [
                 (n, s)
                 for n, s in enumerate(steps)
@@ -631,20 +641,26 @@ class OnlyAPushSavesACache(unittest.TestCase):
             self.assertIn("${{ hashFiles('Cargo.lock') }}", key)
             fallback = key.split("${{ hashFiles('Cargo.lock') }}")[0]
             self.assertEqual(lines_of(restore["with"]["restore-keys"]), [fallback])
-            saves = [
-                (n, s)
-                for n, s in enumerate(steps)
-                if action(s) == "actions/cache/save" and paths(s) == RUST_CACHE
-            ]
-            self.assertEqual(len(saves), 1, f"{job_id} saves no Rust cache")
-            at, save = saves[0]
-            self.assertGreater(at, gate, f"{job_id} saves the Rust cache before its stages")
-            primary = "${{ steps." + restore["id"] + ".outputs.cache-primary-key }}"
-            self.assertEqual(save["with"]["key"], primary)
-            # The workspace's own artifacts are rebuilt from any fresh checkout: clean them first.
-            clean = steps[at - 1]
-            self.assertEqual(str(clean.get("run", "")).strip(), "cargo clean --workspace")
-            self.assertEqual(clean.get("if"), save.get("if"))
+            restored[job_id] = (gate, restore)
+        # One job saves it: the one that builds every target, after its stages.
+        saves = [
+            (job_id, n, s)
+            for job_id, job in workflow["jobs"].items()
+            for n, s in enumerate(job.get("steps") or [])
+            if action(s) == "actions/cache/save" and paths(s) == RUST_CACHE
+        ]
+        self.assertEqual(len(saves), 1, f"the Rust cache is saved by {len(saves)} steps")
+        job_id, at, save = saves[0]
+        self.assertIn(job_id, restored, f"{job_id} saves a Rust cache it never restored")
+        gate, restore = restored[job_id]
+        self.assertIn("clippy", dict(stage_calls(workflow))[job_id], f"{job_id} builds no target")
+        self.assertGreater(at, gate, f"{job_id} saves the Rust cache before its stages")
+        primary = "${{ steps." + restore["id"] + ".outputs.cache-primary-key }}"
+        self.assertEqual(save["with"]["key"], primary)
+        # The workspace's own artifacts are rebuilt from any fresh checkout: clean them first.
+        clean = workflow["jobs"][job_id]["steps"][at - 1]
+        self.assertEqual(str(clean.get("run", "")).strip(), "cargo clean --workspace")
+        self.assertEqual(clean.get("if"), save.get("if"))
 
     def test_a_cache_is_saved_only_by_a_push_to_dev_or_main(self):
         saves = []
