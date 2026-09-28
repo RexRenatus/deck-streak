@@ -73,10 +73,12 @@ R2. The refusal fails the unit that loads the credential, and that unit's `OnFai
       (SPEC-027 R7). A repeat failure only logs, and the liveness job pages once the episode
       outlives its window (SPEC-027 R8);
     - every unit template under `deploy/` that loads a credential, the alert template excepted,
-      names `OnFailure=deck-streak-alert@%n.service`, starts its `ExecStart=` without the `-`
-      prefix, holds no `SuccessExitStatus=` that names 1, and sets no `RestartMode=direct`. The
-      prefix and the exit status would each count a refused start as a success, and the restart
-      mode skips `OnFailure=` (systemd.service(5)).
+      names `OnFailure=deck-streak-alert@%n.service`, names no `ExecCondition=`, starts its
+      `ExecStart=` without the `-` prefix, holds no `SuccessExitStatus=` that names 1 in any
+      spelling systemd reads as 1 (FAILURE, 01, 0x1, +1, 0b1; `systemd-analyze exit-status`), and
+      sets no `RestartMode=direct`. A condition that exits 1 to 254 skips the start, which neither
+      fails the unit nor starts `OnFailure=`; the prefix and the exit status would each count a
+      refused start as a success; and the restart mode skips `OnFailure=` (systemd.service(5)).
 R3. The alert template unit cannot page through itself: it names no `OnFailure=` (SPEC-031). Its own
     refusal is therefore surfaced as its failed state. `deploy/scripts/alert-telegram.sh` refuses
     each of the two credentials it loads whose value is empty, nothing being left once the command
@@ -84,16 +86,21 @@ R3. The alert template unit cannot page through itself: it names no `OnFailure=`
     makes a request. It writes one line at error priority to standard error,
     `<3>the credential <id> is empty in the credentials directory: no page is sent`, which the
     journal keeps under the unit's identifier, and exits 1. The alert template counts no refusal a
-    success and leaves it failed, by three exit conditions: no `-` prefix and no
-    `SuccessExitStatus=` naming 1 or FAILURE, either of which would count the refusal a success,
-    and no `RestartMode=direct`, which skips the failed state on a restart (systemd.service(5)). It
-    also restarts no refused start: no `Restart=` other than `no`, and no `RestartForceExitStatus=`
-    naming 1 or FAILURE, which forces a restart whatever `Restart=` says. A restart at the default
-    mode only passes through the failed state, and the instance waits for its next start
-    activating, not failed (systemd.service(5)), so a loop of restarts settles failed only when its
-    start limit ends it (SPEC-031). The instance is therefore `failed` and listed by
-    `systemctl --failed`. No page reports it: a second route that does not depend on the alert
-    sender is #285.
+    success and leaves it failed, by four exit conditions: no `-` prefix, and no
+    `SuccessExitStatus=` at all, so that no spelling systemd reads as 1 (FAILURE, 01, 0x1, +1,
+    0b1; `systemd-analyze exit-status`) can count the refusal a success; no
+    `RestartMode=direct`, which skips the failed state on a restart; and no `ExecCondition=`, since
+    a condition that exits 1 to 254 skips the start and leaves the instance inactive, not failed
+    (systemd.service(5)). It also restarts no refused start: no `Restart=` other than `no`, and no
+    `RestartForceExitStatus=` at all: on its `Type=oneshot` the service manager refuses the unit
+    outright (a bad unit file setting), and on another type one naming 1 forces a restart
+    whatever `Restart=` says. A restart at the default mode only passes through the failed state,
+    and the instance waits for its next start activating, not failed (systemd.service(5)), so a
+    loop of restarts settles failed only when its start limit ends it (SPEC-031). And it is never
+    unloaded while failed: no `CollectMode=` other than `inactive`, since `inactive-or-failed`
+    unloads the failed instance, which `systemctl --failed` then no longer lists
+    (systemd.unit(5)). The instance is therefore `failed` and listed by `systemctl --failed`. No
+    page reports it: a second route that does not depend on the alert sender is #285.
 R4. ADR-067 records the decision and what it was chosen against. ADR-038 takes one dated note at its
     end, a pure append, naming the loader, not the service manager, as what refuses an empty
     credential.
@@ -113,8 +120,8 @@ R6. The engine probe (`crates/ingest/examples/engine_probe.rs`) reads the sync's
 | A1 | a credential of zero bytes, and one holding only a newline, each refuse to load with `CredentialError::Empty` naming the id, and the refusal says the credential is empty | `credentials.rs` `an_empty_credential_refuses_start_by_its_id` |
 | A2 | beside them, a missing credential keeps its `Missing` refusal, an unreadable one (a directory at its path) its `Unreadable` refusal, and a value loads unchanged less one trailing newline: one character, and a file of two newlines as one newline | `credentials.rs` `a_missing_credential_keeps_its_refusal_and_a_value_loads_unchanged` |
 | A3 | the refusal's `Display` and `Debug` carry the id only: a sentinel planted as the directory's name, and as a sibling credential the same loader read first, is in neither | `credentials.rs` `an_empty_refusal_names_the_id_and_never_a_value` |
-| A4 | every unit template that loads a credential, the alert template excepted, fails and pages on a refused start (R2's four conditions), and the alert template counts no refusal a success and restarts none (R3's three exit conditions, told from `OnFailure=` by the condition and never by a refusal's text, and its restart); the census prints its examined count, refuses zero, and refuses a planted template for each condition, and three alert-shaped ones, which name no `OnFailure=`, each for what it breaks: `SuccessExitStatus=1`, `RestartMode=direct` beside `Restart=on-failure`, and `RestartForceExitStatus=1` | `test_deploy_templates.py` `every_unit_that_loads_a_credential_fails_and_pages_on_a_refusal` |
-| A5 | the alert unit's route (R3): each credential the template loads, empty in each form, makes the script exit 1 with the one line naming it, before any journal read or request; the template names no `OnFailure=`, counts no refusal a success and restarts none: no `-` prefix, no `SuccessExitStatus=` naming 1 or FAILURE and no `RestartMode=direct`, no `Restart=` other than `no` and no `RestartForceExitStatus=` naming 1 or FAILURE | `test_alert_unit.py` `an_empty_credential_fails_the_alert_unit_before_any_request` |
+| A4 | every unit template that loads a credential, the alert template excepted, fails and pages on a refused start (R2's five conditions), and the alert template counts no refusal a success, restarts none and is never unloaded while failed (R3's four exit conditions, told from `OnFailure=` by the condition and never by a refusal's text, its restart and its collection); an exit status is read as systemd reads it, held to a table of words and the readings `systemd-analyze exit-status` gives them; the census prints its examined count, refuses zero, and refuses a planted template for each condition, one of them spelling its exit status `0x1`, and eight alert-shaped ones, which name no `OnFailure=`, each for what it breaks (listed below) | `test_deploy_templates.py` `every_unit_that_loads_a_credential_fails_and_pages_on_a_refusal` |
+| A5 | the alert unit's route (R3): each credential the template loads, empty in each form, makes the script exit 1 with the one line naming it, before any journal read or request; the template names no `OnFailure=`, counts no refusal a success, restarts none and is never unloaded while failed: no `-` prefix, no `ExecCondition=`, no `SuccessExitStatus=` (no word systemd reads as 1, and none at all) and no `RestartMode=direct`; no `Restart=` other than `no` and no `RestartForceExitStatus=` (no word systemd reads as 1, and none at all); and no `CollectMode=` other than `inactive` | `test_alert_unit.py` `an_empty_credential_fails_the_alert_unit_before_any_request` |
 | A6 | the sync's login reads through the loader (R2): each of its two credentials, empty in each form, records the run as `missing_credentials` with no attempt, and the engine is never asked to sync | `retry.rs` `an_empty_sync_credential_is_recorded_missing_and_never_reaches_the_engine` |
 
 ```acceptance
@@ -128,18 +135,28 @@ A6: cargo test -p deck-streak-ingest --test retry -- --exact an_empty_sync_crede
 
 A1 to A3 write synthetic credentials to a temporary directory and read them through the loader.
 A4 reads the templates with `_units.py`, as the rest of the census does, and plants one template for
-each of R2's four conditions. It holds the alert template to R3's three exit conditions, the
-`ExecStart=` prefix, `SuccessExitStatus=` and `RestartMode=`, which are R2's conditions but
-`OnFailure=`, told apart by the condition each refusal names and never by its text, and to R3's
-restart, `Restart=` and `RestartForceExitStatus=`. It plants three templates shaped as the alert
-template is, each loading a credential and naming no `OnFailure=`: one that its
-`SuccessExitStatus=1` alone refuses, one holding `Restart=on-failure` and `RestartMode=direct`,
-which the exit conditions refuse for its `RestartMode=` alone and the restart for its `Restart=`,
-and one that its `RestartForceExitStatus=1` alone refuses.
+each of R2's five conditions, and a second for its exit status, spelled `0x1`. `_units.py` reads an
+exit-status word as systemd does: in the words a unit file's value splits into, where a backslash
+takes the next character as it is (`status_words`), a name, or a number as systemd reads one, with
+its own `0b` and `0o` prefixes and C's `0x`, a leading `0` for octal and one sign, so `01`, `0x1`,
+`+1`, `0b1` and `0o1` are 1 and `010` is 8 (`exit_status`). A4 holds that reading to a table of
+words, each with the reading `systemd-analyze exit-status` gives it. It holds the alert template to
+R3's four exit conditions, the `ExecStart=` prefix, `SuccessExitStatus=`, `RestartMode=` and
+`ExecCondition=`, which are R2's conditions but `OnFailure=`, told apart by the condition each
+refusal names and never by its text, with a `SuccessExitStatus=` that names no 1 refused too; to
+R3's restart, `Restart=` and any `RestartForceExitStatus=`; and to its collection, `CollectMode=`.
+It plants eight templates shaped as the alert template is, each loading a credential and naming no
+`OnFailure=`, and each refused for what it breaks: `SuccessExitStatus=1` alone and
+`SuccessExitStatus=01` alone, by the exit conditions; `Restart=on-failure` beside
+`RestartMode=direct`, by the exit conditions for its `RestartMode=` and by the restart for its
+`Restart=`; `RestartForceExitStatus=1` alone, by the restart; an `ExecCondition=`, by the exit
+conditions; `CollectMode=inactive-or-failed`, by the collection; `SuccessExitStatus=2` beside
+`RestartForceExitStatus=2`, which R2 admits and the alert template's checks refuse; and a
+`Type=oneshot` one naming `RestartForceExitStatus=2`, which the service manager refuses outright.
 A5 runs the script as its unit runs it, with the recording stubs of SPEC-031's tests first on its
 `PATH`, once for each credential the template loads and each empty form, zero bytes and a lone
-newline, the other credential holding its synthetic value, and reads the same three exit conditions
-and the restart in the template. A6 runs the syncer over SPEC-022's scripted engine and in-memory
+newline, the other credential holding its synthetic value, and reads the same four exit conditions,
+the restart and the collection in the template, each exit status as `_units.py` reads it. A6 runs the syncer over SPEC-022's scripted engine and in-memory
 record, which count every sync the engine is asked for, with one of the fixture's two credentials
 rewritten empty. R6 takes no criterion of its own: the engine probe is an example a person runs by
 hand, with no test, and the refusal it takes is the loader's, which A1 to A3 hold.
@@ -165,6 +182,7 @@ is proved with `python3 scripts/mutation_rows.py prove --band S06600-S06699`.
 | `deploy/README.md` | deploy | changed: an empty credential refuses start, and the alert unit's own refusal |
 | `scripts/tests/test_deploy_templates.py` | repo | changed: A4 |
 | `scripts/tests/test_alert_unit.py` | repo | changed: A5, and `run_alert` plants a credential's content |
+| `scripts/tests/_units.py` | repo | changed: A4 and A5 read an exit-status word as systemd does (`exit_status`, `status_words`) |
 | `scripts/mutation-rows.d/S06600-S06699.json` | repo | added: R5 |
 | `docs/schematics/startup-settings-and-secrets.md` | repo | changed: the loader's refusal of an empty credential |
 | `docs/schematics/alert-and-slo-path.md` | repo | changed: the alert unit's own refusal |
@@ -225,11 +243,23 @@ is proved with `python3 scripts/mutation_rows.py prove --band S06600-S06699`.
 - **A fourth reader, and R6.** The engine probe reads the sync's two credentials, so §1 counts it,
   R6 moves its read onto the loader, and §4 lists its file. It takes no criterion: the loader's A1
   to A3 hold the refusal it now takes.
-- **R3 names the alert template's exit, and its restart.** The alert template cannot page, but a
-  refused start must still leave it failed, so R3 states that it counts no refusal a success and
-  restarts none. A4 holds R3's three exit conditions on it, told from `OnFailure=` by the condition
-  each refusal names rather than by its text, and its restart, with three planted alert-shaped
-  templates as the killing cases, and A5 reads the same in the template. The restart is pinned
-  whole, not `RestartMode=direct` alone, since a restart at the default mode also leaves the
-  instance activating, not failed, between its attempts. Each addition pins what the template
-  already declares, so each is disclosed not red (`docs/red-first/SPEC-066.md`).
+- **R3 names the alert template's exit, its restart and its collection.** The alert template cannot
+  page, but a refused start must still leave it failed and listed, so R3 states that it counts no
+  refusal a success, restarts none and is never unloaded while failed. A4 holds R3's four exit
+  conditions on it, told from `OnFailure=` by the condition each refusal names rather than by its
+  text, its restart and its collection, with eight planted alert-shaped templates as the killing
+  cases, and A5 reads the same in the template. The restart is pinned whole, not
+  `RestartMode=direct` alone, since a restart at the default mode also leaves the instance
+  activating, not failed, between its attempts. `SuccessExitStatus=` and `RestartForceExitStatus=`
+  are pinned whole as well, since the alert template names neither: on its `Type=oneshot` the
+  service manager refuses a unit that names the second, rather than restarting it. Each addition
+  pins what the template already declares, so each is disclosed not red
+  (`docs/red-first/SPEC-066.md`).
+- **An exit status is read as systemd reads it, and R2 refuses a condition.** systemd reads an
+  exit-status word by name, or as a number with its own prefixes, in a value split as a unit file's
+  is (`systemd-analyze exit-status` reads `01`, `0x1`, `+1` and `0b1` as 1), so R2 and R3 name 1 in
+  any spelling systemd reads as 1. `_units.py` gains that reading, which A4 and A5 use, and §4
+  lists it. R2's census also refuses an `ExecCondition=`: one that exits 1 to 254 skips the start,
+  and the unit is not marked failed (systemd.service(5)), so its `OnFailure=` never starts. Each
+  addition pins what the templates already declare, so each is disclosed not red, with its killing
+  cases (`docs/red-first/SPEC-066.md`).

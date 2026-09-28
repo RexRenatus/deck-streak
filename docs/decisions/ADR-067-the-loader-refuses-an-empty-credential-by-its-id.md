@@ -59,15 +59,17 @@ shares, and a refusal there fails the unit the way a missing credential does.
 - **The units.** A role that refuses start exits 1 (SPEC-025 R1), and the `sync` job's login records
   the refusal as `missing_credentials`, which pages when it opens the job's error streak (SPEC-027
   R7). Every template that loads a credential, the alert template excepted, names `OnFailure=` the
-  alert template, and none carries a setting that would count the refused start as a success or
-  skip `OnFailure=`: an `ExecStart=` with the `-` prefix, a `SuccessExitStatus=` naming 1, or
-  `RestartMode=direct` (systemd.service(5)). A census over `deploy/` holds all four.
+  alert template, and none carries a setting that would skip the refused start, count it as a
+  success or skip `OnFailure=`: an `ExecCondition=`, which skips the start when it exits 1 to 254,
+  an `ExecStart=` with the `-` prefix, a `SuccessExitStatus=` naming 1 in any spelling systemd
+  reads as 1, or `RestartMode=direct` (systemd.service(5)). A census over `deploy/` holds all five,
+  and reads an exit status as systemd does.
 - **The alert unit.** Its script refuses an empty credential of the two it loads by its id, with one
   line at error priority, before it reads the journal or makes a request, and exits 1. The unit then
   stays failed, in `systemctl --failed` and the journal, because its template counts no refusal a
-  success and restarts no refused start (SPEC-066 R3's exit and restart conditions). It names no
-  `OnFailure=`, so its own failure pages nothing: a page about the alert unit's own failure needs a
-  route that does not depend on the alert sender (#285).
+  success, restarts no refused start and is never unloaded while failed (SPEC-066 R3's exit, restart
+  and collection conditions). It names no `OnFailure=`, so its own failure pages nothing: a page
+  about the alert unit's own failure needs a route that does not depend on the alert sender (#285).
 
 ### Consequences
 
@@ -100,5 +102,8 @@ to S06608 kill the mutants cargo-mutants does not make.
 ADR-038 (its note of 2026-09-28 names this ADR), ADR-010, SPEC-020 R11, SPEC-025 R1, SPEC-027 R7,
 SPEC-031, SPEC-066, #284, #285. systemd.exec(5), `LoadCredential=`, at
 <https://www.freedesktop.org/software/systemd/man/latest/systemd.exec.html>; systemd.service(5),
-`ExecStart=`, `SuccessExitStatus=` and `RestartMode=`, at
-<https://www.freedesktop.org/software/systemd/man/latest/systemd.service.html>.
+`ExecCondition=`, `ExecStart=`, `SuccessExitStatus=`, `Restart=`, `RestartForceExitStatus=` and
+`RestartMode=`, at <https://www.freedesktop.org/software/systemd/man/latest/systemd.service.html>;
+systemd.unit(5), `CollectMode=`, at
+<https://www.freedesktop.org/software/systemd/man/latest/systemd.unit.html>; systemd-analyze(1),
+`exit-status`, at <https://www.freedesktop.org/software/systemd/man/latest/systemd-analyze.html>.
