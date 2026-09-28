@@ -1595,8 +1595,10 @@ def strings(value, where=""):
 
 def step_inputs(step):
     """A step's `with` inputs, each name in lower case: the runner reads an input's name in any
-    case. Inputs that are not a mapping are none: the reader has named their line, or GitHub
-    refuses the workflow."""
+    case. Inputs that are not a mapping are none here, and the checker refuses a checkout whose
+    inputs are not a mapping: GitHub evaluates a `with` that is one `${{ }}` expression when the
+    step runs, so no reading of the file names what it holds. An omitted or empty `with` is no
+    inputs."""
     given = step.get("with")
     if not isinstance(given, dict):
         return {}
@@ -1677,9 +1679,10 @@ def secret_and_checkout_problems(directory):
     """Every read of a secret other than GITHUB_TOKEN, every `secrets: inherit`, and every checkout,
     clone or fetch of another repository in the workflows of `directory`, each named by its file
     and its place, with what was judged: (problems, {population: [...]}). Every step of a job is
-    judged, a step inside a `parallel` block at any depth included. A form the reader does not read
-    is a problem named by its line, and the rest of that file is judged as read. A directory with no
-    workflow file is VOID, never a pass."""
+    judged, a step inside a `parallel` block at any depth included, and a checkout whose inputs are
+    not a mapping is a problem, as `step_inputs` says. A form the reader does not read is a problem
+    named by its line, and the rest of that file is judged as read. A directory with no workflow
+    file is VOID, never a pass."""
     files = workflow_files(directory)
     problems = []
     judged = {"expressions": [], "checkouts": [], "run steps": []}
@@ -1707,6 +1710,10 @@ def secret_and_checkout_problems(directory):
                 if not isinstance(step, dict):
                     continue
                 if is_checkout(step):
+                    if step.get("with") is not None and not isinstance(step["with"], dict):
+                        problems.append(
+                            f"{where}: checks out with inputs the checker does not read"
+                        )
                     repository = checked_out(step)
                     judged["checkouts"].append((where, repository))
                     if repository != THIS_REPOSITORY:
