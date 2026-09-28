@@ -32,8 +32,8 @@ sequenceDiagram
   C-->>S: due count, the cards to move, tariff, funded or not
   O->>S: confirm, carrying the digest
   S->>C: take
+  C->>I: list the cards again, and stop with preview_changed when the digest is missing or differs
   C->>I: record the skip as pending, once per study day
-  I->>I: list the cards again, and stop with preview_changed when the digest differs
   I->>W: copy the private copy beside it, under the exclusive collection lock
   W->>V: converge by one normal sync
   Note over W,V: a full or one-way sync demand aborts here, and nothing is written
