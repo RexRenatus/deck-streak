@@ -1,0 +1,98 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S07101-ANSWER-CAP",
+        "analytics",
+        "src/constants.rs",
+        "pub const ANSWER_TIME_CAP_SECONDS: f64 = 60.0;",
+        "pub const ANSWER_TIME_CAP_SECONDS: f64 = 90.0;",
+        "score_pillars::the_analytics_constants_equal_the_predecessors",
+        "each answer's time is capped at the predecessor's constants.ANSWER_TIME_CAP_SECONDS before the day's seconds are summed (SPEC-071 R6, A7)"
+      ],
+      [
+        "S07102-MATURE-INTERVAL",
+        "analytics",
+        "src/constants.rs",
+        "pub const MATURE_IVL_DAYS: i64 = 21;",
+        "pub const MATURE_IVL_DAYS: i64 = 22;",
+        "score_pillars::the_analytics_constants_equal_the_predecessors",
+        "the young and mature split and the graduation boundary sit at the predecessor's constants.MATURE_IVL_DAYS (SPEC-071 R6, A7)"
+      ],
+      [
+        "S07103-LEECH-THRESHOLD-DEFAULT",
+        "analytics",
+        "src/settings.rs",
+        "pub const DEFAULT_LEECH_THRESHOLD: i64 = 8;",
+        "pub const DEFAULT_LEECH_THRESHOLD: i64 = 7;",
+        "rollup_metrics::the_card_snapshot_matches_the_predecessors_golden",
+        "with DECKSTREAK_LEECH_THRESHOLD unset, a card is a leech at the predecessor's constants.DEFAULT_LEECH_THRESHOLD lapses (SPEC-071 R8, A2)"
+      ],
+      [
+        "S07104-SCORE-WEIGHTS",
+        "analytics",
+        "src/constants.rs",
+        "pub const WEIGHT_CONSISTENCY: f64 = 0.30;",
+        "pub const WEIGHT_CONSISTENCY: f64 = 0.35;",
+        "score_pillars::the_score_matches_the_predecessors_golden",
+        "the total weights the five pillars by the predecessor's WEIGHT_* constants, with and without a card snapshot (SPEC-071 R12, A8)"
+      ],
+      [
+        "S07105-RETENTION-SMALL-SAMPLE",
+        "analytics",
+        "src/constants.rs",
+        "pub const RETENTION_MIN_SAMPLE: i64 = 5;",
+        "pub const RETENTION_MIN_SAMPLE: i64 = 1;",
+        "score_pillars::the_five_pillars_match_their_goldens",
+        "a retention over fewer answers than the predecessor's RETENTION_MIN_SAMPLE is blended toward RETENTION_BLEND_TARGET (SPEC-071 R12, A9)"
+      ],
+      [
+        "S07106-ROUND-HALF-EVEN",
+        "analytics",
+        "src/score.rs",
+        "    value.round_ties_even() as i64",
+        "    value.round() as i64",
+        "score_pillars::the_score_matches_the_predecessors_golden",
+        "the total rounds a half to the even neighbour, as Python's round does (SPEC-071 R12, A8)"
+      ],
+      [
+        "S07107-COURSE-ROOT-EQUALS",
+        "ingest",
+        "src/reader.rs",
+        "        .find(|course| course.deck_root == root)",
+        "        .find(|course| root.starts_with(course.deck_root.as_str()))",
+        "courses_cards::a_cards_course_is_the_course_whose_root_is_its_top_level_name",
+        "a card's course is the course whose deck root equals its home deck's top-level name, never one whose root is only a prefix of it (SPEC-071 R2, A12)"
+      ],
+      [
+        "S07108-SETTLE-ONCE",
+        "coordination",
+        "src/recompute/mod.rs",
+        "            next(cursor)",
+        "            cursor",
+        "settle_fold::the_fold_settles_each_closed_day_once_oldest_first",
+        "the fold settles only the days after the settle cursor, so no recompute settles a day twice (SPEC-071 R16, A16)"
+      ],
+      [
+        "S07109-PHASE-ORDER",
+        "coordination",
+        "src/recompute/mod.rs",
+        "    Phase::DerivedBonuses,\n    Phase::CoinMint,",
+        "    Phase::CoinMint,\n    Phase::DerivedBonuses,",
+        "settle_fold::the_steps_run_in_their_phase_order",
+        "the seven phases are declared once, in the order a day's steps run, so a derived bonus never runs after the coin mint (SPEC-071 R19, A20)"
+      ]
+    ],
+    "CARGO_KILLED_SCRIPT_MUTATIONS": [
+      [
+        "S07110-ROLLUP-KEY",
+        "migrations/007101_analytics_daily_rollup.sql",
+        "    study_day INTEGER PRIMARY KEY,",
+        "    study_day INTEGER NOT NULL,",
+        "analytics",
+        "rollup_store::rerolling_a_day_with_the_same_reviews_writes_identical_rows",
+        "daily_rollup holds one row per study day, held by the table's key, so a re-roll replaces the day's row rather than adding one (SPEC-071 R5, A5)"
+      ]
+    ]
+  }
+}
