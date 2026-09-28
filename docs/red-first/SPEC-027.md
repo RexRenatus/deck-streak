@@ -30,6 +30,14 @@ disclosed here because each touches what a test asserts:
   fire to call off its slot, so the test no longer depends on the wall clock; both jobs still run by
   id, exit 0 and leave their ledger rows.
 
+After green, two tests pinned boundaries the acceptance tests leave loose, for the diff-scoped
+mutation job SPEC-039 brings (da28de2, ea6d1da). `the_watch_pages_just_past_each_of_its_boundaries`
+holds the dead-man window and the boot grace to the millisecond, the drift tolerance at 30 and 31
+minutes, early and late, and the previous check at the very instant the sync died or the fire
+landed. `every_schedule_answers_its_latest_fire_at_every_offset` holds the schedule arithmetic to a
+minute-by-minute scan, for five schedules, three rollover hours and five offsets. They passed when
+written, since the code they pin was already green; they are not criteria and carry no line below.
+
 ```red-first
 A1: red at d22a61c: assertion `left == right` failed: round 1: the job acted once: [Ran { fire_date: FireDate(0), outcome: Ok, released: false }, Ran { fire_date: FireDate(0), outcome: Ok, released: false }]; left: 2, right: 1
 A1: green at 828a291
