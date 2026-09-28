@@ -3,7 +3,8 @@ does not expect (SPEC-030 R10 to R14, ADR-030). It reads the state of every issu
 fails an expectation whose issue is closed, and reads VOID when it cannot (SPEC-054 R4). It reads
 its wiring and pin from a private file, keeps the removed row runner's judgment for the packs
 section, runs the methodology probes and the proxy-client scan from the checkout, checks DeckStreak's
-owned data for drift, and posts one verdict-only status (SPEC-056 A11 to A15, ADR-069).
+owned data for drift, and posts one verdict-only status (SPEC-056 A11 to A15, ADR-069). It runs the
+apiKeyHelper scan from the checkout with the removed gate step's refusals (SPEC-056 A17).
 
 `scripts/box-packs.sh` is driven here with a fake runner, a synthetic checkout, a private file in a
 temporary directory and a fake gh (`scripts/tests/fixtures/box-packs/`), so these tests need neither
@@ -93,6 +94,25 @@ with open(os.environ["FAKE_PROBE_LOG"], "a", encoding="utf-8") as handle:
     handle.write(json.dumps({"script": sys.argv[0], "argv": argv, "cwd": os.getcwd(),
                              "census": census}) + "\\n")
 """
+
+
+# The apiKeyHelper scan's stand-in, and the one verdict line and exit the scan gives for each thing
+# it can find: no settings file, clean files, a finding, or a file it cannot read (SPEC-056 R9).
+HELPER_SCRIPT = "scripts/helper-scan.py"
+HELPER_VERDICTS = {
+    "none": (2, "VOID 0 settings file(s) under <root>: a scan that examined nothing cannot say"),
+    "clean": (0, "GREEN 2 settings file(s) scanned, none carries the shape"),
+    "found": (1, "RED 1 finding(s) in 2 file(s):"),
+    "unreadable": (2, "VOID <root>/agent/settings.json: not valid JSON: Expecting value"),
+}
+
+
+def helper_script(found):
+    """A stand-in for the apiKeyHelper scan: its verdict line (VOID on stderr) and its exit."""
+    code, line = HELPER_VERDICTS[found]
+    stream = ", file=sys.stderr" if line.startswith("VOID") else ""
+    printed = f"print({('NO-APIKEYHELPER ' + line)!r}{stream})"
+    return "\n".join([RECORDER, printed, f"sys.exit({code})"]) + "\n"
 
 
 def scan_script(rows, exit_code):
@@ -202,6 +222,11 @@ class Box:
     def set_scan(self, rows, exit_code):
         """Plant the proxy scan's output in the checkout, and re-pin to it."""
         write(self.checkout, {SCRIPTS["proxy-client-scan"]: scan_script(rows, exit_code)})
+        self.repin()
+
+    def set_helper(self, found):
+        """Plant the apiKeyHelper scan's verdict in the checkout, and re-pin to it."""
+        write(self.checkout, {HELPER_SCRIPT: helper_script(found)})
         self.repin()
 
     def set_probes(self, refused=None, void=None):
@@ -683,6 +708,70 @@ class TheDriverReadsItsPrivateFile(unittest.TestCase):
         done, _ = box.run()
         self.assertEqual(done.returncode, 2, done.stdout)
         self.assertIn("ddd", "".join(void_lines(done.stdout)))
+
+
+class TheApiKeyHelperScanRunsOnTheBox(unittest.TestCase):
+    def test_the_api_key_helper_scan_runs_from_the_checkout_and_waits_for_a_settings_file(self):
+        box = Box(self)
+        box.wiring["scripts"]["no-apikeyhelper"] = HELPER_SCRIPT
+        box.set_box(dict(box.box, **{"no-apikeyhelper": {"pending": "#29"}}))
+        box.set_helper("none")
+        # No settings file yet: the scan reads pending on the issue the private file names.
+        done, _ = box.run()
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        line = pack_line(done.stdout, "no-apikeyhelper")
+        self.assertTrue(line.startswith("pending"), line)
+        self.assertIn("pending #29", line)
+        # It ran once, from the checkout, over the committed tree, from outside the checkout.
+        script = box.checkout / HELPER_SCRIPT
+        calls = [call for call in box.probe_calls() if Path(call["script"]) == script]
+        self.assertEqual(len(calls), 1, box.probe_calls())
+        self.assertEqual(calls[0]["census"], {name: digest(text) for name, text in OWN.items()})
+        self.assertEqual(calls[0]["argv"][:1], ["--root"])
+        cwd = Path(calls[0]["cwd"])
+        self.assertNotEqual(cwd, box.checkout)
+        self.assertNotIn(box.checkout, cwd.parents)
+        # A finding fails the run, and so does a settings file the scan cannot read.
+        for found in examined("refusing verdicts", ["found", "unreadable"]):
+            with self.subTest(found=found):
+                box.set_helper(found)
+                done, _ = box.run()
+                line = pack_line(done.stdout, "no-apikeyhelper")
+                self.assertTrue(line.startswith("FAIL"), line)
+                self.assertEqual(done.returncode, 1, done.stdout)
+        # With no issue named, finding no settings file is VOID, and fails the run.
+        box.set_helper("none")
+        box.set_box(dict(box.box, **{"no-apikeyhelper": {}}))
+        done, _ = box.run()
+        line = pack_line(done.stdout, "no-apikeyhelper")
+        self.assertTrue(line.startswith("FAIL"), line)
+        self.assertIn("VOID", line)
+        self.assertEqual(done.returncode, 1, done.stdout)
+        # Clean settings files pass, and a pending issue that waited for them is stale.
+        box.set_helper("clean")
+        done, _ = box.run()
+        line = pack_line(done.stdout, "no-apikeyhelper")
+        self.assertTrue(line.startswith("ok"), line)
+        self.assertIn("examined 2", line)
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        box.set_box(dict(box.box, **{"no-apikeyhelper": {"pending": "#29"}}))
+        done, _ = box.run()
+        line = pack_line(done.stdout, "no-apikeyhelper")
+        self.assertTrue(line.startswith("FAIL"), line)
+        self.assertIn("stale: pending #29, but a settings file was examined", line)
+        self.assertEqual(done.returncode, 1, done.stdout)
+        # The pending issue closed is stale too, by name.
+        box.set_helper("none")
+        done, _ = box.run(closed=["#29"])
+        line = pack_line(done.stdout, "no-apikeyhelper")
+        self.assertTrue(line.startswith("FAIL"), line)
+        self.assertIn("pending (#29 is closed)", line)
+        # The private file must name the scan's script.
+        del box.wiring["scripts"]["no-apikeyhelper"]
+        box.save()
+        done, _ = box.run()
+        self.assertEqual(done.returncode, 2, done.stdout)
+        self.assertIn("no-apikeyhelper", "".join(void_lines(done.stdout)))
 
 
 class OwnedDataCannotDrift(unittest.TestCase):
