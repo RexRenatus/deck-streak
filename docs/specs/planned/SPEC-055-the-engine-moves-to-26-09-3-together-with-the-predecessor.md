@@ -21,8 +21,8 @@
   26.08.1, 26.09b1 to 26.09b3, 26.09, 26.09.1 (skipped for a Windows packaging issue), 26.09.2 and
   26.09.3, whose notes are on GitHub's release pages (§9). The tree is compared directly: `26.05` is
   `e64c6b1`, `26.09.3` is `29bb700`, and neither is an ancestor of the other, because Anki tags each
-  release on its own branch. `git diff --stat 26.05 26.09.3 -- rslib/` touches 82 files, most of
-  them new service-layer tests.
+  release on its own branch. `git diff --stat 26.05 26.09.3 -- rslib/` touches 82 files with 7,556
+  lines added and 384 removed, and most of the added lines are new service-layer tests.
 - **The rebuild is still there.** Both causes #228 names are byte-identical at both tags and on
   upstream `main` (`1f7c8d7c4`): `rslib/io/src/lib.rs:353-355` registers every file the `anki_proto`
   build script writes, and `rslib/proto_gen/src/lib.rs:253` writes the prost output a second time,
