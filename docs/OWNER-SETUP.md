@@ -31,9 +31,15 @@ way (the bot's first `/start` from you logs a hint to look it up; it is never wr
 
 ## 3. The Anki sync server
 
-DeckStreak reads your own Anki sync server; it never logs in to AnkiWeb. Store the sync server's
-URL, username and password as secrets. Serve the sync server over HTTPS if you can: a plain-HTTP
-sync server sends its credentials in the clear.
+DeckStreak reads your own Anki sync server; it never logs in to AnkiWeb, and it never uploads to
+your server (ADR-037). Set the server's URL as the setting `DECKSTREAK_SYNC_ENDPOINT` in the host's
+private configuration, never in this repository. Store the account's username and password as the
+secrets `anki-sync-username` and `anki-sync-password`; they reach the service as credentials at
+start (ADR-038).
+
+The transport is your decision. Serve the sync server over HTTPS if you can: with a plain `http:`
+URL the credentials cross the network in the clear, and the service says so once at start, in a
+WARN line that names the setting and never its value.
 
 ## 4. The AI agent's device key (optional; only when you enable the AI route)
 

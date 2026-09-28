@@ -183,6 +183,7 @@ context each migration names equal to the owner this register gives each table i
 |---|---|---|---|
 | `settings_generation` | `kernel` | `migrations/002001_kernel_settings_generation.sql` (SPEC-020) | reset in place: the generation back to 0 |
 | `_sqlx_migrations` | `kernel` | sqlx, when `Db::open` applies the migrations | exempt: the schema version table, which replaces the predecessor's `schema_versions` |
+| `sync_runs` | `ingest` | `migrations/002201_ingest_sync_runs.sql` (SPEC-022) | exported and erased |
 
 ## Overloaded words, held apart
 
