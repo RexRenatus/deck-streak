@@ -1,0 +1,21 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO cron_fires\n                   (job_id, fire_date, first_seen_at, updated_at, last_fire_at, catchup_count,\n                    last_outcome, created_at)\n               VALUES (?1, ?2, ?3, ?3, ?3, 1, 'catchup', ?3)\n               ON CONFLICT (job_id, fire_date) DO UPDATE SET\n                   catchup_count = cron_fires.catchup_count + 1,\n                   updated_at = excluded.updated_at,\n                   last_outcome = 'catchup',\n                   last_fire_at = excluded.updated_at\n               WHERE cron_fires.ok_count + cron_fires.error_count + cron_fires.catchup_count = 0\n               RETURNING 1 AS \"claimed!: i64\"",
+  "describe": {
+    "columns": [
+      {
+        "name": "claimed!: i64",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "3ee8101ac8736768b971a66b28cbdca272a73fb58b0b2ec982233919ac61102a"
+}

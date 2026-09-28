@@ -1,17 +1,23 @@
 //! The binary runs a role by the name its first argument gives and refuses any other with code 2,
-//! and two roles that open one fresh database at the same moment both start (SPEC-025 A14, A15,
-//! R1, R11).
+//! two roles that open one fresh database at the same moment both start (SPEC-025 A14, A15, R1,
+//! R11), and the `job` role runs a job of the table by its id and refuses an unknown one with code 2
+//! (SPEC-027 A16, R7, R11); the `sync` job stops on a malformed scope before it syncs, paging with
+//! the scope's reason code (SPEC-023 R2, R12).
 
 // An integration test is test code: its helpers panic on a failed child, and the examined count
 // is printed on purpose.
 #![allow(clippy::expect_used, clippy::print_stdout)]
 
 use std::ffi::OsStr;
+use std::fs;
 use std::process::{Command, Output};
 use std::sync::Arc;
 
-use deck_streak_daemon::wiring::{StateDirectory, open_database};
-use deck_streak_kernel::{Offload, OffloadWorkers, SystemClock};
+use deck_streak_coordination::ledger::{CronLedger, Outcome, SqliteCronLedger};
+use deck_streak_daemon::wiring::{DATABASE_FILE, StateDirectory, open_database};
+use deck_streak_ingest::settings::{LAW_DECK_ROOT, SYNC_PASSWORD, SYNC_USERNAME};
+use deck_streak_ingest::sync_runs::{RunHistory, SqliteSyncRuns};
+use deck_streak_kernel::{Clock, Db, Offload, OffloadWorkers, SystemClock};
 use serde_json::Value;
 use tokio::sync::Barrier;
 
@@ -87,7 +93,7 @@ fn the_binary_runs_a_role_by_name_and_refuses_an_unknown_one() {
         );
         let usage = first.1["message"].as_str().unwrap_or_default().to_owned();
         assert!(usage.starts_with("usage: deckstreakd <role>"), "{usage}");
-        assert!(usage.ends_with("the roles are: api"), "{usage}");
+        assert!(usage.contains("the roles are: api, job;"), "{usage}");
     }
 
     // A known role runs: the api role refuses to start without its listen address, naming the
@@ -140,4 +146,165 @@ async fn two_roles_opening_one_fresh_database_at_once_both_start() {
             database.close().await;
         }
     }
+}
+
+#[tokio::test]
+async fn the_job_role_runs_a_job_by_id_and_refuses_an_unknown_one() {
+    // A job of the table runs by its id, once, and exits 0: each leaves its outcome in the ledger.
+    // The watch runs first: on a fresh database it finds no sync attempt to call dead and no
+    // maintenance fire to call off its slot, whatever the time; a maintenance run started by hand
+    // off its slot is a drift the next check pages on, once.
+    let directory = tempfile::tempdir().expect("a temporary directory");
+    let state = [("STATE_DIRECTORY", directory.path().as_os_str())];
+    for id in examined("job(s) run by id", vec!["liveness", "maintenance"]) {
+        let output = deckstreakd(&["job", id], &state);
+        assert_eq!(output.status.code(), Some(0), "{id}: {}", describe(&output));
+    }
+    let db = Db::open(&directory.path().join(DATABASE_FILE))
+        .await
+        .expect("the role's database opens");
+    let ledger = SqliteCronLedger::new(db.clone());
+    for id in ["maintenance", "liveness"] {
+        let row = ledger
+            .latest(id)
+            .await
+            .expect("the ledger reads")
+            .unwrap_or_else(|| panic!("{id} ran and recorded its fire"));
+        assert_eq!(
+            (row.ok_count, row.last_outcome),
+            (1, Outcome::Ok),
+            "{id}: {row:?}"
+        );
+    }
+    db.close().await;
+
+    // An id the table does not hold, a missing id, and an extra argument: each exits 2, and its
+    // first line is an ERROR event whose usage names every job of the table.
+    let refusals: [&[&str]; 3] = [
+        &["job", "frobnicate"],
+        &["job"],
+        &["job", "maintenance", "extra"],
+    ];
+    for arguments in examined("refused job invocation(s)", refusals.to_vec()) {
+        let output = deckstreakd(arguments, &state);
+        assert_eq!(
+            output.status.code(),
+            Some(2),
+            "{arguments:?}: {}",
+            describe(&output)
+        );
+        let lines = events(&output);
+        let first = lines.first().cloned().unwrap_or((None, Value::Null));
+        assert_eq!(
+            first.0.as_deref(),
+            Some("<3>"),
+            "{arguments:?}: {}",
+            describe(&output)
+        );
+        let usage = first.1["message"].as_str().unwrap_or_default().to_owned();
+        assert!(
+            usage.ends_with("the jobs are: sync, maintenance, liveness"),
+            "{arguments:?}: {usage}"
+        );
+    }
+}
+
+/// A local offset, in minutes, that puts the system's now at about 12:30 local: the `sync` job's
+/// 12:07 slot under a rollover at 12 then elapsed 23 minutes ago, inside its catch-up window,
+/// whatever the time the test runs at. The job reads the system's clock, so the settings place its
+/// fire.
+fn offset_to_half_past_noon() -> String {
+    const MINUTE_MS: i64 = 60_000;
+    const DAY_MS: i64 = 86_400_000;
+    let minute_of_day = SystemClock.now().epoch_millis().rem_euclid(DAY_MS) / MINUTE_MS;
+    (12 * 60 + 30 - minute_of_day).to_string()
+}
+
+#[tokio::test]
+async fn the_sync_job_pages_on_a_malformed_scope_before_it_syncs() {
+    // The sync's own settings are valid: an endpoint on a loopback port nothing listens on, and a
+    // credentials directory holding the synthetic account. The law root holds the deck separator,
+    // which the scope refuses.
+    let directory = tempfile::tempdir().expect("a temporary directory");
+    let state = directory.path().join("state");
+    let credentials = directory.path().join("credentials");
+    for folder in [&state, &credentials] {
+        fs::create_dir_all(folder).expect("a folder");
+    }
+    fs::write(credentials.join(SYNC_USERNAME), "synthetic-owner\n").expect("a credential");
+    fs::write(credentials.join(SYNC_PASSWORD), "synthetic-password\n").expect("a credential");
+    let offset = offset_to_half_past_noon();
+    let output = deckstreakd(
+        &["job", "sync"],
+        &[
+            ("STATE_DIRECTORY", state.as_os_str()),
+            ("CREDENTIALS_DIRECTORY", credentials.as_os_str()),
+            (
+                "DECKSTREAK_SYNC_ENDPOINT",
+                OsStr::new("http://127.0.0.1:9/"),
+            ),
+            ("DECKSTREAK_ROLLOVER_HOUR", OsStr::new("12")),
+            ("DECKSTREAK_UTC_OFFSET_MINUTES", OsStr::new(&offset)),
+            (LAW_DECK_ROOT, OsStr::new("Law\u{1f}Evidence")),
+        ],
+    );
+
+    // The first failure of the job pages: the runner's code 1, and one ERROR line with the scope's
+    // reason.
+    assert_eq!(output.status.code(), Some(1), "{}", describe(&output));
+    let lines = events(&output);
+    let pages: Vec<&Value> = lines
+        .iter()
+        .filter(|(priority, event)| {
+            priority.as_deref() == Some("<3>") && event["message"] == "the job pages"
+        })
+        .map(|(_, event)| event)
+        .collect();
+    assert_eq!(pages.len(), 1, "{}", describe(&output));
+    assert_eq!(
+        (&pages[0]["job"], &pages[0]["reason"]),
+        (&Value::from("sync"), &Value::from("scope_settings_refused")),
+        "{}",
+        describe(&output)
+    );
+    // The refusal names the setting and never its value, which is private configuration.
+    let refusal = lines
+        .iter()
+        .find(|(_, event)| event["message"] == "the read's scope refuses it")
+        .map_or_else(
+            || panic!("the scope's refusal is logged: {}", describe(&output)),
+            |(_, event)| event["refusal"].to_string(),
+        );
+    assert!(
+        refusal.contains(LAW_DECK_ROOT) && !refusal.contains("Evidence"),
+        "{refusal}"
+    );
+
+    // The ledger holds the fire as the job's error, and no sync ran: the job stopped before its
+    // syncer existed, so no request reached the endpoint and no sync run was recorded.
+    let db = Db::open(&state.join(DATABASE_FILE))
+        .await
+        .expect("the role's database opens");
+    let row = SqliteCronLedger::new(db.clone())
+        .latest("sync")
+        .await
+        .expect("the ledger reads")
+        .unwrap_or_else(|| panic!("the sync job recorded its fire: {}", describe(&output)));
+    assert_eq!(
+        (row.ok_count, row.error_count, row.last_outcome),
+        (0, 1, Outcome::Error),
+        "{row:?}"
+    );
+    let history = SqliteSyncRuns::new(db.clone())
+        .history()
+        .await
+        .expect("the sync record reads");
+    assert_eq!(
+        history,
+        RunHistory {
+            last: None,
+            any_success: false,
+        }
+    );
+    db.close().await;
 }

@@ -57,13 +57,26 @@
       }
     },
     "observability": {
-      "state": "pending",
-      "enforced_by": "#24"
+      "state": "enforced",
+      "deferred_rows": {
+        "obs.slo-declared": "#24",
+        "obs.error-budget-policy": "#24",
+        "obs.burn-rate-alerts": "#24",
+        "obs.slo-measurable": "#24",
+        "obs.alert-route": "#24",
+        "obs.failure-alerts": "#24",
+        "obs.memory-watch": "#24"
+      },
+      "note": "the seven deferred rows judge the SLO declaration, the alert unit and the memory watch, which the observability issue ships (SPEC-032 R8)"
     },
     "durable-services": {
-      "state": "deferred",
-      "enforced_by": "#25",
-      "note": "it reads a tree with no unit as a finding, not as VOID"
+      "state": "enforced",
+      "deferred_rows": {
+        "backup.copies": "#44",
+        "backup.offsite": "#44",
+        "backup.restore-drill": "#44"
+      },
+      "note": "the backup rows judge the daily backup, its offsite copy and the restore drill, which the backups issue builds (SPEC-032 R8)"
     },
     "accessibility": {
       "state": "enforced"
@@ -148,9 +161,9 @@
       "cyber-pipeline": {
         "expected_red": {
           "cp.threat-model-trace": "#60",
-          "ws.csp-present": "#25"
+          "ws.csp-script-strict": "#60"
         },
-        "note": "the ws rows are web-security's; no planned SPEC writes the threat model cp.threat-model-trace reads, so #60, which brings every phxd pack to green, owns it"
+        "note": "the ws rows are web-security's, and its note says why ws.csp-script-strict is red; no planned SPEC writes the threat model cp.threat-model-trace reads, so #60, which brings every phxd pack to green, owns it"
       },
       "greenfield": {
         "expected_red": {
@@ -209,9 +222,9 @@
       },
       "web-security": {
         "expected_red": {
-          "ws.csp-present": "#25"
+          "ws.csp-script-strict": "#60"
         },
-        "note": "the Caddy block serves the Content-Security-Policy a source tree cannot carry, since the page's meta policy is built with its hashes (#25)"
+        "note": "the Caddy block's served policy carries frame-ancestors, object-src and base-uri and, by design, no script sources: the page's own meta policy carries them with its build's hashes (SPEC-028 R14), which the probe does not read, so ws.csp-script-strict judges the served policy alone (#60)"
       }
     },
     "proxy-client-scan": {

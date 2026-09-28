@@ -22,6 +22,7 @@
               only #[test] functions, not a support module's helpers"
 )]
 
+pub mod logs;
 pub mod recording;
 pub mod synthetic;
 
