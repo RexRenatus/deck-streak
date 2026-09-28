@@ -50,6 +50,39 @@ Chosen option.
   obsolete worktrees and virtual environments, one-off files left loose, and packages the owner
   lists as unused.
 
+### Decided at delivery (SPEC-060 §8)
+
+The delivery decided what this record left open, each against its alternatives:
+
+- **One private rules file.** It holds the roots, the rules by class, the protected paths and the
+  health checks, which the private rail's lists feed, in the shape `rules.example.json` gives, and
+  the apply reads the protected paths and health checks from it at run time. Chosen against a file
+  per list, which each tool would be handed separately, and against the list carrying its own
+  protected paths, which an edited list could drop.
+- **The plan runs where the files are.** The digest reads each candidate's content, so the plan runs
+  on the host, niced, over the candidates only. Chosen against digesting on the maintainer's
+  machine, which holds no content, and against content hashes in the inventory, which would read
+  every file under every root to digest the few the rules select.
+- **A package is removed by `dpkg --remove`, after `dpkg --dry-run --remove` passes.** dpkg refuses
+  a removal another installed package depends on, so an approved package goes alone or not at all,
+  and it keeps the package's configuration files. Chosen against `apt-get remove`, which would also
+  remove every package that depends on it, and against a purge, which deletes configuration files
+  under `/etc`, a protected path.
+- **A health check is a read command of the allow list, or one GET of an http(s) address.** Chosen
+  against a free shell command, which could change the host, and against `curl`, whose options can
+  write files and send bodies.
+- **The apply refuses more than the three checks above.** It also refuses an item that holds a
+  protected path, an item reached through a symbolic link, a list whose own digest no longer
+  matches its content, an approval naming an id the list does not hold, and a snapshot instant
+  without an offset. Chosen against trusting a list's digest field, which an edit would keep, and
+  against comparing a snapshot's instant that carries no offset, which cannot be ordered.
+- **A virtual environment or worktree is one inventory entry, with its own totals.** Chosen against
+  recording its files one by one, which would multiply the inventory by every environment's files
+  without adding a candidate.
+- **A service's own rotation is stated by its rule.** A backup rule's `rotation_keeps` names the
+  copies the service keeps and makes again, and none of them is listed. Chosen against leaving that
+  family out of the rules altogether, which would also hide the copies beyond the rotation.
+
 ### Consequences
 
 - Good, because the owner approves bytes, not descriptions, and a changed host is caught before the

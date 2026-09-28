@@ -7,8 +7,9 @@
   approval bound to each item's digest, and a disk snapshot as the backup).
 - **Waits for:** owner gate 2 (#161) for the inventory's first run, the snapshot and every deletion.
   Nothing here needs a device key (ADR-054).
-- **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
-  `docs/specs/` with its tests and `docs/red-first/SPEC-060.md` (ADR-016).
+- **Status:** judged: delivered with its tests, `docs/red-first/SPEC-060.md`, the runbook and the
+  tools' schematic. The delivery made R1, R4, R6, R7 and the manifest exact where the code decided
+  them (§8).
 
 ## 1. The problem, measured
 
@@ -41,7 +42,9 @@ R1. `deploy/host-scrub/inventory.py` is standard-library Python. It reads the ho
     blocks on disk, link count, modification time, owner and mode, with a hard-linked file counted
     once in every total; the virtual environments and git worktrees under those roots; the installed
     packages (`dpkg-query -W`); the unit files and the loaded units with their states
-    (`systemctl list-unit-files`, `systemctl list-units --all`); and the ten largest memory users.
+    (`systemctl list-unit-files`, `systemctl list-units --all`), and each loaded service's,
+    socket's and timer's settings that say what it runs, from where, as whom, what it may write and
+    when it fires (`systemctl show`, never its environment); and the ten largest memory users.
     It records every command it ran, with its exit status.
 R2. The inventory runs only the read commands of its own allow list. It writes nothing but its
     output file, never restarts, stops or reloads a unit, and never calls a package manager with a
@@ -51,27 +54,27 @@ R3. The roots, the retention of each backup family, the protected paths and the 
     only. A rule selects a candidate by class (a backup older than its family's retention, counted
     in copies or in days; a virtual environment or worktree that no loaded unit's command names; a
     package the owner lists; a loose file that matches a pattern) and states its reason.
-R4. `deploy/host-scrub/plan.py INVENTORY RULES` writes a deletion list: one item per path, with an
-    id, its class, the rule and reason that selected it, its bytes, and a digest. A file's digest is
-    SHA-256 over its path, size, modification time, mode and content; a directory's is SHA-256 over
-    the sorted list of those fields for every entry under it. The list carries its own digest and
-    the total bytes it would reclaim, where a file whose other links survive reclaims nothing. The
-    plan deletes nothing and writes only its output.
+R4. `deploy/host-scrub/plan.py INVENTORY RULES --out FILE` writes a deletion list: one item per
+    path (or per listed package), with an id, its class, the rule and reason that selected it, its
+    bytes, and a digest. A file's digest is SHA-256 over its path, size, modification time, mode and
+    content; a directory's is SHA-256 over the sorted list of those fields for every entry under it.
+    The list carries its own digest and the total bytes it would reclaim, where a file whose other
+    links survive reclaims nothing. The plan deletes nothing and writes only its output.
 R5. The backup before any deletion is one snapshot of the host's boot disk, taken from the
     maintainer's machine after the inventory and before the list is approved. The approval record
     names the snapshot and the instant it was taken. No per-item copy is made on the host's own disk.
-R6. `deploy/host-scrub/apply.py LIST APPROVAL` runs dry by default and deletes only with
-    `--apply`. It deletes an item only when all of these hold, and otherwise refuses the whole run
-    before its first deletion, naming the item and the reason:
+R6. `deploy/host-scrub/apply.py LIST APPROVAL --rules RULES --log FILE` runs dry by default and
+    deletes only with `--apply`. It deletes an item only when all of these hold, and otherwise
+    refuses the whole run before its first deletion, naming the item and the reason:
     - the approval record carries the list's digest, names the item's id, the approver and the date;
     - the approval names a snapshot taken after the inventory;
     - the item's digest, computed again now, equals the listed one.
 R7. `apply.py` never deletes a path outside the approved list, never follows a symbolic link out of
-    an item, and refuses an item under any protected path whatever the approval says. The protected
-    paths come from the private rail's protected-path list, which holds every path of the host's
-    other services and their data; the example rules protect `/etc`, `/usr`, `/boot`, the credential
-    socket's directory and every DeckStreak release directory, and the tests prove the refusal on a
-    synthetic list.
+    an item, and refuses an item under any protected path, or holding one, whatever the approval
+    says. The protected paths come from the private rail's protected-path list, which holds every
+    path of the host's other services and their data; the example rules protect `/etc`, `/usr`,
+    `/boot`, the credential socket's directory and every DeckStreak release directory, and the tests
+    prove the refusal on a synthetic list.
 R8. The inventory, each list, each approval and each apply log are private: the tools write them to
     a directory the private rail names, outside this repository, and the public tools and the
     example rules hold no private value.
@@ -137,7 +140,7 @@ only.
 | `docs/schematics/host-scrub.md` | docs | added at delivery: the tools' data flow and the apply's refusals (§8) |
 | `scripts/tests/test_host_scrub.py` | repo | added: A1 to A8 |
 | `docs/specs/SPEC-060-host-inventory-backup-and-the-scrub-list.md` | docs | moved from `docs/specs/planned/` |
-| `docs/decisions/ADR-060-the-host-scrub-is-a-runbook-and-approval-gated-tools-behind-a-disk-snapshot.md` | docs | changed: status accepted |
+| `docs/decisions/ADR-060-the-host-scrub-is-a-runbook-and-approval-gated-tools-behind-a-disk-snapshot.md` | docs | changed: accepted, with the decisions made at delivery |
 | `docs/red-first/SPEC-060.md` | docs | added |
 | `changelog.d/` fragment | repo | added |
 
@@ -166,3 +169,49 @@ only.
   cost.
 - **The list reads private data to hash it.** Content is read only to compute a digest, which
   reveals nothing, and the list itself is private (R8).
+
+## 8. Amended in delivery
+
+The code decided these statements of the planned SPEC. Each is corrected above, or stated here; the
+reasons are these, and ADR-060 records each decision with what it was chosen against.
+
+- **The manifest: the tools' schematic.** `docs/schematics/host-scrub.md` draws the files between
+  the three tools and the order of the apply's refusals, since the order of work asks for a
+  schematic before the code of a new component and data flow;
+  `docs/schematics/first-deploy-and-gates.md` draws the scrub at the level of the owner's gates
+  only.
+- **R1: each loaded unit's settings.** R3's environment class selects what no loaded unit's command
+  names, so the inventory reads each loaded service's, socket's and timer's commands and working
+  directory, with the settings ADR-065's other-writer list is built from: its user and group, the
+  paths it may write, and its timers' calendars. It never reads a unit's environment, which can
+  carry a secret. The inventory is invoked as `inventory.py RULES --out FILE`; it also records each
+  backup family's copies and stale copies and each loose rule's matches (A2), and it counts a
+  virtual environment or worktree as one entry with its own totals rather than file by file.
+- **R3: one rules file.** The private rules file holds the roots (a root may be `sizes_only`), the
+  rules by class (`backup`, `environment`, `loose`, `package`), the protected paths fed by the
+  private rail's list, and the health checks fed by its list, in the shape `rules.example.json`
+  gives. The example protects R7's paths and DeckStreak's own state directory.
+- **R4: a package is one item, and the plan runs where the files are.** A package is not a path, so
+  a listed package's item names it (`name:architecture`), and its digest is over its name,
+  architecture, version and state. The digest reads each candidate's content, so the plan runs on
+  the host. It refuses rules other than the ones the inventory read, and it names each candidate it
+  left out, with why.
+- **R6: the refusals the code added.** Beyond R6's three, the apply refuses a list whose own digest
+  no longer matches its content (an edit would keep the digest field), an approval that names an id
+  the list does not hold, a snapshot instant without an offset (it cannot be ordered), an item
+  reached through a symbolic link (R7), and a package that `dpkg --dry-run --remove` would not
+  remove alone. It takes the protected paths and the health checks from the rules, and its log from
+  `--log`; it exits 1 on a refusal, 3 when a deletion failed part way and 4 when a health check is
+  red after the apply.
+- **R7: an item holding a protected path.** Deleting a directory deletes what it holds, so an item
+  that holds a protected path is refused as an item under one is.
+- **R8: no output inside this repository.** Each tool refuses an output path inside the repository
+  it was run from, before it reads anything.
+- **R9: the health checks' form.** A check is a read command of the inventory's allow list, or one
+  GET of an http(s) address, green on a 2xx answer. The inventory reads them before its first read;
+  the apply reads them before its first deletion and after its last, and its log's `turned` names
+  each check that was green before and is red after.
+- **R10: a service's own rotation.** A backup rule states the copies its service's rotation keeps as
+  `rotation_keeps`, and none of that many newest copies is ever listed, whatever the retention says.
+- **§3: two tests beyond the criteria.** `test_no_tool_writes_its_output_inside_the_repository` pins
+  R8's refusal, and `test_a_health_check_red_after_an_apply_stops_the_scrub` pins R9's stop.
