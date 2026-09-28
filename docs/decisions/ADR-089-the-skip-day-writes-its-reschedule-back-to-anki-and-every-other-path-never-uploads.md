@@ -80,7 +80,8 @@ owner's decision at #266.
 ### Consequences
 
 - Good, because a skip moves the study day's due review cards in Anki by itself, as the
-  predecessor's did (#108).
+  predecessor's did (#108), except a card in a filtered deck, which stays due because the undo could
+  not put it back exactly (SPEC-083 R3).
 - Good, because every other path keeps condition (a)'s proof: zero uploads against the recording
   fake sync server.
 - Bad, because DeckStreak can change the owner's collection on one path, so a defect there reaches

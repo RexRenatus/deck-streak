@@ -53,6 +53,9 @@ make the write so that the guardrails hold by construction?
 - Wrap a configured search as the predecessor does and no more (`sync.py:AnkiSyncer._skip_day_blocking`, `-is:new -is:learn`) — rejected because that wrap tests neither the due day nor suspension nor burial, so a custom search could move review cards due on another day, suspended or buried, against guardrail (i).
 - Drop the configurable search — rejected because the predecessor's search is configurable (`config.py:Settings.skip_deck_search`), and SPEC-083 R3's holds keep any configured search to the study day's due review cards.
 - Move a review card in a filtered deck too, as the predecessor does, and put it back on an undo — rejected because the engine's Set Due Date moves it to its home deck and the engine's card update writes a deck without checking that it exists, so the undo could put the card into a filtered deck emptied, rebuilt or deleted since, and the inverse would not be exact (guardrail i).
+- Compose the wrapped search from the configured search's parsed terms — rejected because the engine renders parsed terms in its own form (the pinned engine's `rslib/src/search/writer.rs:45-47`), not as the golden's wrap that SPEC-083's A7 pins, while refusing a configured search that does not parse as one expression keeps every other search the golden's own wrap followed by SPEC-083 R3's holds.
+- Run the engine in the study day's zone and rollover — rejected because the engine's day in client mode is the collection's rollover hour in the process's own zone (the pinned engine's `rslib/src/scheduler/mod.rs:90-108`), so it holds only when the collection's rollover and configured UTC offset already equal the study day's, and otherwise needs a setting changed, which the push would carry whole (SPEC-083 R23), against guardrail (i); refusing covers the same cases and writes nothing.
+- Record a take whose push fails as `failed`, like any other failure — rejected because the engine's sync server commits a push only at `finish` (the pinned engine's `rslib/src/sync/collection/finish.rs:31-37`), so a failure after the push's first request may follow a committed push, and a `failed` row would free the study day and tell the owner that nothing was written while the moved cards stand, where no undo could reach them (SPEC-083 R1, R5, R25).
 
 ## Decision Outcome
 
@@ -77,49 +80,74 @@ Chosen option: "(a) an upload path for the skip day alone", the owner's decision
 - **The engine's own reschedule.** The engine's Set Due Date runs with the predecessor's day spec,
   which carries no `!`, so with FSRS off each review card keeps its interval; with FSRS on the
   engine sets the interval by its own rule, and the snapshot records it either way. The push
-  carries those cards and the review-log rows the engine writes for them, and nothing else
-  (guardrails i and v).
+  carries those cards and the review-log rows the engine writes for them, beside the settings and
+  the creation stamp that a sync carries whole once the working copy is newer, each as the server
+  held it at the converge, the engine's own last-unburied day aside, and nothing else (guardrails i
+  and v). It runs only while the engine's own day, the collection's rollover hour in the process's
+  zone, is the study day and the collection's configured UTC offset is the process's zone:
+  otherwise the engine would count from another day or rewrite that offset (SPEC-083 R3, R23).
 - **The undo compares before it writes.** It restores a card's recorded prior state only when the
   card still carries the state the skip wrote and has no study event since the skip began. It lists
   every other card to the owner and never overwrites one. It is owner-triggered and incremental
   only, and it aborts on any full-sync demand (the undo's rules).
 - **Owner triggers only.** The take and the undo run only from the owner's confirm in the bot or the
   Mini App, as owner triggers under ADR-037. Their syncs are recorded on the skip's own row, never
-  in `sync_runs`, and no job, recompute step or startup path runs them (guardrail iii).
+  in `sync_runs`, and no job, recompute step, startup path, retry or spawned task runs them
+  (guardrail iii).
 - **CHARTER constraint 4 stands as written:** the skip day is the only write back to Anki.
 
 ### Consequences
 
-- Good, because a skip moves the study day's due review cards in Anki, as the predecessor's did, and
-  every effect of it on DeckStreak's own game works as SPEC-083 specifies.
-- Good, because a failed or aborted run leaves the private copy and the owner's collection as they
-  were, and every other sync stays free of uploads.
+- Good, because a skip moves the study day's due review cards in Anki, as the predecessor's did,
+  except a card in a filtered deck, which stays due because the undo could not put it back exactly
+  (SPEC-083 R3), and every effect of it on DeckStreak's own game works as SPEC-083 specifies.
+- Good, because a run that aborts, or fails before its push's first request, leaves the private
+  copy and the owner's collection as they were, and every other sync stays free of uploads.
 - Bad, because a review made on another client in the seconds between a take's converge and its
   push can lose its schedule to the reschedule, since the newer change wins the sync's merge. The
   take reads each moved card back and lists such a card to the owner, and the undo leaves it alone
-  (SPEC-083).
+  (SPEC-083). A suspension, a flag, a deck move or a setting made in that window is overwritten the
+  same way when the reschedule is newer, and the read-back cannot see it (SPEC-083 §6).
 - Bad, because the private copy shows the moved cards as due until its next sync downloads the
   change.
 - Bad, because the reschedule's review-log rows stay after an undo; the read never counts them as
   study events (ADR-089, SPEC-023 R2).
+- Bad, because a review card due that study day in a filtered deck stays due: Set Due Date would
+  move it to its home deck, and the undo could not put it back exactly once the filtered deck is
+  emptied, rebuilt or deleted (SPEC-083 R3). The owner can empty the filtered deck before taking the
+  skip.
+- Bad, because a skip writes only while the engine's own day is the study day and the collection's
+  configured UTC offset is the process's zone. Otherwise the preview, the take and the undo refuse
+  before any request, because the engine would count from another day or rewrite that offset, which
+  the push would carry (SPEC-083 R3, R23).
+- Bad, because a push whose answer is lost may already be committed, so its outcome is not known at
+  once. The take's row stays `pending` until the private copy's next sync settles it, and the undo
+  leaves its skip `applied` until a later undo, which counts the cards already restored as restored;
+  neither answer says that nothing was written (SPEC-083 R25, R26, R32).
 
 ### Confirmation
 
 SPEC-083's criteria, each red first: the take pushes exactly the previewed cards and their
-review-log rows (A5), and a configured search moves only the study day's due review cards outside a
-filtered deck (A38); every other path records zero uploads (A6), and only the skip's take and
-undo reach an engine write (A24); a full-sync demand aborts a take or an undo, writing nothing
-(A25, A26, A32); only the owner's confirm reaches the take and the undo (A27); the preview lists
-the cards and binds the take (A28, A39); the prior state is recorded before any card changes (A29);
-an undo restores exactly the prior state of exactly the moved cards (A30) and never overwrites a
-card changed since (A31); and the recording layer records a planted upload and a planted local change
-(A33). SPEC-022's no-upload census (its A15) stays the proof for every sync of the private copy.
+review-log rows, and no setting changed but the engine's own last-unburied day (A5), and a
+configured search moves only the study day's due review cards outside a filtered deck, or is
+refused when it closes the wrap's group (A38); a take holds to the study day and changes no setting
+when the engine's day or the collection's configured UTC offset differs (A40); every other path
+records zero uploads (A6), and only the skip's take and undo reach an engine write (A24); a
+full-sync demand aborts a take or an undo, writing nothing (A25, A26, A32); only the owner's
+confirm reaches the take and the undo, once per confirm (A27); the preview lists the cards and
+binds the take (A28, A39); the prior state is recorded before any card changes (A29); an undo
+restores exactly the prior state of exactly the moved cards (A30) and never overwrites a card
+changed since (A31); a take or an undo whose push's answer is lost says that its outcome is not
+known yet, never that nothing was written (A35, A41); and the recording layer records a planted
+upload, a planted local change and a planted setting change (A33). SPEC-022's no-upload census (its
+A15) stays the proof for every sync of the private copy.
 
 ## What would make this wrong
 
 - A measured engine or server behaviour breaks a guardrail's proof: for example a normal sync that
-  sends more than the moved cards, or a Set Due Date that changes a field the snapshot does not
-  record. The write is then withheld until the proof is green again.
+  sends a card, note, deck or tag beyond the moved cards, or a setting whose value differs from the
+  server's, or a Set Due Date that changes a field the snapshot does not record. The write is then
+  withheld until the proof is green again.
 - The owner withdraws option (a) (ADR-089): the write is removed, and (b) returns with this ADR
   superseded.
 
