@@ -1,13 +1,13 @@
 # SPEC-039: every change proves its tests kill its mutants
 
 - **Wave:** W0. **Issue:** #217 (epic #1). **Context(s):** `repo` (`scripts/`, `.github/`,
-  `.cargo/`, `.packs/`, `web/app`'s configuration, `docs/`), and `deck-streak-kernel` for the one
-  survivor the first measurement found (§1).
+  `.cargo/`, `web/app`'s configuration, `docs/`), and `deck-streak-kernel` for the one survivor the
+  first measurement found (§1).
 - **Decided by:** ADR-057 (this SPEC's own: the tools, the diff-scoped jobs, the rows and the
   weekly battery), ADR-012 (the testing strategy and the parity oracle), ADR-017 (hosted CI on
   pull requests into `dev`), ADR-055 (the gate's parallel CI jobs, beside which the mutation jobs
-  run), ADR-004, ADR-039 and ADR-056 (the vendored packs and the script that vendors them), and
-  ADR-029 (the one golden reader).
+  run), ADR-056 (the packs stay box-only, so this delivery vendors none), and ADR-029 (the one
+  golden reader).
 - **Status:** written with its delivery (no planned copy existed), with its tests and
   `docs/red-first/SPEC-039.md` (ADR-016).
 
@@ -47,11 +47,10 @@ Every number below was measured on `dev` at b1ce32d, in a scratch clone, with th
   (`tools.parity-oracle.generate`, a directory name with a hyphen). With the test changed to load
   it under that name, mutmut reported 415 of 415 mutants as "no tests" and exited 0: a run that
   examined nothing, reported green.
-- **Copying the tree against building in place.** cargo-mutants over `clock.rs`, `-j 1`: the
-  default copy took 41 s, 21 s of it a cold build in a temporary directory; `--in-place` took
-  34 s cold (leaving a 1.5 GB `target/`) and 17 s warm. With Anki's engine in the workspace
-  (SPEC-022) a cold build of `ingest` is about 5 minutes and 15 to 18 GB, which the copy pays on
-  every run.
+- **Copying the tree against building in place.** cargo-mutants over `clock.rs`, with `-j 1` for
+  the copy and serial in place: the default copy took 41 s, 21 s of it a cold build in a temporary
+  directory; `--in-place` took 34 s cold and 17 s warm. With Anki's engine in the workspace
+  (SPEC-022) a cold build of `ingest` takes minutes, which the copy pays on every run.
 - **GitHub runs `schedule` only for a workflow on the default branch.** "Scheduled workflows will
   only run on the default branch", and `workflow_dispatch` "will only trigger a workflow run if
   the workflow file exists on the default branch" (GitHub's "Events that trigger workflows").
@@ -106,7 +105,14 @@ R4. **The verdict, `scripts/mutation-verdict.py judge`, per class the diff touch
     - A class whose changed lines are all blank or comments reads
       `not-applicable: N changed line(s), all blank or comments` and passes, naming each file. A
       file whose change only deletes lines reads the same way, with its count of deleted lines.
-    - A missing or unreadable report on a class that applies is VOID, never zero.
+    - A missing or unreadable report on a class that applies is VOID, never zero. So is a partial
+      one: cargo-mutants writes its report as it goes, so a report is read only when the tool's
+      exit is 0, 2 or 3 and its caught, missed, timed-out and unviable counts sum to its
+      `total_mutants`.
+    - A line is blank or a comment by a lexer that reads each language's literals: Rust's strings,
+      raw strings and character literals, TypeScript's and JavaScript's quoted strings, template
+      literals and regular expressions, and Python through its own tokenizer. A comment opener
+      inside a literal opens nothing, and a line inside a multi-line literal is code.
 R5. **Survivors and exclusions.** A surviving mutant blocks the pull request until a test kills
     it, or until it is recorded as equivalent. An equivalent Rust mutant is one anchored
     `exclude_re` entry in `.cargo/mutants.toml`, with `# EQUIVALENT: <reason> (#N)` on the line
@@ -115,8 +121,10 @@ R5. **Survivors and exclusions.** A surviving mutant blocks the pull request unt
     attribute. Nothing is excluded silently.
 R6. **The configurations** load under their tools' own rules: `.cargo/mutants.toml` holds only
     cargo-mutants 27.1.0's keys, and `web/app/stryker.config.json` sets `testRunner` `vitest`, the
-    `json` reporter and `thresholds` whose `break` is 100. The vendored probe's blocking
-    `tool-config-valid` row judges both.
+    `json` reporter and `thresholds` whose `break` is 100. `scripts/mutation-verdict.py configs`
+    judges both by what each tool itself refuses: a key cargo-mutants' `Config` does not declare or
+    a value of the wrong type, and a Stryker threshold outside 0 to 100, `high` below `low`, or JSON
+    that does not parse.
 R7. **Local runs** stay targeted (one file, `-f`, or the diff, `--in-diff`), `--in-place` on a
     committed tree, one mutant at a time, then `cargo clean`. `--in-place` is the rule's `-j 1`:
     cargo-mutants 27.1.0 refuses any `-j` beside it (exit 1, measured). Heavy runs belong in CI.
@@ -134,9 +142,10 @@ R8. **Hand-proved rows** cover invariants generic mutants test weakly: a constan
     - A cargo killer is `<target>::<test path>`: an integration-test target of the row's crate,
       or `lib`, then the test's path in it. A script killer is `<module>.<Class>.<method>`, a
       unittest id in `scripts/tests` or `tools/parity-oracle`.
-    - `scripts/mutation_rows.py` is the one reader. `scripts/row_target.py` resolves a target.
-      Both keep the pack's interface, so the vendored `mutation-probe.py` judges the rows with its
-      `find-differs`, `band-ids` and `mutants-distinct` classes.
+    - `scripts/mutation_rows.py` is the one reader, and resolves each row's target by its table's
+      declared spelling. Its census refuses a row that can prove nothing: a find that is empty or
+      equals its replacement, and a second row that installs another row's mutant for its killer;
+      the reader refuses an id outside its band or held twice.
 R9. **The runner, `scripts/mutation_rows.py prove`,** proves each row it is given:
     - it refuses a tree with a tracked change (exit 2), naming the file;
     - it checks the anchor occurs exactly once, and records the target's sha256;
@@ -166,19 +175,21 @@ R12. **A weekly full-repository battery,** `.github/workflows/mutation-weekly.ym
       matrix naming every `k` from 0 to 31, each with `--timeout` on every cargo command and a
       job `timeout-minutes`;
     - `web`: a whole StrykerJS run; `rows`: every row proved;
-    - every job keeps its report under `if: always()`;
+    - every job keeps its report under `if: always()`, and `--build-timeout` bounds each
+      mutant's build, which `--timeout` does not in place;
     - `survivors`: files each surviving mutant's file as one issue, deduplicated against the open
       issues by title, its body scrubbed by `scripts/public-scrub.py` before it is posted, with
-      `issues: write` granted to that job alone and never on a pull request.
+      `issues: write` granted to that job alone and never on a pull request; then, whatever the
+      jobs before it returned, it counts every report they promise (`mutation-verdict.py battery
+      --shards 32`): each shard's whole `outcomes.json`, the rows' report and the Stryker sweep,
+      and fails naming each that is missing or partial.
 R13. **The known lag.** The schedule and the dispatch go live only when a release carries the
     workflow to `main`. Until then, a `pull_request` trigger filtered to the workflow's own file
     runs `rehearsal`: one small file through cargo-mutants, one row, one Stryker file, and the
     survivors job's drafting and scrub, with no issue filed.
-R14. **The mutation-rows pack is vendored** through `scripts/vendor-packs.py` at the commit
-    `.packs/VENDORED.json` already pins, and wired `enforced` in `.packs/wiring.json`: its
-    `practice` rows run, `tool-config-valid` blocking; its `rows` rows that run the pack author's
-    own guards are excluded by name with that reason; `find-differs`, `band-ids` and
-    `mutants-distinct` run over DeckStreak's rows.
+R14. **No vendored pack.** The packs stay box-only (ADR-056, and the owner's decision for this
+    delivery), so no file of the mutation-rows pack is vendored. What CI needs of it is
+    DeckStreak's own code: the census (R8, R11) and the configuration check (R6).
 R15. **`docs/BUILDER-BRIEF.md` gains a mutation section,** so every builder inherits R3 to R11.
 R16. **The first rows** guard invariants that exist on `dev`: the kernel's 04:00 rollover and
     the redactor's constants (SPEC-020), ingest's once-a-study-day refusal and its no-upload rule
@@ -267,9 +278,10 @@ A33: python3 -m unittest discover -s scripts/tests -p test_mutation_workflows.py
 A1 to A8 run the runner against a fixture repository built at run time in a temporary directory:
 a git repository with one committed target, one unittest module, and (for A8) one crate with no
 dependency and its own `Cargo.lock`, built into the fixture's own `target/`. A13 to A19 run the
-verdict over synthetic diffs and reports written by the test, never over a real tool run. A9 and
-A11 read the committed rows. A21 runs the vendored probe's `tool-config-valid` class over the tree
-and reads its examined count.
+verdict over synthetic diffs and reports written by the test, never over a real tool run, and so
+do A27 and A29 to A31. A9 reads the committed rows, and A11 plants rows the census must refuse. A21
+runs the configuration check over the tree and over planted configurations, and reads its examined
+count.
 
 The red stubs, committed with the tests, keep every entry point and do nothing: the runner reads
 every row KILLED without running anything, the census and the retirement check examine nothing,
@@ -286,9 +298,8 @@ and green are the `mutation-rust` job's two runs.
 | `docs/decisions/ADR-057-mutation-testing-runs-on-the-diff-in-ci-and-weekly-on-dev.md` | `repo` | added |
 | `docs/red-first/SPEC-039.md` | `repo` | added |
 | `docs/BUILDER-BRIEF.md` | `repo` | changed: the mutation section (R15) |
-| `scripts/mutation_rows.py` | `repo` | added: the reader, the census, the runner and the retirement check (R8 to R11) |
-| `scripts/row_target.py` | `repo` | added: the target resolver the pack's interface names (R8) |
-| `scripts/mutation-verdict.py` | `repo` | added: the plan, the verdict and the survivors' drafts (R3, R4, R12) |
+| `scripts/mutation_rows.py` | `repo` | added: the reader and target resolver, the census, the runner and the retirement check (R8 to R11) |
+| `scripts/mutation-verdict.py` | `repo` | added: the plan, the verdict, the survivors' drafts, the battery's count and the configuration check (R3, R4, R6, R12) |
 | `scripts/mutation-rows.json` | `repo` | added: the header (R8) |
 | `scripts/mutation-rows.retired.json` | `repo` | added: the retirement record, empty (R11) |
 | `scripts/mutation-rows.d/S02000-S02099.json` | `repo` | added: SPEC-020's rows (R16) |
@@ -307,8 +318,6 @@ and green are the `mutation-rust` job's two runs.
 | `.github/workflows/ci.yml` | `repo` | changed: `mutation-rust` and `mutation-web`, needs of `ci` (R3) |
 | `scripts/tests/test_ci_workflows.py` | `repo` | changed: `ci` needs the two mutation jobs beside the gate's four (R3) |
 | `.github/workflows/mutation-weekly.yml` | `repo` | added (R12, R13) |
-| `.packs/VENDORED.json`, `.packs/wiring.json` | `repo` | changed: the mutation-rows pack (R14) |
-| `.packs/skills/packs/mutation-rows/SKILL.md`, `.packs/skills/packs/mutation-rows/checks.json`, `.packs/scripts/mutation-probe.py` | `repo` | added: vendored (R14) |
 | `crates/kernel/src/clock.rs` | `deck-streak-kernel` | changed: `UtcMillis::from_system_time` (R17) |
 | `crates/kernel/tests/clock.rs` | `deck-streak-kernel` | changed: A26 (R17) |
 | `changelog.d/feat-mutation-039.md` | `repo` | added |
@@ -353,6 +362,9 @@ and green are the `mutation-rust` job's two runs.
   4, VOID here), and the runner's control run refuses a killer red without its mutant (R9).
 - **The weekly battery files noise.** Each issue is one file's survivors, titled by the file, and
   a title already open is not filed twice.
+- **A shard that never reports reads as a shard with no survivor.** A runner shut down mid-run
+  uploads nothing, and a run stopped early leaves a partial report. The survivors job counts every
+  report the battery's jobs promise and fails naming each one missing or partial (A29, A33).
 
 ## 7. The known lag
 
@@ -394,3 +406,32 @@ branch and recorded in its pull request.
   every shard was exposed. With `test_tool = "nextest"` the identity baseline passes: `owner.rs`
   gave 14 mutants, 6 caught, 3 missed and 5 unviable, the missed three being the weekly battery's
   to file.
+- **R4 reads a partial report as VOID (A30).** The verifier measured the judge reading a report
+  that held 1 of its 3 mutants, under a SIGKILL's exit 137, as green. cargo-mutants writes
+  `outcomes.json` as it goes, so a report is now read only when the exit is 0, 2 or 3 and its counts
+  sum to `total_mutants`.
+- **R4's lexer reads literals (A31).** The verifier found that a comment opener inside a string,
+  such as `"crates/*"`, opened a block comment, so every later line, code included, read as a
+  comment. Rust's strings, raw strings and character literals, TypeScript's and JavaScript's
+  strings, templates and regular expressions, and Python's tokens are now read before any comment
+  opener. Over the 91 tracked production files (R2) at the delivery's head, every line the lexer
+  calls quiet is blank or a comment.
+- **R12 counts every report (A29, A33) and bounds every build (A32).** The first dispatch on this
+  delivery's branch (run 36373915578) lost shards 4 and 5 to a runner shutdown: they uploaded no
+  report, and the survivors job read the other 30 and passed. The battery's count now fails, naming
+  both (`battery --shards 32` over that run's artifacts: `counted 32 of 34 reports whole`, exit 1).
+  In place, cargo-mutants bounds no mutant's build unless told, and never bounds the unmutated
+  baseline's (`src/timeouts.rs`: `for_baseline` sets no build limit), so every run passes
+  `--build-timeout 600` beside `--timeout 300`.
+- **R6, R8 and R14: no vendored pack.** By the owner's decision the packs stay box-only, so this
+  delivery vendors no file of the mutation-rows pack. The configuration check (`configs`) and the
+  census's refusal of a second row installing one mutant are DeckStreak's own code. A11 and A21
+  were rewritten against them, and red and green again.
+- **R16's rows are twenty-seven:** S03906 to S03910 hold the fixes' own guards (the partial report,
+  the missing shard, the literal lexer, an unknown cargo-mutants key and the census's duplicate
+  mutant). Each was proved KILLED by the runner.
+- **The Mini App's first whole sweep is backlog.** Run 36373915578's `web` job measured 53
+  survived and 28 uncovered mutants of 274; #240 tracks them, and the battery files each file once
+  it is live.
+- **The red-first record's home.** `dev` takes this delivery as one squash commit, so the record's
+  shas are the commits of pull request #221, reachable from its head, not from `dev`'s history.

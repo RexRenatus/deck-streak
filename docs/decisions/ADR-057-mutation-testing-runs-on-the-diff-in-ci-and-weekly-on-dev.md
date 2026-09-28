@@ -20,10 +20,12 @@ front end and a Python parity oracle, on GitHub-hosted runners (SPEC-039)?
 
 - A verdict read from the tool's own report, never from an exit code alone, because each tool
   measured here exits 0 having examined nothing (SPEC-039 §1).
-- The cost of Anki's engine: a cold build of `ingest` is about 5 minutes and 15 to 18 GB.
+- The cost of Anki's engine: a cold build of `ingest` takes minutes, and its build script runs
+  again on every cargo command.
 - A local run's cost: a copy of the tree pays a cold build of the engine and its disk each time,
   where a targeted, in-place run reuses what the gate already built.
-- One reader for the rows, and the vendored pack's own classes able to judge them.
+- One reader for the rows, in DeckStreak's own code, and no vendored file: the packs stay
+  box-only (ADR-056).
 - A pull request never saves a cache, and nothing reaches an issue unscrubbed.
 
 ## Considered Options (the alternatives it was chosen against)
@@ -43,12 +45,12 @@ front end and a Python parity oracle, on GitHub-hosted runners (SPEC-039)?
   rule asks for the mutants of every changed line.
 
 **D2, where cargo-mutants builds.**
-- `--in-place`, locally and in CI: chosen. Measured on `clock.rs`, `-j 1`: 17 s warm and 34 s cold
-  in place, against 41 s for the default copy, which paid a 21 s cold build in a temporary
-  directory. A CI checkout is disposable and its `target/` is the restored cache; a local run
+- `--in-place`, locally and in CI: chosen. Measured on `clock.rs`, with `-j 1` for the copy and
+  serial in place: 17 s warm and 34 s cold in place, against 41 s for the default copy, which paid
+  a 21 s cold build in a temporary directory. A CI checkout is disposable and its `target/` is the restored cache; a local run
   reuses the target the gate already built.
 - The default copy into a temporary directory: rejected for DeckStreak, because each run pays a
-  cold build, and with the engine that is minutes and up to 18 GB of temporary disk. Its one
+  cold build, and with the engine that is minutes and a whole target of temporary disk. Its one
   advantage, never touching the working tree, is kept another way: runs are on a committed tree
   only, and cargo-mutants restores each file.
 - The copy with `copy_target`: rejected, because it copies the whole `target/`, the engine
@@ -80,17 +82,18 @@ front end and a Python parity oracle, on GitHub-hosted runners (SPEC-039)?
   never pass, with no test or row able to make it pass.
 
 **D5, the rows.**
-- The mutation-rows pack's shape: a header file, band fragments of
-  `{"tables": {...}}`, and a reader with the pack's interface (`load_tree`, `PopulationRefused`,
-  `row_target`), one band per SPEC (`S<NNN>00` to `S<NNN>99`): chosen. The vendored probe's
-  `find-differs`, `band-ids` and `mutants-distinct` then judge the rows, and a SPEC's rows live in
-  one file only it writes, so concurrent deliveries do not collide.
+- The mutation-rows pack's shape, read by DeckStreak's own code: chosen, because a SPEC's rows then
+  live in one file only it writes, so concurrent deliveries do not collide. A header file declares
+  each table's target spelling, band fragments hold `{"tables": {...}}`, one band per SPEC
+  (`S<NNN>00` to `S<NNN>99`), and `scripts/mutation_rows.py` is the one reader, whose census
+  refuses a row that can prove nothing.
 - One flat rows file: rejected, because every delivery would append to one file, the collision the
   pack's fragments were made to end.
 - A band per delivery: rejected, because a SPEC's rows would scatter across files named by
   delivery, and the band would not say which SPEC's invariant a row guards.
-- A format of DeckStreak's own: rejected, because the vendored probe's row classes could not read
-  it, and a second reader is a second place for a rule to drift.
+- A format of DeckStreak's own: rejected, because the pack's shape carries its measured lessons
+  (a band per file, a header that declares how each table spells its target), and a new format
+  would have to learn them again.
 
 **D6, recording an equivalent mutant.**
 - One named mutant per exclusion: chosen, because each names one mutant, and a test holds the
@@ -106,7 +109,11 @@ front end and a Python parity oracle, on GitHub-hosted runners (SPEC-039)?
   mutants costs about 3 minutes, and the 1,721 mutants on `dev` about 14 hours serially.
   Round-robin (`--sharding round-robin --shard k/32`, the matrix naming 0 to 31) spreads the
   engine's mutants over every shard, about five each, and keeps each shard near 40 minutes under a
-  `timeout-minutes` of 120; `--timeout 300` bounds every cargo command, above the engine's 140 s.
+  `timeout-minutes` of 120. `--timeout 300` bounds each mutant's tests, above the engine's 140 s,
+  and `--build-timeout 600` each mutant's build: in place, cargo-mutants applies no multiplier and
+  bounds no build unless told, and it never bounds the unmutated baseline's build, so a cold cache
+  cannot time a shard out. The `survivors` job counts every report the jobs promise, and fails
+  naming each one missing or partial.
 - Sixteen slice shards: rejected, because a slice keeps a crate's mutants together, and the shard
   that holds `ingest`'s would run about five hours, past any job timeout.
 - `--baseline=skip` behind a test job: rejected, because it adds a job whose only purpose is the
@@ -130,9 +137,17 @@ front end and a Python parity oracle, on GitHub-hosted runners (SPEC-039)?
   failed identity's `init_data_never_reaches_the_log` at the baseline on two of 32 CI runners (run
   36372763914), so those shards examined nothing (exit 4).
 
+**D10, the pack's own probe.**
+- DeckStreak's own checks: chosen, because the owner decided the packs stay box-only (ADR-056), so
+  this delivery vendors no file of the mutation-rows pack. The census refuses a row that can prove
+  nothing, and `mutation-verdict.py configs` judges each tool's configuration by what the tool
+  itself refuses, read from each tool's own source.
+- Vendoring the pack's probe and wiring its rows into the gate: rejected, by that decision. A check
+  CI needs lives in this repository's own scripts, where its tests can hold it.
+
 ## Decision Outcome
 
-Chosen: D1 to D9's first options. SPEC-039 R1 to R17 state them as requirements.
+Chosen: D1 to D10's first options. SPEC-039 R1 to R17 state them as requirements.
 
 ### Consequences
 
@@ -140,7 +155,8 @@ Chosen: D1 to D9's first options. SPEC-039 R1 to R17 state them as requirements.
   examined, and a zero, a missing report or an unviable-only run fails it.
 - Good, because a constant, a method named `new` or a guard that the tool cannot mutate is held
   by a row, and a row cannot leave while its target stays without the maintainer's approval.
-- Good, because the vendored probe judges the tools' configurations and the rows.
+- Good, because DeckStreak's own census and configuration check judge the rows and the tools'
+  configurations, and no vendored file is needed.
 - Bad, because a Rust pull request's CI time grows with its diff, most in the engine's crates
   (about 3 minutes a mutant in `ingest`); `timeout-minutes` bounds it, and a diff that reaches the
   bound shards the job the way the battery is sharded.
@@ -150,19 +166,20 @@ Chosen: D1 to D9's first options. SPEC-039 R1 to R17 state them as requirements.
 
 ### Confirmation
 
-SPEC-039's A1 to A26; the `mutation-rust` job's red run and green run on the delivery's pull
-request (R17); the pack's `practice` rows and `find-differs`, `band-ids` and `mutants-distinct`
-in the gate's `packs` stage.
+SPEC-039's A1 to A33; the `mutation-rust` job's red run and green run on the delivery's pull
+request (R17); the census and the configuration check in the gate's `python` stage.
 
 ## What would make this wrong
 
 - A cargo-mutants release that mutates methods named `new` or constants: the rows that exist only
-  because it did not would then duplicate generated mutants, and `mutants-distinct` would say so.
+  because it did not would then duplicate generated mutants, and retire with the maintainer's
+  approval (R11).
 - A pull request whose diff reaches the job's timeout: the job then shards.
 
 ## More Information
 
-SPEC-039; issue #217; #218, #219 and #220 (the follow-ups); ADR-004 and ADR-039 (vendoring),
+SPEC-039; issue #217; #218, #219, #220, #222 and #240 (the follow-ups); ADR-056 (the packs stay
+box-only),
 ADR-012 (testing), ADR-017 (CI), ADR-029 (the golden reader). cargo-mutants: mutants.rs
 (in-diff, in-place, shards, exit codes); StrykerJS: stryker-mutator.io and the stryker-js
 repository; GitHub: "Events that trigger workflows".

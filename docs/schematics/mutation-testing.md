@@ -1,8 +1,8 @@
 # Schematic: mutation testing, from a pull request's diff to a verdict, and the weekly battery
 
 Kind: data flow (the pull request's two jobs, the weekly battery) and a state machine (one row's
-proof). Read at DeckStreak `dev` dbbd896 (`.github/workflows/ci.yml`, `scripts/check.sh`, the
-vendored mutation-rows pack), with cargo-mutants 27.1.0 and StrykerJS 10.0.0 as SPEC-039 §1
+proof). Read at DeckStreak `dev` 3f5470e (`.github/workflows/ci.yml`, `scripts/check.sh`, the
+mutation-rows pack's row shape), with cargo-mutants 27.1.0 and StrykerJS 10.0.0 as SPEC-039 §1
 measured them. Decided by ADR-057; built by SPEC-039.
 
 ## 1. A pull request's diff, through the two jobs
@@ -23,7 +23,7 @@ flowchart TD
   plan --> rows[the rows it selects: on its paths, added or changed, on a killer's file]
 
   subgraph mutation-rust
-    rust --> cm[cargo mutants --in-place --in-diff git.diff --timeout 300]
+    rust --> cm[cargo mutants --in-place --in-diff git.diff --timeout 300 --build-timeout 600]
     cm --> outcomes[(mutants.out/outcomes.json)]
     rows --> prove[mutation_rows.py prove]
     prove --> rowsreport[(rows.json)]
@@ -62,11 +62,11 @@ it, so they run one after the other in one job, never beside another reader of t
 | plan | the diff, `git diff HEAD^1...HEAD`, written to `git.diff` | the new side of the diff is the checked-out tree, so cargo-mutants never exits 5 on a mismatch |
 | classes | each changed path | R2's globs, exactly; a test, a script or a document is never production |
 | lines | each production file's new-side changed lines | blank and comment lines are counted apart; a file whose hunks only delete reads not-applicable with its count |
-| cargo-mutants | the diff, the tree | `--in-place` on the checkout, `--timeout 300` per mutant, the job's `timeout-minutes`; its exit is recorded, never trusted alone |
+| cargo-mutants | the diff, the tree | `--in-place` on the checkout, `--timeout 300` on each mutant's tests and `--build-timeout 600` on its build, the job's `timeout-minutes`; its exit is recorded, never trusted alone |
 | Stryker | every changed web production file, whole | the whole file, so a survivor already there is the pull request's (rule 5); `thresholds.break` 100 |
 | rows | the selected rows | the runner's own refusals (section 3); the report lists every row with its verdict |
 | retired | the rows at `HEAD^1` against the rows at `HEAD` | a row gone while its target stays needs an entry in `scripts/mutation-rows.retired.json` |
-| judge | `outcomes.json`, `mutation.json`, `rows.json` | examined is caught, missed and timed out; unviable is never a kill; zero examined on an applying class is VOID; a missing report is VOID |
+| judge | `outcomes.json`, `mutation.json`, `rows.json` | examined is caught, missed and timed out; unviable is never a kill; zero examined on an applying class is VOID; a missing report is VOID, and so is a partial one (an exit other than 0, 2 or 3, or counts short of `total_mutants`) |
 
 ## 3. One row's proof
 
@@ -100,7 +100,7 @@ no bytecode written, so no run reads another's compiled mutant.
 flowchart LR
   sched[schedule, weekly; workflow_dispatch] -->|live once the file is on main| checkout[checkout dev]
   prtrig[a pull request that changes the workflow] --> rehearsal[rehearsal: one file, one row, one Stryker file, the drafts; files nothing]
-  checkout --> shards[rust: cargo mutants --sharding round-robin --shard k/32, k = 0..31, --in-place --timeout 300]
+  checkout --> shards[rust: cargo mutants --sharding round-robin --shard k/32, k = 0..31, --in-place --timeout 300 --build-timeout 600]
   checkout --> webfull[web: stryker run, whole]
   checkout --> rowsall[rows: prove every row]
   shards --> reports[(each shard's mutants.out)]
@@ -112,10 +112,17 @@ flowchart LR
   scrub --> dedupe{an open issue with that title?}
   dedupe -->|yes| skip([not filed twice])
   dedupe -->|no| file([gh issue create])
+  file --> count[battery --shards 32: every shard's outcomes.json whole, rows.json, mutation.json]
+  skip --> count
+  count -->|one missing or partial| red([the job fails, naming each])
+  count -->|all 34 whole| green([the job passes])
 ```
 
-Every shard and job uploads its report under `if: always()`, so a failing shard still hands its
-survivors to the `survivors` job, which runs `if: always()` and never on a pull request.
+Every shard and job uploads its report under `if: always()`, so a shard that fails on its
+survivors still hands them to the `survivors` job, which runs `if: always()` and never on a pull
+request. A shard whose runner was shut down uploads nothing, and one stopped early leaves a partial
+report: the job's last step counts every report the battery promises, and fails naming each one
+missing or partial, so neither reads as a shard with no survivor.
 
 ## 5. The rows file
 
@@ -124,8 +131,7 @@ survivors to the `survivors` job, which runs `if: always()` and never on a pull 
 | `scripts/mutation-rows.json` | the header alone: `_` (the rules, and one `target spelling:` line per table), `arities`, and empty `tables` |
 | `scripts/mutation-rows.d/S<NNN>00-S<NNN>99.json` | SPEC-NNN's rows, `{"tables": {...}}` and nothing else |
 | `scripts/mutation-rows.retired.json` | each row retired while its target stayed: its id, the reason and the maintainer's approval |
-| `scripts/mutation_rows.py` | the one reader (`load_tree`, `PopulationRefused`), the census, `prove` and `retired` |
-| `scripts/row_target.py` | a row's target by its table's declared spelling |
+| `scripts/mutation_rows.py` | the one reader (`load_tree`, `PopulationRefused`) and a row's target by its table's declared spelling, the census, `prove` and `retired` |
 
 | table | 1 | 2 | 3 | 4 | 5 | 6 |
 |---|---|---|---|---|---|---|

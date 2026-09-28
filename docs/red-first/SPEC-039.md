@@ -1,5 +1,8 @@
 # Red-first record: SPEC-039
 
+`dev` takes this delivery as one squash commit. Every sha below is a commit of pull request #221,
+reachable from its head (`refs/pull/221/head`), not from `dev`'s history.
+
 The SPEC (909856d), the schematic (5a41904) and ADR-057 (2bb3c77, 6719cfb) came first. The tests
 were then committed (d438d38) beside stub entry points that kept every interface and did nothing:
 the runner read no row and refused nothing, the census and the retirement check examined nothing,
@@ -10,13 +13,22 @@ error, a missing fixture or an empty selection.
 - The runner and the retirement check went green at 61e5e14, and the verdict at 73133a4. A17's
   selection also needs a killer's file located without a Cargo manifest, which went green at
   c404cb2.
-- A9 and A11 need rows to judge. At 509bf2c the pack was vendored and wired and no row existed: the
-  census found no header, and the probe's `find-differs` was VOID for want of a row manifest. The
-  header and 22 rows went in at 3a366fb, where the runner proved all 22 KILLED on the committed
-  tree, each file restored byte for byte (714 s); CI's `mutation-rust` proved the same 22 on this
-  pull request (run 36370506636).
-- A21 to A25 were red at 509bf2c: no tool configuration, no weekly workflow, no mutation job in
-  `ci.yml`, no brief section. They went green at 018a6ea.
+- A9 needs rows to judge. At 509bf2c no row existed and the census found no header. The header
+  and 22 rows went in at 3a366fb, where the runner proved all 22 KILLED on the committed tree, each
+  file restored byte for byte; CI's `mutation-rust` proved the same 22 on this pull request (run
+  36370506636).
+- A22 to A25 were red at 509bf2c: no weekly workflow, no mutation job in `ci.yml`, no brief
+  section. They went green at 018a6ea.
+- A11 and A21 first judged the rows and the configurations through a probe vendored from the
+  mutation-rows pack (red at 509bf2c; green at 3a366fb and 018a6ea). The owner's decision that the
+  packs stay box-only dropped every vendored file, so both were rewritten against DeckStreak's own
+  census and configuration check, and red and green again: the lines below are the rewrites'.
+- The verifier's round (F2 to F4) and the owner's decision added A29 to A33 and rewrote A11 and A21.
+  All seven were committed red at 4146198 beside stubs that accepted the new options and did
+  nothing: `battery` and `configs` examined nothing, the census had no duplicate-mutant refusal, the
+  judge read a partial report whole, and the lexer read a comment opener inside a string as a
+  comment. Every one went green at d1dde73. Rows S03906 to S03910 then pinned the new guards, each
+  proved KILLED by the runner with its file restored.
 - A27 was added when the orchestrator asked that each event read its own case: red at fbd772d,
   against a stub that accepted the options and ignored them, and green at fcb226b.
 - A28 was added when the first dispatch of the whole battery stopped two shards at the baseline
@@ -31,7 +43,8 @@ error, a missing fixture or an empty selection.
 Every sha above was replayed from a `git archive` export into a directory of its own: all 25 of A1
 to A25 red at d438d38; A9, A11 and A21 to A25 red at 509bf2c with the rest green; A1 to A8 and A10
 green at 61e5e14; the verdict's criteria but A17 green at 73133a4; A17 at c404cb2; A9 and A11 at
-3a366fb; A1 to A25 at 018a6ea; A27 red at fbd772d and green at fcb226b. Failures below name no path
+3a366fb; A1 to A25 at 018a6ea; A27 red at fbd772d and green at fcb226b; A11, A21 and A29 to A33 red
+at 4146198 with the other 25 green, and all 32 green at d1dde73. Failures below name no path
 outside the repository.
 
 ```red-first
@@ -55,8 +68,8 @@ A9: red at d438d38: AssertionError: 0 not greater than 0 : examined 0 (the censu
 A9: green at 3a366fb
 A10: red at d438d38: AssertionError: 0 != 1 : examined 0 (a row that left while its target stayed was admitted)
 A10: green at 61e5e14
-A11: red at 509bf2c: AssertionError: 3 != 0 : find-differs VOID, no row manifest at scripts/mutation-rows.json
-A11: green at 3a366fb
+A11: red at 4146198: AssertionError: 'census: S00042-AGAIN: installs the mutant S00041-FIRST installs, for the same killer' not found (the census named only S00040-SAME)
+A11: green at d1dde73
 A12: red at d438d38: AssertionError: None != 'other' : crates/fix/build.rs
 A12: green at 73133a4
 A13: red at d438d38: AssertionError: 0 != 3 : mutation: ok (a production diff that examined nothing read green)
@@ -75,8 +88,8 @@ A19: red at d438d38: AssertionError: False is not true : no drafts were written
 A19: green at 73133a4
 A20: red at d438d38: AssertionError: Regex didn't match: 'examined N exclusion' not found in 'mutation: ok'
 A20: green at 73133a4
-A21: red at 509bf2c: AssertionError: False is not true : tool-config-valid: nothing of its kind is in the tree
-A21: green at 018a6ea
+A21: red at 4146198: AssertionError: Regex didn't match: 'examined 2 configuration' not found in 'examined 0 configuration(s)'
+A21: green at d1dde73
 A22: red at d438d38: AssertionError: .github/workflows/mutation-weekly.yml does not exist
 A22: green at 018a6ea
 A23: red at d438d38: AssertionError: .github/workflows/mutation-weekly.yml does not exist
@@ -90,6 +103,16 @@ A27: red at fbd772d: AssertionError: None != 'diff' : pull_request
 A27: green at fcb226b
 A28: red at 5238623: AssertionError: Regex didn't match: '(?m)^test_tool = "nextest"$' not found in .cargo/mutants.toml
 A28: green at e82b796
+A29: red at 4146198: AssertionError: 0 != 1 : examined 0 report(s) (shard 2 missing, shards 1, 3 and 4 partial, and no rows report, yet the battery passed)
+A29: green at d1dde73
+A30: red at 4146198: AssertionError: 0 != 3 : the judge read a report of 1 of its 3 mutants, under exit 137, as green
+A30: green at d1dde73
+A31: red at 4146198: AssertionError: Lists differ: [] != [6, 11] (the line inside a string and the comparison after "crates/*" read as comments)
+A31: green at d1dde73
+A32: red at 4146198: AssertionError: Regex didn't match: '--build-timeout \d+' not found in ci.yml's cargo mutants command
+A32: green at d1dde73
+A33: red at 4146198: AssertionError: 0 != 1 : survivors never counts the battery's reports
+A33: green at d1dde73
 ```
 
 ## The gate's own red first (R17)
