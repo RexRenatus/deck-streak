@@ -6,6 +6,12 @@ not by a usage error. Every sha below was re-run from a `git archive` export. Th
 property the single gate job already had, so they are disclosed as not red: they guard what the
 split must keep, and each refuses a planted defect.
 
+A1 and A5 were amended after `dev` brought SPEC-042's rails test, whose python stage runs `cargo`.
+The amended tests were committed first (c89191f) and were red there for their own reasons:
+`AssertionError: [] is not true : hygiene installs no pinned toolchain` for A1, and, for A5,
+`Regex didn't match: '^FAILED +python .*: missing tool: cargo \(\S.*\)$' not found in 'ok python 0s'`
+(the python stage ran with no cargo on the path). Both were green at afa366e.
+
 ```red-first
 A1: red at fa9dcfd: AssertionError: 0 != 1 : gate restores no Rust cache before its stages
 A1: green at 77107bf
