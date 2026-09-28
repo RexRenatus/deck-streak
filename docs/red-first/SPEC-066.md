@@ -7,8 +7,9 @@ red failed by assertion. The alert script's refusal (6e68804) turned A5 green, a
 refusal (2d3435c) turned A1, A3 and A6 green. A1, A3 and A5 were read red on 00e0bd0's tree. A6 was
 read red at 6e68804, whose `crates/` tree is 00e0bd0's byte for byte: the one commit between them
 changes only the alert script. A2 and A4 pin what the base already did, so each is disclosed.
-R6 and R3's exit came after, in three commits of their own, and R3's restart after those, in three
-more; each is recorded below the commands.
+R6 and R3's exit came after, in three commits of their own, R3's restart after those, in three
+more, and the reading of an exit status as systemd reads it, with R2's condition and R3's pins,
+after those, in four more; each is recorded below the commands.
 
 ```red-first
 A1: red at 00e0bd0: "" was not refused as an empty sync-login: Ok(Secret(..)) (a credential of zero bytes loaded as an empty value)
@@ -16,7 +17,7 @@ A1: green at 2d3435c
 A2: not red: it pins what the refusal must leave as it was, a missing credential refused as Missing, an unreadable one as Unreadable, and a value of one character or more loaded less one trailing newline, all of which the base already did; row S06604 is its killing case, a refusal that reaches past an empty value
 A3: red at 00e0bd0: assertion `left == right` failed: left: Ok(()) right: Err(("the credential sync-login is empty in the credentials directory", "Empty { id: \"sync-login\" }"))
 A3: green at 2d3435c
-A4: not red: the three templates that load a credential beside the alert template already name OnFailure= the alert template and carry no `-` ExecStart= prefix, no SuccessExitStatus= naming 1 and no RestartMode=direct, and the alert template already counts no refusal a success and restarts none (examined 4 service units); its eight planted templates are its killing cases, one refused for each condition, one admitted, and three alert-shaped, naming no OnFailure=, that the alert template's checks refuse each for what it breaks: SuccessExitStatus=1, RestartMode=direct beside Restart=on-failure, and RestartForceExitStatus=1
+A4: not red: the three templates that load a credential beside the alert template already name OnFailure= the alert template and carry no ExecCondition=, no `-` ExecStart= prefix, no SuccessExitStatus= naming 1 in any spelling systemd reads as 1 and no RestartMode=direct, and the alert template already counts no refusal a success, restarts none and is never unloaded while failed (examined 4 service units); its fifteen planted templates that load a credential are its killing cases, one refused for each condition and a second for the exit status, spelled 0x1, one admitted, and eight alert-shaped, naming no OnFailure=, that the alert template's checks refuse each for what it breaks: SuccessExitStatus=1, SuccessExitStatus=01, RestartMode=direct beside Restart=on-failure, RestartForceExitStatus=1, an ExecCondition=, CollectMode=inactive-or-failed, SuccessExitStatus=2 beside RestartForceExitStatus=2, and RestartForceExitStatus=2 on Type=oneshot
 A5: red at 00e0bd0: AssertionError: 0 != 1 : owner-user-id holding '' (the script exited 0: it went on to the journal and the request)
 A5: green at 6e68804
 A6: red at 00e0bd0: assertion `left == right` failed: anki-sync-username "" left: Ok(()) right: Err(MissingCredentials) (the scripted engine was asked to sync, and the run was recorded as a success)
@@ -25,8 +26,9 @@ A6: green at 2d3435c
 
 ## The commands
 
-Each criterion's fence line. A1 to A3 were read at c916846, and A4 and A5 at 3f6dd77. A6 builds the
-sync engine, so it was read at 2d3435c, and its reading at the delivery's head is CI's `test` job:
+Each criterion's fence line. A1 to A3 were read at c916846, and A4 and A5 at 75360a9, the branch's
+merge of dev after its last test commit. A6 builds the sync engine, so it was read at 2d3435c, and
+its reading at the delivery's head is CI's `test` job:
 
 | id | command | result |
 |---|---|---|
@@ -71,6 +73,14 @@ check.
   for nothing where its `RestartMode=direct skips OnFailure=` line was expected, since that line
   names `OnFailure=` too, and neither it nor `alert-forced.service` had its restart refused. 3f6dd77
   turned A4 green, and it reads green there with its fence command.
+- **A4's body changed at 3f6dd77 in two places.** Besides its comments, and its expected refusals
+  given a name of their own, the test's own filter, which kept a refusal of the alert template
+  unless its text named `OnFailure=`, gave way to the census's `alert_exit_refusals`, which tells
+  the conditions apart by the directive each refusal reads; and the `RestartMode=direct` refusal's
+  line took its present wording, `skips the failed state and OnFailure=`, for `skips OnFailure=`.
+  No expected refusal was removed. The red at 572bc1d depends on neither: the restart check was a
+  stub, so `alert-restarts.service` and `alert-forced.service` came back with no restart refused,
+  where A4 expects one for each.
 - **The additions are disclosed not red.** Each pins what the alert template already declares: no
   `RestartMode=`, no `Restart=` and no `RestartForceExitStatus=`. A4 stays disclosed not red in the
   fence, and A5's three reads passed when they were committed; A5 keeps the red and green lines of
@@ -89,6 +99,75 @@ check.
 A5 is the killer of rows S06605 to S06608, so each was proved again at 3f6dd77 with `python3
 scripts/mutation_rows.py prove --row <id>`: each KILLED, its killer passing without the mutant and
 failing with it, and the script restored byte for byte.
+
+## An exit status read as systemd reads it, R2's condition and R3's pins
+
+Four commits carry them, the SPEC first: abe449f amends SPEC-066 (R2's census refuses an
+`ExecCondition=` and reads its exit status in any spelling systemd reads as 1; R3's four exit
+conditions, its restart and its collection; the criteria's text, §4 and §7) and ADR-067's bullets
+and references, 667ef04 adds the plants, A4's table of readings and A5's reads, on stubs, 7e6cf6d
+writes the reader in `_units.py` and the census's checks, and 02e4d83 strengthens A4's table.
+
+- **The plants were committed red.** At 667ef04 `_units.exit_status` was a stub that read a word
+  as its text (the two names, `0` and `1` alone), `status_words` split on whitespace alone, the
+  census refused no `ExecCondition=`, and the collection check was a stub that refused nothing.
+  Over both whole files only A4 failed, by assertion where it reads its planted templates, which
+  lacked four expected lines: `ExecCondition=/bin/true can skip the start, which neither fails the
+  unit nor starts OnFailure=` for `condition.service` and for `alert-condition.service`,
+  `SuccessExitStatus=01 counts the refusal a success` for `alert-spelled.service`, and
+  `SuccessExitStatus=0x1 counts the refusal a success` for `spelled.service`. `test_alert_unit.py`
+  passed its 7 tests. 7e6cf6d turned A4 green, and both whole files pass there (11 and 7 tests), as
+  they do at 75360a9.
+- **The additions are disclosed not red.** Each pins what the templates already declare: no
+  paging template names an `ExecCondition=` or a `SuccessExitStatus=`, and the alert template
+  names no `ExecCondition=`, `SuccessExitStatus=`, `RestartForceExitStatus=` or `CollectMode=`.
+  A4 stays disclosed not red in the fence, and A5's new reads passed when they were committed; A5
+  keeps the red and green lines of its route. The killing cases were measured on `git archive`
+  exports of 7e6cf6d and of e660152, the head before these commits, one plant at a time after
+  `ExecStart=` (`CollectMode=` in `[Unit]`), the template restored by its sha256 after each. Each
+  fails A4 at 7e6cf6d with the line below, and each in the alert template fails A5 there too; at
+  e660152 each passes A4, A5 and both whole files. An export of 02e4d83 reads as 7e6cf6d's.
+
+| plant | A4 at 7e6cf6d | A5 at 7e6cf6d |
+|---|---|---|
+| `SuccessExitStatus=01` | fails: `deck-streak-alert@.service: SuccessExitStatus=01 counts the refusal a success` | fails: `Lists differ: ['01'] != []` |
+| `SuccessExitStatus=0x1` | fails: the same line, for `0x1` | fails: `Lists differ: ['0x1'] != []` |
+| `SuccessExitStatus=+1` | fails: the same line, for `+1` | fails: `Lists differ: ['+1'] != []` |
+| `SuccessExitStatus=0b1` | fails: the same line, for `0b1` | fails: `Lists differ: ['0b1'] != []` |
+| `SuccessExitStatus=\1` | fails: the same line, for `\1` | fails: `Lists differ: ['1'] != []` |
+| `SuccessExitStatus=2` | fails: `deck-streak-alert@.service: SuccessExitStatus=2 is named, and the alert template names none` | fails: `Lists differ: ['2'] != []` |
+| `RestartForceExitStatus=01` | fails: `deck-streak-alert@.service: RestartForceExitStatus=01 makes the service manager refuse the Type=oneshot unit outright` | fails: `Lists differ: ['01'] != []` |
+| `RestartForceExitStatus=2` | fails: the same line, for `2` | fails: `Lists differ: ['2'] != []` |
+| `CollectMode=inactive-or-failed` | fails: `deck-streak-alert@.service: CollectMode=inactive-or-failed can unload the failed instance, which systemctl --failed then no longer lists` | fails: `Lists differ: ['inactive-or-failed'] != []` |
+| `ExecCondition=/bin/true` | fails: `deck-streak-alert@.service: ExecCondition=/bin/true can skip the start, which neither fails the unit nor starts OnFailure=` | fails: `Lists differ: ['/bin/true'] != []` |
+| `SuccessExitStatus=01` in `deck-streak-bot.service` | fails: `deck-streak-bot.service: SuccessExitStatus=01 counts the refusal a success` | passes: A5 reads the alert template alone |
+| `ExecCondition=/bin/true` in `deck-streak-api.service` | fails: `deck-streak-api.service: ExecCondition=/bin/true can skip the start, which neither fails the unit nor starts OnFailure=` | passes: the same |
+
+The six plants of the two tables above still fail A4 and A5 at both exports. At 7e6cf6d
+`SuccessExitStatus=1` and `RestartForceExitStatus=1` fail A5 with `Lists differ: ['1'] != []`, and
+`RestartForceExitStatus=1` fails A4 with `RestartForceExitStatus=1 makes the service manager
+refuse the Type=oneshot unit outright`, R3's reason for it.
+
+- **A4's body changed by additions only.** Besides its comments, 667ef04 added the plants, their
+  expected refusals, the collection check and the table of readings, and the expected pair of each
+  earlier alert-shaped plant, its exit conditions' refusals and its restart's, became a triple
+  whose third list, the collection's, is empty; 02e4d83 added words to the table, and reads the
+  status of each word the split gives, where 667ef04 read that of `0 1` alone. No expected refusal
+  of an earlier plant was removed or weakened. A5's reads of a literal `1` or `FAILURE` in
+  `SuccessExitStatus=` and `RestartForceExitStatus=` became a reading of every word as systemd
+  reads it, beside a check that the template names neither directive at all.
+- **The reader.** `_units.exit_status` agrees with `systemd-analyze exit-status` on 922 generated
+  words, each of 37 prefixes (signs, bases, spaces) before each of 25 bodies, and 11 names and
+  quoted or escaped words. systemd reads 85 of them as 1, and the two differ on one word alone, by
+  design: `INVALIDARGUMENT`, systemd's name of status 2, which the reader reads as no status, since
+  the census asks of a word only whether it is 1. 25 hand mutants of the reader (`status_words`,
+  `exit_status` and `strtoul`), each run against A4's fence command on an export with `_units.py`
+  restored by its sha256 after each, are all killed at 02e4d83; A4's table at 7e6cf6d killed 17 of
+  them, and 02e4d83 added the words that kill the other 8. The reader takes no hand-proved row:
+  `_units.py` is test code, and A4 kills each of the 25 hand mutants on every run.
+- **The rows.** A5 is the killer of rows S06605 to S06608, so each was proved again at 75360a9
+  with `python3 scripts/mutation_rows.py prove --row <id>`: each KILLED, its killer selecting one
+  test, passing without the mutant and failing with it, and the script restored byte for byte.
 
 ## Mutants of the changed code
 
