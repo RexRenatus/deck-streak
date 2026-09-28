@@ -108,6 +108,15 @@
         "            Self::SyncFailed => Class::ConfigFault,",
         "gates::a_failed_last_sync_is_could_not_tell_before_any_collection_work",
         "the closed map gives sync_failed the class rail_broken (SPEC-045 R6, A6)"
+      ],
+      [
+        "S04513-A-COPY-THE-BUDGET-PASSED-IS-STILL-REMOVED",
+        "readings",
+        "src/day_set.rs",
+        "        remove_collection(&self.0);",
+        "        let _ = &self.0;",
+        "day_set::a_budget_passed_during_the_copy_leaves_no_copy_behind",
+        "the throwaway copy is removed when the one blocking operation that made it ends, so a copy the budget passed during is removed once its work ends and none outlives it (SPEC-045 R7)"
       ]
     ]
   }
