@@ -9,7 +9,6 @@ StrykerJS writes, and the rows runner's report. No tool runs here.
 
 import json
 import os
-import re
 import subprocess
 import sys
 import tempfile
@@ -214,7 +213,6 @@ class ThePlanReadsTheDiff(unittest.TestCase):
         for path in examined("classified paths", sorted(expected)):
             self.assertEqual(found.get(path), expected[path], path)
 
-
     def test_a_comment_opener_inside_a_string_is_not_a_comment(self):
         rust = (
             'pub const MEMBERS: &str = "crates/*";\n'
@@ -363,7 +361,9 @@ class TheVerdictReadsTheToolsOwnReport(unittest.TestCase):
             "rust", "--outcomes", str(whole), "--tool-exit", "0", "--rows", str(rows)
         )
         self.assertEqual(green.returncode, 0, green.stdout)
-        self.assertIn("cargo-mutants examined 1 (caught 1, missed 0, timeout 0), unviable 2", green.stdout)
+        self.assertIn(
+            "cargo-mutants examined 1 (caught 1, missed 0, timeout 0), unviable 2", green.stdout
+        )
         missed = "crates/fix/src/lib.rs:3:5: replace + with - in double"
         survived = fixture.report("mutants.out/outcomes.json", outcomes(caught=1, missed=[missed]))
         red = fixture.judge(
@@ -542,7 +542,9 @@ class TheBatteryCountsEveryReport(unittest.TestCase):
         self.assertRegex(done.stdout, r"(?m)^examined 7 report")
         # The control: every shard, the rows and the sweep reported whole.
         whole = Path(scratch.name) / "whole"
-        battery_reports(whole, {0: ("2", outcomes(caught=3, missed=[survivor])), 1: ("0", outcomes())})
+        battery_reports(
+            whole, {0: ("2", outcomes(caught=3, missed=[survivor])), 1: ("0", outcomes())}
+        )
         (whole / "rows").mkdir()
         (whole / "rows" / "rows.json").write_text(
             json.dumps([{"id": "S00050-LAST-HOUR", "verdict": "KILLED", "target": LIB}]), "utf-8"

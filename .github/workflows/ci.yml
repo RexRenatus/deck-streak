@@ -289,7 +289,7 @@ jobs:
         if: ${{ steps.plan.outputs.rust == 'true' }}
         run: |
           rc=0
-          cargo mutants --no-shuffle -vV --in-place --in-diff "$RUNNER_TEMP/mutation/git.diff" --timeout 300 --output "$RUNNER_TEMP/mutation" || rc=$?
+          cargo mutants --no-shuffle -vV --in-place --in-diff "$RUNNER_TEMP/mutation/git.diff" --timeout 300 --build-timeout 600 --output "$RUNNER_TEMP/mutation" || rc=$?
           echo "$rc" > "$RUNNER_TEMP/mutation/cargo-mutants.exit"
           echo "cargo-mutants exited $rc"
       - name: the rows the diff selects (the verdict reads their report)

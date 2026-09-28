@@ -385,7 +385,16 @@ def census(root: pathlib.Path) -> tuple[list[str], int]:
     except (OSError, json.JSONDecodeError, PopulationRefused, row_target.UnresolvableTarget) as e:
         return [f"census: the population does not assemble: {e}"], 0
     findings = []
+    # One mutant, for one killer, is one piece of evidence: a second row that installs it adds none.
+    installed: dict[tuple, str] = {}
     for row in rows:
+        mutant = (row.target, row.find, row.replace, row.crate, row.killer)
+        if mutant in installed:
+            findings.append(
+                f"census: {row.id}: installs the mutant {installed[mutant]} installs, for the "
+                "same killer"
+            )
+        installed.setdefault(mutant, row.id)
         target = root / row.target
         if not target.is_file():
             findings.append(f"census: {row.id}: its target {row.target} does not exist")

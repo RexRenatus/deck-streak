@@ -81,13 +81,14 @@ jobs:
           tool: cargo-nextest@0.9.146
           fallback: none
       # Round-robin spreads the engine's crates, whose mutants cost minutes each, across every
-      # shard. The shard's own baseline sets nothing here: --in-place ignores the multiplier, so
-      # --timeout bounds each cargo command.
+      # shard. In place, cargo-mutants applies no multiplier and bounds no build unless told:
+      # --timeout bounds each mutant's tests and --build-timeout each mutant's build (the tool's
+      # timeouts chapter); the unmutated baseline's build is never bounded.
       - name: cargo-mutants, one shard of the whole workspace
         run: |
           mkdir -p "$RUNNER_TEMP/mutation"
           rc=0
-          cargo mutants --no-shuffle -vV --in-place --sharding round-robin --shard ${{ matrix.shard }}/32 --timeout 300 --output "$RUNNER_TEMP/mutation" || rc=$?
+          cargo mutants --no-shuffle -vV --in-place --sharding round-robin --shard ${{ matrix.shard }}/32 --timeout 300 --build-timeout 600 --output "$RUNNER_TEMP/mutation" || rc=$?
           echo "$rc" > "$RUNNER_TEMP/mutation/cargo-mutants.exit"
           echo "cargo-mutants exited $rc"
           exit "$rc"
@@ -228,6 +229,9 @@ jobs:
           name: survivor-drafts
           path: ${{ runner.temp }}/drafts/
           if-no-files-found: warn
+      - name: every shard, the rows and the Stryker sweep reported whole, or the battery fails naming each
+        if: ${{ always() }}
+        run: python3 scripts/mutation-verdict.py battery --reports "$RUNNER_TEMP/reports" --shards 32
 
   rehearsal:
     if: ${{ github.event_name == 'pull_request' }}
@@ -268,14 +272,18 @@ jobs:
         with:
           tool: cargo-nextest@0.9.146
           fallback: none
-      - name: cargo-mutants over one file, as a shard runs it
+      - name: cargo-mutants over one file, as a shard runs it (laid out as a shard's artifact lands)
         run: |
-          mkdir -p "$RUNNER_TEMP/mutation"
+          shard="$RUNNER_TEMP/reports/mutants-shard-0"
+          mkdir -p "$shard"
           rc=0
-          cargo mutants --no-shuffle -vV --in-place -f crates/kernel/src/clock.rs --timeout 300 --output "$RUNNER_TEMP/mutation" || rc=$?
+          cargo mutants --no-shuffle -vV --in-place -f crates/kernel/src/clock.rs --timeout 300 --build-timeout 600 --output "$shard" || rc=$?
+          echo "$rc" > "$shard/cargo-mutants.exit"
           echo "cargo-mutants exited $rc"
       - name: one row, as the rows job proves it
-        run: python3 scripts/mutation_rows.py prove --row S02001-ROLLOVER-HOUR-IS-FOUR --report "$RUNNER_TEMP/mutation/rows.json"
+        run: |
+          mkdir -p "$RUNNER_TEMP/reports/rows"
+          python3 scripts/mutation_rows.py prove --row S02001-ROLLOVER-HOUR-IS-FOUR --report "$RUNNER_TEMP/reports/rows/rows.json"
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
@@ -289,24 +297,25 @@ jobs:
           pnpm exec svelte-kit sync
           rc=0
           pnpm exec stryker run --mutate src/lib/startapp.ts || rc=$?
-          cp -r reports/mutation "$RUNNER_TEMP/mutation/stryker"
+          mkdir -p "$RUNNER_TEMP/reports/stryker"
+          cp -r reports/mutation "$RUNNER_TEMP/reports/stryker/stryker"
           echo "StrykerJS exited $rc"
       - name: each tool measured something, and the drafts pass the scrub; nothing is filed
         run: |
           python3 - <<'PY'
           import json, os
-          out = os.path.join(os.environ["RUNNER_TEMP"], "mutation")
-          cargo = json.load(open(os.path.join(out, "mutants.out", "outcomes.json"), encoding="utf-8"))
+          out = os.path.join(os.environ["RUNNER_TEMP"], "reports")
+          cargo = json.load(open(os.path.join(out, "mutants-shard-0", "mutants.out", "outcomes.json"), encoding="utf-8"))
           examined = cargo["caught"] + cargo["missed"] + cargo["timeout"]
-          rows = json.load(open(os.path.join(out, "rows.json"), encoding="utf-8"))
-          stryker = json.load(open(os.path.join(out, "stryker", "mutation.json"), encoding="utf-8"))
+          rows = json.load(open(os.path.join(out, "rows", "rows.json"), encoding="utf-8"))
+          stryker = json.load(open(os.path.join(out, "stryker", "stryker", "mutation.json"), encoding="utf-8"))
           mutants = [m for f in stryker["files"].values() for m in f["mutants"]]
           print(f"rehearsal: cargo-mutants examined {examined}; rows {[r['verdict'] for r in rows]}; Stryker ran {len(mutants)}")
           assert examined > 0, "cargo-mutants examined nothing"
           assert [r["verdict"] for r in rows] == ["KILLED"], "the row was not killed"
           assert mutants, "Stryker ran nothing"
           PY
-          python3 scripts/mutation-verdict.py survivors --reports "$RUNNER_TEMP/mutation" --out "$RUNNER_TEMP/drafts"
+          python3 scripts/mutation-verdict.py survivors --reports "$RUNNER_TEMP/reports" --out "$RUNNER_TEMP/drafts"
           python3 scripts/public-scrub.py --root . --no-tree --subject "$RUNNER_TEMP/drafts"
       - name: keep the rehearsal's reports and drafts
         if: ${{ always() }}
@@ -314,6 +323,9 @@ jobs:
         with:
           name: rehearsal
           path: |
-            ${{ runner.temp }}/mutation/
+            ${{ runner.temp }}/reports/
             ${{ runner.temp }}/drafts/
           if-no-files-found: warn
+      - name: the one shard, the row and the Stryker file reported whole, as the battery counts them
+        if: ${{ always() }}
+        run: python3 scripts/mutation-verdict.py battery --reports "$RUNNER_TEMP/reports" --shards 1

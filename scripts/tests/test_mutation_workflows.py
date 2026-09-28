@@ -208,7 +208,6 @@ class TheWeeklyBattery(unittest.TestCase):
         self.assertIn("--open-titles", body, "the drafts are not deduplicated by title")
         self.assertRegex(body, r"gh issue list[^\n]*--state open[^\n]*--json title")
 
-
     def test_the_battery_counts_every_report_its_jobs_promise(self):
         found = jobs(workflow(WEEKLY))
         matrix = re.search(r"(?m)^\s+shard: \[([0-9, ]+)\]$", found.get("rust", ""))
@@ -218,9 +217,7 @@ class TheWeeklyBattery(unittest.TestCase):
             "jobs that judge a battery", [("survivors", shards), ("rehearsal", 1)]
         ):
             counted = [
-                step
-                for step in steps(found.get(name, ""))
-                if "mutation-verdict.py battery" in step
+                step for step in steps(found.get(name, "")) if "mutation-verdict.py battery" in step
             ]
             self.assertEqual(len(counted), 1, f"{name} never counts the battery's reports")
             self.assertRegex(counted[0], rf"--shards {promised}\b", name)

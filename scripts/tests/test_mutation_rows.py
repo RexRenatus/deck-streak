@@ -385,7 +385,9 @@ class TheCensusRefusesARowThatCanProveNothing(unittest.TestCase):
         fixture = Fixture(self, rows)
         refused = census(fixture.root)
         self.assertEqual(refused.returncode, 1, refused.stdout + refused.stderr)
-        self.assertIn("census: S00040-SAME: its find is empty or equals its replacement", refused.stdout)
+        self.assertIn(
+            "census: S00040-SAME: its find is empty or equals its replacement", refused.stdout
+        )
         self.assertIn(
             "census: S00042-AGAIN: installs the mutant S00041-FIRST installs, for the same killer",
             refused.stdout,
@@ -393,7 +395,9 @@ class TheCensusRefusesARowThatCanProveNothing(unittest.TestCase):
         self.assertNotIn("S00041-FIRST:", refused.stdout)
         self.assertRegex(refused.stdout, r"(?m)^examined 3 row")
         # A row outside its fragment's band, and an id two fragments hold, stop the census by name.
-        outside = Fixture(self, [("SCRIPT_MUTATIONS", script_row("S00150-OUT", "x * 2", "x * 3", killer))])
+        outside = Fixture(
+            self, [("SCRIPT_MUTATIONS", script_row("S00150-OUT", "x * 2", "x * 3", killer))]
+        )
         void = census(outside.root)
         self.assertEqual(void.returncode, 1, void.stdout + void.stderr)
         self.assertIn("S00150-OUT lies outside S0-S99", void.stdout)
