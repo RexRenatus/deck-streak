@@ -23,6 +23,7 @@ pub mod analytics_step;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
+use deck_streak_analytics::rollup::{self, fingerprint};
 use deck_streak_ingest::reader::{CollectionData, Review};
 use deck_streak_kernel::{
     CourseCode, Db, KernelError, PortFuture, StudyDay, StudyDayRule, UtcMillis,
@@ -291,8 +292,20 @@ impl Fold {
     ///
     /// [`FoldError::OutsidePhase`] when the step belongs to another phase.
     pub fn register(&mut self, phase: Phase, step: Box<dyn DayStep>) -> Result<(), FoldError> {
-        let _ = phase;
-        self.steps.push(step);
+        if step.phase() != phase {
+            return Err(FoldError::OutsidePhase {
+                step: step.name(),
+                declared: step.phase(),
+                registered: phase,
+            });
+        }
+        // Kept in the phases' order; steps of one phase keep their registration order.
+        let at = self
+            .steps
+            .iter()
+            .position(|registered| registered.phase() > phase)
+            .unwrap_or(self.steps.len());
+        self.steps.insert(at, step);
         Ok(())
     }
 
@@ -312,7 +325,128 @@ impl Fold {
     /// [`KernelError`] when a read or a write of a step or of the cursor fails; the days settled
     /// before it stay settled.
     pub async fn run(&self, db: &Db, input: &FoldInput<'_>) -> Result<FoldReport, KernelError> {
-        let _ = (db, input);
-        Ok(FoldReport::default())
+        let facts = RecomputeFacts::new(input.data, input.rule, input.now, input.courses_digest);
+        let today = facts.today;
+        let closed = previous(today);
+        let study_days: Vec<StudyDay> = facts
+            .study_days()
+            .into_iter()
+            .filter(|day| *day < today)
+            .collect();
+        let mut report = FoldReport::default();
+
+        let mut write = db.write().await?;
+        let cursor = rollup::settle_cursor(&mut write).await?;
+        let stored = rollup::fingerprints(&mut write).await?;
+        // (1) The first recompute: every past study day before the closing one, historically.
+        let first_owed = if let Some(cursor) = cursor {
+            next(cursor)
+        } else {
+            for day in study_days.iter().copied().filter(|day| *day < closed) {
+                let reviews_changed = changed(&facts, &stored, day);
+                let evaluation = Evaluation::Backfill { reviews_changed };
+                self.evaluate(&facts, day, evaluation, &mut write).await?;
+                report.backfilled.push(day);
+                if reviews_changed {
+                    report.rerolled.push(day);
+                }
+            }
+            closed
+        };
+        write.commit().await?;
+
+        // (2) Each owed day, oldest first, once a successful sync started after its close (R15).
+        let mut day = first_owed;
+        while day <= closed && input.synced_in.is_some_and(|synced| day < synced) {
+            let mut write = db.write().await?;
+            let end_of_day = day == closed;
+            self.evaluate(&facts, day, Evaluation::Settle { end_of_day }, &mut write)
+                .await?;
+            // The cursor moves in the same write as the day's steps (R16).
+            if !rollup::record_settled(&mut write, day, input.now).await? {
+                tracing::error!(%day, "a settled day has no rollup: phase 1's step is missing");
+            }
+            write.commit().await?;
+            report.settled.push(day);
+            report.rerolled.push(day);
+            day = next(day);
+        }
+
+        // (3) The current study day, as far as it has gone.
+        let mut write = db.write().await?;
+        self.evaluate(&facts, today, Evaluation::Current, &mut write)
+            .await?;
+        write.commit().await?;
+        report.current = Some(today);
+
+        // (4) Every past study day of the window that is not owed, and the days just settled:
+        // rolled up again only when their reviews changed, and re-scored (R14, R18).
+        let mut write = db.write().await?;
+        let settled_through = report.settled.last().copied().or(cursor);
+        let stored = rollup::fingerprints(&mut write).await?;
+        let revisit: BTreeSet<StudyDay> = study_days
+            .iter()
+            .copied()
+            .filter(|day| {
+                report.backfilled.contains(day) || settled_through.is_some_and(|last| *day <= last)
+            })
+            .chain(report.settled.iter().copied())
+            .collect();
+        for day in revisit {
+            let reviews_changed = changed(&facts, &stored, day);
+            let evaluation = Evaluation::Revisit { reviews_changed };
+            self.evaluate(&facts, day, evaluation, &mut write).await?;
+            report.revisited += 1;
+            if reviews_changed {
+                report.rerolled.push(day);
+            }
+        }
+        write.commit().await?;
+        report.rerolled.push(today);
+        report.rerolled.sort_unstable();
+        report.rerolled.dedup();
+        tracing::info!(
+            backfilled = report.backfilled.len(),
+            settled = report.settled.len(),
+            revisited = report.revisited,
+            rerolled = report.rerolled.len(),
+            "the recompute's fold ran"
+        );
+        Ok(report)
     }
+
+    /// Runs every step for `day`, in the phases' order, inside `write`.
+    async fn evaluate(
+        &self,
+        facts: &RecomputeFacts<'_>,
+        day: StudyDay,
+        evaluation: Evaluation,
+        write: &mut SqliteConnection,
+    ) -> Result<(), KernelError> {
+        let evaluated = DayEvaluation {
+            day,
+            evaluation,
+            facts,
+        };
+        for step in &self.steps {
+            step.evaluate(&evaluated, write).await?;
+        }
+        Ok(())
+    }
+}
+
+/// Whether `day`'s reviews differ from what its stored rollup was made of (R18).
+fn changed(facts: &RecomputeFacts<'_>, stored: &BTreeMap<StudyDay, String>, day: StudyDay) -> bool {
+    let print = fingerprint(facts.reviews_of(day), facts.courses_digest);
+    stored.get(&day) != Some(&print)
+}
+
+/// The study day before `day`.
+const fn previous(day: StudyDay) -> StudyDay {
+    StudyDay::from_epoch_day(day.epoch_day() - 1)
+}
+
+/// The study day after `day`.
+const fn next(day: StudyDay) -> StudyDay {
+    StudyDay::from_epoch_day(day.epoch_day() + 1)
 }

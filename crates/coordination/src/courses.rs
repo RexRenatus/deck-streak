@@ -28,6 +28,20 @@ pub struct CoursesDisagree {
 /// [`CoursesDisagree`] when a language deck of the taxonomy is a course's deck root under another
 /// code.
 pub fn agree(courses: &Courses, taxonomy: Option<&Taxonomy>) -> Result<(), CoursesDisagree> {
-    let _ = (courses, taxonomy, COURSES_FILE, READINGS_TAXONOMY);
-    Ok(())
+    let Some(taxonomy) = taxonomy else {
+        return Ok(());
+    };
+    let disagrees = taxonomy.languages().iter().any(|language| {
+        courses.courses().iter().any(|course| {
+            course.deck_root == language.deck() && course.code.as_str() != language.code()
+        })
+    });
+    if disagrees {
+        Err(CoursesDisagree {
+            courses: COURSES_FILE,
+            taxonomy: READINGS_TAXONOMY,
+        })
+    } else {
+        Ok(())
+    }
 }
