@@ -166,9 +166,11 @@ const NAMED_SENDS: [(&str, &str, &str); 7] = [
 /// out. The second review's: the bot's own send after a field compiled for tests alone, beside a
 /// test module under stacked attributes, which the census leaves out; the bot's own send named
 /// through a variable; a raw request from a new module of the bot; the bot's edit of a message; a
-/// fabricated update handed to the bot's command handler; and a raw request built on the bot's
-/// base URL, its method assembled from parts.
-const AROUND_THE_PORT: [(&str, &str); 8] = [
+/// fabricated update handed to the bot's command handler; a raw request built on the bot's base
+/// URL, its method assembled from parts; and three writes to the Mini App's feed around the router:
+/// through the ledger's table name from the API, in SQL from a script, and through the ledger's
+/// append from a module beside the router.
+const AROUND_THE_PORT: [(&str, &str); 11] = [
     (
         "crates/daemon/src/role_bot.rs",
         r#"/// A celebration sent straight to the owner's chat through the bot's transport, around the router.
@@ -280,6 +282,52 @@ async fn celebrate_over_a_built_url(token: &str, chat: i64) {
     let url = format!("{}/bot{token}/{method}", deck_streak_bot::transport::DEFAULT_API_URL);
     let body = serde_json::json!({ "chat_id": chat, "text": "a celebration the router never decided" });
     let _answer = reqwest::Client::new().post(url).json(&body).send().await;
+}
+"#,
+    ),
+    (
+        "crates/api/src/router.rs",
+        r#"/// A celebration written straight into the Mini App's feed, around the router: the feed route
+/// serves it to the owner's session as if the router had decided it.
+async fn celebrate_in_the_feed(db: &Db, now: i64) -> Result<(), sqlx::Error> {
+    let insert = format!(
+        "INSERT INTO {} (dedupe_key, kind, tier, text, seen_at, created_at) VALUES (?, ?, ?, ?, NULL, ?)",
+        deck_streak_notifications::ledger::FEED_TABLE
+    );
+    let mut write = db.write().await.map_err(|_| sqlx::Error::PoolClosed)?;
+    sqlx::query(&insert)
+        .bind("celebration:around")
+        .bind("celebration")
+        .bind("T2")
+        .bind("a celebration the router never decided")
+        .bind(now)
+        .execute(&mut *write)
+        .await?;
+    write.commit().await
+}
+"#,
+    ),
+    (
+        "deploy/scripts/celebrate.py",
+        r#""""A celebration written straight into the Mini App's feed, around the router."""
+
+import sqlite3
+
+
+def celebrate(database: str, now: int) -> None:
+    with sqlite3.connect(database) as db:
+        db.execute(
+            "INSERT INTO IN_APP_FEED (dedupe_key, kind, tier, text, seen_at, created_at)"
+            " VALUES ('celebration:around', 'celebration', 'T2', 'a celebration', NULL, ?)",
+            (now,),
+        )
+"#,
+    ),
+    (
+        "crates/notifications/src/occasion.rs",
+        r#"/// A celebration appended to the Mini App's feed beside the router, around its decision.
+async fn celebrate_beside_the_router(write: &mut SqliteConnection, now: UtcMillis) -> Result<(), KernelError> {
+    ledger::append_feed(write, "celebration:around", "celebration", Tier::T2, "a celebration", now).await
 }
 "#,
     ),
@@ -916,6 +964,7 @@ fn no_delivery_goes_around_the_port() {
         [
             "crates/api/src/notifications_routes.rs:3: names api.telegram.org",
             "crates/api/src/notifications_routes.rs:3: names sendMessage",
+            "crates/api/src/router.rs:6: names FEED_TABLE",
             "crates/bot/src/celebrate.rs:5: names sendMessage in celebrate, not a named call site",
             "crates/daemon/src/lifecycle.rs:4: calls edit_html in celebrate_by_an_edit, \
              not a named call site",
@@ -930,9 +979,12 @@ fn no_delivery_goes_around_the_port() {
             "crates/daemon/src/role_job.rs:11: calls send_html in celebrate_around_the_router, \
              not a named call site",
             "crates/daemon/src/wiring.rs:4: names DEFAULT_API_URL",
+            "crates/notifications/src/occasion.rs:3: names append_feed",
+            "deploy/scripts/celebrate.py:9: names in_app_feed",
         ],
         "the bot's own send, named or called, its edit and its command handler, raw requests to \
-         the Bot API and on its base URL, and a raw request from inside the bot, around the port"
+         the Bot API and on its base URL, a raw request from inside the bot, and writes to the \
+         Mini App's feed, around the port"
     );
 
     // The walker reads a shipped module in a directory named as tests are, because it is under
