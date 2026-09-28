@@ -63,3 +63,7 @@ A7: green at fe74c1e
 A8: red at 55ac95e: assertion `left == right` failed: one event must log the panic; left: 0, right: 1 (the default hook wrote the panic to stderr)
 A8: green at fe74c1e
 ```
+
+After `dev` brought SPEC-021's `data` role into this branch (merge 91a2583), A1's loop runs that role
+through `data export`, because the role takes a command and a bare `data` is a usage error. A1's
+assertions are unchanged; at 91a2583 A1 was red in CI for exactly that reason (`data: exit status: 2`).
