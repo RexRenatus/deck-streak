@@ -82,6 +82,35 @@ alternatives:
   it judges notifications only. Chosen against naming a kind the policy declares, which would make
   a reply look like an alert or a nudge, and against moving the replies out of `*.msg.json`, which
   the telegram-platform payload rows read.
+- **frankenstein's async client, `client-reqwest`.** frankenstein 0.52.1 offers two clients:
+  `client-reqwest`, its `AsyncTelegramApi` over reqwest and tokio, and `client-ureq`, its blocking
+  `TelegramApi` over ureq. The bot runs in the daemon's tokio runtime, and the stop abandons a long
+  poll in flight by dropping its future (R13). Chosen against `client-ureq`, because each
+  `getUpdates` would then hold a thread for up to the 50-second long poll: called on the runtime, it
+  would block one of its worker threads for as long; moved to tokio's blocking pool, it would hold a
+  thread that cannot be aborted once it has started, so the stop could not abandon the poll and
+  would wait it out before it confirmed its offset and exited.
+- **The TLS provider is aws-lc-rs, the one frankenstein's client brings.** frankenstein 0.52.1
+  depends on reqwest 0.13 with its default features off and `rustls` on, and reqwest 0.13.5 defines
+  `rustls` as `__rustls-aws-lc-rs` plus `rustls-platform-verifier`: its client is built on
+  `rustls::crypto::aws_lc_rs::default_provider()`, and it has no ring feature, since a ring provider
+  takes `rustls-no-provider` and a provider the caller installs before it builds a client. Cargo's
+  features only add, so no setting of this workspace takes `rustls` back from frankenstein (measured
+  with `cargo tree -e features -i reqwest` and the two crates' published manifests). Chosen against
+  ring, which would need a fork of frankenstein that asks for `rustls-no-provider`, or reqwest as a
+  dependency of the bot's own, to hand frankenstein a client built around ring while aws-lc-rs is
+  still built beside it; this record declines both, the second as it declines reqwest for the
+  export. ring is in the bot's tree only beneath rustls-webpki, which `rustls-platform-verifier`
+  brings.
+- **An offset stands confirmed only once the server answers a request that carried it.** The poller
+  marks a long poll's offset confirmed on the server's answer, as the stop's confirmation already
+  did, never as the poll is issued. A stop that wins the race abandons a poll whose request may
+  never have left the process, and the stop's own confirming request then covers it, so R13's stop
+  confirms its offset in every interleaving, at the cost of one request, answered at once, when the
+  last poll was still waiting. Chosen against making the lifecycle test wait for the confirmed
+  offset before it sends SIGTERM and weakening R13's wording to match, which would fit the
+  requirement and the test to the defect, and leave the poller's state claiming a confirmation the
+  server may never have received.
 
 ### Consequences
 

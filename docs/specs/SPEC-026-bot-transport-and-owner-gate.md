@@ -277,8 +277,11 @@ imports no pack probe, and the telegram-platform payload rows judge the same fil
   and the sample's two chunks.
 - **R13: readiness and the stop.** The database opens before the loop; `READY=1` is sent as the first
   long poll is issued, after the drain, and the heartbeat starts with it. A SIGTERM during a long
-  poll abandons it: nothing it held was handled, so the offset already stands confirmed, and an
-  update it was about to return is drained at the next start, never replayed.
+  poll abandons it, and nothing it held is handled. An offset stands confirmed only once the server
+  has answered a request that carried it, and an abandoned poll's request may never have left the
+  process, so the stop sends its confirming request whenever the last poll went unanswered
+  (ADR-026); an update the abandoned poll was about to return is drained at the next start, never
+  replayed.
 - **Manifest: the deploy template and SPEC-021's test.** The bot role requires the Mini App's URL, so
   the deploy template names it, with no value, as it names the sync's endpoint. SPEC-021's policy
   test pins the policy's entry points, and R14 adds the bot's command table to them.

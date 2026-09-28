@@ -63,3 +63,55 @@ A15: red at cdd51b4: assertion `left == right` failed: one owner's sync, now; le
 A15: green at 19cf5bd
 A16: not red: it judges the committed golden messages, which were committed with the tests (cdd51b4), so it passed there as at green: it reads files, not behaviour; its refusals are proved on planted payloads by the same file's test_the_reading_refuses_what_the_bot_api_refuses, which refuses each of 18 payloads the Bot API refuses and accepts each of 5 it takes
 ```
+
+## Fix round
+
+The round-1 verifier asked for four fixes. The branch first took dev at b61851f (03b9459): the
+merge resolved one conflict, where both sides added a workspace dependency to `Cargo.toml`, and
+nothing else. Every test of the round was committed at 410ebfd, before any fix.
+
+- `transport::the_api_url_names_no_path` (R11's base URL): red at 410ebfd: assertion `left == right`
+  failed: https://api.telegram.org/x; left: Some(ApiUrl("https://api.telegram.org/x")), right: None.
+  Green at 6ba65c5, where `ApiUrl::new` refuses any path beyond the root. cargo-mutants never looks
+  inside a method named `new`, so row S02617 holds the refusal (5e20120).
+- `poll::the_stop_confirms_the_offset_of_a_poll_it_abandoned` (R13): red at 410ebfd: assertion
+  `left == right` failed: the stop confirms the offset past update 50, and the fake saw the drain
+  alone; left: 0, right: 1. The stop came before the first long poll's request left the process,
+  and the poller, which had counted offset 51 confirmed as it issued that poll, sent nothing. Green
+  at e7d0dae, where an offset stands confirmed only once the server answers a request that carried
+  it (ADR-026).
+- `chunking::a_paragraph_is_a_line_break_after_another`, `a_tag_name_starts_with_a_letter`,
+  `a_closing_tag_name_starts_with_a_letter` and `a_cut_takes_the_closing_tags_that_end_the_text` are
+  mutant killers, not criteria, and never red: they pass at 410ebfd, whose chunker is correct. Each
+  kills one mutant CI's mutation job read as missed, in that order: `replace - with / in cut`
+  (122:42), `replace && with || in is_name` (257:9), `replace && with || in tag` (235:31) and
+  `replace < with <= in settle` (141:15). Each was proved by hand at 9011aff: the mutant applied,
+  its test failed, the file restored byte for byte.
+- The fifth, `replace + with * in settle` (138:23), was equivalent: `settle` walks back over opening
+  tags only as far as the chunk's own visible piece, so its bound never decided anything. The bound
+  is gone (9011aff), and the mutant with it; the chunking tests pass as before, and no output of the
+  chunker changed on any input a differential compared.
+
+DISCLOSURE: A7, `the_poll_confirms_each_update_by_its_offset`. Its body changed at 410ebfd, after
+its red commit cdd51b4 and its green commit 19cf5bd. Old: `assert_eq!(polls.len(), 4, ...)`, beside
+a comment that the fourth poll had already confirmed every handled update, so no confirmation
+followed. New: `assert_eq!(polls.len(), 5, ...)`, and the fifth poll carries offset 13 without
+waiting. Why: the old count encoded the defect, a poller that counted offset 13 confirmed the moment
+it issued the fourth poll, before any answer. The fake holds that poll unanswered, so it now
+confirms nothing, and the stop confirms offset 13 itself. The count holds in every interleaving: the
+stop resolves only once the fake has recorded the fourth poll, the fake holds that poll's answer for
+a second, and the loop's biased select takes the stop first. Red at 410ebfd (left: 4, right: 5),
+green at e7d0dae. Its assertions of the four offsets, the long-poll timeout, the kinds asked for and
+the two answers are unchanged.
+
+DISCLOSURE: A8, `updates_queued_before_start_are_drained_and_not_replayed`. Its body changed at
+410ebfd, after cdd51b4 and 19cf5bd. Old: the calls are exactly `deleteWebhook`, `deleteMyCommands`,
+`setMyCommands`, `getUpdates`, `getUpdates` ("no webhook, the menu, the drain, then the first
+poll"). New: the same five, then a sixth `getUpdates` that carries offset 21 without waiting ("then
+the stop's confirmation"). Why: A7's cause; the stop came while the first poll, at offset 21, waited
+unanswered, so the stop confirms offset 21 again. The criterion's own claims, that the drain reads
+the newest queued update, that the first poll carries 21 and that nothing queued is replayed, are
+unchanged, and the list is exact in every interleaving for A7's reason. Red at 410ebfd (five calls
+against six), green at e7d0dae.
+
+No other criterion test's body changed in this round; its other tests are new functions.
