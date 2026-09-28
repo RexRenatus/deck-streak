@@ -391,7 +391,7 @@ impl Router {
             dedupe_key: occasion.key().as_str(),
             scope: &scope,
             surface,
-            study_day: now.epoch_millis().div_euclid(86_400_000),
+            study_day,
             lapse_id,
             created_at: now,
         };
@@ -440,8 +440,7 @@ impl Router {
         if let (true, Some(lapse_id)) = (kind.is_comeback(), lapse_id) {
             let (sends, last) = ledger::lapse_sends(write, kind.name(), lapse_id, claim).await?;
             let gap = i64::from(self.policy.comeback.min_gap_days);
-            let too_soon =
-                last.is_some_and(|last| now.epoch_millis().div_euclid(86_400_000) - last < gap);
+            let too_soon = last.is_some_and(|last| occasion.study_day().epoch_day() - last < gap);
             if sends >= i64::from(self.policy.comeback.max_per_episode) || too_soon {
                 return Ok(Verdict::Withhold(Reason::BudgetSpent));
             }
