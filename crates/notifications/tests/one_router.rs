@@ -137,6 +137,32 @@ const FEED_TABLE_NAME: &str = "in_app_feed";
 /// The router's names for the feed: the ledger's constant for its table, and its append.
 const FEED_NAMES: [&str; 2] = ["FEED_TABLE", "append_feed"];
 
+/// The modules that own the held queue's writes, the only sources that may name it: the ledger,
+/// which holds the SQL of each write (`hold`, `abandon`, `relatch`, `settle`) and reads it; the
+/// router, their one caller, which holds, flushes and retries; and the data-rights port, which
+/// exports and erases it. A write to the queue anywhere else is a delivery around the router,
+/// because a flush delivers what the queue holds.
+const QUEUE_MODULES: [&str; 3] = [
+    "crates/notifications/src/ledger.rs",
+    "crates/notifications/src/router.rs",
+    "crates/notifications/src/data_rights.rs",
+];
+
+/// The held queue's table, named in SQL in any case.
+const QUEUE_TABLE_NAME: &str = "notification_queue";
+
+/// The router's names for the queue: the ledger's constant for its table.
+const QUEUE_NAMES: [&str; 1] = ["QUEUE_TABLE"];
+
+/// The ledger, as (the notifications crate's sources, its root, the ledger's name): the ledger's
+/// writes to the queue are private to the crate, so a call of one in the crate's sources names the
+/// ledger, which only the root's declaration of it names outside the queue's modules.
+const LEDGER: (&str, &str, &str) = (
+    "crates/notifications/src/",
+    "crates/notifications/src/lib.rs",
+    "ledger",
+);
+
 /// SPEC-031's alert path: it pages the owner that a unit failed, the daemon among them, so it
 /// cannot go through the daemon's router. The one shipped source outside the bot that names the
 /// Bot API.
@@ -518,6 +544,13 @@ fn census(sources: &[(String, String)]) -> Census {
                     .push((path.clone(), line_of(&code, at), format!("names {name}")));
             }
         }
+        if !QUEUE_MODULES.contains(&path.as_str()) {
+            for (at, name) in names_of_the_queue(path, &code, &structure) {
+                found
+                    .refusals
+                    .push((path.clone(), line_of(&code, at), format!("names {name}")));
+            }
+        }
         if rust {
             for (name, definer) in GUARDED {
                 for at in identifiers(&structure, name) {
@@ -590,6 +623,29 @@ fn names_of_the_feed(code: &str) -> Vec<(usize, String)> {
     named
 }
 
+/// What the source at `path` names of the held queue: its table, in any case, the router's names
+/// for it, and in the notifications crate's sources the ledger, whose writes to the queue are
+/// private to that crate, the root's declaration of it aside. Each is read from its `code`, as the
+/// byte it starts at and the name; a declaration is read from its `structure`.
+fn names_of_the_queue(path: &str, code: &str, structure: &str) -> Vec<(usize, String)> {
+    let lower = code.to_ascii_lowercase();
+    let mut named: Vec<(usize, String)> = identifiers(&lower, QUEUE_TABLE_NAME)
+        .map(|at| (at, QUEUE_TABLE_NAME.to_owned()))
+        .collect();
+    for name in QUEUE_NAMES {
+        named.extend(identifiers(code, name).map(|at| (at, name.to_owned())));
+    }
+    let (sources, root, ledger) = LEDGER;
+    if path.starts_with(sources) {
+        named.extend(
+            identifiers(code, ledger)
+                .filter(|&at| !(path == root && declared(structure, at)))
+                .map(|at| (at, ledger.to_owned())),
+        );
+    }
+    named
+}
+
 /// Each name of a Bot API send method in `code`, in either spelling, as the byte it starts at and
 /// the name.
 fn names_of_a_send(code: &str) -> Vec<(usize, String)> {
@@ -643,6 +699,14 @@ fn defined(structure: &str, at: usize) -> bool {
     structure[..at]
         .trim_end()
         .strip_suffix("fn")
+        .is_some_and(|rest| rest.chars().next_back().is_none_or(|c| !ident(c)))
+}
+
+/// Whether the identifier at the byte `at` of `structure` is the name a `mod` declares.
+fn declared(structure: &str, at: usize) -> bool {
+    structure[..at]
+        .trim_end()
+        .strip_suffix("mod")
         .is_some_and(|rest| rest.chars().next_back().is_none_or(|c| !ident(c)))
 }
 
