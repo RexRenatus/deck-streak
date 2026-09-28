@@ -511,6 +511,19 @@ class AnEmptyCredentialFailsTheAlertUnit(unittest.TestCase):
         self.assertNotIn("-", re.match(r"[-@:+!|]*", start).group(0), start)
         statuses = [s for v in values(template, "Service", "SuccessExitStatus") for s in v.split()]
         self.assertEqual({"1", "FAILURE"} & set(statuses), set(), statuses)
+        # And nothing moves the refused instance out of the failed state: no RestartMode=direct,
+        # which skips that state on a restart, and no restart at all, since a restart at the default
+        # mode only passes through it and waits for the next start activating: no Restart= other
+        # than `no`, and no RestartForceExitStatus= naming 1 or FAILURE, which forces a restart
+        # whatever Restart= says (systemd.service(5)).
+        modes = [m.strip() for m in values(template, "Service", "RestartMode")]
+        self.assertNotIn("direct", modes, modes)
+        restarts = [r for r in values(template, "Service", "Restart") if r != "no"]
+        self.assertEqual(restarts, [], restarts)
+        forced = [
+            s for v in values(template, "Service", "RestartForceExitStatus") for s in v.split()
+        ]
+        self.assertEqual({"1", "FAILURE"} & set(forced), set(), forced)
 
 
 if __name__ == "__main__":

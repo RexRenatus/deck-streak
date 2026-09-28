@@ -356,6 +356,12 @@ def refusal_page_refusals(unit):
     return refused
 
 
+def restart_refusals(unit):
+    """Why a refused start of the alert template would not stay failed (SPEC-066 R3): a restart of
+    it. A stub that refuses nothing, until the check is written."""
+    return []
+
+
 # --- the Caddyfile, read as Caddy's lexer reads it -------------------------------------------
 
 
@@ -808,9 +814,11 @@ class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
         (template,) = [unit for unit in loading if unit.name == alert]
         self.assertEqual(template.values("Unit", "OnFailure"), [])
         self.assertEqual([r for r in refusal_page_refusals(template) if "OnFailure=" not in r], [])
+        self.assertEqual(restart_refusals(template), [])
         # Planted templates: one for each condition, one that meets all four, one that loads no
-        # credential and so is not examined, and one shaped as the alert template is, which names
-        # no OnFailure= and counts the refusal a success.
+        # credential and so is not examined, and three shaped as the alert template is, which name
+        # no OnFailure=, each breaking one thing the alert template must not: its exit status, a
+        # restart mode that skips the failed state beside a restart, and a forced restart.
         head = "[Unit]\nDescription=planted\n"
         page = f"OnFailure={ON_FAILURE}\n"
         run = "[Service]\nExecStart=/bin/true\n"
@@ -823,6 +831,8 @@ class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
             "direct.service": f"{head}{page}{run}Restart=on-failure\nRestartMode=direct\n{loads}",
             "reads-none.service": f"{head}{run}",
             "alert-shaped.service": f"{head}{run}SuccessExitStatus=1\n{loads}",
+            "alert-restarts.service": f"{head}{run}Restart=on-failure\nRestartMode=direct\n{loads}",
+            "alert-forced.service": f"{head}{run}RestartForceExitStatus=1\n{loads}",
         }
         with tempfile.TemporaryDirectory() as scratch:
             folder = Path(scratch) / "deploy" / "systemd"
@@ -834,6 +844,8 @@ class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
         self.assertEqual(
             [unit.name for unit in planted_loading],
             [
+                "alert-forced.service",
+                "alert-restarts.service",
                 "alert-shaped.service",
                 "direct.service",
                 "ignored.service",
@@ -846,6 +858,9 @@ class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
         self.assertEqual(
             [r for unit in planted_loading for r in refusal_page_refusals(unit)],
             [
+                f"{where}/alert-forced.service: OnFailure= does not name {ON_FAILURE}",
+                f"{where}/alert-restarts.service: OnFailure= does not name {ON_FAILURE}",
+                f"{where}/alert-restarts.service: RestartMode=direct skips OnFailure=",
                 f"{where}/alert-shaped.service: OnFailure= does not name {ON_FAILURE}",
                 f"{where}/alert-shaped.service: SuccessExitStatus=1 counts the refusal a success",
                 f"{where}/direct.service: RestartMode=direct skips OnFailure=",
@@ -854,11 +869,37 @@ class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
                 f"{where}/success.service: SuccessExitStatus=2 1 counts the refusal a success",
             ],
         )
-        # The alert template's own check refuses the alert-shaped plant for its exit status alone.
-        (shaped,) = [unit for unit in planted_loading if unit.name == "alert-shaped.service"]
+        # The alert template's own checks refuse each alert-shaped plant for what it breaks alone:
+        # the exit conditions for its exit status or its restart mode, and the restart check for
+        # its restart. `alert-restarts` is refused by the exit conditions with exactly its
+        # RestartMode= line, though that line, like its OnFailure= one, names OnFailure=.
+        shaped = [unit for unit in planted_loading if unit.name.startswith("alert-")]
         self.assertEqual(
-            [r for r in refusal_page_refusals(shaped) if "OnFailure=" not in r],
-            [f"{where}/alert-shaped.service: SuccessExitStatus=1 counts the refusal a success"],
+            {
+                unit.name: (
+                    [r for r in refusal_page_refusals(unit) if "OnFailure=" not in r],
+                    restart_refusals(unit),
+                )
+                for unit in shaped
+            },
+            {
+                "alert-forced.service": (
+                    [],
+                    [
+                        f"{where}/alert-forced.service: RestartForceExitStatus=1 restarts the refusal"
+                    ],
+                ),
+                "alert-restarts.service": (
+                    [f"{where}/alert-restarts.service: RestartMode=direct skips OnFailure="],
+                    [f"{where}/alert-restarts.service: Restart=on-failure restarts the refusal"],
+                ),
+                "alert-shaped.service": (
+                    [
+                        f"{where}/alert-shaped.service: SuccessExitStatus=1 counts the refusal a success"
+                    ],
+                    [],
+                ),
+            },
         )
 
 
