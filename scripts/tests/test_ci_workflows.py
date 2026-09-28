@@ -240,6 +240,16 @@ class WorkflowsAreHardened(unittest.TestCase):
                 "runs in a container the checker does not read",
                 "environment-the-checker-does-not-read.yml:jobs.holding-volumes.container.volumes: "
                 "runs in a container the checker does not read",
+                "environment-the-checker-does-not-read.yml:jobs.given-every-property.container."
+                "env: sets an environment the checker does not read",
+                "environment-the-checker-does-not-read.yml:jobs.given-every-property.container."
+                "image: runs in a container the checker does not read",
+                "environment-the-checker-does-not-read.yml:jobs.given-every-property.container."
+                "options: runs in a container the checker does not read",
+                "environment-the-checker-does-not-read.yml:jobs.given-every-property.container."
+                "ports: runs in a container the checker does not read",
+                "environment-the-checker-does-not-read.yml:jobs.given-every-property.container."
+                "volumes: runs in a container the checker does not read",
                 "every-secret.yml:jobs.build.steps[0].env.CHOSEN: reads the whole secrets "
                 "context, or a secret named at run time",
                 "every-secret.yml:jobs.build.steps[0].run: reads the whole secrets context, or a "
