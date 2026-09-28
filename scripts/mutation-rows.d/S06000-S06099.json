@@ -464,6 +464,62 @@
         "    chosen = select(candidates(read_json(args.inventory, \"inventory\")[0], rules), rules[\"protected\"], skipped)\n",
         "the plan takes its candidates from a second read of the inventory, not the one it bound (SPEC-060 R4, A10)",
         "test_host_scrub.OneRead.test_each_tool_binds_the_bytes_it_parsed"
+      ],
+      [
+        "S06059-THE-INVENTORY-REFUSES-AN-UNSYNCHRONISED-CLOCK",
+        "deploy/host-scrub/inventory.py",
+        "    if not clock_synchronised(runner):\n",
+        "    if False:\n",
+        "the inventory is written although the host clock does not read synchronised (SPEC-060 R6, A11)",
+        "test_host_scrub.Axes.test_the_tools_refuse_a_clock_that_is_not_synchronised"
+      ],
+      [
+        "S06060-ONLY-YES-READS-AS-SYNCHRONISED",
+        "deploy/host-scrub/inventory.py",
+        "    return code == 0 and output.strip() == \"yes\"\n",
+        "    return code == 0\n",
+        "any answer of the time-sync reading counts as synchronised (SPEC-060 R6, A11)",
+        "test_host_scrub.Axes.test_the_tools_refuse_a_clock_that_is_not_synchronised"
+      ],
+      [
+        "S06061-THE-INVENTORY-RECORDS-THE-CLOCK",
+        "deploy/host-scrub/inventory.py",
+        "        \"clock_synchronised\": True,\n",
+        "",
+        "the inventory records nothing of the clock it read (SPEC-060 R6, A11)",
+        "test_host_scrub.Axes.test_the_tools_refuse_a_clock_that_is_not_synchronised"
+      ],
+      [
+        "S06062-THE-LIST-CARRIES-THE-CLOCK",
+        "deploy/host-scrub/plan.py",
+        "            \"clock_synchronised\": inventory.get(\"clock_synchronised\"),\n",
+        "",
+        "the list drops the clock reading of its inventory (SPEC-060 R6, A11)",
+        "test_host_scrub.Axes.test_the_tools_refuse_a_clock_that_is_not_synchronised"
+      ],
+      [
+        "S06063-THE-APPLY-REQUIRES-THE-RECORDED-CLOCK",
+        "deploy/host-scrub/apply.py",
+        "        if listing[\"inventory\"].get(\"clock_synchronised\") is not True:\n",
+        "        if False:\n",
+        "the apply acts on an inventory that did not record a synchronised clock (SPEC-060 R6, A11)",
+        "test_host_scrub.Axes.test_the_tools_refuse_a_clock_that_is_not_synchronised"
+      ],
+      [
+        "S06064-THE-APPLY-READS-THE-CLOCK-AGAIN",
+        "deploy/host-scrub/apply.py",
+        "        if not clock_synchronised(reads):\n",
+        "        if False:\n",
+        "the apply acts although the host clock does not read synchronised now (SPEC-060 R6, A11)",
+        "test_host_scrub.Axes.test_the_tools_refuse_a_clock_that_is_not_synchronised"
+      ],
+      [
+        "S06065-AN-ITEM-ON-ANOTHER-DEVICE-IS-REFUSED",
+        "deploy/host-scrub/plan.py",
+        "        if inodes and st.st_dev != inodes[0][0][0]:\n",
+        "        if False:\n",
+        "an entry on another device than its item is digested and removed with it (SPEC-060 R7, A11)",
+        "test_host_scrub.Axes.test_an_item_holding_another_device_is_never_digested_or_removed"
       ]
     ]
   }
