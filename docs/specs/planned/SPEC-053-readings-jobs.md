@@ -80,8 +80,8 @@ R7. Both jobs are in SPEC-027's catch-up: a fire missed by at most 360 minutes i
 R8. The vault archive switch `readings_vault_archive` defaults to off. While it is off, the generation
     stores and serves every reading in the Mini App and writes nothing to the vault, recording
     `vault_archive_off`. The first live night's checklist switches it on only once the owner's go
-    makes DeckStreak the readings folder's writer (#45), so the folder has one writer at every
-    moment.
+    makes DeckStreak the readings folder's writer (ADR-065, #45), so the folder has one writer at
+    every moment.
 R9. The templates `deploy/systemd/deck-streak-readings-generate.service` and `.timer`, and
     `deck-streak-readings-morning.service` and `.timer`, carry placeholder values only. As committed,
     the generation unit runs in no-AI mode (ADR-054): the runner's settings (the route setting and
@@ -192,3 +192,7 @@ A12: python3 -m unittest discover -s scripts/tests -p test_readings_units.py -k 
 - **Section 6 (2026-09-28): the host-down risk.** It said SPEC-027 does not catch the sync up;
   SPEC-027 as delivered makes `sync` its catch-up job (its R1). The risk now names what the catch-up
   recovers and what still ends `sync_failed`.
+- **R8 (2026-09-28): how DeckStreak becomes the one writer.** R8 now cites ADR-065, which decides
+  it: before the switch goes on, the private rail fences every other writer it lists from the
+  readings folder with a read-only mount, and proves each fence by a refused write. ADR-053 carries
+  the matching note.

@@ -81,6 +81,9 @@ getrandom = "0.4.3"
 # client brings reqwest's rustls stack; the bot reaches reqwest only through frankenstein's own
 # re-export, for the one upload frankenstein reads from a file path (ADR-026, "Decided at delivery").
 frankenstein = { version = "0.52.1", default-features = false, features = ["client-reqwest"] }
+# ADR-040 (SPEC-040 A6): the compile-fail harness that proves an XP amount cannot be built from a
+# signed integer. A dev-dependency only; no production dependency of any context changes.
+trybuild = "1.0.121"
 
 # ADR-058 (#233): the engine's upstream tag above, replaced by a commit of the maintainer's fork that
 # is that tag plus one fix, so the engine's protobuf build script stops rerunning on every cargo
