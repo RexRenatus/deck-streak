@@ -15,7 +15,7 @@ arrangement as the state "until it exists". Several later documents lean on that
 - ADR-030 expects the runner to replace `scripts/box-packs.sh`;
 - ADR-039 expects it to end vendoring;
 - ADR-043 expects it to ship a proxy client with no private name;
-- SPEC-002 and SPEC-030 exclude work "until the open-source pack runner exists" (#60).
+- SPEC-002 and SPEC-030 exclude work "until the open-source pack runner exists" (#60);
 - `scripts/pack-rows.py` and `.packs/VENDORED.json` describe the vendored probes as standing in
   for that runner until it exists.
 
