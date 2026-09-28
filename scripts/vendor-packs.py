@@ -14,10 +14,11 @@ The run reads `ROOT/.packs/VENDORED.json` and the commit the source checkout's H
    file an exclusion matches loses its manifest entry when the run passes; no file is deleted.
 3. A listed file the commit lacks refuses the run with exit 2.
 4. Every other candidate is read from the commit into memory and scanned with the public scrub's
-   own rules (`scripts/public-scrub.py`): persona-core's and privacy-gdpr's shapes, the private
-   list from `--deny-list` or `$PERSONA_CORE_DENY_LIST`, the binary rule and the size limit, with
-   the rule files the scrub skips skipped the same way. Any finding refuses the run with exit 1,
-   one line per finding naming the source path and the rule, never the value.
+   own rules, as `scripts/public-scrub.py`'s `rules()` composes them: persona-core's and
+   privacy-gdpr's shapes, the private list from `--deny-list` or `$PERSONA_CORE_DENY_LIST`, the
+   binary rule and the size limit, with the rule files the scrub skips skipped the same way. Any
+   finding refuses the run with exit 1, one line per finding naming the source path and the rule,
+   never the value.
 5. Only when every candidate passed are the changed and new files written, and the manifest's
    digests and `vendored_from` updated, with `methodology.json`'s `vendored_from`. A file the tree
    already holds byte for byte is not touched. A refused run leaves the tree byte-identical, and
@@ -96,22 +97,13 @@ def load_scrub():
 
 
 def rules(scrub, deny_list: str | None):
-    """The scrub's own Scan, over the deny lists its main() composes: persona-core's with the
-    private list, and privacy-gdpr's."""
-    private = Path(deny_list) if deny_list else None
-    if private is not None and not private.is_file():
-        raise Refusal(f"the private list {private} is not a file")
-    persona = scrub.load_persona_core()
+    """The scrub's own composition of its rules, `rules(private)`, and so the very Scan its main()
+    scans with: persona-core's list with the private list, and privacy-gdpr's. Nothing here
+    composes a list itself (ADR-039, SPEC-054 R3); the scrub's refusal is a usage error here."""
     try:
-        lists = [
-            persona.load_deny(scrub.PACKS / "persona-core", private),
-            persona.load_deny(scrub.PACKS / "privacy-gdpr", None),
-        ]
-    except persona.ContractError as error:
-        raise Refusal(f"a deny list cannot be read: {error}") from error
-    patterns = [(rule, pattern) for deny in lists for _origin, rule, pattern in deny["patterns"]]
-    literals = [(origin, literal) for deny in lists for origin, literal in deny["literals"]]
-    return scrub.Scan(patterns, literals)
+        return scrub.rules(Path(deny_list) if deny_list else None)
+    except scrub.RulesError as error:
+        raise Refusal(str(error)) from error
 
 
 def relative(path: object, what: str) -> str:

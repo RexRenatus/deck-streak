@@ -1,10 +1,11 @@
 """The box-pack runner judges the committed tree with each pack's own verb, and names every red row
-it does not expect (SPEC-030 R10 to R14, ADR-030).
+it does not expect (SPEC-030 R10 to R14, ADR-030). It reads the state of every issue the wiring
+names, fails an expectation whose issue is closed, and reads VOID when it cannot (SPEC-054 R4).
 
-`scripts/box-packs.sh` is driven here with a fake phxd and a fake phoenix checkout
-(`scripts/tests/fixtures/box-packs/`), so these tests need neither phxd nor phoenix-v2 and run in CI.
-The fake records every call, and the census of every tree it was asked to judge, before the runner
-removes that tree. The real run stays on the maintainer's box (ADR-004).
+`scripts/box-packs.sh` is driven here with a fake phxd, a fake phoenix checkout and a fake gh
+(`scripts/tests/fixtures/box-packs/`), so these tests need neither phxd, phoenix-v2 nor GitHub, and
+run in CI. The fakes record every call, and the fake phxd the census of every tree it was asked to
+judge, before the runner removes that tree. The real run stays on the maintainer's box (ADR-004).
 """
 
 import hashlib
@@ -21,6 +22,10 @@ from _support import REPO, examined
 RUNNER = REPO / "scripts" / "box-packs.sh"
 FIXTURES = REPO / "scripts" / "tests" / "fixtures" / "box-packs"
 FAKE_PHXD = FIXTURES / "fake-phxd"
+# The directory holding the fake `gh`, put first on every run's path.
+FAKE_GH = FIXTURES / "bin"
+# The tools the runner itself calls by name, so a path of these alone has everything but gh.
+RUNNER_TOOLS = ("bash", "python3", "git", "tar")
 # Temporary repositories are isolated from the machine's git configuration and hooks.
 GIT = [
     "git",
@@ -112,6 +117,7 @@ class Box:
         self.phoenix = self.tmp / "phoenix"
         self.repo = self.tmp / "deckstreak"
         self.log = self.tmp / "phxd.log"
+        self.gh_log = self.tmp / "gh.log"
         self.cards = self.tmp / "cards"
         self.temp_root = self.tmp / "temp"
         self.temp_root.mkdir()
@@ -163,20 +169,34 @@ class Box:
         write(self.repo, {".packs/wiring.json": json.dumps(wiring, indent=2)})
         commit(self.repo, "the synthetic DeckStreak tree")
 
-    def run(self, *args, red=()):
-        """Run the real runner with the fake phxd; (the finished process, the calls it made)."""
+    def run(self, *args, red=(), closed=(), gh="fake"):
+        """Run the real runner with the fake phxd; (the finished process, the calls it made).
+
+        The fake gh answers CLOSED for each issue `closed` names and OPEN for any other. `gh` set
+        to `auth`, `offline` or `garbled` makes it fail the way gh does, and None runs with no gh on
+        the path at all."""
         self.log.write_text("", encoding="utf-8")
+        self.gh_log.write_text("", encoding="utf-8")
         env = dict(
             os.environ,
             PHOENIX=str(self.phoenix),
             PHXD=str(FAKE_PHXD),
             FAKE_PHXD_LOG=str(self.log),
             FAKE_PHXD_RED=",".join(red),
+            FAKE_GH_LOG=str(self.gh_log),
+            FAKE_GH_CLOSED=",".join(issue.removeprefix("#") for issue in closed),
             BOX_PACKS_OUT=str(self.cards),
             TMPDIR=str(self.temp_root),
             PYTHONDONTWRITEBYTECODE="1",
         )
-        env.pop("PHX_LEDGER", None)
+        for inherited in ("PHX_LEDGER", "FAKE_GH_FAIL", "GH_REPO"):
+            env.pop(inherited, None)
+        if gh is None:
+            env["PATH"] = str(self.tools_without_gh())
+        else:
+            env["PATH"] = os.pathsep.join([str(FAKE_GH), os.environ.get("PATH", "")])
+            if gh != "fake":
+                env["FAKE_GH_FAIL"] = gh
         done = subprocess.run(
             ["bash", str(RUNNER), *args, str(self.repo)],
             env=env,
@@ -187,6 +207,22 @@ class Box:
         )
         calls = [json.loads(line) for line in self.log.read_text().splitlines() if line]
         return done, calls
+
+    def gh_calls(self):
+        """Every call the fake gh answered in the last run: its argv and working directory."""
+        return [json.loads(line) for line in self.gh_log.read_text().splitlines() if line]
+
+    def tools_without_gh(self):
+        """A directory holding the runner's own tools and no gh, to stand for a path without it."""
+        tools = self.tmp / "tools-without-gh"
+        if not tools.is_dir():
+            tools.mkdir()
+            for name in RUNNER_TOOLS:
+                found = shutil.which(name)
+                if found is None:
+                    raise AssertionError(f"this machine has no {name} on its path")
+                (tools / name).symlink_to(found)
+        return tools
 
 
 def calls_of(calls, verb):
@@ -375,6 +411,63 @@ class TheBoxRunnerJudgesHonestly(unittest.TestCase):
         self.assertTrue(line.startswith("FAIL"), line)
         self.assertIn("stale", line)
         self.assertEqual(done.returncode, 1, done.stdout)
+
+
+class EveryExpectationNamesAnOpenIssue(unittest.TestCase):
+    def test_an_expectation_whose_issue_is_closed_fails_the_run_by_name(self):
+        box = Box(self)
+        expected = {"expected_red": {"alpha.second": "#23"}}
+        box.set_box(dict(box.box, packs=dict(box.box["packs"], alpha=expected)))
+        # The expected red row's issue is closed: the pack fails, naming the row and the issue.
+        done, _ = box.run(red=["alpha.second"], closed=["#23"])
+        line = pack_line(done.stdout, "alpha")
+        self.assertTrue(line.startswith("FAIL"), line)
+        self.assertIn("alpha.second (#23 is closed)", line)
+        self.assertEqual(done.returncode, 1, done.stdout)
+        self.assertIn("BOX PACKS FAILED", done.stdout)
+        # A pending pack's issue closed, and the proxy scan's, fail the same way.
+        for pack, issue in (("seo-pipeline", "#59"), ("proxy-client-scan", "#29")):
+            with self.subTest(pack=pack):
+                done, _ = box.run(red=["alpha.second"], closed=[issue])
+                line = pack_line(done.stdout, pack)
+                self.assertTrue(line.startswith("FAIL"), line)
+                self.assertIn(f"pending ({issue} is closed)", line)
+                self.assertEqual(done.returncode, 1, done.stdout)
+        # Every issue open, the same expectations pass, and each issue was asked once, in ROOT.
+        done, _ = box.run(red=["alpha.second"])
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        asked = examined("issue state(s) read", box.gh_calls())
+        self.assertEqual(sorted(call["argv"][2] for call in asked), ["23", "29", "59"])
+        for call in asked:
+            self.assertEqual(call["argv"], ["issue", "view", call["argv"][2], "--json", "state"])
+            self.assertEqual(Path(call["cwd"]), box.repo)
+        self.assertIn(
+            "box-packs: 3 issue(s) the wiring names: #23 OPEN, #29 OPEN, #59 OPEN", done.stdout
+        )
+
+    def test_a_run_that_cannot_read_issue_state_is_void_with_the_reason(self):
+        box = Box(self)
+        reasons = {
+            None: ("gh is not on the path",),
+            "auth": ("gh is not logged in (exit 4)",),
+            "offline": ("gh could not read the state of #", "(exit 1)", "connection refused"),
+            "garbled": ("gh answered no state for #",),
+        }
+        for gh, words in reasons.items():
+            with self.subTest(gh=gh):
+                done, calls = box.run(gh=gh)
+                self.assertEqual(done.returncode, 2, done.stdout + done.stderr)
+                void = [
+                    line
+                    for line in done.stdout.splitlines()
+                    if line.startswith("box-packs: VOID: ")
+                ]
+                self.assertEqual(len(void), 1, done.stdout)
+                for word in words:
+                    self.assertIn(word, void[0])
+                self.assertRegex(void[0], r"#(29|59)\b", "the line names the issue")
+                self.assertEqual(calls, [], "no pack ran")
+                self.assertNotIn("BOX PACKS OK", done.stdout)
 
 
 if __name__ == "__main__":

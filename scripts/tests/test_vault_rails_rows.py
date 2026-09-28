@@ -1,5 +1,6 @@
 """The vault adapter's content rails and the vault-duties pack agree on every planted fixture
-(SPEC-042 A3), and the pack's rails rows are green on the committed synthetic run (A9).
+(SPEC-042 A3), and the pack's rails rows are green on the committed synthetic run (A9). The
+adapter's build runs under a bound, and outliving it fails by name (SPEC-054 R5).
 
 The fixtures are `crates/vault/tests/fixtures/rails/`: one planted note for each rail row of the
 pack's vendored `rails.json`, and one clean reading note, indexed by `rows.json`. Each is staged in
@@ -21,6 +22,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from _support import REPO, examined
 
@@ -33,6 +35,11 @@ RAILS_ROWS = ("write-confinement", "no-executable", "never-deletes")
 #: The private inputs the probe reads from the environment, dropped so it judges the public shapes.
 PRIVATE_INPUTS = ("PERSONA_CORE_DENY_LIST", "VAULT_DUTIES_LAYOUT")
 EXAMINED = re.compile(r"^examined (\d+)$", re.MULTILINE)
+#: The bound on the adapter's build and run, in seconds (SPEC-054 R5). A cold build and run of the
+#: example took 21.1 s on the maintainer's machine. The bound is over 40 times that, so a slower
+#: runner, a cache miss or a wait for a build slot still fits, and inside CI's 30-minute hygiene
+#: job, so a hung build fails here by name before the runner kills the job.
+CARGO_BOUND_S = 900
 
 
 def rail_rows(rails):
@@ -123,12 +130,26 @@ def judged_by_the_pack(fixture, rails):
     return done.returncode, {pack_row(problem, rails) for problem in problems}
 
 
+def bounded(command, timeout, what):
+    """`command`, run from the repository root with its output captured, and killed once it
+    outlives `timeout` seconds. `what` then fails by name, with the bound and the command, rather
+    than holding the gate's python stage with no reason given (SPEC-054 R5)."""
+    try:
+        return subprocess.run(
+            command, cwd=REPO, capture_output=True, text=True, timeout=timeout, check=False
+        )
+    except subprocess.TimeoutExpired as expired:
+        raise AssertionError(
+            f"{what} did not finish within {timeout} s: {' '.join(command)}"
+        ) from expired
+
+
 def judged_by_the_adapter(fixtures):
     """The adapter's rail rows for each fixture, by file name, from its `rails_verdicts` example.
 
-    cargo may wait for a build slot on a shared machine, so the build has no time limit here.
+    cargo may wait for a build slot on a shared machine, so the build's bound is generous.
     """
-    done = subprocess.run(
+    done = bounded(
         [
             "cargo",
             "run",
@@ -141,10 +162,8 @@ def judged_by_the_adapter(fixtures):
             "--",
             *(str(fixture) for fixture in fixtures),
         ],
-        cwd=REPO,
-        capture_output=True,
-        text=True,
-        check=False,
+        CARGO_BOUND_S,
+        "the adapter's rails_verdicts",
     )
     if done.returncode != 0:
         raise AssertionError(f"the adapter's rails_verdicts failed: {done.stderr[-2000:]}")
@@ -220,6 +239,38 @@ class TheRailsRowsAreGreenOnTheSyntheticRun(unittest.TestCase):
                     self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
                     green.append(name)
         self.assertGreater(len(green), len(RAILS_ROWS), f"the green rows: {green}")
+
+
+class TheAdapterBuildIsBounded(unittest.TestCase):
+    """Proved on planted commands and a recorded call: neither test runs cargo."""
+
+    def test_a_command_that_outlives_its_bound_fails_by_name(self):
+        slow = [sys.executable, "-c", "import time; time.sleep(10)"]
+        with self.assertRaises(AssertionError) as raised:
+            bounded(slow, 0.5, "a planted slow command")
+        self.assertEqual(
+            str(raised.exception),
+            f"a planted slow command did not finish within 0.5 s: {' '.join(slow)}",
+        )
+        quick = bounded([sys.executable, "-c", "print('done')"], 60, "a planted quick command")
+        self.assertEqual((quick.returncode, quick.stdout), (0, "done\n"))
+
+    def test_the_adapter_build_runs_under_its_bound(self):
+        recorded = []
+
+        def run(command, **options):
+            recorded.append((command, options))
+            return subprocess.CompletedProcess(command, 0, '{"file": "clean.md", "rows": []}\n', "")
+
+        with mock.patch.object(subprocess, "run", run):
+            verdicts = judged_by_the_adapter([FIXTURES / "clean.md"])
+        self.assertEqual(verdicts, {"clean.md": set()})
+        self.assertEqual(len(recorded), 1, recorded)
+        command, options = recorded[0]
+        self.assertEqual(command[:2], ["cargo", "run"])
+        self.assertIn("rails_verdicts", command)
+        self.assertEqual(options.get("timeout"), CARGO_BOUND_S)
+        self.assertEqual(CARGO_BOUND_S, 900)
 
 
 if __name__ == "__main__":
