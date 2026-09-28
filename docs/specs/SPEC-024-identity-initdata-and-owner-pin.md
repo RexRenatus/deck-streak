@@ -242,3 +242,18 @@ under `crates/identity/tests/fixtures/`.
 Amendment (2026-09-28): names of the maintainer's private tooling were replaced with 'the box-run
 packs' and neutral names for their repository, binary and checkout under the public-text rule
 (ADR-059).
+
+Amendment (2026-09-28): R2's future skew is pinned at 60 seconds by a test that spells it (#222).
+A4's test builds its dates from `FUTURE_SKEW`, so they move with any mutant of the constant: it
+still passed under a skew of 61 or of 120 seconds.
+`an_auth_date_60_seconds_ahead_is_fresh_and_61_is_refused_with_401`
+(`crates/identity/tests/init_data.rs`), added at 9fc901a, spells both dates literally: launch data
+dated 60 seconds ahead of the server's clock is fresh, as the user it names, and launch data dated
+61 seconds ahead is refused as `init_data_stale` with 401. Row S02406 holds it, with a skew of 61
+seconds; cargo-mutants 27.1.0 lists 5 mutants of `crates/identity/src/settings.rs` and none of the
+constant. The test was not red at 3f916ce, where the code already held the bound. On that tree each
+of the skews 0, 59, 61 and 120 seconds made it red by assertion, selecting one test: 0 and 59
+refused the launch 60 seconds ahead (left `Err(InitDataStale)`, right `Ok(TelegramUserId(4242))`),
+and 61 and 120 admitted the one 61 seconds ahead (left `Ok(Caller { user: TelegramUserId(4242) })`,
+right `Err(InitDataStale)`). The file was restored byte for byte after each, its sha256
+`51ff9221e1d770fa958e3be7b33a6b33a2eb2f7a2d2d8d08ce836eb623006823` before and after.

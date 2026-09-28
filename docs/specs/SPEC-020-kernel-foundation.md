@@ -306,3 +306,15 @@ a temporary directory. Tests that read goldens include SPEC-029's reader with `#
   predecessor's rail compared (`>=`) and timed it.
 - **R15: `Db::open_with`** opens with a migrator other than `MIGRATOR`, for the fixtures A20 and A22
   apply; production opens with `Db::open`.
+
+Amendment (2026-09-28): R2's upper bound is pinned by a test of its own (#222).
+`every_hour_past_23_is_refused_and_23_is_admitted` (`crates/kernel/tests/study_day.rs`), added at
+936d033, admits 23 as itself, refuses every value from 24 to 255 as `None`, and refuses a rollover
+or a digest hour of 24 as `SettingsError::Malformed`, by its name and an hour's shape. Row S02005
+holds it, with the mutant `hour <= 24` inside `Hour::new`, where cargo-mutants never looks: 27.1.0
+lists 187 mutants of `crates/kernel/src/study_day.rs` and none inside `Hour::new`. The test was not
+red at 3f916ce, where the code already refused 24. With the mutant installed on that tree it was
+red by assertion, selecting one test (`24 was admitted as an hour`: left `Some(Hour(24))`, right
+`None`), while A1's golden test and A6's malformed-setting test both passed. The file was then
+restored byte for byte, its sha256
+`3668d29d0cf56a289719a20a89df5d0b27f113f6549de1355d027dbd3d246854` before and after.
