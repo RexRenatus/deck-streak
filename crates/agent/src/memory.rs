@@ -14,7 +14,7 @@ use std::sync::Arc;
 
 use deck_streak_kernel::{KernelError, PortFuture};
 
-use crate::persona::{CefrBand, Persona, PersonaError, Subject};
+use crate::persona::{CefrBand, Persona, PersonaError, Subject, SubjectKind};
 
 /// A source of learner memory a template may declare. The journal is never one.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -45,12 +45,14 @@ impl MemorySource {
     ///
     /// # Errors
     ///
-    /// [`PersonaError::Template`] for a name off the list.
+    /// [`PersonaError::Journal`] for `journal` or `diary`, persona-core's journal names, and
+    /// [`PersonaError::Template`] for any other name off the list.
     pub fn parse(name: &str) -> Result<Self, PersonaError> {
         match name {
             "leeches" => Ok(Self::Leeches),
             "drill-grades" => Ok(Self::DrillGrades),
             "lapses" => Ok(Self::Lapses),
+            "journal" | "diary" => Err(PersonaError::Journal),
             _ => Err(PersonaError::Template("a memory source is off the list")),
         }
     }
@@ -202,14 +204,23 @@ impl<'p> MemoryReader<'p> {
         source: MemorySource,
         subject: &Subject,
     ) -> Result<Option<Recall>, MemoryError> {
+        if *subject != self.subject {
+            return Err(MemoryError::OtherSubject);
+        }
+        if !self.declared.contains(&source) {
+            return Err(MemoryError::Undeclared);
+        }
         let Some(port) = self.ports.ports.get(&source) else {
             return Ok(None);
         };
         let entries = port.read(subject).await?;
-        self.reads.push(MemoryRead {
+        let read = MemoryRead {
             source,
             subject: subject.clone(),
-        });
+        };
+        if !self.reads.contains(&read) {
+            self.reads.push(read);
+        }
         Ok(Some(Recall { source, entries }))
     }
 
@@ -247,6 +258,12 @@ pub async fn resolve_band(
     persona: &Persona,
     live: Option<&dyn LiveBand>,
 ) -> Result<Option<CefrBand>, KernelError> {
-    let _ = live;
-    Ok(persona.band())
+    if persona.subject().kind() != SubjectKind::Language {
+        return Ok(None);
+    }
+    let answered = match live {
+        Some(port) => port.band(persona.subject()).await?,
+        None => None,
+    };
+    Ok(answered.or(persona.band()))
 }

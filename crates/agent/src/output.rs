@@ -5,6 +5,8 @@
 //! reader recorded, possibly none; a language output also carries its `cefr` band and its `lang`.
 //! A duty writes its own further keys after these (SPEC-046).
 
+use serde_json::Value;
+
 use crate::memory::MemoryRead;
 use crate::persona::{CefrBand, Duty, Persona, Subject, SubjectKind, TemplateId};
 
@@ -41,12 +43,28 @@ impl Frontmatter {
     /// Its lines, each `key: <one-line JSON value>` and a line break, in the contract's order.
     #[must_use]
     pub fn lines(&self) -> String {
-        format!(
-            "schema: \"{OUTPUT_SCHEMA}\"\npersona: \"{}\"\nsubject: \"{}\"\nduty: \"{}\"\nmemory: []\n",
-            self.persona.as_str(),
-            self.subject,
-            self.duty.name()
-        )
+        let mut lines = vec![
+            ("schema", json(OUTPUT_SCHEMA)),
+            ("persona", json(self.persona.as_str())),
+            ("subject", json(self.subject.as_str())),
+            ("duty", json(self.duty.name())),
+        ];
+        if let Some(band) = self.cefr {
+            lines.push(("cefr", json(band.name())));
+        }
+        if let Some(lang) = &self.lang {
+            lines.push(("lang", json(lang)));
+        }
+        let memory: Vec<String> = self.memory.iter().map(|token| json(token)).collect();
+        lines.push(("memory", format!("[{}]", memory.join(", "))));
+        let mut text = String::new();
+        for (key, value) in lines {
+            text.push_str(key);
+            text.push_str(": ");
+            text.push_str(&value);
+            text.push('\n');
+        }
+        text
     }
 
     /// The whole frontmatter, between its `---` delimiters.
@@ -54,4 +72,9 @@ impl Frontmatter {
     pub fn render(&self) -> String {
         format!("---\n{}---\n", self.lines())
     }
+}
+
+/// `text` as one JSON string, escaped by the serializer, on one line.
+fn json(text: &str) -> String {
+    Value::String(text.to_owned()).to_string()
 }
