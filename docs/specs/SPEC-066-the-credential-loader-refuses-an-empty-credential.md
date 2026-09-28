@@ -7,8 +7,9 @@
   was chosen against), ADR-038 (each credential is read from the credential socket at every start;
   it takes a dated note naming ADR-067), ADR-010 (each unit pages through `OnFailure=` the alert
   template), SPEC-020 R11 (the loader) and SPEC-031 (the one alert path).
-- **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
-  `docs/specs/` with its tests and `docs/red-first/SPEC-066.md` (ADR-016).
+- **Status:** judged: delivered with its tests, its hand-proved rows and
+  `docs/red-first/SPEC-066.md` (ADR-016). It waited in `docs/specs/planned/` from its own commit
+  until its tests were green, and the delivery made R5 exact where the rows decided it (§7).
 
 ## 1. The problem, measured
 
@@ -83,14 +84,15 @@ R4. ADR-067 records the decision and what it was chosen against. ADR-038 takes o
     credential.
 R5. Where cargo-mutants makes no mutant, hand-proved rows in
     `scripts/mutation-rows.d/S06600-S06699.json` guard the refusal (SPEC-039 R8): the loader's
-    check, the variant it returns, the id in its `Display`, and the script's check and its exit.
+    check, the variant it returns, the id in its `Display`, the bound that admits a value of one
+    character, and the script's check, its exit and its check of each of its two credentials.
 
 ## 3. Acceptance criteria
 
 | id | criterion | decided by |
 |---|---|---|
 | A1 | a credential of zero bytes, and one holding only a newline, each refuse to load with `CredentialError::Empty` naming the id, and the refusal says the credential is empty | `credentials.rs` `an_empty_credential_refuses_start_by_its_id` |
-| A2 | beside them, a missing credential keeps its `Missing` refusal, and a value loads unchanged less one trailing newline: one character, and a file of two newlines as one newline | `credentials.rs` `a_missing_credential_keeps_its_refusal_and_a_value_loads_unchanged` |
+| A2 | beside them, a missing credential keeps its `Missing` refusal, an unreadable one (a directory at its path) its `Unreadable` refusal, and a value loads unchanged less one trailing newline: one character, and a file of two newlines as one newline | `credentials.rs` `a_missing_credential_keeps_its_refusal_and_a_value_loads_unchanged` |
 | A3 | the refusal's `Display` and `Debug` carry the id only: a sentinel planted as the directory's name, and as a sibling credential the same loader read first, is in neither | `credentials.rs` `an_empty_refusal_names_the_id_and_never_a_value` |
 | A4 | every unit template that loads a credential, the alert template excepted, fails and pages on a refused start (R2's four conditions); the census prints its examined count, refuses zero, and refuses a planted template for each condition | `test_deploy_templates.py` `every_unit_that_loads_a_credential_fails_and_pages_on_a_refusal` |
 | A5 | the alert unit's route (R3): each credential the template loads, empty in each form, makes the script exit 1 with the one line naming it, before any journal read or request; the template names no `OnFailure=` | `test_alert_unit.py` `an_empty_credential_fails_the_alert_unit_before_any_request` |
@@ -168,3 +170,22 @@ is proved with `python3 scripts/mutation_rows.py prove --band S06600-S06699`.
   its error line stay in `systemctl --failed` and the journal.
 - **A blank credential passes the loader.** The loader is not a validator: each caller's shape
   check (identity's), or the far end (the sync server's login), refuses what it cannot use.
+
+## 7. Amended in delivery
+
+- **R5 names eight rows, not five.** Beside the loader's check, its variant, the id in its message,
+  and the script's check and exit, three rows guard what those five do not name: S06604, a
+  refusal that reaches past an empty value to one of a single character (A2's killer), and S06607
+  and S06608, the script's check of each of its two credentials removed in turn (A5's killer).
+  Each was proved KILLED with its target restored (`docs/red-first/SPEC-066.md`).
+- **A2 and A4 are disclosed not red.** Each pins what the base already did, and what the change
+  must leave as it was: A2 the missing and unreadable refusals and the loaded values, A4 the
+  templates' `OnFailure=` and exit handling. Row S06604 and the census's planted templates give
+  each its killing case.
+- **Two mutants the loader's file already let survive are killed.** `cargo mutants --file
+  crates/kernel/src/credentials.rs` at 5e67962 reported 12 mutants: 9 caught, 1 unviable and 2
+  missed, both on lines this delivery does not change. `Secret`'s `Debug` replaced by an empty
+  write survived an assertion of absence alone, so SPEC-020's test now also asserts what it shows,
+  `Ok(Secret(..))`; and the `NotFound` guard replaced by `true`, which reads every failed read as
+  missing, survived because no test planted an unreadable credential, which A2 now does. A file
+  this delivery touches carries no survivor (`docs/red-first/SPEC-066.md`).

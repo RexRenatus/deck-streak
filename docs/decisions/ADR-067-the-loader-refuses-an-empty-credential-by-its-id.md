@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 date: "2026-09-28"
 decision-makers: "@RexRenatus (owner), the DeckStreak architect"
 ---
@@ -82,7 +82,7 @@ shares, and a refusal there fails the unit the way a missing credential does.
 SPEC-066's acceptance tests: the loader's refusal in each empty form and its message (A1 to A3),
 the census of the templates (A4), the alert unit's route (A5), and the sync's login, which reads
 through the loader, never reaching the engine with an empty value (A6). Hand-proved rows S06601
-to S06605 kill the mutants cargo-mutants does not make.
+to S06608 kill the mutants cargo-mutants does not make.
 
 ## What would make this wrong
 
