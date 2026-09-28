@@ -14,7 +14,8 @@
 //!
 //! The role is ready once the first long poll is issued. When the shutdown future resolves, a poll
 //! in flight is abandoned, the batch in hand is finished, the offset is confirmed, and the loop
-//! returns.
+//! returns. An offset counts as confirmed only once the server has answered a request that carried
+//! it: an abandoned poll may never have left the process, so the stop confirms its offset again.
 
 use std::future::Future;
 use std::pin::pin;
@@ -55,7 +56,8 @@ pub fn backoff(consecutive_failures: u32) -> Duration {
     Duration::from_secs((BACKOFF_BASE_SECONDS << exponent).min(BACKOFF_CEILING_SECONDS))
 }
 
-/// The poll's state: the offset, the last one a request carried, and the failures in a row.
+/// The poll's state: the offset, the last one the server answered a request for, and the failures
+/// in a row.
 #[derive(Debug, Default)]
 pub struct Poller {
     offset: i64,
@@ -111,20 +113,24 @@ impl Poller {
         Ok(())
     }
 
-    /// One long poll at the offset, which confirms every update before it.
+    /// One long poll at the offset, which confirms every update before it once the server answers.
+    /// A poll abandoned before its answer confirms nothing here: its request may never have left.
     ///
     /// # Errors
     ///
     /// The request's [`TransportError`].
     pub async fn poll(&mut self, transport: &Transport) -> Result<Vec<Incoming>, TransportError> {
-        self.confirmed = self.offset;
-        transport
+        let answer = transport
             .get_updates(self.offset, LONG_POLL_SECONDS, None, &ALLOWED_UPDATES)
-            .await
+            .await;
+        if answer.is_ok() {
+            self.confirmed = self.offset;
+        }
+        answer
     }
 
-    /// Confirms the offset, when an update was handled since the last request carried it: one
-    /// request that waits for nothing, whose answer is not handled.
+    /// Confirms the offset, when the server has answered no request that carried it: one request
+    /// that waits for nothing, whose answer is not handled. It covers a poll the stop abandoned.
     pub async fn confirm(&mut self, transport: &Transport) {
         if self.offset <= self.confirmed {
             return;
