@@ -47,8 +47,10 @@ tokio = { workspace = true, features = ["macros", "rt-multi-thread", "signal", "
 tracing.workspace = true
 
 [dev-dependencies]
-# ADR-020's temporary database and ADR-029's golden reader.
+# ADR-020's temporary database and ADR-029's golden reader; SPEC-026's fake Bot API, included from
+# the bot's tests by path, is an axum server on a loopback port.
+axum.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 tempfile.workspace = true
-tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+tokio = { workspace = true, features = ["macros", "net", "rt-multi-thread"] }

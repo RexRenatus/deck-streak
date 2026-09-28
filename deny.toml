@@ -10,6 +10,8 @@ all-features = true
 # workspace only through Anki's engine (ADR-022): the unic crates under its unic-ucd-category, and
 # rustls-pemfile. Each was re-read at 26.09.3 (SPEC-055). An engine upgrade re-reads every one of
 # them, and scripts/tests/test_engine_pin.py refuses an exception cargo deny no longer encounters.
+# The seventh, paste, is the same kind of notice on a direct dependency of frankenstein, the Bot API
+# client (SPEC-026, ADR-026); a frankenstein upgrade re-reads it.
 ignore = [
     { id = "RUSTSEC-2025-0075", reason = "unic-char-range: unmaintained, not vulnerable; the engine's unic-ucd-category (ADR-022)" },
     { id = "RUSTSEC-2025-0080", reason = "unic-common: unmaintained, not vulnerable; the engine's unic-ucd-category (ADR-022)" },
@@ -17,6 +19,7 @@ ignore = [
     { id = "RUSTSEC-2025-0094", reason = "unic-ucd-category: unmaintained, not vulnerable; a direct dependency of the engine (ADR-022)" },
     { id = "RUSTSEC-2025-0098", reason = "unic-ucd-version: unmaintained, not vulnerable; the engine's unic-ucd-category (ADR-022)" },
     { id = "RUSTSEC-2025-0134", reason = "rustls-pemfile: unmaintained, not vulnerable; a direct dependency of the engine (ADR-022)" },
+    { id = "RUSTSEC-2024-0436", reason = "paste: unmaintained, not vulnerable; a direct dependency of frankenstein, the Bot API client (SPEC-026)" },
 ]
 
 [licenses]
@@ -37,6 +40,11 @@ allow = [
     "Zlib",
 ]
 confidence-threshold = 0.9
+# frankenstein, the Bot API client (ADR-003, SPEC-026), is WTFPL: a permissive licence compatible with
+# the GNU GPL. It is admitted for that crate alone, never for the workspace (ADR-026).
+exceptions = [
+    { allow = ["WTFPL"], crate = "frankenstein" },
+]
 
 [licenses.private]
 # The workspace's own crates are unpublished; their licence is the repository's.
