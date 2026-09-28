@@ -766,7 +766,9 @@ class TheSyncLogin(unittest.TestCase):
         parts = re.split(
             r"Some\(job\) if job == jobs::([A-Z_]+) =>", rust_block(runner, "fn run_job")
         )
-        arms = dict(zip(parts[1::2], parts[2::2], strict=True))
+        # Each arm follows its job's name: one iterator pairs them, name then arm.
+        pairs = iter(parts[1:])
+        arms = dict(zip(pairs, pairs, strict=True))
         self.assertEqual(sorted(arms), sorted(names), "run_job's arms are the table's jobs")
         works = {
             work: module for module, work in re.findall(r"use crate::(\w+)::(\w+Work);", runner)
