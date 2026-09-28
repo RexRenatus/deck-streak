@@ -1,3 +1,4 @@
+import { parseScore, type ScoreToday } from './score/score';
 import { telegram } from './telegram.svelte';
 
 /**
@@ -39,6 +40,8 @@ export interface ApiOptions {
 export interface Api {
   /** The owner's session, with the server's study day. */
   me(): Promise<Answer<Me>>;
+  /** The current study day's score (SPEC-071 R20). */
+  score(): Promise<Answer<ScoreToday>>;
 }
 
 /** How opening a session ended: a session, a refusal only reopening the app can answer, or no answer. */
@@ -110,21 +113,28 @@ export function createApi(options: ApiOptions): Api {
     }
   }
 
+  /** A GET of `path` whose JSON body `parse` reads: its value, or why there is none. */
+  async function read<T>(path: string, parse: (body: unknown) => T | null): Promise<Answer<T>> {
+    const response = await get(path);
+    if (response === 'reopen') return { kind: 'reopen' };
+    if (response === 'unavailable' || !response.ok) return { kind: 'unavailable' };
+    const value = parse(await response.json().catch(() => null));
+    return value === null ? { kind: 'unavailable' } : { kind: 'ok', value };
+  }
+
   return {
-    async me() {
-      const response = await get('/api/me');
-      if (response === 'reopen') return { kind: 'reopen' };
-      if (response === 'unavailable' || !response.ok) return { kind: 'unavailable' };
-      const body: unknown = await response.json().catch(() => null);
-      const day =
-        typeof body === 'object' && body !== null
-          ? (body as Record<string, unknown>).study_day
-          : undefined;
-      return typeof day === 'string' && ISO_DATE.test(day)
-        ? { kind: 'ok', value: { studyDay: day } }
-        : { kind: 'unavailable' };
-    }
+    me: () => read('/api/me', parseMe),
+    score: () => read('/api/score', parseScore)
   };
+}
+
+/** The body of `GET /api/me`, or null when it is not one. */
+function parseMe(body: unknown): Me | null {
+  const day =
+    typeof body === 'object' && body !== null
+      ? (body as Record<string, unknown>).study_day
+      : undefined;
+  return typeof day === 'string' && ISO_DATE.test(day) ? { studyDay: day } : null;
 }
 
 /** The app's client, opening its session with the launch data the wrapper read. */

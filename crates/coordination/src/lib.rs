@@ -3,8 +3,8 @@
 //! What this context owns: The use cases and scheduled jobs that cross contexts: the per-sync
 //! recompute in order, the nightly and hourly jobs with the cron-fire ledger, the registry of every
 //! context's data-rights port with the owner's export and erase over it, the resolution of a study
-//! day's reading topics, and each owner action the bot and the Mini App share, so both surfaces run
-//! one code path.
+//! day's reading topics, and each owner action and read the bot and the Mini App share, so both
+//! surfaces run one code path (the score reads, SPEC-071).
 //!
 //! What it does not own: Any domain rule: it calls the contexts in order and holds none of
 //! their logic.
@@ -27,4 +27,5 @@ pub mod obligations;
 pub mod readings;
 pub mod recompute;
 pub mod runner;
+pub mod score;
 pub mod sync_cycle;

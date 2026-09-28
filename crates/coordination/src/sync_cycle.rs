@@ -5,9 +5,11 @@
 //! job syncs (ADR-037). In order, it reads the record as it stands (the gate's run-history term is
 //! the run before this cycle's), syncs (the syncer owns the run's guards, retries and record),
 //! collects every registered obligation's deadlines, and asks the change gate. Then it either reads
-//! the window and recomputes, or leaves the skip the gate recorded. At W0 the recompute has no domain
-//! consumer: it reads the window and writes the anchor. The cycle holds no rule of any context: each
-//! step is its owner's.
+//! the window and recomputes, or leaves the skip the gate recorded. The recompute runs the fold over
+//! the window it read (SPEC-071 R15; [`crate::recompute`]), with the study day in which the latest
+//! successful sync started, so a day closed before that sync is settled and every later day stays
+//! owed; then it writes the anchor. A fold that fails leaves the anchor as it was, so the next
+//! cycle recomputes again. The cycle holds no rule of any context: each step is its owner's.
 
 use std::sync::Arc;
 
@@ -17,9 +19,10 @@ use deck_streak_ingest::reader::CollectionReader;
 use deck_streak_ingest::sync::{SyncError, SyncReport, Syncer};
 use deck_streak_ingest::sync_runs::{SqliteSyncRuns, Trigger};
 use deck_streak_ingest::window::{WindowError, read_window};
-use deck_streak_kernel::{Clock, KernelError};
+use deck_streak_kernel::{Clock, Db, KernelError, StudyDayRule};
 
 use crate::obligations::Obligations;
+use crate::recompute::Fold;
 
 /// What one cycle needs: the syncer, the reader of its copy, the gate over the service's database,
 /// the registered obligations and the clock. The runner's port for the `sync` job
@@ -30,6 +33,17 @@ pub struct CycleParts<E> {
     gate: ChangeGate,
     obligations: Obligations,
     clock: Arc<dyn Clock>,
+    fold: Option<CycleFold>,
+}
+
+/// The fold a cycle's recompute runs (SPEC-071 R15): the fold with its registered steps, the
+/// database they write, the study-day rule, and the digest of the owner's courses that every
+/// day's fingerprint carries.
+struct CycleFold {
+    fold: Fold,
+    db: Db,
+    rule: StudyDayRule,
+    courses_digest: Option<String>,
 }
 
 impl<E: AnkiEngine + Sync> CycleParts<E> {
@@ -48,7 +62,34 @@ impl<E: AnkiEngine + Sync> CycleParts<E> {
             gate,
             obligations,
             clock,
+            fold: None,
         }
+    }
+
+    /// This cycle, running `fold` after every recompute's read (SPEC-071 R15): its steps write
+    /// `db`, the gate's own database, study days are decided by `rule`, and every day's fingerprint
+    /// carries `courses_digest`.
+    #[must_use]
+    pub fn with_fold(
+        mut self,
+        fold: Fold,
+        db: Db,
+        rule: StudyDayRule,
+        courses_digest: Option<String>,
+    ) -> Self {
+        self.fold = Some(CycleFold {
+            fold,
+            db,
+            rule,
+            courses_digest,
+        });
+        self
+    }
+
+    /// The fold this cycle's recompute runs, when it has one.
+    #[must_use]
+    pub fn fold(&self) -> Option<&Fold> {
+        self.fold.as_ref().map(|fold| &fold.fold)
     }
 
     /// The change gate this cycle asks.

@@ -78,7 +78,7 @@ pub async fn run(env: &Environment, redactor: &Redactor) -> Result<(), BotRoleEr
     let shutdown = ShutdownSignal::install().map_err(BotRoleError::Signals)?;
 
     let clock: Arc<dyn Clock> = Arc::new(SystemClock);
-    let offload = Offload::new(kernel.offload_workers, clock);
+    let offload = Offload::new(kernel.offload_workers, Arc::clone(&clock));
     let db = wiring::open_database(&offload, &state)
         .await
         .map_err(BotRoleError::Database)?;
@@ -89,7 +89,15 @@ pub async fn run(env: &Environment, redactor: &Redactor) -> Result<(), BotRoleEr
         offload,
         kernel.study_day_rule,
     );
-    let mut commands = Commands::new(Arc::clone(&transport), owner, app, db.clone(), sync);
+    let mut commands = Commands::new(
+        Arc::clone(&transport),
+        owner,
+        app,
+        db.clone(),
+        sync,
+        kernel.study_day_rule,
+        clock,
+    );
 
     let heartbeat = Cell::new(None);
     deck_streak_bot::run(&transport, &mut commands, shutdown.received(), || {

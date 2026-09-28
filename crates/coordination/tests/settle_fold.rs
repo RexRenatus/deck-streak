@@ -517,3 +517,171 @@ async fn a_recompute_rerolls_only_changed_settling_and_current_days() {
     assert_eq!(late.updated_at, moved);
     assert!(second.revisited > 0, "the past days were revisited");
 }
+
+/// R15's wiring, recorded under A18 (`docs/red-first/SPEC-071.md`): the sync cycle runs the fold after
+/// its recompute's read, with the study day of the latest successful sync, so a cycle whose sync
+/// failed evaluates the current day and settles nothing, and the next cycle whose sync succeeds
+/// settles the day that closed before it. The deployment is a scratch one: an engine the test
+/// switches from failing to succeeding, an empty copy the engine itself created, and the service's
+/// database.
+mod cycle {
+    use std::ffi::OsStr;
+    use std::fs;
+    use std::path::Path;
+    use std::sync::Arc;
+    use std::sync::atomic::{AtomicBool, Ordering};
+
+    use deck_streak_analytics::rollup::RollupStore;
+    use deck_streak_coordination::obligations::Obligations;
+    use deck_streak_coordination::recompute::analytics_step::AnalyticsStep;
+    use deck_streak_coordination::recompute::{Fold, Phase};
+    use deck_streak_coordination::sync_cycle::{CycleParts, Recompute, sync_cycle};
+    use deck_streak_ingest::engine::{
+        AnkiEngine, EngineError, NewCardQueue, RslibEngine, SyncLogin, SyncOutcome,
+    };
+    use deck_streak_ingest::gate::ChangeGate;
+    use deck_streak_ingest::reader::CollectionReader;
+    use deck_streak_ingest::settings::{
+        STATE_DIRECTORY, SYNC_ENDPOINT, SYNC_PASSWORD, SYNC_USERNAME, ScopeSettings, SyncSettings,
+    };
+    use deck_streak_ingest::sync::Syncer;
+    use deck_streak_ingest::sync_runs::{SqliteSyncRuns, Trigger};
+    use deck_streak_kernel::{
+        CredentialLoader, CredentialsDirectory, Db, Environment, ManualClock, Offload,
+        OffloadWorkers, Redactor, StudyDay, StudyDayRule, UtcMillis,
+    };
+
+    use super::{D0, DAY_MS, HOUR_MS, day};
+
+    /// An engine whose syncs fail until the test lets them succeed; a sync that succeeds finds no
+    /// change, so the copy stays the empty collection the engine created.
+    #[derive(Clone, Default)]
+    struct Switched(Arc<AtomicBool>);
+
+    impl AnkiEngine for Switched {
+        fn new_card_queue(&self, _collection: &Path) -> Result<NewCardQueue, EngineError> {
+            Ok(NewCardQueue::default())
+        }
+
+        async fn normal_sync(
+            &self,
+            _collection: &Path,
+            _login: &SyncLogin,
+        ) -> Result<SyncOutcome, EngineError> {
+            if self.0.load(Ordering::SeqCst) {
+                Ok(SyncOutcome::NoChanges)
+            } else {
+                Err(EngineError::AuthRejected)
+            }
+        }
+
+        async fn full_download(
+            &self,
+            _collection: &Path,
+            _login: &SyncLogin,
+        ) -> Result<(), EngineError> {
+            Ok(())
+        }
+    }
+
+    /// The days of the window's last two study days that have a rollup, and which are settled.
+    async fn rolled(db: &Db) -> Vec<(StudyDay, bool)> {
+        RollupStore::new(db.clone())
+            .days(day(D0 - 1), day(D0))
+            .await
+            .expect("the rollups read")
+            .into_iter()
+            .map(|stored| (stored.metrics.day, stored.settled_at.is_some()))
+            .collect()
+    }
+
+    #[tokio::test]
+    async fn a_sync_cycle_runs_the_fold_and_settles_only_after_a_successful_sync() {
+        let scratch = tempfile::tempdir().expect("a scratch");
+        let state = scratch.path().join("state");
+        let credentials = scratch.path().join("credentials");
+        for folder in [&state, &credentials] {
+            fs::create_dir_all(folder).expect("a folder");
+        }
+        for (id, value) in [
+            (SYNC_USERNAME, "synthetic-owner\n"),
+            (SYNC_PASSWORD, "synthetic-password\n"),
+        ] {
+            fs::write(credentials.join(id), value).expect("a credential");
+        }
+        let settings = SyncSettings::from_env(&Environment::from_vars([
+            (SYNC_ENDPOINT, OsStr::new("http://127.0.0.1:9/")),
+            (STATE_DIRECTORY, state.as_os_str()),
+        ]))
+        .expect("the settings");
+        RslibEngine
+            .new_card_queue(&settings.copy_path())
+            .expect("the engine creates the copy");
+        let db = Db::open(&scratch.path().join("deckstreak.db"))
+            .await
+            .expect("the database");
+        // The study day D0, an hour past its rollover: D0 - 1 has just closed.
+        let first = D0 * DAY_MS + 5 * HOUR_MS;
+        let clock = Arc::new(ManualClock::new(UtcMillis::from_epoch_millis(first)));
+        let engine = Switched::default();
+        let syncer = Syncer::new(
+            engine.clone(),
+            SqliteSyncRuns::new(db.clone()),
+            settings.clone(),
+            CredentialLoader::new(
+                CredentialsDirectory::new(credentials).expect("an absolute directory"),
+                Redactor::new(),
+            ),
+            clock.clone(),
+            StudyDayRule::default(),
+        );
+        let offload = Offload::new(OffloadWorkers::new(1).expect("one worker"), clock.clone());
+        let reader = CollectionReader::new(&settings, ScopeSettings::default(), offload);
+        let gate = ChangeGate::new(db.clone(), StudyDayRule::default(), clock.clone());
+        let mut fold = Fold::default();
+        fold.register(Phase::RollupAndScore, Box::new(AnalyticsStep::default()))
+            .expect("phase 1's step");
+        let cycle = CycleParts::new(syncer, reader, gate, Obligations::new(), clock.clone())
+            .with_fold(fold, db.clone(), StudyDayRule::default(), None);
+
+        // The sync fails, and no sync ever succeeded: the recompute still runs, and the fold rolls
+        // the current day up, but the day that closed stays owed.
+        let failed = sync_cycle(&cycle, Trigger::Owner)
+            .await
+            .expect("the cycle runs");
+        assert!(
+            matches!(failed.recompute, Recompute::Ran { .. }),
+            "the gate never skips after a failed sync: {:?}",
+            failed.recompute
+        );
+        assert_eq!(
+            rolled(&db).await,
+            [(day(D0), false)],
+            "the fold ran for the current day, and settled nothing"
+        );
+
+        // The owner's next cycle, ten minutes on, syncs: the closed day is settled by it.
+        engine.0.store(true, Ordering::SeqCst);
+        let second = first + 10 * 60_000;
+        clock.set(UtcMillis::from_epoch_millis(second));
+        let synced = sync_cycle(&cycle, Trigger::Owner)
+            .await
+            .expect("the cycle runs");
+        assert!(matches!(synced.recompute, Recompute::Ran { .. }));
+        assert_eq!(
+            rolled(&db).await,
+            [(day(D0 - 1), true), (day(D0), false)],
+            "the successful sync's recompute settled the closed day"
+        );
+        let settled = RollupStore::new(db.clone())
+            .days(day(D0 - 1), day(D0 - 1))
+            .await
+            .expect("the rollup reads");
+        assert_eq!(
+            settled[0].settled_at,
+            Some(UtcMillis::from_epoch_millis(second)),
+            "settled by the cycle that followed the successful sync"
+        );
+        db.close().await;
+    }
+}

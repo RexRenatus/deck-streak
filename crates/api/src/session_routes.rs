@@ -29,7 +29,7 @@ use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
 use deck_streak_identity::session::{ended_cookie, opening_cookie, presented};
 use deck_streak_identity::{OwnerGate, OwnerSession, Refusal, Sessions};
-use deck_streak_kernel::{Clock, StudyDayRule, UtcMillis};
+use deck_streak_kernel::{Clock, StudyDay, StudyDayRule, UtcMillis};
 use serde::Deserialize;
 
 /// The handshake's path, and the logout's.
@@ -69,6 +69,13 @@ impl OwnerAccess {
             rule,
             bound: Arc::default(),
         }
+    }
+
+    /// The server's study day now, by the kernel's rule and clock: the day every owner's read
+    /// answers for (SPEC-024 R8, SPEC-071 R20).
+    #[must_use]
+    pub fn study_day(&self) -> StudyDay {
+        self.rule.study_day(self.clock.now())
     }
 }
 
@@ -148,8 +155,7 @@ async fn log_out(
 
 /// `GET /api/me`: the server's study day, for the owner's live session alone.
 async fn me(_owner: OwnerSession, State(access): State<OwnerAccess>) -> Response {
-    let day = access.rule.study_day(access.clock.now());
-    let body = serde_json::json!({ "study_day": day.to_string() }).to_string();
+    let body = serde_json::json!({ "study_day": access.study_day().to_string() }).to_string();
     (StatusCode::OK, [(CONTENT_TYPE, "application/json")], body).into_response()
 }
 
