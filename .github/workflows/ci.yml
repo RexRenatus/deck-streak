@@ -239,10 +239,16 @@ jobs:
           # secrets scans every commit, and scrub reads every blob reachable from HEAD.
           fetch-depth: 0
           persist-credentials: false
-      # A guard test builds a Rust example (SPEC-042's rails rows): the pinned toolchain, and the
-      # rust job's cache, restored only. Only the rust job, which builds every target, saves it.
+      # A guard test builds a Rust example (SPEC-042's rails rows), and another builds the ingest
+      # crate twice (SPEC-055 A2): the pinned toolchain, and the rust job's cache, restored only.
+      # Only the rust job, which builds every target, saves it.
       - name: the pinned Rust toolchain (rust-toolchain.toml)
         run: rustup show
+      # SPEC-055 A3 runs cargo deny from the python stage: every advisory exception and allowed
+      # git source in deny.toml must still be live in the graph.
+      - uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
+        with:
+          tool: cargo-deny
       - name: restore the Rust cache, keyed on the toolchain pin and Cargo.lock
         id: rust-cache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -271,7 +277,7 @@ jobs:
           echo "$PROTOC_SHA256  /tmp/protoc.zip" | sha256sum -c -
           mkdir -p "$HOME/.local/protoc" && unzip -q /tmp/protoc.zip -d "$HOME/.local/protoc"
           echo "$HOME/.local/protoc/bin" >> "$GITHUB_PATH"
-      - name: python, scrub and secrets (the guard tests, one of them a cargo build; the public deny-list; gitleaks)
+      - name: python, scrub and secrets (the guard tests, among them cargo builds and a cargo deny audit; the public deny-list; gitleaks)
         env:
           CHECK_LOG_DIR: ${{ runner.temp }}/check-logs
           CHECK_HISTORY: "1"
