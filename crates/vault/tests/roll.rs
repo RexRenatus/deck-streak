@@ -13,13 +13,16 @@ use std::collections::BTreeMap;
 use std::ffi::OsString;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::sync::mpsc::{self, RecvTimeoutError};
+use std::thread;
+use std::time::Duration;
 
 use deck_streak_kernel::{Environment, StudyDay};
 use deck_streak_vault::config::{ARCHIVE_FOLDER, READINGS_FOLDER, VAULT_ROOT};
 use deck_streak_vault::readings_tree::archive_folder;
 use deck_streak_vault::{
-    FolderName, Malformed, Rails, ReadingsTree, RealFs, RollFailure, RollFailureReason, TopicKey,
-    VaultSettings, note,
+    FolderName, Malformed, Rails, ReadingsTree, RealFs, RollFailure, RollFailureReason, RollReport,
+    TopicKey, VaultError, VaultSettings, note,
 };
 use serde_json::Value;
 use tempfile::TempDir;
@@ -51,6 +54,39 @@ fn vault() -> (TempDir, ReadingsTree<RealFs>) {
     let rails = Rails::vendored().expect("the vendored rails");
     let tree = ReadingsTree::open(&settings, RealFs, rails).expect("the vault opens");
     (dir, tree)
+}
+
+/// How long one roll forward may run before a test calls it a hang. A roll of a few notes ends in
+/// milliseconds, so one still running after this has stopped finding a free archive name: the test
+/// fails then, rather than walking every numeric suffix until the mutation tool's own timeout.
+const HANG: Duration = Duration::from_secs(5);
+
+/// What `work` returns, from a run on its own thread that must end within [`HANG`]: one that
+/// panics or outlasts it fails the test.
+fn within<T: Send + 'static>(what: &str, work: impl FnOnce() -> T + Send + 'static) -> T {
+    let (sender, receiver) = mpsc::channel();
+    thread::spawn(move || {
+        // A send fails only once the test has stopped waiting, having failed on a hang.
+        let _ = sender.send(work());
+    });
+    match receiver.recv_timeout(HANG) {
+        Ok(done) => done,
+        Err(RecvTimeoutError::Timeout) => panic!("{what} ran past {HANG:?}"),
+        Err(RecvTimeoutError::Disconnected) => panic!("{what} panicked"),
+    }
+}
+
+/// `tree`'s roll forward to `today`, bounded by [`HANG`]; the tree comes back beside its report.
+fn roll(
+    tree: ReadingsTree<RealFs>,
+    today: StudyDay,
+    carried: &[TopicKey],
+) -> (ReadingsTree<RealFs>, Result<RollReport, VaultError>) {
+    let carried = carried.to_vec();
+    within("the roll forward", move || {
+        let report = tree.roll_forward(today, &carried);
+        (tree, report)
+    })
 }
 
 /// Every file and folder under `root`, each file with its bytes, keyed by its relative path.
@@ -194,9 +230,8 @@ fn rolling_forward_keeps_the_owners_tick_byte_for_byte() {
     fs::create_dir(source_path.parent().expect("the day folder")).expect("yesterday's folder");
     fs::write(&source_path, &source).expect("yesterday's note");
 
-    let report = tree
-        .roll_forward(today, std::slice::from_ref(&topic))
-        .expect("the roll-forward runs");
+    let (tree, report) = roll(tree, today, std::slice::from_ref(&topic));
+    let report = report.expect("the roll-forward runs");
 
     assert_eq!(report.rolled, vec![tree.note_path(today, &topic)]);
     let rolled = fs::read_to_string(dir.path().join(tree.note_path(today, &topic)))
@@ -266,9 +301,8 @@ fn a_second_roll_forward_changes_nothing_and_a_malformed_note_is_reported() {
     let archive = FolderName::new(ARCHIVE).expect("a folder name");
     let carried = [evidence.clone(), japanese.clone()];
 
-    let first = tree
-        .roll_forward(today, &carried)
-        .expect("the first roll-forward");
+    let (tree, first) = roll(tree, today, &carried);
+    let first = first.expect("the first roll-forward");
 
     assert_eq!(first.rolled, vec![tree.note_path(today, &evidence)]);
     let mut archived = first.archived.clone();
@@ -294,9 +328,8 @@ fn a_second_roll_forward_changes_nothing_and_a_malformed_note_is_reported() {
     );
     let after_first = snapshot(dir.path());
 
-    let second = tree
-        .roll_forward(today, &carried)
-        .expect("the second roll-forward");
+    let (_tree, second) = roll(tree, today, &carried);
+    let second = second.expect("the second roll-forward");
 
     assert_eq!(
         snapshot(dir.path()),
@@ -343,5 +376,91 @@ fn the_live_note_is_todays_or_else_the_most_recent_days() {
         tree.find_live(&other, today).expect("the lookup"),
         None,
         "a topic with no note has no live note"
+    );
+}
+
+#[test]
+fn a_day_folder_the_roll_empties_is_removed_and_one_it_leaves_a_note_in_stays() {
+    let (dir, tree) = vault();
+    let older = StudyDay::from_epoch_day(20_200);
+    let yesterday = StudyDay::from_epoch_day(20_210);
+    let kept = StudyDay::from_epoch_day(20_205);
+    let today = StudyDay::from_epoch_day(20_211);
+    let evidence = TopicKey::new("law/evidence").expect("a topic key");
+    let torts = TopicKey::new("law/torts").expect("a topic key");
+    let write = |day: StudyDay, topic: &TopicKey, text: &str| {
+        let path = dir.path().join(tree.note_path(day, topic));
+        fs::create_dir_all(path.parent().expect("the day folder")).expect("a day folder");
+        fs::write(path, text).expect("a note");
+    };
+    // Yesterday's carried note rolls, an older day's note is archived, and a third day's folder
+    // also holds a file that is not a note, which no roll moves.
+    write(
+        yesterday,
+        &evidence,
+        &note_text(
+            "law/evidence",
+            yesterday,
+            "A primer on hearsay.",
+            false,
+            "\n",
+        ),
+    );
+    write(
+        older,
+        &torts,
+        &note_text("law/torts", older, "A primer on duty.", false, "\n"),
+    );
+    write(
+        kept,
+        &torts,
+        &note_text("law/torts", kept, "A primer on breach.", false, "\n"),
+    );
+    let kept_folder = dir.path().join(tree.note_path(kept, &torts));
+    let kept_folder = kept_folder.parent().expect("the day folder").to_path_buf();
+    fs::write(kept_folder.join("owner.txt"), "the owner's file\n").expect("the owner's file");
+    let emptied = [yesterday, older].map(|day| {
+        dir.path()
+            .join(tree.note_path(day, &evidence))
+            .parent()
+            .expect("the day folder")
+            .to_path_buf()
+    });
+
+    let (tree, report) = roll(tree, today, std::slice::from_ref(&evidence));
+
+    let report = report.expect("the roll forward runs");
+    assert_eq!(report.rolled, vec![tree.note_path(today, &evidence)]);
+    assert_eq!(
+        report.archived.len(),
+        2,
+        "both notes not carried are archived"
+    );
+    for folder in &emptied {
+        assert!(
+            !folder.exists(),
+            "{} was emptied and stays",
+            folder.display()
+        );
+    }
+    assert!(
+        kept_folder.join("owner.txt").exists(),
+        "a folder still holding a file is kept"
+    );
+}
+
+#[test]
+fn a_roll_failure_reason_reads_as_a_bounded_sentence() {
+    assert_eq!(
+        RollFailureReason::Malformed(Malformed::NoClosingDelimiter).to_string(),
+        "the note has no closing frontmatter delimiter"
+    );
+    assert_eq!(
+        RollFailureReason::DestinationTaken.to_string(),
+        "a note is already at the roll's destination"
+    );
+    assert_eq!(
+        RollFailureReason::NotARegularFile.to_string(),
+        "it is not a regular file"
     );
 }
