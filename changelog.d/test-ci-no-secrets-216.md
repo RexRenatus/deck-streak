@@ -12,3 +12,6 @@
   scp-like form are refused too. Every workflow test reads `.yml` and `.yaml` files, an action is
   pinned only in its plain form, and the hardening tests read keys the way the checker does
   (SPEC-034 A13).
+- The checker judges every step of a job, a step inside a `parallel` block at any depth included,
+  and refuses a checkout whose inputs are not a mapping, such as one `${{ }}` expression that
+  GitHub evaluates when the step runs; an omitted or empty `with` is no inputs (SPEC-034 R7).

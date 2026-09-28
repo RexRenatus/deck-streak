@@ -124,11 +124,10 @@ a time, on a scratch copy of the committed tree, restoring the file byte for byt
 of the first fix round, re-expressed against this round's code, the second review's six (Y0 to Y3,
 Y5 and Y6), and 34 of this round's: the character check and the line ends, each white-space site,
 the empty block, the job, step and input guards, the reading of `uses`, inputs in any case, the
-server, the SHA-pin pattern, and the quoted and flow-list dispatches. 100 were killed. Two are
-equivalent: W12 and W13 read a block's trailing lines and its indent with white space other than a
-space or a tab, which only a line the character check refuses can hold, and no finding reads white
-space. Y2, which the second review recorded as equivalent, is killed: each planted line asserts the
-reason its refusal gives.
+server, the SHA-pin pattern, and the quoted and flow-list dispatches. 100 were killed there. W12
+and W13, which read a block's trailing lines and its indent with white space other than a space or
+a tab, survived, and fix round 3 kills both (below). Y2, which the second review recorded as
+equivalent, is killed: each planted line asserts the reason its refusal gives.
 
 Rider, 2026-09-28: the hardening tests read keys the way the checker does. `dev` had not moved
 since 07322ae merged it. No criterion was added, so the fences above are unchanged.
@@ -151,6 +150,45 @@ through, one at a time, on a scratch copy of the committed tree, restoring the f
 after each: each new refusal and condition deleted or inverted, each test given back its earlier
 reading, and each test made to skip a workflow the reader refuses. 23 were killed, each by A13, and
 nine of them by a hardening test on the live workflows as well: the five inversions and the walk's
-four. One is equivalent: F5 stops the walk under a matching key, and a key nested there sits
-inside that key's value, a mapping or a list, which each test refuses first with the same outcome;
-only the examined count, which no test asserts, differs.
+four. The 24th, F5, which stops the walk under a matching key, survived, and fix round 3 kills it
+(below).
+
+## Fix round 3, 2026-09-28
+
+Fix round 3 judges every step inside a `parallel` block and refuses a checkout whose inputs are not
+a mapping. It also kills the three hand mutants that survived above and pins two more. `dev` had not
+moved since 07322ae merged it. SPEC-034's inserted text was corrected first, at 6533809. No
+criterion was added, so the fences above are unchanged, and this round's runs are listed here. Each
+fix was committed red, then green.
+
+- A10 red at 0b7f5b6: `AssertionError: Lists differ`: the checker walked a job's steps only, so
+  three steps planted inside a `parallel` block, one of them two blocks deep, were not judged.
+  Green at aef8139, where the checker takes every step from `steps_in`, which descends into a
+  `parallel` step's list at any depth.
+- A10 red at 1a125fd: `AssertionError: Lists differ`: three checkouts whose inputs are one `${{ }}`
+  expression were read as having no inputs. Green at 5a6eccd, where the checker refuses a checkout
+  whose `with` is set and is not a mapping. A11 was green at both: its checkout workflow gained a
+  checkout whose `with` is empty, which is still no inputs.
+- f7221b3 kills W12, W13 and F5 and was green at once, because the reader and the walk already met
+  each. A10 plants, at test time, a `|` block that holds a line of each character the reader
+  refuses, at the block's end and inside it, beside a secret the block names over two lines: the
+  finding names the secret with the indent that line sets, which W12 and W13 change. A13 reads a
+  `uses` nested in a `uses` through `entries`, whose second value F5 drops.
+- 2d7cb8f pins two more hand mutants and was green at once. A10's clone workflow gains a step whose
+  empty `env` comes first, which a reader that took a child block at its key's indent would admit.
+  A13 refuses the control's action with its SHA cut short, which a pattern that took a short SHA
+  would admit. Each is red against that mutant.
+
+DISCLOSURE: A10's body changed after its red commit, eeaa4e7, again in this round. Its committed
+list grew from 53 to 60 findings: 0b7f5b6 (3), 1a125fd (3) and 2d7cb8f (1). f7221b3 added its
+block plants (24 subtests). No finding that was in the list before this round changed or left.
+A11's body did not change; its admitted workflows gained a checkout whose `with` is empty
+(1a125fd). A13's body changed after its red commit, 403d9ce, again: at f7221b3 it reads a nested
+`uses` through `entries`, and at 2d7cb8f its SHA-pin forms are written as whole references and gain
+a short SHA.
+
+At 2d7cb8f the hand sweeps ran again, one mutant at a time, on a scratch copy of the committed tree,
+restoring the file byte for byte after each. The 102 of fix round 2: 102 of 102 killed, W12 and W13
+by A10. The rider's 24: 24 of 24 killed, F5 by A13. And 11 of this round's, the walk into
+`parallel` blocks and the refusal of inputs that are not a mapping, each deleted, inverted or given
+back its earlier reading: 11 of 11 killed. The test file did not change after 2d7cb8f.
