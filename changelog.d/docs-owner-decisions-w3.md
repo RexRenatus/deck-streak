@@ -7,8 +7,10 @@
   - SPEC-083's delivery will build the write and its exact undo, with an acceptance criterion for
     each of the owner's guardrails: incremental syncs only, with any full-sync demand aborting; the
     owner's confirm only; the cards previewed before the write; their prior state recorded first;
-    and an undo that never overwrites a card changed since. Each will be proven against the
-    recording fake sync server, once a control has proven that the recorder sees a planted upload.
+    and an undo that never writes a card changed before it starts, and lists a card reviewed on
+    another client while it runs. Each will be proven against the recording fake sync server, once
+    a control has proven that the recorder sees a planted upload. A review on a device that syncs
+    only after a take or an undo can still lose its schedule to it, unlisted.
   - ADR-083 records the option the owner took and how the write will be made, on a working copy
     discarded after each push. ADR-037, SPEC-001 and SPEC-022 gain insert-only amendments, and the
     skip day's schematics show the write and the undo's compare.
