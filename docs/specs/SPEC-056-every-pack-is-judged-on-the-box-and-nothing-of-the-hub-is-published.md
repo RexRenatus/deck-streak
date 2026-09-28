@@ -27,8 +27,15 @@ Measured at `22fb19a` (the redaction's head, which this delivery is stacked on).
 - **Code that reads vendored data.** The vault adapter compiles in the vault-duties pack's rails,
   layout and rows (`include_str!` in `crates/vault/src/rails.rs` and `staged.rs`); the public scrub
   composes its rules from two vendored deny lists through a vendored probe's loader; and the
-  deploy templates' tests parse units with the vendored durable lint. Public CI and the host hold no
-  private checkout, so none of these can read the pack at run time.
+  deploy templates' tests parse units with the vendored durable lint. Public CI holds no private
+  checkout (ADR-017), so none of these can read the pack there.
+- **The settings scan.** The gate's scrub stage ran the subscription-proxy pack's apiKeyHelper scan
+  (`scripts/no-apikeyhelper-scan.py`), and reported it pending by name while the tree holds no
+  settings file (SPEC-043). The box driver ran only the proxy-client scan, which has no apiKeyHelper
+  row.
+- **Acceptance lines of removed tests.** 21 lines in the acceptance fences of seven delivered SPECs
+  run a test this delivery removes, and the tdd pack judges every line of every `` ```acceptance ``
+  fence. An accepted SPEC may change only insert-only (ruling (i), SPEC-038 section 8).
 - **Schema ids.** 53 files carry `phx.*` schema ids (parity goldens, vault duty records, their
   fixtures and constants). They are contracts the box-run packs judge by, not prose (ADR-069).
 - **The gate's log line.** `scripts/check.sh` prints `logs: <directory>` on stdout, so quoting the
@@ -46,7 +53,7 @@ R3. `scripts/check.sh` has no `packs` stage, and its `scrub` stage runs the publ
     Every other stage and job stays; SPEC-038's layout tests change only in the tables that list
     jobs and stages, and no other assertion is weakened.
 R4. `scripts/check.sh` never prints its log directory on stdout. When the caller names no directory
-    (`CHECK_LOG_DIR` unset), it names the fresh one on stderr; when the caller names one, as every CI
+    (`CHECK_LOG_DIR` unset), it names the fresh one on stderr; when the caller names one, as each CI
     job does, it prints none, and that directory holds every stage's log and `timings.tsv`.
 R5. DeckStreak's own code reads only DeckStreak's own files. The vault adapter's rails, default
     layout and gate classes are `crates/vault/data/rails.json`, `layout.json` and
@@ -59,7 +66,7 @@ R6. Behaviour is unchanged: every vault test passes with no assertion edited; th
     private list in its schema; each parser refuses a document missing a field it reads.
 R7. `scripts/box-packs.sh` names none of the maintainer's private tooling. It reads three variables:
     `PACKS_WIRING`, a private file (schema `deckstreak.box-wiring.v1`) holding the pin, the packs,
-    the box section, the methodology probes' and the proxy-client scan's paths, the skills
+    the box section, the paths of the methodology probes and of the two scans, the skills
     directory and the owned files' sources; `PACKS_CHECKOUT`, the private checkout at the pin; and
     `PACKS_RUNNER`, the runner built from it. It refuses VOID by name when one is unset or unusable.
 R8. The driver judges every pack the private file names through the runner, with the verb its
@@ -69,8 +76,12 @@ R8. The driver judges every pack the private file names through the runner, with
     row as pending and is STALE once every blocking row passes; a deferred pack runs no row; an
     excluded row is counted and never judged; a deferred row that passes is STALE. The `box`
     section keeps its judgment (expected reds, pending, issues read with `gh`, stale expectations).
-R9. The driver runs the sdd, ddd and tdd probes and the proxy-client scan from the checkout, against
-    the judged tree, and prints one verdict line for each.
+R9. The driver runs the sdd, ddd and tdd probes, the proxy-client scan and the apiKeyHelper scan
+    from the checkout, against the judged tree, and prints one verdict line for each. The
+    apiKeyHelper scan keeps the removed gate step's refusals: a finding fails it, and so does a
+    settings file it cannot read; while the tree holds no settings file it reads `pending` with the
+    issue the private file names, is VOID without one, and is stale once it examines a file or
+    its issue closes.
 R10. For each owned file (R5) the private file maps to a source in the checkout, the driver compares
     the fields the owned file keeps and fails naming the first field that differs; a source missing
     from the checkout makes the run VOID.
@@ -83,6 +94,13 @@ R13. Public text names none of the maintainer's private tooling. Living docs, pl
     proposed ADRs say "the box-run packs"; an accepted document takes a pure name replacement and
     one dated note citing ADR-059; a delivered SPEC whose acceptance command runs a removed file
     takes an insert-only amendment giving the criterion's box form.
+R14. A criterion whose test this delivery removes is retired insert-only, every byte of its SPEC and
+    its red-first record kept in order. Its id is struck (`~~A3~~`) in the SPEC's criteria table.
+    Inserted fence lines move its command out of the `` ```acceptance `` fence into a
+    `` ```retired `` fence between the fence's two halves, and move its lines in the red-first
+    record into a `` ```retired `` fence the same way. The SPEC's dated amendment section names each
+    retired criterion, why its subject is gone and its box form, and section 7 lists every
+    retirement.
 
 ## 3. Acceptance criteria
 
@@ -104,6 +122,8 @@ R13. Public text names none of the maintainer's private tooling. Living docs, pl
 | A14 | an owned file equal to its source passes, a changed field fails by name, a missing source is VOID | `test_box_packs.py` `test_an_owned_file_is_judged_against_its_pinned_source` |
 | A15 | `--post-status` posts exactly one verdict-only `box/packs` status | `test_box_packs.py` `test_post_status_posts_one_verdict_only_status` |
 | A16 | the pull request template says a pack verdict comes from the box run | `test_box_only_packs.py` `test_the_pull_request_template_says_pack_verdicts_come_from_the_box_run` |
+| A17 | the apiKeyHelper scan runs from the checkout: pending while no settings file exists, and failing on a finding, an unreadable file, VOID without an issue, or a stale or closed expectation | `test_box_packs.py` `test_the_api_key_helper_scan_runs_from_the_checkout_and_waits_for_a_settings_file` |
+| A18 | every retired criterion is struck in its SPEC's table, fenced apart in its SPEC and its red-first record, and listed in section 7; a planted SPEC that breaks the rule is refused | `test_box_only_packs.py` `test_every_retired_criterion_is_struck_and_fenced_apart_in_its_spec_and_record` |
 
 ```acceptance
 A1: python3 -m unittest discover -s scripts/tests -p test_box_only_packs.py -k test_no_vendored_pack_file_or_removed_script_is_in_the_tree
@@ -122,6 +142,8 @@ A13: python3 -m unittest discover -s scripts/tests -p test_box_packs.py -k test_
 A14: python3 -m unittest discover -s scripts/tests -p test_box_packs.py -k test_an_owned_file_is_judged_against_its_pinned_source
 A15: python3 -m unittest discover -s scripts/tests -p test_box_packs.py -k test_post_status_posts_one_verdict_only_status
 A16: python3 -m unittest discover -s scripts/tests -p test_box_only_packs.py -k test_the_pull_request_template_says_pack_verdicts_come_from_the_box_run
+A17: python3 -m unittest discover -s scripts/tests -p test_box_packs.py -k test_the_api_key_helper_scan_runs_from_the_checkout_and_waits_for_a_settings_file
+A18: python3 -m unittest discover -s scripts/tests -p test_box_only_packs.py -k test_every_retired_criterion_is_struck_and_fenced_apart_in_its_spec_and_record
 ```
 
 ## 4. File manifest
@@ -132,7 +154,7 @@ A16: python3 -m unittest discover -s scripts/tests -p test_box_only_packs.py -k 
 | `scripts/pack-rows.py` | repo | removed: the vendored rows' runner; the box driver judges every pack (R8) |
 | `scripts/vendor-packs.py` | repo | removed: it refreshed the vendored copy |
 | `scripts/methodology_probe.py`, `scripts/sdd-probe.py`, `scripts/ddd-probe.py`, `scripts/tdd-probe.py` | repo | removed: the box run executes them from the checkout (R9) |
-| `scripts/no-apikeyhelper-scan.py` | repo | removed: the box run's proxy-client scan judges the agent's settings (R9) |
+| `scripts/no-apikeyhelper-scan.py` | repo | removed: the box run runs the pack's apiKeyHelper scan from the checkout instead (R9, A17) |
 | `scripts/tests/test_vendor_packs.py` | repo | removed: it tests only `vendor-packs.py` |
 | `scripts/tests/test_vendored_packs.py` | repo | removed: it tests only the vendored copy's digests |
 | `scripts/tests/test_pack_wiring.py` | repo | removed: it tests only the vendored wiring and `pack-rows.py`; the judgment it proved is A12's |
