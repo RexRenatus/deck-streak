@@ -1,4 +1,4 @@
-//! The kernel's errors (SPEC-020 R10, R11, R20).
+//! The kernel's errors (SPEC-020 R10, R11, R20; SPEC-066 R1).
 //!
 //! A library returns its own `thiserror` types. No error here ever carries a setting's value or a
 //! secret: a refusal names the setting, the shape it expects or the credential's id, and nothing a
