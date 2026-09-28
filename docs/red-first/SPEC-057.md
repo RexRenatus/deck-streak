@@ -2,7 +2,7 @@
 
 SPEC-057 is one campaign of deliveries, one per crate (R15), and each appends its own lines here.
 
-## The vault's delivery: the machinery (A1 to A15)
+## The vault's delivery: the machinery (A1 to A15) and its opening row (A16)
 
 The plan's SPEC, ADR-070 and the schematic `docs/schematics/mutation-equivalence-record.md` came
 with the plan (#225). The vault's delivery first committed every test of A1 to A15 (e43dae8)
@@ -52,6 +52,7 @@ A14: red at e43dae8: AssertionError: 0 != 1 (the audit-rust stage passed the loc
 A14: green at 621842f
 A15: red at e43dae8: AssertionError: 'scripts/mutation-equivalent.d/<package>.json' not found (the brief's mutation section taught the exclusion form)
 A15: green at 5c4d6b6
+A16: red at bfae431: AssertionError: 225 != 0 : deck-streak-vault: 225 unexplained mutant(s) in its row (the opening sweep, run 36438243392 at 5767fbe, read listed 939, killed 647, equivalent 0, unexplained 225, unviable 67)
 ```
 
 | requirement | the behaviour a wrong implementation would get wrong | criterion |
@@ -66,3 +67,9 @@ A15: green at 5c4d6b6
 | R14 | a scoped dispatch sweeping the whole workspace, owing a report from a shard its scope gave no mutant, or ending without its table line | A11 |
 | R17 | the brief, the configurations' comments or the drafts teaching an exclusion | A15 |
 | R18 | a squash merge's push judged again, the title's issue read as the pull request; a lock only `--locked` accepts passing the gate | A13, A14 |
+
+A16 is the vault's row of section 7. Its opening sweep, the weekly battery dispatched with
+`package=deck-streak-vault` at 5767fbe (run 36438243392), reported every one of its 32 shards whole
+and tested every listed vault mutant; its `table` line became the row, committed with A16's test
+(bfae431), which reads red on the 225 unexplained mutants. It turns green at the commit that carries
+the closing sweep's row.
