@@ -296,3 +296,19 @@ fn a_code_span_hides_its_code_from_the_prose_and_shows_it_to_the_query_rail() {
         ],
     );
 }
+
+#[test]
+fn a_comment_hides_what_it_holds_and_keeps_the_notes_lines() {
+    judge(
+        &vendored(),
+        "note(s) with a comment",
+        &[
+            // An Obsidian comment and an HTML comment each hide what they hold, to their close.
+            ("Text %% <iframe> %% more\n", &[]),
+            ("Before <!-- a note<p>--> after.\n", &[]),
+            // A comment keeps the note's lines, so a refusal after it names its own line.
+            ("<!-- c -->\n<iframe>\n", &[("html_allow", 2)]),
+            ("<!-- a\nb -->\n<iframe>\n", &[("html_allow", 3)]),
+        ],
+    );
+}
