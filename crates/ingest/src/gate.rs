@@ -15,7 +15,6 @@
 use std::sync::Arc;
 
 use deck_streak_kernel::{Clock, Db, KernelError, StudyDay, StudyDayRule, UtcMillis};
-use sqlx::AssertSqlSafe;
 
 use crate::reader::{CollectionReader, ReadError, read_failed};
 use crate::state::SqliteIngestState;
@@ -32,16 +31,11 @@ pub const CARD_FINGERPRINT_MODULUS: i64 = 1_000_000_007;
 const NEWEST_REVIEW: &str = "SELECT max(id) FROM revlog";
 
 /// The cards' count and fingerprint: one scan of integer columns, each card's weighted term reduced
-/// by the modulus before the sum, built from the constants as the predecessor built its
-/// `_CARDS_FINGERPRINT_SQL`. Only these integer constants are written into it.
-fn card_fingerprint_sql() -> String {
-    let [due, ivl, queue, factor, lapses, kind, odid] = CARD_FIELD_WEIGHTS;
-    format!(
-        "SELECT count(id), coalesce(sum((due * {due} + ivl * {ivl} + queue * {queue} \
-         + factor * {factor} + lapses * {lapses} + type * {kind} + odid * {odid}) \
-         % {CARD_FINGERPRINT_MODULUS}), 0) FROM cards"
-    )
-}
+/// by the modulus before the sum, as the predecessor's `_CARDS_FINGERPRINT_SQL` computes it. The
+/// weights are bound as `?1` to `?7`, in [`CARD_FIELD_WEIGHTS`]' order, and the modulus as `?8`:
+/// bound integers take the same integer arithmetic as the predecessor's literals.
+const CARD_FINGERPRINT: &str = "SELECT count(id), coalesce(sum((due * ?1 + ivl * ?2 + queue * ?3 \
+     + factor * ?4 + lapses * ?5 + type * ?6 + odid * ?7) % ?8), 0) FROM cards";
 
 /// The copy's cheap change signal (R9).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -68,12 +62,19 @@ pub async fn probe(reader: &CollectionReader) -> Result<Probe, ReadError> {
                 .fetch_one(copy.reader())
                 .await
                 .map_err(read_failed)?;
-            // Audited: the statement holds this module's integer constants and nothing else.
-            let (card_count, card_fingerprint): (i64, i64) =
-                sqlx::query_as(AssertSqlSafe(card_fingerprint_sql()))
-                    .fetch_one(copy.reader())
-                    .await
-                    .map_err(read_failed)?;
+            let [due, ivl, queue, factor, lapses, kind, odid] = CARD_FIELD_WEIGHTS;
+            let (card_count, card_fingerprint): (i64, i64) = sqlx::query_as(CARD_FINGERPRINT)
+                .bind(due)
+                .bind(ivl)
+                .bind(queue)
+                .bind(factor)
+                .bind(lapses)
+                .bind(kind)
+                .bind(odid)
+                .bind(CARD_FINGERPRINT_MODULUS)
+                .fetch_one(copy.reader())
+                .await
+                .map_err(read_failed)?;
             Ok(Probe {
                 newest_review_id: newest.unwrap_or(0),
                 card_count,
