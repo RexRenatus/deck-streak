@@ -131,7 +131,11 @@ class ThePolicyDisclosesWhatAnEraseLeaves(unittest.TestCase):
         for entry in entries:
             self.assertIn(entry["text"], (REPO / entry["file"]).read_text(encoding="utf-8"))
         named = {entry["file"] for entry in entries}
-        self.assertEqual(named, {"README.md", "web/app/src/routes/about/+page.svelte"})
+        # SPEC-026 R14: the bot's command table, whose /privacy links the policy, is an entry point.
+        self.assertEqual(
+            named,
+            {"README.md", "web/app/src/routes/about/+page.svelte", "crates/bot/src/commands.rs"},
+        )
         readme = README.read_text(encoding="utf-8")
         self.assertRegex(readme, r"(?m)^## Privacy$")
         self.assertIn("[PRIVACY.md](PRIVACY.md)", readme)

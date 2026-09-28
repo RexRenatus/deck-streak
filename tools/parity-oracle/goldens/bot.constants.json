@@ -1,0 +1,46 @@
+{
+  "cases": [
+    {
+      "input": {
+        "name": "constants.TELEGRAM_MAX_LEN"
+      },
+      "output": 4096
+    },
+    {
+      "input": {
+        "name": "bot._MAX_INBOUND_TEXT"
+      },
+      "output": 4096
+    },
+    {
+      "input": {
+        "name": "bot._MAX_CALLBACK_DATA"
+      },
+      "output": 64
+    },
+    {
+      "input": {
+        "name": "telegram._DEFAULT_RETRY_AFTER"
+      },
+      "output": 1.0
+    },
+    {
+      "input": {
+        "name": "telegram.TelegramNotifier.send_html.__kwdefaults__"
+      },
+      "output": {
+        "max_retries": 3
+      }
+    }
+  ],
+  "function": "bot.constants",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "constants",
+  "registry": "tools/parity-oracle/registry/spec_026.py",
+  "registry_sha256": "0d992c558eeed01b5c8da6a91225e5eae98fbb63b7bf247f77bf797d548aa1df",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}
