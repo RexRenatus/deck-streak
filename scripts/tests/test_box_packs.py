@@ -4,7 +4,8 @@ fails an expectation whose issue is closed, and reads VOID when it cannot (SPEC-
 its wiring and pin from a private file, keeps the removed row runner's judgment for the packs
 section, runs the methodology probes and the proxy-client scan from the checkout, checks DeckStreak's
 owned data for drift, and posts one verdict-only status (SPEC-056 A11 to A15, ADR-069). It runs the
-apiKeyHelper scan from the checkout with the removed gate step's refusals (SPEC-056 A17).
+apiKeyHelper scan from the checkout with the removed gate step's refusals (SPEC-056 A17), and holds
+each advisory departure an advisory lint reports to a waiver in its unit or an open issue (A19).
 
 `scripts/box-packs.sh` is driven here with a fake runner, a synthetic checkout, a private file in a
 temporary directory and a fake gh (`scripts/tests/fixtures/box-packs/`), so these tests need neither
@@ -115,6 +116,51 @@ def helper_script(found):
     stream = ", file=sys.stderr" if line.startswith("VOID") else ""
     printed = f"print({('NO-APIKEYHELPER ' + line)!r}{stream})"
     return "\n".join([RECORDER, printed, f"sys.exit({code})"]) + "\n"
+
+
+# The advisory lint's stand-in (SPEC-056 R15): every timer under deploy/ departs
+# `calendar-not-persistent` unless it says `Persistent=true`, and the tree departs `backup-planted`
+# until it holds deploy/backup.service. A `X-DurableServices-Waive=<reason> <why>` in a unit's [Unit]
+# moves its departure to `waived`, with its why, as the real lint does.
+LINT_SCRIPT = "scripts/unit-lint.py"
+UNIT_LINT = (
+    RECORDER
+    + """
+def unit_waivers(path):
+    section, found = None, {}
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if line.startswith("[") and line.endswith("]"):
+            section = line[1:-1]
+        elif section == "Unit" and line.startswith("X-DurableServices-Waive="):
+            reason, _, why = line.split("=", 1)[1].partition(" ")
+            if why.strip():
+                found[reason] = why.strip()
+    return found
+deploy = root / "deploy"
+timers = sorted(deploy.rglob("*.timer")) if deploy.is_dir() else []
+findings, waived = [], []
+for timer in timers:
+    if "Persistent=true" in timer.read_text(encoding="utf-8"):
+        continue
+    unit = timer.relative_to(root).as_posix()
+    why = unit_waivers(timer).get("calendar-not-persistent")
+    if why:
+        waived.append({"unit": unit, "detail": "not persistent", "why": why})
+    else:
+        findings.append({"unit": unit, "detail": "not persistent"})
+backup = [] if (deploy / "backup.service").is_file() else [{"unit": "deploy", "detail": "no backup"}]
+checks = [
+    {"id": "timer.persistent", "reason": "calendar-not-persistent", "severity": "advisory",
+     "findings": findings, "waived": waived},
+    {"id": "backup.planted", "reason": "backup-planted", "severity": "advisory",
+     "findings": backup, "waived": []},
+    {"id": "units.blocking", "reason": "blocking-planted", "severity": "blocking",
+     "findings": [], "waived": []},
+]
+print(json.dumps({"checks": checks, "examined": {"units": len(timers)}}))
+"""
+)
 
 
 def scan_script(rows, exit_code):
@@ -785,6 +831,86 @@ class TheApiKeyHelperScanRunsOnTheBox(unittest.TestCase):
         done, _ = box.run()
         self.assertEqual(done.returncode, 2, done.stdout)
         self.assertIn("no-apikeyhelper", "".join(void_lines(done.stdout)))
+
+
+class AdvisoryDeparturesAreWaivedOnTheBox(unittest.TestCase):
+    def test_every_advisory_departure_is_waived_in_its_unit_or_waits_on_an_open_issue(self):
+        box = Box(self)
+        write(box.checkout, {LINT_SCRIPT: UNIT_LINT})
+        box.repin()
+        why = "each run reads rolling state that a missed run cannot lose"
+        waived = f"[Unit]\nX-DurableServices-Waive=calendar-not-persistent {why}\n[Timer]\n"
+        persistent = "[Unit]\nDescription=kept\n[Timer]\nPersistent=true\n"
+        departs = "[Unit]\nDescription=departs\n[Timer]\n"
+        units = {"deploy/systemd/a.timer": waived, "deploy/systemd/b.timer": persistent}
+        write(box.repo, units)
+        commit(box.repo, "two timers: one waived, one that departs from nothing")
+        box.set_packs(
+            {
+                "gamma": {
+                    "state": "enforced",
+                    "advisory_waivers": {
+                        "lint": LINT_SCRIPT,
+                        "waiting": {"deploy": {"backup-planted": "#44"}},
+                    },
+                }
+            }
+        )
+        done, _ = box.run()
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        line = pack_line(done.stdout, "gamma")
+        self.assertTrue(line.startswith("ok"), line)
+        self.assertIn("waivers: 1 waived, 1 waiting", line)
+        # The lint ran once, from the checkout, over the committed tree, outside the checkout, and
+        # the waiting entry's issue was read.
+        script = box.checkout / LINT_SCRIPT
+        calls = [call for call in box.probe_calls() if Path(call["script"]) == script]
+        self.assertEqual(len(calls), 1, box.probe_calls())
+        self.assertEqual(calls[0]["argv"][:1], ["lint"])
+        self.assertIn("deploy/systemd/a.timer", calls[0]["census"])
+        cwd = Path(calls[0]["cwd"])
+        self.assertNotIn(box.checkout, [cwd, *cwd.parents])
+        self.assertIn("#44 OPEN", done.stdout)
+
+        def judged(files, closed=()):
+            """Commit `files` over the waived tree and judge it: the run, and gamma's line."""
+            write(box.repo, units)
+            write(box.repo, files)
+            commit(box.repo, "a planted change")
+            done, _ = box.run(closed=closed)
+            for name in files:
+                if name not in units:
+                    (box.repo / name).unlink()
+            return done, pack_line(done.stdout, "gamma")
+
+        thin = "[Unit]\nX-DurableServices-Waive=calendar-not-persistent too few words\n[Timer]\n"
+        waived_b = persistent.replace(
+            "[Timer]", f"X-DurableServices-Waive=calendar-not-persistent {why}\n[Timer]"
+        )
+        cases = [
+            ({"deploy/systemd/a.timer": departs}, "unwaived deploy/systemd/a.timer"),
+            ({"deploy/systemd/c.timer": departs}, "unwaived deploy/systemd/c.timer"),
+            ({"deploy/systemd/a.timer": thin}, "thin why a.timer calendar-not-persistent"),
+            ({"deploy/systemd/b.timer": waived_b}, "STALE waiver b.timer calendar-not-persistent"),
+            ({"deploy/backup.service": "[Unit]\n"}, "STALE waiting deploy backup-planted"),
+        ]
+        for files, named in examined("planted departures", cases):
+            with self.subTest(named=named):
+                done, line = judged(files)
+                self.assertTrue(line.startswith("FAIL"), line)
+                self.assertIn(named, line)
+                self.assertEqual(done.returncode, 1, done.stdout)
+        # A waiting entry whose issue is closed is stale.
+        done, line = judged({}, closed=["#44"])
+        self.assertTrue(line.startswith("FAIL"), line)
+        self.assertIn("(#44 is closed)", line)
+        # A lint the checkout lacks makes the run VOID, by the path the private file names.
+        box.set_packs(
+            {"gamma": {"state": "enforced", "advisory_waivers": {"lint": "scripts/none.py"}}}
+        )
+        done, _ = box.run()
+        self.assertEqual(done.returncode, 2, done.stdout)
+        self.assertIn("scripts/none.py", "".join(void_lines(done.stdout)))
 
 
 class OwnedDataCannotDrift(unittest.TestCase):

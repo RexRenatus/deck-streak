@@ -195,6 +195,22 @@ KEEPS_URLS = {"no-referrer", "same-origin", "strict-origin", "strict-origin-when
 ONE_YEAR = 31_536_000
 
 
+# Every advisory departure the templates declare in their units, by unit and reason (SPEC-032 R4,
+# SPEC-056 R16): the job table places each job on its own minute and makes none a catch-up job
+# (ADR-027), and SPEC-031's two timers read rolling state that a missed run cannot lose. The box
+# run holds every departure the durable lint reports to one of these, or to an issue it waits on
+# (SPEC-056 R15).
+WAIVED = {
+    (f"{JOB_TEMPLATE}@sync.timer", "randomized-delay-missing"),
+    (f"{JOB_TEMPLATE}@maintenance.timer", "randomized-delay-missing"),
+    (f"{JOB_TEMPLATE}@maintenance.timer", "calendar-not-persistent"),
+    (f"{JOB_TEMPLATE}@liveness.timer", "randomized-delay-missing"),
+    (f"{JOB_TEMPLATE}@liveness.timer", "calendar-not-persistent"),
+    ("deck-streak-slo.timer", "calendar-not-persistent"),
+    ("deck-streak-memory-watch.timer", "calendar-not-persistent"),
+}
+
+
 def subject(root=REPO):
     """Every unit under `root`'s deploy/, parsed as systemd reads it."""
     return _units.load_subject(Path(root))
@@ -443,6 +459,38 @@ def scrub(*subjects):
         text=True,
         check=False,
     )
+
+
+def declared_waivers(root=REPO):
+    """Every waiver the units under `root`'s deploy/ declare: (unit, reason) to its why."""
+    declared = {}
+    for unit in subject(root).units.values():
+        for reason, why in _units.waivers(unit):
+            declared[(unit.name, reason)] = why
+    return declared
+
+
+class EveryAdvisoryDepartureIsWaivedInItsUnit(unittest.TestCase):
+    def test_every_advisory_waiver_is_pinned_with_its_why(self):
+        # The reader finds a planted waiver, and drops neither its reason nor its why.
+        with tempfile.TemporaryDirectory() as scratch:
+            planted = Path(scratch) / "deploy" / "systemd"
+            planted.mkdir(parents=True)
+            (planted / "planted.timer").write_text(
+                "[Unit]\nDescription=planted\n"
+                "X-DurableServices-Waive=calendar-not-persistent a planted why of six words\n"
+                "[Timer]\nOnCalendar=daily\n",
+                encoding="utf-8",
+            )
+            self.assertEqual(
+                declared_waivers(scratch),
+                {("planted.timer", "calendar-not-persistent"): "a planted why of six words"},
+            )
+        # Every waiver the templates declare is pinned, and each gives more than five words of why.
+        declared = declared_waivers()
+        for (unit, reason), why in examined("declared waiver(s)", sorted(declared.items())):
+            self.assertGreater(len(why.split()), 5, f"{unit}: {reason}: a thin why")
+        self.assertEqual(set(declared), WAIVED)
 
 
 class TheTemplatesFitTheHostBudget(unittest.TestCase):

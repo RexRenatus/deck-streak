@@ -145,6 +145,12 @@ def service_type(unit):
     return "oneshot"
 
 
+def waivers(unit):
+    """Each `X-DurableServices-Waive=<reason> <why>` of the unit's `[Unit]` section, as (reason,
+    why): the advisory departures the unit declares on purpose (SPEC-056 R16)."""
+    return []
+
+
 def long_running(unit):
     return unit.kind == "service" and service_type(unit) in LONG_RUNNING_KINDS
 
