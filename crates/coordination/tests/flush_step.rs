@@ -25,8 +25,8 @@ use deck_streak_ingest::reader::CollectionReader;
 use deck_streak_ingest::settings::{
     STATE_DIRECTORY, SYNC_ENDPOINT, SYNC_PASSWORD, SYNC_USERNAME, ScopeSettings, SyncSettings,
 };
-use deck_streak_ingest::sync::{RetrySchedule, Syncer};
-use deck_streak_ingest::sync_runs::{SqliteSyncRuns, Trigger};
+use deck_streak_ingest::sync::{RetrySchedule, SyncReport, Syncer};
+use deck_streak_ingest::sync_runs::{ReasonCode, SqliteSyncRuns, Trigger};
 use deck_streak_kernel::{
     CredentialLoader, CredentialsDirectory, Db, Environment, ManualClock, Offload, OffloadWorkers,
     Redactor, StudyDay, StudyDayRule, UtcMillis,
@@ -101,6 +101,7 @@ impl BotTransport for Recording {
 /// A deployment in a scratch directory whose router holds one celebration quiet hours deferred.
 struct Deployment {
     _scratch: tempfile::TempDir,
+    db: Db,
     bot: Arc<Recording>,
     cycle: CycleParts<Engine>,
 }
@@ -152,7 +153,7 @@ impl Deployment {
         let bot = Arc::new(Recording::default());
         let router = Router::new(
             Arc::clone(&policy),
-            db,
+            db.clone(),
             clock.clone(),
             StudyDayRule::default(),
         )
@@ -183,6 +184,7 @@ impl Deployment {
         ));
         Self {
             _scratch: scratch,
+            db,
             bot,
             cycle,
         }
@@ -204,12 +206,31 @@ async fn a_successful_sync_flushes_the_held_celebrations() {
 async fn a_failed_sync_flushes_nothing() {
     let deployment = Deployment::new(Engine { refused: true }).await;
 
-    let _report = sync_cycle(&deployment.cycle, Trigger::Owner)
+    let report = sync_cycle(&deployment.cycle, Trigger::Owner)
         .await
         .expect("the cycle runs");
 
-    assert!(
-        deployment.bot.pushes().is_empty(),
-        "the held celebration waits for a sync that succeeds"
+    let outcome = match report.sync {
+        SyncReport::Ran { run, .. } => Some(run.outcome),
+        _ => None,
+    };
+    assert_eq!(
+        outcome,
+        Some(Err(ReasonCode::AuthRejected)),
+        "the sync ran, and was refused"
+    );
+    let held: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM notification_queue WHERE state = 'held'")
+            .fetch_one(deployment.db.reader())
+            .await
+            .expect("the queue is counted");
+    assert_eq!(
+        held, 1,
+        "the celebration is still held, for a sync that succeeds"
+    );
+    assert_eq!(
+        deployment.bot.pushes(),
+        Vec::<String>::new(),
+        "nothing was pushed"
     );
 }
