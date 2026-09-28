@@ -25,8 +25,11 @@ selection; A2's red is the compile-fail harness reporting that the planted call 
 
 The implementation followed (b5b66ca), restoring the behaviour the stubs stood in for and adding the
 `reading_ready` kind and its deviation. Between the red commit and the green one no test changed.
-After green, the eight hand-proved rows (7cc649d) were proved on the committed tree: every row
-KILLED, each target restored byte for byte.
+After green, eight hand-proved rows (7cc649d) held the constants and the unique key cargo-mutants
+cannot reach, and four more (a3028ea) the checks inside the occasion's and the dedupe key's
+constructors, with a test of the declared tier that kills one of them. All twelve were proved on
+the committed tree: every row KILLED, each target restored byte for byte. A test of the flush step
+that asserted only an absence gained its positive artifacts (b87946d).
 
 ```red-first
 A1: red at 04802ca: assertion `left == right` failed: every key of the file, and nothing else; left: the policy written back without ladder, celebration_budgets, streak_break and near_miss, right: the file with them
