@@ -484,7 +484,8 @@ impl Router {
         let mut full = Vec::new();
         for row in ledger::held(&mut write).await? {
             if now.epoch_millis() - row.deferred_at > max_age {
-                self.abandon(&mut write, &row, now).await?;
+                let reason = Hold::parse(&row.hold).abandoned();
+                self.abandon(&mut write, &row, reason, now).await?;
             } else {
                 full.push(row);
             }
@@ -556,20 +557,21 @@ impl Router {
         ledger::hold(write, row, now).await?;
         let bound = usize::try_from(self.policy.deferral.queue_max).unwrap_or(usize::MAX);
         for row in ledger::held(write).await?.iter().skip(bound) {
-            self.abandon(write, row, now).await?;
+            let reason = Hold::parse(&row.hold).abandoned();
+            self.abandon(write, row, reason, now).await?;
         }
         Ok(())
     }
 
     /// Abandons the held `row`: it waits on the queue for a recap to name it, and its decision is
-    /// a withhold by what held it.
+    /// a withhold for `reason`, what held it.
     async fn abandon(
         &self,
         write: &mut SqliteConnection,
         row: &HeldRow,
+        reason: Reason,
         now: UtcMillis,
     ) -> Result<(), KernelError> {
-        let reason = Hold::parse(&row.hold).abandoned();
         ledger::abandon(write, row.id).await?;
         ledger::record(write, &Subject::held(row).withheld(reason, now)).await?;
         tracing::warn!(
@@ -590,14 +592,10 @@ impl Router {
     ) -> Result<(), KernelError> {
         let tries = row.tries + 1;
         ledger::relatch(write, row.id, tries).await?;
-        let row = HeldRow {
-            hold: Hold::Send.as_str().to_owned(),
-            ..row.clone()
-        };
         if tries > i64::from(self.policy.send_failure.retry_max) {
-            self.abandon(write, &row, now).await
+            self.abandon(write, row, Hold::Send.abandoned(), now).await
         } else {
-            ledger::record(write, &Subject::held(&row).deferred(Hold::Send, now)).await
+            ledger::record(write, &Subject::held(row).deferred(Hold::Send, now)).await
         }
     }
 
