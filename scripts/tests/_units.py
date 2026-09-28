@@ -24,6 +24,12 @@ SIZE = re.compile(r"^(\d+(?:\.\d+)?)\s*([KMGTPE]?)$", re.IGNORECASE)
 WAIVE_KEY = "X-DurableServices-Waive"
 # The service types that keep running after they start (systemd.service(5), Type=).
 LONG_RUNNING_KINDS = {"simple", "exec", "notify", "notify-reload", "forking", "dbus", "idle"}
+# systemd's WHITESPACE: what it splits a list of exit statuses on, and what its safe_atou8() skips
+# before a number (SPEC-066).
+WHITESPACE = " \t\n\r"
+# The exit-status names systemd reads as 0 and 1. Every other name it knows is a status of 2 or
+# more (`systemd-analyze exit-status` lists them), never the refusal's 1, and reads as None here.
+EXIT_NAMES = {"SUCCESS": 0, "FAILURE": 1}
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
@@ -163,14 +169,67 @@ def long_running(unit):
 
 
 def status_words(value):
-    """The words of a `SuccessExitStatus=` or `RestartForceExitStatus=` value (SPEC-066): a stub
-    that splits on whitespace alone."""
-    return value.split()
+    """The words of a `SuccessExitStatus=` or `RestartForceExitStatus=` value as systemd splits
+    one, with extract_first_word() and no flags: on whitespace, where a backslash takes the next
+    character as it is and a quote is a plain character, so `\\1` is the word `1` and `"1"` stays
+    `"1"`. A trailing backslash ends the value there, as systemd's refusal of it does (SPEC-066)."""
+    words, word, escaped = [], None, False
+    for char in value:
+        if escaped:
+            word, escaped = word + char, False
+        elif char == "\\":
+            word, escaped = word or "", True
+        elif char in WHITESPACE:
+            if word is not None:
+                words.append(word)
+            word = None
+        else:
+            word = (word or "") + char
+    if word is not None and not escaped:
+        words.append(word)
+    return words
 
 
 def exit_status(word):
-    """The exit status a word names (SPEC-066): a stub that reads the word as text."""
-    return {"SUCCESS": 0, "FAILURE": 1, "0": 0, "1": 1}.get(word)
+    """The exit status systemd reads `word` as, or None where it reads none (SPEC-066): a name, else
+    a number as its safe_atou8() reads one. That skips leading whitespace, reads its own `0b`
+    (binary) and `0o` (octal) prefixes, and hands the rest to strtoul(3) in that base, or in base 0;
+    the whole word must be read, a negative number is refused unless it is 0, and a status is at
+    most 255. So 01, 0x1, +1, 0b1 and 0o1 read as 1 and 010 as 8, as `systemd-analyze exit-status`
+    reads them."""
+    if word in EXIT_NAMES:
+        return EXIT_NAMES[word]
+    text, base = word.lstrip(WHITESPACE), 0
+    if text[:2] in ("0b", "0B"):
+        text, base = text[2:], 2
+    elif text[:2] in ("0o", "0O"):
+        text, base = text[2:], 8
+    number = strtoul(text, base)
+    if number is None:
+        return None
+    value, negative = number
+    if negative and value:
+        return None
+    return value if value <= 255 else None
+
+
+def strtoul(text, base):
+    """strtoul(3) over the whole of `text` as ISO C23 reads it, the most a C library reads: the
+    value and whether a `-` preceded it, or None when `text` is not one number. It skips leading C
+    whitespace and takes one sign; a `0x` before a hexadecimal digit names base 16 in base 0 or 16,
+    a `0b` before a binary digit names base 2 in base 0 or 2, and in base 0 a leading `0` is
+    octal."""
+    sign, digits = re.fullmatch(r"[ \t\n\v\f\r]*([+-]?)(.*)", text, re.DOTALL).groups()
+    if base in (0, 16) and re.match(r"0[xX][0-9a-fA-F]", digits):
+        base, digits = 16, digits[2:]
+    elif base in (0, 2) and re.match(r"0[bB][01]", digits):
+        base, digits = 2, digits[2:]
+    elif base == 0:
+        base = 8 if digits.startswith("0") else 10
+    allowed = "0123456789abcdef"[:base]
+    if not digits or any(char.lower() not in allowed for char in digits):
+        return None
+    return int(digits, base), sign == "-"
 
 
 def size_bytes(value):

@@ -346,8 +346,11 @@ def names_the_refusal(statuses):
 def refusal_page_conditions(unit):
     """Why a start of `unit` that a credential refuses would not fail it and start its page
     (SPEC-066 R2), each refusal beside the directive it reads: no `OnFailure=` naming the alert
-    template, an `ExecStart=` whose failure counts as a success, a success exit that holds the
-    refusal's, or a restart that skips the failed state, and with it `OnFailure=`."""
+    template, a condition that can skip the start, an `ExecStart=` whose failure counts as a
+    success, a success exit that holds the refusal's in any spelling systemd reads as 1, or a
+    restart that skips the failed state, and with it `OnFailure=`. A condition that exits 1 to 254
+    skips the start, and the unit is not marked failed (systemd.service(5)); the census cannot tell
+    what a condition tests, so it refuses every one."""
     refused = []
 
     def refuse(directive, why):
@@ -356,6 +359,12 @@ def refusal_page_conditions(unit):
     targets = [word for value in unit.values("Unit", "OnFailure") for word in value.split()]
     if ON_FAILURE not in targets:
         refuse("OnFailure", f"OnFailure={' '.join(targets)} does not name {ON_FAILURE}")
+    for command in unit.values("Service", "ExecCondition"):
+        refuse(
+            "ExecCondition",
+            f"ExecCondition={command} can skip the start, which neither fails the unit nor starts "
+            "OnFailure=",
+        )
     for command in unit.values("Service", "ExecStart"):
         if "-" in EXEC_PREFIX.match(command).group(0):
             refuse("ExecStart", f"ExecStart={command} counts a failure as a success")
@@ -378,9 +387,18 @@ def alert_exit_refusals(unit):
     """Why a refused start of the alert template would count as a success or skip its failed state
     (SPEC-066 R3): each of R2's conditions but `OnFailure=`, which the alert template must not
     name. They are told apart by the directive each refusal reads, never by the refusal's text,
-    since the restart mode's refusal names `OnFailure=` too."""
+    since the restart mode's refusal names `OnFailure=` too. A `SuccessExitStatus=` that names no
+    1 is refused as well: the alert template names none, so no spelling of the refusal's exit can
+    count the refusal a success."""
     conditions = refusal_page_conditions(unit)
-    return [refusal for directive, refusal in conditions if directive != "OnFailure"]
+    refused = [refusal for directive, refusal in conditions if directive != "OnFailure"]
+    for statuses in unit.values("Service", "SuccessExitStatus"):
+        if not names_the_refusal(statuses):
+            refused.append(
+                f"{unit.rel}: SuccessExitStatus={statuses} is named, and the alert template names "
+                "none"
+            )
+    return refused
 
 
 def restart_refusals(unit):
@@ -388,23 +406,39 @@ def restart_refusals(unit):
     it. At the default `RestartMode=` a restart only passes through the failed state, and the
     instance waits for its next start activating, so a loop of restarts settles failed only when
     its start limit ends it (systemd.service(5), SPEC-031). So no `Restart=` other than `no`, the
-    default an empty assignment restores, and no `RestartForceExitStatus=` naming the refusal's
-    exit, which forces a restart whatever `Restart=` says. R2's units may restart: each failure a
-    restart passes through still starts their `OnFailure=` page (SPEC-031)."""
+    default an empty assignment restores, and no `RestartForceExitStatus=` at all: on
+    `Type=oneshot` the service manager refuses a unit that names one outright, as a bad unit file
+    setting, and on another type one naming the refusal's exit forces a restart whatever
+    `Restart=` says. R2's units may restart: each failure a restart passes through still starts
+    their `OnFailure=` page (SPEC-031)."""
     refused = []
     restart = last(unit, "Service", "Restart")
     if restart not in (None, "", "no"):
         refused.append(f"{unit.rel}: Restart={restart} restarts the refusal")
+    oneshot = _units.service_type(unit) == "oneshot"
     for statuses in unit.values("Service", "RestartForceExitStatus"):
-        if names_the_refusal(statuses):
-            refused.append(f"{unit.rel}: RestartForceExitStatus={statuses} restarts the refusal")
+        if oneshot:
+            why = "makes the service manager refuse the Type=oneshot unit outright"
+        elif names_the_refusal(statuses):
+            why = "restarts the refusal"
+        else:
+            why = "is named, and the alert template names none"
+        refused.append(f"{unit.rel}: RestartForceExitStatus={statuses} {why}")
     return refused
 
 
 def collect_refusals(unit):
-    """Why the failed alert instance would leave `systemctl --failed` (SPEC-066 R3): a stub that
-    refuses nothing."""
-    return []
+    """Why the failed alert instance would leave `systemctl --failed` (SPEC-066 R3): its unloading.
+    `CollectMode=inactive-or-failed` unloads a unit once it has failed, where the default,
+    `inactive`, which an empty assignment restores, keeps a failed unit loaded until its failed
+    state is reset (systemd.unit(5)). Any other value is refused too."""
+    mode = last(unit, "Unit", "CollectMode")
+    if mode in (None, "", "inactive"):
+        return []
+    return [
+        f"{unit.rel}: CollectMode={mode} can unload the failed instance, which systemctl --failed "
+        "then no longer lists"
+    ]
 
 
 # --- the Caddyfile, read as Caddy's lexer reads it -------------------------------------------
