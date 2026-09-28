@@ -56,12 +56,14 @@ file, and no template carries a secret's value.
 |---|---|---|
 | `deck-streak-api.service` | `owner-user-id`, `telegram-bot-token` | the owner gate over Telegram's launch data (SPEC-024) |
 | `deck-streak-bot.service` | `owner-user-id`, `telegram-bot-token`, `anki-sync-username`, `anki-sync-password` | the transport and the owner gate, and the owner's `/sync`, which runs a sync cycle in this role (SPEC-026) |
-| `deck-streak-job@.service` | `anki-sync-username`, `anki-sync-password` | the `sync` job's account (SPEC-022); only that job reads it |
+| `deck-streak-job@.service` | `anki-sync-username`, `anki-sync-password` | the `sync` job's account (SPEC-022); only that job reads it, and the rail's map answers it to the `sync` instance alone |
 | `deck-streak-alert@.service` | `owner-user-id`, `telegram-bot-token` | the page: the bot's token, and the owner's id, which is the owner's private chat (SPEC-031) |
 
 systemd names the unit in the address it binds for each credential, so a job's credentials reach
 the socket under the job instance's name. The rail's map names the template, and an instance
-matches its template's row; a row is never a pattern over unit names (SPEC-061 R4).
+matches its template's row; a row is never a pattern over unit names (SPEC-061 R4). The sync
+login's rows name the `sync` instance instead, the one job that reads it: the other job instances
+still ask for it at every start, and the socket answers them nothing (SPEC-061 §8).
 
 ## The rail's contract
 
@@ -75,16 +77,20 @@ holds what the rail reads and the checks it runs:
 
 | check | what it reads | what it refuses |
 |---|---|---|
-| `scripts/credential-pairs.py --root <release> [--optional <set>]` | every unit template with its drop-ins, and each optional set it names | `LoadCredentialEncrypted=`, `SetCredential=`, `SetCredentialEncrypted=`, `ImportCredential=`, and a `LoadCredential=` whose source is not the socket |
-| `scripts/effective-check.py --root <release> [<output> ...]` | `systemctl cat` of installed units, from files or standard input | a neutral value left in force, a credential not from the socket, an `Environment=` variable whose name says it holds a secret, and a drop-in other than the rail's own |
+| `scripts/credential-pairs.py --root <release> [--optional <set>]` | every unit template with its drop-ins, and each optional set it names | `LoadCredentialEncrypted=`, `SetCredential=`, `SetCredentialEncrypted=`, `ImportCredential=`, a `LoadCredential=` whose source is not the socket, and a line systemd would read otherwise |
+| `scripts/effective-check.py --root <release> [<output> ...]` | `systemctl cat` of installed units, from files or standard input | a neutral value left in force, a credential not from the socket, an `Environment=` variable whose name says it holds a secret, any other route a value takes into the unit (a secret-named `PassEnvironment=`, standard input written in the file or read from one, a second `EnvironmentFile=`), a line systemd would read otherwise, and a drop-in other than the rail's own |
 | `scripts/effective-check.py --root <release> --census` | `rail-contract.json` and the templates | a neutral value the contract does not name, and a row no template carries |
 | `scripts/guards-check.py <manifest>` | the guards' manifest and each file it names | a missing or changed file, a file anyone but root owns or could write, a mode other than the manifest's, and a manifest that names no file |
 
 `credential-pairs.py` prints its pairs as JSON, a template unit named as the template it is, with
 the files and lines it examined; the rail refuses to install when its map's pairs differ from that
 list in either direction. The contract names a job's timer by its template and its instance, and
-the checks join them. Each check prints how much it examined and never a secret's value, and exits
-0 when everything passes, 1 on a refusal, and 2 when it judged nothing.
+the checks join them. Each check reads a unit file line by line as systemd reads it, and refuses a
+construct systemd would read otherwise instead of guessing (SPEC-061 §8). Each check prints how much
+it examined and never a secret's value. `credential-pairs.py` and `effective-check.py` exit 0 when
+everything passes, 1 on a refusal, and 2 when they judged nothing; `guards-check.py` exits 0 or 1,
+since a manifest that is absent, unreadable or names no file is itself refused, and the agent's
+launch never starts on it (SPEC-061 R8).
 
 ## The schedule
 

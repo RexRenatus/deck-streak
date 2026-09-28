@@ -13,8 +13,9 @@
   first install; gate 6 (#165) for the values the owner stores. The device key and the guards wait
   for gate 3 (#162) and are installed by SPEC-063.
 - **Status:** judged: delivered with its tests and `docs/red-first/SPEC-061.md` (ADR-016). The
-  delivery made R5, R7 and R8 exact where the code decided them (§8). The rail's private pieces
-  wait for owner gate 2 (#161).
+  delivery made R5, R7 and R8 exact where the code decided them, and its fix round made both checks
+  read a unit as systemd reads it and R4 answer the sync login to the `sync` job alone (§8). The
+  rail's private pieces wait for owner gate 2 (#161).
 
 ## 1. The problem, measured
 
@@ -154,7 +155,7 @@ packet; this SPEC names each step only.
 | E1 | 6 (#165) | the owner stores the new values from standard input | each secret's existence, read by name only | the owner disables the version |
 | E2 | 2 (#161) | the grant of R9 | the command, and the read-back of the bindings | remove the binding |
 | E3 | 2 (#161) | the socket unit, the helper and the map | R10's seven proofs, each with its output | stop and disable the socket, remove the helper and the map |
-| E4 | 2 (#161) | the environment file and the drop-ins | `credential-pairs.py` against the map; `effective-check.py` over every installed unit | remove the rail's drop-ins and the file |
+| E4 | 2 (#161) | the environment file and the drop-ins | `credential-pairs.py` against the map; `effective-check.py` over every installed unit; `systemctl show-environment` sets no variable whose name says it carries a secret (§8) | remove the rail's drop-ins and the file |
 | E5 | 2 (#161) | the first scheduled sync with the reused login | R11's four conditions, each with its evidence | stop the sync timer |
 
 The rail's own tests (the helper's refusals, the map's parse, the rendering) run on the
@@ -174,9 +175,15 @@ maintainer's machine before every install; the packet names them.
 | `docs/decisions/ADR-061-host-values-reach-units-as-drop-ins-and-caddy-as-a-rendered-file.md` | docs | changed: status accepted, if SPEC-062 has not accepted it first |
 | `docs/red-first/SPEC-061.md` | docs | added |
 | `changelog.d/` fragment | repo | added |
+| `deploy/systemd/deck-streak-job@.service` | deploy | changed: its comment says the rail's map answers the sync login to the `sync` instance alone (§8, R4) |
+| `scripts/tests/test_deploy_templates.py` | repo | changed: its comment says the same (§8, R4) |
 
-The helper, its socket unit, the map, the rendered environment file, the drop-ins, the guards'
-copies and manifest, and the rail's tests are private: they are named here and never committed.
+The helper, its socket unit and the service unit the socket starts for each connection (its
+`Accept=yes`, ADR-038 and R3), the map, the rail's own command (behind R5 to R8: it checks the map
+against the release, renders the settings file and the drop-ins, and pins the guards), the host
+command through which SPEC-062 R3's deploy reaches the host, the rendered environment file, the
+drop-ins, the guards' copies and manifest, and the rail's tests are private: they are named here
+and never committed.
 
 ## 6. What this does NOT do
 
@@ -193,8 +200,11 @@ copies and manifest, and the rail's tests are private: they are named here and n
 - **The credentials directory's file system is one ADR-038 does not pass.** The sixth proof shows
   it before any unit relies on the socket, and it joins the host findings, tracked privately
   (gate 8, #167).
-- **The secret manager is unreachable when a unit starts.** The unit does not start, its
-  `OnFailure=` alert names the credential id, and its restart policy retries (ADR-038).
+- **The secret manager is unreachable when a unit starts.** The helper refuses the connection and
+  logs the unit, the id and the reason, never a value (R3). The unit's credential is then empty,
+  and every consumer refuses an empty credential at start (SPEC-066, #284), so the unit fails and
+  hands over to its `OnFailure=` alert and, for a long-running service, its restart policy
+  (ADR-038). A second alert route, independent of the alert sender, is #285.
 - **The map drifts from the templates.** R5's comparison refuses the install in either direction.
 - **A neutral value survives an install.** `effective-check.py` refuses the unit before it is
   started (R7).
@@ -208,12 +218,18 @@ copies and manifest, and the rail's tests are private: they are named here and n
 - **R5: the pair lister's output and its refusals.** It prints JSON: `pairs`, each
   `{"unit", "credential"}` once and sorted; `optional`, the sets it added; and `examined`, its files
   and lines. It reads each template with the drop-ins of the `<unit>.d/` directory beside it, and
-  honours the empty assignment that resets a list. An optional set's drop-in `<unit>.conf` applies
+  honours the empty assignment that resets a list. An empty `LoadCredentialEncrypted=` resets that
+  same list in systemd, and the lister ignores it: its list can then name a pair the unit no longer
+  loads, and never misses one it does, so the map answers nothing the templates do not name and
+  ignoring it fails closed. It reads a file line by line as the effective check does (below), and
+  refuses what systemd could read otherwise. An optional set's drop-in `<unit>.conf` applies
   to that unit, and `<name>.conf` to `<name>.service`, the names SPEC-063 and SPEC-065 give theirs.
   Besides `LoadCredentialEncrypted=` and a `LoadCredential=` off the socket, it refuses
   `SetCredential=`, `SetCredentialEncrypted=` and `ImportCredential=`, each of which gives a unit a
   credential the socket did not serve (ADR-038). A refused run prints no list, and a tree with no
-  unit, or an optional set that does not exist, exits 2.
+  unit, or an optional set that does not exist, exits 2. The lister judges credential directives
+  alone: every other route a value takes into a unit is the effective check's (R7), which the rail
+  runs over each rendered unit before an install and main over each installed unit (E4).
 - **R7: the contract's shape and the census.** `deploy/rail-contract.json` holds ADR-032's four
   neutral values (the release root, the settings file, the zone, and the rollover hour the calendars
   are written at), the drop-in's name, the socket's path, and one row per unit and key with its
@@ -226,7 +242,59 @@ copies and manifest, and the rail's tests are private: they are named here and n
   no row for it, and a credential not from the socket in any of the unit's files; the rail's own
   drop-in is the one beside the unit's file. A refused `Environment=` assignment is named by its
   variable, never its value, and its secret-name rule is SPEC-032's pattern widened to any `KEY`
-  segment and to `PASS`.
+  segment and to `PASS`, so that the device key's variable (SPEC-043 R2) and a short password name
+  are refused as well.
+- **R4: the sync login answers the `sync` job alone.** A map row may also name one instance of a
+  template, and then answers that instance alone. The sync login's two rows name the `sync` job's
+  instance, because no other job of the table reads the login: the runner hands the sync cycle to
+  the `sync` job's work alone, and the job role builds its credential loader inside that cycle
+  (A14 holds both). The rail's `check-pairs` takes an instance's row for its template's pair when
+  the release names the instance (its timer), and refuses the template's own row beside it. The
+  liveness and maintenance instances still ask for the login at every start, since the template
+  declares it for every instance; the helper refuses them and logs each refusal (R3), and they
+  start with that credential empty, which neither reads. Chosen against answering every instance
+  from the template's row, which gave the login to jobs that never read it.
+- **R6: the Mini App's origin.** No setting names an origin: Caddy serves the Mini App and the API
+  from one origin, so the API keeps CORS closed and reads none. The Mini App's address reaches the
+  code as the bot's `DECKSTREAK_MINI_APP_URL`, the URL of its launch button (SPEC-026), which the
+  settings example names, so it is one of the settings the rail renders.
+- **R5 and R7: each check reads a unit as systemd reads it, or refuses it.** Each construct below
+  was measured offline with `systemd-analyze verify` and `systemd-analyze calendar` on systemd 255,
+  and is either read exactly as systemd reads it or refused as ambiguous; the rendered drop-ins
+  need none of the refused ones.
+- **Lines (A8, A9): read exactly.** A line ends at a newline, a carriage return or a NUL, and a
+  newline and a carriage return in either order end one line; it continues only when it ends in an
+  odd run of backslashes, the last read as a space; a comment line, whose first non-blank character
+  is `#` or `;`, never continues; and a blank is a space, a tab, a newline or a carriage return
+  alone, so a form feed or a no-break space is text. The effective check splits `systemctl cat`
+  output at newlines alone and refuses a file header not after an empty line, where a file with no
+  final newline and a comment shaped like a header cannot be told apart. A byte-order mark, which
+  systemd skips where it first finds one, is refused. Chosen against stripping and joining lines as
+  Python reads them, which hid a line systemd reads inside the one before it and counted a reset
+  systemd never reads.
+- **Variables' names (A10): quotes read exactly, escapes and specifiers refused.** Quotes are
+  removed as systemd removes them. A value written with a backslash escape is refused whole, since
+  systemd decodes escapes key by key, in single and double quotes too, and a name holding a
+  specifier is refused, since systemd expands it (`%i` is empty in a unit that is no instance).
+  Chosen against decoding escapes in the check, which would have to follow every key's own rules.
+- **Sections (A11): refused unless exact.** A header must be exactly `[Unit]`, `[Install]` or the
+  unit type's own, and an assignment before the first header is refused: systemd reads the text
+  between the brackets whole, so `[ Service ]` names a section whose lines it ignores. Chosen
+  against stripping the header's text, which counted the rail's resets under `[ Service ]`.
+- **Neutral values (A12): paths resolved, zones by their instants.** A value is compared as systemd
+  resolves its paths, quotes removed and repeated slashes and `.` segments collapsed. A `..`
+  segment, which the kernel follows, and a specifier other than the unit's own names (`%i`, `%n`,
+  `%N`), which expands to a path, a user or a host value the check cannot see (`%E` is /etc), are
+  refused. A calendar is neutral when systemd reads its zone as UTC (` UTC` in any case) or its
+  zone keeps a zero offset all year in the tz database, as `Etc/UTC`, `UCT`, `Zulu` and `GMT` do;
+  a calendar that names no zone the check can read is refused, since it fires in the host's own
+  zone. Chosen against matching the neutral text and the zone's name exactly.
+- **Other routes (A13): refused.** A `PassEnvironment=` whose name says it carries a secret,
+  `StandardInputText=`, `StandardInputData=`, `StandardInput=file:`, and a second
+  `EnvironmentFile=` in force (R6 gives a unit one) are refused. The service manager's own
+  environment (`systemctl set-environment`, `DefaultEnvironment=`) is in no unit file, so no
+  `systemctl cat` shows it: E4 reads it with `systemctl show-environment`. Chosen against leaving
+  these routes to review.
 - **R8: the manifest's shape and the directory.** The manifest is JSON: `schema`
   `deckstreak.guards-manifest.v1`, and `files`, each with its `path`, `sha256` and `mode`. Beyond
   the four refusals R8 names, the check refuses a file whose mode is not the manifest's, a symbolic
