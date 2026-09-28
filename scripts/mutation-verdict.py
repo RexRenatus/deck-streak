@@ -34,7 +34,8 @@ into the plan, with each shard's mutants, and as the step outputs `shards` and `
 needs more shards than a job matrix holds is refused with its projection, never capped.
 
 JUDGE reads a tool's own report, never its exit alone (R4); under `--shard-reports`, every shard's
-the plan promised, from `0` to `n-1`, each missing or partial one VOID by name (R18). Examined is caught plus missed plus
+the plan promised, from `0` to `n-1`, each missing or partial one VOID by name, and the reports
+together must hold every listed mutant once (R18). Examined is caught plus missed plus
 timed out (Stryker: killed, survived, no coverage and timed out); an unviable mutant, a compile or
 runtime error, is not examined. A missed or uncovered mutant, or a selected row that was not
 KILLED, fails (exit 1). A class whose production files changed a code line and whose examined
@@ -77,7 +78,7 @@ import subprocess
 import sys
 import tokenize
 import tomllib
-from collections import defaultdict
+from collections import Counter, defaultdict
 from dataclasses import dataclass, field
 
 sys.dont_write_bytecode = True
@@ -765,6 +766,35 @@ def whole_reports(verdict: Verdict, plan: dict, args: argparse.Namespace) -> lis
     return whole
 
 
+def partition(verdict: Verdict, plan: dict, whole: list[tuple[str, dict]], complete: bool) -> None:
+    """The shards' reports hold every mutant the plan listed, each once (R18): one tested in more
+    shards than it was listed fails, and, when no shard was missing or partial, one in none is VOID.
+    A missing shard is named once, not once for each of its mutants."""
+    planned = (plan.get("shards") or {}).get("shards") or []
+    listed = Counter(name for shard in planned for name in shard["mutants"])
+    home = {
+        name: f"mutation-rust-shard-{shard['shard']}"
+        for shard in planned
+        for name in shard["mutants"]
+    }
+    tested: dict[str, list[str]] = defaultdict(list)
+    for where, report in whole:
+        for outcome in report.get("outcomes", []):
+            scenario = outcome.get("scenario")
+            if isinstance(scenario, dict) and isinstance(scenario.get("Mutant"), dict):
+                tested[scenario["Mutant"].get("name")].append(where.rstrip(": "))
+    for name, shards_of in sorted(tested.items()):
+        if len(shards_of) > listed[name]:
+            verdict.fail(
+                f"{name}: tested in {len(shards_of)} shard(s) ({', '.join(shards_of)}), "
+                f"listed {listed[name]} time(s)"
+            )
+    if complete:
+        for name, times in sorted(listed.items()):
+            if len(tested.get(name, [])) < times:
+                verdict.void(f"never tested: {name}, listed for {home[name]}")
+
+
 def judge_rust(verdict: Verdict, plan: dict, args: argparse.Namespace) -> None:
     rows = read_json(args.rows)
     applies = plan["classes"]["rust"]["applies"]
@@ -775,6 +805,7 @@ def judge_rust(verdict: Verdict, plan: dict, args: argparse.Namespace) -> None:
     for entry in plan["files"]:
         if entry["class"] == "rust" and entry["code"]:
             verdict.say(f"{entry['path']}: {len(entry['code'])} changed code line(s)")
+    voids = len(verdict.voids)
     whole = whole_reports(verdict, plan, args)
     caught, missed, timeout, unviable, total = (
         sum(int(report.get(key, 0)) for _, report in whole)
@@ -795,6 +826,8 @@ def judge_rust(verdict: Verdict, plan: dict, args: argparse.Namespace) -> None:
                 verdict.fail(f"{where}MISSED {name}")
     if missed > named:
         verdict.fail(f"MISSED {missed - named} mutant(s), unnamed in the report")
+    if args.shard_reports:
+        partition(verdict, plan, whole, complete=len(verdict.voids) == voids)
     verdict.examined = tool + carried
     verdict.say(f"examined {tool} by cargo-mutants and {carried} by rows")
     touched = {mutated_file(o) for _, report in whole for o in report.get("outcomes", [])} - {None}
