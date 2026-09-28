@@ -11,7 +11,9 @@
 //! SIGTERM the loop finishes the batch in hand and confirms its offset; the role says `STOPPING=1`,
 //! closes the database and returns.
 //!
-//! The owner's `/sync` runs a sync cycle in this role (R11), through wiring's [`OwnerSyncCycle`].
+//! The owner's `/sync` runs a sync cycle in this role (R11), through wiring's [`OwnerSyncCycle`],
+//! which flushes the notification router joined to this role's transport (SPEC-041 R7, R13). The
+//! compiled notification policy is read at start, and a policy it refuses refuses start by its key.
 
 use std::cell::Cell;
 use std::sync::Arc;
@@ -23,6 +25,7 @@ use deck_streak_kernel::{
     Clock, CredentialLoader, CredentialsDirectory, Environment, KernelSettings, Offload, Redactor,
     SettingsError, SystemClock,
 };
+use deck_streak_notifications::{Policy, PolicyError};
 
 use crate::lifecycle::{self, Notifier, NotifyState, ShutdownSignal};
 use crate::wiring::{self, OwnerSyncCycle, StateDirectory, WiringError};
@@ -45,6 +48,9 @@ pub enum BotRoleError {
     /// The database could not be opened.
     #[error("the database could not be opened")]
     Database(#[source] WiringError),
+    /// The compiled notification policy refused start, by its key.
+    #[error(transparent)]
+    Policy(#[from] PolicyError),
 }
 
 /// Runs the `bot` role until SIGTERM (or SIGINT), and returns once the batch in hand is handled
@@ -73,6 +79,7 @@ pub async fn run(env: &Environment, redactor: &Redactor) -> Result<(), BotRoleEr
         }
         .into());
     }
+    let policy = Policy::compiled()?;
     let transport = Arc::new(Transport::new(&api, &token)?);
     let notifier = Notifier::from_env(env);
     let shutdown = ShutdownSignal::install().map_err(BotRoleError::Signals)?;
@@ -82,13 +89,21 @@ pub async fn run(env: &Environment, redactor: &Redactor) -> Result<(), BotRoleEr
     let db = wiring::open_database(&offload, &state)
         .await
         .map_err(BotRoleError::Database)?;
+    let router = wiring::router(
+        policy,
+        db.clone(),
+        kernel.study_day_rule,
+        Arc::clone(&transport),
+        owner,
+    );
     let sync = OwnerSyncCycle::new(
         env.clone(),
         redactor.clone(),
         db.clone(),
         offload,
         kernel.study_day_rule,
-    );
+    )
+    .with_router(Arc::new(router));
     let mut commands = Commands::new(Arc::clone(&transport), owner, app, db.clone(), sync);
 
     let heartbeat = Cell::new(None);

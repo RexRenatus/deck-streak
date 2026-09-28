@@ -45,6 +45,7 @@ use tower_http::trace::{DefaultOnResponse, TraceLayer};
 use tracing::Level;
 
 use crate::health::{self, Readiness};
+use crate::notifications_routes;
 use crate::session_routes::{self, OwnerAccess};
 
 /// Requests served at once, the rust-service pack's reference value. Each holds its buffers until
@@ -91,14 +92,17 @@ impl ApiState {
 }
 
 /// The API: every route the Mini App's backend serves, under the layers. The health routes are
-/// always served; the owner's session routes are served when the state carries the owner's
-/// access, which the daemon's `api` role always gives, since it refuses to start without the
+/// always served; the owner's session routes and the in-app feed (SPEC-041) are served when the
+/// state carries the owner's access, which the daemon's `api` role always gives, since it refuses to start without the
 /// owner's credentials. A router built for the health routes alone needs none.
 pub fn router(state: ApiState) -> Router {
     let owner = state.owner.clone();
+    let readiness = state.readiness.clone();
     let routes = health::routes().with_state(state);
     let routes = match owner {
-        Some(access) => routes.merge(session_routes::routes(access)),
+        Some(access) => routes
+            .merge(session_routes::routes(access.clone()))
+            .merge(notifications_routes::routes(access, readiness)),
         None => routes,
     };
     layered(routes)

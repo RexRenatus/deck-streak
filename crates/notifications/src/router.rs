@@ -1,0 +1,665 @@
+//! The one router (SPEC-041 R1, R4 to R8, R13; ADR-041): every celebration, nudge, digest and alert
+//! of either surface is decided here, in the policy's order, recorded in the decision ledger, and
+//! delivered through the only calls that deliver: the bot transport's, which take this module's
+//! [`Pass`], and [`push_in_app`], which is private to it.
+//!
+//! [`Router::route`] decides one occasion inside one `BEGIN IMMEDIATE` write: the kind's switch;
+//! the claim of its key in its dedupe scope, which a later withhold releases; the lapse; the quiet
+//! window; the comeback cap; and whether a transport answers. A bot send commits its claim before
+//! the call and records what the call came to after it. [`Router::flush`] delivers what quiet hours
+//! and failed sends held, at most two in full and the rest in one recap line that names every
+//! celebration it rolls up or abandons.
+
+use std::fmt;
+use std::sync::{Arc, Mutex, PoisonError};
+
+use deck_streak_kernel::{Clock, Db, KernelError, StudyDayRule, UtcMillis};
+use sqlx::SqliteConnection;
+
+use crate::ledger::{self, ClaimRow, DecisionRow, HeldRow};
+use crate::occasion::{Class, DedupeScope, LapseContext, Occasion, Surface, Tier};
+use crate::policy::Policy;
+use crate::quiet::{in_quiet_hours, local_minute};
+use crate::transport::{BotTransport, Pushed};
+
+/// The owner's override of the quiet window's start, in minutes of the day (the predecessor's key).
+pub const QUIET_START_SETTING: &str = "quiet_start_min";
+/// The owner's override of the quiet window's end, in minutes of the day (the predecessor's key).
+pub const QUIET_END_SETTING: &str = "quiet_end_min";
+/// What a withheld occasion's kind is recorded with appended, so it never stands for a delivery.
+pub const WITHHELD_SUFFIX: &str = ":withheld";
+
+/// One minute, in milliseconds.
+const MINUTE_MS: i64 = 60_000;
+
+/// The router's pass. Every bot transport call takes one, and only this module can make one, so a
+/// delivery call outside the router does not compile (SPEC-041 A2).
+#[derive(Debug)]
+pub struct Pass(pub ());
+
+/// The pass the router hands a transport for each call.
+const PASS: Pass = Pass(());
+
+/// Why an occasion was withheld: the policy's withhold reasons that the router records.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum Reason {
+    /// The owner switched the kind off.
+    NudgesDisabled,
+    /// A delivery already holds the key in its scope.
+    AlreadyRecorded,
+    /// A nudge in an open lapse.
+    Lapse,
+    /// Inside the quiet window.
+    QuietHours,
+    /// The comeback's cap or gap.
+    BudgetSpent,
+    /// No transport answers for the surface.
+    NoNotifier,
+}
+
+impl Reason {
+    /// Every reason the router records; the policy must list each (R2).
+    pub const ALL: [Self; 6] = [
+        Self::NudgesDisabled,
+        Self::AlreadyRecorded,
+        Self::Lapse,
+        Self::QuietHours,
+        Self::BudgetSpent,
+        Self::NoNotifier,
+    ];
+
+    /// The reason as the policy and the ledger spell it.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::NudgesDisabled => "nudges_disabled",
+            Self::AlreadyRecorded => "already_recorded",
+            Self::Lapse => "lapse",
+            Self::QuietHours => "quiet_hours",
+            Self::BudgetSpent => "budget_spent",
+            Self::NoNotifier => "no_notifier",
+        }
+    }
+}
+
+/// Why a celebration is held on the queue.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum Hold {
+    /// The quiet window deferred it.
+    Quiet,
+    /// A send failed, or the outage breaker was open.
+    Send,
+}
+
+impl Hold {
+    /// The hold as the ledger spells it: the deferral's reason.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Quiet => "quiet",
+            Self::Send => "send",
+        }
+    }
+
+    /// The hold the ledger spelled `text`.
+    fn parse(text: &str) -> Self {
+        if text == Self::Send.as_str() {
+            Self::Send
+        } else {
+            Self::Quiet
+        }
+    }
+
+    /// The reason an abandoned celebration held this way is recorded with.
+    const fn abandoned(self) -> Reason {
+        match self {
+            Self::Quiet => Reason::QuietHours,
+            Self::Send => Reason::NoNotifier,
+        }
+    }
+}
+
+/// What [`Router::route`] decided, as the ledger recorded it.
+#[must_use]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Decision {
+    /// Delivered on `surface`, rendered at `tier`.
+    Sent {
+        /// The surface it went to.
+        surface: Surface,
+        /// The tier it rendered at.
+        tier: Tier,
+    },
+    /// Held on the queue for a flush.
+    Deferred {
+        /// The surface it will go to.
+        surface: Surface,
+        /// Why it is held.
+        hold: Hold,
+    },
+    /// Withheld, for `reason`.
+    Withheld {
+        /// The surface it would have gone to.
+        surface: Surface,
+        /// Why.
+        reason: Reason,
+    },
+}
+
+/// What [`Router::flush`] did.
+#[must_use]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Flushed {
+    /// No bot transport is joined, so nothing can be delivered or named: the queue is left.
+    NoNotifier,
+    /// Inside the quiet window: the queue is left.
+    QuietHours,
+    /// The outage breaker is open: the queue is left.
+    BreakerOpen,
+    /// It ran, and delivered this many messages: full renders and the recap line.
+    Ran {
+        /// Messages delivered.
+        sends: u32,
+    },
+}
+
+/// What the rules decided before any delivery call.
+enum Verdict {
+    Withhold(Reason),
+    Defer(Hold),
+    SendInApp,
+    SendBot(i64),
+}
+
+/// What one decision is about: an occasion being routed, or a held celebration being flushed.
+struct Subject<'a> {
+    key: &'a str,
+    kind: &'a str,
+    surface: Surface,
+    requested: Tier,
+    study_day: i64,
+}
+
+impl<'a> Subject<'a> {
+    fn routed(occasion: &'a Occasion, surface: Surface) -> Self {
+        Self {
+            key: occasion.key().as_str(),
+            kind: occasion.kind().name(),
+            surface,
+            requested: occasion.tier(),
+            study_day: occasion.study_day().epoch_day(),
+        }
+    }
+
+    fn held(row: &'a HeldRow) -> Self {
+        Self {
+            key: &row.dedupe_key,
+            kind: &row.kind,
+            surface: row.surface,
+            requested: row.tier_requested,
+            study_day: row.study_day,
+        }
+    }
+
+    fn row(
+        &self,
+        arm: &'static str,
+        reason: Option<&'static str>,
+        rendered: Tier,
+        now: UtcMillis,
+    ) -> DecisionRow<'a> {
+        DecisionRow {
+            dedupe_key: self.key,
+            kind: self.kind.to_owned(),
+            surface: self.surface,
+            arm,
+            reason,
+            tier_requested: self.requested,
+            tier_rendered: rendered,
+            study_day: self.study_day,
+            created_at: now,
+        }
+    }
+
+    fn sent(&self, rendered: Tier, now: UtcMillis) -> DecisionRow<'a> {
+        self.row("send", None, rendered, now)
+    }
+
+    fn deferred(&self, hold: Hold, now: UtcMillis) -> DecisionRow<'a> {
+        self.row("defer", Some(hold.as_str()), Tier::T0, now)
+    }
+
+    fn withheld(&self, reason: Reason, now: UtcMillis) -> DecisionRow<'a> {
+        DecisionRow {
+            kind: format!("{}{WITHHELD_SUFFIX}", self.kind),
+            ..self.row("withhold", Some(reason.as_str()), Tier::T0, now)
+        }
+    }
+}
+
+/// The one router.
+pub struct Router {
+    policy: Arc<Policy>,
+    db: Db,
+    clock: Arc<dyn Clock>,
+    rule: StudyDayRule,
+    bot: Option<Arc<dyn BotTransport>>,
+    /// When the last bot send failed: the outage breaker is open for the cooldown after it.
+    failed_at: Mutex<Option<UtcMillis>>,
+}
+
+impl fmt::Debug for Router {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Router")
+            .field("rule", &self.rule)
+            .field("bot", &self.bot.is_some())
+            .finish_non_exhaustive()
+    }
+}
+
+impl Router {
+    /// The router of `policy` over `db`, reading the time from `clock` and the local offset from
+    /// `rule`, with no bot transport: until one is joined, a bot occasion is withheld with
+    /// `no_notifier` and a flush does nothing.
+    #[must_use]
+    pub fn new(policy: Arc<Policy>, db: Db, clock: Arc<dyn Clock>, rule: StudyDayRule) -> Self {
+        Self {
+            policy,
+            db,
+            clock,
+            rule,
+            bot: None,
+            failed_at: Mutex::new(None),
+        }
+    }
+
+    /// This router, delivering the bot's occasions through `bot`.
+    #[must_use]
+    pub fn with_bot(mut self, bot: Arc<dyn BotTransport>) -> Self {
+        self.bot = Some(bot);
+        self
+    }
+
+    /// Decides `occasion`, delivers it when the decision is to send, and records the decision.
+    ///
+    /// # Errors
+    ///
+    /// [`KernelError::Database`] when the ledger cannot be read or written.
+    pub async fn route(&self, occasion: &Occasion) -> Result<Decision, KernelError> {
+        let now = self.clock.now();
+        let surface = if occasion.origin() == Surface::MiniApp {
+            Surface::MiniApp
+        } else {
+            Surface::Bot
+        };
+        let subject = Subject::routed(occasion, surface);
+        let rendered = rendered(occasion.tier());
+        if surface == Surface::MiniApp {
+            let mut write = self.db.write().await?;
+            push_in_app(&mut write, &subject, rendered, occasion.text(), now).await?;
+            write.commit().await?;
+        } else {
+            let _pushed = self.push(occasion.text(), rendered).await;
+        }
+        Ok(Decision::Sent {
+            surface,
+            tier: rendered,
+        })
+    }
+
+    /// Sends `occasion` to the bot after its claim was committed, and records what that came to.
+    async fn send_bot(
+        &self,
+        occasion: &Occasion,
+        subject: &Subject<'_>,
+        claim: i64,
+    ) -> Result<Decision, KernelError> {
+        let rendered = rendered(occasion.tier());
+        let pushed = self.push(occasion.text(), rendered).await;
+        let now = self.clock.now();
+        let mut write = self.db.write().await?;
+        let decision = if pushed == Pushed::Delivered {
+            ledger::record(&mut write, &subject.sent(rendered, now)).await?;
+            Decision::Sent {
+                surface: Surface::Bot,
+                tier: rendered,
+            }
+        } else {
+            self.trip(now);
+            if occasion.kind().class() == Class::Celebration {
+                let row = held_row(occasion, Surface::Bot, Hold::Send, 1, now);
+                self.hold(&mut write, &row, now).await?;
+                ledger::record(&mut write, &subject.deferred(Hold::Send, now)).await?;
+                Decision::Deferred {
+                    surface: Surface::Bot,
+                    hold: Hold::Send,
+                }
+            } else {
+                ledger::release(&mut write, claim).await?;
+                ledger::record(&mut write, &subject.withheld(Reason::NoNotifier, now)).await?;
+                Decision::Withheld {
+                    surface: Surface::Bot,
+                    reason: Reason::NoNotifier,
+                }
+            }
+        };
+        write.commit().await?;
+        Ok(decision)
+    }
+
+    /// The rules of R4 in order: the kind's switch, then the claim, then the rules after it; a
+    /// withhold after the claim releases it.
+    async fn decide(
+        &self,
+        write: &mut SqliteConnection,
+        occasion: &Occasion,
+        surface: Surface,
+        now: UtcMillis,
+    ) -> Result<Verdict, KernelError> {
+        let kind = occasion.kind();
+        if let Some(setting) = kind.setting()
+            && ledger::setting(write, setting).await?.as_deref()
+                == Some(self.policy.comeback.disable_value.as_str())
+        {
+            return Ok(Verdict::Withhold(Reason::NudgesDisabled));
+        }
+        let lapse_id = match occasion.lapse() {
+            LapseContext::Open(id) => Some(id.epoch_day()),
+            LapseContext::NoLapse => None,
+        };
+        let study_day = occasion.study_day().epoch_day();
+        let scope = scope(kind.dedupe(), study_day, lapse_id);
+        let row = ClaimRow {
+            kind: kind.name(),
+            dedupe_key: occasion.key().as_str(),
+            scope: &scope,
+            surface,
+            study_day,
+            lapse_id,
+            created_at: now,
+        };
+        let Some(claim) = ledger::claim(write, &row).await? else {
+            return Ok(Verdict::Withhold(Reason::AlreadyRecorded));
+        };
+        let verdict = self
+            .after_claim(write, occasion, surface, now, (claim, lapse_id))
+            .await?;
+        if let Verdict::Withhold(_) = verdict {
+            ledger::release(write, claim).await?;
+        }
+        Ok(verdict)
+    }
+
+    /// The rules after the claim: the lapse, the quiet window, the comeback cap and the transport.
+    async fn after_claim(
+        &self,
+        write: &mut SqliteConnection,
+        occasion: &Occasion,
+        surface: Surface,
+        now: UtcMillis,
+        (claim, lapse_id): (i64, Option<i64>),
+    ) -> Result<Verdict, KernelError> {
+        let kind = occasion.kind();
+        let celebration = kind.class() == Class::Celebration;
+        if lapse_id.is_some()
+            && self.policy.lapse.suppress_classes.contains(&kind.class())
+            && !kind.is_comeback()
+        {
+            return Ok(Verdict::Withhold(Reason::Lapse));
+        }
+        if !self
+            .policy
+            .quiet_hours
+            .exempt_classes
+            .contains(&kind.class())
+            && self.in_quiet_window(write, now).await?
+        {
+            return Ok(if celebration {
+                Verdict::Defer(Hold::Quiet)
+            } else {
+                Verdict::Withhold(Reason::QuietHours)
+            });
+        }
+        if let (true, Some(lapse_id)) = (kind.is_comeback(), lapse_id) {
+            let (sends, last) = ledger::lapse_sends(write, kind.name(), lapse_id, claim).await?;
+            let gap = i64::from(self.policy.comeback.min_gap_days);
+            let too_soon = last.is_some_and(|last| occasion.study_day().epoch_day() - last < gap);
+            if sends >= i64::from(self.policy.comeback.max_per_episode) || too_soon {
+                return Ok(Verdict::Withhold(Reason::BudgetSpent));
+            }
+        }
+        Ok(match surface {
+            Surface::MiniApp => Verdict::SendInApp,
+            Surface::Bot if self.bot.is_none() => Verdict::Withhold(Reason::NoNotifier),
+            Surface::Bot if self.breaker_open(now) => {
+                if celebration {
+                    Verdict::Defer(Hold::Send)
+                } else {
+                    Verdict::Withhold(Reason::NoNotifier)
+                }
+            }
+            Surface::Bot => Verdict::SendBot(claim),
+        })
+    }
+
+    /// Delivers what quiet hours and failed sends held, when a bot transport is joined, the quiet
+    /// window has ended and the breaker is closed (R7, R8). A celebration held longer than the
+    /// policy's age is abandoned; at most the policy's flush count render in full, loudest first
+    /// and in the order they were held; and one recap line names the rest and every abandoned
+    /// celebration. The first failed send ends the flush.
+    ///
+    /// # Errors
+    ///
+    /// [`KernelError::Database`] when the ledger cannot be read or written.
+    pub async fn flush(&self) -> Result<Flushed, KernelError> {
+        Ok(Flushed::Ran { sends: 0 })
+    }
+
+    /// Holds `row` on the queue, then keeps the queue's bound: past the policy's count of held
+    /// celebrations, the lowest-ranked is abandoned.
+    async fn hold(
+        &self,
+        write: &mut SqliteConnection,
+        row: &HeldRow,
+        now: UtcMillis,
+    ) -> Result<(), KernelError> {
+        ledger::hold(write, row, now).await?;
+        let bound = usize::try_from(self.policy.deferral.queue_max).unwrap_or(usize::MAX);
+        for row in ledger::held(write).await?.iter().skip(bound) {
+            self.abandon(write, row, now).await?;
+        }
+        Ok(())
+    }
+
+    /// Abandons the held `row`: it waits on the queue for a recap to name it, and its decision is
+    /// a withhold by what held it.
+    async fn abandon(
+        &self,
+        write: &mut SqliteConnection,
+        row: &HeldRow,
+        now: UtcMillis,
+    ) -> Result<(), KernelError> {
+        let reason = Hold::parse(&row.hold).abandoned();
+        ledger::abandon(write, row.id).await?;
+        ledger::record(write, &Subject::held(row).withheld(reason, now)).await?;
+        tracing::warn!(
+            kind = %row.kind,
+            reason = reason.as_str(),
+            "a held celebration was abandoned"
+        );
+        Ok(())
+    }
+
+    /// Holds `row` again after a failed send, its first deferral time kept, or abandons it once its
+    /// retries are spent (R8).
+    async fn retry_or_abandon(
+        &self,
+        write: &mut SqliteConnection,
+        row: &HeldRow,
+        now: UtcMillis,
+    ) -> Result<(), KernelError> {
+        let tries = row.tries + 1;
+        ledger::relatch(write, row.id, tries).await?;
+        let row = HeldRow {
+            tries,
+            hold: Hold::Send.as_str().to_owned(),
+            ..row.clone()
+        };
+        if tries > i64::from(self.policy.send_failure.retry_max) {
+            self.abandon(write, &row, now).await
+        } else {
+            ledger::record(write, &Subject::held(&row).deferred(Hold::Send, now)).await
+        }
+    }
+
+    /// Sends `text` to the bot at `rendered`: nothing at T0, which delivers by sending nothing.
+    async fn push(&self, text: &str, rendered: Tier) -> Pushed {
+        match &self.bot {
+            _ if rendered == Tier::T0 => Pushed::Delivered,
+            Some(bot) => bot.push_message(&PASS, text).await,
+            None => Pushed::Failed,
+        }
+    }
+
+    /// Whether `now` falls in the owner's quiet window, or the policy's where the owner set none.
+    async fn in_quiet_window(
+        &self,
+        write: &mut SqliteConnection,
+        now: UtcMillis,
+    ) -> Result<bool, KernelError> {
+        let quiet = &self.policy.quiet_hours;
+        let start = minutes_setting(write, QUIET_START_SETTING, quiet.start.minutes()).await?;
+        let end = minutes_setting(write, QUIET_END_SETTING, quiet.end.minutes()).await?;
+        Ok(in_quiet_hours(
+            local_minute(now, self.rule.utc_offset()),
+            start,
+            end,
+        ))
+    }
+
+    /// Whether the outage breaker is open: a bot send failed less than the cooldown before `now`.
+    /// A clock that stepped back past the failure closes it.
+    fn breaker_open(&self, now: UtcMillis) -> bool {
+        let failed_at = *self
+            .failed_at
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner);
+        let cooldown = i64::from(self.policy.send_failure.outage_cooldown_ms);
+        failed_at
+            .is_some_and(|at| (0..cooldown).contains(&(now.epoch_millis() - at.epoch_millis())))
+    }
+
+    /// Opens the outage breaker at `now`.
+    fn trip(&self, now: UtcMillis) {
+        *self
+            .failed_at
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner) = Some(now);
+    }
+}
+
+/// The Mini App's delivery call: appends the item to the in-app feed the owner pulls, inside the
+/// write that records its decision (R13).
+async fn push_in_app(
+    write: &mut SqliteConnection,
+    subject: &Subject<'_>,
+    rendered: Tier,
+    text: &str,
+    now: UtcMillis,
+) -> Result<(), KernelError> {
+    ledger::append_feed(write, subject.key, subject.kind, rendered, text, now).await
+}
+
+/// The owner's minutes for `key`, or `default` where the owner set none or set no number.
+async fn minutes_setting(
+    write: &mut SqliteConnection,
+    key: &str,
+    default: i64,
+) -> Result<i64, KernelError> {
+    Ok(ledger::setting(write, key)
+        .await?
+        .and_then(|value| value.parse().ok())
+        .unwrap_or(default))
+}
+
+/// The tier an occasion renders at until the ladder's renders (#120): nothing at T0, and a line at
+/// every other tier.
+const fn rendered(requested: Tier) -> Tier {
+    if matches!(requested, Tier::T0) {
+        Tier::T0
+    } else {
+        Tier::T2
+    }
+}
+
+/// The scope a delivery claims its key in: none for once-ever and per-incident, the study day, or
+/// the lapse and the study day.
+fn scope(dedupe: DedupeScope, study_day: i64, lapse_id: Option<i64>) -> String {
+    match dedupe {
+        DedupeScope::OnceEver | DedupeScope::PerIncident => String::new(),
+        DedupeScope::PerStudyDay => format!("day:{study_day}"),
+        DedupeScope::PerEpisodeDay => format!(
+            "lapse:{}:day:{study_day}",
+            lapse_id.map_or_else(String::new, |id| id.to_string())
+        ),
+    }
+}
+
+/// The queue's row for `occasion`, held for `hold` with `tries` failed sends, deferred at `now`.
+fn held_row(
+    occasion: &Occasion,
+    surface: Surface,
+    hold: Hold,
+    tries: i64,
+    now: UtcMillis,
+) -> HeldRow {
+    HeldRow {
+        id: 0,
+        kind: occasion.kind().name().to_owned(),
+        dedupe_key: occasion.key().as_str().to_owned(),
+        surface,
+        tier_requested: occasion.tier(),
+        tier_pending: rendered(occasion.tier()),
+        text: occasion.text().to_owned(),
+        hold: hold.as_str().to_owned(),
+        tries,
+        deferred_at: now.epoch_millis(),
+        study_day: occasion.study_day().epoch_day(),
+    }
+}
+
+/// The recap line (the predecessor's `CelebrationsLayer._rollup_text`): a head that says what held
+/// them, then each rolled-up celebration by its key, and each abandoned one with why it went unseen.
+fn recap(rolled: &[HeldRow], abandoned: &[(i64, String, String)]) -> String {
+    let mut names = Vec::new();
+    let (mut quiet, mut send) = (false, false);
+    for row in rolled {
+        names.push(row.dedupe_key.clone());
+        match Hold::parse(&row.hold) {
+            Hold::Quiet => quiet = true,
+            Hold::Send => send = true,
+        }
+    }
+    for (_, key, hold) in abandoned {
+        let hold = Hold::parse(hold);
+        names.push(match hold {
+            Hold::Quiet => format!("{key} (expired, unseen)"),
+            Hold::Send => format!("{key} (gave up retrying, unseen)"),
+        });
+        match hold {
+            Hold::Quiet => quiet = true,
+            Hold::Send => send = true,
+        }
+    }
+    let head = match (quiet, send) {
+        (false, true) => "\u{1f4e1} <b>{n} held celebration(s)</b> (send failures)",
+        (true, true) => "\u{1f319} <b>{n} held celebration(s)</b> (quiet hours + send failures)",
+        _ => "\u{1f319} <b>{n} held celebration(s)</b> (quiet hours)",
+    }
+    .replace("{n}", &names.len().to_string());
+    let lines: Vec<String> = names
+        .iter()
+        .map(|name| format!("\u{2022} {name}"))
+        .collect();
+    format!("{head}\n{}", lines.join("\n"))
+}

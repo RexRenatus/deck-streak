@@ -27,4 +27,4 @@ pub mod transport;
 
 pub use commands::{Commands, MiniAppUrl, OwnerSync, Scores, SyncAnswer, SyncOutcome, SyncRefusal};
 pub use poll::run;
-pub use transport::{ApiUrl, SendCounts, Sent, Transport, TransportError};
+pub use transport::{ApiUrl, OwnerChat, SendCounts, Sent, Transport, TransportError};

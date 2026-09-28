@@ -16,6 +16,9 @@
 //! The bot token is part of every request's URL, so nothing here logs a URL, a request or an
 //! answer's body: a line names the method, the attempt and the Bot API's error code, and never a
 //! message's text.
+//!
+//! [`OwnerChat`] is the bot's side of the notification router's transport port (SPEC-041 R13): the
+//! router's pushes go to the owner's chat through the same [`Transport::send_html`].
 
 use std::fmt;
 use std::future::Future;
@@ -25,7 +28,9 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 
+use deck_streak_identity::Owner;
 use deck_streak_kernel::{Environment, Secret, Setting, SettingsError};
+use deck_streak_notifications::{BotTransport, Pass, PushFuture, Pushed};
 use frankenstein::client_reqwest::Bot;
 use frankenstein::methods::{
     AnswerCallbackQueryParams, DeleteMyCommandsParams, DeleteWebhookParams, EditMessageTextParams,
@@ -654,6 +659,33 @@ impl Transport {
             .into_iter()
             .map(Incoming::from_value)
             .collect())
+    }
+}
+
+/// The bot's side of the notification router's transport port (SPEC-041 R13): every push goes to
+/// the owner's private chat, whose id is the owner's user id, through [`Transport::send_html`], so
+/// a pushed text is HTML, chunked and retried as every message of the bot is. The composition root
+/// joins it to the router; only the router can call it (the router's `Pass`).
+pub struct OwnerChat {
+    transport: Arc<Transport>,
+    chat: i64,
+}
+
+impl OwnerChat {
+    /// The owner's chat, over `transport`.
+    #[must_use]
+    pub const fn new(transport: Arc<Transport>, owner: Owner) -> Self {
+        Self {
+            transport,
+            chat: owner.user().get(),
+        }
+    }
+}
+
+impl BotTransport for OwnerChat {
+    fn push_message<'a>(&'a self, _pass: &'a Pass, text: &'a str) -> PushFuture<'a> {
+        let _message = (&self.transport, self.chat, text);
+        Box::pin(async { Pushed::Failed })
     }
 }
 

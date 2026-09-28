@@ -11,7 +11,8 @@
 //! drains on the shutdown signal ([`serve`]). The daemon's `api` role binds, serves and signals
 //! systemd; this crate holds no process lifecycle of its own. SPEC-024 adds the owner's session
 //! routes ([`session_routes`]): the handshake, the logout and the owner's day, over identity's
-//! gate, sessions and extractor.
+//! gate, sessions and extractor. SPEC-041 adds the in-app feed the notification router appends to
+//! ([`notifications_routes`]), served to the owner's session alone.
 //!
 //! The context map (docs/CONTEXT-MAP.md) is binding: this crate depends only on what its line
 //! there declares, and a new edge is an ADR, never a fix to make code compile.
@@ -20,6 +21,7 @@
 #![warn(missing_docs, clippy::all)]
 
 pub mod health;
+pub mod notifications_routes;
 pub mod router;
 pub mod serve;
 pub mod session_routes;

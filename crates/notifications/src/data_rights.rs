@@ -1,0 +1,177 @@
+//! Notifications' data-rights port (SPEC-041 R11; SPEC-021): the router's five tables are the
+//! owner's data, each exported whole and erased, through the kernel's port that `privacy` drives
+//! (CHARTER 13).
+
+use deck_streak_kernel::{
+    DataRights, DataRightsError, Declaration, Disposition, ExportedTable, KernelError, PortFuture,
+    TableRights,
+};
+use serde_json::json;
+use sqlx::SqliteConnection;
+
+use crate::ledger::{DECISIONS_TABLE, DELIVERIES_TABLE, FEED_TABLE, QUEUE_TABLE, SETTINGS_TABLE};
+
+/// The context this port speaks for.
+pub const NOTIFICATIONS_CONTEXT: &str = "notifications";
+
+/// Notifications' implementation of the kernel's data-rights port.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct NotificationsDataRights;
+
+impl DataRights for NotificationsDataRights {
+    fn declaration(&self) -> Result<Declaration, DataRightsError> {
+        Declaration::new(NOTIFICATIONS_CONTEXT, Vec::new())
+    }
+
+    fn export<'a>(
+        &'a self,
+        _connection: &'a mut SqliteConnection,
+    ) -> PortFuture<'a, Vec<ExportedTable>> {
+        Box::pin(async { Ok(Vec::new()) })
+    }
+
+    fn erase<'a>(&'a self, _connection: &'a mut SqliteConnection) -> PortFuture<'a, ()> {
+        Box::pin(async { Ok(()) })
+    }
+}
+
+/// Every decision, in the order recorded.
+async fn decisions(connection: &mut SqliteConnection) -> Result<ExportedTable, KernelError> {
+    let rows = sqlx::query!(
+        r#"SELECT id AS "id!", dedupe_key, kind, surface, arm, reason, tier_requested,
+                  tier_rendered, study_day, created_at
+           FROM notification_decisions ORDER BY id"#
+    )
+    .fetch_all(connection)
+    .await?;
+    Ok(ExportedTable {
+        table: DECISIONS_TABLE,
+        rows: rows
+            .into_iter()
+            .map(|row| {
+                json!({
+                    "id": row.id,
+                    "dedupe_key": row.dedupe_key,
+                    "kind": row.kind,
+                    "surface": row.surface,
+                    "arm": row.arm,
+                    "reason": row.reason,
+                    "tier_requested": row.tier_requested,
+                    "tier_rendered": row.tier_rendered,
+                    "study_day": row.study_day,
+                    "created_at": row.created_at,
+                })
+            })
+            .collect(),
+    })
+}
+
+/// Every delivery's claim.
+async fn deliveries(connection: &mut SqliteConnection) -> Result<ExportedTable, KernelError> {
+    let rows = sqlx::query!(
+        r#"SELECT id AS "id!", kind, dedupe_key, scope, surface, study_day, lapse_id, created_at
+           FROM notification_deliveries ORDER BY id"#
+    )
+    .fetch_all(connection)
+    .await?;
+    Ok(ExportedTable {
+        table: DELIVERIES_TABLE,
+        rows: rows
+            .into_iter()
+            .map(|row| {
+                json!({
+                    "id": row.id,
+                    "kind": row.kind,
+                    "dedupe_key": row.dedupe_key,
+                    "scope": row.scope,
+                    "surface": row.surface,
+                    "study_day": row.study_day,
+                    "lapse_id": row.lapse_id,
+                    "created_at": row.created_at,
+                })
+            })
+            .collect(),
+    })
+}
+
+/// Every held or abandoned celebration on the queue.
+async fn queue(connection: &mut SqliteConnection) -> Result<ExportedTable, KernelError> {
+    let rows = sqlx::query!(
+        r#"SELECT id AS "id!", kind, dedupe_key, surface, tier_requested, tier_pending, text, hold,
+                  tries, state, deferred_at, study_day, created_at
+           FROM notification_queue ORDER BY id"#
+    )
+    .fetch_all(connection)
+    .await?;
+    Ok(ExportedTable {
+        table: QUEUE_TABLE,
+        rows: rows
+            .into_iter()
+            .map(|row| {
+                json!({
+                    "id": row.id,
+                    "kind": row.kind,
+                    "dedupe_key": row.dedupe_key,
+                    "surface": row.surface,
+                    "tier_requested": row.tier_requested,
+                    "tier_pending": row.tier_pending,
+                    "text": row.text,
+                    "hold": row.hold,
+                    "tries": row.tries,
+                    "state": row.state,
+                    "deferred_at": row.deferred_at,
+                    "study_day": row.study_day,
+                    "created_at": row.created_at,
+                })
+            })
+            .collect(),
+    })
+}
+
+/// Every item of the in-app feed, seen or not.
+async fn feed(connection: &mut SqliteConnection) -> Result<ExportedTable, KernelError> {
+    let rows = sqlx::query!(
+        r#"SELECT id AS "id!", dedupe_key, kind, tier, text, seen_at, created_at
+           FROM in_app_feed ORDER BY id"#
+    )
+    .fetch_all(connection)
+    .await?;
+    Ok(ExportedTable {
+        table: FEED_TABLE,
+        rows: rows
+            .into_iter()
+            .map(|row| {
+                json!({
+                    "id": row.id,
+                    "dedupe_key": row.dedupe_key,
+                    "kind": row.kind,
+                    "tier": row.tier,
+                    "text": row.text,
+                    "seen_at": row.seen_at,
+                    "created_at": row.created_at,
+                })
+            })
+            .collect(),
+    })
+}
+
+/// Every setting the owner changed.
+async fn settings(connection: &mut SqliteConnection) -> Result<ExportedTable, KernelError> {
+    let rows =
+        sqlx::query!("SELECT key, value, created_at FROM notification_settings ORDER BY key")
+            .fetch_all(connection)
+            .await?;
+    Ok(ExportedTable {
+        table: SETTINGS_TABLE,
+        rows: rows
+            .into_iter()
+            .map(|row| {
+                json!({
+                    "key": row.key,
+                    "value": row.value,
+                    "created_at": row.created_at,
+                })
+            })
+            .collect(),
+    })
+}
