@@ -3,7 +3,10 @@
 //! ADR-009 chose Anki's engine for ingest and ADR-022 measured it before the choice was final.
 //! Every engine type stays behind [`AnkiEngine`], so the rest of the workspace learns this crate's
 //! own types and never Anki's (the anti-corruption layer of docs/CONTEXT-MAP.md). [`RslibEngine`]
-//! is the adapter over the engine at the tag the workspace manifest pins.
+//! is the adapter over the engine at upstream tag `26.09.3`, which the root manifest's `[patch]`
+//! entry replaces with the maintainer's fork at revision
+//! `57382da085e6752738dc4bb617789be836a23300`: that tag plus one fix, so the engine's protobuf
+//! build script stops rerunning on every cargo command (ADR-058, SPEC-055).
 //!
 //! Nothing here carries the engine's error text, a path, the endpoint or a credential out of the
 //! port: a failure is one [`EngineError`] kind (SPEC-022 R9).
@@ -165,7 +168,8 @@ pub trait AnkiEngine {
     ) -> impl Future<Output = Result<(), EngineError>> + Send;
 }
 
-/// The adapter over Anki's engine (`rslib`), at the tag the workspace manifest pins.
+/// The adapter over Anki's engine (`rslib`), at the upstream tag and the fork's revision the
+/// workspace manifest pins (ADR-058).
 #[derive(Debug, Clone, Copy, Default)]
 pub struct RslibEngine;
 
