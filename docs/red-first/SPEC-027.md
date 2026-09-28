@@ -74,3 +74,22 @@ A16: green at 828a291
 A17: red at d22a61c: assertion `left == right` failed; left: Hourly { minute: 0 }, right: DailyAtRollover { minute: 7 }
 A17: green at 828a291
 ```
+
+## The orchestrator's hand proofs (verification of #224, 2026-09-28)
+
+A7 and A13 went red first on a constant, before their behaviour's assertion, so the orchestrator
+proved each behaviour by hand at the merged head f4c0111. Each mutant was installed once in a
+committed tree, its killer selected exactly one test, and the file was restored and checked by
+sha256 before the next row.
+
+| row | mutant | killer | verdict |
+|---|---|---|---|
+| H1 | `crates/coordination/src/maintenance.rs`: `wal_checkpoint(TRUNCATE)` becomes `wal_checkpoint(PASSIVE)` | A13 | killed: the write-ahead log kept 160,712 bytes |
+| H2 | the same file: the prune's cutoff moves 1,000 times further back | A13 | killed: 0 rows pruned of 369 |
+| H3 | `crates/coordination/src/liveness.rs`: the dead-man check pages while the sync is alive, not when it is dead | A7 | killed: the episode paged on every check |
+| H4 | the same file: the drift tolerance compares `>=` instead of `>` | `the_watch_pages_just_past_each_of_its_boundaries` | killed: a skew of exactly 30 minutes paged |
+| H4b | the same mutant as H4 | A8 | survived: A8's skew is far past the boundary |
+
+H4b is why the boundary test added after green matters: without it, the tolerance's boundary is
+unguarded. H2's output also confirms A13's disclosed change: a successful TRUNCATE checkpoint reports
+zero logged and zero checkpointed frames.
