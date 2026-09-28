@@ -81,7 +81,8 @@ R4. **Issue state on the box.** After it has read the judged commit's wiring, an
     runs, `box-packs.sh` reads the state of every issue the `box` section names: each
     `expected_red` row's issue, each `pending` issue, and the proxy scan's `pending`. It asks once
     per issue, with `gh issue view <n> --json state`, run in ROOT, so `gh` resolves the repository
-    from ROOT's remotes, or from `$GH_REPO`.
+    from ROOT's remotes, or from `$GH_REPO`. It prints how many issues it read, each with its
+    state.
     - An expectation whose issue reads `CLOSED` is stale. Its pack's line reads `FAIL` and names
       the row (or `pending`) and the closed issue, as `<row> (#N is closed)`, and the run exits 1.
     - The run is VOID when `gh` is not on the path, is not logged in (its exit 4), cannot reach
@@ -146,8 +147,9 @@ slow command, and never runs cargo. A11 replaces the process call and records it
 no cargo either.
 
 The red stub, committed with the tests, is the base's behaviour, with one refactor: the guard's
-cargo call moves into a helper that still passes no timeout. A1 to A4, A7, A8 and A9 are then red on
-the base's exit codes. A6 is red because the vendoring calls `load_deny` itself. A10 is red because
+cargo call moves into a helper that still passes no timeout. A1 to A4, A7 and A9 are then red on
+the base's exit codes, and A8 on the pack line the base prints, which reads `ok`. A6 is red because
+the vendoring calls `load_deny` itself. A10 is red because
 the planted command runs to its end, and A11 because the recorded bound is `None`. A12 is red
 because the README holds no example to examine. A5 holds on the base, which refuses every address:
 it pins the admission's edges, so a looser admission cannot pass.
@@ -197,3 +199,13 @@ it pins the admission's edges, so a looser admission cannot pass.
   with a new measurement.
 - **The composition's refactor changes the vendoring.** A6 pins the refusal lines, and the dry run
   before and after, recorded in the red-first record, compares a whole run's output.
+
+## 7. Amendments at delivery
+
+- **A4 also holds a unit name beside an address on the same line.** The same-line case was first
+  planned in A5, where the base failed it for A4's reason: the unit name beside each address was
+  refused too. In A4 it is red for A4's own reason, and A5 keeps only the addresses.
+- **R4 prints the issues it read.** The run prints how many issues it read, each with its state,
+  before any pack runs, so a box run's output shows what the expectations were held to.
+- **The red stub's note names A8's red exactly.** The base printed an `ok` line for the pack, and
+  A8's first assertion reads that line before the exit code.
