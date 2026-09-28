@@ -436,3 +436,21 @@ fn an_autolinks_scheme_runs_two_to_thirty_two_characters() {
         ],
     );
 }
+
+#[test]
+fn a_markdown_paths_percent_escapes_are_decoded_before_its_extension_is_read() {
+    judge(
+        &vendored(),
+        "note(s) with an escaped path",
+        &[
+            // An escape decodes, in either case, wherever it stands after the path's first byte.
+            ("![x](v%2Ebase)\n", &[("dynamic_embed_extensions:.base", 1)]),
+            ("![x](v%2ebase)\n", &[("dynamic_embed_extensions:.base", 1)]),
+            // A `%` without two hexadecimal digits stays as it is.
+            (
+                "![x](a%g2.base)\n",
+                &[("dynamic_embed_extensions:.base", 1)],
+            ),
+        ],
+    );
+}
