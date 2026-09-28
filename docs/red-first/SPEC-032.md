@@ -26,6 +26,8 @@ SPEC-039 brings:
 - `every_departure_from_an_advisory_is_waived_with_its_why`.
 
 They were written with the criteria, red at 89b699e and green at c2af48a, and carry no line below.
+After green, clippy's pedantic `single_match_else` asked for an `if let` in A7's calendar helper
+(1fb052a); the calendars it renders are unchanged, and A7 stays green.
 
 ```red-first
 A1: red at 89b699e: AssertionError: {'service.restart': [{'detail': 'Restart=n[1248 chars]n'}]} != {} : the durable lint refused the templates (six rows: resources.budget, sandbox.identity, sandbox.protect-home, sandbox.protect-system, sandbox.syscall-filter, service.restart)
