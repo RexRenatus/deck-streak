@@ -248,7 +248,20 @@ def credential_refusal(key, value, socket):
     return None
 
 
+def spelling_refusal(key, value):
+    """A value written in a form systemd reads otherwise than this check: a backslash escape,
+    which systemd decodes by key (in quotes too), and this check never guesses at."""
+    if "\\" in value:
+        return f"{key}= is written with a backslash escape, which systemd decodes by key"
+    return None
+
+
 def environment_refusals(value):
+    """systemd splits the line into words, removes their quotes and expands specifiers before it
+    reads each variable's name (SPEC-061 §8). A line with a backslash is refused whole by its
+    spelling, so quotes are all that is left, and shlex removes them as systemd does."""
+    if "\\" in value:
+        return []
     try:
         words = shlex.split(value)
     except ValueError:
@@ -256,7 +269,11 @@ def environment_refusals(value):
     refusals = []
     for word in words:
         name, equals, _ = word.partition("=")
-        if equals and SECRET_NAME.search(name):
+        if not equals:
+            continue
+        if "%" in name:
+            refusals.append("Environment= names a variable with a specifier, which systemd expands")
+        elif SECRET_NAME.search(name):
             refusals.append(f"Environment= sets {name}, whose name says it carries a secret")
     return refusals
 
@@ -288,9 +305,12 @@ def judge(unit_file, dropins, contract):
                 in_force[(section, key)] = []
                 continue
             in_force.setdefault((section, key), []).append(value)
-            reason = credential_refusal(key, value, contract["socket"])
-            if reason:
-                refuse(reason)
+            for reason in (
+                spelling_refusal(key, value),
+                credential_refusal(key, value, contract["socket"]),
+            ):
+                if reason:
+                    refuse(reason)
             if key == "Environment":
                 for reason in environment_refusals(value):
                     refuse(reason)
