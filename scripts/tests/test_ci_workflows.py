@@ -10,10 +10,12 @@ import math
 import os
 import re
 import subprocess
+import sys
 import tempfile
 import textwrap
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from _support import REPO, examined
 
@@ -205,6 +207,8 @@ class WorkflowsAreHardened(unittest.TestCase):
                 "EXAMPLE_VALUE",
                 "secret-in-any-spacing.yml:jobs.build.steps[0].env.CAPITALS: reads the secret "
                 "Example_Token",
+                "secret-in-any-spacing.yml:jobs.build.steps[0].env.HASHED: reads the secret "
+                "EXAMPLE_TOKEN",
                 "secret-in-brackets.yml:jobs.build.steps[0].env.INDEXED: reads the secret "
                 "EXAMPLE_TOKEN",
                 "secrets-inherited.yaml:jobs.call.secrets: passes every secret to the workflow "
@@ -244,6 +248,9 @@ class WorkflowsAreHardened(unittest.TestCase):
             for name, character in {**PLANTED_SPACES, **PLANTED_BREAKS}.items():
                 with self.subTest(f"{form}: {name}"), self.assertRaisesRegex(AssertionError, why):
                     planted_problems(template.replace("<C>", character))
+        for form, (text, why) in PLANTED_UNPLACED.items():
+            with self.subTest(form), self.assertRaisesRegex(AssertionError, why):
+                planted_problems(text)
 
     def test_this_repositorys_token_and_checkout_are_admitted(self):
         problems, judged = secret_and_checkout_problems(PLANTED / "admitted")
@@ -271,18 +278,20 @@ class WorkflowsAreHardened(unittest.TestCase):
                 secret_and_checkout_problems(Path(scratch))
 
     def test_a_yaml_workflow_is_held_to_the_same_hardening_rules(self):
-        # GitHub reads a `.yaml` workflow as it reads a `.yml` one (SPEC-034 R7): each hardening test
-        # above refuses the planted `.yaml` workflow by its name, beside a hardened `.yml` control.
-        planted = workflow_files(PLANTED_HARDENING)
+        # GitHub reads a `.yaml` workflow as it reads a `.yml` one (SPEC-034 R7): each hardening
+        # test above, run through its own setUp over the planted workflows, refuses the `.yaml` one
+        # by its name, beside a hardened `.yml` control.
         for test in (
             "test_every_workflow_defaults_to_a_read_only_token",
             "test_every_action_is_pinned_by_a_full_commit_sha",
             "test_no_workflow_uses_a_self_hosted_runner_or_a_privileged_trigger",
         ):
-            case = WorkflowsAreHardened(test)
-            case.files = planted
-            with self.subTest(test), self.assertRaisesRegex(AssertionError, r"unhardened\.yaml"):
-                getattr(case, test)()
+            workflows = mock.patch.object(sys.modules[__name__], "WORKFLOWS", PLANTED_HARDENING)
+            with self.subTest(test), workflows:
+                case = WorkflowsAreHardened(test)
+                case.setUp()
+                with self.assertRaisesRegex(AssertionError, r"unhardened\.yaml"):
+                    getattr(case, test)()
 
 
 def triggers(workflow):
@@ -1328,6 +1337,30 @@ PLANTED_CHARACTERS = (
           planted<C>#||git clone https://github.com/example-org/other-repository.git
 """
 )
+# Planted workflows with a line the reader cannot place, and the refusal each raises: a block it
+# does not read, before a clone, and a plain value over two lines, the second a secret. The names
+# are synthetic.
+PLANTED_UNPLACED = {
+    "a folded block": (
+        PLANTED_JOB
+        + """\
+      - run: >
+          echo planted
+      - run: git clone https://github.com/example-org/other-repository.git
+""",
+        r"^line 12 was not read",
+    ),
+    "a plain value over two lines": (
+        PLANTED_JOB
+        + """\
+      - env:
+          PLANTED: planted
+            ${{ secrets.EXAMPLE_TOKEN }}
+        run: echo planted
+""",
+        r"^line 13 was not read",
+    ),
+}
 # Planted workflows with a line the reader cannot place, and the refusal each raises: a continuation
 # line that begins with <C>, and a line of <C> alone in a mapping and in a block.
 PLANTED_UNPLACED_CHARACTERS = {
