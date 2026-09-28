@@ -54,6 +54,7 @@ fn every_public_template_loads_with_its_roster_slots_unfilled() {
     files.sort();
     let files = examined("public templates in agent/personas", files);
     let public = TemplateSet::public().expect("the engine loads the templates it compiled in");
+    assert!(!public.is_empty() && TemplateSet::default().is_empty());
     assert_eq!(
         public.len(),
         files.len(),

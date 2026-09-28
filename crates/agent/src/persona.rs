@@ -10,10 +10,44 @@
 use std::collections::BTreeMap;
 use std::fmt;
 
+use serde_json::Value;
+
 use crate::memory::MemorySource;
 
 /// The schema id every persona template declares (persona-core's template schema v1).
 pub const TEMPLATE_SCHEMA: &str = "phx.persona.template.v1";
+
+/// The public templates, compiled into the engine from `agent/personas/` (ADR-044): the text a
+/// build instantiates is the text the box run judged.
+const PUBLIC: [&str; 18] = [
+    include_str!("../../../agent/personas/es.persona.md"),
+    include_str!("../../../agent/personas/fr.persona.md"),
+    include_str!("../../../agent/personas/ja.persona.md"),
+    include_str!("../../../agent/personas/ko.persona.md"),
+    include_str!("../../../agent/personas/law-business-associations.persona.md"),
+    include_str!("../../../agent/personas/law-civil-procedure.persona.md"),
+    include_str!("../../../agent/personas/law-conflict-of-laws.persona.md"),
+    include_str!("../../../agent/personas/law-constitutional-law.persona.md"),
+    include_str!("../../../agent/personas/law-contracts.persona.md"),
+    include_str!("../../../agent/personas/law-criminal-law-and-procedure.persona.md"),
+    include_str!("../../../agent/personas/law-evidence.persona.md"),
+    include_str!("../../../agent/personas/law-family-law.persona.md"),
+    include_str!("../../../agent/personas/law-professional-responsibility.persona.md"),
+    include_str!("../../../agent/personas/law-real-property.persona.md"),
+    include_str!("../../../agent/personas/law-secured-transactions.persona.md"),
+    include_str!("../../../agent/personas/law-torts.persona.md"),
+    include_str!("../../../agent/personas/law-trusts-and-estates.persona.md"),
+    include_str!("../../../agent/personas/zh.persona.md"),
+];
+
+/// Each section the template schema gives roster slots, with the slots it must carry
+/// (persona-core's contract, `template_sections`).
+const SLOTTED: [(&str, &[Slot]); 4] = [
+    ("identity", &[Slot::Name, Slot::Bio]),
+    ("voice", &[Slot::Voice]),
+    ("personality", &[Slot::Personality]),
+    ("disclosure", &[Slot::Name]),
+];
 
 /// Why the engine refused a template, a roster or an instantiation.
 ///
@@ -274,7 +308,7 @@ pub struct Template {
     duties: Vec<Duty>,
     memory: Vec<MemorySource>,
     text: String,
-    body: usize,
+    body: String,
 }
 
 impl Template {
@@ -286,8 +320,65 @@ impl Template {
     /// slot missing from its section, [`PersonaError::UnknownSlot`] for any other `{{...}}` token,
     /// and [`PersonaError::Journal`] for a template that declares the journal.
     pub fn parse(text: &str) -> Result<Self, PersonaError> {
-        let _ = text;
-        Err(PersonaError::Template("the engine reads no template yet"))
+        let rest = text
+            .strip_prefix("---\n")
+            .ok_or(PersonaError::Template("line 1 is not ---"))?;
+        let (head, body) = rest
+            .split_once("\n---\n")
+            .ok_or(PersonaError::Template("the frontmatter is never closed"))?;
+        let fields = frontmatter(head)?;
+        if fields.get("schema").and_then(Value::as_str) != Some(TEMPLATE_SCHEMA) {
+            return Err(PersonaError::Template(
+                "schema is not phx.persona.template.v1",
+            ));
+        }
+        let id = fields
+            .get("template")
+            .and_then(Value::as_str)
+            .and_then(TemplateId::parse)
+            .ok_or(PersonaError::Template("template is not a slug"))?;
+        let subject = fields
+            .get("subject")
+            .and_then(Value::as_str)
+            .and_then(Subject::parse)
+            .ok_or(PersonaError::Template(
+                "subject is not a known kind and an area",
+            ))?;
+        let lang = match (subject.kind(), fields.get("lang")) {
+            (SubjectKind::Language, Some(Value::String(tag))) => Some(tag.clone()),
+            (SubjectKind::Language, _) => {
+                return Err(PersonaError::Template("a language template names no lang"));
+            }
+            (_, None) => None,
+            (_, Some(_)) => {
+                return Err(PersonaError::Template(
+                    "only a language template names a lang",
+                ));
+            }
+        };
+        let duties = names(&fields, "duties", "duties is not a list of names")?
+            .into_iter()
+            .map(|name| {
+                Duty::parse(name).ok_or(PersonaError::Template("a duty is off the registry"))
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        if duties.is_empty() {
+            return Err(PersonaError::Template("the template offers no duty"));
+        }
+        let memory = names(&fields, "memory", "memory is not a list of names")?
+            .into_iter()
+            .map(MemorySource::parse)
+            .collect::<Result<Vec<_>, _>>()?;
+        slots_in_place(text, body)?;
+        Ok(Self {
+            id,
+            subject,
+            lang,
+            duties,
+            memory,
+            text: text.to_owned(),
+            body: body.to_owned(),
+        })
     }
 
     /// The template's id.
@@ -329,7 +420,7 @@ impl Template {
     /// The template's body: everything after its frontmatter.
     #[must_use]
     pub fn body(&self) -> &str {
-        &self.text[self.body..]
+        &self.body
     }
 }
 
@@ -346,7 +437,12 @@ impl TemplateSet {
     ///
     /// The refusal of the first template that does not load.
     pub fn public() -> Result<Self, PersonaError> {
-        Ok(Self::default())
+        Self::new(
+            PUBLIC
+                .iter()
+                .map(|text| Template::parse(text))
+                .collect::<Result<Vec<_>, _>>()?,
+        )
     }
 
     /// The set of `templates`.
@@ -381,11 +477,67 @@ impl TemplateSet {
     pub fn is_empty(&self) -> bool {
         self.templates.is_empty()
     }
+}
 
-    /// Every template, by id.
-    pub fn iter(&self) -> impl Iterator<Item = &Template> {
-        self.templates.values()
+/// The frontmatter's fields: one `key: <one-line JSON value>` per line, each key once.
+fn frontmatter(head: &str) -> Result<BTreeMap<&str, Value>, PersonaError> {
+    let mut fields = BTreeMap::new();
+    for line in head.split('\n') {
+        let (key, value) = line.split_once(": ").ok_or(PersonaError::Template(
+            "a frontmatter line is not key: JSON",
+        ))?;
+        let value = serde_json::from_str(value)
+            .map_err(|_| PersonaError::Template("a frontmatter value is not one JSON value"))?;
+        if fields.insert(key, value).is_some() {
+            return Err(PersonaError::Template("a frontmatter key is repeated"));
+        }
     }
+    Ok(fields)
+}
+
+/// The names the field `key` lists, refused as `refusal` unless it is a list of strings.
+fn names<'f>(
+    fields: &'f BTreeMap<&str, Value>,
+    key: &str,
+    refusal: &'static str,
+) -> Result<Vec<&'f str>, PersonaError> {
+    fields
+        .get(key)
+        .and_then(Value::as_array)
+        .ok_or(PersonaError::Template(refusal))?
+        .iter()
+        .map(|item| item.as_str().ok_or(PersonaError::Template(refusal)))
+        .collect()
+}
+
+/// Refuses a template unless each slot stands in the section that carries it, and no other
+/// `{{...}}` token is anywhere in `text` (R4).
+fn slots_in_place(text: &str, body: &str) -> Result<(), PersonaError> {
+    for (id, slots) in SLOTTED {
+        let section = section(body, id);
+        if let Some(slot) = slots.iter().find(|slot| !section.contains(slot.token())) {
+            return Err(PersonaError::SlotFilled { slot: slot.name() });
+        }
+    }
+    let mut rest = text;
+    while let Some((_, after)) = rest.split_once("{{") {
+        let (inner, tail) = after.split_once("}}").ok_or(PersonaError::UnknownSlot)?;
+        Slot::parse(inner).ok_or(PersonaError::UnknownSlot)?;
+        rest = tail;
+    }
+    Ok(())
+}
+
+/// The lines of the section marked `id` in `body`: from its `##` heading to the next `#` or `##`
+/// heading, as persona-core reads a section; empty when no heading carries the marker.
+fn section(body: &str, id: &str) -> String {
+    let marker = format!("<!-- section:{id} -->");
+    body.lines()
+        .skip_while(|line| !(line.starts_with("## ") && line.ends_with(&marker)))
+        .skip(1)
+        .take_while(|line| !line.starts_with("# ") && !line.starts_with("## "))
+        .collect::<Vec<_>>()
+        .join("\n")
 }
 
 /// Whether `text` is a lowercase slug: groups of `a-z` and `0-9` joined by single hyphens.
