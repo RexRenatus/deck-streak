@@ -96,12 +96,14 @@ alternatives:
   `rustls::crypto::aws_lc_rs::default_provider()`, and it has no ring feature, since a ring provider
   takes `rustls-no-provider` and a provider the caller installs before it builds a client. Cargo's
   features only add, so no setting of this workspace takes `rustls` back from frankenstein (measured
-  with `cargo tree -e features -i reqwest` and the two crates' published manifests). Chosen against
+  with `cargo tree -e features -i reqwest@0.13.5` and the two crates' published manifests). Chosen against
   ring, which would need a fork of frankenstein that asks for `rustls-no-provider`, or reqwest as a
   dependency of the bot's own, to hand frankenstein a client built around ring while aws-lc-rs is
   still built beside it; this record declines both, the second as it declines reqwest for the
-  export. ring is in the bot's tree only beneath rustls-webpki, which `rustls-platform-verifier`
-  brings.
+  export. ring is in the bot's build all the same: the engine's reqwest 0.12.28, reached through
+  coordination, ingest and anki, turns on its `__rustls-ring`, and so rustls's own `ring` feature,
+  which also turns on rustls-webpki's; `rustls-platform-verifier` names no ring. This bullet declines
+  ring as the provider of frankenstein's client, not ring in the tree.
 - **An offset stands confirmed only once the server answers a request that carried it.** The poller
   marks a long poll's offset confirmed on the server's answer, as the stop's confirmation already
   did, never as the poll is issued. A stop that wins the race abandons a poll whose request may
