@@ -594,14 +594,17 @@ def prove_row(root: pathlib.Path, row: Row, scratch: pathlib.Path) -> dict:
 
 
 def chosen(rows: list[Row], args: argparse.Namespace) -> list[Row]:
+    """Every row the selectors name together, each once: `--all`, or a band's, each `--row` and a
+    plan's `--rows-from`. No selector drops another's rows."""
     if args.all:
         return rows
+    wanted = []
     if args.band:
         band = fragment_band(f"{args.band}.json")
         if band is None:
             raise PopulationRefused(f"{args.band} is not a band S<lo>-S<hi>")
-        return [r for r in rows if band[0] <= int(ID_STEM.match(r.id).group(1)) <= band[1]]
-    wanted = list(args.row)
+        wanted += [r.id for r in rows if band[0] <= int(ID_STEM.match(r.id).group(1)) <= band[1]]
+    wanted += list(args.row)
     if args.rows_from:
         plan = json.loads(pathlib.Path(args.rows_from).read_text(encoding="utf-8"))
         wanted += plan.get("rows", [])
