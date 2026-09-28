@@ -62,3 +62,6 @@ replaces `.packs/` and `box-packs.sh` with the runner at a pinned version.
 ## More Information
 
 The seat `roles/deckstreak`; `.packs/VENDORED.json`; `.packs/wiring.json`; the addendum's pack runner note.
+
+Superseded in part by ADR-056 (2026-09-28): the owner decided the packs stay box-only and no pack
+runner is published, so this arrangement is permanent, not "until the open-source runner exists".

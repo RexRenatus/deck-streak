@@ -111,3 +111,6 @@ phxd is posted on each pull request (ADR-004).
 ## More Information
 
 ADR-004 (the vendored packs and the box run); SPEC-030; `docs/schematics/box-pack-runner.md`.
+
+Amended by ADR-056 (2026-09-28): no pack runner will be published, so the premise that one
+replaces this script is retired; this script is the permanent box runner.
