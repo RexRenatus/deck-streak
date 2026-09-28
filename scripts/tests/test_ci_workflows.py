@@ -2,7 +2,8 @@
 on pull requests into dev and main and pushes to both (SPEC-030 A1), and only this repository's dev
 reaches main (SPEC-034 A5 to A7). The gate runs in parallel jobs, each stage in exactly one, the
 engine's slow tests in a job of their own, a cache is saved only by a push to dev or main, and every
-job that compiles Rust installs the protoc Anki's engine needs (SPEC-038)."""
+job that compiles Rust installs the protoc Anki's engine needs (SPEC-038). No workflow reads a
+secret but the default token, or checks out or fetches another repository (SPEC-034 A9 to A12)."""
 
 import math
 import os
@@ -99,6 +100,76 @@ class WorkflowsAreHardened(unittest.TestCase):
         self.assertIn("if: ${{ always() }}", aggregate)
         for job in examined("jobs", [j for j in jobs if j != "ci"]):
             self.assertIn(job, aggregate, f"the aggregate ci job does not need {job}")
+
+    def test_no_workflow_reads_a_secret_or_checks_out_another_repository(self):
+        problems, judged = secret_and_checkout_problems(WORKFLOWS)
+        self.assertEqual(problems, [])
+        examined("workflow expressions", judged["expressions"])
+        examined("run steps", judged["run steps"])
+        for where, repository in examined("checkouts", judged["checkouts"]):
+            self.assertEqual(repository, THIS_REPOSITORY, where)
+
+    def test_each_planted_secret_or_foreign_repository_is_refused_by_name(self):
+        problems, _ = secret_and_checkout_problems(PLANTED / "refused")
+        self.assertEqual(
+            problems,
+            [
+                "checkout-of-another-repository.yml:jobs.build.steps[0]: checks out "
+                "example-org/other-repository, not this repository",
+                "checkout-of-another-repository.yml:jobs.build.steps[1]: checks out "
+                "${{ github.event.pull_request.head.repo.full_name }}, not this repository",
+                "clone-of-another-repository.yml:jobs.build.steps[0]: clones a repository: "
+                "git clone --depth 1 https://github.com/example-org/other-repository.git",
+                "clone-of-another-repository.yml:jobs.build.steps[1]: clones a repository: "
+                "gh repo clone example-org/other-repository",
+                "every-secret.yml:jobs.build.steps[0].env.CHOSEN: reads the whole secrets "
+                "context, or a secret named at run time",
+                "every-secret.yml:jobs.build.steps[0].run: reads the whole secrets context, or a "
+                "secret named at run time",
+                "fetch-of-a-url.yml:jobs.build.steps[1]: points git at a URL: git fetch "
+                "https://github.com/example-org/other-repository.git main",
+                "fetch-of-a-url.yml:jobs.build.steps[2]: points git at a URL: git pull --ff-only "
+                "https://github.com/example-org/other-repository.git main",
+                "secret-in-a-larger-expression.yml:jobs.build.steps[0].env.EITHER: reads the "
+                "secret EXAMPLE_TOKEN",
+                "secret-in-a-larger-expression.yml:jobs.build.steps[0].env.FORMATTED: reads the "
+                "secret EXAMPLE_KEY",
+                "secret-in-any-spacing.yml:jobs.build.steps[0].env.SPACED: reads the secret "
+                "EXAMPLE_TOKEN",
+                "secret-in-any-spacing.yml:jobs.build.steps[0].env.UNSPACED: reads the secret "
+                "EXAMPLE_KEY",
+                "secret-in-any-spacing.yml:jobs.build.steps[0].env.WIDE: reads the secret "
+                "EXAMPLE_VALUE",
+                "secret-in-any-spacing.yml:jobs.build.steps[0].env.CAPITALS: reads the secret "
+                "Example_Token",
+                "secret-in-brackets.yml:jobs.build.steps[0].env.INDEXED: reads the secret "
+                "EXAMPLE_TOKEN",
+                "secrets-inherited.yaml:jobs.call.secrets: passes every secret to the workflow "
+                "it calls",
+            ],
+        )
+
+    def test_this_repositorys_token_and_checkout_are_admitted(self):
+        problems, judged = secret_and_checkout_problems(PLANTED / "admitted")
+        self.assertEqual(problems, [])
+        read = [text for _, text in examined("workflow expressions", judged["expressions"])]
+        for token in (
+            "secrets.GITHUB_TOKEN",
+            "secrets.github_token",
+            "secrets['GITHUB_TOKEN']",
+            "github.token",
+        ):
+            self.assertIn(token, read)
+        examined("run steps", judged["run steps"])
+        for where, repository in examined("checkouts", judged["checkouts"]):
+            self.assertEqual(repository, THIS_REPOSITORY, where)
+
+    def test_an_empty_workflow_directory_is_refused(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            # A file that is not a workflow is not counted: the directory still holds none.
+            (Path(scratch) / "README.md").write_text("Not a workflow.\n", encoding="utf-8")
+            with self.assertRaisesRegex(AssertionError, "examined 0 workflow files"):
+                secret_and_checkout_problems(Path(scratch))
 
 
 def triggers(workflow):
@@ -1012,6 +1083,70 @@ class TheEngineSetRunsInSlices(unittest.TestCase):
                 "[${{ matrix.slice }}/${{ strategy.job-total }}]",
             ],
         )
+
+
+# ------------------------------------------ no secret, no other repository (SPEC-034 A9 to A12)
+
+# The planted workflows: those the checker refuses (A10) and those it admits (A11).
+PLANTED = REPO / "scripts" / "tests" / "fixtures" / "secrets-and-checkouts"
+
+
+def expressions_in(text):
+    """Every `${{ }}` expression in a value, as GitHub delimits one: a `}}` inside a quoted string
+    does not close it (an escaped `''` toggles the quote twice), and one never closed runs to the
+    value's end."""
+    found, at = [], 0
+    while (start := text.find("${{", at)) >= 0:
+        at, quoted = start + 3, False
+        while at < len(text) and (quoted or not text.startswith("}}", at)):
+            if text[at] == "'":
+                quoted = not quoted
+            at += 1
+        found.append(text[start + 3 : at].strip())
+        at += 2
+    return found
+
+
+def strings(value, where=""):
+    """(place, text) for every string a read workflow holds, its place dotted from the root, as in
+    `jobs.build.steps[0].env.TOKEN`."""
+    if isinstance(value, dict):
+        return [
+            found
+            for key, item in value.items()
+            for found in strings(item, f"{where}.{key}" if where else key)
+        ]
+    if isinstance(value, list):
+        return [found for n, item in enumerate(value) for found in strings(item, f"{where}[{n}]")]
+    return [(where, value)] if isinstance(value, str) else []
+
+
+def checked_out(step):
+    """The repository a checkout step checks out. An omitted or empty `repository`, and
+    `${{ github.repository }}`, are this repository, as actions/checkout defaults it."""
+    given = str((step.get("with") or {}).get("repository") or "").strip()
+    if not given or re.fullmatch(r"\$\{\{\s*github\.repository\s*\}\}", given):
+        return THIS_REPOSITORY
+    return given
+
+
+def secret_and_checkout_problems(directory):
+    """A stub that reads every workflow in `directory` and refuses none, so the planted workflows
+    prove A10 and A12 red before the checker judges anything (SPEC-034)."""
+    files = sorted(path for path in directory.iterdir() if path.suffix in (".yml", ".yaml"))
+    judged = {"expressions": [], "checkouts": [], "run steps": []}
+    for path in files:
+        workflow = read_workflow(path.read_text(encoding="utf-8"))
+        for where, text in strings(workflow):
+            judged["expressions"] += [(f"{path.name}:{where}", e) for e in expressions_in(text)]
+        for job_id, job in (workflow.get("jobs") or {}).items():
+            for n, step in enumerate((job or {}).get("steps") or []):
+                where = f"{path.name}:jobs.{job_id}.steps[{n}]"
+                if action(step) == "actions/checkout":
+                    judged["checkouts"].append((where, checked_out(step)))
+                if "run" in step:
+                    judged["run steps"].append(where)
+    return [], judged
 
 
 if __name__ == "__main__":
