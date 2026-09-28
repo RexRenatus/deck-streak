@@ -167,7 +167,8 @@ packet; this SPEC names each step only.
   past the window; R8 turns it off and E1 reads it back.
 - **A backup fills the disk.** Three copies of a small database, and the first week's figures
   measure it (R9); a failed write leaves the previous copies intact (A3).
-- **The drill pages on a slow restore.** It runs on Sunday morning, off every reserved slot and off
-  DeckStreak's own job slots (R6), with its own ceiling; a failure pages once through `OnFailure=`.
+- **The drill pages on a slow restore.** It runs on Sunday morning, off the predecessor's schedule,
+  every reserved slot and DeckStreak's own job slots (R6), with its own ceiling; a failure pages
+  once through `OnFailure=`.
 - **The replica's identity is the host's.** Its grant is on one bucket only (R8), and the host
   findings are tracked privately (gate 8, #167).

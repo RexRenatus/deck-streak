@@ -38,12 +38,13 @@ DeckStreak writes it?
 
 Chosen option.
 - **The list.** The private rail keeps the other-writer list: every unit on the host, other than
-  DeckStreak's, whose settings let it write the vault. It is built from the units SPEC-060's
-  inventory reads, and the owner approves it at gate 2 (#161); like every host value, it is
-  private.
-- **The fence.** In one step, off every slot of the reserved-slot list and off DeckStreak's own job
-  slots, the rail creates the readings folder and its archive (SPEC-065 R1), then at once installs,
-  for each unit on the list, a drop-in that lists the folder in `ReadOnlyPaths=`, and restarts that
+  DeckStreak's, whose settings let it write the vault, with each unit's scheduled slots. It is
+  built from the units SPEC-060's inventory reads, and the owner approves it at gate 2 (#161);
+  like every host value, it is private.
+- **The fence.** In one step, off every reserved slot, off DeckStreak's own job slots,
+  and off every scheduled slot of each unit on the other-writer list, which that list carries,
+  the rail creates the readings folder and its archive (SPEC-065 R1), then at once installs, for
+  each unit on the list, a drop-in that lists the folder in `ReadOnlyPaths=`, and restarts that
   unit. systemd applies a unit's mounts parent first, so the deeper read-only path is applied on top
   of any writable vault path the unit has; and a listed path must exist when the unit starts, which
   is why the folder comes first. Then `deploy/scripts/prove-read-only.sh` shows, for each unit, a
@@ -60,7 +61,8 @@ Chosen option.
 - Good, because the one-writer rule holds in the kernel from the first write, and the vault's
   contract is untouched.
 - Good, because each change to another unit is one small file, reversible.
-- Bad, because each fenced unit restarts once, briefly, off every reserved slot.
+- Bad, because each fenced unit restarts once, briefly, off every reserved slot
+  and off every scheduled slot of each unit on the other-writer list, which that list carries.
 - Bad, because a writer missing from the list is not fenced; the list is built from every loaded
   unit's settings and approved by the owner, and the proofs cover only the units it names.
 

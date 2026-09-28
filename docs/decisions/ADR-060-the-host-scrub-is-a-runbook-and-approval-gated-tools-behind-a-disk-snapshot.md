@@ -57,8 +57,9 @@ Chosen option.
 - Good, because the snapshot restores any item, or the whole disk, without room on the host.
 - Bad, because the snapshot is billed while it is kept; the runbook keeps it until the owner releases
   it after W2's first week.
-- Bad, because the digest reads each candidate's content once; the tools run niced, off every
-  reserved slot and off DeckStreak's own job slots.
+- Bad, because the digest reads each candidate's content once; the tools run niced,
+  off the predecessor's schedule as SPEC-027 R2 defines it, its sync minutes included, off every
+  reserved slot, and off DeckStreak's own job slots.
 
 ### Confirmation
 

@@ -31,7 +31,8 @@ maintainer's private gate packet; this page names each step only. What each step
 Hexagons are owner gates; dotted arrows are rollbacks. Gate 8 comes before the first deploy: every
 host finding tracked privately is closed first (#167). Gate 3's branch (SPEC-063) runs when the
 owner chooses the subscription route, and nothing before it waits on it. "The health-check list",
-"the reserved slots" and "the other-writer list" are the private rail's lists.
+"the reserved slots" and "the other-writer list", which carries each fenced unit's own scheduled
+slots, are the private rail's lists.
 
 ```mermaid
 flowchart TD
@@ -77,7 +78,7 @@ flowchart TD
   end
   memory --> G2f
   subgraph S065["SPEC-065: readings live"]
-    G2g{{"gate 2: the folder, the fences, the vault writer"}} --> mkFolder["both folders made in the contract's mode, off every reserved slot"]
+    G2g{{"gate 2: the folder, the fences, the vault writer"}} --> mkFolder["both folders made in the contract's mode, off every reserved slot and each fenced unit's own slots"]
     mkFolder --> fences["at once: each unit on the other-writer list fenced, one restart each, each refused write proved"]
     fences --> writerDropIn["the drop-in for the vault writer, then a probe file the vault's group reads"]
     writerDropIn --> archiveOn["the vault archive switch on"]
@@ -131,7 +132,7 @@ sequenceDiagram
   participant V as the vault
   participant D as the readings unit
   M->>R: gate 2 for the folder, the fences and the vault writer
-  R->>V: make-readings-folder.py: both folders, in the contract's mode, off every reserved slot
+  R->>V: make-readings-folder.py: both folders, in the contract's mode, off every reserved slot and each fenced unit's own slots
   R->>O: at once, a drop-in: ReadOnlyPaths= lists the readings folder
   R->>O: one restart, so the unit's mount namespace carries the fence
   R->>O: prove-read-only.sh: a write as the unit's user is refused

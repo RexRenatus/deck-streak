@@ -156,8 +156,10 @@ only.
   whatever the approval says (A7), the health-check list is read after each apply (R9), and the
   snapshot restores any item.
 - **The inventory adds work to a small host.** Its commands run niced and idle-class, and the
-  runbook runs it off every slot of the reserved-slot list the private rail provides (SPEC-053 R2)
-  and off DeckStreak's own job slots.
+  runbook runs it
+  off the predecessor's schedule as SPEC-027 R2 defines it, its sync minutes included, off every
+  slot of the reserved-slot list the private rail provides (SPEC-053 R2), and off DeckStreak's own
+  job slots.
 - **The snapshot costs money while it is kept.** Its size is about the disk's used blocks; the
   runbook keeps it until the owner releases it after W2's first week, and the gate packet names the
   cost.

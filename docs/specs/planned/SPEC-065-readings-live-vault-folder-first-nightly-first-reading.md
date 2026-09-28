@@ -41,13 +41,14 @@ R1. The rail creates the readings folder and its archive folder with the owner, 
     that does not. The step is idempotent on folders that already match, and refuses folders that
     exist with another owner, group or mode.
 R2. At once after R1, in the same step, off every slot of the reserved-slot list the private rail
-    provides (SPEC-053 R2) and off DeckStreak's own job slots, each unit on the rail's other-writer
-    list is fenced from the readings folder: the rail installs a drop-in that makes that folder
-    read-only inside the unit's mount namespace, and restarts the unit once (ADR-065). The folder
-    must exist first, because a path the drop-in lists must exist when the unit starts.
-    `deploy/scripts/prove-read-only.sh` then proves, for each unit on the list, that a write from
-    inside its namespace, as its user, is refused. R1 and R2 happen before DeckStreak's archive
-    switch goes on, and the list and the proofs are recorded privately.
+    provides (SPEC-053 R2), off DeckStreak's own job slots,
+    and off every scheduled slot of each unit on the other-writer list, which that list carries,
+    each unit on the rail's other-writer list is fenced from the readings folder: the rail installs
+    a drop-in that makes that folder read-only inside the unit's mount namespace, and restarts the
+    unit once (ADR-065). The folder must exist first, because a path the drop-in lists must exist
+    when the unit starts. `deploy/scripts/prove-read-only.sh` then proves, for each unit on the
+    list, that a write from inside its namespace, as its user, is refused. R1 and R2 happen before
+    DeckStreak's archive switch goes on, and the list and the proofs are recorded privately.
 R3. The unit that writes the vault runs with the vault group as a supplementary group, `UMask=0002`,
     and write access to the lock directory SPEC-048 R2 names and the readings folder only, through
     the drop-in `deploy/optional/vault-archive/deck-streak-readings-generate.conf`, which narrows
@@ -104,8 +105,8 @@ the maintainer's private gate packet; this SPEC names each step only.
 
 | step | gate | what is approved | evidence recorded (privately) | rollback |
 |---|---|---|---|---|
-| E1 | 2 (#161) | the two folders, off every reserved slot | owner, group and mode of each | remove the two empty folders |
-| E2 | 2 (#161) | at once after E1, the fence on each unit of the other-writer list, and one restart of each | each prover's refused write; the health-check list read before and after | remove that drop-in, restart that unit |
+| E1 | 2 (#161) | the two folders, off every reserved slot and off every scheduled slot of each unit on the other-writer list, which that list carries | owner, group and mode of each | remove the two empty folders |
+| E2 | 2 (#161) | at once after E1, off every reserved slot and off every scheduled slot of each unit on the other-writer list, which that list carries: the fence on each unit of the list, and one restart of each | each prover's refused write; the health-check list read before and after | remove that drop-in, restart that unit |
 | E3 | 2 (#161) | the vault settings, and the drop-in for the vault writer | `effective-check.py`; a file created under the unit's umask, then read back by another member of the vault's group and removed | R8 |
 | E4 | 2 (#161) | the first nightly run, before gate 3 | every topic `ai_route_absent`; no alert in the journal; the Mini App's "not enabled" state | none: nothing was written |
 | E5 | 2 (#161) | the archive switch on, after E1 to E3 | the setting's change and the next run's `vault_archive_off` gone | R8 |
@@ -140,8 +141,9 @@ names are the owner's: all of them stay in the private rail.
 
 ## 7. Risks
 
-- **A fence's restart interrupts its unit.** It is one restart per unit, off every reserved slot,
-  and the health-check list is read before and after (E2).
+- **A fence's restart interrupts its unit.** It is one restart per unit, off every reserved slot
+  and off every scheduled slot of each unit on the other-writer list, which that list carries, and
+  the health-check list is read before and after (E2).
 - **The vault's group cannot read DeckStreak's notes.** R3's umask and group make them readable, and
   E3 proves it before the switch goes on.
 - **The vault's folder modes change.** DeckStreak's start check then fails and the readings health
