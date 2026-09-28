@@ -1,8 +1,14 @@
+# The SLO evaluator's timer (SPEC-031 R4; ADR-031): every five minutes, as the observability pack's
+# evaluator timer runs it, with a short random delay so it never fires in step with the other
+# timers. The calendar is written in UTC; five minutes is the same span in every zone. With no
+# Unit=, the timer starts the service of its own name.
 [Unit]
-Description=Evaluate the SLO burn rates every five minutes
+Description=DeckStreak's SLO evaluation, every five minutes
+X-DurableServices-Waive=calendar-not-persistent each run measures rolling windows that end at its own start, so the next run five minutes later measures everything a run missed while the host was down
 
 [Timer]
-OnCalendar=*:0/5
+OnCalendar=*-*-* *:00/5:00 UTC
+RandomizedDelaySec=30s
 AccuracySec=1us
 
 [Install]

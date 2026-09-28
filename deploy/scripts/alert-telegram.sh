@@ -1,18 +1,56 @@
 #!/bin/sh
-# Page the owner on Telegram that a unit failed, with its result and its last error lines.
-# Run by alert@.template.service as `alert-telegram.sh %i`. systemd 251 and later pass the failed
-# unit's $MONITOR_UNIT and $MONITOR_SERVICE_RESULT (oom-kill, watchdog, timeout, exit-code...).
+# DeckStreak's one alert path (SPEC-031 R3; ADR-031, ADR-038): page the owner on Telegram that a unit
+# failed, naming the unit and its result and quoting its last error lines.
+#
+#   alert-telegram.sh UNIT
+#
+# deck-streak-alert@.service runs it as `alert-telegram.sh %i` for every unit whose OnFailure= names
+# it. systemd passes that unit as $MONITOR_UNIT, its result as $MONITOR_SERVICE_RESULT (exit-code,
+# oom-kill, watchdog, timeout...), its exit as $MONITOR_EXIT_STATUS and its run as
+# $MONITOR_INVOCATION_ID; the argument names the unit when systemd passes none. The bot token and the
+# owner's user id, which is the id of the owner's private chat, are credentials in
+# $CREDENTIALS_DIRECTORY (LoadCredential=, ADR-038).
+#
+# The token never reaches a command line or the environment: the request's URL and its fields are
+# written to curl's standard input as its configuration (`--config -`), which no process table
+# shows. The text is plain, at most 3500 bytes cut at a character boundary, inside Telegram's 4096
+# characters.
 set -eu
-unit="${MONITOR_UNIT:-$1}"
+
+unit="${MONITOR_UNIT:-${1:?usage: alert-telegram.sh UNIT}}"
 result="${MONITOR_SERVICE_RESULT:-unknown}"
-status="${MONITOR_EXIT_STATUS:-?}"
+status="${MONITOR_EXIT_STATUS:-}"
 token="$(cat "$CREDENTIALS_DIRECTORY/telegram-bot-token")"
-chat="$(cat "$CREDENTIALS_DIRECTORY/telegram-alert-chat")"
-lines="$(journalctl --unit "$unit" --priority err --lines 5 --output cat --no-pager 2>/dev/null || true)"
-text="$unit failed: $result ($status)
+chat="$(cat "$CREDENTIALS_DIRECTORY/owner-user-id")"
+
+# The failed run's own error lines when systemd names the run, else the unit's latest; at most five.
+# A journal that cannot be read quotes nothing, and the page still goes.
+if [ -n "${MONITOR_INVOCATION_ID:-}" ]; then
+  lines="$(journalctl "_SYSTEMD_INVOCATION_ID=$MONITOR_INVOCATION_ID" --priority=err --lines=5 \
+    --output=cat --no-pager --quiet 2>/dev/null | tail -n 5 || true)"
+else
+  lines="$(journalctl --unit="$unit" --priority=err --lines=5 --output=cat --no-pager --quiet \
+    2>/dev/null | tail -n 5 || true)"
+fi
+
+text="DeckStreak: $unit failed ($result${status:+, status $status})"
+if [ -n "$lines" ]; then
+  text="$text
 $lines"
-# Telegram's limit is 4096 characters per message; keep well under it.
-text="$(printf '%s' "$text" | cut -c1-3500)"
-curl --fail --silent --show-error --max-time 10 --retry 3 --retry-delay 2 \
-  --data-urlencode "chat_id=$chat" --data-urlencode "text=$text" \
-  "https://api.telegram.org/bot$token/sendMessage" > /dev/null
+fi
+# At most 3500 bytes, and never half a character: a UTF-8 sequence the cut split is dropped whole.
+text="$(printf '%s' "$text" | head -c 3500 | LC_ALL=C sed -e \
+  '$ s/\([\xC0-\xDF]\|[\xE0-\xEF][\x80-\xBF]\{0,1\}\|[\xF0-\xF7][\x80-\xBF]\{0,2\}\)$//')"
+
+# A value of curl's configuration: each backslash, double quote and carriage return escaped, and each
+# line break written \n, since a value must stay on its one line (curl's --config).
+quote() {
+  printf '%s' "$1" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' -e 's/\r/\\r/g' |
+    awk 'NR > 1 { printf "\\n" } { printf "%s", $0 }'
+}
+
+{
+  printf 'url = "%s"\n' "$(quote "https://api.telegram.org/bot$token/sendMessage")"
+  printf 'data-urlencode = "%s"\n' "$(quote "chat_id=$chat")"
+  printf 'data-urlencode = "%s"\n' "$(quote "text=$text")"
+} | curl --fail --silent --show-error --max-time 10 --retry 3 --retry-delay 2 --config - >/dev/null

@@ -1,8 +1,15 @@
+# The memory watch's timer (SPEC-031 R5; ADR-031): every minute, as the observability pack's watch
+# timer runs it, with a short random delay so it never fires in step with the other timers. The
+# calendar is written in UTC; a minute is the same span in every zone. With no Unit=, the timer
+# starts the service of its own name.
 [Unit]
-Description=Watch memory every minute
+Description=DeckStreak's memory watch, every minute
+X-DurableServices-Waive=calendar-not-persistent a run missed while the host was down has nothing to catch up, since the restart made every cgroup anew and the next run a minute later reads them all
 
 [Timer]
-OnCalendar=*:*:00
+OnCalendar=*-*-* *:*:00 UTC
+RandomizedDelaySec=20s
+AccuracySec=1us
 
 [Install]
 WantedBy=timers.target

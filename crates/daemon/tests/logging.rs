@@ -88,11 +88,10 @@ fn events(what: &str, output: &Output) -> Vec<Value> {
 
 /// A list the usage line names after `label`, up to the next `;`.
 fn named(message: &str, label: &str) -> Vec<String> {
-    let start = message
-        .find(label)
-        .map(|at| at + label.len())
-        .unwrap_or_else(|| panic!("the usage line names no `{label}`: {message}"));
-    message[start..]
+    let Some(at) = message.find(label) else {
+        panic!("the usage line names no `{label}`: {message}");
+    };
+    message[at + label.len()..]
         .split(';')
         .next()
         .unwrap_or_default()

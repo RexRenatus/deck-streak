@@ -1,15 +1,56 @@
-# The ONE alert path: every service and scheduled job names it with OnFailure=alert@%n.service,
-# and the SLO evaluator and the memory watch page through it by failing. Copy it to
-# deploy/<product>-alert@.service. %i is the unit that failed.
+# DeckStreak's one alert path: page the owner on Telegram that the unit %i failed, naming it, its
+# result and its last error lines (SPEC-031 R3, R6; ADR-031, ADR-038). Every service and scheduled job
+# names it with OnFailure=deck-streak-alert@%n.service, and the SLO evaluator and the memory watch page
+# through it by failing. A template with neutral values that the private rail fills
+# (deploy/README.md); nothing in it is one host's value.
 [Unit]
-Description=Page the owner on Telegram that %i failed
+Description=DeckStreak alert, a page to the owner that %i failed
+Documentation=https://github.com/RexRenatus/deck-streak/blob/main/deploy/README.md
+# No OnFailure= here: a page that fails must not start a page about the page. It stays failed, in
+# systemctl --failed and in the journal.
+# The page reaches Telegram's Bot API.
+Wants=network-online.target
+After=network-online.target
 
 [Service]
 Type=oneshot
-ExecStart=/opt/deckstreak/deploy/alert-telegram.sh %i
-# The bot token and the owner's chat id are credentials, never committed and never in the
-# environment (systemd.exec(5): environment variables are not suitable for passing secrets).
-LoadCredential=telegram-bot-token:/etc/credstore/telegram-bot-token
-LoadCredential=telegram-alert-chat:/etc/credstore/telegram-alert-chat
-# Read the failed unit's journal lines, to quote them.
+ExecStart=/usr/local/lib/deck-streak/current/deploy/scripts/alert-telegram.sh %i
+User=deck-streak
+Group=deck-streak
+# To quote the failed run's error lines from the journal.
 SupplementaryGroups=systemd-journal
+# The bot token, and the owner's user id, whose private chat the page goes to, each read from the
+# private rail's socket at every start and never stored (ADR-038). It reads no settings file and
+# writes nothing, so a page waits on neither.
+LoadCredential=owner-user-id:/run/deck-streak-credentials/socket
+LoadCredential=telegram-bot-token:/run/deck-streak-credentials/socket
+# curl's three retries fit inside it.
+TimeoutStartSec=3min
+SyslogIdentifier=%N
+# The budget is deploy/host-budget.json's entry for this template (ADR-032).
+MemoryHigh=32M
+MemoryMax=48M
+UMask=0077
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+ProtectProc=invisible
+ProcSubset=pid
+# AF_UNIX, which a name lookup may use, and AF_INET and AF_INET6 for the request.
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+CapabilityBoundingSet=

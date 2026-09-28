@@ -33,10 +33,11 @@ flowchart LR
 ## The alert template unit
 
 `deck-streak-alert@.service` is the one alert path. Its instance is the failed unit's full name, so
-a job instance's failure makes an instance whose name holds a second `@`, which systemd 255 accepts
-(`%i` is everything after the first `@`). It names no `OnFailure=` itself: a page that fails must not
-start a page about the page. It reads no settings file and writes nothing: it holds only its two
-credentials, the journal group that lets it quote the failed run's lines, and the network.
+a job instance's failure makes an instance whose name holds a second `@`, which systemd accepts:
+`%i` is everything after the first `@` (systemd.unit(5)). It names no `OnFailure=` itself: a page
+that fails must not start a page about the page. It reads no settings file and writes nothing: it
+holds only its two credentials, the journal group that lets it quote the failed run's lines, and
+the network.
 
 ```mermaid
 sequenceDiagram
