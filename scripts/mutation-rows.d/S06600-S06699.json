@@ -1,0 +1,76 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S06601-AN-EMPTY-CREDENTIAL-REFUSES-START",
+        "kernel",
+        "src/credentials.rs",
+        "        if value.is_empty() {",
+        "        if false {",
+        "credentials::an_empty_credential_refuses_start_by_its_id",
+        "a credential with nothing left once its one trailing newline is trimmed refuses start by its id (SPEC-066 R1); cargo-mutants makes no mutant of an if condition"
+      ],
+      [
+        "S06602-THE-REFUSAL-SAYS-EMPTY-NOT-MISSING",
+        "kernel",
+        "src/credentials.rs",
+        "            return Err(CredentialError::Empty { id });",
+        "            return Err(CredentialError::Missing { id });",
+        "credentials::an_empty_credential_refuses_start_by_its_id",
+        "an empty credential is refused as Empty, never as Missing, so the page says the credential arrived with no value (SPEC-066 R1)"
+      ],
+      [
+        "S06603-THE-EMPTY-REFUSAL-NAMES-ITS-ID",
+        "kernel",
+        "src/error.rs",
+        "    #[error(\"the credential {id} is empty in the credentials directory\")]",
+        "    #[error(\"a credential is empty in the credentials directory\")]",
+        "credentials::an_empty_refusal_names_the_id_and_never_a_value",
+        "the refusal's message names the credential's id (SPEC-066 R1); cargo-mutants never mutates an attribute or a string"
+      ],
+      [
+        "S06604-ONLY-AN-EMPTY-CREDENTIAL-IS-REFUSED",
+        "kernel",
+        "src/credentials.rs",
+        "        if value.is_empty() {",
+        "        if value.len() <= 1 {",
+        "credentials::a_missing_credential_keeps_its_refusal_and_a_value_loads_unchanged",
+        "a value of one character loads: the refusal takes an empty credential and nothing more (SPEC-066 R1)"
+      ]
+    ],
+    "SCRIPT_MUTATIONS": [
+      [
+        "S06605-THE-ALERT-REFUSES-AN-EMPTY-CREDENTIAL",
+        "deploy/scripts/alert-telegram.sh",
+        "    '')\n",
+        "    'unset')\n",
+        "an empty credential of the alert unit refuses the page before the journal is read or a request is made (SPEC-066 R3)",
+        "test_alert_unit.AnEmptyCredentialFailsTheAlertUnit.test_an_empty_credential_fails_the_alert_unit_before_any_request"
+      ],
+      [
+        "S06606-THE-ALERT-REFUSAL-FAILS-ITS-UNIT",
+        "deploy/scripts/alert-telegram.sh",
+        "      exit 1\n",
+        "      exit 0\n",
+        "the refusal exits 1, so the alert instance is failed and listed by systemctl --failed, the route of its own refusal (SPEC-066 R3)",
+        "test_alert_unit.AnEmptyCredentialFailsTheAlertUnit.test_an_empty_credential_fails_the_alert_unit_before_any_request"
+      ],
+      [
+        "S06607-THE-ALERT-CHECKS-ITS-TOKEN",
+        "deploy/scripts/alert-telegram.sh",
+        "refuse_empty telegram-bot-token \"$token\"\n",
+        ": refuse_empty telegram-bot-token \"$token\"\n",
+        "the bot token is checked before any request (SPEC-066 R3)",
+        "test_alert_unit.AnEmptyCredentialFailsTheAlertUnit.test_an_empty_credential_fails_the_alert_unit_before_any_request"
+      ],
+      [
+        "S06608-THE-ALERT-CHECKS-ITS-CHAT",
+        "deploy/scripts/alert-telegram.sh",
+        "refuse_empty owner-user-id \"$chat\"\n",
+        ": refuse_empty owner-user-id \"$chat\"\n",
+        "the owner's id, the chat the page goes to, is checked before any request (SPEC-066 R3)",
+        "test_alert_unit.AnEmptyCredentialFailsTheAlertUnit.test_an_empty_credential_fails_the_alert_unit_before_any_request"
+      ]
+    ]
+  }
+}
