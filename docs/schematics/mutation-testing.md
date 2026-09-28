@@ -1,17 +1,20 @@
 # Schematic: mutation testing, from a pull request's diff to a verdict, and the weekly battery
 
-Kind: data flow (the pull request's two jobs, the weekly battery) and a state machine (one row's
-proof). Read at DeckStreak `dev` 3f5470e (`.github/workflows/ci.yml`, `scripts/check.sh`, the
-mutation-rows pack's row shape), with cargo-mutants 27.1.0 and StrykerJS 10.0.0 as SPEC-039 §1
-measured them. Decided by ADR-057; built by SPEC-039.
+Kind: data flow (the pull request's mutation jobs, the weekly battery) and a state machine (one
+row's proof). Read at DeckStreak `dev` 32bf1e1 (`.github/workflows/ci.yml`, `scripts/check.sh`,
+the mutation-rows pack's row shape), with cargo-mutants 27.1.0 and StrykerJS 10.0.0 as SPEC-039 §1
+measured them, and its shards as R18 sizes them. Decided by ADR-057; built by SPEC-039.
 
-## 1. A pull request's diff, through the two jobs
+## 1. A pull request's diff, through the mutation jobs
 
 ```mermaid
 flowchart TD
-  pr[a pull request into dev or main] --> merge[the merge ref: HEAD^1 is the base's tip]
-  push[a push to dev or main] --> na([each job: not-applicable, by name; the weekly battery sweeps dev])
-  merge --> plan[mutation-verdict.py plan: git diff HEAD^1...HEAD]
+  pr[a pull request into dev, or a release pull request into main] --> merge[the merge ref: HEAD^1 is the base's tip]
+  push[a push to dev or main] --> names{does its subject name the pull request it merges?}
+  names -->|Merge pull request #N| na([every job: not-applicable, naming #N, whose jobs judged this tree])
+  names -->|no| first[its first-parent diff, HEAD^1...HEAD]
+  merge --> plan[mutation-plan: mutation-verdict.py plan: git diff HEAD^1...HEAD, once, to git.diff]
+  first --> plan
   plan --> classes{each changed path's class}
   classes -->|crates/*/src/**/*.rs| rust[rust]
   classes -->|web/app/src/** less tests, paraglide, d.ts| web[web]
@@ -21,15 +24,27 @@ flowchart TD
   lines -->|all blank or comments, or only deletions| nap([not-applicable: its count, by file])
   lines -->|a code line| applies[the class applies]
   plan --> rows[the rows it selects: on its paths, added or changed, on a killer's file]
+  rust --> list[cargo mutants --list --json --in-diff git.diff: the diff's mutants, nothing built]
+  list --> shards[mutation-verdict.py shards: the fewest round-robin shards, each projected within an hour]
+  shards -->|more than 256 shards| refused([REFUSED with its projection, never capped])
+  shards --> matrix[the matrix 0 to n-1, and the plan artifact every job reads]
 
-  subgraph mutation-rust
-    rust --> cm[cargo mutants --in-place --in-diff git.diff --timeout 300 --build-timeout 600]
-    cm --> outcomes[(mutants.out/outcomes.json)]
+  subgraph mutation-rust: one job per shard k of n
+    matrix --> cm[cargo mutants --in-place --in-diff git.diff --sharding round-robin --shard k/n --timeout 300 --build-timeout 600]
+    cm --> outcomes[(mutation-rust-shard-k: outcomes.json and the exit)]
+  end
+
+  subgraph mutation-rows
     rows --> prove[mutation_rows.py prove]
+    oracle --> prove
     prove --> rowsreport[(rows.json)]
     prove --> retired[mutation_rows.py retired --base HEAD^1]
-    oracle --> prove
-    outcomes --> judgeR[mutation-verdict.py judge --class rust]
+  end
+
+  subgraph mutation-verdict: if always
+    outcomes --> count[every shard from 0 to n-1: one missing or partial is VOID, by name]
+    count --> partition[the reports hold every listed mutant once: in two shards fails, in none is VOID]
+    partition --> judgeR[mutation-verdict.py judge --class rust, then --class oracle]
     rowsreport --> judgeR
   end
 
@@ -42,18 +57,21 @@ flowchart TD
 
   judgeR --> verdict{the verdict}
   judgeW --> verdict
-  verdict -->|a missed or uncovered mutant; a row not KILLED; a retirement without approval| fail([FAIL: named])
-  verdict -->|a class that applies examined 0; a report missing| void([VOID: fails the job])
+  verdict -->|a missed or uncovered mutant; a mutant in two shards; a row not KILLED; a retirement without approval| fail([FAIL: named])
+  verdict -->|a class that applies examined 0; a report or a shard missing or partial; a listed mutant in no shard| void([VOID: fails the job])
   verdict -->|every examined mutant caught, examined above 0| ok([ok: counts printed])
-  fail --> ci[ci: needs both jobs]
+  fail --> ci[ci: needs all five jobs]
   void --> ci
   ok --> ci
   na --> ci
+  refused --> ci
 ```
 
-Each job uploads its report under `if: always()`, restores the Rust cache or the pnpm store, and
-saves nothing. `cargo mutants --in-place` and the runner both rewrite a tracked file and restore
-it, so they run one after the other in one job, never beside another reader of the tree.
+Each job that writes a report uploads it under `if: always()`, restores the Rust cache or the pnpm
+store, and saves nothing. `cargo mutants --in-place` and the runner both rewrite a tracked file and
+restore it, so each runs in a job of its own checkout, never beside another reader of the tree.
+Every job reads the plan's one `git.diff`, and the verdict counts the shards the plan promised, not
+the ones that happened to report.
 
 ## 2. What crosses each step
 
@@ -62,11 +80,12 @@ it, so they run one after the other in one job, never beside another reader of t
 | plan | the diff, `git diff HEAD^1...HEAD`, written to `git.diff` | the new side of the diff is the checked-out tree, so cargo-mutants never exits 5 on a mismatch |
 | classes | each changed path | R2's globs, exactly; a test, a script or a document is never production |
 | lines | each production file's new-side changed lines | blank and comment lines are counted apart; a file whose hunks only delete reads not-applicable with its count |
-| cargo-mutants | the diff, the tree | `--in-place` on the checkout, `--timeout 300` on each mutant's tests and `--build-timeout 600` on its build, the job's `timeout-minutes`; its exit is recorded, never trusted alone |
+| shards | cargo-mutants' own listing of the diff's mutants, `--list --json` | each shard's projected time, the baseline's 346 s and each of its mutants' package cost, within an hour; the fewest shards that fit; more than 256 refused, never capped |
+| cargo-mutants | the diff, the tree, the shard `k/n` | `--in-place` on the checkout, round-robin as the plan projected, `--timeout 300` on each mutant's tests and `--build-timeout 600` on its build, the shard job's `timeout-minutes` of 120; its exit is recorded, never trusted alone |
 | Stryker | every changed web production file, whole | the whole file, so a survivor already there is the pull request's (rule 5); `thresholds.break` 100 |
 | rows | the selected rows | the runner's own refusals (section 3); the report lists every row with its verdict |
 | retired | the rows at `HEAD^1` against the rows at `HEAD` | a row gone while its target stays needs an entry in `scripts/mutation-rows.retired.json` |
-| judge | `outcomes.json`, `mutation.json`, `rows.json` | examined is caught, missed and timed out; unviable is never a kill; zero examined on an applying class is VOID; a missing report is VOID, and so is a partial one (an exit other than 0, 2 or 3, or counts short of `total_mutants`) |
+| judge | every shard's `outcomes.json`, `mutation.json`, `rows.json` | examined is caught, missed and timed out; unviable is never a kill; zero examined on an applying class is VOID; a missing report or shard is VOID, by name, and so is a partial one (an exit other than 0, 2 or 3, or counts short of `total_mutants`); the shards' reports hold each listed mutant once |
 
 ## 3. One row's proof
 
