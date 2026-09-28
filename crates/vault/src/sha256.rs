@@ -202,8 +202,9 @@ fn compress(state: &mut [u32; 8], block: &[u8]) {
 mod tests {
     use super::{digest, hex, parse_hex};
 
-    /// FIPS 180-4's examples (NIST's "SHA256.pdf" and "SHA2_Additional.pdf"), including the
-    /// padding boundaries of 55, 56 and 64 bytes and a message of many blocks.
+    /// The standard's examples (FIPS 180-4, the empty message, `abc` and the 448-bit message),
+    /// the padding boundaries of 55, 56 and 64 bytes, and a message of many blocks, each digest as
+    /// Python's `hashlib` gives it.
     #[test]
     fn the_digest_equals_the_standards_examples() {
         let million = vec![b'a'; 1_000_000];

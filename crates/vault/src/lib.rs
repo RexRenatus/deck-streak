@@ -83,6 +83,9 @@ pub enum VaultError {
     /// through (R11).
     #[error("the target is not a regular file")]
     NotARegularFile,
+    /// A path the adapter needs as a folder is something else.
+    #[error("a path the adapter needs as a folder is not one")]
+    NotAFolder,
     /// A note is malformed (R8).
     #[error("the note is malformed: {0}")]
     Malformed(#[from] Malformed),

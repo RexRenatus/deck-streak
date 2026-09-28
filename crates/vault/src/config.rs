@@ -11,12 +11,13 @@
 //! first live night, and the adapter never creates anything at the vault's top level.
 
 use std::fmt;
+use std::io;
 use std::path::{Path, PathBuf};
 
 use deck_streak_kernel::{Environment, Setting, SettingsError};
 
 use crate::VaultError;
-use crate::fs::VaultFs;
+use crate::fs::{EntryKind, VaultFs};
 
 /// The vault root: an absolute directory path, private to the deployment.
 pub const VAULT_ROOT: &str = "DECKSTREAK_VAULT_ROOT";
@@ -150,8 +151,9 @@ pub enum StartRefusal {
     ReadingsFolderNotWritable,
 }
 
-/// The vault's folders, resolved and checked at start.
-#[derive(Clone, Debug, PartialEq, Eq)]
+/// The vault's folders, resolved and checked at start. Its `Debug` names the folders and never
+/// the host's paths.
+#[derive(Clone, PartialEq, Eq)]
 pub struct VaultPaths {
     root: PathBuf,
     readings: PathBuf,
@@ -172,10 +174,67 @@ impl VaultPaths {
         settings: &VaultSettings,
         fs: &F,
     ) -> Result<Self, VaultError> {
-        let _ = fs;
+        let root = match fs.canonicalize(settings.root.path()) {
+            Ok(root) => root,
+            Err(error) if error.kind() == io::ErrorKind::NotFound => {
+                return Err(StartRefusal::RootNotADirectory.into());
+            }
+            Err(error) => return Err(VaultError::io("resolve the vault root")(error)),
+        };
+        if fs
+            .kind(&root)
+            .map_err(VaultError::io("read the vault root"))?
+            != Some(EntryKind::Dir)
+        {
+            return Err(StartRefusal::RootNotADirectory.into());
+        }
+        let configured = root.join(settings.readings.as_str());
+        match fs
+            .kind(&configured)
+            .map_err(VaultError::io("read the readings folder"))?
+        {
+            None => return Err(StartRefusal::ReadingsFolderMissing.into()),
+            Some(EntryKind::Dir | EntryKind::Symlink) => {}
+            Some(_) => return Err(StartRefusal::ReadingsFolderNotADirectory.into()),
+        }
+        let readings = match fs.canonicalize(&configured) {
+            Ok(readings) => readings,
+            // A link to nothing: the folder it names is absent.
+            Err(error) if error.kind() == io::ErrorKind::NotFound => {
+                return Err(StartRefusal::ReadingsFolderMissing.into());
+            }
+            Err(error) => return Err(VaultError::io("resolve the readings folder")(error)),
+        };
+        if fs
+            .kind(&readings)
+            .map_err(VaultError::io("read the readings folder"))?
+            != Some(EntryKind::Dir)
+        {
+            return Err(StartRefusal::ReadingsFolderNotADirectory.into());
+        }
+        if readings == root || !readings.starts_with(&root) {
+            return Err(StartRefusal::ReadingsFolderOutsideRoot.into());
+        }
+        let probe = readings.join(format!(".deckstreak-start.{}.tmp", std::process::id()));
+        match fs.create_new(&probe) {
+            Ok(file) => {
+                drop(file);
+                fs.remove_file(&probe)
+                    .map_err(VaultError::io("remove the start check's temporary file"))?;
+            }
+            Err(error)
+                if matches!(
+                    error.kind(),
+                    io::ErrorKind::PermissionDenied | io::ErrorKind::ReadOnlyFilesystem
+                ) =>
+            {
+                return Err(StartRefusal::ReadingsFolderNotWritable.into());
+            }
+            Err(error) => return Err(VaultError::io("write in the readings folder")(error)),
+        }
         Ok(Self {
-            root: settings.root.path().to_path_buf(),
-            readings: settings.root.path().join(settings.readings.as_str()),
+            root,
+            readings,
             readings_name: settings.readings.clone(),
             archive_name: settings.archive.clone(),
         })
@@ -203,5 +262,14 @@ impl VaultPaths {
     #[must_use]
     pub fn archive_name(&self) -> &FolderName {
         &self.archive_name
+    }
+}
+
+impl fmt::Debug for VaultPaths {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("VaultPaths")
+            .field("readings", &self.readings_name)
+            .field("archive", &self.archive_name)
+            .finish_non_exhaustive()
     }
 }

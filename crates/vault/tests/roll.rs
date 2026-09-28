@@ -309,3 +309,39 @@ fn a_second_roll_forward_changes_nothing_and_a_malformed_note_is_reported() {
         "the second call moves nothing and reports the malformed note again"
     );
 }
+
+#[test]
+fn the_live_note_is_todays_or_else_the_most_recent_days() {
+    let (dir, tree) = vault();
+    let older = StudyDay::from_epoch_day(20_000);
+    let yesterday = StudyDay::from_epoch_day(20_001);
+    let today = StudyDay::from_epoch_day(20_002);
+    let topic = TopicKey::new("law/evidence").expect("a topic key");
+    let other = TopicKey::new("law/torts").expect("a topic key");
+    for day in [older, yesterday] {
+        let path = dir.path().join(tree.note_path(day, &topic));
+        fs::create_dir_all(path.parent().expect("the day folder")).expect("a day folder");
+        fs::write(
+            path,
+            note_text("law/evidence", day, "A primer.", false, "\n"),
+        )
+        .expect("a note");
+    }
+    assert_eq!(
+        tree.find_live(&topic, today).expect("the lookup"),
+        Some(yesterday),
+        "the most recent day's note is live when today has none"
+    );
+    tree.create(today, &topic, DIGEST, "Today's primer.")
+        .expect("today's note");
+    assert_eq!(
+        tree.find_live(&topic, today).expect("the lookup"),
+        Some(today),
+        "today's note is live first"
+    );
+    assert_eq!(
+        tree.find_live(&other, today).expect("the lookup"),
+        None,
+        "a topic with no note has no live note"
+    );
+}

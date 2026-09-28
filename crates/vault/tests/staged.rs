@@ -167,6 +167,9 @@ fn rails() -> Rails {
     Rails::vendored().expect("the vendored rails")
 }
 
+/// A refused run: its operations, its staged files, and the refusal it must draw.
+type RefusedRun<'a> = (Value, Vec<(&'a str, &'a str)>, RunRefusal);
+
 #[test]
 fn a_staged_run_with_a_red_class_leaves_the_vault_untouched() {
     let vault = vault();
@@ -226,7 +229,7 @@ fn a_run_that_deletes_escapes_or_overwrites_is_refused_before_the_gate() {
     symlink(outside.path(), vault.path().join("Weekly")).expect("a planted link");
     let note = daily_note("Evidence primer");
     let owners = "# Evidence primer\n\nA primer.\n";
-    let cases: [(Value, Vec<(&str, &str)>, RunRefusal); 6] = [
+    let cases: [RefusedRun; 6] = [
         (
             json!([{"op": "delete", "path": "12-Readings/Evidence primer.md"}]),
             vec![],

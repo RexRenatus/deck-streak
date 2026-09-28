@@ -145,6 +145,10 @@ impl VaultFs for Recording {
 
 /// The sync bridge's ignore pattern, `\.tmp\.\d+\.|\.tmp$|\.crswap$|^~|\.crdownload$`, matched by
 /// hand: a name it matches is never replicated to the owner's devices.
+#[allow(
+    clippy::case_sensitive_file_extension_comparisons,
+    reason = "the bridge's pattern is case-sensitive"
+)]
 fn bridge_ignores(name: &str) -> bool {
     let tmp_then_digits_then_dot = name.match_indices(".tmp.").any(|(at, _)| {
         let rest = &name[at + ".tmp.".len()..];
