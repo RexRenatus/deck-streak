@@ -40,16 +40,23 @@ sequenceDiagram
   I->>I: commit each card's prior due date and prior state
   W->>W: Set Due Date on the previewed cards still due, with the day spec
   I->>I: commit the state the reschedule left each card in
-  W->>V: push by a second normal sync, the moved cards and their review-log rows only
+  W->>V: push by a second normal sync, the moved cards and their review-log rows
   Note over W,V: a full or one-way sync demand aborts here too, and nothing was pushed
   I->>I: read each moved card back, record applied, and discard the working copy
   C->>E: purchase the tariff, clipped to the wallet, outside the daily loss cap
   C-->>S: cards moved, and every card left alone listed
 ```
 
-A take that aborts or fails records the skip as `failed` with its reason, discards the working copy
-and charges nothing. A take whose write outlives the answer's wait answers `pending`, and the
-write's own outcome settles the row.
+The push also carries the collection's settings and creation stamp whole, because the working copy
+is newer, each as the server held it at the converge, the engine's own last-unburied day aside
+(SPEC-083 R23, R24). A preview, a take or an undo refuses before any request or write while the
+engine's own day is not the study day, or while the collection's configured UTC offset is not the
+process's zone (R3). A take that aborts, or fails before its push's first request, records the skip
+as `failed` with its reason, discards the working copy and charges nothing. A take whose push fails
+after its first request answers that its outcome is not known yet, never that nothing was written,
+and its row stays `pending` (R25). A take whose write outlives the answer's wait answers `pending`,
+and the write's own outcome settles the row; a row still `pending` is settled after the private
+copy's next sync (R26).
 
 ## The skip's states
 
@@ -57,7 +64,7 @@ write's own outcome settles the row.
 stateDiagram-v2
   [*] --> pending: the owner confirms the previewed cards
   pending --> applied: the server accepts the push, or no card is due
-  pending --> failed: a full-sync demand, or any failure before the push is accepted
+  pending --> failed: a full-sync demand, or any failure before the first request of the push
   applied --> undone: the undo is accepted, or has no card to write
   failed --> [*]
   undone --> [*]
@@ -102,7 +109,9 @@ flowchart TD
   listed --> push
   push --> full2{"a full or one-way sync demand?"}
   full2 -- "yes" --> abort
-  full2 -- "no" --> mark["mark the skip undone, at the undo's instant"]
+  full2 -- "no" --> lost{"did the push fail after its first request?"}
+  lost -- "yes" --> unknown["the outcome is not known yet, and the skip stays applied"]
+  lost -- "no" --> mark["mark the skip undone, at the undo's instant"]
   mark --> refund["credit what it paid, on the undo's study day"]
   mark --> next["next recompute: the set no longer holds the day"]
   next --> miss["the day is a missed day wherever a rule counts one"]
