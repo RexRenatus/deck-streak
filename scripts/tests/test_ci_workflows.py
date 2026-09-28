@@ -158,6 +158,8 @@ class WorkflowsAreHardened(unittest.TestCase):
             "secrets.github_token",
             "secrets['GITHUB_TOKEN']",
             "github.token",
+            # A step's output named `secrets` is the steps context's, not the secrets context.
+            "steps.scan.outputs.secrets",
         ):
             self.assertIn(token, read)
         examined("run steps", judged["run steps"])
