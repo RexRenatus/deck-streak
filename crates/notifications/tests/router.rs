@@ -726,3 +726,35 @@ async fn an_occasion_asks_for_a_tier_its_kind_declares() {
         "a nudge and an alert declare T2 alone; a celebration declares T0 to T5"
     );
 }
+
+#[tokio::test]
+async fn the_in_app_feed_serves_each_item_once_in_order() {
+    use deck_streak_notifications::ledger::{FeedItem, take_unseen_feed};
+
+    let harness = Harness::new(at(DAY, 12, 0)).await;
+    for key in ["badge:one", "badge:two"] {
+        let _sent = harness
+            .router
+            .route(&harness.celebration(key, Surface::MiniApp))
+            .await
+            .expect("a decision");
+    }
+
+    let first = take_unseen_feed(&harness.db, at(DAY, 12, 5))
+        .await
+        .expect("the feed is read");
+    let second = take_unseen_feed(&harness.db, at(DAY, 12, 6))
+        .await
+        .expect("the feed is read");
+
+    let item = |text: &str| FeedItem {
+        kind: "celebration".to_owned(),
+        text: text.to_owned(),
+        created_at: at(DAY, 12, 0).epoch_millis(),
+    };
+    assert_eq!(
+        first,
+        [item("synthetic badge:one"), item("synthetic badge:two")]
+    );
+    assert_eq!(second, Vec::<FeedItem>::new(), "each item is served once");
+}

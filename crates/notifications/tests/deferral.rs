@@ -348,3 +348,85 @@ async fn a_mini_app_celebration_held_in_quiet_hours_is_flushed_to_the_feed() {
     assert_eq!(harness.feed().await, ["synthetic badge:late"]);
     assert!(harness.bot.pushes().is_empty(), "the bot sent nothing");
 }
+
+#[tokio::test]
+async fn a_quiet_hold_whose_sends_fail_is_abandoned_as_a_failed_send() {
+    let harness = Harness::new(at(DAY, 23, 30)).await;
+    let decision = harness
+        .router
+        .route(&harness.celebration("streak:week", Surface::Bot))
+        .await
+        .expect("a decision");
+    harness.bot.fail(true);
+
+    let mut flushes = Vec::new();
+    for minute in 0..3 {
+        harness.clock.set(at(DAY + 1, 8, minute));
+        flushes.push(harness.router.flush().await.expect("a flush"));
+    }
+    let abandonment = harness.last_decision().await;
+    harness.bot.fail(false);
+    harness.clock.set(at(DAY + 1, 8, 3));
+    let recap = harness.router.flush().await.expect("a flush");
+
+    assert_eq!(decision, QUIET);
+    assert_eq!(
+        flushes,
+        [Flushed::Ran { sends: 0 }; 3],
+        "each flush's send failed"
+    );
+    assert_eq!(
+        (abandonment.kind.as_str(), abandonment.reason.as_deref()),
+        ("celebration:withheld", Some("no_notifier")),
+        "quiet hours held it, and failed sends gave it up"
+    );
+    assert_eq!(recap, Flushed::Ran { sends: 1 });
+    assert_eq!(
+        harness.bot.delivered(),
+        [
+            "\u{1f4e1} <b>1 held celebration(s)</b> (send failures)\n\u{2022} streak:week (gave up retrying, unseen)"
+        ]
+    );
+}
+
+#[tokio::test]
+async fn a_recap_of_quiet_and_failed_holds_names_both_causes() {
+    let harness = Harness::new(at(DAY, 12, 0)).await;
+    harness.bot.fail(true);
+    let failed = harness
+        .router
+        .route(&harness.celebration("quest:failed", Surface::Bot))
+        .await
+        .expect("a decision");
+    harness.bot.fail(false);
+    harness.clock.set(at(DAY, 23, 0));
+    let quiet = harness
+        .router
+        .route(&harness.celebration("quest:quiet", Surface::Bot))
+        .await
+        .expect("a decision");
+
+    harness.clock.set(at(DAY + 1, 11, 1));
+    let flushed = harness.router.flush().await.expect("a flush");
+
+    assert_eq!(
+        (failed, quiet),
+        (
+            Decision::Deferred {
+                surface: Surface::Bot,
+                hold: Hold::Send
+            },
+            QUIET
+        )
+    );
+    assert_eq!(flushed, Flushed::Ran { sends: 1 });
+    assert_eq!(
+        harness.bot.delivered(),
+        [concat!(
+            "\u{1f319} <b>2 held celebration(s)</b> (quiet hours + send failures)\n",
+            "\u{2022} quest:failed (gave up retrying, unseen)\n",
+            "\u{2022} quest:quiet (expired, unseen)"
+        )],
+        "both past 720 minutes, each named by what held it"
+    );
+}
