@@ -146,3 +146,101 @@ DISCLOSURE, A9 (`a_comeback_past_the_cap_or_inside_the_gap_is_withheld`): its cr
 the rollover hour: a second router on a rule five hours west of UTC, three comebacks and one
 assertion. The criterion says the gap is counted in the owner's study days. The seven comebacks on
 a UTC rule, and what they assert, are unchanged.
+
+## Second fix round
+
+The second review planted ten deliveries around the port that A15's census let through, and found a
+comeback that A9 never exercised. The SPEC re-planned A9 and A15 first (00e8b6d). Then each fix went
+red first: its test's new cases were committed, with the review's plants as their text, while the
+census's model, or for A9 the router, was still the one the review measured. Each red commit was run
+over its whole test file, where only the criterion's own test failed, by assertion, and with the
+SPEC's command selecting one test. The next commit made it green.
+
+- The census inside a source (3b34e57, green at 39ad254). Held as text: a send after a field
+  compiled for tests alone, the bot's own send named through a variable, and a raw request from a
+  new module of the bot; on a tree the test writes for the walker, a shipped module under
+  `src/fixtures/`; and the transport's raw `sendDocument` as the seventh named send. The fix leaves
+  out only a `#[cfg(test)]` module, any attributes stacked on it passed over; always enters a
+  directory under a `src/`; reads every use of the bot's `send_html`; lets a send method be named
+  inside the bot's sources only in the named send that makes its request; and counts a raw request
+  as a send.
+- The census's reach (aa56871, green at cbcaa3e). Held as text: the bot's `edit_html`, a
+  fabricated update handed to the bot's command handler, and a raw request built on the bot's
+  `DEFAULT_API_URL`; on the walker's tree, a script with no extension and a drop-in of the bot's
+  unit. The fix guards `edit_html`, which has no named call site, and the handler, which only the
+  long poll uses; refuses `DEFAULT_API_URL` outside the bot's sources; reads a script by its `#!`
+  first line and a drop-in (`*.d/*.conf`); and makes `DEFAULT_API_URL` `pub(crate)`, so the bot's
+  own test of the unset base URL now reads Telegram's URL as written.
+- The Mini App's feed (afb644d, green at 7db0ef0). Held as text: the feed written from the API
+  through the ledger's `FEED_TABLE`, from a script in SQL, and from a module beside the router
+  through the ledger's `append_feed`. The fix refuses the three names outside the router's ledger,
+  router and data-rights modules.
+- A9 (2a0f692, green at ef01825): a comeback sent at 03:00 on the calendar day after day 0, before
+  the rollover, then one at noon two calendar days later, on the rule five hours west of UTC with
+  the owner's quiet window off. It was committed with the claim's study day taken from the UTC
+  calendar day of the clock, the review's R20a, as its stub, and the stub was removed in the next
+  commit.
+
+These are new cases of A15 and A9, not criteria of their own, so their record stands outside the
+`red-first` fences. Each red is the first assertion of its test that failed; the cases after it in
+the same test were not reached at that commit.
+
+```text
+A15 inside a source: red at assertion `left == right` failed: the bot's own send, named or called, raw requests to the Bot API, and a raw request from inside the bot, around the port; left: ["crates/api/src/notifications_routes.rs:3: names api.telegram.org", "crates/api/src/notifications_routes.rs:3: names sendMessage", "crates/daemon/src/role_bot.rs:4: calls send_html in celebrate_around_the_router, not a named call site", "crates/daemon/src/role_bot.rs:10: names api.telegram.org", "crates/daemon/src/role_bot.rs:10: names sendMessage"], right: ["crates/api/src/notifications_routes.rs:3: names api.telegram.org", "crates/api/src/notifications_routes.rs:3: names sendMessage", "crates/bot/src/celebrate.rs:5: names sendMessage in celebrate, not a named call site", "crates/daemon/src/role_bot.rs:4: calls send_html in celebrate_around_the_router, not a named call site", "crates/daemon/src/role_bot.rs:10: names api.telegram.org", "crates/daemon/src/role_bot.rs:10: names sendMessage", "crates/daemon/src/role_data.rs:3: uses send_html in celebrate_through_a_variable, not a named call site", "crates/daemon/src/role_job.rs:11: calls send_html in celebrate_around_the_router, not a named call site"]
+A15 inside a source: green at 39ad254
+A15 its reach: red at assertion `left == right` failed: the bot's own send, named or called, its edit and its command handler, raw requests to the Bot API and on its base URL, and a raw request from inside the bot, around the port; left: ["crates/api/src/notifications_routes.rs:3: names api.telegram.org", "crates/api/src/notifications_routes.rs:3: names sendMessage", "crates/bot/src/celebrate.rs:5: names sendMessage in celebrate, not a named call site", "crates/daemon/src/role_bot.rs:4: calls send_html in celebrate_around_the_router, not a named call site", "crates/daemon/src/role_bot.rs:10: names api.telegram.org", "crates/daemon/src/role_bot.rs:10: names sendMessage", "crates/daemon/src/role_data.rs:3: uses send_html in celebrate_through_a_variable, not a named call site", "crates/daemon/src/role_job.rs:11: calls send_html in celebrate_around_the_router, not a named call site"], right: ["crates/api/src/notifications_routes.rs:3: names api.telegram.org", "crates/api/src/notifications_routes.rs:3: names sendMessage", "crates/bot/src/celebrate.rs:5: names sendMessage in celebrate, not a named call site", "crates/daemon/src/lifecycle.rs:4: calls edit_html in celebrate_by_an_edit, not a named call site", "crates/daemon/src/main.rs:6: calls handle in celebrate_by_a_fabricated_command, not a named call site", "crates/daemon/src/role_bot.rs:4: calls send_html in celebrate_around_the_router, not a named call site", "crates/daemon/src/role_bot.rs:10: names api.telegram.org", "crates/daemon/src/role_bot.rs:10: names sendMessage", "crates/daemon/src/role_data.rs:3: uses send_html in celebrate_through_a_variable, not a named call site", "crates/daemon/src/role_job.rs:11: calls send_html in celebrate_around_the_router, not a named call site", "crates/daemon/src/wiring.rs:4: names DEFAULT_API_URL"]
+A15 its reach: green at cbcaa3e
+A15 the feed: red at assertion `left == right` failed: the bot's own send, named or called, its edit and its command handler, raw requests to the Bot API and on its base URL, a raw request from inside the bot, and writes to the Mini App's feed, around the port; left: ["crates/api/src/notifications_routes.rs:3: names api.telegram.org", "crates/api/src/notifications_routes.rs:3: names sendMessage", "crates/bot/src/celebrate.rs:5: names sendMessage in celebrate, not a named call site", "crates/daemon/src/lifecycle.rs:4: calls edit_html in celebrate_by_an_edit, not a named call site", "crates/daemon/src/main.rs:6: calls handle in celebrate_by_a_fabricated_command, not a named call site", "crates/daemon/src/role_bot.rs:4: calls send_html in celebrate_around_the_router, not a named call site", "crates/daemon/src/role_bot.rs:10: names api.telegram.org", "crates/daemon/src/role_bot.rs:10: names sendMessage", "crates/daemon/src/role_data.rs:3: uses send_html in celebrate_through_a_variable, not a named call site", "crates/daemon/src/role_job.rs:11: calls send_html in celebrate_around_the_router, not a named call site", "crates/daemon/src/wiring.rs:4: names DEFAULT_API_URL"], right: ["crates/api/src/notifications_routes.rs:3: names api.telegram.org", "crates/api/src/notifications_routes.rs:3: names sendMessage", "crates/api/src/router.rs:6: names FEED_TABLE", "crates/bot/src/celebrate.rs:5: names sendMessage in celebrate, not a named call site", "crates/daemon/src/lifecycle.rs:4: calls edit_html in celebrate_by_an_edit, not a named call site", "crates/daemon/src/main.rs:6: calls handle in celebrate_by_a_fabricated_command, not a named call site", "crates/daemon/src/role_bot.rs:4: calls send_html in celebrate_around_the_router, not a named call site", "crates/daemon/src/role_bot.rs:10: names api.telegram.org", "crates/daemon/src/role_bot.rs:10: names sendMessage", "crates/daemon/src/role_data.rs:3: uses send_html in celebrate_through_a_variable, not a named call site", "crates/daemon/src/role_job.rs:11: calls send_html in celebrate_around_the_router, not a named call site", "crates/daemon/src/wiring.rs:4: names DEFAULT_API_URL", "crates/notifications/src/occasion.rs:3: names append_feed", "deploy/scripts/celebrate.py:9: names in_app_feed"]
+A15 the feed: green at 7db0ef0
+A9 a comeback sent before the rollover: red at assertion `left == right` failed: a comeback sent at 03:00 on the calendar day after day 0, before the rollover, is on study day 0, so one at noon two calendar days later is 3 study days after it and past the gap; left: [(0, Sent { surface: Bot, tier: T2 }), (3, Withheld { surface: Bot, reason: BudgetSpent })], right: [(0, Sent { surface: Bot, tier: T2 }), (3, Sent { surface: Bot, tier: T2 })]
+A9 a comeback sent before the rollover: green at ef01825
+```
+
+Each of the review's plants was then installed again on ef01825, alone and exactly as the review
+wrote it, and the notifications suite run (46 tests without the compile-fail test for A15's plants,
+47 with it for A2's and A9's), every file restored byte for byte after:
+
+- the ten plants the census had let through, each now refused by A15:
+  - the bot's own send through a variable: `uses send_html in celebrate_through_a_variable, not a
+    named call site`;
+  - a request on `DEFAULT_API_URL` with its method assembled from pieces: `names DEFAULT_API_URL`;
+  - a script with no extension, and a drop-in of the bot's unit: `names api.telegram.org` and
+    `names sendMessage` in each;
+  - a new module of the bot posting to `sendMessage`: `names sendMessage in celebrate, not a named
+    call site`;
+  - a send after a field compiled for tests alone: `calls send_html in
+    celebrate_around_the_router, not a named call site`;
+  - a shipped module under `src/fixtures/` calling the bot's send: the same refusal, at its path;
+  - the bot's edit: `calls edit_html in celebrate_by_an_edit, not a named call site`;
+  - an insert into the feed from the API: `names FEED_TABLE`;
+  - a fabricated command handed to the bot's handler: `calls handle in
+    celebrate_by_a_fabricated_command, not a named call site`;
+- all ten at once: A15 red, with twelve refusals;
+- the plants the tests already refused (the pass's two derives, the first review's three
+  deliveries around the port, a `.sh` outside the alert path, a new unit, a new crate, a web
+  source): each still red;
+- R20a alone, the claim's study day from the UTC calendar day: A9 red by the new case, `left:
+  [(0, Sent { surface: Bot, tier: T2 }), (3, Withheld { surface: Bot, reason: BudgetSpent })]`;
+- R20b alone, the gap from the UTC calendar day: A9 red by the first rollover case, `left:
+  [(0, Sent { surface: Bot, tier: T2 }), (2, Sent { surface: Bot, tier: T2 }), (3, Withheld {
+  surface: Bot, reason: BudgetSpent })]`.
+
+The census is test code, which cargo-mutants never mutates, so each of its new refusals takes a
+row: S04115 to S04126 (5880072), and S04113 and S04114 were re-anchored to the lines that now hold
+their refusals. All fourteen were proved with `mutation_rows.py prove` on the committed tree at
+5880072: examined 14, killed 14, survived 0, VOID 0; each control selected one test and passed, each
+mutant selected one test and failed, and the target was restored byte for byte. In a clean checkout
+the census examines 171 shipped sources: the first fix round's 170, and the journald drop-in it now
+reads.
+
+DISCLOSURE, A15 (`no_delivery_goes_around_the_port`): its criterion changed at 00e8b6d and its body
+at 3b34e57, aa56871 and afb644d, after its green commit, a331c8f. The body gained the second
+review's planted cases, each with its expected refusal, the walker's tree and its two assertions,
+and the seventh named send. The census's helpers changed at 39ad254, cbcaa3e and 7db0ef0, into the
+model the criterion now describes, and its module doc at 3ed6729. The first review's planted cases,
+their refusals, and the assertions over the tree are unchanged.
+
+DISCLOSURE, A9 (`a_comeback_past_the_cap_or_inside_the_gap_is_withheld`): its criterion changed at
+00e8b6d and its body at 2a0f692, after its green commits, b5b66ca and 5ad0c43. The body gained the
+case of a comeback sent before the rollover: a third router on the rule five hours west of UTC, two
+comebacks and one assertion. The earlier cases, and what they assert, are unchanged.
