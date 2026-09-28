@@ -423,6 +423,10 @@ exact key still spent most of its `rust` job in one nextest run:
 | 36368711222, attempt 2 | #212's last pull-request run, its `rust` job re-run: its merge commit holds `dev` 63e6671's tree exactly | 4m19s | fmt 0 s, clippy 16 s, test 186 s (the build 45.7 s, the run 139.4 s), doctest 28 s, audit-rust 3 s |
 | 36371239856 | this amendment's red commit, whose workflow was still the single `rust` job | 4m22s, the gate 4m29s | fmt 1 s, clippy 17 s, test 186 s (the build 46.9 s, the run 139.3 s), doctest 28 s, audit-rust 4 s |
 
+A push to `dev` in that layout came after #224 had changed `Cargo.lock`: run 36372781643, at `dev`
+c0dbf2a, restored the 63e6671 entry by its fallback key. Its `rust` job took 4m44s (test 194 s:
+the build 54.8 s, 145 tests in 139.0 s), then saved a new 1005 MB entry under the new key.
+
 The run of 126 tests took 139 s, and ten of them set it: SPEC-022's `sync` and `engine_budget`
 binaries. The other 116 took 5.8 s together, none over 1.5 s. It was decided, under the owner's
 delegation: "A parallel `engine` job runs SPEC-022's slow sync and budget tests, and `rust` runs
@@ -459,7 +463,8 @@ among them) and took 58.6 s, where `test-engine`'s own build of the whole worksp
 ### Two slices (R16), measured
 
 Sharding lowers the floor only as far as the slowest test allows, so it was measured: one `engine`
-job at c8b1d3e, then two slices at 25b102c, each run twice (the second attempt a re-run).
+job at c8b1d3e, then two slices at 25b102c, each run twice (the second attempt a re-run), and the
+two slices twice more on this branch's later heads.
 
 | run | layout | `engine` | `rust` | the gate: first job to the end of `ci` |
 |---|---|---|---|---|
@@ -467,43 +472,57 @@ job at c8b1d3e, then two slices at 25b102c, each run twice (the second attempt a
 | 36371536468, attempt 2 | one engine job | 3m38s: test-engine 193 s (the build 46.3 s, the run 142.0 s) | 2m01s | 3m43s |
 | 36372201275, attempt 1 | two slices | 2m32s: test-engine 128 s (the build 47.3 s, the run 75.3 s); slice 2 1m59s: 83 s (32.9 s, 44.2 s) | 1m52s | 2m39s |
 | 36372201275, attempt 2 | two slices | 2m32s: test-engine 126 s (the build 46.7 s, the run 75.3 s); slice 2 2m24s: 118 s (45.8 s, 67.8 s) | 2m04s | 2m48s, 12 s of it `ci` waiting for a runner |
+| 36373161165 | two slices, the pull request merged with `dev` c0dbf2a and restoring by fallback | 2m38s: test-engine 132 s (the build 52.8 s, the run 74.4 s); slice 2 2m36s: 117 s (53.7 s, 60.2 s) | 2m22s | 2m43s |
+| 36373786208 | two slices at f607dcd, `dev` c0dbf2a merged in, restoring its new entry by exact key | 2m46s: test-engine 133 s (the build 55.0 s, the run 74.3 s); slice 2 2m40s: 127 s (53.9 s, 69.1 s) | 2m19s | 2m54s |
 
-Each slice ran five tests. Slice 1's run is the time of its slowest test,
-`a_sync_run_sends_no_upload_and_no_local_change`, 75.3 s and 74.8 s. Two slices took 67 s off the
-critical path in both pairs of runs, so the engine set runs in two. A third slice would still wait
-for that test, and would cost another runner for a gain the two samples do not show.
+Each slice ran five tests. Slice 1's run, 74.3 to 75.3 s in the four sliced runs, is the time of its
+slowest test, `a_sync_run_sends_no_upload_and_no_local_change`. Two slices took 67 s and 66 s off
+the critical path in the two pairs of runs of one tree, so the engine set runs in two. A third slice
+would still wait for that test, and would cost another runner for a gain the two samples do not
+show.
 
-The price is runner time. Each slice pays its own setup, restore and test build, so the Rust jobs
-took 6m23s and 7m00s of runner time together (`rust` and both slices), against 4m22s for the
-single `rust` job before the amendment, for a gate 1m41s to 1m50s shorter.
+The last two runs build `dev` c0dbf2a's workspace, which #224 grew: the test build took 53 to 55 s
+in each `engine` leg, against 46 to 48 s at 63e6671, because both test stages build the whole
+workspace. #224 also brought two tests of about 13 s each (`deck-streak-coordination::ledger`),
+outside the engine set, which run in `rust`: its 135 tests took 2.1 to 14.5 s.
 
-The `rust` job's stages in those four runs: fmt 0 to 1 s, clippy 14 to 16 s, test 44 to 51 s (the
-build 30 to 46 s, the 116 tests 2 to 13 s), doctest 18 to 27 s, audit-rust 2 to 4 s; its restore
-took 11 to 25 s, and each `engine` leg's 11 or 12 s. On the maintainer's machine, run at c8b1d3e with
-its own build: fmt 1 s, clippy 48 s, test 91 s (116 tests), doctest 85 s, audit-rust 6 s,
-test-engine 150 s (the build 46 s, the run of the whole set 103 s).
+The price is runner time. Each slice pays its own setup, restore and test build, so in run
+36372201275's two attempts the Rust jobs took 6m23s and 7m00s of runner time together (`rust` and
+both slices), against 4m22s for the single `rust` job before the amendment, for a gate 1m41s to
+1m50s shorter.
+
+The `rust` job's stages in the first four runs, at 63e6671's workspace: fmt 0 to 1 s, clippy 14 to
+16 s, test 44 to 51 s (the build 30 to 46 s, the 116 tests 2 to 13 s), doctest 18 to 27 s,
+audit-rust 2 to 4 s; its restore took 11 to 25 s, and each `engine` leg's 11 to 16 s. On the
+maintainer's machine, run at c8b1d3e with its own build: fmt 1 s, clippy 48 s, test 91 s (116
+tests), doctest 85 s, audit-rust 6 s, test-engine 150 s (the build 46 s, the run of the whole set
+103 s).
 
 ### The revised target (R15)
 
 The warm code pull request's target of about a minute and a half is revised. The engine set's run
 bounds it: its slowest test takes about 75 s in a slice, after a test build that recompiles the
-engine once (ADR-022's finding, about 46 s with the workspace). Measured, the warm critical path is
+engine once (ADR-022's finding), 46 to 55 s with the workspace. Measured, the warm critical path is
 the slower `engine` leg:
 
 - **an `engine` leg:** start and setup about 10 s (the checkout, `rustup show` 8 to 9 s,
-  `cargo-nextest` and `protoc`), the restore 11 to 12 s, and `test-engine` 118 to 128 s (the
-  workspace's test build 33 to 47 s, one forced engine recompile among it, and the slice's run 44 to
-  75 s). About 2.5 minutes, **held to 2m45s**.
+  `cargo-nextest` and `protoc`), the restore 11 to 16 s, and `test-engine` 117 to 133 s (the
+  workspace's test build 33 to 55 s, one forced engine recompile among it, and the slice's run 44 to
+  75 s). The slower leg took 2m32s, 2m32s, 2m38s and 2m46s: about 2m40s, **held to 3 minutes**.
 - **the `rust` job:** setup about 10 s, the restore 11 to 25 s, and four cargo commands, three of
-  them recompiling the engine: clippy 14 to 16 s, test 44 to 51 s, doctest 18 to 27 s, audit-rust 2
-  to 4 s. About 2 minutes, **held to 2m30s**.
-- **the gate:** the slower of the two, then the aggregate `ci`. Measured at 2m39s and 2m48s, against
-  4m29s before the amendment and 3m43s with one engine job. **Held to 3 minutes.**
+  them recompiling the engine: clippy 14 to 17 s, test 44 to 63 s, doctest 18 to 31 s, audit-rust 2
+  to 4 s. It took 1m52s to 2m22s: about 2m10s, **held to 2m30s**.
+- **the gate:** the slower of the two, then the aggregate `ci`. Measured at 2m39s, 2m48s, 2m43s and
+  2m54s, against 4m29s before the amendment and 3m43s with one engine job: about 2m50s, **held to
+  3m15s**.
+
+The engine legs build the whole workspace, so their build grows as it does; a delivery that takes a
+leg past its bound says so (R15), and the fix is then the test build, not the split.
 
 These bounds are for the gate's five jobs. SPEC-039's mutation jobs, when they are needs of `ci`,
 state their own.
 
-The `engine` job's `timeout-minutes` is 20, sized from these runs: a warm leg takes 2 to 2.5
+The `engine` job's `timeout-minutes` is 20, sized from these runs: a warm leg takes 2 to 3
 minutes, and a cold one repeats the test stage's cold build (102 s and 126 s in runs 36368711222 and
 36369172368) before a slice of at most 75 s, about 4 minutes. Twenty minutes holds five cold legs,
 and a hung sync test is stopped in a twentieth of GitHub's default six hours.

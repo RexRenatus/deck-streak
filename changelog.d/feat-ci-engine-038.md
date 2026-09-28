@@ -5,4 +5,4 @@
   both, so every test stays required. `scripts/check.sh` defines that set once, as a nextest
   filterset: its `test` stage runs every test outside it, and its new `test-engine` stage runs it,
   so each test runs in exactly one of the two. The `engine` job runs the set in two slices, one per
-  runner, and a warm pull request's gate took 2m39s and 2m48s, against 4m29s in one job.
+  runner, and a warm pull request's gate took 2m39s to 2m54s, against 4m29s in one job.
