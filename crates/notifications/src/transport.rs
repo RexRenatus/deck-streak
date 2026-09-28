@@ -4,9 +4,9 @@
 //! Each call takes the router's [`Pass`], which only the router module can make, so a call of the
 //! port anywhere else does not compile: the policy's one-router rule, held by the type system
 //! (SPEC-041 A2). A delivery that never calls the port, through the bot's own send or a raw request
-//! to the Bot API, is refused by a census of every shipped source (SPEC-041 A15). The port carries
-//! `push_message` alone, because the router renders nothing beyond a line; the ladder's dice,
-//! reaction and pin calls join it with the ladder's renders (#120).
+//! to the Bot API, is refused by a census of the shipped sources of the kinds it reads (SPEC-041
+//! A15). The port carries `push_message` alone, because the router renders nothing beyond a line;
+//! the ladder's dice, reaction and pin calls join it with the ladder's renders (#120).
 
 use std::future::Future;
 use std::pin::Pin;
