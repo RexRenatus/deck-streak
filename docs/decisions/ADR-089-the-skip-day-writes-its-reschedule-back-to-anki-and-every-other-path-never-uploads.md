@@ -67,7 +67,8 @@ owner's decision at #266.
   of exactly those cards; it is owner-triggered, incremental only, and aborts on any full-sync
   demand; it carries the same recording-server proof; and it writes only cards whose current state
   still equals what the skip wrote. A card reviewed or changed since the skip is skipped and listed
-  to the owner, never overwritten.
+  to the owner, never overwritten. The Consequences and SPEC-083 §6 name what the engine's sync
+  still lets through while a take or an undo runs.
 - **The recorder is proved too.** The recording layer SPEC-022 built
   (`crates/ingest/tests/support/recording.rs`) keeps every request. SPEC-083 adds the criterion
   that it records a planted upload and a planted local change, because a recorder that sees nothing
@@ -86,7 +87,12 @@ owner's decision at #266.
   fake sync server.
 - Bad, because DeckStreak can change the owner's collection on one path, so a defect there reaches
   the owner's cards. The guardrails bound it: incremental syncs only, only the previewed cards, the
-  prior state recorded before the write, and an undo that never overwrites a card changed since.
+  prior state recorded before the write, and an undo that never writes a card changed before its own
+  converge. A card changed on another client in the seconds between the undo's converge and its
+  push can still lose that change to the restore, which is newer: the undo lists such a card when
+  the change was a review, and cannot see any other change (SPEC-083 R32, §6). A review on a device
+  that syncs only after a take's or an undo's push can lose its schedule the same way, and nothing
+  lists it (SPEC-083 §6).
 - Bad, because the review-log rows the engine's Set Due Date writes stay after an undo: an
   incremental sync removes no review-log row. The read never counts them as study events
   (SPEC-023 R2).

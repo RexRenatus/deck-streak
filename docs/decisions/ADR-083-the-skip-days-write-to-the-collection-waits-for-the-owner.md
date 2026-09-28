@@ -83,13 +83,17 @@ Chosen option: "(a) an upload path for the skip day alone", the owner's decision
   carries those cards and the review-log rows the engine writes for them, beside the settings and
   the creation stamp that a sync carries whole once the working copy is newer, each as the server
   held it at the converge, the engine's own last-unburied day aside, and nothing else (guardrails i
-  and v). It runs only while the engine's own day, the collection's rollover hour in the process's
-  zone, is the study day and the collection's configured UTC offset is the process's zone:
-  otherwise the engine would count from another day or rewrite that offset (SPEC-083 R3, R23).
+  and v). It runs only when the engine's own day, the collection's rollover hour in the process's
+  zone, is the study day and the collection's configured UTC offset is present and is the process's
+  zone, checked before any request and again on the converged working copy: otherwise the engine
+  would count from another day or rewrite that offset (SPEC-083 R3, R23). The checks cannot hold a
+  rollover or a change of the zone's offset in the moment after one of them (SPEC-083 §6).
 - **The undo compares before it writes.** It restores a card's recorded prior state only when the
-  card still carries the state the skip wrote and has no study event since the skip began. It lists
-  every other card to the owner and never overwrites one. It is owner-triggered and incremental
-  only, and it aborts on any full-sync demand (the undo's rules).
+  card, as its converge brings it, still carries the state the skip wrote and has no study event
+  since the skip began. It lists every other card to the owner and never writes one. A change made
+  on another client after the undo's converge can still lose to the restore, which is newer; the
+  undo reads each restored card back and lists a card reviewed there (SPEC-083 R32). It is
+  owner-triggered and incremental only, and it aborts on any full-sync demand (the undo's rules).
 - **Owner triggers only.** The take and the undo run only from the owner's confirm in the bot or the
   Mini App, as owner triggers under ADR-037. Their syncs are recorded on the skip's own row, never
   in `sync_runs`, and no job, recompute step, startup path, retry or spawned task runs them
@@ -110,7 +114,12 @@ Chosen option: "(a) an upload path for the skip day alone", the owner's decision
   same way when the reschedule is newer, and the read-back cannot see it (SPEC-083 §6).
 - Bad, because a review made on another client between the undo's converge and its push can lose
   its schedule to the restore; the undo lists that card to the owner (SPEC-083 R32, A42) but
-  cannot keep the review's schedule, since the sync keeps the newer card.
+  cannot keep the review's schedule, since the sync keeps the newer card. A suspension, a flag, a
+  deck move or a setting made in that window is overwritten the same way when the restore is
+  newer, and the read-back cannot see it (SPEC-083 §6).
+- Bad, because a review made on a device that syncs only after a take's or an undo's push can lose
+  its schedule to the newer card that push left, and nothing lists it: it reaches the server after
+  the read-back (SPEC-083 §6).
 - Bad, because the private copy shows the moved cards as due until its next sync downloads the
   change.
 - Bad, because the reschedule's review-log rows stay after an undo; the read never counts them as
@@ -119,10 +128,13 @@ Chosen option: "(a) an upload path for the skip day alone", the owner's decision
   move it to its home deck, and the undo could not put it back exactly once the filtered deck is
   emptied, rebuilt or deleted (SPEC-083 R3). The owner can empty the filtered deck before taking the
   skip.
-- Bad, because a skip writes only while the engine's own day is the study day and the collection's
-  configured UTC offset is the process's zone. Otherwise the preview, the take and the undo refuse
-  before any request, because the engine would count from another day or rewrite that offset, which
-  the push would carry (SPEC-083 R3, R23).
+- Bad, because a skip writes only when R3's checks find the engine's own day to be the study day
+  and the collection's configured UTC offset present and equal to the process's zone. Otherwise the
+  preview, the take and the undo refuse before any request, and a take or an undo whose converge
+  brings another client's setting that fails either check ends before its push, because the engine
+  would count from another day or rewrite that offset, which the push would carry (SPEC-083 R3,
+  R23). A rollover or a change of the zone's offset in the moment after a check still gets through:
+  the cards then land a day later, or the push carries the zone's new offset (SPEC-083 §6).
 - Bad, because a push whose answer is lost may already be committed, so its outcome is not known at
   once. The take's row stays `pending` until the private copy's next sync settles it, and the undo
   leaves its skip `applied` until a later undo, which counts the cards already restored as restored;
@@ -133,14 +145,17 @@ Chosen option: "(a) an upload path for the skip day alone", the owner's decision
 SPEC-083's criteria, each red first: the take pushes exactly the previewed cards and their
 review-log rows, and no setting changed but the engine's own last-unburied day (A5), and a
 configured search moves only the study day's due review cards outside a filtered deck, or is
-refused when it closes the wrap's group (A38); a take holds to the study day and changes no setting
-when the engine's day or the collection's configured UTC offset differs (A40); every other path
+refused when it closes the wrap's group (A38); a take or an undo holds to the study day and changes
+no setting when the engine's day or the collection's configured UTC offset differs or is missing,
+in the private copy or as its converge brings it (A40); every other path
 records zero uploads (A6), and only the skip's take and undo reach an engine write (A24); a
 full-sync demand aborts a take or an undo, writing nothing (A25, A26, A32); only the owner's
 confirm reaches the take and the undo, once per confirm (A27); the preview lists the cards and
-binds the take (A28, A39); the prior state is recorded before any card changes (A29); an undo
-restores exactly the prior state of exactly the moved cards (A30) and never overwrites a card
-changed since (A31); a take or an undo whose push's answer is lost says that its outcome is not
+binds the take (A28, A39); the prior state is recorded before any card changes (A29); a take lists
+a card reviewed on another client during its own window (A34); an undo restores exactly the prior
+state of exactly the moved cards (A30) and never writes a card changed before its converge (A31),
+and lists a card reviewed on another client during its own window (A42); a take or an undo whose
+push's answer is lost says that its outcome is not
 known yet, never that nothing was written (A35, A41); and the recording layer records a planted
 upload, a planted local change and a planted setting change (A33). SPEC-022's no-upload census (its
 A15) stays the proof for every sync of the private copy.
