@@ -1,7 +1,10 @@
 # cargo-mutants 27.1.0 (SPEC-039 R5 to R7, ADR-057). The pull request's `mutation-rust` job and the
 # weekly battery run it in place, on a committed tree, and a local run is targeted the same way:
 #
-#   cargo mutants --in-place -j 1 -f crates/<crate>/src/<file>.rs    then cargo clean
+#   cargo mutants --in-place -f crates/<crate>/src/<file>.rs    then cargo clean
+#
+# `--in-place` runs one mutant at a time, the rule's `-j 1`, and refuses a `-j` flag beside it
+# (exit 1, measured on 27.1.0).
 #
 # Each exclusion names one mutant, as an anchored `exclude_re` entry, with
 # `# EQUIVALENT: <why no test can tell it apart> (#N)` on the line above it. A test refuses any other

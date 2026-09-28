@@ -79,9 +79,10 @@ code.
 - **Never weaken.** A row or a killing test leaves only with its target. Retiring one whose target
   stays needs an entry in `scripts/mutation-rows.retired.json` with the reason and the maintainer's
   approval, which the orchestrator relays.
-- **Locally, stay targeted:** one file (`cargo mutants --in-place -j 1 -f <file>`) or your diff
-  (`--in-diff`), on a committed tree, then `cargo clean`. Heavy runs belong in CI; the weekly
-  battery sweeps the whole repository and files each file's survivors as an issue.
+- **Locally, stay targeted:** one file (`cargo mutants --in-place -f <file>`) or your diff
+  (`--in-diff`), on a committed tree, then `cargo clean`. `--in-place` runs one mutant at a time,
+  the rule's `-j 1`, and cargo-mutants refuses a `-j` flag beside it. Heavy runs belong in CI; the
+  weekly battery sweeps the whole repository and files each file's survivors as an issue.
 
 ## Land it
 

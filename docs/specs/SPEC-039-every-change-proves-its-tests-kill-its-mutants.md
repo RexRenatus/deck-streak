@@ -116,8 +116,9 @@ R6. **The configurations** load under their tools' own rules: `.cargo/mutants.to
     `json` reporter and `thresholds` whose `break` is 100. The vendored probe's blocking
     `tool-config-valid` row judges both.
 R7. **Local runs** stay targeted (one file, `-f`, or the diff, `--in-diff`), `--in-place` on a
-    committed tree, `-j 1`, then `cargo clean`. Heavy runs belong in CI. `docs/BUILDER-BRIEF.md`
-    says so.
+    committed tree, one mutant at a time, then `cargo clean`. `--in-place` is the rule's `-j 1`:
+    cargo-mutants 27.1.0 refuses any `-j` beside it (exit 1, measured). Heavy runs belong in CI.
+    `docs/BUILDER-BRIEF.md` says so.
 R8. **Hand-proved rows** cover invariants generic mutants test weakly: a constant, a method named
     `new`, a guard, a security check, a parity comparison.
     - They live in band fragments, `scripts/mutation-rows.d/S<lo>-S<hi>.json`, in the
