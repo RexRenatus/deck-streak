@@ -9,7 +9,7 @@ decision-makers: "@RexRenatus (owner), the DeckStreak architect"
 ## Context and Problem Statement
 
 SPEC-025 builds the API service the Mini App calls through Caddy's `/api/*` proxy. The predecessor
-kept its health routes on a separate localhost-only port and noted that a Mini App backend's public
+served its health routes apart from its API (`server.py:create_server`) and noted that a Mini App backend's public
 listener should keep them apart. The rust-service pack requires a concurrency bound and accepts
 either a queue or a shed. And the axum testing idiom needs a crate the workspace has not admitted.
 Where do the health routes live, what happens to the request past the bound, and which crates does
@@ -27,7 +27,7 @@ that take?
 ## Considered Options (the alternatives it was chosen against)
 
 - Health under `/api/livez` and `/api/readyz` on the API's one loopback listener, with the Caddy block answering 404 for those two paths from outside — chosen: one listener and one port to configure, the probe and the SLO read the same service, and the internet sees nothing.
-- A second loopback-only listener for health, as the predecessor had — rejected because it doubles the listeners, ports and configuration for two routes the edge can close with one matcher.
+- A second loopback-only listener for health — rejected because it doubles the listeners, ports and configuration for two routes the edge can close with one matcher.
 - Health reachable through Caddy — rejected because readiness describes the service's internals (whether its database is open), which the public need not learn.
 - Shed the request past 64 in flight with 503 (tower's `ConcurrencyLimitLayer` inside `LoadShedLayer`) — chosen: the answer is immediate, the connection is released, and each shed is a 503 response event the availability SLO counts.
 - Queue the request past the bound until a slot frees (`GlobalConcurrencyLimitLayer` alone) — rejected because waiting requests hold connections and buffers until the 10-second timeout, which spends memory exactly when the service is overloaded, and hides the overload as latency.
@@ -100,3 +100,6 @@ test for the health matchers.
 
 ADR-003; ADR-007; ADR-010; SPEC-025; SPEC-032; the rust-service pack's `service-main.rs.template`;
 the predecessor's `server.py:create_server` port note.
+
+Amendment (2026-09-28): passages describing another service's operations were replaced with a
+citation of its code, or removed, under the public-text rule (ADR-059).
