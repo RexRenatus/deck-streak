@@ -60,7 +60,9 @@ Every number below was measured on `dev` at b1ce32d, in a scratch clone, with th
 ## 2. Requirements
 
 R1. **The tools, pinned.** Rust: cargo-mutants 27.1.0, installed in CI by
-    `taiki-e/install-action` (pinned by SHA) as `cargo-mutants@27.1.0` with `fallback: none`. The
+    `taiki-e/install-action` (pinned by SHA) as `cargo-mutants@27.1.0` with `fallback: none`,
+    running each mutant's tests under cargo-nextest 0.9.146 (`test_tool = "nextest"`), the gate's
+    own runner, installed the same way. The
     Mini App: StrykerJS 10.0.0, `@stryker-mutator/core` and `@stryker-mutator/vitest-runner` at
     exactly `10.0.0`, as `web/app` devDependencies. The parity oracle's Python has no generated
     mutants (mutmut measured unfit, §1); its invariants are hand-proved rows (R8).
@@ -373,3 +375,12 @@ branch and recorded in its pull request.
   no test pins them on its own: `Hour::new`'s upper bound and identity's future skew (#222).
 - **The manifest gained `scripts/tests/test_ci_workflows.py`.** SPEC-038 A3 pins `ci`'s needs as
   an exact set, and the set grows by the two required mutation jobs, still an exact equality.
+- **R1: cargo-mutants runs the gate's nextest (A28).** Its default runner, `cargo test`, runs a
+  binary's tests in one process; the gate's nextest gives each test a process of its own. The first
+  dispatch of the whole battery on this delivery's branch (run 36372763914) stopped two of its 32
+  shards at the unmutated baseline (exit 4): identity's `init_data_never_reaches_the_log` failed
+  under `cargo test` though it passes under nextest and passed a local `cargo test` run, so it
+  depends on what shares its process. Every shard holds identity's mutants under round-robin, so
+  every shard was exposed. With `test_tool = "nextest"` the identity baseline passes: `owner.rs`
+  gave 14 mutants, 6 caught, 3 missed and 5 unviable, the missed three being the weekly battery's
+  to file.

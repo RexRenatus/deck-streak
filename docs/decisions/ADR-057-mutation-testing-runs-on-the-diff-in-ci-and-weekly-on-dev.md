@@ -121,9 +121,17 @@ front end and a Python parity oracle, on GitHub-hosted runners (SPEC-039)?
 - Wait for a release: rejected, because the battery would first run unproved, on a schedule
   nobody watches.
 
+**D9, the runner under each mutant.**
+- cargo-nextest 0.9.146 (`test_tool = "nextest"`): chosen, because it is the gate's own runner, a
+  process per test, so a mutant is judged by the tests exactly as the gate runs them. Measured: the
+  unmutated baseline passed identity's tests under it (SPEC-039 section 8).
+- `cargo test`, cargo-mutants' default: rejected by measurement, because one process per binary
+  failed identity's `init_data_never_reaches_the_log` at the baseline on two of 32 CI runners (run
+  36372763914), so those shards examined nothing (exit 4).
+
 ## Decision Outcome
 
-Chosen: D1 to D8's first options. SPEC-039 R1 to R17 state them as requirements.
+Chosen: D1 to D9's first options. SPEC-039 R1 to R17 state them as requirements.
 
 ### Consequences
 

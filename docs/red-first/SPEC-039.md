@@ -19,6 +19,8 @@ error, a missing fixture or an empty selection.
   `ci.yml`, no brief section. They went green at 018a6ea.
 - A27 was added when the orchestrator asked that each event read its own case: red at fbd772d,
   against a stub that accepted the options and ignored them, and green at fcb226b.
+- A28 was added when the first dispatch of the whole battery stopped two shards at the baseline
+  under `cargo test` (SPEC-039 section 8): red at 5238623, green at e82b796.
 - No assertion changed between a red and its green. A19's fixture changed in 73133a4: its synthetic
   `outcomes.json` gave the kernel survivor the fixture's own file where it meant `clock.rs`, so the
   draft the assertion names could not be written; the assertions are unchanged.
@@ -86,6 +88,8 @@ A25: green at 018a6ea
 A26: not red: it pins behaviour the code already had (a time before the epoch reads as negative milliseconds); its red is the mutation-rust job's, which missed `delete -` in UtcMillis::from_system_time until the test landed (R17, below)
 A27: red at fbd772d: AssertionError: None != 'diff' : pull_request
 A27: green at fcb226b
+A28: red at 5238623: AssertionError: Regex didn't match: '(?m)^test_tool = "nextest"$' not found in .cargo/mutants.toml
+A28: green at e82b796
 ```
 
 ## The gate's own red first (R17)
