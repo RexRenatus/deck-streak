@@ -116,6 +116,21 @@ const GUARDED: [(&str, &str); 3] = [
 /// the Bot API delivers to the bot.
 const HANDLER_ENTRY: (&str, &str, &str) = ("crates/bot/src/poll.rs", "run", "handle");
 
+/// The router's modules, the only sources that may name the Mini App's feed: the ledger, which
+/// writes and reads it; the router, whose `push_in_app` appends to it; and the data-rights port,
+/// which exports and erases it.
+const FEED_MODULES: [&str; 3] = [
+    "crates/notifications/src/ledger.rs",
+    "crates/notifications/src/router.rs",
+    "crates/notifications/src/data_rights.rs",
+];
+
+/// The Mini App's feed's table, named in SQL in any case.
+const FEED_TABLE_NAME: &str = "in_app_feed";
+
+/// The router's names for the feed: the ledger's constant for its table, and its append.
+const FEED_NAMES: [&str; 2] = ["FEED_TABLE", "append_feed"];
+
 /// SPEC-031's alert path: it pages the owner that a unit failed, the daemon among them, so it
 /// cannot go through the daemon's router. The one shipped source outside the bot that names the
 /// Bot API.
@@ -425,6 +440,13 @@ fn census(sources: &[(String, String)]) -> Census {
                     .push((path.clone(), line_of(&code, at), format!("names {name}")));
             }
         }
+        if !FEED_MODULES.contains(&path.as_str()) {
+            for (at, name) in names_of_the_feed(&code) {
+                found
+                    .refusals
+                    .push((path.clone(), line_of(&code, at), format!("names {name}")));
+            }
+        }
         if rust {
             for (name, definer) in GUARDED {
                 for at in identifiers(&structure, name) {
@@ -481,6 +503,19 @@ fn names_of_the_bot_api(code: &str) -> Vec<(usize, String)> {
         .collect();
     named.extend(identifiers(code, BOT_API_URL).map(|at| (at, BOT_API_URL.to_owned())));
     named.extend(names_of_a_send(code));
+    named
+}
+
+/// What `code` names of the Mini App's feed: its table, in any case, and the router's names for it,
+/// each as the byte it starts at and the name.
+fn names_of_the_feed(code: &str) -> Vec<(usize, String)> {
+    let lower = code.to_ascii_lowercase();
+    let mut named: Vec<(usize, String)> = identifiers(&lower, FEED_TABLE_NAME)
+        .map(|at| (at, FEED_TABLE_NAME.to_owned()))
+        .collect();
+    for name in FEED_NAMES {
+        named.extend(identifiers(code, name).map(|at| (at, name.to_owned())));
+    }
     named
 }
 
