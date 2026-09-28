@@ -1402,10 +1402,20 @@ def strings(value, where=""):
     return [(where, value)] if isinstance(value, str) else []
 
 
+def step_inputs(step):
+    """A step's `with` inputs, each name in lower case: the runner reads an input's name in any
+    case. Inputs that are not a mapping are none: the reader has named their line, or GitHub
+    refuses the workflow."""
+    given = step.get("with")
+    if not isinstance(given, dict):
+        return {}
+    return {str(name).lower(): value for name, value in given.items()}
+
+
 def checked_out(step):
     """The repository a checkout step checks out. An omitted or empty `repository`, and
     `${{ github.repository }}`, are this repository, as actions/checkout defaults it."""
-    given = str((step.get("with") or {}).get("repository") or "").strip()
+    given = str(step_inputs(step).get("repository") or "").strip()
     if not given or re.fullmatch(r"\$\{\{\s*github\.repository\s*\}\}", given):
         return THIS_REPOSITORY
     return given
