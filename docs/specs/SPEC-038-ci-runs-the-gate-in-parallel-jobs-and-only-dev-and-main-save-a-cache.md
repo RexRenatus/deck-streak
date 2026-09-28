@@ -78,7 +78,9 @@ R3. The gate runs in four jobs that need nothing and so start together, each cal
     - `hygiene`: `python scrub secrets`.
     Every stage `check.sh` defines runs in exactly one job. The aggregate `ci` needs these four,
     `workflow-lint` and `base-is-dev`. The required contexts (`ci` and `fragment`, from the app
-    15368) and the rulesets are unchanged.
+    15368) and the rulesets are unchanged. Each gate step's name says what its stages run, because
+    the vendored stack-selection row `svelte-check-ci` reads a workflow's text for `svelte-check`
+    and cannot follow `check.sh` (amended by the delivery: a name without it read RED).
 R4. Each stage checks the tools it runs before it runs them, with the install hint the `toolchain`
     stage gave: `cargo` for `fmt`, `clippy` and `doctest`; `cargo` then `cargo-nextest` for `test`;
     `cargo` then `cargo-deny` for `audit-rust`; `node` (24 or later) then `pnpm` for `web` and

@@ -51,7 +51,7 @@ jobs:
           key: rust-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-${{ hashFiles('Cargo.lock') }}
           restore-keys: |
             rust-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-
-      - name: fmt, clippy, test, doctest and audit-rust
+      - name: fmt, clippy (-D warnings), test (nextest), doctest and audit-rust (cargo deny)
         env:
           CHECK_LOG_DIR: ${{ runner.temp }}/check-logs
         run: bash scripts/check.sh fmt clippy test doctest audit-rust
@@ -125,7 +125,7 @@ jobs:
         with:
           path: ~/.cache/ms-playwright
           key: ${{ steps.playwright-cache.outputs.cache-primary-key }}
-      - name: web and audit-web
+      - name: web (pnpm check with svelte-check --fail-on-warnings, vitest, vite build, playwright) and audit-web (pnpm audit)
         env:
           CHECK_LOG_DIR: ${{ runner.temp }}/check-logs
         run: bash scripts/check.sh web audit-web
