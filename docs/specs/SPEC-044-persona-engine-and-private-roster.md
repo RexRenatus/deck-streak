@@ -5,8 +5,8 @@
   its mentor's daily reading), ADR-069 (every pack is judged by the box run, never in public CI), and
   ADR-044 (the roster file, the topic binding, the band fallback, and memory read through a
   subject-scoped reader).
-- **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
-  `docs/specs/` with its tests and `docs/red-first/SPEC-044.md` (ADR-016).
+- **Status:** judged: delivered with its tests, its hand-proved rows and `docs/red-first/SPEC-044.md`
+  (ADR-016). The delivery made R1 to R3, R5, R8 and R9 exact where the code decided them (§7).
 
 ## 1. The problem, measured
 
@@ -159,3 +159,34 @@ theirs that is red, VOID or in error fails the run.
   (built for one subject) and detected by A5 in each wiring delivery.
 - **The roster's band lags the owner's real level** until the live band exists. Visible in each
   language output's `cefr`, and corrected in the private roster.
+
+## 7. Amendments at delivery
+
+- **R1: the templates are compiled in.** The engine compiles every file of `agent/personas/` into
+  its binary and loads them at start, so the text it instantiates is the text the box run judged.
+  A1 holds the compiled set equal to the directory, template by template (ADR-044).
+- **R2: the roster's setting, file name and shape.** `DECKSTREAK_AGENT_ROSTER` names the roster by
+  an absolute path. The private rail places it as `roster.json`, the name `privacy.json`'s `private`
+  globs hold (`roster.json` and `*/roster.json`). Its keys are `schema`; `personas`, each template id
+  the roster fills, with its four slots; and `topics`, each topic key, with its `template` and, for a
+  language mentor's template, its `cefr` band. Any other key is refused.
+- **R3: a slot is one line.** A slot's value is not blank and holds no control character, no `{{`
+  and no `}}`, because a line break could open a section of its own in the persona and a brace pair
+  could leave a slot token behind. A topic bound to a language mentor's template needs a band, and
+  any other topic takes none.
+- **R3 and R10: a refusal names the rule.** No refusal names a topic key, a template id, a slot's
+  value or the roster's path, since a refusal reaches the journal; it names the rule and, for a
+  slot, the slot's public name. The roster's `Debug` shows its counts, and the persona's never its
+  text.
+- **R5 and R7: the reader's record.** A read is recorded once per source, when its port answered, in
+  the order of first read; a declared source that no port serves reads as nothing and is not
+  recorded. The ports are asynchronous (the kernel's `PortFuture`), because their sources read the
+  database. The journal is refused by name: a template that declares `journal` or `diary` does not
+  load.
+- **R8: a live band that has none.** A live band's port that answers no band for the subject gives
+  the roster's band, as an unwired port does.
+- **R9: the goldens' further keys.** The law golden also carries `sources` and `x-new-cards`, and the
+  language golden `x-new-words`, after the engine's keys: SPEC-046's duty writes them. A6 holds each
+  golden's opening lines to the engine's frontmatter.
+- **The criteria over pack rows.** No public test can run a pack's row (ADR-069), so A1, A3 and A6
+  are tests of the engine, and the box run judges the rows themselves (§3a).
