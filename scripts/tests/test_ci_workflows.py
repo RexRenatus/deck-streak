@@ -312,6 +312,23 @@ class WorkflowsAreHardened(unittest.TestCase):
                     case.setUp()
                     with self.assertRaisesRegex(AssertionError, re.escape(f"uses {written}@")):
                         case.test_every_action_is_pinned_by_a_full_commit_sha()
+        # The hardening tests read keys the way the checker does (SPEC-034 R7): the control, one line
+        # rewritten by each planted key, is judged beside the live workflows, and the test named
+        # refuses it with the refusal named.
+        live = [(path.name, path.read_bytes()) for path in workflow_files(WORKFLOWS)]
+        for test, line, planted, refusal in PLANTED_KEYS:
+            with self.subTest(test=test, planted=planted), tempfile.TemporaryDirectory() as scratch:
+                self.assertEqual(control.count(line), 1, line)
+                for name, text in live:
+                    (Path(scratch) / name).write_bytes(text)
+                (Path(scratch) / "planted.yml").write_text(
+                    control.replace(line, planted), encoding="utf-8"
+                )
+                with mock.patch.object(sys.modules[__name__], "WORKFLOWS", Path(scratch)):
+                    case = WorkflowsAreHardened(test)
+                    case.setUp()
+                    with self.assertRaisesRegex(AssertionError, refusal):
+                        getattr(case, test)()
 
 
 def triggers(workflow):
@@ -1305,6 +1322,78 @@ class TheEngineSetRunsInSlices(unittest.TestCase):
 # The planted workflows: those the checker refuses (A10) and those it admits (A11).
 PLANTED = REPO / "scripts" / "tests" / "fixtures" / "secrets-and-checkouts"
 PLANTED_HARDENING = REPO / "scripts" / "tests" / "fixtures" / "workflow-hardening"
+# The hardening tests read a workflow's keys the way the checker does (SPEC-034 R7). A13 plants each
+# of these in the hardened control, beside the live workflows, as (the test that judges it, the
+# control's line, the lines planted in its place, the refusal the test raises): keys the reader
+# reads, a block read whole, a trigger, and forms the reader does not read, which fail closed.
+HARDENING_PIN, HARDENING_RUNNER, HARDENING_TOKEN = (
+    "test_every_action_is_pinned_by_a_full_commit_sha",
+    "test_no_workflow_uses_a_self_hosted_runner_or_a_privileged_trigger",
+    "test_every_workflow_defaults_to_a_read_only_token",
+)
+CONTROL_STEP = "      - uses: actions/checkout@0123456789abcdef0123456789abcdef01234567"
+PLANTED_KEYS = (
+    (
+        HARDENING_PIN,
+        CONTROL_STEP,
+        "      - 'uses': actions/checkout@v4",
+        r"planted\.yml uses actions/checkout@v4$",
+    ),
+    (
+        HARDENING_PIN,
+        CONTROL_STEP,
+        '      - "uses": actions/checkout@v4',
+        r"planted\.yml uses actions/checkout@v4$",
+    ),
+    (
+        HARDENING_PIN,
+        CONTROL_STEP,
+        '      - "us\\x65s": actions/checkout@v4',
+        r"^planted\.yml: line 17 was not read",
+    ),
+    (
+        HARDENING_PIN,
+        CONTROL_STEP,
+        '      - name: planted\n        "us\\x65s": actions/checkout@v4',
+        r"^planted\.yml: the reader does not read line 17: a key that is not a plain name",
+    ),
+    (
+        HARDENING_RUNNER,
+        "    runs-on: ubuntu-24.04",
+        "    'runs-on': self-hosted",
+        r"planted\.yml runs on self-hosted$",
+    ),
+    (
+        HARDENING_RUNNER,
+        "    runs-on: ubuntu-24.04",
+        '    "runs-on": [self-hosted, linux]',
+        r"planted\.yml runs on \['self-hosted', 'linux'\]$",
+    ),
+    (
+        HARDENING_RUNNER,
+        "  pull_request:",
+        '  "pull_request\\x5ftarget":',
+        r"^planted\.yml: the reader does not read line 6: a key that is not a plain name",
+    ),
+    (
+        HARDENING_RUNNER,
+        "  pull_request:",
+        "  pull_request_target:",
+        r"unexpectedly found in .* : planted\.yml$",
+    ),
+    (
+        HARDENING_TOKEN,
+        "  contents: read",
+        "  contents: read\n  pull-requests: write",
+        r"planted\.yml defaults its token to \{'contents': 'read', 'pull-requests': 'write'\}$",
+    ),
+    (
+        HARDENING_TOKEN,
+        "  contents: read",
+        '  contents: read\n  "pull\\x2drequests": write',
+        r"^planted\.yml: the reader does not read line 11: a key that is not a plain name",
+    ),
+)
 # The characters the reader refuses (SPEC-034 R7), which A10 plants at test time from these escapes,
 # so no committed file holds one: white space that YAML reads as text, and characters that end a
 # line of a script where YAML reads none.
