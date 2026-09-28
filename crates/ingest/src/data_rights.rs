@@ -11,6 +11,9 @@ use sqlx::SqliteConnection;
 pub const INGEST_CONTEXT: &str = "ingest";
 /// The table the sync record lives in (`migrations/002201_ingest_sync_runs.sql`).
 pub const SYNC_RUNS_TABLE: &str = "sync_runs";
+/// The table the change gate's anchor, the rescore flag and the window's base live in
+/// (`migrations/002301_ingest_state.sql`).
+pub const INGEST_STATE_TABLE: &str = "ingest_state";
 
 /// Ingest's implementation of the kernel's data-rights port.
 #[derive(Clone, Copy, Debug, Default)]

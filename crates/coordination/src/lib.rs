@@ -13,4 +13,5 @@
 #![deny(unused_must_use)]
 #![warn(missing_docs, clippy::all)]
 
+pub mod obligations;
 pub mod sync_cycle;

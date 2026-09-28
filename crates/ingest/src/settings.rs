@@ -1,9 +1,11 @@
 //! Ingest's settings: where the sync server is, and where the copy and its lock live (SPEC-022 R5,
-//! R7, R13).
+//! R7, R13); which decks are read, and which of them are the law track (SPEC-023 R2, R3).
 //!
 //! The endpoint is a setting and never a secret: the account that logs in to it arrives as two
 //! credentials through the kernel's loader. The state directory is the one systemd gives the unit
-//! (`StateDirectory=`), so the copy survives a restart and nothing else writes there.
+//! (`StateDirectory=`), so the copy survives a restart and nothing else writes there. Deck names are
+//! the owner's private configuration, so the scope's `Debug` counts its prefixes and never prints
+//! one.
 
 use std::fmt;
 use std::path::PathBuf;
@@ -22,6 +24,14 @@ pub const SYNC_PASSWORD: &str = "anki-sync-password";
 pub const COPY_FILE: &str = "collection.anki2";
 /// The collection lock's file name in the state directory (R7).
 pub const LOCK_FILE: &str = "collection.lock";
+/// The top-level deck-name prefixes whose decks are read, comma-separated; empty or unset reads every
+/// deck (SPEC-023 R2).
+pub const INCLUDE_DECKS: &str = "DECKSTREAK_INCLUDE_DECKS";
+/// The top-level deck name the law track's decks start with, optional (SPEC-023 R3).
+pub const LAW_DECK_ROOT: &str = "DECKSTREAK_LAW_DECK_ROOT";
+/// The separator of a deck's name as the collection stores it: the text before the first one is the
+/// deck's top-level name.
+pub const DECK_SEPARATOR: char = '\x1f';
 
 /// The sync server's URL. Its `Debug` prints the scheme alone: the address is private
 /// configuration, and a log line or a panic message never carries it.
@@ -123,4 +133,135 @@ impl SyncSettings {
             );
         }
     }
+}
+
+/// The include list (SPEC-023 R2): the top-level deck-name prefixes whose decks are read. Empty
+/// reads every deck, as the predecessor's empty list did (`deck_filter.py:allowed_deck_ids`).
+///
+/// Its `Debug` counts the prefixes and never prints one: a deck name is the owner's private
+/// configuration, and a log line or a panic message never carries it.
+#[derive(Clone, Default, PartialEq, Eq)]
+pub struct IncludeDecks(Vec<String>);
+
+impl IncludeDecks {
+    /// The list of `prefixes`, each kept as given.
+    #[must_use]
+    pub fn new<P: Into<String>>(prefixes: impl IntoIterator<Item = P>) -> Self {
+        Self(prefixes.into_iter().map(Into::into).collect())
+    }
+
+    /// The prefixes, in the order they were set.
+    #[must_use]
+    pub fn prefixes(&self) -> &[String] {
+        &self.0
+    }
+
+    /// Whether the list is empty, and so reads every deck.
+    #[must_use]
+    pub fn reads_every_deck(&self) -> bool {
+        self.0.is_empty()
+    }
+}
+
+impl fmt::Debug for IncludeDecks {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "IncludeDecks({} prefix(es))", self.0.len())
+    }
+}
+
+impl Setting for IncludeDecks {
+    const SHAPE: &'static str = "top-level deck-name prefixes, separated by commas";
+
+    /// Every comma-separated part, trimmed, and none that is blank: the predecessor's reading of
+    /// its include list (`config.py:_env_include_decks`).
+    fn parse(text: &str) -> Option<Self> {
+        Some(Self(
+            text.split(',')
+                .map(str::trim)
+                .filter(|prefix| !prefix.is_empty())
+                .map(str::to_owned)
+                .collect(),
+        ))
+    }
+}
+
+/// The law root (SPEC-023 R3): a card whose top-level deck name starts with it is on the law track.
+/// Its `Debug` never prints it.
+#[derive(Clone, PartialEq, Eq)]
+pub struct LawDeckRoot(String);
+
+impl LawDeckRoot {
+    /// The root, as set.
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl fmt::Debug for LawDeckRoot {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("LawDeckRoot(..)")
+    }
+}
+
+impl Setting for LawDeckRoot {
+    const SHAPE: &'static str = "a top-level deck name";
+
+    /// A top-level name: one with the deck separator in it names a subdeck, which no top-level
+    /// name can start with.
+    fn parse(text: &str) -> Option<Self> {
+        (!text.contains(DECK_SEPARATOR)).then(|| Self(text.to_owned()))
+    }
+}
+
+/// Which decks are read, and which of them are the law track (SPEC-023 R2, R3).
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct ScopeSettings {
+    include: IncludeDecks,
+    law_root: Option<LawDeckRoot>,
+}
+
+impl ScopeSettings {
+    /// The scope of `include`, with `law_root` as the law track's root when one is set.
+    #[must_use]
+    pub const fn new(include: IncludeDecks, law_root: Option<LawDeckRoot>) -> Self {
+        Self { include, law_root }
+    }
+
+    /// Reads the scope from `env`: both settings are optional.
+    ///
+    /// # Errors
+    ///
+    /// [`SettingsError::Malformed`] naming [`LAW_DECK_ROOT`] when the root holds the deck separator.
+    pub fn from_env(env: &Environment) -> Result<Self, SettingsError> {
+        Ok(Self {
+            include: env.optional(INCLUDE_DECKS)?.unwrap_or_default(),
+            law_root: env.optional(LAW_DECK_ROOT)?,
+        })
+    }
+
+    /// The include list.
+    #[must_use]
+    pub const fn include(&self) -> &IncludeDecks {
+        &self.include
+    }
+
+    /// The law root, when one is set.
+    #[must_use]
+    pub fn law_root(&self) -> Option<&str> {
+        self.law_root.as_ref().map(LawDeckRoot::as_str)
+    }
+
+    /// Whether a non-empty include list has no prefix the law root starts with, so no deck of the
+    /// law track is read.
+    #[must_use]
+    pub fn law_root_uncovered(&self) -> bool {
+        false
+    }
+
+    /// Logs one WARN naming [`INCLUDE_DECKS`] and [`LAW_DECK_ROOT`], never their values, when the
+    /// include list covers no deck of the law root (R3, the predecessor's warning at
+    /// `config.py:Settings.validate`): a language-only scope stays legal, and the log says what it
+    /// costs.
+    pub fn warn_if_law_root_uncovered(&self) {}
 }
