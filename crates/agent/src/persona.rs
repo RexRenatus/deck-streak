@@ -456,7 +456,9 @@ impl Template {
     ///
     /// # Errors
     ///
-    /// [`PersonaError::DutyNotOffered`] when the template's duties lack `duty`.
+    /// [`PersonaError::DutyNotOffered`] when the template's duties lack `duty`, and
+    /// [`PersonaError::UnknownSlot`] for a token that is not one of the four, which a loaded
+    /// template never holds.
     pub fn instantiate(
         &self,
         slots: &Slots,
@@ -466,10 +468,17 @@ impl Template {
         if !self.duties.contains(&duty) {
             return Err(PersonaError::DutyNotOffered);
         }
-        let mut text = self.body.clone();
-        for slot in Slot::ALL {
-            text = text.replace(slot.token(), slots.value(slot));
+        // One pass: each token is replaced once, so no value is ever read as a token itself.
+        let mut text = String::with_capacity(self.body.len());
+        let mut rest = self.body.as_str();
+        while let Some((before, after)) = rest.split_once("{{") {
+            let (inner, tail) = after.split_once("}}").ok_or(PersonaError::UnknownSlot)?;
+            let slot = Slot::parse(inner).ok_or(PersonaError::UnknownSlot)?;
+            text.push_str(before);
+            text.push_str(slots.value(slot));
+            rest = tail;
         }
+        text.push_str(rest);
         Ok(Persona {
             template: self.id.clone(),
             subject: self.subject.clone(),
