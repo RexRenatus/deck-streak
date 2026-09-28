@@ -140,6 +140,38 @@ pub struct SqliteCronLedger {
     db: Db,
 }
 
+/// A row as `cron_fires` stores it.
+struct Stored {
+    job_id: String,
+    fire_date: i64,
+    first_seen_at: i64,
+    updated_at: i64,
+    last_fire_at: Option<i64>,
+    ok_count: i64,
+    error_count: i64,
+    catchup_count: i64,
+    missed_count: i64,
+    last_outcome: String,
+}
+
+impl Stored {
+    /// The row, or `None` for an outcome the table's check would never have admitted.
+    fn into_row(self) -> Option<FireRow> {
+        Some(FireRow {
+            last_outcome: Outcome::parse(&self.last_outcome)?,
+            job_id: self.job_id,
+            fire_date: FireDate::from_epoch_day(self.fire_date),
+            first_seen_at: UtcMillis::from_epoch_millis(self.first_seen_at),
+            updated_at: UtcMillis::from_epoch_millis(self.updated_at),
+            last_fire_at: self.last_fire_at.map(UtcMillis::from_epoch_millis),
+            ok_count: self.ok_count,
+            error_count: self.error_count,
+            catchup_count: self.catchup_count,
+            missed_count: self.missed_count,
+        })
+    }
+}
+
 impl SqliteCronLedger {
     /// The ledger in `db`, whose migrations created `cron_fires`.
     #[must_use]
@@ -153,19 +185,74 @@ impl SqliteCronLedger {
     ///
     /// [`KernelError::Database`] when the read fails.
     pub async fn row(&self, job: &str, date: FireDate) -> Result<Option<FireRow>, KernelError> {
-        let _ = (&self.db, job, date);
-        Ok(None)
+        let day = date.epoch_day();
+        let stored = sqlx::query_as!(
+            Stored,
+            "SELECT job_id, fire_date, first_seen_at, updated_at, last_fire_at, ok_count, \
+             error_count, catchup_count, missed_count, last_outcome \
+             FROM cron_fires WHERE job_id = ?1 AND fire_date = ?2",
+            job,
+            day
+        )
+        .fetch_optional(self.db.reader())
+        .await?;
+        Ok(stored.and_then(Stored::into_row))
+    }
+}
+
+/// The counters one outcome adds: (`ok`, `error`, `catchup`, `missed`).
+const fn counters(outcome: Outcome) -> (i64, i64, i64, i64) {
+    match outcome {
+        Outcome::Ok => (1, 0, 0, 0),
+        Outcome::Error => (0, 1, 0, 0),
+        Outcome::Catchup => (0, 0, 1, 0),
+        Outcome::Missed => (0, 0, 0, 1),
     }
 }
 
 impl CronLedger for SqliteCronLedger {
     async fn claim(&self, job: &str, date: FireDate, at: UtcMillis) -> Result<bool, KernelError> {
-        let _ = (job, date, at);
-        Ok(true)
+        let (day, at) = (date.epoch_day(), at.epoch_millis());
+        let mut write = self.db.write().await?;
+        // The predecessor's conditional upsert: a first row always claims; an existing one only
+        // while it counts no attempt. The update's WHERE decides, and RETURNING yields a row only
+        // when a row was written.
+        let claimed = sqlx::query_scalar!(
+            r#"INSERT INTO cron_fires
+                   (job_id, fire_date, first_seen_at, updated_at, last_fire_at, catchup_count,
+                    last_outcome, created_at)
+               VALUES (?1, ?2, ?3, ?3, ?3, 1, 'catchup', ?3)
+               ON CONFLICT (job_id, fire_date) DO UPDATE SET
+                   catchup_count = cron_fires.catchup_count + 1,
+                   updated_at = excluded.updated_at,
+                   last_outcome = 'catchup',
+                   last_fire_at = excluded.updated_at
+               WHERE cron_fires.ok_count + cron_fires.error_count + cron_fires.catchup_count = 0
+               RETURNING 1 AS "claimed!: i64""#,
+            job,
+            day,
+            at
+        )
+        .fetch_optional(&mut *write)
+        .await?;
+        write.commit().await?;
+        Ok(claimed.is_some())
     }
 
     async fn release(&self, job: &str, date: FireDate, at: UtcMillis) -> Result<(), KernelError> {
-        let _ = (job, date, at);
+        let (day, at) = (date.epoch_day(), at.epoch_millis());
+        let mut write = self.db.write().await?;
+        sqlx::query!(
+            "UPDATE cron_fires SET catchup_count = max(catchup_count - 1, 0), \
+             ok_count = max(ok_count - 1, 0), updated_at = ?3 \
+             WHERE job_id = ?1 AND fire_date = ?2",
+            job,
+            day,
+            at
+        )
+        .execute(&mut *write)
+        .await?;
+        write.commit().await?;
         Ok(())
     }
 
@@ -177,12 +264,65 @@ impl CronLedger for SqliteCronLedger {
         once_a_day: bool,
         at: UtcMillis,
     ) -> Result<Recorded, KernelError> {
-        let _ = (job, date, outcome, once_a_day, at);
+        let (day, at) = (date.epoch_day(), at.epoch_millis());
+        let mut write = self.db.write().await?;
+        if outcome == Outcome::Missed && once_a_day {
+            // The evidence and the write share the one write lock, so no claim slips between them.
+            let answered = sqlx::query_scalar!(
+                r#"SELECT EXISTS(
+                       SELECT 1 FROM cron_fires WHERE job_id = ?1 AND fire_date = ?2
+                   ) AS "answered!: bool""#,
+                job,
+                day
+            )
+            .fetch_one(&mut *write)
+            .await?;
+            if answered {
+                return Ok(Recorded::Suppressed);
+            }
+        }
+        let (ok, error, catchup, missed) = counters(outcome);
+        let last_fire_at = outcome.ran().then_some(at);
+        let label = outcome.as_str();
+        sqlx::query!(
+            "INSERT INTO cron_fires \
+                 (job_id, fire_date, first_seen_at, updated_at, last_fire_at, ok_count, \
+                  error_count, catchup_count, missed_count, last_outcome, created_at) \
+             VALUES (?1, ?2, ?3, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?3) \
+             ON CONFLICT (job_id, fire_date) DO UPDATE SET \
+                 ok_count = cron_fires.ok_count + excluded.ok_count, \
+                 error_count = cron_fires.error_count + excluded.error_count, \
+                 catchup_count = cron_fires.catchup_count + excluded.catchup_count, \
+                 missed_count = cron_fires.missed_count + excluded.missed_count, \
+                 updated_at = excluded.updated_at, \
+                 last_outcome = excluded.last_outcome, \
+                 last_fire_at = coalesce(excluded.last_fire_at, cron_fires.last_fire_at)",
+            job,
+            day,
+            at,
+            last_fire_at,
+            ok,
+            error,
+            catchup,
+            missed,
+            label
+        )
+        .execute(&mut *write)
+        .await?;
+        write.commit().await?;
         Ok(Recorded::Written)
     }
 
     async fn latest(&self, job: &str) -> Result<Option<FireRow>, KernelError> {
-        let _ = job;
-        Ok(None)
+        let stored = sqlx::query_as!(
+            Stored,
+            "SELECT job_id, fire_date, first_seen_at, updated_at, last_fire_at, ok_count, \
+             error_count, catchup_count, missed_count, last_outcome \
+             FROM cron_fires WHERE job_id = ?1 ORDER BY fire_date DESC LIMIT 1",
+            job
+        )
+        .fetch_optional(self.db.reader())
+        .await?;
+        Ok(stored.and_then(Stored::into_row))
     }
 }

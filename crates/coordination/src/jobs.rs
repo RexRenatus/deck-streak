@@ -9,16 +9,21 @@
 
 use deck_streak_kernel::{Hour, StudyDayRule, UtcMillis, UtcOffset};
 
+const MINUTE_MS: i64 = 60_000;
+const HOUR_MS: i64 = 3_600_000;
+const DAY_MS: i64 = 86_400_000;
+const MINUTES_PER_HOUR: i64 = 60;
+
 /// How late a catch-up job's fire may run, in minutes; a later one is recorded `missed` and not
 /// run (`scheduler.py:CATCHUP_MAX_LATE_MIN`, proved by `goldens/scheduler.constants.json`).
-pub const CATCHUP_MAX_LATE_MIN: i64 = 0;
+pub const CATCHUP_MAX_LATE_MIN: i64 = 360;
 /// The minute the predecessor's sync ticks are offset by (`constants.py:SYNC_TICK_OFFSET_MIN`).
-pub const SYNC_TICK_OFFSET_MIN: i64 = 0;
+pub const SYNC_TICK_OFFSET_MIN: i64 = 2;
 /// The shortest sync interval the predecessor anchors to the hour
 /// (`constants.py:TICK_ALIGN_MIN_INTERVAL_MIN`).
-pub const TICK_ALIGN_MIN_INTERVAL_MIN: i64 = 0;
+pub const TICK_ALIGN_MIN_INTERVAL_MIN: i64 = 5;
 /// One study day, in seconds: the one scheduled sync's cadence (ADR-037).
-pub const SYNC_CADENCE_SECS: i64 = 0;
+pub const SYNC_CADENCE_SECS: i64 = 86_400;
 
 /// When a job fires, in the configured local time.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -54,24 +59,28 @@ pub struct Job {
     pub catch_up: bool,
 }
 
-/// The one scheduled sync of the study day.
+/// The one scheduled sync of the study day (ADR-037): at the rollover hour, minute 7, five minutes
+/// after the predecessor's first sync tick of the day, and claimed per study day. A sync missed by
+/// at most [`CATCHUP_MAX_LATE_MIN`] minutes runs once when its timer activates.
 pub const SYNC: Job = Job {
     id: "sync",
-    schedule: Schedule::Hourly { minute: 0 },
-    catch_up: false,
+    schedule: Schedule::DailyAtRollover { minute: 7 },
+    catch_up: true,
 };
 
-/// The database's daily upkeep.
+/// The database's daily upkeep, after the day turns over: between the predecessor's minutes 25 and
+/// 33 (ADR-027).
 pub const MAINTENANCE: Job = Job {
     id: "maintenance",
-    schedule: Schedule::Hourly { minute: 0 },
+    schedule: Schedule::DailyAtRollover { minute: 28 },
     catch_up: false,
 };
 
-/// The hourly dead-man watch and drift check.
+/// The hourly dead-man watch and drift check, at a minute the predecessor never uses, seven
+/// minutes after the daily sync's (ADR-027).
 pub const LIVENESS: Job = Job {
     id: "liveness",
-    schedule: Schedule::Hourly { minute: 0 },
+    schedule: Schedule::Hourly { minute: 14 },
     catch_up: false,
 };
 
@@ -88,7 +97,7 @@ impl Job {
     /// Whether the job fires at most once a day, so its runs claim their fire date (R5).
     #[must_use]
     pub const fn once_a_day(&self) -> bool {
-        false
+        !matches!(self.schedule, Schedule::Hourly { .. })
     }
 }
 
@@ -97,21 +106,38 @@ impl Schedule {
     /// `None` for an hourly one.
     #[must_use]
     pub const fn daily_slot(self, rollover: Hour) -> Option<(u8, u8)> {
-        let _ = rollover;
-        None
+        match self {
+            Self::DailyAtRollover { minute } => Some((rollover.get(), minute)),
+            Self::DailyAt { hour, minute } => Some((hour, minute)),
+            Self::Hourly { .. } => None,
+        }
     }
 
     /// The minute of the hour the schedule fires at.
     #[must_use]
     pub const fn minute(self) -> u8 {
-        0
+        match self {
+            Self::DailyAtRollover { minute }
+            | Self::DailyAt { minute, .. }
+            | Self::Hourly { minute } => minute,
+        }
     }
 
     /// The latest instant the schedule fires at, at or before `now`, local to `rule`'s offset.
     #[must_use]
     pub fn latest_at_or_before(self, now: UtcMillis, rule: StudyDayRule) -> UtcMillis {
-        let _ = rule;
-        now
+        let offset = offset_millis(rule.utc_offset());
+        let local = now.epoch_millis().saturating_add(offset);
+        let fire = if let Some((hour, minute)) = self.daily_slot(rule.rollover_hour()) {
+            let slot = local.div_euclid(DAY_MS) * DAY_MS
+                + i64::from(hour) * HOUR_MS
+                + i64::from(minute) * MINUTE_MS;
+            if slot <= local { slot } else { slot - DAY_MS }
+        } else {
+            let minute = i64::from(self.minute()) * MINUTE_MS;
+            (local - minute).div_euclid(HOUR_MS) * HOUR_MS + minute
+        };
+        UtcMillis::from_epoch_millis(fire.saturating_sub(offset))
     }
 
     /// The latest instant the schedule fires at between the start of `now`'s local calendar day
@@ -119,8 +145,9 @@ impl Schedule {
     /// `scheduler.py:_latest_elapsed_fire_today`.
     #[must_use]
     pub fn latest_elapsed_today(self, now: UtcMillis, rule: StudyDayRule) -> Option<UtcMillis> {
-        let _ = rule;
-        Some(now)
+        let fire = self.latest_at_or_before(now, rule);
+        let offset = rule.utc_offset();
+        (FireDate::of(fire, offset) == FireDate::of(now, offset)).then_some(fire)
     }
 }
 
@@ -145,8 +172,12 @@ impl FireDate {
     /// The local calendar date `instant` falls on, `offset` east of UTC.
     #[must_use]
     pub fn of(instant: UtcMillis, offset: UtcOffset) -> Self {
-        let _ = (instant, offset);
-        Self(0)
+        Self(
+            instant
+                .epoch_millis()
+                .saturating_add(offset_millis(offset))
+                .div_euclid(DAY_MS),
+        )
     }
 }
 
@@ -154,16 +185,27 @@ impl FireDate {
 /// `timebase.py:is_hour_alignable`.
 #[must_use]
 pub fn is_hour_alignable(interval_min: i64) -> bool {
-    let _ = interval_min;
-    false
+    (TICK_ALIGN_MIN_INTERVAL_MIN..=MINUTES_PER_HOUR).contains(&interval_min)
+        && MINUTES_PER_HOUR % interval_min == 0
 }
 
 /// The minutes of the hour the predecessor's sync ticks fire at, every `interval_min` minutes
 /// offset by `offset_min`, or none when the interval cannot be anchored to the hour: the port of
-/// `timebase.py:tick_minutes`, kept only to name the predecessor's sync minutes, which DeckStreak's
+/// `timebase.py:tick_minutes`, kept only to name the predecessor's sync minutes, which the table's
 /// slots keep off (ADR-011).
 #[must_use]
 pub fn tick_minutes(interval_min: i64, offset_min: i64) -> Vec<i64> {
-    let _ = (interval_min, offset_min);
-    Vec::new()
+    if !is_hour_alignable(interval_min) {
+        return Vec::new();
+    }
+    let base = offset_min.rem_euclid(interval_min);
+    let span = MINUTES_PER_HOUR / interval_min;
+    let mut ticks: Vec<i64> = (0..span).map(|tick| base + tick * interval_min).collect();
+    ticks.sort_unstable();
+    ticks
+}
+
+/// A fixed offset, in milliseconds east of UTC.
+fn offset_millis(offset: UtcOffset) -> i64 {
+    i64::from(offset.minutes()) * MINUTE_MS
 }

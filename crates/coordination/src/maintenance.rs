@@ -14,7 +14,7 @@ use crate::runner::{Done, Fire, Reason, Work};
 
 /// How many days a ledger row is kept, counted from its fire date
 /// (`database.py:CRON_FIRES_RETENTION_DAYS`).
-pub const CRON_FIRES_RETENTION_DAYS: i64 = 0;
+pub const CRON_FIRES_RETENTION_DAYS: i64 = 90;
 
 /// What one upkeep did.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -23,9 +23,10 @@ pub struct Upkeep {
     pub pruned: u64,
     /// Whether the checkpoint met a reader and completed only in part.
     pub checkpoint_busy: bool,
-    /// The write-ahead log's frames when the checkpoint ran.
+    /// The frames left in the write-ahead log: zero once a TRUNCATE checkpoint has reset the log,
+    /// and what a reader held back when it met one.
     pub log_frames: i64,
-    /// The frames the checkpoint moved into the database.
+    /// The frames the checkpoint moved into the database, on the same terms.
     pub checkpointed_frames: i64,
 }
 
@@ -35,8 +36,26 @@ pub struct Upkeep {
 ///
 /// [`KernelError::Database`] when a statement fails.
 pub async fn upkeep(db: &Db, today: FireDate) -> Result<Upkeep, KernelError> {
-    let _ = (db, today);
-    Ok(Upkeep::default())
+    let cutoff = today.epoch_day() - CRON_FIRES_RETENTION_DAYS;
+    let mut write = db.write().await?;
+    let pruned = sqlx::query!("DELETE FROM cron_fires WHERE fire_date < ?1", cutoff)
+        .execute(&mut *write)
+        .await?
+        .rows_affected();
+    // On the connection that just used the ledger, so the planner knows which tables to describe.
+    sqlx::query("PRAGMA optimize").execute(&mut *write).await?;
+    write.commit().await?;
+    // Outside any transaction: a checkpoint cannot run inside one.
+    let (busy, log_frames, checkpointed_frames): (i64, i64, i64) =
+        sqlx::query_as("PRAGMA wal_checkpoint(TRUNCATE)")
+            .fetch_one(db.reader())
+            .await?;
+    Ok(Upkeep {
+        pruned,
+        checkpoint_busy: busy != 0,
+        log_frames,
+        checkpointed_frames,
+    })
 }
 
 /// The `maintenance` job's work: one upkeep.
@@ -54,7 +73,16 @@ impl<'a> MaintenanceWork<'a> {
 
 impl Work for MaintenanceWork<'_> {
     async fn perform(&self, fire: &Fire) -> Result<Done, Reason> {
-        let _ = (fire, self.db);
+        let done = upkeep(self.db, fire.fire_date)
+            .await
+            .map_err(|_| Reason::new("maintenance_failed"))?;
+        tracing::info!(
+            pruned = done.pruned,
+            checkpoint_busy = done.checkpoint_busy,
+            log_frames = done.log_frames,
+            checkpointed_frames = done.checkpointed_frames,
+            "the database's upkeep ran"
+        );
         Ok(Done::Done)
     }
 }

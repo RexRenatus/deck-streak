@@ -104,6 +104,8 @@ Each choice below is the runner's, and each names what it was chosen against.
 - Good, because a failed job pages through the one alert path by failing its unit.
 - Bad, because the schedule exists twice, in the table and in the timer files; SPEC-032's test holds
   them equal, and the drift check watches the live host.
+- Bad, because the drift check reads the maintenance job's last fire, so a maintenance run started
+  by hand off its slot pages the drift once, at the next check; a manual run belongs at the slot.
 - Bad, because each run starts a process and opens the database; for a Rust binary that is
   milliseconds against the hourly liveness watch, the most frequent job.
 

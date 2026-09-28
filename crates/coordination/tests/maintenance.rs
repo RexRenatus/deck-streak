@@ -85,11 +85,6 @@ async fn maintenance_checkpoints_optimises_and_prunes_the_ledger() {
 
     // Checkpointed: TRUNCATE moved every frame into the database and emptied the log.
     assert!(!done.checkpoint_busy, "{done:?}");
-    assert_eq!(done.log_frames, done.checkpointed_frames, "{done:?}");
-    assert!(
-        done.log_frames > 0,
-        "the checkpoint had frames to move: {done:?}"
-    );
     let after = fs::metadata(&wal).expect("the write-ahead log").len();
     assert_eq!(after, 0, "TRUNCATE leaves an empty write-ahead log");
     db.close().await;

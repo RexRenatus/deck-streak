@@ -186,7 +186,7 @@ async fn a_catch_up_job_five_hours_late_is_claimed_and_run_once() {
     );
 
     // A second start of the same fire, a minute later, finds the claim and does nothing.
-    clock.advance(std::time::Duration::from_secs(60));
+    clock.advance(std::time::Duration::from_mins(1));
     let second = runner.run(&NOTIFY, &work).await.expect("the second run");
     assert_eq!(
         second.decision,
@@ -431,7 +431,7 @@ async fn an_attempted_send_without_a_message_id_releases_the_claim() {
             "{what}"
         );
         let after = row(&db, &NOTIFY, DAY).await.expect("the fire has its row");
-        let counted = if released { 0 } else { 1 };
+        let counted = i64::from(!released);
         assert_eq!(
             (after.catchup_count, after.ok_count),
             (counted, counted),
@@ -439,7 +439,7 @@ async fn an_attempted_send_without_a_message_id_releases_the_claim() {
         );
 
         // A later start within the window claims again only when the claim was released.
-        clock.advance(std::time::Duration::from_secs(600));
+        clock.advance(std::time::Duration::from_mins(10));
         let second = runner.run(&NOTIFY, &work).await.expect("the later run");
         let expected_runs = if released { 2 } else { 1 };
         assert_eq!(work.runs(), expected_runs, "{what}: {second:?}");

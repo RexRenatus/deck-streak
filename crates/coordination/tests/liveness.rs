@@ -27,6 +27,10 @@ const DAY_MS: i64 = 86_400_000;
 /// A synthetic day, as an epoch day number.
 const DAY: i64 = 20_000;
 
+/// One day of the drift test: the maintenance fire's hour and minute, then the pages of the first
+/// check after it and of a later one.
+type Day = ((i64, i64), Vec<Reason>, Vec<Reason>);
+
 /// The instant `hour`:`minute` UTC on epoch day `day`.
 const fn at(day: i64, hour: i64, minute: i64) -> UtcMillis {
     UtcMillis::from_epoch_millis(day * DAY_MS + hour * HOUR_MS + minute * MINUTE_MS)
@@ -244,7 +248,7 @@ async fn a_maintenance_fire_drifting_past_the_tolerance_pages() {
     let cycle = NoCycle::default();
     record_sync(&sync_runs, at(DAY, 4, 8), Ok(())).await;
     // (the maintenance fire's hour and minute, the pages of the 05:14 check, of the 06:14 check)
-    let days: [((i64, i64), Vec<Reason>, Vec<Reason>); 4] = [
+    let days: [Day; 4] = [
         (
             (5, 13),
             vec![Reason::new("maintenance_drift").with("skew_min", 45)],

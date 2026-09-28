@@ -147,9 +147,12 @@ async fn two_roles_opening_one_fresh_database_at_once_both_start() {
 #[tokio::test]
 async fn the_job_role_runs_a_job_by_id_and_refuses_an_unknown_one() {
     // A job of the table runs by its id, once, and exits 0: each leaves its outcome in the ledger.
+    // The watch runs first: on a fresh database it finds no sync attempt to call dead and no
+    // maintenance fire to call off its slot, whatever the time; a maintenance run started by hand
+    // off its slot is a drift the next check pages on, once.
     let directory = tempfile::tempdir().expect("a temporary directory");
     let state = [("STATE_DIRECTORY", directory.path().as_os_str())];
-    for id in examined("job(s) run by id", vec!["maintenance", "liveness"]) {
+    for id in examined("job(s) run by id", vec!["liveness", "maintenance"]) {
         let output = deckstreakd(&["job", id], &state);
         assert_eq!(output.status.code(), Some(0), "{id}: {}", describe(&output));
     }

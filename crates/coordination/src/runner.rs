@@ -19,16 +19,19 @@
 
 use std::fmt;
 use std::future::Future;
+use std::ops::ControlFlow;
 
 use deck_streak_ingest::sync::SyncReport;
 use deck_streak_ingest::sync_runs::{SqliteSyncRuns, StudyDayOutcome};
 use deck_streak_kernel::{Clock, Db, KernelError, StudyDay, StudyDayRule, UtcMillis};
 
-use crate::delivery::DeliveryMarker;
-use crate::jobs::{self, FireDate, Job};
+use crate::delivery::{DeliveryCounts, DeliveryMarker};
+use crate::jobs::{self, CATCHUP_MAX_LATE_MIN, FireDate, Job};
 use crate::ledger::{CronLedger, Outcome, Recorded};
 use crate::liveness::LivenessWork;
 use crate::maintenance::MaintenanceWork;
+
+const MINUTE_MS: i64 = 60_000;
 
 /// A reason code and the integers that go with it: all that an ERROR line of the runner says, so
 /// no text of a failure, a path or a value can reach the journal or the alert (R7).
@@ -167,10 +170,25 @@ impl Report {
     /// The exit code of an id the table does not hold.
     pub const UNKNOWN_JOB: u8 = 2;
 
+    /// A report of `decision` that pages on nothing.
+    #[must_use]
+    pub const fn quiet(decision: Decision) -> Self {
+        Self {
+            decision,
+            pages: Vec::new(),
+        }
+    }
+
     /// The run's exit code (R7).
     #[must_use]
     pub fn exit_code(&self) -> u8 {
-        0
+        if self.decision == Decision::UnknownJob {
+            Self::UNKNOWN_JOB
+        } else if self.pages.is_empty() {
+            0
+        } else {
+            Self::PAGE
+        }
     }
 }
 
@@ -217,28 +235,141 @@ impl<'a, L: CronLedger> Runner<'a, L> {
     /// written: the run then fails its unit, which pages.
     pub async fn run<W: Work>(&self, job: &Job, work: &W) -> Result<Report, KernelError> {
         let now = self.clock.now();
+        let scheduled = match self.scheduled(job, now).await? {
+            ControlFlow::Continue(scheduled) => scheduled,
+            ControlFlow::Break(report) => return Ok(report),
+        };
+        let fire_date = FireDate::of(scheduled, self.rule.utc_offset());
+        // The streak this run may break or extend, read before the run writes anything.
+        let previous = self
+            .ledger
+            .latest(job.id)
+            .await?
+            .map(|row| row.last_outcome);
+        if job.once_a_day() && !self.ledger.claim(job.id, fire_date, now).await? {
+            tracing::info!(
+                job = job.id,
+                fire_date = fire_date.epoch_day(),
+                "the fire already has an attempt: nothing to do"
+            );
+            return Ok(Report::quiet(Decision::AlreadyClaimed { fire_date }));
+        }
+        let study_day = self.rule.study_day(scheduled);
         let fire = Fire {
             job: *job,
-            fire_date: FireDate::from_epoch_day(0),
-            scheduled_at: now,
+            fire_date,
+            scheduled_at: scheduled,
             started_at: now,
-            study_day: self.rule.study_day(now),
-            sync: None,
+            study_day,
+            sync: self.sync_runs.study_day_outcome(study_day).await?,
         };
-        let _ = (self.ledger, self.sync_runs, self.marker);
-        let _ = work.perform(&fire).await;
+        let before = self.marker.counts();
+        let performed = work.perform(&fire).await;
+        let outcome = if performed.is_ok() {
+            Outcome::Ok
+        } else {
+            Outcome::Error
+        };
+        self.ledger
+            .record(
+                job.id,
+                fire_date,
+                outcome,
+                job.once_a_day(),
+                self.clock.now(),
+            )
+            .await?;
+        let released = self.release_undelivered(&fire, &performed, before).await?;
+        let pages = pages(&fire, performed, previous);
+        tracing::info!(
+            job = job.id,
+            fire_date = fire_date.epoch_day(),
+            outcome = outcome.as_str(),
+            released,
+            "the job ran"
+        );
         Ok(Report {
             decision: Decision::Ran {
-                fire_date: fire.fire_date,
-                outcome: Outcome::Ok,
-                released: false,
+                fire_date,
+                outcome,
+                released,
             },
-            pages: Vec::new(),
+            pages,
         })
     }
 
+    /// The scheduled instant a run of `job` at `now` answers, or, for a catch-up job that does not
+    /// run, its report: no fire of the day has elapsed, or the fire is too late and is recorded
+    /// `missed`.
+    async fn scheduled(
+        &self,
+        job: &Job,
+        now: UtcMillis,
+    ) -> Result<ControlFlow<Report, UtcMillis>, KernelError> {
+        if !job.catch_up {
+            return Ok(ControlFlow::Continue(
+                job.schedule.latest_at_or_before(now, self.rule),
+            ));
+        }
+        let Some(scheduled) = job.schedule.latest_elapsed_today(now, self.rule) else {
+            tracing::info!(
+                job = job.id,
+                "no fire of the day has elapsed: nothing to catch up"
+            );
+            return Ok(ControlFlow::Break(Report::quiet(Decision::NothingElapsed)));
+        };
+        let late = now.epoch_millis().saturating_sub(scheduled.epoch_millis());
+        if late <= CATCHUP_MAX_LATE_MIN * MINUTE_MS {
+            return Ok(ControlFlow::Continue(scheduled));
+        }
+        let fire_date = FireDate::of(scheduled, self.rule.utc_offset());
+        let recorded = self
+            .ledger
+            .record(job.id, fire_date, Outcome::Missed, job.once_a_day(), now)
+            .await?;
+        tracing::warn!(
+            job = job.id,
+            fire_date = fire_date.epoch_day(),
+            late_min = late / MINUTE_MS,
+            suppressed = recorded == Recorded::Suppressed,
+            "the fire is too late to run: it is recorded missed"
+        );
+        Ok(ControlFlow::Break(Report::quiet(Decision::Missed {
+            fire_date,
+            recorded,
+        })))
+    }
+
+    /// Releases `fire`'s claim when the notifier positively reported a failed delivery: the work
+    /// returned "not delivered", and a send was attempted during it with no message id back. A job
+    /// that never engaged the notifier keeps its claim, so its fire latches instead of retrying.
+    async fn release_undelivered(
+        &self,
+        fire: &Fire,
+        performed: &Result<Done, Reason>,
+        before: DeliveryCounts,
+    ) -> Result<bool, KernelError> {
+        if !(fire.job.once_a_day() && matches!(performed, Ok(Done::NotDelivered))) {
+            return Ok(false);
+        }
+        let after = self.marker.counts();
+        if after.attempted <= before.attempted || after.delivered > before.delivered {
+            return Ok(false);
+        }
+        self.ledger
+            .release(fire.job.id, fire.fire_date, self.clock.now())
+            .await?;
+        tracing::warn!(
+            job = fire.job.id,
+            fire_date = fire.fire_date.epoch_day(),
+            "a send was attempted and nothing was delivered: the claim is released"
+        );
+        Ok(true)
+    }
+
     /// Runs the table's job `id` with its own work: `sync` runs `cycle`, `maintenance` the
-    /// database's upkeep on `db`, and `liveness` the dead-man watch and the drift check.
+    /// database's upkeep on `db`, and `liveness` the dead-man watch and the drift check. No job
+    /// but `sync` is handed the cycle.
     ///
     /// # Errors
     ///
@@ -249,25 +380,41 @@ impl<'a, L: CronLedger> Runner<'a, L> {
         cycle: &C,
         db: &Db,
     ) -> Result<Report, KernelError> {
-        let Some(job) = jobs::job(id) else {
-            return Ok(Report {
-                decision: Decision::UnknownJob,
-                pages: Vec::new(),
-            });
-        };
-        let _ = cycle.run_scheduled().await;
-        if job == jobs::SYNC {
-            self.run(&job, &SyncWork::new(cycle)).await
-        } else if job == jobs::MAINTENANCE {
-            self.run(&job, &MaintenanceWork::new(db)).await
-        } else {
-            self.run(
-                &job,
-                &LivenessWork::new(self.ledger, self.sync_runs, db, self.rule),
-            )
-            .await
+        match jobs::job(id) {
+            Some(job) if job == jobs::SYNC => self.run(&job, &SyncWork::new(cycle)).await,
+            Some(job) if job == jobs::MAINTENANCE => {
+                self.run(&job, &MaintenanceWork::new(db)).await
+            }
+            Some(job) if job == jobs::LIVENESS => {
+                let watch = LivenessWork::new(self.ledger, self.sync_runs, db, self.rule);
+                self.run(&job, &watch).await
+            }
+            _ => {
+                tracing::error!("the job table holds no job of that id");
+                Ok(Report::quiet(Decision::UnknownJob))
+            }
         }
     }
+}
+
+/// The pages of `fire`'s run: what the work asked for, or its failure when it opens the job's error
+/// streak, the job's `previous` outcome not being an error. A repeat failure only logs. Each page
+/// is one ERROR line of reason codes and integers.
+fn pages(fire: &Fire, performed: Result<Done, Reason>, previous: Option<Outcome>) -> Vec<Reason> {
+    let (job, fire_date) = (fire.job.id, fire.fire_date.epoch_day());
+    let pages = match performed {
+        Ok(Done::Page(pages)) => pages,
+        Err(reason) if previous == Some(Outcome::Error) => {
+            tracing::warn!(job, fire_date, reason = %reason, "the job failed again: a repeat only logs");
+            Vec::new()
+        }
+        Err(reason) => vec![reason],
+        Ok(Done::Done | Done::NotDelivered) => Vec::new(),
+    };
+    for page in &pages {
+        tracing::error!(job, fire_date, reason = %page, "the job pages");
+    }
+    pages
 }
 
 /// The `sync` job's work: the one scheduled sync of the study day, and a failed sync reported as
@@ -285,8 +432,17 @@ impl<'a, C> SyncWork<'a, C> {
 }
 
 impl<C: SyncCycle> Work for SyncWork<'_, C> {
-    async fn perform(&self, fire: &Fire) -> Result<Done, Reason> {
-        let _ = (fire, self.cycle);
-        Ok(Done::Done)
+    async fn perform(&self, _fire: &Fire) -> Result<Done, Reason> {
+        match self.cycle.run_scheduled().await? {
+            SyncReport::Ran { run, .. } => match run.outcome {
+                Ok(()) => Ok(Done::Done),
+                Err(code) => {
+                    Err(Reason::new(code.as_str()).with("attempts", i64::from(run.attempts)))
+                }
+            },
+            // Refused (a scheduled run already recorded this study day) or debounced: the day's
+            // sync has its outcome, and this fire adds none.
+            SyncReport::RefusedToday | SyncReport::Debounced { .. } => Ok(Done::Done),
+        }
     }
 }
