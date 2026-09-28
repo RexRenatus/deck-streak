@@ -8,10 +8,10 @@ decision-makers: "@RexRenatus (owner), the DeckStreak architect"
 
 ## Context and Problem Statement
 
-The backend runs on a shared VM with native systemd units (no containers) beside the
-predecessor and a co-hosted service. The owner decided deploys run from the maintainer's box, from
-a tag on `main` only, never from CI; the VM never compiles. Backups on the VM (Litestream, a daily
-backup timer, a weekly restore drill) cover only the predecessor's files today.
+The backend runs as native systemd units (no containers) on one small host shared with other
+services, within a stated budget (CHARTER 3). The owner decided deploys run from the maintainer's
+box, from a tag on `main` only, never from CI; the host never compiles. DeckStreak's database needs
+continuous replication, a daily backup and a weekly restore drill.
 
 ## Decision Drivers
 
@@ -23,7 +23,7 @@ backup timer, a weekly restore drill) cover only the predecessor's files today.
 
 - One release binary `deckstreakd`, units per role (API, bot, scheduled jobs as timers), installed side by side in a releases directory with an atomic `current` switch, deployed by `deploy/deploy.sh` from a verified release artifact of a `main` tag; secrets as systemd encrypted credentials — chosen: the durable-services practice, rollback by redeploying the previous tag.
 - Deploy from GitHub Actions — rejected by the owner: a public repository's CI must hold no deploy credential.
-- Containers — rejected because the radar holds containers at assess and the host runs none.
+- Containers — rejected because the radar holds containers at assess.
 - Secrets in an environment file — rejected because the environment is readable from `/proc` for the life of the process and the packs refuse it.
 
 ## Decision Outcome
@@ -39,8 +39,8 @@ rail and stored with `systemd-creds encrypt` (host key or TPM), and units read t
 is on `main`, installs the artifact beside the previous releases, switches `current` with
 `mv -T`, and restarts; `deploy/rollback.sh` redeploys the previous tag. Backups: a Litestream 0.5
 stanza for DeckStreak's database (global snapshot retention inside the declared backup window),
-DeckStreak added to the daily backup and the weekly restore drill, and the offsite bucket chosen
-with the owner (gate 7).
+a daily backup and a weekly restore drill that cover it, and the offsite bucket chosen with the
+owner (gate 7).
 
 ### Consequences
 
@@ -54,7 +54,7 @@ The durable-services, rust-service, observability and release-ops rows over `dep
 ## What would make this wrong
 
 - The host's systemd version lacks `systemd-creds` or `LoadCredentialEncrypted` (systemd 250 or later has both; re-check on an OS change).
-- Disk headroom on the VM falls below the budget (disk, not memory, is the host's binding limit).
+- Disk headroom on the host falls below DeckStreak's budget.
 
 ## More Information
 
@@ -67,3 +67,8 @@ fed from the secret manager by the private rail's fetch helper, so no value is e
 host's disk; the first item under "What would make this wrong" gives way to ADR-038's own (a systemd
 that cannot load a credential from a socket). The rest of this ADR stands: the units per role, the
 hardening, the budget, the deploy from a tag, the rollback and the backups.
+
+Amendment (2026-09-28): passages describing the host's other services and its capacity, in the
+context, a considered option, the outcome and a condition that would make this wrong, were redacted
+under the public-prose rule (ADR-059). This is a security redaction, the one kind of edit an
+accepted document's text may take; the originals remain in the repository's history.

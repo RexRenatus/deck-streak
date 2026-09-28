@@ -9,8 +9,8 @@ decision-makers: "@RexRenatus (owner), the DeckStreak architect"
 ## Context and Problem Statement
 
 The owner decided the daily digest's coaching, the readings and every other duty run as Claude
-Code through the owner's subscription proxy, "as if it is operating here", on the VM for data
-locality with the vault replica and the database. The proxy is bound to loopback on the
+Code through the owner's subscription proxy, "as if it is operating here", on DeckStreak's host,
+for data locality with the database and the files it reads. The proxy is bound to loopback on the
 maintainer's machine. An earlier agent path is replaced by this one, side by side; the agent reaches
 its model only through the route ADR-054 names.
 
@@ -71,3 +71,7 @@ Amendment (2026-09-28): two passages describing co-hosted infrastructure, one in
 in a considered option, were redacted under the public-prose rule. This is a security redaction, the
 one kind of edit an accepted document's text may take; the originals remain in the repository's
 history.
+
+Amendment (2026-09-28): a third passage describing co-hosted infrastructure, in the context, was
+redacted under the public-prose rule (ADR-059). This is a security redaction, the one kind of edit
+an accepted document's text may take; the original remains in the repository's history.

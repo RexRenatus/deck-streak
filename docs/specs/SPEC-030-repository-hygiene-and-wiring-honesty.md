@@ -18,8 +18,8 @@
     `main` from its `branches` list would pass every test above while release pull requests went
     unchecked.
   - **Temporary files.** The predecessor pinned pytest's `tmp_path_retention_policy = "failed"` so
-    green runs left nothing on the small shared host (`pyproject.toml`, `tests/test_tmp_retention.py`
-    at predecessor `27ee2bc`). DeckStreak has no such guard, and two of its tests already leak:
+    green runs left nothing behind (`pyproject.toml`, `tests/test_tmp_retention.py` at predecessor
+    `27ee2bc`). DeckStreak has no such guard, and two of its tests already leak:
     `scripts/tests/test_pack_wiring.py` and `tools/parity-oracle/test_generate.py` both call
     `tempfile.mkdtemp()` and never remove the directory (read at `main` e05dfa5; SPEC-029 repairs
     the second).
@@ -215,3 +215,9 @@ maintainer's box.
 - **A pack flips between green and void across deliveries.** R6 refuses only when every blocking
   row examined something and passed; a void row keeps a pack pending, so a subject that disappears
   is reported as void, never hidden.
+
+## 7. Amendments
+
+Amendment (2026-09-28): one passage describing the host beside other services, in section 1, was
+redacted under the public-prose rule (ADR-059). This is a security redaction, the one kind of edit
+an accepted document's text may take; the original remains in the repository's history.

@@ -8,10 +8,9 @@ decision-makers: "@RexRenatus (owner), the DeckStreak architect"
 
 ## Context and Problem Statement
 
-The predecessor is live and serving the owner every day, and it holds contracts other systems
-rely on: the stats file written to the vault at 04:05 that a probe expects between 04:00 and
-04:20, the drill post-back, and (by design) the readings folder. A big-bang switch would risk
-every one of them.
+The predecessor serves the owner every day, and it holds contracts other systems rely on: the
+stats file it writes to the vault, the drill post-back, and (by design) the readings folder. A
+big-bang switch would risk every one of them.
 
 ## Decision Drivers
 
@@ -31,13 +30,13 @@ Chosen option. During side by side, DeckStreak's jobs keep off v9's schedule slo
 notifications are limited to the kinds v9 does not send (the readings first). A cutover checklist
 (W8) moves each remaining contract: the stats file, the drill post-back and the digests, each with
 a verification run. The v9 import (ADR-008) runs last, from a verified backup. v9 is stopped and
-retired only by the owner's explicit go (owner gate 5), and its units are kept disabled, not
-deleted, until the owner approves removal.
+retired only by the owner's explicit go (owner gate 5), and it is kept disabled, not deleted,
+until the owner approves its removal.
 
 ### Consequences
 
 - Good, because the owner can compare the two surfaces day by day.
-- Bad, because memory on the VM holds both services for a while; the host budget is sized for it, and a resize is an owner decision if it does not fit.
+- Bad, because both run for a while, and DeckStreak's host budget is sized to hold through it; a resize is an owner decision if it does not fit.
 
 ### Confirmation
 
@@ -45,8 +44,13 @@ The W8 cutover SPEC's checklist, each item a command with its output; the owner'
 
 ## What would make this wrong
 
-- Running both services exceeds the VM's memory budget (the memory watch pages); that forces an owner decision on a resize or a faster cutover.
+- DeckStreak exceeds its memory budget while both run (the memory watch pages); that forces an owner decision on a resize or a faster cutover.
 
 ## More Information
 
 ADR-008; ADR-010; docs/schematics/data-flow.md.
+
+Amendment (2026-09-28): passages describing the predecessor as a running service and the host's
+memory, in the context, the outcome, a consequence and a condition that would make this wrong, were
+redacted under the public-prose rule (ADR-059). This is a security redaction, the one kind of edit
+an accepted document's text may take; the originals remain in the repository's history.

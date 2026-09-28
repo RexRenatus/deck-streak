@@ -8,8 +8,8 @@ decision-makers: "@RexRenatus (owner), the DeckStreak architect"
 
 ## Context and Problem Statement
 
-The predecessor keeps its state in one 2 MB SQLite file at `user_version = 24`, replicated by
-Litestream. DeckStreak needs a store that fits a small VM, survives a crash, and can take over the
+The predecessor keeps its state in one SQLite database whose schema is at `user_version = 24`.
+DeckStreak needs a store that fits a small VM, survives a crash, and can take over the
 predecessor's state at cutover without trusting anyone's reading of it.
 
 ## Decision Drivers
@@ -51,3 +51,7 @@ The data-migration pack's rows once `data-migration.json` lands (W8); ledger-sql
 ## More Information
 
 The ledger-sqlite and data-migration packs; ADR-010 for backups; ADR-011 for cutover.
+
+Amendment (2026-09-28): one passage describing the predecessor as a running service, in the context,
+was redacted under the public-prose rule (ADR-059). This is a security redaction, the one kind of
+edit an accepted document's text may take; the original remains in the repository's history.

@@ -19,10 +19,10 @@
   scanner name the maintainer's private secret, so neither is vendored (`.packs/VENDORED.json`,
   `excluded`). Its scanner reads shell and reads a runner written in Rust or Python as no launch,
   which is VOID. DeckStreak therefore writes its own generic shell runner under `agent/`.
-- **What must not be repeated.** The second brain's nightly AI pass has failed night after night
-  with a message that named no cause, and its provider ran out of credit mid-request (the second
-  brain's inventory, private). The charter asks the opposite: each run capped, a failure that says
-  why, and nothing delivered or written when a step fails (constraints 16 and 17).
+- **What must not be repeated.** An AI pass that fails night after night with a message that names
+  no cause, or stops mid-request when its provider's credit runs out, tells the owner nothing. The
+  charter asks the opposite: each run capped, a failure that says why, and nothing delivered or
+  written when a step fails (constraints 16 and 17).
 - **The route is optional (ADR-054).** At gate 6 the device key became conditional on the owner's
   confirmation, with an API key as the alternative, and the first deploy must not depend on it. An
   unconfigured host has no AI route; every duty must then be whole and quiet, recording that the
@@ -225,8 +225,8 @@ A14: cargo test -p deck-streak-agent --test runner -- --exact an_absent_route_re
   (ADR-004); the CI tests cover the same exits against fakes.
 - **The gate's subprocesses are slow on the small host.** Measured by the run's duration in
   `agent_runs`; a reading's gate is a few dozen standard-library Python processes.
-- **Python is removed from the host with the predecessor.** The gate needs `python3`; the host
-  budget and the deploy templates (SPEC-032) name it as a runtime dependency.
+- **The host lacks `python3`.** The gate needs it; the host budget and the deploy templates
+  (SPEC-032) name it as a runtime dependency.
 - **An attack the red-team cases do not cover.** Mitigated by the tool-less task (nothing can carry
   data out) and the output-links class; new cases are added with each new untrusted source.
 - **A cap too tight for a long reading.** Visible as `time_cap` verdicts in `agent_runs` and in the

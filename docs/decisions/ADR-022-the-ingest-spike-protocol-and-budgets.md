@@ -17,12 +17,11 @@ what, and against which numbers?
 
 ## Decision Drivers
 
-- The host: two vCPU and 1.9 GiB of RAM shared with the predecessor and a co-hosted stack; the
-  predecessor's own unit is capped far below the host, and DeckStreak's share is SPEC-032's host
-  budget.
+- The host is small and shared with other services (CHARTER 3); DeckStreak's share is SPEC-032's
+  host budget.
 - The host never compiles (CHARTER 3); CI builds on GitHub-hosted runners whose gate job has a
   60-minute timeout (SPEC-002's `ci.yml`).
-- The disk, not memory, is the host's binding limit (ADR-010), and releases are kept side by side.
+- Releases are kept side by side on the host's disk (ADR-010).
 - The measurement must be repeatable by anyone from the public repository: synthetic data only.
 
 ## Considered Options (the alternatives it was chosen against)
@@ -30,7 +29,7 @@ what, and against which numbers?
 - Fix the protocol and the budgets now, measure once in the delivery, and let the numbers select the engine — chosen: the pass mark cannot bend toward the measurement, and a failure selects the fallback ADR-009 already names.
 - Measure first and set the budgets from what was measured — rejected because a budget read off the measurement accepts whatever was measured.
 - Accept the engine if it builds — rejected because memory, not compilation, is what the host cannot give back.
-- Measure on the host — rejected because the host never compiles, is shared and live, and the synthetic collection would sit on its constrained disk; the host's own view arrives with the memory watch in W2.
+- Measure on the host — rejected because the host never compiles and is in live use; the host's own view arrives with the memory watch in W2.
 - Measure against a copy of the owner's collection — rejected because the repository is public and the measurement must be reproducible by anyone; the synthetic collection is sized to exceed a large personal collection.
 
 ## Decision Outcome
@@ -72,9 +71,8 @@ criteria are built.
 
 The measured numbers are ADR-009's Confirmation. What admitting the engine took:
 
-- **The tag and its feature.** `26.05`: the predecessor's lockfile pins Anki's Python package at
-  `26.5`, and Anki tags that release `26.05`. The feature is `rustls`, the TLS backend Anki's own
-  build selects on Linux for the package the predecessor runs.
+- **The tag and its feature.** The engine's tag is `26.05`. The feature is `rustls`, the TLS
+  backend Anki's own build selects on Linux.
 - **Two git sources.** Anki's repository, and `ankitects/rust-url`, the fork the engine's own
   manifest pins by revision for `percent-encoding-iri`. `allow-git` names exactly these two
   (SPEC-022 §7).
@@ -121,8 +119,8 @@ Confirmation section, and ADR-009's status changes with them.
 
 ## What would make this wrong
 
-- The host is resized or the predecessor retires, changing the memory the job unit can have (then
-  SPEC-032's budget and these numbers move together, by a new ADR).
+- The host is resized or DeckStreak's host budget changes, changing the memory the job unit can
+  have (then SPEC-032's budget and these numbers move together, by a new ADR).
 - GitHub's hosted runners change size, making the build budget measure a different machine.
 - Anki's engine grows past a budget in a later release; the pinned tag holds until an upgrade
   delivery re-runs this protocol.
@@ -153,3 +151,9 @@ repository, from which no package comes while the patch holds. This takes effect
 delivery accepts ADR-058; until then the pin rule above stands. The protocol and the budgets do not
 change. They were run again at 26.09.3, where every budget held (`engine-measure.yml` run
 36374499584, SPEC-055 §7). The fork is removed when an upstream release carries the fix (#233).
+
+Amendment (2026-09-28): passages describing the host's capacity and its other services, and another
+service's software version, in the decision drivers, a considered option, the record of what the
+engine brought and a condition that would make this wrong, were redacted under the public-prose rule
+(ADR-059). This is a security redaction, the one kind of edit an accepted document's text may take;
+the originals remain in the repository's history.
