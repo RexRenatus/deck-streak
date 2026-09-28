@@ -212,6 +212,16 @@ class WorkflowsAreHardened(unittest.TestCase):
                 "repository: $(git clone https://github.com/example-org/other-repository.git)",
                 "clone-outside-a-run-step.yml:jobs.build.steps[1].env.BASH_ENV: points git at a "
                 "URL: $(git fetch https://github.com/example-org/other-repository.git main)",
+                "environment-the-checker-does-not-read.yml:env: sets an environment the checker "
+                "does not read",
+                "environment-the-checker-does-not-read.yml:jobs.build.env: sets an environment the "
+                "checker does not read",
+                "environment-the-checker-does-not-read.yml:jobs.build.container: runs in a "
+                "container the checker does not read",
+                "environment-the-checker-does-not-read.yml:jobs.build.steps[0].env: sets an "
+                "environment the checker does not read",
+                "environment-the-checker-does-not-read.yml:jobs.contained.container.env: sets an "
+                "environment the checker does not read",
                 "every-secret.yml:jobs.build.steps[0].env.CHOSEN: reads the whole secrets "
                 "context, or a secret named at run time",
                 "every-secret.yml:jobs.build.steps[0].run: reads the whole secrets context, or a "
@@ -220,6 +230,22 @@ class WorkflowsAreHardened(unittest.TestCase):
                 "https://github.com/example-org/other-repository.git main",
                 "fetch-of-a-url.yml:jobs.build.steps[2]: points git at a URL: git pull --ff-only "
                 "https://github.com/example-org/other-repository.git main",
+                "git-configured-from-the-environment.yml:env.GIT_CONFIG_COUNT: names a git "
+                "variable: GIT_CONFIG_COUNT",
+                "git-configured-from-the-environment.yml:env.GIT_CONFIG_KEY_0: names a git "
+                "variable: GIT_CONFIG_KEY_0",
+                "git-configured-from-the-environment.yml:env.GIT_CONFIG_VALUE_0: names a git "
+                "variable: GIT_CONFIG_VALUE_0",
+                "git-configured-from-the-environment.yml:jobs.build.env.GIT_CONFIG_PARAMETERS: "
+                "names a git variable: GIT_CONFIG_PARAMETERS",
+                "git-configured-from-the-environment.yml:jobs.build.container.env.GIT_SSH_COMMAND: "
+                "names a git variable: GIT_SSH_COMMAND",
+                "git-configured-from-the-environment.yml:jobs.build.container.options: names a git "
+                "variable: GIT_CONFIG_GLOBAL",
+                "git-configured-from-the-environment.yml:jobs.build.steps[0].env.git_ssh_command: "
+                "names a git variable: git_ssh_command",
+                "git-configured-from-the-environment.yml:jobs.build.steps[1].run: names a git "
+                "variable: GIT_ASKPASS",
                 "key-the-reader-refuses.yml:line 18: a key that is not a plain name is not read",
                 "key-the-reader-refuses.yml:line 20: a key that is not a plain name is not read",
                 "key-the-reader-refuses.yml:line 22: a key that is not a plain name is not read",
@@ -255,6 +281,8 @@ class WorkflowsAreHardened(unittest.TestCase):
                 "plain is not read",
                 "secret-in-a-form-the-reader-refuses.yml:line 35: a flow list whose items are not "
                 "plain is not read",
+                "secret-in-a-form-the-reader-refuses.yml:jobs.build.steps[1].env: sets an "
+                "environment the checker does not read",
                 "secret-in-a-larger-expression.yml:jobs.build.steps[0].env.EITHER: reads the "
                 "secret EXAMPLE_TOKEN",
                 "secret-in-a-larger-expression.yml:jobs.build.steps[0].env.FORMATTED: reads the "
