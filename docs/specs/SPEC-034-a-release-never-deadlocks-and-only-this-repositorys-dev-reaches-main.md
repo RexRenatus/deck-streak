@@ -67,8 +67,10 @@ R7. No workflow reads a secret other than `GITHUB_TOKEN`, and none checks out or
     workflows, so the same code judges `.github/workflows/` and the planted workflows under
     `scripts/tests/fixtures/secrets-and-checkouts/`. A workflow is a `.yml` or `.yaml` file, as
     GitHub reads both, and the hardening tests beside the checker (a read-only token, SHA pins,
-    hosted runners and no privileged trigger) read both too. The checker refuses each of these by
-    name, naming the file, the place in it and the secret, repository or command:
+    hosted runners and no privileged trigger) read both too. The hardening tests read keys the
+    way the checker does: each reads a workflow through the checker's reader, and a form the
+    reader does not read fails the test. The checker refuses each of these by name, naming the
+    file, the place in it and the secret, repository or command:
     - a read of any secret but `GITHUB_TOKEN`, in any expression form: `secrets.NAME` in any
       spacing or case, `secrets['NAME']`, a secret inside a larger expression, and the secrets
       context whole (`toJSON(secrets)`, or a secret named at run time);
@@ -104,7 +106,7 @@ R7. No workflow reads a secret other than `GITHUB_TOKEN`, and none checks out or
 | A10 | each planted secret or foreign repository is refused by name | `test_ci_workflows.py` |
 | A11 | this repository's token and checkout are admitted | `test_ci_workflows.py` |
 | A12 | an empty workflow directory is refused | `test_ci_workflows.py` |
-| A13 | a .yaml workflow is held to the same hardening rules, and an action is pinned only in its plain form | `test_ci_workflows.py` |
+| A13 | a .yaml workflow is held to the same hardening rules, an action is pinned only in its plain form, and the hardening tests read keys the way the checker does | `test_ci_workflows.py` |
 
 ```acceptance
 A1: python3 -m unittest discover -s scripts/tests -p test_rulesets.py -k main_does_not_require_an_up_to_date_head
@@ -162,6 +164,14 @@ the control with its action written in forms other than its plain one, and the t
 an action is pinned only as its owner, its name and any path, each joined by a single slash, then
 a full commit SHA. The tests and the checker take their files from one function, `workflow_files`,
 which reads both extensions.
+- The hardening tests read keys the way the checker does. Each reads a workflow through
+  `read_workflow`, the checker's reader, and a form the reader does not read, or a line it cannot
+  place, fails the test by the file's name. The token test reads the default permissions as the
+  reader reads them, the SHA-pin test every `uses` the reader reads, and the runner test every
+  `runs-on`.
+- A13 plants keys in the control, one line at a time, and judges it beside the live workflows:
+  keys the reader reads, a trigger, and forms the reader does not read. The test that judges each
+  plant refuses it by the file's name.
 
 ## 4. File manifest
 
@@ -181,7 +191,7 @@ which reads both extensions.
 | `docs/specs/SPEC-034-a-release-never-deadlocks-and-only-this-repositorys-dev-reaches-main.md` | `repo` | added |
 | `docs/red-first/SPEC-034.md` | `repo` | added |
 | `changelog.d/fix-release-flow-and-forks.md` | `repo` | added |
-| `scripts/tests/test_ci_workflows.py` | `repo` | changed by the amendment (section 7): A9 to A13, the checker they run, its workflow reader, `workflow_files` and the SHA-pin pattern |
+| `scripts/tests/test_ci_workflows.py` | `repo` | changed by the amendment (section 7): A9 to A13, the checker they run, its workflow reader, `workflow_files`, the SHA-pin pattern and the hardening tests' reading of each workflow |
 | `scripts/tests/fixtures/secrets-and-checkouts/refused/` | `repo` | added by the amendment: the fourteen planted workflows the checker refuses, `another-repository-in-other-forms.yml`, `checkout-of-another-repository.yml`, `clone-of-another-repository.yml`, `every-secret.yml`, `fetch-of-a-url.yml`, `key-the-reader-refuses.yml`, `run-by-alias.yml`, `second-of-each.yml`, `secret-in-a-form-the-reader-refuses.yml`, `secret-in-a-larger-expression.yml`, `secret-in-a-quoted-value.yml`, `secret-in-any-spacing.yml`, `secret-in-brackets.yml` and `secrets-inherited.yaml` |
 | `scripts/tests/fixtures/secrets-and-checkouts/admitted/` | `repo` | added by the amendment: the six planted workflows it admits, `checkout-of-this-repository.yml`, `github-token.yml`, `not-the-secrets-context.yml`, `quoted-values.yml`, `refspec-of-this-repository.yml` and `secrets-github-token.yml` |
 | `scripts/tests/fixtures/workflow-hardening/` | `repo` | added by the amendment: A13's planted workflows, `hardened.yml` and `unhardened.yaml` |
