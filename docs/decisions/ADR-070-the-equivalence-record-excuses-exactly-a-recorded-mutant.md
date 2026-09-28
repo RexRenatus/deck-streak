@@ -208,8 +208,9 @@ Chosen, and what each was chosen against:
     the crate's interface only to test it, and every other crate's unit tests in `src` would meet
     the same VOID.
   - "No listing means not-applicable", deciding from cargo-mutants' empty listing alone: rejected,
-    because a production line that no tool can mutate, a constant's, lists no mutant either, and it
-    must still read VOID without a covering row (SPEC-039 R8). A28 plants that constant.
+    because a production line that no tool can mutate, a constant with a literal value, lists no
+    mutant either, and it must still read VOID without a covering row (SPEC-039 R8). A28 plants
+    such a constant.
   - Deciding from the listing and the spans together, listing every `src` change first: rejected,
     because an empty listing cannot tell a test module from a constant, so the span reading is
     needed anyway, and the listing would cost a tool install on every test-only diff.

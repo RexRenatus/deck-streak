@@ -363,8 +363,9 @@ R22. In the Rust class, a changed line is **test-only** when every token of code
       listing names that line's mutants: the tool lists none inside a test item.
     - `shards` reads the listing step's empty output as an empty listing, because cargo-mutants
       exits 0 before it prints when no mutant overlaps the diff; a missing listing stays VOID. So a
-      production line that no tool can mutate, a constant's, still applies and reads VOID without
-      a covering row (SPEC-039 R8): an empty listing never makes a class not-applicable.
+      production line that no tool can mutate, a constant with a literal value, still applies and
+      reads VOID without a covering row (SPEC-039 R8): an empty listing never makes a class
+      not-applicable. (cargo-mutants does mutate an operator in a constant's initializer.)
     - Every other shape stays production code: a `cfg` that joins `test` to another predicate
       (`not(test)`, `any(test, ...)`), which the tool mutates; an inner `#![cfg(test)]`; a
       `#[cfg(test)]` statement or expression; a `#[cfg(test)]` item of another kind; and a module
