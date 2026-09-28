@@ -11,19 +11,29 @@ the tree this script belongs to. `systemctl cat` prints every file systemd merge
 unit's own file first, each under a `# <path>` line, and one output may hold several units.
 
 The rail installs every template byte for byte and writes one drop-in per unit,
-`<unit>.d/10-rail.conf`, which resets and sets each neutral value the contract lists (ADR-061). Per
-unit, this check refuses:
+`<unit>.d/10-rail.conf`, which resets and sets each neutral value the contract lists (ADR-061).
+Each file is read as systemd reads it (SPEC-061 §8): its line ends, comments, continued lines,
+sections and quotes. A construct systemd could read otherwise is refused, never guessed: a
+byte-order mark, a section header other than [Unit], [Install] and the unit type's own, an
+assignment before the first header, a file header not after an empty line, and a value written
+with a backslash escape, a `..` segment, or a specifier other than the unit's own names. Per unit,
+this check refuses:
 
 * a neutral value left in force: a value the contract lists for the unit, or any value that still
-  carries a neutral one (the example release root, the example settings file, a calendar in the
-  neutral zone), which no later empty assignment reset;
+  carries a neutral one as systemd resolves it (the example release root, the example settings
+  file, a calendar that fires at the neutral zone's instants), which no later empty assignment
+  reset; and a calendar that names no zone this check can read;
 * a credential from anywhere but the socket, in any of the unit's files: `LoadCredentialEncrypted=`,
   `SetCredential=`, `SetCredentialEncrypted=`, `ImportCredential=`, or a `LoadCredential=` whose
   source is not the socket (ADR-038);
-* an `Environment=` assignment whose variable's name says it carries a secret;
+* an `Environment=` assignment whose variable's name says it carries a secret, or holds a
+  specifier;
+* every other route a value takes into the unit's process: a `PassEnvironment=` whose name says it
+  carries a secret, `StandardInputText=`, `StandardInputData=`, `StandardInput=file:`, and a second
+  `EnvironmentFile=` in force (R6 gives a unit one);
 * a drop-in other than the rail's own, `<unit>.d/10-rail.conf` beside the unit's file.
 
-A refused `Environment=` or credential line is named by its key and its variable, never its value.
+A refused line is named by its key and its variable, never its value.
 Exit 0 when every unit passes, 1 when one is refused, and 2 when the input held no unit or the
 contract cannot be read: a check that judged nothing did not pass.
 
@@ -88,7 +98,17 @@ SECRET_NAME = re.compile(
     re.IGNORECASE,
 )
 # Keys whose value can hold a secret: a refusal names the key alone.
-SECRET_BEARING = frozenset({"Environment", "SetCredential", "SetCredentialEncrypted"})
+SECRET_BEARING = frozenset(
+    {
+        "Environment",
+        "SetCredential",
+        "SetCredentialEncrypted",
+        "StandardInputText",
+        "StandardInputData",
+    }
+)
+# Keys that give the unit's process its standard input from the unit's own file.
+INPUT_KEYS = frozenset({"StandardInputText", "StandardInputData"})
 # A specifier systemd expands in a value, `%` and a letter; `%%` is a literal percent. Only the
 # unit's own names are left to systemd, `%i` (the instance), `%n` and `%N` (the unit's name), none
 # of which holds a slash; every other expands to a path, a user or a host value this check cannot
@@ -331,26 +351,39 @@ def spelling_refusal(key, value):
     return None
 
 
-def environment_refusals(value):
+def name_refusals(key, value):
     """systemd splits the line into words, removes their quotes and expands specifiers before it
     reads each variable's name (SPEC-061 §8). A line with a backslash is refused whole by its
-    spelling, so quotes are all that is left, and shlex removes them as systemd does."""
+    spelling, so quotes are all that is left, and shlex removes them as systemd does. An
+    `Environment=` word is NAME=VALUE; a `PassEnvironment=` word a name alone, whose value comes
+    from the service manager's own environment."""
     if "\\" in value:
         return []
     try:
         words = shlex.split(value)
     except ValueError:
-        return ["an Environment= line that cannot be read"]
+        return [f"{key}= holds a line that cannot be read"]
     refusals = []
     for word in words:
         name, equals, _ = word.partition("=")
-        if not equals:
+        if key == "Environment" and not equals:
             continue
         if "%" in name:
-            refusals.append("Environment= names a variable with a specifier, which systemd expands")
+            refusals.append(f"{key}= names a variable with a specifier, which systemd expands")
         elif SECRET_NAME.search(name):
-            refusals.append(f"Environment= sets {name}, whose name says it carries a secret")
+            verb = "sets" if key == "Environment" else "passes"
+            refusals.append(f"{key}= {verb} {name}, whose name says it carries a secret")
     return refusals
+
+
+def route_refusal(key, value):
+    """A route by which a value reaches the unit's process without a credential: its standard
+    input, written in the unit's file or read from a file."""
+    if key in INPUT_KEYS:
+        return f"{key}= gives the unit's standard input a value written in its file"
+    if key == "StandardInput" and value.startswith("file:"):
+        return "StandardInput= reads a file into the unit's standard input"
+    return None
 
 
 def judge(unit_file, dropins, contract):
@@ -383,11 +416,12 @@ def judge(unit_file, dropins, contract):
             for reason in (
                 spelling_refusal(key, value),
                 credential_refusal(key, value, contract["socket"]),
+                route_refusal(key, value),
             ):
                 if reason:
                     refuse(reason)
-            if key == "Environment":
-                for reason in environment_refusals(value):
+            if key in ("Environment", "PassEnvironment"):
+                for reason in name_refusals(key, value):
                     refuse(reason)
     for section, key, values in contract["rows"].get(name, []):
         for value in values:
@@ -395,6 +429,9 @@ def judge(unit_file, dropins, contract):
                 refuse(f"neutral value left in force: [{section}] {shown(key, value)}")
     zone = contract["neutral"]["time_zone"]
     for (section, key), values in in_force.items():
+        if key == "EnvironmentFile" and len(values) > 1:
+            count = len(values)
+            refuse(f"[{section}] holds {count} EnvironmentFile= in force; R6 gives a unit one")
         for value in values:
             if carries_neutral(key, value, contract["neutral"]):
                 refuse(f"neutral value left in force: [{section}] {shown(key, value)}")
