@@ -454,3 +454,21 @@ fn a_markdown_paths_percent_escapes_are_decoded_before_its_extension_is_read() {
         ],
     );
 }
+
+#[test]
+fn an_extension_is_read_from_the_last_component_as_splitext_reads_it() {
+    judge(
+        &vendored(),
+        "embed(s) of a path",
+        &[
+            // A hidden file named for an extension has none, at the root or in a folder...
+            ("![[.base]]\n", &[]),
+            ("![[dir/.base]]\n", &[]),
+            // ...and a file's extension counts in a folder.
+            (
+                "![[dir/view.base]]\n",
+                &[("dynamic_embed_extensions:.base", 1)],
+            ),
+        ],
+    );
+}
