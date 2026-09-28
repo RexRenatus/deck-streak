@@ -79,8 +79,8 @@ R8. `.packs/wiring.json` moves durable-services to `enforced`, with `backup.copi
     backup and the restore drill are W2's); and defers the observability rows that need an SLO or the alert unit
     (`obs.slo-declared`, `obs.error-budget-policy`, `obs.burn-rate-alerts`, `obs.slo-measurable`,
     `obs.alert-route`, `obs.failure-alerts`, `obs.memory-watch`) to the observability issue
-    (#24), which lifts them, and so moves observability to `enforced`, since its every other
-    blocking row then runs and passes (SPEC-030 R6); and moves the box's web-security expectation
+    (#24), which lifts them, and so moves observability to `enforced`, since every other blocking
+    row of the pack then runs and passes (SPEC-030 R6); and moves the box's web-security expectation
     from `ws.csp-present`, which the Caddy block turns green, to `ws.csp-script-strict` (#60), which
     reads the served policy alone (§7).
 R9. Nothing here touches a host: no unit is installed, no Caddy is reloaded (the first deploy, with

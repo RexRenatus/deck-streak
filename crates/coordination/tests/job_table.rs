@@ -434,12 +434,11 @@ fn timer_section(text: &str) -> BTreeMap<String, Vec<String>> {
 /// The calendar a job's timer carries in the templates: the job's slot in the table at `rule`'s
 /// rollover hour, written in UTC, the neutral zone the private rail replaces (ADR-027).
 fn neutral_calendar(schedule: Schedule, rule: StudyDayRule) -> String {
-    match schedule.daily_slot(rule.rollover_hour()) {
-        Some((hour, minute)) => format!("*-*-* {hour:02}:{minute:02}:00 UTC"),
-        None => {
-            let minute = schedule.minute();
-            format!("*-*-* *:{minute:02}:00 UTC")
-        }
+    if let Some((hour, minute)) = schedule.daily_slot(rule.rollover_hour()) {
+        format!("*-*-* {hour:02}:{minute:02}:00 UTC")
+    } else {
+        let minute = schedule.minute();
+        format!("*-*-* *:{minute:02}:00 UTC")
     }
 }
 
