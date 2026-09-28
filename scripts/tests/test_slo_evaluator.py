@@ -78,6 +78,18 @@ class Evaluator:
         lines = done.stdout.splitlines()
         return done.returncode, lines, done.stderr
 
+    def run_with(self, declaration, now, env=None):
+        """One run at `now` over another declaration path, or with another environment."""
+        done = subprocess.run(
+            [sys.executable, str(EVALUATOR), str(declaration), "--now", str(now)],
+            env=self.env if env is None else env,
+            capture_output=True,
+            text=True,
+            timeout=60,
+            check=False,
+        )
+        return done.returncode, done.stdout.splitlines(), done.stderr
+
     def journal_reads(self):
         path = self.log / "journalctl.jsonl"
         text = path.read_text(encoding="utf-8") if path.exists() else ""
@@ -170,6 +182,49 @@ class TheEvaluatorPagesOncePerEpisode(unittest.TestCase):
                 len([line for line in lines if line.startswith("<4>slo evaluation failed")]), 1
             )
 
+    def test_a_declaration_it_cannot_read_pages_once_and_then_measures_again(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            evaluator = Evaluator(scratch)
+            missing = Path(scratch) / "absent.json"
+            code, lines, _ = evaluator.run_with(missing, NOW)
+            self.assertEqual(code, 1, lines)
+            self.assertEqual(
+                [line for line in lines if line.startswith("<3>")],
+                [
+                    "<3>slo evaluation failed: the declaration cannot be read: No such file or directory"
+                ],
+            )
+            code, lines, _ = evaluator.run_with(missing, NOW + MINUTE)
+            self.assertEqual(code, 0, lines)
+            # The burn it could not see pages once it measures again, and the blind episode ends.
+            code, lines, _ = evaluator.run(NOW)
+            self.assertEqual(code, 1, lines)
+            self.assertEqual(len(at(lines, 3, "page")), 1, lines)
+            self.assertIn("<5>slo evaluation measures again", lines)
+
+    def test_a_record_it_cannot_read_starts_afresh(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            evaluator = Evaluator(scratch)
+            evaluator.run(NOW)
+            (evaluator.state / "burning.json").write_text("not json", encoding="utf-8")
+            code, lines, _ = evaluator.run(NOW + MINUTE)
+            self.assertEqual(code, 1, lines)
+            self.assertIn("<4>slo evaluation found its record unreadable, and starts afresh", lines)
+            self.assertEqual(len(at(lines, 3, "page")), 1, lines)
+
+    def test_without_a_state_directory_it_refuses_to_run(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            evaluator = Evaluator(scratch)
+            env = {key: value for key, value in evaluator.env.items() if key != "STATE_DIRECTORY"}
+            code, lines, _ = evaluator.run_with(SLO, NOW, env=env)
+            self.assertEqual(code, 2, lines)
+            self.assertEqual(
+                lines, ["<3>slo evaluation has no $STATE_DIRECTORY to keep its episodes in"]
+            )
+            self.assertEqual(
+                evaluator.journal_reads(), [], "it read the journal with nowhere to remember"
+            )
+
 
 class TheWindowsAreTheWorkbooks(unittest.TestCase):
     def test_an_alert_burns_only_past_its_burn_rate_in_both_windows(self):
@@ -191,6 +246,29 @@ class TheWindowsAreTheWorkbooks(unittest.TestCase):
         # A window is the half-open span (now - window, now]: its start is out and now is in.
         self.assertEqual(evaluator.count(responses, NOW, 30 * MINUTE), (1, 2))
         self.assertEqual(evaluator.count(responses, NOW, 30 * MINUTE + 1), (2, 3))
+
+    def test_a_response_event_is_read_flattened_or_nested_and_nothing_else(self):
+        evaluator = load_evaluator()
+        flattened = json.dumps({"message": RESPONSE, "status": 503, "latency": "4 ms"})
+        nested = json.dumps({"fields": {"message": RESPONSE, "status": 200}, "target": "t"})
+        self.assertEqual(evaluator.response_status(flattened), 503)
+        self.assertEqual(evaluator.response_status(nested), 200)
+        # Not a response: another event, a status that is no integer, a line that is no JSON.
+        others = [
+            json.dumps({"message": "response failed", "status": 500}),
+            json.dumps({"message": RESPONSE, "status": "500"}),
+            json.dumps({"message": RESPONSE, "status": True}),
+            json.dumps([RESPONSE, 500]),
+            "{not json",
+            "Started a unit.",
+        ]
+        for text in examined("message(s) that are not response events", others):
+            self.assertIsNone(evaluator.response_status(text), text)
+        # journald's own encodings of a message: bytes as numbers, and null past its size limit.
+        encoded = list(flattened.encode("utf-8"))
+        self.assertEqual(evaluator.message_text({"MESSAGE": encoded}), flattened)
+        self.assertIsNone(evaluator.message_text({"MESSAGE": None}))
+        self.assertIsNone(evaluator.message_text({"MESSAGE": [300, 1]}))
 
     def test_the_fixture_holds_the_api_trace_events_shape(self):
         # Every response event of the fixture is the flattened event SPEC-025's layer writes: its

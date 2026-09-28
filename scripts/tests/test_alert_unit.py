@@ -385,6 +385,25 @@ class TheAlertScriptNamesTheFailure(unittest.TestCase):
         self.assertGreater(len(whole.encode("utf-8")), 3500, "the lines do not overflow the bound")
         self.assertTrue(whole.startswith(text), "the cut text is not the start of the page")
 
+    def test_a_json_error_line_reaches_the_page_as_written(self):
+        # A role's error lines are JSON, full of double quotes, and a message may hold a backslash
+        # or a tab: each reaches the page as written, through curl's quoted configuration.
+        line = '{"level":"ERROR","message":"a \\"quoted\\" word, a back\\\\slash","target":"x"}'
+        run = run_alert(
+            FAILED_UNIT,
+            {
+                "MONITOR_UNIT": FAILED_UNIT,
+                "MONITOR_SERVICE_RESULT": "exit-code",
+                "MONITOR_EXIT_STATUS": "1",
+            },
+            journal=[line, "a\ttab"],
+        )
+        self.assertEqual(run.returncode, 0, run.stdout + run.stderr)
+        text = request(run.calls("curl")[0])[1]["text"]
+        self.assertEqual(
+            text, f"DeckStreak: {FAILED_UNIT} failed (exit-code, status 1)\n{line}\na\ttab"
+        )
+
 
 class TheTokenStaysOffTheCommandLine(unittest.TestCase):
     def test_the_bot_token_never_appears_on_the_command_line(self):

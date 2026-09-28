@@ -181,6 +181,75 @@ class TheWatchPagesOncePerEvent(unittest.TestCase):
             self.assertEqual(code, 1, lines)
             self.assertEqual(len(paged(lines, job)), 1, lines)
 
+    def test_a_units_first_sight_is_its_baseline(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            watch = Watch(scratch)
+            # What a unit already counts when the watch first sees it happened before the watch.
+            watch.bump(API, "oom_kill")
+            watch.bump(API, "max")
+            code, lines = watch.run()
+            self.assertEqual((code, paged(lines, API)), (0, []), lines)
+            code, lines = watch.run()
+            self.assertEqual((code, paged(lines, API)), (0, []), lines)
+            # Its next event is new, and pages.
+            watch.bump(API, "oom_kill")
+            code, lines = watch.run()
+            self.assertEqual(code, 1, lines)
+            self.assertIn("rose from 1 to 2", paged(lines, API)[0])
+
+    def test_a_watch_that_finds_no_unit_pages_once(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            watch = Watch(scratch)
+            kept = Path(scratch) / "kept"
+            kept.mkdir()
+            for unit in (API, BOT):
+                watch.cgroup(unit).rename(kept / unit)
+            # Only a unit that is not DeckStreak's: the watch sees nothing, and says so once.
+            code, lines = watch.run()
+            self.assertEqual(code, 1, lines)
+            self.assertEqual(
+                [line for line in lines if line.startswith("<3>no DeckStreak unit's cgroup")],
+                [line for line in lines if line.startswith("<3>")],
+            )
+            self.assertEqual(len([line for line in lines if line.startswith("<3>")]), 1, lines)
+            code, lines = watch.run()
+            self.assertEqual(code, 0, lines)
+            self.assertEqual(len([line for line in lines if line.startswith("<4>still no")]), 1)
+            # A unit seen again ends the episode, and the next blindness pages again.
+            (kept / API).rename(watch.slice / API)
+            code, lines = watch.run()
+            self.assertEqual(code, 0, lines)
+            (watch.slice / API).rename(kept / API)
+            code, lines = watch.run()
+            self.assertEqual(code, 1, lines)
+
+    def test_the_ninety_percent_line_is_crossed_only_past_it(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            watch = Watch(scratch)
+            ceiling = int((watch.cgroup(API) / "memory.max").read_text(encoding="utf-8"))
+            watch.use(API, ceiling * 9 // 10)
+            code, lines = watch.run()
+            self.assertEqual((code, logged(lines, API)), (0, []), lines)
+            watch.use(API, ceiling * 9 // 10 + 1)
+            code, lines = watch.run()
+            self.assertEqual(len(logged(lines, API)), 1, lines)
+
+    def test_a_unit_without_a_ceiling_or_readable_events_is_passed_over(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            watch = Watch(scratch)
+            # No ceiling: no 90% line, however much it uses.
+            (watch.cgroup(API) / "memory.max").write_text("max\n", encoding="utf-8")
+            watch.use(API, 10**12)
+            # Events it cannot read: said once per run, and the other units are still watched.
+            (watch.cgroup(BOT) / "memory.events").unlink()
+            code, lines = watch.run()
+            self.assertEqual(code, 0, lines)
+            self.assertEqual(logged(lines, API), [], lines)
+            self.assertEqual(logged(lines, BOT), [f"<4>{BOT}: its memory.events cannot be read"])
+            watch.bump(API, "oom_kill")
+            code, lines = watch.run()
+            self.assertEqual((code, len(paged(lines, API))), (1, 1), lines)
+
     def test_the_fixture_ceilings_are_the_host_budgets(self):
         # The 90% line is the unit's MemoryMax=, which deploy/host-budget.json decides (ADR-032).
         budget = json.loads(BUDGET.read_text(encoding="utf-8"))["units"]
