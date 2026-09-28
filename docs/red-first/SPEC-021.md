@@ -44,6 +44,13 @@ was green already, and carry no line below:
   a 0, or `FAST`'s 2, can be put to it;
 - the export's closing newline, asserted in the export test.
 
+At verification, the orchestrator's hand mutant of the erase's check of a singleton's reset, every
+declared column compared with its reset value, survived the whole privacy suite: no synthetic port
+had yet left its singleton holding a value its reset row does not.
+`a_port_whose_reset_leaves_a_wrong_value_is_refused_and_rolled_back` was written to kill it (row H14
+below): a port resets its counter and forgets its streak, and the erase is refused by its context and
+table, with every port's work rolled back. It passed when written, and carries no line below.
+
 ```red-first
 A1: red at 949d1a3: assertion `left == right` failed: the export carries whole exactly the tables the erase clears or resets; left: {"sync_runs"}, right: {"_sqlx_migrations", "ingest_state", "settings_generation", "sync_runs"}
 A1: green at e522ce8
@@ -91,6 +98,8 @@ from `HEAD` and checked by sha256 before the next row.
 | H11 | `crates/privacy/src/erase.rs`: the checkpoint's busy flag is read inverted | A5 | killed |
 | H12 | the same file: any answer but 0 turns `secure_delete` on | `only_an_answer_of_one_turns_secure_delete_on` | killed: `FAST`'s 2 was accepted |
 | H13 | `crates/daemon/src/role_data.rs`: the export's line ends with a space, not a newline | `the_data_role_writes_the_export_as_one_line_of_standard_output` | killed |
+| H14 | `crates/privacy/src/erase.rs`: a singleton's reset is never compared, `.all(\|(_column, _value)\| true)`, at 58382dd with the test added | `a_port_whose_reset_leaves_a_wrong_value_is_refused_and_rolled_back` | killed: the erase committed the half-reset row and returned `Ok` |
 
-H1b and H2b are why the two unit tests exist: A5 proves the erase leaves no value behind, and either
+H14 survived every other test: the orchestrator's verification found it. H1b and H2b are why the two
+unit tests exist: A5 proves the erase leaves no value behind, and either
 `secure_delete` or the compaction alone would pass it, so each is proved apart from the other.

@@ -38,7 +38,10 @@ const TABLES: &str = "\
     CREATE TABLE deleting_singleton (id INTEGER PRIMARY KEY CHECK (id = 1), \
         counter INTEGER NOT NULL, created_at INTEGER NOT NULL) STRICT; \
     INSERT INTO deleting_singleton (id, counter, created_at) VALUES (1, 0, 2000); \
-    CREATE TABLE forgetting_rows (id INTEGER PRIMARY KEY, created_at INTEGER NOT NULL) STRICT;";
+    CREATE TABLE forgetting_rows (id INTEGER PRIMARY KEY, created_at INTEGER NOT NULL) STRICT; \
+    CREATE TABLE stale_singleton (id INTEGER PRIMARY KEY CHECK (id = 1), \
+        counter INTEGER NOT NULL, streak INTEGER NOT NULL, created_at INTEGER NOT NULL) STRICT; \
+    INSERT INTO stale_singleton (id, counter, streak, created_at) VALUES (1, 0, 0, 3000);";
 
 /// The rows every test starts from: none of them equals what an erase leaves.
 const ROWS: &str = "\
@@ -50,7 +53,8 @@ const ROWS: &str = "\
         VALUES (1, 'a synthetic note', 1006), (2, 'another synthetic note', 1007); \
     INSERT INTO gamma_rows (id, created_at) VALUES (1, 1008); \
     UPDATE deleting_singleton SET counter = 9 WHERE id = 1; \
-    INSERT INTO forgetting_rows (id, created_at) VALUES (1, 1009), (2, 1010);";
+    INSERT INTO forgetting_rows (id, created_at) VALUES (1, 1009), (2, 1010); \
+    UPDATE stale_singleton SET counter = 6, streak = 4 WHERE id = 1;";
 
 /// The reset row of a synthetic singleton: its counter back to 0.
 fn counter_reset() -> Map<String, Value> {
@@ -305,6 +309,69 @@ impl DataRights for Forgetting {
     }
 }
 
+/// A synthetic context that declares its singleton reset in place to a counter and a streak of 0,
+/// and whose erase resets the counter and forgets the streak: the row stays, holding a value its
+/// declared reset row does not.
+struct Stale;
+
+impl DataRights for Stale {
+    fn declaration(&self) -> Result<Declaration, DataRightsError> {
+        let mut reset = counter_reset();
+        reset.insert("streak".to_owned(), Value::from(0));
+        Declaration::new(
+            "stale",
+            vec![TableRights {
+                table: "stale_singleton",
+                disposition: Disposition::ResetInPlace { row: reset },
+            }],
+        )
+    }
+
+    fn export<'a>(
+        &'a self,
+        connection: &'a mut SqliteConnection,
+    ) -> PortFuture<'a, Vec<ExportedTable>> {
+        Box::pin(async move {
+            let rows: Vec<(i64, i64, i64, i64)> = sqlx::query_as(
+                "SELECT id, counter, streak, created_at FROM stale_singleton ORDER BY id",
+            )
+            .fetch_all(connection)
+            .await?;
+            Ok(vec![ExportedTable {
+                table: "stale_singleton",
+                rows: rows
+                    .into_iter()
+                    .map(|(id, counter, streak, created_at)| {
+                        json!({
+                            "id": id,
+                            "counter": counter,
+                            "streak": streak,
+                            "created_at": created_at,
+                        })
+                    })
+                    .collect(),
+            }])
+        })
+    }
+
+    fn erase<'a>(&'a self, connection: &'a mut SqliteConnection) -> PortFuture<'a, ()> {
+        Box::pin(async move {
+            sqlx::query("UPDATE stale_singleton SET counter = 0 WHERE id = 1")
+                .execute(connection)
+                .await?;
+            Ok(())
+        })
+    }
+}
+
+/// `stale_singleton`'s one row: its id, counter, streak and creation instant.
+async fn stale_singleton_row(db: &Db) -> Vec<(i64, i64, i64, i64)> {
+    sqlx::query_as("SELECT id, counter, streak, created_at FROM stale_singleton")
+        .fetch_all(db.reader())
+        .await
+        .expect("the singleton reads")
+}
+
 /// A migrated temporary database holding the synthetic contexts' tables and `rows`.
 async fn fixture(rows: &'static str) -> (TempDir, PathBuf, Db) {
     let directory = tempfile::tempdir().expect("a temporary directory");
@@ -488,5 +555,48 @@ async fn a_port_whose_erase_leaves_rows_is_refused_and_rolled_back() {
         .expect("the table counts");
     assert_eq!(left, 2);
     assert_eq!(alpha_singleton_row(&db).await, [(1, 5, 1000)]);
+    db.close().await;
+}
+
+#[tokio::test]
+async fn a_port_whose_reset_leaves_a_wrong_value_is_refused_and_rolled_back() {
+    let (_directory, _path, db) = fixture(ROWS).await;
+    assert_eq!(stale_singleton_row(&db).await, [(1, 6, 4, 3000)]);
+    // Alpha and beta erase first, in the same transaction; stale resets its counter and leaves its
+    // streak, so its one row holds a value its declared reset row does not.
+    let refused = erase(&db, &[&Alpha, &Beta, &Stale]).await;
+    assert!(
+        matches!(
+            refused,
+            Err(PrivacyError::EraseIncomplete {
+                context: "stale",
+                table: "stale_singleton",
+            })
+        ),
+        "{refused:?}"
+    );
+    // The refusal rolled every port's work back: each table holds exactly what it started with.
+    assert_eq!(stale_singleton_row(&db).await, [(1, 6, 4, 3000)]);
+    assert_eq!(
+        pairs(&db, "SELECT id, label FROM alpha_rows ORDER BY id").await,
+        [
+            (1, Value::from("first")),
+            (2, Value::from("second")),
+            (3, Value::from("third"))
+        ]
+    );
+    assert_eq!(alpha_singleton_row(&db).await, [(1, 5, 1000)]);
+    assert_eq!(
+        pairs(&db, "SELECT id, body FROM beta_notes ORDER BY id").await,
+        [
+            (1, Value::from("a synthetic note")),
+            (2, Value::from("another synthetic note"))
+        ]
+    );
+    let ledger: i64 = sqlx::query_scalar("SELECT count(*) FROM alpha_ledger")
+        .fetch_one(db.reader())
+        .await
+        .expect("the ledger counts");
+    assert_eq!(ledger, 2);
     db.close().await;
 }
