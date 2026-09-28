@@ -81,8 +81,8 @@ Chosen option: a `[patch]` entry on the upstream source, pointing at a commit of
   criteria):
   1. check first whether the new tag carries the fix, and if it does, remove the fork instead;
   2. the maintainer applies the one commit to the new tag (`git apply --check`, then a cherry-pick),
-     then pushes a new branch and tags it. `write_file_if_changed` has not changed since upstream
-     #4439, which added the registration, so the hunk has applied unchanged so far;
+     then pushes a new branch and tags it. `write_file_if_changed` has not changed since
+     ankitects/anki#4439, which added the registration, so the hunk has applied unchanged so far;
   3. the delivery moves the dependency's `tag` and the patch's `rev` together.
 - **The removal condition.** The pinned upstream tag carries the fix, or an equivalent that stops
   registering `OUT_DIR` outputs. The check: with the engine at that tag, unpatched and consumed as a
