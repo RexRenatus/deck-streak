@@ -1086,11 +1086,13 @@ TEST_ONLY_HEAD = (
 MIXED_HEAD = SPANS_TEXT.replace("x > 3", "x > 4").replace(
     "assert_eq!(double(2), 4);", "assert_eq!(double(2), 2 + 2);"
 )
-#: Lines 13, 19 and 25: after the literals, after the comments, and under `cfg(not(test))`.
+#: Lines 13, 19, 25 and 54: after the literals, after the comments, under `cfg(not(test))`, and a
+#: constant on the line of the brace that closes the test module, which production code shares.
 PRODUCTION_HEAD = (
     SPANS_TEXT.replace("'{'.len_utf8()", "'}'.len_utf8()")
     .replace("x + 1", "x + 2")
     .replace("x - 1", "x - 2")
+    .replace("}\n\n/// After the tests", "} pub const TAIL: u8 = 7;\n\n/// After the tests")
 )
 #: Line 9, a constant's: production code that cargo-mutants lists no mutant of.
 CONSTANT_HEAD = SPANS_TEXT.replace("LAST_HOUR: u8 = 23;", "LAST_HOUR: u8 = 24;")
@@ -1129,7 +1131,8 @@ MIXED_LISTED = spans_listed(
         (58, 7, 8, "replace > with >= in big", "BinaryOperator"),
     ]
 )
-#: The production-only diff's listing: sixteen mutants on lines 13, 19 and 25.
+#: The production-only diff's listing: sixteen mutants on lines 13, 19 and 25, none on line 54's
+#: constant.
 PRODUCTION_LISTED = spans_listed(
     [
         (13, 5, 67, "replace braces -> usize with 0", "FnValue"),
@@ -1267,10 +1270,14 @@ class ATestOnlySrcDiffReadsNotApplicable(unittest.TestCase):
             fixture.head({SPANS: PRODUCTION_HEAD})
             printed, plan, spans = spans_plan(fixture)
             self.assertIn(
-                "mutation: plan: rust applies: 3 production code line(s) in 1 file(s)\n", printed
+                "mutation: plan: rust applies: 4 production code line(s) in 1 file(s)\n", printed
             )
             self.assertTrue(plan["classes"]["rust"]["applies"])
-            self.assertEqual(spans["code"], [13, 19, 25])
+            self.assertEqual(
+                spans["code"],
+                [13, 19, 25, 54],
+                "a line a test module's closing brace shares with a constant is production code",
+            )
             self.assertEqual(spans.get("test"), [])
             done, plan, outputs = spans_shards(fixture, json.dumps(PRODUCTION_LISTED).encode())
             self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
@@ -1282,7 +1289,7 @@ class ATestOnlySrcDiffReadsNotApplicable(unittest.TestCase):
             reports = shard_reports(fixture.out / "caught", {0: ("0", spans_caught(names))})
             judged = fixture.judge("rust", "--shard-reports", reports)
             self.assertEqual(judged.returncode, 0, judged.stdout + judged.stderr)
-            self.assertIn(f"{SPANS}: 3 changed code line(s)", judged.stdout)
+            self.assertIn(f"{SPANS}: 4 changed code line(s)", judged.stdout)
             self.assertIn("examined 16 by cargo-mutants and 0 by rows", judged.stdout)
         with self.subTest("the empty --in-diff output is an empty listing, never a missing one"):
             fixture = Fixture(self, files={SPANS: SPANS_TEXT})
