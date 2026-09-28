@@ -1262,6 +1262,20 @@ def exclusions(root: pathlib.Path) -> int:
     return EXIT_FAIL if findings else EXIT_OK
 
 
+# --------------------------------------------------------------------------- the equivalence record
+
+
+def census(root: pathlib.Path) -> int:
+    """The equivalence record's census (SPEC-057 R7): examines nothing yet."""
+    print("examined 0 record(s)")
+    return EXIT_OK
+
+
+def table(args: argparse.Namespace) -> int:
+    """The campaign's table (SPEC-057 R13): prints no line yet."""
+    return EXIT_OK
+
+
 # --------------------------------------------------------------------------- the command line
 
 
@@ -1269,7 +1283,17 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument(
         "verb",
-        choices=["plan", "shards", "judge", "survivors", "battery", "configs", "exclusions"],
+        choices=[
+            "plan",
+            "shards",
+            "judge",
+            "survivors",
+            "battery",
+            "configs",
+            "exclusions",
+            "census",
+            "table",
+        ],
     )
     parser.add_argument("--root", default=str(pathlib.Path(__file__).resolve().parents[1]))
     parser.add_argument("--base")
@@ -1289,6 +1313,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--shards", type=int)
     parser.add_argument("--listed")
     parser.add_argument("--shard-reports")
+    parser.add_argument("--whole")
+    parser.add_argument("--package")
     args = parser.parse_args(argv)
     root = pathlib.Path(args.root).resolve()
     if args.verb == "plan":
@@ -1316,6 +1342,12 @@ def main(argv: list[str] | None = None) -> int:
         return battery(pathlib.Path(args.reports), args.shards)
     if args.verb == "configs":
         return configs(root)
+    if args.verb == "census":
+        return census(root)
+    if args.verb == "table":
+        if not args.reports:
+            parser.error("table needs --reports")
+        return table(args)
     return exclusions(root)
 
 
