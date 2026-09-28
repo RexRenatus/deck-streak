@@ -109,6 +109,10 @@ TOOL_EXITS = {
 REASON = re.compile(r"EQUIVALENT: \S.*\(#\d+\)")
 #: The subject GitHub writes for a pull request's merge commit.
 MERGE_SUBJECT = re.compile(r"Merge pull request #(\d+) from ")
+#: The first line GitHub writes for a squash merge: the pull request's title, then ` (#N)`. A title
+#: that already ends with an issue's `(#M)` gains one more, so the last number names the pull
+#: request (SPEC-057 R18).
+SQUASH_SUBJECT = re.compile(r" \(#(\d+)\)$")
 
 
 def scope_of(event: str, base_ref: str, subject: str) -> tuple[str, str]:
@@ -124,10 +128,12 @@ def scope_of(event: str, base_ref: str, subject: str) -> tuple[str, str]:
         return "diff", f"the pull request into {base_ref or 'its base'} is judged on its diff"
     if event == "push":
         merged = MERGE_SUBJECT.match(subject)
-        if merged:
+        squashed = SQUASH_SUBJECT.search(subject.splitlines()[0].rstrip() if subject else "")
+        if merged or squashed:
+            number, how = (merged.group(1), "") if merged else (squashed.group(1), " by squash")
             return (
                 "not-applicable",
-                f"this push merges #{merged.group(1)}, whose mutation jobs judged this tree on its "
+                f"this push merges #{number}{how}, whose mutation jobs judged this tree on its "
                 "merge ref; dev and main accept a pull request only with an up-to-date head "
                 "(ADR-034)",
             )
