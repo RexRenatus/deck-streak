@@ -10,7 +10,7 @@
 
 use std::path::{Path, PathBuf};
 
-use deck_streak_kernel::courses::{COURSES_FILE, content_digest};
+use deck_streak_kernel::courses::{COURSES_FILE, COURSES_SCHEMA, content_digest};
 use deck_streak_kernel::{CourseCode, Courses, CoursesError, Db, Environment};
 use serde_json::{Value, json};
 use tempfile::TempDir;
@@ -54,6 +54,19 @@ fn values(value: &Value, into: &mut Vec<String>) {
         Value::Object(map) => map.values().for_each(|item| values(item, into)),
         _ => {}
     }
+}
+
+/// What a malformed file's refusal may not quote: every string value of the file, or the whole
+/// text when it is no JSON. The one exception is the schema's published name, `COURSES_SCHEMA`,
+/// which a refusal names as the shape it expects.
+fn unquotable(text: &str) -> Vec<String> {
+    let mut quoted = Vec::new();
+    match serde_json::from_str::<Value>(text) {
+        Ok(value) => values(&value, &mut quoted),
+        Err(_) => quoted.push(text.to_owned()),
+    }
+    quoted.retain(|value| value.len() > 1 && value != COURSES_SCHEMA);
+    quoted
 }
 
 /// Each planted contradiction: what it is, the file's text, and the refusal it must meet.
@@ -163,6 +176,34 @@ fn malformed_files() -> Vec<(&'static str, String)> {
         (
             "a writing flag as text",
             edited(|file| file["courses"][0]["writing"] = json!("yes")),
+        ),
+        (
+            "a list, not an object",
+            json!(["Example Course Z"]).to_string(),
+        ),
+        (
+            "a course that is no object",
+            edited(|file| file["courses"][0] = json!("Example Course Z")),
+        ),
+        (
+            "unit bands that are no object",
+            edited(|file| file["courses"][1]["unit_bands"] = json!("Example bands")),
+        ),
+        (
+            "focus subjects that are no list",
+            edited(|file| file["focus_subjects"] = json!("Example subject Z")),
+        ),
+        (
+            "a focus subject that is no object",
+            edited(|file| file["focus_subjects"][0] = json!("Example subject Z")),
+        ),
+        (
+            "a focus subject's upper-case code",
+            edited(|file| file["focus_subjects"][0]["code"] = json!("QAC")),
+        ),
+        (
+            "a focus subject's two-letter alias",
+            edited(|file| file["focus_subjects"][0]["alias"] = json!("cd")),
         ),
     ];
     malformed
@@ -276,6 +317,16 @@ fn the_courses_file_refuses_a_duplicate_or_overlapping_course() {
             matches!(refusal, CoursesError::Malformed { setting, .. } if setting == COURSES_FILE),
             "{what}: {refusal:?}"
         );
+        // A malformed file's refusal names the setting and quotes no value, as a contradiction's
+        // does (R1).
+        let said = refusal.to_string();
+        assert!(said.contains(COURSES_FILE), "{what}: {said}");
+        for value in unquotable(&text) {
+            assert!(
+                !said.contains(value.as_str()),
+                "{what}: {said} quotes {value}"
+            );
+        }
     }
 
     // A file that cannot be read refuses start without naming its path.
@@ -292,6 +343,11 @@ fn the_courses_file_refuses_a_duplicate_or_overlapping_course() {
     let relative = Courses::load(&Environment::from_vars([(COURSES_FILE, "courses.json")]))
         .expect_err("a relative path refuses");
     assert!(matches!(relative, CoursesError::Malformed { .. }));
+    for refused in [refusal, relative] {
+        let said = refused.to_string();
+        assert!(said.contains(COURSES_FILE), "{said}");
+        assert!(!said.contains("courses.json"), "{said} quotes the path");
+    }
 }
 
 #[tokio::test]
