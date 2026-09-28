@@ -167,9 +167,9 @@ def planted_deny(allowed=(FORK, RUST_URL)):
 #: R2's bound on the second build, in cargo's own `Finished` time.
 NO_OP_BOUND_S = 10.0
 #: The bound on each build's wall time. A cold build of the engine in a debug profile took about a
-#: minute on the maintainer's machine (SPEC-055 section 7), and cargo may first wait for a build
-#: slot on a shared machine. The bound is 25 minutes, inside CI's 30-minute hygiene job, so a hung
-#: build fails here by name before the runner kills the job.
+#: minute on the maintainer's machine (SPEC-055 section 7), and cargo may first wait for another
+#: build to finish. The bound is 25 minutes, inside CI's 30-minute hygiene job, so a hung build
+#: fails here by name before the runner kills the job.
 BUILD_BOUND_S = 1500
 BUILD = ["cargo", "build", "--locked", "-v", "-p", "deck-streak-ingest"]
 UNIT = re.compile(r"^\s*(Compiling|Fresh) (\S+) v\S+")
@@ -180,7 +180,7 @@ QUOTED = re.compile(r"`([^`]*)`")
 
 def dirty_reason(reason):
     """Cargo's reason for a dirty unit, with every quoted path cut to its file name and the
-    timestamps dropped, so a finding names no path of the machine that measured it."""
+    timestamps dropped, so a finding names no local path."""
     reason = QUOTED.sub(lambda quoted: f"`{Path(quoted.group(1)).name}`", reason)
     return reason.split(" (", 1)[0]
 
@@ -213,8 +213,8 @@ def build_findings(output):
 
 
 def need_build_tools():
-    """Why this machine cannot build the engine, naming the missing tool as the gate does; None
-    when it can. The engine's build runs protoc from PROTOC, or from PATH (ADR-022)."""
+    """Why the engine cannot be built here, naming the missing tool as the gate does; None when it
+    can. The engine's build runs protoc from PROTOC, or from PATH (ADR-022)."""
     if shutil.which("cargo") is None:
         return "missing tool: cargo (rustup, then rustup show in this repository)"
     protoc = os.environ.get("PROTOC")
