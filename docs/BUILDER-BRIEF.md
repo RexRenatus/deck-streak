@@ -57,12 +57,15 @@ A test proves something only when it fails on code that is wrong (SPEC-039, ADR-
 stays the rule; beyond it, every behaviour change proves that its tests kill mutants of the changed
 code.
 
-- **Two CI jobs judge every pull request,** each a need of `ci`. `mutation-rust` runs cargo-mutants
-  over the diff (`--in-diff`, `--in-place`), proves the hand-proved rows the diff selects, and
-  checks that no row left while its target stayed. `mutation-web` runs StrykerJS over every changed
-  Mini App file, whole. Read their counts, never only their colour: a class of production code the
-  diff changed that examined nothing is VOID, and VOID fails the job. A diff of comments and blank
-  lines reads `not-applicable`, by name.
+- **Five CI jobs judge every pull request,** a release into `main` included, each a need of `ci`.
+  `mutation-plan` reads the diff and sizes the shards from cargo-mutants' own listing;
+  `mutation-rust` runs cargo-mutants over the diff (`--in-diff`, `--in-place`), one job per shard;
+  `mutation-rows` proves the hand-proved rows the diff selects and checks that no row left while
+  its target stayed; `mutation-verdict` counts every shard's report and judges; `mutation-web` runs
+  StrykerJS over every changed Mini App file, whole. Read the verdict's counts, never only its
+  colour: a class of production code the diff changed that examined nothing is VOID, a shard that
+  never reported is VOID by name, and VOID fails the job. A diff of comments and blank lines reads
+  `not-applicable`, by name.
 - **A surviving mutant is yours.** Kill it with a test that asserts the behaviour, or, when no test
   can tell it apart, record it as `EQUIVALENT: <reason> (#N)`: one anchored `exclude_re` entry in
   `.cargo/mutants.toml` with that comment on the line above, or a `// Stryker disable next-line
