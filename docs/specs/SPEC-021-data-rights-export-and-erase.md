@@ -2,8 +2,9 @@
 
 - **Wave:** W0. **Issue:** #14 (epic #1). **Context(s):** `deck-streak-privacy` (the engine), `deck-streak-coordination` (the registry of every port, the export and erase use cases), `deck-streak-daemon` (the `data` role), `repo` (`privacy.json`, `PRIVACY.md`, the Litestream and journald templates).
 - **Decided by:** ADR-008 (one database, each context owns its tables), ADR-010 (backups), ADR-002 (the registry crosses contexts, so it lives in coordination), ADR-020 (the data-rights port, one migration sequence).
-- **Status:** in delivery: moved from `docs/specs/planned/` by the delivery that builds it, with its
-  tests and `docs/red-first/SPEC-021.md` (ADR-016). §7 records what the delivery made exact.
+- **Status:** judged: delivered with its tests and `docs/red-first/SPEC-021.md` (ADR-016). The
+  delivery made R2 to R8, A1, A2 and the manifest exact where the code decided them, amended the
+  manifest by two files, each with its reason, and reworded §6 under the public-prose rule (§7).
 
 ## 1. The problem, measured
 
@@ -134,6 +135,8 @@ over a fully migrated temporary database.
 | `docs/schematics/data-rights-export-and-erase.md` | repo | added |
 | `docs/red-first/SPEC-021.md` | repo | added |
 | `changelog.d/` fragment | repo | added |
+| `Cargo.lock` | repo | changed: the privacy crate's dependency edges, no version (§7) |
+| `scripts/tests/test_deploy_templates.py` | repo | changed: the Litestream unit's advisory waits on its issue (§7) |
 
 ## 5. What this does NOT do
 
@@ -167,3 +170,57 @@ over a fully migrated temporary database.
   else a host runs; the risk now says only that the drop-in's settings are journald's own and that
   installing it is a change on the host behind the owner's gate (#161), which the first deploy makes
   with the owner's go (#42).
+- **R2: the export is a type of its own.** `privacy::export` returns `privacy::Export`, one JSON
+  object (`as_json`, and `to_line` for the `data` role), so coordination's registry and the daemon
+  name no serde type and neither manifest changes. Its keys are the schema key and one per table,
+  in serde_json's sorted order, so `schema` need not come first; the document is one object either
+  way.
+- **R2, R3: the declarations are checked before anything runs.** A table two ports declare, or one
+  named `schema`, the export's own key, is refused by name before a row is read or written; and a
+  port whose export returns a table it does not declare, returns one twice, or leaves one out is
+  refused by its context and the table. The export reads every port in one read transaction, so
+  the document is one snapshot.
+- **R3: the erase checks every port's work before it commits.** Inside the erase's transaction each
+  port's own export is read back: every table it exports must be empty and every singleton must hold
+  exactly one row carrying its reset values, or the erase is refused by the context and the table
+  and rolls back. `PRAGMA secure_delete = ON` is read back, and a connection where it does not
+  answer 1 is refused before anything is deleted. The connection keeps `secure_delete` on in the
+  pool. A compaction that fails after the commit is its own refusal, named apart from every refusal
+  that erased nothing; a checkpoint that meets a reader reports busy, is not an error, and the
+  erase's report and the `data` role's log say the log was held
+  (`docs/schematics/data-rights-export-and-erase.md`).
+- **R4, A1, A2: measured, the predecessor's way.** A table counts as exported when the export
+  carries every one of its rows (101 seeded rows where a table takes rows, so an export that pages
+  or limits its read comes up short), and as erased when none of its seeded rows survives the erase
+  unchanged. A1 also holds both sets equal to the tables the ports declare exported or reset, and
+  A2 also holds each table's one port equal to its owner in the ownership register.
+- **R5: what else `privacy.json` carries.** Its export and erase code globs are
+  `crates/*/src/data_rights.rs`, so a later context's port joins by its module's name, and the
+  engine's two files; its `code` globs are the Rust and the Mini App sources the pack reads for
+  client storage, contact requests and log calls. Each category's source is `derived` and its basis
+  `contract`. Its `public.allow` names ten literals the pack's scrub reads as addresses in files
+  this SPEC does not touch: eight systemd unit instance names, by their `@instance.type` tails, a
+  release `v1.2.3.4` and a Python slice. SPEC-054 R2 passed the same unit names in the
+  repository's own scrub.
+- **R6: the templates' other settings.** The Litestream template also sets the global `validation`
+  interval (Litestream 0.5's periodic check of its LTX files), so the durable-services advisory
+  that asks for it holds. Its replica URL is `${DECKSTREAK_REPLICA_URL}`, a placeholder with no
+  scheme that Litestream expands from the environment, so the deferred `backup.offsite` row stays
+  red until the backups issue builds the copy (#44). The journald cap is `SystemMaxUse=256M`.
+- **R7: the policy says what is.** `PRIVACY.md` names no offsite backup: none exists, and a public
+  page shows what is, never what is planned (CHARTER 12). The offsite copy and its window join the
+  policy with the delivery that builds them (#44).
+- **R8: the `data` role is a module of the binary.** `crates/daemon/src/role_data.rs` is compiled
+  into `deckstreakd` through `main.rs`, as the `job` role is, so the daemon's library is unchanged.
+  Any erase other than exactly `data erase --confirm ERASE` is a usage refusal, code 2, before the
+  database is opened. The export is the one line of standard output that does not open with a
+  journal priority, written through the kernel's offload, since the daemon's tokio carries no
+  standard-stream feature.
+- **Manifest: `Cargo.lock` and SPEC-032's advisory test.** The privacy crate gains five dependency
+  edges and no version: `serde_json` (ADR-029), `sqlx` and `thiserror` (ADR-003), and `tempfile` and
+  `tokio` in its tests (ADR-020). `scripts/tests/test_deploy_templates.py` required every
+  durable-services advisory to be waived; the Litestream template raises `litestream-unit-missing`,
+  whose subject, the unit that runs `litestream replicate`, is the backups issue's (#44), so the
+  test now expects exactly that departure while it waits, and fails once it stops firing. Its
+  exemption for the journal's size cap is gone, because the drop-in sets `SystemMaxUse=`. The
+  schematic was planned with the SPEC, so the delivery changes it rather than adding it.
