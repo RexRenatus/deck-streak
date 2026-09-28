@@ -23,7 +23,7 @@ use axum::response::{IntoResponse, Response};
 use axum::routing::get;
 use deck_streak_coordination::score::{DayRollup, DayScore, RangeError, day_rollups, day_score};
 use deck_streak_identity::{OwnerSession, Sessions};
-use deck_streak_kernel::{Db, KernelError, StudyDay};
+use deck_streak_kernel::{Db, KernelError, StudyDay, UtcMillis};
 use serde_json::{Value, json};
 
 use crate::health::Readiness;
@@ -169,7 +169,7 @@ fn rollup_json(rollup: &DayRollup) -> Value {
         "card_state_src": rollup.card_state_src,
         "score": score_json(&rollup.score),
         "score_at_close": rollup.score_at_close,
-        "settled_at": rollup.settled_at.map(|at| at.epoch_millis()),
+        "settled_at": rollup.settled_at.map(UtcMillis::epoch_millis),
     })
 }
 

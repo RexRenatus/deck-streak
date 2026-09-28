@@ -10,7 +10,7 @@ mod support;
 
 use deck_streak_ingest::reader::course_of;
 use deck_streak_ingest::settings::DECK_SEPARATOR;
-use deck_streak_kernel::Courses;
+use deck_streak_kernel::{CourseCode, Courses};
 use support::Fixture;
 use support::synthetic::{self, PlannedCard};
 
@@ -64,7 +64,7 @@ async fn a_cards_course_is_the_course_whose_root_is_its_top_level_name() {
     for (name, expected) in examined("deck names", names) {
         let course = course_of(&courses, &name);
         assert_eq!(
-            course.as_ref().map(|code| code.as_str()),
+            course.as_ref().map(CourseCode::as_str),
             expected,
             "the course of {name:?}"
         );

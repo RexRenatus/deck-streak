@@ -56,47 +56,8 @@ fn values(value: &Value, into: &mut Vec<String>) {
     }
 }
 
-#[test]
-fn the_courses_file_refuses_a_duplicate_or_overlapping_course() {
-    // The example loads: two courses and one focus subject, in the file's order.
-    let loaded = Courses::load(&environment(&example_path())).expect("the example loads");
-    let codes: Vec<&str> = loaded
-        .courses()
-        .iter()
-        .map(|course| course.code.as_str())
-        .collect();
-    assert_eq!(codes, ["qaa", "qab"], "the example's courses");
-    let first = &loaded.courses()[0];
-    assert_eq!(first.deck_root, "Example Course A");
-    assert_eq!(first.alias, 'a');
-    assert!(first.writing);
-    let bands: Vec<(&str, u32, u32)> = first
-        .unit_bands
-        .iter()
-        .map(|band| (band.band, band.first, band.last))
-        .collect();
-    assert_eq!(
-        bands,
-        [
-            ("A1", 1, 10),
-            ("A2", 11, 20),
-            ("B1", 21, 30),
-            ("B2", 31, 40),
-            ("C1", 41, 50),
-            ("C2", 51, 60)
-        ]
-    );
-    let subjects: Vec<(&str, char)> = loaded
-        .focus_subjects()
-        .iter()
-        .map(|subject| (subject.code.as_str(), subject.alias))
-        .collect();
-    assert_eq!(subjects, [("qac", 'c')]);
-
-    // With the setting unset there are no courses, and that is no refusal.
-    let unset = Courses::load(&Environment::default()).expect("an unset setting is no refusal");
-    assert!(unset.courses().is_empty() && unset.digest().is_none());
-
+/// Each planted contradiction: what it is, the file's text, and the refusal it must meet.
+fn planted_contradictions() -> Vec<(&'static str, String, CoursesError)> {
     let duplicate = |field: &'static str| CoursesError::Duplicate {
         setting: COURSES_FILE,
         field,
@@ -149,21 +110,11 @@ fn the_courses_file_refuses_a_duplicate_or_overlapping_course() {
             bands_fault("come out of order"),
         ),
     ];
-    for (what, text, expected) in examined("planted contradictions", planted) {
-        let refusal = Courses::parse(&text).expect_err(what);
-        assert_eq!(refusal, expected, "{what}");
-        let said = refusal.to_string();
-        assert!(said.contains(COURSES_FILE), "{what}: {said}");
-        let mut quoted = Vec::new();
-        values(&serde_json::from_str(&text).expect("JSON"), &mut quoted);
-        for value in quoted.iter().filter(|value| value.len() > 1) {
-            assert!(
-                !said.contains(value.as_str()),
-                "{what}: {said} quotes {value}"
-            );
-        }
-    }
+    planted
+}
 
+/// Each malformed file: what it is, and its text.
+fn malformed_files() -> Vec<(&'static str, String)> {
     let malformed: Vec<(&str, String)> = vec![
         ("not JSON", "{ courses".to_owned()),
         (
@@ -203,6 +154,67 @@ fn the_courses_file_refuses_a_duplicate_or_overlapping_course() {
             edited(|file| file["courses"][0]["writing"] = json!("yes")),
         ),
     ];
+    malformed
+}
+
+#[test]
+fn the_courses_file_refuses_a_duplicate_or_overlapping_course() {
+    // The example loads: two courses and one focus subject, in the file's order.
+    let loaded = Courses::load(&environment(&example_path())).expect("the example loads");
+    let codes: Vec<&str> = loaded
+        .courses()
+        .iter()
+        .map(|course| course.code.as_str())
+        .collect();
+    assert_eq!(codes, ["qaa", "qab"], "the example's courses");
+    let first = &loaded.courses()[0];
+    assert_eq!(first.deck_root, "Example Course A");
+    assert_eq!(first.alias, 'a');
+    assert!(first.writing);
+    let bands: Vec<(&str, u32, u32)> = first
+        .unit_bands
+        .iter()
+        .map(|band| (band.band, band.first, band.last))
+        .collect();
+    assert_eq!(
+        bands,
+        [
+            ("A1", 1, 10),
+            ("A2", 11, 20),
+            ("B1", 21, 30),
+            ("B2", 31, 40),
+            ("C1", 41, 50),
+            ("C2", 51, 60)
+        ]
+    );
+    let subjects: Vec<(&str, char)> = loaded
+        .focus_subjects()
+        .iter()
+        .map(|subject| (subject.code.as_str(), subject.alias))
+        .collect();
+    assert_eq!(subjects, [("qac", 'c')]);
+
+    // With the setting unset there are no courses, and that is no refusal.
+    let unset = Courses::load(&Environment::default()).expect("an unset setting is no refusal");
+    assert!(unset.courses().is_empty() && unset.digest().is_none());
+
+    let planted = planted_contradictions();
+    for (what, text, expected) in examined("planted contradictions", planted) {
+        let refusal = Courses::parse(&text).expect_err(what);
+        assert_eq!(refusal, expected, "{what}");
+        let said = refusal.to_string();
+        assert!(said.contains(COURSES_FILE), "{what}: {said}");
+        let mut quoted = Vec::new();
+        values(&serde_json::from_str(&text).expect("JSON"), &mut quoted);
+        for value in quoted.iter().filter(|value| value.len() > 1) {
+            assert!(
+                !said.contains(value.as_str()),
+                "{what}: {said} quotes {value}"
+            );
+        }
+    }
+
+    let malformed = malformed_files();
     for (what, text) in examined("malformed files", malformed) {
         let refusal = Courses::parse(&text).expect_err(what);
         assert!(

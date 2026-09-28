@@ -35,6 +35,10 @@ async fn count(db: &Db, table: &str) -> i64 {
         .expect("the count reads")
 }
 
+#[allow(
+    clippy::too_many_lines,
+    reason = "A26 is one export and one erase, judged table by table in one test"
+)]
 #[tokio::test]
 async fn the_rollup_tables_are_exported_and_erased() {
     let port = AnalyticsDataRights;

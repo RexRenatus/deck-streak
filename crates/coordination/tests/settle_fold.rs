@@ -664,10 +664,10 @@ mod cycle {
         engine.0.store(true, Ordering::SeqCst);
         let second = first + 10 * 60_000;
         clock.set(UtcMillis::from_epoch_millis(second));
-        let synced = sync_cycle(&cycle, Trigger::Owner)
+        let succeeded = sync_cycle(&cycle, Trigger::Owner)
             .await
             .expect("the cycle runs");
-        assert!(matches!(synced.recompute, Recompute::Ran { .. }));
+        assert!(matches!(succeeded.recompute, Recompute::Ran { .. }));
         assert_eq!(
             rolled(&db).await,
             [(day(D0 - 1), true), (day(D0), false)],

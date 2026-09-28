@@ -183,11 +183,20 @@ pub async fn roll_up(
         > 0;
     // The day's per-course rows are replaced in the same write: a course whose reviews went goes,
     // and a row that is unchanged keeps its `created_at`.
-    let kept: Vec<&str> = rolled
-        .languages
-        .iter()
-        .map(|row| row.course.as_str())
-        .collect();
+    replace_language_days(write, day, rolled.languages, now).await?;
+    record_score(write, metrics.day, score).await?;
+    Ok(changed)
+}
+
+/// Replaces `day`'s per-course rows with `languages`, inside `write` at `now` (R11): a course the
+/// day no longer has loses its row, and a row whose numbers are unchanged is left as it is.
+async fn replace_language_days(
+    write: &mut SqliteConnection,
+    day: i64,
+    languages: &[LanguageDay],
+    now: i64,
+) -> Result<(), KernelError> {
+    let kept: Vec<&str> = languages.iter().map(|row| row.course.as_str()).collect();
     let kept = Value::from(kept).to_string();
     sqlx::query!(
         "DELETE FROM daily_lang_stats WHERE study_day = ?1 \
@@ -197,7 +206,7 @@ pub async fn roll_up(
     )
     .execute(&mut *write)
     .await?;
-    for row in rolled.languages {
+    for row in languages {
         let course = row.course.as_str();
         sqlx::query!(
             "INSERT INTO daily_lang_stats (study_day, course, reviews, seconds, answered, passed, \
@@ -219,8 +228,7 @@ pub async fn roll_up(
         .execute(&mut *write)
         .await?;
     }
-    record_score(write, metrics.day, score).await?;
-    Ok(changed)
+    Ok(())
 }
 
 /// Records `state` as the card state of `day`, recorded at `at` (R8, R9).

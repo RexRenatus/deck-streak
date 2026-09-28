@@ -18,7 +18,7 @@ use std::sync::Arc;
 use axum::Router;
 use axum::body::{Body, to_bytes};
 use axum::http::header::{CONTENT_TYPE, SET_COOKIE};
-use axum::http::{HeaderMap, Request, StatusCode};
+use axum::http::{HeaderMap, HeaderValue, Request, StatusCode};
 use deck_streak_api::{ApiState, OwnerAccess, Readiness, router};
 use deck_streak_coordination::score::day_score;
 use deck_streak_identity::{Freshness, Owner, OwnerGate, WebAppKey};
@@ -291,10 +291,7 @@ async fn a_day_never_recorded_and_a_day_with_no_answer_render_as_null() {
     let answer = get(&app, DAYS_PATH, Some(&cookie)).await;
     assert_eq!(answer.status, StatusCode::OK, "{}", answer.body);
     assert_eq!(
-        answer
-            .headers
-            .get(CONTENT_TYPE)
-            .map(|value| value.as_bytes()),
+        answer.headers.get(CONTENT_TYPE).map(HeaderValue::as_bytes),
         Some(&b"application/json"[..])
     );
     let body = answer.json();

@@ -281,7 +281,8 @@ pub fn volume_baseline(rows: &[DayVolume]) -> Baseline {
     let base_minutes = match minutes.len() {
         0 => 0.0,
         count if count % 2 == 1 => minutes[middle],
-        _ => (minutes[middle - 1] + minutes[middle]) / 2.0,
+        // `(a + b) / 2`, bit for bit, below `f64::MAX / 2`, as the predecessor's median is.
+        _ => f64::midpoint(minutes[middle - 1], minutes[middle]),
     };
     Baseline {
         reviews: py_max(base_reviews, BASE_REVIEWS_FLOOR),

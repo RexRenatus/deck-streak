@@ -137,7 +137,8 @@ pub struct FocusSubject {
 /// The owner's courses, as loaded at start: none when the setting is unset.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Courses {
-    courses: Vec<Course>,
+    /// Every course, in the file's order.
+    list: Vec<Course>,
     focus_subjects: Vec<FocusSubject>,
     digest: Option<String>,
 }
@@ -190,7 +191,7 @@ impl Courses {
         let digest = (!courses.is_empty() || !focus_subjects.is_empty())
             .then(|| content_digest(canonical(&courses, &focus_subjects).as_bytes()));
         Ok(Self {
-            courses,
+            list: courses,
             focus_subjects,
             digest,
         })
@@ -223,7 +224,7 @@ impl Courses {
     /// Every course, in the file's order.
     #[must_use]
     pub fn courses(&self) -> &[Course] {
-        &self.courses
+        &self.list
     }
 
     /// Every further focus subject, in the file's order.

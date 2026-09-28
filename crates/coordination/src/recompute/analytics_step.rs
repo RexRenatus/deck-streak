@@ -98,16 +98,13 @@ impl DayStep for AnalyticsStep {
                     } else {
                         stored(write, day.day).await?.map(|row| row.metrics)
                     };
-                    match kept {
-                        Some(metrics) => {
-                            let score = compute_score(&metrics, None, streak, baseline);
-                            record_score(write, day.day, &score).await?;
-                        }
-                        None => {
-                            let metrics = self.metrics(facts, day.day);
-                            let score = compute_score(&metrics, None, streak, baseline);
-                            roll(write, facts, &metrics, &score).await?;
-                        }
+                    if let Some(metrics) = kept {
+                        let score = compute_score(&metrics, None, streak, baseline);
+                        record_score(write, day.day, &score).await?;
+                    } else {
+                        let metrics = self.metrics(facts, day.day);
+                        let score = compute_score(&metrics, None, streak, baseline);
+                        roll(write, facts, &metrics, &score).await?;
                     }
                 }
             }
