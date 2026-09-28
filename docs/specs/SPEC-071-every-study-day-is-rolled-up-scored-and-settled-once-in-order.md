@@ -366,6 +366,8 @@ privacy-gdpr and accessibility packs stay enforced, and no row is deferred for i
 | `.cargo/mutants.toml` | repo | changed at delivery (§10): the one Rust equivalent's anchored `exclude_re` record (#295) |
 | `web/app/messages/en.json` | miniapp | changed at delivery (§10): the score screen's messages |
 | `web/app/tests/a11y.spec.ts` | miniapp | changed at delivery (§10): the score route answered, so the audit renders the breakdown |
+| `crates/ingest/src/sync_runs.rs` | `deck-streak-ingest` | changed at delivery (§10, Continuation): `first_success_in`, the start of a study day's first successful sync |
+| `crates/ingest/tests/gate.rs` | `deck-streak-ingest` | changed at delivery (§10, Continuation): `first_success_in`'s own test, the one cargo-mutants runs on this package |
 
 ## 5. What this does NOT do
 
@@ -447,6 +449,7 @@ milliseconds (SPEC-029 R3).
 | `S07110-ROLLUP-KEY` | `migrations/007101_analytics_daily_rollup.sql` | one row per study day, held by the table's key (a script mutation of the migration with a cargo killer) | `rollup_store::rerolling_a_day_with_the_same_reviews_writes_identical_rows` |
 | `S07111-SETTLE-ONE-WRITE` | `crates/coordination/src/recompute/mod.rs` | a settle records its cursor in the same write as its steps (added at delivery, §10) | `settle_fold::a_settle_whose_cursor_is_refused_commits_none_of_its_steps_work` |
 | `S07112-SYNC-START-DAY` | `crates/coordination/src/sync_cycle.rs` | the fold is handed the study day the latest successful sync started in (added at delivery, §10) | `settle_fold::cycle::a_sync_across_the_rollover_leaves_the_day_it_started_in_owed` |
+| `S07113-OWED-SETTLE-DUE` | `crates/coordination/src/sync_cycle.rs` | a cycle that runs the fold collects the settle a closed day is owed as an obligation (added at delivery, §10, Continuation) | `settle_fold::cycle::the_scheduled_sync_after_a_sync_across_the_rollover_settles_the_owed_day` |
 
 ## 10. Amendments at delivery
 
@@ -621,3 +624,33 @@ milliseconds (SPEC-029 R3).
   holds, and their tests hold them. A row for R18 would need its killer in analytics' own package,
   where no fold test runs. R1's defect leaks a value into a `&'static str` through `Box::leak`,
   which is contrived, and A13 itself now kills it.
+- **Continuation: a day left owed by a sync across the rollover was settled late.** After the
+  owner's sync that started before the rollover and finished after it, the anchor is written after
+  the close. The next scheduled sync starts after the close, but nothing in the collection changed
+  since that anchor, so the change gate skipped the recompute and the closed day stayed owed until
+  some later recompute settled it with a later card state. R15 asks the recompute after every
+  successful sync, scheduled or the owner's, to settle each closed day, so the code was short of R15
+  and R15 stays as written. A cycle given the fold now registers an obligation, `owed_settle`
+  (`crates/coordination/src/sync_cycle.rs`), whose one deadline is the start of the current study
+  day's first successful sync (`SqliteSyncRuns::first_success_in`). While no recompute has run
+  since that start, the gate runs one for it (`DeadlineDue`), and its fold settles the day that
+  closed; once one has, the deadline has passed and the gate is back to its other terms. The tests,
+  both recorded under A18 in `docs/red-first/SPEC-071.md`, "Continuation":
+  - `settle_fold::cycle::the_scheduled_sync_after_a_sync_across_the_rollover_settles_the_owed_day`:
+    after a sync across the rollover, the scheduled sync that starts after the close, with no
+    rescore marked and nothing changed, runs one recompute for `owed_settle`, which settles the
+    closed day with the card state at that sync; the next scheduled run that day is refused and
+    the day is settled once. It is red at 83cceb7 and green at 2d76848.
+  - `settle_fold::cycle::the_scheduled_sync_after_a_settle_still_skips_the_recompute`: after the
+    owner's sync that started after the close settled the day, the day's scheduled sync, with
+    nothing changed, costs no recompute, and the settled day is as it was.
+
+  The S3 test of fix round 1 stays: its second cycle is the owner's sync, which marks a rescore, and
+  it is S07112's killer; the new test adds the scheduled path. `first_success_in` has its own test in
+  ingest's package, `gate::a_study_days_first_success_is_its_earliest_successful_start`. Row S07113
+  (§9) holds the registration, which no function-level mutant removes. Chosen against a deadline
+  per owed day, the start of the first successful sync after that day's close: it would read the
+  fold's cursor as well as the sync record, and the one deadline already comes due at the cycle the
+  first test observes. Chosen against the latest successful sync on record: it comes due again
+  after every successful sync, so the day's scheduled sync after the owner's settle would recompute
+  with nothing owed; planted in its place, the second test goes red.

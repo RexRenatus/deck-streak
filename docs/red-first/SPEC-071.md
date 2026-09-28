@@ -181,3 +181,55 @@ each add a call, which no constant, string, attribute or `new` method holds, and
 them. A row for R18 (S4) would run its killer in analytics' own package, where no fold test runs.
 R1's (S5) defect leaks a value into a `&'static str` through `Box::leak`, which is contrived, and
 A13 itself now kills it.
+
+## Continuation
+
+The first review's private observation, ruled a defect: after the owner's sync that started before
+the rollover and finished after it, the next scheduled sync starts after the close, but nothing in
+the collection changed since that sync's anchor, so the change gate skipped the recompute and the
+closed day stayed owed. R15 stays as written. The order of work: the test of the scheduled path and
+the negative test, alone (83cceb7); the fix, with `first_success_in`'s own test in ingest's package
+(2d76848); row S07113 (54da2ba); SPEC-071's §4, §9 and §10, ADR-071's "The fold" and this record.
+
+The new test is red first, and it was the only failure of its whole target (`cargo test -p
+deck-streak-coordination --test settle_fold`: 17 passed, 1 failed at 83cceb7; 18 passed at
+2d76848). The negative test passed at 83cceb7, since the code before the fix never recomputed for
+a day with no owed close, so it cannot be red first; it and `first_success_in`'s test, which came
+with the function it observes, were run red under a plant instead. The plants were applied in the
+committed worktree at 2d76848, at an anchor that occurs exactly once, the whole test target run,
+and the file restored, its sha256 the same before the plant and after the restore, with the tree
+clean again before the next plant. None of the three is a criterion of §3, so their record stands
+outside the `red-first` fence:
+
+```text
+R15, recorded under A18: settle_fold::cycle::the_scheduled_sync_after_a_sync_across_the_rollover_settles_the_owed_day
+  red at 83cceb7: assertion `left == right` failed: the scheduled sync, which started after the close, settled the day
+  left: [(StudyDay(20000), false)], right: [(StudyDay(19999), true), (StudyDay(20000), false)]
+  green at 2d76848
+R15, recorded under A18: settle_fold::cycle::the_scheduled_sync_after_a_settle_still_skips_the_recompute
+  green at 83cceb7 and at 2d76848
+  red under the latest successful sync as the deadline (last_success_at for first_success_in):
+  assertion `left == right` failed: no day is owed and nothing changed, so the gate skips the recompute
+  left: Ran { reason: DeadlineDue { label: "owed_settle" }, reviews: 0, cards: 0 }, right: Skipped
+  the only failure of its target: 17 passed, 1 failed
+R15, first_success_in's own test: gate::a_study_days_first_success_is_its_earliest_successful_start
+  green at 2d76848
+  red under first_success_in answering none: assertion `left == right` failed: each day's first
+  success is its own earliest successful start
+  left: (None, None), right: (Some(UtcMillis(1728018000000)), Some(UtcMillis(1728105300000)))
+  the only failure of its target: 11 passed, 1 failed; under the same plant the fold's target
+  failed only the_scheduled_sync_after_a_sync_across_the_rollover_settles_the_owed_day
+```
+
+Each planted file read the same sha256 after its restore as before its plant: `sync_cycle.rs`
+428705d0742e66de and `sync_runs.rs` 9723db156eda77a9 (twice), each the first sixteen hex digits.
+
+The S3 test of fix round 1, `a_sync_across_the_rollover_leaves_the_day_it_started_in_owed`, reads
+as it did: its second cycle is the owner's sync, which marks a rescore, and it stays S07112's
+killer. The new test adds the scheduled path, and does not subsume it. No other test changed.
+
+S07113-OWED-SETTLE-DUE drops the obligation where `with_fold` registers it, which no
+function-level mutant does, and the new test kills it. `python3 scripts/mutation_rows.py prove
+--band S07100-S07199` at 54da2ba reads `rows: examined 13: killed 13, survived 0, void 0`: each
+killer selected its one test with and without the mutant, and each target was restored byte for
+byte.
