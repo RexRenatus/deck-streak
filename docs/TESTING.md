@@ -62,21 +62,37 @@ issue is closed is stale, and a run that cannot read an issue's state is VOID, n
 ## Continuous integration
 
 CI runs `bash scripts/check.sh` on every pull request into `dev` and `main` and every push to them,
-on GitHub-hosted runners, in four jobs that start together (ADR-055):
+on GitHub-hosted runners, in five jobs that start together (ADR-055):
 
 | job | stages |
 |---|---|
 | `rust` | `fmt clippy test doctest audit-rust` |
+| `engine` | `test-engine`, in two slices of the engine set, one per runner |
 | `web` | `web audit-web` |
 | `packs` | `packs` |
 | `hygiene` | `python scrub secrets` |
 
 Every stage runs in exactly one job, and the aggregate `ci` check, which the rulesets require, needs
-all four with `workflow-lint` and `base-is-dev`. Each stage checks its own tools first, so a missing
+all five with `workflow-lint` and `base-is-dev`. Each stage checks its own tools first, so a missing
 tool fails that stage by name wherever it runs.
 
+`check.sh` defines the engine set once, `ENGINE_TESTS`: a nextest filterset naming SPEC-022's two
+test binaries that drive Anki's engine end to end (`sync` and `engine_budget`), whose tests take tens
+of seconds each. The `test` stage runs every test outside it and `test-engine` runs it, with one
+command that differs only in that filterset, so each test runs in exactly one of the two, and the
+engine's slow tests no longer lengthen the `rust` job (SPEC-038 section 8). In CI the `engine` job
+runs the set in two slices, one per runner: each leg sets `ENGINE_SLICE` to its slice (`1/2`,
+`2/2`), which `test-engine` hands nextest as `--partition slice:1/2`. The local gate with no
+arguments runs both stages and the whole set. To run only the fast tests locally:
+
+```sh
+bash scripts/check.sh test          # every test outside the engine set
+bash scripts/check.sh test-engine   # the engine set
+```
+
 `rust` restores a cache of `~/.cargo`'s downloads and `target/`, keyed on the toolchain pin and
-`Cargo.lock`, and `hygiene` restores it too, because a guard test builds a Rust example; `web` restores the pnpm store and Playwright's browser, keyed on `pnpm-lock.yaml` and
+`Cargo.lock`, and `engine` and `hygiene` restore it too (a guard test builds a Rust example); only
+`rust` saves it. `web` restores the pnpm store and Playwright's browser, keyed on `pnpm-lock.yaml` and
 the Playwright version it locks. Only a push to `dev` or `main` saves a cache, and only when it
 missed its key; a pull request, a fork's included, restores and never saves. A newer push to a pull
 request cancels the run it supersedes; a push to `dev` or `main` is never cancelled.

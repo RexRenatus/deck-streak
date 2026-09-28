@@ -1,7 +1,9 @@
 """The local gate checks each stage's own tools, has no toolchain stage, splits its audit by
 toolchain, times every stage it runs, and makes the stages that compile Anki's engine name protoc
 (SPEC-038 A5, A6, A12 and A15). Its python stage runs every suite, whatever an earlier one found,
-and names each one's result (SPEC-054 A13)."""
+and names each one's result (SPEC-054 A13). Its two test stages split the workspace's tests by one
+engine set, defined once, and test-engine runs the slice of it CI hands over (SPEC-038 A16, A17 and
+A19)."""
 
 import re
 import shutil
@@ -25,6 +27,8 @@ TOOLS = {
     "test": ["cargo", "cargo-nextest"],
     "doctest": ["cargo"],
     "audit-rust": ["cargo", "cargo-deny"],
+    # The engine set's own stage (SPEC-038 R13), which the engine job runs.
+    "test-engine": ["cargo", "cargo-nextest"],
     "web": ["node", "pnpm"],
     "audit-web": ["node", "pnpm"],
     # A guard test builds a Rust example (SPEC-042's rails rows), so the stage runs cargo too.
@@ -36,7 +40,12 @@ TOOLS = {
 SUMMARY = re.compile(r"^(ok|FAILED) +\S+ +\d+s")
 # The stages that compile Anki's engine, and the tools each checks before protoc (SPEC-038 R4): the
 # engine's build scripts compile its protobuf definitions with prost-build (ADR-022).
-ENGINE_STAGES = {"clippy": ["cargo"], "test": ["cargo", "cargo-nextest"], "doctest": ["cargo"]}
+ENGINE_STAGES = {
+    "clippy": ["cargo"],
+    "test": ["cargo", "cargo-nextest"],
+    "doctest": ["cargo"],
+    "test-engine": ["cargo", "cargo-nextest"],
+}
 # A planted guard test that fails, and a planted oracle suite of two passing tests (SPEC-054 A13).
 PLANTED_GUARD = (
     "import unittest\n\n\n"
@@ -209,6 +218,289 @@ class ThePythonStageRunsEverySuite(unittest.TestCase):
             done, _ = run_gate(where, ["python"], ["cargo"], check=check, real=["python3"])
         self.assertRegex(summary(done), r"^ok +python ")
         self.assertEqual(done.returncode, 0, done.stdout)
+
+
+# --------------------------------------------------------- the engine set (SPEC-038 A16, A17)
+
+# The engine set's one definition (SPEC-038 R13): a nextest filterset, in single quotes.
+ENGINE_DEFINITION = re.compile(r"^ENGINE_TESTS='([^'\n]*)'$", re.M)
+# The two test stages and the filterset each must run: every test outside the set, and the set.
+SPLIT = {"test": "not ({})", "test-engine": "{}"}
+# A set no real test is in, written in the definition's place to see which stages follow it.
+PLANTED_SET = "test(=a_planted_engine_test)"
+# The flags that carry a filterset to nextest.
+FILTERSET_FLAGS = ("-E", "--filterset")
+# What the engine set is made of: whole test binaries, each `binary_id(=<package>::<target>)`.
+ENGINE_BINARY = re.compile(r"binary_id\(=([a-z0-9-]+)::([a-z0-9_]+)\)")
+WHOLE_BINARIES = re.compile(rf"{ENGINE_BINARY.pattern}(?: \| {ENGINE_BINARY.pattern})*")
+RUST_TEST = re.compile(r"(?m)^\s*#\[(?:tokio::)?test\b")
+# A test function: its test attribute, any attributes after it, then `fn <name>`.
+TEST_FUNCTION = re.compile(
+    r"(?m)^[ \t]*#\[(?:tokio::)?test\b[^\n]*\n(?:[ \t]*#\[[^\n]*\n)*[ \t]*(?:async[ \t]+)?fn[ \t]+"
+    r"([a-z0-9_]+)"
+)
+PACKAGE_NAME = re.compile(r'(?m)^name = "([^"]+)"$')
+CALL_END = "--end-of-cargo-call--"
+
+
+def run_recorded(check, stage, scratch, extra_env=None):
+    """Run `check`, the text of a check.sh, as scripts/check.sh of a scratch tree for one stage,
+    with a PATH of check.sh's shell tools, a cargo that records its arguments and exits 0, stubs
+    for cargo-nextest and protoc, and any `extra_env`. Returns the process and cargo's calls, each
+    a list."""
+    tree = scratch / "tree"
+    (tree / "scripts").mkdir(parents=True)
+    (tree / "scripts" / "check.sh").write_text(check, encoding="utf-8")
+    tools = scratch / "bin"
+    tools.mkdir()
+    for tool in SHELL_TOOLS:
+        found = shutil.which(tool)
+        if found is None:
+            raise AssertionError(f"this machine has no {tool}, which check.sh itself runs")
+        (tools / tool).symlink_to(found)
+    stubs = {
+        "cargo": f"#!/bin/sh\nprintf '%s\\n' \"$@\" '{CALL_END}' >> \"$CARGO_CALLS\"\nexit 0\n",
+        "cargo-nextest": "#!/bin/sh\nexit 0\n",
+        "protoc": "#!/bin/sh\nexit 0\n",
+    }
+    for tool, body in stubs.items():
+        (tools / tool).write_text(body, encoding="utf-8")
+        (tools / tool).chmod(0o755)
+    record = scratch / "cargo-calls"
+    record.write_text("", encoding="utf-8")
+    env = {
+        "PATH": str(tools),
+        "CHECK_LOG_DIR": str(scratch / "logs"),
+        "HOME": str(scratch),
+        "CARGO_CALLS": str(record),
+    }
+    env.update(extra_env or {})
+    done = subprocess.run(
+        [shutil.which("bash"), str(tree / "scripts" / "check.sh"), stage],
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    calls, call = [], []
+    for line in record.read_text(encoding="utf-8").splitlines():
+        if line == CALL_END:
+            calls.append(call)
+            call = []
+        else:
+            call.append(line)
+    return done, calls
+
+
+def filtersets(argv):
+    """The filtersets a cargo call hands nextest, and the call without them."""
+    found, rest, at = [], [], 0
+    while at < len(argv):
+        if argv[at] in FILTERSET_FLAGS and at + 1 < len(argv):
+            found.append(argv[at + 1])
+            at += 2
+        else:
+            rest.append(argv[at])
+            at += 1
+    return found, rest
+
+
+def split_problems(check, scratch):
+    """What a check.sh gets wrong about the engine set (SPEC-038 R13): a set defined other than
+    once, a test stage that does not run it (negated in `test`, as it is in `test-engine`), a stage
+    that holds its own copy of it, or two commands that differ in more than the filterset. It runs
+    both stages twice, with the definition as written and with PLANTED_SET in its place, so a stage
+    that states the set itself instead of reading the definition stays behind and is seen."""
+    definitions = ENGINE_DEFINITION.findall(check)
+    if len(definitions) != 1:
+        return [f"check.sh defines the engine set {len(definitions)} time(s), not once"]
+    planted = ENGINE_DEFINITION.sub(lambda _: f"ENGINE_TESTS='{PLANTED_SET}'", check)
+    problems = []
+    for label, text, engine in (
+        ("as written", check, definitions[0]),
+        ("planted", planted, PLANTED_SET),
+    ):
+        commands = {}
+        for stage, form in SPLIT.items():
+            done, calls = run_recorded(text, stage, scratch / label.replace(" ", "-") / stage)
+            if done.returncode != 0 or len(calls) != 1:
+                said = (summary(done) or done.stdout.strip() or done.stderr.strip())[-160:]
+                problems.append(
+                    f"{stage} ({label}): exit {done.returncode}, {len(calls)} cargo call(s): {said}"
+                )
+                continue
+            found, commands[stage] = filtersets(calls[0])
+            wanted = form.format(engine)
+            if found != [wanted]:
+                problems.append(f"{stage} ({label}) runs the filterset {found}, not [{wanted!r}]")
+        if len(commands) == len(SPLIT) and len({tuple(c) for c in commands.values()}) != 1:
+            problems.append(
+                f"the two stages ({label}) differ in more than the filterset: {commands}"
+            )
+    return problems
+
+
+def planted_check(test_stage, engine_stage, definitions=("binary_id(=p::slow)",)):
+    """A small check.sh: the engine set's definitions, and the two test stages as given."""
+    lines = ["#!/usr/bin/env bash"]
+    lines += [f"ENGINE_TESTS='{definition}'" for definition in definitions]
+    lines += [f"stage_test() {{ {test_stage}; }}", f"stage_test_engine() {{ {engine_stage}; }}"]
+    lines += ['"stage_${1//-/_}"']
+    return "\n".join(lines) + "\n"
+
+
+NEGATED = 'cargo nextest run --workspace -E "not ($ENGINE_TESTS)"'
+AS_IS = 'cargo nextest run --workspace -E "$ENGINE_TESTS"'
+# Each planted check.sh, and what split_problems must say about it.
+PLANTED_SPLITS = [
+    (
+        "a stage that holds its own copy of the set",
+        planted_check(NEGATED, "cargo nextest run --workspace -E 'binary_id(=p::slow)'"),
+        [
+            "test-engine (planted) runs the filterset ['binary_id(=p::slow)'], "
+            "not ['test(=a_planted_engine_test)']"
+        ],
+    ),
+    (
+        "a test stage that runs the set instead of its complement",
+        planted_check(AS_IS, AS_IS),
+        [
+            "test (as written) runs the filterset ['binary_id(=p::slow)'], "
+            "not ['not (binary_id(=p::slow))']",
+            "test (planted) runs the filterset ['test(=a_planted_engine_test)'], "
+            "not ['not (test(=a_planted_engine_test))']",
+        ],
+    ),
+    (
+        "an engine stage that builds another scope",
+        planted_check(NEGATED, 'cargo nextest run --package p -E "$ENGINE_TESTS"'),
+        [
+            "the two stages (as written) differ in more than the filterset: "
+            "{'test': ['nextest', 'run', '--workspace'], "
+            "'test-engine': ['nextest', 'run', '--package', 'p']}",
+            "the two stages (planted) differ in more than the filterset: "
+            "{'test': ['nextest', 'run', '--workspace'], "
+            "'test-engine': ['nextest', 'run', '--package', 'p']}",
+        ],
+    ),
+    (
+        "a set defined twice",
+        planted_check(NEGATED, AS_IS, ("binary_id(=p::slow)", "binary_id(=p::slower)")),
+        ["check.sh defines the engine set 2 time(s), not once"],
+    ),
+]
+
+
+def workspace_packages(root=REPO):
+    """{package name: crate directory} for every crate under crates/."""
+    packages = {}
+    for manifest in sorted((root / "crates").glob("*/Cargo.toml")):
+        named = PACKAGE_NAME.search(manifest.read_text(encoding="utf-8"))
+        if named:
+            packages[named.group(1)] = manifest.parent
+    return packages
+
+
+def engine_binary_problems(engine, root=REPO):
+    """What is wrong with an engine set as a list of whole test binaries: a set made of anything
+    but `binary_id(=<package>::<target>)` terms joined by `|`, a package no crate under
+    crates/ declares, or a target whose tests/<target>.rs holds no test."""
+    if not WHOLE_BINARIES.fullmatch(engine):
+        return [f"the engine set is not a union of whole test binaries: {engine}"]
+    packages = workspace_packages(root)
+    problems = []
+    for package, target in ENGINE_BINARY.findall(engine):
+        if package not in packages:
+            problems.append(f"{package}::{target}: no crate declares the package {package}")
+            continue
+        source = packages[package] / "tests" / f"{target}.rs"
+        if not source.is_file() or not RUST_TEST.search(source.read_text(encoding="utf-8")):
+            problems.append(f"{package}::{target}: no test target with tests at {source.name}")
+    return problems
+
+
+def engine_tests(engine, root=REPO):
+    """[(binary id, test function)] for every test the engine set's binaries hold."""
+    packages = workspace_packages(root)
+    found = []
+    for package, target in ENGINE_BINARY.findall(engine):
+        source = packages[package] / "tests" / f"{target}.rs"
+        found += [
+            (f"{package}::{target}", name)
+            for name in TEST_FUNCTION.findall(source.read_text(encoding="utf-8"))
+        ]
+    return found
+
+
+class TheEngineSetSplitsTheTests(unittest.TestCase):
+    def test_both_test_stages_take_the_engine_set_from_its_one_definition(self):
+        examined("test stages that split the workspace", list(SPLIT))
+        with tempfile.TemporaryDirectory() as scratch:
+            where = Path(scratch)
+            check = CHECK.read_text(encoding="utf-8")
+            self.assertEqual(split_problems(check, where / "check"), [])
+            # The judge refuses each way a check.sh could break the split.
+            for at, (name, planted, expected) in enumerate(PLANTED_SPLITS):
+                with self.subTest(planted=name):
+                    self.assertEqual(split_problems(planted, where / f"planted-{at}"), expected)
+
+    def test_the_engine_set_names_test_binaries_that_hold_tests(self):
+        definitions = ENGINE_DEFINITION.findall(CHECK.read_text(encoding="utf-8"))
+        self.assertEqual(len(definitions), 1, "check.sh defines no single engine set")
+        self.assertEqual(engine_binary_problems(definitions[0]), [])
+        tests = examined("tests in the engine set's binaries", engine_tests(definitions[0]))
+        self.assertEqual(
+            sorted({binary for binary, _ in tests}),
+            sorted(f"{p}::{t}" for p, t in ENGINE_BINARY.findall(definitions[0])),
+            "a binary of the engine set holds no test",
+        )
+        # A set naming nothing, a target no package has, and a package no crate declares.
+        self.assertEqual(
+            engine_binary_problems("none()"),
+            ["the engine set is not a union of whole test binaries: none()"],
+        )
+        self.assertEqual(
+            engine_binary_problems("binary_id(=deck-streak-ingest::no_such_target)"),
+            ["deck-streak-ingest::no_such_target: no test target with tests at no_such_target.rs"],
+        )
+        self.assertEqual(
+            engine_binary_problems("binary_id(=deck-streak-nowhere::sync)"),
+            ["deck-streak-nowhere::sync: no crate declares the package deck-streak-nowhere"],
+        )
+
+
+# A slice of the engine set as the engine job hands it over, m/n, and what nextest must be given
+# for it (SPEC-038 R16); then slices that name none, which fail the stage before any build.
+SLICES = [
+    ("1/2", ["--partition", "slice:1/2"]),
+    ("2/2", ["--partition", "slice:2/2"]),
+    ("3/7", ["--partition", "slice:3/7"]),
+]
+NOT_SLICES = ["0/2", "3/2", "2", "a/b", "1/2/3", " 1/2", "01/2"]
+
+
+class TheEngineStageRunsItsSlice(unittest.TestCase):
+    def test_the_engine_stage_runs_the_slice_it_is_given(self):
+        check = CHECK.read_text(encoding="utf-8")
+        with tempfile.TemporaryDirectory() as scratch:
+            where = Path(scratch)
+            done, calls = run_recorded(check, "test-engine", where / "whole")
+            self.assertEqual((done.returncode, len(calls)), (0, 1), done.stdout)
+            whole = calls[0]
+            self.assertEqual(filtersets(whole)[0], [ENGINE_DEFINITION.findall(check)[0]])
+            self.assertNotIn("--partition", whole, "given no slice, test-engine slices the set")
+            for at, (given, added) in enumerate(examined("slices", SLICES)):
+                env = {"ENGINE_SLICE": given}
+                done, calls = run_recorded(check, "test-engine", where / f"slice-{at}", env)
+                self.assertEqual(calls, [whole + added], f"test-engine given the slice {given!r}")
+            for at, given in enumerate(NOT_SLICES):
+                env = {"ENGINE_SLICE": given}
+                done, calls = run_recorded(check, "test-engine", where / f"not-{at}", env)
+                self.assertEqual(calls, [], f"test-engine ran cargo with the slice {given!r}")
+                named = (
+                    rf"^FAILED +test-engine .*: ENGINE_SLICE names no slice m/n of n: '{given}'$"
+                )
+                self.assertRegex(summary(done), named, done.stdout)
 
 
 if __name__ == "__main__":
