@@ -144,7 +144,7 @@ class Host:
             self.file(b / f"rotated-{n}.tar", 100, mtime=days(11 - n))
         for venv, size in (
             (self.apps / "idle" / ".venv", 3000),
-            (self.apps / "busy" / ".venv", 2000),
+            (self.apps / "named" / ".venv", 2000),
         ):
             self.file(venv / "pyvenv.cfg", text="home = /usr/bin\n")
             self.file(venv / "lib" / "site.py", size)
@@ -169,23 +169,23 @@ class Host:
         self.file(self.var / "log" / "journal.bin", 2500)
 
     def default_scenario(self):
-        busy = self.apps / "busy" / ".venv" / "bin" / "python"
+        named = self.apps / "named" / ".venv" / "bin" / "python"
         return {
             "unit_files": [
-                "busy.service enabled enabled",
+                "named.service enabled enabled",
                 "serving.service enabled enabled",
                 "example.service enabled enabled",
             ],
             "units": [
-                "busy.service loaded active running Busy example",
+                "named.service loaded active running Named example",
                 "serving.service loaded active running Serving example",
                 "example.service loaded active running Example",
                 "gone.service not-found inactive dead gone.service",
             ],
             "show": {
-                "busy.service": {
-                    "Id": "busy.service",
-                    "ExecStart": f"{{ path={busy} ; argv[]={busy} -m busy ; ignore_errors=no }}",
+                "named.service": {
+                    "Id": "named.service",
+                    "ExecStart": f"{{ path={named} ; argv[]={named} -m named ; ignore_errors=no }}",
                     "WorkingDirectory": "",
                 },
                 "serving.service": {
@@ -528,7 +528,7 @@ class Inventory(unittest.TestCase):
                 {venv["path"] for venv in record["venvs"]},
                 {
                     str(host.apps / "idle" / ".venv"),
-                    str(host.apps / "busy" / ".venv"),
+                    str(host.apps / "named" / ".venv"),
                     str(host.srv / "guarded" / ".venv"),
                 },
             )
@@ -543,8 +543,8 @@ class Inventory(unittest.TestCase):
             # The packages, the loaded units with their commands, and the largest memory users.
             self.assertIn("example-unused-tool", {p["name"] for p in record["packages"]})
             units = {unit["unit"]: unit for unit in record["units"]}
-            busy = units["busy.service"]["settings"]["ExecStart"]
-            self.assertIn(str(host.apps / "busy" / ".venv" / "bin" / "python"), busy)
+            named = units["named.service"]["settings"]["ExecStart"]
+            self.assertIn(str(host.apps / "named" / ".venv" / "bin" / "python"), named)
             self.assertEqual(units["serving.service"]["active"], "active")
             self.assertEqual(len(record["memory"]), 2)
 
