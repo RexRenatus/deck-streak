@@ -1,0 +1,46 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S03901-A-RUST-DIFF-THAT-EXAMINED-NOTHING-IS-VOID",
+        "scripts/mutation-verdict.py",
+        "    if verdict.examined == 0:\n        verdict.void(\"production code changed and nothing was examined\")\n\n\ndef klass_rows",
+        "    if verdict.examined < 0:\n        verdict.void(\"production code changed and nothing was examined\")\n\n\ndef klass_rows",
+        "a production diff whose tool examined nothing is VOID, never green (SPEC-039 R4)",
+        "test_mutation_verdict.TheVerdictReadsTheToolsOwnReport.test_a_production_diff_that_examined_nothing_is_void"
+      ],
+      [
+        "S03902-AN-UNVIABLE-MUTANT-IS-NOT-EXAMINED",
+        "scripts/mutation-verdict.py",
+        "    tool = caught + missed + timeout\n",
+        "    tool = caught + missed + timeout + unviable\n",
+        "a mutant that does not build is not examined, so it cannot carry a class (SPEC-039 R4)",
+        "test_mutation_verdict.TheVerdictReadsTheToolsOwnReport.test_a_missed_mutant_fails_and_an_unviable_one_is_not_examined"
+      ],
+      [
+        "S03903-A-TRACKED-CHANGE-IS-REFUSED",
+        "scripts/mutation_rows.py",
+        "    dirty = tracked_changes(root)\n",
+        "    dirty = []\n",
+        "the runner refuses a tree with a tracked change before it installs any mutant (SPEC-039 R9)",
+        "test_mutation_rows.TheRunnerProvesARowTheWayThePackDoes.test_a_tracked_change_is_refused_before_any_mutant_is_installed"
+      ],
+      [
+        "S03904-A-KILLER-SELECTS-EXACTLY-ONE-TEST",
+        "scripts/mutation_rows.py",
+        "    if control.selected != 1:\n",
+        "    if control.selected < 1:\n",
+        "a killer that selects more than one test is VOID (SPEC-039 R9)",
+        "test_mutation_rows.TheRunnerProvesARowTheWayThePackDoes.test_a_killer_that_selects_other_than_one_test_is_void"
+      ],
+      [
+        "S03905-A-ROW-LEAVES-ONLY-WITH-APPROVAL",
+        "scripts/mutation_rows.py",
+        "            refused += 1\n",
+        "            refused += 0\n",
+        "a row that leaves while its target stays fails the job without a recorded approval (SPEC-039 R11)",
+        "test_mutation_rows.NoRowLeavesWhileItsTargetStays.test_a_row_that_leaves_while_its_target_stays_is_refused"
+      ]
+    ]
+  }
+}
