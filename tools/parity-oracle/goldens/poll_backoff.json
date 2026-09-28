@@ -1,0 +1,165 @@
+{
+  "adapter": "after_consecutive_failures",
+  "cases": [
+    {
+      "class": "schedule",
+      "input": {
+        "failures": 1
+      },
+      "output": {
+        "delay_seconds": 3.0
+      }
+    },
+    {
+      "class": "schedule",
+      "input": {
+        "failures": 2
+      },
+      "output": {
+        "delay_seconds": 6.0
+      }
+    },
+    {
+      "class": "schedule",
+      "input": {
+        "failures": 3
+      },
+      "output": {
+        "delay_seconds": 12.0
+      }
+    },
+    {
+      "class": "schedule",
+      "input": {
+        "failures": 4
+      },
+      "output": {
+        "delay_seconds": 24.0
+      }
+    },
+    {
+      "class": "schedule",
+      "input": {
+        "failures": 5
+      },
+      "output": {
+        "delay_seconds": 48.0
+      }
+    },
+    {
+      "class": "schedule",
+      "input": {
+        "failures": 6
+      },
+      "output": {
+        "delay_seconds": 60.0
+      }
+    },
+    {
+      "class": "schedule",
+      "input": {
+        "failures": 7
+      },
+      "output": {
+        "delay_seconds": 60.0
+      }
+    },
+    {
+      "class": "schedule",
+      "input": {
+        "failures": 8
+      },
+      "output": {
+        "delay_seconds": 60.0
+      }
+    },
+    {
+      "class": "clamp",
+      "input": {
+        "failures": 11
+      },
+      "output": {
+        "delay_seconds": 60.0
+      }
+    },
+    {
+      "class": "clamp",
+      "input": {
+        "failures": 12
+      },
+      "output": {
+        "delay_seconds": 60.0
+      }
+    },
+    {
+      "class": "overflow",
+      "input": {
+        "failures": 1024
+      },
+      "output": {
+        "delay_seconds": 60.0
+      }
+    },
+    {
+      "class": "overflow",
+      "input": {
+        "failures": 1025
+      },
+      "output": {
+        "delay_seconds": 60.0
+      }
+    },
+    {
+      "class": "overflow",
+      "input": {
+        "failures": 1026
+      },
+      "output": {
+        "delay_seconds": 60.0
+      }
+    },
+    {
+      "input": {
+        "failures": 58
+      },
+      "output": {
+        "delay_seconds": 60.0
+      }
+    },
+    {
+      "input": {
+        "failures": 47
+      },
+      "output": {
+        "delay_seconds": 60.0
+      }
+    },
+    {
+      "input": {
+        "failures": 44
+      },
+      "output": {
+        "delay_seconds": 60.0
+      }
+    },
+    {
+      "input": {
+        "failures": 51
+      },
+      "output": {
+        "delay_seconds": 60.0
+      }
+    }
+  ],
+  "function": "bot.CommandBot._backoff_delay",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Records each consecutive failed round through the predecessor's _note_getupdates_failure on a stand-in holding only the failure counter and _backoff_delay, with its warning log silenced; returns the wait of the last round; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_026.py",
+  "registry_sha256": "0d992c558eeed01b5c8da6a91225e5eae98fbb63b7bf247f77bf797d548aa1df",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}
