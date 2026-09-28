@@ -219,14 +219,15 @@ R17. **The gate is proved red first.** The survivor in `SystemClock::now` (§1) 
     negative milliseconds then kills it, and the job goes GREEN. Both run ids are recorded.
 R18. **The shards, and their bound.** `scripts/mutation-verdict.py shards` sizes a diff's Rust run
     from cargo-mutants' own listing of its mutants, so that no shard reaches its job's timeout:
-    - a shard's projected time is the unmutated baseline's (346 s, the mean over run
-      36373915578's 30 shards) plus, for each mutant round-robin gives it (mutant `i` in shard
-      `i mod n`, as cargo-mutants assigns them), its package's cost: the mean build and test time
-      of one mutant over the weekly battery's shards on GitHub's `ubuntu-24.04` runners, held in
-      `mutation-verdict.py`'s table. A package the table does not name costs the table's highest;
+    - a shard's projected time is the unmutated baseline's plus, for each mutant round-robin gives
+      it (mutant `i` in shard `i mod n`, as cargo-mutants assigns them), its package's cost. Both
+      are means over the weekly battery's shards on GitHub's `ubuntu-24.04` runners, rounded up and
+      held in `mutation-verdict.py`: over run 36384080819's 31 reported shards, the baseline 371 s
+      and a mutant of `ingest` 126 s, `daemon` 80, `coordination` 64, `api` 54, `kernel` 13,
+      `identity` 8 and `vault` 8. A package the table does not name costs the table's highest;
     - it takes the fewest shards whose slowest is projected within 60 minutes, half the shard
-      job's `timeout-minutes` of 120: over run 36373915578's 30 shards, the measured time ran from
-      0.72 to 1.39 times the projection;
+      job's `timeout-minutes` of 120: the shards of runs 36373915578 and 36384080819 took from 0.66
+      to 1.33 times the table's projection;
     - a diff that needs more than 256 shards, the most a job matrix holds, is refused with its
       projection, never capped;
     - the verdict counts every shard from `0` to `n-1`: one with no report, or a partial one, is
@@ -412,9 +413,14 @@ and green are the `mutation-rust` job's two runs.
   slower than projected. The bound is half the job's timeout, above the measured error (R18). A
   shard that still times out uploads a partial report or none, the verdict names it VOID, and the
   table is measured again from the weekly battery's reports.
-- **A release costs runner time.** Its merge diff holds about every mutant in the repository, so
-  its run is about the weekly battery's size. A newer push to the release pull request cancels the
+- **A release costs runner time.** Its merge diff holds every mutant in the repository, so its
+  run is about the weekly battery's size. A newer push to the release pull request cancels the
   run it supersedes, so only the head that merges pays in full.
+- **A hosted runner can be shut down mid-shard.** Three of the 64 shard jobs across the two
+  dispatches on this delivery's branch stopped on "The runner has received a shutdown signal" and
+  uploaded no report (runs 36373915578 and 36384080819). The verdict names such a shard VOID
+  (A36), never green, and "Re-run failed jobs" runs that shard and the verdict again. At that rate
+  a release of 25 shards often loses one, so its run can need a re-run to go green.
 - **A flaky test makes a survivor or a kill flaky.** cargo-mutants refuses a red baseline (exit
   4, VOID here), and the runner's control run refuses a killer red without its mutant (R9).
 - **The weekly battery files noise.** Each issue is one file's survivors, titled by the file, and
@@ -493,3 +499,52 @@ branch and recorded in its pull request.
   it is live.
 - **The red-first record's home.** `dev` takes this delivery as one squash commit, so the record's
   shas are the commits of pull request #221, reachable from its head, not from `dev`'s history.
+- **R3 and R18: the release is judged on its merge diff, sharded.** By the owner's directive
+  ("deckstreak will need per merge diff mutation testing", "dev to main"), a release pull request
+  into `main` no longer reads `not-applicable`: it is judged on its merge diff by the path every
+  diff takes (`mutation-plan`, `mutation-rust` one job per shard, `mutation-rows`,
+  `mutation-verdict`, `mutation-web`). A pull request into `dev` is judged as before, on its merge
+  ref's diff, and a push that names the pull request it merges still reads `not-applicable`.
+- **The release's plan, rehearsed.** On a local synthetic merge of `dev` 09b60d2 into `main`
+  3d77726, never pushed, `plan --event pull_request --base-ref main` read 438 changed paths: 61
+  Rust files, 8 Mini App files and the oracle's generator. cargo-mutants listed 2,153 mutants of
+  the merge diff, every mutant the merged tree holds (`vault` 939, `kernel` 366, `ingest` 297,
+  `coordination` 292, `identity` 143, `daemon` 65, `api` 51), in under a second, building nothing.
+  Projected at 77,478 s serially, `shards` took 25 shards of 86 or 87 mutants, projected at 3,356
+  to 3,538 s each; 24 would put one at 3,680 s, past the bound. cargo-mutants' own
+  `--shard k/25 --sharding round-robin` listings matched the plan's shards exactly: 2,153 mutants,
+  none in two shards and none in none. The 8 Mini App files hold 266 of the app's 274 Stryker
+  mutants, which the weekly battery's `web` job ran in about three minutes, inside
+  `mutation-web`'s 60.
+- **The costs, measured on GitHub's runners.** The battery's dispatch at this branch's 4082551
+  (run 36384080819) ran 32 shards of 67 or 68 of the same mutants, and its shard jobs took 30.6
+  to 58.0 minutes. The plan's table is its 31 reported shards' means, rounded up (R18). The
+  earlier table, from run 36373915578, where `coordination` had one mutant, projected this run's
+  shards at 0.74 to 1.32 times their measured time; the refit one projects both runs' shards at
+  0.66 to 1.33. At the worst of these the release's slowest shard takes about 78 minutes of
+  baseline and mutants, inside its job's 120.
+- **The next release is red until its survivors are triaged.** Run 36384080819's 31 reported
+  shards found 310 missed mutants in 33 files (218 in `vault`, 145 of them in `rails.rs`), and its
+  `web` job 53 survivors and 21 uncovered mutants among the release's 266 (#240). A release's
+  merge diff holds every one, so the next release pull request fails `mutation-verdict` and
+  `mutation-web` until each is killed or recorded as equivalent. The weekly battery files each
+  file's survivors once it is live.
+- **A38: a diff of no mutant owes no shard report.** cargo-mutants exits 0 and writes no
+  `mutants.out` when a diff lists no mutant (measured on a changed constant), so the verdict read
+  such a diff VOID even when a proved row carried its changed line; A16's synthetic report of zero
+  mutants is one the tool never writes. The plan's listing now tells the verdict which shard owes
+  no report.
+- **R9: every selector's rows are proved (A39).** `prove --band` beside `--row` proved the band's
+  rows and dropped the named one; the selectors now join.
+- **R6: the configuration check reads what StrykerJS would read (A40).** StrykerJS reads the first
+  of its sixteen default configuration names it finds, and refuses `ignoreStatic` without
+  per-test coverage. `configs` refuses a second configuration, `ignoreStatic` without
+  `coverageAnalysis` `perTest`, and a `mutate` list other than R2's, and
+  `web/app/stryker.config.json` now leaves out every `*.test.*` and `*.spec.*` file, as R2 says,
+  where it named only the `.ts` ones.
+- **R16's rows are forty-five:** S03911 to S03928 pin the round's branches: the release's scope,
+  the shards' bound, the refusal past 256 shards, the round-robin partition, the listing, the plan
+  file, the matrix, every shard counted, a plan with no shards, a mutant in two shards or in none,
+  a missing shard named once, a shard of no mutant, the selectors' union and the three Stryker
+  refusals. The runner proved all 28 of the band's rows KILLED at the delivery's head, S03906 to
+  S03910 among them again, each file restored byte for byte.

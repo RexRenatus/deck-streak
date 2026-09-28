@@ -108,8 +108,8 @@ front end and a Python parity oracle, on GitHub-hosted runners (SPEC-039)?
   `ingest`'s 102 tests take about 140 s (SPEC-038's measurements), so each of `ingest`'s 168
   mutants costs about 3 minutes, and the 1,721 mutants on `dev` about 14 hours serially.
   Round-robin (`--sharding round-robin --shard k/32`, the matrix naming 0 to 31) spreads the
-  engine's mutants over every shard, about five each, and keeps each shard near 40 minutes under a
-  `timeout-minutes` of 120. `--timeout 300` bounds each mutant's tests, above the engine's 140 s,
+  engine's mutants over every shard, about five each, and keeps each shard's job between 31 and 58
+  minutes (run 36384080819, 2,154 mutants) under a `timeout-minutes` of 120. `--timeout 300` bounds each mutant's tests, above the engine's 140 s,
   and `--build-timeout 600` each mutant's build: in place, cargo-mutants applies no multiplier and
   bounds no build unless told, and it never bounds the unmutated baseline's build, so a cold cache
   cannot time a shard out. The `survivors` job counts every report the jobs promise, and fails
@@ -159,8 +159,8 @@ front end and a Python parity oracle, on GitHub-hosted runners (SPEC-039)?
   judged on its own pull request into `dev`. It is also the weaker proof: the diff that ships is
   the merge of every change, and the weekly battery sweeps `dev` only once a week.
 - A fixed shard count, such as the battery's 32: rejected, because a release's diff and a pull
-  request's range from a handful of mutants to the whole repository's 2,154 (the release diff at
-  `dev` 32bf1e1 holds every one of them). A fixed count wastes runners on a small diff and can
+  request's range from a handful of mutants to the whole repository's (the release diff of `dev`
+  09b60d2 holds all 2,153 of its mutants). A fixed count wastes runners on a small diff and can
   overrun on a large one; the projection sizes each run to its own diff.
 - A separate release-only job pair, leaving `mutation-rust` unsharded for `dev`: rejected, because
   two paths would judge one rule, the release's rows and retirement check would need a second

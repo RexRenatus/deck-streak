@@ -47,6 +47,12 @@ error, a missing fixture or an empty selection.
   synthetic report of zero mutants is one the tool never writes. Rows S03911 to S03924 then
   pinned each new branch of `mutation-verdict.py`, and the runner proved all 24 of the band's rows
   KILLED, S03906 to S03910 among them again, each file restored byte for byte.
+- Two of the orchestrator's optional items each took a criterion, red then green: A39 at
+  f26c24e, where `prove --band` beside `--row` proved the band and dropped the row, and green at
+  688ae71; A40 at 24013e7, where `configs` passed a second Stryker configuration, `ignoreStatic`
+  without per-test coverage and a `mutate` list short of R2's, and green at a029d19. Rows S03925 to
+  S03928 pin them, and the runner proved them and the runner's own four rows (S03903 to S03905,
+  S03910) KILLED again after the fix.
 - A24 changed with the job layout: it now names the five jobs and allows one job-level `if`, the
   verdict's `always()`. Its first red (d438d38) and green (018a6ea) replay as before; the line
   below is the rewrite's, red at 00a3385 beside A37 and green with the workflow at c954220.
@@ -65,7 +71,8 @@ green at 61e5e14; the verdict's criteria but A17 green at 73133a4; A17 at c404cb
 at 4146198 with the other 25 green, and all 32 green at d1dde73; then A27 red at 7cc64e3 and
 green at 6e722dd, A34 red at 1350ba8 and green at eca251d, A36 red at db78aaa and green at d0e18ca,
 A35 red at b86fbe7 and green at d72c523, A38 red at c506ffb and green at 0db24d2, and A24 and A37
-red at 00a3385 and green at c954220, each red sha failing its own criterion alone. Failures below
+red at 00a3385 and green at c954220, A39 red at f26c24e and green at 688ae71, and A40 red at
+24013e7 and green at a029d19, each red sha failing its own criterion alone. Failures below
 name no path outside the repository.
 
 ```red-first
@@ -144,6 +151,10 @@ A37: red at 00a3385: AssertionError: Regex didn't match: 'cargo mutants [^\n]*--
 A37: green at c954220
 A38: red at c506ffb: AssertionError: 3 != 0 : VOID mutation-rust-shard-0: no report (a shard of no mutant owed one)
 A38: green at 0db24d2
+A39: red at f26c24e: AssertionError: {'S00010-DOUBLE': 'KILLED'} != {'S00010-DOUBLE': 'KILLED', 'S00110-RETURN': 'KILLED'} : --band S00000-S00099 --row S00110-RETURN
+A39: green at 688ae71
+A40: red at 24013e7: AssertionError: 0 != 1 : examined 2 configuration(s) (a second configuration, ignoreStatic and a short mutate list all passed)
+A40: green at a029d19
 ```
 
 ## The gate's own red first (R17)

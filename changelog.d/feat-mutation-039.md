@@ -17,4 +17,6 @@
   Stryker report that is missing or partial. It goes live once a release carries it to `main`; until
   then a pull request that changes it runs a rehearsal.
 - The tools' configurations are judged by what each tool itself refuses
-  (`python3 scripts/mutation-verdict.py configs`), with no vendored pack file.
+  (`python3 scripts/mutation-verdict.py configs`), with no vendored pack file: a second Stryker
+  configuration it would read first, and a `mutate` list other than the production code, are
+  refused too.
