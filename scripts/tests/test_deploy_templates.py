@@ -337,29 +337,62 @@ def loads_a_credential(unit):
     return any(unit.values("Service", key) for key in CREDENTIAL_KEYS)
 
 
-def refusal_page_refusals(unit):
+def refusal_page_conditions(unit):
     """Why a start of `unit` that a credential refuses would not fail it and start its page
-    (SPEC-066 R2): no `OnFailure=` naming the alert template, an `ExecStart=` whose failure counts
-    as a success, a success exit that holds the refusal's, or a restart that skips `OnFailure=`."""
+    (SPEC-066 R2), each refusal beside the directive it reads: no `OnFailure=` naming the alert
+    template, an `ExecStart=` whose failure counts as a success, a success exit that holds the
+    refusal's, or a restart that skips the failed state, and with it `OnFailure=`."""
     refused = []
+
+    def refuse(directive, why):
+        refused.append((directive, f"{unit.rel}: {why}"))
+
     targets = [word for value in unit.values("Unit", "OnFailure") for word in value.split()]
     if ON_FAILURE not in targets:
-        refused.append(f"{unit.rel}: OnFailure={' '.join(targets)} does not name {ON_FAILURE}")
+        refuse("OnFailure", f"OnFailure={' '.join(targets)} does not name {ON_FAILURE}")
     for command in unit.values("Service", "ExecStart"):
         if "-" in EXEC_PREFIX.match(command).group(0):
-            refused.append(f"{unit.rel}: ExecStart={command} counts a failure as a success")
+            refuse("ExecStart", f"ExecStart={command} counts a failure as a success")
     for statuses in unit.values("Service", "SuccessExitStatus"):
         if REFUSAL_EXIT & set(statuses.split()):
-            refused.append(f"{unit.rel}: SuccessExitStatus={statuses} counts the refusal a success")
+            refuse(
+                "SuccessExitStatus", f"SuccessExitStatus={statuses} counts the refusal a success"
+            )
     if last(unit, "Service", "RestartMode") == "direct":
-        refused.append(f"{unit.rel}: RestartMode=direct skips OnFailure=")
+        refuse("RestartMode", "RestartMode=direct skips the failed state and OnFailure=")
     return refused
+
+
+def refusal_page_refusals(unit):
+    """The refusals of `refusal_page_conditions`, each without the directive it reads."""
+    return [refusal for _, refusal in refusal_page_conditions(unit)]
+
+
+def alert_exit_refusals(unit):
+    """Why a refused start of the alert template would count as a success or skip its failed state
+    (SPEC-066 R3): each of R2's conditions but `OnFailure=`, which the alert template must not
+    name. They are told apart by the directive each refusal reads, never by the refusal's text,
+    since the restart mode's refusal names `OnFailure=` too."""
+    conditions = refusal_page_conditions(unit)
+    return [refusal for directive, refusal in conditions if directive != "OnFailure"]
 
 
 def restart_refusals(unit):
     """Why a refused start of the alert template would not stay failed (SPEC-066 R3): a restart of
-    it. A stub that refuses nothing, until the check is written."""
-    return []
+    it. At the default `RestartMode=` a restart only passes through the failed state, and the
+    instance waits for its next start activating, so a loop of restarts settles failed only when
+    its start limit ends it (systemd.service(5), SPEC-031). So no `Restart=` other than `no`, the
+    default an empty assignment restores, and no `RestartForceExitStatus=` naming the refusal's
+    exit, which forces a restart whatever `Restart=` says. R2's units may restart: each failure a
+    restart passes through still starts their `OnFailure=` page (SPEC-031)."""
+    refused = []
+    restart = last(unit, "Service", "Restart")
+    if restart not in (None, "", "no"):
+        refused.append(f"{unit.rel}: Restart={restart} restarts the refusal")
+    for statuses in unit.values("Service", "RestartForceExitStatus"):
+        if REFUSAL_EXIT & set(statuses.split()):
+            refused.append(f"{unit.rel}: RestartForceExitStatus={statuses} restarts the refusal")
+    return refused
 
 
 # --- the Caddyfile, read as Caddy's lexer reads it -------------------------------------------
@@ -810,10 +843,11 @@ class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
         self.assertEqual([r for unit in paging for r in refusal_page_refusals(unit)], [])
         # The alert template is the one exception: it cannot page about itself, so its own refusal
         # is its failed state (SPEC-066 R3; test_alert_unit.py holds that route). Its refused start
-        # must still fail it, so every refusal but one that names OnFailure= holds for it.
+        # must still fail it and stay failed: every condition but OnFailure= holds for it, told
+        # apart by the directive each refusal reads and never by its text, and it restarts none.
         (template,) = [unit for unit in loading if unit.name == alert]
         self.assertEqual(template.values("Unit", "OnFailure"), [])
-        self.assertEqual([r for r in refusal_page_refusals(template) if "OnFailure=" not in r], [])
+        self.assertEqual(alert_exit_refusals(template), [])
         self.assertEqual(restart_refusals(template), [])
         # Planted templates: one for each condition, one that meets all four, one that loads no
         # credential and so is not examined, and three shaped as the alert template is, which name
@@ -855,15 +889,18 @@ class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
             ],
         )
         where = "deploy/systemd"
+        # The restart mode's refusal: it skips a paging unit's OnFailure=, and the alert template's
+        # failed state.
+        direct_mode = "RestartMode=direct skips the failed state and OnFailure="
         self.assertEqual(
             [r for unit in planted_loading for r in refusal_page_refusals(unit)],
             [
                 f"{where}/alert-forced.service: OnFailure= does not name {ON_FAILURE}",
                 f"{where}/alert-restarts.service: OnFailure= does not name {ON_FAILURE}",
-                f"{where}/alert-restarts.service: RestartMode=direct skips OnFailure=",
+                f"{where}/alert-restarts.service: {direct_mode}",
                 f"{where}/alert-shaped.service: OnFailure= does not name {ON_FAILURE}",
                 f"{where}/alert-shaped.service: SuccessExitStatus=1 counts the refusal a success",
-                f"{where}/direct.service: RestartMode=direct skips OnFailure=",
+                f"{where}/direct.service: {direct_mode}",
                 f"{where}/ignored.service: ExecStart=-/bin/true counts a failure as a success",
                 f"{where}/silent.service: OnFailure= does not name {ON_FAILURE}",
                 f"{where}/success.service: SuccessExitStatus=2 1 counts the refusal a success",
@@ -874,32 +911,23 @@ class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
         # its restart. `alert-restarts` is refused by the exit conditions with exactly its
         # RestartMode= line, though that line, like its OnFailure= one, names OnFailure=.
         shaped = [unit for unit in planted_loading if unit.name.startswith("alert-")]
+        refused = {
+            "alert-forced.service": (
+                [],
+                [f"{where}/alert-forced.service: RestartForceExitStatus=1 restarts the refusal"],
+            ),
+            "alert-restarts.service": (
+                [f"{where}/alert-restarts.service: {direct_mode}"],
+                [f"{where}/alert-restarts.service: Restart=on-failure restarts the refusal"],
+            ),
+            "alert-shaped.service": (
+                [f"{where}/alert-shaped.service: SuccessExitStatus=1 counts the refusal a success"],
+                [],
+            ),
+        }
         self.assertEqual(
-            {
-                unit.name: (
-                    [r for r in refusal_page_refusals(unit) if "OnFailure=" not in r],
-                    restart_refusals(unit),
-                )
-                for unit in shaped
-            },
-            {
-                "alert-forced.service": (
-                    [],
-                    [
-                        f"{where}/alert-forced.service: RestartForceExitStatus=1 restarts the refusal"
-                    ],
-                ),
-                "alert-restarts.service": (
-                    [f"{where}/alert-restarts.service: RestartMode=direct skips OnFailure="],
-                    [f"{where}/alert-restarts.service: Restart=on-failure restarts the refusal"],
-                ),
-                "alert-shaped.service": (
-                    [
-                        f"{where}/alert-shaped.service: SuccessExitStatus=1 counts the refusal a success"
-                    ],
-                    [],
-                ),
-            },
+            {unit.name: (alert_exit_refusals(unit), restart_refusals(unit)) for unit in shaped},
+            refused,
         )
 
 
