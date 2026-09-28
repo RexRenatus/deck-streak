@@ -22,8 +22,8 @@ use deck_streak_bot::commands::{privacy_reply, sync_reply};
 use deck_streak_bot::gate::{MAX_CALLBACK_DATA_BYTES, MAX_INBOUND_TEXT};
 use deck_streak_bot::poll::LONG_POLL_SECONDS;
 use deck_streak_bot::transport::{
-    API_URL, DEFAULT_API_URL, DEFAULT_RETRY_AFTER, HTTP_TIMEOUT, MAX_TEXT_UTF16, SEND_ATTEMPTS,
-    TokioTimer, Waits, escape_attribute, escape_html,
+    API_URL, DEFAULT_RETRY_AFTER, HTTP_TIMEOUT, MAX_TEXT_UTF16, SEND_ATTEMPTS, TokioTimer, Waits,
+    escape_attribute, escape_html,
 };
 use deck_streak_bot::{ApiUrl, Scores, SendCounts, Sent, SyncAnswer, SyncOutcome, TransportError};
 use deck_streak_kernel::Environment;
@@ -398,7 +398,8 @@ fn the_api_url_is_https_or_loopback_http() {
     let unset = Environment::from_vars(Vec::<(String, String)>::new());
     assert_eq!(
         ApiUrl::from_env(&unset).map(|api| api.as_str().to_owned()),
-        Ok(DEFAULT_API_URL.to_owned())
+        Ok("https://api.telegram.org".to_owned()),
+        "unset, it is Telegram's own"
     );
     let set = Environment::from_vars([(API_URL, "http://127.0.0.1:9")]);
     assert_eq!(

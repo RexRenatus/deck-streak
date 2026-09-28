@@ -48,11 +48,12 @@ use serde_json::Value;
 
 use crate::chunk;
 
-/// The Bot API's base URL, without the `/bot<token>` part. Unset, it is [`DEFAULT_API_URL`]; set,
-/// it must be `https:`, or `http:` to a loopback host (a local Bot API server, or a test's fake).
+/// The Bot API's base URL, without the `/bot<token>` part. Unset, it is Telegram's own; set, it
+/// must be `https:`, or `http:` to a loopback host (a local Bot API server, or a test's fake).
 pub const API_URL: &str = "DECKSTREAK_BOT_API_URL";
-/// Telegram's own Bot API.
-pub const DEFAULT_API_URL: &str = "https://api.telegram.org";
+/// Telegram's own Bot API. Private to the bot, so no other crate can build a request on it
+/// (SPEC-041 A15).
+pub(crate) const DEFAULT_API_URL: &str = "https://api.telegram.org";
 
 /// The longest text one message may carry, in UTF-16 units after entity parsing (the Bot API's
 /// `sendMessage`; the telegram-platform pack). The predecessor's `constants.py:TELEGRAM_MAX_LEN`,
@@ -104,7 +105,7 @@ impl ApiUrl {
         (secure || local).then(|| Self(text.to_owned()))
     }
 
-    /// The base URL [`API_URL`] names, or [`DEFAULT_API_URL`] when it is unset.
+    /// The base URL [`API_URL`] names, or Telegram's own when it is unset.
     ///
     /// # Errors
     ///

@@ -23,6 +23,7 @@
 #![allow(clippy::expect_used, clippy::print_stdout)]
 
 use std::fs;
+use std::io::Read;
 use std::path::Path;
 
 /// The directories the census never enters: version control, dependencies, build output, caches.
@@ -64,6 +65,10 @@ const SHIPPED_EXTENSIONS: [&str; 15] = [
 /// The Bot API's host.
 const BOT_API_HOST: &str = "api.telegram.org";
 
+/// The bot's constant for the Bot API's base URL, which no other crate can read (it is
+/// `pub(crate)`), and no other source may name.
+const BOT_API_URL: &str = "DEFAULT_API_URL";
+
 /// The Bot API's send methods, in its own spelling; a client library spells each in snake case
 /// (`send_message`).
 const SEND_METHODS: [&str; 22] = [
@@ -98,8 +103,18 @@ const BOT_SEND: &str = "send_html";
 const BOT_SOURCES: &str = "crates/bot/src/";
 
 /// The bot's own ways to reach the owner's chat that take no pass, each with the file that defines
-/// it: every use of one is its definition there or at a named call site.
-const GUARDED: [(&str, &str); 1] = [(BOT_SEND, "crates/bot/src/transport.rs")];
+/// it: every use of one is its definition there or at a named call site. Its send; its edit of a
+/// message, which no shipped source calls, so it has no named call site; and its command handler,
+/// which answers an update with a reply the router never decides.
+const GUARDED: [(&str, &str); 3] = [
+    (BOT_SEND, "crates/bot/src/transport.rs"),
+    ("edit_html", "crates/bot/src/transport.rs"),
+    ("handle", "crates/bot/src/commands.rs"),
+];
+
+/// The one use of the bot's command handler: the bot's entry, the long poll, hands it each update
+/// the Bot API delivers to the bot.
+const HANDLER_ENTRY: (&str, &str, &str) = ("crates/bot/src/poll.rs", "run", "handle");
 
 /// SPEC-031's alert path: it pages the owner that a unit failed, the daemon among them, so it
 /// cannot go through the daemon's router. The one shipped source outside the bot that names the
@@ -394,9 +409,10 @@ fn census(sources: &[(String, String)]) -> Census {
     found
 }
 
-/// Whether `name` is used in `function` of `path` at one of its named call sites.
+/// Whether `name` is used in `function` of `path` at one of its named call sites: a named send, or
+/// the command handler's entry.
 fn at_a_named_site(path: &str, function: &str, name: &str) -> bool {
-    NAMED_SENDS.contains(&(path, function, name))
+    NAMED_SENDS.contains(&(path, function, name)) || HANDLER_ENTRY == (path, function, name)
 }
 
 /// Whether the Bot API method `name`, in either spelling, is named in `function` of `path` by the
@@ -407,14 +423,15 @@ fn by_its_named_send(path: &str, function: &str, name: &str) -> bool {
         .any(|&(file, site, send)| file == path && site == function && snake(send) == snake(name))
 }
 
-/// What `code` names of the Bot API: its host, in any case, and its send methods in either
-/// spelling, each as the byte it starts at and the name.
+/// What `code` names of the Bot API: its host, in any case, the bot's constant for its base URL,
+/// and its send methods in either spelling, each as the byte it starts at and the name.
 fn names_of_the_bot_api(code: &str) -> Vec<(usize, String)> {
     let lower = code.to_ascii_lowercase();
     let mut named: Vec<(usize, String)> = lower
         .match_indices(BOT_API_HOST)
         .map(|(at, host)| (at, host.to_owned()))
         .collect();
+    named.extend(identifiers(code, BOT_API_URL).map(|at| (at, BOT_API_URL.to_owned())));
     named.extend(names_of_a_send(code));
     named
 }
@@ -795,7 +812,8 @@ fn blank(text: &str, start: usize, end: usize) -> String {
     out
 }
 
-/// Every shipped source under `root`, as its path from the root and its text, in path order. A
+/// Every shipped source under `root`, as its path from the root and its text, in path order: a
+/// file of a shipped kind by its name, a script by its `#!` first line, and a unit's drop-in. A
 /// directory under a `src/` is always entered, whatever its name; elsewhere the skipped and the
 /// test directories are left out.
 fn shipped_sources(root: &Path) -> Vec<(String, String)> {
@@ -814,7 +832,11 @@ fn shipped_sources(root: &Path) -> Vec<(String, String)> {
                 if !left_out {
                     pending.push(entry.path());
                 }
-            } else if kind.is_file() && shipped(&name) {
+            } else if kind.is_file()
+                && (shipped(&name)
+                    || a_unit_drop_in(&directory, &name)
+                    || starts_with_a_shebang(&entry.path()))
+            {
                 let path = entry.path();
                 let text = fs::read_to_string(&path).expect("a shipped source is UTF-8");
                 found.push((relative(root, &path).join("/"), text));
@@ -845,6 +867,25 @@ fn shipped(name: &str) -> bool {
         .extension()
         .is_some_and(|inner| inner == "test" || inner == "spec");
     SHIPPED_EXTENSIONS.contains(&extension) && !python_test && !script_test
+}
+
+/// Whether a file named `name` in `directory` is a systemd drop-in: a `.conf` in a `.d` directory.
+fn a_unit_drop_in(directory: &Path, name: &str) -> bool {
+    Path::new(name)
+        .extension()
+        .is_some_and(|extension| extension == "conf")
+        && directory
+            .extension()
+            .is_some_and(|extension| extension == "d")
+}
+
+/// Whether the file at `path` starts with `#!`, as a script run by its interpreter does.
+fn starts_with_a_shebang(path: &Path) -> bool {
+    let mut first = [0_u8; 2];
+    fs::File::open(path)
+        .and_then(|mut file| file.read_exact(&mut first))
+        .is_ok()
+        && first == *b"#!"
 }
 
 /// Prints how many items a check examined and refuses zero (the tdd pack's examined contract).
