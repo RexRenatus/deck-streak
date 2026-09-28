@@ -59,6 +59,11 @@ from inventory import (
 from plan import conflict, list_digest, measure, package_digest
 
 SCHEMA = "deck-streak-host-scrub-apply/1"
+#: Each directory on the way to an item is opened without following a symbolic link (R7).
+DIRECTORY = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
+#: A directory item is removed through its parent's descriptor, which `shutil.rmtree` takes from
+#: Python 3.11, and only where its removal cannot follow a link swapped in beneath it.
+REMOVES_BY_DESCRIPTOR = shutil.rmtree.avoids_symlink_attacks and sys.version_info >= (3, 11)
 
 
 class Refusal(Exception):
@@ -158,12 +163,13 @@ def approved_items(listing: dict, approval_path: str, rules_digest: str) -> tupl
     return approval, [item for item in listing["items"] if item["id"] in set(ids)]
 
 
-def check_item(item: dict, protected: list[str], runner: Runner) -> None:
+def check_item(item: dict, protected: list[str], runner: Runner) -> tuple | None:
     """Refuse an item whose path is not absolute and canonical, or that is protected, reached
-    through a link, or changed (R6, R7)."""
+    through a link, or changed (R6, R7). A path item's device, inode and modification time, as
+    checked, are returned for its deletion to compare."""
     if item["class"] == "package":
         check_package(item, runner)
-        return
+        return None
     path = item.get("path")
     if not canonical(path):
         raise Refusal("its path is not absolute and canonical", item, quote=False)
@@ -176,14 +182,15 @@ def check_item(item: dict, protected: list[str], runner: Runner) -> None:
     if not os.path.lexists(path):
         raise Refusal("is gone since the list was made", item)
     st = os.lstat(path)
-    if stat.S_ISDIR(st.st_mode) and not shutil.rmtree.avoids_symlink_attacks:
-        raise Refusal("this platform's directory removal can follow a swapped link", item)
+    if stat.S_ISDIR(st.st_mode) and not REMOVES_BY_DESCRIPTOR:
+        raise Refusal("this Python cannot remove a directory through a descriptor", item)
     try:
         digest, _ = measure(path)
     except OSError as error:
         raise Refusal(f"cannot be digested again: {error}", item) from error
     if digest != item["digest"]:
         raise Refusal("its digest changed since the list was made", item)
+    return (st.st_dev, st.st_ino, st.st_mtime_ns)
 
 
 def check_package(item: dict, runner: Runner) -> None:
@@ -196,17 +203,50 @@ def check_package(item: dict, runner: Runner) -> None:
         raise Refusal(f"would not be removed alone: dpkg's dry run exited {code}", item)
 
 
-def delete(item: dict, runner: Runner) -> None:
+def open_parent(path: str) -> int:
+    """A descriptor of the directory that holds `path`, opened from `/` one component at a time
+    and never through a symbolic link, so the deletion reads the directories its item was checked
+    under (R7)."""
+    descriptor = os.open("/", DIRECTORY)
+    try:
+        for part in Path(path).parts[1:-1]:
+            try:
+                child = os.open(part, DIRECTORY, dir_fd=descriptor)
+            except OSError as error:
+                st = os.stat(part, dir_fd=descriptor, follow_symlinks=False)
+                if stat.S_ISLNK(st.st_mode):
+                    reason = "a directory above it became a symbolic link after its checks"
+                    raise OSError(reason) from error
+                raise
+            os.close(descriptor)
+            descriptor = child
+    except BaseException:
+        os.close(descriptor)
+        raise
+    return descriptor
+
+
+def delete(item: dict, runner: Runner, checked: tuple | None) -> None:
+    """Delete one item. A package is removed by `dpkg --remove`. A path is read again immediately
+    before its deletion, through the directories `open_parent` opened, and deleted only while it is
+    what its checks read (R6, R7)."""
     if item["class"] == "package":
         code, _ = runner.run(["dpkg", "--remove", item["package"]])
         if code != 0:
             raise OSError(f"dpkg --remove exited {code}")
         return
-    path = item["path"]
-    if stat.S_ISDIR(os.lstat(path).st_mode):
-        shutil.rmtree(path)
-    else:
-        os.unlink(path)
+    name = os.path.basename(item["path"])
+    parent = open_parent(item["path"])
+    try:
+        st = os.stat(name, dir_fd=parent, follow_symlinks=False)
+        if (st.st_dev, st.st_ino, st.st_mtime_ns) != checked:
+            raise OSError("it changed after its checks, so it was left as it was")
+        if stat.S_ISDIR(st.st_mode):
+            shutil.rmtree(name, dir_fd=parent)
+        else:
+            os.unlink(name, dir_fd=parent)
+    finally:
+        os.close(parent)
 
 
 class Log:
@@ -275,8 +315,9 @@ def main(argv: list[str] | None = None) -> int:
             reason = f"the health check `{refused}` is not on the read-only allow list"
             raise Refusal(reason) from refused
         approval, items = approved_items(listing, args.approval, file_digest(args.rules))
+        checked = {}
         for item in items:
-            check_item(item, rules["protected"], runner)
+            checked[item["id"]] = check_item(item, rules["protected"], runner)
     except (Refusal, Refused) as refusal:
         item = getattr(refusal, "item", None)
         reason = getattr(refusal, "reason", f"`{refusal}` is not a command the apply may run")
@@ -296,7 +337,7 @@ def main(argv: list[str] | None = None) -> int:
     deleted = []
     for item in items:
         try:
-            delete(item, runner)
+            delete(item, runner, checked[item["id"]])
         except OSError as error:
             log.write(failed={"id": item["id"], "error": str(error)})
             print(f"apply: stopped: {item['id']} ({target(item)}) could not be deleted: {error}")
