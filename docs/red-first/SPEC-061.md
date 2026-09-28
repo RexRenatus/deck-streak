@@ -46,8 +46,8 @@ line reads to a secret scanner as a key, and every sha below is this branch's.
 DISCLOSURE: A14's test body changed after its red commit (26d09bb), at f5449e7: it pairs each job's
 name with its arm through one iterator instead of two stepped slices, whose text a privacy scrub
 reads as an address. Its assertions and the population it examines are unchanged, and it still
-fails on a planted maintenance arm that is handed the cycle and on a planted loader outside it. No
-other criterion's test body changed after its red commit, and the round changed
+fails on a planted maintenance arm that is handed the cycle and on a planted loader outside it. In
+that round no other criterion's test body changed after its red commit, and the round changed
 `scripts/tests/test_deploy_templates.py` in one comment only (e68b8b6).
 
 ```red-first
@@ -65,3 +65,47 @@ A13: red at 26d09bb: AssertionError: 0 != 1 : effective-check: examined 1 unit(s
 A13: green at bb7324e
 A14: not red: the census holds a fact the code already had, the runner handing the sync cycle to the sync job alone and the job role loading credentials inside it, which the rail's map now relies on
 ```
+
+## Fix round 2
+
+The second review asked for A5 to hold a drop-in beside the unit whose file name holds a blank,
+and for four rules the checks already kept to be held by a test that goes red when the rule is
+removed. Dev had not moved (f5322b2). The round's tests were committed alone (11093cb). There A5
+failed by assertion on its two new drop-ins, one named with a space and one with a tab: systemd
+loads such a drop-in, and `systemctl cat` prints its name as it is (measured on systemd 255 with
+`systemd-analyze verify` and `systemd-analyze cat-config`). Every other criterion passed there, run
+over the whole test file. The effective check then read a file's `# <path>` line to its end
+(12ac03a), and A5 went green. Both were re-run from a `git archive` export of the sha each cites.
+These lines stand outside the `red-first` fence, which records each criterion once; A5's own red
+and green are in the first fence.
+
+```text
+A5, a drop-in whose file name holds a blank: red at 11093cb: AssertionError: 0 != 1 : effective-check: examined 1 unit(s), 2 file(s); 0 refusal(s) (a drop-in named with a space, and one named with a tab, each passed)
+A5, a drop-in whose file name holds a blank: green at 12ac03a
+```
+
+The round's other cases hold rules both checks already kept, so each passed when it was committed,
+and each was shown red with its rule removed. Each removal replaced an anchor that occurs once in
+an export of 12ac03a, ran the criterion's test alone, and restored the file byte for byte. At
+805d769, which lacks this round's cases, each of the seven removals left its criterion's test green.
+
+| case added | rule removed | the test with the rule removed |
+|---|---|---|
+| A8: a credential line after a carriage return | the lister reads a carriage return as no line end | red on that case alone: `AssertionError: 0 != 1` (the lister listed the unit) |
+| A9: a secret-named line after a carriage return | the effective check reads a carriage return as no line end | red on that case alone: `AssertionError: 0 != 1 : effective-check: examined 1 unit(s), 2 file(s); 0 refusal(s)` |
+| A9: a secret-named line after a line of two backslashes alone, and after a line with no `=` that ends in two backslashes | the effective check strips a line and continues it on any trailing backslash | red on those two cases alone, with the same line |
+| A5: an effective `SetCredential=` line | the effective check's refused credential directives leave out `SetCredential` | red on that case alone, with the same line |
+| A5: an effective `SetCredentialEncrypted=` line | they leave out `SetCredentialEncrypted` | red on that case alone, with the same line |
+| A5: an effective `ImportCredential=` line | they leave out `ImportCredential` | red on that case alone, with the same line |
+| A2: the planted `SetCredential=` and `SetCredentialEncrypted=` values, a string found nowhere else, asserted absent from the whole output | the lister's refusal prints the line's value mid-line | red on those two cases alone: `AssertionError: 'value-never-echoed' unexpectedly found in 'REFUSE: …'` |
+
+With the header rule's old form put back at 12ac03a, which cut a path at its first blank, A5 is red
+again on its two new drop-ins alone.
+
+DISCLOSURE: the test bodies of A2, A5, A8 and A9 changed after their red commits (936a51e for A2
+and A5, 26d09bb for A8 and A9), at 11093cb and nowhere else: each gained this round's cases, above.
+Two changes came with them. A2's planted `SetCredential=` and `SetCredentialEncrypted=` values
+became a string found nowhere else, and its assertion that the value is absent now reads the whole
+output, where it read the value at a line's end. A9's comment on a header-shaped line now says why,
+on systemd 255, such a line can only be a file's own comment. Every other case and assertion of the
+four is unchanged, and no other criterion's test body changed in this round.

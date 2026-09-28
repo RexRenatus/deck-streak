@@ -112,7 +112,7 @@ R11. The login reuse conditions are each shown before the first scheduled sync: 
 | A2 | the pair lister refuses a `LoadCredentialEncrypted=` line and a credential whose source is not the socket | `test_rail_contract.py` |
 | A3 | the rail contract names every neutral value the committed templates carry, and a planted neutral value it does not name is refused | `test_rail_contract.py` |
 | A4 | the effective check refuses a unit whose effective configuration still carries a neutral value, and passes the same unit once the rail's drop-in overrides it | `test_rail_contract.py` |
-| A5 | the effective check refuses an effective `LoadCredentialEncrypted=` line, a secret-named `Environment=` assignment, and a drop-in that is not the rail's | `test_rail_contract.py` |
+| A5 | the effective check refuses an effective `LoadCredentialEncrypted=`, `SetCredential=`, `SetCredentialEncrypted=` or `ImportCredential=` line, a `LoadCredential=` off the socket, a secret-named `Environment=` assignment, and a drop-in that is not the rail's | `test_rail_contract.py` |
 | A6 | the guard check refuses a missing, changed or group-writable guard file and an empty manifest, and passes a matching manifest (examined count reported) | `test_rail_contract.py` |
 | A7 | no rail-contract file names a private value, and a planted one is refused by the public scrub | `test_rail_contract.py`; `scripts/public-scrub.py` |
 | A8 | the pair lister reads each line as systemd does, so a credential line systemd reads on its own is never hidden in the line before it, and a byte-order mark is refused | `test_rail_contract.py` |
@@ -170,7 +170,7 @@ maintainer's machine before every install; the packet names them.
 | `deploy/scripts/guards-check.py` | deploy | added: the pinned-guard manifest check |
 | `deploy/rail-contract.json` | deploy | added: the neutral values the rail overrides, by unit and key |
 | `deploy/README.md` | deploy | changed: what the rail provides and how its contract is checked |
-| `scripts/tests/test_rail_contract.py` | repo | added: A1 to A7 |
+| `scripts/tests/test_rail_contract.py` | repo | added: A1 to A14 |
 | `docs/specs/SPEC-061-the-private-deploy-rail.md` | docs | moved from `docs/specs/planned/` |
 | `docs/decisions/ADR-061-host-values-reach-units-as-drop-ins-and-caddy-as-a-rendered-file.md` | docs | changed: status accepted, if SPEC-062 has not accepted it first |
 | `docs/red-first/SPEC-061.md` | docs | added |
@@ -201,8 +201,8 @@ and never committed.
   it before any unit relies on the socket, and it joins the host findings, tracked privately
   (gate 8, #167).
 - **The secret manager is unreachable when a unit starts.** The helper refuses the connection and
-  logs the unit, the id and the reason, never a value (R3). The unit's credential is then empty,
-  and every consumer refuses an empty credential at start (SPEC-066, #284), so the unit fails and
+  logs the unit, the id and the reason, never a value (R3). The unit's credential is then empty.
+  Under SPEC-066 (#284) every consumer refuses an empty credential at start, so the unit fails and
   hands over to its `OnFailure=` alert and, for a long-running service, its restart policy
   (ADR-038). A second alert route, independent of the alert sender, is #285.
 - **The map drifts from the templates.** R5's comparison refuses the install in either direction.
@@ -267,11 +267,17 @@ and never committed.
   odd run of backslashes, the last read as a space; a comment line, whose first non-blank character
   is `#` or `;`, never continues; and a blank is a space, a tab, a newline or a carriage return
   alone, so a form feed or a no-break space is text. The effective check splits `systemctl cat`
-  output at newlines alone and refuses a file header not after an empty line, where a file with no
-  final newline and a comment shaped like a header cannot be told apart. A byte-order mark, which
-  systemd skips where it first finds one, is refused. Chosen against stripping and joining lines as
-  Python reads them, which hid a line systemd reads inside the one before it and counted a reset
-  systemd never reads.
+  output at newlines alone. systemctl prints every line of a file newline-terminated, a last line
+  without a newline included, and an empty line before each later file's `# <path>` line, whose
+  path it prints as it is (measured with `systemd-analyze cat-config`, which prints a unit's files
+  as `systemctl cat` does); a drop-in's file name may hold any blank, and systemd loads such a
+  drop-in. So a header is a `# /` line at the start of the output or after an empty line, its path
+  read to the end of the line, and a header-shaped line that follows no empty line can only be a
+  file's own comment, which the check refuses rather than read a comment as a file. A byte-order
+  mark, which systemd skips where it first finds one, is refused. Chosen against stripping and
+  joining lines as Python reads them, which hid a line systemd reads inside the one before it and
+  counted a reset systemd never reads, and against cutting a header's path at a blank, which read
+  a drop-in named with one as part of the file before it.
 - **Variables' names (A10): quotes read exactly, escapes and specifiers refused.** Quotes are
   removed as systemd removes them. A value written with a backslash escape is refused whole, since
   systemd decodes escapes key by key, in single and double quotes too, and a name holding a
