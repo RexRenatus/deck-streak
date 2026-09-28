@@ -32,7 +32,7 @@ use tempfile::TempDir;
 /// Statements that leave every table of the schema holding rows no erase leaves: 101 rows in each
 /// table that takes rows, so an export that pages or limits its read comes up short (the
 /// predecessor's lesson), and every column a reset writes moved off its reset value.
-const SEEDS: [&str; 5] = [
+const SEEDS: [&str; 7] = [
     "UPDATE settings_generation SET generation = 7 WHERE id = 1",
     "UPDATE ingest_state SET anchor_newest_review_id = 1700000000123, anchor_card_count = 57, \
      anchor_card_fingerprint = 9001, anchor_study_day = 20000, \
@@ -53,6 +53,20 @@ const SEEDS: [&str; 5] = [
      INSERT INTO xp_ledger (study_day, source, track, amount, scope, created_at) \
      SELECT 20000 + i, 'synthetic:grant:' || i, CASE i % 2 WHEN 0 THEN 'language' ELSE 'law' END, \
      i, CASE i % 3 WHEN 0 THEN 'once' ELSE 'per-day' END, 1000 * i FROM n",
+    "WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 101) \
+     INSERT INTO reading_runs (trigger, study_day, started_at, finished_at, outcome, class, \
+     reason, unmapped_decks, created_at) \
+     SELECT CASE i % 2 WHEN 0 THEN 'owner' ELSE 'scheduled' END, 20000 + i, 1000 * i, \
+     1000 * i + 500, CASE i % 3 WHEN 0 THEN 'could_not_tell' WHEN 1 THEN 'resolved' \
+     ELSE 'paused' END, CASE i % 3 WHEN 0 THEN 'rail_broken' ELSE NULL END, \
+     CASE i % 3 WHEN 0 THEN 'sync_failed' ELSE NULL END, i % 4, 1000 * i + 500 FROM n",
+    "WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 101) \
+     INSERT INTO reading_topic_days (run_id, study_day, topic, state, class, reason, digest, \
+     card_ids, note_ids, new_cards, created_at) \
+     SELECT i, 20000 + i, 'law/synthetic-' || i, CASE i % 2 WHEN 0 THEN 'no_new_cards' \
+     ELSE 'could_not_tell' END, CASE i % 2 WHEN 0 THEN NULL ELSE 'config_fault' END, \
+     CASE i % 2 WHEN 0 THEN NULL ELSE 'day_set_fetch_saturated' END, NULL, '[]', '[]', 0, \
+     1000 * i + 500 FROM n",
 ];
 
 /// Prints how many items a check examined and refuses zero (the tdd pack's examined contract).

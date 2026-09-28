@@ -1,0 +1,12 @@
+{
+  "duty": "bot-commands",
+  "schema": "phx.duty.message.v1",
+  "send": {
+    "link_preview_options": {
+      "is_disabled": true
+    },
+    "parse_mode": "HTML",
+    "text": "Your DeckStreak data was erased.\nOlder copies of some of it stay in the database's log until its next maintenance."
+  },
+  "x-message": "erase-done-log-held"
+}
