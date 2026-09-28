@@ -397,3 +397,42 @@ fn a_markdown_links_destination_title_and_embed_are_read_as_the_probe_reads_them
         ],
     );
 }
+
+#[test]
+fn an_autolinks_scheme_is_read_between_its_angle_brackets() {
+    judge(
+        &vendored(),
+        "note(s) with an autolink",
+        &[
+            (
+                "Open <javascript:alert> now.\n",
+                &[("executable_schemes:javascript", 1)],
+            ),
+            // Without its opening bracket a scheme is prose.
+            ("Never paste javascript:x> into a note.\n", &[]),
+        ],
+    );
+}
+
+#[test]
+fn an_autolinks_scheme_runs_two_to_thirty_two_characters() {
+    // Rails that name schemes as short and as long as the autolink form allows, and a character
+    // past each bound: the form, not the rails' data, decides what an autolink is.
+    let (shortest, longest, longer) = ("jj", "s".repeat(32), "s".repeat(33));
+    let mut document: serde_json::Value =
+        serde_json::from_str(VENDORED).expect("rails.json is JSON");
+    document["executable_schemes"] = serde_json::json!(["j", shortest, longest, longer]);
+    let rails = Rails::from_json(&document.to_string()).expect("the edited rails read as rails");
+    let (at_longest, past_longest) = (format!("<{longest}:x>\n"), format!("<{longer}:x>\n"));
+    let longest_row = format!("executable_schemes:{longest}");
+    judge(
+        &rails,
+        "autolink(s) at a scheme's bounds",
+        &[
+            ("<j:x>\n", &[]),
+            ("<jj:x>\n", &[("executable_schemes:jj", 1)]),
+            (&at_longest, &[(&longest_row, 1)]),
+            (&past_longest, &[]),
+        ],
+    );
+}
