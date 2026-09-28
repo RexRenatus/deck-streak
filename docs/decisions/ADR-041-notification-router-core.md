@@ -50,19 +50,25 @@ budgets and the holdout wait for the engagement wave.
 
 - Good, because the bot and the Mini App are held to one router from the first delivery, each path
   by a guard that says what it reads: the compiler holds the port's calls; SPEC-041 A15's census
-  holds a delivery around the port in every shipped source of the kinds it reads (the Rust, Python
-  and web sources, the shell scripts by extension or `#!` first line, and the systemd units and
-  their drop-ins); and the one-router row holds the calls the policy names.
+  refuses a delivery around the port by a name it holds, in the shipped sources of the kinds it
+  reads (the Rust, Python and web sources, the Mini App's HTML among them, the shell scripts by
+  extension or `#!` first line, and the systemd units of every type and their drop-ins); and the
+  one-router row holds the calls the policy names.
 - Good, because the readings line is honest about its kind and can be switched off on its own.
 - Bad, because a celebration raised by a background job while the app is open still arrives as a
   bot message; the decision ledger shows which surface was chosen.
 - Bad, because the lapse context is only as good as the caller's lapse source; the kinds that
   depend on it name the governor as a prerequisite.
-- Bad, because a text census reads names, not requests or statements: a request whose URL or
-  method is assembled from parts, so that neither the Bot API's host nor a send method's name
-  appears; a statement whose table's name is assembled from parts, so that neither the feed's nor
-  the held queue's name appears; and a source of a kind the census does not read, all go unread
-  (#297).
+- Bad, because the census guards ordinary code and is not a sandbox against code written to evade
+  it, which review catches (#297). A text census reads names, not requests, statements or what the
+  compiler resolves, so these go unread: a request, or a table's name, assembled from parts, by
+  `format!` or `concat!` among them, so that no name it holds appears; a source that `include!`
+  pulls in from a file of a kind it does not read, and a source of such a kind; a symlink; a test
+  file that a shipped crate pulls in by `#[path]` outside the notifications crate, or that a unit
+  runs; a re-export under another name from one of the router's modules other than by a `pub use`;
+  and a `pub` wrapper, a function, a macro or a constant that hands out a write to the feed or the
+  held queue under a name the census does not hold, or a reply of the bot's command handler made
+  `pub` and called from outside its module.
 
 ### Confirmation
 
@@ -77,15 +83,19 @@ The delivery decided each question the SPEC left open against its alternatives:
 - **The port's calls by type, and a delivery around the port by a census of what it reads.** Each
   bot transport call takes a `Pass` that no other module can make, not by its field, `Default`, or
   a clone of a borrowed one (SPEC-041 A2, the compiler), and `push_in_app` is private to the router
-  module. A delivery that never calls the port is refused by A15's census, which reads every
-  shipped source of the kinds it names: outside the bot's sources nothing names the Bot API's host,
-  a send method or the bot's `DEFAULT_API_URL` (private to the bot's crate), SPEC-031's alert path
-  aside; inside them a send method is named only in the named send that makes its request; the
-  bot's `send_html`, `edit_html` and command handler are used only at named call sites (`OwnerChat`,
-  the command replies (#257) and the transport's own requests; none for `edit_html`; the long poll
-  for the handler); and only the router's modules name the Mini App's feed or the held queue,
-  which a flush delivers, and in the notifications crate only they name the ledger, whose writes to
-  the queue are private to the crate, the root's declaration of it aside. The box run's
+  module. A delivery that never calls the port, in the shipped sources of the kinds A15 names, is
+  refused by A15's census by a name it holds: outside the bot's sources nothing names the Bot API's
+  host, a send method or another delivery method (a copy, a forward, an edit, a pin or a reaction),
+  or the bot's `DEFAULT_API_URL` (private to the bot's crate), SPEC-031's alert path aside; inside
+  them such a method is named only by its own named send; the bot's `send_html`, `edit_html` and
+  command handler are used only at named call sites (`OwnerChat`, the command replies (#257) and
+  the transport's own requests; none for `edit_html`; the long poll for the handler), and the
+  handler's replies and dispatch only by their named callers; only the router's modules name the
+  Mini App's feed or the held queue, which a flush delivers, and in the notifications crate only
+  they name the ledger, whose writes to the queue are private to the crate, the root's declaration
+  of it aside; and no source of that crate carries `#[path]`, `#[macro_export]` or `#[macro_use]`,
+  or re-exports the ledger, its tables or its writes by a `pub use`. The census guards ordinary
+  code; code written to evade it goes unread, and review catches it (#297). The box run's
   `one-router` row refuses a call the policy names (§3a B1). Chosen against holding the rule by that
   row alone, which matches only the names the policy lists and finds a stray call only after it is
   written; against a private trait, which the bot could not implement; and against parsing the

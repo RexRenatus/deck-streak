@@ -55,17 +55,23 @@ what it names:
   each bot transport call takes one, so a call of the port outside the module does not compile: the
   pass has a private field, no `Default` and no `Clone`. `push_in_app` is private to the module.
 - **A delivery around the port, by a census (A15).** A source that never calls the port could still
-  reach the owner through the bot's own send, edit or command handler, a raw request to the Bot API,
-  a write to the Mini App's feed, or a write to the held queue, which a flush delivers. The census
-  reads every shipped source of the kinds it names (the Rust, Python and web sources, the shell
-  scripts by extension or `#!` first line, and the systemd units and their drop-ins) and refuses
-  each: outside the bot's sources nothing names the Bot API's host, a send method or the bot's
-  `DEFAULT_API_URL`, SPEC-031's alert path aside; inside them a send method is named only in the
-  named send that makes its request; the bot's `send_html`, `edit_html` and command handler are used
-  only at named call sites; and only the router's modules name the feed or the held queue, and in
-  the notifications crate the ledger, whose writes to the queue are private to it, the root's
-  declaration aside. A request, or a table's name, assembled from parts, which names neither the
-  host, a send method nor a table, is not read (#297).
+  reach the owner through the bot's own send, edit or command handler, a raw request to the Bot API
+  or a call of one of its delivery methods, a write to the Mini App's feed, or a write to the held
+  queue, which a flush delivers. The census reads the shipped sources of the kinds A15 names (the
+  Rust, Python and web sources, the Mini App's HTML among them, the shell scripts by extension or
+  `#!` first line, and the systemd units of every type and their drop-ins) and refuses in them each
+  such delivery by a name it holds: outside the bot's sources nothing names the Bot API's host, a
+  send method or another delivery method (a copy, a forward, an edit, a pin or a reaction), or the
+  bot's `DEFAULT_API_URL`, SPEC-031's alert path aside; inside them such a method is named only by
+  its own named send; the bot's `send_html`, `edit_html` and command handler are used only at named
+  call sites, and the handler's replies and dispatch only by their named callers; only the router's
+  modules name the feed or the held queue, and in the notifications crate the ledger, whose writes
+  to the queue are private to it, the root's declaration aside; and no source of that crate
+  carries `#[path]`, `#[macro_export]` or `#[macro_use]`, or re-exports the ledger, its tables or
+  its writes by a `pub use`. The census guards ordinary code, not code written to evade it, which
+  review catches: a request or a table's name assembled from parts, `include!`, a symlink, a test
+  file pulled in by `#[path]` or run by a unit, a re-export other than by a `pub use`, and a `pub`
+  wrapper go unread (#297).
 - **A call the policy names, by the box run (§3a B1).** The `one-router` row refuses a call of
   `push_message`, `push_dice`, `push_reaction`, `push_pin` or `push_in_app` outside `router.rs`.
 

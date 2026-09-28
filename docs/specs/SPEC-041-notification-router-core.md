@@ -169,7 +169,7 @@ the verdict of a run with that wiring is posted as the `box/packs` status at the
 | `crates/notifications/tests/comeback_budget.rs` | `deck-streak-notifications` | added |
 | `crates/notifications/tests/rights.rs` | `deck-streak-notifications` | added |
 | `crates/notifications/tests/policy.rs` | `deck-streak-notifications` | added: A1, A3, and the policy's refusals |
-| `crates/notifications/tests/one_router.rs` | `deck-streak-notifications` | added: A2, and A15's census of the shipped sources of the kinds it reads, which refuses a write to the Mini App's feed or to the held queue outside the router's modules |
+| `crates/notifications/tests/one_router.rs` | `deck-streak-notifications` | added: A2, and A15's census, which reads the shipped sources of the kinds A15 names and refuses in them a delivery around the port by a name it holds; code written to evade it goes unread (§5, #297) |
 | `crates/notifications/tests/ui/push_outside_the_router.rs`, `.stderr` | `deck-streak-notifications` | added: A2's compile-fail fixture and the refusal it records |
 | `crates/notifications/tests/ui/pass_by_default.rs`, `.stderr`, `crates/notifications/tests/ui/pass_kept_by_a_clone.rs`, `.stderr` | `deck-streak-notifications` | added: A2's fixtures for a pass made by `Default` and one kept by cloning a borrowed pass, each with the refusal it records |
 | `crates/notifications/tests/support/mod.rs` | `deck-streak-notifications` | added: the tests' database, clock and recording transport |
@@ -229,15 +229,18 @@ the verdict of a run with that wiring is posted as the `box/packs` status at the
     `#[path]` (outside the notifications crate) or a unit runs;
   - a re-export under another name from one of the router's modules other than by a `pub use`, and
     a `pub` wrapper: a function, a macro or a constant that hands out a write to the feed or the
-    held queue, or a table's name, under a name the census does not hold.
+    held queue, or a table's name, under a name the census does not hold, or a reply of the bot's
+    command handler made `pub` and called from outside the handler's module.
 
 ## 6. Risks
 
 - **A delivery call appears outside the router**, for example a bot command reply written with
   `push_message`. Detected by A2 (the compiler) for the port's call and by the box run's `one-router`
-  row (§3a B1) for a call the policy names, and by A15's census for a delivery around the port in
-  the sources it reads: the bot's own send, edit or command handler, a raw request to the Bot API,
-  or a write to the Mini App's feed or to the held queue.
+  row (§3a B1) for a call the policy names, and by A15's census for a delivery around the port by a
+  name it holds, in the sources of the kinds it reads: the bot's own send, edit or command handler,
+  or a call of the handler's replies beside its dispatch; a raw request to the Bot API, or a call of
+  one of its send or other delivery methods; or a write to the Mini App's feed or to the held queue.
+  Code written to evade the census goes unread, and review catches it (§5, #297).
 - **The lapse context is empty until the governor exists**, so a nudge could reach an owner in a
   real lapse. Detected by SPEC-049's lapse tests, which run over the minimal lapse-episode slice
   SPEC-049 builds in `streaks` ahead of W3's governor; the W1 kinds that nudge (`reading_ready`,
@@ -321,10 +324,10 @@ the verdict of a run with that wiring is posted as the `box/packs` status at the
   - A pass made by `Default`, or kept by cloning a borrowed one, would have compiled outside the
     router. A2 gains a compile-fail case for each, beside the one for the private field.
   - A delivery could go around the port and never take a pass: through the bot's own `send_html`,
-    or by a raw request to the Bot API from the daemon or the API. A15's census reads every shipped
-    source: the Rust, Python and web source files, the shell scripts and the systemd units, with
-    test directories and test files left out, and in a Rust file its comments and `#[cfg(test)]`
-    items too. Outside `crates/bot/` nothing may name `api.telegram.org` or one of the Bot API's
+    or by a raw request to the Bot API from the daemon or the API. A15's census read the shipped
+    sources of these kinds, by extension: the Rust, Python and web source files, the shell scripts
+    and the systemd services and timers, with test directories and test files left out, and in a
+    Rust file its comments and `#[cfg(test)]` items too. Outside `crates/bot/` nothing may name `api.telegram.org` or one of the Bot API's
     send methods, in its own spelling (`sendMessage`) or a client's (`send_message`). SPEC-031's
     alert path, `deploy/scripts/alert-telegram.sh`, is the one exception, because it pages the
     owner that a unit failed, the daemon among them. A call of `Transport::send_html`, or of a Bot
@@ -339,8 +342,8 @@ the verdict of a run with that wiring is posted as the `box/packs` status at the
     default window, where rule 4 withholds a nudge with `quiet_hours` before rule 5 counts the gap.
 - **The second fix round.** The second review planted ten deliveries around the port that A15's
   census let through, and found a comeback A9 never exercised; each now reads red. A15's census
-  reads every shipped source of the kinds it names, and each claim that only the router delivers
-  (the pull request, ADR-041, the schematic and the module docs) says what its guard reads.
+  reads more kinds and more names, and each claim that only the router delivers (the pull request,
+  ADR-041, the schematic and the module docs) says what its guard reads.
   - Inside a source: only a `#[cfg(test)]` module is left out, any attributes stacked on it passed
     over, so a field compiled for tests alone hides nothing after it; a directory under a `src/` is
     always read, whatever its name; every use of the bot's `send_html` is read, not only a call;
@@ -370,3 +373,24 @@ the verdict of a run with that wiring is posted as the `box/packs` status at the
     comeback sent at 03:00 on the calendar day after day 0 is recorded on study day 0, before the
     rollover, so one at noon two calendar days later, on study day 3, is sent.
   - What the census still cannot read is named in §5 (#297).
+- **The third fix round.** The third review planted more deliveries around the port, and the
+  architect ruled that the census guards ordinary code and is not a sandbox against code written to
+  evade it. The ordinary kinds and names it missed are now read, each red first with a row; the ways
+  to evade it are named in §5, not planted further; and every claim says only what the census
+  reads.
+  - Its kinds: a systemd unit of every type (`systemd.unit(5)`), whatever its name, so a socket, a
+    path, a mount and a unit named as a test file are read; the Mini App's HTML, whose inline
+    scripts run in the owner's browser; a CommonJS TypeScript module (`.cts`); and a script by its
+    `.bash` or `.zsh` extension.
+  - The Bot API's other delivery methods (a copy, a forward, an edit of a message, its caption, its
+    media, its live location, its checklist or its keyboard, a pin and a reaction) are held like
+    its send methods. Outside the bot's sources nothing names one; inside them one is named only by
+    its own named send, and the transport's `edit_html` is `editMessageText`'s, the eighth named
+    send, which the census finds once although no shipped source calls it.
+  - The notifications crate: no source of it carries `#[path]`, `#[macro_export]` or
+    `#[macro_use]`, since each hands the ledger's writes to code the census reads under another
+    name; and no `pub` or `pub(...)` `use` in it re-exports the ledger, its tables' constants or its
+    writes to the feed and the queue, under any name.
+  - The command handler: its replies (`send`, and `export`, `ask_erase` and `sync`, which send one)
+    and its dispatch (`on_message`, `on_callback`) are called only by their named callers, the
+    handler and the dispatch, each of which the census finds in the tree.
