@@ -230,6 +230,12 @@ class WorkflowsAreHardened(unittest.TestCase):
                 "EXAMPLE_TOKEN",
                 "secrets-inherited.yaml:jobs.call.secrets: passes every secret to the workflow "
                 "it calls",
+                "steps-in-a-parallel-block.yml:jobs.build.steps[0].parallel[0]: checks out "
+                "example-org/other-repository, not this repository",
+                "steps-in-a-parallel-block.yml:jobs.build.steps[0].parallel[1].parallel[0]: checks "
+                "out from another server: https://example-host.example",
+                "steps-in-a-parallel-block.yml:jobs.build.steps[0].parallel[2]: clones a "
+                "repository: git clone https://github.com/example-org/other-repository.git",
             ],
         )
         # A character outside printable ASCII, planted from a Python escape so no committed file
