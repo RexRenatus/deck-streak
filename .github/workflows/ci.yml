@@ -280,6 +280,11 @@ jobs:
         with:
           tool: cargo-mutants@27.1.0
           fallback: none
+      - uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
+        if: ${{ steps.plan.outputs.rust == 'true' }}
+        with:
+          tool: cargo-nextest@0.9.146
+          fallback: none
       - name: cargo-mutants over the diff, in place (its exit is recorded; the verdict reads its report)
         if: ${{ steps.plan.outputs.rust == 'true' }}
         run: |

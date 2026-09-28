@@ -11,3 +11,8 @@
 # form, and any `mutants::skip` attribute (scripts/tests/test_mutation_workflows.py). Nothing is
 # excluded.
 exclude_re = []
+
+# Each mutant's tests run under cargo-nextest, the gate's own runner, a process per test. Under
+# cargo test, one process per binary, identity's log test failed the unmutated baseline on two of
+# thirty-two CI runners, so cargo-mutants refused the shard (exit 4, SPEC-039 section 8).
+test_tool = "nextest"
