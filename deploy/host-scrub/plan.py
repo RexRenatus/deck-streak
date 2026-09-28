@@ -41,6 +41,7 @@ from pathlib import Path
 
 from inventory import (
     Usage,
+    canonical,
     file_digest,
     inside_repository,
     load_json,
@@ -71,11 +72,13 @@ def within(child: str, parent: str) -> bool:
 
 
 def conflict(path: str, protected: list[str]) -> str | None:
-    """The protected path `path` lies under or holds, or None (R7, R10). Each protected path is
-    compared as written and as it resolves, so a protected link protects what it points at."""
-    path = os.path.normpath(path)
+    """The protected path `path` lies under or holds, or None (R7, R10). A path that is not
+    absolute and canonical is never compared: it raises ValueError. Each protected path is compared
+    as written and as it resolves, so a protected link protects what it points at."""
+    if not canonical(path):
+        raise ValueError("a path that is not absolute and canonical is never compared")
     for guard in protected:
-        for form in {os.path.normpath(guard), os.path.realpath(guard)}:
+        for form in {guard, os.path.realpath(guard)}:
             if within(path, form) or within(form, path):
                 return guard
     return None
@@ -164,14 +167,19 @@ def candidates(inventory: dict, rules: dict) -> list[dict]:
 
 
 def select(found: list[dict], protected: list[str], skipped: list[dict]) -> list[dict]:
-    """Drop what a protected path covers, a path selected twice, and a path inside another."""
+    """Drop a path that is not absolute and canonical, what a protected path covers, a path
+    selected twice, and a path inside another."""
     kept, paths = [], set()
     for candidate in found:
         path = candidate.get("path")
         if path is None:
             kept.append(candidate)
             continue
-        guard = conflict(path, protected)
+        try:
+            guard = conflict(path, protected)
+        except ValueError:
+            skipped.append({"path": path, "reason": "not an absolute, canonical path"})
+            continue
         if guard is not None:
             skipped.append({"path": path, "reason": f"under or holding protected {guard}"})
         elif path not in paths:

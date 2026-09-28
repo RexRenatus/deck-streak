@@ -46,6 +46,7 @@ from inventory import (
     Runner,
     Usage,
     allowed,
+    canonical,
     health_commands,
     inside_repository,
     load_json,
@@ -60,16 +61,20 @@ SCHEMA = "deck-streak-host-scrub-apply/1"
 
 
 class Refusal(Exception):
-    """A check that failed before the first deletion: the whole run deletes nothing (R6)."""
+    """A check that failed before the first deletion: the whole run deletes nothing (R6). A refusal
+    made with `quote=False` names the item by its id alone, never by its path."""
 
-    def __init__(self, reason: str, item: dict | None = None):
+    def __init__(self, reason: str, item: dict | None = None, *, quote: bool = True):
         super().__init__(reason)
         self.reason = reason
         self.item = item
+        self.quote = quote
 
     def __str__(self) -> str:
         if self.item is None:
             return self.reason
+        if not self.quote:
+            return f"{self.item['id']}: {self.reason}"
         return f"{self.item['id']} ({target(self.item)}): {self.reason}"
 
 
@@ -151,11 +156,14 @@ def approved_items(listing: dict, approval_path: str) -> tuple[dict, list[dict]]
 
 
 def check_item(item: dict, protected: list[str], runner: Runner) -> None:
-    """Refuse an item that is protected, reached through a link, or changed (R6, R7)."""
+    """Refuse an item whose path is not absolute and canonical, or that is protected, reached
+    through a link, or changed (R6, R7)."""
     if item["class"] == "package":
         check_package(item, runner)
         return
-    path = item["path"]
+    path = item.get("path")
+    if not canonical(path):
+        raise Refusal("its path is not absolute and canonical", item, quote=False)
     guard = conflict(path, protected)
     if guard is not None:
         raise Refusal(f"lies under or holds the protected path {guard}", item)

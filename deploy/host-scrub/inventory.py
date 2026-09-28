@@ -235,10 +235,22 @@ def file_digest(path: str) -> str:
         return hashlib.sha256(handle.read()).hexdigest()
 
 
+def canonical(path) -> bool:
+    """Whether `path` is written as one absolute, canonical path, the only form these tools compare
+    or delete by (R7)."""
+    return (
+        isinstance(path, str)
+        and os.path.isabs(path)
+        and path == os.path.normpath(path)
+        and not path.startswith("//")
+    )
+
+
 def absolute(value, where: str) -> str:
-    if not isinstance(value, str) or not os.path.isabs(value):
-        raise Usage(f"{where} must be an absolute path")
-    return os.path.normpath(value)
+    """`value` when it is an absolute, canonical path; a refusal names `where`, never the value."""
+    if not canonical(value):
+        raise Usage(f"{where} must be an absolute, canonical path")
+    return value
 
 
 def load_rules(path: str) -> dict:
@@ -267,7 +279,9 @@ def load_rules(path: str) -> dict:
         if kind not in RULE_CLASSES or not isinstance(reason, str) or not reason.strip():
             raise Usage(f"rule {name} needs a class of {RULE_CLASSES} and a reason")
         checked.append(check_rule(dict(rule), name, kind))
-    protected = [absolute(p, "a protected path") for p in rules.get("protected") or []]
+    protected = [
+        absolute(p, f"protected path {n}") for n, p in enumerate(rules.get("protected") or [])
+    ]
     for guard in protected:
         if any(mark in guard for mark in "*?["):
             raise Usage(
@@ -295,7 +309,7 @@ def check_rule(rule: dict, name: str, kind: str) -> dict:
         under = rule.get("under")
         if not isinstance(under, list) or not under:
             raise Usage(f"rule {name} names no directory to look under")
-        rule["under"] = [absolute(p, f"rule {name}'s under") for p in under]
+        rule["under"] = [absolute(p, f"rule {name}'s under {n}") for n, p in enumerate(under)]
     if kind == "package" and not PACKAGE.match(str(rule.get("package", ""))):
         raise Usage(f"rule {name} names no package")
     return rule
