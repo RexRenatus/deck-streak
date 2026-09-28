@@ -1,0 +1,61 @@
+# One run of one job of coordination's job table, `deckstreakd job <id>`, the instance being the
+# job's id (SPEC-027, SPEC-032; ADR-027). Its timer starts it, so it has no [Install] of its own. The
+# run exits 0 when the job ran, skipped or recorded a missed fire; 1 when it pages, which fails the
+# unit so that OnFailure= sends the one alert; and 2 for an id the table does not hold. A template
+# with neutral values that the private rail fills (deploy/README.md).
+[Unit]
+Description=DeckStreak job %i, one run of coordination's job table
+Documentation=https://github.com/RexRenatus/deck-streak/blob/main/deploy/README.md
+# A failed run pages through the one alert path (the alert template is SPEC-031's).
+OnFailure=deck-streak-alert@%n.service
+# The sync job reaches the sync server.
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/lib/deck-streak/current/bin/deckstreakd job %i
+User=deck-streak
+Group=deck-streak
+StateDirectory=deck-streak
+EnvironmentFile=/etc/deck-streak/deck-streak.env
+# The sync's account, read from the private rail's socket at every start and never stored
+# (ADR-038). Only the sync job reads it, and the rail's map decides which instances it answers.
+LoadCredential=anki-sync-username:/run/deck-streak-credentials/socket
+LoadCredential=anki-sync-password:/run/deck-streak-credentials/socket
+# A job yields the processor and the disk to the long-running services.
+Nice=10
+IOSchedulingClass=idle
+# A oneshot has no start timeout of its own, so a hung run would hold its unit active and its timer
+# could never start it again. Thirty minutes ends a hung run, which pages, before the hourly watch is
+# due again (ADR-032).
+TimeoutStartSec=30min
+SyslogIdentifier=%N
+# The budget is deploy/host-budget.json's entry for this template (ADR-032): the sync's resident
+# memory budget (ADR-022) lies a fifth below MemoryHigh.
+MemoryHigh=320M
+MemoryMax=384M
+UMask=0077
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+ProtectProc=invisible
+ProcSubset=pid
+# AF_UNIX, which a name lookup may use, and AF_INET and AF_INET6 for the sync's requests.
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+CapabilityBoundingSet=
