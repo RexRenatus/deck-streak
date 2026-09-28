@@ -171,8 +171,9 @@ Chosen, and what each was chosen against:
 
 ### Consequences of the note
 
-- Good, because a warm code pull request's gate took 2m39s to 2m54s in four runs, against 4m29s
-  before the engine job and 3m43s with one, and every test still decides `ci`.
+- Good, because a warm code pull request's gate took 2m36s to 3m15s in five runs, not counting
+  `ci`'s wait for a runner, against 4m29s before the engine job and 3m43s with one, and every
+  test still decides `ci`.
 - Bad, because each run pays two more runners, each with its own setup, restore and test build: the
   Rust jobs took 6m23s and 7m00s of runner time together, against 4m22s for the single `rust` job,
   for a gate 1m41s to 1m50s shorter.

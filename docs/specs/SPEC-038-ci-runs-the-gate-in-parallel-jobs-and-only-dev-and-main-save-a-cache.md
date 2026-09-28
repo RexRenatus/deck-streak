@@ -464,7 +464,7 @@ among them) and took 58.6 s, where `test-engine`'s own build of the whole worksp
 
 Sharding lowers the floor only as far as the slowest test allows, so it was measured: one `engine`
 job at c8b1d3e, then two slices at 25b102c, each run twice (the second attempt a re-run), and the
-two slices twice more on this branch's later heads.
+two slices three more times on this branch's later heads.
 
 | run | layout | `engine` | `rust` | the gate: first job to the end of `ci` |
 |---|---|---|---|---|
@@ -474,17 +474,19 @@ two slices twice more on this branch's later heads.
 | 36372201275, attempt 2 | two slices | 2m32s: test-engine 126 s (the build 46.7 s, the run 75.3 s); slice 2 2m24s: 118 s (45.8 s, 67.8 s) | 2m04s | 2m48s, 12 s of it `ci` waiting for a runner |
 | 36373161165 | two slices, the pull request merged with `dev` c0dbf2a and restoring by fallback | 2m38s: test-engine 132 s (the build 52.8 s, the run 74.4 s); slice 2 2m36s: 117 s (53.7 s, 60.2 s) | 2m22s | 2m43s |
 | 36373786208 | two slices at f607dcd, `dev` c0dbf2a merged in, restoring its new entry by exact key | 2m46s: test-engine 133 s (the build 55.0 s, the run 74.3 s); slice 2 2m40s: 127 s (53.9 s, 69.1 s) | 2m19s | 2m54s |
+| 36374302129 | two slices at 2bc6350, the same key | slice 2 3m07s: test-engine 152 s (the build 67 s, the run 80.6 s); slice 1 2m51s: 137 s (56.6 s, 76.2 s) | 2m17s | 4m16s: 3m15s, then 61 s of `ci` waiting for a runner |
 
-Each slice ran five tests. Slice 1's run, 74.3 to 75.3 s in the four sliced runs, is the time of its
+Each slice ran five tests. Slice 1's run, 74.3 to 76.2 s in the five sliced runs, is the time of its
 slowest test, `a_sync_run_sends_no_upload_and_no_local_change`. Two slices took 67 s and 66 s off
 the critical path in the two pairs of runs of one tree, so the engine set runs in two. A third slice
 would still wait for that test, and would cost another runner for a gain the two samples do not
 show.
 
-The last two runs build `dev` c0dbf2a's workspace, which #224 grew: the test build took 53 to 55 s
-in each `engine` leg, against 46 to 48 s at 63e6671, because both test stages build the whole
-workspace. #224 also brought two tests of about 13 s each (`deck-streak-coordination::ledger`),
-outside the engine set, which run in `rust`: its 135 tests took 2.1 to 14.5 s.
+The last three runs build `dev` c0dbf2a's workspace, which #224 grew: the test build took 53 to 57 s
+in an `engine` leg, and once 67 s on a slower runner, against 46 to 48 s at 63e6671, because both
+test stages build the whole workspace. #224 also brought two tests of about 13 s each
+(`deck-streak-coordination::ledger`), outside the engine set, which run in `rust`: its 135 tests
+took 2.1 to 14.5 s.
 
 The price is runner time. Each slice pays its own setup, restore and test build, so in run
 36372201275's two attempts the Rust jobs took 6m23s and 7m00s of runner time together (`rust` and
@@ -502,19 +504,20 @@ tests), doctest 85 s, audit-rust 6 s, test-engine 150 s (the build 46 s, the run
 
 The warm code pull request's target of about a minute and a half is revised. The engine set's run
 bounds it: its slowest test takes about 75 s in a slice, after a test build that recompiles the
-engine once (ADR-022's finding), 46 to 55 s with the workspace. Measured, the warm critical path is
+engine once (ADR-022's finding), 46 to 67 s with the workspace. Measured, the warm critical path is
 the slower `engine` leg:
 
-- **an `engine` leg:** start and setup about 10 s (the checkout, `rustup show` 8 to 9 s,
-  `cargo-nextest` and `protoc`), the restore 11 to 16 s, and `test-engine` 117 to 133 s (the
-  workspace's test build 33 to 55 s, one forced engine recompile among it, and the slice's run 44 to
-  75 s). The slower leg took 2m32s, 2m32s, 2m38s and 2m46s: about 2m40s, **held to 3 minutes**.
+- **an `engine` leg:** start and setup about 10 s (the checkout, `rustup show` 8 to 10 s,
+  `cargo-nextest` and `protoc`), the restore 11 to 19 s, and `test-engine` 117 to 152 s (the
+  workspace's test build 33 to 67 s, one forced engine recompile among it, and the slice's run 44 to
+  81 s). The slower leg took 2m32s, 2m32s, 2m38s, 2m46s and 3m07s: about 2m45s, **held to 3m15s**.
 - **the `rust` job:** setup about 10 s, the restore 11 to 25 s, and four cargo commands, three of
   them recompiling the engine: clippy 14 to 17 s, test 44 to 63 s, doctest 18 to 31 s, audit-rust 2
   to 4 s. It took 1m52s to 2m22s: about 2m10s, **held to 2m30s**.
-- **the gate:** the slower of the two, then the aggregate `ci`. Measured at 2m39s, 2m48s, 2m43s and
-  2m54s, against 4m29s before the amendment and 3m43s with one engine job: about 2m50s, **held to
-  3m15s**.
+- **the gate:** the slower of the two, then the aggregate `ci`, which runs in 2 to 4 s once a runner
+  takes it. Without the wait for that runner, which this workflow does not control (0 to 61 s
+  measured), it took 2m39s, 2m36s, 2m43s, 2m54s and 3m15s, against 4m29s before the amendment and
+  3m43s with one engine job: about 2m50s, **held to 3m20s**.
 
 The engine legs build the whole workspace, so their build grows as it does; a delivery that takes a
 leg past its bound says so (R15), and the fix is then the test build, not the split.
@@ -522,9 +525,9 @@ leg past its bound says so (R15), and the fix is then the test build, not the sp
 These bounds are for the gate's five jobs. SPEC-039's mutation jobs, when they are needs of `ci`,
 state their own.
 
-The `engine` job's `timeout-minutes` is 20, sized from these runs: a warm leg takes 2 to 3
-minutes, and a cold one repeats the test stage's cold build (102 s and 126 s in runs 36368711222 and
-36369172368) before a slice of at most 75 s, about 4 minutes. Twenty minutes holds five cold legs,
+The `engine` job's `timeout-minutes` is 20, sized from these runs: a warm leg took 1m59s to 3m07s,
+and a cold one repeats the test stage's cold build (102 s and 126 s in runs 36368711222 and
+36369172368) before a slice of at most 81 s, about 4 minutes. Twenty minutes holds five cold legs,
 and a hung sync test is stopped in a twentieth of GitHub's default six hours.
 
 ### What remains for the orchestrator
