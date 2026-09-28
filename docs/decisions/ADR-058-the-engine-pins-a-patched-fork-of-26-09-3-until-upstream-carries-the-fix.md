@@ -156,3 +156,24 @@ SPEC-055; #228, #233, #235. The Cargo Book on `[patch]` and git dependencies
 (https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html), cargo-deny's sources check
 (https://embarkstudios.github.io/cargo-deny/checks/sources/cfg.html) and rust-lang/cargo#11613
 (https://github.com/rust-lang/cargo/pull/11613), each read on 2026-09-28.
+
+## Confirmation, appended 2026-09-28: CI's warm path after the pin
+
+This section fills the Confirmation's reserved bullet, "CI's warm path after the first push to
+`dev` that saves a cache". Measured from `dev`'s push runs on GitHub-hosted runners, by SPEC-038
+section 8's metric (the slowest gate job plus `ci`, excluding the wait for a runner):
+
+- **The merge's own push, run 36391248783 at 65d7649 (#242).** The lockfile changed, so every Rust
+  job restored the 26.05-era entry by its fallback key (1,005,229,631 bytes) and compiled the fork's
+  engine. `rust` then saved the new entry under the 26.09.3 lockfile's key: 1,331,055,956 bytes.
+  The jobs: engine (1) 192 s, engine (2) 182 s, rust 171 s, hygiene 156 s. The gate: 195 s.
+- **The first warm push, run 36392549996 at 5f3f2d5 (#243, docs only).** Every Rust job restored
+  that entry by its exact key, and nothing was saved. The jobs: engine (2) 143 s, engine (1) 127 s,
+  rust 96 s, hygiene 139 s. The gate: 147 s, against 176 s at 9e8e53e before the fork (run
+  36382447015).
+- **Later warm pushes, the gate:** 868aaa5 (#245, run 36395345580) 155 s; 0f68ed4 (#221, run
+  36396463661) 161 s, excluding the new mutation jobs, which SPEC-039 bounds itself; d4af48e (#246,
+  run 36397385939) 152 s; d9ffe44 (#244, run 36398486069) 161 s; 16ed8e2 (#247, run 36410369748)
+  149 s.
+- **The engine's recompile on every cargo command is gone.** The `rust` job now takes 93 to 139 s
+  warm, against 147 s before the fork (run 36382447015), with its three forced recompiles.
