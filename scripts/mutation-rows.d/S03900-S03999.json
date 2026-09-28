@@ -192,6 +192,14 @@
         "    if True:\n",
         "a missing shard is named once, never as each of its mutants unexamined (SPEC-039 R18)",
         "test_mutation_verdict.TheVerdictCountsEveryShard.test_a_missing_or_partial_shard_report_is_void_by_name"
+      ],
+      [
+        "S03925-EVERY-SELECTOR-IS-PROVED",
+        "scripts/mutation_rows.py",
+        "    wanted += list(args.row)\n",
+        "    wanted = list(args.row)\n",
+        "a --row beside a --band adds its row and drops none of the band's (SPEC-039 R9)",
+        "test_mutation_rows.TheRunnerProvesEverySelectedRow.test_every_row_its_selectors_name_is_proved_once"
       ]
     ]
   }
