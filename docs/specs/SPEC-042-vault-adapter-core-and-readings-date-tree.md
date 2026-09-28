@@ -5,8 +5,9 @@
   ADR-011 (DeckStreak is the single writer of the readings folder), ADR-012 (the parity oracle),
   ADR-019 (the Mini App first, the vault an archive copy), and ADR-042 (the two write paths, the
   reading note's format and the rails).
-- **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
-  `docs/specs/` with its tests and `docs/red-first/SPEC-042.md` (ADR-016).
+- **Status:** judged: delivered with its tests, `docs/red-first/SPEC-042.md`, and two goldens
+  (`roll_note_text`, `archive_dir`) generated at the predecessor's `27ee2bc`. The delivery made R1 to
+  R4, R7 to R9, A3, A9 and the manifest exact where the code decided them (§7).
 
 ## 1. The problem, measured
 
@@ -136,27 +137,31 @@ A13: cargo test -p deck-streak-vault --test boxes -- --exact a_body_replacement_
 | `crates/vault/src/atomic.rs` | `deck-streak-vault` | added |
 | `crates/vault/src/rails.rs` | `deck-streak-vault` | added: the rails, read from the vendored `rails.json` |
 | `crates/vault/src/staged.rs` | `deck-streak-vault` | added: the run record, the three-verb executor, the gate call |
+| `crates/vault/src/sha256.rs` | `deck-streak-vault` | added: SHA-256 for the run record's hashes and the body hash, by hand because no ADR admits a hashing crate (§7) |
 | `crates/vault/src/note.rs` | `deck-streak-vault` | added: the reading note's render, patch and box lines |
 | `crates/vault/src/readings_tree.rs` | `deck-streak-vault` | added: paths, create, roll, roll-forward, archive, stamp, tick, body replacement |
+| `crates/vault/examples/rails_verdicts.rs` | `deck-streak-vault` | added: the adapter's rails verdict on each file it is given, which A3 compares with the pack's probe (§7) |
 | `crates/vault/tests/atomic.rs` | `deck-streak-vault` | added |
 | `crates/vault/tests/rails.rs` | `deck-streak-vault` | added |
-| `crates/vault/tests/fixtures/rails/` | `deck-streak-vault` | added: one planted fixture per rail row and one clean note, plain notes with no run record |
+| `crates/vault/tests/fixtures/rails/` | `deck-streak-vault` | added: one planted fixture per rail row and one clean note, plain notes with no run record, and `rows.json`, which names each fixture's rail row |
 | `crates/vault/tests/roll.rs` | `deck-streak-vault` | added |
 | `crates/vault/tests/archive.rs` | `deck-streak-vault` | added |
 | `crates/vault/tests/boxes.rs` | `deck-streak-vault` | added |
 | `crates/vault/tests/staged.rs` | `deck-streak-vault` | added |
 | `crates/vault/tests/confinement.rs` | `deck-streak-vault` | added |
-| `crates/vault/tests/runs/clean/duty-run.json` | `deck-streak-vault` | added: one synthetic run, green on every blocking vault-duties row |
-| `crates/vault/tests/runs/clean/` | `deck-streak-vault` | added: that run's staged notes |
+| `crates/vault/tests/runs/clean/duty-run.json` | `deck-streak-vault` | added: one synthetic daily-note run, green on every blocking vault-duties row that judges a daily note (§7) |
+| `crates/vault/tests/runs/clean/` | `deck-streak-vault` | added: that run's staged daily note |
 | `scripts/tests/test_vault_rails_rows.py` | repo | added |
-| `tools/parity-oracle/registry/spec_042.py` | repo | added: registers `reading_notes.py:_roll_note_text` and `reading_notes.py:_archive_dir` (SPEC-029's registry) |
-| `tools/parity-oracle/goldens/_roll_note_text.json` | repo | added |
-| `tools/parity-oracle/goldens/_archive_dir.json` | repo | added |
+| `tools/parity-oracle/registry/spec_042.py` | repo | added: registers `reading_notes.py:_roll_note_text` and `reading_notes.py:_archive_dir` as the goldens `roll_note_text` and `archive_dir` (SPEC-029's registry; §7) |
+| `tools/parity-oracle/goldens/roll_note_text.json` | repo | added |
+| `tools/parity-oracle/goldens/archive_dir.json` | repo | added |
 | `Cargo.lock` | workspace | changed |
-| `docs/schematics/vault-write-paths.md` | docs | added |
+| `docs/schematics/vault-write-paths.md` | docs | changed: drawn again as built, with the start check and the executor's own checks |
 | `docs/specs/SPEC-042-vault-adapter-core-and-readings-date-tree.md` | docs | moved from `docs/specs/planned/` |
-| `docs/decisions/ADR-042-vault-write-paths-note-format-and-rails.md` | docs | added |
+| `docs/decisions/ADR-042-vault-write-paths-note-format-and-rails.md` | docs | changed: accepted, with the decisions the delivery made |
 | `docs/red-first/SPEC-042.md` | docs | added |
+| `.env.example` | repo | changed: the vault's three settings, by name, with the example folder names |
+| `changelog.d/` fragment | repo | added |
 
 Planted-defect runs are built in temporary directories by the tests and never committed: the pack's
 walk from the root would find them and turn its rows red.
@@ -186,3 +191,59 @@ walk from the root would find them and turn its rows red.
   Prevented by the one-writer prerequisite of the first live night (SPEC-053).
 - **A case-insensitive file system on a device** merges two names. Detected by the case-insensitive
   collision check (R4, R8).
+
+## 7. Amendments at delivery
+
+- **The goldens' names, and a day inside a note.** The generator refuses a golden name that starts
+  with `_`, so the goldens of `reading_notes.py:_roll_note_text` and `reading_notes.py:_archive_dir`
+  are `roll_note_text.json` and `archive_dir.json`. A golden holds no calendar date, so a day inside a
+  note's text is written as the token `{day:N}`, N its epoch day number, which the registry's adapter
+  expands before it calls the predecessor and writes back after; the archive golden gives the day
+  folder as the day it names. A note the predecessor refuses is recorded as the class of its
+  exception, and A4 holds the port to a refusal of the same kind.
+- **R7: a spelling only Python reads is refused (ADR-042).** The predecessor's `int` also read a
+  digit separator (`1_0`), digits outside ASCII and a count of any size. The port reads an optional
+  sign and ASCII digits within a 128-bit integer, and refuses the rest as a malformed note; the
+  golden marks those cases `class: python-only`. A `rolls` that is no whole number stopped the
+  predecessor's whole roll-forward (its per-note handler did not catch the `ValueError`); here it is
+  reported by path like every malformed note (R8).
+- **R2: the directory sync is part of the write.** A failed step up to the rename leaves the target
+  as it was and removes the temporary file. A failed directory sync after the rename is an error,
+  because the write is not known to be durable (the predecessor made it a no-op), so a roll never
+  removes its source unless its destination's directory was synced and the destination read back.
+- **R8: the reasons a note stays, and links.** A roll-forward reports a note by its path relative to
+  the vault root and one of four bounded reasons: malformed, a note already at the roll's
+  destination, a rail the rolled note would fail, or not a regular file. A day folder or a note that
+  is a symbolic link is reported and never followed. A destination that does not read back as
+  written is removed (it is the call's own write), the source stays, and the roll-forward stops, as
+  the predecessor's verification did. An archive name taken in any case takes the next free number;
+  the predecessor raised and stopped the call.
+- **R9: doubled means twice in either state.** A box line found twice, ticked or unticked, is
+  `box_anchor_ambiguous`; the predecessor counted only unticked lines, so it would tick one of two.
+  Lines are split where Python's `splitlines` splits them, as the predecessor's stamp read them, and
+  a body that holds a box line of its own is refused, so an anchor can never be doubled by a body.
+- **R1: the start check.** It proves the readings folder writable by creating and removing one
+  temporary file whose name the sync bridge ignores, and also refuses a readings folder that resolves
+  outside the vault root. The three settings are `DECKSTREAK_VAULT_ROOT`,
+  `DECKSTREAK_VAULT_READINGS_FOLDER` and `DECKSTREAK_VAULT_ARCHIVE_FOLDER`, all required; a folder
+  name is one segment, not hidden, with no slash or control character. The archive folder and its
+  subfolders are made inside the readings folder when missing, and never at the vault's top level.
+- **R3 and A3: the rails read a note as the pack's probe reads it.** The port reads the whole text
+  as the note's body and never parses a JSON frontmatter, so on a vault-duty note it is as strict as
+  the probe or stricter, and it case-folds as Python does for every letter a rail compares.
+  `rows.json` names each planted fixture's rail row: A2 holds the adapter to it, and A3 compares the
+  adapter's verdict on every fixture, printed by `crates/vault/examples/rails_verdicts.rs`, with the
+  probe's own. A key `rails.json` gains fails a test, because a new kind of rail needs code.
+- **R4: the gate, and the executor's own checks.** The gate runs the pack's probe once per blocking
+  class of the vendored rows, as a subprocess outside any model (ADR-043). A class that examined
+  nothing of the run (a daily note's class for a synthesis) is passed over; any other ending fails
+  closed. The executor's own checks run before the gate and again after it, before the first write,
+  and refuse a staged link or a staged file no operation writes.
+- **R4 and R10: SHA-256 by hand.** No ADR admits a hashing crate, so `crates/vault/src/sha256.rs`
+  implements FIPS 180-4, held to the standard's examples. It checks an update's `sha256_before`, a
+  move's `sha256`, and the body hash a body replacement is given.
+- **A9 and the manifest: green on the blocking rows that judge a daily note.** One run cannot be
+  green on every blocking row: `daily-note` examines only a daily note and `synthesis-cites` only a
+  synthesis. The committed run is a daily note, green on ten blocking rows, and `synthesis-cites`
+  reads VOID, so the vault-duties pack stays `pending` on #49. A test also holds no blocking row red
+  on it.
