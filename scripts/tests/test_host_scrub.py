@@ -572,6 +572,7 @@ class Inventory(unittest.TestCase):
                     ("systemctl", "is-active"),
                     ("dpkg-query", "-W"),
                     ("ps", "-eo"),
+                    ("timedatectl", "show"),
                 },
             )
             # The inventory records every command it ran, with its exit status.

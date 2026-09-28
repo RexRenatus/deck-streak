@@ -57,6 +57,7 @@ from inventory import (
     Usage,
     allowed,
     canonical,
+    clock_synchronised,
     health_commands,
     inside_repository,
     load_json,
@@ -332,6 +333,10 @@ def main(argv: list[str] | None = None) -> int:
             reason = f"the health check `{refused}` is not on the read-only allow list"
             raise Refusal(reason) from refused
         approval, items = approved_items(listing, args.approval, rules["digest"])
+        if listing["inventory"].get("clock_synchronised") is not True:
+            raise Refusal("the inventory did not record a synchronised clock")
+        if not clock_synchronised(reads):
+            raise Refusal("the host clock does not read synchronised now")
         checked = {}
         for item in items:
             checked[item["id"]] = check_item(item, rules["protected"], runner)

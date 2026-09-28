@@ -117,6 +117,8 @@ def measure(path: str) -> tuple[str, list[tuple]]:
     errors: list[dict] = []
     lines, inodes = [], []
     for sub, st in walk(path, errors):
+        if inodes and st.st_dev != inodes[0][0][0]:
+            raise OSError(f"{sub} lies on another device than the item, so it is not digested")
         lines.append(line(sub, st))
         directory = stat.S_ISDIR(st.st_mode)
         inodes.append(((st.st_dev, st.st_ino), st.st_nlink, st.st_blocks * 512, directory))
@@ -268,7 +270,11 @@ def main(argv: list[str] | None = None) -> int:
     listing = {
         "schema": SCHEMA,
         "made_at": now_utc().isoformat(),
-        "inventory": {"digest": inventory_digest, "taken_at": inventory["taken_at"]},
+        "inventory": {
+            "digest": inventory_digest,
+            "taken_at": inventory["taken_at"],
+            "clock_synchronised": inventory.get("clock_synchronised"),
+        },
         "rules_digest": inventory["rules_digest"],
         "items": items,
         "skipped": skipped,

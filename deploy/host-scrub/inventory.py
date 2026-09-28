@@ -98,6 +98,7 @@ READS = {
     "units": ["systemctl", "list-units", "--all", "--no-legend", "--no-pager", "--plain"],
     "packages": DPKG_QUERY,
     "memory": ["ps", "-eo", "pid=,uid=,rss=,comm=", "--sort=-rss"],
+    "clock": ["timedatectl", "show", "-p", "NTPSynchronized", "--value"],
 }
 MEMORY_USERS = 10
 #: File systems that hold no files of their own.
@@ -195,6 +196,14 @@ class Runner:
 
 def now_utc() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def clock_synchronised(runner: Runner) -> bool:
+    """Whether the host's time-sync service reads the clock as synchronised. The approval's
+    instants (the snapshot's, the inventory's) are ordered on this clock, so a tool that acts on
+    them reads it first (R6)."""
+    code, output = runner.run(READS["clock"])
+    return code == 0 and output.strip() == "yes"
 
 
 def iso(timestamp: float) -> str:
@@ -734,6 +743,9 @@ def main(argv: list[str] | None = None) -> int:
     except Refused as refused:
         print(f"inventory: refused: `{refused}` is not on the read-only allow list; nothing ran")
         return 1
+    if not clock_synchronised(runner):
+        print("inventory: refused: the host clock does not read synchronised; nothing was written")
+        return 1
     os.nice(max(0, 19 - os.nice(0)))
     taken = now_utc()
     health = read_health(rules["health"], runner)
@@ -743,6 +755,7 @@ def main(argv: list[str] | None = None) -> int:
     record = {
         "schema": SCHEMA,
         "taken_at": taken.isoformat(),
+        "clock_synchronised": True,
         "rules_digest": rules["digest"],
         "health_before": health,
         "mounts": mounts(),
