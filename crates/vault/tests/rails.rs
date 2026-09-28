@@ -334,3 +334,23 @@ fn a_closing_tag_and_each_attribute_name_are_read_as_the_probe_reads_them() {
         ],
     );
 }
+
+#[test]
+fn a_wikilink_is_read_between_its_double_brackets() {
+    judge(
+        &vendored(),
+        "note(s) with a wikilink",
+        &[
+            // Two brackets open it and two close it.
+            ("![xy.base]]\n", &[]),
+            ("![[view.base] and more\n", &[]),
+            // The scan resumes right after one, so the next is read, and an empty one is read
+            // once.
+            (
+                "[[abcdefgh]]![[view.base]]\n",
+                &[("dynamic_embed_extensions:.base", 1)],
+            ),
+            ("An empty link [[]] here.\n", &[]),
+        ],
+    );
+}
