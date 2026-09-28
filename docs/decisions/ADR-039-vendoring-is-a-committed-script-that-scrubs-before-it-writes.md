@@ -70,3 +70,6 @@ SPEC-037's A1 to A7, and every future re-pin pull request, which runs this scrip
 
 SPEC-037; ADR-004 (vendored probes), ADR-033 (the history scrub); the persona-core and privacy-gdpr
 packs, whose shapes the scrub composes.
+
+Amended by ADR-056 (2026-09-28): no pack runner will be published, so vendoring does not end;
+this script remains the way the probes are refreshed.
