@@ -35,4 +35,43 @@ A12 at eeaa4e7, against a checker stub that read every workflow and refused none
 705d506. A hand sweep then deleted or inverted each branch of the checker in a scratch copy, 28
 mutants. 26 were killed at once. The two that survived, the two boundaries of the word `secrets`,
 are killed by the admitted workflow that 09eca13 and af4c5b7 add to A11, and the checker itself did
-not change after 705d506.
+not change after 705d506 until the fix round below.
+
+## Fix round, 2026-09-28
+
+The review found that the checker's own workflow reader did not fail closed. The fix round made it
+fail closed on quoting, escapes, anchors, aliases and tags, flow forms and keys, read a checkout
+named in any case and git's scp-like form, held a `.yaml` workflow to the hardening tests (A13),
+and pinned each rule with a planted workflow. `dev` was merged in first, at 9c84e61, with no
+conflict. Each step was committed red, then green.
+
+```red-first
+A13: red at 403d9ce: AssertionError: AssertionError not raised, in each of three subtests; the hardening tests took .yml files only, so none saw the planted .yaml workflow
+A13: green at 1b5f253
+```
+
+A10 and A11 are recorded above, so their fix-round runs are listed here, outside the fence:
+
+- A10 red at 6de90e8: `AssertionError: Lists differ`; four planted workflows that hold a secret or a
+  run step in quoted, escaped, aliased, tagged or flow forms, or under a key that is not a plain
+  name, passed the reader. Green at 2d6731c, where the reader fails closed.
+- A10 red at 8041679: `AssertionError: Lists differ`; flow-list items that hold a key, and a matrix
+  item keyed by more than a plain name, were read as text. A11 red at 8041679:
+  `AssertionError: line 27 was not read`; a key that begins with a dash was taken for a list item.
+  Both green at a3f3ae6.
+- A10 red at db630d1: `AssertionError: Lists differ`; a checkout named in another case and a fetch
+  in git's scp-like form were admitted. Green at ac103f6.
+
+DISCLOSURE: A10's body changed after its red commit, eeaa4e7. Its expected list grew from 16 to 42
+findings in four commits: 6de90e8 (13), 8041679 (3), db630d1 (7) and b0e917c (3). The first three
+were committed red, as listed above. b0e917c's three pin reader rules that a hand mutant showed no
+test held; the checker already met them, so they were green at once, and each is red against its
+mutant. No finding that was in the list at eeaa4e7 was changed or removed. A9, A11, A12 and the
+three hardening tests keep their bodies; their setUp takes its files from `workflow_files`.
+
+At 7f9e423 a hand sweep ran 62 mutants over the checker and its reader, one at a time, on a scratch
+copy of the committed tree, restoring the file byte for byte after each: the 28 of the first sweep,
+re-expressed against the fix round's code, 11 from the review (V1, V3, V6 to V9, X06, and X12 in
+four forms) and 23 of the reader's branches. 62 were killed and none survived. The first run, at
+ac103f6, left five survivors: b0e917c's planted workflows kill four, and 7f9e423 removed the fifth's
+branch, which read a bare dash as an empty item and which no test could tell apart.
