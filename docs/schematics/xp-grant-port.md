@@ -94,7 +94,15 @@ flowchart LR
 ```
 
 No level is stored, so none can drift from the ledger (R8). The square root is an integer square
-root and the division floors, never a floating-point root, which places the level one XP below a
-threshold one too high once totals pass about 2 × 10^16 XP. The arithmetic is 128-bit, so the widest
-total a 64-bit ledger can hold has its level. The parity golden `level_for_xp` proves both against
-the predecessor's own function (A4).
+root and the division floors, never a floating-point root, and the arithmetic is 128-bit, so the
+widest total a 64-bit ledger can hold has its level. The parity golden `level_for_xp` proves both
+against the predecessor's own function (A4).
+
+How far a floating-point root drifts was measured by a scan of every level from 2 to 3 × 10^7, at
+its threshold and one XP below it, comparing the integer formula with two double-precision ports,
+each emulated step by step in IEEE doubles. A port that rounds the exact `2500 + 200 × total` to a
+double once, then takes its square root, first reads the total one XP below a threshold a level too
+high at level 10,737,419 (a total of about 5.8 × 10^15 XP), and does so at every level from
+18,958,242 to the end of the scan. A port that computes every step in doubles goes wrong sooner,
+from level 8,388,610 (about 3.5 × 10^15 XP), and from level 26,843,551 it also reads some
+thresholds a level too low.
