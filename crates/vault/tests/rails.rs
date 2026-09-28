@@ -354,3 +354,46 @@ fn a_wikilink_is_read_between_its_double_brackets() {
         ],
     );
 }
+
+#[test]
+fn a_markdown_links_destination_title_and_embed_are_read_as_the_probe_reads_them() {
+    judge(
+        &vendored(),
+        "note(s) with a markdown link",
+        &[
+            // An embed of a dynamic view is refused as a wikilink's is; a label may be empty.
+            (
+                "![x](view.base)\n",
+                &[("dynamic_embed_extensions:.base", 1)],
+            ),
+            (
+                "[](javascript:x)\n",
+                &[("executable_schemes:javascript", 1)],
+            ),
+            // An angled destination may hold a space.
+            (
+                "[x](<javascript:a b>)\n",
+                &[("executable_schemes:javascript", 1)],
+            ),
+            // A title stands after spaces, and the link closes right after it.
+            (
+                "[x](javascript:y \"title\")\n",
+                &[("executable_schemes:javascript", 1)],
+            ),
+            ("[x](javascript:y \"t\" )\n", &[]),
+            ("![x](<view.base>\"t\")\n", &[]),
+            // The scan resumes after the link, never inside it.
+            (
+                "[x](a \"t\")[y](javascript:z)\n",
+                &[("executable_schemes:javascript", 1)],
+            ),
+            ("[x](a \"a[\")](javascript:z)\n", &[]),
+            ("[a](x[)](javascript:z)\n", &[]),
+            // A one-letter scheme is a drive: the destination is a path, cut at `#`.
+            (
+                "![x](C:view.base#top)\n",
+                &[("dynamic_embed_extensions:.base", 1)],
+            ),
+        ],
+    );
+}
