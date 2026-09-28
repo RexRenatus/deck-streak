@@ -347,3 +347,27 @@ on `main` (§1), that is, after the next release. Until then its `rehearsal` job
 machinery on every pull request that changes the workflow (R13), and GitHub's documented
 exception, a dispatch of a workflow that has already run once, is measured on this delivery's
 branch and recorded in its red-first record.
+
+## 8. Amendments at delivery
+
+- **R3 gained each event's case by name (A27).** `ci` reads a skipped need as failed, so neither
+  mutation job may be skipped. The orchestrator asked for each case explicitly, and
+  `mutation-verdict.py plan --event` decides it: a pull request into `dev` is judged on its diff;
+  a release pull request into `main` and a push that merges `#N` read `not-applicable` by name; a
+  push that names no pull request is judged on its first-parent diff.
+- **R7: `--in-place` is the rule's `-j 1`.** cargo-mutants 27.1.0 refuses any `-j` flag beside
+  `--in-place` (exit 1, a usage error), and in place it runs one mutant at a time. The verdict read
+  that exit as VOID the first time it met it.
+- **R12: thirty-two round-robin shards, not sixteen slices.** SPEC-038 measured Anki's engine
+  re-running its build script on every cargo command (about 26 to 28 s, warm) and `ingest`'s 102
+  tests at about 140 s, so an `ingest` mutant costs about three minutes. A slice of sixteen would
+  hold most of `ingest`'s 168 mutants in one shard for about five hours; round-robin spreads them.
+- **The population grew before the delivery.** At `dev` dbbd896, where #215 added identity,
+  cargo-mutants lists 1,721 mutants (`deck-streak-identity` 143).
+- **R16's rows are twenty-two:** S02001 to S02004 (SPEC-020), S02201 and S02202 (SPEC-022), S02401
+  to S02405 (SPEC-024), S02901 to S02903 (SPEC-029), S03901 to S03905 (this SPEC's runner and
+  verdict) and S04201 to S04203 (SPEC-042). The cookie row's killer lives in `api`, so it is a
+  `CARGO_KILLED_SCRIPT_MUTATIONS` row naming its crate. Two bounds could not take a row, because
+  no test pins them on its own: `Hour::new`'s upper bound and identity's future skew (#222).
+- **The manifest gained `scripts/tests/test_ci_workflows.py`.** SPEC-038 A3 pins `ci`'s needs as
+  an exact set, and the set grows by the two required mutation jobs, still an exact equality.
