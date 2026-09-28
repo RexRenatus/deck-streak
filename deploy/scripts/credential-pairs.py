@@ -49,6 +49,18 @@ OTHER_SOURCES = (
 # run of backslashes goes on in the next, its last backslash read as a space.
 BLANK = " \t\n\r"
 LINE_END = re.compile(r"\n\r?\0?|\r\n?\0?|\0")
+# The section systemd reads in a unit of each type besides [Unit] and [Install]; any other header,
+# `[X-...]` included, is one this reading refuses.
+SECTIONS = {
+    ".service": "Service",
+    ".socket": "Socket",
+    ".timer": "Timer",
+    ".path": "Path",
+    ".mount": "Mount",
+    ".swap": "Swap",
+    ".slice": "Slice",
+    ".target": None,
+}
 # A credential id is a plain file name in the unit's credentials directory (systemd.exec(5)).
 CREDENTIAL_ID = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9_.-]*$")
 SET_NAME = re.compile(r"^[a-z0-9][a-z0-9-]*$")
@@ -84,19 +96,31 @@ def logical_lines(text):
 def read_unit(text, unit):
     """Every assignment of one file of `unit` as systemd reads it, as (line, section, key, value),
     and each construct systemd could read otherwise, as (line, reason): a byte-order mark, which
-    systemd skips where it first finds one."""
+    systemd skips where it first finds one; a section header other than [Unit], [Install] and the
+    unit type's own, whose lines systemd ignores or which fails the whole file; and an assignment
+    before the first header, which systemd ignores."""
     found, unread = [], []
     for number, raw in enumerate(physical_lines(text), start=1):
         if "\ufeff" in raw:
             unread.append((number, "a byte-order mark, which systemd skips"))
-    section = None
+    known = {"Unit", "Install", SECTIONS.get(unit[unit.rfind(".") :])} - {None}
+    section, headed = None, False
     for number, line in logical_lines(text):
-        if line.startswith("[") and line.endswith("]"):
-            section = line[1:-1].strip(BLANK)
+        if line.startswith("["):
+            # systemd reads the text between the brackets whole: `[ Service ]` is no [Service].
+            headed = True
+            section = line[1:-1] if line.endswith("]") and line[1:-1] in known else None
+            if section is None:
+                names = ", ".join(f"[{name}]" for name in sorted(known))
+                unread.append((number, f"a section header other than {names}"))
             continue
         key, equals, value = line.partition("=")
-        if equals:
+        if not equals:
+            continue
+        if section is not None:
             found.append((number, section, key.strip(BLANK), value.strip(BLANK)))
+        elif not headed:
+            unread.append((number, "an assignment before the first section header"))
     return found, unread
 
 
