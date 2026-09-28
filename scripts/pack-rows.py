@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """pack-rows: run every tree row of DeckStreak's vendored packs against a checkout (ADR-004).
 
-    python3 scripts/pack-rows.py [--root DIR] [--pack NAME ...] [--json]
+    python3 scripts/pack-rows.py [--root DIR] [--pack NAME ...] [--json] [--jobs N]
 
 The vendored packs live in `.packs/skills/packs/<pack>/`, each with its own `checks.json`, and
 their standard-library probes in `.packs/scripts/` (the methodology probes in `scripts/`, where
@@ -30,6 +30,11 @@ pass after the others: one that passes is refused as STALE, because its deferral
 reason, and one that is red, VOID or in error stays deferred and fails nothing (SPEC-030 R7). The
 summary line reports that pass's count and time.
 
+Rows run in a pool of at most `--jobs` at once, by default the smaller of 8 and the CPUs this
+process may use (SPEC-038 R7). Every row is its own process, so the pool's threads only wait on
+them. Each row keeps its own timeout, and the report lists rows in row order whatever order they
+finish in, so `--jobs 1` and `--jobs 8` report the same verdicts in the same order.
+
 A row's exit is 0 green, 1 a finding, 2 a usage error, 3 VOID (nothing examined, never a pass).
 An advisory row never fails the gate. The runner exits 0 when no row fails, 1 when one does, 2
 when the wiring is malformed (an unknown key or state, a pack it names that is not vendored, or a
@@ -40,9 +45,11 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 import time
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -54,6 +61,9 @@ PACK_KEYS = {"state", "enforced_by", "excluded_rows", "deferred_rows", "note"}
 FAILING = ("RED", "VOID", "ERROR", "STALE")
 # The verdicts of a row the main pass ran; a deferred row's pass is counted on its own.
 RAN = ("ok", "advisory", "pending", "RED", "VOID", "ERROR")
+# The default bound. The rows are single-threaded interpreters, so more at once than the CPUs only
+# queue them; past 8 the longest row, not the pool, sets the pass's time (SPEC-038 section 7).
+MOST_JOBS = 8
 
 
 class WiringError(Exception):
@@ -138,11 +148,29 @@ def judge(code: int | None, severity: str, state: str) -> str:
     return "ERROR"
 
 
+def jobs_bound(text: str) -> int:
+    """`--jobs`: the most rows that run at once, an integer of at least 1."""
+    value = int(text)
+    if value < 1:
+        raise argparse.ArgumentTypeError(f"--jobs must be at least 1, not {value}")
+    return value
+
+
+def default_jobs() -> int:
+    """The smaller of MOST_JOBS and the CPUs this process may run on."""
+    try:
+        cpus = len(os.sched_getaffinity(0))
+    except AttributeError:
+        cpus = os.cpu_count() or 1
+    return max(1, min(MOST_JOBS, cpus))
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("--root", default=str(REPO))
     parser.add_argument("--pack", action="append", default=[])
     parser.add_argument("--json", action="store_true")
+    parser.add_argument("--jobs", type=jobs_bound, default=default_jobs())
     args = parser.parse_args()
     root = Path(args.root).resolve()
     try:
@@ -157,17 +185,22 @@ def main() -> int:
         print(f"pack-rows: wiring refused: no state for {unnamed}; not vendored: {missing}")
         return 2
     chosen = args.pack or vendored
-    report: list[dict] = []
+    # Every pack's rows are planned before any runs, so the report keeps the row order whatever
+    # order the pool finishes them in: (pack, state, entry, its items, the items the main pass runs).
+    plans: list[tuple[str, str, dict, list[dict], list[dict]]] = []
+    main_pass: list[tuple[dict, Row, str]] = []
     waiting: list[tuple[dict, Row, str]] = []
     for pack in chosen:
         entry = wiring[pack]
         state = entry["state"]
         if state == "phxd":
-            report.append({"pack": pack, "row": "*", "verdict": "phxd", "why": "run on the box"})
+            item = {"pack": pack, "row": "*", "verdict": "phxd", "why": "run on the box"}
+            plans.append((pack, state, entry, [item], []))
             continue
         if state == "deferred":
             why = f"deferred to {entry['enforced_by']}"
-            report.append({"pack": pack, "row": "*", "verdict": "deferred", "why": why})
+            item = {"pack": pack, "row": "*", "verdict": "deferred", "why": why}
+            plans.append((pack, state, entry, [item], []))
             continue
         try:
             rows = rows_of(pack, root)
@@ -179,49 +212,59 @@ def main() -> int:
         for name in sorted((set(excluded) | set(deferred)) - {r.ident for r in rows}):
             print(f"pack-rows: wiring refused: {pack} names row {name}, which the pack lacks")
             return 2
-        ran_here = []
+        items, ran_here = [], []
         for row in rows:
             if row.ident in excluded:
-                verdict, why, code, seconds, tail = "excluded", excluded[row.ident], None, 0.0, ""
+                verdict, why = "excluded", excluded[row.ident]
             elif row.ident in deferred:
-                verdict, code, seconds, tail = "deferred", None, 0.0, ""
-                why = f"deferred to {deferred[row.ident]}"
+                verdict, why = "deferred", f"deferred to {deferred[row.ident]}"
             else:
-                code, seconds, tail = run(row, root)
-                verdict, why = judge(code, row.severity, state), ""
+                verdict, why = "", ""
             item = {
                 "pack": pack,
                 "row": row.ident,
                 "severity": row.severity,
                 "state": state,
-                "exit": code,
+                "exit": None,
                 "verdict": verdict,
-                "seconds": round(seconds, 2),
-                "tail": tail[:200],
+                "seconds": 0.0,
+                "tail": "",
                 "why": why,
             }
-            report.append(item)
+            items.append(item)
             if verdict == "deferred":
                 waiting.append((item, row, deferred[row.ident]))
             elif verdict != "excluded":
+                main_pass.append((item, row, state))
                 ran_here.append(item)
-        blocking = [item for item in ran_here if item["severity"] == "block"]
-        if state == "pending" and blocking and all(item["exit"] == 0 for item in blocking):
-            why = (
-                f"pending on {entry['enforced_by']}, but every blocking row ran and passed "
-                f"({len(blocking)} row(s)): its state must say enforced"
-            )
-            report.append({"pack": pack, "row": "*", "verdict": "STALE", "why": why})
-    started = time.monotonic()
-    for item, row, issue in waiting:
-        code, seconds, tail = run(row, root)
-        item.update(exit=code, seconds=round(seconds, 2), tail=tail[:200])
-        if code == 0:
-            item["verdict"] = "STALE"
-            item["why"] = f"deferred to {issue}, but the row passes: remove its deferral"
-        else:
-            still = "a timeout" if code is None else f"exit {code}"
-            item["why"] = f"deferred to {issue}; still {still}: {tail[:80]}"
+        plans.append((pack, state, entry, items, ran_here))
+    with ThreadPoolExecutor(max_workers=args.jobs) as pool:
+        for (item, row, state), (code, seconds, tail) in zip(
+            main_pass, pool.map(lambda planned: run(planned[1], root), main_pass)
+        ):
+            item.update(exit=code, seconds=round(seconds, 2), tail=tail[:200])
+            item["verdict"] = judge(code, row.severity, state)
+        report: list[dict] = []
+        for pack, state, entry, items, ran_here in plans:
+            report.extend(items)
+            blocking = [item for item in ran_here if item["severity"] == "block"]
+            if state == "pending" and blocking and all(item["exit"] == 0 for item in blocking):
+                why = (
+                    f"pending on {entry['enforced_by']}, but every blocking row ran and passed "
+                    f"({len(blocking)} row(s)): its state must say enforced"
+                )
+                report.append({"pack": pack, "row": "*", "verdict": "STALE", "why": why})
+        started = time.monotonic()
+        for (item, row, issue), (code, seconds, tail) in zip(
+            waiting, pool.map(lambda planned: run(planned[1], root), waiting)
+        ):
+            item.update(exit=code, seconds=round(seconds, 2), tail=tail[:200])
+            if code == 0:
+                item["verdict"] = "STALE"
+                item["why"] = f"deferred to {issue}, but the row passes: remove its deferral"
+            else:
+                still = "a timeout" if code is None else f"exit {code}"
+                item["why"] = f"deferred to {issue}; still {still}: {tail[:80]}"
     deferred_pass = {
         "ran": len(waiting),
         "seconds": round(time.monotonic() - started, 2),
@@ -234,6 +277,7 @@ def main() -> int:
             "examined": len(ran),
             "failures": len(failures),
             "deferred_pass": deferred_pass,
+            "jobs": args.jobs,
             "rows": report,
         }
         print(json.dumps(payload, indent=2))
@@ -251,7 +295,8 @@ def main() -> int:
             f"stale {deferred_pass['stale']}"
         )
         print(
-            f"PACK ROWS: examined {len(ran)} row(s) of {len(chosen)} pack(s): {summary}; {second}"
+            f"PACK ROWS: examined {len(ran)} row(s) of {len(chosen)} pack(s): {summary}; "
+            f"{second}; at most {args.jobs} at once"
         )
     if not ran:
         print("PACK ROWS VOID: no row was examined")
