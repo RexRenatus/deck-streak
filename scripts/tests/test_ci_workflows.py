@@ -142,6 +142,14 @@ class WorkflowsAreHardened(unittest.TestCase):
                 "another server: https://example-host.example",
                 "another-repository-in-other-forms.yml:jobs.build.steps[7]: checks out from "
                 "another server: https://example-host.example",
+                "another-repository-in-other-forms.yml:jobs.build.steps[8]: checks out "
+                "example-org/other-repository, not this repository",
+                "another-repository-in-other-forms.yml:jobs.build.steps[9]: checks out "
+                "example-org/other-repository, not this repository",
+                "another-repository-in-other-forms.yml:jobs.build.steps[10]: checks out "
+                "example-org/other-repository, not this repository",
+                "another-repository-in-other-forms.yml:jobs.build.steps[11]: checks out "
+                "example-org/other-repository, not this repository",
                 "checkout-of-another-repository.yml:jobs.build.steps[0]: checks out "
                 "example-org/other-repository, not this repository",
                 "checkout-of-another-repository.yml:jobs.build.steps[1]: checks out "
@@ -292,6 +300,18 @@ class WorkflowsAreHardened(unittest.TestCase):
                 case.setUp()
                 with self.assertRaisesRegex(AssertionError, r"unhardened\.yaml"):
                     getattr(case, test)()
+        # The SHA-pin test admits an action only in its plain form: the hardened control, its action
+        # written with an empty part, a trailing slash or a backslash, is refused by that reference.
+        control = (PLANTED_HARDENING / "hardened.yml").read_text(encoding="utf-8")
+        for written in ("actions//checkout", "actions/checkout/", "actions\\checkout"):
+            with self.subTest(written), tempfile.TemporaryDirectory() as scratch:
+                planted = control.replace("actions/checkout@", f"{written}@")
+                (Path(scratch) / "planted.yml").write_text(planted, encoding="utf-8")
+                with mock.patch.object(sys.modules[__name__], "WORKFLOWS", Path(scratch)):
+                    case = WorkflowsAreHardened("test_every_action_is_pinned_by_a_full_commit_sha")
+                    case.setUp()
+                    with self.assertRaisesRegex(AssertionError, re.escape(f"uses {written}@")):
+                        case.test_every_action_is_pinned_by_a_full_commit_sha()
 
 
 def triggers(workflow):

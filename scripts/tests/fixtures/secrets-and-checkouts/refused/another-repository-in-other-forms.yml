@@ -2,8 +2,10 @@ name: planted
 
 # A planted workflow (SPEC-034 A10): another repository reached in other forms: a checkout whose
 # action is named in another case, a clone after a git option, a fetch through an ssh host and in
-# git's scp-like form, a checkout whose input is named in another case, and a checkout from another
-# server. The names are synthetic. scripts/tests/test_ci_workflows.py judges it; nothing runs it.
+# git's scp-like form, a checkout whose input is named in another case, a checkout from another
+# server, and actions/checkout written with an empty part, a trailing slash, a backslash or a path
+# inside it, as the runner reads each. The names are synthetic. scripts/tests/test_ci_workflows.py
+# judges it; nothing runs it.
 on:
   pull_request:
     branches: [dev]
@@ -45,4 +47,24 @@ jobs:
         uses: actions/checkout@0123456789abcdef0123456789abcdef01234567
         with:
           GitHub-Server-URL: https://example-host.example
+          persist-credentials: false
+      - name: actions/checkout with an empty part
+        uses: actions//checkout@0123456789abcdef0123456789abcdef01234567
+        with:
+          repository: example-org/other-repository
+          persist-credentials: false
+      - name: actions/checkout with a trailing slash
+        uses: actions/checkout/@0123456789abcdef0123456789abcdef01234567
+        with:
+          repository: example-org/other-repository
+          persist-credentials: false
+      - name: actions/checkout with a backslash
+        uses: actions\checkout@0123456789abcdef0123456789abcdef01234567
+        with:
+          repository: example-org/other-repository
+          persist-credentials: false
+      - name: an action at a path inside actions/checkout
+        uses: actions/checkout/planted@0123456789abcdef0123456789abcdef01234567
+        with:
+          repository: example-org/other-repository
           persist-credentials: false
