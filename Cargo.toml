@@ -65,7 +65,7 @@ anyhow = "1.0.104"
 # ADR-022 (SPEC-022): Anki's own Rust engine, for ingest only, pinned to the release tag of the line
 # the predecessor's pinned Python package comes from, with the TLS backend Anki's own Linux build
 # selects. An Anki upgrade is a deliberate delivery that re-runs ADR-022's measurement.
-anki = { git = "https://github.com/ankitects/anki.git", tag = "26.05", features = ["rustls"] }
+anki = { git = "https://github.com/ankitects/anki.git", tag = "26.09.3", features = ["rustls"] }
 # SPEC-022 section 7: the zstd the engine already brings, for the census's tests to read the
 # engine's compressed request bodies.
 zstd = "0.13.3"
