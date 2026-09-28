@@ -505,6 +505,12 @@ class AnEmptyCredentialFailsTheAlertUnit(unittest.TestCase):
         template = unit_file(SYSTEMD / ALERT_TEMPLATE)
         self.assertEqual(values(template, "Unit", "OnFailure"), [])
         self.assertEqual(len(values(template, "Service", "LoadCredential")), 2)
+        # It counts no refusal a success, so the refusal leaves the instance failed: no `-` prefix
+        # on its one ExecStart= and no SuccessExitStatus= naming 1 or FAILURE (systemd.service(5)).
+        (start,) = values(template, "Service", "ExecStart")
+        self.assertNotIn("-", re.match(r"[-@:+!|]*", start).group(0), start)
+        statuses = [s for v in values(template, "Service", "SuccessExitStatus") for s in v.split()]
+        self.assertEqual({"1", "FAILURE"} & set(statuses), set(), statuses)
 
 
 if __name__ == "__main__":

@@ -803,11 +803,14 @@ class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
             self.assertIn(ON_FAILURE, unit.values("Unit", "OnFailure"), unit.rel)
         self.assertEqual([r for unit in paging for r in refusal_page_refusals(unit)], [])
         # The alert template is the one exception: it cannot page about itself, so its own refusal
-        # is its failed state (SPEC-066 R3; test_alert_unit.py holds that route).
+        # is its failed state (SPEC-066 R3; test_alert_unit.py holds that route). Its refused start
+        # must still fail it, so every refusal but one that names OnFailure= holds for it.
         (template,) = [unit for unit in loading if unit.name == alert]
         self.assertEqual(template.values("Unit", "OnFailure"), [])
-        # Planted templates: one for each condition, one that meets all four, and one that loads
-        # no credential and so is not examined.
+        self.assertEqual([r for r in refusal_page_refusals(template) if "OnFailure=" not in r], [])
+        # Planted templates: one for each condition, one that meets all four, one that loads no
+        # credential and so is not examined, and one shaped as the alert template is, which names
+        # no OnFailure= and counts the refusal a success.
         head = "[Unit]\nDescription=planted\n"
         page = f"OnFailure={ON_FAILURE}\n"
         run = "[Service]\nExecStart=/bin/true\n"
@@ -819,6 +822,7 @@ class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
             "success.service": f"{head}{page}{run}SuccessExitStatus=2 1\n{loads}",
             "direct.service": f"{head}{page}{run}Restart=on-failure\nRestartMode=direct\n{loads}",
             "reads-none.service": f"{head}{run}",
+            "alert-shaped.service": f"{head}{run}SuccessExitStatus=1\n{loads}",
         }
         with tempfile.TemporaryDirectory() as scratch:
             folder = Path(scratch) / "deploy" / "systemd"
@@ -830,6 +834,7 @@ class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
         self.assertEqual(
             [unit.name for unit in planted_loading],
             [
+                "alert-shaped.service",
                 "direct.service",
                 "ignored.service",
                 "pages.service",
@@ -841,11 +846,19 @@ class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
         self.assertEqual(
             [r for unit in planted_loading for r in refusal_page_refusals(unit)],
             [
+                f"{where}/alert-shaped.service: OnFailure= does not name {ON_FAILURE}",
+                f"{where}/alert-shaped.service: SuccessExitStatus=1 counts the refusal a success",
                 f"{where}/direct.service: RestartMode=direct skips OnFailure=",
                 f"{where}/ignored.service: ExecStart=-/bin/true counts a failure as a success",
                 f"{where}/silent.service: OnFailure= does not name {ON_FAILURE}",
                 f"{where}/success.service: SuccessExitStatus=2 1 counts the refusal a success",
             ],
+        )
+        # The alert template's own check refuses the alert-shaped plant for its exit status alone.
+        (shaped,) = [unit for unit in planted_loading if unit.name == "alert-shaped.service"]
+        self.assertEqual(
+            [r for r in refusal_page_refusals(shaped) if "OnFailure=" not in r],
+            [f"{where}/alert-shaped.service: SuccessExitStatus=1 counts the refusal a success"],
         )
 
 
