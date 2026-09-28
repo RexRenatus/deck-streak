@@ -298,7 +298,7 @@ class Host:
             "health": [
                 {
                     "id": "example-service",
-                    "argv": ["systemctl", "is-active", "--quiet", "example.service"],
+                    "argv": ["systemctl", "is-active", "--quiet", "--", "example.service"],
                 }
             ],
         }
@@ -466,10 +466,15 @@ class Inventory(unittest.TestCase):
                 sorted(c["argv"] for c in record["commands"]), sorted(c for c in wrapped)
             )
             self.assertEqual({c["exit"] for c in record["commands"]}, {0})
-            # A planted changing command is refused before any command runs.
+            # A planted changing command is refused before any command runs, and so is a read
+            # whose units are not written after `--`, each beginning with a letter or a digit.
             for planted in (
                 ["systemctl", "restart", "example.service"],
+                ["systemctl", "restart", "--", "example.service"],
                 ["apt-get", "remove", "example-unused-tool"],
+                ["systemctl", "is-active", "--quiet", "example.service"],
+                ["systemctl", "is-active", "--quiet", "-Hexample.service"],
+                ["systemctl", "is-active", "--quiet", "--", "-Hexample.service"],
             ):
                 (host.bin / "calls.jsonl").unlink(missing_ok=True)
                 out.unlink(missing_ok=True)
@@ -872,7 +877,7 @@ class Health(unittest.TestCase):
                 checks = [
                     {
                         "id": "example-service",
-                        "argv": ["systemctl", "is-active", "--quiet", "example.service"],
+                        "argv": ["systemctl", "is-active", "--quiet", "--", "example.service"],
                     },
                     {"id": "example-ready", "url": url},
                 ]
