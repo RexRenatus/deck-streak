@@ -22,16 +22,20 @@ release; a push that merges a pull request (`Merge pull request #N`) is not-appl
 `#N`, whose jobs judged that same tree; a push that names none is judged on its first-parent
 diff. For a diff it reads `git diff BASE...HEAD` (on a pull request's merge
 ref, BASE is `HEAD^1`) and writes `plan.json` and `git.diff` into `--out`: every changed path with
-its class (R2), each production file's changed lines split into code lines and blank or comment
-lines, the rows the diff selects (R10), and the web files Stryker mutates whole. Under GitHub
-Actions it writes the step outputs `scope`, `case`, `rust`, `web`, `oracle`, `rows` and `mutate`.
+its class (R2), each production file's changed lines split into code lines, blank or comment lines
+and, in Rust, test-only lines, those inside an item cargo-mutants never mutates for a test attribute
+(SPEC-057 R22), the rows the diff selects (R10), and the web files Stryker mutates whole. It prints
+each class's case by name: why it applies, or why it is not-applicable. Under GitHub Actions it
+writes the step outputs `scope`, `case`, `rust`, `web`, `oracle`, `rows` and `mutate`.
 
 SHARDS sizes the Rust run from cargo-mutants' own listing of the diff's mutants (`--list --json
 --in-diff`), so no shard reaches its job's timeout (R18). Each round-robin shard's time is projected
 as the unmutated baseline's plus its mutants' measured costs, mutant `i` in shard `i mod n` as the
 tool assigns them, and the fewest shards whose slowest is projected within the bound are written
 into the plan, with each shard's mutants, and as the step outputs `shards` and `matrix`. A diff that
-needs more shards than a job matrix holds is refused with its projection, never capped.
+needs more shards than a job matrix holds is refused with its projection, never capped. A listing
+file that holds nothing is the tool's own empty listing, since it prints nothing when no mutant
+overlaps the diff; a missing listing is VOID (SPEC-057 R22).
 
 JUDGE reads a tool's own report, never its exit alone (R4); under `--shard-reports`, every shard's
 the plan promised, from `0` to `n-1`, each missing or partial one VOID by name, and the reports
@@ -42,8 +46,8 @@ KILLED, fails (exit 1). A class whose production files changed a code line and w
 count, the tool's and the rows' on its changed lines, is zero is VOID (exit 3). So is a missing
 report, and a partial one: cargo-mutants writes its report as it goes, so a report is read only when
 the tool's exit is 0, 2 or 3 and its caught, missed, timed-out and unviable counts sum to its total.
-A class whose changed lines are all blank or comments, or only deletions, reads `not-applicable` by
-name, with its count.
+A class whose changed lines are all blank or comments, or only deletions, or in Rust test-only,
+reads `not-applicable` by name, with its count.
 
 SURVIVORS turns the weekly battery's reports into one issue draft per file, titled
 `Mutation survivors: <path>`, and marks a draft whose title is already an open issue (R12). The
@@ -388,6 +392,161 @@ def language_of(path: str) -> str:
     return "svelte" if path.endswith(".svelte") else "js"
 
 
+#: The items cargo-mutants 27.1.0 never mutates for an attribute (`attrs_excluded` in its
+#: `visit.rs`): a function, an `impl` or `trait` block, or a module (SPEC-057 R22). It checks no
+#: other item's attributes, so a `#[cfg(test)]` constant, statement or `use` stays production code.
+TEST_ITEMS = frozenset({"fn", "mod", "impl", "trait"})
+#: The words that may stand between an item's attributes and its keyword.
+QUALIFIERS = frozenset({"pub", "const", "async", "unsafe", "extern", "default", "auto"})
+BRACKETS = {"(": ")", "[": "]", "{": "}"}
+#: How a test-only line is named, in the plan's case and the verdict's lines.
+TEST_ONLY = (
+    "inside an item marked #[cfg(test)] or with a test attribute, which cargo-mutants never mutates"
+)
+
+
+def rust_tokens(text: str) -> list[tuple[int, int]]:
+    """(start, end) of each token of Rust code in `text`, read as `c_code_lines` reads Rust: a
+    word, a literal whole, or one other character. Whitespace and comments hold no token, so a
+    brace or an attribute inside a string, a raw string, a character or a comment is no token."""
+    tokens: list[tuple[int, int]] = []
+    at = 0
+    while at < len(text):
+        char = text[at]
+        if char.isspace():
+            at += 1
+            continue
+        if text.startswith("//", at):
+            stop = text.find("\n", at)
+            at = len(text) if stop < 0 else stop
+            continue
+        if text.startswith("/*", at):
+            at = block_end(text, at, nested=True)
+            continue
+        stop = rust_literal(text, at)
+        if stop is None and (char.isalnum() or char == "_"):
+            stop = at
+            while stop < len(text) and (text[stop].isalnum() or text[stop] == "_"):
+                stop += 1
+        stop = at + 1 if stop is None else stop
+        tokens.append((at, stop))
+        at = stop
+    return tokens
+
+
+def closing(words: list[str], at: int) -> int | None:
+    """The index of the bracket that closes the one at `at`, or None when none does."""
+    depth = 0
+    for index in range(at, len(words)):
+        if words[index] == words[at]:
+            depth += 1
+        elif words[index] == BRACKETS[words[at]]:
+            depth -= 1
+            if depth == 0:
+                return index
+    return None
+
+
+def is_test_mark(inner: list[str]) -> bool:
+    """Whether an attribute's inner tokens mark its item as test code the way cargo-mutants 27.1.0
+    reads them: exactly `cfg(test)`, or a path whose last segment is `test` (`test`,
+    `tokio::test(...)`). A `cfg` that joins `test` to another predicate marks nothing, since the
+    tool mutates such an item."""
+    if "".join(inner) == "cfg(test)":
+        return True
+    path = []
+    for word in inner:
+        if word in ("(", "[", "{", "="):
+            break
+        path.append(word)
+    return "".join(path).split("::")[-1] == "test"
+
+
+def item_keyword(words: list[str], at: int) -> int | None:
+    """The index of the keyword of the item whose attributes end before `at`, past its visibility
+    and qualifiers (`pub(crate)`, `async`, `unsafe`, `extern "C"`), when it is one of TEST_ITEMS."""
+    while at < len(words):
+        word = words[at]
+        if word in TEST_ITEMS:
+            return at
+        if word not in QUALIFIERS:
+            return None
+        at += 1
+        if word == "pub" and words[at : at + 1] == ["("]:
+            shut = closing(words, at)
+            if shut is None:
+                return None
+            at = shut + 1
+        elif word == "extern" and words[at : at + 1] and words[at].startswith('"'):
+            at += 1
+    return None
+
+
+def item_end(words: list[str], at: int) -> int | None:
+    """The index of the token that ends the item whose keyword is at `at`: the `}` that closes its
+    body, or the `;` of an item without one (`mod tests;`), or None when nothing ends it."""
+    depth = 0
+    for index in range(at, len(words)):
+        word = words[index]
+        if word in ("(", "["):
+            depth += 1
+        elif word in (")", "]"):
+            depth -= 1
+        elif depth == 0 and word == ";":
+            return index
+        elif depth == 0 and word == "{":
+            return closing(words, index)
+    return None
+
+
+def rust_test_spans(text: str, tokens: list[tuple[int, int]]) -> list[tuple[int, int]]:
+    """The character spans of the items cargo-mutants never mutates for an attribute, each from
+    its first outer attribute to the token that ends it (SPEC-057 R22). An attribute or an item
+    that nothing closes ends the reading: an unread item stays production code."""
+    words = [text[start:end] for start, end in tokens]
+    spans: list[tuple[int, int]] = []
+    at = 0
+    while at < len(words):
+        if words[at] != "#" or words[at + 1 : at + 2] != ["["]:
+            at += 1
+            continue
+        first, marked = at, False
+        while words[at : at + 1] == ["#"] and words[at + 1 : at + 2] == ["["]:
+            shut = closing(words, at + 1)
+            if shut is None:
+                return spans
+            marked = marked or is_test_mark(words[at + 2 : shut])
+            at = shut + 1
+        keyword = item_keyword(words, at) if marked else None
+        last = item_end(words, keyword) if keyword is not None else None
+        if last is not None:
+            spans.append((tokens[first][0], tokens[last][1]))
+            at = last + 1
+    return spans
+
+
+def rust_test_lines(text: str) -> set[int]:
+    """The 1-based lines of Rust `text` whose every token lies inside a test item (SPEC-057 R22).
+    A line that holds any token outside one, a brace that closes a test module before production
+    code, say, is production code: the reading errs toward applying, never toward passing."""
+    tokens = rust_tokens(text)
+    spans = rust_test_spans(text, tokens)
+    # The spans are disjoint and in order, since each reading resumes after the item it ended.
+    starts = [low for low, _ in spans]
+    breaks = [at for at, char in enumerate(text) if char == "\n"]
+    inside: set[int] = set()
+    outside: set[int] = set()
+    for start, stop in tokens:
+        lines = range(
+            bisect.bisect_left(breaks, start) + 1,
+            bisect.bisect_left(breaks, max(start, stop - 1)) + 2,
+        )
+        span = bisect.bisect_right(starts, start) - 1
+        within = span >= 0 and start < spans[span][1]
+        (inside if within else outside).update(lines)
+    return inside - outside
+
+
 def changed_lines(root: pathlib.Path, base: str, head: str) -> dict[str, dict]:
     """{path: {added: [new-side line numbers], deleted: n}} for every path the diff changes."""
     text = git(
@@ -469,6 +628,30 @@ def selected_rows(root, base, head, changed, plan):
     plan.rows = sorted(chosen)
 
 
+def class_case(files: list[dict], name: str) -> str:
+    """Why a class applies, or why it is not-applicable, by name, from its files' changed lines:
+    its production code lines, and in Rust the test-only lines set apart (SPEC-057 R22)."""
+    mine = [entry for entry in files if entry["class"] == name]
+    code = sum(len(entry["code"]) for entry in mine)
+    test = sum(len(entry["test"]) for entry in mine)
+    if code:
+        coded = sum(1 for entry in mine if entry["code"])
+        case = f"{code} production code line(s) in {coded} file(s)"
+        return case + (f"; {test} test-only line(s) set apart, {TEST_ONLY}" if test else "")
+    if not mine:
+        return f"not-applicable: the diff changes no {name} production file"
+    if test:
+        tested = sum(1 for entry in mine if entry["test"])
+        return (
+            f"not-applicable: no production code line changed; {test} test-only line(s) in "
+            f"{tested} file(s), {TEST_ONLY}"
+        )
+    return (
+        "not-applicable: no production code line changed; every changed line is blank or a "
+        "comment, or deleted"
+    )
+
+
 def plan_diff(
     root: pathlib.Path, base: str, head: str, out: pathlib.Path, scope: tuple[str, str]
 ) -> Plan:
@@ -494,10 +677,14 @@ def plan_diff(
         if klass != "other" and entry["added"]:
             text = git(root, "show", f"{head_sha}:{path}")
             quiet = comment_or_blank(text, language_of(path))
-            record["code"] = [n for n in entry["added"] if n not in quiet]
+            # A Rust line inside a test item is test-only, never a code line (SPEC-057 R22).
+            test = rust_test_lines(text) if klass == "rust" else set()
+            record["code"] = [n for n in entry["added"] if n not in quiet and n not in test]
             record["quiet"] = [n for n in entry["added"] if n in quiet]
+            record["test"] = [n for n in entry["added"] if n in test and n not in quiet]
         else:
             record["code"], record["quiet"] = [], list(entry["added"])
+            record["test"] = []
         plan.files.append(record)
         if klass != "other":
             classes[klass]["files"].append(path)
@@ -505,6 +692,8 @@ def plan_diff(
                 classes[klass]["applies"] = True
                 if klass == "web":
                     plan.stryker_mutate.append(path[len(WEB_ROOT) :])
+    for name, klass in classes.items():
+        klass["case"] = class_case(plan.files, name)
     plan.classes = classes
     selected_rows(root, base_sha, head_sha, changed, plan)
     document = json.dumps(plan.__dict__, indent=2) + "\n"
@@ -523,7 +712,9 @@ def say_plan(plan: Plan) -> None:
         f"(base {plan.base[:7]}, head {plan.head[:7]})"
     )
     for name, klass in plan.classes.items():
-        print(f"mutation: plan: {name} {'applies' if klass['applies'] else 'does not apply'}")
+        verb = "applies" if klass["applies"] else "does not apply"
+        case = klass.get("case")
+        print(f"mutation: plan: {name} {verb}" + (f": {case}" if case else ""))
     print(f"mutation: plan: {len(plan.rows)} row(s) selected: {' '.join(plan.rows) or 'none'}")
     output = os.environ.get("GITHUB_OUTPUT")
     if output:
@@ -569,6 +760,19 @@ def projected(costs: list[int], count: int) -> list[int]:
     return totals
 
 
+def read_listing(path: str | None) -> object | None:
+    """A cargo-mutants listing, or None when `path` names no readable one. A file that holds
+    nothing is the empty listing: `--list --json --in-diff` prints nothing, not `[]`, when no
+    mutant overlaps the diff, since 27.1.0 exits 0 before it lists (SPEC-057 R22). A listing step
+    that fails stops its job before `shards` runs, so the empty file is the tool's own answer."""
+    try:
+        if path and not pathlib.Path(path).read_text(encoding="utf-8").strip():
+            return []
+    except (OSError, ValueError):
+        return None
+    return read_json(path)
+
+
 def shards(plan_path: pathlib.Path, listed_path: str | None) -> int:
     """The fewest round-robin shards whose slowest is projected within the bound (R18), written
     into the plan with each shard's mutants and, under GitHub Actions, as the matrix's outputs."""
@@ -578,13 +782,21 @@ def shards(plan_path: pathlib.Path, listed_path: str | None) -> int:
         return EXIT_VOID
     mutants: list[tuple[str, str]] = []
     if plan["classes"]["rust"]["applies"]:
-        listed = read_json(listed_path)
+        listed = read_listing(listed_path)
         if not isinstance(listed, list):
             print(
                 f"mutation: shards: VOID the rust class applies and {listed_path or 'no --listed'} "
                 "holds no cargo-mutants listing"
             )
             return EXIT_VOID
+        if not listed:
+            # An empty listing never makes the class not-applicable: a changed production line
+            # that no tool mutates, a constant's, still needs a row, or the verdict is VOID.
+            print(
+                "mutation: shards: the listing is empty, cargo-mutants' answer when no mutant "
+                "overlaps the diff: each changed production code line needs a row, or the verdict "
+                "reads VOID"
+            )
         mutants = [(str(entry.get("name")), str(entry.get("package"))) for entry in listed]
     highest = max(SECONDS_PER_MUTANT.values())
     costs = [SECONDS_PER_MUTANT.get(package, highest) for _, package in mutants]
@@ -685,7 +897,14 @@ def not_applicable(verdict: Verdict, plan: dict, klass: str) -> None:
             f"{shown or 'nothing'}"
         )
     for entry in files:
-        if entry["added"]:
+        test, quiet = entry.get("test") or [], len(entry["quiet"])
+        if test:
+            # SPEC-057 R22: lines cargo-mutants never mutates are named, never VOID.
+            verdict.say(
+                f"not-applicable: {entry['path']}: {entry['added']} changed line(s): {len(test)} "
+                f"test-only, {TEST_ONLY}" + (f"; {quiet} blank or comments" if quiet else "")
+            )
+        elif entry["added"]:
             verdict.say(
                 f"not-applicable: {entry['path']}: {entry['added']} changed line(s), all blank "
                 "or comments"
@@ -818,6 +1037,10 @@ def judge_rust(verdict: Verdict, plan: dict, args: argparse.Namespace) -> None:
     for entry in plan["files"]:
         if entry["class"] == "rust" and entry["code"]:
             verdict.say(f"{entry['path']}: {len(entry['code'])} changed code line(s)")
+        if entry["class"] == "rust" and entry.get("test"):
+            verdict.say(
+                f"{entry['path']}: {len(entry['test'])} test-only line(s) set apart, {TEST_ONLY}"
+            )
     excuses = rust_excuses(verdict, args)
     voids = len(verdict.voids)
     whole = whole_reports(verdict, plan, args)
