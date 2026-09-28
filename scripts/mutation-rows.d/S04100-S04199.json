@@ -104,19 +104,127 @@
         "S04113-NOTHING-OUTSIDE-THE-BOT-NAMES-THE-BOT-API",
         "notifications",
         "tests/one_router.rs",
-        "        if !path.starts_with(BOT_CRATE) && path != ALERT_PATH {",
-        "        if path.starts_with(BOT_CRATE) && path != ALERT_PATH {",
+        "        } else if path != ALERT_PATH {",
+        "        } else if path == ALERT_PATH {",
         "one_router::no_delivery_goes_around_the_port",
-        "a shipped source outside the bot that names the Bot API's host or a send method is refused, SPEC-031's alert path aside (SPEC-041 A15); the census is test code, which cargo-mutants never mutates, and the mutant lets the planted raw requests through"
+        "a shipped source outside the bot's sources that names the Bot API's host, a send method or the bot's base URL is refused, SPEC-031's alert path aside (SPEC-041 A15); the census is test code, which cargo-mutants never mutates, and the mutant lets the planted raw requests through"
       ],
       [
         "S04114-A-SEND-IS-CALLED-ONLY-AT-ITS-NAMED-CALL-SITE",
         "notifications",
         "tests/one_router.rs",
-        "                if !NAMED_SENDS.contains(&(path.as_str(), function.as_str(), send.as_str())) {",
-        "                if NAMED_SENDS.contains(&(path.as_str(), function.as_str(), send.as_str())) {",
+        "                    if !at_a_named_site(path, &function, name) {",
+        "                    if at_a_named_site(path, &function, name) {",
         "one_router::no_delivery_goes_around_the_port",
-        "a call of the bot's send_html or of a Bot API send method anywhere but its named call site is refused (SPEC-041 A15); the census is test code, which cargo-mutants never mutates, and the mutant lets the planted send through the bot's own transport"
+        "a use of the bot's send_html, edit_html or command handler anywhere but its named call site is refused (SPEC-041 A15); the census is test code, which cargo-mutants never mutates, and the mutant lets the planted sends through the bot's own transport"
+      ],
+      [
+        "S04115-A-FIELD-FOR-TESTS-HIDES-NO-SEND",
+        "notifications",
+        "tests/one_router.rs",
+        "        if !a_module_follows(&structure[after..]) {",
+        "        if false && !a_module_follows(&structure[after..]) {",
+        "one_router::no_delivery_goes_around_the_port",
+        "only a #[cfg(test)] module is left out of a Rust source, so a field compiled for tests alone hides nothing after it (SPEC-041 A15); the census is test code, which cargo-mutants never mutates, and the mutant blanks every item after the attribute, the planted send after such a field among them"
+      ],
+      [
+        "S04116-A-TEST-MODULE-UNDER-STACKED-ATTRIBUTES-IS-LEFT-OUT",
+        "notifications",
+        "tests/one_router.rs",
+        "    while rest.starts_with(\"#[\") {",
+        "    while false && rest.starts_with(\"#[\") {",
+        "one_router::no_delivery_goes_around_the_port",
+        "a #[cfg(test)] module is left out with any further attributes stacked on it (SPEC-041 A15); the census is test code, which cargo-mutants never mutates, and the mutant reads the planted test module under a second attribute, refusing its send"
+      ],
+      [
+        "S04117-A-DIRECTORY-UNDER-SRC-IS-ALWAYS-READ",
+        "notifications",
+        "tests/one_router.rs",
+        "                let left_out = !under_sources",
+        "                let left_out = true",
+        "one_router::no_delivery_goes_around_the_port",
+        "the walker enters every directory under a src/, whatever its name, and leaves test directories out only elsewhere (SPEC-041 A15); the census is test code, which cargo-mutants never mutates, and the mutant skips the planted shipped module under src/fixtures/"
+      ],
+      [
+        "S04118-EVERY-USE-OF-THE-BOTS-SEND-IS-READ",
+        "notifications",
+        "tests/one_router.rs",
+        "                for at in identifiers(&structure, name) {",
+        "                for at in identifiers(&structure, name).filter(|&at| called(&structure, at, name)) {",
+        "one_router::no_delivery_goes_around_the_port",
+        "every use of the bot's send_html, edit_html and command handler is read, not only a call (SPEC-041 A15); the census is test code, which cargo-mutants never mutates, and the mutant lets the planted send named through a variable through"
+      ],
+      [
+        "S04119-A-SEND-IS-NAMED-IN-THE-BOT-ONLY-BY-ITS-NAMED-SEND",
+        "notifications",
+        "tests/one_router.rs",
+        "                if !by_its_named_send(path, &function, &name) {",
+        "                if false && !by_its_named_send(path, &function, &name) {",
+        "one_router::no_delivery_goes_around_the_port",
+        "inside the bot's sources a Bot API send method is named, in either spelling, only in the named send that makes its request (SPEC-041 A15); the census is test code, which cargo-mutants never mutates, and the mutant lets the planted raw request from a new module of the bot through"
+      ],
+      [
+        "S04120-THE-TRANSPORTS-RAW-REQUEST-IS-A-NAMED-SEND",
+        "notifications",
+        "tests/one_router.rs",
+        "                .filter(|&at| code[..at].ends_with('/'))",
+        "                .filter(|_| false)",
+        "one_router::no_delivery_goes_around_the_port",
+        "a raw request, a send method's own spelling after a / in a literal, is a send the census counts, so the transport's sendDocument is the seventh named send and found once (SPEC-041 A15); the census is test code, which cargo-mutants never mutates, and the mutant counts six sends against seven named"
+      ],
+      [
+        "S04121-A-SCRIPT-IS-READ-BY-ITS-FIRST-LINE",
+        "notifications",
+        "tests/one_router.rs",
+        "                    || starts_with_a_shebang(&entry.path()))",
+        "                    || false)",
+        "one_router::no_delivery_goes_around_the_port",
+        "the walker reads a script with no shipped extension by its #! first line (SPEC-041 A15); the census is test code, which cargo-mutants never mutates, and the mutant leaves the planted script without an extension unread"
+      ],
+      [
+        "S04122-A-UNITS-DROP-IN-IS-READ",
+        "notifications",
+        "tests/one_router.rs",
+        "                    || a_unit_drop_in(&directory, &name)",
+        "                    || false",
+        "one_router::no_delivery_goes_around_the_port",
+        "the walker reads a systemd drop-in, a .conf in a .d directory (SPEC-041 A15); the census is test code, which cargo-mutants never mutates, and the mutant leaves the planted drop-in of the bot's unit unread"
+      ],
+      [
+        "S04123-THE-BOTS-EDIT-HAS-NO-NAMED-CALL-SITE",
+        "notifications",
+        "tests/one_router.rs",
+        "    (\"edit_html\", \"crates/bot/src/transport.rs\"),",
+        "    (\"edit_html_\", \"crates/bot/src/transport.rs\"),",
+        "one_router::no_delivery_goes_around_the_port",
+        "the bot's edit_html has no shipped caller, so every use of it outside its definition is refused (SPEC-041 A15); the census is test code, which cargo-mutants never mutates, and the mutant lets the planted edit through"
+      ],
+      [
+        "S04124-THE-BOTS-HANDLER-IS-USED-ONLY-BY-THE-LONG-POLL",
+        "notifications",
+        "tests/one_router.rs",
+        "    (\"handle\", \"crates/bot/src/commands.rs\"),",
+        "    (\"handle_\", \"crates/bot/src/commands.rs\"),",
+        "one_router::no_delivery_goes_around_the_port",
+        "the bot's command handler is used only by the bot's entry, the long poll (SPEC-041 A15); the census is test code, which cargo-mutants never mutates, and the mutant lets the planted fabricated update through"
+      ],
+      [
+        "S04125-NOTHING-OUTSIDE-THE-BOT-NAMES-ITS-BASE-URL",
+        "notifications",
+        "tests/one_router.rs",
+        "    named.extend(identifiers(code, BOT_API_URL).map(|at| (at, BOT_API_URL.to_owned())));",
+        "    named.extend(identifiers(code, BOT_API_URL).take(0).map(|at| (at, BOT_API_URL.to_owned())));",
+        "one_router::no_delivery_goes_around_the_port",
+        "a shipped source outside the bot's sources that names the bot's DEFAULT_API_URL is refused (SPEC-041 A15); the census is test code, which cargo-mutants never mutates, and the mutant lets the planted request built on the bot's base URL through"
+      ],
+      [
+        "S04126-ONLY-THE-ROUTERS-MODULES-NAME-THE-FEED",
+        "notifications",
+        "tests/one_router.rs",
+        "        if !FEED_MODULES.contains(&path.as_str()) {",
+        "        if false && !FEED_MODULES.contains(&path.as_str()) {",
+        "one_router::no_delivery_goes_around_the_port",
+        "only the router's ledger, router and data-rights modules name the Mini App's feed, its table in any case, FEED_TABLE or append_feed (SPEC-041 A15); the census is test code, which cargo-mutants never mutates, and the mutant lets the planted writes to the feed through"
       ]
     ],
     "CARGO_KILLED_SCRIPT_MUTATIONS": [
