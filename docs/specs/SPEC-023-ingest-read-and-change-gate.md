@@ -2,8 +2,10 @@
 
 - **Wave:** W0. **Issue:** #16 (epic #1). **Context(s):** `deck-streak-ingest`, `deck-streak-coordination` (the obligations registry and the sync cycle).
 - **Decided by:** ADR-009 (reads stay read-only SQLite over the copy, bounded to the 400-day window), ADR-008 (the kernel's database base), ADR-002 (cross-context work in coordination), ADR-012 (goldens), ADR-020 (the settings generation in the kernel).
-- **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
-  `docs/specs/` with its tests and `docs/red-first/SPEC-023.md` (ADR-016).
+- **Status:** judged: delivered with its tests, `docs/red-first/SPEC-023.md`, and five goldens
+  (`allowed_deck_ids`, `study_event`, `ingest_rebase`, `change_probe`, `ingest.constants`) generated
+  at the predecessor's `27ee2bc`. The delivery made R1, R3, R4, R8, R11, R12 and the manifest exact
+  where the code decided them (§7).
 
 ## 1. The problem, measured
 
@@ -166,9 +168,12 @@ real deadlines exist yet. Every clock is a `ManualClock`.
 | `crates/ingest/tests/reader.rs`, `scope.rs`, `window.rs`, `gate.rs` | `deck-streak-ingest` | added: A1 to A17 |
 | `crates/ingest/tests/data_rights.rs` | `deck-streak-ingest` | changed: A20 |
 | `crates/ingest/tests/support/synthetic.rs` | `deck-streak-ingest` | changed: filtered decks and a `unicase` deck table |
+| `crates/ingest/tests/support/logs.rs`, `crates/ingest/tests/support/mod.rs` | `deck-streak-ingest` | added, changed: the log recorder A7 and A9 read their WARN through (§7) |
+| `crates/ingest/src/sync_runs.rs` | `deck-streak-ingest` | changed: the `skipped` row and the run history the gate reads (§7) |
 | `crates/coordination/src/obligations.rs` | `deck-streak-coordination` | added: the registration port |
 | `crates/coordination/src/sync_cycle.rs`, `crates/coordination/src/lib.rs` | `deck-streak-coordination` | changed: probe, gate, read or skip |
 | `crates/coordination/tests/change_gate.rs` | `deck-streak-coordination` | added: A18, A19 |
+| `crates/coordination/Cargo.toml`, `Cargo.lock` | `deck-streak-coordination` | changed: `thiserror`; dev `tokio` and `tempfile` (§7) |
 | `migrations/002301_ingest_state.sql` | `deck-streak-ingest` | added |
 | `.sqlx/` | workspace | changed |
 | `tools/parity-oracle/registry/spec_023.py` | repo | added |
@@ -210,3 +215,50 @@ real deadlines exist yet. Every clock is a `ManualClock`.
   recompute.
 - **The recount runs during a busy cycle.** It is one indexed `COUNT` on the read-only connection,
   bounded to once per rebase period, on the offload rail, so it never blocks the async runtime.
+
+## 7. Amendments at delivery
+
+- **Manifest: three more files, no new crate.** `sync_runs.rs` is the one writer of `sync_runs`, so
+  the skip's `skipped` row (R11) and the record the gate's run-history term reads (R8) are two methods
+  there. The WARNs R3 and R6 promise are read as positive artifacts through a recording subscriber in
+  the ingest tests' support, which needs only the `tracing` crate ingest already depends on. The
+  sync cycle's error type is a `thiserror` enum like every library's, and the change-gate tests run
+  whole cycles over a temporary database and copy, so `coordination` names `thiserror`, and `tokio`
+  and `tempfile` as dev-dependencies: three crates the workspace already locks, which adds three
+  lines to `Cargo.lock` and no version.
+- **R1: one read is one session.** Every read of the copy, the probe and the window's recount
+  included, takes the shared collection lock, then a worker of the kernel's `Offload`, then a
+  connection from `Db::open_foreign_read_only`; `sqlx`'s queries run to their end on the offload's
+  blocking thread, so the offload's bound and its slow-operation WARN cover the whole read. A1 proves
+  the refusal through `CollectionReader::execute_statement`, the reader's one door that runs a
+  caller's statement: it returns a count of changed rows and never a row, so no Anki data leaves the
+  crate through it, and every write is refused, the one after lifting `query_only` included.
+- **R3: the law root is read as a prefix.** R3 reads the root as the include list reads a prefix. The
+  predecessor's law set (`pipeline.py:GamifyPipeline._run_sync_cycle_impl`) compared the top-level
+  name with its root for equality; the two differ only for a top-level deck whose name extends the
+  root, which a test pins as R3 says. The WARN names both settings and never a value, since deck names
+  are private configuration.
+- **R4: names by id, deck ids in SQL.** The card and review reads, and the window's recount, filter by
+  the allowed deck ids, integers bound as one JSON array that `json_each` expands; the scope itself is
+  decided in Rust over the names read by id, and the study-event rule is applied in Rust to the rows
+  read (the recount's count needs its SQL mirror, as the predecessor's did). A6 shows the trap is live
+  on the reader's own connection: an ordering by name there fails for want of `unicase`.
+- **R8: the record is read before the cycle's own sync.** The predecessor's gate read its last run
+  before its own cycle wrote a row; here the sync writes its row first, so the cycle reads the record
+  before it syncs, and "no successful run on record" is read at the same moment. A sync refused for
+  the day or debounced made no request, so the gate counts it healthy; a failed earlier run still
+  holds the gate open through the run-history term. A partial anchor, or a row that is gone, reads as
+  unreadable and runs the recompute, whose write puts the row back.
+- **R11: the anchor is the one the cycle decided on.** A full recompute writes the probe, study day,
+  instant and settings generation its cycle decided on, read before the read, so a sync that lands
+  between them makes the next cycle run again rather than skip. The same write clears the rescore
+  flag: a request is consumed by the recompute that served it, and a recompute that fails serves none.
+- **R12 and A18: whole cycles.** A18 and A19 run `sync_cycle` end to end over an engine whose every
+  sync finds no change and a copy the engine itself created, with a synthetic source registered in
+  `coordination::obligations`. Tests beyond the fence pin R8's order, R10's window, R8's unreadable
+  anchor, R3's prefix and the settings' parse.
+- **R2: the include list.** Unset, empty or blank reads every deck; the predecessor also read `ALL` as
+  every deck, which R2 does not name, so it is read as a prefix.
+- **Goldens.** `change_probe`'s adapter writes the case's rows into a temporary collection through
+  the `sqlite3` module the predecessor's reader already imports: the registry module imports no
+  database module and reads nothing, and only the predecessor's probe reads the file back.

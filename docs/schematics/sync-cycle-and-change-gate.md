@@ -5,12 +5,14 @@ Kind: state machine. Read at DeckStreak `main` e05dfa5 (ADR-008, ADR-009,
 (`sync.py:AnkiSyncer.sync_now`, `pipeline.py:GamifyPipeline._sync_attempts`,
 `pipeline.py:GamifyPipeline._maybe_skip_recompute`, `pipeline.py:GamifyPipeline._first_due_obligation`,
 `anki_reader.py:probe_change_signal`). Decided by ADR-009 and ADR-022; built by SPEC-022 (the sync)
-and SPEC-023 (the read and the gate).
+and SPEC-023 (the read and the gate), whose delivery made the gate's half of this diagram exact.
 
 ```mermaid
 stateDiagram-v2
-  [*] --> Locked: take the collection lock (exclusive)
+  [*] --> History: read the record as it stands (the gate's run-history term)
+  History --> Locked: take the collection lock (exclusive)
   Locked --> Attempting: attempt n of SYNC_RETRY_ATTEMPTS
+  Locked --> Probing: RefusedToday or Debounced, no request and no row
   Attempting --> Synced: incremental ok
   Attempting --> Downloading: server demands a full sync
   Downloading --> Synced: download complete, swapped in
@@ -18,33 +20,92 @@ stateDiagram-v2
   Attempting --> Waiting: error or SYNC_TIMEOUT_SECS passed, attempts left
   Waiting --> Attempting: golden backoff with jitter (tokio timer)
   Attempting --> Failed: error on the last attempt (one bounded reason code)
-  Refused --> Recorded
-  Failed --> Recorded: sync_runs error row
-  Synced --> Probing: unlock, then the cheap probe under a shared lock
-  Probing --> Deciding: newest review id, card count, fingerprint
+  Synced --> Probing: sync_runs ok row, unlock
+  Refused --> Probing: sync_runs error row, unlock
+  Failed --> Probing: sync_runs error row, unlock
+  Probing --> Deciding: every obligation's deadlines, then the probe under a shared lock
   Deciding --> Recomputing: Run(reason)
   Deciding --> Skipped: Skip
-  Recomputing --> Recorded: read the window, recompute, write a fresh anchor
-  Skipped --> Recorded: sync_runs skipped row, anchor unchanged
-  Recorded --> [*]
+  Recomputing --> [*]: read the window, recompute, write the anchor, clear the rescore
+  Skipped --> [*]: sync_runs skipped row, anchor unchanged
 ```
 
-`decide` runs the recompute when ANY of these holds, in this order, and skips only when none does:
+`decide` is a pure function of the inputs below. It runs the recompute for the FIRST of these terms
+that holds, in this order, and skips only when none does:
 
-| term | source |
-|---|---|
-| an owner rescore is pending (consumed once) | `ingest_state` |
-| this cycle's sync failed | the sync outcome |
-| no successful run on record, or the last run failed | `sync_runs` |
-| the anchor is missing or unreadable | `ingest_state` |
-| the settings generation changed | the kernel's `settings_generation` |
-| the study day changed | the kernel's study-day rule and clock |
-| the newest review id, the card count or the fingerprint changed | the probe |
-| a registered deadline lies after the anchor's last recompute and at or before now | `coordination::obligations` |
+| term | reason | source |
+|---|---|---|
+| an owner rescore is pending | `rescore_pending` | `ingest_state` |
+| this cycle's sync failed | `sync_failed` | the sync's report; a refused or debounced sync made no request and counts as healthy |
+| no run on record succeeded | `no_successful_run` | `sync_runs`, read before the cycle's own sync |
+| the last run on record failed | `last_run_failed` | `sync_runs`, read before the cycle's own sync |
+| the anchor is missing | `anchor_missing` | `ingest_state` (every anchor column NULL) |
+| the anchor is unreadable | `anchor_unreadable` | `ingest_state` (the row gone, or some anchor columns NULL) |
+| the settings generation changed | `settings_changed` | the kernel's `settings_generation` |
+| the study day changed | `study_day_changed` | the kernel's study-day rule and clock, never the collection's rollover |
+| the newest review id changed | `newest_review_changed` | the probe |
+| the card count changed | `card_count_changed` | the probe |
+| the card fingerprint changed | `card_fingerprint_changed` | the probe |
+| a registered deadline lies after the anchor's recompute and at or before now | `deadline_due` | `coordination::obligations` |
 
 The last term is the one an input-keyed gate cannot see: an obligation comes due precisely on a
 cycle in which nothing in the collection changed. Every deadline-bearing feature registers its
 source there in the delivery that builds it.
+
+## The read, the window and the obligations (SPEC-023)
+
+Kind: component, then flow. Built by SPEC-023, decided by ADR-009 (read-only SQLite over the copy,
+bounded to the window) and ADR-002 (cross-context work in `coordination`), read at the predecessor's
+`27ee2bc` (`anki_reader.py:read_collection`, `deck_filter.py:allowed_deck_ids`,
+`pipeline.py:GamifyPipeline._maybe_rebase_ingest`, `_obligation_deadlines`).
+
+```mermaid
+flowchart LR
+  cycle[coordination::sync_cycle] -->|deadlines at now| registry[[obligations: one named source per context]]
+  cycle -->|facts: trigger, sync ok, history| gate[ingest::gate::ChangeGate]
+  gate -->|probe| reader
+  gate -->|anchor, rescore, base| state[(ingest_state)]
+  gate -->|skipped row| runs[(sync_runs)]
+  gate -->|settings generation| kernel[(settings_generation)]
+  cycle -->|on Run: read_window| reader[ingest::reader::CollectionReader]
+  subgraph session[one read: with_copy]
+    lock[shared collection lock] --> offload[the kernel Offload, one worker] --> ro[Db::open_foreign_read_only: mode=ro, query_only]
+  end
+  reader --> session
+  ro --> copy[(the private copy)]
+```
+
+Every read of the copy is one session: the shared lock (so it never sees a sync's swap), then the
+offload (so it never stalls the runtime or runs beside another collection read), then a read-only
+connection (so any write through it is refused by `SQLite`, `query_only` and `mode=ro` both). Deck
+names are read by id and matched in Rust; the card and review queries filter by the allowed deck ids,
+integers bound as one JSON array that `json_each` expands, and no SQL predicate, ordering or aggregate
+touches a name column, so a collection whose names are collated `unicase` reads with no collation.
+
+```mermaid
+flowchart TD
+  start[a Run decision at now] --> load[load the window's base]
+  load --> floor{a base?}
+  floor -->|yes| above[read reviews above the base's floor]
+  floor -->|no| fresh[read reviews above now minus INGEST_WINDOW_DAYS, never below 0]
+  above --> stale{floor more than INGEST_REBASE_DAYS staler than a fresh floor?}
+  fresh --> recount
+  stale -->|no| keep[keep the base]
+  stale -->|yes| recount[recount the study events at or before a fresh floor, in SQL]
+  recount --> shrink{lower than the stored count?}
+  shrink -->|yes| warn[the self-check: one WARN with both counts]
+  shrink -->|no| write
+  warn --> write[write the new base]
+  keep --> anchor[write the anchor the cycle decided on, clear the rescore]
+  write --> anchor
+```
+
+The anchor a recompute writes is the probe its own cycle read before the read, with the study day,
+the instant and the settings generation that cycle decided on. A sync that lands between the probe and
+the read therefore makes the next cycle run again rather than skip, and a deadline at or before the
+decision's instant is one the recompute saw. A deadline counts in the window (anchor, now]: one not
+yet due, or one a recompute has served, never holds the gate open, so each costs exactly one
+recompute.
 
 ## The engine port and its measurement
 
