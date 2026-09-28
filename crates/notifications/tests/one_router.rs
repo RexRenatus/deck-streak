@@ -262,9 +262,12 @@ const NAMED_SENDS: [(&str, &str, &str); 8] = [
 /// from the flush step's crate, in SQL from a script, through the ledger's own writes from a module
 /// beside the router, and through one of them re-exported at the crate's root. The third review's:
 /// a copy of a message from a new module of the bot; the Bot API's edit from a new function of the
-/// bot's transport; and a forward, a pin and a reaction through the Bot API's client from the
-/// daemon.
-const AROUND_THE_PORT: [(&str, &str); 18] = [
+/// bot's transport; a forward, a pin and a reaction through the Bot API's client from the daemon;
+/// and in the notifications crate, a macro the ledger exports to every crate, the ledger's macros
+/// handed to the modules beside it, the ledger compiled a second time by an escaped `#[path]`, the
+/// ledger's hold re-exported from the router under another name, and the held queue's table
+/// re-exported under another name.
+const AROUND_THE_PORT: [(&str, &str); 23] = [
     (
         "crates/daemon/src/role_bot.rs",
         r#"/// A celebration sent straight to the owner's chat through the bot's transport, around the router.
@@ -522,6 +525,53 @@ async fn celebrate_through_the_client(bot: &Bot, forward: &ForwardMessageParams,
     let _pinned = bot.pin_chat_message(pin).await;
     let _reacted = bot.set_message_reaction(reaction).await;
 }
+",
+    ),
+    (
+        "crates/notifications/src/ledger.rs",
+        r#"/// Holds a celebration on the queue, for any crate that invokes it, around the router.
+#[macro_export]
+macro_rules! keep {
+    ($write:expr, $text:expr, $now:expr) => {
+        sqlx::query("INSERT INTO notification_queue (kind, dedupe_key, surface, tier_requested, tier_pending, text, hold, tries, state, deferred_at, study_day, created_at) VALUES ('celebration', 'celebration:kept', 'bot', 'T2', 'T2', ?, 'quiet', 0, 'held', ?, 0, ?)")
+            .bind($text)
+            .bind($now)
+            .bind($now)
+            .execute($write)
+    };
+}
+"#,
+    ),
+    (
+        "crates/notifications/src/lib.rs",
+        r"/// The ledger's macros, handed to every module declared after it, so a module beside the router
+/// holds a celebration on the queue without naming the ledger.
+#[macro_use]
+pub mod ledger;
+",
+    ),
+    (
+        "crates/notifications/src/policy.rs",
+        r#"#[path = "ledg\x65r.rs"]
+mod store;
+
+/// A held celebration settled beside the router, through the ledger compiled a second time.
+async fn settle_beside_the_router(write: &mut SqliteConnection, id: i64) -> Result<(), KernelError> {
+    store::settle(write, id).await
+}
+"#,
+    ),
+    (
+        "crates/notifications/src/router.rs",
+        r"/// The ledger's hold, re-exported under another name, so a module beside the router holds a
+/// celebration on the queue without naming the ledger.
+pub(crate) use crate::ledger::{HeldRow as Kept, hold as keep};
+",
+    ),
+    (
+        "crates/notifications/src/data_rights.rs",
+        r"/// The held queue's table, re-exported under another name for a caller outside the crate.
+pub use crate::ledger::QUEUE_TABLE as HELD_TABLE;
 ",
     ),
 ];
@@ -1310,18 +1360,27 @@ fn no_delivery_goes_around_the_port() {
             "crates/daemon/src/role_job.rs:11: calls send_html in celebrate_around_the_router, \
              not a named call site",
             "crates/daemon/src/wiring.rs:4: names DEFAULT_API_URL",
+            "crates/notifications/src/data_rights.rs:2: re-exports QUEUE_TABLE",
+            "crates/notifications/src/data_rights.rs:2: re-exports ledger",
+            "crates/notifications/src/ledger.rs:2: carries #[macro_export]",
+            "crates/notifications/src/lib.rs:3: carries #[macro_use]",
             "crates/notifications/src/lib.rs:6: names ledger",
+            "crates/notifications/src/lib.rs:6: re-exports hold",
+            "crates/notifications/src/lib.rs:6: re-exports ledger",
             "crates/notifications/src/occasion.rs:3: names append_feed",
             "crates/notifications/src/occasion.rs:3: names ledger",
+            "crates/notifications/src/policy.rs:1: carries #[path]",
             "crates/notifications/src/quiet.rs:1: names ledger",
             "crates/notifications/src/quiet.rs:7: names ledger",
+            "crates/notifications/src/router.rs:3: re-exports hold",
+            "crates/notifications/src/router.rs:3: re-exports ledger",
             "deploy/scripts/celebrate.py:9: names in_app_feed",
             "deploy/scripts/hold.py:9: names notification_queue",
         ],
         "the bot's own send, named or called, its edit and its command handler, raw requests to \
          the Bot API and on its base URL, a raw request from inside the bot, writes to the Mini \
-         App's feed and to the held queue, and the Bot API's copy, edit, forward, pin and \
-         reaction, around the port"
+         App's feed and to the held queue, the Bot API's copy, edit, forward, pin and reaction, \
+         and the notifications crate's carrying attributes and re-exports, around the port"
     );
 
     // The walker reads a shipped module in a directory named as tests are, because it is under
