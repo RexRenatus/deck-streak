@@ -54,5 +54,21 @@ The stack-selection rows `svelte-runes`, `svelte-check-ci`, `pinned-majors`, `no
 
 The stack-selection pack; the telegram-platform pack's Mini App rows; ADR-007 for the same-origin API.
 
+Amendment (2026-09-28): `pnpm-workspace.yaml` overrides two development-only transitive
+dependencies, because no update inside a parent's major reaches a version that fixes their
+advisories. SvelteKit 2 declares `cookie ^0.6.0`, so `@sveltejs/kit@2>cookie` takes `>=0.7.0 <0.8`
+(GHSA-pxg6-pf52-xh8x, fixed in 0.7.0). StrykerJS 10 (ADR-057) takes `typed-rest-client ~2.3.0`,
+whose 2.3.1 pins `qs` 6.15.1 exactly, so `typed-rest-client@2>qs` takes `>=6.16.0 <7`
+(GHSA-q8mj-m7cp-5q26, GHSA-4mjr-xmp4-gh2g and GHSA-x5fp-wj9c-mxmx; 6.16.0 is the first version
+outside all three). SvelteKit keeps `cookie` 0.6 in its 2.x line because 0.7 holds a cookie's name,
+path and domain to RFC 6265 in `serialize`, which breaks an app that sets a non-conforming name;
+the Mini App has no server at runtime and sets no cookie through SvelteKit. Each selector names its
+parent's major, so neither entry applies to a later major, which declares a fixed range itself, and
+an entry whose parent no longer matches is removed. Rejected: a global `cookie` or `qs` override,
+which would also force a later SvelteKit major, or any other consumer, onto the older line; holding
+`typed-rest-client` at 2.3.0, whose `qs ^6.14.1` admits a fixed release, in the lockfile alone,
+which the next resolution undoes with nothing recording why; and accepting the advisories as
+build- and test-time only, while a fix exists that changes no byte of the built Mini App.
+
 Amendment (2026-09-28): passages describing another service's operations were replaced with the
 API's own memory budget under the public-text rule (ADR-059).
