@@ -57,11 +57,12 @@ R3. The day set is resolved with one query per top-level deck other than `Defaul
     card an earlier root already claimed is skipped; a topic's digest is the SHA-256 of its sorted
     card ids joined by commas. The resolution equals the golden of `prereading.py:resolve_day_sets`
     through the adapter.
-R4. The gates run before any collection work, in this order: (1) when the last sync did not succeed,
-    every topic is `could_not_tell` with class `rail_broken` and reason `sync_failed`; (2) when the
-    owner made no qualifying review (a review of type 0 to 3 with ease 1 or more) on each of the two
-    study days before this one, every topic is `paused`; (3) otherwise the day set is resolved. The
-    collection file's age is never a reason to refuse.
+R4. The gates run after ingest's read-only read of the private copy and before any collection copy
+    or engine query, in this order: (1) when the last sync did not succeed, every topic is
+    `could_not_tell` with class `rail_broken` and reason `sync_failed`; (2) when the owner made no
+    qualifying review (a review of type 0 to 3 with ease 1 or more) on each of the two study days
+    before this one, every topic is `paused`; (3) otherwise the day set is resolved. The collection
+    file's age is never a reason to refuse.
 R5. Each topic of the taxonomy ends a study day in exactly one state: `ready`, `no_new_cards`,
     `could_not_tell` with a class and a closed reason, `paused`, `failed` with a closed reason, or
     `ai_route_absent` (`failed`, `ready` and `ai_route_absent` are set by SPEC-046). The state is one
@@ -184,8 +185,8 @@ A14: cargo test -p deck-streak-readings --test states -- --exact ai_route_absent
   a synthetic collection built through ingest, beside the pure golden A2.
 - **An adapter hides a private constant in a golden.** Prevented by the generator's recorded adapter
   note and synthetic names; detected by the public scrub over the goldens (A12).
-- **The private taxonomy is absent on the host.** Every topic is `config_fault` `taxonomy_missing`,
-  and the health check pages it (SPEC-050).
+- **The private taxonomy is absent on the host.** The run is `config_fault` `taxonomy_missing`, with
+  no topic; SPEC-050 pages it from `reading_runs`.
 - **Reviews arrive late** (the sync that carries yesterday's reviews fails), so a pause is judged on
   missing data. The last-sync gate runs first, so a failed sync is `could_not_tell`, never `paused`;
   and the owner's tap regenerates on demand whatever the gates say (SPEC-048).
@@ -229,12 +230,23 @@ A14: cargo test -p deck-streak-readings --test states -- --exact ai_route_absent
   attributed by the card ingest's read returns for it (`Card::home_deck_id`, the predecessor's
   `true_did`), which also gives its note; a card the read did not return is attributed to deck 0,
   so it is reported unmapped and never dropped. The engine always answers its own new count, so the
-  saturation rule's branch for an absent count is reached only by the rule's own tests.
+  saturation rule's branch for an absent count is reached only by the rule's own tests. Chosen
+  against ingest's queue answering each card's decks and note, because that is a new engine call
+  beside SPEC-023's port, which answers the queue and is used as it stands, while ingest's read
+  already returns both; and against dropping a card the read did not return, because that would
+  hide a queued card, where deck 0 keeps it in R9's count of unmapped decks.
 - **R3 and R4: where the day set is read.** The engine selects a deck to answer the queue, a write,
-  so the queue runs on a throwaway copy of the private copy, taken under the shared collection lock,
-  queried on the offload and removed. That copy is the collection work R4 keeps behind the gates.
-  The review read, ingest's read-only read of the private copy, comes first: it gives the pause its
-  reviews and the resolution its deck names and cards.
+  so the queue runs on a throwaway copy of the private copy, which one blocking operation on the
+  offload takes under the shared collection lock, queries and removes (R7). That copy and the
+  engine's query are the collection work R4 keeps behind the gates. The review read, ingest's
+  read-only read of the private copy, comes first: it gives the pause its reviews and the resolution
+  its deck names and cards. It comes before the last-sync gate, chosen against reading after that
+  gate, because a night whose sync failed would then have no deck names and record no topic, and R5
+  ends every topic of the day in one state: read first, that night records each topic the read and
+  the taxonomy name as `could_not_tell` `sync_failed`. The read copies nothing and asks no engine,
+  so R4, amended to say so, still runs its gates before any collection copy or engine query, and
+  ADR-045's driver (no work and no collection copy on a night that is refused anyway) holds for the
+  copy and the engine: the read is the one work a refused night does.
 - **R4: the order, and the refusals of a whole run.** The last sync is ingest's record's last run:
   `ok` or `skipped` succeeded, and `error` or no run did not. After the last-sync gate, a missing
   taxonomy (`config_fault`, `taxonomy_missing`) and a private copy the read cannot open (`rail_broken`,
@@ -246,14 +258,28 @@ A14: cargo test -p deck-streak-readings --test states -- --exact ai_route_absent
   state; one row holds each study day and topic, and a later run that day replaces its state.
   `failed` carries the closed reasons SPEC-046 names (`form_unregistered`, `seed_empty`,
   `anchor_unusable_all`, `gate_failed:<gate>` for its six gates, and `agent_unavailable:<cause>` for
-  SPEC-043's nine causes), so the table's checks hold every state from the first migration.
+  SPEC-043's nine causes), so the table's checks hold every state from the first migration. Chosen
+  against SPEC-046 adding its reasons in its own migration, because SQLite cannot alter a CHECK in
+  place: changing the reason list would rebuild `reading_topic_days` (a new table, every row copied,
+  the old table dropped and the new one renamed). The gate "no list markers" is spelled
+  `no_list_markers` here (`gate_failed:no_list_markers`), and SPEC-046 inherits that spelling.
 - **R6: the whole queue's failures.** Ingest answers every root in one call. A lock that cannot be
   taken, and the engine's `collection_locked`, give `collection_locked`; a copy that cannot be made,
   and the engine's open failure, give `collection_open_failed`; any other failure of the engine or
   the offload gives `collection_locked`, as the predecessor classed a root whose read failed.
-- **R7: the budget covers the whole call.** The 30 seconds run from the port's call through the
-  lock, the copy and the engine's query. Past them the query's blocking work finishes on the offload
-  and removes its copy, and every root is `day_set_resolve_timeout`.
+- **R7: the budget covers the whole call, and stops the wait, never the work.** The 30 seconds run
+  from the port's call through the lock, the copy and the engine's query. The copy, the query and
+  the copy's removal are one blocking operation on the offload that owns the shared lock, holds it
+  from before the copy until the copy is whole, and removes the copy when it ends, by a guard that
+  neither an early return nor a panic skips. Past the budget that operation runs on to its end,
+  because a blocking task that has started cannot be aborted and a dropped handle only detaches it,
+  so it still removes its copy and never copies outside the lock; every root is
+  `day_set_resolve_timeout`. Chosen against the split lifecycle (the copy in one offload call, its
+  removal in a later one), because past the budget the copy's call ran on detached with nothing left
+  to remove its copy, and the lock was released as the future dropped, so the rest of the copy ran
+  outside it. `a_budget_passed_during_the_copy_leaves_no_copy_behind` holds the copy part-way with a
+  named pipe and passes a 10 ms budget during it, and row S04513 proves the removal (ADR-045, at
+  acceptance).
 - **R8 and R9: the run's columns.** `reading_runs` also holds the class and reason of a run refused
   as a whole, and `unmapped_decks`, the count R9 keeps with the run. Its outcome is `resolved`,
   `paused`, `could_not_tell`, or SPEC-046's `ai_route_absent`. The unmapped decks' names are logged
@@ -261,5 +287,14 @@ A14: cargo test -p deck-streak-readings --test states -- --exact ai_route_absent
 - **R11: the queue's adapter.** The adapter over ingest's engine port uses ingest and the kernel's
   offload only, so it lives in readings beside the rules, where A1 proves it on a synthetic
   collection; coordination composes the use case (ADR-045, at acceptance).
+- **R11: the test-only engine dependency.** Readings' test build compiles Anki's engine: `anki` is a
+  dev-dependency (ADR-022), and the tests' support module includes ingest's synthetic builder by
+  `#[path = "../../../ingest/tests/support/synthetic.rs"]`, so test code crosses the map's rule that
+  only ingest learns Anki's model, while readings' own code names no engine type (ADR-045, ADR-022).
+  Chosen against ingest exporting its builder behind a test-support feature, which would need no
+  `anki` dev-dependency here, because that adds a module and a feature to another context's library,
+  outside this SPEC's manifest, and cargo unifies a dev-dependency's feature into the one ingest
+  library a workspace test build compiles, so ingest's own tests would run against a library
+  carrying test code.
 - **A10: paused time.** A10 runs on tokio's paused clock (`start_paused`), and its queue answers
-  after 31 seconds of that clock, so the budget passes without a real 30-second wait.
+  1 ms past the 30-second budget on that clock, so the budget passes without a real 30-second wait.

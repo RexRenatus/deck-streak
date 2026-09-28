@@ -6,4 +6,6 @@
   and each topic ends the day in exactly one state: no new cards, could not tell (with a class and a
   closed reason), or paused after two study days without study. The readings resolve only after a
   sync that succeeded, however old the collection file is, and a resolution has a 30-second budget.
+  The budget bounds the wait, never the work: the throwaway copy the queue reads is taken under the
+  collection lock and removed even when the budget passes during it.
   Each run and each topic's state are exported and erased with the rest of the owner's data.

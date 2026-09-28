@@ -49,7 +49,7 @@ A4: red at 277391c: assertion `left == right` failed: the digest of []; left: St
 A4: green at 2c414de
 A5: red at 277391c: assertion `left == right` failed; left: {}, right: {11, 12}
 A5: green at 2c414de
-A6: red at 277391c: assertion failed: !last_sync.succeeded(), for the last run Some(Error)
+A6: red at 277391c: Some(Error)
 A6: green at 2c414de
 A7: red at 277391c: assertion `left == right` failed; left: [20000, 20000], right: [19999, 19998]
 A7: green at 2c414de
@@ -65,7 +65,7 @@ A12: red at a41b7f1: AssertionError: False is not true : deploy/config/readings-
 A12: green at 5e3da60
 A13: red at 277391c: assertion `left == right` failed: the readings' record is the owner's data: exported and erased (CHARTER 13); left: [], right: [("reading_topic_days", ExportAndErase), ("reading_runs", ExportAndErase)]
 A13: green at 2c414de
-A14: red at 277391c: assertion failed: an absent route is a setting, not a failure
+A14: red at 277391c: an absent route is a setting, not a failure
 A14: green at 2c414de
 ```
 
@@ -75,3 +75,71 @@ succeeded; in A7 the pause window was today twice; in A8 the store read back not
 1000 cards with no count read as complete; in A10 the resolution returned at once, with no budget;
 in A12 the example taxonomy was missing; in A13 the port declared no table; and in A14 an absent AI
 route counted as a failure.
+
+## Fix round
+
+The first review found that a budget passing during the throwaway copy left the copy in the scratch
+directory and released the lock before the copy ended (R7). The order of work was: `dev` absorbed
+by a merge commit that resolved conflicts only (b1b1f95); the new test committed alone (929593b);
+the fix (ee5e423); its hand-proved row, S04513 (46b4d0b); the test's scratch listing passed through
+the examined contract (e9affde); and this record with the documents.
+
+`a_budget_passed_during_the_copy_leaves_no_copy_behind` (`--test day_set`) holds the copy part-way:
+a named pipe stands at the throwaway's path, so the copy blocks once the pipe is full, and the test
+drains it only after a 10 ms budget has passed and dropped the port's future, as `resolve` drops
+it. It is not one of §3's criteria, so its record stands outside the `red-first` fence:
+
+```text
+R7 copy test: red at 929593b: a copy outlived its budget: ["readings-day-set-0.anki2"]
+R7 copy test: green at ee5e423
+```
+
+At 929593b the split lifecycle's copy ran on, detached, to its full size, and nothing removed it.
+With the test's last two assertions swapped, the same code also failed `the shared lock was held
+through the copy, past the budget`, because the lock was released as the future dropped. Run 50
+times at 929593b the test failed 50 times with that line; run 50 times at ee5e423 it passed 50
+times. Row S04513 deletes the removal the copy's guard makes, and the test kills it.
+
+The fence above now quotes A6's and A14's panic lines as the tests print them, measured again at
+277391c: an `assert!` with a message prints only its message, so A6's line is the run it formats
+(`{last:?}`) and A14's is its message.
+
+DISCLOSURE, A1 (`the_day_set_is_the_schedulers_queue_per_root_attributed_by_original_deck`): its
+body changed at 1d6a90e, after its green commit. `assert_eq!(day_set.note_ids, day_set.card_ids,
+"{}", resolved.topic);` became `assert_eq!(day_set.note_ids, day_set.card_ids, "{:?}",
+resolved.topic);`, because 1d6a90e removed `TopicKey`'s `Display`, which no caller used, and
+derived its `Debug`. Only the assertion's message changed; what it compares did not.
+
+DISCLOSURE, A7 (`two_days_without_study_pause_every_topic`): its body changed at 2c414de, its green
+commit. `pause_window(support::today()).map(|day| day.epoch_day())` became
+`pause_window(support::today()).map(StudyDay::epoch_day)`, because clippy's pedantic
+`redundant_closure_for_method_calls`, which the gate denies, refuses the closure. The same values
+are compared.
+
+DISCLOSURE, A8 (`every_state_and_class_is_stored_and_read_back_distinctly`): its body changed at
+1d6a90e, after its green commit. `assert_eq!(reason.class(), expected, "{reason}");` became
+`assert_eq!(reason.class(), expected, "{reason:?}");`, because 1d6a90e removed `CouldNotTell`'s
+`Display`, which no caller used. Only the assertion's message changed.
+
+DISCLOSURE, A10 (`a_resolution_past_its_budget_is_rail_broken`): its body changed at 2c414de, its
+green commit. `RESOLVE_BUDGET - Duration::from_millis(1)`, the early queue's delay, became
+`RESOLVE_BUDGET.saturating_sub(Duration::from_millis(1))`, because clippy's pedantic
+`unchecked_time_subtraction` refuses a `Duration` subtraction that could panic. Thirty seconds less
+a millisecond is the same instant either way.
+
+DISCLOSURE, A11 (`the_topics_come_only_from_the_configured_taxonomy`): its body changed at 2c414de,
+its green commit. `let named: BTreeSet<String> = resolution` and `assert_eq!(named, expected);`
+became `let resolved_topics: BTreeSet<String> = resolution` and
+`assert_eq!(resolved_topics, expected);`, because clippy's pedantic `similar_names` refuses `named`
+beside the test's `names`. The assertion is unchanged.
+
+DISCLOSURE, the R7 copy test (not a criterion): its body changed at e9affde, after its green commit.
+`let left: Vec<_> = fs::read_dir(&scratch)` and its chain became `let left =
+examined_may_be_empty("entries left in the scratch directory", fs::read_dir(&scratch)` with the
+same chain, because the tdd pack's examined contract asks a test file that walks a directory to
+report how many entries it examined, and the contract's form that may be empty fits a directory
+expected to hold nothing. The assertion is unchanged; the new body, run against 929593b's split
+lifecycle, failed with the same line.
+
+No other criterion test's body changed after its red commit: A2, A3, A4, A5, A6, A9, A12, A13 and
+A14 read the same at their red commits and at this round's head, and the fix round changed none.

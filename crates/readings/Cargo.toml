@@ -18,7 +18,8 @@ deck-streak-ingest.workspace = true
 # serde and serde_json); the data-rights port's rows and the day set's id lists are JSON values.
 serde.workspace = true
 serde_json.workspace = true
-# SPEC-045 R3: a topic's digest is SHA-256 (ADR-045, at acceptance; ADR-024 admits sha2).
+# SPEC-045 R3: a topic's digest is SHA-256. sha2 entered the workspace for identity (ADR-006, on
+# ADR-024's 0.11 line); ADR-045 admits it to readings for the day-set digest.
 sha2.workspace = true
 # ADR-003: the topic days and runs are written through the kernel's Db, their queries checked into
 # .sqlx/, and every refusal is this context's own error type, as every library's (CLAUDE.md).
