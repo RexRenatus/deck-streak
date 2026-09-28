@@ -734,18 +734,20 @@ def partial_reason(report: object, code: int | None, source: str) -> str | None:
 
 def whole_reports(verdict: Verdict, plan: dict, args: argparse.Namespace) -> list[tuple[str, dict]]:
     """(where, report) for each whole cargo-mutants report the run promised; each one missing or
-    partial is VOID, by name. Under --shard-reports it promised every shard's, from 0 to n-1 (R18);
-    else the one --outcomes names."""
+    partial is VOID, by name. Under --shard-reports it promised every shard's, from 0 to n-1 (R18),
+    but a shard the plan gave no mutant, which cargo-mutants leaves without a report; else the one
+    --outcomes names."""
     if not args.shard_reports:
         promised = [
             ("", read_json(args.outcomes), args.tool_exit, args.outcomes or "no --outcomes")
         ]
+        listed = [None]
     else:
         planned = (plan.get("shards") or {}).get("shards") or []
         if not planned:
             verdict.void("the plan names no shards, so no shard's report was promised")
         root = pathlib.Path(args.shard_reports)
-        promised = []
+        promised, listed = [], []
         for shard in range(len(planned)):
             name = root / f"mutation-rust-shard-{shard}"
             promised.append(
@@ -756,8 +758,13 @@ def whole_reports(verdict: Verdict, plan: dict, args: argparse.Namespace) -> lis
                     "its outcomes.json",
                 )
             )
+            listed.append(len(planned[shard]["mutants"]))
     whole = []
-    for where, report, code, source in promised:
+    for (where, report, code, source), mutants in zip(promised, listed, strict=True):
+        if report is None and code == 0 and mutants == 0:
+            # cargo-mutants exits 0 and writes no report when it has no mutant to test.
+            verdict.say(f"{where}no mutant listed, and cargo-mutants reports none")
+            continue
         reason = partial_reason(report, code, source)
         if reason is None:
             whole.append((where, report))
