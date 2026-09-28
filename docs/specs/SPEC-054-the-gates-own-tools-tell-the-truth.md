@@ -3,14 +3,15 @@
 - **Wave:** W0. **Issue:** #230 (epic #1). **Context(s):** `repo` (`scripts/`, `tools/parity-oracle/`).
 - **Decided by:** ADR-033 (the public scrub), ADR-039 (vendoring reuses the scrub's rules, never
   copies them), ADR-030 and ADR-056 (the box-pack runner, and the packs staying box-only), ADR-042
-  (the vault's rails guard) and ADR-012 (the parity oracle). Each change here applies one of them;
-  none needs a new decision.
+  (the vault's rails guard), ADR-012 (the parity oracle) and ADR-055 (the gate's stages). Each
+  change here applies one of them; none needs a new decision.
 - **Status:** judged: written at delivery, because it had no planned copy, and delivered with its
   tests and `docs/red-first/SPEC-054.md` (ADR-016).
 
 ## 1. The problem, measured
 
-Six tools of the gate misreport. Each was measured at `dev` c0dbf2a.
+Seven of the gate's own tools misreport. The first six were measured at `dev` c0dbf2a, and the
+seventh on that commit's `scripts/check.sh`, unchanged since.
 
 1. **A file given as `--subject` examines nothing.** `scripts/public-scrub.py` walks every subject
    with `rglob`, which yields nothing for a file. `public-scrub.py --root . --no-tree --subject
@@ -45,6 +46,11 @@ Six tools of the gate misreport. Each was measured at `dev` c0dbf2a.
    `{day:N}` tokens, written and read by `registry/spec_042.py`. `tools/parity-oracle/README.md`
    names the token 0 times, so the next registry module whose text carries a date has no pattern to
    follow, and a golden that holds the raw date is refused by `test_goldens.py`.
+7. **The python stage skips its second suite when the first is red.** `scripts/check.sh`'s
+   `stage_python` chains its two suites with `&&`, so a red `scripts/tests` suite stops the stage
+   before `tools/parity-oracle` runs, and nothing says so. Run on a copy of the gate with one
+   planted failing guard test and two passing oracle tests, the stage printed `FAILED python 0s
+   exit 1: FAILED (failures=1)`, and its log held no result of the oracle suite at all.
 
 ## 2. Requirements
 
@@ -106,6 +112,13 @@ R6. **The day token, documented.** `tools/parity-oracle/README.md` documents `{d
       its `expand` and `contract`;
     - a synthetic example, in the golden's form and as the predecessor reads it.
     No registry module and no golden changes, so no golden's digest moves.
+R7. **Every python suite runs.** `scripts/check.sh`'s `stage_python` runs both of its suites,
+    `scripts/tests` and then `tools/parity-oracle`, whatever the first one found. Its log keeps
+    each suite's output, and its last line gives each suite's tests run and exit:
+    `python: scripts/tests ran <N> test(s), exit <code>; tools/parity-oracle ran <N> test(s), exit
+    <code>`. The gate's summary line prints that last line when the stage fails. The stage fails
+    when either suite exits non-zero or runs no test, because a suite that examined nothing is not
+    a pass.
 
 ## 3. Acceptance criteria
 
@@ -123,6 +136,7 @@ R6. **The day token, documented.** `tools/parity-oracle/README.md` documents `{d
 | A10 | a command that outlives its bound fails by name, and one inside it returns | `test_vault_rails_rows.py` |
 | A11 | the adapter's cargo run is bounded at 900 s | `test_vault_rails_rows.py` |
 | A12 | the README's day-token example round-trips through the oracle's own reader and writer | `tools/parity-oracle/test_goldens.py` |
+| A13 | a planted failing guard test leaves the oracle suite run, its result in the stage log, and both suites named on the summary line; a suite that runs nothing fails the stage | `test_check_gate.py` |
 
 ```acceptance
 A1: python3 -m unittest discover -s scripts/tests -p test_public_scrub.py -k a_file_given_as_subject_is_its_own_subject
@@ -137,6 +151,7 @@ A9: python3 -m unittest discover -s scripts/tests -p test_box_packs.py -k a_run_
 A10: python3 -m unittest discover -s scripts/tests -p test_vault_rails_rows.py -k a_command_that_outlives_its_bound_fails_by_name
 A11: python3 -m unittest discover -s scripts/tests -p test_vault_rails_rows.py -k the_adapter_build_runs_under_its_bound
 A12: python3 -m unittest discover -s tools/parity-oracle -p test_goldens.py -k the_readme_day_token_example_round_trips
+A13: python3 -m unittest discover -s scripts/tests -p test_check_gate.py -k a_red_guard_suite_leaves_the_oracle_suite_run
 ```
 
 The planted addresses are assembled at run time, so no test file holds one. A8 and A9 drive the
@@ -149,10 +164,12 @@ no cargo either.
 The red stub, committed with the tests, is the base's behaviour, with one refactor: the guard's
 cargo call moves into a helper that still passes no timeout. A1 to A4, A7 and A9 are then red on
 the base's exit codes, and A8 on the pack line the base prints, which reads `ok`. A6 is red because
-the vendoring calls `load_deny` itself. A10 is red because
-the planted command runs to its end, and A11 because the recorded bound is `None`. A12 is red
-because the README holds no example to examine. A5 holds on the base, which refuses every address:
-it pins the admission's edges, so a looser admission cannot pass.
+the vendoring calls `load_deny` itself. A10 is red because the planted command runs to its end,
+and A11 because the recorded bound is `None`. A12 is red because the README holds no example to
+examine. A13 runs the real `check.sh` on a copy of the tree layout, whose guard suite holds one
+planted failing test, and is red because the stage stops before the oracle suite runs. A5 holds on
+the base, which refuses every address: it pins the admission's edges, so a looser admission cannot
+pass.
 
 ## 4. File manifest
 
@@ -168,6 +185,8 @@ it pins the admission's edges, so a looser admission cannot pass.
 | `scripts/tests/test_vault_rails_rows.py` | `repo` | changed: R5, A10, A11 |
 | `tools/parity-oracle/README.md` | `repo` | changed: R6 |
 | `tools/parity-oracle/test_goldens.py` | `repo` | changed: A12 |
+| `scripts/check.sh` | `repo` | changed: R7 |
+| `scripts/tests/test_check_gate.py` | `repo` | changed: A13 |
 | `docs/schematics/box-pack-runner.md` | `repo` | changed: the issue-state step and its verdicts |
 | `docs/schematics/pack-vendoring.md` | `repo` | changed: the scan composes through `rules()` |
 | `docs/TESTING.md` | `repo` | changed: the box runner reads each named issue's state |
@@ -209,3 +228,7 @@ it pins the admission's edges, so a looser admission cannot pass.
   before any pack runs, so a box run's output shows what the expectations were held to.
 - **The red stub's note names A8's red exactly.** The base printed an `ok` line for the pack, and
   A8's first assertion reads that line before the exit code.
+- **R7 and A13 were added at delivery,** at the orchestrator's request, for a seventh defect of the
+  same kind that another helper measured: the python stage's `&&` chain. They were written, and A13
+  was red, before `check.sh` changed, in their own commits after the first six requirements were
+  green.
