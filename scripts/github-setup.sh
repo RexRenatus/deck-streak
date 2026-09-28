@@ -62,9 +62,12 @@ PY
 }
 
 settings() {
-    step "default branch main, discussions on" gh api -X PATCH "repos/$REPO" \
+    # A squash takes the pull request's title and a blank body, so no branch commit's message
+    # reaches the base branch through a squash; a merge that wants a body passes one.
+    step "default branch main, discussions on, squash messages" gh api -X PATCH "repos/$REPO" \
         -f default_branch=main -F has_discussions=true -F delete_branch_on_merge=true \
-        -F allow_merge_commit=true -F allow_squash_merge=true -F allow_rebase_merge=true
+        -F allow_merge_commit=true -F allow_squash_merge=true -F allow_rebase_merge=true \
+        -f squash_merge_commit_title=PR_TITLE -f squash_merge_commit_message=BLANK
 }
 
 security() {
