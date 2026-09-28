@@ -1,13 +1,62 @@
-# SPEC-032's red-first stub: the api role's unit, with credentials as ADR-010 first stored them.
+# DeckStreak's API: the HTTP service the Mini App calls through the Caddy block's /api/* proxy
+# (SPEC-025, SPEC-032; ADR-007, ADR-010, ADR-025). A template with neutral values that the private
+# rail fills (deploy/README.md); nothing in it is one host's value.
 [Unit]
-Description=DeckStreak API
+Description=DeckStreak API, the HTTP service the Mini App calls
+Documentation=https://github.com/RexRenatus/deck-streak/blob/main/deploy/README.md
+# A failed unit pages through the one alert path (the alert template is SPEC-031's).
+OnFailure=deck-streak-alert@%n.service
+# Five starts at RestartSec=15 take 75 seconds, inside 300, so a crash loop reaches failed and pages.
+StartLimitIntervalSec=300
+StartLimitBurst=5
 
 [Service]
+# READY=1 once the loopback listener is bound, then WATCHDOG=1 every third of WatchdogSec (SPEC-025).
 Type=notify
 ExecStart=/usr/local/lib/deck-streak/current/bin/deckstreakd api
+User=deck-streak
+Group=deck-streak
+StateDirectory=deck-streak
 EnvironmentFile=/etc/deck-streak/deck-streak.env
-LoadCredentialEncrypted=owner-user-id:/etc/credstore.encrypted/owner-user-id
-LoadCredentialEncrypted=telegram-bot-token:/etc/credstore.encrypted/telegram-bot-token
+# Each credential is read from the private rail's socket at every start and never stored (ADR-038).
+LoadCredential=owner-user-id:/run/deck-streak-credentials/socket
+LoadCredential=telegram-bot-token:/run/deck-streak-credentials/socket
+Restart=on-failure
+RestartSec=15
+WatchdogSec=90
+TimeoutStartSec=180
+TimeoutStopSec=30
+OOMPolicy=kill
+SyslogIdentifier=deck-streak-api
+# The budget is deploy/host-budget.json's entry for this unit (ADR-032).
+MemoryHigh=96M
+MemoryMax=128M
+CPUQuota=100%
+TasksMax=64
+UMask=0077
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+ProtectProc=invisible
+ProcSubset=pid
+# AF_UNIX carries the sd_notify datagram, and AF_INET and AF_INET6 the loopback listener.
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+CapabilityBoundingSet=
 
 [Install]
 WantedBy=multi-user.target

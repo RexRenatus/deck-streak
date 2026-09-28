@@ -1,5 +1,10 @@
 {
+  "note": "DeckStreak's share of the host, and each unit's MemoryHigh= and MemoryMax=, which the unit must equal (ADR-032). SPEC-031 adds its three units' entries.",
   "memory": "640M",
   "cpus": 2,
-  "units": {}
+  "units": {
+    "deck-streak-api.service": { "memory_high": "96M", "memory_max": "128M" },
+    "deck-streak-bot.service": { "memory_high": "64M", "memory_max": "96M" },
+    "deck-streak-job@.service": { "memory_high": "320M", "memory_max": "384M" }
+  }
 }

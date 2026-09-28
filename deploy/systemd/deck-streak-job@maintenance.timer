@@ -1,9 +1,17 @@
-# SPEC-032's red-first stub: the maintenance job's timer, at midnight until the job table decides it.
+# The maintenance job's timer (SPEC-027, SPEC-032; ADR-027): once a day, at the rollover hour,
+# minute 28. The job table in crates/coordination/src/jobs.rs is the one schedule, and
+# crates/coordination/tests/job_table.rs holds this calendar equal to it. The calendar is written in
+# UTC, the neutral zone, at the default rollover hour; the private rail renders the deployment's own
+# zone and hour (deploy/README.md). With no Unit=, the timer starts the job instance of its own name.
+# Run this job by hand only at its slot: a run off its slot makes the next liveness check page a
+# drift, once (ADR-027).
 [Unit]
-Description=DeckStreak maintenance job
+Description=DeckStreak's daily maintenance, at the rollover hour, minute 28
+X-DurableServices-Waive=calendar-not-persistent the job table makes maintenance no catch-up job (ADR-027): a run missed while the host was down waits for its next slot, where the drift check expects it
+X-DurableServices-Waive=randomized-delay-missing the job table spreads its jobs across distinct minutes, clear of the predecessor's and of one another (ADR-027), and a random delay would move each fire off its minute
 
 [Timer]
-OnCalendar=*-*-* 00:00:00 UTC
+OnCalendar=*-*-* 04:28:00 UTC
 
 [Install]
 WantedBy=timers.target
