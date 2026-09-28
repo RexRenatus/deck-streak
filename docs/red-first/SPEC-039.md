@@ -54,8 +54,12 @@ error, a missing fixture or an empty selection.
   S03928 pin them, and the runner proved them and the runner's own four rows (S03903 to S03905,
   S03910) KILLED again after the fix.
 - A24 changed with the job layout: it now names the five jobs and allows one job-level `if`, the
-  verdict's `always()`. Its first red (d438d38) and green (018a6ea) replay as before; the line
-  below is the rewrite's, red at 00a3385 beside A37 and green with the workflow at c954220.
+  verdict's `always()`. Its first red (d438d38) and green (018a6ea) replay as before, and so does
+  the rewrite, red at 00a3385 beside A37 and green with the workflow at c954220. The first `ci` run
+  of the layout (36389287255) then went VOID: `mutation-rows` proved all 45 rows KILLED and could
+  not write its report into a directory it never made, so the verdict read `45 row(s) selected and
+  no rows report`. A24 gained that the rows job makes its report's directory, red at 9853d50 and
+  green at 8bce65d; the line below is that change's.
 - No assertion changed between a red and its green. A19's fixture changed in 73133a4: its synthetic
   `outcomes.json` gave the kernel survivor the fixture's own file where it meant `clock.rs`, so the
   draft the assertion names could not be written; the assertions are unchanged.
@@ -71,8 +75,9 @@ green at 61e5e14; the verdict's criteria but A17 green at 73133a4; A17 at c404cb
 at 4146198 with the other 25 green, and all 32 green at d1dde73; then A27 red at 7cc64e3 and
 green at 6e722dd, A34 red at 1350ba8 and green at eca251d, A36 red at db78aaa and green at d0e18ca,
 A35 red at b86fbe7 and green at d72c523, A38 red at c506ffb and green at 0db24d2, and A24 and A37
-red at 00a3385 and green at c954220, A39 red at f26c24e and green at 688ae71, and A40 red at
-24013e7 and green at a029d19, each red sha failing its own criterion alone. Failures below
+red at 00a3385 and green at c954220, A39 red at f26c24e and green at 688ae71, A40 red at 24013e7
+and green at a029d19, and A24 red at 9853d50 and green at 8bce65d, each red sha failing its own
+criterion alone. Failures below
 name no path outside the repository.
 
 ```red-first
@@ -122,8 +127,8 @@ A22: red at d438d38: AssertionError: .github/workflows/mutation-weekly.yml does 
 A22: green at 018a6ea
 A23: red at d438d38: AssertionError: .github/workflows/mutation-weekly.yml does not exist
 A23: green at 018a6ea
-A24: red at 00a3385: AssertionError: 'mutation-plan' not found in ci.yml's jobs : ci.yml has no mutation-plan job
-A24: green at c954220
+A24: red at 9853d50: AssertionError: False is not true : the rows job never makes the directory its report goes to
+A24: green at 8bce65d
 A25: red at d438d38: AssertionError: unexpectedly None : docs/BUILDER-BRIEF.md has no Mutation testing section
 A25: green at 018a6ea
 A26: not red: it pins behaviour the code already had (a time before the epoch reads as negative milliseconds); its red is the mutation-rust job's, which missed `delete -` in UtcMillis::from_system_time until the test landed (R17, below)

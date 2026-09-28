@@ -529,6 +529,10 @@ branch and recorded in its pull request.
   merge diff holds every one, so the next release pull request fails `mutation-verdict` and
   `mutation-web` until each is killed or recorded as equivalent. The weekly battery files each
   file's survivors once it is live.
+- **The layout's first run went VOID, as it should.** In `ci` run 36389287255, `mutation-rows`
+  proved all 45 rows KILLED, then could not write its report into a directory the job never made,
+  and the verdict read `VOID 45 row(s) selected and no rows report`. The job now makes it, and A24
+  holds it.
 - **A38: a diff of no mutant owes no shard report.** cargo-mutants exits 0 and writes no
   `mutants.out` when a diff lists no mutant (measured on a changed constant), so the verdict read
   such a diff VOID even when a proved row carried its changed line; A16's synthetic report of zero
