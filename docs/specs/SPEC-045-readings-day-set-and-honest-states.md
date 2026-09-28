@@ -8,8 +8,8 @@
   closed states).
 - **Status:** judged: delivered with its tests, `docs/red-first/SPEC-045.md`, and three goldens
   (`resolve_day_sets`, `law_subject`, `digest_for_card_ids`) generated at the predecessor's
-  `27ee2bc`. The delivery made §1, R3 to R9, R12 and the manifest exact where the code decided them
-  (§7).
+  `27ee2bc`. The delivery made §1, R1 to R9, R11, R12, A10 and the manifest exact where the code
+  decided them (§7).
 
 ## 1. The problem, measured
 
