@@ -57,6 +57,12 @@ file, and no template carries a secret's value.
 systemd names the unit in the address it binds for each credential, so a job's credentials reach
 the socket under the job instance's name; the rail's map decides which instances it answers (#41).
 
+A credential that arrives empty, with no bytes or only a newline, refuses start by its id as a
+missing one does (SPEC-066, ADR-067). A role refuses it through the kernel's loader, and the page
+quotes the line that names it; the `sync` job records it as `missing_credentials`. The alert unit
+refuses one in its script before any request, and stays failed in `systemctl --failed`, since
+nothing pages about the alert unit itself (#285).
+
 ## The schedule
 
 Coordination's job table (`crates/coordination/src/jobs.rs`) is the one schedule, and every timer is
