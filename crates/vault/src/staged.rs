@@ -30,12 +30,12 @@ use crate::{VaultError, atomic, sha256};
 pub const RUN_RECORD: &str = "duty-run.json";
 /// The schema the record carries.
 pub const RUN_SCHEMA: &str = "phx.duty.vault.run.v1";
-/// The vault-duties pack's public layout, as vendored, for a record that names none.
-pub const VENDORED_LAYOUT: &str =
-    include_str!("../../../.packs/skills/packs/vault-duties/layout.json");
-/// The vault-duties pack's rows, as vendored: the gate runs every blocking one.
-pub const VENDORED_CHECKS: &str =
-    include_str!("../../../.packs/skills/packs/vault-duties/checks.json");
+/// The default layout, for a record that names none: the crate's own `data/layout.json`, which
+/// keeps the fields of the vault-duties pack's public layout that the executor reads (ADR-069).
+pub const VENDORED_LAYOUT: &str = include_str!("../data/layout.json");
+/// The gate's classes: the crate's own `data/gate-classes.json`, which keeps each of the
+/// vault-duties pack's rows by its id, severity and time limit. The gate runs every blocking one.
+pub const VENDORED_CHECKS: &str = include_str!("../data/gate-classes.json");
 
 /// How long the gate waits between two looks at a class's process, in milliseconds.
 const POLL_MILLIS: u64 = 20;
@@ -419,7 +419,7 @@ struct GateClass {
     timeout_seconds: u64,
 }
 
-/// The gate as the pack's own probe (ADR-043): each blocking class of the vendored rows runs as
+/// The gate as the pack's own probe (ADR-043): each blocking class of the owned rows runs as
 /// `python3 <probe> --root <run> --subject <run> [--vault <vault>] check <class>`, outside any
 /// model. Exit 0 is green, 1 is red; a class that examined nothing of this run (its own duty's
 /// class, for another duty) is passed over; any other ending fails closed.
@@ -434,11 +434,11 @@ pub struct ProbeGate {
 
 impl ProbeGate {
     /// The gate that runs `probe` (the pack's `vault-duties-probe.py`) with `python` over every
-    /// blocking class of the vendored rows.
+    /// blocking class of the owned rows.
     ///
     /// # Errors
     ///
-    /// [`GateError::Checks`] when the vendored rows name no blocking class.
+    /// [`GateError::Checks`] when the owned rows name no blocking class.
     pub fn new(python: impl Into<PathBuf>, probe: impl Into<PathBuf>) -> Result<Self, GateError> {
         Ok(Self {
             python: python.into(),
@@ -494,7 +494,7 @@ impl ProbeGate {
             command.arg("--deny-list").arg(deny_list);
         }
         // The probe's private inputs come only from this gate's own arguments, and it writes no
-        // bytecode beside the vendored scripts.
+        // bytecode beside the probe's scripts.
         command
             .arg("check")
             .arg(&class.id)

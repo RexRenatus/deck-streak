@@ -455,7 +455,9 @@ class TheScrubOwnsItsShapes(unittest.TestCase):
 
     def test_the_loader_reads_a_synthetic_private_list_in_its_schema(self):
         module = scrub_module()
-        self.assertTrue(hasattr(module, "load_deny"), "the scrub reads its lists with its own loader")
+        self.assertTrue(
+            hasattr(module, "load_deny"), "the scrub reads its lists with its own loader"
+        )
         word = "zebra" + "-canary"
         shape = "quokka" + "-[0-9]{3}"
         with tempfile.TemporaryDirectory() as tmp:
@@ -473,7 +475,9 @@ class TheScrubOwnsItsShapes(unittest.TestCase):
                 encoding="utf-8",
             )
             loaded = module.load_deny(private, "private")
-            self.assertEqual([(o, i) for o, i, _ in loaded["patterns"]], [("private", "planted-shape")])
+            self.assertEqual(
+                [(o, i) for o, i, _ in loaded["patterns"]], [("private", "planted-shape")]
+            )
             self.assertTrue(loaded["patterns"][0][2].search("QUOKKA-123"), "the flags are read")
             self.assertEqual(loaded["literals"], [("private", word)], "literals are casefolded")
             subject = Path(tmp) / "subject"

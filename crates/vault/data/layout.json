@@ -1,0 +1,44 @@
+{
+  "schema": "phx.duty.vault.layout.v1",
+  "periodic": {
+    "daily": {
+      "folder": ""
+    },
+    "weekly": {
+      "folder": ""
+    }
+  },
+  "inbox": "90-Inbox",
+  "duties": {
+    "daily-note": {
+      "writes": [
+        "@daily"
+      ]
+    },
+    "weekly-synthesis": {
+      "writes": [
+        "@weekly"
+      ]
+    },
+    "inbox-curator": {
+      "moves_from": [
+        "90-Inbox"
+      ],
+      "moves_to": [
+        "11-Drills",
+        "12-Readings"
+      ]
+    },
+    "daily-reading": {
+      "writes": [
+        "12-Readings"
+      ]
+    },
+    "drill-coach": {
+      "writes": [
+        "11-Drills"
+      ]
+    }
+  },
+  "journal": []
+}

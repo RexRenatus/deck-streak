@@ -141,10 +141,10 @@ fn snapshot(root: &Path) -> BTreeMap<PathBuf, Option<Vec<u8>>> {
         .collect()
 }
 
-/// The gate as the pack's own vendored probe, reading `vault`.
+/// The gate, with a stand-in for the pack's probe that judges its `note-links` class as the pack
+/// does, reading `vault`. The pack's own probe runs on the maintainer's box (ADR-069).
 fn probe_gate(vault: &Path) -> ProbeGate {
-    let probe =
-        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../.packs/scripts/vault-duties-probe.py");
+    let probe = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/gate/stand-in-probe.py");
     ProbeGate::new("python3", probe)
         .expect("the pack's blocking classes")
         .with_vault(vault)
