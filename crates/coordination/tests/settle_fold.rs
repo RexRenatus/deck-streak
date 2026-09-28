@@ -9,7 +9,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::{Arc, Mutex, PoisonError};
 
-use deck_streak_analytics::rollup::{RollupStore, StoredDay, recent_volumes};
+use deck_streak_analytics::rollup::{RollupStore, StoredDay, fingerprint, recent_volumes};
 use deck_streak_analytics::score::{ScoreState, baseline_window, compute_score, raw_streak};
 use deck_streak_analytics::settings::AnalyticsSettings;
 use deck_streak_analytics::snapshot::{CardState, card_snapshot};
@@ -18,7 +18,7 @@ use deck_streak_coordination::recompute::{
     DayEvaluation, DayStep, Evaluation, Fold, FoldError, FoldInput, FoldReport, PHASES, Phase,
 };
 use deck_streak_ingest::reader::{Card, CollectionData, Review};
-use deck_streak_kernel::{Db, PortFuture, StudyDay, StudyDayRule, Track, UtcMillis};
+use deck_streak_kernel::{Db, KernelError, PortFuture, StudyDay, StudyDayRule, Track, UtcMillis};
 use sqlx::SqliteConnection;
 use tempfile::TempDir;
 
@@ -696,12 +696,334 @@ async fn settling_a_day_no_step_rolled_up_logs_one_error() {
     );
 }
 
+/// The digest of the owner's courses that [`recompute`] hands the fold.
+const COURSES_DIGEST: &str = "0123456789abcdef";
+
+/// Runs the fold over `data` at `now`, after a successful sync that started on study day
+/// `synced_in`, with `courses_digest`, and hands back what it answered, a refusal included.
+async fn run_fold(
+    fold: &Fold,
+    db: &Db,
+    data: &CollectionData,
+    now: i64,
+    synced_in: i64,
+    courses_digest: &str,
+) -> Result<FoldReport, KernelError> {
+    fold.run(
+        db,
+        &FoldInput {
+            data,
+            rule: StudyDayRule::default(),
+            now: UtcMillis::from_epoch_millis(now),
+            synced_in: Some(day(synced_in)),
+            courses_digest: Some(courses_digest),
+        },
+    )
+    .await
+}
+
+/// SPEC-071 R9, recorded under A6: a settled day that a late review re-rolls, once its cards have
+/// moved, keeps the card state, the provenance and the score it closed with, and a backfilled day
+/// that a late review re-rolls keeps the card state it never had. A6's own test holds analytics'
+/// store to this; this one holds the fold's steps to it, whose revisit is the evaluation that
+/// re-rolls a past day.
+#[tokio::test]
+async fn a_late_review_rerolls_a_settled_day_and_keeps_what_it_closed_with() {
+    let scratch = TempDir::new().expect("a scratch directory");
+    let db = database(&scratch).await;
+    let log = Log::default();
+    let fold = fold(&log);
+    // At D0+1's close card 11 is due, card 12 is overdue and card 13 is a leech.
+    let cards = vec![
+        card(11, number(D0 + 1), 30, 0),
+        card(12, number(D0 + 1) - 3, 5, 0),
+        card(13, number(D0 + 1) + 40, 30, 9),
+    ];
+    let before = collection(reviews_on(&[D0, D0 + 1]), cards.clone());
+    let first = recompute(&fold, &db, &before, at(D0 + 2, 5), D0 + 2).await;
+    assert_eq!(first.backfilled, days(&[D0]));
+    assert_eq!(first.settled, days(&[D0 + 1]));
+    let closed = rollup(&db, D0 + 1).await;
+    assert!(
+        closed.card_state.is_some() && closed.score_at_close.is_some(),
+        "the day closed with a card state and a score: {closed:?}"
+    );
+
+    // By the next recompute cards 11 and 12 have been answered again, and a review of each past
+    // day reached the copy late.
+    let moved = vec![
+        card(11, number(D0 + 1) + 30, 60, 0),
+        card(12, number(D0 + 1) + 1, 1, 1),
+        card(13, number(D0 + 1) + 40, 30, 9),
+    ];
+    assert_ne!(
+        card_snapshot(&moved, 8, number(D0 + 1)),
+        card_snapshot(&cards, 8, number(D0 + 1)),
+        "the cards' state at the closed day's own day number has moved"
+    );
+    let mut reviews = reviews_on(&[D0, D0 + 1]);
+    reviews.extend([review(at(D0, 20), 3, 4), review(at(D0 + 1, 20), 3, 4)]);
+    reviews.sort_by_key(|review| review.id);
+    let after = collection(reviews, moved);
+    let second = recompute(&fold, &db, &after, at(D0 + 2, 9), D0 + 2).await;
+    assert_eq!(
+        examined("re-rolled days", second.rerolled.clone()),
+        days(&[D0, D0 + 1, D0 + 2]),
+        "both past days are rolled up again, and the current day"
+    );
+
+    let again = rollup(&db, D0 + 1).await;
+    assert_eq!(again.metrics.reviews, 3, "the late review counts");
+    assert_eq!(
+        again.card_state, closed.card_state,
+        "the card state it closed with"
+    );
+    assert_eq!(
+        again.card_state_src, closed.card_state_src,
+        "its provenance"
+    );
+    assert_eq!(
+        again.score_at_close, closed.score_at_close,
+        "the score it closed with"
+    );
+    assert_eq!(again.settled_at, closed.settled_at, "its one settle");
+    let backfilled = rollup(&db, D0).await;
+    assert_eq!(backfilled.metrics.reviews, 3, "the late review counts");
+    assert_eq!(
+        (backfilled.card_state, backfilled.card_state_src),
+        (None, None),
+        "a day never recorded keeps no card state"
+    );
+}
+
+/// A phase-7 step that counts each settle it is handed, in the day's own write: a count stays only
+/// when the settle's write commits.
+struct SettleCounter;
+
+impl DayStep for SettleCounter {
+    fn phase(&self) -> Phase {
+        Phase::Awards
+    }
+
+    fn name(&self) -> &'static str {
+        "probe.settle_counter"
+    }
+
+    fn evaluate<'a>(
+        &'a self,
+        day: &'a DayEvaluation<'a>,
+        write: &'a mut SqliteConnection,
+    ) -> PortFuture<'a, ()> {
+        Box::pin(async move {
+            if matches!(day.evaluation, Evaluation::Settle { .. }) {
+                sqlx::query("INSERT INTO probe_settles (study_day) VALUES (?1)")
+                    .bind(day.day.epoch_day())
+                    .execute(&mut *write)
+                    .await?;
+            }
+            Ok(())
+        })
+    }
+}
+
+/// Runs `statement` in a write of its own.
+async fn execute(db: &Db, statement: &'static str) {
+    let mut write = db.write().await.expect("a write");
+    sqlx::query(statement)
+        .execute(&mut *write)
+        .await
+        .unwrap_or_else(|error| panic!("{statement}: {error}"));
+    write.commit().await.expect("the write commits");
+}
+
+/// How many settles of study day `number` committed their steps' work.
+async fn committed_settles(db: &Db, number: i64) -> i64 {
+    let mut connection = db.reader().acquire().await.expect("a connection");
+    sqlx::query_scalar::<_, i64>("SELECT count(*) FROM probe_settles WHERE study_day = ?1")
+        .bind(number)
+        .fetch_one(&mut *connection)
+        .await
+        .expect("the count reads")
+}
+
+/// SPEC-071 R16, recorded under A16: the cursor moves in the same write as the day's steps, so a
+/// settle whose cursor cannot be recorded commits none of its steps' work, and the recompute that
+/// settles the day at last commits it once. A trigger the test installs refuses the cursor's
+/// write, the one statement that names `settled_at`: a failure inside a step could not tell one
+/// write from a settle split in two, whose steps would commit before its cursor.
+#[tokio::test]
+async fn a_settle_whose_cursor_is_refused_commits_none_of_its_steps_work() {
+    let scratch = TempDir::new().expect("a scratch directory");
+    let db = database(&scratch).await;
+    let log = Log::default();
+    let mut fold = fold(&log);
+    fold.register(Phase::Awards, Box::new(SettleCounter))
+        .expect("the counter is phase 7's");
+    execute(
+        &db,
+        "CREATE TABLE probe_settles (study_day INTEGER NOT NULL) STRICT",
+    )
+    .await;
+    execute(
+        &db,
+        "CREATE TRIGGER refuse_the_cursor BEFORE UPDATE OF settled_at ON daily_rollup \
+         BEGIN SELECT RAISE(ABORT, 'the cursor is refused'); END",
+    )
+    .await;
+    let data = collection(reviews_on(&[D0, D0 + 1]), Vec::new());
+
+    let refused = run_fold(&fold, &db, &data, at(D0 + 1, 10), D0 + 1, COURSES_DIGEST).await;
+    assert!(
+        refused.is_err(),
+        "the refused cursor fails the recompute: {refused:?}"
+    );
+    let evaluated: Vec<StudyDay> = seen(&log)
+        .into_iter()
+        .filter(|seen| matches!(seen.evaluation, Evaluation::Settle { .. }))
+        .map(|seen| seen.day)
+        .collect();
+    assert_eq!(
+        evaluated,
+        days(&[D0]),
+        "the settle's steps ran before its cursor was refused"
+    );
+    assert_eq!(
+        committed_settles(&db, D0).await,
+        0,
+        "the refused settle committed none of its steps' work"
+    );
+
+    execute(&db, "DROP TRIGGER refuse_the_cursor").await;
+    let settled = recompute(&fold, &db, &data, at(D0 + 1, 11), D0 + 1).await;
+    assert_eq!(
+        settled.settled,
+        days(&[D0]),
+        "the day stayed owed, and is settled now"
+    );
+    assert_eq!(
+        committed_settles(&db, D0).await,
+        1,
+        "its steps' work is committed once, with its one settle"
+    );
+    let again = recompute(&fold, &db, &data, at(D0 + 1, 12), D0 + 1).await;
+    assert_eq!(
+        again.settled,
+        Vec::<StudyDay>::new(),
+        "a second recompute settles no day"
+    );
+    assert_eq!(
+        committed_settles(&db, D0).await,
+        1,
+        "and commits no settle's work"
+    );
+}
+
+/// A review field as the fingerprint's table names it, and a change to it.
+type FieldChange = (&'static str, fn(&mut Review));
+
+/// SPEC-071 R18, recorded under A21: a day's fingerprint digests every field of each of its study
+/// reviews and the courses file's digest, so a recompute rolls a past day up again when any one of
+/// them changed, and no other past day. cargo-mutants never removes one element of the list the
+/// fingerprint digests, so each field has its own row here.
+#[tokio::test]
+async fn a_change_to_any_review_field_or_to_the_courses_rerolls_the_day() {
+    let reviews = reviews_on(&[D0, D0 + 1]);
+    let fields: Vec<FieldChange> = vec![
+        ("id", |review| review.id += 1_000),
+        ("card_id", |review| review.card_id += 10),
+        ("ease", |review| review.ease += 1),
+        ("interval", |review| review.interval += 1),
+        ("last_interval", |review| review.last_interval += 1),
+        ("factor", |review| review.factor += 100),
+        ("taken_ms", |review| review.taken_ms += 1),
+        ("kind", |review| review.kind += 1),
+    ];
+    assert_eq!(
+        rerolled_after(&reviews, &reviews, COURSES_DIGEST).await,
+        days(&[D0 + 2]),
+        "with nothing changed, only the current day is rolled up again"
+    );
+    for (field, change) in examined("review fields", fields) {
+        let mut changed = reviews.clone();
+        change(&mut changed[0]);
+        assert_ne!(
+            fingerprint(&changed[..2], Some(COURSES_DIGEST)),
+            fingerprint(&reviews[..2], Some(COURSES_DIGEST)),
+            "the fingerprint digests a review's {field}"
+        );
+        assert_eq!(
+            rerolled_after(&reviews, &changed, COURSES_DIGEST).await,
+            days(&[D0, D0 + 2]),
+            "a changed {field} rolls its day up again, beside the current day"
+        );
+    }
+
+    // Another courses file: every past day's fingerprint changes with it.
+    let other = "fedcba9876543210";
+    assert_ne!(
+        fingerprint(&reviews[..2], Some(other)),
+        fingerprint(&reviews[..2], Some(COURSES_DIGEST)),
+        "the fingerprint digests the courses file's digest"
+    );
+    assert_eq!(
+        rerolled_after(&reviews, &reviews, other).await,
+        days(&[D0, D0 + 1, D0 + 2]),
+        "a changed courses file rolls every past day up again"
+    );
+}
+
+/// The days a recompute over `after`, with `courses_digest`, rolls up again, following a first
+/// recompute over `before` that backfilled D0 and settled D0+1. A past day's rollup carries the
+/// later recompute's instant exactly when that recompute says it rolled the day up again.
+async fn rerolled_after(
+    before: &[Review],
+    after: &[Review],
+    courses_digest: &str,
+) -> Vec<StudyDay> {
+    let scratch = TempDir::new().expect("a scratch directory");
+    let db = database(&scratch).await;
+    let fold = fold(&Log::default());
+    let first = recompute(
+        &fold,
+        &db,
+        &collection(before.to_vec(), Vec::new()),
+        at(D0 + 2, 10),
+        D0 + 2,
+    )
+    .await;
+    assert_eq!(
+        (first.backfilled, first.settled),
+        (days(&[D0]), days(&[D0 + 1]))
+    );
+    let now = at(D0 + 2, 12);
+    let report = run_fold(
+        &fold,
+        &db,
+        &collection(after.to_vec(), Vec::new()),
+        now,
+        D0 + 2,
+        courses_digest,
+    )
+    .await
+    .expect("the fold runs");
+    for past in [D0, D0 + 1] {
+        let moved = rollup(&db, past).await.updated_at == UtcMillis::from_epoch_millis(now);
+        assert_eq!(
+            moved,
+            report.rerolled.contains(&day(past)),
+            "study day {past}'s rollup says whether it was rolled up again"
+        );
+    }
+    db.close().await;
+    report.rerolled
+}
+
 mod cycle {
     use std::ffi::OsStr;
     use std::fs;
     use std::path::Path;
-    use std::sync::Arc;
     use std::sync::atomic::{AtomicBool, Ordering};
+    use std::sync::{Arc, Mutex, PoisonError};
 
     use deck_streak_analytics::rollup::RollupStore;
     use deck_streak_coordination::obligations::Obligations;
@@ -716,7 +1038,8 @@ mod cycle {
     use deck_streak_ingest::settings::{
         STATE_DIRECTORY, SYNC_ENDPOINT, SYNC_PASSWORD, SYNC_USERNAME, ScopeSettings, SyncSettings,
     };
-    use deck_streak_ingest::sync::Syncer;
+    use deck_streak_ingest::state::SqliteIngestState;
+    use deck_streak_ingest::sync::{SyncReport, Syncer};
     use deck_streak_ingest::sync_runs::{SqliteSyncRuns, Trigger};
     use deck_streak_kernel::{
         CredentialLoader, CredentialsDirectory, Db, Environment, ManualClock, Offload,
@@ -858,6 +1181,224 @@ mod cycle {
             settled[0].settled_at,
             Some(UtcMillis::from_epoch_millis(second)),
             "settled by the cycle that followed the successful sync"
+        );
+        db.close().await;
+    }
+
+    /// A scratch deployment's cycle over `engine`, reading `clock`: the owner's two credentials,
+    /// the empty copy the engine itself creates, the service's database, and a fold of analytics'
+    /// step whose days carry `courses_digest`.
+    async fn deployment<E: AnkiEngine + Sync>(
+        scratch: &Path,
+        engine: E,
+        clock: &Arc<ManualClock>,
+        courses_digest: Option<&str>,
+    ) -> (Db, CycleParts<E>) {
+        let state = scratch.join("state");
+        let credentials = scratch.join("credentials");
+        for folder in [&state, &credentials] {
+            fs::create_dir_all(folder).expect("a folder");
+        }
+        for (id, value) in [
+            (SYNC_USERNAME, "synthetic-owner\n"),
+            (SYNC_PASSWORD, "synthetic-password\n"),
+        ] {
+            fs::write(credentials.join(id), value).expect("a credential");
+        }
+        let settings = SyncSettings::from_env(&Environment::from_vars([
+            (SYNC_ENDPOINT, OsStr::new("http://127.0.0.1:9/")),
+            (STATE_DIRECTORY, state.as_os_str()),
+        ]))
+        .expect("the settings");
+        RslibEngine
+            .new_card_queue(&settings.copy_path())
+            .expect("the engine creates the copy");
+        let db = Db::open(&scratch.join("deckstreak.db"))
+            .await
+            .expect("the database");
+        let syncer = Syncer::new(
+            engine,
+            SqliteSyncRuns::new(db.clone()),
+            settings.clone(),
+            CredentialLoader::new(
+                CredentialsDirectory::new(credentials).expect("an absolute directory"),
+                Redactor::new(),
+            ),
+            clock.clone(),
+            StudyDayRule::default(),
+        );
+        let offload = Offload::new(OffloadWorkers::new(1).expect("one worker"), clock.clone());
+        let reader = CollectionReader::new(&settings, ScopeSettings::default(), offload);
+        let gate = ChangeGate::new(db.clone(), StudyDayRule::default(), clock.clone());
+        let mut fold = Fold::default();
+        fold.register(Phase::RollupAndScore, Box::new(AnalyticsStep::default()))
+            .expect("phase 1's step");
+        let cycle = CycleParts::new(syncer, reader, gate, Obligations::new(), clock.clone())
+            .with_fold(
+                Arc::new(fold),
+                db.clone(),
+                StudyDayRule::default(),
+                courses_digest.map(str::to_owned),
+            );
+        (db, cycle)
+    }
+
+    /// An engine whose syncs succeed and find no change; the first one moves the clock to `finish`
+    /// while it runs, as a sync that started before a rollover and finished after it.
+    #[derive(Clone)]
+    struct AcrossTheRollover {
+        clock: Arc<ManualClock>,
+        finish: Arc<Mutex<Option<UtcMillis>>>,
+    }
+
+    impl AnkiEngine for AcrossTheRollover {
+        fn new_card_queue(&self, _collection: &Path) -> Result<NewCardQueue, EngineError> {
+            Ok(NewCardQueue::default())
+        }
+
+        async fn normal_sync(
+            &self,
+            _collection: &Path,
+            _login: &SyncLogin,
+        ) -> Result<SyncOutcome, EngineError> {
+            let finish = self
+                .finish
+                .lock()
+                .unwrap_or_else(PoisonError::into_inner)
+                .take();
+            if let Some(finish) = finish {
+                self.clock.set(finish);
+            }
+            Ok(SyncOutcome::NoChanges)
+        }
+
+        async fn full_download(
+            &self,
+            _collection: &Path,
+            _login: &SyncLogin,
+        ) -> Result<(), EngineError> {
+            Ok(())
+        }
+    }
+
+    /// SPEC-071 R15, recorded under A18: a successful sync that started before the rollover and
+    /// finished after it is the sync of the day that closed, so that day stays owed; the owner's
+    /// next sync, which starts after the close, settles it.
+    #[tokio::test]
+    async fn a_sync_across_the_rollover_leaves_the_day_it_started_in_owed() {
+        let scratch = tempfile::tempdir().expect("a scratch");
+        // D0 - 1 closes at D0's rollover, 04:00 UTC: the sync starts ten minutes before it and
+        // finishes five minutes after it.
+        let rollover = D0 * DAY_MS + 4 * HOUR_MS;
+        let started = UtcMillis::from_epoch_millis(rollover - 10 * 60_000);
+        let finished = UtcMillis::from_epoch_millis(rollover + 5 * 60_000);
+        let rule = StudyDayRule::default();
+        assert_eq!(
+            (rule.study_day(started), rule.study_day(finished)),
+            (day(D0 - 1), day(D0)),
+            "the sync starts in D0 - 1 and finishes in D0"
+        );
+        let clock = Arc::new(ManualClock::new(started));
+        let engine = AcrossTheRollover {
+            clock: Arc::clone(&clock),
+            finish: Arc::new(Mutex::new(Some(finished))),
+        };
+        let (db, cycle) = deployment(scratch.path(), engine, &clock, None).await;
+
+        let across = sync_cycle(&cycle, Trigger::Owner)
+            .await
+            .expect("the cycle runs");
+        let SyncReport::Ran { run, .. } = &across.sync else {
+            panic!("the sync ran: {:?}", across.sync);
+        };
+        assert!(run.outcome.is_ok(), "the sync succeeded: {run:?}");
+        assert_eq!(
+            (run.started_at, run.finished_at, run.study_day),
+            (started, finished, day(D0 - 1)),
+            "it ran across the rollover, and is recorded in the day it started in"
+        );
+        assert!(
+            matches!(across.recompute, Recompute::Ran { .. }),
+            "{:?}",
+            across.recompute
+        );
+        assert_eq!(
+            rolled(&db).await,
+            [(day(D0), false)],
+            "the fold rolled the current day up, and the day that closed stays owed"
+        );
+
+        // The owner's next /sync, ten minutes on, marks a rescore as every owner's sync does; its
+        // sync starts after the close, and its recompute settles the day.
+        let next = UtcMillis::from_epoch_millis(finished.epoch_millis() + 10 * 60_000);
+        clock.set(next);
+        SqliteIngestState::new(db.clone())
+            .request_rescore(next)
+            .await
+            .expect("the rescore is marked");
+        let after = sync_cycle(&cycle, Trigger::Owner)
+            .await
+            .expect("the cycle runs");
+        assert!(
+            matches!(after.recompute, Recompute::Ran { .. }),
+            "{:?}",
+            after.recompute
+        );
+        assert_eq!(
+            rolled(&db).await,
+            [(day(D0 - 1), true), (day(D0), false)],
+            "the sync that started after the close settled the day"
+        );
+        db.close().await;
+    }
+
+    /// SPEC-071 R4, recorded under A14: a run of the sync job records the courses' digest at its
+    /// start, then runs its cycle. With the courses file unchanged, neither a later start nor any
+    /// cycle's recompute moves the settings generation.
+    #[tokio::test]
+    async fn cycles_with_an_unchanged_courses_file_leave_the_settings_generation_alone() {
+        let scratch = tempfile::tempdir().expect("a scratch");
+        let first = D0 * DAY_MS + 5 * HOUR_MS;
+        let clock = Arc::new(ManualClock::new(UtcMillis::from_epoch_millis(first)));
+        let courses = "0123456789abcdef";
+        let engine = Switched::default();
+        engine.0.store(true, Ordering::SeqCst);
+        let (db, cycle) = deployment(scratch.path(), engine, &clock, Some(courses)).await;
+        assert!(
+            db.record_courses_digest(Some(courses))
+                .await
+                .expect("recorded"),
+            "the first start records the digest"
+        );
+        assert_eq!(db.settings_generation().await.expect("readable"), 1);
+
+        // The scheduled job, on two study days in turn.
+        for run in 0..2 {
+            clock.set(UtcMillis::from_epoch_millis(first + run * DAY_MS));
+            assert!(
+                !db.record_courses_digest(Some(courses))
+                    .await
+                    .expect("recorded"),
+                "run {run}: the job's start finds the courses unchanged"
+            );
+            let report = sync_cycle(&cycle, Trigger::Scheduled)
+                .await
+                .expect("the cycle runs");
+            assert!(
+                matches!(report.recompute, Recompute::Ran { .. }),
+                "run {run}: the recompute ran: {:?}",
+                report.recompute
+            );
+            assert_eq!(
+                db.settings_generation().await.expect("readable"),
+                1,
+                "run {run}: the generation stays where the first start put it"
+            );
+        }
+        assert_eq!(
+            rolled(&db).await,
+            [(day(D0 - 1), true), (day(D0), true)],
+            "each run's fold settled the day that closed before it"
         );
         db.close().await;
     }
