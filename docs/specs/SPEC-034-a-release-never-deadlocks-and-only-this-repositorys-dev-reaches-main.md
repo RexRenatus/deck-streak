@@ -139,9 +139,9 @@ A9 to A12 run one checker, `secret_and_checkout_problems`, over a directory: A9 
 `scripts/tests/fixtures/secrets-and-checkouts/refused/` and `admitted/`, and A12 over a directory
 that holds no workflow. A10 also writes planted workflows to a scratch directory at test time: each
 character the reader refuses, from a Python escape so that no committed file holds one, and lines
-the reader cannot place, each of which refuses its whole file. Among them is a `|` block that holds
-a line of a form feed: the block's end and its indent read only a space or a tab as white space, so
-a secret the block names over two lines keeps its indent.
+the reader cannot place, each of which refuses its whole file. Among them are `|` blocks that each
+hold a line of one such character: the block's end and its indent read only a space or a tab as
+white space, so a secret the block names over two lines keeps its indent.
 - It reads each workflow with the test file's own reader (`read_workflow`), chosen over a YAML
   library the repository does not depend on: the guard tests run on the standard library alone,
   and a library would be the repository's first Python dependency, with a pin, an install step in
