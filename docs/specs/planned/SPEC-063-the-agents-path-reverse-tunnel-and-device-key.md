@@ -9,9 +9,9 @@
   shell runner and the caps), ADR-061 (the route lands as a drop-in), and this SPEC's ADR-063 (the
   agent's Claude Code comes from the vendor's signed package at one held version).
 - **Waits for:** owner gate 3 (#162): the owner's choice of the subscription route over an API key,
-  and the maintainer adding the key to the proxy's roster with the owner's go. Also gate 6 (#165) for the key's
-  value and gate 2 (#161) for the host changes. It is CONDITIONAL: until gate 3 passes, nothing here
-  is installed, and every night runs in no-AI mode (ADR-054).
+  and the maintainer adding the key to the proxy's roster with the owner's go. Also gate 6 (#165)
+  for the key's value and gate 2 (#161) for the host changes. It is CONDITIONAL: until gate 3
+  passes, nothing here is installed, and every night runs in no-AI mode (ADR-054).
 - **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
   `docs/specs/` with its tests and `docs/red-first/SPEC-063.md` (ADR-016).
 
@@ -67,9 +67,9 @@ R4. Claude Code reaches the host from the vendor's signed package repository, it
     installed by a piped script (ADR-063). The rail installs a new version only after the runner's
     tests have passed with that version on the maintainer's machine.
 R5. The device key is the owner's: minted and stored by the owner (gate 6), added to the proxy's
-    roster by the maintainer with the owner's go, which restarts the proxy (gate 3). No builder adds it, probes
-    the proxy or restarts it. The rail then adds the key's row to the credential map and installs
-    `deploy/optional/ai-route/` for the readings unit: the drop-in loads
+    roster by the maintainer with the owner's go, which restarts the proxy (gate 3). No builder adds
+    it, probes the proxy or restarts it. The rail then adds the key's row to the credential map and
+    installs `deploy/optional/ai-route/` for the readings unit: the drop-in loads
     `LoadCredential=agent-device-key:/run/deck-streak-credentials/socket` (ADR-038), and the
     environment file gains the route setting and the loopback base URL (SPEC-053 R9). With the
     route, the rail also installs the output gate's probes at the version the box run judges, and
