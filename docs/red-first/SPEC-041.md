@@ -123,10 +123,16 @@ criterion's test run selecting one test, with the file restored byte for byte af
 - A raw request to the Bot API's `sendMessage` in the bot's role, and the same in the API: A15 red
   for each, `names api.telegram.org` and `names sendMessage`.
 
+After A15's green, f89d330 changed one helper of its census: `shipped` reads a test file's inner
+extension (`.test`, `.spec`) through `Path::extension` instead of `str::ends_with`, as clippy's
+pedantic `case_sensitive_file_extension_comparisons` requires. The same files are left out, and the
+census still examines 170 shipped sources; A15's body is unchanged.
+
 The census is test code, which cargo-mutants never mutates, so rows S04113 and S04114 hold its two
-refusals (da492cf). Both were proved on the committed tree with `mutation_rows.py prove`: examined
-2, killed 2, survived 0, VOID 0; each control selected one test and passed, each mutant selected
-one test and failed, and the target was restored byte for byte.
+refusals (da492cf). Both were proved with `mutation_rows.py prove` on the committed tree at
+da492cf, and again after f89d330: each time examined 2, killed 2, survived 0, VOID 0; each control
+selected one test and passed, each mutant selected one test and failed, and the target was restored
+byte for byte.
 
 DISCLOSURE, A2 (`a_delivery_call_outside_the_router_does_not_compile`): its criterion changed at
 168e626 and its body at eb2a552, after its green commit, b5b66ca. The body gained
