@@ -15,6 +15,7 @@
 #![deny(unused_must_use)]
 #![warn(missing_docs, clippy::all)]
 
+pub mod courses;
 pub mod data_rights;
 pub mod data_rights_registry;
 pub mod delivery;
@@ -24,5 +25,6 @@ pub mod liveness;
 pub mod maintenance;
 pub mod obligations;
 pub mod readings;
+pub mod recompute;
 pub mod runner;
 pub mod sync_cycle;
