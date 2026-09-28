@@ -183,13 +183,14 @@ Recorded by SPEC-057's vault delivery (its section 1.6, R22 and A28). This decis
 the note decides how SPEC-039's plan reads a change to a unit test in `src`, which the delivery's
 own diff measured.
 
-At dd734e5 the vault's diff changes three files under `crates/vault/src` only inside their
-`#[cfg(test)]` modules, which cargo-mutants never mutates. The plan read 71 of those lines as
-production code, so the Rust class applied. `cargo mutants --list --json --in-diff` printed
-nothing, since it exits 0 before it lists when no mutant overlaps the diff; `shards` read the empty
-file as no listing; and `mutation-plan` and `mutation-verdict` read VOID (runs 36461579108 and
-36463302615). Any pull request that adds a unit test in `src` and changes no production line reads
-the same. The architect ruled the defect the plan's, and this delivery fixes it.
+At 8b18276, and again at dd734e5, whose `crates/` are the same, the vault's diff changes three
+files under `crates/vault/src` only inside their `#[cfg(test)]` modules, which cargo-mutants never
+mutates. The plan read 71 of those lines as production code, so the Rust class applied. `cargo
+mutants --list --json --in-diff` printed nothing, since it exits 0 before it lists when no mutant
+overlaps the diff; `shards` read the empty file as no listing; and `mutation-plan` and
+`mutation-verdict` read VOID (run 36461579108 at 8b18276, and run 36463302615 at dd734e5). Any
+pull request that adds a unit test in `src` and changes no production line reads the same. The
+architect ruled the defect the plan's, and this delivery fixes it.
 
 Chosen, and what each was chosen against:
 

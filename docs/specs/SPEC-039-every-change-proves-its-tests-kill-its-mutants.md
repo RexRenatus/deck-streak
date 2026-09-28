@@ -643,9 +643,10 @@ What it amends, and why:
   as a code line. A unit test in a `#[cfg(test)]` module lives on that path, and cargo-mutants never
   mutates it: 27.1.0's visitor skips an item marked `#[cfg(test)]`, or one with an attribute whose
   path ends in `test` (`attrs_excluded` in its `src/visit.rs`; https://mutants.rs/mutants.html).
-  SPEC-057's vault delivery measured the cost at dd734e5: its diff changes only three such modules,
-  the plan read 71 of their lines as code, cargo-mutants listed nothing, and `mutation-plan` and
-  `mutation-verdict` read VOID (runs 36461579108 and 36463302615). SPEC-057 R22 now reads such a
+  SPEC-057's vault delivery measured the cost at 8b18276 and again at dd734e5, whose `crates/` are
+  the same: its diff changes only three such modules, the plan read 71 of their lines as code,
+  cargo-mutants listed nothing, and `mutation-plan` and `mutation-verdict` read VOID (run
+  36461579108 at 8b18276, and run 36463302615 at dd734e5). SPEC-057 R22 now reads such a
   line as test-only. A class whose changed code lines are all test-only reads `not-applicable` by
   name; one that also changes a production code line applies as before. R2's paths are unchanged.
 - **R18 read the tool's empty answer as no listing.** `cargo mutants --list --json --in-diff`

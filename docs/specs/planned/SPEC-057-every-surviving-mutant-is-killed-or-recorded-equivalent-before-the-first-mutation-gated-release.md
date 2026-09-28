@@ -200,10 +200,10 @@ code line (its R2 and R4), so the Rust class applied. cargo-mutants 27.1.0 never
 marked `#[cfg(test)]`, or one with an attribute whose path ends in `test` (its `visit.rs`), and
 when no mutant overlaps a diff it exits 0 before it lists, so `--list --json --in-diff` printed
 nothing at all, not `[]`. `shards` read that empty file as no listing and was VOID, and the
-verdict was VOID because the plan named no shards (runs 36461579108 and 36463302615). Any pull
-request that adds a unit test in `src` and changes no production line reads the same. The
-architect ruled it a defect of the plan rather than of the delivery, and gave the vault's delivery
-a third rider (R22, A28).
+verdict was VOID because the plan named no shards (run 36463302615; run 36461579108, at 8b18276,
+whose `crates/` are the same, read the same). Any pull request that adds a unit test in `src` and
+changes no production line reads the same. The architect ruled it a defect of the plan rather than
+of the delivery, and gave the vault's delivery a third rider (R22, A28).
 
 ## 2. Requirements
 
