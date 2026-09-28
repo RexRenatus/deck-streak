@@ -5,15 +5,22 @@
   "why": "DeckStreak runs the packs' standard-library probes in its own CI until the open-source pack runner exists (ADR-004). Four phxd packs (web-launch, vibecode-polish, ux-laws, ui-styles) are vendored as data only: the accessibility matrix names their rows.",
   "excluded": [
     {
-      "glob": "skills/packs/*/examples/**",
+      "globs": [
+        "skills/packs/*/examples/**"
+      ],
       "why": "phoenix-v2's own dogfood population; DeckStreak judges its own golden outputs, not the pack authors' worked examples"
     },
     {
-      "from": "skills/packs/subscription-proxy/SKILL.md",
+      "globs": [
+        "skills/packs/subscription-proxy/SKILL.md"
+      ],
       "why": "it names the maintainer's box paths; the public repository carries the pack's probe, rows and reference client only"
     },
     {
-      "from": "skills/packs/subscription-proxy/** and scripts/proxy-client-scan.py",
+      "globs": [
+        "skills/packs/subscription-proxy/**",
+        "scripts/proxy-client-scan.py"
+      ],
       "why": "the reference client and its scanner name the maintainer's private secret; the pack runs on the maintainer's box against this repository instead (ADR-004)"
     }
   ],
