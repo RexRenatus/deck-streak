@@ -1636,6 +1636,10 @@ GIT_URL = re.compile(
     r"\bgit\b[^;&|]*?(?:\w+://|(?<![\w/.:@-])"
     r"(?:[\w.-]+@[\w.-]+|[\w-]+(?:\.[\w-]+)*\.[A-Za-z][\w-]*):)"
 )
+# GitHub's built-in shell keywords, as written. The runner runs any other `shell` as a command
+# template, its first word the command and `{0}` the script's path, so it runs a command the
+# checker does not read.
+SHELLS = ("bash", "sh", "pwsh", "powershell", "python", "cmd")
 
 
 def expressions_in(text):
@@ -1750,6 +1754,32 @@ def reaches(script):
     return found
 
 
+def shell_problems(given, where):
+    """A `shell` that is not one of GitHub's built-in keywords, as written. The runner runs any other
+    as a command, so what a custom shell runs is a command the checker does not read. An omitted or
+    empty `shell` is none: the runner falls back to the defaults, which are judged where they
+    are."""
+    if given is None or given == "" or given in SHELLS:
+        return []
+    return [f"{where}: runs a shell the checker does not read: {given}"]
+
+
+def defaults_problems(defaults, where):
+    """A `defaults.run.shell` that `shell_problems` refuses, and defaults whose shell the checker
+    cannot read: a `defaults` or a `defaults.run` that is set and is not a mapping, such as one
+    `${{ }}` expression, which GitHub evaluates when the job runs."""
+    if defaults is None:
+        return []
+    if not isinstance(defaults, dict):
+        return [f"{where}: runs a shell the checker does not read: {defaults}"]
+    run = defaults.get("run")
+    if run is None:
+        return []
+    if not isinstance(run, dict):
+        return [f"{where}.run: runs a shell the checker does not read: {run}"]
+    return shell_problems(run.get("shell"), f"{where}.run.shell")
+
+
 def secret_and_checkout_problems(directory):
     """Every read of a secret other than GITHUB_TOKEN, every `secrets: inherit`, and every checkout,
     clone or fetch of another repository in the workflows of `directory`, each named by its file
@@ -1771,6 +1801,7 @@ def secret_and_checkout_problems(directory):
             for expression in expressions_in(text):
                 judged["expressions"].append((f"{path.name}:{where}", expression))
                 problems += [f"{path.name}:{where}: {read}" for read in secret_reads(expression)]
+        problems += defaults_problems(workflow.get("defaults"), f"{path.name}:defaults")
         for job_id, job in (workflow.get("jobs") or {}).items():
             # A job or step that is not a mapping is not judged: the reader has named its line, or
             # GitHub refuses the workflow.
@@ -1781,6 +1812,9 @@ def secret_and_checkout_problems(directory):
                     f"{path.name}:jobs.{job_id}.secrets: passes every secret to the workflow it "
                     "calls"
                 )
+            problems += defaults_problems(
+                job.get("defaults"), f"{path.name}:jobs.{job_id}.defaults"
+            )
             for where, step in steps_in(job.get("steps"), f"{path.name}:jobs.{job_id}.steps"):
                 if not isinstance(step, dict):
                     continue
@@ -1798,6 +1832,7 @@ def secret_and_checkout_problems(directory):
                 if "run" in step:
                     judged["run steps"].append(where)
                     problems += [f"{where}: {reach}" for reach in reaches(str(step["run"]))]
+                problems += shell_problems(step.get("shell"), f"{where}.shell")
     return problems, judged
 
 
