@@ -166,7 +166,13 @@ R3. The search and the day spec: the configured search (`DECKSTREAK_SKIP_SEARCH`
     computation whenever the process's zone is not UTC (the pinned engine's
     `rslib/src/scheduler/mod.rs:91-104`). The checks cannot hold a rollover, or a change of the
     process's zone offset, in the moment between a check and the engine's next day computation
-    (§6).
+    (§6). The service's process runs in a time zone that observes no daylight saving: a zone whose
+    UTC offset is not the same at every instant of the current and the next calendar year in the tz
+    database refuses the preview, the take and the undo with a bounded reason before any request or
+    write, because an offset change between a check and the engine's next day computation makes the
+    engine rewrite the configured UTC offset (`rslib/src/scheduler/mod.rs:101-104`), a setting
+    guardrail (i) forbids, and no check can sit between that computation and the push that carries
+    it (`rslib/src/sync/collection/normal.rs:80-90`).
 R4. The skip set is exactly the study days that hold an `applied` skip not undone
     (`database.py:GamifyStore.skip_days_set`); a `pending` or `failed` skip is not in it. It is read
     through one port in coordination that every consumer calls; no other module queries
@@ -420,7 +426,7 @@ R33. The recording layer is proved to see a write before any proof rests on it. 
 | A37 | a take that is refused, aborts or fails charges no tariff and puts no day in the skip set, and an applied take charges once | `a_take_that_does_not_apply_charges_nothing` |
 | A38 | (i) with a custom `DECKSTREAK_SKIP_SEARCH` that also matches a review card due on another day, a suspended and a buried review card due today, a relearning card due today, a review card due today in a filtered deck, and new and learning cards, the preview lists and the push carries only the review cards due that study day outside a filtered deck; and a configured search that closes the wrap's group (`deck:X) or (deck:X`, over a deck holding every card above) is refused before any preview, request or write | `a_custom_search_moves_only_the_study_days_due_review_cards` |
 | A39 | (iv) a card the preview did not list, which another client made due before the converge, and a previewed card, which another client rescheduled before it, are each left alone and listed in the take's answer, and the push carries neither | `a_card_that_changed_between_the_preview_and_the_converge_is_left_alone` |
-| A40 | (i, v) when the engine's own day differs from the study day (the synthetic collection's rollover hour differs from the study-day rule's), when the collection's configured UTC offset differs from the test process's zone, and when the collection holds no configured UTC offset and the test process's zone is not UTC, a preview and a take either list and push only that study day's due review cards, each moved to a day in the day spec's range from the study day, with no setting whose value differs from the server's at the converge, or refuse before any request or write, and an undo either restores its cards as A30 requires or refuses before any request or write; the private copy's bytes are unchanged either way; and when another client changes the server's configured UTC offset, and in a second case its rollover hour, after the private copy's last sync, so that the private copy passes both checks, a take and an undo push nothing, and no request carries a setting whose value differs from the server's at the converge; and the same holds in a third case, where that client's change leaves the server with no configured UTC offset | `a_take_holds_to_the_study_day_and_writes_no_setting_when_the_engines_day_or_zone_differs` |
+| A40 | (i, v) when the engine's own day differs from the study day (the synthetic collection's rollover hour differs from the study-day rule's), when the collection's configured UTC offset differs from the test process's zone, and when the collection holds no configured UTC offset and the test process's zone is not UTC, a preview and a take either list and push only that study day's due review cards, each moved to a day in the day spec's range from the study day, with no setting whose value differs from the server's at the converge, or refuse before any request or write, and an undo either restores its cards as A30 requires or refuses before any request or write; the private copy's bytes are unchanged either way; and when another client changes the server's configured UTC offset, and in a second case its rollover hour, after the private copy's last sync, so that the private copy passes both checks, a take and an undo push nothing, and no request carries a setting whose value differs from the server's at the converge; and the same holds in a third case, where that client's change leaves the server with no configured UTC offset; and in a test process whose zone observes daylight saving, a preview, a take and an undo each refuse before any request or write, and the private copy's bytes are unchanged | `a_take_holds_to_the_study_day_and_writes_no_setting_when_the_engines_day_or_zone_differs` |
 | A41 | (undo) an undo whose push the server commits while the relay drops the answer to its `finish` answers that its outcome is not known yet and never that nothing was written; the skip stays `applied`; a second undo marks it undone, refunds it once, and lists no restored card as changed since the skip | `an_undo_whose_finish_answer_is_lost_says_its_outcome_is_not_known` |
 | A42 | (undo) a card reviewed on another client between the undo's converge and its push is listed to the owner in the undo's answer, with its review-log row kept, both when the review lands before the restore (the push overwrites it and only its review log shows it) and after it (the merge keeps the review), that later review landing at least one whole second after the restore's modification time, because a tie keeps the working copy's card (the pinned engine's `rslib/src/sync/collection/chunks.rs:184`) | `a_card_reviewed_during_the_undo_is_listed_to_the_owner` |
 | A43 | (undo) while the study day's take is `pending`, `/skipundo` refuses before any request or write with a bounded reason that the take's outcome is not known yet; and every undo's preview and confirm name the study day it undoes | `the_undo_refuses_while_the_take_is_pending_and_names_the_study_day_it_undoes` |
@@ -484,10 +490,11 @@ engine's current day, since a normal sync first unburies every buried card, what
 buried, whenever the collection's last-unburied day is before the engine's day, and does so
 without marking the card modified (`rslib/src/sync/collection/normal.rs:88`,
 `rslib/src/scheduler/bury_and_suspend.rs:32-50`). The write's tests run with FSRS off and on, and
-nothing reaches the owner's server. A40 runs on a
-synthetic collection whose rollover hour and configured UTC offset differ from the study-day rule's
-and from the test process's zone, and on one with no configured UTC offset under a test process
-zone other than UTC; A6 and A30 run their offset clauses on the first. For its undo, A40 takes a
+nothing reaches the owner's server. A40 runs on a synthetic collection whose rollover hour and
+configured UTC offset differ from the study-day rule's and from the test process's zone, and on one
+with no configured UTC offset under a test process zone other than UTC, and on one whose test
+process runs in a generic example zone that observes daylight saving, never the owner's; A6 and A30
+run their offset clauses on the first. For its undo, A40 takes a
 skip first, and then another client's change of the rollover hour or the configured UTC offset,
 or its removal of the offset, reaches the private copy by the copy's next sync; in its converge
 cases the same change reaches the server after the private copy's last sync. A second synthetic
@@ -535,9 +542,9 @@ delivery changes no pack's state.
 | file | context | change |
 |---|---|---|
 | `crates/ingest/src/skip.rs` | `deck-streak-ingest` | added: the record, its once-per-study-day take, the snapshot's rows, the undo's compare, a pending row's compare by state and modification time (R26), the skip set, the summary, the search with its holds (R3) and the day spec |
-| `crates/ingest/src/skip_write.rs` | `deck-streak-ingest` | added: the take's and the undo's write on a working copy: the preview's list and digest, the converge, the snapshot's commits, the reschedule or the restore, the push and the read-back, incremental syncs only, the refusal while the engine's day is not the study day or the configured UTC offset is missing or not the process's zone, checked before any request and again on the converged working copy (R3), an outcome not known yet after a push's first request (R25, R32), and the test seam between steps |
+| `crates/ingest/src/skip_write.rs` | `deck-streak-ingest` | added: the take's and the undo's write on a working copy: the preview's list and digest, the converge, the snapshot's commits, the reschedule or the restore, the push and the read-back, incremental syncs only, the refusal while the engine's day is not the study day, the configured UTC offset is missing or not the process's zone, or the process's zone observes daylight saving, checked before any request and again on the converged working copy (R3, A40), an outcome not known yet after a push's first request (R25, R32), and the test seam between steps |
 | `crates/ingest/src/engine.rs` | `deck-streak-ingest` | changed: the port gains the wrapped search's cards with their scheduling state, Set Due Date over a card list, and the card update that writes recorded fields back; `RslibEngine` implements them over the engine |
-| `crates/ingest/src/settings.rs` | `deck-streak-ingest` | changed: `DECKSTREAK_SKIP_SEARCH`, defaulting to the golden constant, refused at start when it does not parse as one expression (R3) |
+| `crates/ingest/src/settings.rs` | `deck-streak-ingest` | changed: `DECKSTREAK_SKIP_SEARCH`, defaulting to the golden constant, refused at start when it does not parse as one expression, and the process's zone refused at start when it observes daylight saving (R3) |
 | `crates/ingest/src/data_rights.rs` | `deck-streak-ingest` | changed: `skip_days` and `skip_card_snapshot`, exported and erased |
 | `crates/ingest/src/lib.rs` | `deck-streak-ingest` | changed: the skip modules |
 | `crates/ingest/tests/skip_record.rs` | `deck-streak-ingest` | added: A1 to A4, A7, A8 |
@@ -582,7 +589,7 @@ delivery changes no pack's state.
 | `Cargo.lock` | workspace | changed |
 | `.env.example` | repo | changed: `DECKSTREAK_SKIP_SEARCH`, empty, with the default named in its comment |
 | `docs/CONTEXT-MAP.md` | docs | changed: the register of DeckStreak's own tables gains `skip_days` and `skip_card_snapshot` |
-| `docs/OWNER-SETUP.md` | docs | changed: the sync server's section says that the skip day's reschedule and its undo are DeckStreak's only writes to the owner's server (ADR-089), and that a preview, a take or an undo refuses unless the process's zone is the collection's configured UTC offset and the engine's day is the study day (R3) |
+| `docs/OWNER-SETUP.md` | docs | changed: the sync server's section says that the skip day's reschedule and its undo are DeckStreak's only writes to the owner's server (ADR-089), and that a preview, a take or an undo refuses unless the process's zone is the collection's configured UTC offset, the engine's day is the study day, and the service's zone observes no daylight saving (R3) |
 | `privacy.json` | repo | changed: the `skip-days` category, over both tables |
 | `PRIVACY.md` | repo | changed: the `skip-days` line |
 | `tools/parity-oracle/registry/spec_083.py` | repo | added: this SPEC's registrations (SPEC-029's registry) |
@@ -675,13 +682,11 @@ delivery changes no pack's state.
   the engine computes its day again at the reschedule (the pinned engine's
   `rslib/src/scheduler/reviews.rs:136`) and at the start of each normal sync that exchanges changes
   (`rslib/src/sync/collection/normal.rs:87`). A rollover in that moment makes the reschedule count
-  the day spec's range from the next day, so the cards land a day later than R3 intends. A
-  change of the zone's offset in that moment, a daylight-saving change, makes the engine rewrite
-  the configured UTC offset to the zone's new one, and the push carries it (R23): a setting
-  guardrail (i) does not allow, holding the value each client in that zone writes at its own
-  next sync. Not prevented: the push's own normal sync computes the day after its first request
-  and sends the configuration in the same call (`normal.rs:80-90`), so no check can run in
-  between. The window is the moment between a check and that computation; the impact is low.
+  the day spec's range from the next day, so the cards land a day later than R3 intends. The
+  window is the moment between a check and that computation; the impact is low. A change of the
+  zone's offset in that moment, a daylight-saving change, is prevented: R3 refuses the preview,
+  the take and the undo before any request or write when the process's zone observes daylight
+  saving, so no deployment that could hit this race ever starts one (A40).
 - **The private copy shows the moved cards as due until its next sync.** Visible: the take's answer
   counts the cards moved, and the owner's `/sync` refreshes the copy (ADR-037).
 - **A consumer reads the skip days its own way** and drifts from the port. Detected by A4 and the

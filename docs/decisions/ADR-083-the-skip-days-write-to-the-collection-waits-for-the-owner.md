@@ -56,6 +56,7 @@ make the write so that the guardrails hold by construction?
 - Compose the wrapped search from the configured search's parsed terms — rejected because the engine renders parsed terms in its own form (the pinned engine's `rslib/src/search/writer.rs:45-47`), not as the golden's wrap that SPEC-083's A7 pins, while refusing a configured search that does not parse as one expression keeps every other search the golden's own wrap followed by SPEC-083 R3's holds.
 - Run the engine in the study day's zone and rollover — rejected because the engine's day in client mode is the collection's rollover hour in the process's own zone (the pinned engine's `rslib/src/scheduler/mod.rs:90-108`), so it holds only when the collection's rollover and configured UTC offset already equal the study day's, and otherwise needs a setting changed, which the push would carry whole (SPEC-083 R23), against guardrail (i); refusing covers the same cases and writes nothing.
 - Record a take whose push fails as `failed`, like any other failure — rejected because the engine's sync server commits a push only at `finish` (the pinned engine's `rslib/src/sync/collection/finish.rs:31-37`), so a failure after the push's first request may follow a committed push, and a `failed` row would free the study day and tell the owner that nothing was written while the moved cards stand, where no undo could reach them (SPEC-083 R1, R5, R25).
+- Accepting the daylight-saving moment as a named risk: rejected, because a push could then carry a changed setting, which guardrail (i) forbids, and only the owner may relax an owner clause.
 
 ## Decision Outcome
 
@@ -133,12 +134,15 @@ Chosen option: "(a) an upload path for the skip day alone", the owner's decision
   preview, the take and the undo refuse before any request, and a take or an undo whose converge
   brings another client's setting that fails either check ends before its push, because the engine
   would count from another day or rewrite that offset, which the push would carry (SPEC-083 R3,
-  R23). A rollover or a change of the zone's offset in the moment after a check still gets through:
-  the cards then land a day later, or the push carries the zone's new offset (SPEC-083 §6).
+  R23). A rollover in the moment after a check still gets through: the cards then land a day later
+  (SPEC-083 §6). A change of the zone's offset in that moment is prevented: R3 refuses a zone that
+  observes daylight saving before any request or write (SPEC-083 R3, A40).
 - Bad, because a push whose answer is lost may already be committed, so its outcome is not known at
   once. The take's row stays `pending` until the private copy's next sync settles it, and the undo
   leaves its skip `applied` until a later undo, which counts the cards already restored as restored;
   neither answer says that nothing was written (SPEC-083 R25, R26, R32).
+- Bad, because the service skips nothing in a zone that observes daylight saving; such a deployment
+  refuses every skip until its zone is changed (SPEC-083 R3).
 
 ### Confirmation
 
@@ -147,7 +151,8 @@ review-log rows, and no setting changed but the engine's own last-unburied day (
 configured search moves only the study day's due review cards outside a filtered deck, or is
 refused when it closes the wrap's group (A38); a take or an undo holds to the study day and changes
 no setting when the engine's day or the collection's configured UTC offset differs or is missing,
-in the private copy or as its converge brings it (A40); every other path
+in the private copy or as its converge brings it, and refuses before any request or write in a test
+process whose zone observes daylight saving (A40); every other path
 records zero uploads (A6), and only the skip's take and undo reach an engine write (A24); a
 full-sync demand aborts a take or an undo, writing nothing (A25, A26, A32); only the owner's
 confirm reaches the take and the undo, once per confirm (A27); the preview lists the cards and
