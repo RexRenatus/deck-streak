@@ -32,6 +32,10 @@ WHITESPACE = " \t\n\r"
 EXIT_NAMES = {"SUCCESS": 0, "FAILURE": 1}
 
 
+class Refused(AssertionError):
+    """A unit file the reader refuses to read, naming the file and the line (SPEC-066)."""
+
+
 @dataclasses.dataclass(frozen=True, slots=True)
 class Assignment:
     section: str

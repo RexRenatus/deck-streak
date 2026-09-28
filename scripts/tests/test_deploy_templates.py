@@ -237,6 +237,21 @@ def services(root=REPO):
     return examined("service unit(s) under deploy/", sorted(subject(root).services, key=name))
 
 
+def reader_refusal(files):
+    """The reader's refusal of a `deploy/systemd/` holding `files`, each a file name and its
+    content, or None when it reads every one (SPEC-066)."""
+    with tempfile.TemporaryDirectory() as scratch:
+        folder = Path(scratch) / "deploy" / "systemd"
+        folder.mkdir(parents=True)
+        for file, content in files.items():
+            (folder / file).write_bytes(content.encode("utf-8"))
+        try:
+            subject(scratch)
+        except _units.Refused as refusal:
+            return str(refusal)
+    return None
+
+
 def name(unit):
     return unit.name
 
@@ -1067,6 +1082,53 @@ class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
         words = _units.status_words('\\1 F\\AILURE 0\\ 1 \\ 1 \\ 0o1 0b\\ 1 "1"\t2 3\\')
         self.assertEqual(words, ["1", "FAILURE", "0 1", " 1", " 0o1", "0b 1", '"1"', "2"])
         self.assertEqual([_units.exit_status(w) for w in words], [1, 1, None, 1, 1, 1, None, 2])
+        # The reader refuses a line it would read otherwise than systemd does, one planted template
+        # at a time, naming the file and the line: a line that ends in a backslash, a comment's
+        # included; a control character other than tab and newline, or whitespace outside ASCII;
+        # and a line that is neither blank, a comment, a section header nor an assignment inside a
+        # section. A tab, and a `§` in a comment, are read.
+        backslash = "ends in a backslash, which the reader refuses"
+        character = "a character the reader refuses"
+        shape = "is neither a section header nor an assignment in a section"
+        misread = {
+            "continued-comment.service": (
+                f"{head}{page}{run}# a note \\\nExecCondition=/bin/true\n{loads}",
+                f"6: {backslash}",
+            ),
+            "escaped-backslash.service": (
+                f"{head}{page}{run}X-Note=kept \\\\\nExecCondition=/bin/true\n{loads}",
+                f"6: {backslash}",
+            ),
+            "alert-continued.service": (
+                f"{head}{run}SuccessExitStatus=2 \\\n1\n{loads}",
+                f"5: {backslash}",
+            ),
+            "spaced-section.service": (
+                f"[ Unit ]\nDescription=planted\n{page}{run}{loads}",
+                f"1: {shape}",
+            ),
+            "no-equals.service": (
+                f"{head}{page}{run}ExecCondition /bin/true\n{loads}",
+                f"6: {shape}",
+            ),
+            "no-section.service": (f"{page}{head}{run}{loads}", f"1: {shape}"),
+        }
+        for char in "\x0b\x0c\r\x00\x1c\x1d\x1e\x1f\x7f\x85\u00a0\u2009\u2028\u2029\u3000":
+            misread[f"char-{ord(char):04x}.service"] = (
+                f"{head}{page}{run}SuccessExitStatus={char}1 X-Y=z\n{loads}",
+                f"6: holds U+{ord(char):04X}, {character}",
+            )
+        misread["alert-char-000b.service"] = (
+            f"{head}{run}SuccessExitStatus=\x0b1 X-Y=z\n{loads}",
+            f"5: holds U+000B, {character}",
+        )
+        cases = examined("planted template(s) the reader refuses", sorted(misread))
+        self.assertEqual(
+            {file: reader_refusal({file: misread[file][0]}) for file in cases},
+            {file: f"deploy/systemd/{file}:{misread[file][1]}" for file in cases},
+        )
+        read = f"{head}# a note, \u00a7 3\n{page}{run}\t{loads}"
+        self.assertIsNone(reader_refusal({"read.service": read}))
 
 
 if __name__ == "__main__":

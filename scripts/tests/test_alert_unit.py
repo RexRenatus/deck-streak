@@ -20,6 +20,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import _units
 from _support import REPO, examined
 
 SYSTEMD = REPO / "deploy" / "systemd"
@@ -328,9 +329,13 @@ def alert_template_refusals(path):
     `SuccessExitStatus=` at all; and no `RestartMode=direct`, which skips the failed state on a
     restart. It restarts none: no `Restart=` other than `no`, and no `RestartForceExitStatus=` at
     all. And it is never unloaded while failed: no `CollectMode=` other than `inactive`
-    (systemd.service(5), systemd.unit(5))."""
+    (systemd.service(5), systemd.unit(5)). A template the reader refuses is refused whole, with the
+    reader's line."""
     name = Path(path).name
-    template = unit_file(path)
+    try:
+        template = unit_file(path)
+    except _units.Refused as refusal:
+        return [str(refusal)]
     refused = []
 
     def refuse(why):
@@ -596,6 +601,28 @@ class AnEmptyCredentialFailsTheAlertUnit(unittest.TestCase):
             with tempfile.TemporaryDirectory() as scratch:
                 path = planted_template(Path(scratch), anchor, line, keep)
                 self.assertEqual(alert_template_refusals(path), [f"{name}: {refusal}"], line)
+        # Planted lines the reader refuses, after ExecStart=, each refused whole with its line: one
+        # ending in a backslash, a comment's included, and a control character other than a tab or
+        # whitespace outside ASCII (SPEC-066 R3).
+        lines = (SYSTEMD / ALERT_TEMPLATE).read_bytes().decode("utf-8").split("\n")
+        (after,) = [n + 2 for n, text in enumerate(lines) if text.startswith("ExecStart=")]
+        backslash = "ends in a backslash, which the reader refuses"
+        misread = [
+            ("# a note \\\nExecCondition=/bin/true", backslash),
+            ("X-Note=kept \\\\\nExecCondition=/bin/true", backslash),
+        ] + [
+            (
+                f"SuccessExitStatus={char}1 X-Y=z",
+                f"holds U+{ord(char):04X}, a character the reader refuses",
+            )
+            for char in "\x0b\x0c\x85\u2028\u2029"
+        ]
+        for line, why in examined("planted alert template(s) the reader refuses", misread):
+            with tempfile.TemporaryDirectory() as scratch:
+                path = planted_template(Path(scratch), "ExecStart=", line, True)
+                self.assertEqual(
+                    alert_template_refusals(path), [f"{name}:{after}: {why}"], repr(line)
+                )
 
 
 if __name__ == "__main__":
