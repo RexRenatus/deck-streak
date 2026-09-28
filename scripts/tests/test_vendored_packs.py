@@ -1,4 +1,5 @@
-"""The vendored packs are byte-identical to the phoenix-v2 commit they name (ADR-004)."""
+"""The vendored packs are byte-identical to the phoenix-v2 commit they name (ADR-004), and every
+exclusion the manifest records is one a tool can apply (SPEC-037 A7)."""
 
 import hashlib
 import json
@@ -18,6 +19,31 @@ def unlisted_candidates():
     )
 
 
+def not_machine_applicable(entry):
+    """Why one `excluded` entry is prose a tool cannot apply, or [] when it is not (SPEC-037 R2):
+    exactly `globs` and `why`, and each glob one pattern over source paths, relative to the
+    source's root, with no whitespace a sentence would carry."""
+    if not isinstance(entry, dict):
+        return ["is not an object"]
+    problems = []
+    prose = sorted(set(entry) - {"globs", "why"})
+    if prose:
+        problems.append(f"carries prose keys: {', '.join(prose)}")
+    globs = entry.get("globs")
+    if not isinstance(globs, list) or not globs:
+        problems.append("carries no globs")
+    else:
+        for glob in globs:
+            if not isinstance(glob, str) or not glob or any(char.isspace() for char in glob):
+                problems.append(f"holds a glob that is not one pattern: {glob!r}")
+            elif glob.startswith("/") or ".." in glob.split("/") or "\\" in glob:
+                problems.append(f"holds a glob outside the source tree: {glob}")
+    why = entry.get("why")
+    if not isinstance(why, str) or not why.strip():
+        problems.append("gives no why")
+    return problems
+
+
 class VendoredPacksMatchTheirSource(unittest.TestCase):
     def setUp(self):
         self.manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
@@ -35,6 +61,19 @@ class VendoredPacksMatchTheirSource(unittest.TestCase):
         planted = set(present) | {".packs/skills/packs/sdd/planted.md"}
         self.assertEqual(sorted(planted - listed), [".packs/skills/packs/sdd/planted.md"])
         self.assertEqual(sorted(set(present) - listed), [])
+
+    def test_every_exclusion_is_machine_applicable(self):
+        planted = {"from": "skills/packs/x/** and scripts/y.py", "why": "a sentence, not a glob"}
+        self.assertEqual(
+            not_machine_applicable(planted), ["carries prose keys: from", "carries no globs"]
+        )
+        spaced = {"globs": ["skills/packs/x/** and scripts/y.py"], "why": "one glob, two paths"}
+        self.assertEqual(
+            not_machine_applicable(spaced),
+            ["holds a glob that is not one pattern: 'skills/packs/x/** and scripts/y.py'"],
+        )
+        for entry in examined("exclusions", self.manifest["excluded"]):
+            self.assertEqual(not_machine_applicable(entry), [], entry)
 
     def test_the_manifest_names_a_full_commit(self):
         self.assertRegex(self.manifest["vendored_from"], r"^[0-9a-f]{40}$")
