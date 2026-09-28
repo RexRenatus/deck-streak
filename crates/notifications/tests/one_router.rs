@@ -237,8 +237,11 @@ const NAMED_SENDS: [(&str, &str, &str); 7] = [
 /// append from a module beside the router. The architect's ruling on the second review: four writes
 /// to the held queue around the router, which a flush delivers: through the ledger's table name
 /// from the flush step's crate, in SQL from a script, through the ledger's own writes from a module
-/// beside the router, and through one of them re-exported at the crate's root.
-const AROUND_THE_PORT: [(&str, &str); 15] = [
+/// beside the router, and through one of them re-exported at the crate's root. The third review's:
+/// a copy of a message from a new module of the bot; the Bot API's edit from a new function of the
+/// bot's transport; and a forward, a pin and a reaction through the Bot API's client from the
+/// daemon.
+const AROUND_THE_PORT: [(&str, &str); 18] = [
     (
         "crates/daemon/src/role_bot.rs",
         r#"/// A celebration sent straight to the owner's chat through the bot's transport, around the router.
@@ -459,6 +462,43 @@ pub mod quiet;
 /// The ledger's hold, re-exported at the crate's root, so a module beside the router holds a
 /// celebration on the queue without naming the ledger.
 pub(crate) use ledger::hold;
+",
+    ),
+    (
+        "crates/bot/src/copy.rs",
+        r#"//! A celebration from inside the bot crate: a copy of a message, which names no send method.
+
+/// A celebration copied into the owner's chat by a new module of the bot, around the router.
+pub async fn celebrate(api_url: &str, token: &str, chat: i64, from: i64, id: i32) {
+    let url = format!("{api_url}/bot{token}/copyMessage");
+    let body = serde_json::json!({ "chat_id": chat, "from_chat_id": from, "message_id": id });
+    let _answer = reqwest::Client::new().post(url).json(&body).send().await;
+}
+"#,
+    ),
+    (
+        "crates/bot/src/transport.rs",
+        r#"impl Transport {
+    /// A celebration written over a message already in the owner's chat, around the router.
+    pub async fn celebrate_by_an_edit(&self, chat: i64, message_id: i32) -> bool {
+        let params = EditMessageTextParams::builder()
+            .chat_id(chat)
+            .message_id(message_id)
+            .text("a celebration the router never decided")
+            .build();
+        self.bot.edit_message_text(&params).await.is_ok()
+    }
+}
+"#,
+    ),
+    (
+        "crates/daemon/src/digest.rs",
+        r"/// A celebration forwarded, pinned and reacted to in the owner's chat, around the router.
+async fn celebrate_through_the_client(bot: &Bot, forward: &ForwardMessageParams, pin: &PinChatMessageParams, reaction: &SetMessageReactionParams) {
+    let _forwarded = bot.forward_message(forward).await;
+    let _pinned = bot.pin_chat_message(pin).await;
+    let _reacted = bot.set_message_reaction(reaction).await;
+}
 ",
     ),
 ];
@@ -1222,7 +1262,13 @@ fn no_delivery_goes_around_the_port() {
             "crates/api/src/notifications_routes.rs:3: names sendMessage",
             "crates/api/src/router.rs:6: names FEED_TABLE",
             "crates/bot/src/celebrate.rs:5: names sendMessage in celebrate, not a named call site",
+            "crates/bot/src/copy.rs:5: names copyMessage in celebrate, not a named call site",
+            "crates/bot/src/transport.rs:9: names edit_message_text in \
+             Transport::celebrate_by_an_edit, not a named call site",
             "crates/coordination/src/sync_cycle.rs:6: names QUEUE_TABLE",
+            "crates/daemon/src/digest.rs:3: names forward_message",
+            "crates/daemon/src/digest.rs:4: names pin_chat_message",
+            "crates/daemon/src/digest.rs:5: names set_message_reaction",
             "crates/daemon/src/lifecycle.rs:4: calls edit_html in celebrate_by_an_edit, \
              not a named call site",
             "crates/daemon/src/main.rs:6: calls handle in celebrate_by_a_fabricated_command, \
@@ -1245,8 +1291,9 @@ fn no_delivery_goes_around_the_port() {
             "deploy/scripts/hold.py:9: names notification_queue",
         ],
         "the bot's own send, named or called, its edit and its command handler, raw requests to \
-         the Bot API and on its base URL, a raw request from inside the bot, and writes to the \
-         Mini App's feed and to the held queue, around the port"
+         the Bot API and on its base URL, a raw request from inside the bot, writes to the Mini \
+         App's feed and to the held queue, and the Bot API's copy, edit, forward, pin and \
+         reaction, around the port"
     );
 
     // The walker reads a shipped module in a directory named as tests are, because it is under
