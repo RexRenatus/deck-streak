@@ -13,7 +13,8 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use deck_streak_coordination::delivery::NoNotifier;
 use deck_streak_coordination::ledger::SqliteCronLedger;
 use deck_streak_coordination::liveness::{
-    DEAD_MAN_WINDOW_SECS, LIVENESS_BOOT_GRACE_SECS, rollover_skew_minutes, signed_skew_minutes,
+    DEAD_MAN_WINDOW_SECS, LIVENESS_BOOT_GRACE_SECS, SyncHistory, check, rollover_skew_minutes,
+    signed_skew_minutes,
 };
 use deck_streak_coordination::runner::{Reason, Report, Runner, SyncCycle};
 use deck_streak_ingest::sync::SyncReport;
@@ -291,4 +292,89 @@ async fn a_maintenance_fire_drifting_past_the_tolerance_pages() {
         );
     }
     println!("examined 4 maintenance fire(s)");
+}
+#[test]
+fn the_watch_pages_just_past_each_of_its_boundaries() {
+    let rule = StudyDayRule::default();
+    let later = |instant: UtcMillis, millis: i64| {
+        UtcMillis::from_epoch_millis(instant.epoch_millis() + millis)
+    };
+    let dead = |silent_secs: i64| Reason::new("sync_dead").with("silent_secs", silent_secs);
+    let quiet: Vec<Reason> = Vec::new();
+
+    // One success: dead from the end of the window, and not a millisecond before.
+    let success = at(DAY, 4, 8);
+    let history = SyncHistory {
+        last_success_at: Some(success),
+        first_attempt_at: Some(success),
+    };
+    let dead_after = later(success, DEAD_MAN_WINDOW_SECS * 1000);
+    assert_eq!(history.dead_after(), Some(dead_after));
+    assert_eq!(check(dead_after, None, history, None, rule), quiet);
+    assert_eq!(
+        check(later(dead_after, 1), None, history, None, rule),
+        [dead(DEAD_MAN_WINDOW_SECS)]
+    );
+    // The previous check ran at the very instant it died, so it had not found it dead: this one is
+    // the first. One that ran a millisecond later had, so this one only repeats.
+    assert_eq!(
+        check(later(dead_after, 2), Some(dead_after), history, None, rule),
+        [dead(DEAD_MAN_WINDOW_SECS)]
+    );
+    assert_eq!(
+        check(
+            later(dead_after, 2),
+            Some(later(dead_after, 1)),
+            history,
+            None,
+            rule
+        ),
+        quiet
+    );
+
+    // Never a success: the grace counts from the first attempt.
+    let never = SyncHistory {
+        last_success_at: None,
+        first_attempt_at: Some(success),
+    };
+    let grace_end = later(success, LIVENESS_BOOT_GRACE_SECS * 1000);
+    assert_eq!(never.dead_after(), Some(grace_end));
+    assert_eq!(check(grace_end, None, never, None, rule), quiet);
+    assert_eq!(
+        check(later(grace_end, 1000), None, never, None, rule),
+        [Reason::new("sync_never_succeeded").with("since_first_attempt_secs", 901)]
+    );
+    assert_eq!(
+        SyncHistory::default().dead_after(),
+        None,
+        "nothing attempted, nothing dead"
+    );
+
+    // The drift: 30 minutes off the 04:28 slot is within the tolerance, 31 is not, late or early;
+    // and only the first check after the fire pages on it.
+    let alive = SyncHistory {
+        last_success_at: Some(success),
+        first_attempt_at: Some(success),
+    };
+    let now = at(DAY, 5, 14);
+    let drift = |skew_min: i64| Reason::new("maintenance_drift").with("skew_min", skew_min);
+    let fires = [
+        (at(DAY, 4, 58), vec![]),
+        (at(DAY, 4, 59), vec![drift(31)]),
+        (at(DAY, 3, 58), vec![]),
+        (at(DAY, 3, 57), vec![drift(-31)]),
+    ];
+    for (fired, expected) in &fires {
+        assert_eq!(check(now, None, alive, Some(*fired), rule), *expected);
+    }
+    println!(
+        "examined {} maintenance fire(s) against the tolerance",
+        fires.len()
+    );
+    let fired = at(DAY, 4, 59);
+    assert_eq!(check(now, Some(fired), alive, Some(fired), rule), quiet);
+    assert_eq!(
+        check(now, Some(later(fired, -1)), alive, Some(fired), rule),
+        [drift(31)]
+    );
 }

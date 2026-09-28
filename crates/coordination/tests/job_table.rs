@@ -310,3 +310,91 @@ fn the_job_table_holds_sync_to_one_daily_slot_claimed_per_study_day() {
     println!("examined {fires} scheduled sync fire(s)");
     assert_eq!(fires, 24 * offsets.len() * 30);
 }
+
+/// The latest instant at or before `now` that `schedule` fires at, found the slow and obvious way:
+/// a scan back from `now`, one minute at a time, to the first local hour and minute the schedule
+/// names.
+fn scanned(schedule: Schedule, now: UtcMillis, rule: StudyDayRule) -> UtcMillis {
+    let offset = i64::from(rule.utc_offset().minutes()) * MINUTE_MS;
+    let mut minute = now.epoch_millis().div_euclid(MINUTE_MS) * MINUTE_MS;
+    loop {
+        let local = minute + offset;
+        let hour = local.rem_euclid(DAY_MS) / HOUR_MS;
+        let of_hour = local.rem_euclid(HOUR_MS) / MINUTE_MS;
+        let fires = match schedule.daily_slot(rule.rollover_hour()) {
+            Some((slot_hour, slot_minute)) => {
+                hour == i64::from(slot_hour) && of_hour == i64::from(slot_minute)
+            }
+            None => of_hour == i64::from(schedule.minute()),
+        };
+        if fires {
+            return UtcMillis::from_epoch_millis(minute);
+        }
+        minute -= MINUTE_MS;
+    }
+}
+
+#[test]
+fn every_schedule_answers_its_latest_fire_at_every_offset() {
+    let schedules = [
+        jobs::SYNC.schedule,
+        jobs::MAINTENANCE.schedule,
+        jobs::LIVENESS.schedule,
+        Schedule::DailyAt { hour: 0, minute: 0 },
+        Schedule::DailyAt {
+            hour: 23,
+            minute: 59,
+        },
+    ];
+    let mut answered = 0_usize;
+    for schedule in schedules {
+        for hour in [0, 4, 23] {
+            for minutes in [-720, -300, 0, 330, 840] {
+                let offset = UtcOffset::from_minutes(minutes).expect("an offset");
+                let rule = StudyDayRule::new(Hour::new(hour).expect("an hour"), offset);
+                // Instants on every side of a slot: the minute itself, a millisecond before and
+                // after it, and the minutes around local midnight.
+                let base = 20_000 * DAY_MS - i64::from(minutes) * MINUTE_MS;
+                let mut instants = Vec::new();
+                for local in [
+                    i64::from(hour) * HOUR_MS + 7 * MINUTE_MS,
+                    i64::from(hour) * HOUR_MS + 28 * MINUTE_MS,
+                    14 * MINUTE_MS,
+                    DAY_MS - MINUTE_MS,
+                    DAY_MS + 30 * MINUTE_MS,
+                    13 * HOUR_MS + 14 * MINUTE_MS,
+                ] {
+                    for nudge in [-1, 0, 1, 59_999] {
+                        instants.push(UtcMillis::from_epoch_millis(base + local + nudge));
+                    }
+                }
+                for now in instants {
+                    let expected = scanned(schedule, now, rule);
+                    assert_eq!(
+                        schedule.latest_at_or_before(now, rule),
+                        expected,
+                        "{schedule:?} at {} with rollover {hour}, offset {minutes}",
+                        now.epoch_millis()
+                    );
+                    let local_day = |instant: UtcMillis| {
+                        (instant.epoch_millis() + i64::from(minutes) * MINUTE_MS).div_euclid(DAY_MS)
+                    };
+                    let today = local_day(expected) == local_day(now);
+                    assert_eq!(
+                        schedule.latest_elapsed_today(now, rule),
+                        today.then_some(expected),
+                        "{schedule:?} today at {} with rollover {hour}, offset {minutes}",
+                        now.epoch_millis()
+                    );
+                    assert_eq!(
+                        FireDate::of(expected, offset).epoch_day(),
+                        local_day(expected)
+                    );
+                    answered += 1;
+                }
+            }
+        }
+    }
+    println!("examined {answered} instant(s) of five schedules");
+    assert_eq!(answered, 5 * 3 * 5 * 6 * 4);
+}
