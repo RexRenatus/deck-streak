@@ -18,11 +18,13 @@
 //! alert path aside; inside them a send method is named only in the named send that makes its
 //! request. The bot's `send_html`, its `edit_html` and its command handler are used only at named
 //! call sites, and each of the seven named sends is found exactly once. Only the router's ledger,
-//! router and data-rights modules name the Mini App's feed. The refusals are proved on the reviews'
-//! deliveries around the port, which the test holds as text, and on a tree it writes for the
-//! walker. A text census reads names, so a request assembled from parts, in which neither the Bot
-//! API's host nor a send method's name appears, and a source of a kind it does not read, go unread
-//! (#297).
+//! router and data-rights modules, which own their writes, name the Mini App's feed or the held
+//! queue, which a flush delivers; and because the ledger's writes to the queue are private to the
+//! notifications crate, only they name the ledger in that crate's sources, the root's declaration
+//! of it aside. The refusals are proved on the reviews' deliveries around the port, which the test
+//! holds as text, and on a tree it writes for the walker. A text census reads names, so a request
+//! or a table's name assembled from parts, in which no name it reads appears, and a source of a
+//! kind it does not read, go unread (#297).
 
 // An integration test is test code: its helpers panic on a failed fixture, and the examined count
 // is printed on purpose.

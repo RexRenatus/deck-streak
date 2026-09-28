@@ -58,10 +58,11 @@ budgets and the holdout wait for the engagement wave.
   bot message; the decision ledger shows which surface was chosen.
 - Bad, because the lapse context is only as good as the caller's lapse source; the kinds that
   depend on it name the governor as a prerequisite.
-- Bad, because a text census reads names, not requests: a request whose URL or method is
-  assembled from parts, so that neither the Bot API's host nor a send method's name appears; a
-  write to the held queue from outside the router's modules, which a flush would deliver; and a
-  source of a kind the census does not read, all go unread (#297).
+- Bad, because a text census reads names, not requests or statements: a request whose URL or
+  method is assembled from parts, so that neither the Bot API's host nor a send method's name
+  appears; a statement whose table's name is assembled from parts, so that neither the feed's nor
+  the held queue's name appears; and a source of a kind the census does not read, all go unread
+  (#297).
 
 ### Confirmation
 
@@ -82,7 +83,9 @@ The delivery decided each question the SPEC left open against its alternatives:
   aside; inside them a send method is named only in the named send that makes its request; the
   bot's `send_html`, `edit_html` and command handler are used only at named call sites (`OwnerChat`,
   the command replies (#257) and the transport's own requests; none for `edit_html`; the long poll
-  for the handler); and only the router's modules name the Mini App's feed. The box run's
+  for the handler); and only the router's modules name the Mini App's feed or the held queue,
+  which a flush delivers, and in the notifications crate only they name the ledger, whose writes to
+  the queue are private to the crate, the root's declaration of it aside. The box run's
   `one-router` row refuses a call the policy names (§3a B1). Chosen against holding the rule by that
   row alone, which matches only the names the policy lists and finds a stray call only after it is
   written; against a private trait, which the bot could not implement; and against parsing the

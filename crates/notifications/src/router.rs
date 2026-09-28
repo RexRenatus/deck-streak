@@ -5,9 +5,10 @@
 //! it. A delivery around the port is held by a census (A15) of the shipped sources of the kinds it
 //! names: it refuses the bot's own send, edit or command handler outside their named call sites, a
 //! Bot API send method named anywhere but its named send, the Bot API's host named outside the
-//! bot's sources, and the in-app feed named outside this module, the ledger and the data-rights
-//! port. A request assembled from parts, which names neither the host nor a send method, is not
-//! read (#297).
+//! bot's sources, and the in-app feed or the held queue named outside this module, the ledger and
+//! the data-rights port, which own their writes, or in this crate the ledger named outside them,
+//! its root's declaration aside. A request, or a table's name, assembled from parts, which names
+//! neither the host, a send method nor a table, is not read (#297).
 //!
 //! [`Router::route`] decides one occasion inside one `BEGIN IMMEDIATE` write: the kind's switch;
 //! the claim of its key in its dedupe scope, which a later withhold releases; the lapse; the quiet

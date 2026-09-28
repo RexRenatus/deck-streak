@@ -169,7 +169,7 @@ the verdict of a run with that wiring is posted as the `box/packs` status at the
 | `crates/notifications/tests/comeback_budget.rs` | `deck-streak-notifications` | added |
 | `crates/notifications/tests/rights.rs` | `deck-streak-notifications` | added |
 | `crates/notifications/tests/policy.rs` | `deck-streak-notifications` | added: A1, A3, and the policy's refusals |
-| `crates/notifications/tests/one_router.rs` | `deck-streak-notifications` | added: A2, and A15's census of the shipped sources of the kinds it reads |
+| `crates/notifications/tests/one_router.rs` | `deck-streak-notifications` | added: A2, and A15's census of the shipped sources of the kinds it reads, which refuses a write to the Mini App's feed or to the held queue outside the router's modules |
 | `crates/notifications/tests/ui/push_outside_the_router.rs`, `.stderr` | `deck-streak-notifications` | added: A2's compile-fail fixture and the refusal it records |
 | `crates/notifications/tests/ui/pass_by_default.rs`, `.stderr`, `crates/notifications/tests/ui/pass_kept_by_a_clone.rs`, `.stderr` | `deck-streak-notifications` | added: A2's fixtures for a pass made by `Default` and one kept by cloning a borrowed pass, each with the refusal it records |
 | `crates/notifications/tests/support/mod.rs` | `deck-streak-notifications` | added: the tests' database, clock and recording transport |
@@ -215,12 +215,12 @@ the verdict of a run with that wiring is posted as the `box/packs` status at the
   (#83).
 - It builds no settings screen for quiet hours or a kind's switch (#57).
 - It pins and re-pins no widget (#121).
-- It holds no delivery the census cannot read, because a text census reads names, not requests: a
-  request whose URL or method is assembled from parts, so that neither the Bot API's host nor a
-  send method's name appears (outside the bot, on a base URL read through `ApiUrl::as_str`; inside
-  the bot's sources, with a method's name built from pieces); a write to the held queue from outside
-  the router's modules, which a flush would deliver; and a source of a kind the census does not
-  read (#297).
+- It holds no delivery the census cannot read, because a text census reads names, not requests or
+  statements: a request whose URL or method is assembled from parts, so that neither the Bot API's
+  host nor a send method's name appears (outside the bot, on a base URL read through
+  `ApiUrl::as_str`; inside the bot's sources, with a method's name built from pieces); a statement
+  whose table's name is assembled from parts, so that neither the feed's nor the held queue's name
+  appears; and a source of a kind the census does not read (#297).
 
 ## 6. Risks
 
@@ -228,7 +228,7 @@ the verdict of a run with that wiring is posted as the `box/packs` status at the
   `push_message`. Detected by A2 (the compiler) for the port's call and by the box run's `one-router`
   row (§3a B1) for a call the policy names, and by A15's census for a delivery around the port in
   the sources it reads: the bot's own send, edit or command handler, a raw request to the Bot API,
-  or a write to the Mini App's feed.
+  or a write to the Mini App's feed or to the held queue.
 - **The lapse context is empty until the governor exists**, so a nudge could reach an owner in a
   real lapse. Detected by SPEC-049's lapse tests, which run over the minimal lapse-episode slice
   SPEC-049 builds in `streaks` ahead of W3's governor; the W1 kinds that nudge (`reading_ready`,
@@ -345,6 +345,14 @@ the verdict of a run with that wiring is posted as the `box/packs` status at the
     request on it; the bot's own test of the unset base URL reads Telegram's URL as written.
   - The Mini App's feed: only the router's ledger, router and data-rights modules name its table,
     `in_app_feed` in any case, the ledger's `FEED_TABLE` or its `append_feed`.
+  - The held queue, by the architect's ruling on the round: a write to `notification_queue` from
+    outside the router's modules is a delivery around the router, because a flush delivers what the
+    queue holds. The modules that own its writes are the same three: the ledger holds the SQL of
+    each write (`hold`, `abandon`, `relatch`, `settle`), the router is their one caller, and the
+    data-rights port exports and erases it. Only they name its table, `notification_queue` in any
+    case, or the ledger's `QUEUE_TABLE`; and because the ledger's writes to the queue are private to
+    the notifications crate, only they name the ledger in that crate's sources, the root's
+    declaration of it aside.
   - `Transport::answer_callback` is not a delivery: it answers a callback query with no text, so the
     owner's client stops its progress indicator.
   - `Transport::set_chat_menu` is not a delivery: it registers the owner's command menu, which the

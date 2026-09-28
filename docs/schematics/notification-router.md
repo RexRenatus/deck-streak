@@ -55,15 +55,17 @@ what it names:
   each bot transport call takes one, so a call of the port outside the module does not compile: the
   pass has a private field, no `Default` and no `Clone`. `push_in_app` is private to the module.
 - **A delivery around the port, by a census (A15).** A source that never calls the port could still
-  reach the owner through the bot's own send, edit or command handler, a raw request to the Bot
-  API, or a write to the Mini App's feed. The census reads every shipped source of the kinds it
-  names (the Rust, Python and web sources, the shell scripts by extension or `#!` first line, and
-  the systemd units and their drop-ins) and refuses each: outside the bot's sources nothing names
-  the Bot API's host, a send method or the bot's `DEFAULT_API_URL`, SPEC-031's alert path aside;
-  inside them a send method is named only in the named send that makes its request; the bot's
-  `send_html`, `edit_html` and command handler are used only at named call sites; and only the
-  router's modules name the feed. A request assembled from parts, which names neither the host nor
-  a send method, is not read (#297).
+  reach the owner through the bot's own send, edit or command handler, a raw request to the Bot API,
+  a write to the Mini App's feed, or a write to the held queue, which a flush delivers. The census
+  reads every shipped source of the kinds it names (the Rust, Python and web sources, the shell
+  scripts by extension or `#!` first line, and the systemd units and their drop-ins) and refuses
+  each: outside the bot's sources nothing names the Bot API's host, a send method or the bot's
+  `DEFAULT_API_URL`, SPEC-031's alert path aside; inside them a send method is named only in the
+  named send that makes its request; the bot's `send_html`, `edit_html` and command handler are used
+  only at named call sites; and only the router's modules name the feed or the held queue, and in
+  the notifications crate the ledger, whose writes to the queue are private to it, the root's
+  declaration aside. A request, or a table's name, assembled from parts, which names neither the
+  host, a send method nor a table, is not read (#297).
 - **A call the policy names, by the box run (§3a B1).** The `one-router` row refuses a call of
   `push_message`, `push_dice`, `push_reaction`, `push_pin` or `push_in_app` outside `router.rs`.
 
