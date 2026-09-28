@@ -51,20 +51,23 @@
   guardrails, and each of the undo's rules, is a criterion below whose test is planned red first:
   - (i) the only writes ever made are the skip day's reschedule of that day's due review cards, and
     its exact inverse; every other path records zero uploads against the recording fake sync server
-    (A5, A6, A24);
+    (A5, A6, A24, A38);
   - (ii) incremental sync only: a full or one-way sync demand aborts, writes nothing and tells the
     owner (A25, A26);
   - (iii) the write runs only on the owner's explicit skip declaration, inside ADR-037's
-    owner-trigger rule, with no new scheduled sync (A27);
+    owner-trigger rule, with no new scheduled sync (A27, A6);
   - (iv) a preview of the cards to be rescheduled is shown before the write, and their prior due
-    dates are recorded so the skip can be undone (A28, A29);
+    dates are recorded so the skip can be undone (A28, A29, A39);
   - (v) the recording-server proof covers both the skip day's exact changes and the zero-upload
-    paths (A5, A6, A30), and the recorder is proved to see a planted upload (A33);
+    paths (A5, A6, A30, A38), and the recorder is proved to see a planted upload (A33);
   - the undo restores exactly the recorded prior due dates of exactly those cards (A30); it is
     owner-triggered, incremental only, and aborts on any full-sync demand (A27, A32); it carries the
-    same recording-server proof (A30, A31); and it writes only cards whose current state still
+    same recording-server proof (A6, A30, A31); and it writes only cards whose current state still
     equals what the skip wrote, listing every card reviewed or changed since (A31, A34).
 - **Where DeckStreak's write differs from the predecessor's**, by those guardrails:
+  - the predecessor's wrap keeps only new and learning cards out of a configured search
+    (`sync.py:AnkiSyncer._skip_day_blocking`); here any configured search is also held to the study
+    day's due review cards, and no card in a filtered deck is moved (R3, i);
   - the predecessor's converge resolves a full-sync demand by a full download
     (`sync.py:AnkiSyncer._converge`); here any full or one-way demand aborts the skip (ii);
   - the predecessor writes its own copy and reverts that copy in place when the upload fails
@@ -93,7 +96,8 @@
   (`SkipDaysLayer.skip_preview`); the charge and the refund (`EconomyLayer._charge_skip_tariff`,
   `EconomyLayer._refund_skip_tariff`); the summary (`skip.py:summarize_skips`); and the constants.
   The reschedule itself is the engine's own Set Due Date, proved against the recording layer (A5),
-  not against a golden.
+  not against a golden. R3's holds on the wrapped search are DeckStreak's own, and A38 proves them
+  against the recording layer.
 - **Prerequisites.** SPEC-022, SPEC-023, SPEC-071, SPEC-072, SPEC-076 and SPEC-082, as the header
   lists. SPEC-080 and SPEC-081 read this SPEC's skip set and prove their own reactions to it.
 
@@ -117,9 +121,25 @@ R2. Taking a skip on a study day that already holds one `pending` or `applied` a
     or a sync.
 R3. The search and the day spec: the configured search (`DECKSTREAK_SKIP_SEARCH`, defaulting to the
     predecessor's `constants.SKIP_DEFAULT_SEARCH`) wrapped exactly as the golden of
-    `sync.py:AnkiSyncer._skip_day_blocking` wraps it, so no new or learning card is ever selected,
-    and the day spec of the golden of `skip.py:skip_spec`, which carries no `!`, so the engine's Set
-    Due Date keeps each review card's interval. The preview shows both, and the write runs them.
+    `sync.py:AnkiSyncer._skip_day_blocking` wraps it (`-is:new -is:learn`), and held to the study
+    day's due review cards by the default search's own terms
+    (`prop:due=0 -is:suspended -is:buried`), so whatever `DECKSTREAK_SKIP_SEARCH` says, no card is
+    selected that is new, learning, relearning, suspended, buried or due on another day. It is also
+    held out of filtered decks (`-deck:filtered`), a deviation from the golden: the engine's Set Due
+    Date moves a card in a filtered deck back to its home deck (the pinned engine's
+    `rslib/src/scheduler/filtered/card.rs:52-58`), so its exact inverse would put the card back into
+    a filtered deck that may have been emptied, rebuilt or deleted since, and the engine's card
+    update writes a card's deck without checking that the deck exists
+    (`rslib/src/card/mod.rs:285-339`); the predecessor moved such cards and recorded their original
+    deck (`odid`) but not their deck (`did`) (`sync.py:AnkiSyncer._snapshot`). A review card due
+    today in a filtered deck is left where it is (A5, A38). The search the preview shows and the
+    write runs is therefore the golden's wrap of the configured search followed by
+    `prop:due=0 -is:suspended -is:buried -deck:filtered`, the default search included; with the
+    default search it selects what the golden's search selects, less the cards in a filtered deck.
+    The day spec is the golden of `skip.py:skip_spec`, which carries no `!`, so with FSRS off the
+    engine's Set Due Date keeps each review card's interval; with FSRS on it sets the interval by
+    its own rule, and the snapshot records the interval either way (R22). The preview shows both,
+    and the write runs them.
 R4. The skip set is exactly the study days that hold an `applied` skip not undone
     (`database.py:GamifyStore.skip_days_set`); a `pending` or `failed` skip is not in it. It is read
     through one port in coordination that every consumer calls; no other module queries
@@ -206,21 +226,23 @@ The write to the collection (#266, ADR-089)
 
 R19. Owner triggers only (guardrail iii). A take's write runs only when the owner confirms a skip:
     the bot's `sk:go`, or the Mini App's confirm through `POST /api/skip`, each owner-only, as an
-    owner trigger under ADR-037. No scheduled job, recompute step, restart catch-up, startup path or
-    agent tool calls the take or the undo, and neither adds a scheduled sync: the `sync` job keeps
-    its one daily slot (SPEC-027). Their syncs are recorded on the skip's own row, never in
+    owner trigger under ADR-037. No scheduled job, recompute step, restart catch-up, startup path,
+    agent tool, retry or spawned task calls the take or the undo or sends their push again, so each
+    runs once per confirm. Neither adds a scheduled sync: the `sync` job keeps its one daily slot
+    (SPEC-027). Their syncs are recorded on the skip's own row, never in
     `sync_runs` (SPEC-022 R16), and ADR-037's five-minute reuse of a recent sync does not apply to
     them: a write always follows its own converge.
 R20. The preview binds the take (guardrail iv). The preview lists the cards the wrapped search (R3)
     selects in the private copy, read under the shared collection lock: each card's id, its
     top-level deck and its current due, with a digest of the listed ids. The confirm carries the
-    digest. The take first lists the cards again from the private copy, and when the digest
-    differs it writes nothing, sends no request, and answers `preview_changed` with the new preview.
+    digest. The take first lists the cards again from the private copy, and when the confirm
+    carries no digest, or one that differs from the list it reads, it writes nothing, sends no
+    request, and answers `preview_changed` with the new preview.
 R21. The working copy and the converge (guardrails i and ii). Under the exclusive collection lock,
     the take copies the private copy to a working copy beside it and converges the working copy with
     one normal (incremental) sync. The cards it moves are the previewed cards that the wrapped
-    search still selects in the converged working copy. A previewed card no longer due, and a card
-    due that the preview did not list, are left alone and listed in the answer. More cards than
+    search (R3) still selects in the converged working copy. A previewed card no longer due, and a
+    card due that the preview did not list, are left alone and listed in the answer. More cards than
     `SKIP_MAX_CARDS` (5,000, the golden constant) are refused with `too_many_cards` before any
     change; with no card to move, the skip is recorded `applied` with none moved, and no card is
     written and no second sync runs (the predecessor's `noop`).
@@ -250,8 +272,12 @@ R26. An outcome the answer cannot wait for (#108's reconciliation). The take's a
     cancelled mid-sync: the answer says `pending`, and the write's own outcome settles the row, as
     the predecessor's reconciliation does (`SkipDaysLayer._reconcile_later`). A row still `pending`
     when the service starts is settled after the private copy's next successful sync: `applied`
-    when any of its recorded cards carries the due date the skip wrote, and `failed` otherwise. The
-    tariff is charged only when a row settles `applied`.
+    when any of its recorded cards carries the scheduling state and modification time the take
+    recorded after its reschedule (R22), which only the take's push can have put on the server, and
+    `failed` otherwise, a row with no such record included. A due date alone never settles a row
+    `applied`: a card reviewed on another client can land on the date the skip wrote, and a tariff
+    charged for a push that never landed is worse than a tariff missed. The tariff is charged only
+    when a row settles `applied`.
 R27. The read-back (the undo's rules). After the push, the take reads each moved card back from the
     synced working copy. A card whose state differs from what the skip wrote, or whose review log
     holds a study event after the take's converge (a review on another client that the sync's merge
@@ -259,8 +285,9 @@ R27. The read-back (the undo's rules). After the push, the take reads each moved
 R28. Every other path uploads nothing (guardrail i). Only the take's and the undo's write
     (`crates/ingest/src/skip_write.rs`) reaches the engine's card writes (Set Due Date and the card
     update) or pushes a local change. Every other path, from a scheduled or owner sync to a preview,
-    a refused take and an aborted or failed one, records zero uploads and zero local changes through
-    the recording layer, and leaves the private copy's bytes as its own sync left them.
+    a refused take and an aborted or failed one, and a refused undo, one with no card to write and
+    an aborted or failed one, records zero uploads and zero local changes through the recording
+    layer, and leaves the private copy's bytes as its own sync left them.
 
 The undo's write (#266, ADR-089)
 
@@ -268,8 +295,11 @@ R29. Owner-triggered (the undo's rules). The undo runs only on the owner's expli
     `sk:undo`, or `POST /api/skip/undo`, each owner-only, as an owner trigger under ADR-037 (R19).
 R30. Incremental only (the undo's rules). The undo works on its own working copy under the exclusive
     collection lock, and converges it with one normal sync. A full or one-way sync demand at its
-    converge or at its push aborts it: nothing is pushed, the working copy is discarded, the skip
-    stays `applied` with its record and its tariff unchanged, and the answer tells the owner.
+    converge or at its push, in either direction, aborts it: it resolves the demand neither by a
+    download nor by an upload, nothing is pushed, the private copy's bytes are unchanged, the
+    working copy is discarded, the skip stays `applied` with its record and its tariff unchanged,
+    nothing is refunded, and the answer tells the owner that a full sync is needed and that nothing
+    was written.
 R31. Only cards still as the skip left them (the undo's rules). The undo writes a card only when its
     current scheduling state and modification time equal what the skip wrote (R22), and its review
     log holds no study event after the take's converge. A card reviewed or changed since the skip is
@@ -298,9 +328,9 @@ R33. The recording layer is proved to see a write before any proof rests on it. 
 | A2 | a raw insert of a second skip `pending` or `applied` and not undone for one study day is refused by the migration's key, and a `failed` row leaves the day free | `the_migration_refuses_a_second_skip_not_undone_for_one_study_day` |
 | A3 | undo targets the most recent applied skip not undone, and with none answers `nothing_to_undo` | `undo_reverses_the_most_recent_skip_not_undone` |
 | A4 | the skip set holds exactly the study days with an applied skip not undone, and no `pending` or `failed` one | `the_skip_set_holds_exactly_the_days_with_an_applied_skip_not_undone` |
-| A5 | (i, v) a take's push, through the recording layer, carries exactly the previewed cards still due, each as the reschedule left it, and one review-log row of type 4 with ease 0 for each; it carries no other card, note, grave, deck, notetype, tag or setting, and no upload; and the private copy's bytes are unchanged | `a_take_pushes_exactly_the_previewed_cards_and_their_review_log_rows` |
-| A6 | (i, v) every other path records zero uploads and zero local changes through the recording layer: a scheduled sync, an owner sync, a preview, each refused take (`already_skipped`, `preview_changed`, `too_many_cards`), an aborted take and a failed one, and the sync that follows each; the private copy's bytes stay as its own sync left them | `every_path_but_the_take_and_the_undo_records_zero_uploads` |
-| A7 | the search and the day spec the preview shows and the write runs equal the goldens of the wrap and of `skip.py:skip_spec` | `the_search_and_day_spec_equal_the_parity_goldens` |
+| A5 | (i, v) a take's push, through the recording layer, carries exactly the previewed cards the wrapped search still selects at the converge; each pushed card equals the state the take recorded before the push (R22) and differs from its row at the converge only in its due date, which lies in the day spec's range from the study day, its modification time, its sync number, and what the engine's Set Due Date itself sets for that card (its interval when FSRS is on); one review-log row of type 4 with ease 0 for each; no other card, note, grave, deck, notetype, tag or setting, and no upload; a review card due today in a filtered deck is neither listed nor pushed, and its row is unchanged (R3); and the private copy's bytes are unchanged. It runs with FSRS off and with FSRS on | `a_take_pushes_exactly_the_previewed_cards_and_their_review_log_rows` |
+| A6 | (i, iii, v) every other path records zero uploads and zero local changes through the recording layer: a scheduled sync, an owner sync, a preview, each refused take (`already_skipped`, `preview_changed`, `too_many_cards`), an aborted take and a failed one, a refused undo (`nothing_to_undo`), an undo that finds no card to write, an aborted undo and a failed one, and the sync that follows each; the private copy's bytes stay as its own sync left them; and each refused, aborted or failed take and undo sends no request after its answer, over a wait longer than the syncer's timeout (SPEC-022 R8) | `every_path_but_the_take_and_the_undo_records_zero_uploads` |
+| A7 | the search the preview shows and the write runs is the golden's wrap of the configured search followed by R3's holds (`prop:due=0 -is:suspended -is:buried -deck:filtered`), for the default search and for each synthetic custom search the golden records, and the day spec equals the golden of `skip.py:skip_spec` | `the_search_and_day_spec_equal_the_parity_goldens` |
 | A8 | the summary shows counts only, with the cards the writes moved, and equals the golden of `skip.py:summarize_skips` | `the_summary_shows_counts_equal_to_the_parity_golden` |
 | A9 | the engine's Set Due Date writes review-log rows the read does not count as study events | `a_reschedule_by_the_engine_is_not_a_study_event` |
 | A10 | the preview equals the golden of `SkipDaysLayer.skip_preview`, and its due count is absent when the study day has no rollup | `the_preview_matches_the_parity_golden_and_is_absent_without_a_rollup` |
@@ -313,24 +343,26 @@ R33. The recording layer is proved to see a write before any proof rests on it. 
 | A17 | a skip day neither counts toward nor ends the governor's silent run | `a_skip_day_neither_counts_nor_ends_the_governors_silent_run` |
 | A18 | after an undo, the next recompute treats the day as a missed day, and transitions already settled stay as they were | `after_an_undo_the_day_is_a_missed_day_at_the_next_recompute` |
 | A19 | `/skip` and `/cheat` answer the preview, the cards to move counted per deck and the tariff, with Confirm and Cancel, and only for the owner | `skip_and_cheat_answer_the_preview_with_confirm_and_cancel` |
-| A20 | `/skipundo` asks before undoing and lists every card left alone, and `/skipstats` shows counts only | `skipundo_asks_before_undoing_and_skipstats_shows_counts_only` |
+| A20 | `/skipundo` asks before undoing and lists every card left alone, and `/skipstats` shows counts only, both only for the owner | `skipundo_asks_before_undoing_and_skipstats_shows_counts_only` |
 | A21 | the four skip routes answer the owner's session and refuse any other caller with no data | `the_skip_routes_answer_only_the_owner` |
 | A22 | the Mini App's skip sheet shows the due count, the cards to move, the tariff and whether the balance covers it, then the outcome with every card left alone | `shows the due count, the cards to move and the tariff, then the outcome` |
 | A23 | ingest's data-rights port lists `skip_days` and `skip_card_snapshot` as exported and erased, and an erase empties both | `the_skip_tables_are_exported_and_erased` |
 | A24 | (i) only the skip's write module reaches the engine's card writes or pushes a local change, and a planted fixture that does elsewhere is refused (examined count reported, zero refused) | `only_the_skip_write_reaches_an_engine_write_or_a_push` |
-| A25 | (ii) a full or one-way sync demand at a take's converge aborts it: no request carries a card, the private copy's bytes are unchanged, the row is `failed` with `full_sync_required`, and the answer tells the owner | `a_full_sync_demand_at_the_converge_aborts_the_take_writing_nothing` |
-| A26 | (ii) a full-sync demand at a take's push, forced by another client after the converge, aborts it the same way, and the working copy is discarded | `a_full_sync_demand_at_the_push_aborts_the_take_writing_nothing` |
-| A27 | (iii, undo) only the owner's confirm reaches the take and the undo: the bot's skip callbacks and the API's two skip routes are their only callers, no scheduler job, recompute step or startup path names them, and a planted caller is refused (examined count reported) | `only_the_owners_confirm_reaches_the_take_and_the_undo` |
-| A28 | (iv) the preview lists the cards the write would move with their digest, and a take whose list has changed writes nothing, sends no request and answers `preview_changed` with the new preview | `the_preview_lists_the_cards_and_a_changed_list_writes_nothing` |
+| A25 | (ii) a full or one-way sync demand at a take's converge aborts it, in either direction, one a download would resolve (another client forced a one-way sync) and one only an upload would resolve (the server holds an empty collection): no request carries a card, the private copy's bytes are unchanged, the working copy is discarded, the row is `failed` with `full_sync_required`, and the answer tells the owner | `a_full_sync_demand_at_the_converge_aborts_the_take_writing_nothing` |
+| A26 | (ii) a full or one-way sync demand at a take's push, in either direction, forced after the converge, aborts it the same way | `a_full_sync_demand_at_the_push_aborts_the_take_writing_nothing` |
+| A27 | (iii, undo) only the owner's confirm reaches the take and the undo, once per confirm: the bot's skip callbacks and the API's two skip routes are their only callers, no scheduler job, recompute step, startup path, retry or spawned task calls them or sends their push again, and a planted caller is refused (examined count reported) | `only_the_owners_confirm_reaches_the_take_and_the_undo` |
+| A28 | (iv) the preview lists the cards the write would move with their digest, and a take whose confirm carries no digest, or a digest that differs from the list the take reads again, writes nothing, sends no request and answers `preview_changed` with the new preview | `the_preview_lists_the_cards_and_a_changed_list_writes_nothing` |
 | A29 | (iv) each moved card's prior due date and prior state are committed before any card changes: a take stopped between that commit and the reschedule leaves the snapshot rows and no request carrying a card | `the_prior_state_is_recorded_before_any_card_changes` |
-| A30 | (undo, v) after a take and its undo each moved card's row equals its pre-skip row in every field but its modification time and sync number, and the undo's push, through the recording layer, carries exactly those cards and no review-log row | `an_undo_restores_exactly_the_prior_state_of_the_moved_cards` |
-| A31 | (undo) a card reviewed or changed since the skip, one reviewed on another client during the take included, is left as it is and listed to the owner, and no request of the undo carries it | `an_undo_never_overwrites_a_card_changed_since_the_skip` |
-| A32 | (undo) a full or one-way sync demand at the undo's converge or push aborts it: no request carries a card, the skip stays applied, and nothing is refunded | `a_full_sync_demand_aborts_the_undo_writing_nothing` |
+| A30 | (undo, v) after a take and its undo each moved card's row equals its pre-skip row in every field but its modification time and sync number, with FSRS off and on, and the undo's push, through the recording layer, carries exactly those cards, no card the skip did not move, and no review-log row | `an_undo_restores_exactly_the_prior_state_of_the_moved_cards` |
+| A31 | (undo) the undo writes a card only when its scheduling state and modification time equal what the take recorded (R22) and its review log holds no study event after the take's converge: a card whose due date still equals what the skip wrote but that was suspended on another client, one only flagged there, and one reviewed on another client between the take's converge and its reschedule (the take's newer push overwrote the review, so its due date, scheduling state and modification time all equal what the skip recorded) are each left as they are and listed to the owner, and no request of the undo carries any of them | `an_undo_never_overwrites_a_card_changed_since_the_skip` |
+| A32 | (ii, undo) a full or one-way sync demand at the undo's converge or its push, in either direction, aborts it: no request carries a card, the private copy's bytes are unchanged, the working copy is discarded, the skip stays `applied` with its record and tariff unchanged, nothing is refunded, and the answer tells the owner that a full sync is needed and that nothing was written | `a_full_sync_demand_aborts_the_undo_writing_nothing` |
 | A33 | (v) the recording layer records a planted upload and a planted local change: another client's full upload through it is recorded as `upload`, and that client's normal sync of one review as a chunk carrying the card and its review-log row, and the classifier marks both | `the_recorder_sees_a_planted_upload_and_a_planted_local_change` |
-| A34 | a card reviewed on another client between the take's converge and its push is listed to the owner in the take's answer | `a_card_reviewed_during_the_take_is_listed_to_the_owner` |
-| A35 | a take whose write outlives the answer's wait answers `pending`, its write's own outcome settles the row, a row still `pending` at start is settled after the next successful sync, and the tariff is charged only when a row settles `applied` | `a_write_that_outlives_the_answer_settles_its_own_row` |
+| A34 | a card reviewed on another client between the take's converge and its push is listed to the owner in the take's answer, both when the review lands before the reschedule (the push overwrites it and only its review log shows it) and after it (the merge keeps the review) | `a_card_reviewed_during_the_take_is_listed_to_the_owner` |
+| A35 | a take whose write outlives the answer's wait answers `pending`, and its write's own outcome settles the row; a row still `pending` at start is settled after the next successful sync by the scheduling state and modification time the take recorded after its reschedule (R26): a row whose push landed settles `applied` and is charged once, and a row whose push never landed settles `failed`, is charged no tariff and leaves its day out of the skip set, so the day is not bridged, even when one of its recorded cards, a card with a 1-day interval reviewed on another client, lands on the date the skip wrote | `a_write_that_outlives_the_answer_settles_its_own_row` |
 | A36 | more cards than the golden 5,000 are refused with `too_many_cards` before any change or request, and a day with no card to move records the skip with no card written | `the_card_guard_refuses_a_large_set_and_an_empty_set_writes_nothing` |
 | A37 | a take that is refused, aborts or fails charges no tariff and puts no day in the skip set, and an applied take charges once | `a_take_that_does_not_apply_charges_nothing` |
+| A38 | (i) with a custom `DECKSTREAK_SKIP_SEARCH` that also matches a review card due on another day, a suspended and a buried review card due today, a relearning card due today, a review card due today in a filtered deck, and new and learning cards, the preview lists and the push carries only the review cards due that study day outside a filtered deck | `a_custom_search_moves_only_the_study_days_due_review_cards` |
+| A39 | (iv) a card the preview did not list, which another client made due before the converge, and a previewed card, which another client rescheduled before it, are each left alone and listed in the take's answer, and the push carries neither | `a_card_that_changed_between_the_preview_and_the_converge_is_left_alone` |
 
 ```acceptance
 A1: cargo test -p deck-streak-ingest --test skip_record -- --exact a_skip_is_recorded_once_per_study_day_and_again_after_an_undo
@@ -370,19 +402,30 @@ A34: cargo test -p deck-streak-ingest --test skip_write -- --exact a_card_review
 A35: cargo test -p deck-streak-coordination --test skip_flow -- --exact a_write_that_outlives_the_answer_settles_its_own_row
 A36: cargo test -p deck-streak-ingest --test skip_write -- --exact the_card_guard_refuses_a_large_set_and_an_empty_set_writes_nothing
 A37: cargo test -p deck-streak-coordination --test skip_flow -- --exact a_take_that_does_not_apply_charges_nothing
+A38: cargo test -p deck-streak-ingest --test skip_write -- --exact a_custom_search_moves_only_the_study_days_due_review_cards
+A39: cargo test -p deck-streak-ingest --test skip_write -- --exact a_card_that_changed_between_the_preview_and_the_converge_is_left_alone
 ```
 
 The write's tests run the engine's own sync server in a child process with SPEC-022's recording
 layer in front of it (SPEC-022 §3 and §7), on a synthetic collection built by
-`crates/ingest/tests/support/synthetic.rs` that holds review cards due today, new and learning cards
-the wrap must exclude, and cards due on other days; nothing reaches the owner's server. A second
-synthetic client plays the owner's other device. A26, A29, A31 and A34 act between the take's steps
-through a seam the skip write offers its tests: a hook called after the converge, after the
-snapshot's commit and before the push, which does nothing in production. A30 compares every field
-of each moved card's row before the take and after the undo. A33 is the control every other proof
-rests on, and it fails when the layer records nothing. Every test that enumerates reports its
-examined count and refuses zero. The red-first record gives each of A5, A6 and A24 to A34 a red
-commit whose failure is the criterion's own reason.
+`crates/ingest/tests/support/synthetic.rs` that holds review cards due today; new and learning
+cards the wrap must exclude; relearning, suspended and buried cards due today; a review card due
+today in a filtered deck, which R3 leaves where it is; a card the skip does not move that is already
+due within the day spec's range; and cards due on other days. The write's tests run with FSRS off
+and on, and nothing reaches the owner's server. A second synthetic client plays the owner's other
+device. A26, A29, A31 and A34 act between the take's steps through a seam the skip write offers its
+tests: a hook called after the converge, after the snapshot's commit and before the push, which
+does nothing in production. For A31 and A34 the other client's review lands at the hook after the
+converge and at the hook before the push, a second apart, because the sync's merge keeps the card
+with the newer modification time, in whole seconds, and adds every review-log row (the pinned
+engine's `rslib/src/sync/collection/chunks.rs:168-193`). A39's other client changes its cards after
+the preview and before the take's converge. A35 leaves a row `pending` from a take whose push never
+landed, and the private copy's next sync brings one of its recorded cards, reviewed on another
+client with a 1-day interval, onto the date the skip wrote, with that review's state and
+modification time. A30 compares every field of each moved card's row before the take and after the
+undo. A33 is the control every other proof rests on, and it fails when the layer records nothing.
+Every test that enumerates reports its examined count and refuses zero. The red-first record gives
+each of A5, A6, A24 to A35, A38 and A39 a red commit whose failure is the criterion's own reason.
 
 ## 3a. What the box run judges
 
@@ -403,14 +446,14 @@ delivery changes no pack's state.
 
 | file | context | change |
 |---|---|---|
-| `crates/ingest/src/skip.rs` | `deck-streak-ingest` | added: the record, its once-per-study-day take, the snapshot's rows, the undo's compare, the skip set, the summary, the search and the day spec |
+| `crates/ingest/src/skip.rs` | `deck-streak-ingest` | added: the record, its once-per-study-day take, the snapshot's rows, the undo's compare, a pending row's compare by state and modification time (R26), the skip set, the summary, the search with its holds (R3) and the day spec |
 | `crates/ingest/src/skip_write.rs` | `deck-streak-ingest` | added: the take's and the undo's write on a working copy: the preview's list and digest, the converge, the snapshot's commits, the reschedule or the restore, the push and the read-back, incremental syncs only, and the test seam between steps |
 | `crates/ingest/src/engine.rs` | `deck-streak-ingest` | changed: the port gains the wrapped search's cards with their scheduling state, Set Due Date over a card list, and the card update that writes recorded fields back; `RslibEngine` implements them over the engine |
 | `crates/ingest/src/settings.rs` | `deck-streak-ingest` | changed: `DECKSTREAK_SKIP_SEARCH`, defaulting to the golden constant |
 | `crates/ingest/src/data_rights.rs` | `deck-streak-ingest` | changed: `skip_days` and `skip_card_snapshot`, exported and erased |
 | `crates/ingest/src/lib.rs` | `deck-streak-ingest` | changed: the skip modules |
 | `crates/ingest/tests/skip_record.rs` | `deck-streak-ingest` | added: A1 to A4, A7, A8 |
-| `crates/ingest/tests/skip_write.rs` | `deck-streak-ingest` | added: A5, A9, A25, A26, A28, A29, A34, A36 |
+| `crates/ingest/tests/skip_write.rs` | `deck-streak-ingest` | added: A5, A9, A25, A26, A28, A29, A34, A36, A38, A39 |
 | `crates/ingest/tests/skip_undo.rs` | `deck-streak-ingest` | added: A30 to A32 |
 | `crates/ingest/tests/skip_zero_upload.rs` | `deck-streak-ingest` | added: A6 |
 | `crates/ingest/tests/skip_census.rs` | `deck-streak-ingest` | added: A24, with its planted fixture |
@@ -418,7 +461,7 @@ delivery changes no pack's state.
 | `crates/ingest/tests/skip_rights.rs` | `deck-streak-ingest` | added: A23 |
 | `crates/ingest/tests/support/recording.rs` | `deck-streak-ingest` | changed: the census's classifier moves here, beside a reader of the cards and review-log rows each request carries (R33) |
 | `crates/ingest/tests/support/mod.rs` | `deck-streak-ingest` | changed: another client's normal sync and full upload through a given endpoint (R33) |
-| `crates/ingest/tests/support/synthetic.rs` | `deck-streak-ingest` | changed: review cards due today, new and learning cards, cards due on other days, and a second client's review |
+| `crates/ingest/tests/support/synthetic.rs` | `deck-streak-ingest` | changed: review cards due today; new and learning cards; relearning, suspended and buried cards due today; a review card due today in a filtered deck; a card the skip does not move that is already due within the day spec's range; cards due on other days; a second client's review, at the hook after the converge and at the hook before the push, a second apart; and FSRS off and on |
 | `crates/ingest/tests/sync.rs` | `deck-streak-ingest` | changed: the census calls the shared classifier; SPEC-022's A15 is unchanged |
 | `crates/economy/src/tariff.rs` | `deck-streak-economy` | added: the skip tariff's price, from `economy.json`'s ladder |
 | `crates/economy/src/lib.rs` | `deck-streak-economy` | changed: the tariff module |
@@ -475,6 +518,9 @@ delivery changes no pack's state.
 - It resolves no full-sync demand inside a take or an undo: either aborts, and the owner's `/sync`
   downloads as SPEC-022 R6 says (#266).
 - It retries no failed write: the owner takes the skip again, or undoes it again (#266).
+- It moves no review card in a filtered deck: such a card stays due there, because the exact
+  inverse of Set Due Date's move back to the home deck cannot be kept once the filtered deck is
+  emptied, rebuilt or deleted (R3, #266).
 - It proves no quest void, chest pause or race-week exemption itself: the quests, the chests and the
   race read this SPEC's port and prove each when they land (#100, #102, #124).
 - It pauses no committed-window verdict (#109), no contract breach (#113) and no fine (#110), and
@@ -490,11 +536,18 @@ delivery changes no pack's state.
 ## 6. Risks
 
 - **A defect in the write reaches the owner's collection.** Prevented by the working copy, the
-  incremental-only rule and the undo's compare (R21 to R32); detected by A5, A6 and A24 to A34, each
-  red first against the recording layer, whose own control runs first (A33).
+  incremental-only rule and the undo's compare (R21 to R32); detected by A5, A6, A24 to A34, A38
+  and A39, each red first against the recording layer, whose own control runs first (A33).
 - **A review on another client during a take loses its schedule to the reschedule**, because the
   newer change wins the sync's merge. Detected by the read-back (A34): the owner sees the card
   listed, and the undo leaves it alone (A31).
+- **A skip leaves a filtered deck's review cards due.** Visible: the preview lists only the cards it
+  moves, and a card in a filtered deck is never among them (R3, A5, A38); the owner can empty the
+  filtered deck in Anki before taking the skip.
+- **A pending row settles `failed` although its push landed**, when every card it moved was
+  reviewed or changed on another client before the private copy's next sync. Accepted: no tariff is
+  charged and the day is not bridged, because a tariff charged for a push that never landed is
+  worse than one missed (R26, A35).
 - **The owner's server demands a full sync**, so a take aborts. Visible: the answer says why, and the
   owner's `/sync` resolves a download (SPEC-022 R6). A server that only a full upload could satisfy
   keeps the skip from writing, which is guardrail (ii) working (ADR-089).
