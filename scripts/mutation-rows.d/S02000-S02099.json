@@ -1,0 +1,42 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S02001-ROLLOVER-HOUR-IS-FOUR",
+        "kernel",
+        "src/study_day.rs",
+        "pub const DEFAULT_ROLLOVER_HOUR: u8 = 4;",
+        "pub const DEFAULT_ROLLOVER_HOUR: u8 = 0;",
+        "constants::the_kernel_constants_equal_the_predecessors",
+        "the study day turns over at 04:00 by default, the predecessor's constant, never at midnight (CHARTER 7); cargo-mutants never mutates a constant"
+      ],
+      [
+        "S02002-AN-HOUR-RUNS-TO-23",
+        "kernel",
+        "src/study_day.rs",
+        "        if hour <= 23 { Some(Self(hour)) } else { None }",
+        "        if hour <= 22 { Some(Self(hour)) } else { None }",
+        "study_day::the_study_day_matches_the_predecessors_golden",
+        "a rollover hour of 23 is an hour of the day; cargo-mutants never looks inside a method named new"
+      ],
+      [
+        "S02003-THE-REDACTION-MARKER",
+        "kernel",
+        "src/redact.rs",
+        "pub const REDACTED: &str = \"***REDACTED***\";",
+        "pub const REDACTED: &str = \"[redacted]\";",
+        "constants::the_kernel_constants_equal_the_predecessors",
+        "a redacted secret leaves as the predecessor's marker, byte for byte"
+      ],
+      [
+        "S02004-THE-SHORTEST-SECRET",
+        "kernel",
+        "src/redact.rs",
+        "pub const MIN_SECRET_LEN: usize = 4;",
+        "pub const MIN_SECRET_LEN: usize = 5;",
+        "constants::the_kernel_constants_equal_the_predecessors",
+        "a secret of four characters is registered and redacted, as the predecessor registers it"
+      ]
+    ]
+  }
+}

@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 date: "2026-09-28"
 decision-makers: "@RexRenatus (owner, through the maintainer), the DeckStreak architect"
 ---
@@ -40,7 +40,7 @@ without loosening ADR-022's supply-chain rule, and when does the carry end?
 - A `[patch."https://github.com/ankitects/anki.git"]` entry that replaces the engine with a commit of the fork, pinned by `rev`, while the dependency keeps naming the upstream tag — chosen: measured in a scratch resolution, it re-locks exactly the engine's five packages to the fork, and the dependency line keeps the upstream tag that SPEC-022's A1 check and `engine-measure.yml`'s report both read.
 - A direct `git` dependency on the fork pinned by `rev` — rejected because it breaks both readers of the dependency line (`test_engine_spike_record.py`'s engine-tag pattern and `engine-measure.yml:104`) and hides which upstream release DeckStreak runs, for a `Cargo.lock` byte-identical to the patch's.
 - Stay on 26.05 unpatched — rejected because it keeps paying 38 to 51 s of engine recompilation on every cargo command (#228), and the owner decided to move the engine to 26.09.3.
-- Upgrade to 26.09.3 unpatched and wait for upstream — rejected because both causes are still in 26.09.3 and on upstream `main`, so the bump saves nothing measurable (31 to 35 s per no-op), and when upstream releases a fix is not DeckStreak's to decide.
+- Upgrade to 26.09.3 unpatched and wait for upstream — rejected because the cause #228 names is still in 26.09.3 and on upstream `main`, so the bump saves nothing measurable (31 to 35 s per no-op), and when upstream releases a fix is not DeckStreak's to decide.
 - Route C, a gate-side workaround that resets the generated files' mtimes after every cargo command — rejected by the maintainer because it edits cargo's build directory, depends on cargo's internal layout, must follow every ad-hoc cargo command, and a gate that edits mtimes is a new way for a gate to lie.
 - Vendor the engine's source into this repository — rejected because it copies a large AGPL tree into a public repository to change one file, hides the engine from the lockfile's view of dependencies, and turns every Anki bump into a re-vendoring.
 
@@ -111,13 +111,33 @@ Chosen option: a `[patch]` entry on the upstream source, pointing at a commit of
 SPEC-055's A1 (the tag, the patch by revision and the exact `allow-git`), A2 (a second build
 recompiles nothing), A3 (every advisory exception and allowed source is live) and A5. ADR-022's
 numbers at the pinned commit go below the spike's in ADR-009's Confirmation, which SPEC-022's A1
-judges (SPEC-055 R11). The delivery records here, for A5:
+judges (SPEC-055 R11). SPEC-055's delivery recorded, for A5:
 
-- the pinned commit, and `git diff --stat 26.09.3 <rev>` on the fork: one file, `rslib/io/src/lib.rs`;
-- the no-op build before and after the pin, in cargo's own time;
-- CI's warm path after the first push to `dev` that saves a cache, handed to SPEC-038's amendment
-  (#207);
-- the status: `accepted` when every budget holds.
+| record | measured |
+|---|---|
+| the pinned commit | `57382da085e6752738dc4bb617789be836a23300` on `RexRenatus/anki`, the head of branch `fix-proto-out-dir-rerun-26.09.3`, tagged `deckstreak-pin-26.09.3` (`git ls-remote`, read on 2026-09-28) |
+| its parent | `29bb700b951e`, upstream tag `26.09.3`, its only parent |
+| `git diff --stat 26.09.3 57382da` on the fork | `rslib/io/src/lib.rs`, 1 file changed, 47 insertions(+), 2 deletions(-) |
+
+| measure | before the pin | after the pin |
+|---|---|---|
+| a no-op `cargo build -p deck-streak-ingest`, in cargo's own `Finished` time on the maintainer's machine | 29.3 to 38.2 s at `26.09.3` unpatched (four runs), each recompiling `anki_proto`, `anki` and the ingest crate; 35.5 s at `26.05` (A2 at the base) | 0.33 to 0.35 s at the pinned commit (five runs), every unit Fresh |
+
+- **CI on SPEC-055's pull request.** The pull request changes `Cargo.lock`, so in
+  `ci.yml` run 36386849369 at `4df16b0` every Rust job restored `dev`'s entry (1,005,229,631 bytes)
+  by its fallback key, in 11 to 21 s, and compiled the fork's engine, which that entry lacks. By
+  SPEC-038 section 8's metric, the slower gate job (an `engine` leg, 3m23s) plus `ci` (4 s) took
+  3m27s. The fix shows in the `rust` job: `doctest`, its third cargo command, found every unit
+  Fresh and took 1 s, against 31 s on `dev` (run 36383672922), where each cargo command recompiled
+  the engine. Its `hygiene` job ran A2 in the python stage, 373 units Fresh and the second build
+  0.2 s of wall time, and was red only on A5 and A7, the two records not yet written at that
+  commit.
+- **ADR-022's protocol.** `engine-measure.yml` run 36386849300 at `4df16b0`: every budget holds
+  (ADR-009's Confirmation).
+- **CI's warm path after the first push to `dev` that saves a cache.** Appended here by the
+  orchestrator after the merge, because only such a push saves a cache (ADR-055; SPEC-055 R6 and
+  R10).
+- **The status.** `accepted`: every budget holds at the pinned commit.
 
 ## What would make this wrong
 

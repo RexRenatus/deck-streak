@@ -71,8 +71,11 @@
       "note": "language-mentors' two composed rows judge mentor texts, which arrive with the readings screen"
     },
     "privacy-gdpr": {
-      "state": "pending",
-      "enforced_by": "#14"
+      "state": "enforced",
+      "deferred_rows": {
+        "defaults-private": "#57"
+      },
+      "note": "defaults-private judges the default settings file, which the settings screen ships (SPEC-021 R9)"
     },
     "ai-content-safety": {
       "state": "pending",

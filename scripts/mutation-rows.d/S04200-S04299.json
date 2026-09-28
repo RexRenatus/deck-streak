@@ -1,0 +1,33 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S04201-THE-TEMPORARY-FILE-IS-SYNCED",
+        "vault",
+        "src/atomic.rs",
+        "            file.sync()\n                .map_err(VaultError::io(\"sync the temporary file\"))",
+        "            Ok(())",
+        "atomic::a_write_lands_through_an_ignored_temp_name_then_fsync_rename_and_dir_fsync",
+        "a vault write syncs its temporary file before the rename (SPEC-042 R4)"
+      ],
+      [
+        "S04202-THE-DIRECTORY-IS-SYNCED",
+        "vault",
+        "src/atomic.rs",
+        "    fs.sync_dir(directory)\n        .map_err(VaultError::io(\"sync the target's directory\"))\n}",
+        "    let _ = directory;\n    Ok(())\n}",
+        "atomic::a_write_lands_through_an_ignored_temp_name_then_fsync_rename_and_dir_fsync",
+        "a vault write syncs the target's directory after the rename (SPEC-042 R4)"
+      ],
+      [
+        "S04203-A-TOPIC-KEY-IS-A-LOWERCASE-SLUG",
+        "vault",
+        "src/note.rs",
+        "                        .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit())",
+        "                        .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || byte == b'.')",
+        "confinement::a_write_outside_the_readings_folder_or_over_a_note_is_refused",
+        "a topic key that could climb out of its folder is refused before any path is built (SPEC-042 A8); cargo-mutants never looks inside TopicKey::new"
+      ]
+    ]
+  }
+}

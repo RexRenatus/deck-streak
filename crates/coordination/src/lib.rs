@@ -1,8 +1,9 @@
 //! # deck-streak-coordination
 //!
 //! What this context owns: The use cases and scheduled jobs that cross contexts: the per-sync
-//! recompute in order, the nightly and hourly jobs with the cron-fire ledger, and each owner
-//! action the bot and the Mini App share, so both surfaces run one code path.
+//! recompute in order, the nightly and hourly jobs with the cron-fire ledger, the registry of every
+//! context's data-rights port with the owner's export and erase over it, and each owner action the
+//! bot and the Mini App share, so both surfaces run one code path.
 //!
 //! What it does not own: Any domain rule: it calls the contexts in order and holds none of
 //! their logic.
@@ -14,6 +15,7 @@
 #![warn(missing_docs, clippy::all)]
 
 pub mod data_rights;
+pub mod data_rights_registry;
 pub mod delivery;
 pub mod jobs;
 pub mod ledger;

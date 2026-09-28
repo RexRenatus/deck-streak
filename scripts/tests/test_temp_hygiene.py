@@ -1,7 +1,7 @@
 """Tests leave no temporary file or directory behind (SPEC-030 R2 to R4).
 
-The predecessor pinned pytest's `tmp_path_retention_policy = "failed"`, so green runs left nothing on
-the small shared host. DeckStreak's Python tests are `unittest`, so this lint holds the line
+The predecessor pinned pytest's `tmp_path_retention_policy = "failed"`, so green runs left nothing
+behind. DeckStreak's Python tests are `unittest`, so this lint holds the line
 instead: it reads every test file of the repository (the Rust integration tests, the repository's
 Python tests and the Mini App's tests), and refuses, naming the file and the line, each form that
 keeps what it creates after the test ends. The accepted forms remove what they create on drop or

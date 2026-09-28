@@ -6,9 +6,9 @@
   carries the fix), ADR-022 (the spike's protocol and budgets, whose pin rule ADR-058 amends),
   ADR-009 (the engine), ADR-037 (never upload), ADR-012 (the parity oracle), ADR-018 (licences) and
   ADR-055 (CI's jobs and caches).
-- **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
-  `docs/specs/` with its tests and `docs/red-first/SPEC-055.md` (ADR-016). No code until the
-  maintainer accepts this plan.
+- **Status:** judged: delivered with its tests, `docs/red-first/SPEC-055.md`, and the measurement
+  that accepted ADR-058 (`engine-measure.yml` run 36386849300). The delivery amended R6, R10, A5,
+  §3's account of A3, §5, §6 and the manifest's `ci.yml` row, each for the reason §7 gives.
 
 ## 1. The problem, measured
 
@@ -90,8 +90,11 @@ R5. `rust-toolchain.toml` stays at 1.97.0. If the engine fails to build with it,
 R6. ADR-022's protocol runs again at the new pin, unchanged: the same synthetic collection, the same
     budgets, the cold build in `engine-measure.yml` on the delivery's pull request. ADR-009's
     Confirmation records each number with its run (R11). ADR-058's Confirmation records the pinned
-    commit, the no-op build before and after in cargo's own time, and CI's warm path after the first
-    push to `dev` saves a cache. A budget that fails stops the delivery (ADR-022).
+    commit, the no-op build before and after in cargo's own time, and CI's numbers on the delivery's
+    pull request: the fallback restore, the jobs' times by SPEC-038 §8's metric, and the
+    `engine-measure.yml` run. CI's warm path after the first push to `dev` that saves a cache is
+    appended to ADR-058's Confirmation by the orchestrator after the merge, because only that push
+    saves a cache. A budget that fails stops the delivery (ADR-022).
 R7. Every SPEC-022 criterion passes at the new pin: A1 to A17, including the budget tests (A2, A3)
     and the no-upload census (A15, A16).
 R8. The parity goldens stay byte-identical. A golden that changes is explained by a named upstream
@@ -99,7 +102,10 @@ R8. The parity goldens stay byte-identical. A golden that changes is explained b
 R9. `crates/ingest/src/engine.rs`'s adapter keeps every engine type inside `ingest` (SPEC-022 R1).
     Its documentation names the upstream tag and the fork's revision that patches it. Any change
     the engine's API forces stays in that file.
-R10. The measured warm path goes to SPEC-038's amendment (#207), with its run ids.
+R10. The warm path after the first push to `dev` that saves a cache is appended, with its run ids,
+    to ADR-058's Confirmation by the orchestrator after the merge. SPEC-038's amendment (#207) is
+    closed, and a pull request that changes `Cargo.lock` restores `dev`'s entry by its fallback key,
+    so the delivery cannot measure that path itself.
 R11. The engine's record follows the pin. SPEC-022's A1 check (`test_engine_spike_record.py`)
     requires ADR-009's Confirmation to name the tag the dependency line pins, so at 26.09.3 it is red
     by construction until the record names the new tag (measured). ADR-009 is accepted and no
@@ -116,7 +122,7 @@ R11. The engine's record follows the pin. SPEC-022's A1 check (`test_engine_spik
 | A2 | a second build of `deck-streak-ingest` with nothing changed compiles no unit, within cargo's own time bound | `test_engine_pin.py` `a_second_build_of_ingest_recompiles_nothing` |
 | A3 | every advisory exception in `deny.toml` is one `cargo deny` still encounters, and every allowed git source is in the graph | `test_engine_pin.py` `every_advisory_exception_and_git_source_in_deny_toml_is_live` |
 | A4 | every job that compiles Rust still installs protoc 31.1 at ADR-022's digest | `test_ci_workflows.py` `every_job_that_compiles_rust_installs_the_pinned_protoc_first` (SPEC-038) |
-| A5 | ADR-058 records the pinned commit and its one-file difference from the upstream tag, the no-op build before and after, CI's warm path with its run, and a final status | `test_engine_pin.py` `adr_058_records_the_pinned_commit_and_what_it_saves` |
+| A5 | ADR-058 records the pinned commit and its one-file difference from the upstream tag, the no-op build before and after, CI's numbers on the delivery's pull request with their runs, and a final status | `test_engine_pin.py` `adr_058_records_the_pinned_commit_and_what_it_saves` |
 | A6 | every committed golden is current and well formed | `test_goldens.py` `every_committed_golden_is_current_and_well_formed` (SPEC-029) |
 | A7 | SPEC-022's A1: ADR-009's Confirmation names the pinned tag, and its latest record holds ADR-022's budgets, with a final status (R11) | `test_engine_spike_record.py` |
 | A8 | SPEC-022's A2: opening the large synthetic collection and resolving its new-card queue stays inside the memory budget | `engine_budget` test |
@@ -166,10 +172,11 @@ A1, A2, A3 and A5 are new, in `scripts/tests/test_engine_pin.py`. A1 reads the m
 lockfile and `deny.toml`. A2 runs `cargo build --locked -v -p deck-streak-ingest` twice against the
 workspace's own target directory, and reads the second run's `Compiling`, `Dirty` and `Finished`
 lines. At the base it is red for its reason: the second run recompiles `anki_proto` and `anki`. A3
-runs `cargo deny --locked --format json check advisories sources`, and refuses a zero count of
-examined exceptions. A5 reads ADR-058's Confirmation. A4, A6 and A8 to A23 exist and must stay green
-at the new pin. A7 exists, and it turns green with R11's record. Each budget test runs alone in its
-own process, as SPEC-022 §6 requires.
+runs `cargo deny --locked --log-level info --format json check advisories sources`, whose notes
+name each exception it encounters and each crate a source allowance admits, and refuses a zero
+count of examined exceptions. A5 reads ADR-058's Confirmation. A4, A6 and A8 to A23 exist and must
+stay green at the new pin. A7 exists, and it turns green with R11's record. Each budget test runs
+alone in its own process, as SPEC-022 §6 requires.
 
 ## 4. File manifest
 
@@ -182,7 +189,7 @@ own process, as SPEC-022 §6 requires.
 | `scripts/tests/test_engine_pin.py` | repo | added: A1, A2, A3, A5 |
 | `scripts/tests/test_engine_spike_record.py` | repo | changed: the Confirmation's latest table is the one judged (R11) |
 | `docs/decisions/ADR-009-ingest-from-the-anki-sync-server.md` | repo | changed: its Confirmation gains the record at 26.09.3 below the spike's, with no existing line changed (R11) |
-| `.github/workflows/ci.yml` | repo | changed only if A2 cannot run where the gate's python stage runs in CI; the delivery measures both places and records its choice |
+| `.github/workflows/ci.yml` | repo | changed: the `hygiene` job, which runs the gate's python stage, installs cargo-deny, because A3 runs `cargo deny` there. A2 runs there as the job stood, measured in both places, locally and in CI (§7) |
 | `docs/decisions/ADR-058-the-engine-pins-a-patched-fork-of-26-09-3-until-upstream-carries-the-fix.md` | repo | changed: status, the pinned commit and the Confirmation's measurements |
 | `docs/specs/planned/SPEC-055-the-engine-moves-to-26-09-3-on-a-patched-fork.md` | repo | moved to `docs/specs/`, with §7 filled |
 | `docs/red-first/SPEC-055.md` | repo | added |
@@ -199,7 +206,8 @@ own process, as SPEC-022 §6 requires.
   upload stay as ADR-037 decided (#164 owns any cadence change at cutover).
 - It adds no CI cache for dependency checkouts. The engine's second rebuild watch is inert for a git
   dependency, so such a cache would buy nothing (#228).
-- It does not amend SPEC-038. It hands the re-measured warm path to SPEC-038's amendment (#207).
+- It does not amend SPEC-038, whose amendment is closed (#207). CI's warm path after the first push
+  to `dev` is appended to ADR-058's Confirmation by the orchestrator after the merge (R10).
 - It changes nothing on the owner's devices or sync server (#167).
 
 ## 6. Risks
@@ -226,8 +234,8 @@ own process, as SPEC-022 §6 requires.
 - **The engine needs a newer toolchain than 1.97.0.** The build fails, and the delivery stops (R5).
   Anki's move to 1.97.1 was a routine bump, and its declared MSRV is 1.80.
 - **A later sync demands a full sync.** Not because of the upgrade: the schema and the protocol are
-  unchanged (§1). If the owner's own client forces one, DeckStreak downloads and never uploads
-  (SPEC-022 R6, A12, A21).
+  unchanged (§1). If a client forces one, DeckStreak downloads and never uploads (SPEC-022 R6, A12,
+  A21).
 - **A removed exception comes back.** If `paste` or `bincode` re-enter the graph, the audit fails on
   their advisories again. That failure is the point of removing a stale exception rather than
   keeping it.
@@ -241,25 +249,72 @@ a measurement pull request that changed only the engine's tag and `Cargo.lock` a
 unmerged. Both ran on GitHub-hosted runners, whose build time varies from run to run, so a single
 cold-build sample is read as a range and only the deterministic outputs compare exactly. The local
 numbers were measured on the maintainer's machine, in cargo's own `Finished` time. The delivery
-re-measures on the fork's commit (R6).
+re-measures on the fork's commit (R6): its last column comes from
+`engine-measure.yml` run 36386849300 on this delivery's pull request, at `4df16b0`, whose engine is
+the pinned commit.
 
 | measure | budget (ADR-022) | 26.05 | 26.09.3 | 26.09.3 with the fix |
 |---|---|---|---|---|
-| cold build, the protoc download included | at most 20 minutes | 4.7 minutes (282 s; 197 to 301 s over nine runs) | 4.2 minutes (249 s; 214 s in a second run) | the delivery measures it (R6) |
-| the stripped `engine_probe` | at most 100 MiB | 20.7 MiB (21,661,952 bytes, run 36371774969 at `f4c0111`) | 19.3 MiB (20,236,032 bytes, 6.6 % smaller) | the delivery measures it (R6) |
-| peak RSS, open and queue | at most 256 MiB | 29.4 MiB | 28.8 MiB | the delivery measures it (R6) |
-| peak RSS, full download | at most 256 MiB | 234.0 MiB | 232.1 to 232.2 MiB (90.7 % of the budget) | the delivery measures it (R6) |
-| incremental sync of 100 reviews | at most 60 seconds | 0.12 seconds | 0.12 seconds | the delivery measures it (R6) |
-| `cargo deny check licenses` | pass | pass | pass | pass (a scratch resolution, §1) |
-| SPEC-022's A1 to A17, locally | all pass | all pass | A2 to A17 pass (16 of 16), the census A15 and A16 included; A1 is red by construction until the record follows the tag (R11) | the delivery runs them (R7) |
-| the parity oracle's tests | all pass | 20 pass, 16 goldens | 20 pass, the 16 goldens unchanged | unchanged (§1) |
+| cold build, the protoc download included | at most 20 minutes | 4.7 minutes (282 s; 197 to 301 s over nine runs) | 4.2 minutes (249 s; 214 s in a second run) | 4.4 minutes (262 s, `engine-measure.yml` run 36386849300 at `4df16b0`) |
+| the stripped `engine_probe` | at most 100 MiB | 20.7 MiB (21,661,952 bytes, run 36371774969 at `f4c0111`) | 19.3 MiB (20,236,032 bytes, 6.6 % smaller) | 19.3 MiB (20,234,656 bytes) |
+| peak RSS, open and queue | at most 256 MiB | 29.4 MiB | 28.8 MiB | 28.7 MiB |
+| peak RSS, full download | at most 256 MiB | 234.0 MiB | 232.1 to 232.2 MiB (90.7 % of the budget) | 232.2 MiB (90.7 % of the budget) |
+| incremental sync of 100 reviews | at most 60 seconds | 0.12 seconds | 0.12 seconds | 0.14 seconds |
+| `cargo deny check licenses` | pass | pass | pass | pass, with `Unlicense` gone from the allow list (run 36386849300, and the gate's `audit-rust`) |
+| SPEC-022's A1 to A17, locally | all pass | all pass | A2 to A17 pass (16 of 16), the census A15 and A16 included; A1 is red by construction until the record follows the tag (R11) | all pass (17 of 17): A1 once R11's record is written, and A2 to A17 with the census A15 and A16, each budget test alone in its own process |
+| the parity oracle's tests | all pass | 20 pass, 16 goldens | 20 pass, the 16 goldens unchanged | 21 pass; all 21 goldens regenerate byte-identical under the interpreters their notes record, and no `anki` module loads |
 | a cold debug build of `deck-streak-ingest`, locally | none | 69 s, 435 units | 59.5 s, 373 units | not measured |
-| a no-op `cargo build -p deck-streak-ingest`, locally | none | 38 to 51 s | 31.4 to 34.5 s, with the same `Dirty` reasons | Fresh in 0.33 to 0.34 s with the first cause neutralised; the drafted fix consumed as a git source took 0.60 s and 0.53 s against 39.70 s and 43.00 s unpatched |
-| the lockfile | none | 685 packages; 34 duplicate warnings | 477 packages; one `libsqlite3-sys`, 0.34.0; 31 duplicate warnings, the new ones (`itertools`, `snafu`, `strum`, `rand`) through `fsrs` 6.6.2 | the same, with five engine sources moved (§1) |
-| CI's warm path | none | SPEC-038 §7 | not measured: only a push to `dev` saves a cache | the delivery measures it (R6, R10) |
+| a no-op `cargo build -p deck-streak-ingest`, locally | none | 38 to 51 s | 31.4 to 34.5 s, with the same `Dirty` reasons | Fresh in 0.33 to 0.34 s with the first cause neutralised; the drafted fix consumed as a git source took 0.60 s and 0.53 s against 39.70 s and 43.00 s unpatched. At the pinned commit: 0.33 to 0.35 s over five runs, every unit Fresh (A2 judged 373), against 29.3 to 38.2 s over four runs of 26.09.3 unpatched, measured the same way |
+| the lockfile | none | 685 packages; 34 duplicate warnings | 477 packages; one `libsqlite3-sys`, 0.34.0; 31 duplicate warnings, the new ones (`itertools`, `snafu`, `strum`, `rand`) through `fsrs` 6.6.2 | 477 packages and 31 duplicate warnings. A scratch resolution of the plain tag and one with the patch differ only in the `source` of the five engine packages, and the committed lockfile is the second, byte for byte |
+| CI's warm path | none | SPEC-038 §7 | not measured: only a push to `dev` saves a cache | not measurable here: this pull request's `ci.yml` run 36386849369 restored `dev`'s entry by its fallback key (ADR-058's Confirmation), and the warm path after the first push to `dev` is appended there by the orchestrator (R6, R10) |
 
 Every budget holds at 26.09.3, and no pin besides the engine's has to move: protoc stays 31.1, the
 engine's declared MSRV stays 1.80, and the toolchain stays 1.97.0.
+
+Every budget holds at the pinned commit too, the engine builds with toolchain 1.97.0, and its API
+forced no change in `crates/ingest/src/engine.rs`: only the adapter's documentation moved (R9).
+
+**Where A2 runs.** A2 is a guard test of the gate's python stage, and the manifest left its place
+in CI open, so it was measured in both places the stage runs:
+
+- **locally**, in the worktree's own target: at the pinned commit the second build judged 373 units
+  Fresh and compiled none, where at the base it recompiled `anki_proto`, `anki` and the ingest crate
+  in 35.5 s of cargo's own time;
+- **in CI**, where the `hygiene` job runs the python stage with the pinned toolchain, protoc and the
+  restored Rust cache: in `ci.yml` run 36386849369 its first build took 30.6 s and its second 0.2 s
+  of wall time, 373 units Fresh, and the stage took 72 s for 120 tests, against 52 s for 115 tests
+  on `dev` (run 36383672922).
+
+It stays there. The `hygiene` job needed only cargo-deny, for A3.
+
+**CI on this pull request.** The pull request changes `Cargo.lock`, so `ci.yml` run 36386849369 at
+`4df16b0` restored `dev`'s Rust entry by its fallback key, and every Rust job compiled the fork's
+engine, which that entry lacks. The slower gate job, an `engine` leg, took 3m23s, and the gate,
+with `ci`'s 4 s, 3m27s. Both are past SPEC-038 R15's warm bounds of 3m15s and 3m20s, which a first
+run after a lockfile change cannot meet (ADR-055). The `rust` job's `doctest` stage found every unit
+Fresh and took 1 s, against 31 s on `dev` (run 36383672922), where each cargo command recompiled
+the engine. The warm path after the merge is appended to ADR-058 by the orchestrator (R6, R10).
+
+### Amended at delivery
+
+Each of these is corrected above, for the reason given.
+
+- **R6, R10 and A5: CI's warm path after the merge.** Only a push to `dev` saves a cache (ADR-055),
+  and a pull request that changes `Cargo.lock` restores `dev`'s entry by its fallback key, so the
+  delivery cannot measure the warm path after its own merge, and SPEC-038's amendment (#207) is
+  closed. ADR-058's Confirmation records the pull request's own CI numbers (the fallback restore,
+  SPEC-038 §8's gate time and the `engine-measure.yml` run), and the orchestrator appends the warm
+  path after the first push to `dev` that saves a cache. A5's criterion names what the pull request
+  can record, and §5's bullet on SPEC-038 follows.
+- **§3: A3 reads the audit at the info level.** At its default level cargo deny prints only
+  warnings, so an encountered exception would show as the absence of `advisory-not-detected`.
+  Measured, the notes that name each exception it encounters (`advisory-ignored`) and each crate a
+  source allowance admits (`allowed-source`) print only with `--log-level info`, and A3 reads them
+  as positive evidence.
+- **The manifest's `ci.yml` row.** A3 runs `cargo deny` in the gate's python stage, which CI runs
+  in the `hygiene` job, and that job had no cargo-deny. It installs it with the action and commit
+  the `rust` job already pins; A2 needed nothing more (above).
+- **§6: "If a client forces one".** The risk holds for any client, not one in particular.
 
 ## 8. References
 

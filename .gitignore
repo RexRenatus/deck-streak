@@ -29,3 +29,9 @@ __pycache__/
 # Playwright output
 test-results/
 playwright-report/
+
+# Mutation testing's output (SPEC-039): cargo-mutants' reports, StrykerJS's sandboxes and reports
+mutants.out/
+mutants.out.old/
+.stryker-tmp/
+web/app/reports/

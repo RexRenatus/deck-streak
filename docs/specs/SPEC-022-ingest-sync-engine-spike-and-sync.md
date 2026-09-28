@@ -255,7 +255,7 @@ other test.
 - **The build budget is spent on caching, not compiling.** The workflow measures a cold build with
   no cache restored, so the number is the worst case CI pays.
 - **A full download fills the disk.** The download is written beside the copy before the swap, so
-  it needs one collection's worth of free space; the host's disk headroom is the host inventory's (#40),
+  it needs one collection's worth of free space; the host's disk headroom is the host inventory's (#239),
   and a failed write ends in `engine_failed` with the old copy intact.
 - **One sync a day makes a failed sync cost the day's data.** Its retries belong to its one run
   (R8); the jobs that read the study day then record `sync_failed` (ADR-037), SPEC-027 pages on the
@@ -315,3 +315,6 @@ other test.
 - **R10 and R15: `sync_runs` records the run's study day.** The refusal of a second scheduled run
   reads the study day the kernel's rule gave the first when it started, so a row is found by its
   day rather than by an instant range the rule would have to invert.
+
+Amendment (2026-09-28): a tracking issue's number changed: the host inventory in section 6 is
+#239.

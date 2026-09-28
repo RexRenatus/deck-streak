@@ -194,8 +194,7 @@ HEADERS = {
 # Referrer policies that never send a URL to another origin (web-security `ws.referrer-policy`).
 KEEPS_URLS = {"no-referrer", "same-origin", "strict-origin", "strict-origin-when-cross-origin"}
 ONE_YEAR = 31_536_000
-# Every advisory the templates depart from, by unit and reason, each waived with its why (R4); and
-# the one advisory no unit can waive, because journald's size cap is host-wide configuration.
+# Every advisory the templates depart from, by unit and reason, each waived with its why (R4).
 # SPEC-031's two timers catch up on nothing: each run reads the same rolling state a missed one would.
 WAIVED = {
     (f"{JOB_TEMPLATE}@sync.timer", "randomized-delay-missing"),
@@ -206,7 +205,12 @@ WAIVED = {
     ("deck-streak-slo.timer", "calendar-not-persistent"),
     ("deck-streak-memory-watch.timer", "calendar-not-persistent"),
 }
-HOST_WIDE_ADVISORIES = {"journal-size-uncapped"}
+# Every advisory whose subject waits on an open issue, by where the lint reports it and its reason:
+# SPEC-021's Litestream template is committed before the unit that runs `litestream replicate`,
+# which the backups issue builds with the daily backup and the restore drill (#44). Each must still
+# fire, so an entry that outlives its reason fails rather than passes. SPEC-021's journald drop-in
+# sets `SystemMaxUse=`, so the journal's size cap no longer departs from its advisory.
+WAITING = {("deploy", "litestream-unit-missing"): "#44"}
 
 
 def load_lint():
@@ -518,9 +522,10 @@ class TheTemplatesPassTheDurableLint(unittest.TestCase):
             (finding["unit"], check["reason"])
             for check in advisories
             for finding in check["findings"]
-            if check["reason"] not in HOST_WIDE_ADVISORIES
         }
-        self.assertEqual(unwaived, set(), "an advisory departure carries no waiver")
+        self.assertEqual(
+            unwaived, set(WAITING), "an advisory departure is neither waived nor waiting"
+        )
         waived = {
             (Path(item["unit"]).name, check["reason"])
             for check in advisories
