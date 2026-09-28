@@ -99,6 +99,24 @@
         "        if !holds_calendar_date(text.as_bytes()) {",
         "router::a_dedupe_key_is_an_opaque_token_that_holds_no_calendar_date",
         "a dedupe key never holds a calendar date, refused when it is built (SPEC-041 R3); cargo-mutants never looks inside a method named new"
+      ],
+      [
+        "S04113-NOTHING-OUTSIDE-THE-BOT-NAMES-THE-BOT-API",
+        "notifications",
+        "tests/one_router.rs",
+        "        if !path.starts_with(BOT_CRATE) && path != ALERT_PATH {",
+        "        if path.starts_with(BOT_CRATE) && path != ALERT_PATH {",
+        "one_router::no_delivery_goes_around_the_port",
+        "a shipped source outside the bot that names the Bot API's host or a send method is refused, SPEC-031's alert path aside (SPEC-041 A15); the census is test code, which cargo-mutants never mutates, and the mutant lets the planted raw requests through"
+      ],
+      [
+        "S04114-A-SEND-IS-CALLED-ONLY-AT-ITS-NAMED-CALL-SITE",
+        "notifications",
+        "tests/one_router.rs",
+        "                if !NAMED_SENDS.contains(&(path.as_str(), function.as_str(), send.as_str())) {",
+        "                if NAMED_SENDS.contains(&(path.as_str(), function.as_str(), send.as_str())) {",
+        "one_router::no_delivery_goes_around_the_port",
+        "a call of the bot's send_html or of a Bot API send method anywhere but its named call site is refused (SPEC-041 A15); the census is test code, which cargo-mutants never mutates, and the mutant lets the planted send through the bot's own transport"
       ]
     ],
     "CARGO_KILLED_SCRIPT_MUTATIONS": [
