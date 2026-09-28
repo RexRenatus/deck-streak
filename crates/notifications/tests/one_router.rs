@@ -63,11 +63,27 @@ const TEST_DIRECTORIES: [&str; 7] = [
     "testdata",
 ];
 
-/// A shipped source's extensions: the Rust, Python and web sources, the shell scripts and the
-/// systemd units.
-const SHIPPED_EXTENSIONS: [&str; 15] = [
-    "rs", "py", "ts", "js", "mjs", "cjs", "mts", "tsx", "jsx", "svelte", "vue", "astro", "sh",
-    "service", "timer",
+/// A shipped source's extensions: the Rust, Python and web sources, the Mini App's HTML among them,
+/// whose inline scripts run in the owner's client, and the shell scripts.
+const SHIPPED_EXTENSIONS: [&str; 17] = [
+    "rs", "py", "ts", "js", "mjs", "cjs", "mts", "cts", "tsx", "jsx", "svelte", "vue", "astro",
+    "html", "sh", "bash", "zsh",
+];
+
+/// The systemd unit types, each a unit file's suffix (`systemd.unit(5)`). A unit is shipped whatever
+/// its name, because systemd runs a unit named as tests are like any other.
+const UNIT_SUFFIXES: [&str; 11] = [
+    "service",
+    "socket",
+    "device",
+    "mount",
+    "automount",
+    "swap",
+    "target",
+    "path",
+    "timer",
+    "slice",
+    "scope",
 ];
 
 /// The Bot API's host.
@@ -453,7 +469,7 @@ pub(crate) use ledger::hold;
 /// extension but a `#!` first line; and a drop-in of the bot's unit. The third review's kinds: a
 /// bash and a zsh script with no `#!` first line; a socket unit, a path unit and a mount unit; a
 /// service unit whose name reads as a test's; the Mini App's HTML shell with an inline script; and a
-/// CommonJS TypeScript module.
+/// `.cts` module.
 const WALKED: [(&str, &str); 12] = [
     (
         "crates/daemon/src/fixtures/celebrate.rs",
@@ -516,14 +532,14 @@ ExecStart=/usr/bin/curl -fsS "https://api.telegram.org/bot${BOT_TOKEN}/sendMessa
     ),
     (
         "web/app/src/lib/celebrate.cts",
-        r#"// A celebration posted straight to the Bot API from a CommonJS TypeScript module, around the router.
+        r"// A celebration posted straight to the Bot API from a CommonJS TypeScript module, around the router.
 export async function celebrate(token: string, chat: number): Promise<void> {
   await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
     method: 'POST',
     body: JSON.stringify({ chat_id: chat, text: 'a celebration the router never decided' }),
   });
 }
-"#,
+",
     ),
 ];
 
@@ -1092,9 +1108,9 @@ fn blank(text: &str, start: usize, end: usize) -> String {
 }
 
 /// Every shipped source under `root`, as its path from the root and its text, in path order: a
-/// file of a shipped kind by its name, a script by its `#!` first line, and a unit's drop-in. A
-/// directory under a `src/` is always entered, whatever its name; elsewhere the skipped and the
-/// test directories are left out.
+/// file of a shipped kind by its name, a unit of any type, a script by its `#!` first line, and a
+/// unit's drop-in. A directory under a `src/` is always entered, whatever its name; elsewhere the
+/// skipped and the test directories are left out. A symlink is neither read nor followed.
 fn shipped_sources(root: &Path) -> Vec<(String, String)> {
     let mut found = Vec::new();
     let mut pending = vec![root.to_path_buf()];
@@ -1113,6 +1129,7 @@ fn shipped_sources(root: &Path) -> Vec<(String, String)> {
                 }
             } else if kind.is_file()
                 && (shipped(&name)
+                    || a_unit(&name)
                     || a_unit_drop_in(&directory, &name)
                     || starts_with_a_shebang(&entry.path()))
             {
@@ -1146,6 +1163,12 @@ fn shipped(name: &str) -> bool {
         .extension()
         .is_some_and(|inner| inner == "test" || inner == "spec");
     SHIPPED_EXTENSIONS.contains(&extension) && !python_test && !script_test
+}
+
+/// Whether a file named `name` is a systemd unit, of any type and whatever its name.
+fn a_unit(name: &str) -> bool {
+    name.rsplit_once('.')
+        .is_some_and(|(_, suffix)| UNIT_SUFFIXES.contains(&suffix))
 }
 
 /// Whether a file named `name` in `directory` is a systemd drop-in: a `.conf` in a `.d` directory.
@@ -1185,6 +1208,8 @@ fn a_delivery_call_outside_the_router_does_not_compile() {
     cases.compile_fail("tests/ui/pass_kept_by_a_clone.rs");
 }
 
+// One test holds every planted case of its criterion, so its body grows with each review.
+#[allow(clippy::too_many_lines)]
 #[test]
 fn no_delivery_goes_around_the_port() {
     // The first review's deliveries around the port are refused, each where it was planted, and
