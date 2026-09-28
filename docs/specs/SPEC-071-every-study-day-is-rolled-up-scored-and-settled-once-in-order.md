@@ -357,12 +357,13 @@ privacy-gdpr and accessibility packs stay enforced, and no row is deferred for i
 | `crates/daemon/src/role_bot.rs` | `deck-streak-daemon` | changed at delivery (§10): the recompute loaded at start; the bot's clock and rule |
 | `crates/kernel/tests/data_rights.rs` | `deck-streak-kernel` | changed at delivery (§10): the pinned reset row names `courses_digest` |
 | `crates/readings/tests/support/mod.rs` | `deck-streak-readings` | changed at delivery (§10): a card literal names its `course` |
-| `web/app/src/lib/api.ts` | miniapp | changed at delivery (§10): `score()`, through the one session; its equivalent mutants recorded in place |
-| `web/app/src/lib/api.test.ts` | miniapp | changed at delivery (§10): `score()`'s tests, and the tests that kill the client's older survivors |
+| `web/app/src/lib/api.ts` | miniapp | changed at delivery (§10): `score()`, through the one session; a refusal stops the client in the call that met it, and a call with no answer reads null; its equivalent mutants recorded in place, each alone on its line |
+| `web/app/src/lib/api.test.ts` | miniapp | changed at delivery (§10): `score()`'s tests, and the tests that kill the client's older survivors, the failed handshake's interleaving among them |
 | `web/app/src/lib/score/score.test.ts` | miniapp | added at delivery (§10): the score body's reading |
 | `web/app/src/routes/score.test.ts` | miniapp | added at delivery (§10): the score screen's states |
-| `web/app/src/lib/startapp.ts` | miniapp | changed at delivery (§10): the `score` token; its equivalent mutants recorded in place |
-| `web/app/src/lib/startapp.test.ts` | miniapp | changed at delivery (§10): the token list names `score`; Today's own path |
+| `web/app/src/lib/startapp.ts` | miniapp | changed at delivery (§10): the `score` token; the shape check is `isToken`, tested on its own; the `today` entry's equivalent mutants recorded in place |
+| `web/app/src/lib/startapp.test.ts` | miniapp | changed at delivery (§10): the token list names `score`; Today's own path; `isToken`'s own tests |
+| `.cargo/mutants.toml` | repo | changed at delivery (§10): the one Rust equivalent's anchored `exclude_re` record (#295) |
 | `web/app/messages/en.json` | miniapp | changed at delivery (§10): the score screen's messages |
 | `web/app/tests/a11y.spec.ts` | miniapp | changed at delivery (§10): the score route answered, so the audit renders the breakdown |
 
@@ -527,19 +528,43 @@ milliseconds (SPEC-029 R3).
 - **The mutation jobs' survivors (SPEC-039).** The diff-scoped jobs mutate every file the delivery
   changed, whole, so the survivors of the three older client modules it touched are its own.
   `mutation-web` found 31 at 97823b2: 19 survived and 4 uncovered in `api.ts`, 7 in `startapp.ts`
-  and 1 in `routes.ts`. 13 are killed by new tests: a handshake and a call the network drops, a
-  handshake refused with 403, two calls whose session ended together sharing one new handshake, a
-  failed `/api/me` whose body reads as a session, `/api/me` bodies that are no JSON object or carry
-  a malformed day, and Today's own path. The 18 that no test can observe are recorded in place as
-  `EQUIVALENT (#294)`, each with its reason on its line: a guard a later check already implies (the
-  token map's type and shape guard and its anchors, a string answer's missing `ok`, the `typeof`
-  beside `body !== null`, a refused session that stays cached, a newer session only microtask timing
-  could open) or a literal whose value changes no answer. StrykerJS disables by mutator and line, so
-  the records also keep seven mutants from running that the tests killed at 97823b2: the other side
-  of three recorded conditions, both sides of the `read` refusal's condition, and two narrowed forms
-  of the token pattern. So that no killable mutant shares a recorded line, `parseMe` tests
-  `body !== null` before `typeof body`, the refusal's `return` has its own line, and the `today`
-  token names `TODAY`; each reads as before.
+  and 1 in `routes.ts`. Tests now kill every mutant of the three that a test can observe: a
+  handshake and a call the network drops, a handshake refused with 403, two calls whose session
+  ended together sharing one new handshake, a failed `/api/me` whose body reads as a session,
+  `/api/me` bodies that are no JSON object or carry a malformed day, Today's own path, a failed
+  handshake's interleaving, and the token's shape. Six mutants no test can observe are recorded in
+  place as `EQUIVALENT (#294)`, each with its reason on its line: the `'open'` literal, which no
+  caller compares with; `stopped` left unset after a refusal, since a refused session stays cached
+  and a later call answers reopen and sends nothing either way; the `null` an unreadable body falls
+  back to, which both parsers read as they read `undefined`; the `typeof` beside `body !== null`,
+  since a JSON value that is no object reads no `study_day`; and the `today` entry removed or its
+  key emptied, since `today` opens `TODAY` as every unlisted token does. At 8a12cf4 StrykerJS over
+  the three modules kills 142 mutants, times out 1, and ignores 6, the records alone; none survives
+  and none is uncovered.
+- **A record hides only its own mutants.** StrykerJS disables a mutator for every mutant whose node
+  starts on the line its comment names (instrumenter 10.0.0). At 47172da seven mutants the tests
+  kill started where a recorded one did, since a condition's two forced values start at one node,
+  as a regular expression's mutants do, and no line split can part them. Three places are
+  restructured instead, each answering as before, and the seven are killed again:
+  - a refusal stops the client in the call that met it (`get`), not in a callback on the shared
+    handshake, and the refused session stays cached as before; the refusal's condition now decides
+    the answer, so both its forced values are killed. The tests of a handshake refused with 403, a
+    page opened outside Telegram and a call the new session refuses too pin it.
+  - a call that got no answer reads `null`, not the string `'unavailable'`, so the read's refusal,
+    `response === null || !response.ok`, holds no part that another implies. The tests of a
+    handshake and a call the network drops, a server that fails and a failed `/api/me` whose body
+    reads as a session pin it.
+  - the token's shape is `isToken`, and `routeFor` reads the table through a conditional on it.
+    The table is read by exact key, so no screen shows whether the shape holds; `isToken`'s own
+    test pins its anchors, its characters and its length, beside the tests of unknown and
+    malformed tokens.
+
+  The mutant that forces the failed handshake's `session === used` true is killed by a test that
+  sweeps the offsets of the microtask queue after a dropped handshake: at one offset, a call that
+  joined the failing attempt resumes only after another call has opened a newer session, and the
+  mutant then forgets that session, so a later call sends a handshake of its own. Against the mutant
+  the test fails at that offset, the later call sending `POST /api/session` before its
+  `GET /api/me`; it refuses a sweep that never reaches the interleaving.
 - **`mutation-rust`** missed 51 mutants at 97823b2, and timed out 3, which it counts as examined.
   cargo-mutants runs only the mutated package's tests, and several functions were tested only
   through their callers in other packages, so 49 of them are now killed by a test in their own
@@ -550,7 +575,12 @@ milliseconds (SPEC-029 R3).
   boundaries and a course code's formatting; and the API's refusals. `seconds_of` caps each answer
   with the crate's one port of Python's `min`, `score.rs`'s `py_min`, which it matched line for line,
   so its tie is proved by `py_min`'s own test rather than standing as an equivalent. The last one
-  is a mutant no test can observe, and it is not recorded here: in `card_snapshot`, the test
-  `card.interval < MATURE_IVL_DAYS` sits inside the branch that only a card younger than
-  `MATURE_IVL_DAYS` reaches, so `<=` there admits no other card; its record waits for an issue that
-  tracks Rust equivalents.
+  is a mutant no test can observe: in `card_snapshot`, the test `card.interval < MATURE_IVL_DAYS`
+  sits inside the branch that only a card younger than `MATURE_IVL_DAYS` reaches, so `<=` there
+  admits no other card. It is recorded in the form SPEC-039 R5 holds in force: one `exclude_re`
+  entry in `.cargo/mutants.toml`, with `EQUIVALENT: <reason> (#295)` on the line above, anchored to
+  the whole name cargo-mutants' listing prints,
+  `crates/analytics/src/snapshot.rs:75:58: replace < with <= in card_snapshot`. The listing no
+  longer names it and still names the line's six other mutants. SPEC-057 (#277) replaces this
+  form, and its delivery converts the entry. At 47172da the job read examined 465 (caught 461,
+  missed 1, timeout 3), unviable 101, of 566; the missed one is this mutant.
