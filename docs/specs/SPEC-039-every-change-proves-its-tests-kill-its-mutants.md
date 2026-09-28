@@ -219,6 +219,7 @@ R17. **The gate is proved red first.** The survivor in `SystemClock::now` (§1) 
 | A25 | the builder brief teaches the mutation rules | `test_mutation_workflows.py` |
 | A26 | a time before the epoch reads as negative milliseconds | `cargo test -p deck-streak-kernel --test clock` |
 | A27 | each event reads its case by name, and a diff with no production path names its paths | `test_mutation_verdict.py` |
+| A28 | every job that runs cargo-mutants installs the nextest its configuration names | `test_mutation_workflows.py` |
 
 ```acceptance
 A1: python3 -m unittest discover -s scripts/tests -p test_mutation_rows.py -k a_tracked_change_is_refused_before_any_mutant_is_installed
@@ -248,6 +249,7 @@ A24: python3 -m unittest discover -s scripts/tests -p test_mutation_workflows.py
 A25: python3 -m unittest discover -s scripts/tests -p test_mutation_workflows.py -k the_builder_brief_teaches_the_mutation_rules
 A26: cargo test -p deck-streak-kernel --test clock -- --exact a_time_before_the_epoch_reads_as_negative_milliseconds
 A27: python3 -m unittest discover -s scripts/tests -p test_mutation_verdict.py -k each_event_reads_its_case_by_name
+A28: python3 -m unittest discover -s scripts/tests -p test_mutation_workflows.py -k every_job_that_runs_cargo_mutants_installs_the_test_tool_it_names
 ```
 
 A1 to A8 run the runner against a fixture repository built at run time in a temporary directory:
@@ -285,7 +287,7 @@ and green are the `mutation-rust` job's two runs.
 | `scripts/mutation-rows.d/S04200-S04299.json` | `repo` | added: SPEC-042's rows (R16) |
 | `scripts/tests/test_mutation_rows.py` | `repo` | added: A1 to A11 |
 | `scripts/tests/test_mutation_verdict.py` | `repo` | added: A12 to A19, A27 |
-| `scripts/tests/test_mutation_workflows.py` | `repo` | added: A20 to A25 |
+| `scripts/tests/test_mutation_workflows.py` | `repo` | added: A20 to A25, A28 |
 | `.cargo/mutants.toml` | `repo` | added (R5, R6) |
 | `web/app/stryker.config.json` | `repo` | added (R6) |
 | `web/app/package.json`, `pnpm-lock.yaml` | `miniapp` | changed: StrykerJS 10.0.0 (R1) |

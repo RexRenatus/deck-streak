@@ -221,5 +221,25 @@ class TheBuilderBriefTeachesTheRules(unittest.TestCase):
             self.assertIn(needle, section.group(1))
 
 
+class CargoMutantsRunsTheGatesTestTool(unittest.TestCase):
+    def test_every_job_that_runs_cargo_mutants_installs_the_test_tool_it_names(self):
+        # The gate runs nextest, a process per test; cargo-mutants runs cargo test, one process per
+        # binary, unless its configuration says otherwise (SPEC-039 R1, measured in section 8).
+        config = (REPO / ".cargo" / "mutants.toml").read_text(encoding="utf-8")
+        self.assertRegex(config, r'(?m)^test_tool = "nextest"$')
+        running = [
+            (path.name, name, job)
+            for path in sorted(WORKFLOWS.glob("*.yml"))
+            for name, job in jobs(path.read_text(encoding="utf-8")).items()
+            if "cargo mutants" in job
+        ]
+        for workflow_name, name, job in examined("jobs that run cargo-mutants", running):
+            self.assertRegex(
+                job,
+                r"(?m)^\s*tool: cargo-nextest@0\.9\.146$",
+                f"{workflow_name}:{name} runs cargo-mutants without the nextest it names",
+            )
+
+
 if __name__ == "__main__":
     unittest.main()
