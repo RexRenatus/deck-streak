@@ -144,6 +144,15 @@
         "        let rest = text.split_once(\"://\")?.1;",
         "commands::the_mini_app_url_is_https",
         "the Mini App's URL is https, the only scheme a web_app button opens (R11); cargo-mutants never looks inside a method named new"
+      ],
+      [
+        "S02617-THE-BASE-URL-HAS-NO-PATH",
+        "bot",
+        "src/transport.rs",
+        "            || authority.contains(['/', '?', '#', '@'])",
+        "            || authority.contains(['?', '#', '@'])",
+        "transport::the_api_url_names_no_path",
+        "the Bot API's base URL carries no path beyond its root, so the token is appended to the host's root and nowhere else (ADR-026); cargo-mutants never looks inside a method named new"
       ]
     ]
   }
