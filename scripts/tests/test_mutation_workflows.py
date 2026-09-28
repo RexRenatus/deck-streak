@@ -295,6 +295,16 @@ class TheMutationJobsGateEveryPullRequest(unittest.TestCase):
             self.assertIn(flag, command)
         self.assertIn("mutation_rows.py prove", found["mutation-rows"])
         self.assertIn("mutation_rows.py retired", found["mutation-rows"])
+        # The runner writes its report into a directory: one the job never made holds no report,
+        # and the verdict reads the rows VOID (the first run of this layout, SPEC-039 section 8).
+        prove = next(s for s in steps(found["mutation-rows"]) if "mutation_rows.py prove" in s)
+        report = re.search(r'--report "([^"]+)/[^"/]+"', prove)
+        self.assertIsNotNone(report, "the rows job writes no report")
+        made = prove.find(f'mkdir -p "{report.group(1)}"')
+        self.assertTrue(
+            0 <= made < prove.find("mutation_rows.py prove"),
+            "the rows job never makes the directory its report goes to",
+        )
         self.assertIn("stryker run", found["mutation-web"])
 
 
