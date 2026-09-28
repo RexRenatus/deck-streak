@@ -20,15 +20,16 @@
   opens and closes, what a code span, a comment, a tag and its attributes, and each form of
   link take, how a path is percent-decoded, where its extension starts, and the line each
   rail names. They kill 138 of the mutants of `crates/vault/src/rails.rs` that the opening
-  sweep left, and the file's 11 equivalent mutants are recorded in
+  sweep left, unit tests of where a tag, a link's tail and an autolink end and of an attribute
+  with no value kill 6 more, and the file's 5 equivalent mutants are recorded in
   `scripts/mutation-equivalent.d/deck-streak-vault.json`.
 - The vault's other six files gain tests of what they already do: the start check's refusals and
-  the failures it reports by step, the real file system's own errors, a note's key, hash and body
-  shape, the readings tree's calendar, rails and emptied day folders, and the staged executor's
-  moves, updates and new folders, the gate's classes, the class that examined nothing and its
-  time limit. They kill 69 more of the vault's mutants, 7 more equivalent mutants are recorded (18
-  in all), and a test that rolls or archives a note fails within seconds when a mutant stops its
-  search for a free archive name.
+  the failures it reports by step, the real file system's own errors, a sync the system refuses
+  included, a note's key, hash and body shape, the readings tree's calendar, rails and emptied day
+  folders, and the staged executor's moves, updates and new folders, the gate's classes, the class
+  that examined nothing and its time limit. They kill 70 more of the vault's mutants, 6 more
+  equivalent mutants are recorded (11 in all), and a test that rolls or archives a note fails
+  within seconds when a mutant stops its search for a free archive name.
 
 ### Changed
 
