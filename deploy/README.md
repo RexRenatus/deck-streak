@@ -14,6 +14,8 @@ a unit, reloads Caddy or touches a host; the first deploy is #42's.
 | `systemd/deck-streak-bot.service` | the `bot` role: the Telegram bot's long-polling transport, `Type=notify` with a watchdog |
 | `systemd/deck-streak-job@.service` | one run of one job of coordination's job table, `deckstreakd job <id>`, a `oneshot` |
 | `systemd/deck-streak-job@<id>.timer` | one timer per job of the table (`sync`, `maintenance`, `liveness`), each starting the job instance of its own name |
+| `systemd/deck-streak-job@sync.path` | the owner's `/sync` doorbell: a change of the request file starts `deck-streak-job@sync.service`, and it loads no credential (SPEC-059) |
+| `tmpfiles.d/deck-streak-sync-request.conf` | the request directory, the service user's alone, mode `0700`; only the bot unit may write it (SPEC-059) |
 | `systemd/deck-streak-alert@.service` | the one alert path, a `oneshot` every other service names with `OnFailure=`: it pages the owner on Telegram that its instance failed (SPEC-031) |
 | `systemd/deck-streak-slo.service`, `.timer` | the SLO evaluator, every five minutes: it pages once per burn episode of the API's SLO (SPEC-031) |
 | `systemd/deck-streak-memory-watch.service`, `.timer` | the memory watch, every minute: it pages once per new OOM kill or `MemoryMax` event of any DeckStreak unit (SPEC-031) |
@@ -55,8 +57,8 @@ file, and no template carries a secret's value.
 | unit | credential ids | why |
 |---|---|---|
 | `deck-streak-api.service` | `owner-user-id`, `telegram-bot-token` | the owner gate over Telegram's launch data (SPEC-024) |
-| `deck-streak-bot.service` | `owner-user-id`, `telegram-bot-token`, `anki-sync-username`, `anki-sync-password` | the transport and the owner gate, and the owner's `/sync`, which runs a sync cycle in this role (SPEC-026) |
-| `deck-streak-job@.service` | `anki-sync-username`, `anki-sync-password` | the `sync` job's account (SPEC-022); only that job reads it, and the rail's map answers it to the `sync` instance alone |
+| `deck-streak-bot.service` | `owner-user-id`, `telegram-bot-token` | the transport and the owner gate (SPEC-026); the owner's `/sync` holds no login, it asks the sync job (SPEC-059) |
+| `deck-streak-job@.service` | `anki-sync-username`, `anki-sync-password` | the `sync` job's account (SPEC-022), which serves the owner's `/sync` too (SPEC-059); only that job reads it, and the rail's map answers it to the `sync` instance alone |
 | `deck-streak-alert@.service` | `owner-user-id`, `telegram-bot-token` | the page: the bot's token, and the owner's id, which is the owner's private chat (SPEC-031) |
 
 systemd names the unit in the address it binds for each credential, so a job's credentials reach
@@ -103,6 +105,10 @@ job's slot (ADR-027).
 | `sync` | daily, the rollover hour, minute 7 | `*-*-* 04:07:00 UTC` | `true`: the table's one catch-up job |
 | `maintenance` | daily, the rollover hour, minute 28 | `*-*-* 04:28:00 UTC` | none, waived with its why |
 | `liveness` | hourly, minute 14 | `*-*-* *:14:00 UTC` | none, waived with its why |
+
+The owner's `/sync` adds no slot and no timer: the bot stores the request and touches the request
+file, `deck-streak-job@sync.path` starts the sync job, and the job serves the stored request before
+its scheduled run, which stays claimed once per study day (SPEC-059, ADR-037).
 
 No job timer carries a random delay: the table already places each job on its own minute, clear of
 the others, and a delay would move a fire off it. Each timer says so in its `X-DurableServices-Waive=`.

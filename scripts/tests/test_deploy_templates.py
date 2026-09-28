@@ -88,12 +88,7 @@ CREDENTIAL_SOURCES = {
 # the evaluator and the watch read none.
 ROLE_CREDENTIALS = {
     "deck-streak-api.service": ("OWNER_USER_ID", "TELEGRAM_BOT_TOKEN"),
-    "deck-streak-bot.service": (
-        "OWNER_USER_ID",
-        "TELEGRAM_BOT_TOKEN",
-        "SYNC_USERNAME",
-        "SYNC_PASSWORD",
-    ),
+    "deck-streak-bot.service": ("OWNER_USER_ID", "TELEGRAM_BOT_TOKEN"),
     f"{JOB_TEMPLATE}@.service": ("SYNC_USERNAME", "SYNC_PASSWORD"),
     f"{ALERT_TEMPLATE}@.service": ("OWNER_USER_ID", "TELEGRAM_BOT_TOKEN"),
     SLO_SERVICE: (),

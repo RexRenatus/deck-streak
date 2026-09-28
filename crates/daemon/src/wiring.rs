@@ -11,17 +11,16 @@
 //! (`docs/schematics/service-lifecycle.md`).
 //!
 //! The bot's transport counts what it sent; [`TransportMarker`] hands those counts to
-//! coordination's `DeliveryMarker` (SPEC-027 R6). The bot's `/sync` asks an [`OwnerSync`];
-//! [`OwnerSyncCycle`] answers it with ingest's sync and coordination's cycle, which the bot cannot
-//! name (docs/CONTEXT-MAP.md).
+//! coordination's `DeliveryMarker` (SPEC-027 R6). The owner's cycle, [`OwnerSyncCycle`], is run by
+//! the sync job when a request is stored (SPEC-059); the bot's `/sync` port only requests it
+//! (`sync_request.rs`).
 
 use std::fs::{File, OpenOptions};
-use std::future::Future;
 use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use deck_streak_bot::{OwnerSync, Scores, SyncAnswer, SyncOutcome, SyncRefusal, Transport};
+use deck_streak_bot::{Scores, SyncAnswer, SyncOutcome, SyncRefusal, Transport};
 use deck_streak_coordination::delivery::{DeliveryCounts, DeliveryMarker};
 use deck_streak_coordination::obligations::Obligations;
 use deck_streak_coordination::sync_cycle::{
@@ -198,7 +197,13 @@ impl OwnerSyncCycle {
         }
     }
 
-    async fn run(&self) -> Result<SyncAnswer, SyncRefusal> {
+    /// Runs the owner's cycle once, in the process that calls it: the sync job's, never the
+    /// bot's (SPEC-059).
+    ///
+    /// # Errors
+    ///
+    /// The refusal, with its reason code, when the cycle could not run to its end.
+    pub async fn run(&self) -> Result<SyncAnswer, SyncRefusal> {
         let clock = Arc::new(SystemClock);
         let gate = ChangeGate::new(self.db.clone(), self.rule, clock.clone());
         gate.state()
@@ -225,12 +230,6 @@ impl OwnerSyncCycle {
             .await
             .map_err(|error| refused(cycle_reason(&error), &error))?;
         Ok(answer_of(&report))
-    }
-}
-
-impl OwnerSync for OwnerSyncCycle {
-    fn sync_now(&self) -> impl Future<Output = Result<SyncAnswer, SyncRefusal>> + Send {
-        self.run()
     }
 }
 
@@ -380,7 +379,7 @@ mod tests {
             Offload::new(workers, Arc::new(SystemClock)),
             StudyDayRule::default(),
         );
-        let answer = cycle.sync_now().await;
+        let answer = cycle.run().await;
         assert_eq!(
             answer,
             Err(SyncRefusal {

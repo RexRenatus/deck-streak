@@ -11,7 +11,7 @@
 //! SIGTERM the loop finishes the batch in hand and confirms its offset; the role says `STOPPING=1`,
 //! closes the database and returns.
 //!
-//! The owner's `/sync` runs a sync cycle in this role (R11), through wiring's [`OwnerSyncCycle`].
+//! The owner's `/sync` runs no cycle in this role: it requests the sync job (SPEC-059).
 
 use std::cell::Cell;
 use std::sync::Arc;
@@ -25,7 +25,8 @@ use deck_streak_kernel::{
 };
 
 use crate::lifecycle::{self, Notifier, NotifyState, ShutdownSignal};
-use crate::wiring::{self, OwnerSyncCycle, StateDirectory, WiringError};
+use crate::sync_request::{self, FileDoorbell, SqliteRequestLedger, SyncRequester, TokioPause};
+use crate::wiring::{self, StateDirectory, WiringError};
 
 /// Why the `bot` role stopped with an error.
 #[derive(Debug, thiserror::Error)]
@@ -60,6 +61,7 @@ pub async fn run(env: &Environment, redactor: &Redactor) -> Result<(), BotRoleEr
     let state = StateDirectory::from_env(env)?;
     let app = MiniAppUrl::from_env(env)?;
     let api = ApiUrl::from_env(env)?;
+    let request = sync_request::request_path(env)?;
     let credentials = CredentialsDirectory::from_env(env)?;
     let loader = CredentialLoader::new(credentials, redactor.clone());
     let owner = Owner::load(&loader)?;
@@ -82,12 +84,11 @@ pub async fn run(env: &Environment, redactor: &Redactor) -> Result<(), BotRoleEr
     let db = wiring::open_database(&offload, &state)
         .await
         .map_err(BotRoleError::Database)?;
-    let sync = OwnerSyncCycle::new(
-        env.clone(),
-        redactor.clone(),
-        db.clone(),
-        offload,
-        kernel.study_day_rule,
+    let sync = SyncRequester::new(
+        SystemClock,
+        SqliteRequestLedger::new(db.clone()),
+        FileDoorbell::new(request),
+        TokioPause,
     );
     let mut commands = Commands::new(Arc::clone(&transport), owner, app, db.clone(), sync);
 

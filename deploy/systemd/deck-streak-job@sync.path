@@ -1,0 +1,14 @@
+# The doorbell of the owner's /sync (SPEC-059; ADR-066; systemd.path(5)). The bot stores the request
+# and touches this file; a close after a write starts the sync job instance of this unit's own name,
+# deck-streak-job@sync.service. PathChanged= is edge triggered, so requests during a running sync
+# start at most one more. The file's content is never read: the job reads the stored request. The
+# unit loads no credential and runs nothing itself.
+[Unit]
+Description=DeckStreak's owner-requested sync doorbell
+Documentation=https://github.com/RexRenatus/deck-streak/blob/main/deploy/README.md
+
+[Path]
+PathChanged=/run/deck-streak-sync/request
+
+[Install]
+WantedBy=paths.target
