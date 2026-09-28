@@ -8,8 +8,8 @@
     "src/**/*.ts",
     "src/**/*.js",
     "src/**/*.svelte",
-    "!src/**/*.test.ts",
-    "!src/**/*.spec.ts",
+    "!src/**/*.test.*",
+    "!src/**/*.spec.*",
     "!src/**/*.d.ts",
     "!src/lib/paraglide/**"
   ],
