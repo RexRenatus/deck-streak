@@ -108,6 +108,9 @@ Chosen option: "(a) an upload path for the skip day alone", the owner's decision
   take reads each moved card back and lists such a card to the owner, and the undo leaves it alone
   (SPEC-083). A suspension, a flag, a deck move or a setting made in that window is overwritten the
   same way when the reschedule is newer, and the read-back cannot see it (SPEC-083 §6).
+- Bad, because a review made on another client between the undo's converge and its push can lose
+  its schedule to the restore; the undo lists that card to the owner (SPEC-083 R32, A42) but
+  cannot keep the review's schedule, since the sync keeps the newer card.
 - Bad, because the private copy shows the moved cards as due until its next sync downloads the
   change.
 - Bad, because the reschedule's review-log rows stay after an undo; the read never counts them as

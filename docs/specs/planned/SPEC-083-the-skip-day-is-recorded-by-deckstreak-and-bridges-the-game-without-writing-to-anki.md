@@ -63,7 +63,7 @@
   - the undo restores exactly the recorded prior due dates of exactly those cards (A30, A41); it is
     owner-triggered, incremental only, and aborts on any full-sync demand (A27, A32); it carries the
     same recording-server proof (A6, A30, A31); and it writes only cards whose current state still
-    equals what the skip wrote, listing every card reviewed or changed since (A31, A34).
+    equals what the skip wrote, listing every card reviewed or changed since (A31, A34, A42).
 - **Where DeckStreak's write differs from the predecessor's**, by those guardrails:
   - the predecessor's wrap keeps only new and learning cards out of a configured search
     (`sync.py:AnkiSyncer._skip_day_blocking`); here a configured search that does not parse as one
@@ -338,7 +338,11 @@ R32. The exact inverse (guardrail i and the undo's rules). For each card it writ
     discarded either way. An undo whose push fails after its first request answers that its outcome
     is not known yet, never that nothing was written, and the skip stays `applied`; a later undo
     counts a card that already equals its recorded prior state as restored, never as changed since
-    the skip.
+    the skip. After the push, the undo reads each restored card back from the synced working copy, as
+    the take does (R27): a card whose state differs from what the undo wrote, or whose review log
+    holds a study event after the undo's converge (a review on another client between the undo's
+    converge and its push, which the sync's merge kept or overwrote), is listed to the owner in the
+    undo's answer, with its review-log row kept.
 
 The recorder's own proof (#266, ADR-089)
 
@@ -395,6 +399,7 @@ R33. The recording layer is proved to see a write before any proof rests on it. 
 | A39 | (iv) a card the preview did not list, which another client made due before the converge, and a previewed card, which another client rescheduled before it, are each left alone and listed in the take's answer, and the push carries neither | `a_card_that_changed_between_the_preview_and_the_converge_is_left_alone` |
 | A40 | (i, v) when the engine's own day differs from the study day (the synthetic collection's rollover hour differs from the study-day rule's), and when the collection's configured UTC offset differs from the test process's zone, a preview and a take either list and push only that study day's due review cards, each moved to a day in the day spec's range from the study day, with no setting whose value differs from the server's at the converge, or refuse before any request or write; the private copy's bytes are unchanged either way | `a_take_holds_to_the_study_day_and_writes_no_setting_when_the_engines_day_or_zone_differs` |
 | A41 | (undo) an undo whose push the server commits while the relay drops the answer to its `finish` answers that its outcome is not known yet and never that nothing was written; the skip stays `applied`; a second undo marks it undone, refunds it once, and lists no restored card as changed since the skip | `an_undo_whose_finish_answer_is_lost_says_its_outcome_is_not_known` |
+| A42 | (undo) a card reviewed on another client between the undo's converge and its push, the review landing at least one whole second after the undo's converge (a tie keeps the working copy's card, `chunks.rs:184`), is listed to the owner in the undo's answer, and its review-log row is kept | `a_card_reviewed_during_the_undo_is_listed_to_the_owner` |
 
 ```acceptance
 A1: cargo test -p deck-streak-ingest --test skip_record -- --exact a_skip_is_recorded_once_per_study_day_and_again_after_an_undo
@@ -438,6 +443,7 @@ A38: cargo test -p deck-streak-ingest --test skip_write -- --exact a_custom_sear
 A39: cargo test -p deck-streak-ingest --test skip_write -- --exact a_card_that_changed_between_the_preview_and_the_converge_is_left_alone
 A40: cargo test -p deck-streak-ingest --test skip_write -- --exact a_take_holds_to_the_study_day_and_writes_no_setting_when_the_engines_day_or_zone_differs
 A41: cargo test -p deck-streak-ingest --test skip_undo -- --exact an_undo_whose_finish_answer_is_lost_says_its_outcome_is_not_known
+A42: cargo test -p deck-streak-ingest --test skip_undo -- --exact a_card_reviewed_during_the_undo_is_listed_to_the_owner
 ```
 
 The write's tests run the engine's own sync server in a child process with SPEC-022's recording
@@ -447,8 +453,11 @@ cards the wrap must exclude; relearning, suspended and buried cards due today; a
 today in a filtered deck, which R3 leaves where it is; a card the skip does not move that is already
 due within the day spec's range; and cards due on other days. Every card above sits in one deck,
 the filtered-deck card by its home deck, which `deck:` also matches (the pinned engine's
-`rslib/src/search/sqlwriter.rs:531-532`), and A38's group-closing search names that deck. The
-write's tests run with FSRS off and on, and nothing reaches the owner's server. A40 runs on a
+`rslib/src/search/sqlwriter.rs:531-532`), and A38's group-closing search names that deck. A38's
+buried card is buried on the engine's current day, since the converge unburies an older bury
+without marking the card modified (`rslib/src/sync/collection/normal.rs:88`,
+`rslib/src/scheduler/bury_and_suspend.rs:43-50`). The write's tests run with FSRS off and on, and
+nothing reaches the owner's server. A40 runs on a
 synthetic collection whose rollover hour and configured UTC offset differ from the study-day rule's
 and from the test process's zone; A6 and A30 run their offset clauses on it. A second synthetic
 client plays the owner's other device. A26, A29, A31 and A34 act between the take's steps through a
@@ -457,18 +466,19 @@ and before the push, which does nothing in production. For A31 and A34 the other
 lands at the hook after the converge and at the hook before the push, the second at least one whole
 second after the reschedule's modification time, because the sync's merge keeps the card with the
 newer modification time, in whole seconds, a tie keeping the working copy's card, and adds every
-review-log row (the pinned engine's `rslib/src/sync/collection/chunks.rs:168-193`). A39's other
-client changes its cards after the preview and before the take's converge. A35 leaves a row
-`pending` from a take whose push never landed, and the private copy's next sync brings one of its
-recorded cards, reviewed on another client with a 1-day interval, onto the date the skip wrote,
-with that review's state and modification time; that card's prior interval is 1 day and FSRS is
-off, so only its modification time separates it from the state the take recorded. A35 and A41 have
-the recording layer drop the answer to a push's `finish` after the server commits the push. A27
-plants a failure at the converge and one at the push, for a take and for an undo. A30 compares
-every field of each moved card's row before the take and after the undo. A33 is the control every
-other proof rests on, and it fails when the layer records nothing. Every test that enumerates
-reports its examined count and refuses zero. The red-first record gives each of A5, A6, A24 to A35,
-and A38 to A41 a red commit whose failure is the criterion's own reason.
+review-log row (the pinned engine's `rslib/src/sync/collection/chunks.rs:168-193`). For A42 the other
+client's review lands at the hook before the undo's push, timed the same way, at least one whole
+second after the undo's converge. A39's other client changes its cards after the preview and before
+the take's converge. A35 leaves a row `pending` from a take whose push never landed, and the private
+copy's next sync brings one of its recorded cards, reviewed on another client with a 1-day interval,
+onto the date the skip wrote, with that review's state and modification time; that card's prior
+interval is 1 day and FSRS is off, so only its modification time separates it from the state the take
+recorded. A35 and A41 have the recording layer drop the answer to a push's `finish` after the server
+commits the push. A27 plants a failure at the converge and one at the push, for a take and for an
+undo. A30 compares every field of each moved card's row before the take and after the undo. A33 is
+the control every other proof rests on, and it fails when the layer records nothing. Every test that
+enumerates reports its examined count and refuses zero. The red-first record gives each of A5, A6,
+A24 to A35, and A38 to A42 a red commit whose failure is the criterion's own reason.
 
 ## 3a. What the box run judges
 
@@ -497,7 +507,7 @@ delivery changes no pack's state.
 | `crates/ingest/src/lib.rs` | `deck-streak-ingest` | changed: the skip modules |
 | `crates/ingest/tests/skip_record.rs` | `deck-streak-ingest` | added: A1 to A4, A7, A8 |
 | `crates/ingest/tests/skip_write.rs` | `deck-streak-ingest` | added: A5, A9, A25, A26, A28, A29, A34, A36, A38 to A40 |
-| `crates/ingest/tests/skip_undo.rs` | `deck-streak-ingest` | added: A30 to A32, A41 |
+| `crates/ingest/tests/skip_undo.rs` | `deck-streak-ingest` | added: A30 to A32, A41, A42 |
 | `crates/ingest/tests/skip_zero_upload.rs` | `deck-streak-ingest` | added: A6 |
 | `crates/ingest/tests/skip_census.rs` | `deck-streak-ingest` | added: A24, with its planted fixture |
 | `crates/ingest/tests/recorder_control.rs` | `deck-streak-ingest` | added: A33 |
@@ -580,10 +590,13 @@ delivery changes no pack's state.
 
 - **A defect in the write reaches the owner's collection.** Prevented by the working copy, the
   incremental-only rule and the undo's compare (R21 to R32); detected by A5, A6, A24 to A34, and
-  A38 to A41, each red first against the recording layer, whose own control runs first (A33).
+  A38 to A42, each red first against the recording layer, whose own control runs first (A33).
 - **A review on another client during a take loses its schedule to the reschedule**, because the
   newer change wins the sync's merge. Detected by the read-back (A34): the owner sees the card
   listed, and the undo leaves it alone (A31).
+- **The undo's window.** A review made on another client between the undo's converge and its push
+  can lose its schedule to the restore, which is newer; R32's read-back lists the card to the owner,
+  who may reschedule it. Detected, not prevented: the sync keeps the newer card.
 - **A change other than a review, made on another client during a take, is overwritten.** A
   suspension, a flag, a deck move or a setting made on another client between the take's converge
   and its push is overwritten when the reschedule is newer: the sync's merge keeps the card with the
