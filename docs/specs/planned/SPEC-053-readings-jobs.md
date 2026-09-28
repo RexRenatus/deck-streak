@@ -54,10 +54,13 @@ R3. The generation job claims its fire for the study day in the cron-fire ledger
     second fire on the same study day does nothing. It never syncs (ADR-037). It then reads the AI
     route (SPEC-043): with the route `Absent`, every topic ends `ai_route_absent` (SPEC-046) and the
     job does nothing more. Otherwise it reads the study day's sync outcome (SPEC-022), after taking
-    the collection lock in its shared mode so that a sync still in flight ends first. When the
-    study day's scheduled sync fire is unclaimed although its slot has passed (a restart missed it),
-    the job first runs that one scheduled sync itself, claimed for the study day through SPEC-027's
-    ledger, so no second scheduled sync can follow (ADR-037). The outcome
+    the collection lock in its shared mode so that a sync still in flight ends first: the job's own
+    re-read under that lock, not the outcome the runner handed it before the lock. When no sync has
+    succeeded in the study day yet (a restart missed the scheduled slot, `sync`'s catch-up has not
+    run, and the owner has triggered none), the job runs no sync and waits for none (SPEC-027 R5):
+    the outcome is not succeeded. The shared lock is a wait for read consistency on a sync already
+    in flight, never a wait for a sync to be run. The generation unit is ordered `After=` the `sync`
+    job's unit, so a start of both queued together runs the sync to its end first (R9). The outcome
     succeeded when a sync that started in the study day succeeded, which is the scheduled sync unless
     the owner has triggered one since. Only then does it resolve the topics (SPEC-045), roll forward
     and generate (SPEC-046). When the study day's sync did not succeed, every topic ends
@@ -90,7 +93,11 @@ R9. The templates `deploy/systemd/deck-streak-readings-generate.service` and `.t
     template (ADR-038). The device key is never an `Environment=` value, and no secret name or
     project is in the unit. The unit has a `RuntimeMaxSec` above one run of every configured topic at
     its caps, `OnFailure=` the alert template unit, and the shared lock directory and the vault root
-    in `ReadWritePaths=`. `deploy/host-budget.json` gives both units their memory limits.
+    in `ReadWritePaths=`. `deploy/host-budget.json` gives both units their memory limits. The
+    generation unit is ordered `After=` the `sync` job's unit (SPEC-032's job template): when both
+    starts are queued together, as a boot that fires both missed timers can queue them, the
+    generation starts once the sync's `oneshot` run has ended (R3). `After=` holds a start of the
+    generation back only while a start of the sync is pending.
 
 ## 3. Acceptance criteria
 
@@ -107,6 +114,7 @@ R9. The templates `deploy/systemd/deck-streak-readings-generate.service` and `.t
 | A9 | with the vault archive switch off, a generation writes no vault byte and records `vault_archive_off` | `the_vault_archive_stays_off_until_it_is_switched_on` |
 | A10 | the readings unit templates carry no private value and pass the durable-services unit rows | durable-services unit rows; `test_the_readings_units_pass_the_unit_rows_with_placeholders_only` |
 | A11 | a night with the route absent records `ai_route_absent` for every topic, raises no alert, stores nothing and reads no sync | `a_night_with_the_route_absent_records_ai_route_absent_and_raises_nothing` |
+| A12 | the generation unit's template is ordered `After=` the `sync` job's unit (R3, R9) | `test_the_generation_unit_is_ordered_after_the_sync_job` |
 
 ```acceptance
 A1: cargo test -p deck-streak-coordination --test readings_jobs -- --exact the_generation_reads_the_study_days_sync_and_never_syncs
@@ -120,6 +128,7 @@ A8: cargo test -p deck-streak-coordination --test readings_jobs -- --exact a_mis
 A9: cargo test -p deck-streak-coordination --test readings_jobs -- --exact the_vault_archive_stays_off_until_it_is_switched_on
 A10: python3 -m unittest discover -s scripts/tests -p test_readings_units.py -k test_the_readings_units_pass_the_unit_rows_with_placeholders_only
 A11: cargo test -p deck-streak-coordination --test readings_jobs -- --exact a_night_with_the_route_absent_records_ai_route_absent_and_raises_nothing
+A12: python3 -m unittest discover -s scripts/tests -p test_readings_units.py -k test_the_generation_unit_is_ordered_after_the_sync_job
 ```
 
 ## 4. File manifest
@@ -163,10 +172,25 @@ A11: cargo test -p deck-streak-coordination --test readings_jobs -- --exact a_ni
 - **The scheduled sync is still retrying at the generation's slot.** The generation reads the
   outcome under the collection lock's shared mode, which waits for a sync in flight (R3), so it never
   reads a sync that has not ended.
-- **The host is down across the sync slot.** SPEC-027 does not catch the sync up, so a caught-up
-  generation finds no successful sync for the study day and ends every topic `sync_failed`. The
-  owner's `/sync` and a regeneration (SPEC-048) recover the day.
+- **The host is down across the sync slot.** `sync` is SPEC-027's catch-up job (its R1), so a sync
+  missed by at most 360 minutes runs once when its timer's `Persistent=` activates it. A generation
+  that runs while the study day has no successful sync (the host was down longer, the sync failed,
+  or the generation's start was not queued beside the sync's, R9) ends every topic `could_not_tell`
+  with `sync_failed` (R3, A5). The owner's `/sync` and a regeneration (SPEC-048) recover the day.
 - **A heavy day runs past the unit's runtime bound.** Each topic's run is capped, and the health check
   pages a run that did not finish (SPEC-050).
 - **A caught-up generation costs an extra run after a restart.** It is claimed once and bounded to 360
   minutes late; the owner set no spend cap and receives the readings that day.
+
+## 7. Amendments before delivery
+
+- **R3 (2026-09-28): the generation job never runs the scheduled sync, even after a restart.** R3
+  said that when a restart had missed the sync's slot, the job would first run that scheduled sync
+  itself (ADR-037's first reading). SPEC-027, delivered in #224, decides that no job but `sync` runs
+  the sync cycle, and A1 here already said the job never runs a sync. R3 now reads the missing
+  outcome as not succeeded (every topic `could_not_tell` with `sync_failed`, as A5 requires), and
+  the generation unit is ordered `After=` the `sync` job's unit, so that when both starts are queued
+  together the sync's run ends first (R9, A12). ADR-037 carries the matching note.
+- **Section 6 (2026-09-28): the host-down risk.** It said SPEC-027 does not catch the sync up;
+  SPEC-027 as delivered makes `sync` its catch-up job (its R1). The risk now names what the catch-up
+  recovers and what still ends `sync_failed`.
