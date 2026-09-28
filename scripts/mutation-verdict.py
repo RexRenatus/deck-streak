@@ -14,11 +14,11 @@ R6, R10, R12; ADR-057).
     python3 scripts/mutation-verdict.py exclusions [--root DIR]
 
 PLAN first decides the run's scope from the event that started it (R3), because a job is never
-skipped: `ci` reads a skipped need as failed. A pull request into `dev` is judged on its diff; a
-release pull request into `main` is not-applicable, since each of its changes was judged on its
-own pull request into `dev`; a push that merges a pull request (`Merge pull request #N`) is
-not-applicable, naming `#N`, whose jobs judged that same tree; a push that names none is judged
-on its first-parent diff. For a diff it reads `git diff BASE...HEAD` (on a pull request's merge
+skipped: `ci` reads a skipped need as failed. A pull request into `dev` is judged on its diff, and
+a release pull request into `main` on its merge diff, every change `dev` carries since the last
+release; a push that merges a pull request (`Merge pull request #N`) is not-applicable, naming
+`#N`, whose jobs judged that same tree; a push that names none is judged on its first-parent
+diff. For a diff it reads `git diff BASE...HEAD` (on a pull request's merge
 ref, BASE is `HEAD^1`) and writes `plan.json` and `git.diff` into `--out`: every changed path with
 its class (R2), each production file's changed lines split into code lines and blank or comment
 lines, the rows the diff selects (R10), and the web files Stryker mutates whole. Under GitHub
@@ -104,9 +104,9 @@ def scope_of(event: str, base_ref: str, subject: str) -> tuple[str, str]:
     never skipped, because `ci` reads a skipped need as failed, so each case says why by name."""
     if event == "pull_request" and base_ref == "main":
         return (
-            "not-applicable",
-            "a release pull request into main carries dev's changes, each judged by these jobs "
-            "on its own pull request into dev; the weekly battery sweeps dev",
+            "diff",
+            "a release pull request into main is judged on its merge diff, every change dev "
+            "carries since the last release, in as many shards as fit their bound",
         )
     if event == "pull_request":
         return "diff", f"the pull request into {base_ref or 'its base'} is judged on its diff"
