@@ -445,6 +445,11 @@ branch and recorded in its pull request.
   `mutation-verdict.py plan --event` decides it: a pull request into `dev` is judged on its diff;
   a release pull request into `main` and a push that merges `#N` read `not-applicable` by name; a
   push that names no pull request is judged on its first-parent diff.
+- **Correction (2026-09-28): a squash merge's push.** A push that merges a pull request by squash
+  has a subject that ends "(#N)", which the plan does not read as a merge, so it is judged again on
+  its first-parent diff: the work is repeated, and nothing is skipped. The plan's subject match
+  gains that form with the next mutation delivery. Releases merge with a merge commit, never a
+  squash (RELEASING.md).
 - **R7: `--in-place` is the rule's `-j 1`.** cargo-mutants 27.1.0 refuses any `-j` flag beside
   `--in-place` (exit 1, a usage error), and in place it runs one mutant at a time. The verdict read
   that exit as VOID the first time it met it.
@@ -523,6 +528,15 @@ branch and recorded in its pull request.
   shards at 0.74 to 1.32 times their measured time; the refit one projects both runs' shards at
   0.66 to 1.33. At the worst of these the release's slowest shard takes about 78 minutes of
   baseline and mutants, inside its job's 120.
+- **Correction (2026-09-28): the mutants at 4082551.** cargo-mutants listed 2,154 mutants at this
+  branch's 4082551, ten shards of 68 and twenty-two of 67, not the 2,153 the rehearsal listed at
+  `dev` 09b60d2.
+- **Correction (2026-09-28): the projection's direction.** Over runs 36373915578 and 36384080819,
+  the refit table's projection over the measured time is 0.75 to 1.52, and the measured time over
+  the projection is 0.66 to 1.33, as R18 states it.
+- **Correction (2026-09-28): an `ingest` mutant's cost.** ADR-057's D11 prices an `ingest` mutant at
+  124 s; the refit table in R18, which `scripts/mutation-verdict.py` holds, prices it at 126 s, the
+  figure the plan uses.
 - **The next release is red until its survivors are triaged.** Run 36384080819's 31 reported
   shards found 310 missed mutants in 33 files (218 in `vault`, 145 of them in `rails.rs`), and its
   `web` job 53 survivors and 21 uncovered mutants among the release's 266 (#240). A release's
@@ -552,3 +566,17 @@ branch and recorded in its pull request.
   a missing shard named once, a shard of no mutant, the selectors' union and the three Stryker
   refusals. The runner proved all 28 of the band's rows KILLED at the delivery's head, S03906 to
   S03910 among them again, each file restored byte for byte.
+
+## 9. Amendment, 2026-09-28: section 8's figures corrected
+
+Made after the delivery, insert-only under ruling (i) of SPEC-038 section 8: every earlier byte is
+kept in order. It inserts:
+
+- section 8: the bullet "Correction (2026-09-28): a squash merge's push", after the bullet on R3's
+  cases;
+- section 8: the bullets "Correction (2026-09-28): the mutants at 4082551", "Correction
+  (2026-09-28): the projection's direction" and "Correction (2026-09-28): an `ingest` mutant's
+  cost", after the bullet on the costs measured on GitHub's runners;
+- this section.
+
+ADR-057 carries a note of its own: its Confirmation's range is A1 to A40.

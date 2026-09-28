@@ -137,6 +137,23 @@ judges (SPEC-055 R11). SPEC-055's delivery recorded, for A5:
 - **CI's warm path after the first push to `dev` that saves a cache.** Appended here by the
   orchestrator after the merge, because only such a push saves a cache (ADR-055; SPEC-055 R6 and
   R10).
+  Measured from `dev`'s push runs on GitHub-hosted runners, by SPEC-038 section 8's metric (the
+  slowest gate job plus `ci`, excluding the wait for a runner):
+  - **The merge's own push, run 36391248783 at 65d7649 (#242).** The lockfile changed, so every
+    Rust job restored the 26.05-era entry by its fallback key (1,005,229,631 bytes) and compiled the
+    fork's engine. `rust` then saved the new entry under the 26.09.3 lockfile's key: 1,331,055,956
+    bytes. The jobs: engine (1) 192 s, engine (2) 182 s, rust 171 s, hygiene 156 s. The gate:
+    195 s.
+  - **The first warm push, run 36392549996 at 5f3f2d5 (#243, docs only).** Every Rust job restored
+    that entry by its exact key, and nothing was saved. The jobs: engine (2) 143 s, engine (1)
+    127 s, rust 96 s, hygiene 139 s. The gate: 147 s, against 176 s at 9e8e53e before the fork (run
+    36382447015).
+  - **Later warm pushes, the gate:** 868aaa5 (#245, run 36395345580) 155 s; 0f68ed4 (#221, run
+    36396463661) 161 s, excluding the new mutation jobs, which SPEC-039 bounds itself; d4af48e
+    (#246, run 36397385939) 152 s; d9ffe44 (#244, run 36398486069) 161 s; 16ed8e2 (#247, run
+    36410369748) 149 s.
+  - **The engine's recompile on every cargo command is gone.** The `rust` job now takes 93 to 139 s
+    warm, against 147 s before the fork (run 36382447015), with its three forced recompiles.
 - **The status.** `accepted`: every budget holds at the pinned commit.
 
 ## What would make this wrong

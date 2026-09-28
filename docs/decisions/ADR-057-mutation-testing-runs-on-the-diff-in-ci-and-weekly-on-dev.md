@@ -218,3 +218,5 @@ box-only),
 ADR-012 (testing), ADR-017 (CI), ADR-029 (the golden reader). cargo-mutants: mutants.rs
 (in-diff, in-place, shards, exit codes); StrykerJS: stryker-mutator.io and the stryker-js
 repository; GitHub: "Events that trigger workflows".
+
+Note (2026-09-28): the Confirmation's criteria are SPEC-039's A1 to A40, not A1 to A37.
