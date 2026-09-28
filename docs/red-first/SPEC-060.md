@@ -48,6 +48,8 @@ A8: red at 3bd0f96: AssertionError: Items in the second set but not the first: '
 A8: green at ceaa1b9
 A9: red at 6a9abea: AssertionError: 0 != 1 : apply: deleted i005 (...) (the apply read rules the inventory never read, and the item went)
 A9: green at 499dee8
+A10: red at 7ae7dbc: AssertionError: False is not true : apply: deleted x001 (...), 0 bytes (the apply parsed rules without a protected path, bound the list's rules by a second read, and the item that path protects went)
+A10: green at 28df6ac
 ```
 
 Two tests beyond the criteria were written with them, red at 3bd0f96 and green at ceaa1b9, and carry
@@ -166,12 +168,12 @@ while the apply reads it).
 
 ## Rows
 
-`scripts/mutation-rows.d/S06000-S06099.json` holds 49 rows, S06001 to S06049, one for each check
+`scripts/mutation-rows.d/S06000-S06099.json` holds 54 rows, S06001 to S06054, one for each check
 that stands before a deletion. Each has an anchor that occurs exactly once, one mutant, and a killer
 that selects one test. `python3 scripts/mutation_rows.py prove --band S06000-S06099` proved
-them at 8843ceb, on the committed tree: `rows: examined 49: killed 49, survived 0, void 0`. Each
-killer selected one test and passed without its mutant, and each target was restored byte for
-byte, checked by its sha256.
+the first 49 at 8843ceb, on the committed tree: `rows: examined 49: killed 49, survived 0, void 0`,
+and all 54 in the second fix round (below). Each killer selected one test and passed without its
+mutant, and each target was restored byte for byte, checked by its sha256.
 
 | the checks | rows | killer |
 |---|---|---|
@@ -188,9 +190,60 @@ byte, checked by its sha256.
 | a JSON key held twice | S06039 | A4 |
 | a service's own rotation never listed | S06040 | A2 |
 | the plan: a canonical path, within a boundary, holding, a protected link, the rules it read, an environment in use, an item inside another | S06041 to S06049 | A3, A7 |
+| a file a tool parses and binds, read once: the reader's digest, the inventory's record, the plan's rules check and its inventory's digest, the apply's rules check | S06050 to S06054 | A10 |
 
 Not held by a row, each with why: the Python-version guard for a directory item (no interpreter the
 tests run under tells it apart); a directory removed through its parent's descriptor rather than by
 path (the two differ only inside a window no test holds open); a package's removal run through a
 shell with the same argument vector (no different argument can reach it while the package's name
 is validated); and an item found gone since the list was made (nothing is left to delete).
+
+## Fix round 2
+
+The fix round bound the apply to the rules the list names, but each tool that bound a file by its
+digest still parsed the file and then read it again to digest it: the inventory recorded, and the
+plan and the apply checked, the digest of a second read, not of the bytes each had parsed, and the
+plan named its inventory the same way. A file that changed between the two reads was parsed as one
+content and bound as another, so the apply could act on rules the list does not name while its
+rules check passed. The order of work, the red committed before its fix:
+
+- 7ae7dbc: A10, and a test beyond the criteria, red. A10 runs each tool through a reader the test
+  writes at run time: an audit hook in the tool's own process sees every open of one file, and just
+  before the second open the file takes other bytes, in either order. Over the whole test file at
+  7ae7dbc only these two tests failed, and the other eleven passed.
+- 28df6ac: the fix. `read_json` in `inventory.py` reads a file once and returns its content with the
+  SHA-256 of those bytes, `load_rules` carries that digest with the rules, and the tools record and
+  check it: the inventory's `rules_digest`, the plan's rules check and its list's inventory digest,
+  and the apply's rules check. `file_digest` went with its last caller, and S06047's anchor moved
+  with the plan's check it mutates, in the same commit. Every test was green at 28df6ac.
+- 6be15a9: the rows, S06050 to S06054; 6e79a2f: SPEC-060's A10 and §8, ADR-060's decision and the
+  schematic.
+
+Each case of A10 is a subtest, so each one's state was read at both commits:
+
+```text
+A10 the inventory, the rules and other rules each first: red at 7ae7dbc (it recorded the digest of rules it had not read its health checks from), green at 28df6ac
+A10 the plan, the rules the inventory read first: red at 7ae7dbc (it refused them, 1 != 0, having bound the second read), green at 28df6ac
+A10 the plan, rules naming one more package first: red at 7ae7dbc (it listed that package under the inventory's rules digest), green at 28df6ac
+A10 the plan, its inventory and another inventory each first: red at 7ae7dbc (the list named the other inventory's digest), green at 28df6ac
+A10 the apply, the rules the list names first: red at 7ae7dbc (it refused them, 1 != 0, having bound the second read), green at 28df6ac
+A10 the apply, rules without the protected path first: red at 7ae7dbc (the protected item went while the rules check passed), green at 28df6ac
+```
+
+`test_each_tool_opens_each_file_it_binds_once` counts the opens of the rules in each tool, and of
+the inventory in the plan, in one run each: red at 7ae7dbc (`AssertionError: 2 != 1` for each of the
+four), green at 28df6ac. It stands beside A10 and carries no fence line, as the two tests beyond the
+criteria above.
+
+The rows S06050 to S06054 each install a second read where a tool binds a file: in the reader, the
+inventory's record, the plan's rules check, the list's inventory digest and the apply's rules check.
+Each is killed by A10. With S06047, re-anchored, they were proved at 6be15a9 with
+`python3 scripts/mutation_rows.py prove --row ...`, each target restored byte for byte:
+`rows: examined 6: killed 6, survived 0, void 0`.
+The whole band was proved again at 6e79a2f, whose tools and tests the head keeps, with
+`python3 scripts/mutation_rows.py prove --band S06000-S06099`, each killer selecting one test with
+and without its mutant: `rows: examined 54: killed 54, survived 0, void 0`.
+
+DISCLOSURE, the module's helpers changed at 7ae7dbc: `Host.run` can run a tool through the reader,
+`Host.served` does so and counts the opens, and the module's docstring names the reader. No
+criterion's test body changed in this round, and A10's is the same at 7ae7dbc and 28df6ac.
