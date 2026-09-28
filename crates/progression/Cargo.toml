@@ -14,3 +14,19 @@ workspace = true
 [dependencies]
 deck-streak-kernel.workspace = true
 deck-streak-ingest.workspace = true
+# SPEC-040: the data-rights port's rows are JSON values (ADR-029).
+serde_json.workspace = true
+# ADR-003: the XP ledger's queries run through the kernel's Db, checked into .sqlx/, and a refused
+# grant source is this context's own error type, as every library's (CLAUDE.md).
+sqlx.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+# ADR-029: the parity oracle's golden reader, compiled into the level test by path.
+serde.workspace = true
+serde_json.workspace = true
+# ADR-020's temporary database, and two concurrent grants on tokio's multi-thread runtime (A3).
+tempfile.workspace = true
+tokio = { workspace = true, features = ["macros", "rt", "rt-multi-thread", "sync"] }
+# ADR-040: the compile-fail fixture that proves a signed amount does not compile (A6).
+trybuild.workspace = true

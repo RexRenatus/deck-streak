@@ -32,7 +32,7 @@ use tempfile::TempDir;
 /// Statements that leave every table of the schema holding rows no erase leaves: 101 rows in each
 /// table that takes rows, so an export that pages or limits its read comes up short (the
 /// predecessor's lesson), and every column a reset writes moved off its reset value.
-const SEEDS: [&str; 6] = [
+const SEEDS: [&str; 7] = [
     "UPDATE settings_generation SET generation = 7 WHERE id = 1",
     "UPDATE ingest_state SET anchor_newest_review_id = 1700000000123, anchor_card_count = 57, \
      anchor_card_fingerprint = 9001, anchor_study_day = 20000, \
@@ -49,6 +49,10 @@ const SEEDS: [&str; 6] = [
      ok_count, error_count, catchup_count, missed_count, last_outcome, created_at) \
      SELECT 'synthetic_daily', 20000 + i, 1000 * i, 1000 * i + 1, 1000 * i + 1, 1, 0, 1, 0, \
      'ok', 1000 * i FROM n",
+    "WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 101) \
+     INSERT INTO xp_ledger (study_day, source, track, amount, scope, created_at) \
+     SELECT 20000 + i, 'synthetic:grant:' || i, CASE i % 2 WHEN 0 THEN 'language' ELSE 'law' END, \
+     i, CASE i % 3 WHEN 0 THEN 'once' ELSE 'per-day' END, 1000 * i FROM n",
     "WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 101) \
      INSERT INTO reading_runs (trigger, study_day, started_at, finished_at, outcome, class, \
      reason, unmapped_decks, created_at) \

@@ -7,8 +7,8 @@
 //! is none; the base is recounted in SQL when it is more than [`INGEST_REBASE_DAYS`] days staler than
 //! a fresh floor; and a recount lower than the stored count is the self-check, logged once (cards
 //! deleted or the collection replaced). `goldens/ingest_rebase.json` and
-//! `goldens/ingest.constants.json` prove the rule and the constants. The bounded window is what kept
-//! the predecessor's memory under its unit's ceiling.
+//! `goldens/ingest.constants.json` prove the rule and the constants. The bounded window keeps the
+//! read inside the memory budget of the unit that runs it (ADR-032).
 
 use deck_streak_kernel::{KernelError, UtcMillis};
 

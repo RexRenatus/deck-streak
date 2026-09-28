@@ -51,10 +51,7 @@
   (`goldens/predecessor_schedule.json`, an adapter over `scheduler.py:create_scheduler` with
   default settings and a stub pipeline, listing each job's trigger fields); and the constants
   (`goldens/scheduler.constants.json`).
-- **The predecessor's systemd timers**, outside its in-process schedule (its `deploy/` units for the
-  daily backup, the daily publish and the weekly restore drill), fire at minutes 39, 25 and 0; this
-  SPEC names them by what each does, because a registry module reads no file (SPEC-029) and no
-  public file carries the predecessor's unit names.
+- **The job table also keeps off three reserved minutes**, 0, 25 and 39 (ADR-011).
 - **Nothing schedules anything yet** in DeckStreak (read at `main` e05dfa5).
 
 **Order.** After SPEC-022 (the sync cycle and `sync_runs`) and SPEC-025 (the binary this SPEC adds
@@ -72,10 +69,10 @@ R1. `coordination::jobs::TABLE` is the one schedule (ADR-027): each job has an i
     the rollover hour, minute 28) and `liveness` (hourly at minute 14). `sync` is `catch_up` (a fire
     missed by at most `CATCHUP_MAX_LATE_MIN` minutes runs once at start, claimed for its study day);
     the others are not.
-R2. No DeckStreak job shares a minute with the predecessor's schedule while both run: the in-process
-    slots of `goldens/predecessor_schedule.json`, the predecessor's sync ticks (its tick function at
-    its offset, `goldens/tick_minutes.json`), and its three systemd timers (minutes 39, 25 and 0);
-    and no other DeckStreak job shares the daily `sync` slot.
+R2. No DeckStreak job shares a minute with the predecessor's schedule while both run, or with a
+    reserved minute: the in-process slots of `goldens/predecessor_schedule.json`, the predecessor's
+    sync ticks (its tick function at its offset, `goldens/tick_minutes.json`), and the reserved
+    minutes 0, 25 and 39 (ADR-011); and no other DeckStreak job shares the daily `sync` slot.
 R3. `cron_fires` (`migrations/002701_coordination_cron_fires.sql`, `STRICT`, `created_at`) keeps the
     predecessor's columns and constraint: `job_id`, `fire_date` (the LOCAL calendar date of the
     scheduled fire under the configured offset, which the predecessor called `fire_day`; a calendar
@@ -223,8 +220,7 @@ database.
   claim makes the second a no-op; A1 proves it under concurrency, and A17 holds `sync` to a claimed
   daily slot.
 - **A `TRUNCATE` checkpoint meets Litestream's read lock.** The checkpoint then completes partially
-  and returns busy, which is not an error; the predecessor ran the same statement beside
-  Litestream. The restore drill (W2) proves the replica (#44).
+  and returns busy, which is not an error. The restore drill (W2) proves the replica (#44).
 - **A paging job pages on every run.** R7 pages only on transitions recorded in the ledger and
   `sync_runs`; the liveness job runs hourly, and A7 and A11 prove "once per episode".
 - **The host is down across the sync slot.** `sync` is a catch-up job (R1), so a sync missed by at
@@ -267,8 +263,8 @@ database.
 - **R3: `created_at` beside the first-seen instant.** The table keeps the predecessor's
   `first_seen_at` and adds the workspace's `created_at`; both hold the instant of the row's first
   write.
-- **§1: the predecessor's three systemd timers are named by what they do.** Their unit names carry
-  the predecessor's own name, which no public file holds.
+- **§1: three reserved minutes.** The job table keeps off minutes 0, 25 and 39 (ADR-011), and A10's
+  test holds them as one constant, `RESERVED_MINUTES`.
 - **Manifest: `Cargo.lock` and the schematic.** Coordination's ledger runs its queries through the
   kernel's `Db` (sqlx, checked into `.sqlx/`) and its runner logs through tracing, both admitted by
   ADR-003; its tests add tempfile and tokio, which the workspace already holds. The lockfile gains
@@ -277,3 +273,6 @@ database.
 - **The `job` role is a module of the binary.** `crates/daemon/src/role_job.rs` is compiled into
   `deckstreakd` through `main.rs`, so the daemon's library, which the manifest does not name, is
   unchanged; A16 drives the role through the binary.
+
+Amendment (2026-09-28): passages describing another service's operations were replaced with neutral
+reserved minutes, or removed, under the public-text rule (ADR-059).

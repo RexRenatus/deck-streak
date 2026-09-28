@@ -17,12 +17,11 @@
 - **A panic bypasses the one logging setup.** Rust's default panic hook prints a panic's message to
   stderr as plain text, past the redacting writer, so a credential the message carried would reach
   the journal whole (found by SPEC-025's delivery).
-- **The predecessor's operations this carries** (predecessor `27ee2bc`, names only): logs as one JSON
+- **The predecessor's code this carries** (predecessor `27ee2bc`, names only): logs as one JSON
   object per line with a syslog priority prefix (`logging_setup.py:configure`); one Telegram path for
   infrastructure pages whose bodies carry integers only
-  (`pipeline_layers/ops.py:OpsLayer._check_deadman`); a memory ceiling whose breach went unpaged on a
-  render job (the observability pack's lesson on the predecessor's daily render job). The predecessor
-  had no SLO.
+  (`pipeline_layers/ops.py:OpsLayer._check_deadman`). DeckStreak also pages a breach of a unit's
+  memory ceiling (R5). The predecessor had no SLO.
 - **The pack's template has a leak this SPEC must not copy.** The observability pack's
   `alert-telegram.template.sh` passes the bot token inside the request URL on `curl`'s command line,
   where any local user can read it in the process table while the request runs; CHARTER 15 forbids a
@@ -233,3 +232,6 @@ SPEC. Each is corrected above; the reasons are these.
 - **The timers.** Each spreads its fires with `RandomizedDelaySec=` and `AccuracySec=1us`, as the
   durable pack's `timers.spread` asks, since neither keeps a minute of its own, and each waives
   `timers.catch-up` with its why: a run missed while the host was down has nothing a later run lacks.
+
+Amendment (2026-09-28): a passage describing another service's operations was replaced with
+DeckStreak's own memory watch under the public-text rule (ADR-059).
