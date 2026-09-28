@@ -116,3 +116,7 @@ week on the host (SPEC-031, W2).
 
 ADR-007; ADR-010; ADR-011; ADR-022; ADR-025; SPEC-032; `docs/schematics/deployment.md`; the
 durable-services and observability packs.
+
+Amended by ADR-061 (proposed): the rail fills the Caddy block's placeholders by rendering the block at
+install and importing the rendered file with one line, so Caddy's environment carries none of their
+values; the committed template keeps its placeholders, valid as written.

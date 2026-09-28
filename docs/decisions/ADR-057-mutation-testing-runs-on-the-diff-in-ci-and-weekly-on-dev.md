@@ -227,3 +227,7 @@ instead recorded in `scripts/mutation-equivalent.d/`, one fragment per package, 
 to exactly one listed mutant, and excused only while the tool keeps reporting it missed. This takes
 effect when SPEC-057's first delivery accepts ADR-070; until then D6 stands. The rest of this
 decision does not change.
+
+Note (2026-09-28): the Confirmation's criteria are SPEC-039's A1 to A40, not A1 to A37. D11 prices
+an `ingest` mutant at 124 s; R18's refit table, held by `scripts/mutation-verdict.py`, prices it at
+126 s (SPEC-039 §8, listed in its §9).
