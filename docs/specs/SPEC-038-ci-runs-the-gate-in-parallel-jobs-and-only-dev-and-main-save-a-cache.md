@@ -173,8 +173,8 @@ R16. The `engine` job runs the engine set in two slices, one per runner, from a 
 | A5 | every stage fails by name, with an install hint, without each tool it runs | `test_check_gate.py` `every_stage_fails_by_name_without_each_tool_it_runs` |
 | A6 | the gate has no toolchain stage, and its audit is split by toolchain | `test_check_gate.py` `the_gate_has_no_toolchain_stage_and_splits_the_audit` |
 | A7 | the jobs that read history fetch all of it | `test_ci_workflows.py` `the_jobs_that_read_history_fetch_all_of_it` |
-| A8 | a parallel run gives the serial run's verdicts, exit and row order, timeouts included | `test_pack_wiring.py` `a_parallel_run_gives_the_serial_verdicts_in_row_order` |
-| A9 | the pool runs at most its bound of rows at once, and reaches it | `test_pack_wiring.py` `the_pool_runs_at_most_its_bound_of_rows_at_once` |
+| ~~A8~~ | a parallel run gives the serial run's verdicts, exit and row order, timeouts included | `test_pack_wiring.py` `a_parallel_run_gives_the_serial_verdicts_in_row_order` |
+| ~~A9~~ | the pool runs at most its bound of rows at once, and reaches it | `test_pack_wiring.py` `the_pool_runs_at_most_its_bound_of_rows_at_once` |
 | A10 | only a superseded pull-request run is cancelled; two pushes never share a group | `test_ci_workflows.py` `only_a_superseded_pull_request_run_is_cancelled` |
 | A11 | the browser cache is keyed on the Playwright version the lockfile locks, and the browser is installed on a miss | `test_ci_workflows.py` `the_browser_cache_is_keyed_on_the_locked_playwright_version` |
 | A12 | each stage run is timed in timings.tsv with its verdict and exit | `test_check_gate.py` `each_stage_run_is_timed_in_timings_tsv` |
@@ -195,8 +195,12 @@ A4: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k eve
 A5: python3 -m unittest discover -s scripts/tests -p test_check_gate.py -k every_stage_fails_by_name_without_each_tool_it_runs
 A6: python3 -m unittest discover -s scripts/tests -p test_check_gate.py -k the_gate_has_no_toolchain_stage_and_splits_the_audit
 A7: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k the_jobs_that_read_history_fetch_all_of_it
+```
+```retired
 A8: python3 -m unittest discover -s scripts/tests -p test_pack_wiring.py -k a_parallel_run_gives_the_serial_verdicts_in_row_order
 A9: python3 -m unittest discover -s scripts/tests -p test_pack_wiring.py -k the_pool_runs_at_most_its_bound_of_rows_at_once
+```
+```acceptance
 A10: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k only_a_superseded_pull_request_run_is_cancelled
 A11: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k the_browser_cache_is_keyed_on_the_locked_playwright_version
 A12: python3 -m unittest discover -s scripts/tests -p test_check_gate.py -k each_stage_run_is_timed_in_timings_tsv
@@ -576,3 +580,19 @@ and a hung sync test is stopped in a twentieth of GitHub's default six hours.
   saves the new key.
 - A docs-only pull request, which does the same work as a code pull request, since no job is
   skipped by path (section 5).
+
+## 9. Amendment, 2026-09-28: criteria whose tests SPEC-056 removed
+
+Made by SPEC-056 (ADR-069), insert-only under ruling (i) of SPEC-038 section 8: every earlier byte
+is kept in order. It inserts:
+
+- section 3: `~~` around A8 and A9 in the criteria table, so the table no longer states them;
+- section 3: the fence lines that set their commands apart in a `` ```retired `` fence, between the
+  acceptance fence's two halves;
+- this section.
+
+The retired criteria, why their subject is gone, and what judges it now:
+
+- A8 and A9 (the row runner's pool gives the serial run's verdicts, and keeps its bound): SPEC-056
+  removed the row runner and its tests (SPEC-056 A1). The box run runs each pack's rows through the
+  packs' own binary.

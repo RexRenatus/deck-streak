@@ -90,7 +90,10 @@ tightest, at 90.7 % of its budget.
 
 ## More Information
 
-The predecessor's ADR-002 (sync via the Anki package, read via stdlib SQLite); the vm-survey's capacity figures; ADR-008.
+The predecessor's ADR-002 (sync via the Anki package, read via stdlib SQLite); the maintainer's survey (private input); ADR-008.
 
 Amendment (2026-09-28): two passages describing the host's capacity and its other services, in a
 decision driver and a considered option, were redacted under the public-prose rule (ADR-059).
+
+Amendment (2026-09-28): the name of the maintainer's private tooling was replaced with a neutral one
+under the public-text rule (ADR-059).

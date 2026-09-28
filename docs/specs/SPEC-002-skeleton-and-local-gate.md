@@ -11,8 +11,8 @@ gate that runs every stage the same way locally and in CI:
 
 - 24 bounded contexts must exist as crates whose manifests equal the context map, or the ddd probe
   refuses every later delivery (`python3 scripts/ddd-probe.py --root . check declared-edges-match-imports`).
-- 25 packs' standard-library probes must run in public CI without the private phoenix-v2 source
-  (ADR-004); 11 more (the ten built into phxd, and the proxy client scan, whose probe names a
+- 25 packs' standard-library probes must run in public CI without the private packs source
+  (ADR-004); 11 more (the ten built into the packs' binary, and the proxy client scan, whose probe names a
   private secret) run only on the maintainer's box.
 - A pack whose subject is not built yet reads VOID, which must never pass as green, and must never
   be forgotten either (`.packs/wiring.json`).
@@ -24,7 +24,7 @@ R1. The workspace holds exactly one crate per Rust context of docs/CONTEXT-MAP.m
     `deck-streak-<context>`, each inheriting the workspace lint table (unsafe code forbidden,
     clippy pedantic on).
 R2. The crate graph equals the context map in both directions.
-R3. The vendored packs are byte-identical to the phoenix-v2 commit `.packs/VENDORED.json` names.
+R3. The vendored packs are byte-identical to the packs commit `.packs/VENDORED.json` names.
 R4. Every vendored pack has a wiring state; every pending or deferred pack or row names the open
     issue that builds its subject.
 R5. `scripts/check.sh` runs every stage (toolchain, fmt, clippy, test, doctest, web, python, packs,
@@ -45,25 +45,31 @@ R10. Every workflow runs on GitHub-hosted runners with a read-only token and act
 |---|---|---|
 | A1 | every crate is named for its context directory | `cargo test -p deck-streak-daemon --test workspace -- --exact every_crate_is_named_for_its_context_directory` |
 | A2 | every crate inherits the workspace lints | `cargo test -p deck-streak-daemon --test workspace -- --exact every_crate_inherits_the_workspace_lints` |
-| A3 | the vendored packs match their recorded digests | `python3 -m unittest discover -s scripts/tests -p test_vendored_packs.py -k every_listed_file_has_its_recorded_digest` |
-| A4 | every waiting pack or row names an open issue by number | `python3 -m unittest discover -s scripts/tests -p test_pack_wiring.py -k every_waiting_pack_or_row_names_an_open_issue_by_number` |
+| ~~A3~~ | the vendored packs match their recorded digests | `python3 -m unittest discover -s scripts/tests -p test_vendored_packs.py -k every_listed_file_has_its_recorded_digest` |
+| ~~A4~~ | every waiting pack or row names an open issue by number | `python3 -m unittest discover -s scripts/tests -p test_pack_wiring.py -k every_waiting_pack_or_row_names_an_open_issue_by_number` |
 | A5 | the oracle writes a golden with its provenance and Python's rounding | `python3 -m unittest discover -s tools/parity-oracle -p test_generate.py -k a_golden_records_its_provenance_and_rounds_half_to_even` |
 | A6 | no SPEC number is held twice across judged and planned | `python3 -m unittest discover -s scripts/tests -p test_planned_specs.py -k no_number_is_held_twice_across_judged_and_planned` |
 | A7 | an internal address is refused by rule name | `python3 -m unittest discover -s scripts/tests -p test_public_scrub.py -k an_internal_address_is_refused_by_rule_name` |
 | A8 | the Mini App's smoke test observes its heading | `pnpm exec vitest run web/app/src/lib/smoke.test.ts -t "renders the DeckStreak heading"` |
 | A9 | CI runs every stage of the local gate | `python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k ci_runs_every_stage_of_the_local_gate` |
-| A10 | the pack runner refuses a wiring that forgets a pack | `python3 -m unittest discover -s scripts/tests -p test_pack_wiring.py -k the_runner_refuses_a_wiring_that_forgets_a_pack` |
+| ~~A10~~ | the pack runner refuses a wiring that forgets a pack | `python3 -m unittest discover -s scripts/tests -p test_pack_wiring.py -k the_runner_refuses_a_wiring_that_forgets_a_pack` |
 
 ```acceptance
 A1: cargo test -p deck-streak-daemon --test workspace -- --exact every_crate_is_named_for_its_context_directory
 A2: cargo test -p deck-streak-daemon --test workspace -- --exact every_crate_inherits_the_workspace_lints
+```
+```retired
 A3: python3 -m unittest discover -s scripts/tests -p test_vendored_packs.py -k every_listed_file_has_its_recorded_digest
 A4: python3 -m unittest discover -s scripts/tests -p test_pack_wiring.py -k every_waiting_pack_or_row_names_an_open_issue_by_number
+```
+```acceptance
 A5: python3 -m unittest discover -s tools/parity-oracle -p test_generate.py -k a_golden_records_its_provenance_and_rounds_half_to_even
 A6: python3 -m unittest discover -s scripts/tests -p test_planned_specs.py -k no_number_is_held_twice_across_judged_and_planned
 A7: python3 -m unittest discover -s scripts/tests -p test_public_scrub.py -k an_internal_address_is_refused_by_rule_name
 A8: pnpm exec vitest run web/app/src/lib/smoke.test.ts -t "renders the DeckStreak heading"
 A9: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k ci_runs_every_stage_of_the_local_gate
+```
+```retired
 A10: python3 -m unittest discover -s scripts/tests -p test_pack_wiring.py -k the_runner_refuses_a_wiring_that_forgets_a_pack
 ```
 
@@ -85,7 +91,7 @@ A10: python3 -m unittest discover -s scripts/tests -p test_pack_wiring.py -k the
 
 - It writes no feature code: the kernel's types, the database base and every behaviour are W0's
   deliveries (#11).
-- It runs no phxd-built pack in CI: those run on the maintainer's box until the open-source pack
+- It runs no binary-built pack in CI: those run on the maintainer's box until the open-source pack
   runner exists (#60).
 - It creates no landing page: the `landing` context stays planned until W7 (#59).
 
@@ -96,3 +102,31 @@ A10: python3 -m unittest discover -s scripts/tests -p test_pack_wiring.py -k the
 - **A vendored probe drifts from its source.** Detected by `test_vendored_packs.py`'s digests.
 - **A pack stays pending forever.** Detected by `test_pack_wiring.py`, which requires an open issue
   for every waiting pack, and by W7's issue that enforces them all.
+
+## 7. Amendment, 2026-09-28: criteria whose tests SPEC-056 removed
+
+Made by SPEC-056 (ADR-069), insert-only under ruling (i) of SPEC-038 section 8: every earlier byte
+is kept in order. It inserts:
+
+- section 3: `~~` around A3, A4 and A10 in the criteria table, so the table no longer states them;
+- section 3: the fence lines that set their commands apart in a `` ```retired `` fence, between the
+  acceptance fence's two halves;
+- this section.
+
+The retired criteria, why their subject is gone, and what judges it now:
+
+- A3 (the vendored packs match their recorded digests): SPEC-056 removed the vendored copy and its
+  digest test. The only copies DeckStreak keeps of a pack's data are compared with their source at
+  the pin by the box run's drift check (SPEC-056 A14), and SPEC-056 A1 proves that no vendored file
+  remains.
+- A4 (every waiting pack or row names an open issue by number): the wiring is now the maintainer's
+  private file, which no public test reads. The box run refuses a pending or deferred pack that
+  names no issue by number, and a deferred row that names nothing (SPEC-056 R8), and it reads the
+  state of every issue its box section names (SPEC-054 R4).
+- A10 (the pack runner refuses a wiring that forgets a pack): SPEC-056 removed that runner and the
+  vendored packs it held the wiring to (SPEC-056 A1). The packs DeckStreak consumes are the ones the
+  private wiring names, and the box run judges each of them.
+
+Amendment (2026-09-28): names of the maintainer's private tooling were replaced with 'the box-run
+packs' and neutral names for their repository, binary and checkout under the public-text rule
+(ADR-059).

@@ -1,8 +1,8 @@
-# Schematic: one vendoring run, from a phoenix-v2 commit to the vendored tree
+# Schematic: one vendoring run, from a packs commit to the vendored tree
 
 Kind: data flow, with the refusals that leave the tree unchanged. Read at DeckStreak `dev` 8f91667
 (`.packs/VENDORED.json`, `methodology.json`, `scripts/public-scrub.py`, ADR-004, ADR-033), and at
-the vendored phoenix-v2 commit for the shape of what it ships. Decided by ADR-039; built by
+the vendored packs commit for the shape of what it ships. Decided by ADR-039; built by
 SPEC-037. Since SPEC-054 R3, the scan's rules are composed in one place, the scrub's
 `rules(private)`, which the vendoring calls and never copies.
 
@@ -56,3 +56,7 @@ untracked. The script sets `sys.dont_write_bytecode` before it loads the scrub, 
 | a finding: an address, a private literal, a binary, an oversize file, a symlink | 1 | unchanged |
 | a listed file the commit lacks, or a manifest, pin or private list it cannot read | 2 | unchanged |
 | no candidate left to examine | 3 | unchanged |
+
+Amendment (2026-09-28): names of the maintainer's private tooling were replaced with 'the box-run
+packs' and neutral names for their repository, binary and checkout under the public-text rule
+(ADR-059).

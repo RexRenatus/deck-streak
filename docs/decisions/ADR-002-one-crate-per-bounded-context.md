@@ -52,7 +52,11 @@ every edge.
 
 ## More Information
 
-docs/CONTEXT-MAP.md; the ddd pack; phoenix-v2's CONTEXT-MAP as the reference implementation.
+docs/CONTEXT-MAP.md; the ddd pack; the packs repository's CONTEXT-MAP as the reference implementation.
 
 Amendment (2026-09-28): one passage stating the host's size, in a considered option, was redacted
 under the public-prose rule (ADR-059).
+
+Amendment (2026-09-28): names of the maintainer's private tooling were replaced with 'the box-run
+packs' and neutral names for their repository, binary and checkout under the public-text rule
+(ADR-059).

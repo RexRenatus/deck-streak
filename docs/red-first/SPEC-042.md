@@ -22,8 +22,12 @@ A1: red at 2814116: assertion `left == right` failed: a temp file in the target'
 A1: green at abe9781
 A2: red at 2814116: assertion `left == right` failed: the planted fixture embed-base.md is refused by its own rail row dynamic_embed_extensions:.base, and by no other; left: {}, right: {"dynamic_embed_extensions:.base"}
 A2: green at abe9781
+```
+```retired
 A3: red at 2814116: AssertionError: Items in the second set but not the first: the adapter and the pack disagree on 22 of the 23 fixtures (failures=22; the clean note agreed)
 A3: green at abe9781
+```
+```red-first
 A4: red at 2814116: assertion `left == right` failed: the roll of the golden's first fresh case; left: the note unchanged, rolls 0; right: rolls 1 and last_rolled a study day later
 A4: green at abe9781
 A5: red at 2814116: assertion `left == right` failed: the notes rolled; left: [], right: the carried note's path in today's folder
@@ -34,8 +38,12 @@ A7: red at 2814116: assertion `left == right` failed: the notes rolled; left: []
 A7: green at abe9781
 A8: red at 2814116: the topic key "../escape" was accepted
 A8: green at abe9781
+```
+```retired
 A9: red at 2814116: AssertionError: False is not true : the synthetic run is not committed
 A9: green at abe9781
+```
+```red-first
 A10: red at 2814116: the run was not discarded for its red note-links class: Applied { ops: 1 }
 A10: green at abe9781
 A11: red at 2814116: a missing readings folder started as Ok(())
@@ -54,3 +62,6 @@ that climbs out of its folder. In A9 the synthetic run the pack judges was not y
 the stub executor applied a run the pack's `note-links` class finds red. In A11 the stub start check
 opened a vault with no readings folder. In A12 the stub stamp wrote nothing, and in A13 the stub body
 replacement kept the old body.
+
+Amendment (2026-09-28): the lines of A3 and A9 moved into a `` ```retired `` fence, by inserted
+fence lines, because SPEC-056 retired those criteria when it removed their tests.

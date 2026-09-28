@@ -10,7 +10,7 @@
 
 ## 1. The problem, measured
 
-- **Vendoring had no committed tool.** The probes in `.packs/` were copied from a phoenix-v2
+- **Vendoring had no committed tool.** The probes in `.packs/` were copied from a packs
   checkout by a maintainer's script outside the repository. That script copied every file of every
   listed pack and applied the exclusions that `.packs/VENDORED.json` records only afterwards, by
   hand.
@@ -26,7 +26,7 @@
 ## 2. Requirements
 
 R1. `scripts/vendor-packs.py --source DIR [--root ROOT] [--deny-list FILE]` re-vendors from a
-    phoenix-v2 checkout. It takes every file `.packs/VENDORED.json` lists (by its `from`), plus any
+    packs checkout. It takes every file `.packs/VENDORED.json` lists (by its `from`), plus any
     new file under a pack directory already vendored, and nothing else. A new pack stays a person's
     decision, because it needs a wiring state.
 R2. Every `excluded` entry of `VENDORED.json` carries `globs`: a list of patterns over source paths
@@ -58,15 +58,17 @@ R6. The run ends with one line naming the files examined, changed, new and exclu
 
 | id | criterion | decided by |
 |---|---|---|
-| A1 | an excluded upstream file is never written into the tree | `test_vendor_packs.py` |
-| A2 | a planted address shape upstream refuses the run by path and rule, and the tree is unchanged | `test_vendor_packs.py` |
-| A3 | a private literal upstream refuses the run by its index, never its value | `test_vendor_packs.py` |
-| A4 | a binary upstream file refuses the run | `test_vendor_packs.py` |
-| A5 | a listed file the source lacks refuses the run with exit 2, and nothing is deleted | `test_vendor_packs.py` |
-| A6 | a clean upstream re-vendors with its digests and its commit | `test_vendor_packs.py` |
-| A7 | every exclusion the manifest records is machine-applicable | `test_vendored_packs.py` |
+| ~~A1~~ | an excluded upstream file is never written into the tree | `test_vendor_packs.py` |
+| ~~A2~~ | a planted address shape upstream refuses the run by path and rule, and the tree is unchanged | `test_vendor_packs.py` |
+| ~~A3~~ | a private literal upstream refuses the run by its index, never its value | `test_vendor_packs.py` |
+| ~~A4~~ | a binary upstream file refuses the run | `test_vendor_packs.py` |
+| ~~A5~~ | a listed file the source lacks refuses the run with exit 2, and nothing is deleted | `test_vendor_packs.py` |
+| ~~A6~~ | a clean upstream re-vendors with its digests and its commit | `test_vendor_packs.py` |
+| ~~A7~~ | every exclusion the manifest records is machine-applicable | `test_vendored_packs.py` |
 
 ```acceptance
+```
+```retired
 A1: python3 -m unittest discover -s scripts/tests -p test_vendor_packs.py -k an_excluded_upstream_file_is_never_written_into_the_tree
 A2: python3 -m unittest discover -s scripts/tests -p test_vendor_packs.py -k a_planted_address_upstream_refuses_the_run_and_the_tree_is_unchanged
 A3: python3 -m unittest discover -s scripts/tests -p test_vendor_packs.py -k a_private_literal_upstream_refuses_the_run_by_index
@@ -102,7 +104,7 @@ and A2 to A5 are red because the run exits 0.
 
 - It vendors no new pack. Adding one is a wiring decision with its own issue, and the script
   reports it and leaves it out (#60).
-- It runs no phxd pack and builds no phxd: the box run stays `scripts/box-packs.sh` (#23).
+- It runs no binary-built pack and builds no binary: the box run stays `scripts/box-packs.sh` (#23).
 - It deletes nothing, upstream or local. A vanished upstream file stops the run for a person (#60).
 - It does not replace the history scrub. The gate still reads every blob (SPEC-033, #206).
 
@@ -145,3 +147,23 @@ and A2 to A5 are red because the run exits 0.
   `new` are 0 because nothing was written.
 - **The manifest gains `docs/schematics/pack-vendoring.md`,** the run's data flow, because the
   order of work asks a schematic before a new data flow.
+
+## 8. Amendment, 2026-09-28: criteria whose tests SPEC-056 removed
+
+Made by SPEC-056 (ADR-069), insert-only under ruling (i) of SPEC-038 section 8: every earlier byte
+is kept in order. It inserts:
+
+- section 3: `~~` around A1 to A7 in the criteria table, so the table no longer states them;
+- section 3: the fence lines that set their commands apart in a `` ```retired `` fence, between the
+  acceptance fence's two halves;
+- this section.
+
+The retired criteria, why their subject is gone, and what judges it now:
+
+- A1 to A7 (the vendoring script's refusals, its digests and its exclusions): SPEC-056 removed the
+  vendoring script, the vendored tree and their tests. Nothing is vendored any more, and SPEC-056 A1
+  proves that neither is in the tree.
+
+Amendment (2026-09-28): names of the maintainer's private tooling were replaced with 'the box-run
+packs' and neutral names for their repository, binary and checkout under the public-text rule
+(ADR-059).

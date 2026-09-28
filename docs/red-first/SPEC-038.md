@@ -44,9 +44,13 @@ A5: green at 77107bf
 A6: red at fa9dcfd: AssertionError: Lists differ: ['audit', 'clippy', 'doctest', 'fmt', 'packs', 'python', 'scrub', 'secrets', 'test', 'toolchain', 'web'] != ['audit-rust', 'audit-web', 'clippy', 'doctest', 'fmt', 'packs', 'python', 'scrub', 'secrets', 'test', 'web']
 A6: green at 77107bf
 A7: not red: the single gate job already checked out the whole history and set CHECK_HISTORY=1; the test pins that every job reading history still does after the split
+```
+```retired
 A8: not red: the runner at the base ran one row at a time, so a run the stub gave --jobs 4 decided exactly what a serial run did; the test guards the pool's row order, verdicts, timeouts and exit on every verdict kind
 A9: red at fa9dcfd: AssertionError: 1 != 3 : the most rows seen running at once: [1, 1, 1, 1, 1, 1]
 A9: green at 77107bf
+```
+```red-first
 A10: red at fa9dcfd: AssertionError: Lists differ: ['two pushes to dev share a group, so a third would cancel the pending one', 'a newer run of a pull request leaves the superseded one running'] != []
 A10: green at 77107bf
 A11: red at fa9dcfd: AssertionError: examined 0 browser caches: the population is empty, so nothing was judged (no step cached the browser)
@@ -70,3 +74,6 @@ A19: green at 25b102c
 A20: red at 6863e92: AssertionError: Lists differ: ["the engine job's matrix is {}, not one slice dimension", "the engine job's slices are [], not 1 to N with N of at least 2", "one slice's failure cancels the other slices", 'the engine job hands test-engine the slices [None], ...'] != []
 A20: green at 25b102c
 ```
+
+Amendment (2026-09-28): the lines of A8 and A9 moved into a `` ```retired `` fence, by inserted
+fence lines, because SPEC-056 retired those criteria when it removed their tests.

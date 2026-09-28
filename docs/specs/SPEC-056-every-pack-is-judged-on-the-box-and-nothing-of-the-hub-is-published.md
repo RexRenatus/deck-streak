@@ -221,3 +221,33 @@ A18: python3 -m unittest discover -s scripts/tests -p test_box_only_packs.py -k 
   that does not match the checkout refuses the run.
 - **A stage-log upload uploads nothing.** Every CI job names `CHECK_LOG_DIR` and uploads that path,
   and A5 proves a named directory holds every stage's log and `timings.tsv`.
+
+## 7. Retired criteria
+
+Each criterion below ran a test this delivery removes. It is retired insert-only (R14): its id is
+struck in its SPEC's table, its command and its red-first lines sit in `` ```retired `` fences,
+and its SPEC's dated amendment section says why its subject is gone and what judges it now.
+
+| SPEC | criterion | its subject | what judges it now |
+|---|---|---|---|
+| SPEC-002 | A3 | the vendored packs' digests | the drift check (A14); no vendored file remains (A1) |
+| SPEC-002 | A4 | every waiting pack or row names an issue | the private file's checks (R8) and the issue states (SPEC-054 R4) |
+| SPEC-002 | A10 | the row runner refuses a wiring that forgets a pack | nothing: the runner and the vendored packs are removed (A1) |
+| SPEC-030 | A6 | a pending pack whose rows all pass is stale | A12 |
+| SPEC-030 | A7 | a deferred row that passes is stale | A12 |
+| SPEC-030 | A8 | a deferred row still red fails nothing | A12 |
+| SPEC-032 | A1 | the durable lint over the deploy templates | the box run's durable-services pack |
+| SPEC-037 | A1 | the vendoring never writes an excluded file | nothing: the vendoring is removed (A1) |
+| SPEC-037 | A2 | the vendoring refuses a planted address | nothing: the vendoring is removed (A1) |
+| SPEC-037 | A3 | the vendoring refuses a private literal | nothing: the vendoring is removed (A1) |
+| SPEC-037 | A4 | the vendoring refuses a binary file | nothing: the vendoring is removed (A1) |
+| SPEC-037 | A5 | the vendoring refuses a listed file the source lacks | nothing: the vendoring is removed (A1) |
+| SPEC-037 | A6 | a clean upstream re-vendors with its digests | nothing: the vendoring is removed (A1) |
+| SPEC-037 | A7 | every recorded exclusion is machine-applicable | nothing: the vendoring is removed (A1) |
+| SPEC-038 | A8 | the row runner's pool gives the serial verdicts | nothing: the row runner is removed (A1) |
+| SPEC-038 | A9 | the row runner's pool keeps its bound | nothing: the row runner is removed (A1) |
+| SPEC-042 | A3 | the adapter's rails agree with the pack's `no-executable` class | the box run's vault-duties pack, and the drift check (A6, A14) |
+| SPEC-042 | A9 | the rails rows are green over the synthetic run | the box run's vault-duties pack |
+| SPEC-054 | A6 | the vendoring scans with the scrub's own rules | the scrub's own rules (A9, A10); the vendoring is removed (A1) |
+| SPEC-054 | A10 | a bounded command fails by name | the box run's vault-duties pack, which runs the rows it bounded |
+| SPEC-054 | A11 | the adapter's cargo run is bounded | the box run's vault-duties pack, which runs the rows it bounded |

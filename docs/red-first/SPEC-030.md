@@ -17,13 +17,17 @@ A4: red at f415814: AssertionError: Lists differ: [] != [17, 25, 30, 34, 39] (th
 A4: green at 8162903
 A5: red at f415814: AssertionError: Lists differ: [] != [12, 18, 23, 27] (the stubbed lint refused none of the four planted TypeScript leaks)
 A5: green at 8162903
+```
+```retired
 A6: red at f415814: AssertionError: Regex didn't match: '^FAIL STALE +planted-honesty:\* .*must say enforced' (the pending pack whose rows all passed exited 0)
 A6: green at c559980
 A7: red at f415814: AssertionError: Regex didn't match: '^FAIL STALE +planted-honesty:lifted .*#23' (the deferred row was never run)
 A7: green at c559980
 A8: red at f415814: AssertionError: Regex didn't match: '^ +deferred +planted-honesty:red deferred to #23; still exit 1' (no deferred row was run)
 A8: green at c559980
-A9: red at f415814: AssertionError: 0 != 1 : phxd pack list was called once (the runner probed its hard-coded packs without --skills-root)
+```
+```red-first
+A9: red at f415814: AssertionError: 0 != 1 : <binary> pack list was called once (the runner probed its hard-coded packs without --skills-root)
 A9: green at 1d96f67
 A10: red at f415814: AssertionError: True is not false : .packs/VENDORED.json is vendored rule code
 A10: green at 1d96f67
@@ -35,10 +39,15 @@ A13: red at f415814: AssertionError: False is not true : <0 lines for proxy-clie
 A13: green at 1d96f67
 ```
 
-At 53f1640 the maintainer-box run with a phxd built from the vendored phoenix-v2 commit printed
+At 53f1640 the maintainer-box run with a binary built from the vendored packs commit printed
 `BOX PACKS OK: 11 pack(s), 3 pending`, with 35 expected red rows in seven packs. Once SPEC-028 was
 merged in (d27d4ee), the same run refused four expectations as stale, because the Mini App shell had
 made those rows green, and 880d303 removed them. The run there printed
 `BOX PACKS OK: 11 pack(s), 3 pending`: eight packs with no unexpected red and no stale expectation
 (31 expected red rows in six packs), and seo-pipeline, ui-styles and the proxy scan pending on #59,
 #60 and #29.
+
+Amendment (2026-09-28): the lines of A6, A7 and A8 moved into a `` ```retired `` fence, by inserted
+fence lines, because SPEC-056 retired those criteria when it removed their tests; names of the
+maintainer's private tooling were replaced with 'the box-run packs' and neutral names for their
+repository, binary and checkout under the public-text rule (ADR-059).

@@ -22,7 +22,7 @@
 - **The rows that judge it, applied BY HAND.** The web-security pack's
   `ws.tg-init-data-verified`, `ws.tg-init-data-constant-time`, `ws.tg-init-data-fresh` and
   `ws.session-cookie-flags` run on the maintainer's box (ADR-004), and their green is not trusted
-  until the phoenix-v2 commit carrying train 84's web-security fixes is vendored (ADR-004's
+  until the packs commit carrying the web-security fixes is vendored (ADR-004's
   re-pin). This delivery proves each control with its own tests (A1 to A6, A9) and its pull request
   carries a review of the validator against each row's rule; the box's verdict is posted beside it.
 - **The rest that judge it:** web-security `ws.cookie-prefix`, `ws.session-samesite`,
@@ -238,3 +238,7 @@ under `crates/identity/tests/fixtures/`.
   `the_mini_apps_own_requests_open_a_session_and_read_the_day` (the wire contract of SPEC-028,
   sent as `web/app/src/lib/api.ts` sends it), `the_handshake_body_is_bounded_below_the_shells_limit`;
   daemon: `the_api_role_refuses_start_without_an_identity_credential`.
+
+Amendment (2026-09-28): names of the maintainer's private tooling were replaced with 'the box-run
+packs' and neutral names for their repository, binary and checkout under the public-text rule
+(ADR-059).

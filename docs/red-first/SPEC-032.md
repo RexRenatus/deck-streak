@@ -30,8 +30,12 @@ After green, clippy's pedantic `single_match_else` asked for an `if let` in A7's
 (1fb052a); the calendars it renders are unchanged, and A7 stays green.
 
 ```red-first
+```
+```retired
 A1: red at 89b699e: AssertionError: {'service.restart': [{'detail': 'Restart=n[1248 chars]n'}]} != {} : the durable lint refused the templates (six rows: resources.budget, sandbox.identity, sandbox.protect-home, sandbox.protect-system, sandbox.syscall-filter, service.restart)
 A1: green at c2af48a
+```
+```red-first
 A2: red at 89b699e: AssertionError: Lists differ: [] != ['deck-streak-api.service', 'deck-streak-bot.service', 'deck-streak-job@.service'] : budget against units
 A2: green at c2af48a
 A3: red at 89b699e: AssertionError: unexpectedly None : deploy/systemd/deck-streak-api.service has no MemoryMax, so it cannot be shown to fit
@@ -48,3 +52,6 @@ A8: green at c2af48a
 A9: red at 89b699e: AssertionError: Lists differ: ['systemd/deck-streak-api.service:9: LoadCredentialEncrypted= is refused; use LoadCredential= (ADR-038)', ...] != [] (six credential lines, each refused)
 A9: green at c2af48a
 ```
+
+Amendment (2026-09-28): the lines of A1 moved into a `` ```retired `` fence, by inserted fence
+lines, because SPEC-056 retired those criteria when it removed their tests.

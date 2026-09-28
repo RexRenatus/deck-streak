@@ -98,13 +98,13 @@ R12. The vault context owns no table and depends on the kernel only.
 |---|---|---|
 | A1 | a write lands through a temp name matching the bridge's ignore pattern, then a file fsync, the rename and a directory fsync, in that order (a recording file-system fake) | `a_write_lands_through_an_ignored_temp_name_then_fsync_rename_and_dir_fsync` |
 | A2 | every rail row of `rails.json` refuses its planted fixture and a clean reading note passes (examined count equals the rail rows, zero refused) | `every_rail_refuses_its_planted_fixture_and_a_clean_note_passes` |
-| A3 | the adapter's rails and the vault-duties `no-executable` class agree on every planted fixture, each staged in a temporary run | vault-duties `no-executable`; `test_the_adapter_rails_agree_with_the_pack_on_every_fixture` |
+| ~~A3~~ | the adapter's rails and the vault-duties `no-executable` class agree on every planted fixture, each staged in a temporary run | vault-duties `no-executable`; `test_the_adapter_rails_agree_with_the_pack_on_every_fixture` |
 | A4 | rolling a note forward equals the golden of `reading_notes.py:_roll_note_text` | `rolling_a_note_matches_the_parity_golden` |
 | A5 | rolling a CRLF note whose owner ticked `I read it` keeps that line and every line ending byte for byte | `rolling_forward_keeps_the_owners_tick_byte_for_byte` |
 | A6 | archive paths equal the golden of `reading_notes.py:_archive_dir`, a year-boundary ISO week included | `archive_paths_match_the_parity_golden` |
 | A7 | a second roll-forward on the same study day changes nothing, and a malformed note is reported while its siblings still roll | `a_second_roll_forward_changes_nothing_and_a_malformed_note_is_reported` |
 | A8 | a write outside the readings folder, through `..` or a symbolic link, or over an existing note is refused | `a_write_outside_the_readings_folder_or_over_a_note_is_refused` |
-| A9 | the vault-duties rails rows (`write-confinement`, `no-executable`, `never-deletes`) are green over the committed synthetic run, with a non-zero examined count | vault-duties rails stage; `test_the_vault_duties_rails_rows_are_green_on_the_synthetic_run` |
+| ~~A9~~ | the vault-duties rails rows (`write-confinement`, `no-executable`, `never-deletes`) are green over the committed synthetic run, with a non-zero examined count | vault-duties rails stage; `test_the_vault_duties_rails_rows_are_green_on_the_synthetic_run` |
 | A10 | a staged run with a red blocking class is discarded and the vault's bytes are unchanged | `a_staged_run_with_a_red_class_leaves_the_vault_untouched` |
 | A11 | a missing readings folder refuses the vault features at start and creates no folder | `a_missing_readings_folder_refuses_and_creates_nothing` |
 | A12 | the Studied stamp never changes the `I read it` line, the read tick changes only its own line, and neither unticks | `each_box_write_changes_only_its_own_line` |
@@ -113,13 +113,21 @@ R12. The vault context owns no table and depends on the kernel only.
 ```acceptance
 A1: cargo test -p deck-streak-vault --test atomic -- --exact a_write_lands_through_an_ignored_temp_name_then_fsync_rename_and_dir_fsync
 A2: cargo test -p deck-streak-vault --test rails -- --exact every_rail_refuses_its_planted_fixture_and_a_clean_note_passes
+```
+```retired
 A3: python3 -m unittest discover -s scripts/tests -p test_vault_rails_rows.py -k test_the_adapter_rails_agree_with_the_pack_on_every_fixture
+```
+```acceptance
 A4: cargo test -p deck-streak-vault --test roll -- --exact rolling_a_note_matches_the_parity_golden
 A5: cargo test -p deck-streak-vault --test roll -- --exact rolling_forward_keeps_the_owners_tick_byte_for_byte
 A6: cargo test -p deck-streak-vault --test archive -- --exact archive_paths_match_the_parity_golden
 A7: cargo test -p deck-streak-vault --test roll -- --exact a_second_roll_forward_changes_nothing_and_a_malformed_note_is_reported
 A8: cargo test -p deck-streak-vault --test confinement -- --exact a_write_outside_the_readings_folder_or_over_a_note_is_refused
+```
+```retired
 A9: python3 -m unittest discover -s scripts/tests -p test_vault_rails_rows.py -k test_the_vault_duties_rails_rows_are_green_on_the_synthetic_run
+```
+```acceptance
 A10: cargo test -p deck-streak-vault --test staged -- --exact a_staged_run_with_a_red_class_leaves_the_vault_untouched
 A11: cargo test -p deck-streak-vault --test confinement -- --exact a_missing_readings_folder_refuses_and_creates_nothing
 A12: cargo test -p deck-streak-vault --test boxes -- --exact each_box_write_changes_only_its_own_line
@@ -249,3 +257,22 @@ walk from the root would find them and turn its rows red.
 
 Amendment (2026-09-28): two passages describing co-hosted infrastructure and the predecessor as a
 running service, in two risks (section 6), were redacted under the public-prose rule (ADR-059).
+
+## 8. Amendment, 2026-09-28: criteria whose tests SPEC-056 removed
+
+Made by SPEC-056 (ADR-069), insert-only under ruling (i) of SPEC-038 section 8: every earlier byte
+is kept in order. It inserts:
+
+- section 3: `~~` around A3 and A9 in the criteria table, so the table no longer states them;
+- section 3: the fence lines that set their commands apart in a `` ```retired `` fence, between the
+  acceptance fence's two halves;
+- this section.
+
+The retired criteria, why their subject is gone, and what judges it now:
+
+- A3 (the adapter's rails and the vault-duties `no-executable` class agree on every planted
+  fixture): SPEC-056 removed the test that ran the vendored probe. The box run's vault-duties pack
+  judges the rails rows, and its drift check holds the adapter's owned rails equal to the pack's
+  (SPEC-056 A6 and A14).
+- A9 (the vault-duties rails rows are green over the committed synthetic run): the box run's
+  vault-duties pack judges those rows over the committed tree.

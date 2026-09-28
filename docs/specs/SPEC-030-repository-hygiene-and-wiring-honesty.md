@@ -31,12 +31,12 @@
     that was to lift it and nobody learns the row is already green (`.packs/wiring.json` holds
     six deferred rows, sixteen pending packs and one deferred pack in the architect's working tree
     after `main` e05dfa5, counted by state).
-- **The box-pack runner judges nothing.** `scripts/box-packs.sh`, run at `dev` c1f53c1 with a phxd
-  built from the vendored phoenix-v2 commit, reported all ten cards RED for reasons unrelated to the
+- **The box-pack runner judges nothing.** `scripts/box-packs.sh`, run at `dev` c1f53c1 with a binary
+  built from the vendored packs commit, reported all ten cards RED for reasons unrelated to the
   tree:
   - every `pack probe` exited 4 with `skills/catalog.json not found`, because the runner never
     passes `--skills-root`;
-  - four packs (web-security, cyber-pipeline, ux-laws, ui-styles) declare `phxd.pack.run.v1`, and
+  - four packs (web-security, cyber-pipeline, ux-laws, ui-styles) declare `<binary>.pack.run.v1`, and
     `pack probe` refuses them (`wrong_verb`); `pack run` needs a project row in a ledger;
   - with the verbs corrected, web-security still read the vendored rule code as DeckStreak's own:
     two false reds came from `.packs/scripts/privacy-gdpr-probe.py` and
@@ -92,17 +92,17 @@ R8. Wherever R6 or R7 would refuse the tree this SPEC lands on, `.packs/wiring.j
 R9. SPEC-002's wiring tests keep passing: every vendored pack has a state, and every waiting pack or
     row names an issue in `docs/issues-manifest.json`.
 
-R10. `scripts/box-packs.sh` runs each phxd pack with the verb its catalog entry admits, read from
-    `phxd pack list` and never hard-coded:
-    - `phxd pack probe --skills-root <phoenix>/skills` for a pack declaring `phxd.pack.probe.v1`;
-    - `phxd --ledger <scratch> pack run --project <id> --skills-root <phoenix>/skills` for
-      `phxd.pack.run.v1`, against a scratch ledger it creates with `phxd init` and
-      `phxd project register` in a temporary directory outside both repositories;
-    - `phxd verify seo-pipeline` for the site once it is built (#59).
+R10. `scripts/box-packs.sh` runs each binary-built pack with the verb its catalog entry admits, read from
+    `<binary> pack list` and never hard-coded:
+    - `<binary> pack probe --skills-root <checkout>/skills` for a pack declaring `<binary>.pack.probe.v1`;
+    - `<binary> --ledger <scratch> pack run --project <id> --skills-root <checkout>/skills` for
+      `<binary>.pack.run.v1`, against a scratch ledger it creates with `<binary> init` and
+      `<binary> project register` in a temporary directory outside both repositories;
+    - `<binary> verify seo-pipeline` for the site once it is built (#59).
 R11. It judges the committed tree at `--rev` (default `HEAD`), exported with `git archive`, without
     the vendored rule code: `.packs/` and the vendored methodology probes. A rule's own source is
     never read as DeckStreak's code.
-R12. `.packs/wiring.json` names, for each phxd pack, every row expected red on the tree and the open
+R12. `.packs/wiring.json` names, for each binary-built pack, every row expected red on the tree and the open
     issue that builds that row's subject.
     - A red row it does not name fails the run, naming the pack and the row.
     - A named row that is no longer red is refused as stale, as in R6 and R7.
@@ -127,10 +127,10 @@ R14. The run prints one line per pack: its examined count, its unexpected, expec
 | A3 | a planted Rust test that keeps its temporary directory is refused | `test_temp_hygiene.py` `a_planted_rust_leak_is_refused` |
 | A4 | a planted Python test that never removes its `mkdtemp` directory is refused | `test_temp_hygiene.py` `a_planted_python_leak_is_refused` |
 | A5 | a planted TypeScript test that never removes its `mkdtempSync` directory is refused | `test_temp_hygiene.py` `a_planted_typescript_leak_is_refused` |
-| A6 | the runner refuses a pending pack whose every blocking row passed | `test_pack_wiring.py` `a_pending_pack_whose_rows_all_pass_is_refused_as_stale` |
-| A7 | the runner refuses a deferred row that now passes | `test_pack_wiring.py` `a_deferred_row_that_passes_is_refused_as_stale` |
-| A8 | a deferred row that is still red stays deferred and fails nothing | `test_pack_wiring.py` `a_deferred_row_that_is_still_red_fails_nothing` |
-| A9 | each phxd pack runs with the verb its catalog entry admits, the run packs against a scratch ledger outside the repository | `test_box_packs.py` `each_pack_runs_with_the_verb_its_catalog_admits` |
+| ~~A6~~ | the runner refuses a pending pack whose every blocking row passed | `test_pack_wiring.py` `a_pending_pack_whose_rows_all_pass_is_refused_as_stale` |
+| ~~A7~~ | the runner refuses a deferred row that now passes | `test_pack_wiring.py` `a_deferred_row_that_passes_is_refused_as_stale` |
+| ~~A8~~ | a deferred row that is still red stays deferred and fails nothing | `test_pack_wiring.py` `a_deferred_row_that_is_still_red_fails_nothing` |
+| A9 | each binary-built pack runs with the verb its catalog entry admits, the run packs against a scratch ledger outside the repository | `test_box_packs.py` `each_pack_runs_with_the_verb_its_catalog_admits` |
 | A10 | the judged tree holds no vendored rule code | `test_box_packs.py` `the_judged_tree_holds_no_vendored_rule_code` |
 | A11 | a red row the wiring does not expect fails the run by name | `test_box_packs.py` `an_unexpected_red_row_fails_the_run_by_name` |
 | A12 | an expected red row that turns green is refused as stale | `test_box_packs.py` `an_expected_red_row_that_turns_green_is_refused_as_stale` |
@@ -142,9 +142,13 @@ A2: python3 -m unittest discover -s scripts/tests -p test_temp_hygiene.py -k eve
 A3: python3 -m unittest discover -s scripts/tests -p test_temp_hygiene.py -k a_planted_rust_leak_is_refused
 A4: python3 -m unittest discover -s scripts/tests -p test_temp_hygiene.py -k a_planted_python_leak_is_refused
 A5: python3 -m unittest discover -s scripts/tests -p test_temp_hygiene.py -k a_planted_typescript_leak_is_refused
+```
+```retired
 A6: python3 -m unittest discover -s scripts/tests -p test_pack_wiring.py -k a_pending_pack_whose_rows_all_pass_is_refused_as_stale
 A7: python3 -m unittest discover -s scripts/tests -p test_pack_wiring.py -k a_deferred_row_that_passes_is_refused_as_stale
 A8: python3 -m unittest discover -s scripts/tests -p test_pack_wiring.py -k a_deferred_row_that_is_still_red_fails_nothing
+```
+```acceptance
 A9: python3 -m unittest discover -s scripts/tests -p test_box_packs.py -k each_pack_runs_with_the_verb_its_catalog_admits
 A10: python3 -m unittest discover -s scripts/tests -p test_box_packs.py -k the_judged_tree_holds_no_vendored_rule_code
 A11: python3 -m unittest discover -s scripts/tests -p test_box_packs.py -k an_unexpected_red_row_fails_the_run_by_name
@@ -156,9 +160,9 @@ A6 to A8 run the runner over a copy of `.packs/` and `scripts/` in a `TemporaryD
 synthetic pack whose rows are one-line probes that exit 0, 1 or 3 as the case needs; they never run
 the real packs, so they stay fast.
 
-A9 to A13 drive `scripts/box-packs.sh` with a fake phxd and a fake phoenix checkout, under
-`scripts/tests/fixtures/box-packs/`. The fake phxd records its argv and prints planted cards, so the
-tests need neither phxd nor the private phoenix-v2 checkout and run in CI. The real run stays on the
+A9 to A13 drive `scripts/box-packs.sh` with a fake binary and a fake packs checkout, under
+`scripts/tests/fixtures/box-packs/`. The fake binary records its argv and prints planted cards, so the
+tests need neither the binary nor the private packs checkout and run in CI. The real run stays on the
 maintainer's box.
 
 ## 4. File manifest
@@ -176,8 +180,8 @@ maintainer's box.
 | `.packs/wiring.json` | repo | changed where R8 applies, and the `box` section R12 and R13 read |
 | `scripts/box-packs.sh` | repo | changed: R10 to R14 |
 | `scripts/tests/test_box_packs.py` | repo | added: A9 to A13 |
-| `scripts/tests/fixtures/box-packs/fake-phxd` | repo | added: the fake phxd and its planted cards |
-| `scripts/tests/fixtures/box-packs/phoenix/skills/catalog.json` | repo | added: a fake catalog naming one probe pack, one run pack and one seo-pipeline pack (amended: A9 pins R10's third verb too) |
+| `scripts/tests/fixtures/box-packs/fake-runner` | repo | added: the fake binary and its planted cards |
+| `scripts/tests/fixtures/box-packs/checkout/skills/catalog.json` | repo | added: a fake catalog naming one probe pack, one run pack and one seo-pipeline pack (amended: A9 pins R10's third verb too) |
 | `docs/TESTING.md` | repo | changed: the temporary-file rule and the honest-state rule |
 | `docs/red-first/SPEC-030.md` | repo | added |
 | `docs/decisions/ADR-030-the-box-pack-runner-uses-each-packs-own-verb.md` | repo | added: R10 to R14's design and what it was chosen against |
@@ -191,8 +195,8 @@ maintainer's box.
   SPEC-002's, delivered (#23).
 - It enforces no pack whose subject is not built: each waits for the issue its wiring names, and
   the last of them are lifted by W7's work (#60).
-- It builds no phxd and runs no phxd pack in CI: the maintainer builds phxd from the vendored
-  phoenix-v2 commit, and the phxd packs stay box-run until the open-source pack runner exists
+- It builds no binary and runs no binary-built pack in CI: the maintainer builds the binary from the vendored
+  packs commit, and the binary-built packs stay box-run until the open-source pack runner exists
   (#60).
 - It keeps no pytest retention setting: DeckStreak's Python tests are `unittest`, and the lint
   replaces the setting's purpose (#23).
@@ -220,3 +224,23 @@ maintainer's box.
 
 Amendment (2026-09-28): one passage describing the host beside other services, in section 1, was
 redacted under the public-prose rule (ADR-059).
+
+## 8. Amendment, 2026-09-28: criteria whose tests SPEC-056 removed
+
+Made by SPEC-056 (ADR-069), insert-only under ruling (i) of SPEC-038 section 8: every earlier byte
+is kept in order. It inserts:
+
+- section 3: `~~` around A6, A7 and A8 in the criteria table, so the table no longer states them;
+- section 3: the fence lines that set their commands apart in a `` ```retired `` fence, between the
+  acceptance fence's two halves;
+- this section.
+
+The retired criteria, why their subject is gone, and what judges it now:
+
+- A6, A7 and A8 (a pending pack whose rows all pass, a deferred row that passes, and a deferred row
+  still red): SPEC-056 removed the row runner and its tests. The box driver keeps the same three
+  judgments for the packs of the maintainer's private wiring, decided by SPEC-056 A12.
+
+Amendment (2026-09-28): names of the maintainer's private tooling were replaced with 'the box-run
+packs' and neutral names for their repository, binary and checkout under the public-text rule
+(ADR-059).

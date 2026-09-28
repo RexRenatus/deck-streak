@@ -98,7 +98,7 @@ R4. **Issue state on the box.** After it has read the judged commit's wiring, an
     `.packs/wiring.json` and its schema are unchanged.
 R5. **A bounded build in the rails guard.** The guard runs the adapter's `cargo run` under a bound
     of 900 s. That is over 40 times the measured cold run, so a slower runner, a cache miss or a
-    wait for a build slot on a shared machine still finishes inside it. It is also inside CI's
+    wait before the build starts still finishes inside it. It is also inside CI's
     30-minute hygiene job, so the guard names the failure before the runner kills the job. When
     the bound expires, the child is killed and the test fails with `<what> did not finish within
     <N> s: <the command>`.
@@ -129,12 +129,12 @@ R7. **Every python suite runs.** `scripts/check.sh`'s `stage_python` runs both o
 | A3 | a subject that examines nothing is VOID by name, although the tree beside it was examined | `test_public_scrub.py` |
 | A4 | a unit instance name of each of the eight types passes the email rule, also beside an address on the same line, which is still refused | `test_public_scrub.py` |
 | A5 | an address that only looks like a unit name is still refused by `email`, never by value | `test_public_scrub.py` |
-| A6 | the vendoring scans with the scrub's own `rules()`, holds no second composition, and refuses an unreadable private list as before | `test_vendor_packs.py` |
+| ~~A6~~ | the vendoring scans with the scrub's own `rules()`, holds no second composition, and refuses an unreadable private list as before | `test_vendor_packs.py` |
 | A7 | a private list the rules cannot read stops the scrub with exit 2, by name | `test_public_scrub.py` |
 | A8 | an expectation whose issue is closed fails the box run, naming the pack, the row and the issue | `test_box_packs.py` |
 | A9 | a box run that cannot read an issue's state (no `gh`, not logged in, offline) is VOID with the reason, and runs no pack | `test_box_packs.py` |
-| A10 | a command that outlives its bound fails by name, and one inside it returns | `test_vault_rails_rows.py` |
-| A11 | the adapter's cargo run is bounded at 900 s | `test_vault_rails_rows.py` |
+| ~~A10~~ | a command that outlives its bound fails by name, and one inside it returns | `test_vault_rails_rows.py` |
+| ~~A11~~ | the adapter's cargo run is bounded at 900 s | `test_vault_rails_rows.py` |
 | A12 | the README's day-token example round-trips through the oracle's own reader and writer | `tools/parity-oracle/test_goldens.py` |
 | A13 | a planted failing guard test leaves the oracle suite run, its result in the stage log, and both suites named on the summary line; a suite that runs nothing fails the stage | `test_check_gate.py` |
 
@@ -144,18 +144,26 @@ A2: python3 -m unittest discover -s scripts/tests -p test_public_scrub.py -k a_s
 A3: python3 -m unittest discover -s scripts/tests -p test_public_scrub.py -k a_subject_that_examines_nothing_is_void_by_name
 A4: python3 -m unittest discover -s scripts/tests -p test_public_scrub.py -k a_systemd_unit_instance_name_passes_the_email_rule
 A5: python3 -m unittest discover -s scripts/tests -p test_public_scrub.py -k an_address_that_only_looks_like_a_unit_name_is_still_refused
+```
+```retired
 A6: python3 -m unittest discover -s scripts/tests -p test_vendor_packs.py -k the_vendoring_scans_with_the_scrubs_own_rules
+```
+```acceptance
 A7: python3 -m unittest discover -s scripts/tests -p test_public_scrub.py -k a_private_list_the_rules_cannot_read_stops_the_scrub
 A8: python3 -m unittest discover -s scripts/tests -p test_box_packs.py -k an_expectation_whose_issue_is_closed_fails_the_run
 A9: python3 -m unittest discover -s scripts/tests -p test_box_packs.py -k a_run_that_cannot_read_issue_state_is_void
+```
+```retired
 A10: python3 -m unittest discover -s scripts/tests -p test_vault_rails_rows.py -k a_command_that_outlives_its_bound_fails_by_name
 A11: python3 -m unittest discover -s scripts/tests -p test_vault_rails_rows.py -k the_adapter_build_runs_under_its_bound
+```
+```acceptance
 A12: python3 -m unittest discover -s tools/parity-oracle -p test_goldens.py -k the_readme_day_token_example_round_trips
 A13: python3 -m unittest discover -s scripts/tests -p test_check_gate.py -k a_red_guard_suite_leaves_the_oracle_suite_run
 ```
 
 The planted addresses are assembled at run time, so no test file holds one. A8 and A9 drive the
-real runner with the fake phxd and a fake `gh` on the path, which answers `CLOSED` for the issues a
+real runner with the fake binary and a fake `gh` on the path, which answers `CLOSED` for the issues a
 test names and `OPEN` for any other. Every other box-runner test gets the same fake, answering
 `OPEN`. A9's missing `gh` is a path that holds the runner's own tools and no `gh`. A10 plants a
 slow command, and never runs cargo. A11 replaces the process call and records its bound, so it runs
@@ -232,3 +240,25 @@ pass.
   same kind that another helper measured: the python stage's `&&` chain. They were written, and A13
   was red, before `check.sh` changed, in their own commits after the first six requirements were
   green.
+
+## 8. Amendment, 2026-09-28: criteria whose tests SPEC-056 removed
+
+Made by SPEC-056 (ADR-069), insert-only under ruling (i) of SPEC-038 section 8: every earlier byte
+is kept in order. It inserts:
+
+- section 3: `~~` around A6, A10 and A11 in the criteria table, so the table no longer states them;
+- section 3: the fence lines that set their commands apart in a `` ```retired `` fence, between the
+  acceptance fence's two halves;
+- this section.
+
+The retired criteria, why their subject is gone, and what judges it now:
+
+- A6 (the vendoring scans with the scrub's own rules): SPEC-056 removed the vendoring script and its
+  test (SPEC-056 A1). The scrub's own rules are decided by SPEC-056 A9 and A10.
+- A10 and A11 (a bounded command, and the adapter's bounded cargo run): they bounded the build the
+  removed rails-row test needed. SPEC-056 removed that test, and the box run's vault-duties pack
+  runs those rows.
+
+Amendment (2026-09-28): names of the maintainer's private tooling were replaced with 'the box-run
+packs' and neutral names for their repository, binary and checkout, and one phrase describing a
+machine's state was replaced, under the public-text rule (ADR-059).
