@@ -7,7 +7,6 @@ import { TODAY, type RoutePath } from './routes';
  * table (`startapp.test.ts` holds every destination to it).
  */
 const TOKENS: ReadonlyMap<string, RoutePath> = new Map<string, RoutePath>([
-  // Stryker disable next-line ArrayDeclaration,StringLiteral: EQUIVALENT: 'today' opens TODAY, which every unlisted token opens too, so no token's screen changes without this entry (#294)
   ['today', TODAY],
   ['about', '/about'],
   ['score', '/score']

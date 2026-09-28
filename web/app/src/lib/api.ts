@@ -66,7 +66,6 @@ export function createApi(options: ApiOptions): Api {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ init_data: launch })
       });
-      // Stryker disable next-line StringLiteral: EQUIVALENT: callers test only for 'refused' and 'failed', so any other value is an open session (#294)
       if (response.ok) return 'open';
       return response.status === 401 || response.status === 403 ? 'refused' : 'failed';
     } catch {
@@ -92,7 +91,6 @@ export function createApi(options: ApiOptions): Api {
       const opened = await used;
       if (opened === 'refused') {
         // the launch data is refused: the client stops calling until the owner reopens the app
-        // Stryker disable next-line BooleanLiteral: EQUIVALENT: a refused session stays cached, so a later call answers reopen and sends nothing whether or not this sets stopped (#294)
         stopped = true;
         return 'reopen';
       }
@@ -126,7 +124,6 @@ export function createApi(options: ApiOptions): Api {
     if (response === null || !response.ok) {
       return { kind: 'unavailable' };
     }
-    // Stryker disable next-line ArrowFunction: EQUIVALENT: parseMe and parseScore read an undefined body as they read null (#294)
     const value = parse(await response.json().catch(() => null));
     return value === null ? { kind: 'unavailable' } : { kind: 'ok', value };
   }
@@ -141,7 +138,6 @@ export function createApi(options: ApiOptions): Api {
 function parseMe(body: unknown): Me | null {
   const day =
     body !== null &&
-    // Stryker disable next-line ConditionalExpression: EQUIVALENT: a JSON value that is no object reads no study_day either, so null is the one value this must stop (#294)
     typeof body === 'object'
       ? (body as Record<string, unknown>).study_day
       : undefined;
