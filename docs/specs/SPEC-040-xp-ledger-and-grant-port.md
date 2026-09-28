@@ -4,8 +4,9 @@
 - **Decided by:** ADR-002 (one crate per context), ADR-008 (one SQLite database, owned table by
   table), ADR-012 (the parity oracle proves the math), and ADR-040 (the ledger's key, the once
   scope and the unsigned amount).
-- **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
-  `docs/specs/` with its tests and `docs/red-first/SPEC-040.md` (ADR-016).
+- **Status:** judged: delivered with its tests, `docs/red-first/SPEC-040.md`, and one golden
+  (`level_for_xp`) generated at the predecessor's `27ee2bc`. The delivery made R5, R7, R9, R10, A4
+  and the manifest exact where the code decided them (§7).
 
 ## 1. The problem, measured
 
@@ -168,3 +169,24 @@ context and a slug.
   and the refusal of a source are invariants the diff's generated mutants cannot all reach: the keys
   live in the migration and the refusal in a method named `new`. Each has a hand-proved row in this
   SPEC's band (SPEC-039).
+- **R5: the existence check is the insert's own conflict.** A grant is one
+  `INSERT ... ON CONFLICT DO NOTHING` inside the port's `BEGIN IMMEDIATE` write: its conflict with
+  the two unique indexes is the check, so the key lives in the migration alone and no second
+  statement of it in code can drift from the index. When the insert writes nothing, the row that
+  holds the key is read in the same transaction for the `AlreadyGranted` answer (ADR-040, at
+  acceptance).
+- **R7 and A4: the golden's cases, and the widths.** Level 1 begins at 0 XP and no unsigned total
+  lies one XP below it, so the golden holds the thresholds of levels 1 to 100 and the total one XP
+  below those of levels 2 to 100. It also holds eight seeded levels between 2 × 10^7 and 6 × 10^8,
+  where a floating-point square root places the total one XP below the threshold a level too high
+  (it does for all eight), and the widest total an unsigned 64-bit integer holds, 2^64 − 1, which is
+  level 607,400,100. A4 also holds the XP to reach each level to the total at which the
+  predecessor's level rises. The amount is an unsigned 32-bit integer, the total an unsigned 64-bit
+  one, and the level is computed in 128-bit integers. The predecessor's `max(1, …)` never binds on a
+  total that cannot be negative, since the least total, 0 XP, is level 1 already, so the port leaves
+  it out.
+- **R10: the owner's erase.** The one other statement that changes `xp_ledger` is the data-rights
+  port's erase, in progression beside the grant port: it deletes every grant at once when the owner
+  erases their data (CHARTER 13), and the grant port itself offers no debit, update or delete (R6).
+  A9's census reads each line of every crate's sources and every migration, where a comment is
+  prose, and refuses a planted crate and a planted migration, in a temporary tree, by name.
