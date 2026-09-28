@@ -16,3 +16,19 @@ deck-streak-kernel.workspace = true
 deck-streak-identity.workspace = true
 deck-streak-notifications.workspace = true
 deck-streak-coordination.workspace = true
+# ADR-003 and ADR-026 (SPEC-026): the Bot API client, the poll's raw updates, the library's error
+# type, the timers the waits run on, and the log.
+frankenstein.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tokio = { workspace = true, features = ["macros", "time"] }
+tracing.workspace = true
+
+[dev-dependencies]
+# SPEC-026 section 3: the fake Bot API is an axum server on a loopback port, run on tokio's paused
+# time; ADR-020's temporary database holds the data /export and /delete reach; ADR-029's golden
+# reader.
+axum.workspace = true
+serde.workspace = true
+tempfile.workspace = true
+tokio = { workspace = true, features = ["macros", "net", "rt", "sync", "test-util", "time"] }

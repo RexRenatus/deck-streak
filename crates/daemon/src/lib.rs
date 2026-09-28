@@ -8,8 +8,8 @@
 //!
 //! The `deckstreakd` binary (`src/main.rs`) dispatches on its first argument to a role. What the
 //! roles share lives here, where the tests reach it: the process lifecycle under systemd
-//! ([`lifecycle`]), the adapters the roles build ([`wiring`]) and the `api` role itself
-//! ([`role_api`]) (SPEC-025).
+//! ([`lifecycle`]), the adapters the roles build and the ports they join ([`wiring`]), the `api`
+//! role ([`role_api`], SPEC-025) and the `bot` role ([`role_bot`], SPEC-026).
 //!
 //! The context map (docs/CONTEXT-MAP.md) is binding: this crate depends only on what its line
 //! there declares, and a new edge is an ADR, never a fix to make code compile.
@@ -19,4 +19,5 @@
 
 pub mod lifecycle;
 pub mod role_api;
+pub mod role_bot;
 pub mod wiring;

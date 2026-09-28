@@ -1,0 +1,9 @@
+{
+  "duty": "bot-commands",
+  "schema": "phx.duty.message.v1",
+  "send": {
+    "caption": "Your DeckStreak data, as one JSON document.",
+    "parse_mode": "HTML"
+  },
+  "x-message": "export"
+}
