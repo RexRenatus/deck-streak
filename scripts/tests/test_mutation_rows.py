@@ -408,5 +408,29 @@ class TheCensusRefusesARowThatCanProveNothing(unittest.TestCase):
         self.assertIn("the row id S00041-FIRST is held twice", held.stdout)
 
 
+class TheRunnerProvesEverySelectedRow(unittest.TestCase):
+    def test_every_row_its_selectors_name_is_proved_once(self):
+        killer = "test_fixmod.Double.test_two_doubles_to_four"
+        first = script_row("S00010-DOUBLE", "x * 2", "x * 3", killer)
+        fixture = Fixture(self, [("SCRIPT_MUTATIONS", first)])
+        second = script_row("S00110-RETURN", "return x * 2", "return x - 2", killer)
+        fixture.rows([("SCRIPT_MUTATIONS", second)], band="S00100-S00199")
+        fixture.commit("a second band")
+        plan = fixture.write("plan.json", json.dumps({"rows": ["S00110-RETURN", "S00010-DOUBLE"]}))
+        both = {"S00010-DOUBLE": "KILLED", "S00110-RETURN": "KILLED"}
+        for selectors in examined(
+            "selector sets",
+            [
+                ["--band", "S00000-S00099", "--row", "S00110-RETURN"],
+                ["--band", "S00100-S00199", "--rows-from", str(plan)],
+                ["--row", "S00010-DOUBLE", "--row", "S00110-RETURN", "--row", "S00010-DOUBLE"],
+            ],
+        ):
+            done = fixture.run("prove", *selectors)
+            self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+            self.assertEqual(verdicts(done), both, " ".join(selectors))
+            self.assertRegex(done.stdout, r"(?m)^examined 2\b", " ".join(selectors))
+
+
 if __name__ == "__main__":
     unittest.main()
