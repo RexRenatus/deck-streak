@@ -38,6 +38,11 @@ if [ "$#" -gt 0 ]; then STAGES=("$@"); else STAGES=("${STAGES_ALL[@]}"); fi
 # runs in exactly one of the two, and a test added to either binary goes with it.
 ENGINE_TESTS='binary_id(=deck-streak-ingest::sync) | binary_id(=deck-streak-ingest::engine_budget)'
 
+# The web audit's level (SPEC-058 R2), defined here and nowhere else: pnpm's lowest, so every
+# advisory pnpm grades fails the stage, the bar audit-rust holds, where deny.toml makes every
+# RustSec advisory an error. It is given on the command line, so no workspace setting raises it.
+AUDIT_WEB_LEVEL=low
+
 failed=()
 
 need() {
@@ -121,7 +126,18 @@ stage_web() {
         pnpm -r test:e2e
 }
 
-stage_audit_web() { need_node && pnpm audit --prod; }
+stage_audit_web() {
+    # Every package the lockfile resolves, development ones included: the Mini App ships as a
+    # static build, so its packages are all development dependencies, and no flag narrows the
+    # classes pnpm audits. The verdict reads pnpm's report, prints how many packages it examined,
+    # and reads a report that examined none as VOID (SPEC-058).
+    need_node && need_python || return 1
+    local report code
+    report=$(pnpm audit --json --audit-level "$AUDIT_WEB_LEVEL")
+    code=$?
+    python3 scripts/audit-web-verdict.py --level "$AUDIT_WEB_LEVEL" --pnpm-exit "$code" \
+        <<<"$report"
+}
 
 stage_python() {
     # cargo too: guard tests build and audit the workspace (SPEC-055's engine pin).

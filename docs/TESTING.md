@@ -78,6 +78,12 @@ Every stage runs in exactly one job, and the aggregate `ci` check, which the rul
 all five with `workflow-lint` and `base-is-dev`. Each stage checks its own tools first, so a missing
 tool fails that stage by name wherever it runs.
 
+`audit-web` audits every package `pnpm-lock.yaml` resolves, the development dependencies too: the
+Mini App ships as a static build, so its packages are all development dependencies. It runs
+`pnpm audit --json --audit-level low`, and `scripts/audit-web-verdict.py` reads the report. The
+verdict prints how many packages pnpm examined, reads VOID when that is none, and fails on any
+advisory at `low` or above, the bar `audit-rust` holds (SPEC-058).
+
 `check.sh` defines the engine set once, `ENGINE_TESTS`: a nextest filterset naming SPEC-022's two
 test binaries that drive Anki's engine end to end (`sync` and `engine_budget`), whose tests take tens
 of seconds each. The `test` stage runs every test outside it and `test-engine` runs it, with one
