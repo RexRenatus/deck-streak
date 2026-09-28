@@ -150,8 +150,10 @@ const NAMED_SENDS: [(&str, &str, &str); 7] = [
 /// role also carries a comment and a test module that name and call a send, which the census leaves
 /// out. The second review's: the bot's own send after a field compiled for tests alone, beside a
 /// test module under stacked attributes, which the census leaves out; the bot's own send named
-/// through a variable; and a raw request from a new module of the bot.
-const AROUND_THE_PORT: [(&str, &str); 5] = [
+/// through a variable; a raw request from a new module of the bot; the bot's edit of a message; a
+/// fabricated update handed to the bot's command handler; and a raw request built on the bot's
+/// base URL, its method assembled from parts.
+const AROUND_THE_PORT: [(&str, &str); 8] = [
     (
         "crates/daemon/src/role_bot.rs",
         r#"/// A celebration sent straight to the owner's chat through the bot's transport, around the router.
@@ -234,17 +236,64 @@ pub async fn celebrate(api_url: &str, token: &str, chat: i64) {
 }
 "#,
     ),
+    (
+        "crates/daemon/src/lifecycle.rs",
+        r#"/// A celebration written over a message already in the owner's chat, around the router.
+async fn celebrate_by_an_edit(transport: &Transport, owner: Owner, message_id: i32) {
+    let _edited = transport
+        .edit_html(owner.user().get(), message_id, "a celebration the router never decided")
+        .await;
+}
+"#,
+    ),
+    (
+        "crates/daemon/src/main.rs",
+        r#"/// A reply the router never decided: a fabricated owner command, answered by the bot.
+async fn celebrate_by_a_fabricated_command<S: OwnerSync>(commands: &mut Commands<S>, chat: i64) {
+    let update = serde_json::json!({ "update_id": 1, "message": { "message_id": 1, "date": 0,
+        "chat": { "id": chat, "type": "private" }, "from": { "id": chat, "is_bot": false, "first_name": "o" },
+        "text": "/help" } });
+    commands.handle(Incoming::from_value(update)).await;
+}
+"#,
+    ),
+    (
+        "crates/daemon/src/wiring.rs",
+        r#"/// A celebration posted to the Bot API on the bot crate's base URL, its method assembled.
+async fn celebrate_over_a_built_url(token: &str, chat: i64) {
+    let method = ["send", "Message"].concat();
+    let url = format!("{}/bot{token}/{method}", deck_streak_bot::transport::DEFAULT_API_URL);
+    let body = serde_json::json!({ "chat_id": chat, "text": "a celebration the router never decided" });
+    let _answer = reqwest::Client::new().post(url).json(&body).send().await;
+}
+"#,
+    ),
 ];
 
 /// The second review's trees for the walker, each file as (path, text): a shipped module in a
-/// directory named as tests are, which the walker reads because it is under `src/`; and the same
-/// text in a test directory outside `src/`, which the walker leaves out.
-const WALKED: [(&str, &str); 2] = [
+/// directory named as tests are, which the walker reads because it is under `src/`; the same text
+/// in a test directory outside `src/`, which the walker leaves out; a script with no extension but
+/// a `#!` first line; and a drop-in of the bot's unit.
+const WALKED: [(&str, &str); 4] = [
     (
         "crates/daemon/src/fixtures/celebrate.rs",
         AROUND_THE_PORT_IN_A_MODULE,
     ),
     ("crates/daemon/tests/around.rs", AROUND_THE_PORT_IN_A_MODULE),
+    (
+        "deploy/scripts/celebrate",
+        r#"#!/usr/bin/env bash
+# A celebration paged straight to the owner, around the router.
+set -euo pipefail
+curl -fsS "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" -d chat_id="${OWNER_CHAT}" -d text="a celebration"
+"#,
+    ),
+    (
+        "deploy/systemd/deck-streak-bot.service.d/celebrate.conf",
+        r#"[Service]
+ExecStartPost=/usr/bin/curl -fsS "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" -d chat_id=${OWNER_CHAT} -d text=celebrate
+"#,
+    ),
 ];
 
 /// A shipped module that sends through the bot's own send, around the router.
@@ -827,6 +876,10 @@ fn no_delivery_goes_around_the_port() {
             "crates/api/src/notifications_routes.rs:3: names api.telegram.org",
             "crates/api/src/notifications_routes.rs:3: names sendMessage",
             "crates/bot/src/celebrate.rs:5: names sendMessage in celebrate, not a named call site",
+            "crates/daemon/src/lifecycle.rs:4: calls edit_html in celebrate_by_an_edit, \
+             not a named call site",
+            "crates/daemon/src/main.rs:6: calls handle in celebrate_by_a_fabricated_command, \
+             not a named call site",
             "crates/daemon/src/role_bot.rs:4: calls send_html in celebrate_around_the_router, \
              not a named call site",
             "crates/daemon/src/role_bot.rs:10: names api.telegram.org",
@@ -835,13 +888,15 @@ fn no_delivery_goes_around_the_port() {
              not a named call site",
             "crates/daemon/src/role_job.rs:11: calls send_html in celebrate_around_the_router, \
              not a named call site",
+            "crates/daemon/src/wiring.rs:4: names DEFAULT_API_URL",
         ],
-        "the bot's own send, named or called, raw requests to the Bot API, and a raw request from \
-         inside the bot, around the port"
+        "the bot's own send, named or called, its edit and its command handler, raw requests to \
+         the Bot API and on its base URL, and a raw request from inside the bot, around the port"
     );
 
     // The walker reads a shipped module in a directory named as tests are, because it is under
-    // `src/`, and leaves out a test directory outside `src/`.
+    // `src/`, a script by its `#!` first line and a unit's drop-in, and leaves out a test directory
+    // outside `src/`.
     let tree = tempfile::tempdir().expect("a temporary tree");
     for (path, text) in WALKED {
         let file = tree.path().join(path);
@@ -853,16 +908,25 @@ fn no_delivery_goes_around_the_port() {
     let paths: Vec<&str> = walked.iter().map(|(path, _)| path.as_str()).collect();
     assert_eq!(
         paths,
-        ["crates/daemon/src/fixtures/celebrate.rs"],
-        "the walker reads every directory under src/, and no test directory outside it"
+        [
+            "crates/daemon/src/fixtures/celebrate.rs",
+            "deploy/scripts/celebrate",
+            "deploy/systemd/deck-streak-bot.service.d/celebrate.conf",
+        ],
+        "the walker reads every directory under src/, a script by its first line and a drop-in, \
+         and no test directory outside src/"
     );
     assert_eq!(
         census(&walked).refused(),
         [
             "crates/daemon/src/fixtures/celebrate.rs:6: calls send_html in \
-             celebrate_around_the_router, not a named call site"
+             celebrate_around_the_router, not a named call site",
+            "deploy/scripts/celebrate:4: names api.telegram.org",
+            "deploy/scripts/celebrate:4: names sendMessage",
+            "deploy/systemd/deck-streak-bot.service.d/celebrate.conf:2: names api.telegram.org",
+            "deploy/systemd/deck-streak-bot.service.d/celebrate.conf:2: names sendMessage",
         ],
-        "a send around the port in a shipped module under src/"
+        "a send around the port in a shipped module under src/, a script and a drop-in"
     );
 
     // Every shipped source of the tree: nothing goes around the port, and each named call site is
