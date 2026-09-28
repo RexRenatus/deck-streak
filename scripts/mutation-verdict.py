@@ -972,22 +972,47 @@ def judge(args: argparse.Namespace) -> int:
 # --------------------------------------------------------------------------- the weekly survivors
 
 
-def survivors_in(reports: pathlib.Path) -> dict[str, list[str]]:
-    """{file: [each survivor, one line]} across every report under `reports`."""
+def survivors_in(reports: pathlib.Path, root: pathlib.Path) -> tuple[dict[str, list[str]], int]:
+    """{file: [each survivor, one line]} across every report under `reports`, less each missed or
+    survived mutant that exactly one record binds, for which no issue is drafted (SPEC-057 R12);
+    and how many those were."""
     found: dict[str, list[str]] = defaultdict(list)
-    for path in sorted(reports.rglob("outcomes.json")):
-        document = read_json(str(path)) or {}
-        for outcome in document.get("outcomes", []):
-            if outcome.get("summary") == "MissedMutant" and mutated_file(outcome):
-                found[mutated_file(outcome)].append(outcome["scenario"]["Mutant"]["name"])
+    records, _ = load_records(root)
+    excused = 0
+    rust = Excuses(root, records, "rust")
+    documents = [read_json(str(path)) for path in sorted(reports.rglob("outcomes.json"))]
+    outcomes = [
+        outcome
+        for document in documents
+        if isinstance(document, dict)
+        for outcome in document.get("outcomes", [])
+    ]
+    tested = [cargo_mutant(outcome_mutant(outcome)) for outcome in outcomes]
+    rust.bind([mutant for mutant in tested if mutant], lambda _: None)
+    for outcome, mutant in zip(outcomes, tested, strict=True):
+        if outcome.get("summary") == "MissedMutant" and mutated_file(outcome):
+            if len(rust.of(mutant)) == 1:
+                excused += 1
+                continue
+            found[mutated_file(outcome)].append(outcome["scenario"]["Mutant"]["name"])
+    web = Excuses(root, records, "web")
     for path in sorted(reports.rglob("mutation.json")):
         document = read_json(str(path)) or {}
         for name, entry in sorted((document.get("files") or {}).items()):
-            for mutant in entry.get("mutants", []):
+            file = f"{WEB_ROOT}{name}"
+            if isinstance(entry.get("source"), str):
+                web.sources.put(file, entry["source"])
+            parsed = [(mutant, stryker_mutant(file, mutant)) for mutant in entry.get("mutants", [])]
+            mine = [record for record in web.records if record.get("file") == file]
+            web.bind([bound for _, bound in parsed if bound], lambda _: None, records=mine)
+            for mutant, bound in parsed:
+                if mutant.get("status") == "Survived" and len(web.of(bound)) == 1:
+                    excused += 1
+                    continue
                 if mutant.get("status") in ("Survived", "NoCoverage"):
                     line = mutant.get("location", {}).get("start", {}).get("line")
-                    found[f"{WEB_ROOT}{name}"].append(
-                        f"{WEB_ROOT}{name}:{line}: {mutant.get('status')}: "
+                    found[file].append(
+                        f"{file}:{line}: {mutant.get('status')}: "
                         f"{mutant.get('mutatorName')} -> {mutant.get('replacement')!r}"
                     )
     for path in sorted(reports.rglob("rows.json")):
@@ -997,7 +1022,7 @@ def survivors_in(reports: pathlib.Path) -> dict[str, list[str]]:
                 found[entry.get("target", "<no target>")].append(
                     f"row {entry.get('id')}: {entry.get('verdict')}: {entry.get('reason', '')}"
                 )
-    return found
+    return found, excused
 
 
 def draft_body(path: str, lines: list[str]) -> str:
@@ -1012,10 +1037,13 @@ def draft_body(path: str, lines: list[str]) -> str:
     return (
         f"{source} found {len(lines)} mutant(s) of `{path}` that no test killed (SPEC-039 R12).\n\n"
         f"{listed}\n\n"
-        "Triage each one (SPEC-039 R5): kill it with a test that asserts the behaviour the mutant "
-        "breaks, or, when no test can tell it apart, record it as `EQUIVALENT: <reason> (#N)` in "
-        "`.cargo/mutants.toml` or a `Stryker disable next-line` comment. A row that SURVIVED or is "
-        "VOID is repaired in its band fragment under `scripts/mutation-rows.d/`.\n"
+        "Triage each one (SPEC-057 R1): kill it with a test that asserts the behaviour the mutant "
+        "breaks, or, when no test can tell it apart, record it EQUIVALENT in "
+        "`scripts/mutation-equivalent.d/<package>.json`, `miniapp.json` for the Mini App "
+        "(ADR-070): its `file`, `mutant`, `anchor`, `reason`, `evidence`, a Rust mutant's "
+        "`reached_by`, and `issue`. An uncovered Mini App mutant first gains a test that reaches "
+        "it. A row that SURVIVED or is VOID is repaired in its band fragment under "
+        "`scripts/mutation-rows.d/`.\n"
     )
 
 
@@ -1024,7 +1052,8 @@ def survivors(args: argparse.Namespace) -> int:
     out.mkdir(parents=True, exist_ok=True)
     open_titles = set(read_json(args.open_titles) or [])
     manifest = []
-    for number, (path, lines) in enumerate(sorted(survivors_in(reports).items()), start=1):
+    found, excused = survivors_in(reports, pathlib.Path(args.root))
+    for number, (path, lines) in enumerate(sorted(found.items()), start=1):
         name = f"draft-{number:03d}.md"
         (out / name).write_text(draft_body(path, lines), encoding="utf-8")
         title = TITLE.format(path)
@@ -1032,6 +1061,7 @@ def survivors(args: argparse.Namespace) -> int:
         state = "already open, not filed again" if title in open_titles else "to file"
         print(f"survivors: {title}: {len(lines)} mutant(s): {state}")
     (out / "drafts.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+    print(f"survivors: {excused} mutant(s) the equivalence record excuses, drafted as no issue")
     print(f"examined {len(manifest)} file(s) with survivors")
     return EXIT_OK
 
@@ -1044,16 +1074,44 @@ def read_exit(path: pathlib.Path) -> int | None:
         return None
 
 
-def battery(reports: pathlib.Path, shards: int) -> int:
+def battery(
+    reports: pathlib.Path, shards: int, package: str | None = None, listed: str | None = None
+) -> int:
     """Every report the weekly battery's jobs promise, counted whole (R12): each shard's
     `outcomes.json` with an exit of 0, 2 or 3 and counts that sum to its total, the rows' report
     with at least one row proved, and the Stryker sweep's `mutation.json`. A runner shut down
     mid-run uploads nothing, and a shard stopped early leaves a partial report: either is named, and
-    fails the battery, rather than read as a shard with no survivor."""
+    fails the battery, rather than read as a shard with no survivor. A dispatch scoped to one
+    package (SPEC-057 R14) promises the shards its scope gave a mutant, which the whole tree's
+    listing counts, since shard k holds a mutant when the scope lists more than k; scoped to the
+    Mini App it promises the Stryker sweep alone."""
     findings: list[str] = []
-    whole = 0
+    whole = promised = 0
+    owed = range(shards)
+    if listed is not None:
+        promised += 1
+        listing = read_json(listed)
+        if not isinstance(listing, list):
+            findings.append(f"battery: MISSING listing: {listed} holds no cargo-mutants listing")
+        else:
+            whole += 1
+            entries = [entry for entry in listing if isinstance(entry, dict)]
+            count = sum(1 for entry in entries if package in (None, entry.get("package")))
+            if package not in (None, MINIAPP) and not count:
+                packages = ", ".join(sorted({str(entry.get("package")) for entry in entries}))
+                findings.append(
+                    f"battery: the scope {package} lists no mutant; the listing's packages are "
+                    f"{packages or 'none'}, and the Mini App is {MINIAPP}"
+                )
+            owed = range(0 if package == MINIAPP else min(shards, count))
+    elif package == MINIAPP:
+        owed = range(0)
     for shard in range(shards):
         name = f"mutants-shard-{shard}"
+        if shard not in owed:
+            print(f"battery: {name}: the scope lists no mutant for it, so it owes no report")
+            continue
+        promised += 1
         report = read_json(str(reports / name / "mutants.out" / "outcomes.json"))
         code = read_exit(reports / name / "cargo-mutants.exit")
         if not isinstance(report, dict) or "total_mutants" not in report:
@@ -1072,26 +1130,30 @@ def battery(reports: pathlib.Path, shards: int) -> int:
                 )
             else:
                 whole += 1
-    rows = read_json(str(reports / "rows" / "rows.json"))
-    if rows is None:
-        findings.append("battery: MISSING rows: no rows.json")
-    elif not isinstance(rows, list) or not rows:
-        findings.append("battery: PARTIAL rows: rows.json proves no row")
-    else:
-        whole += 1
-    sweep = reports / "stryker"
-    found = sorted(sweep.rglob("mutation.json")) if sweep.is_dir() else []
-    documents = [read_json(str(path)) for path in found]
-    if not found:
-        findings.append("battery: MISSING stryker: no mutation.json")
-    elif len(found) > 1 or not isinstance(documents[0], dict) or "files" not in documents[0]:
-        findings.append(f"battery: PARTIAL stryker: {len(found)} mutation.json, not one report")
-    else:
-        whole += 1
+    if package is None:
+        promised += 1
+        rows = read_json(str(reports / "rows" / "rows.json"))
+        if rows is None:
+            findings.append("battery: MISSING rows: no rows.json")
+        elif not isinstance(rows, list) or not rows:
+            findings.append("battery: PARTIAL rows: rows.json proves no row")
+        else:
+            whole += 1
+    if package in (None, MINIAPP):
+        promised += 1
+        sweep = reports / "stryker"
+        found = sorted(sweep.rglob("mutation.json")) if sweep.is_dir() else []
+        documents = [read_json(str(path)) for path in found]
+        if not found:
+            findings.append("battery: MISSING stryker: no mutation.json")
+        elif len(found) > 1 or not isinstance(documents[0], dict) or "files" not in documents[0]:
+            findings.append(f"battery: PARTIAL stryker: {len(found)} mutation.json, not one report")
+        else:
+            whole += 1
     for finding in findings:
         print(finding)
-    print(f"battery: counted {whole} of {shards + 2} reports whole")
-    print(f"examined {shards + 2} report(s)")
+    print(f"battery: counted {whole} of {promised} reports whole")
+    print(f"examined {promised} report(s)")
     return EXIT_FAIL if findings else EXIT_OK
 
 
@@ -1963,7 +2025,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.verb == "battery":
         if not args.reports or args.shards is None or args.shards < 1:
             parser.error("battery needs --reports and --shards, at least 1")
-        return battery(pathlib.Path(args.reports), args.shards)
+        return battery(pathlib.Path(args.reports), args.shards, args.package, args.listed)
     if args.verb == "configs":
         return configs(root)
     if args.verb == "census":
