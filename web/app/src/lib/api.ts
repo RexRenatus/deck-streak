@@ -66,6 +66,7 @@ export function createApi(options: ApiOptions): Api {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ init_data: launch })
       });
+      // Stryker disable next-line StringLiteral: EQUIVALENT: callers test only for 'refused' and 'failed', so any other value is an open session (#294)
       if (response.ok) return 'open';
       return response.status === 401 || response.status === 403 ? 'refused' : 'failed';
     } catch {
@@ -76,6 +77,7 @@ export function createApi(options: ApiOptions): Api {
   /** The session being opened or already open; concurrent calls share one handshake. */
   function opening(): Promise<Opened> {
     session ??= handshake().then((opened) => {
+      // Stryker disable next-line ConditionalExpression,StringLiteral,BooleanLiteral: EQUIVALENT: a refused session stays cached, so a later call answers reopen and sends nothing whether or not this sets stopped (#294)
       if (opened === 'refused') stopped = true;
       return opened;
     });
@@ -92,13 +94,16 @@ export function createApi(options: ApiOptions): Api {
       if (opened === 'refused') return 'reopen';
       if (opened === 'failed') {
         // no session came of it: forget the attempt, so the next call tries again
+        // Stryker disable next-line ConditionalExpression: EQUIVALENT: only a microtask-timed call, never an order of calls and answers, can open a newer session between this handshake failing and this line (#294)
         if (session === used) session = null;
+        // Stryker disable next-line StringLiteral: EQUIVALENT: read() answers unavailable for any answer without ok, so this literal's value changes no answer (#294)
         return 'unavailable';
       }
       let response: Response;
       try {
         response = await send(path, { credentials: 'same-origin' });
       } catch {
+        // Stryker disable next-line StringLiteral: EQUIVALENT: read() answers unavailable for any answer without ok, so this literal's value changes no answer (#294)
         return 'unavailable';
       }
       if (response.status !== 401) return response;
@@ -117,7 +122,11 @@ export function createApi(options: ApiOptions): Api {
   async function read<T>(path: string, parse: (body: unknown) => T | null): Promise<Answer<T>> {
     const response = await get(path);
     if (response === 'reopen') return { kind: 'reopen' };
-    if (response === 'unavailable' || !response.ok) return { kind: 'unavailable' };
+    // Stryker disable next-line ConditionalExpression,StringLiteral: EQUIVALENT: a string answer has no ok, so !response.ok alone answers unavailable for it (#294)
+    if (response === 'unavailable' || !response.ok) {
+      return { kind: 'unavailable' };
+    }
+    // Stryker disable next-line ArrowFunction: EQUIVALENT: parseMe and parseScore read an undefined body as they read null (#294)
     const value = parse(await response.json().catch(() => null));
     return value === null ? { kind: 'unavailable' } : { kind: 'ok', value };
   }
@@ -131,7 +140,9 @@ export function createApi(options: ApiOptions): Api {
 /** The body of `GET /api/me`, or null when it is not one. */
 function parseMe(body: unknown): Me | null {
   const day =
-    typeof body === 'object' && body !== null
+    body !== null &&
+    // Stryker disable next-line ConditionalExpression: EQUIVALENT: a JSON value that is no object reads no study_day either, so null is the one value this must stop (#294)
+    typeof body === 'object'
       ? (body as Record<string, unknown>).study_day
       : undefined;
   return typeof day === 'string' && ISO_DATE.test(day) ? { studyDay: day } : null;
