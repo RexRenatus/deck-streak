@@ -239,3 +239,35 @@ fn each_kind_of_rail_refuses_the_line_it_stands_on() {
         ],
     );
 }
+
+#[test]
+fn a_fence_opens_within_three_spaces_and_closes_on_a_bare_run_as_long() {
+    judge(
+        &vendored(),
+        "fenced note(s)",
+        &[
+            // Up to three spaces may stand before an opening run; four open no fence.
+            (
+                "   ```dataviewjs\nlet x = 1;\n   ```\n",
+                &[("fence_known:dataviewjs", 1)],
+            ),
+            ("    ```dataviewjs\nlet x = 1;\n", &[]),
+            // A backtick run whose info holds a backtick opens no fence, so its line is prose; a
+            // tilde run may hold one (CommonMark).
+            ("```js`x\n<iframe>\n", &[("html_allow", 2)]),
+            ("~~~ a`b\n<iframe>\n~~~\n", &[("fence_allow", 1)]),
+            // The fence hides its code up to the run that closes it, and the prose after it is
+            // read again.
+            ("```\nlet x = 1;\n<iframe>\n```\n", &[]),
+            ("```\nlet x = 1;\n```\n<iframe>\n", &[("html_allow", 4)]),
+            // Up to three spaces may stand before a closing run; four close nothing.
+            ("```\nlet x = 1;\n   ```\n<iframe>\n", &[("html_allow", 4)]),
+            ("```\nlet x = 1;\n    ```\n<iframe>\n", &[]),
+            // A blank line closes nothing, and neither does a run with text after it; spaces and
+            // tabs after a run close.
+            ("```\nlet x = 1;\n\n<iframe>\n```\n", &[]),
+            ("```\nlet x = 1;\n```x\n<iframe>\n```\n", &[]),
+            ("```\nlet x = 1;\n``` \t\n<iframe>\n", &[("html_allow", 4)]),
+        ],
+    );
+}
