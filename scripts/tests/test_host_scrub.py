@@ -20,7 +20,7 @@ import threading
 import time
 import unittest
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
@@ -307,7 +307,7 @@ class Host:
         path.write_text(json.dumps(document, indent=2))
         return path
 
-    def run(self, tool, *args):
+    def run(self, tool, *args, cwd=None):
         env = dict(
             os.environ,
             PATH=f"{self.bin}{os.pathsep}{os.environ.get('PATH', '')}",
@@ -323,6 +323,7 @@ class Host:
             capture_output=True,
             text=True,
             env=env,
+            cwd=cwd,
             check=False,
             timeout=120,
         )
@@ -350,9 +351,10 @@ class Host:
             "items": list(ids),
             "approver": "the owner",
             "date": taken.date().isoformat(),
+            # The snapshot is taken after the inventory and before the approval is written.
             "snapshot": {
                 "name": "example-pre-scrub",
-                "taken_at": (taken + timedelta(minutes=5)).isoformat(),
+                "taken_at": datetime.now(timezone.utc).isoformat(),
             },
         }
         document.update(changes)
@@ -361,7 +363,31 @@ class Host:
         path.write_text(json.dumps(document, indent=2))
         return path
 
-    def apply(self, listing_path, approval, *flags, rules=None, log="apply-log.json"):
+    def relist(self, listing, name="crafted-list.json", **changes):
+        """The list with `changes`, its own digest taken again in the form R4 gives, as a hand
+        other than the plan's might write it: what refuses it is the apply's own checks."""
+        crafted = {key: value for key, value in listing.items() if key != "digest"}
+        crafted.update(changes)
+        crafted["digest"] = list_digest(crafted)
+        path = self.private / name
+        path.write_text(json.dumps(crafted, indent=1))
+        return crafted, path
+
+    def craft(self, listing, written, kind="loose", real=None, name="crafted-list.json"):
+        """The list with one more item, `x001`, whose path is `written` and whose digest is taken
+        where it lies (`real`, when `written` is relative), so only its path can refuse it."""
+        item = {
+            "class": kind,
+            "rule": "crafted",
+            "reason": "an item the plan did not list",
+            "path": written,
+            "bytes": 0,
+            "digest": item_digest(real or written, written),
+            "id": "x001",
+        }
+        return self.relist(listing, name, items=[*listing["items"], item])
+
+    def apply(self, listing_path, approval, *flags, rules=None, log="apply-log.json", cwd=None):
         return self.run(
             "apply.py",
             listing_path,
@@ -371,6 +397,7 @@ class Host:
             "--log",
             self.private / log,
             *flags,
+            cwd=cwd,
         )
 
 
@@ -397,8 +424,9 @@ def tree(root):
     return dict(examined(f"entry(ies) under {root.name}", sorted(found.items())))
 
 
-def line(path):
-    """One entry's digest line, in the form SPEC-060 R4 and the schematic give."""
+def line(path, written=None):
+    """One entry's digest line, in the form SPEC-060 R4 and the schematic give: the path as the
+    list writes it (`written`, or `path`), and the entry that path reaches."""
     st = os.lstat(path)
     if stat.S_ISREG(st.st_mode):
         content = hashlib.sha256(Path(path).read_bytes()).hexdigest()
@@ -406,12 +434,13 @@ def line(path):
         content = hashlib.sha256(os.fsencode(os.readlink(path))).hexdigest()
     else:
         content = ""
-    fields = [str(path), str(st.st_size), str(st.st_mtime_ns), format(st.st_mode, "o"), content]
+    written = str(path) if written is None else written
+    fields = [written, str(st.st_size), str(st.st_mtime_ns), format(st.st_mode, "o"), content]
     return b"\0".join(os.fsencode(field) for field in fields)
 
 
-def file_digest(path):
-    return hashlib.sha256(line(path)).hexdigest()
+def file_digest(path, written=None):
+    return hashlib.sha256(line(path, written)).hexdigest()
 
 
 def directory_digest(path):
@@ -419,6 +448,13 @@ def directory_digest(path):
     for directory, dirs, files in os.walk(path):
         lines.extend(line(Path(directory) / name) for name in dirs + files)
     return hashlib.sha256(b"\n".join(sorted(lines))).hexdigest()
+
+
+def item_digest(path, written=None):
+    """An item's digest, a directory's or a file's, by what `path` reaches."""
+    if stat.S_ISDIR(os.lstat(path).st_mode):
+        return directory_digest(path)
+    return file_digest(path, written)
 
 
 def list_digest(listing):
@@ -429,6 +465,37 @@ def list_digest(listing):
 
 def by_path(listing):
     return {item.get("path") or item.get("package"): item for item in listing["items"]}
+
+
+class Window:
+    """A health check's address whose next GET, once armed, makes `change` first: the change lands
+    after the apply's checks and before its first deletion, while it reads its health checks."""
+
+    def __init__(self, change):
+        self.armed, self.spent = threading.Event(), threading.Event()
+        window = self
+
+        class Answer(BaseHTTPRequestHandler):
+            def do_GET(self):  # noqa: N802
+                if window.armed.is_set() and not window.spent.is_set():
+                    window.spent.set()
+                    change()
+                self.send_response(200)
+                self.end_headers()
+
+            def log_message(self, *args):
+                pass
+
+        self.server = ThreadingHTTPServer(("127.0.0.1", 0), Answer)
+        self.url = f"http://127.0.0.1:{self.server.server_address[1]}/window"
+
+    def __enter__(self):
+        threading.Thread(target=self.server.serve_forever, daemon=True).start()
+        return self
+
+    def __exit__(self, *failure):
+        self.server.shutdown()
+        self.server.server_close()
 
 
 class Inventory(unittest.TestCase):
@@ -617,6 +684,21 @@ class Plan(unittest.TestCase):
             self.assertEqual(done.returncode, 1, said(done))
             self.assertIn("not the ones the inventory read", said(done))
             self.assertFalse(refused.exists())
+            # A candidate an inventory names in a form the plan does not read canonically is
+            # never compared with the protected paths, and never listed.
+            inventory = json.loads((host.private / "inventory.json").read_text())
+            written = "/" + str(host.srv / "guarded" / ".venv" / "pyvenv.cfg")
+            inventory["loose"][0]["matches"].append({"path": written})
+            edited = host.private / "edited-inventory.json"
+            edited.write_text(json.dumps(inventory))
+            relisted = host.private / "relisted.json"
+            done = host.run("plan.py", edited, host.private / "rules.json", "--out", relisted)
+            self.assertEqual(done.returncode, 0, said(done))
+            again = json.loads(relisted.read_text())
+            self.assertEqual(set(by_path(again)), set(by_path(listing)))
+            self.assertIn(
+                {"path": written, "reason": "not an absolute, canonical path"}, again["skipped"]
+            )
 
 
 class Apply(unittest.TestCase):
@@ -657,6 +739,13 @@ class Apply(unittest.TestCase):
             self.assertEqual(tree(host.root), before)
             self.assertEqual(done.returncode, 1, said(done))
             self.assertIn("the list changed after it was made", said(done))
+            # A list that holds a key twice is refused, whichever of the two a reader keeps.
+            doubled = host.private / "doubled-list.json"
+            doubled.write_text('{"items": [], ' + json.dumps(listing)[1:])
+            done = host.apply(doubled, host.approve(listing, ids), "--apply")
+            self.assertEqual(tree(host.root), before)
+            self.assertEqual(done.returncode, 2, said(done))
+            self.assertIn("the key 'items' is held twice", said(done))
 
     def test_apply_deletes_exactly_the_approved_items_or_nothing(self):
         with tempfile.TemporaryDirectory() as scratch:
@@ -738,6 +827,52 @@ class Apply(unittest.TestCase):
             )
             removals = [c for c in host.calls() if c[0] == "dpkg" and "--dry-run" not in c]
             self.assertEqual(removals, [["dpkg", "--remove", "example-unused-tool:amd64"]])
+        with tempfile.TemporaryDirectory() as scratch:
+            host = Host(scratch)
+            listing, list_path = host.plan()
+            paths = by_path(listing)
+            # A file changed at the same size, its modification time put back, is a change.
+            probe = host.apps / "probe-1.py"
+            st = os.lstat(probe)
+            data = bytearray(probe.read_bytes())
+            data[0] ^= 0xFF
+            probe.write_bytes(bytes(data))
+            os.utime(probe, ns=(st.st_atime_ns, st.st_mtime_ns))
+            now = os.lstat(probe)
+            self.assertEqual((now.st_size, now.st_mtime_ns), (st.st_size, st.st_mtime_ns))
+            # So is an entry added inside an approved directory after the list was made.
+            venv = host.apps / "idle" / ".venv"
+            write(venv / "added-after-the-list.txt", text="not approved\n")
+            before = tree(host.root)
+            for changed in (probe, venv):
+                item = paths[str(changed)]["id"]
+                done = host.apply(list_path, host.approve(listing, [item]), "--apply")
+                self.assertEqual(tree(host.root), before)
+                self.assertEqual(done.returncode, 1, said(done))
+                self.assertIn(f"{item} ", said(done))
+                self.assertIn("digest changed", said(done))
+        with tempfile.TemporaryDirectory() as scratch:
+            host = Host(scratch)
+            probe = host.apps / "probe-1.py"
+            fresh = host.apps / "probe-1.py.new"
+
+            def replace():
+                write(fresh, text="written after the checks\n")
+                os.replace(fresh, probe)
+
+            # An item replaced after the apply's checks, while it reads its health checks, is not
+            # deleted: the apply stops there, and the log says nothing went.
+            with Window(replace) as window:
+                rules = host.rules(health=[{"id": "window", "url": window.url}])
+                listing, list_path = host.plan(rules)
+                approval = host.approve(listing, [by_path(listing)[str(probe)]["id"]])
+                window.armed.set()
+                done = host.apply(list_path, approval, "--apply", rules=rules)
+            self.assertEqual(done.returncode, 3, said(done))
+            self.assertIn("it changed after its checks", said(done))
+            self.assertEqual(probe.read_text(), "written after the checks\n")
+            log = json.loads((host.private / "apply-log.json").read_text())
+            self.assertEqual(log["deleted"], [])
 
     def test_apply_refuses_an_approval_without_a_later_snapshot(self):
         with tempfile.TemporaryDirectory() as scratch:
@@ -746,111 +881,268 @@ class Apply(unittest.TestCase):
             ids = [by_path(listing)[str(host.apps / "probe-1.py")]["id"]]
             before = tree(host.root)
             taken = datetime.fromisoformat(listing["inventory"]["taken_at"])
+            east, west = timezone(timedelta(hours=2)), timezone(timedelta(hours=-5))
+
+            def snapshot(at):
+                return {"name": "example-pre-scrub", "taken_at": at.isoformat()}
+
             cases = (
-                (host.approve(listing, ids, "none.json", snapshot=None), "names no snapshot"),
+                ("none.json", None, ids, "names no snapshot"),
                 (
-                    host.approve(
-                        listing,
-                        ids,
-                        "before.json",
-                        snapshot={
-                            "name": "example-pre-scrub",
-                            "taken_at": (taken - timedelta(hours=1)).isoformat(),
-                        },
-                    ),
+                    "before.json",
+                    snapshot(taken - timedelta(hours=1)),
+                    ids,
                     "taken before the inventory",
                 ),
                 (
-                    host.approve(
-                        listing,
-                        ids,
-                        "unnamed.json",
-                        snapshot={"name": "", "taken_at": taken.isoformat()},
-                    ),
+                    "unnamed.json",
+                    {"name": "", "taken_at": taken.isoformat()},
+                    ids,
                     "names no snapshot",
                 ),
+                ("same.json", snapshot(taken), ids, "taken before the inventory"),
                 (
-                    host.approve(
-                        listing,
-                        ids,
-                        "same.json",
-                        snapshot={"name": "example-pre-scrub", "taken_at": taken.isoformat()},
-                    ),
-                    "taken before the inventory",
-                ),
-                (
-                    host.approve(
-                        listing,
-                        ids,
-                        "naive.json",
-                        snapshot={
-                            "name": "example-pre-scrub",
-                            "taken_at": (taken + timedelta(hours=1))
-                            .replace(tzinfo=None)
-                            .isoformat(),
-                        },
-                    ),
+                    "naive.json",
+                    snapshot((taken + timedelta(hours=1)).replace(tzinfo=None)),
+                    ids,
                     "carries no offset",
                 ),
+                # An instant is compared as an instant, whatever offset it is written in.
+                (
+                    "east.json",
+                    snapshot((taken - timedelta(minutes=30)).astimezone(east)),
+                    ids,
+                    "taken before the inventory",
+                ),
+                # A snapshot dated later than the apply's own clock has not been taken yet.
+                (
+                    "future.json",
+                    snapshot(datetime.now(timezone.utc) + timedelta(days=1)),
+                    [by_path(listing)[str(host.backups / "nightly-1.tar")]["id"]],
+                    "later than the apply's clock",
+                ),
             )
-            for approval, reason in cases:
-                done = host.apply(list_path, approval, "--apply")
-                self.assertEqual(tree(host.root), before)
-                self.assertEqual(done.returncode, 1, said(done))
-                self.assertIn(reason, said(done))
+            for name, shot, approved, reason in cases:
+                with self.subTest(case=name):
+                    approval = host.approve(listing, approved, name, snapshot=shot)
+                    done = host.apply(list_path, approval, "--apply")
+                    self.assertEqual(tree(host.root), before)
+                    self.assertEqual(done.returncode, 1, said(done))
+                    self.assertIn(reason, said(done))
             # A snapshot taken after the inventory lets the same approval through.
             done = host.apply(list_path, host.approve(listing, ids), "--apply")
             self.assertEqual(done.returncode, 0, said(done))
             self.assertFalse((host.apps / "probe-1.py").exists())
             self.assertTrue((host.apps / "probe-2.py").exists())
+            # So does one written in another offset: an inventory two hours old, and a snapshot
+            # half an hour after it written five hours behind, compared as instants.
+            old = taken - timedelta(hours=2)
+            moved = dict(listing["inventory"], taken_at=old.isoformat())
+            crafted, path = host.relist(listing, inventory=moved)
+            log = host.srv / "cache" / "old-1.log"
+            approval = host.approve(
+                crafted,
+                [by_path(crafted)[str(log)]["id"]],
+                "west.json",
+                snapshot=snapshot((old + timedelta(minutes=30)).astimezone(west)),
+            )
+            done = host.apply(path, approval, "--apply")
+            self.assertEqual(done.returncode, 0, said(done))
+            self.assertFalse(log.exists())
+            self.assertTrue((host.apps / "probe-2.py").exists())
 
     def test_apply_refuses_protected_paths_and_symbolic_links_out(self):
-        with tempfile.TemporaryDirectory() as scratch:
+        # An item under a protected path of the synthetic list, or one that holds a protected path,
+        # is refused whatever the approval says.
+        for case in ("under", "holding"):
+            with self.subTest(case=case), tempfile.TemporaryDirectory() as scratch:
+                host = Host(scratch)
+                listing, _ = host.plan()
+                item = host.srv / "guarded" / ".venv" if case == "under" else host.srv
+                before = tree(host.root)
+                crafted, path = host.craft(listing, str(item), "venv")
+                done = host.apply(path, host.approve(crafted, ["x001"]), "--apply")
+                self.assertEqual(tree(host.root), before)
+                self.assertEqual(done.returncode, 1, said(done))
+                self.assertIn("x001 ", said(done))
+                self.assertIn("protected path", said(done))
+        # A pattern in the protected list protects nothing as a path, so the rules are refused.
+        with self.subTest(case="pattern"), tempfile.TemporaryDirectory() as scratch:
             host = Host(scratch)
             listing, list_path = host.plan()
-            paths = by_path(listing)
+            probe = by_path(listing)[str(host.apps / "probe-1.py")]["id"]
             before = tree(host.root)
-            probe = paths[str(host.apps / "probe-1.py")]["id"]
-            # An item under a protected path of the synthetic list, whatever the approval says.
-            guarded = host.rules("guarded.json", protected=[str(host.apps)])
-            done = host.apply(list_path, host.approve(listing, [probe]), "--apply", rules=guarded)
-            self.assertEqual(tree(host.root), before)
-            self.assertEqual(done.returncode, 1, said(done))
-            self.assertIn(f"{probe} ", said(done))
-            self.assertIn("protected path", said(done))
-            # A pattern in the protected list protects nothing as a path, so the rules are refused.
             pattern = host.rules("pattern.json", protected=[str(host.apps / "probe-*.py")])
             done = host.apply(list_path, host.approve(listing, [probe]), "--apply", rules=pattern)
             self.assertEqual(tree(host.root), before)
             self.assertEqual(done.returncode, 2, said(done))
             self.assertIn("is a pattern", said(done))
-            # An item that holds a protected path is refused the same way.
-            checkout = paths[str(host.apps / "old-checkout")]["id"]
-            inner = host.rules(
-                "inner.json", protected=[str(host.apps / "old-checkout" / "README.md")]
+        # However the list writes an item's path, a path the apply does not read canonically is
+        # refused by the item's id before it is compared, and what it reaches is kept.
+        for form in ("parent step", "doubled slash", "trailing slash", "relative"):
+            with self.subTest(form=form), tempfile.TemporaryDirectory() as scratch:
+                host = Host(scratch)
+                listing, _ = host.plan()
+                guarded, cwd, kind = host.srv / "guarded", None, "loose"
+                if form == "parent step":
+                    written = f"{host.apps}/../guarded/.venv/pyvenv.cfg"
+                elif form == "doubled slash":
+                    written = f"/{guarded}/.venv/pyvenv.cfg"
+                elif form == "trailing slash":
+                    os.symlink(guarded, host.apps / "lnk")
+                    written, kind = f"{host.apps / 'lnk'}/", "venv"
+                else:
+                    cwd, written = guarded / ".venv", "pyvenv.cfg"
+                kept = tree(guarded)
+                real = cwd / written if cwd else None
+                crafted, path = host.craft(listing, written, kind, real=real)
+                done = host.apply(path, host.approve(crafted, ["x001"]), "--apply", cwd=cwd)
+                self.assertEqual(done.returncode, 1, said(done))
+                self.assertIn("x001: its path is not absolute and canonical", said(done))
+                self.assertNotIn(written, said(done))
+                self.assertEqual(tree(guarded), kept)
+        # Rules that write a path the tools do not read canonically are refused by the path's key,
+        # never its value, before anything is read or deleted.
+        with self.subTest(case="rules not canonical"), tempfile.TemporaryDirectory() as scratch:
+            host = Host(scratch)
+            listing, list_path = host.plan()
+            ids = [by_path(listing)[str(host.apps / "probe-1.py")]["id"]]
+            document = json.loads((host.private / "rules.json").read_text())
+            written = "/" + str(host.srv / "guarded" / ".venv")
+            document["rules"].append(
+                {
+                    "name": "doubled",
+                    "class": "loose",
+                    "dir": written,
+                    "pattern": "pyvenv.cfg",
+                    "reason": "a loose file",
+                }
             )
-            done = host.apply(list_path, host.approve(listing, [checkout]), "--apply", rules=inner)
+            doubled = host.private / "doubled.json"
+            doubled.write_text(json.dumps(document, indent=2))
+            before = tree(host.root)
+            inventory, _ = host.inventory(doubled)
+            applied = host.apply(list_path, host.approve(listing, ids), "--apply", rules=doubled)
+            for done in (inventory, applied):
+                self.assertEqual(done.returncode, 2, said(done))
+                self.assertIn("rule doubled's dir must be an absolute, canonical path", said(done))
+                self.assertNotIn(written, said(done))
+            self.assertEqual(tree(host.root), before)
+        # A protected path given as a link protects what it points at: the plan leaves the
+        # environment under the link's target out, and the apply refuses it when a list names it.
+        with self.subTest(case="protected link"), tempfile.TemporaryDirectory() as scratch:
+            host = Host(scratch)
+            link = host.srv / "guard-link"
+            os.symlink(host.srv / "guarded", link)
+            rules = host.rules("linked.json", protected=[str(link)])
+            listing, _ = host.plan(rules)
+            venv = host.srv / "guarded" / ".venv"
+            skipped = {entry["path"]: entry["reason"] for entry in listing["skipped"]}
+            self.assertIn(str(link), skipped[str(venv)])
+            self.assertNotIn(str(venv), by_path(listing))
+            kept = tree(venv)
+            crafted, path = host.craft(listing, str(venv), "venv")
+            done = host.apply(path, host.approve(crafted, ["x001"]), "--apply", rules=rules)
             self.assertEqual(done.returncode, 1, said(done))
             self.assertIn("protected path", said(done))
-            self.assertEqual(tree(host.root), before)
-            # A directory item's link out is removed, and what it points at is kept.
-            precious = tree(host.outside)
-            linked = paths[str(host.apps / "linked-tree")]["id"]
-            done = host.apply(list_path, host.approve(listing, [linked]), "--apply")
+            self.assertEqual(tree(venv), kept)
+        # A sibling whose name only begins with a protected path's is not under it, and goes.
+        with self.subTest(case="sibling"), tempfile.TemporaryDirectory() as scratch:
+            host = Host(scratch)
+            rules = host.rules("sibling.json", protected=[str(host.apps / "probe-1")])
+            listing, list_path = host.plan(rules)
+            probe = host.apps / "probe-1.py"
+            ids = [by_path(listing)[str(probe)]["id"]]
+            done = host.apply(list_path, host.approve(listing, ids), "--apply", rules=rules)
             self.assertEqual(done.returncode, 0, said(done))
-            self.assertFalse(os.path.lexists(host.apps / "linked-tree"))
+            self.assertFalse(probe.exists())
+        # An item that is itself a link goes as a link, and what it points at is kept; so is the
+        # far end of a link inside a directory item, which goes without following it.
+        with self.subTest(case="item a link"), tempfile.TemporaryDirectory() as scratch:
+            host = Host(scratch)
+            loose = host.apps / "probe-9.py"
+            os.symlink(host.outside / "precious.txt", loose)
+            listing, list_path = host.plan()
+            linked = host.apps / "linked-tree"
+            ids = [by_path(listing)[str(p)]["id"] for p in (loose, linked)]
+            precious = tree(host.outside)
+            done = host.apply(list_path, host.approve(listing, ids), "--apply")
+            self.assertEqual(done.returncode, 0, said(done))
+            self.assertFalse(os.path.lexists(loose))
+            self.assertFalse(os.path.lexists(linked))
             self.assertEqual(tree(host.outside), precious)
-            # An item reached through a symbolic link is refused, and the far file is kept.
+        # An item reached through a symbolic link is refused, and the far file is kept.
+        with self.subTest(case="link above"), tempfile.TemporaryDirectory() as scratch:
+            host = Host(scratch)
+            listing, list_path = host.plan()
             cache, far = host.srv / "cache", host.outside / "cache"
+            old_log = by_path(listing)[str(cache / "old-1.log")]["id"]
             os.rename(cache, far)
             os.symlink(far, cache)
             kept = tree(host.outside)
-            old_log = paths[str(cache / "old-1.log")]["id"]
             done = host.apply(list_path, host.approve(listing, [old_log]), "--apply")
             self.assertEqual(done.returncode, 1, said(done))
             self.assertIn("symbolic link", said(done))
             self.assertTrue((far / "old-1.log").exists())
             self.assertEqual(tree(host.outside), kept)
+        # A directory above an approved item that becomes a link after the apply's checks, while
+        # it reads its health checks, stops the apply before that deletion: nothing goes.
+        with self.subTest(case="swapped above"), tempfile.TemporaryDirectory() as scratch:
+            host = Host(scratch)
+            cache, moved = host.srv / "cache", host.outside / "cache-moved"
+            twin = host.srv / "guarded" / "old-1.log"
+            write(twin, text="a protected file with the item's name\n")
+
+            def swap():
+                os.rename(cache, moved)
+                os.symlink(host.srv / "guarded", cache)
+
+            with Window(swap) as window:
+                rules = host.rules(health=[{"id": "window", "url": window.url}])
+                listing, list_path = host.plan(rules)
+                approval = host.approve(listing, [by_path(listing)[str(cache / "old-1.log")]["id"]])
+                window.armed.set()
+                done = host.apply(list_path, approval, "--apply", rules=rules)
+            self.assertEqual(done.returncode, 3, said(done))
+            self.assertIn(
+                "a directory above it became a symbolic link after its checks", said(done)
+            )
+            self.assertEqual(twin.read_text(), "a protected file with the item's name\n")
+            self.assertTrue((moved / "old-1.log").exists())
+
+    def test_apply_runs_only_read_health_checks_from_the_listed_rules(self):
+        # Rules other than the ones the inventory read, which the list names, are refused before
+        # any command runs.
+        with self.subTest(case="other rules"), tempfile.TemporaryDirectory() as scratch:
+            host = Host(scratch)
+            listing, list_path = host.plan()
+            ids = [by_path(listing)[str(host.apps / "probe-1.py")]["id"]]
+            other = host.rules("other.json", protected=[str(host.srv / "guarded"), str(host.var)])
+            (host.bin / "calls.jsonl").unlink()
+            before = tree(host.root)
+            done = host.apply(list_path, host.approve(listing, ids), "--apply", rules=other)
+            self.assertEqual(done.returncode, 1, said(done))
+            self.assertIn("not the ones the inventory read", said(done))
+            self.assertEqual(tree(host.root), before)
+            self.assertEqual(host.calls(), [])
+        # A changing command given as a health check is refused before anything runs, even in
+        # rules a list names as the ones the inventory read: no package tool is called.
+        with self.subTest(case="changing health check"), tempfile.TemporaryDirectory() as scratch:
+            host = Host(scratch)
+            listing, _ = host.plan()
+            removal = ["dpkg", "--remove", "example-needed-tool:amd64"]
+            planted = host.rules("planted.json", health=[{"id": "planted", "argv": removal}])
+            bound = hashlib.sha256(planted.read_bytes()).hexdigest()
+            crafted, path = host.relist(listing, rules_digest=bound)
+            ids = [by_path(crafted)[str(host.apps / "probe-1.py")]["id"]]
+            (host.bin / "calls.jsonl").unlink()
+            before = tree(host.root)
+            done = host.apply(path, host.approve(crafted, ids), "--apply", rules=planted)
+            self.assertEqual(done.returncode, 1, said(done))
+            self.assertIn(" ".join(removal), said(done))
+            self.assertIn("is not on the read-only allow list", said(done))
+            self.assertEqual(tree(host.root), before)
+            self.assertEqual(host.calls(), [])
 
 
 class Health(unittest.TestCase):
