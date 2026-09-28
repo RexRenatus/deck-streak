@@ -53,6 +53,7 @@ A14: green at 621842f
 A15: red at e43dae8: AssertionError: 'scripts/mutation-equivalent.d/<package>.json' not found (the brief's mutation section taught the exclusion form)
 A15: green at 5c4d6b6
 A16: red at bfae431: AssertionError: 225 != 0 : deck-streak-vault: 225 unexplained mutant(s) in its row (the opening sweep, run 36438243392 at 5767fbe, read listed 939, killed 647, equivalent 0, unexplained 225, unviable 67)
+A16: green at 18cff1c
 ```
 
 | requirement | the behaviour a wrong implementation would get wrong | criterion |
@@ -73,3 +74,14 @@ A16 is the vault's row of section 7. Its opening sweep, the weekly battery dispa
 and tested every listed vault mutant; its `table` line became the row, committed with A16's test
 (bfae431), which reads red on the 225 unexplained mutants. It turns green at the commit that carries
 the closing sweep's row.
+
+Its closing sweep, the battery dispatched with `package=deck-streak-vault` at 8b18276 (run
+36461589655), came after every kill and record of the vault's delivery: 138 of `rails.rs`'s
+unexplained mutants killed and 11 recorded (9dbdc70), and the other six files' 69 killed and 7
+recorded (8b18276). Every one of its 32 shards reported whole: 16 exited 0, 13 exited 2 on missed
+mutants, and 3 exited 3, each on one `rails.rs` mutant that ran to the tool's timeout, which counts
+killed; the 18 missed mutants, in 14 shards, are the fragment's 18 records. The battery counted 33
+of 33 reports whole, and its table read `listed 939, killed 854, equivalent 18, unexplained 0,
+unviable 67`.
+That line is the row committed at 18cff1c, where A16's test, re-run from a `git archive` export of
+that sha, passes.
