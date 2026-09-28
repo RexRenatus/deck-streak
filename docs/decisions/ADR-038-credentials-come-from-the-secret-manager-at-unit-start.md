@@ -108,3 +108,10 @@ ADR-010 (partly superseded), ADR-037, SPEC-020 R11, SPEC-031, SPEC-032; systemd.
 
 Amendment (2026-09-28): one passage stating a version of the host's software, in the decision
 outcome, was redacted under the public-prose rule (ADR-059).
+
+## Note, 2026-09-28: the loader refuses an empty credential
+
+The kernel's loader, not the service manager, is what refuses an empty credential (ADR-067). A
+credential that holds no value, zero bytes or only the one trailing newline the loader trims, refuses
+start by its id as a missing one does, so the unit fails and its `OnFailure=` alert fires; the alert
+unit's own script refuses one the same way (SPEC-066).

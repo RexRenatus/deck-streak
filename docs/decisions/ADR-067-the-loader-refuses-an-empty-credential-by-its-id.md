@@ -1,0 +1,100 @@
+---
+status: proposed
+date: "2026-09-28"
+decision-makers: "@RexRenatus (owner), the DeckStreak architect"
+---
+
+# The kernel's loader refuses an empty credential by its id, so every unit that reads one fails and pages the same way
+
+## Context and Problem Statement
+
+ADR-038 delivers each credential to a unit at every start as
+`LoadCredential=<id>:<the credential socket>`, and the kernel's `CredentialLoader` reads it from the
+credentials directory (SPEC-020 R11). The loader refuses a missing credential by its id, and loads
+any other file it can read, less one trailing newline: a file of zero bytes, or one holding only
+that newline, loads as an empty value. systemd.exec(5) describes a socket's credential as "the
+credential data read from the connection" and bounds a unit's credentials from above only ("an
+accumulated credential size limit of 1 MB per unit"); it states no lower bound, and no start failure
+when the data read is empty. Where is an empty credential refused, so that the unit fails and its
+`OnFailure=` page says which credential it was?
+
+## Decision Drivers
+
+- One place every role passes through. Each role of `deckstreakd` reads its credentials through
+  the loader, so a rule there holds for every present and future role, with nothing to repeat per
+  unit.
+- A refusal names the credential's id and never a value (SPEC-020 R11, CHARTER 15).
+- A refused start must fail its unit, so that its `OnFailure=` alert fires (ADR-010, SPEC-031).
+- The alert unit reads its credentials in its own script, not through the loader, and it cannot page
+  about itself (SPEC-031).
+
+## Considered Options (the alternatives it was chosen against)
+
+- The loader refuses an empty credential with `CredentialError::Empty`, and the alert unit's script
+  refuses one the same way: chosen, because every role reads through the loader, so no unit or
+  credential can be left out, and the refusal takes the path a missing credential already takes, to
+  a failed unit and a page that quotes its error line.
+- Relying on the service manager to refuse the start: rejected, because its manual promises no start
+  failure when a credential source answers with nothing. systemd.exec(5) reads a socket's credential
+  as the data read from the connection, and states an upper bound on its size and no lower one.
+- An `ExecStartPre=` size check in every unit: rejected, because it takes one line per credential per
+  unit, and a unit, or a credential added to one, that forgets its line starts with the empty value.
+- The credential helper declining to answer: rejected, because declining is not a start failure the
+  manual documents either. The service manager can still hand the unit an empty credential, so the
+  refusal has to be where the value is read.
+
+## Decision Outcome
+
+Chosen option: the loader refuses an empty credential, because it is the one reader every role
+shares, and a refusal there fails the unit the way a missing credential does.
+
+- **The loader.** `CredentialLoader::load` trims the one trailing newline, and refuses a value with
+  nothing left as `CredentialError::Empty { id }`, before it registers the value with the redactor
+  or returns it. Its message is `the credential <id> is empty in the credentials directory`. A
+  missing credential keeps `Missing`, and a value of one character or more loads as before, so a
+  file of two newlines loads as one newline. The loader judges emptiness only: a value's shape
+  stays its caller's check.
+- **The units.** A role that refuses start exits 1 (SPEC-025 R1), and the `sync` job's login records
+  the refusal as `missing_credentials`, which pages when it opens the job's error streak (SPEC-027
+  R7). Every template that loads a credential, the alert template excepted, names `OnFailure=` the
+  alert template, and none carries a setting that would count the refused start as a success or
+  skip `OnFailure=`: an `ExecStart=` with the `-` prefix, a `SuccessExitStatus=` naming 1, or
+  `RestartMode=direct` (systemd.service(5)). A census over `deploy/` holds all four.
+- **The alert unit.** Its script refuses an empty credential of the two it loads by its id, with one
+  line at error priority, before it reads the journal or makes a request, and exits 1. The unit then
+  stays failed, in `systemctl --failed` and the journal, because it names no `OnFailure=`. A page
+  about the alert unit's own failure needs a route that does not depend on the alert sender (#285).
+
+### Consequences
+
+- Good, because every role refuses an empty credential by its id with no line in its unit, and a
+  future role inherits the refusal with the loader.
+- Good, because the refusal reaches the owner as the page a missing credential already sends, whose
+  quoted error line names the credential for a role, and names `missing_credentials` for the sync
+  job.
+- Bad, because the alert unit's own refusal pages no one until #285 builds a second route; it is
+  visible in `systemctl --failed` and the journal only.
+- Bad, because a credential that is present but blank (spaces, or a carriage return) still loads;
+  its caller's shape check refuses it, as identity's owner gate does.
+
+### Confirmation
+
+SPEC-066's acceptance tests: the loader's refusal in each empty form and its message (A1 to A3),
+the census of the templates (A4), the alert unit's route (A5), and the sync's login, which reads
+through the loader, never reaching the engine with an empty value (A6). Hand-proved rows S06601
+to S06605 kill the mutants cargo-mutants does not make.
+
+## What would make this wrong
+
+- A credential whose empty value is meaningful, such as an optional feature's token. It would need
+  an id and a loading call of its own that admit an empty value, decided in its own ADR.
+- A service manager that documents a start failure for an empty credential. The loader's refusal
+  would then be a second guard, and it would still name the credential.
+
+## More Information
+
+ADR-038 (its note of 2026-09-28 names this ADR), ADR-010, SPEC-020 R11, SPEC-025 R1, SPEC-027 R7,
+SPEC-031, SPEC-066, #284, #285. systemd.exec(5), `LoadCredential=`, at
+<https://www.freedesktop.org/software/systemd/man/latest/systemd.exec.html>; systemd.service(5),
+`ExecStart=`, `SuccessExitStatus=` and `RestartMode=`, at
+<https://www.freedesktop.org/software/systemd/man/latest/systemd.service.html>.
