@@ -10,21 +10,31 @@
 //! (`TRYBUILD=overwrite`).
 //!
 //! A15: a delivery can go around the port and never take a pass. The census reads every shipped
-//! source of these kinds: the Rust, Python and web source files and the shell scripts by their
-//! extensions, a script with none by its `#!` first line, and the systemd units and their drop-ins.
-//! It leaves out test files, test directories outside a `src/`, and in a Rust file its comments and
-//! `#[cfg(test)]` modules. Outside the bot's sources nothing may name the Bot API's host, one of its
-//! send methods, in the API's spelling or a client's, or the bot's `DEFAULT_API_URL`, SPEC-031's
-//! alert path aside; inside them a send method is named only in the named send that makes its
-//! request. The bot's `send_html`, its `edit_html` and its command handler are used only at named
-//! call sites, and each of the seven named sends is found exactly once. Only the router's ledger,
-//! router and data-rights modules, which own their writes, name the Mini App's feed or the held
-//! queue, which a flush delivers; and because the ledger's writes to the queue are private to the
-//! notifications crate, only they name the ledger in that crate's sources, the root's declaration
-//! of it aside. The refusals are proved on the reviews' deliveries around the port, which the test
-//! holds as text, and on a tree it writes for the walker. A text census reads names, so a request
-//! or a table's name assembled from parts, in which no name it reads appears, and a source of a
-//! kind it does not read, go unread (#297).
+//! source of these kinds: the Rust, Python and web source files, the Mini App's HTML among them,
+//! and the shell scripts by their extensions, a script with none by its `#!` first line, and the
+//! systemd units of every type and their drop-ins. It leaves out symlinks, test files, test
+//! directories outside a `src/`, and in a Rust file its comments and `#[cfg(test)]` modules.
+//! Outside the bot's sources nothing may name the Bot API's host, one of its send methods or its
+//! other delivery methods (a copy, a forward, an edit, a pin or a reaction), in the API's spelling
+//! or a client's, or the bot's `DEFAULT_API_URL`, SPEC-031's alert path aside; inside them such a
+//! method is named only by its own named send. The bot's `send_html`, its `edit_html` and its
+//! command handler are used only at named call sites, and each of the eight named sends is found
+//! exactly once; the handler's replies and its dispatch are called only by their named callers.
+//! Only the router's ledger, router and data-rights modules, which own their writes, name the Mini
+//! App's feed or the held queue, which a flush delivers; because the ledger's writes to the queue
+//! are private to the notifications crate, only they name the ledger in that crate's sources, the
+//! root's declaration of it aside; and no source of that crate carries `#[path]`,
+//! `#[macro_export]` or `#[macro_use]`, or re-exports the ledger, its tables or its writes to the
+//! feed and the queue by a `pub use`. The refusals are proved on the reviews' deliveries around the
+//! port, which the test holds as text, and on a tree it writes for the walker.
+//!
+//! The census guards ordinary code, not code written to evade it, which review catches. A text
+//! census reads names, not requests, statements or what the compiler resolves, so these go unread
+//! (#297): a request, or a table's name, assembled from parts, in which no name it reads appears;
+//! `include!` of a file of a kind it does not read; a source of such a kind; a symlink; a test file
+//! pulled in by `#[path]` outside the notifications crate, or run by a unit; and a re-export other
+//! than by a `pub use`, or a `pub` wrapper, that hands out a write to the feed or the held queue
+//! under a name the census does not hold.
 
 // An integration test is test code: its helpers panic on a failed fixture, and the examined count
 // is printed on purpose.

@@ -234,6 +234,141 @@
         "        if false && !QUEUE_MODULES.contains(&path.as_str()) {",
         "one_router::no_delivery_goes_around_the_port",
         "only the modules that own the held queue's writes, the router's ledger, router and data-rights modules, name it, its table in any case or QUEUE_TABLE, and in the notifications crate only they name the ledger, whose writes to the queue are private to the crate (SPEC-041 A15); the census is test code, which cargo-mutants never mutates, and the mutant lets the planted writes to the queue through"
+      ],
+      [
+        "S04128-A-UNIT-OF-EVERY-TYPE-IS-READ",
+        "notifications",
+        "tests/one_router.rs",
+        "                    || a_unit(&name)",
+        "                    || false",
+        "one_router::no_delivery_goes_around_the_port",
+        "the walker reads a systemd unit of every type, whatever its name, a socket, a path, a mount and a unit named as a test file among them (SPEC-041 A15); the census is test code, which cargo-mutants never mutates, and the mutant lets the planted units go unread"
+      ],
+      [
+        "S04129-THE-MINI-APPS-HTML-IS-READ",
+        "notifications",
+        "tests/one_router.rs",
+        "    \"html\", \"sh\", \"bash\", \"zsh\",",
+        "    \"html_\", \"sh\", \"bash\", \"zsh\",",
+        "one_router::no_delivery_goes_around_the_port",
+        "the walker reads the Mini App's HTML, whose inline scripts run in the owner's browser (SPEC-041 A15); the census is test code, which cargo-mutants never mutates, and the mutant lets the planted request in an inline script go unread"
+      ],
+      [
+        "S04130-A-COMMONJS-TYPESCRIPT-MODULE-IS-READ",
+        "notifications",
+        "tests/one_router.rs",
+        "    \"rs\", \"py\", \"ts\", \"js\", \"mjs\", \"cjs\", \"mts\", \"cts\", \"tsx\", \"jsx\", \"svelte\", \"vue\", \"astro\",",
+        "    \"rs\", \"py\", \"ts\", \"js\", \"mjs\", \"cjs\", \"mts\", \"cts_\", \"tsx\", \"jsx\", \"svelte\", \"vue\", \"astro\",",
+        "one_router::no_delivery_goes_around_the_port",
+        "the walker reads a CommonJS TypeScript module (SPEC-041 A15); the census is test code, which cargo-mutants never mutates, and the mutant lets the planted request in a .cts module go unread"
+      ],
+      [
+        "S04131-A-BASH-SCRIPT-IS-READ",
+        "notifications",
+        "tests/one_router.rs",
+        "    \"html\", \"sh\", \"bash\", \"zsh\",",
+        "    \"html\", \"sh\", \"bash_\", \"zsh\",",
+        "one_router::no_delivery_goes_around_the_port",
+        "the walker reads a shell script by its .bash extension, with no #! first line (SPEC-041 A15); the census is test code, which cargo-mutants never mutates, and the mutant lets the planted request in a .bash script go unread"
+      ],
+      [
+        "S04132-A-ZSH-SCRIPT-IS-READ",
+        "notifications",
+        "tests/one_router.rs",
+        "    \"html\", \"sh\", \"bash\", \"zsh\",",
+        "    \"html\", \"sh\", \"bash\", \"zsh_\",",
+        "one_router::no_delivery_goes_around_the_port",
+        "the walker reads a shell script by its .zsh extension, with no #! first line (SPEC-041 A15); the census is test code, which cargo-mutants never mutates, and the mutant lets the planted request in a .zsh script go unread"
+      ],
+      [
+        "S04133-THE-BOT-APIS-OTHER-DELIVERY-METHODS-ARE-SENDS",
+        "notifications",
+        "tests/one_router.rs",
+        "    SEND_METHODS.into_iter().chain(DELIVERY_METHODS)",
+        "    SEND_METHODS.into_iter().chain(DELIVERY_METHODS.into_iter().take(0))",
+        "one_router::no_delivery_goes_around_the_port",
+        "the Bot API's other delivery methods, a copy, a forward, an edit, a pin and a reaction, are held as sends (SPEC-041 A15); the census is test code, which cargo-mutants never mutates, and the mutant lets the planted copy, edit, forward, pin and reaction through"
+      ],
+      [
+        "S04134-THE-TRANSPORTS-EDIT-IS-A-NAMED-SEND",
+        "notifications",
+        "tests/one_router.rs",
+        "        \"Transport::edit_html\",",
+        "        \"Transport::edit_html_\",",
+        "one_router::no_delivery_goes_around_the_port",
+        "the transport's edit_html is edit_message_text's one named send, found once in the tree (SPEC-041 A15); the census is test code, which cargo-mutants never mutates, and the mutant lets the tree's own edit refused and its named send unfound"
+      ],
+      [
+        "S04135-THE-NOTIFICATIONS-CRATE-CARRIES-NO-PATH",
+        "notifications",
+        "tests/one_router.rs",
+        "const CARRYING_ATTRIBUTES: [&str; 3] = [\"path\", \"macro_export\", \"macro_use\"];",
+        "const CARRYING_ATTRIBUTES: [&str; 3] = [\"path_\", \"macro_export\", \"macro_use\"];",
+        "one_router::no_delivery_goes_around_the_port",
+        "no source of the notifications crate carries #[path], which compiles the ledger under another module's name (SPEC-041 A15); the census is test code, which cargo-mutants never mutates, and the mutant lets the planted second ledger through"
+      ],
+      [
+        "S04136-THE-NOTIFICATIONS-CRATE-EXPORTS-NO-MACRO",
+        "notifications",
+        "tests/one_router.rs",
+        "const CARRYING_ATTRIBUTES: [&str; 3] = [\"path\", \"macro_export\", \"macro_use\"];",
+        "const CARRYING_ATTRIBUTES: [&str; 3] = [\"path\", \"macro_export_\", \"macro_use\"];",
+        "one_router::no_delivery_goes_around_the_port",
+        "no source of the notifications crate carries #[macro_export], which hands a macro to every crate (SPEC-041 A15); the census is test code, which cargo-mutants never mutates, and the mutant lets the planted exported write to the queue through"
+      ],
+      [
+        "S04137-THE-NOTIFICATIONS-CRATE-HANDS-ON-NO-MACROS",
+        "notifications",
+        "tests/one_router.rs",
+        "const CARRYING_ATTRIBUTES: [&str; 3] = [\"path\", \"macro_export\", \"macro_use\"];",
+        "const CARRYING_ATTRIBUTES: [&str; 3] = [\"path\", \"macro_export\", \"macro_use_\"];",
+        "one_router::no_delivery_goes_around_the_port",
+        "no source of the notifications crate carries #[macro_use], which hands a module's macros to the modules after it (SPEC-041 A15); the census is test code, which cargo-mutants never mutates, and the mutant lets the planted ledger's macros through"
+      ],
+      [
+        "S04138-NO-PUB-USE-RE-EXPORTS-THE-LEDGER",
+        "notifications",
+        "tests/one_router.rs",
+        "        if !visible(&structure[..at]) {",
+        "        if true || !visible(&structure[..at]) {",
+        "one_router::no_delivery_goes_around_the_port",
+        "no pub use in the notifications crate re-exports the ledger, its tables or its writes to the feed and the queue, under any name (SPEC-041 A15); the census is test code, which cargo-mutants never mutates, and the mutant lets the planted re-exports through"
+      ],
+      [
+        "S04139-A-PUB-CRATE-USE-IS-A-RE-EXPORT",
+        "notifications",
+        "tests/one_router.rs",
+        "    if let Some(rest) = before.strip_suffix(')') {",
+        "    if let Some(rest) = before.strip_suffix(')').filter(|_| false) {",
+        "one_router::no_delivery_goes_around_the_port",
+        "a pub(crate) use is a re-export like a pub use (SPEC-041 A15); the census is test code, which cargo-mutants never mutates, and the mutant lets the planted pub(crate) re-exports of the ledger's hold through"
+      ],
+      [
+        "S04140-ONLY-NAMED-CALLERS-CALL-THE-HANDLERS-REPLIES",
+        "notifications",
+        "tests/one_router.rs",
+        "        if COMMAND_CALLERS.contains(&(function.as_str(), name)) {",
+        "        if true || COMMAND_CALLERS.contains(&(function.as_str(), name)) {",
+        "one_router::no_delivery_goes_around_the_port",
+        "the command handler's replies and dispatch are called only by their named callers (SPEC-041 A15); the census is test code, which cargo-mutants never mutates, and the mutant lets the planted reply, dispatch and prompt through"
+      ],
+      [
+        "S04141-A-METHOD-CALL-OF-A-REPLY-IS-READ",
+        "notifications",
+        "tests/one_router.rs",
+        "            let method = before.ends_with('.') && called(structure, at, name);",
+        "            let method = false && before.ends_with('.') && called(structure, at, name);",
+        "one_router::no_delivery_goes_around_the_port",
+        "a method call of the command handler's reply or dispatch is read (SPEC-041 A15); the census is test code, which cargo-mutants never mutates, and the mutant lets the planted reply and dispatch through"
+      ],
+      [
+        "S04142-A-PATH-TO-A-REPLY-IS-READ",
+        "notifications",
+        "tests/one_router.rs",
+        "            let path = before.ends_with(\"::\") && !after.starts_with(\"::\");",
+        "            let path = false && before.ends_with(\"::\") && !after.starts_with(\"::\");",
+        "one_router::no_delivery_goes_around_the_port",
+        "a path to the command handler's reply, Self::ask_erase among them, is read (SPEC-041 A15); the census is test code, which cargo-mutants never mutates, and the mutant lets the planted prompt through"
       ]
     ],
     "CARGO_KILLED_SCRIPT_MUTATIONS": [
