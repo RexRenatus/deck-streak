@@ -37,7 +37,8 @@ const TABLES: &str = "\
     CREATE TABLE gamma_rows (id INTEGER PRIMARY KEY, created_at INTEGER NOT NULL) STRICT; \
     CREATE TABLE deleting_singleton (id INTEGER PRIMARY KEY CHECK (id = 1), \
         counter INTEGER NOT NULL, created_at INTEGER NOT NULL) STRICT; \
-    INSERT INTO deleting_singleton (id, counter, created_at) VALUES (1, 0, 2000);";
+    INSERT INTO deleting_singleton (id, counter, created_at) VALUES (1, 0, 2000); \
+    CREATE TABLE forgetting_rows (id INTEGER PRIMARY KEY, created_at INTEGER NOT NULL) STRICT;";
 
 /// The rows every test starts from: none of them equals what an erase leaves.
 const ROWS: &str = "\
@@ -48,7 +49,8 @@ const ROWS: &str = "\
     INSERT INTO beta_notes (id, body, created_at) \
         VALUES (1, 'a synthetic note', 1006), (2, 'another synthetic note', 1007); \
     INSERT INTO gamma_rows (id, created_at) VALUES (1, 1008); \
-    UPDATE deleting_singleton SET counter = 9 WHERE id = 1;";
+    UPDATE deleting_singleton SET counter = 9 WHERE id = 1; \
+    INSERT INTO forgetting_rows (id, created_at) VALUES (1, 1009), (2, 1010);";
 
 /// The reset row of a synthetic singleton: its counter back to 0.
 fn counter_reset() -> Map<String, Value> {
@@ -265,6 +267,44 @@ impl DataRights for Deleting {
     }
 }
 
+/// A synthetic context that declares its table exported and erased, and whose erase leaves it.
+struct Forgetting;
+
+impl DataRights for Forgetting {
+    fn declaration(&self) -> Result<Declaration, DataRightsError> {
+        Declaration::new(
+            "forgetting",
+            vec![TableRights {
+                table: "forgetting_rows",
+                disposition: Disposition::ExportAndErase,
+            }],
+        )
+    }
+
+    fn export<'a>(
+        &'a self,
+        connection: &'a mut SqliteConnection,
+    ) -> PortFuture<'a, Vec<ExportedTable>> {
+        Box::pin(async move {
+            let rows: Vec<(i64, i64)> =
+                sqlx::query_as("SELECT id, created_at FROM forgetting_rows ORDER BY id")
+                    .fetch_all(connection)
+                    .await?;
+            Ok(vec![ExportedTable {
+                table: "forgetting_rows",
+                rows: rows
+                    .into_iter()
+                    .map(|(id, created_at)| json!({"id": id, "created_at": created_at}))
+                    .collect(),
+            }])
+        })
+    }
+
+    fn erase<'a>(&'a self, _connection: &'a mut SqliteConnection) -> PortFuture<'a, ()> {
+        Box::pin(async { Ok(()) })
+    }
+}
+
 /// A migrated temporary database holding the synthetic contexts' tables and `rows`.
 async fn fixture(rows: &'static str) -> (TempDir, PathBuf, Db) {
     let directory = tempfile::tempdir().expect("a temporary directory");
@@ -424,5 +464,29 @@ async fn a_failing_port_rolls_the_whole_erase_back() {
         .await
         .expect("gamma counts");
     assert_eq!(gamma, 1);
+    db.close().await;
+}
+
+#[tokio::test]
+async fn a_port_whose_erase_leaves_rows_is_refused_and_rolled_back() {
+    let (_directory, _path, db) = fixture(ROWS).await;
+    // Alpha erases first, in the same transaction, and the refusal rolls its work back too.
+    let refused = erase(&db, &[&Alpha, &Forgetting]).await;
+    assert!(
+        matches!(
+            refused,
+            Err(PrivacyError::EraseIncomplete {
+                context: "forgetting",
+                table: "forgetting_rows",
+            })
+        ),
+        "{refused:?}"
+    );
+    let left: i64 = sqlx::query_scalar("SELECT count(*) FROM forgetting_rows")
+        .fetch_one(db.reader())
+        .await
+        .expect("the table counts");
+    assert_eq!(left, 2);
+    assert_eq!(alpha_singleton_row(&db).await, [(1, 5, 1000)]);
     db.close().await;
 }

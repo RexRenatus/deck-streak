@@ -55,13 +55,11 @@ async fn erase_rows(db: &Db, ports: &[&dyn DataRights]) -> Result<Erasure, Priva
     let declarations = declarations(ports)?;
     let database = |error: sqlx::Error| PrivacyError::Database(error.into());
     let mut write = db.write().await.map_err(PrivacyError::Database)?;
-    let secure: i64 = sqlx::query_scalar("PRAGMA secure_delete = ON")
+    let answer: i64 = sqlx::query_scalar("PRAGMA secure_delete = ON")
         .fetch_one(&mut *write)
         .await
         .map_err(database)?;
-    if secure != 1 {
-        return Err(PrivacyError::SecureDeleteOff);
-    }
+    secure_delete_is_on(answer)?;
     for (port, declaration) in ports.iter().zip(&declarations) {
         port.erase(&mut write)
             .await
@@ -83,6 +81,16 @@ async fn erase_rows(db: &Db, ports: &[&dyn DataRights]) -> Result<Erasure, Priva
     }
     write.commit().await.map_err(database)?;
     Ok(erasure)
+}
+
+/// Whether `SQLite`'s answer to `PRAGMA secure_delete = ON` says the pragma is on: 1. `FAST` (2)
+/// leaves freed bytes in the freelist and is refused like off (0).
+fn secure_delete_is_on(answer: i64) -> Result<(), PrivacyError> {
+    if answer == 1 {
+        Ok(())
+    } else {
+        Err(PrivacyError::SecureDeleteOff)
+    }
 }
 
 /// Checks what a port's erase left, `after` being its export inside the erase's transaction: every
@@ -142,7 +150,8 @@ mod tests {
     use serde_json::json;
     use sqlx::SqliteConnection;
 
-    use super::{compact, erase_rows};
+    use super::{compact, erase_rows, secure_delete_is_on};
+    use crate::PrivacyError;
 
     /// A value no other test writes: the tests search the database's files for its bytes.
     const MARKER: &str = "synthetic-unit-marker-5d3c1b";
@@ -230,6 +239,20 @@ mod tests {
             .expect("a checkpoint");
         assert_eq!(busy, 0, "no reader holds the planted database");
         db
+    }
+
+    #[test]
+    fn only_an_answer_of_one_turns_secure_delete_on() {
+        assert!(secure_delete_is_on(1).is_ok());
+        for answer in [0, 2] {
+            assert!(
+                matches!(
+                    secure_delete_is_on(answer),
+                    Err(PrivacyError::SecureDeleteOff)
+                ),
+                "{answer}"
+            );
+        }
     }
 
     #[tokio::test]

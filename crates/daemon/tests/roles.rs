@@ -410,6 +410,10 @@ async fn the_data_role_writes_the_export_as_one_line_of_standard_output() {
     assert_eq!(output.status.code(), Some(0), "{}", describe(&output));
     // The export is the one line that does not open with a journal priority, and the only line.
     let stdout = String::from_utf8_lossy(&output.stdout).into_owned();
+    assert!(
+        stdout.ends_with("}\n"),
+        "one object, ended by a newline: {stdout}"
+    );
     let lines: Vec<&str> = examined("line(s) of standard output", stdout.lines().collect());
     assert_eq!(lines.len(), 1, "{}", describe(&output));
     let document: Value = serde_json::from_str(lines[0]).expect("the line is one JSON object");
