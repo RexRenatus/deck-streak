@@ -1,0 +1,398 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S06001-LIST-DIGEST-RECOMPUTED",
+        "deploy/host-scrub/apply.py",
+        "    if listing.get(\"digest\") != list_digest(listing):\n",
+        "    if False:\n",
+        "a list whose own digest no longer matches its content is refused (SPEC-060 R6, A4)",
+        "test_host_scrub.Apply.test_apply_without_a_matching_approval_deletes_nothing"
+      ],
+      [
+        "S06002-RULES-BOUND-TO-THE-LIST",
+        "deploy/host-scrub/apply.py",
+        "    if listing.get(\"rules_digest\") != rules_digest:\n",
+        "    if False:\n",
+        "rules other than the ones the inventory read, which the list names, are refused (SPEC-060 R6, R9, A9)",
+        "test_host_scrub.Apply.test_apply_runs_only_read_health_checks_from_the_listed_rules"
+      ],
+      [
+        "S06003-APPROVAL-CARRIES-THE-LIST-DIGEST",
+        "deploy/host-scrub/apply.py",
+        "    if approval.get(\"list_digest\") != listing[\"digest\"]:\n",
+        "    if approval.get(\"list_digest\") != approval.get(\"list_digest\"):\n",
+        "an approval that does not carry the list's digest is refused (SPEC-060 R6, A4)",
+        "test_host_scrub.Apply.test_apply_without_a_matching_approval_deletes_nothing"
+      ],
+      [
+        "S06004-APPROVAL-NAMES-ITS-APPROVER",
+        "deploy/host-scrub/apply.py",
+        "    if not isinstance(approval.get(\"approver\"), str) or not approval[\"approver\"].strip():\n",
+        "    if False:\n",
+        "an approval that names no approver is refused (SPEC-060 R6, A4)",
+        "test_host_scrub.Apply.test_apply_without_a_matching_approval_deletes_nothing"
+      ],
+      [
+        "S06005-APPROVAL-IS-DATED",
+        "deploy/host-scrub/apply.py",
+        "        date.fromisoformat(approval.get(\"date\"))\n",
+        "        pass\n",
+        "an approval whose date is not a date is refused (SPEC-060 R6, A4)",
+        "test_host_scrub.Apply.test_apply_without_a_matching_approval_deletes_nothing"
+      ],
+      [
+        "S06006-APPROVED-IDS-ARE-THE-LISTS",
+        "deploy/host-scrub/apply.py",
+        "        if item_id not in by_id:\n",
+        "        if False:\n",
+        "an approval naming an id the list does not hold is refused (SPEC-060 R6, A4)",
+        "test_host_scrub.Apply.test_apply_without_a_matching_approval_deletes_nothing"
+      ],
+      [
+        "S06007-SNAPSHOT-IS-NAMED",
+        "deploy/host-scrub/apply.py",
+        "    if not isinstance(snapshot, dict) or not str(snapshot.get(\"name\") or \"\").strip():\n",
+        "    if not isinstance(snapshot, dict):\n",
+        "an approval whose snapshot has no name is refused (SPEC-060 R5, A6)",
+        "test_host_scrub.Apply.test_apply_refuses_an_approval_without_a_later_snapshot"
+      ],
+      [
+        "S06008-INSTANT-CARRIES-AN-OFFSET",
+        "deploy/host-scrub/apply.py",
+        "    if moment.tzinfo is None:\n",
+        "    if False:\n",
+        "an instant without an offset cannot be ordered and is refused (SPEC-060 R6, A6)",
+        "test_host_scrub.Apply.test_apply_refuses_an_approval_without_a_later_snapshot"
+      ],
+      [
+        "S06009-SNAPSHOT-STRICTLY-AFTER-THE-INVENTORY",
+        "deploy/host-scrub/apply.py",
+        "    if taken <= inventory:\n",
+        "    if taken < inventory:\n",
+        "a snapshot at the inventory's own instant is refused (SPEC-060 R5, A6)",
+        "test_host_scrub.Apply.test_apply_refuses_an_approval_without_a_later_snapshot"
+      ],
+      [
+        "S06010-INSTANTS-NOT-COMPARED-AS-TEXT",
+        "deploy/host-scrub/apply.py",
+        "    if taken <= inventory:\n",
+        "    if str(snapshot.get(\"taken_at\")) <= str(listing[\"inventory\"][\"taken_at\"]):\n",
+        "instants are compared as instants, whatever offset each is written in (SPEC-060 R5, A6)",
+        "test_host_scrub.Apply.test_apply_refuses_an_approval_without_a_later_snapshot"
+      ],
+      [
+        "S06011-INSTANTS-NOT-COMPARED-AS-WALL-CLOCKS",
+        "deploy/host-scrub/apply.py",
+        "    if taken <= inventory:\n",
+        "    if taken.replace(tzinfo=None) <= inventory.replace(tzinfo=None):\n",
+        "an instant's offset is part of its comparison (SPEC-060 R5, A6)",
+        "test_host_scrub.Apply.test_apply_refuses_an_approval_without_a_later_snapshot"
+      ],
+      [
+        "S06012-SNAPSHOT-NOT-DATED-AFTER-THE-CLOCK",
+        "deploy/host-scrub/apply.py",
+        "    if taken > now_utc():\n",
+        "    if False:\n",
+        "a snapshot dated later than the apply's own clock is refused (SPEC-060 R5, A6)",
+        "test_host_scrub.Apply.test_apply_refuses_an_approval_without_a_later_snapshot"
+      ],
+      [
+        "S06013-HEALTH-CHECKS-ARE-READS",
+        "deploy/host-scrub/apply.py",
+        "    reads, runner = Runner(), Runner(allow=admitted)\n",
+        "    reads, runner = Runner(allow=admitted), Runner(allow=admitted)\n",
+        "a health check runs through the read allow list alone (SPEC-060 R9, A9)",
+        "test_host_scrub.Apply.test_apply_runs_only_read_health_checks_from_the_listed_rules"
+      ],
+      [
+        "S06014-CHECKS-BEFORE-ANY-DELETION",
+        "deploy/host-scrub/apply.py",
+        "            checked[item[\"id\"]] = check_item(item, rules[\"protected\"], runner)\n",
+        "            checked[item[\"id\"]] = None\n",
+        "every approved item is checked before the first deletion (SPEC-060 R6, A5)",
+        "test_host_scrub.Apply.test_apply_deletes_exactly_the_approved_items_or_nothing"
+      ],
+      [
+        "S06015-ITEM-PATH-CANONICAL",
+        "deploy/host-scrub/apply.py",
+        "    if not canonical(path):\n",
+        "    if False:\n",
+        "an item whose path is not absolute and canonical is refused by its id (SPEC-060 R7, A7)",
+        "test_host_scrub.Apply.test_apply_refuses_protected_paths_and_symbolic_links_out"
+      ],
+      [
+        "S06016-ITEM-UNDER-OR-HOLDING-PROTECTED",
+        "deploy/host-scrub/apply.py",
+        "    if guard is not None:\n",
+        "    if False:\n",
+        "an item under or holding a protected path is refused (SPEC-060 R7, A7)",
+        "test_host_scrub.Apply.test_apply_refuses_protected_paths_and_symbolic_links_out"
+      ],
+      [
+        "S06017-ITEM-NOT-REACHED-THROUGH-A-LINK",
+        "deploy/host-scrub/apply.py",
+        "    link = linked_ancestor(path)\n",
+        "    link = None\n",
+        "an item reached through a symbolic link is refused (SPEC-060 R7, A7)",
+        "test_host_scrub.Apply.test_apply_refuses_protected_paths_and_symbolic_links_out"
+      ],
+      [
+        "S06018-ITEM-DIGEST-COMPUTED-AGAIN",
+        "deploy/host-scrub/apply.py",
+        "        digest, _ = measure(path)\n",
+        "        digest = item[\"digest\"]\n",
+        "an item's digest is computed again at apply time (SPEC-060 R6, A5)",
+        "test_host_scrub.Apply.test_apply_deletes_exactly_the_approved_items_or_nothing"
+      ],
+      [
+        "S06019-ITEM-DIGEST-COMPARED",
+        "deploy/host-scrub/apply.py",
+        "    if digest != item[\"digest\"]:\n",
+        "    if False:\n",
+        "an item whose digest changed since the list is refused (SPEC-060 R6, A5)",
+        "test_host_scrub.Apply.test_apply_deletes_exactly_the_approved_items_or_nothing"
+      ],
+      [
+        "S06020-DIRECTORY-DIGEST-COMPARED",
+        "deploy/host-scrub/apply.py",
+        "    if digest != item[\"digest\"]:\n",
+        "    if digest != item[\"digest\"] and not stat.S_ISDIR(st.st_mode):\n",
+        "a directory item whose digest changed since the list is refused (SPEC-060 R6, A5)",
+        "test_host_scrub.Apply.test_apply_deletes_exactly_the_approved_items_or_nothing"
+      ],
+      [
+        "S06021-PACKAGE-DIGEST-COMPARED",
+        "deploy/host-scrub/apply.py",
+        "    if len(found) != 1 or package_digest(found[0]) != item[\"digest\"]:\n",
+        "    if False:\n",
+        "a package whose version or state changed since the list is refused (SPEC-060 R6, A5)",
+        "test_host_scrub.Apply.test_apply_deletes_exactly_the_approved_items_or_nothing"
+      ],
+      [
+        "S06022-PACKAGE-REMOVED-ALONE-OR-NOT-AT-ALL",
+        "deploy/host-scrub/apply.py",
+        "        raise Refusal(f\"would not be removed alone: dpkg's dry run exited {code}\", item)\n",
+        "        pass\n",
+        "a package dpkg would not remove alone is refused (SPEC-060 R6, A5)",
+        "test_host_scrub.Apply.test_apply_deletes_exactly_the_approved_items_or_nothing"
+      ],
+      [
+        "S06023-DELETION-OPENS-NO-LINK-ABOVE",
+        "deploy/host-scrub/apply.py",
+        "DIRECTORY = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW\n",
+        "DIRECTORY = os.O_RDONLY | os.O_DIRECTORY\n",
+        "a directory above an item that became a link after its checks stops that deletion (SPEC-060 R7, A7)",
+        "test_host_scrub.Apply.test_apply_refuses_protected_paths_and_symbolic_links_out"
+      ],
+      [
+        "S06024-DELETION-READS-ITS-ITEM-AGAIN",
+        "deploy/host-scrub/apply.py",
+        "        if (st.st_dev, st.st_ino, st.st_mtime_ns) != checked:\n",
+        "        if False:\n",
+        "an item that changed after its checks is not deleted (SPEC-060 R6, A5)",
+        "test_host_scrub.Apply.test_apply_deletes_exactly_the_approved_items_or_nothing"
+      ],
+      [
+        "S06025-DIRECTORY-REMOVED-WITHOUT-FOLLOWING-A-LINK",
+        "deploy/host-scrub/apply.py",
+        "            shutil.rmtree(name, dir_fd=parent)\n",
+        "            for top, _, files in os.walk(item[\"path\"]):\n                for inner in files:\n                    full = os.path.join(top, inner)\n                    if os.path.islink(full) and os.path.isfile(full):\n                        os.unlink(os.path.realpath(full))\n            shutil.rmtree(name, dir_fd=parent)\n",
+        "a link inside a directory item goes with it, and its target stays (SPEC-060 R7, A7)",
+        "test_host_scrub.Apply.test_apply_refuses_protected_paths_and_symbolic_links_out"
+      ],
+      [
+        "S06026-AN-ITEM-THAT-IS-A-LINK-GOES-AS-A-LINK",
+        "deploy/host-scrub/apply.py",
+        "            os.unlink(name, dir_fd=parent)\n",
+        "            os.unlink(os.path.realpath(item[\"path\"]))\n",
+        "an item that is itself a link goes, and its target stays (SPEC-060 R7, A7)",
+        "test_host_scrub.Apply.test_apply_refuses_protected_paths_and_symbolic_links_out"
+      ],
+      [
+        "S06027-DRY-BY-DEFAULT",
+        "deploy/host-scrub/apply.py",
+        "    parser.add_argument(\"--apply\", action=\"store_true\", help=\"delete; without it, a dry run\")\n",
+        "    parser.add_argument(\"--apply\", action=\"store_true\", default=True, help=\"delete\")\n",
+        "the apply deletes nothing without --apply (SPEC-060 R6, A5)",
+        "test_host_scrub.Apply.test_apply_deletes_exactly_the_approved_items_or_nothing"
+      ],
+      [
+        "S06028-A-RED-HEALTH-CHECK-STOPS-THE-SCRUB",
+        "deploy/host-scrub/apply.py",
+        "    if red:\n",
+        "    if False:\n",
+        "a health check red after the apply stops the scrub with its own exit (SPEC-060 R9)",
+        "test_host_scrub.Health.test_a_health_check_red_after_an_apply_stops_the_scrub"
+      ],
+      [
+        "S06029-UNIT-BEGINS-WITH-A-LETTER-OR-DIGIT",
+        "deploy/host-scrub/inventory.py",
+        "    r\"^[A-Za-z0-9][A-Za-z0-9:_.@\\\\-]*\\.(?:service|socket|timer|target|path|mount|automount|swap\"\n",
+        "    r\"^[A-Za-z0-9:_.@\\\\-]+\\.(?:service|socket|timer|target|path|mount|automount|swap\"\n",
+        "a unit's name begins with a letter or a digit (SPEC-060 R2, A1)",
+        "test_host_scrub.Inventory.test_the_inventory_runs_only_its_read_only_allow_list"
+      ],
+      [
+        "S06030-IS-ACTIVE-NAMES-ITS-UNITS-AFTER-DASHDASH",
+        "deploy/host-scrub/inventory.py",
+        "        return rest[:1] == [\"--\"] and bool(units) and all(UNIT.match(unit) for unit in units)\n",
+        "        return bool(rest) and all(UNIT.match(unit) for unit in rest)\n",
+        "an is-active read names its units after -- (SPEC-060 R2, A1)",
+        "test_host_scrub.Inventory.test_the_inventory_runs_only_its_read_only_allow_list"
+      ],
+      [
+        "S06031-IS-ACTIVE-IS-THE-ONLY-VERB",
+        "deploy/host-scrub/inventory.py",
+        "    if argv[:2] == [\"systemctl\", \"is-active\"]:\n",
+        "    if argv[:1] == [\"systemctl\"]:\n",
+        "the allow list admits systemctl's is-active verb, no other (SPEC-060 R2, A1)",
+        "test_host_scrub.Inventory.test_the_inventory_runs_only_its_read_only_allow_list"
+      ],
+      [
+        "S06032-THE-RUNNER-REFUSES-AN-UNLISTED-COMMAND",
+        "deploy/host-scrub/inventory.py",
+        "            if not self.allow(argv):\n",
+        "            if False:\n",
+        "a command the allow list does not admit is refused (SPEC-060 R2, A1)",
+        "test_host_scrub.Inventory.test_the_inventory_runs_only_its_read_only_allow_list"
+      ],
+      [
+        "S06033-HEALTH-CHECKED-BEFORE-ANY-COMMAND-RUNS",
+        "deploy/host-scrub/inventory.py",
+        "        runner.check(health_commands(rules[\"health\"]))\n",
+        "        pass\n",
+        "the inventory refuses an unlisted health check before any command runs (SPEC-060 R2, A1)",
+        "test_host_scrub.Inventory.test_the_inventory_runs_only_its_read_only_allow_list"
+      ],
+      [
+        "S06034-RULES-PATH-CANONICAL",
+        "deploy/host-scrub/inventory.py",
+        "    if not canonical(value):\n",
+        "    if False:\n",
+        "rules that hold a path that is not absolute and canonical are refused by its key (SPEC-060 R3, R7, A7)",
+        "test_host_scrub.Apply.test_apply_refuses_protected_paths_and_symbolic_links_out"
+      ],
+      [
+        "S06035-CANONICAL-IS-ABSOLUTE",
+        "deploy/host-scrub/inventory.py",
+        "        and os.path.isabs(path)\n",
+        "        and True\n",
+        "a canonical path is absolute (SPEC-060 R7, A7)",
+        "test_host_scrub.Apply.test_apply_refuses_protected_paths_and_symbolic_links_out"
+      ],
+      [
+        "S06036-CANONICAL-IS-ITS-OWN-NORMAL-FORM",
+        "deploy/host-scrub/inventory.py",
+        "        and path == os.path.normpath(path)\n",
+        "        and True\n",
+        "a canonical path is written in its own normal form (SPEC-060 R7, A7)",
+        "test_host_scrub.Apply.test_apply_refuses_protected_paths_and_symbolic_links_out"
+      ],
+      [
+        "S06037-CANONICAL-HAS-ONE-LEADING-SLASH",
+        "deploy/host-scrub/inventory.py",
+        "        and not path.startswith(\"//\")\n",
+        "        and True\n",
+        "a canonical path begins with one slash (SPEC-060 R7, A7)",
+        "test_host_scrub.Apply.test_apply_refuses_protected_paths_and_symbolic_links_out"
+      ],
+      [
+        "S06038-A-PROTECTED-PATTERN-IS-REFUSED",
+        "deploy/host-scrub/inventory.py",
+        "        if any(mark in guard for mark in \"*?[\"):\n",
+        "        if False:\n",
+        "a protected entry that is a pattern is refused (SPEC-060 R7, A7)",
+        "test_host_scrub.Apply.test_apply_refuses_protected_paths_and_symbolic_links_out"
+      ],
+      [
+        "S06039-A-JSON-KEY-HELD-TWICE-IS-REFUSED",
+        "deploy/host-scrub/inventory.py",
+        "        if key in found:\n",
+        "        if False:\n",
+        "a JSON file that holds a key twice is refused (SPEC-060 R6, A4)",
+        "test_host_scrub.Apply.test_apply_without_a_matching_approval_deletes_nothing"
+      ],
+      [
+        "S06040-A-ROTATION-COPY-IS-NEVER-STALE",
+        "deploy/host-scrub/inventory.py",
+        "        stale = copies[max(rule[\"keep_copies\"], rotation) :]\n",
+        "        stale = copies[rule[\"keep_copies\"] :]\n",
+        "none of the copies a service's own rotation makes again is listed (SPEC-060 R10, A2)",
+        "test_host_scrub.Inventory.test_the_inventory_reports_space_backups_venvs_and_worktrees"
+      ],
+      [
+        "S06041-PLAN-COMPARES-ONLY-A-CANONICAL-PATH",
+        "deploy/host-scrub/plan.py",
+        "    if not canonical(path):\n",
+        "    if False:\n",
+        "the plan never lists a path that is not absolute and canonical (SPEC-060 R7, A3)",
+        "test_host_scrub.Plan.test_the_plan_lists_rule_selected_items_and_deletes_nothing"
+      ],
+      [
+        "S06042-WITHIN-STOPS-AT-A-PATH-BOUNDARY",
+        "deploy/host-scrub/plan.py",
+        "    return child == parent or child.startswith(parent.rstrip(\"/\") + \"/\")\n",
+        "    return child.startswith(parent)\n",
+        "a sibling whose name only begins with a protected path's is not under it (SPEC-060 R7, A7)",
+        "test_host_scrub.Apply.test_apply_refuses_protected_paths_and_symbolic_links_out"
+      ],
+      [
+        "S06043-WITHIN-HOLDS-A-CHILD",
+        "deploy/host-scrub/plan.py",
+        "    return child == parent or child.startswith(parent.rstrip(\"/\") + \"/\")\n",
+        "    return child == parent\n",
+        "an entry under a protected path is protected (SPEC-060 R7, A7)",
+        "test_host_scrub.Apply.test_apply_refuses_protected_paths_and_symbolic_links_out"
+      ],
+      [
+        "S06044-HOLDING-A-PROTECTED-PATH-IS-REFUSED",
+        "deploy/host-scrub/plan.py",
+        "            if within(path, form) or within(form, path):\n",
+        "            if within(path, form):\n",
+        "an item that holds a protected path is refused (SPEC-060 R7, A7)",
+        "test_host_scrub.Apply.test_apply_refuses_protected_paths_and_symbolic_links_out"
+      ],
+      [
+        "S06045-A-PROTECTED-LINK-PROTECTS-ITS-TARGET",
+        "deploy/host-scrub/plan.py",
+        "        for form in {guard, os.path.realpath(guard)}:\n",
+        "        for form in {guard}:\n",
+        "a protected path given as a link protects what it points at (SPEC-060 R7, A7)",
+        "test_host_scrub.Apply.test_apply_refuses_protected_paths_and_symbolic_links_out"
+      ],
+      [
+        "S06046-PLAN-SKIPS-A-PROTECTED-CANDIDATE",
+        "deploy/host-scrub/plan.py",
+        "        if guard is not None:\n",
+        "        if False:\n",
+        "the plan never lists an item under or holding a protected path (SPEC-060 R7, R10, A3)",
+        "test_host_scrub.Plan.test_the_plan_lists_rule_selected_items_and_deletes_nothing"
+      ],
+      [
+        "S06047-PLAN-READS-THE-INVENTORYS-RULES",
+        "deploy/host-scrub/plan.py",
+        "    if inventory.get(\"rules_digest\") != file_digest(args.rules):\n",
+        "    if False:\n",
+        "the plan refuses rules other than the ones the inventory read (SPEC-060 R4, A3)",
+        "test_host_scrub.Plan.test_the_plan_lists_rule_selected_items_and_deletes_nothing"
+      ],
+      [
+        "S06048-AN-ENVIRONMENT-IN-USE-IS-KEPT",
+        "deploy/host-scrub/plan.py",
+        "                names(text, path) for text in settings\n",
+        "                False for text in settings\n",
+        "an environment a loaded unit's command or working directory names is never listed (SPEC-060 R3, A3)",
+        "test_host_scrub.Plan.test_the_plan_lists_rule_selected_items_and_deletes_nothing"
+      ],
+      [
+        "S06049-AN-ITEM-INSIDE-A-LISTED-ITEM-IS-NOT-LISTED",
+        "deploy/host-scrub/plan.py",
+        "        if c.get(\"path\") is None or not any(p != c[\"path\"] and within(c[\"path\"], p) for p in paths)\n",
+        "        if c.get(\"path\") is None or True\n",
+        "a candidate inside another listed item is not listed again (SPEC-060 R10, A3)",
+        "test_host_scrub.Plan.test_the_plan_lists_rule_selected_items_and_deletes_nothing"
+      ]
+    ]
+  }
+}
