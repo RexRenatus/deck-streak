@@ -10,8 +10,9 @@
 //! predecessor's resolver (`prereading.py:resolve_day_sets`): each card is attributed by its
 //! original deck, a card an earlier root claimed is skipped, and a topic's digest is the SHA-256 of
 //! its sorted card ids joined by commas. [`EngineQueue`] is the port's adapter over ingest's engine:
-//! the engine selects a deck to answer, a write, so it reads a throwaway copy of the private copy,
-//! taken under the shared collection lock and removed after, on the kernel's offload.
+//! the engine selects a deck to answer, a write, so it reads a throwaway copy of the private copy.
+//! One blocking operation on the kernel's offload owns the shared collection lock, takes the copy,
+//! queries it and removes it, so a budget that passes stops the wait and never the work (R7).
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write as _;
@@ -378,8 +379,9 @@ pub trait QueuePort: Sync {
 /// The throwaway copy's file name, numbered per call.
 const THROWAWAY: &str = "readings-day-set";
 
-/// The queue port over ingest's engine (R3, R7, R11): a throwaway copy of the private copy, taken
-/// under the shared collection lock, queried by the engine on the kernel's offload, and removed.
+/// The queue port over ingest's engine (R3, R7, R11): one blocking operation on the kernel's
+/// offload takes a throwaway copy of the private copy under the shared collection lock, queries it
+/// with the engine, and removes it.
 #[derive(Debug)]
 pub struct EngineQueue<E> {
     engine: E,
@@ -410,37 +412,43 @@ impl<E> QueuePort for EngineQueue<E>
 where
     E: AnkiEngine + Clone + Send + Sync + 'static,
 {
+    /// The copy, its query and its removal are one closure that owns the lock. Past the budget,
+    /// `resolve` drops this future, and the closure runs on to its end, because a blocking task
+    /// that has started cannot be aborted and a dropped handle only detaches it: the budget stops
+    /// the wait, never the work, so no copy outlives the work and none is taken outside the lock.
     async fn new_card_queue(&self) -> Result<NewCardQueue, QueueFailure> {
         let call = self.calls.fetch_add(1, Ordering::Relaxed);
         let throwaway = self.scratch.join(format!("{THROWAWAY}-{call}.anki2"));
         let held = self.lock.shared().await.map_err(|_| QueueFailure::Locked)?;
-        let (source, target) = (self.copy.clone(), throwaway.clone());
-        let copied = self
-            .offload
-            .run("readings_day_set_copy", move || {
-                copy_collection(&source, &target)
-            })
-            .await;
-        // An explicit unlock before the lock file closes (SPEC-022 R7); a failed unlock is released
-        // by the close that follows it.
-        let _ = held.release();
-        if !matches!(copied, Ok(Ok(()))) {
-            return Err(QueueFailure::OpenFailed);
-        }
-        let engine = self.engine.clone();
+        let (source, engine) = (self.copy.clone(), self.engine.clone());
         let answer = self
             .offload
             .run("readings_day_set", move || {
-                let answer = engine.new_card_queue(&throwaway);
-                remove_collection(&throwaway);
-                answer
+                let throwaway = Throwaway(throwaway);
+                let copied = copy_collection(&source, &throwaway.0);
+                // An explicit unlock before the lock file closes (SPEC-022 R7), once the copy is
+                // whole; a failed unlock is released by the close that follows it.
+                let _ = held.release();
+                copied.map_err(|_| QueueFailure::OpenFailed)?;
+                engine
+                    .new_card_queue(&throwaway.0)
+                    .map_err(QueueFailure::from)
             })
             .await;
         match answer {
-            Ok(Ok(queue)) => Ok(queue),
-            Ok(Err(error)) => Err(QueueFailure::from(error)),
+            Ok(answer) => answer,
             Err(_) => Err(QueueFailure::Locked),
         }
+    }
+}
+
+/// A throwaway copy, removed when it is dropped, so neither an early return nor a panic of the
+/// work that made it can leave it behind.
+struct Throwaway(PathBuf);
+
+impl Drop for Throwaway {
+    fn drop(&mut self) {
+        remove_collection(&self.0);
     }
 }
 
@@ -454,22 +462,16 @@ fn siblings(path: &Path) -> [PathBuf; 2] {
     [PathBuf::from(wal), PathBuf::from(shm)]
 }
 
-/// Copies the collection at `source`, and its write-ahead log when it has one, to `target`; on a
-/// failure, removes what it copied.
+/// Copies the collection at `source`, and its write-ahead log when it has one, to `target`. What
+/// it copied, whole or not, is the caller's [`Throwaway`] to remove.
 fn copy_collection(source: &Path, target: &Path) -> io::Result<()> {
     let [source_wal, _] = siblings(source);
     let [target_wal, _] = siblings(target);
-    let copied = fs::copy(source, target).and_then(|_| {
-        if source_wal.exists() {
-            fs::copy(&source_wal, &target_wal).map(|_| ())
-        } else {
-            Ok(())
-        }
-    });
-    if copied.is_err() {
-        remove_collection(target);
+    fs::copy(source, target)?;
+    if source_wal.exists() {
+        fs::copy(&source_wal, &target_wal)?;
     }
-    copied
+    Ok(())
 }
 
 /// Removes the collection at `path` and the files `SQLite` keeps beside it; one already gone is
