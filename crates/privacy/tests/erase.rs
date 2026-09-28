@@ -302,7 +302,7 @@ async fn alpha_singleton_row(db: &Db) -> Vec<(i64, i64, i64)> {
         .expect("the singleton reads")
 }
 
-/// The write-ahead log beside the database at `path`, as SQLite names it.
+/// The write-ahead log beside the database at `path`, as `SQLite` names it.
 fn log_of(path: &Path) -> PathBuf {
     let mut name = OsString::from(path.as_os_str());
     name.push("-wal");

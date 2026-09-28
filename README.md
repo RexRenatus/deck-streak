@@ -14,6 +14,7 @@ stay quiet.
 - [Install](#install)
 - [Usage](#usage)
 - [Documentation](#documentation)
+- [Privacy](#privacy)
 - [Support](#support)
 - [Contributing](#contributing)
 - [Source code](#source-code)
@@ -64,6 +65,12 @@ sync server; it does not log in to AnkiWeb.
 - [docs/decisions/](docs/decisions/): every architecture decision and what it was chosen against.
 - [AGENTS.md](AGENTS.md) and [CLAUDE.md](CLAUDE.md): instructions for AI coding agents.
 - [docs/README.md](docs/README.md): the documentation index.
+
+## Privacy
+
+DeckStreak keeps what it needs to score its owner's study. [PRIVACY.md](PRIVACY.md) says what that
+is: each kind of data, why it is kept, on which lawful basis and for how long, how the owner
+exports or erases it, and what an erase does not reach.
 
 ## Support
 

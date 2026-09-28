@@ -66,12 +66,12 @@ fn root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")
 }
 
-/// An identifier, quoted for SQLite.
+/// An identifier, quoted for `SQLite`.
 fn quoted(identifier: &str) -> String {
     format!("\"{}\"", identifier.replace('"', "\"\""))
 }
 
-/// Every table of the database's schema but SQLite's own, by name.
+/// Every table of the database's schema but `SQLite`'s own, by name.
 async fn schema_tables(db: &Db) -> Vec<String> {
     sqlx::query_scalar(
         "SELECT name FROM sqlite_master WHERE type = 'table' \
@@ -464,7 +464,7 @@ fn judge(inventory: &Value, declarations: &[Declaration]) -> Vec<String> {
             None => refused.push(format!("{table} is named by no category")),
             Some([category]) => {
                 let id = category["id"].as_str().unwrap_or("?");
-                if category["erase"] != Value::from(*mode) {
+                if category["erase"] != *mode {
                     refused.push(format!(
                         "{table}'s category {id} erases it by {}, and its port by {mode}",
                         category["erase"]
@@ -521,7 +521,7 @@ fn privacy_json_names_every_table_the_ports_export_or_erase() {
         .to_owned();
     let mut forgotten = inventory.clone();
     if let Some(categories) = forgotten["categories"].as_array_mut() {
-        categories.retain(|category| category["id"] != Value::from(id.as_str()));
+        categories.retain(|category| category["id"] != id.as_str());
     }
     assert_eq!(
         judge(&forgotten, &declarations),
@@ -535,7 +535,7 @@ fn privacy_json_names_every_table_the_ports_export_or_erase() {
     let mut mismatched = inventory.clone();
     if let Some(categories) = mismatched["categories"].as_array_mut() {
         for category in categories.iter_mut() {
-            if category["id"] == Value::from(id.as_str()) {
+            if category["id"] == id.as_str() {
                 category["erase"] = Value::from(other);
             }
         }

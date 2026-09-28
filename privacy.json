@@ -11,6 +11,28 @@
       "retention": {"until": "account-deletion"},
       "export": true,
       "erase": "delete"
+    },
+    {
+      "id": "ingest-state",
+      "data": "what the last recompute of the owner's reviews saw (the newest review's id, the card count and its fingerprint, the study day, when it ran and the settings generation it read), whether the owner asked for a rescore, and the base of the review window",
+      "source": "derived",
+      "stores": ["ingest_state.*"],
+      "purpose": "recomputing the owner's scores only when their collection or their settings changed",
+      "lawful_basis": "contract",
+      "retention": {"until": "account-deletion"},
+      "export": true,
+      "erase": "anonymise"
+    },
+    {
+      "id": "service-counters",
+      "data": "the settings generation: one counter of how many times the owner's settings changed",
+      "source": "derived",
+      "stores": ["settings_generation.*"],
+      "purpose": "telling the recompute that a setting changed",
+      "lawful_basis": "contract",
+      "retention": {"until": "account-deletion"},
+      "export": true,
+      "erase": "anonymise"
     }
   ],
   "sql": ["migrations/*.sql"],
@@ -24,6 +46,20 @@
     "entry": [
       {"file": "README.md", "text": "PRIVACY.md"},
       {"file": "web/app/src/routes/about/+page.svelte", "text": "PRIVACY.md"}
+    ]
+  },
+  "public": {
+    "allow": [
+      "@tty1.service",
+      "@nightly.timer",
+      "@web.socket",
+      "@inbox.path",
+      "@usb1.mount",
+      "@alpha.target",
+      "@alpha.slice",
+      "@c2.scope",
+      "v1.2.3.4",
+      "fences[1::2]"
     ]
   }
 }

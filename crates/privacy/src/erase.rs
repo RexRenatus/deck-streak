@@ -1,11 +1,26 @@
 //! The erase: every port's erase in one transaction, and nothing an erased row held left in the
 //! database's file or its write-ahead log (SPEC-021 R3; CHARTER 13;
 //! `docs/schematics/data-rights-export-and-erase.md`).
+//!
+//! The erase runs in ONE `BEGIN IMMEDIATE` transaction ([`Db::write`]) on a connection with
+//! `secure_delete` on, so every page a delete frees is written back zeroed. Every port erases in it,
+//! and then every port's own export is read in it and checked against the port's declaration: each
+//! table the port exports is empty, and each singleton holds exactly its one row with its declared
+//! reset values. Only then does the transaction commit. A port that fails, or leaves a table as its
+//! declaration forbids, drops the transaction, and every port's work rolls back with it. After the
+//! commit, `VACUUM` rebuilds the file from the rows that remain and `PRAGMA
+//! wal_checkpoint(TRUNCATE)` copies the rebuilt pages over the file and empties the log, so neither
+//! holds an erased value.
+//!
+//! The connection keeps `secure_delete` on after the erase returns it to the pool, so every later
+//! delete on it also zeroes what it frees.
 
-use deck_streak_kernel::{DataRights, Db, KernelError};
-use sqlx::AssertSqlSafe;
+use std::collections::BTreeMap;
 
-use crate::PrivacyError;
+use deck_streak_kernel::{DataRights, Db, Declaration, Disposition, KernelError};
+use serde_json::Value;
+
+use crate::{PrivacyError, declarations, exported};
 
 /// What an erase did, table by table, in the ports' order.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -16,50 +31,103 @@ pub struct Erasure {
     pub reset: Vec<&'static str>,
     /// The exempt tables, left as they were.
     pub kept: Vec<&'static str>,
-    /// Whether the checkpoint after the erase met a reader, which held the write-ahead log.
+    /// Whether the checkpoint after the erase met a reader, which held the write-ahead log: its
+    /// older frames then remain until the next checkpoint truncates it.
     pub checkpoint_busy: bool,
 }
 
-/// Erases every table `ports` declare exported or reset, then compacts the database.
+/// Erases every table `ports` declare exported or reset, in one transaction, then compacts the
+/// database.
 ///
 /// # Errors
 ///
-/// Every refusal of [`PrivacyError`].
+/// Every refusal of [`PrivacyError`]. [`PrivacyError::Compaction`] alone means the erase
+/// committed; every other refusal means nothing was erased.
 pub async fn erase(db: &Db, ports: &[&dyn DataRights]) -> Result<Erasure, PrivacyError> {
     let mut erasure = erase_rows(db, ports).await?;
     erasure.checkpoint_busy = compact(db).await.map_err(PrivacyError::Compaction)?;
     Ok(erasure)
 }
 
-/// This first erase runs each port's erase and then empties every table the port declares, one
-/// transaction per port.
+/// Runs every port's erase in one `BEGIN IMMEDIATE` transaction with `secure_delete` on, checks
+/// what each left against its declaration, and commits.
 async fn erase_rows(db: &Db, ports: &[&dyn DataRights]) -> Result<Erasure, PrivacyError> {
-    for port in ports {
-        let declaration = port.declaration()?;
-        let mut write = db.write().await.map_err(PrivacyError::Database)?;
+    let declarations = declarations(ports)?;
+    let database = |error: sqlx::Error| PrivacyError::Database(error.into());
+    let mut write = db.write().await.map_err(PrivacyError::Database)?;
+    let secure: i64 = sqlx::query_scalar("PRAGMA secure_delete = ON")
+        .fetch_one(&mut *write)
+        .await
+        .map_err(database)?;
+    if secure != 1 {
+        return Err(PrivacyError::SecureDeleteOff);
+    }
+    for (port, declaration) in ports.iter().zip(&declarations) {
         port.erase(&mut write)
             .await
             .map_err(|source| PrivacyError::Port {
                 context: declaration.context(),
                 source,
             })?;
-        for rights in declaration.tables() {
-            sqlx::query(AssertSqlSafe(format!("DELETE FROM \"{}\"", rights.table)))
-                .execute(&mut *write)
-                .await
-                .map_err(|error| PrivacyError::Database(error.into()))?;
-        }
-        write
-            .commit()
-            .await
-            .map_err(|error| PrivacyError::Database(error.into()))?;
     }
-    Ok(Erasure::default())
+    let mut erasure = Erasure::default();
+    for (port, declaration) in ports.iter().zip(&declarations) {
+        let tables = port
+            .export(&mut write)
+            .await
+            .map_err(|source| PrivacyError::Port {
+                context: declaration.context(),
+                source,
+            })?;
+        check(declaration, &exported(declaration, tables)?, &mut erasure)?;
+    }
+    write.commit().await.map_err(database)?;
+    Ok(erasure)
 }
 
-/// This first compaction does nothing, and reports no reader.
-async fn compact(_db: &Db) -> Result<bool, KernelError> {
-    Ok(false)
+/// Checks what a port's erase left, `after` being its export inside the erase's transaction: every
+/// table it exports is empty, and every singleton holds exactly one row carrying its reset values.
+/// Each table is added to `erasure` under what was done to it.
+fn check(
+    declaration: &Declaration,
+    after: &BTreeMap<&'static str, Vec<Value>>,
+    erasure: &mut Erasure,
+) -> Result<(), PrivacyError> {
+    for rights in declaration.tables() {
+        let rows = after.get(rights.table).map_or(&[][..], Vec::as_slice);
+        let done = match &rights.disposition {
+            Disposition::ExportAndErase => rows.is_empty().then_some(&mut erasure.emptied),
+            Disposition::ResetInPlace { row } => match rows {
+                [only] => row
+                    .iter()
+                    .all(|(column, value)| only.get(column) == Some(value))
+                    .then_some(&mut erasure.reset),
+                _ => None,
+            },
+            Disposition::Exempt { .. } => Some(&mut erasure.kept),
+        };
+        let Some(list) = done else {
+            return Err(PrivacyError::EraseIncomplete {
+                context: declaration.context(),
+                table: rights.table,
+            });
+        };
+        list.push(rights.table);
+    }
+    Ok(())
+}
+
+/// Rebuilds the database's file from the rows that remain, then copies the rebuilt pages over the
+/// file and empties the write-ahead log. Returns whether the checkpoint met a reader, which holds
+/// the log's older frames until the next checkpoint; that is not an error.
+async fn compact(db: &Db) -> Result<bool, KernelError> {
+    // Outside any transaction: neither statement can run inside one.
+    sqlx::query("VACUUM").execute(db.reader()).await?;
+    let (busy, _log_frames, _checkpointed): (i64, i64, i64) =
+        sqlx::query_as("PRAGMA wal_checkpoint(TRUNCATE)")
+            .fetch_one(db.reader())
+            .await?;
+    Ok(busy != 0)
 }
 
 #[cfg(test)]
@@ -122,7 +190,7 @@ mod tests {
         }
     }
 
-    /// The write-ahead log beside the database at `path`, as SQLite names it.
+    /// The write-ahead log beside the database at `path`, as `SQLite` names it.
     fn log_of(path: &Path) -> PathBuf {
         let mut name = OsString::from(path.as_os_str());
         name.push("-wal");

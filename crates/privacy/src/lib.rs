@@ -25,7 +25,10 @@ pub mod export;
 use std::collections::BTreeMap;
 use std::fmt;
 
-use deck_streak_kernel::{DataRights, DataRightsError, Declaration, KernelError};
+use deck_streak_kernel::{
+    DataRights, DataRightsError, Declaration, Disposition, ExportedTable, KernelError,
+};
+use serde_json::Value;
 
 pub use erase::{Erasure, erase};
 pub use export::{EXPORT_SCHEMA, Export, SCHEMA_KEY, export};
@@ -87,7 +90,7 @@ pub enum PrivacyError {
         #[source]
         source: KernelError,
     },
-    /// SQLite did not turn `secure_delete` on, so the erase stopped before it deleted anything.
+    /// `SQLite` did not turn `secure_delete` on, so the erase stopped before it deleted anything.
     #[error("the database did not turn secure_delete on, so nothing was erased")]
     SecureDeleteOff,
     /// The database refused one of the engine's own statements before an erase committed (its
@@ -152,4 +155,47 @@ pub fn declarations(ports: &[&dyn DataRights]) -> Result<Vec<Declaration>, Priva
         found.push(declaration);
     }
     Ok(found)
+}
+
+/// Whether an export carries a table of this disposition: every one but an exempt one.
+const fn is_exported(disposition: &Disposition) -> bool {
+    !matches!(disposition, Disposition::Exempt { .. })
+}
+
+/// The rows of every table `declaration` exports or resets, from its port's export `tables`.
+///
+/// # Errors
+///
+/// [`PrivacyError::ExportMismatch`] when the export returned a table the declaration does not
+/// export, returned one twice, or left one out.
+fn exported(
+    declaration: &Declaration,
+    tables: Vec<ExportedTable>,
+) -> Result<BTreeMap<&'static str, Vec<Value>>, PrivacyError> {
+    let context = declaration.context();
+    let mismatch = |table, problem| PrivacyError::ExportMismatch {
+        context,
+        table,
+        problem,
+    };
+    let mut found = BTreeMap::new();
+    for table in tables {
+        if !declaration
+            .disposition(table.table)
+            .is_some_and(is_exported)
+        {
+            return Err(mismatch(table.table, ExportProblem::Undeclared));
+        }
+        if found.insert(table.table, table.rows).is_some() {
+            return Err(mismatch(table.table, ExportProblem::Twice));
+        }
+    }
+    let omitted = declaration
+        .tables()
+        .iter()
+        .find(|rights| is_exported(&rights.disposition) && !found.contains_key(rights.table));
+    match omitted {
+        Some(rights) => Err(mismatch(rights.table, ExportProblem::Omitted)),
+        None => Ok(found),
+    }
 }

@@ -5,8 +5,13 @@
 //! output: the one line there that does not open with a journal priority, and on success the only
 //! line the role writes, so a copy redirected to a file is the document alone.
 //! `deckstreakd data erase --confirm ERASE` erases every context's tables through coordination's
-//! registry and logs what it did. Like every role it reads the kernel's settings and the state
-//! directory, and opens the database under the open lock.
+//! registry and logs what it did; any other form of the erase is refused by the binary with the
+//! usage line and code 2, before the database is opened. Like every role it reads the kernel's
+//! settings and the state directory, and opens the database under the open lock.
+//!
+//! The role is the owner's own act on the host: only a shell on the host, as the service's user,
+//! reaches the database it opens. The bot's `/export` and `/delete` reach the same use cases behind
+//! the owner gate (SPEC-024, SPEC-026).
 
 use std::ffi::OsString;
 use std::io::{self, Write};
@@ -32,11 +37,17 @@ pub enum DataCommand {
 }
 
 impl DataCommand {
-    /// The command the arguments after `data` name.
+    /// The command the arguments after `data` name: `export` alone, or `erase --confirm ERASE`
+    /// exactly. Any other erase names none, so the binary refuses it with the usage line and code 2
+    /// before it opens the database.
     pub fn from_arguments(arguments: &[OsString]) -> Option<Self> {
         match arguments {
             [verb] if verb == "export" => Some(Self::Export),
-            [verb, ..] if verb == "erase" => Some(Self::Erase),
+            [verb, flag, word]
+                if verb == "erase" && flag == "--confirm" && word == CONFIRMATION =>
+            {
+                Some(Self::Erase)
+            }
             _ => None,
         }
     }

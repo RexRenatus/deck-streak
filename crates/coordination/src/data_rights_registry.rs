@@ -9,15 +9,21 @@ use deck_streak_ingest::data_rights::IngestDataRights;
 use deck_streak_kernel::{DataRights, Db, KernelDataRights};
 use deck_streak_privacy::{Erasure, Export, PrivacyError};
 
+use crate::data_rights::CoordinationDataRights;
+
 /// The kernel's port: the settings generation reset in place, the schema version table exempt.
 static KERNEL: KernelDataRights = KernelDataRights;
 /// Ingest's port: the sync record exported and erased, its state reset in place.
 static INGEST: IngestDataRights = IngestDataRights;
+/// Coordination's own port: the cron-fire ledger exempt.
+static COORDINATION: CoordinationDataRights = CoordinationDataRights;
 
-/// Every stateful context's port, in the order an erase runs them.
+/// Every stateful context's port, in the order an erase runs them. At W0 the stateful contexts are
+/// the kernel, ingest and coordination; identity keeps its sessions in memory (ADR-024), so it has
+/// no table and no port.
 #[must_use]
 pub fn ports() -> Vec<&'static dyn DataRights> {
-    vec![&KERNEL, &INGEST]
+    vec![&KERNEL, &INGEST, &COORDINATION]
 }
 
 /// The owner's export: every table a port exports or resets, as one JSON document
