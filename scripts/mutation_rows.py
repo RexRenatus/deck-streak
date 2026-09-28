@@ -90,7 +90,7 @@ LIBTEST_RUNNING = re.compile(r"(?m)^running (\d+) tests?$")
 LIBTEST_IGNORED = re.compile(r"(?m)^test result: \w+\. \d+ passed; \d+ failed; ([1-9]\d*) ignored")
 UNITTEST_RAN = re.compile(r"(?m)^Ran (\d+) tests? in ")
 UNITTEST_SKIPPED = re.compile(r"(?m)^OK \(skipped=([1-9]\d*)\)$")
-#: A cargo build may wait for a machine's build slot; a killer's test runs under its own bound.
+#: A cargo build may wait on a busy machine; a killer's test runs under its own bound.
 BUILD_SECONDS = 3600
 TEST_SECONDS = 900
 

@@ -21,7 +21,8 @@ front end and a Python parity oracle, on GitHub-hosted runners (SPEC-039)?
 - A verdict read from the tool's own report, never from an exit code alone, because each tool
   measured here exits 0 having examined nothing (SPEC-039 §1).
 - The cost of Anki's engine: a cold build of `ingest` is about 5 minutes and 15 to 18 GB.
-- The box's limits: two cargo slots, and a disk that must stay above 25 GB.
+- A local run's cost: a copy of the tree pays a cold build of the engine and its disk each time,
+  where a targeted, in-place run reuses what the gate already built.
 - One reader for the rows, and the vendored pack's own classes able to judge them.
 - A pull request never saves a cache, and nothing reaches an issue unscrubbed.
 
