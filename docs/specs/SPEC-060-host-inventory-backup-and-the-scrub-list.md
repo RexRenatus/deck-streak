@@ -134,6 +134,7 @@ only.
 | `deploy/host-scrub/apply.py` | deploy | added: the approval-gated delete |
 | `deploy/host-scrub/rules.example.json` | deploy | added: neutral example rules and protected paths |
 | `docs/runbooks/host-scrub.md` | docs | added: the runbook, inventory to apply, and the rollback |
+| `docs/schematics/host-scrub.md` | docs | added at delivery: the tools' data flow and the apply's refusals (§8) |
 | `scripts/tests/test_host_scrub.py` | repo | added: A1 to A8 |
 | `docs/specs/SPEC-060-host-inventory-backup-and-the-scrub-list.md` | docs | moved from `docs/specs/planned/` |
 | `docs/decisions/ADR-060-the-host-scrub-is-a-runbook-and-approval-gated-tools-behind-a-disk-snapshot.md` | docs | changed: status accepted |
