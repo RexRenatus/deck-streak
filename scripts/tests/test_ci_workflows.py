@@ -486,8 +486,8 @@ def _mapping(lines, at, indent, refused):
                 at += 1
             while body and not body[-1].strip(" \t"):
                 body.pop()
-            width = min(_indent(line) for line in body if line.strip(" \t"))
-            found[key] = "\n".join(line[width:] for line in body) + "\n"
+            width = min((_indent(line) for line in body if line.strip(" \t")), default=0)
+            found[key] = "".join(line[width:] + "\n" for line in body)
         elif not rest or rest.startswith("#"):
             child = _skip(lines, at + 1)
             if child < len(lines) and _indent(lines[child]) > indent:
@@ -1459,13 +1459,18 @@ def secret_and_checkout_problems(directory):
                 judged["expressions"].append((f"{path.name}:{where}", expression))
                 problems += [f"{path.name}:{where}: {read}" for read in secret_reads(expression)]
         for job_id, job in (workflow.get("jobs") or {}).items():
-            job = job or {}
+            # A job or step that is not a mapping is not judged: the reader has named its line, or
+            # GitHub refuses the workflow.
+            if not isinstance(job, dict):
+                continue
             if job.get("secrets") == "inherit":
                 problems.append(
                     f"{path.name}:jobs.{job_id}.secrets: passes every secret to the workflow it "
                     "calls"
                 )
             for n, step in enumerate(job.get("steps") or []):
+                if not isinstance(step, dict):
+                    continue
                 where = f"{path.name}:jobs.{job_id}.steps[{n}]"
                 # GitHub reads an action's owner and name in any case.
                 if action(step).lower() == "actions/checkout":
