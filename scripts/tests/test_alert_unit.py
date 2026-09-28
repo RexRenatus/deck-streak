@@ -20,7 +20,6 @@ import tempfile
 import unittest
 from pathlib import Path
 
-import _units
 from _support import REPO, examined
 
 SYSTEMD = REPO / "deploy" / "systemd"
@@ -31,6 +30,18 @@ OWNER_SOURCE = REPO / "crates" / "identity" / "src" / "owner.rs"
 ALERT_TEMPLATE = "deck-streak-alert@.service"
 ON_FAILURE = "deck-streak-alert@%n.service"
 SENDMESSAGE = "https://api.telegram.org/bot{token}/sendMessage"
+# The prefixes systemd reads before an ExecStart= path; `-` counts a failure as a success
+# (systemd.service(5)).
+EXEC_PREFIX = re.compile(r"[-@:+!|]*")
+# What the alert template's refusals say each directive breaks (SPEC-066 R3).
+PAGES = "is named, and a page that fails must not start a page about the page"
+ONE_START = "where the template runs its script once"
+COUNTS_A_FAILURE = "counts a failure as a success"
+SKIPS = "can skip the start, which leaves the instance inactive, not failed"
+NAMED = "is named, and the alert template names none"
+DIRECT = "skips the failed state on a restart"
+RESTARTS = "restarts the refusal"
+UNLOADS = "can unload the failed instance, which systemctl --failed then no longer lists"
 
 # Synthetic values: a token of the Bot API's shape whose id has seven digits, never the public
 # scrub's shape; the scrub's own placeholder id for the owner; and another for any credential the
@@ -115,17 +126,6 @@ def unit_file(path):
 
 def values(unit, section, key):
     return unit.get(section, {}).get(key, [])
-
-
-def reading_one(assignments):
-    """Each word of `assignments` that systemd reads as the refusal's exit, 1, in any spelling:
-    FAILURE, 01, 0x1, +1, 0b1 (SPEC-066 R3; `_units.exit_status`)."""
-    return [
-        word
-        for value in assignments
-        for word in _units.status_words(value)
-        if _units.exit_status(word) == 1
-    ]
 
 
 def identity_ids():
@@ -317,6 +317,59 @@ def timer_target(path, services):
         return target
     prefix, at, _ = target.partition("@")
     return f"{prefix}@.service" if at else target
+
+
+def alert_template_refusals(path):
+    """Why the alert template at `path` would not stay failed when its script refuses a credential
+    (SPEC-066 R3), one line each, and none for a template that stays failed. It names no
+    `OnFailure=`, since a page that fails must not start a page about the page (SPEC-031). It
+    counts no refusal a success: one `ExecStart=`, with no `-` prefix; no `ExecCondition=`, since
+    one that exits 1 to 254 skips the start and leaves the instance inactive, not failed; no
+    `SuccessExitStatus=` at all; and no `RestartMode=direct`, which skips the failed state on a
+    restart. It restarts none: no `Restart=` other than `no`, and no `RestartForceExitStatus=` at
+    all. And it is never unloaded while failed: no `CollectMode=` other than `inactive`
+    (systemd.service(5), systemd.unit(5))."""
+    name = Path(path).name
+    template = unit_file(path)
+    refused = []
+
+    def refuse(why):
+        refused.append(f"{name}: {why}")
+
+    for target in values(template, "Unit", "OnFailure"):
+        refuse(f"OnFailure={target} {PAGES}")
+    starts = values(template, "Service", "ExecStart")
+    if len(starts) != 1:
+        refuse(f"{len(starts)} ExecStart= lines, {ONE_START}")
+    for start in starts:
+        if "-" in EXEC_PREFIX.match(start).group(0):
+            refuse(f"ExecStart={start} {COUNTS_A_FAILURE}")
+    for command in values(template, "Service", "ExecCondition"):
+        refuse(f"ExecCondition={command} {SKIPS}")
+    for key in ("SuccessExitStatus", "RestartForceExitStatus"):
+        for statuses in values(template, "Service", key):
+            refuse(f"{key}={statuses} {NAMED}")
+    for mode in values(template, "Service", "RestartMode"):
+        if mode.strip() == "direct":
+            refuse(f"RestartMode={mode} {DIRECT}")
+    for restart in values(template, "Service", "Restart"):
+        if restart != "no":
+            refuse(f"Restart={restart} {RESTARTS}")
+    for mode in values(template, "Unit", "CollectMode"):
+        if mode != "inactive":
+            refuse(f"CollectMode={mode} {UNLOADS}")
+    return refused
+
+
+def planted_template(scratch, anchor, line, keep):
+    """The alert template written into `scratch` with `line` after its one line that starts
+    `anchor`, or in its place when `keep` is false."""
+    lines = (SYSTEMD / ALERT_TEMPLATE).read_bytes().decode("utf-8").split("\n")
+    (at,) = [number for number, text in enumerate(lines) if text.startswith(anchor)]
+    lines[at : at + 1] = [lines[at], line] if keep else [line]
+    path = scratch / ALERT_TEMPLATE
+    path.write_bytes("\n".join(lines).encode("utf-8"))
+    return path
 
 
 class TheAlertScriptNamesTheFailure(unittest.TestCase):
@@ -513,37 +566,36 @@ class AnEmptyCredentialFailsTheAlertUnit(unittest.TestCase):
             for value in (TOKEN, OWNER):
                 self.assertNotIn(value, run.stdout + run.stderr, where)
         # The route is the failed instance: the template still names no OnFailure=, and a page
-        # about it is a second route's (#285).
+        # about it is a second route's (#285). It loads its two credentials, and nothing in it
+        # counts the refusal a success, restarts it or unloads the failed instance.
         template = unit_file(SYSTEMD / ALERT_TEMPLATE)
         self.assertEqual(values(template, "Unit", "OnFailure"), [])
         self.assertEqual(len(values(template, "Service", "LoadCredential")), 2)
-        # It counts no refusal a success, so the refusal leaves the instance failed: no `-` prefix
-        # on its one ExecStart=; no ExecCondition=, since one that exits 1 to 254 skips the start
-        # and leaves the instance inactive, not failed; and no SuccessExitStatus= at all, none
-        # holding a word systemd reads as 1 in any spelling and none named (systemd.service(5)).
+        self.assertEqual(alert_template_refusals(SYSTEMD / ALERT_TEMPLATE), [])
+        # Planted templates: the alert template with one line added after its ExecStart= or its
+        # Description=, or its ExecStart= given the `-` prefix, each refused for what it breaks.
         (start,) = values(template, "Service", "ExecStart")
-        self.assertNotIn("-", re.match(r"[-@:+!|]*", start).group(0), start)
-        self.assertEqual(values(template, "Service", "ExecCondition"), [])
-        statuses = values(template, "Service", "SuccessExitStatus")
-        self.assertEqual(reading_one(statuses), [], statuses)
-        self.assertEqual(statuses, [], "the alert template names no SuccessExitStatus=")
-        # And nothing moves the refused instance out of the failed state: no RestartMode=direct,
-        # which skips that state on a restart, and no restart at all, since a restart at the default
-        # mode only passes through it and waits for the next start activating: no Restart= other
-        # than `no`, and no RestartForceExitStatus= at all, none holding a word systemd reads as 1
-        # and none named: on its Type=oneshot the service manager refuses the unit outright, and on
-        # another type one naming 1 forces a restart whatever Restart= says (systemd.service(5)).
-        modes = [m.strip() for m in values(template, "Service", "RestartMode")]
-        self.assertNotIn("direct", modes, modes)
-        restarts = [r for r in values(template, "Service", "Restart") if r != "no"]
-        self.assertEqual(restarts, [], restarts)
-        forced = values(template, "Service", "RestartForceExitStatus")
-        self.assertEqual(reading_one(forced), [], forced)
-        self.assertEqual(forced, [], "the alert template names no RestartForceExitStatus=")
-        # Nor is the failed instance unloaded: no CollectMode= other than `inactive`, since
-        # `inactive-or-failed` drops it from systemctl --failed (systemd.unit(5)).
-        collected = [m for m in values(template, "Unit", "CollectMode") if m != "inactive"]
-        self.assertEqual(collected, [], collected)
+        name = ALERT_TEMPLATE
+        plants = [
+            ("ExecStart=", f"ExecStart=-{start}", False, f"ExecStart=-{start} {COUNTS_A_FAILURE}"),
+            ("ExecStart=", "ExecStart=/bin/true", True, f"2 ExecStart= lines, {ONE_START}"),
+            ("ExecStart=", "ExecCondition=/bin/true", True, f"ExecCondition=/bin/true {SKIPS}"),
+            ("ExecStart=", "SuccessExitStatus=2", True, f"SuccessExitStatus=2 {NAMED}"),
+            ("ExecStart=", "RestartForceExitStatus=2", True, f"RestartForceExitStatus=2 {NAMED}"),
+            ("ExecStart=", "RestartMode=direct", True, f"RestartMode=direct {DIRECT}"),
+            ("ExecStart=", "Restart=on-failure", True, f"Restart=on-failure {RESTARTS}"),
+            (
+                "Description=",
+                "CollectMode=inactive-or-failed",
+                True,
+                f"CollectMode=inactive-or-failed {UNLOADS}",
+            ),
+            ("Description=", f"OnFailure={ON_FAILURE}", True, f"OnFailure={ON_FAILURE} {PAGES}"),
+        ]
+        for anchor, line, keep, refusal in examined("planted alert template(s)", plants):
+            with tempfile.TemporaryDirectory() as scratch:
+                path = planted_template(Path(scratch), anchor, line, keep)
+                self.assertEqual(alert_template_refusals(path), [f"{name}: {refusal}"], line)
 
 
 if __name__ == "__main__":
