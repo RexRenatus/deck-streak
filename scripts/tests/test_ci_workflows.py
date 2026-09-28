@@ -1873,13 +1873,19 @@ def environment_problems(env, where):
 
 
 def container_problems(container, where):
-    """A job's container whose environment the checker cannot read: one `${{ }}` expression, or an
-    `env` that `environment_problems` refuses. The steps of a job with a container run inside it,
-    in its environment. A container named by its image alone sets no variable."""
+    """A job's container whose environment the checker cannot read: one `${{ }}` expression, an
+    `env` that `environment_problems` refuses, or `options` that are or hold a `${{ }}` expression,
+    which GitHub evaluates when the job runs and the runner passes whole to the container it
+    creates. The steps of a job with a container run inside it, in its environment. A container
+    named by its image alone sets no variable."""
     if container is None or (isinstance(container, str) and "${{" not in container):
         return []
     if isinstance(container, dict):
-        return environment_problems(container.get("env"), f"{where}.env")
+        problems = environment_problems(container.get("env"), f"{where}.env")
+        options = container.get("options")
+        if options is not None and "${{" in str(options):
+            problems.append(f"{where}.options: runs in a container the checker does not read")
+        return problems
     return [f"{where}: runs in a container the checker does not read"]
 
 
