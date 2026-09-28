@@ -1821,8 +1821,8 @@ def commands(script):
 
 
 def reaches(script):
-    """Each command of a run script that clones a repository or gives git a URL: a workflow reaches
-    this repository through actions/checkout and origin, and no other."""
+    """Each command of a run script, or of any other string, that clones a repository or gives git a
+    URL: a workflow reaches this repository through actions/checkout and origin, and no other."""
     found = []
     for command in commands(script):
         if CLONE.search(command):
@@ -1889,9 +1889,13 @@ def secret_and_checkout_problems(directory):
     clone or fetch of another repository in the workflows of `directory`, each named by its file
     and its place, with what was judged: (problems, {population: [...]}). Every step of a job is
     judged, a step inside a `parallel` block at any depth included, and a checkout whose inputs are
-    not a mapping is a problem, as `step_inputs` says. A form the reader does not read is a problem
-    named by its line, and the rest of that file is judged as read. A directory with no workflow
-    file is VOID, never a pass."""
+    not a mapping is a problem, as `step_inputs` says. A clone or a fetch is read in every string
+    the workflow holds, not only a run step's script. A shell that is not a built-in keyword, git
+    configured from the environment, and an environment the checker cannot read are problems too,
+    as `shell_problems`, `defaults_problems`, `environment_problems`, `container_problems` and
+    `git_variables` say. A form the reader does not read is a problem named by its line, and the
+    rest of that file is judged as read. A directory with no workflow file is VOID, never a
+    pass."""
     files = workflow_files(directory)
     problems = []
     judged = {"expressions": [], "checkouts": [], "run steps": []}
