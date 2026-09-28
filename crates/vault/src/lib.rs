@@ -12,8 +12,8 @@
 //! there declares, and a new edge is an ADR, never a fix to make code compile.
 //!
 //! SPEC-042 builds the core: the configured paths and the start check ([`config`]), the file-system
-//! port ([`fs`]), the atomic write ([`atomic`]), the content rails read from the vault-duties pack's
-//! vendored `rails.json` ([`rails`]), the reading note's text ([`note`]), the readings date tree
+//! port ([`fs`]), the atomic write ([`atomic`]), the content rails the crate keeps from the
+//! vault-duties pack's `rails.json` ([`rails`]), the reading note's text ([`note`]), the readings date tree
 //! ([`readings_tree`]) and the staged duty run's three-verb executor ([`staged`]). Every write
 //! passes the rails, stays inside its confined folder, never overwrites a note and never deletes a
 //! user file (ADR-042).

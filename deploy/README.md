@@ -122,11 +122,11 @@ instance as `<id>`, or build the name at run time, as the tests do.
 
 ## How the templates are judged
 
-- The durable-services pack's rows (`python3 scripts/pack-rows.py --pack durable-services`), and the
-  rust-service rows that read the units beside `deckstreakd`'s code.
+- The durable-services pack's rows, and the rust-service rows that read the units beside
+  `deckstreakd`'s code, both judged on the maintainer's box (ADR-069).
 - `scripts/tests/test_deploy_templates.py` and the job table's timer test (SPEC-032's acceptance
   criteria).
-- The observability rows (`python3 scripts/pack-rows.py --pack observability`), and SPEC-031's
+- The observability rows, judged on the maintainer's box (ADR-069), and SPEC-031's
   `test_slo_declaration.py`, `test_alert_unit.py`, `test_slo_evaluator.py` and
   `test_memory_watch.py`, which run the three scripts over synthetic credentials, journal and cgroups.
 - The public scrub over every file here.

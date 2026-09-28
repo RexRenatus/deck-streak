@@ -2,13 +2,13 @@
 and names no private value (SPEC-032; ADR-007, ADR-010, ADR-025, ADR-032, ADR-038), SPEC-031's
 alert, SLO evaluator and memory watch included (SPEC-031 R6; ADR-031).
 
-The units are read through the vendored durable lint's own parser, so the tests and the pack read
-a unit exactly the same way. Every enumerating test prints `examined N` and refuses zero, and every
+The units are read with `_units.py`, DeckStreak's own reader of systemd unit syntax; the
+durable-services pack judges the templates on the maintainer's box (ADR-069, SPEC-056). Every
+enumerating test prints `examined N` and refuses zero, and every
 absence it asserts is paired with a planted template it must refuse. No test writes a template
 instance name literally (SPEC-032 R10): each is built at run time from its template and its id.
 """
 
-import importlib.util
 import ipaddress
 import json
 import re
@@ -18,6 +18,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import _units
 from _support import REPO, examined
 
 DEPLOY = REPO / "deploy"
@@ -25,9 +26,7 @@ SYSTEMD = DEPLOY / "systemd"
 CADDY = DEPLOY / "caddy" / "deck-streak.caddy"
 BUDGET = DEPLOY / "host-budget.json"
 ENV_EXAMPLE = DEPLOY / "deck-streak.env.example"
-LINT = REPO / ".packs" / "scripts" / "durable-unit-lint.py"
 SCRUB = REPO / "scripts" / "public-scrub.py"
-WIRING = REPO / ".packs" / "wiring.json"
 ADR = REPO / "docs" / "decisions" / "ADR-032-deploy-templates-and-the-host-budget.md"
 
 # The one release binary every service runs, from the release root's `current` link (R2).
@@ -194,8 +193,13 @@ HEADERS = {
 # Referrer policies that never send a URL to another origin (web-security `ws.referrer-policy`).
 KEEPS_URLS = {"no-referrer", "same-origin", "strict-origin", "strict-origin-when-cross-origin"}
 ONE_YEAR = 31_536_000
-# Every advisory the templates depart from, by unit and reason, each waived with its why (R4).
-# SPEC-031's two timers catch up on nothing: each run reads the same rolling state a missed one would.
+
+
+# Every advisory departure the templates declare in their units, by unit and reason (SPEC-032 R4,
+# SPEC-056 R16): the job table places each job on its own minute and makes none a catch-up job
+# (ADR-027), and SPEC-031's two timers read rolling state that a missed run cannot lose. The box
+# run holds every departure the durable lint reports to one of these, or to an issue it waits on
+# (SPEC-056 R15).
 WAIVED = {
     (f"{JOB_TEMPLATE}@sync.timer", "randomized-delay-missing"),
     (f"{JOB_TEMPLATE}@maintenance.timer", "randomized-delay-missing"),
@@ -205,40 +209,11 @@ WAIVED = {
     ("deck-streak-slo.timer", "calendar-not-persistent"),
     ("deck-streak-memory-watch.timer", "calendar-not-persistent"),
 }
-# Every advisory whose subject waits on an open issue, by where the lint reports it and its reason:
-# SPEC-021's Litestream template is committed before the unit that runs `litestream replicate`,
-# which the backups issue builds with the daily backup and the restore drill (#44). Each must still
-# fire, so an entry that outlives its reason fails rather than passes. SPEC-021's journald drop-in
-# sets `SystemMaxUse=`, so the journal's size cap no longer departs from its advisory.
-WAITING = {("deploy", "litestream-unit-missing"): "#44"}
-
-
-def load_lint():
-    """The vendored durable lint as a module, registered before it runs, because its dataclasses
-    resolve their annotations through `sys.modules`."""
-    if "durable_unit_lint" in sys.modules:
-        return sys.modules["durable_unit_lint"]
-    spec = importlib.util.spec_from_file_location("durable_unit_lint", LINT)
-    module = importlib.util.module_from_spec(spec)
-    sys.modules["durable_unit_lint"] = module
-    spec.loader.exec_module(module)
-    return module
-
-
-def lint_json(root, *args):
-    """The durable lint's JSON report over `root`, and its exit."""
-    done = subprocess.run(
-        [sys.executable, str(LINT), *args, "--root", str(root), "--format", "json"],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    return json.loads(done.stdout), done.returncode
 
 
 def subject(root=REPO):
     """Every unit under `root`'s deploy/, parsed as systemd reads it."""
-    return load_lint().load_subject(Path(root))
+    return _units.load_subject(Path(root))
 
 
 def services(root=REPO):
@@ -256,7 +231,7 @@ def last(unit, section, key):
 
 def size(text):
     """A systemd byte size such as 128M, in bytes."""
-    found = load_lint().size_bytes(text)
+    found = _units.size_bytes(text)
     if found is None:
         raise AssertionError(f"{text!r} is not a byte size")
     return found
@@ -299,7 +274,7 @@ def declared_settings():
 
 def env_example():
     """The committed example's active `KEY=VALUE` lines, as (line, key, value)."""
-    return load_lint().env_assignments(ENV_EXAMPLE)
+    return _units.env_assignments(ENV_EXAMPLE)
 
 
 def credential_lines(root):
@@ -333,12 +308,11 @@ def socket_form_refusals(lines, ids):
 
 def environment_refusals(unit, ids):
     """Every way `unit` passes a secret through its environment."""
-    lint = load_lint()
     refused = []
     for value in unit.values("Service", "Environment") + unit.values("Service", "PassEnvironment"):
         for word in value.split():
             variable = word.partition("=")[0].strip("\"'")
-            if lint.SECRET_NAME.search(variable) or variable.lower().replace("_", "-") in ids:
+            if _units.SECRET_NAME.search(variable) or variable.lower().replace("_", "-") in ids:
                 refused.append(f"{unit.rel}: {variable} passes a secret through the environment")
     return refused
 
@@ -487,54 +461,36 @@ def scrub(*subjects):
     )
 
 
-class TheTemplatesPassTheDurableLint(unittest.TestCase):
-    def test_the_durable_lint_finds_no_blocking_defect_in_the_templates(self):
-        files = examined(
-            "unit file(s) under deploy/",
-            [p for p in DEPLOY.rglob("*") if p.suffix in (".service", ".timer", ".slice")],
-        )
-        report, _ = lint_json(REPO, "lint")
-        self.assertEqual(report["examined"]["units"], len(files), report["examined"])
-        wiring = json.loads(WIRING.read_text(encoding="utf-8"))["packs"]["durable-services"]
-        deferred = wiring.get("deferred_rows", {})
-        blocking = examined(
-            "blocking check(s)", [c for c in report["checks"] if c["severity"] == "blocking"]
-        )
-        refused = {
-            check["id"]: check["findings"]
-            for check in blocking
-            if check["verdict"] != "pass" and check["id"] not in deferred
-        }
-        self.assertEqual(refused, {}, "the durable lint refused the templates")
-        # Only the rows whose subject the backups issue builds wait, and the pack is enforced (R8).
-        self.assertEqual(
-            deferred,
-            {"backup.copies": "#44", "backup.offsite": "#44", "backup.restore-drill": "#44"},
-        )
-        self.assertEqual(wiring["state"], "enforced")
+def declared_waivers(root=REPO):
+    """Every waiver the units under `root`'s deploy/ declare: (unit, reason) to its why."""
+    declared = {}
+    for unit in subject(root).units.values():
+        for reason, why in _units.waivers(unit):
+            declared[(unit.name, reason)] = why
+    return declared
 
-    def test_every_departure_from_an_advisory_is_waived_with_its_why(self):
-        report, _ = lint_json(REPO, "lint")
-        advisories = examined(
-            "advisory check(s)", [c for c in report["checks"] if c["severity"] == "advisory"]
-        )
-        unwaived = {
-            (finding["unit"], check["reason"])
-            for check in advisories
-            for finding in check["findings"]
-        }
-        self.assertEqual(
-            unwaived, set(WAITING), "an advisory departure is neither waived nor waiting"
-        )
-        waived = {
-            (Path(item["unit"]).name, check["reason"])
-            for check in advisories
-            for item in check["waived"]
-        }
-        self.assertEqual(waived, WAIVED)
-        for check in advisories:
-            for item in check["waived"]:
-                self.assertGreater(len(item["why"].split()), 5, f"{item['unit']}: a thin why")
+
+class EveryAdvisoryDepartureIsWaivedInItsUnit(unittest.TestCase):
+    def test_every_advisory_waiver_is_pinned_with_its_why(self):
+        # The reader finds a planted waiver, and drops neither its reason nor its why.
+        with tempfile.TemporaryDirectory() as scratch:
+            planted = Path(scratch) / "deploy" / "systemd"
+            planted.mkdir(parents=True)
+            (planted / "planted.timer").write_text(
+                "[Unit]\nDescription=planted\n"
+                "X-DurableServices-Waive=calendar-not-persistent a planted why of six words\n"
+                "[Timer]\nOnCalendar=daily\n",
+                encoding="utf-8",
+            )
+            self.assertEqual(
+                declared_waivers(scratch),
+                {("planted.timer", "calendar-not-persistent"): "a planted why of six words"},
+            )
+        # Every waiver the templates declare is pinned, and each gives more than five words of why.
+        declared = declared_waivers()
+        for (unit, reason), why in examined("declared waiver(s)", sorted(declared.items())):
+            self.assertGreater(len(why.split()), 5, f"{unit}: {reason}: a thin why")
+        self.assertEqual(set(declared), WAIVED)
 
 
 class TheTemplatesFitTheHostBudget(unittest.TestCase):
@@ -554,7 +510,6 @@ class TheTemplatesFitTheHostBudget(unittest.TestCase):
             )
 
     def test_the_daemons_and_the_largest_job_fit_the_stack_share(self):
-        lint = load_lint()
         units = services()
         share = budget()["memory"]
         self.assertIn(f'"memory": "{share}"', ADR.read_text(encoding="utf-8"), "ADR-032's share")
@@ -565,8 +520,8 @@ class TheTemplatesFitTheHostBudget(unittest.TestCase):
                 value, f"{unit.rel} has no MemoryMax, so it cannot be shown to fit"
             )
             ceilings[unit.name] = size(value)
-        daemons = [u.name for u in units if lint.long_running(u)]
-        oneshots = [u.name for u in units if not lint.long_running(u)]
+        daemons = [u.name for u in units if _units.long_running(u)]
+        oneshots = [u.name for u in units if not _units.long_running(u)]
         self.assertEqual(daemons, ["deck-streak-api.service", "deck-streak-bot.service"])
         self.assertEqual(
             oneshots,
@@ -581,8 +536,6 @@ class TheTemplatesFitTheHostBudget(unittest.TestCase):
             int(last(u, "Service", "CPUQuota").rstrip("%")) for u in units if u.name in daemons
         ]
         self.assertLessEqual(sum(quotas), 100 * budget()["cpus"], quotas)
-        report, code = lint_json(REPO, "check", "--id", "resources.budget")
-        self.assertEqual((code, report["checks"][0]["verdict"]), (0, "pass"), report["checks"])
 
 
 class TheCaddyBlock(unittest.TestCase):
@@ -680,10 +633,9 @@ class NoSecretInTheEnvironment(unittest.TestCase):
         # The one settings file every service reads names no secret, only settings a role reads.
         settings = examined("setting(s) in the committed example", env_example())
         declared = declared_settings()
-        lint = load_lint()
         for number, key, value in settings:
             where = f"{ENV_EXAMPLE.relative_to(REPO)}:{number}"
-            self.assertIsNone(lint.SECRET_NAME.search(key), f"{where}: {key} names a secret")
+            self.assertIsNone(_units.SECRET_NAME.search(key), f"{where}: {key} names a secret")
             self.assertNotIn(key, SYSTEMD_SETS, f"{where}: systemd sets {key}")
             self.assertIn(key, declared | {"RUST_LOG"}, f"{where}: no role reads {key}")
         self.assertLessEqual(set(REQUIRED_SETTINGS), {key for _, key, _ in settings})
@@ -694,10 +646,7 @@ class NoSecretInTheEnvironment(unittest.TestCase):
             loaded = {value.partition(":")[0] for value in unit.values("Service", "LoadCredential")}
             wanted = {ids[constant] for constant in ROLE_CREDENTIALS[unit.name]}
             self.assertEqual(loaded, wanted, f"{unit.rel}: the credentials its role reads")
-        # The pack's secrets rows agree, and refuse a planted unit that passes the bot token.
-        for row in ("secrets.environment-literal", "secrets.env-file", "secrets.credentials"):
-            report, code = lint_json(REPO, "check", "--id", row)
-            self.assertEqual(code, 0, report["checks"])
+        # A planted unit that passes the bot token through its environment is refused.
         with tempfile.TemporaryDirectory() as scratch:
             planted = Path(scratch) / "deploy" / "systemd" / "planted.service"
             planted.parent.mkdir(parents=True)
@@ -706,9 +655,7 @@ class NoSecretInTheEnvironment(unittest.TestCase):
                 "[Unit]\nDescription=planted\n\n[Service]\nExecStart=/bin/true\n"
                 f"Environment=DECKSTREAK_BOT_TOKEN={token}\n"
             )
-            report, code = lint_json(scratch, "check", "--id", "secrets.environment-literal")
             planted_units = subject(scratch).services
-        self.assertEqual(code, 1, report["checks"])
         self.assertEqual(
             [environment_refusals(u, set(ids.values())) for u in planted_units],
             [

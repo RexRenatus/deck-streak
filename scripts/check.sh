@@ -5,21 +5,30 @@
 #   bash scripts/check.sh fmt clippy only the named stages
 #
 # Every stage runs even when an earlier one failed, so one run names every red. Each stage writes
-# its full output to a log under $CHECK_LOG_DIR (a fresh temporary directory by default), prints
-# one summary line, and adds a row to timings.tsv there. Each stage first checks the tools it runs:
+# its full output to a log under $CHECK_LOG_DIR, prints one summary line, and adds a row to
+# timings.tsv there. With no $CHECK_LOG_DIR it makes a fresh temporary directory and names it on
+# stderr; stdout, which a reader quotes, never names it (SPEC-056 R4). Each stage first checks the
+# tools it runs:
 # a missing tool FAILS that stage by name, with its install hint, because a gate that silently
-# skipped a stage would report green having examined nothing. CI runs these stages in five parallel
+# skipped a stage would report green having examined nothing. CI runs these stages in four parallel
 # jobs, each stage in exactly one of them (ADR-055).
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT" || exit 2
-LOG_DIR="${CHECK_LOG_DIR:-$(mktemp -d -t deckstreak-check.XXXXXX)}"
+if [ -n "${CHECK_LOG_DIR:-}" ]; then
+    LOG_DIR="$CHECK_LOG_DIR"
+    NAMED_LOG_DIR=1
+else
+    LOG_DIR="$(mktemp -d -t deckstreak-check.XXXXXX)"
+    NAMED_LOG_DIR=0
+fi
 mkdir -p "$LOG_DIR"
 TIMINGS="$LOG_DIR/timings.tsv"
 
-# In CI's order: the rust job, the engine job, the web job, the packs job, the hygiene job.
-STAGES_ALL=(fmt clippy test doctest audit-rust test-engine web audit-web packs python scrub secrets)
+# In CI's order: the rust job, the engine job, the web job, the hygiene job. The packs are judged
+# on the maintainer's box by scripts/box-packs.sh, never here (ADR-069).
+STAGES_ALL=(fmt clippy test doctest audit-rust test-engine web audit-web python scrub secrets)
 if [ "$#" -gt 0 ]; then STAGES=("$@"); else STAGES=("${STAGES_ALL[@]}"); fi
 
 # The engine set (SPEC-038 R13), defined here and nowhere else: SPEC-022's two test binaries that
@@ -114,10 +123,8 @@ stage_web() {
 
 stage_audit_web() { need_node && pnpm audit --prod; }
 
-stage_packs() { need_python && python3 scripts/pack-rows.py; }
-
 stage_python() {
-    # cargo too: a guard test builds a Rust example (SPEC-042's rails rows).
+    # cargo too: guard tests build and audit the workspace (SPEC-055's engine pin).
     need_python && need_cargo || return 1
     # Both suites run whatever the first found, and the last line gives each one's tests and exit,
     # so a red suite never hides the other's result; a suite that ran no test fails (SPEC-054 R7).
@@ -139,15 +146,7 @@ stage_scrub() {
     need_python || return 1
     # The tree and every blob reachable from HEAD: a value that only history or a binary holds
     # is still published (SPEC-033).
-    python3 scripts/public-scrub.py --root . --history || return 1
-    # No apiKeyHelper in any Claude Code settings file (the subscription-proxy pack's rule). The
-    # scan is VOID with no settings file, so until the agent's settings template lands (SPEC-043)
-    # it reports pending by name rather than passing over nothing.
-    if git ls-files | grep -Eq '(^|/)\.claude/settings[^/]*\.json$|^agent/([^/]+/)*settings[^/]*\.json$|(^|/)managed-settings\.json$'; then
-        python3 scripts/no-apikeyhelper-scan.py --root .
-    else
-        echo "no-apikeyhelper: pending until the agent's settings template lands (SPEC-043)"
-    fi
+    python3 scripts/public-scrub.py --root . --history
 }
 
 stage_secrets() {
@@ -180,7 +179,8 @@ for stage in "${STAGES[@]}"; do
     fi
 done
 
-echo "logs: $LOG_DIR"
+# The directory is named only when the caller did not name it, and on stderr (SPEC-056 R4).
+if [ "$NAMED_LOG_DIR" = 0 ]; then echo "logs: $LOG_DIR" >&2; fi
 if [ "${#failed[@]}" -gt 0 ]; then
     echo "CHECK FAILED: ${failed[*]}"
     exit 1

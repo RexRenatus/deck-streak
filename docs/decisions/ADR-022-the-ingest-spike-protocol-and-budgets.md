@@ -127,7 +127,7 @@ Confirmation section, and ADR-009's status changes with them.
 
 ## More Information
 
-ADR-009; ADR-010; ADR-018; SPEC-022; SPEC-032; the vm-survey's capacity figures (private input).
+ADR-009; ADR-010; ADR-018; SPEC-022; SPEC-032; the maintainer's survey (private input).
 
 Amended in part on 2026-09-28: the finding above is the only rebuild cause that fires for this
 repository's pinned git dependency. `rslib/build.rs:13` in the pinned tag also emits
@@ -156,3 +156,6 @@ Amendment (2026-09-28): passages describing the host's capacity and its other se
 service's software version, in the decision drivers, a considered option, the record of what the
 engine brought and a condition that would make this wrong, were redacted under the public-prose rule
 (ADR-059).
+
+Amendment (2026-09-28): the name of the maintainer's private tooling was replaced with a neutral one
+under the public-text rule (ADR-059).

@@ -24,9 +24,10 @@
   of 429, 5xx and 200 responses and a recording sleep), and the constants
   (`goldens/bot.constants.json`: the long-poll and HTTP timeouts, the inbound caps and
   `telegram.py:_DEFAULT_RETRY_AFTER`).
-- **What the skeleton deferred.** `.packs/wiring.json` defers the telegram-platform rows
+- **What the skeleton deferred.** The box-run packs' wiring deferred the telegram-platform rows
   `tg-retry-after` and `tg-callback-answer` to this issue, because the probe read the vendored probes
-  as bot source until a real bot existed; every other bot-api row is enforced.
+  as bot source until a real bot existed. SPEC-056 removed those files, and the two deferrals with
+  them; every other bot-api row is enforced.
 - **Where DeckStreak improves on the predecessor:** the predecessor's chunker cut at a character
   count; DeckStreak's cuts at a paragraph, a line or a word in UTF-16 units and closes and reopens
   open tags, because Telegram refuses a chunk with an unclosed tag (the telegram-platform pack).
@@ -90,7 +91,7 @@ R12. Every message the bot renders at W0 is committed as a golden,
     the telegram-platform payload rows judge the files.
 R13. The bot role follows the shared lifecycle (SPEC-025): `READY=1` once the first poll is issued,
     watchdog pings, and on SIGTERM it finishes the batch in hand, confirms its offset and exits 0.
-R14. `.packs/wiring.json` loses the deferrals of `tg-retry-after` and `tg-callback-answer`; every
+R14. No telegram-platform row is deferred (SPEC-056 removed the two deferrals); every
     telegram-platform bot-api row is green over the workspace. `privacy.json` names the bot's command
     table (`crates/bot/src/commands.rs`, text `privacy`) as a policy entry point, and `PRIVACY.md`
     names the bot's `/export` and `/delete`.
@@ -138,8 +139,9 @@ A16: python3 -m unittest discover -s scripts/tests -p test_bot_messages.py -k ev
 The Rust tests run a fake Bot API (an axum server on a loopback port that records every call and
 answers as each test scripts it), reached through frankenstein's `Bot::builder().api_url`; waits
 run on tokio's paused time. Test tokens never have the Bot API token's shape and test user ids have
-fewer than seven digits (SPEC-024's R11). A16 loads the vendored telegram-platform probe and calls
-its published `check_message` on each golden file, reporting how many it examined.
+fewer than seven digits (SPEC-024's R11). A16 calls the telegram-platform probe's published
+`check_message` on each golden file, reporting how many it examined. The probe is box-run
+(ADR-069), so A16's test takes it from the maintainer's checkout.
 
 ## 4. File manifest
 
@@ -160,7 +162,7 @@ its published `check_message` on each golden file, reporting how many it examine
 | `Cargo.toml`, `Cargo.lock` | workspace | changed: frankenstein (ADR-003) |
 | `deny.toml` | workspace | changed only if the TLS stack's licences need an allow entry compatible with AGPL-3.0-or-later |
 | `tools/parity-oracle/registry/spec_026.py`, `tools/parity-oracle/goldens/poll_backoff.json`, `send_retry.json`, `bot.constants.json` | repo | added |
-| `.packs/wiring.json` | repo | changed: the two telegram-platform deferrals removed |
+| the box-run packs' private wiring (ADR-069) | the maintainer's | unchanged: SPEC-056 removed the two telegram-platform deferrals |
 | `privacy.json`, `PRIVACY.md` | repo | changed: the bot as an entry point, its data-rights commands |
 | `.env.example` | repo | changed: the Mini App URL, by name |
 | `docs/schematics/bot-update-loop.md` | repo | added |

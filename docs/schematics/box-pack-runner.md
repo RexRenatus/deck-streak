@@ -2,8 +2,8 @@
 
 Kind: data flow, with the verdict each pack reaches. Read at DeckStreak `dev` cb66427
 (`scripts/box-packs.sh`, `.packs/wiring.json`, `.packs/VENDORED.json`, ADR-004), and at the
-vendored phoenix-v2 commit for the verbs it drives (`phxd pack list`, `phxd pack probe`,
-`phxd pack run`, `phxd verify seo-pipeline`, `phxd init`, `phxd project register`, and
+vendored packs commit for the verbs it drives (`<binary> pack list`, `<binary> pack probe`,
+`<binary> pack run`, `<binary> verify seo-pipeline`, `<binary> init`, `<binary> project register`, and
 `scripts/proxy-client-scan.py`). Decided by ADR-030; built by SPEC-030. The issue-state step was
 added by SPEC-054 R4, read at `dev` c0dbf2a with `gh issue view <n> --json state`.
 
@@ -18,12 +18,12 @@ flowchart LR
   wiring -->|every issue it names, once each| gh[gh issue view N --json state, run in ROOT]
   gh -->|no gh, not logged in, offline, or no state: exit 2| void([VOID: no pack runs])
   gh -->|OPEN or CLOSED| states[each issue's state]
-  catalog[(phoenix-v2 skills/catalog.json)] -->|phxd pack list| verbs[each pack's schema]
+  catalog[(packs checkout skills/catalog.json)] -->|binary pack list| verbs[each pack's schema]
   wiring -->|the packs to run| verbs
-  verbs -->|phxd.pack.probe.v1| probe[phxd pack probe --skills-root]
-  verbs -->|phxd.pack.run.v1| run[phxd --ledger scratch pack run --project]
-  verbs -->|phxd.seo-pipeline.v1, once the site is built| seo[phxd verify seo-pipeline]
-  ledger[(scratch ledger: phxd init, phxd project register)] --> run
+  verbs -->|binary.pack.probe.v1| probe[binary pack probe --skills-root]
+  verbs -->|binary.pack.run.v1| run[binary --ledger scratch pack run --project]
+  verbs -->|binary.seo-pipeline.v1, once the site is built| seo[binary verify seo-pipeline]
+  ledger[(scratch ledger: binary init, binary project register)] --> run
   judged --> probe
   judged --> run
   judged --> seo
@@ -48,7 +48,7 @@ be posted on the pull request.
 
 | the card says | the wiring says | the pack reads | fails the run |
 |---|---|---|---|
-| no card: phxd refused, or the card's schema is not the verb's | anything | `FAIL` with phxd's last line | yes |
+| no card: the binary refused, or the card's schema is not the verb's | anything | `FAIL` with the binary's last line | yes |
 | examined 0 (a declarative walk, or no built site) | `pending #N` | `pending #N` | no |
 | examined 0 | nothing | `FAIL` VOID | yes |
 | examined 1 or more | `pending #N` | `FAIL`, the pending issue stale | yes |
@@ -71,3 +71,7 @@ document examined) is stale; and a blocking VOID row with a settings document pr
 | catalog to verb | the schema a pack's row declares | a schema no verb admits, or a pack the catalog lacks, fails that pack by name |
 | card to verdict | each row's id and state | the wiring's expectations; a card that is not the verb's schema is no card |
 | run to pull request | one line per pack and a summary | exit 0 only when every pack examined a row or reads pending, and none failed |
+
+Amendment (2026-09-28): names of the maintainer's private tooling were replaced with 'the box-run
+packs' and neutral names for their repository, binary and checkout under the public-text rule
+(ADR-059).

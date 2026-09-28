@@ -22,8 +22,8 @@ request into `dev`.
 
 1. `CLAUDE.md`, `CHARTER.md`, `docs/CONTEXT-MAP.md`, `docs/LEXICON.md`.
 2. Your SPEC, and every ADR it names.
-3. The packs your SPEC names, in `.packs/skills/packs/<pack>/SKILL.md`. Load a pack when your work
-   touches its subject, and run its rows over your change with `python3 scripts/pack-rows.py --pack <pack>`.
+3. The packs your SPEC names. They are box-run (ADR-069): your private environment notes say where
+   a pack's SKILL.md is, and `scripts/box-packs.sh` judges its rows over your change.
 4. Context7 (`resolve-library-id`, then `query-docs`) for every library API you call. Record the
    library ids that answered in your hand-back.
 
@@ -130,18 +130,18 @@ When your issue creates or changes a pack (an agent duty, an engineering practic
   each check proved by a planted-defect fixture.
 - **R8 documents:** SKILL.md with the exhaustive catalog and exact counts; `checks.json`; a SPEC with
   the coverage matrix and References; an ADR naming what it was chosen against.
-- `python3 .packs/scripts/pack-lint.py` judges the pack's shape.
+- The pack-authoring pack, one of the box-run packs, judges the pack's shape.
 
 ## Hand back
 
 - The pull request number and its head sha.
 - The red-first record, and the acceptance commands' output.
-- The tail of `bash scripts/check.sh` (every stage line), and `python3 scripts/pack-rows.py`'s
+- The tail of `bash scripts/check.sh` (every stage line), and the box run's
   summary for the packs you touched.
 - The Context7 library ids that answered, and the external crates or packages you added.
 - `## SKILL FEEDBACK`: where a pack, the SPEC or this brief was unclear or wrong, with the evidence.
 
 ## Private environment notes (filled by the orchestrator, never committed)
 
-`<the tool environment to source, the machine's limits, the paths of the vendored phoenix-v2
-checkout, and anything else specific to where you run>`
+`<the tool environment to source, the machine's limits, the paths of the packs checkout, its runner
+and the private wiring file, and anything else specific to where you run>`

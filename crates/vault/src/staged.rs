@@ -30,12 +30,12 @@ use crate::{VaultError, atomic, sha256};
 pub const RUN_RECORD: &str = "duty-run.json";
 /// The schema the record carries.
 pub const RUN_SCHEMA: &str = "phx.duty.vault.run.v1";
-/// The vault-duties pack's public layout, as vendored, for a record that names none.
-pub const VENDORED_LAYOUT: &str =
-    include_str!("../../../.packs/skills/packs/vault-duties/layout.json");
-/// The vault-duties pack's rows, as vendored: the gate runs every blocking one.
-pub const VENDORED_CHECKS: &str =
-    include_str!("../../../.packs/skills/packs/vault-duties/checks.json");
+/// The default layout, for a record that names none: the crate's own `data/layout.json`, which
+/// keeps the fields of the vault-duties pack's public layout that the executor reads (ADR-069).
+pub const VENDORED_LAYOUT: &str = include_str!("../data/layout.json");
+/// The gate's classes: the crate's own `data/gate-classes.json`, which keeps each of the
+/// vault-duties pack's rows by its id, severity and time limit. The gate runs every blocking one.
+pub const VENDORED_CHECKS: &str = include_str!("../data/gate-classes.json");
 
 /// How long the gate waits between two looks at a class's process, in milliseconds.
 const POLL_MILLIS: u64 = 20;
@@ -419,7 +419,7 @@ struct GateClass {
     timeout_seconds: u64,
 }
 
-/// The gate as the pack's own probe (ADR-043): each blocking class of the vendored rows runs as
+/// The gate as the pack's own probe (ADR-043): each blocking class of the owned rows runs as
 /// `python3 <probe> --root <run> --subject <run> [--vault <vault>] check <class>`, outside any
 /// model. Exit 0 is green, 1 is red; a class that examined nothing of this run (its own duty's
 /// class, for another duty) is passed over; any other ending fails closed.
@@ -434,11 +434,11 @@ pub struct ProbeGate {
 
 impl ProbeGate {
     /// The gate that runs `probe` (the pack's `vault-duties-probe.py`) with `python` over every
-    /// blocking class of the vendored rows.
+    /// blocking class of the owned rows.
     ///
     /// # Errors
     ///
-    /// [`GateError::Checks`] when the vendored rows name no blocking class.
+    /// [`GateError::Checks`] when the owned rows name no blocking class.
     pub fn new(python: impl Into<PathBuf>, probe: impl Into<PathBuf>) -> Result<Self, GateError> {
         Ok(Self {
             python: python.into(),
@@ -494,7 +494,7 @@ impl ProbeGate {
             command.arg("--deny-list").arg(deny_list);
         }
         // The probe's private inputs come only from this gate's own arguments, and it writes no
-        // bytecode beside the vendored scripts.
+        // bytecode beside the probe's scripts.
         command
             .arg("check")
             .arg(&class.id)
@@ -1062,5 +1062,76 @@ fn allowed_folders(
             let target = rules.moves_to.iter().find(|folder| inside(to, folder))?;
             Some((target.clone(), Some(source.clone())))
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use serde_json::Value;
+
+    use super::{VENDORED_CHECKS, blocking_classes};
+
+    /// SPEC-056 A8: the owned classes keep every field the gate's parser reads.
+    #[test]
+    fn the_gate_class_parser_refuses_the_owned_classes_without_a_field_it_reads() {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("data")
+            .join("gate-classes.json");
+        let text = std::fs::read_to_string(&path).expect("the owned gate classes can be read");
+        assert_eq!(
+            VENDORED_CHECKS, text,
+            "the gate compiles in the owned classes"
+        );
+        let classes = blocking_classes(&text).expect("the owned classes read as classes");
+        assert!(
+            !classes.is_empty(),
+            "the owned classes name a blocking class"
+        );
+        let document: Value = serde_json::from_str(&text).expect("the owned classes are JSON");
+        let first_blocking = |document: &mut Value| -> Option<usize> {
+            document
+                .get("checks")
+                .and_then(Value::as_array)?
+                .iter()
+                .position(|row| row.get("severity").and_then(Value::as_str) == Some("block"))
+        };
+        // Without its rows, the file names no class.
+        let mut rowless = document.clone();
+        rowless
+            .as_object_mut()
+            .expect("the owned classes are an object")
+            .remove("checks");
+        assert!(blocking_classes(&rowless.to_string()).is_err());
+        // Without a blocking row's id, its class cannot be named.
+        let mut nameless = document.clone();
+        let at = first_blocking(&mut nameless).expect("a blocking row");
+        nameless["checks"][at]
+            .as_object_mut()
+            .expect("a row is an object")
+            .remove("id");
+        assert!(blocking_classes(&nameless.to_string()).is_err());
+        // Without the severities, no row is blocking.
+        let mut unranked = document.clone();
+        for row in unranked["checks"]
+            .as_array_mut()
+            .expect("the rows are a list")
+        {
+            row.as_object_mut()
+                .expect("a row is an object")
+                .remove("severity");
+        }
+        assert!(blocking_classes(&unranked.to_string()).is_err());
+        // A row's time limit is read: a changed limit changes its class's.
+        let mut slower = document.clone();
+        let at = first_blocking(&mut slower).expect("a blocking row");
+        let limit = slower["checks"][at]["probe"]["timeout_seconds"]
+            .as_u64()
+            .expect("a blocking row names its time limit");
+        slower["checks"][at]["probe"]["timeout_seconds"] = Value::from(limit + 1);
+        assert_ne!(
+            blocking_classes(&slower.to_string()).expect("the slower classes read"),
+            classes,
+            "the parser reads each row's time limit"
+        );
     }
 }

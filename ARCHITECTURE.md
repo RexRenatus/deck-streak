@@ -49,8 +49,7 @@ flowchart LR
 | `agent/` | the agent's public duty skills, prompts, settings template and runner |
 | `deploy/` | systemd unit and Caddy templates, the host budget, deploy and rollback scripts |
 | `tools/parity-oracle/` | the golden generator and the committed goldens |
-| `.packs/` | the vendored packs and their probes (ADR-004) |
-| `scripts/` | the gate: `check.sh`, the methodology probes, `pack-rows.py` |
+| `scripts/` | the gate (`check.sh`), the public scrub, and the box run's driver (ADR-069) |
 | `docs/` | the charter's companions: context map, lexicon, SPECs, ADRs, schematics, red-first records |
 
 ## Invariants

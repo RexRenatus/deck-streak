@@ -1,5 +1,6 @@
 //! The content rails (SPEC-042 R3): every byte the adapter writes into the vault passes the rails
-//! of the vault-duties pack's `no-executable` class, read from the pack's vendored `rails.json`, plus
+//! of the vault-duties pack's `no-executable` class, read from the crate's own `data/rails.json`
+//! (ADR-069), plus
 //! one rail of the adapter's own that refuses NUL and every other control character but the tab,
 //! the line feed and the carriage return.
 //!
@@ -16,20 +17,19 @@ use serde_json::Value;
 
 use crate::note::{is_python_space, python_strip};
 
-/// The vault-duties pack's `rails.json`, as vendored with the packs (ADR-004), compiled in so the
-/// adapter reads the same bytes the pack's probe reads.
-pub const VENDORED: &str = include_str!("../../../.packs/skills/packs/vault-duties/rails.json");
+/// The rails the adapter enforces: the crate's own `data/rails.json`, which keeps the fields of the
+/// vault-duties pack's rails that the port reads. The box run compares it with the pack's own, so
+/// the two cannot drift apart (ADR-069).
+pub const VENDORED: &str = include_str!("../data/rails.json");
 
 /// The schema `rails.json` carries.
 pub const SCHEMA: &str = "phx.duty.vault.rails.v1";
 
-/// Every key `rails.json` holds: the ten the `no-executable` class reads, the three the pack's
-/// `nothing-leaves` class reads, and the document's own three. A key outside this list is a new
-/// kind of rail, which needs code before the port can honour it (ADR-042).
-pub const KNOWN_KEYS: [&str; 16] = [
+/// Every key the owned `rails.json` holds: its schema and the ten the `no-executable` class reads.
+/// A key the pack's own rails gain is a new kind of rail, which needs code before the port can
+/// honour it; the box run's drift check names it (ADR-042, ADR-069).
+pub const KNOWN_KEYS: [&str; 11] = [
     "schema",
-    "spec",
-    "note",
     "fence_allow",
     "fence_known",
     "fence_prefixes",
@@ -38,11 +38,8 @@ pub const KNOWN_KEYS: [&str; 16] = [
     "html_allow",
     "html_attributes_allow",
     "executable_schemes",
-    "egress_schemes",
-    "remote_schemes",
     "math_macros_refused",
     "dynamic_embed_extensions",
-    "publish_key",
 ];
 
 /// The adapter's own rail: a control character other than a tab, a line feed or a carriage return.
@@ -119,11 +116,11 @@ pub struct Rails {
 }
 
 impl Rails {
-    /// The rails of the vendored `rails.json`.
+    /// The rails of the crate's own `data/rails.json`.
     ///
     /// # Errors
     ///
-    /// [`RailsError`] when the vendored file is not the rails' shape, which a build of the adapter
+    /// [`RailsError`] when the owned file is not the rails' shape, which a build of the adapter
     /// would never ship: a test reads it.
     pub fn vendored() -> Result<Self, RailsError> {
         Self::from_json(VENDORED)

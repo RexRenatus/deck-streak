@@ -18,18 +18,26 @@ A3: green at 3a03c5d
 A4: red at ff25fe2: AssertionError: 1 != 0 : public-scrub: <the subject>/note.md:1: email (each of the eight unit names was refused as an address)
 A4: green at 3a03c5d
 A5: not red: the base refuses every address, these included; A5 pins the admission's edges (a unit word as another label, a longer last label, a last label that ends in a unit word, a unit type in capitals, a unit word inside a label), and the hand-proved mutants below show that it fails each looser admission
+```
+```retired
 A6: red at ff25fe2: AssertionError: Lists differ: [] != ['scrub.rules'] (the vendoring composed the deny lists itself, with its own load_deny calls)
 A6: green at 3a03c5d
+```
+```red-first
 A7: red at ff25fe2: AssertionError: 1 != 2 : Traceback (most recent call last): ... persona_core_probe.ContractError: <scratch>/malformed.json: not JSON (the scrub crashed, and its exit read as a finding)
 A7: green at 3a03c5d
 A8: red at ff25fe2: AssertionError: False is not true : ok       alpha                probe  examined 3: unexpected 0, expected 1, stale 0 (the expectation's closed issue was never read)
 A8: green at 3a03c5d
 A9: red at ff25fe2: AssertionError: 0 != 2 : box-packs: judging <sha> (HEAD) without the vendored rule code (in each of the four subtests, no gh, not logged in, offline and no state, the run never asked and passed)
 A9: green at 3a03c5d
+```
+```retired
 A10: red at ff25fe2: AssertionError: AssertionError not raised (the planted command ran its 10 s to the end)
 A10: green at 3a03c5d
 A11: red at ff25fe2: AssertionError: None != 900 (the cargo call passed no timeout)
 A11: green at 3a03c5d
+```
+```red-first
 A12: red at ff25fe2: AssertionError: examined 0 README day-token example(s): the population is empty, so nothing was judged
 A12: green at 3a03c5d
 A13: red at c8ffe05: AssertionError: 'Ran 2 tests' not found in the python stage's log, which held only the planted guard suite's `Ran 1 test` and `FAILED (failures=1)` (the stage stopped before the oracle suite ran)
@@ -43,7 +51,7 @@ passes both empty suites.
 
 ## The vendoring is byte-identical (R3)
 
-At c0dbf2a and at 3a03c5d, `scripts/vendor-packs.py` was run against the vendored phoenix-v2
+At c0dbf2a and at 3a03c5d, `scripts/vendor-packs.py` was run against the vendored packs
 commit, each into its own scratch copy of `dev` c0dbf2a and with the maintainer's private list.
 Both runs exited 0 and printed the same three lines, whose sha256 is `60c0dbb9…2be2455` both times:
 the upstream packs left out (18, not vendored), the subscription-proxy pack excluded whole, and
@@ -71,3 +79,8 @@ mutant. The file was restored byte for byte after each. All 37 were killed:
 | R5 | the cargo call unbounded | A11 |
 | R6 | the example's token off by one day | A12 |
 | R7 | a red suite passing; a suite that ran nothing passing; the first red suite stopping the stage; only the first suite run; the suites' output not logged; no verdict line; the stage always passing | A13 |
+
+Amendment (2026-09-28): the lines of A6, A10 and A11 moved into a `` ```retired `` fence, by
+inserted fence lines, because SPEC-056 retired those criteria when it removed their tests; names of
+the maintainer's private tooling were replaced with 'the box-run packs' and neutral names for their
+repository, binary and checkout under the public-text rule (ADR-059).

@@ -9,7 +9,7 @@ decision-makers: "@RexRenatus (owner), the DeckStreak architect"
 ## Context and Problem Statement
 
 ADR-004 vendored the packs' standard-library probes into this repository and ran the packs built
-into `phxd` on the maintainer's box. It left one question open: the owner had planned a public,
+into the packs' binary on the maintainer's box. It left one question open: the owner had planned a public,
 open-source pack runner that CI would install at a pinned version, and ADR-004 treated today's
 arrangement as the state "until it exists". Several later documents lean on that premise:
 - ADR-030 expects the runner to replace `scripts/box-packs.sh`;
@@ -84,3 +84,7 @@ box-only". SPEC-033's exclusion, no private literal in CI, is unconditional and 
 ## More Information
 
 ADR-004 (partly superseded), ADR-017, ADR-030, ADR-039, ADR-043; issues #60 and #216.
+
+Amendment (2026-09-28): names of the maintainer's private tooling were replaced with 'the box-run
+packs' and neutral names for their repository, binary and checkout under the public-text rule
+(ADR-059).

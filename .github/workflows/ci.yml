@@ -1,8 +1,9 @@
 name: ci
 
 # The local gate (scripts/check.sh) on GitHub-hosted runners, on every pull request into dev or
-# main and every push to them (ADR-017). The gate runs in five parallel jobs, each calling check.sh
-# with its own stages, every stage in exactly one job (ADR-055). No secret is used, the token is
+# main and every push to them (ADR-017). The gate runs in four parallel jobs, each calling check.sh
+# with its own stages, every stage in exactly one job (ADR-055). The packs are judged on the
+# maintainer's box, never here (ADR-069). No secret is used, the token is
 # read-only, every action is pinned by its full commit SHA, and every job runs on a GitHub-hosted
 # runner. A cache is saved only by a push to dev or main that missed its key; a pull request, a
 # fork's included, restores and never saves.
@@ -207,27 +208,6 @@ jobs:
           path: ${{ runner.temp }}/check-logs/
           if-no-files-found: warn
 
-  packs:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          # The sdd numbering row reads every branch's SPECs and ADRs.
-          fetch-depth: 0
-          persist-credentials: false
-      - name: packs (every vendored pack's rows, in a bounded pool)
-        env:
-          CHECK_LOG_DIR: ${{ runner.temp }}/check-logs
-        run: bash scripts/check.sh packs
-      - name: upload stage logs
-        if: ${{ always() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: check-stage-logs-packs
-          path: ${{ runner.temp }}/check-logs/
-          if-no-files-found: warn
-
   hygiene:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
@@ -239,8 +219,8 @@ jobs:
           # secrets scans every commit, and scrub reads every blob reachable from HEAD.
           fetch-depth: 0
           persist-credentials: false
-      # A guard test builds a Rust example (SPEC-042's rails rows), and another builds the ingest
-      # crate twice (SPEC-055 A2): the pinned toolchain, and the rust job's cache, restored only.
+      # A guard test builds the ingest crate twice (SPEC-055 A2): the pinned toolchain, and the
+      # rust job's cache, restored only.
       # Only the rust job, which builds every target, saves it.
       - name: the pinned Rust toolchain (rust-toolchain.toml)
         run: rustup show
@@ -623,7 +603,7 @@ jobs:
 
   ci:
     if: ${{ always() }}
-    needs: [rust, engine, web, packs, hygiene, mutation-plan, mutation-rust, mutation-rows, mutation-verdict, mutation-web, workflow-lint, base-is-dev]
+    needs: [rust, engine, web, hygiene, mutation-plan, mutation-rust, mutation-rows, mutation-verdict, mutation-web, workflow-lint, base-is-dev]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:

@@ -84,7 +84,7 @@ R12. `.packs/wiring.json` moves `accessibility` and `cjk-typography` to `enforce
     subject until the readings render CJK text or ruby (`furigana-ruby` and `pinyin-tones`, which
     judge mentor texts) is listed under `deferred_rows` with the readings screen's issue; every other
     row is green.
-R13. The phxd packs that judge the built SPA (web-launch, vibecode-polish, ux-laws, ui-styles) run on
+R13. The binary-built packs that judge the built SPA (web-launch, vibecode-polish, ux-laws, ui-styles) run on
     the maintainer's box by `scripts/box-packs.sh`, and their verdicts are posted on the pull
     request (ADR-004).
 R14. `web/app/svelte.config.js` sets `kit.csp` in hash mode with `script-src 'self'
@@ -222,3 +222,7 @@ Each is corrected above; the reasons are these.
 - **What existed.** The skeleton on `dev` had grown past section 1's reading: it already loaded
   Telegram's script first in `<head>`, compiled seven locales with `zh-Hans` and `zh-Hant`, set
   `<html lang>` per locale and imported the CJK stylesheet. That is why A10 was not red first.
+
+Amendment (2026-09-28): names of the maintainer's private tooling were replaced with 'the box-run
+packs' and neutral names for their repository, binary and checkout under the public-text rule
+(ADR-059).

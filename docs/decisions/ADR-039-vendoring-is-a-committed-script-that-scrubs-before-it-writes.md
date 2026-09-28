@@ -8,7 +8,7 @@ decision-makers: "@RexRenatus (owner, through the maintainer), the DeckStreak ar
 
 ## Context and Problem Statement
 
-DeckStreak vendors phoenix-v2's pack probes and pins them to one commit (ADR-004). Some upstream
+DeckStreak vendors the packs repository's pack probes and pins them to one commit (ADR-004). Some upstream
 files must never enter this public repository: the subscription-proxy reference client and its
 scanner name a private secret, and one SKILL.md names the maintainer's host paths. `VENDORED.json`
 records those exclusions, but only in prose, and the vendoring was a script outside the repository
@@ -35,14 +35,14 @@ excluded or private file out by construction (SPEC-037)?
   a tarball can carry it before any scan runs.
 - A `.gitignore` for the excluded paths: rejected because the file is still written to disk, and
   `git add -f` or any tool that ignores `.gitignore` would still carry it.
-- A git subtree or sparse checkout of phoenix-v2: rejected because it brings the private
+- A git subtree or sparse checkout of the packs repository: rejected because it brings the private
   repository's history, or its paths, into view, and still needs the same exclusions applied by
   hand.
 
 ## Decision Outcome
 
 Chosen option.
-- **The script.** `scripts/vendor-packs.py --source <phoenix-v2 checkout>` reads `VENDORED.json`.
+- **The script.** `scripts/vendor-packs.py --source <packs checkout>` reads `VENDORED.json`.
 - **Candidates.** It takes the files the manifest lists and any new file of an already vendored
   pack, and drops every candidate that matches an `excluded` entry's `globs` before reading it.
 - **The scan.** It scans every remaining file with `scripts/public-scrub.py`'s rules and the private
@@ -73,3 +73,7 @@ packs, whose shapes the scrub composes.
 
 Amended by ADR-056 (2026-09-28): no pack runner will be published, so vendoring does not end;
 this script remains the way the probes are refreshed.
+
+Amendment (2026-09-28): names of the maintainer's private tooling were replaced with 'the box-run
+packs' and neutral names for their repository, binary and checkout under the public-text rule
+(ADR-059).

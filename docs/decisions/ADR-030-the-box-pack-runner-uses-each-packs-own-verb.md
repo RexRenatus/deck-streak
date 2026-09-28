@@ -8,13 +8,13 @@ decision-makers: "the DeckStreak architect (SPEC-030), the SPEC-030 builder"
 
 ## Context and Problem Statement
 
-ADR-004 runs the packs built into phxd, and the subscription-proxy client scan, on the maintainer's
-box with `scripts/box-packs.sh`. Run at `dev` c1f53c1 with a phxd built from the vendored
-phoenix-v2 commit, that script judged nothing (SPEC-030 section 1):
+ADR-004 runs the packs built into the packs' binary, and the subscription-proxy client scan, on the maintainer's
+box with `scripts/box-packs.sh`. Run at `dev` c1f53c1 with a binary built from the vendored
+packs commit, that script judged nothing (SPEC-030 section 1):
 
-- every `phxd pack probe` exited 4 with `skills/catalog.json not found`, because the script never
+- every `<binary> pack probe` exited 4 with `skills/catalog.json not found`, because the script never
   passed `--skills-root`;
-- four packs (web-security, cyber-pipeline, ux-laws, ui-styles) declare `phxd.pack.run.v1`, and the
+- four packs (web-security, cyber-pipeline, ux-laws, ui-styles) declare `<binary>.pack.run.v1`, and the
   script's hard-coded `pack probe` was refused (`wrong_verb`) for each;
 - web-security read two vendored rule files under `.packs/scripts/` as DeckStreak's code and
   reported two false reds;
@@ -27,14 +27,14 @@ choose the tree it judges, and tell an expected red from a new one (SPEC-030 R10
 
 ## Decision Drivers
 
-- phxd admits a pack to a verb only when the pack's catalog row declares that verb's card schema,
+- the binary admits a pack to a verb only when the pack's catalog row declares that verb's card schema,
   so the catalog, not the runner, decides the verb, and a re-pin can move a pack between verbs.
 - A rule's own source is not DeckStreak's code, and a pull request publishes its commits, not the
   maintainer's working copy.
 - A red row nobody expects must fail the run by name; a red row somebody expects must name the open
   issue that builds its subject; an expectation that no longer holds must be removed, as SPEC-030
   R6 and R7 do for pending packs and deferred rows.
-- No exit status alone is a verdict here: phxd exits 4 for a red card and for a refusal alike, and
+- No exit status alone is a verdict here: the binary exits 4 for a red card and for a refusal alike, and
   the proxy scan's `check all` exits VOID when a RED row is also present.
 - Examining nothing is VOID, never a pass.
 
@@ -43,11 +43,11 @@ choose the tree it judges, and tell an expected red from a new one (SPEC-030 R10
 - Read each verb from the catalog, judge the exported commit, and name every expected red: chosen,
   because every false red of the c1f53c1 run disappears for a stated reason, and every red that
   remains is either named with an open issue or fails the run by name. The verb comes from
-  `phxd pack list`; the tree is `git archive` of `--rev` less `.packs/` and every path
+  `<binary> pack list`; the tree is `git archive` of `--rev` less `.packs/` and every path
   `.packs/VENDORED.json` lists; the expectations are a `box` section of `.packs/wiring.json`.
 - Hard-code each pack's verb in the script: rejected, because it is the defect measured at c1f53c1:
-  four packs had moved to `phxd.pack.run.v1` and the script still called `pack probe`, and nothing
-  but a refused run said so. The catalog is phxd's own admission rule.
+  four packs had moved to `<binary>.pack.run.v1` and the script still called `pack probe`, and nothing
+  but a refused run said so. The catalog is the binary's own admission rule.
 - Judge the live working tree, `.packs/` included: rejected, because the vendored probes are rule
   code whose patterns read as findings (web-security's two false reds), and because an uncommitted
   file would be judged although no pull request carries it.
@@ -62,15 +62,15 @@ choose the tree it judges, and tell an expected red from a new one (SPEC-030 R10
 Chosen option.
 
 - `.packs/wiring.json` gains a `box` object. `box.packs` names every pack the box runs (each pack
-  the wiring marks `phxd` must be there), and each entry may hold `expected_red` (row id to the
+  the wiring marks `<binary>` must be there), and each entry may hold `expected_red` (row id to the
   open issue that builds that row's subject) or `pending` (the open issue after which the pack
   examines a row), never both, and a `note`. `box["proxy-client-scan"]` may hold `pending` and a
   `note`. `scripts/tests/test_pack_wiring.py` holds every such issue to the issue manifest.
-- The verb comes from the pack's `requires_phxd_schema`, as `phxd pack list` reports it:
-  `phxd.pack.probe.v1` is `phxd pack probe --skills-root <phoenix>/skills`; `phxd.pack.run.v1` is
-  `phxd --ledger <scratch> pack run --project <id>` against a ledger made in the scratch directory
-  with `phxd init` and `phxd project register`; `phxd.seo-pipeline.v1` is
-  `phxd verify seo-pipeline` over `web/site/dist` once the judged tree holds it. A schema no verb
+- The verb comes from the pack's `requires_<binary>_schema`, as `<binary> pack list` reports it:
+  `<binary>.pack.probe.v1` is `<binary> pack probe --skills-root <checkout>/skills`; `<binary>.pack.run.v1` is
+  `<binary> --ledger <scratch> pack run --project <id>` against a ledger made in the scratch directory
+  with `<binary> init` and `<binary> project register`; `<binary>.seo-pipeline.v1` is
+  `<binary> verify seo-pipeline` over `web/site/dist` once the judged tree holds it. A schema no verb
   admits fails that pack by name.
 - The judged tree is `git archive` of `--rev` (default `HEAD`) in a scratch directory outside both
   repositories, removed when the run ends. `.packs/` and every `VENDORED.json` path are removed
@@ -89,7 +89,7 @@ Chosen option.
 - Good, because a new red is named on the pull request, and a fixed one names the expectation to
   delete, so the wiring cannot lag the tree in either direction.
 - Good, because a pack that moves between verbs in a re-pin needs no edit to the runner.
-- Good, because the tests drive the real script with a fake phxd, so the runner's logic is proved in
+- Good, because the tests drive the real script with a fake binary, so the runner's logic is proved in
   public CI although the packs themselves run only on the box.
 - Bad, because expectations name rows by id: a row renamed in a re-pin reads as one stale
   expectation and one unexpected red until the wiring is edited.
@@ -99,12 +99,12 @@ Chosen option.
 ### Confirmation
 
 `scripts/tests/test_box_packs.py` (SPEC-030 A9 to A13) drives `scripts/box-packs.sh` with
-`scripts/tests/fixtures/box-packs/fake-phxd` and a fake catalog. The maintainer's run with the real
-phxd is posted on each pull request (ADR-004).
+`scripts/tests/fixtures/box-packs/fake-runner` and a fake catalog. The maintainer's run with the real
+binary is posted on each pull request (ADR-004).
 
 ## What would make this wrong
 
-- phxd changes a card's schema or its row fields: the runner then reads no card and fails the pack
+- the binary changes a card's schema or its row fields: the runner then reads no card and fails the pack
   by name, which is the signal to re-read the card.
 - The open-source pack runner exists (#60): it replaces this script, and this ADR is superseded.
 
@@ -114,3 +114,7 @@ ADR-004 (the vendored packs and the box run); SPEC-030; `docs/schematics/box-pac
 
 Amended by ADR-056 (2026-09-28): no pack runner will be published, so the premise that one
 replaces this script is retired; this script is the permanent box runner.
+
+Amendment (2026-09-28): names of the maintainer's private tooling were replaced with 'the box-run
+packs' and neutral names for their repository, binary and checkout under the public-text rule
+(ADR-059).

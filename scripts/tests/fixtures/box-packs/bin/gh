@@ -10,8 +10,11 @@ the network:
   when it is not logged in; `offline` exits 1 with a connection error, as gh does when it cannot
   reach GitHub; and `garbled` exits 0 having printed no state.
 
+* `api repos/{owner}/{repo}/statuses/SHA --method POST -f state=S -f context=C -f description=D`
+  answers the posted status as JSON, as gh does (SPEC-056 R11).
+
 Every call appends one JSON line to FAKE_GH_LOG, when it is set: its argv and its working
-directory, so a test can read which issues were asked, and where.
+directory, so a test can read which issues were asked, which statuses were posted, and where.
 """
 
 import json
@@ -33,6 +36,10 @@ def main(argv):
         return 1
     if failure == "garbled":
         print("a page that is not JSON")
+        return 0
+    if argv[:1] == ["api"] and "--method" in argv:
+        fields = dict(argv[i + 1].split("=", 1) for i, word in enumerate(argv) if word == "-f")
+        print(json.dumps({"url": argv[1], **fields}))
         return 0
     if len(argv) != 5 or argv[:2] != ["issue", "view"] or argv[3:] != ["--json", "state"]:
         print(f"fake gh: no verb {' '.join(argv)}", file=sys.stderr)

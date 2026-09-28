@@ -31,9 +31,8 @@ TOOLS = {
     "test-engine": ["cargo", "cargo-nextest"],
     "web": ["node", "pnpm"],
     "audit-web": ["node", "pnpm"],
-    # A guard test builds a Rust example (SPEC-042's rails rows), so the stage runs cargo too.
+    # A guard test builds the ingest crate twice (SPEC-055 A2), so the stage runs cargo too.
     "python": ["python3", "cargo"],
-    "packs": ["python3"],
     "scrub": ["python3"],
     "secrets": ["gitleaks"],
 }
@@ -69,7 +68,7 @@ EMPTY_UNITTEST = (
 
 def run_gate(scratch, stages, stubs, extra_env=None, check=CHECK, real=(), bodies=None):
     """Run `check` (the repository's check.sh by default) for `stages` with a PATH that holds only
-    the shell tools check.sh needs, each tool `real` names as the machine has it, and, for each name
+    the shell tools check.sh needs, each tool `real` names as PATH finds it, and, for each name
     in `stubs`, a stub that exits 0 (or runs the shell body `bodies` gives it), and any
     `extra_env`. Returns the process and its log directory."""
     tools = scratch / "bin"
@@ -77,7 +76,7 @@ def run_gate(scratch, stages, stubs, extra_env=None, check=CHECK, real=(), bodie
     for tool in (*SHELL_TOOLS, *real):
         found = shutil.which(tool)
         if found is None:
-            raise AssertionError(f"this machine has no {tool}, which check.sh itself runs")
+            raise AssertionError(f"no {tool} is on PATH, and check.sh itself runs it")
         (tools / tool).symlink_to(found)
     for tool in stubs:
         stub = tools / tool
@@ -181,6 +180,38 @@ class EveryStageIsTimed(unittest.TestCase):
         self.assertEqual(done.returncode, 1, done.stdout)
 
 
+class TheLogDirectoryStaysOffStdout(unittest.TestCase):
+    """SPEC-056 R4: stdout, which a reader quotes, never names the log directory's path."""
+
+    def test_the_log_directory_is_never_on_stdout_and_holds_every_stage_log(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            # A caller that names the directory, as every CI job does: nothing names it, and it
+            # holds each stage's log and the timings, which the job's upload step reads.
+            named = Path(scratch) / "named"
+            done, logs = run_gate(named, ["fmt", "web"], ["cargo"])
+            self.assertNotIn(str(logs), done.stdout)
+            self.assertNotIn(str(logs), done.stderr)
+            self.assertEqual([line for line in done.stdout.splitlines() if "logs" in line], [])
+            held = examined("files in the named log directory", sorted(logs.iterdir()))
+            self.assertEqual([path.name for path in held], ["fmt.log", "timings.tsv", "web.log"])
+            self.assertTrue(summary(done), done.stdout)
+            # A caller that names none: the fresh directory is named once, on stderr alone.
+            fresh = Path(scratch) / "fresh"
+            temp = fresh / "tmp"
+            temp.mkdir(parents=True)
+            done, _ = run_gate(
+                fresh, ["fmt"], ["cargo"], extra_env={"CHECK_LOG_DIR": "", "TMPDIR": str(temp)}
+            )
+            made = examined("fresh log directories", sorted(temp.iterdir()))
+            self.assertEqual(len(made), 1, made)
+            self.assertNotIn(str(made[0]), done.stdout)
+            self.assertEqual(done.stderr.splitlines(), [f"logs: {made[0]}"])
+            self.assertEqual(
+                sorted(path.name for path in made[0].iterdir()), ["fmt.log", "timings.tsv"]
+            )
+            self.assertIn("CHECK OK: 1 stage(s)", done.stdout)
+
+
 class ThePythonStageRunsEverySuite(unittest.TestCase):
     def test_a_red_guard_suite_leaves_the_oracle_suite_run_and_named(self):
         with tempfile.TemporaryDirectory() as scratch:
@@ -256,7 +287,7 @@ def run_recorded(check, stage, scratch, extra_env=None):
     for tool in SHELL_TOOLS:
         found = shutil.which(tool)
         if found is None:
-            raise AssertionError(f"this machine has no {tool}, which check.sh itself runs")
+            raise AssertionError(f"no {tool} is on PATH, and check.sh itself runs it")
         (tools / tool).symlink_to(found)
     stubs = {
         "cargo": f"#!/bin/sh\nprintf '%s\\n' \"$@\" '{CALL_END}' >> \"$CARGO_CALLS\"\nexit 0\n",

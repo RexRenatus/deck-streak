@@ -93,7 +93,7 @@ R10. No committed file writes a template instance name literally (a template, `@
 
 | id | criterion | decided by |
 |---|---|---|
-| A1 | the durable lint finds no blocking defect in the templates (examined units, zero refused) | `test_deploy_templates.py`; durable-services tree rows, enforced |
+| ~~A1~~ | the durable lint finds no blocking defect in the templates (examined units, zero refused) | `test_deploy_templates.py`; durable-services tree rows, enforced |
 | A2 | every unit's `MemoryHigh` is below its `MemoryMax`, and both equal its host-budget entry | `test_deploy_templates.py`; `resources.memory-order` |
 | A3 | the long-running units' ceilings plus the largest oneshot's fit the stack's share | `test_deploy_templates.py`; `resources.budget` |
 | A4 | the Caddy block's policy admits Telegram Web as a framer and sends the security headers | `test_deploy_templates.py`; web-security header rows on the box |
@@ -104,7 +104,11 @@ R10. No committed file writes a template instance name literally (a template, `@
 | A9 | every credential line of every template has the socket form, and a planted `LoadCredentialEncrypted=` line is refused (examined count reported) | `test_deploy_templates.py` |
 
 ```acceptance
+```
+```retired
 A1: python3 -m unittest discover -s scripts/tests -p test_deploy_templates.py -k the_durable_lint_finds_no_blocking_defect_in_the_templates
+```
+```acceptance
 A2: python3 -m unittest discover -s scripts/tests -p test_deploy_templates.py -k every_unit_ceiling_matches_the_host_budget_and_high_is_below_max
 A3: python3 -m unittest discover -s scripts/tests -p test_deploy_templates.py -k the_daemons_and_the_largest_job_fit_the_stack_share
 A4: python3 -m unittest discover -s scripts/tests -p test_deploy_templates.py -k the_caddy_policy_admits_telegram_web_and_sends_the_security_headers
@@ -215,7 +219,7 @@ SPEC. Each is corrected above; the reasons are these.
   carries no `script-src` or `default-src` by design: the page's own meta policy carries the script
   sources with its build's hashes (SPEC-028 R14), which the probe does not read. A served script
   policy strict enough for the row would block the scripts those hashes admit, so the row is an
-  expected red owned by #60, which brings every phxd pack to green.
+  expected red owned by #60, which brings every binary-built pack to green.
 - **ADR-032: decided at delivery.** The neutral release root and settings file, the daemons'
   processor and task caps, the job template's start timeout, and each unit's credentials, each
   recorded in ADR-032 with what it was chosen against.
@@ -223,3 +227,23 @@ SPEC. Each is corrected above; the reasons are these.
   showed that SPEC-026 runs the sync cycle inside the bot, beside ADR-032's bot ceiling.
 - **The manifest.** The `.packs/wiring.json` row names every change above, and ADR-032 is changed
   (accepted) rather than added, since the plan wrote it.
+
+## 8. Amendment, 2026-09-28: criteria whose tests SPEC-056 removed
+
+Made by SPEC-056 (ADR-069), insert-only under ruling (i) of SPEC-038 section 8: every earlier byte
+is kept in order. It inserts:
+
+- section 3: `~~` around A1 in the criteria table, so the table no longer states it;
+- section 3: the fence lines that close the acceptance fence before its first line, which leaves an
+  empty acceptance fence, set A1 apart in a `` ```retired `` fence after it, and open the acceptance
+  fence again for A2 to A9;
+- this section.
+
+The retired criteria, why their subject is gone, and what judges it now:
+
+- A1 (the durable lint finds no blocking defect in the templates): SPEC-056 removed the vendored
+  lint the test ran. The box run's durable-services pack, enforced, judges the templates.
+
+Amendment (2026-09-28): names of the maintainer's private tooling were replaced with 'the box-run
+packs' and neutral names for their repository, binary and checkout under the public-text rule
+(ADR-059).

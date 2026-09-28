@@ -42,21 +42,23 @@ names each one it refuses by file and line, and proves itself on the planted lea
 
 ## Honest pack states
 
-`.packs/wiring.json` says which packs are enforced and which wait for a named issue, and the gate
-refuses a state the tree has outgrown. A `pending` pack whose every blocking row passes must say
-`enforced`. Every deferred row runs in a pass of its own: one that passes must lose its deferral,
-and one that is still red, VOID or in error stays deferred and fails nothing
-(`scripts/pack-rows.py`). The runner runs rows in a bounded pool, `--jobs N`, by default the
-smaller of 8 and the CPUs available, and reports them in row order with the verdicts one row at a
-time would give.
+Every pack is judged on the maintainer's box by `scripts/box-packs.sh` (ADR-069), from a private
+checkout of the packs at a pinned commit, with the wiring a private file gives it; the sdd, ddd and
+tdd probes run the same way. A pull request shows the run's verdict as its `box/packs` status.
 
-The packs built into phxd run on the maintainer's box with `scripts/box-packs.sh` (ADR-030). The
-wiring's `box` section names every red row expected on the tree with the open issue that builds its
-subject. A red row it does not name fails the run, and a named row that is no longer red is refused
-as stale. A pack that examines nothing reads `pending` with its issue, and is never reported green.
-Before any pack runs, the runner reads each named issue's state with `gh`: an expectation whose
-issue is closed is stale, and a run that cannot read an issue's state is VOID, never green
-(SPEC-054). The runner's own tests drive it with a fake phxd and a fake `gh`
+The wiring's packs section says which packs are enforced and which wait for a named issue, and the
+run refuses a state the tree has outgrown. A `pending` pack whose every blocking row passes must say
+`enforced`. A deferred row that passes must lose its deferral, and one that is still red, VOID or in
+error stays deferred and fails nothing.
+
+The wiring's box section names every red row expected on the tree with the open issue that builds
+its subject. A red row it does not name fails the run, and a named row that is no longer red is
+refused as stale. A pack that examines nothing reads `pending` with its issue, and is never reported
+green. Before any pack runs, the driver reads each named issue's state with `gh`: an expectation
+whose issue is closed is stale, and a run that cannot read an issue's state is VOID, never green
+(SPEC-054). The data DeckStreak keeps from a pack (the vault's rails, layout and gate classes, and
+the scrub's shapes) is compared with the pack's own at the pin, so it cannot drift. The driver's
+own tests drive it with a fake runner, a synthetic checkout and a fake `gh`
 (`scripts/tests/test_box_packs.py`), so they run in CI.
 
 ## Continuous integration

@@ -181,7 +181,7 @@ A19: cargo test -p deck-streak-coordination --test readings_generate -- --exact 
 | `Cargo.toml` | workspace | changed: `[workspace.dependencies]` gains `unicode-normalization`, `html-escape`, `unicode-segmentation` (ADR-046) |
 | `Cargo.lock`, `.sqlx/` | workspace | changed |
 | `scripts/tests/test_reading_rows.py` | repo | added |
-| `.packs/wiring.json` | repo | changed: study-duties and learning-science become `enforced` |
+| the box-run packs' private wiring (ADR-069) | the maintainer's | changed: study-duties and learning-science become `enforced` |
 | `tools/parity-oracle/registry/spec_046.py` | repo | added: registers the two anchor functions (SPEC-029's registry) |
 | `tools/parity-oracle/goldens/anchor_for_note.json` | repo | added |
 | `tools/parity-oracle/goldens/is_anchor_usable.json` | repo | added |

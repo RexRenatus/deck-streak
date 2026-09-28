@@ -8,8 +8,9 @@ must not.
     python3 scripts/public-scrub.py --root . --deny-list FILE     plus the maintainer's private list
     python3 scripts/public-scrub.py --root . --history            plus every blob HEAD reaches
 
-The rules are the packs' own, composed and never copied (CHARTER constraint 11), in one place,
-`rules(private)`, which `scripts/vendor-packs.py` reuses (ADR-039):
+The rules are composed in one place, `rules(private)`, from the scrub's own files in
+`scripts/scrub-rules/`, which keep the persona-core and privacy-gdpr packs' public shapes; the box
+run compares each with its pack's own, field by field, so they cannot drift (ADR-069):
 
 * persona-core's public deny shapes: IPv4 addresses and hostnames that encode one, provider token
   shapes, Telegram bot tokens and supergroup ids, private-key headers, and email addresses outside
@@ -46,8 +47,8 @@ examined nothing, or the history is shallow.
 from __future__ import annotations
 
 import argparse
-import importlib.util
 import ipaddress
+import json
 import os
 import re
 import subprocess
@@ -56,14 +57,16 @@ import unicodedata
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
-PACKS = REPO / ".packs" / "skills" / "packs"
-PROBE = REPO / ".packs" / "scripts" / "persona-core-probe.py"
+# The scrub's own public shapes, in the order they are composed around the private list.
+RULES = REPO / "scripts" / "scrub-rules"
+# The schema every deny list carries, the public ones and the maintainer's private one.
+DENY_SCHEMA = "phx.persona.deny.v1"
 MAX_BYTES = 2_000_000
 # git's own binary heuristic reads the first 8000 bytes for a NUL.
 SNIFF_BYTES = 8000
 # The rule files themselves, and license texts, are not disclosures.
 SKIP_NAMES = {"deny-list.json", "LICENSE"}
-SKIP_PREFIXES = ("LICENSES/",)
+SKIP_PREFIXES = ("LICENSES/", "scripts/scrub-rules/")
 ADDRESS_RULES = {"ipv4", "ipv6"}
 # The ranges privacy-gdpr's public scrub passes: documentation (RFC 5737, RFC 3849, RFC 9637).
 DOCUMENTATION = [
@@ -104,13 +107,47 @@ def harmless_address(text: str, before: str, after: str) -> bool:
     return any(address in net for net in DOCUMENTATION)
 
 
-def load_persona_core():
-    spec = importlib.util.spec_from_file_location("persona_core_probe", PROBE)
-    if spec is None or spec.loader is None:
-        raise SystemExit(f"public-scrub: cannot load {PROBE}")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+class DenyListError(ValueError):
+    """A deny list cannot be read: str() names the file and why."""
+
+
+def compiled(row: object, where: str) -> tuple:
+    """A pattern row as (its id, its compiled regex); the flag `i` ignores case."""
+    if not isinstance(row, dict) or not isinstance(row.get("regex"), str):
+        raise DenyListError(f"{where}: a row has no regex")
+    flags = re.IGNORECASE if "i" in str(row.get("flags", "")) else 0
+    try:
+        return (str(row.get("id", "?")), re.compile(row["regex"], flags))
+    except re.error as error:
+        raise DenyListError(f"{where}: {row.get('id')}: {error}") from error
+
+
+def load_deny(path: Path, origin: str) -> dict:
+    """The deny list at `path` in its schema, each entry tagged with `origin`: its `patterns` as
+    (origin, id, compiled regex) and its `literals` as (origin, literal), casefolded. Its key
+    markers and journal paths are checked and not kept: the scrub reads neither. An unreadable or
+    malformed list raises DenyListError."""
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except OSError as error:
+        raise DenyListError(f"{path}: unreadable ({error.strerror or error})") from error
+    except (UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise DenyListError(f"{path}: not JSON ({error})") from error
+    if not isinstance(data, dict) or data.get("schema") != DENY_SCHEMA:
+        raise DenyListError(f"{path}: schema is not {DENY_SCHEMA}")
+    loaded: dict = {"patterns": [], "literals": []}
+    for key in ("key_markers", "patterns", "literals", "journal_paths"):
+        values = data.get(key, [])
+        if not isinstance(values, list):
+            raise DenyListError(f"{origin} deny-list: {key} is not a list")
+        for value in values:
+            if key == "patterns":
+                loaded["patterns"].append((origin, *compiled(value, f"{origin} deny-list")))
+            elif not isinstance(value, str) or not value:
+                raise DenyListError(f"{origin} deny-list: {key} holds a non-string")
+            elif key == "literals":
+                loaded["literals"].append((origin, value.casefold()))
+    return loaded
 
 
 def tracked(root: Path) -> list[Path]:
@@ -157,8 +194,8 @@ class UsageError(Exception):
 
 
 class RulesError(Exception):
-    """The deny lists cannot be composed (a private list that is not a file, or a list the probe
-    refuses): a usage error, reported with exit 2 by every caller of `rules()`."""
+    """The deny lists cannot be composed (a private list that is not a file, or a list that
+    cannot be read): a usage error, reported with exit 2 by every caller of `rules()`."""
 
 
 class Scan:
@@ -266,19 +303,17 @@ def history(root: Path, rev: str, scan: Scan) -> int | None:
 
 
 def rules(private: Path | None) -> Scan:
-    """The scrub's rules, composed in this one place (ADR-039): persona-core's deny list with the
-    private list `private`, then privacy-gdpr's, as a Scan. `scripts/vendor-packs.py` scans with
-    this very composition, so the two can never drift. RulesError names a private list that is not
-    a file, or a deny list the probe refuses."""
+    """The scrub's rules, composed in this one place: persona-core's public shapes, then the
+    private list `private`, then privacy-gdpr's public shapes, as a Scan. RulesError names a
+    private list that is not a file, or a deny list that cannot be read."""
     if private is not None and not private.is_file():
         raise RulesError(f"the private list {private} is not a file")
-    persona = load_persona_core()
     try:
-        lists = [
-            persona.load_deny(PACKS / "persona-core", private),
-            persona.load_deny(PACKS / "privacy-gdpr", None),
-        ]
-    except persona.ContractError as error:
+        lists = [load_deny(RULES / "persona-core.json", "public")]
+        if private is not None:
+            lists.append(load_deny(private, "private"))
+        lists.append(load_deny(RULES / "privacy-gdpr.json", "public"))
+    except DenyListError as error:
         raise RulesError(f"a deny list cannot be read: {error}") from error
     rows = [(rule, pattern) for deny in lists for _origin, rule, pattern in deny["patterns"]]
     literals = [(origin, literal) for deny in lists for origin, literal in deny["literals"]]

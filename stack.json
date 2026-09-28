@@ -1,6 +1,5 @@
 {
   "schema": "phx.stack.v1",
-  "radar": ".packs/skills/packs/stack-selection/radar.json",
   "app_types": [
     "backend-api",
     "app-ui",

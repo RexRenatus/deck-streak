@@ -18,7 +18,7 @@
   `crates/notifications/src/router.rs` and its symbol `route`, with the bot's `push_message`,
   `push_dice`, `push_reaction` and `push_pin` and the Mini App's `push_in_app` as the only delivery
   calls. The notifications-policy pack is enforced, with its `one-router` row deferred until this
-  delivery (`.packs/wiring.json`, `deferred_rows`).
+  delivery (the box-run packs' wiring, `deferred_rows`; ADR-069).
 - **What is ported.** The predecessor's `quiet-hours` feature (`quiet_hours.py:in_quiet_hours`:
   23:00 to 07:30, wrapping midnight, start equal to end disables), the deferral and flush of
   `pipeline_layers/celebrations.py:CelebrationsLayer.flush_deferred_celebrations` (720 minutes, 2
@@ -157,7 +157,7 @@ A14: cargo test -p deck-streak-notifications --test rights -- --exact the_notifi
 | `crates/coordination/src/sync_cycle.rs` | `deck-streak-coordination` | changed: the flush step after a successful sync |
 | `crates/daemon/src/wiring.rs` | `deck-streak-daemon` | changed: the bot transport joined to the router |
 | `notifications-policy.json` | repo | changed: the `reading_ready` kind and its deviation |
-| `.packs/wiring.json` | repo | changed: `one-router` is no longer deferred |
+| the box-run packs' private wiring (ADR-069) | the maintainer's | changed: `one-router` is no longer deferred |
 | `scripts/tests/test_notifications_router_rows.py` | repo | added |
 | `tools/parity-oracle/registry/spec_041.py` | repo | added: registers `quiet_hours.py:in_quiet_hours` (SPEC-029's registry) |
 | `tools/parity-oracle/goldens/in_quiet_hours.json` | repo | added |

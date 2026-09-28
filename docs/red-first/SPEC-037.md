@@ -6,6 +6,8 @@ applies no exclusion and no scan. Each criterion was run there for its own reaso
 implementation (4acf763). Both shas were re-run from a `git archive` export.
 
 ```red-first
+```
+```retired
 A1: red at 13f69a9: AssertionError: Lists differ: ['.packs/scripts/proxy-client-scan.py', '.packs/skills/packs/alpha/examples/demo.md', '.packs/skills/packs/subscription-proxy/SKILL.md', '.packs/skills/packs/subscription-proxy/checks.json', '.packs/skills/packs/subscription-proxy/client/run-headless.sh'] != [] (every excluded fixture file landed in the tree)
 A1: green at 4acf763
 A2: red at 13f69a9: AssertionError: 0 != 1 : 8 files vendored (the address was copied and the run exited 0)
@@ -30,8 +32,13 @@ the names upstream ships today. Two further tests were red at 13f69a9 and green 
 run changes nothing (`'8 files vendored' != 'vendor-packs: examined 7 file(s), ...'`), and a run
 that examines nothing is VOID (`0 != 3 : 1 files vendored`).
 
-At 4acf763, a run against the vendored phoenix-v2 commit e54f39c, into a scratch copy of this tree
+At 4acf763, a run against the vendored packs commit e54f39c, into a scratch copy of this tree
 and with the maintainer's private list, printed
 `vendor-packs: examined 186 file(s), changed 0, new 0, excluded 71, from e54f39c5ad586fc59da33b56bd8e0044af277c25`.
 It named the subscription-proxy pack excluded whole, left out 18 upstream packs that are not
 vendored, found nothing, and left every one of the copy's 550 files byte-identical.
+
+Amendment (2026-09-28): the lines of A1 to A7 moved into a `` ```retired `` fence, by inserted fence
+lines, because SPEC-056 retired those criteria when it removed their tests; names of the
+maintainer's private tooling were replaced with 'the box-run packs' and neutral names for their
+repository, binary and checkout under the public-text rule (ADR-059).
