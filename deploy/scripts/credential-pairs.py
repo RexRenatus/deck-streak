@@ -8,9 +8,10 @@
 It reads every unit file under `<root>/deploy/`, with the drop-ins of the `<unit>.d/` directory
 beside it, as systemd reads them: its line ends, comments and continued lines (SPEC-061 §8), and
 the empty assignment that resets a list; a construct systemd could read otherwise, such as a
-byte-order mark, is refused by file and line rather than guessed. An optional set, `deploy/optional/<name>/`, is read only when `--optional` names it: each
-drop-in `<unit>.conf` applies to that unit after its template, and a name without a unit type,
-`<name>.conf`, applies to `<name>.service` (SPEC-063, SPEC-065).
+byte-order mark, is refused by file and line rather than guessed. An optional set,
+`deploy/optional/<name>/`, is read only when `--optional` names it: each drop-in `<unit>.conf`
+applies to that unit after its template, and a name without a unit type, `<name>.conf`, applies to
+`<name>.service` (SPEC-063, SPEC-065).
 
 It prints one JSON object: `pairs`, each `{"unit", "credential"}` once, sorted, and a template
 unit named as the template it is (`name@.service`), because systemd asks the socket under the
