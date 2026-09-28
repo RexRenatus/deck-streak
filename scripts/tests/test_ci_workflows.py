@@ -1089,6 +1089,13 @@ class TheEngineSetRunsInSlices(unittest.TestCase):
 
 # The planted workflows: those the checker refuses (A10) and those it admits (A11).
 PLANTED = REPO / "scripts" / "tests" / "fixtures" / "secrets-and-checkouts"
+# The secrets context in an expression, in any case: `secrets.NAME` (group 1), `secrets['NAME']`
+# (group 2), or the context whole, which names no secret: `toJSON(secrets)`, `secrets.*`, or an
+# index computed at run time.
+SECRET = re.compile(r"(?<![\w.-])secrets(?![\w-])(?:\.([A-Za-z_][\w-]*)|\['([^']*)'\])?", re.I)
+# A command that clones a repository, and a git command given a URL.
+CLONE = re.compile(r"\bgit\b[^;&|]*?\bclone\b|\bgh\s+repo\s+clone\b")
+GIT_URL = re.compile(r"\bgit\b[^;&|]*?(?:\w+://|\bgit@)")
 
 
 def expressions_in(text):
@@ -1130,23 +1137,73 @@ def checked_out(step):
     return given
 
 
+def secret_reads(expression):
+    """What an expression reads from the secrets context, other than GITHUB_TOKEN. GitHub reads a
+    secret's name without case, so `secrets.github_token` is the default token too."""
+    found = []
+    for match in SECRET.finditer(expression):
+        name = match.group(1) if match.group(1) is not None else match.group(2)
+        if name is None:
+            found.append("reads the whole secrets context, or a secret named at run time")
+        elif name.upper() != "GITHUB_TOKEN":
+            found.append(f"reads the secret {name}")
+    return found
+
+
+def commands(script):
+    """A run script's commands, one per line: a line continued with a backslash is joined to the
+    next, and each command's whitespace is collapsed."""
+    lines = script.replace("\\\n", " ").splitlines()
+    return [" ".join(line.split()) for line in lines if line.strip()]
+
+
+def reaches(script):
+    """Each command of a run script that clones a repository or gives git a URL: a workflow reaches
+    this repository through actions/checkout and origin, and no other."""
+    found = []
+    for command in commands(script):
+        if CLONE.search(command):
+            found.append(f"clones a repository: {command}")
+        elif GIT_URL.search(command):
+            found.append(f"points git at a URL: {command}")
+    return found
+
+
 def secret_and_checkout_problems(directory):
-    """A stub that reads every workflow in `directory` and refuses none, so the planted workflows
-    prove A10 and A12 red before the checker judges anything (SPEC-034)."""
-    files = sorted(path for path in directory.iterdir() if path.suffix in (".yml", ".yaml"))
+    """Every read of a secret other than GITHUB_TOKEN, every `secrets: inherit`, and every checkout,
+    clone or fetch of another repository in the workflows of `directory`, each named by its file
+    and its place, with what was judged: (problems, {population: [...]}). A directory with no
+    workflow file is VOID, never a pass."""
+    files = examined(
+        "workflow files",
+        sorted(path for path in directory.iterdir() if path.suffix in (".yml", ".yaml")),
+    )
+    problems = []
     judged = {"expressions": [], "checkouts": [], "run steps": []}
     for path in files:
         workflow = read_workflow(path.read_text(encoding="utf-8"))
         for where, text in strings(workflow):
-            judged["expressions"] += [(f"{path.name}:{where}", e) for e in expressions_in(text)]
+            for expression in expressions_in(text):
+                judged["expressions"].append((f"{path.name}:{where}", expression))
+                problems += [f"{path.name}:{where}: {read}" for read in secret_reads(expression)]
         for job_id, job in (workflow.get("jobs") or {}).items():
-            for n, step in enumerate((job or {}).get("steps") or []):
+            job = job or {}
+            if job.get("secrets") == "inherit":
+                problems.append(
+                    f"{path.name}:jobs.{job_id}.secrets: passes every secret to the workflow it "
+                    "calls"
+                )
+            for n, step in enumerate(job.get("steps") or []):
                 where = f"{path.name}:jobs.{job_id}.steps[{n}]"
                 if action(step) == "actions/checkout":
-                    judged["checkouts"].append((where, checked_out(step)))
+                    repository = checked_out(step)
+                    judged["checkouts"].append((where, repository))
+                    if repository != THIS_REPOSITORY:
+                        problems.append(f"{where}: checks out {repository}, not this repository")
                 if "run" in step:
                     judged["run steps"].append(where)
-    return [], judged
+                    problems += [f"{where}: {reach}" for reach in reaches(str(step["run"]))]
+    return problems, judged
 
 
 if __name__ == "__main__":
