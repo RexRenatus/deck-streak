@@ -1,7 +1,7 @@
 //! The one validator of Telegram's launch data: the `WebAppData` HMAC over the sorted check string,
 //! a bounded `auth_date`, and a malformed payload refused (SPEC-024 A1 to A5, R1, R2).
 //!
-//! Payloads are signed here the way Telegram signs them, through RustCrypto's own
+//! Payloads are signed here the way Telegram signs them, through the `hmac` crate's own
 //! `new_from_slice`, never through anything the crate does, so each test knows exactly what it
 //! changed. A1 and A5 also read payloads whose hashes Python's standard `hmac` and `hashlib`
 //! computed, so the construction itself (which key signs which message) is pinned by an oracle
@@ -12,11 +12,12 @@
 // are printed on purpose.
 #![allow(clippy::expect_used, clippy::print_stdout)]
 
+use std::fmt::Write as _;
 use std::time::Duration;
 
 use axum::http::StatusCode;
 use deck_streak_identity::settings::{FUTURE_SKEW, INIT_DATA_MAX_AGE};
-use deck_streak_identity::{Freshness, Refusal, WebAppKey, validate};
+use deck_streak_identity::{Caller, Freshness, Refusal, WebAppKey, validate};
 use deck_streak_kernel::{Environment, SettingsError, TelegramUserId, UtcMillis};
 use hmac::{Hmac, KeyInit, Mac};
 use sha2::Sha256;
@@ -92,7 +93,10 @@ fn check_string(fields: &[(String, String)]) -> String {
 }
 
 fn hex(bytes: &[u8]) -> String {
-    bytes.iter().map(|byte| format!("{byte:02x}")).collect()
+    bytes.iter().fold(String::new(), |mut text, byte| {
+        let _ = write!(text, "{byte:02x}");
+        text
+    })
 }
 
 /// The hash Telegram gives `fields` for the bot `token`: the check string's HMAC-SHA-256 under the
@@ -161,7 +165,7 @@ fn a_payload_signed_with_the_webappdata_key_is_accepted() {
     let fields = launch(777, SIGNED_AT);
     let signed = payload(&fields, &sign(BOT_TOKEN, &fields));
     assert_eq!(
-        validate(&signed, &key, Freshness::default(), now).map(|caller| caller.user()),
+        validate(&signed, &key, Freshness::default(), now).map(Caller::user),
         Ok(TelegramUserId::new(777))
     );
 
@@ -205,9 +209,14 @@ fn a_tampered_field_is_refused_with_401() {
     // So is the hash with one digit changed.
     let mut digits = hash.clone().into_bytes();
     digits[0] = if digits[0] == b'0' { b'1' } else { b'0' };
-    let changed = String::from_utf8(digits).expect("hex is ASCII");
+    let one_digit_off = String::from_utf8(digits).expect("hex is ASCII");
     assert_eq!(
-        validate(&payload(&fields, &changed), &key, Freshness::default(), now),
+        validate(
+            &payload(&fields, &one_digit_off),
+            &key,
+            Freshness::default(),
+            now
+        ),
         Err(Refusal::InitDataInvalid)
     );
 }
@@ -262,7 +271,7 @@ fn a_stale_or_future_auth_date_is_refused_with_401() {
     }
 
     // A shorter bound is the bound: two minutes admits a launch two minutes old, and no older.
-    let two_minutes = Freshness::new(Duration::from_secs(120)).expect("a bound in range");
+    let two_minutes = Freshness::new(Duration::from_mins(2)).expect("a bound in range");
     for (age, fresh) in [(120, true), (121, false)] {
         let fields = launch(USER, now_seconds - age);
         let signed = payload(&fields, &sign(BOT_TOKEN, &fields));
@@ -387,11 +396,11 @@ fn the_freshness_bound_is_read_from_its_setting() {
         |value: &str| Freshness::from_env(&Environment::from_vars([(INIT_DATA_MAX_AGE, value)]));
     assert_eq!(
         read("120").map(Freshness::max_age),
-        Ok(Duration::from_secs(120))
+        Ok(Duration::from_mins(2))
     );
     assert_eq!(
         Freshness::from_env(&Environment::default()).map(Freshness::max_age),
-        Ok(Duration::from_secs(3600))
+        Ok(Duration::from_hours(1))
     );
     for malformed in examined("malformed bound(s)", vec!["0", "86401", "an hour", "-5"]) {
         assert_eq!(

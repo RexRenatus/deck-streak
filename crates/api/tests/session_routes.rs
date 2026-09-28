@@ -18,8 +18,7 @@ use std::time::Duration;
 use axum::Router;
 use axum::body::{Body, to_bytes};
 use axum::http::header::{CONTENT_TYPE, RETRY_AFTER, SET_COOKIE};
-use axum::http::{HeaderMap, Request, StatusCode};
-use deck_streak_api::router::BODY_LIMIT_BYTES;
+use axum::http::{HeaderMap, HeaderValue, Request, StatusCode};
 use deck_streak_api::session_routes::HANDSHAKE_BODY_LIMIT_BYTES;
 use deck_streak_api::{ApiState, OwnerAccess, Readiness, router};
 use deck_streak_identity::{Freshness, Owner, OwnerGate, WebAppKey};
@@ -80,6 +79,9 @@ fn app() -> (Arc<ManualClock>, Router) {
     let app = router(ApiState::new(Readiness::new()).with_owner(access));
     (clock, app)
 }
+
+/// A refused state change: its method, its headers, and the reason code it is refused with.
+type Refused<'a> = (&'a str, Vec<(&'a str, &'a str)>, &'a str);
 
 /// An answer: its status, its headers and its body.
 struct Answer {
@@ -225,10 +227,7 @@ async fn me_answers_the_study_day_only_with_a_live_session() {
     let answer = me(&app, Some(&cookie)).await;
     assert_eq!(answer.status, StatusCode::OK, "{}", answer.body);
     assert_eq!(
-        answer
-            .headers
-            .get(CONTENT_TYPE)
-            .map(|value| value.as_bytes()),
+        answer.headers.get(CONTENT_TYPE).map(HeaderValue::as_bytes),
         Some(&b"application/json"[..])
     );
     assert_eq!(answer.body, "{\"study_day\":\"2025-01-14\"}");
@@ -261,7 +260,7 @@ async fn a_cross_site_or_non_json_state_change_is_refused() {
 
     // The owner's own valid launch data, sent cross-site or as something other than JSON: 403,
     // before the route reads it. A cross-site logout carrying the live cookie is refused too.
-    let refusals: Vec<(&str, Vec<(&str, &str)>, &str)> = vec![
+    let refusals: Vec<Refused> = vec![
         (
             "POST",
             vec![
@@ -376,10 +375,7 @@ async fn handshakes_past_the_bound_are_refused_with_429() {
     assert_eq!(refused.status, StatusCode::TOO_MANY_REQUESTS);
     assert_eq!(refused.body, "{\"reason\":\"too_many_handshakes\"}");
     assert_eq!(
-        refused
-            .headers
-            .get(RETRY_AFTER)
-            .map(|value| value.as_bytes()),
+        refused.headers.get(RETRY_AFTER).map(HeaderValue::as_bytes),
         Some(&b"50"[..])
     );
     // The thirty it admitted were judged, and each refused as forged: the bound counts every
@@ -389,7 +385,7 @@ async fn handshakes_past_the_bound_are_refused_with_429() {
     let last = handshake(&app, OWNER_PAYLOAD, None).await;
     assert_eq!(last.status, StatusCode::TOO_MANY_REQUESTS);
     assert_eq!(
-        last.headers.get(RETRY_AFTER).map(|value| value.as_bytes()),
+        last.headers.get(RETRY_AFTER).map(HeaderValue::as_bytes),
         Some(&b"1"[..])
     );
 
@@ -518,7 +514,6 @@ async fn the_mini_apps_own_requests_open_a_session_and_read_the_day() {
 #[tokio::test]
 async fn the_handshake_body_is_bounded_below_the_shells_limit() {
     assert_eq!(HANDSHAKE_BODY_LIMIT_BYTES, 16 * 1024);
-    assert!(HANDSHAKE_BODY_LIMIT_BYTES < BODY_LIMIT_BYTES);
     let (_clock, app) = app();
     let headers = [
         ("content-type", "application/json"),
@@ -538,7 +533,7 @@ async fn the_handshake_body_is_bounded_below_the_shells_limit() {
             "{\"reason\":\"init_data_invalid\"}"
         )
     );
-    // One byte more is refused 413, far below the shell's 2 MiB.
+    // One byte more is refused 413: the shell's own limit, 2 MiB, would have read it.
     let over = send(
         &app,
         "POST",

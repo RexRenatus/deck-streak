@@ -13,12 +13,12 @@ use deck_streak_kernel::{Environment, Setting, SettingsError};
 /// How old the launch data may be, in whole seconds, 1 to 86400 (default 3600).
 pub const INIT_DATA_MAX_AGE: &str = "DECKSTREAK_INIT_DATA_MAX_AGE_SECONDS";
 /// The bound when none is set: an hour covers a Mini App launch and its re-handshakes (ADR-024).
-pub const DEFAULT_MAX_AGE: Duration = Duration::from_secs(3600);
+pub const DEFAULT_MAX_AGE: Duration = Duration::from_hours(1);
 /// The longest bound the setting takes: a day, the common library default ADR-024 turned down as
 /// the default; beyond it a leaked launch string outlives any use of it.
-pub const LONGEST_MAX_AGE: Duration = Duration::from_secs(86_400);
+pub const LONGEST_MAX_AGE: Duration = Duration::from_hours(24);
 /// How far ahead of the server's clock an `auth_date` may be: ordinary clock skew (ADR-024).
-pub const FUTURE_SKEW: Duration = Duration::from_secs(60);
+pub const FUTURE_SKEW: Duration = Duration::from_mins(1);
 
 /// How fresh launch data must be: no older than its bound, and no further ahead than the skew.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -58,8 +58,7 @@ impl Freshness {
     /// [`SettingsError::Malformed`] when it is set and is not a whole number of seconds from 1 to
     /// 86400.
     pub fn from_env(env: &Environment) -> Result<Self, SettingsError> {
-        let _unread = env;
-        Ok(Self::default())
+        Ok(env.optional(INIT_DATA_MAX_AGE)?.unwrap_or_default())
     }
 }
 

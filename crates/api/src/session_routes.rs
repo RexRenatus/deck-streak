@@ -20,10 +20,11 @@ use std::sync::{Arc, Mutex, PoisonError};
 
 use axum::Router;
 use axum::body::Bytes;
-use axum::extract::{FromRef, FromRequestParts, State};
-use axum::http::header::CONTENT_TYPE;
+use axum::extract::{DefaultBodyLimit, FromRef, FromRequestParts, State};
+use axum::handler::Handler;
+use axum::http::header::{CONTENT_TYPE, RETRY_AFTER};
 use axum::http::request::Parts;
-use axum::http::{HeaderMap, StatusCode};
+use axum::http::{HeaderMap, HeaderName, StatusCode};
 use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
 use deck_streak_identity::session::{ended_cookie, opening_cookie, presented};
@@ -40,6 +41,10 @@ pub const ME_PATH: &str = "/api/me";
 pub const HANDSHAKE_BODY_LIMIT_BYTES: usize = 16 * 1024;
 /// Handshakes admitted in one minute of the kernel's clock, per process (ADR-024).
 pub const HANDSHAKES_PER_MINUTE: u32 = 30;
+/// The fetch-metadata header a browser sends with every request it makes (the CSRF bound, R9).
+const SEC_FETCH_SITE: HeaderName = HeaderName::from_static("sec-fetch-site");
+/// A minute of the kernel's clock, in milliseconds.
+const MINUTE_MS: i64 = 60_000;
 
 /// What the session routes share: the owner's gate, the sessions, the clock, the study-day rule
 /// and the handshake bound. A handle: every clone reads and writes the same sessions and bound.
@@ -82,10 +87,13 @@ impl FromRef<OwnerAccess> for Sessions {
     }
 }
 
-/// The session routes over `access`.
+/// The session routes over `access`. The handshake's own body limit sits on its handler, inside
+/// the shell's 2 MiB, so it is the limit the handler's `Bytes` extractor reads (axum-core's
+/// `DefaultBodyLimit` inserts its limit into each request, and the innermost layer inserts last).
 pub(crate) fn routes(access: OwnerAccess) -> Router {
+    let open = open_session.layer(DefaultBodyLimit::max(HANDSHAKE_BODY_LIMIT_BYTES));
     Router::new()
-        .route(SESSION_PATH, post(open_session).delete(log_out))
+        .route(SESSION_PATH, post(open).delete(log_out))
         .route(ME_PATH, get(me))
         .with_state(access)
 }
@@ -147,6 +155,11 @@ async fn me(_owner: OwnerSession, State(access): State<OwnerAccess>) -> Response
 
 /// A request that may change state: JSON, and not cross-site (R9). It refuses anything else with
 /// 403 before the route reads a byte of the body.
+///
+/// A cross-site HTML form can send only a form encoding or plain text, and a cross-site script
+/// that sends JSON must pass a CORS preflight, which this origin never grants; `SameSite=Strict`
+/// keeps the cookie off a cross-site request besides. `Sec-Fetch-Site`, which every current browser
+/// sends, names a cross-site request outright; a client that sends none is judged by the rest.
 struct StateChange;
 
 impl<S> FromRequestParts<S> for StateChange
@@ -156,12 +169,28 @@ where
     type Rejection = Response;
 
     async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
-        let _unread = parts;
+        let cross_site = parts
+            .headers
+            .get(&SEC_FETCH_SITE)
+            .is_some_and(|site| site != "same-origin");
+        if cross_site {
+            return Err(refused(StatusCode::FORBIDDEN, "cross_site_request"));
+        }
+        let json = parts
+            .headers
+            .get(CONTENT_TYPE)
+            .and_then(|value| value.to_str().ok())
+            .and_then(|value| value.split(';').next())
+            .is_some_and(|media| media.trim().eq_ignore_ascii_case("application/json"));
+        if !json {
+            return Err(refused(StatusCode::FORBIDDEN, "not_json"));
+        }
         Ok(Self)
     }
 }
 
-/// A handshake the bound admitted this minute (R10); past it, 429 until the minute turns.
+/// A handshake the bound admitted this minute (R10); past it, 429 until the minute turns, with a
+/// `Retry-After` of the seconds left.
 struct HandshakeSlot;
 
 impl FromRequestParts<OwnerAccess> for HandshakeSlot {
@@ -173,7 +202,11 @@ impl FromRequestParts<OwnerAccess> for HandshakeSlot {
     ) -> Result<Self, Self::Rejection> {
         match access.bound.admit(access.clock.now()) {
             Ok(()) => Ok(Self),
-            Err(_seconds) => Err(StatusCode::TOO_MANY_REQUESTS.into_response()),
+            Err(seconds) => {
+                let mut response = refused(StatusCode::TOO_MANY_REQUESTS, "too_many_handshakes");
+                response.headers_mut().insert(RETRY_AFTER, seconds.into());
+                Err(response)
+            }
         }
     }
 }
@@ -189,10 +222,26 @@ impl HandshakeBound {
     /// Admits one more handshake at `now`, or answers how many whole seconds remain until the
     /// minute turns.
     fn admit(&self, now: UtcMillis) -> Result<(), u64> {
-        let _unread = (
-            now,
-            self.window.lock().unwrap_or_else(PoisonError::into_inner),
-        );
+        let millis = now.epoch_millis();
+        let minute = millis.div_euclid(MINUTE_MS);
+        let mut window = self.window.lock().unwrap_or_else(PoisonError::into_inner);
+        if window.0 != minute {
+            *window = (minute, 0);
+        }
+        if window.1 >= HANDSHAKES_PER_MINUTE {
+            // Between 1 and 60 000 milliseconds are left, so between 1 and 60 whole seconds.
+            let left = MINUTE_MS - millis.rem_euclid(MINUTE_MS);
+            return Err(u64::try_from(left).map_or(60, |left| left.div_ceil(1000)));
+        }
+        window.1 += 1;
         Ok(())
     }
+}
+
+/// A refusal of this module's own: its status, and a JSON body naming its reason code alone, as
+/// identity's refusals are written. It is logged by the reason code alone.
+fn refused(status: StatusCode, reason: &'static str) -> Response {
+    tracing::warn!(reason, "a state change was refused");
+    let body = serde_json::json!({ "reason": reason }).to_string();
+    (status, [(CONTENT_TYPE, "application/json")], body).into_response()
 }

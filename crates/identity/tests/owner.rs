@@ -64,7 +64,10 @@ fn launch(user: i64, auth_date: i64) -> Vec<(String, String)> {
 }
 
 fn hex(bytes: &[u8]) -> String {
-    bytes.iter().map(|byte| format!("{byte:02x}")).collect()
+    bytes.iter().fold(String::new(), |mut text, byte| {
+        let _ = write!(text, "{byte:02x}");
+        text
+    })
 }
 
 /// The hash Telegram gives `fields` for the bot `token`.

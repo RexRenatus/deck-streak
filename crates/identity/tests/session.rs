@@ -97,7 +97,7 @@ fn an_idle_session_expires_and_an_old_one_ends_at_its_lifetime() {
     // A session used within its idle timeout lives on, each request refreshing the timer.
     let busy = open(&sessions);
     for _ in 0..3 {
-        clock.advance(IDLE - TICK);
+        clock.advance(IDLE.saturating_sub(TICK));
         assert_eq!(sessions.admit(busy.expose()), Some(owner()), "refreshed");
     }
     // Left idle for the whole timeout, it has ended, and it stays ended.
@@ -119,7 +119,7 @@ fn an_idle_session_expires_and_an_old_one_ends_at_its_lifetime() {
             "{elapsed:?} after it began"
         );
     }
-    clock.advance(LIFETIME - elapsed - TICK);
+    clock.advance(LIFETIME.saturating_sub(elapsed).saturating_sub(TICK));
     assert_eq!(
         sessions.admit(long.expose()),
         Some(owner()),
@@ -210,7 +210,7 @@ async fn the_owner_session_extractor_admits_only_a_live_cookie() {
     }
 
     // Each admitted request refreshed the idle timer; left idle, the session is refused.
-    clock.advance(IDLE - TICK);
+    clock.advance(IDLE.saturating_sub(TICK));
     assert_eq!(call(Some(live.clone())).await.0, StatusCode::OK);
     clock.advance(IDLE);
     assert_eq!(call(Some(live)).await.0, StatusCode::UNAUTHORIZED);

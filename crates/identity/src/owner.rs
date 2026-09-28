@@ -1,6 +1,6 @@
 //! The owner pin and its two credentials (SPEC-024 R3, R4; CHARTER 14; ADR-006, ADR-038).
 //!
-//! DeckStreak answers one owner. The owner's Telegram user id is the credential [`OWNER_USER_ID`],
+//! The service answers one owner. Its Telegram user id is the credential [`OWNER_USER_ID`],
 //! and the bot token the credential [`TELEGRAM_BOT_TOKEN`], both read at start through the
 //! kernel's loader, which registers each value with the log's redactor before it returns it; a
 //! missing or malformed one refuses start by its id, never by its value. The bot token is kept
@@ -14,7 +14,7 @@ use std::fmt;
 use deck_streak_kernel::{CredentialError, CredentialLoader, TelegramUserId, UtcMillis};
 
 use crate::Refusal;
-use crate::init_data::WebAppKey;
+use crate::init_data::{WebAppKey, validate};
 use crate::settings::Freshness;
 
 /// The credential holding the owner's Telegram user id.
@@ -58,8 +58,17 @@ impl Owner {
     /// [`IdentityError::Credential`] when the credential is missing or unreadable, and
     /// [`IdentityError::Malformed`] when it is not a positive whole number.
     pub fn load(loader: &CredentialLoader) -> Result<Self, IdentityError> {
-        let _unread = loader;
-        Ok(Self(TelegramUserId::new(0)))
+        let value = loader.load(OWNER_USER_ID)?;
+        let text = value.expose().trim();
+        let user = (!text.is_empty() && text.bytes().all(|byte| byte.is_ascii_digit()))
+            .then(|| text.parse::<i64>().ok())
+            .flatten()
+            .filter(|user| *user > 0)
+            .ok_or(IdentityError::Malformed {
+                id: OWNER_USER_ID,
+                expected: "a positive whole number, the owner's Telegram user id",
+            })?;
+        Ok(Self(TelegramUserId::new(user)))
     }
 
     /// Whether `user` is the owner.
@@ -108,10 +117,17 @@ impl OwnerGate {
     ///
     /// [`IdentityError`] naming the first credential that is missing, unreadable or malformed.
     pub fn load(loader: &CredentialLoader, freshness: Freshness) -> Result<Self, IdentityError> {
-        let _unread = loader;
+        let owner = Owner::load(loader)?;
+        let token = loader.load(TELEGRAM_BOT_TOKEN)?;
+        if token.expose().trim().is_empty() {
+            return Err(IdentityError::Malformed {
+                id: TELEGRAM_BOT_TOKEN,
+                expected: "the bot's token, not blank",
+            });
+        }
         Ok(Self::new(
-            WebAppKey::from_bot_token(""),
-            Owner::new(TelegramUserId::new(0)),
+            WebAppKey::from_bot_token(token.expose()),
+            owner,
             freshness,
         ))
     }
@@ -130,8 +146,17 @@ impl OwnerGate {
     /// The [`Refusal`] of [`crate::init_data::validate`], or [`Refusal::NotOwner`] when valid,
     /// fresh launch data names another user.
     pub fn admit(&self, raw: &str, now: UtcMillis) -> Result<Owner, Refusal> {
-        let _unread = now;
-        tracing::info!(payload = raw, "a handshake arrived");
-        Ok(self.owner)
+        let admitted = validate(raw, &self.key, self.freshness, now).and_then(|caller| {
+            if self.owner.is(caller.user()) {
+                Ok(self.owner)
+            } else {
+                Err(Refusal::NotOwner)
+            }
+        });
+        match admitted {
+            Ok(_) => tracing::info!("the owner's launch data was admitted"),
+            Err(refusal) => tracing::warn!(reason = refusal.reason(), "a handshake was refused"),
+        }
+        admitted
     }
 }
