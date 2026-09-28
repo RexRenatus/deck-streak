@@ -154,3 +154,52 @@ describe('the API client', () => {
     expect(await api.me()).toEqual({ kind: 'unavailable' });
   });
 });
+
+// SPEC-071 R20, R22. The score screen reads the current study day's score through the same
+// session: one GET of `/api/score`, whose body is read by the score module.
+describe("the API client's score", () => {
+  const SCORE = {
+    study_day: STUDY_DAY,
+    score: {
+      total: 72,
+      grade: { label: 'SOLID', emoji: '✅' },
+      pillars: { consistency: 76, retention: null, workload: 70, volume: 60.5, mastery: 55 },
+      reviews: 40,
+      retention: null
+    }
+  };
+
+  function scoring(body: unknown) {
+    const sent: string[] = [];
+    const fetch = vi.fn(async (input: RequestInfo | URL, init: RequestInit = {}) => {
+      sent.push(`${init.method ?? 'GET'} ${String(input)}`);
+      return String(input) === '/api/score' ? Response.json(body) : new Response(null, { status: 200 });
+    });
+    const api = createApi({
+      launchData: () => LAUNCH,
+      fetch: fetch as unknown as typeof globalThis.fetch
+    });
+    return { api, sent };
+  }
+
+  it('reads the current study day and its score from /api/score', async () => {
+    const { api, sent } = scoring(SCORE);
+    expect(await api.score()).toEqual({
+      kind: 'ok',
+      value: {
+        studyDay: STUDY_DAY,
+        score: {
+          total: 72,
+          grade: { label: 'SOLID', emoji: '✅' },
+          pillars: { consistency: 76, retention: null, workload: 70, volume: 60.5, mastery: 55 }
+        }
+      }
+    });
+    expect(sent).toEqual(['POST /api/session', 'GET /api/score']);
+  });
+
+  it('answers unavailable when /api/score answers something that is not a score', async () => {
+    const { api } = scoring({ study_day: STUDY_DAY });
+    expect(await api.score()).toEqual({ kind: 'unavailable' });
+  });
+});

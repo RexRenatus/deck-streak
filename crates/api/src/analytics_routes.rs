@@ -22,7 +22,7 @@ use axum::http::header::CONTENT_TYPE;
 use axum::response::{IntoResponse, Response};
 use axum::routing::get;
 use deck_streak_coordination::score::{DayRollup, DayScore, RangeError, day_rollups, day_score};
-use deck_streak_identity::Sessions;
+use deck_streak_identity::{OwnerSession, Sessions};
 use deck_streak_kernel::{Db, KernelError, StudyDay};
 use serde_json::{Value, json};
 
@@ -57,7 +57,11 @@ pub(crate) fn routes(access: OwnerAccess, readiness: Readiness) -> Router {
 }
 
 /// `GET /api/analytics/days`: the rollups of the range the query names.
-async fn days(State(analytics): State<Analytics>, RawQuery(query): RawQuery) -> Response {
+async fn days(
+    _owner: OwnerSession,
+    State(analytics): State<Analytics>,
+    RawQuery(query): RawQuery,
+) -> Response {
     let Some(db) = analytics.readiness.database() else {
         return refused(StatusCode::SERVICE_UNAVAILABLE, "database_not_open");
     };
@@ -76,7 +80,7 @@ async fn days(State(analytics): State<Analytics>, RawQuery(query): RawQuery) -> 
 }
 
 /// `GET /api/score`: the current study day's score.
-async fn score(State(analytics): State<Analytics>) -> Response {
+async fn score(_owner: OwnerSession, State(analytics): State<Analytics>) -> Response {
     let Some(db) = analytics.readiness.database() else {
         return refused(StatusCode::SERVICE_UNAVAILABLE, "database_not_open");
     };

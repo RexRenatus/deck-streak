@@ -17,12 +17,12 @@ use deck_streak_ingest::engine::AnkiEngine;
 use deck_streak_ingest::gate::{ChangeGate, CycleFacts, Decision, GateError, RunReason};
 use deck_streak_ingest::reader::CollectionReader;
 use deck_streak_ingest::sync::{SyncError, SyncReport, Syncer};
-use deck_streak_ingest::sync_runs::{SqliteSyncRuns, Trigger};
+use deck_streak_ingest::sync_runs::{SqliteSyncRuns, SyncRunStore, Trigger};
 use deck_streak_ingest::window::{WindowError, read_window};
 use deck_streak_kernel::{Clock, Db, KernelError, StudyDayRule};
 
 use crate::obligations::Obligations;
-use crate::recompute::Fold;
+use crate::recompute::{Fold, FoldInput};
 
 /// What one cycle needs: the syncer, the reader of its copy, the gate over the service's database,
 /// the registered obligations and the clock. The runner's port for the `sync` job
@@ -40,7 +40,7 @@ pub struct CycleParts<E> {
 /// database they write, the study-day rule, and the digest of the owner's courses that every
 /// day's fingerprint carries.
 struct CycleFold {
-    fold: Fold,
+    fold: Arc<Fold>,
     db: Db,
     rule: StudyDayRule,
     courses_digest: Option<String>,
@@ -68,11 +68,12 @@ impl<E: AnkiEngine + Sync> CycleParts<E> {
 
     /// This cycle, running `fold` after every recompute's read (SPEC-071 R15): its steps write
     /// `db`, the gate's own database, study days are decided by `rule`, and every day's fingerprint
-    /// carries `courses_digest`.
+    /// carries `courses_digest`. A role builds its fold once, at start, and shares it with every
+    /// cycle it runs.
     #[must_use]
     pub fn with_fold(
         mut self,
-        fold: Fold,
+        fold: Arc<Fold>,
         db: Db,
         rule: StudyDayRule,
         courses_digest: Option<String>,
@@ -89,7 +90,7 @@ impl<E: AnkiEngine + Sync> CycleParts<E> {
     /// The fold this cycle's recompute runs, when it has one.
     #[must_use]
     pub fn fold(&self) -> Option<&Fold> {
-        self.fold.as_ref().map(|fold| &fold.fold)
+        self.fold.as_ref().map(|fold| fold.fold.as_ref())
     }
 
     /// The change gate this cycle asks.
@@ -148,6 +149,10 @@ pub enum CycleError {
     /// The window could not be read.
     #[error(transparent)]
     Window(#[from] WindowError),
+    /// The recompute's fold, or the record of the last successful sync it reads, could not read or
+    /// write; the anchor was left as it was, so the next cycle recomputes again.
+    #[error("the recompute's fold could not run to its end")]
+    Recompute(#[source] KernelError),
 }
 
 /// Runs one cycle for `trigger` (R12): sync, then the gate, then the recompute or the skip.
@@ -186,8 +191,28 @@ where
         Decision::Skip => Recompute::Skipped,
         Decision::Run(reason) => {
             let window = read_window(&cycle.reader, cycle.gate.state(), checked.now).await?;
-            // The recompute's domain consumers arrive with their waves (#66); at W0 it leaves the
-            // anchor its cycle decided on.
+            if let Some(fold) = &cycle.fold {
+                // A closed day is settled only after a successful sync that started after its
+                // close (R15): the fold reads the study day of the latest one on record.
+                let synced_in = cycle
+                    .gate
+                    .runs()
+                    .last_success()
+                    .await
+                    .map_err(CycleError::Recompute)?
+                    .map(|run| run.study_day);
+                let input = FoldInput {
+                    data: &window.data,
+                    rule: fold.rule,
+                    now: checked.now,
+                    synced_in,
+                    courses_digest: fold.courses_digest.as_deref(),
+                };
+                fold.fold
+                    .run(&fold.db, &input)
+                    .await
+                    .map_err(CycleError::Recompute)?;
+            }
             cycle.gate.recomputed(&checked).await?;
             Recompute::Ran {
                 reason,

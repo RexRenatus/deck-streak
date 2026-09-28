@@ -26,15 +26,21 @@
       <li data-pillar={pillar}>
         <div class="flex justify-between">
           <span id="pillar-{pillar}" class="font-medium">{NAMES[pillar]()}</span>
-          <span>{Math.round(value ?? 0)}</span>
+          {#if value === null}
+            <span>{m.retention_absent()}</span>
+          {:else}
+            <span>{Math.round(value)}</span>
+          {/if}
         </div>
-        <meter
-          class="mt-1 block h-2 w-full"
-          min="0"
-          max="100"
-          value={value ?? 0}
-          aria-labelledby="pillar-{pillar}"
-        ></meter>
+        {#if value !== null}
+          <meter
+            class="mt-1 block h-2 w-full"
+            min="0"
+            max="100"
+            {value}
+            aria-labelledby="pillar-{pillar}"
+          ></meter>
+        {/if}
       </li>
     {/each}
   </ul>

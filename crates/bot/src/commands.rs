@@ -24,12 +24,13 @@ use std::future::Future;
 use std::sync::Arc;
 
 use deck_streak_coordination::data_rights_registry::{erase_all, export_all};
+use deck_streak_coordination::score::day_score;
 use deck_streak_identity::Owner;
 use deck_streak_kernel::{Clock, Db, Environment, Setting, SettingsError, StudyDayRule};
 use frankenstein::types::{BotCommand, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo};
 
 use crate::gate::{self, Admission, OwnerCallback, OwnerMessage};
-use crate::score_commands::score_reply;
+use crate::score_commands::{score_failed_reply, score_reply};
 use crate::transport::{Incoming, Sent, Transport, escape_attribute, escape_html};
 
 /// The Mini App's URL, which `/start`'s button opens: an `https:` URL, required by the bot role.
@@ -540,9 +541,18 @@ impl<S: OwnerSync> Commands<S> {
         self.send(sync_reply(&answer)).await;
     }
 
+    /// `/score`: the current study day's score, through coordination's score reads (SPEC-071
+    /// R21).
     async fn score(&self) {
-        let _today = self.rule.study_day(self.clock.now());
-        self.send(score_reply(None)).await;
+        let today = self.rule.study_day(self.clock.now());
+        let reply = match day_score(&self.db, today).await {
+            Ok(score) => score_reply(score.as_ref()),
+            Err(error) => {
+                tracing::error!(%error, "the owner's score could not be read");
+                score_failed_reply()
+            }
+        };
+        self.send(reply).await;
     }
 
     /// Sends `reply` to the owner. A reply that gives up is logged by the transport, with its

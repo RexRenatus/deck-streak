@@ -117,6 +117,7 @@ pub async fn day_rollups(
 
 /// `stored`'s score, with its retention absent when the day had no answered review (R10).
 fn score_of(stored: &StoredDay) -> DayScore {
+    let answered = stored.metrics.answered > 0;
     DayScore {
         day: stored.metrics.day,
         total: stored.score.total,
@@ -124,13 +125,13 @@ fn score_of(stored: &StoredDay) -> DayScore {
         grade_emoji: stored.score.grade_emoji,
         pillars: Pillars {
             consistency: stored.score.consistency,
-            retention: Some(stored.score.retention),
+            retention: answered.then_some(stored.score.retention),
             workload: stored.score.workload,
             volume: stored.score.volume,
             mastery: stored.score.mastery,
         },
         reviews: stored.metrics.reviews,
-        retention: Some(stored.metrics.true_retention),
+        retention: answered.then_some(stored.metrics.true_retention),
     }
 }
 
@@ -139,7 +140,7 @@ fn rollup_of(stored: StoredDay) -> DayRollup {
     let score = score_of(&stored);
     DayRollup {
         metrics: stored.metrics,
-        card_state: Some(stored.card_state.unwrap_or_default()),
+        card_state: stored.card_state,
         card_state_src: stored.card_state_src,
         score,
         score_at_close: stored.score_at_close,

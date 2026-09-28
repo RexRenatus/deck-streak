@@ -642,7 +642,7 @@ mod cycle {
         fold.register(Phase::RollupAndScore, Box::new(AnalyticsStep::default()))
             .expect("phase 1's step");
         let cycle = CycleParts::new(syncer, reader, gate, Obligations::new(), clock.clone())
-            .with_fold(fold, db.clone(), StudyDayRule::default(), None);
+            .with_fold(Arc::new(fold), db.clone(), StudyDayRule::default(), None);
 
         // The sync fails, and no sync ever succeeded: the recompute still runs, and the fold rolls
         // the current day up, but the day that closed stays owed.

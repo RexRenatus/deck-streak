@@ -66,7 +66,7 @@ describe('the startapp token map', () => {
   });
 
   it('every destination is a screen of the route table', () => {
-    const destinations = ['today', 'about'].map(routeFor).sort();
+    const destinations = ['today', 'about', 'score'].map(routeFor).sort();
 
     expect(destinations).toEqual([...ROUTES].sort());
   });
