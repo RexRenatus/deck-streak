@@ -114,7 +114,7 @@ R14. The typed policy reads every key of the file, and names the key `defer_fanf
 | A12 | a flush renders at most 2 deferred celebrations in full and one rollup line naming the rest; the queue never exceeds 20 | `a_flush_renders_two_and_rolls_up_the_rest` |
 | A13 | the in-app feed serves its items to the owner's session and refuses any other caller with no item | `the_in_app_feed_answers_only_the_owner` |
 | A14 | the notifications data-rights port lists its five tables as exported and erased, and an erase empties them | `the_notification_tables_are_exported_and_erased` |
-| A15 | no delivery goes around the port in a shipped source of the kinds the census reads (the Rust, Python and web source files, the shell scripts by extension or by a `#!` first line, and the systemd units and their drop-ins): outside the bot's sources nothing names the Bot API's host, a send method or the bot's `DEFAULT_API_URL`, SPEC-031's alert path aside; inside them a send method is named only by its own named send; the bot's `send_html`, `edit_html` and command handler are used only at named sites; only the router's modules name the in-app feed or the held queue, and in the notifications crate only they name its ledger, the root's declaration of it aside; and each of the seven named sends is found once | `no_delivery_goes_around_the_port` |
+| A15 | the census reads every shipped source of these kinds: the Rust, Python and web source files, the Mini App's HTML among them, the shell scripts by extension or by a `#!` first line, and the systemd units of every type and their drop-ins; it leaves out symlinks, test files, test directories outside a `src/`, and in a Rust file its comments and `#[cfg(test)]` modules. In what it reads, no name it holds appears outside its place: outside the bot's sources nothing names the Bot API's host, one of its send methods or its other delivery methods (a copy, a forward, an edit, a pin or a reaction), or the bot's `DEFAULT_API_URL`, SPEC-031's alert path aside; inside them such a method is named only by its own named send; the bot's `send_html`, `edit_html` and command handler are used only at named sites, and the handler's own replies and dispatch are called only by their named callers; only the router's modules name the in-app feed or the held queue, and in the notifications crate only they name its ledger, the root's declaration of it aside; no source of that crate carries `#[path]`, `#[macro_export]` or `#[macro_use]`, or re-exports the ledger, its tables or its writes to the feed and the queue by a `pub use`; and each of the eight named sends is found once | `no_delivery_goes_around_the_port` |
 
 ```acceptance
 A1: cargo test -p deck-streak-notifications --test policy -- --exact the_typed_policy_reads_every_key_of_the_file
@@ -215,12 +215,21 @@ the verdict of a run with that wiring is posted as the `box/packs` status at the
   (#83).
 - It builds no settings screen for quiet hours or a kind's switch (#57).
 - It pins and re-pins no widget (#121).
-- It holds no delivery the census cannot read, because a text census reads names, not requests or
-  statements: a request whose URL or method is assembled from parts, so that neither the Bot API's
-  host nor a send method's name appears (outside the bot, on a base URL read through
-  `ApiUrl::as_str`; inside the bot's sources, with a method's name built from pieces); a statement
-  whose table's name is assembled from parts, so that neither the feed's nor the held queue's name
-  appears; and a source of a kind the census does not read (#297).
+- It holds no delivery the census does not read. The census guards ordinary code; it is not a
+  sandbox against code written to evade it, which review catches (#297). A text census reads names,
+  not requests, statements or what the compiler resolves, so these go unread (#297):
+  - a request whose method's name is assembled from parts: outside the bot's sources on a base URL
+    read through `ApiUrl::as_str`, and inside them beside the Bot API's host or on
+    `DEFAULT_API_URL`;
+  - a statement whose table's name is assembled from parts, by `format!` or `concat!`, and a source
+    that `include!` pulls in from a file of a kind the census does not read;
+  - a source of a kind the census does not read, such as SQL;
+  - a symlink, which the walker neither reads nor follows;
+  - a test file, or a file in a test directory outside a `src/`, that a shipped crate pulls in by
+    `#[path]` (outside the notifications crate) or a unit runs;
+  - a re-export under another name from one of the router's modules other than by a `pub use`, and
+    a `pub` wrapper: a function, a macro or a constant that hands out a write to the feed or the
+    held queue, or a table's name, under a name the census does not hold.
 
 ## 6. Risks
 
