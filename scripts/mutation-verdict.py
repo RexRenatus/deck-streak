@@ -534,22 +534,22 @@ def say_plan(plan: Plan) -> None:
 # --------------------------------------------------------------------------- the shards
 
 #: Seconds one mutant costs, its build and its tests, by package: the mean over the weekly
-#: battery's shards on GitHub's ubuntu-24.04 runners (R18). A package the table does not name costs
-#: the table's highest.
+#: battery's 31 reported shards of run 36384080819 on GitHub's ubuntu-24.04 runners, rounded up
+#: (R18). A package the table does not name costs the table's highest.
 SECONDS_PER_MUTANT = {
-    "deck-streak-ingest": 124,
-    "deck-streak-daemon": 84,
-    "deck-streak-api": 51,
-    "deck-streak-coordination": 40,
-    "deck-streak-kernel": 12,
+    "deck-streak-ingest": 126,
+    "deck-streak-daemon": 80,
+    "deck-streak-coordination": 64,
+    "deck-streak-api": 54,
+    "deck-streak-kernel": 13,
     "deck-streak-identity": 8,
-    "deck-streak-vault": 7,
+    "deck-streak-vault": 8,
 }
 #: The unmutated baseline each shard builds and tests before its first mutant: the mean over the
-#: 30 shards of run 36373915578.
-BASELINE_SECONDS = 346
-#: A shard's projected time may reach an hour, half its job's timeout-minutes of 120: measured
-#: shards took from 0.72 to 1.39 times their projection (R18).
+#: same 31 shards, rounded up.
+BASELINE_SECONDS = 371
+#: A shard's projected time may reach an hour, half its job's timeout-minutes of 120: the shards of
+#: runs 36373915578 and 36384080819 took from 0.66 to 1.33 times this table's projection (R18).
 SHARD_BOUND_SECONDS = 3600
 #: The most jobs a matrix may generate in one workflow run (GitHub's workflow syntax).
 MAX_SHARDS = 256
