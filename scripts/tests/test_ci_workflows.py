@@ -4,7 +4,8 @@ reaches main (SPEC-034 A5 to A7). The gate runs in parallel jobs, each stage in 
 engine's slow tests in a job of their own, a cache is saved only by a push to dev or main, and every
 job that compiles Rust installs the protoc Anki's engine needs (SPEC-038). No workflow reads a
 secret but the default token, or checks out or fetches another repository (SPEC-034 A9 to A12), and
-a `.yaml` workflow is held to the hardening rules as a `.yml` one is (A13)."""
+a `.yaml` workflow is held to the hardening rules as a `.yml` one is, the hardening tests reading keys
+the way the checker does (A13)."""
 
 import math
 import os
@@ -20,7 +21,6 @@ from unittest import mock
 from _support import REPO, examined
 
 WORKFLOWS = REPO / ".github" / "workflows"
-USES = re.compile(r"^\s*-?\s*uses:\s*([^\s#]+)", re.M)
 PINNED = re.compile(r"^[\w.-]+/[\w.-]+(?:/[\w.-]+)*@[0-9a-f]{40}$")
 STAGES = re.compile(r"^STAGES_ALL=\(([^)]*)\)", re.M)
 THIS_REPOSITORY = "RexRenatus/deck-streak"
@@ -82,21 +82,30 @@ class WorkflowsAreHardened(unittest.TestCase):
 
     def test_every_workflow_defaults_to_a_read_only_token(self):
         for path in self.files:
-            self.assertRegex(path.read_text(), r"(?m)^permissions:\n  contents: read$", path.name)
+            permissions = read_hardened(path).get("permissions")
+            self.assertEqual(
+                permissions,
+                {"contents": "read"},
+                f"{path.name} defaults its token to {permissions}",
+            )
 
     def test_every_action_is_pinned_by_a_full_commit_sha(self):
-        uses = [(path.name, ref) for path in self.files for ref in USES.findall(path.read_text())]
+        uses = [
+            (path.name, ref) for path in self.files for ref in entries(read_hardened(path), "uses")
+        ]
         for name, ref in examined("action references", uses):
             self.assertRegex(ref, PINNED, f"{name} uses {ref}")
 
     def test_no_workflow_uses_a_self_hosted_runner_or_a_privileged_trigger(self):
         runners = []
         for path in self.files:
+            workflow = read_hardened(path)
             code = re.sub(r"(?m)#.*$", "", path.read_text())
             self.assertNotIn("pull_request_target", code, path.name)
-            runners += [(path.name, runner) for runner in re.findall(r"runs-on:\s*(.+)", code)]
+            runners += [(path.name, runner) for runner in entries(workflow, "runs-on")]
         for name, runner in examined("runs-on values", runners):
-            self.assertRegex(runner.strip(), r"^ubuntu-\d\d\.\d\d$", f"{name} runs on {runner}")
+            # A list or a mapping of labels is read as its text, so the pattern refuses it by name.
+            self.assertRegex(str(runner), r"^ubuntu-\d\d\.\d\d$", f"{name} runs on {runner}")
 
     def test_ci_runs_every_stage_of_the_local_gate(self):
         stages = STAGES.search((REPO / "scripts" / "check.sh").read_text()).group(1).split()
@@ -571,6 +580,30 @@ def _sequence(lines, at, indent, refused):
 
 def load(name):
     return read_workflow((WORKFLOWS / name).read_text(encoding="utf-8"))
+
+
+def read_hardened(path):
+    """A workflow as the hardening tests read it: through `read_workflow`, the checker's reader, so
+    they read its keys the way the checker does (SPEC-034 R7). A form the reader does not read, or a
+    line it cannot place, fails the test that reads it, named by the file and the line."""
+    try:
+        return read_workflow(path.read_text(encoding="utf-8"))
+    except AssertionError as refused:
+        raise AssertionError(f"{path.name}: {refused}") from None
+
+
+def entries(value, key):
+    """Every value a read workflow holds under `key`, in the order it holds them, wherever it sits:
+    each `uses`, or each `runs-on`."""
+    if isinstance(value, dict):
+        return [
+            found
+            for name, item in value.items()
+            for found in ([item] if name == key else []) + entries(item, key)
+        ]
+    if isinstance(value, list):
+        return [found for item in value for found in entries(item, key)]
+    return []
 
 
 def action(step):
