@@ -1,0 +1,201 @@
+# SPEC-056: every pack is judged on the box, and nothing of the hub is published
+
+- **Wave:** W0. **Issue:** none of its own: it applies the owner's box-only ruling (ADR-056) in
+  full, and #60 keeps its goal, every pack wired and green. **Context(s):** `repo` (`scripts/`,
+  `.github/`, `docs/`), `deck-streak-vault` (the data its adapter reads).
+- **Decided by:** ADR-069 (the public tree carries no vendored hub files, and the box driver's
+  shape), ADR-056 (the packs stay box-only), ADR-059 (public text describes DeckStreak only).
+- **Status:** judged: written at delivery, because it had no planned copy, and delivered with its
+  tests and `docs/red-first/SPEC-056.md` (ADR-016).
+
+## 1. The problem, measured
+
+Measured at `22fb19a` (the redaction's head, which this delivery is stacked on).
+
+- **The vendored tree.** `.packs/` holds 183 files: the packs' skills, rows and probes, their
+  manifest `VENDORED.json` and the wiring `wiring.json`. Beside it, seven scripts exist only to run
+  or refresh that copy: `scripts/pack-rows.py`, `scripts/vendor-packs.py`, the four methodology
+  probes (`scripts/methodology_probe.py`, `sdd-probe.py`, `ddd-probe.py`, `tdd-probe.py`) and
+  `scripts/no-apikeyhelper-scan.py`.
+- **Names of the maintainer's private tooling.** 211 lines in 39 files outside `.packs/`, and two
+  file paths, name that tooling: its project, its runner, its proxy and its paths, counted with the
+  maintainer's private word list, which is not in this repository.
+- **Readers.** 65 files outside `.packs/` read or name a file this delivery removes (271 lines): the
+  gate (`scripts/check.sh`'s `packs` stage, 480 rows of 29 packs) and CI's `packs` job, 13 scripts
+  and tests, three vault crate files, 18 SPECs, 13 ADRs, 4 schematics, 4 red-first records, the
+  living docs, `stack.json` and `ruff.toml`.
+- **Code that reads vendored data.** The vault adapter compiles in the vault-duties pack's rails,
+  layout and rows (`include_str!` in `crates/vault/src/rails.rs` and `staged.rs`); the public scrub
+  composes its rules from two vendored deny lists through a vendored probe's loader; and the
+  deploy templates' tests parse units with the vendored durable lint. Public CI and the host hold no
+  private checkout, so none of these can read the pack at run time.
+- **Schema ids.** 53 files carry `phx.*` schema ids (parity goldens, vault duty records, their
+  fixtures and constants). They are contracts the box-run packs judge by, not prose (ADR-069).
+- **The gate's log line.** `scripts/check.sh` prints `logs: <directory>` on stdout, so quoting the
+  gate's tail pastes a path of the machine that ran it. CI never reads that line: each job names
+  `CHECK_LOG_DIR` and uploads it.
+
+## 2. Requirements
+
+R1. No vendored pack file is in the tree: `.packs/` and the seven scripts above are removed, and so
+    is every test that exists only for one of them (section 4 names each, with its reason).
+R2. `methodology.json` holds DeckStreak's own configuration only, which the box run's probes read
+    with `--root`: it has no `vendored_from` key.
+R3. `scripts/check.sh` has no `packs` stage, and its `scrub` stage runs the public scrub alone.
+    `.github/workflows/ci.yml` has no `packs` job, and the `ci` job's `needs` does not name one.
+    Every other stage and job stays; SPEC-038's layout tests change only in the tables that list
+    jobs and stages, and no other assertion is weakened.
+R4. `scripts/check.sh` never prints its log directory on stdout. When the caller names no directory
+    (`CHECK_LOG_DIR` unset), it names the fresh one on stderr; when the caller names one, as every CI
+    job does, it prints none, and that directory holds every stage's log and `timings.tsv`.
+R5. DeckStreak's own code reads only DeckStreak's own files. The vault adapter's rails, default
+    layout and gate classes are `crates/vault/data/rails.json`, `layout.json` and
+    `gate-classes.json`; the public scrub's shapes are `scripts/scrub-rules/persona-core.json` and
+    `privacy-gdpr.json`, read by a loader in `scripts/public-scrub.py`; the deploy templates' tests
+    read units with `scripts/tests/_units.py`. Each data file keeps exactly the fields its parser
+    reads and its `phx.*` schema id, and no reference to its source's documents.
+R6. Behaviour is unchanged: every vault test passes with no assertion edited; the scrub examines
+    the same files and history blobs, with the same findings, and still reads the maintainer's
+    private list in its schema; each parser refuses a document missing a field it reads.
+R7. `scripts/box-packs.sh` names none of the maintainer's private tooling. It reads three variables:
+    `PACKS_WIRING`, a private file (schema `deckstreak.box-wiring.v1`) holding the pin, the packs,
+    the box section, the methodology probes' and the proxy-client scan's paths, the skills
+    directory and the owned files' sources; `PACKS_CHECKOUT`, the private checkout at the pin; and
+    `PACKS_RUNNER`, the runner built from it. It refuses VOID by name when one is unset or unusable.
+R8. The driver judges every pack the private file names through the runner, with the verb its
+    catalog admits (`pack probe --scope tree` for a probe pack), and reads each card by the suffix
+    of its schema. The `packs` section keeps the judgment of the removed row runner: an enforced
+    pack fails on a blocking row that is RED, VOID or in ERROR; a pending pack reads a blocking VOID
+    row as pending and is STALE once every blocking row passes; a deferred pack runs no row; an
+    excluded row is counted and never judged; a deferred row that passes is STALE. The `box`
+    section keeps its judgment (expected reds, pending, issues read with `gh`, stale expectations).
+R9. The driver runs the sdd, ddd and tdd probes and the proxy-client scan from the checkout, against
+    the judged tree, and prints one verdict line for each.
+R10. For each owned file (R5) the private file maps to a source in the checkout, the driver compares
+    the fields the owned file keeps and fails naming the first field that differs; a source missing
+    from the checkout makes the run VOID.
+R11. `--post-status` posts one commit status on the judged commit: context `box/packs`, state
+    `success`, `failure` or `error`, and a description of a few words naming no row and no private
+    tool. It is off by default, and it is not a required check.
+R12. The pull request template says that a pack verdict comes from the maintainer's box run
+    (`box/packs`).
+R13. Public text names none of the maintainer's private tooling. Living docs, planned SPECs and
+    proposed ADRs say "the box-run packs"; an accepted document takes a pure name replacement and
+    one dated note citing ADR-059; a delivered SPEC whose acceptance command runs a removed file
+    takes an insert-only amendment giving the criterion's box form.
+
+## 3. Acceptance criteria
+
+| id | criterion | decided by |
+|---|---|---|
+| A1 | no vendored pack file and no removed script is in the tree | `test_box_only_packs.py` `test_no_vendored_pack_file_or_removed_script_is_in_the_tree` |
+| A2 | `methodology.json` names no vendored commit | `test_box_only_packs.py` `test_methodology_json_names_no_vendored_commit` |
+| A3 | the gate has no `packs` stage, CI no `packs` job, and `ci.needs` no `packs` | `test_box_only_packs.py` `test_the_gate_and_ci_have_no_packs_stage_or_job` |
+| A4 | no file of the tree reads a vendored path, and the census finds a planted one | `test_box_only_packs.py` `test_no_file_reads_a_vendored_path` |
+| A5 | the gate never names its log directory on stdout, names a fresh one on stderr, and the directory a caller names holds every stage's log | `test_check_gate.py` `test_the_log_directory_is_never_on_stdout_and_holds_every_stage_log` |
+| A6 | the rails parser refuses the owned rails without each field it reads | `the_rails_parser_refuses_the_owned_rails_without_each_field_it_reads` |
+| A7 | the layout parser refuses the owned layout without each field it requires | `the_layout_parser_refuses_the_owned_layout_without_each_field_it_requires` |
+| A8 | the gate-class parser refuses the owned classes without a field it reads | `staged::tests::the_gate_class_parser_refuses_the_owned_classes_without_a_field_it_reads` |
+| A9 | the scrub finds a planted value of each public shape family from its own rules | `test_public_scrub.py` `test_each_public_shape_family_is_found_from_the_scrubs_own_rules` |
+| A10 | the scrub's loader reads a synthetic private list in the private list's schema | `test_public_scrub.py` `test_the_loader_reads_a_synthetic_private_list_in_its_schema` |
+| A11 | the driver refuses VOID by name without each of its three variables | `test_box_packs.py` `test_the_driver_refuses_void_by_name_without_its_private_variables` |
+| A12 | the `packs` section keeps the removed row runner's judgment | `test_box_packs.py` `test_the_packs_section_keeps_the_row_runners_judgment` |
+| A13 | the methodology probes and the proxy-client scan run from the checkout | `test_box_packs.py` `test_the_methodology_probes_and_the_scan_run_from_the_checkout` |
+| A14 | an owned file equal to its source passes, a changed field fails by name, a missing source is VOID | `test_box_packs.py` `test_an_owned_file_is_judged_against_its_pinned_source` |
+| A15 | `--post-status` posts exactly one verdict-only `box/packs` status | `test_box_packs.py` `test_post_status_posts_one_verdict_only_status` |
+| A16 | the pull request template says a pack verdict comes from the box run | `test_box_only_packs.py` `test_the_pull_request_template_says_pack_verdicts_come_from_the_box_run` |
+
+```acceptance
+A1: python3 -m unittest discover -s scripts/tests -p test_box_only_packs.py -k test_no_vendored_pack_file_or_removed_script_is_in_the_tree
+A2: python3 -m unittest discover -s scripts/tests -p test_box_only_packs.py -k test_methodology_json_names_no_vendored_commit
+A3: python3 -m unittest discover -s scripts/tests -p test_box_only_packs.py -k test_the_gate_and_ci_have_no_packs_stage_or_job
+A4: python3 -m unittest discover -s scripts/tests -p test_box_only_packs.py -k test_no_file_reads_a_vendored_path
+A5: python3 -m unittest discover -s scripts/tests -p test_check_gate.py -k test_the_log_directory_is_never_on_stdout_and_holds_every_stage_log
+A6: cargo test -p deck-streak-vault --test owned_data -- --exact the_rails_parser_refuses_the_owned_rails_without_each_field_it_reads
+A7: cargo test -p deck-streak-vault --test owned_data -- --exact the_layout_parser_refuses_the_owned_layout_without_each_field_it_requires
+A8: cargo test -p deck-streak-vault --lib -- --exact staged::tests::the_gate_class_parser_refuses_the_owned_classes_without_a_field_it_reads
+A9: python3 -m unittest discover -s scripts/tests -p test_public_scrub.py -k test_each_public_shape_family_is_found_from_the_scrubs_own_rules
+A10: python3 -m unittest discover -s scripts/tests -p test_public_scrub.py -k test_the_loader_reads_a_synthetic_private_list_in_its_schema
+A11: python3 -m unittest discover -s scripts/tests -p test_box_packs.py -k test_the_driver_refuses_void_by_name_without_its_private_variables
+A12: python3 -m unittest discover -s scripts/tests -p test_box_packs.py -k test_the_packs_section_keeps_the_row_runners_judgment
+A13: python3 -m unittest discover -s scripts/tests -p test_box_packs.py -k test_the_methodology_probes_and_the_scan_run_from_the_checkout
+A14: python3 -m unittest discover -s scripts/tests -p test_box_packs.py -k test_an_owned_file_is_judged_against_its_pinned_source
+A15: python3 -m unittest discover -s scripts/tests -p test_box_packs.py -k test_post_status_posts_one_verdict_only_status
+A16: python3 -m unittest discover -s scripts/tests -p test_box_only_packs.py -k test_the_pull_request_template_says_pack_verdicts_come_from_the_box_run
+```
+
+## 4. File manifest
+
+| file | context | change |
+|---|---|---|
+| `.packs/` (183 files) | repo | removed: the vendored skills, rows, probes, `VENDORED.json` and `wiring.json` (R1); the wiring moves to the maintainer's private file (R7) |
+| `scripts/pack-rows.py` | repo | removed: the vendored rows' runner; the box driver judges every pack (R8) |
+| `scripts/vendor-packs.py` | repo | removed: it refreshed the vendored copy |
+| `scripts/methodology_probe.py`, `scripts/sdd-probe.py`, `scripts/ddd-probe.py`, `scripts/tdd-probe.py` | repo | removed: the box run executes them from the checkout (R9) |
+| `scripts/no-apikeyhelper-scan.py` | repo | removed: the box run's proxy-client scan judges the agent's settings (R9) |
+| `scripts/tests/test_vendor_packs.py` | repo | removed: it tests only `vendor-packs.py` |
+| `scripts/tests/test_vendored_packs.py` | repo | removed: it tests only the vendored copy's digests |
+| `scripts/tests/test_pack_wiring.py` | repo | removed: it tests only the vendored wiring and `pack-rows.py`; the judgment it proved is A12's |
+| `scripts/tests/test_vault_rails_rows.py` | repo | removed: it runs only the vendored vault-duties probe, and bounds the build that run needs; the box run judges the rails rows |
+| `scripts/tests/fixtures/box-packs/fake-runner` | repo | renamed from the old fake runner: it answers the runner's verbs with synthetic cards |
+| `scripts/tests/fixtures/box-packs/checkout/skills/catalog.json` | repo | renamed from the old catalog fixture, with synthetic packs |
+| `scripts/tests/fixtures/box-packs/checkout/` | repo | added: a synthetic checkout (packs, probes, scan, sources) that names no private tool |
+| `scripts/box-packs.sh` | repo | changed: the private-file driver (R7 to R11) |
+| `scripts/check.sh` | repo | changed: no `packs` stage, the scrub alone, the log directory off stdout (R3, R4) |
+| `.github/workflows/ci.yml` | repo | changed: no `packs` job or need (R3) |
+| `.github/pull_request_template.md` | repo | changed: the box run's pack verdict (R12) |
+| `methodology.json` | repo | changed: no `vendored_from` (R2) |
+| `ruff.toml` | repo | changed: no vendored excludes |
+| `stack.json` | repo | changed: no vendored radar path |
+| `scripts/public-scrub.py` | repo | changed: its own rules and loader (R5, R6) |
+| `scripts/scrub-rules/persona-core.json`, `scripts/scrub-rules/privacy-gdpr.json` | repo | added: the scrub's public shapes (R5) |
+| `crates/vault/data/rails.json`, `crates/vault/data/layout.json`, `crates/vault/data/gate-classes.json` | `deck-streak-vault` | added: the adapter's rails, default layout and gate classes (R5) |
+| `crates/vault/src/rails.rs`, `crates/vault/src/staged.rs` | `deck-streak-vault` | changed: read the crate's own data; A8's test |
+| `crates/vault/tests/owned_data.rs` | `deck-streak-vault` | added: A6, A7 |
+| `crates/vault/tests/staged.rs` | `deck-streak-vault` | changed: its red-class gate is a synthetic probe; no assertion edited |
+| `scripts/tests/_units.py` | repo | added: systemd unit syntax, as systemd.syntax(7) reads it, for the deploy templates' tests |
+| `scripts/tests/test_deploy_templates.py` | repo | changed: reads units with `_units.py`; its two durable-lint tests are removed, because the box run's durable-services pack judges the templates |
+| `scripts/tests/test_box_packs.py` | repo | changed: the new interface, and A11 to A15 |
+| `scripts/tests/test_box_only_packs.py` | repo | added: A1 to A4, A16 |
+| `scripts/tests/test_check_gate.py` | repo | changed: the stage table, A5 |
+| `scripts/tests/test_ci_workflows.py` | repo | changed: the job and stage tables |
+| `scripts/tests/test_public_scrub.py` | repo | changed: A9, A10 |
+| `web/app/src/lib/styles/cjk.css`, `web/app/tests/a11y.spec.ts`, `web/app/tests/telegram-palettes.ts` | repo | changed: comments name the box-run packs |
+| `CLAUDE.md`, `README.md`, `ARCHITECTURE.md`, `deploy/README.md`, `docs/BUILDER-BRIEF.md`, `docs/CONTEXT-MAP.md`, `docs/LEXICON.md`, `docs/TESTING.md` | repo | changed: the box-run packs (R13) |
+| `docs/specs/planned/SPEC-021-data-rights-export-and-erase.md`, `SPEC-026-bot-transport-and-owner-gate.md`, `SPEC-031-observability-foundation.md`, `SPEC-041-notification-router-core.md`, `SPEC-043-agent-core-runner-gate-and-degradation.md`, `SPEC-044-persona-engine-and-private-roster.md`, `SPEC-046-readings-generation-gates-and-repair.md` | repo | changed in place: the box-run packs (R13) |
+| `docs/decisions/ADR-043-shell-runner-pack-gate-and-duty-caps.md` | repo | changed in place (proposed) |
+| `docs/decisions/ADR-001`, `ADR-002`, `ADR-003`, `ADR-004`, `ADR-013`, `ADR-014`, `ADR-016`, `ADR-030`, `ADR-033`, `ADR-039`, `ADR-055`, `ADR-056` | repo | accepted: name replacement and one dated note (R13) |
+| `docs/specs/SPEC-001`, `SPEC-002`, `SPEC-020`, `SPEC-024`, `SPEC-025`, `SPEC-028`, `SPEC-030`, `SPEC-032`, `SPEC-037`, `SPEC-038`, `SPEC-054` | repo | delivered: name replacement, one dated note, and an insert-only amendment where an acceptance command runs a removed file (R13) |
+| `docs/schematics/agent-duty-run.md`, `box-pack-runner.md`, `ci-jobs-and-caches.md`, `pack-vendoring.md` | repo | accepted schematics: name replacement and one dated note |
+| `docs/red-first/SPEC-030.md`, `SPEC-037.md`, `SPEC-038.md`, `SPEC-054.md` | repo | accepted records: name replacement and one dated note |
+| `changelog.d/chore-repin-packs-e54f39c.md`, `feat-ci-speed-038.md`, `feat-repo-hygiene-030.md`, `feat-tooling-054.md`, `feat-vendor-packs-037.md` | repo | changed: unreleased fragments name the box-run packs |
+| `docs/specs/SPEC-056-every-pack-is-judged-on-the-box-and-nothing-of-the-hub-is-published.md` | repo | added: this SPEC |
+| `docs/decisions/ADR-069-the-public-tree-carries-no-vendored-hub-files.md` | repo | added |
+| `docs/schematics/pack-judgment-on-the-box.md` | repo | added: the gate, CI and the box run after the change |
+| `docs/red-first/SPEC-056.md` | repo | added |
+| `changelog.d/chore-box-only-packs-056.md` | repo | added |
+
+## 5. What this does NOT do
+
+- It makes no pack verdict a required check: `box/packs` is posted, and a new required context
+  would strand the pull requests opened before it (#60).
+- It renames no `phx.*` schema id: the box-run packs judge DeckStreak's outputs by them, and a
+  later rename is the maintainer's (#60).
+- It changes no pack's rows and no expectation: the private file carries today's wiring, and its
+  expected reds keep their issues (#60).
+- It re-pins no pack, and builds nothing the box runs: the checkout, the runner and the private
+  file stay the maintainer's (#60).
+- It publishes no finding about a host: those stay with the owner gate that tracks them (#167).
+
+## 6. Risks
+
+- **The owned data drifts from the pack that judges it.** Detected on the box by the drift check
+  (R10, A14), which names the first field that differs.
+- **A pull request merges with no pack verdict.** `box/packs` is visible on the pull request and the
+  template asks for it (R11, R12); the maintainer's merge waits for the box run.
+- **Public CI stops showing SPEC-shape verdicts.** Accepted: the box run judges them with the sdd,
+  ddd and tdd probes before a merge (R9), which is the owner's box-only ruling applied fully.
+- **The private file is lost or stale.** The driver refuses VOID by name without it (A11), and a pin
+  that does not match the checkout refuses the run.
+- **A stage-log upload uploads nothing.** Every CI job names `CHECK_LOG_DIR` and uploads that path,
+  and A5 proves a named directory holds every stage's log and `timings.tsv`.
