@@ -11,8 +11,8 @@ decision-makers: "@RexRenatus (owner), the DeckStreak architect"
 The owner decided the daily digest's coaching, the readings and every other duty run as Claude
 Code through the owner's subscription proxy, "as if it is operating here", on the VM for data
 locality with the vault replica and the database. The proxy is bound to loopback on the
-maintainer's machine. The co-hosted second brain's current agent routes through a local LLM proxy
-to a third-party model; it is replaced, side by side.
+maintainer's machine. An earlier agent path is replaced by this one, side by side; the agent reaches
+its model only through the route ADR-054 names.
 
 ## Decision Drivers
 
@@ -26,7 +26,7 @@ to a third-party model; it is replaced, side by side.
 - A reverse SSH tunnel opened FROM the maintainer's machine by a supervised user unit, so the proxy appears at the VM's own loopback port; the agent sets the same base URL as sessions on the maintainer's machine — chosen: no firewall rule, no bind change, no credential on the VM that reaches the maintainer's machine.
 - Bind the proxy to the internal address behind a source-restricted VPC rule — rejected because it exposes the proxy on a network interface.
 - A tunnel initiated by the VM — rejected because the VM would hold a key to the maintainer's machine.
-- Keep the local LLM proxy to a third-party model — rejected by the owner.
+- Keep the earlier agent path to a third-party model — rejected by the owner.
 - Call the model API directly with an API key — rejected because the owner's direction is the subscription proxy, and a key on the VM is a secret at rest.
 
 ## Decision Outcome
@@ -66,3 +66,8 @@ with no coaching line and no "unavailable" line, and the first deploy needs no d
 and no proxy. The runner decided here is the `Proxy` adapter, unchanged, and its fail-closed rule
 and single alert still apply to a configured route that fails. An `ApiKey` adapter would follow an
 amendment of this ADR; the choice between the subscription and an API key is the owner's.
+
+Amendment (2026-09-28): two passages describing co-hosted infrastructure, one in the context and one
+in a considered option, were redacted under the public-prose rule. This is a security redaction, the
+one kind of edit an accepted document's text may take; the originals remain in the repository's
+history.
