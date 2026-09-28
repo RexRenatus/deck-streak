@@ -310,8 +310,9 @@ fn clamp(value: f64) -> f64 {
     py_max(0.0, py_min(100.0, value))
 }
 
-/// Python's two-argument `min`: `a`, unless `b` is smaller.
-fn py_min(a: f64, b: f64) -> f64 {
+/// Python's two-argument `min`: `a`, unless `b` is smaller. The metrics cap each answer's time
+/// with it too, so the crate holds one port of it.
+pub(crate) fn py_min(a: f64, b: f64) -> f64 {
     if b < a { b } else { a }
 }
 

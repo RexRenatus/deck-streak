@@ -12,6 +12,7 @@ use deck_streak_ingest::reader::{Review, is_study_event};
 use deck_streak_kernel::{CourseCode, StudyDay, StudyDayRule, UtcMillis};
 
 use crate::constants::{ANSWER_TIME_CAP_SECONDS, MATURE_IVL_DAYS};
+use crate::score::py_min;
 
 /// One study day's metrics, every field of the predecessor's `DailyMetrics`.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -209,15 +210,11 @@ fn day_of(review: &Review, rule: StudyDayRule) -> StudyDay {
 /// The seconds of `reviews`, each answer capped at [`ANSWER_TIME_CAP_SECONDS`] and summed in their
 /// order, as the predecessor's `sum(min(r.time_ms / 1000, ANSWER_TIME_CAP_SECONDS) ...)` does.
 fn seconds_of(reviews: &[&Review]) -> f64 {
-    python_sum(reviews.iter().map(|review| {
-        let taken = float(review.taken_ms) / 1000.0;
-        // Python's `min(a, b)` keeps `a` unless `b` is smaller.
-        if ANSWER_TIME_CAP_SECONDS < taken {
-            ANSWER_TIME_CAP_SECONDS
-        } else {
-            taken
-        }
-    }))
+    python_sum(
+        reviews
+            .iter()
+            .map(|review| py_min(float(review.taken_ms) / 1000.0, ANSWER_TIME_CAP_SECONDS)),
+    )
 }
 
 /// Python's built-in `sum` of floats from its integer start of 0, as `CPython` 3.12 and later
