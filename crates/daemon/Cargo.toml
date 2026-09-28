@@ -11,6 +11,11 @@ publish.workspace = true
 [lints]
 workspace = true
 
+# The one release binary: its first argument names the role it runs (SPEC-025 R1, ADR-010).
+[[bin]]
+name = "deckstreakd"
+path = "src/main.rs"
+
 [dependencies]
 deck-streak-kernel.workspace = true
 deck-streak-ingest.workspace = true
@@ -35,3 +40,15 @@ deck-streak-privacy.workspace = true
 deck-streak-coordination.workspace = true
 deck-streak-api.workspace = true
 deck-streak-bot.workspace = true
+# ADR-003: anyhow in the binary alone; the library's roles return thiserror types (SPEC-025).
+anyhow.workspace = true
+thiserror.workspace = true
+tokio = { workspace = true, features = ["macros", "rt-multi-thread", "signal", "sync", "time"] }
+tracing.workspace = true
+
+[dev-dependencies]
+# ADR-020's temporary database and ADR-029's golden reader.
+serde.workspace = true
+serde_json.workspace = true
+tempfile.workspace = true
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
