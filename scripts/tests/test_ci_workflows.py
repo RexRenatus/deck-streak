@@ -1597,6 +1597,17 @@ def step_inputs(step):
     return {str(name).lower(): value for name, value in given.items()}
 
 
+def steps_in(steps, where):
+    """(place, step) for every step of a list of steps, a step inside a `parallel` block at any
+    depth included, each placed as in `jobs.build.steps[0].parallel[1]`: GitHub's workflow schema
+    reads a `parallel` step's list as steps, and one of them may be another `parallel` step."""
+    for n, step in enumerate(steps if isinstance(steps, list) else []):
+        place = f"{where}[{n}]"
+        yield place, step
+        if isinstance(step, dict):
+            yield from steps_in(step.get("parallel"), f"{place}.parallel")
+
+
 def is_checkout(step):
     """Whether a step uses actions/checkout, its `uses` read as the runner reads it: split at each
     `/` and `\\`, empty parts dropped, and the owner and name in any case. An action at a path
@@ -1659,9 +1670,10 @@ def reaches(script):
 def secret_and_checkout_problems(directory):
     """Every read of a secret other than GITHUB_TOKEN, every `secrets: inherit`, and every checkout,
     clone or fetch of another repository in the workflows of `directory`, each named by its file
-    and its place, with what was judged: (problems, {population: [...]}). A form the reader does
-    not read is a problem named by its line, and the rest of that file is judged as read. A
-    directory with no workflow file is VOID, never a pass."""
+    and its place, with what was judged: (problems, {population: [...]}). Every step of a job is
+    judged, a step inside a `parallel` block at any depth included. A form the reader does not read
+    is a problem named by its line, and the rest of that file is judged as read. A directory with no
+    workflow file is VOID, never a pass."""
     files = workflow_files(directory)
     problems = []
     judged = {"expressions": [], "checkouts": [], "run steps": []}
@@ -1685,10 +1697,9 @@ def secret_and_checkout_problems(directory):
                     f"{path.name}:jobs.{job_id}.secrets: passes every secret to the workflow it "
                     "calls"
                 )
-            for n, step in enumerate(job.get("steps") or []):
+            for where, step in steps_in(job.get("steps"), f"{path.name}:jobs.{job_id}.steps"):
                 if not isinstance(step, dict):
                     continue
-                where = f"{path.name}:jobs.{job_id}.steps[{n}]"
                 if is_checkout(step):
                     repository = checked_out(step)
                     judged["checkouts"].append((where, repository))
