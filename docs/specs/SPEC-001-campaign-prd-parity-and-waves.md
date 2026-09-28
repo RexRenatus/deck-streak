@@ -11,15 +11,15 @@
 - **The predecessor.** A private single-user service with 131 features (93 product, 9 platform, 18
   ops, 11 with no production caller), a database of 64 tables at schema version 24, 64 bot
   commands, 29 inline-button families, 12 scheduled jobs and 35 MCP tools. Its only surface is a
-  Telegram bot; its charts are drawn on a small host whose memory they spike. Source: the
-  predecessor's feature inventory (private), counted by feature record.
-- **The flagship never shipped.** The predecessor's nightly pre-study readings fired every night and
-  produced nothing: every run refused on a stale-snapshot gate, and the folder the readings were to
-  be written to never existed. Source: the second-brain inventory (private), from the run ledger.
+  Telegram bot; its charts are drawn on the server. Source: the predecessor's feature inventory
+  (private), counted by feature record.
+- **The flagship is new work, not a port (ADR-019).** The predecessor's pre-study readings lane
+  gated each reading on the collection file's age, so it refused whenever the owner had not
+  studied, even after a successful sync, and the folder it wrote to had to exist beforehand.
+  Source: the second-brain inventory (private).
 - **The second brain.** 22 user-facing features around an Obsidian vault (the readings, drills, the
-  daily note, the journal, the weekly synthesis, dashboards, the inbox), whose nightly AI pass has
-  been failing; the owner directed that a Claude Code agent through the owner's subscription proxy
-  take over its duties.
+  daily note, the journal, the weekly synthesis, dashboards, the inbox); the owner directed that a
+  Claude Code agent through the owner's subscription proxy take over its duties.
 - **What this campaign delivers.** Every predecessor feature built or excluded with a reason
   (121 built, 10 excluded as inert, each with an owner decision issue); every
   second-brain user-facing feature placed; the daily pre-study readings as the Mini App's first-class
@@ -98,8 +98,7 @@ A5: python3 -m unittest discover -s scripts/tests -p test_parity_matrix.py -k ev
 
 Waves run in order, with W2's owner-gated deploy running beside W3. A wave's SPECs are written by
 the wave's architect turn before its builders are dispatched; W0 and W1 are specified now
-(`docs/specs/planned/`). Builders at once are bounded by the build machine (about six compiling
-builders).
+(`docs/specs/planned/`). Each wave's builders run in parallel, as many at once as the table plans.
 
 | wave | goal | DeckStreak units | v9 rows with their own issue | builders at once |
 |---|---|---|---|---|
@@ -403,3 +402,7 @@ keep their original text where only these notes apply.
   predecessor as a running service, in a risk (section 6), the wave plan and the parity matrix,
   were redacted under the public-prose rule. A tracking issue's number changed: `DS-W2-01` is #239
   (Appendix D).
+
+Amendment (2026-09-28): passages describing another service's operations or a build machine's
+capacity were restated as product rules and as the wave plan, or removed, under the public-text
+rule (ADR-059).

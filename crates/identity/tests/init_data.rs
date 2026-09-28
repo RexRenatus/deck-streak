@@ -281,6 +281,31 @@ fn a_stale_or_future_auth_date_is_refused_with_401() {
 }
 
 #[test]
+fn an_auth_date_60_seconds_ahead_is_fresh_and_61_is_refused_with_401() {
+    // The skew is spelled here as SPEC-024 R2 states it, 60 seconds, and never read from
+    // FUTURE_SKEW: dates built from the constant would move with any change to it (#222).
+    let key = WebAppKey::from_bot_token(BOT_TOKEN);
+    let now_seconds = SIGNED_AT + 7200;
+    let now = at(now_seconds);
+    let dated_ahead = |seconds: i64| {
+        let fields = launch(USER, now_seconds + seconds);
+        let signed = payload(&fields, &sign(BOT_TOKEN, &fields));
+        validate(&signed, &key, Freshness::default(), now)
+    };
+    // A launch a minute ahead of the server's clock is ordinary skew: fresh, as the user it names.
+    assert_eq!(
+        dated_ahead(60).map(Caller::user),
+        Ok(TelegramUserId::new(USER))
+    );
+    // A second further is not: it is stale, and answered 401 with its reason.
+    let refused = dated_ahead(61);
+    assert_eq!(refused, Err(Refusal::InitDataStale));
+    let refusal = refused.expect_err("launch data 61 seconds ahead is refused");
+    assert_eq!(refusal.status(), StatusCode::UNAUTHORIZED);
+    assert_eq!(refusal.reason(), "init_data_stale");
+}
+
+#[test]
 fn a_payload_with_a_signature_field_validates_with_it_in_the_check_string() {
     let key = WebAppKey::from_bot_token(BOT_TOKEN);
     let now = at(SIGNED_AT + 10);

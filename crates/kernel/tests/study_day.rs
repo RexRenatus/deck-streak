@@ -1,5 +1,5 @@
 //! The study day equals the predecessor's for every golden case, across the rollover, and renders
-//! as its ISO date and parses back (SPEC-020 A1, A2).
+//! as its ISO date and parses back (SPEC-020 A1, A2); an hour of the day stops at 23 (R2, #222).
 
 // An integration test is test code: its helpers panic on a malformed golden, and the reader prints
 // the examined count on purpose. clippy.toml's in-test allowances cover only `#[test]` bodies.
@@ -10,7 +10,11 @@ mod golden;
 
 use std::collections::BTreeSet;
 
-use deck_streak_kernel::{Hour, StudyDay, StudyDayRule, UtcMillis, UtcOffset};
+use deck_streak_kernel::settings::{DIGEST_HOUR, ROLLOVER_HOUR};
+use deck_streak_kernel::{
+    Environment, Hour, KernelSettings, Setting, SettingsError, StudyDay, StudyDayRule, UtcMillis,
+    UtcOffset,
+};
 
 /// The integer `key` of a golden case's input.
 fn integer(case: &golden::Case, key: &str) -> i64 {
@@ -55,6 +59,27 @@ fn the_study_day_matches_the_predecessors_golden() {
     // The boundaries a port gets wrong were examined, not only ordinary instants.
     for class in ["rollover", "negative", "offset"] {
         assert!(classes.contains(class), "no {class} case was examined");
+    }
+}
+
+#[test]
+fn every_hour_past_23_is_refused_and_23_is_admitted() {
+    // A day's hours run from 0 to 23 (SPEC-020 R2): 23, the last of them, is an hour, as itself.
+    assert_eq!(Hour::new(23).map(Hour::get), Some(23));
+    // 24 is no hour, nor is any later value a byte holds: each is refused as none at all.
+    for hour in 24..=u8::MAX {
+        assert_eq!(Hour::new(hour), None, "{hour} was admitted as an hour");
+    }
+    // So an hour setting of 24 refuses start as malformed, by its name and an hour's shape.
+    for setting in [ROLLOVER_HOUR, DIGEST_HOUR] {
+        assert_eq!(
+            KernelSettings::from_env(&Environment::from_vars([(setting, "24")])),
+            Err(SettingsError::Malformed {
+                setting,
+                expected: Hour::SHAPE,
+            }),
+            "{setting} of 24"
+        );
     }
 }
 
