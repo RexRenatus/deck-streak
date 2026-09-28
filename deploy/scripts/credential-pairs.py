@@ -6,8 +6,9 @@
     python3 deploy/scripts/credential-pairs.py --root . --optional ai-route
 
 It reads every unit file under `<root>/deploy/`, with the drop-ins of the `<unit>.d/` directory
-beside it, as systemd reads them: comments, continued lines, and the empty assignment that resets
-a list. An optional set, `deploy/optional/<name>/`, is read only when `--optional` names it: each
+beside it, as systemd reads them: its line ends, comments and continued lines (SPEC-061 §8), and
+the empty assignment that resets a list; a construct systemd could read otherwise, such as a
+byte-order mark, is refused by file and line rather than guessed. An optional set, `deploy/optional/<name>/`, is read only when `--optional` names it: each
 drop-in `<unit>.conf` applies to that unit after its template, and a name without a unit type,
 `<name>.conf`, applies to `<name>.service` (SPEC-063, SPEC-065).
 
@@ -39,40 +40,63 @@ OTHER_SOURCES = (
     "SetCredentialEncrypted",
     "ImportCredential",
 )
+# systemd's own reading of a unit file (conf-parser.c, and read_line() in fileio.c), measured with
+# `systemd-analyze verify` (SPEC-061 §8): a line ends at a newline, a carriage return or a NUL, and
+# a newline and a carriage return in either order, a NUL perhaps after them, end one line; a blank
+# is a space, a tab, a newline or a carriage return, nothing else; a line whose first non-blank
+# character is `#` or `;` is a comment, inside a continued line too; and a line that ends in an odd
+# run of backslashes goes on in the next, its last backslash read as a space.
+BLANK = " \t\n\r"
+LINE_END = re.compile(r"\n\r?\0?|\r\n?\0?|\0")
 # A credential id is a plain file name in the unit's credentials directory (systemd.exec(5)).
 CREDENTIAL_ID = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9_.-]*$")
 SET_NAME = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 
 
+def physical_lines(text):
+    """The file's lines, ended as systemd's read_line() ends them."""
+    lines = LINE_END.split(text)
+    if lines[-1] == "":
+        lines.pop()
+    return lines
+
+
 def logical_lines(text):
-    """systemd.syntax(7): a trailing backslash joins the next line, a comment line inside the join
-    is skipped, and each logical line keeps the number it started on."""
-    pending, start = [], 0
-    for number, raw in enumerate(text.splitlines(), start=1):
-        stripped = raw.strip()
-        if pending and stripped.startswith(("#", ";")):
+    """(number, line) for each line systemd parses: comments skipped, continued lines joined,
+    blanks stripped, each numbered by the line it starts on."""
+    pending, start = None, 0
+    for number, raw in enumerate(physical_lines(text), start=1):
+        if raw.lstrip(BLANK)[:1] in ("#", ";"):
             continue
-        if not pending:
-            start = number
-        if stripped.endswith("\\"):
-            pending.append(stripped[:-1])
+        if pending is None:
+            pending, start = "", number
+        pending += raw
+        if (len(pending) - len(pending.rstrip("\\"))) % 2:
+            pending = pending[:-1] + " "
             continue
-        pending.append(stripped)
-        yield start, " ".join(part for part in pending if part).strip()
-        pending = []
-    if pending:
-        yield start, " ".join(pending).strip()
+        yield start, pending.strip(BLANK)
+        pending = None
+    if pending is not None:
+        yield start, pending.strip(BLANK)
 
 
-def assignments(text):
-    """Every `Key=Value` of a unit file or drop-in, as (line, key, value). Sections are not kept: a
-    credential directive means the same in every section that takes one."""
+def read_unit(text, unit):
+    """Every assignment of one file of `unit` as systemd reads it, as (line, section, key, value),
+    and each construct systemd could read otherwise, as (line, reason): a byte-order mark, which
+    systemd skips where it first finds one."""
+    found, unread = [], []
+    for number, raw in enumerate(physical_lines(text), start=1):
+        if "\ufeff" in raw:
+            unread.append((number, "a byte-order mark, which systemd skips"))
+    section = None
     for number, line in logical_lines(text):
-        if not line or line.startswith(("#", ";", "[")):
+        if line.startswith("[") and line.endswith("]"):
+            section = line[1:-1].strip(BLANK)
             continue
         key, equals, value = line.partition("=")
         if equals:
-            yield number, key.strip(), value.strip()
+            found.append((number, section, key.strip(BLANK), value.strip(BLANK)))
+    return found, unread
 
 
 def optional_unit(file_name):
@@ -93,15 +117,24 @@ class Lister:
         self.lines = 0
 
     def read(self, unit, path):
-        text = path.read_text(encoding="utf-8")
-        self.files += 1
-        self.lines += len(text.splitlines())
         where = path.relative_to(self.root).as_posix()
+        self.files += 1
+        try:
+            # Bytes, so that no newline is translated before systemd's own line ends are read.
+            text = path.read_bytes().decode("utf-8")
+        except UnicodeDecodeError:
+            self.refuse(where, 1, "not UTF-8, which systemd reads line by line")
+            return
+        self.lines += len(physical_lines(text))
         ids = self.credentials.setdefault(unit, {})
-        for number, key, value in assignments(text):
+        found, unread = read_unit(text, unit)
+        for number, reason in unread:
+            self.refuse(where, number, f"{reason}; the lister refuses what systemd reads otherwise")
+        for number, _, key, value in found:
             if key in OTHER_SOURCES and value:
                 # The value is never printed: a SetCredential= line holds a literal secret.
-                self.refuse(where, number, f"{key}= is refused; a credential comes from the socket")
+                reason = f"{key}= is refused; a credential comes from the socket (ADR-038)"
+                self.refuse(where, number, reason)
             elif key == "LoadCredential":
                 self.load(ids, where, number, value)
 
@@ -112,16 +145,18 @@ class Lister:
             return
         ident, colon, source = value.partition(":")
         if not CREDENTIAL_ID.match(ident):
-            self.refuse(where, number, "LoadCredential= names no valid credential id")
+            self.refuse(where, number, "LoadCredential= names no valid credential id (ADR-038)")
         elif not colon:
-            self.refuse(where, number, f"{ident} is read from the credential store, not the socket")
+            reason = f"{ident} is read from the credential store, not the socket (ADR-038)"
+            self.refuse(where, number, reason)
         elif source != SOCKET:
-            self.refuse(where, number, f"{ident} is read from {source}, not the socket {SOCKET}")
+            reason = f"{ident} is read from {source}, not the socket {SOCKET} (ADR-038)"
+            self.refuse(where, number, reason)
         else:
             ids[ident] = None
 
     def refuse(self, where, number, reason):
-        self.refusals.append(f"REFUSE: {where}:{number}: {reason} (ADR-038)")
+        self.refusals.append(f"REFUSE: {where}:{number}: {reason}")
 
     def pairs(self):
         return [
