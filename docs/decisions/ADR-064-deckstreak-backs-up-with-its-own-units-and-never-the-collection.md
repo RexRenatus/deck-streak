@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 date: "2026-09-28"
 decision-makers: "@RexRenatus (owner), the DeckStreak architect"
 ---
@@ -54,6 +54,33 @@ Chosen option.
   the window holds offsite too.
 - **Left out.** The collection copy, the releases (downloadable again) and every credential.
 - These units are ADR-010's backups; the rest of ADR-010 stands.
+
+### The memory budget
+
+DeckStreak's units keep their ceilings in `deploy/host-budget.json`, which SPEC-032 reads against
+ADR-032's table. This decision adds three rows and raises DeckStreak's own share.
+
+| unit | MemoryHigh | MemoryMax | CPUQuota |
+|---|---|---|---|
+| `deck-streak-litestream.service` | 48M | 64M | 50% |
+| `deck-streak-backup.service` | 48M | 64M | none (a job) |
+| `deck-streak-restore-drill.service` | 96M | 128M | none (a job) |
+
+The replicator keeps `CPUQuota=50%`, because the deploy-template test requires every daemon to
+carry a quota and the daemons' quotas to fit the share's CPUs (100% for the API, 50% for the bot
+and 50% for the replicator).
+
+The share becomes `"memory": "704M"`, from 640M. The worst case is the three daemons (128M for the
+API, 96M for the bot's ceiling as ADR-032 set them, and 64M for the replicator) plus the largest
+job, 384M: 672M, which fits 704M.
+
+Chosen against:
+
+- A 32M ceiling for Litestream that keeps the share at 640M: rejected because nothing has measured
+  Litestream's resident size, and a replicator killed at its ceiling stops replicating until it
+  restarts.
+- A lower ceiling for the job to make room: rejected because ADR-022's sync budget (256 MiB
+  resident) sets the job's ceiling.
 
 ### Consequences
 
