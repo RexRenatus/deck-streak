@@ -24,9 +24,10 @@ imported rows, in how many transactions, and whose row stands on a shared key?
 
 ## Considered Options (the alternatives it was chosen against)
 
-- Each context's `ImportPort`, composed by the migration crate in one `Db::write` transaction, the
-  predecessor's row winning on a shared key: chosen, because the owner stays the one writer, the
-  transaction makes the apply all or nothing, and the predecessor was the record until the go.
+- Each context's `ImportPort` in one `Db::write` transaction: chosen, because the owner stays the
+  one writer, the transaction makes the apply all or nothing, and the predecessor was the record
+  until the go. The migration crate composes the ports, and the predecessor's row wins on a shared
+  key.
 - One migration crate writing every table: rejected because it is a second writer of every table,
   which four censuses refuse by name, and rightly.
 - One transaction per context: rejected because a failure in a later context leaves the earlier

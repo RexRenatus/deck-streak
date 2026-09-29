@@ -190,7 +190,7 @@ R13. **The job.** `coordination::jobs::TABLE` gains `vault_stats`,
      with `Persistent=true` and the job table's waiver line, and `deploy/rail-contract.json` gains
      its `OnCalendar` row. The drop-in
      `deploy/systemd/deck-streak-job@vault_stats.service.d/30-after-sync.conf` orders it
-     `After=deck-streak-job@sync.service`, which holds a start back only while a start of the sync
+     `After=` the `sync` job's unit, which holds a start back only while a start of the sync
      is pending, as SPEC-053 R3's generation unit is ordered. Write access reaches the unit only
      through the optional drop-in `deploy/optional/vault-stats/deck-streak-job@vault_stats.conf`
      (the vault's group, `UMask=0002`, and write access to the stats file's folder only, with a

@@ -21,10 +21,10 @@ and the import, what judges "a day alone", and what enters the ledger?
 
 ## Considered Options (the alternatives it was chosen against)
 
-- A day report over the first full day after the import, which `alone` refuses unless it begins
-  at or after the retirement, each SLO's good over total against its objective as an exact
-  fraction, `void` with no response, the report's sha256 in the ledger: chosen, because it judges
-  one day of the system that stays, and a quiet day cannot pass.
+- A day report over the first full day after the import: chosen, because it judges one day of the
+  system that stays, and a quiet day cannot pass. `alone` refuses it unless it begins at or after
+  the retirement; it holds each SLO's good over total against its objective as an exact fraction,
+  `void` with no response, and the ledger holds the report's sha256.
 - The SLOs' rolling 28-day window: rejected because it holds the release for four weeks, and mixes
   days before the retirement into the verdict.
 - The silence of the burn alerts: rejected because silence is not evidence: a day with no traffic,

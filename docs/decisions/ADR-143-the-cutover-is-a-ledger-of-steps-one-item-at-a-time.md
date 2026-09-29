@@ -24,9 +24,9 @@ proves the order?
 
 ## Considered Options (the alternatives it was chosen against)
 
-- An append-only ledger of steps (`go`, `stopped`, `switched`, `verified`, `reverted`), the rail's
-  stop recorded before the switch, one item in flight: chosen, because the ledger proves the
-  order, and one item in flight makes every failure one contract's.
+- An append-only ledger of steps, one item in flight: chosen, because the ledger proves the order,
+  and one item in flight makes every failure one contract's. The steps are `go`, `stopped`,
+  `switched`, `verified` and `reverted`, and the rail's stop is recorded before the switch.
 - A big-bang switch: rejected because every contract would have two writers or none at the same
   moment, and a fault could not be traced to one of them.
 - Switches flipped by hand, with no ledger: rejected because nothing would prove that a stop came

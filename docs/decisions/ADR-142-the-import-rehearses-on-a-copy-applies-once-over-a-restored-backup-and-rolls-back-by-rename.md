@@ -23,10 +23,11 @@ backup come from, and how does it roll back?
 
 ## Considered Options (the alternatives it was chosen against)
 
-- The dry run on a `VACUUM INTO` copy of DeckStreak's database; the apply once, over a backup
-  restored from the Litestream replica and verified; the rollback by rename: chosen, because the
-  rehearsal writes only a copy it discards, as often as the owner likes before the go, and the
+- A rehearsal on a copy, one apply over a restored backup, a rollback by rename: chosen, because
+  the rehearsal writes only a copy it discards, as often as the owner likes before the go, and the
   apply's backup is the restore path the owner relies on (ADR-010), proved before it is needed.
+  The dry run reads a `VACUUM INTO` copy of DeckStreak's database, and the apply's backup is
+  restored from the Litestream replica and verified.
 - A backup the tool takes itself: rejected because a copy nobody restored is unproved, and a copy
   of a live WAL database under its writers is the torn-copy class the data-migration rules refuse.
 - The import before the moves, before the predecessor stops: rejected because the copy is stale by

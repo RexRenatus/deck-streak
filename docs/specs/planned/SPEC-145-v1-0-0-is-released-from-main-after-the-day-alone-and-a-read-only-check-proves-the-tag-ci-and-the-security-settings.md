@@ -109,8 +109,9 @@ A10: python3 -m unittest discover -s scripts/tests -p test_release_runbook.py -k
 
 The box run (`scripts/box-packs.sh`, ADR-069) judges this over the committed tree and posts its
 verdict on the pull request as the `box/packs` status. It has no line in the acceptance fence. The
-wiring change handed back with this delivery lifts the release-ops pack's last deferral, whose
-issue (#360) is closed.
+release-ops pack is enforced; its last deferral, whose issue (#360) is closed, is lifted by the
+wiring change handed back with the pull request that plans this SPEC, because the deferred row
+already passes. This delivery hands back no wiring change.
 
 | id | criterion | decided by |
 |---|---|---|

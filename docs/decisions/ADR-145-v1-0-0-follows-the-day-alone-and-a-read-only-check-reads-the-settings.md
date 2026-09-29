@@ -21,9 +21,10 @@ When is v1.0.0 cut, and how is "the settings are on" proved without changing the
 
 ## Considered Options (the alternatives it was chosen against)
 
-- The release PR dev to main after the day alone, the tag on main, the deploy from the tag, then a
-  read-only check (`gh api` GET only) of the tag, CI and the three settings: chosen, because the tag
-  follows the evidence, and the check can only read.
+- The release after the day alone, then a read-only check: chosen, because the tag follows the
+  evidence, and the check can only read. The release PR goes dev to main, the tag is on main, the
+  deploy is from the tag, and the check (`gh api` GET only) reads the tag, CI and the three
+  settings.
 - Tagging before the cutover: rejected because v1.0.0 would claim a product that had not yet run
   alone.
 - A script that turns the settings on: rejected because the settings are the owner's, and a writing

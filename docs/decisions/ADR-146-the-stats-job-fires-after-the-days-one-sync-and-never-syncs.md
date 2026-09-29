@@ -23,9 +23,9 @@ the day's sync did not succeed?
 
 ## Considered Options (the alternatives it was chosen against)
 
-- A job at the rollover hour plus 12 minutes that takes the collection lock shared, reads the
-  study day's sync outcome, and writes only when it succeeded: chosen, because it follows the sync,
-  never runs one, and minute 12 is on no predecessor minute and no other slot.
+- A job at the rollover hour plus 12 minutes, after the day's sync: chosen, because it follows the
+  sync, never runs one, and minute 12 is on no predecessor minute and no other slot. It takes the
+  collection lock shared, reads the study day's sync outcome, and writes only when it succeeded.
 - The issue's minute 5: rejected because it precedes the day's only scheduled sync, so every file
   would report the day before the sync, a day stale.
 - A sync, then the write, inside the job: rejected because it adds a second scheduled sync a day,
