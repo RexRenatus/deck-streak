@@ -224,9 +224,11 @@ R8. The selection:
 
 R9. `mutation-plan` lists the diff's Python mutants (`list --plan`) and the whole population's
     (`list --all`), and `mutation-verdict.py shards` sizes the Python matrix from the diff's listing
-    (`--python-listed FILE`): the ceiling of listed over 40, clamped to 1 to 8, written into the
+    (`--python-listed FILE`): the ceiling of listed over 40, clamped to 1 to 32, written into the
     plan beside each shard's mutants and as the outputs `python_shards` and `python_matrix`. A
-    listing of no mutant is one shard.
+    listing of no mutant is one shard. The ceiling is 32 because a diff that adds a whole guard
+    script lists hundreds of mutants: this delivery's own diff listed 840, and eight shards of 105
+    ran past their 60-minute bound.
 R10. A `ci.yml` job `mutation-python` needs `mutation-plan`, runs one job per shard of the plan's
     matrix (`run --plan ... --shard k/n --failfast`), prints its event's case by name, is never
     skipped, bounds itself with `timeout-minutes`, uploads its report under `if: always()`, restores
@@ -309,7 +311,7 @@ R16. The delivery sets ADR-073 `accepted`; appends to SPEC-039 a dated amendment
 | A11 | a file whose map entry names no module reads each mutant `uncovered`, counted in the report's `examined N`, runs no test, and the run exits 1 | `test_mutation_python.py` |
 | A12 | the report carries R7's schema and each field it lists (the selection, the shard, whether it ran `--failfast`, each file's modules, control ran count, failures and seconds, bound, byte readers and VOID reason, and each mutant's name, file, line, end line, column, `mutant`, operator, outcome and killers), each read by name, examined equals killed plus survived plus uncovered, and the counts of `timeout` and `void` each equal the mutants that read it, over a run whose fixtures hold at least one of each (A7's two), the recorded bound, under `--control-seconds` of 5, 12 and 20, is 60, 60 and 100, unless `--test-seconds` sets it, and the run exits 0 when every examined mutant is killed and 1 on a survivor | `test_mutation_python.py` (the runner mints the report) |
 | A13 | `classify` reads `scripts/<name>.py` as `scripts`, anything under `scripts/tests/` and deeper, and `scripts/x.sh`, as `other`, and the generator as `oracle`; `plan` over a diff that changes a script's code line names the `scripts` class as applying, and over a push naming the pull request it merges as `not-applicable` | `test_mutation_python_verdict.py` (the verdict mints the class) |
-| A14 | `shards --python-listed` sizes the Python matrix at the ceiling of listed over 40, clamped to 1 to 8: one shard for no mutant and for 40, two for 41, eight for 320 and for 321, writes each shard's mutants into the plan, and writes `python_shards` and `python_matrix` | `test_mutation_python_verdict.py` |
+| A14 | `shards --python-listed` sizes the Python matrix at the ceiling of listed over 40, clamped to 1 to 32: one shard for no mutant and for 40, two for 41, eight for 320, nine for 321, 32 for 1280 and for 1281, writes each shard's mutants into the plan, and writes `python_shards` and `python_matrix` | `test_mutation_python_verdict.py` |
 | A15 | a class whose changed code lines hold no mutant and no row reads VOID by name, one that a selected row covers reads examined 1 from the row, one whose changed lines are all blank or comments reads `not-applicable`, a report holding one killed mutant of a script and one of the generator gives each class examined 1, and the oracle's line reads `examined N: generated G, rows R` with the words "has no generated mutants" gone | `test_mutation_python_verdict.py` |
 | A16 | a survived or uncovered mutant with no record fails by name; a `timeout` (even with a record naming it), a `void` mutant, a VOID file and an exit-4 report are each VOID by name; an unviable mutant and a byte reader are named and change no count | `test_mutation_python_verdict.py` |
 | A17 | a promised shard, the last included, whose report is missing, unreadable or not of the schema is VOID, naming its index | `test_mutation_python_verdict.py` |
