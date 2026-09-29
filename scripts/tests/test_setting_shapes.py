@@ -436,10 +436,12 @@ class TheGuardReadsOutOfLineTestModules(unittest.TestCase):
 
     def test_a_module_directory_with_a_mod_file_is_its_test_module(self):
         root = self.declared("#[cfg(test)]\nmod tests;\n", ("depth/tests/mod.rs", self.SPELLING))
+        own = root / "crates" / "demo" / "src" / "depth.rs"
+        self.assertEqual(out_of_line(own), [own.with_suffix("") / "tests" / "mod.rs"])
         self.assertEqual(len(implementations(root)), 1)
         self.assertEqual(unpinned(root), [])
 
-    def test_a_path_attribute_names_the_module_file_from_the_own_files_directory(self):
+    def test_a_module_whose_file_an_attribute_chooses_is_not_read(self):
         for declaration in (
             '#[cfg(test)]\n#[path = "words/shape.rs"]\nmod tests;\n',
             '#[path = "words/shape.rs"]\n#[cfg(test)]\nmod tests;\n',
@@ -447,7 +449,7 @@ class TheGuardReadsOutOfLineTestModules(unittest.TestCase):
         ):
             root = self.declared(declaration, ("words/shape.rs", self.SPELLING))
             self.assertEqual(len(implementations(root)), 1)
-            self.assertEqual(unpinned(root), [])
+            self.assertEqual(len(unpinned(root)), 1, declaration)
 
     def test_the_module_of_a_lib_file_is_read_from_the_crates_src_directory(self):
         root = self.declared(
@@ -480,6 +482,51 @@ class TheGuardReadsOutOfLineTestModules(unittest.TestCase):
         path = '#[cfg(test)]\n#[path = "words/shape.rs"]\nmod tests;\n'
         root = self.declared(path, ("words/shape.rs", "let shape = 1;\n"), elsewhere)
         self.assertEqual(len(unpinned(root)), 1)
+
+    KINDS = (
+        ("lib.rs", (), "tests.rs"),
+        ("main.rs", (), "tests.rs"),
+        ("bin/tool.rs", (), "bin/tests.rs"),
+        ("a/depth.rs", (), "a/depth/tests.rs"),
+        ("a/mod.rs", (), "a/tests.rs"),
+        ("x/depth.rs", (("lib.rs", '#[path = "x/depth.rs"]\nmod depth;\n'),), "x/tests.rs"),
+    )
+    ATTRIBUTES = (
+        "",
+        '#[path = "t.rs"]\n',
+        '#[path="t.rs"]\n',
+        '#[ path = "t.rs" ]\n',
+        '#[path = r"t.rs"]\n',
+        '#[cfg_attr(test, path = "t.rs")]\n',
+        '#[cfg_attr(all(test, unix), path = "t.rs")]\n',
+    )
+
+    def test_every_module_file_choice_is_read_from_rustcs_file_or_refused(self):
+        """R8's population: each declaring-file kind, each attribute that can choose the file, and
+        a stale spelling at each other place rustc could look. The guard reads rustc's file or
+        nothing; it never pins a shape from a file rustc does not read."""
+        members = 0
+        for own, extra, default in self.KINDS:
+            stem, folder = Path(own).with_suffix(""), Path(own).parent
+            places = [p / leaf for p in (stem, folder) for leaf in ("tests.rs", "tests/mod.rs")]
+            for attribute in self.ATTRIBUTES:
+                chosen = (folder / "t.rs").as_posix() if attribute else default
+                stale = [p.as_posix() for p in places if p.as_posix() != chosen]
+                for misplaced in (None, *stale):
+                    for spelled in (True, False):
+                        members += 1
+                        text = self.SPELLING if spelled else "let shape = 1;\n"
+                        files = [*extra, (chosen, text)]
+                        if misplaced:
+                            files.append((misplaced, self.SPELLING))
+                        declaration = f"#[cfg(test)]\n{attribute}mod tests;\n"
+                        root = self.declared(declaration, *files, own=own)
+                        src = root / "crates" / "demo" / "src"
+                        case = f"{own} {attribute!r} stale={misplaced} spelled={spelled}"
+                        self.assertIn(out_of_line(src / own), ([src / chosen], []), case)
+                        if not spelled:
+                            self.assertEqual(len(unpinned(root)), 1, case)
+        print(f"R8 population: {members} members")
 
 
 class TheGuardIgnoresAnImplementationInAComment(unittest.TestCase):
