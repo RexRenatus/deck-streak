@@ -53,4 +53,13 @@ describe('About', () => {
     expect([await fireEvent.click(privacy), await fireEvent.click(source)]).toEqual([false, false]);
     expect(telegram.openLink.mock.calls).toEqual([[PRIVACY_POLICY], [SOURCE_CODE]]);
   });
+
+  it('About says what it is, under which licence, and links back to Today', () => {
+    render(About);
+
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('About DeckStreak');
+    expect(document.body.textContent).toContain('GNU Affero General Public License, version 3 or later');
+    const back = screen.getByRole('link', { name: 'Back to Today' });
+    expect(back.getAttribute('href')).toBe('/');
+  });
 });

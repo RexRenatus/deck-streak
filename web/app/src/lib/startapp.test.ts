@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { routeFor } from './startapp';
 import { ROUTES, TODAY } from './routes';
 
@@ -6,6 +6,10 @@ import { ROUTES, TODAY } from './routes';
 // screen only through a closed table, and everything else opens Today: never a 404, and never a
 // navigation to the token's own text.
 describe('the startapp token map', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('an unknown or empty startapp token opens Today', () => {
     const unknown = [
       '',
@@ -69,5 +73,26 @@ describe('the startapp token map', () => {
     const destinations = ['today', 'about'].map(routeFor).sort();
 
     expect(destinations).toEqual([...ROUTES].sort());
+  });
+
+  it('Today is the root path, and every launch without a known destination opens it', () => {
+    expect(TODAY).toBe('/');
+    expect(routeFor(null)).toBe('/');
+    expect(routeFor('unlisted')).toBe('/');
+  });
+
+  it('a token reaches the table only when it has the shape of a token, and the table lists today', () => {
+    const lookups = vi.spyOn(Map.prototype, 'get');
+    const malformed = [null, undefined, '', '/about', 'about/', ' about', 'about ', 'a b', 'x'.repeat(65)];
+    for (const token of malformed) routeFor(token);
+    // a token the shape refuses is never looked up
+    expect(lookups.mock.calls.map(([key]) => key)).toEqual([]);
+
+    expect(routeFor('today')).toBe('/');
+    // the table answers for today itself, before the fallback would
+    expect(lookups).toHaveBeenLastCalledWith('today');
+    expect(lookups.mock.results.at(-1)?.value).toBe('/');
+    expect(routeFor('a'.repeat(64))).toBe('/');
+    expect(lookups).toHaveBeenLastCalledWith('a'.repeat(64));
   });
 });

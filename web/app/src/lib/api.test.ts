@@ -153,4 +153,138 @@ describe('the API client', () => {
 
     expect(await api.me()).toEqual({ kind: 'unavailable' });
   });
+
+  it('a launch the server refuses at once asks the owner to reopen, and stops', async () => {
+    for (const status of [401, 403]) {
+      const { fetch, sent } = server([status]);
+      const api = createApi({ launchData: () => LAUNCH, fetch });
+
+      expect(await api.me(), `status ${status}`).toEqual({ kind: 'reopen' });
+      expect(await api.me(), `status ${status}`).toEqual({ kind: 'reopen' });
+      expect(lines(sent), `status ${status}`).toEqual(['POST /api/session']);
+    }
+  });
+
+  it('a handshake that cannot reach the server says so, and the next call tries again', async () => {
+    const sent: string[] = [];
+    let reachable = false;
+    const fetch = vi.fn(async (input: RequestInfo | URL, init: RequestInit = {}) => {
+      sent.push(`${init.method ?? 'GET'} ${String(input)}`);
+      if (!reachable) throw new TypeError('network down');
+      return String(input) === '/api/me'
+        ? Response.json({ study_day: STUDY_DAY })
+        : new Response(null, { status: 200 });
+    });
+    const api = createApi({
+      launchData: () => LAUNCH,
+      fetch: fetch as unknown as typeof globalThis.fetch
+    });
+
+    expect(await api.me()).toEqual({ kind: 'unavailable' });
+    // no session came of it, so nothing was asked of the API
+    expect(sent).toEqual(['POST /api/session']);
+    reachable = true;
+    expect(await api.me()).toEqual({ kind: 'ok', value: { studyDay: STUDY_DAY } });
+    expect(sent).toEqual(['POST /api/session', 'POST /api/session', 'GET /api/me']);
+  });
+
+  it('a call that cannot reach the server says so, and the session stays open', async () => {
+    const sent: string[] = [];
+    let reachable = false;
+    const fetch = vi.fn(async (input: RequestInfo | URL, init: RequestInit = {}) => {
+      sent.push(`${init.method ?? 'GET'} ${String(input)}`);
+      if (String(input) === '/api/session') return new Response(null, { status: 200 });
+      if (!reachable) throw new TypeError('network down');
+      return Response.json({ study_day: STUDY_DAY });
+    });
+    const api = createApi({
+      launchData: () => LAUNCH,
+      fetch: fetch as unknown as typeof globalThis.fetch
+    });
+
+    expect(await api.me()).toEqual({ kind: 'unavailable' });
+    reachable = true;
+    expect(await api.me()).toEqual({ kind: 'ok', value: { studyDay: STUDY_DAY } });
+    expect(sent).toEqual(['POST /api/session', 'GET /api/me', 'GET /api/me']);
+  });
+
+  it('an answer that is not a success is unavailable whatever its body says', async () => {
+    const fetch = vi.fn(async (input: RequestInfo | URL) =>
+      String(input) === '/api/me'
+        ? Response.json({ study_day: STUDY_DAY }, { status: 500 })
+        : new Response(null, { status: 200 })
+    );
+    const api = createApi({
+      launchData: () => LAUNCH,
+      fetch: fetch as unknown as typeof globalThis.fetch
+    });
+
+    expect(await api.me()).toEqual({ kind: 'unavailable' });
+  });
+
+  it('a body that is not a study day is refused rather than shown', async () => {
+    const bodies: readonly string[] = [
+      'null',
+      'not json at all',
+      '"2001-02-03"',
+      '5',
+      '[]',
+      '{}',
+      JSON.stringify({ study_day: null }),
+      JSON.stringify({ study_day: 20010203 }),
+      // an array that reads as a date once it is written out as text
+      JSON.stringify({ study_day: [STUDY_DAY] }),
+      // a date with anything before or after it is not an ISO date
+      JSON.stringify({ study_day: `x${STUDY_DAY}` }),
+      JSON.stringify({ study_day: `${STUDY_DAY}x` }),
+      JSON.stringify({ study_day: `${STUDY_DAY}\n` })
+    ];
+    for (const body of bodies) {
+      const fetch = vi.fn(async (input: RequestInfo | URL) =>
+        String(input) === '/api/me'
+          ? new Response(body, { status: 200 })
+          : new Response(null, { status: 200 })
+      );
+      const api = createApi({
+        launchData: () => LAUNCH,
+        fetch: fetch as unknown as typeof globalThis.fetch
+      });
+
+      expect(await api.me(), `body ${body}`).toEqual({ kind: 'unavailable' });
+    }
+  });
+
+  it('a call that meets the ended session after another renewed it joins the new session', async () => {
+    const gates: Array<(status: number) => void> = [];
+    const sent: string[] = [];
+    const fetch = vi.fn(async (input: RequestInfo | URL, init: RequestInit = {}) => {
+      const url = String(input);
+      sent.push(`${init.method ?? 'GET'} ${url}`);
+      if (url === '/api/session') return new Response(null, { status: 200 });
+      // the first two calls wait for the test to answer them; later ones succeed
+      if (sent.filter((line) => line === 'GET /api/me').length <= 2) {
+        const status = await new Promise<number>((resolve) => gates.push(resolve));
+        return new Response(null, { status });
+      }
+      return Response.json({ study_day: STUDY_DAY });
+    });
+    const api = createApi({
+      launchData: () => LAUNCH,
+      fetch: fetch as unknown as typeof globalThis.fetch
+    });
+
+    const both = Promise.all([api.me(), api.me()]);
+    await vi.waitFor(() => expect(gates.length).toBe(2));
+    // both calls learn at once that the session has ended
+    gates[0](401);
+    gates[1](401);
+
+    const answers = await both;
+    expect(answers).toEqual([
+      { kind: 'ok', value: { studyDay: STUDY_DAY } },
+      { kind: 'ok', value: { studyDay: STUDY_DAY } }
+    ]);
+    // one session at first, one renewal shared by both: two handshakes, not three
+    expect(sent.filter((line) => line === 'POST /api/session')).toHaveLength(2);
+  });
 });
