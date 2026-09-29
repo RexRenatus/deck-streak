@@ -310,6 +310,21 @@ async fn a_retired_reading_turns_studied_on_late_reviews_inside_its_window() {
 }
 
 #[tokio::test]
+async fn only_a_reading_that_turns_retired_this_pass_is_counted_retired() {
+    let rig = Rig::new().await;
+    rig.reviews.add(1, START + HOUR_MS);
+    rig.set_clock(CLOSE - 1);
+    let open = rig.settle.run().await.expect("a settle");
+    assert_eq!(open.retired, 0, "an open reading that stays open");
+    rig.set_clock(CLOSE);
+    let retiring = rig.settle.run().await.expect("a settle");
+    assert_eq!(retiring.retired, 1, "the pass that retires it");
+    rig.set_clock(CLOSE + HOUR_MS);
+    let again = rig.settle.run().await.expect("a settle");
+    assert_eq!(again.retired, 0, "a reading that was already retired");
+}
+
+#[tokio::test]
 async fn a_read_and_studied_reading_earns_exactly_100_xp_once() {
     let rig = Rig::new().await;
     let tapped = rig.tap.tap_reading(rig.id.as_str()).await;
