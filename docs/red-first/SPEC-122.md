@@ -20,4 +20,5 @@ A4: green at 73b3502
 
 The control, `every_committed_band_file_reads_as_plain_json_reads_it`, is not red: it pins that
 every committed band file reads as plain `json.load` reads it, which the base already did.
-Rows S12201 to S12206 are its killing cases' companions, each proved KILLED by its full id.
+Rows S12201 to S12206 are companions of the killing tests of A1 to A4, each proved KILLED by its
+full id.
