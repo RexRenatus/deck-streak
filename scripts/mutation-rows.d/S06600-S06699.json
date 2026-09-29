@@ -94,6 +94,14 @@
         "",
         "a paging unit that loads a credential holds only the restart budget its units use, so a start limit interval planted beside the admitted one is refused (SPEC-066 R2)",
         "test_deploy_templates.ARefusedCredentialFailsItsUnitAndPages.test_a_paging_units_restart_holds_only_the_admitted_value"
+      ],
+      [
+        "S06612-A-RESTARTING-PAGING-UNIT-NEEDS-ITS-BUDGET",
+        "scripts/tests/test_deploy_templates.py",
+        "        if not unit.values(section, key)\n",
+        "        if False\n",
+        "a paging unit that loads a credential and assigns Restart= to anything but no holds each key of its restart budget, so a unit with a restart and no start limit is refused by the missing key (SPEC-066 R2)",
+        "test_deploy_templates.ARefusedCredentialFailsItsUnitAndPages.test_a_restarting_paging_unit_holds_the_whole_restart_budget"
       ]
     ]
   }
