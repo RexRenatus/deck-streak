@@ -225,6 +225,33 @@
         "Some(_source) => state,",
         "law_tiers::the_composed_router_serves_the_law_tiers_to_the_owner_alone",
         "the api role gives its router the law tiers' source (SPEC-072 R24, A31)"
+      ],
+      [
+        "S07230-CENSUS-FIXPOINT",
+        "progression",
+        "tests/xp_census.rs",
+        "if aliases.len() == before {",
+        "if true {",
+        "xp_census::the_census_follows_a_grouped_module_renaming_and_a_chain_read_before_its_link",
+        "the census follows a chain of renamings read before its link, so the alias loop runs to a fixpoint (SPEC-072 A32)"
+      ],
+      [
+        "S07231-CENSUS-PUB-CRATE-CLOSE",
+        "progression",
+        "tests/xp_census.rs",
+        ".is_some_and(|open| open > 0 && words[open - 1] == \"pub\"),",
+        ".is_some_and(|_open| false),",
+        "xp_census::the_census_follows_a_grouped_module_renaming_and_a_chain_read_before_its_link",
+        "a `)` that closes `pub(` makes the next `use` a re-export, so a crate-visible chain link is followed (SPEC-072 A32)"
+      ],
+      [
+        "S07232-CENSUS-SELF-RENAME",
+        "progression",
+        "tests/xp_census.rs",
+        "if !grouped && (path.len() > prefix.len() || renamed_self) {",
+        "if !grouped && path.len() > prefix.len() {",
+        "xp_census::the_census_follows_a_grouped_module_renaming_and_a_chain_read_before_its_link",
+        "a `{self as X}` inside a group is a leaf, so a grouped module renaming is followed (SPEC-072 A32)"
       ]
     ],
     "CARGO_KILLED_SCRIPT_MUTATIONS": [
