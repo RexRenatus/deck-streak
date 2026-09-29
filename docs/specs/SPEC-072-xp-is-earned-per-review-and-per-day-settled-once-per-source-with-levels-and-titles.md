@@ -367,8 +367,8 @@ stay enforced; no row is deferred for this delivery.
 | `crates/api/src/lib.rs` | `deck-streak-api` | changed: the `xp_routes` module is declared |
 | `crates/bot/src/lib.rs` | `deck-streak-bot` | changed: the `xp_commands` module is declared |
 | `crates/bot/tests/commands.rs` | `deck-streak-bot` | changed: the menu names `level` |
-| `crates/bot/tests/messages/help.msg.json` | `deck-streak-bot` | changed: the help message lists `/level` |
-| `crates/bot/tests/messages/start.msg.json` | `deck-streak-bot` | changed: the start message lists `/level` |
+| `crates/bot/tests/messages/help.msg.json` | `deck-streak-bot` | changed: the help message lists the level command |
+| `crates/bot/tests/messages/start.msg.json` | `deck-streak-bot` | changed: the start message lists the level command |
 | `crates/notifications/tests/one_router.rs` | `deck-streak-notifications` | changed: the command replies the router census names |
 | `crates/progression/tests/rights.rs` | `deck-streak-progression` | changed: the rights of the two new tables |
 | `crates/progression/tests/xp_reads.rs` | `deck-streak-progression` | added: the reads answer what the tables hold (R6, R8, R17, R20 to R22) |
@@ -376,7 +376,7 @@ stay enforced; no row is deferred for this delivery.
 | `web/app/src/lib/api.ts` | `web` | changed: the level read (R23) |
 | `web/app/src/lib/api.test.ts` | `web` | changed: the level read's test |
 | `web/app/src/lib/level/level.test.ts` | `web` | changed: the level view's test |
-| `web/app/src/lib/startapp.ts` | `web` | changed: the start menu names `/level` |
+| `web/app/src/lib/startapp.ts` | `web` | changed: the start menu names the level command |
 | `web/app/src/lib/startapp.test.ts` | `web` | changed: the start menu's test |
 | `web/app/src/routes/level.test.ts` | `web` | added: the level screen's test |
 | `web/app/tests/a11y.spec.ts` | `web` | changed: the level screen's accessibility run (R26) |
