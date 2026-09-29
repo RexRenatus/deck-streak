@@ -14,8 +14,8 @@
   gate 2 (#161) for the units, the host-wide journald drop-in, the Caddy change and the first start;
   gate 6 (#165) for the owner's user id; SPEC-061's rail. The Mini App's registration with BotFather
   is the owner's act after HTTPS works (#171).
-- **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
-  `docs/specs/` with its tests and `docs/red-first/SPEC-062.md` (ADR-016).
+- **Status:** built (moved from `docs/specs/planned/` by the delivery, with its tests and
+  `docs/red-first/SPEC-062.md`, ADR-016).
 
 ## 1. The problem, measured
 
@@ -111,6 +111,12 @@ R13. The install gives every unit that writes readings one common lock directory
     a directory inside the service's state directory, owned by the service user, named by its
     setting in the environment file, and present before those units start, since each of them
     refuses to start without it (SPEC-048's start check).
+R14. The sync login is loaded by the sync job alone. `deck-streak-job@.service` carries no
+    `LoadCredential=` for it; a drop-in `deploy/systemd/deck-streak-job@sync.service.d/` carries the
+    two lines, so the liveness and maintenance instances request no sync credential (ADR-061,
+    amended). `deploy/scripts/credential-pairs.py` lists the drop-in's pairs under the instance,
+    and `deploy/scripts/effective-check.py` accepts a shipped drop-in beside the rail's own. The
+    deploy installs the drop-in directories byte for byte with the unit templates.
 
 ## 3. Acceptance criteria
 
@@ -126,6 +132,7 @@ R13. The install gives every unit that writes readings one common lock directory
 | A8 | the release workflow runs only on SemVer tags, proves the tag is on `main` on a full-history checkout, creates a draft, attests provenance and publishes after the last upload | `test_release_workflow.py` |
 | A9 | the release workflow's top-level permissions are read-only, only its release job may write, it runs on the pinned image, every action is pinned by a full commit SHA, and no step saves a cache (examined count reported) | `test_release_workflow.py` |
 | A10 | no deploy script names a private value, and a planted one is refused by the public scrub | `test_deploy_scripts.py`; `scripts/public-scrub.py` |
+| A11 | the liveness and maintenance instances request no sync credential, the sync instance still requests the sync login, and the pair list and the effective check accept the drop-in | `test_deploy_templates.py` |
 
 ```acceptance
 A1: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k test_the_deploy_refuses_a_tag_off_main_and_a_lightweight_tag
@@ -138,6 +145,7 @@ A7: python3 -m unittest discover -s scripts/tests -p test_caddy_render.py -k tes
 A8: python3 -m unittest discover -s scripts/tests -p test_release_workflow.py -k test_the_release_runs_on_semver_tags_and_publishes_last
 A9: python3 -m unittest discover -s scripts/tests -p test_release_workflow.py -k test_the_release_workflow_is_read_only_and_pinned
 A10: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k test_no_deploy_script_names_a_private_value
+A11: python3 -m unittest discover -s scripts/tests -p test_deploy_templates.py -k test_the_sync_login_is_loaded_by_the_sync_job_alone
 ```
 
 A1 to A6 run the scripts against a synthetic repository with its own tags, a synthetic release
@@ -180,6 +188,13 @@ this SPEC names each step only.
 | `docs/decisions/ADR-062-a-deploy-installs-only-a-release-whose-provenance-and-digests-verify.md` | docs | changed: status accepted |
 | `docs/decisions/ADR-061-host-values-reach-units-as-drop-ins-and-caddy-as-a-rendered-file.md` | docs | changed: status accepted, if SPEC-061 has not accepted it first |
 | `docs/red-first/SPEC-062.md` | docs | added |
+| `deploy/systemd/deck-streak-job@.service` | deploy | changed: R14, the sync login lines removed |
+| `deploy/systemd/deck-streak-job@sync.service.d/20-sync-login.conf` | deploy | added: R14, the sync login |
+| `deploy/scripts/credential-pairs.py`, `deploy/scripts/effective-check.py` | deploy | changed: R14, instance drop-ins |
+| `scripts/tests/test_deploy_templates.py`, `scripts/tests/test_rail_contract.py` | repo | changed: A11 and the role table |
+| `docs/decisions/ADR-061-...md` | docs | one dated Amendment section (R14) |
+| the private rail's map, rendered drop-ins and tests (`rail/`) | the maintainer's | changed: R14, committed privately |
+| `scripts/mutation-rows.d/S06200-S06299.json` | repo | added: the mutation rows |
 | `changelog.d/` fragment | repo | added |
 
 ## 6. What this does NOT do
