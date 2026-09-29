@@ -153,7 +153,7 @@ A17: cargo test -p deck-streak-coordination --test image_art -- --exact a_provid
 A18: cargo test -p deck-streak-coordination --test job_table -- --exact the_image_art_job_is_hourly_and_sending
 A19: cargo test -p deck-streak-daemon --test roles -- --exact the_image_art_job_starts_with_no_provider
 A20: cargo test -p deck-streak-daemon --test roles -- --exact an_empty_image_provider_key_refuses_start
-A21: cargo test -p deck-streak-agent --test rights -- --exact agent_images_export_and_erase_are_symmetric
+A21: cargo test -p deck-streak-agent --test data_rights -- --exact agent_images_export_and_erase_are_symmetric
 A22: cargo test -p deck-streak-agent --test images -- --exact no_prompt_or_image_reaches_a_log
 A23: python3 -m unittest discover -s scripts/tests -p test_deploy_templates.py -k test_the_image_art_timer_is_on_the_sending_template
 ```
@@ -166,7 +166,7 @@ and a job to their populations. The delivery hands back an empty JSON diff and s
 
 | id | criterion | decided by |
 |---|---|---|
-| B1 | over `privacy.json`, `PRIVACY.md` and `crates/agent/src/rights.rs`: `agent_images` is declared with purpose, basis and retention, and export and erase cover it | the privacy-gdpr pack |
+| B1 | over `privacy.json`, `PRIVACY.md` and `crates/agent/src/data_rights.rs`: `agent_images` is declared with purpose, basis and retention, and export and erase cover it | the privacy-gdpr pack |
 | B2 | over `deploy/systemd/deck-streak-job-send@image_art.timer`, `crates/coordination/src/image_art.rs` and `crates/agent/src/images.rs`: every outbound call is bounded and every row is settled once | the durable-services pack |
 
 ## 4. File manifest
@@ -174,11 +174,11 @@ and a job to their populations. The delivery hands back an empty JSON diff and s
 | file | context | change |
 |---|---|---|
 | `crates/agent/src/images.rs` | `deck-streak-agent` | added: the port, `NoImageProvider`, the draw, its cap, its bound and its outcomes |
-| `crates/agent/src/rights.rs` | `deck-streak-agent` | changed: the port exports and erases `agent_images` (SPEC-043 adds it) |
+| `crates/agent/src/data_rights.rs` | `deck-streak-agent` | changed: the port exports and erases `agent_images` (SPEC-043 adds it) |
 | `crates/agent/src/lib.rs` | `deck-streak-agent` | changed: the module |
 | `crates/agent/tests/images.rs` | `deck-streak-agent` | added: A1 to A9, A22 |
 | `crates/agent/tests/images_parity.rs` | `deck-streak-agent` | added: A10, A11 |
-| `crates/agent/tests/rights.rs` | `deck-streak-agent` | changed: A21 |
+| `crates/agent/tests/data_rights.rs` | `deck-streak-agent` | changed: A21 |
 | `migrations/013501_agent_images.sql` | `deck-streak-agent` | added: the table |
 | `ai-safety.json` | repo | changed: the tasks `keepsake-art` and `share-card-art` |
 | `crates/coordination/src/keepsake.rs` | `deck-streak-coordination` | added: the ceremony step's enqueue |
