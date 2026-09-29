@@ -1,5 +1,9 @@
 ### Added
 
+- The Python mutation runner, `scripts/mutation_python.py`, and its population map
+  `scripts/mutation-python.json` (SPEC-087; #218, #219). It lists the mutants of the guard scripts
+  and the parity oracle's generator, runs each against its mapped test modules, restores every file
+  checked by sha256, and reads a hung mutant, a red control and a failed restore as VOID by name.
 - The repository's own Python is mutated (SPEC-087, ADR-073, accepted; #218, #219). A pull request
   runs the new job `mutation-python` over the mutants on its changed lines in the guard scripts and
   the parity oracle's Python, one job per shard, and the verdict judges the reports: a survivor
