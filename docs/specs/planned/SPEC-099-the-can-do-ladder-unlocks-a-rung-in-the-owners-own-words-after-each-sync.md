@@ -174,6 +174,7 @@ when it merges.
 | `migrations/009901_curriculum_can_do.sql` | `deck-streak-curriculum` | added: `can_do_unlocks` and `can_do_ladder` |
 | `crates/coordination/src/can_do.rs` | `deck-streak-coordination` | added: the unlock pass and the ladder's read model |
 | `crates/coordination/src/sync_cycle.rs` | `deck-streak-coordination` | changed: the pass after the recompute, before the instruments step |
+| `crates/daemon/src/wiring.rs` | `deck-streak-daemon` | changed: joins the unlock pass to the sync cycle after the recompute and before the instruments step (R6) |
 | `crates/coordination/src/lib.rs` | `deck-streak-coordination` | changed: the module |
 | `crates/coordination/tests/can_do_step.rs` | `deck-streak-coordination` | added: A8 to A11 |
 | `crates/api/src/can_do_routes.rs` | `deck-streak-api` | added: the ladder route |

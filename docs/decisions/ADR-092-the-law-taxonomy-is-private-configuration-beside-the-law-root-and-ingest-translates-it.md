@@ -29,8 +29,8 @@ context turns a deck path into a law subject?
 - The predecessor's literals — rejected because they are the owner's deck names, which CHARTER 11 keeps out of the repository.
 - The courses file — rejected because it lists language courses (ADR-087), and law is a track, not a course.
 - The note conventions file (ADR-096) — rejected because it describes note types and fields, while the law taxonomy describes decks.
-- Reuse the readings taxonomy file (SPEC-045), which already names the law roots and bands — rejected because ADR-045 makes it the readings context's schema, which ingest may not read.
-- Curriculum parsing the deck path itself — rejected because the runway in insights reads the same subject, and a parser of the curriculum's own text would have no golden: the two ports of `_law_subject` (readings and ingest) are held to one golden.
+- Reuse the readings taxonomy file (SPEC-045), which already names the law roots and bands — rejected because ADR-045 makes it the readings context's schema, and ingest depends only on the kernel (ADR-002), so it may not read the readings context's code or schema.
+- Curriculum parsing the deck path itself — rejected because the runway in insights reads the same subject and may not depend on curriculum (ADR-002), so insights would port `_law_subject` a third time; a deck path is Anki's language, which ingest translates once for both (ADR-087).
 
 ## Decision Outcome
 
@@ -41,7 +41,9 @@ deck layout, and deck layout is what ingest's scope settings already hold.
   deck name) are read with `DECKSTREAK_LAW_DECK_ROOT`; either set without the root refuses start,
   naming the setting and never a value.
 - `crates/ingest/src/law_subject.rs` gives a card's law subject and, under the test-prep subtree,
-  its section, equal to the golden of `leeches.py:_law_subject` with synthetic bands.
+  its section. The law subject equals `goldens/law_subject.json` (the golden of
+  `leeches.py:_law_subject` with synthetic bands), and the test-prep section is the segment after the
+  subtree's name, which `goldens/test_prep_board.json` holds.
 - `.env.example` shows neutral examples.
 
 ### Consequences
@@ -50,9 +52,11 @@ deck layout, and deck layout is what ingest's scope settings already hold.
 - Good, because curriculum and insights read one subject for a card.
 - Good, because the two ports of `_law_subject` (readings and ingest) are held to one golden.
 - Bad, because a change to the bands takes effect at the next start, like every scope setting.
-- **One truth across two files.** The readings taxonomy keeps its own file (ADR-045). Ingest's
-  settings and the readings taxonomy must name the same law roots and bands, and the daemon
-  refuses to start when they disagree, naming both settings (SPEC-092 A17).
+- **One truth across two files.** The readings taxonomy keeps its own file (ADR-045). When both are
+  configured, ingest's settings and the readings taxonomy must name the same law roots and bands, and
+  the daemon refuses to start when they disagree, naming both settings and neither value (SPEC-092 A17).
+- Bad, because there are two ports of `_law_subject` and two settings files to keep equal, which one
+  golden and the start refusal hold together.
 
 ### Confirmation
 

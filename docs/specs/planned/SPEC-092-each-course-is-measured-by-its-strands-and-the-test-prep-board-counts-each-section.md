@@ -3,7 +3,7 @@
 - **Wave:** W4. **Issue:** #88, #135 (epic #5). **Context(s):** `deck-streak-ingest` (a card's law
   subject and test-prep section, from the law taxonomy settings); `deck-streak-curriculum` (the strand
   parse, the strand statistics and weak spots, the test-prep board, `strand_readouts`);
-  `deck-streak-coordination` (the strands step in phase 4 of the fold, the read models);
+  `deck-streak-coordination` (the strands step in phase 4 of the fold, the read models, the `law_taxonomy` module);
   `deck-streak-api`, `deck-streak-bot` and the Mini App (the routes, `/weakspots` and its alias
   `/weak`, `/lsat`, the strand table and the law tab's coverage grid).
 - **Decided by:** ADR-012 (the parity oracle proves the math), ADR-087 (the courses are private
@@ -67,13 +67,16 @@ R1. Ingest's scope settings read `DECKSTREAK_LAW_YEAR_BANDS` (a comma-separated 
     without the root refuses start, naming the setting and never a value; `.env.example` shows
     neutral examples.
 R2. `crates/ingest/src/law_subject.rs` gives a card's law subject and, under the test-prep subtree,
-    its section, equal to `goldens/law_subject.json` (`leeches.py:_law_subject`, with the module's year
-    bands and law root patched to synthetic ones). The readings context already ports the same
-    function (`crates/readings/src/topic.rs`, SPEC-045); ingest ports `_law_subject` again because a
-    context may not read another context's code or schema (the crate graph, ADR-002). The two ports
+    its section. The law subject equals `goldens/law_subject.json` (`leeches.py:_law_subject`, with the
+    module's year bands and law root patched to synthetic ones), and the test-prep section is the
+    segment after the subtree's name, which `goldens/test_prep_board.json` holds (A7). The readings context already ports the same
+    function (`crates/readings/src/topic.rs`, SPEC-045); ingest ports `_law_subject` again because
+    ingest depends only on the kernel (ADR-002) and may not read the readings context's code or schema. The two ports
     stay equal because both tests read the ONE golden, which SPEC-045 added and this SPEC does not
     overwrite. When both the readings taxonomy and ingest's settings are configured, a law root or a
-    year band that they name differently refuses start, naming both settings and neither value (A17).
+    year band that they name differently refuses start, naming both settings and neither value (A17);
+    "the same law roots" means the readings taxonomy's `law.roots` list equals the one-element list
+    of ingest's `DECKSTREAK_LAW_DECK_ROOT`.
 
 The strands (#88)
 
@@ -134,7 +137,7 @@ R11. Every constant this SPEC uses (the index pattern, the mature mastery, the w
 | A14 | `/lsat` names each section's studied share and discloses the dormant axes | `lsat_states_each_section_and_the_dormant_axes` |
 | A15 | the strand table states each strand's retention as text beside its colour | `states each strand retention as text beside its colour` |
 | A16 | the coverage grid renders a missing board as none found, never as zeros | `renders a missing board as none found` |
-| A17 | a law root or year band that ingest's settings and the readings taxonomy name differently refuses start | `a_law_root_or_band_named_differently_refuses_start` |
+| A17 | a law root or year band that ingest's settings and the readings taxonomy name differently refuses start (the readings `law.roots` list must equal the one-element list of ingest's root) | `a_law_root_or_band_named_differently_refuses_start` |
 
 ```acceptance
 A1: cargo test -p deck-streak-ingest --test law_subject -- --exact the_law_subject_matches_the_predecessors_golden
@@ -191,9 +194,10 @@ when it merges.
 | `crates/curriculum/tests/strands_store.rs` | `deck-streak-curriculum` | added: A11 |
 | `migrations/009201_curriculum_strand_readouts.sql` | `deck-streak-curriculum` | added: `strand_readouts` |
 | `crates/coordination/src/recompute/strands.rs` | `deck-streak-coordination` | added: the strands step |
-| `crates/coordination/src/recompute/mod.rs` | `deck-streak-coordination` | changed: the strands step in phase 4 |
+| `crates/coordination/src/recompute/mod.rs` | `deck-streak-coordination` | changed: declares the strands step's module |
+| `crates/daemon/src/wiring.rs` | `deck-streak-daemon` | changed: `RecomputeSetup::load` checks ingest's law root and year bands against the readings taxonomy and refuses start when they disagree (R2, A17); registers the strands step in phase 4 of `recompute_fold` (SPEC-071 R19) |
 | `crates/coordination/src/strands.rs` | `deck-streak-coordination` | added: the strands and board read models |
-| `crates/coordination/src/lib.rs` | `deck-streak-coordination` | changed: the read models |
+| `crates/coordination/src/lib.rs` | `deck-streak-coordination` | changed: the read models and the `law_taxonomy` module |
 | `crates/coordination/tests/strands_step.rs` | `deck-streak-coordination` | added: A10 |
 | `crates/api/src/strands_routes.rs` | `deck-streak-api` | added: the two routes |
 | `crates/api/src/router.rs` | `deck-streak-api` | changed: the routes behind the owner's session |
@@ -257,12 +261,14 @@ owner's.
 
 | golden | the predecessor's function | kind | the adapter builds |
 |---|---|---|---|
-| `law_subject` | `leeches.py:_law_subject` | adapter | patches `leeches.LAW_DECK_PREFIX` and `leeches._LAW_BANDS` with a synthetic root and bands; paths with and without a band, a short banded path, the bare root and a non-law deck |
 | `strand_parse` | `strands.py:parse_strand` | function | none: leaves with and without an index token, a letter suffix, and an index alone |
 | `strand_stats` | `strands.py:compute_strand_stats` | adapter | synthetic courses patched into `progress`, cards with memory states and reviews across two study days |
 | `weak_strands` | `strands.py:weak_strands` | adapter | statistics above and below 30 answered and around the 8-point gap |
 | `test_prep_board` | `lsat.py:compute_lsat_board` | adapter | patches the module's law root and `_LSAT_TRACK` with synthetic names; sections, a short path and suspended studied cards |
 | `strands.constants` | `strands._STRAND_IDX_RE`, `_MATURE_MASTERY_THRESHOLD`; `weak_strands`' defaults | constants | none |
+
+`law_subject` is SPEC-045's golden (`registry/spec_045.py`, adapter `under_the_synthetic_taxonomy`); ingest's A1
+reads it unchanged, and this SPEC registers no case of it.
 
 ## 8. Tables and the v9 import
 

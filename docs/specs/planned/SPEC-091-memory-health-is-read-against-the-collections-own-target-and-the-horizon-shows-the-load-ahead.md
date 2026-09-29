@@ -177,7 +177,8 @@ when it merges.
 | `crates/curriculum/tests/memory_store.rs` | `deck-streak-curriculum` | added: A13 |
 | `migrations/009101_curriculum_memory_readouts.sql` | `deck-streak-curriculum` | added: `memory_readouts` |
 | `crates/coordination/src/recompute/memory.rs` | `deck-streak-coordination` | added: the memory step |
-| `crates/coordination/src/recompute/mod.rs` | `deck-streak-coordination` | changed: the memory step in phase 4 |
+| `crates/coordination/src/recompute/mod.rs` | `deck-streak-coordination` | changed: declares the memory step's module |
+| `crates/daemon/src/wiring.rs` | `deck-streak-daemon` | changed: registers the memory step in phase 4 of `recompute_fold` (SPEC-071 R19) |
 | `crates/coordination/src/memory.rs` | `deck-streak-coordination` | added: the memory and horizon read models |
 | `crates/coordination/src/lib.rs` | `deck-streak-coordination` | changed: the read models |
 | `crates/coordination/tests/memory_step.rs` | `deck-streak-coordination` | added: A11, A12 |

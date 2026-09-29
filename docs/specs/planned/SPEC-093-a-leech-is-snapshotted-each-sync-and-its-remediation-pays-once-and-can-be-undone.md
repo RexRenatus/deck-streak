@@ -197,7 +197,8 @@ change when it merges.
 | `crates/insights/src/charts.rs` | `deck-streak-insights` | changed: the leech breakdown's shape |
 | `crates/insights/tests/charts_leech.rs` | `deck-streak-insights` | added: A17 |
 | `crates/coordination/src/recompute/leeches.rs` | `deck-streak-coordination` | added: the leech step |
-| `crates/coordination/src/recompute/mod.rs` | `deck-streak-coordination` | changed: the leech step in phase 4 |
+| `crates/coordination/src/recompute/mod.rs` | `deck-streak-coordination` | changed: declares the leech step's module |
+| `crates/daemon/src/wiring.rs` | `deck-streak-daemon` | changed: registers the leech step in phase 4 of `recompute_fold` (SPEC-071 R19) |
 | `crates/coordination/src/leeches.rs` | `deck-streak-coordination` | added: the board's read model and the remediate and undo use cases |
 | `crates/coordination/src/law/mod.rs` | `deck-streak-coordination` | changed: the law block reads the leech port |
 | `crates/coordination/src/charts/mod.rs` | `deck-streak-coordination` | changed: `leech_breakdown` joins the closed set |

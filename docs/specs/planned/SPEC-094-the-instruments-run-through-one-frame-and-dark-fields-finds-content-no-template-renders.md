@@ -224,6 +224,7 @@ when it merges.
 | `migrations/009401_coordination_instrument_reports.sql` | `deck-streak-coordination` | added: `instrument_reports` |
 | `crates/coordination/src/instruments.rs` | `deck-streak-coordination` | added: the step, the on-demand run and the store |
 | `crates/coordination/src/sync_cycle.rs` | `deck-streak-coordination` | changed: the instruments step after the recompute |
+| `crates/daemon/src/wiring.rs` | `deck-streak-daemon` | changed: loads `DECKSTREAK_CONVENTIONS_FILE` once at start and refuses start on a malformed file or a forbidden direction label (R1, R2, A3); joins the instruments step to the sync cycle after the recompute (R7) |
 | `crates/coordination/src/data_rights.rs` | `deck-streak-coordination` | changed: the port exports and erases `instrument_reports` |
 | `crates/coordination/src/lib.rs` | `deck-streak-coordination` | changed: the instruments module |
 | `crates/coordination/tests/instruments_step.rs` | `deck-streak-coordination` | added: A13 to A15 |

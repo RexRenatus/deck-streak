@@ -204,7 +204,8 @@ when it merges.
 | `crates/curriculum/Cargo.toml` | `deck-streak-curriculum` | changed: serde_json's `float_roundtrip` for the goldens' reader (a dev-dependency) |
 | `migrations/009001_curriculum_pace_readouts.sql` | `deck-streak-curriculum` | added: `pace_readouts` |
 | `crates/coordination/src/recompute/pace.rs` | `deck-streak-coordination` | added: the pace step |
-| `crates/coordination/src/recompute/mod.rs` | `deck-streak-coordination` | changed: the pace step in phase 4 |
+| `crates/coordination/src/recompute/mod.rs` | `deck-streak-coordination` | changed: declares the pace step's module |
+| `crates/daemon/src/wiring.rs` | `deck-streak-daemon` | changed: registers the pace step in phase 4 of `recompute_fold` (SPEC-071 R19) |
 | `crates/coordination/src/pace.rs` | `deck-streak-coordination` | added: the pace read model |
 | `crates/coordination/src/today/view.rs` | `deck-streak-coordination` | changed: the goal beside today's reviews |
 | `crates/coordination/src/lib.rs` | `deck-streak-coordination` | changed: the pace read model |

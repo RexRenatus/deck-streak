@@ -23,8 +23,8 @@ same ones?
 
 - ADR-012: every number is proved against a golden of the predecessor's own function; an edge the
   port gets wrong fails a golden far from its cause.
-- ADR-002: contexts may not depend on each other; a primitive several of them read belongs in the
-  shared kernel, which knows no context.
+- ADR-002: the domain contexts depend on the kernel and on ingest alone, never on each other, so a
+  primitive several of them read belongs in the shared kernel, which knows no context.
 - The primitives are arithmetic, not rules: none of them names a card, a course or a reward.
 
 ## Considered Options (the alternatives it was chosen against)
