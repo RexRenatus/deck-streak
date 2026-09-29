@@ -23,8 +23,10 @@ use std::os::linux::net::SocketAddrExt;
 use std::os::unix::net::SocketAddr;
 use std::os::unix::net::UnixDatagram;
 use std::path::{Path, PathBuf};
-use std::process::{Command, Output, Stdio};
+use std::process::{Child, Command, Output, Stdio};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, mpsc};
+use std::thread::JoinHandle;
 use std::time::{Duration, Instant};
 
 use deck_streak_daemon::lifecycle::{
@@ -41,6 +43,11 @@ use tracing::{Event, Level, Metadata, Subscriber};
 const DEADLINE: Duration = Duration::from_mins(2);
 /// How long one read of the socket waits before the test looks at the child again.
 const POLL: Duration = Duration::from_millis(250);
+/// How long the guard waits for a child to exit after SIGTERM before it sends SIGKILL.
+const STOP_BOUND: Duration = Duration::from_secs(10);
+/// The variable through which the child run of the failing scenario names the file that receives
+/// the daemon's pid.
+const PID_FILE: &str = "DECKSTREAK_LIFECYCLE_PID_FILE";
 /// Identity's two credentials, each with a synthetic value: an owner id of fewer than seven digits
 /// and a token that never has the Bot API token's shape (SPEC-024 R11).
 const CREDENTIALS: [(&str, &str); 2] = [
@@ -57,6 +64,86 @@ fn credentials_directory(parent: &Path, credentials: &[(&str, &str)]) -> PathBuf
         std::fs::write(directory.join(id), format!("{value}\n")).expect("a credential file");
     }
     directory
+}
+
+/// A child process this test started, owned so that a failed assertion never leaves it running
+/// (#366, SPEC-025's amendment of 2026-09-29).
+///
+/// The waiter thread keeps the shape the tests always had: it waits for the child and sends its
+/// output down `exited`. The guard holds the pid and a flag the waiter sets once the child is
+/// reaped; while the flag is clear the pid is still the child's own, so the signals below can
+/// never reach another process. When the guard drops with the child still running it sends
+/// SIGTERM, then SIGKILL once `bound` passes, and joins the waiter.
+struct Daemon {
+    pid: u32,
+    exited: mpsc::Receiver<Output>,
+    reaped: Arc<AtomicBool>,
+    bound: Duration,
+    waiter: Option<JoinHandle<()>>,
+}
+
+impl Daemon {
+    /// Starts `deckstreakd api` with a cleared environment holding only what a test names.
+    fn start(state: &Path, credentials: &Path, environment: &[(&str, &str)]) -> Self {
+        let child = Command::new(env!("CARGO_BIN_EXE_deckstreakd"))
+            .arg("api")
+            .env_clear()
+            .env("DECKSTREAK_API_LISTEN", "127.0.0.1:0")
+            .env("STATE_DIRECTORY", state)
+            .env("CREDENTIALS_DIRECTORY", credentials)
+            .envs(environment.iter().copied())
+            .stdin(Stdio::null())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .expect("the binary starts");
+        Self::own(child, STOP_BOUND)
+    }
+
+    /// Takes ownership of `child`.
+    fn own(child: Child, bound: Duration) -> Self {
+        let pid = child.id();
+        let reaped = Arc::new(AtomicBool::new(false));
+        let (exit, exited) = mpsc::sync_channel(1);
+        let flag = Arc::clone(&reaped);
+        let waiter = std::thread::spawn(move || {
+            let output = child.wait_with_output().expect("the binary is waited for");
+            flag.store(true, Ordering::SeqCst);
+            // The guard may have dropped its receiver by now: nobody is listening, and that is fine.
+            drop(exit.send(output));
+        });
+        Self {
+            pid,
+            exited,
+            reaped,
+            bound,
+            waiter: Some(waiter),
+        }
+    }
+
+    /// Sends `signal` (`TERM` or `KILL`) to the child with the system's `kill`.
+    fn signal(&self, signal: &str) -> bool {
+        Command::new("kill")
+            .args([format!("-{signal}"), self.pid.to_string()])
+            .status()
+            .expect("the system's kill runs")
+            .success()
+    }
+}
+
+impl Drop for Daemon {
+    fn drop(&mut self) {}
+}
+
+/// Whether process `pid` is running: a zombie awaiting its parent is not.
+fn is_running(pid: u32) -> bool {
+    std::fs::read_to_string(format!("/proc/{pid}/stat"))
+        .map(|stat| {
+            stat.rsplit_once(')')
+                .and_then(|(_, rest)| rest.split_whitespace().next().map(|state| state != "Z"))
+                .unwrap_or(false)
+        })
+        .unwrap_or(false)
 }
 
 /// Reads the socket until it receives `wanted`, recording every message in `seen`.
@@ -114,33 +201,23 @@ fn the_binary_notifies_ready_watchdog_and_stopping_then_exits_zero() {
     let credentials = credentials_directory(directory.path(), &CREDENTIALS);
 
     let started = Instant::now();
-    let child = Command::new(env!("CARGO_BIN_EXE_deckstreakd"))
-        .arg("api")
-        .env_clear()
-        .env("DECKSTREAK_API_LISTEN", "127.0.0.1:0")
-        .env("STATE_DIRECTORY", &state)
-        .env("CREDENTIALS_DIRECTORY", &credentials)
-        .env("NOTIFY_SOCKET", &socket_path)
-        // The predecessor's floor, five seconds: the heartbeat is armed, and its first ping
-        // follows READY=1 at once.
-        .env(WATCHDOG_USEC, "5000000")
-        .env("RUST_LOG", "info")
-        .stdin(Stdio::null())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-        .expect("the binary starts");
-    let pid = child.id().to_string();
-    let (exit, exited) = mpsc::sync_channel(1);
-    let waiter = std::thread::spawn(move || {
-        let output = child.wait_with_output().expect("the binary is waited for");
-        exit.send(output).expect("the test is listening");
-    });
+    let daemon = Daemon::start(
+        &state,
+        &credentials,
+        &[
+            ("NOTIFY_SOCKET", socket_path.to_str().expect("a UTF-8 path")),
+            // The predecessor's floor, five seconds: the heartbeat is armed, and its first ping
+            // follows READY=1 at once.
+            (WATCHDOG_USEC, "5000000"),
+            ("RUST_LOG", "info"),
+        ],
+    );
+    let exited = &daemon.exited;
 
     let mut seen = Vec::new();
-    let ready = receive_until(&socket, "READY=1", &mut seen, &exited, started);
+    let ready = receive_until(&socket, "READY=1", &mut seen, exited, started);
     assert_eq!(ready, Ok(()));
-    let fed = receive_until(&socket, "WATCHDOG=1", &mut seen, &exited, started);
+    let fed = receive_until(&socket, "WATCHDOG=1", &mut seen, exited, started);
     assert_eq!(fed, Ok(()));
     assert_eq!(
         seen.first().map(String::as_str),
@@ -148,19 +225,14 @@ fn the_binary_notifies_ready_watchdog_and_stopping_then_exits_zero() {
         "{seen:?}"
     );
 
-    let killed = Command::new("kill")
-        .args(["-TERM", &pid])
-        .status()
-        .expect("the system's kill runs");
-    assert!(killed.success(), "kill -TERM {pid} failed: {killed}");
-    let stopping = receive_until(&socket, "STOPPING=1", &mut seen, &exited, started);
+    assert!(daemon.signal("TERM"), "kill -TERM {} failed", daemon.pid);
+    let stopping = receive_until(&socket, "STOPPING=1", &mut seen, exited, started);
     assert_eq!(stopping, Ok(()));
 
     let remaining = DEADLINE.saturating_sub(started.elapsed());
     let output = exited
         .recv_timeout(remaining)
         .unwrap_or_else(|_| panic!("the binary did not exit within {DEADLINE:?}; seen: {seen:?}"));
-    waiter.join().expect("the waiter thread");
     assert_eq!(
         output.status.code(),
         Some(0),
@@ -207,29 +279,11 @@ fn the_api_role_refuses_start_without_an_identity_credential() {
             .filter(|(id, _)| *id != missing)
             .collect();
         let credentials = credentials_directory(directory.path(), &present);
-        let child = Command::new(env!("CARGO_BIN_EXE_deckstreakd"))
-            .arg("api")
-            .env_clear()
-            .env("DECKSTREAK_API_LISTEN", "127.0.0.1:0")
-            .env("STATE_DIRECTORY", &state)
-            .env("CREDENTIALS_DIRECTORY", &credentials)
-            .stdin(Stdio::null())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .spawn()
-            .expect("the binary starts");
-        let pid = child.id().to_string();
-        let (exit, exited) = mpsc::sync_channel(1);
-        let waiter = std::thread::spawn(move || {
-            let output = child.wait_with_output().expect("the binary is waited for");
-            exit.send(output).expect("the test is listening");
-        });
-        let Ok(output) = exited.recv_timeout(DEADLINE) else {
-            // It started instead of refusing: stop it, and fail naming the credential.
-            let _ = Command::new("kill").args(["-TERM", &pid]).status();
+        let daemon = Daemon::start(&state, &credentials, &[]);
+        let Ok(output) = daemon.exited.recv_timeout(DEADLINE) else {
+            // It started instead of refusing: the guard stops it as this panic unwinds.
             panic!("the api role started without the credential {missing}");
         };
-        waiter.join().expect("the waiter thread");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
         assert_eq!(output.status.code(), Some(1), "{missing}: {stdout}");
@@ -246,6 +300,130 @@ fn the_api_role_refuses_start_without_an_identity_credential() {
             );
         }
     }
+}
+
+/// The scenario the next test runs as a child: a lifecycle test whose daemon is silent (its log
+/// is off and it arms no heartbeat, as one does under a mutant that breaks both), which fails on
+/// purpose after `READY=1` and before its stop step. It runs only there.
+#[test]
+#[ignore = "the child run of a_failing_lifecycle_test_leaves_no_daemon_running; it fails on purpose"]
+fn a_lifecycle_scenario_that_fails_before_its_stop_step() {
+    let pid_file = std::env::var_os(PID_FILE).expect("the parent run names the pid file");
+    let directory = tempfile::tempdir().expect("a temporary directory");
+    let socket_path = directory.path().join("notify.socket");
+    let socket = UnixDatagram::bind(&socket_path).expect("the notify socket binds");
+    socket
+        .set_read_timeout(Some(POLL))
+        .expect("a read timeout on the socket");
+    let state = directory.path().join("state");
+    std::fs::create_dir(&state).expect("the state directory");
+    let credentials = credentials_directory(directory.path(), &CREDENTIALS);
+
+    let started = Instant::now();
+    let daemon = Daemon::start(
+        &state,
+        &credentials,
+        &[
+            ("NOTIFY_SOCKET", socket_path.to_str().expect("a UTF-8 path")),
+            ("RUST_LOG", "off"),
+        ],
+    );
+    let mut seen = Vec::new();
+    let ready = receive_until(&socket, "READY=1", &mut seen, &daemon.exited, started);
+    assert_eq!(ready, Ok(()));
+    // The daemon is running and ready: its pid is recorded only now.
+    std::fs::write(pid_file, daemon.pid.to_string()).expect("the pid file");
+
+    panic!("planted failure before the stop step");
+}
+
+#[test]
+fn a_failing_lifecycle_test_leaves_no_daemon_running() {
+    // #366: a lifecycle test that fails before it stops its daemon must not leave the daemon
+    // behind. The failing scenario runs as a child of this test, through this binary and the
+    // harness, so the failure is a real one.
+    let directory = tempfile::tempdir().expect("a temporary directory");
+    let pid_file = directory.path().join("daemon.pid");
+    let run = Command::new(std::env::current_exe().expect("this test binary"))
+        .args([
+            "--exact",
+            "a_lifecycle_scenario_that_fails_before_its_stop_step",
+            "--ignored",
+            "--nocapture",
+        ])
+        .env(PID_FILE, &pid_file)
+        .stdin(Stdio::null())
+        .output()
+        .expect("the scenario runs");
+    let report = format!(
+        "{}\n{}",
+        String::from_utf8_lossy(&run.stdout),
+        String::from_utf8_lossy(&run.stderr)
+    );
+
+    // The scenario failed where it was planted to, after the daemon was ready.
+    assert!(!run.status.success(), "the scenario passed: {report}");
+    assert!(
+        report.contains("planted failure before the stop step"),
+        "the scenario failed for another reason: {report}"
+    );
+    let pid: u32 = std::fs::read_to_string(&pid_file)
+        .expect("the daemon was ready, so its pid was recorded")
+        .trim()
+        .parse()
+        .expect("a pid");
+
+    let survived = is_running(pid);
+    if survived {
+        // Stop the orphan by number, so a red run leaves nothing behind either.
+        drop(
+            Command::new("kill")
+                .args(["-KILL", &pid.to_string()])
+                .status(),
+        );
+    }
+    assert!(
+        !survived,
+        "the daemon {pid} was still running after its test failed"
+    );
+}
+
+#[test]
+fn a_child_that_ignores_sigterm_is_killed_after_the_bound() {
+    // The guard's second signal: a child that traps SIGTERM outlives the first, and only SIGKILL
+    // ends it. The child says it is trapping before the guard drops, so the trap is in place.
+    let mut child = Command::new("sh")
+        .args([
+            "-c",
+            "trap '' TERM; echo trapped; while :; do sleep 1; done",
+        ])
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .spawn()
+        .expect("the shell starts");
+    let mut stdout = std::io::BufReader::new(child.stdout.take().expect("a piped stdout"));
+    let mut line = String::new();
+    std::io::BufRead::read_line(&mut stdout, &mut line).expect("the shell's first line");
+    assert_eq!(line.trim(), "trapped");
+    let pid = child.id();
+    assert!(
+        is_running(pid),
+        "the child is running before the guard drops"
+    );
+
+    drop(Daemon::own(child, Duration::from_secs(1)));
+
+    let survived = is_running(pid);
+    if survived {
+        // Stop it by number, so a red run leaves nothing behind either.
+        drop(
+            Command::new("kill")
+                .args(["-KILL", &pid.to_string()])
+                .status(),
+        );
+    }
+    assert!(!survived, "the child {pid} survived its guard");
 }
 
 #[test]
