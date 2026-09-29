@@ -86,12 +86,16 @@ def mutant_named(path, text, description):
     return found[0]
 
 
-def file_entry(path, text, outcomes_by_description, void=None, byte_readers=(), only=None):
+def file_entry(
+    path, text, outcomes_by_description, void=None, byte_readers=(), only=None, slot=None
+):
     """A report's entry for one file: each mutant of `text` with the outcome the map gives its
     description, `killed` for one it does not name."""
     mutants = []
-    for entry in listed(path, text):
+    for index, entry in enumerate(listed(path, text)):
         if only is not None and entry["mutant"] != only:
+            continue
+        if slot is not None and index % slot[1] != slot[0]:
             continue
         outcome = outcomes_by_description.get(entry["mutant"], "killed")
         mutants.append(
@@ -311,7 +315,7 @@ class TheVerdictReadsThePythonReports(unittest.TestCase):
         # A row the diff selects, on a changed line, examines the class with no mutant: one, from
         # the row.
         row = [
-            "S08799-GUARD",
+            "S00077-GUARD",
             "scripts/guard.py",
             "return x + 2",
             "return x + 3",
@@ -337,6 +341,7 @@ class TheVerdictReadsThePythonReports(unittest.TestCase):
 
     def test_a_python_survivor_fails_and_a_timeout_is_void_by_name(self):
         fixture = changed_fixture(self)
+        shard_the_plan(fixture, listed(SCRIPT, SCRIPT_HEAD))
         plus = mutant_named(SCRIPT, SCRIPT_HEAD, PLUS)["name"]
         record = a_record(PLUS, "return x + 2")
         fixture.write(
@@ -387,7 +392,9 @@ class TheVerdictReadsThePythonReports(unittest.TestCase):
         self.assertIn(
             "VOID mutation-python-shard-0: a restore failed: scripts/guard.py", restored.stdout
         )
-        # An unviable mutant and a byte reader are named and change no count.
+        # An unviable mutant and a byte reader are named and change no count; a record naming an
+        # unviable mutant would be UNNEEDED, so none is held here.
+        fixture.write("scripts/mutation-equivalent.d/python.json", json.dumps({"records": []}))
         entry = file_entry(
             SCRIPT,
             SCRIPT_HEAD,
@@ -552,24 +559,24 @@ class TheVerdictReadsThePythonReports(unittest.TestCase):
             "scripts/mutation-equivalent.d/python.json", json.dumps({"records": [record]})
         )
         reports = fixture.out / "weekly"
+        held = {
+            PLUS: "survived",
+            "replace 2 with 3 in guard": "survived",
+            "replace return value with return None in guard": "unviable",
+        }
         for shard in range(16):
-            entry = file_entry(SCRIPT, SCRIPT_HEAD, {}, only=None)
-            if shard == 0:
-                entry = file_entry(SCRIPT, SCRIPT_HEAD, {PLUS: "survived"})
-                for mutant in entry["mutants"]:
-                    if mutant["mutant"] == "replace 2 with 3 in guard":
-                        mutant["outcome"] = "survived"
-                    if mutant["mutant"] == "replace return x + 2 with return None in guard":
-                        mutant["outcome"] = "unviable"
             if shard == 7:
                 continue
+            entry = file_entry(SCRIPT, SCRIPT_HEAD, held, slot=(shard, 16))
             write_shard(reports, shard, report_of([entry], shard=f"{shard}/16"))
         base = ("battery", "--reports", str(reports), "--shards", "4", "--package", "python")
         missing = fixture.verdict(*base)
         self.assertEqual(missing.returncode, 1, missing.stdout + missing.stderr)
         self.assertIn("battery: MISSING mutation-python-shard-7: no report.json", missing.stdout)
         self.assertIn("battery: counted 15 of 16 reports whole", missing.stdout)
-        write_shard(reports, 7, report_of([file_entry(SCRIPT, SCRIPT_HEAD, {})], shard="7/16"))
+        write_shard(
+            reports, 7, report_of([file_entry(SCRIPT, SCRIPT_HEAD, {}, slot=(7, 16))], shard="7/16")
+        )
         whole = fixture.verdict(*base)
         self.assertEqual(whole.returncode, 0, whole.stdout + whole.stderr)
         self.assertIn("battery: counted 16 of 16 reports whole", whole.stdout)
@@ -593,7 +600,7 @@ class TheVerdictReadsThePythonReports(unittest.TestCase):
             str(listing),
         )
         self.assertEqual(scoped.returncode, 0, scoped.stdout + scoped.stderr)
-        self.assertIn("battery: counted 1 of 1 reports whole", scoped.stdout)
+        self.assertIn("battery: counted 2 of 2 reports whole", scoped.stdout)
         self.assertNotIn("python", scoped.stdout)
         sweep = fixture.out / "miniapp" / "stryker"
         sweep.mkdir(parents=True)
@@ -635,7 +642,7 @@ class TheVerdictReadsThePythonReports(unittest.TestCase):
         for name, outcome in examined("table voids", [("timeout", "timeout"), ("void", "void")]):
             damaged = fixture.out / name
             for shard in range(16):
-                entry = file_entry(SCRIPT, SCRIPT_HEAD, {PLUS: outcome if shard == 3 else "killed"})
+                entry = file_entry(SCRIPT, SCRIPT_HEAD, {PLUS: outcome}, slot=(shard, 16))
                 write_shard(damaged, shard, report_of([entry], shard=f"{shard}/16"))
             done = fixture.verdict(
                 "table",
@@ -648,12 +655,16 @@ class TheVerdictReadsThePythonReports(unittest.TestCase):
             )
             self.assertEqual(done.returncode, 3, f"{name}: {done.stdout}{done.stderr}")
             self.assertIn(
-                f"table: VOID mutation-python-shard-3: {outcome}: {plus['name']}", done.stdout
+                f"table: VOID mutation-python-shard-1: {outcome}: {plus['name']}", done.stdout
             )
         gone = fixture.out / "voidfile"
         for shard in range(16):
             entry = file_entry(
-                SCRIPT, SCRIPT_HEAD, {}, void="the sentinel left no test" if shard == 5 else None
+                SCRIPT,
+                SCRIPT_HEAD,
+                {},
+                void="the sentinel left no test" if shard == 5 else None,
+                slot=(shard, 16),
             )
             write_shard(gone, shard, report_of([entry], shard=f"{shard}/16"))
         done = fixture.verdict(
