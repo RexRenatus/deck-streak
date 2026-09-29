@@ -225,3 +225,34 @@ Fix round 1's reds, each measured on a scratch copy of 96ae492 with its mutant a
 - A41: red at 96ae492: AssertionError: Lists differ: ['cargo', 'bash'] != ['bash', 'cargo'] (measured on a scratch copy at 96ae492, mutant B04: the shell check made after the cargo branch)
 - A41: red at 96ae492: AssertionError: 'sh' is not None (measured on a scratch copy at 96ae492, mutant M10: a target that is not a shell script given sh)
 - A41: red at 8bbeac4: AssertionError: 0 != 3 : S00034-BASH-OPEN-ARRAY: KILLED: its killer passed without the mutant and failed with it (measured on a scratch copy at 8bbeac4, mutant P05: an exit of 1 from the parser read as a parse)
+
+## Addendum, 2026-09-29: the bin killer (issue #352)
+
+A42 to A44 are the acceptance criteria of section 16, made by issue #352's delivery. Each was
+written red at b47b9a3, where `bin` is no killer kind and `scripts/mutation_rows.py` refuses it
+by name, and each is green at 1adadce, which adds the kind. Each red fails by assertion: the tests
+turn the runner's refusal into a failed assertion, and the failures name no path outside the
+repository. The original lines above stand.
+
+```red-first
+A42: red at b47b9a3: AssertionError: a bin killer is refused: crates/fix has no test target bin
+A42: green at 1adadce
+A43: red at b47b9a3: AssertionError: {'S00054-BIN-KILLED': 'VOID', 'S00055-BIN-NO-TEST': 'VOID'} != {'S00054-BIN-KILLED': 'KILLED', 'S00055-BIN-NO-TEST': 'VOID'}
+A43: green at 1adadce
+A44: red at b47b9a3: AssertionError: 'census: S00058-BIN-LIB-TEST: its killer bin::tests::only_in_the_lib names no test: crates/fix/src/main.rs declares only_in_the_lib 0 times' not found in 'census: S00056-BIN-ROOT: its killer bin::tests::three_triples_to_nine crates/fix has no test target bin\ncensus: S00057-BIN-MODULE: its killer bin::helper::tests::four_halves_to_two crates/fix has no test target bin\ncensus: S00058-BIN-LIB-TEST: its killer bin::tests::only_in_the_lib crates/fix has no test target bin\nexamined 3 row(s)\n'
+A44: green at 1adadce
+A45: red at a4ce513: AssertionError: 'S00059' unexpectedly found in 'census: S00059-BIN-OTHER-ROOT-MODULE: its killer bin::helper::tests::four_halves_to_two names no test: crates/fix/src/other.rs declares four_halves_to_two 0 times\nexamined 1 row(s)\n'
+A45: green at 3a3bdd6
+```
+
+Review of this pull request found that a root file not named `main.rs`
+was walked as if its modules sat under a directory, and that a crate holding `tests/bin.rs` had a
+`bin::` killer rerouted to the binary's own test. A45, the criterion of section 16 for both, is
+the fix round's: its two tests were written red at a4ce513 against the head's runner, and are green
+at 3a3bdd6, which changes the runner alone. Each red fails by assertion. A42 to A44 are unchanged:
+the fence line for A44 above is now the full failure message, where the first version cut its end.
+A45 has two tests, and the fence holds one line for the criterion; the other test's red, verbatim:
+
+```text
+test_a_bin_killer_beside_a_tests_bin_rs_is_refused: AssertionError: 'census: S00060-BIN-SHADOW: its killer bin::tests::three_triples_to_nine crates/fix has a test target bin, which the bin kind shadows' not found in 'examined 1 row(s)\n'
+```

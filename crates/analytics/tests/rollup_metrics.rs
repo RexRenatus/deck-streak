@@ -19,7 +19,7 @@ use deck_streak_analytics::snapshot::{CardSnapshot, CardState, card_snapshot};
 use deck_streak_ingest::reader::{Card, Review, course_of};
 use deck_streak_ingest::settings::DECK_SEPARATOR;
 use deck_streak_kernel::{
-    CourseCode, Courses, Environment, Hour, StudyDay, StudyDayRule, Track, UtcOffset,
+    CourseCode, Courses, Environment, Hour, SettingsError, StudyDay, StudyDayRule, Track, UtcOffset,
 };
 use serde_json::{Value, json};
 
@@ -397,4 +397,20 @@ fn the_leech_threshold_is_read_from_its_setting() {
         12,
         "the set value differs from the default"
     );
+}
+
+/// SPEC-071 R8: a leech threshold of another shape refuses start naming the whole shape it must
+/// have, the text the operator reads, compared as written and never through the constant.
+#[test]
+fn a_malformed_leech_threshold_is_refused_naming_its_whole_shape() {
+    for malformed in ["0", "1001", "eight"] {
+        assert_eq!(
+            AnalyticsSettings::from_env(&Environment::from_vars([(LEECH_THRESHOLD, malformed)])),
+            Err(SettingsError::Malformed {
+                setting: LEECH_THRESHOLD,
+                expected: "a whole number of lapses from 1 to 1000",
+            }),
+            "{malformed}"
+        );
+    }
 }
