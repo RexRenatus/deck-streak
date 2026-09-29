@@ -562,6 +562,19 @@ def off_list_refusals(unit, allowed):
     ]
 
 
+# The one key an instance's drop-in may set (SPEC-062 R14). systemd applies an instance's drop-in to
+# that instance alone, while the guards read it into its template, so any other setting there would
+# be judged as the template's other instances' too, which systemd never gives them.
+INSTANCE_DROPIN_KEYS = {("Service", "LoadCredential")}
+
+
+def instance_dropin_refusals(unit):
+    """Every assignment of `unit` read from an instance's drop-in directory, neither the unit file
+    nor its own `<name>.d/`, whose section and key are not on INSTANCE_DROPIN_KEYS (SPEC-062
+    R14)."""
+    return []
+
+
 def value_refusals(unit, table):
     """Every assignment of `unit`, its drop-ins included, of a key `table` bounds whose value is
     not one it admits, each naming its key and its value (SPEC-066 R2)."""
@@ -1158,6 +1171,35 @@ class CredentialsComeFromTheSocket(unittest.TestCase):
                     "missing.service is not on this unit's list of keys, and is refused"
                 ],
                 "a key planted in the template's own drop-in directory",
+            )
+
+    def test_an_instance_dropin_sets_only_the_credentials_it_loads(self):
+        # The guards read an instance's drop-in into its template, but systemd applies it to that
+        # instance alone: a setting there would stand in for the template's other instances, so an
+        # instance's drop-in sets only `LoadCredential=` (SPEC-062 R14).
+        units = examined("unit(s) under deploy/", list(subject().units.values()))
+        self.assertEqual([r for unit in units for r in instance_dropin_refusals(unit)], [])
+        with tempfile.TemporaryDirectory() as scratch:
+            systemd = Path(scratch) / "deploy" / "systemd"
+            (systemd / "planted@.service.d").mkdir(parents=True)
+            (systemd / "planted@tty1.service.d").mkdir()
+            (systemd / "planted@.service").write_text("[Service]\nMemoryMax=4G\n", encoding="utf-8")
+            (systemd / "planted@.service.d" / "10.conf").write_text(
+                "[Service]\nMemoryHigh=3G\n", encoding="utf-8"
+            )
+            (systemd / "planted@tty1.service.d" / "10-planted.conf").write_text(
+                f"[Service]\nLoadCredential=telegram-bot-token:{SOCKET}\nMemoryMax=48M\n",
+                encoding="utf-8",
+            )
+            (planted,) = subject(scratch).services
+            self.assertEqual(
+                instance_dropin_refusals(planted),
+                [
+                    "deploy/systemd/planted@tty1.service.d/10-planted.conf:3: [Service] "
+                    "MemoryMax=48M is set in an instance's drop-in, which systemd applies to that "
+                    "instance alone, and is refused"
+                ],
+                "a template's setting restated in its one instance's drop-in",
             )
 
     def test_only_a_units_own_dropin_directory_is_shipped_under_deploy(self):
