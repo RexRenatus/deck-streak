@@ -1,5 +1,6 @@
 """SPEC-059 A3: the path unit that starts the sync job, and who may write its request."""
 
+import posixpath
 import re
 import unittest
 
@@ -61,10 +62,17 @@ def writable_paths(unit):
     for key in ("ReadWritePaths", "BindPaths"):
         for value in values(unit, "Service", key):
             for entry in value.split():
-                yield entry.lstrip("-+").split(":")[0].rstrip("/") or "/"
+                yield as_systemd_reads(entry.strip("\"'").lstrip("-+").split(":")[0])
     for value in values(unit, "Service", "RuntimeDirectory"):
         for entry in value.split():
-            yield "/run/" + entry.split(":")[0].strip("/")
+            yield as_systemd_reads("/run/" + entry.strip("\"'").split(":")[0])
+
+
+def as_systemd_reads(path):
+    """`path` as systemd resolves it: "." and repeated slashes dropped, and /var/run, the
+    symlink every host keeps to /run, followed."""
+    path = posixpath.normpath("/" + path.lstrip("/"))
+    return "/run" + path[len("/var/run") :] if (path + "/").startswith("/var/run/") else path
 
 
 def reaches_the_request_directory(path):
@@ -126,6 +134,10 @@ class TheSyncPath(unittest.TestCase):
             "ReadWritePaths=/run/deck-streak-sync/request",
             "RuntimeDirectory=deck-streak-sync",
             "BindPaths=/run/deck-streak-sync",
+            'ReadWritePaths="/run/deck-streak-sync"',
+            "ReadWritePaths=/run/./deck-streak-sync",
+            "ReadWritePaths=//run/deck-streak-sync",
+            "ReadWritePaths=/var/run/deck-streak-sync",
         ):
             writer = sections("[Service]\n" + line + "\n")
             self.assertEqual(
