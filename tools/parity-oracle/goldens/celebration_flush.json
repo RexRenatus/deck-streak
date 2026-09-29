@@ -1,0 +1,1986 @@
+{
+  "adapter": "with_held_rows",
+  "cases": [
+    {
+      "class": "one",
+      "input": {
+        "broke": false,
+        "fail": [],
+        "owner": {
+          "age_minutes": 5,
+          "id": 5
+        },
+        "rows": [
+          {
+            "age_minutes": 60,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-1",
+            "order": 1,
+            "tier": 3,
+            "tries": 0
+          }
+        ]
+      },
+      "output": {
+        "calls": [
+          [
+            "qaa-1",
+            "send_html",
+            null
+          ]
+        ],
+        "engaged": 1,
+        "latched": [],
+        "settled": [
+          [
+            "qaa-1",
+            3
+          ]
+        ]
+      }
+    },
+    {
+      "class": "two",
+      "input": {
+        "broke": false,
+        "fail": [],
+        "owner": {
+          "age_minutes": 5,
+          "id": 5
+        },
+        "rows": [
+          {
+            "age_minutes": 60,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-1",
+            "order": 1,
+            "tier": 2,
+            "tries": 0
+          },
+          {
+            "age_minutes": 60,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-2",
+            "order": 2,
+            "tier": 5,
+            "tries": 0
+          }
+        ]
+      },
+      "output": {
+        "calls": [
+          [
+            "qaa-1",
+            "send_html",
+            null
+          ],
+          [
+            "qaa-2",
+            "send_dice",
+            "\ud83c\udfb0"
+          ],
+          [
+            "qaa-2",
+            "send_html_id",
+            null
+          ],
+          [
+            "qaa-2",
+            "pin_message",
+            null
+          ]
+        ],
+        "engaged": 2,
+        "latched": [],
+        "settled": [
+          [
+            "qaa-1",
+            2
+          ],
+          [
+            "qaa-2",
+            5
+          ]
+        ]
+      }
+    },
+    {
+      "class": "tie",
+      "input": {
+        "broke": false,
+        "fail": [],
+        "owner": {
+          "age_minutes": 5,
+          "id": 5
+        },
+        "rows": [
+          {
+            "age_minutes": 60,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-3",
+            "order": 3,
+            "tier": 4,
+            "tries": 0
+          },
+          {
+            "age_minutes": 60,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-1",
+            "order": 1,
+            "tier": 4,
+            "tries": 0
+          },
+          {
+            "age_minutes": 60,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-2",
+            "order": 2,
+            "tier": 4,
+            "tries": 0
+          },
+          {
+            "age_minutes": 60,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-4",
+            "order": 4,
+            "tier": 3,
+            "tries": 0
+          }
+        ]
+      },
+      "output": {
+        "calls": [
+          [
+            "qaa-1",
+            "send_dice",
+            "\ud83c\udfb0"
+          ],
+          [
+            "qaa-1",
+            "send_html_id",
+            null
+          ],
+          [
+            "qaa-2",
+            "send_dice",
+            "\ud83c\udfb0"
+          ],
+          [
+            "qaa-2",
+            "send_html_id",
+            null
+          ],
+          [
+            "qaa-4",
+            "send_html",
+            null
+          ]
+        ],
+        "engaged": 3,
+        "latched": [],
+        "settled": [
+          [
+            "qaa-1",
+            4
+          ],
+          [
+            "qaa-2",
+            4
+          ],
+          [
+            "qaa-3",
+            2
+          ],
+          [
+            "qaa-4",
+            2
+          ]
+        ]
+      }
+    },
+    {
+      "class": "rollup",
+      "input": {
+        "broke": false,
+        "fail": [],
+        "owner": {
+          "age_minutes": 5,
+          "id": 5
+        },
+        "rows": [
+          {
+            "age_minutes": 60,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-1",
+            "order": 1,
+            "tier": 5,
+            "tries": 0
+          },
+          {
+            "age_minutes": 60,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-2",
+            "order": 2,
+            "tier": 4,
+            "tries": 0
+          },
+          {
+            "age_minutes": 60,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-3",
+            "order": 3,
+            "tier": 3,
+            "tries": 0
+          },
+          {
+            "age_minutes": 60,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-4",
+            "order": 4,
+            "tier": 3,
+            "tries": 0
+          },
+          {
+            "age_minutes": 60,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-5",
+            "order": 5,
+            "tier": 2,
+            "tries": 0
+          },
+          {
+            "age_minutes": 60,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-6",
+            "order": 6,
+            "tier": 1,
+            "tries": 0
+          }
+        ]
+      },
+      "output": {
+        "calls": [
+          [
+            null,
+            "set_reaction",
+            "\ud83c\udf89"
+          ],
+          [
+            "qaa-1",
+            "send_dice",
+            "\ud83c\udfb0"
+          ],
+          [
+            "qaa-1",
+            "send_html_id",
+            null
+          ],
+          [
+            "qaa-1",
+            "pin_message",
+            null
+          ],
+          [
+            "qaa-2",
+            "send_dice",
+            "\ud83c\udfb0"
+          ],
+          [
+            "qaa-2",
+            "send_html_id",
+            null
+          ],
+          [
+            "qaa-5",
+            "send_html",
+            null
+          ]
+        ],
+        "engaged": 4,
+        "latched": [],
+        "settled": [
+          [
+            "qaa-6",
+            1
+          ],
+          [
+            "qaa-1",
+            5
+          ],
+          [
+            "qaa-2",
+            4
+          ],
+          [
+            "qaa-3",
+            2
+          ],
+          [
+            "qaa-4",
+            2
+          ],
+          [
+            "qaa-5",
+            2
+          ]
+        ]
+      }
+    },
+    {
+      "class": "broke",
+      "input": {
+        "broke": true,
+        "fail": [],
+        "owner": {
+          "age_minutes": 5,
+          "id": 5
+        },
+        "rows": [
+          {
+            "age_minutes": 60,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-1",
+            "order": 1,
+            "tier": 5,
+            "tries": 0
+          },
+          {
+            "age_minutes": 60,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-2",
+            "order": 2,
+            "tier": 4,
+            "tries": 0
+          },
+          {
+            "age_minutes": 60,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-3",
+            "order": 3,
+            "tier": 3,
+            "tries": 0
+          },
+          {
+            "age_minutes": 60,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-4",
+            "order": 4,
+            "tier": 2,
+            "tries": 0
+          }
+        ]
+      },
+      "output": {
+        "calls": [
+          [
+            null,
+            "set_reaction",
+            "\ud83c\udf89"
+          ],
+          [
+            "qaa-1",
+            "set_reaction",
+            "\ud83c\udf89"
+          ],
+          [
+            "qaa-4",
+            "send_html",
+            null
+          ]
+        ],
+        "engaged": 3,
+        "latched": [],
+        "settled": [
+          [
+            "qaa-1",
+            1
+          ],
+          [
+            "qaa-2",
+            1
+          ],
+          [
+            "qaa-3",
+            1
+          ],
+          [
+            "qaa-4",
+            1
+          ]
+        ]
+      }
+    },
+    {
+      "class": "broke_no_owner",
+      "input": {
+        "broke": true,
+        "fail": [],
+        "owner": null,
+        "rows": [
+          {
+            "age_minutes": 60,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-1",
+            "order": 1,
+            "tier": 4,
+            "tries": 0
+          }
+        ]
+      },
+      "output": {
+        "calls": [],
+        "engaged": 0,
+        "latched": [],
+        "settled": []
+      }
+    },
+    {
+      "class": "age",
+      "input": {
+        "broke": false,
+        "fail": [],
+        "owner": {
+          "age_minutes": 5,
+          "id": 5
+        },
+        "rows": [
+          {
+            "age_minutes": 720,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-1",
+            "order": 1,
+            "tier": 4,
+            "tries": 0
+          },
+          {
+            "age_minutes": 721,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-2",
+            "order": 2,
+            "tier": 4,
+            "tries": 0
+          },
+          {
+            "age_minutes": 60,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-3",
+            "order": 3,
+            "tier": 2,
+            "tries": 0
+          }
+        ]
+      },
+      "output": {
+        "calls": [
+          [
+            "qaa-1",
+            "send_dice",
+            "\ud83c\udfb0"
+          ],
+          [
+            "qaa-1",
+            "send_html_id",
+            null
+          ],
+          [
+            "qaa-3",
+            "send_html",
+            null
+          ],
+          [
+            "qaa-2",
+            "send_html",
+            null
+          ]
+        ],
+        "engaged": 3,
+        "latched": [],
+        "settled": [
+          [
+            "qaa-1",
+            4
+          ],
+          [
+            "qaa-3",
+            2
+          ],
+          [
+            "qaa-2",
+            0
+          ]
+        ]
+      }
+    },
+    {
+      "class": "silent",
+      "input": {
+        "broke": false,
+        "fail": [],
+        "owner": {
+          "age_minutes": 5,
+          "id": 5
+        },
+        "rows": [
+          {
+            "age_minutes": 60,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-1",
+            "order": 1,
+            "tier": 0,
+            "tries": 0
+          },
+          {
+            "age_minutes": 60,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-2",
+            "order": 2,
+            "tier": 3,
+            "tries": 0
+          }
+        ]
+      },
+      "output": {
+        "calls": [
+          [
+            "qaa-2",
+            "send_html",
+            null
+          ],
+          [
+            "qaa-1",
+            "send_html",
+            null
+          ]
+        ],
+        "engaged": 2,
+        "latched": [],
+        "settled": [
+          [
+            "qaa-2",
+            3
+          ],
+          [
+            "qaa-1",
+            0
+          ]
+        ]
+      }
+    },
+    {
+      "class": "queue",
+      "input": {
+        "broke": false,
+        "fail": [],
+        "owner": {
+          "age_minutes": 5,
+          "id": 5
+        },
+        "rows": [
+          {
+            "age_minutes": 60,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-1",
+            "order": 1,
+            "tier": 3,
+            "tries": 0
+          },
+          {
+            "age_minutes": 60,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-2",
+            "order": 2,
+            "tier": 4,
+            "tries": 0
+          },
+          {
+            "age_minutes": 60,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-3",
+            "order": 3,
+            "tier": 5,
+            "tries": 0
+          },
+          {
+            "age_minutes": 60,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-4",
+            "order": 4,
+            "tier": 2,
+            "tries": 0
+          },
+          {
+            "age_minutes": 60,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-5",
+            "order": 5,
+            "tier": 3,
+            "tries": 0
+          },
+          {
+            "age_minutes": 60,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-6",
+            "order": 6,
+            "tier": 4,
+            "tries": 0
+          },
+          {
+            "age_minutes": 60,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-7",
+            "order": 7,
+            "tier": 5,
+            "tries": 0
+          },
+          {
+            "age_minutes": 60,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-8",
+            "order": 8,
+            "tier": 2,
+            "tries": 0
+          },
+          {
+            "age_minutes": 60,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-9",
+            "order": 9,
+            "tier": 3,
+            "tries": 0
+          },
+          {
+            "age_minutes": 60,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-10",
+            "order": 10,
+            "tier": 4,
+            "tries": 0
+          },
+          {
+            "age_minutes": 60,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-11",
+            "order": 11,
+            "tier": 5,
+            "tries": 0
+          },
+          {
+            "age_minutes": 60,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-12",
+            "order": 12,
+            "tier": 2,
+            "tries": 0
+          },
+          {
+            "age_minutes": 60,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-13",
+            "order": 13,
+            "tier": 3,
+            "tries": 0
+          },
+          {
+            "age_minutes": 60,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-14",
+            "order": 14,
+            "tier": 4,
+            "tries": 0
+          },
+          {
+            "age_minutes": 60,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-15",
+            "order": 15,
+            "tier": 5,
+            "tries": 0
+          },
+          {
+            "age_minutes": 60,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-16",
+            "order": 16,
+            "tier": 2,
+            "tries": 0
+          },
+          {
+            "age_minutes": 60,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-17",
+            "order": 17,
+            "tier": 3,
+            "tries": 0
+          },
+          {
+            "age_minutes": 60,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-18",
+            "order": 18,
+            "tier": 4,
+            "tries": 0
+          },
+          {
+            "age_minutes": 60,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-19",
+            "order": 19,
+            "tier": 5,
+            "tries": 0
+          },
+          {
+            "age_minutes": 60,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-20",
+            "order": 20,
+            "tier": 2,
+            "tries": 0
+          },
+          {
+            "age_minutes": 60,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-21",
+            "order": 21,
+            "tier": 3,
+            "tries": 0
+          },
+          {
+            "age_minutes": 60,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-22",
+            "order": 22,
+            "tier": 4,
+            "tries": 0
+          },
+          {
+            "age_minutes": 60,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-23",
+            "order": 23,
+            "tier": 5,
+            "tries": 0
+          }
+        ]
+      },
+      "output": {
+        "calls": [
+          [
+            "qaa-3",
+            "send_dice",
+            "\ud83c\udfb0"
+          ],
+          [
+            "qaa-3",
+            "send_html_id",
+            null
+          ],
+          [
+            "qaa-3",
+            "pin_message",
+            null
+          ],
+          [
+            "qaa-7",
+            "send_dice",
+            "\ud83c\udfb0"
+          ],
+          [
+            "qaa-7",
+            "send_html_id",
+            null
+          ],
+          [
+            "qaa-7",
+            "pin_message",
+            null
+          ],
+          [
+            "qaa-20",
+            "send_html",
+            null
+          ]
+        ],
+        "engaged": 3,
+        "latched": [],
+        "settled": [
+          [
+            "qaa-3",
+            5
+          ],
+          [
+            "qaa-7",
+            5
+          ],
+          [
+            "qaa-11",
+            2
+          ],
+          [
+            "qaa-15",
+            2
+          ],
+          [
+            "qaa-19",
+            2
+          ],
+          [
+            "qaa-23",
+            2
+          ],
+          [
+            "qaa-2",
+            2
+          ],
+          [
+            "qaa-6",
+            2
+          ],
+          [
+            "qaa-10",
+            2
+          ],
+          [
+            "qaa-14",
+            2
+          ],
+          [
+            "qaa-18",
+            2
+          ],
+          [
+            "qaa-22",
+            2
+          ],
+          [
+            "qaa-1",
+            2
+          ],
+          [
+            "qaa-5",
+            2
+          ],
+          [
+            "qaa-9",
+            2
+          ],
+          [
+            "qaa-13",
+            2
+          ],
+          [
+            "qaa-17",
+            2
+          ],
+          [
+            "qaa-21",
+            2
+          ],
+          [
+            "qaa-4",
+            2
+          ],
+          [
+            "qaa-8",
+            2
+          ],
+          [
+            "qaa-12",
+            0
+          ],
+          [
+            "qaa-16",
+            0
+          ],
+          [
+            "qaa-20",
+            0
+          ]
+        ]
+      }
+    },
+    {
+      "class": "queue_edge",
+      "input": {
+        "broke": false,
+        "fail": [],
+        "owner": {
+          "age_minutes": 5,
+          "id": 5
+        },
+        "rows": [
+          {
+            "age_minutes": 60,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-1",
+            "order": 1,
+            "tier": 3,
+            "tries": 0
+          },
+          {
+            "age_minutes": 60,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-2",
+            "order": 2,
+            "tier": 3,
+            "tries": 0
+          },
+          {
+            "age_minutes": 60,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-3",
+            "order": 3,
+            "tier": 3,
+            "tries": 0
+          },
+          {
+            "age_minutes": 60,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-4",
+            "order": 4,
+            "tier": 3,
+            "tries": 0
+          },
+          {
+            "age_minutes": 60,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-5",
+            "order": 5,
+            "tier": 3,
+            "tries": 0
+          },
+          {
+            "age_minutes": 60,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-6",
+            "order": 6,
+            "tier": 3,
+            "tries": 0
+          },
+          {
+            "age_minutes": 60,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-7",
+            "order": 7,
+            "tier": 3,
+            "tries": 0
+          },
+          {
+            "age_minutes": 60,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-8",
+            "order": 8,
+            "tier": 3,
+            "tries": 0
+          },
+          {
+            "age_minutes": 60,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-9",
+            "order": 9,
+            "tier": 3,
+            "tries": 0
+          },
+          {
+            "age_minutes": 60,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-10",
+            "order": 10,
+            "tier": 3,
+            "tries": 0
+          },
+          {
+            "age_minutes": 60,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-11",
+            "order": 11,
+            "tier": 3,
+            "tries": 0
+          },
+          {
+            "age_minutes": 60,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-12",
+            "order": 12,
+            "tier": 3,
+            "tries": 0
+          },
+          {
+            "age_minutes": 60,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-13",
+            "order": 13,
+            "tier": 3,
+            "tries": 0
+          },
+          {
+            "age_minutes": 60,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-14",
+            "order": 14,
+            "tier": 3,
+            "tries": 0
+          },
+          {
+            "age_minutes": 60,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-15",
+            "order": 15,
+            "tier": 3,
+            "tries": 0
+          },
+          {
+            "age_minutes": 60,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-16",
+            "order": 16,
+            "tier": 3,
+            "tries": 0
+          },
+          {
+            "age_minutes": 60,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-17",
+            "order": 17,
+            "tier": 3,
+            "tries": 0
+          },
+          {
+            "age_minutes": 60,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-18",
+            "order": 18,
+            "tier": 3,
+            "tries": 0
+          },
+          {
+            "age_minutes": 60,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-19",
+            "order": 19,
+            "tier": 3,
+            "tries": 0
+          },
+          {
+            "age_minutes": 60,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-20",
+            "order": 20,
+            "tier": 3,
+            "tries": 0
+          }
+        ]
+      },
+      "output": {
+        "calls": [
+          [
+            "qaa-1",
+            "send_html",
+            null
+          ],
+          [
+            "qaa-2",
+            "send_html",
+            null
+          ],
+          [
+            "qaa-20",
+            "send_html",
+            null
+          ]
+        ],
+        "engaged": 3,
+        "latched": [],
+        "settled": [
+          [
+            "qaa-1",
+            3
+          ],
+          [
+            "qaa-2",
+            3
+          ],
+          [
+            "qaa-3",
+            2
+          ],
+          [
+            "qaa-4",
+            2
+          ],
+          [
+            "qaa-5",
+            2
+          ],
+          [
+            "qaa-6",
+            2
+          ],
+          [
+            "qaa-7",
+            2
+          ],
+          [
+            "qaa-8",
+            2
+          ],
+          [
+            "qaa-9",
+            2
+          ],
+          [
+            "qaa-10",
+            2
+          ],
+          [
+            "qaa-11",
+            2
+          ],
+          [
+            "qaa-12",
+            2
+          ],
+          [
+            "qaa-13",
+            2
+          ],
+          [
+            "qaa-14",
+            2
+          ],
+          [
+            "qaa-15",
+            2
+          ],
+          [
+            "qaa-16",
+            2
+          ],
+          [
+            "qaa-17",
+            2
+          ],
+          [
+            "qaa-18",
+            2
+          ],
+          [
+            "qaa-19",
+            2
+          ],
+          [
+            "qaa-20",
+            2
+          ]
+        ]
+      }
+    },
+    {
+      "class": "failure",
+      "input": {
+        "broke": false,
+        "fail": [
+          "send_html"
+        ],
+        "owner": {
+          "age_minutes": 5,
+          "id": 5
+        },
+        "rows": [
+          {
+            "age_minutes": 60,
+            "dice": "qaa-dice",
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-1",
+            "order": 1,
+            "tier": 5,
+            "tries": 0
+          },
+          {
+            "age_minutes": 60,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-2",
+            "order": 2,
+            "tier": 4,
+            "tries": 0
+          },
+          {
+            "age_minutes": 60,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-3",
+            "order": 3,
+            "tier": 3,
+            "tries": 0
+          }
+        ]
+      },
+      "output": {
+        "calls": [
+          [
+            "qaa-1",
+            "send_dice",
+            "qaa-dice"
+          ],
+          [
+            "qaa-1",
+            "send_html_id",
+            null
+          ],
+          [
+            "qaa-1",
+            "pin_message",
+            null
+          ],
+          [
+            "qaa-2",
+            "send_dice",
+            "\ud83c\udfb0"
+          ],
+          [
+            "qaa-2",
+            "send_html_id",
+            null
+          ],
+          [
+            "qaa-3",
+            "send_html",
+            null
+          ]
+        ],
+        "engaged": 2,
+        "latched": [
+          [
+            "qaa-3",
+            3,
+            "quiet",
+            1
+          ]
+        ],
+        "settled": [
+          [
+            "qaa-1",
+            5
+          ],
+          [
+            "qaa-2",
+            4
+          ],
+          [
+            "qaa-3",
+            2
+          ]
+        ]
+      }
+    },
+    {
+      "class": "failure",
+      "input": {
+        "broke": false,
+        "fail": [
+          "send_html_id"
+        ],
+        "owner": {
+          "age_minutes": 5,
+          "id": 5
+        },
+        "rows": [
+          {
+            "age_minutes": 60,
+            "dice": "qaa-dice",
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-1",
+            "order": 1,
+            "tier": 5,
+            "tries": 0
+          },
+          {
+            "age_minutes": 60,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-2",
+            "order": 2,
+            "tier": 4,
+            "tries": 0
+          },
+          {
+            "age_minutes": 60,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-3",
+            "order": 3,
+            "tier": 3,
+            "tries": 0
+          }
+        ]
+      },
+      "output": {
+        "calls": [
+          [
+            "qaa-1",
+            "send_dice",
+            "qaa-dice"
+          ],
+          [
+            "qaa-1",
+            "send_html_id",
+            null
+          ],
+          [
+            "qaa-1",
+            "send_html",
+            null
+          ],
+          [
+            "qaa-2",
+            "send_dice",
+            "\ud83c\udfb0"
+          ],
+          [
+            "qaa-2",
+            "send_html_id",
+            null
+          ],
+          [
+            "qaa-2",
+            "send_html",
+            null
+          ],
+          [
+            "qaa-3",
+            "send_html",
+            null
+          ]
+        ],
+        "engaged": 3,
+        "latched": [],
+        "settled": [
+          [
+            "qaa-1",
+            5
+          ],
+          [
+            "qaa-2",
+            4
+          ],
+          [
+            "qaa-3",
+            2
+          ]
+        ]
+      }
+    },
+    {
+      "class": "failure",
+      "input": {
+        "broke": false,
+        "fail": [
+          "set_reaction"
+        ],
+        "owner": {
+          "age_minutes": 5,
+          "id": 5
+        },
+        "rows": [
+          {
+            "age_minutes": 60,
+            "dice": "qaa-dice",
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-1",
+            "order": 1,
+            "tier": 5,
+            "tries": 0
+          },
+          {
+            "age_minutes": 60,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-2",
+            "order": 2,
+            "tier": 4,
+            "tries": 0
+          },
+          {
+            "age_minutes": 60,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-3",
+            "order": 3,
+            "tier": 3,
+            "tries": 0
+          }
+        ]
+      },
+      "output": {
+        "calls": [
+          [
+            "qaa-1",
+            "send_dice",
+            "qaa-dice"
+          ],
+          [
+            "qaa-1",
+            "send_html_id",
+            null
+          ],
+          [
+            "qaa-1",
+            "pin_message",
+            null
+          ],
+          [
+            "qaa-2",
+            "send_dice",
+            "\ud83c\udfb0"
+          ],
+          [
+            "qaa-2",
+            "send_html_id",
+            null
+          ],
+          [
+            "qaa-3",
+            "send_html",
+            null
+          ]
+        ],
+        "engaged": 3,
+        "latched": [],
+        "settled": [
+          [
+            "qaa-1",
+            5
+          ],
+          [
+            "qaa-2",
+            4
+          ],
+          [
+            "qaa-3",
+            2
+          ]
+        ]
+      }
+    },
+    {
+      "class": "failure",
+      "input": {
+        "broke": false,
+        "fail": [
+          "pin_message"
+        ],
+        "owner": {
+          "age_minutes": 5,
+          "id": 5
+        },
+        "rows": [
+          {
+            "age_minutes": 60,
+            "dice": "qaa-dice",
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-1",
+            "order": 1,
+            "tier": 5,
+            "tries": 0
+          },
+          {
+            "age_minutes": 60,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-2",
+            "order": 2,
+            "tier": 4,
+            "tries": 0
+          },
+          {
+            "age_minutes": 60,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-3",
+            "order": 3,
+            "tier": 3,
+            "tries": 0
+          }
+        ]
+      },
+      "output": {
+        "calls": [
+          [
+            "qaa-1",
+            "send_dice",
+            "qaa-dice"
+          ],
+          [
+            "qaa-1",
+            "send_html_id",
+            null
+          ],
+          [
+            "qaa-1",
+            "pin_message",
+            null
+          ],
+          [
+            "qaa-2",
+            "send_dice",
+            "\ud83c\udfb0"
+          ],
+          [
+            "qaa-2",
+            "send_html_id",
+            null
+          ],
+          [
+            "qaa-3",
+            "send_html",
+            null
+          ]
+        ],
+        "engaged": 3,
+        "latched": [],
+        "settled": [
+          [
+            "qaa-1",
+            5
+          ],
+          [
+            "qaa-2",
+            4
+          ],
+          [
+            "qaa-3",
+            2
+          ]
+        ]
+      }
+    },
+    {
+      "class": "failure",
+      "input": {
+        "broke": false,
+        "fail": [
+          "send_dice"
+        ],
+        "owner": {
+          "age_minutes": 5,
+          "id": 5
+        },
+        "rows": [
+          {
+            "age_minutes": 60,
+            "dice": "qaa-dice",
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-1",
+            "order": 1,
+            "tier": 5,
+            "tries": 0
+          },
+          {
+            "age_minutes": 60,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-2",
+            "order": 2,
+            "tier": 4,
+            "tries": 0
+          },
+          {
+            "age_minutes": 60,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-3",
+            "order": 3,
+            "tier": 3,
+            "tries": 0
+          }
+        ]
+      },
+      "output": {
+        "calls": [
+          [
+            "qaa-1",
+            "send_dice",
+            "qaa-dice"
+          ],
+          [
+            "qaa-1",
+            "send_html_id",
+            null
+          ],
+          [
+            "qaa-1",
+            "pin_message",
+            null
+          ],
+          [
+            "qaa-2",
+            "send_dice",
+            "\ud83c\udfb0"
+          ],
+          [
+            "qaa-2",
+            "send_html_id",
+            null
+          ],
+          [
+            "qaa-3",
+            "send_html",
+            null
+          ]
+        ],
+        "engaged": 3,
+        "latched": [],
+        "settled": [
+          [
+            "qaa-1",
+            5
+          ],
+          [
+            "qaa-2",
+            4
+          ],
+          [
+            "qaa-3",
+            2
+          ]
+        ]
+      }
+    },
+    {
+      "class": "t1",
+      "input": {
+        "broke": false,
+        "fail": [],
+        "owner": {
+          "age_minutes": 5,
+          "id": 5
+        },
+        "rows": [
+          {
+            "age_minutes": 60,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-1",
+            "order": 1,
+            "tier": 1,
+            "tries": 0
+          },
+          {
+            "age_minutes": 60,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "send",
+            "key": "qaa-2",
+            "order": 2,
+            "tier": 1,
+            "tries": 0
+          },
+          {
+            "age_minutes": 60,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-3",
+            "order": 3,
+            "tier": 3,
+            "tries": 0
+          }
+        ]
+      },
+      "output": {
+        "calls": [
+          [
+            null,
+            "set_reaction",
+            "\ud83c\udf89"
+          ],
+          [
+            "qaa-1",
+            "set_reaction",
+            "\ud83c\udf89"
+          ],
+          [
+            "qaa-3",
+            "send_html",
+            null
+          ]
+        ],
+        "engaged": 3,
+        "latched": [],
+        "settled": [
+          [
+            "qaa-1",
+            1
+          ],
+          [
+            "qaa-2",
+            1
+          ],
+          [
+            "qaa-3",
+            3
+          ]
+        ]
+      }
+    },
+    {
+      "class": "t1_refused",
+      "input": {
+        "broke": false,
+        "fail": [
+          "set_reaction"
+        ],
+        "owner": {
+          "age_minutes": 5,
+          "id": 5
+        },
+        "rows": [
+          {
+            "age_minutes": 60,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-1",
+            "order": 1,
+            "tier": 1,
+            "tries": 0
+          },
+          {
+            "age_minutes": 60,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "quiet",
+            "key": "qaa-2",
+            "order": 2,
+            "tier": 1,
+            "tries": 0
+          }
+        ]
+      },
+      "output": {
+        "calls": [
+          [
+            null,
+            "set_reaction",
+            "\ud83c\udf89"
+          ]
+        ],
+        "engaged": 0,
+        "latched": [],
+        "settled": []
+      }
+    },
+    {
+      "class": "retries",
+      "input": {
+        "broke": false,
+        "fail": [
+          "send_html"
+        ],
+        "owner": {
+          "age_minutes": 5,
+          "id": 5
+        },
+        "rows": [
+          {
+            "age_minutes": 60,
+            "dice": null,
+            "event_type": "badge",
+            "hold": "send",
+            "key": "qaa-1",
+            "order": 1,
+            "tier": 3,
+            "tries": 2
+          }
+        ]
+      },
+      "output": {
+        "calls": [
+          [
+            "qaa-1",
+            "send_html",
+            null
+          ]
+        ],
+        "engaged": 0,
+        "latched": [
+          [
+            "qaa-1",
+            0,
+            "send",
+            3
+          ]
+        ],
+        "settled": [
+          [
+            "qaa-1",
+            3
+          ],
+          [
+            "qaa-1",
+            0
+          ]
+        ]
+      }
+    }
+  ],
+  "function": "pipeline_layers.celebrations.CelebrationsLayer.flush_deferred_celebrations",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Builds a stand-in layer whose stub store holds the case's held rows (key, held tier, age, order), the clock fixed outside quiet hours, the streak-break check patched, and a recording notifier; returns what each key settled at in order, each call with the key it served and its emoji, and each row latched again; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_084.py",
+  "registry_sha256": "d94121fc9e1af11dff03656086884c0469daf7c5443f325a08a51ce9430f21bc",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

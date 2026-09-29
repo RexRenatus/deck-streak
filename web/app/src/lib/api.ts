@@ -1,3 +1,4 @@
+import { FEED_PATH, parseFeed, type FeedItem } from './ladder/feed';
 import {
   parseEnvelope,
   parseListings,
@@ -48,6 +49,8 @@ export interface Api {
   me(): Promise<Answer<Me>>;
   /** The current study day's score (SPEC-071 R20). */
   score(): Promise<Answer<ScoreToday>>;
+  /** The owner's unseen in-app celebrations, each with its tier (SPEC-084 R10). */
+  feed(): Promise<Answer<FeedItem[]>>;
   /** The instruments the owner can read (SPEC-094 R18). */
   insights(): Promise<Answer<Listing[]>>;
   /** One instrument's latest report; null when it has not run yet. */
@@ -141,6 +144,7 @@ export function createApi(options: ApiOptions): Api {
   return {
     me: () => read('/api/me', parseMe),
     score: () => read('/api/score', parseScore),
+    feed: () => read(FEED_PATH, parseFeed),
     insights: () => read('/api/insights', parseListings),
     insight: (id) =>
       read(`/api/insights/${encodeURIComponent(id)}`, (body) => {

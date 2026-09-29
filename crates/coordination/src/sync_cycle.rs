@@ -27,6 +27,7 @@ use deck_streak_kernel::{Clock, Db, KernelError, PortFuture, StudyDayRule, UtcMi
 use deck_streak_notifications::Router;
 
 use crate::instruments::Instruments;
+use crate::ladder_facts;
 use crate::obligations::{ObligationSource, Obligations};
 use crate::recompute::{Fold, FoldInput};
 
@@ -314,10 +315,12 @@ async fn run_instruments(instruments: &Instruments) {
     }
 }
 
-/// The router's flush, after a sync that ran and succeeded (SPEC-041 R7). A flush that cannot run is
-/// logged and never fails the sync it follows: the queue keeps its holds for the next.
+/// The router's flush, after a sync that ran and succeeded (SPEC-041 R7), carrying the streak's
+/// facts the ladder re-caps each held celebration for (SPEC-084 R11; none until SPEC-076). A flush
+/// that cannot run is logged and never fails the sync it follows: the queue keeps its holds for the
+/// next.
 async fn flush(router: &Router) {
-    match router.flush().await {
+    match router.flush_with(ladder_facts::streak_facts()).await {
         Ok(flushed) => tracing::info!(?flushed, "the notification router flushed"),
         Err(error) => tracing::error!(%error, "the notification router could not flush"),
     }
