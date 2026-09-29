@@ -303,8 +303,9 @@ R15's study day, so that a program that breaks either one fails a test.
   rule's definition (the day is the span from its beginning to the next day's), and each member
   asserts the day and whether the lapse opens where that day decides it. The zone west of UTC with a
   04:00 rollover is one of the members, and its four local times are also asserted by name.
-- **Rows.** This amendment writes S04907 to S04912 of this SPEC's band, two on the walk's bounds
-  (A16) and four on the mapping (A17); the remainder's rows start at S04914.
+- **Rows.** This amendment writes S04907 to S04919 of this SPEC's band, one for each plant a row
+  admits: seven on the walk's bounds (A16) and six on the mapping (A17). The remainder's rows
+  start at S04921.
 - **Text fixes.** The comment in A15's test no longer says a window of only non-study entries opens
   no lapse of its own, which R13 contradicts; and `docs/red-first/SPEC-049.md` gains an addendum
   that reads A15's red panic as measured.
@@ -315,7 +316,7 @@ Files this amendment adds or changes:
 |---|---|---|
 | `crates/streaks/tests/lapse.rs` | `deck-streak-streaks` | A16 and A18 |
 | `crates/coordination/tests/lapse.rs` | `deck-streak-coordination` | A17, and the comment fix in A15's test |
-| `scripts/mutation-rows.d/S04900-S04999.json` | repo | six rows |
+| `scripts/mutation-rows.d/S04900-S04999.json` | repo | thirteen rows |
 | `docs/red-first/SPEC-049.md` | docs | an insert-only addendum |
 | `changelog.d/lapse-walk-422.md` | repo | the fragment |
 

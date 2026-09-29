@@ -59,21 +59,25 @@ against `the_walk_reads_every_day_of_its_window_and_none_outside_it` (W) and
     F: panicked at crates/streaks/tests/lapse.rs:237:5: left: Some(19996) right: Some(19997)
     W: panicked at crates/streaks/tests/lapse.rs:227:5: left: Some(20000) right: None
 (e1) the window's start is its LAST key (next_back)
-    W: panicked at crates/streaks/tests/lapse.rs:227:5: left: None
+    W: panicked at crates/streaks/tests/lapse.rs:227:5: left: None right: Some(20001)
 (e2) the walk starts one day before today (today.epoch_day() - 1)
     F: panicked at crates/streaks/tests/lapse.rs:240:5: left: None right: Some(19998)
 (e3) the walk steps two days (checked_sub(2))
-    W and F fail by assertion (the existing A12, A13 and A11 tests fail too)
+    F: panicked at crates/streaks/tests/lapse.rs:237:5: left: None right: Some(19997)
+    W: panicked at crates/streaks/tests/lapse.rs:227:5: left: None right: Some(20001)
+    (the existing A12, A13 and A11 tests fail too)
 (e4) the window's first day is never silent (&& number != window_start)
     F: panicked at crates/streaks/tests/lapse.rs:237:5: left: Some(19998) right: Some(19997)
     W: panicked at crates/streaks/tests/lapse.rs:227:5: left: None right: Some(20001)
 (e5) a review closes the run only from two reviews (> 1)
-    W and F fail by assertion (the existing tests fail too)
+    F: panicked at crates/streaks/tests/lapse.rs:240:5: left: Some(19997) right: Some(19998)
+    W: panicked at crates/streaks/tests/lapse.rs:227:5: left: Some(20000) right: None
+    (the existing tests fail too)
 ```
 
 Plants on `crates/coordination/src/lapse.rs`, each against
 `a_review_counts_on_the_study_day_the_rule_gives_at_every_boundary`, which panics at
-`crates/coordination/tests/lapse.rs:179:21`:
+`crates/coordination/tests/lapse.rs:181:21`:
 
 ```text
 (c) the study day is the UTC date: StudyDay::from_epoch_day(review.id.div_euclid(86_400_000))
@@ -86,6 +90,7 @@ Plants on `crates/coordination/src/lapse.rs`, each against
 (e4) the review's instant minus the offset           left: None right: Some(20000)
 ```
 
-No plant stayed green, so none is recorded as equivalent. Rows S04907 to S04912 carry (a) and (b) of the walk
-and (c), (d), (e1) and (e2) of the mapping; the remaining plants are killed by the existing tests as well as
-by these, and each is a variant of a row above.
+No plant stayed green, so none is recorded as equivalent. Rows S04907 to S04919 carry every plant a row admits:
+(a), (b) and (e1) to (e5) of the walk (S04907, S04908, S04913 to S04917), and (c), (d) and (e1) to (e4) of the
+mapping (S04909 to S04912, S04918, S04919). Over dev's tests, (a), (b) and (e4) of the walk and every plant of
+the mapping pass; (e1), (e2), (e3) and (e5) of the walk are killed there by the existing tests as well.
