@@ -42,6 +42,5 @@ impl Tier {
 /// The tier in a note's `tags` text: the first token that names one, or none.
 #[must_use]
 pub fn parse_tier(tags: &str) -> Option<Tier> {
-    let _ = tags;
-    None
+    tags.split_whitespace().find_map(Tier::from_token)
 }
