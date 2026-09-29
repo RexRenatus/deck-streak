@@ -547,7 +547,7 @@ def with_a_ledger(day_base_xp, predecessor, *, rows, day):
 
     async def run():
         with tempfile.TemporaryDirectory() as directory:
-            store = await store_type(Path(directory) / "gamify.db").connect()
+            store = await store_type(Path(directory) / "store.db").connect()
             try:
                 for row in rows:
                     await store.upsert_xp_grant(
