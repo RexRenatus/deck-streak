@@ -12,7 +12,7 @@
 - **Prerequisites:** SPEC-021 (data rights), SPEC-027 (the job table), SPEC-029 (the goldens),
   SPEC-041 (the router), SPEC-043 (the agent core and its output gate), SPEC-066 (the credential
   loader), SPEC-071 (the fold), SPEC-074 (the chapter ceremony), SPEC-100 (the sending template) and
-  SPEC-132 (the photo occasion). SPEC-043, SPEC-071, SPEC-074, SPEC-100 and SPEC-132 are unlanded.
+  SPEC-132 (the photo occasion). SPEC-043, SPEC-074, SPEC-100 and SPEC-132 are unlanded.
   **Mutation band:** `S13500-S13599`.
 - **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
   `docs/specs/` with its tests and `docs/red-first/SPEC-135.md` (ADR-016).

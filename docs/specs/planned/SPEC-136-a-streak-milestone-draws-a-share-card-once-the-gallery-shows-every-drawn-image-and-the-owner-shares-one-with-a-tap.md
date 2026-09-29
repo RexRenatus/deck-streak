@@ -10,8 +10,8 @@
   (the one router) and ADR-012 (the parity oracle).
 - **Prerequisites:** SPEC-024 (the owner's session), SPEC-028 (the Mini App shell), SPEC-029 (the
   goldens), SPEC-071 (the fold), SPEC-076 (the language streak), SPEC-132 (the photo occasion and
-  the prepared share) and SPEC-135 (the draw, the job and `agent_images`). SPEC-071, SPEC-076,
-  SPEC-132 and SPEC-135 are unlanded. **Mutation band:** `S13600-S13699`.
+  the prepared share) and SPEC-135 (the draw, the job and `agent_images`). SPEC-076, SPEC-132
+  and SPEC-135 are unlanded. **Mutation band:** `S13600-S13699`.
 - **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
   `docs/specs/` with its tests and `docs/red-first/SPEC-136.md` (ADR-016).
 
