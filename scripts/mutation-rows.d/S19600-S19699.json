@@ -1,0 +1,246 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S19600-CAP-IS-FIFTEEN-SIXTEENTHS",
+        "scripts/memory_scope.py",
+        "* 1024 * 15 // 16 //",
+        "* 1024 * 16 // 16 //",
+        "the cap is fifteen sixteenths of the machine, so the runner keeps a sixteenth for everything outside the scope (SPEC-196 R1)",
+        "test_memory_scope.TheScope.test_the_cap_is_fifteen_sixteenths_of_the_machine_in_whole_pages_and_never_given"
+      ],
+      [
+        "S19601-CAP-IN-WHOLE-PAGES",
+        "scripts/memory_scope.py",
+        " // page * page\n",
+        "\n",
+        "the cap is floored to whole pages, so the kernel's limit reads back as asked (SPEC-196 R1)",
+        "test_memory_scope.TheScope.test_the_cap_is_fifteen_sixteenths_of_the_machine_in_whole_pages_and_never_given"
+      ],
+      [
+        "S19602-NO-MEMTOTAL-REFUSES",
+        "scripts/memory_scope.py",
+        "    raise ValueError(\"MemTotal is absent from the meminfo\")\n",
+        "    return 0\n",
+        "a meminfo without MemTotal refuses and runs nothing, so no cap is ever guessed (SPEC-196 R1)",
+        "test_memory_scope.TheScope.test_the_cap_is_fifteen_sixteenths_of_the_machine_in_whole_pages_and_never_given"
+      ],
+      [
+        "S19603-SWAP-FORBIDDEN",
+        "scripts/memory_scope.py",
+        "        \"MemorySwapMax\",\n        \"t\",\n        \"0\",",
+        "        \"MemorySwapMax\",\n        \"t\",\n        \"1\",",
+        "the scope forbids swap, so a runaway mutant meets the cap and not the disk (SPEC-196 R2)",
+        "test_memory_scope.TheScope.test_the_scope_holds_the_scripts_own_process_with_swap_forbidden_and_oom_policy_continue"
+      ],
+      [
+        "S19604-OOM-POLICY-CONTINUE",
+        "scripts/memory_scope.py",
+        "        \"OOMPolicy\",\n        \"s\",\n        \"continue\",",
+        "        \"OOMPolicy\",\n        \"s\",\n        \"stop\",",
+        "the scope's policy is continue, so the kernel's stop of one process does not end the unit (SPEC-196 R2)",
+        "test_memory_scope.TheScope.test_the_scope_holds_the_scripts_own_process_with_swap_forbidden_and_oom_policy_continue"
+      ],
+      [
+        "S19605-SCOPE-HOLDS-OWN-PID",
+        "scripts/memory_scope.py",
+        "        str(pid),\n        \"MemoryMax\",",
+        "        \"1\",\n        \"MemoryMax\",",
+        "the scope holds the script's own process, so the command and its children share the limit (SPEC-196 R2)",
+        "test_memory_scope.TheScope.test_the_scope_holds_the_scripts_own_process_with_swap_forbidden_and_oom_policy_continue"
+      ],
+      [
+        "S19606-MEMORY-MAX-IS-THE-CAP",
+        "scripts/memory_scope.py",
+        "(\"memory.max\", str(cap)),",
+        "(\"memory.max\", \"max\"),",
+        "a memory.max that is not the cap refuses, so a limit not in force is never read as green (SPEC-196 R3)",
+        "test_memory_scope.TheScope.test_a_scope_whose_cap_is_not_in_force_runs_nothing"
+      ],
+      [
+        "S19607-SWAP-MAX-IS-ZERO",
+        "scripts/memory_scope.py",
+        "(\"memory.swap.max\", \"0\"),",
+        "(\"memory.swap.max\", \"max\"),",
+        "a memory.swap.max that is not 0 refuses (SPEC-196 R3)",
+        "test_memory_scope.TheScope.test_a_scope_whose_cap_is_not_in_force_runs_nothing"
+      ],
+      [
+        "S19608-OOM-GROUP-IS-ZERO",
+        "scripts/memory_scope.py",
+        "(\"memory.oom.group\", \"0\"),",
+        "(\"memory.oom.group\", \"1\"),",
+        "a memory.oom.group that is not 0 refuses, so one stopped process does not take its group (SPEC-196 R3)",
+        "test_memory_scope.TheScope.test_a_scope_whose_cap_is_not_in_force_runs_nothing"
+      ],
+      [
+        "S19609-EVENTS-START-AT-ZERO",
+        "scripts/memory_scope.py",
+        "    if events.get(\"oom\") != 0 or events[\"oom_kill\"] != 0:",
+        "    if events.get(\"oom\") != 0:",
+        "a scope whose oom and oom_kill are not 0 at the start refuses, so the record counts only this command (SPEC-196 R3)",
+        "test_memory_scope.TheScope.test_a_scope_whose_cap_is_not_in_force_runs_nothing"
+      ],
+      [
+        "S19610-POLICY-READ-BACK",
+        "scripts/memory_scope.py",
+        "    if shown.stdout.strip() != \"continue\":",
+        "    if shown.stdout.strip() == \"\":",
+        "the unit's OOMPolicy is read back and refused unless it is continue (SPEC-196 R3)",
+        "test_memory_scope.TheScope.test_a_scope_whose_cap_is_not_in_force_runs_nothing"
+      ],
+      [
+        "S19611-REFUSAL-RUNS-NOTHING",
+        "scripts/memory_scope.py",
+        "        return refuse(report, str(error))\n",
+        "        refuse(report, str(error))\n",
+        "a refusal returns before the command, so a scope not in force runs nothing (SPEC-196 R3)",
+        "test_memory_scope.TheScope.test_a_scope_whose_cap_is_not_in_force_runs_nothing"
+      ],
+      [
+        "S19612-EXIT-PASSES-THROUGH",
+        "scripts/memory_scope.py",
+        "    return 128 - code if code < 0 else code\n",
+        "    return code\n",
+        "the script exits with the command's code, or 128 plus the signal, so a killed run is not read as a pass (SPEC-196 R5)",
+        "test_memory_scope.TheScope.test_the_commands_exit_status_is_the_scripts"
+      ],
+      [
+        "S19613-RECORD-BEGUN-FIRST",
+        "scripts/memory_scope.py",
+        "            \"state\": \"running\",",
+        "            \"state\": \"done\",",
+        "the record is begun as running before the command, so a run that never finished cannot read as done (SPEC-196 R4)",
+        "test_memory_scope.TheScope.test_the_record_is_begun_before_the_command_and_finished_after"
+      ],
+      [
+        "S19614-RECORD-COUNTS-KILLS",
+        "scripts/memory_scope.py",
+        "        \"oom_kill\": events.get(\"oom_kill\", 0),",
+        "        \"oom_kill\": 0,",
+        "the finished record counts the kernel's kills, so the verdict can place them (SPEC-196 R4)",
+        "test_memory_scope.TheScope.test_the_record_is_begun_before_the_command_and_finished_after"
+      ],
+      [
+        "S19615-CI-LEG-WRAPPED",
+        ".github/workflows/ci.yml",
+        "python3 scripts/memory_scope.py --report \"$out\" -- cargo mutants",
+        "cargo mutants",
+        "the pull-request mutants leg runs inside the memory scope (SPEC-196 R6)",
+        "test_memory_scope.TheWorkflows.test_every_mutants_run_that_runs_tests_is_inside_the_scope"
+      ],
+      [
+        "S19616-WEEKLY-LEG-WRAPPED",
+        ".github/workflows/mutation-weekly.yml",
+        "python3 scripts/memory_scope.py --report \"$RUNNER_TEMP/mutation\" -- ",
+        "",
+        "the weekly battery's rust leg runs inside the memory scope (SPEC-196 R6)",
+        "test_memory_scope.TheWorkflows.test_every_mutants_run_that_runs_tests_is_inside_the_scope"
+      ],
+      [
+        "S19617-REHEARSAL-WRAPPED",
+        ".github/workflows/mutation-weekly.yml",
+        "python3 scripts/memory_scope.py --report \"$shard\" -- ",
+        "",
+        "the rehearsal's mutants run is inside the memory scope (SPEC-196 R6)",
+        "test_memory_scope.TheWorkflows.test_every_mutants_run_that_runs_tests_is_inside_the_scope"
+      ],
+      [
+        "S19618-RECORD-MISSING-VOID",
+        "scripts/mutation-verdict.py",
+        "        return None, \"no memory-scope.json: the leg left no record of its memory scope\"\n",
+        "        return {\"oom\": 0, \"oom_kill\": 0}, None\n",
+        "a leg with no memory-scope record is VOID by name, never read as untouched by the cap (SPEC-196 R8)",
+        "test_memory_cap_verdict.TheRecord.test_the_verdict_reads_every_promised_shards_record"
+      ],
+      [
+        "S19619-NOT-IN-FORCE-VOID",
+        "scripts/mutation-verdict.py",
+        "    if record.get(\"in_force\") is not True:",
+        "    if record.get(\"in_force\") is None:",
+        "a record whose scope was not in force is VOID naming its reason (SPEC-196 R8)",
+        "test_memory_cap_verdict.TheRecord.test_the_verdict_reads_every_promised_shards_record"
+      ],
+      [
+        "S19620-ANY-KILL-TOUCHES",
+        "scripts/mutation-verdict.py",
+        "    if oom == 0 and kills == 0:",
+        "    if kills == 0:",
+        "any counted event touches the leg: an event with no kill is named and fails, never passed over (SPEC-196 R9)",
+        "test_memory_cap_verdict.TheAttribution.test_an_attribution_that_does_not_match_fails_the_leg"
+      ],
+      [
+        "S19621-OOM-COUNTS-TOO",
+        "scripts/mutation-verdict.py",
+        "    oom, kills = record[\"oom\"], record[\"oom_kill\"]",
+        "    oom, kills = record[\"oom_kill\"], record[\"oom_kill\"]",
+        "the out-of-memory event count is read beside the kill count (SPEC-196 R9)",
+        "test_memory_cap_verdict.TheAttribution.test_an_attribution_that_does_not_match_fails_the_leg"
+      ],
+      [
+        "S19622-PLACED-EQUALS-KILLS",
+        "scripts/mutation-verdict.py",
+        "    if kills == 0 or len(placed) != kills:",
+        "    if kills == 0:",
+        "the kills the logs place must equal the kills the scope counted, or the leg fails as ambiguous (SPEC-196 R10)",
+        "test_memory_cap_verdict.TheAttribution.test_an_attribution_that_does_not_match_fails_the_leg"
+      ],
+      [
+        "S19623-KILLS-DEDUPED",
+        "scripts/mutation-verdict.py",
+        "placed.add((scenario, status.group(1), status.group(2)))",
+        "placed.add((scenario, status.group(1), status.group(2), line))",
+        "a test's in-run line and its summary repeat place one kill (SPEC-196 R10)",
+        "test_memory_cap_verdict.TheAttribution.test_a_status_line_is_placed_or_refused_as_the_verdict_reads_it"
+      ],
+      [
+        "S19624-CAP-KILL-FAILS",
+        "scripts/mutation-verdict.py",
+        "    fail(\n        f\"{where}MEMORY-CAP {name}:",
+        "    say(\n        f\"{where}MEMORY-CAP {name}:",
+        "a mutant the cap stopped fails its leg by name (SPEC-196 R11)",
+        "test_memory_cap_verdict.TheNamedKill.test_a_mutant_the_cap_stopped_fails_its_leg_by_name_and_the_rest_stand"
+      ],
+      [
+        "S19625-CAP-KILL-NOT-EXAMINED",
+        "scripts/mutation-verdict.py",
+        "neither caught nor a timeout\"\n    )\n    return False\n",
+        "neither caught nor a timeout\"\n    )\n    return True\n",
+        "a mutant the cap stopped is not examined: neither caught nor a timeout (SPEC-196 R11)",
+        "test_memory_cap_verdict.TheNamedKill.test_a_mutant_the_cap_stopped_fails_its_leg_by_name_and_the_rest_stand"
+      ],
+      [
+        "S19626-EXAMINED-LESS-NAMED",
+        "scripts/mutation-verdict.py",
+        "    verdict.examined = tool - capped + carried\n",
+        "    verdict.examined = tool + carried\n",
+        "the examined count omits the mutants the cap stopped (SPEC-196 R11)",
+        "test_memory_cap_verdict.TheNamedKill.test_a_mutant_the_cap_stopped_fails_its_leg_by_name_and_the_rest_stand"
+      ],
+      [
+        "S19627-BASELINE-KILL-NAMED",
+        "scripts/mutation-verdict.py",
+        "        if scenario == BASELINE:\n            fail(",
+        "        if scenario == BASELINE:\n            say(",
+        "a kill in the unmutated baseline fails by that name (SPEC-196 R11)",
+        "test_memory_cap_verdict.TheBaselineAndThePartialShard.test_a_cap_kill_in_the_baseline_or_a_partial_shard_fails_by_name"
+      ],
+      [
+        "S19628-BATTERY-READS-RECORD",
+        "scripts/mutation-verdict.py",
+        "            findings_append,\n            findings_append,\n            lambda text: print(f\"battery: {text}\"),",
+        "            lambda text: None,\n            lambda text: None,\n            lambda text: print(f\"battery: {text}\"),",
+        "the weekly battery reads each shard's record and refuses a cap kill by name (SPEC-196 R12)",
+        "test_memory_cap_verdict.TheWeeklyReaders.test_the_weekly_battery_and_table_refuse_a_cap_kill_by_name"
+      ],
+      [
+        "S19629-TABLE-SKIPS-NAMED",
+        "scripts/mutation-verdict.py",
+        "        if (where, name) in stopped:\n            continue\n        tally = tallies[package]",
+        "        tally = tallies[package]",
+        "the table tallies a mutant the cap stopped nowhere (SPEC-196 R12)",
+        "test_memory_cap_verdict.TheWeeklyReaders.test_the_weekly_battery_and_table_refuse_a_cap_kill_by_name"
+      ]
+    ]
+  }
+}
