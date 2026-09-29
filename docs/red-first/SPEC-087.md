@@ -52,6 +52,60 @@ with `'T/reports/mutation-python-shard-0/report.json' not found`; both were gree
 adds the verdict's download of `mutation-python-shard-*` and the shard's `python-shards/` output
 directory. The number is A23 because A5 was already the runner's sentinel criterion.
 
+Round 2 of review (2026-09-29): the green commits that edit a test file, beyond the red and green
+commits named above, each by its short sha.
+- 2005f77 adds three tests to `test_mutation_python_lister_kills.py`. Each was red by assertion
+  in its own body against its own hand-applied mutant of `scripts/mutation_python.py`, and green
+  without it:
+  - `break` to `continue` in `Lister.between` (line 178):
+    `test_between_stops_at_the_first_token_at_or_past_its_end` failed with
+    `AssertionError: Lists differ: ['a', 'b'] != ['a']`;
+  - `is not None` to `is None` in `Lister.skipped_nodes` (line 191):
+    `test_an_arguments_annotation_is_skipped_as_a_node_of_its_own` failed with
+    `AssertionError: Lists differ: [False, False] != [True, True]`;
+  - `strict=True` to `strict=False` in `Lister.site` (line 287):
+    `test_a_comparison_whose_operators_and_operands_disagree_is_refused` failed with
+    `AssertionError: None is not an instance of <class 'ValueError'>`.
+- 6b5bd84 also changed, beyond the A16 and A19 changes disclosed above:
+  - A15's fixture row id, from `S08799-GUARD` to `S00077-GUARD`. 9e913f9's row lay outside its
+    band file `S00000-S00099.json`, so the census refused the fixture before A15's assertion;
+  - A19's unviable fixture mutant, from `replace return x + 2 with return None in guard`, which
+    names no listed mutant, to `replace return value with return None in guard`; its three held
+    outcomes now apply in each shard's slice instead of in shard 0 alone;
+  - two of SPEC-039's tests in `test_mutation_verdict.py`, where they assert text this delivery
+    changes: A12 (`the_production_classes_are_exact`) reads `scripts/check.py` as `scripts`, not
+    `other`; A29 (`a_missing_or_partial_battery_report_fails_by_name`) names the 16 missing
+    `mutation-python-shard-<k>` reports and counts `2 of 23` and `examined 23`, not `2 of 7` and
+    `examined 7`, and its whole control counts `20 of 20`, not `4 of 4`.
+- 015f7f6 adds `mutation-python` to the `mutation-verdict` needs line that
+  `test_mutation_workflows.py` asserts.
+- 8853ac3 adds `test_a_rehearsal_promises_the_python_shards_it_ran`, red; its green, 69b63f6,
+  changed that test's `--shards 0` to `--shards 1`, so the test was not held fixed.
+- 424dbb3 adds `size` to the `survivors` needs line that A21's test asserts.
+- ba9b956, 5d84ae5 and e123e2e count enumerations through the `examined` helper and change no
+  assertion; 3bfa171 also drops `PYTHONPYCACHEPREFIX` from the bytecode row test's environment.
+- ea20f09, fddb2be, 2a02cf2, f0e98f1, d1bc0a9 and 7da3f41 add tests only, and 3389443 drops the
+  three dead `False` arguments to `table_python`.
+
+Fix round 2 (2026-09-29): the merge of dev `06a881a0` (SPEC-290, PR #443) and the commits after it
+that edit a test file.
+- d55e792 is the merge. Its auto-merged hunk in `test_mutation_workflows.py` keeps dev's own
+  assertions and this delivery's `mutation-python` needs line; no assertion of either side changed.
+  At d55e792 `test_the_verdict_step_fails_on_the_legs_check` (SPEC-290 A7) was red by assertion:
+  `AssertionError: 99 != 3 : legs refuses, the judges passed`, because the merged step also runs
+  `judge --class scripts`, which its recording shim did not know and answered 99.
+- c31f056 adds the shim's `scripts` case, answering 0; that test is green and its scenarios and
+  assertions are unchanged.
+- 7df8833 adds `test_a_plan_of_python_mutants_and_no_rust_mutant_lists_zero`. It was red by
+  assertion against a planted `listed=len(mutants) + python count` in a copy of the tree:
+  `AssertionError: '1' != '0'`, and green on the real `mutation-verdict.py`.
+- 9420f63 adds `test_ci_admits_a_skip_from_the_two_legs_and_from_no_other_need`: every entry of
+  `ci`'s needs, read from the YAML, crossed with success, failure, cancelled and skipped, alone and
+  beside both admitted skips (96 members). It was red by assertion against a planted
+  `mutation-python` in `ci`'s admitted loop, in a copy of the tree:
+  `AssertionError: 0 != 1 : mutation-python skipped, alone: ci: mutation-python was not started`,
+  and green on the real `ci.yml`.
+
 ```red-first
 A1: red at 5c7fcad: AssertionError: 'mutation-python: listed 0' != 'mutation-python: listed 29'
 A1: green at 96eee0b
