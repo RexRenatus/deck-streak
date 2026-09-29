@@ -864,9 +864,11 @@ class TheCaddyInstall(Case):
         w = self.world
         _original, _after, block_text = self.installed()
         caddyfile = w.caddy_dir / "Caddyfile"
-        caddyfile.unlink()
-        caddyfile.mkdir()
-        done = w.run(ROLLBACK, "caddy-remove", **self.config())
+        caddyfile.chmod(0)
+        try:
+            done = w.run(ROLLBACK, "caddy-remove", **self.config())
+        finally:
+            caddyfile.chmod(0o644)
         self.assertNotEqual(done.returncode, 0, "an unreadable Caddyfile refuses the removal")
         self.assertIn(
             "the candidate Caddyfile could not be written",
