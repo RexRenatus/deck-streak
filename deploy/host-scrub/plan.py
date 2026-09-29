@@ -128,6 +128,18 @@ def mounted(path: str) -> str | None:
             return point
         if whole[fields[2]] > 1 and path.startswith(point.rstrip("/") + "/"):
             return point
+    # A mount whose root is not `/` shows a directory of its file system, and that directory's own
+    # place is wherever the table mounts a root it lies within: an item inside it, or holding it, is
+    # shown at the bind's point too.
+    table = [(f[2], unescape(f[3]), unescape(f[4])) for f in map(str.split, rows) if len(f) >= 5]
+    for device, root, point in table:
+        if root == "/":
+            continue
+        for other, shown, where in table:
+            if other == device and where != point and within(root, shown):
+                source = (where.rstrip("/") + root[len(shown.rstrip("/")) :]) or "/"
+                if within(path, source) or within(source, path):
+                    return point
     return None
 
 
@@ -135,7 +147,10 @@ def mount_reason(path: str, point: str) -> str:
     """Why `path` may not be judged against the mount point `point`. A mount point shorter than the
     path can only lie above it, and a mount above an item whose root is not `/`, or of a file system
     mounted whole twice, shows another place of the disk there, so the item's own path is not where
-    it lives (R7)."""
+    it lives (R7). A point neither above nor under the item is a bind of a directory the item lies
+    in or holds."""
+    if not (within(path, point) or within(point, path)):
+        return f"is or holds what the bind mount {point} shows"
     if len(point) < len(path):
         return f"lies inside the bind mount {point}"
     return f"is or holds the mount point {point}"
