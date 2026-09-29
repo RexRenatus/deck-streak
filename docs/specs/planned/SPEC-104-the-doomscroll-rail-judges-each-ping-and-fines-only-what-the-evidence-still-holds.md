@@ -96,8 +96,7 @@ R1. The bot asks for channel posts beside the owner's messages and taps. Its gat
     app's name (lowercased, its first 24 characters, letters, digits, `_` and `-`) and the kinds
     `ds`, `de`, `ao` and `test` equal the golden of `parse`.
 R2. A ping is valid when its token equals the first 8 characters of the rail's secret and its
-    instant lies within 15 hours of now (the golden of `valid`). The secret is read at start from
-    the secret manager like every credential (ADR-038); with none, no ping is valid.
+    instant lies within 15 hours of now (the golden of `valid`). The secret is the credential `tripwire-secret`, read at start by the bot role through its credential loader (ADR-038). A missing credential reads as none, so no ping is valid; an empty one refuses start (SPEC-066 R1). No unit names it until a source is bound (#170): the delivery that binds one adds the bot unit's `LoadCredential=` line and the rail's answer.
 R3. While no source is bound, a valid test ping binds its source and every other ping is ignored:
     nothing is recorded, nothing answers and nothing fines. A ping from any other source than the
     bound one is ignored. An invalid ping from the bound source records `spoof` and answers nothing.
@@ -260,6 +259,7 @@ R25. Discipline's data-rights port exports and erases the four tables (`tripwire
 | A26 | an erase empties the four tables, resets the state row and unbinds the source | `an_erase_empties_the_rail_and_unbinds_it` |
 | A27 | the poll asks for channel posts, and the gate admits a channel post as a rail post only, never as the owner's message or command, and drops one over the cap | `a_channel_post_reaches_only_the_rail` |
 | A28 | an idle-only defection whose study reviews before its instant reach 15 is cleared at settlement and fines nothing, one at 14 is fined, and a window defection is fined whatever the reviews; nothing settles before its cycle | `an_idle_defection_with_its_reviews_is_cleared_at_settlement` |
+| A29 | a bot role started with no `tripwire-secret` starts and refuses every ping, and one started with an empty one refuses start, each through the credential loader and never the environment | `the_bot_role_reads_the_rails_secret_through_the_loader` |
 
 ```acceptance
 A1: cargo test -p deck-streak-discipline --test rail_goldens -- --exact the_ping_grammar_and_token_match_the_parity_goldens
@@ -290,6 +290,7 @@ A25: pnpm exec vitest run web/app/src/lib/discipline/rail.test.ts -t "shows the 
 A26: cargo test -p deck-streak-discipline --test rail_rights -- --exact an_erase_empties_the_rail_and_unbinds_it
 A27: cargo test -p deck-streak-bot --test channel_posts -- --exact a_channel_post_reaches_only_the_rail
 A28: cargo test -p deck-streak-discipline --test rail_revision -- --exact an_idle_defection_with_its_reviews_is_cleared_at_settlement
+A29: cargo test -p deck-streak-daemon --test roles -- --exact the_bot_role_reads_the_rails_secret_through_the_loader
 ```
 
 ## 3a. What the box run judges
@@ -346,13 +347,16 @@ so the private wiring does not change when it merges.
 | `crates/bot/src/gate.rs` | `deck-streak-bot` | changed: a channel post is admitted as a rail post only |
 | `crates/bot/src/channel.rs` | `deck-streak-bot` | added: a rail post handed to the rail's port |
 | `crates/bot/tests/channel_posts.rs` | `deck-streak-bot` | added: A27 |
-| `crates/bot/src/discipline_commands.rs` | `deck-streak-bot` | changed: `/tripwire`, `/confess` and the `tw:` and `cf:` buttons join SPEC-105's commands |
+| `crates/bot/src/discipline_commands.rs` | `deck-streak-bot` | changed: /tripwire, /confess and the `tw:` and `cf:` buttons join SPEC-105's commands |
 | `crates/bot/src/commands.rs` | `deck-streak-bot` | changed: both commands join the command table |
 | `crates/bot/tests/discipline_commands.rs` | `deck-streak-bot` | added: A24 |
 | `crates/api/src/discipline_routes.rs` | `deck-streak-api` | changed: the rail's routes join SPEC-105's |
 | `crates/api/src/router.rs` | `deck-streak-api` | changed: the routes, behind the owner's session |
 | `crates/api/tests/discipline_routes.rs` | `deck-streak-api` | added: A23 |
 | `crates/daemon/src/wiring.rs` | `deck-streak-daemon` | changed: the rail joined to coordination, the bot and the secret |
+| `crates/daemon/src/role_bot.rs` | `deck-streak-daemon` | changed: the bot role reads the rail's secret at start, a missing one read as none (R2), and hands the rail's port to the bot |
+| `crates/daemon/tests/roles.rs` | `deck-streak-daemon` | changed: A29 |
+| `deploy/README.md` | deploy | changed: the bot's optional credential id `tripwire-secret`, named by no unit until #170 |
 | `web/app/src/lib/discipline/RailCard.svelte` | miniapp | added: the rail's state |
 | `web/app/src/lib/discipline/ConfessChips.svelte` | miniapp | added: the four chips |
 | `web/app/src/lib/discipline/discipline.ts` | miniapp | changed: the rail's routes join the client |

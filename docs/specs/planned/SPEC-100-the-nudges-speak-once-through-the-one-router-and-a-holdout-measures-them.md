@@ -10,20 +10,19 @@
   the comeback's skip-day decline); `deck-streak-analytics` (the recent rollups' read);
   `deck-streak-habits` (two reads for the habit check-in); `deck-streak-bot` (the button rows on the
   transport, the `nu:` callbacks, the snooze's turn); `deck-streak-api` (the holdout route);
-  `deck-streak-daemon` (the wiring); the Mini App (`web/app`, the startapp token `habits`).
+  `deck-streak-daemon` (the wiring, and the job role's transport); the Mini App (`web/app`, the startapp token `habits`).
 - **Decided by:** ADR-100 (this SPEC's: the evening check-in is one routed message whose parts keep
   their own kinds), ADR-101 (the comeback is the owner's one-reading sequence under the
   predecessor's cadence), ADR-102 (a hold withholds the whole nudge, and what the owner holds
   travels as its own message), ADR-041 (the router core), ADR-080 (the draw), ADR-049 (the comeback
-  reading), ADR-052 (deep links are URL buttons), ADR-011 and ADR-027 (the job minutes), ADR-053
-  (the private rail's reserved slots) and ADR-012 (the parity oracle).
+  reading), ADR-052 (deep links are URL buttons), ADR-011 and ADR-027 (the job minutes), ADR-053 (the private rail's reserved slots), ADR-012 (the parity oracle) and ADR-124 (a job that sends runs under its own template, which loads the bot's two credentials).
 - **Prerequisites:** SPEC-041 (the router, its ledger and its queue), SPEC-049 (the comeback reading
   and its lapse slice), SPEC-052 (deep links), SPEC-080 (the kernel's `draw_bp`, the challenge
   offers and their pick), SPEC-081 (the vaulted chests and their buttons), SPEC-071 (the rollups),
   SPEC-072 (the multiplier's preview and the Ascendant buff), SPEC-076 (the streak state and
   `real_misses`), SPEC-078 (the habit summary, its freshness and the `/habits` screen), SPEC-079
   (the focus nudge's eligibility), SPEC-083 (the skip set and `/skip`), SPEC-027 (the job table),
-  SPEC-021 (the six files of a table) and SPEC-029 (the goldens).
+  SPEC-021 (the six files of a table), SPEC-029 (the goldens) and SPEC-062 (the unit guards the sending template must pass; planned, #319).
   **Mutation band:** `S10000-S10099`.
 - **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
   `docs/specs/` with its tests and `docs/red-first/SPEC-100.md` (ADR-016).
@@ -292,7 +291,20 @@ R27. `migrations/010004_notifications_nudges_side_by_side_defaults.sql` seeds `m
     so nothing speaks twice while the predecessor runs.
 R28. The three jobs join the job table, each with its timer and its calendar key in the rail
     contract; none shares a minute with the predecessor's schedule, a reserved minute (0, 25, 39),
-    the private rail's reserved slots or the sync's slot (SPEC-027 R2, SPEC-053 R2).
+    the private rail's reserved slots or the sync's slot (SPEC-027 R2, SPEC-053 R2). Further,
+    the job role joins the bot's transport to the router before a job that sends runs: it loads
+    `owner-user-id` and `telegram-bot-token` through its credential loader, builds the transport
+    and passes wiring's `TransportMarker` as the notifier, as SPEC-026 R10 and SPEC-041 R13
+    leave to the first job that sends. The job table marks each job as sending or not. Each
+    sending job runs as an instance of a second job template, `deck-streak-job-send@.service`
+    (ADR-124), with its `@<id>.timer`: it is identical to `deck-streak-job@.service` but for the
+    two `LoadCredential=` lines of `deck-streak-alert@.service`'s form. A job that sends nothing
+    stays on `deck-streak-job@` and requests neither credential. A sending job started without
+    either credential refuses start, and a job that sends nothing builds no transport. The
+    rail's map answers the two ids to the sending template's instances alone, as it answers the
+    sync login to `sync` (SPEC-061 R4). The sending jobs are `morning_nudge`, `evening_nudge`,
+    `last_chance_nudge`, `daily_digest`, `weekly_report`, `widget_refresh` and
+    `discipline_tick`; each job's own SPEC adds its timer on the sending template.
 R29. The Mini App's startapp map gains `habits`, opening `/habits` (SPEC-078).
 R30. The constants equal the golden `nudges.constants`, and the policy's numbers each equal a
     constant there.
@@ -355,6 +367,9 @@ R31. The reads this SPEC adds to other contexts, each that context's own and a r
 | A44 | the bot renders each row kind, a token as the deep link and the study link from its configuration, omitting it when unset | `the_bot_renders_every_button_row` |
 | A45 | the holdout route answers the owner's session only, and serves the readout and the silence ages | `the_holdout_route_answers_only_the_owner` |
 | A46 | the startapp token `habits` opens `/habits` | `opens the habits screen from its token` |
+| A47 | a nudge job run by the job role with the two credentials routes through a joined transport and records `sent`, not `no_notifier`, and a job that sends nothing builds no transport; the test's environment carries the two credentials as files in a credentials directory, never as values in the environment | `a_sending_job_routes_through_the_joined_transport` |
+| A48 | a sending job started without either credential refuses start, through the credential loader and never the environment | `a_sending_job_without_its_credentials_refuses_start` |
+| A49 | the two job templates differ only by the two `LoadCredential=` lines, and the sending template's lines are the alert template's form | `test_the_two_job_templates_differ_only_by_the_credential_lines` |
 
 ```acceptance
 A1: cargo test -p deck-streak-notifications --test nudge_router -- --exact the_reasons_are_the_policys_in_its_order
@@ -403,6 +418,9 @@ A43: cargo test -p deck-streak-bot --test nudge_callbacks -- --exact the_nudge_c
 A44: cargo test -p deck-streak-bot --test button_rows -- --exact the_bot_renders_every_button_row
 A45: cargo test -p deck-streak-api --test nudges_routes -- --exact the_holdout_route_answers_only_the_owner
 A46: pnpm exec vitest run web/app/src/lib/startapp-habits.test.ts -t "opens the habits screen from its token"
+A47: cargo test -p deck-streak-daemon --test roles -- --exact a_sending_job_routes_through_the_joined_transport
+A48: cargo test -p deck-streak-daemon --test roles -- --exact a_sending_job_without_its_credentials_refuses_start
+A49: python3 -m unittest discover -s scripts/tests -p test_deploy_templates.py -k test_the_two_job_templates_differ_only_by_the_credential_lines
 ```
 
 ## 3a. What the box run judges
@@ -479,7 +497,8 @@ it, and the message metadata stays deferred (#257): this delivery claims neither
 | `crates/api/src/lib.rs` | `deck-streak-api` | changed: the route |
 | `crates/api/tests/nudges_routes.rs` | `deck-streak-api` | added: A45 |
 | `crates/daemon/src/wiring.rs` | `deck-streak-daemon` | changed: the three jobs, the snooze's port and the route's read model |
-| `crates/daemon/tests/roles.rs` | `deck-streak-daemon` | changed: the new ports named |
+| `crates/daemon/tests/roles.rs` | `deck-streak-daemon` | changed: the new ports named, A47 and A48 |
+| `crates/daemon/src/role_job.rs` | `deck-streak-daemon` | changed: a job that sends loads the two credentials, builds the transport and joins it to the router (R28) |
 | `web/app/src/lib/startapp.ts` | miniapp | changed: the token `habits` |
 | `web/app/src/lib/startapp-habits.test.ts` | miniapp | added: A46 |
 | `migrations/010001_notifications_holdout_arms.sql` | `deck-streak-notifications` | added |
@@ -487,9 +506,14 @@ it, and the message metadata stays deferred (#257): this delivery claims neither
 | `migrations/010003_notifications_requested_and_buttons.sql` | `deck-streak-notifications` | added |
 | `migrations/010004_notifications_nudges_side_by_side_defaults.sql` | `deck-streak-notifications` | added |
 | `notifications-policy.json` | repo | changed: the three kinds and their deviations |
-| `deploy/systemd/deck-streak-job@morning_nudge.timer` | deploy | added |
-| `deploy/systemd/deck-streak-job@evening_nudge.timer` | deploy | added |
-| `deploy/systemd/deck-streak-job@last_chance_nudge.timer` | deploy | added |
+| `deploy/systemd/deck-streak-job-send@morning_nudge.timer` | deploy | added: on the sending template (SPEC-100 R28) |
+| `deploy/systemd/deck-streak-job-send@evening_nudge.timer` | deploy | added: on the sending template (SPEC-100 R28) |
+| `deploy/systemd/deck-streak-job-send@last_chance_nudge.timer` | deploy | added: on the sending template (SPEC-100 R28) |
+| `deploy/systemd/deck-streak-job-send@.service` | deploy | added: the sending template, `deck-streak-job@.service` with the two `LoadCredential=` lines of the alert template's form (R28, ADR-124) |
+| `deploy/README.md` | deploy | changed: the sending template's credential ids and why |
+| `deploy/host-budget.json` | deploy | changed: the sending template's entry, equal to the job template's (ADR-032) |
+| `deploy/rail-contract.json` | deploy | changed: the sending template's neutral values, equal to the job template's (SPEC-061 R7) |
+| `scripts/tests/test_deploy_templates.py` | repo | changed: A49, the two job templates differ only by the credential lines |
 | `deploy/rail-contract.json` | deploy | changed: the three calendar keys |
 | `tools/parity-oracle/registry/spec_100.py` | tools | added: the adapters |
 | `tools/parity-oracle/goldens/` | tools | added: the goldens of section 7 |
@@ -565,7 +589,7 @@ draw's reference an opaque token; no golden holds a calendar date or a personal 
 | table | owner | created by | from the predecessor's | export and erase |
 |---|---|---|---|---|
 | `nudge_holdout_arms` | `notifications` | `migrations/010001_notifications_holdout_arms.sql` (SPEC-100) | `nudge_ablation`, its day as an epoch day, its reference dropped for the kind's key | exported and erased |
-| `nudge_snoozes` | `notifications` | `migrations/010002_notifications_snoozes.sql` (SPEC-100) | none: the predecessor keeps a snooze only in its running process | exported and erased |
+| `nudge_snoozes` | `notifications` | `migrations/010002_notifications_snoozes.sql` (SPEC-100) | none: the predecessor stores no snooze | exported and erased |
 
 ## 9. Mutation rows
 
@@ -598,3 +622,5 @@ fake clock bounds that.
 | `S10019-THE-OFFER-LABEL-CUTS-AT-60` | `crates/notifications/src/nudges.rs` | the cut in characters | `nudge_goldens::the_quest_offer_matches_the_parity_golden` |
 | `S10020-THE-WRITING-LINE-NEEDS-30-DAYS` | `crates/notifications/src/nudges.rs` | the adoption window | `nudge_goldens::the_morning_brief_matches_the_parity_golden` |
 | `S10021-A-FAILED-PUSH-DELETES-ITS-ARM` | `crates/notifications/src/router.rs` | the readout counts no failed send | `holdout::a_failed_push_deletes_its_send_arm` |
+| `S10022-THE-JOB-ROLE-JOINS-THE-TRANSPORT` | `crates/daemon/src/role_job.rs` | a job that sends builds the transport and joins it to the router | `roles::a_sending_job_routes_through_the_joined_transport` |
+| `S10023-THE-SENDING-TEMPLATE-LOADS-BOTH-CREDENTIALS` | `deploy/systemd/deck-streak-job-send@.service` | the two credential lines that make a job's send reach a transport (a script-mutation row) | `test_deploy_templates.TheSendingTemplate.test_the_two_job_templates_differ_only_by_the_credential_lines` |

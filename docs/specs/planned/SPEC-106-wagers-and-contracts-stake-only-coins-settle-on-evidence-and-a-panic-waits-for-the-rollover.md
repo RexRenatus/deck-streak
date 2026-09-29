@@ -407,7 +407,7 @@ this delivery, so the private wiring does not change when it merges.
 | `web/app/src/routes/discipline/+page.svelte` | miniapp | changed: the three cards join the discipline screen |
 | `tools/parity-oracle/registry/spec_106.py` | repo | added: this SPEC's registrations |
 | `tools/parity-oracle/goldens/arm_wager.json` | repo | added: the golden of `DisciplineLayer.arm_wager` (adapter) |
-| `tools/parity-oracle/goldens/wager_offers.json` | repo | added: the golden of `CommandBot._process_update` on `/wager` and `_callback_wager` (adapter) |
+| `tools/parity-oracle/goldens/wager_offers.json` | repo | added: the golden of `CommandBot._process_update` on /wager and `_callback_wager` (adapter) |
 | `tools/parity-oracle/goldens/wager_settle.json` | repo | added: the golden of `DisciplineLayer._settle_wagers` (adapter) |
 | `tools/parity-oracle/goldens/build_contract.json` | repo | added: the golden of `DisciplineLayer.build_contract` (adapter) |
 | `tools/parity-oracle/goldens/contract_offers.json` | repo | added: the golden of `CommandBot._contract_builder_keyboard` and `_callback_contract` (adapter) |

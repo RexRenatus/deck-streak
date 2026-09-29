@@ -68,7 +68,7 @@ Chosen option: "a quarter-hourly tick that reads no reviews", built by SPEC-105.
 - Good, because reminders keep the predecessor's 15-minute lookahead without a sync.
 - Good, because the notice is raised the morning after the settle instead of never.
 - Good, because a later discipline duty that reads no review has a clock to join.
-- Bad, because the host runs 96 more job fires a day, each a short read of discipline's state.
+- Bad, because DeckStreak runs 96 more job fires a day, each a short read of discipline's state.
 - Bad, because a new schedule kind extends SPEC-027 R1, and the job-table test must hold four
   minutes for one job.
 

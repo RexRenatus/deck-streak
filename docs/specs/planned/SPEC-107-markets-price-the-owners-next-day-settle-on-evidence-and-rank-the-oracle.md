@@ -388,7 +388,7 @@ lifted for this delivery, so the private wiring does not change when it merges.
 | `crates/coordination/tests/markets_settle.rs` | `deck-streak-coordination` | added: A26 to A30 |
 | `crates/coordination/tests/markets_calibration.rs` | `deck-streak-coordination` | added: A31 |
 | `crates/daemon/src/wiring.rs` | `deck-streak-daemon` | changed: the markets' use cases joined to the bot and the API |
-| `crates/bot/src/markets_commands.rs` | `deck-streak-bot` | added: `/predict`, `/oracle` and the `pm:` buttons |
+| `crates/bot/src/markets_commands.rs` | `deck-streak-bot` | added: /predict, /oracle and the `pm:` buttons |
 | `crates/bot/src/commands.rs` | `deck-streak-bot` | changed: the two commands join the command table |
 | `crates/bot/tests/markets_commands.rs` | `deck-streak-bot` | added: A36, A37 |
 | `crates/api/src/markets_routes.rs` | `deck-streak-api` | added: the markets' routes |
@@ -400,7 +400,7 @@ lifted for this delivery, so the private wiring does not change when it merges.
 | `web/app/src/lib/markets/OracleCard.svelte` | miniapp | added: the rank, the record and the calibration chart |
 | `web/app/src/lib/markets/markets.test.ts` | miniapp | added: A39 |
 | `web/app/src/routes/markets/+page.svelte` | miniapp | added: the markets screen |
-| `web/app/src/lib/routes.ts` | miniapp | changed: `/markets` joins the route table |
+| `web/app/src/lib/routes.ts` | miniapp | changed: /markets joins the route table |
 | `migrations/010701_markets_positions.sql` | repo | added: `market_positions` (SPEC-020 R15, R18) |
 | `tools/parity-oracle/registry/spec_107.py` | repo | added: this SPEC's registrations |
 | `tools/parity-oracle/goldens/market_price.json` | repo | added: the golden of `laplace_rate`, `blended_probability`, `price_for` and `survival_probability` (pure) |

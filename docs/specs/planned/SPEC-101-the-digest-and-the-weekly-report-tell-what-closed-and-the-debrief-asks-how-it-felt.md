@@ -323,8 +323,8 @@ it, and the message metadata stays deferred (#257): this delivery claims neither
 | `migrations/010101_notifications_debrief_ratings.sql` | `deck-streak-notifications` | added |
 | `migrations/010102_notifications_digests_side_by_side_defaults.sql` | `deck-streak-notifications` | added |
 | `notifications-policy.json` | repo | changed: the kind `weekly` and its deviation |
-| `deploy/systemd/deck-streak-job@daily_digest.timer` | deploy | added |
-| `deploy/systemd/deck-streak-job@weekly_report.timer` | deploy | added |
+| `deploy/systemd/deck-streak-job-send@daily_digest.timer` | deploy | added: on the sending template (SPEC-100 R28) |
+| `deploy/systemd/deck-streak-job-send@weekly_report.timer` | deploy | added: on the sending template (SPEC-100 R28) |
 | `deploy/rail-contract.json` | deploy | changed: the two calendar keys |
 | `tools/parity-oracle/registry/spec_101.py` | tools | added: the adapters |
 | `tools/parity-oracle/goldens/` | tools | added: the goldens of section 7 |

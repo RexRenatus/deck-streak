@@ -82,8 +82,7 @@
   - What the morning's recompute raises falls in quiet hours and is held, and #291's flush delivers
     it when the window ends.
   - The widget is the kind `widget`, one message a study day, edited in place through the router,
-    held by quiet hours like every class but the alert, and refreshed after each sync cycle and
-    every hour (ADR-109).
+    held by quiet hours like every class but the alert, and refreshed after each of the owner's sync cycles and every hour (ADR-109).
   - The widget carries an Open app button (the token `today`), as #121's note on the Mini App asks.
     Its change test is the sha256 of its text, which the predecessor's per-process hash is not.
   - `widget_enabled` and `widget_mood` turn off only at `"0"`, as every kind's switch does
@@ -211,11 +210,13 @@ R19. The bot transport gains `push_widget` (a silent send with its row, answerin
     are eight where SPEC-041 R1 counts five, and SPEC-041 R1's rule holds for all eight: only the
     router module calls them. The census of SPEC-041's A15 names each call's one site in the bot
     transport.
-R20. The sync cycle refreshes the widget after its recompute, and a cycle whose sync failed
-    refreshes nothing. The job `widget_refresh` refreshes it every hour at minute 44, without
+R20. The owner's sync cycle, the bot role's cycle that holds the router and its transport, refreshes
+    the widget after its recompute, and a cycle whose sync failed refreshes nothing. The scheduled
+    sync's cycle carries no router, so it refreshes nothing and attempts no send; whether it gains
+    a router is #291's. The job `widget_refresh` refreshes it every hour at minute 44, without
     catch-up, off every minute of the predecessor's schedule, the reserved minutes (0, 25, 39), the
     private rail's reserved slots and the sync's slot (SPEC-027 R2, SPEC-053 R2). Its timer
-    `deck-streak-job@widget_refresh.timer` and the rail contract hold its calendar equal to the
+    `deck-streak-job-send@widget_refresh.timer` and the rail contract hold its calendar equal to the
     table.
 
 Surfaces, tables and names
@@ -266,7 +267,7 @@ R23. `migrations/010203_notifications_widget_side_by_side_default.sql` seeds `wi
 | A30 | the badge occasion carries its badge's milestone text with the streak as of the day evaluated | `the_badge_occasion_carries_the_milestone_text` |
 | A31 | the level-up occasion carries the reached level's milestone text | `the_level_up_occasion_carries_the_milestone_text` |
 | A32 | the widget reads the rollup's reviews and due-today count, the streak's length, last study day and longest, the strength, the open lapse, the goal, the skip set, the day's quests, the week's quest, the Ascendant day, the token's end, the wager's days and stake and the local hour, and a fixture that changes any one of them changes the text | `the_widget_reads_every_input_it_names` |
-| A33 | the sync cycle refreshes the widget after its recompute, and a failed sync refreshes nothing | `the_sync_cycle_refreshes_the_widget_after_the_recompute` |
+| A33 | the owner's sync cycle refreshes the widget after its recompute, a failed sync refreshes nothing, and the scheduled sync's cycle attempts no send | `the_owners_sync_cycle_refreshes_the_widget_and_the_scheduled_one_sends_nothing` |
 | A34 | the job `widget_refresh` fires hourly at minute 44 without catch-up, off every predecessor, reserved and private-rail minute and the sync's slot, and its timer and the rail contract hold the calendar | `the_widget_job_keeps_off_every_reserved_minute` |
 
 ```acceptance
@@ -302,7 +303,7 @@ A29: cargo test -p deck-streak-coordination --test queue_zero_step -- --exact a_
 A30: cargo test -p deck-streak-coordination --test milestone_texts -- --exact the_badge_occasion_carries_the_milestone_text
 A31: cargo test -p deck-streak-coordination --test milestone_texts -- --exact the_level_up_occasion_carries_the_milestone_text
 A32: cargo test -p deck-streak-coordination --test widget_step -- --exact the_widget_reads_every_input_it_names
-A33: cargo test -p deck-streak-coordination --test widget_step -- --exact the_sync_cycle_refreshes_the_widget_after_the_recompute
+A33: cargo test -p deck-streak-coordination --test widget_step -- --exact the_owners_sync_cycle_refreshes_the_widget_and_the_scheduled_one_sends_nothing
 A34: cargo test -p deck-streak-coordination --test widget_job -- --exact the_widget_job_keeps_off_every_reserved_minute
 ```
 
@@ -372,7 +373,7 @@ delivery claims none of it.
 | `migrations/010202_notifications_queue_dice.sql` | `deck-streak-notifications` | added |
 | `migrations/010203_notifications_widget_side_by_side_default.sql` | `deck-streak-notifications` | added |
 | `notifications-policy.json` | repo | changed: the kind `widget`, its deviation and the three calls |
-| `deploy/systemd/deck-streak-job@widget_refresh.timer` | deploy | added |
+| `deploy/systemd/deck-streak-job-send@widget_refresh.timer` | deploy | added: on the sending template (SPEC-100 R28) |
 | `deploy/rail-contract.json` | deploy | changed: the calendar key |
 | `tools/parity-oracle/registry/spec_102.py` | tools | added: the adapters |
 | `tools/parity-oracle/goldens/` | tools | added: the goldens of section 7 |
@@ -407,7 +408,7 @@ delivery claims none of it.
 - **A widget lost to a deleted message.** A failed edit sends anew and pins (A14).
 - **Two widgets beside the predecessor.** The switch is seeded off while it runs (A20).
 - **A widget that wakes the owner.** Its sends are silent, and quiet hours hold it (A16, A22).
-- **A whole-log read that outgrows the host.** The read keeps one value per study day, never the
+- **A whole-log read whose memory grows with the study days.** The read keeps one value per study day, never the
   reviews (R1, A24).
 - **A ledger row an hour while the widget is off.** While the switch is `"0"`, each refresh with no
   row for the day records a withheld decision, as every withhold does (SPEC-041): one an hour and

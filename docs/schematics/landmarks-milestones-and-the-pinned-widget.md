@@ -43,7 +43,7 @@ flowchart TD
 
 ## A widget refresh
 
-The sync cycle's last step, and the hourly job at minute 44, route one occasion of the kind
+The owner's sync cycle's last step, and the hourly job at minute 44, route one occasion of the kind
 `widget`; its arm in `route` decides.
 
 ```mermaid

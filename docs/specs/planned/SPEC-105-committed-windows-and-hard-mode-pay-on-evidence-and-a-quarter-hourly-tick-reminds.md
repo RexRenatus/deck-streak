@@ -126,7 +126,7 @@ R12. The job `discipline_tick` fires every 15 minutes at minutes 4, 19, 34 and 4
     new quarter-hourly schedule kind of the job table that extends SPEC-027 R1 (ADR-105). None of
     its four minutes is a predecessor minute, a reserved minute (0, 25, 39) or the sync's slot
     (SPEC-027 R2), and a zone offset that is a multiple of 15 minutes maps the set onto itself. It
-    does not catch up. Its timer `deck-streak-job@discipline_tick.timer` and the rail contract hold
+    does not catch up. Its timer `deck-streak-job-send@discipline_tick.timer` and the rail contract hold
     its calendar equal to the table. It reads no review and syncs nothing (ADR-037): it raises the
     reminders (R13) and the standby notice (R14), and later discipline SPECs add only messages a
     settle left pending (SPEC-106's stakes and their Sunday review).
@@ -308,17 +308,17 @@ private wiring does not change when it merges.
 | `crates/coordination/tests/job_table.rs` | `deck-streak-coordination` | changed: a quarter-hourly job's four minutes each held to R2 |
 | `crates/coordination/tests/discipline_windows.rs` | `deck-streak-coordination` | added: A6, A7, A10, A11, A23 |
 | `crates/coordination/tests/discipline_tick.rs` | `deck-streak-coordination` | added: A14, A16 to A18 |
-| `deploy/systemd/deck-streak-job@discipline_tick.timer` | deploy | added: the tick's calendar, in UTC, with its waivers |
+| `deploy/systemd/deck-streak-job-send@discipline_tick.timer` | deploy | added: the tick's calendar, in UTC, with its waivers, on the sending template (SPEC-100 R28) |
 | `deploy/rail-contract.json` | deploy | changed: the tick's calendar key |
 | `crates/daemon/tests/roles.rs` | `deck-streak-daemon` | changed: the tick's id among the jobs run by id |
 | `crates/daemon/src/wiring.rs` | `deck-streak-daemon` | changed: discipline joined to coordination, the bot and the API |
-| `crates/bot/src/discipline_commands.rs` | `deck-streak-bot` | added: `/windows`, `/hardmode` and the `wn:` and `hm:` buttons |
+| `crates/bot/src/discipline_commands.rs` | `deck-streak-bot` | added: /windows, /hardmode and the `wn:` and `hm:` buttons |
 | `crates/bot/src/commands.rs` | `deck-streak-bot` | changed: both commands join the command table |
 | `crates/bot/tests/window_commands.rs` | `deck-streak-bot` | added: A26 |
 | `crates/api/src/discipline_routes.rs` | `deck-streak-api` | added: discipline's routes |
 | `crates/api/src/router.rs` | `deck-streak-api` | changed: the routes, behind the owner's session |
 | `crates/api/tests/window_routes.rs` | `deck-streak-api` | added: A27 |
-| `web/app/src/lib/routes.ts` | miniapp | changed: `/discipline` joins the route table |
+| `web/app/src/lib/routes.ts` | miniapp | changed: /discipline joins the route table |
 | `web/app/src/lib/discipline/discipline.ts` | miniapp | added: the client of discipline's routes |
 | `web/app/src/lib/discipline/WindowsCard.svelte` | miniapp | added: the board and the booking form |
 | `web/app/src/lib/discipline/HardModeCard.svelte` | miniapp | added: the toggle, the booking and the cancellation |

@@ -1,10 +1,10 @@
 ### Added
 
-- Engagement parity (W5) is specified as ten planned SPECs, ten proposed ADRs and nine schematics,
+- Engagement parity (W5) is specified as ten planned SPECs, eleven proposed ADRs and nine schematics,
   one SPEC per bounded context or tight group, each naming its issues, its prerequisites and its
   mutation band.
   - SPEC-100: the morning brief, the evening nudges and the comeback speak once through the one
-    router, and a holdout measures the nudges (ADR-100, ADR-101, ADR-102).
+    router, a holdout measures the nudges, and a job that sends runs under its own template (ADR-100, ADR-101, ADR-102, ADR-124).
   - SPEC-101: the daily digest and the weekly report tell what closed, and the session debrief asks
     how a session felt (ADR-108).
   - SPEC-102: landmarks and milestones are celebrated once, and the widget is one silent pinned

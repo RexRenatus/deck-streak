@@ -33,7 +33,7 @@ nudge, it edits a message the router sent, and DeckStreak reads the collection o
 
 ## Considered Options (the alternatives it was chosen against)
 
-- One message a study day, the kind `widget` of class `digest`, sent silently with an Open app button, pinned, the day before's unpinned, edited in place when its text changes, every call in the router module, refreshed after each sync cycle and hourly — chosen, because it keeps the predecessor's one pinned message and its calls, and adds no delivery path, class or exemption.
+- One message a study day, the kind `widget` of class `digest`, sent silently with an Open app button, pinned, the day before's unpinned, edited in place when its text changes, every call in the router module, refreshed after each of the owner's sync cycles and hourly — chosen, because it keeps the predecessor's one pinned message and its calls, and adds no delivery path, class or exemption.
 - A new message at every refresh — rejected because the chat would gain a message an hour and a pin notice with each, where the predecessor edits one message in place.
 - The bot sends, edits and pins the widget by itself, as the predecessor does — rejected because SPEC-041 keeps every delivery call in the router module and its census refuses the bot's own send or edit elsewhere, and the widget would escape the switch, quiet hours and the ledger.
 - A new class for ambient messages, exempt from quiet hours — rejected because the policy admits four classes and exempts only the alert, so the pack would refuse both the class and the exemption.
@@ -57,8 +57,7 @@ Chosen option: "one message a study day, the kind `widget`, edited in place thro
   modified" counts as edited, and a failed edit sends and pins anew.
 - After a T5 pins its message, the router re-pins the day's widget, as the predecessor's
   `_repin_widget` does.
-- The sync cycle refreshes the widget after its recompute, and the job `widget_refresh` refreshes
-  it hourly at minute 44, without catch-up.
+- The owner's sync cycle refreshes the widget after its recompute, the scheduled sync's cycle carries no router and refreshes nothing (#291), and the job `widget_refresh` refreshes it hourly at minute 44, without catch-up.
 - The transport gains `push_widget`, `push_edit` and `push_unpin`, named in the policy's
   `router.transport` and called only in the router module.
 
