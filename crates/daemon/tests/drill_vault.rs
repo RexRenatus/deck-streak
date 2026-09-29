@@ -51,8 +51,18 @@ fn a_configured_vault_opens_over_its_active_drills() {
 
 #[test]
 fn no_vault_and_a_missing_root_serve_no_drills() {
-    assert!(drill_vault::open(&Environment::from_vars(Vec::<(&str, &str)>::new())).is_none());
     let dir = tempfile::tempdir().expect("a temporary directory");
+    let vault = dir.path().join("vault");
+    fs::create_dir_all(vault.join("11-Drills").join("Active")).expect("the active folder");
+    let root = vault.to_str().expect("a utf-8 path");
+    let opened = drill_vault::open(&env(root)).expect("the same setting opens a real root");
+    assert_eq!(
+        opened.list_active(StudyDay::from_epoch_day(20_500)).ok(),
+        Some(Vec::new())
+    );
+    let unset = Environment::from_vars(Vec::<(&str, &str)>::new());
+    assert_eq!(drill_vault::open(&unset).map(|_| ()), None);
     let missing = dir.path().join("nowhere");
-    assert!(drill_vault::open(&env(missing.to_str().expect("a utf-8 path"))).is_none());
+    let missing = drill_vault::open(&env(missing.to_str().expect("a utf-8 path")));
+    assert_eq!(missing.map(|_| ()), None);
 }

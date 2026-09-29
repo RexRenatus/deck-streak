@@ -5,6 +5,7 @@
 // An integration test is test code: its helpers panic, and it prints the examined count on purpose.
 #![allow(clippy::expect_used, clippy::print_stdout)]
 
+use std::fmt::Write as _;
 use std::fs;
 use std::path::Path;
 
@@ -109,7 +110,7 @@ impl tracing::field::Visit for Fields {
         if !self.0.is_empty() {
             self.0.push(' ');
         }
-        self.0.push_str(&format!("{}={value:?}", field.name()));
+        let _ = write!(self.0, "{}={value:?}", field.name());
     }
 }
 
