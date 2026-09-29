@@ -733,7 +733,7 @@ class TheRunnerParseChecksAShellMutant(unittest.TestCase):
         # executed nothing, so no third mark exists.
         self.assertEqual(fixture.observed(), ["MARK", "3", "MARK", "2"])
 
-    def test_a_missing_parser_leaves_the_mutant_unchecked_and_void(self):
+    def test_a_missing_parser_is_a_refusal_naming_it(self):
         row = script_row(
             "S00032-NO-PARSER",
             "+ ${a[1]}",
@@ -749,9 +749,9 @@ class TheRunnerParseChecksAShellMutant(unittest.TestCase):
         control = fixture.run("prove", "--all")
         self.assertEqual(verdicts(control), {"S00032-NO-PARSER": "KILLED"}, control.stdout)
         done = fixture.run("prove", "--all", path=str(bare))
-        self.assertEqual(done.returncode, 3, done.stdout + done.stderr)
-        self.assertEqual(verdicts(done), {"S00032-NO-PARSER": "VOID"})
-        self.assertIn("unchecked: bash is not installed", done.stdout)
+        self.assertEqual(done.returncode, 2, done.stdout + done.stderr)
+        self.assertEqual(verdicts(done), {})
+        self.assertIn("REFUSED: missing tool: bash", done.stdout)
 
     def test_a_parser_that_hangs_leaves_the_mutant_unchecked_and_void(self):
         runner = runner_module()
@@ -767,8 +767,9 @@ class TheRunnerParseChecksAShellMutant(unittest.TestCase):
             why = runner.parses("bash", b"echo 1\n")
         self.assertEqual(why, "the mutant is unchecked: bash -n timed out")
         with mock.patch.dict(os.environ, {"PATH": str(stubs / "none")}):
-            why = runner.parses("bash", b"echo 1\n")
-        self.assertEqual(why, "the mutant is unchecked: bash is not installed")
+            with self.assertRaises(runner.ToolMissing) as refusal:
+                runner.parses("bash", b"echo 1\n")
+        self.assertEqual(refusal.exception.tool, "bash")
 
     def test_the_reason_is_the_first_line_of_a_two_line_refusal(self):
         runner = runner_module()

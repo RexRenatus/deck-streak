@@ -43,7 +43,14 @@ MODULE = REPO / "scripts" / "mutation_rows.py"
 HELPERS = ("run_tool", "run_in_own_group")
 #: What a spawn looks like in the source: the names the population is derived from.
 SPAWN_NAMES = ("subprocess.run", "subprocess.Popen", "run_in_own_group", "run_tool")
-MODES = ("absent", "not executable", "a directory")
+MODES = ("absent", "not executable", "a directory", "bad interpreter")
+#: What the refusal line says about each mode: the reason is part of the line, not only the name.
+WHY = {
+    "absent": ("not found on path", "no such file"),
+    "not executable": ("not executable",),
+    "a directory": ("is a directory",),
+    "bad interpreter": ("no such file",),
+}
 ID = "S00001-DOUBLE"
 BAND = "S00000-S00099"
 PROVE_VERBS = ("prove-id", "prove-band", "prove-all", "prove-rows-from")
@@ -87,7 +94,8 @@ def spawn_sites():
 
 
 def unrunnable(path, mode):
-    """Make `path` an executable that cannot be run, in one of the three ways."""
+    """Make `path` an executable that cannot be run: absent, without the execute bit, a directory,
+    or a script whose interpreter line names a program that does not exist."""
     if path.is_symlink() or path.is_file():
         path.unlink()
     if mode == "not executable":
@@ -95,6 +103,9 @@ def unrunnable(path, mode):
         path.chmod(0o644)
     elif mode == "a directory":
         path.mkdir()
+    elif mode == "bad interpreter":
+        path.write_text("#!/nonexistent/interpreter\n", encoding="utf-8")
+        path.chmod(0o755)
 
 
 CARGO_SHIM = """#!{python}
@@ -104,6 +115,7 @@ from pathlib import Path
 me = Path(__file__)
 if "--no-run" in sys.argv:
     sys.exit(0)
+(me.parent / "served").write_text("the control run reached this cargo")
 print("running 1 test")
 print("test double::two_doubles_to_four ... ok")
 print()
@@ -117,6 +129,9 @@ if mode == "not executable":
     me.chmod(0o644)
 elif mode == "a directory":
     me.mkdir()
+elif mode == "bad interpreter":
+    me.write_text("#!/nonexistent/interpreter\\n")
+    me.chmod(0o755)
 """
 
 
@@ -252,7 +267,11 @@ class TheMissingToolPopulation(unittest.TestCase):
                 lines = [line for line in output.splitlines() if "REFUSED" in line]
                 self.assertEqual(len(lines), 1, output)
                 self.assertIn(member.named(), lines[0], output)
+                self.assertTrue(any(why in lines[0].lower() for why in WHY[mode]), lines[0])
                 self.assertIsNone(VERDICT_LINE.search(output), output)
+                if site == "builds":
+                    served = member.bindir / "served"
+                    self.assertTrue(served.is_file(), "the control never reached the cargo shim")
                 self.assertEqual(sha256(member.fixture.root / member.target), before)
                 changed = git(member.fixture.root, "status", "--porcelain", "--untracked-files=no")
                 self.assertEqual(changed, "")
