@@ -238,6 +238,10 @@ other test.
   (#31).
 - It writes nothing back to Anki, ever. The predecessor's one write, the skip day, is recorded in
   DeckStreak's own database instead and never reaches the collection (ADR-037, #108).
+  - Amendment (2026-09-28, ADR-089): ingest's sync still never writes, uploads or sends a local
+    change (R6, R14). The skip-day path that SPEC-083 specifies under ADR-089 is the sole
+    exception, the owner's decision at #266: the skip day's reschedule of the study day's due review
+    cards and its exact inverse, with their own recording-server proof.
 - It copies no predecessor database: the v9 import is W8's (#61).
 - It provisions no credential on the host (#41).
 - It raises no sync cadence: one scheduled sync per study day holds until cutover decides otherwise

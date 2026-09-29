@@ -25,7 +25,7 @@ flowchart LR
   router -->|in-app| api
   bot <--> telegram[Telegram]
   api <-->|HTTPS, initData then session| miniapp[Mini App]
-  coordination -.->|the skip day, W3: not built, and held to ADR-037's no-upload rule| server
+  coordination -.->|the skip day, W3: not built, its reschedule and exact undo only, on the owner's confirm, incremental syncs only, ADR-089| server
 ```
 
 What crosses each boundary:
@@ -33,6 +33,7 @@ What crosses each boundary:
 | boundary | what crosses | guard |
 |---|---|---|
 | sync server to copy | the collection, by Anki's own sync, once per study day plus the owner's triggers | no upload and no local change, proven against a recording fake server (ADR-037, SPEC-022) |
+| skip day to sync server | the reschedule of the study day's previewed due review cards, and its exact inverse on an undo | the owner's confirm only; normal syncs of a working copy that is then discarded; a full or one-way sync demand aborts; each proven against the recording fake server (ADR-089, SPEC-083) |
 | copy to ingest | read-only rows | `mode=ro`; the change gate skips an unchanged cycle |
 | coordination to agent | card text, vault notes, the learner's writing | fenced as untrusted data; the agent holds no tool that reaches out; nothing crosses while the AI route is absent (ADR-054) |
 | agent to coordination | a duty's output | the packs' blocking classes; a red output is withheld |
