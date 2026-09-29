@@ -66,6 +66,7 @@ A28: red at e260627: AssertionError in each of its four subtests, each for its o
 A28: green at 8c87e5b
 A19: red at 8eba7ef: AssertionError: 16 != 0 : deck-streak-identity: 16 unexplained mutant(s) in its row (opening sweep run 36511057164 listed 143, killed 97, equivalent 0, unexplained 16, unviable 30)
 A19: green at a911483
+A27: not red: the opening sweep (run 36533129255 at dev c8d8a30) already read deck-streak-progression unexplained 0 (listed 57, killed 39, equivalent 0, unexplained 0, unviable 18), so no test was needed and the row was only filled
 ```
 
 | requirement | the behaviour a wrong implementation would get wrong | criterion |
@@ -227,3 +228,15 @@ sweep, run 36529229929 at 618a392, counted 33 of 33 whole and read `table: verdi
 killed 50, equivalent 0, unexplained 0, unviable 20. All 32 shards exited 0 and none logged a
 timeout. No record was needed, and rows S05770 to S05774 are unused: the tool mutated every
 invariant of the crate (R20).
+
+## The progression delivery: its row (A27)
+
+A27 is the progression crate's row of section 7. Its opening sweep, run 36533129255 at the base
+(dev c8d8a30), counted 33 of 33 reports whole, listed 57 mutants and read `table: verdict: ok` with
+unexplained 0: killed 39, equivalent 0, unviable 18. The crate's existing tests already kill every
+viable mutant, so A27's test, which compares the row to its counts, has no unexplained mutant to
+be red for: it is recorded `not red`, and the delivery adds no killing test, no record and no
+production change. The closing sweep, run 36534197772 at the branch head (c3c6484), counted 33 of 33
+whole and read the same figures. All 32 shards and the listing job exited 0, and no shard log
+holds a timeout line. Rows S05775 to S05779 are unused: the tool mutated every invariant of the
+crate (R20).
