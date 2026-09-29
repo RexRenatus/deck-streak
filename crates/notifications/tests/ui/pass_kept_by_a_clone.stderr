@@ -1,0 +1,13 @@
+error[E0308]: mismatched types
+  --> tests/ui/pass_kept_by_a_clone.rs:14:26
+   |
+14 |         let kept: Pass = pass.clone();
+   |                   ----   ^^^^^^^^^^^^ expected `Pass`, found `&Pass`
+   |                   |
+   |                   expected due to this
+   |
+note: `Pass` does not implement `Clone`, so `&Pass` was cloned instead
+  --> tests/ui/pass_kept_by_a_clone.rs:14:26
+   |
+14 |         let kept: Pass = pass.clone();
+   |                          ^^^^

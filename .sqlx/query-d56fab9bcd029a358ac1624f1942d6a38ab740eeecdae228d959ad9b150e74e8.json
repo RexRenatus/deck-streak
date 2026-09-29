@@ -1,0 +1,146 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT id AS \"id!\", kind, dedupe_key, surface, tier_requested, tier_pending, text, hold,\n                  tries, deferred_at, study_day\n           FROM notification_queue WHERE state = 'held' ORDER BY tier_pending DESC, id ASC",
+  "describe": {
+    "columns": [
+      {
+        "name": "id!",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "notification_queue",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "name": "kind",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "notification_queue",
+            "name": "kind"
+          }
+        }
+      },
+      {
+        "name": "dedupe_key",
+        "ordinal": 2,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "notification_queue",
+            "name": "dedupe_key"
+          }
+        }
+      },
+      {
+        "name": "surface",
+        "ordinal": 3,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "notification_queue",
+            "name": "surface"
+          }
+        }
+      },
+      {
+        "name": "tier_requested",
+        "ordinal": 4,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "notification_queue",
+            "name": "tier_requested"
+          }
+        }
+      },
+      {
+        "name": "tier_pending",
+        "ordinal": 5,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "notification_queue",
+            "name": "tier_pending"
+          }
+        }
+      },
+      {
+        "name": "text",
+        "ordinal": 6,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "notification_queue",
+            "name": "text"
+          }
+        }
+      },
+      {
+        "name": "hold",
+        "ordinal": 7,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "notification_queue",
+            "name": "hold"
+          }
+        }
+      },
+      {
+        "name": "tries",
+        "ordinal": 8,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "notification_queue",
+            "name": "tries"
+          }
+        }
+      },
+      {
+        "name": "deferred_at",
+        "ordinal": 9,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "notification_queue",
+            "name": "deferred_at"
+          }
+        }
+      },
+      {
+        "name": "study_day",
+        "ordinal": 10,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "notification_queue",
+            "name": "study_day"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "d56fab9bcd029a358ac1624f1942d6a38ab740eeecdae228d959ad9b150e74e8"
+}

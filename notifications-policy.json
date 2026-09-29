@@ -88,6 +88,15 @@
       "dedupe": "per-episode-day",
       "setting": "comeback_enabled"
     },
+    "reading_ready": {
+      "class": "nudge",
+      "tiers": [
+        "T2"
+      ],
+      "budget": null,
+      "dedupe": "per-study-day",
+      "setting": "reading_ready_enabled"
+    },
     "alert": {
       "class": "alert",
       "tiers": [
@@ -259,5 +268,10 @@
       "already_recorded"
     ]
   },
-  "deviations": []
+  "deviations": [
+    {
+      "key": "kinds.reading_ready",
+      "adr": "docs/decisions/ADR-041-notification-router-core.md"
+    }
+  ]
 }
