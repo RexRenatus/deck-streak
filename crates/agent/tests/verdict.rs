@@ -14,7 +14,9 @@ fn attributes_of_the_verdict() -> Vec<String> {
         .iter()
         .rev()
         .take_while(|line| {
-            line.trim_start().starts_with("#[") || line.trim_start().starts_with("///")
+            // One whole attribute per line: `#[rustfmt::skip] fn f() {}` is an item, not an attribute.
+            let line = line.trim();
+            (line.starts_with("#[") && line.ends_with(']')) || line.starts_with("///")
         })
         .filter(|line| line.trim_start().starts_with("#["))
         .map(|line| line.trim().to_owned())
