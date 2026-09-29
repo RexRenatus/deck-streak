@@ -68,7 +68,7 @@ describe('the startapp token map', () => {
   });
 
   it('every destination is a screen of the route table', () => {
-    const destinations = ['today', 'about', 'score'].map(routeFor).sort();
+    const destinations = ['today', 'about', 'insights', 'score'].map(routeFor).sort();
 
     expect(destinations).toEqual([...ROUTES].sort());
   });
@@ -76,7 +76,7 @@ describe('the startapp token map', () => {
   // SPEC-071 §10: the table is read by exact key, so no screen shows whether the shape
   // holds; these pin each part of it (the anchors, the characters, the length) directly.
   it('a token is one to 64 of A-Z, a-z, 0-9, underscore and hyphen, and nothing else is', () => {
-    const tokens = ['today', 'about', 'score', 'a', 'Z', '0', '_', '-', 'A_b-9', 'a'.repeat(64)];
+    const tokens = ['today', 'about', 'insights', 'score', 'a', 'Z', '0', '_', '-', 'A_b-9', 'a'.repeat(64)];
     for (const token of tokens) {
       expect(isToken(token), `token ${JSON.stringify(token)}`).toBe(true);
     }

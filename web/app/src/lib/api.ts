@@ -1,3 +1,9 @@
+import {
+  parseEnvelope,
+  parseListings,
+  type Envelope,
+  type Listing
+} from './insights/insights';
 import { parseScore, type ScoreToday } from './score/score';
 import { telegram } from './telegram.svelte';
 
@@ -42,6 +48,10 @@ export interface Api {
   me(): Promise<Answer<Me>>;
   /** The current study day's score (SPEC-071 R20). */
   score(): Promise<Answer<ScoreToday>>;
+  /** The instruments the owner can read (SPEC-094 R18). */
+  insights(): Promise<Answer<Listing[]>>;
+  /** One instrument's latest report; null when it has not run yet. */
+  insight(id: string): Promise<Answer<Envelope | null>>;
 }
 
 /** How opening a session ended: a session, a refusal only reopening the app can answer, or no answer. */
@@ -130,7 +140,15 @@ export function createApi(options: ApiOptions): Api {
 
   return {
     me: () => read('/api/me', parseMe),
-    score: () => read('/api/score', parseScore)
+    score: () => read('/api/score', parseScore),
+    insights: () => read('/api/insights', parseListings),
+    insight: (id) =>
+      read(`/api/insights/${encodeURIComponent(id)}`, (body) => {
+        const parsed = parseEnvelope(body);
+        return parsed === undefined ? null : { value: parsed };
+      }).then((answer) =>
+        answer.kind === 'ok' ? { kind: 'ok', value: answer.value.value } : answer
+      )
   };
 }
 
