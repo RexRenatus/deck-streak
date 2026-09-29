@@ -1,0 +1,11 @@
+error[E0423]: cannot initialize a tuple struct which contains private fields
+ --> tests/ui/push_outside_the_router.rs:6:43
+  |
+6 |     let _pushed = transport.push_message(&Pass(()), "a line the router never decided").await;
+  |                                           ^^^^
+  |
+note: constructor is not visible here due to private fields
+ --> src/router.rs
+  |
+  | pub struct Pass(());
+  |                 ^^ private field

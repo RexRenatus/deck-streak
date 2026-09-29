@@ -1,5 +1,6 @@
 """The one alert path: the alert template unit and its script (SPEC-031 A3, A4, A7; R3, R6;
-ADR-031, ADR-038).
+ADR-031, ADR-038), and the alert unit's own refusal of an empty credential (SPEC-066 A5,
+R3; ADR-067).
 
 The script runs as its unit runs it, with stubs first on its PATH. `curl` and `journalctl` record
 their argument vector, standard input and environment, and answer as the real ones would; every other
@@ -19,6 +20,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import _units
 from _support import REPO, examined
 
 SYSTEMD = REPO / "deploy" / "systemd"
@@ -29,6 +31,24 @@ OWNER_SOURCE = REPO / "crates" / "identity" / "src" / "owner.rs"
 ALERT_TEMPLATE = "deck-streak-alert@.service"
 ON_FAILURE = "deck-streak-alert@%n.service"
 SENDMESSAGE = "https://api.telegram.org/bot{token}/sendMessage"
+# The prefixes systemd reads before an ExecStart= path; `-` counts a failure as a success
+# (systemd.service(5)).
+EXEC_PREFIX = re.compile(r"[-@:+!|]*")
+# What the alert template's refusals say each directive breaks (SPEC-066 R3).
+PAGES = "is named, and a page that fails must not start a page about the page"
+ONE_START = "where the template runs its script once"
+COUNTS_A_FAILURE = "counts a failure as a success"
+SKIPS = "can skip the start, which leaves the instance inactive, not failed"
+NAMED = "is named, and the alert template names none"
+DIRECT = "skips the failed state on a restart"
+RESTARTS = "restarts the refusal"
+UNLOADS = "can unload the failed instance, which systemctl --failed then no longer lists"
+UNREAD = "is empty or not a known value, which the check refuses"
+OFF_LIST = "is not on this unit's list of keys, and is refused"
+STOPS = (
+    "is refused, as every condition and assertion is, since one can stop the start and leave the "
+    "instance inactive, not failed"
+)
 
 # Synthetic values: a token of the Bot API's shape whose id has seven digits, never the public
 # scrub's shape; the scrub's own placeholder id for the owner; and another for any credential the
@@ -89,23 +109,14 @@ os.execv({real!r}, [{real!r}] + sys.argv[1:])
 
 
 def unit_file(path):
-    """A unit file as systemd reads it: each section's assignments in order, where an empty
-    assignment clears the list (systemd.syntax(7))."""
+    """A unit file through the census's reader, `_units.assignments`, which refuses a line it
+    cannot read: each section's assignments in order, where an empty assignment clears the list
+    (systemd.syntax(7))."""
     sections = {}
-    section = None
-    for number, raw in enumerate(Path(path).read_text(encoding="utf-8").splitlines(), start=1):
-        line = raw.strip()
-        if not line or line.startswith(("#", ";")):
-            continue
-        if line.startswith("[") and line.endswith("]"):
-            section = sections.setdefault(line[1:-1], {})
-            continue
-        key, equals, value = line.partition("=")
-        if not equals or section is None:
-            raise AssertionError(f"{path}:{number}: not an assignment in a section: {raw!r}")
-        values = section.setdefault(key.strip(), [])
-        if value.strip():
-            values.append(value.strip())
+    for section, key, value, _ in _units.assignments(_units.unit_text(path), Path(path).name):
+        values = sections.setdefault(section, {}).setdefault(key, [])
+        if value:
+            values.append(value)
         else:
             values.clear()
     return sections
@@ -154,9 +165,10 @@ class Run:
         return [call for call in self.all_calls if call["command"] == command]
 
 
-def run_alert(instance, environment, journal=JOURNAL_LINES, script=SCRIPT):
+def run_alert(instance, environment, journal=JOURNAL_LINES, script=SCRIPT, planted=None):
     """Runs `script` as the alert unit runs it, `alert-telegram.sh %i`, with the stubs first on its
-    PATH and a credentials directory holding each credential the unit loads."""
+    PATH and a credentials directory holding each credential the unit loads: its synthetic value
+    and a newline, or exactly the content `planted` names for its id."""
     original = os.environ.get("PATH", "/usr/bin:/bin")
     with tempfile.TemporaryDirectory() as scratch:
         root = Path(scratch)
@@ -177,7 +189,8 @@ def run_alert(instance, environment, journal=JOURNAL_LINES, script=SCRIPT):
             )
             wrapper.chmod(0o755)
         for ident in loaded_credentials():
-            (credentials / ident).write_text(synthetic(ident) + "\n", encoding="utf-8")
+            content = (planted or {}).get(ident, synthetic(ident) + "\n")
+            (credentials / ident).write_text(content, encoding="utf-8")
         journal_file = root / "journal.txt"
         journal_file.write_text("".join(f"{line}\n" for line in journal), encoding="utf-8")
         env = {
@@ -302,6 +315,85 @@ def timer_target(path, services):
         return target
     prefix, at, _ = target.partition("@")
     return f"{prefix}@.service" if at else target
+
+
+def alert_template_refusals(path):
+    """Why the alert template at `path` would not stay failed when its script refuses a credential
+    (SPEC-066 R3), one line each, and none for a template that stays failed. It names no
+    `OnFailure=`, since a page that fails must not start a page about the page (SPEC-031). It
+    counts no refusal a success: one `ExecStart=`, with no `-` prefix; no `ExecCondition=`, since
+    one that exits 1 to 254 skips the start and leaves the instance inactive, not failed; no
+    `SuccessExitStatus=` at all; and no `RestartMode=direct`, which skips the failed state on a
+    restart. It names no `[Unit]` condition or assertion, an empty one included, since an unmet one
+    stops the start and leaves the instance inactive, not failed. It restarts none: no `Restart=`
+    other than `no`, and no `RestartForceExitStatus=` at all. And it is never unloaded while
+    failed: no `CollectMode=` other than `inactive` (systemd.service(5), systemd.unit(5)). Each of
+    `RestartMode=`, `Restart=` and `CollectMode=` is read at every assignment, with no reset
+    applied, and one that is empty or not a known value is refused, so the check never decides
+    which of two is in force. A template the reader refuses is refused whole, with the reader's
+    line."""
+    name = Path(path).name
+    try:
+        read = list(_units.assignments(_units.unit_text(path), name))
+    except _units.Refused as refusal:
+        return [str(refusal)]
+    template = unit_file(path)
+    refused = []
+
+    def every(key):
+        section, _ = _units.ENUMS[key]
+        return [value for at, named, value, _ in read if (at, named) == (section, key)]
+
+    def refuse(why):
+        refused.append(f"{name}: {why}")
+
+    for target in values(template, "Unit", "OnFailure"):
+        refuse(f"OnFailure={target} {PAGES}")
+    for section, key, value, _ in read:
+        if section == "Unit" and key.startswith(_units.STOPS_A_START):
+            refuse(f"{key}={value} {STOPS}")
+    starts = values(template, "Service", "ExecStart")
+    if len(starts) != 1:
+        refuse(f"{len(starts)} ExecStart= lines, {ONE_START}")
+    for start in starts:
+        if "-" in EXEC_PREFIX.match(start).group(0):
+            refuse(f"ExecStart={start} {COUNTS_A_FAILURE}")
+    for command in values(template, "Service", "ExecCondition"):
+        refuse(f"ExecCondition={command} {SKIPS}")
+    for key in ("SuccessExitStatus", "RestartForceExitStatus"):
+        for statuses in values(template, "Service", key):
+            refuse(f"{key}={statuses} {NAMED}")
+    for mode in every("RestartMode"):
+        if mode == "direct":
+            refuse(f"RestartMode={mode} {DIRECT}")
+    for restart in every("Restart"):
+        if restart in _units.ENUMS["Restart"][1] and restart != "no":
+            refuse(f"Restart={restart} {RESTARTS}")
+    for mode in every("CollectMode"):
+        if mode in _units.ENUMS["CollectMode"][1] and mode != "inactive":
+            refuse(f"CollectMode={mode} {UNLOADS}")
+    for key, (_, known) in _units.ENUMS.items():
+        for value in every(key):
+            if value not in known:
+                refuse(f"{key}={value} {UNREAD}")
+    pairs = [(at, named) for at, named, _, _ in read]
+    for (at, named, value, _), off in zip(
+        read, _units.off_list(pairs, _units.ALERT_KEYS), strict=True
+    ):
+        if off:
+            refuse(f"[{at}] {named}={value} {OFF_LIST}")
+    return refused
+
+
+def planted_template(scratch, anchor, line, keep):
+    """The alert template written into `scratch` with `line` after its one line that starts
+    `anchor`, or in its place when `keep` is false."""
+    lines = (SYSTEMD / ALERT_TEMPLATE).read_bytes().decode("utf-8").split("\n")
+    (at,) = [number for number, text in enumerate(lines) if text.startswith(anchor)]
+    lines[at : at + 1] = [lines[at], line] if keep else [line]
+    path = scratch / ALERT_TEMPLATE
+    path.write_bytes("\n".join(lines).encode("utf-8"))
+    return path
 
 
 class TheAlertScriptNamesTheFailure(unittest.TestCase):
@@ -473,6 +565,203 @@ class EveryUnitPagesThroughTheTemplate(unittest.TestCase):
                 f"silent.service names OnFailure=nothing, not {ON_FAILURE}",
                 f"bare.service names OnFailure=deck-streak-alert.service, not {ON_FAILURE}",
             ],
+        )
+
+
+class AnEmptyCredentialFailsTheAlertUnit(unittest.TestCase):
+    def test_an_empty_credential_fails_the_alert_unit_before_any_request(self):
+        # The alert template names no OnFailure=, so it cannot page about itself (SPEC-031): its
+        # own refusal is its failed state, with one error line naming the credential (SPEC-066 R3).
+        # Each credential the template loads, empty in each form, the other holding its value.
+        environment = {"MONITOR_UNIT": FAILED_UNIT, "MONITOR_SERVICE_RESULT": RESULT}
+        cases = [(ident, form) for ident in loaded_credentials() for form in ("", "\n")]
+        for ident, form in examined("empty credential case(s)", cases):
+            where = f"{ident} holding {form!r}"
+            run = run_alert(FAILED_UNIT, environment, planted={ident: form})
+            self.assertEqual(run.returncode, 1, f"{where}: {run.stdout}{run.stderr}")
+            refusal = (
+                f"<3>the credential {ident} is empty in the credentials directory: no page is sent"
+            )
+            self.assertEqual(run.stderr.splitlines(), [refusal], where)
+            # Refused before anything is asked or sent: no journal read and no request.
+            asked = [call["command"] for call in run.all_calls]
+            self.assertEqual([c for c in asked if c in ("curl", "journalctl")], [], where)
+            # What it wrote names the id and carries no value of either credential.
+            for value in (TOKEN, OWNER):
+                self.assertNotIn(value, run.stdout + run.stderr, where)
+        # The route is the failed instance: the template still names no OnFailure=, and a page
+        # about it is a second route's (#285). It loads its two credentials, and nothing in it
+        # counts the refusal a success, restarts it or unloads the failed instance.
+        template = unit_file(SYSTEMD / ALERT_TEMPLATE)
+        self.assertEqual(values(template, "Unit", "OnFailure"), [])
+        self.assertEqual(len(values(template, "Service", "LoadCredential")), 2)
+        self.assertEqual(alert_template_refusals(SYSTEMD / ALERT_TEMPLATE), [])
+        # Planted templates: the alert template with one line added after its ExecStart= or its
+        # Description=, or its ExecStart= given the `-` prefix, each refused for what it breaks.
+        (start,) = values(template, "Service", "ExecStart")
+        name = ALERT_TEMPLATE
+
+        def off(section, *assigned):
+            # The lines a key off the alert's list adds, each after the refusals of what it breaks.
+            return [f"{name}: [{section}] {a} {OFF_LIST}" for a in assigned]
+
+        plants = [
+            ("ExecStart=", f"ExecStart=-{start}", False, f"ExecStart=-{start} {COUNTS_A_FAILURE}"),
+            ("ExecStart=", "ExecStart=/bin/true", True, f"2 ExecStart= lines, {ONE_START}"),
+            ("ExecStart=", "ExecCondition=/bin/true", True, f"ExecCondition=/bin/true {SKIPS}"),
+            ("ExecStart=", "SuccessExitStatus=2", True, f"SuccessExitStatus=2 {NAMED}"),
+            ("ExecStart=", "RestartForceExitStatus=2", True, f"RestartForceExitStatus=2 {NAMED}"),
+            ("ExecStart=", "RestartMode=direct", True, f"RestartMode=direct {DIRECT}"),
+            ("ExecStart=", "Restart=on-failure", True, f"Restart=on-failure {RESTARTS}"),
+            (
+                "Description=",
+                "CollectMode=inactive-or-failed",
+                True,
+                f"CollectMode=inactive-or-failed {UNLOADS}",
+            ),
+            ("Description=", f"OnFailure={ON_FAILURE}", True, f"OnFailure={ON_FAILURE} {PAGES}"),
+        ]
+        off_planted = {
+            "ExecCondition=/bin/true": ("Service", "ExecCondition=/bin/true"),
+            "SuccessExitStatus=2": ("Service", "SuccessExitStatus=2"),
+            "RestartForceExitStatus=2": ("Service", "RestartForceExitStatus=2"),
+            "RestartMode=direct": ("Service", "RestartMode=direct"),
+            "Restart=on-failure": ("Service", "Restart=on-failure"),
+            "CollectMode=inactive-or-failed": ("Unit", "CollectMode=inactive-or-failed"),
+            f"OnFailure={ON_FAILURE}": ("Unit", f"OnFailure={ON_FAILURE}"),
+        }
+        for anchor, line, keep, refusal in examined("planted alert template(s)", plants):
+            with tempfile.TemporaryDirectory() as scratch:
+                path = planted_template(Path(scratch), anchor, line, keep)
+                extra = off(*off_planted[line]) if line in off_planted else []
+                self.assertEqual(
+                    alert_template_refusals(path), [f"{name}: {refusal}"] + extra, line
+                )
+        # A reset or an unknown value of Restart=, RestartMode= or CollectMode= is refused beside
+        # what it follows (SPEC-066 R3).
+        unread = "is empty or not a known value, which the check refuses"
+        reset = [
+            (
+                "ExecStart=",
+                "Restart=on-failure\nRestartSec=1d\nRestart=",
+                [f"Restart=on-failure {RESTARTS}", f"Restart= {unread}"],
+                off("Service", "Restart=on-failure", "RestartSec=1d", "Restart="),
+            ),
+            (
+                "ExecStart=",
+                "RestartMode=direct\nRestartMode=",
+                [f"RestartMode=direct {DIRECT}", f"RestartMode= {unread}"],
+                off("Service", "RestartMode=direct", "RestartMode="),
+            ),
+            (
+                "Description=",
+                "CollectMode=inactive-or-failed\nCollectMode=",
+                [f"CollectMode=inactive-or-failed {UNLOADS}", f"CollectMode= {unread}"],
+                off("Unit", "CollectMode=inactive-or-failed", "CollectMode="),
+            ),
+            (
+                "ExecStart=",
+                "Restart=On-Failure",
+                [f"Restart=On-Failure {unread}"],
+                off("Service", "Restart=On-Failure"),
+            ),
+        ]
+        for anchor, line, refusals, extra in examined(
+            "planted alert template(s) with a reset", reset
+        ):
+            with tempfile.TemporaryDirectory() as scratch:
+                path = planted_template(Path(scratch), anchor, line, True)
+                self.assertEqual(
+                    alert_template_refusals(path), [f"{name}: {r}" for r in refusals] + extra, line
+                )
+        # Every [Unit] condition and assertion is refused, an empty one included (SPEC-066 R3).
+        stops = (
+            "is refused, as every condition and assertion is, since one can stop the start and "
+            "leave the instance inactive, not failed"
+        )
+        stopped = [
+            (
+                "ConditionPathExists=/nonexistent",
+                [f"ConditionPathExists=/nonexistent {stops}"],
+                off("Unit", "ConditionPathExists=/nonexistent"),
+            ),
+            (
+                "AssertPathExists=/nonexistent",
+                [f"AssertPathExists=/nonexistent {stops}"],
+                off("Unit", "AssertPathExists=/nonexistent"),
+            ),
+            (
+                "ConditionPathExists=/nonexistent\nConditionPathExists=",
+                [f"ConditionPathExists=/nonexistent {stops}", f"ConditionPathExists= {stops}"],
+                off("Unit", "ConditionPathExists=/nonexistent", "ConditionPathExists="),
+            ),
+        ]
+        for line, refusals, extra in examined(
+            "planted alert template(s) with a condition", stopped
+        ):
+            with tempfile.TemporaryDirectory() as scratch:
+                path = planted_template(Path(scratch), "Description=", line, True)
+                self.assertEqual(
+                    alert_template_refusals(path), [f"{name}: {r}" for r in refusals] + extra, line
+                )
+        # Planted lines the reader refuses, after ExecStart=, each refused whole with its line: one
+        # ending in a backslash, a comment's included, and a control character other than a tab or
+        # whitespace outside ASCII (SPEC-066 R3).
+        lines = (SYSTEMD / ALERT_TEMPLATE).read_bytes().decode("utf-8").split("\n")
+        (after,) = [n + 2 for n, text in enumerate(lines) if text.startswith("ExecStart=")]
+        backslash = "ends in a backslash, which the reader refuses"
+        misread = [
+            ("# a note \\\nExecCondition=/bin/true", backslash),
+            ("X-Note=kept \\\\\nExecCondition=/bin/true", backslash),
+        ] + [
+            (
+                f"SuccessExitStatus={char}1 X-Y=z",
+                f"holds U+{ord(char):04X}, a character the reader refuses",
+            )
+            for char in "\x0b\x0c\x85\u2028\u2029"
+        ]
+        for line, why in examined("planted alert template(s) the reader refuses", misread):
+            with tempfile.TemporaryDirectory() as scratch:
+                path = planted_template(Path(scratch), "ExecStart=", line, True)
+                self.assertEqual(
+                    alert_template_refusals(path), [f"{name}:{after}: {why}"], repr(line)
+                )
+
+    def test_a_key_off_the_alert_templates_list_is_refused_by_name(self):
+        # The alert template holds only the keys `_units.ALERT_KEYS` lists, each in the section the
+        # list gives it: a key off the list, in any section, is refused by its key (SPEC-066 R3).
+        # The committed template holds none. Planted, one line at a time after the template's
+        # Description= (in [Unit]) or its ExecStart= (in [Service]): the directives that make a
+        # start depend on another unit; a key with no standard meaning; and a key the list holds in
+        # the other section.
+        self.assertEqual(alert_template_refusals(SYSTEMD / ALERT_TEMPLATE), [])
+        name = ALERT_TEMPLATE
+        plants = [
+            ("Description=", "Requisite=missing.service", "Unit", "Requisite", "missing.service"),
+            ("Description=", "Requires=missing.service", "Unit", "Requires", "missing.service"),
+            ("Description=", "BindsTo=missing.service", "Unit", "BindsTo", "missing.service"),
+            ("Description=", "X-Note=kept", "Unit", "X-Note", "kept"),
+            ("Description=", "User=nobody", "Unit", "User", "nobody"),
+            ("ExecStart=", "X-Note=kept", "Service", "X-Note", "kept"),
+            (
+                "ExecStart=",
+                "Wants=network-online.target",
+                "Service",
+                "Wants",
+                "network-online.target",
+            ),
+        ]
+        got = {}
+        for anchor, line, section, key, value in examined("planted alert template(s)", plants):
+            with tempfile.TemporaryDirectory() as scratch:
+                path = planted_template(Path(scratch), anchor, line, True)
+                got[line] = alert_template_refusals(path)
+        self.assertEqual(
+            got,
+            {
+                line: [f"{name}: [{section}] {key}={value} {OFF_LIST}"]
+                for _, line, section, key, value in plants
+            },
         )
 
 

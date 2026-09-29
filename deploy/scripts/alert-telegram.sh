@@ -23,6 +23,21 @@ status="${MONITOR_EXIT_STATUS:-}"
 token="$(cat "$CREDENTIALS_DIRECTORY/telegram-bot-token")"
 chat="$(cat "$CREDENTIALS_DIRECTORY/owner-user-id")"
 
+# A credential with nothing left once the command substitution has removed its trailing newlines
+# refuses the page by its id, before the journal is read or a request is made (SPEC-066 R3;
+# ADR-067). The line reaches the journal at error priority, and exit 1 leaves this instance failed,
+# in systemctl --failed: the alert unit names no OnFailure=, so nothing pages about it (#285).
+refuse_empty() {
+  case $2 in
+    '')
+      echo "<3>the credential $1 is empty in the credentials directory: no page is sent" >&2
+      exit 1
+      ;;
+  esac
+}
+refuse_empty telegram-bot-token "$token"
+refuse_empty owner-user-id "$chat"
+
 # The failed run's own error lines when systemd names the run, else the unit's latest; at most five.
 # A journal that cannot be read quotes nothing, and the page still goes.
 if [ -n "${MONITOR_INVOCATION_ID:-}" ]; then
