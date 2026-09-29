@@ -202,6 +202,7 @@ PAGING_KEYS = {
         "ProtectKernelTunables",
         "ProtectProc",
         "ProtectSystem",
+        "ReadWritePaths",
         "Restart",
         "RestartSec",
         "RestrictAddressFamilies",
@@ -234,6 +235,7 @@ PAGING_VALUES = {
     ("Service", "RestartSec"): ("15",),
     ("Unit", "After"): ("network-online.target",),
     ("Unit", "Wants"): ("network-online.target",),
+    ("Service", "ReadWritePaths"): ("/run/deck-streak-sync",),
 }
 
 

@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 date: "2026-09-27"
 decision-makers: "@RexRenatus (owner), the DeckStreak architect"
 ---
@@ -59,13 +59,23 @@ deadline). The daily-reading task holds no tool.
   directory; the live proof is the agent's path (#43), after the owner's route choice (ADR-054).
 - Bad, because the subscription-proxy scanner's `credential-from-secret-manager` row accepts only a
   secret-manager call inside the client, so on the box it refuses a runner that reads a systemd
-  credential; the pack must learn ADR-038's socket, or a decision must waive the row, before
-  SPEC-043 is built.
+  credential. The row is substituted, not waived: SPEC-043's A15 fails if the runner takes its token
+  from anywhere but `$CREDENTIALS_DIRECTORY/agent-device-key` or a committed file carries a token or a
+  token path, until the scan learns the socket (issue #341); the box's deferral mechanism (issue #342)
+  records the scan's red as expected against #341.
 
 ### Confirmation
 
 SPEC-043's tests; the box run's apiKeyHelper scan and the subscription-proxy client rows, both run
 by `scripts/box-packs.sh` (SPEC-056); the ai-content-safety rows over `ai-safety.json`.
+
+## Dependencies and retention
+
+The agent crate gains `sqlx` (the `agent_runs` repository, offline-checked) and `tokio` with the
+`process`, `time`, `io-util`, `rt` and `macros` features (the process runner and its wall clock), both
+already workspace dependencies. `agent_runs` keeps 90 days, declared in `privacy.json`; `prune_before`
+is the repository's deletion, and its schedule is the coordination layer's: the daily upkeep in
+`crates/coordination/src/maintenance.rs` calls it.
 
 ## What would make this wrong
 
