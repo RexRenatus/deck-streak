@@ -295,3 +295,100 @@ fn only_progression_writes_xp_settlement_and_only_coordination_settles() {
         ]
     );
 }
+
+#[test]
+fn the_census_reads_progressions_own_reexports_as_it_reads_the_other_crates() {
+    // Progression re-exports `settle`, its request and its module under other names, one of them
+    // through another alias and one inside a nested module. A caller outside coordination that
+    // names only the new names never spells `settle` or `SettleRequest`, and is refused by file,
+    // alias and original all the same. Progression's own use of the names, coordination's callers
+    // by the same rules as before, a mention in a comment, a crate that never imports progression
+    // and a re-export that renames nothing of the settlement are not refused.
+    let planted = tempfile::tempdir().expect("a temporary directory");
+    plant(
+        planted.path(),
+        "crates/progression/src/settle.rs",
+        "const Q: &str = \"INSERT INTO xp_settlement (amount) VALUES (1)\";\n",
+    );
+    plant(
+        planted.path(),
+        "crates/progression/src/lib.rs",
+        "pub mod settle;\n\
+         pub use settle::{\n    SettledRow,\n    settle as tally,\n    SettleRequest as TallyRequest,\n    settled_of_day,\n};\n\
+         pub use settle as ledger_write;\n\
+         pub use self::tally as tally_again;\n\
+         pub mod api {\n    pub use super::settle::settle as run_it;\n}\n",
+    );
+    plant(
+        planted.path(),
+        "crates/progression/src/inner.rs",
+        "use crate::settle::settle as tally;\nfn own() { let _ = tally; }\n",
+    );
+    plant(
+        planted.path(),
+        "crates/streaks/src/tally_user.rs",
+        "use deck_streak_progression::{TallyRequest, tally};\n",
+    );
+    plant(
+        planted.path(),
+        "crates/quests/src/module_user.rs",
+        "use deck_streak_progression::ledger_write;\n",
+    );
+    plant(
+        planted.path(),
+        "crates/quests/src/chained_user.rs",
+        "use deck_streak_progression::tally_again;\n",
+    );
+    plant(
+        planted.path(),
+        "crates/quests/src/nested_user.rs",
+        "use deck_streak_progression::api::run_it;\n",
+    );
+    plant(
+        planted.path(),
+        "crates/coordination/src/recompute/xp.rs",
+        "use deck_streak_progression::{SettleCause, tally};\n\
+         fn step() { let _ = SettleCause::Recompute; }\n",
+    );
+    plant(
+        planted.path(),
+        "crates/coordination/src/correction.rs",
+        "use deck_streak_progression::{SettleCause, tally};\n\
+         fn fix() { let _ = SettleCause::OwnersCorrection; }\n",
+    );
+    plant(
+        planted.path(),
+        "crates/coordination/src/shortcut.rs",
+        "use deck_streak_progression::{SettleCause, tally};\n\
+         fn quick() { let _ = SettleCause::Recompute; }\n",
+    );
+    plant(
+        planted.path(),
+        "crates/streaks/src/note.rs",
+        "use deck_streak_progression::SettledRow;\n// tally and ledger_write are coordination's\n",
+    );
+    plant(
+        planted.path(),
+        "crates/streaks/src/homonym.rs",
+        "fn tally() {}\nfn again() { tally(); }\n",
+    );
+    let refused = census(planted.path());
+    examined("planted crate source file(s)", refused.sources.clone());
+    assert_eq!(
+        refused.refused,
+        [
+            "crates/coordination/src/shortcut.rs calls settle outside the recompute steps, and \
+             only the owner's correction may",
+            "crates/quests/src/chained_user.rs calls settle through tally_again, progression's \
+             alias of settle, and only coordination's code may",
+            "crates/quests/src/module_user.rs calls settle through ledger_write, progression's \
+             alias of settle, and only coordination's code may",
+            "crates/quests/src/nested_user.rs calls settle through run_it, progression's alias \
+             of settle, and only coordination's code may",
+            "crates/streaks/src/tally_user.rs calls settle through TallyRequest, progression's \
+             alias of SettleRequest, and only coordination's code may",
+            "crates/streaks/src/tally_user.rs calls settle through tally, progression's alias \
+             of settle, and only coordination's code may",
+        ]
+    );
+}
