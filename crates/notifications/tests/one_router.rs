@@ -569,15 +569,16 @@ const GUARDED: [(&str, &str); 3] = [
 /// dispatch are private to it, so only it can call them.
 const COMMANDS: (&str, &str) = ("crates/bot/src/commands.rs", "crates/bot/src/commands/");
 
-/// The command handler's replies, `send` and the five that send one (`export`, `ask_erase`, `sync`,
-/// `score` and `level`), and its dispatch, `on_message` and `on_callback`.
-const COMMAND_REPLIES: [&str; 8] = [
+/// The command handler's replies, `send` and the six that send one (`export`, `ask_erase`, `sync`,
+/// `score`, `level` and `streak`), and its dispatch, `on_message` and `on_callback`.
+const COMMAND_REPLIES: [&str; 9] = [
     "send",
     "export",
     "ask_erase",
     "sync",
     "score",
     "level",
+    "streak",
     "on_message",
     "on_callback",
 ];
@@ -586,7 +587,7 @@ const COMMAND_REPLIES: [&str; 8] = [
 /// the handler, which dispatches an update the long poll hands it, and the dispatch, which answers
 /// it. A call anywhere else in the handler's module sends a reply the router never decides, though
 /// no update asked for it.
-const COMMAND_CALLERS: [(&str, &str); 13] = [
+const COMMAND_CALLERS: [(&str, &str); 15] = [
     ("Commands::handle", "on_message"),
     ("Commands::handle", "on_callback"),
     ("Commands::on_message", "send"),
@@ -595,11 +596,13 @@ const COMMAND_CALLERS: [(&str, &str); 13] = [
     ("Commands::on_message", "sync"),
     ("Commands::on_message", "score"),
     ("Commands::on_message", "level"),
+    ("Commands::on_message", "streak"),
     ("Commands::on_callback", "send"),
     ("Commands::export", "send"),
     ("Commands::sync", "send"),
     ("Commands::score", "send"),
     ("Commands::level", "send"),
+    ("Commands::streak", "send"),
 ];
 
 /// The one use of the bot's command handler: the bot's entry, the long poll, hands it each update

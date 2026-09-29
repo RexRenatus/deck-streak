@@ -304,6 +304,7 @@ accessibility packs stay enforced, and no row is deferred for this delivery.
 | `crates/api/tests/streak_routes.rs` | `deck-streak-api` | added: A20 |
 | `crates/bot/src/streak_commands.rs` | `deck-streak-bot` | added: the streak command |
 | `crates/bot/src/commands.rs` | `deck-streak-bot` | changed: the streak command joins the command table and the owner's menu |
+| `crates/notifications/tests/one_router.rs` | `deck-streak-notifications` | changed: the streak command joins the census of command replies and callers |
 | `crates/bot/tests/streak_commands.rs` | `deck-streak-bot` | added: A21 |
 | `crates/daemon/src/wiring.rs` | `deck-streak-daemon` | changed: the streaks store and the freeze port joined to coordination |
 | `web/app/src/routes/streak/+page.svelte` | miniapp | added: the streak screen |
