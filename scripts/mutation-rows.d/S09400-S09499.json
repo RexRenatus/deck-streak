@@ -1,0 +1,116 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S09401-MIN-DARK-NOTES",
+        "insights",
+        "src/dark_fields.rs",
+        "pub const MIN_DARK_NOTES: i64 = 3;",
+        "pub const MIN_DARK_NOTES: i64 = 4;",
+        "dark_fields::the_dark_fields_constants_equal_the_predecessors",
+        "a field is dark only when three reviewed notes have content in it, as the predecessor's constant says (SPEC-094 R5, A11)"
+      ],
+      [
+        "S09402-DARK-FIELDS-SHOWN-CAP",
+        "insights",
+        "src/dark_fields.rs",
+        "pub const MAX_DARK_FIELDS_SHOWN: usize = 40;",
+        "pub const MAX_DARK_FIELDS_SHOWN: usize = 41;",
+        "dark_fields::a_report_shows_at_most_the_cap_and_counts_the_rest",
+        "a report shows at most forty dark fields and counts the rest (SPEC-094 R5)"
+      ],
+      [
+        "S09403-UNPARSEABLE-SHOWN-CAP",
+        "insights",
+        "src/dark_fields.rs",
+        "pub const MAX_UNPARSEABLE_SHOWN: usize = 20;",
+        "pub const MAX_UNPARSEABLE_SHOWN: usize = 21;",
+        "dark_fields::the_dark_fields_constants_equal_the_predecessors",
+        "the unparseable list is capped at the predecessor's twenty (SPEC-094 R5, A11)"
+      ],
+      [
+        "S09404-SPECIAL-FIELD-NAMES",
+        "insights",
+        "src/dark_fields.rs",
+        "\"Subdeck\", \"Card\"]",
+        "\"Subdeck\", \"Cards\"]",
+        "dark_fields::the_dark_fields_constants_equal_the_predecessors",
+        "Anki's own template names are never read as field references, exactly the predecessor's six (SPEC-094 R5, A11)"
+      ],
+      [
+        "S09405-PRESENCE-BATCH",
+        "ingest",
+        "src/structure.rs",
+        "pub const NOTES_BATCH_SIZE: usize = 400;",
+        "pub const NOTES_BATCH_SIZE: usize = 401;",
+        "structure::the_presence_read_reduces_each_batch_of_400",
+        "the presence read holds no more than 400 notes' content at once (SPEC-094 R4, A6)"
+      ],
+      [
+        "S09406-WIRE-VARINT-LIMIT",
+        "ingest",
+        "src/wire.rs",
+        "        if shift >= VARINT_LIMIT {",
+        "        if shift > VARINT_LIMIT {",
+        "structure::the_wire_walk_matches_the_predecessors_golden",
+        "a varint at or past seventy bits of shift is refused, as the predecessor refuses it (SPEC-094 R4, A3)"
+      ],
+      [
+        "S09407-WEEKLY-SEVEN-DAYS",
+        "coordination",
+        "src/instruments.rs",
+        "pub const WEEKLY_DAYS: i64 = 7;",
+        "pub const WEEKLY_DAYS: i64 = 6;",
+        "instruments_step::a_weekly_instrument_runs_once_in_seven_study_days",
+        "a weekly instrument is due at seven study days (SPEC-094 R8, A13)"
+      ],
+      [
+        "S09408-WEEKLY-DUE-AT-SEVEN",
+        "coordination",
+        "src/instruments.rs",
+        "today.saturating_sub(stored.study_day) >= WEEKLY_DAYS",
+        "today.saturating_sub(stored.study_day) > WEEKLY_DAYS",
+        "instruments_step::a_weekly_instrument_runs_once_in_seven_study_days",
+        "a report exactly seven study days old is due, not one day later (SPEC-094 R8, A13)"
+      ],
+      [
+        "S09409-FORBIDDEN-TOKENS",
+        "kernel",
+        "src/conventions.rs",
+        "\"recognition\", \"recognize\"]",
+        "\"recognition\", \"recognise\"]",
+        "conventions::a_forbidden_direction_label_refuses_start",
+        "a direction label naming recall or recognition is refused at start in each spelling (SPEC-094 R2, A3)"
+      ],
+      [
+        "S09410-INSTRUMENT-LOCK-NO-WAIT",
+        "coordination",
+        "src/instruments.rs",
+        "let held = match self.lock.try_exclusive().await {",
+        "let held = match self.lock.exclusive().await.map(Some) {",
+        "instruments_step::a_run_while_one_runs_starts_nothing",
+        "a run requested while one runs returns without waiting for the holder (SPEC-094 R8, A15)"
+      ],
+      [
+        "S09411-INSTRUMENT-LOCK-EXPLICIT-RELEASE",
+        "coordination",
+        "src/instruments.rs",
+        "if let Err(error) = held.release() {",
+        "if let Err(error) = std::io::Result::Ok(drop(held)) {",
+        "instruments_step::a_run_while_one_runs_starts_nothing",
+        "the lock is released explicitly, since a lock closed alone can read as held (SPEC-094 R8, A15)"
+      ]
+    ],
+    "CARGO_KILLED_SCRIPT_MUTATIONS": [
+      [
+        "S09412-ONE-REPORT-PER-INSTRUMENT",
+        "migrations/009401_coordination_instrument_reports.sql",
+        "    instrument TEXT PRIMARY KEY,",
+        "    instrument TEXT NOT NULL,",
+        "coordination",
+        "instrument_reports::a_report_replaces_its_instruments_previous_one",
+        "the instrument's id is the table's key, so a second report replaces the first and the table never holds two (SPEC-094 R9, A16)"
+      ]
+    ]
+  }
+}
