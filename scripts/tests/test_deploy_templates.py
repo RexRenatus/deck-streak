@@ -94,7 +94,7 @@ ROLE_CREDENTIALS = {
         "SYNC_USERNAME",
         "SYNC_PASSWORD",
     ),
-    f"{JOB_TEMPLATE}@.service": ("SYNC_USERNAME", "SYNC_PASSWORD"),
+    f"{JOB_TEMPLATE}@.service": (),
     f"{ALERT_TEMPLATE}@.service": ("OWNER_USER_ID", "TELEGRAM_BOT_TOKEN"),
     SLO_SERVICE: (),
     WATCH_SERVICE: (),
@@ -750,3 +750,87 @@ class TheServicesRunTheirRoles(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TheSyncLoginIsTheSyncJobsAlone(unittest.TestCase):
+    """SPEC-062 R14: the sync login is loaded by the sync job alone."""
+
+    SYNC_LOGIN = ("anki-sync-username", "anki-sync-password")
+    CONF = "20-sync-login.conf"
+
+    def dropin_dir(self, root, ident):
+        return Path(root) / "deploy" / "systemd" / f"{JOB_TEMPLATE}@{ident}.service.d"
+
+    def test_the_sync_login_is_loaded_by_the_sync_job_alone(self):
+        template = SYSTEMD / f"{JOB_TEMPLATE}@.service"
+        text = template.read_text(encoding="utf-8")
+        for ident in self.SYNC_LOGIN:
+            self.assertNotIn(ident, text, "the template requests a sync credential")
+        self.assertNotIn("SYNC_", text)
+        # The sync instance's drop-in loads exactly the two, from the socket.
+        dropin = self.dropin_dir(REPO, "sync") / self.CONF
+        self.assertTrue(dropin.is_file(), f"{dropin.relative_to(REPO)} is missing")
+        loaded = re.findall(r"^LoadCredential=(.*)$", dropin.read_text(encoding="utf-8"), re.M)
+        self.assertEqual(sorted(loaded), sorted(f"{i}:{SOCKET}" for i in self.SYNC_LOGIN))
+        # No other instance has a drop-in that loads one.
+        others = [
+            d for d in SYSTEMD.glob(f"{JOB_TEMPLATE}@*.service.d") if d.name != dropin.parent.name
+        ]
+        self.assertEqual(others, [], "an instance other than sync ships a drop-in")
+        # The pair list holds them under the sync instance, and under no other unit.
+        code = subprocess.run(
+            [sys.executable, str(DEPLOY / "scripts" / "credential-pairs.py"), "--root", str(REPO)],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(code.returncode, 0, code.stderr)
+        pairs = json.loads(code.stdout)["pairs"]
+        sync_unit = f"{JOB_TEMPLATE}@sync.service"
+        sync_pairs = {p["credential"] for p in pairs if p["unit"] == sync_unit}
+        self.assertEqual(sync_pairs, set(self.SYNC_LOGIN))
+        self.assertFalse(
+            [p for p in pairs if p["unit"] == f"{JOB_TEMPLATE}@.service"], "the template asks"
+        )
+        for ident in ("liveness", "maintenance"):
+            unit = f"{JOB_TEMPLATE}@{ident}.service"
+            self.assertFalse([p for p in pairs if p["unit"] == unit], f"{ident} asks")
+        examined("pair(s) listed", pairs)
+
+    def test_the_effective_check_accepts_the_shipped_drop_in_and_no_other(self):
+        checker = DEPLOY / "scripts" / "effective-check.py"
+        contract = json.loads((DEPLOY / "rail-contract.json").read_text(encoding="utf-8"))
+        with tempfile.TemporaryDirectory() as scratch:
+            root = Path(scratch)
+            (root / "deploy").mkdir()
+            contract["values"] = contract["values"][:1]
+            (root / "deploy" / "rail-contract.json").write_text(json.dumps(contract))
+            source = self.dropin_dir(REPO, "sync") / self.CONF
+            self.assertTrue(source.is_file(), f"{source.relative_to(REPO)} is missing")
+            shipped = self.dropin_dir(root, "sync")
+            shipped.mkdir(parents=True)
+            (shipped / self.CONF).write_text(source.read_text(encoding="utf-8"))
+            unit = "[Unit]\nDescription=x\n\n[Service]\nType=oneshot\n"
+            head = f"/etc/systemd/system/{JOB_TEMPLATE}@.service"
+            here = f"/etc/systemd/system/{JOB_TEMPLATE}@sync.service.d/{self.CONF}"
+            elsewhere = f"/etc/systemd/system/{JOB_TEMPLATE}@sync.service.d/99-host.conf"
+            other = f"/etc/systemd/system/{JOB_TEMPLATE}@liveness.service.d/{self.CONF}"
+            body = source.read_text(encoding="utf-8")
+
+            def check(dropin_path):
+                out = f"# {head}\n{unit}\n# {dropin_path}\n{body}"
+                return subprocess.run(
+                    [sys.executable, str(checker), "--root", str(root)],
+                    input=out,
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+
+            accepted = check(here)
+            self.assertEqual(accepted.returncode, 0, accepted.stdout + accepted.stderr)
+            # A drop-in the release does not ship is refused, whatever it holds.
+            for path in (elsewhere, other):
+                refused = check(path)
+                self.assertEqual(refused.returncode, 1, path)
+                self.assertIn("a drop-in that is not the rail's", refused.stdout + refused.stderr)

@@ -112,8 +112,8 @@ R13. The install gives every unit that writes readings one common lock directory
     setting in the environment file, and present before those units start, since each of them
     refuses to start without it (SPEC-048's start check).
 R14. The sync login is loaded by the sync job alone. `deck-streak-job@.service` carries no
-    `LoadCredential=` for it; a drop-in `deploy/systemd/deck-streak-job@sync.service.d/` carries the
-    two lines, so the liveness and maintenance instances request no sync credential (ADR-061,
+    `LoadCredential=` for it; a drop-in in the `.service.d` directory of the `sync` instance, beside the templates in
+    `deploy/systemd/`, carries the two lines, so the liveness and maintenance instances request no sync credential (ADR-061,
     amended). `deploy/scripts/credential-pairs.py` lists the drop-in's pairs under the instance,
     and `deploy/scripts/effective-check.py` accepts a shipped drop-in beside the rail's own. The
     deploy installs the drop-in directories byte for byte with the unit templates.
@@ -189,7 +189,7 @@ this SPEC names each step only.
 | `docs/decisions/ADR-061-host-values-reach-units-as-drop-ins-and-caddy-as-a-rendered-file.md` | docs | changed: status accepted, if SPEC-061 has not accepted it first |
 | `docs/red-first/SPEC-062.md` | docs | added |
 | `deploy/systemd/deck-streak-job@.service` | deploy | changed: R14, the sync login lines removed |
-| `deploy/systemd/deck-streak-job@sync.service.d/20-sync-login.conf` | deploy | added: R14, the sync login |
+| `deploy/systemd/` drop-in `20-sync-login.conf` in the `sync` instance's `.service.d` directory | deploy | added: R14, the sync login |
 | `deploy/scripts/credential-pairs.py`, `deploy/scripts/effective-check.py` | deploy | changed: R14, instance drop-ins |
 | `scripts/tests/test_deploy_templates.py`, `scripts/tests/test_rail_contract.py` | repo | changed: A11 and the role table |
 | `docs/decisions/ADR-061-...md` | docs | one dated Amendment section (R14) |
