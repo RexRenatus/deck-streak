@@ -13,7 +13,7 @@ use deck_streak_coordination::instruments::{
 use deck_streak_ingest::lock::CollectionLock;
 use deck_streak_ingest::structure::{DeclaredField, StructureReads, Template};
 use deck_streak_insights::dark_fields::DarkFields;
-use deck_streak_insights::instrument::{Cadence, ReportEnvelope, failure};
+use deck_streak_insights::instrument::{Cadence, Instrument, ReportEnvelope, failure};
 use deck_streak_insights::registry::{Row, State};
 use deck_streak_kernel::{
     Clock, Db, ManualClock, Offload, OffloadWorkers, StudyDayRule, SystemClock, UtcMillis,
@@ -270,4 +270,52 @@ async fn dark_fields_is_passed_its_reads() {
     assert_eq!(dark[0]["note_type"], "Type A");
     assert_eq!(dark[0]["reviewed_notes"], 4);
     assert_eq!(envelope.report["notetypes_checked"], 1);
+}
+
+#[tokio::test]
+async fn a_frame_answers_the_id_and_version_of_its_instrument() {
+    let offload = Offload::new(OffloadWorkers::new(1).unwrap(), Arc::new(SystemClock));
+    let dark = Frame::new(
+        DarkFields,
+        Given(StructureReads::default()),
+        offload.clone(),
+    );
+    assert_eq!(InstrumentRunner::id(&dark), "dark_fields");
+    assert_eq!(InstrumentRunner::schema_version(&dark), 1);
+    let seven = Frame::new(Seven, Unit, offload);
+    assert_eq!(InstrumentRunner::id(&seven), "seven");
+    assert_eq!(InstrumentRunner::schema_version(&seven), 7);
+}
+
+/// An instrument whose id and version no shipped instrument shares, so a frame that answered a
+/// constant would show.
+struct Seven;
+
+impl Instrument for Seven {
+    type Reads = ();
+    type Report = serde_json::Value;
+
+    fn id(&self) -> &'static str {
+        "seven"
+    }
+    fn cadence(&self) -> Cadence {
+        Cadence::OnDemand
+    }
+    fn schema_version(&self) -> u32 {
+        7
+    }
+    fn build(&self, _reads: &()) -> serde_json::Value {
+        json!({})
+    }
+    fn failed_reads(&self, _report: &serde_json::Value) -> Vec<String> {
+        Vec::new()
+    }
+}
+
+struct Unit;
+
+impl ReadSource<()> for Unit {
+    fn read(&self) -> BoxFuture<'_, Result<(), String>> {
+        Box::pin(async { Ok(()) })
+    }
 }
