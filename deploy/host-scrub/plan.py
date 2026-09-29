@@ -145,10 +145,10 @@ def mounted(path: str) -> str | None:
 
 def mount_reason(path: str, point: str) -> str:
     """Why `path` may not be judged against the mount point `point`. A mount point shorter than the
-    path can only lie above it, and a mount above an item whose root is not `/`, or of a file system
-    mounted whole twice, shows another place of the disk there, so the item's own path is not where
-    it lives (R7). A point neither above nor under the item is a bind of a directory the item lies
-    in or holds."""
+    path can only lie above it, and a mount above an item whose root is not `/` shows another place of
+    the disk there, so the item's own path is not where it lives; a file system mounted whole twice
+    shows one tree at both points, so an item under either point lives at both (R7). A point neither
+    above nor under the item is a bind of a directory the item lies in or holds."""
     if not (within(path, point) or within(point, path)):
         return f"is or holds what the bind mount {point} shows"
     if len(point) < len(path):

@@ -1587,7 +1587,7 @@ class Axes(unittest.TestCase):
             self.assertIsNotNone(apply_tool.check_item(item, [], apply_tool.Runner()))
 
     def test_an_item_that_is_or_holds_a_mount_point_is_refused(self):
-        # A bind mount shares its device with the tree around it, so the device check cannot see
+        # A bind of a directory shares its device with the tree around it, so the device check cannot see
         # it. The mount table is read through one seam (`read_mountinfo`) and faked here.
         sys.path.insert(0, str(TOOLS))
         try:
