@@ -359,7 +359,8 @@ DeckStreak.
 | `crates/daemon/tests/lifecycle.rs` | `deck-streak-daemon` | changed: A55 |
 | `deploy/systemd/deck-streak-job@link_revocation.timer` | deploy | added: hourly at minute 41, on the plain job template |
 | `deploy/rail-contract.json` | deploy | changed: the timer's calendar |
-| `scripts/tests/test_deploy_templates.py` | repo | changed: A52 |
+| `scripts/tests/test_deploy_templates.py` | repo | changed: A52 and `WAIVED`'s entries for `deck-streak-job@link_revocation.timer` |
+| `scripts/tests/test_rail_contract.py` | repo | changed: `test_only_the_sync_job_reads_the_sync_login` admits `link_revocation`'s optional credential loads |
 | `crates/coordination/src/data_rights_registry.rs` | `deck-streak-coordination` | changed: identity's port registered |
 | `crates/coordination/tests/data_rights_symmetry.rs` | `deck-streak-coordination` | changed: seeded rows for the three tables |
 | `crates/api/src/linking_routes.rs` | `deck-streak-api` | added: the link, the flows, the passkeys, the identities |

@@ -196,7 +196,8 @@ and a job to their populations. The delivery hands back an empty JSON diff and s
 | `crates/daemon/tests/roles.rs` | `deck-streak-daemon` | changed: A19, A20 |
 | `deploy/systemd/deck-streak-job-send@image_art.timer` | deploy | added: hourly at minute 53 |
 | `deploy/rail-contract.json` | deploy | changed: the timer's calendar |
-| `scripts/tests/test_deploy_templates.py` | repo | changed: A23 |
+| `scripts/tests/test_deploy_templates.py` | repo | changed: A23 and `WAIVED`'s entries for `deck-streak-job-send@image_art.timer` |
+| `scripts/tests/test_rail_contract.py` | repo | changed: `test_only_the_sync_job_reads_the_sync_login` admits `image_art`'s optional credential loads |
 | `tools/parity-oracle/registry/spec_135.py` | parity oracle | added: the four goldens' adapters |
 | `tools/parity-oracle/goldens/art.constants.json` | parity oracle | added |
 | `tools/parity-oracle/goldens/art_generate.json` | parity oracle | added |
