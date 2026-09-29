@@ -225,8 +225,18 @@ PAGING_KEYS = {
 
 # The values a key of a paging unit that loads a credential may hold, at every assignment, its
 # drop-ins included (SPEC-066 R2). `Restart=` is `on-failure`, the one value the tree uses, so a
-# value that stops a oneshot unit loading, or ends a failure in a success, is refused.
-PAGING_VALUES = {("Service", "Restart"): ("on-failure",)}
+# value that stops a oneshot unit loading, or ends a failure in a success, is refused. The restart
+# budget (`StartLimitIntervalSec=`, `StartLimitBurst=`, `RestartSec=`) is the one a crash loop
+# reaches `failed` inside, and `After=` and `Wants=` are the one ordering and pull-in the units use,
+# so a unit that never stops paging, or never reaches a page, cannot be planted by a value.
+PAGING_VALUES = {
+    ("Service", "Restart"): ("on-failure",),
+    ("Unit", "StartLimitIntervalSec"): ("300",),
+    ("Unit", "StartLimitBurst"): ("5",),
+    ("Service", "RestartSec"): ("15",),
+    ("Unit", "After"): ("network-online.target",),
+    ("Unit", "Wants"): ("network-online.target",),
+}
 
 
 class Refused(AssertionError):
