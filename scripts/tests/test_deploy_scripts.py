@@ -126,6 +126,16 @@ fi
 echo "mv $*" >> "$STUB_LOG/moves.log"
 exec /usr/bin/mv "$@"
 """
+# A `mv` that fails when it renames a `.previous` file onto the site block: a restore that goes wrong.
+MOVE_ONTO_BLOCK_FAILS = r"""#!/bin/bash
+src=${@: -2:1}; dst=${@: -1}
+if [ "$dst" = "$(dirname "$DECKSTREAK_DEPLOY_CADDYFILE")/deck-streak.caddy" ] && [ "${src%.previous}" != "$src" ]; then
+    echo "mv $* refused-rename" >> "$STUB_LOG/moves.log"
+    exit 1
+fi
+echo "mv $*" >> "$STUB_LOG/moves.log"
+exec /usr/bin/mv "$@"
+"""
 HOST = r"""#!/bin/bash
 echo "host" >> "$STUB_LOG/host.log"
 exec "$@"
@@ -778,6 +788,18 @@ class TheCaddyInstall(Case):
         done = w.run(DEPLOY, "caddy-install", "v1.0.0", **self.config())
         self.assertNotEqual(done.returncode, 0)
         self.assertIn("refused-rename", w.text("moves.log"), "the restore rename was refused")
+        self.assertFalse(self.imports_a_missing_block(), "the live Caddyfile imports a block")
+
+    def test_a_removal_whose_block_restore_fails_never_imports_a_missing_block(self):
+        w = self.world
+        self.installed()
+        (w.log / "caddy-reload-fails").write_text("1")
+        w.script("mv", MOVE_ONTO_BLOCK_FAILS)
+        done = w.run(ROLLBACK, "caddy-remove", **self.config())
+        self.assertNotEqual(done.returncode, 0)
+        self.assertIn(
+            "refused-rename", w.text("moves.log"), "the block's restore rename was refused"
+        )
         self.assertFalse(self.imports_a_missing_block(), "the live Caddyfile imports a block")
 
     def test_the_caddy_calls_name_the_caddyfile_adapter_for_the_candidate_copy(self):

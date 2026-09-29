@@ -300,8 +300,8 @@ cp -p "$file" "$kept"
 mv -T "$copy" "$file"
 [ -f "$block" ] && { had=$block.previous; mv -T "$block" "$had"; }
 if ! caddy reload --config "$file"; then
-    [ -n "$had" ] && mv -T "$had" "$block"
     mv -T "$kept" "$file"
+    [ -n "$had" ] && mv -T "$had" "$block"
     echo "deploy: the Caddy reload failed; the previous site file and Caddyfile were restored" >&2
     caddy reload --config "$file" || echo "deploy: the restoring reload also failed" >&2
     exit 1
