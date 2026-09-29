@@ -74,6 +74,15 @@
         "a report exactly seven study days old is due, not one day later (SPEC-094 R8, A13)"
       ],
       [
+        "S09412-CONVENTIONS-PATH-STATES-ITS-SHAPE",
+        "kernel",
+        "src/conventions.rs",
+        "const SHAPE: &'static str = \"an absolute file path\";",
+        "const SHAPE: &'static str = \"an absolute file path PLANTED\";",
+        "conventions::a_malformed_conventions_file_refuses_start",
+        "a refused conventions path names the shape the setting accepts, word for word (SPEC-192 R3)"
+      ],
+      [
         "S09409-FORBIDDEN-TOKENS",
         "kernel",
         "src/conventions.rs",
