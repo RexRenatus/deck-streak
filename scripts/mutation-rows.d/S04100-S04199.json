@@ -369,6 +369,51 @@
         "            let path = false && before.ends_with(\"::\") && !after.starts_with(\"::\");",
         "one_router::no_delivery_goes_around_the_port",
         "a path to the command handler's reply, Self::ask_erase among them, is read (SPEC-041 A15); the census is test code, which cargo-mutants never mutates, and the mutant lets the planted prompt through"
+      ],
+      [
+        "S04143-THE-WIDENED-SEND-AND-DELIVERY-METHODS-ARE-HELD",
+        "notifications",
+        "tests/one_router.rs",
+        "    SEND_METHODS.into_iter().chain(DELIVERY_METHODS)",
+        "    SEND_METHODS.into_iter().take(22).chain(DELIVERY_METHODS.into_iter().take(12))",
+        "one_router::no_delivery_goes_around_the_port",
+        "the rich message, live photo, ephemeral edit, stopped poll and live location and Mini App query methods the pinned client added are held with the earlier ones (SPEC-041 A15); the census is test code, which cargo-mutants never mutates, and the mutant drops each widened method from its list, letting the planted rich message, live photo and ephemeral edit through"
+      ],
+      [
+        "S04144-THE-CENSUS-VERSION-IS-THE-LOCKED-VERSION",
+        "notifications",
+        "tests/one_router.rs",
+        "const CLIENT_VERSION: &str = \"0.52.1\";",
+        "const CLIENT_VERSION: &str = \"0.52.0\";",
+        "one_router::the_census_classifies_every_method_of_the_pinned_client",
+        "the version the method list was read from is held equal to the version the lock pins, so a bump of the client reds until the list is derived again (SPEC-041 A15); the census is test code, which cargo-mutants never mutates, and the mutant names a version the lock does not pin"
+      ],
+      [
+        "S04145-EVERY-CLIENT-METHOD-IS-CLASSIFIED",
+        "notifications",
+        "tests/one_router.rs",
+        "            (\"NOT_DELIVERIES\", &NOT_DELIVERIES),",
+        "            (\"NOT_DELIVERIES\", &NOT_DELIVERIES[1..]),",
+        "one_router::the_census_classifies_every_method_of_the_pinned_client",
+        "each method of the pinned client is a send, a delivery or not a delivery, so a method no class holds is named and refused (SPEC-041 A15); the census is test code, which cargo-mutants never mutates, and the mutant leaves one method unclassified"
+      ],
+      [
+        "S04146-NO-CLIENT-METHOD-IS-IN-TWO-CLASSES",
+        "notifications",
+        "tests/one_router.rs",
+        "            (\"SEND_METHODS\", &SEND_METHODS),",
+        "            (\"SEND_METHODS\", &SEND_METHODS),\n            (\"SEND_AGAIN\", &SEND_METHODS),",
+        "one_router::the_census_classifies_every_method_of_the_pinned_client",
+        "the send, delivery and not-a-delivery classes are pairwise disjoint (SPEC-041 A15); the census is test code, which cargo-mutants never mutates, and the mutant holds every send method in a second class"
+      ],
+      [
+        "S04147-NO-CLASSIFIED-NAME-IS-UNKNOWN-TO-THE-CLIENT",
+        "notifications",
+        "tests/one_router.rs",
+        "            if !client.contains(name) {",
+        "            if client.contains(name) {",
+        "one_router::the_census_classifies_every_method_of_the_pinned_client",
+        "a name a class holds that the pinned client does not expose is named and refused, so the classes cannot keep a method the client dropped (SPEC-041 A15); the census is test code, which cargo-mutants never mutates, and the mutant reads the check the wrong way round"
       ]
     ],
     "CARGO_KILLED_SCRIPT_MUTATIONS": [
