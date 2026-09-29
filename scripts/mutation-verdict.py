@@ -1233,8 +1233,7 @@ def python_reports(verdict: Verdict, plan: dict, directory: str | None) -> list[
     whole = []
     for shard in range(planned):
         where = f"mutation-python-shard-{shard}"
-        path = pathlib.Path(directory or "") / where / "report.json"
-        if not directory or not path.is_file():
+        if not directory or not (path := pathlib.Path(directory) / where / "report.json").is_file():
             verdict.void(f"{where}: no report")
             continue
         try:
@@ -2300,7 +2299,7 @@ def python_reached(root: pathlib.Path, record: Record, file: str) -> list[str]:
     mapped = read_json(str(root / PYTHON_POPULATION))
     entry = mapped.get(file) if isinstance(mapped, dict) else None
     modules = entry.get("modules") if isinstance(entry, dict) else None
-    if not isinstance(modules, list) or row.killer.split(".", 1)[0] not in modules:
+    if not isinstance(modules, list) or row.killer.partition(".")[0] not in modules:
         return [f"reached_by: {row.killer} is no test of a module {PYTHON_POPULATION} gives {file}"]
     return []
 
@@ -2392,7 +2391,7 @@ def table(args: argparse.Namespace) -> int:
     if scope in (None, MINIAPP):
         read += table_web(root, reports, records, tallies[MINIAPP], fail, void)
     if scope in (None, PYTHON_CLASS):
-        read += table_python(root, reports, tallies, fail, void, scope is not None)
+        read += table_python(root, reports, tallies, fail, void, bool(scope))
     if scope is not None and scope not in tallies:
         void(f"no listing or report holds a mutant of {scope}")
     if voids:

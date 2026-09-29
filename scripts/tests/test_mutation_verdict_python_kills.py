@@ -10,6 +10,7 @@ import io
 import json
 import tempfile
 import unittest
+from unittest import mock
 from argparse import Namespace
 from collections import defaultdict
 from pathlib import Path
@@ -353,6 +354,25 @@ class TheRecordsAreHeldToTheirPopulation(unittest.TestCase):
             V.python_reached(root, record, ""),
             [f"reached_by: {REACHED} is no test of a module {V.PYTHON_POPULATION} gives "],
         )
+
+    def test_the_killer_is_resolved_from_a_row_of_the_scripts_table_naming_the_file(self):
+        root = tree(self)
+        record = V.Record("python.json", 1, a_record("m", "a"))
+        seen = []
+        real = V.mutation_rows.resolve_killer
+
+        def spy(where, row):
+            seen.append(row)
+            return real(where, row)
+
+        with mock.patch.object(V.mutation_rows, "resolve_killer", spy):
+            self.assertEqual(V.python_reached(root, record, SCRIPT), [])
+        (row,) = seen
+        self.assertEqual(
+            (row.table, row.target, row.find, row.replace, row.description, row.crate),
+            ("SCRIPT_MUTATIONS", SCRIPT, "", "", "", None),
+        )
+        self.assertEqual(row.killer, REACHED)
 
     def test_a_record_with_no_file_still_has_its_reached_by_read(self):
         root = tree(self)
