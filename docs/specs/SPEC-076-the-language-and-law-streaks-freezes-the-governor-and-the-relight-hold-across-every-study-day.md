@@ -292,7 +292,6 @@ accessibility packs stay enforced, and no row is deferred for this delivery.
 | `crates/coordination/src/recompute/streaks.rs` | `deck-streak-coordination` | added: the streak step of the fold (both tracks, strength, the governor, the relight) |
 | `crates/coordination/src/recompute/mod.rs` | `deck-streak-coordination` | changed: registers the streak step in phase 3 of SPEC-071's fold |
 | `crates/coordination/src/freeze.rs` | `deck-streak-coordination` | added: the one freeze use case other contexts' use cases call |
-| `crates/coordination/src/lapse.rs` | `deck-streak-coordination` | changed: it passes the stored anchor to the slice |
 | `crates/coordination/src/streak_views.rs` | `deck-streak-coordination` | added: the streak and governor views |
 | `crates/coordination/src/lib.rs` | `deck-streak-coordination` | changed: the modules above |
 | `crates/coordination/src/data_rights_registry.rs` | `deck-streak-coordination` | changed: the streaks port joins the registry |
@@ -309,8 +308,20 @@ accessibility packs stay enforced, and no row is deferred for this delivery.
 | `crates/daemon/src/wiring.rs` | `deck-streak-daemon` | changed: the streaks store and the freeze port joined to coordination |
 | `web/app/src/routes/streak/+page.svelte` | miniapp | added: the streak screen |
 | `web/app/src/lib/streak/StreakScreen.svelte` | miniapp | added: both tracks, the calendar and the at-stake line |
-| `web/app/src/lib/streak/GovernorChip.svelte` | miniapp | added: the verdict and why |
 | `web/app/src/lib/streak/streak.ts` | miniapp | added: the two routes' client |
+| `crates/api/src/lib.rs` | `deck-streak-api` | changed: the streak routes module joins the crate |
+| `crates/bot/src/lib.rs` | `deck-streak-bot` | changed: the streak commands module joins the crate |
+| `crates/bot/tests/commands.rs` | `deck-streak-bot` | changed: the command table names the streak command |
+| `crates/bot/tests/messages/help.msg.json` | `deck-streak-bot` | changed: the help message lists the streak command |
+| `crates/bot/tests/messages/start.msg.json` | `deck-streak-bot` | changed: the start message lists the streak command |
+| `crates/coordination/src/relight.rs` | `deck-streak-coordination` | added: the relight's grant and its celebration key |
+| `crates/coordination/src/sync_cycle.rs` | `deck-streak-coordination` | changed: the celebration is routed after the fold's commit |
+| `crates/progression/src/ledger.rs` | `deck-streak-progression` | changed: `grant_on` writes a grant on the caller's connection |
+| `crates/streaks/src/replay.rs` | `deck-streak-streaks` | added: the replay of the streaks and the governor over the study days |
+| `web/app/messages/en.json` | miniapp | changed: the streak screen's messages |
+| `web/app/src/lib/api.ts` | miniapp | changed: the client for the two routes |
+| `web/app/src/lib/startapp.ts` | miniapp | changed: the streak screen joins the start-parameter routes |
+| `web/app/src/lib/startapp.test.ts` | miniapp | changed: the start-parameter test names the streak screen |
 | `web/app/src/lib/streak/streak-screen.test.ts` | miniapp | added: A22 |
 | `web/app/src/lib/routes.ts` | miniapp | changed: the streak screen's route joins `ROUTES` |
 | `tools/parity-oracle/registry/spec_076.py` | repo | added: this SPEC's registrations (SPEC-029's registry) |

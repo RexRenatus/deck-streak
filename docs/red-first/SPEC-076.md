@@ -85,3 +85,9 @@ A25: green at 5ac898b6
   install, and its green line is the test passing at the head. A23's fence carried no acceptance
   tag when the replay ran, so the replay skipped it; the tag is added in this delivery and A23's
   red line was run by hand at 46b3a57d.
+- **Test edits after the red commit.** Commit 14081b2 changes the two anchor assertions of
+  `one_episode_keeps_its_anchor_across_recomputes` in `crates/coordination/tests/streak_fold.rs`
+  from `D0 - 120` to `D0 - 121`, the same corrected constant as A14's. Commit 93f4ee6 changes the
+  menu assertion in `crates/bot/tests/commands.rs` from six commands to seven and the expected
+  help and start messages under `crates/bot/tests/messages/`, because the streak command joins the
+  menu; those files are the streak command's own surface.
