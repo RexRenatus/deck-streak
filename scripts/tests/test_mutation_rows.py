@@ -72,8 +72,8 @@ class Double(unittest.TestCase):
 DESCRIPTION = "doubling doubles, not triples"
 
 
-def script_row(identifier, find, replace, killer):
-    return [identifier, TARGET, find, replace, DESCRIPTION, killer]
+def script_row(identifier, find, replace, killer, target=TARGET):
+    return [identifier, target, find, replace, DESCRIPTION, killer]
 
 
 def git(root, *args):
@@ -89,7 +89,7 @@ def sha256(path):
 class Fixture:
     """A git repository in a temporary directory, removed when the test ends."""
 
-    def __init__(self, test, rows=(), cargo=False):
+    def __init__(self, test, rows=(), cargo=False, files=None):
         scratch = tempfile.TemporaryDirectory()
         test.addCleanup(scratch.cleanup)
         self.root = Path(scratch.name)
@@ -100,6 +100,8 @@ class Fixture:
         self.write(".gitignore", "observed.log\ntarget/\n")
         if cargo:
             self.crate()
+        for relative, text in (files or {}).items():
+            self.write(relative, text)
         self.rows(rows)
         git(self.root, "init", "-q", "-b", "dev")
         git(self.root, "config", "user.email", "fixture@example.invalid")
@@ -430,6 +432,135 @@ class TheRunnerProvesEverySelectedRow(unittest.TestCase):
             self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
             self.assertEqual(verdicts(done), both, " ".join(selectors))
             self.assertRegex(done.stdout, r"(?m)^examined 2\b", " ".join(selectors))
+
+
+#: A bash script that uses an array, which `sh -n` refuses and `bash -n` accepts, and prints 3.
+BASH_TARGET = "scripts/fixtool.sh"
+BASH_TEXT = '#!/usr/bin/env bash\na=(1 2)\necho $(( ${a[0]} + ${a[1]} ))\n'
+#: The same, kept by its shebang alone: no `.sh` or `.bash` extension.
+BASH_SHEBANG_TARGET = "scripts/fixtool"
+#: A POSIX script that prints 3.
+SH_TARGET = "scripts/fixposix.sh"
+SH_TEXT = "#!/bin/sh\necho $((1 + 2))\n"
+#: Opens an `if` no `fi` closes, so neither shell reads the file.
+UNPARSED = ("echo $((", "if echo $((")
+TOOL_KILLERS = '''"""A fixture's shell killers; each appends what it observed to observed.log."""
+
+import subprocess
+import unittest
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+
+
+def observe(value):
+    with (ROOT / "observed.log").open("a", encoding="utf-8") as log:
+        log.write(f"{value}\\n")
+
+
+def printed(shell, script):
+    done = subprocess.run(
+        [shell, str(ROOT / script)], capture_output=True, text=True, check=False
+    )
+    value = done.stdout.strip() or "nothing"
+    observe(value)
+    return value
+
+
+class Tool(unittest.TestCase):
+    def test_bash_sums_to_three(self):
+        self.assertEqual(printed("bash", "scripts/fixtool.sh"), "3")
+
+    def test_bash_shebang_sums_to_three(self):
+        self.assertEqual(printed("bash", "scripts/fixtool"), "3")
+
+    def test_sh_sums_to_three(self):
+        self.assertEqual(printed("sh", "scripts/fixposix.sh"), "3")
+'''
+TOOL_FILES = {
+    BASH_TARGET: BASH_TEXT,
+    BASH_SHEBANG_TARGET: BASH_TEXT,
+    SH_TARGET: SH_TEXT,
+    "scripts/tests/test_fixtool.py": TOOL_KILLERS,
+}
+
+
+class TheRunnerParseChecksAShellMutant(unittest.TestCase):
+    """SPEC-039 A41: a shell target's mutant is parse-checked, `bash -n` for a bash script and
+    `sh -n` otherwise; one that fails is VOID, never a kill."""
+
+    def prove(self, row):
+        fixture = Fixture(self, [("SCRIPT_MUTATIONS", row)], files=TOOL_FILES)
+        target = fixture.root / row[1]
+        before = target.read_bytes()
+        done = fixture.run("prove", "--all")
+        self.assertEqual(target.read_bytes(), before, "the target was not restored")
+        return fixture, done
+
+    def test_the_fixture_construct_parses_under_bash_and_not_under_sh(self):
+        script = Path(tempfile.mkdtemp()) / "array.sh"
+        self.addCleanup(shutil.rmtree, script.parent)
+        script.write_text(BASH_TEXT, encoding="utf-8")
+        bash = subprocess.run(["bash", "-n", str(script)], capture_output=True, text=True)
+        posix = subprocess.run(["sh", "-n", str(script)], capture_output=True, text=True)
+        self.assertEqual(bash.returncode, 0, bash.stderr)
+        self.assertNotEqual(posix.returncode, 0, "sh reads the array, so the fixture proves nothing")
+
+    def test_a_bash_mutant_that_does_not_parse_is_void_not_a_kill(self):
+        row = script_row(
+            "S00020-BASH-UNPARSED", *UNPARSED, "test_fixtool.Tool.test_bash_sums_to_three",
+            target=BASH_TARGET,
+        )
+        fixture, done = self.prove(row)
+        self.assertEqual(done.returncode, 3, done.stdout + done.stderr)
+        self.assertEqual(verdicts(done), {"S00020-BASH-UNPARSED": "VOID"})
+        self.assertIn("does not parse", done.stdout)
+        self.assertIn("bash", done.stdout)
+        # Only the control ran: the mutant never reached its killer.
+        self.assertEqual(fixture.observed(), ["3"])
+
+    def test_a_bash_mutant_that_parses_and_is_caught_is_killed(self):
+        row = script_row(
+            "S00021-BASH-CAUGHT", "+ ${a[1]}", "* ${a[1]}",
+            "test_fixtool.Tool.test_bash_sums_to_three", target=BASH_TARGET,
+        )
+        fixture, done = self.prove(row)
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        self.assertEqual(verdicts(done), {"S00021-BASH-CAUGHT": "KILLED"})
+        # The control read 1 + 2, and the mutant read 1 * 2: both ran.
+        self.assertEqual(fixture.observed(), ["3", "2"])
+
+    def test_a_shebang_alone_makes_a_target_a_shell_script(self):
+        row = script_row(
+            "S00022-SHEBANG-UNPARSED", *UNPARSED,
+            "test_fixtool.Tool.test_bash_shebang_sums_to_three", target=BASH_SHEBANG_TARGET,
+        )
+        fixture, done = self.prove(row)
+        self.assertEqual(done.returncode, 3, done.stdout + done.stderr)
+        self.assertEqual(verdicts(done), {"S00022-SHEBANG-UNPARSED": "VOID"})
+        self.assertIn("does not parse", done.stdout)
+        self.assertEqual(fixture.observed(), ["3"])
+
+    def test_a_posix_sh_mutant_that_does_not_parse_is_void_not_a_kill(self):
+        row = script_row(
+            "S00023-SH-UNPARSED", *UNPARSED, "test_fixtool.Tool.test_sh_sums_to_three",
+            target=SH_TARGET,
+        )
+        fixture, done = self.prove(row)
+        self.assertEqual(done.returncode, 3, done.stdout + done.stderr)
+        self.assertEqual(verdicts(done), {"S00023-SH-UNPARSED": "VOID"})
+        self.assertIn("does not parse", done.stdout)
+        self.assertEqual(fixture.observed(), ["3"])
+
+    def test_a_posix_sh_mutant_that_parses_and_is_caught_is_killed(self):
+        row = script_row(
+            "S00024-SH-CAUGHT", "1 + 2", "1 * 2", "test_fixtool.Tool.test_sh_sums_to_three",
+            target=SH_TARGET,
+        )
+        fixture, done = self.prove(row)
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        self.assertEqual(verdicts(done), {"S00024-SH-CAUGHT": "KILLED"})
+        self.assertEqual(fixture.observed(), ["3", "2"])
 
 
 if __name__ == "__main__":
