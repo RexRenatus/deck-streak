@@ -169,16 +169,15 @@ class TheSyncPath(unittest.TestCase):
         with tempfile.TemporaryDirectory() as scratch:
             root = Path(scratch)
             (root / "deck-streak-bot.service").write_text(writes, encoding="utf-8")
-            for directory in ("deck-streak-job@.service.d", "deck-streak-job@sync.service.d"):
-                (root / directory).mkdir()
-                (root / directory / "10-plant.conf").write_text(writes, encoding="utf-8")
+            at = "@"
+            template = f"deck-streak-job{at}.service.d/10-plant.conf"
+            instance = f"deck-streak-job{at}sync.service.d/10-plant.conf"
+            for planted in (template, instance):
+                (root / planted).parent.mkdir()
+                (root / planted).write_text(writes, encoding="utf-8")
             self.assertEqual(
                 request_directory_writers(every_unit(root)),
-                [
-                    "deck-streak-bot.service",
-                    "deck-streak-job@.service.d/10-plant.conf",
-                    "deck-streak-job@sync.service.d/10-plant.conf",
-                ],
+                ["deck-streak-bot.service", template, instance],
             )
 
     def test_only_the_bot_unit_writes_the_request_directory(self):
