@@ -90,6 +90,24 @@
     ".min_by_key(|size| u64::from(size.width) * u64::from(size.height))",
     "photo_transport::push_photo_is_one_send_photo_to_the_owner",
     "the file id kept is the largest size Telegram answered, wherever it sits in the list (SPEC-132)"
+   ],
+   [
+    "S13211-PHOTO-FAILURE-TRIPS",
+    "notifications",
+    "src/router.rs",
+    "PhotoPushed::Failed => {\n                self.trip(now);\n                ledger::release(&mut write, claim).await?;",
+    "PhotoPushed::Failed => {\n                ledger::release(&mut write, claim).await?;",
+    "photo_render::a_failed_photo_opens_the_breaker_for_the_next_photo",
+    "a failed photo opens the outage breaker, so the next photo inside the cooldown is refused before any call (SPEC-132)"
+   ],
+   [
+    "S13212-CAPTION-UTF16",
+    "notifications",
+    "src/photo.rs",
+    "if caption.encode_utf16().count() > MAX_CAPTION_UTF16 {",
+    "if caption.chars().count() > MAX_CAPTION_UTF16 {",
+    "photo_render::a_caption_is_counted_in_utf16_units",
+    "a caption is counted in UTF-16 units as Telegram counts it, so 513 characters outside the BMP are refused (SPEC-132)"
    ]
   ]
  }
