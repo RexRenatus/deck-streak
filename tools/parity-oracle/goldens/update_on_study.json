@@ -1,0 +1,1499 @@
+{
+  "adapter": "updating",
+  "cases": [
+    {
+      "class": "bootstrap",
+      "input": {
+        "observed_streak": 5,
+        "skip_days": [],
+        "state": {
+          "comeback_armed": false,
+          "current": 0,
+          "freezes": 1,
+          "last_study_day": null,
+          "longest": 0
+        },
+        "today": 20000
+      },
+      "output": {
+        "broke_today": false,
+        "comeback_armed": false,
+        "current": 5,
+        "freezes": 1,
+        "froze_today": false,
+        "heat": "\ud83d\udd25",
+        "last_study_day": 20000,
+        "longest": 5
+      }
+    },
+    {
+      "class": "bootstrap-with-no-history",
+      "input": {
+        "observed_streak": 0,
+        "skip_days": [],
+        "state": {
+          "comeback_armed": false,
+          "current": 0,
+          "freezes": 1,
+          "last_study_day": null,
+          "longest": 0
+        },
+        "today": 20000
+      },
+      "output": {
+        "broke_today": false,
+        "comeback_armed": false,
+        "current": 1,
+        "freezes": 1,
+        "froze_today": false,
+        "heat": "\ud83d\udd25",
+        "last_study_day": 20000,
+        "longest": 1
+      }
+    },
+    {
+      "class": "same-day",
+      "input": {
+        "observed_streak": 1,
+        "skip_days": [],
+        "state": {
+          "comeback_armed": false,
+          "current": 4,
+          "freezes": 2,
+          "last_study_day": 20000,
+          "longest": 9
+        },
+        "today": 20000
+      },
+      "output": {
+        "broke_today": false,
+        "comeback_armed": false,
+        "current": 4,
+        "freezes": 2,
+        "froze_today": false,
+        "heat": "\ud83d\udd25",
+        "last_study_day": 20000,
+        "longest": 9
+      }
+    },
+    {
+      "class": "continue",
+      "input": {
+        "observed_streak": 1,
+        "skip_days": [],
+        "state": {
+          "comeback_armed": false,
+          "current": 4,
+          "freezes": 2,
+          "last_study_day": 19999,
+          "longest": 9
+        },
+        "today": 20000
+      },
+      "output": {
+        "broke_today": false,
+        "comeback_armed": false,
+        "current": 5,
+        "freezes": 2,
+        "froze_today": false,
+        "heat": "\ud83d\udd25",
+        "last_study_day": 20000,
+        "longest": 9
+      }
+    },
+    {
+      "class": "continue-across-a-skip",
+      "input": {
+        "observed_streak": 1,
+        "skip_days": [
+          19999
+        ],
+        "state": {
+          "comeback_armed": false,
+          "current": 4,
+          "freezes": 2,
+          "last_study_day": 19998,
+          "longest": 9
+        },
+        "today": 20000
+      },
+      "output": {
+        "broke_today": false,
+        "comeback_armed": false,
+        "current": 5,
+        "freezes": 2,
+        "froze_today": false,
+        "heat": "\ud83d\udd25",
+        "last_study_day": 20000,
+        "longest": 9
+      }
+    },
+    {
+      "class": "freeze",
+      "input": {
+        "observed_streak": 1,
+        "skip_days": [],
+        "state": {
+          "comeback_armed": false,
+          "current": 4,
+          "freezes": 2,
+          "last_study_day": 19998,
+          "longest": 9
+        },
+        "today": 20000
+      },
+      "output": {
+        "broke_today": false,
+        "comeback_armed": false,
+        "current": 5,
+        "freezes": 1,
+        "froze_today": true,
+        "heat": "\ud83d\udd25",
+        "last_study_day": 20000,
+        "longest": 9
+      }
+    },
+    {
+      "class": "freeze-across-a-skip",
+      "input": {
+        "observed_streak": 1,
+        "skip_days": [
+          19998
+        ],
+        "state": {
+          "comeback_armed": false,
+          "current": 4,
+          "freezes": 1,
+          "last_study_day": 19997,
+          "longest": 9
+        },
+        "today": 20000
+      },
+      "output": {
+        "broke_today": false,
+        "comeback_armed": false,
+        "current": 5,
+        "freezes": 0,
+        "froze_today": true,
+        "heat": "\ud83d\udd25",
+        "last_study_day": 20000,
+        "longest": 9
+      }
+    },
+    {
+      "class": "break-with-no-freeze",
+      "input": {
+        "observed_streak": 1,
+        "skip_days": [],
+        "state": {
+          "comeback_armed": false,
+          "current": 4,
+          "freezes": 0,
+          "last_study_day": 19998,
+          "longest": 9
+        },
+        "today": 20000
+      },
+      "output": {
+        "broke_today": true,
+        "comeback_armed": false,
+        "current": 1,
+        "freezes": 0,
+        "froze_today": false,
+        "heat": "\ud83d\udd25",
+        "last_study_day": 20000,
+        "longest": 9
+      }
+    },
+    {
+      "class": "break-two-misses",
+      "input": {
+        "observed_streak": 1,
+        "skip_days": [],
+        "state": {
+          "comeback_armed": false,
+          "current": 4,
+          "freezes": 3,
+          "last_study_day": 19997,
+          "longest": 9
+        },
+        "today": 20000
+      },
+      "output": {
+        "broke_today": true,
+        "comeback_armed": false,
+        "current": 1,
+        "freezes": 3,
+        "froze_today": false,
+        "heat": "\ud83d\udd25",
+        "last_study_day": 20000,
+        "longest": 9
+      }
+    },
+    {
+      "class": "break-two-misses-one-skip-and-no-freeze",
+      "input": {
+        "observed_streak": 1,
+        "skip_days": [
+          19998
+        ],
+        "state": {
+          "comeback_armed": false,
+          "current": 4,
+          "freezes": 0,
+          "last_study_day": 19996,
+          "longest": 9
+        },
+        "today": 20000
+      },
+      "output": {
+        "broke_today": true,
+        "comeback_armed": false,
+        "current": 1,
+        "freezes": 0,
+        "froze_today": false,
+        "heat": "\ud83d\udd25",
+        "last_study_day": 20000,
+        "longest": 9
+      }
+    },
+    {
+      "class": "break-of-seven-arms-the-comeback",
+      "input": {
+        "observed_streak": 1,
+        "skip_days": [],
+        "state": {
+          "comeback_armed": false,
+          "current": 7,
+          "freezes": 0,
+          "last_study_day": 19997,
+          "longest": 7
+        },
+        "today": 20000
+      },
+      "output": {
+        "broke_today": true,
+        "comeback_armed": true,
+        "current": 1,
+        "freezes": 0,
+        "froze_today": false,
+        "heat": "\ud83d\udd25",
+        "last_study_day": 20000,
+        "longest": 7
+      }
+    },
+    {
+      "class": "break-of-six-does-not-arm",
+      "input": {
+        "observed_streak": 1,
+        "skip_days": [],
+        "state": {
+          "comeback_armed": false,
+          "current": 6,
+          "freezes": 0,
+          "last_study_day": 19997,
+          "longest": 9
+        },
+        "today": 20000
+      },
+      "output": {
+        "broke_today": true,
+        "comeback_armed": false,
+        "current": 1,
+        "freezes": 0,
+        "froze_today": false,
+        "heat": "\ud83d\udd25",
+        "last_study_day": 20000,
+        "longest": 9
+      }
+    },
+    {
+      "class": "break-already-recorded",
+      "input": {
+        "observed_streak": 1,
+        "skip_days": [],
+        "state": {
+          "comeback_armed": false,
+          "current": 0,
+          "freezes": 1,
+          "last_study_day": 19995,
+          "longest": 12
+        },
+        "today": 20000
+      },
+      "output": {
+        "broke_today": false,
+        "comeback_armed": false,
+        "current": 1,
+        "freezes": 1,
+        "froze_today": false,
+        "heat": "\ud83d\udd25",
+        "last_study_day": 20000,
+        "longest": 12
+      }
+    },
+    {
+      "class": "earn-at-seven",
+      "input": {
+        "observed_streak": 1,
+        "skip_days": [],
+        "state": {
+          "comeback_armed": false,
+          "current": 6,
+          "freezes": 1,
+          "last_study_day": 19999,
+          "longest": 6
+        },
+        "today": 20000
+      },
+      "output": {
+        "broke_today": false,
+        "comeback_armed": false,
+        "current": 7,
+        "freezes": 2,
+        "froze_today": false,
+        "heat": "\ud83d\udd25\ud83d\udd25",
+        "last_study_day": 20000,
+        "longest": 7
+      }
+    },
+    {
+      "class": "earn-at-seven-capped",
+      "input": {
+        "observed_streak": 1,
+        "skip_days": [],
+        "state": {
+          "comeback_armed": false,
+          "current": 6,
+          "freezes": 3,
+          "last_study_day": 19999,
+          "longest": 6
+        },
+        "today": 20000
+      },
+      "output": {
+        "broke_today": false,
+        "comeback_armed": false,
+        "current": 7,
+        "freezes": 3,
+        "froze_today": false,
+        "heat": "\ud83d\udd25\ud83d\udd25",
+        "last_study_day": 20000,
+        "longest": 7
+      }
+    },
+    {
+      "class": "earn-at-fourteen",
+      "input": {
+        "observed_streak": 1,
+        "skip_days": [],
+        "state": {
+          "comeback_armed": false,
+          "current": 13,
+          "freezes": 0,
+          "last_study_day": 19999,
+          "longest": 13
+        },
+        "today": 20000
+      },
+      "output": {
+        "broke_today": false,
+        "comeback_armed": false,
+        "current": 14,
+        "freezes": 1,
+        "froze_today": false,
+        "heat": "\ud83d\udd25\ud83d\udd25",
+        "last_study_day": 20000,
+        "longest": 14
+      }
+    },
+    {
+      "class": "freeze-then-earn",
+      "input": {
+        "observed_streak": 1,
+        "skip_days": [],
+        "state": {
+          "comeback_armed": false,
+          "current": 6,
+          "freezes": 1,
+          "last_study_day": 19998,
+          "longest": 6
+        },
+        "today": 20000
+      },
+      "output": {
+        "broke_today": false,
+        "comeback_armed": false,
+        "current": 7,
+        "freezes": 1,
+        "froze_today": true,
+        "heat": "\ud83d\udd25\ud83d\udd25",
+        "last_study_day": 20000,
+        "longest": 7
+      }
+    },
+    {
+      "class": "skip-outside-the-gap",
+      "input": {
+        "observed_streak": 1,
+        "skip_days": [
+          19994,
+          19997,
+          20000
+        ],
+        "state": {
+          "comeback_armed": false,
+          "current": 4,
+          "freezes": 1,
+          "last_study_day": 19997,
+          "longest": 9
+        },
+        "today": 20000
+      },
+      "output": {
+        "broke_today": true,
+        "comeback_armed": false,
+        "current": 1,
+        "freezes": 1,
+        "froze_today": false,
+        "heat": "\ud83d\udd25",
+        "last_study_day": 20000,
+        "longest": 9
+      }
+    },
+    {
+      "class": "comeback-stays-armed",
+      "input": {
+        "observed_streak": 1,
+        "skip_days": [],
+        "state": {
+          "comeback_armed": true,
+          "current": 3,
+          "freezes": 2,
+          "last_study_day": 19999,
+          "longest": 9
+        },
+        "today": 20000
+      },
+      "output": {
+        "broke_today": false,
+        "comeback_armed": true,
+        "current": 4,
+        "freezes": 2,
+        "froze_today": false,
+        "heat": "\ud83d\udd25",
+        "last_study_day": 20000,
+        "longest": 9
+      }
+    },
+    {
+      "input": {
+        "observed_streak": 6,
+        "skip_days": [
+          19997,
+          19998
+        ],
+        "state": {
+          "comeback_armed": true,
+          "current": 1,
+          "freezes": 1,
+          "last_study_day": null,
+          "longest": 21
+        },
+        "today": 20000
+      },
+      "output": {
+        "broke_today": false,
+        "comeback_armed": true,
+        "current": 6,
+        "freezes": 1,
+        "froze_today": false,
+        "heat": "\ud83d\udd25",
+        "last_study_day": 20000,
+        "longest": 21
+      }
+    },
+    {
+      "input": {
+        "observed_streak": 6,
+        "skip_days": [],
+        "state": {
+          "comeback_armed": true,
+          "current": 1,
+          "freezes": 2,
+          "last_study_day": 20000,
+          "longest": 9
+        },
+        "today": 20000
+      },
+      "output": {
+        "broke_today": false,
+        "comeback_armed": true,
+        "current": 1,
+        "freezes": 2,
+        "froze_today": false,
+        "heat": "\ud83d\udd25",
+        "last_study_day": 20000,
+        "longest": 9
+      }
+    },
+    {
+      "input": {
+        "observed_streak": 10,
+        "skip_days": [],
+        "state": {
+          "comeback_armed": false,
+          "current": 13,
+          "freezes": 2,
+          "last_study_day": 19999,
+          "longest": 34
+        },
+        "today": 20000
+      },
+      "output": {
+        "broke_today": false,
+        "comeback_armed": false,
+        "current": 14,
+        "freezes": 3,
+        "froze_today": false,
+        "heat": "\ud83d\udd25\ud83d\udd25",
+        "last_study_day": 20000,
+        "longest": 34
+      }
+    },
+    {
+      "input": {
+        "observed_streak": 1,
+        "skip_days": [
+          20000
+        ],
+        "state": {
+          "comeback_armed": false,
+          "current": 1,
+          "freezes": 1,
+          "last_study_day": null,
+          "longest": 14
+        },
+        "today": 20000
+      },
+      "output": {
+        "broke_today": false,
+        "comeback_armed": false,
+        "current": 1,
+        "freezes": 1,
+        "froze_today": false,
+        "heat": "\ud83d\udd25",
+        "last_study_day": 20000,
+        "longest": 14
+      }
+    },
+    {
+      "input": {
+        "observed_streak": 2,
+        "skip_days": [],
+        "state": {
+          "comeback_armed": true,
+          "current": 6,
+          "freezes": 2,
+          "last_study_day": 20000,
+          "longest": 22
+        },
+        "today": 20000
+      },
+      "output": {
+        "broke_today": false,
+        "comeback_armed": true,
+        "current": 6,
+        "freezes": 2,
+        "froze_today": false,
+        "heat": "\ud83d\udd25",
+        "last_study_day": 20000,
+        "longest": 22
+      }
+    },
+    {
+      "input": {
+        "observed_streak": 0,
+        "skip_days": [],
+        "state": {
+          "comeback_armed": false,
+          "current": 0,
+          "freezes": 1,
+          "last_study_day": 19996,
+          "longest": 17
+        },
+        "today": 20000
+      },
+      "output": {
+        "broke_today": false,
+        "comeback_armed": false,
+        "current": 1,
+        "freezes": 1,
+        "froze_today": false,
+        "heat": "\ud83d\udd25",
+        "last_study_day": 20000,
+        "longest": 17
+      }
+    },
+    {
+      "input": {
+        "observed_streak": 9,
+        "skip_days": [],
+        "state": {
+          "comeback_armed": true,
+          "current": 7,
+          "freezes": 1,
+          "last_study_day": 20000,
+          "longest": 24
+        },
+        "today": 20000
+      },
+      "output": {
+        "broke_today": false,
+        "comeback_armed": true,
+        "current": 7,
+        "freezes": 1,
+        "froze_today": false,
+        "heat": "\ud83d\udd25\ud83d\udd25",
+        "last_study_day": 20000,
+        "longest": 24
+      }
+    },
+    {
+      "input": {
+        "observed_streak": 6,
+        "skip_days": [
+          19997
+        ],
+        "state": {
+          "comeback_armed": false,
+          "current": 7,
+          "freezes": 3,
+          "last_study_day": 19995,
+          "longest": 42
+        },
+        "today": 20000
+      },
+      "output": {
+        "broke_today": true,
+        "comeback_armed": true,
+        "current": 1,
+        "freezes": 3,
+        "froze_today": false,
+        "heat": "\ud83d\udd25",
+        "last_study_day": 20000,
+        "longest": 42
+      }
+    },
+    {
+      "input": {
+        "observed_streak": 1,
+        "skip_days": [],
+        "state": {
+          "comeback_armed": false,
+          "current": 5,
+          "freezes": 3,
+          "last_study_day": 19995,
+          "longest": 42
+        },
+        "today": 20000
+      },
+      "output": {
+        "broke_today": true,
+        "comeback_armed": false,
+        "current": 1,
+        "freezes": 3,
+        "froze_today": false,
+        "heat": "\ud83d\udd25",
+        "last_study_day": 20000,
+        "longest": 42
+      }
+    },
+    {
+      "input": {
+        "observed_streak": 1,
+        "skip_days": [],
+        "state": {
+          "comeback_armed": false,
+          "current": 99,
+          "freezes": 3,
+          "last_study_day": 19996,
+          "longest": 111
+        },
+        "today": 20000
+      },
+      "output": {
+        "broke_today": true,
+        "comeback_armed": true,
+        "current": 1,
+        "freezes": 3,
+        "froze_today": false,
+        "heat": "\ud83d\udd25",
+        "last_study_day": 20000,
+        "longest": 111
+      }
+    },
+    {
+      "input": {
+        "observed_streak": 7,
+        "skip_days": [],
+        "state": {
+          "comeback_armed": true,
+          "current": 7,
+          "freezes": 2,
+          "last_study_day": 20000,
+          "longest": 7
+        },
+        "today": 20000
+      },
+      "output": {
+        "broke_today": false,
+        "comeback_armed": true,
+        "current": 7,
+        "freezes": 2,
+        "froze_today": false,
+        "heat": "\ud83d\udd25\ud83d\udd25",
+        "last_study_day": 20000,
+        "longest": 7
+      }
+    },
+    {
+      "input": {
+        "observed_streak": 9,
+        "skip_days": [
+          19997,
+          19998
+        ],
+        "state": {
+          "comeback_armed": false,
+          "current": 1,
+          "freezes": 2,
+          "last_study_day": null,
+          "longest": 30
+        },
+        "today": 20000
+      },
+      "output": {
+        "broke_today": false,
+        "comeback_armed": false,
+        "current": 9,
+        "freezes": 2,
+        "froze_today": false,
+        "heat": "\ud83d\udd25\ud83d\udd25",
+        "last_study_day": 20000,
+        "longest": 30
+      }
+    },
+    {
+      "input": {
+        "observed_streak": 10,
+        "skip_days": [],
+        "state": {
+          "comeback_armed": false,
+          "current": 1,
+          "freezes": 2,
+          "last_study_day": 19995,
+          "longest": 22
+        },
+        "today": 20000
+      },
+      "output": {
+        "broke_today": true,
+        "comeback_armed": false,
+        "current": 1,
+        "freezes": 2,
+        "froze_today": false,
+        "heat": "\ud83d\udd25",
+        "last_study_day": 20000,
+        "longest": 22
+      }
+    },
+    {
+      "input": {
+        "observed_streak": 2,
+        "skip_days": [
+          20000
+        ],
+        "state": {
+          "comeback_armed": false,
+          "current": 0,
+          "freezes": 1,
+          "last_study_day": 19994,
+          "longest": 1
+        },
+        "today": 20000
+      },
+      "output": {
+        "broke_today": false,
+        "comeback_armed": false,
+        "current": 1,
+        "freezes": 1,
+        "froze_today": false,
+        "heat": "\ud83d\udd25",
+        "last_study_day": 20000,
+        "longest": 1
+      }
+    },
+    {
+      "input": {
+        "observed_streak": 4,
+        "skip_days": [],
+        "state": {
+          "comeback_armed": true,
+          "current": 99,
+          "freezes": 2,
+          "last_study_day": 20000,
+          "longest": 107
+        },
+        "today": 20000
+      },
+      "output": {
+        "broke_today": false,
+        "comeback_armed": true,
+        "current": 99,
+        "freezes": 2,
+        "froze_today": false,
+        "heat": "\ud83d\udd25\ud83d\udd25\ud83d\udd25",
+        "last_study_day": 20000,
+        "longest": 107
+      }
+    },
+    {
+      "input": {
+        "observed_streak": 3,
+        "skip_days": [],
+        "state": {
+          "comeback_armed": false,
+          "current": 20,
+          "freezes": 1,
+          "last_study_day": 20000,
+          "longest": 26
+        },
+        "today": 20000
+      },
+      "output": {
+        "broke_today": false,
+        "comeback_armed": false,
+        "current": 20,
+        "freezes": 1,
+        "froze_today": false,
+        "heat": "\ud83d\udd25\ud83d\udd25",
+        "last_study_day": 20000,
+        "longest": 26
+      }
+    },
+    {
+      "input": {
+        "observed_streak": 7,
+        "skip_days": [],
+        "state": {
+          "comeback_armed": false,
+          "current": 7,
+          "freezes": 3,
+          "last_study_day": 20000,
+          "longest": 15
+        },
+        "today": 20000
+      },
+      "output": {
+        "broke_today": false,
+        "comeback_armed": false,
+        "current": 7,
+        "freezes": 3,
+        "froze_today": false,
+        "heat": "\ud83d\udd25\ud83d\udd25",
+        "last_study_day": 20000,
+        "longest": 15
+      }
+    },
+    {
+      "input": {
+        "observed_streak": 4,
+        "skip_days": [],
+        "state": {
+          "comeback_armed": false,
+          "current": 5,
+          "freezes": 2,
+          "last_study_day": 19997,
+          "longest": 17
+        },
+        "today": 20000
+      },
+      "output": {
+        "broke_today": true,
+        "comeback_armed": false,
+        "current": 1,
+        "freezes": 2,
+        "froze_today": false,
+        "heat": "\ud83d\udd25",
+        "last_study_day": 20000,
+        "longest": 17
+      }
+    },
+    {
+      "input": {
+        "observed_streak": 6,
+        "skip_days": [
+          20000
+        ],
+        "state": {
+          "comeback_armed": false,
+          "current": 5,
+          "freezes": 0,
+          "last_study_day": 19999,
+          "longest": 11
+        },
+        "today": 20000
+      },
+      "output": {
+        "broke_today": false,
+        "comeback_armed": false,
+        "current": 6,
+        "freezes": 0,
+        "froze_today": false,
+        "heat": "\ud83d\udd25",
+        "last_study_day": 20000,
+        "longest": 11
+      }
+    },
+    {
+      "input": {
+        "observed_streak": 3,
+        "skip_days": [
+          20000
+        ],
+        "state": {
+          "comeback_armed": true,
+          "current": 29,
+          "freezes": 0,
+          "last_study_day": 19998,
+          "longest": 35
+        },
+        "today": 20000
+      },
+      "output": {
+        "broke_today": true,
+        "comeback_armed": true,
+        "current": 1,
+        "freezes": 0,
+        "froze_today": false,
+        "heat": "\ud83d\udd25",
+        "last_study_day": 20000,
+        "longest": 35
+      }
+    },
+    {
+      "input": {
+        "observed_streak": 2,
+        "skip_days": [],
+        "state": {
+          "comeback_armed": false,
+          "current": 99,
+          "freezes": 2,
+          "last_study_day": 20000,
+          "longest": 103
+        },
+        "today": 20000
+      },
+      "output": {
+        "broke_today": false,
+        "comeback_armed": false,
+        "current": 99,
+        "freezes": 2,
+        "froze_today": false,
+        "heat": "\ud83d\udd25\ud83d\udd25\ud83d\udd25",
+        "last_study_day": 20000,
+        "longest": 103
+      }
+    },
+    {
+      "input": {
+        "observed_streak": 9,
+        "skip_days": [
+          19999
+        ],
+        "state": {
+          "comeback_armed": false,
+          "current": 0,
+          "freezes": 1,
+          "last_study_day": 19998,
+          "longest": 2
+        },
+        "today": 20000
+      },
+      "output": {
+        "broke_today": false,
+        "comeback_armed": false,
+        "current": 1,
+        "freezes": 1,
+        "froze_today": false,
+        "heat": "\ud83d\udd25",
+        "last_study_day": 20000,
+        "longest": 2
+      }
+    },
+    {
+      "input": {
+        "observed_streak": 9,
+        "skip_days": [
+          19998,
+          20000
+        ],
+        "state": {
+          "comeback_armed": false,
+          "current": 13,
+          "freezes": 3,
+          "last_study_day": null,
+          "longest": 31
+        },
+        "today": 20000
+      },
+      "output": {
+        "broke_today": false,
+        "comeback_armed": false,
+        "current": 9,
+        "freezes": 3,
+        "froze_today": false,
+        "heat": "\ud83d\udd25\ud83d\udd25",
+        "last_study_day": 20000,
+        "longest": 31
+      }
+    },
+    {
+      "input": {
+        "observed_streak": 5,
+        "skip_days": [
+          19999
+        ],
+        "state": {
+          "comeback_armed": true,
+          "current": 7,
+          "freezes": 3,
+          "last_study_day": 19997,
+          "longest": 7
+        },
+        "today": 20000
+      },
+      "output": {
+        "broke_today": false,
+        "comeback_armed": true,
+        "current": 8,
+        "freezes": 2,
+        "froze_today": true,
+        "heat": "\ud83d\udd25\ud83d\udd25",
+        "last_study_day": 20000,
+        "longest": 8
+      }
+    },
+    {
+      "input": {
+        "observed_streak": 9,
+        "skip_days": [],
+        "state": {
+          "comeback_armed": false,
+          "current": 7,
+          "freezes": 2,
+          "last_study_day": 19999,
+          "longest": 35
+        },
+        "today": 20000
+      },
+      "output": {
+        "broke_today": false,
+        "comeback_armed": false,
+        "current": 8,
+        "freezes": 2,
+        "froze_today": false,
+        "heat": "\ud83d\udd25\ud83d\udd25",
+        "last_study_day": 20000,
+        "longest": 35
+      }
+    },
+    {
+      "input": {
+        "observed_streak": 0,
+        "skip_days": [],
+        "state": {
+          "comeback_armed": true,
+          "current": 13,
+          "freezes": 0,
+          "last_study_day": 20000,
+          "longest": 21
+        },
+        "today": 20000
+      },
+      "output": {
+        "broke_today": false,
+        "comeback_armed": true,
+        "current": 13,
+        "freezes": 0,
+        "froze_today": false,
+        "heat": "\ud83d\udd25\ud83d\udd25",
+        "last_study_day": 20000,
+        "longest": 21
+      }
+    },
+    {
+      "input": {
+        "observed_streak": 2,
+        "skip_days": [],
+        "state": {
+          "comeback_armed": false,
+          "current": 29,
+          "freezes": 1,
+          "last_study_day": 19994,
+          "longest": 44
+        },
+        "today": 20000
+      },
+      "output": {
+        "broke_today": true,
+        "comeback_armed": true,
+        "current": 1,
+        "freezes": 1,
+        "froze_today": false,
+        "heat": "\ud83d\udd25",
+        "last_study_day": 20000,
+        "longest": 44
+      }
+    },
+    {
+      "input": {
+        "observed_streak": 8,
+        "skip_days": [
+          19998
+        ],
+        "state": {
+          "comeback_armed": true,
+          "current": 99,
+          "freezes": 0,
+          "last_study_day": 19995,
+          "longest": 108
+        },
+        "today": 20000
+      },
+      "output": {
+        "broke_today": true,
+        "comeback_armed": true,
+        "current": 1,
+        "freezes": 0,
+        "froze_today": false,
+        "heat": "\ud83d\udd25",
+        "last_study_day": 20000,
+        "longest": 108
+      }
+    },
+    {
+      "input": {
+        "observed_streak": 9,
+        "skip_days": [],
+        "state": {
+          "comeback_armed": true,
+          "current": 20,
+          "freezes": 2,
+          "last_study_day": 19997,
+          "longest": 44
+        },
+        "today": 20000
+      },
+      "output": {
+        "broke_today": true,
+        "comeback_armed": true,
+        "current": 1,
+        "freezes": 2,
+        "froze_today": false,
+        "heat": "\ud83d\udd25",
+        "last_study_day": 20000,
+        "longest": 44
+      }
+    },
+    {
+      "input": {
+        "observed_streak": 7,
+        "skip_days": [],
+        "state": {
+          "comeback_armed": false,
+          "current": 29,
+          "freezes": 2,
+          "last_study_day": 19994,
+          "longest": 46
+        },
+        "today": 20000
+      },
+      "output": {
+        "broke_today": true,
+        "comeback_armed": true,
+        "current": 1,
+        "freezes": 2,
+        "froze_today": false,
+        "heat": "\ud83d\udd25",
+        "last_study_day": 20000,
+        "longest": 46
+      }
+    },
+    {
+      "input": {
+        "observed_streak": 10,
+        "skip_days": [
+          19997,
+          19999
+        ],
+        "state": {
+          "comeback_armed": false,
+          "current": 5,
+          "freezes": 2,
+          "last_study_day": 19995,
+          "longest": 27
+        },
+        "today": 20000
+      },
+      "output": {
+        "broke_today": true,
+        "comeback_armed": false,
+        "current": 1,
+        "freezes": 2,
+        "froze_today": false,
+        "heat": "\ud83d\udd25",
+        "last_study_day": 20000,
+        "longest": 27
+      }
+    },
+    {
+      "input": {
+        "observed_streak": 3,
+        "skip_days": [
+          19996,
+          20000
+        ],
+        "state": {
+          "comeback_armed": true,
+          "current": 7,
+          "freezes": 1,
+          "last_study_day": 19995,
+          "longest": 9
+        },
+        "today": 20000
+      },
+      "output": {
+        "broke_today": true,
+        "comeback_armed": true,
+        "current": 1,
+        "freezes": 1,
+        "froze_today": false,
+        "heat": "\ud83d\udd25",
+        "last_study_day": 20000,
+        "longest": 9
+      }
+    },
+    {
+      "input": {
+        "observed_streak": 9,
+        "skip_days": [
+          19999,
+          20000
+        ],
+        "state": {
+          "comeback_armed": false,
+          "current": 5,
+          "freezes": 1,
+          "last_study_day": 19996,
+          "longest": 13
+        },
+        "today": 20000
+      },
+      "output": {
+        "broke_today": true,
+        "comeback_armed": false,
+        "current": 1,
+        "freezes": 1,
+        "froze_today": false,
+        "heat": "\ud83d\udd25",
+        "last_study_day": 20000,
+        "longest": 13
+      }
+    },
+    {
+      "input": {
+        "observed_streak": 1,
+        "skip_days": [],
+        "state": {
+          "comeback_armed": true,
+          "current": 5,
+          "freezes": 2,
+          "last_study_day": 19995,
+          "longest": 26
+        },
+        "today": 20000
+      },
+      "output": {
+        "broke_today": true,
+        "comeback_armed": true,
+        "current": 1,
+        "freezes": 2,
+        "froze_today": false,
+        "heat": "\ud83d\udd25",
+        "last_study_day": 20000,
+        "longest": 26
+      }
+    },
+    {
+      "input": {
+        "observed_streak": 0,
+        "skip_days": [
+          20000
+        ],
+        "state": {
+          "comeback_armed": true,
+          "current": 1,
+          "freezes": 2,
+          "last_study_day": 19999,
+          "longest": 9
+        },
+        "today": 20000
+      },
+      "output": {
+        "broke_today": false,
+        "comeback_armed": true,
+        "current": 2,
+        "freezes": 2,
+        "froze_today": false,
+        "heat": "\ud83d\udd25",
+        "last_study_day": 20000,
+        "longest": 9
+      }
+    },
+    {
+      "input": {
+        "observed_streak": 10,
+        "skip_days": [],
+        "state": {
+          "comeback_armed": false,
+          "current": 29,
+          "freezes": 3,
+          "last_study_day": 19996,
+          "longest": 59
+        },
+        "today": 20000
+      },
+      "output": {
+        "broke_today": true,
+        "comeback_armed": true,
+        "current": 1,
+        "freezes": 3,
+        "froze_today": false,
+        "heat": "\ud83d\udd25",
+        "last_study_day": 20000,
+        "longest": 59
+      }
+    },
+    {
+      "input": {
+        "observed_streak": 2,
+        "skip_days": [
+          20000
+        ],
+        "state": {
+          "comeback_armed": true,
+          "current": 5,
+          "freezes": 3,
+          "last_study_day": 19999,
+          "longest": 34
+        },
+        "today": 20000
+      },
+      "output": {
+        "broke_today": false,
+        "comeback_armed": true,
+        "current": 6,
+        "freezes": 3,
+        "froze_today": false,
+        "heat": "\ud83d\udd25",
+        "last_study_day": 20000,
+        "longest": 34
+      }
+    },
+    {
+      "input": {
+        "observed_streak": 6,
+        "skip_days": [],
+        "state": {
+          "comeback_armed": true,
+          "current": 6,
+          "freezes": 0,
+          "last_study_day": 19999,
+          "longest": 24
+        },
+        "today": 20000
+      },
+      "output": {
+        "broke_today": false,
+        "comeback_armed": true,
+        "current": 7,
+        "freezes": 1,
+        "froze_today": false,
+        "heat": "\ud83d\udd25\ud83d\udd25",
+        "last_study_day": 20000,
+        "longest": 24
+      }
+    },
+    {
+      "input": {
+        "observed_streak": 11,
+        "skip_days": [],
+        "state": {
+          "comeback_armed": false,
+          "current": 7,
+          "freezes": 0,
+          "last_study_day": 19997,
+          "longest": 41
+        },
+        "today": 20000
+      },
+      "output": {
+        "broke_today": true,
+        "comeback_armed": true,
+        "current": 1,
+        "freezes": 0,
+        "froze_today": false,
+        "heat": "\ud83d\udd25",
+        "last_study_day": 20000,
+        "longest": 41
+      }
+    },
+    {
+      "input": {
+        "observed_streak": 5,
+        "skip_days": [],
+        "state": {
+          "comeback_armed": false,
+          "current": 99,
+          "freezes": 3,
+          "last_study_day": 19998,
+          "longest": 117
+        },
+        "today": 20000
+      },
+      "output": {
+        "broke_today": false,
+        "comeback_armed": false,
+        "current": 100,
+        "freezes": 2,
+        "froze_today": true,
+        "heat": "\u2604\ufe0f",
+        "last_study_day": 20000,
+        "longest": 117
+      }
+    }
+  ],
+  "function": "gamification.streak.update_on_study",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Builds the state, the day, the observed raw streak and the skip days as above, and returns the new state with its last study day as an epoch day and its transient flags; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_076.py",
+  "registry_sha256": "e451e77bd68e8dfbd5e1fb48845aab7b7f6667f318bc4b956168da0819a89709",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}
