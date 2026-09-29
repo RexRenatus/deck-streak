@@ -191,7 +191,8 @@ def mark_dollars(command):
     ends where the shell ends it, at a control operator or a comment outside every quote, and the
     reading ends at a redirection or a command substitution, whose words are not arguments. Inside
     double quotes `$(` and the backquote still open a substitution, so the reading ends there too,
-    and the double quote it ends in is closed first so that the words before it still split."""
+    and the double quote it ends in is closed first so that the words before it still split. An
+    ANSI-C string `$'...'`, where `\\'` does not close the quote, ends the reading too."""
     out, quote, i, start = [], None, 0, True
     while i < len(command):
         char = command[i]
@@ -200,6 +201,8 @@ def mark_dollars(command):
             i, start = i + 2, False
             continue
         if quote is None and (char in ";&|()<>`" or (char == "#" and start)):
+            break
+        if quote is None and command.startswith("$'", i):
             break
         if quote == '"' and (char == "`" or command.startswith("$(", i)):
             out.append(quote)
