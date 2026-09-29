@@ -65,6 +65,7 @@ its own failure at the red commit cannot be quoted, and the red line quotes the 
 ```red-first
 A14: red at e1c6a03: roles::a_refusal_code_is_a_variant_of_the_closed_enum panicked at crates/daemon/tests/roles.rs:570:5: the scan passed a code defined in a new file: planted_unknown_code is recorded through `refused` and no scan reads it
 A14: green at d34307d
+A15: not red: written green at the head, because it pins behaviour the head already has (each refusal site refuses by its own code); the plants below turn it red by assertion
 ```
 
 A13 keeps its earlier `not red` line above; its body changed at d34307d as said.
@@ -72,3 +73,38 @@ A13 keeps its earlier `not red` line above; its body changed at d34307d as said.
 A later commit, the one that follows 3eca7dc4, edits `crates/daemon/tests/roles.rs` again: it moves the
 compile-time type assertion into a named helper so clippy passes with `-D warnings`. The test body is
 otherwise unchanged and green.
+
+## Addendum, 2026-09-29, round 2: each refusal site is pinned by behaviour (#396)
+
+The scan A13 ran counted the owner cycle's refusal codes, and the count held that every site still
+refuses. The closed enum replaced the scan and nothing replaced the count, so a site swallowed into
+an `Ok` answer, or a discarded result, was green at the head. The gap was planted first, on the head
+before the tests: the credentials-directory refusal swallowed into `Ok(SyncAnswer { .. })` (P7) and
+the rescore request's result discarded with `let _ = ..` (P9) each left every daemon test green
+(55 passed, 0 failed, over 9 test binaries). A15's tests (ef7fd2da) then turn each plant red by
+assertion, and are green at the head:
+
+```text
+P7: wiring::tests::the_owners_sync_without_a_credentials_directory_is_refused_by_its_own_code
+  left: Ok(SyncAnswer { sync: Reused, scores: Unchanged })
+ right: Err(CredentialsDirectoryRefused)
+P9: wiring::tests::the_owners_sync_that_cannot_mark_the_rescore_is_refused_by_its_own_code
+  left: Err(SyncSettingsRefused)
+ right: Err(RescoreUnrecorded)
+```
+
+The other sites were planted the same way and are pinned already: swallowing the settings refusal
+turns `the_owners_sync_marks_the_rescore_before_it_reads_its_settings` red (left
+`Ok(SyncAnswer { sync: Reused, scores: Unchanged })`, right `Err(SyncSettingsRefused)`), swallowing
+the scope refusal turns A7 red (left `(true, None)`, right `(false, Some("scope_settings_refused"))`),
+and swallowing the cycle's own refusal turns A11 red ("no refusal recorded").
+
+The bot's answer to a request its store cannot record (the `rescore_unrecorded` code in
+`sync_request.rs`) was pinned by no test. Its test (d8e111bd) is red under a plant that changes the
+code to `rescore_unrecordedx` and green at the head:
+
+```text
+H6: sync_request::a_request_the_store_cannot_record_is_refused_with_the_rescore_code
+  left: Err(SyncRefusal { reason: "rescore_unrecordedx" })
+ right: Err(SyncRefusal { reason: "rescore_unrecorded" })
+```

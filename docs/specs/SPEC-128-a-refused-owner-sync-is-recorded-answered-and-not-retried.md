@@ -149,16 +149,16 @@ ADR-066 is not edited. The reply for `NotRun` is the existing one; only a refusa
 
 Made by ADR-193 and issue #396, insert-only under ruling (i) of SPEC-038 section 8: every earlier
 byte is kept in order, so the amendment is these two new last sections and nothing above them is
-edited. It inserts no line into section 3's table or fence; its one new criterion, A14, is defined
-in the section below.
+edited. It inserts no line into section 3's table or fence; its two new criteria, A14 and A15, are
+defined in the section below.
 
 - **The strengthened rule.** R1 says the closed set is enforced by the type `RefusalReason`. That held
   where a reason is stored and read; where a reason is PRODUCED it was a string, and the guard on
   it was A13's scan of the sources of `impl OwnerSyncCycle` for code literals. A code defined in
   a new file and recorded through the composition root was not read by that scan, so A13 passed while
   the code bypassed it. The rule now holds at the producer: `OwnerSyncCycle::run` returns
-  `Result<SyncAnswer, RefusalReason>`, the private `refused` and `cycle_reason` in `wiring.rs` take and
-  give a `RefusalReason`, and the job records the value it is given, with no `parse` on that path. A
+  `Result<SyncAnswer, RefusalReason>`, the private `refused` in `wiring.rs` takes a `RefusalReason`,
+  `cycle_reason` takes a `&CycleError` and gives a `RefusalReason`, and the job records the value it is given, with no `parse` on that path. A
   code outside the eight does not compile. `RefusalReason::parse` stays for reading a stored row.
 - **No stored code changes.** Each variant's string form equals the code the migration's `CHECK`
   already allows, byte for byte (A14 holds the table), so there is no migration and no `.sqlx/` change.
@@ -168,11 +168,24 @@ in the section below.
   longer scans sources: it reads the codes the migration's `CHECK` allows and requires that each
   parses as a `RefusalReason` and that each variant is one of them. The third risk in section 6
   stands as the record of the state before this amendment.
-- **Rows.** `S12809` to `S12811` in the band file, and `S12804`'s anchor moves to the arm's new
-  indentation.
+- **The scan's count is replaced by a behaviour test per refusal site.** The scan also held, by
+  counting the codes it found, that every site of the owner's sync still refuses; a site swallowed
+  into an `Ok` answer or a discarded result left the count short and turned it red, and the closed
+  enum cannot see that. A15 replaces the count with one test per site, each asserting the code the site
+  refuses with: `the_owners_sync_marks_the_rescore_before_it_reads_its_settings` (`sync_settings_refused`),
+  `the_owners_sync_without_a_credentials_directory_is_refused_by_its_own_code`
+  (`credentials_directory_refused`),
+  `the_owners_sync_that_cannot_mark_the_rescore_is_refused_by_its_own_code` (`rescore_unrecorded`),
+  `a_refused_owner_request_is_recorded_and_the_next_run_does_not_retry_it` (`scope_settings_refused`),
+  `a_cycle_that_cannot_finish_is_refused_with_its_steps_reason_code` (the three codes `cycle_reason`
+  gives) and `a_refusal_after_the_owners_run_answers_the_request_beside_the_run` (the cycle's own
+  refusal reaching the job's record). The bot's answer to a request its store cannot record is pinned
+  by `a_request_the_store_cannot_record_is_refused_with_the_rescore_code`.
+- **Rows.** `S12809` to `S12813` in the band file, and `S12804`'s anchor moves to the arm's new
+  indentation; `S12812` and `S12813` are the swallowed-site mutants that A15's tests kill.
 - **Files this amendment touches.** `crates/daemon/src/wiring.rs`, `crates/daemon/src/role_job.rs`,
   `crates/daemon/src/sync_request.rs`, `crates/daemon/tests/roles.rs`,
-  `scripts/mutation-rows.d/S12800-S12899.json`, `docs/red-first/SPEC-128.md`,
+  `crates/daemon/tests/sync_request.rs`, `scripts/mutation-rows.d/S12800-S12899.json`, `docs/red-first/SPEC-128.md`,
   `docs/decisions/ADR-193-*.md` and `changelog.d/fix-refusal-enum-396.md`.
 
 ## 8. Acceptance criteria of the 2026-09-29 amendment
@@ -180,7 +193,11 @@ in the section below.
 | id | criterion | decided by |
 |---|---|---|
 | A14 | each variant's string form is the code stored today, no two variants share one, and the owner cycle's refusal type is the enum | `cargo test -p deck-streak-daemon --test roles -- --exact a_refusal_code_is_a_variant_of_the_closed_enum` |
+| A15 | every refusal site of the owner's sync refuses by its own code: a site swallowed into an `Ok` answer or a discarded result is caught | the three tests this amendment adds, in the fence below; the sites already pinned are named in section 7 |
 
 ```acceptance
 A14: cargo test -p deck-streak-daemon --test roles -- --exact a_refusal_code_is_a_variant_of_the_closed_enum
+A15: cargo test -p deck-streak-daemon --lib -- --exact wiring::tests::the_owners_sync_without_a_credentials_directory_is_refused_by_its_own_code
+A15: cargo test -p deck-streak-daemon --lib -- --exact wiring::tests::the_owners_sync_that_cannot_mark_the_rescore_is_refused_by_its_own_code
+A15: cargo test -p deck-streak-daemon --test sync_request -- --exact a_request_the_store_cannot_record_is_refused_with_the_rescore_code
 ```
