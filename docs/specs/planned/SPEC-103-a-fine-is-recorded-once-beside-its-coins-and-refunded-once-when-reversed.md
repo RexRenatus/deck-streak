@@ -3,14 +3,13 @@
 - **Wave:** W5. **Issue:** the fine and its reversal that #110, #111, #113 and #279 share (epic #6).
   **Context(s):** `deck-streak-economy` (the penalty ledger, the fine port, the reversal port, the
   listing of a study day's standing fines and the setter of the pass surcharge's end);
-  `deck-streak-coordination` (the data-rights registry
-  only). No other context changes: every caller of these ports arrives with its own SPEC (SPEC-104,
-  SPEC-106, SPEC-108).
+  `deck-streak-coordination` (the data-rights registry only). No other context changes: every caller
+  of these ports arrives with its own SPEC (SPEC-104, SPEC-106, SPEC-108).
 - **Decided by:** ADR-103 (this SPEC's: a fine is one economy port that records the debited amount
   beside its coin movement, and a reversal refunds that amount once), ADR-012 (the parity oracle
   proves the math) and ADR-071 (a settled study day's value never falls).
-- **Prerequisites:** SPEC-082 (the coin ledger, the capped debit and the refund port), SPEC-021
-  (the data-rights rule) and SPEC-020 (migrations). **Mutation band:** `S10300-S10399`.
+- **Prerequisites:** SPEC-082 (the coin ledger, the capped debit and the refund port), SPEC-021 (the
+  data-rights rule) and SPEC-020 (migrations). **Mutation band:** `S10300-S10399`.
 - **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
   `docs/specs/` with its tests and `docs/red-first/SPEC-103.md` (ADR-016).
 
@@ -24,15 +23,15 @@
 - **The rule that binds it.** Coins are the only confiscable stake (CHARTER), and a false fine is
   worse than a missed fine: every fine must be reversible, and a reversal must return exactly what
   was taken, once.
-- **What is ported.** The predecessor's fine path, `pipeline_layers/economy.py:EconomyLayer._debit_fine`
-  at `27ee2bc`: it reads the wallet, the daily loss cap over the wallet at the day's start, and the
-  day's debits, clips the request (`gamification/economy.py:clip_debit`), records the DEBITED amount
-  in `penalty_ledger` (a fully forgiven fine records 0, so a later refund can never mint coins that
-  were never taken), and writes the coin movement `fine` only when the debit is positive. The
-  ledger's functions `database.py:GamifyStore.insert_penalty` (once per key),
-  `GamifyStore.reverse_penalty` (true only for the call that reversed it),
-  `GamifyStore.penalty_amount` and `GamifyStore.penalties_total_for_day` (the standing fines of a
-  study day, reversed ones left out).
+- **What is ported.** The predecessor's fine path,
+  `pipeline_layers/economy.py:EconomyLayer._debit_fine` at `27ee2bc`: it reads the wallet, the daily
+  loss cap over the wallet at the day's start, and the day's debits, clips the request
+  (`gamification/economy.py:clip_debit`), records the DEBITED amount in `penalty_ledger` (a fully
+  forgiven fine records 0, so a later refund can never mint coins that were never taken), and writes
+  the coin movement `fine` only when the debit is positive. The ledger's functions
+  `database.py:GamifyStore.insert_penalty` (once per key), `GamifyStore.reverse_penalty` (true only
+  for the call that reversed it), `GamifyStore.penalty_amount` and
+  `GamifyStore.penalties_total_for_day` (the standing fines of a study day, reversed ones left out).
 - **Measured in the predecessor.** Its three fine references are `tw:<event>` (a doomscroll
   defection), `confess:<event>` (a confession) and `contract:<contract>:<day>` (a contract breach),
   and its two refund sources are `grace_refund` (a defection closed within its grace) and
@@ -194,10 +193,9 @@ merges.
 - It decides no revision: which verdicts are re-judged, for how long and on what evidence is the
   discipline wave's (ADR-104, #110, #113).
 - It spends no smoke bomb: the spend reverses a night's standing fines through this port (#279).
-- It grants no pardon and no grace: both reverse through this port with their features (#114,
-  #110).
-- It shows no fine on any screen or in any message: the discipline screens and the digest do
-  (#110, #129).
+- It grants no pardon and no grace: both reverse through this port with their features (#114, #110).
+- It shows no fine on any screen or in any message: the discipline screens and the digest do (#110,
+  #129).
 - It imports none of the predecessor's penalty rows (#61).
 
 ## 6. Risks

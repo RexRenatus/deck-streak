@@ -6,9 +6,8 @@
   the chest lock and its ransom, the acknowledgement and the free spin, and the revision rules of
   ADR-104); `deck-streak-coordination` (the use cases that join the rail to the governor, the skip
   set, the wallet, the fine port, the grant port and the router, and the rail's step of the sync
-  cycle); `deck-streak-bot` (the
-  source's posts, `/tripwire`, `/confess` and the reply's buttons); `deck-streak-api` (the rail's
-  routes); the Mini App (`web/app`, the discipline screen).
+  cycle); `deck-streak-bot` (the source's posts, `/tripwire`, `/confess` and the reply's buttons);
+  `deck-streak-api` (the rail's routes); the Mini App (`web/app`, the discipline screen).
 - **Decided by:** ADR-104 (this SPEC's: a discipline verdict is provisional; a fine is re-judged
   within the revision window and refunded when its evidence fails, and a reward is paid only once
   its evidence confirms it), ADR-103 (the fine port), ADR-012 (the parity oracle), ADR-041 (the one
@@ -23,8 +22,8 @@
 
 ## 1. The problem, measured
 
-- **What exists.** At `dev` 26263de, `crates/discipline/src/` holds only `lib.rs`. SPEC-026 left
-  the reading of the rail's posts to this wave (#110), SPEC-082 left the surcharge's setter and the
+- **What exists.** At `dev` 26263de, `crates/discipline/src/` holds only `lib.rs`. SPEC-026 left the
+  reading of the rail's posts to this wave (#110), SPEC-082 left the surcharge's setter and the
   pass's effect on a ping to it, and SPEC-081 left the chest lock and its ransom to it.
 - **The sensor is a port.** A ping is a line of text a bound source posts where the bot reads it.
   The grammar is `KIND|...|<seconds>|<token>`: `DS|example_app|1700000000|abcd1234` opens a
@@ -39,16 +38,16 @@
   - the verdict, `TripwireLayer._doomscroll_verdict`, and the session's close and its grace,
     `_close_session` and `_grace_defection`;
   - the fine's rung, `book_defection_fine`, the sprint, `start_sprint` and
-    `_resolve_sprints_and_fines`, the snooze, `snooze_tripwire`, the canary, `_tripwire_canary`,
-    and the rung's de-escalation, `_deescalate_rung`;
+    `_resolve_sprints_and_fines`, the snooze, `snooze_tripwire`, the canary, `_tripwire_canary`, and
+    the rung's de-escalation, `_deescalate_rung`;
   - the confession, `TripwireLayer.confess`;
   - the instant loop, `_instant_loop_ack` and `_confirm_free_spin`;
   - the chest lock's ransom, `pipeline_layers/loot.py:LootLayer._chest_lock_active`.
 - **Measured outcome sets.**
-  - A post: not ours (no answer, nothing recorded), `spoof`, `rate_dropped`, `test`, `ack`,
-    `free`, `defection`, `duplicate`, and for a close `orphan_close`, `grace` or `session`.
-  - The verdict is `free` when any holds: the governor is not armed, a skip is active, discipline
-    is off, quiet hours, an active scroll pass, a snooze, the rail suspended, the rail unverified, or
+  - A post: not ours (no answer, nothing recorded), `spoof`, `rate_dropped`, `test`, `ack`, `free`,
+    `defection`, `duplicate`, and for a close `orphan_close`, `grace` or `session`.
+  - The verdict is `free` when any holds: the governor is not armed, a skip is active, discipline is
+    off, quiet hours, an active scroll pass, a snooze, the rail suspended, the rail unverified, or
     neither an idle defection (scope `reviews` or `both`, and the study day's reviews below 15, the
     predecessor's `quests.Q1_TARGET`) nor a window defection (scope `windows` or `both`, and the
     instant inside a committed window).
@@ -66,8 +65,8 @@
     canary suspends a verified rail silent for more than 72 hours, or does nothing. A chest lock is
     ransomed (20 distinct cards) or stands.
 - **Corrections to the issues and the predecessor.**
-  - The predecessor reads reviews every few minutes. DeckStreak reads them once a study day plus
-    the owner's `/sync` (ADR-037), so at an open the day's review count is often the morning's. The
+  - The predecessor reads reviews every few minutes. DeckStreak reads them once a study day plus the
+    owner's `/sync` (ADR-037), so at an open the day's review count is often the morning's. The
     open's verdict is therefore provisional: a defection settles at the first sync cycle that begins
     after its evidence window, on the reviews that cycle read, and an idle defection whose reviews
     before it reach 15 is cleared and fines nothing (ADR-104).
@@ -83,8 +82,8 @@
     applies only to the grace.
 - **What the parity oracle proves.** The grammar, the token and its skew; every post's outcome; the
   verdict over every input; the close and the grace; the rung, the base, the long session's scale
-  and the escalation; the sprint; the confession; the canary; the de-escalation; the ransom; the
-  ack and the spin's confirmation; every constant (section 7).
+  and the escalation; the sprint; the confession; the canary; the de-escalation; the ransom; the ack
+  and the spin's confirmation; every constant (section 7).
 
 ## 2. Requirements
 
@@ -196,9 +195,9 @@ Revision (ADR-104)
 R20. At each sync cycle, every fine of a study day inside the revision window (the 7 closed study
     days before the current one, and the current one) that is not reversed is judged again on the
     evidence as it now stands, and reversed with the reason `revision` when it no longer holds:
-    - `tw:<event>`: the event's study day now holds an applied skip; or the defection was idle
-      only (not inside a window) and the study reviews timestamped before its instant now reach 15;
-      or its sprint, measured again, is kept;
+    - `tw:<event>`: the event's study day now holds an applied skip; or the defection was idle only
+      (not inside a window) and the study reviews timestamped before its instant now reach 15; or
+      its sprint, measured again, is kept;
     - `confess:<event>`: the event's study day now holds an applied skip.
     A reversed fine is never booked again (SPEC-103 R7), and its rung, lock and surcharge stand.
 R21. The rail's deadlines (a sprint's deadline plus 15 minutes, an unanswered defection's 45
@@ -338,7 +337,7 @@ so the private wiring does not change when it merges.
 | `crates/coordination/src/sync_cycle.rs` | `deck-streak-coordination` | changed: the rail's step after the recompute |
 | `crates/coordination/src/obligations.rs` | `deck-streak-coordination` | changed: the rail's deadline source |
 | `crates/coordination/src/lib.rs` | `deck-streak-coordination` | changed: the module above |
-| `crates/coordination/src/data_rights_registry.rs` | `deck-streak-coordination` | changed: the discipline port joins the registry |
+| `crates/coordination/src/data_rights_registry.rs` | `deck-streak-coordination` | unchanged: discipline's port is registered by SPEC-105; listed under SPEC-021's six-file rule |
 | `crates/coordination/tests/data_rights_symmetry.rs` | `deck-streak-coordination` | changed: seeded rows for the four tables |
 | `crates/coordination/tests/discipline_rail.rs` | `deck-streak-coordination` | added: A5, A6, A20, A22 |
 | `crates/coordination/tests/discipline_fines.rs` | `deck-streak-coordination` | added: A11, A19 |
@@ -397,13 +396,13 @@ so the private wiring does not change when it merges.
 
 ## 6. Risks
 
-- **A false fine.** Every fine passes the booking's refusals, the loss cap and the revision (A18);
-  a silent source suspends the rail (A14); an unbound rail reads nothing (A3).
+- **A false fine.** Every fine passes the booking's refusals, the loss cap and the revision (A18); a
+  silent source suspends the rail (A14); an unbound rail reads nothing (A3).
 - **A spoof reveals the rail.** A spoof answers nothing (A2), and a foreign source is ignored.
 - **A retried tap fines twice.** The event's fine and the fine port's key hold one fine per event
   (A11, SPEC-103 A3).
-- **A stranger's post reaches a command.** The gate admits a channel post as a rail post only
-  (A27), the rail reads only its grammar from its bound source (A3), and a spoof answers nothing.
+- **A stranger's post reaches a command.** The gate admits a channel post as a rail post only (A27),
+  the rail reads only its grammar from its bound source (A3), and a spoof answers nothing.
 - **The reply arrives late.** The post's use case answers on receipt, not at the next sync (A6).
 - **A spin becomes a faucet.** It is granted only on a confirming review, once a study day (A17).
 
