@@ -99,6 +99,24 @@
         "\"the owner's sync could not run\");\n    RefusalReason::RecomputeFailed\n}",
         "lib::wiring::tests::the_owners_sync_marks_the_rescore_before_it_reads_its_settings",
         "the closed enum is the only refusal type, and the site must hand back the variant it was given (SPEC-128 amendment, #396)"
+      ],
+      [
+        "S12812-A-SWALLOWED-CREDENTIALS-DIRECTORY-REFUSAL-IS-NOT-AN-ANSWER",
+        "daemon",
+        "src/wiring.rs",
+        "        let directory = CredentialsDirectory::from_env(&self.env)\n            .map_err(|error| refused(RefusalReason::CredentialsDirectoryRefused, &error))?;\n",
+        "        let directory = match CredentialsDirectory::from_env(&self.env) {\n            Ok(directory) => directory,\n            Err(error) => {\n                let _ = refused(RefusalReason::CredentialsDirectoryRefused, &error);\n                return Ok(SyncAnswer {\n                    sync: SyncOutcome::Reused,\n                    scores: Scores::Unchanged,\n                });\n            }\n        };\n",
+        "lib::wiring::tests::the_owners_sync_without_a_credentials_directory_is_refused_by_its_own_code",
+        "a refusal turned into an Ok answer tells the owner a sync was reused when none ran; each refusal site must refuse by its own code (SPEC-128 amendment, #396)"
+      ],
+      [
+        "S12813-A-SWALLOWED-RESCORE-REQUEST-REFUSAL-IS-NOT-IGNORED",
+        "daemon",
+        "src/wiring.rs",
+        "        gate.state()\n            .request_rescore(clock.now())\n            .await\n            .map_err(|error| refused(RefusalReason::RescoreUnrecorded, &error))?;\n",
+        "        let _ = gate.state().request_rescore(clock.now()).await;\n",
+        "lib::wiring::tests::the_owners_sync_that_cannot_mark_the_rescore_is_refused_by_its_own_code",
+        "a rescore request that cannot be marked must refuse the sync, or the owner's request is lost while the cycle goes on (SPEC-128 amendment, #396)"
       ]
     ]
   }
