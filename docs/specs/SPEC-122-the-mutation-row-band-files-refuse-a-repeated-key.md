@@ -158,18 +158,6 @@ plain `json.loads` that keeps the last value and says nothing (the census printe
   `mutation_rows`, so it reuses the hook and the sentence; there is no second copy, and nothing
   moves.
 
-## 10. Acceptance criteria of the amendment (A5 and A6)
-
-| id | criterion | decided by |
-|---|---|---|
-| A5 | a band file that repeats a key makes `plan` exit 1 with the whole sentence on stderr and no `Traceback`; a well-formed tree is planned and its selected-row count printed | `test_verdict_repeated_key.py` `a_band_file_that_repeats_a_key_is_refused_by_the_plan_without_a_traceback` and `a_well_formed_band_file_is_planned_and_its_row_count_printed` |
-| A6 | a record fragment that repeats a key at its top, and one that repeats a key inside a record, are each refused by the census (exit 1) with the whole sentence and no `Traceback`; a well-formed fragment is read and its record count printed | `test_verdict_repeated_key.py` `a_record_fragment_that_repeats_a_key_at_the_top_is_refused`, `a_record_that_repeats_a_key_inside_an_entry_is_refused` and `a_well_formed_record_fragment_is_read_and_counted` |
-
-```acceptance
-A5: python3 -m unittest discover -s scripts/tests -p test_verdict_repeated_key.py -k a_band_file_that_repeats_a_key_is_refused_by_the_plan_without_a_traceback -k a_well_formed_band_file_is_planned_and_its_row_count_printed
-A6: python3 -m unittest discover -s scripts/tests -p test_verdict_repeated_key.py -k a_record_fragment_that_repeats_a_key_at_the_top_is_refused -k a_record_that_repeats_a_key_inside_an_entry_is_refused -k a_well_formed_record_fragment_is_read_and_counted
-```
-
 The rows join `S12200-S12299` (`SCRIPT_MUTATIONS`), each with one killer that names one test:
 
 | row | mutant | killer |
@@ -183,3 +171,15 @@ Files added or changed by this amendment: `scripts/mutation-verdict.py` (changed
 (three rows), `docs/red-first/SPEC-122.md` (a dated addendum) and
 `changelog.d/fix-verdict-repeated-key-345.md` (added). It still changes no Rust and no workflow
 (#345).
+
+## 10. Acceptance criteria of the amendment (A5 and A6)
+
+| id | criterion | decided by |
+|---|---|---|
+| A5 | a band file that repeats a key makes `plan` exit 1 with the whole sentence on stderr and no `Traceback`; a well-formed tree is planned and its selected-row count printed | `test_verdict_repeated_key.py` `a_band_file_that_repeats_a_key_is_refused_by_the_plan_without_a_traceback` and `a_well_formed_band_file_is_planned_and_its_row_count_printed` |
+| A6 | a record fragment that repeats a key at its top, and one that repeats a key inside a record, are each refused by the census (exit 1) with the whole sentence and no `Traceback`; a well-formed fragment is read and its record count printed | `test_verdict_repeated_key.py` `a_record_fragment_that_repeats_a_key_at_the_top_is_refused`, `a_record_that_repeats_a_key_inside_an_entry_is_refused` and `a_well_formed_record_fragment_is_read_and_counted` |
+
+```acceptance
+A5: python3 -m unittest discover -s scripts/tests -p test_verdict_repeated_key.py -k a_band_file_that_repeats_a_key_is_refused_by_the_plan_without_a_traceback -k a_well_formed_band_file_is_planned_and_its_row_count_printed
+A6: python3 -m unittest discover -s scripts/tests -p test_verdict_repeated_key.py -k a_record_fragment_that_repeats_a_key_at_the_top_is_refused -k a_record_that_repeats_a_key_inside_an_entry_is_refused -k a_well_formed_record_fragment_is_read_and_counted
+```
