@@ -422,3 +422,32 @@ Two records of the same criterion are given, as in rounds 4 and 5: the pair abov
 and the earlier pairs stand for the cases they added. The documents state what the code now
 refuses: A12 gains the file-system case, the disclosed cost names both hosts it refuses, and a
 package is still removed on such a host, since the refusal is of path items.
+
+## Fix round 7
+
+The seventh review found that a directory bound at a protected path is deleted through its source:
+an item in, or holding, the directory a bind mount shows lies beside the bind and not under it, so
+no clause keyed on the item's own path refused it. The order of work:
+
+- dde939b: A12's test gains the source direction in the bind subtest, with two controls (the bind
+  replaced by another directory, and the bind on another device). Red over the whole module: only
+  A12 failed, by assertion;
+- b61d1dc: the fix, a third clause of `plan.mounted` that finds the directory a bind mount shows
+  from the table's rows, and the reason for it in `mount_reason`;
+- ebdb5af: the row S06073, proved with its full id: killed.
+
+```text
+A12: red at dde939b: AssertionError: Lists differ: [{...}] != [] (an item inside the source of a directory bound at another point was listed, and the apply's check let it through)
+A12: green at b61d1dc
+```
+
+Per case, as the subtest reads:
+
+```text
+A12 an item inside a bind mount of another directory: red at dde939b, green at b61d1dc (the added cases; its earlier cases are green at both)
+```
+
+Two records of the same criterion are given, as in rounds 4 to 6: the pair above is the latest, and
+the earlier pairs stand for the cases they added. The documents state what the code now refuses: A7,
+R7 and A12 gain the directory a bind mount shows, and the disclosed cost names the host with a
+directory bound elsewhere, which refuses every path item inside or holding that directory.
