@@ -201,7 +201,7 @@ missed mutant each, the three recorded) and shard 23 exited 3 (one timeout, coun
 A20 is the daemon crate's row of section 7. Its opening sweep, run 36515002230 at the base (dev
 2fd66f4), counted 33 of 33 reports whole, listed 101 mutants and left 8 unexplained: both values of
 `Notifier::is_enabled`, the deleted `!` in `Notifier::notify`, both `millis` values, the Linux
-`send_abstract` and the `name == "data"` guard of `Role::from_arguments`; its `table` line is the
+`send_abstract`, the non-Linux `send_abstract` and the `name == "data"` guard of `Role::from_arguments`; its `table` line is the
 row committed at cd59d2a with A20's test, which read `8 != 0`. Seven are now killed by tests in
 `crates/daemon/tests/` (the notifier's enabled state, delivery to a path and to an abstract socket,
 the once-per-episode warning, the watchdog warning's two millisecond figures, and the refusal of a
@@ -211,4 +211,4 @@ non-`data` name followed by a data command). One is recorded equivalent in
 36517001675 at the branch head with dev 8903f71 merged, counted 33 of 33 whole and read
 `table: verdict: ok`, listed 101, killed 71, equivalent 1, unexplained 0, unviable 29. Shard 1
 exited 2 (the one recorded mutant) and the other shards exited 0. Rows S05750 to S05759 are unused:
-every mutant was mutable and killed by a test. No shard exited 3, so no mutant of this crate timed out in the closing sweep.
+the tool mutated every invariant of the crate, so none needed a hand-proved row (R20). No shard exited 3, so no mutant of this crate timed out in the closing sweep.
