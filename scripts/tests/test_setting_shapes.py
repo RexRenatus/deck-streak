@@ -141,6 +141,35 @@ class TheGuardJudgesAPlantedTree(unittest.TestCase):
         row = ["S00001-DEPTH", "demo", "src/other.rs", 'str = "a whole depth";', "", "t::k", "d"]
         self.assertEqual(len(unpinned(self.tree(rows=[row]))), 1)
 
+    def src(self, root, text):
+        (root / "crates" / "demo" / "src" / "more.rs").write_text(text, encoding="utf-8")
+        return root
+
+    def test_a_generic_implementation_is_examined(self):
+        root = self.src(
+            self.tree('const X: &str = "a whole depth";'),
+            'impl<T> Setting for Wide<T> {\n    const SHAPE: &\'static str = "a whole width";\n}\n',
+        )
+        self.assertEqual(len(implementations(root)), 2)
+        self.assertEqual(unpinned(root), ['demo::Wide (src/more.rs) "a whole width"'])
+
+    def test_a_shape_only_a_production_line_of_the_crate_spells_is_refused(self):
+        root = self.src(self.tree(), '/// Reads "a whole depth".\npub fn depth() {}\n')
+        self.assertEqual(len(implementations(root)), 1)
+        self.assertEqual(unpinned(root), ['demo::Depth (src/depth.rs) "a whole depth"'])
+
+    def test_a_shape_two_implementations_of_one_crate_share_needs_a_row_of_each_file(self):
+        root = self.src(
+            self.tree('const X: &str = "a whole depth";'),
+            'impl Setting for Deep {\n    const SHAPE: &\'static str = "a whole depth";\n}\n',
+        )
+        self.assertEqual(len(implementations(root)), 2)
+        self.assertEqual(len(unpinned(root)), 2)
+
+    def test_a_shape_only_a_comment_spells_is_refused(self):
+        root = self.tree('// "a whole depth"\nlet shape = Depth::SHAPE;')
+        self.assertEqual(len(implementations(root)), 1)
+        self.assertEqual(len(unpinned(root)), 1)
 
 if __name__ == "__main__":
     unittest.main()
