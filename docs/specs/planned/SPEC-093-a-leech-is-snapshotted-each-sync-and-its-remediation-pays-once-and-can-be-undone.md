@@ -53,7 +53,7 @@
   - The day base leaves `leech:` sources out (`database.py:GamifyStore.day_base_xp`), so a
     remediation never feeds the consistency bonus or the coin mint.
   - A remediation's action is cut to 40 characters (empty reads `fixed`) and its note to 200; a card
-    not in the snapshot is refused. DeckStreak never writes to the collection.
+    not in the snapshot is refused. A remediation writes nothing to the collection.
 - **Corrections to the accepted documents.** `docs/schematics/leeches-state-machine.md` says an undo
   removes "the XP grant"; here the XP is a settlement an undo sets to zero on its day (ADR-093), which
   `docs/schematics/leech-remediation-settles-once.md` records beside it. `docs/LEXICON.md` glosses a

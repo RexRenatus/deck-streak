@@ -38,8 +38,8 @@ Chosen option: "Two scope settings beside the law root, read by ingest", because
 deck layout, and deck layout is what ingest's scope settings already hold.
 
 - `DECKSTREAK_LAW_YEAR_BANDS` (a comma-separated list) and `DECKSTREAK_LAW_TEST_PREP_DECK` (one
-  deck name) are read with `DECKSTREAK_LAW_DECK_ROOT`; either set without the root refuses start,
-  naming the setting and never a value.
+  deck name) are read with `DECKSTREAK_LAW_DECK_ROOT`; either set without the root refuses the cycle's step (the scope is read on each cycle), naming
+  the setting and never a value.
 - `crates/ingest/src/law_subject.rs` gives a card's law subject and, under the test-prep subtree,
   its section. The law subject equals `goldens/law_subject.json` (the golden of
   `leeches.py:_law_subject` with synthetic bands), and the test-prep section is the segment after the
@@ -61,7 +61,7 @@ deck layout, and deck layout is what ingest's scope settings already hold.
 ### Confirmation
 
 SPEC-092's A1, A2 and A17: the subject of every synthetic path equals the golden, a law setting
-without the root refuses start, and a root or band named differently by the two files refuses start.
+without the root refuses the cycle's step, and a root or band named differently by the two files refuses start.
 
 ## What would make this wrong
 

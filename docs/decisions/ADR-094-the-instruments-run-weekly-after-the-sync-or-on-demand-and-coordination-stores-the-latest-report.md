@@ -43,8 +43,9 @@ instrument in coordination", because it bounds the reads and keeps every report 
 - After each sync's recompute, coordination runs each weekly instrument whose report is absent or
   at least 7 study days older than the sync's study day; a failure of one is its report's failed
   read and never stops the next.
-- An on-demand run answers a route or a command; a request while any instrument runs is answered
-  that a run is in progress and starts nothing.
+- An on-demand run answers a route or a command; a request while any instrument runs in the same role
+  process is answered that a run is in progress and starts nothing; role processes each hold their own
+  guard, and a run in another process may overlap under the collection lock's shared side.
 - `instrument_reports` holds the latest report per instrument (id, study day, schema version, JSON),
   replaced in one write, in the `research-instruments` category.
 - A registry row marked inert never runs; reviving it is that row.

@@ -8,10 +8,9 @@
   (four sections of the insights screen).
 - **Decided by:** ADR-012 (the parity oracle proves the math), ADR-090 (CPython's numeric semantics
   live once, in the kernel), ADR-094 (the frame: weekly and on-demand runs, one latest report per
-  instrument) and ADR-095 (the reads keep SPEC-023's scope, and only a read of answers keeps its
+  instrument), ADR-097 (a skip day's rows are attributed by its card snapshot and window) and ADR-095 (the reads keep SPEC-023's scope, and only a read of answers keeps its
   window).
-- **Prerequisites:** SPEC-023 (the read), SPEC-029, SPEC-081 (the sessions), SPEC-083 (the skip day,
-  which writes nothing to the collection), SPEC-090 (`pynum`), SPEC-094 (the frame) and SPEC-095
+- **Prerequisites:** SPEC-023 (the read), SPEC-029, SPEC-081 (the sessions), SPEC-083 (the skip record and its card snapshot; the skip day writes one type-4 review-log row per moved card, SPEC-083 R18 under ADR-089), SPEC-090 (`pynum`), SPEC-094 (the frame) and SPEC-095
   (the Mersenne Twister and the review reads). **Mutation band:** `S09700-S09799`.
 - **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
   `docs/specs/` with its tests and `docs/red-first/SPEC-097.md` (ADR-016).
@@ -53,10 +52,7 @@
     most 100,000 manual rows and naming a truncation; a bulk act is a run of such rows with gaps
     under 60 seconds.
 - **Corrections to the issues.**
-  - #151 attributes rows to the service's skip days by their moved cards. DeckStreak's skip day
-    writes nothing to the collection (SPEC-083), so no row is DeckStreak's own: the report says so,
-    and it attributes every manual row to the owner's edits or an earlier tool's, never to
-    DeckStreak.
+  - #151 attributes rows to the service's skip days by their moved cards, and so does this census: DeckStreak's skip day writes one type-4 review-log row per card it moves (SPEC-083 R18, ADR-089), so a manual row belongs to a skip day when its card is in that skip's snapshot and its id falls between that skip's creation and the next skip's (`provenance.py:build_skip_evidence`, ADR-097), and an undone skip's rows are named undone; every other manual row is the owner's edits or an earlier tool's.
   - #151 says the census is whole-collection. Here it covers the owner's scope (ADR-095), which is
     the whole collection when `DECKSTREAK_INCLUDE_DECKS` is unset; the report states which, and
     over which window.
@@ -109,8 +105,7 @@ R7. `crates/ingest/src/review_reads.rs` reads the provenance counts: all rows an
     the window's floor, the manual rows' ids and cards up to 100,000, and the cards whose first row
     is manual, keeping the scope, equal to `goldens/provenance_counts.json`
     (`anki_reader.py:read_due_date_provenance` over a synthetic collection).
-R8. The census equals `goldens/provenance_report.json` (`provenance.py:compute_provenance`) with an
-    empty skip ledger. The report states that DeckStreak writes nothing to the collection, whether
+R8. The census equals `goldens/provenance_report.json` (`provenance.py:compute_provenance`) with an empty skip ledger, and equals `goldens/provenance_report_skips.json` over a synthetic ledger of two skips, one undone, read from ingest's `skip_days` and its card snapshot (SPEC-083 R1, ADR-097). The report states the rows it attributes to DeckStreak's skip days, whether
     it covers the whole collection or the owner's scope, and its window; its constants (100,000 and
     60,000 ms) equal `goldens/provenance.constants.json`.
 
@@ -146,10 +141,11 @@ R10. The insights screen shows each report as a section: Dead Air's attention sh
 | A15 | the provenance constants equal the predecessor's | `the_provenance_constants_equal_the_predecessors` |
 | A16 | Dead Air runs weekly over the sessions' spans | `dead_air_runs_weekly_over_the_sessions_spans` |
 | A17 | each on-demand command runs its instrument or answers that a run is in progress | `each_on_demand_command_runs_its_instrument` |
-| A18 | the Other Hand states its coverage and that DeckStreak writes nothing | `states its coverage and that deckstreak writes nothing` |
+| A18 | the Other Hand states its coverage and the rows it attributes to DeckStreak's skip days | `states its coverage and the rows deckstreak's skip days wrote` |
 | A19 | the Tilt Test reads its verdict with its sign and never as a cause | `reads the verdict with its sign and never as a cause` |
 | A20 | a Dead Air refusal renders its reason | `renders each refusal with its reason` |
 | A21 | the Fluency Trap renders its deck rows and verdict | `renders the verdict and the deck rows` |
+| A22 | the census over a ledger of two skips, one undone, equals the golden | `the_provenance_census_with_skips_matches_the_predecessors_golden` |
 
 ```acceptance
 A1: cargo test -p deck-streak-kernel --test pynum_statistics -- --exact shuffle_and_erfc_match_cpythons_golden
@@ -169,10 +165,11 @@ A14: cargo test -p deck-streak-insights --test other_hand -- --exact the_provena
 A15: cargo test -p deck-streak-insights --test other_hand -- --exact the_provenance_constants_equal_the_predecessors
 A16: cargo test -p deck-streak-coordination --test dead_air_step -- --exact dead_air_runs_weekly_over_the_sessions_spans
 A17: cargo test -p deck-streak-bot --test instrument_commands -- --exact each_on_demand_command_runs_its_instrument
-A18: pnpm exec vitest run web/app/src/lib/insights/OtherHandSection.test.ts -t "states its coverage and that deckstreak writes nothing"
+A18: pnpm exec vitest run web/app/src/lib/insights/OtherHandSection.test.ts -t "states its coverage and the rows deckstreak's skip days wrote"
 A19: pnpm exec vitest run web/app/src/lib/insights/TiltSection.test.ts -t "reads the verdict with its sign and never as a cause"
 A20: pnpm exec vitest run web/app/src/lib/insights/DeadAirSection.test.ts -t "renders each refusal with its reason"
 A21: pnpm exec vitest run web/app/src/lib/insights/FluencySection.test.ts -t "renders the verdict and the deck rows"
+A22: cargo test -p deck-streak-insights --test other_hand -- --exact the_provenance_census_with_skips_matches_the_predecessors_golden
 ```
 
 ## 3a. What the box run judges
@@ -204,7 +201,7 @@ delivery, so the private wiring does not change when it merges.
 | `crates/insights/tests/dead_air.rs` | `deck-streak-insights` | added: A3 to A5 |
 | `crates/insights/tests/fluency.rs` | `deck-streak-insights` | added: A6 to A8 |
 | `crates/insights/tests/tilt.rs` | `deck-streak-insights` | added: A10 to A12 |
-| `crates/insights/tests/other_hand.rs` | `deck-streak-insights` | added: A14, A15 |
+| `crates/insights/tests/other_hand.rs` | `deck-streak-insights` | added: A14, A15, A22 |
 | `crates/coordination/src/instruments.rs` | `deck-streak-coordination` | changed: the floors, the sessions' spans and the on-demand runs |
 | `crates/coordination/tests/dead_air_step.rs` | `deck-streak-coordination` | added: A2, A16 |
 | `crates/bot/src/instrument_commands.rs` | `deck-streak-bot` | added: the three on-demand commands |
@@ -233,6 +230,7 @@ delivery, so the private wiring does not change when it merges.
 | `tools/parity-oracle/goldens/tilt.constants.json` | repo | added: the Tilt Test's constants (constants) |
 | `tools/parity-oracle/goldens/provenance_counts.json` | repo | added: the golden of `anki_reader.py:read_due_date_provenance` (adapter; a temporary synthetic collection) |
 | `tools/parity-oracle/goldens/provenance_report.json` | repo | added: the golden of `provenance.py:compute_provenance` (adapter; an empty skip ledger) |
+| `tools/parity-oracle/goldens/provenance_report_skips.json` | repo | added: the golden of `provenance.py:compute_provenance` with `build_skip_evidence` (adapter; a synthetic ledger of two skips, one undone, and their card snapshots) |
 | `tools/parity-oracle/goldens/provenance.constants.json` | repo | added: the Other Hand's constants (constants) |
 | `scripts/mutation-rows.d/S09700-S09799.json` | repo | added: the rows of §9 |
 | `docs/specs/SPEC-097-dead-air-the-fluency-trap-the-tilt-test-and-the-other-hand-read-how-the-owner-studies.md` | docs | moved from `docs/specs/planned/` |
@@ -244,7 +242,6 @@ delivery, so the private wiring does not change when it merges.
 - It sends no weekly report; Dead Air's stored report waits for it (#130).
 - It revives neither the Churn Tax (#173), the Latency Debt audit (#174), the Two-Button Grading
   audit (#175) nor the Shuffle Test (#176), each inert in v9 and waiting for the owner's decision.
-- It attributes no collection row to a skip day, because DeckStreak's skip day moves no card (#108).
 - It serves no instrument to the agent's machine read tool (#157).
 - It imports none of the predecessor's reports (#61).
 
@@ -254,8 +251,8 @@ delivery, so the private wiring does not change when it merges.
   apart.
 - **A pooled tilt rate replaces the paired estimate** and flips the sign. Detected by A10.
 - **A float running sum stands in for `statistics.mean`.** Detected by SPEC-090's A1 and by A10.
-- **The Other Hand claims a row as DeckStreak's.** Prevented by the empty skip ledger and detected
-  by A18.
+- **The Other Hand claims a row as DeckStreak's.** Prevented by the snapshot-and-window rule (ADR-097) and detected
+  by A22 and A18.
 
 ## 7. Parity goldens
 
@@ -273,6 +270,7 @@ predecessor at `27ee2bc` (SPEC-029). Every case is synthetic.
 | `tilt_report` | `tilt.py:build_tilt_report` | adapter | synthetic rows for each verdict, a failed read and both work caps |
 | `provenance_counts` | `anki_reader.py:read_due_date_provenance` | adapter | a temporary collection file with manual, reschedule and study rows, and a small cap |
 | `provenance_report` | `provenance.py:compute_provenance` | adapter | synthetic rows, deck names and an empty skip ledger, truncated and not |
+| `provenance_report_skips` | `provenance.py:compute_provenance`, `build_skip_evidence` | adapter | synthetic rows and a ledger of two skips, one undone, with card snapshots, rows inside and outside each window |
 | `dead_air.constants`, `fluency.constants`, `tilt.constants`, `provenance.constants` | the modules' constants | constants | none |
 
 ## 8. Tables and the v9 import

@@ -280,6 +280,7 @@ delivery, so the private wiring does not change when it merges.
 | `crates/coordination/tests/hand_step.rs` | `deck-streak-coordination` | added: A17, A18 |
 | `crates/bot/src/time_commands.rs` | `deck-streak-bot` | added: the divest, hand and park commands |
 | `crates/bot/src/commands.rs` | `deck-streak-bot` | changed: the commands join the table |
+| `crates/daemon/src/role_bot.rs` | `deck-streak-daemon` | changed: the bot's commands receive the owner's courses loaded at start, for /park's aliases (R17) |
 | `crates/bot/tests/time_commands.rs` | `deck-streak-bot` | added: A19, A20 |
 | `web/app/src/lib/insights/DivestSection.svelte` | miniapp | added |
 | `web/app/src/lib/insights/DivestSection.test.ts` | miniapp | added: A21 |

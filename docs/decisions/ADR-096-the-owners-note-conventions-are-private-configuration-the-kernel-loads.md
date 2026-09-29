@@ -18,8 +18,8 @@ literal in the repository?
 ## Decision Drivers
 
 - CHARTER 11: a personal default is configuration with a neutral example value.
-- ADR-002: ingest, curriculum and insights all read these names, so the value lives in the shared
-  kernel.
+- ADR-002: ingest, curriculum and insights all read these names, and ingest depends only on the
+  kernel, so the kernel is the one crate all three reach.
 - ADR-012: the goldens patch synthetic conventions into the predecessor's modules.
 - A rule the predecessor enforces in code (the forbidden direction tokens) stays code.
 

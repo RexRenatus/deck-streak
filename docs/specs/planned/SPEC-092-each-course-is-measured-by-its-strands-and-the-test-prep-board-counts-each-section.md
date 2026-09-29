@@ -64,7 +64,9 @@ The law taxonomy (ADR-092)
 
 R1. Ingest's scope settings read `DECKSTREAK_LAW_YEAR_BANDS` (a comma-separated list) and
     `DECKSTREAK_LAW_TEST_PREP_DECK` (one deck name) beside `DECKSTREAK_LAW_DECK_ROOT`. Either set
-    without the root refuses start, naming the setting and never a value; `.env.example` shows
+    without the root refuses the cycle's step, which reads the scope on each cycle (`role_job.rs`
+    `run_scheduled`, the owner sync's read in `wiring.rs`), naming the setting and never a value and
+    ending in the refusal reason `scope_settings_refused`; `.env.example` shows
     neutral examples.
 R2. `crates/ingest/src/law_subject.rs` gives a card's law subject and, under the test-prep subtree,
     its section. The law subject equals `goldens/law_subject.json` (`leeches.py:_law_subject`, with the
@@ -122,7 +124,7 @@ R11. Every constant this SPEC uses (the index pattern, the mature mastery, the w
 | id | criterion | decided by |
 |---|---|---|
 | A1 | the law subject of every synthetic path equals the golden of `leeches.py:_law_subject` | `the_law_subject_matches_the_predecessors_golden` |
-| A2 | a year-band or test-prep setting without the law root refuses start, naming the setting only | `a_law_taxonomy_without_a_root_refuses_start` |
+| A2 | a year-band or test-prep setting without the law root refuses the cycle's step with `scope_settings_refused`, naming the setting only | `a_law_taxonomy_without_a_root_refuses_start` |
 | A3 | the strand of every synthetic deck name equals the golden of `strands.py:parse_strand` | `the_strand_parse_matches_the_predecessors_golden` |
 | A4 | every course's strand statistics equal the golden of `strands.py:compute_strand_stats` | `strand_stats_match_the_predecessors_golden` |
 | A5 | the weak spots equal the golden of `strands.py:weak_strands` | `weak_spots_match_the_predecessors_golden` |
@@ -181,6 +183,7 @@ when it merges.
 | `crates/ingest/src/lib.rs` | `deck-streak-ingest` | changed: the law subject module |
 | `crates/ingest/tests/law_subject.rs` | `deck-streak-ingest` | added: A1, A2 |
 | `.env.example` | repo | changed: neutral examples of the two settings |
+| `deploy/deck-streak.env.example` | deploy | changed: the same two settings |
 | `crates/coordination/src/law_taxonomy.rs` | `deck-streak-coordination` | added: the start-up agreement of ingest's law settings with the readings taxonomy (R2) |
 | `crates/coordination/tests/law_taxonomy_agrees.rs` | `deck-streak-coordination` | added: A17 |
 | `crates/curriculum/src/strands.rs` | `deck-streak-curriculum` | added: the strand parse, the statistics, the weak spots and the digest's two |

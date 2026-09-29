@@ -111,8 +111,11 @@ R7. After each sync's recompute, coordination's instruments step runs each weekl
     run one at a time through the kernel's offload, named by their id, and a failure of one is
     recorded as its report's failed read and never stops the next.
 R8. An on-demand run (the route below, or an instrument's command from a later SPEC) runs one
-    instrument through the same offload; a request while any instrument runs is answered that a run
-    is in progress and starts nothing.
+    instrument through the same offload; a request while any instrument runs in the same role
+    process is answered that a run is in progress and starts nothing. Across role processes the
+    guard does not reach: ingest's collection lock is shared by readers (SPEC-022 R7), so a weekly
+    run in the job process and an on-demand run in the api or bot process may overlap, each reading
+    under the shared lock and each replacing only its own instrument's report (R9).
 R9. `instrument_reports` holds the latest report per instrument (the instrument id, the study day,
     the report's schema version and its JSON), replaced in one write. It is a `STRICT` table with
     `created_at`, created by `migrations/009401_coordination_instrument_reports.sql`; it is
@@ -158,7 +161,7 @@ R13. The Mini App's `/insights` screen shows each stored report as a section. A 
 | A12 | every instrument in the registry has one row, and an inert row never runs | `an_inert_instrument_never_runs` |
 | A13 | a weekly instrument runs after the sync once in seven study days, and not again sooner | `a_weekly_instrument_runs_once_in_seven_study_days` |
 | A14 | one instrument's failure is stored as its failed read and the next still runs | `one_failure_never_stops_the_next_instrument` |
-| A15 | a run requested while one runs starts nothing and says a run is in progress | `a_run_while_one_runs_starts_nothing` |
+| A15 | a run requested while one runs in the same role process starts nothing and says a run is in progress | `a_run_while_one_runs_starts_nothing` |
 | A16 | a second report replaces its instrument's first in one write | `a_report_replaces_its_instruments_previous_one` |
 | A17 | `instrument_reports` is exported and erased by coordination's port | `the_instrument_reports_are_exported_and_erased` |
 | A18 | the insights routes answer the owner and refuse every other caller with no data | `the_insights_routes_answer_only_the_owner` |
@@ -210,6 +213,8 @@ when it merges.
 | `crates/kernel/src/lib.rs` | `deck-streak-kernel` | changed: the conventions module |
 | `crates/kernel/tests/conventions.rs` | `deck-streak-kernel` | added: A1 to A3 |
 | `deploy/config/conventions.example.json` | deploy | added: neutral values |
+| `.env.example` | repo | changed: `DECKSTREAK_CONVENTIONS_FILE` |
+| `deploy/deck-streak.env.example` | deploy | changed: `DECKSTREAK_CONVENTIONS_FILE` |
 | `crates/ingest/src/wire.rs` | `deck-streak-ingest` | added: the protobuf wire walk |
 | `crates/ingest/src/structure.rs` | `deck-streak-ingest` | added: the structure reads and their failed reads |
 | `crates/ingest/src/lib.rs` | `deck-streak-ingest` | changed: the two modules |
@@ -224,13 +229,15 @@ when it merges.
 | `migrations/009401_coordination_instrument_reports.sql` | `deck-streak-coordination` | added: `instrument_reports` |
 | `crates/coordination/src/instruments.rs` | `deck-streak-coordination` | added: the step, the on-demand run and the store |
 | `crates/coordination/src/sync_cycle.rs` | `deck-streak-coordination` | changed: the instruments step after the recompute |
-| `crates/daemon/src/wiring.rs` | `deck-streak-daemon` | changed: loads `DECKSTREAK_CONVENTIONS_FILE` once at start and refuses start on a malformed file or a forbidden direction label (R1, R2, A3); joins the instruments step to the sync cycle after the recompute (R7) |
+| `crates/daemon/src/wiring.rs` | `deck-streak-daemon` | changed: loads `DECKSTREAK_CONVENTIONS_FILE` once at start and refuses start on a malformed file or a forbidden direction label (R1, R2, A3); joins the instruments step to the sync cycle after the recompute (R7); builds the on-demand run over the private copy's reader in scope, the offload and the conventions, for the api and the bot, which cannot name ingest, as OwnerSyncCycle answers /sync (R8) |
 | `crates/coordination/src/data_rights.rs` | `deck-streak-coordination` | changed: the port exports and erases `instrument_reports` |
 | `crates/coordination/src/lib.rs` | `deck-streak-coordination` | changed: the instruments module |
 | `crates/coordination/tests/instruments_step.rs` | `deck-streak-coordination` | added: A13 to A15 |
 | `crates/coordination/tests/instrument_reports.rs` | `deck-streak-coordination` | added: A16, A17 |
 | `crates/api/src/insights_routes.rs` | `deck-streak-api` | added: the three routes |
-| `crates/api/src/router.rs` | `deck-streak-api` | changed: the routes behind the owner's session |
+| `crates/api/src/router.rs` | `deck-streak-api` | changed: the routes behind the owner's session; ApiState carries the on-demand run (R8, R12) |
+| `crates/daemon/src/role_api.rs` | `deck-streak-daemon` | changed: the api role builds the on-demand run at start and hands it to ApiState (R8, R12) |
+| `crates/daemon/src/role_bot.rs` | `deck-streak-daemon` | changed: the bot role hands the on-demand run to its commands at start, for the instruments' commands of SPEC-097 and SPEC-098 (R8) |
 | `crates/api/tests/insights_routes.rs` | `deck-streak-api` | added: A18 |
 | `web/app/src/routes/insights/+page.svelte` | miniapp | added: the insights screen |
 | `web/app/src/lib/insights/insights.ts` | miniapp | added: the routes' client and the report types |
@@ -275,7 +282,7 @@ when it merges.
 - **The presence read holds the collection's notes.** Detected by A6, whose fixture counts the notes
   held per batch, and by the memory watch.
 - **A decode failure calls every field dark.** Detected by A9's unparseable case.
-- **Two runs at once double the memory.** Detected by A15.
+- **Two runs at once in one process double the memory.** Detected by A15; a run in another role process is bounded by that process's own guard and the memory watch.
 - **An owner's note-type name reaches a golden or an example.** Prevented by the synthetic adapters
   and the neutral example file, and detected by the public scrub.
 
