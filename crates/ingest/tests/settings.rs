@@ -74,24 +74,6 @@ fn a_plain_http_endpoint_is_marked_cleartext() {
 }
 
 #[test]
-fn a_skip_search_that_is_not_one_expression_refuses_start_by_name() {
-    let unset = SkipSearch::from_env(&Environment::from_vars([("UNRELATED", "1")]))
-        .expect("an unset search is the default");
-    assert_eq!(unset.as_str(), "prop:due=0 -is:suspended -is:buried");
-    let set = SkipSearch::from_env(&Environment::from_vars([(SKIP_SEARCH, "deck:Synthetic")]))
-        .expect("one expression starts");
-    assert_eq!(set.as_str(), "deck:Synthetic");
-    let value = "deck:X) or (deck:X";
-    let refused = SkipSearch::from_env(&Environment::from_vars([(SKIP_SEARCH, value)]));
-    assert!(
-        matches!(refused, Err(SettingsError::Malformed { setting, .. }) if setting == SKIP_SEARCH),
-        "{refused:?}"
-    );
-    let named = refused.map(|_| ()).unwrap_err().to_string();
-    assert!(
-        named.contains(SKIP_SEARCH) && !named.contains(value),
-        "{named}"
-
 fn an_endpoint_that_names_no_host_is_refused() {
     let parse = |endpoint| {
         SyncSettings::from_env(&Environment::from_vars([
@@ -130,5 +112,26 @@ fn a_cleartext_endpoint_logs_one_warning_that_names_the_setting_and_not_its_valu
     assert!(
         !format!("{:?}", warnings[0]).contains("example"),
         "{warnings:?}"
+    );
+}
+
+#[test]
+fn a_skip_search_that_is_not_one_expression_refuses_start_by_name() {
+    let unset = SkipSearch::from_env(&Environment::from_vars([("UNRELATED", "1")]))
+        .expect("an unset search is the default");
+    assert_eq!(unset.as_str(), "prop:due=0 -is:suspended -is:buried");
+    let set = SkipSearch::from_env(&Environment::from_vars([(SKIP_SEARCH, "deck:Synthetic")]))
+        .expect("one expression starts");
+    assert_eq!(set.as_str(), "deck:Synthetic");
+    let value = "deck:X) or (deck:X";
+    let refused = SkipSearch::from_env(&Environment::from_vars([(SKIP_SEARCH, value)]));
+    assert!(
+        matches!(refused, Err(SettingsError::Malformed { setting, .. }) if setting == SKIP_SEARCH),
+        "{refused:?}"
+    );
+    let named = refused.map(|_| ()).unwrap_err().to_string();
+    assert!(
+        named.contains(SKIP_SEARCH) && !named.contains(value),
+        "{named}"
     );
 }
