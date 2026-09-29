@@ -98,6 +98,7 @@ A failed write of `caddy-remove`'s candidate file used to be hidden by `|| true`
 cleanup then failed on the absent candidate before it printed `deploy: refused`. A12 and A13 were
 committed first (87822bc) against the unchanged `deploy.sh`, red by assertion; A14 and A15 followed
 (ce8c72c), A14 red by assertion and A15 recorded `not red` because `grep` keeping no line already
-succeeded. The fix and rows S12713 to S12717 came in dcfcc9c. No green commit edits a test file: the
-tests are in 87822bc and ce8c72c only, and dcfcc9c changes `deploy.sh` and the rows. Rows S12711 and
+succeeded. The fix and rows S12713 to S12717 came in dcfcc9c. dcfcc9c changes `deploy.sh` and the rows and edits no test file;
+the one later commit that edits a test file is f369d2f, which adds a presence assertion to A15 (the
+removal's reload ran) so the probe's absence-only rule passes, and A15 stays `not red`. Rows S12711 and
 S12712 keep their killers and are re-anchored on the changed lines.
