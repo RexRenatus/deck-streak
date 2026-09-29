@@ -268,6 +268,13 @@ when it merges.
 | `crates/daemon/src/role_bot.rs` | `deck-streak-daemon` | changed: the bot role hands the drill notes' reader and the answer's writer to its commands at start (R13) |
 | `crates/daemon/src/role_api.rs` | `deck-streak-daemon` | changed: the api role hands the drill notes' reader and the answer's writer to `ApiState` at start |
 | `changelog.d/` fragment | repo | added |
+| `crates/vault/src/unicode_other.rs` | `deck-streak-vault` | changed (amendment): the drill Unicode table, a lookup compared at each boundary |
+| `crates/daemon/src/drill_vault.rs` | `deck-streak-daemon` | added (amendment): the roles open the drill notes from the environment; an unset vault is not a start refusal |
+| `crates/daemon/tests/roles.rs` | `deck-streak-daemon` | changed (amendment): the job usage line names the drill post-back |
+| `crates/coordination/src/lib.rs` | `deck-streak-coordination` | changed (amendment): the re-exports the bot and the api open the drills with |
+| `crates/api/src/session_routes.rs`, `crates/api/src/lib.rs` | `deck-streak-api` | changed (amendment): the state-change guard is crate-visible and the module is declared |
+| `crates/bot/tests/messages/help.msg.json`, `crates/bot/tests/messages/start.msg.json` | `deck-streak-bot` | changed (amendment): the menu goldens list the two drill commands |
+| `crates/bot/tests/commands.rs` | `deck-streak-bot` | changed (amendment): the menu entries |
 
 ## 5. What this does NOT do
 
