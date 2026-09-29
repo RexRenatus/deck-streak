@@ -141,3 +141,14 @@ fn a_commented_copy_of_the_enum_above_it_is_refused() {
     let decoy = "/*\n#[must_use]\n#[derive(Clone)]\npub enum Verdict {\n*/\n#[derive(Clone)]\npub enum Verdict {";
     assert_eq!(declarations_of(decoy), 2);
 }
+
+#[test]
+fn a_raw_identifier_declaration_is_the_verdict_enum() {
+    let raw = "#[must_use]\n#[derive(Clone)]\npub enum r#Verdict {";
+    assert_eq!(declarations_of(raw), 1);
+    assert!(attributes_of(raw).iter().any(|a| a == "#[must_use]"));
+    // The copy the scan reaches first is compiled out; the enum that compiles is spelled with the
+    // raw identifier and carries no `#[must_use]`, so it is a second declaration.
+    let decoy = "#[must_use]\n#[cfg(any())]\n#[derive(Clone)]\npub enum Verdict {\n}\n#[derive(Clone)]\npub enum r#Verdict {";
+    assert_eq!(declarations_of(decoy), 2);
+}
