@@ -25,6 +25,7 @@ pub mod level_up;
 pub mod liveness;
 pub mod maintenance;
 pub mod obligations;
+pub mod progression;
 pub mod readings;
 pub mod recompute;
 pub mod runner;
