@@ -74,6 +74,9 @@ class TheCampaignTable(unittest.TestCase):
     def test_the_daemon_row_reads_no_unexplained_mutant(self):
         self.assert_closed("deck-streak-daemon")
 
+    def test_the_identity_row_reads_no_unexplained_mutant(self):
+        self.assert_closed("deck-streak-identity")
+
 
 if __name__ == "__main__":
     unittest.main()
