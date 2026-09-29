@@ -54,6 +54,42 @@
         "            let studied = 1_u32;\n",
         "lapse::the_open_lapse_is_counted_from_the_study_reviews_read",
         "a manual or rescheduling entry is counted as zero, so it closes no run (SPEC-049 R15; A15)"
+      ],
+      [
+        "S04907-THE-WALK-READS-THE-WINDOWS-FIRST-DAY",
+        "streaks",
+        "src/lapse.rs",
+        "    while number >= window_start {\n",
+        "    while number > window_start {\n",
+        "lapse::the_walk_reads_every_day_of_its_window_and_none_outside_it",
+        "the walk reads every day of its window, the first one included, so a silent run that starts on it counts (SPEC-049 R13; A16)"
+      ],
+      [
+        "S04908-THE-WALK-READS-NO-DAY-BEFORE-ITS-WINDOW",
+        "streaks",
+        "src/lapse.rs",
+        "    let window_start = review_counts.keys().next()?.epoch_day();\n",
+        "    let window_start = review_counts.keys().next()?.epoch_day() - 1;\n",
+        "lapse::the_walk_reads_every_day_of_its_window_and_none_outside_it",
+        "the walk stops at the earliest day the caller read and reads nothing before it (SPEC-049 R13; A16)"
+      ],
+      [
+        "S04909-A-REVIEW-COUNTS-ON-THE-RULES-DAY-NOT-THE-UTC-DATE",
+        "coordination",
+        "src/lapse.rs",
+        "                facts\n                    .rule\n                    .study_day(deck_streak_kernel::UtcMillis::from_epoch_millis(review.id)),\n",
+        "                StudyDay::from_epoch_day(review.id.div_euclid(86_400_000)),\n",
+        "lapse::a_review_counts_on_the_study_day_the_rule_gives_at_every_boundary",
+        "a review counts on the study day the configured rule gives its instant, not on its UTC date (SPEC-049 R15; A17)"
+      ],
+      [
+        "S04910-A-REVIEW-COUNTS-BY-THE-CONFIGURED-ROLLOVER",
+        "coordination",
+        "src/lapse.rs",
+        "                facts\n                    .rule\n                    .study_day(deck_streak_kernel::UtcMillis::from_epoch_millis(review.id)),\n",
+        "                deck_streak_kernel::StudyDayRule::default()\n                    .study_day(deck_streak_kernel::UtcMillis::from_epoch_millis(review.id)),\n",
+        "lapse::a_review_counts_on_the_study_day_the_rule_gives_at_every_boundary",
+        "a review counts by the configured offset and rollover hour, not by the default rule (SPEC-049 R15; A17)"
       ]
     ]
   }
