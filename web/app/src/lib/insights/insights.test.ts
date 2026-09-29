@@ -33,7 +33,9 @@ describe('insight parsers', () => {
   });
 
   it('refuses a listing that is not one', () => {
-    expect(parseListings({ instruments: [] })).toEqual([]);
+    expect(parseListings({ instruments: [{ id: 'a', cadence: 'w', study_day: 0 }] })).toEqual([
+      { id: 'a', cadence: 'w', studyDay: 0 }
+    ]);
     expect(parseListings(null)).toBeNull();
     expect(parseListings([])).toBeNull();
     expect(parseListings({})).toBeNull();
