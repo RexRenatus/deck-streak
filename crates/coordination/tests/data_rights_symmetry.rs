@@ -32,13 +32,15 @@ use tempfile::TempDir;
 /// Statements that leave every table of the schema holding rows no erase leaves: 101 rows in each
 /// table that takes rows, so an export that pages or limits its read comes up short (the
 /// predecessor's lesson), and every column a reset writes moved off its reset value.
-const SEEDS: [&str; 14] = [
+const SEEDS: [&str; 16] = [
     "UPDATE settings_generation SET generation = 7, courses_digest = '0123456789abcdef' \
      WHERE id = 1",
     "UPDATE ingest_state SET anchor_newest_review_id = 1700000000123, anchor_card_count = 57, \
      anchor_card_fingerprint = 9001, anchor_study_day = 20000, \
      anchor_recomputed_at = 1700000000456, anchor_settings_generation = 7, rescore_pending = 1, \
+     refused_at = 1700000000789, refused_reason = 'recompute_failed', \
      window_floor = 1690000000000, window_count = 12 WHERE id = 1",
+    "UPDATE owner_last_message SET message_id = 4242, arrived_at = 1700000000789 WHERE id = 1",
     "WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 101) \
      INSERT INTO sync_runs (trigger, study_day, started_at, finished_at, status, reason, \
      attempts, full_download, created_at) \
@@ -68,6 +70,14 @@ const SEEDS: [&str; 14] = [
      ELSE 'could_not_tell' END, CASE i % 2 WHEN 0 THEN NULL ELSE 'config_fault' END, \
      CASE i % 2 WHEN 0 THEN NULL ELSE 'day_set_fetch_saturated' END, NULL, '[]', '[]', 0, \
      1000 * i + 500 FROM n",
+    "WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 101) \
+     INSERT INTO agent_runs (duty, template, subject, verdict, cause, class, turns, \
+     input_tokens, output_tokens, cost_micro_usd, duration_ms, created_at) \
+     SELECT 'synthetic-duty', 'synthetic-template', 'law/synthetic-' || i, \
+     CASE i % 3 WHEN 0 THEN 'unavailable' WHEN 1 THEN 'delivered' ELSE 'withheld' END, \
+     CASE i % 3 WHEN 0 THEN 'turn_cap' ELSE NULL END, \
+     CASE i % 3 WHEN 2 THEN 'output-links' ELSE NULL END, \
+     i % 30, 10 * i, 20 * i, 1000 * i, 100 * i, 1000 * i FROM n",
     "WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 101) \
      INSERT INTO daily_rollup (study_day, reviews, learn_count, review_count, relearn_count, \
      filtered_count, seconds, answered, passed, true_retention, graduations, decks_studied, \

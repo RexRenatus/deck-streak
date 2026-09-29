@@ -1,0 +1,102 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S12701-A-FAILED-RELOAD-PUTS-THE-PREVIOUS-BLOCK-BACK",
+        "deploy/deploy.sh",
+        "    if [ -n \"$had\" ]; then mv -T \"$had\" \"$block\"; else find \"$block\" -delete; fi\n",
+        "    if [ -n \"$had\" ]; then :; else find \"$block\" -delete; fi\n",
+        "a reload that fails leaves the previous site block in place of the new one (SPEC-127 R2)",
+        "test_deploy_scripts.TheCaddyInstall.test_a_failed_reload_restores_the_previous_block_and_caddyfile"
+      ],
+      [
+        "S12702-A-FAILED-RELOAD-PUTS-THE-PREVIOUS-CADDYFILE-BACK",
+        "deploy/deploy.sh",
+        "    mv -T \"$kept\" \"$file\"\n    put_back_block\n",
+        "    find \"$kept\" -delete\n    put_back_block\n",
+        "a reload that fails leaves the previous Caddyfile in place of the new one (SPEC-127 R2)",
+        "test_deploy_scripts.TheCaddyInstall.test_a_first_install_whose_reload_fails_removes_the_new_block"
+      ],
+      [
+        "S12703-A-FAILED-RESTORING-RELOAD-STILL-EXITS-NON-ZERO",
+        "deploy/deploy.sh",
+        "    mv -T \"$kept\" \"$file\"\n    put_back_block\n    echo \"deploy: the Caddy reload failed; the previous site file and Caddyfile were restored\" >&2\n    caddy reload --config \"$file\" || echo \"deploy: the restoring reload also failed\" >&2\n    exit 1\n",
+        "    mv -T \"$kept\" \"$file\"\n    put_back_block\n    echo \"deploy: the Caddy reload failed; the previous site file and Caddyfile were restored\" >&2\n    caddy reload --config \"$file\" || echo \"deploy: the restoring reload also failed\" >&2\n    exit 0\n",
+        "an install whose reload and restoring reload fail still refuses, non-zero (SPEC-127 R2)",
+        "test_deploy_scripts.TheCaddyInstall.test_a_failed_restoring_reload_is_named_apart_and_still_refuses"
+      ],
+      [
+        "S12704-THE-PREVIOUS-COPIES-SURVIVE-UNTIL-THE-RELOAD",
+        "deploy/deploy.sh",
+        "caddy adapt --adapter caddyfile --config \"$copy\" --validate >/dev/null || undo\ncp -p \"$file\" \"$kept\"\nmv -T \"$copy\" \"$file\"\n",
+        "caddy adapt --adapter caddyfile --config \"$copy\" --validate >/dev/null || undo\ncp -p \"$file\" \"$kept\"\nmv -T \"$copy\" \"$file\"\nfind \"$kept\" -delete\n[ -n \"$had\" ] && find \"$had\" -delete\n",
+        "the previous block and Caddyfile are removed only after the reload succeeds, never before it (SPEC-127 R1, R5)",
+        "test_deploy_scripts.TheCaddyInstall.test_the_previous_copies_outlive_the_reload_and_go_after_a_good_one"
+      ],
+      [
+        "S12705-A-FAILED-REMOVAL-RELOAD-PUTS-THE-CADDYFILE-BACK",
+        "deploy/deploy.sh",
+        "    [ -n \"$had\" ] && mv -T \"$had\" \"$block\"\n    mv -T \"$kept\" \"$file\"\n",
+        "    [ -n \"$had\" ] && mv -T \"$had\" \"$block\"\n    find \"$kept\" -delete\n",
+        "a removal whose reload fails puts the previous Caddyfile back (SPEC-127 R4)",
+        "test_deploy_scripts.TheCaddyInstall.test_a_failed_reload_of_the_removal_restores_the_block_and_caddyfile"
+      ],
+      [
+        "S12706-THE-FAILED-RELOAD-IS-NAMED-BY-THE-INSTALL",
+        "deploy/deploy.sh",
+        "    mv -T \"$kept\" \"$file\"\n    put_back_block\n    echo \"deploy: the Caddy reload failed; the previous site file and Caddyfile were restored\" >&2\n",
+        "    mv -T \"$kept\" \"$file\"\n    put_back_block\n",
+        "an install whose reload fails says so in words of its own, not only Caddy's (SPEC-127 R2)",
+        "test_deploy_scripts.TheCaddyInstall.test_a_failed_reload_restores_the_previous_block_and_caddyfile"
+      ],
+      [
+        "S12707-THE-REMOVAL-RELOADS-AGAIN-AFTER-RESTORING",
+        "deploy/deploy.sh",
+        "    mv -T \"$kept\" \"$file\"\n    echo \"deploy: the Caddy reload failed; the previous site file and Caddyfile were restored\" >&2\n    caddy reload --config \"$file\" || echo \"deploy: the restoring reload also failed\" >&2\n",
+        "    mv -T \"$kept\" \"$file\"\n    echo \"deploy: the Caddy reload failed; the previous site file and Caddyfile were restored\" >&2\n",
+        "a removal whose reload fails reloads the restored files and names a second failure apart (SPEC-127 R4)",
+        "test_deploy_scripts.TheCaddyInstall.test_a_failed_restoring_reload_of_the_removal_is_named_apart"
+      ],
+      [
+        "S12708-THE-REMOVAL-SWAPS-THE-CADDYFILE-BEFORE-THE-BLOCK",
+        "deploy/deploy.sh",
+        "cp -p \"$file\" \"$kept\"\nmv -T \"$copy\" \"$file\"\n[ -f \"$block\" ] && { had=$block.previous; mv -T \"$block\" \"$had\"; }\n",
+        "cp -p \"$file\" \"$kept\"\n[ -f \"$block\" ] && { had=$block.previous; mv -T \"$block\" \"$had\"; }\nmv -T \"$copy\" \"$file\"\n",
+        "a removal moves the block aside only after the Caddyfile is swapped, so the live Caddyfile never imports a missing file (SPEC-127 R4, SPEC-062 R7)",
+        "test_deploy_scripts.TheCaddyInstall.test_a_removal_whose_caddyfile_rename_fails_leaves_the_block_in_place"
+      ],
+      [
+        "S12709-THE-INSTALL-RESTORES-THE-CADDYFILE-BEFORE-THE-BLOCK",
+        "deploy/deploy.sh",
+        "    mv -T \"$kept\" \"$file\"\n    put_back_block\n    echo \"deploy: the Caddy reload failed; the previous site file and Caddyfile were restored\" >&2\n",
+        "    put_back_block\n    mv -T \"$kept\" \"$file\"\n    echo \"deploy: the Caddy reload failed; the previous site file and Caddyfile were restored\" >&2\n",
+        "a failed install puts the Caddyfile back before it takes the new block away (SPEC-127 R2, SPEC-062 R7)",
+        "test_deploy_scripts.TheCaddyInstall.test_a_first_install_whose_restore_rename_fails_never_imports_a_missing_block"
+      ],
+      [
+        "S12710-THE-REMOVAL-RESTORES-THE-BLOCK-BEFORE-THE-CADDYFILE",
+        "deploy/deploy.sh",
+        "    [ -n \"$had\" ] && mv -T \"$had\" \"$block\"\n    mv -T \"$kept\" \"$file\"\n",
+        "    mv -T \"$kept\" \"$file\"\n    [ -n \"$had\" ] && mv -T \"$had\" \"$block\"\n",
+        "a removal whose reload fails returns the block before the Caddyfile, so no step imports a missing file (SPEC-127 R4, SPEC-062 R7)",
+        "test_deploy_scripts.TheCaddyInstall.test_a_removal_whose_block_restore_fails_never_imports_a_missing_block"
+      ],
+      [
+        "S12711-THE-REMOVALS-SECOND-REFUSAL-SAYS-SO",
+        "deploy/deploy.sh",
+        "caddy adapt --adapter caddyfile --config \"$copy\" --validate >/dev/null || { find \"$copy\" -delete; echo \"deploy: refused\" >&2; exit 1; }\n",
+        "caddy adapt --adapter caddyfile --config \"$copy\" --validate >/dev/null || { find \"$copy\" -delete; exit 1; }\n",
+        "a removal whose adapted configuration is refused prints the removal's own message (SPEC-127 A10, #361)",
+        "test_deploy_scripts.TheCaddyInstall.test_a_removal_whose_adapted_configuration_is_refused_says_so"
+      ],
+      [
+        "S12712-THE-REMOVALS-FIRST-REFUSAL-SAYS-SO",
+        "deploy/deploy.sh",
+        "caddy validate --adapter caddyfile --config \"$copy\" || { find \"$copy\" -delete; echo \"deploy: refused\" >&2; exit 1; }\n",
+        "caddy validate --adapter caddyfile --config \"$copy\" || { find \"$copy\" -delete; exit 1; }\n",
+        "a removal whose validation is refused prints the removal's own message (SPEC-127 A11, #361)",
+        "test_deploy_scripts.TheCaddyInstall.test_a_removal_whose_validation_is_refused_says_so"
+      ]
+    ]
+  }
+}

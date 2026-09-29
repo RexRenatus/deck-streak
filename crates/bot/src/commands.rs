@@ -27,6 +27,7 @@ use deck_streak_coordination::data_rights_registry::{erase_all, export_all};
 use deck_streak_coordination::score::day_score;
 use deck_streak_identity::Owner;
 use deck_streak_kernel::{Clock, Db, Environment, Setting, SettingsError, StudyDayRule};
+use deck_streak_notifications::owner_message;
 use frankenstein::types::{BotCommand, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo};
 
 use crate::gate::{self, Admission, OwnerCallback, OwnerMessage};
@@ -135,15 +136,23 @@ pub enum SyncOutcome {
         /// Why.
         reason: String,
     },
+    /// The job was asked and had not finished when the bounded wait ended: the owner is told so
+    /// instead of being left without an answer (SPEC-059 R5).
+    StillRunning,
 }
 
 /// What the recompute after the sync did.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Scores {
     /// The scores were recomputed from the copy.
     Recomputed,
     /// Nothing the recompute reads had changed, so the scores stand.
     Unchanged,
+    /// The job refused the recompute after the sync ran (SPEC-128); `reason` is the refusal's code.
+    Refused {
+        /// The refusal's code, one of the closed set.
+        reason: String,
+    },
 }
 
 /// One `/sync`'s account.
@@ -337,10 +346,20 @@ pub fn sync_reply(answer: &Result<SyncAnswer, SyncRefusal>) -> Reply {
         SyncOutcome::NotRun { reason } => {
             format!("No sync ran (<code>{}</code>).", escape_html(reason))
         }
+        SyncOutcome::StillRunning => {
+            return Reply::text(
+                "The sync is still running. Send /sync again in a minute for its outcome."
+                    .to_owned(),
+            );
+        }
     };
-    let scores = match answer.scores {
-        Scores::Recomputed => "Your scores were recomputed from the copy here.",
-        Scores::Unchanged => "Nothing they read had changed, so your scores stand.",
+    let scores = match &answer.scores {
+        Scores::Recomputed => "Your scores were recomputed from the copy here.".to_owned(),
+        Scores::Unchanged => "Nothing they read had changed, so your scores stand.".to_owned(),
+        Scores::Refused { reason } => format!(
+            "Your scores were not recomputed (<code>{}</code>), so they stand.",
+            escape_html(reason)
+        ),
     };
     Reply::text(format!("{sync}\n{scores}"))
 }
@@ -451,6 +470,12 @@ impl<S: OwnerSync> Commands<S> {
     }
 
     async fn on_message(&mut self, message: OwnerMessage) {
+        // The owner's latest message, which a T1 celebration reacts to (SPEC-084 R13).
+        let at = self.clock.now();
+        if let Err(error) = owner_message::record(&self.db, i64::from(message.message_id), at).await
+        {
+            tracing::warn!(%error, "the owner's latest message was not recorded");
+        }
         match command_of(&message.text).as_deref() {
             Some("start") => self.send(start_reply(&self.app)).await,
             Some("privacy") => self.send(privacy_reply()).await,

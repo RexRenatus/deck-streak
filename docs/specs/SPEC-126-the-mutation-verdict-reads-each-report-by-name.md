@@ -116,3 +116,86 @@ a report, the verdict downloads it), and section 2 says where each report lands.
 
 Issue #351; SPEC-039 R3 and R18; ADR-057; ADR-016; ADR-126; `actions/download-artifact` v8.0.1
 (`src/download-artifact.ts`, `README.md`).
+
+## 8. Amendment, 2026-09-29: A4 reads each judge line, and two statements corrected
+
+Insert-only under ruling (i) of SPEC-038 section 8: every earlier byte is kept in order. It inserts
+this section and nothing else. Issue #358.
+
+- **A4 now asserts per judge line.** The section 3 row and fenced command for A4 stand. The test
+  parses the verdict job's `mutation-verdict.py judge` command lines, identifies each by its
+  `--class` value, and asserts on that line alone: the `rust` line carries `--plan`,
+  `--shard-reports`, `--rows` and `--whole` at the paths section 3 names, and the `oracle` line
+  carries `--plan` and `--rows` there. It refuses zero judge lines and prints how many it examined.
+  A judge line of a class the test does not name is neither asserted nor an error, so a later
+  class does not redden it. Before this amendment A4 asserted each path as a substring of the whole
+  job, which passes when a flag moves from one judge line to the other or is dropped from one line
+  while another still carries it. Two plants, recorded in `docs/red-first/SPEC-126.md`, are killed:
+  `--plan` removed from the `rust` line while the `oracle` line carries it, and `--rows` removed
+  from the `oracle` line while the `rust` line carries it (#358).
+- **Section 5's `mutation-weekly` sentence is corrected.** It read "its survivors job downloads
+  every artifact of its own run and reads them by recursive search, which does not depend on the
+  layout". The corrected sentence is: the survivors job downloads every artifact of its own run into
+  `reports/<artifact name>/`. Its `survivors` command finds every `outcomes.json`, `mutation.json`
+  and `rows.json` by recursive search below `reports/`. Its battery step runs two commands:
+  `battery` reads `reports/mutants-shard-<i>/` (the `mutants.out/outcomes.json` and
+  `cargo-mutants.exit` inside), `reports/rows/rows.json` and `reports/listing/whole.json` by name
+  and the Stryker sweep by search below `reports/stryker`, and `table` reads
+  `reports/listing/whole.json` by name and finds the shards and the Stryker report by recursive
+  search. So the battery depends on the layout, which this SPEC's change to `ci.yml` does not
+  alter (#358).
+- **Section 3's "a docs-only diff" is corrected.** The pull request that delivered this SPEC changed
+  a workflow and Python tests, so its diff was not docs-only; the corrected sentence is that the
+  live proof is the pull request's own `mutation-verdict` run, on a diff that changed a workflow
+  and Python, whose download step logs are quoted in the pull request (#358).
+
+## 9. Amendment, 2026-09-29: the judge-line reader splits words as the shell does
+
+Insert-only under ruling (i) of SPEC-038 section 8: every earlier byte is kept in order. It inserts
+this section and nothing else. Issue #374.
+
+- **The rule.** Section 8's reader took each word of a judge command as written, so a path the
+  shell builds identically but spells differently was refused. The reader now splits each command
+  into words as the shell does: it joins a backslash-newline continuation first, removes quotes
+  (Python's `shlex.split` in POSIX mode, which removes the quotes it parses), and splits
+  `--flag=value` into the flag and its value, as the verdict script's argument parser reads it.
+  The `--class` value picks the line, as before.
+- **An expansion is kept distinct from text.** `shlex` removes the quotes and the backslash, so it
+  cannot tell `"$reports"` from `'$reports'`. A pass before it marks a `$` inside single quotes, or
+  escaped by a backslash, as text, and a `$` outside every quote as unquoted. `"$reports"`,
+  `"${reports}"`, `"$reports"/...` and `"$reports"'/...'` all read as the expansion of `reports`;
+  `'$reports'` and `\$reports` read as the text `\$reports`; an unquoted `$reports` reads as
+  `(unquoted)$reports`, which the test refuses because the shell word-splits it.
+- **The command ends where the shell ends it.** The reader stops at a control operator (`;`, `&` or
+  `|`) or at a `#` that starts a word, outside every quote, and the command's words stay on one
+  line: a line break after `judge` with no backslash is not read as a space. A flag that only a
+  comment or a later command carries is therefore not a flag of the judge line.
+- **Every wrong path is still refused.** A single-quoted or escaped path, a different directory, a
+  different variable, an unquoted expansion, a flag moved to the other judge line and a flag dropped
+  from one line each stay refused. Three more are refused: a flag only in a comment, a flag after
+  a control operator, and a line break after `judge` with no backslash (eleven wrong paths in all).
+- **Two checks join A4, both in `test_verdict_download.py`.** The test
+  `test_every_spelling_the_shell_reads_alike_passes` builds the verdict job with each of the seven
+  spellings issue #374 names (braces, the expansion closed before the slash, a single-quoted tail,
+  a quoted flag name, a backslash continuation, and `--flag=value` with the value quoted or with
+  its quotes closing early) and asserts the judge-line check passes. The test
+  `test_every_path_the_shell_reads_differently_is_refused` asserts the check refuses each path the
+  shell reads differently, and `test_an_expansion_is_kept_apart_from_text_and_from_an_unquoted_one`
+  pins how the reader tells the three kinds of `$` apart. They are run by
+  `python3 -m unittest discover -s scripts/tests -p test_verdict_download.py`, and the red-first
+  record names them A5 and A6.
+- It changes no Rust, no workflow and no Python outside the test, because the defect is in the
+  test's reader (#374).
+- It adds no mutation-row band, for the reason section 5 gives (#374).
+
+## 10. Acceptance criteria added by the section 9 amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A5 | each of the seven spellings issue #374 names passes the judge-line check | `test_verdict_download.py` `every_spelling_the_shell_reads_alike_passes` |
+| A6 | each path the shell reads differently is refused | `test_verdict_download.py` `every_path_the_shell_reads_differently_is_refused` |
+
+```acceptance
+A5: python3 -m unittest discover -s scripts/tests -p test_verdict_download.py -k test_every_spelling_the_shell_reads_alike_passes
+A6: python3 -m unittest discover -s scripts/tests -p test_verdict_download.py -k test_every_path_the_shell_reads_differently_is_refused
+```

@@ -269,3 +269,5 @@ this SPEC names each step only.
   decides any resize with the numbers.
 - **The maintainer's machine is where deploys run.** A deploy needs that machine, the rail and the
   owner's go; the release itself stays downloadable, so a rollback needs only a kept tag.
+
+Amendment (2026-09-29): SPEC-127 makes a Caddy reload that fails after the file swap restore the previous site block and Caddyfile, which the last exclusion of section 6 left to #321 (ADR-127).

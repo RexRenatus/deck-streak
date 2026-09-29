@@ -10,11 +10,12 @@ inventory, in the form the repository's privacy checks read.
 | category | what | purpose | lawful basis | retention |
 |---|---|---|---|---|
 | `sync-history` | the record of each sync of your collection: when it ran, what started it, its outcome and its attempts | running your daily sync, and telling you when it stops | contract | until account deletion |
-| `ingest-state` | what the last recompute of your reviews saw, whether you asked for a rescore, and the base of the review window | recomputing your scores only when your collection or your settings changed | contract | until account deletion |
+| `ingest-state` | what the last recompute of your reviews saw, whether you asked for a rescore, why and when a request of yours was refused, and the base of the review window | recomputing your scores only when your collection or your settings changed | contract | until account deletion |
 | `service-counters` | one counter of how many times your settings changed, and a digest of your courses file | telling the recompute that a setting or your courses changed | contract | until account deletion |
 | `xp-ledger` | every XP grant: the study day it pays for, what it was for, the track, the amount, and whether it pays once a day or once ever | keeping your XP total and level, and paying each award at most once | contract | until account deletion |
 | `reading-runs` | the record of each resolution of your readings for a study day: what started it, when it ran, its outcome and why, and how many decks with new cards matched no topic | resolving your daily readings, and showing you why a day has none | contract | until account deletion |
 | `reading-topic-days` | each reading topic's state for each study day and why, and for a topic with new cards the ids of those cards and their notes | giving each topic one honest state each day, and the new cards its reading primes | contract | until account deletion |
+| `agent-runs` | the record of each AI duty run: the duty, the persona template, the subject, how the run ended and why, the turns, tokens and cost it reported, and how long it took; never the prompt or the reply | showing you why a duty delivered nothing, and keeping each run's cost visible | contract | 90 days |
 | `daily-rollups` | each study day's numbers from your reviews (answers by kind, time, true retention, graduations, decks studied), the card state recorded for it, its score and the score it closed with | scoring each study day once it closes, and showing you each day's numbers and score | contract | until account deletion |
 | `daily-course-stats` | each course's reviews, time, first answers and passes on each study day | showing you how each day's work was split across your courses | contract | until account deletion |
 | `notification-decisions` | every decision about a celebration or a nudge: its key, its kind, where it would go, whether it was sent, held or withheld and why, and the tiers asked for and shown | keeping one record of why each message was sent, held or withheld | contract | until account deletion |
@@ -22,6 +23,7 @@ inventory, in the form the repository's privacy checks read.
 | `notification-queue` | the celebrations held by quiet hours or a failed send: their text, why and since when they are held, and how often a send failed | delivering them once quiet hours end or sends succeed, and naming every one given up | contract | until account deletion |
 | `in-app-feed` | the celebrations delivered to the Mini App, and when the Mini App fetched them | showing you in the Mini App the celebrations raised there | contract | until account deletion |
 | `notification-settings` | which kinds of message you switched off, and your quiet hours | honouring your choices of what to receive and when to stay quiet | contract | until account deletion |
+| `owner-last-message` | the id of your latest message to the bot and when it arrived | reacting to your latest message when a small celebration lands | contract | until account deletion |
 
 The lawful basis of each is the contract (GDPR Article 6(1)(b)): the service you run needs it. None
 is kept for a fixed period. Each is kept until you erase it, which is how an account is deleted here.

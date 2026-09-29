@@ -18,20 +18,24 @@
 use std::sync::Arc;
 
 use deck_streak_coordination::delivery::NoNotifier;
-use deck_streak_coordination::jobs::Job;
+use deck_streak_coordination::jobs::{Job, SYNC};
 use deck_streak_coordination::ledger::SqliteCronLedger;
 use deck_streak_coordination::obligations::Obligations;
 use deck_streak_coordination::runner::{Reason, Runner, SyncCycle};
 use deck_streak_coordination::sync_cycle::{CycleError, CycleParts, sync_cycle};
-use deck_streak_daemon::wiring::{self, RecomputeSetup, StateDirectory, WiringError};
+use deck_streak_daemon::sync_request::owner_request_pending;
+use deck_streak_daemon::wiring::{
+    self, OwnerSyncCycle, RecomputeSetup, StateDirectory, WiringError,
+};
 use deck_streak_ingest::engine::RslibEngine;
 use deck_streak_ingest::gate::ChangeGate;
 use deck_streak_ingest::settings::{ScopeSettings, SyncSettings};
+use deck_streak_ingest::state::{RefusalReason, SqliteIngestState};
 use deck_streak_ingest::sync::{SyncReport, Syncer};
 use deck_streak_ingest::sync_runs::{SqliteSyncRuns, Trigger};
 use deck_streak_kernel::{
-    CredentialLoader, CredentialsDirectory, Db, Environment, KernelError, KernelSettings, Offload,
-    Redactor, SettingsError, StudyDayRule, SystemClock,
+    Clock, CredentialLoader, CredentialsDirectory, Db, Environment, KernelError, KernelSettings,
+    Offload, Redactor, SettingsError, StudyDayRule, SystemClock,
 };
 
 /// Why the `job` role stopped before its job could report.
@@ -72,9 +76,67 @@ pub async fn run(env: &Environment, redactor: &Redactor, job: &Job) -> Result<u8
         offload: offload.clone(),
         rule,
     };
+    if job.id == SYNC.id {
+        serve_owner_request(env, redactor, &db, &offload, rule).await;
+    }
     let report = runner.run_job(job.id, &cycle, &db).await;
     db.close().await;
     Ok(report.map_err(JobRoleError::Ledger)?.exit_code())
+}
+
+/// Serves the owner's stored request, when there is one (SPEC-059; ADR-066): one owner cycle, with
+/// R17's reuse window, before the scheduled run. Only the stored flag says the owner asked: the
+/// file that rang the doorbell is never read. A refusal is logged and the scheduled run goes on,
+/// so the timer's own fire is never lost to a request.
+async fn serve_owner_request(
+    env: &Environment,
+    redactor: &Redactor,
+    db: &Db,
+    offload: &Offload,
+    rule: StudyDayRule,
+) {
+    match owner_request_pending(db).await {
+        Ok(false) => {}
+        Ok(true) => {
+            let recompute = match RecomputeSetup::load(env, db).await {
+                Ok(recompute) => recompute,
+                Err(error) => {
+                    tracing::error!(%error, "the recompute refuses the owner's request");
+                    record_refusal(db, RefusalReason::RecomputeRefused).await;
+                    return;
+                }
+            };
+            let cycle = OwnerSyncCycle::new(
+                env.clone(),
+                redactor.clone(),
+                db.clone(),
+                offload.clone(),
+                rule,
+                recompute,
+            );
+            match cycle.run().await {
+                Ok(answer) => tracing::info!(?answer, "the owner's request was served"),
+                Err(refusal) => {
+                    tracing::error!(reason = refusal.reason, "the owner's request was refused");
+                    if let Some(reason) = RefusalReason::parse(refusal.reason) {
+                        record_refusal(db, reason).await;
+                    }
+                }
+            }
+        }
+        Err(error) => tracing::error!(%error, "the owner's request could not be read"),
+    }
+}
+
+/// Records the refusal of the owner's request, so the flag is clear and the owner is answered with
+/// the code (SPEC-128). A failed write is logged and changes nothing else: the scheduled run goes on.
+async fn record_refusal(db: &Db, reason: RefusalReason) {
+    if let Err(error) = SqliteIngestState::new(db.clone())
+        .record_refusal(reason, SystemClock.now())
+        .await
+    {
+        tracing::error!(%error, "the owner's refusal could not be recorded");
+    }
 }
 
 /// The `sync` job's cycle in production: SPEC-022's syncer over Anki's engine, SPEC-023's reader and

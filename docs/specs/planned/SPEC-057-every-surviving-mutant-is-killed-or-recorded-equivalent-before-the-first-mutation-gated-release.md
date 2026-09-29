@@ -582,7 +582,7 @@ closing runs.
 | 5 | `deck-streak-daemon` | 101 | 71 | 1 | 0 | 29 | #318 (runs 36515002230, 36517001675) |
 | 6 | `deck-streak-coordination` | 409 | 324 | 2 | 0 | 83 | #329 (runs 36526822999, 36528662545) |
 | 7 | `deck-streak-api` | 70 | 50 | 0 | 0 | 20 | #328 (runs 36528558184, 36529229929) |
-| 8 | `deck-streak-agent` | 146 | 111 | 0 | 0 | 35 | #330 (runs 36531093051, 36531457597) |
+| 8 | `deck-streak-agent` | 239 | 174 | 0 | 0 | 65 | #338 (runs 36543074674, 36545641689) |
 | 9 | `deck-streak-progression` | 57 | 39 | 0 | 0 | 18 | #333 (runs 36533129255, 36534197772) |
 | 10 | `deck-streak-privacy` | 29 | 26 | 0 | 0 | 3 | #332 (runs 36533127814, 36533533659) |
 | 11 | `miniapp` | 274 | 193 | 0 | 81 | 0 | open (#240) |
@@ -674,3 +674,13 @@ A delivery whose measurements prove this plan wrong records it here, dated, with
   (https://github.com/stryker-mutator/stryker-js/blob/master/docs/disable-mutants.md) and its
   per-test coverage, which tells `Survived` from `NoCoverage`
   (https://github.com/stryker-mutator/stryker-js/blob/master/docs/configuration.md).
+
+## 11. Amendment, 2026-09-29: a package dispatch is sharded by its projected weight
+
+Made by issue #368's delivery, insert-only under ruling (i) of SPEC-038 section 8: every earlier
+byte is kept in order. It inserts this section only.
+
+- **R14's dispatch no longer fans a package out to a fixed 32 legs.** A dispatch naming a package
+  sizes its legs from that package's listing with R18's projection, and the battery reads the same
+  count; a scheduled run and a dispatch with no package keep 32. SPEC-129 decides it and ADR-129
+  records it.

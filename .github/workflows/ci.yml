@@ -7,6 +7,8 @@ name: ci
 # read-only, every action is pinned by its full commit SHA, and every job runs on a GitHub-hosted
 # runner. A cache is saved only by a push to dev or main that missed its key; a pull request, a
 # fork's included, restores and never saves.
+# The required `ci` check is always the pull request's own run: the aggregate job reports as `ci` for
+# a pull request and as `ci (push)` for a push to dev or main.
 on:
   pull_request:
     branches: [dev, main]
@@ -687,6 +689,7 @@ jobs:
           echo "base-is-dev: ok ($EVENT into '${BASE:-push}')"
 
   ci:
+    name: ${{ github.event_name == 'pull_request' && 'ci' || 'ci (push)' }}
     if: ${{ always() }}
     needs: [rust, engine, web, hygiene, mutation-plan, mutation-rust, mutation-python, mutation-rows, mutation-verdict, mutation-web, workflow-lint, base-is-dev]
     runs-on: ubuntu-24.04

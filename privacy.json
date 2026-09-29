@@ -14,7 +14,7 @@
     },
     {
       "id": "ingest-state",
-      "data": "what the last recompute of the owner's reviews saw (the newest review's id, the card count and its fingerprint, the study day, when it ran and the settings generation it read), whether the owner asked for a rescore, and the base of the review window",
+      "data": "what the last recompute of the owner's reviews saw (the newest review's id, the card count and its fingerprint, the study day, when it ran and the settings generation it read), whether the owner asked for a rescore, the reason and the time a request of the owner was refused, and the base of the review window",
       "source": "derived",
       "stores": ["ingest_state.*"],
       "purpose": "recomputing the owner's scores only when their collection or their settings changed",
@@ -64,6 +64,17 @@
       "purpose": "giving each reading topic one honest state each study day, and the new cards its reading primes",
       "lawful_basis": "contract",
       "retention": {"until": "account-deletion"},
+      "export": true,
+      "erase": "delete"
+    },
+    {
+      "id": "agent-runs",
+      "data": "the record of each AI duty run: the duty, the persona template, the subject, how the run ended with its cause or its class, the turns, the tokens and the cost the run reported, and how long it took; never the prompt and never the reply",
+      "source": "derived",
+      "stores": ["agent_runs.*"],
+      "purpose": "showing the owner why a duty delivered nothing, and keeping each run's cost visible",
+      "lawful_basis": "contract",
+      "retention": {"period": "P90D"},
       "export": true,
       "erase": "delete"
     },
@@ -143,12 +154,24 @@
       "retention": {"until": "account-deletion"},
       "export": true,
       "erase": "delete"
+    },
+    {
+      "id": "owner-last-message",
+      "data": "the id of the owner's latest message to the bot and when it arrived",
+      "source": "derived",
+      "stores": ["owner_last_message.*"],
+      "purpose": "reacting to the owner's latest message when a small celebration lands",
+      "lawful_basis": "contract",
+      "retention": {"until": "account-deletion"},
+      "export": true,
+      "erase": "anonymise"
     }
   ],
   "sql": ["migrations/*.sql"],
   "code": ["crates/*/src/**/*.rs", "web/app/src/**/*.ts", "web/app/src/**/*.svelte"],
   "export": {"code": ["crates/*/src/data_rights.rs", "crates/privacy/src/export.rs"], "format": "json"},
   "erase": {"code": ["crates/*/src/data_rights.rs", "crates/privacy/src/erase.rs"]},
+  "purge": {"code": ["crates/agent/src/runs.rs", "crates/coordination/src/maintenance.rs"], "timer": "deploy/systemd/deck-streak-job@maintenance.timer"},
   "backups": {"config": "deploy/litestream.yml", "retention": "P3D"},
   "logs": {"config": "deploy/journald.conf.d/deck-streak.conf", "retention": "P14D"},
   "policy": {
@@ -162,7 +185,7 @@
   "public": {
     "allow": [
       "@tty1.service",
-      "@nightly.timer",
+      "@nightly.timer", "@maintenance.timer",
       "@web.socket",
       "@inbox.path",
       "@usb1.mount",

@@ -15,6 +15,8 @@ maintainer's machine, only when run there (SPEC-062, below).
 | `systemd/deck-streak-bot.service` | the `bot` role: the Telegram bot's long-polling transport, `Type=notify` with a watchdog |
 | `systemd/deck-streak-job@.service` | one run of one job of coordination's job table, `deckstreakd job <id>`, a `oneshot` |
 | `systemd/deck-streak-job@<id>.timer` | one timer per job of the table (`sync`, `maintenance`, `liveness`), each starting the job instance of its own name |
+| `systemd/deck-streak-job@sync (path unit)` | the owner's `/sync` doorbell: a change of the request file starts `deck-streak-job@sync` (service unit), and it loads no credential (SPEC-059) |
+| `tmpfiles.d/deck-streak-sync-request.conf` | the request directory, the service user's alone, mode `0700`; only the bot unit may write it (SPEC-059) |
 | `systemd/deck-streak-alert@.service` | the one alert path, a `oneshot` every other service names with `OnFailure=`: it pages the owner on Telegram that its instance failed (SPEC-031) |
 | `systemd/deck-streak-slo.service`, `.timer` | the SLO evaluator, every five minutes: it pages once per burn episode of the API's SLO (SPEC-031) |
 | `systemd/deck-streak-memory-watch.service`, `.timer` | the memory watch, every minute: it pages once per new OOM kill or `MemoryMax` event of any DeckStreak unit (SPEC-031) |
@@ -56,7 +58,7 @@ file, and no template carries a secret's value.
 | unit | credential ids | why |
 |---|---|---|
 | `deck-streak-api.service` | `owner-user-id`, `telegram-bot-token` | the owner gate over Telegram's launch data (SPEC-024) |
-| `deck-streak-bot.service` | `owner-user-id`, `telegram-bot-token`, `anki-sync-username`, `anki-sync-password` | the transport and the owner gate, and the owner's `/sync`, which runs a sync cycle in this role (SPEC-026) |
+| `deck-streak-bot.service` | `owner-user-id`, `telegram-bot-token` | the transport and the owner gate (SPEC-026); the owner's `/sync` holds no login, it asks the sync job (SPEC-059) |
 | `deck-streak-job@.service` | none | the sync login is loaded by the sync job alone: its instance's drop-in in `systemd/` carries `anki-sync-username` and `anki-sync-password` (SPEC-022, SPEC-062 R14), and the rail's map answers them to that instance alone |
 | `deck-streak-alert@.service` | `owner-user-id`, `telegram-bot-token` | the page: the bot's token, and the owner's id, which is the owner's private chat (SPEC-031) |
 
@@ -112,6 +114,10 @@ job's slot (ADR-027).
 | `maintenance` | daily, the rollover hour, minute 28 | `*-*-* 04:28:00 UTC` | none, waived with its why |
 | `liveness` | hourly, minute 14 | `*-*-* *:14:00 UTC` | none, waived with its why |
 
+The owner's `/sync` adds no slot and no timer: the bot stores the request and touches the request
+file, `deck-streak-job@sync` (path unit) starts the sync job, and the job serves the stored request before
+its scheduled run, which stays claimed once per study day (SPEC-059, ADR-037).
+
 No job timer carries a random delay: the table already places each job on its own minute, clear of
 the others, and a delay would move a fire off it. Each timer says so in its `X-DurableServices-Waive=`.
 
@@ -121,6 +127,11 @@ of its own; neither catches up a run missed while the host was down, and each ti
 
 ## Runbook
 
+- First deploy, for the owner's `/sync`: create the request directory before the bot restarts, with
+  `systemd-tmpfiles --create` over `tmpfiles.d/deck-streak-sync-request.conf`, because the bot's
+  `ReadWritePaths=` names the directory without a `-` prefix and the bot does not start while it is
+  absent. Then restart the bot, and enable the path unit of the sync instance (`systemctl enable --now`
+  on the `deck-streak-job` path template, instance `sync`).
 - Start one job by hand with `systemctl start deck-streak-job@<id>.service`, the id being one of the
   table's. The run exits 0 when the job ran, skipped or recorded a missed fire, 1 when it pages
   (the unit fails, and `OnFailure=` sends the one alert), and 2 for an id the table does not hold.
@@ -177,7 +188,9 @@ host no longer keeps through the same verification. `deploy.sh caddy-install vX.
 block with `scripts/render-caddy.py` from the private configuration (`DECKSTREAK_DEPLOY_CADDY_CONFIG`,
 a JSON object with `host`, `web_root` and `api_upstream`), adds it and one `import` line to a copy
 of the Caddyfile, runs `caddy validate` and `caddy adapt --validate` on the copy, moves it into
-place and reloads; a refusal leaves the live file as it was. `rollback.sh caddy-remove` reverses it.
+place and reloads; a refusal leaves the live file as it was, and a reload that fails puts the
+previous block and Caddyfile back, reloads them and exits non-zero (SPEC-127).
+`rollback.sh caddy-remove` reverses it under the same rule.
 
 ## The host budget
 

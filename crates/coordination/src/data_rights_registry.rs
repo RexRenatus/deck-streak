@@ -5,6 +5,7 @@
 //! A delivery that creates a table adds it to its context's port, and a context with a port adds
 //! it here, in the same change: `tests/data_rights_symmetry.rs` fails until it does.
 
+use deck_streak_agent::data_rights::AgentDataRights;
 use deck_streak_analytics::data_rights::AnalyticsDataRights;
 use deck_streak_ingest::data_rights::IngestDataRights;
 use deck_streak_kernel::{DataRights, Db, KernelDataRights};
@@ -28,11 +29,13 @@ static PROGRESSION: ProgressionDataRights = ProgressionDataRights;
 static NOTIFICATIONS: NotificationsDataRights = NotificationsDataRights;
 /// Readings' port: the topic days and the runs exported and erased (SPEC-045).
 static READINGS: ReadingsDataRights = ReadingsDataRights;
+/// The agent's port: the duty runs exported and erased (SPEC-043).
+static AGENT: AgentDataRights = AgentDataRights;
 /// Coordination's own port: the cron-fire ledger exempt.
 static COORDINATION: CoordinationDataRights = CoordinationDataRights;
 
 /// Every stateful context's port, in the order an erase runs them: the kernel, ingest, analytics
-/// (SPEC-071), progression (SPEC-040), notifications (SPEC-041), readings (SPEC-045) and
+/// (SPEC-071), progression (SPEC-040), notifications (SPEC-041), readings (SPEC-045), the agent (SPEC-043) and
 /// coordination. Identity keeps its sessions in memory (ADR-024), so it has no table and no port.
 #[must_use]
 pub fn ports() -> Vec<&'static dyn DataRights> {
@@ -43,6 +46,7 @@ pub fn ports() -> Vec<&'static dyn DataRights> {
         &PROGRESSION,
         &NOTIFICATIONS,
         &READINGS,
+        &AGENT,
         &COORDINATION,
     ]
 }

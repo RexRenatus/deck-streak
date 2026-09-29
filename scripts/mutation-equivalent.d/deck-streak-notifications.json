@@ -1,0 +1,13 @@
+{
+  "records": [
+    {
+      "file": "crates/notifications/src/router.rs",
+      "mutant": "replace match guard celebration with true in Router::send_bot",
+      "anchor": "Some(bot) if celebration => {",
+      "reason": "A non-celebration reaches send_bot only at T0 or T2, where render makes exactly the calls push makes and answers the same outcome.",
+      "evidence": "route gives a non-celebration the tier rendered(requested), and rendered answers only Tier::T0 or Tier::T2. At T0 render answers Outcome::Delivered(Tier::T0) with no call, and push answers Pushed::Delivered with no call, which delivered maps to Outcome::Delivered(Tier::T0). At T2 render answers delivered(bot.push_message(&PASS, text).await, Tier::T2), and push with a joined bot calls bot.push_message(&PASS, text) once, which the same delivered maps at Tier::T2. With no bot the guard is never read, since the arm matches Some(bot) only. send_bot has one caller, route; the flush renders through render directly.",
+      "reached_by": "router::a_nudge_raised_in_the_mini_app_goes_to_the_bot",
+      "issue": "#120"
+    }
+  ]
+}
