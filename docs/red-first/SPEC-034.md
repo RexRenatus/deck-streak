@@ -325,3 +325,5 @@ The third amendment (section 9 of the SPEC, issue #360) adds A16.
 A16: red at 71ad257: AssertionError: 'Release model: no-back-merge (ADR-034)' not found in the lines of RELEASING.md
 A16: green at 5c5dc26
 ```
+
+DISCLOSURE: A16's body changed after its red commit (71ad257). It now reads the declaration as the only line of the runbook that begins `Release model:`, and as the first non-blank line under the heading of section 5. It fails at 71ad257's runbook by the assertion quoted above, and at dev's runbook by `Lists differ: [] != ['Release model: no-back-merge (ADR-034)']`; it passes at the head.
