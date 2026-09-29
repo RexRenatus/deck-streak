@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM reading_attempts WHERE created_at < ?1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "5c9245feca457eb65b795427fd37e7092bd6185a747883638a51c9c94441e6c7"
+}

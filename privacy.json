@@ -68,6 +68,28 @@
       "erase": "delete"
     },
     {
+      "id": "readings",
+      "data": "each generated reading: its topic, the study day it first covered, the ids of the new cards it primes, its digest, its body, its length in minutes, its vault copy status, and how many nights it was carried; only when an AI route is configured is a topic's card text sent to the model provider named in configuration through that route, and under the default no route no card text leaves the host for a reading and none is generated",
+      "source": "derived",
+      "stores": ["readings.*"],
+      "purpose": "giving the owner a primer for each topic's new cards before they are studied",
+      "lawful_basis": "contract",
+      "retention": {"until": "account-deletion"},
+      "export": true,
+      "erase": "delete"
+    },
+    {
+      "id": "reading-attempts",
+      "data": "each attempt to write a reading: the attempt number, the gate that asked for a repair, how the attempt ended with its cause, and the turns, tokens, cost and time it reported; never the prompt and never the reply",
+      "source": "derived",
+      "stores": ["reading_attempts.*"],
+      "purpose": "showing the owner why a reading was refused, and keeping each attempt's cost visible",
+      "lawful_basis": "contract",
+      "retention": {"period": "P90D"},
+      "export": true,
+      "erase": "delete"
+    },
+    {
       "id": "agent-runs",
       "data": "the record of each AI duty run: the duty, the persona template, the subject, how the run ended with its cause or its class, the turns, the tokens and the cost the run reported, and how long it took; never the prompt and never the reply",
       "source": "derived",

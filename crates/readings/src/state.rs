@@ -128,6 +128,12 @@ impl ReadingGate {
         Self::Contract,
     ];
 
+    /// The gate a stored name is, or `None` for a name outside the closed set.
+    #[must_use]
+    pub fn parse(name: &str) -> Option<Self> {
+        Self::ALL.into_iter().find(|gate| gate.as_str() == name)
+    }
+
     /// The gate's name in a `gate_failed` reason.
     #[must_use]
     pub const fn as_str(self) -> &'static str {
@@ -179,6 +185,12 @@ impl AgentCause {
         Self::TimeCap,
         Self::BudgetCap,
     ];
+
+    /// The cause a stored name is, or `None` for a name outside the closed set.
+    #[must_use]
+    pub fn parse(name: &str) -> Option<Self> {
+        Self::ALL.into_iter().find(|cause| cause.as_str() == name)
+    }
 
     /// The cause's name in an `agent_unavailable` reason.
     #[must_use]

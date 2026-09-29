@@ -38,6 +38,14 @@ impl DataRights for ReadingsDataRights {
                     table: READING_RUNS_TABLE,
                     disposition: Disposition::ExportAndErase,
                 },
+                TableRights {
+                    table: READINGS_TABLE,
+                    disposition: Disposition::ExportAndErase,
+                },
+                TableRights {
+                    table: READING_ATTEMPTS_TABLE,
+                    disposition: Disposition::ExportAndErase,
+                },
             ],
         )
     }
@@ -58,6 +66,22 @@ impl DataRights for ReadingsDataRights {
                 r#"SELECT id AS "id!", trigger, study_day, started_at, finished_at, outcome, class,
                           reason, unmapped_decks, created_at
                    FROM reading_runs ORDER BY id"#
+            )
+            .fetch_all(&mut *connection)
+            .await?;
+            let readings = sqlx::query!(
+                r#"SELECT id, topic, study_day, digest, persona, text, word_count,
+                          reading_minutes, new_cards, note_count, card_ids, generated_at, version,
+                          vault_status, vault_path, carried_nights, created_at
+                   FROM readings ORDER BY generated_at, rowid"#
+            )
+            .fetch_all(&mut *connection)
+            .await?;
+            let attempts = sqlx::query!(
+                r#"SELECT id AS "id!", run_id, topic, study_day, attempt, repair_gate, verdict,
+                          cause, class, gate, turns, input_tokens, output_tokens, cost_micro_usd,
+                          duration_ms, created_at
+                   FROM reading_attempts ORDER BY id"#
             )
             .fetch_all(connection)
             .await?;
@@ -104,14 +128,73 @@ impl DataRights for ReadingsDataRights {
                         })
                         .collect(),
                 },
+                ExportedTable {
+                    table: READINGS_TABLE,
+                    rows: readings
+                        .into_iter()
+                        .map(|row| {
+                            json!({
+                                "id": row.id,
+                                "topic": row.topic,
+                                "study_day": row.study_day,
+                                "digest": row.digest,
+                                "persona": row.persona,
+                                "text": row.text,
+                                "word_count": row.word_count,
+                                "reading_minutes": row.reading_minutes,
+                                "new_cards": row.new_cards,
+                                "note_count": row.note_count,
+                                "card_ids": row.card_ids,
+                                "generated_at": row.generated_at,
+                                "version": row.version,
+                                "vault_status": row.vault_status,
+                                "vault_path": row.vault_path,
+                                "carried_nights": row.carried_nights,
+                                "created_at": row.created_at,
+                            })
+                        })
+                        .collect(),
+                },
+                ExportedTable {
+                    table: READING_ATTEMPTS_TABLE,
+                    rows: attempts
+                        .into_iter()
+                        .map(|row| {
+                            json!({
+                                "id": row.id,
+                                "run_id": row.run_id,
+                                "topic": row.topic,
+                                "study_day": row.study_day,
+                                "attempt": row.attempt,
+                                "repair_gate": row.repair_gate,
+                                "verdict": row.verdict,
+                                "cause": row.cause,
+                                "class": row.class,
+                                "gate": row.gate,
+                                "turns": row.turns,
+                                "input_tokens": row.input_tokens,
+                                "output_tokens": row.output_tokens,
+                                "cost_micro_usd": row.cost_micro_usd,
+                                "duration_ms": row.duration_ms,
+                                "created_at": row.created_at,
+                            })
+                        })
+                        .collect(),
+                },
             ])
         })
     }
 
     fn erase<'a>(&'a self, connection: &'a mut SqliteConnection) -> PortFuture<'a, ()> {
         Box::pin(async move {
-            // A topic day names its run, so the topic days go first.
+            // An attempt and a topic day name their run, so they go before the runs.
+            sqlx::query!("DELETE FROM reading_attempts")
+                .execute(&mut *connection)
+                .await?;
             sqlx::query!("DELETE FROM reading_topic_days")
+                .execute(&mut *connection)
+                .await?;
+            sqlx::query!("DELETE FROM readings")
                 .execute(&mut *connection)
                 .await?;
             sqlx::query!("DELETE FROM reading_runs")
