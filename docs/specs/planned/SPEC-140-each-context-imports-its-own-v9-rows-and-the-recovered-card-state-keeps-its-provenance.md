@@ -12,7 +12,8 @@
   `skip_card_snapshot`), `deck-streak-readings` (`readings`, `reading_attempts`,
   `reading_topic_days`, `reading_runs`), `deck-streak-vault` (`drill_grades`) and
   `deck-streak-markets` (`market_positions`); `deck-streak-coordination` (a test that the
-  recompute keeps an imported day's card state).
+  recompute keeps an imported day's card state, and the day's rollup carries the origin) and
+  `deck-streak-api` (the day view carries the origin).
 - **Decided by:** ADR-008 (the v9 import follows `data-migration.json`), ADR-011 (side by side),
   ADR-012 (the parity oracle proves the math), ADR-071 (the recompute settles each study day once,
   with its end-of-day state), ADR-072 (the import writes the derived sources to
@@ -122,8 +123,9 @@ R7. The card state's origin (ADR-141): `migrations/014001_analytics_card_state_o
 R8. Analytics' `card_state_reading(source, origin)` answers `Absent`, `Recorded`, `Recovered` or
     `Voided`, and equals the golden `import_card_state_reading`: each stamp R7 maps answers the
     reading the predecessor's daily view gave it, and the golden's unknown-prefix case, which R7
-    refuses, carries `diverges` citing ADR-141. The day view and export carry the origin with its
-    row (SPEC-021: the analytics data-rights port exports the new column).
+    refuses, carries `diverges` citing ADR-141. The day view (coordination's `DayRollup` and the
+    API's day JSON, beside `card_state_src`) and the export carry the origin with its row
+    (SPEC-021: the analytics data-rights port exports the new column).
 R9. Progression maps the predecessor's ledger by source: the derived sources (review XP, the daily
     bonuses, consistency, Ascendant, and the habit, focus, token and `leech:` sources ADR-072
     names) go to `xp_settlement` as closed days, and every other source to `xp_ledger`, so the sum
@@ -183,6 +185,7 @@ R15. CHARTER 10's eleven anti-goals bind this SPEC as one block; the ones it tou
 | A20 | a row a writer cannot map refuses the whole write by table, column and reason, and nothing is written | `an_unmappable_row_refuses_the_whole_write` |
 | A21 | an imported history that crosses levels, badges and a record makes progression write no occasion row and call no port | `an_imported_history_raises_nothing` |
 | A22 | an imported rollup row carries the fingerprint `imported`, `settled_at` the source's `updated_at` in epoch milliseconds, and `score_at_close` its score | `an_imported_rollup_row_arrives_settled_with_the_imported_fingerprint` |
+| A23 | the day route answers an imported recovered day with `card_state_origin` `backup`, a voided day with `void` and a live day with null, each beside its `card_state_src` | `the_day_route_carries_the_card_state_origin` |
 
 ```acceptance
 A1: cargo test -p deck-streak-kernel --test import -- --exact the_import_count_adds_and_leaves_unchanged_out
@@ -207,6 +210,7 @@ A19: cargo test -p deck-streak-markets --test import -- --exact the_market_posit
 A20: cargo test -p deck-streak-streaks --test import -- --exact an_unmappable_row_refuses_the_whole_write
 A21: cargo test -p deck-streak-progression --test import -- --exact an_imported_history_raises_nothing
 A22: cargo test -p deck-streak-analytics --test import -- --exact an_imported_rollup_row_arrives_settled_with_the_imported_fingerprint
+A23: cargo test -p deck-streak-api --test rollup_routes -- --exact the_day_route_carries_the_card_state_origin
 ```
 
 ## 4. File manifest
@@ -223,6 +227,9 @@ A22: cargo test -p deck-streak-analytics --test import -- --exact an_imported_ro
 | `crates/analytics/src/lib.rs` | `deck-streak-analytics` | changed: the module |
 | `crates/analytics/tests/import.rs` | `deck-streak-analytics` | added: A2 to A6 and A22 |
 | `crates/coordination/tests/import_recompute.rs` | `deck-streak-coordination` | added: A7 |
+| `crates/coordination/src/score.rs` | `deck-streak-coordination` | changed: `DayRollup` carries `card_state_origin` with its row (R8) |
+| `crates/api/src/analytics_routes.rs` | `deck-streak-api` | changed: the day's JSON carries `card_state_origin` beside `card_state_src` (R8) |
+| `crates/api/tests/rollup_routes.rs` | `deck-streak-api` | changed: A23 |
 | `crates/progression/src/import.rs` | `deck-streak-progression` | added: the ledger split, `day_base_xp`, `drill_xp`, the buffs, badges, records, season and multiplier writers |
 | `crates/progression/src/lib.rs` | `deck-streak-progression` | changed: the module |
 | `crates/progression/tests/import.rs` | `deck-streak-progression` | added: A8 to A11, A21 |
@@ -352,3 +359,4 @@ writers fill these tables; the rule is the count rule SPEC-142 reconciles.
 | `S14018-ASCENDANT-ONLY` | `crates/progression/src/import.rs` | only the Ascendant kind of `buffs` is progression's | `import::the_progression_rows_follow_the_precedence` |
 | `S14019-EVENT-KEPT` | `crates/markets/src/import.rs` | a DeckStreak-only row of an event table is kept, never superseded | `import::the_market_positions_follow_the_precedence` |
 | `S14020-UNKNOWN-STAMP` | `crates/analytics/src/import.rs` | a stamp of an unknown prefix refuses the write rather than arriving as recorded | `import::each_card_state_stamp_arrives_with_its_provenance` |
+| `S14021-DAY-VIEW-ORIGIN` | `crates/api/src/analytics_routes.rs` | the day view drops the origin and shows a recovered day as live | `rollup_routes::the_day_route_carries_the_card_state_origin` |
