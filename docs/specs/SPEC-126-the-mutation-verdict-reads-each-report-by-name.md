@@ -136,10 +136,14 @@ this section and nothing else. Issue #358.
 - **Section 5's `mutation-weekly` sentence is corrected.** It read "its survivors job downloads
   every artifact of its own run and reads them by recursive search, which does not depend on the
   layout". The corrected sentence is: the survivors job downloads every artifact of its own run into
-  `reports/<artifact name>/`, and its battery step reads `reports/mutants-shard-<i>/` (the
-  `mutants.out/outcomes.json` and `cargo-mutants.exit` inside), `reports/rows/rows.json` and
-  `reports/listing/whole.json` by name, and the Stryker sweep by search below `reports/stryker`,
-  so it depends on the layout, which this SPEC's change to `ci.yml` does not alter (#358).
+  `reports/<artifact name>/`. Its `survivors` command finds every `outcomes.json`, `mutation.json`
+  and `rows.json` by recursive search below `reports/`. Its battery step runs two commands:
+  `battery` reads `reports/mutants-shard-<i>/` (the `mutants.out/outcomes.json` and
+  `cargo-mutants.exit` inside), `reports/rows/rows.json` and `reports/listing/whole.json` by name
+  and the Stryker sweep by search below `reports/stryker`, and `table` reads
+  `reports/listing/whole.json` by name and finds the shards and the Stryker report by recursive
+  search. So the battery depends on the layout, which this SPEC's change to `ci.yml` does not
+  alter (#358).
 - **Section 3's "a docs-only diff" is corrected.** The pull request that delivered this SPEC changed
   a workflow and Python tests, so its diff was not docs-only; the corrected sentence is that the
   live proof is the pull request's own `mutation-verdict` run, on a diff that changed a workflow

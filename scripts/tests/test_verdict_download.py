@@ -49,10 +49,12 @@ def judge_lines(verdict):
     job, read one line at a time; a line with no `--class` is refused, and zero lines is too."""
     found = {}
     for command in examined("judge command lines", JUDGE.findall(verdict)):
-        words = shlex.split(command)
+        words = shlex.split(command, posix=False)
         flags = {w: words[i + 1] for i, w in enumerate(words[:-1]) if w.startswith("--")}
         if "--class" not in flags:
             raise AssertionError(f"a judge line names no --class: {command}")
+        if flags["--class"] in found:
+            raise AssertionError(f"two judge lines of class {flags['--class']}: {command}")
         found[flags["--class"]] = flags
     return found
 
@@ -216,7 +218,7 @@ class TheVerdictReadsEachReportByName(unittest.TestCase):
             for flag, path in wanted.items():
                 self.assertEqual(
                     lines[cls].get(flag),
-                    path,
+                    f'"{path}"',
                     f"the {cls} judge line does not read {flag} at {path}",
                 )
         for step in [s for s in steps(verdict) if DOWNLOAD in s]:
