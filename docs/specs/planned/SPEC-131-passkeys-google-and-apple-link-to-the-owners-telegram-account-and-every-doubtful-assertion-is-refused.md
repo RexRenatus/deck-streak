@@ -85,7 +85,8 @@ R6. `GET /api/auth/{provider}/start?purpose=link|sign_in&return_to=<path>` accep
     `response_type=code`, PKCE `S256`, the state, the nonce, and the exact redirect URI
     `<origin>/api/auth/{provider}/callback`. Google's request asks `scope=openid` alone; Apple's asks
     neither `name` nor `email` and `response_mode=query`, so both callbacks are a `GET` that carries
-    the `SameSite=Lax` cookie. At most 8 flows are live.
+    the `SameSite=Lax` cookie. At most 8 flows are live; a ninth evicts the oldest, whose callback
+    then meets R7 step 1 (`state_invalid`).
 R7. The callback refuses, in this order, and each refusal consumes nothing but the flow:
     1. no flow cookie, or a flow id with no flow: `state_invalid`;
     2. a flow older than 600 seconds: `state_expired` (599 accepted);
@@ -181,7 +182,7 @@ R19. The link code, the state, the nonce, the verifier, a token, a sealed token,
      session id never reach a log line, a span field, an error or a response body other than the
      one that mints them (SPEC-024 R4).
 R20. CHARTER 10's eleven anti-goals bind this SPEC as one block; the ones it touches are no
-     unbounded work (R3, R6 and R10's caps, R9's bound, R14's five attempts) and no secret on
+     unbounded work (R3 and R6's caps, R10's 300-second life, R9's bound, R14's five attempts) and no secret on
      anything public (R2, R19).
 
 ## 3. Acceptance criteria
@@ -244,6 +245,8 @@ R20. CHARTER 10's eleven anti-goals bind this SPEC as one block; the ones it tou
 | A54 | a revoker without Apple's credentials queues the sealed token and reports it queued | `a_revoker_without_the_credential_queues_the_token` |
 | A55 | each role reads exactly R2's credentials: an empty `google-client-secret` refuses the api role's start and no other role's, and an empty `link-token-key` refuses the api, bot and data roles' start and the job `link_revocation`'s run | `each_role_reads_exactly_its_linking_credentials` |
 | A56 | a queued revocation opens its sealed token without a subject, and Apple's acceptance deletes its row | `a_queued_revocation_opens_without_a_subject_and_is_deleted_on_success` |
+| A57 | a ninth live link code evicts the oldest, which is refused `link_code_invalid`, and the eighth still redeems | `a_ninth_link_code_evicts_the_oldest` |
+| A58 | a ninth live flow evicts the oldest | `a_ninth_flow_evicts_the_oldest` |
 
 ```acceptance
 A1: cargo test -p deck-streak-identity --test linking -- --exact a_link_code_is_random_and_kept_hashed
@@ -302,6 +305,8 @@ A53: cargo test -p deck-streak-identity --test linking -- --exact a_link_session
 A54: cargo test -p deck-streak-identity --test apple -- --exact a_revoker_without_the_credential_queues_the_token
 A55: cargo test -p deck-streak-daemon --test lifecycle -- --exact each_role_reads_exactly_its_linking_credentials
 A56: cargo test -p deck-streak-identity --test apple -- --exact a_queued_revocation_opens_without_a_subject_and_is_deleted_on_success
+A57: cargo test -p deck-streak-identity --test linking -- --exact a_ninth_link_code_evicts_the_oldest
+A58: cargo test -p deck-streak-identity --test oidc -- --exact a_ninth_flow_evicts_the_oldest
 ```
 
 ## 3a. What the box run judges
@@ -332,8 +337,8 @@ DeckStreak.
 | `crates/identity/src/data_rights.rs` | `deck-streak-identity` | added: the three tables exported and erased, `identity_revocations` exempt |
 | `crates/identity/src/lib.rs` | `deck-streak-identity` | changed: the modules |
 | `crates/identity/Cargo.toml` | `deck-streak-identity` | changed: `openidconnect`, `webauthn-rs`, `chacha20poly1305`, `p256` (ADR-131, ADR-132, ADR-133) |
-| `crates/identity/tests/linking.rs` | `deck-streak-identity` | added: A1 to A4, A21 to A26, A42, A53 |
-| `crates/identity/tests/oidc.rs` | `deck-streak-identity` | added: A5 to A17 |
+| `crates/identity/tests/linking.rs` | `deck-streak-identity` | added: A1 to A4, A21 to A26, A42, A53, A57 |
+| `crates/identity/tests/oidc.rs` | `deck-streak-identity` | added: A5 to A17, A58 |
 | `crates/identity/tests/linking_config.rs` | `deck-streak-identity` | added: A18 to A20 |
 | `crates/identity/tests/passkeys.rs` | `deck-streak-identity` | added: A27 to A33 |
 | `crates/identity/tests/apple.rs` | `deck-streak-identity` | added: A34 to A38, A54, A56 |
@@ -470,3 +475,5 @@ network or a provider.
 | `S13139-ERASE-REVOKES-FIRST` | `crates/coordination/src/linked_sign_in_erase.rs` | the revocation step runs before the engine | `linked_sign_in_erase::the_erase_revokes_apple_first_and_never_waits_on_a_failure` |
 | `S13140-NO-CREDENTIAL-QUEUES` | `crates/identity/src/apple.rs` | a revoker without the credential queues the token rather than dropping it | `apple::a_revoker_without_the_credential_queues_the_token` |
 | `S13141-QUEUE-OPENS` | `crates/identity/src/apple.rs` | the queued token opens with its issuer and token id | `apple::a_queued_revocation_opens_without_a_subject_and_is_deleted_on_success` |
+| `S13142-CODE-CAP` | `crates/identity/src/linking.rs` | 8; the test names the eighth and the ninth | `linking::a_ninth_link_code_evicts_the_oldest` |
+| `S13143-FLOW-CAP` | `crates/identity/src/oidc.rs` | 8; the test names the eighth and the ninth | `oidc::a_ninth_flow_evicts_the_oldest` |
