@@ -152,6 +152,9 @@ impl DataRights for KernelDataRights {
     fn declaration(&self) -> Result<Declaration, DataRightsError> {
         let mut reset = Map::new();
         reset.insert("generation".to_owned(), Value::from(0));
+        // SPEC-071 R4: the courses digest is cleared with the generation, so the next start
+        // records it again and recomputes.
+        reset.insert("courses_digest".to_owned(), Value::Null);
         Declaration::new(
             KERNEL_CONTEXT,
             vec![
@@ -175,7 +178,8 @@ impl DataRights for KernelDataRights {
     ) -> PortFuture<'a, Vec<ExportedTable>> {
         Box::pin(async move {
             let rows = sqlx::query!(
-                "SELECT id, generation, created_at FROM settings_generation ORDER BY id"
+                "SELECT id, generation, courses_digest, created_at FROM settings_generation \
+                 ORDER BY id"
             )
             .fetch_all(connection)
             .await?;
@@ -187,6 +191,7 @@ impl DataRights for KernelDataRights {
                         json!({
                             "id": row.id,
                             "generation": row.generation,
+                            "courses_digest": row.courses_digest,
                             "created_at": row.created_at,
                         })
                     })
@@ -197,10 +202,13 @@ impl DataRights for KernelDataRights {
 
     fn erase<'a>(&'a self, connection: &'a mut SqliteConnection) -> PortFuture<'a, ()> {
         Box::pin(async move {
-            // The declared reset row: the generation back to 0, the row itself kept.
-            sqlx::query!("UPDATE settings_generation SET generation = 0 WHERE id = 1")
-                .execute(connection)
-                .await?;
+            // The declared reset row: the generation back to 0 and the courses digest cleared, the
+            // row itself kept.
+            sqlx::query!(
+                "UPDATE settings_generation SET generation = 0, courses_digest = NULL WHERE id = 1"
+            )
+            .execute(connection)
+            .await?;
             Ok(())
         })
     }

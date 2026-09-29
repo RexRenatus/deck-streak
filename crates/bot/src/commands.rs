@@ -1,9 +1,10 @@
 //! The bot's commands: the menu, the handlers and the messages they render (SPEC-026 R9, R11, R12;
 //! ADR-037).
 //!
-//! At W0 the owner has five commands. `/start` says first that the coach is an AI, and offers the
-//! Mini App through a `web_app` button whose URL is [`MINI_APP_URL`]. `/privacy` links the published
-//! privacy policy. `/export` sends the owner's data, `coordination::export_all`, as one JSON
+//! The owner has six commands. `/start` says first that the coach is an AI, and offers the Mini App
+//! through a `web_app` button whose URL is [`MINI_APP_URL`]. `/score` answers the current study
+//! day's score through coordination's score reads, the ones the Mini App's score screen reads too
+//! (SPEC-071 R21; [`crate::score_commands`]). `/privacy` links the published privacy policy. `/export` sends the owner's data, `coordination::export_all`, as one JSON
 //! document. `/delete` asks for confirmation with a button, and erases, `coordination::erase_all`,
 //! only when the owner taps the button of the latest prompt, once. `/sync` is the owner's explicit
 //! sync trigger (ADR-037): it runs one sync cycle now through [`OwnerSync`] and answers with the
@@ -23,11 +24,13 @@ use std::future::Future;
 use std::sync::Arc;
 
 use deck_streak_coordination::data_rights_registry::{erase_all, export_all};
+use deck_streak_coordination::score::day_score;
 use deck_streak_identity::Owner;
-use deck_streak_kernel::{Db, Environment, Setting, SettingsError};
+use deck_streak_kernel::{Clock, Db, Environment, Setting, SettingsError, StudyDayRule};
 use frankenstein::types::{BotCommand, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo};
 
 use crate::gate::{self, Admission, OwnerCallback, OwnerMessage};
+use crate::score_commands::{score_failed_reply, score_reply};
 use crate::transport::{Incoming, Sent, Transport, escape_attribute, escape_html};
 
 /// The Mini App's URL, which `/start`'s button opens: an `https:` URL, required by the bot role.
@@ -52,7 +55,11 @@ pub struct MenuEntry {
 }
 
 /// The owner's menu, in the order the menu shows it.
-pub const MENU: [MenuEntry; 4] = [
+pub const MENU: [MenuEntry; 5] = [
+    MenuEntry {
+        command: "score",
+        description: "Show today's score",
+    },
     MenuEntry {
         command: "sync",
         description: "Sync your collection now",
@@ -178,7 +185,8 @@ pub struct Reply {
 }
 
 impl Reply {
-    fn text(text: String) -> Self {
+    /// A reply of `text` alone, with no button.
+    pub(crate) const fn text(text: String) -> Self {
         Self {
             text,
             keyboard: None,
@@ -189,6 +197,7 @@ impl Reply {
 /// The commands' lines, which `/start` and the answer to anything else share.
 fn command_lines() -> String {
     [
+        "/score shows today's score",
         "/sync syncs your collection now",
         "/export sends you a copy of your data",
         "/delete erases your data",
@@ -352,19 +361,24 @@ pub struct Commands<S> {
     app: MiniAppUrl,
     db: Db,
     sync: S,
+    rule: StudyDayRule,
+    clock: Arc<dyn Clock>,
     /// The latest `/delete` prompt's message id, until its button is tapped.
     pending_erase: Option<i32>,
 }
 
 impl<S: OwnerSync> Commands<S> {
     /// The handlers that answer `owner` through `transport`, reaching the owner's data in `db` and
-    /// the sync through `sync`, with `app` as the Mini App's URL.
+    /// the sync through `sync`, with `app` as the Mini App's URL, and reading the current study day
+    /// by `rule` on `clock`.
     pub const fn new(
         transport: Arc<Transport>,
         owner: Owner,
         app: MiniAppUrl,
         db: Db,
         sync: S,
+        rule: StudyDayRule,
+        clock: Arc<dyn Clock>,
     ) -> Self {
         Self {
             transport,
@@ -372,6 +386,8 @@ impl<S: OwnerSync> Commands<S> {
             app,
             db,
             sync,
+            rule,
+            clock,
             pending_erase: None,
         }
     }
@@ -441,6 +457,7 @@ impl<S: OwnerSync> Commands<S> {
             Some("export") => self.export().await,
             Some("delete") => self.ask_erase().await,
             Some("sync") => self.sync().await,
+            Some("score") => self.score().await,
             _ => self.send(help_reply()).await,
         }
     }
@@ -522,6 +539,20 @@ impl<S: OwnerSync> Commands<S> {
         self.transport.send_typing(self.chat()).await;
         let answer = self.sync.sync_now().await;
         self.send(sync_reply(&answer)).await;
+    }
+
+    /// `/score`: the current study day's score, through coordination's score reads (SPEC-071
+    /// R21).
+    async fn score(&self) {
+        let today = self.rule.study_day(self.clock.now());
+        let reply = match day_score(&self.db, today).await {
+            Ok(score) => score_reply(score.as_ref()),
+            Err(error) => {
+                tracing::error!(%error, "the owner's score could not be read");
+                score_failed_reply()
+            }
+        };
+        self.send(reply).await;
     }
 
     /// Sends `reply` to the owner. A reply that gives up is logged by the transport, with its

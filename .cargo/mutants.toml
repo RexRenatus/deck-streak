@@ -6,11 +6,10 @@
 # `--in-place` runs one mutant at a time, the rule's `-j 1`, and refuses a `-j` flag beside it
 # (exit 1, measured on 27.1.0).
 #
-# Each exclusion names one mutant, as an anchored `exclude_re` entry, with
-# `# EQUIVALENT: <why no test can tell it apart> (#N)` on the line above it. A test refuses any other
-# form, and any `mutants::skip` attribute (scripts/tests/test_mutation_workflows.py). Nothing is
-# excluded.
-exclude_re = []
+# Nothing is excluded, so every mutant is listed, run and reported (SPEC-057 R11, ADR-070). A mutant
+# no test can tell apart is recorded equivalent in scripts/mutation-equivalent.d/<package>.json, and
+# `python3 scripts/mutation-verdict.py exclusions` refuses every key here that would filter the
+# listing.
 
 # Each mutant's tests run under cargo-nextest, the gate's own runner, a process per test. Under
 # cargo test, one process per binary, identity's log test failed the unmutated baseline on two of

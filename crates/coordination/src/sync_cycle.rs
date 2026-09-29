@@ -6,22 +6,69 @@
 //! the run before this cycle's), syncs (the syncer owns the run's guards, retries and record),
 //! flushes the notification router when the sync ran and succeeded and the parts carry a router
 //! (SPEC-041 R7), collects every registered obligation's deadlines, and asks the change gate. Then it either reads
-//! the window and recomputes, or leaves the skip the gate recorded. At W0 the recompute has no domain
-//! consumer: it reads the window and writes the anchor. The cycle holds no rule of any context: each
-//! step is its owner's.
+//! the window and recomputes, or leaves the skip the gate recorded. The recompute runs the fold over
+//! the window it read (SPEC-071 R15; [`crate::recompute`]), with the study day in which the latest
+//! successful sync started, so a day closed before that sync is settled and every later day stays
+//! owed; then it writes the anchor. A fold that fails leaves the anchor as it was, so the next
+//! cycle recomputes again. A cycle given the fold also collects the settle a closed day is owed as
+//! an obligation ([`OWED_SETTLE`]), so the day's first successful sync after a sync that ran across
+//! the rollover still recomputes, even when nothing in the collection changed. The cycle holds no
+//! rule of any context: each step is its owner's.
 
 use std::sync::Arc;
 
 use deck_streak_ingest::engine::AnkiEngine;
-use deck_streak_ingest::gate::{ChangeGate, CycleFacts, Decision, GateError, RunReason};
+use deck_streak_ingest::gate::{ChangeGate, CycleFacts, Deadline, Decision, GateError, RunReason};
 use deck_streak_ingest::reader::CollectionReader;
 use deck_streak_ingest::sync::{SyncError, SyncReport, Syncer};
-use deck_streak_ingest::sync_runs::{SqliteSyncRuns, Trigger};
+use deck_streak_ingest::sync_runs::{SqliteSyncRuns, SyncRunStore, Trigger};
 use deck_streak_ingest::window::{WindowError, read_window};
-use deck_streak_kernel::{Clock, KernelError};
+use deck_streak_kernel::{Clock, Db, KernelError, PortFuture, StudyDayRule, UtcMillis};
 use deck_streak_notifications::Router;
 
-use crate::obligations::Obligations;
+use crate::obligations::{ObligationSource, Obligations};
+use crate::recompute::{Fold, FoldInput};
+
+/// The name of the settle a closed study day is owed, as an obligation (SPEC-071 R15): the source's
+/// name, and the label of its deadline, which the gate's reason and the log carry.
+pub const OWED_SETTLE: &str = "owed_settle";
+
+/// The settle a closed study day is owed, as an obligation of every cycle that runs the fold
+/// (SPEC-071 R15, SPEC-023 R10). Its one deadline is the start of the current study day's first
+/// successful sync: a sync that started after the close of every day before it, so the recompute
+/// that follows it may settle them. After a sync that ran across the rollover left the day that
+/// closed owed, the day's next successful sync comes due for it even when nothing in the collection
+/// changed; a recompute that ran after that start has served it, so it holds the gate open for
+/// no other cycle.
+struct OwedSettle {
+    runs: SqliteSyncRuns,
+    rule: StudyDayRule,
+}
+
+impl OwedSettle {
+    /// The deadline at `now`: the start of the first successful sync of `now`'s study day, if one
+    /// has started.
+    async fn due(&self, now: UtcMillis) -> Result<Vec<Deadline>, KernelError> {
+        let first = self.runs.first_success_in(self.rule.study_day(now)).await?;
+        Ok(first
+            .into_iter()
+            .map(|at| Deadline {
+                label: self.name(),
+                at,
+            })
+            .collect())
+    }
+}
+
+impl ObligationSource for OwedSettle {
+    fn name(&self) -> &'static str {
+        OWED_SETTLE
+    }
+
+    fn deadlines(&self, now: UtcMillis) -> PortFuture<'_, Vec<Deadline>> {
+        Box::pin(self.due(now))
+    }
+}
 
 /// What one cycle needs: the syncer, the reader of its copy, the gate over the service's database,
 /// the registered obligations, the clock, and the notification router it flushes, when it has one.
@@ -34,6 +81,17 @@ pub struct CycleParts<E> {
     obligations: Obligations,
     clock: Arc<dyn Clock>,
     router: Option<Arc<Router>>,
+    fold: Option<CycleFold>,
+}
+
+/// The fold a cycle's recompute runs (SPEC-071 R15): the fold with its registered steps, the
+/// database they write, the study-day rule, and the digest of the owner's courses that every
+/// day's fingerprint carries.
+struct CycleFold {
+    fold: Arc<Fold>,
+    db: Db,
+    rule: StudyDayRule,
+    courses_digest: Option<String>,
 }
 
 impl<E: AnkiEngine + Sync> CycleParts<E> {
@@ -53,6 +111,7 @@ impl<E: AnkiEngine + Sync> CycleParts<E> {
             obligations,
             clock,
             router: None,
+            fold: None,
         }
     }
 
@@ -61,6 +120,39 @@ impl<E: AnkiEngine + Sync> CycleParts<E> {
     pub fn with_flush(mut self, router: Arc<Router>) -> Self {
         self.router = Some(router);
         self
+    }
+
+    /// This cycle, running `fold` after every recompute's read (SPEC-071 R15): its steps write
+    /// `db`, the gate's own database, study days are decided by `rule`, and every day's fingerprint
+    /// carries `courses_digest`. A role builds its fold once, at start, and shares it with every
+    /// cycle it runs. The cycle collects the settle a closed day is owed among its obligations
+    /// ([`OWED_SETTLE`]), so no cycle that runs the fold can leave it out.
+    #[must_use]
+    pub fn with_fold(
+        mut self,
+        fold: Arc<Fold>,
+        db: Db,
+        rule: StudyDayRule,
+        courses_digest: Option<String>,
+    ) -> Self {
+        let owed = OwedSettle {
+            runs: SqliteSyncRuns::new(db.clone()),
+            rule,
+        };
+        self.obligations.register(owed);
+        self.fold = Some(CycleFold {
+            fold,
+            db,
+            rule,
+            courses_digest,
+        });
+        self
+    }
+
+    /// The fold this cycle's recompute runs, when it has one.
+    #[must_use]
+    pub fn fold(&self) -> Option<&Fold> {
+        self.fold.as_ref().map(|fold| fold.fold.as_ref())
     }
 
     /// The change gate this cycle asks.
@@ -119,6 +211,10 @@ pub enum CycleError {
     /// The window could not be read.
     #[error(transparent)]
     Window(#[from] WindowError),
+    /// The recompute's fold, or the record of the last successful sync it reads, could not read or
+    /// write; the anchor was left as it was, so the next cycle recomputes again.
+    #[error("the recompute's fold could not run to its end")]
+    Recompute(#[source] KernelError),
 }
 
 /// Runs one cycle for `trigger` (R12): sync, then the gate, then the recompute or the skip.
@@ -162,8 +258,28 @@ where
         Decision::Skip => Recompute::Skipped,
         Decision::Run(reason) => {
             let window = read_window(&cycle.reader, cycle.gate.state(), checked.now).await?;
-            // The recompute's domain consumers arrive with their waves (#66); at W0 it leaves the
-            // anchor its cycle decided on.
+            if let Some(fold) = &cycle.fold {
+                // A closed day is settled only after a successful sync that started after its
+                // close (R15): the fold reads the study day of the latest one on record.
+                let synced_in = cycle
+                    .gate
+                    .runs()
+                    .last_success()
+                    .await
+                    .map_err(CycleError::Recompute)?
+                    .map(|run| run.study_day);
+                let input = FoldInput {
+                    data: &window.data,
+                    rule: fold.rule,
+                    now: checked.now,
+                    synced_in,
+                    courses_digest: fold.courses_digest.as_deref(),
+                };
+                fold.fold
+                    .run(&fold.db, &input)
+                    .await
+                    .map_err(CycleError::Recompute)?;
+            }
             cycle.gate.recomputed(&checked).await?;
             Recompute::Ran {
                 reason,

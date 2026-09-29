@@ -32,8 +32,9 @@ use tempfile::TempDir;
 /// Statements that leave every table of the schema holding rows no erase leaves: 101 rows in each
 /// table that takes rows, so an export that pages or limits its read comes up short (the
 /// predecessor's lesson), and every column a reset writes moved off its reset value.
-const SEEDS: [&str; 12] = [
-    "UPDATE settings_generation SET generation = 7 WHERE id = 1",
+const SEEDS: [&str; 14] = [
+    "UPDATE settings_generation SET generation = 7, courses_digest = '0123456789abcdef' \
+     WHERE id = 1",
     "UPDATE ingest_state SET anchor_newest_review_id = 1700000000123, anchor_card_count = 57, \
      anchor_card_fingerprint = 9001, anchor_study_day = 20000, \
      anchor_recomputed_at = 1700000000456, anchor_settings_generation = 7, rescore_pending = 1, \
@@ -67,6 +68,25 @@ const SEEDS: [&str; 12] = [
      ELSE 'could_not_tell' END, CASE i % 2 WHEN 0 THEN NULL ELSE 'config_fault' END, \
      CASE i % 2 WHEN 0 THEN NULL ELSE 'day_set_fetch_saturated' END, NULL, '[]', '[]', 0, \
      1000 * i + 500 FROM n",
+    "WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 101) \
+     INSERT INTO daily_rollup (study_day, reviews, learn_count, review_count, relearn_count, \
+     filtered_count, seconds, answered, passed, true_retention, graduations, decks_studied, \
+     avg_answer_seconds, young_answered, young_passed, mature_answered, mature_passed, \
+     mature_count, young_count, leech_active, backlog, due_today, card_state_src, score, \
+     consistency, retention, workload, volume, mastery, score_at_close, settled_at, fingerprint, \
+     created_at, updated_at) \
+     SELECT 20000 + i, i, 1, i - 1, 0, 0, 7.5 * i, 1, 1, 100.0, 0, 1, 7.5, 1, 1, 0, 0, \
+     CASE i % 2 WHEN 0 THEN i ELSE NULL END, CASE i % 2 WHEN 0 THEN 2 ELSE NULL END, \
+     CASE i % 2 WHEN 0 THEN 1 ELSE NULL END, CASE i % 2 WHEN 0 THEN 3 ELSE NULL END, \
+     CASE i % 2 WHEN 0 THEN 4 ELSE NULL END, \
+     CASE i % 2 WHEN 0 THEN 'live:' || (1000 * i) ELSE NULL END, i % 101, 70.0, 100.0, 0.0, \
+     40.0, 0.0, CASE i % 3 WHEN 0 THEN i % 101 ELSE NULL END, \
+     CASE i % 3 WHEN 0 THEN 1000 * i ELSE NULL END, 'synthetic-' || i, 1000 * i, 1000 * i FROM n",
+    "WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 101) \
+     INSERT INTO daily_lang_stats (study_day, course, reviews, seconds, answered, passed, \
+     created_at) \
+     SELECT 20000 + i, CASE i % 2 WHEN 0 THEN 'qaa' ELSE 'qab' END, i, 7.5 * i, 1, 1, 1000 * i \
+     FROM n",
     "WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 101) \
      INSERT INTO notification_settings (key, value, created_at) \
      SELECT 'synthetic_setting_' || i, CASE i % 2 WHEN 0 THEN '0' ELSE '1' END, 1000 * i FROM n",

@@ -872,3 +872,39 @@ fn extension(path: &str) -> &str {
         _ => "",
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{attribute_value, autolink_at, link_tail, tag_at};
+
+    fn chars(text: &str) -> Vec<char> {
+        text.chars().collect()
+    }
+
+    #[test]
+    fn a_tag_ends_after_its_closing_bracket() {
+        let (tag, end) = tag_at(&chars("<b>x"), 0).expect("a tag");
+        assert_eq!((tag.name.as_str(), end), ("b", 3));
+    }
+
+    #[test]
+    fn an_equals_sign_with_no_value_after_it_takes_nothing() {
+        assert_eq!(
+            attribute_value(&chars("=x")),
+            2,
+            "an equals sign and its value"
+        );
+        assert_eq!(attribute_value(&chars("==x")), 0);
+    }
+
+    #[test]
+    fn a_links_tail_ends_after_its_parenthesis() {
+        assert_eq!(link_tail(&chars(")x"), 0), Some(1));
+    }
+
+    #[test]
+    fn an_autolink_ends_after_its_angle_bracket() {
+        let (link, end) = autolink_at(&chars("<https://a>x"), 0).expect("an autolink");
+        assert_eq!((link.target.as_str(), end), ("https://a", 11));
+    }
+}
