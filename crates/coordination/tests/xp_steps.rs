@@ -12,15 +12,19 @@ use std::sync::{Arc, Mutex, PoisonError};
 
 use deck_streak_analytics::settings::AnalyticsSettings;
 use deck_streak_coordination::level_up::announce_level_up;
+use deck_streak_coordination::progression::level_view::level_view;
 use deck_streak_coordination::recompute::analytics_step::AnalyticsStep;
 use deck_streak_coordination::recompute::day_bonuses::DayBonusesStep;
 use deck_streak_coordination::recompute::xp::XpStep;
-use deck_streak_coordination::recompute::{Fold, FoldInput, Phase};
+use deck_streak_coordination::recompute::{DayStep, Fold, FoldInput, Phase};
 use deck_streak_ingest::reader::{Card, CollectionData, Review};
 use deck_streak_ingest::tier::Tier;
 use deck_streak_kernel::{Db, ManualClock, StudyDay, StudyDayRule, Track, UtcMillis};
 use deck_streak_notifications::{BotTransport, Pass, Policy, PushFuture, Pushed, Router};
+use deck_streak_progression::buffs::is_ascendant_day;
+use deck_streak_progression::consistency::consistency_multiplier;
 use deck_streak_progression::ledger::SqliteXpLedger;
+use deck_streak_progression::level::level_info;
 use deck_streak_progression::review_xp::review_xp;
 use deck_streak_progression::settle::{SettledRow, settled_of_day};
 use tempfile::TempDir;
@@ -409,4 +413,111 @@ async fn a_day_settles_the_bonus_sources() {
             "{source} is settled on a studied day: {rows:?}"
         );
     }
+}
+
+/// The settled amount `source` holds on `number`'s language track, or none.
+async fn language(db: &Db, number: i64, source: &str) -> Option<u32> {
+    amount_of(&settled(db, number).await, source, "language")
+}
+
+/// Whether `source`'s row on `number` is marked closed.
+async fn closed(db: &Db, number: i64, source: &str) -> Option<bool> {
+    settled(db, number)
+        .await
+        .iter()
+        .find(|row| row.source == source && row.track == "language")
+        .map(|row| row.closed)
+}
+
+#[test]
+fn the_steps_name_and_phase_themselves() {
+    assert_eq!(XpStep.name(), "progression.base_xp");
+    assert_eq!(XpStep.phase(), Phase::BaseXp);
+    assert_eq!(DayBonusesStep.name(), "progression.derived_bonuses");
+    assert_eq!(DayBonusesStep.phase(), Phase::DerivedBonuses);
+}
+
+#[tokio::test]
+async fn the_derived_bonuses_follow_the_run_the_buff_and_the_state_of_the_day() {
+    let scratch = TempDir::new().expect("a scratch directory");
+    let db = database(&scratch).await;
+    let reviews = vec![
+        review(at(D0, 9), 1, 3),
+        review(at(D0 + 1, 9), 1, 3),
+        review(at(D0 + 2, 9), 1, 3),
+    ];
+    let data = collection(
+        reviews,
+        vec![card(1, number(D0) + 100, Track::Language, None)],
+    );
+    let now = at(D0 + 2, 12);
+    recompute(&fold(), &db, &data, now, D0 + 2).await;
+
+    // The two closed days were on pace: the next pass reads a run of two before the current day.
+    let mut write = db.write().await.expect("a write");
+    sqlx::query("UPDATE daily_rollup SET score = 80 WHERE study_day < ?1")
+        .bind(D0 + 2)
+        .execute(&mut *write)
+        .await
+        .expect("the synthetic scores are written");
+    write.commit().await.expect("commit");
+    recompute(&fold(), &db, &data, now, D0 + 2).await;
+
+    // The Ascendant buff was armed for the current day by the closed day before it, and for no
+    // other day.
+    let mut read = db.reader().acquire().await.expect("a reader");
+    let mut armed = Vec::new();
+    for number in [D0, D0 + 1, D0 + 2] {
+        armed.push((
+            number,
+            is_ascendant_day(&mut read, day(number))
+                .await
+                .expect("read"),
+        ));
+    }
+    assert_eq!(
+        examined("days", armed),
+        vec![(D0, false), (D0 + 1, false), (D0 + 2, true)]
+    );
+
+    // The current day: provisional rows, its base times the run's excess, and the buff's bonus.
+    let today = settled(&db, D0 + 2).await;
+    // Base 219 (the reviews' 24, studied 50, backlog-zero 100, streak 15, graduations 30) at a
+    // run of two: 219 * 0.3 truncated is 65. The buff pays a quarter of the 24 review XP.
+    assert_eq!(language(&db, D0 + 2, "consistency").await, Some(65));
+    assert_eq!(language(&db, D0 + 2, "ascendant").await, Some(6));
+    for source in ["reviews", "consistency", "ascendant"] {
+        assert_eq!(closed(&db, D0 + 2, source).await, Some(false), "{source}");
+    }
+
+    // The day before it: a run of one, and its rows closed.
+    // Base 214 at a run of one: 214 * 0.15 truncated is 32.
+    assert_eq!(language(&db, D0 + 1, "consistency").await, Some(32));
+    assert_eq!(language(&db, D0 + 1, "ascendant").await, None);
+    for source in ["reviews", "consistency"] {
+        assert_eq!(closed(&db, D0 + 1, source).await, Some(true), "{source}");
+    }
+    // The first day had no run before it.
+    assert_eq!(language(&db, D0, "consistency").await, None);
+
+    // The level view reads the same run, the buff, the rows and the total.
+    let view = level_view(&db, day(D0 + 2)).await.expect("the view reads");
+    let total = SqliteXpLedger::new(db.clone())
+        .total()
+        .await
+        .expect("total");
+    assert_eq!(view.study_day, day(D0 + 2));
+    assert_eq!(view.info, level_info(total));
+    assert_eq!(view.today, today);
+    assert_eq!(view.run, 2);
+    assert!((view.multiplier - consistency_multiplier(2)).abs() < f64::EPSILON);
+    assert!((view.multiplier_after_a_miss - 1.0).abs() < f64::EPSILON);
+    assert!(view.ascendant);
+
+    // A day with no run: the view says so.
+    let quiet = level_view(&db, day(D0 - 30)).await.expect("the view reads");
+    assert_eq!(quiet.run, 0);
+    assert!((quiet.multiplier - 1.0).abs() < f64::EPSILON);
+    assert!(!quiet.ascendant);
+    assert!(quiet.today.is_empty());
 }

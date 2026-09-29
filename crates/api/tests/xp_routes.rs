@@ -10,6 +10,8 @@
 // are printed on purpose.
 #![allow(clippy::expect_used, clippy::print_stdout)]
 
+use std::future::Future;
+use std::pin::Pin;
 use std::sync::Arc;
 
 use axum::Router;
@@ -17,8 +19,11 @@ use axum::body::{Body, to_bytes};
 use axum::http::header::{CONTENT_TYPE, SET_COOKIE};
 use axum::http::{HeaderMap, HeaderValue, Request, StatusCode};
 use deck_streak_api::{ApiState, OwnerAccess, Readiness, router};
+use deck_streak_coordination::progression::level_view::{LawTierSource, LawTiers};
 use deck_streak_identity::{Freshness, Owner, OwnerGate, WebAppKey};
-use deck_streak_kernel::{Db, ManualClock, StudyDayRule, TelegramUserId, UtcMillis};
+use deck_streak_kernel::{
+    Db, KernelError, ManualClock, StudyDay, StudyDayRule, TelegramUserId, UtcMillis,
+};
 use serde_json::{Value, json};
 use tempfile::TempDir;
 use tower::ServiceExt;
@@ -101,6 +106,11 @@ async fn seed(db: &Db) {
 /// The API as the daemon builds it, over a migrated database holding the three seeded days, for
 /// the synthetic owner and bot, on a manual clock.
 async fn app(scratch: &TempDir) -> (Db, Router) {
+    app_with(scratch, None).await
+}
+
+/// [`app`], with the law tiers' `source` when there is one.
+async fn app_with(scratch: &TempDir, source: Option<Arc<dyn LawTierSource>>) -> (Db, Router) {
     let db = Db::open(&scratch.path().join("deck_streak.db"))
         .await
         .expect("the database opens");
@@ -114,7 +124,28 @@ async fn app(scratch: &TempDir) -> (Db, Router) {
     let access = OwnerAccess::new(gate, clock, StudyDayRule::default());
     let readiness = Readiness::new();
     readiness.database_opened(db.clone());
-    (db, router(ApiState::new(readiness).with_owner(access)))
+    let mut state = ApiState::new(readiness).with_owner(access);
+    if let Some(source) = source {
+        state = state.with_law_tiers(source);
+    }
+    (db, router(state))
+}
+
+/// A law-tier source that answers `tiers`, or a database refusal when it holds none.
+#[derive(Debug)]
+struct FixedTiers(Option<LawTiers>);
+
+impl LawTierSource for FixedTiers {
+    fn law_tiers<'a>(
+        &'a self,
+        _today: StudyDay,
+    ) -> Pin<Box<dyn Future<Output = Result<LawTiers, KernelError>> + Send + 'a>> {
+        Box::pin(async move {
+            self.0
+                .clone()
+                .ok_or(KernelError::Database(sqlx::Error::PoolClosed))
+        })
+    }
 }
 /// An answer: its status, its headers and its body.
 struct Answer {
@@ -290,4 +321,51 @@ async fn the_level_routes_answer_only_the_owner() {
     );
     assert_eq!(tiers.json(), json!({"reason": "law_tiers_unavailable"}));
     db.close().await;
+}
+
+#[tokio::test]
+async fn the_law_tiers_answer_each_tier_and_a_failed_read_answers_500() {
+    let scratch = tempfile::tempdir().expect("a temporary directory");
+    let tiers = LawTiers {
+        cards: [1, 2, 3, 4, 5],
+        xp: [10, 20, 30, 40, 50],
+    };
+    let (db, app) = app_with(&scratch, Some(Arc::new(FixedTiers(Some(tiers))))).await;
+    let cookie = cookie_of(&handshake(&app, OWNER_PAYLOAD).await);
+    let answer = get(&app, LAW_TIERS_PATH, Some(&cookie)).await;
+    assert_eq!(answer.status, StatusCode::OK, "{}", answer.body);
+    assert_eq!(
+        answer.headers.get(CONTENT_TYPE).map(HeaderValue::as_bytes),
+        Some(&b"application/json"[..])
+    );
+    assert_eq!(
+        answer.json(),
+        json!({
+            "cards": {"T1": 1, "T2": 2, "T3": 3, "T4": 4, "none": 5},
+            "xp_today": {"T1": 10, "T2": 20, "T3": 30, "T4": 40, "none": 50}
+        })
+    );
+    db.close().await;
+
+    let scratch = tempfile::tempdir().expect("a temporary directory");
+    let (db, app) = app_with(&scratch, Some(Arc::new(FixedTiers(None)))).await;
+    let cookie = cookie_of(&handshake(&app, OWNER_PAYLOAD).await);
+    let failed = get(&app, LAW_TIERS_PATH, Some(&cookie)).await;
+    assert_eq!(failed.status, StatusCode::INTERNAL_SERVER_ERROR);
+    assert_eq!(
+        failed.headers.get(CONTENT_TYPE).map(HeaderValue::as_bytes),
+        Some(&b"application/json"[..])
+    );
+    assert_eq!(failed.json(), json!({"reason": "level_unreadable"}));
+
+    // A level read over a database that has gone away fails the same way.
+    db.close().await;
+    let gone = get(&app, LEVEL_PATH, Some(&cookie)).await;
+    assert_eq!(
+        gone.status,
+        StatusCode::INTERNAL_SERVER_ERROR,
+        "{}",
+        gone.body
+    );
+    assert_eq!(gone.json(), json!({"reason": "level_unreadable"}));
 }
