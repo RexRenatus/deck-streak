@@ -116,6 +116,16 @@ LOGGED = r"""#!/bin/bash
 echo "@NAME@ $*" >> "$STUB_LOG/moves.log"
 exec /usr/bin/@NAME@ "$@"
 """
+# A `mv` that fails when it renames a `@SUFFIX@` file onto the Caddyfile: a rename that goes wrong.
+MOVE_FAILS = r"""#!/bin/bash
+src=${@: -2:1}; dst=${@: -1}
+if [ "$dst" = "$DECKSTREAK_DEPLOY_CADDYFILE" ] && [ "${src%@SUFFIX@}" != "$src" ]; then
+    echo "mv $* refused-rename" >> "$STUB_LOG/moves.log"
+    exit 1
+fi
+echo "mv $*" >> "$STUB_LOG/moves.log"
+exec /usr/bin/mv "$@"
+"""
 HOST = r"""#!/bin/bash
 echo "host" >> "$STUB_LOG/host.log"
 exec "$@"
@@ -721,6 +731,41 @@ class TheCaddyInstall(Case):
         self.ok(w.run(ROLLBACK, "caddy-remove", **self.config()))
         self.assertFalse((w.caddy_dir / "deck-streak.caddy").exists())
         self.assertEqual(self.leftovers(), [])
+
+    def failing_rename(self, source_suffix):
+        """A `mv` that refuses to rename a `source_suffix` file onto the Caddyfile, and logs it."""
+        body = MOVE_FAILS.replace("@SUFFIX@", source_suffix)
+        self.world.script("mv", body)
+
+    def imports_a_missing_block(self):
+        w = self.world
+        live = (w.caddy_dir / "Caddyfile").read_text()
+        return (
+            "import deck-streak.caddy" in live and not (w.caddy_dir / "deck-streak.caddy").exists()
+        )
+
+    def test_a_removal_whose_caddyfile_rename_fails_leaves_the_block_in_place(self):
+        w = self.world
+        _original, after, block_text = self.installed()
+        self.failing_rename(".candidate")
+        done = w.run(ROLLBACK, "caddy-remove", **self.config())
+        self.assertNotEqual(done.returncode, 0, "a failed rename refuses the removal")
+        block = w.caddy_dir / "deck-streak.caddy"
+        self.assertEqual(block.read_text() if block.exists() else None, block_text)
+        self.assertEqual((w.caddy_dir / "Caddyfile").read_text(), after)
+        self.assertFalse(self.imports_a_missing_block(), "the live Caddyfile imports a block")
+
+    def test_a_first_install_whose_restore_rename_fails_never_imports_a_missing_block(self):
+        w = self.world
+        caddyfile = w.caddy_dir / "Caddyfile"
+        caddyfile.write_text("example.org {\n\trespond 200\n}\n", encoding="utf-8")
+        w.ship("v1.0.0")
+        (w.log / "caddy-reload-fails").write_text("1")
+        self.failing_rename(".previous")
+        done = w.run(DEPLOY, "caddy-install", "v1.0.0", **self.config())
+        self.assertNotEqual(done.returncode, 0)
+        self.assertIn("refused-rename", w.text("moves.log"), "the restore rename was refused")
+        self.assertFalse(self.imports_a_missing_block(), "the live Caddyfile imports a block")
 
     def test_the_caddy_calls_name_the_caddyfile_adapter_for_the_candidate_copy(self):
         w = self.world
