@@ -52,8 +52,12 @@ R4. `deckstreakd cutover alone --report <file>` records the step `alone` with th
     the report's sha256. It is refused unless `retired` is recorded (`not_retired`), unless the
     report's last line is `SLO DAY PASS` (`not_passed`), unless `until - since` is at least 86,400
     seconds (`not_a_day`), and unless `since` is at or after the `retired` row's time
-    (`before_retirement`). The report stays in the maintainer's private record; only its digest
-    enters the ledger.
+    (`before_retirement`). It is also refused with `items_open`, naming the item, while any `moves`
+    item's last step is not `verified`, and with `moved_in_day`, naming the item, when a step of
+    any item is recorded at or after `since` and before `until`: an item reverted after the
+    retirement (SPEC-143 R6) has its predecessor's writer running again, so a day that saw a
+    revert, or a move after one, was not DeckStreak's alone. The report stays in the maintainer's
+    private record; only its digest enters the ledger.
 R5. The runbook `deploy/cutover.md` gains `## Retirement` and `## The day alone`, in this order
     after the last item of SPEC-143's checklist: the rail's retirement, recorded with `retired`
     (#41, #164); SPEC-142's runbook `deploy/v9-import.md` from its final copy to its apply; the day
@@ -74,7 +78,7 @@ R6. Every refusal names its reason and writes nothing. The eleven anti-goals hol
 | A4 | a day report passes only when every SLO's good over total meets its objective, one SLO one response short fails, and a fail outranks a void | `test_a_day_passes_only_when_every_slo_meets_its_objective` |
 | A5 | a day with no response event is void and exits 3 | `test_a_day_with_no_response_is_void` |
 | A6 | the day report writes no episode record and prints no priority-3 line | `test_the_day_report_pages_nothing_and_keeps_no_state` |
-| A7 | a day alone is refused with `not_retired` before the retirement, `not_passed` for a report that did not pass, `not_a_day` for a span under a day, and `before_retirement` for a day that began before the retirement | `an_alone_day_needs_a_passing_full_day_after_the_retirement` |
+| A7 | a day alone is refused with `not_retired` before the retirement, `not_passed` for a report that did not pass, `not_a_day` for a span under a day, `before_retirement` for a day that began before the retirement, `items_open` while an item reverted after the retirement is not verified again, and `moved_in_day` for a day in which an item was reverted and verified again | `an_alone_day_needs_a_passing_full_day_after_the_retirement` |
 | A8 | a recorded day alone holds the command line and the report's sha256, and no line of the report | `the_alone_record_holds_the_reports_digest` |
 | A9 | the runbook orders the retirement, the import and the day alone after the checklist, and every step after the go names #164 | `test_the_runbook_orders_retirement_import_and_the_day_alone` |
 | A10 | the runbook names no removal of the predecessor | `test_the_runbook_keeps_the_predecessor_disabled_not_removed` |
@@ -146,6 +150,8 @@ wiring change.
 - **A day report that pages.** Prevented by R3's stateless mode, and detected by A6 and row S14406.
 - **A day judged before the predecessor stopped.** Prevented by R4's `before_retirement`, and
   detected by A7 and row S14407.
+- **A day judged while a reverted contract had its predecessor's writer back.** Prevented by R4's
+  `items_open` and `moved_in_day`, and detected by A7 and rows S14408 and S14409.
 
 ## 7. Parity goldens
 
@@ -167,6 +173,8 @@ No table. The two steps are rows of SPEC-143's `cutover_steps`.
 | `S14405-VOID` | `deploy/scripts/slo-evaluate.py` | no response is void | `test_slo_evaluator.TheDayReport.test_a_day_with_no_response_is_void` |
 | `S14406-NO-PAGE` | `deploy/scripts/slo-evaluate.py` | the day report pages no one | `test_slo_evaluator.TheDayReport.test_the_day_report_pages_nothing_and_keeps_no_state` |
 | `S14407-AFTER-RETIREMENT` | `crates/coordination/src/cutover.rs` | the day begins after the retirement | `retirement::an_alone_day_needs_a_passing_full_day_after_the_retirement` |
+| `S14408-ALONE-ITEMS-VERIFIED` | `crates/coordination/src/cutover.rs` | the day alone waits for every moving item verified | `retirement::an_alone_day_needs_a_passing_full_day_after_the_retirement` |
+| `S14409-NO-MOVE-IN-DAY` | `crates/coordination/src/cutover.rs` | no item moved inside the day | `retirement::an_alone_day_needs_a_passing_full_day_after_the_retirement` |
 
 No killer calls a network: the evaluator's tests feed a stub journal, and the Rust tests run
 against a temporary database.

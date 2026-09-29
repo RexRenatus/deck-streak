@@ -68,4 +68,6 @@ sequenceDiagram
 ```
 
 A failed or void day is the owner's decision (#164): the ways back are the import's rollback and
-an item's revert. The predecessor's removal waits for the owner's own approval.
+an item's revert. `alone` records a day only while every moving item is verified and no item's
+step falls inside the day, so a day that saw a revert is judged again once the item is verified.
+The predecessor's removal waits for the owner's own approval.
