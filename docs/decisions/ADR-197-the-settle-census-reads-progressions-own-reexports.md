@@ -34,8 +34,8 @@ makes?
 - Resolve names with a full parser such as `syn` over every crate: exact, and it would follow
   every alias a compiler follows. It lost because it adds a dependency to the test crate and
   parses every source in the workspace to answer a question about one crate's exports.
-- Read progression's own re-exports and aliases as the census already reads the other crates':
-  chosen. The census tokenises progression's `src`, reads every `pub use` tree (grouped, nested,
+- Read progression's own re-exports and aliases — chosen, because it is the census's own method:
+  the census tokenises progression's `src`, reads every `pub use` tree (grouped, nested,
   with or without `as`, inside a nested module, a whole-module renaming, and a chain of
   renamings), and adds each new name to the names it searches for. A source that names the
   progression crate and one of those names is a caller. No measurement pointed the other way: the
