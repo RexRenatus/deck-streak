@@ -66,7 +66,7 @@ R6. Nothing else changes: `pending` reads as SPEC-030 R13 states it, the helper'
 A1: python3 -m unittest discover -s scripts/tests -p test_box_scan_expected.py -k an_expected_red_row_passes_and_the_line_counts_it
 A2: python3 -m unittest discover -s scripts/tests -p test_box_scan_expected.py -k an_unexpected_red_row_beside_an_expected_one_still_fails
 A3: python3 -m unittest discover -s scripts/tests -p test_box_scan_expected.py -k a_red_total_beyond_the_expected_rows_fails
-A4: python3 -m unittest discover -s scripts/tests -p test_box_scan_expected.py -k an_expected_row_that_does_not_read_red_is_stale
+A4: python3 -m unittest discover -s scripts/tests -p test_box_scan_expected.py -k an_expected_row_that_does_not_read_red_is_stale -k an_expectation_with_no_settings_document_names_its_issues
 A5: python3 -m unittest discover -s scripts/tests -p test_box_scan_expected.py -k an_expectation_whose_issue_is_closed_is_stale
 A6: python3 -m unittest discover -s scripts/tests -p test_box_scan_expected.py -k an_expected_red_beside_pending_is_refused
 A7: python3 -m unittest discover -s scripts/tests -p test_box_scan_expected.py -k an_expectation_that_names_no_issue_is_refused

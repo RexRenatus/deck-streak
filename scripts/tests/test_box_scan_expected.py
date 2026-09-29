@@ -84,7 +84,7 @@ class TheScanAdmitsAnExpectedRed(unittest.TestCase):
     def test_an_expectation_with_no_settings_document_names_its_issues(self):
         # With no settings document examined the scan is VOID, and the detail names the issues the
         # expectation holds, sorted and once each, not "the wiring names no issue".
-        expected = {ROW: ISSUE, "credential-not-on-disk": "#59", "credential-not-on-argv": ISSUE}
+        expected = {"credential-not-on-disk": "#59", ROW: ISSUE, "credential-not-on-argv": ISSUE}
         box = deferred(self, ["void-settings", "green-surface"], exit_code=0, expected=expected)
         done, _ = box.run()
         line = pack_line(done.stdout, SCAN)
@@ -97,6 +97,23 @@ class TheScanAdmitsAnExpectedRed(unittest.TestCase):
         self.assertNotIn("the wiring names no issue", line)
         self.assertIn(f"stale: {ROW} ({ISSUE})", line)
         self.assertEqual(done.returncode, 1, done.stdout)
+        # An expected row that reads red, with no stale expectation, still fails: VOID is never green.
+        expected = {"credential-not-on-disk": ISSUE}
+        box = deferred(self, ["void-settings", "red-surface"], exit_code=2, expected=expected)
+        done, _ = box.run()
+        line = pack_line(done.stdout, SCAN)
+        self.assertTrue(line.startswith("FAIL"), line)
+        self.assertIn("unexpected 0, expected 1, stale 0", line)
+        self.assertIn("expected_red names #341, but no settings document was examined", line)
+        self.assertEqual(done.returncode, 1, done.stdout)
+        # With no expectation, the detail keeps the old words.
+        box = Box(self)
+        box.set_box(dict(box.box, **{SCAN: {"note": "no expectation"}}))
+        box.set_scan(["void-settings", "green-surface"], 2)
+        done, _ = box.run()
+        line = pack_line(done.stdout, SCAN)
+        self.assertIn("1 void, and the wiring names no issue", line)
+        self.assertNotIn("expected_red names", line)
 
     def test_an_expectation_whose_issue_is_closed_is_stale(self):
         box = deferred(self, [*SETTLED, "red-secret-manager"])
