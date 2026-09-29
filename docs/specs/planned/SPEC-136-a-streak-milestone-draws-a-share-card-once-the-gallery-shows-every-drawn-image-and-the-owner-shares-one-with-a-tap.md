@@ -21,9 +21,9 @@
   `27ee2bc`) runs when a study day moves the streak's current length (`pipeline.py`'s streak step),
   and only at a length in `constants.SHARE_CARD_STREAKS` (7, 30, 50, 100, 180, 365, 500 and 1000). It
   is once per length, ever (`sharecard:streak:<n>` in its notified ledger), asks
-  `_generate_art` for a medallion under the key `streak_<n>`, sends it captioned
-  "Day N. The phoenix remembers.", and marks the length done whatever the art came to. Without the
-  art key nothing is sent and nothing fails.
+  `_generate_art` for a medallion under the key `streak_<n>`, sends it with a one-line caption that
+  names the day (the golden `share_card_prompt` holds it), and marks the length done whatever the art
+  came to. Without the art key nothing is sent and nothing fails.
 - **Nothing shows or shares an image.** #125 asks for a gallery in the Mini App where sharing the
   image is one tap. The Mini App has no gallery and no share control.
 - **Sharing needs no public link.** Telegram's share sheet can send a message the bot prepared
