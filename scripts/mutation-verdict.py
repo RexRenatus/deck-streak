@@ -760,6 +760,64 @@ def projected(costs: list[int], count: int) -> list[int]:
     return totals
 
 
+def mutant_costs(packages: list[str]) -> list[int]:
+    """Each mutant's projected seconds, by its package; a package the table does not name costs
+    the table's highest."""
+    highest = max(SECONDS_PER_MUTANT.values())
+    return [SECONDS_PER_MUTANT.get(package, highest) for package in packages]
+
+
+def fewest_shards(costs: list[int]) -> int | None:
+    """The fewest round-robin shards whose slowest is projected within the bound, or None when
+    even `MAX_SHARDS` do not fit. The one function the per-pull-request plan and a package
+    dispatch's sizing share (SPEC-129 R2)."""
+    fitting = (
+        n for n in range(1, MAX_SHARDS + 1) if max(projected(costs, n)) <= SHARD_BOUND_SECONDS
+    )
+    return next(fitting, None)
+
+
+#: The shards a scheduled run and a dispatch with no package sweep (SPEC-129 R4).
+WHOLE_SHARDS = 32
+
+
+def size(listed_path: str | None, package: str | None) -> int:
+    """The shards a dispatch runs: `WHOLE_SHARDS` with no package or for the Mini App, which
+    reads no listing, else the fewest that fit the bound for the package's listing (SPEC-129
+    R2 to R4). A projection past the matrix's limit is refused and never capped."""
+    if package in (None, "", MINIAPP):
+        count, note = WHOLE_SHARDS, "the whole tree, which is never sized"
+    else:
+        listed = read_listing(listed_path)
+        if not isinstance(listed, list):
+            print(
+                f"mutation: size: VOID {listed_path or 'no --listed'} holds no cargo-mutants listing"
+            )
+            return EXIT_VOID
+        costs = mutant_costs([str(entry.get("package")) for entry in listed])
+        fewest = fewest_shards(costs)
+        if fewest is None:
+            print(
+                f"mutation: size: REFUSED: {len(listed)} mutant(s), projected at {sum(costs)} s "
+                f"serially, need more than {MAX_SHARDS} shards within {SHARD_BOUND_SECONDS} s each, "
+                "the most a job matrix holds: never capped"
+            )
+            return EXIT_FAIL
+        count = fewest
+        times = projected(costs, count)
+        note = (
+            f"{len(listed)} listed mutant(s), projected at {sum(costs)} s serially, the slowest "
+            f"at {max(times)} s of its {SHARD_BOUND_SECONDS} s bound"
+        )
+    print(f"mutation: size: {count} shard(s) for {note}")
+    output = os.environ.get("GITHUB_OUTPUT")
+    if output:
+        with open(output, "a", encoding="utf-8") as sink:
+            sink.write(f"shards={count}\n")
+            sink.write(f"matrix={json.dumps(list(range(count)))}\n")
+    return EXIT_OK
+
+
 def read_listing(path: str | None) -> object | None:
     """A cargo-mutants listing, or None when `path` names no readable one. A file that holds
     nothing is the empty listing: `--list --json --in-diff` prints nothing, not `[]`, when no
@@ -798,12 +856,8 @@ def shards(plan_path: pathlib.Path, listed_path: str | None) -> int:
                 "reads VOID"
             )
         mutants = [(str(entry.get("name")), str(entry.get("package"))) for entry in listed]
-    highest = max(SECONDS_PER_MUTANT.values())
-    costs = [SECONDS_PER_MUTANT.get(package, highest) for _, package in mutants]
-    fitting = (
-        n for n in range(1, MAX_SHARDS + 1) if max(projected(costs, n)) <= SHARD_BOUND_SECONDS
-    )
-    count = next(fitting, None)
+    costs = mutant_costs([package for _, package in mutants])
+    count = fewest_shards(costs)
     if count is None:
         print(
             f"mutation: shards: REFUSED: {len(mutants)} mutant(s), projected at {sum(costs)} s "
@@ -1373,6 +1427,12 @@ def battery(
             findings.append(f"battery: PARTIAL stryker: {len(found)} mutation.json, not one report")
         else:
             whole += 1
+    for foreign in sorted(reports.glob("mutants-shard-*")):
+        number = foreign.name.removeprefix("mutants-shard-")
+        if number.isdigit() and int(number) >= shards:
+            findings.append(
+                f"battery: FOREIGN {foreign.name}: the run was sized at {shards} shard(s)"
+            )
     for finding in findings:
         print(finding)
     print(f"battery: counted {whole} of {promised} reports whole")
@@ -2195,6 +2255,7 @@ def main(argv: list[str] | None = None) -> int:
         choices=[
             "plan",
             "shards",
+            "size",
             "judge",
             "survivors",
             "battery",
@@ -2237,6 +2298,8 @@ def main(argv: list[str] | None = None) -> int:
         if not args.plan:
             parser.error("shards needs --plan")
         return shards(pathlib.Path(args.plan), args.listed)
+    if args.verb == "size":
+        return size(args.listed, args.package)
     if args.verb == "judge":
         if not args.plan or not args.klass:
             parser.error("judge needs --plan and --class")

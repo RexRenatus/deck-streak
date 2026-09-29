@@ -49,14 +49,63 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  # The number of legs the rust job runs (SPEC-129): a dispatch that names a package lists that
+  # package's mutants with the listing job's command, builds nothing, and takes the fewest
+  # round-robin shards whose slowest the per-pull-request plan's projection puts within its bound;
+  # a scheduled run and a dispatch with no package take 32. The legs and the survivors' battery read
+  # this one count, so the mutants, the timeouts and the test tool are the 32-leg sweep's.
+  size:
+    if: ${{ github.event_name != 'pull_request' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    outputs:
+      shards: ${{ steps.size.outputs.shards }}
+      matrix: ${{ steps.size.outputs.matrix }}
+    env:
+      PACKAGE: ${{ inputs.package }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event_name == 'schedule' && 'dev' || github.ref }}
+          persist-credentials: false
+      - name: the pinned Rust toolchain (rust-toolchain.toml)
+        if: ${{ inputs.package && inputs.package != 'miniapp' }}
+        run: rustup show
+      - uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
+        if: ${{ inputs.package && inputs.package != 'miniapp' }}
+        with:
+          tool: cargo-mutants@27.1.0
+          fallback: none
+      - uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
+        if: ${{ inputs.package && inputs.package != 'miniapp' }}
+        with:
+          tool: cargo-nextest@0.9.146
+          fallback: none
+      - name: the package's mutants, in the order the shards take them
+        if: ${{ inputs.package && inputs.package != 'miniapp' }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/size"
+          cargo mutants --no-shuffle --list --json --in-place ${PACKAGE:+--package "$PACKAGE"} --timeout 300 --build-timeout 600 > "$RUNNER_TEMP/size/package.json"
+      - name: the shards, the fewest whose slowest is projected within its bound
+        id: size
+        run: python3 scripts/mutation-verdict.py size ${PACKAGE:+--package "$PACKAGE"} --listed "$RUNNER_TEMP/size/package.json"
+      - name: keep the package's listing
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: sizing
+          path: ${{ runner.temp }}/size/
+          if-no-files-found: ignore
+
   rust:
+    needs: size
     if: ${{ github.event_name != 'pull_request' && inputs.package != 'miniapp' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     strategy:
       fail-fast: false
       matrix:
-        shard: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31]
+        shard: ${{ fromJSON(needs.size.outputs.matrix) }}
     env:
       CARGO_INCREMENTAL: "0"
     steps:
@@ -98,15 +147,16 @@ jobs:
       # shard. In place, cargo-mutants applies no multiplier and bounds no build unless told:
       # --timeout bounds each mutant's tests and --build-timeout each mutant's build (the tool's
       # timeouts chapter); the unmutated baseline's build is never bounded. A dispatch that names a
-      # package sweeps its mutants alone, round-robin over the same 32 shards (SPEC-057 R14); the
-      # input reaches the shell through the environment, never interpolated into it.
+      # package sweeps its mutants alone, round-robin over the shards its own listing sized (SPEC-129),
+      # and a run with no package sweeps 32; the input reaches the shell through the environment,
+      # never interpolated into it.
       - name: cargo-mutants, one shard of the workspace, or of the one package a dispatch names
         env:
           PACKAGE: ${{ inputs.package }}
         run: |
           mkdir -p "$RUNNER_TEMP/mutation"
           rc=0
-          cargo mutants --no-shuffle -vV --in-place ${PACKAGE:+--package "$PACKAGE"} --sharding round-robin --shard ${{ matrix.shard }}/32 --timeout 300 --build-timeout 600 --output "$RUNNER_TEMP/mutation" || rc=$?
+          cargo mutants --no-shuffle -vV --in-place ${PACKAGE:+--package "$PACKAGE"} --sharding round-robin --shard ${{ matrix.shard }}/${{ needs.size.outputs.shards }} --timeout 300 --build-timeout 600 --output "$RUNNER_TEMP/mutation" || rc=$?
           echo "$rc" > "$RUNNER_TEMP/mutation/cargo-mutants.exit"
           echo "cargo-mutants exited $rc"
           exit "$rc"
@@ -236,7 +286,7 @@ jobs:
           if-no-files-found: warn
 
   survivors:
-    needs: [rust, web, rows, listing]
+    needs: [size, rust, web, rows, listing]
     if: ${{ always() && github.event_name != 'pull_request' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15
@@ -290,7 +340,7 @@ jobs:
         run: |
           reports="$RUNNER_TEMP/reports"
           rc=0
-          python3 scripts/mutation-verdict.py battery --reports "$reports" --shards 32 ${PACKAGE:+--package "$PACKAGE"} --listed "$reports/listing/whole.json" || rc=$?
+          python3 scripts/mutation-verdict.py battery --reports "$reports" --shards ${{ needs.size.outputs.shards }} ${PACKAGE:+--package "$PACKAGE"} --listed "$reports/listing/whole.json" || rc=$?
           python3 scripts/mutation-verdict.py table --reports "$reports" ${PACKAGE:+--package "$PACKAGE"} --listed "$reports/listing/whole.json" || rc=$?
           exit "$rc"
 
