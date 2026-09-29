@@ -19,10 +19,19 @@
 #![deny(unused_must_use)]
 #![warn(missing_docs, clippy::all)]
 
+pub mod compose;
+pub mod data_rights;
+pub mod duty;
+pub mod fence;
+pub mod gate;
 pub mod memory;
 pub mod output;
 pub mod persona;
 pub mod roster;
+pub mod route;
+pub mod runner;
+pub mod runs;
+pub mod verdict;
 
 pub use memory::{
     LiveBand, MemoryError, MemoryPort, MemoryPorts, MemoryRead, MemoryReader, MemorySource, Recall,

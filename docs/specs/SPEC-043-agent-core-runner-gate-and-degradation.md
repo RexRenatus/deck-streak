@@ -6,8 +6,7 @@
   device key as a credential from the credential socket), ADR-054 (the AI route is optional, and
   no-AI mode is the default and a first-class path), and ADR-043 (a shell runner, the gate as the
   packs' own probes, the duty caps).
-- **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
-  `docs/specs/` with its tests and `docs/red-first/SPEC-043.md` (ADR-016).
+- **Status:** built (`docs/red-first/SPEC-043.md`, ADR-016).
 
 ## 1. The problem, measured
 
@@ -49,12 +48,13 @@ R2. The device key is a systemd credential (ADR-038): the runner reads it at lau
     unsets `ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN`, `ANTHROPIC_CUSTOM_HEADERS`,
     `CLAUDE_CONFIG_DIR` and the Bedrock, Vertex and Foundry switches, and sets
     `CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=1`.
-R3. The base URL comes from the unit's environment and must be a loopback URL (`http://localhost`,
-    the IPv4 loopback address, or `http://[::1]`); any other refuses with exit 2. No file in the
+R3. The base URL comes from the unit's environment and must be a loopback URL: `http://` and then
+    `localhost`, the IPv4 loopback address or `[::1]`, then at most a port, and nothing after it;
+    any other, whatever it carries after the scheme, refuses with exit 2. No file in the
     repository sets an `apiKeyHelper`, `--bare`, `bypassPermissions` or
     `--dangerously-skip-permissions`, and none sets `ANTHROPIC_API_KEY` or `ANTHROPIC_AUTH_TOKEN`.
-R4. Before a launch the runner asks the proxy's capacity endpoint (a configured path), with the key
-    on curl's stdin, and reads the status word: `ready` launches, `exhausted` exits 4, an HTTP 401
+R4. Before a launch the runner asks the proxy's capacity endpoint (a configured path, which must be
+    an absolute path: any other refuses with exit 2), with the key on curl's stdin, and reads the status word: `ready` launches, `exhausted` exits 4, an HTTP 401
     exits 3, and anything else exits 5.
 R5. Every launch passes `--max-turns`, `--max-budget-usd`, `--output-format json`,
     `--permission-mode dontAsk`, `--strict-mcp-config` and `--settings agent/settings.json`, under a
@@ -131,36 +131,54 @@ R17. None of R1 to R14's proxy-runner criteria is a precondition for the crate's
 | id | criterion | decided by |
 |---|---|---|
 | A1 | the runner hands the key to `claude` only in its environment: a fake `claude` records an argv without it and an environment with it, and no file the run leaves holds it | subscription-proxy client rows (on the box, ADR-004); `test_the_runner_keeps_the_key_off_argv_and_disk` |
-| A2 | a non-loopback base URL, `--bare` and a bypass flag each refuse with exit 2 and one `REFUSE:` line | subscription-proxy `launch-base-url-loopback`, `launch-no-bare`, `launch-no-bypass`; `test_the_runner_refuses_a_remote_url_bare_and_bypass` |
+| A2 | a base URL that is not exactly a loopback host with at most a port, whatever it carries after the scheme, a capacity path that is not absolute, `--bare` and a bypass flag each refuse with exit 2 and one `REFUSE:` line, and neither `curl` nor `claude` is called | subscription-proxy `launch-base-url-loopback`, `launch-no-bare`, `launch-no-bypass`; `test_the_runner_refuses_a_remote_url_bare_and_bypass`, `test_the_runner_accepts_only_an_exact_loopback_url_and_an_absolute_path`; rows S04321 and S04322 |
 | A3 | the preflight reads the status word: `exhausted` exits 4 with the retry instant, a 401 exits 3, an unknown answer exits 5, and the key never reaches curl's argv | subscription-proxy `launch-preflight-reads-status`; `test_the_preflight_reads_the_status_word` |
 | A4 | no settings file in the tree names an `apiKeyHelper` (the scan examines `agent/settings.json`, which declares the settings `$schema` so the scan finds it) | the box run's apiKeyHelper scan (SPEC-056 R9); `test_no_settings_file_names_an_api_key_helper` |
 | A5 | every ai-content-safety row is green over `ai-safety.json`, none VOID | ai-content-safety, every row; `test_every_ai_content_safety_row_is_green` |
 | A6 | each red-team case (instruction override, fence breakout, exfiltration link) is withheld by the gate | ai-content-safety `redteam-present`; `every_redteam_case_is_withheld_by_the_gate` |
 | A7 | a run that reaches its turn cap is stopped and delivers nothing, and its verdict names `turn_cap` | `a_run_past_its_turn_cap_delivers_nothing` |
 | A8 | a run that reaches its wall clock is stopped and delivers nothing, and its verdict names `time_cap` | `a_run_past_its_wall_clock_delivers_nothing` |
-| A9 | an output failing a blocking class is withheld, the class is recorded in `agent_runs`, and the fake vault and router receive nothing | `an_output_failing_a_blocking_class_is_withheld_and_recorded` |
+| A9 | an output failing a blocking class is withheld, the class is recorded in `agent_runs`, the fake vault receives nothing, and the router receives ONE alert carrying only the class, never the content | `an_output_failing_a_blocking_class_is_withheld_and_recorded` |
 | A10 | every untrusted input is fenced alone, JSON-encoded, with `<` and `>` escaped, and no system file holds untrusted text | `every_untrusted_input_is_fenced_alone_and_encoded` |
 | A11 | the prompt is composed in persona-core's order | `the_prompt_is_composed_in_the_persona_order` |
 | A12 | an unreachable proxy yields an unavailable verdict with `proxy_unreachable`, one alert, and nothing delivered | `an_unreachable_proxy_is_unavailable_with_its_cause` |
 | A13 | the agent's data-rights port exports and erases `agent_runs` | `the_agent_runs_are_exported_and_erased` |
 | A14 | an unset route is `Absent`, and with it a duty launches nothing (the fake runner records no call), records `ai_route_absent` in `agent_runs`, raises no alert and is not retried | `an_absent_route_records_ai_route_absent_and_alerts_nothing` |
+| A15 | the runner's credential comes only from the credential socket: with a token in the environment (every name the script unsets, and `CLAUDE_CODE_OAUTH_TOKEN`) and no credentials directory it refuses and never runs `claude`; a token file at any path but `$CREDENTIALS_DIRECTORY/agent-device-key` is refused; the token never reaches an argv and no fallback chain reads it; and no committed file under `agent/` (nor under `deploy/` where it names the agent) carries a token literal or a path to a token on persistent disk. This substitutes for the proxy client scan's `credential-from-secret-manager` row (see section 6; issues #341 and #342) | `CredentialComesOnlyFromTheSocket` (five tests in `agent/tests/test_run_headless.py`); rows S04318 to S04320 |
 
 ```acceptance
 A1: python3 -m unittest discover -s agent/tests -p test_run_headless.py -k test_the_runner_keeps_the_key_off_argv_and_disk
-A2: python3 -m unittest discover -s agent/tests -p test_run_headless.py -k test_the_runner_refuses_a_remote_url_bare_and_bypass
+A2: python3 -m unittest discover -s agent/tests -p test_run_headless.py -k test_the_runner_refuses_a_remote_url_bare_and_bypass -k test_the_runner_accepts_only_an_exact_loopback_url_and_an_absolute_path
 A3: python3 -m unittest discover -s agent/tests -p test_run_headless.py -k test_the_preflight_reads_the_status_word
 A4: python3 -m unittest discover -s scripts/tests -p test_ai_safety_rows.py -k test_no_settings_file_names_an_api_key_helper
 A5: python3 -m unittest discover -s scripts/tests -p test_ai_safety_rows.py -k test_every_ai_content_safety_row_is_green
 A6: cargo test -p deck-streak-agent --test redteam -- --exact every_redteam_case_is_withheld_by_the_gate
 A7: cargo test -p deck-streak-agent --test runner -- --exact a_run_past_its_turn_cap_delivers_nothing
 A8: cargo test -p deck-streak-agent --test runner -- --exact a_run_past_its_wall_clock_delivers_nothing
-A9: cargo test -p deck-streak-agent --test gate -- --exact an_output_failing_a_blocking_class_is_withheld_and_recorded
+A9: cargo test -p deck-streak-agent --test duty -- --exact an_output_failing_a_blocking_class_is_withheld_and_recorded
 A10: cargo test -p deck-streak-agent --test compose -- --exact every_untrusted_input_is_fenced_alone_and_encoded
 A11: cargo test -p deck-streak-agent --test compose -- --exact the_prompt_is_composed_in_the_persona_order
 A12: cargo test -p deck-streak-agent --test runner -- --exact an_unreachable_proxy_is_unavailable_with_its_cause
-A13: cargo test -p deck-streak-agent --test rights -- --exact the_agent_runs_are_exported_and_erased
-A14: cargo test -p deck-streak-agent --test runner -- --exact an_absent_route_records_ai_route_absent_and_alerts_nothing
+A13: cargo test -p deck-streak-agent --test data_rights -- --exact the_agent_runs_are_exported_and_erased
+A14: cargo test -p deck-streak-agent --test duty -- --exact an_absent_route_records_ai_route_absent_and_alerts_nothing
+A15: python3 -m unittest discover -s agent/tests -p test_run_headless.py -k CredentialComesOnlyFromTheSocket
 ```
+
+## 3a. What the box run judges
+
+The ai-content-safety probes are box-only (ADR-069). The tree's own test checks the structure of
+`ai-safety.json` and the red-team cases on every run, and runs the real probes only when the
+packs' scripts are present; the box run is where each row is judged over `ai-safety.json`, none VOID.
+
+| id | what it judges | population it must examine |
+|---|---|---|
+| B1 | the pack's `redteam-present` row: every case in `agent/redteam/` is present and is a case the gate withholds | the 5 red-team cases under `agent/redteam/` |
+| B2 | the pack's `disclosure-first-contact` row: the learner's first contact says the coach is an AI (the bot's `/start` reply; no web change here) | the 1 disclosure surface `ai-safety.json` names |
+| B3 | every other ai-content-safety row the pack lists, including the blocking output classes the gate runs before any delivery | the 1 duty (the daily reading) and its 2 prompt templates in `ai-safety.json` |
+| B4 | the subscription-proxy client rows and the apiKeyHelper scan | the 1 runner `agent/run-headless.sh` and the 1 settings template `agent/settings.json` |
+
+The private wiring change that enforces them: the ai-content-safety pack becomes `enforced`, and the
+apiKeyHelper scan's waiting entry is lifted; the JSON diff is handed back with this delivery.
 
 ## 4. File manifest
 
@@ -174,6 +192,7 @@ A14: cargo test -p deck-streak-agent --test runner -- --exact an_absent_route_re
 | `agent/duties/daily-reading.duty.md` | agent (public) | added: study-duties' duty template, copied |
 | `agent/redteam/` | agent (public) | added: the red-team cases |
 | `agent/tests/test_run_headless.py` | agent (public) | added |
+| `docs/specs/SPEC-123-the-box-proxy-scan-admits-an-expected-red-that-names-an-open-issue.md` | repo | amended: the VOID case's wording, SPEC-123 R5 and A4 |
 | `agent/tests/fakes/` | agent (public) | added: fake `claude` and `curl`, and a temporary credentials directory, for the runner's tests |
 | `ai-safety.json` | repo | added |
 | `crates/agent/Cargo.toml` | `deck-streak-agent` | changed: the workspace dependencies it uses |
@@ -186,13 +205,21 @@ A14: cargo test -p deck-streak-agent --test runner -- --exact an_absent_route_re
 | `crates/agent/src/gate.rs` | `deck-streak-agent` | added: the output gate over the box-run packs' probes |
 | `crates/agent/src/verdict.rs` | `deck-streak-agent` | added: the verdict and its closed causes |
 | `crates/agent/src/runs.rs` | `deck-streak-agent` | added: the `agent_runs` repository |
-| `crates/agent/src/rights.rs` | `deck-streak-agent` | added: the data-rights port |
+| `crates/agent/src/data_rights.rs` | `deck-streak-agent` | added: the data-rights port |
 | `migrations/004301_agent_runs.sql` | `deck-streak-agent` | added |
 | `crates/agent/tests/runner.rs` | `deck-streak-agent` | added |
 | `crates/agent/tests/compose.rs` | `deck-streak-agent` | added |
 | `crates/agent/tests/gate.rs` | `deck-streak-agent` | added |
+| `crates/agent/tests/duty.rs` | `deck-streak-agent` | added: the duty engine's order, A9 and A14 |
+| `crates/coordination/src/maintenance.rs` | `deck-streak-coordination` | changed: the daily upkeep prunes `agent_runs` past its 90 days |
+| `crates/coordination/tests/maintenance.rs` | `deck-streak-coordination` | changed: the prune of `agent_runs` |
+| `crates/coordination/src/data_rights_registry.rs` | `deck-streak-coordination` | changed: the agent's data-rights port joins the ports an export and an erase run |
+| `crates/coordination/tests/data_rights_symmetry.rs` | `deck-streak-coordination` | changed: a seeded `agent_runs` block of 101 rows, so the symmetry test covers the new table |
+| `scripts/tests/test_check_gate.py` | repo | changed: the gate's python-stage test also plants the `agent/tests` suite it now discovers |
+| `crates/agent/tests/constants.rs` | `deck-streak-agent` | added: the configured literals, each asserted written out |
+| `crates/agent/tests/support/mod.rs` | `deck-streak-agent` | added: the recorded alerts, vault, runner and gate fakes |
 | `crates/agent/tests/redteam.rs` | `deck-streak-agent` | added |
-| `crates/agent/tests/rights.rs` | `deck-streak-agent` | added |
+| `crates/agent/tests/data_rights.rs` | `deck-streak-agent` | added |
 | `crates/agent/tests/fixtures/` | `deck-streak-agent` | added: the fake runner and its canned replies |
 | `scripts/tests/test_ai_safety_rows.py` | repo | added |
 | `scripts/check.sh` | repo | changed: the python stage also discovers `agent/tests` |
@@ -203,6 +230,10 @@ A14: cargo test -p deck-streak-agent --test runner -- --exact an_absent_route_re
 | `Cargo.lock`, `.sqlx/` | workspace | changed |
 | `docs/schematics/agent-duty-run.md` | docs | added |
 | `docs/specs/SPEC-043-agent-core-runner-gate-and-degradation.md` | docs | moved from `docs/specs/planned/` |
+| `changelog.d/feat-agent-core-043.md` | docs | added |
+| `scripts/mutation-rows.d/S04300-S04399.json` | repo | added: the constants' rows, the three credential script rows S04318 to S04320 (A15), and the two runner-check rows S04321 and S04322 (A2) |
+| `scripts/mutation_rows.py` | repo | changed: `agent/tests` joins the unittest roots a script row's killer resolves in |
+| `PRIVACY.md` | docs | changed: the agent-runs row |
 | `docs/decisions/ADR-043-shell-runner-pack-gate-and-duty-caps.md` | docs | added |
 | `docs/red-first/SPEC-043.md` | docs | added |
 
@@ -216,6 +247,9 @@ A14: cargo test -p deck-streak-agent --test runner -- --exact an_absent_route_re
 - It ports no vault-ops skill and offers no on-demand vault run (#54).
 - It builds no DeckStreak-owned skill pack under `skills/`, so the pack-authoring rows have nothing
   to judge here (#60).
+- The output gate does not refuse an empty input-class list, and the verdict's `#[must_use]` has no
+  test that pins it (#362).
+- It adds no index on `agent_runs.created_at` for the daily prune (#363).
 - It builds no `ApiKey` adapter: that waits for an amendment of ADR-015 and the owner's choice of a
   route at gate 3 (#162).
 
@@ -232,11 +266,16 @@ A14: cargo test -p deck-streak-agent --test runner -- --exact an_absent_route_re
   data out) and the output-links class; new cases are added with each new untrusted source.
 - **A cap too tight for a long reading.** Visible as `time_cap` verdicts in `agent_runs` and in the
   readings health (SPEC-050); the cap is a duty declaration, changed by a SPEC amendment.
-- **The box scanner refuses the runner's credential read.** The subscription-proxy client scan's
-  `credential-from-secret-manager` row accepts only a secret-manager call inside the client, and R2
-  reads a systemd credential (ADR-038). Detected by `scripts/box-packs.sh` before the merge into
-  `dev` (ADR-004); the pack must learn ADR-038's socket, or a decision must waive the row, before
-  this SPEC is built (ADR-043).
+- **The box scanner refuses the runner's credential read, and the row is substituted, not
+  waived.** The subscription-proxy client scan's `credential-from-secret-manager` row accepts only
+  a secret-manager call inside the client, and R2 reads a systemd credential (ADR-038, which
+  rejects a secret-manager read in the application). Until the scan learns the socket (issue #341)
+  the row is substituted by A15, which fails if the runner takes its token from anywhere but
+  `$CREDENTIALS_DIRECTORY/agent-device-key` or a committed file carries a token or a token path;
+  the box's deferral mechanism (issue #342) records the scan's red as expected against #341, so the
+  box run reads `BOX PACKS OK` without hiding it. The unit's `LoadCredential=agent-device-key:`
+  line in the socket form (the third leg of #341) is not this SPEC's: it ships no unit, and
+  SPEC-063's A2 (issue #43) pins it where the unit ships.
 - **A mistyped route would silently turn the readings off.** An unknown value refuses start by name
   (R15), so only an unset route is `Absent`, and the surfaces then say readings are not enabled,
   never that something failed (ADR-054).

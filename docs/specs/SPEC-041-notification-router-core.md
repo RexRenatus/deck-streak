@@ -311,6 +311,7 @@ the verdict of a run with that wiring is posted as the `box/packs` status at the
 - **R13: the roles.** The bot role reads the compiled policy at start and joins its transport to the
   router its owner's `/sync` flushes. The job role's scheduled cycle carries no router yet: a flush
   without a bot transport would do nothing, and the first job that sends joins one (#39).
+  Amendment (2026-09-29): the owner's `/sync` runs as the sync job (SPEC-059); the bot flushes this router when it observes that sync succeed, and the job holds no bot credential (ADR-066).
 - **The port's name.** Notifications' data-rights port is `crates/notifications/src/data_rights.rs`,
   not `rights.rs`: `privacy.json`'s export and erase globs read that name (SPEC-021's rule).
 - **The manifest.** SPEC-021's rule adds the ports' registry, the symmetry probe's seeds and

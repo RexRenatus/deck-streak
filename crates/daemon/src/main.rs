@@ -139,3 +139,17 @@ async fn run(role: Role, environment: &Environment, redactor: &Redactor) -> anyh
             .context("the data role"),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::time::Duration;
+
+    use super::EXIT_GRACE;
+
+    #[test]
+    fn the_exit_grace_is_one_second() {
+        // How long a role that stopped while waiting for the open lock lingers at exit: the whole
+        // value, so a longer wait slows every such stop and a shorter one abandons work at once.
+        assert_eq!(EXIT_GRACE, Duration::from_secs(1));
+    }
+}
