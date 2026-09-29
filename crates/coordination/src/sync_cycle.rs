@@ -26,6 +26,7 @@ use deck_streak_ingest::window::{WindowError, read_window};
 use deck_streak_kernel::{Clock, Db, KernelError, PortFuture, StudyDayRule, UtcMillis};
 use deck_streak_notifications::Router;
 
+use crate::instruments::Instruments;
 use crate::obligations::{ObligationSource, Obligations};
 use crate::recompute::{Fold, FoldInput};
 
@@ -82,6 +83,7 @@ pub struct CycleParts<E> {
     clock: Arc<dyn Clock>,
     router: Option<Arc<Router>>,
     fold: Option<CycleFold>,
+    instruments: Option<Arc<Instruments>>,
 }
 
 /// The fold a cycle's recompute runs (SPEC-071 R15): the fold with its registered steps, the
@@ -112,6 +114,7 @@ impl<E: AnkiEngine + Sync> CycleParts<E> {
             clock,
             router: None,
             fold: None,
+            instruments: None,
         }
     }
 
@@ -146,6 +149,14 @@ impl<E: AnkiEngine + Sync> CycleParts<E> {
             rule,
             courses_digest,
         });
+        self
+    }
+
+    /// This cycle, running `instruments` after every sync's recompute (SPEC-094 R7). A role builds
+    /// them once, at start, and shares them with every cycle it runs.
+    #[must_use]
+    pub fn with_instruments(mut self, instruments: Arc<Instruments>) -> Self {
+        self.instruments = Some(instruments);
         self
     }
 
@@ -288,7 +299,19 @@ where
             }
         }
     };
+    if let Some(instruments) = &cycle.instruments {
+        run_instruments(instruments).await;
+    }
     Ok(CycleReport { sync, recompute })
+}
+
+/// The instruments step, after a sync's recompute (SPEC-094 R7). A step that cannot run is logged
+/// and never fails the sync it follows: every instrument stays due for the next.
+async fn run_instruments(instruments: &Instruments) {
+    match instruments.step().await {
+        Ok(step) => tracing::info!(?step, "the instruments step ran"),
+        Err(error) => tracing::error!(%error, "the instruments step could not run"),
+    }
 }
 
 /// The router's flush, after a sync that ran and succeeded (SPEC-041 R7). A flush that cannot run is

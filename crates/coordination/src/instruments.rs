@@ -7,10 +7,12 @@ use std::path::Path;
 use std::pin::Pin;
 use std::sync::Arc;
 
-use deck_streak_insights::instrument::{Instrument, ReportEnvelope};
-use deck_streak_insights::registry::Row;
+use deck_streak_ingest::lock::CollectionLock;
+use deck_streak_insights::instrument::{Cadence, Instrument, ReportEnvelope, envelope, failure};
+use deck_streak_insights::registry::{self, Row};
 use deck_streak_kernel::{Clock, Db, KernelError, Offload, StudyDayRule, UtcMillis};
 use serde_json::Value;
+use sqlx::Row as _;
 
 /// A boxed future, so the ports below are object safe.
 pub type BoxFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;
@@ -55,10 +57,22 @@ impl InstrumentStore {
     /// [`KernelError::Database`] when the write fails.
     pub async fn replace(
         &self,
-        _envelope: &ReportEnvelope,
-        _at: UtcMillis,
+        envelope: &ReportEnvelope,
+        at: UtcMillis,
     ) -> Result<(), KernelError> {
-        let _ = &self.db;
+        let json = serde_json::to_string(envelope).map_err(|_| KernelError::Offload {
+            operation: "encode an instrument report",
+        })?;
+        let mut write = self.db.write().await?;
+        sqlx::query(REPLACE)
+            .bind(&envelope.instrument)
+            .bind(envelope.study_day)
+            .bind(i64::from(envelope.schema_version))
+            .bind(json)
+            .bind(at.epoch_millis())
+            .execute(&mut *write)
+            .await?;
+        write.commit().await?;
         Ok(())
     }
 
@@ -67,8 +81,12 @@ impl InstrumentStore {
     /// # Errors
     ///
     /// [`KernelError::Database`] when the read fails.
-    pub async fn get(&self, _instrument: &str) -> Result<Option<StoredReport>, KernelError> {
-        Ok(None)
+    pub async fn get(&self, instrument: &str) -> Result<Option<StoredReport>, KernelError> {
+        let row = sqlx::query(SELECT_ONE)
+            .bind(instrument)
+            .fetch_optional(self.db.reader())
+            .await?;
+        Ok(row.as_ref().and_then(stored_of))
     }
 
     /// Every stored report, by instrument id.
@@ -77,8 +95,36 @@ impl InstrumentStore {
     ///
     /// [`KernelError::Database`] when the read fails.
     pub async fn list(&self) -> Result<Vec<StoredReport>, KernelError> {
-        Ok(Vec::new())
+        let rows = sqlx::query(SELECT_ALL).fetch_all(self.db.reader()).await?;
+        Ok(rows.iter().filter_map(stored_of).collect())
     }
+}
+
+/// One write replaces the instrument's row: the id is the key, so the table never holds two.
+const REPLACE: &str = "INSERT INTO instrument_reports \
+    (instrument, study_day, schema_version, report_json, created_at) \
+    VALUES (?1, ?2, ?3, ?4, ?5) \
+    ON CONFLICT(instrument) DO UPDATE SET study_day = excluded.study_day, \
+    schema_version = excluded.schema_version, report_json = excluded.report_json, \
+    created_at = excluded.created_at";
+/// One instrument's row.
+const SELECT_ONE: &str = "SELECT instrument, study_day, schema_version, report_json, created_at \
+    FROM instrument_reports WHERE instrument = ?1";
+/// Every row, by instrument.
+const SELECT_ALL: &str = "SELECT instrument, study_day, schema_version, report_json, created_at \
+    FROM instrument_reports ORDER BY instrument";
+
+/// The stored report a row holds; a row whose JSON no longer parses is read as absent, so the
+/// instrument is simply due again.
+fn stored_of(row: &sqlx::sqlite::SqliteRow) -> Option<StoredReport> {
+    let json: String = row.try_get("report_json").ok()?;
+    Some(StoredReport {
+        instrument: row.try_get("instrument").ok()?,
+        study_day: row.try_get("study_day").ok()?,
+        schema_version: u32::try_from(row.try_get::<i64, _>("schema_version").ok()?).ok()?,
+        report: serde_json::from_str(&json).ok()?,
+        created_at: row.try_get("created_at").ok()?,
+    })
 }
 
 /// Where an instrument's reads come from.
@@ -130,9 +176,18 @@ where
         self.instrument.schema_version()
     }
 
-    fn run(&self, _study_day: i64) -> BoxFuture<'_, Result<ReportEnvelope, String>> {
-        let _ = (&self.source, &self.offload);
-        Box::pin(async { Err("not built".to_owned()) })
+    fn run(&self, study_day: i64) -> BoxFuture<'_, Result<ReportEnvelope, String>> {
+        Box::pin(async move {
+            let reads = self.source.read().await?;
+            let instrument = Arc::clone(&self.instrument);
+            self.offload
+                .run(self.instrument.id(), move || {
+                    envelope(&*instrument, study_day, &reads)
+                })
+                .await
+                .map_err(|_| "the run could not be scheduled".to_owned())?
+                .map_err(|_| "the report could not be encoded".to_owned())
+        })
     }
 }
 
@@ -167,6 +222,9 @@ pub enum OnDemandRefusal {
 /// The instruments the host runs, in one process's view.
 pub struct Instruments {
     store: InstrumentStore,
+    lock: CollectionLock,
+    clock: Arc<dyn Clock>,
+    rule: StudyDayRule,
     rows: &'static [Row],
     runners: Vec<Arc<dyn InstrumentRunner>>,
 }
@@ -176,14 +234,17 @@ impl Instruments {
     #[must_use]
     pub fn new(
         db: Db,
-        _state_directory: &Path,
-        _clock: Arc<dyn Clock>,
-        _rule: StudyDayRule,
+        state_directory: &Path,
+        clock: Arc<dyn Clock>,
+        rule: StudyDayRule,
         runners: Vec<Arc<dyn InstrumentRunner>>,
     ) -> Self {
         Self {
             store: InstrumentStore::new(db),
-            rows: deck_streak_insights::registry::ROWS,
+            lock: CollectionLock::new(state_directory.join(LOCK_FILE)),
+            clock,
+            rule,
+            rows: registry::ROWS,
             runners,
         }
     }
@@ -201,22 +262,97 @@ impl Instruments {
         &self.store
     }
 
-    /// Runs each due weekly instrument, one at a time.
+    fn runner(&self, id: &str) -> Option<&Arc<dyn InstrumentRunner>> {
+        self.runners.iter().find(|runner| runner.id() == id)
+    }
+
+    /// Runs each weekly instrument that is due, one at a time, after a sync's recompute (R7). A
+    /// held lock leaves the instrument due for the next sync's step (R8).
     ///
     /// # Errors
     ///
-    /// [`KernelError`] when the store cannot be read.
+    /// [`KernelError`] when the store cannot be read or written.
     pub async fn step(&self) -> Result<StepReport, KernelError> {
-        let _ = (self.rows, &self.runners);
-        Ok(StepReport::default())
+        let today = self.rule.study_day(self.clock.now()).epoch_day();
+        let mut report = StepReport::default();
+        for row in registry::runnable(self.rows) {
+            if row.cadence != Cadence::Weekly {
+                continue;
+            }
+            let Some(runner) = self.runner(row.id) else {
+                continue;
+            };
+            let due = self
+                .store
+                .get(row.id)
+                .await?
+                .is_none_or(|stored| today.saturating_sub(stored.study_day) >= WEEKLY_DAYS);
+            if !due {
+                continue;
+            }
+            match self.run_held(runner.as_ref(), today).await {
+                Ok((_, false)) => report.ran.push(row.id.to_owned()),
+                Ok((_, true)) => report.failed.push(row.id.to_owned()),
+                Err(OnDemandRefusal::Store(error)) => return Err(error),
+                Err(refusal) => {
+                    tracing::info!(instrument = row.id, %refusal, "the instrument stays due");
+                    report.deferred.push(row.id.to_owned());
+                }
+            }
+        }
+        Ok(report)
     }
 
-    /// Runs one instrument now.
+    /// Runs one instrument now, through the same lock and offload as the step (R8).
     ///
     /// # Errors
     ///
     /// [`OnDemandRefusal`] when nothing started.
-    pub async fn run_on_demand(&self, _id: &str) -> Result<StoredReport, OnDemandRefusal> {
-        Err(OnDemandRefusal::Unknown)
+    pub async fn run_on_demand(&self, id: &str) -> Result<StoredReport, OnDemandRefusal> {
+        if registry::find(self.rows, id).is_none() {
+            return Err(OnDemandRefusal::Unknown);
+        }
+        let runner = self.runner(id).ok_or(OnDemandRefusal::Unknown)?;
+        let today = self.rule.study_day(self.clock.now()).epoch_day();
+        self.run_held(runner.as_ref(), today)
+            .await
+            .map(|(stored, _)| stored)
+    }
+
+    /// Takes the lock without waiting, runs, stores and releases; the flag says the run failed.
+    async fn run_held(
+        &self,
+        runner: &dyn InstrumentRunner,
+        today: i64,
+    ) -> Result<(StoredReport, bool), OnDemandRefusal> {
+        let held = match self.lock.try_exclusive().await {
+            Ok(Some(held)) => held,
+            Ok(None) => return Err(OnDemandRefusal::InProgress),
+            Err(error) => return Err(OnDemandRefusal::Lock(error)),
+        };
+        let (envelope, failed) = match runner.run(today).await {
+            Ok(envelope) => (envelope, false),
+            Err(reason) => (
+                failure(runner.id(), today, runner.schema_version(), &reason),
+                true,
+            ),
+        };
+        let at = self.clock.now();
+        let stored = self.store.replace(&envelope, at).await;
+        if let Err(error) = held.release() {
+            tracing::warn!(%error, "the instrument lock did not unlock cleanly");
+        }
+        stored.map_err(OnDemandRefusal::Store)?;
+        let report = serde_json::to_value(&envelope).unwrap_or(Value::Null);
+        Ok((
+            StoredReport {
+                instrument: envelope.instrument,
+                study_day: envelope.study_day,
+                schema_version: envelope.schema_version,
+                report,
+                created_at: at.epoch_millis(),
+            },
+            failed,
+        ))
     }
 }

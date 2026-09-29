@@ -5,7 +5,7 @@
 #![allow(clippy::expect_used)]
 
 use deck_streak_coordination::data_rights::{
-    COORDINATION_CONTEXT, CRON_FIRES_TABLE, CoordinationDataRights,
+    COORDINATION_CONTEXT, CRON_FIRES_TABLE, CoordinationDataRights, INSTRUMENT_REPORTS_TABLE,
 };
 use deck_streak_coordination::jobs::FireDate;
 use deck_streak_coordination::ledger::{CronLedger, Outcome, SqliteCronLedger};
@@ -24,8 +24,8 @@ async fn the_cron_fire_ledger_is_declared_exempt_with_its_reason() {
         .collect();
     assert_eq!(
         tables,
-        [CRON_FIRES_TABLE],
-        "coordination owns the one table it declares"
+        [CRON_FIRES_TABLE, INSTRUMENT_REPORTS_TABLE],
+        "coordination declares the two tables it owns"
     );
     let Some(Disposition::Exempt { reason }) = declaration.disposition(CRON_FIRES_TABLE) else {
         panic!(
@@ -73,7 +73,15 @@ async fn the_cron_fire_ledger_is_declared_exempt_with_its_reason() {
         (1, Outcome::Catchup)
     );
     let named: Vec<&str> = exported.iter().map(|table| table.table).collect();
-    assert_eq!(named.len(), 0, "an export carries no ledger row: {named:?}");
+    assert_eq!(
+        named,
+        [INSTRUMENT_REPORTS_TABLE],
+        "an export carries no ledger table: {named:?}"
+    );
+    assert!(
+        exported.iter().all(|table| table.rows.is_empty()),
+        "and no row, the reports having been erased first"
+    );
     // The guard still holds after the erase: a second claim of the fire is refused.
     assert_eq!(
         ledger.claim("synthetic_daily", date, at).await.ok(),
