@@ -12,6 +12,8 @@ A2: not red: the reader finds the blocks on the unfixed tree too, since a block 
 A3: not red: the parser refuses a reserved-word id on any tree; the criterion pins that the check itself can refuse
 A4: red at cbb4047b: AssertionError: expected [] to deeply equal [ 'planted.md block 1' ]: the reader found no block in an indented fence, in a list item or by three spaces, so both new tests failed
 A4: green at 5855fa5b
+A5: red at 9de26193: AssertionError: expected [] to deeply equal [ 'planted.md block 1' ]: the reader found no block in a quoted fence or in one spaced before `mermaid`, so both new tests failed
+A5: green at e39a1d01
 ```
 
 The reader was then extended to read an indented fence. Its test (A4) was committed alone
@@ -24,8 +26,10 @@ The replay of A1 ran the check on 0cf79dda's tree from a detached checkout with
 
 ```text
 AssertionError: expected [ …(8) ] to deeply equal []
+
 - Expected
 + Received
+
 - []
 + [
 +   "schematics/alert-and-slo-path.md block 1",
@@ -48,3 +52,17 @@ AssertionError: expected [] to deeply equal [ 'planted.md block 1' ]
 The same line is printed for both tests, `reads an indented fence and refuses one that does not parse`
 and `accepts an indented valid block of each diagram type the docs use`. At 5855fa5b all six tests
 pass and 183 blocks are examined, the same 183 as before.
+
+The reader was extended once more, to read a fence inside a blockquote (with a space after `>`, with
+none, and as a list item in a quote) and one with blanks before `mermaid`. Its test (A5) was
+committed alone (9de26193) against the unchanged reader, and the reader change (e39a1d01) turned all
+eight green; the test file is unchanged between those two commits except for the reader and the
+opener count. The replay of A5 at 9de26193, over the whole file, printed `Tests  2 failed | 6 passed (8)`
+and, for both tests, `reads a quoted fence and one spaced before its info string, and refuses one that
+does not parse` and `accepts a quoted valid block with a quoted blank line in it`:
+
+```text
+AssertionError: expected [] to deeply equal [ 'planted.md block 1' ]
+```
+
+At e39a1d01 all eight tests pass and 190 blocks are examined, the count of the merged tree.

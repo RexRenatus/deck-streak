@@ -38,8 +38,9 @@ none fails.
 R5. **A refusal names the block:** the file's path under `docs/` and the block's number counted from
 1, one entry per unparsable block.
 
-R6. **The check agrees with the renderer.** On the same 183 blocks the check refuses exactly the
-blocks the renderer exits non-zero for: eight before the fix and none after.
+R6. **The check agrees with the renderer.** On the blocks the renderer was run over, the check refuses
+exactly the blocks the renderer exits non-zero for: eight of 183 before the fix, and none of the 190
+the merged tree holds after it.
 
 R7. **The eight blocks are fixed by ids and syntax only.** Every label renders the same text: a
 `;` becomes the entity `#59;` (rendered as `;`), and an edge label holding `(` or `@` is quoted.
@@ -53,6 +54,13 @@ indentation. GitHub renders both as diagrams, so the check reads both. The check
 an unparsable block in each and refuses it by name, and plants a valid block of each diagram type
 the documents use (`sequenceDiagram`, `flowchart`, `stateDiagram-v2`) and accepts it.
 
+The same three-backtick `mermaid` fence is also read inside a blockquote, with a space after the `>`
+or none, and as a list item inside a blockquote: the `>` markers are part of the prefix, stripped like
+indentation, the closing fence carries the same prefix, and a quoted blank line (the prefix without
+its trailing blanks) becomes an empty line. So is a fence with blanks between the backticks and
+`mermaid`. GitHub renders each of these as a diagram. The check's own test plants an unparsable
+block in each and refuses it by name, and accepts a valid quoted block that holds a quoted blank line.
+
 ## 3. Acceptance criteria
 
 | id | criterion | decided by |
@@ -61,16 +69,18 @@ the documents use (`sequenceDiagram`, `flowchart`, `stateDiagram-v2`) and accept
 | A2 | the check reads every fenced block, and at least 100 of them | `docs-mermaid.test.ts` `reads every fenced block` |
 | A3 | a block whose node id is a reserved word is refused, and the same block with another id is accepted | `docs-mermaid.test.ts` `reserved word` (two tests) |
 | A4 | an indented fence, in a list item or by one to three spaces, is read: an unparsable one is refused by name, and a valid one of each diagram type the documents use is accepted | `docs-mermaid.test.ts` `indented` (two tests) |
+| A5 | a fence in a blockquote, and one spaced before `mermaid`, is read: an unparsable one is refused by name, and a valid quoted one with a quoted blank line is accepted | `docs-mermaid.test.ts` `quoted` (two tests) |
 
 ```acceptance
 A1: pnpm exec vitest run web/app/src/lib/docs-mermaid.test.ts -t "parses every block"
 A2: pnpm exec vitest run web/app/src/lib/docs-mermaid.test.ts -t "reads every fenced block"
 A3: pnpm exec vitest run web/app/src/lib/docs-mermaid.test.ts -t "reserved word"
 A4: pnpm exec vitest run web/app/src/lib/docs-mermaid.test.ts -t "indented"
+A5: pnpm exec vitest run web/app/src/lib/docs-mermaid.test.ts -t "quoted"
 ```
 
-Each fence line selects its tests: A1 one test, A2 one, A3 two and A4 two, and no test is selected by
-two lines.
+Each fence line selects its tests: A1 one test, A2 one, A3 two, A4 two and A5 two, and no test is
+selected by two lines.
 
 The command-line renderer is the oracle for R6: it is run once, by hand, over the extracted blocks
 before and after the fix, and its table of block to exit code is the delivery's evidence. It is not
@@ -80,7 +90,7 @@ part of the gate.
 
 | file | context | change |
 |---|---|---|
-| `web/app/src/lib/docs-mermaid.test.ts` | repo | added: A1 to A3 |
+| `web/app/src/lib/docs-mermaid.test.ts` | repo | added: A1 to A5 |
 | `web/app/package.json` | repo | changed: R3, the `mermaid` devDependency |
 | `pnpm-lock.yaml` | repo | changed: the lock of that dependency |
 | `docs/schematics/alert-and-slo-path.md` | repo | changed: R7, two blocks |
@@ -103,15 +113,16 @@ No new schematic: the change adds no component; it corrects six existing ones.
 - It adds no job and no workflow step, because the `web` job's `vitest run` already runs every test
   file under `web/app/src` (#383).
 - It does not change any diagram's meaning: no label's text, no node, no edge (#383).
-- It does not read a fence that is not the three-backtick `mermaid` form, because the repository
-  writes every diagram that way (#383). What it does read is that form at any indentation: the
-  opener's leading spaces or tabs are captured, the closing fence must carry the same, and the
-  indentation is stripped from each body line before the parse.
-- It reads a `mermaid` fence that GitHub shows as code, and never misses one it renders. A `mermaid`
-  fence shown inside a four-backtick example, or inside an indented code block, is read too. That
-  may refuse an example, and it cannot miss a diagram. Measured on `dev`: no such case exists among
-  the 183 blocks, and the documents hold no four-backtick fence and no `mermaid` fence after an
-  indented code line (#383).
+- It does not read a `~~~` fence or a four-backtick one, because the repository writes every diagram
+  as a three-backtick `mermaid` fence (#383). What it does read is that form at any indentation,
+  inside a blockquote, and with blanks before `mermaid`: the opener's prefix (leading spaces or tabs
+  and any `>` markers) is captured, the closing fence must carry the same, and the prefix is
+  stripped from each body line before the parse.
+- It reads a three-backtick `mermaid` fence that GitHub shows as code too. A `mermaid` fence shown
+  inside a four-backtick example, or inside an indented code block, is read. That may refuse an
+  example; a fence in a form R9 does not name is outside R1, by the bullet above (#383). Measured
+  on the merged tree: 190 blocks, and the documents hold no blockquote line, no four-backtick
+  fence, no tilde fence and no `mermaid` fence after an indented code line (#383).
 - It owes no mutation rows, because no production file changes and the check is test code (#383).
   The mutation plan reads the same: on this pull request it selects no tool and no row.
 - It changes no Rust and no Python, because the defect is in Markdown and the check is a test in the
@@ -122,12 +133,21 @@ No new schematic: the change adds no component; it corrects six existing ones.
 - **A new Mermaid syntax the pinned parser does not know.** A diagram valid in a later release
   would be refused until the pin moves; the refusal names the block, and moving the pin is one
   reviewed change to `web/app/package.json`.
-- **The parser and the renderer disagree on some future block.** R6 holds for today's 183 blocks
-  only; the two share one grammar, and the oracle run in this delivery is the evidence.
+- **The parser and the renderer disagree on some future block.** R6 holds for the blocks it was
+  measured over, 183 before the fix and 190 on the merged tree; the two share one grammar, and the
+  oracle run in this delivery is the evidence.
 - **A block that only the fence-line reader misses** (an unusual fence) is not examined. A2 counts
   opener lines with the reader's own spelling, so it detects an unclosed fence (the reader finds one
-  block fewer than the openers) but not a spelling the reader misses. A4 covers indentation; a fence
-  in any other form, such as tildes, stays outside R1 by section 5.
+  block fewer than the openers) but not a spelling the reader misses. A4 and A5 cover indentation,
+  blockquotes and blanks before `mermaid`; a fence in another form, a tilde or four-backtick one,
+  stays outside R1 by section 5.
+- **False refusals, on the fail-closed side.** The check goes red on a valid diagram, rather than
+  passing an unread one, in these shapes: a closing fence at a different indentation or quote prefix
+  than its opener (A2's count of openers then differs from the blocks read, without naming a file,
+  and the opener may run on to the next fence and refuse a block by name), an opener such as
+  `mermaidx`, a top-level block indented four spaces or by a tab, and a `mermaid` fence shown inside
+  a four-backtick example (the last three are refused by name). The merged tree holds none of them:
+  the check reads 190 blocks and refuses none.
 
 ## 7. References
 
