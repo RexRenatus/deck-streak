@@ -382,6 +382,69 @@ async fn only_the_sync_job_serves_the_owners_stored_request() {
     );
 }
 
+#[tokio::test]
+async fn two_planted_request_payloads_change_nothing_the_sync_job_serves() {
+    // The doorbell's file holds a payload that pretends to command the job. The job reads the
+    // stored flag and nothing from the file: with the flag clear it serves no owner request, with
+    // the flag pending it serves exactly one, and the file stays byte for byte as planted.
+    let cases: Vec<(bool, &[u8])> = examined(
+        "planted payload cases",
+        vec![
+            (false, br#"{"trigger":"owner","force":true,"job":"sync"}"#),
+            (true, b"{\"trigger\":\"none\",\"cancel\":true}\n\x00\xff"),
+        ],
+    );
+    for (pending, payload) in cases {
+        let directory = tempfile::tempdir().expect("a temporary directory");
+        let state = directory.path().join("state");
+        let credentials = directory.path().join("credentials");
+        let run = directory.path().join("run");
+        for folder in [&state, &credentials, &run] {
+            fs::create_dir_all(folder).expect("a folder");
+        }
+        let doorbell = run.join("request");
+        fs::write(&doorbell, payload).expect("a planted payload");
+        fs::write(credentials.join(SYNC_USERNAME), "synthetic-owner\n").expect("a credential");
+        fs::write(credentials.join(SYNC_PASSWORD), "synthetic-password\n").expect("a credential");
+        let db = Db::open(&state.join(DATABASE_FILE))
+            .await
+            .expect("the role's database opens");
+        if pending {
+            SqliteIngestState::new(db.clone())
+                .request_rescore(SystemClock.now())
+                .await
+                .expect("the request is stored");
+        }
+        db.close().await;
+        let offset = offset_to_half_past_noon();
+        let environment = [
+            ("STATE_DIRECTORY", state.as_os_str()),
+            ("CREDENTIALS_DIRECTORY", credentials.as_os_str()),
+            (
+                "DECKSTREAK_SYNC_ENDPOINT",
+                OsStr::new("http://127.0.0.1:9/"),
+            ),
+            ("DECKSTREAK_ROLLOVER_HOUR", OsStr::new("12")),
+            ("DECKSTREAK_UTC_OFFSET_MINUTES", OsStr::new(&offset)),
+            (LAW_DECK_ROOT, OsStr::new("Law\u{1f}Evidence")),
+            ("DECKSTREAK_SYNC_REQUEST_PATH", doorbell.as_os_str()),
+        ];
+        let output = deckstreakd(&["job", "sync"], &environment);
+        let served = request_events(&output);
+        assert_eq!(
+            served.len(),
+            usize::from(pending),
+            "flag pending={pending}: {}",
+            describe(&output)
+        );
+        assert_eq!(
+            fs::read(&doorbell).expect("the file stays"),
+            payload,
+            "the job leaves the request file untouched"
+        );
+    }
+}
+
 /// A database in `directory`, where a role finds it, holding one synthetic sync run: the owner's
 /// data an erase removes.
 async fn with_one_sync_run(directory: &std::path::Path) {
