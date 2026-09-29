@@ -650,7 +650,9 @@ differ only in the filterset *and the target flags derived from it*, so every te
 runs in exactly one of them, under one build scope and one feature resolution." `--workspace`,
 `--locked`, `--no-fail-fast`, the filterset and R16's partition are unchanged. `test` names no
 target. A set that names no whole binary derives no target flag, so the stage builds every test
-target, as it did.
+target, as it did. The derivation is complete only for a union of whole binaries, which A17
+requires; a set that named whole binaries beside another term would derive only those binaries, so
+A17 is not relaxed without this derivation.
 
 **A16, as amended.** A16's words "their commands differ only in the filterset" read "their commands
 differ only in the filterset and the `--test <target>` pairs derived from the set". The test that

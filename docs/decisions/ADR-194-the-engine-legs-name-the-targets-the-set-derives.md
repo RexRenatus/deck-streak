@@ -32,6 +32,9 @@ without narrowing the package scope and without running fewer tests?
 - A hand-written `--test sync --test engine_budget` beside the filterset: rejected, because it is a
   second definition of the set that can drift from `ENGINE_TESTS`, and a target missing from it would
   silently drop tests from both stages.
+- `--workspace` kept as it is, with no target flag: rejected, because each slice then builds every
+  test target of the workspace to run two of them, the cost #407 removes, and it runs no test the
+  derived flags leave out.
 - One slice instead of two: rejected, because it is R16's reason reversed; the wall of one leg would
   return to the whole set, and it does not change what a leg builds.
 
@@ -47,8 +50,12 @@ S03800-S03899 kill a change of the flag and of the scope.
 - Good, because a slice builds two test targets in place of every one of the workspace, with the
   same tests run.
 - Good, because a target cannot drift from the set.
-- Bad, because the derivation reads the binary ids by pattern; a set written in another shape
-  derives no target and builds every target, as before, which A21's planted set shows.
+- Bad, because the derivation reads the binary ids by pattern, so it is complete only for a set that
+  is a `|` union of whole `binary_id(=<package>::<target>)` terms. A17 refuses every other set, and
+  that refusal is what keeps it complete: a set naming whole binaries beside another term (a
+  `test(...)` or `package(...)` predicate, a glob or regex binary id, `&` or `not`) would derive
+  only those binaries, and a test the other term names would run in neither stage. A set naming no
+  whole binary derives no target and builds every target, as before, which A21's planted set shows.
 
 ### Confirmation
 
