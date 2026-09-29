@@ -49,8 +49,8 @@ R2. The configuration is SPEC-021's `deploy/litestream.yml`, installed as commit
     retention and validation, and sets no replica-level retention.
 R3. The declared window holds: an erased row survives at most the snapshot interval plus the
     retention in the replica (72 hours) and three days in the daily copies, both inside `P3D`.
-    `privacy.json`'s `backups` block and `PRIVACY.md` state the replica and the daily copies with
-    that window.
+    `PRIVACY.md` states the replica and the daily copies with that window. `privacy.json`'s
+    `backups` block admits only its declared keys, `config` and `retention`, so it is unchanged.
 R4. `deploy/systemd/deck-streak-backup.service` and its timer run `deploy/scripts/backup.py`
     (standard-library Python) once a day. It copies the live database with SQLite's online backup API
     into a temporary file beside the backups directory, runs `PRAGMA integrity_check` on the copy,
@@ -61,7 +61,9 @@ R5. `deploy/systemd/deck-streak-restore-drill.service` and its timer run
     `litestream restore -config <DeckStreak's configuration> -o <a private temporary path> <the
     database>`, opens the newest daily copy, runs `PRAGMA integrity_check` on both, compares each
     copy's migration version with the live database's, removes both copies, and exits non-zero on any
-    failed step, paging through `OnFailure=`.
+    failed step, paging through `OnFailure=`. The migration rule has two halves: the restored replica
+    is at exactly the live database's version, and a daily copy is at that version or an earlier one
+    (older after a deploy), never a later one.
 R6. The daily backup runs at 03:24 and the drill on Sundays at 06:24, in the owner's zone as the
     rail renders it (SPEC-032 R4). A test proves both slots off the predecessor's schedule as
     SPEC-027 R2 defines it, its sync minutes included, off every slot of the reserved-slot list the
@@ -139,7 +141,7 @@ packet; this SPEC names each step only.
 | `deploy/litestream.yml` | deploy | changed: the replica's URL as a `gs://` URL whose bucket is an environment reference |
 | `deploy/deck-streak.env.example` | deploy | changed: the replica bucket's setting, with a neutral value |
 | `deploy/host-budget.json` | deploy | changed: the three units' ceilings |
-| `privacy.json`, `PRIVACY.md` | repo | changed: the replica and the daily copies, with their window |
+| `PRIVACY.md` | repo | changed: the replica and the daily copies, with their window (`privacy.json` is unchanged) |
 | the box-run packs' private wiring (ADR-069) | the maintainer's | changed: durable-services' three backup deferrals and the Litestream unit's wait ended |
 | `scripts/tests/test_backup_units.py` | repo | added: A1 to A7 |
 | `scripts/tests/test_deploy_templates.py` | repo | changed: the daemon list gains the replicator, the worst case is 672M against the 704M share, and the new units' rows are read from ADR-064's table |

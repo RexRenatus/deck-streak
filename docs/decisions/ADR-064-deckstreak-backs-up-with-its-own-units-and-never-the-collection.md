@@ -60,11 +60,15 @@ Chosen option.
 DeckStreak's units keep their ceilings in `deploy/host-budget.json`, which SPEC-032 reads against
 ADR-032's table. This decision adds three rows and raises DeckStreak's own share.
 
-| unit | MemoryHigh | MemoryMax |
-|---|---|---|
-| `deck-streak-litestream.service` | 48M | 64M |
-| `deck-streak-backup.service` | 48M | 64M |
-| `deck-streak-restore-drill.service` | 96M | 128M |
+| unit | MemoryHigh | MemoryMax | CPUQuota |
+|---|---|---|---|
+| `deck-streak-litestream.service` | 48M | 64M | 50% |
+| `deck-streak-backup.service` | 48M | 64M | none (a job) |
+| `deck-streak-restore-drill.service` | 96M | 128M | none (a job) |
+
+The replicator keeps `CPUQuota=50%`, because the deploy-template test requires every daemon to
+carry a quota and the daemons' quotas to fit the share's CPUs (100% for the API, 50% for the bot
+and 50% for the replicator).
 
 The share becomes `"memory": "704M"`, from 640M. The worst case is the three daemons (128M for the
 API, 96M for the bot's ceiling as ADR-032 set them, and 64M for the replicator) plus the largest

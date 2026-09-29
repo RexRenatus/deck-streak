@@ -31,7 +31,10 @@ ADR = REPO / "docs" / "decisions" / "ADR-032-deploy-templates-and-the-host-budge
 # SPEC-064's units: the replicator's, the daily backup's and the drill's ceilings are decided here,
 # and the share it raised (ADR-032 keeps a dated note).
 ADR_BACKUPS = (
-    REPO / "docs" / "decisions" / "ADR-064-deckstreak-backs-up-with-its-own-units-and-never-the-collection.md"
+    REPO
+    / "docs"
+    / "decisions"
+    / "ADR-064-deckstreak-backs-up-with-its-own-units-and-never-the-collection.md"
 )
 LITESTREAM_SERVICE_NAME = "deck-streak-litestream.service"
 BACKUP_SERVICE_NAME = "deck-streak-backup.service"
@@ -782,7 +785,9 @@ class TheServicesRunTheirRoles(unittest.TestCase):
                 # own configuration, and keeps running.
                 self.assertEqual(
                     unit.values("Service", "ExecStart"),
-                    [f"/usr/local/bin/litestream replicate -config {RELEASE}/deploy/litestream.yml"],
+                    [
+                        f"/usr/local/bin/litestream replicate -config {RELEASE}/deploy/litestream.yml"
+                    ],
                     unit.rel,
                 )
                 self.assertEqual(last(unit, "Unit", "OnFailure"), ON_FAILURE, unit.rel)

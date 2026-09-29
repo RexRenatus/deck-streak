@@ -183,7 +183,6 @@ def url_scheme(url):
 def calendar_minutes(calendar):
     """The minutes of the hour an `OnCalendar=` fires at, or None when it names a wildcard or a
     step (a timer that fires every few minutes has no one slot)."""
-    match = re.search(r"(?:^|\s)(\d{1,2}|\*)?:(\d{1,2}|\*(?:/\d+)?|\d+/\d+):", calendar)
     time = re.search(r"(\S+):(\S+):(\S+)", calendar)
     if not time:
         return None
@@ -387,12 +386,8 @@ class BackupUnits(unittest.TestCase):
                 self.assertNotIn(b"COLLECTION-COPY", data)
                 self.assertNotIn(b"CREDENTIAL", data)
             # Beside the backups directory nothing is left: no temporary file, and no WAL sidecar.
-            self.assertEqual(
-                [p.name for p in state.iterdir() if p.name.startswith(".backup-")], []
-            )
-            self.assertEqual(
-                [p.name for p in backups.iterdir() if not p.name.endswith(".db")], []
-            )
+            self.assertEqual([p.name for p in state.iterdir() if p.name.startswith(".backup-")], [])
+            self.assertEqual([p.name for p in backups.iterdir() if not p.name.endswith(".db")], [])
 
     def test_a_failed_integrity_check_fails_the_backup_and_keeps_the_old_copies(self):
         backup = load_backup()
@@ -544,7 +539,8 @@ class BackupUnits(unittest.TestCase):
         failing = {
             "replica fails its integrity check": run_drill(replica="bad"),
             "daily copy fails its integrity check": run_drill(daily="bad"),
-            "replica is at another migration version": run_drill(replica_version=6),
+            "replica is behind the live database": run_drill(replica_version=6),
+            "replica is ahead of the live database": run_drill(replica_version=8),
             "daily copy is ahead of the live database": run_drill(daily_version=8),
             "litestream exits non-zero": run_drill(stub_exit=1),
             "no daily copy exists": run_drill(with_daily=False),
