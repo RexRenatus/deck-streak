@@ -31,7 +31,7 @@ sequenceDiagram
   participant M as markets void port
   participant E as economy wallet and fine port
   C->>W: settle the active wager, governor and markers and skips
-  W-->>E: refund or payout, keyed by the wager, once
+  W-->>E: refund or payout, once with its status
   C->>W: judge a lost wager again within 7 closed study days
   C->>P: the panic day reached
   P->>W: void the active wager, reason panic
@@ -67,8 +67,9 @@ stateDiagram-v2
 
 - A flat spot is a consumed freeze or a skip day inside the term; each adds a day to the end, 3 at
   most.
-- A void records its reason: `standby`, `panic` or `revision`. Every refund uses the one key
-  `wager_refund` and the wager's id, so a stake is refunded once however many voids are tried.
+- A void records its reason: `standby`, `panic` or `revision`. A void changes the status and
+  refunds the stake in one transaction, and only an active or lost wager can be voided, so a stake
+  is refunded once whatever voids it.
 
 ## A contract and one of its days
 

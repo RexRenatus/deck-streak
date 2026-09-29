@@ -6,21 +6,21 @@
   contract's authoring, verdict, weakening and revision, the pardon, the panic, the engine switch's
   writes and the Sunday review's rule); `deck-streak-coordination` (the stakes' step of the sync
   cycle, the panic's application across discipline, markets and economy, and the stakes' messages at
-  the discipline tick); `deck-streak-streaks` (the read of a range of freeze markers);
-  `deck-streak-bot` (`/wager`, `/contract`, `/panic`, `/pardon`, `/discipline_on`);
-  `deck-streak-api` (the stakes' routes); the Mini App (`web/app`, the stakes' cards on the
-  `/discipline` screen).
+  the discipline tick); `deck-streak-bot` (`/wager`, `/contract`, `/panic`, `/pardon`,
+  `/discipline_on`); `deck-streak-api` (the stakes' routes); the Mini App (`web/app`, the stakes'
+  cards on the `/discipline` screen).
 - **Decided by:** ADR-106 (this SPEC's: the money rung is not built until the owner rules), ADR-104
   (a verdict settles after its evidence and is revised within 7 closed study days: a contract's day
   and a lost wager), ADR-105 (the discipline tick, which raises the stakes' messages), ADR-103 (the
-  fine and its reversal), ADR-037 (one sync a study day), ADR-012 (the parity oracle) and ADR-071
-  (a settled day's rollup changes only with its reviews).
+  fine and its reversal), ADR-037 (one sync a study day), ADR-012 (the parity oracle) and ADR-071 (a
+  settled day's rollup changes only with its reviews).
 - **Prerequisites:** SPEC-105 (discipline's floor: `discipline_state` and its engine switch, the
   kind `discipline`, the tick, and the kept windows of a study day), SPEC-104 (the rail's defections
   of a study day), SPEC-103 (`fine` and `reverse_fine`), SPEC-107 (markets' `void_open_positions`
-  port), SPEC-082 (the wallet's `purchase` and `credit`), SPEC-076 (the governor's stored verdict
-  and the freeze markers), SPEC-083 (the skip set), SPEC-071 (the rollup's reviews of a study day),
-  SPEC-084 (the celebration ladder), SPEC-041 (the router) and SPEC-023 (the sync cycle).
+  port, and the streak's read of the freeze markers of a range of study days), SPEC-082 (the
+  wallet's `purchase` and `credit`), SPEC-076 (the governor's stored verdict and the freeze
+  markers), SPEC-083 (the skip set), SPEC-071 (the rollup's reviews of a study day), SPEC-084 (the
+  celebration ladder), SPEC-041 (the router) and SPEC-023 (the sync cycle).
   **Mutation band:** `S10600-S10699`.
 - **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
   `docs/specs/` with its tests and `docs/red-first/SPEC-106.md` (ADR-016).
@@ -97,7 +97,7 @@ R3. At each sync cycle (SPEC-023 R12), the active wager settles from these input
     (SPEC-076 R6); the skip set (SPEC-083) after its start up to its end; and the current study day.
     Over the outcome set `active`, `won`, `won_early`, `lost` and `voided`, and equal to the golden
     `wager_settle`:
-    - the governor not armed: `voided`, and the stake is refunded once through `credit(day,
+    - the governor not armed: `voided`, and the stake is refunded through SPEC-082's `refund(day,
       "wager_refund", "<wager id>", stake)`;
     - otherwise its flat spots are the consumed markers and the skip days counted above, its
       extensions the smaller of 3 and the flat spots, its effective end its end plus the extensions,
@@ -107,14 +107,16 @@ R3. At each sync cycle (SPEC-023 R12), the active wager settles from these input
       (`credit(day, "wager_win", "<wager id>", amount)`);
     - else a current study day after the effective end: `won`, paying twice the stake the same way;
     - else it stays `active`.
-    A settlement and its coin movement are written in one transaction, once.
+    A settlement's status and its coin movement are written in one transaction, and only an
+    `active` wager settles, so each is written once.
 R4. When a wager settles `lost`, it records its break's study day and the first day of the gap the
     break closed: the earliest day of the run of days before the break's study day that held no
     study review in SPEC-071's rollup, skip days bridged. At each sync cycle while the break's study
     day is the current study day or one of the 7 closed study days before it, the loss is judged
     again: when a day of that gap now holds a study review, the wager becomes `voided` with the
-    reason `revision` and its stake is refunded once through the same `wager_refund` key (ADR-104).
-    Its streak stays as SPEC-076 settled it. `won`, `won_early` and `voided` are final.
+    reason `revision` and its stake is refunded through `refund(day, "wager_refund", "<wager id>",
+    stake)` in the same transaction as the status, so a stake is refunded once whatever voids it
+    (ADR-104). Its streak stays as SPEC-076 settled it. `won`, `won_early` and `voided` are final.
 R5. A void records its reason, one of `standby` (R3), `panic` (R15) and `revision` (R4).
 
 The contract (#113)
@@ -187,11 +189,11 @@ R14. `panic()` stores the next study day as the panic's study day, and `cancel_p
 R15. At the first sync cycle whose current study day is on or after the panic's study day, after the
     wager settles (R3) and before the weakenings (R12), in one transaction: the engine is switched
     off and the panic's day cleared; the active wager is voided with the reason `panic` and its
-    stake refunded through `wager_refund`; each active contract becomes `revoked`, so its pending
-    weakening is cancelled at R12; markets' `void_open_positions` (SPEC-107) voids each open
-    position and refunds its stake; and the panic's notice is left pending for the tick (R17).
-    Discipline's part equals the golden `panic_apply`. Nothing is voided before that cycle, so a
-    stake armed on the panic's eve still stands for it.
+    stake refunded through `refund(day, "wager_refund", "<wager id>", stake)`; each active contract
+    becomes `revoked`, so its pending weakening is cancelled at R12; markets' `void_open_positions`
+    (SPEC-107) voids each open position and refunds its stake; and the panic's notice is left
+    pending for the tick (R17). Discipline's part equals the golden `panic_apply`. Nothing is voided
+    before that cycle, so a stake armed on the panic's eve still stands for it.
 R16. `/discipline_on`, the notice's re-arm button (`ct:rearm`) and the Mini App's switch turn the
     engine on. While it is off, no contract day is judged (R9), an open fines nothing (the rail's
     input, SPEC-104 R6), and arming, authoring and a panic are refused (R1, R6, R14); from the
@@ -250,7 +252,10 @@ R23. Discipline's data-rights port exports and erases the five tables, and the r
     `discipline_state` (SPEC-105 R24) clears the two new fields; the five tables owe SPEC-021's six
     files.
 R24. The weakening stakes equal the constants golden `stakes.constants`; the horizon, the durations,
-    the offers, the payouts and the day limits are proved by the goldens of R1 to R18.
+    the offers, the payouts and the day limits are proved by the goldens of R1 to R18. The wager's
+    stake options, durations, stake fraction, multipliers, extension cap and void states equal
+    `economy.json`'s `wager` section, the game-economy pack's reference, which this SPEC does not
+    change.
 R25. No crate and no screen posts to an outside pledge service or names it, and no setting enables
     one (ADR-106, #116).
 
@@ -289,7 +294,7 @@ R25. No crate and no screen posts to an outside pledge service or names it, and 
 | A29 | a won wager and a finished contract each raise their celebration once | `wins_and_finished_contracts_celebrate_once` |
 | A30 | the constants equal the constants golden | `the_stake_constants_match_the_predecessors` |
 | A31 | no file under `crates/*/src/` or `web/app/src/` names the pledge service or its host, and no setting key enables one | `no_path_posts_to_a_pledge_service` |
-| A32 | the freeze markers of a range of study days are read back as the streak wrote them | `the_freeze_markers_of_a_range_are_read_back` |
+| A32 | the wager's constants equal `economy.json`'s `wager` section, key for key | `the_wager_constants_equal_the_economy_declaration` |
 | A33 | the commands and buttons call their use cases through a stub port and relay a refusal's reason unchanged, and a malformed button's data reaches no use case | `stake_commands_run_the_use_cases` |
 | A34 | the stakes' routes answer the owner's session only | `the_stake_routes_answer_only_the_owner` |
 | A35 | the screen arms a wager from the offers and shows a pending weakening's landing day | `arms a wager and shows the landing day` |
@@ -327,7 +332,7 @@ A28: cargo test -p deck-streak-coordination --test discipline_stake_messages -- 
 A29: cargo test -p deck-streak-coordination --test discipline_stake_messages -- --exact wins_and_finished_contracts_celebrate_once
 A30: cargo test -p deck-streak-discipline --test stake_goldens -- --exact the_stake_constants_match_the_predecessors
 A31: cargo test -p deck-streak-discipline --test money_rung_census -- --exact no_path_posts_to_a_pledge_service
-A32: cargo test -p deck-streak-streaks --test freeze_markers_read -- --exact the_freeze_markers_of_a_range_are_read_back
+A32: cargo test -p deck-streak-discipline --test stake_goldens -- --exact the_wager_constants_equal_the_economy_declaration
 A33: cargo test -p deck-streak-bot --test stake_commands -- --exact stake_commands_run_the_use_cases
 A34: cargo test -p deck-streak-api --test stake_routes -- --exact the_stake_routes_answer_only_the_owner
 A35: pnpm exec vitest run web/app/src/lib/discipline/stakes.test.ts -t "arms a wager and shows the landing day"
@@ -364,12 +369,10 @@ this delivery, so the private wiring does not change when it merges.
 | `crates/discipline/src/review.rs` | `deck-streak-discipline` | added: the Sunday review's rule and its lines, pure |
 | `crates/discipline/src/data_rights.rs` | `deck-streak-discipline` | changed: the five tables join discipline's data-rights port |
 | `migrations/010601_discipline_stakes.sql` | `deck-streak-discipline` | added: the five tables, `STRICT`, and the two state fields |
-| `crates/discipline/tests/stake_goldens.rs` | `deck-streak-discipline` | added: A1 to A3, A8, A9, A11 to A13, A16 to A18, A21, A22, A26, A30 |
+| `crates/discipline/tests/stake_goldens.rs` | `deck-streak-discipline` | added: A1 to A3, A8, A9, A11 to A13, A16 to A18, A21, A22, A26, A30, A32 |
 | `crates/discipline/tests/stake_rules.rs` | `deck-streak-discipline` | added: A5, A10, A19, A25 |
 | `crates/discipline/tests/stake_rights.rs` | `deck-streak-discipline` | added: A36 |
 | `crates/discipline/tests/money_rung_census.rs` | `deck-streak-discipline` | added: A31 |
-| `crates/streaks/src/store.rs` | `deck-streak-streaks` | changed: the freeze markers of a range of study days, read for the wager and the contract days |
-| `crates/streaks/tests/freeze_markers_read.rs` | `deck-streak-streaks` | added: A32 |
 | `crates/coordination/src/discipline/mod.rs` | `deck-streak-coordination` | changed: the stakes' modules |
 | `crates/coordination/src/discipline/stakes.rs` | `deck-streak-coordination` | added: the wager's, the weakenings' and the contract days' step, their inputs, their coins and their revision |
 | `crates/coordination/src/discipline/panic.rs` | `deck-streak-coordination` | added: the panic's application across discipline, markets and economy, and the re-arm |
@@ -437,8 +440,8 @@ this delivery, so the private wiring does not change when it merges.
 
 - **A loss or a breach rests on reviews DeckStreak had not read.** Both are judged again within 7
   closed study days and refunded when the evidence fails (A7, A15).
-- **Coins are paid, taken or refunded twice.** Every movement has one key and is written with its
-  settlement in one transaction (A4, A6, A14, A20).
+- **Coins are paid, taken or refunded twice.** Every movement is written in one transaction with the
+  status change that allows it once (A4, A6, A14, A20).
 - **A panic lands early, late or twice.** It is applied only at the first cycle on its study day,
   after the wager settles, in one transaction (A23), and it is refused while the engine is off
   (A25).
