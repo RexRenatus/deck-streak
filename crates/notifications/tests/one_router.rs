@@ -147,6 +147,371 @@ const DELIVERY_METHODS: [&str; 12] = [
     "setMessageReaction",
 ];
 
+/// The version of the Bot API client the census's method list was read from. The test
+/// `the_census_classifies_every_method_of_the_pinned_client` holds it equal to the version the
+/// workspace's `Cargo.lock` pins, so a bump reds until the list below is derived again.
+const CLIENT_VERSION: &str = "0.52.1";
+
+/// Every method the pinned client exposes, in the Bot API's own spelling, sorted. Derived from the
+/// client's source tree at `CLIENT_VERSION`, in the directory of its `src/`, with:
+///
+/// ```text
+/// { grep -ohE 'request(_f|_nb)?!\(\s*[A-Za-z]+' src/trait_async.rs | sed -E 's/.*\(\s*//'; \
+///   perl -0ne 'print "$1\n" while /request(?:_with_possible_form_data|_with_form_data)\(\s*"([A-Za-z]+)"/g' \
+///   src/trait_async.rs; } | sort -u
+/// ```
+///
+/// That reads the `request!`, `request_f!` and `request_nb!` tables and the methods the client
+/// writes by hand around its form-data requests; `src/trait_sync.rs` yields the same set. Each
+/// name is in exactly one of `SEND_METHODS`, `DELIVERY_METHODS` and `NOT_DELIVERIES`.
+const CLIENT_METHODS: [&str; 185] = [
+    "addStickerToSet",
+    "answerCallbackQuery",
+    "answerChatJoinRequestQuery",
+    "answerGuestQuery",
+    "answerInlineQuery",
+    "answerPreCheckoutQuery",
+    "answerShippingQuery",
+    "answerWebAppQuery",
+    "approveChatJoinRequest",
+    "approveSuggestedPost",
+    "banChatMember",
+    "banChatSenderChat",
+    "close",
+    "closeForumTopic",
+    "closeGeneralForumTopic",
+    "convertGiftToStars",
+    "copyMessage",
+    "copyMessages",
+    "createChatInviteLink",
+    "createChatSubscriptionInviteLink",
+    "createForumTopic",
+    "createInvoiceLink",
+    "createNewStickerSet",
+    "declineChatJoinRequest",
+    "declineSuggestedPost",
+    "deleteAllMessageReactions",
+    "deleteBusinessMessages",
+    "deleteChatPhoto",
+    "deleteChatStickerSet",
+    "deleteEphemeralMessage",
+    "deleteForumTopic",
+    "deleteMessage",
+    "deleteMessageReaction",
+    "deleteMessages",
+    "deleteMyCommands",
+    "deleteStickerFromSet",
+    "deleteStickerSet",
+    "deleteStory",
+    "deleteWebhook",
+    "editChatInviteLink",
+    "editChatSubscriptionInviteLink",
+    "editEphemeralMessageCaption",
+    "editEphemeralMessageMedia",
+    "editEphemeralMessageReplyMarkup",
+    "editEphemeralMessageText",
+    "editForumTopic",
+    "editGeneralForumTopic",
+    "editMessageCaption",
+    "editMessageChecklist",
+    "editMessageLiveLocation",
+    "editMessageMedia",
+    "editMessageReplyMarkup",
+    "editMessageText",
+    "editStory",
+    "editUserStarSubscription",
+    "exportChatInviteLink",
+    "forwardMessage",
+    "forwardMessages",
+    "getAvailableGifts",
+    "getBusinessAccountGifts",
+    "getBusinessAccountStarBalance",
+    "getBusinessConnection",
+    "getChat",
+    "getChatAdministrators",
+    "getChatGifts",
+    "getChatMember",
+    "getChatMemberCount",
+    "getChatMenuButton",
+    "getCustomEmojiStickers",
+    "getFile",
+    "getForumTopicIconStickers",
+    "getGameHighScores",
+    "getManagedBotAccessSettings",
+    "getManagedBotToken",
+    "getMe",
+    "getMyCommands",
+    "getMyDefaultAdministratorRights",
+    "getMyDescription",
+    "getMyName",
+    "getMyShortDescription",
+    "getMyStarBalance",
+    "getStarTransactions",
+    "getStickerSet",
+    "getUpdates",
+    "getUserChatBoosts",
+    "getUserGifts",
+    "getUserPersonalChatMessages",
+    "getUserProfileAudios",
+    "getUserProfilePhotos",
+    "getWebhookInfo",
+    "giftPremiumSubscription",
+    "hideGeneralForumTopic",
+    "leaveChat",
+    "logOut",
+    "pinChatMessage",
+    "postStory",
+    "promoteChatMember",
+    "readBusinessMessage",
+    "refundStarPayment",
+    "removeBusinessAccountProfilePhoto",
+    "removeChatVerification",
+    "removeMyProfilePhoto",
+    "removeUserVerification",
+    "reopenForumTopic",
+    "reopenGeneralForumTopic",
+    "replaceManagedBotToken",
+    "replaceStickerInSet",
+    "repostStory",
+    "restrictChatMember",
+    "revokeChatInviteLink",
+    "savePreparedInlineMessage",
+    "savePreparedKeyboardButton",
+    "sendAnimation",
+    "sendAudio",
+    "sendChatAction",
+    "sendChatJoinRequestWebApp",
+    "sendChecklist",
+    "sendContact",
+    "sendDice",
+    "sendDocument",
+    "sendGame",
+    "sendGift",
+    "sendInvoice",
+    "sendLivePhoto",
+    "sendLocation",
+    "sendMediaGroup",
+    "sendMessage",
+    "sendMessageDraft",
+    "sendPaidMedia",
+    "sendPhoto",
+    "sendPoll",
+    "sendRichMessage",
+    "sendRichMessageDraft",
+    "sendSticker",
+    "sendVenue",
+    "sendVideo",
+    "sendVideoNote",
+    "sendVoice",
+    "setBusinessAccountBio",
+    "setBusinessAccountGiftSettings",
+    "setBusinessAccountName",
+    "setBusinessAccountProfilePhoto",
+    "setBusinessAccountUsername",
+    "setChatAdministratorCustomTitle",
+    "setChatDescription",
+    "setChatMemberTag",
+    "setChatMenuButton",
+    "setChatPermissions",
+    "setChatPhoto",
+    "setChatStickerSet",
+    "setChatTitle",
+    "setCustomEmojiStickerSetThumbnail",
+    "setGameScore",
+    "setManagedBotAccessSettings",
+    "setMessageReaction",
+    "setMyCommands",
+    "setMyDefaultAdministratorRights",
+    "setMyDescription",
+    "setMyName",
+    "setMyProfilePhoto",
+    "setMyShortDescription",
+    "setPassportDataErrors",
+    "setStickerEmojiList",
+    "setStickerKeywords",
+    "setStickerMaskPosition",
+    "setStickerPositionInSet",
+    "setStickerSetThumbnail",
+    "setStickerSetTitle",
+    "setUserEmojiStatus",
+    "setWebhook",
+    "stopMessageLiveLocation",
+    "stopPoll",
+    "transferBusinessAccountStars",
+    "transferGift",
+    "unbanChatMember",
+    "unbanChatSenderChat",
+    "unhideGeneralForumTopic",
+    "unpinAllChatMessages",
+    "unpinAllForumTopicMessages",
+    "unpinAllGeneralForumTopicMessages",
+    "unpinChatMessage",
+    "upgradeGift",
+    "uploadStickerFile",
+    "verifyChat",
+    "verifyUser",
+];
+
+/// The client's methods that put nothing before a user: each is classified, not held, and the
+/// census does not read a name in it. One reason for each group.
+const NOT_DELIVERIES: [&str; 141] = [
+    // Reads: each returns data to the bot and delivers nothing to a user.
+    "getAvailableGifts",
+    "getBusinessAccountGifts",
+    "getBusinessAccountStarBalance",
+    "getBusinessConnection",
+    "getChat",
+    "getChatAdministrators",
+    "getChatGifts",
+    "getChatMember",
+    "getChatMemberCount",
+    "getChatMenuButton",
+    "getCustomEmojiStickers",
+    "getFile",
+    "getForumTopicIconStickers",
+    "getGameHighScores",
+    "getManagedBotAccessSettings",
+    "getManagedBotToken",
+    "getMe",
+    "getMyCommands",
+    "getMyDefaultAdministratorRights",
+    "getMyDescription",
+    "getMyName",
+    "getMyShortDescription",
+    "getMyStarBalance",
+    "getStarTransactions",
+    "getStickerSet",
+    "getUpdates",
+    "getUserChatBoosts",
+    "getUserGifts",
+    "getUserPersonalChatMessages",
+    "getUserProfileAudios",
+    "getUserProfilePhotos",
+    "getWebhookInfo",
+    // Deletions and unpins: each removes or unpins what a user was shown and delivers nothing to a
+    // user.
+    "deleteAllMessageReactions",
+    "deleteBusinessMessages",
+    "deleteEphemeralMessage",
+    "deleteMessage",
+    "deleteMessageReaction",
+    "deleteMessages",
+    "deleteStory",
+    "unpinAllChatMessages",
+    "unpinAllForumTopicMessages",
+    "unpinAllGeneralForumTopicMessages",
+    "unpinChatMessage",
+    // Answers to a callback, an inline query, a checkout or a join request, and a prepared button:
+    // each answers the query it was raised by, or prepares an object a user later sends, and posts
+    // nothing into a chat itself.
+    "answerCallbackQuery",
+    "answerChatJoinRequestQuery",
+    "answerGuestQuery",
+    "answerInlineQuery",
+    "answerPreCheckoutQuery",
+    "answerShippingQuery",
+    "createInvoiceLink",
+    "savePreparedInlineMessage",
+    "savePreparedKeyboardButton",
+    "sendChatJoinRequestWebApp",
+    // Bot and session configuration: the bot's webhook, commands, profile and menu, and its
+    // process.
+    "close",
+    "deleteMyCommands",
+    "deleteWebhook",
+    "logOut",
+    "removeMyProfilePhoto",
+    "replaceManagedBotToken",
+    "setChatMenuButton",
+    "setManagedBotAccessSettings",
+    "setMyCommands",
+    "setMyDefaultAdministratorRights",
+    "setMyDescription",
+    "setMyName",
+    "setMyProfilePhoto",
+    "setMyShortDescription",
+    "setPassportDataErrors",
+    "setWebhook",
+    // Stickers: a sticker set is authored, not sent into a chat.
+    "addStickerToSet",
+    "createNewStickerSet",
+    "deleteStickerFromSet",
+    "deleteStickerSet",
+    "replaceStickerInSet",
+    "setCustomEmojiStickerSetThumbnail",
+    "setStickerEmojiList",
+    "setStickerKeywords",
+    "setStickerMaskPosition",
+    "setStickerPositionInSet",
+    "setStickerSetThumbnail",
+    "setStickerSetTitle",
+    "uploadStickerFile",
+    // Chat administration: members, permissions, titles, forum topics, invite links and join
+    // requests change how a chat is run and post no message.
+    "approveChatJoinRequest",
+    "banChatMember",
+    "banChatSenderChat",
+    "closeForumTopic",
+    "closeGeneralForumTopic",
+    "createChatInviteLink",
+    "createChatSubscriptionInviteLink",
+    "createForumTopic",
+    "declineChatJoinRequest",
+    "deleteChatPhoto",
+    "deleteChatStickerSet",
+    "deleteForumTopic",
+    "editChatInviteLink",
+    "editChatSubscriptionInviteLink",
+    "editForumTopic",
+    "editGeneralForumTopic",
+    "exportChatInviteLink",
+    "hideGeneralForumTopic",
+    "leaveChat",
+    "promoteChatMember",
+    "reopenForumTopic",
+    "reopenGeneralForumTopic",
+    "restrictChatMember",
+    "revokeChatInviteLink",
+    "setChatAdministratorCustomTitle",
+    "setChatDescription",
+    "setChatMemberTag",
+    "setChatPermissions",
+    "setChatPhoto",
+    "setChatStickerSet",
+    "setChatTitle",
+    "setUserEmojiStatus",
+    "unbanChatMember",
+    "unbanChatSenderChat",
+    "unhideGeneralForumTopic",
+    // Business accounts, stories, gifts, stars, games, verification and suggested posts: each acts
+    // on an account's own state or another product surface, and puts no message in the chat
+    // (#297).
+    "approveSuggestedPost",
+    "convertGiftToStars",
+    "declineSuggestedPost",
+    "editStory",
+    "editUserStarSubscription",
+    "giftPremiumSubscription",
+    "postStory",
+    "readBusinessMessage",
+    "refundStarPayment",
+    "removeBusinessAccountProfilePhoto",
+    "removeChatVerification",
+    "removeUserVerification",
+    "repostStory",
+    "setBusinessAccountBio",
+    "setBusinessAccountGiftSettings",
+    "setBusinessAccountName",
+    "setBusinessAccountProfilePhoto",
+    "setBusinessAccountUsername",
+    "setGameScore",
+    "transferBusinessAccountStars",
+    "transferGift",
+    "upgradeGift",
+    "verifyChat",
+    "verifyUser",
+];
+
 /// The bot's own send, which takes no pass.
 const BOT_SEND: &str = "send_html";
 
@@ -1693,4 +2058,68 @@ fn no_delivery_goes_around_the_port() {
         .map(|(_, _, what)| what.as_str())
         .collect();
     assert_eq!(what, ["names api.telegram.org", "names sendMessage"]);
+}
+
+/// Each name a class holds twice, in more than one class, or that is not a method of the client,
+/// and each method of the client no class holds, as a line that names it.
+fn classification_faults(client: &[&str], classes: &[(&str, &[&str])]) -> Vec<String> {
+    let mut faults = Vec::new();
+    for method in client {
+        let holding: Vec<&str> = classes
+            .iter()
+            .flat_map(|(class, names)| names.iter().filter(|name| *name == method).map(|_| *class))
+            .collect();
+        match holding.len() {
+            0 => faults.push(format!("unclassified: {method}")),
+            1 => {}
+            _ => faults.push(format!(
+                "classified {} times: {method} in {holding:?}",
+                holding.len()
+            )),
+        }
+    }
+    for (class, names) in classes {
+        for name in *names {
+            if !client.contains(name) {
+                faults.push(format!("unknown to the client: {name} in {class}"));
+            }
+        }
+    }
+    faults
+}
+
+/// The version `Cargo.lock` pins for the package `name`.
+fn locked_version(lock: &str, name: &str) -> Option<String> {
+    let mut lines = lock.lines();
+    while let Some(line) = lines.next() {
+        if line == format!("name = \"{name}\"") {
+            let version = lines.next()?.strip_prefix("version = \"")?;
+            return Some(version.trim_end_matches('"').to_owned());
+        }
+    }
+    None
+}
+
+#[test]
+fn the_census_classifies_every_method_of_the_pinned_client() {
+    let lock = fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("../../Cargo.lock"))
+        .expect("the workspace's Cargo.lock");
+    assert_eq!(
+        locked_version(&lock, "frankenstein").as_deref(),
+        Some(CLIENT_VERSION),
+        "the pinned client moved: derive CLIENT_METHODS again and classify what is new"
+    );
+    let faults = classification_faults(
+        &CLIENT_METHODS,
+        &[
+            ("SEND_METHODS", &SEND_METHODS),
+            ("DELIVERY_METHODS", &DELIVERY_METHODS),
+            ("NOT_DELIVERIES", &NOT_DELIVERIES),
+        ],
+    );
+    assert!(
+        faults.is_empty(),
+        "every method of the pinned client is a send, a delivery or not a delivery, in one class \
+         only: {faults:#?}"
+    );
 }
