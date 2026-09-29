@@ -14,6 +14,9 @@ workspace = true
 [dependencies]
 # ADR-022: the engine stays inside this crate, behind the AnkiEngine port (src/engine.rs).
 anki.workspace = true
+# SPEC-083 R6: the summary and the tariff count calendar months; the write reads the process's zone
+# (ADR-083; the version Cargo.lock already pins through the engine).
+chrono.workspace = true
 deck-streak-kernel.workspace = true
 # SPEC-022 section 7: the data-rights port's rows are JSON values.
 serde_json.workspace = true

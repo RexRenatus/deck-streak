@@ -21,6 +21,7 @@ pub mod gate;
 pub mod lock;
 pub mod reader;
 pub mod settings;
+pub mod skip;
 pub mod state;
 pub mod sync;
 pub mod sync_runs;

@@ -1018,6 +1018,7 @@ name = "deck-streak-ingest"
 version = "0.2.0"
 dependencies = [
  "anki",
+ "chrono",
  "deck-streak-kernel",
  "serde",
  "serde_json",

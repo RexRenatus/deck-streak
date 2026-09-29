@@ -13,6 +13,10 @@ use sqlx::SqliteConnection;
 pub const INGEST_CONTEXT: &str = "ingest";
 /// The table the sync record lives in (`migrations/002201_ingest_sync_runs.sql`).
 pub const SYNC_RUNS_TABLE: &str = "sync_runs";
+/// The table a skip day's record lives in (`migrations/008301_ingest_skip_days.sql`).
+pub const SKIP_DAYS_TABLE: &str = "skip_days";
+/// The table a skip's card snapshot lives in (`migrations/008302_ingest_skip_card_snapshot.sql`).
+pub const SKIP_CARD_SNAPSHOT_TABLE: &str = "skip_card_snapshot";
 /// The table the change gate's anchor, the rescore flag and the window's base live in
 /// (`migrations/002301_ingest_state.sql`).
 pub const INGEST_STATE_TABLE: &str = "ingest_state";
