@@ -143,6 +143,7 @@ printf '%s\\n' "$*" >> "$SHIM_LOG"
 case "$*" in
   *" judge "*"--class rust"*) exit "$RUST_RC" ;;
   *" judge "*"--class oracle"*) exit "$ORACLE_RC" ;;
+  *" judge "*"--class scripts"*) exit 0 ;;
   *" legs "*) exit "$LEGS_RC" ;;
 esac
 exit 99
