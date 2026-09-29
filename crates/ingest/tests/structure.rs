@@ -33,14 +33,21 @@ fn hex(bytes: &[u8]) -> String {
     })
 }
 
+/// Reports how many cases a golden walk examined, so an empty walk cannot pass unseen.
+#[allow(clippy::print_stdout)]
+fn examined(what: &str, count: usize) -> usize {
+    println!("examined {count} {what}");
+    count
+}
+
 #[test]
 fn the_wire_walk_matches_the_predecessors_golden() {
-    let mut examined = 0;
+    let mut cases = 0;
     let mut errors = 0;
     golden::each_case("wire_walk", |case| {
         let blob = unhex(case.input["hex"].as_str().expect("the blob's hex"));
         let walked = wire::walk(&blob);
-        examined += 1;
+        cases += 1;
         if let Some(message) = case.output.get("error") {
             errors += 1;
             let error = walked.expect_err("the predecessor refused this blob");
@@ -82,6 +89,7 @@ fn the_wire_walk_matches_the_predecessors_golden() {
             .collect();
         assert_eq!(seen, wanted, "{}", case.input);
     });
+    let examined = examined("wire golden case(s)", cases);
     assert!(examined >= 30, "examined only {examined} golden cases");
     assert!(errors >= 8, "examined only {errors} refused blobs");
 }

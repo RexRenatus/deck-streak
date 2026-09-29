@@ -62,3 +62,7 @@ In `crates/ingest/tests/structure.rs` the `unhex` and `hex` helpers changed betw
 and the green one, to satisfy clippy's pedantic lints; no assertion changed. The existing SPEC-027
 test `crates/coordination/tests/data_rights.rs` was edited in the green commit of A13 to A17,
 because a second table is now declared for export and erasure.
+
+Disclosure: after its red commit, `the_wire_walk_matches_the_predecessors_golden` in
+`crates/ingest/tests/structure.rs` gained a local `examined` helper call that prints how many golden cases it examined
+(the tdd examined-counts rule). No assertion changed.
