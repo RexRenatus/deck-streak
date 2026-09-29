@@ -410,7 +410,7 @@ jobs:
           out="$RUNNER_TEMP/shards/mutation-rust-shard-$SHARD"
           mkdir -p "$out"
           rc=0
-          cargo mutants --no-shuffle -vV --in-place --in-diff "$RUNNER_TEMP/mutation/git.diff" --sharding round-robin --shard "$SHARD/$SHARDS" --timeout 300 --build-timeout 600 --output "$out" || rc=$?
+          python3 scripts/memory_scope.py --report "$out" -- cargo mutants --no-shuffle -vV --in-place --in-diff "$RUNNER_TEMP/mutation/git.diff" --sharding round-robin --shard "$SHARD/$SHARDS" --timeout 300 --build-timeout 600 --output "$out" || rc=$?
           echo "$rc" > "$out/cargo-mutants.exit"
           echo "cargo-mutants exited $rc"
       - name: keep the shard's report
