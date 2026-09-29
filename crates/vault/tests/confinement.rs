@@ -22,6 +22,9 @@ use deck_streak_vault::{
 
 const READINGS: &str = "12-Readings";
 const ARCHIVE: &str = "Archive";
+/// The shape a folder setting's refusal names, as the operator reads it.
+const FOLDER_SHAPE: &str =
+    "one folder name: not empty, not hidden, and with no slash or control character";
 const DIGEST: &str = "5d41402abc4b2a76b9719d911017c592aaf1d7f2c3b4e5a69788796a5b4c3d2e";
 const BODY: &str = "# Hearsay\n\nAn out-of-court statement offered for its truth.";
 
@@ -260,15 +263,13 @@ fn the_vault_settings_refuse_by_name_and_never_by_value() {
             (READINGS_FOLDER, folder),
             (ARCHIVE_FOLDER, ARCHIVE),
         ]));
-        assert!(
-            matches!(
-                refused,
-                Err(SettingsError::Malformed {
-                    setting: READINGS_FOLDER,
-                    ..
-                })
-            ),
-            "the folder name {folder:?} was accepted"
+        assert_eq!(
+            refused,
+            Err(SettingsError::Malformed {
+                setting: READINGS_FOLDER,
+                expected: FOLDER_SHAPE,
+            }),
+            "the folder name {folder:?} is refused naming the whole shape"
         );
     }
     let settings = settings(Path::new("/vault"));
