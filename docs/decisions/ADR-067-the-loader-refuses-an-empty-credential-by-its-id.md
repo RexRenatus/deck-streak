@@ -57,6 +57,11 @@ template, and two were considered for it:
   review of a model found a spelling the model read otherwise than systemd, and a census that reads
   a word otherwise than systemd can admit what it means to refuse. A refusal holds for every
   spelling it does not read; a model holds only until its next divergence.
+- Refusing the directives that stop a start one by one (`Requisite=`, `Requires=`, `BindsTo=`,
+  then whichever the next review names): rejected, because a list of refused keys holds only until
+  the next key, while a literal list of the keys each kind of unit uses refuses every other key by
+  its name. The lists are the keys the units use, and a unit that needs another key adds it to its
+  list in the same change (SPEC-066 R2).
 
 ## Decision Outcome
 
@@ -80,11 +85,14 @@ shares, and a refusal there fails the unit the way a missing credential does.
   how systemd reads a unit file: it reads the plain syntax the templates hold and refuses the rest,
   a line it does not read, an exit-status word other than a decimal of at most 255 or a status
   name, and an empty or unknown `Restart=`, `RestartMode=` or `CollectMode=`, each read at every
-  assignment (SPEC-066 R2).
+  assignment (SPEC-066 R2). It holds each unit to a literal list of `(section, key)` pairs for its
+  kind, the drop-ins of the unit's own `<name>.d/` included, and refuses any key off it by name; a
+  `*.d/` directory under `deploy/` that is not a shipped unit's own is refused, since only a unit's
+  own drop-in directory is read.
 - **The alert unit.** Its script refuses an empty credential of the two it loads by its id, with one
   line at error priority, before it reads the journal or makes a request, and exits 1. The unit then
   stays failed, in `systemctl --failed` and the journal, because its template counts no refusal a
-  success, names no `[Unit]` condition or assertion, restarts no refused start and is never unloaded
+  success, names no `[Unit]` condition or assertion, holds only the keys of its own list, which has no dependency directive, restarts no refused start and is never unloaded
   while failed (SPEC-066 R3's exit, restart and collection conditions). It names no `OnFailure=`, so
   its own failure pages nothing: a page about the alert unit's own failure needs a route that does
   not depend on the alert sender (#285).

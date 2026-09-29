@@ -90,7 +90,19 @@ R2. The refusal fails the unit that loads the credential, and that unit's `OnFai
         words at spaces and tabs;
       - a `Restart=`, `RestartMode=` or `CollectMode=` that is empty or not a value its manual
         lists, each read at every assignment, so the census never decides which of two is in
-        force.
+        force;
+      - a key that is off the list of its unit's kind. The tests hold a literal list of
+        `(section, key)` pairs for the alert template and another for the units that page on
+        failure, `OnFailure=` being on the second alone. Every assignment of a unit, its own
+        drop-ins included, is checked against its list, and one off it, in any section, is refused
+        by its key: a `Requisite=`, a `Requires=`, a `BindsTo=`, an `X-` key, or a key the list
+        holds in another section. The lists are the keys the units use;
+      - a `*.d/` directory under `deploy/` that is not the `<unit name>.d/` of a unit shipped
+        beside it, the one directory of a file that is no unit excepted by name. Only a unit's own
+        drop-in directory is read with it;
+      - a credential directive read by the raw form of a line: the check of R2's credential form
+        reads each unit file and drop-in through the same reader, so a blank before `=` is a key
+        like any other.
 R3. The alert template unit cannot page through itself: it names no `OnFailure=` (SPEC-031). Its own
     refusal is therefore surfaced as its failed state. `deploy/scripts/alert-telegram.sh` refuses
     each of the two credentials it loads whose value is empty, nothing being left once the command
@@ -114,7 +126,9 @@ R3. The alert template unit cannot page through itself: it names no `OnFailure=`
     `systemctl --failed` then no longer lists (systemd.unit(5)). Its `Restart=`, `RestartMode=`
     and `CollectMode=` are read at every assignment, and one that is empty or not a value its
     manual lists is refused, as R2 refuses it; the template is read by R2's reader, which refuses
-    the lines R2 lists. A template these checks admit therefore leaves a refused instance `failed`
+    the lines R2 lists, and its keys are held to the alert template's list, which carries no
+    dependency directive (`Requisite=`, `Requires=`, `BindsTo=`) and no `OnFailure=`, since a start
+    that a dependency stops leaves the instance not failed. A template these checks admit therefore leaves a refused instance `failed`
     and listed by `systemctl --failed`. No page reports it: a second route that does not depend on
     the alert sender is #285.
 R4. ADR-067 records the decision and what it was chosen against. ADR-038 takes one dated note at its
@@ -153,7 +167,9 @@ A1 to A3 write synthetic credentials to a temporary directory and read them thro
 A4 reads the templates with `_units.py`, as the rest of the census does. Its reader does not
 model how systemd reads a unit file: it reads the plain syntax the templates hold, and refuses each
 line R2 lists by its file and line (`logical_lines`, `assignments`). A5 reads the alert template
-with the same reader, so the two cannot drift. A value splits into exit-status words at spaces and
+with the same reader, so the two cannot drift, and both hold a unit to the literal list of its
+kind (`ALERT_KEYS`, `PAGING_KEYS`), refusing any key off it by name; only a unit's own `<name>.d/`
+is read with it, and A4 refuses any other `*.d/` directory under `deploy/`. A value splits into exit-status words at spaces and
 tabs alone (`status_words`), and a word is read only as a decimal of at most 255, with no sign and
 no leading zero, or as a status name `systemd-analyze exit-status` lists (`exit_status`); the
 census refuses every other word. A4 holds that reading to a table of words, each with its reading
@@ -209,9 +225,9 @@ is proved with `python3 scripts/mutation_rows.py prove --band S06600-S06699`.
 | `crates/ingest/examples/engine_probe.rs` | `deck-streak-ingest` | changed: R6, the probe reads its sync login through the loader |
 | `deploy/scripts/alert-telegram.sh` | deploy | changed: R3 |
 | `deploy/README.md` | deploy | changed: an empty credential refuses start, and the alert unit's own refusal |
-| `scripts/tests/test_deploy_templates.py` | repo | changed: A4 |
+| `scripts/tests/test_deploy_templates.py` | repo | changed: A4, the key lists' check, the drop-in directory check and the credential lines' reader |
 | `scripts/tests/test_alert_unit.py` | repo | changed: A5, and `run_alert` plants a credential's content; `unit_file` reads through `_units.py`'s reader |
-| `scripts/tests/_units.py` | repo | changed: one reader for A4 and A5 that refuses the lines R2 lists (`logical_lines`, `assignments`), an exit-status word read only as a decimal of at most 255 or a status name (`exit_status`, `status_words`), and every assignment of a key (`Unit.every`) |
+| `scripts/tests/_units.py` | repo | changed: one reader for A4 and A5 that refuses the lines R2 lists (`logical_lines`, `assignments`), an exit-status word read only as a decimal of at most 255 or a status name (`exit_status`, `status_words`), every assignment of a key (`Unit.every`), and the literal lists of keys per kind of unit (`ALERT_KEYS`, `PAGING_KEYS`, `off_list`) |
 | `scripts/mutation-rows.d/S06600-S06699.json` | repo | added: R5 |
 | `docs/schematics/startup-settings-and-secrets.md` | repo | changed: the loader's refusal of an empty credential |
 | `docs/schematics/alert-and-slo-path.md` | repo | changed: the alert unit's own refusal |
@@ -296,3 +312,11 @@ is proved with `python3 scripts/mutation_rows.py prove --band S06600-S06699`.
   holds the one reader, which A4 and A5 use, and §4 lists it. Each addition pins what the templates
   already declare, so A4 stays disclosed not red, with its plants committed red before each
   refusal, and its killing cases (`docs/red-first/SPEC-066.md`).
+- **Any key off a unit's list is refused, and only its own drop-in directory is read.** R2 and R3
+  hold every unit to a literal list of `(section, key)` pairs for its kind, which closes the
+  directives that stop a start without failing the unit (`Requisite=`, `Requires=`, `BindsTo=`)
+  along with every key the lists do not name; the lists are the keys the units use, and the alert
+  template's carries no `OnFailure=`. A4 refuses a `*.d/` directory under `deploy/` that is not a
+  shipped unit's own `<unit name>.d/`, and the credential lines are read by the unit reader. Each
+  addition pins what the templates already declare, so it is disclosed not red, with its plants
+  committed red before each refusal (`docs/red-first/SPEC-066.md`).

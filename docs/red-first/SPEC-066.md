@@ -256,6 +256,32 @@ tests call, in `_units.py`, or beside the test in its file.
   the script restored byte for byte. No refusal the round adds is in a row's target, and no row is
   added.
 
+## Round 5: the readers hold each unit to a list of keys
+
+Each addition pins what the templates already declare, so each is disclosed not red on the tree,
+and each was committed red first, with a stub that compiles: both whole modules ran at each red
+commit, and only the tests named failed, by assertion.
+
+| item | red commit | what failed at the red | green commit |
+|---|---|---|---|
+| a literal list of keys per kind of unit, checked in A4 and A5 | e826281 | `test_a_key_off_its_units_list_is_refused_and_the_trees_units_hold_only_listed_keys` (A4) and `test_a_key_off_the_alert_templates_list_is_refused_by_name` (A5), each on its first plant the stub `off_list` did not flag | a76a59e |
+| the credential lines read through the unit reader | 7006ff0 | `test_a_credential_key_with_blanks_before_its_equals_sign_is_read_and_refused` (A4's module), a key with a space or a tab before `=` not read as a credential key | 4162a83 |
+| a `*.d/` directory of no unit refused | 997fcf9 | `test_only_a_units_own_dropin_directory_is_shipped_under_deploy`, the stub refusing none | 8000f00 |
+
+The plants of the list: a `Requisite=`, a `Requires=` and a `BindsTo=` on the alert template, a
+`Requisite=` on a unit that pages, an `X-` key on each kind, a key of the other section on each kind,
+a key of a section no list holds, and a drop-in's `Requires=`. The alert template's existing
+plants, which add a line the list also refuses, expect that line beside the refusal they had. A
+follow-up commit (3018669) adds the plants that kill the hand mutants below: a section off the
+list, an empty credential value, and a drop-in's credential line.
+
+**Hand mutants.** 13 hand mutants of the round's checks, in `_units.py` (3), `test_alert_unit.py`
+(2) and `test_deploy_templates.py` (8), each run against the three whole modules, the file restored
+by its sha256 after each: 3 survived the first commits (a fallback of an unlisted section to the
+service list, the credential lines' empty value, and the `.conf` files' suffix), and 3018669's
+plants kill each; one anchor did not occur and was dropped. The checks are test code and take no
+hand-proved row, and rows S06605 to S06608, whose killer is A5, were proved again at the head.
+
 ## Mutants of the changed code
 
 **The rows.** `python3 scripts/mutation_rows.py prove --band S06600-S06699` at e0cdf9f, on the
