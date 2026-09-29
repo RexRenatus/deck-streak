@@ -108,3 +108,48 @@ H6: sync_request::a_request_the_store_cannot_record_is_refused_with_the_rescore_
   left: Err(SyncRefusal { reason: "rescore_unrecordedx" })
  right: Err(SyncRefusal { reason: "rescore_unrecorded" })
 ```
+
+## Addendum, 2026-09-29, round 3: the cycle's own refusal and each `cycle_reason` arm pin their code (#396)
+
+Round 2's tests pinned that the cycle's own refusal EXISTS, not which code it carries, and three arms
+of `cycle_reason` (the sync, gate and window failures) were pinned by no assertion. The gap was
+planted first, on the head before the tests (a merge of dev at be5a976b), each plant leaving every
+daemon test green (58 passed, 0 failed, 1 ignored, over 9 test binaries):
+
+- the cycle's site hard-codes `SyncRecordFailed`;
+- the cycle's site remaps the code and still calls `cycle_reason`
+  (`RecomputeFailed => SyncRecordFailed, other => other`), which raises no warning;
+- each of the sync, gate and window arms of `cycle_reason` alone gives another code.
+
+The sites' other two shapes were planted too: the cycle's refusal swallowed into an `Ok` answer turns
+A11 red at `roles.rs:659` ("no refusal recorded"), and dropping the `?` does not compile (`E0308`).
+The new assertions (e970b038) are three cases in
+`a_cycle_that_cannot_finish_is_refused_with_its_steps_reason_code` and a code assertion in A11, and
+turn each code plant red by assertion. They are recorded `not red` under A15 above for the same
+reason as its other tests: they pin behaviour the head already has, so there is no green line. With
+no plant, the daemon `--tests` read 58 passed, 0 failed over 9 binaries:
+
+```text
+S5-code: roles::a_refusal_after_the_owners_run_answers_the_request_beside_the_run
+  panicked at crates/daemon/tests/roles.rs:660:5
+  left: SyncRecordFailed
+ right: RecomputeFailed
+S5-code2: the same test, the same line
+  left: SyncRecordFailed
+ right: RecomputeFailed
+S6-sync: wiring::tests::a_cycle_that_cannot_finish_is_refused_with_its_steps_reason_code
+  panicked at crates/daemon/src/wiring.rs:516:9
+  left: RecomputeFailed
+ right: SyncRecordFailed
+S6-gate: the same test
+  panicked at crates/daemon/src/wiring.rs:524:9
+  left: SyncRecordFailed
+ right: RecomputeFailed
+S6-window: the same test
+  panicked at crates/daemon/src/wiring.rs:528:9
+  left: SyncRecordFailed
+ right: RecomputeFailed
+```
+
+The rows `S12814` (the remap, as the mutant) and `S12815` to `S12817` (one arm each) are proved KILLED
+on a committed tree and each survives at the head before the tests.

@@ -181,8 +181,9 @@ defined in the section below.
   gives) and `a_refusal_after_the_owners_run_answers_the_request_beside_the_run` (the cycle's own
   refusal reaching the job's record). The bot's answer to a request its store cannot record is pinned
   by `a_request_the_store_cannot_record_is_refused_with_the_rescore_code`.
-- **Rows.** `S12809` to `S12813` in the band file, and `S12804`'s anchor moves to the arm's new
-  indentation; `S12812` and `S12813` are the swallowed-site mutants that A15's tests kill.
+- **Rows.** `S12809` to `S12817` in the band file, and `S12804`'s anchor moves to the arm's new
+  indentation; `S12812` and `S12813` are the swallowed-site mutants that A15's tests kill, `S12814`
+  is the cycle site's remapped code, and `S12815` to `S12817` give one `cycle_reason` arm another code.
 - **Files this amendment touches.** `crates/daemon/src/wiring.rs`, `crates/daemon/src/role_job.rs`,
   `crates/daemon/src/sync_request.rs`, `crates/daemon/tests/roles.rs`,
   `crates/daemon/tests/sync_request.rs`, `scripts/mutation-rows.d/S12800-S12899.json`, `docs/red-first/SPEC-128.md`,
