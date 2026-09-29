@@ -148,3 +148,38 @@ this section and nothing else. Issue #358.
   a workflow and Python tests, so its diff was not docs-only; the corrected sentence is that the
   live proof is the pull request's own `mutation-verdict` run, on a diff that changed a workflow
   and Python, whose download step logs are quoted in the pull request (#358).
+
+## 9. Amendment, 2026-09-29: the judge-line reader splits words as the shell does
+
+Insert-only under ruling (i) of SPEC-038 section 8: every earlier byte is kept in order. It inserts
+this section and nothing else. Issue #374.
+
+- **The rule.** Section 8's reader took each word of a judge command as written, so a path the
+  shell builds identically but spells differently was refused. The reader now splits each command
+  into words as the shell does: it joins a backslash-newline continuation first, removes quotes
+  (Python's `shlex.split` in POSIX mode, which removes the quotes it parses), and splits
+  `--flag=value` into the flag and its value, as the verdict script's argument parser reads it.
+  The `--class` value picks the line, as before.
+- **An expansion is kept distinct from text.** `shlex` removes the quotes and the backslash, so it
+  cannot tell `"$reports"` from `'$reports'`. A pass before it marks a `$` inside single quotes, or
+  escaped by a backslash, as text, and a `$` outside every quote as unquoted. `"$reports"`,
+  `"${reports}"`, `"$reports"/...` and `"$reports"'/...'` all read as the expansion of `reports`;
+  `'$reports'` and `\$reports` read as the text `\$reports`; an unquoted `$reports` reads as
+  `(unquoted)$reports`, which the test refuses because the shell word-splits it.
+- **Every wrong path is still refused.** A single-quoted or escaped path, a different directory, a
+  different variable, an unquoted expansion, a flag moved to the other judge line and a flag dropped
+  from one line each stay refused.
+
+| id | criterion | decided by |
+|---|---|---|
+| A5 | each of the seven spellings issue #374 names (braces, the expansion closed before the slash, a single-quoted tail, a quoted flag name, a backslash continuation, and `--flag=value` with the value quoted or with its quotes closing early) passes the judge-line check | `test_verdict_download.py` `every_spelling_the_shell_reads_alike_passes` |
+| A6 | each path the shell reads differently is refused, and the reader keeps an expansion apart from text and from an unquoted expansion | `test_verdict_download.py` `every_path_the_shell_reads_differently_is_refused` |
+
+```acceptance
+A5: python3 -m unittest discover -s scripts/tests -p test_verdict_download.py -k test_every_spelling_the_shell_reads_alike_passes
+A6: python3 -m unittest discover -s scripts/tests -p test_verdict_download.py -k test_every_path_the_shell_reads_differently_is_refused
+```
+
+- It changes no Rust, no workflow and no Python outside the test, because the defect is in the
+  test's reader (#374).
+- It adds no mutation-row band, for the reason section 5 gives (#374).
