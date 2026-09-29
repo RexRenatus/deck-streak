@@ -64,6 +64,22 @@ three planted-workflow tests over the old pattern; the green commit 9a7b2141 cha
 comment, in `scripts/tests/test_dispatch_shards.py`, because the guard's pattern lives in the test module. The whole test file at the red commit fails only the three new tests, each by assertion.
 
 ```red-first
-A7: red at 1b6bc977: AssertionError: {} != {'planted.yml': ['cargo +nightly mutants --in-place']} (toolchain); AssertionError: {} != {'planted.yml': ['cargo-mutants mutants --in-place']} (binary form); AssertionError: 1 != 2 (two commands on one line)
+A7: red at 1b6bc977: AssertionError: {} != {'planted.yml': ['cargo +nightly mutants --in-place']} (toolchain); AssertionError: {} != {'planted.yml': ['cargo-mutants mutants --in-place']} (binary form); AssertionError: 1 != 2 : ['cargo mutants --timeout 300 --build-timeout 600 ; cargo mutants --in-place'] (two commands on one line)
 A7: green at 9a7b2141
+A8: red at 7b9ae9cc: AssertionError: {} != {'planted.yml': ['cargo --config net.retry=2 mutants --in-place']} (a flag's separate value); AssertionError: {'pla[13 chars]cargo mutants --in-place # --timeout 300 --build-timeout 600']} != {'pla[13 chars]cargo mutants --in-place']} (a comment)
+A8: green at 1e54fe48
+```
+
+## Addendum, 2026-09-29 (issue #395, round 2): a flag's value, a comment, and A7 replayed
+
+The lines above stand. The red commit 7b9ae9cc adds three planted-workflow tests; the green commit
+1e54fe48 changes only the start pattern (a global flag with a separate value) and cuts comments
+before any command is read, in `scripts/tests/test_dispatch_shards.py`, because the guard lives in
+the test module. The whole test file at the red commit fails only the three new tests, each by
+assertion. A8 is recorded in the fence above; A7 keeps its one red and one green line, and its new
+test's replay is quoted here.
+
+```text
+A7 replay: red at 7b9ae9cc: AssertionError: 1 != 2 : ['cargo mutants --timeout 300 --build-timeout 600 && cargo -C crates mutants --in-place']
+A7 replay: green at 1e54fe48: Ran 18 tests, OK
 ```
