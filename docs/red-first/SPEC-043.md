@@ -121,6 +121,13 @@ lines are quoted here.
 - A21, `a_prune_spelled_around_the_keyword_scan_beside_a_quoted_copy_is_refused`: red at the commit
   that adds only the test; green at the commit that adds the word count to `prune_pin_problems`.
 
+Disclosure of the edits between red and green: the scans are helper functions inside the two test
+files, so the green commits edit those files. Commit b2b13fc changes `is_one_whole_attribute` to fail
+closed, adds `is_a_plain_doc_line`, makes `declarations_of` count, and adds one assertion to
+`the_verdict_type_is_must_use` that the enum is declared once; it changes no assertion of the two new
+tests. Commit 0ec2d29 adds `delete_keywords_in` and its use in `prune_pin_problems`, and changes no
+assertion of the new test.
+
 ```text
 A23: red at 25b1a12108b61d743630a57be0304db9e96938e2: a must_use outside the enum's attributes was read as one: ["#[derive(Clone)]", "#[doc = \"[\"] pub fn decoy() {} // ]", "#[must_use]"] (verdict.rs:110)
 A23: red at 25b1a12108b61d743630a57be0304db9e96938e2: assertion `left == right` failed, left: 1, right: 2 (verdict.rs:125)
