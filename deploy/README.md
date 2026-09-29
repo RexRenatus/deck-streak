@@ -122,8 +122,8 @@ of its own; neither catches up a run missed while the host was down, and each ti
 - First deploy, for the owner's `/sync`: create the request directory before the bot restarts, with
   `systemd-tmpfiles --create` over `tmpfiles.d/deck-streak-sync-request.conf`, because the bot's
   `ReadWritePaths=` names the directory without a `-` prefix and the bot does not start while it is
-  absent. Then restart the bot, and enable the path unit (`systemctl enable --now
-  deck-streak-job@sync.path`).
+  absent. Then restart the bot, and enable the path unit of the sync instance (`systemctl enable --now`
+  on the `deck-streak-job` path template, instance `sync`).
 - Start one job by hand with `systemctl start deck-streak-job@<id>.service`, the id being one of the
   table's. The run exits 0 when the job ran, skipped or recorded a missed fire, 1 when it pages
   (the unit fails, and `OnFailure=` sends the one alert), and 2 for an id the table does not hold.
