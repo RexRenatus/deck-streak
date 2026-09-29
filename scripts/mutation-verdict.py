@@ -1100,6 +1100,19 @@ def judge_rust(verdict: Verdict, plan: dict, args: argparse.Namespace) -> None:
     excuses = rust_excuses(verdict, args)
     voids = len(verdict.voids)
     whole = whole_reports(verdict, plan, args)
+    complete = len(verdict.voids) == voids
+    stopped: set[tuple[str, str]] = set()
+    if args.shard_reports:
+        held = dict(whole)
+        for shard in range(len((plan.get("shards") or {}).get("shards") or [])):
+            where = f"mutation-rust-shard-{shard}: "
+            directory = pathlib.Path(args.shard_reports) / f"mutation-rust-shard-{shard}"
+            stopped |= {
+                (where, name)
+                for name in memory_cap(
+                    verdict.fail, verdict.void, verdict.say, where, directory, held.get(where)
+                )
+            }
     caught, missed, timeout, unviable, total = (
         sum(int(report.get(key, 0)) for _, report in whole)
         for key in ("caught", "missed", "timeout", "unviable", "total_mutants")
@@ -1109,13 +1122,20 @@ def judge_rust(verdict: Verdict, plan: dict, args: argparse.Namespace) -> None:
         f"cargo-mutants examined {tool} (caught {caught}, missed {missed}, timeout {timeout}), "
         f"unviable {unviable}, of {total} on the diff"
     )
-    named = equivalent = 0
+    named = equivalent = capped = 0
     for where, report in whole:
         for outcome in report.get("outcomes", []):
             scenario = outcome.get("scenario")
             if not isinstance(scenario, dict):
                 continue
             name = scenario.get("Mutant", {}).get("name", "<unnamed mutant>")
+            if (where, name) in stopped:
+                # The cap stopped this mutant's tests: named by memory_cap, examined by nobody.
+                if outcome.get("summary") in ("CaughtMutant", "MissedMutant", "Timeout"):
+                    capped += 1
+                if outcome.get("summary") == "MissedMutant":
+                    named += 1
+                continue
             excused = excuses.of(cargo_mutant(scenario.get("Mutant")))
             if outcome.get("summary") == "MissedMutant":
                 named += 1
@@ -1134,9 +1154,9 @@ def judge_rust(verdict: Verdict, plan: dict, args: argparse.Namespace) -> None:
         verdict.fail(f"MISSED {missed - named} mutant(s), unnamed in the report")
     verdict.say(f"missed {missed}: equivalent {equivalent}, unexplained {missed - equivalent}")
     if args.shard_reports:
-        partition(verdict, plan, whole, complete=len(verdict.voids) == voids)
-    verdict.examined = tool + carried
-    verdict.say(f"examined {tool} by cargo-mutants and {carried} by rows")
+        partition(verdict, plan, whole, complete=complete)
+    verdict.examined = tool - capped + carried
+    verdict.say(f"examined {tool - capped} by cargo-mutants and {carried} by rows")
     touched = {mutated_file(o) for _, report in whole for o in report.get("outcomes", [])} - {None}
     for entry in plan["files"]:
         path = entry["path"]
@@ -1157,6 +1177,111 @@ def mutated_file(outcome: dict) -> str | None:
     if isinstance(scenario, dict) and isinstance(scenario.get("Mutant"), dict):
         return scenario["Mutant"].get("file")
     return None
+
+
+KILL_STATUS = re.compile(r"^\s*SIGKILL\s+\[\s*[\d.]+s\]\s+(?:\(\s*\d+/\d+\)\s+)?(\S+)\s+(\S+)\s*$")
+BASELINE = "baseline"
+
+
+def read_scope_record(directory: pathlib.Path) -> tuple[dict | None, str | None]:
+    """The leg's memory-scope record and, when it cannot be used, why not (SPEC-196 R8)."""
+    path = directory / "memory-scope.json"
+    if not path.is_file():
+        return None, "no memory-scope.json: the leg left no record of its memory scope"
+    try:
+        record = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as error:
+        return None, f"memory-scope.json is unreadable: {error}"
+    if not isinstance(record, dict):
+        return None, "memory-scope.json is unreadable: it holds no object"
+    for key in ("oom", "oom_kill"):
+        value = record.get(key)
+        if isinstance(value, bool) or not isinstance(value, int):
+            return None, f"memory-scope.json is unreadable: {key} is no integer count"
+    if record.get("state") != "done":
+        return None, f"memory-scope.json is not done (state {record.get('state')})"
+    if record.get("in_force") is not True:
+        return None, f"the memory scope was not in force: {record.get('reason')}"
+    return record, None
+
+
+def placed_kills(mutants_out: pathlib.Path, report: dict | None) -> set[tuple[str, str, str]]:
+    """Each distinct (scenario, binary, test) a scenario log shows the kernel stopped: a nextest
+    status line whose first token is SIGKILL, and the summary repeat of it counts once. A scenario
+    is named by the outcome whose `log_path` names its log when the report is whole, else by the
+    `*** <scenario>` line the log opens with."""
+    named: dict[str, str] = {}
+    for outcome in (report or {}).get("outcomes", []):
+        if not isinstance(outcome, dict) or not isinstance(outcome.get("log_path"), str):
+            continue
+        scenario = outcome.get("scenario")
+        if scenario == "Baseline":
+            named[pathlib.PurePosixPath(outcome["log_path"]).name] = BASELINE
+        elif isinstance(scenario, dict) and isinstance(scenario.get("Mutant"), dict):
+            named[pathlib.PurePosixPath(outcome["log_path"]).name] = str(
+                scenario["Mutant"].get("name")
+            )
+    placed: set[tuple[str, str, str]] = set()
+    for log in sorted((mutants_out / "log").glob("*.log")):
+        try:
+            lines = log.read_text(encoding="utf-8", errors="replace").splitlines()
+        except OSError:
+            continue
+        first = lines[0].removeprefix("*** ").strip() if lines else ""
+        scenario = named.get(log.name) or first or log.stem
+        for line in lines[1:]:
+            status = KILL_STATUS.match(line)
+            if status is not None:
+                placed.add((scenario, status.group(1), status.group(2)))
+    return placed
+
+
+def score_memory_cap(fail, say, where: str, name: str) -> bool:
+    """The one place a mutant the memory cap stopped is scored: a failure by name, and never
+    caught and never a timeout, so the mutant is not examined."""
+    fail(
+        f"{where}MEMORY-CAP {name}: the memory cap stopped its tests; neither caught nor a timeout"
+    )
+    return False
+
+
+def memory_cap(
+    fail, void, say, where: str, directory: pathlib.Path, report: dict | None
+) -> set[str]:
+    """Read one leg's memory-scope record and name each mutant the cap stopped (SPEC-196 R8 to
+    R11). Returns the names NOT examined. A leg with no report and no exit was never run, so
+    nothing is read."""
+    mutants_out = directory / "mutants.out"
+    if (
+        not (mutants_out / "outcomes.json").is_file()
+        and not (directory / "cargo-mutants.exit").is_file()
+    ):
+        return set()
+    record, why = read_scope_record(directory)
+    if record is None:
+        void(f"{where}{why}")
+        return set()
+    oom, kills = record["oom"], record["oom_kill"]
+    if oom == 0 and kills == 0:
+        return set()
+    placed = placed_kills(mutants_out, report)
+    scenarios = sorted({scenario for scenario, _, _ in placed})
+    if kills == 0 or len(placed) != kills:
+        fail(
+            f"{where}MEMORY-CAP AMBIGUOUS: the scope counted {oom} out-of-memory event(s) and "
+            f"{kills} kill(s); the logs place {len(placed)}: {', '.join(scenarios)}"
+        )
+        return set()
+    stopped: set[str] = set()
+    for scenario in scenarios:
+        if scenario == BASELINE:
+            fail(
+                f"{where}MEMORY-CAP the unmutated baseline: the memory cap stopped its tests, "
+                "so no mutant of this leg was judged against a passing baseline"
+            )
+        elif not score_memory_cap(fail, say, where, scenario):
+            stopped.add(scenario)
+    return stopped
 
 
 def judge_oracle(verdict: Verdict, plan: dict, args: argparse.Namespace) -> None:
@@ -1365,6 +1490,10 @@ def battery(
     listing counts, since shard k holds a mutant when the scope lists more than k; scoped to the
     Mini App it promises the Stryker sweep alone."""
     findings: list[str] = []
+
+    def findings_append(text: str) -> None:
+        findings.append(f"battery: {text}")
+
     whole = promised = 0
     owed = range(shards)
     if listed is not None:
@@ -1409,6 +1538,14 @@ def battery(
                 )
             else:
                 whole += 1
+        memory_cap(
+            findings_append,
+            findings_append,
+            lambda text: print(f"battery: {text}"),
+            f"{name}: ",
+            reports / name,
+            report if isinstance(report, dict) and code in WHOLE_EXITS else None,
+        )
     if package is None:
         promised += 1
         rows = read_json(str(reports / "rows" / "rows.json"))
@@ -2131,6 +2268,7 @@ def table_rust(root, reports, scope, records, listed_path, tallies, fail, void) 
     shards = {path.parent for path in reports.rglob("cargo-mutants.exit")}
     shards |= {path.parent.parent for path in reports.rglob("outcomes.json")}
     outcomes: list[tuple[str, dict]] = []
+    stopped: set[tuple[str, str]] = set()
     read = 0
     for directory in sorted(shards):
         where = directory.relative_to(reports).as_posix()
@@ -2142,6 +2280,17 @@ def table_rust(root, reports, scope, records, listed_path, tallies, fail, void) 
         reason = partial_reason(report, code, "its outcomes.json")
         if reason is not None:
             void(f"{where}: {reason}")
+        stopped |= {
+            (where, name)
+            for name in memory_cap(
+                fail,
+                void,
+                lambda text: print(f"table: {text}"),
+                f"{where}: ",
+                directory,
+                report if reason is None else None,
+            )
+        }
         if isinstance(report, dict):
             outcomes += [(where, outcome) for outcome in report.get("outcomes", [])]
 
@@ -2177,6 +2326,8 @@ def table_rust(root, reports, scope, records, listed_path, tallies, fail, void) 
             outcome.get("summary"),
         )
         seen[name] += 1
+        if (where, name) in stopped:
+            continue
         tally = tallies[package]
         excused = excuses.of(cargo_mutant(entry))
         if summary == "MissedMutant":

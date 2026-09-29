@@ -248,7 +248,7 @@ class TheAttribution(Scenes):
         self.world()
         first, second = self.planned[0][1], self.planned[0][2]
         cases = {
-            "no placed kill": (scope(1, 1), {}, (0, 1, 0)),
+            "no placed kill": (scope(1, 1), {}, (1, 1, 0)),
             "two placed kills": (
                 scope(1, 1),
                 {first: [IN_RUN, SUMMARY], second: [OTHER]},
