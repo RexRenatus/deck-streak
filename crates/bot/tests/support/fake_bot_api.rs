@@ -46,7 +46,8 @@ use deck_streak_bot::{
 };
 use deck_streak_identity::Owner;
 use deck_streak_kernel::{
-    CredentialLoader, CredentialsDirectory, Db, Redactor, Secret, TelegramUserId,
+    CredentialLoader, CredentialsDirectory, Db, ManualClock, Redactor, Secret, StudyDayRule,
+    TelegramUserId, UtcMillis,
 };
 use serde_json::{Map, Value, json};
 use tokio::net::TcpListener;
@@ -330,6 +331,10 @@ pub fn payload(call: &Call) -> Value {
     body
 }
 
+/// The bench's clock starts at 2025-01-15T03:30:10Z, in epoch milliseconds: under the default
+/// rule, still the study day 2025-01-14.
+pub const BENCH_STARTED_AT: i64 = 1_736_911_810_000;
+
 /// The Mini App URL the tests configure: the neutral example `.env.example` names.
 pub const APP_URL: &str = "https://deckstreak.example/app";
 
@@ -393,7 +398,7 @@ impl OwnerSync for ScriptedSync {
 }
 
 /// What a command test runs on: the fake, a temporary directory holding the token and the
-/// database, the transport, and the database.
+/// database, the transport, the database, and the clock the handlers read the study day on.
 pub struct Bench {
     /// The fake Bot API.
     pub fake: FakeBotApi,
@@ -403,6 +408,8 @@ pub struct Bench {
     pub transport: Arc<Transport>,
     /// The service's database, migrated.
     pub db: Db,
+    /// The handlers' clock, at [`BENCH_STARTED_AT`] until a test moves it.
+    pub clock: Arc<ManualClock>,
 }
 
 impl Bench {
@@ -419,6 +426,9 @@ impl Bench {
             directory,
             transport,
             db,
+            clock: Arc::new(ManualClock::new(UtcMillis::from_epoch_millis(
+                BENCH_STARTED_AT,
+            ))),
         }
     }
 
@@ -431,6 +441,8 @@ impl Bench {
             MiniAppUrl::new(APP_URL).expect("an https URL"),
             self.db.clone(),
             sync,
+            StudyDayRule::default(),
+            self.clock.clone(),
         )
     }
 }

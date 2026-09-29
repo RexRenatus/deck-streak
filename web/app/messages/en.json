@@ -10,5 +10,14 @@
   "about_license": "DeckStreak is free software under the GNU Affero General Public License, version 3 or later, and its complete source code is public.",
   "privacy_policy": "Privacy policy",
   "source_code": "Source code",
-  "back_to_today": "Back to Today"
+  "back_to_today": "Back to Today",
+  "score_title": "Today's score",
+  "score_none": "Today has no score yet. Send /sync to the bot to compute it now.",
+  "score_pillars": "The five pillars of the score",
+  "pillar_consistency": "Consistency",
+  "pillar_retention": "Retention",
+  "pillar_workload": "Workload",
+  "pillar_volume": "Volume",
+  "pillar_mastery": "Mastery",
+  "retention_absent": "No review answered yet"
 }
