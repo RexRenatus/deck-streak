@@ -1,6 +1,8 @@
 //! Ingest's settings refuse start by name (SPEC-022 A14, R5, R13).
 
-use deck_streak_ingest::settings::{STATE_DIRECTORY, SYNC_ENDPOINT, SyncSettings};
+use deck_streak_ingest::settings::{
+    SKIP_SEARCH, STATE_DIRECTORY, SYNC_ENDPOINT, SkipSearch, SyncSettings,
+};
 use deck_streak_kernel::{Environment, SettingsError};
 
 /// A state directory that names no real host path: settings are parsed, never opened, here.
@@ -66,5 +68,26 @@ fn a_plain_http_endpoint_is_marked_cleartext() {
     assert_eq!(
         format!("{:?}", settings("http://sync.example.invalid/").endpoint()),
         "SyncEndpoint(..)"
+    );
+}
+
+#[test]
+fn a_skip_search_that_is_not_one_expression_refuses_start_by_name() {
+    let unset = SkipSearch::from_env(&Environment::from_vars([("UNRELATED", "1")]))
+        .expect("an unset search is the default");
+    assert_eq!(unset.as_str(), "prop:due=0 -is:suspended -is:buried");
+    let set = SkipSearch::from_env(&Environment::from_vars([(SKIP_SEARCH, "deck:Synthetic")]))
+        .expect("one expression starts");
+    assert_eq!(set.as_str(), "deck:Synthetic");
+    let value = "deck:X) or (deck:X";
+    let refused = SkipSearch::from_env(&Environment::from_vars([(SKIP_SEARCH, value)]));
+    assert!(
+        matches!(refused, Err(SettingsError::Malformed { setting, .. }) if setting == SKIP_SEARCH),
+        "{refused:?}"
+    );
+    let named = refused.map(|_| ()).unwrap_err().to_string();
+    assert!(
+        named.contains(SKIP_SEARCH) && !named.contains(value),
+        "{named}"
     );
 }

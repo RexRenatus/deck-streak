@@ -32,7 +32,7 @@ use tempfile::TempDir;
 /// Statements that leave every table of the schema holding rows no erase leaves: 101 rows in each
 /// table that takes rows, so an export that pages or limits its read comes up short (the
 /// predecessor's lesson), and every column a reset writes moved off its reset value.
-const SEEDS: [&str; 9] = [
+const SEEDS: [&str; 11] = [
     "UPDATE settings_generation SET generation = 7, courses_digest = '0123456789abcdef' \
      WHERE id = 1",
     "UPDATE ingest_state SET anchor_newest_review_id = 1700000000123, anchor_card_count = 57, \
@@ -45,6 +45,19 @@ const SEEDS: [&str; 9] = [
      SELECT CASE i % 2 WHEN 0 THEN 'owner' ELSE 'scheduled' END, 20000 + i, 1000 * i, \
      1000 * i + 500, CASE i % 3 WHEN 0 THEN 'error' ELSE 'ok' END, \
      CASE i % 3 WHEN 0 THEN 'server_error' ELSE NULL END, i % 4, i % 2, 1000 * i FROM n",
+    "WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 101) \
+     INSERT INTO skip_days (study_day, due_count, state, reason, cards_moved, tariff_unfunded, \
+     undone, undone_at, created_at) \
+     SELECT 20000 + i, i, CASE i % 3 WHEN 0 THEN 'failed' ELSE 'applied' END, \
+     CASE i % 3 WHEN 0 THEN 'push_failed' ELSE NULL END, i, i % 2, \
+     CASE WHEN i % 3 = 1 THEN 1 ELSE 0 END, CASE WHEN i % 3 = 1 THEN 1000 * i + 7 END, \
+     1000 * i FROM n",
+    "WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 101) \
+     INSERT INTO skip_card_snapshot (skip_id, card_id, prior_due, prior_queue, prior_type, \
+     prior_interval, prior_ease_factor, prior_original_deck_id, prior_original_due, left_due, \
+     left_queue, left_type, left_interval, left_ease_factor, left_mtime, created_at) \
+     SELECT i, 1700000000000 + i, i, 2, 2, i, 2500, 0, 0, i + 1, 2, 2, i, 2500, 1000 * i, \
+     1000 * i FROM n",
     "WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 101) \
      INSERT INTO cron_fires (job_id, fire_date, first_seen_at, updated_at, last_fire_at, \
      ok_count, error_count, catchup_count, missed_count, last_outcome, created_at) \

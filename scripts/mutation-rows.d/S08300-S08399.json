@@ -1,0 +1,44 @@
+{
+  "tables": {
+    "CARGO_KILLED_SCRIPT_MUTATIONS": [
+      [
+        "S08301-ONE-SKIP-PER-STUDY-DAY",
+        "migrations/008301_ingest_skip_days.sql",
+        "WHERE state IN ('pending', 'applied') AND undone = 0;",
+        "WHERE state IN ('pending', 'applied') AND undone = 7;",
+        "ingest",
+        "skip_record::the_migration_refuses_a_second_skip_not_undone_for_one_study_day",
+        "one skip a study day is held by the table's key, so two concurrent takes write one row whatever the callers do (SPEC-083 R2, A2)"
+      ]
+    ],
+    "MUTATIONS": [
+      [
+        "S08302-THE-SET-EXCLUDES-UNDONE",
+        "ingest",
+        "src/skip.rs",
+        "self.state == SkipState::Applied && self.undone_at.is_none()",
+        "self.state == SkipState::Applied || self.undone_at.is_none()",
+        "skip_record::the_skip_set_holds_exactly_the_days_with_an_applied_skip_not_undone",
+        "the skip set holds the study days of an applied skip not undone, never a pending, failed or undone one (SPEC-083 R4, A4)"
+      ],
+      [
+        "S08303-UNDO-TAKES-THE-LATEST",
+        "ingest",
+        "src/skip.rs",
+        ".max_by_key(|record| (record.day, record.id))",
+        ".min_by_key(|record| (record.day, record.id))",
+        "skip_record::undo_reverses_the_most_recent_skip_not_undone",
+        "an undo targets the most recent applied skip not undone, never the oldest (SPEC-083 R5, A3)"
+      ],
+      [
+        "S08304-THE-SEARCH-IS-WRAPPED",
+        "ingest",
+        "src/skip.rs",
+        "format!(\"({configured}) -is:new -is:learn\")",
+        "format!(\"({configured})\")",
+        "skip_record::the_search_and_day_spec_equal_the_parity_goldens",
+        "the configured search is wrapped to review cards only, as the predecessor wraps it, before the holds (SPEC-083 R3, A7)"
+      ]
+    ]
+  }
+}

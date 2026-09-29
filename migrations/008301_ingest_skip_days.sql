@@ -26,3 +26,9 @@ CREATE TABLE skip_days (
 ) STRICT;
 
 CREATE INDEX skip_days_by_day ON skip_days (study_day);
+
+-- R2, R5: one skip a study day that is `pending` or `applied` and not undone. A `failed` take, and
+-- an undone skip, leave the day free. The key is the once-per-day rule, so two concurrent takes
+-- write one row whatever the callers do.
+CREATE UNIQUE INDEX skip_days_one_open_per_day ON skip_days (study_day)
+WHERE state IN ('pending', 'applied') AND undone = 0;

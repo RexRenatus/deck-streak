@@ -43,6 +43,79 @@ fn ingest_state_reset() -> Map<String, Value> {
     row
 }
 
+/// The skip record, exported whole: every column, one row per take.
+async fn export_skip_days(connection: &mut SqliteConnection) -> Result<ExportedTable, sqlx::Error> {
+    let rows = sqlx::query!(
+        r#"SELECT id AS "id!", study_day, due_count, state, reason, cards_moved,
+                  tariff_unfunded, undone, undone_at, created_at
+           FROM skip_days ORDER BY id"#
+    )
+    .fetch_all(connection)
+    .await?;
+    Ok(ExportedTable {
+        table: SKIP_DAYS_TABLE,
+        rows: rows
+            .into_iter()
+            .map(|row| {
+                json!({
+                    "id": row.id,
+                    "study_day": row.study_day,
+                    "due_count": row.due_count,
+                    "state": row.state,
+                    "reason": row.reason,
+                    "cards_moved": row.cards_moved,
+                    "tariff_unfunded": row.tariff_unfunded,
+                    "undone": row.undone,
+                    "undone_at": row.undone_at,
+                    "created_at": row.created_at,
+                })
+            })
+            .collect(),
+    })
+}
+
+/// The skip card snapshot, exported whole: card ids and scheduling only.
+async fn export_skip_card_snapshot(
+    connection: &mut SqliteConnection,
+) -> Result<ExportedTable, sqlx::Error> {
+    let rows = sqlx::query!(
+        r#"SELECT id AS "id!", skip_id, card_id, prior_due, prior_queue, prior_type,
+                  prior_interval, prior_ease_factor, prior_original_deck_id,
+                  prior_original_due, left_due, left_queue, left_type, left_interval,
+                  left_ease_factor, left_mtime, created_at
+           FROM skip_card_snapshot ORDER BY id"#
+    )
+    .fetch_all(connection)
+    .await?;
+    Ok(ExportedTable {
+        table: SKIP_CARD_SNAPSHOT_TABLE,
+        rows: rows
+            .into_iter()
+            .map(|row| {
+                json!({
+                    "id": row.id,
+                    "skip_id": row.skip_id,
+                    "card_id": row.card_id,
+                    "prior_due": row.prior_due,
+                    "prior_queue": row.prior_queue,
+                    "prior_type": row.prior_type,
+                    "prior_interval": row.prior_interval,
+                    "prior_ease_factor": row.prior_ease_factor,
+                    "prior_original_deck_id": row.prior_original_deck_id,
+                    "prior_original_due": row.prior_original_due,
+                    "left_due": row.left_due,
+                    "left_queue": row.left_queue,
+                    "left_type": row.left_type,
+                    "left_interval": row.left_interval,
+                    "left_ease_factor": row.left_ease_factor,
+                    "left_mtime": row.left_mtime,
+                    "created_at": row.created_at,
+                })
+            })
+            .collect(),
+    })
+}
+
 /// Ingest's implementation of the kernel's data-rights port.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct IngestDataRights;
@@ -54,6 +127,14 @@ impl DataRights for IngestDataRights {
             vec![
                 TableRights {
                     table: SYNC_RUNS_TABLE,
+                    disposition: Disposition::ExportAndErase,
+                },
+                TableRights {
+                    table: SKIP_DAYS_TABLE,
+                    disposition: Disposition::ExportAndErase,
+                },
+                TableRights {
+                    table: SKIP_CARD_SNAPSHOT_TABLE,
                     disposition: Disposition::ExportAndErase,
                 },
                 TableRights {
@@ -85,7 +166,7 @@ impl DataRights for IngestDataRights {
                           created_at
                    FROM ingest_state ORDER BY id"#
             )
-            .fetch_all(connection)
+            .fetch_all(&mut *connection)
             .await?;
             let state = ExportedTable {
                 table: INGEST_STATE_TABLE,
@@ -129,6 +210,8 @@ impl DataRights for IngestDataRights {
                         })
                         .collect(),
                 },
+                export_skip_days(&mut *connection).await?,
+                export_skip_card_snapshot(connection).await?,
                 state,
             ])
         })
@@ -137,6 +220,13 @@ impl DataRights for IngestDataRights {
     fn erase<'a>(&'a self, connection: &'a mut SqliteConnection) -> PortFuture<'a, ()> {
         Box::pin(async move {
             sqlx::query!("DELETE FROM sync_runs")
+                .execute(&mut *connection)
+                .await?;
+            // The snapshot rows reference their skip, so they go first.
+            sqlx::query!("DELETE FROM skip_card_snapshot")
+                .execute(&mut *connection)
+                .await?;
+            sqlx::query!("DELETE FROM skip_days")
                 .execute(&mut *connection)
                 .await?;
             // The declared reset row (`ingest_state_reset`): the row itself, and when it was made,

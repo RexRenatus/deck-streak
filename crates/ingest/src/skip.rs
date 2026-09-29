@@ -36,7 +36,13 @@ const EPOCH_DAY_FROM_CE: i64 = 719_163;
 /// interval is kept.
 #[must_use]
 pub fn skip_spec(min_days: i64, max_days: i64) -> String {
-    format!("{min_days}-{max_days}")
+    let lo = min_days.min(max_days).max(1);
+    let hi = min_days.max(max_days).max(1);
+    if lo == hi {
+        lo.to_string()
+    } else {
+        format!("{lo}-{hi}")
+    }
 }
 
 /// Why a configured search is refused at start (R3).
@@ -97,7 +103,7 @@ pub fn skip_search(configured: &str) -> Result<String, SearchRefusal> {
     if !is_one_expression(configured) {
         return Err(SearchRefusal::NotOneExpression);
     }
-    Ok(format!("({configured})"))
+    Ok(format!("{} {HOLDS}", wrap_search(configured)))
 }
 
 /// The calendar year and month of a study day, as the tariff and the summary count months.
@@ -230,6 +236,13 @@ pub struct SkipRecord {
     pub undone_at: Option<UtcMillis>,
 }
 
+impl SkipRecord {
+    /// Whether the skip covers its study day: applied and not undone (R4).
+    fn covers_its_day(&self) -> bool {
+        self.state == SkipState::Applied && self.undone_at.is_none()
+    }
+}
+
 /// A skip row as the summary reads it (`skip.py:summarize_skips`'s input).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct SkipRow {
@@ -266,12 +279,17 @@ pub struct SkipSummary {
 /// is tallied.
 #[must_use]
 pub fn summarize_skips(rows: &[SkipRow], today: StudyDay) -> SkipSummary {
-    let _ = (rows, today);
+    let active: Vec<&SkipRow> = rows.iter().filter(|row| row.is_active()).collect();
+    let month = calendar_month(today);
+    let this_month = active
+        .iter()
+        .filter(|row| month.is_some() && calendar_month(row.day) == month)
+        .count();
     SkipSummary {
-        this_month: 0,
-        all_time: 0,
-        last_day: None,
-        cards_moved_all_time: 0,
+        this_month: u32::try_from(this_month).unwrap_or(u32::MAX),
+        all_time: u32::try_from(active.len()).unwrap_or(u32::MAX),
+        last_day: active.iter().map(|row| row.day).max(),
+        cards_moved_all_time: active.iter().map(|row| row.cards_moved).sum(),
     }
 }
 
@@ -305,22 +323,42 @@ impl SkipStore {
         Self { db }
     }
 
-    /// Records a `pending` skip for `day` (R2).
+    /// Records a `pending` skip for `day` (R2): the take's first act, in one `BEGIN IMMEDIATE` write.
     ///
     /// # Errors
     ///
-    /// [`SkipRefusal::AlreadySkipped`] when `day` holds a skip `pending` or `applied` and not undone.
+    /// [`SkipRefusal::AlreadySkipped`] when `day` holds a skip `pending` or `applied` and not
+    /// undone; nothing is written then. [`SkipRefusal::Database`] when the write fails.
     pub async fn begin(
         &self,
         day: StudyDay,
         due_count: Option<i64>,
         now: UtcMillis,
     ) -> Result<SkipId, SkipRefusal> {
-        let _ = (&self.db, day, due_count, now);
-        Ok(SkipId(0))
+        let day = day.epoch_day();
+        let now = now.epoch_millis();
+        let mut write = self.db.write().await?;
+        let inserted = sqlx::query!(
+            "INSERT INTO skip_days (study_day, due_count, state, created_at) \
+             VALUES (?1, ?2, 'pending', ?3) \
+             ON CONFLICT (study_day) WHERE state IN ('pending', 'applied') AND undone = 0 \
+             DO NOTHING RETURNING id",
+            day,
+            due_count,
+            now
+        )
+        .fetch_optional(&mut *write)
+        .await
+        .map_err(KernelError::from)?;
+        let Some(inserted) = inserted else {
+            return Err(SkipRefusal::AlreadySkipped);
+        };
+        write.commit().await.map_err(KernelError::from)?;
+        Ok(SkipId(inserted.id))
     }
 
-    /// Settles a `pending` skip `applied`.
+    /// Settles a `pending` skip `applied`, with the cards moved and whether its tariff went
+    /// unfunded.
     ///
     /// # Errors
     ///
@@ -331,47 +369,105 @@ impl SkipStore {
         cards_moved: i64,
         tariff_unfunded: bool,
     ) -> Result<(), KernelError> {
-        let _ = (id, cards_moved, tariff_unfunded);
+        let id = id.get();
+        let mut write = self.db.write().await?;
+        sqlx::query!(
+            "UPDATE skip_days SET state = 'applied', cards_moved = ?2, tariff_unfunded = ?3 \
+             WHERE id = ?1 AND state = 'pending'",
+            id,
+            cards_moved,
+            tariff_unfunded
+        )
+        .execute(&mut *write)
+        .await?;
+        write.commit().await?;
         Ok(())
     }
 
-    /// Settles a `pending` skip `failed` with its one reason.
+    /// Settles a `pending` skip `failed` with its one reason, which frees its study day.
     ///
     /// # Errors
     ///
     /// [`KernelError::Database`] when the write fails.
     pub async fn settle_failed(&self, id: SkipId, reason: FailReason) -> Result<(), KernelError> {
-        let _ = (id, reason);
+        let id = id.get();
+        let reason = reason.as_str();
+        let mut write = self.db.write().await?;
+        sqlx::query!(
+            "UPDATE skip_days SET state = 'failed', reason = ?2 WHERE id = ?1 AND state = 'pending'",
+            id,
+            reason
+        )
+        .execute(&mut *write)
+        .await?;
+        write.commit().await?;
         Ok(())
     }
 
-    /// The skip an undo targets (R5).
+    /// The skip an undo targets (R5): the most recent `applied` skip not undone, by study day.
     ///
     /// # Errors
     ///
-    /// [`SkipRefusal::NothingToUndo`] when no applied skip is left.
+    /// [`SkipRefusal::TakePending`] while `today`'s take is `pending`;
+    /// [`SkipRefusal::NothingToUndo`] when no applied skip is left;
+    /// [`SkipRefusal::Database`] when the read fails.
     pub async fn latest_undoable(&self, today: StudyDay) -> Result<SkipRecord, SkipRefusal> {
-        let _ = today;
-        Err(SkipRefusal::NothingToUndo)
+        let today = today.epoch_day();
+        let pending = sqlx::query_scalar!(
+            r#"SELECT count(*) AS "pending!: i64" FROM skip_days
+               WHERE study_day = ?1 AND state = 'pending' AND undone = 0"#,
+            today
+        )
+        .fetch_one(self.db.reader())
+        .await
+        .map_err(KernelError::from)?;
+        if pending > 0 {
+            return Err(SkipRefusal::TakePending);
+        }
+        self.records()
+            .await?
+            .into_iter()
+            .filter(SkipRecord::covers_its_day)
+            .max_by_key(|record| (record.day, record.id))
+            .ok_or(SkipRefusal::NothingToUndo)
     }
 
-    /// Marks a skip undone at `now`.
+    /// Marks a skip undone at `now`, once its undo's write was accepted or had no card to write.
     ///
     /// # Errors
     ///
     /// [`KernelError::Database`] when the write fails.
     pub async fn mark_undone(&self, id: SkipId, now: UtcMillis) -> Result<(), KernelError> {
-        let _ = (id, now);
+        let id = id.get();
+        let now = now.epoch_millis();
+        let mut write = self.db.write().await?;
+        sqlx::query!(
+            "UPDATE skip_days SET undone = 1, undone_at = ?2 \
+             WHERE id = ?1 AND state = 'applied' AND undone = 0",
+            id,
+            now
+        )
+        .execute(&mut *write)
+        .await?;
+        write.commit().await?;
         Ok(())
     }
 
-    /// The skip set (R4).
+    /// The skip set (R4): the study days that hold an `applied` skip not undone, in order.
     ///
     /// # Errors
     ///
     /// [`KernelError::Database`] when the read fails.
     pub async fn skip_set(&self) -> Result<Vec<StudyDay>, KernelError> {
-        Ok(Vec::new())
+        let mut days: Vec<StudyDay> = self
+            .records()
+            .await?
+            .iter()
+            .filter(|record| record.covers_its_day())
+            .map(|record| record.day)
+            .collect();
+        days.sort_unstable();
+        Ok(days)
     }
 
     /// The summary's counts on `today` (R6).
@@ -380,17 +476,31 @@ impl SkipStore {
     ///
     /// [`KernelError::Database`] when the read fails.
     pub async fn summary(&self, today: StudyDay) -> Result<SkipSummary, KernelError> {
-        Ok(summarize_skips(&[], today))
+        let rows: Vec<SkipRow> = self
+            .records()
+            .await?
+            .into_iter()
+            .map(|record| SkipRow {
+                day: record.day,
+                applied: record.state == SkipState::Applied,
+                undone: record.undone_at.is_some(),
+                cards_moved: record.cards_moved,
+            })
+            .collect();
+        Ok(summarize_skips(&rows, today))
     }
 
-    /// The skip that covers `day` and is `pending` or `applied` and not undone.
+    /// The skip that covers `day` and is `pending` or `applied` and not undone, if one does.
     ///
     /// # Errors
     ///
     /// [`KernelError::Database`] when the read fails.
     pub async fn open_on(&self, day: StudyDay) -> Result<Option<SkipRecord>, KernelError> {
-        let _ = day;
-        Ok(None)
+        Ok(self.records().await?.into_iter().find(|record| {
+            record.day == day
+                && record.undone_at.is_none()
+                && matches!(record.state, SkipState::Pending | SkipState::Applied)
+        }))
     }
 
     /// Every skip, oldest first.
@@ -399,6 +509,32 @@ impl SkipStore {
     ///
     /// [`KernelError::Database`] when the read fails.
     pub async fn records(&self) -> Result<Vec<SkipRecord>, KernelError> {
-        Ok(Vec::new())
+        let rows = sqlx::query!(
+            "SELECT id, study_day, due_count, state, reason, cards_moved, tariff_unfunded, \
+             undone_at FROM skip_days ORDER BY id"
+        )
+        .fetch_all(self.db.reader())
+        .await?;
+        Ok(rows
+            .into_iter()
+            .map(|row| SkipRecord {
+                id: SkipId(row.id),
+                day: StudyDay::from_epoch_day(row.study_day),
+                due_count: row.due_count,
+                state: match row.state.as_str() {
+                    "applied" => SkipState::Applied,
+                    "failed" => SkipState::Failed(
+                        row.reason
+                            .as_deref()
+                            .and_then(FailReason::parse)
+                            .unwrap_or(FailReason::EngineFailed),
+                    ),
+                    _ => SkipState::Pending,
+                },
+                cards_moved: row.cards_moved,
+                tariff_unfunded: row.tariff_unfunded != 0,
+                undone_at: row.undone_at.map(UtcMillis::from_epoch_millis),
+            })
+            .collect())
     }
 }
