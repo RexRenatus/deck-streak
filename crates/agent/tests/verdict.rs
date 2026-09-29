@@ -50,15 +50,16 @@ fn without_raw_prefixes(text: &str) -> String {
 /// spelled any way (a wider gap under `#[rustfmt::skip]`, a line break or a comment between the
 /// words, another visibility) each count: no copy can stand in for the enum that compiles.
 fn declarations_in(source: &str) -> Vec<usize> {
-    let mut at = 0;
-    let mut found = Vec::new();
-    for line in source.split_inclusive('\n') {
-        if without_raw_prefixes(line.trim()) == "pub enum Verdict {" {
-            found.push(at + line.find("enum").unwrap_or(0));
-        }
-        at += line.len();
-    }
-    found
+    let bytes = source.as_bytes();
+    source
+        .match_indices("enum")
+        .filter(|(at, _)| {
+            let before = at.checked_sub(1).and_then(|i| bytes.get(i));
+            !before.is_some_and(|b| b.is_ascii_alphanumeric() || *b == b'_')
+                && name_after(&source[at + "enum".len()..]) == Some("Verdict")
+        })
+        .map(|(at, _)| at)
+        .collect()
 }
 
 /// The identifier `rest` starts with once whitespace and comments are skipped, its raw prefix
@@ -112,7 +113,7 @@ fn declarations_of(source: &str) -> usize {
 
 /// Whether `attribute` is `#[must_use]`, its raw prefix removed.
 fn is_must_use(attribute: &str) -> bool {
-    attribute == "#[must_use]"
+    without_raw_prefixes(attribute) == "#[must_use]"
 }
 
 /// Whether `attribute` is conditional: the last segment of its path, raw prefix removed, is `cfg`
@@ -305,6 +306,7 @@ fn every_spelling_of_the_declaration_and_of_a_conditional_attribute_is_read() {
         }
     }
     assert_eq!(members, 16, "the population changed");
+    eprintln!("members: {members} declarations-by-attributes");
 }
 
 /// Every spelling of the enum that compiles: plain, raw, a wider gap, a line break or a comment
@@ -367,4 +369,5 @@ fn every_copy_of_the_enum_beside_every_spelling_of_it_is_a_second_declaration() 
         }
     }
     assert_eq!(members, 72, "the population changed");
+    eprintln!("members: {members} copies-by-spellings");
 }

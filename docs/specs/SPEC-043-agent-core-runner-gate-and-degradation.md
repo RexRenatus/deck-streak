@@ -385,12 +385,16 @@ Issue #404, a follow-up of the review of section 7's delivery. Sections 1 to 8 s
 this section only adds to them; the two pins it strengthens are R12a's (criterion A18) and R16a's
 (criterion A20), and both still hold for every shape the SPEC promises. What follows refuses the
 decoys named below and the spellings R16b and R12b list. The scans read text, so a decoy spelled
-past what they count stays green. The known classes of that kind are a `DELETE` keyword written
-with a string escape (`\x44ELETE`, `\u{44}ELETE`), broken by a `\`-newline continuation inside its
-literal, or split across joined literals (`"DEL" + "ETE FROM ..."`); a prune statement read from a
-file by `sqlx::query_file!`, whose text is not in `runs.rs`; and a verdict enum declared on a line
-the count does not read (spelled otherwise under `#[rustfmt::skip]`, or made by a macro) beside a
-copy compiled out by a `cfg` on an enclosing item.
+past what they count stays green. The known classes of that kind are two. For the prune: a copy of
+the tested statement handed to `sqlx::query!` in code that never executes it (a function nothing
+calls, a query built and dropped, an item compiled out), beside a prune that runs and whose
+`DELETE` keyword the word count cannot read (written with a string escape such as `\x44ELETE` or
+`\u{44}ELETE`, broken by a `\`-newline continuation inside its literal, or split across `concat!`
+parts) or whose text is not in `runs.rs` (read by `sqlx::query_file!` or `include_str!`, or held
+in another module). For the verdict: a type named `Verdict` whose source never writes the word
+`enum` followed by that name (an enum made by a macro from a parameter, declared in another file,
+or renamed by a `use` or a type alias), beside a copy the compiler never builds as the enum (in a
+comment, or under a `cfg` on an enclosing item).
 
 **What the decoys were.** A20 found the prune's statement by looking for its quoted literal in
 `crates/agent/src/runs.rs`, so a comment quoting that literal, beside a prune that no longer used
@@ -400,19 +404,24 @@ other. A18 read a line as an attribute when it began with `#[` and ended with `]
 `#[rustfmt::skip]` whose line ended in a `// ]` comment read as an attribute.
 
 **R16b. The prune is one statement, written once.** The source of `runs.rs` holds exactly one
-`DELETE FROM agent_runs`, counted case-insensitively with every run of whitespace collapsed, and
-writes the word `delete` exactly once as a word of its own, in any case. The word count does not
-read prose: a comment in any form (`//`, `///`, `//!`, `/* */`, `/** */`, `/*! */`, nested
-blocks included) that holds no double quote can neither run a statement nor quote the tested one,
-so a comment that calls the prune a delete keeps the test green, while a comment that quotes is
-read. A comment marker inside a string, a raw string or a character literal opens no comment. The
-statement count reads every line, so a commented copy of the statement, in any comment form, is
-refused, quoted or not. A second statement, and a quoted or commented copy of the first, each turn the
-test red, and so does a changed statement beside a quoted copy when its table is spelled
-`main.agent_runs` or `"agent_runs"` or an SQL comment stands between its keywords. Not refused: a
-statement whose `DELETE` keyword is written with a string escape (`\x44ELETE`, `\u{44}ELETE`),
-broken by a `\`-newline continuation, or split across joined literals (`"DEL" + "ETE FROM ..."`),
-and one read from a file by `sqlx::query_file!`; no count of the source's text sees them. The test file writes
+`DELETE FROM agent_runs`, counted case-insensitively with every run of whitespace collapsed; its
+code hands the tested statement, quoted whole, to `sqlx::query!` exactly once; and its code writes
+the word `delete` exactly once as a word of its own, in any case. The code is the source with every
+comment removed, in any form (`//`, `///`, `//!`, `/* */`, `/** */`, `/*! */`, nested blocks
+included) and whatever it holds, a double quote included: a comment runs nothing, so a comment that
+calls the prune a delete, quoted or not, keeps the test green, and a copy of the statement moved
+into a comment is not the statement that runs. A comment marker inside a string, a raw string or a
+character literal opens no comment, and a character literal is measured to its closing quote,
+escaped ones (`'\''`, `'\\'`, `'\x27'`, `'\u{27}'`) included. The statement count reads every
+line, so a commented copy of the statement, in any comment form, is refused, quoted or not. A
+second statement, and a quoted or commented copy of the first, each turn the test red; so does a
+changed statement beside a quoted copy, in a comment or handed to a `sqlx::query!` that never
+runs, when its table is spelled `main.agent_runs` or `"agent_runs"` or an SQL comment stands
+between its keywords; and so does a prune that runs through
+`sqlx::query`, `include_str!` or `sqlx::query_file!` beside a copy of the tested statement that
+`sqlx::query!` does not take (in a comment, a constant, a static, a doc attribute or a plain
+literal). Not refused: the prune class named at the head of this section, which no count of the
+source's text sees. The test file writes
 the statement once, as a `macro_rules!` literal; the tested statement (`PRUNE`) and the text of its
 `EXPLAIN QUERY PLAN` are both made from that literal with `concat!`, and a scan of the test file's
 own text asserts it writes `DELETE FROM agent_runs` once, in any case or spacing, so a changed copy
@@ -430,9 +439,14 @@ character literal and no comment marker; a doc line is passed only when it holds
 block-comment marker. `#[rustfmt::skip] pub fn f() {} // ]` and `#[doc = "["] pub fn f() {} // ]`
 are therefore items, the scan above `pub enum Verdict` stops at them, and a `#[must_use]` above them
 does not count for the verdict; nor does one inside a string or a block comment that a line of the
-scan would close. The source declares the enum on exactly one line, as `pub enum Verdict {` or with
-the raw identifier `pub enum r#Verdict {`, so a commented copy of the enum above the real one, or a
-compiled-out copy above a raw-identifier one, cannot lend it the copy's attributes. An attribute of
+scan would close. The source declares the enum exactly once, counted as every word `enum` followed,
+across any whitespace or comment, by the name `Verdict` with its raw prefix removed, on every line,
+comments and strings included: a copy anywhere (in a comment or a string, compiled out by its own
+`cfg` or an enclosing one, or by a macro) beside the enum in any spelling (`pub enum r#Verdict {`,
+a wider gap, a line break or a comment between the words under `#[rustfmt::skip]`, another
+visibility) is a second declaration, and cannot lend the enum the copy's attributes. The attributes
+are read above the first declaration, and `#[must_use]` compares after its raw prefix is removed,
+so `#[r#must_use]` counts. An attribute of
 the enum that names `cfg` or `cfg_attr`, in any path or raw spelling, is conditional and refused
 rather than judged, so a copy compiled out by `#[cfg(...)]` cannot satisfy the pin with its
 `#[must_use]`, and a `#[must_use]` given only under a `cfg_attr` condition does not count.
@@ -446,9 +460,9 @@ line is one whole attribute), listed in section 10, which follow the last A-numb
 
 | file | context | change |
 |---|---|---|
-| `crates/agent/tests/runs.rs` | `deck-streak-agent` | changed: the one macro literal, the two scans and their comment-aware word count, four planted decoys, and two prose fixtures |
-| `crates/agent/tests/verdict.rs` | `deck-streak-agent` | changed: the whole-attribute rule, the declaration count, the conditional-attribute refusal, planted decoys, and a generated population of spellings |
-| `scripts/mutation-rows.d/S04300-S04399.json` | repo | changed: rows S04328 to S04339 |
+| `crates/agent/tests/runs.rs` | `deck-streak-agent` | changed: the one macro literal, the two scans and their comment-free word count, the run count, four planted decoys, two prose fixtures, and generated populations of copies that do not run and of character literals |
+| `crates/agent/tests/verdict.rs` | `deck-streak-agent` | changed: the whole-attribute rule, the declaration count by the word pair, the conditional-attribute refusal, planted decoys, and generated populations of spellings and of copies |
+| `scripts/mutation-rows.d/S04300-S04399.json` | repo | changed: rows S04328 to S04343 |
 | `docs/red-first/SPEC-043.md` | docs | changed: an addendum with the decoys' red and green lines, and a fix round's |
 | `docs/specs/SPEC-043-agent-core-runner-gate-and-degradation.md` | docs | changed: this section and section 10 |
 | `changelog.d/fix-agent-pins-404.md` | docs | added |
@@ -473,14 +487,36 @@ recognising a block comment (killed by
 reading `pub enum r#Verdict {` as a declaration (killed by
 `verdict::a_raw_identifier_declaration_is_the_verdict_enum`); S04338 and S04339 stop seeing `cfg`
 and `cfg_attr` as conditional (both killed by
-`verdict::a_conditional_attribute_on_the_enum_is_refused`).
+`verdict::a_conditional_attribute_on_the_enum_is_refused`). S04340 to S04343 were added by the
+verifier's fix of the third round, which also re-anchored S04332, S04335 and S04337 on the
+rewritten helpers with the same meaning: S04340 lets the run count read a quoted copy that
+`sqlx::query!` does not take (killed by
+`runs::a_copy_of_the_statement_that_does_not_run_is_not_the_tested_statement`); S04341 measures an
+escaped character literal one byte short (killed by
+`runs::no_character_literal_hides_a_second_statement_in_the_string_after_it`); S04342 stops skipping
+a block comment between `enum` and the name, and S04343 compares `#[must_use]` without removing its
+raw prefix (both killed by
+`verdict::every_copy_of_the_enum_beside_every_spelling_of_it_is_a_second_declaration`).
 
 The second round closes two classes with one rule each, and derives each killer from the class's
-population. The word count reads the source with every prose comment removed, comment forms found
-by a scan that knows strings, raw strings and character literals, and the statement count still
-reads comments: `runs::a_delete_word_in_any_comment_form_is_not_counted_but_the_statement_in_one_is`
-generates eight comment forms, wraps a benign delete word and then the whole statement in each, and
-asserts the first is not refused and the second is. Identifiers and attribute paths compare after
+population. The word count reads the source with every comment removed, whatever it holds, comment
+forms found by a scan that knows strings, raw strings and character literals, and the statement
+count still reads comments: `runs::a_delete_word_in_any_comment_form_is_not_counted_but_the_statement_in_one_is`
+generates eight comment forms, wraps a benign delete word, quoted and not, and then the whole
+statement, bare and quoted, in each, and asserts the first is not refused and the second is. The
+third round's fix closes the two classes the second round's rules left open, again one rule each.
+The run count reads only the literal the code hands to `sqlx::query!`:
+`runs::a_copy_of_the_statement_that_does_not_run_is_not_the_tested_statement` generates twenty-one
+copies that do not run (the eight comment forms, bare and quoted, a constant, a static, a doc
+attribute, a plain literal and a `concat!`) against three prunes that run elsewhere, and asserts
+each pair is refused; `runs::no_character_literal_hides_a_second_statement_in_the_string_after_it`
+puts thirteen character literals, escaped ones included, before a string that hides a second
+statement between comment markers, and asserts each is refused. The declaration count reads the
+word pair wherever it stands:
+`verdict::every_copy_of_the_enum_beside_every_spelling_of_it_is_a_second_declaration` generates
+twelve copies of the enum the compiler never builds as it against six spellings of the enum that
+compiles (seventy-two members), asserts each pair is two declarations, and asserts each spelling
+alone, under `#[must_use]` or `#[r#must_use]`, is one declaration whose must_use is read. Identifiers and attribute paths compare after
 the `r#` prefix is removed, and an attribute is conditional when the last segment of its path is
 `cfg` or `cfg_attr`: `verdict::every_spelling_of_the_declaration_and_of_a_conditional_attribute_is_read`
 generates the two declaration spellings against the four attribute spellings, each with and
@@ -493,12 +529,12 @@ This amendment changes no production code, and no other requirement.
 
 | id | criterion | decided by |
 |---|---|---|
-| A21 | the source of `runs.rs` writes `DELETE FROM agent_runs` once in any case or spacing and the word `delete` once, outside prose (a comment, in any form, holding no double quote), so a second statement, or a commented or quoted copy of the first beside a changed statement spelled `main.agent_runs`, `"agent_runs"` or with an SQL comment between its keywords, is refused, and a comment naming the delete is not; a keyword written with an escape, a continuation or a joined-literal split, and a statement read by `query_file!`, are not refused | `the_prune_reads_agent_runs_through_the_created_at_index`, `a_comment_quoting_the_prune_beside_a_prune_that_skips_the_index_is_refused`, `a_second_delete_statement_is_refused_however_it_is_spelled`, `a_prune_spelled_around_the_keyword_scan_beside_a_quoted_copy_is_refused`, `prose_that_names_the_delete_beside_the_prune_is_not_counted`, `a_delete_word_in_any_comment_form_is_not_counted_but_the_statement_in_one_is` |
+| A21 | the source of `runs.rs` writes `DELETE FROM agent_runs` once in any case or spacing, and its code (the source with every comment removed, whatever it holds) hands the tested statement to `sqlx::query!` once and writes the word `delete` once, so a second statement, a commented or quoted copy of the first beside a changed statement spelled `main.agent_runs`, `"agent_runs"` or with an SQL comment between its keywords, a copy `sqlx::query!` does not take beside a prune that runs elsewhere, and a second statement hidden after a character literal are refused, and a comment naming the delete, quoted or not, is not; a copy handed to `sqlx::query!` that never executes, beside a prune whose keyword is written with an escape, a continuation or a `concat!` split or whose text is not in `runs.rs`, is not refused | `the_prune_reads_agent_runs_through_the_created_at_index`, `a_comment_quoting_the_prune_beside_a_prune_that_skips_the_index_is_refused`, `a_second_delete_statement_is_refused_however_it_is_spelled`, `a_prune_spelled_around_the_keyword_scan_beside_a_quoted_copy_is_refused`, `prose_that_names_the_delete_beside_the_prune_is_not_counted`, `a_delete_word_in_any_comment_form_is_not_counted_but_the_statement_in_one_is`, `a_copy_of_the_statement_that_does_not_run_is_not_the_tested_statement`, `no_character_literal_hides_a_second_statement_in_the_string_after_it` |
 | A22 | the tested statement and the text of its plan are made from one literal, and a changed copy of the statement written out in the test file, in any case or spacing, is refused | `the_prune_reads_agent_runs_through_the_created_at_index`, `a_changed_copy_of_the_statement_in_the_plan_string_is_refused` |
-| A23 | a line is read as an attribute only when the bracket closing its `#[` ends the line and it holds no quote or comment marker, the enum is declared once (plain or as `r#Verdict`), and a conditional (`cfg` or `cfg_attr`) attribute on it is refused, so an item line ending in a `// ]` comment, a bracket inside a string, an attribute inside a string or block comment, a commented copy of the enum, and a compiled-out or condition-only `#[must_use]` are not read as the verdict's | `the_verdict_type_is_must_use`, `an_item_ending_in_a_bracket_comment_is_not_an_attribute`, `a_bracket_inside_a_string_or_a_comment_never_closes_an_attribute`, `a_commented_copy_of_the_enum_above_it_is_refused`, `a_raw_identifier_declaration_is_the_verdict_enum`, `a_conditional_attribute_on_the_enum_is_refused`, `every_spelling_of_the_declaration_and_of_a_conditional_attribute_is_read` |
+| A23 | a line is read as an attribute only when the bracket closing its `#[` ends the line and it holds no quote or comment marker, the enum is declared once (every word `enum` followed by `Verdict` across whitespace and comments, raw prefix removed, on every line), `#[must_use]` compares after its raw prefix, and a conditional (`cfg` or `cfg_attr`) attribute on it is refused, so an item line ending in a `// ]` comment, a bracket inside a string, an attribute inside a string or block comment, a copy of the enum in a comment or a string or compiled out by its own or an enclosing `cfg` beside any spelling of the enum, and a compiled-out or condition-only `#[must_use]` are not read as the verdict's | `the_verdict_type_is_must_use`, `an_item_ending_in_a_bracket_comment_is_not_an_attribute`, `a_bracket_inside_a_string_or_a_comment_never_closes_an_attribute`, `a_commented_copy_of_the_enum_above_it_is_refused`, `a_raw_identifier_declaration_is_the_verdict_enum`, `a_conditional_attribute_on_the_enum_is_refused`, `every_spelling_of_the_declaration_and_of_a_conditional_attribute_is_read`, `every_copy_of_the_enum_beside_every_spelling_of_it_is_a_second_declaration` |
 
 ```acceptance
-A21: cargo test -p deck-streak-agent --test runs -- --exact the_prune_reads_agent_runs_through_the_created_at_index a_comment_quoting_the_prune_beside_a_prune_that_skips_the_index_is_refused a_second_delete_statement_is_refused_however_it_is_spelled a_prune_spelled_around_the_keyword_scan_beside_a_quoted_copy_is_refused prose_that_names_the_delete_beside_the_prune_is_not_counted a_delete_word_in_any_comment_form_is_not_counted_but_the_statement_in_one_is
+A21: cargo test -p deck-streak-agent --test runs -- --exact the_prune_reads_agent_runs_through_the_created_at_index a_comment_quoting_the_prune_beside_a_prune_that_skips_the_index_is_refused a_second_delete_statement_is_refused_however_it_is_spelled a_prune_spelled_around_the_keyword_scan_beside_a_quoted_copy_is_refused prose_that_names_the_delete_beside_the_prune_is_not_counted a_delete_word_in_any_comment_form_is_not_counted_but_the_statement_in_one_is a_copy_of_the_statement_that_does_not_run_is_not_the_tested_statement no_character_literal_hides_a_second_statement_in_the_string_after_it
 A22: cargo test -p deck-streak-agent --test runs -- --exact the_prune_reads_agent_runs_through_the_created_at_index a_changed_copy_of_the_statement_in_the_plan_string_is_refused
-A23: cargo test -p deck-streak-agent --test verdict -- --exact the_verdict_type_is_must_use an_item_ending_in_a_bracket_comment_is_not_an_attribute a_bracket_inside_a_string_or_a_comment_never_closes_an_attribute a_commented_copy_of_the_enum_above_it_is_refused a_raw_identifier_declaration_is_the_verdict_enum a_conditional_attribute_on_the_enum_is_refused every_spelling_of_the_declaration_and_of_a_conditional_attribute_is_read
+A23: cargo test -p deck-streak-agent --test verdict -- --exact the_verdict_type_is_must_use an_item_ending_in_a_bracket_comment_is_not_an_attribute a_bracket_inside_a_string_or_a_comment_never_closes_an_attribute a_commented_copy_of_the_enum_above_it_is_refused a_raw_identifier_declaration_is_the_verdict_enum a_conditional_attribute_on_the_enum_is_refused every_spelling_of_the_declaration_and_of_a_conditional_attribute_is_read every_copy_of_the_enum_beside_every_spelling_of_it_is_a_second_declaration
 ```

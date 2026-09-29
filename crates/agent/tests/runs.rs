@@ -104,7 +104,10 @@ fn raw_string_len(rest: &str) -> Option<usize> {
 fn char_literal_len(rest: &str) -> usize {
     let mut chars = rest[1..].chars();
     match chars.next() {
-        Some('\\') => rest[2..].find('\'').map_or(1, |n| 2 + n + 1),
+        Some('\\') => rest
+            .get(3..)
+            .and_then(|tail| tail.find('\''))
+            .map_or(1, |n| 3 + n + 1),
         Some(c) if rest[1 + c.len_utf8()..].starts_with('\'') => 2 + c.len_utf8(),
         _ => 1,
     }
@@ -118,11 +121,7 @@ fn code_of(source: &str) -> String {
     let mut from = 0;
     for (start, end) in comment_spans(source) {
         code.push_str(&source[from..start]);
-        if source[start..end].contains('"') {
-            code.push_str(&source[start..end]);
-        } else {
-            code.push(' ');
-        }
+        code.push(' ');
         from = end;
     }
     code.push_str(&source[from..]);
@@ -133,7 +132,10 @@ fn code_of(source: &str) -> String {
 /// `sqlx::query!`: a copy in a comment, a constant, a doc attribute or any other literal is not
 /// the statement that runs.
 fn statements_run_in(source: &str) -> usize {
-    source.matches(&format!("\"{PRUNE}\"")).count()
+    let code = code_of(source);
+    code.match_indices(&format!("\"{PRUNE}\""))
+        .filter(|(at, _)| code[..*at].trim_end().ends_with("sqlx::query!("))
+        .count()
 }
 
 /// How many times `source` writes a delete from the run table, quoted or not, code or comment.
@@ -426,6 +428,7 @@ fn a_delete_word_in_any_comment_form_is_not_counted_but_the_statement_in_one_is(
     .flat_map(every_comment_form)
     .collect();
     assert_eq!(forms.len(), 16, "the population changed");
+    eprintln!("members: {} comment forms", forms.len());
     for comment in &forms {
         assert_eq!(
             prune_pin_problems(&format!("{comment}\n{good}")),
@@ -488,6 +491,7 @@ fn a_copy_of_the_statement_that_does_not_run_is_not_the_tested_statement() {
     ];
     let copies = every_copy_that_does_not_run();
     assert_eq!(copies.len(), 21, "the population changed");
+    let mut members = 0;
     let none = "the code hands the statement to sqlx::query! 0 times, not once".to_owned();
     for run in runs {
         for copy in &copies {
@@ -496,8 +500,11 @@ fn a_copy_of_the_statement_that_does_not_run_is_not_the_tested_statement() {
                 problems.contains(&none),
                 "a copy that does not run was read as the prune: {copy}: {problems:?}"
             );
+            members += 1;
         }
     }
+    assert_eq!(members, 63, "the population changed");
+    eprintln!("members: {members} copies-by-runs");
 }
 
 #[test]
@@ -524,6 +531,8 @@ fn no_character_literal_hides_a_second_statement_in_the_string_after_it() {
         "'/'",
         "'*'",
     ];
+    assert_eq!(literals.len(), 13, "the population changed");
+    eprintln!("members: {} character literals", literals.len());
     for literal in literals {
         let before = format!("let _ = ({literal},'\"');\n{good}");
         assert_eq!(

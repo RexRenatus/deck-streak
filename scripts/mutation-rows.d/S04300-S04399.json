@@ -221,10 +221,10 @@
         "S04332-THE-VERDICT-ENUM-IS-DECLARED-ONCE",
         "agent",
         "tests/verdict.rs",
-        ".filter(|line| declares_the_verdict(line))\n        .count()",
-        ".filter(|line| declares_the_verdict(line))\n        .count()\n        .min(1)",
+        "    declarations_in(source).len()",
+        "    declarations_in(source).len().min(1)",
         "verdict::a_commented_copy_of_the_enum_above_it_is_refused",
-        "the declaration count sees every line that declares the verdict enum, so a commented copy above the real one is a second declaration (SPEC-043 amendment, issue 404)"
+        "the declaration count reads every line and every spelling, so a copy of the enum above the real one is a second declaration (SPEC-043 amendment, issue 404)"
       ],
       [
         "S04333-A-DOC-LINE-CLOSING-A-BLOCK-COMMENT-IS-NOT-PASSED",
@@ -242,16 +242,16 @@
         "if keywords != 1 {",
         "if false {",
         "runs::a_prune_spelled_around_the_keyword_scan_beside_a_quoted_copy_is_refused",
-        "the prune's source writes the word delete once, so a schema-qualified, quoted or comment-split statement beside a quoted copy is refused (SPEC-043 amendment, issue 404)"
+        "the prune's source writes the word delete once, so a schema-qualified, quoted or comment-split statement beside a copy of the tested statement handed to a sqlx::query! that never runs is refused (SPEC-043 amendment, issue 404)"
       ],
       [
         "S04335-A-PROSE-COMMENT-IS-NOT-READ-BY-THE-WORD-COUNT",
         "agent",
         "tests/runs.rs",
-        "if source[start..end].contains('\"') {",
-        "if true {",
+        "        code.push(' ');\n        from = end;",
+        "        code.push_str(&source[start..end]);\n        from = end;",
         "runs::prose_that_names_the_delete_beside_the_prune_is_not_counted",
-        "the word count drops every comment that holds no double quote, so a comment naming the delete beside the one prune is not a second keyword (SPEC-043 second fix round, issue 404)"
+        "the word count drops every comment, whatever it holds, so a comment naming the delete beside the one prune is not a second keyword (SPEC-043 verifier's fix, issue 404)"
       ],
       [
         "S04336-A-BLOCK-COMMENT-IS-A-COMMENT-TOO",
@@ -266,10 +266,10 @@
         "S04337-A-RAW-IDENTIFIER-DECLARES-THE-VERDICT",
         "agent",
         "tests/verdict.rs",
-        "without_raw_prefixes(line.trim()) == \"pub enum Verdict {\"",
-        "line.trim() == \"pub enum Verdict {\"",
+        "let rest = rest.strip_prefix(\"r#\").unwrap_or(rest);",
+        "let rest = rest.strip_prefix(\"r#r#\").unwrap_or(rest);",
         "verdict::a_raw_identifier_declaration_is_the_verdict_enum",
-        "a declaration compares after the raw-identifier prefix is removed, so `pub enum r#Verdict {` is the verdict enum and counts as a declaration (SPEC-043 second fix round, issue 404)"
+        "a declaration's name compares after the raw-identifier prefix is removed, so `pub enum r#Verdict {` is the verdict enum and counts as a declaration (SPEC-043 second fix round, issue 404)"
       ],
       [
         "S04338-A-CFG-ON-THE-VERDICT-IS-REFUSED",
@@ -288,6 +288,42 @@
         "Some(\"cfg\")",
         "verdict::a_conditional_attribute_on_the_enum_is_refused",
         "an attribute whose path ends in cfg_attr is conditional, in any spelling, so a must_use given only under a condition does not count (SPEC-043 second fix round, issue 404)"
+      ],
+      [
+        "S04340-A-COPY-THAT-DOES-NOT-RUN-IS-NOT-THE-PRUNE",
+        "agent",
+        "tests/runs.rs",
+        ".filter(|(at, _)| code[..*at].trim_end().ends_with(\"sqlx::query!(\"))",
+        ".filter(|_| true)",
+        "runs::a_copy_of_the_statement_that_does_not_run_is_not_the_tested_statement",
+        "only the literal the code hands to sqlx::query! is the tested statement, so a copy in a comment, a constant or a doc attribute beside a prune that skips the index is refused (SPEC-043 verifier's fix, issue 404)"
+      ],
+      [
+        "S04341-AN-ESCAPED-QUOTE-CHARACTER-IS-MEASURED-WHOLE",
+        "agent",
+        "tests/runs.rs",
+        ".map_or(1, |n| 3 + n + 1),",
+        ".map_or(1, |n| 3 + n),",
+        "runs::no_character_literal_hides_a_second_statement_in_the_string_after_it",
+        "an escaped character literal is measured to its closing quote, so a string after it cannot hide a second statement behind comment markers (SPEC-043 verifier's fix, issue 404)"
+      ],
+      [
+        "S04342-A-COMMENT-BETWEEN-THE-WORDS-STILL-DECLARES",
+        "agent",
+        "tests/verdict.rs",
+        "} else if rest.starts_with(\"/*\") {",
+        "} else if false {",
+        "verdict::every_copy_of_the_enum_beside_every_spelling_of_it_is_a_second_declaration",
+        "a comment between `enum` and the name is skipped, so an enum spelled with one is still a declaration and a copy beside it is a second (SPEC-043 verifier's fix, issue 404)"
+      ],
+      [
+        "S04343-A-RAW-MUST-USE-IS-MUST-USE",
+        "agent",
+        "tests/verdict.rs",
+        "without_raw_prefixes(attribute) == \"#[must_use]\"",
+        "attribute == \"#[must_use]\"",
+        "verdict::every_copy_of_the_enum_beside_every_spelling_of_it_is_a_second_declaration",
+        "the must_use attribute compares after the raw prefix is removed, so `#[r#must_use]` is read as the verdict's must_use (SPEC-043 verifier's fix, issue 404)"
       ]
     ],
     "SCRIPT_MUTATIONS": [

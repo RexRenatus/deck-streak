@@ -156,7 +156,7 @@ before the helpers changed, and failed by assertion. The A21 and A23 fence lines
   generated from two declaration spellings (`Verdict`, `r#Verdict`) and four attribute spellings
   (`cfg`, `r#cfg`, `cfg_attr`, `r#cfg_attr`), each with and without spaces inside the brackets: 16
   members. Each member was compiled once in a scratch crate and none was rejected.
-- The two named tests, `prose_that_names_the_delete_beside_the_prune_is_not_counted`,
+- The three named tests, `prose_that_names_the_delete_beside_the_prune_is_not_counted`,
   `a_raw_identifier_declaration_is_the_verdict_enum` and
   `a_conditional_attribute_on_the_enum_is_refused`, were committed alone first as well. The
   conditional test's commit carries a stub `is_conditional` that answers false, so the file
@@ -175,7 +175,6 @@ A21: red at e34a4e49a57786221353ba20bd5baef6997499fa: prose was counted: /// The
 A21: red at f2d220350de15bb5c41baa56bf999fd54a595506: a benign delete word in a comment was counted: // The delete reads created_at through its index.: ["the source writes the word delete 2 times, not once"] (runs.rs:298)
 A21: green at 1fdacad0bdbae66c1e6af24e5dfb5ca502f179d8
 A23: red at b943730aea15ad5588f469eda7ffee1289cb371b: assertion `left == right` failed, left: 0, right: 1 (verdict.rs:148)
-A23: green at cb94c17866005d69cd8b4b8079bcab4ac9a40be3
 A23: red at 89d84eddc0f7386339680fce6f1400d07d4c49f3: a conditional attribute was not seen: ["#[derive(Clone)]", "#[cfg(any())]", "#[must_use]"] (verdict.rs:182)
 A23: red at 4d11e2e6c80c343534643f7b85407009b3c23ce1: a conditional attribute was not refused: #[must_use] #[cfg(any())] (verdict.rs:220)
 A23: green at 9fdf9391f05e91e1ae1163ba1194c36b79dcf8fa
