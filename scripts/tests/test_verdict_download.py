@@ -14,6 +14,7 @@ The workflow is read as text, job by job, the way `test_mutation_workflows.py` r
 import fnmatch
 import posixpath
 import re
+import shlex
 import unittest
 
 from _support import examined
@@ -24,6 +25,36 @@ SHARD_COUNTS = (0, 1, 3)
 DOWNLOAD = "actions/download-artifact@"
 UPLOAD = "actions/upload-artifact@"
 ROWS_PLANNED = "needs.mutation-plan.outputs.rows == 'true'"
+
+
+REPORTS = "$reports"
+PLAN = f"{REPORTS}/mutation-plan/plan.json"
+ROWS = f"{REPORTS}/mutation-rows/rows.json"
+# The flags each named class's judge line must carry, and the path each reads. A class the table
+# does not name (a later class another change adds) is neither asserted nor an error.
+JUDGE_FLAGS = {
+    "rust": {
+        "--plan": PLAN,
+        "--shard-reports": REPORTS,
+        "--rows": ROWS,
+        "--whole": f"{REPORTS}/mutation-plan/whole.json",
+    },
+    "oracle": {"--plan": PLAN, "--rows": ROWS},
+}
+JUDGE = re.compile(r"(?m)^\s*python3 scripts/mutation-verdict\.py judge (.*?)(?: \|\| \w+=\$\?)?$")
+
+
+def judge_lines(verdict):
+    """{class: {flag: value}} for each `mutation-verdict.py judge` command line of the verdict
+    job, read one line at a time; a line with no `--class` is refused, and zero lines is too."""
+    found = {}
+    for command in examined("judge command lines", JUDGE.findall(verdict)):
+        words = shlex.split(command)
+        flags = {w: words[i + 1] for i, w in enumerate(words[:-1]) if w.startswith("--")}
+        if "--class" not in flags:
+            raise AssertionError(f"a judge line names no --class: {command}")
+        found[flags["--class"]] = flags
+    return found
 
 
 class StepFailed(Exception):
@@ -179,16 +210,15 @@ class TheVerdictReadsEachReportByName(unittest.TestCase):
     def test_the_judge_reads_the_paths_the_downloads_lay_down(self):
         verdict = jobs(workflow(CI))["mutation-verdict"]
         self.assertIn('reports="$RUNNER_TEMP/reports"', verdict)
-        for path in examined(
-            "judge paths",
-            [
-                '--plan "$reports/mutation-plan/plan.json"',
-                '--rows "$reports/mutation-rows/rows.json"',
-                '--whole "$reports/mutation-plan/whole.json"',
-                '--shard-reports "$reports"',
-            ],
-        ):
-            self.assertIn(path, verdict)
+        lines = judge_lines(verdict)
+        for cls, wanted in examined("judge classes asserted", list(JUDGE_FLAGS.items())):
+            self.assertIn(cls, lines, f"the verdict has no judge line for class {cls}")
+            for flag, path in wanted.items():
+                self.assertEqual(
+                    lines[cls].get(flag),
+                    path,
+                    f"the {cls} judge line does not read {flag} at {path}",
+                )
         for step in [s for s in steps(verdict) if DOWNLOAD in s]:
             destination = local(inputs(step).get("path", ""))
             self.assertTrue(
