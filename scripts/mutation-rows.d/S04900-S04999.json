@@ -90,6 +90,24 @@
         "                deck_streak_kernel::StudyDayRule::default()\n                    .study_day(deck_streak_kernel::UtcMillis::from_epoch_millis(review.id)),\n",
         "lapse::a_review_counts_on_the_study_day_the_rule_gives_at_every_boundary",
         "a review counts by the configured offset and rollover hour, not by the default rule (SPEC-049 R15; A17)"
+      ],
+      [
+        "S04911-A-REVIEW-ONE-MILLISECOND-BEFORE-THE-ROLLOVER-IS-THE-DAY-BEFORE",
+        "coordination",
+        "src/lapse.rs",
+        "                facts\n                    .rule\n                    .study_day(deck_streak_kernel::UtcMillis::from_epoch_millis(review.id)),\n",
+        "                facts\n                    .rule\n                    .study_day(deck_streak_kernel::UtcMillis::from_epoch_millis(review.id - 1)),\n",
+        "lapse::a_review_counts_on_the_study_day_the_rule_gives_at_every_boundary",
+        "a review counts on the day its instant falls in, so one millisecond earlier can be the day before (SPEC-049 R15; A17)"
+      ],
+      [
+        "S04912-A-REVIEW-AT-THE-ROLLOVER-BEGINS-THE-NEW-DAY",
+        "coordination",
+        "src/lapse.rs",
+        "                facts\n                    .rule\n                    .study_day(deck_streak_kernel::UtcMillis::from_epoch_millis(review.id)),\n",
+        "                facts\n                    .rule\n                    .study_day(deck_streak_kernel::UtcMillis::from_epoch_millis(review.id + 1)),\n",
+        "lapse::a_review_counts_on_the_study_day_the_rule_gives_at_every_boundary",
+        "a review at the rollover instant counts on the new day, so one millisecond later is the same day and one earlier is not (SPEC-049 R15; A17)"
       ]
     ]
   }
