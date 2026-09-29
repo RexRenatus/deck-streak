@@ -20,13 +20,17 @@ const ENDPOINT: &str = "http://127.0.0.1:9/";
 fn unhex(hex: &str) -> Vec<u8> {
     (0..hex.len())
         .step_by(2)
-        .map(|at| u8::from_str_radix(&hex[at..at + 2], 16).expect("hex"))
+        .map(|at| u8::from_str_radix(&hex[at..at + 2], 16).unwrap_or_else(|_| panic!("hex {hex}")))
         .collect()
 }
 
 /// A byte run as lowercase hex.
 fn hex(bytes: &[u8]) -> String {
-    bytes.iter().map(|byte| format!("{byte:02x}")).collect()
+    use std::fmt::Write;
+    bytes.iter().fold(String::new(), |mut text, byte| {
+        let _ = write!(text, "{byte:02x}");
+        text
+    })
 }
 
 #[test]
