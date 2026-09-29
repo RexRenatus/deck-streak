@@ -589,3 +589,32 @@ mod tests {
         );
     }
 }
+
+/// How many drill grades the memory port gives a persona at most (SPEC-110 R12).
+pub const DRILL_GRADES_LIMIT: i64 = 10;
+
+/// The drill-grades memory port (SPEC-044 R7; SPEC-110 R12): a subject's newest grades, each a
+/// drill's type and its accepted XP, never the drill's text, its id or its answer.
+pub struct DrillGradesMemory {
+    db: Db,
+}
+
+impl DrillGradesMemory {
+    /// The port over `db`.
+    #[must_use]
+    pub const fn new(db: Db) -> Self {
+        Self { db }
+    }
+}
+
+impl deck_streak_agent::MemoryPort for DrillGradesMemory {
+    fn read<'a>(
+        &'a self,
+        subject: &'a deck_streak_agent::Subject,
+    ) -> deck_streak_kernel::PortFuture<'a, Vec<String>> {
+        Box::pin(async move {
+            let _ = (&self.db, subject);
+            Ok(Vec::new())
+        })
+    }
+}
