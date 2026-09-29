@@ -24,6 +24,7 @@ hang passes a short `--test-seconds` and a subprocess timeout.
 """
 
 import hashlib
+import importlib.util
 import json
 import os
 import re
@@ -31,6 +32,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import tokenize
 import unittest
 from pathlib import Path
 
@@ -790,6 +792,50 @@ class TheReportCarriesWhatItSays(unittest.TestCase):
             "--file", "scripts/calc.py", "--control-seconds", "20", "--test-seconds", "7"
         )
         self.assertEqual(report["files"][0]["bound"], 7)
+
+
+def runner_module():
+    """The runner's file loaded fresh, so a constant a row mutates in place is read as it stands."""
+    spec = importlib.util.spec_from_file_location("mutation_python_constants", RUNNER)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+class TheRunnersConstantsAreNamedWhole(unittest.TestCase):
+    """Each constant a run's output or bound rests on, named by its whole value (SPEC-087 R15)."""
+
+    def test_the_sentinel_is_the_exact_text_a_byte_reader_is_run_against(self):
+        self.assertEqual(runner_module().SENTINEL, "\n# mutation-python sentinel\n")
+
+    def test_a_control_without_a_bound_may_run_fifteen_minutes(self):
+        self.assertEqual(runner_module().CONTROL_SECONDS, 900.0)
+
+    def test_the_outcomes_are_in_the_order_the_report_counts_them(self):
+        self.assertEqual(
+            runner_module().OUTCOMES,
+            ("killed", "survived", "uncovered", "unviable", "timeout", "void"),
+        )
+
+    def test_a_newline_is_a_line_feed_a_carriage_return_or_both(self):
+        newline = runner_module().NEWLINE
+        self.assertEqual(newline.split("a\r\nb\rc\nd"), ["a", "b", "c", "d"])
+
+    def test_the_quiet_tokens_are_the_six_kinds_that_carry_no_code(self):
+        self.assertEqual(
+            runner_module().QUIET,
+            frozenset(
+                {
+                    tokenize.COMMENT,
+                    tokenize.NL,
+                    tokenize.NEWLINE,
+                    tokenize.INDENT,
+                    tokenize.DEDENT,
+                    tokenize.ENDMARKER,
+                }
+            ),
+        )
 
 
 if __name__ == "__main__":
