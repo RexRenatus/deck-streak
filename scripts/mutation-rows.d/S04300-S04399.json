@@ -180,6 +180,33 @@
         "#[derive(Clone, Debug, PartialEq, Eq)]\npub enum Verdict {",
         "verdict::the_verdict_type_is_must_use",
         "the verdict type keeps #[must_use], so a caller cannot ignore how a run ended (SPEC-043 R12, issue 362)"
+      ],
+      [
+        "S04328-A-SECOND-DELETE-IN-THE-PRUNE-SOURCE-IS-REFUSED",
+        "agent",
+        "src/runs.rs",
+        "/// Deletes every run recorded before `cutoff` and returns how many it deleted.",
+        "/// Deletes every run recorded before `cutoff` and returns how many it deleted.\n    /// DELETE FROM agent_runs WHERE created_at < ?1",
+        "runs::the_prune_reads_agent_runs_through_the_created_at_index",
+        "the prune's source holds exactly one delete from agent_runs, so a second statement or a copy of it in a comment is refused (SPEC-043 amendment, issue 404)"
+      ],
+      [
+        "S04329-AN-ITEM-LINE-IS-NOT-THE-VERDICTS-ATTRIBUTE",
+        "agent",
+        "src/verdict.rs",
+        "#[derive(Clone, Debug, PartialEq, Eq)]\npub enum Verdict {",
+        "#[rustfmt::skip] pub fn decoy() {} // ]\n#[derive(Clone, Debug, PartialEq, Eq)]\npub enum Verdict {",
+        "verdict::the_verdict_type_is_must_use",
+        "an item line that ends in a bracket comment is not an attribute, so a must_use above it does not count for the verdict (SPEC-043 amendment, issue 404)"
+      ],
+      [
+        "S04330-THE-PLAN-TEXT-IS-DERIVED-FROM-THE-ONE-LITERAL",
+        "agent",
+        "tests/runs.rs",
+        "concat!(\"EXPLAIN QUERY PLAN \", prune_statement!())",
+        "\"EXPLAIN QUERY PLAN DELETE FROM agent_runs WHERE created_at <= ?1\"",
+        "runs::the_prune_reads_agent_runs_through_the_created_at_index",
+        "the plan check runs the statement the file's one literal holds, never a separately typed copy (SPEC-043 amendment, issue 404)"
       ]
     ],
     "SCRIPT_MUTATIONS": [
