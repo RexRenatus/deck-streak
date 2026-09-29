@@ -8,7 +8,7 @@
         "pub const AI_ROUTE: &str = \"DECKSTREAK_AI_ROUTE\";",
         "pub const AI_ROUTE: &str = \"DECKSTREAK_AI\";",
         "constants::the_ai_route_setting_is_named_deckstreak_ai_route",
-        "the route setting is read under the name .env.example documents (SPEC-043 R1, ADR-054)"
+        "the route setting is read under the name .env.example documents (SPEC-043 R15, ADR-054)"
       ],
       [
         "S04302-THE-ROUTE-STATES-ITS-SHAPE",
@@ -17,7 +17,7 @@
         "const SHAPE: &'static str = \"proxy, or unset for no AI route\";",
         "const SHAPE: &'static str = \"\";",
         "constants::the_ai_route_setting_states_its_shape",
-        "a refused route value names the shapes it accepts (SPEC-043 R1)"
+        "a refused route value names the shapes it accepts (SPEC-043 R15)"
       ],
       [
         "S04303-THE-DEFAULT-TURN-CAP",
@@ -62,7 +62,7 @@
         "pub const DAILY_READING: &str = \"daily-reading\";",
         "pub const DAILY_READING: &str = \"reading\";",
         "constants::the_daily_reading_is_recorded_under_its_name",
-        "agent_runs records the daily reading under its duty name (SPEC-043 R9)"
+        "agent_runs records the daily reading under its duty name (SPEC-043 R13)"
       ],
       [
         "S04308-THE-WALL-CLOCK-GRACE",
@@ -107,7 +107,7 @@
         "pub const CLASS_VOID: &str = \"void\";",
         "pub const CLASS_VOID: &str = \"\";",
         "constants::the_gate_names_a_void_and_an_empty_probe",
-        "a probe that cannot run is withheld under the class void (SPEC-043 R8)"
+        "a probe that cannot run is withheld under the class void (SPEC-043 R11)"
       ],
       [
         "S04313-AN-EMPTY-PROBE-IS-NAMED",
@@ -116,7 +116,7 @@
         "pub const CLASS_EMPTY: &str = \"examined-nothing\";",
         "pub const CLASS_EMPTY: &str = \"\";",
         "constants::the_gate_names_a_void_and_an_empty_probe",
-        "a probe that examined nothing is withheld under examined-nothing (SPEC-043 R8)"
+        "a probe that examined nothing is withheld under examined-nothing (SPEC-043 R11)"
       ],
       [
         "S04314-THE-AGENT-RUNS-TABLE",
@@ -125,7 +125,7 @@
         "pub const AGENT_RUNS_TABLE: &str = \"agent_runs\";",
         "pub const AGENT_RUNS_TABLE: &str = \"runs\";",
         "constants::the_agent_runs_table_and_context_are_named",
-        "the data-rights port names the table the migration creates (SPEC-043 R9)"
+        "the data-rights port names the table the migration creates (SPEC-043 R13)"
       ],
       [
         "S04315-THE-AGENT-CONTEXT",
@@ -134,7 +134,7 @@
         "pub const AGENT_CONTEXT: &str = \"agent\";",
         "pub const AGENT_CONTEXT: &str = \"agents\";",
         "constants::the_agent_runs_table_and_context_are_named",
-        "the data-rights port declares the agent context (SPEC-043 R9)"
+        "the data-rights port declares the agent context (SPEC-043 R13)"
       ],
       [
         "S04316-THE-RETENTION-IS-NINETY-DAYS",
@@ -179,6 +179,22 @@
         "\"DISABLE_AUTOUPDATER\": \"1\",\n    \"CLAUDE_CODE_OAUTH_TOKEN_FILE\": \"/var/lib/deck-streak/agent-device-key\"",
         "no committed file under agent/ names a token file on persistent disk (SPEC-043 A15, issue 341)",
         "test_run_headless.CredentialComesOnlyFromTheSocket.test_no_committed_file_under_agent_carries_a_token_or_a_token_path"
+      ],
+      [
+        "S04321-THE-PROXY-URL-IS-AN-EXACT-LOOPBACK-URL",
+        "agent/run-headless.sh",
+        "[[ \"$url\" =~ ^http://(127\\.0\\.0\\.1|localhost|\\[::1\\])(:[0-9]{1,5})?$ ]] ||",
+        "[[ \"$url\" =~ ^http://.*$ ]] ||",
+        "the runner accepts only an exact loopback proxy URL, host and optional port and nothing after them (SPEC-043 R3, A2)",
+        "test_run_headless.RunnerTest.test_the_runner_accepts_only_an_exact_loopback_url_and_an_absolute_path"
+      ],
+      [
+        "S04322-THE-CAPACITY-PATH-IS-AN-ABSOLUTE-PATH",
+        "agent/run-headless.sh",
+        "[[ \"$capacity_path\" =~ ^/[A-Za-z0-9._/-]*$ ]] || refuse 2 \"the capacity path is not an absolute path\"",
+        ":",
+        "the runner accepts only an absolute capacity path (SPEC-043 R4, A2)",
+        "test_run_headless.RunnerTest.test_the_runner_accepts_only_an_exact_loopback_url_and_an_absolute_path"
       ]
     ]
   }
