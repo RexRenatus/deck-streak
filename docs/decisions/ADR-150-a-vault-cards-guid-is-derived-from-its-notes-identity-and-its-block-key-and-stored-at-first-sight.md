@@ -22,7 +22,7 @@ card's GUID made from, so that each of these edits keeps it?
 - An inserted, removed or reordered card leaves every other card's GUID where it was.
 - Nothing is written into the vault to make the GUID stable.
 - An erase followed by a rescan gives the same GUIDs, so the owner's Anki is not doubled.
-- The derivation is pinned by a test and a mutation row (the W9 plan's binding 3).
+- The derivation is pinned by a test and a mutation row, so no change moves it unseen.
 
 ## Considered Options (the alternatives it was chosen against)
 

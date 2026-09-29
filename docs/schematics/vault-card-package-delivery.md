@@ -44,4 +44,5 @@ flowchart TD
 
 Each note's time is the owner's decision (ADR-151), so a package re-sent without a new decision never
 overwrites an edit the owner made in Anki, and an approved edit does update the note. The import is
-the owner's act; DeckStreak writes no Anki collection but the in-memory one it builds the file from.
+the owner's act; DeckStreak writes no Anki collection but the in-memory one it builds the file from
+and the export's own temporary copy of it, which the engine removes.

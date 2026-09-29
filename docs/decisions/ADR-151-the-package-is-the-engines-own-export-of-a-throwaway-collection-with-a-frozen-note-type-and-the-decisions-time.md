@@ -10,12 +10,12 @@ decision-makers: "@RexRenatus (owner), the DeckStreak architect"
 
 The owner's approved vault cards reach Anki as a file the owner imports (#65, SPEC-151). DeckStreak
 already carries Anki's own engine, pinned to a fork (ADR-009, ADR-058), behind ingest's engine port.
-CHARTER 4 makes the skip day the only write back to Anki, and the W9 plan's binding 4 says DeckStreak
-never writes an Anki collection directly and never talks to the predecessor's sync. The owner's
-import updates a note whose GUID it holds only when the package's note is newer, under its default
-condition, and keeps the package's own modification time. What builds the file, in what format, and
-with which times, so that an import adds each new card once, updates an approved edit in place, and
-never overwrites an edit the owner made in Anki?
+CHARTER 4 makes the skip day the only write back to Anki, so DeckStreak writes no card into the
+owner's collection or its copy and delivers none through a sync: the owner imports the file. The
+owner's import updates a note whose GUID it holds only when the package's note is newer, under its
+default condition, and keeps the package's own modification time. What builds the file, in what
+format, and with which times, so that an import adds each new card once, updates an approved edit in
+place, and never overwrites an edit the owner made in Anki?
 
 ## Decision Drivers
 
@@ -38,9 +38,8 @@ never overwrites an edit the owner made in Anki?
 - A text file for Anki's text import, with a GUID column: rejected because it carries no note time, so a re-import either overwrites every owner edit in Anki or keeps every note unchanged.
   It also needs the note type to exist in the owner's collection before the first import, which the
   owner would make by hand; the package carries its own note type.
-- A write through an Anki add-on's local API, or into the collection's copy before a sync: rejected
-  because it writes the owner's collection, which CHARTER 4 and binding 4 forbid, and the second
-  would upload through the sync.
+- A write through an Anki add-on's local API, or into the collection's copy before a sync: rejected because it writes the owner's collection, which CHARTER 4 forbids.
+  The second would also upload through the sync, and neither leaves the import to the owner.
 - The legacy package format: rejected because it exists for Anki clients older than the modern format, and it would be a second format to test for no gain.
   The modern format is the export's default when the legacy option is off.
 - Each note's time set to the build's time: rejected because every note of every package would then
@@ -54,9 +53,9 @@ Chosen option: "the engine's `export_apkg` over a throwaway collection, with a f
 the decision's time", because it keeps every write inside a collection DeckStreak made and drops, and
 lets the owner's importer decide each note by the owner's own clock.
 
-- **Binding 4's reading.** "Never writes an Anki collection directly" is read as the owner's
-  collection and its copy. The throwaway collection is DeckStreak's own, lives in memory, and exists
-  only to be exported; it is not a collection the owner studies from.
+- **Which collection is never written.** CHARTER 4's write back is read as the owner's collection
+  and its copy. The throwaway collection is DeckStreak's own, lives in memory, and exists only to be
+  exported; it is not a collection the owner studies from.
 - **The note type** `DeckStreak vault card` has the fields `Front` and `Back`, one template, `Card 1`,
   whose question is `{{Front}}` and whose answer is `{{FrontSide}}<hr id=answer>{{Back}}`, a fixed
   style, and a fixed id and time, added with the engine's call that keeps both. A change to any of

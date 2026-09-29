@@ -9,7 +9,7 @@ decision-makers: "@RexRenatus (owner), the DeckStreak architect"
 ## Context and Problem Statement
 
 The owner decides each vault card candidate (#65, SPEC-150): approve, edit then approve, or reject.
-The W9 plan binds the tap to the owner alone (ADR-006), and nothing unapproved may reach a package.
+The tap is the owner's alone (ADR-006, CHARTER 14), and nothing unapproved may reach a package.
 DeckStreak has two owner surfaces, the bot and the Mini App, in separate processes over one database,
 and every message goes through the one router or is a command reply its census names (SPEC-041).
 Where does the owner's tap happen, how do two surfaces avoid deciding one card twice, and how does
