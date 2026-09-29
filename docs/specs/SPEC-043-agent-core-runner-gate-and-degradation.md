@@ -430,10 +430,10 @@ line is one whole attribute), listed in section 10, which follow the last A-numb
 
 | file | context | change |
 |---|---|---|
-| `crates/agent/tests/runs.rs` | `deck-streak-agent` | changed: the one macro literal, the two scans, and three planted decoys |
-| `crates/agent/tests/verdict.rs` | `deck-streak-agent` | changed: the whole-attribute rule, and one planted decoy |
-| `scripts/mutation-rows.d/S04300-S04399.json` | repo | changed: rows S04328 to S04330 |
-| `docs/red-first/SPEC-043.md` | docs | changed: an addendum with the decoys' red and green lines |
+| `crates/agent/tests/runs.rs` | `deck-streak-agent` | changed: the one macro literal, the two scans, and four planted decoys |
+| `crates/agent/tests/verdict.rs` | `deck-streak-agent` | changed: the whole-attribute rule, the declaration count, and three planted decoys |
+| `scripts/mutation-rows.d/S04300-S04399.json` | repo | changed: rows S04328 to S04334 |
+| `docs/red-first/SPEC-043.md` | docs | changed: an addendum with the decoys' red and green lines, and a fix round's |
 | `docs/specs/SPEC-043-agent-core-runner-gate-and-degradation.md` | docs | changed: this section and section 10 |
 | `changelog.d/fix-agent-pins-404.md` | docs | added |
 
@@ -443,7 +443,13 @@ statement to `runs.rs`; S04329 puts an item line ending in a `// ]` comment betw
 `#[must_use]` and its `derive` (both killed by the tests named in the row); S04330 replaces the
 plan's derived text with a separately typed copy of the statement. The killers are
 `runs::the_prune_reads_agent_runs_through_the_created_at_index` for S04328 and S04330, and
-`verdict::the_verdict_type_is_must_use` for S04329.
+`verdict::the_verdict_type_is_must_use` for S04329. S04331 to S04334 were added by the fix round:
+S04331 removes the attribute scan's fail-closed condition and S04333 removes the block-comment
+refusal from the doc-line check (both killed by
+`verdict::a_bracket_inside_a_string_or_a_comment_never_closes_an_attribute`); S04332 lets the
+declaration count pass when the enum is declared twice (killed by
+`verdict::a_commented_copy_of_the_enum_above_it_is_refused`); S04334 disables the delete word count
+(killed by `runs::a_prune_spelled_around_the_keyword_scan_beside_a_quoted_copy_is_refused`).
 
 This amendment changes no production code, and no other requirement.
 
@@ -451,12 +457,12 @@ This amendment changes no production code, and no other requirement.
 
 | id | criterion | decided by |
 |---|---|---|
-| A21 | the source of `runs.rs` writes `DELETE FROM agent_runs` once in any case or spacing and the word `delete` once, so a second statement, or a commented or quoted copy of the first beside a changed statement spelled `main.agent_runs`, `"agent_runs"` or with an SQL comment between its keywords, is refused; a keyword split across joined literals is not | `the_prune_reads_agent_runs_through_the_created_at_index`, `a_comment_quoting_the_prune_beside_a_prune_that_skips_the_index_is_refused`, `a_second_delete_statement_is_refused_however_it_is_spelled` |
+| A21 | the source of `runs.rs` writes `DELETE FROM agent_runs` once in any case or spacing and the word `delete` once, so a second statement, or a commented or quoted copy of the first beside a changed statement spelled `main.agent_runs`, `"agent_runs"` or with an SQL comment between its keywords, is refused; a keyword split across joined literals is not | `the_prune_reads_agent_runs_through_the_created_at_index`, `a_comment_quoting_the_prune_beside_a_prune_that_skips_the_index_is_refused`, `a_second_delete_statement_is_refused_however_it_is_spelled`, `a_prune_spelled_around_the_keyword_scan_beside_a_quoted_copy_is_refused` |
 | A22 | the tested statement and the text of its plan are made from one literal, and a changed copy of the statement written out in the test file, in any case or spacing, is refused | `the_prune_reads_agent_runs_through_the_created_at_index`, `a_changed_copy_of_the_statement_in_the_plan_string_is_refused` |
 | A23 | a line is read as an attribute only when the bracket closing its `#[` ends the line and it holds no quote or comment marker, and the enum is declared once, so an item line ending in a `// ]` comment, a bracket inside a string, an attribute inside a string or block comment, and a commented copy of the enum are not read as the verdict's | `the_verdict_type_is_must_use`, `an_item_ending_in_a_bracket_comment_is_not_an_attribute`, `a_bracket_inside_a_string_or_a_comment_never_closes_an_attribute`, `a_commented_copy_of_the_enum_above_it_is_refused` |
 
 ```acceptance
-A21: cargo test -p deck-streak-agent --test runs -- --exact the_prune_reads_agent_runs_through_the_created_at_index a_comment_quoting_the_prune_beside_a_prune_that_skips_the_index_is_refused a_second_delete_statement_is_refused_however_it_is_spelled
+A21: cargo test -p deck-streak-agent --test runs -- --exact the_prune_reads_agent_runs_through_the_created_at_index a_comment_quoting_the_prune_beside_a_prune_that_skips_the_index_is_refused a_second_delete_statement_is_refused_however_it_is_spelled a_prune_spelled_around_the_keyword_scan_beside_a_quoted_copy_is_refused
 A22: cargo test -p deck-streak-agent --test runs -- --exact the_prune_reads_agent_runs_through_the_created_at_index a_changed_copy_of_the_statement_in_the_plan_string_is_refused
 A23: cargo test -p deck-streak-agent --test verdict -- --exact the_verdict_type_is_must_use an_item_ending_in_a_bracket_comment_is_not_an_attribute a_bracket_inside_a_string_or_a_comment_never_closes_an_attribute a_commented_copy_of_the_enum_above_it_is_refused
 ```
