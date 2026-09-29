@@ -371,3 +371,5 @@ is proved with `python3 scripts/mutation_rows.py prove --band S06600-S06699`.
   shipped unit's own `<unit name>.d/`, and the credential lines are read by the unit reader. Each
   addition pins what the templates already declare, so it is disclosed not red, with its plants
   committed red before each refusal (`docs/red-first/SPEC-066.md`).
+
+Amendment (2026-09-29): a shipped template's instance drop-in directory is that template's own, and every unit guard reads its drop-ins with the template; a template with two such directories has both refused, and an instance's drop-in sets only `LoadCredential=` (SPEC-062 R14).

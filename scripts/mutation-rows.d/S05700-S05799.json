@@ -92,6 +92,24 @@
         "const SHAPE: &'static str = \"an absolute file path PLANTED\";",
         "persona::a_roster_outside_the_repository_fills_the_four_slots",
         "a malformed roster setting is refused naming the shape it must have, an absolute file path, so the operator reads what to set; cargo-mutants never mutates a constant"
+      ],
+      [
+        "S05775-THE-SOURCE-REFUSAL-NAMES-THE-GRAMMAR",
+        "progression",
+        "src/grant.rs",
+        "pub const SOURCE_GRAMMAR: &str = \"^[a-z0-9][a-z0-9:._-]{0,127}$\";",
+        "pub const SOURCE_GRAMMAR: &str = \"^[a-z0-9][a-z0-9:._-]*$\";",
+        "grant::a_source_outside_the_token_grammar_is_refused",
+        "a refused source's error names the grammar SPEC-040 R2 states, ^[a-z0-9][a-z0-9:._-]{0,127}$, so the text a refusal shows cannot drift from the rule the check enforces; cargo-mutants never mutates a constant (SPEC-057 R20)"
+      ],
+      [
+        "S05780-THE-EXPORT-NAMES-ITS-FORMAT-V1",
+        "privacy",
+        "src/export.rs",
+        "pub const EXPORT_SCHEMA: &str = \"deckstreak.export.v1\";",
+        "pub const EXPORT_SCHEMA: &str = \"deckstreak.export.v2\";",
+        "export::the_export_names_its_format_deckstreak_export_v1",
+        "the owner's export names its format deckstreak.export.v1 under the key schema (SPEC-021 R2), so a renamed constant never changes the format silently; cargo-mutants never mutates a constant"
       ]
     ]
   }

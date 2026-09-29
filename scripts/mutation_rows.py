@@ -194,11 +194,43 @@ def assemble(monolith: object, fragments: list[tuple[str, object]]) -> object:
     return population
 
 
-def _fragment(name: str, text: str) -> tuple[str, object]:
+#: The words of a repeated-key refusal, after the file's name (SPEC-122 R1).
+REPEATED_KEY = "repeats the key"
+
+
+class _RepeatedKey(Exception):
+    """A key seen twice in one object; `parse_document` turns it into a refusal naming the file."""
+
+    def __init__(self, key: str) -> None:
+        super().__init__(key)
+        self.key = key
+
+
+def _refuse_repeats(pairs: list[tuple[str, object]]) -> dict[str, object]:
+    """`json`'s object hook: the object's members, refusing a key the object already holds."""
+    seen: dict[str, object] = {}
+    for key, value in pairs:
+        if key in seen:
+            raise _RepeatedKey(key)
+        seen[key] = value
+    return seen
+
+
+def parse_document(where: str, text: str) -> object:
+    """A document of the population, parsed. `json.loads` keeps the last value of a repeated key
+    and says nothing, and two branches that each add a table under one key merge in git without a
+    conflict (#334), so a key seen twice in one object, at any depth, is a refusal naming `where`
+    and the key. Text that is not JSON is refused by name too (SPEC-122 R1)."""
     try:
-        return name, json.loads(text)
+        return json.loads(text, object_pairs_hook=_refuse_repeats)
+    except _RepeatedKey as repeated:
+        raise PopulationRefused(f"{where} {REPEATED_KEY} {repeated.key!r} in one object") from None
     except json.JSONDecodeError as error:
-        raise PopulationRefused(f"{FRAGMENTS}/{name} is not JSON: {error}") from error
+        raise PopulationRefused(f"{where} is not JSON: {error}") from error
+
+
+def _fragment(name: str, text: str) -> tuple[str, object]:
+    return name, parse_document(f"{FRAGMENTS}/{name}", text)
 
 
 def tree_fragments(root: pathlib.Path | str) -> list[tuple[str, object]]:
@@ -217,7 +249,7 @@ def tree_fragments(root: pathlib.Path | str) -> list[tuple[str, object]]:
 def load_tree(root: pathlib.Path | str) -> object:
     """The population of the tree at `root`: its header, read and parsed, then its fragments."""
     text = (pathlib.Path(root) / MONOLITH).read_text(encoding="utf-8")
-    return assemble(json.loads(text), tree_fragments(root))
+    return assemble(parse_document(MONOLITH, text), tree_fragments(root))
 
 
 def git(root: pathlib.Path, *args: str) -> str:
@@ -232,7 +264,7 @@ def load_revision(root: pathlib.Path | str, revision: str) -> object | None:
     listed = git(root, "ls-tree", "--name-only", revision, "--", MONOLITH)
     if not listed.strip():
         return None
-    monolith = json.loads(git(root, "show", f"{revision}:{MONOLITH}"))
+    monolith = parse_document(MONOLITH, git(root, "show", f"{revision}:{MONOLITH}"))
     names = git(root, "ls-tree", "--name-only", "-z", revision, "--", FRAGMENTS + "/")
     fragments = [
         _fragment(path.rsplit("/", 1)[1], git(root, "show", f"{revision}:{path}"))
@@ -766,7 +798,11 @@ def main(argv: list[str] | None = None) -> int:
         return prove(root, args)
     if not args.base:
         parser.error("retired needs --base")
-    return retired(root, args.base)
+    try:
+        return retired(root, args.base)
+    except (OSError, json.JSONDecodeError, PopulationRefused, UnresolvableTarget) as refusal:
+        print(f"mutation_rows: REFUSED: {refusal}", file=sys.stderr)
+        return EXIT_REFUSED
 
 
 if __name__ == "__main__":
