@@ -540,10 +540,11 @@ class PruneAfterARollback(Case):
 
 
 class AnotherUnitsDropInsAreLeftAlone(Case):
+    AT = chr(64)
     FOREIGN = {
-        "getty@tty1.service.d/autologin.conf": b"[Service]\nExecStart=\n",
-        "other-app@x.service.d/override.conf": b"[Service]\nMemoryMax=1G\n",
-        "user@.service.d/delegate.conf": b"[Service]\nDelegate=yes\n",
+        f"getty{AT}tty1.service.d/autologin.conf": b"[Service]\nExecStart=\n",
+        f"other-app{AT}x.service.d/override.conf": b"[Service]\nMemoryMax=1G\n",
+        f"user{AT}.service.d/delegate.conf": b"[Service]\nDelegate=yes\n",
     }
 
     def intact(self, when):
@@ -568,6 +569,7 @@ class AnotherUnitsDropInsAreLeftAlone(Case):
         done = w.deploy("v2.0.0", STUB_BAD_UNIT=API, STUB_BAD_TAG="v2.0.0")
         self.assertNotEqual(done.returncode, 0)
         self.intact("a switch back")
+        self.assertTrue(all((w.units / rel).is_file() for rel in self.FOREIGN))
 
 
 class APartialEffectiveConfigurationIsRefused(Case):
@@ -646,6 +648,9 @@ class TheCaddyInstall(Case):
         self.assertEqual(installed.returncode, 0, installed.stdout + installed.stderr)
         removed = w.run(ROLLBACK, "caddy-remove", **self.config())
         self.assertEqual(removed.returncode, 0, removed.stdout + removed.stderr)
+        calls = [ln for ln in w.text("caddy.log").splitlines() if ln.startswith("caddy ")]
+        named = [ln for ln in calls if "--adapter caddyfile" in ln]
+        self.assertTrue(any(ln.startswith("caddy validate") for ln in named), calls)
 
 
 class NoDeployScriptNamesAPrivateValue(unittest.TestCase):

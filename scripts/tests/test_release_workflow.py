@@ -180,6 +180,7 @@ class TheTagGuardRuns(unittest.TestCase):
                     text=True,
                 )
                 verdicts[tag] = done.returncode
+            self.assertEqual(sorted(verdicts), ["v1.0.0", "v1.1.0", "v2.0.0"])
             self.assertEqual(verdicts["v1.0.0"], 0, f"an annotated tag on main: {verdicts}")
             self.assertNotEqual(verdicts["v1.1.0"], 0, f"a lightweight tag: {verdicts}")
             self.assertNotEqual(verdicts["v2.0.0"], 0, f"a tag off main: {verdicts}")
