@@ -458,7 +458,7 @@ real source id or a real token.
 |---|---|---|---|---|
 | `tripwire_events` | `discipline` | `migrations/010401_discipline_tripwire.sql` (SPEC-104) | `tripwire_events`, one row per ping or confession, its day as an epoch day, and no pending message | exported and erased |
 | `tripwire_state` | `discipline` | the same migration | `tripwire_state`, with the bound source, the scope, the snooze's day and the spin's day and instant, which the predecessor keeps as runtime settings, and no pending message | reset in place: unbound, unverified, rung 0 |
-| `sprints` | `discipline` | the same migration | `sprints`, one per event | exported and erased |
+| `sprints` | `discipline` | the same migration | `sprints`, one per event, and no pending notice | exported and erased |
 | `chest_locks` | `discipline` | the same migration | the chest-lock rows of `buffs`, one per study day with its instant, and no pending notice | exported and erased |
 
 ## 9. Mutation rows

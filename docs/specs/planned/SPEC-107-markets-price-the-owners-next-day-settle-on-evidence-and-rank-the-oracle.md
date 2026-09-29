@@ -181,10 +181,10 @@ R16. A won position, settled or revised, whose price is 25 or less raises the ce
     `quest_all` with the key `market:<id>`. The Brier rank is computed before and after the step,
     and a rank after the step that is the first or a higher band raises `quest_all` with the key
     `oracle_rank:<name>`. Both go through SPEC-084's ladder on the router (SPEC-041), and neither
-    moves a coin. The markets step records each raise pending (R25), as SPEC-106 R17 does: when the
-    cycle carries a router (the owner's sync), the step raises it through that router at once;
-    otherwise it waits for `discipline_tick` (SPEC-105 R12), which raises it through the router on
-    its next run; either path clears it as SPEC-106 R17 does.
+    moves a coin. The markets step records each raise pending (R25), as SPEC-106 R17 records its
+    stakes' messages: when the cycle carries a router (the owner's sync), the step raises it
+    through that router at once; otherwise it waits for `discipline_tick` (SPEC-105 R12), which
+    raises it through the router on its next run; either path clears it as SPEC-106 R17 does.
 R17. `void_open_positions(day)`, which coordination's markets module holds, runs in its caller's
     transaction: each open position becomes `voided` with its settled day, and its stake is refunded
     through `refund(day, "market_refund", "<id>", stake)`; it answers the number voided. SPEC-106's

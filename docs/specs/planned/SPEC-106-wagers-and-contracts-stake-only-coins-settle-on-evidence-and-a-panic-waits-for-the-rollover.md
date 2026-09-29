@@ -249,9 +249,9 @@ R22. The migration `migrations/010601_discipline_stakes.sql` creates `wagers` (o
     most), `contracts`, `contract_days` (unique on contract and study day), `contract_changes` (one
     `pending` row per contract at most) and `pardons` (one row per month), each `STRICT` with
     `created_at`, with `CHECK`s on the statuses, the verdicts, the metrics, the durations and the
-    void reasons, and each row's pending-message flag (a won wager's and a done contract's
-    celebration among them, R17); and it adds to `discipline_state` the last reviewed week and the
-    pending panic notice (SPEC-020 R15, R18).
+    void reasons, and the pending-message flag of each wager, contract, contract day and change (a
+    won wager's and a done contract's celebration among them, R17); and it adds to
+    `discipline_state` the last reviewed week and the pending panic notice (SPEC-020 R15, R18).
 R23. Discipline's data-rights port exports and erases the five tables, and the reset of
     `discipline_state` (SPEC-105 R24) clears the two new fields; the five tables owe SPEC-021's six
     files.
@@ -495,7 +495,7 @@ instant epoch milliseconds; no golden holds a calendar date or a personal value.
 | `contracts` | `discipline` | the same migration | `contracts`, its days as epoch days, its horizon dropped and its celebration read as sent | exported and erased |
 | `contract_days` | `discipline` | the same migration | `contract_days`, one row per contract and study day, its pending message read as sent | exported and erased |
 | `contract_changes` | `discipline` | the same migration | `contract_changes`, its landing day as an epoch day and its message read as sent | exported and erased |
-| `pardons` | `discipline` | the same migration | `pardons`, its month keyed by the epoch day of its first day, its pending message read as sent | exported and erased |
+| `pardons` | `discipline` | the same migration | `pardons`, its month keyed by the epoch day of its first day | exported and erased |
 
 The predecessor's `beeminder_posts` maps to nothing: the money rung is not built (ADR-106).
 

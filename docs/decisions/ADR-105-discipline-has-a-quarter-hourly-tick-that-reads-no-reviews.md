@@ -66,8 +66,8 @@ Chosen option: "a quarter-hourly tick that reads no reviews", built by SPEC-105.
 - **A sync step's messages.** The rail's step (SPEC-104 R10's kept-sprint notice, R10 and R13's fine
   message, R14's ransom notice, R20's refund message, R15 and R16) and the markets step (SPEC-107
   R16) record each message pending in the ledger, as SPEC-106 R17 records the stakes' messages and
-  their two celebrations (R9, R17), which SPEC-106 raises only at the tick. An owner's sync carries a
-  router, so the step raises the message through that router at once and nothing stays pending;
+  their two celebrations (R9, R17), which SPEC-106 raises only at the tick. An owner's sync carries
+  a router, so the step raises the message through that router at once and nothing stays pending;
   a scheduled sync carries none, so the message waits for `discipline_tick`, which delivers it
   through the router on its next run.
   Rejected:
