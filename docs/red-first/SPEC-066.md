@@ -22,6 +22,8 @@ A5: red at 00e0bd0: AssertionError: 0 != 1 : owner-user-id holding '' (the scrip
 A5: green at 6e68804
 A6: red at 00e0bd0: assertion `left == right` failed: anki-sync-username "" left: Ok(()) right: Err(MissingCredentials) (the scripted engine was asked to sync, and the run was recorded as a success)
 A6: green at 2d3435c
+A7: red at ed12601: AssertionError: {'no restart, no budget': [], 'restart and [208 chars]: []} != {'restart and delay, no start limit': ['dep[1246 chars]: []}
+A7: green at 2b778de
 ```
 
 ## The commands
@@ -344,11 +346,28 @@ copy of the head's full-tree export, the file restored by its sha256 after each:
 survived. Beside round 6's 192, the round adds 18: for each of the six bounded keys, the entry
 dropped, a second value admitted, and the value check blind to the key.
 
+## Round 9: a unit that restarts holds its whole restart budget
+
+A7's red and green lines are in the fence above. The plants were committed alone (ed12601), with a
+helper that refused nothing: a unit that loads a credential and pages, holds `Restart=on-failure`
+and `RestartSec=15` and no start limit, and four more lacking one key of the budget at a time,
+beside three controls that must not be refused. The three modules ran whole, and only
+`test_a_restarting_paging_unit_holds_the_whole_restart_budget` failed, by assertion, the plants
+coming back with no refusal; `test_alert_unit` (8) and the rail module (14) passed. The rule
+followed at 2b778de (`restart_budget_refusals`, over `_units.RESTART_BUDGET`), with the modules
+green at 17, 8 and 14 tests. Every earlier plant is refused for its own reason as before, and the
+tree's units hold all three keys. Row S06612 makes the check `if False`, killed by A7's test.
+
+**Hand mutants.** 215 hand mutants, each run against both whole modules on a worker copy of the
+head's full-tree export, the file restored by its sha256 after each: 215 killed, 0 survived. Beside
+the earlier 210, the round adds 5: the presence check dropped, the restart trigger dropped, and each
+of the three keys left out of `RESTART_BUDGET` in turn.
+
 ## Mutants of the changed code
 
 **The rows.** `python3 scripts/mutation_rows.py prove --band S06600-S06699` at e0cdf9f, on the
 committed tree: `rows: examined 8: killed 8, survived 0, void 0` (`examined 11: killed 11` with rows
-S06609 to S06611, at the round-7 head). Each row's killer passed without
+S06609 to S06611, at the round-7 head; S06612 proved with `--row`, KILLED). Each row's killer passed without
 its mutant and failed with it, and the tool restored each target byte for byte before the next. The
 four script mutants were also checked to parse (`sh -n`), since the tool parses only Python. It
 read the same at c916846, after A5, the killer of S06605 to S06608, gained its exit check.
@@ -366,6 +385,7 @@ read the same at c916846, after A5, the killer of S06605 to S06608, gained its e
 | S06609 | `scripts/tests/_units.py` | the restart entry of the value table admits a second value | A4's value test |
 | S06610 | `scripts/tests/test_deploy_templates.py` | the target check admits a target beside the alert's | A4's target test |
 | S06611 | `scripts/tests/_units.py` | the value table drops its `StartLimitIntervalSec=` entry | A4's value test |
+| S06612 | `scripts/tests/test_deploy_templates.py` | the restart budget's presence check made `if False` | A7 |
 
 **cargo-mutants on the loader's file.** `cargo mutants --package deck-streak-kernel --file
 crates/kernel/src/credentials.rs -j 1` (cargo-mutants 27.1.0), on the committed tree:

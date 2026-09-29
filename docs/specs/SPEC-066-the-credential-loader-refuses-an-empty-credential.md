@@ -104,6 +104,11 @@ R2. The refusal fails the unit that loads the credential, and that unit's `OnFai
         use (`StartLimitIntervalSec=300`, `StartLimitBurst=5`, `RestartSec=15`,
         `After=` and `Wants=` `network-online.target`), at every assignment, its drop-ins
         included, and any other value is refused by its key and value;
+      - a unit that loads a credential and pages on failure and assigns `Restart=` to anything but
+        `no`, in the unit or a drop-in, that holds no `StartLimitIntervalSec=`,
+        `StartLimitBurst=` or `RestartSec=`: each key it lacks is refused by name. Without the
+        start limit the default interval is shorter than the restart delay, so the unit never
+        reaches failed and pages on every restart;
       - an `OnFailure=` of such a unit that is not exactly the alert template, at every
         assignment, its drop-ins included: a target beside it, in its place, or an empty one is
         refused by its key and value;
@@ -148,8 +153,9 @@ R5. Where cargo-mutants makes no mutant, hand-proved rows in
     `scripts/mutation-rows.d/S06600-S06699.json` guard the refusal (SPEC-039 R8): the loader's
     check, the variant it returns, the id in its `Display`, the bound that admits a value of one
     character, and the script's check, its exit and its check of each of its two credentials, the
-    table of the values the units that load a credential and page on failure admit, and the check
-    that their `OnFailure=` is the alert template alone.
+    table of the values the units that load a credential and page on failure admit, the check
+    that their `OnFailure=` is the alert template alone, and the check that a unit which restarts
+    holds its whole restart budget.
 R6. The engine probe (`crates/ingest/examples/engine_probe.rs`) reads the sync's two credentials
     through the loader, by the ids `deck_streak_ingest::settings` declares, as the sync's login
     does. A refusal ends it before it builds a login: it writes the refusal's `Display`, which names
@@ -165,6 +171,7 @@ R6. The engine probe (`crates/ingest/examples/engine_probe.rs`) reads the sync's
 | A4 | every unit template that loads a credential, the alert template excepted, fails and pages on a refused start (R2's conditions), and the alert template counts no refusal a success, names no `[Unit]` condition or assertion, restarts none and is never unloaded while failed (R3's four exit conditions, told from `OnFailure=` by the condition and never by a refusal's text, its restart and its collection); the census reads every template with one reader, which refuses the lines R2 lists by file and line, reads an exit-status word only as a decimal of at most 255 or a status name, held to a table of words, and refuses every other word and every empty or unknown `Restart=`, `RestartMode=` or `CollectMode=`; it prints its examined count, refuses zero, refuses a planted template for each condition and each refusal, and alert-shaped ones, which name no `OnFailure=`, each for what it breaks (listed below), and admits none of a cross-check corpus of exit-status words | `test_deploy_templates.py` `every_unit_that_loads_a_credential_fails_and_pages_on_a_refusal` |
 | A5 | the alert unit's route (R3): each credential the template loads, empty in each form, makes the script exit 1 with the one line naming it, before any journal read or request; the template, read by A4's reader, names no `OnFailure=`, counts no refusal a success, restarts none and is never unloaded while failed: no `-` prefix, no `ExecCondition=`, no `[Unit]` condition or assertion, no `SuccessExitStatus=` at all and no `RestartMode=direct`; no `Restart=` other than `no` and no `RestartForceExitStatus=` at all; no `CollectMode=` other than `inactive`; and no `Restart=`, `RestartMode=` or `CollectMode=` that is empty or not a known value, each read at every assignment; each of these planted on the template, and a line the reader refuses, is refused | `test_alert_unit.py` `an_empty_credential_fails_the_alert_unit_before_any_request` |
 | A6 | the sync's login reads through the loader (R2): each of its two credentials, empty in each form, records the run as `missing_credentials` with no attempt, and the engine is never asked to sync | `retry.rs` `an_empty_sync_credential_is_recorded_missing_and_never_reaches_the_engine` |
+| A7 | a unit that loads a credential and pages on failure and assigns `Restart=` to anything but `no` holds `StartLimitIntervalSec=`, `StartLimitBurst=` and `RestartSec=`, in the unit or a drop-in, and a unit that lacks one is refused by the key it lacks; the tree's units hold all three | `test_deploy_templates.py` `a_restarting_paging_unit_holds_the_whole_restart_budget` |
 
 ```acceptance
 A1: cargo test -p deck-streak-kernel --test credentials -- --exact an_empty_credential_refuses_start_by_its_id
@@ -173,6 +180,7 @@ A3: cargo test -p deck-streak-kernel --test credentials -- --exact an_empty_refu
 A4: python3 -m unittest discover -s scripts/tests -p test_deploy_templates.py -k every_unit_that_loads_a_credential_fails_and_pages_on_a_refusal
 A5: python3 -m unittest discover -s scripts/tests -p test_alert_unit.py -k an_empty_credential_fails_the_alert_unit_before_any_request
 A6: cargo test -p deck-streak-ingest --test retry -- --exact an_empty_sync_credential_is_recorded_missing_and_never_reaches_the_engine
+A7: python3 -m unittest discover -s scripts/tests -p test_deploy_templates.py -k a_restarting_paging_unit_holds_the_whole_restart_budget
 ```
 
 A1 to A3 write synthetic credentials to a temporary directory and read them through the loader.
@@ -221,6 +229,12 @@ synthetic value, and reads the same four exit conditions, the `[Unit]` condition
 and the collection in the template. It plants on the template each thing R3 refuses, a reset or
 unknown restart or collect value, a `[Unit]` condition or assertion, and a line the reader
 refuses, and each is refused.
+A7 plants a unit that loads a credential and pages, assigns `Restart=on-failure`, and lacks one key of
+the restart budget at a time (`RESTART_BUDGET`): a restart with a delay and no start limit, a
+restart with no budget at all, and a restart with no burst, no interval or no delay, each refused by
+the key it lacks, beside controls that assign `Restart=no`, assign no `Restart=`, or hold the whole
+budget, none refused. The value table holds a key's value and cannot hold that a key is present,
+so a unit whose every assigned value is admitted can still page without bound.
 A6 runs the syncer over SPEC-022's scripted engine and in-memory record, which count every sync
 the engine is asked for, with one of the fixture's two credentials rewritten empty. R6 takes no
 criterion of its own: the engine probe is an example a person runs by hand, with no test, and the
@@ -245,9 +259,9 @@ is proved with `python3 scripts/mutation_rows.py prove --band S06600-S06699`.
 | `crates/ingest/examples/engine_probe.rs` | `deck-streak-ingest` | changed: R6, the probe reads its sync login through the loader |
 | `deploy/scripts/alert-telegram.sh` | deploy | changed: R3 |
 | `deploy/README.md` | deploy | changed: an empty credential refuses start, and the alert unit's own refusal |
-| `scripts/tests/test_deploy_templates.py` | repo | changed: A4, the key lists' check, the drop-in directory check and the credential lines' reader |
+| `scripts/tests/test_deploy_templates.py` | repo | changed: A4 and A7, the key lists' check, the drop-in directory check and the credential lines' reader |
 | `scripts/tests/test_alert_unit.py` | repo | changed: A5, and `run_alert` plants a credential's content; `unit_file` reads through `_units.py`'s reader |
-| `scripts/tests/_units.py` | repo | changed: one reader for A4 and A5 that refuses the lines R2 lists (`logical_lines`, `assignments`), an exit-status word read only as a decimal of at most 255 or a status name (`exit_status`, `status_words`), every assignment of a key (`Unit.every`), and the literal lists of keys per kind of unit (`ALERT_KEYS`, `PAGING_KEYS`, `off_list`) and the table of admitted values (`PAGING_VALUES`) |
+| `scripts/tests/_units.py` | repo | changed: one reader for A4 and A5 that refuses the lines R2 lists (`logical_lines`, `assignments`), an exit-status word read only as a decimal of at most 255 or a status name (`exit_status`, `status_words`), every assignment of a key (`Unit.every`), and the literal lists of keys per kind of unit (`ALERT_KEYS`, `PAGING_KEYS`, `off_list`) and the table of admitted values (`PAGING_VALUES`) and the keys of the restart budget (`RESTART_BUDGET`) |
 | `scripts/mutation-rows.d/S06600-S06699.json` | repo | added: R5 |
 | `docs/schematics/startup-settings-and-secrets.md` | repo | changed: the loader's refusal of an empty credential |
 | `docs/schematics/alert-and-slo-path.md` | repo | changed: the alert unit's own refusal |
@@ -289,14 +303,23 @@ is proved with `python3 scripts/mutation_rows.py prove --band S06600-S06699`.
 
 ## 7. Amended in delivery
 
-- **R5 names eleven rows, not five.** Beside the loader's check, its variant, the id in its message,
+- **R5 names twelve rows, not five.** Beside the loader's check, its variant, the id in its message,
   and the script's check and exit, six rows guard what those five do not name: S06604, a
   refusal that reaches past an empty value to one of a single character (A2's killer); S06607
   and S06608, the script's check of each of its two credentials removed in turn (A5's killer);
   S06609 and S06611, the value table admitting a second `Restart=` value and dropping a key of
   the restart budget (A4's value test); and S06610, the target check admitting a target beside
-  the alert's (A4's target test).
+  the alert's (A4's target test); and S06612, the restart budget's presence check disabled (A7's
+  test).
   Each was proved KILLED with its target restored (`docs/red-first/SPEC-066.md`).
+- **A unit that restarts holds its whole restart budget (R2, A7).** The value table bounds the
+  value of each key a unit holds and says nothing of a key it lacks. A unit that loads a credential
+  and pages, and restarts, needs the start limit beside its restart delay: without it the default
+  start limit interval is shorter than the restart delay, so the limit never trips and the unit
+  pages on every restart. R2 therefore refuses each key of the budget a restarting unit lacks, by
+  name, A7 decides it, S06612 guards it, and the plants were committed red first
+  (`docs/red-first/SPEC-066.md`). The three keys and their values are the ones `deck-streak-api`
+  and `deck-streak-bot` hold.
 - **A2 and A4 are disclosed not red.** Each pins what the base already did, and what the change
   must leave as it was: A2 the missing and unreadable refusals and the loaded values, A4 the
   templates' `OnFailure=` and exit handling. Row S06604 and the census's planted templates give

@@ -65,7 +65,9 @@ template, and two were considered for it:
 - Bounding only the keys, and leaving the value of a listed key free: rejected, because a listed key
   can hold a value that changes what a unit does, and a list of keys cannot say so. A table holds the
   values those units use for `Restart=`, their restart budget and their ordering, and their
-  `OnFailure=` is the alert template alone (SPEC-066 R2).
+  `OnFailure=` is the alert template alone (SPEC-066 R2). A table bounds a value, not the presence
+  of a key, so a unit that loads a credential, pages and restarts also holds the three keys of the
+  restart budget, and a unit lacking one is refused by name (SPEC-066 R2, A7).
 
 ## Decision Outcome
 
@@ -121,8 +123,9 @@ shares, and a refusal there fails the unit the way a missing credential does.
 SPEC-066's acceptance tests: the loader's refusal in each empty form and its message (A1 to A3),
 the census of the templates (A4), which plants each refusal and a cross-check corpus of exit-status
 words and admits none of the corpus, the alert unit's route (A5), and the sync's login, which reads
-through the loader, never reaching the engine with an empty value (A6). Hand-proved rows S06601
-to S06610 kill the mutants cargo-mutants does not make.
+through the loader, never reaching the engine with an empty value (A6), and the restart budget a
+restarting unit holds (A7). Hand-proved rows S06601 to S06612 kill the mutants cargo-mutants does
+not make.
 
 ## What would make this wrong
 
