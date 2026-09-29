@@ -13,8 +13,8 @@
   (the router, for the level-up line), SPEC-071 (the rollup, the score, the raw streak, the card
   snapshot and the settle fold), SPEC-026 (the bot's command table). **Mutation band:**
   `S07200-S07299`.
-- **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
-  `docs/specs/` with its tests and `docs/red-first/SPEC-072.md` (ADR-016).
+- **Status:** in delivery: moved from `docs/specs/planned/` to `docs/specs/` with its tests and
+  `docs/red-first/SPEC-072.md` (ADR-016).
 
 ## 1. The problem, measured
 
