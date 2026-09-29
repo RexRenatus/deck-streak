@@ -694,7 +694,7 @@ const NAMED_SENDS: [(&str, &str, &str); 8] = [
 /// ledger's hold re-exported from the router under another name, and the held queue's table
 /// re-exported under another name; and in the bot's command handler, its reply sent, its dispatch
 /// run and its erase's prompt sent by callers of their own, which no update asked for.
-const AROUND_THE_PORT: [(&str, &str); 24] = [
+const AROUND_THE_PORT: [(&str, &str); 27] = [
     (
         "crates/daemon/src/role_bot.rs",
         r#"/// A celebration sent straight to the owner's chat through the bot's transport, around the router.
@@ -943,6 +943,34 @@ pub async fn celebrate(api_url: &str, token: &str, chat: i64, from: i64, id: i32
     }
 }
 "#,
+    ),
+    (
+        "crates/bot/src/rich.rs",
+        r#"//! A celebration from inside the bot crate: a rich message, which the first census did not name.
+
+/// A celebration posted straight to the Bot API as a rich message, around the router.
+pub async fn celebrate_richly(api_url: &str, token: &str, chat: i64) {
+    let url = format!("{api_url}/bot{token}/sendRichMessage");
+    let body = serde_json::json!({ "chat_id": chat, "text": "a celebration the router never decided" });
+    let _answer = reqwest::Client::new().post(url).json(&body).send().await;
+}
+"#,
+    ),
+    (
+        "crates/daemon/src/celebrate_client.rs",
+        r"/// A celebration sent as a live photo through the Bot API's client, around the router.
+async fn celebrate_with_a_live_photo(bot: &Bot, photo: &SendLivePhotoParams) {
+    let _sent = bot.send_live_photo(photo).await;
+}
+",
+    ),
+    (
+        "crates/daemon/src/ephemeral.rs",
+        r"/// A celebration put before the owner as an ephemeral edit through the client, around the router.
+async fn celebrate_by_an_ephemeral_edit(bot: &Bot, edit: &EditEphemeralMessageTextParams) {
+    let _edited = bot.edit_ephemeral_message_text(edit).await;
+}
+",
     ),
     (
         "crates/daemon/src/digest.rs",
@@ -1910,12 +1938,16 @@ fn no_delivery_goes_around_the_port() {
             "crates/bot/src/commands.rs:14: calls ask_erase in Commands::celebrate_by_a_prompt, \
              not a named caller",
             "crates/bot/src/copy.rs:5: names copyMessage in celebrate, not a named call site",
+            "crates/bot/src/rich.rs:5: names sendRichMessage in celebrate_richly, not a named call \
+             site",
             "crates/bot/src/transport.rs:9: names edit_message_text in \
              Transport::celebrate_by_an_edit, not a named call site",
             "crates/coordination/src/sync_cycle.rs:6: names QUEUE_TABLE",
+            "crates/daemon/src/celebrate_client.rs:3: names send_live_photo",
             "crates/daemon/src/digest.rs:3: names forward_message",
             "crates/daemon/src/digest.rs:4: names pin_chat_message",
             "crates/daemon/src/digest.rs:5: names set_message_reaction",
+            "crates/daemon/src/ephemeral.rs:3: names edit_ephemeral_message_text",
             "crates/daemon/src/lifecycle.rs:4: calls edit_html in celebrate_by_an_edit, \
              not a named call site",
             "crates/daemon/src/main.rs:6: calls handle in celebrate_by_a_fabricated_command, \
