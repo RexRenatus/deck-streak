@@ -153,6 +153,33 @@
         "const MILLIS_PER_DAY: i64 = 8_640_000;",
         "maintenance::maintenance_prunes_the_agent_runs_past_their_retention",
         "the upkeep's retention cutoff counts whole days of milliseconds, the unit agent_runs.created_at is kept in (SPEC-043 R13)"
+      ],
+      [
+        "S04323-THE-EMPTY-CLASS-LIST-IS-REFUSED",
+        "agent",
+        "src/gate.rs",
+        "if classes.is_empty() {",
+        "if classes.is_empty() && false {",
+        "gate::an_empty_class_list_is_refused_at_construction",
+        "a gate built with no blocking output class is refused at construction, never built to pass every output (SPEC-043 R11, issue 362)"
+      ],
+      [
+        "S04324-A-DUTY-THAT-READS-INPUTS-NEEDS-AN-INPUT-CLASS",
+        "agent",
+        "src/gate.rs",
+        "if reads_inputs && input_class.is_none() {",
+        "if reads_inputs && input_class.is_none() && false {",
+        "gate::a_duty_that_reads_inputs_needs_an_input_class",
+        "a gate for a duty that reads untrusted inputs is refused without an input class (SPEC-043 R11, issue 362)"
+      ],
+      [
+        "S04325-THE-VERDICT-IS-MUST-USE",
+        "agent",
+        "src/verdict.rs",
+        "#[must_use]\n#[derive(Clone, Debug, PartialEq, Eq)]\npub enum Verdict {",
+        "#[derive(Clone, Debug, PartialEq, Eq)]\npub enum Verdict {",
+        "verdict::the_verdict_type_is_must_use",
+        "the verdict type keeps #[must_use], so a caller cannot ignore how a run ended (SPEC-043 R12, issue 362)"
       ]
     ],
     "SCRIPT_MUTATIONS": [
@@ -195,6 +222,26 @@
         ":",
         "the runner accepts only an absolute capacity path (SPEC-043 R4, A2)",
         "test_run_headless.RunnerTest.test_the_runner_accepts_only_an_exact_loopback_url_and_an_absolute_path"
+      ]
+    ],
+    "CARGO_KILLED_SCRIPT_MUTATIONS": [
+      [
+        "S04326-THE-PRUNE-INDEX-IS-CREATED",
+        "migrations/004302_agent_runs_created_at_index.sql",
+        "CREATE INDEX agent_runs_by_created_at ON agent_runs (created_at);",
+        "SELECT 1;",
+        "agent",
+        "runs::agent_runs_is_indexed_on_created_at",
+        "the migration creates the created_at index on agent_runs (SPEC-043 amendment, issue 363)"
+      ],
+      [
+        "S04327-THE-PRUNE-INDEX-IS-ON-CREATED-AT",
+        "migrations/004302_agent_runs_created_at_index.sql",
+        "ON agent_runs (created_at);",
+        "ON agent_runs (duration_ms);",
+        "agent",
+        "runs::the_prune_reads_agent_runs_through_the_created_at_index",
+        "the index is on the column the prune's range reads, so the prune seeks and never scans (SPEC-043 amendment, issue 363)"
       ]
     ]
   }

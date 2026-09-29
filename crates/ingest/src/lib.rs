@@ -24,4 +24,5 @@ pub mod settings;
 pub mod state;
 pub mod sync;
 pub mod sync_runs;
+pub mod tier;
 pub mod window;

@@ -28,21 +28,22 @@ impl SqliteXpLedger {
         Self { db }
     }
 
-    /// The sum of every grant (R7).
+    /// The sum of every grant and every settlement (R7, SPEC-072 R10).
     ///
     /// # Errors
     ///
     /// [`KernelError::Database`] when the read fails.
     pub async fn total(&self) -> Result<XpTotal, KernelError> {
         let total = sqlx::query_scalar!(
-            r#"SELECT COALESCE(SUM(amount), 0) AS "total!: u64" FROM xp_ledger"#
+            r#"SELECT (SELECT COALESCE(SUM(amount), 0) FROM xp_ledger)
+                    + (SELECT COALESCE(SUM(amount), 0) FROM xp_settlement) AS "total!: u64""#
         )
         .fetch_one(self.db.reader())
         .await?;
         Ok(XpTotal::new(total))
     }
 
-    /// The sum of `track`'s grants (R7).
+    /// The sum of `track`'s grants and settlements (R7, SPEC-072 R10).
     ///
     /// # Errors
     ///
@@ -50,7 +51,9 @@ impl SqliteXpLedger {
     pub async fn track_total(&self, track: Track) -> Result<XpTotal, KernelError> {
         let track = track.as_str();
         let total = sqlx::query_scalar!(
-            r#"SELECT COALESCE(SUM(amount), 0) AS "total!: u64" FROM xp_ledger WHERE track = ?1"#,
+            r#"SELECT (SELECT COALESCE(SUM(amount), 0) FROM xp_ledger WHERE track = ?1)
+                    + (SELECT COALESCE(SUM(amount), 0) FROM xp_settlement WHERE track = ?1)
+                    AS "total!: u64""#,
             track
         )
         .fetch_one(self.db.reader())

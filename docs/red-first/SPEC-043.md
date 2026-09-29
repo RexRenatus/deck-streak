@@ -49,3 +49,33 @@ quoted here and not repeated in the block above.
 red at a6f20dc911efbcf5860541860c1cbaede5657c2e: AssertionError: 0 != 2 : (five refusal subtests)
 green at d78d60cd8bd7076f09a493128349e3d7f96485ae: the agent tests pass, with the four loopback forms launching
 ```
+
+## Amendment addendum, 2026-09-29 (issues #362 and #363)
+
+A16, A17, A19 and A20 were committed alone, against inert stubs where a symbol was missing:
+`ProbeGate::new` took the new arguments and returned a `Result` but refused nothing, and migration
+004302 was absent. A18 pins an attribute the base already carried, so it could not be red first
+and is recorded not red: the red commit a8bdd84 also removed `#[must_use]` from `Verdict` as a
+plant, restored in the green commit, and that plant turns A18 red by its assertion (verdict.rs:34),
+as row S04325 does. The lines above stand.
+
+A20's body changed after its green commit: its source check now counts the prune as one whole
+quoted literal in `crates/agent/src/runs.rs`, so a statement with an added predicate no longer
+matches. Replayed at a8bdd84, the new body fails first by the assertion the fence line quotes from
+the earlier body, verbatim: `the prune does not use the index: ["SCAN agent_runs"]` (runs.rs:51).
+
+A18's body changed after a8bdd84 too: its scanner now reads only whole attribute lines, which moved
+its assertion from verdict.rs:32 to verdict.rs:34. Replayed at a8bdd84, the new body fails by
+`` `pub enum Verdict` lost its #[must_use]: ["#[derive(Clone, Debug, PartialEq, Eq)]"] `` (verdict.rs:34).
+
+```red-first
+A16: red at a8bdd84ed73f95269f30e14306a595c8d1ca1596: assertion `left == right` failed: left: None right: Some(NoOutputClass) (gate.rs:157)
+A16: green at 745d5fded1d72932e6b5065756bc7d887f099a0d
+A17: red at a8bdd84ed73f95269f30e14306a595c8d1ca1596: assertion `left == right` failed: left: None right: Some(NoInputClass) (gate.rs:181)
+A17: green at 745d5fded1d72932e6b5065756bc7d887f099a0d
+A18: not red: the base already carried #[must_use] on Verdict, so the pin was green at the base; removing the attribute (the plant of a8bdd84, and row S04325) turns it red by assertion (verdict.rs:34)
+A19: red at a8bdd84ed73f95269f30e14306a595c8d1ca1596: assertion `left == right` failed: left: [] (runs.rs:30)
+A19: green at 745d5fded1d72932e6b5065756bc7d887f099a0d
+A20: red at a8bdd84ed73f95269f30e14306a595c8d1ca1596: the prune does not use the index (runs.rs:51)
+A20: green at 745d5fded1d72932e6b5065756bc7d887f099a0d
+```

@@ -433,3 +433,20 @@ selects exactly one test, and each is proved with its file restored byte for byt
 | `S07608-STRENGTH-HALVES-IN-THIRTEEN-DAYS` | `crates/streaks/src/constants.rs` | the strength half-life | `governor_goldens::strength_and_the_verdict_match_the_parity_goldens` |
 | `S07609-ONE-STANDBY-NOTICE-A-WEEK` | `crates/streaks/src/governor.rs` | no notice within 7 days of the last | `governor_goldens::the_standby_notice_rule_matches_the_parity_golden` |
 | `S07610-THE-RELIGHT-NEEDS-THREE-REVIEWS` | `crates/streaks/src/constants.rs` | a return day relights at 3 reviews | `relight_rule::the_relight_rule_matches_the_parity_golden` |
+
+## 10. Amendment, 2026-09-29: the prerequisite is SPEC-049's lapse slice, not the whole of SPEC-049
+
+Made under ADR-088, insert-only: every earlier byte is kept in order, and this section is the only
+insertion.
+
+- Where this SPEC names SPEC-049 (the header, section 1, R15, A13, and sections 6 and 7), it names
+  the slice SPEC-049 section 7 defines: R12 to R15, decided by its A11, A12, A13 and A15. SPEC-049's
+  remainder, the comeback reading, is not a prerequisite of this SPEC, and nothing in this SPEC
+  reads SPEC-046, SPEC-047, SPEC-048, SPEC-051 or SPEC-052.
+- The slice leaves SPEC-049 in `docs/specs/planned/` (ADR-016). This prerequisite is therefore met
+  when `dev` holds `crates/streaks/src/lapse.rs`, `crates/coordination/src/lapse.rs`,
+  `tools/parity-oracle/registry/spec_049.py` and `tools/parity-oracle/goldens/lapse_episode.json`,
+  and SPEC-049's A11, A12, A13 and A15 pass there. A dispatch check reads those, not the folder
+  SPEC-049 is in.
+- The slice's function takes no stored anchor. R15 adds it, so the manifest's rows marked `changed`
+  for the two `lapse.rs` files change the slice's files.
