@@ -9,9 +9,8 @@
   ADR-059 (public text describes DeckStreak only) and ADR-087 (the configured courses name the
   reading and the writing courses). No new decision is taken here, so this SPEC has no ADR of its
   own.
-- **Prerequisites:** SPEC-020, SPEC-024, SPEC-040, SPEC-071, SPEC-077, SPEC-078, SPEC-092 (planned,
-  W4, on `docs/w4-plan`), SPEC-093 (planned, W4, on `docs/w4-plan`) and SPEC-110. **Mutation
-  band:** `S12100-S12199`.
+- **Prerequisites:** SPEC-020, SPEC-024, SPEC-040, SPEC-071, SPEC-077, SPEC-078, SPEC-092
+  (planned, W4), SPEC-093 (planned, W4) and SPEC-110. **Mutation band:** `S12100-S12199`.
 - **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
   `docs/specs/` with its tests and `docs/red-first/SPEC-121.md` (ADR-016).
 

@@ -12,7 +12,7 @@
   time, and keeps the predecessor's limiter).
 - **Prerequisites:** SPEC-020, SPEC-021, SPEC-022, SPEC-066, SPEC-071, SPEC-072, SPEC-073,
   SPEC-075, SPEC-076, SPEC-077, SPEC-078, SPEC-079, SPEC-080, SPEC-083, SPEC-085, SPEC-086, SPEC-090,
-  SPEC-091, SPEC-092 and SPEC-093 (planned, W4, on `docs/w4-plan`) and SPEC-110. **Mutation band:**
+  SPEC-091, SPEC-092 and SPEC-093 (planned, W4) and SPEC-110. **Mutation band:**
   `S11900-S11999`.
 - **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
   `docs/specs/` with its tests and `docs/red-first/SPEC-119.md` (ADR-016).
