@@ -95,7 +95,8 @@ PROBES = ("sdd", "ddd", "tdd")
 WIRING_KEYS = {"schema", "pin", "skills", "scripts", "packs", "box", "owned", "unset_env", "note"}
 BOX_KEYS = {"packs", SCAN, HELPER, "note"}
 PACK_KEYS = {"expected_red", "pending", "note"}
-SCAN_KEYS = {"pending", "note"}
+SCAN_KEYS = {"expected_red", "pending", "note"}
+HELPER_KEYS = {"pending", "note"}
 ROW_PACK_KEYS = {
     "state", "enforced_by", "excluded_rows", "deferred_rows", "advisory_waivers", "note",
 }
@@ -383,12 +384,24 @@ def box_of(box: object) -> dict:
         for issue in issues:
             if not ISSUE.match(str(issue)):
                 raise Refusal(f"box.packs.{pack} waits on {issue!r}, not an issue")
-    for name in (SCAN, HELPER):
+    for name, keys in ((SCAN, SCAN_KEYS), (HELPER, HELPER_KEYS)):
         scan = box.get(name, {})
-        if not isinstance(scan, dict) or set(scan) - SCAN_KEYS:
-            raise Refusal(f"box.{name} takes only {sorted(SCAN_KEYS)}")
+        if not isinstance(scan, dict) or set(scan) - keys:
+            raise Refusal(f"box.{name} takes only {sorted(keys)}")
         if "pending" in scan and not ISSUE.match(str(scan["pending"])):
             raise Refusal(f"box.{name} waits on {scan['pending']!r}, not an issue")
+    entry = box.get(SCAN, {})
+    if "expected_red" in entry:
+        if "pending" in entry:
+            raise Refusal(f"box.{SCAN} is pending, so it expects no red row")
+        expected = entry["expected_red"]
+        if (
+            not isinstance(expected, dict)
+            or not expected
+            or not all(isinstance(row, str) and row for row in expected)
+            or not all(ISSUE.match(str(issue)) for issue in expected.values())
+        ):
+            raise Refusal(f"box.{SCAN}'s expected_red maps a row to an issue, as #NNN")
     return box
 
 
@@ -417,6 +430,7 @@ def named_issues(box: dict, packs: dict) -> list[str]:
         if "pending" in entry:
             named.add(entry["pending"])
     for name in (SCAN, HELPER):
+        named.update(box.get(name, {}).get("expected_red", {}).values())
         if "pending" in box.get(name, {}):
             named.add(box[name]["pending"])
     return sorted(named, key=lambda issue: int(issue[1:]))
@@ -911,9 +925,12 @@ def judge_scan(
     env: dict,
 ) -> Verdict:
     """R13: the proxy scan, read by its row lines, because `check all` exits VOID over RED. A
-    pending issue that is closed fails it (SPEC-054 R4)."""
+    pending issue that is closed fails it (SPEC-054 R4). A red row the entry names under
+    `expected_red` is expected, as a pack's is (R12), and is stale once its issue is closed or it no
+    longer reads RED (SPEC-123)."""
     verdict = Verdict(SCAN, "scan", stale=closed_expectations(expectation, closed))
     pending = expectation.get("pending")
+    expected = expectation.get("expected_red", {})
     if not script.is_file():
         verdict.mark, verdict.detail = "FAIL", f"the checkout has no {script.name}"
         return verdict
@@ -945,11 +962,24 @@ def judge_scan(
         return verdict
     green, red, void = summary
     counts = f"{settings} settings document(s); blocking {green} green, {red} red, {void} void"
-    verdict.unexpected = sorted(ident for ident, word in rows.items() if word == "RED")
-    if verdict.unexpected or red:
+    reds = sorted(ident for ident, word in rows.items() if word == "RED")
+    verdict.unexpected = [ident for ident in reds if ident not in expected]
+    verdict.expected = [ident for ident in reds if ident in expected]
+    for ident, issue in sorted(expected.items()):
+        if issue not in closed and rows.get(ident) != "RED":
+            verdict.stale.append(f"{ident} ({issue})")
+    if verdict.expected:
+        counts += f" ({len(verdict.expected)} expected)"
+    if verdict.unexpected or red > len(verdict.expected):
         verdict.mark, verdict.detail = "FAIL", counts
     elif settings == 0 and pending:
         verdict.mark, verdict.detail = "pending", f"pending {pending}: {counts}"
+    elif settings == 0 and expected:
+        named = ", ".join(sorted(set(expected.values())))
+        verdict.mark = "FAIL"
+        verdict.detail = (
+            f"VOID: {counts}; expected_red names {named}, but no settings document was examined"
+        )
     elif settings == 0:
         verdict.mark, verdict.detail = "FAIL", f"VOID: {counts}, and the wiring names no issue"
     elif pending:
