@@ -68,11 +68,12 @@ R6. Before any call, each untrusted input (the memory and the cards, the new wor
        the `retrieval` and `glosses` sections are lists by their packs' contracts;
     6. contract: persona-core's `output-contract`.
 R7. A topic whose first attempt fails a gate is regenerated once, with a repair instruction that
-    names the failed gate and its finding lines and never quotes the rejected text: a finding line
-    that carries a fence marker, repeats a rejected line of 16 characters or more, or quotes a span
-    (`'...'` or `"..."`) found in the rejected text, written with an escape (`\`, as Python's `repr`
-    writes a character it cannot print), or holding a quote character, is left out: a span the repair
-    cannot prove is its own words never reaches the trusted repair slot. A second failure
+    names the failed gate and never quotes the rejected text. An own gate's finding lines are named:
+    a finding line that carries a fence marker, repeats a rejected line of 16 characters or more, or
+    quotes a span (`'...'` or `"..."`) found in the rejected text or holding a backslash or a quote
+    character, is left out. A pack gate's finding lines are never named: the repair names the check
+    that refused, in the engine's own words. The rule that lost leaves out any pack line that holds a
+    colon: it does not fail closed on probe output that is not in the protocol's shape. A second failure
     stores nothing, writes nothing and ends the topic `failed` with `gate_failed:<gate>`. An
     unavailable verdict from a configured route ends the topic `failed` with
     `agent_unavailable:<cause>`, with no retry; an absent route is R16's, never a failure.
@@ -171,8 +172,9 @@ A19: cargo test -p deck-streak-coordination --test readings_generate -- --exact 
 | A23 | a finding that quotes a new word is left out of the repair instruction | `a_finding_quoting_a_new_word_is_dropped_from_the_repair` |
 | A24 | each untrusted input is checked before any call, and a refused input ends the topic with no call and no attempt | `an_untrusted_input_is_checked_before_any_call` |
 | A25 | an unclosed tag ends the walk of `strip_tags` and leaves the rest of the text as it is | `an_unclosed_tag_leaves_the_rest_of_the_text_as_it_is` |
-| A26 | no escape form of a new word reaches the trusted repair slot: each of eleven forms a probe's `repr` prints (`\xNN`, `\uNNNN`, `\UNNNNNNNN`, `\n`, `\r`, `\t`, `\\` and a quote character) is left out, and a finding that quotes nothing of the rejected text is kept | `no_escape_form_of_a_new_word_reaches_the_trusted_repair_slot` |
+| A26 | the repair slot drops an escaped span, and a finding that quotes nothing of the rejected text is kept | `no_escape_form_of_a_new_word_reaches_the_trusted_repair_slot` |
 | A27 | a new word is checked with the cards before any call, and a refused word ends the topic on the contract gate with no call | `a_new_word_is_checked_before_any_call` |
+| A28 | a pack gate's failure reaches the repair only as the name of the check that refused | `a_pack_finding_never_reaches_the_trusted_repair_slot` |
 
 ```acceptance
 A20: cargo test -p deck-streak-coordination --test readings_trust -- --exact a_new_word_reaches_the_model_only_inside_the_fence
@@ -183,14 +185,17 @@ A24: cargo test -p deck-streak-coordination --test readings_generate -- --exact 
 A25: cargo test -p deck-streak-readings --test coverage -- --exact an_unclosed_tag_leaves_the_rest_of_the_text_as_it_is
 A26: cargo test -p deck-streak-coordination --test readings_trust -- --exact no_escape_form_of_a_new_word_reaches_the_trusted_repair_slot
 A27: cargo test -p deck-streak-coordination --test readings_generate -- --exact a_new_word_is_checked_before_any_call
+A28: cargo test -p deck-streak-readings --test repair -- --exact a_pack_finding_never_reaches_the_trusted_repair_slot
 ```
 
-The class behind A26 is one rule inside `repair::quotes()`: a finding is dropped when any quoted span
-is found in the rejected text or cannot be proved to be the probe's own words, that is, holds a
-backslash or a quote character. The eleven forms of A26 were generated from what Python's `repr` can
-print for one word (a no-break space, a control character, an ideographic space, a line separator, a
-code point above U+FFFF, a newline, a return, a tab, a backslash and each quote character), and each
-finding is the line the language-mentors probe printed for that word. Two more tests pin the rule:
+The class behind A28 is one rule, provenance: a pack gate's failure reaches the repair only as the
+engine's words naming the check, because a probe prints the model's text folded, joined or unquoted,
+so no rule about spans can prove who wrote one. `every_pack_class_reaches_the_repair_only_as_the_name_of_the_check`
+in `crates/readings/tests/repair.rs` generates its members when it runs: every pack class the engine
+configures, read from `ai-safety.json` and from the classes `first_failure` ranks, against hostile
+lines, each under the class's own name and under a forged one.
+
+Two more tests pin the rule that the repair slot drops an escaped span:
 `a_finding_quoting_an_escaped_span_is_dropped` in `crates/readings/tests/repair.rs` and
 `a_finding_quoting_an_escaped_new_word_is_dropped_from_the_repair` in `readings_trust.rs`.
 
@@ -254,7 +259,7 @@ finding is the line the language-mentors probe printed for that word. Two more t
 - It pages nobody for a failed topic; the health check does (#36).
 - It feeds no leech or drill grade into the prompt (#133, #136).
 - It shows no reading on any surface (#37, #38).
-- It widens the input class that checks a new word from the characters of category Cf to an allow-list of characters: the repair drops a span it cannot prove is its own, so the leak is closed at the trusted slot (#437).
+- It does not change the input class that checks a new word (#437).
 - It enforces no rule that judges the drill or the practice duty: those rules examine nothing on reading goldens, and the deliveries that add those goldens enforce them (#46 for the drill coach, #52 for practice questions).
 
 ## 6. Risks

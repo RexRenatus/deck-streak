@@ -242,7 +242,34 @@
         "        || quoted_spans(finding).any(is_unproven)",
         "        || quoted_spans(finding).any(|span| span.is_empty())",
         "repair::a_finding_quoting_an_escaped_span_is_dropped",
-        "a finding whose quoted span carries an escape or a quote character never reaches the repair, since a probe's repr escapes what the rejected text holds raw (SPEC-046 R7)"
+        "the repair slot drops an escaped span (SPEC-046 R7)"
+      ],
+      [
+        "S04628-A-PACK-FINDING-NEVER-REACHES-THE-REPAIR",
+        "readings",
+        "src/coverage.rs",
+        "    vec![format!(\"the {} check refused the reading\", pack.class)]",
+        "    pack.findings.clone()",
+        "repair::a_pack_finding_never_reaches_the_trusted_repair_slot",
+        "a pack gate's failure carries the engine's words naming the check, never a probe's finding line (SPEC-046 R7)"
+      ],
+      [
+        "S04629-A-SPAN-HOLDING-A-QUOTE-IS-DROPPED",
+        "readings",
+        "src/repair.rs",
+        "    span.contains(['\\\\', '\\'', '\"'])",
+        "    span.contains(['\\\\'])",
+        "repair::a_finding_quoting_a_span_that_holds_a_quote_is_dropped",
+        "the repair slot drops an escaped span (SPEC-046 R7)"
+      ],
+      [
+        "S04630-A-CONTRACT-GATE-FAILURE-NAMES-THE-CHECK",
+        "readings",
+        "src/coverage.rs",
+        "        findings: named(p),",
+        "        findings: p.findings.clone(),",
+        "repair::every_pack_class_reaches_the_repair_only_as_the_name_of_the_check",
+        "the contract gate's failure carries the engine's words naming the check, for every configured pack class (SPEC-046 R7, A28)"
       ]
     ]
   }
