@@ -98,7 +98,9 @@ fn raw_string_len(rest: &str) -> Option<usize> {
     )
 }
 
-/// The length of the character literal `rest` opens, or 1 when the quote is a lifetime's.
+/// The length of the character literal `rest` opens, or 1 when the quote is a lifetime's. An
+/// escape's closing quote is looked for after the escaped character, so `'\''` is four bytes long
+/// and its middle quote closes nothing.
 fn char_literal_len(rest: &str) -> usize {
     let mut chars = rest[1..].chars();
     match chars.next() {
@@ -108,10 +110,9 @@ fn char_literal_len(rest: &str) -> usize {
     }
 }
 
-/// `source` without its prose: every comment, in any form, that holds no double quote. Such a
-/// comment can neither run a statement nor quote the tested one, so the word count does not read
-/// it, and a comment that calls the prune one delete writes no second keyword. A comment that
-/// quotes is kept: a quoted copy of the statement beside a changed prune is still read.
+/// `source` as the compiler reads it: every comment, in any form and whatever it holds, is gone.
+/// A comment runs nothing, so it is never the statement that runs and writes no keyword: a copy
+/// of the statement moved into one, quoted or not, leaves the code without it.
 fn code_of(source: &str) -> String {
     let mut code = String::new();
     let mut from = 0;
@@ -128,6 +129,13 @@ fn code_of(source: &str) -> String {
     code
 }
 
+/// How many times the code of `source` hands the tested statement, quoted whole, to
+/// `sqlx::query!`: a copy in a comment, a constant, a doc attribute or any other literal is not
+/// the statement that runs.
+fn statements_run_in(source: &str) -> usize {
+    source.matches(&format!("\"{PRUNE}\"")).count()
+}
+
 /// How many times `source` writes a delete from the run table, quoted or not, code or comment.
 fn delete_statements_in(source: &str) -> usize {
     normalized(source)
@@ -136,12 +144,14 @@ fn delete_statements_in(source: &str) -> usize {
 }
 
 /// What is wrong with a prune's source text: an empty list when it holds exactly one delete
-/// statement and that statement is the tested one, quoted whole exactly once.
+/// statement and that statement is the tested one, handed whole to `sqlx::query!` exactly once.
 fn prune_pin_problems(source: &str) -> Vec<String> {
     let mut problems = Vec::new();
-    let quoted = source.matches(&format!("\"{PRUNE}\"")).count();
-    if quoted != 1 {
-        problems.push(format!("the statement is quoted {quoted} times, not once"));
+    let run = statements_run_in(source);
+    if run != 1 {
+        problems.push(format!(
+            "the code hands the statement to sqlx::query! {run} times, not once"
+        ));
     }
     let statements = delete_statements_in(source);
     if statements != 1 {
@@ -160,7 +170,7 @@ fn prune_pin_problems(source: &str) -> Vec<String> {
 
 /// How many times `source` writes `delete` as a word of its own, in any case, whatever follows
 /// it: a table spelled `main.agent_runs` or `"agent_runs"`, or an SQL comment after the keyword,
-/// still counts, where `delete_statements_in` sees only the one spelling. Prose is not read.
+/// still counts, where `delete_statements_in` sees only the one spelling. No comment is read.
 fn delete_keywords_in(source: &str) -> usize {
     let lower = code_of(source).to_lowercase();
     let bytes = lower.as_bytes();
@@ -313,27 +323,43 @@ fn a_prune_spelled_around_the_keyword_scan_beside_a_quoted_copy_is_refused() {
         prune_pin_problems(&a_good_prune_source()),
         Vec::<String>::new()
     );
-    // Each decoy keeps the tested statement quoted once in a comment and runs a prune the index
-    // cannot seek, spelled so that the plain statement text never appears in it: the table is
-    // schema-qualified or quoted, split across two literals, or an SQL comment sits between the
-    // keywords.
+    // Each decoy keeps the tested statement quoted once, in a comment or handed to a
+    // `sqlx::query!` that never runs, and runs a prune the index cannot seek, spelled so that the
+    // plain statement text never appears in it: the table is schema-qualified or quoted, split
+    // across two literals, or an SQL comment sits between the keywords. Beside the copy that is
+    // handed to `sqlx::query!`, only the word count sees the prune that runs.
+    let copies = [
+        format!("// \"{PRUNE}\""),
+        format!("let _unused = sqlx::query!(\"{PRUNE}\", cutoff);"),
+    ];
     let spellings = [
         format!("DELETE FROM main.{TABLE} WHERE created_at + 0 < ?1"),
         format!("DELETE FROM \\\"{TABLE}\\\" WHERE created_at + 0 < ?1"),
         "DELETE FROM agent\" + \"_runs WHERE created_at + 0 < ?1".to_owned(),
         format!("DELETE/**/FROM {TABLE} WHERE created_at + 0 < ?1"),
     ];
-    for spelling in spellings {
-        let decoy = format!("// \"{PRUNE}\"\nlet done = sqlx::query!(\"{spelling}\", cutoff);");
-        assert_eq!(
-            decoy.matches(&format!("\"{PRUNE}\"")).count(),
-            1,
-            "the decoy does not quote the tested statement once: {decoy}"
+    for spelling in &spellings {
+        for copy in &copies {
+            let decoy = format!("{copy}\nlet done = sqlx::query!(\"{spelling}\", cutoff);");
+            assert_eq!(
+                decoy.matches(&format!("\"{PRUNE}\"")).count(),
+                1,
+                "the decoy does not quote the tested statement once: {decoy}"
+            );
+            let problems = prune_pin_problems(&decoy);
+            assert!(
+                !problems.is_empty(),
+                "the decoy is not refused: {spelling}: {problems:?}"
+            );
+        }
+        let beside_a_query = format!(
+            "{}\nlet done = sqlx::query!(\"{spelling}\", cutoff);",
+            copies[1]
         );
-        let problems = prune_pin_problems(&decoy);
-        assert!(
-            !problems.is_empty(),
-            "the decoy is not refused: {spelling}: {problems:?}"
+        assert_eq!(
+            prune_pin_problems(&beside_a_query),
+            ["the source writes the word delete 2 times, not once"],
+            "the word count did not refuse the prune beside a copy handed to sqlx::query!: {spelling}"
         );
     }
 }
@@ -341,11 +367,12 @@ fn a_prune_spelled_around_the_keyword_scan_beside_a_quoted_copy_is_refused() {
 #[test]
 fn prose_that_names_the_delete_beside_the_prune_is_not_counted() {
     let good = a_good_prune_source();
-    // A comment or doc line that names the prune in words and holds no double quote is prose: it
-    // runs nothing and quotes nothing, so the good source stays good beside it.
+    // A comment or doc line that names the prune in words is prose, whatever it holds: it runs
+    // nothing, so the good source stays good beside it, a quote in it included.
     for prose in [
         "/// The delete reads `created_at` through its index.",
         "// One DELETE, so the index on created_at is used.",
+        "// The \"prune\" is one delete, through the index on created_at.",
     ] {
         assert_eq!(
             prune_pin_problems(&format!("{prose}\n{good}")),
@@ -360,14 +387,15 @@ fn prose_that_names_the_delete_beside_the_prune_is_not_counted() {
         ["the source holds 2 delete statements, not one"],
         "a commented copy of the statement was not refused as a second statement"
     );
-    // A comment line that quotes is read, so its copy beside a changed prune is still refused.
+    // A comment that quotes the statement is not the statement that runs, so beside a changed
+    // prune the code hands the tested statement to nothing.
     let decoy = format!(
         "// \"{PRUNE}\"\nlet done = sqlx::query!(\"DELETE FROM main.{TABLE} WHERE created_at + 0 < ?1\", cutoff);"
     );
     let problems = prune_pin_problems(&decoy);
     assert!(
         !problems.is_empty(),
-        "a quoting comment was read as prose: {problems:?}"
+        "a quoting comment was read as the prune: {problems:?}"
     );
 }
 
@@ -389,8 +417,15 @@ fn every_comment_form(text: &str) -> Vec<String> {
 #[test]
 fn a_delete_word_in_any_comment_form_is_not_counted_but_the_statement_in_one_is() {
     let good = a_good_prune_source();
-    let forms = every_comment_form("The delete reads created_at through its index.");
-    assert_eq!(forms.len(), 8, "the population changed");
+    // Two prose texts, one holding a quote, in each of the eight forms: none is read.
+    let forms: Vec<String> = [
+        "The delete reads created_at through its index.",
+        "The \"prune\" is one delete, through the index on created_at.",
+    ]
+    .into_iter()
+    .flat_map(every_comment_form)
+    .collect();
+    assert_eq!(forms.len(), 16, "the population changed");
     for comment in &forms {
         assert_eq!(
             prune_pin_problems(&format!("{comment}\n{good}")),
@@ -398,13 +433,16 @@ fn a_delete_word_in_any_comment_form_is_not_counted_but_the_statement_in_one_is(
             "a benign delete word in a comment was counted: {comment}"
         );
     }
-    // The statement itself inside each form is a second delete statement, and only that.
-    for comment in every_comment_form(PRUNE) {
-        assert_eq!(
-            prune_pin_problems(&format!("{comment}\n{good}")),
-            ["the source holds 2 delete statements, not one"],
-            "a commented copy of the statement was not refused: {comment}"
-        );
+    // The statement itself inside each form, bare or quoted, is a second delete statement, and
+    // only that.
+    for text in [PRUNE.to_owned(), format!("\"{PRUNE}\"")] {
+        for comment in every_comment_form(&text) {
+            assert_eq!(
+                prune_pin_problems(&format!("{comment}\n{good}")),
+                ["the source holds 2 delete statements, not one"],
+                "a commented copy of the statement was not refused: {comment}"
+            );
+        }
     }
     // Comment markers inside a string or a character literal open no comment: a prune written
     // after them on the same line is still read.
@@ -415,6 +453,88 @@ fn a_delete_word_in_any_comment_form_is_not_counted_but_the_statement_in_one_is(
         assert!(
             !prune_pin_problems(&decoy).is_empty(),
             "a comment marker in a literal hid a prune: {opener}"
+        );
+    }
+}
+
+/// Every place the tested statement can be written without being the statement that runs: each
+/// comment form, bare and quoted, and each literal in code that `sqlx::query!` does not take.
+fn every_copy_that_does_not_run() -> Vec<String> {
+    let quoted = format!("\"{PRUNE}\"");
+    let mut copies = every_comment_form(PRUNE);
+    copies.extend(every_comment_form(&quoted));
+    copies.extend([
+        format!("const _PRUNE: &str = {quoted};"),
+        format!("static _PRUNE: &str = {quoted};"),
+        format!("#[doc = {quoted}]"),
+        format!("let _prune = {quoted};"),
+        format!("let _prune = concat!({quoted});"),
+    ]);
+    copies
+}
+
+#[test]
+fn a_copy_of_the_statement_that_does_not_run_is_not_the_tested_statement() {
+    assert_eq!(
+        prune_pin_problems(&a_good_prune_source()),
+        Vec::<String>::new()
+    );
+    // Prunes that run a statement the source does not write: one from another module, one from
+    // a file, and one read by `query_file!`. Each can skip the index while a copy stays behind.
+    let runs = [
+        "let done = sqlx::query(crate::prune_sql::PRUNE).bind(cutoff);",
+        "let done = sqlx::query(include_str!(\"../queries/prune.sql\")).bind(cutoff);",
+        "let done = sqlx::query_file!(\"queries/prune.sql\", cutoff);",
+    ];
+    let copies = every_copy_that_does_not_run();
+    assert_eq!(copies.len(), 21, "the population changed");
+    let none = "the code hands the statement to sqlx::query! 0 times, not once".to_owned();
+    for run in runs {
+        for copy in &copies {
+            let problems = prune_pin_problems(&format!("{copy}\n{run}"));
+            assert!(
+                problems.contains(&none),
+                "a copy that does not run was read as the prune: {copy}: {problems:?}"
+            );
+        }
+    }
+}
+
+#[test]
+fn no_character_literal_hides_a_second_statement_in_the_string_after_it() {
+    let good = a_good_prune_source();
+    // A string after the literal holds comment markers around a second statement. A literal the
+    // scan measures wrongly lets that string's quote open a string outside it, and the markers
+    // then hide the statement from the word count.
+    let hidden = format!(
+        "sqlx::query(\"/* /* */ DELETE FROM main.{TABLE} WHERE created_at + 0 < ?1 -- */\");"
+    );
+    let literals = [
+        "'\"'",
+        "'\\''",
+        "'\\\"'",
+        "'\\\\'",
+        "b'\\''",
+        "b'\"'",
+        "'\\x27'",
+        "'\\x22'",
+        "'\\u{27}'",
+        "'\\u{22}'",
+        "'\\n'",
+        "'/'",
+        "'*'",
+    ];
+    for literal in literals {
+        let before = format!("let _ = ({literal},'\"');\n{good}");
+        assert_eq!(
+            prune_pin_problems(&before),
+            Vec::<String>::new(),
+            "the literal alone was refused: {literal}"
+        );
+        assert_eq!(
+            prune_pin_problems(&format!("{before}\n{hidden}")),
+            ["the source writes the word delete 2 times, not once"],
+            "a character literal hid a second statement: {literal}"
         );
     }
 }

@@ -44,18 +44,75 @@ fn without_raw_prefixes(text: &str) -> String {
     text.replace("r#", "")
 }
 
-/// Whether `line` declares the verdict enum, whichever way its name is spelled.
-fn declares_the_verdict(line: &str) -> bool {
-    without_raw_prefixes(line.trim()) == "pub enum Verdict {"
+/// The byte offsets at which `source` declares the verdict enum: every word `enum` followed,
+/// across any whitespace or comment, by the name `Verdict`, its raw prefix removed. Every line is
+/// read, comments and strings included, so a copy anywhere, compiled out or not, and an enum
+/// spelled any way (a wider gap under `#[rustfmt::skip]`, a line break or a comment between the
+/// words, another visibility) each count: no copy can stand in for the enum that compiles.
+fn declarations_in(source: &str) -> Vec<usize> {
+    let mut at = 0;
+    let mut found = Vec::new();
+    for line in source.split_inclusive('\n') {
+        if without_raw_prefixes(line.trim()) == "pub enum Verdict {" {
+            found.push(at + line.find("enum").unwrap_or(0));
+        }
+        at += line.len();
+    }
+    found
 }
 
-/// How many lines of `source` declare the verdict enum: a copy above the real one, inside a
-/// comment or a string, or compiled out, would lend the real enum the copy's attributes.
+/// The identifier `rest` starts with once whitespace and comments are skipped, its raw prefix
+/// removed, or `None` when `rest` continues the word before it.
+fn name_after(rest: &str) -> Option<&str> {
+    if rest.starts_with(|c: char| c.is_alphanumeric() || c == '_') {
+        return None;
+    }
+    let mut rest = rest.trim_start();
+    loop {
+        if let Some(line) = rest.strip_prefix("//") {
+            rest = line.find('\n').map_or("", |n| &line[n..]).trim_start();
+        } else if rest.starts_with("/*") {
+            rest = rest[block_comment_len(rest)..].trim_start();
+        } else {
+            break;
+        }
+    }
+    let rest = rest.strip_prefix("r#").unwrap_or(rest);
+    let len = rest
+        .find(|c: char| !(c.is_alphanumeric() || c == '_'))
+        .unwrap_or(rest.len());
+    Some(&rest[..len])
+}
+
+/// The length of the block comment `text` opens, nested blocks included.
+fn block_comment_len(text: &str) -> usize {
+    let bytes = text.as_bytes();
+    let (mut depth, mut end) = (0_usize, 0);
+    while end < bytes.len() {
+        if bytes[end..].starts_with(b"/*") {
+            depth += 1;
+            end += 2;
+        } else if bytes[end..].starts_with(b"*/") {
+            depth = depth.saturating_sub(1);
+            end += 2;
+            if depth == 0 {
+                break;
+            }
+        } else {
+            end += 1;
+        }
+    }
+    end
+}
+
+/// How many times `source` declares the verdict enum.
 fn declarations_of(source: &str) -> usize {
-    source
-        .lines()
-        .filter(|line| declares_the_verdict(line))
-        .count()
+    declarations_in(source).len()
+}
+
+/// Whether `attribute` is `#[must_use]`, its raw prefix removed.
+fn is_must_use(attribute: &str) -> bool {
+    attribute == "#[must_use]"
 }
 
 /// Whether `attribute` is conditional: the last segment of its path, raw prefix removed, is `cfg`
@@ -75,13 +132,13 @@ fn is_conditional(attribute: &str) -> bool {
     )
 }
 
-/// The attribute lines directly above `pub enum Verdict` in `source`.
+/// The attribute lines directly above the first declaration of the verdict enum in `source`.
 fn attributes_of(source: &str) -> Vec<String> {
-    let lines: Vec<&str> = source.lines().collect();
-    let at = lines
-        .iter()
-        .position(|line| declares_the_verdict(line))
+    let first = *declarations_in(source)
+        .first()
         .expect("the verdict enum is declared in the source");
+    let lines: Vec<&str> = source.lines().collect();
+    let at = source[..first].matches('\n').count();
     lines[..at]
         .iter()
         .rev()
@@ -113,7 +170,7 @@ fn the_verdict_type_is_must_use() {
         "the attributes of `pub enum Verdict` were not read: {attributes:?}"
     );
     assert!(
-        attributes.iter().any(|a| a == "#[must_use]"),
+        attributes.iter().any(|a| is_must_use(a)),
         "`pub enum Verdict` lost its #[must_use]: {attributes:?}"
     );
     assert!(
@@ -248,4 +305,66 @@ fn every_spelling_of_the_declaration_and_of_a_conditional_attribute_is_read() {
         }
     }
     assert_eq!(members, 16, "the population changed");
+}
+
+/// Every spelling of the enum that compiles: plain, raw, a wider gap, a line break or a comment
+/// between the words (each under `#[rustfmt::skip]`, which keeps them), and another visibility.
+const LIVE: [&str; 6] = [
+    "pub enum Verdict {",
+    "pub enum r#Verdict {",
+    "#[rustfmt::skip]\npub  enum Verdict {",
+    "#[rustfmt::skip]\npub enum\nVerdict {",
+    "#[rustfmt::skip]\npub enum /* the verdict */ Verdict {",
+    "pub(crate) enum Verdict {",
+];
+
+/// Every place a copy of the enum carrying `#[must_use]` can stand above the enum that compiles:
+/// compiled out by its own `cfg` (plain, nested in a `cfg_attr`, holding a quote or a comment),
+/// by a `cfg` above a line the attribute scan stops at (a comment, a blank line, a doc
+/// attribute), by a `cfg` on an enclosing module or applied by a macro; inside a block comment or
+/// line comments; and inside a string.
+fn every_copy_of_the_enum() -> Vec<String> {
+    let copy = "#[must_use]\n#[derive(Clone)]\npub enum Verdict {\n    A,\n}";
+    vec![
+        format!("#[cfg(any())]\n{copy}"),
+        format!("#[cfg_attr(all(), cfg(any()))]\n{copy}"),
+        format!("#[cfg(target_os = \"none\")]\n{copy}"),
+        format!("#[cfg/**/(any())]\n{copy}"),
+        format!("#[cfg(any())]\n// the scan stops here\n{copy}"),
+        format!("#[cfg(any())]\n\n{copy}"),
+        format!("#[cfg(any())]\n#[doc = \"a copy\"]\n{copy}"),
+        format!("#[cfg(any())]\nmod dead {{\n{copy}\n}}"),
+        format!(
+            "macro_rules! dead {{\n    ($($item:tt)*) => {{ #[cfg(any())] $($item)* }};\n}}\ndead! {{\n{copy}\n}}"
+        ),
+        format!("/*\n{copy}\n*/"),
+        copy.lines()
+            .fold(String::new(), |text, line| text + "// " + line + "\n"),
+        format!("const _COPY: &str = \"{}\";", copy.replace('\n', " ")),
+    ]
+}
+
+#[test]
+fn every_copy_of_the_enum_beside_every_spelling_of_it_is_a_second_declaration() {
+    let copies = every_copy_of_the_enum();
+    assert_eq!(copies.len(), 12, "the copies changed");
+    let mut members = 0;
+    for live in LIVE {
+        for must_use in ["#[must_use]", "#[r#must_use]"] {
+            let alone = format!("{must_use}\n#[derive(Clone)]\n{live}");
+            assert_eq!(declarations_of(&alone), 1, "not declared: {alone}");
+            let read = attributes_of(&alone);
+            assert!(read.iter().any(|a| is_must_use(a)), "{alone}: {read:?}");
+        }
+        for copy in &copies {
+            members += 1;
+            let source = format!("{copy}\n#[derive(Clone)]\n{live}");
+            assert_eq!(
+                declarations_of(&source),
+                2,
+                "a copy stood in for the enum: {source}"
+            );
+        }
+    }
+    assert_eq!(members, 72, "the population changed");
 }
