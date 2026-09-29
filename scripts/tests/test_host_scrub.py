@@ -1584,6 +1584,95 @@ class Axes(unittest.TestCase):
             self.assertEqual(plan_tool.measure(venv)[0], digest)
             self.assertIsNotNone(apply_tool.check_item(item, [], apply_tool.Runner()))
 
+    def test_an_item_that_is_or_holds_a_mount_point_is_refused(self):
+        # A bind mount shares its device with the tree around it, so the device check cannot see
+        # it. The mount table is read through one seam (`read_mountinfo`) and faked here.
+        sys.path.insert(0, str(TOOLS))
+        try:
+            import apply as apply_tool
+            import plan as plan_tool
+        finally:
+            sys.path.remove(str(TOOLS))
+        real_reader = plan_tool.read_mountinfo
+
+        def table(*points):
+            rows = [
+                f"{30 + n} 1 8:1 / {point} rw,relatime shared:1 - ext4 /dev/x rw"
+                for n, point in enumerate(points)
+            ]
+            return "\n".join(["20 1 8:1 / / rw - ext4 /dev/x rw"] + rows) + "\n"
+
+        def refused(item, candidate, mounts):
+            plan_tool.read_mountinfo = lambda: mounts
+            try:
+                skipped = []
+                listed = plan_tool.items_of([candidate], skipped)
+                try:
+                    apply_tool.check_item(item, [], apply_tool.Runner())
+                except apply_tool.Refusal as refusal:
+                    return listed, skipped, str(refusal)
+                return listed, skipped, None
+            finally:
+                plan_tool.read_mountinfo = real_reader
+
+        with tempfile.TemporaryDirectory() as scratch:
+            host = Host(scratch)
+            venv = str(host.apps / "idle" / ".venv")
+            spaced = host.apps / "idle" / "old env"
+            write(spaced / "lib" / "site.py", 300)
+            single = host.apps / "idle" / "one.bak"
+            write(single, 200)
+            rule = {"name": "idle-environments", "reason": "no unit names it"}
+            cases = {}
+            for path in (venv, str(spaced), str(single)):
+                digest, _ = plan_tool.measure(path)
+                cases[path] = (
+                    {"id": "i001", "class": "venv", "path": path, "digest": digest},
+                    {"class": "venv", "rule": rule, "path": path},
+                )
+            # A control: mount points that are neither the item nor under it change nothing.
+            item, candidate = cases[venv]
+            elsewhere = table(str(host.apps / "idle"), str(host.apps / "named" / ".venv"))
+            with self.subTest("a control with none of them under the item"):
+                listed, skipped, refusal = refused(item, candidate, elsewhere)
+                self.assertEqual([entry["path"] for entry in listed], [venv], skipped)
+                self.assertIsNone(refusal)
+            with self.subTest("an item that is a mount point"):
+                listed, skipped, refusal = refused(item, candidate, table(venv))
+                self.assertEqual(listed, [])
+                self.assertEqual([entry["path"] for entry in skipped], [venv])
+                self.assertIn("mount", skipped[0]["reason"])
+                self.assertIsNotNone(refusal)
+                self.assertIn("mount", refusal)
+            with self.subTest("an item that holds a mount point"):
+                listed, skipped, refusal = refused(item, candidate, table(venv + "/lib"))
+                self.assertEqual(listed, [])
+                self.assertEqual([entry["path"] for entry in skipped], [venv])
+                self.assertIsNotNone(refusal)
+                self.assertIn("mount", refusal)
+            with self.subTest("a mount point that only shares the item's name as a prefix"):
+                listed, skipped, refusal = refused(item, candidate, table(venv + "-other"))
+                self.assertEqual([entry["path"] for entry in listed], [venv], skipped)
+                self.assertIsNone(refusal)
+            with self.subTest("an escaped mount point is read as the path it names"):
+                item, candidate = cases[str(spaced)]
+                escaped = str(spaced).replace(" ", "\\040") + "/lib"
+                listed, skipped, refusal = refused(item, candidate, table(escaped))
+                self.assertEqual(listed, [])
+                self.assertEqual([entry["path"] for entry in skipped], [str(spaced)])
+                self.assertIsNotNone(refusal)
+            with self.subTest("a file mounted over a file"):
+                item, candidate = cases[str(single)]
+                listed, skipped, refusal = refused(item, candidate, table(str(single)))
+                self.assertEqual(listed, [])
+                self.assertEqual([entry["path"] for entry in skipped], [str(single)])
+                self.assertIsNotNone(refusal)
+            with self.subTest("the same items are listed and pass when nothing is mounted"):
+                for path, (item, candidate) in cases.items():
+                    listed, skipped, refusal = refused(item, candidate, table())
+                    self.assertEqual([entry["path"] for entry in listed], [path], skipped)
+                    self.assertIsNone(refusal)
+
 
 class Health(unittest.TestCase):
     def test_a_health_check_red_after_an_apply_stops_the_scrub(self):

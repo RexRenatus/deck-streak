@@ -85,6 +85,16 @@ def conflict(path: str, protected: list[str]) -> str | None:
     return None
 
 
+def read_mountinfo() -> str:
+    """The kernel's table of mounts, through one seam so a test can fake it (R7)."""
+    return ""
+
+
+def mounted(path: str) -> str | None:
+    """The mount point `path` is or holds, or None."""
+    return None
+
+
 def names(text: str, path: str) -> bool:
     """Whether a unit's setting `text` names `path`, or anything under it, as a whole path."""
     return re.search(r"(?<![\w.])" + re.escape(path) + r"(?=$|[/\s;\"'])", text) is not None
