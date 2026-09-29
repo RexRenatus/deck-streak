@@ -7,7 +7,7 @@
  * `src/routes`, so a new screen is audited from the day it exists. The module imports nothing, so
  * Playwright loads it outside SvelteKit.
  */
-export const ROUTES = ['/', '/about', '/score'] as const;
+export const ROUTES = ['/', '/about', '/score', '/level'] as const;
 
 /** A path the route table lists. */
 export type RoutePath = (typeof ROUTES)[number];

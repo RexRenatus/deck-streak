@@ -17,7 +17,19 @@
 #![deny(unused_must_use)]
 #![warn(missing_docs, clippy::all)]
 
+pub mod bonus;
+pub mod buffs;
+pub mod consistency;
 pub mod data_rights;
+pub mod economy_config;
 pub mod grant;
 pub mod ledger;
+pub mod level;
+pub mod review_xp;
+pub mod settle;
 pub mod xp;
+
+/// The read side of the settlement, at the crate root: a day's settled rows are what the level view
+/// shows, and reading them is not the write that only the recompute and the owner's correction make
+/// through [`settle::settle`].
+pub use settle::{SettledRow, settled_of_day};

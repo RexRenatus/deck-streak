@@ -873,7 +873,12 @@ class TheBinKillerRunsTheBinarysOwnUnitTests(unittest.TestCase):
             calls.append((command, kwargs["cwd"]))
             return subprocess.CompletedProcess(command, 0, "running 1 test\n", "")
 
-        with mock.patch.object(runner.subprocess, "run", side_effect=record):
+        # The killer runs in its own process group (#366) and the build through `subprocess.run`;
+        # both are recorded, so no real cargo runs and the order is the runner's own.
+        with (
+            mock.patch.object(runner.subprocess, "run", side_effect=record),
+            mock.patch.object(runner, "run_in_own_group", side_effect=record),
+        ):
             run = runner.run_killer(fixture.root, killer, Path("."))
             self.assertIsNone(runner.builds(fixture.root, row, killer, b"x"))
         self.assertEqual((run.selected, run.passed), (1, True))

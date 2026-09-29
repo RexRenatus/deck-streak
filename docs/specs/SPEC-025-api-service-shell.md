@@ -240,3 +240,46 @@ fresh database from two tasks released together, 64 times.
   library's typed errors), both admitted by ADR-003; tokio's `test-util`, `io-util` and `net` and
   tower's `util` are dev features of admitted crates. tower-http is 0.7.1, the current release; the
   layers R4 names keep their API there.
+
+## 8. Amendment, 2026-09-29: a failed lifecycle test leaves no daemon running
+
+Issue 366. Three `deckstreakd api` daemons and one `deckstreakd bot` were found running long after
+the tests that started them.
+
+- **Measured.** A lifecycle test that failed before its stop step left its daemon running when the
+  daemon was silent (no log output, no watchdog): a logging daemon aborts on the broken pipe at its
+  next write, so only a silent one survives. The `bot` role's child, with its output on null,
+  survived a SIGKILL of the test, which runs no destructor.
+- **The guard.** `crates/daemon/tests/lifecycle.rs` owns its child through `Daemon`, which keeps the
+  waiter thread. Its drop sends SIGTERM through the system `kill` (the crates forbid unsafe code and
+  admit no signal dependency), waits on the waiter's message for a bound, sends SIGKILL if the child
+  is still running, and joins the waiter only once the child is reaped. A flag the waiter sets
+  before it reports keeps the signals off a reused pid. Every test that spawns the daemon uses it.
+- **A16.** A test runs a scenario that fails before its stop step through this binary and the
+  harness, and asserts the daemon is gone; the daemon was running before the failure. Fence:
+  `cargo test -p deck-streak-daemon --test lifecycle -- --exact
+  a_failing_lifecycle_test_leaves_no_daemon_running`.
+- **The `bot` case, ruled.** The orchestrator ruled a process-group kill in the row runner's killer
+  run (both kinds; the parse and build-only calls unchanged): the killer leads its own group, a
+  timeout kills the group and reaps, and any other exit kills it while the leader lives. **A17**
+  is its test, with a grandchild that outlives the bound. Chosen against: a parent-death signal
+  set in `pre_exec` (needs `unsafe`), a daemon that watches its parent (a production change), and
+  the drop guard alone (a destructor does not run on SIGKILL). `process_group(0)` was measured
+  sufficient, so no new session is made. Limits: an external SIGKILL of the test alone, a SIGTERM
+  of the runner itself, and a descendant that leaves the group are not covered.
+- **Rows** S02501 to S02505, in `scripts/mutation-rows.d/S02500-S02599.json`: the guard's drop made
+  a no-op, its SIGKILL fallback removed, the group kill removed, the group not created, and the
+  cleanup on an interrupted run removed. One known survivor: the `ProcessLookupError` suppression
+  in `kill_group`, which only tolerates a group that is already gone.
+
+## 9. Acceptance criteria of the 2026-09-29 amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A16 | a lifecycle test that fails before its stop step leaves no daemon running | daemon `lifecycle` test |
+| A17 | a killer that outlives the row runner's bound leaves no descendant running when the run returns | `test_mutation_rows_group` test |
+
+```acceptance
+A16: cargo test -p deck-streak-daemon --test lifecycle -- --exact a_failing_lifecycle_test_leaves_no_daemon_running
+A17: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_group.py -k test_the_grandchild_of_a_timed_out_killer_is_gone_when_the_run_returns
+```
