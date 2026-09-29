@@ -94,8 +94,14 @@ def request_directory_writers(units):
 
 
 def every_unit(root=SYSTEMD):
-    """Every unit file directly under `root`, parsed, by file name."""
-    return {path.name: sections(read(path)) for path in sorted(root.iterdir()) if path.is_file()}
+    """Every unit file under `root` and every drop-in below it, a unit's own or an instance's,
+    parsed, by its path under `root`: systemd merges a drop-in into its unit, so a drop-in that
+    makes the request directory writable makes its unit a writer."""
+    return {
+        path.relative_to(root).as_posix(): sections(read(path))
+        for path in sorted(root.rglob("*"))
+        if path.is_file()
+    }
 
 
 class TheSyncPath(unittest.TestCase):
