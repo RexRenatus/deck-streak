@@ -66,8 +66,7 @@ A28: red at e260627: AssertionError in each of its four subtests, each for its o
 A28: green at 8c87e5b
 A19: red at 8eba7ef: AssertionError: 16 != 0 : deck-streak-identity: 16 unexplained mutant(s) in its row (opening sweep run 36511057164 listed 143, killed 97, equivalent 0, unexplained 16, unviable 30)
 A19: green at a911483
-A26: red at a69e0af: AssertionError: unexpectedly None : deck-streak-agent: 'open' names no pull request and runs (the opening sweep, run 36531093051 at 5216bcf, read listed 146, killed 111, equivalent 0, unexplained 0, unviable 35)
-A26: green at f0e5f02
+A26: not red: the opening sweep, run 36531093051 at 5216bcf, already read listed 146, killed 111, equivalent 0, unexplained 0, unviable 35, so the row had no unexplained mutant to be red for (R16)
 ```
 
 | requirement | the behaviour a wrong implementation would get wrong | criterion |
@@ -236,10 +235,10 @@ A26 is the agent crate's row of section 7. Its opening sweep, run 36531093051 at
 5216bcf), counted 33 of 33 reports whole and read `table: verdict: ok`: listed 146, killed 111,
 equivalent 0, unexplained 0, unviable 35, every shard exiting 0. The crate was never swept before,
 and no mutant of it survives, so no test was added, no record was written and no crate file
-changed. The row's test read red at the base because the row was not delivered (its pull request
-and runs unnamed), and reads green with them named. The closing sweep, run 36531457597 at the
-branch head, counted 33 of 33 whole and read the same figures, with no shard exiting 2 or 3 and no
-`TIMEOUT` line. Rows S05765 to S05769 are unused: four by-hand plantings in `SLOTTED`, one
-emptying the slot list of each of the identity (its bio slot), voice, personality and disclosure
-sections, each failed `a_template_with_a_filled_slot_is_refused`, so the constant's invariant is
-already pinned by an existing test (R20).
+changed. The opening sweep already read unexplained 0, so A26 is disclosed not red, naming that
+run (R16). The closing sweep, run 36531457597 at a69e0af, counted 33 of 33 whole and read the same
+figures, with no shard exiting 2 or 3 and no `TIMEOUT` line. Rows S05765 to S05769 are unused:
+four by-hand plantings in `SLOTTED`, one emptying the slot list of each of the identity (its bio
+slot), voice, personality and disclosure sections, each failed
+`a_template_with_a_filled_slot_is_refused`, so the constant's invariant is already pinned by an
+existing test (R20).
