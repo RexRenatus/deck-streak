@@ -132,6 +132,8 @@ Issue #361. `deploy.sh caddy-remove` checks the Caddyfile it will leave behind t
 so the operator could not tell which deploy step had stopped. Both refusals now print the removal's
 own message, remove the candidate and exit non-zero.
 
+## Acceptance criteria of the 2026-09-29 amendment
+
 | id | criterion | test |
 |---|---|---|
 | A10 | a removal whose adapted configuration is refused exits non-zero, prints `deploy: refused`, leaves the live Caddyfile and the site block unchanged and leaves no candidate file | `test_deploy_scripts.py` `a_removal_whose_adapted_configuration_is_refused_says_so` |
