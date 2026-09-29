@@ -20,9 +20,12 @@ from test_mutation_workflows import VERDICT, WEEKLY, WORKFLOWS, jobs, listed, sh
 WHOLE = 32
 COUNT = "${{ needs.size.outputs.shards }}"
 BOUNDS = "--timeout 300 --build-timeout 600"
-# A command is `cargo mutants` wherever it sits on its line, argument or none; the bounds are
-# matched whole, so a digit or a decimal appended to either value is not the gate's bound.
-COMMAND = re.compile(r"\bcargo\s+mutants\b[^\n]*")
+# A command is `cargo mutants` wherever it sits on its line, argument or none, with a toolchain or
+# a cargo flag before the subcommand, or the `cargo-mutants mutants` binary itself; a second command
+# on the same line is its own command. The bounds are matched whole, so a digit or a decimal
+# appended to either value is not the gate's bound.
+START = r"(?:\bcargo(?:\s+[+-]\S+)*\s+mutants\b|\bcargo-mutants\s+mutants\b)"
+COMMAND = re.compile(START + r"(?:(?!" + START + r")[^\n])*")
 BOUNDED = re.compile(r"(?<![\w-])" + re.escape(BOUNDS) + r"(?![\w.])")
 
 
