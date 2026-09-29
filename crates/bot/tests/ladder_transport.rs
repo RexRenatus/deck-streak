@@ -18,9 +18,7 @@ use std::sync::Arc;
 use deck_streak_bot::transport::SEND_ATTEMPTS;
 use deck_streak_bot::{OwnerChat, SendCounts};
 use deck_streak_kernel::{Db, ManualClock, StudyDay, StudyDayRule, UtcMillis};
-use deck_streak_notifications::ladder::{
-    DICE_EMOJI, REACTION_EMOJI, REVEAL_PAUSE, REVEAL_PLACEHOLDER,
-};
+use deck_streak_notifications::ladder::{DICE_EMOJI, REACTION_EMOJI, REVEAL_PAUSE};
 use deck_streak_notifications::{
     Decision, DedupeKey, Hold, LapseContext, Occasion, Policy, Router, Surface, Tier, owner_message,
 };
@@ -84,7 +82,11 @@ async fn a_reveal_edits_its_placeholder_and_falls_back_to_a_new_message() {
         surface: Surface::Bot,
         tier: Tier::T3,
     };
-    let placeholder = (String::from("sendMessage"), REVEAL_PLACEHOLDER.to_owned());
+    // the predecessor's placeholder, whole
+    let placeholder = (
+        String::from("sendMessage"),
+        String::from("\u{1f4e6} <b>opening\u{2026}</b>"),
+    );
     let edit = (String::from("editMessageText"), TEXT.to_owned());
     let anew = (String::from("sendMessage"), TEXT.to_owned());
 

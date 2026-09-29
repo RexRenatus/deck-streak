@@ -16,7 +16,6 @@ use std::time::Duration;
 use deck_streak_kernel::{Clock, UtcMillis};
 use deck_streak_notifications::ladder::{self, DICE_EMOJI, REACTION_EMOJI};
 use deck_streak_notifications::occasion::StreakFacts;
-use deck_streak_notifications::router::INTENSITY_SETTING;
 use deck_streak_notifications::{
     Decision, DedupeKey, Hold, LapseContext, Occasion, Pushed, Surface, Tier,
 };
@@ -128,7 +127,8 @@ async fn each_tier_makes_the_transport_calls_of_the_parity_golden_in_order() {
         let event = input["event_type"].as_str().expect("an event");
         let rarity = input["rarity"].as_str();
         if let Some(intensity) = input["intensity"].as_str() {
-            harness.set(INTENSITY_SETTING, intensity).await;
+            // the owner's intensity, under the key the predecessor's store and the v9 import use
+            harness.set("celebration_intensity", intensity).await;
         }
         let at_or_above_5 = input["at_or_above_5"].as_u64().expect("a count");
         let at_or_above_4 = input["at_or_above_4"].as_u64().expect("a count");
