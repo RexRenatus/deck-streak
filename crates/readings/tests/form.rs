@@ -5,7 +5,7 @@
 #![allow(clippy::expect_used, clippy::print_stdout)]
 
 use deck_streak_readings::form::{
-    BAND_CEILING_WORDS, BAND_FLOOR_WORDS, Form, WORDS_PER_NEW_CARD, word_target,
+    BAND_CEILING_WORDS, BAND_FLOOR_WORDS, Form, WORDS_PER_NEW_CARD, corpus_json, word_target,
 };
 use deck_streak_readings::seed::{Seed, SeedNote, Track};
 
@@ -129,4 +129,33 @@ fn the_instruction_names_the_sections_and_never_the_rejected_text() {
         instruction.contains("[@n401]"),
         "the instruction names each note's citation key"
     );
+}
+
+#[test]
+fn the_corpus_names_the_subject_and_every_note_as_a_source() {
+    let seed = Seed {
+        card_ids: vec![1, 2],
+        notes: vec![
+            SeedNote {
+                id: 401,
+                text: "A synthetic rule".to_owned(),
+            },
+            SeedNote {
+                id: 402,
+                text: "Another synthetic rule".to_owned(),
+            },
+        ],
+        new_words: Vec::new(),
+    };
+    let corpus: serde_json::Value =
+        serde_json::from_str(&corpus_json(&seed, "law/evidence")).expect("the corpus is JSON");
+    assert_eq!(corpus["schema"], "phx.law.corpus.v1");
+    assert_eq!(corpus["subject"], "law/evidence");
+    let sources = corpus["sources"].as_array().expect("the sources");
+    assert_eq!(sources.len(), 2);
+    assert_eq!(sources[0]["id"], "n401");
+    assert_eq!(sources[0]["title"], "n401");
+    assert_eq!(sources[0]["text"], "A synthetic rule");
+    assert_eq!(sources[1]["id"], "n402");
+    assert_eq!(sources[1]["text"], "Another synthetic rule");
 }

@@ -279,8 +279,9 @@ fn citations(text: &str) -> BTreeSet<String> {
         let after = &rest[open + 2..];
         match after.find(']') {
             Some(close) => {
-                found.insert(after[..close].trim().to_owned());
-                rest = &after[close + 1..];
+                let (key, tail) = after.split_at(close);
+                found.insert(key.trim().to_owned());
+                rest = tail.strip_prefix(']').unwrap_or(tail);
             }
             None => break,
         }

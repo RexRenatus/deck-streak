@@ -177,9 +177,19 @@ impl OutputGate for FakeGate {
     }
 }
 
-struct FakeNotes(BTreeMap<i64, String>);
+struct FakeNotes(BTreeMap<i64, String>, AtomicUsize);
 
 impl NoteTexts for FakeNotes {
+    fn new_words<'a>(
+        &'a self,
+        topic: &'a TopicKey,
+        card_ids: &'a [i64],
+    ) -> PortFuture<'a, Result<Vec<String>, NoteTextsError>> {
+        let _ = (topic, card_ids);
+        self.1.fetch_add(1, Ordering::SeqCst);
+        Box::pin(async { Ok(Vec::new()) })
+    }
+
     fn texts<'a>(
         &'a self,
         note_ids: &'a [i64],
@@ -338,7 +348,7 @@ impl Rig {
             store,
             roster,
             runner: FakeRunner::new(respond),
-            notes: FakeNotes(all),
+            notes: FakeNotes(all, AtomicUsize::new(0)),
             vault: FakeVault::default(),
             taxonomy,
             texts: [
@@ -670,5 +680,17 @@ async fn an_absent_route_ends_every_topic_ai_route_absent_with_no_attempt() {
     assert_eq!(
         runs.last().expect("a run").1.outcome,
         RunOutcome::AiRouteAbsent
+    );
+}
+
+#[tokio::test]
+async fn a_law_topic_never_asks_for_new_words() {
+    let rig = Rig::new(one_topic(), good()).await;
+    let generated = rig.generate(AiRoute::Proxy).await;
+    assert_eq!(state_of(&generated, "law/evidence"), TopicState::Ready);
+    assert_eq!(
+        rig.notes.1.load(Ordering::SeqCst),
+        0,
+        "new words are fetched only for a language topic"
     );
 }

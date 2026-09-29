@@ -12,7 +12,7 @@ mod golden;
 
 use deck_streak_readings::coverage::{
     ANCHOR_MAX_CHARS, ANCHOR_MIN_USABLE_CHARS, Document, OwnChecks, PackFailure, anchor_for_note,
-    check_own, first_failure, is_anchor_usable,
+    check_own, first_failure, is_anchor_usable, normalise,
 };
 use deck_streak_readings::form::Form;
 use deck_streak_readings::seed::{Seed, SeedNote, Track};
@@ -233,7 +233,9 @@ fn a_list_marker_in_the_primer_prose_is_refused() {
             checks.no_list_markers
         );
     }
-    for fine in ["-item", "1.item", "a - b", "12 items", "**bold**"] {
+    for fine in [
+        "-item", "1.item", "a - b", "12 items", "**bold**", "a. item", "a) item",
+    ] {
         let doc = law_doc(|prose| {
             prose[2].1.push_str(&format!("\n{fine}"));
         });
@@ -352,4 +354,36 @@ fn anchors_match_the_parity_golden() {
         );
     });
     assert_eq!(usable.function, "preread.is_anchor_usable");
+}
+
+#[test]
+fn a_seed_of_usable_anchors_carries_no_advisory() {
+    let mut seed = law_seed();
+    seed.notes.truncate(3);
+    let checks = own(&seed, &law_doc(|_| {}));
+    assert_eq!(checks.advisory, None, "every anchor is usable");
+    let checks = own(&law_seed(), &law_doc(|_| {}));
+    assert_eq!(
+        checks.advisory.as_deref(),
+        Some("anchors_partially_unverifiable:1/4"),
+        "one short note is unusable"
+    );
+}
+
+#[test]
+fn a_numeric_reference_without_digits_stays_as_written() {
+    assert_eq!(normalise("a &# b"), "a &# b");
+    assert_eq!(normalise("a &#x b"), "a &#x b");
+    assert_eq!(normalise("a &#65 b"), "a A b");
+}
+
+#[test]
+fn a_document_splits_its_frontmatter_from_its_sections() {
+    let doc = Document::parse(
+        "---\nschema: v1\n---\nintro\n## a <!-- section:reading -->\nfirst\nsecond\n## b <!-- section:issue -->\nthird\n",
+    );
+    assert_eq!(doc.frontmatter, "schema: v1");
+    assert_eq!(doc.section("reading"), Some("first\nsecond\n"));
+    assert_eq!(doc.section("issue"), Some("third\n"));
+    assert_eq!(doc.body.lines().next(), Some("intro"));
 }
