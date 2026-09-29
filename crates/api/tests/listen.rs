@@ -69,3 +69,11 @@ fn a_non_loopback_listen_address_is_refused_by_name() {
         "{malformed:?}"
     );
 }
+
+#[test]
+fn a_listen_address_displays_as_the_socket_address_it_holds() {
+    for value in ["127.0.0.1:8080", "[::1]:8443"] {
+        let address = listen(value).expect("a loopback address starts");
+        assert_eq!(address.to_string(), value);
+    }
+}

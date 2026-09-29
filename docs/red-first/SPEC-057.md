@@ -60,6 +60,8 @@ A18: red at 2311afa: AssertionError: 17 != 0 : deck-streak-kernel: 17 unexplaine
 A18: green at 0896902
 A20: red at cd59d2a: AssertionError: 8 != 0 : deck-streak-daemon: 8 unexplained mutant(s) in its row (the opening sweep, run 36515002230 at 2fd66f4, read listed 101, killed 64, equivalent 0, unexplained 8, unviable 29)
 A20: green at b42ef34
+A22: red at 3d271a1: AssertionError: 2 != 0 : deck-streak-api: 2 unexplained mutant(s) in its row (the opening sweep, run 36528558184 at 5216bcf, read listed 70, killed 48, equivalent 0, unexplained 2, unviable 20)
+A22: green at ab99ab8
 A28: red at e260627: AssertionError in each of its four subtests, each for its own reason: 'True is not false : the rust class applies on test lines [31, 36, 43, 47, 53]' (the test-only diff); 'Lists differ: [46, 58] != [58]' (the mixed diff counted its test module's line as production code); "'mutation: plan: rust applies: 3 production code line(s) in 1 file(s)' not found" (the production-only diff's plan named no production line); and '3 != 0 : mutation: shards: VOID the rust class applies and ... holds no cargo-mutants listing' (cargo-mutants' empty --in-diff output read as no listing)
 A28: green at 8c87e5b
 A19: red at 8eba7ef: AssertionError: 16 != 0 : deck-streak-identity: 16 unexplained mutant(s) in its row (opening sweep run 36511057164 listed 143, killed 97, equivalent 0, unexplained 16, unviable 30)
@@ -212,3 +214,16 @@ non-`data` name followed by a data command). One is recorded equivalent in
 `table: verdict: ok`, listed 101, killed 71, equivalent 1, unexplained 0, unviable 29. Shard 1
 exited 2 (the one recorded mutant) and the other shards exited 0. Rows S05750 to S05759 are unused:
 the tool mutated every invariant of the crate, so none needed a hand-proved row (R20). No shard exited 3, so no mutant of this crate timed out in the closing sweep.
+
+## The api delivery: its row (A22)
+
+A22 is the api crate's row of section 7. Its opening sweep, run 36528558184 at the base (dev
+5216bcf), counted 33 of 33 reports whole, listed 70 mutants and left 2 unexplained: the `Display`
+implementation of `ListenAddress` and the `Debug` implementation of `OwnerAccess`, each replaced by
+an empty `Ok`. Its `table` line is the row committed at 3d271a1 with A22's test, which read
+`2 != 0`. Both are now killed by tests in `crates/api/tests/` (the listen address's display form,
+and the owner access's debug form, which names its parts and never the signing token). The closing
+sweep, run 36529229929 at 618a392, counted 33 of 33 whole and read `table: verdict: ok`, listed 70,
+killed 50, equivalent 0, unexplained 0, unviable 20. All 32 shards exited 0 and none logged a
+timeout. No record was needed, and rows S05770 to S05774 are unused: the tool mutated every
+invariant of the crate (R20).

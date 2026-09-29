@@ -544,3 +544,19 @@ async fn the_handshake_body_is_bounded_below_the_shells_limit() {
     .await;
     assert_eq!(over.status, StatusCode::PAYLOAD_TOO_LARGE);
 }
+
+#[test]
+fn the_owner_access_debug_names_its_parts_and_never_the_signing_token() {
+    let clock = Arc::new(ManualClock::new(UtcMillis::from_epoch_millis(STARTED_AT)));
+    let gate = OwnerGate::new(
+        WebAppKey::from_bot_token(BOT_TOKEN),
+        Owner::new(TelegramUserId::new(OWNER)),
+        Freshness::default(),
+    );
+    let access = OwnerAccess::new(gate, clock, StudyDayRule::default());
+    let shown = format!("{access:?}");
+    assert!(shown.starts_with("OwnerAccess {"), "{shown}");
+    assert!(shown.contains("sessions:"), "{shown}");
+    assert!(shown.contains("rule:"), "{shown}");
+    assert!(!shown.contains(BOT_TOKEN), "{shown}");
+}
