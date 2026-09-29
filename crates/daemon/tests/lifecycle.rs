@@ -132,7 +132,20 @@ impl Daemon {
 }
 
 impl Drop for Daemon {
-    fn drop(&mut self) {}
+    fn drop(&mut self) {
+        if !self.reaped.load(Ordering::SeqCst) {
+            // Still the child's own pid: the waiter has not reaped it. Ask it to stop, and wait on
+            // the waiter's message rather than on the clock; only a child that ignores SIGTERM
+            // for the whole bound is killed.
+            self.signal("TERM");
+            if self.exited.recv_timeout(self.bound).is_err() {
+                self.signal("KILL");
+            }
+        }
+        if let Some(waiter) = self.waiter.take() {
+            drop(waiter.join());
+        }
+    }
 }
 
 /// Whether process `pid` is running: a zombie awaiting its parent is not.
