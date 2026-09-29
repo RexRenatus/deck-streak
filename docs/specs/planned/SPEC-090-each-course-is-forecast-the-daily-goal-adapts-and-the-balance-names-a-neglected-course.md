@@ -288,9 +288,9 @@ unit band or syllabus of the owner's.
 | golden | the predecessor's function | kind | the adapter builds |
 |---|---|---|---|
 | `pynum_basics` | CPython's `sum`, `statistics.median`, `statistics.mean`, `round` | adapter | float lists with cancellation, even and odd counts, lists whose running sum differs from the exact mean, and halves at each digit, and `round(2.675, 2)`, whose shortest decimal is a tie but whose binary value is not (expected 2.67) |
-| `percentile` | `gamification/adaptive.py:percentile` | function | none: empty, one value, `0.9` of 70 values, `0.2` and `1.0` |
+| `percentile` | `gamification/adaptive.py:percentile` | function | none: empty, one value, `0.9` of 70 values, `0.2` and `1.0`, `0.9` of 7 distinct values (rank 6.3, which the ceiling takes to 7) and `0.0` of 70 values (rank 0, which the floor takes to 1) |
 | `mature_velocity` | `velocity.py:mature_velocity` | adapter | rollup rows with and without reviews, all-zero graduations, an even count |
-| `forecast` | `velocity.py:compute_velocity` | adapter | synthetic `LanguageProgress` values with gaps, empty bands and a fully achieved course |
+| `forecast` | `velocity.py:compute_velocity` | adapter | synthetic `LanguageProgress` values with gaps, empty bands, a fully achieved course and a remaining count the rate does not divide (7 over a rate of 2.0 is 3.5, which the ceiling takes to 4 and the floor to 3) |
 | `adaptive_goal` | `gamification/adaptive.py:adaptive_daily_goal` | adapter | the remaining sum, the 365-day horizon and `max(percentile_p90(history), 30)` as `compute_all` feeds them, a per-day need under 10, at 10 and over it, and a history p90 under 30, at 30 and over it |
 | `balance` | `cross_language.py:compute_balance` | adapter | synthetic courses patched into the module's course lookup, reviews on the window's first and last study day and on the day before it, and either side of the rollover, a course whose share is exactly 5.0 and one just under it, a long-idle course and an empty window |
 | `syllabus_derive` | `tools/syllabus/export_bands.py:derive_language` | function | none: synthetic syllabi |

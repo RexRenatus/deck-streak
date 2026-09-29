@@ -161,6 +161,7 @@ R13. The Mini App's `/insights` screen shows each stored report as a section. A 
 | A18 | the insights routes answer the owner and refuse every other caller with no data | `the_insights_routes_answer_only_the_owner` |
 | A19 | a section with a failed read renders the failure line, never an all-clear | `renders a failed read as a failure line` |
 | A20 | Dark Fields' section states zero dark fields as a checked result | `states zero dark fields as a checked result` |
+| A21 | Dark Fields is passed R4's reads: each template's note type, ordinal, names and front and back formats, each note type's declared fields, the set of reviewed note ids and each field's count of reviewed notes with content | `dark_fields_is_passed_its_reads` |
 
 ```acceptance
 A1: cargo test -p deck-streak-kernel --test conventions -- --exact the_conventions_file_loads_into_one_value
@@ -183,6 +184,7 @@ A17: cargo test -p deck-streak-coordination --test instrument_reports -- --exact
 A18: cargo test -p deck-streak-api --test insights_routes -- --exact the_insights_routes_answer_only_the_owner
 A19: pnpm exec vitest run web/app/src/lib/insights/InstrumentSection.test.ts -t "renders a failed read as a failure line"
 A20: pnpm exec vitest run web/app/src/lib/insights/DarkFields.test.ts -t "states zero dark fields as a checked result"
+A21: cargo test -p deck-streak-coordination --test instruments_step -- --exact dark_fields_is_passed_its_reads
 ```
 
 ## 3a. What the box run judges
@@ -227,7 +229,7 @@ when it merges.
 | `crates/daemon/src/wiring.rs` | `deck-streak-daemon` | changed: loads `DECKSTREAK_CONVENTIONS_FILE` once at start and refuses start on a malformed file or a forbidden direction label (R1, R2, A3); joins the instruments step to the sync cycle after the recompute (R7); builds the on-demand run over the private copy's reader in scope, the offload and the conventions, for the api and the bot, which cannot name ingest, as OwnerSyncCycle answers /sync (R8) |
 | `crates/coordination/src/data_rights.rs` | `deck-streak-coordination` | changed: the port exports and erases `instrument_reports` |
 | `crates/coordination/src/lib.rs` | `deck-streak-coordination` | changed: the instruments module |
-| `crates/coordination/tests/instruments_step.rs` | `deck-streak-coordination` | added: A13 to A15 |
+| `crates/coordination/tests/instruments_step.rs` | `deck-streak-coordination` | added: A13 to A15, A21 |
 | `crates/coordination/tests/instrument_reports.rs` | `deck-streak-coordination` | added: A16, A17 |
 | `crates/api/src/insights_routes.rs` | `deck-streak-api` | added: the three routes |
 | `crates/api/src/router.rs` | `deck-streak-api` | changed: the routes behind the owner's session; ApiState carries the on-demand run (R8, R12) |
@@ -312,5 +314,5 @@ predecessor at `27ee2bc` (SPEC-029). Every case is synthetic.
 | `S09406-WEEKLY-SEVEN` | `crates/coordination/src/instruments.rs` | a weekly instrument's 7 study days | `instruments_step::a_weekly_instrument_runs_once_in_seven_study_days` |
 | `S09407-FORBIDDEN-TOKENS` | `crates/kernel/src/conventions.rs` | the three forbidden direction tokens | `conventions::a_forbidden_direction_label_refuses_start` |
 | `S09408-ONE-ROW-PER-INSTRUMENT` | `migrations/009401_coordination_instrument_reports.sql` | the key on `instrument_reports (instrument)` (a script row; the cargo killer) | `instrument_reports::a_report_replaces_its_instruments_previous_one` |
-| `S09409-INSTRUMENT-LOCK-NO-WAIT` | `crates/ingest/src/lock.rs` | the instrument lock's take never waits: the mutant makes the take wait for the holder (`File::lock` for `File::try_lock`); the killer bounds its wait with a timeout that fails the test | `instruments_step::a_run_while_one_runs_starts_nothing` |
+| `S09409-INSTRUMENT-LOCK-NO-WAIT` | `crates/ingest/src/lock.rs` | the instrument lock's take never waits: the mutant makes the take wait for the holder (`File::lock` for `File::try_lock`, with the error converted by `From` so the mutant builds); the killer bounds its wait with a timeout that fails the test | `instruments_step::a_run_while_one_runs_starts_nothing` |
 | `S09410-INSTRUMENT-LOCK-ALWAYS-TAKEN` | `crates/ingest/src/lock.rs` | the instrument lock's take holds the lock: the mutant returns from the take without holding it, so a second run starts | `instruments_step::a_run_while_one_runs_starts_nothing` |

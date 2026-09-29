@@ -272,7 +272,7 @@ predecessor at `27ee2bc` (SPEC-029). Every case is synthetic.
 | `session_bounds` | `chests.py:session_bounds_from_reviews` | adapter | synthetic reviews with gaps at and around 10 minutes |
 | `dead_air_gap` | `deadair.py:gap_ms` | adapter | review pairs with positive, zero and negative gaps |
 | `dead_air_report` | `deadair.py:build_deadair_report` | adapter | synthetic reviews and sessions, each refusal and each bucket |
-| `fluency_audit` | `fluency.py:audit` | adapter | synthetic reviews, cards, deck names and a calendar for each verdict, an even median, a same-day re-show, and a follow-up at exactly the snap threshold and one just over it |
+| `fluency_audit` | `fluency.py:audit` | adapter | synthetic reviews, cards, deck names and a calendar for each verdict, an even median, a median of 2000 ms (threshold 700, the relative arm) and one of 5000 ms (threshold 1500, the absolute arm, where the relative arm alone gives 1750), a same-day re-show, and a follow-up at exactly the snap threshold and one just over it |
 | `tilt_rows` | `tilt.py:read_tilt_rows` | adapter | a temporary collection file with study events and manual rows between them |
 | `tilt_report` | `tilt.py:build_tilt_report` | adapter | synthetic rows for each verdict, a failed read and both work caps |
 | `provenance_counts` | `anki_reader.py:read_due_date_provenance` | adapter | a temporary collection file with manual, reschedule and study rows, and a small cap |

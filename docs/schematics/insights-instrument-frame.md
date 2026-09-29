@@ -32,7 +32,7 @@ events. A failure of one instrument is stored as its report's failed read and ne
 ```mermaid
 flowchart LR
   ask["a weekly turn, a route or a command"] --> busy{"does another run hold the host's instrument lock?"}
-  busy -- "yes" --> refuse["an on-demand request is answered that a run is in progress; a weekly turn leaves the instrument due; start nothing"]
+  busy -- "yes" --> refuse["an on-demand request is answered that a run is in progress, a weekly turn leaves the instrument due, start nothing"]
   busy -- "no" --> reads["coordination gathers the reads: ingest, analytics rollups, curriculum"]
   reads --> build["insights builds the report, a pure function of its reads"]
   reads -- "a read fails" --> failed["one write: the failed read, its study day and schema version"]

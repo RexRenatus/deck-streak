@@ -238,7 +238,7 @@ predecessor at `27ee2bc` (SPEC-029). Every case is synthetic.
 | `transfer_fold` | `transfer.py:fold` | function | none: every folded character and a character outside the table |
 | `transfer_parse` | `transfer.py:parse_note` | adapter | patches the field-name constants with synthetic names; excluded, choice, rank and meaning fields |
 | `transfer_snippet` | `transfer.py:_snippet_for` | function | none: a character at a field's start, middle and end |
-| `transfer_report` | `transfer.py:build_transfer_report` | adapter | synthetic stats, notes, fields and a census, null for each reason and resolved, truncated and not |
+| `transfer_report` | `transfer.py:build_transfer_report` | adapter | synthetic stats, notes, fields and a census, null for each reason and resolved, truncated and not, and a pool that uses exactly 2 rank bands |
 | `direction.constants`, `transfer.constants` | the modules' constants | constants | none |
 
 ## 8. Tables and the v9 import

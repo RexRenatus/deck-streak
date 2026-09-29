@@ -350,7 +350,7 @@ and law subjects in where the module reads them, so no name of the owner's enter
 |---|---|---|---|
 | `runway_rows` | `runway.py:read_runway_rows` | adapter | a temporary collection file with filtered and home decks, kinds, presets and each form of the flag |
 | `divest_report` | `divest.py:report` | adapter | synthetic cards for each reason, a suspended leech, a dormant deck with claimed cards, and window reviews |
-| `hand_size` | `hand.py:hand_size` | function | answered counts below, at and above 14 samples, and at both clamps |
+| `hand_size` | `hand.py:hand_size` | function | answered counts below, at and above 14 samples, and 20th percentiles of 3, 5, 191 and 200 (rank 3 of 14 values), so each clamp is crossed and met |
 | `hand` | `hand.py:build_hand` | adapter | synthetic cards in every queue with and without a memory state, ties, and rollups with and without a pace |
 | `elapsed_at_floor` | `peak.py:elapsed_at_floor` | function | stabilities, decays in and out of range, and floors from 0.1 to above 1 |
 | `sabbatical` | `sabbatical.py:compute_sabbatical` | adapter | synthetic courses and cards in every partition, a card of no course, a card with a missing decay (read as 0.2), and a review between local and UTC midnight |
