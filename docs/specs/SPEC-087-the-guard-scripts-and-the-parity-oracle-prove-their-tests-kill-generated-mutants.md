@@ -11,8 +11,7 @@
 - **Prerequisites:** SPEC-039 (the mutation jobs, the verdict, the rows and their census) and the
   machinery SPEC-057's first delivery built (the equivalence record, its census, `table`, and the
   weekly battery's `package` input).
-- **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
-  `docs/specs/` with its tests and `docs/red-first/SPEC-087.md` (ADR-016).
+- **Status:** built (moved from `docs/specs/planned/` with its tests and `docs/red-first/SPEC-087.md`, ADR-016).
 
 ## 1. The problem, measured
 
@@ -369,7 +368,7 @@ A22: python3 -m unittest discover -s scripts/tests -p test_mutation_python_workf
 
 | file | by | change |
 |---|---|---|
-| `docs/specs/planned/SPEC-087-the-guard-scripts-and-the-parity-oracle-prove-their-tests-kill-generated-mutants.md` | this plan | added; the delivery moves it to `docs/specs/` (R16) |
+| `docs/specs/SPEC-087-the-guard-scripts-and-the-parity-oracle-prove-their-tests-kill-generated-mutants.md` | this plan | added under `docs/specs/planned/`; the delivery moved it here (R16) |
 | `docs/decisions/ADR-073-the-repositorys-python-is-mutated-by-a-runner-of-its-own-restored-by-digest.md` | this plan | added, `proposed`; the delivery sets it `accepted` (R16) |
 | `docs/schematics/mutation-testing-python.md` | this plan | added: where the Python run sits among the mutation jobs, on a pull request and in the weekly battery |
 | `changelog.d/docs-python-mutants-087.md` | this plan | added: the plan's fragment |
@@ -452,7 +451,12 @@ A22: python3 -m unittest discover -s scripts/tests -p test_mutation_python_workf
 | `S08712-A-PYTHON-SURVIVOR-FAILS` | `scripts/mutation-verdict.py` | a survived mutant no record binds passes | `test_mutation_python_verdict.TheVerdictReadsThePythonReports.test_a_python_survivor_fails_and_a_timeout_is_void_by_name` |
 | `S08713-A-PYTHON-TIMEOUT-IS-VOID` | `scripts/mutation-verdict.py` | a `timeout` counts as killed | `test_mutation_python_verdict.TheVerdictReadsThePythonReports.test_a_python_survivor_fails_and_a_timeout_is_void_by_name` |
 | `S08714-EVERY-PROMISED-PYTHON-SHARD-REPORTS` | `scripts/mutation-verdict.py` | the promised shards are counted one short | `test_mutation_python_verdict.TheVerdictReadsThePythonReports.test_a_missing_or_partial_python_shard_is_void` |
-| `S08715-A-PYTHON-RECORD-CARRIES-ITS-ARGUMENT` | `scripts/mutation-verdict.py` | a Python record without `evidence` passes the census | `test_mutation_python_verdict.TheVerdictReadsThePythonReports.test_a_python_record_excuses_exactly_its_survivor_and_carries_its_argument` |
+| `S08715-A-PYTHON-RECORD-CARRIES-ITS-ARGUMENT` | `scripts/mutation-verdict.py` | a Python record without `evidence` passes the census | `test_mutation_python_verdict.TheVerdictReadsThePythonReports.test_the_census_holds_a_python_record_whole` |
+| `S08716-THE-SENTINEL-TEXT` | `scripts/mutation_python.py` | the sentinel's text changes | `test_mutation_python.TheRunnersConstantsAreNamedWhole` (sentinel test) |
+| `S08717-THE-CONTROL-BOUND` | `scripts/mutation_python.py` | `CONTROL_SECONDS` changes | `test_mutation_python.TheRunnersConstantsAreNamedWhole` (bound test) |
+| `S08718-THE-OUTCOMES-ORDER` | `scripts/mutation_python.py` | the outcomes' order changes | `test_mutation_python.TheRunnersConstantsAreNamedWhole` (order test) |
+| `S08719-THE-NEWLINE-SPLIT` | `scripts/mutation_python.py` | the newline pattern loses a form | `test_mutation_python.TheRunnersConstantsAreNamedWhole` (newline test) |
+| `S08720` to `S08725` | `scripts/mutation_python.py` | each of the six quiet tokenize kinds (comment, nl, newline, indent, dedent, endmarker) is dropped | `test_mutation_python.TheRunnersConstantsAreNamedWhole` (quiet-set test) |
 
 Each row's find text is written by the delivery, against the code it builds, and must occur once in
 its target. Each mutant is killable by its killer's assertion, and none makes a test wait: S08701's

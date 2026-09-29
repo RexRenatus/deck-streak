@@ -707,3 +707,24 @@ What it amends, and why:
 
 ADR-057 carries a note of this date that records the decision and what it was chosen against;
 A41 decides it.
+
+## 13. Amendment, 2026-09-29: the Python is mutated by a runner of its own
+
+Made by SPEC-087's delivery (issues #218 and #219), insert-only under ruling (i) of SPEC-038
+section 8: every earlier byte is kept in order. It adds:
+
+- a Python class beside the Rust, the Mini App and the parity oracle: `scripts/*.py` (a guard
+  script, never its tests) is the class `scripts`, and the oracle's Python is judged by the same
+  runner;
+- the job `mutation-python`, a need of `mutation-verdict` and of `ci`, which runs
+  `scripts/mutation_python.py` over the diff's mutants, one job per shard, and the weekly
+  battery's `python` job, which sweeps every listed file in 16 shards;
+- `judge --class scripts` and `judge --class oracle`, each reading the shards' reports, where a
+  report that is missing, partial or of exit 4 (a failed restore) is VOID by name;
+- the equivalence record `scripts/mutation-equivalent.d/python.json`, held to the same census as
+  the Rust and Mini App records (SPEC-057, ADR-070), and the rows `S08700-S08799`.
+
+What it amends, and why: the Python that guards the repository was proved only by hand-proved
+rows, so a weak test of a guard script had no measure. The decision and what it was chosen
+against are ADR-073; the requirements and criteria are SPEC-087's. The criteria of this SPEC
+stand; SPEC-087's A1 to A22 are added beside them.

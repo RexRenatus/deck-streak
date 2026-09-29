@@ -251,3 +251,11 @@ decides when it names a shell; else `.bash` is bash and `.sh` is sh. It was chos
 - **Refusing every target that is neither Python nor cargo.** It would void the five rows on
   `scripts/check.sh`, whose mutants parse and which the killers catch by their behaviour, to
   avoid a check that costs one `bash -n` per row.
+
+## Note, 2026-09-29
+
+The Python of the repository is mutated too, by a runner of its own, `scripts/mutation_python.py`,
+which restores each file by digest and runs its tests once per mutant; its shards are the CI job
+`mutation-python`. This is ADR-073 (SPEC-087, SPEC-039 section 13). The decisions above are
+unchanged: a survivor still fails, an equivalent mutant is still recorded and never skipped, and
+no annotation hides a mutant.
