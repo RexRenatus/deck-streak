@@ -30,8 +30,11 @@ interface Block {
 
 /** The fenced `mermaid` blocks of one file, each named `<file> block <n>` counted from 1. */
 function blocksOf(name: string, text: string): Block[] {
-  const found = text.matchAll(/^```mermaid[^\n]*\n([\s\S]*?)^```[ \t]*$/gm);
-  return [...found].map((match, index) => ({ name: `${name} block ${index + 1}`, source: match[1] }));
+  const found = text.matchAll(/^([ \t]*)```mermaid[^\n]*\n([\s\S]*?)^\1```[ \t]*$/gm);
+  return [...found].map((match, index) => ({
+    name: `${name} block ${index + 1}`,
+    source: match[2].replace(new RegExp(`^${match[1]}`, 'gm'), '')
+  }));
 }
 
 /** Whether Mermaid's own parser accepts the diagram. */
@@ -54,7 +57,7 @@ describe('the Mermaid diagrams under docs', () => {
   it('reads every fenced block', () => {
     examined('mermaid blocks', BLOCKS);
     const opened = markdownFiles(DOCS)
-      .map((file) => (readFileSync(file, 'utf8').match(/^```mermaid/gm) ?? []).length)
+      .map((file) => (readFileSync(file, 'utf8').match(/^[ \t]*```mermaid/gm) ?? []).length)
       .reduce((sum, count) => sum + count, 0);
 
     expect(BLOCKS.length).toBeGreaterThan(100);
