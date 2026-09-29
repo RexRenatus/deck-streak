@@ -852,3 +852,57 @@ the leg nothing to examine:
   leg that starts prints its case as R3 says.
 
 This section adds no criterion: SPEC-290's A1 to A7 decide it, and its rows are S29000-S29099.
+
+## 19. Amendment, 2026-09-29: a missing tool is a refusal
+
+Issue #431: `scripts/mutation_rows.py prove` ended with an uncaught `FileNotFoundError`, and exit
+1, which is `EXIT_SURVIVED`, when a row's killer was a cargo test and `cargo` was not on `PATH`. A
+run that could not start a check said "a mutant survived". ADR-291 decides the class, and this
+section states it.
+
+- **The rule.** Every process the runner spawns, under every verb that reaches it, ends the verb
+  with ONE line naming the tool and exit 2 (`EXIT_REFUSED`) when its executable cannot be run:
+  absent from `PATH`, present but not executable, or a directory at the name. It is never a
+  traceback, never exit 1, never a verdict line and never `KILLED`. A mutant that was installed
+  is restored byte for byte, by digest, before the verb ends. The line reads
+  `<verb>: REFUSED: missing tool: <name as spawned>: <why>`, with the verb `prove` or `retired`.
+- **One place.** The executable is resolved in one place, before the spawn: `run_tool` for a
+  command that is run to its end, and `run_in_own_group` for a killer. A spawn that still fails
+  for its executable after resolution passed is mapped to the same refusal. `main` alone turns the
+  refusal into the line and the exit code. No other function spawns a process, and the census of
+  the module's own source (A47) refuses a function that does.
+- **A missing parser joins the class.** Section 12 (A41) made a shell that is not installed leave
+  the mutant unchecked and VOID. That clause, and only that clause, is superseded: a shell that
+  cannot be run is the same fact as a missing killer tool, the runner could not run a check, so it
+  is a refusal and the verb exits 2. A41's other readings stand unchanged: a parse check that
+  outlives its bound is still VOID, a mutant that does not parse is still VOID, and `-n` still
+  keeps the check from running the mutant. A41's text above is not edited.
+- **Reading at the verdict.** Exit 2 writes no report, so `mutation-verdict.py` reads the leg as
+  "selected and no rows report", which is VOID, and the weekly run's step fails on a non-zero
+  exit. Nothing reads 2 as a pass or as a usage error to ignore (ADR-291 quotes each reader).
+- **What it does NOT do.** It adds no tool to any leg's setup (#431), and it does not make the
+  rows leg skip its toolchain, which is the later lever this refusal makes safe (#431). It changes
+  no verdict logic other than a missing tool's, and no existing row other than S03935 (#431).
+
+## 20. Acceptance criteria of the 2026-09-29 (#431) amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A46 | for every spawn site of the runner, every tool it can spawn (`git`, `cargo`, the interpreter, `bash`, `sh`), every one of the three unrunnable modes and every verb that reaches the site, the verb exits 2, prints exactly one `REFUSED` line naming the tool, prints no traceback and no verdict line, and leaves the target's bytes and the tree's tracked state as they were; the population's count is printed | `test_mutation_rows_missing_tool.py` |
+| A47 | the spawn sites read from the module's own source are exactly the sites the population covers, and no function outside `run_tool` and `run_in_own_group` calls `subprocess.run` or `subprocess.Popen` | `test_mutation_rows_missing_tool.py` |
+| A48 | `count`, `ids` and `census` spawn nothing and succeed with every tool unrunnable | `test_mutation_rows_missing_tool.py` |
+| A49 | a shell parser that cannot be run refuses the proof naming it, exit 2 and no verdict, where section 12 left the mutant VOID | `test_mutation_rows.py` |
+
+```acceptance
+A46: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_missing_tool.py -k a_tool_the_runner_cannot_run_is_a_refusal_at_every_site_mode_and_verb
+A47: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_missing_tool.py -k every_spawn_site_the_module_holds_has_a_scenario_and_owns_no_raw_spawn
+A48: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_missing_tool.py -k a_verb_that_spawns_nothing_runs_with_every_tool_unrunnable
+A49: python3 -m unittest discover -s scripts/tests -p test_mutation_rows.py -k a_missing_parser_is_a_refusal_naming_it
+```
+
+A46 to A48 build a temporary git repository per member with the suite's own fixture, and run the
+runner as a child process whose `PATH` holds real `git`, `bash` and `sh` except the tool under
+test, which is absent, a file without the execute bit, or a directory (the interpreter's case
+replaces `sys.executable` in the child). The cargo build site's member serves the control run from
+a shim that then makes itself unrunnable, so the refusal comes from the mutant's build and the
+member asserts the shim was reached. A49's test keeps A41's fixture and its bare `PATH`.

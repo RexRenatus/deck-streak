@@ -298,6 +298,7 @@ class TheMissingToolPopulation(unittest.TestCase):
                 check=False,
             )
             self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+            self.assertTrue(done.stdout.strip(), verb + " printed nothing")
             self.assertNotIn("REFUSED", done.stdout + done.stderr)
 
 

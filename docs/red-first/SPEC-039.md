@@ -256,3 +256,94 @@ A45 has two tests, and the fence holds one line for the criterion; the other tes
 ```text
 test_a_bin_killer_beside_a_tests_bin_rs_is_refused: AssertionError: 'census: S00060-BIN-SHADOW: its killer bin::tests::three_triples_to_nine crates/fix has a test target bin, which the bin kind shadows' not found in 'examined 1 row(s)\n'
 ```
+
+## Addendum, 2026-09-29: a missing tool is a refusal (issue #431)
+
+A46 to A49 are the acceptance criteria of section 20, made by issue #431's delivery. A46 to A48
+were written red at 932358d, against the runner as dev holds it, where the runner spawns `git`,
+`cargo`, the interpreter, `bash` and `sh` with no check of its own; A49's updated test was written
+red at 27646b2. Each is green at b1bd758, which adds the check to the runner. At 932358d the file
+reads `FAILED (failures=73)` over 75 members: 64 members fail with a traceback (`'Traceback'
+unexpectedly found`), 8 with a `bash` or `sh` that left the mutant VOID and exit 3 where the rule
+says 2, and the census of spawn sites fails with `['git', 'parses', 'builds'] != []`. The
+failures name no path outside the repository. The original lines above stand.
+
+```red-first
+A46: red at 932358d: AssertionError: 'Traceback' unexpectedly found in 'Traceback (most recent call last):
+A46: green at b1bd758
+A47: red at 932358d: AssertionError: Lists differ: ['git', 'parses', 'builds'] != []
+A47: green at b1bd758
+A49: red at 27646b2: AssertionError: 3 != 2 : S00032-NO-PARSER: VOID: the mutant is unchecked: bash is not installed
+A49: green at b1bd758
+A48: not red: count, ids and census spawn nothing, so they already exit 0 at dev; a spawn planted in the count branch reds it
+```
+
+**A48 is `not red`, and takes no green line.** `count`, `ids` and `census` spawn nothing, so they
+already exit 0 with every tool unrunnable at dev. The plant that turns it red is a spawn in the
+`count` branch (`tracked_changes(root)` first in that `try`), which reads `AssertionError: 1 != 0 :
+Traceback (most recent call last):` from `test_a_verb_that_spawns_nothing_runs_with_every_tool_unrunnable`.
+
+**Three of the 75 members are `not red` at 932358d**: the `git` site, the `retired` verb, in each of
+the three modes. `main` already catches `OSError` around `retired` and prints `mutation_rows:
+REFUSED: <error>` with exit 2, and a missing, unexecutable or directory `git` raises
+`FileNotFoundError`, `PermissionError` or `NotADirectoryError`, which are all `OSError`. The rule
+changes their line to the class's own (`retired: REFUSED: missing tool: git: <why>`). The plant that
+turns them red is the `retired` mapping to `EXIT_OK` (row S03962).
+
+**The test was strengthened after 932358d, at 27646b2**, with no change to the runner: the line
+must also give the reason for its mode (`not found on path`, `not executable`, `is a directory`,
+or `no such file`); a fourth mode, a script whose interpreter line names a missing program, joins
+the population (100 members); and the cargo build site's member asserts that its shim served the
+control run, so the refusal is the mutant build's. Each closes a plant that stayed green: see the
+plants below.
+
+**Supersession, A41's missing-parser clause (SPEC-039 section 12), by A49.** Two assertions of
+`test_mutation_rows.py` changed, each recorded old then new, verbatim. Neither was removed, skipped
+or weakened: the first reads the same fact with the refusal's code and line, and the second
+reads it as the exception the parser now raises. The parser-timeout assertions are unchanged.
+
+```text
+old: self.assertEqual(done.returncode, 3, done.stdout + done.stderr)
+new: self.assertEqual(done.returncode, 2, done.stdout + done.stderr)
+old: self.assertEqual(verdicts(done), {"S00032-NO-PARSER": "VOID"})
+new: self.assertEqual(verdicts(done), {})
+old: self.assertIn("unchecked: bash is not installed", done.stdout)
+new: self.assertIn("REFUSED: missing tool: bash", done.stdout)
+old: why = runner.parses("bash", b"echo 1\n")
+old: self.assertEqual(why, "the mutant is unchecked: bash is not installed")
+new: with self.assertRaises(runner.ToolMissing) as refusal:
+new:     runner.parses("bash", b"echo 1\n")
+new: self.assertEqual(refusal.exception.tool, "bash")
+```
+
+The first test is renamed to `test_a_missing_parser_is_a_refusal_naming_it`, and row S03935 follows:
+its anchor is now the parse check's `run_tool` call, its mutant the raw `subprocess.run` around it.
+
+**The plants**, each a scratch mutant of `scripts/mutation_rows.py` at b1bd758 run against
+`test_mutation_rows_missing_tool.py`, restored after; the first red line of each:
+
+```text
+a  refusal mapped to EXIT_SURVIVED:           FAILED (failures=72)  AssertionError: 1 != 2 : prove: REFUSED: missing tool: git: not found on PATH
+b  git spawns raw:                            FAILED (failures=13)  AssertionError: 'Traceback' unexpectedly found in 'Traceback (most recent call last):
+b  parse check spawns raw:                    FAILED (failures=25)  AssertionError: 'Traceback' unexpectedly found in 'Traceback (most recent call last):
+b  mutant build spawns raw:                   FAILED (failures=13)  AssertionError: 'Traceback' unexpectedly found in 'Traceback (most recent call last):
+b  killer group unresolved (final test):      FAILED (failures=16)  AssertionError: False is not true : prove: REFUSED: missing tool: cargo: Permission denied
+c  restore skipped on the refusal path:       FAILED (failures=36)  AssertionError: 4 != 2 : prove: RESTORE FAILED: crates/fix/src/lib.rs was not restored byte for byte after S00002-CARGO
+d  named line drops the tool:                 FAILED (failures=72)  AssertionError: 'git' not found in 'prove: REFUSED' : prove: REFUSED
+e  refusal mapped to EXIT_VOID:               FAILED (failures=72)  AssertionError: 3 != 2 : prove: REFUSED: missing tool: git: not found on PATH
+e  retired refusal mapped to EXIT_OK:         FAILED (failures=3)   AssertionError: 0 != 2 : retired: REFUSED: missing tool: git: not found on PATH
+e  unexecutable file taken for a tool:        FAILED (failures=25)  AssertionError: False is not true : prove: REFUSED: missing tool: git: Permission denied
+e  directory taken for a non-file:            FAILED (failures=25)  AssertionError: False is not true : prove: REFUSED: missing tool: git: not found on PATH
+e  the PATH search ignores the child's PATH:  FAILED (failures=12)  AssertionError: False is not true : the control never reached the cargo shim
+e  the spawn-error backstop removed:          FAILED (failures=24)  AssertionError: 'Traceback' unexpectedly found in 'Traceback (most recent call last):
+```
+
+Four plants stayed green at 932358d's test and were closed by the strengthening at 27646b2: the
+last four rows of the block above (unexecutable file, directory, the PATH search, and the killer
+group's resolution, whose spawn-error backstop alone still mapped the refusal, but with the
+system's `Permission denied` as its reason). The backstop alone removed reads red only because the
+interpreter-line mode joined the population. One plant is EQUIVALENT: the slash in a name searched
+along `PATH` (`if False:` for the path branch of `resolve_tool`). The runner spawns a bare name or
+`sys.executable`, an absolute path, and `pathlib` discards the `PATH` part when the name it joins
+is absolute, so the search reaches the same file; measured green, `OK` over 100 members. A relative
+name with a slash is never spawned by the runner.
