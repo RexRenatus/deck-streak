@@ -540,11 +540,10 @@ class PruneAfterARollback(Case):
 
 
 class AnotherUnitsDropInsAreLeftAlone(Case):
-    AT = chr(64)
     FOREIGN = {
-        f"getty{AT}tty1.service.d/autologin.conf": b"[Service]\nExecStart=\n",
-        f"other-app{AT}x.service.d/override.conf": b"[Service]\nMemoryMax=1G\n",
-        f"user{AT}.service.d/delegate.conf": b"[Service]\nDelegate=yes\n",
+        "getty@tty1.service.d/autologin.conf": b"[Service]\nExecStart=\n",
+        "other-app@tty1.service.d/override.conf": b"[Service]\nMemoryMax=1G\n",
+        "user@.service.d/delegate.conf": b"[Service]\nDelegate=yes\n",
     }
 
     def intact(self, when):
@@ -580,7 +579,7 @@ class APartialEffectiveConfigurationIsRefused(Case):
         w.ship("v1.1.0", marker="two")
         done = w.deploy("v1.1.0", STUB_CAT_FAIL=API)
         self.assertNotEqual(done.returncode, 0, "a deploy whose effective view was partial")
-        self.assertIn(API, done.stderr, "the refusal names the unit")
+        self.assertIn(f"deploy: {API} could not be shown", done.stderr, "the deploy names the unit")
         self.assertEqual(w.current(), "v1.0.0", "current is unchanged")
 
 
@@ -652,6 +651,23 @@ class TheCaddyInstall(Case):
         named = [ln for ln in calls if "--adapter caddyfile" in ln]
         self.assertTrue(any(ln.startswith("caddy validate") for ln in named), calls)
 
+    def test_the_caddy_block_is_rendered_from_the_tags_own_file(self):
+        w = self.world
+        caddyfile = w.caddy_dir / "Caddyfile"
+        caddyfile.write_text("example.org {\n\trespond 200\n}\n", encoding="utf-8")
+        w.ship("v1.0.0")
+        self.ok(w.deploy("v1.0.0"))
+        mark = "# a line only the tag's block holds"
+        block = w.other / "deploy" / "caddy" / "deck-streak.caddy"
+        w.git("checkout", "-q", "main", cwd=w.other)
+        block.write_text(block.read_text(encoding="utf-8") + mark + "\n", encoding="utf-8")
+        w.git("commit", "-q", "-am", "the tag's own block", cwd=w.other)
+        w.git("push", "-q", "origin", "main", cwd=w.other)
+        w.mark("v1.0.1", True)
+        self.ok(w.run(DEPLOY, "caddy-install", "v1.0.1", **self.config()))
+        rendered = (w.caddy_dir / "deck-streak.caddy").read_text(encoding="utf-8")
+        self.assertIn(mark, rendered, "the block is the tag's, not the working tree's")
+
 
 class NoDeployScriptNamesAPrivateValue(unittest.TestCase):
     FILES = (
@@ -669,8 +685,8 @@ class NoDeployScriptNamesAPrivateValue(unittest.TestCase):
             texts[name] = path.read_text(encoding="utf-8")
         scrub = REPO / "scripts" / "public-scrub.py"
         env = {k: v for k, v in os.environ.items() if k != "PERSONA_CORE_DENY_LIST"}
-        octets = ".".join(["203", "0", "113", "7"])
-        word = "quokka" + "-" + "host"
+        octets = "203.0.113.7"
+        word = "quokka-host"
         for name, text in examined("deploy files", texts.items()):
             self.assertNotRegex(text, PRIVATE_PATHS, f"{name} names a private path")
             for found in re.findall(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", text):

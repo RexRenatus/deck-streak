@@ -133,6 +133,20 @@ class TheReleaseWorkflowIsHardened(unittest.TestCase):
         attested = [s for s in steps if action(s) == ATTEST]
         self.assertEqual(len(attested), 1, "one attestation step")
 
+    def test_the_token_reaches_the_three_gh_release_steps_alone(self):
+        workflow = read_release()
+        job = list(workflow["jobs"].values())[0]
+        self.assertNotIn("GH_TOKEN", workflow.get("env") or {}, "the workflow env holds it")
+        self.assertNotIn("GH_TOKEN", job.get("env") or {}, "the job env holds it")
+        steps = steps_of(workflow)
+        holders = [str(s.get("run", "")) for s in steps if "GH_TOKEN" in (s.get("env") or {})]
+        releases = [str(s.get("run", "")) for s in steps]
+        releases = [r for r in releases if r.startswith("gh release ")]
+        self.assertEqual(len(releases), 3, releases)
+        self.assertEqual(holders, releases, "only the gh release steps hold the token")
+        text = RELEASE.read_text(encoding="utf-8")
+        self.assertEqual(text.count("github.token"), 3, "the token is named three times")
+
 
 def git(*args, cwd, env):
     done = subprocess.run(["git", *args], cwd=cwd, env=env, capture_output=True, text=True)

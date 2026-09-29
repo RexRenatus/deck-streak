@@ -18,9 +18,9 @@ from _support import REPO, examined
 
 SCRIPT = REPO / "deploy" / "scripts" / "render-caddy.py"
 TEMPLATE = REPO / "deploy" / "caddy" / "deck-streak.caddy"
-# Addresses built from parts, so no committed line holds one.
+# The private address is built from parts: no plain RFC 1918 literal passes the public scrub.
 PRIVATE_V4 = ".".join(["10", "0", "0", "5"])
-PUBLIC_V4 = ".".join(["203", "0", "113", "9"])
+PUBLIC_V4 = "203.0.113.9"
 GOOD = {
     "host": "app.example.org",
     "web_root": "/usr/local/lib/deck-streak/current/web",

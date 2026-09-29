@@ -2002,7 +2002,7 @@ class TheSyncLoginIsTheSyncJobsAlone(unittest.TestCase):
                 "/etc/systemd/system",
                 "/run/systemd/system",
                 "/etc/systemd/system.control",
-                "/" + "home" + "/someone/.config/systemd/user",
+                "/home/user/.config/systemd/user",
             ):
                 path = f"{where}/{JOB_TEMPLATE}@sync.service.d/{self.CONF}"
                 done = subprocess.run(

@@ -118,7 +118,7 @@
         ".github/workflows/release.yml",
         "          if ! git merge-base --is-ancestor \"$GITHUB_SHA\" origin/main; then\n",
         "          if ! git merge-base --is-ancestor \"$GITHUB_SHA\" \"$GITHUB_SHA\"; then\n",
-        "a tag whose commit is not on main builds no release (SPEC-062 R1, A8)",
+        "a tag whose commit is not on main builds no release (SPEC-062 R1, A18)",
         "test_release_workflow.TheTagGuardRuns.test_the_release_refuses_a_tag_off_main_or_lightweight_by_running_its_guard"
       ],
       [
@@ -176,6 +176,30 @@
         "caddy validate --config \"$copy\" || undo\n",
         "the candidate copy is validated with the Caddyfile adapter, as its name is not one (SPEC-062 R7, A17)",
         "test_deploy_scripts.TheCaddyInstall.test_the_caddy_calls_name_the_caddyfile_adapter_for_the_candidate_copy"
+      ],
+      [
+        "S06223-THE-CADDY-BLOCK-IS-THE-TAGS-OWN",
+        "deploy/deploy.sh",
+        "git -C \"$checkout\" show \"refs/tags/$tag:deploy/caddy/deck-streak.caddy\" >\"$template\"",
+        "cat \"$here/caddy/deck-streak.caddy\" >\"$template\"",
+        "the Caddy block is rendered from the tag's own file, never the working tree's (SPEC-062 R7, A19)",
+        "test_deploy_scripts.TheCaddyInstall.test_the_caddy_block_is_rendered_from_the_tags_own_file"
+      ],
+      [
+        "S06224-THE-TOKEN-IS-THE-RELEASE-STEPS-ALONE",
+        ".github/workflows/release.yml",
+        "      CARGO_INCREMENTAL: \"0\"\n",
+        "      CARGO_INCREMENTAL: \"0\"\n      GH_TOKEN: ${{ github.token }}\n",
+        "the job's build steps never hold the token; only the three gh release steps do (SPEC-062 R1, A20)",
+        "test_release_workflow.TheReleaseWorkflowIsHardened.test_the_token_reaches_the_three_gh_release_steps_alone"
+      ],
+      [
+        "S06225-THE-DEPLOY-NAMES-A-UNIT-IT-CANNOT-SHOW",
+        "deploy/deploy.sh",
+        "        { echo \"deploy: ${u%.d} could not be shown\" >&2; : >\"$checked\"; break; }\n",
+        "        { : >\"$checked\"; break; }\n",
+        "a unit whose effective configuration cannot be shown is named by the deploy itself (SPEC-062 R4, A15)",
+        "test_deploy_scripts.APartialEffectiveConfigurationIsRefused.test_a_unit_that_cannot_be_shown_refuses_the_deploy_and_names_it"
       ]
     ]
   }
