@@ -144,6 +144,15 @@
         "pub const RETENTION_DAYS: i64 = 900;",
         "data_rights::a_run_older_than_the_retention_is_pruned_and_a_newer_one_kept",
         "agent_runs keeps 90 days, as privacy.json declares"
+      ],
+      [
+        "S04317-A-DAY-IS-EIGHTY-SIX-MILLION-MILLISECONDS",
+        "coordination",
+        "src/maintenance.rs",
+        "const MILLIS_PER_DAY: i64 = 86_400_000;",
+        "const MILLIS_PER_DAY: i64 = 8_640_000;",
+        "maintenance::maintenance_prunes_the_agent_runs_past_their_retention",
+        "the upkeep's retention cutoff counts whole days of milliseconds, the unit agent_runs.created_at is kept in (SPEC-043 R13)"
       ]
     ]
   }

@@ -207,6 +207,8 @@ apiKeyHelper scan's waiting entry is lifted; the JSON diff is handed back with t
 | `crates/agent/tests/compose.rs` | `deck-streak-agent` | added |
 | `crates/agent/tests/gate.rs` | `deck-streak-agent` | added |
 | `crates/agent/tests/duty.rs` | `deck-streak-agent` | added: the duty engine's order, A9 and A14 |
+| `crates/coordination/src/maintenance.rs` | `deck-streak-coordination` | changed: the daily upkeep prunes `agent_runs` past its 90 days |
+| `crates/coordination/tests/maintenance.rs` | `deck-streak-coordination` | changed: the prune of `agent_runs` |
 | `crates/agent/tests/constants.rs` | `deck-streak-agent` | added: the configured literals, each asserted written out |
 | `crates/agent/tests/support/mod.rs` | `deck-streak-agent` | added: the recorded alerts, vault, runner and gate fakes |
 | `crates/agent/tests/redteam.rs` | `deck-streak-agent` | added |
