@@ -15,8 +15,9 @@
 - **Prerequisites:** SPEC-020, SPEC-021, SPEC-027, SPEC-041, SPEC-042 and SPEC-043 (landed);
   SPEC-049, SPEC-053, SPEC-100, SPEC-101, SPEC-102, SPEC-105, SPEC-110, SPEC-111 and SPEC-116
   (planned, unlanded: each adds a kind, a duty's writer or a job this checklist gates); SPEC-142
-  (this wave, unlanded: the `import` role beside which the `cutover` role is added). SPEC-146
-  (this wave) builds after it and adds its own item. **Mutation band:** `S14300-S14399`.
+  (this wave, unlanded: the `import` role beside which the `cutover` role is added).
+  **Mutation band:** `S14300-S14399`. SPEC-146 (this wave) builds after this SPEC and adds its own
+  item.
 - **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
   `docs/specs/` with its tests and `docs/red-first/SPEC-143.md` (ADR-016).
 
