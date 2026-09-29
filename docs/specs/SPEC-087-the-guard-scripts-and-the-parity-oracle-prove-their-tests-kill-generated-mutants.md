@@ -390,6 +390,7 @@ A23: python3 -m unittest discover -s scripts/tests -p test_verdict_download.py -
 | `scripts/tests/test_mutation_python_verdict.py` | delivery | added: A13 to A19 |
 | `scripts/tests/test_mutation_python_workflows.py` | delivery | added: A20 to A22 |
 | `scripts/tests/test_mutation_verdict.py`, `scripts/tests/test_mutation_workflows.py` | delivery | changed only where they assert text this delivery changes (the plan's count line, `ci`'s and `mutation-verdict`'s needs), each change named in the red-first record |
+| `scripts/tests/test_not_started_legs.py` | delivery | changed: the recording shim answers the `scripts` judge of the merged verdict step, and `ci` is driven over every need of its `needs:` list, so `mutation-python` reads as never skipped by design |
 | `docs/BUILDER-BRIEF.md`, `docs/TESTING.md` | delivery | changed: R13 and the Python run (R16) |
 | `docs/specs/SPEC-039-every-change-proves-its-tests-kill-its-mutants.md` | delivery | changed: a dated amendment, insert-only (R16) |
 | `docs/decisions/ADR-057-mutation-testing-runs-on-the-diff-in-ci-and-weekly-on-dev.md` | delivery | changed: a dated note pointing to ADR-073 (R16) |
