@@ -47,7 +47,7 @@ outcome within a bound and answers, or says the sync is still running.
 - The bot unit drops the sync login and adds one writable directory.
 - A refusal on the job side (a recompute load error, or a cycle refusal such as a malformed sync
   scope) leaves the request pending, so the owner is told the sync is still running until the
-  answer bound; the next request or the daily timer serves it again. No refused owner run is
+  answer bound; the next request or the daily timer serves it again. The follow-up is #323. No refused owner run is
   recorded, and no table is added to record one.
 - The path unit's live behaviour is cited from `systemd.path(5)`; a user manager was not available
   to measure it in the build sandbox.

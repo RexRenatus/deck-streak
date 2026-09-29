@@ -32,7 +32,7 @@ is red only under the violating job, and under the verifier's violating plant (t
 path unit's [Path] section is exactly `PathChanged=` on the request file, and a census of every
 unit under `deploy/systemd` refuses zero examined and names the units that write the request
 directory. A `PathModified=` line in the path unit and a `ReadWritePaths=` line in the API unit each
-left the old suite green and turn the new one red.
+left the old suite green and turn the new one red. The census resolves a directory above the request directory, a BindPaths= source and a RuntimeDirectory= as write access; six such plants on another unit each fail it.
 
 ```red-first
 A1: red at ca3b54b: panicked at crates/daemon/tests/sync_request.rs:146: the bot role runs no cycle in its own process

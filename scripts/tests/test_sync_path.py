@@ -54,12 +54,32 @@ def judge_path_unit(unit):
     return problems
 
 
+def writable_paths(unit):
+    """Every path a unit's [Service] section makes writable: ReadWritePaths= and BindPaths=
+    entries (their "-" and "+" prefixes and a bind's destination dropped), and each
+    RuntimeDirectory=, which systemd creates below /run, owned by the unit's user."""
+    for key in ("ReadWritePaths", "BindPaths"):
+        for value in values(unit, "Service", key):
+            for entry in value.split():
+                yield entry.lstrip("-+").split(":")[0].rstrip("/") or "/"
+    for value in values(unit, "Service", "RuntimeDirectory"):
+        for entry in value.split():
+            yield "/run/" + entry.split(":")[0].strip("/")
+
+
+def reaches_the_request_directory(path):
+    """Whether write access to `path` is write access to the request directory: the directory
+    itself, a path inside it, or any directory above it."""
+    inside = (path + "/").startswith(REQUEST_DIRECTORY + "/")
+    return inside or REQUEST_DIRECTORY.startswith(path.rstrip("/") + "/")
+
+
 def request_directory_writers(units):
-    """The names of the units whose ReadWritePaths= names the request directory."""
+    """The names of the units that can write the request directory."""
     return sorted(
         name
         for name, unit in units.items()
-        if any(REQUEST_DIRECTORY in value for value in values(unit, "Service", "ReadWritePaths"))
+        if any(reaches_the_request_directory(path) for path in writable_paths(unit))
     )
 
 
@@ -98,6 +118,30 @@ class TheSyncPath(unittest.TestCase):
                 {"deck-streak-bot.service": bot, "deck-streak-api.service": planted}
             ),
             ["deck-streak-api.service", "deck-streak-bot.service"],
+        )
+        for line in (
+            "ReadWritePaths=/run",
+            "ReadWritePaths=-/run/",
+            "ReadWritePaths=/",
+            "ReadWritePaths=/run/deck-streak-sync/request",
+            "RuntimeDirectory=deck-streak-sync",
+            "BindPaths=/run/deck-streak-sync",
+        ):
+            writer = sections("[Service]\n" + line + "\n")
+            self.assertEqual(
+                request_directory_writers(
+                    {"deck-streak-bot.service": bot, "deck-streak-api.service": writer}
+                ),
+                ["deck-streak-api.service", "deck-streak-bot.service"],
+                line + " writes the request directory and is named",
+            )
+        sibling = sections("[Service]\nReadWritePaths=/run/deck-streak-syncer\n")
+        self.assertEqual(
+            request_directory_writers(
+                {"deck-streak-bot.service": bot, "deck-streak-api.service": sibling}
+            ),
+            ["deck-streak-bot.service"],
+            "a sibling directory is not the request directory",
         )
 
     def test_only_the_bot_unit_writes_the_request_directory(self):

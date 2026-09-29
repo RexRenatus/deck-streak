@@ -92,7 +92,7 @@ A6: cargo test -p deck-streak-coordination --test job_table -- --exact the_job_t
 | `crates/bot/tests/commands.rs` | `deck-streak-bot` | changed: the `StillRunning` reply is sent |
 | `crates/bot/tests/messages/sync-still-running.msg.json` | `deck-streak-bot` | added: the golden for that reply |
 | `crates/ingest/src/sync_runs.rs` | `deck-streak-ingest` | changed: `owner_run_since` |
-| `crates/ingest/tests/owner_run.rs` | `deck-streak-ingest` | changed: the owner's latest run since an instant is read |
+| `crates/ingest/tests/owner_run.rs` | `deck-streak-ingest` | added: the owner's latest run since an instant is read |
 | `.sqlx/` | `deck-streak-ingest` | changed: the refreshed query cache |
 | `scripts/tests/test_deploy_templates.py` | tests | changed: the bot reads no sync credential |
 | `deploy/systemd/deck-streak-job@sync (path unit)` | deploy | added |
@@ -109,6 +109,7 @@ A6: cargo test -p deck-streak-coordination --test job_table -- --exact the_job_t
 - It does not start units from the bot and adds no polkit or sudo rule (#286).
 - It does not move the sync login into a drop-in; SPEC-062 owns that (#286).
 - It does not install any unit: the first deploy does (#286).
+- It does not record a job-side refusal (a recompute load error, or a cycle refusal such as a malformed sync scope) as an owner run: `sync_runs.reason` holds only SPEC-022 R9's closed set of sync failure codes, so the owner is told the sync is still running until the answer bound rather than that it failed (#323).
 
 ## 6. Risks
 
