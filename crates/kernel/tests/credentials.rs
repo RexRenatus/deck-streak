@@ -126,3 +126,26 @@ fn a_missing_credential_refuses_start_by_its_id() {
         );
     }
 }
+
+#[test]
+fn a_credential_that_exists_and_cannot_be_read_is_unreadable_and_not_missing() {
+    let directory = tempfile::tempdir().expect("a temporary directory");
+    // A directory of the credential's name exists, and reading it as a file fails for a reason
+    // other than the file's absence.
+    fs::create_dir(directory.path().join(ID)).expect("a directory of that name");
+    let refused = loader(directory.path(), &Redactor::new()).load(ID);
+    assert!(
+        matches!(refused, Err(CredentialError::Unreadable { id: ID, .. })),
+        "an unreadable credential was reported as {refused:?}"
+    );
+}
+
+#[test]
+fn a_secret_shows_no_value_in_debug() {
+    let directory = tempfile::tempdir().expect("a temporary directory");
+    fs::write(directory.path().join(ID), FROM_THE_FILE).expect("written");
+    let secret = loader(directory.path(), &Redactor::new())
+        .load(ID)
+        .expect("the credential loads");
+    assert_eq!(format!("{secret:?}"), "Secret(..)");
+}

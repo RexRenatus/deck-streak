@@ -1,0 +1,39 @@
+name: planted
+
+# A planted workflow (SPEC-034 A11): actions/checkout of this repository, without `repository`, with
+# an empty `with`, which is no inputs, with `${{ github.repository }}` and with its own name, and
+# from this server, named by `${{ github.server_url }}` or left empty, and a fetch from origin.
+# scripts/tests/test_ci_workflows.py judges it; nothing runs it.
+on:
+  pull_request:
+    branches: [dev]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@0123456789abcdef0123456789abcdef01234567
+      - name: a checkout whose with is empty
+        uses: actions/checkout@0123456789abcdef0123456789abcdef01234567
+        with:
+      - uses: actions/checkout@0123456789abcdef0123456789abcdef01234567
+        with:
+          repository: ${{ github.repository }}
+          persist-credentials: false
+      - uses: actions/checkout@0123456789abcdef0123456789abcdef01234567
+        with:
+          repository: RexRenatus/deck-streak
+          persist-credentials: false
+      - name: this repository's dev, from origin
+        run: git fetch --depth 1 origin dev
+      - uses: actions/checkout@0123456789abcdef0123456789abcdef01234567
+        with:
+          github-server-url: ${{ github.server_url }}
+          persist-credentials: false
+      - uses: actions/checkout@0123456789abcdef0123456789abcdef01234567
+        with:
+          github-server-url: ''
+          persist-credentials: false
