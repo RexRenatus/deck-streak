@@ -90,15 +90,6 @@
         "let held = match self.lock.exclusive().await.map(Some) {",
         "instruments_step::a_run_while_one_runs_starts_nothing",
         "a run requested while one runs returns without waiting for the holder (SPEC-094 R8, A15)"
-      ],
-      [
-        "S09411-INSTRUMENT-LOCK-EXPLICIT-RELEASE",
-        "coordination",
-        "src/instruments.rs",
-        "if let Err(error) = held.release() {",
-        "if let Err(error) = std::io::Result::Ok(drop(held)) {",
-        "instruments_step::a_run_while_one_runs_starts_nothing",
-        "the lock is released explicitly, since a lock closed alone can read as held (SPEC-094 R8, A15)"
       ]
     ],
     "CARGO_KILLED_SCRIPT_MUTATIONS": [
