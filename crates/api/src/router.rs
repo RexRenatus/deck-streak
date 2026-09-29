@@ -24,6 +24,7 @@
 //!    (ADR-025);
 //! 9. the extractors read a body of at most [`BODY_LIMIT_BYTES`], and answer 413 past it.
 
+use std::sync::Arc;
 use std::time::Duration;
 
 use axum::error_handling::HandleErrorLayer;
@@ -31,6 +32,7 @@ use axum::extract::{DefaultBodyLimit, MatchedPath, Request};
 use axum::http::header::{AUTHORIZATION, COOKIE, SET_COOKIE};
 use axum::http::{HeaderName, StatusCode};
 use axum::{BoxError, Router};
+use deck_streak_coordination::progression::level_view::LawTierSource;
 use tower::ServiceBuilder;
 use tower::limit::GlobalConcurrencyLimitLayer;
 use tower::load_shed::LoadShedLayer;
@@ -48,6 +50,7 @@ use crate::analytics_routes;
 use crate::health::{self, Readiness};
 use crate::notifications_routes;
 use crate::session_routes::{self, OwnerAccess};
+use crate::xp_routes;
 
 /// Requests served at once, the rust-service pack's reference value. Each holds its buffers until
 /// it answers, so this bounds the service's memory; one owner's Mini App never reaches it.
@@ -66,6 +69,7 @@ pub const REQUEST_ID_HEADER: &str = "x-request-id";
 pub struct ApiState {
     readiness: Readiness,
     owner: Option<OwnerAccess>,
+    law_tiers: Option<Arc<dyn LawTierSource>>,
 }
 
 impl ApiState {
@@ -75,6 +79,7 @@ impl ApiState {
         Self {
             readiness,
             owner: None,
+            law_tiers: None,
         }
     }
 
@@ -82,6 +87,13 @@ impl ApiState {
     #[must_use]
     pub fn with_owner(mut self, access: OwnerAccess) -> Self {
         self.owner = Some(access);
+        self
+    }
+
+    /// This state, answering `GET /api/level/law-tiers` from `source` (SPEC-072 R24).
+    #[must_use]
+    pub fn with_law_tiers(mut self, source: Arc<dyn LawTierSource>) -> Self {
+        self.law_tiers = Some(source);
         self
     }
 
@@ -99,10 +111,16 @@ impl ApiState {
 pub fn router(state: ApiState) -> Router {
     let owner = state.owner.clone();
     let readiness = state.readiness.clone();
+    let law_tiers = state.law_tiers.clone();
     let routes = health::routes().with_state(state);
     let routes = match owner {
         Some(access) => routes
             .merge(analytics_routes::routes(access.clone(), readiness.clone()))
+            .merge(xp_routes::routes(
+                access.clone(),
+                readiness.clone(),
+                law_tiers,
+            ))
             .merge(session_routes::routes(access.clone()))
             .merge(notifications_routes::routes(access, readiness)),
         None => routes,

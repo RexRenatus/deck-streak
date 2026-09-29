@@ -1,21 +1,21 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT COALESCE(SUM(amount), 0) AS \"total!: u64\" FROM xp_ledger",
+  "query": "SELECT COUNT(*) AS \"held!: i64\" FROM buffs WHERE study_day = ?1 AND kind = 'ascendant'",
   "describe": {
     "columns": [
       {
-        "name": "total!: u64",
+        "name": "held!: i64",
         "ordinal": 0,
         "type_info": "Integer",
         "origin": "Expression"
       }
     ],
     "parameters": {
-      "Right": 0
+      "Right": 1
     },
     "nullable": [
       false
     ]
   },
-  "hash": "cf3c989e0508fedb14a7533581d9bfa2e19ffef186bca9c2fc70c58968de1eff"
+  "hash": "9f7c546d1b4c1207ec959ad5ded0a67e6b10872ce7db8034c02e5342e7d280ff"
 }

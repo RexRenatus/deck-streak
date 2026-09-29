@@ -346,7 +346,13 @@ fn the_courses_file_refuses_a_duplicate_or_overlapping_course() {
     assert!(!refusal.to_string().contains("no-such-courses"));
     let relative = Courses::load(&Environment::from_vars([(COURSES_FILE, "courses.json")]))
         .expect_err("a relative path refuses");
-    assert!(matches!(relative, CoursesError::Malformed { .. }));
+    assert_eq!(
+        relative,
+        CoursesError::Malformed {
+            setting: COURSES_FILE,
+            expected: "an absolute file path",
+        }
+    );
     for refused in [refusal, relative] {
         let said = refused.to_string();
         assert!(said.contains(COURSES_FILE), "{said}");
