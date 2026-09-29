@@ -392,6 +392,22 @@
         "        for name in ():\n",
         "a `bin::` killer in a module the binary's root declares resolves, because the module tree is followed from the root (SPEC-039 section 15, A44)",
         "test_mutation_rows.TheBinKillerRunsTheBinarysOwnUnitTests.test_a_bin_killer_outside_the_binarys_sources_is_refused_by_the_census"
+      ],
+      [
+        "S03950-A-BINARYS-MODULES-SIT-BESIDE-ITS-ROOT",
+        "scripts/mutation_rows.py",
+        "            file.parent if file == root_file or file.name == \"mod.rs\" else file.parent / file.stem\n",
+        "            file.parent if file.name == \"mod.rs\" else file.parent / file.stem\n",
+        "a binary's crate root declares its modules beside itself whatever its file is named, as rustc reads a crate root, so a `bin::` killer in a module of `src/other.rs` resolves (SPEC-039 section 15, A45)",
+        "test_mutation_rows.TheBinKillerFollowsRustcAndRefusesAShadow.test_a_module_beside_a_root_not_named_main_resolves"
+      ],
+      [
+        "S03951-A-BIN-KILLER-BESIDE-A-TESTS-BIN-RS-IS-REFUSED",
+        "scripts/mutation_rows.py",
+        "            if any(candidate.is_file() for candidate in shadowed):\n",
+        "            if False:\n",
+        "a crate holding `tests/bin.rs` or `tests/bin/main.rs` is refused for a `bin::` killer by name, so a killer written for that file never runs the binary's own test of the same path (SPEC-039 section 15, A45)",
+        "test_mutation_rows.TheBinKillerFollowsRustcAndRefusesAShadow.test_a_bin_killer_beside_a_tests_bin_rs_is_refused"
       ]
     ]
   }
