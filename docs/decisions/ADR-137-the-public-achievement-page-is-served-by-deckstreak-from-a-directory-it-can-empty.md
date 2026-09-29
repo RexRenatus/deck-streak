@@ -24,9 +24,9 @@ does DeckStreak put the page, so that withdrawing it is possible at all?
 
 ## Considered Options (the alternatives it was chosen against)
 
-- DeckStreak writes static files into a directory it is configured with, and its own Caddy block
-  serves them under `/public/`: chosen, because a withdrawal is a file removal DeckStreak performs
-  and verifies.
+- Static files in a directory DeckStreak is configured with: chosen, because a withdrawal is a
+  file removal DeckStreak performs and verifies, and its own Caddy block serves them under
+  `/public/`.
 - A public repository: rejected because history cannot be withdrawn, and that breaks erase symmetry.
 - A third-party static host: rejected because a withdrawal would depend on another service's
   deletion and its caches.

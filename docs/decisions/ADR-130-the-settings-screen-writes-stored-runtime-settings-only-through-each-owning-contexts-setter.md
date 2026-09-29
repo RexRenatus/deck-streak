@@ -27,8 +27,8 @@ ownership register). Which of them may the screen write, and through what?
 
 ## Considered Options (the alternatives it was chosen against)
 
-- Each owning context declares its settings beside its setter, and coordination's census gathers
-  and routes each write: chosen, because the owner of each table stays its only writer and one
+- Each owning context declares its settings beside its setter: chosen, because the owner of each
+  table stays its only writer, and coordination's census gathers and routes each write, so one
   screen still reaches every setting.
 - One generic key-value settings table that the API writes directly: rejected because the API
   would write rows that belong to other contexts, which the ownership register forbids.

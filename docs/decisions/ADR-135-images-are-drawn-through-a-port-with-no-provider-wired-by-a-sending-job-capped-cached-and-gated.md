@@ -25,8 +25,8 @@ a ceremony, and what is wired before #169 is answered?
 
 ## Considered Options (the alternatives it was chosen against)
 
-- A port with no provider wired, drawn by the sending job `image_art` from rows the fold enqueues:
-  chosen, because the fold stays free of calls, and a draw's failure touches only its own row.
+- A port with no provider wired, drawn by the sending job `image_art`: chosen, because the fold
+  only enqueues rows and stays free of calls, and a draw's failure touches only its own row.
 - Draw inline in the fold, as the predecessor did: rejected because a 90-second call would sit
   inside the fold, and a replay would call the provider again.
 - Draw from a request handler when the owner opens the gallery: rejected because a milestone's

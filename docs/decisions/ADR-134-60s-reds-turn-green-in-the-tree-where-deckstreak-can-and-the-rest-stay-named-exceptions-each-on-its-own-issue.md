@@ -26,9 +26,9 @@ what does it do with the rest?
 
 For the threat model's trace:
 
-- Plan the STRIDE model with `path:line:quote` spans, declared by the front matter the
-  cyber-pipeline pack reads, and keep the trace as a named exception on its own issue: chosen,
-  because the model and its citations are checked in the tree, and nothing of the hub is published.
+- Plan the STRIDE model and keep its trace a named exception on its own issue: chosen, because
+  the model and its citations (`path:line:quote` spans, declared by the front matter the
+  cyber-pipeline pack reads) are checked in the tree, and nothing of the hub is published.
 - Carry the pack's row identifier in public front matter: rejected because it puts a hub identifier
   in a public repository.
 - Exclude the trace silently: rejected because the house forbids an exclusion with no record.

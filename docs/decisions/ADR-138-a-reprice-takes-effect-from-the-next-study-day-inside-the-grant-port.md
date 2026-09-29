@@ -24,9 +24,9 @@ price take effect, and where is it applied?
 
 ## Considered Options (the alternatives it was chosen against)
 
-- Price inside `GrantPort::grant` and `settle`, by the multiplier in force on the request's study
-  day, with a change in force from the next study day: chosen, because a day's price is fixed
-  before its first grant, so a replay and a recompute meet the same price.
+- Price inside the grant port, in force from the next study day: chosen, because a day's price is
+  fixed before its first grant, so a replay and a recompute meet the same price; `GrantPort::grant`
+  and `settle` price by the multiplier in force on the request's study day.
 - Price at the call, as the predecessor did: rejected because a change in the middle of a day would
   price its later grants unlike its earlier ones, and a recompute of that day could change it.
 - Each caller prices its amount before the port: rejected because a caller could forget, and the

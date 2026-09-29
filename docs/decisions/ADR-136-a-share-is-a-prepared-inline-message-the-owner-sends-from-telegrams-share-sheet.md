@@ -22,9 +22,9 @@ the one router (ADR-041). How does a card leave that chat, and who chooses where
 
 ## Considered Options (the alternatives it was chosen against)
 
-- The Bot API's `savePreparedInlineMessage` with the card's file id, then the Mini App's
-  `shareMessage`: chosen, because Telegram's own sheet asks the owner for each recipient, and the
-  photo is referenced by the id Telegram already holds.
+- A prepared inline message sent through `shareMessage`: chosen, because Telegram's own sheet
+  asks the owner for each recipient, and the Bot API's `savePreparedInlineMessage` references the
+  photo by the file id Telegram already holds.
 - `shareToStory`: rejected because it needs the image at a public URL, and no image is served from
   a public path.
 - `downloadFile`: rejected because it saves a file to the device rather than sharing it, and it also
