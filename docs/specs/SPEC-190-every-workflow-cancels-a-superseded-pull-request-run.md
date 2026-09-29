@@ -4,8 +4,9 @@
 - **Decided by:** ADR-190 (this SPEC's own: one concurrency rule for every workflow, and what it
   was chosen against), ADR-055 (the rule for `ci.yml` and why GitHub's one pending run per group
   shapes it) and SPEC-038 R8 (the pull-request concurrency rule; it takes an insert-only amendment).
-- **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
-  `docs/specs/` with its tests and `docs/red-first/SPEC-190.md` (ADR-016).
+- **Status:** delivered. It waited in `docs/specs/planned/` from its own commit until its tests
+  were green, and the delivery moved it to `docs/specs/` (ADR-016). It holds
+  `docs/red-first/SPEC-190.md`.
 
 ## 1. The problem, measured
 
