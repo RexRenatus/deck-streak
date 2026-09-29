@@ -5,8 +5,9 @@
   `drill_mints`, the staged runs that create, grade and archive a drill note);
   `deck-streak-coordination` (the `drill_coach` job and its use case, the `drill_ready` occasion).
 - **Decided by:** ADR-043 (the shell runner, its gate and caps), ADR-054 (no-AI mode is the
-  default), ADR-110 (a graded drill is paid once by SPEC-110's post-back) and ADR-111 (the drill
-  coach's plan is the engine's, and a grade is accepted by the law gate and a score range).
+  default), ADR-110 (a graded drill is paid once by SPEC-110's post-back), ADR-111 (the drill
+  coach's plan is the engine's, and a grade is accepted by the law gate and a score range) and
+  ADR-113 (a prepared duty's ping is a router occasion).
 - **Prerequisites:** SPEC-027, SPEC-040, SPEC-041, SPEC-042, SPEC-043, SPEC-044 and SPEC-110.
   **Mutation band:** `S11100-S11199`.
 - **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
@@ -70,9 +71,11 @@ R8. The gate is the task's in `ai-safety.json`: ai-content-safety's own classes,
 R9. `drill_mints` (`migrations/011101_vault_drill_mints.sql`, `STRICT`, `created_at`) holds one row
     per minted drill: the drill id (primary key), the code, the subject, the study day, the held
     `rule` section. SPEC-110's list gives a note with no `created` property the age of its mint row.
-R10. A minted drill raises the occasion `drill_ready` (class `nudge`, tier T2, no budget, dedupe
-    per study day, setting `drill_ready_enabled`, off by default) through the router (SPEC-041 R1),
-    whose text names the drill's type and subject and no date.
+R10. A minted drill raises the occasion `drill_ready` through the router (SPEC-041 R1), whose text
+    names the drill's type and subject and no date. The policy gains the kind as SPEC-041 R10 added
+    `reading_ready`: class `nudge`, tiers `["T2"]`, budget `null`, dedupe `per-study-day`, setting
+    `drill_ready_enabled`, and a `deviations` entry naming ADR-113. The setting withholds at `"0"`
+    (SPEC-041 R4, rule 1); with the cadence unset nothing is minted, so nothing is raised.
 
 The grade
 
@@ -120,7 +123,7 @@ R16. CHARTER 10's eleven anti-goals bind this SPEC as one block; the ones it tou
 | A11 | the XP mapping gives 10 for 0, 25 for 10, and rounds a half up | `the_grade_maps_its_mean_to_xp` |
 | A12 | an accepted grade updates and moves the note, and the post-back pays it once | `an_accepted_grade_is_moved_and_paid_once` |
 | A13 | the job grades at most the configured number, oldest first | `the_job_grades_at_most_its_cap` |
-| A14 | a minted drill raises `drill_ready` through the router, and none with its setting off | `a_minted_drill_raises_drill_ready` |
+| A14 | a minted drill raises `drill_ready` through the router, and its setting at `"0"` withholds it | `a_minted_drill_raises_drill_ready` |
 | A15 | a mint's persona reads only its own subject's memory | `the_mint_reads_only_its_subjects_memory` |
 | A16 | `drill_mints` is exported and erased | `the_mint_table_is_exported_and_erased` |
 | A17 | the job table holds `drill_coach` off every reserved minute | `the_job_table_holds_the_drill_coach` |
