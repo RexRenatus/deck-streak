@@ -81,6 +81,53 @@
         "starts_with(\"lawx/\")",
         "reading_xp::a_topic_earns_on_the_track_of_its_prefix",
         "a law topic's XP lands on the law track (SPEC-047 R6, A6)"
+      ],
+      [
+        "S04710-THE-WINDOW-COUNTS-IN-THE-CONFIGURED-OFFSET",
+        "readings",
+        "src/studied.rs",
+        "rule.study_day(at).epoch_day()",
+        "StudyDayRule::default().study_day(at).epoch_day()",
+        "studied::the_window_follows_the_configured_offset",
+        "a review counts by the study day of the configured offset and rollover hour, never the default rule's (SPEC-047 R5, A12)"
+      ],
+      [
+        "S04711-THE-WINDOW-CLOSES-IN-THE-CONFIGURED-OFFSET",
+        "readings",
+        "src/studied.rs",
+        "rule.study_day(now).epoch_day()",
+        "StudyDayRule::default().study_day(now).epoch_day()",
+        "studied::the_window_follows_the_configured_offset",
+        "the window is over when the configured offset's study day d + 2 begins (SPEC-047 R5, A12)"
+      ],
+      [
+        "S04712-A-FAILED-STAMP-IS-NOT-COUNTED-STUDIED",
+        "coordination",
+        "src/readings/settle.rs",
+        ".record_measure(&reading.id, count, reading.verdict, None)",
+        ".record_measure(&reading.id, count, reading.verdict, { report.studied += 1; None })",
+        "readings_settle::a_failed_stamp_leaves_the_reading_open_for_the_next_pass",
+        "a reading whose Studied stamp failed is not counted studied in the pass (SPEC-047 R4, A13)"
+      ],
+      [
+        "S04713-A-FAILED-STAMP-KEEPS-THE-VERDICT-OPEN",
+        "coordination",
+        "src/readings/settle.rs",
+        ".record_measure(&reading.id, count, reading.verdict, None)",
+        ".record_measure(&reading.id, count, Verdict::Studied, Some(now))",
+        "readings_settle::a_failed_stamp_leaves_the_reading_open_for_the_next_pass",
+        "a reading turns studied only once its line is stamped, so the next pass measures it again (SPEC-047 R4, A13)"
+      ]
+    ],
+    "CARGO_KILLED_SCRIPT_MUTATIONS": [
+      [
+        "S04714-THE-EXPORT-KEEPS-READ-AT-AND-STUDIED-AT-APART",
+        "crates/readings/src/data_rights.rs",
+        "\"read_at\": row.read_at,",
+        "\"read_at\": row.studied_at,",
+        "coordination",
+        "data_rights_symmetry::the_exported_tables_equal_the_erased_tables_over_every_port",
+        "the export carries read_at as read_at, not as studied_at; the seeded rows give the two distinct values (SPEC-047 R8)"
       ]
     ]
   }
