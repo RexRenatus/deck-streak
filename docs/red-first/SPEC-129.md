@@ -96,3 +96,17 @@ file at the red commit fails only that test, by assertion.
 A8 replay: red at cc3cfb8e: FAILED (failures=1), AssertionError: {'pla[13 chars]cargo mutants --in-place;# --timeout 300 --build-timeout 600']} != {'pla[13 chars]cargo mutants --in-place;']}
 A8 replay: green at 39426b86: Ran 18 tests, OK, examined 3 ci.yml commands, examined 4 mutation-weekly.yml commands
 ```
+
+## Addendum, 2026-09-29 (issue #395, round 4): a comment mark after a substitution
+
+The lines above stand, and A8 keeps its one red and one green line; this replay is quoted below
+them. The red commit 3a2383bc adds one loop to the comment test, four in-word hashes (`$(true)#`,
+`<(true)#`, `$((1))#` and `${X//;#/}`) each followed by an unbounded command; the green commit
+f15ca871 changes only the guard's word-start rule and its docstring, in
+`scripts/tests/test_dispatch_shards.py`, because the guard lives in the test module. The whole test
+file at the red commit fails only that test, by assertion.
+
+```text
+A8 replay: red at 3a2383bc: FAILED (failures=1), AssertionError: Lists differ: [] != ['cargo mutants --in-place']
+A8 replay: green at f15ca871: Ran 18 tests, OK, examined 4 in-word hashes, examined 3 ci.yml commands, examined 4 mutation-weekly.yml commands
+```

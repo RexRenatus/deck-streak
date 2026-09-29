@@ -158,7 +158,9 @@ this section and the next, and nothing else. Issue #395.
   starts a word outside every quote, to the end of its line) is cut before any command is read,
   so it is no command and bounds nothing. A word, and so a comment, starts after a blank or after
   one of `;`, `&`, `|`, `(`, `)`, `<` and `>`, so `cargo mutants --in-place;# <bounds>` is cut
-  at the `#` too. A `#` inside quotes is text (#395).
+  at the `#` too. A `)` that closes a substitution (`$( )`, `<( )`, `>( )`, `$(( ))`) starts no
+  word, and inside `${ }` an operator is text, so the `#` in `$(true)#` or `${X//;#/}` is text
+  and the command after it is still read. A `#` inside quotes is text (#395).
 - **A plant per shape.** Three tests write one workflow each into a temporary directory: one with
   a toolchain spelling, one with the binary form, and one with two commands on a line (the first
   bounded, the second not). Each asserts that every command is found and, for the last, that the
