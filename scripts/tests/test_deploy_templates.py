@@ -498,8 +498,17 @@ def value_refusals(unit, table):
 
 
 def restart_budget_refusals(unit):
-    """Every key of the restart budget a restarting unit lacks (SPEC-066 R2)."""
-    return []
+    """Every key of the restart budget a restarting unit lacks (SPEC-066 R2): a unit that assigns
+    `Restart=` to anything but `no`, in the unit or a drop-in, holds each key of
+    `_units.RESTART_BUDGET`, each refusal naming the missing key."""
+    if not any(value != "no" for value in unit.every("Service", "Restart")):
+        return []
+    return [
+        f"{unit.rel}: assigns Restart= and holds no {key}=, which the restart budget needs, and "
+        "is refused"
+        for section, key in _units.RESTART_BUDGET
+        if not unit.values(section, key)
+    ]
 
 
 def failure_target_refusals(unit):
