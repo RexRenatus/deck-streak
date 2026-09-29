@@ -92,10 +92,9 @@ class TheJudgeSetsUp(Base):
         self.addCleanup(sys.modules.pop, "mutation_python_judge_copy", None)
         judge = module.Judge(self.root, {}, self.args())
         self.addCleanup(shutil.rmtree, judge.scratch, ignore_errors=True)
-        self.assertEqual(
-            sorted(p.name for p in judge.copy.iterdir()),
-            ["helper.py", "mutation_python.py", "mutation_rows.py"],
-        )
+        copied = sorted(p.name for p in judge.copy.iterdir())
+        print(f"examined {len(copied)} copied files")
+        self.assertEqual(copied, ["helper.py", "mutation_python.py", "mutation_rows.py"])
 
 
 class TheChildIsRunAndRead(Base):

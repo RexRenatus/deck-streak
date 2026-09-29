@@ -126,6 +126,7 @@ class TheModuleHoldsItsConstants(unittest.TestCase):
             written = sorted(
                 p.name for p in Path(scratch).rglob("*") if p.name.startswith("mutation_rows")
             )
+        print(f"examined {len(written)} bytecode-free rows modules")
         self.assertEqual(ran.stdout.split("\n")[:2], ["True", scratch], ran.stderr)
         self.assertEqual(written, ["mutation_rows.py"])
 
