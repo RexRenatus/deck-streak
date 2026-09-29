@@ -237,7 +237,8 @@ function, `workflow_files`, which reads both extensions.
 A14 and A15 read both rulesets' required contexts and every workflow through `read_workflow`.
 - A14 asserts the aggregate job's `name` is exactly the expression of R8, and evaluates it for
   `pull_request` (`ci`) and for `push` (`ci (push)`, which no ruleset requires). The evaluator reads
-  exactly the form `github.event_name == '<event>' && '<a>' || '<b>'` and refuses any other.
+  exactly the form `github.event_name == '<event>' && '<a>' || '<b>'`, each arm non-empty, and
+  refuses any other.
 - A15 evaluates every job's name under each event of a workflow that is not `pull_request`, and
   asserts none is a required context. A job with no `name` reports under its id.
 

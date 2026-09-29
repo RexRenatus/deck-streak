@@ -316,3 +316,9 @@ A15: green at 3de33c5
 Rows S03401 to S03403 (`scripts/mutation-rows.d/S03400-S03499.json`) were proved with
 `python3 scripts/mutation_rows.py prove --band S03400-S03499`, the file restored by its digest:
 3 examined, 3 killed, 0 survived, 0 VOID. Each row's killer is A14. `census` and `ids` are clean.
+
+Two changes to the test file followed the green commit, each red against 58574a9's workflow. 39f81ac
+added the positive assertion that the push name `ci (push)` is judged. The fix round's commit made
+both arms of the evaluated form non-empty and read a one-line `on:` trigger in either form, so A15
+judges every event of every workflow. Under each, A14 and A15 fail at 58574a9's workflow and pass at
+the head.

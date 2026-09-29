@@ -520,7 +520,7 @@ class CiRunsOnDevAndMain(unittest.TestCase):
 # The one form the aggregate job's name takes, as the file writes it (SPEC-034 R8).
 AGGREGATE_NAME = "${{ github.event_name == 'pull_request' && 'ci' || 'ci (push)' }}"
 NAME_FORM = re.compile(
-    r"^\$\{\{ github\.event_name == '([a-z_]+)' && '([^']*)' \|\| '([^']*)' \}\}$"
+    r"^\$\{\{ github\.event_name == '([a-z_]+)' && '([^']+)' \|\| '([^']+)' \}\}$"
 )
 RULESETS = REPO / ".github" / "rulesets"
 
@@ -561,7 +561,12 @@ class TheRequiredCiCheckIsThePullRequestsOwn(unittest.TestCase):
         self.assertEqual(pushed, "ci (push)")
         self.assertNotIn(pushed, required)
         # The reader refuses every other form rather than guess at it.
-        for other in ("${{ github.event_name }}", "${{ github.ref && 'ci' || 'x' }}", "${{ x }}"):
+        for other in (
+            "${{ github.event_name }}",
+            "${{ github.ref && 'ci' || 'x' }}",
+            "${{ x }}",
+            "${{ github.event_name == 'push' && '' || 'ci' }}",
+        ):
             with self.assertRaises(AssertionError, msg=other):
                 job_name_for("ci", {"name": other}, "push")
         self.assertEqual(job_name_for("a", {}, "push"), "a")
@@ -571,7 +576,8 @@ class TheRequiredCiCheckIsThePullRequestsOwn(unittest.TestCase):
         judged = []
         for path in workflow_files(WORKFLOWS):
             workflow = read_hardened(path)
-            events = [event for event in workflow["on"] if event != "pull_request"]
+            on = workflow["on"]
+            events = [e for e in ([on] if isinstance(on, str) else on) if e != "pull_request"]
             for event in events:
                 for job_id, job in workflow["jobs"].items():
                     name = job_name_for(job_id, job, event)

@@ -86,10 +86,10 @@ note decides which run satisfies the required `ci`.
 The `ci` workflow runs on a pull request and on a push to `dev` or `main`, from the same app. The
 aggregate job keeps its id `ci`, which every `needs` reader uses, and takes the name
 `${{ github.event_name == 'pull_request' && 'ci' || 'ci (push)' }}`. A pull request's own run
-reports as `ci`, the check both rulesets require, and a push run reports as `ci (push)`. No other
-job of any workflow reports a required name under any event. GitHub's contexts reference lists the
-`github` context among those available to a job's keys, and a job's `name` is what its check run
-displays, so the name follows the event that started the run.
+reports as `ci`, the check both rulesets require, and a push run reports as `ci (push)`. No job
+of any workflow reports a required name under an event that is not `pull_request`. GitHub's
+contexts reference lists the `github` context among those available to a job's keys, and a job's
+`name` is what its check run displays, so the name follows the event that started the run.
 
 Chosen against:
 - **A new pull-request-only required context in both rulesets.** Rejected: the name every document
