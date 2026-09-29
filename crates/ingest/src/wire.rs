@@ -70,44 +70,73 @@ fn fixed<'a>(data: &'a [u8], at: usize, width: usize, what: &str) -> Result<&'a 
         .ok_or_else(|| WireError(format!("truncated {what} field")))
 }
 
+/// The refusal text of a pass that did not move the walk forward.
+pub const NO_PROGRESS: &str = "wire walk made no progress";
+
+/// The one top-level field at `at`, and the position after it.
+fn field_at(data: &[u8], mut at: usize) -> Result<(WireField<'_>, usize), WireError> {
+    let (key, next) = varint(data, at)?;
+    at = next;
+    let number = key >> 3;
+    let value = match key & 0x7 {
+        0 => {
+            let (value, next) = varint(data, at)?;
+            at = next;
+            WireValue::Varint(value)
+        }
+        1 => {
+            let bytes = fixed(data, at, 8, "64-bit")?;
+            at += 8;
+            WireValue::Fixed64(bytes)
+        }
+        2 => {
+            let (length, next) = varint(data, at)?;
+            let length = usize::try_from(length).unwrap_or(usize::MAX);
+            let bytes = fixed(data, next, length, "length-delimited")?;
+            at = next + length;
+            WireValue::Length(bytes)
+        }
+        5 => {
+            let bytes = fixed(data, at, 4, "32-bit")?;
+            at += 4;
+            WireValue::Fixed32(bytes)
+        }
+        other => return Err(WireError(format!("unsupported wire type {other}"))),
+    };
+    Ok((WireField { number, value }, at))
+}
+
 /// Walks `data` as protobuf wire format: every top-level field, in order.
 ///
 /// # Errors
 ///
 /// [`WireError`] on a truncation or an unsupported wire type; never a partial result.
 pub fn walk(data: &[u8]) -> Result<Vec<WireField<'_>>, WireError> {
+    walk_with(data, field_at)
+}
+
+/// The walk with its per-field reader injected, so the progress guard is testable on its own.
+///
+/// A pass that does not strictly advance the position is refused with [`NO_PROGRESS`] before its
+/// field is kept: a reader that stalls would otherwise push fields without bound, which is
+/// memory rather than time, and no per-run timeout protects a small runner from it.
+///
+/// # Errors
+///
+/// The reader's own [`WireError`], or [`NO_PROGRESS`] when a pass stays or steps back.
+pub fn walk_with<'a, F>(data: &'a [u8], mut step: F) -> Result<Vec<WireField<'a>>, WireError>
+where
+    F: FnMut(&'a [u8], usize) -> Result<(WireField<'a>, usize), WireError>,
+{
     let mut at = 0;
     let mut fields = Vec::new();
     while at < data.len() {
-        let (key, next) = varint(data, at)?;
+        let (field, next) = step(data, at)?;
+        if next <= at {
+            return Err(WireError(NO_PROGRESS.to_owned()));
+        }
         at = next;
-        let number = key >> 3;
-        let value = match key & 0x7 {
-            0 => {
-                let (value, next) = varint(data, at)?;
-                at = next;
-                WireValue::Varint(value)
-            }
-            1 => {
-                let bytes = fixed(data, at, 8, "64-bit")?;
-                at += 8;
-                WireValue::Fixed64(bytes)
-            }
-            2 => {
-                let (length, next) = varint(data, at)?;
-                let length = usize::try_from(length).unwrap_or(usize::MAX);
-                let bytes = fixed(data, next, length, "length-delimited")?;
-                at = next + length;
-                WireValue::Length(bytes)
-            }
-            5 => {
-                let bytes = fixed(data, at, 4, "32-bit")?;
-                at += 4;
-                WireValue::Fixed32(bytes)
-            }
-            other => return Err(WireError(format!("unsupported wire type {other}"))),
-        };
-        fields.push(WireField { number, value });
+        fields.push(field);
     }
     Ok(fields)
 }
