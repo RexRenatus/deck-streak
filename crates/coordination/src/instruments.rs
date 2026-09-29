@@ -356,3 +356,64 @@ impl Instruments {
         ))
     }
 }
+
+/// One live instrument as the surfaces list it.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct InstrumentListing {
+    /// The instrument's id.
+    pub id: String,
+    /// How often it runs, as the words `weekly` and `on_demand`.
+    pub cadence: &'static str,
+    /// The study day of its stored report; `None` while no run has stored one.
+    pub study_day: Option<i64>,
+}
+
+/// What the api and the bot hold of the instruments: an object-safe port, so neither names the
+/// ingest context the runs read through (the context map's edges).
+pub trait InstrumentService: Send + Sync {
+    /// Each live instrument, with its stored study day.
+    fn list(&self) -> BoxFuture<'_, Result<Vec<InstrumentListing>, KernelError>>;
+    /// The stored report of a live instrument; `None` while it has none.
+    fn report<'a>(
+        &'a self,
+        id: &'a str,
+    ) -> BoxFuture<'a, Result<Option<StoredReport>, KernelError>>;
+    /// Runs one instrument now; a run already going is answered, never queued (R8).
+    fn run<'a>(&'a self, id: &'a str) -> BoxFuture<'a, Result<StoredReport, OnDemandRefusal>>;
+}
+
+impl InstrumentService for Instruments {
+    fn list(&self) -> BoxFuture<'_, Result<Vec<InstrumentListing>, KernelError>> {
+        Box::pin(async move {
+            let mut listings = Vec::new();
+            for row in registry::runnable(self.rows) {
+                let stored = self.store.get(row.id).await?;
+                listings.push(InstrumentListing {
+                    id: row.id.to_owned(),
+                    cadence: match row.cadence {
+                        Cadence::Weekly => "weekly",
+                        Cadence::OnDemand => "on_demand",
+                    },
+                    study_day: stored.map(|report| report.study_day),
+                });
+            }
+            Ok(listings)
+        })
+    }
+
+    fn report<'a>(
+        &'a self,
+        id: &'a str,
+    ) -> BoxFuture<'a, Result<Option<StoredReport>, KernelError>> {
+        Box::pin(async move {
+            if registry::find(self.rows, id).is_none() {
+                return Ok(None);
+            }
+            self.store.get(id).await
+        })
+    }
+
+    fn run<'a>(&'a self, id: &'a str) -> BoxFuture<'a, Result<StoredReport, OnDemandRefusal>> {
+        Box::pin(self.run_on_demand(id))
+    }
+}
