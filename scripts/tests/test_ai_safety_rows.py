@@ -72,7 +72,9 @@ class ManifestIsGreen(unittest.TestCase):
         self.assertEqual(sources, {"cards", "memory"})
         scripts = os.environ.get(PACKS_SCRIPTS_ENV)
         if not scripts:
-            print(f"the packs' scripts are not present ({PACKS_SCRIPTS_ENV} is unset): the box run judges the rows")
+            print(
+                f"the packs' scripts are not present ({PACKS_SCRIPTS_ENV} is unset): the box run judges the rows"
+            )
             return
         probe = Path(scripts) / "ai-content-safety-probe.py"
         classes = subprocess.run(

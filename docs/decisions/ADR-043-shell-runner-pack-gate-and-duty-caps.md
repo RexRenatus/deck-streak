@@ -59,8 +59,10 @@ deadline). The daily-reading task holds no tool.
   directory; the live proof is the agent's path (#43), after the owner's route choice (ADR-054).
 - Bad, because the subscription-proxy scanner's `credential-from-secret-manager` row accepts only a
   secret-manager call inside the client, so on the box it refuses a runner that reads a systemd
-  credential; the pack must learn ADR-038's socket, or a decision must waive the row, before
-  SPEC-043 is built.
+  credential. The row is substituted, not waived: SPEC-043's A15 fails if the runner takes its token
+  from anywhere but `$CREDENTIALS_DIRECTORY/agent-device-key` or a committed file carries a token or a
+  token path, until the scan learns the socket (issue #341); the box's deferral mechanism (issue #342)
+  records the scan's red as expected against #341.
 
 ### Confirmation
 

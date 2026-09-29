@@ -33,4 +33,5 @@ A13: red at fad6ac02873d1fb82f43af0becea0fc39c361fd4: assertion `left == right` 
 A13: green at 18250b29c8c075e29e025e3845c8cc4d9314edb4
 A14: red at fad6ac02873d1fb82f43af0becea0fc39c361fd4: assertion `left == right` failed: left: []
 A14: green at 18250b29c8c075e29e025e3845c8cc4d9314edb4
+A15: not red: the runner already read only the credentials directory, so the tests were written against a green runner; each is disclosed with its plant, rows S04318 (an environment fallback), S04319 (another credential path) and S04320 (a token path in a committed file), each proved killed
 ```

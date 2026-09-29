@@ -143,6 +143,7 @@ R17. None of R1 to R14's proxy-runner criteria is a precondition for the crate's
 | A12 | an unreachable proxy yields an unavailable verdict with `proxy_unreachable`, one alert, and nothing delivered | `an_unreachable_proxy_is_unavailable_with_its_cause` |
 | A13 | the agent's data-rights port exports and erases `agent_runs` | `the_agent_runs_are_exported_and_erased` |
 | A14 | an unset route is `Absent`, and with it a duty launches nothing (the fake runner records no call), records `ai_route_absent` in `agent_runs`, raises no alert and is not retried | `an_absent_route_records_ai_route_absent_and_alerts_nothing` |
+| A15 | the runner's credential comes only from the credential socket: with a token in the environment (every name the script unsets, and `CLAUDE_CODE_OAUTH_TOKEN`) and no credentials directory it refuses and never runs `claude`; a token file at any path but `$CREDENTIALS_DIRECTORY/agent-device-key` is refused; the token never reaches an argv and no fallback chain reads it; and no committed file under `agent/` (nor under `deploy/` where it names the agent) carries a token literal or a path to a token on persistent disk. This substitutes for the proxy client scan's `credential-from-secret-manager` row (see section 6; issues #341 and #342) | `CredentialComesOnlyFromTheSocket` (five tests in `agent/tests/test_run_headless.py`); rows S04318 to S04320 |
 
 ```acceptance
 A1: python3 -m unittest discover -s agent/tests -p test_run_headless.py -k test_the_runner_keeps_the_key_off_argv_and_disk
@@ -159,6 +160,7 @@ A11: cargo test -p deck-streak-agent --test compose -- --exact the_prompt_is_com
 A12: cargo test -p deck-streak-agent --test runner -- --exact an_unreachable_proxy_is_unavailable_with_its_cause
 A13: cargo test -p deck-streak-agent --test data_rights -- --exact the_agent_runs_are_exported_and_erased
 A14: cargo test -p deck-streak-agent --test duty -- --exact an_absent_route_records_ai_route_absent_and_alerts_nothing
+A15: python3 -m unittest discover -s agent/tests -p test_run_headless.py -k CredentialComesOnlyFromTheSocket
 ```
 
 ## 3a. What the box run judges
@@ -224,7 +226,8 @@ apiKeyHelper scan's waiting entry is lifted; the JSON diff is handed back with t
 | `docs/schematics/agent-duty-run.md` | docs | added |
 | `docs/specs/SPEC-043-agent-core-runner-gate-and-degradation.md` | docs | moved from `docs/specs/planned/` |
 | `changelog.d/feat-agent-core-043.md` | docs | added |
-| `scripts/mutation-rows.d/S04300-S04399.json` | repo | added: the constants' rows |
+| `scripts/mutation-rows.d/S04300-S04399.json` | repo | added: the constants' rows, and the three credential script rows S04318 to S04320 (A15) |
+| `scripts/mutation_rows.py` | repo | changed: `agent/tests` joins the unittest roots a script row's killer resolves in |
 | `PRIVACY.md` | docs | changed: the agent-runs row |
 | `docs/decisions/ADR-043-shell-runner-pack-gate-and-duty-caps.md` | docs | added |
 | `docs/red-first/SPEC-043.md` | docs | added |
@@ -255,11 +258,16 @@ apiKeyHelper scan's waiting entry is lifted; the JSON diff is handed back with t
   data out) and the output-links class; new cases are added with each new untrusted source.
 - **A cap too tight for a long reading.** Visible as `time_cap` verdicts in `agent_runs` and in the
   readings health (SPEC-050); the cap is a duty declaration, changed by a SPEC amendment.
-- **The box scanner refuses the runner's credential read.** The subscription-proxy client scan's
-  `credential-from-secret-manager` row accepts only a secret-manager call inside the client, and R2
-  reads a systemd credential (ADR-038). Detected by `scripts/box-packs.sh` before the merge into
-  `dev` (ADR-004); the pack must learn ADR-038's socket, or a decision must waive the row, before
-  this SPEC is built (ADR-043).
+- **The box scanner refuses the runner's credential read, and the row is substituted, not
+  waived.** The subscription-proxy client scan's `credential-from-secret-manager` row accepts only
+  a secret-manager call inside the client, and R2 reads a systemd credential (ADR-038, which
+  rejects a secret-manager read in the application). Until the scan learns the socket (issue #341)
+  the row is substituted by A15, which fails if the runner takes its token from anywhere but
+  `$CREDENTIALS_DIRECTORY/agent-device-key` or a committed file carries a token or a token path;
+  the box's deferral mechanism (issue #342) records the scan's red as expected against #341, so the
+  box run reads `BOX PACKS OK` without hiding it. The unit's `LoadCredential=agent-device-key:`
+  line in the socket form (the third leg of #341) is not this SPEC's: it ships no unit, and
+  SPEC-063's A2 (issue #43) pins it where the unit ships.
 - **A mistyped route would silently turn the readings off.** An unknown value refuses start by name
   (R15), so only an unset route is `Absent`, and the surfaces then say readings are not enabled,
   never that something failed (ADR-054).

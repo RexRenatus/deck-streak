@@ -161,7 +161,7 @@
         "agent/run-headless.sh",
         "device_key=\"$(<\"$credential_file\")\"",
         "device_key=\"${CLAUDE_CODE_OAUTH_TOKEN:-$(<\"$credential_file\")}\"",
-        "the device key is the credential file's content alone, so a token in the environment never replaces it (SPEC-043 A19, ADR-038, issue 341)",
+        "the device key is the credential file's content alone, so a token in the environment never replaces it (SPEC-043 A15, ADR-038, issue 341)",
         "test_run_headless.CredentialComesOnlyFromTheSocket.test_an_environment_token_never_replaces_the_credential"
       ],
       [
@@ -169,7 +169,7 @@
         "agent/run-headless.sh",
         "credential_file=\"${CREDENTIALS_DIRECTORY:-}/agent-device-key\"",
         "credential_file=\"${CREDENTIALS_DIRECTORY:-}/device-key\"",
-        "the runner reads the credential named agent-device-key in the credentials directory and no other file (SPEC-043 A19, ADR-038, issue 341)",
+        "the runner reads the credential named agent-device-key in the credentials directory and no other file (SPEC-043 A15, ADR-038, issue 341)",
         "test_run_headless.CredentialComesOnlyFromTheSocket.test_a_token_file_at_any_other_path_is_refused"
       ],
       [
@@ -177,7 +177,7 @@
         "agent/settings.json",
         "\"DISABLE_AUTOUPDATER\": \"1\"",
         "\"DISABLE_AUTOUPDATER\": \"1\",\n    \"CLAUDE_CODE_OAUTH_TOKEN_FILE\": \"/var/lib/deck-streak/agent-device-key\"",
-        "no committed file under agent/ names a token file on persistent disk (SPEC-043 A19, issue 341)",
+        "no committed file under agent/ names a token file on persistent disk (SPEC-043 A15, issue 341)",
         "test_run_headless.CredentialComesOnlyFromTheSocket.test_no_committed_file_under_agent_carries_a_token_or_a_token_path"
       ]
     ]

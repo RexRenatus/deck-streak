@@ -5,6 +5,7 @@
 Exit 0 is green, 1 a finding. The classes: output-links (an http link), output-invisible (a
 zero-width character) and output-identity (a claim to be human). Every report ends `examined N`.
 """
+
 import sys
 
 args = sys.argv[1:]
