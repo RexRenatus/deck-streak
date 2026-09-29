@@ -8,6 +8,7 @@ use deck_streak_notifications::{
     Decision, DedupeKey, LapseContext, Occasion, Policy, Router, Surface, Tier,
 };
 use deck_streak_progression::level::level_title;
+use deck_streak_progression::{settle::{settle as plant_call, SettleRequest as PlantRequest}};
 use deck_streak_progression::xp::Level;
 
 /// The event the line is raised for.

@@ -25,6 +25,9 @@ const OWNER: &str = "progression";
 const CALLER: &str = "coordination";
 /// How a source names the operation: its module's path in progression's crate.
 const OPERATION: &str = "deck_streak_progression::settle";
+/// The request type `settle` takes. A grouped import never spells `OPERATION` contiguously, and
+/// nothing can call `settle` without building this by name.
+const REQUEST: &str = "SettleRequest";
 /// Where a recompute step lives inside coordination.
 const RECOMPUTE_DIR: &str = "crates/coordination/src/recompute/";
 /// The cause a caller outside the recompute steps passes.
@@ -129,7 +132,7 @@ fn census(root: &Path) -> Census {
                         .push(format!("{name} names {TABLE}, and only {OWNER}'s code may"));
                 }
             }
-            if context != OWNER && rust_names(&text, OPERATION) {
+            if context != OWNER && (rust_names(&text, OPERATION) || rust_names(&text, REQUEST)) {
                 census.calling.insert(name.clone());
                 if context != CALLER {
                     census
@@ -241,6 +244,11 @@ fn only_progression_writes_xp_settlement_and_only_coordination_settles() {
     );
     plant(
         planted.path(),
+        "crates/streaks/src/grouped.rs",
+        "use deck_streak_progression::{settle::{settle as plant_call, SettleRequest as PlantRequest}};\n",
+    );
+    plant(
+        planted.path(),
         "crates/coordination/src/recompute/xp.rs",
         "use deck_streak_progression::settle::{SettleCause, settle};\n\
          fn step() { let _ = SettleCause::Recompute; }\n",
@@ -280,6 +288,7 @@ fn only_progression_writes_xp_settlement_and_only_coordination_settles() {
             "crates/coordination/src/shortcut.rs calls settle outside the recompute steps, and \
              only the owner's correction may",
             "crates/quests/src/chest.rs names xp_settlement, and only progression's code may",
+            "crates/streaks/src/grouped.rs calls settle, and only coordination's code may",
             "crates/streaks/src/relight.rs calls settle, and only coordination's code may",
             "migrations/999901_quests_debit.sql names xp_settlement, and only progression's \
              migrations may",
