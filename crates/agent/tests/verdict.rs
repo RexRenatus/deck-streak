@@ -47,6 +47,11 @@ fn declarations_of(source: &str) -> usize {
         .count()
 }
 
+/// Whether `attribute` is conditional. Not yet read: the test below names what it must find.
+fn is_conditional(_attribute: &str) -> bool {
+    false
+}
+
 /// The attribute lines directly above `pub enum Verdict` in `source`.
 fn attributes_of(source: &str) -> Vec<String> {
     let lines: Vec<&str> = source.lines().collect();
@@ -87,6 +92,10 @@ fn the_verdict_type_is_must_use() {
     assert!(
         attributes.iter().any(|a| a == "#[must_use]"),
         "`pub enum Verdict` lost its #[must_use]: {attributes:?}"
+    );
+    assert!(
+        !attributes.iter().any(|a| is_conditional(a)),
+        "`pub enum Verdict` carries a conditional attribute: {attributes:?}"
     );
 }
 
@@ -151,4 +160,28 @@ fn a_raw_identifier_declaration_is_the_verdict_enum() {
     // raw identifier and carries no `#[must_use]`, so it is a second declaration.
     let decoy = "#[must_use]\n#[cfg(any())]\n#[derive(Clone)]\npub enum Verdict {\n}\n#[derive(Clone)]\npub enum r#Verdict {";
     assert_eq!(declarations_of(decoy), 2);
+}
+
+#[test]
+fn a_conditional_attribute_on_the_enum_is_refused() {
+    let good = attributes_of("#[must_use]\n#[derive(Clone)]\npub enum Verdict {");
+    assert!(good.iter().any(|a| a == "#[must_use]"));
+    assert!(!good.iter().any(|a| is_conditional(a)));
+    // A copy compiled out by `cfg`, in either spelling, and a `must_use` given only under a
+    // `cfg_attr` condition: each is read, and each is conditional.
+    for decoy in [
+        "#[must_use]\n#[cfg(any())]\n#[derive(Clone)]\npub enum Verdict {",
+        "#[must_use]\n#[r#cfg(any())]\n#[derive(Clone)]\npub enum Verdict {",
+        "#[cfg_attr(test, must_use)]\n#[derive(Clone)]\npub enum Verdict {",
+    ] {
+        let attributes = attributes_of(decoy);
+        assert!(
+            attributes.iter().any(|a| a.starts_with("#[derive(")),
+            "the enum's own derive was not read: {attributes:?}"
+        );
+        assert!(
+            attributes.iter().any(|a| is_conditional(a)),
+            "a conditional attribute was not seen: {attributes:?}"
+        );
+    }
 }
