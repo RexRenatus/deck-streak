@@ -25,9 +25,11 @@ use deck_streak_ingest::sync_runs::{SqliteSyncRuns, SyncRunStore, Trigger};
 use deck_streak_ingest::window::{WindowError, read_window};
 use deck_streak_kernel::{Clock, Db, KernelError, PortFuture, StudyDayRule, UtcMillis};
 use deck_streak_notifications::Router;
+use deck_streak_progression::ledger::SqliteXpLedger;
 
 use crate::instruments::Instruments;
 use crate::ladder_facts;
+use crate::level_up::announce_level_up;
 use crate::obligations::{ObligationSource, Obligations};
 use crate::recompute::{Fold, FoldInput};
 
@@ -287,10 +289,21 @@ where
                     synced_in,
                     courses_digest: fold.courses_digest.as_deref(),
                 };
+                // The level before the recompute's first write, against the level after its last
+                // (SPEC-072 R14): no level is stored, so the ledger says both.
+                let ledger = SqliteXpLedger::new(fold.db.clone());
+                let before = ledger.level().await.map_err(CycleError::Recompute)?;
                 fold.fold
                     .run(&fold.db, &input)
                     .await
                     .map_err(CycleError::Recompute)?;
+                if let Some(router) = &cycle.router {
+                    let after = ledger.level().await.map_err(CycleError::Recompute)?;
+                    let today = fold.rule.study_day(checked.now);
+                    if let Err(error) = announce_level_up(router, before, after, today).await {
+                        tracing::error!(%error, "the level-up line could not be raised");
+                    }
+                }
             }
             cycle.gate.recomputed(&checked).await?;
             Recompute::Ran {

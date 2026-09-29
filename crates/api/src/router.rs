@@ -33,6 +33,7 @@ use axum::http::header::{AUTHORIZATION, COOKIE, SET_COOKIE};
 use axum::http::{HeaderName, StatusCode};
 use axum::{BoxError, Router};
 use deck_streak_coordination::instruments::InstrumentService;
+use deck_streak_coordination::progression::level_view::LawTierSource;
 use tower::ServiceBuilder;
 use tower::limit::GlobalConcurrencyLimitLayer;
 use tower::load_shed::LoadShedLayer;
@@ -51,6 +52,7 @@ use crate::health::{self, Readiness};
 use crate::insights_routes;
 use crate::notifications_routes;
 use crate::session_routes::{self, OwnerAccess};
+use crate::xp_routes;
 
 /// Requests served at once, the rust-service pack's reference value. Each holds its buffers until
 /// it answers, so this bounds the service's memory; one owner's Mini App never reaches it.
@@ -70,6 +72,7 @@ pub struct ApiState {
     readiness: Readiness,
     owner: Option<OwnerAccess>,
     instruments: Option<Arc<dyn InstrumentService>>,
+    law_tiers: Option<Arc<dyn LawTierSource>>,
 }
 
 impl std::fmt::Debug for ApiState {
@@ -79,6 +82,7 @@ impl std::fmt::Debug for ApiState {
             .field("readiness", &self.readiness)
             .field("owner", &self.owner)
             .field("instruments", &self.instruments.is_some())
+            .field("law_tiers", &self.law_tiers.is_some())
             .finish()
     }
 }
@@ -91,6 +95,7 @@ impl ApiState {
             readiness,
             owner: None,
             instruments: None,
+            law_tiers: None,
         }
     }
 
@@ -105,6 +110,13 @@ impl ApiState {
     #[must_use]
     pub fn with_owner(mut self, access: OwnerAccess) -> Self {
         self.owner = Some(access);
+        self
+    }
+
+    /// This state, answering `GET /api/level/law-tiers` from `source` (SPEC-072 R24).
+    #[must_use]
+    pub fn with_law_tiers(mut self, source: Arc<dyn LawTierSource>) -> Self {
+        self.law_tiers = Some(source);
         self
     }
 
@@ -123,11 +135,17 @@ pub fn router(state: ApiState) -> Router {
     let owner = state.owner.clone();
     let readiness = state.readiness.clone();
     let instruments = state.instruments.clone();
+    let law_tiers = state.law_tiers.clone();
     let routes = health::routes().with_state(state);
     let routes = match owner {
         Some(access) => {
             let routes = routes
                 .merge(analytics_routes::routes(access.clone(), readiness.clone()))
+                .merge(xp_routes::routes(
+                    access.clone(),
+                    readiness.clone(),
+                    law_tiers,
+                ))
                 .merge(session_routes::routes(access.clone()))
                 .merge(notifications_routes::routes(access.clone(), readiness));
             match instruments {

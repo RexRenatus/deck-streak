@@ -184,3 +184,50 @@ Files added or changed by this amendment: `scripts/mutation-verdict.py` (changed
 A5: python3 -m unittest discover -s scripts/tests -p test_verdict_repeated_key.py -k a_band_file_that_repeats_a_key_is_refused_by_the_plan_without_a_traceback -k a_well_formed_band_file_is_planned_and_its_row_count_printed
 A6: python3 -m unittest discover -s scripts/tests -p test_verdict_repeated_key.py -k a_record_fragment_that_repeats_a_key_at_the_top_is_refused -k a_record_that_repeats_a_key_inside_an_entry_is_refused -k a_well_formed_record_fragment_is_read_and_counted
 ```
+
+## 11. Amendment, 2026-09-29: the retired list refuses a repeated key
+
+Issue #385. `mutation_rows.py retired` still read `scripts/mutation-rows.retired.json` with a plain
+`json.loads`, so a key repeated in the list, at its top or inside one entry, kept its last value
+and said nothing. Measured at `dev` 24b880e: an entry whose `approval` was written twice was
+admitted with the second value (`retired with approval: another`), and a list whose `retired` key
+was written twice retired nothing and exited 1 with the row refused for want of a record, naming
+the list only as lacking a record, and never the repeated key.
+
+Made by issue #385's delivery, insert-only under ruling (i) of SPEC-038 section 8: every earlier
+byte is kept in order. It inserts sections 11 and 12 only.
+
+This amendment strengthens the rule of R1 and R2: every document the retirement check reads goes
+through the one parser. It supersedes the first bullet of section 5 for the retirement record
+only; a `--rows-from` plan still keeps `json.loads`.
+
+- **R8. The retired list is read by the same parser.** `retired` reads
+  `scripts/mutation-rows.retired.json` through `mutation_rows.parse_document`, with that path as
+  `<where>`. A key repeated at any depth is a `PopulationRefused`, and the verb exits 2 with
+  `mutation_rows: REFUSED: <the sentence>` on stderr, as R3 already gives `count`, `ids` and a
+  refused revision. No row is retired by a refused list. A list without a repeated key reads
+  exactly as it did. There is no second copy of the parser: the call is the one R1 names.
+
+The row joins `S12200-S12299` (`SCRIPT_MUTATIONS`), with one killer that names one test:
+
+| row | mutant | killer |
+|---|---|---|
+| S12210 | the retired list is read by `json.loads` | `test_a_retired_list_that_repeats_a_key_is_refused_naming_it` |
+
+Sections 3 and 7 are left as they stand: no earlier line of this SPEC is edited, so the criterion
+of this amendment, A7, is defined in the criteria table and fence of section 12, and the row above
+is the only row of section 7's shape added. Files added or changed by this amendment:
+`scripts/mutation_rows.py` (changed), `scripts/tests/test_band_repeated_key.py` (two tests added),
+`scripts/mutation-rows.d/S12200-S12299.json` (one row), `docs/red-first/SPEC-122.md` (a dated
+addendum) and `changelog.d/fix-retired-repeated-key-385.md` (added). It still changes no Rust and
+no workflow (#385).
+
+## 12. Acceptance criteria of the amendment of 2026-09-29 (A7, #385)
+
+| id | criterion | decided by |
+|---|---|---|
+| A7 | a retired list that repeats a key at its top, and one that repeats a key inside an entry, are each refused by `retired` (exit 2) with the whole sentence naming the list and the key, no `Traceback` and no row retired; a well-formed list still admits its row and the examined count is printed | `test_band_repeated_key.py` `test_a_retired_list_that_repeats_a_key_is_refused_naming_it` and `test_a_well_formed_retired_list_still_admits_its_row` |
+
+```acceptance
+A7: python3 -m unittest discover -s scripts/tests -p test_band_repeated_key.py -k test_a_retired_list_that_repeats_a_key_is_refused_naming_it -k test_a_well_formed_retired_list_still_admits_its_row
+```

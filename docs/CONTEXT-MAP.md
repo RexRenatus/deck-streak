@@ -107,6 +107,8 @@ that does so updates this register in the same change.
 | `daily_rollup` | `analytics` | user-data |
 | `xp_state` | `progression` | singleton |
 | `xp_ledger` | `progression` | user-data |
+| `xp_settlement` | `progression` | user-data |
+| `buffs` | `progression` | user-data |
 | `streak_state` | `streaks` | singleton (all tracks reset) |
 | `badges_earned` | `progression` | user-data |
 | `notifications` | `notifications` | user-data |
@@ -188,6 +190,8 @@ context each migration names equal to the owner this register gives each table i
 | `cron_fires` | `coordination` | `migrations/002701_coordination_cron_fires.sql` (SPEC-027) | exempt: an erase must never re-arm the catch-up double-send guard |
 | `instrument_reports` | `coordination` | `migrations/009401_coordination_instrument_reports.sql` (SPEC-094) | exported and erased |
 | `xp_ledger` | `progression` | `migrations/004001_progression_xp_ledger.sql` (SPEC-040) | exported and erased |
+| `xp_settlement` | `progression` | `migrations/007201_progression_xp_settlement.sql` (SPEC-072) | exported and erased |
+| `buffs` | `progression` | `migrations/007202_progression_buffs.sql` (SPEC-072) | exported and erased |
 | `notification_decisions` | `notifications` | `migrations/004101_notifications_router.sql` (SPEC-041) | exported and erased |
 | `notification_deliveries` | `notifications` | `migrations/004101_notifications_router.sql` (SPEC-041) | exported and erased |
 | `notification_queue` | `notifications` | `migrations/004101_notifications_router.sql` (SPEC-041) | exported and erased |

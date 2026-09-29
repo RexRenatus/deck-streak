@@ -32,7 +32,7 @@ use tempfile::TempDir;
 /// Statements that leave every table of the schema holding rows no erase leaves: 101 rows in each
 /// table that takes rows, so an export that pages or limits its read comes up short (the
 /// predecessor's lesson), and every column a reset writes moved off its reset value.
-const SEEDS: [&str; 17] = [
+const SEEDS: [&str; 19] = [
     "UPDATE settings_generation SET generation = 7, courses_digest = '0123456789abcdef' \
      WHERE id = 1",
     "UPDATE ingest_state SET anchor_newest_review_id = 1700000000123, anchor_card_count = 57, \
@@ -128,6 +128,12 @@ const SEEDS: [&str; 17] = [
      INSERT INTO instrument_reports (instrument, study_day, schema_version, report_json, \
      created_at) \
      SELECT 'synthetic_' || i, 20000 + i, 1 + i % 3, '{\"report\":null}', 1000 * i FROM n",
+    "WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 101) \
+     INSERT INTO xp_settlement (study_day, source, track, amount, closed, created_at) \
+     SELECT 20000 + i, 'reviews', CASE i % 2 WHEN 0 THEN 'language' ELSE 'law' END, \
+     i, i % 2, 1000 * i FROM n",
+    "WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 101) \
+     INSERT INTO buffs (study_day, kind, created_at) SELECT 20000 + i, 'ascendant', 1000 * i FROM n",
 ];
 
 /// Prints how many items a check examined and refuses zero (the tdd pack's examined contract).

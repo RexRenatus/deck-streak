@@ -25,5 +25,6 @@ pub mod state;
 pub mod structure;
 pub mod sync;
 pub mod sync_runs;
+pub mod tier;
 pub mod window;
 pub mod wire;
