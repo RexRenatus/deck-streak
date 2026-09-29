@@ -35,3 +35,16 @@ A14: red at fad6ac02873d1fb82f43af0becea0fc39c361fd4: assertion `left == right` 
 A14: green at 18250b29c8c075e29e025e3845c8cc4d9314edb4
 A15: not red: the runner already read only the credentials directory, so the tests were written against a green runner; each is disclosed with its plant, rows S04318 (an environment fallback), S04319 (another credential path) and S04320 (a token path in a committed file), each proved killed
 ```
+
+## Round 5 addendum
+
+Round 5 added `test_the_runner_accepts_only_an_exact_loopback_url_and_an_absolute_path` (a sibling of the A2 test) and the runner's
+exact-URL and absolute-path checks. It was committed alone and run red against the previous
+`agent/run-headless.sh`: five of its six refusal cases failed by assertion (the sixth, a remote
+`http://` URL, was already refused), each with `AssertionError: 0 != 2`, and the four loopback forms
+launched. The A1 to A3 lines above stand; these lines are the round-5 pair for A2.
+
+```red-first
+A2: red at a6f20dc911efbcf5860541860c1cbaede5657c2e: AssertionError: 0 != 2 : (five subtests: three URLs carrying text after the port, and two capacity paths that are not absolute)
+A2: green at d78d60cd8bd7076f09a493128349e3d7f96485ae
+```

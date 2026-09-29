@@ -48,12 +48,13 @@ R2. The device key is a systemd credential (ADR-038): the runner reads it at lau
     unsets `ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN`, `ANTHROPIC_CUSTOM_HEADERS`,
     `CLAUDE_CONFIG_DIR` and the Bedrock, Vertex and Foundry switches, and sets
     `CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=1`.
-R3. The base URL comes from the unit's environment and must be a loopback URL (`http://localhost`,
-    the IPv4 loopback address, or `http://[::1]`); any other refuses with exit 2. No file in the
+R3. The base URL comes from the unit's environment and must be a loopback URL: `http://` and then
+    `localhost`, the IPv4 loopback address or `[::1]`, then at most a port, and nothing after it;
+    any other, whatever it carries after the scheme, refuses with exit 2. No file in the
     repository sets an `apiKeyHelper`, `--bare`, `bypassPermissions` or
     `--dangerously-skip-permissions`, and none sets `ANTHROPIC_API_KEY` or `ANTHROPIC_AUTH_TOKEN`.
-R4. Before a launch the runner asks the proxy's capacity endpoint (a configured path), with the key
-    on curl's stdin, and reads the status word: `ready` launches, `exhausted` exits 4, an HTTP 401
+R4. Before a launch the runner asks the proxy's capacity endpoint (a configured path, which must be
+    an absolute path: any other refuses with exit 2), with the key on curl's stdin, and reads the status word: `ready` launches, `exhausted` exits 4, an HTTP 401
     exits 3, and anything else exits 5.
 R5. Every launch passes `--max-turns`, `--max-budget-usd`, `--output-format json`,
     `--permission-mode dontAsk`, `--strict-mcp-config` and `--settings agent/settings.json`, under a
@@ -130,7 +131,7 @@ R17. None of R1 to R14's proxy-runner criteria is a precondition for the crate's
 | id | criterion | decided by |
 |---|---|---|
 | A1 | the runner hands the key to `claude` only in its environment: a fake `claude` records an argv without it and an environment with it, and no file the run leaves holds it | subscription-proxy client rows (on the box, ADR-004); `test_the_runner_keeps_the_key_off_argv_and_disk` |
-| A2 | a non-loopback base URL, `--bare` and a bypass flag each refuse with exit 2 and one `REFUSE:` line | subscription-proxy `launch-base-url-loopback`, `launch-no-bare`, `launch-no-bypass`; `test_the_runner_refuses_a_remote_url_bare_and_bypass` |
+| A2 | a base URL that is not exactly a loopback host with at most a port, whatever it carries after the scheme, a capacity path that is not absolute, `--bare` and a bypass flag each refuse with exit 2 and one `REFUSE:` line, and neither `curl` nor `claude` is called | subscription-proxy `launch-base-url-loopback`, `launch-no-bare`, `launch-no-bypass`; `test_the_runner_refuses_a_remote_url_bare_and_bypass`, `test_the_runner_accepts_only_an_exact_loopback_url_and_an_absolute_path`; rows S04321 and S04322 |
 | A3 | the preflight reads the status word: `exhausted` exits 4 with the retry instant, a 401 exits 3, an unknown answer exits 5, and the key never reaches curl's argv | subscription-proxy `launch-preflight-reads-status`; `test_the_preflight_reads_the_status_word` |
 | A4 | no settings file in the tree names an `apiKeyHelper` (the scan examines `agent/settings.json`, which declares the settings `$schema` so the scan finds it) | the box run's apiKeyHelper scan (SPEC-056 R9); `test_no_settings_file_names_an_api_key_helper` |
 | A5 | every ai-content-safety row is green over `ai-safety.json`, none VOID | ai-content-safety, every row; `test_every_ai_content_safety_row_is_green` |
@@ -147,7 +148,7 @@ R17. None of R1 to R14's proxy-runner criteria is a precondition for the crate's
 
 ```acceptance
 A1: python3 -m unittest discover -s agent/tests -p test_run_headless.py -k test_the_runner_keeps_the_key_off_argv_and_disk
-A2: python3 -m unittest discover -s agent/tests -p test_run_headless.py -k test_the_runner_refuses_a_remote_url_bare_and_bypass
+A2: python3 -m unittest discover -s agent/tests -p test_run_headless.py -k test_the_runner_refuses_a_remote_url_bare_and_bypass -k test_the_runner_accepts_only_an_exact_loopback_url_and_an_absolute_path
 A3: python3 -m unittest discover -s agent/tests -p test_run_headless.py -k test_the_preflight_reads_the_status_word
 A4: python3 -m unittest discover -s scripts/tests -p test_ai_safety_rows.py -k test_no_settings_file_names_an_api_key_helper
 A5: python3 -m unittest discover -s scripts/tests -p test_ai_safety_rows.py -k test_every_ai_content_safety_row_is_green
@@ -212,6 +213,9 @@ apiKeyHelper scan's waiting entry is lifted; the JSON diff is handed back with t
 | `crates/agent/tests/duty.rs` | `deck-streak-agent` | added: the duty engine's order, A9 and A14 |
 | `crates/coordination/src/maintenance.rs` | `deck-streak-coordination` | changed: the daily upkeep prunes `agent_runs` past its 90 days |
 | `crates/coordination/tests/maintenance.rs` | `deck-streak-coordination` | changed: the prune of `agent_runs` |
+| `crates/coordination/src/data_rights_registry.rs` | `deck-streak-coordination` | changed: the agent's data-rights port joins the ports an export and an erase run |
+| `crates/coordination/tests/data_rights_symmetry.rs` | `deck-streak-coordination` | changed: a seeded `agent_runs` block of 101 rows, so the symmetry test covers the new table |
+| `scripts/tests/test_check_gate.py` | repo | changed: the gate's python-stage test also plants the `agent/tests` suite it now discovers |
 | `crates/agent/tests/constants.rs` | `deck-streak-agent` | added: the configured literals, each asserted written out |
 | `crates/agent/tests/support/mod.rs` | `deck-streak-agent` | added: the recorded alerts, vault, runner and gate fakes |
 | `crates/agent/tests/redteam.rs` | `deck-streak-agent` | added |
@@ -227,7 +231,7 @@ apiKeyHelper scan's waiting entry is lifted; the JSON diff is handed back with t
 | `docs/schematics/agent-duty-run.md` | docs | added |
 | `docs/specs/SPEC-043-agent-core-runner-gate-and-degradation.md` | docs | moved from `docs/specs/planned/` |
 | `changelog.d/feat-agent-core-043.md` | docs | added |
-| `scripts/mutation-rows.d/S04300-S04399.json` | repo | added: the constants' rows, and the three credential script rows S04318 to S04320 (A15) |
+| `scripts/mutation-rows.d/S04300-S04399.json` | repo | added: the constants' rows, the three credential script rows S04318 to S04320 (A15), and the two runner-check rows S04321 and S04322 (A2) |
 | `scripts/mutation_rows.py` | repo | changed: `agent/tests` joins the unittest roots a script row's killer resolves in |
 | `PRIVACY.md` | docs | changed: the agent-runs row |
 | `docs/decisions/ADR-043-shell-runner-pack-gate-and-duty-caps.md` | docs | added |
@@ -243,6 +247,9 @@ apiKeyHelper scan's waiting entry is lifted; the JSON diff is handed back with t
 - It ports no vault-ops skill and offers no on-demand vault run (#54).
 - It builds no DeckStreak-owned skill pack under `skills/`, so the pack-authoring rows have nothing
   to judge here (#60).
+- The output gate does not refuse an empty input-class list, and the verdict's `#[must_use]` has no
+  test that pins it (#362).
+- It adds no index on `agent_runs.created_at` for the daily prune (#363).
 - It builds no `ApiKey` adapter: that waits for an amendment of ADR-015 and the owner's choice of a
   route at gate 3 (#162).
 

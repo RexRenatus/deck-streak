@@ -74,7 +74,8 @@ by `scripts/box-packs.sh` (SPEC-056); the ai-content-safety rows over `ai-safety
 The agent crate gains `sqlx` (the `agent_runs` repository, offline-checked) and `tokio` with the
 `process`, `time`, `io-util`, `rt` and `macros` features (the process runner and its wall clock), both
 already workspace dependencies. `agent_runs` keeps 90 days, declared in `privacy.json`; `prune_before`
-is the repository's deletion, and its schedule is the coordination layer's, not built here.
+is the repository's deletion, and its schedule is the coordination layer's: the daily upkeep in
+`crates/coordination/src/maintenance.rs` calls it.
 
 ## What would make this wrong
 
