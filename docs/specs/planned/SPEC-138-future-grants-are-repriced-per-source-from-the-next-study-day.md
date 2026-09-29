@@ -3,7 +3,10 @@
 - **Wave:** W7. **Issue:** #281 (per-source re-pricing of future grants) (epic #8).
   **Context(s):** `deck-streak-progression` (the table `xp_price_changes`, the multiplier, the
   price in force on a study day, pricing inside the grant and the settle); `deck-streak-api` (the
-  price routes); the Mini App (`web/app`, the prices' rows on the settings screen).
+  price routes); `deck-streak-coordination` (the table's data-rights registration and its symmetry
+  seed); `deck-streak-bot` (a test that no command changes a price); `deck-streak-daemon` (the api
+  role hands the price store to the routes); the Mini App (`web/app`, the prices' rows on the
+  settings screen).
 - **Decided by:** ADR-138 (this SPEC's: a re-price takes effect from the next study day and is
   applied inside the grant port), ADR-072 (a closed day's settled XP never falls), ADR-012 (the
   parity oracle proves the math), ADR-130 (the settings screen writes stored runtime settings only).

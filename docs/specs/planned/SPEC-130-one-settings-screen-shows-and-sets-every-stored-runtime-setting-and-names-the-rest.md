@@ -2,6 +2,7 @@
 
 - **Wave:** W7. **Issue:** #57 (the Mini App's settings screen for every runtime setting) (epic
   #8). **Context(s):** `deck-streak-coordination` (the settings census and its write route);
+  `deck-streak-kernel` (`SettingDecl`, the shared shape a declaration carries, and its check);
   `deck-streak-notifications` (its settings' declarations and setter); `deck-streak-quests` (the
   chest settings' declarations and setter); `deck-streak-ingest` (the skip day's declaration);
   `deck-streak-discipline` (the rail's scope and switch, declared and set); `deck-streak-api` (the

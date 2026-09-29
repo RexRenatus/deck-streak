@@ -3,8 +3,8 @@
 - **Wave:** W7. **Issues:** #125 (streak milestone share cards) and #126 (AI keepsake art for chapter
   ceremonies) (epic #8), for the delivery both need. **Context(s):** `deck-streak-notifications`
   (the photo occasion, `route_photo`, `prepare_share`, the two transport calls and their default
-  bodies, the policy's transport list); `deck-streak-bot` (the two calls on the Bot API);
-  `deck-streak-daemon` (nothing new to join: the bot transport is already joined where a role sends).
+  bodies, the policy's transport list); `deck-streak-bot` (the two calls on the Bot API). No daemon
+  role file changes: the bot's transport is already joined wherever a role sends.
 - **Decided by:** ADR-041 (the router and its transport port), ADR-136 (this wave's: a share is a
   prepared inline message the owner sends), ADR-054 (no-AI mode is the default) and ADR-135 (this
   wave's: the image pipeline).

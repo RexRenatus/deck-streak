@@ -4,9 +4,10 @@
   owner's action: register the Google and Apple sign-in clients) (epic #8). **Context(s):**
   `deck-streak-identity` (the link code, the ceremonies' state, the OpenID Connect and WebAuthn
   verifiers, the linked identities, the passkeys, Apple's sealed token and its revocation, every
-  refusal); `deck-streak-coordination` (the erase's revocation step); `deck-streak-api` (the
-  routes and the flow cookie); `deck-streak-daemon` (the api role's loads and wiring); the Mini App
-  (`web/app`: `/link`, `/signin` and the settings screen's section).
+  refusal); `deck-streak-coordination` (the erase's revocation step and the job `link_revocation`);
+  `deck-streak-api` (the routes and the flow cookie); `deck-streak-bot` (/delete erases through the
+  revocation step); `deck-streak-daemon` (the api, bot, data and job roles' loads and wiring); the
+  Mini App (`web/app`: `/link`, `/signin` and the settings screen's section).
 - **Decided by:** ADR-131 (this SPEC's: OpenID Connect through `openidconnect` over the workspace's
   own HTTP client), ADR-132 (this SPEC's: passkeys through `webauthn-rs`, with the Mini App's host as
   the relying party), ADR-133 (this SPEC's: Apple's refresh token is kept sealed and revoked on
