@@ -6,7 +6,7 @@ mod support;
 use std::path::PathBuf;
 
 use deck_streak_agent::gate::{
-    CLASS_EMPTY, CLASS_VOID, GateClassSpec, GateOutcome, OutputGate, ProbeGate,
+    CLASS_EMPTY, CLASS_VOID, GateBuildError, GateClassSpec, GateOutcome, OutputGate, ProbeGate,
 };
 use support::script;
 
@@ -28,7 +28,9 @@ fn gate(dir: &std::path::Path, classes: &[&str]) -> ProbeGate {
         dir.to_path_buf(),
         classes.iter().map(|c| spec(c)).collect(),
         Some(spec("output-invisible")),
+        true,
     )
+    .expect("a gate with its classes and its input class")
 }
 
 #[tokio::test]
@@ -76,7 +78,9 @@ async fn a_probe_that_cannot_run_or_examined_nothing_fails_closed() {
             with_template: false,
         }],
         None,
-    );
+        false,
+    )
+    .expect("a gate over one class, for a duty that reads no input");
     let GateOutcome::Failed { class, .. } = g.check("ok", "tpl").await else {
         panic!("examined 0 must not pass")
     };
@@ -90,7 +94,9 @@ async fn a_probe_that_cannot_run_or_examined_nothing_fails_closed() {
             with_template: false,
         }],
         None,
-    );
+        false,
+    )
+    .expect("a gate over one class, for a duty that reads no input");
     assert!(matches!(
         missing.check("ok", "t").await,
         GateOutcome::Failed { .. }
@@ -129,9 +135,51 @@ async fn a_template_flag_adds_the_template_as_a_second_subject() {
             with_template: true,
         }],
         None,
-    );
+        false,
+    )
+    .expect("a gate over one class, for a duty that reads no input");
     assert_eq!(g.check("out", "tpl").await, GateOutcome::Passed);
     let argv = std::fs::read_to_string(dir.path().join("argv")).expect("argv");
     assert_eq!(argv.matches("--subject").count(), 2);
     assert!(argv.ends_with("check persona"));
+}
+
+#[test]
+fn an_empty_class_list_is_refused_at_construction() {
+    let dir = tempfile::tempdir().expect("a directory");
+    let refused = ProbeGate::new(
+        dir.path().to_path_buf(),
+        dir.path().to_path_buf(),
+        Vec::new(),
+        Some(spec("output-invisible")),
+        true,
+    );
+    assert_eq!(refused.err(), Some(GateBuildError::NoOutputClass));
+    // The same call with one class is built: the refusal is the empty list and nothing else.
+    let built = ProbeGate::new(
+        dir.path().to_path_buf(),
+        dir.path().to_path_buf(),
+        vec![spec("output-links")],
+        Some(spec("output-invisible")),
+        true,
+    );
+    assert!(built.is_ok());
+}
+
+#[test]
+fn a_duty_that_reads_inputs_needs_an_input_class() {
+    let dir = tempfile::tempdir().expect("a directory");
+    let build = |input_class: Option<GateClassSpec>, reads_inputs: bool| {
+        ProbeGate::new(
+            dir.path().to_path_buf(),
+            dir.path().to_path_buf(),
+            vec![spec("output-links")],
+            input_class,
+            reads_inputs,
+        )
+    };
+    assert_eq!(build(None, true).err(), Some(GateBuildError::NoInputClass));
+    // A duty that reads no input needs none, and a duty that reads inputs is built with one.
+    assert!(build(None, false).is_ok());
+    assert!(build(Some(spec("output-invisible")), true).is_ok());
 }

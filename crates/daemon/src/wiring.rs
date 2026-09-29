@@ -35,6 +35,8 @@ use deck_streak_coordination::courses::{CoursesDisagree, agree};
 use deck_streak_coordination::delivery::{DeliveryCounts, DeliveryMarker};
 use deck_streak_coordination::obligations::Obligations;
 use deck_streak_coordination::recompute::analytics_step::AnalyticsStep;
+use deck_streak_coordination::recompute::day_bonuses::DayBonusesStep;
+use deck_streak_coordination::recompute::xp::XpStep;
 use deck_streak_coordination::recompute::{Fold, FoldError, Phase};
 use deck_streak_coordination::sync_cycle::{
     CycleError, CycleParts, CycleReport, Recompute, sync_cycle,
@@ -167,6 +169,8 @@ pub fn recompute_fold(analytics: AnalyticsSettings) -> Result<Fold, FoldError> {
         Phase::RollupAndScore,
         Box::new(AnalyticsStep::new(analytics)),
     )?;
+    fold.register(Phase::BaseXp, Box::new(XpStep))?;
+    fold.register(Phase::DerivedBonuses, Box::new(DayBonusesStep))?;
     Ok(fold)
 }
 
@@ -466,6 +470,8 @@ mod tests {
     use deck_streak_analytics::settings::AnalyticsSettings;
     use deck_streak_coordination::recompute::Phase;
     use deck_streak_coordination::recompute::analytics_step::ANALYTICS_STEP;
+    use deck_streak_coordination::recompute::day_bonuses::DAY_BONUSES_STEP;
+    use deck_streak_coordination::recompute::xp::XP_STEP;
 
     use super::{
         OwnerSyncCycle, RecomputeSetup, TransportMarker, answer_of, cycle_reason, recompute_fold,
@@ -552,9 +558,16 @@ mod tests {
     }
 
     #[test]
-    fn the_recompute_fold_registers_the_analytics_step_in_phase_one() {
+    fn the_recompute_fold_registers_the_analytics_and_xp_steps_in_their_phases() {
         let fold = recompute_fold(AnalyticsSettings::default()).expect("every step in its phase");
-        assert_eq!(fold.steps(), [(Phase::RollupAndScore, ANALYTICS_STEP)]);
+        assert_eq!(
+            fold.steps(),
+            [
+                (Phase::RollupAndScore, ANALYTICS_STEP),
+                (Phase::BaseXp, XP_STEP),
+                (Phase::DerivedBonuses, DAY_BONUSES_STEP),
+            ]
+        );
     }
 
     #[tokio::test(flavor = "multi_thread")]

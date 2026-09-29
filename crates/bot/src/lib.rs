@@ -27,6 +27,7 @@ pub mod gate;
 pub mod poll;
 pub mod score_commands;
 pub mod transport;
+pub mod xp_commands;
 
 pub use commands::{Commands, MiniAppUrl, OwnerSync, Scores, SyncAnswer, SyncOutcome, SyncRefusal};
 pub use poll::run;

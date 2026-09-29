@@ -25,6 +25,7 @@ use std::sync::Arc;
 
 use deck_streak_coordination::data_rights_registry::{erase_all, export_all};
 use deck_streak_coordination::drills::{self, DrillMeta, DrillNotes, RealFs, Surface};
+use deck_streak_coordination::progression::level_view::level_view;
 use deck_streak_coordination::score::day_score;
 use deck_streak_identity::Owner;
 use deck_streak_kernel::{Clock, Db, Environment, Setting, SettingsError, StudyDayRule};
@@ -35,6 +36,7 @@ use crate::drill_commands::{self, ANSWER_PREFIX, VIEW_PREFIX};
 use crate::gate::{self, Admission, OwnerCallback, OwnerMessage};
 use crate::score_commands::{score_failed_reply, score_reply};
 use crate::transport::{Incoming, Sent, Transport, escape_attribute, escape_html};
+use crate::xp_commands::{level_failed_reply, level_reply};
 
 /// The Mini App's URL, which `/start`'s button opens: an `https:` URL, required by the bot role.
 pub const MINI_APP_URL: &str = "DECKSTREAK_MINI_APP_URL";
@@ -58,10 +60,14 @@ pub struct MenuEntry {
 }
 
 /// The owner's menu, in the order the menu shows it.
-pub const MENU: [MenuEntry; 7] = [
+pub const MENU: [MenuEntry; 8] = [
     MenuEntry {
         command: "score",
         description: "Show today's score",
+    },
+    MenuEntry {
+        command: "level",
+        description: "Show your level and XP",
     },
     MenuEntry {
         command: "drills",
@@ -217,6 +223,7 @@ impl Reply {
 fn command_lines() -> String {
     [
         "/score shows today's score",
+        "/level shows your level and XP",
         "/drills lists the law drills to answer",
         "/drill picks a law drill by type",
         "/sync syncs your collection now",
@@ -512,6 +519,7 @@ impl<S: OwnerSync> Commands<S> {
             Some("delete") => self.ask_erase().await,
             Some("sync") => self.sync().await,
             Some("score") => self.score().await,
+            Some("level") => self.level().await,
             Some("drills") => self.drills().await,
             Some("drill") => self.drill(&message.text).await,
             None if self.pending_drill.is_some() => self.drill_answer(&message.text).await,
@@ -615,6 +623,19 @@ impl<S: OwnerSync> Commands<S> {
             Err(error) => {
                 tracing::error!(%error, "the owner's score could not be read");
                 score_failed_reply()
+            }
+        };
+        self.send(reply).await;
+    }
+
+    /// `/level`: the level and the day's XP, through coordination's level view (SPEC-072 R25).
+    async fn level(&self) {
+        let today = self.rule.study_day(self.clock.now());
+        let reply = match level_view(&self.db, today).await {
+            Ok(view) => level_reply(&view),
+            Err(error) => {
+                tracing::error!(%error, "the owner's level could not be read");
+                level_failed_reply()
             }
         };
         self.send(reply).await;

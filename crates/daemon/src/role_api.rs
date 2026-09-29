@@ -16,7 +16,11 @@ use std::sync::Arc;
 
 use deck_streak_api::settings::LISTEN;
 use deck_streak_api::{ApiError, ApiState, ListenAddress, OwnerAccess, Readiness};
+use deck_streak_coordination::progression::law_tiers::CollectionLawTiers;
+use deck_streak_coordination::progression::level_view::LawTierSource;
 use deck_streak_identity::{Freshness, IdentityError, OwnerGate};
+use deck_streak_ingest::reader::CollectionReader;
+use deck_streak_ingest::settings::{ScopeSettings, SyncSettings};
 use deck_streak_kernel::{
     Clock, CredentialLoader, CredentialsDirectory, Environment, KernelSettings, Offload, Redactor,
     SettingsError, SystemClock,
@@ -54,6 +58,57 @@ enum Stop {
     Database(WiringError),
 }
 
+/// The API's state as the role composes it: the readiness the database opens into, the owner's
+/// access, and (SPEC-072 R24) the law tiers' source when the settings name a collection to read.
+///
+/// The composition lives here so the daemon's own test can drive the router the role serves.
+#[must_use]
+pub fn api_state(
+    env: &Environment,
+    offload: &Offload,
+    readiness: Readiness,
+    access: OwnerAccess,
+) -> ApiState {
+    let state = ApiState::new(readiness).with_owner(access);
+    let state = match law_tier_source(env, offload) {
+        Some(source) => state.with_law_tiers(source),
+        None => state,
+    };
+    match crate::drill_vault::open(env) {
+        Some(notes) => state.with_drills(notes),
+        None => state,
+    }
+}
+
+/// The law tiers' source, when the settings name a collection copy to read and a scope to read it
+/// in. A role whose settings do not (the API can run apart from the sync) serves the view as
+/// unavailable, and says why in its log.
+fn law_tier_source(env: &Environment, offload: &Offload) -> Option<Arc<dyn LawTierSource>> {
+    let settings = match SyncSettings::from_env(env) {
+        Ok(settings) => settings,
+        Err(refusal) => {
+            tracing::warn!(%refusal, "the law tiers are unavailable: the collection is not named");
+            return None;
+        }
+    };
+    let scope = match ScopeSettings::from_env(env) {
+        Ok(scope) => scope,
+        Err(refusal) => {
+            tracing::warn!(%refusal, "the law tiers are unavailable: the read's scope refuses");
+            return None;
+        }
+    };
+    let reader = CollectionReader::new(&settings, scope, offload.clone());
+    let rule = match KernelSettings::from_env(env) {
+        Ok(kernel) => kernel.study_day_rule,
+        Err(refusal) => {
+            tracing::warn!(%refusal, "the law tiers are unavailable: the study day is unknown");
+            return None;
+        }
+    };
+    Some(Arc::new(CollectionLawTiers::new(reader, rule)))
+}
+
 /// Runs the `api` role until SIGTERM (or SIGINT), and returns once every request in flight has
 /// finished. `redactor` is the one the process's log writer reads: every credential the role
 /// loads is registered with it.
@@ -84,17 +139,12 @@ pub async fn run(env: &Environment, redactor: &Redactor) -> Result<(), ApiRoleEr
     let clock: Arc<dyn Clock> = Arc::new(SystemClock);
     let readiness = Readiness::new();
     let access = OwnerAccess::new(gate, Arc::clone(&clock), kernel.study_day_rule);
-    let api_state = ApiState::new(readiness.clone()).with_owner(access);
-    let api_state = match crate::drill_vault::open(env) {
-        Some(notes) => api_state.with_drills(notes),
-        None => api_state,
-    };
-    let router = deck_streak_api::router(api_state);
+    let offload = Offload::new(kernel.offload_workers, clock);
+    let router = deck_streak_api::router(api_state(env, &offload, readiness.clone(), access));
     tracing::info!(listen = %bound, "the api role serves");
     notifier.notify(NotifyState::Ready);
     let heartbeat = lifecycle::spawn_heartbeat(notifier.clone(), env);
 
-    let offload = Offload::new(kernel.offload_workers, clock);
     let (failed, failure) = oneshot::channel();
     let opener = {
         let readiness = readiness.clone();
