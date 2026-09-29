@@ -350,8 +350,8 @@ dropped, a second value admitted, and the value check blind to the key.
 
 A7's red and green lines are in the fence above. The plants were committed alone (ed12601), with a
 helper that refused nothing: a unit that loads a credential and pages, holds `Restart=on-failure`
-and `RestartSec=15` and no start limit, and four more lacking one key of the budget at a time,
-beside three controls that must not be refused. The three modules ran whole, and only
+and `RestartSec=15` and no start limit, and four more, one with no budget at all and three
+lacking one key of the budget at a time, beside three controls that must not be refused. The three modules ran whole, and only
 `test_a_restarting_paging_unit_holds_the_whole_restart_budget` failed, by assertion, the plants
 coming back with no refusal; `test_alert_unit` (8) and the rail module (14) passed. The rule
 followed at 2b778de (`restart_budget_refusals`, over `_units.RESTART_BUDGET`), with the modules

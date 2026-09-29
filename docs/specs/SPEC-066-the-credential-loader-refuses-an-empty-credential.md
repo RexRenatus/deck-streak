@@ -229,12 +229,12 @@ synthetic value, and reads the same four exit conditions, the `[Unit]` condition
 and the collection in the template. It plants on the template each thing R3 refuses, a reset or
 unknown restart or collect value, a `[Unit]` condition or assertion, and a line the reader
 refuses, and each is refused.
-A7 plants a unit that loads a credential and pages, assigns `Restart=on-failure`, and lacks one key of
-the restart budget at a time (`RESTART_BUDGET`): a restart with a delay and no start limit, a
-restart with no budget at all, and a restart with no burst, no interval or no delay, each refused by
-the key it lacks, beside controls that assign `Restart=no`, assign no `Restart=`, or hold the whole
-budget, none refused. The value table holds a key's value and cannot hold that a key is present,
-so a unit whose every assigned value is admitted can still page without bound.
+A7 plants a unit that loads a credential and pages, assigns `Restart=on-failure`, and lacks keys of
+the restart budget (`RESTART_BUDGET`): a restart with a delay and no start limit, a restart with no
+budget at all, and a restart with no burst, no interval or no delay, each refused by every key it
+lacks, beside controls that assign `Restart=no`, assign no `Restart=`, or hold the whole budget,
+none refused. The value table holds a key's value and cannot hold that a key is present, so a unit
+whose every assigned value is admitted can still page without bound.
 A6 runs the syncer over SPEC-022's scripted engine and in-memory record, which count every sync
 the engine is asked for, with one of the fixture's two credentials rewritten empty. R6 takes no
 criterion of its own: the engine probe is an example a person runs by hand, with no test, and the
@@ -304,11 +304,11 @@ is proved with `python3 scripts/mutation_rows.py prove --band S06600-S06699`.
 ## 7. Amended in delivery
 
 - **R5 names twelve rows, not five.** Beside the loader's check, its variant, the id in its message,
-  and the script's check and exit, six rows guard what those five do not name: S06604, a
+  and the script's check and exit, seven rows guard what those five do not name: S06604, a
   refusal that reaches past an empty value to one of a single character (A2's killer); S06607
   and S06608, the script's check of each of its two credentials removed in turn (A5's killer);
   S06609 and S06611, the value table admitting a second `Restart=` value and dropping a key of
-  the restart budget (A4's value test); and S06610, the target check admitting a target beside
+  the restart budget (A4's value test); S06610, the target check admitting a target beside
   the alert's (A4's target test); and S06612, the restart budget's presence check disabled (A7's
   test).
   Each was proved KILLED with its target restored (`docs/red-first/SPEC-066.md`).
