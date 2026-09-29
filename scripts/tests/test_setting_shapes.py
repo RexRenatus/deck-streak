@@ -91,6 +91,7 @@ def unpinned(root):
 class EverySettingShapeIsPinnedByItsLiteral(unittest.TestCase):
     def test_every_setting_impl_has_a_shape_literal_that_a_test_or_a_row_pins(self):
         impls = examined("Setting impl(s)", implementations(REPO))
+        self.assertGreater(len(impls), 0)
         self.assertEqual(unpinned(REPO), [], f"{len(impls)} impl(s) examined")
 
 
@@ -123,14 +124,18 @@ class TheGuardJudgesAPlantedTree(unittest.TestCase):
         self.assertEqual(found, ['demo::Depth (src/depth.rs) "a whole depth"'])
 
     def test_a_shape_a_test_of_the_crate_spells_is_pinned(self):
-        self.assertEqual(unpinned(self.tree('const X: &str = "a whole depth";')), [])
+        root = self.tree('const X: &str = "a whole depth";')
+        self.assertEqual(len(implementations(root)), 1)
+        self.assertEqual(unpinned(root), [])
 
     def test_a_shape_the_test_only_reads_back_from_the_constant_is_refused(self):
         self.assertEqual(len(unpinned(self.tree("let shape = Depth::SHAPE;"))), 1)
 
     def test_a_shape_a_row_of_the_implementations_own_file_finds_is_pinned(self):
         row = ["S00001-DEPTH", "demo", "src/depth.rs", 'str = "a whole depth";', "", "t::k", "d"]
-        self.assertEqual(unpinned(self.tree(rows=[row])), [])
+        root = self.tree(rows=[row])
+        self.assertEqual(len(implementations(root)), 1)
+        self.assertEqual(unpinned(root), [])
 
     def test_a_row_of_another_file_does_not_pin_it(self):
         row = ["S00001-DEPTH", "demo", "src/other.rs", 'str = "a whole depth";', "", "t::k", "d"]
