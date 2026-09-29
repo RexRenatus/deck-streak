@@ -276,11 +276,12 @@ def uncommented(text):
     """`text` with each comment cut: a `#` that starts a word outside every quote opens a comment
     to the end of its line, in YAML and in the shell alike. Its text is no command, and bounds
     written in it bound nothing. A word starts after a blank or a shell operator (`;`, `&`, `|`,
-    `(`, `)`, `<`, `>`). A `#` inside quotes or inside a word is text, so the command after it is
-    still read."""
+    `(`, `)`, `<`, `>`), but a `)` that closes a substitution (`$( )`, `<( )`, `>( )`) ends no
+    word, and inside `${ }` an operator is text. A `#` inside quotes or inside a word is text, so
+    the command after it is still read."""
     kept = []
     for line in text.split("\n"):
-        quote, i, start = None, 0, True
+        quote, i, start, parens, braces = None, 0, True, [], 0
         while i < len(line):
             char = line[i]
             if char == "\\" and quote != "'":
@@ -289,7 +290,15 @@ def uncommented(text):
             if quote is None and char == "#" and start:
                 line = line[:i].rstrip(" \t")
                 break
-            start = quote is None and char in " \t;&|()<>"
+            start = quote is None and not braces and char in " \t;&|()<>"
+            if quote != "'" and line.startswith("${", i):
+                braces += 1
+            elif quote != "'" and braces and char == "}":
+                braces -= 1
+            elif quote is None and not braces and char == "(":
+                parens.append(i > 0 and line[i - 1] in "$<>")
+            elif quote is None and not braces and char == ")":
+                start = not (parens and parens.pop())
             if quote is None and char in "'\"":
                 quote = char
             elif quote == char:
