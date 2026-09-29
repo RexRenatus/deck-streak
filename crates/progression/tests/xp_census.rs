@@ -30,6 +30,8 @@ const OPERATION: &str = "deck_streak_progression::settle";
 const REQUEST: &str = "SettleRequest";
 /// The crate's name in a path: a source that never names it cannot reach progression's re-exports.
 const PROGRESSION_CRATE: &str = "deck_streak_progression";
+/// The crate's package name, which a manifest may bind to another name (`package = "..."`).
+const PROGRESSION_PACKAGE: &str = "deck-streak-progression";
 /// The names progression's own re-exports and aliases are followed from: the operation, its
 /// request type, and (through `settle`) its module.
 const ORIGINALS: [&str; 2] = ["settle", REQUEST];
@@ -117,6 +119,11 @@ fn tokens(text: &str) -> Vec<String> {
             word.push(character);
             continue;
         }
+        // `r#name` is the raw spelling of `name`, and the compiler reads the two as one name.
+        if character == '#' && word == "r" {
+            word.clear();
+            continue;
+        }
         if !word.is_empty() {
             found.push(std::mem::take(&mut word));
         }
@@ -158,7 +165,10 @@ fn use_tree(tokens: &[String], at: &mut usize, prefix: &[String], out: &mut Vec<
                     alias = tokens.get(*at + 1).cloned();
                     *at += 2;
                 }
-                "*" => *at += 1,
+                "*" => {
+                    path.push("*".to_owned());
+                    *at += 1;
+                }
                 name => {
                     path.push(name.to_owned());
                     *at += 1;
@@ -250,22 +260,143 @@ fn progression_aliases(root: &Path) -> BTreeMap<String, String> {
     }
 }
 
-/// The names a source reaches progression's crate by: its own, and every
-/// `deck_streak_progression as <name>` (a `use` or an `extern crate`) in any crate's `src`.
-fn crate_names(root: &Path) -> BTreeSet<String> {
-    let mut names = BTreeSet::from([PROGRESSION_CRATE.to_owned()]);
-    for member in fs::read_dir(root.join("crates")).expect("crates/ is readable") {
-        for source in files(&member.expect("a directory entry").path().join("src"), "rs") {
-            let text = fs::read_to_string(&source).expect("a readable source");
-            let words = tokens(&code_lines(&text).join(" "));
-            for window in words.windows(3) {
-                if window[0] == PROGRESSION_CRATE && window[1] == "as" {
-                    names.insert(window[2].clone());
-                }
+/// Every leaf of every `use` tree in Rust `words`, of any visibility.
+fn use_leaves(words: &[String]) -> Vec<Leaf> {
+    let mut leaves = Vec::new();
+    for (index, word) in words.iter().enumerate() {
+        if word == "use" {
+            use_tree(words, &mut (index + 1), &[], &mut leaves);
+        }
+    }
+    leaves
+}
+
+/// The tokens of every Rust source in `member`'s `src`.
+fn member_words(member: &Path) -> Vec<Vec<String>> {
+    files(&member.join("src"), "rs")
+        .iter()
+        .map(|source| {
+            let text = fs::read_to_string(source).expect("a readable source");
+            tokens(&code_lines(&text).join(" "))
+        })
+        .collect()
+}
+
+/// The workspace's members, by path.
+fn members(root: &Path) -> Vec<PathBuf> {
+    let mut members: Vec<PathBuf> = fs::read_dir(root.join("crates"))
+        .expect("crates/ is readable")
+        .map(|entry| entry.expect("a directory entry").path())
+        .filter(|path| path.is_dir())
+        .collect();
+    members.sort();
+    members
+}
+
+/// The names a manifest (the workspace's or a member's) binds progression's package to:
+/// `prog = { package = "deck-streak-progression", .. }`, `prog.package = ..`, or a
+/// `[dependencies.prog]` table with that `package`, whose key's `-` is `_` in a path.
+fn manifest_names(root: &Path) -> BTreeSet<String> {
+    let needle = format!("package={PROGRESSION_PACKAGE}");
+    let mut names = BTreeSet::new();
+    let manifests = std::iter::once(root.join("Cargo.toml")).chain(
+        members(root)
+            .into_iter()
+            .map(|member| member.join("Cargo.toml")),
+    );
+    for manifest in manifests {
+        let Ok(text) = fs::read_to_string(&manifest) else {
+            continue;
+        };
+        let mut table = String::new();
+        for line in text.lines() {
+            // The line without its spaces and quotes: `prog={package=deck-streak-progression}`.
+            let line: String = line
+                .chars()
+                .filter(|character| !character.is_whitespace() && !matches!(character, '"' | '\''))
+                .collect();
+            let renames = line.match_indices(&needle).any(|(at, _)| {
+                !line[at + needle.len()..]
+                    .starts_with(|c: char| c.is_alphanumeric() || c == '_' || c == '-')
+            });
+            if line.starts_with('[') {
+                line.trim_matches(['[', ']']).clone_into(&mut table);
+            } else if renames {
+                let key = if line.starts_with("package=") {
+                    table.rsplit('.').next().unwrap_or_default()
+                } else {
+                    line.split(['=', '.']).next().unwrap_or_default()
+                };
+                names.insert(key.replace('-', "_"));
             }
         }
     }
     names
+}
+
+/// The names a source reaches progression's crate by: its own; every name a manifest binds its
+/// package to; and every name a `use` or an `extern crate` in any crate's `src` binds one of those
+/// to (`as prog`, `{self as prog}`, `as r#prog`, or through a name already found), to a fixpoint.
+fn crate_names(root: &Path) -> BTreeSet<String> {
+    let mut names = BTreeSet::from([PROGRESSION_CRATE.to_owned()]);
+    names.extend(manifest_names(root));
+    let mut links: Vec<(String, String)> = Vec::new();
+    for words in members(root).iter().flat_map(|member| member_words(member)) {
+        for window in words.windows(3) {
+            if window[1] == "as" {
+                links.push((window[0].clone(), window[2].clone()));
+            }
+        }
+        links.extend(
+            use_leaves(&words)
+                .into_iter()
+                .filter_map(|leaf| Some((leaf.path.last()?.clone(), leaf.alias?))),
+        );
+    }
+    loop {
+        let before = names.len();
+        for (original, alias) in &links {
+            if names.contains(original) {
+                names.insert(alias.clone());
+            }
+        }
+        if names.len() == before {
+            return names;
+        }
+    }
+}
+
+/// The members whose `src` imports progression's crate, or a module of it, whole with a glob of
+/// any visibility (`use prog::*`): each of their files reaches progression's names as
+/// `crate::name` or `super::name` without naming the crate.
+fn glob_members(root: &Path, crate_names: &BTreeSet<String>) -> BTreeSet<String> {
+    members(root)
+        .iter()
+        .filter(|member| {
+            member_words(member).iter().any(|words| {
+                use_leaves(words).iter().any(|leaf| {
+                    leaf.path.last().is_some_and(|last| last == "*")
+                        && leaf
+                            .path
+                            .iter()
+                            .any(|segment| crate_names.contains(segment))
+                })
+            })
+        })
+        .filter_map(|member| member.file_name()?.to_str().map(str::to_owned))
+        .collect()
+}
+
+/// Whether a source reaches the operation itself through a name that denotes progression's crate:
+/// `alias::settle` in a path, a `use` or a grouped `use`, or, in a member that globs the crate's
+/// root, `settle` as a word (`crate::settle`).
+fn reaches_settle(words: &[String], crate_names: &BTreeSet<String>, globbed: bool) -> bool {
+    let step = |pair: &[String]| crate_names.contains(&pair[0]) && pair[1] == ORIGINALS[0];
+    (globbed && words.iter().any(|word| word == ORIGINALS[0]))
+        || words.windows(2).any(step)
+        || use_leaves(words)
+            .iter()
+            .any(|leaf| leaf.path.windows(2).any(step))
 }
 
 /// The census of a tree at `root`.
@@ -287,13 +418,8 @@ fn census(root: &Path) -> Census {
     };
     let aliases = progression_aliases(root);
     let crate_names = crate_names(root);
-    let mut members: Vec<PathBuf> = fs::read_dir(root.join("crates"))
-        .expect("crates/ is readable")
-        .map(|entry| entry.expect("a directory entry").path())
-        .filter(|path| path.is_dir())
-        .collect();
-    members.sort();
-    for member in members {
+    let globbed = glob_members(root, &crate_names);
+    for member in members(root) {
         let context = member
             .file_name()
             .and_then(|name| name.to_str())
@@ -310,16 +436,20 @@ fn census(root: &Path) -> Census {
                         .push(format!("{name} names {TABLE}, and only {OWNER}'s code may"));
                 }
             }
-            let direct = names_the_operation(&text) || rust_names(&text, REQUEST);
+            let source_words = tokens(&code_lines(&text).join(" "));
+            let direct = names_the_operation(&text)
+                || rust_names(&text, REQUEST)
+                || reaches_settle(&source_words, &crate_names, globbed.contains(&context));
             // A source that names progression's crate and one of progression's own renamings
             // reaches `settle` without spelling it.
             let words: BTreeSet<String> =
                 tokens(&code_lines(&text).join(" ")).into_iter().collect();
             let through: Vec<(&String, &String)> = if context != OWNER
                 && !direct
-                && crate_names
-                    .iter()
-                    .any(|crate_name| words.contains(crate_name))
+                && (globbed.contains(&context)
+                    || crate_names
+                        .iter()
+                        .any(|crate_name| words.contains(crate_name)))
             {
                 aliases
                     .iter()
@@ -883,21 +1013,21 @@ fn plant_binding(
     package: &str,
 ) -> Vec<(&'static str, String)> {
     let name = format!("bound_{member}");
-    let fill = |text: &str| {
+    let expand = |text: &str| {
         text.replace("{name}", &name)
             .replace("{krate}", krate)
             .replace("{package}", package)
     };
     for (path, text) in binding.files {
-        plant(root, &format!("crates/{member}/{path}"), &fill(text));
+        plant(root, &format!("crates/{member}/{path}"), &expand(text));
     }
-    let reached = fill(binding.reached_as);
+    let reached = expand(binding.reached_as);
     CALLER_SHAPES
         .iter()
         .map(|(shape, text)| {
-            let file = format!("crates/{member}/src/call_{}.rs", shape.replace(' ', "_"));
-            plant(root, &file, &text.replace("{reached}", &reached));
-            (*shape, file)
+            let caller = format!("crates/{member}/src/call_{}.rs", shape.replace(' ', "_"));
+            plant(root, &caller, &text.replace("{reached}", &reached));
+            (*shape, caller)
         })
         .collect()
 }
@@ -968,4 +1098,191 @@ fn the_census_refuses_every_member_of_the_binding_population() {
         "a control naming another crate is accepted"
     );
     assert_eq!(controls.len(), members.len());
+}
+
+#[test]
+fn the_census_reads_a_raw_identifier_as_its_plain_name() {
+    // `r#raw_tally` and `raw_tally` are one name to the compiler, so a caller may import the alias
+    // in either spelling.
+    let planted = tempfile::tempdir().expect("a temporary directory");
+    plant_settle(planted.path());
+    for (path, text) in [
+        (
+            "crates/progression/src/lib.rs",
+            "pub mod settle;\npub use settle::settle as r#raw_tally;\n",
+        ),
+        (
+            "crates/quests/src/plain.rs",
+            "use deck_streak_progression::raw_tally;\n",
+        ),
+        (
+            "crates/quests/src/raw.rs",
+            "use deck_streak_progression::r#raw_tally;\n",
+        ),
+    ] {
+        plant(planted.path(), path, text);
+    }
+    let refused = census(planted.path());
+    examined("planted crate source file(s)", refused.sources.clone());
+    assert_eq!(
+        refused.refused,
+        [
+            "crates/quests/src/plain.rs calls settle through raw_tally, progression's alias of \
+             settle, and only coordination's code may",
+            "crates/quests/src/raw.rs calls settle through raw_tally, progression's alias of \
+             settle, and only coordination's code may",
+        ]
+    );
+}
+
+/// The refusal of a planted `crates/{file}` that reaches the renamed `settle` as `tally`.
+fn through_tally(file: &str) -> String {
+    format!(
+        "crates/{file} calls settle through tally, progression's alias of settle, and only \
+         coordination's code may"
+    )
+}
+
+#[test]
+fn the_census_follows_a_crate_alias_however_it_is_written() {
+    // Each member reaches progression's crate by a name other than its own: by a glob, by an
+    // `extern crate`, renamed inside a group, through a chain read before its link, and in raw
+    // spelling. A member whose glob is another crate's, or which imports progression's crate
+    // without a glob, keeps its own `tally`.
+    let planted = tempfile::tempdir().expect("a temporary directory");
+    plant_settle(planted.path());
+    for (path, text) in [
+        (
+            "crates/progression/src/lib.rs",
+            "pub mod settle;\npub use settle::settle as tally;\n",
+        ),
+        (
+            "crates/habits/src/lib.rs",
+            "pub use deck_streak_progression::*;\n",
+        ),
+        ("crates/habits/src/via_glob.rs", "use crate::tally;\n"),
+        (
+            "crates/economy/src/lib.rs",
+            "extern crate deck_streak_progression as ext_prog;\n",
+        ),
+        ("crates/economy/src/via_extern.rs", "use ext_prog::tally;\n"),
+        (
+            "crates/markets/src/lib.rs",
+            "pub use deck_streak_progression::{self as grouped_prog};\n",
+        ),
+        (
+            "crates/markets/src/via_grouped.rs",
+            "use crate::grouped_prog::tally;\n",
+        ),
+        (
+            "crates/quests/src/a_link.rs",
+            "pub use crate::first_prog as second_prog;\n",
+        ),
+        (
+            "crates/quests/src/lib.rs",
+            "pub use deck_streak_progression as first_prog;\n",
+        ),
+        (
+            "crates/quests/src/via_chain.rs",
+            "use crate::second_prog::tally;\n",
+        ),
+        ("crates/readings/src/lib.rs", "use std::io::*;\n"),
+        ("crates/readings/src/own.rs", "fn tally() {}\n"),
+        (
+            "crates/streaks/src/lib.rs",
+            "pub use deck_streak_progression as r#raw_prog;\n",
+        ),
+        (
+            "crates/streaks/src/via_raw.rs",
+            "use crate::raw_prog::tally;\n",
+        ),
+        (
+            "crates/vault/src/lib.rs",
+            "use deck_streak_progression::SettledRow;\n",
+        ),
+        ("crates/vault/src/own.rs", "fn tally() {}\n"),
+    ] {
+        plant(planted.path(), path, text);
+    }
+    let refused = census(planted.path());
+    examined("planted crate source file(s)", refused.sources.clone());
+    assert_eq!(
+        refused.refused,
+        [
+            through_tally("economy/src/via_extern.rs"),
+            through_tally("habits/src/via_glob.rs"),
+            through_tally("markets/src/via_grouped.rs"),
+            through_tally("quests/src/via_chain.rs"),
+            through_tally("streaks/src/via_raw.rs"),
+        ]
+    );
+}
+
+#[test]
+fn the_census_follows_a_crate_renamed_by_a_manifest() {
+    // A manifest's `package` binds progression's package to another name: in the workspace's own
+    // table, and in a member's inline, table (with a `-` in its key) and dotted-key forms. A
+    // package whose name only begins with progression's is another package.
+    let planted = tempfile::tempdir().expect("a temporary directory");
+    plant_settle(planted.path());
+    for (path, text) in [
+        (
+            "crates/progression/src/lib.rs",
+            "pub mod settle;\npub use settle::settle as tally;\n",
+        ),
+        (
+            "Cargo.toml",
+            "[workspace.dependencies]\n\
+             workspace_prog = { package = \"deck-streak-progression\", path = \"crates/progression\" }\n",
+        ),
+        (
+            "crates/analytics/src/via_workspace.rs",
+            "use workspace_prog::tally;\n",
+        ),
+        (
+            "crates/focus/Cargo.toml",
+            "[dependencies]\n\
+             focus_prog = { package = \"deck-streak-progression\", path = \"../progression\" }\n",
+        ),
+        ("crates/focus/src/via_inline.rs", "use focus_prog::tally;\n"),
+        (
+            "crates/insights/Cargo.toml",
+            "[dependencies.insights-prog]\n\
+             package = 'deck-streak-progression'\n\
+             path = '../progression'\n",
+        ),
+        (
+            "crates/insights/src/via_table.rs",
+            "use insights_prog::tally;\n",
+        ),
+        (
+            "crates/markets/Cargo.toml",
+            "[dependencies]\n\
+             dotted_prog.package = \"deck-streak-progression\"\n\
+             dotted_prog.path = \"../progression\"\n",
+        ),
+        (
+            "crates/markets/src/via_dotted.rs",
+            "use dotted_prog::tally;\n",
+        ),
+        (
+            "crates/vault/Cargo.toml",
+            "[dependencies]\n\
+             vault_other = { package = \"deck-streak-progression-extra\", path = \"../extra\" }\n",
+        ),
+        ("crates/vault/src/own.rs", "use vault_other::tally;\n"),
+    ] {
+        plant(planted.path(), path, text);
+    }
+    let refused = census(planted.path());
+    examined("planted crate source file(s)", refused.sources.clone());
+    assert_eq!(
+        refused.refused,
+        [
+            through_tally("analytics/src/via_workspace.rs"),
+            through_tally("focus/src/via_inline.rs"),
+            through_tally("insights/src/via_table.rs"),
+            through_tally("markets/src/via_dotted.rs"),
+        ]
+    );
 }
