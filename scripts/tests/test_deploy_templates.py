@@ -1677,28 +1677,71 @@ class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
         loads = f"LoadCredential=telegram-bot-token:{SOCKET}\n"
         where = "deploy/systemd/planted.service"
 
-        def refusal(line, value):
+        def refusal(line, section, key, value):
             return (
-                f"{where}:{line}: [Service] Restart={value} is not a value this unit admits for "
+                f"{where}:{line}: [{section}] {key}={value} is not a value this unit admits for "
                 "the key, and is refused"
             )
 
+        # Each plant is (lines added to [Unit], lines added to [Service], refusals). A [Unit] line
+        # sits at line 4, so the [Service] lines that follow it move down one.
         plants = {
-            "oneshot restart always": ("Restart=always\n", [refusal(8, "always")]),
-            "oneshot restart on-success": ("Restart=on-success\n", [refusal(8, "on-success")]),
-            "restart extending the admitted value": (
-                "Restart=on-failure-extra\n",
-                [refusal(8, "on-failure-extra")],
+            "oneshot restart always": (
+                "",
+                "Restart=always\n",
+                [refusal(8, "Service", "Restart", "always")],
             ),
-            "restart control": ("Restart=on-failure\n", []),
+            "oneshot restart on-success": (
+                "",
+                "Restart=on-success\n",
+                [refusal(8, "Service", "Restart", "on-success")],
+            ),
+            "restart extending the admitted value": (
+                "",
+                "Restart=on-failure-extra\n",
+                [refusal(8, "Service", "Restart", "on-failure-extra")],
+            ),
+            "restart control": ("", "Restart=on-failure\n", []),
+            "start limit interval unbounded": (
+                "StartLimitIntervalSec=0\n",
+                "",
+                [refusal(4, "Unit", "StartLimitIntervalSec", "0")],
+            ),
+            "start limit burst raised": (
+                "StartLimitBurst=1000\n",
+                "",
+                [refusal(4, "Unit", "StartLimitBurst", "1000")],
+            ),
+            "restart delay removed": (
+                "",
+                "RestartSec=0\n",
+                [refusal(8, "Service", "RestartSec", "0")],
+            ),
+            "ordering names another unit": (
+                "After=other.service\n",
+                "",
+                [refusal(4, "Unit", "After", "other.service")],
+            ),
+            "pull-in names another unit": (
+                "Wants=other.service\n",
+                "",
+                [refusal(4, "Unit", "Wants", "other.service")],
+            ),
+            "restart budget and ordering controls": (
+                "StartLimitIntervalSec=300\nStartLimitBurst=5\n"
+                "After=network-online.target\nWants=network-online.target\n",
+                "RestartSec=15\n",
+                [],
+            ),
         }
         got = {}
         for label in examined("planted unit(s) held to the value table", sorted(plants)):
+            unit_lines, service_lines, _ = plants[label]
             got[label] = planted_refusals(
-                f"{head}{page}{run}{loads}{plants[label][0]}",
+                f"{head}{page}{unit_lines}{run}{loads}{service_lines}",
                 lambda unit: value_refusals(unit, table),
             )
-        self.assertEqual(got, {label: plants[label][1] for label in plants})
+        self.assertEqual(got, {label: plants[label][2] for label in plants})
         # A drop-in is read with its unit: a value planted in one is refused by the drop-in's file
         # and line.
         with tempfile.TemporaryDirectory() as scratch:
