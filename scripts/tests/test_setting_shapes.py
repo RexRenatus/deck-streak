@@ -127,11 +127,14 @@ def cfg_test_spans(skeleton):
 def out_of_line(own):
     """The files of the `#[cfg(test)] mod name;` modules that `own` declares, where the compiler
     looks for them: a `#[path]` beside `own`, else `name.rs` or `name/mod.rs` in `own`'s module
-    directory (`own`'s own directory for `lib.rs`, `main.rs` and `mod.rs`)."""
+    directory (`own`'s own directory for `lib.rs`, `main.rs` and `mod.rs`). A declaration inside
+    an inline module or a block is not followed."""
     bare, skeleton = lexed(own.read_text(encoding="utf-8"))
     folder = own.parent if own.name in ("lib.rs", "main.rs", "mod.rs") else own.with_suffix("")
     files = []
     for module in OUT_OF_LINE.finditer(skeleton):
+        if skeleton.count("{", 0, module.start()) != skeleton.count("}", 0, module.start()):
+            continue
         if "#[cfg(test)]" not in module.group(1):
             continue
         named = PATH_ATTR.search(bare, module.start(1), module.end(1))
