@@ -486,6 +486,21 @@ def off_list_refusals(unit, allowed):
     ]
 
 
+def value_refusals(unit, table):
+    """Every assignment of `unit`, its drop-ins included, of a key `table` bounds whose value is
+    not one it admits, each naming its key and its value (SPEC-066 R2)."""
+    return [
+        f"{a.source}:{a.line}: [{a.section}] {a.key}={a.value} is not a value this unit admits "
+        "for the key, and is refused"
+        for a in unit.assignments
+        if (a.section, a.key) in table and a.value not in table[(a.section, a.key)]
+    ]
+
+
+def failure_target_refusals(unit):
+    return []
+
+
 def refusal_page_refusals(unit):
     """The refusals of `refusal_page_conditions`, each without the directive it reads."""
     return [refusal for _, refusal in refusal_page_conditions(unit)]
@@ -1633,6 +1648,119 @@ class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
             [
                 "deploy/systemd/planted.service.d/10-planted.conf:2: [Unit] Requires="
                 "missing.service is not on this unit's list of keys, and is refused"
+            ],
+        )
+
+    def test_a_paging_units_restart_holds_only_the_admitted_value(self):
+        # Every paging unit that loads a credential holds, at every assignment of a bounded key,
+        # only the value the table admits: `Restart=` is `on-failure` and no other, so a restart
+        # value that stops a oneshot unit loading, or turns its failure into a success, is refused
+        # by key and value (SPEC-066 R2).
+        table = getattr(_units, "PAGING_VALUES", {})
+        alert = f"{ALERT_TEMPLATE}@.service"
+        loading = examined(
+            "service unit(s) that load a credential",
+            sorted((unit for unit in subject().services if loads_a_credential(unit)), key=name),
+        )
+        paging = [unit for unit in loading if unit.name != alert]
+        self.assertEqual([r for unit in paging for r in value_refusals(unit, table)], [])
+        head = "[Unit]\nDescription=planted\n"
+        page = f"OnFailure={ON_FAILURE}\n"
+        run = "[Service]\nType=oneshot\nExecStart=/bin/true\n"
+        loads = f"LoadCredential=telegram-bot-token:{SOCKET}\n"
+        where = "deploy/systemd/planted.service"
+
+        def refusal(line, value):
+            return (
+                f"{where}:{line}: [Service] Restart={value} is not a value this unit admits for "
+                "the key, and is refused"
+            )
+
+        plants = {
+            "oneshot restart always": ("Restart=always\n", [refusal(8, "always")]),
+            "oneshot restart on-success": ("Restart=on-success\n", [refusal(8, "on-success")]),
+            "restart control": ("Restart=on-failure\n", []),
+        }
+        got = {}
+        for label in examined("planted unit(s) held to the value table", sorted(plants)):
+            got[label] = planted_refusals(
+                f"{head}{page}{run}{loads}{plants[label][0]}",
+                lambda unit: value_refusals(unit, table),
+            )
+        self.assertEqual(got, {label: plants[label][1] for label in plants})
+        # A drop-in is read with its unit: a value planted in one is refused by the drop-in's file
+        # and line.
+        with tempfile.TemporaryDirectory() as scratch:
+            folder = Path(scratch) / "deploy" / "systemd"
+            (folder / "planted.service.d").mkdir(parents=True)
+            (folder / "planted.service").write_text(f"{head}{page}{run}{loads}", encoding="utf-8")
+            (folder / "planted.service.d" / "10-planted.conf").write_text(
+                "[Service]\nRestart=always\n", encoding="utf-8"
+            )
+            (planted,) = subject(scratch).services
+        self.assertEqual(
+            value_refusals(planted, table),
+            [
+                "deploy/systemd/planted.service.d/10-planted.conf:2: [Service] Restart=always "
+                "is not a value this unit admits for the key, and is refused"
+            ],
+        )
+
+    def test_a_paging_unit_names_no_failure_target_but_the_alert(self):
+        # Every `OnFailure=` assignment of a paging unit that loads a credential, in the unit and
+        # its drop-ins, is exactly the alert template: a target beside it or in its place is
+        # refused by key and value (SPEC-066 R2).
+        alert = f"{ALERT_TEMPLATE}@.service"
+        loading = examined(
+            "service unit(s) that load a credential",
+            sorted((unit for unit in subject().services if loads_a_credential(unit)), key=name),
+        )
+        paging = [unit for unit in loading if unit.name != alert]
+        self.assertEqual([r for unit in paging for r in failure_target_refusals(unit)], [])
+        head = "[Unit]\nDescription=planted\n"
+        page = f"OnFailure={ON_FAILURE}\n"
+        run = "[Service]\nExecStart=/bin/true\n"
+        loads = f"LoadCredential=telegram-bot-token:{SOCKET}\n"
+        where = "deploy/systemd/planted.service"
+
+        def refusal(line, value):
+            return (
+                f"{where}:{line}: [Unit] OnFailure={value} is not the alert template "
+                f"{ON_FAILURE}, and is refused"
+            )
+
+        plants = {
+            "target control": (page, []),
+            "extra target in one assignment": (
+                f"OnFailure={ON_FAILURE} other.service\n",
+                [refusal(3, f"{ON_FAILURE} other.service")],
+            ),
+            "extra target in a second assignment": (
+                f"{page}OnFailure=other.service\n",
+                [refusal(4, "other.service")],
+            ),
+            "replaced target": ("OnFailure=other.service\n", [refusal(3, "other.service")]),
+            "reset after the alert": (f"{page}OnFailure=\n", [refusal(4, "")]),
+        }
+        got = {}
+        for label in examined("planted unit(s) held to the alert target", sorted(plants)):
+            got[label] = planted_refusals(
+                f"{head}{plants[label][0]}{run}{loads}", failure_target_refusals
+            )
+        self.assertEqual(got, {label: plants[label][1] for label in plants})
+        with tempfile.TemporaryDirectory() as scratch:
+            folder = Path(scratch) / "deploy" / "systemd"
+            (folder / "planted.service.d").mkdir(parents=True)
+            (folder / "planted.service").write_text(f"{head}{page}{run}{loads}", encoding="utf-8")
+            (folder / "planted.service.d" / "10-planted.conf").write_text(
+                "[Unit]\nOnFailure=other.service\n", encoding="utf-8"
+            )
+            (planted,) = subject(scratch).services
+        self.assertEqual(
+            failure_target_refusals(planted),
+            [
+                "deploy/systemd/planted.service.d/10-planted.conf:2: [Unit] OnFailure="
+                f"other.service is not the alert template {ON_FAILURE}, and is refused"
             ],
         )
 
