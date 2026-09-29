@@ -290,7 +290,7 @@ fn ending_a_session_ends_that_one_and_reports_whether_it_was_live() {
     assert_eq!(sessions.live(), 2);
 
     for absent in [
-        "".to_owned(),
+        String::new(),
         "ab".repeat(32),
         "AB".repeat(32),
         "ab".repeat(31),
