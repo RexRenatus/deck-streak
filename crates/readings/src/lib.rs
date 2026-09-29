@@ -29,5 +29,7 @@ pub mod repair;
 pub mod seed;
 pub mod state;
 pub mod store;
+pub mod studied;
 pub mod taxonomy;
 pub mod topic;
+pub mod xp;

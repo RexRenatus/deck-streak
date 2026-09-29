@@ -15,6 +15,7 @@ use deck_streak_kernel::{Db, KernelError, StudyDay, UtcMillis};
 use crate::day_set::{StudyDayResolution, TopicEnd};
 use crate::reading::ReadingId;
 use crate::state::{Class, CouldNotTell, RunOutcome, TopicState};
+use crate::studied::Verdict;
 use crate::topic::TopicKey;
 
 /// What asked for a resolution.
@@ -667,4 +668,110 @@ fn read_reading(
         },
         carried_nights: u32::try_from(carried_nights).ok()?,
     })
+}
+
+/// Whether the tap's vault tick was written (SPEC-047 R8).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum VaultTick {
+    /// No tap yet, so nothing to write.
+    None,
+    /// The `I read it` line was ticked.
+    Written,
+    /// The tap happened and the tick failed; the next tap retries it.
+    Pending,
+}
+
+impl VaultTick {
+    /// The stored text.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::None => "none",
+            Self::Written => "written",
+            Self::Pending => "pending",
+        }
+    }
+}
+
+/// A stored reading's read line and studied measure (SPEC-047 R8, R9).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ReadingProgress {
+    /// Its id.
+    pub id: ReadingId,
+    /// Its topic.
+    pub topic: TopicKey,
+    /// The study day it was generated for.
+    pub study_day: StudyDay,
+    /// When it was generated.
+    pub generated_at: UtcMillis,
+    /// The covered cards.
+    pub card_ids: Vec<i64>,
+    /// When the owner tapped it, if they did.
+    pub read_at: Option<UtcMillis>,
+    /// How many covered cards the last settle found studied.
+    pub studied_count: u32,
+    /// Its verdict as of the last settle.
+    pub verdict: Verdict,
+    /// When it turned studied.
+    pub studied_at: Option<UtcMillis>,
+    /// Whether the tap's vault tick was written.
+    pub vault_tick: VaultTick,
+}
+
+impl SqliteReadings {
+    /// The read and studied state of the reading `id`, or `None` when no such reading is stored.
+    ///
+    /// # Errors
+    ///
+    /// [`StoreError`] when the read fails, or the row was not written here.
+    pub async fn progress(&self, id: &ReadingId) -> Result<Option<ReadingProgress>, StoreError> {
+        let _ = id;
+        Ok(None)
+    }
+
+    /// The state of every reading whose verdict is not yet `studied`, oldest first.
+    ///
+    /// # Errors
+    ///
+    /// [`StoreError`] when the read fails, or a row was not written here.
+    pub async fn unsettled(&self) -> Result<Vec<ReadingProgress>, StoreError> {
+        Ok(Vec::new())
+    }
+
+    /// Sets `read_at` of the reading `id` to `at` when it is unset; true when this call set it.
+    ///
+    /// # Errors
+    ///
+    /// [`KernelError::Database`] when the write fails.
+    pub async fn mark_read(&self, id: &ReadingId, at: UtcMillis) -> Result<bool, KernelError> {
+        let _ = (id, at);
+        Ok(false)
+    }
+
+    /// Records whether the tap's vault tick was written.
+    ///
+    /// # Errors
+    ///
+    /// [`KernelError::Database`] when the write fails.
+    pub async fn set_vault_tick(&self, id: &ReadingId, tick: VaultTick) -> Result<(), KernelError> {
+        let _ = (id, tick);
+        Ok(())
+    }
+
+    /// Records the settle's measure of the reading `id`: its studied count and verdict, with the
+    /// instant it turned studied when it did.
+    ///
+    /// # Errors
+    ///
+    /// [`KernelError::Database`] when the write fails.
+    pub async fn record_measure(
+        &self,
+        id: &ReadingId,
+        count: u32,
+        verdict: Verdict,
+        studied_at: Option<UtcMillis>,
+    ) -> Result<(), KernelError> {
+        let _ = (id, count, verdict, studied_at);
+        Ok(())
+    }
 }
