@@ -251,3 +251,7 @@ decides when it names a shell; else `.bash` is bash and `.sh` is sh. It was chos
 - **Refusing every target that is neither Python nor cargo.** It would void the five rows on
   `scripts/check.sh`, whose mutants parse and which the killers catch by their behaviour, to
   avoid a check that costs one `bash -n` per row.
+
+Note (2026-09-29): a repeated key in a band file is refused at every read, naming the file and the
+key, because git merges two added tables under one key without a conflict and the last-key read
+dropped the rows silently. ADR-122 decides it and records what it was chosen against.

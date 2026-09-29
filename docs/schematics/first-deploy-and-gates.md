@@ -88,8 +88,8 @@ flowchart TD
   drill --> G2g
   install --> nightOne
   subgraph S063["SPEC-063: the agent's path, only after gate 3"]
-    G3{{"gate 3: the owner's route, the maintainer adds the key to the roster"}} --> G2h{{"gate 2: the tunnel account, Claude Code, the guards"}}
-    G2h --> tunnel["the tunnel's rows on the rail, the forward on loopback only"]
+    G3{{"gate 3: the owner's route, the maintainer adds the key to the roster"}} --> G2h{{"gate 2: the loopback admission, Claude Code, the guards"}}
+    G2h --> tunnel["the rail's forward confirmed on loopback only"]
     tunnel --> route["the route's drop-in, the map row and the settings"]
     route --> liveUp["tunnel up: one capped run, one gated reading"]
     liveUp --> liveDown["tunnel down: proxy_unreachable, one alert, nothing written"]
@@ -152,7 +152,7 @@ sequenceDiagram
 | 2 | #161 | the units, the journald drop-in, the first start, the Caddy block (SPEC-062) | `systemd-analyze` over the units; `caddy validate` and `caddy adapt` on a copy | `deploy/rollback.sh`; the Caddy import line, then the file |
 | 2 | #161 | the backup units and the first drill (SPEC-064) | the bucket's settings read back; the first drill by hand | stop the timers |
 | 2 | #161 | the folder, the fences, the vault writer, the switch (SPEC-065) | the folder's modes; each refused write; the probe read by the vault's group | the switch off; a fence's drop-in removed |
-| 2 | #161 | the tunnel account, Claude Code, the guards (SPEC-063) | `sshd -t` and `sshd -T -C`; the tunnel's rows; the guard check | remove the account's key and the drop-in; remove the package |
+| 2 | #161 | the loopback admission, Claude Code, the guards (SPEC-063) | the admission's presence; the rail's forward on loopback only, and no second forward; the guard check | remove the admission; remove the package |
 | 3 | #162 | the route, and the key in the roster (SPEC-063) | the live proof, tunnel up and tunnel down | the route's drop-in removed; the maintainer removes the key |
 | 6 | #165 | the owner's user id, and the device key (SPEC-061, SPEC-063) | each secret's existence, by name | the owner disables the version |
 | 7 | #166 | the bucket (SPEC-064) | public access prevention, uniform access, no public principal, soft delete off | delete the empty bucket |
