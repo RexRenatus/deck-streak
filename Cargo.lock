@@ -841,6 +841,11 @@ version = "0.2.0"
 dependencies = [
  "deck-streak-ingest",
  "deck-streak-kernel",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "tempfile",
+ "tokio",
 ]
 
 [[package]]
@@ -854,6 +859,7 @@ dependencies = [
  "deck-streak-notifications",
  "serde",
  "serde_json",
+ "sqlx",
  "tempfile",
  "thiserror",
  "tokio",
@@ -874,6 +880,7 @@ dependencies = [
  "frankenstein",
  "serde",
  "serde_json",
+ "sqlx",
  "tempfile",
  "thiserror",
  "tokio",

@@ -14,6 +14,12 @@
 //! coordination's `DeliveryMarker` (SPEC-027 R6). The bot's `/sync` asks an [`OwnerSync`];
 //! [`OwnerSyncCycle`] answers it with ingest's sync and coordination's cycle, which the bot cannot
 //! name (docs/CONTEXT-MAP.md).
+//!
+//! Every cycle recomputes through the fold (SPEC-071 R15, R19). A role that runs cycles loads a
+//! [`RecomputeSetup`] once, at its start: the owner's courses, refused when they disagree with the
+//! readings taxonomy, their digest recorded with the settings generation, and the fold with every
+//! step registered in its phase by [`recompute_fold`]. The setup hands the reader its courses and
+//! each cycle its fold.
 
 use std::fs::{File, OpenOptions};
 use std::future::Future;
@@ -21,22 +27,27 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
+use deck_streak_analytics::settings::AnalyticsSettings;
 use deck_streak_bot::{OwnerSync, Scores, SyncAnswer, SyncOutcome, SyncRefusal, Transport};
+use deck_streak_coordination::courses::{CoursesDisagree, agree};
 use deck_streak_coordination::delivery::{DeliveryCounts, DeliveryMarker};
 use deck_streak_coordination::obligations::Obligations;
+use deck_streak_coordination::recompute::analytics_step::AnalyticsStep;
+use deck_streak_coordination::recompute::{Fold, FoldError, Phase};
 use deck_streak_coordination::sync_cycle::{
     CycleError, CycleParts, CycleReport, Recompute, sync_cycle,
 };
-use deck_streak_ingest::engine::RslibEngine;
+use deck_streak_ingest::engine::{AnkiEngine, RslibEngine};
 use deck_streak_ingest::gate::ChangeGate;
 use deck_streak_ingest::reader::CollectionReader;
 use deck_streak_ingest::settings::{ScopeSettings, SyncSettings};
 use deck_streak_ingest::sync::{SyncReport, Syncer};
 use deck_streak_ingest::sync_runs::{SqliteSyncRuns, Trigger};
 use deck_streak_kernel::{
-    Clock, CredentialLoader, CredentialsDirectory, Db, Environment, KernelError, Offload, Redactor,
-    Setting, SettingsError, StudyDayRule, SystemClock,
+    Clock, Courses, CoursesError, CredentialLoader, CredentialsDirectory, Db, Environment,
+    KernelError, Offload, Redactor, Setting, SettingsError, StudyDayRule, SystemClock,
 };
+use deck_streak_readings::taxonomy::{Taxonomy, TaxonomyError, TaxonomyPath};
 
 /// The directory systemd gives a unit for its state (`StateDirectory=`), where the database lives.
 pub const STATE_DIRECTORY: &str = "STATE_DIRECTORY";
@@ -139,6 +150,102 @@ fn take_open_lock(path: &Path) -> io::Result<File> {
     Ok(file)
 }
 
+/// The recompute's fold, with every step registered in its phase (SPEC-071 R19): phase 1's
+/// analytics step, counting leeches by `analytics`. A later SPEC registers its step here, in its
+/// own phase, without touching the fold.
+///
+/// # Errors
+///
+/// [`FoldError::OutsidePhase`] when a step is registered outside its phase.
+pub fn recompute_fold(analytics: AnalyticsSettings) -> Result<Fold, FoldError> {
+    let mut fold = Fold::default();
+    fold.register(
+        Phase::RollupAndScore,
+        Box::new(AnalyticsStep::new(analytics)),
+    )?;
+    Ok(fold)
+}
+
+/// Why a role's recompute cannot start. Each names a setting or a step, never a value.
+#[derive(Debug, thiserror::Error)]
+pub enum RecomputeError {
+    /// The courses file refused start (SPEC-071 R1).
+    #[error(transparent)]
+    Courses(#[from] CoursesError),
+    /// A setting refused start: the readings taxonomy's path or the leech threshold.
+    #[error(transparent)]
+    Settings(#[from] SettingsError),
+    /// The readings taxonomy could not be loaded.
+    #[error(transparent)]
+    Taxonomy(#[from] TaxonomyError),
+    /// The courses file and the readings taxonomy map a language deck to two codes (R3).
+    #[error(transparent)]
+    Disagree(#[from] CoursesDisagree),
+    /// The courses' digest could not be recorded with the settings generation (R4).
+    #[error("the courses' digest could not be recorded")]
+    Digest(#[source] KernelError),
+    /// A step was registered outside its phase (R19).
+    #[error(transparent)]
+    Fold(#[from] FoldError),
+}
+
+/// What every cycle of a role recomputes with, loaded once at the role's start (SPEC-071 R1, R3,
+/// R4, R15): the owner's courses, and the fold.
+#[derive(Clone, Debug)]
+pub struct RecomputeSetup {
+    courses: Courses,
+    fold: Arc<Fold>,
+}
+
+impl RecomputeSetup {
+    /// Loads the owner's courses from `env` (R1), refuses start when they disagree with the
+    /// readings taxonomy (R3), records their digest with the settings generation in `db`, which
+    /// bumps the generation when they changed (R4), and builds the fold (R19).
+    ///
+    /// # Errors
+    ///
+    /// Every refusal of [`RecomputeError`].
+    pub async fn load(env: &Environment, db: &Db) -> Result<Self, RecomputeError> {
+        let courses = Courses::load(env)?;
+        let taxonomy = match TaxonomyPath::from_env(env)? {
+            Some(path) => Some(Taxonomy::load(path.as_path())?),
+            None => None,
+        };
+        agree(&courses, taxonomy.as_ref())?;
+        db.record_courses_digest(courses.digest())
+            .await
+            .map_err(RecomputeError::Digest)?;
+        let fold = recompute_fold(AnalyticsSettings::from_env(env)?)?;
+        Ok(Self {
+            courses,
+            fold: Arc::new(fold),
+        })
+    }
+
+    /// The reader of the copy `settings` names, within `scope`, giving each card its course (R2).
+    #[must_use]
+    pub fn reader(
+        &self,
+        settings: &SyncSettings,
+        scope: ScopeSettings,
+        offload: Offload,
+    ) -> CollectionReader {
+        CollectionReader::new(settings, scope, offload).with_courses(self.courses.clone())
+    }
+
+    /// `parts`, recomputing through the fold over `db`, with study days decided by `rule` (R15).
+    #[must_use]
+    pub fn cycle<E: AnkiEngine + Sync>(
+        &self,
+        parts: CycleParts<E>,
+        db: Db,
+        rule: StudyDayRule,
+    ) -> CycleParts<E> {
+        let digest = self.courses.digest().map(str::to_owned);
+        parts.with_fold(Arc::clone(&self.fold), db, rule, digest)
+    }
+}
+
 /// The bot transport's counts, as coordination's `DeliveryMarker` (SPEC-026 R10, SPEC-027 R6): a
 /// message attempted and never delivered is a failed send, and one never attempted is a job that
 /// did not engage the notifier.
@@ -175,12 +282,13 @@ pub struct OwnerSyncCycle {
     db: Db,
     offload: Offload,
     rule: StudyDayRule,
+    recompute: RecomputeSetup,
 }
 
 impl OwnerSyncCycle {
     /// The owner's sync over `db`, reading its settings from `env` and its credentials through a
-    /// loader that registers them with `redactor`, blocking work on `offload`, and study days by
-    /// `rule`.
+    /// loader that registers them with `redactor`, blocking work on `offload`, study days by
+    /// `rule`, and recomputing through `recompute`, which the role loaded at its start.
     #[must_use]
     pub const fn new(
         env: Environment,
@@ -188,6 +296,7 @@ impl OwnerSyncCycle {
         db: Db,
         offload: Offload,
         rule: StudyDayRule,
+        recompute: RecomputeSetup,
     ) -> Self {
         Self {
             env,
@@ -195,6 +304,7 @@ impl OwnerSyncCycle {
             db,
             offload,
             rule,
+            recompute,
         }
     }
 
@@ -211,7 +321,9 @@ impl OwnerSyncCycle {
             .map_err(|error| refused("credentials_directory_refused", &error))?;
         let scope = ScopeSettings::from_env(&self.env)
             .map_err(|error| refused("scope_settings_refused", &error))?;
-        let reader = CollectionReader::new(&settings, scope, self.offload.clone());
+        let reader = self
+            .recompute
+            .reader(&settings, scope, self.offload.clone());
         let syncer = Syncer::new(
             RslibEngine,
             SqliteSyncRuns::new(self.db.clone()),
@@ -220,7 +332,11 @@ impl OwnerSyncCycle {
             clock.clone(),
             self.rule,
         );
-        let parts = CycleParts::new(syncer, reader, gate, Obligations::new(), clock);
+        let parts = self.recompute.cycle(
+            CycleParts::new(syncer, reader, gate, Obligations::new(), clock),
+            self.db.clone(),
+            self.rule,
+        );
         let report = sync_cycle(&parts, Trigger::Owner)
             .await
             .map_err(|error| refused(cycle_reason(&error), &error))?;
@@ -247,7 +363,9 @@ const fn cycle_reason(error: &CycleError) -> &'static str {
     match error {
         CycleError::History(_) | CycleError::Sync(_) => "sync_record_failed",
         CycleError::Obligations(_) => "obligations_unreadable",
-        CycleError::Gate(_) | CycleError::Window(_) => "recompute_failed",
+        CycleError::Gate(_) | CycleError::Window(_) | CycleError::Recompute(_) => {
+            "recompute_failed"
+        }
     }
 }
 
@@ -288,7 +406,13 @@ mod tests {
         OffloadWorkers, Redactor, StudyDay, StudyDayRule, SystemClock, UtcMillis,
     };
 
-    use super::{OwnerSyncCycle, TransportMarker, answer_of, cycle_reason};
+    use deck_streak_analytics::settings::AnalyticsSettings;
+    use deck_streak_coordination::recompute::Phase;
+    use deck_streak_coordination::recompute::analytics_step::ANALYTICS_STEP;
+
+    use super::{
+        OwnerSyncCycle, RecomputeSetup, TransportMarker, answer_of, cycle_reason, recompute_fold,
+    };
 
     /// A run of the given outcome, with synthetic instants.
     fn run(outcome: Result<(), ReasonCode>) -> SyncRun {
@@ -364,6 +488,16 @@ mod tests {
             cycle_reason(&CycleError::Obligations(cause())),
             "obligations_unreadable"
         );
+        assert_eq!(
+            cycle_reason(&CycleError::Recompute(cause())),
+            "recompute_failed"
+        );
+    }
+
+    #[test]
+    fn the_recompute_fold_registers_the_analytics_step_in_phase_one() {
+        let fold = recompute_fold(AnalyticsSettings::default()).expect("every step in its phase");
+        assert_eq!(fold.steps(), [(Phase::RollupAndScore, ANALYTICS_STEP)]);
     }
 
     #[tokio::test(flavor = "multi_thread")]
@@ -373,12 +507,17 @@ mod tests {
             .await
             .expect("the database opens");
         let workers = OffloadWorkers::new(1).expect("one worker is in range");
+        let env = Environment::from_vars(Vec::<(String, String)>::new());
+        let recompute = RecomputeSetup::load(&env, &db)
+            .await
+            .expect("no courses and no taxonomy are configured");
         let cycle = OwnerSyncCycle::new(
-            Environment::from_vars(Vec::<(String, String)>::new()),
+            env,
             Redactor::new(),
             db.clone(),
             Offload::new(workers, Arc::new(SystemClock)),
             StudyDayRule::default(),
+            recompute,
         );
         let answer = cycle.sync_now().await;
         assert_eq!(

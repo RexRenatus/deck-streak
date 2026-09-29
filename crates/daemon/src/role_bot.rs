@@ -12,6 +12,8 @@
 //! closes the database and returns.
 //!
 //! The owner's `/sync` runs a sync cycle in this role (R11), through wiring's [`OwnerSyncCycle`].
+//! Its recompute is loaded once, when the database is open: the owner's courses, refused when they
+//! disagree with the readings taxonomy, their digest recorded, and the fold (SPEC-071 R1, R3, R4).
 
 use std::cell::Cell;
 use std::sync::Arc;
@@ -25,7 +27,9 @@ use deck_streak_kernel::{
 };
 
 use crate::lifecycle::{self, Notifier, NotifyState, ShutdownSignal};
-use crate::wiring::{self, OwnerSyncCycle, StateDirectory, WiringError};
+use crate::wiring::{
+    self, OwnerSyncCycle, RecomputeError, RecomputeSetup, StateDirectory, WiringError,
+};
 
 /// Why the `bot` role stopped with an error.
 #[derive(Debug, thiserror::Error)]
@@ -45,6 +49,10 @@ pub enum BotRoleError {
     /// The database could not be opened.
     #[error("the database could not be opened")]
     Database(#[source] WiringError),
+    /// The recompute could not start: the courses, the readings taxonomy, their agreement, the
+    /// courses' digest or the fold refused it (SPEC-071).
+    #[error(transparent)]
+    Recompute(#[from] RecomputeError),
 }
 
 /// Runs the `bot` role until SIGTERM (or SIGINT), and returns once the batch in hand is handled
@@ -78,18 +86,34 @@ pub async fn run(env: &Environment, redactor: &Redactor) -> Result<(), BotRoleEr
     let shutdown = ShutdownSignal::install().map_err(BotRoleError::Signals)?;
 
     let clock: Arc<dyn Clock> = Arc::new(SystemClock);
-    let offload = Offload::new(kernel.offload_workers, clock);
+    let offload = Offload::new(kernel.offload_workers, Arc::clone(&clock));
     let db = wiring::open_database(&offload, &state)
         .await
         .map_err(BotRoleError::Database)?;
+    let recompute = match RecomputeSetup::load(env, &db).await {
+        Ok(recompute) => recompute,
+        Err(error) => {
+            db.close().await;
+            return Err(error.into());
+        }
+    };
     let sync = OwnerSyncCycle::new(
         env.clone(),
         redactor.clone(),
         db.clone(),
         offload,
         kernel.study_day_rule,
+        recompute,
     );
-    let mut commands = Commands::new(Arc::clone(&transport), owner, app, db.clone(), sync);
+    let mut commands = Commands::new(
+        Arc::clone(&transport),
+        owner,
+        app,
+        db.clone(),
+        sync,
+        kernel.study_day_rule,
+        clock,
+    );
 
     let heartbeat = Cell::new(None);
     deck_streak_bot::run(&transport, &mut commands, shutdown.received(), || {

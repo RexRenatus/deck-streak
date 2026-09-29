@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM daily_lang_stats WHERE study_day = ?1 AND course NOT IN (SELECT value FROM json_each(?2))",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "61df4d7a7c7cfa2412bae3b987739efb82758feb15621c905df7cc96e5040df4"
+}

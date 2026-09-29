@@ -19,7 +19,7 @@ use deck_streak_ingest::gate::{
 };
 use deck_streak_ingest::reader::CollectionReader;
 use deck_streak_ingest::sync_runs::{
-    ReasonCode, RunHistory, RunStatus, SqliteSyncRuns, SyncRun, SyncRunStore, Trigger,
+    ReasonCode, RunHistory, RunStatus, SkippedRun, SqliteSyncRuns, SyncRun, SyncRunStore, Trigger,
 };
 use deck_streak_kernel::{Clock, Db, ManualClock, StudyDay, StudyDayRule, UtcMillis};
 use serde_json::Value;
@@ -340,6 +340,67 @@ async fn a_failed_sync_or_a_failed_last_run_never_skips() {
     );
 }
 
+/// The record's read behind SPEC-071 R15's owed settle: a study day's first successful run is the
+/// success that started first in it. A failed run that started earlier in the day, a skipped check
+/// and another day's success are not it, and a day with no success has none.
+#[tokio::test]
+async fn a_study_days_first_success_is_its_earliest_successful_start() {
+    let bench = Bench::new().await;
+    let runs = SqliteSyncRuns::new(bench.db.clone());
+    let rule = StudyDayRule::default();
+    let first_success = |day: StudyDay| {
+        let runs = runs.clone();
+        async move {
+            runs.first_success_in(day)
+                .await
+                .unwrap_or_else(|error| panic!("the record is read: {error}"))
+        }
+    };
+    let before = rule.study_day(bench.clock.now());
+    assert_eq!(first_success(before).await, None, "no run on record");
+    let earlier = bench.clock.now();
+    bench.record_sync(Ok(())).await;
+
+    bench.clock.advance(Duration::from_hours(24));
+    let day = rule.study_day(bench.clock.now());
+    assert_eq!(
+        day.epoch_day(),
+        before.epoch_day() + 1,
+        "the next study day"
+    );
+    runs.record_skipped(&SkippedRun {
+        trigger: Trigger::Scheduled,
+        started_at: bench.clock.now(),
+        finished_at: bench.clock.now(),
+        study_day: day,
+    })
+    .await
+    .unwrap_or_else(|error| panic!("the skip is recorded: {error}"));
+    bench.clock.advance(Duration::from_mins(5));
+    bench.record_sync(Err(ReasonCode::ServerError)).await;
+    assert_eq!(
+        first_success(day).await,
+        None,
+        "a skipped check and a failed run are no success"
+    );
+    bench.clock.advance(Duration::from_mins(10));
+    let first = bench.clock.now();
+    bench.record_sync(Ok(())).await;
+    bench.clock.advance(Duration::from_mins(10));
+    bench.record_sync(Ok(())).await;
+
+    assert_eq!(
+        (first_success(before).await, first_success(day).await),
+        (Some(earlier), Some(first)),
+        "each day's first success is its own earliest successful start"
+    );
+    assert_eq!(
+        first_success(StudyDay::from_epoch_day(day.epoch_day() + 1)).await,
+        None,
+        "a day with no success has none"
+    );
+}
+
 #[tokio::test]
 async fn an_owner_rescore_forces_exactly_one_recompute() {
     let bench = Bench::anchored().await;
@@ -512,4 +573,28 @@ fn a_deadline_runs_the_recompute_only_after_the_anchor_and_at_or_before_now() {
         Decision::Run(RunReason::DeadlineDue { label: "due" }),
         "the first deadline inside the window names the reason"
     );
+}
+
+#[test]
+fn every_run_reason_is_named_as_a_log_line_names_it() {
+    let named = [
+        (RunReason::RescorePending, "rescore_pending"),
+        (RunReason::SyncFailed, "sync_failed"),
+        (RunReason::NoSuccessfulRun, "no_successful_run"),
+        (RunReason::LastRunFailed, "last_run_failed"),
+        (RunReason::AnchorMissing, "anchor_missing"),
+        (RunReason::AnchorUnreadable, "anchor_unreadable"),
+        (RunReason::SettingsChanged, "settings_changed"),
+        (RunReason::StudyDayChanged, "study_day_changed"),
+        (RunReason::NewestReviewChanged, "newest_review_changed"),
+        (RunReason::CardCountChanged, "card_count_changed"),
+        (
+            RunReason::CardFingerprintChanged,
+            "card_fingerprint_changed",
+        ),
+        (RunReason::DeadlineDue { label: "any" }, "deadline_due"),
+    ];
+    for (reason, word) in named {
+        assert_eq!(reason.as_str(), word);
+    }
 }
