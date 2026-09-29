@@ -73,7 +73,7 @@ R8. `POST /api/images/{key}/share` (`OwnerSession`, SPEC-024 R9's CSRF bound) ru
     `prepare_share(key)`: a row with no file id is 409 `share_unavailable`; otherwise the router's
     `prepare_share` (SPEC-132 R8) with the row's file id and caption. `Ready` answers the prepared
     message's id; `Unsupported` or `Failed` answer 503 `share_unavailable` by name. At most 10 shares
-    a minute, then 429.
+    a minute (a chosen bound), then 429.
 R9. The share control appears only when the row can be shared and the client reports Bot API 8.0 or
     later (`isVersionAtLeast('8.0')`); a tap asks the route, then passes the id to
     `WebApp.shareMessage`. On any refusal the control reports that the image cannot be shared now,

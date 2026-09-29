@@ -161,7 +161,7 @@ SPEC adds.
 |---|---|---|
 | `crates/progression/src/pricing.rs` | `deck-streak-progression` | added: the clamp, the price, the multiplier in force, the change and its refusals |
 | `crates/progression/src/grant.rs` | `deck-streak-progression` | changed: the grant prices its amount (R6, R7) |
-| `crates/progression/src/settle.rs` | `deck-streak-progression` | changed: the settle prices its amount (R8) |
+| `crates/progression/src/settle.rs` | `deck-streak-progression` | changed (SPEC-072 adds it): the settle prices its amount (R8) |
 | `crates/progression/src/lib.rs` | `deck-streak-progression` | changed: the module |
 | `crates/progression/src/data_rights.rs` | `deck-streak-progression` | changed: `xp_price_changes` exported and erased |
 | `crates/progression/tests/repricing.rs` | `deck-streak-progression` | added: A1 to A10 |

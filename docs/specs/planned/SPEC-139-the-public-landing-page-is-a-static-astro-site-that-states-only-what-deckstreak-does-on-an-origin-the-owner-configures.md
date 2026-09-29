@@ -57,8 +57,8 @@ R3. The built tree is flat: `index.html`, `privacy.html`, `terms.html`, `404.htm
 The page's head
 
 R4. Each page's head opens with `<meta charset="utf-8">` and then its meta description, the first
-    tag with a `content=` attribute. The description is 50 to 160 characters, plain ASCII with no
-    double quote. The title is `<keyword phrase> | DeckStreak`, 10 to 70 characters, plain ASCII,
+    tag with a `content=` attribute. The description is 50 to 160 characters (seo-pipeline's bound), plain ASCII with no
+    double quote. The title is `<keyword phrase> | DeckStreak`, 10 to 70 characters (seo-pipeline's bound), plain ASCII,
     unique per page. The pages' titles and descriptions are:
     - the landing page: `Gamify Anki in Telegram: XP, Streaks and Quests | DeckStreak`, and
       `DeckStreak turns your Anki reviews into XP, levels, streaks, quests and badges in a Telegram
@@ -101,7 +101,8 @@ R10. Every page's footer is ADR-014's notice, `Anki® is a registered trademark 
      `/terms.html`.
 R11. Every `<img>` carries `alt`, `width` and `height`; the landing page has at least one, the hero
      `hero.svg` (`data-lcp`), whose alt text describes what the image shows in 125 characters or
-     fewer. Each raster, `og-card.png` included, is 30,000 bytes or less.
+     fewer (a chosen bound). Each raster, `og-card.png` included, is 30,000 bytes or less
+     (web-launch's budget).
 R12. `vitals.json` is written only by `web/site/scripts/measure-vitals.ts`, which serves `dist` on
      loopback, loads `index.html` in Playwright's Chromium with the `web-vitals` library, and records
      the measured values with the tool versions. It writes into `dist`, which is never committed,

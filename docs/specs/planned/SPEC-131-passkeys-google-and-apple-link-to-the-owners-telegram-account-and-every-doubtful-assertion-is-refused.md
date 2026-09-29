@@ -16,7 +16,9 @@
 - **Prerequisites:** SPEC-020 (settings and migrations), SPEC-021 (data rights and the erase),
   SPEC-024 (the handshake, the sessions and the CSRF bound), SPEC-027 (the job table and its page
   exit), SPEC-028 (the Mini App shell), SPEC-066 (the credential loader and its empty refusal) and
-  SPEC-130 (the settings screen). SPEC-130 is unlanded. **Mutation band:** `S13100-S13199`.
+  SPEC-130 (the settings screen). SPEC-130 is unlanded. The job `link_revocation` needs SPEC-100 R28's
+  INSTANCE widening (the effective-config check refuses a job name it does not list); it holds
+  through SPEC-130. **Mutation band:** `S13100-S13199`.
 - **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
   `docs/specs/` with its tests and `docs/red-first/SPEC-131.md` (ADR-016).
 
@@ -37,7 +39,9 @@
   from another origin. The auth and web-security packs name the standards' MUSTs (RFC 9700, OpenID
   Connect Core, WebAuthn Level 3, NIST SP 800-63B-4).
 - **The predecessor had no linked sign-in.** Its boundary was the bot's owner chat; there is nothing
-  to port and no golden.
+  to port and no golden. Every number in R3 to R14 (the code's 600 seconds and 128 bits, the 300-second
+  reauthentication age, the cap of 8, the 10-second revocation bound, the five attempts) is chosen
+  by this SPEC, not measured in the predecessor.
 
 ## 2. Requirements
 
@@ -367,7 +371,7 @@ DeckStreak.
 | `crates/api/src/router.rs` | `deck-streak-api` | changed: the routes joined |
 | `crates/api/src/lib.rs` | `deck-streak-api` | changed: the module |
 | `crates/api/tests/linking_routes.rs` | `deck-streak-api` | added: A43, A44 |
-| `crates/daemon/src/role_api.rs` | `deck-streak-daemon` | changed: the api role loads the three credentials through its loader, builds the provider HTTP client and starts the revocation retry |
+| `crates/daemon/src/role_api.rs` | `deck-streak-daemon` | changed: the api role loads the three credentials through its loader, builds the provider HTTP client and builds the revoker |
 | `crates/daemon/src/wiring.rs` | `deck-streak-daemon` | changed: identity's `ProviderHttp` adapter over `reqwest`, redirects disabled, 10 seconds per call |
 | `crates/daemon/Cargo.toml` | `deck-streak-daemon` | changed: `reqwest`, for the adapter (ADR-131) |
 | `web/app/src/routes/link/+page.svelte` | miniapp | added: the link page |

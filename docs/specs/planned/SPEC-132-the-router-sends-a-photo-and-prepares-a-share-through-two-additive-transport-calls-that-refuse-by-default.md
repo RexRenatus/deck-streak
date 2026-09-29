@@ -57,7 +57,9 @@ R4. `Router::route_photo(&Occasion, &Photo)` is the one entry point for a photo.
 R5. A photo occasion asks tier T2 and is rendered by one `push_photo`, whatever tier the ladder names
     for its event: the predecessor sent both photos outside its ladder (§1), so a photo never spends
     the week's T4 or T5 budget (SPEC-084). The ladder's `share_card` entry is left as it is; no text
-    occasion raises it.
+    occasion raises it. A share photo is rendered at T2 outside the ladder's tier, budget and break
+    cap, as the predecessor ships its keepsake photo outside the ladder (`showcase.py`), and it stays
+    on the one router (R4).
 R6. `Delivered` records the delivery under SPEC-041 R6's shape and answers `Sent { file_id }`.
     `Unsupported` records the occasion withheld with the new reason `photo_unsupported` (its kind with
     `:withheld` appended, SPEC-041 R6), final, and sends nothing else: no caption as text, because
@@ -162,6 +164,7 @@ each judges. The delivery hands back an empty JSON diff and says so.
 - It holds no photo in the deferral queue: a caller raises it again (#126).
 - It adds no photo to the Mini App's in-app feed; the gallery shows images (#125).
 - It changes no tier of the ladder's table (#120).
+- It does not route a share photo through the ladder's tier (#125).
 
 ## 6. Risks
 

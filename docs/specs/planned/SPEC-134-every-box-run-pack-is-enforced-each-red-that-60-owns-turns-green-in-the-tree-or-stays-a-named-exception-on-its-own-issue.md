@@ -74,7 +74,8 @@ R3. `docs/schematics/threat-model.md` is a STRIDE threat model of DeckStreak, de
     when it has landed); a request flood (denial of service: the API's global concurrency limit);
     overlapping syncs (denial of service: ingest's lock); and an action with no record
     (repudiation: the ledgers that record each grant, send and sync). Linked sign-in's refusals
-    join when SPEC-131 has landed. Every STRIDE category has at least one row.
+    join when SPEC-131 has landed. Every STRIDE category has at least one row. The table states controls only: each row names the
+    control that answers its threat and describes no weakness of a live host.
 R4. `scripts/threat_model.py` reads the model as the pack describes it and answers each finding: a
     citation whose path names no file or more than one, one whose cited lines hold no line
     containing its quote, one with no quote, a row with no citation, and a STRIDE category with no
