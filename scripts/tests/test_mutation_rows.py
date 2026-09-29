@@ -507,6 +507,7 @@ class TheRunnerParseChecksAShellMutant(unittest.TestCase):
         self.assertNotEqual(
             posix.returncode, 0, "sh reads the array, so the fixture proves nothing"
         )
+        self.assertRegex(posix.stderr, r"(?i)syntax error")
 
     def test_a_bash_mutant_that_does_not_parse_is_void_not_a_kill(self):
         row = script_row(
