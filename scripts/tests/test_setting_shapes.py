@@ -328,5 +328,79 @@ class TheGuardReadsRustSource(unittest.TestCase):
         self.assertEqual(len(unpinned(root)), 1)
 
 
+class TheGuardReadsOutOfLineTestModules(unittest.TestCase):
+    """A `#[cfg(test)] mod name;` of the implementation's own file, read where the compiler looks
+    for it (A13)."""
+
+    tree = TheGuardJudgesAPlantedTree.tree
+    SPELLING = 'const X: &str = "a whole depth";\n'
+
+    def declared(self, declaration, *files, own="depth.rs", text=IMPL_TEXT):
+        """A tree whose `src/<own>` declares a module, and the module files written at `files`."""
+        root = self.tree()
+        src = root / "crates" / "demo" / "src"
+        if own != "depth.rs":
+            (src / "depth.rs").unlink()
+        (src / own).write_text(text + declaration, encoding="utf-8")
+        for name, body in files:
+            (src / name).parent.mkdir(parents=True, exist_ok=True)
+            (src / name).write_text(body, encoding="utf-8")
+        return root
+
+    def test_a_module_file_beside_the_own_file_is_its_test_module(self):
+        root = self.declared("#[cfg(test)]\nmod tests;\n", ("depth/tests.rs", self.SPELLING))
+        self.assertEqual(len(implementations(root)), 1)
+        self.assertEqual(unpinned(root), [])
+
+    def test_a_module_directory_with_a_mod_file_is_its_test_module(self):
+        root = self.declared("#[cfg(test)]\nmod tests;\n", ("depth/tests/mod.rs", self.SPELLING))
+        self.assertEqual(len(implementations(root)), 1)
+        self.assertEqual(unpinned(root), [])
+
+    def test_a_path_attribute_names_the_module_file_from_the_own_files_directory(self):
+        for declaration in (
+            '#[cfg(test)]\n#[path = "words/shape.rs"]\nmod tests;\n',
+            '#[path = "words/shape.rs"]\n#[cfg(test)]\nmod tests;\n',
+        ):
+            root = self.declared(declaration, ("words/shape.rs", self.SPELLING))
+            self.assertEqual(len(implementations(root)), 1)
+            self.assertEqual(unpinned(root), [])
+
+    def test_the_module_of_a_lib_file_is_read_from_the_crates_src_directory(self):
+        root = self.declared(
+            "#[cfg(test)]\nmod tests;\n", ("tests.rs", self.SPELLING), own="lib.rs"
+        )
+        self.assertEqual(len(implementations(root)), 1)
+        self.assertEqual(unpinned(root), [])
+
+    def test_a_file_that_is_no_declared_test_module_is_not_read_as_one(self):
+        elsewhere = ("depth/tests.rs", self.SPELLING)
+        for declaration in ("", "mod tests;\n", "#[cfg(test)]\nmod other;\n"):
+            root = self.declared(declaration, elsewhere)
+            self.assertEqual(len(implementations(root)), 1)
+            self.assertEqual(len(unpinned(root)), 1, declaration)
+        root = self.declared("#[cfg(test)]\nmod tests;\n", ("depth/tests.rs", "let shape = 1;\n"))
+        self.assertEqual(len(unpinned(root)), 1)
+
+
+class TheGuardIgnoresAnImplementationInAComment(unittest.TestCase):
+    """An `impl Setting for` inside a comment is no implementation (A14)."""
+
+    tree = TheGuardJudgesAPlantedTree.tree
+    src = TheGuardJudgesAPlantedTree.src
+
+    def test_a_block_comment_holding_an_impl_is_not_examined(self):
+        ghost = 'impl Setting for Ghost {\n    const SHAPE: &\'static str = "a ghost shape";\n}\n'
+        pinned = self.tree('const X: &str = "a whole depth";')
+        for comment in ("/*\n" + ghost + "*/\n", "/* a /* nested */\n" + ghost + "*/\n"):
+            root = self.src(pinned, comment)
+            self.assertEqual(len(implementations(root)), 1)
+            self.assertEqual(unpinned(root), [])
+        line = self.src(pinned, "// " + ghost.replace("\n", "\n// "))
+        self.assertEqual(len(implementations(line)), 1)
+        live = self.src(pinned, ghost)
+        self.assertEqual(unpinned(live), ['demo::Ghost (src/more.rs) "a ghost shape"'])
+
+
 if __name__ == "__main__":
     unittest.main()
