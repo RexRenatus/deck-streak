@@ -87,7 +87,7 @@ jobs:
           cp -R agent "$stage/agent"
           if [ -f ai-safety.json ]; then cp ai-safety.json "$stage/ai-safety.json"; fi
           (cd "$stage" && find . -type f ! -name MANIFEST.sha256 -print0 | sort -z | xargs -0 sha256sum > MANIFEST.sha256)
-          tar --sort=name --owner=0 --group=0 --numeric-owner -C "$out" -czf "$out/deck-streak-$tag.tar.gz" "deck-streak-$tag"
+          tar --sort=name --owner=0 --group=0 --numeric-owner -C "$stage" -czf "$out/deck-streak-$tag.tar.gz" .
           (cd "$out" && sha256sum "deck-streak-$tag.tar.gz" > SHA256SUMS)
           echo "OUT=$out" >> "$GITHUB_ENV"
           {
