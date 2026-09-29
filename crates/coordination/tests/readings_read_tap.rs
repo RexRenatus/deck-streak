@@ -227,6 +227,16 @@ async fn no_xp_is_granted_for_a_failed_or_missing_reading() {
     assert_eq!(untouched.vault_tick, VaultTick::None);
 }
 
+/// Prints how many items a check examined and refuses zero (the tdd pack's examined contract).
+fn examined<T>(what: &str, items: Vec<T>) -> Vec<T> {
+    println!("examined {} {what}", items.len());
+    assert!(
+        !items.is_empty(),
+        "examined 0 {what}: the population is empty, so nothing was judged"
+    );
+    items
+}
+
 /// The repository's root, two levels above this crate.
 fn root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")
@@ -265,8 +275,7 @@ fn the_read_line_is_written_only_by_the_tap() {
             population.extend(sources(&src));
         }
     }
-    println!("examined {} source file(s)", population.len());
-    assert!(!population.is_empty(), "examined 0 source files");
+    let population = examined("source file(s)", population);
 
     let callers: Vec<&PathBuf> = population
         .iter()
