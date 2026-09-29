@@ -67,7 +67,11 @@ sudo nice -n 19 ionice -c3 python3 inventory.py rules.json --out inventory.json
 
 It reads every health check before its first read, runs only the read commands of its allow list,
 and writes one file. A command outside the allow list, such as a health check that would restart a
-unit, refuses the whole run before any command runs (exit 1). Read, and record privately:
+unit, refuses the whole run before any command runs (exit 1). The host's clock must read
+synchronised, since the snapshot's instant is ordered against the inventory's: the inventory reads
+it (`timedatectl show -p NTPSynchronized --value`) before any other read and, when it does not read
+`yes`, refuses (exit 1) and writes no file. Synchronise the clock, then run it again. Read, and
+record privately:
 
 - `health_before`: every check green, or stop here;
 - `mounts`, and each root's `space` and totals, where a hard-linked file counts once: the free
@@ -126,7 +130,8 @@ Nothing changed, so no rollback is needed.
 
 ## E4: the apply
 
-Read the health checks and the free space (`df -h /`) first. Then, on the host, a dry run, and the
+Read the health checks, the free space (`df -h /`) and the clock first: the apply reads the clock
+again and refuses before any deletion when it does not read synchronised. Then, on the host, a dry run, and the
 apply:
 
 ```sh
@@ -140,9 +145,11 @@ check stands before the first deletion, and one failure refuses the whole run, n
 the reason: a health check that is not a read command of the allow list; a list whose digest does
 not match its content, or rules other than the ones the inventory read, which the list names; no
 approval, or one without the list's digest, the approver, the date or ids the list holds; no
-snapshot, one taken at or before the inventory, or one dated later than the apply's own clock; an
+snapshot, one taken at or before the inventory, or one dated later than the apply's own clock; a
+host clock that does not read synchronised now, or an inventory that did not record one; an
 item whose path the apply does not read canonically (named by its id); an item under a protected
-path or holding one; an item reached through a symbolic link; an item whose digest changed since
+path or holding one; an item reached through a symbolic link; an item holding an entry on another
+device than its own; an item whose digest changed since
 the list was made; a package that `dpkg --dry-run --remove` would not remove alone. A file or link
 is unlinked, never its target; a directory is removed without following a link inside it; a
 package is removed with `dpkg --remove`, which keeps its configuration files. Each item is read

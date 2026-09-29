@@ -63,20 +63,24 @@ flowchart TD
   names -->|"no"| refuse
   names --> snapshot{"a snapshot, taken after the inventory and not dated after the apply's clock"}
   snapshot -->|"none, taken before, or dated later"| refuse
-  snapshot --> each["each approved item"]
+  snapshot --> clock{"the inventory recorded a synchronised clock, and the clock reads synchronised now"}
+  clock -->|"no"| refuse
+  clock --> each["each approved item"]
   each --> canon{"its path absolute and canonical"}
   canon -->|"no: named by its id"| refuse
   canon --> prot{"under a protected path, or holding one"}
   prot -->|"yes"| refuse
   prot --> link{"reached through a symbolic link"}
   link -->|"yes"| refuse
-  link --> dig{"its digest, computed now, equals the listed one"}
+  link --> dev{"every entry under it on the item's own device"}
+  dev -->|"no"| refuse
+  dev --> dig{"its digest, computed now, equals the listed one"}
   dig -->|"no"| refuse
   dig --> pkg{"a listed package removes alone (a dry removal)"}
   pkg -->|"no"| refuse
   pkg --> mode{"--apply given"}
   mode -->|"no"| dry(["dry run: what would go, and the bytes, in the log"])
-  mode -->|"yes"| before["health checks read"] --> again{"each item read again, through directories opened without following a link: still what its checks read"}
+  mode -->|"yes"| before["health checks read"] --> again{"each item read again, through directories opened without following a link: the entry, and its digest measured again, still what its checks read"}
   again -->|"no"| stopped(["stopped part way: the log names what went"])
   again -->|"yes"| del["delete it: a file or link is unlinked, a directory removed without following a link, a package removed"]
   del -->|"the next item"| again
@@ -86,7 +90,8 @@ flowchart TD
 ```
 
 The health read before the first deletion lies between the checks and the deletions, so each
-deletion reads its item again immediately before it deletes (SPEC-060 §7).
+deletion reads its item again, digest included, immediately before it deletes (SPEC-060 §7). The
+inventory refuses the same clock reading before it writes anything.
 
 ## 3. The digest
 

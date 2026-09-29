@@ -168,7 +168,7 @@ while the apply reads it).
 
 ## Rows
 
-`scripts/mutation-rows.d/S06000-S06099.json` holds 54 rows, S06001 to S06054, one for each check
+`scripts/mutation-rows.d/S06000-S06099.json` holds 65 rows, S06001 to S06065, one for each check
 that stands before a deletion. Each has an anchor that occurs exactly once, one mutant, and a killer
 that selects one test. `python3 scripts/mutation_rows.py prove --band S06000-S06099` proved
 the first 49 at 8843ceb, on the committed tree: `rows: examined 49: killed 49, survived 0, void 0`,
@@ -192,7 +192,9 @@ mutant, and each target was restored byte for byte, checked by its sha256.
 | the plan: a canonical path, within a boundary, holding, a protected link, the rules it read, an environment in use, an item inside another | S06041 to S06049 | A3, A7 |
 | a file a tool parses and binds, read once: the reader's digest, the inventory's record, the plan's rules check and its inventory's digest, the apply's rules check | S06050 to S06054 | A10 |
 
-Not held by a row, each with why: the Python-version guard for a directory item (no interpreter the
+Not held by a row, each with why: a file system mounted inside an item (R20: the device check
+is green on one file system, and unprivileged mounts are blocked here, so its test fakes `st_dev`
+in the walk and no run crosses a real mount); the Python-version guard for a directory item (no interpreter the
 tests run under tells it apart); a directory removed through its parent's descriptor rather than by
 path (the two differ only inside a window no test holds open); a package's removal run through a
 shell with the same argument vector (no different argument can reach it while the package's name
@@ -247,3 +249,50 @@ and without its mutant: `rows: examined 54: killed 54, survived 0, void 0`.
 DISCLOSURE, the module's helpers changed at 7ae7dbc: `Host.run` can run a tool through the reader,
 `Host.served` does so and counts the opens, and the module's docstring names the reader. No
 criterion's test body changed in this round, and A10's is the same at 7ae7dbc and 28df6ac.
+
+## Fix round 3
+
+The deletion compared the item's entry, so a file rewritten below a directory item kept its entry
+and was removed; a file the apply binds was read twice in three places the tests had not opened; and
+the tools ran on a clock nobody had checked. The order of work, each red committed before its fix,
+the whole test module run at each red commit:
+
+- b83a634: A5's cases (a) to (d), red; 5434854: the fix, `delete()` measures the item's digest again
+  and leaves it when it differs. Every test was green at 5434854.
+- 51f0944: A10's three cases (the apply's rules first, the plan's inventory, the apply's list) and
+  the open counts of the apply's list and approval. These were green on arrival, because the head
+  reads each of these files once: they pin the reads, and rows S06056 to S06058 install the second
+  read and are killed by them.
+- f5ae5c8: A11, red; 5342bc0: the fix, the inventory records and refuses a clock that does not read
+  synchronised, the apply reads it again, and `measure` refuses an entry on another device.
+
+```red-first
+A5: red at b83a634: AssertionError: 0 != 3 (an entry added below a directory item, a file rewritten inside it, and a file item rewritten with its mtime put back were each deleted)
+A5: green at 5434854
+A11: red at f5ae5c8: AssertionError: the inventory did not record the clock, and an unsynchronised clock refused nothing (the crossed-device test failed with it)
+A11: green at 5342bc0
+```
+
+Per case, as the subtests read at both commits:
+
+```text
+A5 (a) an entry added under the venv: red at b83a634 (deleted), green at 5434854
+A5 (b) a file inside the venv rewritten: red at b83a634 (deleted), green at 5434854
+A5 (c) a file item rewritten, mtime put back: red at b83a634 (deleted), green at 5434854
+A5 (d) a file item rewritten: green on arrival, the entry's mtime moves; kept by S06055
+A10 the apply's rules first: green on arrival; pinned by S06057
+A10 the plan's inventory: green on arrival; pinned by S06058
+A10 the apply's list: green on arrival; pinned by S06056
+A11 the inventory records the clock: red at f5ae5c8, green at 5342bc0
+A11 the inventory refuses an unsynchronised clock: red at f5ae5c8, green at 5342bc0
+A11 the apply refuses an unsynchronised clock: red at f5ae5c8, green at 5342bc0
+A11 the list carries the clock, the apply refuses a list without it: red at f5ae5c8, green at 5342bc0
+A11 an entry on another device is never digested or removed: red at f5ae5c8, green at 5342bc0
+```
+
+Unprivileged mounts are blocked on the box, so the crossed-device case replaces `walk` with a seam
+that reports one entry on another device; it does not cross a real mount (R20, above).
+
+The rows S06055 to S06065: the deletion's re-measure (S06055, killed by A5), the apply's list, the
+apply's rules and the plan's inventory each read once (S06056 to S06058, A10), and the clock and
+device refusals (S06059 to S06065, A11).

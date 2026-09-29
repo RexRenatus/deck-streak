@@ -94,12 +94,13 @@ R10. The only classes W2 deletes are the owner's: backups older than their reten
 | A2 | the inventory of a synthetic host root reports the free space, each root's sizes with a hard-linked file counted once, the stale backup copies, the virtual environments and the worktrees (examined count reported) | `test_host_scrub.py` |
 | A3 | the plan lists only the items its rules select, each with its reason and digest, never a path it does not read canonically, and leaves the synthetic tree byte for byte as it was | `test_host_scrub.py` |
 | A4 | apply with no approval, an approval that does not carry the list's digest, or a list that holds a key twice, deletes nothing and names the reason | `test_host_scrub.py` |
-| A5 | apply deletes exactly the approved items when every digest matches, and deletes nothing when one approved item changed after the list was made: a file changed at the same size and modification time, or an entry added inside an approved directory; an item that changes after the apply's checks is not deleted | `test_host_scrub.py` |
+| A5 | apply deletes exactly the approved items when every digest matches, and deletes nothing when one approved item changed after the list was made: a file changed at the same size and modification time, or an entry added inside an approved directory; an item that changes after the apply's checks, at its own entry or anywhere below it, is not deleted | `test_host_scrub.py` |
 | A6 | apply refuses an approval that names no snapshot, a snapshot taken at or before the inventory's instant, compared as instants whatever offset each is written in, or one dated later than the apply's own clock | `test_host_scrub.py` |
 | A7 | apply refuses an approved item under or holding a protected path however the item's path is written or reached, and never follows a symbolic link out of an item, including an item that is itself a link: the link goes, the target stays | `test_host_scrub.py` |
 | A8 | no host-scrub file names a private value, and a planted one is refused by the public scrub | `test_host_scrub.py`; `scripts/public-scrub.py` |
 | A9 | apply runs as health checks only the read commands of the inventory's allow list, from the rules the inventory read: a changing command given as a health check, or other rules, are refused before any command runs, with 0 package-tool calls | `test_host_scrub.py` |
-| A10 | each tool parses and binds a file from one read: the rules' digest the inventory records, the plan checks and the apply checks is taken over the rules each acts on, and the list names its inventory by the bytes the plan parsed, so a file that serves other bytes to a second read is refused or acted on exactly as its digest says, and nothing the list's rules protect is deleted | `test_host_scrub.py` |
+| A10 | each tool parses and binds a file from one read, and opens it once: the rules' digest the inventory records, the plan checks and the apply checks is taken over the rules each acts on; the list names its inventory by the bytes the plan parsed; and the apply deletes only items of the list whose digest the approval carries, so a file that serves other bytes to a second read is refused or acted on exactly as its digest says, and nothing the list's rules protect or the approval does not name is deleted | `test_host_scrub.py` |
+| A11 | the inventory refuses to be written, and the apply refuses to delete, while the host clock does not read synchronised or when the inventory did not record that it did; and an item any of whose entries lies on another device than its own is neither digested, listed nor removed | `test_host_scrub.py` |
 
 ```acceptance
 A1: python3 -m unittest discover -s scripts/tests -p test_host_scrub.py -k test_the_inventory_runs_only_its_read_only_allow_list
@@ -111,18 +112,22 @@ A6: python3 -m unittest discover -s scripts/tests -p test_host_scrub.py -k test_
 A7: python3 -m unittest discover -s scripts/tests -p test_host_scrub.py -k test_apply_refuses_protected_paths_and_symbolic_links_out
 A8: python3 -m unittest discover -s scripts/tests -p test_host_scrub.py -k test_no_host_scrub_file_names_a_private_value
 A9: python3 -m unittest discover -s scripts/tests -p test_host_scrub.py -k test_apply_runs_only_read_health_checks_from_the_listed_rules
-A10: python3 -m unittest discover -s scripts/tests -p test_host_scrub.py -k test_each_tool_binds_the_bytes_it_parsed
+A10: python3 -m unittest discover -s scripts/tests -p test_host_scrub.py -k test_each_tool_binds_the_bytes_it_parsed -k test_each_tool_opens_each_file_it_binds_once
+A11: python3 -m unittest discover -s scripts/tests -p test_host_scrub.py -k test_the_tools_refuse_a_clock_that_is_not_synchronised -k test_an_item_holding_another_device_is_never_digested_or_removed
 ```
 
 A1 runs the inventory with stub commands first on its `PATH`, each recording its argument vector
-into a `TemporaryDirectory`. A2 to A7, A9 and A10 build a synthetic host tree in a
+into a `TemporaryDirectory`. A2 to A7, A9, A10 and A11 build a synthetic host tree in a
 `TemporaryDirectory` at run time, and A7 a synthetic protected-path list; no fixture holds a real
 path, size or name. A5 and A7 change the synthetic tree while the apply reads a health check's
 address, which the test serves on the loopback, and A4, A6, A7, A9 and A10 write lists the plan
 did not make, each with its own digest taken again, so the apply's own checks are what refuse them.
 A8 writes its planted value at run time, as SPEC-032's A6 does, so no private literal is ever
 committed. A10 runs each tool through a reader that serves a file's bytes differently on a second
-open, in either order, so a tool that parsed one read and bound another would show it.
+open, in either order, so a tool that parsed one read and bound another would show it. A11 fakes the
+host's time-sync reading through the stub on the tools' `PATH`, changing it between the inventory
+and the apply, and fakes a file system mounted inside an item at the walk's seam, since the box that
+runs the tests refuses unprivileged mounts.
 
 ## 4. The owner's gate and the evidence it records
 
@@ -170,8 +175,18 @@ only.
   health checks are read between the two, so the window holds every health read. Each deletion
   reads its item again immediately before it deletes, through directories opened one at a time
   without following a link, and deletes it only while its device, inode and modification time are
-  the ones its checks read; otherwise the apply stops there, and the log names what went (A5,
-  A7).
+  the ones its checks read and its digest, measured again over the item and everything below it,
+  is the approved one; otherwise the apply stops there, and the log names what went (A5, A7). What
+  remains is the interval between that last measurement and the removal itself, which no check of
+  a path can close without holding the tree still.
+- **The clock the approval's instants are ordered on.** The snapshot's instant is compared with the
+  inventory's and with the apply's own clock, so a host clock that is not synchronised can order
+  them wrongly. The inventory records whether the time-sync reading says synchronised and refuses to
+  be written when it does not, and the apply reads it again and refuses before any deletion when it
+  does not read synchronised now or when the inventory did not record it (A11).
+- **A file system mounted inside an item.** A mount inside a directory item would be walked, digested
+  and removed with the item. `measure` refuses an item any of whose entries lies on another device
+  than its top entry, so the plan skips it with its reason and the apply refuses it (A11).
 - **A deletion breaks another service.** The protected-path list refuses that service's paths
   whatever the approval says (A7), the health-check list is read after each apply (R9), and the
   snapshot restores any item.
@@ -267,3 +282,17 @@ Its second fix round amended these statements too:
   between the reads is parsed as one content and bound as another, so the apply could act on rules
   the list does not name while its check passed. A10 is new, and a test beyond the criteria,
   `test_each_tool_opens_each_file_it_binds_once`, pins one open of each such file per run.
+
+Its third fix round amended these statements too:
+
+- **R6, A5: a deletion reads the item's digest again.** Each deletion measures the item again over
+  its whole tree, right after its entry check, and stops when the digest is not the approved one, so
+  a change below a directory item's top entry, or a rewrite in place with its time put back, is
+  caught where the entry check alone would not. A5 grew four cases; the interval between that
+  measurement and the removal is named in section 7.
+- **R6, A10: the list and the approval are bound too.** The apply deletes only items of the list it
+  bound whose digest the approval carries, the plan lists from the inventory it named, and the
+  apply's protected paths come from the rules it bound; A10's text and fence say so, and the
+  open-count test adds the apply's list and approval.
+- **R6, R7: A11.** The clock reading and the crossed device above are new; the clock reading is one
+  more read command of the allow list, `timedatectl show -p NTPSynchronized --value`.

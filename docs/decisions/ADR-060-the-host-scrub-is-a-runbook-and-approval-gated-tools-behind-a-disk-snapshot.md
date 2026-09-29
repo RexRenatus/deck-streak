@@ -130,6 +130,23 @@ alternatives:
   against a digest over the parsed content written out again, which no file tool the owner runs
   would reproduce, where the digest of the file's bytes is what `sha256sum` gives.
 
+### Decided in the third fix round (SPEC-060 §8)
+
+- **The deletion measures the item again.** `delete()` recomputes the item's digest right after its
+  entry check and leaves the item when it differs from the approved one, so a change below the
+  entry, or one that restores the entry's own mtime, is caught where the removal happens. Chosen
+  against comparing ctime, which a legitimate metadata touch moves and which still says nothing
+  about content below the entry; and against narrowing the text to what the entry tuple sees, which
+  states the weaker guarantee rather than giving the stronger one.
+- **The clock is enforced, not documented.** The inventory records whether the host clock reads
+  synchronised and refuses to write when it does not; the apply refuses when the inventory did not
+  record it or when the clock does not read synchronised now. Chosen against documenting the
+  precondition in the runbook alone, which leaves the ordering of snapshot, inventory and approval
+  resting on a clock nobody checked.
+- **An item holding another device is never digested or removed.** `measure` refuses an entry whose
+  device differs from the item's own. Chosen against following it, which would digest and delete a
+  mounted file system's content that no inventory approved.
+
 ### Consequences
 
 - Good, because the owner approves bytes, not descriptions, and a changed host is caught before the
@@ -139,13 +156,15 @@ alternatives:
   it after W2's first week.
 - Bad, because a directory item needs Python 3.11 or later, whose `shutil.rmtree` takes a directory
   descriptor; the runbook names that floor.
+- Bad, because a change made in the interval between the deletion's re-measure and the removal itself
+  is not seen; the interval is the removal's own and is not closed by a check.
 - Bad, because the digest reads each candidate's content once; the tools run niced,
   off the predecessor's schedule as SPEC-027 R2 defines it, its sync minutes included, off every
   reserved slot, and off DeckStreak's own job slots.
 
 ### Confirmation
 
-SPEC-060's acceptance tests (A1 to A10) and its hand-proved mutation rows
+SPEC-060's acceptance tests (A1 to A11) and its hand-proved mutation rows
 (`scripts/mutation-rows.d/S06000-S06099.json`); the gate-2 evidence E1 to E4, recorded privately.
 
 ## What would make this wrong
