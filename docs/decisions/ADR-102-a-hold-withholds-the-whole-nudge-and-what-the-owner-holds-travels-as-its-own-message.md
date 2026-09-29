@@ -38,7 +38,7 @@ contaminating the readout?
 - Draw always and still send the brief when it carries an offer or a chest, as the predecessor does — rejected because such a held arm was delivered, and the readout then compares arms that are not what they say.
 - Skip the draw when the brief carries an offer or a chest — rejected because the offer is pending nearly every morning, so the ledger would stay nearly empty, the hole the predecessor closed.
 - Mark each line of the brief holdable or not, and hold only the holdable lines — rejected because a partial brief is neither arm: the owner still received a morning message.
-- Send a shortened brief on a hold — rejected for the same reason: any delivered message is a sent arm.
+- Send a shortened brief on a hold — rejected because any delivered message is a sent arm, so a shortened brief is not the held arm the readout counts.
 
 ## Decision Outcome
 
