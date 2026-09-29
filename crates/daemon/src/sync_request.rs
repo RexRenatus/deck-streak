@@ -188,7 +188,13 @@ impl<C: Clock, L: RequestLedger, D: Doorbell, P: Pause, F: Flush> SyncRequester<
                 Progress::Ran {
                     failure: Some(reason),
                 } => SyncOutcome::Failed { reason },
-                Progress::Reused | Progress::Refused { .. } => SyncOutcome::Reused,
+                Progress::Reused => SyncOutcome::Reused,
+                Progress::Refused { reason } => {
+                    return Ok(SyncAnswer {
+                        sync: SyncOutcome::NotRun { reason },
+                        scores: Scores::Unchanged,
+                    });
+                }
                 Progress::Waiting if self.clock.now().epoch_millis() >= deadline => {
                     return Ok(SyncAnswer {
                         sync: SyncOutcome::StillRunning,
@@ -251,6 +257,17 @@ impl RequestLedger for SqliteRequestLedger {
         let run = SqliteSyncRuns::new(self.db.clone())
             .owner_run_since(since)
             .await?;
+        if run.is_none()
+            && let Some(refusal) = SqliteIngestState::new(self.db.clone())
+                .load()
+                .await?
+                .refusal
+            && refusal.at >= since
+        {
+            return Ok(Progress::Refused {
+                reason: refusal.reason.as_str().to_owned(),
+            });
+        }
         Ok(run.map_or(Progress::Reused, |run| Progress::Ran {
             failure: (run.status == RunStatus::Error)
                 .then(|| run.reason.unwrap_or_else(|| "unknown".to_owned())),

@@ -50,13 +50,22 @@ impl RefusalReason {
     /// The reason's code, as stored and as the owner is told.
     #[must_use]
     pub const fn as_str(self) -> &'static str {
-        "unset"
+        match self {
+            Self::RescoreUnrecorded => "rescore_unrecorded",
+            Self::SyncSettingsRefused => "sync_settings_refused",
+            Self::CredentialsDirectoryRefused => "credentials_directory_refused",
+            Self::ScopeSettingsRefused => "scope_settings_refused",
+            Self::RecomputeRefused => "recompute_refused",
+            Self::SyncRecordFailed => "sync_record_failed",
+            Self::ObligationsUnreadable => "obligations_unreadable",
+            Self::RecomputeFailed => "recompute_failed",
+        }
     }
 
     /// The reason a code names, when it is one of the closed set.
     #[must_use]
-    pub fn parse(_code: &str) -> Option<Self> {
-        None
+    pub fn parse(code: &str) -> Option<Self> {
+        Self::ALL.into_iter().find(|reason| reason.as_str() == code)
     }
 }
 
@@ -111,6 +120,8 @@ impl SqliteIngestState {
                       anchor_recomputed_at AS "anchor_recomputed_at?",
                       anchor_settings_generation AS "anchor_settings_generation?",
                       rescore_pending AS "rescore_pending!",
+                      refused_at AS "refused_at?",
+                      refused_reason AS "refused_reason?",
                       window_floor AS "window_floor?",
                       window_count AS "window_count?"
                FROM ingest_state WHERE id = 1"#
@@ -160,7 +171,13 @@ impl SqliteIngestState {
         Ok(IngestState {
             anchor,
             rescore_pending: row.rescore_pending != 0,
-            refusal: None,
+            refusal: row
+                .refused_at
+                .zip(row.refused_reason.as_deref().and_then(RefusalReason::parse))
+                .map(|(at, reason)| Refusal {
+                    reason,
+                    at: UtcMillis::from_epoch_millis(at),
+                }),
             window_base,
         })
     }
@@ -176,7 +193,8 @@ impl SqliteIngestState {
         let mut write = self.db.write().await?;
         sqlx::query!(
             "INSERT INTO ingest_state (id, rescore_pending, created_at) VALUES (1, 1, ?1) \
-             ON CONFLICT (id) DO UPDATE SET rescore_pending = 1",
+             ON CONFLICT (id) DO UPDATE SET rescore_pending = 1, \
+             refused_at = NULL, refused_reason = NULL",
             created_at
         )
         .execute(&mut *write)
@@ -186,16 +204,31 @@ impl SqliteIngestState {
     }
 
     /// Records that the job refused the owner's request (SPEC-128 R1): the reason and the instant,
-    /// and the pending flag cleared, in one write.
+    /// and the pending flag cleared, in one write. A new request ([`Self::request_rescore`]) clears
+    /// the record again (R3).
     ///
     /// # Errors
     ///
     /// [`KernelError::Database`] when the write fails.
     pub async fn record_refusal(
         &self,
-        _reason: RefusalReason,
-        _now: UtcMillis,
+        reason: RefusalReason,
+        now: UtcMillis,
     ) -> Result<(), KernelError> {
+        let created_at = now.epoch_millis();
+        let code = reason.as_str();
+        let mut write = self.db.write().await?;
+        sqlx::query!(
+            "INSERT INTO ingest_state (id, rescore_pending, refused_at, refused_reason, created_at) \
+             VALUES (1, 0, ?1, ?2, ?1) \
+             ON CONFLICT (id) DO UPDATE SET rescore_pending = 0, \
+             refused_at = excluded.refused_at, refused_reason = excluded.refused_reason",
+            created_at,
+            code
+        )
+        .execute(&mut *write)
+        .await?;
+        write.commit().await?;
         Ok(())
     }
 
