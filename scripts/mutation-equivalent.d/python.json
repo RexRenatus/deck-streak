@@ -1,69 +1,6 @@
 {
   "records": [
     {
-      "file": "scripts/mutation-verdict.py",
-      "mutant": "replace \"\" with \"XX\" in python_reports",
-      "anchor": "pathlib.Path(directory or \"\")",
-      "reason": "The fallback \"\" of directory or \"\" is read only when directory is falsy, and then the path built from it is never used.",
-      "evidence": "The next line tests `not directory or not path.is_file()`: a falsy directory makes the first operand true, so path.is_file() is never called and path is not read again; a truthy directory never takes the fallback.",
-      "reached_by": "test_mutation_verdict_python_kills.TheShardReportsAreReadWhole.test_no_directory_leaves_every_shard_without_a_report",
-      "issue": "#340"
-    },
-    {
-      "file": "scripts/mutation-verdict.py",
-      "mutant": "replace \"SCRIPT_MUTATIONS\" with \"\" in python_reached",
-      "anchor": "table=\"SCRIPT_MUTATIONS\"",
-      "reason": "The Row's table names which table it came from, and the killer check never reads it.",
-      "evidence": "resolve_killer calls locate_killer, which reads only row.crate (None here) and row.killer, then parses row.killer; mutation_rows.py's resolve_killer and locate_killer name no other Row field on the script path.",
-      "reached_by": "test_mutation_verdict_python_kills.TheRecordsAreHeldToTheirPopulation.test_a_reached_by_names_a_test_of_a_module_the_map_gives_the_file",
-      "issue": "#340"
-    },
-    {
-      "file": "scripts/mutation-verdict.py",
-      "mutant": "replace \"\" with \"XX\" in python_reached",
-      "anchor": "target=file,\n        find=\"\",",
-      "reason": "The Row's find is a mutant's anchor text, which the killer check never reads.",
-      "evidence": "On the script path resolve_killer and locate_killer read row.crate and row.killer alone, so the find field's value cannot reach the returned problems.",
-      "reached_by": "test_mutation_verdict_python_kills.TheRecordsAreHeldToTheirPopulation.test_a_reached_by_names_a_test_of_a_module_the_map_gives_the_file",
-      "issue": "#340"
-    },
-    {
-      "file": "scripts/mutation-verdict.py",
-      "mutant": "replace \"\" with \"XX\" in python_reached",
-      "anchor": "replace=\"\",\n        killer=",
-      "reason": "The Row's replace is a mutant's replacement text, which the killer check never reads.",
-      "evidence": "resolve_killer and locate_killer take no value from row.replace on the script path: the only Row fields they touch are crate and killer.",
-      "reached_by": "test_mutation_verdict_python_kills.TheRecordsAreHeldToTheirPopulation.test_a_reached_by_names_a_test_of_a_module_the_map_gives_the_file",
-      "issue": "#340"
-    },
-    {
-      "file": "scripts/mutation-verdict.py",
-      "mutant": "replace \"\" with \"XX\" in python_reached",
-      "anchor": "crate=None,\n        description=\"\",",
-      "reason": "The Row's description is a label for a human, which the killer check never reads.",
-      "evidence": "resolve_killer and locate_killer take no value from row.description, and no message they raise names it, so the returned problems are the same for any text.",
-      "reached_by": "test_mutation_verdict_python_kills.TheRecordsAreHeldToTheirPopulation.test_a_reached_by_names_a_test_of_a_module_the_map_gives_the_file",
-      "issue": "#340"
-    },
-    {
-      "file": "scripts/mutation-verdict.py",
-      "mutant": "replace 1 with 2 in python_reached",
-      "anchor": ".split(\".\", 1)[0] not in modules",
-      "reason": "str.split with maxsplit 2 instead of 1 returns the same first element for a killer of the form module.Class.method.",
-      "evidence": "The killer was already resolved, so it matches the module.Class.method pattern; split(\".\", 1)[0] and split(\".\", 2)[0] are both the text before the first dot, the module name.",
-      "reached_by": "test_mutation_verdict_python_kills.TheRecordsAreHeldToTheirPopulation.test_a_reached_by_names_a_test_of_a_module_the_map_gives_the_file",
-      "issue": "#340"
-    },
-    {
-      "file": "scripts/mutation-verdict.py",
-      "mutant": "replace is not with is in table",
-      "anchor": "scope is not None)",
-      "reason": "table_python takes a `required` parameter and never reads it, so its value cannot change what the table prints or returns.",
-      "evidence": "The body of table_python names required only in its signature: an absent report returns 0 in both cases, and an absent scope's row is made VOID by table() after the call.",
-      "reached_by": "test_mutation_python_verdict.TheVerdictReadsThePythonReports.test_the_battery_the_table_and_the_survivors_read_the_python_reports",
-      "issue": "#340"
-    },
-    {
       "file": "scripts/mutation_python.py",
       "mutant": "replace break with continue in Lister.between",
       "anchor": "            if token.start >= before:\n                break\n",
