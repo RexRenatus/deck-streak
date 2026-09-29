@@ -252,6 +252,33 @@
         "if !grouped && path.len() > prefix.len() {",
         "xp_census::the_census_follows_a_grouped_module_renaming_and_a_chain_read_before_its_link",
         "a `{self as X}` inside a group is a leaf, so a grouped module renaming is followed (SPEC-072 A32)"
+      ],
+      [
+        "S07233-CENSUS-MANIFEST-RENAME",
+        "progression",
+        "tests/xp_census.rs",
+        "names.extend(manifest_names(root));",
+        "names.extend(BTreeSet::<String>::new());",
+        "xp_census::the_census_follows_a_crate_renamed_by_a_manifest",
+        "a manifest's `package` rename of progression's crate is a name that denotes it (SPEC-072 A33)"
+      ],
+      [
+        "S07234-CENSUS-GLOB-OPENS-MEMBER",
+        "progression",
+        "tests/xp_census.rs",
+        "&& (globbed.contains(&context)",
+        "&& (false",
+        "xp_census::the_census_follows_a_crate_alias_however_it_is_written",
+        "a glob of progression's crate root opens every file of the member that holds it (SPEC-072 A33)"
+      ],
+      [
+        "S07235-CENSUS-RAW-IDENTIFIER",
+        "progression",
+        "tests/xp_census.rs",
+        "if character == '#' && word == \"r\" {",
+        "if false {",
+        "xp_census::the_census_reads_a_raw_identifier_as_its_plain_name",
+        "`r#name` is read as `name`, so a raw alias denotes the same name (SPEC-072 A33)"
       ]
     ],
     "CARGO_KILLED_SCRIPT_MUTATIONS": [
