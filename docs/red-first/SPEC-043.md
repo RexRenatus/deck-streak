@@ -166,7 +166,8 @@ Disclosure of the edits between red and green: the scans are helper functions in
 files, so the green commits edit those files. Commit 1fdacad0 adds `comment_spans`,
 `raw_string_len`, `char_literal_len` and `code_of`, and makes `delete_keywords_in` read `code_of`.
 Commit cb94c178 adds `without_raw_prefixes` and `declares_the_verdict` and uses it in
-`declarations_of` and `attributes_of`. Commit 9fdf9391 replaces the stub `is_conditional`. No commit
+`declarations_of` and `attributes_of`. Commit 9fdf9391 replaces the stub `is_conditional`. Commits b943730, 89d84ed and 4d11e2e are the verdict tests; they were
+committed between the prune red and green and edit verdict.rs, not runs.rs. No commit
 changes an assertion of the tests above.
 
 ```text
