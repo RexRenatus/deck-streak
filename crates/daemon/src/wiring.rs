@@ -27,12 +27,16 @@
 use std::fs::{File, OpenOptions};
 use std::io;
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 
 use deck_streak_analytics::settings::AnalyticsSettings;
 use deck_streak_bot::{OwnerChat, Scores, SyncAnswer, SyncOutcome, SyncRefusal, Transport};
 use deck_streak_coordination::courses::{CoursesDisagree, agree};
 use deck_streak_coordination::delivery::{DeliveryCounts, DeliveryMarker};
+use deck_streak_coordination::instruments::{
+    BoxFuture, Frame, InstrumentListing, InstrumentRunner, InstrumentService, Instruments,
+    OnDemandRefusal, ReadSource, StoredReport,
+};
 use deck_streak_coordination::obligations::Obligations;
 use deck_streak_coordination::recompute::analytics_step::AnalyticsStep;
 use deck_streak_coordination::recompute::{Fold, FoldError, Phase};
@@ -44,11 +48,14 @@ use deck_streak_ingest::engine::{AnkiEngine, RslibEngine};
 use deck_streak_ingest::gate::ChangeGate;
 use deck_streak_ingest::reader::CollectionReader;
 use deck_streak_ingest::settings::{ScopeSettings, SyncSettings};
+use deck_streak_ingest::structure::StructureReads;
 use deck_streak_ingest::sync::{SyncReport, Syncer};
 use deck_streak_ingest::sync_runs::{SqliteSyncRuns, Trigger};
+use deck_streak_insights::dark_fields::DarkFields;
 use deck_streak_kernel::{
-    Clock, Courses, CoursesError, CredentialLoader, CredentialsDirectory, Db, Environment,
-    KernelError, Offload, Redactor, Setting, SettingsError, StudyDayRule, SystemClock,
+    Clock, Conventions, ConventionsError, Courses, CoursesError, CredentialLoader,
+    CredentialsDirectory, Db, Environment, KernelError, Offload, Redactor, Setting, SettingsError,
+    StudyDayRule, SystemClock,
 };
 use deck_streak_notifications::{Policy, Router};
 use deck_streak_readings::taxonomy::{Taxonomy, TaxonomyError, TaxonomyPath};
@@ -199,6 +206,7 @@ pub enum RecomputeError {
 pub struct RecomputeSetup {
     courses: Courses,
     fold: Arc<Fold>,
+    instruments: Option<Arc<Instruments>>,
 }
 
 impl RecomputeSetup {
@@ -223,7 +231,16 @@ impl RecomputeSetup {
         Ok(Self {
             courses,
             fold: Arc::new(fold),
+            instruments: None,
         })
+    }
+
+    /// This setup, running `instruments` after the recompute of every cycle it hands out
+    /// (SPEC-094 R7).
+    #[must_use]
+    pub fn with_instruments(mut self, instruments: Option<Arc<Instruments>>) -> Self {
+        self.instruments = instruments;
+        self
     }
 
     /// The reader of the copy `settings` names, within `scope`, giving each card its course (R2).
@@ -246,7 +263,11 @@ impl RecomputeSetup {
         rule: StudyDayRule,
     ) -> CycleParts<E> {
         let digest = self.courses.digest().map(str::to_owned);
-        parts.with_fold(Arc::clone(&self.fold), db, rule, digest)
+        let parts = parts.with_fold(Arc::clone(&self.fold), db, rule, digest);
+        match &self.instruments {
+            Some(instruments) => parts.with_instruments(Arc::clone(instruments)),
+            None => parts,
+        }
     }
 }
 
@@ -587,5 +608,144 @@ mod tests {
                 delivered: 0
             }
         );
+    }
+}
+
+/// Why the instruments cannot be built. Each names a setting, never a value.
+#[derive(Debug, thiserror::Error)]
+pub enum InstrumentsError {
+    /// The owner's note conventions refused start (SPEC-094 R1, R2; ADR-096).
+    #[error(transparent)]
+    Conventions(#[from] ConventionsError),
+    /// The private copy's settings or its scope refused start.
+    #[error(transparent)]
+    Settings(#[from] SettingsError),
+}
+
+/// Dark Fields' reads: the structure of the private copy, within scope, read through the ingest
+/// context's reader so the instruments' host never opens the copy itself (ADR-094).
+struct StructureSource {
+    reader: CollectionReader,
+}
+
+impl ReadSource<StructureReads> for StructureSource {
+    fn read(&self) -> BoxFuture<'_, Result<StructureReads, String>> {
+        Box::pin(async move {
+            self.reader.read_structure().await.map_err(|error| {
+                tracing::error!(%error, "the copy's structure could not be read");
+                "the copy's structure could not be read".to_owned()
+            })
+        })
+    }
+}
+
+/// The instruments a role runs: each live instrument's frame over its reads, one at a time behind
+/// the lock in `state`, storing into `db` (SPEC-094 R7, R8).
+///
+/// The owner's note conventions are loaded here once, so a malformed file or a forbidden label
+/// refuses the role's start before any instrument can read them (R1, R2).
+///
+/// # Errors
+///
+/// Every refusal of [`InstrumentsError`].
+pub fn build_instruments(
+    env: &Environment,
+    db: Db,
+    state: &StateDirectory,
+    offload: Offload,
+    rule: StudyDayRule,
+) -> Result<Arc<Instruments>, InstrumentsError> {
+    let _conventions = Conventions::load(env)?;
+    let settings = SyncSettings::from_env(env)?;
+    let scope = ScopeSettings::from_env(env)?;
+    let reader = CollectionReader::new(&settings, scope, offload.clone());
+    let dark_fields: Arc<dyn InstrumentRunner> =
+        Arc::new(Frame::new(DarkFields, StructureSource { reader }, offload));
+    Ok(Arc::new(Instruments::new(
+        db,
+        state.path(),
+        Arc::new(SystemClock),
+        rule,
+        vec![dark_fields],
+    )))
+}
+
+/// [`build_instruments`] for a role: a private copy's settings that refuse leave the role without
+/// instruments (logged; the sync's own refusal is recorded by its cycle), while a conventions file
+/// that refuses stops the role's start.
+///
+/// # Errors
+///
+/// [`ConventionsError`] when the owner's conventions refuse start.
+pub fn instruments_for_role(
+    env: &Environment,
+    db: Db,
+    state: &StateDirectory,
+    offload: Offload,
+    rule: StudyDayRule,
+) -> Result<Option<Arc<Instruments>>, ConventionsError> {
+    match build_instruments(env, db, state, offload, rule) {
+        Ok(instruments) => Ok(Some(instruments)),
+        Err(InstrumentsError::Conventions(error)) => Err(error),
+        Err(InstrumentsError::Settings(error)) => {
+            tracing::warn!(%error, "the instruments are not available: the copy's settings refuse");
+            Ok(None)
+        }
+    }
+}
+
+/// The instruments as the api role holds them: the api binds before the database opens, so the
+/// service is filled in when the opener finishes, and answers "not ready" until then.
+#[derive(Clone, Debug, Default)]
+pub struct LateInstruments(Arc<OnceLock<Arc<Instruments>>>);
+
+impl LateInstruments {
+    /// An empty holder.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Fills the holder once the instruments are built.
+    pub fn fill(&self, instruments: Arc<Instruments>) {
+        drop(self.0.set(instruments));
+    }
+
+    fn not_ready() -> KernelError {
+        KernelError::Offload {
+            operation: "instruments_not_ready",
+        }
+    }
+}
+
+impl InstrumentService for LateInstruments {
+    fn list(&self) -> BoxFuture<'_, Result<Vec<InstrumentListing>, KernelError>> {
+        Box::pin(async move {
+            match self.0.get() {
+                Some(instruments) => instruments.list().await,
+                None => Err(Self::not_ready()),
+            }
+        })
+    }
+
+    fn report<'a>(
+        &'a self,
+        id: &'a str,
+    ) -> BoxFuture<'a, Result<Option<StoredReport>, KernelError>> {
+        Box::pin(async move {
+            match self.0.get() {
+                Some(instruments) => instruments.report(id).await,
+                None => Err(Self::not_ready()),
+            }
+        })
+    }
+
+    fn run<'a>(&'a self, id: &'a str) -> BoxFuture<'a, Result<StoredReport, OnDemandRefusal>> {
+        Box::pin(async move {
+            match self.0.get() {
+                Some(instruments) => instruments.run(id).await,
+                None => Err(OnDemandRefusal::Store(Self::not_ready())),
+            }
+        })
     }
 }

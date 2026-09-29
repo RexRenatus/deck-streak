@@ -22,8 +22,8 @@ use deck_streak_bot::{ApiUrl, Commands, MiniAppUrl, Transport, TransportError};
 use deck_streak_identity::owner::TELEGRAM_BOT_TOKEN;
 use deck_streak_identity::{IdentityError, Owner};
 use deck_streak_kernel::{
-    Clock, CredentialLoader, CredentialsDirectory, Environment, KernelSettings, Offload, Redactor,
-    SettingsError, SystemClock,
+    Clock, ConventionsError, CredentialLoader, CredentialsDirectory, Environment, KernelSettings,
+    Offload, Redactor, SettingsError, SystemClock,
 };
 use deck_streak_notifications::{Policy, PolicyError};
 
@@ -49,6 +49,9 @@ pub enum BotRoleError {
     /// The database could not be opened.
     #[error("the database could not be opened")]
     Database(#[source] WiringError),
+    /// The owner's note conventions refused start (SPEC-094 R2; ADR-096).
+    #[error(transparent)]
+    Conventions(#[from] ConventionsError),
     /// The compiled notification policy refused start, by its key.
     #[error(transparent)]
     Policy(#[from] PolicyError),
@@ -105,6 +108,13 @@ pub async fn run(env: &Environment, redactor: &Redactor) -> Result<(), BotRoleEr
         TokioPause,
     )
     .with_flush(Arc::new(router));
+    let instruments = wiring::instruments_for_role(
+        env,
+        db.clone(),
+        &state,
+        offload.clone(),
+        kernel.study_day_rule,
+    )?;
     let mut commands = Commands::new(
         Arc::clone(&transport),
         owner,
@@ -114,6 +124,9 @@ pub async fn run(env: &Environment, redactor: &Redactor) -> Result<(), BotRoleEr
         kernel.study_day_rule,
         clock,
     );
+    if let Some(instruments) = instruments {
+        commands = commands.with_instruments(instruments);
+    }
 
     let heartbeat = Cell::new(None);
     deck_streak_bot::run(&transport, &mut commands, shutdown.received(), || {

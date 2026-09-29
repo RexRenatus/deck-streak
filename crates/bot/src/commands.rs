@@ -24,6 +24,7 @@ use std::future::Future;
 use std::sync::Arc;
 
 use deck_streak_coordination::data_rights_registry::{erase_all, export_all};
+use deck_streak_coordination::instruments::InstrumentService;
 use deck_streak_coordination::score::day_score;
 use deck_streak_identity::Owner;
 use deck_streak_kernel::{Clock, Db, Environment, Setting, SettingsError, StudyDayRule};
@@ -374,6 +375,8 @@ pub struct Commands<S> {
     clock: Arc<dyn Clock>,
     /// The latest `/delete` prompt's message id, until its button is tapped.
     pending_erase: Option<i32>,
+    /// The on-demand instruments, for the commands of the instruments' specs (SPEC-094 R8).
+    instruments: Option<Arc<dyn InstrumentService>>,
 }
 
 impl<S: OwnerSync> Commands<S> {
@@ -398,7 +401,22 @@ impl<S: OwnerSync> Commands<S> {
             rule,
             clock,
             pending_erase: None,
+            instruments: None,
         }
+    }
+
+    /// These handlers, holding the on-demand run of the instruments. The bot cannot name the
+    /// context that reads the copy, so the daemon hands it the port (SPEC-094 R8).
+    #[must_use]
+    pub fn with_instruments(mut self, instruments: Arc<dyn InstrumentService>) -> Self {
+        self.instruments = Some(instruments);
+        self
+    }
+
+    /// The on-demand instruments, when the role has them.
+    #[must_use]
+    pub fn instruments(&self) -> Option<&Arc<dyn InstrumentService>> {
+        self.instruments.as_ref()
     }
 
     /// The owner's chat: in a private chat, the chat's id is the user's.

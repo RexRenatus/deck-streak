@@ -18,8 +18,8 @@ use deck_streak_api::settings::LISTEN;
 use deck_streak_api::{ApiError, ApiState, ListenAddress, OwnerAccess, Readiness};
 use deck_streak_identity::{Freshness, IdentityError, OwnerGate};
 use deck_streak_kernel::{
-    Clock, CredentialLoader, CredentialsDirectory, Environment, KernelSettings, Offload, Redactor,
-    SettingsError, SystemClock,
+    Clock, Conventions, ConventionsError, CredentialLoader, CredentialsDirectory, Environment,
+    KernelSettings, Offload, Redactor, SettingsError, SystemClock,
 };
 use tokio::sync::oneshot;
 
@@ -29,6 +29,9 @@ use crate::wiring::{self, StateDirectory, WiringError};
 /// Why the `api` role stopped with an error.
 #[derive(Debug, thiserror::Error)]
 pub enum ApiRoleError {
+    /// The owner's note conventions refused start (SPEC-094 R2; ADR-096).
+    #[error(transparent)]
+    Conventions(#[from] ConventionsError),
     /// A setting refused start.
     #[error(transparent)]
     Settings(#[from] SettingsError),
@@ -73,6 +76,8 @@ pub async fn run(env: &Environment, redactor: &Redactor) -> Result<(), ApiRoleEr
         &CredentialLoader::new(credentials, redactor.clone()),
         freshness,
     )?;
+    // The conventions refuse start here, before anything is bound (SPEC-094 R2).
+    let _conventions = Conventions::load(env)?;
     let notifier = Notifier::from_env(env);
     let shutdown = ShutdownSignal::install().map_err(ApiRoleError::Signals)?;
 
@@ -84,18 +89,38 @@ pub async fn run(env: &Environment, redactor: &Redactor) -> Result<(), ApiRoleEr
     let clock: Arc<dyn Clock> = Arc::new(SystemClock);
     let readiness = Readiness::new();
     let access = OwnerAccess::new(gate, Arc::clone(&clock), kernel.study_day_rule);
-    let router = deck_streak_api::router(ApiState::new(readiness.clone()).with_owner(access));
+    let late = wiring::LateInstruments::new();
+    let router = deck_streak_api::router(
+        ApiState::new(readiness.clone())
+            .with_owner(access)
+            .with_instruments(Arc::new(late.clone())),
+    );
     tracing::info!(listen = %bound, "the api role serves");
     notifier.notify(NotifyState::Ready);
     let heartbeat = lifecycle::spawn_heartbeat(notifier.clone(), env);
 
     let offload = Offload::new(kernel.offload_workers, clock);
     let (failed, failure) = oneshot::channel();
+    let rule = kernel.study_day_rule;
     let opener = {
         let readiness = readiness.clone();
+        let env = env.clone();
         tokio::spawn(async move {
             match wiring::open_database(&offload, &state).await {
                 Ok(database) => {
+                    match wiring::instruments_for_role(
+                        &env,
+                        database.clone(),
+                        &state,
+                        offload.clone(),
+                        rule,
+                    ) {
+                        Ok(Some(instruments)) => late.fill(instruments),
+                        Ok(None) => {}
+                        Err(error) => {
+                            tracing::error!(%error, "the owner's conventions refuse the instruments");
+                        }
+                    }
                     readiness.database_opened(database);
                     tracing::info!("the database is open and migrated");
                 }

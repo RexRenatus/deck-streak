@@ -229,6 +229,15 @@ pub struct Instruments {
     runners: Vec<Arc<dyn InstrumentRunner>>,
 }
 
+impl std::fmt::Debug for Instruments {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter
+            .debug_struct("Instruments")
+            .field("runners", &self.runners.len())
+            .finish_non_exhaustive()
+    }
+}
+
 impl Instruments {
     /// The instruments over `db`, locking in `state_directory`.
     #[must_use]
