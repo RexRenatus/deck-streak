@@ -21,12 +21,16 @@ stateDiagram-v2
   switched --> verified: verify passes, the output's sha256 recorded
   switched --> reverted: revert, every gate closed first
   reverted --> stopped: stopped again, once the rail restarted and stopped the writer
+  verified --> reverted: revert on the owner's decision after a failed or void day, gates closed first
   verified --> [*]
 ```
 
-A refusal writes nothing: `no_go` before the go, `not_movable` for a DeckStreak-only item,
-`in_flight` while another item is in flight, `not_stopped` and `not_switched` out of order. A
-switch set by hand before its item switched is drift, and a drift fails every verification.
+A refusal writes nothing: `no_go` for a stop before the go, `go_recorded` for a second go,
+`unknown_item` for an item the checklist does not list, `not_movable` for a stop of a
+DeckStreak-only item or a verified one, `in_flight` for a stop while an item is in flight,
+`not_stopped` and `not_switched` out of order, and `output_exists` for a verification whose output
+file exists. A verified item reverts only on the owner's decision (#164). A switch set by hand
+before its item switched is drift, and a drift fails every verification.
 
 ## What a closed gate holds
 

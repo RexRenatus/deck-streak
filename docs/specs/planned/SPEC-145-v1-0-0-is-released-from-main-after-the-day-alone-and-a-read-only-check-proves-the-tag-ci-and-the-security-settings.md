@@ -54,8 +54,8 @@ R1. `scripts/release-check.py TAG --repo OWNER/REPO` (standard library and the `
 R2. **It only reads.** Every call is `gh api` with the GET method: no `-X`/`--method` other than
     GET, and no `-f`, `-F`, `--field`, `--raw-field` or `--input`. It changes no setting and no ref.
 R3. **An answer it cannot read refuses.** A `gh` call that exits non-zero, outlasts
-    `RELEASE_CHECK_TIMEOUT` seconds (default 30; a test sets 1), or answers a shape the check does not know makes that check `unreadable`, which
-    counts as refused: an admin-read permission the caller lacks never passes as a setting that is
+    `RELEASE_CHECK_TIMEOUT` seconds (default 30; a test sets 1), or answers a shape the check does
+    not know makes that check `unreadable`, which counts as refused: an admin-read permission the caller lacks never passes as a setting that is
     on.
 R4. **The output carries no value of the account.** Each line names the check, its verdict and a
     reason from a closed set (`not_semver`, `lightweight`, `not_on_main`, `no_release`,
@@ -72,7 +72,7 @@ R5. `RELEASING.md` gains `## 8. v1.0.0, after the cutover`, in this order: the d
     release serves. The drill's output and the deploy's lines stay in the maintainer's private
     record.
 R6. `RELEASING.md` §4 gains one sentence: after every deploy, the restore drill's next run is the
-    proof that the backups cover the database; v1.0.0 runs it at once (§8).
+    proof that the backups cover the database; v1.0.0 runs it right after its deploy (§8).
 R7. The delivery is done when the release check reads `RELEASE CHECK OK` for `v1.0.0` and the deploy
     reads `deploy: v1.0.0 is current`. Both are quoted in the release pull request as those two
     lines only, with no timing and no host detail (ADR-059).
@@ -82,11 +82,11 @@ R7. The delivery is done when the release check reads `RELEASE CHECK OK` for `v1
 | id | criterion | decided by |
 |---|---|---|
 | A1 | a tag whose commit is not on main is refused with `not_on_main` | `test_a_tag_not_on_main_is_refused` |
-| A2 | a lightweight tag and a tag that is not SemVer are refused, each with its reason | `test_a_lightweight_or_non_semver_tag_is_refused` |
-| A3 | a release that is a draft, or lacks its tarball or `SHA256SUMS`, is refused | `test_a_release_without_its_assets_is_refused` |
-| A4 | one failed and one pending check run on dev's or main's head are each refused | `test_a_failed_or_pending_run_on_dev_or_main_is_refused` |
+| A2 | a lightweight tag and a tag that is not SemVer are refused, with `lightweight` and `not_semver` | `test_a_lightweight_or_non_semver_tag_is_refused` |
+| A3 | a tag with no release, a release that is a draft, and one that lacks its tarball or `SHA256SUMS` are refused, with `no_release`, `draft` and `asset_missing` | `test_a_release_without_its_assets_is_refused` |
+| A4 | one failed and one pending check run on dev's or main's head are each refused, with `run_failed` and `run_pending` | `test_a_failed_or_pending_run_on_dev_or_main_is_refused` |
 | A5 | a head whose runs lack a context its ruleset requires is refused with `context_missing` | `test_a_required_context_missing_is_refused` |
-| A6 | each of the four settings off, Dependabot paused, and `dependabot.yml` absent are each refused by name | `test_each_security_setting_off_is_refused_by_name` |
+| A6 | each of the four settings off (`disabled`), Dependabot paused (`paused`), and `dependabot.yml` absent (`file_missing`) are each refused by name | `test_each_security_setting_off_is_refused_by_name` |
 | A7 | every `gh` call the check makes is a GET with no field and no input | `test_the_check_only_reads` |
 | A8 | a `gh` that answers 403 or times out makes its check `unreadable` and the run refused | `test_an_unreadable_answer_refuses` |
 | A9 | every input green reads `RELEASE CHECK OK` and exit 0, and no line carries a sha, a URL or a run's name | `test_every_green_input_reads_release_check_ok` |

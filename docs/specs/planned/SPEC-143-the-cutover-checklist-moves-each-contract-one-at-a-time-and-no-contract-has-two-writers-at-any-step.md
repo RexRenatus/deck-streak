@@ -109,13 +109,19 @@ R6. The steps, each a `deckstreakd cutover` command and one `Db::write` transact
     - `verify <item> --output <file>` runs R9's verification, writes its output to `<file>` (mode
       0600, created new, refused if it exists) and, on `pass`, records `verified` with the command
       line and the output's sha256. `pending` and `fail` record nothing and exit 3 and 1.
-    - `revert <item>` closes every gate of a switched item, then records `reverted`, so the rail
-      restarts the predecessor's writer only after `status` reads the item reverted.
+    - `revert <item>` closes every gate of an item whose last step is `switched` or `verified`,
+      then records `reverted`, so the rail restarts the predecessor's writer only after `status`
+      reads the item reverted. A verified item reverts only on the owner's decision (#164), after a
+      failed or void day (SPEC-144 R5).
     - `status` prints one line per item, `item=<id> side=<side> step=<step>`, then R8's drift
       lines, and ends `CUTOVER STATUS OK` or `CUTOVER STATUS DRIFT: <n>` (exit 1).
-R7. Every refusal names its reason (`no_go`, `go_recorded`, `unknown_item`, `not_movable`,
-    `in_flight`, `not_stopped`, `not_switched`, `output_exists`) and writes nothing. Exit codes: 0
-    done, 1 refused or failed, 2 usage, 3 pending.
+R7. Every refusal names its reason and writes nothing: `no_go` (a stop before the go),
+    `go_recorded` (a second go), `unknown_item` (an item the checklist does not list),
+    `not_movable` (a stop of a `deckstreak_only` item or of a verified one), `in_flight` (a stop
+    while an item, itself included, is stopped or switched), `not_stopped` (a switch whose item's
+    last step is not `stopped`), `not_switched` (a verify whose item's last step is not `switched`,
+    or a revert whose item's last step is neither `switched` nor `verified`) and `output_exists` (a
+    verify whose output file exists). Exit codes: 0 done, 1 refused or failed, 2 usage, 3 pending.
 
 The gates hold (#62's second criterion)
 
@@ -172,7 +178,7 @@ R15. The eleven anti-goals hold (CHARTER): the checklist grants no XP, sends no 
 | A9 | a revert closes every gate of the item before its row is recorded, and a gate that cannot be closed records nothing | `a_revert_closes_the_gates_before_it_records` |
 | A10 | a kind switch set to `"1"` before its item switched reads as drift, and `status` exits 1 | `a_switch_open_before_its_move_is_drift` |
 | A11 | a verify with no run since the switch is `pending`, exits 3 and records nothing | `a_verify_with_no_run_is_pending` |
-| A12 | a passing verify writes its output with mode 0600, refuses an existing file, and records the command line and the output's sha256 | `a_passing_verify_records_its_output_digest` |
+| A12 | a passing verify writes its output with mode 0600, refuses an existing file with `output_exists`, and records the command line and the output's sha256 | `a_passing_verify_records_its_output_digest` |
 | A13 | a verify's output over synthetic runs holds only R9's lines, and none of the synthetic rows' values | `the_verify_output_carries_no_row_value` |
 | A14 | a job gated by an item that has not switched writes no fire row and exits 0 | `a_job_that_has_not_moved_does_not_run` |
 | A15 | a staged run of a duty outside the in-force set is refused with `NotMoved` and leaves the vault untouched | `a_run_of_a_duty_not_moved_is_refused` |
@@ -181,6 +187,7 @@ R15. The eleven anti-goals hold (CHARTER): the checklist grants no XP, sends no 
 | A18 | the archive switch port opens and closes the readings archive switch | `the_archive_switch_opens_and_closes` |
 | A19 | the ledger refuses an update and a delete, and a row whose columns do not fit its step | `the_ledger_is_append_only_and_shaped_by_step` |
 | A20 | only the name `cutover` runs the cutover role, and it refuses arguments it does not take with the usage code | `only_the_name_cutover_runs_the_cutover_role` |
+| A21 | a second go is refused with `go_recorded`, a step on an item the checklist does not list with `unknown_item`, a stop of a `deckstreak_only` item or of a verified one with `not_movable`, a verify of an item not switched and a revert of a stopped one with `not_switched`, each writing nothing, and a revert of a verified item closes its gates and records `reverted` | `each_out_of_order_step_names_its_reason` |
 
 ```acceptance
 A1: cargo test -p deck-streak-coordination --test cutover_census -- --exact every_policy_kind_has_one_item
@@ -203,6 +210,7 @@ A17: cargo test -p deck-streak-notifications --test switches -- --exact a_switch
 A18: cargo test -p deck-streak-readings --test archive_switch -- --exact the_archive_switch_opens_and_closes
 A19: cargo test -p deck-streak-coordination --test cutover -- --exact the_ledger_is_append_only_and_shaped_by_step
 A20: cargo test -p deck-streak-daemon --test roles -- --exact only_the_name_cutover_runs_the_cutover_role
+A21: cargo test -p deck-streak-coordination --test cutover -- --exact each_out_of_order_step_names_its_reason
 ```
 
 ## 4. File manifest
@@ -213,7 +221,7 @@ A20: cargo test -p deck-streak-daemon --test roles -- --exact only_the_name_cuto
 | `crates/coordination/src/cutover.rs` | `deck-streak-coordination` | added: the checklist's reader, the steps, drift, the verification and `in_force` |
 | `crates/coordination/src/lib.rs` | `deck-streak-coordination` | changed: the `cutover` module |
 | `crates/coordination/src/runner.rs` | `deck-streak-coordination` | changed: the not-moved gate (R10) |
-| `crates/coordination/tests/cutover.rs` | `deck-streak-coordination` | added: A6-A10, A19 |
+| `crates/coordination/tests/cutover.rs` | `deck-streak-coordination` | added: A6-A10, A19, A21 |
 | `crates/coordination/tests/cutover_census.rs` | `deck-streak-coordination` | added: A1-A4, A16 |
 | `crates/coordination/tests/cutover_verify.rs` | `deck-streak-coordination` | added: A11, A13 |
 | `crates/coordination/tests/runner.rs` | `deck-streak-coordination` | changed: A14 |

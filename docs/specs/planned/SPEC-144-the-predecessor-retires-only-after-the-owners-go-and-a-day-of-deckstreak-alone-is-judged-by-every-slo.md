@@ -68,13 +68,13 @@ R6. Every refusal names its reason and writes nothing. The eleven anti-goals hol
 
 | id | criterion | decided by |
 |---|---|---|
-| A1 | a retirement recorded before the go is refused with `no_go` and writes nothing | `a_retirement_before_the_go_is_refused` |
+| A1 | a retirement recorded before the go is refused with `no_go`, and a second retirement with `retired`, each writing nothing | `a_retirement_before_the_go_is_refused` |
 | A2 | a retirement while one moving item is only switched is refused with `items_open`, naming the item | `a_retirement_with_an_item_not_verified_is_refused` |
 | A3 | the import's apply before the retirement is refused with `not_retired` and reads nothing, and its dry run is not held | `an_apply_before_the_retirement_is_refused` |
 | A4 | a day report passes only when every SLO's good over total meets its objective, one SLO one response short fails, and a fail outranks a void | `test_a_day_passes_only_when_every_slo_meets_its_objective` |
 | A5 | a day with no response event is void and exits 3 | `test_a_day_with_no_response_is_void` |
 | A6 | the day report writes no episode record and prints no priority-3 line | `test_the_day_report_pages_nothing_and_keeps_no_state` |
-| A7 | a day alone is refused before the retirement, for a report that did not pass, for a span under a day, and for a day that began before the retirement | `an_alone_day_needs_a_passing_full_day_after_the_retirement` |
+| A7 | a day alone is refused with `not_retired` before the retirement, `not_passed` for a report that did not pass, `not_a_day` for a span under a day, and `before_retirement` for a day that began before the retirement | `an_alone_day_needs_a_passing_full_day_after_the_retirement` |
 | A8 | a recorded day alone holds the command line and the report's sha256, and no line of the report | `the_alone_record_holds_the_reports_digest` |
 | A9 | the runbook orders the retirement, the import and the day alone after the checklist, and every step after the go names #164 | `test_the_runbook_orders_retirement_import_and_the_day_alone` |
 | A10 | the runbook names no removal of the predecessor | `test_the_runbook_keeps_the_predecessor_disabled_not_removed` |
