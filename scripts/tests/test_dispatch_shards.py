@@ -355,6 +355,12 @@ class EveryMutationCommandKeepsTheGatesBounds(unittest.TestCase):
         with plant_workflow(f"cargo mutants --in-place;# {BOUNDS}") as scratch:
             found = mutants_commands(Path(scratch))
         self.assertEqual(found, {"planted.yml": ["cargo mutants --in-place;"]})
+        # A `)` that closes a substitution, or an operator inside `${ }`, starts no word, so a `#`
+        # after it is text and the unbounded command after it is still read.
+        for text in examined("in-word hashes", ["$(true)#", "<(true)#", "$((1))#", "${X//;#/}"]):
+            with plant_workflow(f"cargo mutants {BOUNDS} {text}; cargo mutants --in-place") as s:
+                found = mutants_commands(Path(s))
+            self.assertEqual(found["planted.yml"][1:], ["cargo mutants --in-place"], text)
         with plant_workflow(f"echo planted # cargo mutants {BOUNDS}") as scratch:
             found = mutants_commands(Path(scratch))
         self.assertEqual(found, {})
