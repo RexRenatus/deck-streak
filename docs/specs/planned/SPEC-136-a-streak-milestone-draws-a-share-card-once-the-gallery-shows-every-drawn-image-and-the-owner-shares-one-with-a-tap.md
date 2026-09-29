@@ -24,6 +24,10 @@
   `_generate_art` for a medallion under the key `streak_<n>`, sends it with a one-line caption that
   names the day (the golden `share_card_prompt` holds it), and marks the length done whatever the art
   came to. Without the art key nothing is sent and nothing fails.
+- **A recorded deviation.** The predecessor's caption carries a second, mascot sentence, and its
+  prompt builds on the style sentence SPEC-135 R2 records. DeckStreak's caption is `Day <n>.`
+  alone, the prompt uses SPEC-135's neutral emblem motif, and the golden's adapter applies the same
+  replacements, so A5 compares like with like.
 - **Nothing shows or shares an image.** #125 asks for a gallery in the Mini App where sharing the
   image is one tap. The Mini App has no gallery and no share control.
 - **Sharing needs no public link.** Telegram's share sheet can send a message the bot prepared
@@ -38,7 +42,8 @@ R1. `progression::share_cards::SHARE_CARD_STREAKS` is the predecessor's set, equ
 R2. A fold step in phase 7 (awards) of SPEC-071's fold reads the streak step's report (SPEC-076): when
     the language streak's current length CHANGED on a study day and the new length is in the set, it
     enqueues one `agent_images` row keyed `share_card:streak:<n>`, kind `share_card`, with the
-    predecessor's prompt and caption for `n`, equal to the golden `share_card_prompt`. A length
+    predecessor's prompt for `n` and the caption `Day <n>.`, without its mascot sentence (a recorded
+    deviation, §1), equal to the golden `share_card_prompt`. A length
     reached again after a lapse enqueues nothing: the key is present (SPEC-135 R5), as the
     predecessor's ledger is once ever. A length that did not change enqueues nothing, and so does the
     law streak.
@@ -202,7 +207,8 @@ accessibility and telegram-platform packs are already enforced and widen their p
 
 - `share_card.constants`: `constants.SHARE_CARD_STREAKS`.
 - `share_card_prompt`: the prompt, the art key, the notified reference and the caption
-  `ghost_race.py:GhostRaceLayer._milestone_share_card` builds, over a recording double, for the
+  `ghost_race.py:GhostRaceLayer._milestone_share_card` builds (the adapter applies §1's
+  replacements), over a recording double, for the
   lengths 6, 7, 8, 30, 999 and 1000 (6, 8 and 999 build nothing; 7 and 1000 are the set's ends).
 
 ## 8. Tables and the v9 import

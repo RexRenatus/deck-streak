@@ -27,6 +27,9 @@
   `generate` answers nothing on a transport error or a timeout (`_TIMEOUT_S`, 90 seconds), on an
   HTTP status of 400 or more, and on a body it cannot read (`data[0].b64_json`); otherwise the image,
   cached by its key for good. Every nothing leaves the ceremony as text.
+- **A recorded deviation.** The predecessor's style sentence names a mascot motif. DeckStreak's
+  copy of the sentence replaces that motif with a neutral emblem motif, and the golden's adapter
+  applies the same replacement, so A11 compares like with like.
 - **DeckStreak has no image route.** ADR-054 makes every AI route optional and off by default, and
   the owner has not chosen an image provider (#169). The design must hold with none.
 - **Where it lives.** SPEC-001 files the feature under progression; the draw lives in the agent
@@ -47,7 +50,9 @@ R1. `agent::images::ImageProvider` is a port with one call, `draw(&ImageRequest)
     through the kernel's `CredentialLoader` (SPEC-066) as optional (`Missing` is off, `Empty` refuses
     start by its id), and is never in the repository or the environment.
 R2. The prompt is the request's own sentence followed by the predecessor's style sentence
-    (`art.STYLE`), equal to the golden `art.constants`.
+    (`art.STYLE`) with its mascot motif replaced by a neutral emblem motif (a recorded deviation,
+    §1); the golden's adapter applies the same replacement, and the result equals the golden
+    `art.constants`.
 
 The draw
 
@@ -233,7 +238,7 @@ and a job to their populations. The delivery hands back an empty JSON diff and s
 
 `tools/parity-oracle/registry/spec_135.py` generates, at `27ee2bc`:
 
-- `art.constants`: `ART_DAILY_CAP` (2), `_TIMEOUT_S` (90.0) and `STYLE`, from `art.py`.
+- `art.constants`: `ART_DAILY_CAP` (2), `_TIMEOUT_S` (90.0) and `STYLE`, from `art.py`, with the mascot motif replaced by the neutral emblem motif (§1).
 - `art_generate`: `art.py:generate` over a recording HTTP double: a transport error, a timeout, the
   statuses 399 and 400 (the boundary), a body without `data`, without `b64_json` and not base64, and
   a success; with the outcome of each.
