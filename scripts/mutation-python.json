@@ -14,7 +14,8 @@
     "modules": [
       "test_mutation_verdict",
       "test_mutation_equivalent",
-      "test_mutation_python_verdict"
+      "test_mutation_python_verdict",
+      "test_mutation_verdict_python_kills"
     ]
   },
   "scripts/mutation_python.py": {
