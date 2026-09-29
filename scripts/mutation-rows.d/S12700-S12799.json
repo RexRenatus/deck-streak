@@ -72,6 +72,14 @@
         "    put_back_block\n    mv -T \"$kept\" \"$file\"\n    echo \"deploy: the Caddy reload failed; the previous site file and Caddyfile were restored\" >&2\n",
         "a failed install puts the Caddyfile back before it takes the new block away (SPEC-127 R2, SPEC-062 R7)",
         "test_deploy_scripts.TheCaddyInstall.test_a_first_install_whose_restore_rename_fails_never_imports_a_missing_block"
+      ],
+      [
+        "S12710-THE-REMOVAL-RESTORES-THE-BLOCK-BEFORE-THE-CADDYFILE",
+        "deploy/deploy.sh",
+        "    [ -n \"$had\" ] && mv -T \"$had\" \"$block\"\n    mv -T \"$kept\" \"$file\"\n",
+        "    mv -T \"$kept\" \"$file\"\n    [ -n \"$had\" ] && mv -T \"$had\" \"$block\"\n",
+        "a removal whose reload fails returns the block before the Caddyfile, so no step imports a missing file (SPEC-127 R4, SPEC-062 R7)",
+        "test_deploy_scripts.TheCaddyInstall.test_a_removal_whose_block_restore_fails_never_imports_a_missing_block"
       ]
     ]
   }
