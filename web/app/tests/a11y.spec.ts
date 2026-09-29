@@ -88,6 +88,28 @@ for (const [scheme, themeParams] of Object.entries(THEMES)) {
           }
         })
       );
+      // The level screen, on an Ascendant day with one provisional source (SPEC-072 R26).
+      await page.route('**/api/level', (intercepted) =>
+        intercepted.fulfill({
+          json: {
+            study_day: '2001-02-03',
+            level: 7,
+            title: 'Adept',
+            emoji: '\u{1F33F}',
+            total_xp: 1234,
+            xp_into_level: 40,
+            xp_for_next: 200,
+            today: [
+              { source: 'reviews', track: 'language', amount: 24, state: 'settled' },
+              { source: 'streak', track: 'language', amount: 10, state: 'provisional' }
+            ],
+            run: 5,
+            multiplier: 1.25,
+            multiplier_after_a_miss: 1.1,
+            ascendant: true
+          }
+        })
+      );
       await page.emulateMedia({ colorScheme: scheme as 'light' | 'dark' });
     });
 

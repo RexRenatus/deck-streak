@@ -408,3 +408,48 @@ describe("the API client's score", () => {
     expect(await api.score()).toEqual({ kind: 'unavailable' });
   });
 });
+
+// SPEC-072 R23. The level screen reads the owner's level through the same session: one GET of
+// `/api/level`, whose body is read by the level module.
+describe("the API client's level", () => {
+  const LEVEL = {
+    study_day: STUDY_DAY,
+    level: 7,
+    title: 'Adept',
+    emoji: '🌿',
+    total_xp: 1234,
+    xp_into_level: 40,
+    xp_for_next: 200,
+    today: [],
+    run: 5,
+    multiplier: 1.25,
+    multiplier_after_a_miss: 1.1,
+    ascendant: false
+  };
+
+  function leveling(body: unknown) {
+    const sent: string[] = [];
+    const fetch = vi.fn(async (input: RequestInfo | URL, init: RequestInit = {}) => {
+      sent.push(`${init.method ?? 'GET'} ${String(input)}`);
+      return String(input) === '/api/level' ? Response.json(body) : new Response(null, { status: 200 });
+    });
+    const api = createApi({
+      launchData: () => LAUNCH,
+      fetch: fetch as unknown as typeof globalThis.fetch
+    });
+    return { api, sent };
+  }
+
+  it('reads the level view from /api/level', async () => {
+    const { api, sent } = leveling(LEVEL);
+    const answer = await api.level();
+    expect(answer.kind).toBe('ok');
+    expect(answer.kind === 'ok' && answer.value.title).toBe('Adept');
+    expect(sent).toEqual(['POST /api/session', 'GET /api/level']);
+  });
+
+  it('answers unavailable when /api/level answers something that is not a level view', async () => {
+    const { api } = leveling({ study_day: STUDY_DAY });
+    expect(await api.level()).toEqual({ kind: 'unavailable' });
+  });
+});
