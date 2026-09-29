@@ -212,6 +212,7 @@ R15. The stakes preview: kind `streak_risk`, key `evening`. It declines with `sk
     when a wager is active (SPEC-106); the due count; and the estimate (R9). Its rows: Study now
     (the configured study link) and Open app (the token `today`), then Cheat day (`nu:skip`) and
     Snooze 1h (`nu:sn`). It equals the golden `stakes_nudge` (`NudgesLayer._streak_risk_payload`).
+    SPEC-109 R4 leaves out the Cheat day row while the skip day is switched off.
 R16. The habit check-in: kind `habit`, key `evening`. It declines with `no_payload` when no writing
     course adopted in the trailing 30 days is unconfirmed today and no reading course is behind its
     pace (not met, pace above 0). Its text is `render_habit_nudge` over the adopted writing courses
@@ -242,7 +243,7 @@ R19. `nu:sn`, from the owner only, records the study day's snooze in `nudge_snoo
     snooze whose study day has passed is marked fired and raises nothing. The router's claim on
     `snooze` keeps a fire from sending twice.
 R20. `nu:skip`, from the owner only, answers with SPEC-083 R14's `/skip` preview, with its Confirm
-    and Cancel.
+    and Cancel; while the skip day is switched off it answers as `/skip` does (SPEC-109 R13).
 
 The comeback (#123)
 
