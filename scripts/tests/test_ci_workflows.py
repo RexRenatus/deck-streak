@@ -1240,7 +1240,40 @@ class TheGateRunsInParallelJobs(unittest.TestCase):
                 self.assertEqual(env.get("CHECK_HISTORY"), "1", f"{job_id} scans no history")
 
 
+def cache_scan(directory):
+    """`cache_problems` over every workflow of a directory: the problems, then the saves found."""
+    problems, saves = [], []
+    for path in sorted(directory.glob("*.yml")):
+        found_problems, found = cache_problems(path.name, read_workflow(path.read_text("utf-8")))
+        problems += found_problems
+        saves += found
+    return problems, saves
+
+
+def protoc_pins(directory):
+    """(workflow name, digest) for every `PROTOC_SHA256` a workflow of the directory pins."""
+    return [
+        (path.name, digest)
+        for path in sorted(directory.glob("*.yml"))
+        for digest in re.findall(r"PROTOC_SHA256: ([0-9a-f]+)", path.read_text())
+    ]
+
+
 class OnlyAPushSavesACache(unittest.TestCase):
+    def test_the_cache_scan_reads_a_workflow_saved_with_the_yaml_suffix(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            (Path(scratch) / "planted.yaml").write_text(PLANTED_CACHES, encoding="utf-8")
+            problems, _ = cache_scan(Path(scratch))
+        self.assertIn(
+            "planted.yaml:build:combined", [problem.split(": ", 1)[0] for problem in problems]
+        )
+
+    def test_the_protoc_pin_scan_reads_a_workflow_saved_with_the_yaml_suffix(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            (Path(scratch) / "planted.yaml").write_text("env:\n  PROTOC_SHA256: 0123abcd\n")
+            pins = protoc_pins(Path(scratch))
+        self.assertEqual(pins, [("planted.yaml", "0123abcd")])
+
     def test_the_rust_cache_is_keyed_on_the_toolchain_pin_and_the_lockfile(self):
         workflow = load("ci.yml")
         compiling = sorted(
@@ -1291,11 +1324,8 @@ class OnlyAPushSavesACache(unittest.TestCase):
         self.assertEqual(clean.get("if"), save.get("if"))
 
     def test_a_cache_is_saved_only_by_a_push_to_dev_or_main(self):
-        saves = []
-        for path in examined("workflow files", sorted(WORKFLOWS.glob("*.yml"))):
-            problems, found = cache_problems(path.name, load(path.name))
-            self.assertEqual(problems, [], path.name)
-            saves += found
+        problems, saves = cache_scan(WORKFLOWS)
+        self.assertEqual(problems, [])
         examined("cache saves", saves)
         problems, _ = cache_problems("planted.yml", read_workflow(PLANTED_CACHES))
         self.assertEqual(
@@ -1414,12 +1444,7 @@ class TheEngineBuildsInEveryRustJob(unittest.TestCase):
             self.assertIn('echo "$PROTOC_SHA256 ', step["run"], f"{job_id} checks another digest")
             self.assertIn('>> "$GITHUB_PATH"', step["run"], f"{job_id} puts no protoc on PATH")
         # Every workflow that pins protoc pins ADR-022's digest, engine-measure.yml's cold build too.
-        pins = [
-            (path.name, digest)
-            for path in sorted(WORKFLOWS.glob("*.yml"))
-            for digest in re.findall(r"PROTOC_SHA256: ([0-9a-f]+)", path.read_text())
-        ]
-        for name, digest in examined("protoc pins", pins):
+        for name, digest in examined("protoc pins", protoc_pins(WORKFLOWS)):
             self.assertEqual(digest, PROTOC_SHA256, name)
 
 
