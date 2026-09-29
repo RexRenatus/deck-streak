@@ -44,6 +44,30 @@
         "        if False:",
         "any way out of a killer run other than its timeout, an interrupt for one, still ends the killer's group while its leader runs (#366)",
         "test_mutation_rows_group.ATimedOutKillerLeavesNothingRunning.test_an_interrupted_run_ends_the_killers_group_too"
+      ],
+      [
+        "S02506-A-SIGTERM-ENDS-THE-RUNNER-THROUGH-ITS-CLEANUP",
+        "scripts/mutation_rows.py",
+        "    signal.signal(signal.SIGTERM, lambda signum, _frame: sys.exit(128 + signum))",
+        "    pass",
+        "a SIGTERM of the runner, to its pid or its group, ends it through its cleanup so the killer's group ends too (#409); without the handler the default action leaves the group running",
+        "test_mutation_rows_group.ASignalledRunnerEndsTheKillersGroup.test_sigterm_to_the_runner_ends_the_killers_group"
+      ],
+      [
+        "S02507-A-TIMED-OUT-KILLER-IS-NOT-WAITED-ON-FOR-ITS-PIPES",
+        "scripts/mutation_rows.py",
+        "        kill_group(process)\n        process.wait()\n        raise",
+        "        kill_group(process)\n        process.communicate()\n        raise",
+        "a timed-out killer returns at its bound whatever a descendant outside the group holds (#409); collecting its output after the kill waits on pipes the descendant keeps open",
+        "test_mutation_rows_group.AHeldPipeDoesNotHoldATimedOutKiller.test_a_timed_out_killer_returns_at_its_bound_whatever_an_escapee_holds"
+      ],
+      [
+        "S02508-EVERY-WAY-OUT-CLOSES-BOTH-PIPES",
+        "scripts/mutation_rows.py",
+        "            pipe.close()",
+        "            pass",
+        "every way out of a killer run closes its stdout and stderr pipes (#409); without the close an interrupted run leaves both open",
+        "test_mutation_rows_group.APipeIsClosedOnEveryPath.test_an_interrupted_run_closes_both_pipes"
       ]
     ]
   }
