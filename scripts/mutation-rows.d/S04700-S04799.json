@@ -1,0 +1,87 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S04701-THE-READ-TAP-EARNS-40-XP",
+        "readings",
+        "src/xp.rs",
+        "pub const READ_XP: u32 = 40;",
+        "pub const READ_XP: u32 = 41;",
+        "readings_read_tap::a_second_read_tap_changes_nothing",
+        "the owner's first tap earns 40 XP, no more (SPEC-047 R6, A1)"
+      ],
+      [
+        "S04702-A-STUDIED-READING-EARNS-60-XP",
+        "readings",
+        "src/xp.rs",
+        "pub const STUDIED_XP: u32 = 60;",
+        "pub const STUDIED_XP: u32 = 61;",
+        "readings_settle::a_settle_grants_and_stamps_once_on_crossing_the_threshold",
+        "a studied reading earns 60 XP on crossing (SPEC-047 R6, A6)"
+      ],
+      [
+        "S04703-STUDIED-NEEDS-80-PERCENT",
+        "readings",
+        "src/studied.rs",
+        "pub const STUDIED_MAJORITY_PCT: u32 = 80;",
+        "pub const STUDIED_MAJORITY_PCT: u32 = 79;",
+        "studied::the_studied_rule_matches_the_parity_golden",
+        "studied means four fifths of the covered cards (SPEC-047 R4, A4)"
+      ],
+      [
+        "S04704-EXACTLY-THE-MAJORITY-IS-STUDIED",
+        "readings",
+        "src/studied.rs",
+        ">= u64::from(covered) * u64::from(STUDIED_MAJORITY_PCT)",
+        "> u64::from(covered) * u64::from(STUDIED_MAJORITY_PCT)",
+        "studied::the_studied_rule_matches_the_parity_golden",
+        "a reading sitting exactly on the majority is studied (SPEC-047 R4, A4)"
+      ],
+      [
+        "S04705-THE-WINDOW-IS-TWO-STUDY-DAYS",
+        "readings",
+        "src/studied.rs",
+        "(0..=1).contains(",
+        "(0..=2).contains(",
+        "studied::only_reviews_inside_the_two_study_day_window_count",
+        "only reviews on the reading's study day and the next count (SPEC-047 R5, A5)"
+      ],
+      [
+        "S04706-THE-WINDOW-CLOSES-AT-DAY-PLUS-2",
+        "readings",
+        "src/studied.rs",
+        "self.study_day.epoch_day() + 2",
+        "self.study_day.epoch_day() + 3",
+        "readings_settle::a_retired_reading_turns_studied_on_late_reviews_inside_its_window",
+        "the window closes when study day d + 2 begins (SPEC-047 R5, A7)"
+      ],
+      [
+        "S04707-ONLY-A-FAILED-TICK-IS-RETRIED",
+        "coordination",
+        "src/readings/read_tap.rs",
+        "if progress.vault_tick != VaultTick::Written {",
+        "if progress.vault_tick == VaultTick::Written {",
+        "readings_read_tap::a_later_tap_retries_only_a_failed_vault_tick",
+        "a later tap retries the vault tick only when it was not written (SPEC-047 R2, A3)"
+      ],
+      [
+        "S04708-THE-READ-SOURCE-IS-ITS-OWN",
+        "readings",
+        "src/xp.rs",
+        "\"reading:{}:read\"",
+        "\"reading:{}:studied\"",
+        "readings_settle::a_read_and_studied_reading_earns_exactly_100_xp_once",
+        "the read grant and the studied grant have distinct sources (SPEC-047 R6, A8)"
+      ],
+      [
+        "S04709-A-LAW-TOPIC-EARNS-ON-THE-LAW-TRACK",
+        "readings",
+        "src/xp.rs",
+        "starts_with(\"law/\")",
+        "starts_with(\"lawx/\")",
+        "readings_settle::a_settle_grants_and_stamps_once_on_crossing_the_threshold",
+        "a law topic's XP lands on the law track (SPEC-047 R6, A6)"
+      ]
+    ]
+  }
+}
