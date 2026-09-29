@@ -1083,8 +1083,9 @@ class CredentialsComeFromTheSocket(unittest.TestCase):
     def test_a_shipped_templates_instance_dropin_directory_is_its_own_and_no_other_is(self):
         # systemd reads an instance's drop-ins from `<name>@<instance>.<type>.d/`, so a shipped
         # template's is admitted and read with the template: a key planted in it is judged as the
-        # template's own. An instance of a template the tree does not ship is refused (SPEC-062
-        # R14; SPEC-066 amendment).
+        # template's own. An instance of a template the tree does not ship is refused, and so are
+        # two instances of a shipped one, which the reader would merge (SPEC-062 R14; SPEC-066
+        # amendment).
         refused = "is not the drop-in directory of a unit shipped beside it, and is refused"
         with tempfile.TemporaryDirectory() as scratch:
             systemd = Path(scratch) / "deploy" / "systemd"
@@ -1112,6 +1113,17 @@ class CredentialsComeFromTheSocket(unittest.TestCase):
                 dropin_directory_refusals(scratch),
                 [f"deploy/systemd/other-app@tty1.service.d: {refused}"],
                 "an instance of a template the tree does not ship",
+            )
+            (systemd / "planted@test.service.d").mkdir()
+            shared = "is not the only instance drop-in directory of its template, and is refused"
+            self.assertEqual(
+                dropin_directory_refusals(scratch),
+                [
+                    f"deploy/systemd/other-app@tty1.service.d: {refused}",
+                    f"deploy/systemd/planted@test.service.d: {shared}",
+                    f"deploy/systemd/planted@tty1.service.d: {shared}",
+                ],
+                "a second instance of the shipped template",
             )
 
     def test_only_a_units_own_dropin_directory_is_shipped_under_deploy(self):
