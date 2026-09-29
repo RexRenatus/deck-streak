@@ -577,7 +577,7 @@ closing runs.
 |---|---|---|---|---|---|---|---|
 | 1 | `deck-streak-vault` | 939 | 861 | 11 | 0 | 67 | #277 (runs 36438243392, 36483219611) |
 | 2 | `deck-streak-ingest` | 288 | 182 | 0 | 43 | 63 | open |
-| 3 | `deck-streak-kernel` | 355 | 292 | 0 | 17 | 46 | open |
+| 3 | `deck-streak-kernel` | 368 | 303 | 0 | 17 | 48 | open |
 | 4 | `deck-streak-identity` | 139 | 94 | 0 | 15 | 30 | open |
 | 5 | `deck-streak-daemon` | 63 | 35 | 0 | 9 | 19 | open |
 | 6 | `deck-streak-coordination` | 282 | 240 | 0 | 5 | 37 | open |
