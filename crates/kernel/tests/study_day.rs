@@ -140,3 +140,20 @@ fn a_study_day_renders_as_its_iso_date_and_parses_back() {
         );
     }
 }
+
+#[test]
+fn a_signed_year_is_written_only_where_four_digits_cannot_hold_it() {
+    // A minus sign names a year below zero, never year zero; a plus sign a year past 9999.
+    assert!("-0000-01-01".parse::<StudyDay>().is_err());
+    assert!("+9999-01-01".parse::<StudyDay>().is_err());
+    assert_eq!(
+        "-0001-01-01".parse::<StudyDay>().map(|day| day.to_string()),
+        Ok("-0001-01-01".to_owned())
+    );
+    assert_eq!(
+        "+10000-01-01"
+            .parse::<StudyDay>()
+            .map(|day| day.to_string()),
+        Ok("+10000-01-01".to_owned())
+    );
+}
