@@ -14,16 +14,17 @@
 //! and the shell scripts by their extensions, a script with none by its `#!` first line, and the
 //! systemd units of every type and their drop-ins. It leaves out symlinks, test files, test
 //! directories outside a `src/`, and in a Rust file its comments and `#[cfg(test)]` modules.
-//! Outside the bot's sources nothing may name the Bot API's host, one of the send or delivery
-//! methods of the pinned client's table (a send, a copy, a forward, an edit, an ephemeral edit, a
-//! stopped poll or live location, a pin, a reaction or a Mini App query's answer), in the API's
-//! spelling or a client's, or the bot's `DEFAULT_API_URL`, SPEC-031's alert path aside; inside
-//! them such a method is named only by its own named send. The client's whole table is listed with
-//! its version, and every method in it is a send, a delivery or not a delivery, in one class only
-//! (`the_census_classifies_every_method_of_the_pinned_client`): deletions, unpins and the other
-//! classes of `NOT_DELIVERIES` deliver nothing to a user, and are classified, not held (#297). The
-//! bot's `send_html`, its `edit_html` and its command handler are used only at named call sites,
-//! and each of the ten named sends is found exactly once; the handler's replies and its dispatch
+//! Outside the bot's sources nothing may name the Bot API's host, a send or delivery method of the
+//! pinned client's table, in the API's spelling or a client's, or the bot's `DEFAULT_API_URL`,
+//! SPEC-031's alert path aside; inside them such a method is named only by its own named send. The
+//! client's whole table is listed with its version, and every method in it is a send, a delivery or
+//! not a delivery, in one class only (`the_census_classifies_every_method_of_the_pinned_client`):
+//! the reads, the deletions and unpins, bot and session configuration, a sticker's emoji, keywords,
+//! mask, position and bare uploads, chat administration without user-visible text, and business,
+//! star and gift account state are the 91 of `NOT_DELIVERIES`, which can make no content the bot
+//! chose visible to a user, and are classified, not held (#297). The bot's `send_html`, its
+//! `edit_html` and its command handler are used only at named call sites, and each of the ten named
+//! sends is found exactly once; the handler's replies and its dispatch
 //! are called only by their named callers. Only the router's ledger, router and data-rights
 //! modules, which own their writes, name the Mini App's feed or the held queue, which a flush
 //! delivers; because the ledger's writes to the queue are private to the notifications crate, only
@@ -143,12 +144,11 @@ const SEND_METHODS: [&str; 29] = [
     "repostStory",
 ];
 
-/// The pinned client's other methods that put a message before the owner, in the Bot API's own
-/// spelling: a copy, a forward, an edit, an ephemeral edit, a stopped poll or live location, a pin,
-/// a reaction, a Mini App query's answer, which sends a message into the chat on the user's
-/// behalf, the answers to a callback, an inline, a shipping or a checkout query, a game's score, a
-/// story's edit, a suggested post's decision, a Passport error's message, and the name, description, photo,
-/// commands or menu that a chat, a bot or a business account shows, or that an invite link carries. The census holds them as it holds a send method.
+/// The pinned client's other methods that can make content the bot chose visible to a user, in the
+/// Bot API's own spelling; an administrator is a user. The census holds them as it holds a send
+/// method: the bot's messages reshaped or placed (a copy, a forward, an edit, a pin, a reaction),
+/// the answers and decisions a user is shown, and the names, texts, photos, titles, tags and error
+/// messages that a chat, a bot, a business account or an invite link shows.
 const DELIVERY_METHODS: [&str; 65] = [
     "copyMessage",
     "copyMessages",
