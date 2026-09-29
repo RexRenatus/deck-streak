@@ -45,6 +45,24 @@
         "        let code = \"recompute_failed\";\n        let mut write",
         "refusal::every_reason_round_trips_through_its_code",
         "the store keeps the code the caller gave; a constant code answers every refusal with one reason (SPEC-128 R1)"
+      ],
+      [
+        "S12806-A-REFUSAL-AFTER-THE-OWNERS-RUN-IS-NOT-HIDDEN-BY-THE-RUN",
+        "daemon",
+        "src/sync_request.rs",
+        "            return Ok(if run.is_some() {",
+        "            if run.is_some() {\n                return Ok(Progress::Ran { failure });\n            }\n            return Ok(if run.is_some() {",
+        "sync_request::a_refusal_after_the_owners_run_is_answered_beside_the_run",
+        "a run on record must not hide the refusal recorded after it: answering the run first tells the owner the scores were recomputed when they were not (SPEC-128 R5)"
+      ],
+      [
+        "S12808-THE-SCORES-REFUSED-SENTENCE-NAMES-THE-CODE",
+        "bot",
+        "src/commands.rs",
+        "Your scores were not recomputed (<code>{}</code>), so they stand.",
+        "Your scores were kept (<code>{}</code>).",
+        "commands::a_refusal_after_a_run_is_answered_beside_the_syncs_own_line",
+        "the owner is told the recompute was refused and that the scores stand; other words change the message the golden fixes (SPEC-128 R5)"
       ]
     ]
   }

@@ -513,6 +513,33 @@ async fn a_refused_owner_request_is_recorded_and_the_next_run_does_not_retry_it(
     );
 }
 
+#[test]
+fn every_code_the_owner_cycle_refuses_with_is_one_the_job_records() {
+    // SPEC-128 R1: `serve_owner_request` records only a code `RefusalReason` parses; a code outside
+    // the set is logged and the flag stays set, so every job run would retry the request (#323).
+    let source = fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/src/wiring.rs"))
+        .expect("the wiring's source reads");
+    let start = source
+        .find("impl OwnerSyncCycle {")
+        .expect("the owner cycle");
+    let end = source
+        .find("/// What the owner is told")
+        .expect("the answer's mapping");
+    let codes: Vec<&str> = source[start..end]
+        .split('"')
+        .skip(1)
+        .step_by(2)
+        .filter(|literal| literal.bytes().all(|b| b.is_ascii_lowercase() || b == b'_'))
+        .collect();
+    assert_eq!(codes.len(), 7, "the cycle's refusal codes: {codes:?}");
+    for code in codes {
+        assert!(
+            deck_streak_ingest::state::RefusalReason::parse(code).is_some(),
+            "the owner cycle refuses with {code}, which the job cannot record"
+        );
+    }
+}
+
 #[tokio::test]
 async fn a_refusal_after_the_owners_run_answers_the_request_beside_the_run() {
     use deck_streak_daemon::sync_request::{Progress, RequestLedger as _, SqliteRequestLedger};

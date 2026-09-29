@@ -191,13 +191,13 @@ impl<C: Clock, L: RequestLedger, D: Doorbell, P: Pause, F: Flush> SyncRequester<
                     reason: "sync_progress_unread",
                 }
             })?;
-            let sync = match progress {
-                Progress::Ran { failure: None } => SyncOutcome::Synced,
-                Progress::Ran {
-                    failure: Some(reason),
-                } => SyncOutcome::Failed { reason },
-                Progress::Reused => SyncOutcome::Reused,
-                Progress::Refused { reason } | Progress::RefusedAfterRun { reason, .. } => {
+            let (sync, scores) = match progress {
+                Progress::Ran { failure } => (run_outcome(failure), Scores::Recomputed),
+                Progress::RefusedAfterRun { failure, reason } => {
+                    (run_outcome(failure), Scores::Refused { reason })
+                }
+                Progress::Reused => (SyncOutcome::Reused, Scores::Recomputed),
+                Progress::Refused { reason } => {
                     return Ok(SyncAnswer {
                         sync: SyncOutcome::NotRun { reason },
                         scores: Scores::Unchanged,
@@ -221,12 +221,14 @@ impl<C: Clock, L: RequestLedger, D: Doorbell, P: Pause, F: Flush> SyncRequester<
             {
                 tracing::error!(%error, "the notification router could not flush");
             }
-            return Ok(SyncAnswer {
-                sync,
-                scores: Scores::Recomputed,
-            });
+            return Ok(SyncAnswer { sync, scores });
         }
     }
+}
+
+/// The owner's run as the reply names it: synced, or failed with the run's reason code.
+fn run_outcome(failure: Option<String>) -> SyncOutcome {
+    failure.map_or(SyncOutcome::Synced, |reason| SyncOutcome::Failed { reason })
 }
 
 impl<C: Clock, L: RequestLedger, D: Doorbell, P: Pause, F: Flush> OwnerSync
@@ -265,21 +267,27 @@ impl RequestLedger for SqliteRequestLedger {
         let run = SqliteSyncRuns::new(self.db.clone())
             .owner_run_since(since)
             .await?;
-        if run.is_none()
-            && let Some(refusal) = SqliteIngestState::new(self.db.clone())
-                .load()
-                .await?
-                .refusal
+        let failure = run.as_ref().and_then(|run| {
+            (run.status == RunStatus::Error)
+                .then(|| run.reason.clone().unwrap_or_else(|| "unknown".to_owned()))
+        });
+        // A refusal at or after the request answers it even when the owner's run is on record: every
+        // request and every owner cycle clears the record first, so a refusal beside a run was
+        // recorded after it, by the same cycle (SPEC-128 R5).
+        if let Some(refusal) = SqliteIngestState::new(self.db.clone())
+            .load()
+            .await?
+            .refusal
             && refusal.at >= since
         {
-            return Ok(Progress::Refused {
-                reason: refusal.reason.as_str().to_owned(),
+            let reason = refusal.reason.as_str().to_owned();
+            return Ok(if run.is_some() {
+                Progress::RefusedAfterRun { failure, reason }
+            } else {
+                Progress::Refused { reason }
             });
         }
-        Ok(run.map_or(Progress::Reused, |run| Progress::Ran {
-            failure: (run.status == RunStatus::Error)
-                .then(|| run.reason.unwrap_or_else(|| "unknown".to_owned())),
-        }))
+        Ok(run.map_or(Progress::Reused, |_| Progress::Ran { failure }))
     }
 }
 

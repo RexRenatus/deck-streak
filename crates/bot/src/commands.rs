@@ -355,7 +355,10 @@ pub fn sync_reply(answer: &Result<SyncAnswer, SyncRefusal>) -> Reply {
     let scores = match &answer.scores {
         Scores::Recomputed => "Your scores were recomputed from the copy here.".to_owned(),
         Scores::Unchanged => "Nothing they read had changed, so your scores stand.".to_owned(),
-        Scores::Refused { .. } => String::new(),
+        Scores::Refused { reason } => format!(
+            "Your scores were not recomputed (<code>{}</code>), so they stand.",
+            escape_html(reason)
+        ),
     };
     Reply::text(format!("{sync}\n{scores}"))
 }
