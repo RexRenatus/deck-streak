@@ -104,13 +104,14 @@ impl Form {
                 }
             }
             Track::Language => {
-                text.push_str(
-                    "Gloss each of these new words in the glosses section and use it in the \
-                     reading:\n",
+                // The words themselves are card text: they reach the model fenced, on the cards'
+                // `new word N:` lines, and never in this trusted instruction.
+                let _ = writeln!(
+                    text,
+                    "Gloss each of the {} new words on the cards' `new word N:` lines in the \
+                     glosses section and use it in the reading.",
+                    seed.new_words.len()
                 );
-                for word in &seed.new_words {
-                    let _ = writeln!(text, "- {word}");
-                }
             }
         }
         text.push_str(

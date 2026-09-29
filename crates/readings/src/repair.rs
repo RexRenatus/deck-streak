@@ -19,10 +19,19 @@ pub enum Step {
     Fail(ReadingGate),
 }
 
+/// The spans a finding quotes, `'...'` or `"..."`, the way a probe's `repr` writes a fragment.
+fn quoted_spans(finding: &str) -> impl Iterator<Item = &str> {
+    ['\'', '"']
+        .into_iter()
+        .flat_map(move |mark| finding.split(mark).skip(1).step_by(2))
+        .filter(|span| !span.trim().is_empty())
+}
+
 /// Whether a finding would carry rejected text or a fence marker back to the model.
 fn quotes(finding: &str, rejected: &str) -> bool {
     finding.contains("<untrusted")
         || finding.contains("</untrusted")
+        || quoted_spans(finding).any(|span| rejected.contains(span))
         || rejected
             .lines()
             .map(str::trim)

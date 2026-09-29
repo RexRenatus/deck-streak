@@ -257,6 +257,9 @@ fn strip_frontmatter(body: &str) -> &str {
         .unwrap_or(trimmed)
 }
 
+/// A daily reading reads no memory; the empty list is still an input, checked like the cards.
+const NO_MEMORY: &str = "[]";
+
 fn agent_cause(cause: Cause) -> AgentCause {
     AgentCause::parse(cause.as_str()).unwrap_or(AgentCause::RunFailed)
 }
@@ -312,6 +315,18 @@ async fn generate_topic(
     for note in &seed.notes {
         let _ = writeln!(cards, "{}: {}", Seed::key_of(note.id), note.text);
     }
+    // A new word is a card's term field: card text, so it is fenced with the notes, never trusted.
+    for (index, word) in seed.new_words.iter().enumerate() {
+        let _ = writeln!(cards, "new word {}: {word}", index + 1);
+    }
+    // SPEC-043 R11: each untrusted input is checked before it is fenced; a refusal calls nothing.
+    for untrusted in [NO_MEMORY, cards.as_str()] {
+        if let GateOutcome::Failed { .. } = parts.gate.check_input(untrusted).await {
+            return Ok(TopicState::Failed(FailedReason::GateFailed(
+                ReadingGate::Contract,
+            )));
+        }
+    }
     let instruction = form.instruction(&seed);
     let target = word_target(seed.new_cards()).to_string();
     let spec = DutySpec::daily_reading();
@@ -325,7 +340,7 @@ async fn generate_topic(
             template: parts.prompt.template,
             persona: persona.text(),
             duty: parts.prompt.duty,
-            memory: "[]",
+            memory: NO_MEMORY,
             cards: &cards,
             form: &instruction,
             word_target: &target,
