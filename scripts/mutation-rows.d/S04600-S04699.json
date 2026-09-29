@@ -234,6 +234,15 @@
         "pub const ID_HEX_DIGITS: usize = 33;",
         "stored::a_reading_id_parses_only_as_thirty_two_lowercase_hex_digits",
         "a stored reading's id parses at exactly 32 hex digits, so a longer id is refused (SPEC-046 R9, A16)"
+      ],
+      [
+        "S04627-A-FINDING-QUOTING-AN-UNPROVEN-SPAN-IS-DROPPED",
+        "readings",
+        "src/repair.rs",
+        "        || quoted_spans(finding).any(is_unproven)",
+        "        || quoted_spans(finding).any(|span| span.is_empty())",
+        "repair::a_finding_quoting_an_escaped_span_is_dropped",
+        "a finding whose quoted span carries an escape or a quote character never reaches the repair, since a probe's repr escapes what the rejected text holds raw (SPEC-046 R7)"
       ]
     ]
   }
