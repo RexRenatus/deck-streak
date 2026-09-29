@@ -72,5 +72,5 @@ A18: not red: the workflow's guard is right and the test only executes it; the r
 A19: not red: the Caddy install already renders from the tag; the row S06223 proves the test fails when it renders from the working tree
 A20: not red: the token is already scoped to the three release steps; the row S06224 proves the test fails when it is set at job level
 A21: red at 6938671: AssertionError: Lists differ: [] != ["deploy/systemd/planted@tty1.service.d/10[96 chars]sed"]
-A21: green at GREENSHA
+A21: green at 59d8186
 ```
