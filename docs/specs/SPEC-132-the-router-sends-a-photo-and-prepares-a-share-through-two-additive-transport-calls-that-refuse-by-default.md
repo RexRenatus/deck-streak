@@ -159,8 +159,8 @@ each judges. The delivery hands back an empty JSON diff and says so.
 | `docs/specs/SPEC-132-the-router-sends-a-photo-and-prepares-a-share-through-two-additive-transport-calls-that-refuse-by-default.md` | docs | moved from `docs/specs/planned/` |
 | `docs/schematics/notification-router.md` | docs | changed: the census line names the two new calls |
 | `docs/red-first/SPEC-132.md` | docs | added |
-| `docs/decisions/ADR-135-images-are-drawn-through-a-port-with-no-provider-wired-by-a-sending-job-capped-cached-and-gated.md` | docs | changed: status accepted, for the router's photo path |
-| `docs/decisions/ADR-136-a-share-is-a-prepared-inline-message-the-owner-sends-from-telegrams-share-sheet.md` | docs | changed: status accepted |
+| `docs/decisions/ADR-135-images-are-drawn-through-a-port-with-no-provider-wired-by-a-sending-job-capped-cached-and-gated.md` | docs | changed: the withhold reason, its rejected option and a delivered-so-far line; it stays proposed until SPEC-135 delivers the rest |
+| `docs/decisions/ADR-136-a-share-is-a-prepared-inline-message-the-owner-sends-from-telegrams-share-sheet.md` | docs | changed: a delivered-so-far line; it stays proposed until SPEC-136 delivers the route and the client |
 | `scripts/mutation-rows.d/S13200-S13299.json` | repo | added: §9's rows |
 | `changelog.d/` fragment | repo | added |
 

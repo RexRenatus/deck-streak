@@ -1,5 +1,5 @@
 ---
-status: "accepted"
+status: "proposed"
 date: "2026-09-29"
 decision-makers: "@RexRenatus (owner), the DeckStreak architect"
 ---
@@ -57,6 +57,10 @@ pure, keeps every send on the router, and makes the product with no provider the
   `notifications-policy.json` gains that one entry and the policy records the deviation.
 - **The credential.** `image-provider-key`, optional through the kernel's loader, named by no unit
   until #169's delivery binds it.
+
+Delivered so far (2026-09-29): the withhold reason, by SPEC-132 (`Router::route_photo`). The port,
+the draw, the gate, the job and the credential are SPEC-135's, which accepts this record when it
+delivers them.
 
 The options for #169, recorded for the owner's decision:
 
