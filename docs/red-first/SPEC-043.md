@@ -42,9 +42,10 @@ Round 5 added `test_the_runner_accepts_only_an_exact_loopback_url_and_an_absolut
 exact-URL and absolute-path checks. It was committed alone and run red against the previous
 `agent/run-headless.sh`: five of its six refusal cases failed by assertion (the sixth, a remote
 `http://` URL, was already refused), each with `AssertionError: 0 != 2`, and the four loopback forms
-launched. The A1 to A3 lines above stand; these lines are the round-5 pair for A2.
+launched. The A1 to A3 lines above stand, and each id is recorded once, so the round-5 pair is
+quoted here and not repeated in the block above.
 
-```red-first
-A2: red at a6f20dc911efbcf5860541860c1cbaede5657c2e: AssertionError: 0 != 2 : (five subtests: three URLs carrying text after the port, and two capacity paths that are not absolute)
-A2: green at d78d60cd8bd7076f09a493128349e3d7f96485ae
+```text
+red at a6f20dc911efbcf5860541860c1cbaede5657c2e: AssertionError: 0 != 2 : (five refusal subtests)
+green at d78d60cd8bd7076f09a493128349e3d7f96485ae: the agent tests pass, with the four loopback forms launching
 ```
