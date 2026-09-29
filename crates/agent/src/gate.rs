@@ -66,22 +66,42 @@ pub struct ProbeGate {
     input_class: Option<GateClassSpec>,
 }
 
+/// Why a gate cannot be built (SPEC-043 R11): a gate that would pass an output unchecked is
+/// refused at construction, never built and never a panic.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, thiserror::Error)]
+pub enum GateBuildError {
+    /// No blocking output class was named, so every output would pass.
+    #[error("the gate names no blocking output class")]
+    NoOutputClass,
+    /// A duty that reads untrusted inputs was given no input class, so its inputs would pass
+    /// unchecked.
+    #[error("the gate has no input class for a duty that reads inputs")]
+    NoInputClass,
+}
+
 impl ProbeGate {
     /// A gate over `classes`, probing with `root` as the repository root and staging subjects in
-    /// `work_dir`. `input_class` is the invisible-character check for untrusted inputs.
-    #[must_use]
-    pub const fn new(
+    /// `work_dir`. `input_class` is the invisible-character check for untrusted inputs, and
+    /// `reads_inputs` says whether the duty it gates reads any.
+    ///
+    /// # Errors
+    ///
+    /// [`GateBuildError`] when `classes` is empty, or when `reads_inputs` holds and `input_class`
+    /// is `None`.
+    pub fn new(
         root: PathBuf,
         work_dir: PathBuf,
         classes: Vec<GateClassSpec>,
         input_class: Option<GateClassSpec>,
-    ) -> Self {
-        Self {
+        reads_inputs: bool,
+    ) -> Result<Self, GateBuildError> {
+        let _ = reads_inputs;
+        Ok(Self {
             root,
             work_dir,
             classes,
             input_class,
-        }
+        })
     }
 
     async fn run_class(

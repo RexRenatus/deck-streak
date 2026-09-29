@@ -91,7 +91,6 @@ pub struct Withheld {
 }
 
 /// How a duty run ended (R12, R16).
-#[must_use]
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Verdict {
     /// The output passed the gate and was delivered.
