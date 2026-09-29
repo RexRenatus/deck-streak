@@ -707,3 +707,14 @@ What it amends, and why:
 
 ADR-057 carries a note of this date that records the decision and what it was chosen against;
 A41 decides it.
+
+## 13. Amendment, 2026-09-29: a band file that repeats a key is refused
+
+Made by issue #334's delivery, insert-only under ruling (i) of SPEC-038 section 8: every earlier
+byte is kept in order. It inserts this section only.
+
+- **R8's one reader read the last of a repeated key.** Two branches that each add a table under the
+  same key merge in git without a conflict, and `json.loads` kept the later value, so the rows under
+  the earlier table vanished with no failure. The reader now refuses a key repeated in one object,
+  at any depth, in the tree and in a revision, naming the file and the key. SPEC-122 decides it and
+  ADR-122 records it; the rows are in `S12200-S12299`.
