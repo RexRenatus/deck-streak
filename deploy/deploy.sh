@@ -254,7 +254,7 @@ copy=$dir/deck-streak.candidate
 kept=$file.previous
 had=
 put_back_block() {
-    if [ -n "$had" ]; then mv -T "$had" "$block"; else find "$block" -delete; fi
+    if [ -n "$had" ]; then mv -T "$had" "$block"; else [ ! -f "$block" ] || find "$block" -delete; fi
 }
 undo() {
     [ ! -f "$copy" ] || find "$copy" -delete
@@ -262,14 +262,19 @@ undo() {
     echo "deploy: the Caddy configuration was refused" >&2
     exit 1
 }
-[ -f "$block" ] && { had=$block.previous; cp -p "$block" "$had"; }
+for path in "$block" "$block.previous" "$copy" "$kept"; do
+    { [ ! -e "$path" ] && [ ! -L "$path" ]; } ||
+        [ -z "$(find "$path" -maxdepth 0 \( ! -type f -o -links +1 \) -print)" ] ||
+        { echo "deploy: the Caddy configuration was refused" >&2; exit 1; }
+done
+[ -f "$block" ] && { had=$block.previous; cp -p "$block" "$had" || { echo "deploy: the Caddy configuration was refused" >&2; exit 1; }; }
 cat >"$block" || undo
 cp -p "$file" "$copy" || undo
 grep -qxF "$line" "$copy" || printf "%s\n" "$line" >>"$copy" || undo
 caddy validate --adapter caddyfile --config "$copy" || undo
 caddy adapt --adapter caddyfile --config "$copy" --validate >/dev/null || undo
-cp -p "$file" "$kept"
-mv -T "$copy" "$file"
+cp -p "$file" "$kept" || undo
+mv -T "$copy" "$file" || { find "$kept" -delete; undo; }
 if ! caddy reload --config "$file"; then
     mv -T "$kept" "$file"
     put_back_block
@@ -299,6 +304,8 @@ unwritten() {
     exit 1
 }
 [ ! -L "$copy" ] || unwritten
+[ ! -e "$copy" ] || [ -z "$(find "$copy" -maxdepth 0 \( -type p -o -type s -o -type b -o -type c -o -type f -links +1 \) -print)" ] ||
+    { echo "deploy: the candidate Caddyfile could not be written" >&2; exit 1; }
 : >"$copy" || unwritten
 grep -vxF "$line" "$file" >"$copy" || [ "$?" -eq 1 ] || unwritten
 caddy validate --adapter caddyfile --config "$copy" || { [ ! -f "$copy" ] || find "$copy" -delete; echo "deploy: refused" >&2; exit 1; }
