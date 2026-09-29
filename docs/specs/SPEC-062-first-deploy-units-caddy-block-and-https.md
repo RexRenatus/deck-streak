@@ -125,9 +125,9 @@ R14. The sync login is loaded by the sync job alone. `deck-streak-job@.service` 
     and `deploy/scripts/effective-check.py` accepts a shipped drop-in beside the rail's own. The
     deploy installs the drop-in directories byte for byte with the unit templates. The unit
     guards model a template's instance drop-ins as systemd reads them: a shipped template's own
-    instance directory `<name>@<instance>.<type>.d` is that template's, the template counts as
-    loading a credential when it or its instance drop-in carries one, and the directory of an
-    instance of a template the tree does not ship stays refused (A21; SPEC-066, amended).
+    instance directory `<name>@<instance>.<type>.d` is that template's, every unit guard reads
+    the drop-ins in it with the template, and the directory of an instance of a template the
+    tree does not ship stays refused (A21; SPEC-066, amended).
 
 ## 3. Acceptance criteria
 
@@ -153,7 +153,7 @@ R14. The sync login is loaded by the sync job alone. `deck-streak-job@.service` 
 | A18 | the release workflow's tag guard, run against a synthetic origin, admits an annotated tag on `main` and refuses a lightweight tag and a tag off `main` | `test_release_workflow.py` |
 | A19 | the Caddy install renders the block from the tag's own `deploy/caddy/deck-streak.caddy`, never from the working tree | `test_deploy_scripts.py` |
 | A20 | the release token reaches the three `gh release` steps alone: not the workflow, the job or any other step | `test_release_workflow.py` |
-| A21 | a shipped template's instance drop-in directory is admitted as its own, and the directory of an instance of an unshipped template is refused | `test_deploy_templates.py` |
+| A21 | a shipped template's instance drop-in directory is admitted as its own and read with the template, so a key planted in it is refused by the unit guards, and the directory of an instance of an unshipped template is refused | `test_deploy_templates.py` |
 
 ```acceptance
 A1: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k test_the_deploy_refuses_a_tag_off_main_and_a_lightweight_tag

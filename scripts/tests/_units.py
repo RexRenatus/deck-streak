@@ -274,10 +274,6 @@ class Unit:
     rel: str
     kind: str
     assignments: list
-    # A template's instances' drop-ins (`<name>@<instance>.<type>.d/`): systemd reads them with the
-    # instance, so they are part of the template's effective unit, but each is one instance's own
-    # and is kept apart from the template's assignments (SPEC-062 R14).
-    instance_dropins: list = dataclasses.field(default_factory=list)
 
     def assigned(self, section, key):
         return any(a.section == section and a.key == key for a in self.assignments)
@@ -376,18 +372,17 @@ def read_into(unit, path, source):
 def parse_unit(root, path):
     """The unit at `path`, with the drop-ins of its `<name>.d/` directory read after it, and, for a
     template `<name>@.<type>`, those of each instance's `<name>@<instance>.<type>.d/` directory
-    read into `instance_dropins`."""
+    read after those: systemd reads them with the instance, so every guard judges them as the
+    template's own (SPEC-062 R14)."""
     unit = Unit(path.name, path.relative_to(root).as_posix(), UNIT_KINDS[path.suffix], [])
     read_into(unit, path, unit.rel)
     for dropin in sorted((path.parent / f"{path.name}.d").glob("*.conf")):
         read_into(unit, dropin, dropin.relative_to(root).as_posix())
     if "@." in path.name:
         stem, suffix = path.name.split("@.", 1)
-        held = Unit(path.name, unit.rel, unit.kind, [])
         for folder in sorted(path.parent.glob(f"{stem}@*.{suffix}.d")):
             for dropin in sorted(folder.glob("*.conf")):
-                read_into(held, dropin, dropin.relative_to(root).as_posix())
-        unit.instance_dropins = held.assignments
+                read_into(unit, dropin, dropin.relative_to(root).as_posix())
     return unit
 
 

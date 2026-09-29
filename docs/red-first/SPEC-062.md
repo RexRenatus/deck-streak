@@ -30,6 +30,10 @@ for the sync instance's drop-in (the drop-in directory guard and the credential-
 A21 is the third test, beside them, and the guards now read an instance's drop-ins. After the green
 commit of round 1, two test files were changed, as a later commit in the same round.
 
+Fix round 3: A21 now plants a key in the instance's drop-in and asserts that the unit guards refuse
+it, because the reader reads an instance's drop-ins with its template. Its red line is the test run
+against the reader as it stood, and its green commit is the one that changes the reader.
+
 ```red-first
 A1: red at 300eca2: AssertionError: deploy/deploy.sh does not exist
 A1: green at bc0665a
@@ -67,6 +71,6 @@ A17: green at 52e5aa5
 A18: not red: the workflow's guard is right and the test only executes it; the row S06215 proves it fails when the guard is weakened
 A19: not red: the Caddy install already renders from the tag; the row S06223 proves the test fails when it renders from the working tree
 A20: not red: the token is already scoped to the three release steps; the row S06224 proves the test fails when it is set at job level
-A21: red at 4a49b65: AssertionError: Lists differ: [<the planted instance directory>: is n[65 chars]sed'] != [] (the test run against the guard as it stood there)
-A21: green at 3275235
+A21: red at 6938671: AssertionError: Lists differ: [] != ["deploy/systemd/planted@tty1.service.d/10[96 chars]sed"]
+A21: green at GREENSHA
 ```

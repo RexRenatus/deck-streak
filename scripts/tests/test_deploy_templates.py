@@ -140,9 +140,9 @@ CREDENTIAL_SOURCES = {
 }
 # Which credentials each service's role reads: the api's owner gate (SPEC-024, SPEC-025), the bot's
 # transport, owner gate and `/sync` (SPEC-026 R1, R11), and the `sync` job's syncer (SPEC-022,
-# SPEC-027). The job template carries the sync's pair for every instance, and the private rail's map
-# answers them for the `sync` instance alone, the one job that reads them (ADR-038; SPEC-061 §8,
-# A14). SPEC-031's alert reads the bot token and the owner's id, whose private chat it pages (R3);
+# SPEC-027). The job template's `sync` instance carries the sync's pair in its drop-in, which the
+# reader reads with the template (SPEC-062 R14), and the private rail's map answers them for the
+# `sync` instance alone, the one job that reads them (ADR-038; SPEC-061 §8, A14). SPEC-031's alert reads the bot token and the owner's id, whose private chat it pages (R3);
 # the evaluator and the watch read none.
 ROLE_CREDENTIALS = {
     "deck-streak-api.service": ("OWNER_USER_ID", "TELEGRAM_BOT_TOKEN"),
@@ -152,7 +152,7 @@ ROLE_CREDENTIALS = {
         "SYNC_USERNAME",
         "SYNC_PASSWORD",
     ),
-    f"{JOB_TEMPLATE}@.service": (),
+    f"{JOB_TEMPLATE}@.service": ("SYNC_USERNAME", "SYNC_PASSWORD"),
     f"{ALERT_TEMPLATE}@.service": ("OWNER_USER_ID", "TELEGRAM_BOT_TOKEN"),
     SLO_SERVICE: (),
     WATCH_SERVICE: (),
@@ -456,12 +456,9 @@ def environment_refusals(unit, ids):
 
 
 def loads_a_credential(unit):
-    """Whether the unit's effective configuration holds a credential directive of any kind: the
-    unit itself, a drop-in of it, or a drop-in of one of its instances if it is a template
-    (SPEC-062 R14)."""
-    return any(unit.values("Service", key) for key in CREDENTIAL_KEYS) or any(
-        a.section == "Service" and a.key in CREDENTIAL_KEYS for a in unit.instance_dropins
-    )
+    """Whether `unit` holds a credential directive of any kind, its drop-ins and a template's
+    instance drop-ins included (SPEC-062 R14)."""
+    return any(unit.values("Service", key) for key in CREDENTIAL_KEYS)
 
 
 def names_the_refusal(statuses):
@@ -1251,12 +1248,9 @@ class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
             sorted((unit for unit in subject().services if loads_a_credential(unit)), key=name),
         )
         # The roles that read a credential, and the alert template, which reads two (SPEC-031 R3).
-        # The job template holds none itself: the sync instance's drop-in loads the sync login, so
-        # the template's effective unit does (SPEC-062 R14).
         self.assertEqual(
             {unit.name for unit in loading},
-            {unit for unit, constants in ROLE_CREDENTIALS.items() if constants}
-            | {f"{JOB_TEMPLATE}@.service"},
+            {unit for unit, constants in ROLE_CREDENTIALS.items() if constants},
         )
         paging = [unit for unit in loading if unit.name != alert]
         for unit in paging:

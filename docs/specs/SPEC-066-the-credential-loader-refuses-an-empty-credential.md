@@ -372,4 +372,4 @@ is proved with `python3 scripts/mutation_rows.py prove --band S06600-S06699`.
   addition pins what the templates already declare, so it is disclosed not red, with its plants
   committed red before each refusal (`docs/red-first/SPEC-066.md`).
 
-Amendment (2026-09-29): a shipped template's instance drop-in directory is that template's own, and a template loads a credential when it or its instance drop-in carries one (SPEC-062 R14).
+Amendment (2026-09-29): a shipped template's instance drop-in directory is that template's own, and every unit guard reads its drop-ins with the template (SPEC-062 R14).
