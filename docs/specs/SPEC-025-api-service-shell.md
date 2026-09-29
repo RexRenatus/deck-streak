@@ -271,3 +271,15 @@ the tests that started them.
   a no-op, its SIGKILL fallback removed, the group kill removed, the group not created, and the
   cleanup on an interrupted run removed. One known survivor: the `ProcessLookupError` suppression
   in `kill_group`, which only tolerates a group that is already gone.
+
+## 9. Acceptance criteria of the 2026-09-29 amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A16 | a lifecycle test that fails before its stop step leaves no daemon running | daemon `lifecycle` test |
+| A17 | a killer that outlives the row runner's bound leaves no descendant running when the run returns | `test_mutation_rows_group` test |
+
+```acceptance
+A16: cargo test -p deck-streak-daemon --test lifecycle -- --exact a_failing_lifecycle_test_leaves_no_daemon_running
+A17: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_group.py -k test_the_grandchild_of_a_timed_out_killer_is_gone_when_the_run_returns
+```
