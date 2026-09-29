@@ -23,18 +23,30 @@ function markdownFiles(dir: string): string[] {
     });
 }
 
+/** A `mermaid` opener: indentation and blockquote markers, three backticks, blanks, `mermaid`. */
+const OPENER = '^((?:[ \\t]*>[ \\t]?)*[ \\t]*)```[ \\t]*mermaid';
+const CLOSER = '```[ \\t]*$';
+
 interface Block {
   name: string;
   source: string;
 }
 
-/** The fenced `mermaid` blocks of one file, each named `<file> block <n>` counted from 1. */
+/**
+ * The fenced `mermaid` blocks of one file, each named `<file> block <n>` counted from 1. The opener's
+ * prefix (its indentation and any blockquote markers) is captured, the closer must carry the same,
+ * and the prefix is stripped from each body line; a quoted blank line (the prefix without its
+ * trailing blanks) becomes an empty line.
+ */
 function blocksOf(name: string, text: string): Block[] {
-  const found = text.matchAll(/^([ \t]*)```mermaid[^\n]*\n([\s\S]*?)^\1```[ \t]*$/gm);
-  return [...found].map((match, index) => ({
-    name: `${name} block ${index + 1}`,
-    source: match[2].replace(new RegExp(`^${match[1]}`, 'gm'), '')
-  }));
+  const found = text.matchAll(new RegExp(`${OPENER}[^\\n]*\\n([\\s\\S]*?)^\\1${CLOSER}`, 'gm'));
+  return [...found].map((match, index) => {
+    const prefix = match[1];
+    const bare = prefix.trimEnd();
+    const strip = (line: string) =>
+      line.startsWith(prefix) ? line.slice(prefix.length) : line.trimEnd() === bare ? '' : line;
+    return { name: `${name} block ${index + 1}`, source: match[2].split('\n').map(strip).join('\n') };
+  });
 }
 
 /** Whether Mermaid's own parser accepts the diagram. */
@@ -57,7 +69,7 @@ describe('the Mermaid diagrams under docs', () => {
   it('reads every fenced block', () => {
     examined('mermaid blocks', BLOCKS);
     const opened = markdownFiles(DOCS)
-      .map((file) => (readFileSync(file, 'utf8').match(/^[ \t]*```mermaid/gm) ?? []).length)
+      .map((file) => (readFileSync(file, 'utf8').match(new RegExp(OPENER, 'gm')) ?? []).length)
       .reduce((sum, count) => sum + count, 0);
 
     expect(BLOCKS.length).toBeGreaterThan(100);
