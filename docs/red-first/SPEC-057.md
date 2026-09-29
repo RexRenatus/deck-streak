@@ -54,6 +54,8 @@ A15: red at e43dae8: AssertionError: 'scripts/mutation-equivalent.d/<package>.js
 A15: green at 5c4d6b6
 A16: red at bfae431: AssertionError: 225 != 0 : deck-streak-vault: 225 unexplained mutant(s) in its row (the opening sweep, run 36438243392 at 5767fbe, read listed 939, killed 647, equivalent 0, unexplained 225, unviable 67)
 A16: green at 6abff4a
+A18: red at 2311afa: AssertionError: 17 != 0 : deck-streak-kernel: 17 unexplained mutant(s) in its row (the opening sweep, run 36502933533 at a7b8025, read listed 368, killed 303, equivalent 0, unexplained 17, unviable 48)
+A18: green at 0896902
 A28: red at e260627: AssertionError in each of its four subtests, each for its own reason: 'True is not false : the rust class applies on test lines [31, 36, 43, 47, 53]' (the test-only diff); 'Lists differ: [46, 58] != [58]' (the mixed diff counted its test module's line as production code); "'mutation: plan: rust applies: 3 production code line(s) in 1 file(s)' not found" (the production-only diff's plan named no production line); and '3 != 0 : mutation: shards: VOID the rust class applies and ... holds no cargo-mutants listing' (cargo-mutants' empty --in-diff output read as no listing)
 A28: green at 8c87e5b
 ```
@@ -158,3 +160,20 @@ the script's sha256 matched. Row S05709 pins it (793e95e): `mutation_rows.py pro
 its killer passing without the mutant and failing with it, with the file restored byte for byte.
 A28's own red and green lines stand, since the plan at dd734e5 read every line as production and
 the new line adds no red of its own.
+
+A18 is the kernel's row of section 7. Its opening sweep, the weekly battery dispatched with
+`package=deck-streak-kernel` (run 36502933533 at the base, dev a7b8025), listed 368 mutants, all 33
+reports whole, and left 17 unexplained across `redact.rs` (5), `study_day.rs` (4), `db.rs`, `verdict.rs` and
+`credentials.rs` (2 each), `offload.rs` and `settings.rs` (one each); its `table` line was the row
+committed at 2311afa with A18's test, which read `17 != 0`. Every one is observed by a test and none is
+recorded equivalent: the tests, at d702900, read `66 mutants tested: 61 caught, 3 unviable, 2
+timeouts` in place on a `git archive` export of that commit, none missed. A merge of dev then added
+`courses.rs` and two `Db` methods, so the crate at the head lists 423 mutants (55 more than the 368,
+of which 49 are in `courses.rs` and 6 in `db.rs`), and the sweep of d702900 no longer measured the
+head. The closing sweep (run 36508893368 at 592bc43) read 33 of 33 reports whole, `listed 423, killed
+367, equivalent 0, unexplained 0, unviable 56` and `table: verdict: ok`; eight shards exited 3 for
+one timeout each, counted killed (six in `redact_tokens`: `redact.rs` 204:12, 205:16, 209:21 twice,
+210:19 and 215:21; two in `OffloadWorkers::get`: `settings.rs` 157:9, returning 0 and 1), and the
+other twenty-four exited 0. The same eight also timed out in the opening sweep. Its table line is the
+row committed at 0896902, where A18's test passes. Rows S05730 to S05739 are unused: every mutant was
+mutable and killed by a test.
