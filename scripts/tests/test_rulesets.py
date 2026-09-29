@@ -84,6 +84,13 @@ class TheCommittedRulesetsAreTheReleaseWorkflow(unittest.TestCase):
         self.assertIn("Nothing is merged back into dev", runbook)
         self.assertNotRegex(runbook, re.compile(r"git merge [^`]*origin/main"))
 
+    def test_the_release_runbook_declares_its_release_model(self):
+        # Line-exact, not whitespace-normalised: the release-ops probe reads the declaration as a
+        # line of its own, so a sentence that merely contains it would satisfy a joined reading and
+        # still leave the probe refusing.
+        lines = (REPO / "RELEASING.md").read_text(encoding="utf-8").splitlines()
+        self.assertIn("Release model: no-back-merge (ADR-034)", lines)
+
 
 if __name__ == "__main__":
     unittest.main()
