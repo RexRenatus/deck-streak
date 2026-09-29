@@ -60,6 +60,8 @@ A18: red at 2311afa: AssertionError: 17 != 0 : deck-streak-kernel: 17 unexplaine
 A18: green at 0896902
 A28: red at e260627: AssertionError in each of its four subtests, each for its own reason: 'True is not false : the rust class applies on test lines [31, 36, 43, 47, 53]' (the test-only diff); 'Lists differ: [46, 58] != [58]' (the mixed diff counted its test module's line as production code); "'mutation: plan: rust applies: 3 production code line(s) in 1 file(s)' not found" (the production-only diff's plan named no production line); and '3 != 0 : mutation: shards: VOID the rust class applies and ... holds no cargo-mutants listing' (cargo-mutants' empty --in-diff output read as no listing)
 A28: green at 8c87e5b
+A19: red at 8eba7ef: AssertionError: 16 != 0 : deck-streak-identity: 16 unexplained mutant(s) in its row (opening sweep run 36511057164 listed 143, killed 97, equivalent 0, unexplained 16, unviable 30)
+A19: green at a911483
 ```
 
 | requirement | the behaviour a wrong implementation would get wrong | criterion |
