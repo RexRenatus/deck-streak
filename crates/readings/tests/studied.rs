@@ -7,7 +7,7 @@
 mod golden;
 
 use deck_streak_ingest::reader::Review;
-use deck_streak_kernel::{Clock, ManualClock, StudyDayRule, UtcMillis};
+use deck_streak_kernel::{Clock, Hour, ManualClock, StudyDayRule, UtcMillis, UtcOffset};
 use deck_streak_readings::studied::{
     STUDIED_MAJORITY_PCT, Window, is_studied, qualifies, studied_count,
 };
@@ -95,4 +95,31 @@ fn only_reviews_inside_the_two_study_day_window_count() {
     assert!(qualifies(&review(1, 1, 0, 1)) && qualifies(&review(1, 1, 3, 4)));
     assert!(!qualifies(&review(1, 1, 4, 3)) && !qualifies(&review(1, 1, 1, 0)));
     assert!(!qualifies(&review(1, 1, -1, 3)));
+}
+
+#[test]
+fn the_window_follows_the_configured_offset() {
+    // At UTC+9 with the 04:00 rollover, study day 20 000 starts at 19:00 UTC of epoch day 19 999,
+    // so the window's edges sit nine hours from where a UTC reading would put them.
+    let rule = StudyDayRule::new(
+        Hour::new(4).expect("an hour"),
+        UtcOffset::from_minutes(9 * 60).expect("an offset"),
+    );
+    let day_start = 20_000 * DAY_MS - 5 * HOUR_MS;
+    let generated = at(day_start + HOUR_MS);
+    let window = Window {
+        generated_at: generated,
+        study_day: rule.study_day(generated),
+    };
+    assert_eq!(window.study_day.epoch_day(), 20_000);
+    assert!(
+        window.counts(rule, at(day_start + 2 * DAY_MS - 1)),
+        "the last instant of d + 1"
+    );
+    assert!(
+        !window.counts(rule, at(day_start + 2 * DAY_MS)),
+        "the rollover that starts d + 2, in the configured offset"
+    );
+    assert!(!window.is_over(rule, at(day_start + 2 * DAY_MS - 1)));
+    assert!(window.is_over(rule, at(day_start + 2 * DAY_MS)));
 }

@@ -370,3 +370,45 @@ async fn a_read_and_studied_reading_earns_exactly_100_xp_once() {
     }
     assert_eq!(rig.total().await, XpTotal::new(100), "exactly 100 XP");
 }
+
+#[tokio::test]
+async fn a_failed_stamp_leaves_the_reading_open_for_the_next_pass() {
+    let rig = Rig::new().await;
+    for card in 1..=4 {
+        rig.reviews.add(card, START + HOUR_MS);
+    }
+    rig.set_clock(START + 2 * HOUR_MS);
+    rig.stamp.failing.store(true, Ordering::SeqCst);
+    let failed = rig.settle.run().await.expect("a settle");
+    assert_eq!(
+        failed.studied, 0,
+        "a reading whose stamp failed is not counted studied"
+    );
+    let open = rig.progress().await;
+    assert_eq!(
+        open.verdict,
+        Verdict::Open,
+        "the verdict waits for the stamp"
+    );
+    assert_eq!(open.studied_at, None);
+    assert_eq!(open.studied_count, 4);
+    assert_eq!(
+        rig.total().await,
+        XpTotal::new(60),
+        "the once-scoped grant stands"
+    );
+
+    // The next pass stamps it, counts it and grants nothing again.
+    rig.stamp.failing.store(false, Ordering::SeqCst);
+    rig.set_clock(START + 3 * HOUR_MS);
+    let retried = rig.settle.run().await.expect("a settle");
+    assert_eq!(retried.studied, 1);
+    let studied = rig.progress().await;
+    assert_eq!(studied.verdict, Verdict::Studied);
+    assert_eq!(
+        studied.studied_at,
+        Some(UtcMillis::from_epoch_millis(START + 3 * HOUR_MS))
+    );
+    assert_eq!(rig.stamp.calls.count(), 2, "the stamp is retried once");
+    assert_eq!(rig.total().await, XpTotal::new(60), "exactly 60 XP");
+}
