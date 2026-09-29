@@ -120,7 +120,7 @@ R16. The generation reads the agent's AI route (SPEC-043) before it resolves any
 | A6 | anchors and their usability equal the goldens of `preread.py:anchor_for_note` and `preread.py:is_anchor_usable` | `anchors_match_the_parity_golden` |
 | A7 | a first gate failure is regenerated once with the failed gate and its findings named and no rejected text quoted | `a_gate_failure_is_repaired_once_naming_the_gate` |
 | A8 | a second failure stores nothing, writes nothing and ends the topic `failed` with `gate_failed:<gate>` | `a_second_failure_writes_nothing_and_records_its_reason` |
-| A9 | every blocking row of study-duties, learning-science, law-professors and language-mentors is green on the golden readings | those packs' blocking rows; `test_every_blocking_reading_row_is_green_on_the_goldens` |
+| A9 | every blocking row of study-duties, learning-science, law-professors and language-mentors that applies to the daily-reading duty is green on the golden readings, and examines at least one reading | those packs' blocking rows; `test_every_blocking_reading_row_is_green_on_the_goldens` |
 | A10 | every attempt is recorded with its turns, tokens, duration and verdict | `every_attempt_is_recorded_with_tokens_latency_and_verdict` |
 | A11 | twelve synthetic topics with new cards each get a reading in one run: no daily cap | `every_topic_with_new_cards_gets_a_reading_with_no_daily_cap` |
 | A12 | an unusable seed fails before any model call (the fake runner records none) | `an_unusable_seed_fails_before_any_model_call` |
@@ -190,7 +190,7 @@ A19: cargo test -p deck-streak-coordination --test readings_generate -- --exact 
 | `Cargo.toml` | workspace | changed: `[workspace.dependencies]` gains `unicode-normalization`, `html-escape`, `unicode-segmentation` (ADR-046) |
 | `Cargo.lock`, `.sqlx/` | workspace | changed |
 | `scripts/tests/test_reading_rows.py` | repo | added |
-| the box-run packs' private wiring (ADR-069) | the maintainer's | changed: study-duties and learning-science become `enforced` |
+| the box-run packs' private wiring (ADR-069) | the maintainer's | unchanged: study-duties and learning-science stay pending until drill and practice goldens exist (#46, #52) |
 | `tools/parity-oracle/registry/spec_046.py` | repo | added: registers the two anchor functions (SPEC-029's registry) |
 | `tools/parity-oracle/goldens/anchor_for_note.json` | repo | added |
 | `tools/parity-oracle/goldens/is_anchor_usable.json` | repo | added |
@@ -209,6 +209,7 @@ A19: cargo test -p deck-streak-coordination --test readings_generate -- --exact 
 - It pages nobody for a failed topic; the health check does (#36).
 - It feeds no leech or drill grade into the prompt (#133, #136).
 - It shows no reading on any surface (#37, #38).
+- It enforces no rule that judges the drill or the practice duty: those rules examine nothing on reading goldens, and the deliveries that add those goldens enforce them (#46 for the drill coach, #52 for practice questions).
 
 ## 6. Risks
 
