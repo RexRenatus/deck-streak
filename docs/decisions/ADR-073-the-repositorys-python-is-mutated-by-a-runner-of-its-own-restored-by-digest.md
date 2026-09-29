@@ -45,8 +45,9 @@ tables every count.
 
 - A runner of the repository's own, `scripts/mutation_python.py`: chosen, because it is the one
   option that met every driver on every target. It generates mutants from Python's `ast` with a
-  fixed operator set, installs each in place and restores it through `scripts/mutation_rows.py`'s
-  own machinery (the refusal of a dirty tree, the parse check and the restore checked by sha256),
+  fixed operator set, installs each in place and reuses `tracked_changes` and `sha256` from
+  `scripts/mutation_rows.py` and the same restore-then-compare pattern as its `prove_row` (the
+  refusal of a dirty tree, the parse check and the restore checked by sha256),
   and runs the file's tests in a child of its own that prints every failing test's id. Its
   prototype ran on all four targets, restored every byte (sha256 equal before and after, the tree
   clean), reported each hung or unparsable mutant apart from a kill, and named the killers of every

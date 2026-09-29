@@ -32,7 +32,7 @@ flowchart TD
   plan --> rowsjob(["mutation-rows: the rows the diff selects, drawn in mutation-testing.md"])
   plan --> rustjob(["mutation-rust: drawn in mutation-testing.md"])
 
-  subgraph mutation-verdict: after every shard, if always
+  subgraph verdict ["mutation-verdict: after every shard, if always"]
     pyreport --> promised{"a report from every shard 0 to n-1?"}
     promised -->|"one missing, unreadable, or not of the schema"| voidshard(["VOID, naming the shard"])
     promised -->|yes| judge["judge --class scripts, then judge --class oracle, each with --python and --rows"]
@@ -96,6 +96,8 @@ stateDiagram-v2
 The sentinel's run restores the file the same way before the first mutant. Every child runs with
 `PYTHONDONTWRITEBYTECODE=1` and `PYTHONPYCACHEPREFIX` in a temporary directory, and loads each test
 module as `unittest discover` does, so an import that fails is a failed test named for its module.
+The child runs from a copy of the runner and of the `scripts/` modules it imports, taken outside the
+tree before the first mutant, so no mutant of the runner runs as its own child.
 
 ## 3. The weekly battery: the Python shards added
 
@@ -107,7 +109,7 @@ flowchart LR
   python --> reports[("each shard's python.json")]
   others --> reports
   listing --> reports
-  reports --> survivors["survivors: drafts Mutation survivors: python, unless an open issue holds that title"]
+  reports --> survivors["survivors: drafts one issue per file, Mutation survivors: path, unless an open issue holds that title"]
   survivors --> battery["battery: every one of the 16 Python reports, VOID by name for one missing"]
   battery --> table["table: python: listed N, killed K, equivalent E, unexplained U, unviable V"]
   table --> killers[("every killer of every killed mutant, which the killer map will read")]

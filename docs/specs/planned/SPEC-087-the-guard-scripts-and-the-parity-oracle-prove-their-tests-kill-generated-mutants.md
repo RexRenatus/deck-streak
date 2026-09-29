@@ -98,7 +98,7 @@ Appending one comment line to a file changes its bytes and never its behaviour. 
 failed exactly two tests of `test_goldens.py`,
 `test_a_golden_whose_generator_digest_differs_is_refused` and
 `test_every_committed_golden_is_current_and_well_formed`, which compare each committed golden's
-`generator_sha256` with the generator's digest; on the three scripts it failed none of the 54 tests
+`generator_sha256` with the generator's digest; on the three scripts it failed none of the 55 tests
 of `test_public_scrub.py`, `test_audit_web.py` and `test_mutation_rows.py`. Those two tests kill
 every mutant of the generator: with them both tools read no survivor (279 of 279, 165 of 165);
 with `test_generate.py` alone, 52 and 26 survived, and each of the prototype's 26 was killed by
@@ -178,7 +178,9 @@ R5. `run` judges each selected file in order:
       of that file's mutants; a sentinel that leaves no test is VOID by name;
     - each mutant is installed in place and parsed with `ast.parse`: a mutant that does not parse
       is `unviable`, never a kill, and runs no test; else its tests run in the child (R6), bounded
-      by `--test-seconds`, whose default is the larger of 60 and five times the control's seconds;
+      by `--test-seconds`, whose default is the larger of 60 and five times the control's seconds
+      (`--control-seconds S` replaces the measured seconds in that bound, the seam by which a test
+      tells the bound from a constant 60);
     - a run that outlives its bound kills the child's process group and reads `timeout`; a child
       that prints no report reads `void`; a failing test reads `killed`, naming its killers; else
       `survived`;
@@ -187,11 +189,13 @@ R5. `run` judges each selected file in order:
       run at once, exit 4, naming the file;
     - every child runs with `PYTHONDONTWRITEBYTECODE=1` and `PYTHONPYCACHEPREFIX` in a temporary
       directory, so the run writes no bytecode into the tree.
-R6. The child, `tests --dir DIR --module M ... [--skip ID ...] [--failfast]`, loads each module as
-    `unittest discover` does (`TestLoader.discover(DIR, pattern="M.py")`), so an import that fails
-    in any way is a failed test named for its module, drops each test whose id is skipped, runs the
-    rest, and prints one JSON line, `{"ran": N, "failed": [id, ...]}`, each id down to the
-    sub-test.
+R6. The child, `tests --dir DIR --module M ... [--skip ID ...] [--failfast]`, runs from a copy of
+    `scripts/mutation_python.py` and of each module of `scripts/` it imports, taken outside the tree
+    before the first mutant is installed, so no mutant of the runner or of `mutation_rows.py` runs
+    as the child; it loads each module as `unittest discover` does
+    (`TestLoader.discover(DIR, pattern="M.py")`), so an import that fails in any way is a failed
+    test named for its module, drops each test whose id is skipped, runs the rest, and prints one
+    JSON line, `{"ran": N, "failed": [id, ...]}`, each id down to the sub-test.
 R7. The report, `--report FILE`, schema `deckstreak.mutation-python.v1`, holds the selection
     (`plan`, `all` or `file`), the shard, whether it ran `--failfast`, and per file its test
     modules, the control's ran count, failures and seconds, the bound in seconds each of its
@@ -204,6 +208,8 @@ R7. The report, `--report FILE`, schema `deckstreak.mutation-python.v1`, holds t
     restore; VOID outranks a survivor. A selection of no mutant writes a report with examined 0 and
     exits 0: whether that is VOID is the verdict's to say (R11), as it is for cargo-mutants.
 R8. The selection:
+    - exactly one of `--plan`, `--all` and `--file` is given, and `--shard k/n` takes integers with
+      0 <= k < n and n >= 1; anything else is a usage error (exit 2, R7), before any file is read;
     - `--plan PLAN` takes, from `plan.json`, the code lines of each changed population file whose
       class the plan says applies, and selects each mutant whose span, from its first line to its
       last, holds one of them;
@@ -264,8 +270,10 @@ R13. A survivor is resolved in the pull request that meets it: by a test that ki
 R14. `mutation-weekly.yml` gains a `python` job of 16 shards, each `run --all --shard k/16`
     without `--failfast`, uploading its report under `if: always()`:
     - `listing` adds the whole population's listing, and `survivors` needs `python`;
-    - `survivors` drafts one issue titled `Mutation survivors: python` listing each unexplained
-      mutant by file, unless an open issue holds that title;
+    - `survivors` drafts one issue per file, titled as SPEC-039 R12 titles each file's
+      (`mutation-verdict.py`'s `TITLE`, `Mutation survivors: <path>`), listing that file's
+      unexplained mutants, unless an open issue holds that file's title, and none for a file with
+      no unexplained mutant;
     - `battery` counts each of the 16 reports, VOID by name for one missing, and `table` prints
       `table: python: listed N, killed K, equivalent E, unexplained U, unviable V`, where
       unexplained is survived or uncovered with no record, and any timeout, void mutant or VOID
@@ -289,26 +297,26 @@ R16. The delivery sets ADR-073 `accepted`; appends to SPEC-039 a dated amendment
 
 | id | criterion | decided by |
 |---|---|---|
-| A1 | over a planted file holding one site of each operator, a `not` before a parenthesised operand, and a docstring, an annotation and an f-string each holding operator sites of their own, `list` lists exactly R3's mutants in source order, each named `<file>:<line>:<column>: replace <old> with <new> in <function>`, each parsing, none inside the docstring, the annotation or the f-string, the same on a second listing, and a comment of any text on a line changes nothing | `test_mutation_python.py` (the runner mints the names) |
-| A2 | the map census refuses, by name, a planted map that omits a population file, names a key outside the population, names a module whose file is absent, names a module twice, or carries a key but `dir` and `modules`; and it passes the committed map, printing `examined N` | `test_mutation_python.py` (the runner's census) |
-| A3 | `run` over a planted tree with a tracked change exits 2 and leaves every file's bytes as they were | `test_mutation_python.py` |
+| A1 | over a planted file holding one site of each operator, a `not` before a parenthesised operand, and a docstring, an argument's, a return's and an annotated assignment's annotation and an f-string each holding operator sites of their own, and sites at module level, in a function and in a method, and, beside them, a bare `return`, a `return None`, an empty string, a multi-line string, a `True` and a `False`, `list` prints `mutation-python: listed N` with N the count of mutants and each one's name in source order, `list --out FILE` writes the same names, `list` leaves every byte as it was and runs no test, and it lists exactly R3's mutants (the bare `return`, the `return None` and the multi-line string listing none), each named `<file>:<line>:<column>: replace <old> with <new> in <function>`, each parsing, none inside the docstring, any of the three annotations or the f-string, a method's site named in `Class.method` and a module-level site in `<module>`, the same on a second listing, and a comment of any text on a line changes nothing | `test_mutation_python.py` (the runner mints the names) |
+| A2 | the map census refuses, by name, a planted map that omits a population file, names a key outside the population, names a module whose file is absent, names a module twice, or carries a key but `dir` and `modules`; and it passes the committed map, printing `examined N` with N the number of files the map names | `test_mutation_python.py` (the runner's census) |
+| A3 | `run` over a planted tree with a tracked change exits 2 and leaves every file's bytes as they were; `run` with no selection, with `--all` beside `--file`, and with `--shard` of `2/2`, `0/0` and `x` each exits 2 and writes no report | `test_mutation_python.py` |
 | A4 | a file whose tests fail unmutated, and one whose tests select nothing, each read VOID by name with exit 3, even beside another file's survivor, and none of their mutants runs | `test_mutation_python.py` |
-| A5 | a planted test that fails on the sentinel is named a byte reader, is never any mutant's killer, and a mutant only it would kill reads `survived`; a sentinel that leaves no test is VOID | `test_mutation_python.py` |
-| A6 | a killed mutant names every failing test's id without `--failfast` and exactly one with it, a failing sub-test down to its sub-test, and a mutant that makes a test module's import raise is killed by a test named for that module | `test_mutation_python.py` (the child mints the ids) |
+| A5 | a planted test that fails on the sentinel is named a byte reader, is never any mutant's killer, and a mutant only it would kill reads `survived`; a sentinel that leaves no test is VOID by name with exit 3 | `test_mutation_python.py` |
+| A6 | a killed mutant names every failing test's id without `--failfast` and exactly one with it, a failing sub-test down to its sub-test, and a mutant that makes a test module's import raise is killed by a test named for that module; over a planted tree whose population holds the runner itself, the mutant that negates its `if __name__ == "__main__":` reads `killed`, never `void` | `test_mutation_python.py` (the child mints the ids) |
 | A7 | a mutant that makes its test loop reads `timeout` within `--test-seconds`, never `killed`, and no process of its child outlives the run; a mutant whose child exits without its report reads `void`; each makes the run exit 3 | `test_mutation_python.py` |
-| A8 | a planted mutant whose text does not parse reads `unviable`, runs no test, is named, and is not examined | `test_mutation_python.py` |
-| A9 | after a run holding a killed, a survived and a timed-out mutant, every file's bytes equal the bytes before and the tree gains no file; a planted test that replaces the file with a directory while a mutant is installed ends the run with exit 4 naming the file | `test_mutation_python.py` |
-| A10 | given a planted plan, `--plan` selects exactly the mutants whose span holds a changed code line of a population file, one whose span begins above that line included, and none of any other file; `--all` selects every mutant of the map's files and `--file` one file's; `--shard k/n` over n shards partitions the selection, disjoint and whole; and `run` over a plan whose changed lines hold no mutant writes a report with examined 0 and exits 0 | `test_mutation_python.py` |
-| A11 | a file whose map entry names no module reads each mutant `uncovered`, examined, runs no test, and the run exits 1 | `test_mutation_python.py` |
-| A12 | the report carries R7's schema and fields, examined equals killed plus survived plus uncovered, the recorded bound is the larger of 60 and five times the control's seconds unless `--test-seconds` sets it, and the run exits 0 when every examined mutant is killed and 1 on a survivor | `test_mutation_python.py` (the runner mints the report) |
-| A13 | `classify` reads `scripts/<name>.py` as `scripts`, anything under `scripts/tests/` and deeper as `other`, and the generator as `oracle`; `plan` over a diff that changes a script's code line names the `scripts` class as applying, and over a push naming the pull request it merges as `not-applicable` | `test_mutation_python_verdict.py` (the verdict mints the class) |
-| A14 | `shards --python-listed` sizes the Python matrix at the ceiling of listed over 40, clamped to 1 to 8, one shard for no mutant, writes each shard's mutants into the plan, and writes `python_shards` and `python_matrix` | `test_mutation_python_verdict.py` |
-| A15 | a class whose changed code lines hold no mutant and no row reads VOID by name, one that a selected row covers reads examined 1 from the row, one whose changed lines are all blank or comments reads `not-applicable`, and the oracle's line reads `examined N: generated G, rows R` | `test_mutation_python_verdict.py` |
-| A16 | a survived or uncovered mutant with no record fails by name; a `timeout`, a `void` mutant, a VOID file and an exit-4 report are each VOID by name; an unviable mutant and a byte reader are named and change no count | `test_mutation_python_verdict.py` |
+| A8 | a planted mutant whose text does not parse reads `unviable`, runs no test, is named, and is not examined, and a run of nothing else exits 0 | `test_mutation_python.py` |
+| A9 | after a run holding a killed, a survived and a timed-out mutant, every file's bytes equal the bytes before, the tree gains no file, and that run exits 3 with a killed, a survived and a timeout outcome in its report; a planted test that replaces the file with a directory while a mutant is installed ends the run with exit 4 naming the file, and so does one that replaces it with a symbolic link to `/dev/null`, and no later mutant runs | `test_mutation_python.py` |
+| A10 | given a planted plan, `--plan` selects exactly the mutants whose span holds a changed code line of a population file, one whose span begins above that line included, one whose span ends on it, one whose first line is it and one whose span holds it between, and none whose span ends just above it or begins just below it, and none of any other file; `--all` selects every mutant of the map's files and `--file` one file's; `--shard k/n` over n shards partitions the selection, disjoint and whole, with shard k holding the mutants at listing positions k, k+n, k+2n and so on from 0, and `0/1` the whole selection; and `run` over a plan whose changed lines hold no mutant writes a report with examined 0 and exits 0 | `test_mutation_python.py` |
+| A11 | a file whose map entry names no module reads each mutant `uncovered`, counted in the report's `examined N`, runs no test, and the run exits 1 | `test_mutation_python.py` |
+| A12 | the report carries R7's schema and each field it lists (the selection, the shard, whether it ran `--failfast`, each file's modules, control ran count, failures and seconds, bound, byte readers and VOID reason, and each mutant's name, file, line, end line, column, `mutant`, operator, outcome and killers), each read by name, examined equals killed plus survived plus uncovered, the recorded bound, under `--control-seconds` of 5, 12 and 20, is 60, 60 and 100, unless `--test-seconds` sets it, and the run exits 0 when every examined mutant is killed and 1 on a survivor | `test_mutation_python.py` (the runner mints the report) |
+| A13 | `classify` reads `scripts/<name>.py` as `scripts`, anything under `scripts/tests/` and deeper, and `scripts/x.sh`, as `other`, and the generator as `oracle`; `plan` over a diff that changes a script's code line names the `scripts` class as applying, and over a push naming the pull request it merges as `not-applicable` | `test_mutation_python_verdict.py` (the verdict mints the class) |
+| A14 | `shards --python-listed` sizes the Python matrix at the ceiling of listed over 40, clamped to 1 to 8: one shard for no mutant and for 40, two for 41, eight for 320 and for 321, writes each shard's mutants into the plan, and writes `python_shards` and `python_matrix` | `test_mutation_python_verdict.py` |
+| A15 | a class whose changed code lines hold no mutant and no row reads VOID by name, one that a selected row covers reads examined 1 from the row, one whose changed lines are all blank or comments reads `not-applicable`, a report holding one killed mutant of a script and one of the generator gives each class examined 1, and the oracle's line reads `examined N: generated G, rows R` with the words "has no generated mutants" gone | `test_mutation_python_verdict.py` |
+| A16 | a survived or uncovered mutant with no record fails by name; a `timeout` (even with a record naming it), a `void` mutant, a VOID file and an exit-4 report are each VOID by name; an unviable mutant and a byte reader are named and change no count | `test_mutation_python_verdict.py` |
 | A17 | a promised shard, the last included, whose report is missing, unreadable or not of the schema is VOID, naming its index | `test_mutation_python_verdict.py` |
-| A18 | a `python.json` record binds exactly its survived mutant, which is counted equivalent and named; the census refuses a planted record without `evidence`, with `evidence` repeating its `reason`, with a `reached_by` that resolves to no test, or with a file outside the population; a record that binds no mutant of the whole listing is STALE and one that binds two AMBIGUOUS; and a record whose mutant was killed is REFUTED, unviable UNNEEDED and uncovered UNCOVERED | `test_mutation_python_verdict.py` (the verdict mints each word) |
-| A19 | `battery` over a planted weekly layout names a missing Python shard VOID, `table` prints the `python` line whose listed equals its four counts summed and reads VOID on a timeout, and `survivors` drafts the `python` issue naming each unexplained mutant, and none while an open issue holds its title | `test_mutation_python_verdict.py` |
-| A20 | `ci.yml`'s `mutation-plan` runs `list --plan`, `list --all` and `shards --python-listed`; `mutation-python` needs it, runs its matrix with `--plan`, `--shard` and `--failfast`, prints the plan's case, has no job-level `if`, a `timeout-minutes`, an `if: always()` upload and no cache step, and is a need of `mutation-verdict` and `ci`, whose verdict step runs `judge --class scripts` and `--class oracle` with `--python` | `test_mutation_python_workflows.py` (the workflow's text) |
+| A18 | a `python.json` record binds exactly its survived mutant, which is counted equivalent and named; the census refuses a planted record lacking each of `file`, `mutant`, `anchor`, `reason`, `evidence`, `reached_by` and `issue` in turn, with an empty `evidence`, with `evidence` repeating its `reason`, with a `reached_by` that resolves to no test or to two, or with a file outside the population; a record that binds no mutant of the whole listing is STALE and one that binds two AMBIGUOUS, which a `span` resolves into one; and a record whose mutant was killed is REFUTED, unviable UNNEEDED and uncovered UNCOVERED | `test_mutation_python_verdict.py` (the verdict mints each word) |
+| A19 | `battery` over a planted weekly layout names a missing Python shard VOID and, under a crate's `package` scope, names none missing, `table` prints the `python` line whose listed equals its four counts summed and reads VOID on a timeout, on a void mutant and on a VOID file, and `survivors` drafts one issue per file titled `Mutation survivors: <path>` naming that file's unexplained mutants, none for a file with none, and none while an open issue holds a file's title | `test_mutation_python_verdict.py` |
+| A20 | `ci.yml`'s `mutation-plan` runs `list --plan`, `list --all` and `shards --python-listed`; `mutation-python` needs it, runs its matrix with `--plan`, `--shard` and `--failfast`, prints the plan's case, has no job-level `if`, a `timeout-minutes`, an `if: always()` upload and no cache step, and is a need of `mutation-verdict` and `ci`, whose verdict step runs `judge --class scripts` and `--class oracle` each with `--python` and `--rows` | `test_mutation_python_workflows.py` (the workflow's text) |
 | A21 | `mutation-weekly.yml`'s `python` job runs 16 shards with `--all` and no `--failfast`, uploads under `if: always()`, `listing` lists the whole population, `survivors` needs it, `battery` counts its 16 reports, the `package` input's crate and `miniapp` scopes run no Python shard, and its `python` scope runs no Rust shard and no Stryker sweep | `test_mutation_python_workflows.py` |
 | A22 | `docs/BUILDER-BRIEF.md` teaches a survivor's two resolutions and names no comment or setting that skips a mutant; `docs/TESTING.md` names the Python run; SPEC-039 carries the dated amendment and ADR-057 the note, each naming ADR-073; and ADR-073 reads `accepted` | `test_mutation_python_workflows.py` (the documents' text) |
 
