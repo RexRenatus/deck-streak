@@ -43,6 +43,16 @@ pub trait NoteTexts: Send + Sync {
         &'a self,
         note_ids: &'a [i64],
     ) -> PortFuture<'a, Result<Vec<SeedNote>, NoteTextsError>>;
+
+    /// The new words a language topic's day set introduces, in card order; none for law.
+    fn new_words<'a>(
+        &'a self,
+        topic: &'a TopicKey,
+        card_ids: &'a [i64],
+    ) -> PortFuture<'a, Result<Vec<String>, NoteTextsError>> {
+        let _ = (topic, card_ids);
+        Box::pin(async { Ok(Vec::new()) })
+    }
 }
 
 /// The vault refused the copy.
