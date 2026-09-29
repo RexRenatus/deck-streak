@@ -480,20 +480,20 @@ A target outside a crate (a migration, `economy.json`) is a cargo-killed script 
 |---|---|---|---|
 | `S07201-REVIEW-XP-ROUNDING` | `src/review_xp.rs` | a review's XP rounds half to even as the predecessor's round() does (SPEC-072 R1, A1) | `xp_review::review_xp_matches_the_parity_golden_for_every_combination` |
 | `S07202-MATURE-BOUNDARY` | `src/review_xp.rs` | a card at the mature interval earns the mature multiplier (SPEC-072 R1, A1) | `xp_review::review_xp_matches_the_parity_golden_for_every_combination` |
-| `S07203-LAW-TIER-ONLY` | `src/recompute/xp.rs` | only a law card's tier scales its XP (SPEC-072 R2, A6) | `xp_steps::an_untagged_law_card_and_a_tagged_language_card_earn_the_base_rate` |
-| `S07204-CLOSED-DAY-NEVER-FALLS` | `src/settle.rs` | a closed day's settled XP is raised and never lowered by a recompute (SPEC-072 R7, A7) | `xp_settle::a_closed_days_settled_xp_is_raised_and_never_lowered_by_a_recompute` |
+| `S07203-LAW-TIER-ONLY` | `src/recompute/xp.rs` | only a law card's tier scales its XP (SPEC-072 R4, A6) | `xp_steps::an_untagged_law_card_and_a_tagged_language_card_earn_the_base_rate` |
+| `S07204-CLOSED-DAY-NEVER-FALLS` | `src/settle.rs` | a closed day's settled XP is raised and never lowered by a recompute (SPEC-072 R8, A7) | `xp_settle::a_closed_days_settled_xp_is_raised_and_never_lowered_by_a_recompute` |
 | `S07205-SETTLEMENT-KEY` | `(study_day, source, track);` | xp_settlement holds one row per study day, source and track, held by the table's index (SPEC-072 R6, A10) | `xp_settle::settle_keeps_one_row_per_study_day_source_and_track` |
 | `S07206-DERIVED-ONLY` | `src/settle.rs` | settle accepts only a source in the derived registry (SPEC-072 R7, A11) | `xp_settle::settle_refuses_a_source_outside_the_derived_registry` |
-| `S07207-DAY-BASE-CHEST` | `src/consistency.rs` | the day base leaves out the chest source (SPEC-072 R12, A20) | `xp_consistency::the_day_base_matches_the_parity_golden_over_both_tables` |
-| `S07208-DAY-BASE-READING` | `src/consistency.rs` | the day base leaves out the readings' grants (SPEC-072 R12, A22) | `xp_consistency::the_day_base_leaves_out_the_readings_grants` |
-| `S07209-CONSISTENCY-WINDOW` | `"window_days": 90` | the consistency run looks back the predecessor's window (SPEC-072 R12, A19) | `xp_consistency::the_consistency_run_and_multiplier_match_the_parity_goldens` |
-| `S07210-STREAK-CAP` | `"streak_cap": 250,` | the streak bonus is capped at the predecessor's cap (SPEC-072 R13, A14) | `xp_bonus::daily_bonus_grants_match_the_parity_golden` |
+| `S07207-DAY-BASE-CHEST` | `src/consistency.rs` | the day base leaves out the chest source (SPEC-072 R17, A20) | `xp_consistency::the_day_base_matches_the_parity_golden_over_both_tables` |
+| `S07208-DAY-BASE-READING` | `src/consistency.rs` | the day base leaves out the readings' grants (SPEC-072 R17, A22) | `xp_consistency::the_day_base_leaves_out_the_readings_grants` |
+| `S07209-CONSISTENCY-WINDOW` | `"window_days": 90` | the consistency run looks back the predecessor's window (SPEC-072 R15, A19) | `xp_consistency::the_consistency_run_and_multiplier_match_the_parity_goldens` |
+| `S07210-STREAK-CAP` | `"streak_cap": 250,` | the streak bonus is capped at the predecessor's cap (SPEC-072 R11, A14) | `xp_bonus::daily_bonus_grants_match_the_parity_golden` |
 | `S07211-DERIVED-SOURCES` | `src/settle.rs` | the derived registry is the nine sources by their whole value (SPEC-072 R7; pinned outside the acceptance fence) | `xp_settle::the_derived_registry_and_the_tables_are_pinned_whole` |
 | `S07212-SETTLEMENT-TABLE` | `src/settle.rs` | the settlement table is named xp_settlement (SPEC-072 R6; pinned outside the acceptance fence) | `xp_settle::the_derived_registry_and_the_tables_are_pinned_whole` |
 | `S07213-BUFFS-TABLE` | `src/data_rights.rs` | the buffs table is named buffs (SPEC-072 R20; pinned outside the acceptance fence) | `xp_settle::the_derived_registry_and_the_tables_are_pinned_whole` |
 | `S07214-ASCENDANT-KIND` | `src/buffs.rs` | the Ascendant buff is named ascendant (SPEC-072 R20; pinned outside the acceptance fence) | `xp_settle::the_derived_registry_and_the_tables_are_pinned_whole` |
-| `S07215-LEVEL-TITLE-ADEPT` | `src/level.rs` | level 30 holds the predecessor's title (SPEC-072 R11, A2) | `xp_constants::the_progression_constants_equal_the_predecessors_and_economy_json` |
-| `S07217-DAY-BASE-2X` | `src/consistency.rs` | the day base leaves out the 2x grants (SPEC-072 R12, A20) | `xp_consistency::the_day_base_matches_the_parity_golden_over_both_tables` |
+| `S07215-LEVEL-TITLE-ADEPT` | `src/level.rs` | level 30 holds the predecessor's title (SPEC-072 R13, A2) | `xp_constants::the_progression_constants_equal_the_predecessors_and_economy_json` |
+| `S07217-DAY-BASE-2X` | `src/consistency.rs` | the day base leaves out the 2x grants (SPEC-072 R17, A20) | `xp_consistency::the_day_base_matches_the_parity_golden_over_both_tables` |
 | `S07218-XP-STEP-NAME` | `src/recompute/xp.rs` | the base-XP step is registered under its whole name (SPEC-072 R19; pinned outside the acceptance fence) | `xp_steps::the_step_names_and_the_level_up_kind_are_pinned_whole` |
 | `S07219-BONUS-STEP-NAME` | `src/recompute/day_bonuses.rs` | the derived-bonuses step is registered under its whole name (SPEC-072 R19; pinned outside the acceptance fence) | `xp_steps::the_step_names_and_the_level_up_kind_are_pinned_whole` |
 | `S07220-LEVEL-UP-KIND` | `src/level_up.rs` | the level-up line goes out as a celebration (SPEC-072 R14; pinned outside the acceptance fence) | `xp_steps::the_step_names_and_the_level_up_kind_are_pinned_whole` |

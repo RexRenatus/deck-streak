@@ -26,7 +26,7 @@
         "(card.track == Track::Law).then_some(card.tier).flatten()",
         "card.tier",
         "xp_steps::an_untagged_law_card_and_a_tagged_language_card_earn_the_base_rate",
-        "only a law card's tier scales its XP (SPEC-072 R2, A6)"
+        "only a law card's tier scales its XP (SPEC-072 R4, A6)"
       ],
       [
         "S07204-CLOSED-DAY-NEVER-FALLS",
@@ -35,7 +35,7 @@
         "(held.amount.max(request.amount), true)",
         "(request.amount, true)",
         "xp_settle::a_closed_days_settled_xp_is_raised_and_never_lowered_by_a_recompute",
-        "a closed day's settled XP is raised and never lowered by a recompute (SPEC-072 R7, A7)"
+        "a closed day's settled XP is raised and never lowered by a recompute (SPEC-072 R8, A7)"
       ],
       [
         "S07206-DERIVED-ONLY",
@@ -53,7 +53,7 @@
         "    \"chest\",",
         "    \"chesx\",",
         "xp_consistency::the_day_base_matches_the_parity_golden_over_both_tables",
-        "the day base leaves out the chest source (SPEC-072 R12, A20)"
+        "the day base leaves out the chest source (SPEC-072 R17, A20)"
       ],
       [
         "S07208-DAY-BASE-READING",
@@ -62,7 +62,7 @@
         "    \"reading:\",",
         "    \"readinx:\",",
         "xp_consistency::the_day_base_leaves_out_the_readings_grants",
-        "the day base leaves out the readings' grants (SPEC-072 R12, A22)"
+        "the day base leaves out the readings' grants (SPEC-072 R17, A22)"
       ],
       [
         "S07211-DERIVED-SOURCES",
@@ -107,7 +107,7 @@
         "(30, \"Adept\", ",
         "(30, \"Adeptx\", ",
         "xp_constants::the_progression_constants_equal_the_predecessors_and_economy_json",
-        "level 30 holds the predecessor's title (SPEC-072 R11, A2)"
+        "level 30 holds the predecessor's title (SPEC-072 R13, A2)"
       ],
       [
         "S07217-DAY-BASE-2X",
@@ -116,7 +116,7 @@
         "    \"2x:\",",
         "    \"3x:\",",
         "xp_consistency::the_day_base_matches_the_parity_golden_over_both_tables",
-        "the day base leaves out the 2x grants (SPEC-072 R12, A20)"
+        "the day base leaves out the 2x grants (SPEC-072 R17, A20)"
       ],
       [
         "S07218-XP-STEP-NAME",
@@ -244,7 +244,7 @@
         "\"window_days\": 89",
         "progression",
         "xp_consistency::the_consistency_run_and_multiplier_match_the_parity_goldens",
-        "the consistency run looks back the predecessor's window (SPEC-072 R12, A19)"
+        "the consistency run looks back the predecessor's window (SPEC-072 R15, A19)"
       ],
       [
         "S07210-STREAK-CAP",
@@ -253,7 +253,7 @@
         "\"streak_cap\": 251,",
         "progression",
         "xp_bonus::daily_bonus_grants_match_the_parity_golden",
-        "the streak bonus is capped at the predecessor's cap (SPEC-072 R13, A14)"
+        "the streak bonus is capped at the predecessor's cap (SPEC-072 R11, A14)"
       ]
     ]
   }
