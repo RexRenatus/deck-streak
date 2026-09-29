@@ -342,6 +342,15 @@
         "const READY_LABEL: &str = \"**Ready for gradinf**\";",
         "drill_kills::the_ready_label_and_the_self_check_heading_are_read_as_written",
         "the ready marker reads Ready for grading (SPEC-110 R3)"
+      ],
+      [
+        "S11040-DRILL-POSTBACK-MINUTE",
+        "coordination",
+        "src/jobs.rs",
+        "schedule: Schedule::Hourly { minute: 19 },",
+        "schedule: Schedule::Hourly { minute: 20 },",
+        "job_table::the_job_table_holds_the_drill_postback",
+        "the drill post-back runs hourly at minute 19 (SPEC-110 R9)"
       ]
     ],
     "CARGO_KILLED_SCRIPT_MUTATIONS": [
