@@ -514,6 +514,76 @@ async fn a_refused_owner_request_is_recorded_and_the_next_run_does_not_retry_it(
 }
 
 #[tokio::test]
+async fn a_refusal_after_the_owners_run_answers_the_request_beside_the_run() {
+    use deck_streak_daemon::sync_request::{Progress, RequestLedger as _, SqliteRequestLedger};
+    let directory = tempfile::tempdir().expect("a temporary directory");
+    let since = SystemClock.now();
+    let (state, credentials) = stored_request(directory.path()).await;
+    // The recompute writes the rollup after the sync's run is on record: a trigger that aborts that
+    // write makes the recompute fail at that point, as a full disk or a locked file would.
+    let db = Db::open(&state.join(DATABASE_FILE))
+        .await
+        .expect("the role's database opens");
+    let mut write = db.write().await.expect("a write");
+    sqlx::query(
+        "CREATE TRIGGER refuse_rollup BEFORE INSERT ON daily_rollup \
+         BEGIN SELECT RAISE(ABORT, 'planted'); END",
+    )
+    .execute(&mut *write)
+    .await
+    .expect("the trigger is planted");
+    write.commit().await.expect("the trigger commits");
+    db.close().await;
+    let offset = offset_to_half_past_noon();
+    let environment = [
+        ("STATE_DIRECTORY", state.as_os_str()),
+        ("CREDENTIALS_DIRECTORY", credentials.as_os_str()),
+        (
+            "DECKSTREAK_SYNC_ENDPOINT",
+            OsStr::new("http://127.0.0.1:9/"),
+        ),
+        ("DECKSTREAK_ROLLOVER_HOUR", OsStr::new("12")),
+        ("DECKSTREAK_UTC_OFFSET_MINUTES", OsStr::new(&offset)),
+    ];
+    let output = deckstreakd(&["job", "sync"], &environment);
+    let db = Db::open(&state.join(DATABASE_FILE))
+        .await
+        .expect("the role's database opens");
+    let progress = SqliteRequestLedger::new(db.clone())
+        .progress(since)
+        .await
+        .expect("reads");
+    let owner_run = SqliteSyncRuns::new(db.clone())
+        .owner_run_since(since)
+        .await
+        .expect("reads");
+    let loaded = SqliteIngestState::new(db.clone())
+        .load()
+        .await
+        .expect("reads");
+    db.close().await;
+    println!(
+        "A11 refusal={:?} owner_run={owner_run:?} progress={progress:?}",
+        loaded.refusal
+    );
+    assert!(
+        owner_run.is_some(),
+        "the owner's run is on record: {}",
+        describe(&output)
+    );
+    let refusal = loaded
+        .refusal
+        .unwrap_or_else(|| panic!("no refusal recorded: {}", describe(&output)));
+    assert!(
+        matches!(
+            progress,
+            Progress::RefusedAfterRun { ref reason, .. } if reason == refusal.reason.as_str()
+        ),
+        "the refusal recorded after the run answers beside it: {progress:?}"
+    );
+}
+
+#[tokio::test]
 async fn a_refused_recompute_setup_is_recorded_for_the_owner() {
     let directory = tempfile::tempdir().expect("a temporary directory");
     let (state, credentials) = stored_request(directory.path()).await;

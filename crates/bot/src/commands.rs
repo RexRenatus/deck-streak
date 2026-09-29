@@ -141,12 +141,17 @@ pub enum SyncOutcome {
 }
 
 /// What the recompute after the sync did.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Scores {
     /// The scores were recomputed from the copy.
     Recomputed,
     /// Nothing the recompute reads had changed, so the scores stand.
     Unchanged,
+    /// The job refused the recompute after the sync ran (SPEC-128); `reason` is the refusal's code.
+    Refused {
+        /// The refusal's code, one of the closed set.
+        reason: String,
+    },
 }
 
 /// One `/sync`'s account.
@@ -347,9 +352,10 @@ pub fn sync_reply(answer: &Result<SyncAnswer, SyncRefusal>) -> Reply {
             );
         }
     };
-    let scores = match answer.scores {
-        Scores::Recomputed => "Your scores were recomputed from the copy here.",
-        Scores::Unchanged => "Nothing they read had changed, so your scores stand.",
+    let scores = match &answer.scores {
+        Scores::Recomputed => "Your scores were recomputed from the copy here.".to_owned(),
+        Scores::Unchanged => "Nothing they read had changed, so your scores stand.".to_owned(),
+        Scores::Refused { .. } => String::new(),
     };
     Reply::text(format!("{sync}\n{scores}"))
 }

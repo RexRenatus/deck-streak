@@ -42,6 +42,14 @@ pub enum Progress {
         /// The refusal's code, one of the closed set.
         reason: String,
     },
+    /// The job refused after the owner's run was on record (SPEC-128): the run's outcome and the
+    /// refusal stand beside each other.
+    RefusedAfterRun {
+        /// The run's reason code, when it failed.
+        failure: Option<String>,
+        /// The refusal's code, one of the closed set.
+        reason: String,
+    },
 }
 
 /// The store's side of a request.
@@ -189,7 +197,7 @@ impl<C: Clock, L: RequestLedger, D: Doorbell, P: Pause, F: Flush> SyncRequester<
                     failure: Some(reason),
                 } => SyncOutcome::Failed { reason },
                 Progress::Reused => SyncOutcome::Reused,
-                Progress::Refused { reason } => {
+                Progress::Refused { reason } | Progress::RefusedAfterRun { reason, .. } => {
                     return Ok(SyncAnswer {
                         sync: SyncOutcome::NotRun { reason },
                         scores: Scores::Unchanged,
