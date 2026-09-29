@@ -1,6 +1,8 @@
 //! A secret is read from the credentials directory and never from the environment, and a missing
 //! credential refuses start by its id (SPEC-020 A11, A12; the rust-service pack's
-//! `rs.no-secret-env` holds the production code to the same rule).
+//! `rs.no-secret-env` holds the production code to the same rule). An empty credential, no bytes
+//! or only the one trailing newline the loader trims, refuses start the same way, and its refusal
+//! carries the id and nothing else (SPEC-066 A1 to A3).
 //!
 //! "Never from the environment" is measured on a child process: this test binary run again with
 //! the credential's name set in its real environment, where the loader must still find nothing.
@@ -22,6 +24,15 @@ use deck_streak_kernel::{
 const ID: &str = "sync-login";
 const FROM_THE_FILE: &str = "tidal-orchid-velvet";
 const FROM_THE_ENVIRONMENT: &str = "copper-sparrow-drift";
+
+/// The two forms of an empty credential: no bytes, and only the one trailing newline the loader
+/// trims (SPEC-066 R1).
+const EMPTY_FORMS: [&str; 2] = ["", "\n"];
+/// A synthetic value planted where a careless refusal could pick one up: the credentials
+/// directory's name, and a sibling credential the same loader reads first.
+const SENTINEL: &str = "quartz-lantern-sentinel";
+/// The sibling credential that holds the sentinel.
+const SIBLING: &str = "sync-password";
 
 /// A loader over `directory`, registering with `redactor`.
 fn loader(directory: &Path, redactor: &Redactor) -> CredentialLoader {
@@ -66,6 +77,8 @@ fn a_secret_is_read_from_the_credentials_directory_and_never_from_the_environmen
         !format!("{secret:?}").contains(FROM_THE_FILE),
         "a secret's Debug shows its value"
     );
+    // What its Debug shows instead: the type, and never the value.
+    assert_eq!(format!("{secret:?}"), "Ok(Secret(..))");
     // One trailing newline is trimmed, and only one.
     fs::write(directory.path().join(ID), "two-newlines-value\n\n").expect("written");
     assert_eq!(
@@ -148,4 +161,104 @@ fn a_secret_shows_no_value_in_debug() {
         .load(ID)
         .expect("the credential loads");
     assert_eq!(format!("{secret:?}"), "Secret(..)");
+}
+
+#[test]
+fn an_empty_credential_refuses_start_by_its_id() {
+    let directory = tempfile::tempdir().expect("a temporary directory");
+    let loader = loader(directory.path(), &Redactor::new());
+    for form in EMPTY_FORMS {
+        fs::write(directory.path().join(ID), form).expect("written");
+        let refused = loader.load(ID);
+        assert!(
+            matches!(refused, Err(CredentialError::Empty { id: ID })),
+            "{form:?} was not refused as an empty {ID}: {refused:?}"
+        );
+        assert_eq!(
+            refused.map(|_| ()).map_err(|refusal| refusal.to_string()),
+            Err(format!(
+                "the credential {ID} is empty in the credentials directory"
+            )),
+            "{form:?}"
+        );
+    }
+}
+
+#[test]
+fn a_missing_credential_keeps_its_refusal_and_a_value_loads_unchanged() {
+    let directory = tempfile::tempdir().expect("a temporary directory");
+    let loader = loader(directory.path(), &Redactor::new());
+    // No file of the id: it is missing, and the empty refusal does not take its place.
+    let refused = loader.load(ID);
+    assert!(
+        matches!(refused, Err(CredentialError::Missing { id: ID })),
+        "{refused:?}"
+    );
+    // A path of the id that exists and cannot be read as a file, here a directory, is refused as
+    // unreadable: neither missing nor empty takes its place.
+    fs::create_dir(directory.path().join(SIBLING)).expect("a directory at the id's path");
+    let unreadable = loader.load(SIBLING);
+    assert!(
+        matches!(
+            unreadable,
+            Err(CredentialError::Unreadable { id: SIBLING, .. })
+        ),
+        "{unreadable:?}"
+    );
+    assert_eq!(
+        unreadable
+            .map(|_| ())
+            .map_err(|refusal| refusal.to_string()),
+        Err(format!("the credential {SIBLING} cannot be read"))
+    );
+    // A value of one character or more loads unchanged, less one trailing newline: a lone
+    // character, and a file of two newlines, which holds one newline as its value.
+    for (content, value) in [
+        ("x", "x"),
+        ("x\n", "x"),
+        ("\n\n", "\n"),
+        (FROM_THE_FILE, FROM_THE_FILE),
+    ] {
+        fs::write(directory.path().join(ID), content).expect("written");
+        let secret = loader.load(ID);
+        assert_eq!(
+            secret.as_ref().map(Secret::expose).ok(),
+            Some(value),
+            "{content:?}: {secret:?}"
+        );
+    }
+}
+
+#[test]
+fn an_empty_refusal_names_the_id_and_never_a_value() {
+    // The sentinel is the credentials directory's name, and the value of a sibling credential the
+    // same loader reads first; the refusal of the empty credential beside it carries neither.
+    let scratch = tempfile::tempdir().expect("a temporary directory");
+    let directory = scratch.path().join(SENTINEL);
+    fs::create_dir(&directory).expect("the credentials directory");
+    let loader = loader(&directory, &Redactor::new());
+    fs::write(directory.join(SIBLING), format!("{SENTINEL}\n")).expect("written");
+    let sibling = loader.load(SIBLING);
+    assert_eq!(sibling.as_ref().map(Secret::expose).ok(), Some(SENTINEL));
+    for form in EMPTY_FORMS {
+        fs::write(directory.join(ID), form).expect("written");
+        let said = loader
+            .load(ID)
+            .map(|_| ())
+            .map_err(|refusal| (refusal.to_string(), format!("{refusal:?}")));
+        // The id, and only the id: the message, and the variant's own Debug.
+        assert_eq!(
+            said,
+            Err((
+                format!("the credential {ID} is empty in the credentials directory"),
+                format!("Empty {{ id: {ID:?} }}"),
+            )),
+            "{form:?}"
+        );
+        let (display, debug) = said.err().unwrap_or_default();
+        assert!(
+            !display.contains(SENTINEL) && !debug.contains(SENTINEL),
+            "{form:?}: the refusal carries the sentinel: {display} / {debug}"
+        );
+    }
 }

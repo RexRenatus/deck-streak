@@ -88,6 +88,61 @@
       "retention": {"until": "account-deletion"},
       "export": true,
       "erase": "delete"
+    },
+    {
+      "id": "notification-decisions",
+      "data": "every decision the notification router made about an occasion: its opaque key, its kind, the surface, whether it was sent, deferred or withheld and why, the tier asked for and the tier rendered, and the study day",
+      "source": "derived",
+      "stores": ["notification_decisions.*"],
+      "purpose": "keeping one record of why each celebration or nudge was sent, held or withheld",
+      "lawful_basis": "contract",
+      "retention": {"until": "account-deletion"},
+      "export": true,
+      "erase": "delete"
+    },
+    {
+      "id": "notification-deliveries",
+      "data": "each delivered occasion's opaque key with its kind, the scope it holds that key in, the surface, the study day and the lapse it belongs to",
+      "source": "derived",
+      "stores": ["notification_deliveries.*"],
+      "purpose": "delivering each celebration or nudge at most once across the bot and the Mini App, and capping comebacks per lapse",
+      "lawful_basis": "contract",
+      "retention": {"until": "account-deletion"},
+      "export": true,
+      "erase": "delete"
+    },
+    {
+      "id": "notification-queue",
+      "data": "the celebrations held by quiet hours or a failed send: their text, key, kind and tiers, why and since when they are held, and how often a send failed",
+      "source": "derived",
+      "stores": ["notification_queue.*"],
+      "purpose": "delivering a held celebration once quiet hours end or sends succeed, and naming every one that is abandoned",
+      "lawful_basis": "contract",
+      "retention": {"until": "account-deletion"},
+      "export": true,
+      "erase": "delete"
+    },
+    {
+      "id": "in-app-feed",
+      "data": "the celebrations delivered to the Mini App: their text, key, kind and tier, and when the Mini App fetched them",
+      "source": "derived",
+      "stores": ["in_app_feed.*"],
+      "purpose": "showing the owner in the Mini App the celebrations raised there",
+      "lawful_basis": "contract",
+      "retention": {"until": "account-deletion"},
+      "export": true,
+      "erase": "delete"
+    },
+    {
+      "id": "notification-settings",
+      "data": "the owner's notification settings: which kinds are switched off, and the owner's quiet hours",
+      "source": "learner-input",
+      "stores": ["notification_settings.*"],
+      "purpose": "honouring the owner's choices about which notifications to receive and when to stay quiet",
+      "lawful_basis": "contract",
+      "retention": {"until": "account-deletion"},
+      "export": true,
+      "erase": "delete"
     }
   ],
   "sql": ["migrations/*.sql"],

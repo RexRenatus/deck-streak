@@ -15,11 +15,12 @@ use std::time::Duration;
 
 use axum::Router;
 use axum::body::{Body, to_bytes};
-use axum::http::header::COOKIE;
-use axum::http::{Request, StatusCode};
+use axum::http::header::{COOKIE, SET_COOKIE};
+use axum::http::{HeaderMap, HeaderValue, Request, StatusCode};
 use axum::routing::get;
 use deck_streak_identity::session::{
-    ABSOLUTE_LIFETIME, IDLE_TIMEOUT, MAX_LIVE_SESSIONS, SESSION_COOKIE,
+    ABSOLUTE_LIFETIME, IDLE_TIMEOUT, MAX_LIVE_SESSIONS, SESSION_COOKIE, ended_cookie,
+    opening_cookie, presented,
 };
 use deck_streak_identity::{Owner, OwnerSession, SessionToken, Sessions};
 use deck_streak_kernel::{ManualClock, TelegramUserId, UtcMillis};
@@ -214,4 +215,134 @@ async fn the_owner_session_extractor_admits_only_a_live_cookie() {
     assert_eq!(call(Some(live.clone())).await.0, StatusCode::OK);
     clock.advance(IDLE);
     assert_eq!(call(Some(live)).await.0, StatusCode::UNAUTHORIZED);
+}
+
+/// The handshake's `Set-Cookie`: every attribute the SPEC names, in one place, and the
+/// logout's twin that differs only in its value and `Max-Age` (SPEC-024 R6).
+#[test]
+fn the_opening_and_ending_cookies_carry_every_attribute() {
+    let (_clock, sessions) = store();
+    let token = open(&sessions);
+
+    let (name, value) = opening_cookie(&token);
+    assert_eq!(name, SET_COOKIE);
+    assert_eq!(
+        value,
+        format!(
+            "{SESSION_COOKIE}={}; Path=/; Max-Age=28800; Secure; HttpOnly; SameSite=Strict",
+            token.expose()
+        )
+    );
+    assert_eq!(ABSOLUTE_LIFETIME.as_secs(), 28_800);
+
+    let (name, value) = ended_cookie();
+    assert_eq!(name, SET_COOKIE);
+    assert_eq!(
+        value,
+        "__Host-deckstreak_session=; Path=/; Max-Age=0; Secure; HttpOnly; SameSite=Strict"
+    );
+    assert!(value.starts_with(SESSION_COOKIE));
+}
+
+/// The id a request presents: the one session cookie's value among others, `None` for none, for
+/// two (in one header or two), and never a look-alike name.
+#[test]
+fn the_presented_id_is_the_one_session_cookie_and_nothing_else() {
+    let id = "ab".repeat(32);
+    let headers = |values: &[&[u8]]| {
+        let mut map = HeaderMap::new();
+        for value in values {
+            map.append(
+                COOKIE,
+                HeaderValue::from_bytes(value).expect("a header value"),
+            );
+        }
+        map
+    };
+    let carried = format!("{SESSION_COOKIE}={id}");
+
+    let one = headers(&[format!("theme=dark;   {carried} ; lang=en").as_bytes()]);
+    assert_eq!(presented(&one), Some(id.as_str()));
+
+    // A value that is not text is skipped, and the next header still supplies the cookie.
+    let skipped = headers(&[b"\xff\xfe=1", carried.as_bytes()]);
+    assert_eq!(presented(&skipped), Some(id.as_str()));
+
+    let refused = [
+        headers(&[]),
+        headers(&[b"theme=dark; flag"]),
+        headers(&[format!("x{SESSION_COOKIE}={id}; {SESSION_COOKIE}x={id}").as_bytes()]),
+        headers(&[format!("{carried}; {SESSION_COOKIE}={id}").as_bytes()]),
+        headers(&[carried.as_bytes(), carried.as_bytes()]),
+    ];
+    for map in examined("refused header set(s)", refused.into_iter().collect()) {
+        assert_eq!(presented(&map), None, "{map:?}");
+    }
+}
+
+/// Ending a session names whether a live one ended, drops only that one, and an id that is
+/// malformed, unknown or already ended ends nothing.
+#[test]
+fn ending_a_session_ends_that_one_and_reports_whether_it_was_live() {
+    let (clock, sessions) = store();
+    let first = open(&sessions);
+    let second = open(&sessions);
+    assert_eq!(sessions.live(), 2);
+
+    for absent in [
+        String::new(),
+        "ab".repeat(32),
+        "AB".repeat(32),
+        "ab".repeat(31),
+        format!("{}g", "a".repeat(63)),
+    ] {
+        assert!(!sessions.end_session(&absent), "{absent:?} ended a session");
+        assert_eq!(sessions.live(), 2);
+    }
+
+    assert!(sessions.end_session(first.expose()));
+    assert_eq!(sessions.live(), 1);
+    assert_eq!(sessions.admit(first.expose()), None);
+    assert_eq!(sessions.admit(second.expose()), Some(owner()));
+    assert!(!sessions.end_session(first.expose()), "ended twice");
+
+    // A session whose idle time is up has already ended: there is nothing left to end.
+    clock.advance(IDLE);
+    assert!(!sessions.end_session(second.expose()));
+    assert_eq!(sessions.live(), 0);
+}
+
+/// An id is 64 lowercase hex digits and no other text: uppercase, a digit past `f`, the
+/// characters either side of each range, and a wrong length all name no session.
+#[test]
+fn an_id_is_read_only_as_sixty_four_lowercase_hex_digits() {
+    let (_clock, sessions) = store();
+    let token = open(&sessions);
+    let id = token.expose().to_owned();
+
+    assert_eq!(sessions.admit(&id), Some(owner()));
+    let upper = id.to_uppercase();
+    let expected = (upper == id).then(owner);
+    assert_eq!(sessions.admit(&upper), expected, "uppercase digits");
+    for stray in ['/', ':', '`', 'g', 'G', '@', ' '] {
+        let spoiled = format!("{}{stray}", &id[..63]);
+        assert_eq!(sessions.admit(&spoiled), None, "{stray:?} read as a digit");
+        let front = format!("{stray}{}", &id[1..]);
+        assert_eq!(sessions.admit(&front), None, "{stray:?} read as a digit");
+    }
+    for wrong in [&id[..62], &id[..63], &format!("{id}0"), &format!("{id}00")] {
+        assert_eq!(sessions.admit(wrong), None, "{} digits", wrong.len());
+    }
+}
+
+/// Neither a token nor the store shows an id in its `Debug`.
+#[test]
+fn a_token_and_a_store_debug_show_no_id() {
+    let (_clock, sessions) = store();
+    let token = open(&sessions);
+    let _second = open(&sessions);
+    assert_eq!(format!("{token:?}"), "SessionToken(..)");
+    let shown = format!("{sessions:?}");
+    assert!(shown.starts_with("Sessions { live: 2"), "{shown}");
+    assert!(!shown.contains(token.expose()));
 }

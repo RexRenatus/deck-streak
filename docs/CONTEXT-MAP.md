@@ -187,6 +187,11 @@ context each migration names equal to the owner this register gives each table i
 | `ingest_state` | `ingest` | `migrations/002301_ingest_state.sql` (SPEC-023) | reset in place: the anchor, the rescore flag and the window's base cleared |
 | `cron_fires` | `coordination` | `migrations/002701_coordination_cron_fires.sql` (SPEC-027) | exempt: an erase must never re-arm the catch-up double-send guard |
 | `xp_ledger` | `progression` | `migrations/004001_progression_xp_ledger.sql` (SPEC-040) | exported and erased |
+| `notification_decisions` | `notifications` | `migrations/004101_notifications_router.sql` (SPEC-041) | exported and erased |
+| `notification_deliveries` | `notifications` | `migrations/004101_notifications_router.sql` (SPEC-041) | exported and erased |
+| `notification_queue` | `notifications` | `migrations/004101_notifications_router.sql` (SPEC-041) | exported and erased |
+| `in_app_feed` | `notifications` | `migrations/004101_notifications_router.sql` (SPEC-041) | exported and erased |
+| `notification_settings` | `notifications` | `migrations/004101_notifications_router.sql` (SPEC-041) | exported and erased |
 | `reading_runs` | `readings` | `migrations/004501_readings_topic_days_and_runs.sql` (SPEC-045) | exported and erased |
 | `reading_topic_days` | `readings` | `migrations/004501_readings_topic_days_and_runs.sql` (SPEC-045) | exported and erased |
 | `daily_rollup` | `analytics` | `migrations/007101_analytics_daily_rollup.sql` (SPEC-071) | exported and erased |

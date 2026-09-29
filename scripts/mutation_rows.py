@@ -31,9 +31,10 @@ in one of the unittest roots the gate discovers (`scripts/tests`, `tools/parity-
 PROVE (R9) refuses a tree with a tracked change, since it rewrites a tracked file and restores it.
 For each row it checks the anchor occurs exactly once and records the target's sha256; runs the
 killer without the mutant, which must pass selecting exactly one test; installs the mutant once;
-refuses a mutant that does not build (`cargo test --no-run`) or parse (Python) as VOID, never a
-kill; runs the killer, which must select exactly one test, counted from libtest's `running N test`
-lines or unittest's `Ran N test` line; reads a failure as KILLED and a pass as SURVIVED; then
+refuses a mutant that does not build (`cargo test --no-run`) or parse (Python, or a shell script
+by `bash -n` or `sh -n`, chosen by its shebang or extension) as VOID, never a kill; runs the
+killer, which must select exactly one test, counted from libtest's `running N test` lines or
+unittest's `Ran N test` line; reads a failure as KILLED and a pass as SURVIVED; then
 writes the saved bytes back and checks the sha256 before anything else runs. Exit 0 when every row
 was KILLED, 1 on a survivor, 2 on a refusal, 3 on a VOID with no survivor, 4 when a restore failed.
 
@@ -94,6 +95,9 @@ UNITTEST_RAN = re.compile(r"(?m)^Ran (\d+) tests? in ")
 UNITTEST_SKIPPED = re.compile(r"(?m)^OK \(skipped=([1-9]\d*)\)$")
 #: A cargo build may wait on a busy machine; a killer's test runs under its own bound.
 BUILD_SECONDS = 3600
+PARSE_SECONDS = 60
+#: A shebang that names a shell, directly or after `env`: group 1 is `sh`, `bash` or `dash`.
+SHELL_SHEBANG = re.compile(r"^#!\s*(?:\S*/)?(?:env\s+(?:-\S+\s+)*)?(?:\S*/)?(sh|bash|dash)(?=\s|$)")
 TEST_SECONDS = 900
 
 EXIT_OK, EXIT_SURVIVED, EXIT_REFUSED, EXIT_VOID, EXIT_RESTORE = 0, 1, 2, 3, 4
@@ -512,6 +516,42 @@ def run_killer(root: pathlib.Path, killer: Killer, scratch: pathlib.Path) -> Run
     return Run(selected, done.returncode == 0)
 
 
+def shell_parser(target: str, text: bytes) -> str | None:
+    """`bash` or `sh` when the target is a shell script, else None. The shebang decides when it
+    names a shell, since a `.sh` file may be bash; else the extension does, and `.bash` is bash."""
+    first = text.split(b"\n", 1)[0].decode("utf-8", errors="replace")
+    named = SHELL_SHEBANG.match(first)
+    if named:
+        return "bash" if named.group(1) == "bash" else "sh"
+    if target.endswith(".bash"):
+        return "bash"
+    if target.endswith(".sh"):
+        return "sh"
+    return None
+
+
+def parses(parser: str, mutated: bytes) -> str | None:
+    """None when the shell reads the mutated bytes, else why it does not: `<parser> -n` reads
+    them from stdin and runs nothing, and a missing shell fails closed."""
+    try:
+        done = subprocess.run(
+            [parser, "-n"],
+            input=mutated,
+            capture_output=True,
+            timeout=PARSE_SECONDS,
+            check=False,
+        )
+    except FileNotFoundError:
+        return f"the mutant is unchecked: {parser} is not installed"
+    except subprocess.TimeoutExpired:
+        return f"the mutant is unchecked: {parser} -n timed out"
+    if done.returncode == 0:
+        return None
+    lines = done.stderr.decode("utf-8", errors="replace").strip().splitlines()
+    why = lines[0] if lines else f"exit {done.returncode}"
+    return f"the mutant does not parse: {parser}: {why}"
+
+
 def builds(root: pathlib.Path, row: Row, killer: Killer, mutated: bytes) -> str | None:
     """None when the installed mutant builds or parses; else why it does not."""
     if row.target.endswith(".py"):
@@ -520,6 +560,11 @@ def builds(root: pathlib.Path, row: Row, killer: Killer, mutated: bytes) -> str 
         except SyntaxError as error:
             return f"the mutant does not parse: {error.msg} at line {error.lineno}"
         return None
+    parser = shell_parser(row.target, mutated)
+    if parser is not None:
+        refusal = parses(parser, mutated)
+        if refusal is not None:
+            return refusal
     if killer.kind == "cargo":
         flags = ["--lib"] if killer.target == "lib" else ["--test", killer.target]
         done = subprocess.run(

@@ -1,4 +1,5 @@
-//! The retry loop and its record (SPEC-022 A8 to A11, R8, R9).
+//! The retry loop and its record (SPEC-022 A8 to A11, R8, R9), and the login's refusal of an empty
+//! credential, which it reads through the kernel's loader (SPEC-066 A6).
 //!
 //! A8 and A10 run the predecessor's schedule on tokio's paused time, so no test sleeps: the waits
 //! and timeouts pass the moment nothing else can run. They hand the syncer an in-memory record,
@@ -9,10 +10,12 @@
 mod golden;
 mod support;
 
+use std::fs;
 use std::net::TcpListener;
 use std::time::Duration;
 
 use deck_streak_ingest::engine::{EngineError, RslibEngine, SyncOutcome};
+use deck_streak_ingest::settings::{SYNC_PASSWORD, SYNC_USERNAME};
 use deck_streak_ingest::sync::{
     COLLECTION_OPEN_RETRIES, COLLECTION_OPEN_RETRY_BASE_SECS, RetrySchedule, SYNC_RETRY_ATTEMPTS,
     SYNC_RETRY_BASE_SECS, SYNC_RETRY_JITTER_FRAC, SYNC_TIMEOUT_SECS, SyncReport,
@@ -332,4 +335,37 @@ fn the_default_jitter_draws_stay_inside_their_fraction_of_each_wait() {
         })
         .collect();
     assert!(draws.len() > 30, "the draws were not spread: {draws:?}");
+}
+
+#[test]
+fn an_empty_sync_credential_is_recorded_missing_and_never_reaches_the_engine() {
+    // The login reads both of its credentials through the kernel's loader, so each, empty in each
+    // form the loader refuses, records the run as missing credentials with no attempt made, and
+    // the engine, which counts every sync it is asked for, is never asked (SPEC-066 A6).
+    for id in [SYNC_USERNAME, SYNC_PASSWORD] {
+        for form in ["", "\n"] {
+            let engine = ScriptedEngine::new([Step::Answer(SyncOutcome::NoChanges)]);
+            let runs = MemoryRuns::default();
+            let fixture = Fixture::new("http://127.0.0.1:9/");
+            fs::write(fixture.scratch().join("credentials").join(id), form)
+                .expect("the credential is rewritten");
+            let syncer = fixture.syncer(engine.clone(), runs.clone(), support::clock_at(0));
+            paused()
+                .block_on(syncer.sync(Trigger::Scheduled))
+                .expect("the record is in memory");
+            let recorded = runs.runs();
+            assert_eq!(recorded.len(), 1, "{id} {form:?}: {recorded:?}");
+            assert_eq!(
+                recorded[0].outcome,
+                Err(ReasonCode::MissingCredentials),
+                "{id} {form:?}"
+            );
+            assert_eq!(recorded[0].attempts, 0, "{id} {form:?}");
+            assert_eq!(
+                engine.normal_syncs(),
+                0,
+                "{id} {form:?}: an empty login reached the engine"
+            );
+        }
+    }
 }

@@ -18,6 +18,7 @@ dbs:
   # The database in the directory systemd gives the units (StateDirectory=deck-streak).
   - path: /var/lib/deck-streak/deck_streak.db
     replica:
-      # The replica's destination: a placeholder the private rail fills, expanded by Litestream from
-      # the environment when it starts.
-      url: ${DECKSTREAK_REPLICA_URL}
+      # The replica's destination: a Google Cloud Storage URL whose bucket, with a prefix if the owner
+      # keeps one, is a setting the private rail writes in the unit's environment file and Litestream
+      # expands when it starts. The scheme reads as off the host; no bucket is named here.
+      url: gs://${DECKSTREAK_REPLICA_BUCKET}

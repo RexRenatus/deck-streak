@@ -1,0 +1,49 @@
+# DeckStreak's daily backup: a checked copy of the database, the newest three kept (SPEC-064 R4;
+# ADR-064). deck-streak-backup.timer starts it once a day; it exits 1 on any failed step, leaving the
+# copies there untouched, so OnFailure= pages through the one alert path with its error lines. A
+# template with neutral values that the private rail fills (deploy/README.md).
+[Unit]
+Description=DeckStreak daily backup of the database
+Documentation=https://github.com/RexRenatus/deck-streak/blob/main/deploy/README.md
+OnFailure=deck-streak-alert@%n.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /usr/local/lib/deck-streak/current/deploy/scripts/backup.py
+User=deck-streak
+Group=deck-streak
+# The database it copies and the backups directory it writes beside it.
+StateDirectory=deck-streak
+# It yields the processor and the disk to the long-running services.
+Nice=10
+IOSchedulingClass=idle
+# A hung run ends long before the next is due.
+TimeoutStartSec=30min
+SyslogIdentifier=deck-streak-backup
+# The budget is deploy/host-budget.json's entry for this unit (ADR-032, ADR-064).
+MemoryHigh=48M
+MemoryMax=64M
+UMask=0077
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+ProtectProc=invisible
+ProcSubset=pid
+# It reads and writes files and opens no network socket.
+RestrictAddressFamilies=AF_UNIX
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+CapabilityBoundingSet=
