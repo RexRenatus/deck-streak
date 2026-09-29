@@ -100,6 +100,7 @@ if [ "$first" = validate ] && [ "$adapter" != caddyfile ]; then
     case "$name" in Caddyfile* | *.caddyfile) ;; *) echo "invalid character: not JSON" >&2; exit 1 ;; esac
 fi
 [ "$first" = validate ] && [ -f "$STUB_LOG/caddy-refuses" ] && exit 1
+[ "$first" = adapt ] && [ -f "$STUB_LOG/caddy-adapt-refuses" ] && exit 1
 if [ "$first" = reload ]; then
     # the previous copies a reload can see, and a reload that fails on demand: the file holds how many
     echo "$(ls -1 "$(dirname "$conf")" | grep -c '\.previous$')" >> "$STUB_LOG/reload-sees.log"
@@ -801,6 +802,19 @@ class TheCaddyInstall(Case):
             "refused-rename", w.text("moves.log"), "the block's restore rename was refused"
         )
         self.assertFalse(self.imports_a_missing_block(), "the live Caddyfile imports a block")
+
+    def test_a_removal_whose_adapted_configuration_is_refused_says_so(self):
+        w = self.world
+        _original, after, block_text = self.installed()
+        (w.log / "caddy-adapt-refuses").write_text("x")
+        done = w.run(ROLLBACK, "caddy-remove", **self.config())
+        self.assertNotEqual(done.returncode, 0, "a refused adapted configuration")
+        self.assertIn("deploy: refused", done.stderr, "the removal says which step stopped")
+        block = w.caddy_dir / "deck-streak.caddy"
+        self.assertEqual(block.read_text() if block.exists() else None, block_text)
+        self.assertEqual((w.caddy_dir / "Caddyfile").read_text(), after)
+        candidates = [p.name for p in w.caddy_dir.iterdir() if "candidate" in p.name]
+        self.assertEqual(candidates, [], "no candidate file is left behind")
 
     def test_the_caddy_calls_name_the_caddyfile_adapter_for_the_candidate_copy(self):
         w = self.world
