@@ -27,7 +27,8 @@ after the crate-root re-export left the census needle to the recompute steps alo
 A12 gained an arm in fix round 1: the census now also reads `SettleRequest`, so a grouped import
 of the operation and its request outside the recompute steps is found. Its red is the changed test
 beside a planted grouped import in `level_up.rs` (5dfd74a); its green removes the plant (168c835).
-The base criterion's own red and green above stay as they were.
+The record carries one pair for the criterion, this one; the base census's own red (a25cc88) and
+green (22f2390) are the ones named in the paragraph above.
 
 A30 (R14) and A31 (R24) were added in fix round 1. A30's test covers code already in the head, so
 its red is the test beside a planted swap of the level before and after in `sync_cycle.rs`
@@ -62,8 +63,6 @@ A10: red at a25cc88: assertion `left == right` failed: one row per day, source a
 A10: green at de00943
 A11: red at a25cc88: a grant's source is not a derived one: 10
 A11: green at de00943
-A12: red at a25cc88: the fold's XP step calls settle; every file that does: {}
-A12: green at 22f2390
 A12: red at 5dfd74a: assertion `left == right` failed; left: ["crates/coordination/src/level_up.rs calls settle outside the recompute steps, and only the owner's correction may"], right: []
 A12: green at 168c835
 A13: red at a25cc88: assertion `left == right` failed: both tables; left: 60, right: 100
