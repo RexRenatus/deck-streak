@@ -103,9 +103,9 @@ const BOT_API_HOST: &str = "api.telegram.org";
 /// `pub(crate)`), and no other source may name.
 const BOT_API_URL: &str = "DEFAULT_API_URL";
 
-/// The Bot API's send methods, in its own spelling; a client library spells each in snake case
-/// (`send_message`).
-const SEND_METHODS: [&str; 22] = [
+/// The pinned client's send methods, in the Bot API's own spelling; a client library spells each in
+/// snake case (`send_message`).
+const SEND_METHODS: [&str; 25] = [
     "sendMessage",
     "sendPhoto",
     "sendAudio",
@@ -128,11 +128,16 @@ const SEND_METHODS: [&str; 22] = [
     "sendGame",
     "sendGift",
     "sendMessageDraft",
+    "sendLivePhoto",
+    "sendRichMessage",
+    "sendRichMessageDraft",
 ];
 
-/// The Bot API's other methods that put a message before the owner, in its own spelling: a copy, a
-/// forward, an edit, a pin and a reaction. The census holds them as it holds a send method.
-const DELIVERY_METHODS: [&str; 12] = [
+/// The pinned client's other methods that put a message before the owner, in the Bot API's own
+/// spelling: a copy, a forward, an edit, an ephemeral edit, a stopped poll or live location, a pin,
+/// a reaction, and a Mini App query's answer, which sends a message into the chat on the user's
+/// behalf. The census holds them as it holds a send method.
+const DELIVERY_METHODS: [&str; 19] = [
     "copyMessage",
     "copyMessages",
     "forwardMessage",
@@ -145,6 +150,13 @@ const DELIVERY_METHODS: [&str; 12] = [
     "editMessageReplyMarkup",
     "pinChatMessage",
     "setMessageReaction",
+    "editEphemeralMessageText",
+    "editEphemeralMessageCaption",
+    "editEphemeralMessageMedia",
+    "editEphemeralMessageReplyMarkup",
+    "stopPoll",
+    "stopMessageLiveLocation",
+    "answerWebAppQuery",
 ];
 
 /// The version of the Bot API client the census's method list was read from. The test
