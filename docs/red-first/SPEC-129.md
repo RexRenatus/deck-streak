@@ -18,4 +18,16 @@ A4: red at 0e39853: 0 != 1 : battery: counted 3 of 3 reports whole
 A4: green at ced6887
 A5: red at 0e39853: 2 != 0 : usage: mutation-verdict.py [-h] [--root ROOT] [--base BASE] [--head HEAD]
 A5: green at ced6887
+A6: not red: it pins bounds the workflows already hold at dev, so it is green at every commit and each plant of a raised bound turns it red by assertion
+```
+
+Fix round 1 added A6 after the delivery was green. It pins bounds that dev already holds (every
+`cargo mutants` command line carries `--timeout 300 --build-timeout 600`), so it has no red commit.
+Each planted change turned it red by assertion, and the workflow was restored after each:
+
+```text
+rust leg --timeout 300 -> 600:        AssertionError: '--timeout 300 --build-timeout 600' not found in 'cargo mutants ... --shard "$SHARD/$SHARDS" --timeout 600 --build-timeout 600 ...'
+rust leg --build-timeout 600 -> 1200: AssertionError: '--timeout 300 --build-timeout 600' not found in 'cargo mutants ... --shard "$SHARD/$SHARDS" --timeout 300 --build-timeout 1200 ...'
+ci.yml   --timeout 300 -> 600:        AssertionError: ... ci.yml: cargo mutants ... --timeout 600 --build-timeout 600 ...
+ci.yml   --build-timeout 600 -> 1200: AssertionError: ... ci.yml: cargo mutants ... --timeout 300 --build-timeout 1200 ...
 ```
