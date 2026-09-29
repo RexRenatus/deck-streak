@@ -28,8 +28,9 @@
   HTTP status of 400 or more, and on a body it cannot read (`data[0].b64_json`); otherwise the image,
   cached by its key for good. Every nothing leaves the ceremony as text.
 - **A recorded deviation.** The predecessor's style sentence names a mascot motif. DeckStreak's
-  copy of the sentence replaces that motif with a neutral emblem motif, and the golden's adapter
-  applies the same replacement, so A11 compares like with like.
+  copy of the sentence replaces that motif with a neutral emblem motif, and the golden
+  `art_prompt`'s adapter applies the same replacement, so A11 compares like with like. The golden
+  `art.constants` is a constants golden, which takes no adapter, so it holds the two numbers alone.
 - **DeckStreak has no image route.** ADR-054 makes every AI route optional and off by default, and
   the owner has not chosen an image provider (#169). The design must hold with none.
 - **Where it lives.** SPEC-001 files the feature under progression; the draw lives in the agent
@@ -51,8 +52,8 @@ R1. `agent::images::ImageProvider` is a port with one call, `draw(&ImageRequest)
     start by its id), and is never in the repository or the environment.
 R2. The prompt is the request's own sentence followed by the predecessor's style sentence
     (`art.STYLE`) with its mascot motif replaced by a neutral emblem motif (a recorded deviation,
-    §1); the golden's adapter applies the same replacement, and the result equals the golden
-    `art.constants`.
+    §1); the golden `art_prompt`'s adapter applies the same replacement, and the prompt equals
+    that golden.
 
 The draw
 
@@ -123,7 +124,7 @@ R13. CHARTER 10's eleven anti-goals bind this SPEC as one block; the ones it tou
 | A8 | an image the output gate fails settles `withheld` with its class and is never stored | `a_withheld_image_is_never_stored` |
 | A9 | a row is drawn once, and enqueuing a present key writes nothing | `a_row_is_drawn_once` |
 | A10 | the draw's outcomes equal the goldens `art_generate_art` and `art_generate` | `the_draw_matches_the_parity_goldens` |
-| A11 | the prompt's style and the constants equal the golden `art.constants` | `the_style_and_constants_match_the_parity_golden` |
+| A11 | the prompt equals the golden `art_prompt`, and the cap and the timeout equal the golden `art.constants` | `the_style_and_constants_match_the_parity_golden` |
 | A12 | the ceremony's step enqueues one keepsake row with the golden's prompt and caption, and makes no call | `the_ceremony_enqueues_one_keepsake` |
 | A13 | with no provider the ceremony is the text alone, and no photo occasion is raised | `with_no_provider_the_ceremony_is_text_alone` |
 | A14 | a `ready` row is raised as a photo and settles `sent` with its file id | `a_ready_keepsake_is_sent_as_a_photo` |
@@ -203,8 +204,9 @@ and a job to their populations. The delivery hands back an empty JSON diff and s
 | `deploy/rail-contract.json` | deploy | changed: the timer's calendar |
 | `scripts/tests/test_deploy_templates.py` | repo | changed: A23 and `WAIVED`'s entries for `deck-streak-job-send@image_art.timer` |
 | `scripts/tests/test_rail_contract.py` | repo | changed: `test_only_the_sync_job_reads_the_sync_login` admits `image_art`'s optional credential loads |
-| `tools/parity-oracle/registry/spec_135.py` | parity oracle | added: the four goldens' adapters |
+| `tools/parity-oracle/registry/spec_135.py` | parity oracle | added: the constants golden `art.constants` and the adapters of `art_prompt`, `art_generate`, `art_generate_art` and `keepsake_prompt` |
 | `tools/parity-oracle/goldens/art.constants.json` | parity oracle | added |
+| `tools/parity-oracle/goldens/art_prompt.json` | parity oracle | added |
 | `tools/parity-oracle/goldens/art_generate.json` | parity oracle | added |
 | `tools/parity-oracle/goldens/art_generate_art.json` | parity oracle | added |
 | `tools/parity-oracle/goldens/keepsake_prompt.json` | parity oracle | added |
@@ -238,10 +240,14 @@ and a job to their populations. The delivery hands back an empty JSON diff and s
 
 `tools/parity-oracle/registry/spec_135.py` generates, at `27ee2bc`:
 
-- `art.constants`: `ART_DAILY_CAP` (2), `_TIMEOUT_S` (90.0) and `STYLE`, from `art.py`, with the mascot motif replaced by the neutral emblem motif (§1).
+- `art.constants`: `ART_DAILY_CAP` (2) and `_TIMEOUT_S` (90.0), from `art.py`, verbatim (a
+  constants golden takes no adapter).
+- `art_prompt`: the prompt `art.py:generate` posts, recorded by an HTTP double, for three request
+  sentences, with §1's replacement applied by the adapter: it rewrites the word between `golden`
+  and `motif` to `emblem`, so no committed file names the motif.
 - `art_generate`: `art.py:generate` over a recording HTTP double: a transport error, a timeout, the
   statuses 399 and 400 (the boundary), a body without `data`, without `b64_json` and not base64, and
-  a success; with the outcome of each.
+  a success; with the outcome of each, never the posted prompt (`art_prompt` records it).
 - `art_generate_art`: `showcase.py:ShowcaseLayer._generate_art` over a recording store and double: no
   key, a cache hit, counts 0, 1 and 2 (2 is the on-boundary case that `capped` tells apart from a
   draw), a new day after a count of 2, and a failed draw that still counts.
