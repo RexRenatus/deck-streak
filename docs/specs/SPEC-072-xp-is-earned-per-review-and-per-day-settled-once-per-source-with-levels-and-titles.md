@@ -483,7 +483,7 @@ A target outside a crate (a migration, `economy.json`) is a cargo-killed script 
 | `S07203-LAW-TIER-ONLY` | `src/recompute/xp.rs` | only a law card's tier scales its XP (SPEC-072 R2, A6) | `xp_steps::an_untagged_law_card_and_a_tagged_language_card_earn_the_base_rate` |
 | `S07204-CLOSED-DAY-NEVER-FALLS` | `src/settle.rs` | a closed day's settled XP is raised and never lowered by a recompute (SPEC-072 R7, A7) | `xp_settle::a_closed_days_settled_xp_is_raised_and_never_lowered_by_a_recompute` |
 | `S07205-SETTLEMENT-KEY` | `(study_day, source, track);` | xp_settlement holds one row per study day, source and track, held by the table's index (SPEC-072 R6, A10) | `xp_settle::settle_keeps_one_row_per_study_day_source_and_track` |
-| `S07206-DERIVED-ONLY` | `src/settle.rs` | settle accepts only a source in the derived registry (SPEC-072 R6, A11) | `xp_settle::settle_refuses_a_source_outside_the_derived_registry` |
+| `S07206-DERIVED-ONLY` | `src/settle.rs` | settle accepts only a source in the derived registry (SPEC-072 R7, A11) | `xp_settle::settle_refuses_a_source_outside_the_derived_registry` |
 | `S07207-DAY-BASE-CHEST` | `src/consistency.rs` | the day base leaves out the chest source (SPEC-072 R12, A20) | `xp_consistency::the_day_base_matches_the_parity_golden_over_both_tables` |
 | `S07208-DAY-BASE-READING` | `src/consistency.rs` | the day base leaves out the readings' grants (SPEC-072 R12, A22) | `xp_consistency::the_day_base_leaves_out_the_readings_grants` |
 | `S07209-CONSISTENCY-WINDOW` | `"window_days": 90` | the consistency run looks back the predecessor's window (SPEC-072 R12, A19) | `xp_consistency::the_consistency_run_and_multiplier_match_the_parity_goldens` |
@@ -498,8 +498,8 @@ A target outside a crate (a migration, `economy.json`) is a cargo-killed script 
 | `S07219-BONUS-STEP-NAME` | `src/recompute/day_bonuses.rs` | the derived-bonuses step is registered under its whole name (SPEC-072 R19; pinned outside the acceptance fence) | `xp_steps::the_step_names_and_the_level_up_kind_are_pinned_whole` |
 | `S07220-LEVEL-UP-KIND` | `src/level_up.rs` | the level-up line goes out as a celebration (SPEC-072 R14; pinned outside the acceptance fence) | `xp_steps::the_step_names_and_the_level_up_kind_are_pinned_whole` |
 | `S07221-BONUS-SOURCES` | `src/recompute/xp.rs` | the bonus sources settled for a day include studied, backlog_zero, streak and graduations (SPEC-072 R11; pinned outside the acceptance fence) | `xp_steps::a_day_settles_the_bonus_sources` |
-| `S07222-LEVEL-PATH` | `src/xp_routes.rs` | the level view is served at /api/level (SPEC-072 R15, A26) | `xp_routes::the_level_routes_answer_only_the_owner` |
-| `S07223-LAW-TIERS-PATH` | `src/xp_routes.rs` | the law-tier counts are served at /api/level/law-tiers (SPEC-072 R15, A26) | `xp_routes::the_level_routes_answer_only_the_owner` |
+| `S07222-LEVEL-PATH` | `src/xp_routes.rs` | the level view is served at /api/level (SPEC-072 R23, A26) | `xp_routes::the_level_routes_answer_only_the_owner` |
+| `S07223-LAW-TIERS-PATH` | `src/xp_routes.rs` | the law-tier counts are served at /api/level/law-tiers (SPEC-072 R24, A26) | `xp_routes::the_level_routes_answer_only_the_owner` |
 | `S07224-BOT-LEVEL-COMMAND` | `src/commands.rs` | the bot menu names the level command (SPEC-072 R25; SPEC-026 A6) | `commands::the_menu_is_registered_for_the_owners_chat_only` |
 | `S07225-LEVEL-UP-BEFORE-AFTER` | `src/sync_cycle.rs` | a sync cycle hands the router the level before the recompute and the level after it, in that order (SPEC-072 R14, A30) | `level_up_cycle::a_sync_cycle_announces_a_level_reached_once` |
 | `S07226-LAW-TIERS-LAW-TRACK` | `src/progression/law_tiers.rs` | the law tiers count law-track cards alone, and price law-track reviews alone (SPEC-072 R24; pinned outside the acceptance fence) | `law_tiers::a_collection_with_no_law_root_has_no_law_cards_and_no_law_xp` |

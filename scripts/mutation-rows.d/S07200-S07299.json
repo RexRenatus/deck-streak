@@ -44,7 +44,7 @@
         "if !DERIVED_SOURCES.contains(&request.source) {",
         "if DERIVED_SOURCES.is_empty() {",
         "xp_settle::settle_refuses_a_source_outside_the_derived_registry",
-        "settle accepts only a source in the derived registry (SPEC-072 R6, A11)"
+        "settle accepts only a source in the derived registry (SPEC-072 R7, A11)"
       ],
       [
         "S07207-DAY-BASE-CHEST",
@@ -161,7 +161,7 @@
         "LEVEL_PATH: &str = \"/api/level\";",
         "LEVEL_PATH: &str = \"/api/levels\";",
         "xp_routes::the_level_routes_answer_only_the_owner",
-        "the level view is served at /api/level (SPEC-072 R15, A26)"
+        "the level view is served at /api/level (SPEC-072 R23, A26)"
       ],
       [
         "S07223-LAW-TIERS-PATH",
@@ -170,7 +170,7 @@
         "LAW_TIERS_PATH: &str = \"/api/level/law-tiers\";",
         "LAW_TIERS_PATH: &str = \"/api/level/law-tier\";",
         "xp_routes::the_level_routes_answer_only_the_owner",
-        "the law-tier counts are served at /api/level/law-tiers (SPEC-072 R15, A26)"
+        "the law-tier counts are served at /api/level/law-tiers (SPEC-072 R24, A26)"
       ],
       [
         "S07224-BOT-LEVEL-COMMAND",
