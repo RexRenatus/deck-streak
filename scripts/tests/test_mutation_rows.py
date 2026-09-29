@@ -797,6 +797,8 @@ class TheRunnerParseChecksAShellMutant(unittest.TestCase):
         runner = runner_module()
         self.assertIsNone(runner.shell_parser("crates/f/src/lib.rs", b"fn main() {}\n"))
         self.assertIsNone(runner.shell_parser("db/001.sql", b"select 1;\n"))
+        # The control: the same call names a parser once the target is a shell script.
+        self.assertEqual(runner.shell_parser("scripts/x.sh", b"select 1;\n"), "sh")
 
 
 if __name__ == "__main__":
