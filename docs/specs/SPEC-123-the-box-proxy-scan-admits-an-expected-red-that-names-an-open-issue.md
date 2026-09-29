@@ -56,7 +56,7 @@ R6. Nothing else changes: `pending` reads as SPEC-030 R13 states it, the helper'
 | A1 | an expected red row passes, and the scan's line counts it as expected | `test_box_scan_expected.py` `an_expected_red_row_passes_and_the_line_counts_it` |
 | A2 | an unexpected red row beside an expected one still fails the run, by name | `test_box_scan_expected.py` `an_unexpected_red_row_beside_an_expected_one_still_fails` |
 | A3 | a red total beyond the rows the scan printed fails, and one that does not exceed the expected rows does not | `test_box_scan_expected.py` `a_red_total_beyond_the_expected_rows_fails` |
-| A4 | an expected row that reads green, void or is absent is stale | `test_box_scan_expected.py` `an_expected_row_that_does_not_read_red_is_stale` |
+| A4 | an expected row that reads green, void or is absent is stale, and with no settings document examined the detail names the expectation's issues | `test_box_scan_expected.py` `an_expected_row_that_does_not_read_red_is_stale`, `an_expectation_with_no_settings_document_names_its_issues` |
 | A5 | an expectation whose issue is closed is stale, once, on a red row and on a green one | `test_box_scan_expected.py` `an_expectation_whose_issue_is_closed_is_stale` |
 | A6 | `expected_red` beside `pending` is refused | `test_box_scan_expected.py` `an_expected_red_beside_pending_is_refused` |
 | A7 | an expectation with a value that is no issue, a row that is no name, an empty mapping or a list is refused | `test_box_scan_expected.py` `an_expectation_that_names_no_issue_is_refused` |
