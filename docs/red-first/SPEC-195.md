@@ -66,3 +66,22 @@ AssertionError: expected [] to deeply equal [ 'planted.md block 1' ]
 ```
 
 At e39a1d01 all eight tests pass and 190 blocks are examined, the count of the merged tree.
+
+Round 3 replaced A5's hand-listed quoted plants with a population generated from the reader's own
+prefix grammar: five quote prefixes up to depth 2, alone and followed by a list marker, with two
+fence spellings, which is 30 members, each planted unparsable (refused by name) and valid (accepted).
+The test asserts the count and prints `examined 30 quoted fence forms`. The generated test cannot be
+red against the correct reader, so it is recorded not red, and its proof that it can fail is a kill
+of two mutants of the reader, each applied to a scratch copy of the test file at 787b3534 (the tree
+holds no such copy):
+
+```text
+A5: not red: the generated test passes at the reader as it is (8 passed, 190 blocks); it is killed by two mutants of the reader
+M1 (OPENER `>[ \t]?` changed to `>[ \t]`): Tests  1 failed | 7 passed (8)
+AssertionError: {"quote":">","marker":"","fence":"```mermaid"}: expected [] to deeply equal [ 'planted.md block 1' ]
+M2 (the quote group `(?:>[ \t]?)*` changed to `(?:>[ \t]?)?`, depth 1 only): Tests  1 failed | 7 passed (8)
+AssertionError: {"quote":"> > ","marker":"","fence":"```mermaid"}: expected [] to deeply equal [ 'planted.md block 1' ]
+```
+
+The member `>` with no marker and the fence ```` ```mermaid ```` is the string `>```mermaid` that
+review planted by hand, so that plant is one member of the population.
