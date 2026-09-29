@@ -305,3 +305,94 @@ fn bounded(error: AnkiError) -> EngineError {
         _ => EngineError::EngineFailed,
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use anki::error::{DbError, NetworkError, SyncError};
+
+    use super::*;
+
+    fn db(kind: DbErrorKind) -> AnkiError {
+        AnkiError::DbError {
+            source: DbError {
+                info: String::from("a path the port must drop"),
+                kind,
+            },
+        }
+    }
+
+    fn sync(kind: SyncErrorKind) -> AnkiError {
+        AnkiError::SyncError {
+            source: SyncError {
+                info: String::from("an endpoint the port must drop"),
+                kind,
+            },
+        }
+    }
+
+    fn network(kind: NetworkErrorKind) -> AnkiError {
+        AnkiError::NetworkError {
+            source: NetworkError {
+                info: String::from("a host the port must drop"),
+                kind,
+            },
+        }
+    }
+
+    #[test]
+    fn a_locked_database_is_the_locked_collection_and_no_other_database_error_is() {
+        assert_eq!(
+            bounded(db(DbErrorKind::Locked)),
+            EngineError::CollectionLocked
+        );
+        assert_eq!(bounded(db(DbErrorKind::Corrupt)), EngineError::EngineFailed);
+        assert_eq!(bounded(db(DbErrorKind::Other)), EngineError::EngineFailed);
+    }
+
+    #[test]
+    fn a_refused_login_is_auth_rejected_and_every_other_sync_error_is_a_server_error() {
+        assert_eq!(
+            bounded(sync(SyncErrorKind::AuthFailed)),
+            EngineError::AuthRejected
+        );
+        assert_eq!(
+            bounded(sync(SyncErrorKind::ServerError)),
+            EngineError::ServerError
+        );
+        assert_eq!(
+            bounded(sync(SyncErrorKind::Conflict)),
+            EngineError::ServerError
+        );
+        assert_eq!(
+            bounded(sync(SyncErrorKind::Other)),
+            EngineError::ServerError
+        );
+    }
+
+    #[test]
+    fn a_network_timeout_is_a_timeout_and_every_other_network_error_is_unreachable() {
+        assert_eq!(
+            bounded(network(NetworkErrorKind::Timeout)),
+            EngineError::Timeout
+        );
+        assert_eq!(
+            bounded(network(NetworkErrorKind::Offline)),
+            EngineError::NetworkUnreachable
+        );
+        assert_eq!(
+            bounded(network(NetworkErrorKind::Other)),
+            EngineError::NetworkUnreachable
+        );
+    }
+
+    #[test]
+    fn an_error_of_no_named_family_is_an_engine_failure() {
+        assert_eq!(bounded(AnkiError::Interrupted), EngineError::EngineFailed);
+    }
+
+    #[test]
+    fn a_login_prints_none_of_its_parts() {
+        let login = SyncLogin::new("https://host.invalid/", "account", "secret");
+        assert_eq!(format!("{login:?}"), "SyncLogin { .. }");
+    }
+}

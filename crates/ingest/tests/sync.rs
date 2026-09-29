@@ -10,7 +10,7 @@ mod support;
 use std::fs;
 use std::time::Duration;
 
-use deck_streak_ingest::engine::{RslibEngine, SyncOutcome};
+use deck_streak_ingest::engine::{AnkiEngine, RslibEngine, SyncLogin, SyncOutcome};
 use deck_streak_ingest::sync::{OWNER_SYNC_DEBOUNCE_SECS, SyncReport};
 use deck_streak_ingest::sync_runs::{ReasonCode, SqliteSyncRuns, SyncRun, Trigger};
 use deck_streak_kernel::Db;
@@ -445,4 +445,31 @@ fn an_owner_trigger_within_five_minutes_of_a_success_returns_it_without_syncing(
         recorded[1].0, "owner",
         "the owner's trigger is recorded as the owner's"
     );
+}
+
+#[test]
+fn the_engine_tells_a_sync_with_no_change_from_one_that_exchanged_changes() {
+    const TEST: &str = "the_engine_tells_a_sync_with_no_change_from_one_that_exchanged_changes";
+    if support::role().as_deref() == Some(support::SERVER) {
+        return support::serve();
+    }
+    let (scratch, server) = start_server(TEST, Some(Shape::SMALL));
+    let login = SyncLogin::new(server.endpoint(), support::USERNAME, support::PASSWORD);
+    let runtime = support::runtime();
+    let copy = scratch.path().join("copy.anki2");
+    runtime
+        .block_on(RslibEngine.full_download(&copy, &login))
+        .expect("the copy starts as a full download");
+    let unchanged = runtime
+        .block_on(RslibEngine.normal_sync(&copy, &login))
+        .expect("the copy syncs");
+    assert_eq!(unchanged, SyncOutcome::NoChanges);
+
+    let other = scratch.path().join("other.anki2");
+    fs::copy(&copy, &other).expect("the other client starts from the same collection");
+    support::review_on_another_client(&runtime, &other, server.endpoint(), OTHER_REVIEWS);
+    let changed = runtime
+        .block_on(RslibEngine.normal_sync(&copy, &login))
+        .expect("the copy syncs");
+    assert_eq!(changed, SyncOutcome::Synced);
 }
