@@ -177,7 +177,7 @@ accessibility and telegram-platform packs are already enforced and widen their p
 | `web/app/src/lib/api.ts` | miniapp | changed: the three calls |
 | `web/app/src/lib/routes.ts` | miniapp | changed: the route |
 | `web/app/messages/*.json` | miniapp | changed: the gallery's strings, in each locale's catalog |
-| `tools/parity-oracle/registry/spec_136.py` | parity oracle | added: the two goldens' adapters |
+| `tools/parity-oracle/registry/spec_136.py` | parity oracle | added: the constants golden `share_card.constants` and the adapter of `share_card_prompt` |
 | `tools/parity-oracle/goldens/share_card.constants.json` | parity oracle | added |
 | `tools/parity-oracle/goldens/share_card_prompt.json` | parity oracle | added |
 | `docs/specs/SPEC-136-a-streak-milestone-draws-a-share-card-once-the-gallery-shows-every-drawn-image-and-the-owner-shares-one-with-a-tap.md` | docs | moved from `docs/specs/planned/` |
