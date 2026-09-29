@@ -206,6 +206,7 @@ delivery changes no pack's state, so the private wiring does not change when it 
 | `Cargo.lock`, `.sqlx/` | workspace | changed |
 | `docs/specs/SPEC-120-the-collection-atlas-is-a-series-refreshed-from-changed-cards-after-each-sync-and-the-agent-reads-it-in-pages.md` | docs | moved from `docs/specs/planned/` |
 | `docs/red-first/SPEC-120.md` | docs | added |
+| `docs/schematics/collection-atlas-refresh.md` | docs | added by the W6 architect turn; this delivery corrects it only where the code proves it wrong |
 | `changelog.d/` fragment | repo | added |
 
 ## 5. What this does NOT do

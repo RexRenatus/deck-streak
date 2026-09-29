@@ -126,7 +126,7 @@ R16. CHARTER 10's eleven anti-goals bind this SPEC as one block; the ones it tou
 | A9 | an empty section holds its line, never nothing | `an_empty_daily_section_says_nothing_new` |
 | A10 | an existing daily note is skipped and nothing is written | `an_existing_daily_note_is_left_alone` |
 | A11 | the synthesis runs on a Sunday only, once per week | `the_synthesis_runs_once_on_sunday` |
-| A12 | the synthesis inputs are the week's notes, at most 30, never a journal note or a journal capture | `the_synthesis_never_reads_the_journal` |
+| A12 | the synthesis' task receives exactly the readings of the week's study days, the drills graded in the week and the captures filed in the week, newest first, at most 30 notes of at most 4000 characters each, plus the template; a journal note or a journal capture is never among them | `the_synthesis_receives_exactly_the_weeks_notes` |
 | A13 | an uncited claim, a one-note connection or a source outside the inputs is withheld | `an_uncited_synthesis_is_withheld` |
 | A14 | a red class from the executor discards the run and leaves the vault byte for byte | `a_red_gate_leaves_the_vault_untouched` |
 | A15 | with the route absent the curator and the synthesis write nothing and the daily note is written | `with_no_ai_route_only_the_daily_note_is_written` |
@@ -143,7 +143,7 @@ A8: cargo test -p deck-streak-vault --test periodic -- --exact the_daily_note_li
 A9: cargo test -p deck-streak-vault --test periodic -- --exact an_empty_daily_section_says_nothing_new
 A10: cargo test -p deck-streak-coordination --test vault_duties -- --exact an_existing_daily_note_is_left_alone
 A11: cargo test -p deck-streak-coordination --test vault_duties -- --exact the_synthesis_runs_once_on_sunday
-A12: cargo test -p deck-streak-coordination --test vault_duties -- --exact the_synthesis_never_reads_the_journal
+A12: cargo test -p deck-streak-coordination --test vault_duties -- --exact the_synthesis_receives_exactly_the_weeks_notes
 A13: cargo test -p deck-streak-agent --test vault_duties -- --exact an_uncited_synthesis_is_withheld
 A14: cargo test -p deck-streak-coordination --test vault_duties -- --exact a_red_gate_leaves_the_vault_untouched
 A15: cargo test -p deck-streak-coordination --test vault_duties -- --exact with_no_ai_route_only_the_daily_note_is_written
@@ -239,7 +239,7 @@ None: the filing's record is a column of SPEC-118's `inbox_captures` (R5).
 | `S11606-EMPTY-SECTION` | `crates/vault/src/periodic.rs` | an empty section holds its line | `periodic::an_empty_daily_section_says_nothing_new` |
 | `S11607-DAILY-ONCE` | `crates/coordination/src/vault_duties.rs` | an existing daily note is skipped | `vault_duties::an_existing_daily_note_is_left_alone` |
 | `S11608-SUNDAY` | `crates/coordination/src/vault_duties.rs` | the synthesis runs on a Sunday; the test names Saturday and Sunday | `vault_duties::the_synthesis_runs_once_on_sunday` |
-| `S11609-SOURCES-CAP` | `crates/coordination/src/vault_duties.rs` | at most 30 notes; the test holds 31 | `vault_duties::the_synthesis_never_reads_the_journal` |
+| `S11609-SOURCES-CAP` | `crates/coordination/src/vault_duties.rs` | at most 30 notes; the test holds 31 | `vault_duties::the_synthesis_receives_exactly_the_weeks_notes` |
 | `S11610-CLAIM-CITES` | `crates/agent/src/vault_duties.rs` | an uncited claim is withheld | `vault_duties::an_uncited_synthesis_is_withheld` |
 | `S11611-CONNECTION-TWO` | `crates/agent/src/vault_duties.rs` | a connection links two notes | `vault_duties::an_uncited_synthesis_is_withheld` |
 | `S11612-RED-DISCARDS` | `crates/coordination/src/vault_duties.rs` | a red class writes nothing | `vault_duties::a_red_gate_leaves_the_vault_untouched` |

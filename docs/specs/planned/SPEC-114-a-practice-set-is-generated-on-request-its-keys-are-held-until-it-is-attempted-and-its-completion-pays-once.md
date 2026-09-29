@@ -95,7 +95,7 @@ R13. CHARTER 10's eleven anti-goals bind this SPEC as one block; the ones it tou
 | A1 | with the route absent `/practice` answers not enabled and launches nothing | `with_no_ai_route_practice_answers_not_enabled` |
 | A2 | with the route absent a stored set is still completed and paid | `with_no_ai_route_a_stored_set_still_pays` |
 | A3 | an unknown section or subject is refused with no run | `an_unknown_section_is_refused` |
-| A4 | the task receives exactly its inputs, memory only for a bar set | `the_practice_task_receives_exactly_its_inputs` |
+| A4 | the task receives exactly the persona, the duty, the set kind, the section or subject and the time multiplier, and the subject's memory only for a bar set | `the_practice_task_receives_exactly_its_inputs` |
 | A5 | an item with a key outside its choices, a repeated id, or four LSAT choices is withheld | `a_set_with_a_bad_item_is_withheld` |
 | A6 | an `official` item is withheld | `an_official_item_is_withheld` |
 | A7 | a set of 26 items is accepted and one of 27, or of none, is withheld | `a_set_outside_its_item_bounds_is_withheld` |

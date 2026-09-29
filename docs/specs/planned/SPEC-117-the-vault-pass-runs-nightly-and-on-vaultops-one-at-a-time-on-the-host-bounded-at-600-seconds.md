@@ -112,7 +112,7 @@ R12. CHARTER 10's eleven anti-goals bind this SPEC as one block; the ones it tou
 | A10 | with the route absent a pass completes and writes the daily note | `a_pass_with_no_ai_route_completes` |
 | A11 | `/vaultops` replies with the placeholder and edits it once to each outcome's line, equal to the golden's | `vaultops_edits_its_placeholder_to_the_outcome` |
 | A12 | `/vaultops` from anyone but the owner runs nothing | `vaultops_from_anyone_but_the_owner_runs_nothing` |
-| A13 | text after `/vaultops` never reaches the pass | `vaultops_passes_no_text_to_the_pass` |
+| A13 | text after `/vaultops` never reaches the pass, whose inputs are exactly the trigger `on_demand` and the study day | `vaultops_passes_no_text_to_the_pass` |
 | A14 | `/vaultops` while a pass runs answers that one is running | `vaultops_while_a_pass_runs_says_so` |
 | A15 | a failed pass's edit is exactly the failed line, with no text of the error | `a_failed_vaultops_reply_carries_no_diagnostic` |
 | A16 | `/vaultops` inside quiet hours is answered | `vaultops_answers_inside_quiet_hours` |

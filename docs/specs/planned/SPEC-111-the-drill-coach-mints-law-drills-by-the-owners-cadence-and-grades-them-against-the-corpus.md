@@ -128,6 +128,8 @@ R16. CHARTER 10's eleven anti-goals bind this SPEC as one block; the ones it tou
 | A16 | `drill_mints` is exported and erased | `the_mint_table_is_exported_and_erased` |
 | A17 | the job table holds `drill_coach` off every reserved minute | `the_job_table_holds_the_drill_coach` |
 | A18 | an imported note with `created` keeps its age, and a minted one takes its mint row's | `a_minted_drill_takes_its_age_from_its_row` |
+| A19 | the mint's task receives exactly the subject's law professor persona, `drill-coach.duty.md`, the subject's `drill-grades` and `leeches` memory and the drill code, in SPEC-043 R9's order | `the_mint_task_receives_exactly_its_inputs` |
+| A20 | the grade's task receives exactly the drill's note and the owner's answer, fenced as `vault`, and the held `rule` section as `duty` | `the_grade_task_receives_exactly_its_inputs` |
 
 ```acceptance
 A1: cargo test -p deck-streak-agent --test drill_coach -- --exact the_drill_coach_declines_before_its_runner_with_the_route_absent
@@ -148,6 +150,8 @@ A15: cargo test -p deck-streak-agent --test drill_coach -- --exact the_mint_read
 A16: cargo test -p deck-streak-vault --test drill_store -- --exact the_mint_table_is_exported_and_erased
 A17: cargo test -p deck-streak-coordination --test job_table -- --exact the_job_table_holds_the_drill_coach
 A18: cargo test -p deck-streak-vault --test drill_goldens -- --exact a_minted_drill_takes_its_age_from_its_row
+A19: cargo test -p deck-streak-agent --test drill_coach -- --exact the_mint_task_receives_exactly_its_inputs
+A20: cargo test -p deck-streak-agent --test drill_coach -- --exact the_grade_task_receives_exactly_its_inputs
 ```
 
 ## 3a. What the box run judges
@@ -174,7 +178,7 @@ does not change when it merges.
 |---|---|---|
 | `crates/agent/src/drill_coach.rs` | `deck-streak-agent` | added: the plan, the two tasks, the grade's acceptance and its XP mapping |
 | `crates/agent/src/lib.rs` | `deck-streak-agent` | changed: the module |
-| `crates/agent/tests/drill_coach.rs` | `deck-streak-agent` | added: A1, A3, A4, A7, A10, A11, A15 |
+| `crates/agent/tests/drill_coach.rs` | `deck-streak-agent` | added: A1, A3, A4, A7, A10, A11, A15, A19, A20 |
 | `agent/duties/drill-coach.duty.md` | agent (public) | added: study-duties' template, copied |
 | `agent/prompts/drill-mint.prompt.md`, `agent/prompts/drill-grade.prompt.md` | agent (public) | added: the task prompts with their fenced slots |
 | `agent/golden/drill-coach/` | agent (public) | added: golden mints, grades and staged runs, synthetic |

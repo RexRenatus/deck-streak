@@ -225,6 +225,7 @@ R23. **The chart resources.** Each name of SPEC-085 R6's closed set is a resourc
 | A36 | the drill reference equals its golden | `the_drill_ref_matches_the_golden` |
 | A37 | the resources are exactly SPEC-085 R6's names as `charts://<name>`, each `application/json` with the route's payload, and an unknown name is a resource error | `each_chart_resource_answers_its_series` |
 | A38 | `deckstreakd mcp` is a role, not refused as an unknown one | `the_mcp_role_is_a_known_role` |
+| A39 | with the scripted loader answering `Missing` for `mcp-core-token`, a token-shaped value in the process environment, on the command line and in a file of the working directory still refuses start by its id | `the_role_reads_its_tokens_only_through_the_loader` |
 
 ```acceptance
 A1: cargo test -p deck-streak-mcp --test settings -- --exact the_listen_address_must_be_loopback
@@ -265,6 +266,7 @@ A35: cargo test -p deck-streak-mcp --test drills -- --exact an_unsafe_or_unknown
 A36: cargo test -p deck-streak-mcp --test drills -- --exact the_drill_ref_matches_the_golden
 A37: cargo test -p deck-streak-mcp --test resources -- --exact each_chart_resource_answers_its_series
 A38: cargo test -p deck-streak-daemon --test roles -- --exact the_mcp_role_is_a_known_role
+A39: cargo test -p deck-streak-mcp --test settings -- --exact the_role_reads_its_tokens_only_through_the_loader
 ```
 
 ## 3a. What the box run judges
@@ -295,7 +297,7 @@ not change when it merges.
 | `crates/mcp/src/tools.rs` | `deck-streak-mcp` | added: the roster, the scopes, the clamps, the writers, export, erase and the sync |
 | `crates/mcp/src/drills.rs` | `deck-streak-mcp` | added: the drill tools, their caps and reference |
 | `crates/mcp/src/resources.rs` | `deck-streak-mcp` | added: the chart resources |
-| `crates/mcp/tests/settings.rs` | `deck-streak-mcp` | added: A1 to A8 |
+| `crates/mcp/tests/settings.rs` | `deck-streak-mcp` | added: A1 to A8, A39 |
 | `crates/mcp/tests/guard.rs` | `deck-streak-mcp` | added: A9 to A15 |
 | `crates/mcp/tests/guard_census.rs` | `deck-streak-mcp` | added: A16 |
 | `crates/mcp/tests/limiter.rs` | `deck-streak-mcp` | added: A17 to A21 |

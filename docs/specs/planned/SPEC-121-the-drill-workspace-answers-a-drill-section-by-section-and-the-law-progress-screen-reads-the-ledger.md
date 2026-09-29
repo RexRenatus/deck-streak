@@ -189,6 +189,7 @@ delivery changes no pack's state, so the private wiring does not change when it 
 | `scripts/mutation-rows.d/S12100-S12199.json` | repo | added: the rows of §9 |
 | `docs/specs/SPEC-121-the-drill-workspace-answers-a-drill-section-by-section-and-the-law-progress-screen-reads-the-ledger.md` | docs | moved from `docs/specs/planned/` |
 | `docs/red-first/SPEC-121.md` | docs | added |
+| `docs/schematics/law-drill-answer-grade-and-pay.md` | docs | added by the W6 architect turn; this delivery corrects it only where the code proves it wrong |
 | `changelog.d/` fragment | repo | added |
 
 ## 5. What this does NOT do

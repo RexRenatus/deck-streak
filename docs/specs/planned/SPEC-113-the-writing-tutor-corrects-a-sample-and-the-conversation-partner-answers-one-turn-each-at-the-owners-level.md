@@ -106,11 +106,11 @@ R16. CHARTER 10's eleven anti-goals bind this SPEC as one block; the ones it tou
 | A1 | with the route absent the tutor answers not enabled, launches nothing, and still confirms the habit | `with_no_ai_route_a_sample_still_counts_for_the_habit` |
 | A2 | a sample confirms the day's writing once, before the run, whatever the verdict | `a_sample_confirms_the_writing_habit_once` |
 | A3 | a course that is not a writing course, an empty sample and one over 2000 characters are refused with no run | `a_sample_outside_its_bounds_is_refused` |
-| A4 | the tutor's task receives exactly its four inputs | `the_tutor_receives_exactly_its_inputs` |
+| A4 | the tutor's task receives exactly the course's persona, its duty, the band and the sample | `the_tutor_receives_exactly_its_inputs` |
 | A5 | an answer with four distinct categories is withheld, and three are accepted | `corrections_over_three_categories_are_withheld` |
 | A6 | a correction item off the pack's shape, or no next step, is withheld | `a_malformed_correction_is_withheld` |
 | A7 | with the route absent the partner answers not enabled and stores nothing | `with_no_ai_route_the_partner_stores_no_turn` |
-| A8 | the partner's task receives the band, at most the 12 last turns of the day, and the new turn | `the_partner_receives_at_most_twelve_turns` |
+| A8 | the partner's task receives exactly the course's persona, its duty, the band, at most the 12 last turns of the day and the new turn | `the_partner_receives_at_most_twelve_turns` |
 | A9 | a turn of a new study day deletes every earlier day's turns in the same write | `a_new_day_clears_the_conversation` |
 | A10 | a withheld reply stores neither the owner's turn nor the reply | `a_withheld_reply_stores_no_turn` |
 | A11 | the bot's placeholder is replaced by one edit with the answer | `the_placeholder_is_edited_with_the_answer` |

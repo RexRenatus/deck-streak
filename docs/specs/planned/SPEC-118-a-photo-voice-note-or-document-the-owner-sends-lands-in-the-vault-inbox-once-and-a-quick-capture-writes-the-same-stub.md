@@ -192,16 +192,19 @@ the files it adds under packs that are already enforced.
 | `crates/vault/tests/inbox_capture.rs` | `deck-streak-vault` | added: A1 to A4, A19 |
 | `crates/vault/tests/atomic.rs` | `deck-streak-vault` | changed: A5, A6 |
 | `migrations/011801_vault_inbox_captures.sql` | `deck-streak-vault` | added |
-| `crates/coordination/src/inbox_capture.rs`, `crates/coordination/src/lib.rs` | `deck-streak-coordination` | added and changed: the one use case both surfaces call |
+| `crates/coordination/src/inbox_capture.rs` | `deck-streak-coordination` | added: the one use case both surfaces call |
+| `crates/coordination/src/lib.rs` | `deck-streak-coordination` | changed: the module |
 | `crates/coordination/src/data_rights_registry.rs` | `deck-streak-coordination` | changed: `inbox_captures` registered |
 | `crates/coordination/tests/data_rights_symmetry.rs` | `deck-streak-coordination` | changed: a seeded row |
 | `docs/CONTEXT-MAP.md` | docs | changed: `inbox_captures` in the vault's own tables |
 | `privacy.json`, `PRIVACY.md` | repo | changed: `inbox-captures` |
 | `crates/bot/src/gate.rs` | `deck-streak-bot` | changed: media admitted from the owner |
-| `crates/bot/src/capture.rs`, `crates/bot/src/lib.rs` | `deck-streak-bot` | added and changed: the choice, the extension rule, the replies |
+| `crates/bot/src/capture.rs` | `deck-streak-bot` | added: the choice, the extension rule, the replies |
+| `crates/bot/src/lib.rs` | `deck-streak-bot` | changed: the module |
 | `crates/bot/src/transport.rs` | `deck-streak-bot` | changed: `getFile` and the streamed download |
 | `crates/bot/tests/media_capture.rs` | `deck-streak-bot` | added: A7 to A14 |
-| `crates/api/src/inbox_capture_route.rs`, `crates/api/src/router.rs`, `crates/api/src/lib.rs` | `deck-streak-api` | added and changed: the quick capture |
+| `crates/api/src/inbox_capture_route.rs` | `deck-streak-api` | added: the quick capture |
+| `crates/api/src/router.rs`, `crates/api/src/lib.rs` | `deck-streak-api` | changed: the route and the module |
 | `crates/api/tests/inbox_capture_route.rs` | `deck-streak-api` | added: A15 to A18 |
 | `web/app/src/routes/capture/+page.svelte` | Mini App | added |
 | `web/app/src/lib/capture/QuickCapture.svelte`, `web/app/src/lib/capture/capture.ts` | Mini App | added |

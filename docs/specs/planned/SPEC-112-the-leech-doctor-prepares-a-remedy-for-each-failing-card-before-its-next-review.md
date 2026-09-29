@@ -118,7 +118,7 @@ R17. CHARTER 10's eleven anti-goals bind this SPEC as one block; the ones it tou
 | A6 | a run prepares at most its cap | `a_run_prepares_at_most_its_cap` |
 | A7 | a remedy prepared at fewer lapses than the row holds is queued again | `a_card_that_lapsed_again_is_queued_again` |
 | A8 | a remedy whose card left the snapshot is deleted in the run's write | `a_remedy_leaves_with_its_card` |
-| A9 | the task receives exactly the five inputs of R5 | `the_task_receives_exactly_its_inputs` |
+| A9 | the task receives exactly the card's persona, the duty, the subject's memory, the card's note fields in field order and the candidates | `the_task_receives_exactly_its_inputs` |
 | A10 | the candidates are the same subject's other rows, at most 8, by lapses | `the_candidates_are_the_subjects_other_leeches` |
 | A11 | a confusable outside the candidates is withheld and nothing is stored | `a_confusable_outside_the_candidates_is_withheld` |
 | A12 | a mnemonic of 40 words is accepted and one of 41 is withheld | `a_mnemonic_over_forty_words_is_withheld` |
