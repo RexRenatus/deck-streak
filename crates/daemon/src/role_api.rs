@@ -16,7 +16,11 @@ use std::sync::Arc;
 
 use deck_streak_api::settings::LISTEN;
 use deck_streak_api::{ApiError, ApiState, ListenAddress, OwnerAccess, Readiness};
+use deck_streak_coordination::progression::law_tiers::CollectionLawTiers;
+use deck_streak_coordination::progression::level_view::LawTierSource;
 use deck_streak_identity::{Freshness, IdentityError, OwnerGate};
+use deck_streak_ingest::reader::CollectionReader;
+use deck_streak_ingest::settings::{ScopeSettings, SyncSettings};
 use deck_streak_kernel::{
     Clock, CredentialLoader, CredentialsDirectory, Environment, KernelSettings, Offload, Redactor,
     SettingsError, SystemClock,
@@ -60,12 +64,45 @@ enum Stop {
 /// The composition lives here so the daemon's own test can drive the router the role serves.
 #[must_use]
 pub fn api_state(
-    _env: &Environment,
-    _offload: &Offload,
+    env: &Environment,
+    offload: &Offload,
     readiness: Readiness,
     access: OwnerAccess,
 ) -> ApiState {
-    ApiState::new(readiness).with_owner(access)
+    let state = ApiState::new(readiness).with_owner(access);
+    match law_tier_source(env, offload) {
+        Some(source) => state.with_law_tiers(source),
+        None => state,
+    }
+}
+
+/// The law tiers' source, when the settings name a collection copy to read and a scope to read it
+/// in. A role whose settings do not (the API can run apart from the sync) serves the view as
+/// unavailable, and says why in its log.
+fn law_tier_source(env: &Environment, offload: &Offload) -> Option<Arc<dyn LawTierSource>> {
+    let settings = match SyncSettings::from_env(env) {
+        Ok(settings) => settings,
+        Err(refusal) => {
+            tracing::warn!(%refusal, "the law tiers are unavailable: the collection is not named");
+            return None;
+        }
+    };
+    let scope = match ScopeSettings::from_env(env) {
+        Ok(scope) => scope,
+        Err(refusal) => {
+            tracing::warn!(%refusal, "the law tiers are unavailable: the read's scope refuses");
+            return None;
+        }
+    };
+    let reader = CollectionReader::new(&settings, scope, offload.clone());
+    let rule = match KernelSettings::from_env(env) {
+        Ok(kernel) => kernel.study_day_rule,
+        Err(refusal) => {
+            tracing::warn!(%refusal, "the law tiers are unavailable: the study day is unknown");
+            return None;
+        }
+    };
+    Some(Arc::new(CollectionLawTiers::new(reader, rule)))
 }
 
 /// Runs the `api` role until SIGTERM (or SIGINT), and returns once every request in flight has

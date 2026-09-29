@@ -198,7 +198,7 @@ async fn a_sync_cycle_announces_a_level_reached_once() {
     );
     assert_eq!(
         bot.pushes(),
-        [line.clone()],
+        std::slice::from_ref(&line),
         "one line, for the level reached"
     );
 

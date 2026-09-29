@@ -173,14 +173,17 @@ const fn slot(tier: Option<Tier>) -> usize {
 }
 
 /// The router the `api` role serves, over a seeded copy, for the synthetic owner and bot.
-async fn composed(scratch: &TempDir) -> Router {
+async fn composed(scratch: &TempDir, law_root: Option<&str>) -> Router {
     let state = scratch.path().join("state");
     std::fs::create_dir_all(&state).expect("a state directory");
-    let env = Environment::from_vars([
+    let mut variables = vec![
         (SYNC_ENDPOINT, OsStr::new("http://127.0.0.1:9/")),
         (STATE_DIRECTORY, state.as_os_str()),
-        (LAW_DECK_ROOT, OsStr::new(LAW_ROOT)),
-    ]);
+    ];
+    if let Some(root) = &law_root {
+        variables.push((LAW_DECK_ROOT, OsStr::new(root)));
+    }
+    let env = Environment::from_vars(variables);
     let settings = SyncSettings::from_env(&env).expect("the settings");
     RslibEngine
         .new_card_queue(&settings.copy_path())
@@ -254,7 +257,7 @@ async fn handshake(app: &Router, init_data: &str) -> Answer {
 #[tokio::test]
 async fn the_composed_router_serves_the_law_tiers_to_the_owner_alone() {
     let scratch = tempfile::tempdir().expect("a temporary directory");
-    let app = composed(&scratch).await;
+    let app = composed(&scratch, Some(LAW_ROOT)).await;
 
     let mut cards = [0_u64; 5];
     for (_, _, tier) in CARDS {
@@ -321,5 +324,38 @@ async fn the_composed_router_serves_the_law_tiers_to_the_owner_alone() {
         body,
         json!({"cards": named(cards), "xp_today": named(xp)}),
         "the seeded counts and the seeded XP"
+    );
+}
+
+#[tokio::test]
+async fn a_collection_with_no_law_root_has_no_law_cards_and_no_law_xp() {
+    let scratch = tempfile::tempdir().expect("a temporary directory");
+    let app = composed(&scratch, None).await;
+    let opened = handshake(&app, OWNER_PAYLOAD).await;
+    let cookie = opened
+        .headers
+        .get(SET_COOKIE)
+        .expect("a Set-Cookie")
+        .to_str()
+        .expect("text")
+        .split(';')
+        .next()
+        .expect("a name and value")
+        .to_owned();
+    let answer = send(
+        &app,
+        "GET",
+        LAW_TIERS_PATH,
+        &[("cookie", &cookie)],
+        String::new(),
+    )
+    .await;
+    assert_eq!(answer.status, StatusCode::OK, "{}", answer.body);
+    let body: Value = serde_json::from_str(&answer.body).expect("a JSON body");
+    let zeros = json!({"T1": 0, "T2": 0, "T3": 0, "T4": 0, "none": 0});
+    assert_eq!(
+        body,
+        json!({"cards": zeros, "xp_today": zeros}),
+        "every seeded card is a language card, so none is a law card and none earned law XP"
     );
 }
