@@ -376,6 +376,10 @@ def alert_template_refusals(path):
         for value in every(key):
             if value not in known:
                 refuse(f"{key}={value} {UNREAD}")
+    pairs = [(at, named) for at, named, _, _ in read]
+    for (at, named, value, _), off in zip(read, _units.off_list(pairs, _units.ALERT_KEYS), strict=True):
+        if off:
+            refuse(f"[{at}] {named}={value} {OFF_LIST}")
     return refused
 
 
@@ -594,6 +598,11 @@ class AnEmptyCredentialFailsTheAlertUnit(unittest.TestCase):
         # Description=, or its ExecStart= given the `-` prefix, each refused for what it breaks.
         (start,) = values(template, "Service", "ExecStart")
         name = ALERT_TEMPLATE
+
+        def off(section, *assigned):
+            # The lines a key off the alert's list adds, each after the refusals of what it breaks.
+            return [f"{name}: [{section}] {a} {OFF_LIST}" for a in assigned]
+
         plants = [
             ("ExecStart=", f"ExecStart=-{start}", False, f"ExecStart=-{start} {COUNTS_A_FAILURE}"),
             ("ExecStart=", "ExecStart=/bin/true", True, f"2 ExecStart= lines, {ONE_START}"),
@@ -610,10 +619,20 @@ class AnEmptyCredentialFailsTheAlertUnit(unittest.TestCase):
             ),
             ("Description=", f"OnFailure={ON_FAILURE}", True, f"OnFailure={ON_FAILURE} {PAGES}"),
         ]
+        off_planted = {
+            "ExecCondition=/bin/true": ("Service", "ExecCondition=/bin/true"),
+            "SuccessExitStatus=2": ("Service", "SuccessExitStatus=2"),
+            "RestartForceExitStatus=2": ("Service", "RestartForceExitStatus=2"),
+            "RestartMode=direct": ("Service", "RestartMode=direct"),
+            "Restart=on-failure": ("Service", "Restart=on-failure"),
+            "CollectMode=inactive-or-failed": ("Unit", "CollectMode=inactive-or-failed"),
+            f"OnFailure={ON_FAILURE}": ("Unit", f"OnFailure={ON_FAILURE}"),
+        }
         for anchor, line, keep, refusal in examined("planted alert template(s)", plants):
             with tempfile.TemporaryDirectory() as scratch:
                 path = planted_template(Path(scratch), anchor, line, keep)
-                self.assertEqual(alert_template_refusals(path), [f"{name}: {refusal}"], line)
+                extra = off(*off_planted[line]) if line in off_planted else []
+                self.assertEqual(alert_template_refusals(path), [f"{name}: {refusal}"] + extra, line)
         # A reset or an unknown value of Restart=, RestartMode= or CollectMode= is refused beside
         # what it follows (SPEC-066 R3).
         unread = "is empty or not a known value, which the check refuses"
@@ -622,24 +641,34 @@ class AnEmptyCredentialFailsTheAlertUnit(unittest.TestCase):
                 "ExecStart=",
                 "Restart=on-failure\nRestartSec=1d\nRestart=",
                 [f"Restart=on-failure {RESTARTS}", f"Restart= {unread}"],
+                off("Service", "Restart=on-failure", "RestartSec=1d", "Restart="),
             ),
             (
                 "ExecStart=",
                 "RestartMode=direct\nRestartMode=",
                 [f"RestartMode=direct {DIRECT}", f"RestartMode= {unread}"],
+                off("Service", "RestartMode=direct", "RestartMode="),
             ),
             (
                 "Description=",
                 "CollectMode=inactive-or-failed\nCollectMode=",
                 [f"CollectMode=inactive-or-failed {UNLOADS}", f"CollectMode= {unread}"],
+                off("Unit", "CollectMode=inactive-or-failed", "CollectMode="),
             ),
-            ("ExecStart=", "Restart=On-Failure", [f"Restart=On-Failure {unread}"]),
+            (
+                "ExecStart=",
+                "Restart=On-Failure",
+                [f"Restart=On-Failure {unread}"],
+                off("Service", "Restart=On-Failure"),
+            ),
         ]
-        for anchor, line, refusals in examined("planted alert template(s) with a reset", reset):
+        for anchor, line, refusals, extra in examined(
+            "planted alert template(s) with a reset", reset
+        ):
             with tempfile.TemporaryDirectory() as scratch:
                 path = planted_template(Path(scratch), anchor, line, True)
                 self.assertEqual(
-                    alert_template_refusals(path), [f"{name}: {r}" for r in refusals], line
+                    alert_template_refusals(path), [f"{name}: {r}" for r in refusals] + extra, line
                 )
         # Every [Unit] condition and assertion is refused, an empty one included (SPEC-066 R3).
         stops = (
@@ -647,18 +676,27 @@ class AnEmptyCredentialFailsTheAlertUnit(unittest.TestCase):
             "leave the instance inactive, not failed"
         )
         stopped = [
-            ("ConditionPathExists=/nonexistent", [f"ConditionPathExists=/nonexistent {stops}"]),
-            ("AssertPathExists=/nonexistent", [f"AssertPathExists=/nonexistent {stops}"]),
+            (
+                "ConditionPathExists=/nonexistent",
+                [f"ConditionPathExists=/nonexistent {stops}"],
+                off("Unit", "ConditionPathExists=/nonexistent"),
+            ),
+            (
+                "AssertPathExists=/nonexistent",
+                [f"AssertPathExists=/nonexistent {stops}"],
+                off("Unit", "AssertPathExists=/nonexistent"),
+            ),
             (
                 "ConditionPathExists=/nonexistent\nConditionPathExists=",
                 [f"ConditionPathExists=/nonexistent {stops}", f"ConditionPathExists= {stops}"],
+                off("Unit", "ConditionPathExists=/nonexistent", "ConditionPathExists="),
             ),
         ]
-        for line, refusals in examined("planted alert template(s) with a condition", stopped):
+        for line, refusals, extra in examined("planted alert template(s) with a condition", stopped):
             with tempfile.TemporaryDirectory() as scratch:
                 path = planted_template(Path(scratch), "Description=", line, True)
                 self.assertEqual(
-                    alert_template_refusals(path), [f"{name}: {r}" for r in refusals], line
+                    alert_template_refusals(path), [f"{name}: {r}" for r in refusals] + extra, line
                 )
         # Planted lines the reader refuses, after ExecStart=, each refused whole with its line: one
         # ending in a backslash, a comment's included, and a control character other than a tab or

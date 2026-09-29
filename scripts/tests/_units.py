@@ -228,7 +228,7 @@ class Refused(AssertionError):
 def off_list(pairs, allowed):
     """For each (section, key) of `pairs`, whether it is off `allowed`, the list of a kind of unit
     (SPEC-066 R2)."""
-    return [False for _ in pairs]
+    return [key not in allowed.get(section, ()) for section, key in pairs]
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
