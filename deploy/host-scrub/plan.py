@@ -101,8 +101,10 @@ def unescape(field: str) -> str:
 
 def mounted(path: str) -> str | None:
     """The mount point `path` is or holds, or None. A bind mount shares its device with the tree
-    around it, so the device check cannot see it; the mount table can (R7). Raises OSError when the
-    table cannot be read, since an item is never judged clear of mounts without it."""
+    around it, so the device check cannot see it; the mount table can (R7). An item inside a mount
+    whose root (field 4) is not `/` is refused too: it is a bind of some other directory, whose
+    protection an operator's list would have to know. Raises OSError when the table cannot be read,
+    since an item is never judged clear of mounts without it."""
     for row in read_mountinfo().splitlines():
         fields = row.split()
         if len(fields) < 5:
@@ -112,7 +114,18 @@ def mounted(path: str) -> str | None:
             return point
         if point.startswith(path.rstrip("/") + "/"):
             return point
+        if unescape(fields[3]) != "/" and path.startswith(point.rstrip("/") + "/"):
+            return point
     return None
+
+
+def mount_reason(path: str, point: str) -> str:
+    """Why `path` may not be judged against the mount point `point`. A mount point shorter than the
+    path can only lie above it, and a mount above an item whose root is not `/` shows another
+    directory of the disk at that place, so the item's own path is not where it lives (R7)."""
+    if len(point) < len(path):
+        return f"lies inside the bind mount {point}"
+    return f"is or holds the mount point {point}"
 
 
 def names(text: str, path: str) -> bool:
@@ -252,7 +265,7 @@ def items_of(chosen: list[dict], skipped: list[dict]) -> list[dict]:
                 skipped.append({"path": path, "reason": f"the mount table cannot be read: {error}"})
                 continue
             if point is not None:
-                skipped.append({"path": path, "reason": f"is or holds the mount point {point}"})
+                skipped.append({"path": path, "reason": mount_reason(path, point)})
                 continue
             try:
                 digest, inodes = measure(path)

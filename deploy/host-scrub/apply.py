@@ -19,7 +19,8 @@ first failure, naming the item and the reason:
   deletes;
 - no approved item lies under a protected path of RULES, or holds one, whatever the approval says;
 - no approved item is reached through a symbolic link;
-- no approved item is, or holds, a mount point of the kernel's mount table;
+- no approved item is, holds or lies inside a mount point of the kernel's mount table (inside
+  only when the mount's root is not `/`);
 - each approved item's digest, computed again now, equals the listed one;
 - each approved package would be removed alone (`dpkg --dry-run --remove`), since `dpkg` refuses
   a removal another installed package depends on, where `apt-get` would remove that one too.
@@ -67,7 +68,7 @@ from inventory import (
     parse_packages,
     read_health,
 )
-from plan import conflict, list_digest, measure, mounted, package_digest
+from plan import conflict, list_digest, measure, mount_reason, mounted, package_digest
 
 SCHEMA = "deck-streak-host-scrub-apply/1"
 #: Each directory on the way to an item is opened without following a symbolic link (R7).
@@ -200,7 +201,7 @@ def check_item(item: dict, protected: list[str], runner: Runner) -> tuple | None
     except OSError as error:
         raise Refusal(f"the mount table cannot be read: {error}", item) from error
     if point is not None:
-        raise Refusal(f"is or holds the mount point {point}", item)
+        raise Refusal(mount_reason(path, point), item)
     if not os.path.lexists(path):
         raise Refusal("is gone since the list was made", item)
     st = os.lstat(path)
