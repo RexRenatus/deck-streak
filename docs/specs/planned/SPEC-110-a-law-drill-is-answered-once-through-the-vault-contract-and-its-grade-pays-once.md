@@ -68,7 +68,12 @@ R2. The list, the unanswered list and the single view equal `goldens/drill_meta.
     `read_active_drill`): the id, the type (`_drill_type`), the subject, the title, the age in study
     days, answered and deferred; the single view adds the prompt and the sanitised deferral reason
     (`goldens/drill_defer_reason.json`, `_sanitise_defer_reason`), which no list shows. A note that
-    cannot be read is left out and logged by its error's type, never by its path.
+    cannot be read is left out and logged by its error's type, never by its path. For the drill
+    workspace (#55, SPEC-121) the single view also carries `sections`, the note's `## ` headings
+    after the prompt's cut in note order, leaving out `## Self-Check` and every heading after the
+    Ready marker, and `self_check`, the text of each checklist line under `## Self-Check` other
+    than the Ready marker. The predecessor's view carried neither, so A24 proves them, not the
+    golden.
 R3. The queue equals `goldens/drill_queue.json` (`nudges.py:NudgesLayer.drill_queue`): unanswered,
     awaiting grading, and deferred among the answered. The rollup equals `goldens/drill_rollup.json`
     (`vault_bridge.py:_active_drill_rollup`): active, awaiting grading, the oldest age, unmatched
@@ -173,6 +178,7 @@ R19. CHARTER 10's eleven anti-goals bind this SPEC as one block; the one it touc
 | A21 | every drill constant equals `goldens/drills.constants.json` | `the_drill_constants_equal_the_predecessors` |
 | A22 | a drill that has an answer row is `already_answered` even when its note's marker is unticked | `an_answer_row_refuses_an_unticked_note` |
 | A23 | the grade row refuses an XP of 9 and of 26, and takes 10 and 25 | `the_grade_row_refuses_xp_outside_its_band` |
+| A24 | the single view's `sections` and `self_check` are the note's, in order, for a note of each of the four shapes and one with no answer heading (both empty) | `the_single_view_carries_the_answer_sections_and_the_self_check` |
 
 ```acceptance
 A1: cargo test -p deck-streak-vault --test drill_goldens -- --exact the_drill_views_match_the_predecessors_golden
@@ -198,6 +204,7 @@ A20: cargo test -p deck-streak-vault --test drill_store -- --exact the_drill_tab
 A21: cargo test -p deck-streak-vault --test drill_goldens -- --exact the_drill_constants_equal_the_predecessors
 A22: cargo test -p deck-streak-vault --test drill_answer -- --exact an_answer_row_refuses_an_unticked_note
 A23: cargo test -p deck-streak-vault --test drill_store -- --exact the_grade_row_refuses_xp_outside_its_band
+A24: cargo test -p deck-streak-vault --test drill_goldens -- --exact the_single_view_carries_the_answer_sections_and_the_self_check
 ```
 
 ## 3a. What the box run judges
@@ -223,7 +230,7 @@ when it merges.
 | `crates/vault/src/data_rights.rs` | `deck-streak-vault` | added: the vault's data-rights port |
 | `crates/vault/src/lib.rs` | `deck-streak-vault` | changed: the modules |
 | `crates/vault/Cargo.toml` | `deck-streak-vault` | changed: the workspace dependencies the store uses |
-| `crates/vault/tests/drill_goldens.rs` | `deck-streak-vault` | added: A1 to A3, A8, A11, A21 |
+| `crates/vault/tests/drill_goldens.rs` | `deck-streak-vault` | added: A1 to A3, A8, A11, A21, A24 |
 | `crates/vault/tests/drill_answer.rs` | `deck-streak-vault` | added: A4, A5, A7, A22 |
 | `crates/vault/tests/drill_store.rs` | `deck-streak-vault` | added: A20, A23 |
 | `crates/vault/tests/fixtures/drills/` | `deck-streak-vault` | added: synthetic drill notes |
