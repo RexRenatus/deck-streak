@@ -7,7 +7,7 @@
 use deck_streak_kernel::{KernelError, StudyDay, UtcMillis};
 use sqlx::SqliteConnection;
 
-use crate::freeze::FreezeEvent;
+use crate::freeze::{FreezeEvent, FreezeReason};
 use crate::streak::StreakState;
 
 /// The governor's one row.
@@ -167,4 +167,107 @@ pub async fn put_governor(
     .execute(&mut *connection)
     .await?;
     Ok(())
+}
+
+/// The stored streak of `track` (`language` or `law`), when the fold has written one.
+///
+/// # Errors
+///
+/// [`KernelError`] when the read fails.
+pub async fn state(
+    connection: &mut SqliteConnection,
+    track: &str,
+) -> Result<Option<StreakState>, KernelError> {
+    let row = sqlx::query!(
+        "SELECT current_days, longest_days, freezes, last_study_day, comeback_armed
+         FROM streak_state WHERE track = ?1",
+        track
+    )
+    .fetch_optional(&mut *connection)
+    .await?;
+    Ok(row.map(|row| StreakState {
+        current: u32::try_from(row.current_days).unwrap_or(0),
+        longest: u32::try_from(row.longest_days).unwrap_or(0),
+        freezes: u32::try_from(row.freezes).unwrap_or(0),
+        last_study_day: row.last_study_day.map(StudyDay::from_epoch_day),
+        comeback_armed: row.comeback_armed != 0,
+    }))
+}
+
+/// Every freeze event, oldest first.
+///
+/// # Errors
+///
+/// [`KernelError`] when the read fails.
+pub async fn events(connection: &mut SqliteConnection) -> Result<Vec<FreezeEvent>, KernelError> {
+    let rows = sqlx::query!("SELECT study_day, delta, reason FROM freeze_events ORDER BY id")
+        .fetch_all(&mut *connection)
+        .await?;
+    Ok(rows
+        .into_iter()
+        .filter_map(|row| {
+            Some(FreezeEvent {
+                day: StudyDay::from_epoch_day(row.study_day),
+                delta: i32::try_from(row.delta).ok()?,
+                reason: FreezeReason::parse(&row.reason)?,
+            })
+        })
+        .collect())
+}
+
+/// The net freezes the outside sources paid (a shop purchase, a chest, the weekly quest, a season
+/// node): what the fold's own replay cannot know, and adds back to the language row.
+///
+/// # Errors
+///
+/// [`KernelError`] when the read fails.
+pub async fn external_freezes(connection: &mut SqliteConnection) -> Result<i64, KernelError> {
+    let row = sqlx::query!(
+        "SELECT COALESCE(SUM(delta), 0) AS \"net!: i64\" FROM freeze_events
+         WHERE reason IN ('chest', 'weekly_quest', 'season', 'shop')"
+    )
+    .fetch_one(&mut *connection)
+    .await?;
+    Ok(row.net)
+}
+
+/// The strength of the latest day the fold stored, when it has stored one.
+///
+/// # Errors
+///
+/// [`KernelError`] when the read fails.
+pub async fn latest_strength(
+    connection: &mut SqliteConnection,
+) -> Result<Option<f64>, KernelError> {
+    let row = sqlx::query!("SELECT strength FROM habit_strength ORDER BY study_day DESC LIMIT 1")
+        .fetch_optional(&mut *connection)
+        .await?;
+    Ok(row.map(|row| row.strength))
+}
+
+/// Adds one freeze to the language row and its event, in the caller's write (R7).
+///
+/// # Errors
+///
+/// [`KernelError`] when a statement fails.
+pub async fn add_freeze(
+    connection: &mut SqliteConnection,
+    day: StudyDay,
+    reason: FreezeReason,
+    at: UtcMillis,
+) -> Result<(), KernelError> {
+    let held = state(connection, "language")
+        .await?
+        .unwrap_or_else(StreakState::start);
+    let raised = StreakState {
+        freezes: held.freezes + 1,
+        ..held
+    };
+    upsert_state(connection, "language", &raised, at).await?;
+    let event = FreezeEvent {
+        day,
+        delta: 1,
+        reason,
+    };
+    insert_events(connection, &[event], at).await
 }

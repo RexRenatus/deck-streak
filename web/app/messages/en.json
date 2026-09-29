@@ -43,5 +43,16 @@
   "ladder_region": "Celebrations",
   "ladder_opening": "Opening…",
   "ladder_dice": "A dice roll",
-  "ladder_dismiss": "Dismiss"
+  "ladder_dismiss": "Dismiss",
+  "streak_title": "Your streaks",
+  "streak_language": "Language",
+  "streak_law": "Law",
+  "streak_days": "{days} days",
+  "streak_best": "Best {days}",
+  "streak_freezes": "{count} of {cap} freezes held",
+  "streak_at_stake_freeze": "A freeze covers one missed day.",
+  "streak_at_stake_break": "Studying today keeps this streak going.",
+  "governor_armed": "Armed: your habit is strong.",
+  "governor_standby": "Standby: your habit strength is below the arming level.",
+  "governor_lapse": "Lapse: {count} reviews on one day relight it."
 }

@@ -26,6 +26,7 @@ use std::sync::Arc;
 use deck_streak_coordination::data_rights_registry::{erase_all, export_all};
 use deck_streak_coordination::progression::level_view::level_view;
 use deck_streak_coordination::score::day_score;
+use deck_streak_coordination::streak_views::streak_view;
 use deck_streak_identity::Owner;
 use deck_streak_kernel::{Clock, Db, Environment, Setting, SettingsError, StudyDayRule};
 use deck_streak_notifications::owner_message;
@@ -33,6 +34,7 @@ use frankenstein::types::{BotCommand, InlineKeyboardButton, InlineKeyboardMarkup
 
 use crate::gate::{self, Admission, OwnerCallback, OwnerMessage};
 use crate::score_commands::{score_failed_reply, score_reply};
+use crate::streak_commands::{streak_failed_reply, streak_reply};
 use crate::transport::{Incoming, Sent, Transport, escape_attribute, escape_html};
 use crate::xp_commands::{level_failed_reply, level_reply};
 
@@ -58,7 +60,7 @@ pub struct MenuEntry {
 }
 
 /// The owner's menu, in the order the menu shows it.
-pub const MENU: [MenuEntry; 6] = [
+pub const MENU: [MenuEntry; 7] = [
     MenuEntry {
         command: "score",
         description: "Show today's score",
@@ -66,6 +68,10 @@ pub const MENU: [MenuEntry; 6] = [
     MenuEntry {
         command: "level",
         description: "Show your level and XP",
+    },
+    MenuEntry {
+        command: "streak",
+        description: "Show your streaks",
     },
     MenuEntry {
         command: "sync",
@@ -214,6 +220,7 @@ fn command_lines() -> String {
     [
         "/score shows today's score",
         "/level shows your level and XP",
+        "/streak shows your streaks",
         "/sync syncs your collection now",
         "/export sends you a copy of your data",
         "/delete erases your data",
@@ -604,8 +611,15 @@ impl<S: OwnerSync> Commands<S> {
 
     /// `/streak`: both tracks, the law track first when it has activity (SPEC-076 R22).
     async fn streak(&self) {
-        self.send(Reply::text("Streaks are not built yet.".to_owned()))
-            .await;
+        let today = self.rule.study_day(self.clock.now());
+        let reply = match streak_view(&self.db, today).await {
+            Ok(view) => streak_reply(&view),
+            Err(error) => {
+                tracing::error!(%error, "the owner's streaks could not be read");
+                streak_failed_reply()
+            }
+        };
+        self.send(reply).await;
     }
 
     /// Sends `reply` to the owner. A reply that gives up is logged by the transport, with its

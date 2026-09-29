@@ -17,6 +17,7 @@ use deck_streak_progression::xp::XpAmount;
 use deck_streak_streaks::governor::{assess, silence_walk};
 use deck_streak_streaks::lapse::anchor_beyond_the_walk;
 use deck_streak_streaks::relight::relight;
+use deck_streak_streaks::streak::StreakState;
 use deck_streak_streaks::{replay, store, strength};
 use sqlx::SqliteConnection;
 
@@ -106,6 +107,14 @@ impl StreaksStep {
         store::insert_events(write, &events, facts.now).await?;
         if day == facts.today {
             let law = replay::law(&days.law, &skips, day);
+            let outside = store::external_freezes(write).await?;
+            let held = i64::from(language.freezes)
+                .saturating_add(outside)
+                .clamp(0, 3);
+            let language = StreakState {
+                freezes: u32::try_from(held).unwrap_or(0),
+                ..language
+            };
             store::upsert_state(write, "language", &language, facts.now).await?;
             store::upsert_state(write, "law", &law, facts.now).await?;
         }

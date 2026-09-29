@@ -122,7 +122,7 @@ pub fn router(state: ApiState) -> Router {
                 readiness.clone(),
                 law_tiers,
             ))
-            .merge(streak_routes::routes(access.clone()))
+            .merge(streak_routes::routes(access.clone(), readiness.clone()))
             .merge(session_routes::routes(access.clone()))
             .merge(notifications_routes::routes(access, readiness)),
         None => routes,

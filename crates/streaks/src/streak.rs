@@ -89,6 +89,17 @@ pub fn heat_for(days: u32) -> &'static str {
         .map_or("", |(_, emoji)| emoji)
 }
 
+/// How many of the heat thresholds `days` has reached, from 0 (none) to the table's length less
+/// one: the tier the Mini App shows as flames.
+#[must_use]
+pub fn heat_tier(days: u32) -> u32 {
+    let reached = STREAK_HEAT
+        .iter()
+        .filter(|(threshold, emoji)| days >= *threshold && !emoji.is_empty())
+        .count();
+    u32::try_from(reached).unwrap_or(u32::MAX)
+}
+
 /// Study days missed between `last` and `today`, not counting skip days: the gap less one, less the
 /// skip days strictly between the two, never below zero.
 #[must_use]

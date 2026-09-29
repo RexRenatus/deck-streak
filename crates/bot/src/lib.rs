@@ -25,6 +25,7 @@ pub mod commands;
 pub mod gate;
 pub mod poll;
 pub mod score_commands;
+pub mod streak_commands;
 pub mod transport;
 pub mod xp_commands;
 

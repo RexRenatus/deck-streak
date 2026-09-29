@@ -18,7 +18,7 @@
         ]
       ]
     },
-    "text": "Your coach here is an AI, not a person.\n\nDeckStreak reads the reviews you do in Anki from a private copy of your collection. Open the app to see your study.\n\n/score shows today's score\n/level shows your level and XP\n/sync syncs your collection now\n/export sends you a copy of your data\n/delete erases your data\n/privacy says how your data is kept"
+    "text": "Your coach here is an AI, not a person.\n\nDeckStreak reads the reviews you do in Anki from a private copy of your collection. Open the app to see your study.\n\n/score shows today's score\n/level shows your level and XP\n/streak shows your streaks\n/sync syncs your collection now\n/export sends you a copy of your data\n/delete erases your data\n/privacy says how your data is kept"
   },
   "x-message": "start"
 }
