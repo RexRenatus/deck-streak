@@ -41,12 +41,14 @@ guard of `Router::send_bot` is recorded equivalent in
 `scripts/mutation-equivalent.d/deck-streak-notifications.json`: a non-celebration reaches it only
 at T0 or T2, where the ladder's render and the line make the same call. After the first
 verification, A11's golden gained a gap of 5 and of 5.5 toward 40, where the units bound decides
-alone, and A12 gained a policy parsed with other bounds, so a units bound moved by one or a
-reaction's age typed in code is killed; the red lines stand, since each stub failed before either.
-Replayed over the red commit 96383a4 with the strengthened bodies, A11 fails at its first case
-(`assertion left == right failed: a gap of 5 toward 100; left: false, right: true`) and A12 fails at
-its first assertion (`assertion left == right failed: the streak-break cap is the ladder's cap on a
-day the streak broke; left: "T1", right: "T0"`), so neither new body passes over the inert stubs.
+alone, and A12 gained a policy parsed with other values, so a units bound moved by one, or a
+reaction's age, a near-miss bound, the streak-break cap, a rarity's tier or a weekly budget typed in
+code, is killed; the red lines stand, since each stub failed before either. Replayed over the red
+commit 96383a4 with the strengthened bodies, A11 fails at its first failing case (`assertion left ==
+right failed: a gap of 5 toward 100; left: false, right: true`) and A12 at its first failing
+assertion (`assertion left == right failed: the streak-break cap is the ladder's cap on a day the
+streak broke; left: String("T1"), right: String("T0")`), so neither new body passes over the inert
+stubs.
 
 ```red-first
 A1: red at 96383a4: assertion `left == right` failed: the requested tier of "badge" with rarity "common"; left: T0, right: T2

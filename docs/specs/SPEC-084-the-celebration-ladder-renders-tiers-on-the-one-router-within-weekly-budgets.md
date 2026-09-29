@@ -344,8 +344,8 @@ calls and their non-text arguments only.
   still holds its row with the failed-send hold.
 - **A11 and A12: each near-miss bound where it alone decides.** The near-miss golden gains a gap of 5
   toward 40 and of 5.5 toward 40, where the units bound decides and the fraction does not, and A12
-  parses the policy with other bounds and checks the reaction's age and the near-miss units follow
-  the file.
+  parses the policy with other values and checks that the reaction's age, both near-miss bounds, the
+  streak-break cap, a rarity's tier and a weekly budget follow the file.
 - **The census.** SPEC-041 A15's census names each new call at its one call site in the bot's
   transport, and leaves out the parity oracle's tooling (`tools/parity-oracle/`), which ships
   nothing and whose recording stand-ins name the Bot API's calls they record; a directory of the same

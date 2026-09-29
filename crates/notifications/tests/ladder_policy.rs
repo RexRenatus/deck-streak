@@ -144,14 +144,18 @@ fn the_policy_ladder_values_equal_the_parity_goldens() {
     read_from_the_file();
 }
 
-/// Read from the file, never typed beside it: a policy with other bounds moves the reaction's age
-/// and the near-miss units with it.
+/// Read from the file, never typed beside it: a policy with other values moves the reaction's age,
+/// both near-miss bounds, the streak-break cap, a rarity's tier and a weekly budget with it.
 fn read_from_the_file() {
     let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../notifications-policy.json");
     let mut other: Value =
         serde_json::from_str(&fs::read_to_string(path).expect("the policy file")).expect("JSON");
     other["ladder"]["reaction_max_age_hours"] = json!(1);
     other["near_miss"]["max_units"] = json!(2);
+    other["near_miss"]["max_fraction"] = json!(0.2);
+    other["streak_break"]["cap"] = json!("T0");
+    other["ladder"]["rarity"]["common"] = json!("T3");
+    other["celebration_budgets"]["intensities"]["quiet"]["T4"] = json!(2);
     let other = Policy::parse(&other.to_string()).expect("the altered policy parses");
     let now = UtcMillis::from_epoch_millis(1_728_000_000_000);
     let aged = |minutes: i64| UtcMillis::from_epoch_millis(now.epoch_millis() - minutes * 60_000);
@@ -170,6 +174,29 @@ fn read_from_the_file() {
         ],
         [true, false],
         "the near-miss units are the file's"
+    );
+    assert_eq!(
+        [
+            ladder::near_miss_ok(&other, 8.0, 40.0),
+            ladder::near_miss_ok(&other, 8.5, 40.0)
+        ],
+        [true, false],
+        "the near-miss fraction is the file's"
+    );
+    assert_eq!(
+        ladder::outcome_cap(&other, true),
+        Tier::T0,
+        "the streak-break cap is the file's"
+    );
+    assert_eq!(
+        ladder::requested_tier(&other, "badge", Some("common")),
+        Tier::T3,
+        "a rarity's tier is the file's"
+    );
+    assert_eq!(
+        ladder::weekly_budget(&other, "quiet"),
+        (2, 0),
+        "a weekly budget is the file's"
     );
 }
 
