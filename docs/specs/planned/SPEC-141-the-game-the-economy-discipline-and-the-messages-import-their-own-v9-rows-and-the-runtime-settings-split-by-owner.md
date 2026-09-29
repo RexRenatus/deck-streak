@@ -157,7 +157,7 @@ R11. CHARTER 10's eleven anti-goals bind this SPEC as one block; the ones it tou
 | A12 | a setting outside its declaration arrives at its default and is counted by key | `a_setting_outside_its_declaration_arrives_at_its_default` |
 | A13 | the publishing state is written with its switch off and no baseline | `the_publishing_state_arrives_switched_off` |
 | A14 | discipline's count of the buffs names the chest-lock rows it wrote and no other kind | `the_chest_lock_count_is_disciplines_share` |
-| A15 | the kind map names each kind the predecessor writes once, and a ledger row of a kind it does not name refuses the write by table, column and reason | `every_ledger_kind_is_mapped_once` |
+| A15 | the kind map names each ledger kind of the predecessor's code once, and a ledger row of a kind it does not name refuses the write by table, column and reason | `every_ledger_kind_is_mapped_once` |
 | A16 | the log's rows equal the decisions and its pending rows the queue rows, and the ledger's rows equal the deliveries plus the perfect-week and not-carried rows by kind | `the_message_counts_reconcile` |
 
 ```acceptance

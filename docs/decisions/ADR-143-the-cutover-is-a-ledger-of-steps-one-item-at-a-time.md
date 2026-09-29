@@ -10,9 +10,9 @@ decision-makers: "@RexRenatus (owner), the DeckStreak architect"
 
 ADR-011 keeps one writer per vault contract and per notification kind at every moment, and gives
 the stop and the retirement of the predecessor to the owner's explicit go. DeckStreak has 21
-contracts and kinds the predecessor also writes, each behind a switch, a staged duty, a job or the
-readings archive switch. How does each move from the predecessor to DeckStreak, and what proves the
-order?
+contracts and kinds the predecessor's code also writes, each behind a switch, a staged duty, a job
+or the readings archive switch. How does each move from the predecessor to DeckStreak, and what
+proves the order?
 
 ## Decision Drivers
 

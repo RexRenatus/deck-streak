@@ -25,7 +25,7 @@
 
 - **The contracts are switched off one by one, and switched on by nobody.** At `dev` 703097b the
   router withholds a kind whose setting reads `"0"` with `nudges_disabled` (SPEC-041 R4), and the
-  planned SPECs seed the kinds the predecessor's code also raises as `"0"` while both run:
+  planned SPECs seed the kinds the predecessor's code also raises as `"0"` until each moves:
   `comeback_enabled` (SPEC-049 R7), `morning_enabled`, `evening_enabled`, `last_chance_enabled`,
   `habit_enabled`, `focus_enabled`, `quest_offer_enabled` and `chests_vaulted_enabled` (SPEC-100
   R27), `digest_enabled` and `weekly_enabled` (SPEC-101 R28), and `widget_enabled` (SPEC-102 R23).
