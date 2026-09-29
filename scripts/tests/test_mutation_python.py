@@ -36,7 +36,7 @@ import tokenize
 import unittest
 from pathlib import Path
 
-from _support import REPO
+from _support import REPO, examined
 
 RUNNER = REPO / "scripts" / "mutation_python.py"
 LISTED = re.compile(r"^mutation-python: listed (\d+)$", re.MULTILINE)
@@ -238,9 +238,14 @@ class Tree:
 
     def files(self):
         return sorted(
-            p.relative_to(self.root).as_posix()
-            for p in self.root.rglob("*")
-            if p.is_file() and ".git" not in p.relative_to(self.root).parts
+            examined(
+                "fixture files",
+                (
+                    p.relative_to(self.root).as_posix()
+                    for p in self.root.rglob("*")
+                    if p.is_file() and ".git" not in p.relative_to(self.root).parts
+                ),
+            )
         )
 
     def runner(self, *args, runner=RUNNER, timeout=SUBPROCESS_SECONDS):
