@@ -7,6 +7,7 @@ secret but the default token, or checks out or fetches another repository (SPEC-
 a `.yaml` workflow is held to the hardening rules as a `.yml` one is, the hardening tests reading
 keys the way the checker does (A13)."""
 
+import json
 import math
 import os
 import re
@@ -514,6 +515,92 @@ class CiRunsOnDevAndMain(unittest.TestCase):
             "  push:\n    branches:\n      - dev\n      - main\npermissions: {}\n"
         )
         self.assertEqual(triggers(planted), {"pull_request": ["dev"], "push": ["dev", "main"]})
+
+
+# The one form the aggregate job's name takes, as the file writes it (SPEC-034 R8).
+AGGREGATE_NAME = "${{ github.event_name == 'pull_request' && 'ci' || 'ci (push)' }}"
+NAME_FORM = re.compile(
+    r"^\$\{\{ github\.event_name == '([a-z_]+)' && '([^']+)' \|\| '([^']+)' \}\}$"
+)
+RULESETS = REPO / ".github" / "rulesets"
+
+
+def required_contexts():
+    """Every context a ruleset requires, from both long-lived branches' rulesets."""
+    found = set()
+    for name in ("dev", "main"):
+        ruleset = json.loads((RULESETS / f"{name}.json").read_text(encoding="utf-8"))
+        for rule in ruleset["rules"]:
+            if rule["type"] == "required_status_checks":
+                found |= {c["context"] for c in rule["parameters"]["required_status_checks"]}
+    return examined("required contexts", sorted(found))
+
+
+def job_name_for(job_id, job, event):
+    """The name a job's check run carries for `event`: its `name`, or its id when it has none. A
+    name that holds an expression is read in exactly one form,
+    `github.event_name == '<e>' && '<a>' || '<b>'`, and refused in any other."""
+    name = str(job.get("name", job_id))
+    if "${{" not in name:
+        return name
+    form = NAME_FORM.match(name)
+    if form is None:
+        raise AssertionError(f"{job_id}: a job name in a form this reader does not model: {name!r}")
+    matched, then, otherwise = form.groups()
+    return then if event == matched else otherwise
+
+
+def judged_events(on):
+    """The events a workflow's `on:` names that are not `pull_request`, in order. `on` is a scalar
+    (`on: push`), a list, or a mapping keyed by event."""
+    return [e for e in ([on] if isinstance(on, str) else on) if e != "pull_request"]
+
+
+class TheRequiredCiCheckIsThePullRequestsOwn(unittest.TestCase):
+    def test_the_required_ci_check_is_always_the_pull_requests_own_run(self):
+        required = required_contexts()
+        self.assertIn("ci", required)
+        job = load("ci.yml")["jobs"]["ci"]
+        self.assertEqual(job.get("name"), AGGREGATE_NAME, "the aggregate job's name")
+        self.assertEqual(job_name_for("ci", job, "pull_request"), "ci")
+        pushed = job_name_for("ci", job, "push")
+        self.assertEqual(pushed, "ci (push)")
+        self.assertNotIn(pushed, required)
+        # The reader refuses every other form rather than guess at it.
+        for other in (
+            "${{ github.event_name }}",
+            "${{ github.ref && 'ci' || 'x' }}",
+            "${{ x }}",
+            "${{ github.event_name == 'push' && '' || 'ci' }}",
+            "${{ github.event_name == 'push' && 'ci' || '' }}",
+        ):
+            with self.assertRaises(AssertionError, msg=other):
+                job_name_for("ci", {"name": other}, "push")
+        self.assertEqual(job_name_for("a", {}, "push"), "a")
+
+    def test_the_events_a_workflow_is_judged_under_are_read_in_every_form(self):
+        self.assertEqual(judged_events("push"), ["push"])
+        self.assertEqual(judged_events(["pull_request", "push", "schedule"]), ["push", "schedule"])
+        self.assertEqual(
+            judged_events({"pull_request": {}, "push": {}, "workflow_dispatch": None}),
+            ["push", "workflow_dispatch"],
+        )
+        self.assertEqual(judged_events("pull_request"), [])
+        self.assertEqual(judged_events({"pull_request": {"branches": ["dev"]}}), [])
+
+    def test_no_push_run_reports_under_a_required_name(self):
+        required = set(required_contexts())
+        judged = []
+        for path in workflow_files(WORKFLOWS):
+            workflow = read_hardened(path)
+            on = workflow["on"]
+            for event in judged_events(on):
+                for job_id, job in workflow["jobs"].items():
+                    name = job_name_for(job_id, job, event)
+                    judged.append((path.name, event, name))
+                    self.assertNotIn(name, required, f"{path.name}: {event} reports {name}")
+        self.assertIn(("ci.yml", "push", "ci (push)"), judged)
+        examined("job names under a non-pull_request event", judged)
 
 
 def run_base_is_dev(context):

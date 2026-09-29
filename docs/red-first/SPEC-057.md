@@ -218,8 +218,7 @@ non-`data` name followed by a data command). One is recorded equivalent in
 `#[cfg(not(target_os = "linux"))]` removes from every Linux build. The closing sweep, run
 36517001675 at the branch head with dev 8903f71 merged, counted 33 of 33 whole and read
 `table: verdict: ok`, listed 101, killed 71, equivalent 1, unexplained 0, unviable 29. Shard 1
-exited 2 (the one recorded mutant) and the other shards exited 0. Rows S05750 to S05759 are unused:
-the tool mutated every invariant of the crate, so none needed a hand-proved row (R20). No shard exited 3, so no mutant of this crate timed out in the closing sweep.
+exited 2 (the one recorded mutant) and the other shards exited 0. Rows S05750 to S05759 are unused, but the tool did not mutate every invariant of the crate: it lists no mutant on any of its 16 constants, and a by-hand planting at dev f3c976f survived every test of the crate for 8 of them (OPEN_LOCK_FILE, StateDirectory's SHAPE, WATCHDOG_USEC, WATCHDOG_PID, EXIT_GRACE, and the SHAPEs of NotifyAddress, Micros and Text) (R20). Rows S05750 to S05753 and S05755 to S05757 now pin seven of them by their text, and EXIT_GRACE is pinned by the unit test `tests::the_exit_grace_is_one_second`, whose row S05754 waits for #352. No shard exited 3, so no mutant of this crate timed out in the closing sweep.
 
 ## The api delivery: its row (A22)
 
@@ -231,8 +230,7 @@ an empty `Ok`. Its `table` line is the row committed at 3d271a1 with A22's test,
 and the owner access's debug form, which names its parts and never the signing token). The closing
 sweep, run 36529229929 at 618a392, counted 33 of 33 whole and read `table: verdict: ok`, listed 70,
 killed 50, equivalent 0, unexplained 0, unviable 20. All 32 shards exited 0 and none logged a
-timeout. No record was needed, and rows S05770 to S05774 are unused: the tool mutated every
-invariant of the crate (R20).
+timeout. No record was needed. Rows S05770 to S05774 are unused, but the tool did not mutate every invariant of the crate: it lists a mutant on only 2 of its 21 constants (the `*` of BODY_LIMIT_BYTES and HANDSHAKE_BODY_LIMIT_BYTES), and a by-hand planting at dev f3c976f found 4 that no test of the crate pins: VERSION, LISTEN, SocketSetting's SHAPE and FEED_PATH (R20). Rows S05770 to S05773 now pin those four by their text.
 
 ## The privacy delivery: its row (A23)
 

@@ -99,10 +99,16 @@ def run_gate(scratch, stages, stubs, extra_env=None, check=CHECK, real=(), bodie
 
 
 def python_tree(where, guard, oracle):
-    """A copy of check.sh in a tree with its two python suites, each holding the one test file
-    given, or none for None. Returns the copy's path."""
+    """A copy of check.sh in a tree with its three python suites: the guard and the oracle each
+    hold the one test file given, or none for None, and the agent's holds the oracle's text so it
+    always runs. Returns the copy's path."""
     tree = where / "tree"
-    for suite, text in (("scripts/tests", guard), ("tools/parity-oracle", oracle)):
+    suites = (
+        ("scripts/tests", guard),
+        ("tools/parity-oracle", oracle),
+        ("agent/tests", PLANTED_ORACLE),
+    )
+    for suite, text in suites:
         (tree / suite).mkdir(parents=True)
         if text is not None:
             (tree / suite / "test_planted.py").write_text(text, encoding="utf-8")
@@ -228,7 +234,7 @@ class ThePythonStageRunsEverySuite(unittest.TestCase):
         self.assertRegex(
             summary(done),
             r"^FAILED +python .*: python: scripts/tests ran 1 test\(s\), exit 1; "
-            r"tools/parity-oracle ran 2 test\(s\), exit 0$",
+            r"tools/parity-oracle ran 2 test\(s\), exit 0; agent/tests ran 2 test\(s\), exit 0$",
         )
         # A suite that runs no test fails the stage by name, whatever its exit.
         with tempfile.TemporaryDirectory() as scratch:
