@@ -58,10 +58,11 @@ only from the default branch's copy.
 
 - Good, because a run on any ref restores a warm cache once `main` carries the workflow.
 - Good, because every consumer's key is unchanged and no gate examines less.
-- Bad, because the workflow does nothing on its schedule until `main` has it; a dispatch on a branch
-  saves into that branch's scope only, which the live proof deletes.
+- Bad, because the workflow does nothing, on its schedule or by dispatch, until `main` has it (both
+  triggers need the file on the default branch), so its live proof runs on `main` after the release.
 - Bad, because SPEC-038 R2's test needs one admitted shape (a scheduled save that runs only on a
-  lookup miss); SPEC-191 R9 and A7 bound it and refuse the variants.
+  lookup miss, in the workflow `rust-cache.yml` alone); SPEC-191 R9 and A7 bound it and refuse the
+  variants and the same shape in any other workflow.
 
 ## What would make this wrong
 

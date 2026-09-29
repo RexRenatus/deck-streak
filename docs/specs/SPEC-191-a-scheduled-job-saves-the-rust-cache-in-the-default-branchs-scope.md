@@ -60,10 +60,11 @@ R7. It runs `cargo clean --workspace`, as `ci.yml` does, after the builds and be
 R8. It saves the same paths with `actions/cache/save`, under `${{ steps.<id>.outputs.cache-primary-key
     }}` of the restore step whose key is R4's, only when R4's lookup missed.
 R9. SPEC-038 R2's rule stands for every other workflow: a cache is saved only by a push to `dev` or
-    `main` that missed its key. The one further admission is a workflow whose events are only
-    `schedule` and `workflow_dispatch` and whose save runs only when a lookup missed; the test that
-    judges R2 judges that shape in scenarios, and refuses a scheduled workflow whose save has no
-    such condition and any workflow that adds a `push` or `pull_request` trigger to it.
+    `main` that missed its key. The one further admission is the workflow `rust-cache.yml`, whose
+    events are only `schedule` and `workflow_dispatch` and whose save runs only when a lookup
+    missed, on a schedule and on a dispatch alike; the test that judges R2 judges that shape in
+    scenarios, and refuses the same shape in any other workflow, a save with no such condition, a
+    save that also runs on a hit, and a `push` or `pull_request` trigger added to it.
 
 ## 3. Acceptance criteria
 
@@ -75,7 +76,7 @@ R9. SPEC-038 R2's rule stands for every other workflow: a cache is saved only by
 | A4 | the lookup is `lookup-only` on that key with no `restore-keys`, and every later step runs only on a miss | `test_rust_cache_workflow.py` `it_looks_the_exact_key_up_and_every_later_step_stops_on_a_hit` |
 | A5 | on a miss it installs what `ci.yml` installs, restores by `ci.yml`'s prefix, and compiles the two builds of R6 with no test run | `test_rust_cache_workflow.py` `it_installs_restores_by_prefix_and_compiles_without_running_a_test` |
 | A6 | `cargo clean --workspace` is the step before the save, after every build, and the save is keyed on the exact key's primary-key output | `test_rust_cache_workflow.py` `it_cleans_the_workspace_before_it_saves_under_the_exact_key` |
-| A7 | the save-rule test admits this shape and only this one: planted scheduled workflows with no condition, with a push trigger or with a pull request trigger are refused | `test_rust_cache_workflow.py` `the_save_rule_admits_a_scheduled_save_only_when_a_lookup_missed` |
+| A7 | the save-rule test admits this shape in `rust-cache.yml` and only there: the same shape in another workflow, and planted scheduled workflows with no condition, one that also saves on a hit, a push trigger or a pull request trigger, are refused | `test_rust_cache_workflow.py` `the_save_rule_admits_a_scheduled_save_only_when_a_lookup_missed` |
 | A8 | its cron minute is no other workflow's cron minute | `test_rust_cache_workflow.py` `its_cron_minute_collides_with_no_other_workflows` |
 | A9 | it defaults its token to read-only and queues instead of cancelling | `test_rust_cache_workflow.py` `it_reads_only_and_queues_instead_of_cancelling` |
 
@@ -92,9 +93,11 @@ A9: python3 -m unittest discover -s scripts/tests -p test_rust_cache_workflow.py
 ```
 
 The tests read the workflows through `test_ci_workflows.py`'s reader and print how many steps,
-workflows or scenarios each examined, refusing zero. The live proof is two dispatched runs of the
-new workflow on the delivery's branch, quoted in the pull request: the first builds and saves, the
-second stops at the lookup. The dispatched entry is deleted by its cache id afterwards.
+workflows or scenarios each examined, refusing zero. `workflow_dispatch` and `schedule` need the file on the default
+branch (the GitHub docs: "It only triggers a workflow run if the workflow file exists on the
+repository's default branch"; "Scheduled workflows only trigger if the workflow file exists on the
+default branch"), so the live proof runs on `main` after the release pull request carries the file
+there: a dispatched run that saves on a miss, then a second that stops at the lookup on the hit.
 
 ## 4. File manifest
 
@@ -102,8 +105,8 @@ second stops at the lookup. The dispatched entry is deleted by its cache id afte
 |---|---|---|
 | `.github/workflows/rust-cache.yml` | repo | added: R1 to R8 |
 | `scripts/tests/test_rust_cache_workflow.py` | repo | added: A1 to A9 |
-| `scripts/tests/test_ci_workflows.py` | repo | changed: `cache_problems` admits R9's shape and refuses its planted variants |
-| `scripts/mutation-rows.d/S19100-S19199.json` | repo | added: four script rows on the workflow |
+| `scripts/tests/test_ci_workflows.py` | repo | changed: `cache_problems` admits R9's shape in `rust-cache.yml` only and refuses its planted variants |
+| `scripts/mutation-rows.d/S19100-S19199.json` | repo | added: four script rows on the workflow and one on the save rule's scope |
 | `docs/specs/SPEC-191-a-scheduled-job-saves-the-rust-cache-in-the-default-branchs-scope.md` | repo | added |
 | `docs/decisions/ADR-191-a-scheduled-job-saves-the-rust-cache-in-the-default-branchs-scope.md` | repo | added |
 | `docs/specs/SPEC-038-ci-runs-the-gate-in-parallel-jobs-and-only-dev-and-main-save-a-cache.md` | repo | changed: an insert-only amendment section at its end |
@@ -130,9 +133,9 @@ and who can restore it.
 
 ## 6. Risks
 
-- **Until the release carries the workflow to `main`, it never runs on its schedule.** Only a
-  dispatch on a branch runs it; its entry then sits in that branch's scope. The live proof deletes
-  it. The workflow file's copy on `main` is what a schedule runs.
+- **Until the release carries the workflow to `main`, it never runs, on its schedule or by
+  dispatch.** Both triggers need the file on the default branch, so no run on this branch is
+  possible and the live proof waits for the release. The copy on `main` is what a schedule runs.
 - **`dev` moves between the lookup and the save.** The job checks `dev` out once, so its key and its
   tree agree; the entry may be one push behind, which the next run replaces (a new lockfile is a new
   key). A2 pins the single checkout.

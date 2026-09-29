@@ -14,7 +14,7 @@
         ".github/workflows/rust-cache.yml",
         "run: cargo clean --workspace",
         "run: true",
-        "the workspace's own artifacts are cleaned before the save, as ci.yml does, so the entry holds dependencies only (SPEC-191 R6)",
+        "the workspace's own artifacts are cleaned before the save, as ci.yml does, so the entry holds dependencies only (SPEC-191 R7)",
         "test_rust_cache_workflow.TheRustCacheWorkflow.test_it_cleans_the_workspace_before_it_saves_under_the_exact_key"
       ],
       [
@@ -22,7 +22,7 @@
         ".github/workflows/rust-cache.yml",
         "          ref: dev\n",
         "          ref: main\n",
-        "the job computes the key over dev's tree, the tree ci.yml's pushes key over (SPEC-191 R2)",
+        "the job computes the key over dev's tree, the tree ci.yml's pushes key over (SPEC-191 R3)",
         "test_rust_cache_workflow.TheRustCacheWorkflow.test_it_checks_out_dev_without_persisting_credentials"
       ],
       [
@@ -30,7 +30,7 @@
         ".github/workflows/rust-cache.yml",
         "          lookup-only: true\n          key: rust-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-${{ hashFiles('Cargo.lock') }}\n",
         "          lookup-only: true\n          key: rust-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}\n",
-        "the lookup key equals ci.yml's, Cargo.lock term included, so a new lockfile state is a miss (SPEC-191 R3)",
+        "the lookup key equals ci.yml's, Cargo.lock term included, so a new lockfile state is a miss (SPEC-191 R4)",
         "test_rust_cache_workflow.TheRustCacheWorkflow.test_its_key_and_paths_are_the_ones_ci_and_the_weekly_battery_restore"
       ],
       [

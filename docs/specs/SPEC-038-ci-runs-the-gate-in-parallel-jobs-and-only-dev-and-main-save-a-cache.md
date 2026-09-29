@@ -617,12 +617,13 @@ SPEC-058 decides the stage's command, its level and its verdict, and its tests j
 SPEC's table `TOOLS` in `test_check_gate.py` by one entry, `python3` after `pnpm` for `audit-web`,
 and changes no assertion, so A5 of this SPEC judges the new tool too.
 
-## Amendment (SPEC-191, #370)
+## 11. Amendment, 2026-09-29: a scheduled job may save the Rust cache in the default branch's scope (SPEC-191, #370)
 
 Made by SPEC-191 and ADR-191, insert-only under ruling (i) of section 8: every earlier byte is kept
 in order. R2 still holds for every workflow that has a `push` or `pull_request` trigger: a cache is
 saved only by a push to `dev` or `main` that missed its exact key. SPEC-191 R9 admits one further
-shape, a workflow whose events are only `schedule` and `workflow_dispatch` and whose save runs only
+shape, in the workflow `rust-cache.yml` alone, whose events are only `schedule` and `workflow_dispatch` and whose save runs only
 when a lookup of the same key missed, so that a scheduled run in the default branch's scope saves the
 entry a run on any ref can restore. The test that judges R2 (`cache_problems` in `test_ci_workflows.py`)
-judges that shape in scenarios and refuses its planted variants (SPEC-191 A7).
+judges that shape, in the workflow `rust-cache.yml` only, in scenarios and refuses its planted
+variants and the same shape in any other workflow (SPEC-191 A7).
