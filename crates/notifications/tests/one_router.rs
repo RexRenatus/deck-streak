@@ -147,9 +147,9 @@ const SEND_METHODS: [&str; 29] = [
 /// spelling: a copy, a forward, an edit, an ephemeral edit, a stopped poll or live location, a pin,
 /// a reaction, a Mini App query's answer, which sends a message into the chat on the user's
 /// behalf, the answers to a callback, an inline, a shipping or a checkout query, a game's score, a
-/// story's edit, a suggested post's decision, and the name, description, photo, commands or menu
-/// that a chat, a bot or a business account shows. The census holds them as it holds a send method.
-const DELIVERY_METHODS: [&str; 60] = [
+/// story's edit, a suggested post's decision, a Passport error's message, and the name, description, photo,
+/// commands or menu that a chat, a bot or a business account shows, or that an invite link carries. The census holds them as it holds a send method.
+const DELIVERY_METHODS: [&str; 65] = [
     "copyMessage",
     "copyMessages",
     "forwardMessage",
@@ -213,6 +213,13 @@ const DELIVERY_METHODS: [&str; 60] = [
     "savePreparedKeyboardButton",
     "setChatAdministratorCustomTitle",
     "setChatMemberTag",
+    // A Passport error's message, which a user is shown, and the name of an invite link, which
+    // administrators see.
+    "setPassportDataErrors",
+    "createChatInviteLink",
+    "editChatInviteLink",
+    "createChatSubscriptionInviteLink",
+    "editChatSubscriptionInviteLink",
 ];
 
 /// The version of the Bot API client the census's method list was read from. The test
@@ -422,7 +429,7 @@ const CLIENT_METHODS: [&str; 185] = [
 
 /// The client's methods that put nothing before a user: each is classified, not held, and the
 /// census does not read a name in it. One reason for each group.
-const NOT_DELIVERIES: [&str; 96] = [
+const NOT_DELIVERIES: [&str; 91] = [
     // Reads: each returns data to the bot and delivers nothing to a user.
     "getAvailableGifts",
     "getBusinessAccountGifts",
@@ -471,7 +478,7 @@ const NOT_DELIVERIES: [&str; 96] = [
     "unpinChatMessage",
     // Bot and session configuration: the bot's webhook, tokens, rights and process, and removing
     // its profile photo. Its name, descriptions, photo, commands and menu button are content a
-    // user reads, so they are held.
+    // user reads, so they are held; so is a Passport error's message.
     "close",
     "deleteMyCommands",
     "deleteWebhook",
@@ -480,7 +487,6 @@ const NOT_DELIVERIES: [&str; 96] = [
     "replaceManagedBotToken",
     "setManagedBotAccessSettings",
     "setMyDefaultAdministratorRights",
-    "setPassportDataErrors",
     "setWebhook",
     // Stickers: removals, and the emoji, keywords, mask and position of a sticker, which show a
     // user no title, media or thumbnail; a bare file upload shows nothing. A set's title, media
@@ -492,23 +498,20 @@ const NOT_DELIVERIES: [&str; 96] = [
     "setStickerMaskPosition",
     "setStickerPositionInSet",
     "uploadStickerFile",
-    // Chat administration: members, permissions, invite links, join requests and closing or hiding
-    // a topic change how a chat is run and show a user no new content. A chat's title,
-    // description and photo, a topic's creation or edit, an administrator's title and a member's
-    // tag show one, so they are held.
+    // Chat administration: members, permissions, join requests, revoking or exporting an invite
+    // link, and closing or hiding a topic change how a chat is run and show a user no new content.
+    // A chat's title, description and photo, a topic's creation or edit, an administrator's title,
+    // a member's tag and the name an invite link carries, which administrators see, show one, so
+    // they are held.
     "approveChatJoinRequest",
     "banChatMember",
     "banChatSenderChat",
     "closeForumTopic",
     "closeGeneralForumTopic",
-    "createChatInviteLink",
-    "createChatSubscriptionInviteLink",
     "declineChatJoinRequest",
     "deleteChatPhoto",
     "deleteChatStickerSet",
     "deleteForumTopic",
-    "editChatInviteLink",
-    "editChatSubscriptionInviteLink",
     "exportChatInviteLink",
     "hideGeneralForumTopic",
     "leaveChat",
