@@ -182,7 +182,7 @@
   "code": ["crates/*/src/**/*.rs", "web/app/src/**/*.ts", "web/app/src/**/*.svelte"],
   "export": {"code": ["crates/*/src/data_rights.rs", "crates/privacy/src/export.rs"], "format": "json"},
   "erase": {"code": ["crates/*/src/data_rights.rs", "crates/privacy/src/erase.rs"]},
-  "purge": {"code": ["crates/agent/src/runs.rs", "crates/coordination/src/maintenance.rs"], "timer": "deploy/systemd/deck-streak-job@maintenance.timer"},
+  "purge": {"code": ["crates/agent/src/runs.rs", "crates/coordination/src/maintenance.rs", "crates/readings/src/attempts.rs"], "timer": "deploy/systemd/deck-streak-job@maintenance.timer"},
   "backups": {"config": "deploy/litestream.yml", "retention": "P3D"},
   "logs": {"config": "deploy/journald.conf.d/deck-streak.conf", "retention": "P14D"},
   "policy": {
