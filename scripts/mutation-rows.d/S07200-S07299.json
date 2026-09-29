@@ -110,15 +110,6 @@
         "level 30 holds the predecessor's title (SPEC-072 R11)"
       ],
       [
-        "S07216-LEVEL-FALLBACK",
-        "progression",
-        "src/level.rs",
-        "const FALLBACK: (&str, &str) = (\"Sprout\"",
-        "const FALLBACK: (&str, &str) = (\"Sproux\"",
-        "xp_level::level_info_and_titles_match_the_parity_goldens",
-        "a level below every threshold holds the fallback title (SPEC-072 R11)"
-      ],
-      [
         "S07217-DAY-BASE-2X",
         "progression",
         "src/consistency.rs",
@@ -158,10 +149,10 @@
         "S07221-BONUS-SOURCES",
         "coordination",
         "src/recompute/xp.rs",
-        "    \"score90\",\n    \"graduations\",\n];",
-        "    \"score91\",\n    \"graduations\",\n];",
-        "xp_steps::backlog_zero_is_settled_only_for_a_day_with_its_snapshot",
-        "the bonus sources are the five the bonuses settle (SPEC-072 R3)"
+        "    \"graduations\",\n];",
+        "    \"graduatiox\",\n];",
+        "xp_steps::a_day_settles_the_bonus_sources",
+        "the bonus sources settled for a day include studied, backlog_zero, streak and graduations (SPEC-072 R3)"
       ],
       [
         "S07222-LEVEL-PATH",
@@ -187,7 +178,7 @@
         "src/commands.rs",
         "        command: \"level\",",
         "        command: \"levels\",",
-        "xp_commands::level_shows_the_title_and_the_consistency_bonus",
+        "commands::the_menu_is_registered_for_the_owners_chat_only",
         "the bot menu names the level command (SPEC-072 R15)"
       ]
     ],

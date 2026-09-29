@@ -391,3 +391,22 @@ fn the_step_names_and_the_level_up_kind_are_pinned_whole() {
     assert_eq!(DAY_BONUSES_STEP, "progression.derived_bonuses");
     assert_eq!(LEVEL_UP_KIND, "celebration");
 }
+
+#[tokio::test]
+async fn a_day_settles_the_bonus_sources() {
+    let scratch = TempDir::new().expect("a scratch directory");
+    let db = database(&scratch).await;
+    let data = collection(
+        vec![review(at(D0, 9), 1, 3)],
+        vec![card(1, number(D0) + 90, Track::Language, None)],
+    );
+    recompute(&fold(), &db, &data, at(D0, 14), D0 - 1).await;
+
+    let rows = settled(&db, D0).await;
+    for source in ["studied", "backlog_zero", "streak", "graduations"] {
+        assert!(
+            amount_of(&rows, source, "language").is_some(),
+            "{source} is settled on a studied day: {rows:?}"
+        );
+    }
+}
