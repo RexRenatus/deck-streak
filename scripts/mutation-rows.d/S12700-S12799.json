@@ -280,6 +280,22 @@
         "for name in; do",
         "the removal refuses a block, block copy or Caddyfile copy that is a link, a directory or a pipe",
         "test_deploy_scripts.TheCaddyInstall.test_a_removal_refuses_every_previous_copy_that_is_not_a_plain_file"
+      ],
+      [
+        "S12736-THE-INSTALL-REFUSES-A-CADDYFILE-DIRECTORY-IT-CANNOT-WRITE",
+        "deploy/deploy.sh",
+        "[ -w \"$(dirname -- \"$file\")\" ] || { echo \"deploy: the Caddy configuration was refused\"",
+        "[ -w \"$dir\" ] || { echo \"deploy: the Caddy configuration was refused\"",
+        "the install refuses a directory holding the live Caddyfile that it cannot write, before its first write (SPEC-127 A38)",
+        "test_deploy_scripts.TheCaddyInstall.test_every_directory_a_caddy_script_writes_or_undoes_is_checked_before_the_first_write"
+      ],
+      [
+        "S12737-THE-REMOVAL-REFUSES-A-CADDYFILE-DIRECTORY-IT-CANNOT-WRITE",
+        "deploy/deploy.sh",
+        "[ -w \"$(dirname -- \"$file\")\" ] || { echo \"deploy: the candidate Caddyfile could not be written\"",
+        "[ -w \"$dir\" ] || { echo \"deploy: the candidate Caddyfile could not be written\"",
+        "the removal refuses a directory holding the live Caddyfile that it cannot write, before its first write (SPEC-127 A38)",
+        "test_deploy_scripts.TheCaddyInstall.test_every_directory_a_caddy_script_writes_or_undoes_is_checked_before_the_first_write"
       ]
     ]
   }
