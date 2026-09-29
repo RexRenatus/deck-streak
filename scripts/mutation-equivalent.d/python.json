@@ -62,6 +62,42 @@
       "evidence": "The body of table_python names required only in its signature: an absent report returns 0 in both cases, and an absent scope's row is made VOID by table() after the call.",
       "reached_by": "test_mutation_python_verdict.TheVerdictReadsThePythonReports.test_the_battery_the_table_and_the_survivors_read_the_python_reports",
       "issue": "#340"
+    },
+    {
+      "file": "scripts/mutation_python.py",
+      "mutant": "replace break with continue in Lister.between",
+      "anchor": "            if token.start >= before:\n                break\n",
+      "reason": "The tokens are in source order, so once one starts at or after `before` every later one does too.",
+      "evidence": "tokenize yields tokens by ascending start, so continue skips each remaining token by the same test that would have ended the loop, and between() returns the same list.",
+      "issue": "#340",
+      "reached_by": "test_mutation_python_lister_kills.TheListingIsHeldWhole.test_every_site_of_a_source_is_listed_with_its_whole_record"
+    },
+    {
+      "file": "scripts/mutation_python.py",
+      "mutant": "replace is not with is in Lister.skipped_nodes",
+      "anchor": "elif isinstance(node, ast.arg) and node.annotation is not None:",
+      "reason": "No walked node is an argument's annotation, so what this branch skips is never visited.",
+      "evidence": "visit() reads a FunctionDef's decorators, defaults and body but never its arguments, and a lambda's arguments carry no annotation, so an ast.arg is never reached; with `is` the branch skips id(None), which no visited node has.",
+      "issue": "#340",
+      "reached_by": "test_mutation_python_lister_kills.TheListingIsHeldWhole.test_every_site_of_a_source_is_listed_with_its_whole_record"
+    },
+    {
+      "file": "scripts/mutation_python.py",
+      "mutant": "replace True with False in Lister.site",
+      "anchor": "for op, left, right in zip(node.ops, lefts, node.comparators, strict=True):",
+      "reason": "The three sequences zipped always have one length, so strict changes nothing.",
+      "evidence": "An ast.Compare holds one op per comparator, and lefts is the left operand plus every comparator but the last, so all three have len(node.ops) items and strict=True never raises.",
+      "issue": "#340",
+      "reached_by": "test_mutation_python_lister_kills.TheListingIsHeldWhole.test_every_site_of_a_source_is_listed_with_its_whole_record"
+    },
+    {
+      "file": "scripts/mutation_python.py",
+      "mutant": "replace \".\" with \"\" in child",
+      "anchor": "pathlib.Path(entry or \".\").resolve() != here",
+      "reason": "An empty path and the current directory are one path to pathlib.",
+      "evidence": "pathlib.Path('') == pathlib.Path('.') is True and both resolve to the working directory, so an empty sys.path entry is kept or dropped exactly as before.",
+      "issue": "#340",
+      "reached_by": "test_mutation_python_lister_kills.TheChildReportsWhatFailed.test_the_child_keeps_its_own_main_module_and_reports_a_pass"
     }
   ]
 }
