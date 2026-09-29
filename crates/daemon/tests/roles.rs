@@ -20,7 +20,10 @@ use deck_streak_ingest::settings::{LAW_DECK_ROOT, SYNC_PASSWORD, SYNC_USERNAME};
 use deck_streak_ingest::sync_runs::{
     ReasonCode, RunHistory, SqliteSyncRuns, SyncRun, SyncRunStore, Trigger,
 };
-use deck_streak_kernel::{Clock, Db, Offload, OffloadWorkers, StudyDay, SystemClock, UtcMillis};
+use deck_streak_kernel::{
+    Clock, Db, Environment, Offload, OffloadWorkers, SettingsError, StudyDay, SystemClock,
+    UtcMillis,
+};
 use serde_json::Value;
 use tokio::sync::Barrier;
 
@@ -144,6 +147,39 @@ fn only_the_name_data_runs_the_data_role() {
             .unwrap_or_default();
         assert!(usage.starts_with("usage: deckstreakd <role>"), "{usage}");
     }
+}
+
+#[tokio::test]
+async fn the_open_lock_is_a_file_of_its_own_beside_the_database() {
+    // SPEC-025 R11 names it: `deck_streak.db-open.lock`, never the database file itself, whose
+    // descriptors' closing would drop SQLite's own POSIX locks.
+    let directory = tempfile::tempdir().expect("a temporary directory");
+    let state = StateDirectory::new(directory.path()).expect("an absolute path");
+    let workers = OffloadWorkers::new(2).expect("two workers is in range");
+    let offload = Offload::new(workers, Arc::new(SystemClock));
+    let database = open_database(&offload, &state)
+        .await
+        .expect("the database opens");
+    database.close().await;
+    assert!(
+        directory.path().join("deck_streak.db-open.lock").is_file(),
+        "no open lock named deck_streak.db-open.lock beside the database"
+    );
+}
+
+#[test]
+fn a_relative_state_directory_is_refused_naming_the_shape_it_must_have() {
+    let refused = StateDirectory::from_env(&Environment::from_vars([(
+        "STATE_DIRECTORY",
+        "relative/state",
+    )]));
+    assert_eq!(
+        refused,
+        Err(SettingsError::Malformed {
+            setting: "STATE_DIRECTORY",
+            expected: "an absolute directory path",
+        })
+    );
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
