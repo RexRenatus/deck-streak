@@ -7,7 +7,7 @@ import unittest
 from _support import REPO, examined
 
 MANIFEST = REPO / "Cargo.toml"
-OVERRIDE = re.compile(r"CARGO_PROFILE_|--config\s+['\"]?profile\.")
+OVERRIDE = re.compile(r"CARGO_PROFILE_|--config[=\s]+['\"]?profile\.")
 PLANTED = (
     "CARGO_PROFILE_DEV_DEBUG=2",
     "cargo build --config profile.dev.debug=2",
