@@ -459,7 +459,7 @@ jobs:
           SHARD: ${{ matrix.shard }}
           SHARDS: ${{ needs.mutation-plan.outputs.python_shards }}
         run: |
-          out="$RUNNER_TEMP/python-shard"
+          out="$RUNNER_TEMP/python-shards/mutation-python-shard-$SHARD"
           mkdir -p "$out"
           rc=0
           python3 scripts/mutation_python.py run --plan "$RUNNER_TEMP/mutation/plan.json" --shard "$SHARD/$SHARDS" --failfast --report "$out/report.json" || rc=$?
@@ -469,7 +469,7 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: mutation-python-shard-${{ matrix.shard }}
-          path: ${{ runner.temp }}/python-shard/
+          path: ${{ runner.temp }}/python-shards/
           if-no-files-found: warn
 
   # The hand-proved rows the diff selects, and the retirement check: no row leaves while its target
@@ -570,6 +570,11 @@ jobs:
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           pattern: mutation-rust-shard-*
+          merge-multiple: true
+          path: ${{ runner.temp }}/reports
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: mutation-python-shard-*
           merge-multiple: true
           path: ${{ runner.temp }}/reports
       - name: the verdict, from every shard's report and the rows' (the plan names a not-applicable case)
