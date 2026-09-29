@@ -295,7 +295,7 @@ kept=$file.previous
 had=
 grep -vxF "$line" "$file" >"$copy" || true
 caddy validate --adapter caddyfile --config "$copy" || { find "$copy" -delete; echo "deploy: refused" >&2; exit 1; }
-caddy adapt --adapter caddyfile --config "$copy" --validate >/dev/null || { find "$copy" -delete; exit 1; }
+caddy adapt --adapter caddyfile --config "$copy" --validate >/dev/null || { find "$copy" -delete; echo "deploy: refused" >&2; exit 1; }
 cp -p "$file" "$kept"
 mv -T "$copy" "$file"
 [ -f "$block" ] && { had=$block.previous; mv -T "$block" "$had"; }
