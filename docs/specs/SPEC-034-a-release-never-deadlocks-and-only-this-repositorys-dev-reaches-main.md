@@ -340,3 +340,36 @@ The `ci` workflow runs on a pull request and on a push to `dev` or `main`, and b
 require the context `ci` from GitHub Actions. The aggregate job's name depends on the event, so
 a pull request's own run is the run that satisfies the required check and a push run reports as
 `ci (push)`. A14 and A15 hold it, and S03401 to S03403 prove them red.
+
+## 9. Amendment, 2026-09-29: the runbook declares its release model
+
+Made on issue #360, insert-only under ruling (i) of SPEC-038 section 8: every earlier byte is kept
+in order, and this section is appended after them, so its requirement, criterion and manifest rows
+sit here and not in sections 2 to 4. ADR-034 is the decision: its considered options reject a
+back-merge pull request from `main` into `dev` after each release, so no new ADR is made. The
+release-ops pack judges the runbook and reads a declared model as well as a missing back-merge step.
+
+R9. `RELEASING.md` declares its release model in one line of its own, directly under the heading of
+    its section 5, exactly `Release model: no-back-merge (ADR-034)`. It restates R2 in the form the
+    pack reads (#360).
+
+| id | criterion | decided by |
+|---|---|---|
+| A16 | the release runbook declares its release model | `test_rulesets.py` |
+
+```acceptance
+A16: python3 -m unittest discover -s scripts/tests -p test_rulesets.py -k the_release_runbook_declares_its_release_model
+```
+
+A16 reads `RELEASING.md` line by line and asks for that exact line. A sentence that only contains the
+words would satisfy a joined reading and leave the pack refusing, so the comparison is line-exact.
+No mutation row is added: the table of `S03400-S03499.json` carries rows for `ci.yml` only, none for a
+document, and a line of a document is judged by A16 and by the pack.
+
+| file | context | change |
+|---|---|---|
+| `RELEASING.md` | `repo` | changed by the third amendment (section 9): the declaration line |
+| `scripts/tests/test_rulesets.py` | `repo` | changed by the third amendment: A16 |
+| `docs/specs/SPEC-034-a-release-never-deadlocks-and-only-this-repositorys-dev-reaches-main.md` | `repo` | changed by the third amendment: this section |
+| `docs/red-first/SPEC-034.md` | `repo` | changed by the third amendment: A16 |
+| `changelog.d/docs-release-model-360.md` | `repo` | added by the third amendment |
