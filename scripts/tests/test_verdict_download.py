@@ -41,8 +41,15 @@ JUDGE_FLAGS = {
     },
     "oracle": {"--plan": PLAN, "--rows": ROWS},
 }
-JUDGE = re.compile(r"(?m)^\s*python3 scripts/mutation-verdict\.py judge (.*?)(?: \|\| \w+=\$\?)?$")
-
+JUDGE = re.compile(
+    r"(?m)^\s*python3\s+scripts/mutation-verdict\.py\s+judge\s+(.*?)(?: \|\| \w+=\$\?)?$"
+)
+# Two private-use characters mark what `shlex` would erase: a `$` the shell reads as text (inside
+# single quotes, or escaped) and a `$` outside every quote, where the shell word-splits the value.
+LITERAL = "\ue000"
+UNQUOTED = "\ue001"
+BRACED = re.compile(r"\$\{(\w+)\}")
+CONTINUATION = re.compile(r"(?<!\\)((?:\\\\)*)\\\n")
 
 JUDGE_CMD = "python3 scripts/mutation-verdict.py judge"
 
@@ -119,13 +126,61 @@ WRONG = {
 }
 
 
+def mark_dollars(command):
+    """The command with each `$` the shell reads as text replaced by LITERAL (in single quotes,
+    or escaped by a backslash) and each `$` outside every quote preceded by UNQUOTED. `shlex`
+    removes the quotes and the backslash, so this pass keeps the fact it would lose."""
+    out, quote, i = [], None, 0
+    while i < len(command):
+        char = command[i]
+        if char == "\\" and quote != "'" and i + 1 < len(command):
+            out.append(LITERAL if command[i + 1] == "$" else char + command[i + 1])
+            i += 2
+            continue
+        if quote is None and char in "'\"":
+            quote = char
+        elif quote == char:
+            quote = None
+        if char == "$":
+            out.append(LITERAL if quote == "'" else (UNQUOTED if quote is None else "") + char)
+        else:
+            out.append(char)
+        i += 1
+    return "".join(out)
+
+
+def shell_words(command):
+    """The words the shell splits `command` into (quote removal, backslash-newline continuations
+    joined). An expansion reads `$name` whether it was written `$name` or `${name}`; one outside
+    every quote reads `(unquoted)$name`; a `$` that is text reads `\\$`."""
+    joined = CONTINUATION.sub(r"\1", command)
+    words = shlex.split(mark_dollars(joined), comments=False, posix=True)
+    return [
+        BRACED.sub(r"$\1", w).replace(UNQUOTED, "(unquoted)").replace(LITERAL, "\\$") for w in words
+    ]
+
+
+def judge_flags(words):
+    """{flag: value} for the `--flag value` and `--flag=value` pairs among `words`."""
+    flags = {}
+    for i, word in enumerate(words):
+        if not word.startswith("--"):
+            continue
+        name, equals, value = word.partition("=")
+        if equals:
+            flags[name] = value
+        elif i + 1 < len(words):
+            flags[name] = words[i + 1]
+    return flags
+
+
 def judge_lines(verdict):
-    """{class: {flag: value}} for each `mutation-verdict.py judge` command line of the verdict
-    job, read one line at a time; a line with no `--class` is refused, and zero lines is too."""
+    """{class: {flag: value}} for each `mutation-verdict.py judge` command of the verdict job,
+    read as the shell splits it; a command with no `--class` is refused, and zero commands too."""
     found = {}
-    for command in examined("judge command lines", JUDGE.findall(verdict)):
-        words = shlex.split(command, posix=False)
-        flags = {w: words[i + 1] for i, w in enumerate(words[:-1]) if w.startswith("--")}
+    joined = CONTINUATION.sub(r"\1", verdict)
+    for command in examined("judge command lines", JUDGE.findall(joined)):
+        flags = judge_flags(shell_words(command))
         if "--class" not in flags:
             raise AssertionError(f"a judge line names no --class: {command}")
         if flags["--class"] in found:
@@ -141,7 +196,7 @@ def check_judge(verdict):
         if cls not in lines:
             raise AssertionError(f"the verdict has no judge line for class {cls}")
         for flag, path in wanted.items():
-            if lines[cls].get(flag) != f'"{path}"':
+            if lines[cls].get(flag) != path:
                 raise AssertionError(
                     f"{lines[cls].get(flag)!r} != {path!r} : "
                     f"the {cls} judge line does not read {flag} at {path}"
@@ -320,6 +375,18 @@ class TheVerdictReadsEachReportByName(unittest.TestCase):
             with self.subTest(wrong=name):
                 with self.assertRaises(AssertionError):
                     check_judge(as_verdict(pair))
+
+    def test_an_expansion_is_kept_apart_from_text_and_from_an_unquoted_one(self):
+        spelled = {
+            '"$reports"': "$reports",
+            '"${reports}"': "$reports",
+            "\"$reports\"'/x'": "$reports/x",
+            "'$reports'": "\\$reports",
+            "\\$reports": "\\$reports",
+            "$reports": "(unquoted)$reports",
+        }
+        for written, read in examined("spellings of an expansion", spelled.items()):
+            self.assertEqual(shell_words(written), [read], written)
 
 
 if __name__ == "__main__":
