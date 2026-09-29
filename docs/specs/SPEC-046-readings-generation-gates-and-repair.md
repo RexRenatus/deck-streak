@@ -5,8 +5,8 @@
   readings' surface, the law primer and the language form), ADR-054 (the AI route is optional; with
   it absent, no reading is generated and nothing pages), and ADR-046 (the word target, the coverage
   gates on a persona output, the repair and the text crates).
-- **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
-  `docs/specs/` with its tests and `docs/red-first/SPEC-046.md` (ADR-016).
+- **Status:** promoted from `docs/specs/planned/` by the delivery that builds it, with its tests and
+  `docs/red-first/SPEC-046.md` (ADR-016).
 
 ## 1. The problem, measured
 
