@@ -136,6 +136,9 @@ pub enum SyncOutcome {
         /// Why.
         reason: String,
     },
+    /// The job was asked and had not finished when the bounded wait ended: the owner is told so
+    /// instead of being left without an answer (SPEC-059 R5).
+    StillRunning,
 }
 
 /// What the recompute after the sync did.
@@ -337,6 +340,12 @@ pub fn sync_reply(answer: &Result<SyncAnswer, SyncRefusal>) -> Reply {
         SyncOutcome::Reused => "A sync had just succeeded, so no new one ran.".to_owned(),
         SyncOutcome::NotRun { reason } => {
             format!("No sync ran (<code>{}</code>).", escape_html(reason))
+        }
+        SyncOutcome::StillRunning => {
+            return Reply::text(
+                "The sync is still running. Send /sync again in a minute for its outcome."
+                    .to_owned(),
+            );
         }
     };
     let scores = match answer.scores {

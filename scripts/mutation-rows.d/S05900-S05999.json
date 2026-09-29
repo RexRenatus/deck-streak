@@ -1,0 +1,68 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S05901-ONLY-THE-STORED-FLAG-SAYS-THE-OWNER-ASKED",
+        "daemon",
+        "src/sync_request.rs",
+        "        .rescore_pending)",
+        "        .rescore_pending || true)",
+        "roles::two_planted_request_payloads_change_nothing_the_sync_job_serves",
+        "the job runs an owner cycle only for the stored request; a mutant that reads pending without it starts one for any ring, so a planted file's payload would change what runs; the killer runs the job through the binary (SPEC-059 R2)"
+      ],
+      [
+        "S05902-THE-SYNC-COMMAND-IS-THE-OWNERS-ALONE",
+        "bot",
+        "src/gate.rs",
+        "is_ok_and(|id| owner.is(TelegramUserId::new(id)))",
+        "is_ok_and(|_id| true)",
+        "gate::an_update_from_anyone_but_the_owner_is_dropped_without_a_reply",
+        "a request for the job is made only after the owner gate admits the update; a gate that admits anyone lets a stranger ring the doorbell (SPEC-026 R4; SPEC-059 A6)"
+      ],
+      [
+        "S05906-THE-DOORBELL-WRITES-ITS-FILE",
+        "daemon",
+        "src/sync_request.rs",
+        "        OpenOptions::new()\n            .write(true)\n            .create(true)\n            .truncate(true)\n            .open(&self.path)\n            .map(drop)",
+        "        let _ = OpenOptions::new();\n        Ok(())",
+        "sync_request::the_doorbell_writes_its_file_and_refuses_an_absent_directory",
+        "a ring that reports success without writing the request file never starts the sync job, so the owner's request is stored and never served; the doorbell test reads the file the ring must leave (SPEC-059 R2)"
+      ],
+      [
+        "S05907-THE-BOT-FLUSHES-AFTER-THE-OWNERS-SYNC-SUCCEEDS",
+        "daemon",
+        "src/sync_request.rs",
+        "                && let Err(error) = self.flush.flush().await",
+        "                && let Err(error) = NoFlush.flush().await",
+        "sync_request::the_bot_flushes_its_router_after_the_owners_sync_succeeds",
+        "a requester that never flushes leaves the notifications the quiet hours and failed sends held undelivered after the owner's sync succeeded, which regresses SPEC-041 R7 for the owner's /sync; the killer counts the flush the requester makes once the job's run succeeded (SPEC-059 R8)"
+      ]
+    ],
+    "SCRIPT_MUTATIONS": [
+      [
+        "S05903-THE-REQUEST-DIRECTORY-IS-THE-SERVICE-USERS-ALONE",
+        "deploy/tmpfiles.d/deck-streak-sync-request.conf",
+        "d /run/deck-streak-sync 0700 ",
+        "d /run/deck-streak-sync 0755 ",
+        "a directory other users can enter lets another process ring the doorbell; only the bot unit's ReadWritePaths= may write it (SPEC-059 R3)",
+        "test_sync_path.TheSyncPath.test_the_path_unit_and_its_request_directory"
+      ],
+      [
+        "S05904-THE-DOORBELL-IS-EDGE-TRIGGERED",
+        "deploy/systemd/deck-streak-job\u0040sync.path",
+        "\nPathChanged=/run/deck-streak-sync/request",
+        "\nPathExists=/run/deck-streak-sync/request",
+        "PathExists= is level triggered and, with a job that never consumes the file, starts the sync again and again; PathChanged= starts it once per change (SPEC-059 R4)",
+        "test_sync_path.TheSyncPath.test_the_path_unit_and_its_request_directory"
+      ],
+      [
+        "S05905-THE-BOT-MAY-WRITE-THE-REQUEST-DIRECTORY",
+        "deploy/systemd/deck-streak-bot.service",
+        "\nReadWritePaths=/run/deck-streak-sync",
+        "\nReadWritePaths=/run/deck-streak-syn",
+        "the bot's sandbox is read-only outside its paths, so without the directory it cannot ring the doorbell and the owner is never served (SPEC-059 R3)",
+        "test_sync_path.TheSyncPath.test_the_path_unit_and_its_request_directory"
+      ]
+    ]
+  }
+}

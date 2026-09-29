@@ -14,6 +14,15 @@ license = "AGPL-3.0-or-later"
 repository = "https://github.com/RexRenatus/deck-streak"
 publish = false
 
+# Build profile (SPEC-125, ADR-125). Workspace crates keep line tables, which is what a panic
+# backtrace needs to name a file and line; dependencies keep no debuginfo. The `test` profile
+# inherits `dev`, so both apply to `cargo test` too.
+[profile.dev]
+debug = "line-tables-only"
+
+[profile.dev.package."*"]
+debug = false
+
 # One home for every version. External crates are added here by the delivery whose ADR admits
 # them (docs/decisions); a member writes `name.workspace = true`.
 [workspace.dependencies]
