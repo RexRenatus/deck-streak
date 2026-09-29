@@ -153,6 +153,15 @@
         "CycleError::Window(_) => RefusalReason::SyncRecordFailed,\n        CycleError::Gate(_) | CycleError::Recompute(_) => {",
         "lib::wiring::tests::a_cycle_that_cannot_finish_is_refused_with_its_steps_reason_code",
         "the window step's failure is named by the recompute code, not the sync code (SPEC-128 amendment, #396)"
+      ],
+      [
+        "S12818-A-RUN-RECORD-THE-CYCLE-CANNOT-READ-IS-REFUSED-BY-THE-SYNC-CODE",
+        "daemon",
+        "src/wiring.rs",
+        ".map_err(|error| refused(cycle_reason(&error), &error))?;",
+        ".map_err(|error| refused(match cycle_reason(&error) { RefusalReason::SyncRecordFailed => RefusalReason::RecomputeFailed, other => other }, &error))?;",
+        "lib::wiring::tests::the_owners_cycle_that_cannot_read_its_run_record_is_refused_by_the_sync_code",
+        "a cycle whose run record cannot be read is refused by the sync code at the cycle's own site; a remap that still calls the mapper stores the recompute code (SPEC-128 amendment, #396)"
       ]
     ]
   }
