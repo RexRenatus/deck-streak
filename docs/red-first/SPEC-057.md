@@ -64,6 +64,7 @@ A28: red at e260627: AssertionError in each of its four subtests, each for its o
 A28: green at 8c87e5b
 A19: red at 8eba7ef: AssertionError: 16 != 0 : deck-streak-identity: 16 unexplained mutant(s) in its row (opening sweep run 36511057164 listed 143, killed 97, equivalent 0, unexplained 16, unviable 30)
 A19: green at a911483
+A21: green at c7391f9
 A21: red at 660dda8 (full sha 660dda874b1aba282f5ffa2f395ce3819c51e79a): AssertionError: 5 != 0 : deck-streak-coordination: 5 unexplained mutant(s) in its row (the opening sweep, run 36526822999 at 36b283a, read listed 409, killed 321, equivalent 0, unexplained 5, unviable 83)
 ```
 
