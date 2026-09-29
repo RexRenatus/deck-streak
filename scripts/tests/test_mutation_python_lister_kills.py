@@ -7,6 +7,7 @@ fails by assertion. A call that a mutant makes raise is read through `attempt`, 
 by assertion and not by an exception.
 """
 
+import ast
 import importlib.util
 import json
 import os
@@ -14,6 +15,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from collections import namedtuple
 from pathlib import Path
 
 from _support import REPO, examined
@@ -209,6 +211,36 @@ class TheListingIsHeldWhole(unittest.TestCase):
             pick(source, "old", "new"),
             [("3", "4"), ("return value", "return None")],
         )
+
+
+Token = namedtuple("Token", "start string")
+
+
+class TheListerHoldsItsBoundsAndItsSkips(unittest.TestCase):
+    """The three mutants #340 first recorded as equivalent, each told apart by a direct call."""
+
+    def test_an_arguments_annotation_is_skipped_as_a_node_of_its_own(self):
+        lister = MP.Lister("def f(x: a + b, y: c < d):\n    pass\n")
+        arguments = lister.tree.body[0].args.args
+        skipped = lister.skipped_nodes()
+        self.assertEqual([id(a.annotation) in skipped for a in arguments], [True, True])
+
+    def test_a_comparison_whose_operators_and_operands_disagree_is_refused(self):
+        lister = MP.Lister("a == b\n")
+        node = lister.tree.body[0].value
+        node.ops.append(ast.NotEq())
+        raised = None
+        try:
+            lister.site(node, "<module>")
+        except ValueError as error:
+            raised = error
+        self.assertIsInstance(raised, ValueError)
+
+    def test_between_stops_at_the_first_token_at_or_past_its_end(self):
+        lister = MP.Lister("a = 1\n")
+        lister.tokens = [Token((1, 0), "a"), Token((1, 5), "z"), Token((1, 2), "b")]
+        lister.token_starts = [token.start for token in lister.tokens]
+        self.assertEqual([t.string for t in lister.between((1, 0), (1, 3))], ["a"])
 
 
 class TheMapAndTheCensusAreHeld(unittest.TestCase):
