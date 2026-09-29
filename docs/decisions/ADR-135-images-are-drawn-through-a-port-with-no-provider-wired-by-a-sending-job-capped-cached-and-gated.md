@@ -35,6 +35,9 @@ a ceremony, and what is wired before #169 is answered?
   is the default (ADR-054).
 - A second send path for photos beside the router: rejected because every message goes through the
   one router (ADR-041), whose ledger makes a send happen once.
+- Record a photo the transport cannot send as `no_notifier`: rejected because that reason means no
+  transport is joined, and a joined transport that lacks the photo call is a different fault the
+  owner must be able to tell apart in the ledger.
 
 ## Decision Outcome
 
@@ -49,6 +52,9 @@ pure, keeps every send on the router, and makes the product with no provider the
   withholds it, and the image is discarded.
 - **The job.** `image_art` runs hourly on the sending template (ADR-124, planned) and raises each
   ready image through `Router::route_photo`.
+- **The withhold reason.** `Router::route_photo` records a photo whose transport answers
+  `Unsupported` as withheld under a reason of its own, `photo_unsupported`, so `withhold.reasons` in
+  `notifications-policy.json` gains that one entry and the policy records the deviation.
 - **The credential.** `image-provider-key`, optional through the kernel's loader, named by no unit
   until #169's delivery binds it.
 

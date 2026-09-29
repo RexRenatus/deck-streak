@@ -276,6 +276,10 @@
     {
       "key": "kinds.reading_ready",
       "adr": "docs/decisions/ADR-041-notification-router-core.md"
+    },
+    {
+      "key": "withhold.reasons",
+      "adr": "docs/decisions/ADR-135-images-are-drawn-through-a-port-with-no-provider-wired-by-a-sending-job-capped-cached-and-gated.md"
     }
   ]
 }
