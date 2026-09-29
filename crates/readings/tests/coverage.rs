@@ -208,15 +208,13 @@ fn a_language_roster_needs_each_new_word_glossed_and_used() {
         "the glosses are a list by contract"
     );
     let unglossed = Document::parse(&text("La casa y el perro.", "- casa: house"));
-    assert!(
-        !check_own(&form, &seed, &unglossed).roster.is_empty(),
-        "perro is unglossed"
-    );
+    let unglossed_roster = check_own(&form, &seed, &unglossed).roster;
+    assert_eq!(unglossed_roster.len(), 1, "{unglossed_roster:?}");
+    assert_eq!(unglossed_roster[0], "new word 2 is not glossed");
     let unused = Document::parse(&text("La casa.", "- casa: house\n- perro: dog"));
-    assert!(
-        !check_own(&form, &seed, &unused).roster.is_empty(),
-        "perro is unused"
-    );
+    let unused_roster = check_own(&form, &seed, &unused).roster;
+    assert_eq!(unused_roster.len(), 1, "{unused_roster:?}");
+    assert_eq!(unused_roster[0], "new word 2 is not used in the reading");
 }
 
 #[test]
@@ -228,9 +226,11 @@ fn a_list_marker_in_the_primer_prose_is_refused() {
             prose[2].1.push_str(&format!("\n{marker}"));
         });
         let checks = own(&law_seed(), &doc);
-        assert!(
-            !checks.no_list_markers.is_empty(),
-            "{marker:?} is a list marker"
+        assert_eq!(
+            checks.no_list_markers.len(),
+            1,
+            "{marker:?} is a list marker: {:?}",
+            checks.no_list_markers
         );
     }
     for fine in ["-item", "1.item", "a - b", "12 items", "**bold**"] {
