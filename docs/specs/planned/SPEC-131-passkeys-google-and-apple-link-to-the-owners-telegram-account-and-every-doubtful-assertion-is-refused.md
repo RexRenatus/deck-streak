@@ -16,8 +16,8 @@
 - **Prerequisites:** SPEC-020 (settings and migrations), SPEC-021 (data rights and the erase),
   SPEC-024 (the handshake, the sessions and the CSRF bound), SPEC-027 (the job table and its page
   exit), SPEC-028 (the Mini App shell), SPEC-066 (the credential loader and its empty refusal) and
-  SPEC-130 (the settings screen). SPEC-130 is unlanded. The job `link_revocation` needs SPEC-100 R28's
-  INSTANCE widening (the effective-config check refuses a job name it does not list); it holds
+  SPEC-130 (the settings screen). SPEC-130 is unlanded. The job `link_revocation` needs SPEC-100
+  R28's INSTANCE widening (the effective-config check refuses a job name it does not list); it holds
   through SPEC-130. **Mutation band:** `S13100-S13199`.
 - **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
   `docs/specs/` with its tests and `docs/red-first/SPEC-131.md` (ADR-016).
@@ -39,9 +39,12 @@
   from another origin. The auth and web-security packs name the standards' MUSTs (RFC 9700, OpenID
   Connect Core, WebAuthn Level 3, NIST SP 800-63B-4).
 - **The predecessor had no linked sign-in.** Its boundary was the bot's owner chat; there is nothing
-  to port and no golden. Every number in R3 to R14 (the code's 600 seconds and 128 bits, the 300-second
-  reauthentication age, the cap of 8, the 10-second revocation bound, the five attempts) is chosen
-  by this SPEC, not measured in the predecessor.
+  to port and no golden. Four numbers in R3 to R15 are fixed by their source: the 24-byte nonce by
+  XChaCha20, the 16-byte id by the passkey library's UUID type, the code's 600 seconds by the auth
+  pack's ten-minute ceiling, and its 128 bits by that pack's 112-bit floor, which they exceed. The
+  rest are chosen by this SPEC, not measured in the predecessor: the 300-second reauthentication
+  age, challenge life and client-secret life, the cap of 8, the 10-second revocation bound and the
+  five attempts.
 
 ## 2. Requirements
 
@@ -123,7 +126,8 @@ Passkeys (ADR-132)
 
 R10. The relying party is the host of `DECKSTREAK_PUBLIC_ORIGIN`, and the expected origin that
      origin exactly. Registration (inside a `link` session) asks for user verification `required`,
-     attestation `none`, and a user handle that is a random version-4 UUID (16 bytes, the `Uuid` webauthn-rs 0.5's
+     attestation `none`, and a user handle that is a random version-4 UUID (16 bytes, the `Uuid`
+     webauthn-rs 0.5's
      `start_passkey_registration` takes as `user_unique_id`), minted once for the owner and reused,
      with a fixed display name that carries no personal data. The ceremony's state is kept on the
      server under the flow id, never sent to the browser, and lives 300 seconds.
@@ -141,13 +145,15 @@ R12. Apple's client secret is an ES256 JWT (`kid` the key id; `iss` the team id;
      id; `aud` Apple's issuer; `exp` 300 seconds after `iat`), signed with `apple-signing-key` for
      each exchange and never stored.
 R13. Apple's refresh token from the exchange is sealed with XChaCha20-Poly1305 under
-     `link-token-key`, with a random 24-byte nonce and `(issuer, token id)` as associated data, the token id 16 random
+     `link-token-key`, with a random 24-byte nonce and `(issuer, token id)` as associated data, the
+     token id 16 random
      bytes minted at the seal, and stored in `linked_identities.sealed_refresh_token` beside its
      `token_id`. No other token of any provider is kept.
 R14. Unlinking Apple, and the erase (R18), call Apple's revocation with the opened token first,
      bounded at 10 seconds, then delete the local row either way. A revocation that fails, times
      out, or cannot be made because the role holds no Apple credential moves the sealed token to
-     `identity_revocations` (the sealed token, its issuer and token id, its attempt count, its next attempt instant; no
+     `identity_revocations` (the sealed token, its issuer and token id, its attempt count, its next
+     attempt instant; no
      subject and no user id), due an hour later. The job `link_revocation` runs hourly at minute 41
      (SPEC-027 R1's hourly kind, a minute R2 admits) on the plain job template, and tries each due
      row once; a failure, or no credential, counts an attempt and doubles the wait (1, 2, 4, 8 and
@@ -186,7 +192,8 @@ R19. The link code, the state, the nonce, the verifier, a token, a sealed token,
      session id never reach a log line, a span field, an error or a response body other than the
      one that mints them (SPEC-024 R4).
 R20. CHARTER 10's eleven anti-goals bind this SPEC as one block; the ones it touches are no
-     unbounded work (R3 and R6's caps, R10's 300-second life, R9's bound, R14's five attempts) and no secret on
+     unbounded work (R3 and R6's caps, R10's 300-second life, R9's bound, R14's five attempts) and
+     no secret on
      anything public (R2, R19).
 
 ## 3. Acceptance criteria

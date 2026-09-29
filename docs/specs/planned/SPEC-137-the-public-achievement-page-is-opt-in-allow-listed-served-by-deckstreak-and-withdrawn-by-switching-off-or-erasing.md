@@ -16,7 +16,8 @@
 - **Prerequisites:** SPEC-020 (migrations), SPEC-021 (the data-rights registry), SPEC-024 (the
   owner's session and the CSRF bound), SPEC-027 (the job table and its exit codes), SPEC-029 (the
   parity oracle), SPEC-032 (the Caddy block), SPEC-040 (the XP ledger), SPEC-071 (the day's rollup,
-  score and grade) and SPEC-130 (the settings census and screen). SPEC-130 is unlanded. The job `public_page` needs
+  score and grade) and SPEC-130 (the settings census and screen). SPEC-130 is unlanded. The job
+  `public_page` needs
   SPEC-100 R28's INSTANCE widening (the effective-config check refuses a job name it does not list);
   it holds through SPEC-130. The sections
   whose sources are SPEC-072, SPEC-073, SPEC-076, SPEC-077, SPEC-078, SPEC-079 and SPEC-083 join

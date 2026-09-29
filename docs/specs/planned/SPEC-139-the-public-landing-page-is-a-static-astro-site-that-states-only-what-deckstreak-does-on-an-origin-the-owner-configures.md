@@ -57,8 +57,10 @@ R3. The built tree is flat: `index.html`, `privacy.html`, `terms.html`, `404.htm
 The page's head
 
 R4. Each page's head opens with `<meta charset="utf-8">` and then its meta description, the first
-    tag with a `content=` attribute. The description is 50 to 160 characters (seo-pipeline's bound), plain ASCII with no
-    double quote. The title is `<keyword phrase> | DeckStreak`, 10 to 70 characters (seo-pipeline's bound), plain ASCII,
+    tag with a `content=` attribute. The description is 50 to 160 characters (seo-pipeline's bound),
+    plain ASCII with no
+    double quote. The title is `<keyword phrase> | DeckStreak`, 10 to 70 characters (seo-pipeline's
+    bound), plain ASCII,
     unique per page. The pages' titles and descriptions are:
     - the landing page: `Gamify Anki in Telegram: XP, Streaks and Quests | DeckStreak`, and
       `DeckStreak turns your Anki reviews into XP, levels, streaks, quests and badges in a Telegram
@@ -85,8 +87,9 @@ R7. `robots.txt` is exactly `User-agent: *`, `Allow: /` and `Sitemap: <origin>/s
 The page's body
 
 R8. Each page has exactly one `<h1`, the first heading. The landing page's is `Turn your Anki reviews
-    into XP, streaks and quests`, followed by a paragraph of at least 40 characters that says how
-    DeckStreak reads reviews (through the user's own Anki sync server, SPEC-022), the hero image,
+    into XP, streaks and quests`, followed by a paragraph of at least 40 characters (seo-pipeline's
+    bound) that says how DeckStreak reads reviews (through the user's own Anki sync server,
+    SPEC-022), the hero image,
     and the one call to action (`data-cta`), `Open DeckStreak in Telegram`, to `PUBLIC_BOT_URL`.
 R9. Each `<h2>` of the landing page names a feature, and `web/site/src/features.json` maps each
     heading to the SPEC that delivered it. A heading whose SPEC is still under
@@ -94,8 +97,8 @@ R9. Each `<h2>` of the landing page names a feature, and `web/site/src/features.
     does not do (binding decision 11). A later delivery adds its own heading when its SPEC moves.
     The two headings that describe no single feature, `How DeckStreak reads your Anki reviews`
     (SPEC-022) and `Privacy` (SPEC-021), map to their SPECs the same way. R16's checker
-    reads the title, the meta description and the `<h1` the same way: each feature they name maps in `features.json` to a
-    delivered SPEC, or is a finding (A8).
+    reads the title, the meta description and the `<h1` the same way: each feature they name maps in
+    `features.json` to a delivered SPEC, or is a finding (A8).
 R10. Every page's footer is ADR-014's notice, `Anki® is a registered trademark of Ankitects Pty Ltd.
      DeckStreak is not affiliated with or endorsed by Anki.`, with links to `/privacy.html` and
      `/terms.html`.

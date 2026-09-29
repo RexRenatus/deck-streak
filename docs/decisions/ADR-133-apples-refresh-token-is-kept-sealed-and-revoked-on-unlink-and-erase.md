@@ -37,13 +37,16 @@ a credential at rest. Does DeckStreak keep Apple's refresh token, and if so, how
 Chosen option: "keep it sealed", because it is the only option that keeps revocation possible
 without a live credential at rest.
 
-- **The seal.** A random 24-byte nonce per seal, and `(issuer, token id)` as associated data, the token id kept beside the sealed token, so the retry
-  opens it with no subject and a sealed token moved to another row does not open. The token is stored in
+- **The seal.** A random 24-byte nonce per seal, and `(issuer, token id)` as associated data, the
+  token id kept beside the sealed token, so the retry
+  opens it with no subject and a sealed token moved to another row does not open. The token is
+  stored in
   `linked_identities.sealed_refresh_token`; no other provider token is kept.
 - **The revocation.** Unlinking Apple and either erase path open the token and call Apple's
   revocation first, bounded at 10 seconds, then delete the local row either way.
 - **The retry.** A revocation that fails, times out or has no credential moves the sealed token to
-  `identity_revocations` (with its issuer and token id; no subject, no user id), tried hourly by the job `link_revocation` with
+  `identity_revocations` (with its issuer and token id; no subject, no user id), tried hourly by the
+  job `link_revocation` with
   waits of 1, 2, 4, 8 and 16 hours; the fifth failure deletes the row and pages once.
 - **Rights.** `identity_revocations` is exempt from export and erase: each row is the erase's own
   withdrawal, holding nothing that names the owner.

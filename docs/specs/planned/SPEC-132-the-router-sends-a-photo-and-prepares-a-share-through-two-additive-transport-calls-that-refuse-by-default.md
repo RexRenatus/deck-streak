@@ -41,7 +41,8 @@ R1. `BotTransport` gains `push_photo(&Pass, &Photo, caption: &str) -> PhotoFutur
 R2. `BotTransport` gains `prepare_share(&Pass, &FileId, caption: &str) -> ShareFuture`, whose output
     is `Prepared`: `Ready { id }` (the prepared message's id), `Failed`, or `Unsupported`, with the same
     refusing default.
-R3. A `Photo` holds PNG or JPEG bytes of at most 10 MB (10,000,000 bytes), whose width and height total at most
+R3. A `Photo` holds PNG or JPEG bytes of at most 10 MB (10,000,000 bytes), whose width and height
+    total at most
     10,000 pixels with a ratio of at most 20 (Bot API `sendPhoto`), and a caption of at most 1,024
     characters after escaping; anything else is refused at construction
     `photo_invalid`, before any call. It is never written to a log line (SPEC-041's decision ledger
@@ -58,8 +59,8 @@ R5. A photo occasion asks tier T2 and is rendered by one `push_photo`, whatever 
     for its event: the predecessor sent both photos outside its ladder (§1), so a photo never spends
     the week's T4 or T5 budget (SPEC-084). The ladder's `share_card` entry is left as it is; no text
     occasion raises it. A share photo is rendered at T2 outside the ladder's tier, budget and break
-    cap, as the predecessor ships its keepsake photo outside the ladder (`showcase.py`), and it stays
-    on the one router (R4).
+    cap, as the predecessor ships its keepsake photo outside the ladder (`showcase.py`), and it
+    stays on the one router (R4).
 R6. `Delivered` records the delivery under SPEC-041 R6's shape and answers `Sent { file_id }`.
     `Unsupported` records the occasion withheld with the new reason `photo_unsupported` (its kind with
     `:withheld` appended, SPEC-041 R6), final, and sends nothing else: no caption as text, because
