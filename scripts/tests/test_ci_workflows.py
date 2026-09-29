@@ -1902,8 +1902,7 @@ def container_problems(container, where):
     """A job's container whose environment the checker cannot read: one `${{ }}` expression, an
     `env` that `environment_problems` refuses, or one of `CONTAINER_CREATED_WITH` that is or holds
     a `${{ }}` expression, which GitHub evaluates when the job runs. The steps of a job with a
-    container run inside it, in its environment. A container named by its image alone sets no
-    variable."""
+    container run inside it, in its environment. A container named by its image alone has no `env` to read."""
     if container is None or (isinstance(container, str) and "${{" not in container):
         return []
     if isinstance(container, dict):

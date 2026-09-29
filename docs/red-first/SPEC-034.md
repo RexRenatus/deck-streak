@@ -215,8 +215,8 @@ checker reads (R7, section 3, and the manifest's rows of planted workflows).
   the twelve planted-character subtests expects the value under its refused key as well; they
   follow the list's assertion, which stops the test at red, and each is red at 5447e5b run alone.
   Green at 89f86ec, where the checker reads every string the workflow holds for those commands.
-- A10 red at 0994866: `AssertionError: Lists differ`: fourteen findings were missing: a variable
-  git reads, set as an `env` key of the workflow, a job, a job's container and a step, in any
+- A10 red at 0994866: `AssertionError: Lists differ`: fourteen findings were missing: a variable whose name begins with `GIT_`, set as an
+  `env` key of the workflow, a job, a job's container and a step, in any
   case, or named in a container's options and in a script (eight); an `env` of the workflow, a
   job, a job's container and a step, and a container, each one `${{ }}` expression (five); and an
   `env` the reader refuses as a flow mapping (one). Green at e7fb4f5. A11 was green at both: its
@@ -234,7 +234,7 @@ or left: each new one follows its file's earlier ones, in the order the checker 
 did not change; its admitted workflows grew from six to eight, `built-in-shells.yml` (237176d, its
 empty forms at 8274f9f) and `environment-the-checker-reads.yml` (0994866). On the live workflows
 the checker reads 636 strings, 570 of them outside a run step's script: none names a clone, a
-fetch of a URL or a variable git reads, and none of the four workflows sets a `shell`, `defaults`,
+fetch of a URL or a variable whose name begins with `GIT_`, and none of the four workflows sets a `shell`, `defaults`,
 a container or an `env` that is not a mapping.
 
 At 8274f9f a hand sweep ran 41 mutants over this round's code, one at a time, on a scratch copy of
@@ -262,7 +262,7 @@ use of each, and each has its verdict:
 | `options` | refused when it is or holds a `${{ }}` expression |
 | `ports` | refused when it is or holds a `${{ }}` expression |
 | `volumes` | refused when it is or holds a `${{ }}` expression |
-| `env` | refused when it is not a mapping or names a variable git reads (fix round 4) |
+| `env` | refused when it is not a mapping or names a variable whose name begins with `GIT_` (fix round 4) |
 | `credentials` | not read by steps |
 
 - A10 red at ec13211: `AssertionError: Lists differ`: two planted containers' `options`, one
@@ -287,7 +287,7 @@ the list before this round changed or left: each new one follows its file's earl
 order the checker reads. A11's body did not change; its admitted workflows are still eight, and
 `environment-the-checker-reads.yml` gained two containers (ec13211 and 6a31256). The live workflows
 set no job's container. On them the checker reads 668 strings, 599 of them outside a run step's
-script, and none names a clone, a fetch of a URL or a variable git reads.
+script, and none names a clone, a fetch of a URL or a variable whose name begins with `GIT_`.
 
 At 9f19b06 the hand sweeps ran again, one mutant at a time, on a scratch copy of the committed
 tree, restoring the file byte for byte after each. The 102 of fix round 2: 102 of 102 killed. The

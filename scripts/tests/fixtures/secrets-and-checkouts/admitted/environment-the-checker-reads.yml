@@ -1,9 +1,9 @@
 name: planted
 
-# A planted workflow (SPEC-034 A11): environments the checker reads that set no variable git
-# reads: names that hold the letters `GIT_` only inside a longer word, an empty `env`, a container
+# A planted workflow (SPEC-034 A11): environments the checker reads that set no variable whose name
+# begins with `GIT_`: names that hold the letters `GIT_` only inside a longer word, an empty `env`, a container
 # named by its image alone, a container whose `env` is a mapping, a container whose `options`
-# are written out and name no variable git reads, and a container whose `ports` and `volumes` are
+# are written out and name no `GIT_` variable, and a container whose `ports` and `volumes` are
 # written out, and whose registry `credentials` are one `${{ }}` expression, which no step reads.
 # scripts/tests/test_ci_workflows.py judges it; nothing runs it.
 on:

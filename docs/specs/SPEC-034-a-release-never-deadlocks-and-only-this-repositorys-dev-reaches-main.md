@@ -201,7 +201,7 @@ white space, so a secret the block names over two lines keeps its indent.
   `volumes` is or holds one, since the steps of a job with a container run in its environment and
   the runner creates the container from each of those. A name that holds those letters only
   inside a longer word, such as `DIGIT_COUNT`, names no such variable, a container named by its
-  image alone sets none, and a container's registry `credentials`, read to pull its image, are
+  image alone has no `env` to read, and a container's registry `credentials`, read to pull its image, are
   not read by its steps.
 
 A13 runs the three hardening tests, each through its own setUp, over
