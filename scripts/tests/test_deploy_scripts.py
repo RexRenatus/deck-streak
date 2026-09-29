@@ -871,6 +871,8 @@ class TheCaddyInstall(Case):
         caddyfile.write_text(line + "\n", encoding="utf-8")
         self.ok(w.run(ROLLBACK, "caddy-remove", **self.config()))
         self.assertEqual(caddyfile.read_text(), "", "grep found no line to keep")
+        reloads = [ln for ln in w.text("caddy.log").splitlines() if ln.startswith("caddy reload")]
+        self.assertEqual(len(reloads), 2, "the install's reload and the removal's, so it went on")
         self.assertFalse((w.caddy_dir / "deck-streak.caddy").exists(), "the block is removed")
 
     def refused_with_no_candidate(self, flag):
