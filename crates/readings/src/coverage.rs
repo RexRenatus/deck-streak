@@ -441,6 +441,13 @@ pub struct GateFailure {
     pub findings: Vec<String>,
 }
 
+/// The finding a pack gate's failure carries: the engine's own words naming the check. A pack's
+/// finding lines are a probe's output about the model's text, so none of them is a finding here
+/// (SPEC-046 R7).
+fn named(pack: &PackFailure) -> Vec<String> {
+    vec![format!("the {} check refused the reading", pack.class)]
+}
+
 /// The first failure across the own gates and the pack gate, in the gate order: complete, roster,
 /// anchors, band, no list markers, contract.
 #[must_use]
@@ -459,19 +466,19 @@ pub fn first_failure(own: &OwnChecks, pack: Option<&PackFailure>) -> Option<Gate
         return failure(ReadingGate::Roster, &own.roster);
     }
     if let Some(p) = pack_of(&ROSTER_CLASSES) {
-        return failure(ReadingGate::Roster, &p.findings);
+        return failure(ReadingGate::Roster, &named(p));
     }
     if !own.anchors.is_empty() {
         return failure(ReadingGate::Anchors, &own.anchors);
     }
     if let Some(p) = pack_of(&[BAND_CLASS]) {
-        return failure(ReadingGate::Band, &p.findings);
+        return failure(ReadingGate::Band, &named(p));
     }
     if !own.no_list_markers.is_empty() {
         return failure(ReadingGate::NoListMarkers, &own.no_list_markers);
     }
     pack.map(|p| GateFailure {
         gate: ReadingGate::Contract,
-        findings: p.findings.clone(),
+        findings: named(p),
     })
 }

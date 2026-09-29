@@ -27,11 +27,8 @@ fn quoted_spans(finding: &str) -> impl Iterator<Item = &str> {
         .filter(|span| !span.trim().is_empty())
 }
 
-/// Whether a span cannot be proved to be the probe's own words: it is written with an escape or
-/// holds a quote character. A probe prints a value with Python's `repr`, which escapes what it
-/// cannot print (a no-break space as `\xa0`) and picks the other quote for a word that holds one,
-/// while the rejected text holds the word in JSON (`\"`), so neither is found as written in the
-/// rejected text even when it quotes a new word. Such a span is taken as a quote.
+/// Whether a span cannot be proved to be the probe's own words: the repair slot drops an escaped
+/// span, and a span that holds a quote character.
 fn is_unproven(span: &str) -> bool {
     span.contains(['\\', '\'', '"'])
 }
