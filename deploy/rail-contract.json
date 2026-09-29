@@ -29,6 +29,18 @@
       "neutral": ["/etc/deck-streak/deck-streak.env"]
     },
     {
+      "unit": "deck-streak-backup.service",
+      "section": "Service",
+      "key": "ExecStart",
+      "neutral": ["/usr/bin/python3 /usr/local/lib/deck-streak/current/deploy/scripts/backup.py"]
+    },
+    {
+      "unit": "deck-streak-backup.timer",
+      "section": "Timer",
+      "key": "OnCalendar",
+      "neutral": ["*-*-* 03:24:00 UTC"]
+    },
+    {
       "unit": "deck-streak-bot.service",
       "section": "Service",
       "key": "ExecStart",
@@ -74,6 +86,18 @@
       "neutral": ["*-*-* 04:07:00 UTC"]
     },
     {
+      "unit": "deck-streak-litestream.service",
+      "section": "Service",
+      "key": "ExecStart",
+      "neutral": ["/usr/local/bin/litestream replicate -config /usr/local/lib/deck-streak/current/deploy/litestream.yml"]
+    },
+    {
+      "unit": "deck-streak-litestream.service",
+      "section": "Service",
+      "key": "EnvironmentFile",
+      "neutral": ["/etc/deck-streak/deck-streak.env"]
+    },
+    {
       "unit": "deck-streak-memory-watch.service",
       "section": "Service",
       "key": "ExecStart",
@@ -84,6 +108,24 @@
       "section": "Timer",
       "key": "OnCalendar",
       "neutral": ["*-*-* *:*:00 UTC"]
+    },
+    {
+      "unit": "deck-streak-restore-drill.service",
+      "section": "Service",
+      "key": "ExecStart",
+      "neutral": ["/usr/local/lib/deck-streak/current/deploy/scripts/restore-drill.sh"]
+    },
+    {
+      "unit": "deck-streak-restore-drill.service",
+      "section": "Service",
+      "key": "EnvironmentFile",
+      "neutral": ["/etc/deck-streak/deck-streak.env"]
+    },
+    {
+      "unit": "deck-streak-restore-drill.timer",
+      "section": "Timer",
+      "key": "OnCalendar",
+      "neutral": ["Sun *-*-* 06:24:00 UTC"]
     },
     {
       "unit": "deck-streak-slo.service",

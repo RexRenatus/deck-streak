@@ -1,0 +1,65 @@
+# DeckStreak's Litestream replica: it follows the database's write-ahead log and ships snapshots to
+# the bucket the settings file names (SPEC-064 R1, R2; ADR-010, ADR-064). It runs the Litestream
+# binary the private rail provides, at version 0.5.2 or later, with the configuration this release
+# carries. A template with neutral values that the private rail fills (deploy/README.md).
+[Unit]
+Description=DeckStreak Litestream replica of the database
+Documentation=https://github.com/RexRenatus/deck-streak/blob/main/deploy/README.md
+# A replicator that keeps failing pages once through the alert path and then stays down.
+StartLimitIntervalSec=300
+StartLimitBurst=5
+OnFailure=deck-streak-alert@%n.service
+# Litestream never sends sd_notify keep-alives, so no watchdog can watch it; a stopped replica
+# pages through OnFailure= and the drill's version rule catches a stale one.
+X-DurableServices-Waive=watchdog-missing the replicator sends no sd_notify keep-alives, so a watchdog would kill a healthy process, and OnFailure= and the weekly drill judge it instead
+
+[Service]
+# exec: the unit is active once the binary runs, and Litestream has no readiness notification.
+Type=exec
+ExecStart=/usr/local/bin/litestream replicate -config /usr/local/lib/deck-streak/current/deploy/litestream.yml
+User=deck-streak
+Group=deck-streak
+# The directory of the database it follows, which the API and the jobs share.
+StateDirectory=deck-streak
+# The configuration expands the bucket from this file when Litestream starts.
+EnvironmentFile=/etc/deck-streak/deck-streak.env
+Restart=on-failure
+# Litestream takes a final sync on SIGTERM; this bounds the wait before SIGKILL.
+TimeoutStopSec=30
+RestartSec=15
+OOMPolicy=kill
+# Go's soft limit, under MemoryHigh, so the replicator collects before the cgroup throttles it.
+Environment=GOMEMLIMIT=40MiB
+SyslogIdentifier=deck-streak-litestream
+# The budget is deploy/host-budget.json's entry for this unit (ADR-032, ADR-064).
+MemoryHigh=48M
+MemoryMax=64M
+CPUQuota=50%
+TasksMax=64
+UMask=0077
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+ProtectProc=invisible
+ProcSubset=pid
+# It reaches the bucket over the network and its own files over a socket.
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+CapabilityBoundingSet=
+
+[Install]
+WantedBy=multi-user.target
