@@ -81,30 +81,35 @@ notifications-policy pack's rows (`one-router`, `policy-deviation-has-adr`) in t
 The delivery decided each question the SPEC left open against its alternatives:
 
 - **The port's calls by type, and a delivery around the port by a census of what it reads.** Each
-  bot transport call takes a `Pass` that no other module can make, not by its field, `Default`, or
-  a clone of a borrowed one (SPEC-041 A2, the compiler), and `push_in_app` is private to the router
+  bot transport call takes a `Pass` that no other module can make, not by its field, `Default`, or a
+  clone of a borrowed one (SPEC-041 A2, the compiler), and `push_in_app` is private to the router
   module. A delivery that never calls the port, in the shipped sources of the kinds A15 names, is
   refused by A15's census by a name it holds: outside the bot's sources nothing names the Bot API's
-  host, one of the send or delivery methods of the pinned client's table (a send, a copy, a
-  forward, an edit, an ephemeral edit, a stopped poll or live location, a pin, a reaction or a Mini
-  App query's answer), or the bot's `DEFAULT_API_URL` (private to the bot's crate), SPEC-031's alert path aside; inside
-  them such a method is named only by its own named send; the bot's `send_html`, `edit_html` and
-  command handler are used only at named call sites (`OwnerChat`, the command replies (#257) and
-  the transport's own requests; none for `edit_html`; the long poll for the handler), and the
-  handler's replies and dispatch only by their named callers; only the router's modules name the
-  Mini App's feed or the held queue, which a flush delivers, and in the notifications crate only
-  they name the ledger, whose writes to the queue are private to the crate, the root's declaration
-  of it aside; and no source of that crate carries `#[path]`, `#[macro_export]` or `#[macro_use]`,
-  or re-exports the ledger, its feed's and queue's tables or its writes to the feed and the queue
-  by a `pub use`. The client's whole table is listed with its version and every method in it is a
-  send, a delivery or not a delivery, in one class only; deletions, unpins and the other
-  classes that deliver nothing to a user are classified, not held (#297). The census guards ordinary
-  code; code written to evade it goes unread, and review catches it (#297). The box run's
+  host, a send or delivery method of the pinned client's table, or the bot's `DEFAULT_API_URL`
+  (private to the bot's crate), SPEC-031's alert path aside; inside them such a method is named only
+  by its own named send; the bot's `send_html`, `edit_html` and command handler are used only at
+  named call sites (`OwnerChat`, the command replies (#257) and the transport's own requests; none
+  for `edit_html`; the long poll for the handler), and the handler's replies and dispatch only by
+  their named callers; only the router's modules name the Mini App's feed or the held queue, which a
+  flush delivers, and in the notifications crate only they name the ledger, whose writes to the
+  queue are private to the crate, the root's declaration of it aside; and no source of that crate
+  carries `#[path]`, `#[macro_export]` or `#[macro_use]`, or re-exports the ledger, its feed's and
+  queue's tables or its writes to the feed and the queue by a `pub use`. The client's whole table is
+  listed with its version and every method in it is a send, a delivery or not a delivery, in one
+  class only; the 91 that are not held (the reads, deletions and unpins, bot and session
+  configuration, a sticker's emoji, keywords, mask, position and bare uploads, chat administration
+  without user-visible text, and business, star and gift account state) can make no content the bot
+  chose visible to a user, and are classified, not held (#297). A method is held when it can make
+  content the bot chose visible to a user, and an administrator is a user. Chosen against holding
+  only methods that post a message into a chat, which let a gift, a story, an answer or a title
+  reach a user around the port; and the whole table's partition is chosen against a hand-kept list
+  of send and delivery methods, which went stale when the client added methods. The census guards
+  ordinary code; code written to evade it goes unread, and review catches it (#297). The box run's
   `one-router` row refuses a call the policy names (§3a B1). Chosen against holding the rule by that
   row alone, which matches only the names the policy lists and finds a stray call only after it is
   written; against a private trait, which the bot could not implement; and against parsing the
-  sources with a Rust parser, a new dependency, since a census that leaves out only
-  `#[cfg(test)]` modules fails closed.
+  sources with a Rust parser, a new dependency, since a census that leaves out only `#[cfg(test)]`
+  modules fails closed.
 - **The policy is compiled into the binary and parsed at start.** Chosen against reading a deployed
   copy of the file, which could drift from the one the box run judged, and against typing the values
   as constants, which would be a second policy the pack never reads.

@@ -114,7 +114,7 @@ R14. The typed policy reads every key of the file, and names the key `defer_fanf
 | A12 | a flush renders at most 2 deferred celebrations in full and one rollup line naming the rest; the queue never exceeds 20 | `a_flush_renders_two_and_rolls_up_the_rest` |
 | A13 | the in-app feed serves its items to the owner's session and refuses any other caller with no item | `the_in_app_feed_answers_only_the_owner` |
 | A14 | the notifications data-rights port lists its five tables as exported and erased, and an erase empties them | `the_notification_tables_are_exported_and_erased` |
-| A15 | the census reads every shipped source of these kinds: the Rust, Python and web source files, the Mini App's HTML among them, the shell scripts by extension or by a `#!` first line, and the systemd units of every type and their drop-ins; it leaves out symlinks, test files, test directories outside a `src/`, and in a Rust file its comments and `#[cfg(test)]` modules. In what it reads, no name it holds appears outside its place: outside the bot's sources nothing names the Bot API's host, one of the send or delivery methods of the pinned client's table (a send, a copy, a forward, an edit, an ephemeral edit, a stopped poll or live location, a pin, a reaction or a Mini App query's answer), or the bot's `DEFAULT_API_URL`, SPEC-031's alert path aside; inside them such a method is named only by its own named send; the bot's `send_html`, `edit_html` and command handler are used only at named sites, and the handler's own replies and dispatch are called only by their named callers; only the router's modules name the in-app feed or the held queue, and in the notifications crate only they name its ledger, the root's declaration of it aside; no source of that crate carries `#[path]`, `#[macro_export]` or `#[macro_use]`, or re-exports the ledger, its feed's and queue's tables or its writes to the feed and the queue by a `pub use`; every method of the pinned client's table is a send, a delivery or not a delivery, in one class only; and each of the eight named sends is found once | `no_delivery_goes_around_the_port` |
+| A15 | the census reads every shipped source of these kinds: the Rust, Python and web source files, the Mini App's HTML among them, the shell scripts by extension or by a `#!` first line, and the systemd units of every type and their drop-ins; it leaves out symlinks, test files, test directories outside a `src/`, and in a Rust file its comments and `#[cfg(test)]` modules. In what it reads, no name it holds appears outside its place: outside the bot's sources nothing names the Bot API's host, a send or delivery method of the pinned client's table, or the bot's `DEFAULT_API_URL`, SPEC-031's alert path aside; inside them such a method is named only by its own named send; the bot's `send_html`, `edit_html` and command handler are used only at named sites, and the handler's own replies and dispatch are called only by their named callers; only the router's modules name the in-app feed or the held queue, and in the notifications crate only they name its ledger, the root's declaration of it aside; no source of that crate carries `#[path]`, `#[macro_export]` or `#[macro_use]`, or re-exports the ledger, its feed's and queue's tables or its writes to the feed and the queue by a `pub use`; every method of the pinned client's table is a send, a delivery or not a delivery, in one class only; and each of the eight named sends is found once | `no_delivery_goes_around_the_port` |
 
 ```acceptance
 A1: cargo test -p deck-streak-notifications --test policy -- --exact the_typed_policy_reads_every_key_of_the_file
@@ -382,32 +382,33 @@ the verdict of a run with that wiring is posted as the `box/packs` status at the
     path, a mount and a unit named as a test file are read; the Mini App's HTML, whose inline
     scripts run in the owner's browser; a CommonJS TypeScript module (`.cts`); and a script by its
     `.bash` or `.zsh` extension.
-  - The delivery methods of the pinned client's table (a copy, a forward, an edit of a message, its
-    caption, its media, its live location, its checklist or its keyboard, an ephemeral edit, a
-    stopped poll or live location, a pin, a reaction and a Mini App query's answer) are held like
-    its send methods. Outside the bot's sources nothing names one; inside them one is named only by
-    its own named send, and the transport's `edit_html` is `editMessageText`'s, one of ten named
-    send, which the census finds once although no shipped source calls it.
+  - A send or delivery method of the pinned client's table is held. Outside the bot's sources
+    nothing names one; inside them one is named only by its own named send, and the transport's
+    `edit_html` is `editMessageText`'s, one of ten named send, which the census finds once although
+    no shipped source calls it.
   - A method is held when it can make content the bot chose visible to a user: text, media, a title,
     a button, a status or a badge's description. That is the gifts, the stories, a game score, the
     answers to a callback, an inline, shipping or checkout query, a suggested post's decision, a
     chat's title, description and photo, a forum topic, an administrator's title, a member's tag,
-    the bot's own name, texts, photo, commands and menu button, a business account's name, bio,
-    username and photo, a sticker set's title, media and thumbnail, an emoji status, a badge's
-    description, an invoice's link and a prepared message or button. The transport's answer to a
-    callback and its menu of commands are named sends. Reads, removals, permissions and
-    membership, tokens, webhooks, bare file uploads and the account's own gift state
-    (`upgradeGift` and its kin) are classified, not held. The census holds 29 send methods, 60
-    delivery methods and 96 that deliver nothing, 185 in all.
+    the name an invite link carries, a Passport error's message, the bot's own name, texts, photo,
+    commands and menu button, a business account's name, bio, username and photo, a sticker set's
+    title, media and thumbnail, an emoji status, a badge's description, an invoice's link and a
+    prepared message or button. The transport's answer to a callback and its menu of commands are
+    named sends. Reads, removals, permissions and membership, tokens, webhooks, bare file uploads
+    and the account's own gift state (`upgradeGift` and its kin) are classified, not held. The
+    census holds 29 send methods, 65 delivery methods and 91 that are classified, not held, 185 in
+    all.
   - The pinned client's whole table is listed in the census with the client's version, which a
     bump of the lock turns red until the list is derived again, and every method in it is a send,
-    a delivery or not a delivery, in one class only. Deletions, unpins and the other classes of
-    `NOT_DELIVERIES` (reads, configuration, answers to a query, stickers, chat administration,
-    business accounts and stories) deliver nothing to a user, and are classified, not held (#297).
+    a delivery or not a delivery, in one class only. The 91 that are not held are the reads (32),
+    deletions and unpins (11), bot and session configuration (9), a sticker's emoji, keywords, mask,
+    position and bare upload and a set's removal (7), chat administration without user-visible
+    text (22), and business, star and gift account state (10). None can make content the bot
+    chose visible to a user, so each is classified, not held (#297).
   - The notifications crate: no source of it carries `#[path]`, `#[macro_export]` or
     `#[macro_use]`, since each hands the ledger's writes to code the census reads under another
     name; and no `pub` or `pub(...)` `use` in it re-exports the ledger, the constants of its feed's and queue's
     tables or its writes to the feed and the queue, under any name.
-  - The command handler: its replies (`send`, and `export`, `ask_erase` and `sync`, which send one)
+  - The command handler: its replies (`send`, and `export`, `ask_erase`, `sync` and `score`, which send one)
     and its dispatch (`on_message`, `on_callback`) are called only by their named callers, the
     handler and the dispatch, each of which the census finds in the tree.

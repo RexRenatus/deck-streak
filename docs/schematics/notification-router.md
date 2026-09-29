@@ -56,26 +56,27 @@ what it names:
   pass has a private field, no `Default` and no `Clone`. `push_in_app` is private to the module.
 - **A delivery around the port, by a census (A15).** A source that never calls the port could still
   reach the owner through the bot's own send, edit or command handler, a raw request to the Bot API
-  or a call of one of the send or delivery methods of the pinned client's table, a write to the Mini App's feed, or a write to the held
-  queue, which a flush delivers. The census reads the shipped sources of the kinds A15 names (the
-  Rust, Python and web sources, the Mini App's HTML among them, the shell scripts by extension or
-  `#!` first line, and the systemd units of every type and their drop-ins) and refuses in them each
-  such delivery by a name it holds: outside the bot's sources nothing names the Bot API's host, one
-  of the send or delivery methods of the pinned client's table (a send, a copy, a forward, an edit,
-  an ephemeral edit, a stopped poll or live location, a pin, a reaction or a Mini App query's
-  answer), or the bot's `DEFAULT_API_URL`, SPEC-031's alert path aside; inside them such a method is named only by
+  or a call of one of the send or delivery methods of the pinned client's table, a write to the Mini
+  App's feed, or a write to the held queue, which a flush delivers. The census reads the shipped
+  sources of the kinds A15 names (the Rust, Python and web sources, the Mini App's HTML among them,
+  the shell scripts by extension or `#!` first line, and the systemd units of every type and their
+  drop-ins) and refuses in them each such delivery by a name it holds: outside the bot's sources
+  nothing names the Bot API's host, a send or delivery method of the pinned client's table, or the
+  bot's `DEFAULT_API_URL`, SPEC-031's alert path aside; inside them such a method is named only by
   its own named send; the bot's `send_html`, `edit_html` and command handler are used only at named
   call sites, and the handler's replies and dispatch only by their named callers; only the router's
   modules name the feed or the held queue, and in the notifications crate the ledger, whose writes
-  to the queue are private to it, the root's declaration aside; and no source of that crate
-  carries `#[path]`, `#[macro_export]` or `#[macro_use]`, or re-exports the ledger, its feed's and
-  queue's tables or its writes to the feed and the queue by a `pub use`. The client's whole table is
-  listed with its version and each method in it is a send, a delivery or not a delivery, in one
-  class only; deletions, unpins and the other classes that deliver nothing to a user are
-  classified, not held (#297). The census guards ordinary code, not code written to evade it, which
-  review catches: a request or a table's name assembled from parts, `include!`, a symlink, a test
-  file pulled in by `#[path]` or run by a unit, a re-export other than by a `pub use`, and a `pub`
-  wrapper go unread (#297).
+  to the queue are private to it, the root's declaration aside; and no source of that crate carries
+  `#[path]`, `#[macro_export]` or `#[macro_use]`, or re-exports the ledger, its feed's and queue's
+  tables or its writes to the feed and the queue by a `pub use`. The client's whole table is listed
+  with its version and each method in it is a send, a delivery or not a delivery, in one class only;
+  the 91 that are not held (the reads, deletions and unpins, bot and session configuration, a
+  sticker's emoji, keywords, mask, position and bare uploads, chat administration without
+  user-visible text, and business, star and gift account state) can make no content the bot chose
+  visible to a user, and are classified, not held (#297). The census guards ordinary code, not code
+  written to evade it, which review catches: a request or a table's name assembled from parts,
+  `include!`, a symlink, a test file pulled in by `#[path]` or run by a unit, a re-export other than
+  by a `pub use`, and a `pub` wrapper go unread (#297).
 - **A call the policy names, by the box run (§3a B1).** The `one-router` row refuses a call of
   `push_message`, `push_dice`, `push_reaction`, `push_pin` or `push_in_app` outside `router.rs`.
 

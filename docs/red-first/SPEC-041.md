@@ -407,8 +407,8 @@ whole notifications `one_router` target, run at that commit.
   new module of the bot, a `send_live_photo` call and an `edit_ephemeral_message_text` call from new
   modules of the daemon, each with its expected refusal. Because the partition's red came first,
   the two failing tests at 373aed1 are the partition test and `no_delivery_goes_around_the_port`,
-  the second by an `assert_eq` mismatch of the refusals; the brief's two reds cannot each show one
-  failing test in a single line of commits, and each was measured on the whole target. The widening
+  the second by an `assert_eq` mismatch of the refusals; after the partition's red, as ruled, the
+  plants' red also carries the partition test, and each was measured on the whole target. The widening
   (b86433d) put `sendLivePhoto`, `sendRichMessage` and `sendRichMessageDraft` in `SEND_METHODS`, and
   `editEphemeralMessageText`, `editEphemeralMessageCaption`, `editEphemeralMessageMedia`,
   `editEphemeralMessageReplyMarkup`, `stopPoll`, `stopMessageLiveLocation` and `answerWebAppQuery`
@@ -423,3 +423,19 @@ two classes and a name the client does not expose. The band was proved with `mut
 
 DISCLOSURE, A15: its lists and its planted cases changed at 373aed1 and b86433d, after its earlier
 green commits; the earlier cases and their refusals are unchanged. The partition test is new.
+
+The sixth review's round held the Passport error and the invite-link names. Each red is the whole
+notifications `one_router` target, run at that commit.
+
+- A15, a Passport error's message and a named invite link, each through the client from a new
+  module of the daemon: red at 6cbae83: only `no_delivery_goes_around_the_port` failed, by an
+  `assert_eq` mismatch of the refusals, which lacked exactly `crates/daemon/src/invite.rs:3: names
+  create_chat_invite_link` and `crates/daemon/src/passport.rs:3: names set_passport_data_errors`;
+  the other two tests passed. Green at fccdb2f: `setPassportDataErrors`, `createChatInviteLink`,
+  `editChatInviteLink`, `createChatSubscriptionInviteLink` and `editChatSubscriptionInviteLink`
+  moved from `NOT_DELIVERIES` to `DELIVERY_METHODS`; the census holds 29 send methods, 65 delivery
+  methods and 91 that are classified, not held, and all three tests pass.
+
+Rows S04148 and S04149 (ea4df18): a Passport error's message and an invite link's name, each held
+with the sends; the killer is `no_delivery_goes_around_the_port`, and the mutant drops the name from
+`DELIVERY_METHODS`.
