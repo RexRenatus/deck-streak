@@ -89,6 +89,13 @@ class TheScanAdmitsAnExpectedRed(unittest.TestCase):
         self.assertIn(f"{ROW} ({ISSUE} is closed)", line)
         self.assertIn("unexpected 0, expected 1, stale 1", line)
         self.assertEqual(done.returncode, 1, done.stdout)
+        # A closed issue on a row that no longer reads red is one stale expectation, not two.
+        box.set_scan([*SETTLED, "green-secret-manager"], 0)
+        done, _ = box.run(closed=[ISSUE])
+        line = pack_line(done.stdout, SCAN)
+        self.assertIn("unexpected 0, expected 0, stale 1", line)
+        self.assertIn(f"stale: {ROW} ({ISSUE} is closed)", line)
+        box.set_scan([*SETTLED, "red-secret-manager"], 1)
         # Each issue the scan's expectation names is read once, in the run's root.
         done, _ = box.run()
         asked = examined("issue state(s) read", box.gh_calls())
