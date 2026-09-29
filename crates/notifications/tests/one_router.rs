@@ -146,7 +146,7 @@ const SEND_METHODS: [&str; 29] = [
 
 /// The pinned client's other methods that can make content the bot chose visible to a user, in the
 /// Bot API's own spelling; an administrator is a user. The census holds them as it holds a send
-/// method; each group's comment names what it shows.
+/// method.
 const DELIVERY_METHODS: [&str; 65] = [
     "copyMessage",
     "copyMessages",
