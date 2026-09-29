@@ -253,19 +253,19 @@ block=$dir/deck-streak.caddy
 copy=$dir/deck-streak.candidate
 kept=$file.previous
 had=
-[ -f "$block" ] && { had=$block.previous; cp -p "$block" "$had"; }
-cat >"$block"
-cp -p "$file" "$copy"
-grep -qxF "$line" "$copy" || printf "%s\n" "$line" >>"$copy"
 put_back_block() {
     if [ -n "$had" ]; then mv -T "$had" "$block"; else find "$block" -delete; fi
 }
 undo() {
-    find "$copy" -delete
+    [ ! -f "$copy" ] || find "$copy" -delete
     put_back_block
     echo "deploy: the Caddy configuration was refused" >&2
     exit 1
 }
+[ -f "$block" ] && { had=$block.previous; cp -p "$block" "$had"; }
+cat >"$block" || undo
+cp -p "$file" "$copy" || undo
+grep -qxF "$line" "$copy" || printf "%s\n" "$line" >>"$copy" || undo
 caddy validate --adapter caddyfile --config "$copy" || undo
 caddy adapt --adapter caddyfile --config "$copy" --validate >/dev/null || undo
 cp -p "$file" "$kept"
@@ -298,6 +298,7 @@ unwritten() {
     echo "deploy: the candidate Caddyfile could not be written" >&2
     exit 1
 }
+[ ! -L "$copy" ] || unwritten
 : >"$copy" || unwritten
 grep -vxF "$line" "$file" >"$copy" || [ "$?" -eq 1 ] || unwritten
 caddy validate --adapter caddyfile --config "$copy" || { [ ! -f "$copy" ] || find "$copy" -delete; echo "deploy: refused" >&2; exit 1; }
