@@ -209,7 +209,7 @@ delivery lifts that deferral, and hands the change back as its JSON diff.
 | `web/app/src/routes/settings/+page.ts` | miniapp | added: the census load |
 | `web/app/src/lib/settings/SettingControl.svelte` | miniapp | added: one row's native control |
 | `web/app/src/routes/settings.test.ts` | miniapp | added: A12, A13 |
-| `web/app/src/lib/a11y-coverage.test.ts` | miniapp | changed: A14's routes gain `/settings` |
+| `web/app/src/lib/a11y-coverage.test.ts` | miniapp | changed: A14's routes gain /settings |
 | `web/app/src/lib/telegram.svelte.ts` | miniapp | changed: the settings button |
 | `web/app/src/lib/telegram.test.ts` | miniapp | changed: A15 |
 | `web/app/src/lib/routes.ts` | miniapp | changed: the route |

@@ -348,7 +348,7 @@ diff that adds `web/app/src/lib/settings/Publishing.svelte` to the ux-laws popul
 | `crates/daemon/src/role_data.rs` | `deck-streak-daemon` | changed: the data role's erase withdraws first |
 | `crates/daemon/src/role_job.rs` | `deck-streak-daemon` | changed: the job `public_page`, with the site and the source ports |
 | `crates/daemon/tests/roles.rs` | `deck-streak-daemon` | changed: A37, A44 |
-| `deploy/caddy/deck-streak.caddy` | deploy | changed: the `/public/*` handle, and the site-wide policy moved into the two other handles |
+| `deploy/caddy/deck-streak.caddy` | deploy | changed: the /public/* handle, and the site-wide policy moved into the two other handles |
 | `deploy/systemd/deck-streak-job@public_page.timer` | deploy | added: daily at the rollover hour, minute 36 |
 | `deploy/README.md` | deploy | changed: the new placeholder and the timer |
 | `scripts/tests/test_deploy_templates.py` | repo | changed: A40, A41 |
