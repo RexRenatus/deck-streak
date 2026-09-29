@@ -1,0 +1,22 @@
+{
+  "records": [
+    {
+      "file": "crates/insights/src/dark_fields.rs",
+      "mutant": "replace + with - in tokens_in",
+      "anchor": "at = end + 2;",
+      "reason": "The scan resumes two bytes before the closing braces instead of after them, and the bytes it rescans can never begin a token, so the tokens found are the same.",
+      "evidence": "A token's inside holds no brace by the scan's own stop condition, so the bytes from end - 2 up to end + 1 are content bytes and the closing pair, none of which is an opening brace followed by another; end >= start + 1 = at + 3 makes end - 2 >= at + 1, so the position still advances and the loop ends. The rescanned positions find no opening pair, so the found list and the config_tokens set are identical for every input.",
+      "reached_by": "dark_fields::template_tokens_match_the_predecessors_golden",
+      "issue": "#403"
+    },
+    {
+      "file": "crates/insights/src/dark_fields.rs",
+      "mutant": "replace > with >= in tokens_in",
+      "anchor": "if end > start && bytes.get(end) == Some(&b'}')",
+      "reason": "An empty pair of braces then yields an empty token, which the normaliser drops, and the scan skips only bytes that cannot begin a token.",
+      "evidence": "end == start means the text holds an opening pair straight followed by a closing pair; the empty slice found is refused by normalise (its first test is is_empty, giving None) before config_tokens collects, and the jump to end + 2 passes only the second opening brace and the two closing braces, none of which can start an opening pair because the byte after each is a closing brace or the next iteration's own start.",
+      "reached_by": "dark_fields::template_tokens_match_the_predecessors_golden",
+      "issue": "#403"
+    }
+  ]
+}
