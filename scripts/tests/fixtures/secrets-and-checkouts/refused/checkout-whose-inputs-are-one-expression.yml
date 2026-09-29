@@ -1,10 +1,10 @@
 name: planted
 
-# A planted workflow (SPEC-034 A10): actions/checkout whose inputs are one `${{ }}` expression, which
-# GitHub evaluates when the step runs, so no reading of the file names the repository it checks out:
-# a literal read by fromJSON, a step's output read by fromJSON, and a literal in quotes naming
-# another server. The names are synthetic. scripts/tests/test_ci_workflows.py judges it; nothing
-# runs it.
+# A planted workflow (SPEC-034 A10): actions/checkout whose inputs are one `${{ }}` expression,
+# which GitHub evaluates when the step runs, so no reading of the file names the repository it
+# checks out: a literal read by fromJSON, a step's output read by fromJSON, and a literal in quotes
+# naming another server. The names are synthetic. scripts/tests/test_ci_workflows.py judges it;
+# nothing runs it.
 on:
   pull_request:
     branches: [dev]

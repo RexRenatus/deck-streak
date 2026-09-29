@@ -1,7 +1,7 @@
 name: planted
 
-# A planted workflow (SPEC-034 A11): fetches from origin with a refspec, whose colon names no host, so
-# git reads no scp-like URL in it. scripts/tests/test_ci_workflows.py judges it; nothing runs it.
+# A planted workflow (SPEC-034 A11): fetches from origin with a refspec, whose colon names no host,
+# so git reads no scp-like URL in it. scripts/tests/test_ci_workflows.py judges it; nothing runs it.
 on:
   pull_request:
     branches: [dev]

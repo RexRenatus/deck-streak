@@ -4,8 +4,8 @@ reaches main (SPEC-034 A5 to A7). The gate runs in parallel jobs, each stage in 
 engine's slow tests in a job of their own, a cache is saved only by a push to dev or main, and every
 job that compiles Rust installs the protoc Anki's engine needs (SPEC-038). No workflow reads a
 secret but the default token, or checks out or fetches another repository (SPEC-034 A9 to A12), and
-a `.yaml` workflow is held to the hardening rules as a `.yml` one is, the hardening tests reading keys
-the way the checker does (A13)."""
+a `.yaml` workflow is held to the hardening rules as a `.yml` one is, the hardening tests reading
+keys the way the checker does (A13)."""
 
 import math
 import os
@@ -458,9 +458,9 @@ class WorkflowsAreHardened(unittest.TestCase):
                     case.setUp()
                     with self.assertRaisesRegex(AssertionError, re.escape(f"uses {written}") + "$"):
                         case.test_every_action_is_pinned_by_a_full_commit_sha()
-        # The hardening tests read keys the way the checker does (SPEC-034 R7): the control, one line
-        # rewritten by each planted key, is judged beside the live workflows, and the test named
-        # refuses it with the refusal named.
+        # The hardening tests read keys the way the checker does (SPEC-034 R7): the control, one
+        # line rewritten by each planted key, is judged beside the live workflows, and the test
+        # named refuses it with the refusal named.
         live = [(path.name, path.read_bytes()) for path in workflow_files(WORKFLOWS)]
         for test, line, planted, refusal in PLANTED_KEYS:
             with self.subTest(test=test, planted=planted), tempfile.TemporaryDirectory() as scratch:
@@ -1863,10 +1863,10 @@ def reaches(script):
 
 
 def shell_problems(given, where):
-    """A `shell` that is not one of GitHub's built-in keywords, as written. The runner runs any other
-    as a command, so what a custom shell runs is a command the checker does not read. An omitted or
-    empty `shell` is none: the runner falls back to the defaults, which are judged where they
-    are."""
+    """A `shell` that is not one of GitHub's built-in keywords, as written. The runner runs any
+    other as a command, so what a custom shell runs is a command the checker does not read. An
+    omitted or empty `shell` is none: the runner falls back to the defaults, which are judged
+    where they are."""
     if given is None or given == "" or given in SHELLS:
         return []
     return [f"{where}: runs a shell the checker does not read: {given}"]
@@ -1891,8 +1891,8 @@ def defaults_problems(defaults, where):
 def environment_problems(env, where):
     """An environment whose variables the checker cannot read: an `env` that is set and is not a
     mapping, such as one `${{ }}` expression, which GitHub evaluates when the job or the step runs,
-    so no reading of the file names a variable whose name begins with `GIT_` there. An omitted or empty
-    `env` is no variables."""
+    so no reading of the file names a variable whose name begins with `GIT_` there. An omitted or
+    empty `env` is no variables."""
     if env is None or isinstance(env, dict):
         return []
     return [f"{where}: sets an environment the checker does not read"]
@@ -1902,7 +1902,8 @@ def container_problems(container, where):
     """A job's container whose environment the checker cannot read: one `${{ }}` expression, an
     `env` that `environment_problems` refuses, or one of `CONTAINER_CREATED_WITH` that is or holds
     a `${{ }}` expression, which GitHub evaluates when the job runs. The steps of a job with a
-    container run inside it, in its environment. A container named by its image alone has no `env` to read."""
+    container run inside it, in its environment. A container named by its image alone has no `env`
+    to read."""
     if container is None or (isinstance(container, str) and "${{" not in container):
         return []
     if isinstance(container, dict):
@@ -1989,8 +1990,9 @@ def secret_and_checkout_problems(directory):
         for where, text in strings(workflow):
             if f"{path.name}:{where}" not in scripts:
                 problems += [f"{path.name}:{where}: {reach}" for reach in reaches(text)]
-        # A variable git reads, set or named anywhere, configures git from the environment: an
-        # `env` key at any level, a container's options, or a script that exports one.
+        # A variable whose name begins with `GIT_`, set or named anywhere, configures git from the
+        # environment: an `env` key at any level, a container's options, or a script that
+        # exports one.
         for where, text in texts(workflow):
             problems += [
                 f"{path.name}:{where}: names a git variable: {name}" for name in git_variables(text)

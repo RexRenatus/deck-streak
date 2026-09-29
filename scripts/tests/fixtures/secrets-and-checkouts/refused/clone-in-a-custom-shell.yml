@@ -1,11 +1,11 @@
 name: planted
 
-# A planted workflow (SPEC-034 A10): a shell that is not one of GitHub's built-in keywords, which the
-# runner runs as a command template with the script's path in place of `{0}`. A custom shell that
-# clones another repository, in the workflow's defaults, a job's defaults, a step and a step inside
-# a `parallel` block, and shells the checker cannot read: a keyword in another case, and a job's
-# `defaults.run` and `defaults` that are each one `${{ }}` expression, which GitHub evaluates when
-# the job runs. The names are synthetic. scripts/tests/test_ci_workflows.py judges it; nothing
+# A planted workflow (SPEC-034 A10): a shell that is not one of GitHub's built-in keywords, which
+# the runner runs as a command template with the script's path in place of `{0}`. A custom shell
+# that clones another repository, in the workflow's defaults, a job's defaults, a step and a step
+# inside a `parallel` block, and shells the checker cannot read: a keyword in another case, and a
+# job's `defaults.run` and `defaults` that are each one `${{ }}` expression, which GitHub evaluates
+# when the job runs. The names are synthetic. scripts/tests/test_ci_workflows.py judges it; nothing
 # runs it.
 on:
   pull_request:

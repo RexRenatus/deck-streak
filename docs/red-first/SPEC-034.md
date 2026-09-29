@@ -197,7 +197,8 @@ back its earlier reading: 11 of 11 killed. The test file did not change after 2d
 ## Fix round 4, 2026-09-28
 
 Fix round 4 refuses a `shell` that is not one of GitHub's built-in keywords, reads every string of
-a workflow for a clone or a fetch, and refuses git configured from the environment. `dev` was
+a workflow for a clone or a fetch, and refuses git configured from the environment: a key or a
+string that names a variable whose name begins with `GIT_`. `dev` was
 merged first, at 38e6e6d, with no conflict. No criterion was added, so the fences above are
 unchanged, and this round's runs are listed here. Each refusal was committed red, then green.
 SPEC-034's inserted text says so at 9fa2e40, after the green commits, because it states what the
@@ -221,7 +222,8 @@ checker reads (R7, section 3, and the manifest's rows of planted workflows).
   job, a job's container and a step, and a container, each one `${{ }}` expression (five); and an
   `env` the reader refuses as a flow mapping (one). Green at e7fb4f5. A11 was green at both: its
   admitted workflows gained names that hold the letters `GIT_` only inside a longer word, an empty
-  `env`, a container named by its image alone and a container whose `env` is a mapping.
+  `env`, a container named by its image alone, which has no `env` to read, and a container whose
+  `env` is a mapping.
 - 8274f9f pins four hand mutants and was green at once, because the checker already met each: a
   job's `defaults` that is one expression (S7), an empty `defaults.run` and an empty `shell` (S8
   and S4), and a script that names one variable twice (E7). Each is red against its mutant.
