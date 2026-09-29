@@ -1,0 +1,126 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S06201-THE-ATTESTATION-IS-VERIFIED-BEFORE-THE-HOST",
+        "deploy/deploy.sh",
+        "    gh attestation verify \"$dir/$name\" --repo \"$repo\" \\\n",
+        "    true attestation verify \"$dir/$name\" --repo \"$repo\" \\\n",
+        "a tarball whose build provenance does not verify against this repository's release workflow never reaches the host (SPEC-062 R3, A1; ADR-062)",
+        "test_deploy_scripts.TheDeployVerifiesBeforeTheHost.test_the_deploy_refuses_a_bad_digest_or_attestation_before_the_host"
+      ],
+      [
+        "S06202-THE-TARBALL-MUST-MATCH-SHA256SUMS",
+        "deploy/deploy.sh",
+        "    (cd \"$dir\" && printf '%s\\n' \"$listed\" | sha256sum -c --quiet -) ||\n",
+        "    (cd \"$dir\" && printf '%s\\n' \"$listed\" | cat >/dev/null) ||\n",
+        "a tarball that differs from its published digest never reaches the host (SPEC-062 R3, A1; ADR-062)",
+        "test_deploy_scripts.TheDeployVerifiesBeforeTheHost.test_the_deploy_refuses_a_bad_digest_or_attestation_before_the_host"
+      ],
+      [
+        "S06203-A-TAG-MUST-BE-ANNOTATED",
+        "deploy/deploy.sh",
+        "    [ \"$kind\" = tag ] || die \"$tag is not an annotated tag\"\n",
+        "    [ \"$kind\" = tag ] || [ \"$kind\" = commit ] || die \"$tag is not an annotated tag\"\n",
+        "a lightweight tag names no tagger and no date, so it is never deployed (SPEC-062 R3, A1)",
+        "test_deploy_scripts.TheDeployVerifiesBeforeTheHost.test_the_deploy_refuses_a_tag_off_main_and_a_lightweight_tag"
+      ],
+      [
+        "S06204-A-TAG-MUST-BE-ON-MAIN",
+        "deploy/deploy.sh",
+        "    git -C \"$checkout\" merge-base --is-ancestor \"refs/tags/$tag^{commit}\" refs/remotes/origin/main ||\n",
+        "    git -C \"$checkout\" merge-base --is-ancestor \"refs/tags/$tag^{commit}\" \"refs/tags/$tag^{commit}\" ||\n",
+        "only a commit already on origin's main is deployed (SPEC-062 R3, A1)",
+        "test_deploy_scripts.TheDeployVerifiesBeforeTheHost.test_the_deploy_refuses_a_tag_off_main_and_a_lightweight_tag"
+      ],
+      [
+        "S06205-MAIN-IS-FETCHED-BEFORE-THE-CHECK",
+        "deploy/deploy.sh",
+        "        \"+refs/heads/main:refs/remotes/origin/main\" \"+refs/tags/$tag:refs/tags/$tag\" ||\n",
+        "        \"+refs/tags/$tag:refs/tags/$tag\" ||\n",
+        "the on-main check reads origin's main as it is now, not as a stale checkout last saw it (SPEC-062 R3, A1)",
+        "test_deploy_scripts.TheDeployVerifiesBeforeTheHost.test_the_deploy_refuses_a_tag_off_main_and_a_lightweight_tag"
+      ],
+      [
+        "S06206-CURRENT-IS-LINKED-UNDER-A-TEMPORARY-NAME",
+        "deploy/deploy.sh",
+        "    ln -sfn \"$1\" \"$root/.current.$$\"\n",
+        "    ln -sfn \"$1\" \"$root/current\"\n",
+        "current is never rewritten in place: a temporary link is built beside it, then renamed over it (SPEC-062 R3, A2)",
+        "test_deploy_scripts.TheDeploySwitches.test_the_deploy_installs_beside_and_switches_current_atomically"
+      ],
+      [
+        "S06207-CURRENT-IS-REPLACED-BY-ONE-ATOMIC-RENAME",
+        "deploy/deploy.sh",
+        "    mv -T \"$root/.current.$$\" \"$root/current\"\n",
+        "    mv -f \"$root/.current.$$\" \"$root/current\"\n",
+        "the switch is one rename that replaces the link itself, never a move into the directory it points at (SPEC-062 R3, A2)",
+        "test_deploy_scripts.TheDeploySwitches.test_the_deploy_installs_beside_and_switches_current_atomically"
+      ],
+      [
+        "S06208-A-RELEASE-NOT-READY-IS-SWITCHED-BACK-FROM",
+        "deploy/deploy.sh",
+        "        switch_to \"$prev\"\n        install_units \"$prev\"\n",
+        "        switch_to \"$rel\"\n        install_units \"$prev\"\n",
+        "a release that does not become ready leaves current on the release it replaced (SPEC-062 R4, A3)",
+        "test_deploy_scripts.TheDeploySwitches.test_the_deploy_switches_back_when_readiness_does_not_arrive"
+      ],
+      [
+        "S06209-A-SWITCH-BACK-REINSTALLS-THE-PREVIOUS-UNITS",
+        "deploy/deploy.sh",
+        "        switch_to \"$prev\"\n        install_units \"$prev\"\n",
+        "        switch_to \"$prev\"\n        install_units \"$rel\"\n",
+        "the switch back restores the previous release's unit bytes, not the failed release's (SPEC-062 R4, A3)",
+        "test_deploy_scripts.TheDeploySwitches.test_the_deploy_switches_back_when_readiness_does_not_arrive"
+      ],
+      [
+        "S06210-A-KEPT-RELEASE-IS-NOT-FETCHED-AGAIN",
+        "deploy/deploy.sh",
+        "    if on_host 'test -d \"$1/releases/$2\"' \"$ROOT\" \"$tag\" </dev/null; then\n",
+        "    if on_host 'test -d \"$1/releases/$2.absent\"' \"$ROOT\" \"$tag\" </dev/null; then\n",
+        "a rollback to a release the host keeps is a switch and a restart, with no download (SPEC-062 R5, A4)",
+        "test_deploy_scripts.TheDeploySwitches.test_the_rollback_makes_a_kept_release_current_again"
+      ],
+      [
+        "S06211-A-ROLLBACK-TARGET-IS-VERIFIED-LIKE-A-DEPLOY",
+        "deploy/deploy.sh",
+        "rollback_tag() {\n    local tag=$1\n    verify_tag \"$tag\"\n",
+        "rollback_tag() {\n    local tag=$1\n",
+        "a rollback names a SemVer annotated tag on main, so it cannot install a commit a deploy would refuse (SPEC-062 R5, A4)",
+        "test_deploy_scripts.TheDeploySwitches.test_the_rollback_makes_a_kept_release_current_again"
+      ],
+      [
+        "S06212-THE-OLDEST-RELEASES-ARE-PRUNED",
+        "deploy/deploy.sh",
+        "sort -V -r | tail -n +\"$keep\")\n",
+        "sort -V | tail -n +\"$keep\")\n",
+        "the host keeps the newest releases and removes the oldest, never the reverse (SPEC-062 R6, A5)",
+        "test_deploy_scripts.TheDeploySwitches.test_the_deploy_keeps_three_releases_and_prunes_after_a_ready_switch"
+      ],
+      [
+        "S06213-A-COPY-IS-VALIDATED-BEFORE-THE-RELOAD",
+        "deploy/deploy.sh",
+        "caddy validate --config \"$copy\" || undo\n",
+        "caddy validate --config \"$copy\" || true\n",
+        "a configuration Caddy refuses is never moved over the live Caddyfile (SPEC-062 R7, A6)",
+        "test_deploy_scripts.TheCaddyInstall.test_the_caddy_install_validates_a_copy_first_and_the_removal_reverses_it"
+      ],
+      [
+        "S06214-THE-CADDY-UPSTREAM-IS-LOOPBACK",
+        "deploy/scripts/render-caddy.py",
+        "        if octets[0] != 127 or any(part > 255 for part in octets):\n",
+        "        if octets[0] > 255 or any(part > 255 for part in octets):\n",
+        "the API upstream a block proxies to is a loopback address, never one that reaches outward (SPEC-062 R7, A7; ADR-061)",
+        "test_caddy_render.TheCaddyRender.test_the_render_refuses_placeholders_and_keeps_the_headers"
+      ],
+      [
+        "S06215-THE-RELEASE-WORKFLOW-REQUIRES-MAIN",
+        ".github/workflows/release.yml",
+        "          if ! git merge-base --is-ancestor \"$GITHUB_SHA\" origin/main; then\n",
+        "          if ! git merge-base --is-ancestor \"$GITHUB_SHA\" \"$GITHUB_SHA\"; then\n",
+        "a tag whose commit is not on main builds no release (SPEC-062 R2, A8)",
+        "test_release_workflow.TheReleaseRunsOnSemverTags.test_the_release_runs_on_semver_tags_and_publishes_last"
+      ]
+    ]
+  }
+}
