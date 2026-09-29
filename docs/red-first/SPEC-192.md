@@ -56,30 +56,6 @@ The guard change at a8d57e9 turns the class green (`Ran 7 tests`, `OK`) and the 
 (`Ran 17 tests`, `OK`, `examined 24 Setting impl(s)`). A11's nine tests are unchanged; its
 criterion text now maps one clause to each of them.
 
-## Addendum, 2026-09-29: the guard's tests kill every lexer-arm mutant
-
-Criteria A13, A14 and A15 join the fence (SPEC-192 section 9). The eight lexer rewrites of issue #406
-each survived the base guard (`Ran 17 tests`, `OK`, `examined 24 Setting impl(s)`). 7034826c
-strengthens assertions inside the existing tests of A11 and A12, so each rewrite now turns the module
-red by assertion, and the unmodified guard prints the same `examined 24 Setting impl(s)`; that
-commit edits a test file, so A15 is recorded `not red`.
-
-The new tests of A13 (five) and A14 (one) were committed alone at faaf43ec against the guard as
-7034826c left it: all six fail by assertion.
-
-```red-first
-A13: red at faaf43ec: AssertionError: Lists differ: ['demo::Depth (src/depth.rs) "a whole depth"'] != [] : four of the five tests of TheGuardReadsOutOfLineTestModules, each naming the file of the out-of-line module
-A13: green at 77ed28a0
-A14: red at faaf43ec: AssertionError: 2 != 1 : test_a_block_comment_holding_an_impl_is_not_examined
-A14: green at 77ed28a0
-A15: not red: the base guard already passed the assertions added inside A11's and A12's tests; the rows S19216 to S19225 prove each kills its rewrite
-```
-
-The red run (`Ran 23 tests`, `FAILED (failures=5)`; one is the `lib.rs` case, `Lists differ:
-['demo::Depth (src/lib.rs) "a whole depth"'] != []`). The guard change at 77ed28a0 edits the test file itself
-(the guard and its tests are one module: the guard code and its docstring, no assertion); it turns the whole module green (`Ran 23 tests`,
-`OK`, `examined 24 Setting impl(s)`). Ten rows (S19216 to S19225) are proved KILLED by full id.
-
 ## The population: 24 `impl Setting for`, and how each is pinned
 
 The guard's 24 (`examined 24 Setting impl(s)`), from `git grep -n 'impl .*Setting for' -- crates |
@@ -115,3 +91,47 @@ with `cargo test -p <crate> --tests --no-fail-fast`.
 
 Fifteen rows in this delivery's band (S19201 to S19215); seven implementations pinned before it by
 rows of other bands (five of them by #354) and two by tests alone.
+
+## Addendum, 2026-09-29: the guard's tests kill every lexer-arm mutant
+
+Criteria A13, A14 and A15 join the fence (SPEC-192 section 9). The eight rewrites of issue #406 (six of the
+lexer, two of the selection of spellings) each survived the base guard (`Ran 17 tests`, `OK`, `examined 24 Setting impl(s)`). 7034826c
+strengthens assertions inside the existing tests of A11 and A12, so each rewrite now turns the module
+red by assertion, and the unmodified guard prints the same `examined 24 Setting impl(s)`; that
+commit edits a test file, so A15 is recorded `not red`.
+
+The new tests of A13 (five) and A14 (one) were committed alone at faaf43ec against the guard as
+7034826c left it: five of the six fail by assertion; the sixth,
+`test_a_file_that_is_no_declared_test_module_is_not_read_as_one`, passes there, because it pins a
+refusal the guard already made.
+
+```red-first
+A13: red at faaf43ec: AssertionError: Lists differ: ['demo::Depth (src/depth.rs) "a whole depth"'] != [] : four of the five tests of TheGuardReadsOutOfLineTestModules, each naming the implementation's file
+A13: green at 77ed28a0
+A14: red at faaf43ec: AssertionError: 2 != 1 : test_a_block_comment_holding_an_impl_is_not_examined
+A14: green at 77ed28a0
+A15: not red: the base guard already passed the assertions added inside A11's and A12's tests; the rows S19216 to S19228 prove each kills its rewrite
+```
+
+The red run (`Ran 23 tests`, `FAILED (failures=5)`; one is the `lib.rs` case, `Lists differ:
+['demo::Depth (src/lib.rs) "a whole depth"'] != []`). The guard change at 77ed28a0 edits the test file itself
+(the guard and its tests are one module: the guard code and its docstring, no assertion); it turns the whole module green (`Ran 23 tests`,
+`OK`, `examined 24 Setting impl(s)`). Thirteen rows (S19216 to S19228) are proved KILLED by full id.
+
+## Addendum, 2026-09-29, round 1 fix: three more arms are pinned
+
+Three rewrites of the guard were planted in a scratch copy, one at a time, and each one survived the
+tests as the head had them (`Ran 23 tests`, `OK`). e195540e adds one fixture line to each of three
+existing tests (no test is renamed or removed), so each rewrite now turns the module red by
+assertion; the unmodified guard prints `Ran 23 tests`, `OK`, `examined 24 Setting impl(s)`. The
+commit edits a test file, so these arms are recorded here and not as new criteria: they belong to
+A13 and A15, whose fence lines are unchanged. Rows S19226 to S19228 are proved KILLED by full id.
+
+```text
+X2 (a `//` comment kept in the skeleton): survives before; after, line 349, AssertionError: 0 != 1 : test_a_production_line_after_the_own_files_test_module_is_refused
+H3 (the `#[cfg(test)]` requirement deleted from the out-of-line reading): survives before; after, line 413, AssertionError: 0 != 1 : #[allow(dead_code)] : test_a_file_that_is_no_declared_test_module_is_not_read_as_one
+X10 (a raw string closed without its hashes): survives before; after, line 332, AssertionError: Lists differ: ['demo::Depth (src/depth.rs) "a whole depth"'] != [] : test_a_shape_a_test_spells_after_a_url_on_its_line_is_pinned
+```
+
+A15's decider now selects `TheGuardJudgesAPlantedTree` and `TheGuardReadsRustSource` (16 tests, `OK`).
+Run under that selection alone, each of the eight rewrites turns it red.
