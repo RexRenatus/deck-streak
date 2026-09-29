@@ -27,8 +27,8 @@
 - **What exists.** At `dev` 26263de, `crates/discipline/src/` holds only `lib.rs`, and no discipline
   table exists. `coordination::jobs::TABLE` holds three jobs (`sync` at the rollover hour's minute
   7, `maintenance` at its minute 28, `liveness` hourly at minute 14), and SPEC-027 R1 knows three
-  schedule kinds, none shorter than an hour. The policy (`notifications-policy.json`) holds eight
-  kinds and no deviation.
+  schedule kinds, none shorter than an hour. The router core is built (SPEC-041), and its policy
+  (`notifications-policy.json`) holds nine kinds, none for discipline.
 - **This SPEC builds discipline's floor.** It is the first discipline SPEC to build, so it creates
   what SPEC-104 and SPEC-106 change: the state row `discipline_state`, discipline's data-rights
   port, the policy's kind `discipline` (ADR-104), the coordination module `discipline`, the bot's
