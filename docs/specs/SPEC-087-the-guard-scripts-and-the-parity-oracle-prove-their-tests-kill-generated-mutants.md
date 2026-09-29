@@ -472,3 +472,18 @@ SPEC-039 (section 1, R1 to R4, R8, R10, R18, section 5, section 12), SPEC-057 (R
 SPEC-038 section 8 (insert-only amendments), ADR-057 (D1, D4), ADR-070, ADR-073,
 `docs/schematics/mutation-testing.md`, `docs/schematics/mutation-equivalence-record.md`,
 `docs/schematics/mutation-testing-python.md`; #218, #219, #220, #240, #294, #295, #322, #325.
+
+## 9. Amendments at delivery
+
+- **The kill modules and the files that read them** (#340). The survivors of the first whole run
+  are killed by four test modules, one per file range of the two scripts: `scripts/tests/test_mutation_verdict_python_kills.py`,
+  `scripts/tests/test_mutation_python_lister_kills.py`, `scripts/tests/test_mutation_python_judge_kills.py` and
+  `scripts/tests/test_mutation_python_cli_kills.py`, each named in `scripts/mutation-python.json` under the
+  file it kills for. Rows S08728 to S08799 of `scripts/mutation-rows.d/S08700-S08799.json` and the
+  records of `scripts/mutation-equivalent.d/python.json` are the same work's other artifacts.
+- **Two guard tests changed where they read text this delivery changed.** `scripts/tests/test_ci_workflows.py`
+  and `scripts/tests/test_verdict_download.py` assert the jobs, needs and downloads of `ci.yml`, and
+  `scripts/tests/test_audit_web.py` gained cases for the two mutants of `scripts/audit-web-verdict.py`
+  that the stage's runs cannot tell apart.
+- **The plan's changelog fragment** `changelog.d/docs-python-mutants-087.md` is unchanged by the delivery:
+  it landed with the plan.
