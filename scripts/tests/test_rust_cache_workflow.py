@@ -214,25 +214,35 @@ class TheRustCacheWorkflow(unittest.TestCase):
         self.assertEqual(restore["with"]["key"], lookup_step(steps)["with"]["key"])
 
     def test_the_save_rule_admits_a_scheduled_save_only_when_a_lookup_missed(self):
-        admitted, found = cache_problems("planted.yml", read_workflow(SCHEDULED_SAVE))
+        admitted, found = cache_problems(CACHE_WORKFLOW, read_workflow(SCHEDULED_SAVE))
         self.assertEqual((admitted, len(found)), ([], 1), "the planted good shape is refused")
         unconditional = SCHEDULED_SAVE.replace(
             "      - name: save\n        if: ${{ steps.lookup.outputs.cache-hit != 'true' }}\n",
             "      - name: save\n",
         )
-        refused, _ = cache_problems("planted.yml", read_workflow(unconditional))
+        refused, _ = cache_problems(CACHE_WORKFLOW, read_workflow(unconditional))
         self.assertTrue(refused, "a scheduled save with no condition is admitted")
         pushed = SCHEDULED_SAVE.replace("  workflow_dispatch:\n", "  workflow_dispatch:\n  push:\n")
-        refused, _ = cache_problems("planted.yml", read_workflow(pushed))
+        refused, _ = cache_problems(CACHE_WORKFLOW, read_workflow(pushed))
         self.assertTrue(refused, "a scheduled save that also runs on push is admitted")
         pulled = SCHEDULED_SAVE.replace(
             "  workflow_dispatch:\n", "  workflow_dispatch:\n  pull_request:\n"
         )
-        refused, _ = cache_problems("planted.yml", read_workflow(pulled))
+        refused, _ = cache_problems(CACHE_WORKFLOW, read_workflow(pulled))
         self.assertTrue(refused, "a scheduled save that also runs on pull_request is admitted")
         wrong_key = SCHEDULED_SAVE.replace("steps.warm.outputs.cache-primary-key", "runner.os")
-        refused, _ = cache_problems("planted.yml", read_workflow(wrong_key))
+        refused, _ = cache_problems(CACHE_WORKFLOW, read_workflow(wrong_key))
         self.assertTrue(refused, "a scheduled save under another key is admitted")
+        refused, _ = cache_problems("planted.yml", read_workflow(SCHEDULED_SAVE))
+        self.assertTrue(refused, "another workflow's scheduled save is admitted")
+        widened = SCHEDULED_SAVE.replace(
+            "      - name: save\n        if: ${{ steps.lookup.outputs.cache-hit != 'true' }}\n",
+            "      - name: save\n        if: ${{ steps.lookup.outputs.cache-hit != 'true'"
+            " || github.event_name == 'workflow_dispatch' }}\n",
+        )
+        self.assertIn("workflow_dispatch' }}", widened)
+        refused, _ = cache_problems(CACHE_WORKFLOW, read_workflow(widened))
+        self.assertTrue(refused, "a scheduled save that also saves on a hit is admitted")
         problems, saves = cache_problems(CACHE_WORKFLOW, load(CACHE_WORKFLOW))
         self.assertEqual(problems, [])
         self.assertEqual(len(saves), 1)
