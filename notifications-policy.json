@@ -13,7 +13,9 @@
         "push_reveal",
         "push_dice",
         "push_reaction",
-        "push_pin"
+        "push_pin",
+        "push_photo",
+        "prepare_share"
       ],
       "mini-app": [
         "push_in_app"
@@ -264,6 +266,7 @@
       "already_studied",
       "ablation_hold",
       "no_notifier",
+      "photo_unsupported",
       "nudges_disabled",
       "no_payload",
       "already_recorded"
@@ -273,6 +276,10 @@
     {
       "key": "kinds.reading_ready",
       "adr": "docs/decisions/ADR-041-notification-router-core.md"
+    },
+    {
+      "key": "withhold.reasons",
+      "adr": "docs/decisions/ADR-135-images-are-drawn-through-a-port-with-no-provider-wired-by-a-sending-job-capped-cached-and-gated.md"
     }
   ]
 }
