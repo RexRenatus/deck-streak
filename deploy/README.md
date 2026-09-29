@@ -154,7 +154,7 @@ with its build's hashes (SPEC-028), so the header sets none.
 `deploy/deploy.sh vX.Y.Z` and `deploy/rollback.sh vX.Y.Z` run on the maintainer's machine and reach
 the host only through the host command they are given (SPEC-062; ADR-062). They are configured by
 environment variables: `DECKSTREAK_DEPLOY_REPO` (the repository whose release is installed) and
-`DECKSTREAK_DEPLOY_HOST` (a command that runs its argv on the host as given (the private rail's host command)) are the
+`DECKSTREAK_DEPLOY_HOST` (a command that runs its argv on the host as given: the private rail's host command) are the
 two a maintainer sets; `DECKSTREAK_DEPLOY_ELEVATE` (default `sudo`), `_CHECKOUT`, `_ROOT`,
 `_UNIT_DIR`, `_ENV_FILE`, `_CADDY_DIR`, `_CADDYFILE`, `_READY_SECONDS`, `_READY_POLL` and `_KEEP`
 default to the host layout the templates assume, and a test points them at a temporary tree.

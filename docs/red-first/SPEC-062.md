@@ -25,7 +25,10 @@ red line; their rows S06216 and S06215 show each fails when its behaviour is rem
 Fix round 2: A19 and A20 read behaviour that was already right (the Caddy block's source and the
 token's scope), so neither has a red line; their rows S06223 and S06224 show each fails when its
 behaviour is removed, and S06225 shows A15 fails when the deploy stops naming the unit it cannot
-show. After the green commit, two test files were changed, as a later commit in the same round.
+show. The merge with dev brought SPEC-066's unit guards, and two of them were red on the merged tree
+for the sync instance's drop-in (the drop-in directory guard and the credential-bearing unit set);
+A21 is the third test, beside them, and the guards now read an instance's drop-ins. After the green
+commit of round 1, two test files were changed, as a later commit in the same round.
 
 ```red-first
 A1: red at 300eca2: AssertionError: deploy/deploy.sh does not exist
@@ -64,4 +67,6 @@ A17: green at 52e5aa5
 A18: not red: the workflow's guard is right and the test only executes it; the row S06215 proves it fails when the guard is weakened
 A19: not red: the Caddy install already renders from the tag; the row S06223 proves the test fails when it renders from the working tree
 A20: not red: the token is already scoped to the three release steps; the row S06224 proves the test fails when it is set at job level
+A21: red at 4a49b65: AssertionError: Lists differ: ['deploy/systemd/planted@x.service.d: is n[65 chars]sed'] != [] (the test run against the guard as it stood there)
+A21: green at 3275235
 ```

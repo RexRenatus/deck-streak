@@ -123,7 +123,11 @@ R14. The sync login is loaded by the sync job alone. `deck-streak-job@.service` 
     `deploy/systemd/`, carries the two lines, so the liveness and maintenance instances request no sync credential (ADR-061,
     amended). `deploy/scripts/credential-pairs.py` lists the drop-in's pairs under the instance,
     and `deploy/scripts/effective-check.py` accepts a shipped drop-in beside the rail's own. The
-    deploy installs the drop-in directories byte for byte with the unit templates.
+    deploy installs the drop-in directories byte for byte with the unit templates. The unit
+    guards model a template's instance drop-ins as systemd reads them: a shipped template's own
+    instance directory `<name>@<instance>.<type>.d` is that template's, the template counts as
+    loading a credential when it or its instance drop-in carries one, and the directory of an
+    instance of a template the tree does not ship stays refused (A21; SPEC-066, amended).
 
 ## 3. Acceptance criteria
 
@@ -149,6 +153,7 @@ R14. The sync login is loaded by the sync job alone. `deck-streak-job@.service` 
 | A18 | the release workflow's tag guard, run against a synthetic origin, admits an annotated tag on `main` and refuses a lightweight tag and a tag off `main` | `test_release_workflow.py` |
 | A19 | the Caddy install renders the block from the tag's own `deploy/caddy/deck-streak.caddy`, never from the working tree | `test_deploy_scripts.py` |
 | A20 | the release token reaches the three `gh release` steps alone: not the workflow, the job or any other step | `test_release_workflow.py` |
+| A21 | a shipped template's instance drop-in directory is admitted as its own, and the directory of an instance of an unshipped template is refused | `test_deploy_templates.py` |
 
 ```acceptance
 A1: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k test_the_deploy_refuses_a_tag_off_main_and_a_lightweight_tag
@@ -171,6 +176,7 @@ A17: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k 
 A18: python3 -m unittest discover -s scripts/tests -p test_release_workflow.py -k test_the_release_refuses_a_tag_off_main_or_lightweight_by_running_its_guard
 A19: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k test_the_caddy_block_is_rendered_from_the_tags_own_file
 A20: python3 -m unittest discover -s scripts/tests -p test_release_workflow.py -k test_the_token_reaches_the_three_gh_release_steps_alone
+A21: python3 -m unittest discover -s scripts/tests -p test_deploy_templates.py -k test_a_shipped_templates_instance_dropin_directory_is_its_own_and_no_other_is
 ```
 
 A1 to A6, A12 to A15, A17 and A19 run the scripts against a synthetic repository with its own tags, a synthetic release
@@ -216,8 +222,10 @@ this SPEC names each step only.
 | `deploy/systemd/deck-streak-job@.service` | deploy | changed: R14, the sync login lines removed |
 | `deploy/systemd/` drop-in `20-sync-login.conf` in the `sync` instance's `.service.d` directory | deploy | added: R14, the sync login |
 | `deploy/scripts/credential-pairs.py`, `deploy/scripts/effective-check.py` | deploy | changed: R14, instance drop-ins; the shipped-name rule (A16) |
-| `scripts/tests/test_deploy_templates.py` | repo | changed: A11, A16; plain synthetic literals |
+| `scripts/tests/test_deploy_templates.py` | repo | changed: A11, A16, A21; the two SPEC-066 guards for a template's instance drop-ins; plain synthetic literals |
 | `docs/decisions/ADR-061-...md` | docs | one dated Amendment section (R14) |
+| `scripts/tests/_units.py` | repo | changed: R14, a template's instance drop-ins read beside it (A21) |
+| `docs/specs/SPEC-066-the-credential-loader-refuses-an-empty-credential.md` | docs | one dated Amendment line (R14) |
 | the private rail's map, rendered drop-ins and tests (`rail/`) | the maintainer's | changed: R14, committed privately |
 | `scripts/mutation-rows.d/S06200-S06299.json` | repo | added: the mutation rows S06201 to S06225 |
 | `changelog.d/` fragment | repo | added |
