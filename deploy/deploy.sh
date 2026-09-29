@@ -271,8 +271,8 @@ caddy adapt --adapter caddyfile --config "$copy" --validate >/dev/null || undo
 cp -p "$file" "$kept"
 mv -T "$copy" "$file"
 if ! caddy reload --config "$file"; then
-    put_back_block
     mv -T "$kept" "$file"
+    put_back_block
     echo "deploy: the Caddy reload failed; the previous site file and Caddyfile were restored" >&2
     caddy reload --config "$file" || echo "deploy: the restoring reload also failed" >&2
     exit 1
@@ -297,8 +297,8 @@ grep -vxF "$line" "$file" >"$copy" || true
 caddy validate --adapter caddyfile --config "$copy" || { find "$copy" -delete; echo "deploy: refused" >&2; exit 1; }
 caddy adapt --adapter caddyfile --config "$copy" --validate >/dev/null || { find "$copy" -delete; exit 1; }
 cp -p "$file" "$kept"
-[ -f "$block" ] && { had=$block.previous; mv -T "$block" "$had"; }
 mv -T "$copy" "$file"
+[ -f "$block" ] && { had=$block.previous; mv -T "$block" "$had"; }
 if ! caddy reload --config "$file"; then
     [ -n "$had" ] && mv -T "$had" "$block"
     mv -T "$kept" "$file"
