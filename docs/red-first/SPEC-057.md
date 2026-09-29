@@ -54,6 +54,8 @@ A15: red at e43dae8: AssertionError: 'scripts/mutation-equivalent.d/<package>.js
 A15: green at 5c4d6b6
 A16: red at bfae431: AssertionError: 225 != 0 : deck-streak-vault: 225 unexplained mutant(s) in its row (the opening sweep, run 36438243392 at 5767fbe, read listed 939, killed 647, equivalent 0, unexplained 225, unviable 67)
 A16: green at 6abff4a
+A17: red at e8f9695: AssertionError: 44 != 0 : deck-streak-ingest: 44 unexplained mutant(s) in its row (the opening sweep, run 36502008965, read listed 297, killed 190, equivalent 0, unexplained 44, unviable 63)
+A17: green at 2e0c239
 A18: red at 2311afa: AssertionError: 17 != 0 : deck-streak-kernel: 17 unexplained mutant(s) in its row (the opening sweep, run 36502933533 at a7b8025, read listed 368, killed 303, equivalent 0, unexplained 17, unviable 48)
 A18: green at 0896902
 A28: red at e260627: AssertionError in each of its four subtests, each for its own reason: 'True is not false : the rust class applies on test lines [31, 36, 43, 47, 53]' (the test-only diff); 'Lists differ: [46, 58] != [58]' (the mixed diff counted its test module's line as production code); "'mutation: plan: rust applies: 3 production code line(s) in 1 file(s)' not found" (the production-only diff's plan named no production line); and '3 != 0 : mutation: shards: VOID the rust class applies and ... holds no cargo-mutants listing' (cargo-mutants' empty --in-diff output read as no listing)
@@ -177,3 +179,15 @@ one timeout each, counted killed (six in `redact_tokens`: `redact.rs` 204:12, 20
 other twenty-four exited 0. The same eight also timed out in the opening sweep. Its table line is the
 row committed at 0896902, where A18's test passes. Rows S05730 to S05739 are unused: every mutant was
 mutable and killed by a test.
+
+## The ingest delivery: its row (A17)
+
+A17 is the ingest crate's row of section 7. Its opening sweep, run 36502008965, counted 33 of 33
+reports whole. Forty-one of the 44 survivors are now killed by tests (retry reopens and waits, the
+jitter draws, the engine's error mapping, the run record's reads, the settings' host check and
+cleartext warning, the reset row of the data-rights declaration). Three are recorded equivalent in
+`scripts/mutation-equivalent.d/deck-streak-ingest.json`: `engine_client` (the same call spelled
+two ways), `Held::release` and `Held::drop` (closing the only open file description releases the
+flock). The closing sweep, run 36505515113, counted 33 of 33 whole and read `table: verdict: ok`,
+listed 309, killed 239, equivalent 3, unexplained 0, unviable 67. Shards 8, 9 and 28 exited 2 (one
+missed mutant each, the three recorded) and shard 23 exited 3 (one timeout, counted killed).

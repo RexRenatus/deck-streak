@@ -65,6 +65,9 @@ class TheCampaignTable(unittest.TestCase):
     def test_the_vault_row_reads_no_unexplained_mutant(self):
         self.assert_closed("deck-streak-vault")
 
+    def test_the_ingest_row_reads_no_unexplained_mutant(self):
+        self.assert_closed("deck-streak-ingest")
+
     def test_the_kernel_row_reads_no_unexplained_mutant(self):
         self.assert_closed("deck-streak-kernel")
 

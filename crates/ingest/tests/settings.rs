@@ -1,5 +1,7 @@
 //! Ingest's settings refuse start by name (SPEC-022 A14, R5, R13).
 
+mod support;
+
 use deck_streak_ingest::settings::{STATE_DIRECTORY, SYNC_ENDPOINT, SyncSettings};
 use deck_streak_kernel::{Environment, SettingsError};
 
@@ -66,5 +68,47 @@ fn a_plain_http_endpoint_is_marked_cleartext() {
     assert_eq!(
         format!("{:?}", settings("http://sync.example.invalid/").endpoint()),
         "SyncEndpoint(..)"
+    );
+}
+
+#[test]
+fn an_endpoint_that_names_no_host_is_refused() {
+    let parse = |endpoint| {
+        SyncSettings::from_env(&Environment::from_vars([
+            (STATE_DIRECTORY, STATE),
+            (SYNC_ENDPOINT, endpoint),
+        ]))
+        .is_ok()
+    };
+    assert!(parse("https://sync.example.invalid:8080/path"));
+    assert!(!parse("http://"));
+    assert!(!parse("http:///path"));
+    assert!(!parse("http://:8080/"));
+    assert!(!parse("http://sync example.invalid/"));
+}
+
+#[test]
+fn a_cleartext_endpoint_logs_one_warning_that_names_the_setting_and_not_its_value() {
+    let logs = support::logs::Logs::default();
+    let settings = |endpoint| {
+        SyncSettings::from_env(&Environment::from_vars([
+            (STATE_DIRECTORY, STATE),
+            (SYNC_ENDPOINT, endpoint),
+        ]))
+        .expect("a valid endpoint")
+    };
+    tracing::subscriber::with_default(logs.recorder(), || {
+        settings("https://sync.example.invalid/").warn_if_cleartext();
+    });
+    assert!(logs.warnings().is_empty(), "{:?}", logs.events());
+    tracing::subscriber::with_default(logs.recorder(), || {
+        settings("http://sync.example.invalid/").warn_if_cleartext();
+    });
+    let warnings = logs.warnings();
+    assert_eq!(warnings.len(), 1, "{warnings:?}");
+    assert_eq!(warnings[0].field("setting"), Some(SYNC_ENDPOINT));
+    assert!(
+        !format!("{:?}", warnings[0]).contains("example"),
+        "{warnings:?}"
     );
 }
