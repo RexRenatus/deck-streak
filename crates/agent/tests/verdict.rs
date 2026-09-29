@@ -25,6 +25,16 @@ fn is_one_whole_attribute(line: &str) -> bool {
     false
 }
 
+/// How many lines of `source` declare `pub enum Verdict {`. The head's scan only asks whether one
+/// does, so a second declaration is not seen.
+fn declarations_of(source: &str) -> usize {
+    usize::from(
+        source
+            .lines()
+            .any(|line| line.trim() == "pub enum Verdict {"),
+    )
+}
+
 /// The attribute lines directly above `pub enum Verdict` in `source`.
 fn attributes_of(source: &str) -> Vec<String> {
     let lines: Vec<&str> = source.lines().collect();
@@ -79,4 +89,38 @@ fn an_item_ending_in_a_bracket_comment_is_not_an_attribute() {
         !attributes.iter().any(|a| a == "#[must_use]"),
         "an item line ending in a comment was read as an attribute: {attributes:?}"
     );
+}
+
+#[test]
+fn a_bracket_inside_a_string_or_a_comment_never_closes_an_attribute() {
+    let good = "#[must_use]\n#[derive(Clone)]\npub enum Verdict {";
+    assert!(attributes_of(good).iter().any(|a| a == "#[must_use]"));
+    // Each decoy leaves the enum without a `#[must_use]` of its own: the first gives it to a
+    // function, the second and third hide it in a raw string and in a block comment.
+    for decoy in [
+        "#[must_use]\n#[doc = \"[\"] pub fn decoy() {} // ]\n#[derive(Clone)]\npub enum Verdict {",
+        "pub const DECOY: &str = r#\"\n#[must_use]\n#[\"#; #[derive(Clone)] // ]\n#[derive(Debug)]\npub enum Verdict {",
+        "/*\n#[must_use]\n/// */\n#[derive(Clone)]\npub enum Verdict {",
+    ] {
+        let attributes = attributes_of(decoy);
+        assert!(
+            attributes.iter().any(|a| a.starts_with("#[derive(")),
+            "the enum's own derive was not read: {attributes:?}"
+        );
+        assert!(
+            !attributes.iter().any(|a| a == "#[must_use]"),
+            "a must_use outside the enum's attributes was read as one: {attributes:?}"
+        );
+    }
+}
+
+#[test]
+fn a_commented_copy_of_the_enum_above_it_is_refused() {
+    assert_eq!(
+        declarations_of("#[must_use]\n#[derive(Clone)]\npub enum Verdict {"),
+        1
+    );
+    // The copy inside the comment carries the `#[must_use]`; the enum that compiles carries none.
+    let decoy = "/*\n#[must_use]\n#[derive(Clone)]\npub enum Verdict {\n*/\n#[derive(Clone)]\npub enum Verdict {";
+    assert_eq!(declarations_of(decoy), 2);
 }
