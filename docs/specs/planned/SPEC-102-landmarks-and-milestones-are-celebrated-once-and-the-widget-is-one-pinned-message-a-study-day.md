@@ -156,14 +156,13 @@ R11. `crates/notifications/src/widget.rs` renders the widget from notifications'
     day (SPEC-084 R5's rule), the mood, the current study day's reviews and due cards, the day's
     quest lines and the footer. The text equals the golden `widget_text`
     (`telegram.py:render_widget`), empty lines dropped.
-R12. The mood equals the golden `widget_mood` (`telegram.py:widget_mood`) over its outcome set, the
-    first that holds, in this order: an open lapse,
-    `✨ The phoenix waits in the ashes — 3 cards relight it.`; a skip day,
-    `🧊 Rest day — the flame is banked, not out.`; reviews at least the larger of 1 and the goal,
-    `🐦‍🔥 Radiant — goal met.`; reviews above 0, `🙂 Warming up.`; a local hour of 22 or later,
-    `🪶 Embers... the day is almost gone.`; a local hour of 18 or later,
-    `😐 The phoenix dims — nothing yet today.`; otherwise `🌅 A fresh day.`. A goal not yet stored
-    reads as 30. The mood line is empty when `widget_mood` is `"0"`.
+R12. The mood equals the golden `widget_mood` (`telegram.py:widget_mood`) over its outcome set of
+    seven texts, each the golden's verbatim, the first that holds, in this order: an open lapse, the
+    relight text (3 cards relight the streak); a skip day, the rest-day text; reviews at least the
+    larger of 1 and the goal, the radiant text; reviews above 0, the warming text; a local hour of
+    22 or later, the embers text; a local hour of 18 or later, the dimming text; otherwise the
+    fresh-day text. A goal not yet stored reads as 30. The mood line is empty when `widget_mood` is
+    `"0"`.
 R13. The quest lines and the footer equal the golden `widget_payload`
     (`ShowcaseLayer._widget_payload`). A sealed quest reads `✉️ sealed quest`; any other reads `✅`
     when completed or `◻️`, then its emoji, then ` · <n> to go` when open with a target above 1.
