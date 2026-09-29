@@ -149,7 +149,7 @@ const SEND_METHODS: [&str; 29] = [
 /// behalf, the answers to a callback, an inline, a shipping or a checkout query, a game's score, a
 /// story's edit, a suggested post's decision, and the name, description, photo, commands or menu
 /// that a chat, a bot or a business account shows. The census holds them as it holds a send method.
-const DELIVERY_METHODS: [&str; 46] = [
+const DELIVERY_METHODS: [&str; 60] = [
     "copyMessage",
     "copyMessages",
     "forwardMessage",
@@ -196,6 +196,23 @@ const DELIVERY_METHODS: [&str; 46] = [
     "setBusinessAccountBio",
     "setBusinessAccountUsername",
     "setBusinessAccountProfilePhoto",
+    // Bot-authored content a user sees once used: a sticker set's title, media or thumbnail, a
+    // status, a badge's description, an invoice's link, a prepared message or button, and an
+    // administrator's title or a member's tag.
+    "addStickerToSet",
+    "createNewStickerSet",
+    "replaceStickerInSet",
+    "setCustomEmojiStickerSetThumbnail",
+    "setStickerSetThumbnail",
+    "setStickerSetTitle",
+    "setUserEmojiStatus",
+    "verifyChat",
+    "verifyUser",
+    "createInvoiceLink",
+    "savePreparedInlineMessage",
+    "savePreparedKeyboardButton",
+    "setChatAdministratorCustomTitle",
+    "setChatMemberTag",
 ];
 
 /// The version of the Bot API client the census's method list was read from. The test
@@ -405,7 +422,7 @@ const CLIENT_METHODS: [&str; 185] = [
 
 /// The client's methods that put nothing before a user: each is classified, not held, and the
 /// census does not read a name in it. One reason for each group.
-const NOT_DELIVERIES: [&str; 110] = [
+const NOT_DELIVERIES: [&str; 96] = [
     // Reads: each returns data to the bot and delivers nothing to a user.
     "getAvailableGifts",
     "getBusinessAccountGifts",
@@ -452,12 +469,6 @@ const NOT_DELIVERIES: [&str; 110] = [
     "unpinAllForumTopicMessages",
     "unpinAllGeneralForumTopicMessages",
     "unpinChatMessage",
-    // Invoice links and prepared objects: each makes an object a user later sends or opens, and
-    // shows a user nothing itself. The answers to a callback, an inline query, a checkout, a
-    // shipping query or a join request show a user content, so they are held.
-    "createInvoiceLink",
-    "savePreparedInlineMessage",
-    "savePreparedKeyboardButton",
     // Bot and session configuration: the bot's webhook, tokens, rights and process, and removing
     // its profile photo. Its name, descriptions, photo, commands and menu button are content a
     // user reads, so they are held.
@@ -471,23 +482,20 @@ const NOT_DELIVERIES: [&str; 110] = [
     "setMyDefaultAdministratorRights",
     "setPassportDataErrors",
     "setWebhook",
-    // Stickers: a sticker set is authored, not sent into a chat.
-    "addStickerToSet",
-    "createNewStickerSet",
+    // Stickers: removals, and the emoji, keywords, mask and position of a sticker, which show a
+    // user no title, media or thumbnail; a bare file upload shows nothing. A set's title, media
+    // and thumbnail are content a user sees, so they are held.
     "deleteStickerFromSet",
     "deleteStickerSet",
-    "replaceStickerInSet",
-    "setCustomEmojiStickerSetThumbnail",
     "setStickerEmojiList",
     "setStickerKeywords",
     "setStickerMaskPosition",
     "setStickerPositionInSet",
-    "setStickerSetThumbnail",
-    "setStickerSetTitle",
     "uploadStickerFile",
     // Chat administration: members, permissions, invite links, join requests and closing or hiding
     // a topic change how a chat is run and show a user no new content. A chat's title,
-    // description and photo and a topic's creation or edit show one, so they are held.
+    // description and photo, a topic's creation or edit, an administrator's title and a member's
+    // tag show one, so they are held.
     "approveChatJoinRequest",
     "banChatMember",
     "banChatSenderChat",
@@ -509,18 +517,16 @@ const NOT_DELIVERIES: [&str; 110] = [
     "reopenGeneralForumTopic",
     "restrictChatMember",
     "revokeChatInviteLink",
-    "setChatAdministratorCustomTitle",
-    "setChatMemberTag",
     "setChatPermissions",
     "setChatStickerSet",
-    "setUserEmojiStatus",
     "unbanChatMember",
     "unbanChatSenderChat",
     "unhideGeneralForumTopic",
-    // Business accounts, gifts, stars, verification and stories: each acts on an account's own
-    // state, its money or its badges, and shows a user no new content. A gift sent to a user, a
-    // story, a game's score, a suggested post's decision and a business profile's name, bio,
-    // username and photo show one, so they are held (#297).
+    // Business accounts, gifts, stars and verification: each acts on an account's own state, its
+    // money, a removal or a read, and shows a user no new content. A gift sent to a user, a story,
+    // a game's score, a suggested post's decision, a business profile's name, bio, username and
+    // photo, an emoji status, a badge's description, an invoice's link and a prepared message or
+    // button show one, so they are held (#297).
     "convertGiftToStars",
     "editUserStarSubscription",
     "readBusinessMessage",
@@ -531,8 +537,6 @@ const NOT_DELIVERIES: [&str; 110] = [
     "setBusinessAccountGiftSettings",
     "transferBusinessAccountStars",
     "upgradeGift",
-    "verifyChat",
-    "verifyUser",
 ];
 
 /// The bot's own send, which takes no pass.
