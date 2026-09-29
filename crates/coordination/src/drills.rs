@@ -6,12 +6,14 @@ use deck_streak_progression::grant::{
     GrantAnswer, GrantPort, GrantRequest, GrantScope, GrantSource,
 };
 use deck_streak_progression::xp::XpAmount;
+pub use deck_streak_vault::config::{ARCHIVE_FOLDER, READINGS_FOLDER, VAULT_ROOT};
 pub use deck_streak_vault::drill_notes::{AnswerOutcome, DrillNotes};
 pub use deck_streak_vault::drill_store::Surface;
 use deck_streak_vault::drill_store::{GradeRow, record_grade};
 use deck_streak_vault::drills::drill_key;
 pub use deck_streak_vault::drills::{DrillMeta, DrillView};
-pub use deck_streak_vault::{RealFs, VaultError, VaultFs};
+pub use deck_streak_vault::sha256;
+pub use deck_streak_vault::{Rails, RealFs, VaultError, VaultFs, VaultSettings};
 
 use crate::runner::{Done, Fire, Reason, Work};
 
