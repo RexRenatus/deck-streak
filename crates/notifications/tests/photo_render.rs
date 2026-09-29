@@ -410,6 +410,31 @@ async fn a_photo_with_its_kind_off_is_never_pushed() {
 }
 
 #[test]
+fn a_caption_is_counted_in_utf16_units() {
+    // Telegram counts a caption in UTF-16 units after entity parsing: a character outside the
+    // Basic Multilingual Plane counts two, so 513 of them are 1,026 units.
+    let emoji = |count: usize| "\u{1F600}".repeat(count);
+    assert!(
+        Photo::new(png(64, 48, 64), emoji(512)).is_ok(),
+        "512 emoji are 1,024 units"
+    );
+    assert_eq!(
+        Photo::new(png(64, 48, 64), emoji(513)).err(),
+        Some(PhotoError::Caption),
+        "513 emoji are 1,026 units"
+    );
+    let combining = "e\u{301}".repeat(512);
+    assert!(
+        Photo::new(png(64, 48, 64), combining.clone()).is_ok(),
+        "a combining sequence counts each of its units"
+    );
+    assert_eq!(
+        Photo::new(png(64, 48, 64), format!("{combining}e")).err(),
+        Some(PhotoError::Caption)
+    );
+}
+
+#[test]
 fn an_oversized_photo_is_refused_before_any_call() {
     let refused = |bytes: Vec<u8>, caption: &str| Photo::new(bytes, caption).err();
 
