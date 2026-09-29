@@ -13,8 +13,8 @@
       "file": "crates/ingest/src/lock.rs",
       "mutant": "replace Held::release -> io::Result<()> with Ok(())",
       "anchor": "pub fn release(mut self) -> io::Result<()> {\n        self.file.take().map_or(Ok(()), |file| file.unlock())\n    }",
-      "reason": "With the body gone, release drops self, and Held's Drop unlocks the same file the body would have unlocked; only the returned Result differs, and the caller discards it.",
-      "evidence": "Held owns the only handle to the lock file and Drop::drop runs file.unlock() on whatever self.file still holds, then File's own close releases the flock. The one caller, Syncer::sync, binds the result to `let _`, and unlock on a valid open descriptor does not fail, so the released state and every observable value are unchanged.",
+      "reason": "With the body gone, release drops self, and Held's Drop unlocks the same file the body would have unlocked; only the returned Result differs, and every caller discards it.",
+      "evidence": "Held owns the only handle to the lock file and Drop::drop runs file.unlock() on whatever self.file still holds, then File's own close releases the flock. Every caller binds the result to `let _` (Syncer::sync in deck-streak-ingest's crates/ingest/src/sync.rs, the reader in deck-streak-ingest's crates/ingest/src/reader.rs, and deck-streak-readings' crates/readings/src/day_set.rs), and unlock on a valid open descriptor does not fail, so the released state and every observable value are unchanged.",
       "reached_by": "lock::a_second_sync_waits_for_the_collection_lock_and_never_overlaps",
       "issue": "#300"
     },

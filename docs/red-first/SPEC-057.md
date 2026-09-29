@@ -54,6 +54,8 @@ A15: red at e43dae8: AssertionError: 'scripts/mutation-equivalent.d/<package>.js
 A15: green at 5c4d6b6
 A16: red at bfae431: AssertionError: 225 != 0 : deck-streak-vault: 225 unexplained mutant(s) in its row (the opening sweep, run 36438243392 at 5767fbe, read listed 939, killed 647, equivalent 0, unexplained 225, unviable 67)
 A16: green at 6abff4a
+A17: red at e8f9695: AssertionError: 44 != 0 : deck-streak-ingest: 44 unexplained mutant(s) in its row (the opening sweep, run 36502008965, read listed 297, killed 190, equivalent 0, unexplained 44, unviable 63)
+A17: green at 2e0c239
 A28: red at e260627: AssertionError in each of its four subtests, each for its own reason: 'True is not false : the rust class applies on test lines [31, 36, 43, 47, 53]' (the test-only diff); 'Lists differ: [46, 58] != [58]' (the mixed diff counted its test module's line as production code); "'mutation: plan: rust applies: 3 production code line(s) in 1 file(s)' not found" (the production-only diff's plan named no production line); and '3 != 0 : mutation: shards: VOID the rust class applies and ... holds no cargo-mutants listing' (cargo-mutants' empty --in-diff output read as no listing)
 A28: green at 8c87e5b
 ```
@@ -160,9 +162,6 @@ A28's own red and green lines stand, since the plan at dd734e5 read every line a
 the new line adds no red of its own.
 
 ## The ingest delivery: its row (A17)
-
-A17: red at e8f9695: AssertionError: 44 != 0 : deck-streak-ingest: 44 unexplained mutant(s) in its row (the opening sweep, run 36502008965, read listed 297, killed 190, equivalent 0, unexplained 44, unviable 63)
-A17: green at 2e0c239
 
 A17 is the ingest crate's row of section 7. Its opening sweep, run 36502008965, counted 33 of 33
 reports whole. Forty-one of the 44 survivors are now killed by tests (retry reopens and waits, the
