@@ -267,18 +267,50 @@ class TheExaminedTotalIsTheListing(unittest.TestCase):
         self.assertEqual(len(taken(count)), len(names))
 
 
+def mutants_commands(directory):
+    """{workflow name: its `cargo mutants` commands} for the workflows of a directory that run one."""
+    found = {}
+    for path in sorted(directory.iterdir()):
+        if path.suffix not in (".yml", ".yaml"):
+            continue
+        # A shell continuation is one command: join it before the command is read.
+        lines = COMMAND.findall(workflow(path).replace("\\\n", " "))
+        if lines:
+            found[path.name] = lines
+    return found
+
+
+def plant_workflow(run):
+    """A workflow whose one step runs `run`, saved as `planted.yml` in a fresh directory."""
+    scratch = tempfile.TemporaryDirectory()
+    text = f"jobs:\n  shard:\n    runs-on: ubuntu-24.04\n    steps:\n      - run: {run}\n"
+    (Path(scratch.name) / "planted.yml").write_text(text, encoding="utf-8")
+    return scratch
+
+
 class EveryMutationCommandKeepsTheGatesBounds(unittest.TestCase):
     """A6 (R5): every `cargo mutants` command line in every workflow carries the gate's bounds."""
 
+    def test_a_command_spelled_with_a_toolchain_is_found(self):
+        with plant_workflow("cargo +nightly mutants --in-place") as scratch:
+            found = mutants_commands(Path(scratch))
+        self.assertEqual(found, {"planted.yml": ["cargo +nightly mutants --in-place"]})
+
+    def test_the_cargo_mutants_binary_form_is_found(self):
+        with plant_workflow("cargo-mutants mutants --in-place") as scratch:
+            found = mutants_commands(Path(scratch))
+        self.assertEqual(found, {"planted.yml": ["cargo-mutants mutants --in-place"]})
+
+    def test_a_second_command_on_one_line_is_its_own_command(self):
+        with plant_workflow(f"cargo mutants {BOUNDS} ; cargo mutants --in-place") as scratch:
+            found = mutants_commands(Path(scratch))
+        lines = found.get("planted.yml", [])
+        self.assertEqual(len(lines), 2, lines)
+        self.assertRegex(lines[0], BOUNDED)
+        self.assertNotRegex(lines[1], BOUNDED)
+
     def test_every_cargo_mutants_command_carries_the_gates_own_bounds(self):
-        found = {}
-        for path in sorted(WORKFLOWS.iterdir()):
-            if path.suffix not in (".yml", ".yaml"):
-                continue
-            # A shell continuation is one command: join it before the command is read.
-            lines = COMMAND.findall(workflow(path).replace("\\\n", " "))
-            if lines:
-                found[path.name] = lines
+        found = mutants_commands(WORKFLOWS)
         for name in ("ci.yml", "mutation-weekly.yml"):
             self.assertIn(name, found, f"{name} runs no cargo mutants command")
             self.assertGreaterEqual(len(found[name]), 1, name)
