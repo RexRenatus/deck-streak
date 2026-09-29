@@ -59,13 +59,20 @@ A2: python3 -m unittest discover -s scripts/tests -p test_build_profile.py -k te
 
 No schematic: the change adds no component and no state machine.
 
-## 5. Risks
+## 5. What this does NOT do
+
+- It changes no `release` profile and no workflow: #353 names the `dev` profile only, and CI
+  already sets `CARGO_INCREMENTAL=0` on its own.
+- It adds no opt-in `debugging` profile: #353 asks for two values and a test, and a contributor
+  who wants full debuginfo passes their own `--config`.
+
+## 6. Risks
 
 - **A debugger loses variable and type information for workspace crates.** Backtraces keep file and
   line; a contributor who needs full debuginfo builds once with their own profile.
 - **A changed profile invalidates every cached build once.** Cargo's fingerprints include the
   profile, so the first CI run and each contributor's first build rebuild from scratch.
 
-## 6. References
+## 7. References
 
 Issue #353; ADR-125; the Cargo book, "Profiles" and "Build Performance".
