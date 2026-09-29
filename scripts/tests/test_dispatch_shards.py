@@ -24,7 +24,9 @@ BOUNDS = "--timeout 300 --build-timeout 600"
 # a cargo flag before the subcommand, or the `cargo-mutants mutants` binary itself; a second command
 # on the same line is its own command. The bounds are matched whole, so a digit or a decimal
 # appended to either value is not the gate's bound.
-START = r"(?:\bcargo(?:\s+[+-]\S+)*\s+mutants\b|\bcargo-mutants\s+mutants\b)"
+# A global flag that takes its value as the next word (`cargo -C dir mutants`) is part of the start.
+VALUED = r"(?:--config|--color|-C|-Z)\s+\S+"
+START = r"(?:\bcargo(?:\s+(?:" + VALUED + r"|[+-]\S+))*\s+mutants\b|\bcargo-mutants\s+mutants\b)"
 COMMAND = re.compile(START + r"(?:(?!" + START + r")[^\n])*")
 BOUNDED = re.compile(r"(?<![\w-])" + re.escape(BOUNDS) + r"(?![\w.])")
 
@@ -270,14 +272,41 @@ class TheExaminedTotalIsTheListing(unittest.TestCase):
         self.assertEqual(len(taken(count)), len(names))
 
 
+def uncommented(text):
+    """`text` with each comment cut: a `#` that starts a word outside every quote opens a comment
+    to the end of its line, in YAML and in the shell alike. Its text is no command, and bounds
+    written in it bound nothing. A `#` inside quotes or inside a word is text, so the command
+    after it is still read."""
+    kept = []
+    for line in text.split("\n"):
+        quote, i, start = None, 0, True
+        while i < len(line):
+            char = line[i]
+            if char == "\\" and quote != "'":
+                i, start = i + 2, False
+                continue
+            if quote is None and char == "#" and start:
+                line = line[:i].rstrip(" \t")
+                break
+            start = quote is None and char in " \t"
+            if quote is None and char in "'\"":
+                quote = char
+            elif quote == char:
+                quote = None
+            i += 1
+        kept.append(line)
+    return "\n".join(kept)
+
+
 def mutants_commands(directory):
     """{workflow name: its `cargo mutants` commands} for the workflows of a directory that run one."""
     found = {}
     for path in sorted(directory.iterdir()):
         if path.suffix not in (".yml", ".yaml"):
             continue
-        # A shell continuation is one command: join it before the command is read.
-        lines = COMMAND.findall(workflow(path).replace("\\\n", " "))
+        # A shell continuation is one command: join it before the command is read, and after the
+        # comments are cut, because a comment's backslash continues nothing.
+        lines = COMMAND.findall(uncommented(workflow(path)).replace("\\\n", " "))
         if lines:
             found[path.name] = lines
     return found
