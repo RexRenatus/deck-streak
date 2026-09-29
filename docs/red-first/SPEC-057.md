@@ -212,3 +212,17 @@ non-`data` name followed by a data command). One is recorded equivalent in
 `table: verdict: ok`, listed 101, killed 71, equivalent 1, unexplained 0, unviable 29. Shard 1
 exited 2 (the one recorded mutant) and the other shards exited 0. Rows S05750 to S05759 are unused:
 the tool mutated every invariant of the crate, so none needed a hand-proved row (R20). No shard exited 3, so no mutant of this crate timed out in the closing sweep.
+
+## The agent delivery: its row (A26)
+
+A26 is the agent crate's row of section 7. Its opening sweep, run 36531093051 at the base (dev
+5216bcf), counted 33 of 33 reports whole and read `table: verdict: ok`: listed 146, killed 111,
+equivalent 0, unexplained 0, unviable 35, every shard exiting 0. The crate was never swept before,
+and no mutant of it survives, so no test was added, no record was written and no crate file
+changed. The row's test read red at the base because the row was not delivered (its pull request
+and runs unnamed), and reads green with them named. The closing sweep, run 36531457597 at the
+branch head, counted 33 of 33 whole and read the same figures, with no shard exiting 2 or 3 and no
+`TIMEOUT` line. Rows S05765 to S05769 are unused: four by-hand plantings in `SLOTTED`, one
+emptying the slot list of each of the identity (its bio slot), voice, personality and disclosure
+sections, each failed `a_template_with_a_filled_slot_is_refused`, so the constant's invariant is
+already pinned by an existing test (R20).
