@@ -39,3 +39,16 @@ A5: green at 3af853b
 A6: red at 3c9dfb6: a record fragment that repeats a key was read as its last value and the census exited 0: 0 != 1 : examined 0 record(s)
 A6: green at 3af853b
 ```
+
+Addendum, 2026-09-29 (issue #385, the amendment's A7). The tests of A7 were committed alone
+(f54cabab) against the unchanged reader; the whole file ran nine tests, one red by assertion (two
+failures counting its two subtests), eight green (the well-formed control is not red). Reading the
+list through `parse_document` (ad32aefc) turned it green. No green commit edits a test file.
+
+```red-first
+A7: red at f54cabab: a retired list that repeats a key was read as its last value and the verb exited 1 or 0, not 2: 1 != 2 : retired: S00030-DOUBLE: REFUSED: it left while its target scripts/fixmod.py stays, and scripts/mutation-rows.retired.json records no reason and approval for it; approval: 0 != 2 : retired: S00030-DOUBLE: its target stays; retired with approval: another
+A7: green at ad32aefc
+```
+
+Row S12210 is the companion of the killing test of A7, proved KILLED by its full id on a clean
+committed tree.

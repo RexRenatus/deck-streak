@@ -1,0 +1,60 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S04901-THREE-SILENT-DAYS-OPEN-A-LAPSE",
+        "streaks",
+        "src/lapse.rs",
+        "    if silent >= silent_days_to_open {\n",
+        "    if silent > silent_days_to_open {\n",
+        "lapse::a_skip_day_neither_counts_nor_ends_a_silent_run",
+        "a run of exactly the threshold's silent days opens a lapse, so three silent days open one and two do not (SPEC-049 R13; A12)"
+      ],
+      [
+        "S04902-A-SKIP-DAY-NEITHER-COUNTS-NOR-ENDS",
+        "streaks",
+        "src/lapse.rs",
+        "        if !skip_days.contains(&day) {\n",
+        "        if true {\n",
+        "lapse::a_skip_day_neither_counts_nor_ends_a_silent_run",
+        "a skip day is not a silent day and does not end the run, so three silent days with one skipped are two (SPEC-049 R13; A12)"
+      ],
+      [
+        "S04903-THE-ID-IS-THE-RUNS-FIRST-UNSKIPPED-DAY",
+        "streaks",
+        "src/lapse.rs",
+        "            first_silent = Some(day);\n",
+        "            first_silent = first_silent.or(Some(day));\n",
+        "lapse::one_episode_keeps_one_lapse_id_until_a_study_day_closes_it",
+        "the id is the earliest unskipped silent day of the run, so every day of one episode reports one id (SPEC-049 R13; A13)"
+      ],
+      [
+        "S04904-A-STUDY-REVIEW-CLOSES-THE-RUN",
+        "streaks",
+        "src/lapse.rs",
+        "        if review_counts.get(&day).copied().unwrap_or(0) > 0 {\n",
+        "        if review_counts.get(&day).copied().unwrap_or(0) > 100 {\n",
+        "lapse::one_episode_keeps_one_lapse_id_until_a_study_day_closes_it",
+        "a day holding a study review ends the walk, so the run counts only the silent days after it (SPEC-049 R13; A13)"
+      ],
+      [
+        "S04905-COORDINATION-COUNTS-BY-THE-STUDY-DAY-RULE",
+        "coordination",
+        "src/lapse.rs",
+        "                    .study_day(deck_streak_kernel::UtcMillis::from_epoch_millis(review.id)),\n",
+        "                    .study_day(deck_streak_kernel::UtcMillis::from_epoch_millis(review.id - 28_800_000)),\n",
+        "lapse::the_open_lapse_is_counted_from_the_study_reviews_read",
+        "a review is counted on the study day SPEC-020's rule gives its instant, not on a day of its own (SPEC-049 R15; A15)"
+      ],
+      [
+        "S04906-ONLY-STUDY-EVENTS-CLOSE-A-RUN",
+        "coordination",
+        "src/lapse.rs",
+        "            let studied = u32::from(is_study_event(review.kind, review.ease));\n",
+        "            let studied = 1_u32;\n",
+        "lapse::the_open_lapse_is_counted_from_the_study_reviews_read",
+        "a manual or rescheduling entry is counted as zero, so it closes no run (SPEC-049 R15; A15)"
+      ]
+    ]
+  }
+}

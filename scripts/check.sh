@@ -104,9 +104,18 @@ stage_test_engine() {
         fi
         slice=(--partition "slice:$ENGINE_SLICE")
     fi
+    # One --test <target> per whole binary the set names, read from ENGINE_TESTS and written
+    # nowhere else (R13 as amended), so cargo builds those test targets and no other. --workspace
+    # stays: the package selection is what fixes the feature resolution the cache was built under.
+    local targets=() rest="$ENGINE_TESTS"
+    local named='binary_id\(=[a-z0-9-]+::([a-z0-9_]+)\)'
+    while [[ "$rest" =~ $named ]]; do
+        targets+=(--test "${BASH_REMATCH[1]}")
+        rest="${rest#*"${BASH_REMATCH[0]}"}"
+    done
     need_cargo && need_nextest && need_protoc &&
         cargo nextest run --workspace --locked --no-fail-fast -E "$ENGINE_TESTS" \
-            ${slice[@]+"${slice[@]}"}
+            ${targets[@]+"${targets[@]}"} ${slice[@]+"${slice[@]}"}
 }
 
 stage_doctest() { need_cargo && need_protoc && cargo test --doc --workspace --locked; }

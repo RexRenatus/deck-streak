@@ -635,3 +635,71 @@ when a lookup of the same key missed, so that a scheduled run in the default bra
 entry a run on any ref can restore. The test that judges R2 (`cache_problems` in `test_ci_workflows.py`)
 judges that shape, in the workflow `rust-cache.yml` only, in scenarios and refuses its planted
 variants and the same shape in any other workflow (SPEC-191 A7).
+
+## 13. Amendment, 2026-09-29: the engine legs name their test targets (#407)
+
+Made by ADR-194, insert-only: every earlier byte of this SPEC is kept in order, so the words below
+are stated here and read in place of the earlier words they name. It inserts, at the end of the
+file, this section and section 14.
+
+**R13, as amended.** R13's last sentences read, with the insertion in italics: "The `test` stage
+runs `cargo nextest run --workspace --locked --no-fail-fast -E 'not (<the set>)'`, and a new
+`test-engine` stage runs the same command with `-E '<the set>'` *and one `--test <target>` for each
+whole binary the set names, derived from `ENGINE_TESTS` and written nowhere else*. The two commands
+differ only in the filterset *and the target flags derived from it*, so every test of the workspace
+runs in exactly one of them, under one build scope and one feature resolution." `--workspace`,
+`--locked`, `--no-fail-fast`, the filterset and R16's partition are unchanged. `test` names no
+target. A set that names no whole binary derives no target flag, so the stage builds every test
+target, as it did. The derivation is complete only for a union of whole binaries, which A17
+requires; a set that named whole binaries beside another term would derive only those binaries, so
+A17 is not relaxed without this derivation.
+
+**A16, as amended.** A16's words "their commands differ only in the filterset" read "their commands
+differ only in the filterset and the `--test <target>` pairs derived from the set". The test that
+judges A16 compares the two stages' commands without those pairs; the pairs themselves are judged
+by A21, so A16's other refusals (a stage's own copy of the set, a `test` that runs the set, a
+second build scope, a second definition) hold as they were.
+
+**Section 5's bullet, as amended.** The bullet "The amendment narrows no build" (section 5, the
+amendment's own) reads "The amendment narrows no package scope and no feature resolution":
+`test-engine` still builds under `--workspace`, as `test` does, because a build of the ingest
+package alone resolves other features than the build the cache holds and would recompile what the
+cache already has (section 8, #207). It now builds only the two test targets the set names, in
+place of every test target of the workspace, which the set's filterset never ran (#407).
+
+**Why the scope stays.** Cargo unifies features over the packages a command selects, so the
+package selection fixes the feature resolution. `--workspace` keeps both as the cache was built
+under them, and `--test <target>` only narrows which targets of those packages are built. The
+proof is equal counts at one commit (ADR-194 records it): each slice's nextest line reads the same
+number of tests before and after, and the engine log's `Compiling` lines name workspace crates
+only. If a dependency recompiles, section 8's reason stands and this amendment is withdrawn.
+
+**Rows.** Band S03800-S03899 holds two hand-proved rows on `scripts/check.sh`, S03801 (the derived
+`--test` flag) and S03802 (the workspace scope), each killed by A21's test.
+
+**Files.**
+
+| file | change |
+|---|---|
+| `scripts/check.sh` | `test-engine` derives one `--test <target>` per binary the set names |
+| `scripts/tests/test_check_gate.py` | A21, and A16's comparison of the two commands without the derived pairs |
+| `scripts/mutation-rows.d/S03800-S03899.json` | added: S03801 and S03802 |
+| `docs/decisions/ADR-194-the-engine-legs-name-the-targets-the-set-derives.md` | added |
+| `docs/red-first/SPEC-038.md` | changed by the amendment: A21, and the equal-count reading |
+| `changelog.d/ci-engine-targets-407.md` | added |
+
+## 14. Acceptance criteria of the 2026-09-29 amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A21 | `test-engine` names one `--test <target>` for each whole binary the engine set names, derived from the one definition, beside `--workspace`, and `test` names none; a target list written by hand, a target the set does not name, a set target left out and a `test` that narrows to a target are refused | `test_check_gate.py` `the_engine_stage_builds_only_the_targets_the_set_names` |
+
+```acceptance
+A21: python3 -m unittest discover -s scripts/tests -p test_check_gate.py -k the_engine_stage_builds_only_the_targets_the_set_names
+```
+
+A21 runs `check.sh`'s two test stages with a `cargo` that records its arguments, twice: with the
+definition as written and with a planted set that names no binary in its place. The engine stage
+must name exactly the targets its set names, so a stage that writes its own list keeps it under
+the planted set and is refused; the `test` stage must name none. Four planted `check.sh` files hold
+the refused shapes, and a fifth holds the derivation that is accepted.
