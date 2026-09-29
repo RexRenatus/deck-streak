@@ -487,11 +487,31 @@ class TheVerdictReadsTheToolsOwnReport(unittest.TestCase):
         self.assertIn("exit 4", baseline.stdout)
 
 
-def battery_reports(root, shards):
-    """A battery's downloaded artifacts: {shard: (exit, outcomes or None)}, then rows and Stryker."""
+ZERO_SCOPE = {
+    "in_force": True,
+    "state": "done",
+    "reason": None,
+    "oom": 0,
+    "oom_kill": 0,
+    "max": 0,
+    "peak_percent": 0,
+}
+
+
+def write_scope(directory, record=None):
+    """The record every leg's memory scope writes beside `mutants.out/`: zero events unless given."""
+    (directory / "memory-scope.json").write_text(
+        json.dumps(ZERO_SCOPE if record is None else record), encoding="utf-8"
+    )
+
+
+def battery_reports(root, shards, scopes=None):
+    """A battery's downloaded artifacts: {shard: (exit, outcomes or None)}, then rows and Stryker.
+    `scopes` maps a shard to its memory-scope record; a shard left out gets the zero record."""
     for shard, (code, report) in shards.items():
         directory = root / f"mutants-shard-{shard}"
         (directory / "mutants.out").mkdir(parents=True)
+        write_scope(directory, (scopes or {}).get(shard))
         if code is not None:
             (directory / "cargo-mutants.exit").write_text(f"{code}\n", encoding="utf-8")
         if report is not None:
@@ -857,12 +877,14 @@ def shard_outcomes(names, missed=(), total=None):
     }
 
 
-def shard_reports(root, reports):
+def shard_reports(root, reports, scopes=None):
     """Each shard's artifact, as the verdict's job downloads it: {shard: (exit, outcomes or None)}.
-    A shard left out uploaded nothing."""
+    A shard left out uploaded nothing. `scopes` maps a shard to its memory-scope record; a shard
+    left out gets the zero record."""
     for shard, (code, report) in reports.items():
         directory = root / f"mutation-rust-shard-{shard}"
         directory.mkdir(parents=True)
+        write_scope(directory, (scopes or {}).get(shard))
         (directory / "cargo-mutants.exit").write_text(f"{code}\n", encoding="utf-8")
         if report is not None:
             (directory / "mutants.out").mkdir()
@@ -1692,6 +1714,7 @@ class TheTableCountsTheCampaign(unittest.TestCase):
         for shard, (code, entries) in shards.items():
             directory = reports / f"mutants-shard-{shard}"
             (directory / "mutants.out").mkdir(parents=True)
+            write_scope(directory)
             (directory / "cargo-mutants.exit").write_text(f"{code}\n", encoding="utf-8")
             if entries is not None:
                 (directory / "mutants.out" / "outcomes.json").write_text(

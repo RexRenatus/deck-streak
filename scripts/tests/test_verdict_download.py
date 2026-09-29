@@ -258,7 +258,11 @@ def shard_artifact(shard):
     name = given["name"].replace("${{ matrix.shard }}", str(shard))
     inside = posixpath.relpath(out, root)
     prefix = "" if inside == "." else inside + "/"
-    files = {f"{prefix}mutants.out/outcomes.json", f"{prefix}cargo-mutants.exit"}
+    files = {
+        f"{prefix}mutants.out/outcomes.json",
+        f"{prefix}cargo-mutants.exit",
+        f"{prefix}memory-scope.json",
+    }
     return name, files
 
 
