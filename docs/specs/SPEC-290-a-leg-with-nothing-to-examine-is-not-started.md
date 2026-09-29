@@ -88,8 +88,8 @@ R9. These stay byte-identical: both cargo-mutants listing commands and their con
 | A1 | `shards` writes `listed`: `0` for a plan whose Rust class does not apply, even beside a listing that is not empty, `0` for a Rust diff whose listing is empty, and the listing's count otherwise, with the shard count and matrix of each unchanged; `mutation-plan` maps it as a job output | `test_not_started_legs.py` `the_plan_writes_how_many_rust_mutants_its_listing_holds` |
 | A2 | `mutation-rust`'s and `mutation-rows`' job-level conditions read the plan's outputs alone: evaluated over every combination of `listed`, `rust`, `rows` and `scope`, the rust leg starts exactly when `listed` is not `0` and the rows leg exactly when a row is selected or the scope is `diff`; the matrix line is unchanged, and no other mutation job gains a condition | `test_not_started_legs.py` `each_legs_job_condition_reads_the_plans_listing_alone` |
 | A3 | on a recorded plan whose Rust class applies and whose listing is empty, a shard with no artifact reads `not started`, the rows carry the examined count and the verdict is ok; with no row it is VOID because nothing was examined; `legs` reads a skipped rust leg there, and a skipped rows leg on a `not-applicable` plan, as not started and correct | `test_not_started_legs.py` `a_leg_the_listing_gives_nothing_reads_not_started` |
-| A4 | the first plant: on a recorded plan whose listing holds mutants, the shard with no artifact is VOID by name; `legs` refuses by name a skipped rust leg there, a skipped rows leg beside a selected row, a skipped rows leg on a diff with no row selected, and a result that is not a job's | `test_not_started_legs.py` `a_listed_leg_that_is_missing_or_not_started_is_refused_by_name` |
-| A5 | the second plant: the recorded whole report with one caught mutant and one total added reads VOID, naming the reports' count and the listing's; so does a report in a shard the listing gives no mutant; the recorded report itself reads ok | `test_not_started_legs.py` `an_examined_sum_that_differs_from_the_listing_is_refused` |
+| A4 | the first plant: on a recorded plan whose listing holds mutants, the shard with no artifact is VOID by name; `legs` refuses by name a skipped rust leg there, a skipped rows leg beside a selected row, a skipped rows leg on a diff with no row selected, a skipped rust leg beside a plan that names no shards, and a result that is not a job's | `test_not_started_legs.py` `a_listed_leg_that_is_missing_or_not_started_is_refused_by_name` |
+| A5 | the second plant: the recorded whole report with one caught mutant and one total added, or one of each removed, reads VOID, naming the reports' count and the listing's; so does a report in a shard the listing gives no mutant; the recorded report itself reads ok | `test_not_started_legs.py` `an_examined_sum_that_differs_from_the_listing_is_refused` |
 | A6 | `ci`'s own step, run under `bash -e` with each need's result: a not-started `mutation-rust` or `mutation-rows`, or both, passes and is named; a skipped `mutation-verdict`, a skipped other job, a cancelled leg and a failed verdict beside a skipped leg each fail it | `test_not_started_legs.py` `ci_admits_a_not_started_leg_and_no_other_skip` |
 | A7 | `mutation-verdict`'s own step, run with a recording interpreter, passes each leg's result to `legs` and fails with `legs`' status when both judges passed, and keeps a judge's status when one failed | `test_not_started_legs.py` `the_verdict_step_fails_on_the_legs_check` |
 
@@ -108,10 +108,13 @@ job downloads them. They are the plan, the rows' report and, for one, the shard'
 pull request runs, reduced to the fields the verdict reads: no timing, no log, no path of the
 machine that ran them. `listed/` is a plan whose listing holds mutants, with its shard's whole
 report (run 36624231257, #396); `empty/` is a plan whose Rust class applies and whose listing is
-empty (run 36604153634, #362). The two plants are built from `listed/` at run time and replay with
-`mutation-verdict.py judge` alone: the first removes the shard's artifact, as a leg that never ran
-leaves it; the second raises the report's caught count and its total by one, so the report still
-reads whole and every mutant it names is listed once. Each test prints how many cases it examined
+empty (run 36604153634, #362). The shard's report keeps the path the verdict reads,
+`mutants.out/outcomes.json`, which `.gitignore` names for cargo-mutants' own output, so that one
+recorded file is tracked by force (`git add -f`) and a clean checkout holds it. The two plants
+are built from `listed/` at run time and replay with `mutation-verdict.py judge` alone: the first
+removes the shard's artifact, as a leg that never ran leaves it; the second raises the report's
+caught count and its total by one, or lowers both by one, so the report still reads whole and every
+mutant it names is listed once. Each test prints how many cases it examined
 and refuses zero.
 
 A change that lists Rust mutants runs its legs exactly as before, and the pull request's own CI shows
@@ -178,11 +181,18 @@ KILLED on a committed tree with `python3 scripts/mutation_rows.py prove --band S
 | S29003 | the plan's `listed` output unmapped | A1 |
 | S29004 | the not-started reading decided from the artifact's absence alone, not the listing | A4 |
 | S29005 | the not-started reading also taken with a report present | A5 |
-| S29006 | the examined-sum refusal dropped | A5 |
-| S29007 | `legs` decides the rust leg from the `rust` class, not the listing | A4 |
+| S29006 | the examined-sum refusal only for a sum below the listing | A5 |
+| S29007 | `legs` decides the rust leg from the `rust` class, not the listing | A3 |
 | S29008 | `legs` drops the retirement check from what the rows leg owes | A4 |
 | S29009 | `ci` admits a skip without a leg that was not started | A6 |
 | S29010 | the verdict step drops `legs`' status | A7 |
+| S29011 | `shards` writes `listed=0` whatever the listing holds | A1 |
+| S29012 | the examined-sum refusal only for a sum above the listing, not below it | A5 |
+| S29013 | the verdict never checks the examined sum | A5 |
+| S29014 | `legs` reads an unset or unknown result as a job's | A4 |
+| S29015 | `legs` reads a skipped Rust leg beside a plan with no shards as correct | A4 |
+| S29016 | `ci` admits two skips for each leg that was not started | A6 |
+| S29017 | the verdict step passes each leg's result as the other's | A7 |
 
 ## 8. References
 
