@@ -83,6 +83,8 @@ The first deploy, and any change to a unit, Caddy or the firewall, needs the own
 
 ## 5. Nothing is merged back into dev
 
+Release model: no-back-merge (ADR-034)
+
 `main` receives only release pull requests from `dev`, merged with a merge commit, so it holds
 nothing `dev` lacks except those merge commits, and the next release pull request merges cleanly. A
 pull request from `main` into `dev` would carry no change, and `fragment` would refuse it (ADR-034).
