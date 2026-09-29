@@ -18,7 +18,11 @@ from pathlib import Path
 
 from _support import REPO, examined
 
-IMPL = re.compile(r"^\s*impl\s+(?:[\w:]+::)?Setting\s+for\s+(\w+)", re.MULTILINE)
+IMPL = re.compile(
+    r"^\s*impl\b\s*(?:<[^{};]*>)?\s*(?:[\w:]+::)?Setting\s+for\s+(\$?\w+)", re.MULTILINE
+)
+TEST_MODULE = re.compile(r"^\s*#\[cfg\(test\)\]", re.MULTILINE)
+COMMENT = re.compile(r"//[^\n]*")
 SHAPE = re.compile(r'const\s+SHAPE\s*:\s*&\'static\s+str\s*=\s*("(?:[^"\\]|\\.)*")\s*;')
 BANDS = REPO / "scripts" / "mutation-rows.d"
 
@@ -50,16 +54,29 @@ def implementations(root):
 
 
 def spelled_elsewhere(root, crate, file, literal, own_span):
-    """True when `literal` is spelled, quoted, anywhere in the crate's tests or sources but at the
-    implementation's own constant."""
+    """True when `literal` is spelled, quoted, in the crate's tests or in the test module of the
+    implementation's own source file, outside a comment, and never at any `SHAPE` constant."""
     base = root / "crates" / crate
-    for path in sorted(list((base / "tests").rglob("*.rs")) + list((base / "src").rglob("*.rs"))):
+    constants = {
+        (path, span)
+        for holder, path, _, _, span in implementations(root)
+        if holder == crate and span
+    }
+    candidates = sorted((base / "tests").rglob("*.rs")) + [base / file]
+    for path in candidates:
         text = path.read_text(encoding="utf-8")
-        at = text.find(literal)
+        start = 0
+        if path == base / file:
+            module = TEST_MODULE.search(text)
+            if module is None:
+                continue
+            start = module.start()
+        bare = COMMENT.sub(lambda m: " " * len(m.group(0)), text)
+        at = bare.find(literal, start)
         while at != -1:
-            if not (path == base / file and (at, at + len(literal)) == tuple(own_span)):
+            if (path.relative_to(base), (at, at + len(literal))) not in constants:
                 return True
-            at = text.find(literal, at + 1)
+            at = bare.find(literal, at + 1)
     return False
 
 
@@ -76,13 +93,18 @@ def rows_pinning(root, crate, file, literal):
 
 
 def unpinned(root):
-    """The implementations whose literal no test spells and no row of their file finds."""
+    """The implementations whose literal no test spells and no row of their file finds. A literal
+    that two implementations of one crate share is pinned only by a row of each one's file."""
+    found = implementations(root)
+    holders = {}
+    for crate, _, _, literal, _ in found:
+        holders[(crate, literal)] = holders.get((crate, literal), 0) + 1
     return [
         f"{crate}::{name} ({file.as_posix()}) {literal}"
-        for crate, file, name, literal, span in implementations(root)
+        for crate, file, name, literal, span in found
         if literal is None
         or not (
-            spelled_elsewhere(root, crate, file, literal, span)
+            (holders[(crate, literal)] == 1 and spelled_elsewhere(root, crate, file, literal, span))
             or rows_pinning(root, crate, file, literal)
         )
     ]
@@ -170,6 +192,7 @@ class TheGuardJudgesAPlantedTree(unittest.TestCase):
         root = self.tree('// "a whole depth"\nlet shape = Depth::SHAPE;')
         self.assertEqual(len(implementations(root)), 1)
         self.assertEqual(len(unpinned(root)), 1)
+
 
 if __name__ == "__main__":
     unittest.main()
