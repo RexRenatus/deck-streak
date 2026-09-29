@@ -694,3 +694,74 @@ async fn a_law_topic_never_asks_for_new_words() {
         "new words are fetched only for a language topic"
     );
 }
+
+/// A gate whose input check refuses an invisible character, and counts its checks (SPEC-043 R11).
+struct InputRefusingGate(AtomicUsize);
+
+impl OutputGate for InputRefusingGate {
+    fn check<'a>(&'a self, output: &'a str, template: &'a str) -> GateFuture<'a> {
+        FakeGate.check(output, template)
+    }
+    fn check_input<'a>(&'a self, input: &'a str) -> GateFuture<'a> {
+        self.0.fetch_add(1, Ordering::SeqCst);
+        let outcome = if input.contains('\u{200b}') {
+            GateOutcome::Failed {
+                class: "output-invisible".to_owned(),
+                findings: vec!["an invisible character".to_owned()],
+            }
+        } else {
+            GateOutcome::Passed
+        };
+        Box::pin(async move { outcome })
+    }
+}
+
+#[tokio::test]
+async fn an_untrusted_input_is_checked_before_any_call() {
+    let mut rig = Rig::new(one_topic(), good()).await;
+    rig.notes.0.insert(
+        401,
+        "Synthetic rule number 401 says\u{200b} the proof stands".to_owned(),
+    );
+    let gate = InputRefusingGate(AtomicUsize::new(0));
+    let parts = GenerateParts {
+        route: AiRoute::Proxy,
+        roster: &rig.roster,
+        runner: &rig.runner,
+        gate: &gate,
+        resolver: &rig.resolver,
+        notes: &rig.notes,
+        vault: &rig.vault,
+        store: rig.store.clone(),
+        clock: Arc::new(ManualClock::new(UtcMillis::from_epoch_millis(START))),
+        rule: StudyDayRule::default(),
+        taxonomy: Some(rig.taxonomy.clone()),
+        prompt: PromptTexts {
+            rules: &rig.texts[0],
+            policy: &rig.texts[1],
+            template: &rig.texts[2],
+            duty: &rig.texts[3],
+        },
+    };
+    let generated = generate_readings(&parts, RunTrigger::Owner)
+        .await
+        .expect("the generation is recorded");
+    assert_eq!(
+        (gate.0.load(Ordering::SeqCst), rig.runner.calls()),
+        (2, 0),
+        "input checks made, model calls made; the topic ended {:?}",
+        state_of(&generated, "law/evidence")
+    );
+    assert_eq!(
+        state_of(&generated, "law/evidence"),
+        TopicState::Failed(FailedReason::GateFailed(ReadingGate::Contract)),
+        "a refused input ends the topic on the contract gate"
+    );
+    let attempts = rig
+        .store
+        .attempts(generated.run)
+        .await
+        .expect("the attempts");
+    assert!(attempts.is_empty(), "no attempt is made: {attempts:?}");
+    assert!(readings(&rig).await.is_empty());
+}
