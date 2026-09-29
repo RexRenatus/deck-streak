@@ -317,8 +317,4 @@ Rows S03401 to S03403 (`scripts/mutation-rows.d/S03400-S03499.json`) were proved
 `python3 scripts/mutation_rows.py prove --band S03400-S03499`, the file restored by its digest:
 3 examined, 3 killed, 0 survived, 0 VOID. Each row's killer is A14. `census` and `ids` are clean.
 
-Two changes to the test file followed the green commit, each red against 58574a9's workflow. 39f81ac
-added the positive assertion that the push name `ci (push)` is judged. d24c0b6 made
-both arms of the evaluated form non-empty and read a one-line `on:` trigger in either form, so A15
-judges every event of every workflow. Under each, A14 and A15 fail at 58574a9's workflow and pass at
-the head.
+DISCLOSURE: A14's and A15's bodies changed after their red commit (58574a9), in three commits after the green commit, each red against 58574a9's workflow. 39f81ac added the positive assertion that the push name `ci (push)` is judged. d24c0b6 made both arms of the evaluated form non-empty, added the empty-arm form to A14's refusals, and read a one-line `on:` trigger in either form, so A15 judges every job's name under every event that is not `pull_request`. Under each, A14 and A15 fail at 58574a9's workflow and pass at the head. The fix round after them added the second-arm empty form (`'ci' || ''`) to A14's refusals, which kills the mutant that lets the second arm be empty, and factored A15's events reading into `judged_events` with its own self-check over the scalar, list and mapping forms and a `pull_request`-only trigger, which kills the mutant that reverts the scalar branch.
