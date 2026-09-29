@@ -1,0 +1,64 @@
+# Red-first record: SPEC-094
+
+Each criterion's tests were committed against inert stubs (or absent routes, or absent screens)
+and run there, so each failed by assertion, before the implementation that turns it green. A
+criterion's red and green are two commits. The criteria's extra tests, which the SPEC's list does
+not name, went red and green in the same two commits as the criterion they sit beside:
+`a_report_shows_at_most_the_cap_and_counts_the_rest` (red: 0 vs 45) and
+`names_made_safe_at_the_read_are_compared_made_safe` (red: `left: 0 right: 1`) with A9 to A12;
+`an_inert_row_never_runs` (red: `left: [] right: ["alpha"]`) with A12 to A17;
+`a_run_in_progress_is_answered_and_starts_nothing` (red: 404 vs 409) and
+`a_cross_site_run_is_refused` (red: 404 vs 403) with A18.
+
+```red-first
+A1: red at 37990f8: examined 0 pair rules, so nothing was judged
+A1: green at b8ea3f0
+A2: red at 37990f8: not JSON: Conventions {..}
+A2: green at b8ea3f0
+A3: red at 37990f8: template rule: Conventions {..}
+A3: green at b8ea3f0
+A4: red at f170628: left: [] right: [(1, 0, "150")]
+A4: green at 924f863
+A5: red at f170628: no template rows were read
+A5: green at 924f863
+A6: red at f170628: left: [] right: [400, 400, 200]
+A6: green at 924f863
+A7: red at f170628: a note type used only outside the scope was read
+A7: green at 924f863
+A8: red at f170628: left: "<b>Example</b> & .." right: "&lt;b&gt;Example&lt;/b&gt; &amp; .."
+A8: green at 924f863
+A9: red at b826570: left: [] right: [("Type A", "Dark", 5)]
+A9: green at b68f556
+A10: red at b826570: left: [] right: ["Back", "Front"]
+A10: green at b68f556
+A11: red at b826570: left: 0 right: 3
+A11: green at b68f556
+A12: red at b826570: left: ["dark_fields","sleeper"] right: ["dark_fields"]
+A12: green at b68f556
+A13: red at ec7a942: left: [] right: ["alpha"]
+A13: green at 685c6c8
+A14: red at ec7a942: left: [] right: ["alpha"]
+A14: green at 685c6c8
+A15: red at ec7a942: Err(Unknown)
+A15: green at 685c6c8
+A16: red at ec7a942: panicked "a report": the store returned none
+A16: green at 685c6c8
+A17: red at ec7a942: panicked "the table is declared"
+A17: green at 685c6c8
+A18: red at 17a4c4b: every route refuses a caller with no session: the routes were not mounted, so the answer was 404 and not 401
+A18: green at 6b5a0c4
+A19: red at 9717e12: Unable to find an accessible element with the role "alert"
+A19: green at b6fadce
+A20: red at 9717e12: Unable to find an element with the text: /checked 4 note types/i
+A20: green at b6fadce
+A21: red at ec7a942: the run: "not built"
+A21: green at 685c6c8
+```
+
+The parity goldens (59f4f52) were generated from the predecessor's own functions before the tests
+that read them, so A9 to A11 compare against values no test of this delivery wrote.
+
+In `crates/ingest/tests/structure.rs` the `unhex` and `hex` helpers changed between the red commit
+and the green one, to satisfy clippy's pedantic lints; no assertion changed. The existing SPEC-027
+test `crates/coordination/tests/data_rights.rs` was edited in the green commit of A13 to A17,
+because a second table is now declared for export and erasure.
