@@ -158,3 +158,18 @@ the script's sha256 matched. Row S05709 pins it (793e95e): `mutation_rows.py pro
 its killer passing without the mutant and failing with it, with the file restored byte for byte.
 A28's own red and green lines stand, since the plan at dd734e5 read every line as production and
 the new line adds no red of its own.
+
+## The ingest delivery: its row (A17)
+
+A17: red at e8f9695: AssertionError: 44 != 0 : deck-streak-ingest: 44 unexplained mutant(s) in its row (the opening sweep, run 36502008965, read listed 297, killed 190, equivalent 0, unexplained 44, unviable 63)
+A17: green at PLACEHOLDER
+
+A17 is the ingest crate's row of section 7. Its opening sweep, run 36502008965, counted 33 of 33
+reports whole. Forty-one of the 44 survivors are now killed by tests (retry reopens and waits, the
+jitter draws, the engine's error mapping, the run record's reads, the settings' host check and
+cleartext warning, the reset row of the data-rights declaration). Three are recorded equivalent in
+`scripts/mutation-equivalent.d/deck-streak-ingest.json`: `engine_client` (the same call spelled
+two ways), `Held::release` and `Held::drop` (closing the only open file description releases the
+flock). The closing sweep, run 36505515113, counted 33 of 33 whole and read `table: verdict: ok`,
+listed 309, killed 239, equivalent 3, unexplained 0, unviable 67. Shards 8, 9 and 28 exited 2 (one
+missed mutant each, the three recorded) and shard 23 exited 3 (one timeout, counted killed).
