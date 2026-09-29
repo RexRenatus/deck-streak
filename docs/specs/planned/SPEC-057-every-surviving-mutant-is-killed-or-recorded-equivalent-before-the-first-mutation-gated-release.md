@@ -582,7 +582,7 @@ closing runs.
 | 5 | `deck-streak-daemon` | 101 | 71 | 1 | 0 | 29 | #318 (runs 36515002230, 36517001675) |
 | 6 | `deck-streak-coordination` | 409 | 324 | 2 | 0 | 83 | #329 (runs 36526822999, 36528662545) |
 | 7 | `deck-streak-api` | 70 | 50 | 0 | 0 | 20 | #328 (runs 36528558184, 36529229929) |
-| 8 | `deck-streak-agent` | 239 | 174 | 0 | 0 | 65 | #330 (runs 36531093051, 36531457597); re-swept on the PR 338 head (run 36545641689) |
+| 8 | `deck-streak-agent` | 239 | 174 | 0 | 0 | 65 | #338 (runs 36543074674, 36545641689) |
 | 9 | `deck-streak-progression` | 57 | unmeasured | 0 | unmeasured | unmeasured | open |
 | 10 | `deck-streak-privacy` | 29 | unmeasured | 0 | unmeasured | unmeasured | open |
 | 11 | `miniapp` | 274 | 193 | 0 | 81 | 0 | open (#240) |
