@@ -1679,7 +1679,15 @@ def load_records(root: pathlib.Path) -> tuple[list[Record], list[str]]:
     problems: list[str] = []
     directory = root / RECORDS
     for path in sorted(directory.glob("*.json")) if directory.is_dir() else []:
-        document = read_json(str(path))
+        try:
+            document = mutation_rows.parse_document(
+                f"{RECORDS}/{path.name}", path.read_text(encoding="utf-8")
+            )
+        except mutation_rows.PopulationRefused as refusal:
+            problems.append(str(refusal))
+            continue
+        except (OSError, UnicodeDecodeError):
+            document = None
         entries = document.get("records") if isinstance(document, dict) else None
         if not isinstance(entries, list):
             problems.append(f'{path.name}: holds no records list, {{"records": [...]}}')
@@ -2230,7 +2238,11 @@ def main(argv: list[str] | None = None) -> int:
         if not args.base or not args.out:
             parser.error("plan needs --base and --out")
         scope = scope_of(args.event, args.base_ref, args.subject)
-        plan = plan_diff(root, args.base, args.head, pathlib.Path(args.out), scope)
+        try:
+            plan = plan_diff(root, args.base, args.head, pathlib.Path(args.out), scope)
+        except mutation_rows.PopulationRefused as refusal:
+            print(f"mutation: plan: REFUSED: {refusal}", file=sys.stderr)
+            return EXIT_FAIL
         say_plan(plan)
         return EXIT_OK
     if args.verb == "shards":

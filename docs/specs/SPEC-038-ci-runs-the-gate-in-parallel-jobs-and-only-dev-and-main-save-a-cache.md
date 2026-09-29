@@ -616,3 +616,11 @@ SPEC-058 decides the stage's command, its level and its verdict, and its tests j
 (`scripts/tests/test_audit_web.py`). Under ruling (ii) of section 8, SPEC-058's A5 grows this
 SPEC's table `TOOLS` in `test_check_gate.py` by one entry, `python3` after `pnpm` for `audit-web`,
 and changes no assertion, so A5 of this SPEC judges the new tool too.
+
+## 11. Amendment, 2026-09-29: R8 holds for every workflow with a pull-request trigger
+
+Made by SPEC-190 (#369), insert-only: every earlier byte is kept in order. R8's rule, one group per
+pull request that a newer run cancels and a group of its own for every other event, is now carried
+by every workflow with a `pull_request` trigger, not `ci.yml` alone. SPEC-190 decides the blocks of
+`changelog.yml` and `engine-measure.yml` and a test over every workflow file
+(`scripts/tests/test_workflow_concurrency.py`); this SPEC's A10 keeps judging `ci.yml`'s.

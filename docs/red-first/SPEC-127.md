@@ -25,6 +25,9 @@ A7: green at cd9e1b1aeff832698e98f39c2a32e6bf2a9b521a
 A8: green at cd9e1b1aeff832698e98f39c2a32e6bf2a9b521a
 A9: red at a0b0b5b485b0d2981c8a081f0d8ea32cd6843aa0: with the removal's two restore lines swapped, AssertionError: True is not false : the live Caddyfile imports a block
 A9: green at b766c2a1308977b850073d346d5e8d96c4968c9c
+A10: red at 3b4267ef6c19a8ef15346e7390de15c0334a61bb: AssertionError: 'deploy: refused' not found in '' : the removal says which step stopped
+A10: green at a224cc8d0fdf1e81a6f0e9bf45670fbf7d00735f
+A11: not red: the removal's first refusal already printed `deploy: refused` at a4036b3; the test pins it (#361)
 ```
 
 ## Fix round 1 (PR #357)
@@ -66,3 +69,18 @@ is green there.
 Replays on the other scripts, by the same test: A9 is red on dev's `deploy.sh` for another reason,
 as A8 is ('refused-rename' is not in the move log, because dev has no restore rename), and it is not
 red on 4b2037d's `deploy.sh`, whose removal already restores the block first.
+
+## Amendment 2026-09-29 (issue #361)
+
+A10 covers the removal's second refusal, `caddy adapt --validate`: its stub flag makes `adapt` refuse
+while `validate` passes. The test was committed first (3b4267e) against the unchanged `deploy.sh`,
+red by assertion because stderr was empty; the one-line fix and the row S12711 followed (a224cc8).
+
+A11 covers the removal's first refusal, `caddy validate`: its stub flag (`caddy-refuses`) makes
+`validate` refuse. The refusal already printed its message at `a4036b3`, so the test is green from
+the start and is recorded `not red`; it pins the line. Four plants on a copy of the head's
+`deploy.sh` each turn A11 red by assertion: the first refusal's echo removed (`'deploy: refused' not
+found in ''`), its `exit 1` made `exit 0` (`0 == 0 : a refused validation`), its `find` removed
+(`Lists differ: ['deck-streak.candidate'] != []`), and its echo sent to stdout (`'deploy: refused'
+not found in ''`). The second refusal's echo removed leaves A11 green and turns A10 red, so the two
+tests are independent. Row S12712 pins the first refusal's message (killer A11).
