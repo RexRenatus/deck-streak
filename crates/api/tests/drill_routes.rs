@@ -276,3 +276,48 @@ async fn the_drill_routes_answer_only_the_owner() {
         empty.body
     );
 }
+
+/// `note()` answered, and deferred when `reason` names one.
+fn answered_note(reason: Option<&str>) -> String {
+    let ticked = note().replace("- [ ] **Ready", "- [x] **Ready");
+    match reason {
+        Some(reason) => ticked.replacen(
+            "status: active\n",
+            &format!("status: active\ndefer_reason: {reason}\n"),
+            1,
+        ),
+        None => ticked,
+    }
+}
+
+#[tokio::test]
+async fn the_list_counts_what_awaits_grading_and_what_is_deferred() {
+    assert_eq!(deck_streak_api::drill_routes::LIST_PATH, "/api/drills");
+    let scratch = tempfile::tempdir().expect("a temporary directory");
+    let (app, note_path) = app(&scratch).await;
+    let active = note_path.parent().expect("the active folder");
+    fs::write(active.join("b-answered.md"), answered_note(None)).expect("a note");
+    fs::write(active.join("c-deferred.md"), answered_note(Some("later"))).expect("a note");
+    fs::write(
+        active.join("d-pending.md"),
+        note().replacen(
+            "status: active\n",
+            "status: active\ndefer_reason: later\n",
+            1,
+        ),
+    )
+    .expect("a note");
+    let cookie = cookie_of(&handshake(&app, OWNER_PAYLOAD).await);
+    let list = get(&app, "/api/drills", Some(&cookie)).await;
+    assert_eq!(list.status, StatusCode::OK, "{}", list.body);
+    let body = list.json();
+    let ids: Vec<&str> = body["drills"]
+        .as_array()
+        .expect("the drills")
+        .iter()
+        .map(|drill| drill["drill_id"].as_str().expect("an id"))
+        .collect();
+    assert_eq!(ids, vec!["d-pending", DRILL]);
+    assert_eq!(body["awaiting_grading"], 2);
+    assert_eq!(body["deferred"], 1);
+}
