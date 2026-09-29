@@ -450,3 +450,23 @@ insertion.
   SPEC-049 is in.
 - The slice's function takes no stored anchor. R15 adds it, so the manifest's rows marked `changed`
   for the two `lapse.rs` files change the slice's files.
+
+## 11. Amendment, 2026-09-29: an empty history is answered as the predecessor answers it
+
+Made on the orchestrator's ruling at re-dispatch, insert-only, after section 10. SPEC-049's own
+answer and its criterion stay as they are: the slice's function answers no lapse for a window with
+no anchor, and this layer, which holds the stored anchor, answers an empty history through it.
+
+R25. When the study set is empty, the layer answers as the predecessor's governor does: the silence
+    walk reaches its 120-day cap, so the lapse is anchored on the stored anchor when one exists and
+    is not later than the horizon (today minus 120 days), and otherwise on the horizon. The rule
+    lives in `crates/streaks/src/lapse.rs` beside the slice's function and leaves the slice's
+    answers unchanged.
+
+| id | criterion | decided by |
+|---|---|---|
+| A23 | an empty history is answered with the stored anchor or the horizon, equal to the golden `lapse_anchor_beyond_the_walk`'s empty-history cases | `an_empty_history_is_anchored_as_the_predecessor_anchors_it` |
+
+```
+A23: cargo test -p deck-streak-streaks --test governor_goldens -- --exact an_empty_history_is_anchored_as_the_predecessor_anchors_it
+```
