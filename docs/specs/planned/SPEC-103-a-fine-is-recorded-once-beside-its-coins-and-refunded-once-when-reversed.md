@@ -194,8 +194,8 @@ merges.
   discipline wave's (ADR-104, #110, #113).
 - It spends no smoke bomb: the spend reverses a night's standing fines through this port (#279).
 - It grants no pardon and no grace: both reverse through this port with their features (#114, #110).
-- It shows no fine on any screen or in any message: the discipline screens and the digest do (#110,
-  #129).
+- It shows no fine on any screen or in any message: the discipline screen and the rail's messages
+  do (#109, #105).
 - It imports none of the predecessor's penalty rows (#61).
 
 ## 6. Risks
