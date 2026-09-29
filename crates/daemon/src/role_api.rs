@@ -54,6 +54,20 @@ enum Stop {
     Database(WiringError),
 }
 
+/// The API's state as the role composes it: the readiness the database opens into, the owner's
+/// access, and (SPEC-072 R24) the law tiers' source when the settings name a collection to read.
+///
+/// The composition lives here so the daemon's own test can drive the router the role serves.
+#[must_use]
+pub fn api_state(
+    _env: &Environment,
+    _offload: &Offload,
+    readiness: Readiness,
+    access: OwnerAccess,
+) -> ApiState {
+    ApiState::new(readiness).with_owner(access)
+}
+
 /// Runs the `api` role until SIGTERM (or SIGINT), and returns once every request in flight has
 /// finished. `redactor` is the one the process's log writer reads: every credential the role
 /// loads is registered with it.
@@ -84,12 +98,12 @@ pub async fn run(env: &Environment, redactor: &Redactor) -> Result<(), ApiRoleEr
     let clock: Arc<dyn Clock> = Arc::new(SystemClock);
     let readiness = Readiness::new();
     let access = OwnerAccess::new(gate, Arc::clone(&clock), kernel.study_day_rule);
-    let router = deck_streak_api::router(ApiState::new(readiness.clone()).with_owner(access));
+    let offload = Offload::new(kernel.offload_workers, clock);
+    let router = deck_streak_api::router(api_state(env, &offload, readiness.clone(), access));
     tracing::info!(listen = %bound, "the api role serves");
     notifier.notify(NotifyState::Ready);
     let heartbeat = lifecycle::spawn_heartbeat(notifier.clone(), env);
 
-    let offload = Offload::new(kernel.offload_workers, clock);
     let (failed, failure) = oneshot::channel();
     let opener = {
         let readiness = readiness.clone();
