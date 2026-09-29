@@ -1,6 +1,6 @@
 ### Added
 
-- Curriculum and insight parity (W4) is specified as ten planned SPECs, nine proposed ADRs and three
+- Curriculum and insight parity (W4) is specified as ten planned SPECs, ten proposed ADRs and three
   schematics, one SPEC per bounded context or tight group, each naming its issues, its
   prerequisites and its mutation band.
   - SPEC-090: each course is forecast to its next band, the daily goal adapts, and the balance names
@@ -18,7 +18,7 @@
   - SPEC-095: the Echo Test, the Price of a Day Off, Bench II and the Docket run weekly on the frame.
   - SPEC-096: the Illusion Ledger and the Hanzi Dividend read the owner's note conventions.
   - SPEC-097: Dead Air, the Fluency Trap, the Tilt Test and the Other Hand read how the owner
-    studies.
+    studies, and the Other Hand attributes a skip day's rows by its snapshot and window (ADR-097).
   - SPEC-098: Divestment Day, the hand, the sabbatical clock and the runway price the owner's time;
     the clock ports its two primitives into insights (ADR-098).
   - SPEC-099: the Can-Do ladder unlocks a rung in the owner's own words after each sync, and records
