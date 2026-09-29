@@ -62,8 +62,9 @@ The port
 R1. The kernel gains `crates/kernel/src/import.rs`: `SourceRow` (one predecessor row, its columns by
     name, each a NULL, an integer, a real, a text or a blob), `SourceTables` (the rows of every
     source table by the table's name, read-only), `ImportCount` (`inserted`, `replaced`,
-    `unchanged`, `superseded`, `kept`; `add`, and `written`, the sum of `inserted`, `replaced`
-    and `superseded`),
+    `unchanged`, `superseded`, `kept`, and `filtered`, the source rows a pair's declared filter
+    leaves out, which only a pair whose §8 rule is `filtered` answers; `add`, and `written`, the
+    sum of `inserted`, `replaced` and `superseded`),
     `ImportContext` (the cutoff, which is the latest study day the source's `daily_rollup` holds,
     and the configured courses, by which a language code becomes a course code), and the trait
     `ImportPort`: `writers()`, the pairs of source table and target table the owner writes, and
@@ -219,6 +220,7 @@ A21: cargo test -p deck-streak-progression --test import -- --exact an_imported_
 | `crates/progression/src/import.rs` | `deck-streak-progression` | added: the ledger split, `day_base_xp`, `drill_xp`, the buffs, badges, records, season and multiplier writers |
 | `crates/progression/src/lib.rs` | `deck-streak-progression` | changed: the module |
 | `crates/progression/tests/import.rs` | `deck-streak-progression` | added: A8 to A11, A21 |
+| `crates/progression/Cargo.toml` | `deck-streak-progression` | changed: serde_json's `float_roundtrip` as a dev-dependency feature, because the multiplier golden's floats are compared bit for bit |
 | `crates/streaks/src/import.rs` | `deck-streak-streaks` | added: the four writers |
 | `crates/streaks/src/lib.rs` | `deck-streak-streaks` | changed: the module |
 | `crates/streaks/tests/import.rs` | `deck-streak-streaks` | added: A12, A20 |
