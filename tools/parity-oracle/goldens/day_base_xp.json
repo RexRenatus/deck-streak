@@ -642,7 +642,7 @@
   "kind": "adapter",
   "note": "Fills a temporary store with the case's synthetic ledger rows through its own upsert_xp_grant, then reads the day base; each day is an epoch day turned into the store's form inside the adapter; cases drawn under CPython 3.12.12.",
   "registry": "tools/parity-oracle/registry/spec_072.py",
-  "registry_sha256": "2786f11a526dda3d1731046af5db3880321fe7e7b345b36dd4b3fce305c87c4e",
+  "registry_sha256": "d25c88fa142d319489e7334677aebdbcf5b9e0aca3dfb751f221140bead5b54f",
   "schema": "phx.parity-golden.v1",
   "seed": 20,
   "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
