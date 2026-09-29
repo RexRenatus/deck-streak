@@ -7,7 +7,9 @@ that compiled and always answered no lapse was committed in streaks and in coord
 (474da3f), then the tests were committed (5fb50bd). Each criterion was run there with the SPEC's own
 fenced command and failed by assertion, not by a compile error, a missing fixture or an empty
 selection. The implementation followed in two commits, streaks first (fed4e0a) and coordination
-second (d392ab7). Between the red and the green no test changed what it asserts. A15 stays red
+second (d392ab7). Between the red and the green no test changed what it asserts, and one test that was never red,
+\`an_empty_window_holds_no_lapse\`, gained a positive assertion after the tdd probe refused it for
+asserting only an absence. A15 stays red
 until the coordination commit because it counts through streaks' rule, which the first green
 supplies.
 

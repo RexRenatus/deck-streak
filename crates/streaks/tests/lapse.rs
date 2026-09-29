@@ -145,6 +145,8 @@ fn one_episode_keeps_one_lapse_id_until_a_study_day_closes_it() {
 #[test]
 fn an_empty_window_holds_no_lapse() {
     assert_eq!(open(T, &BTreeMap::new(), &[]), None);
+    // The same day over a window that begins nine days back holds the run that follows it.
+    assert_eq!(open(T, &counts(&[T - 9], &[]), &[]), Some(T - 8));
 }
 
 #[test]
