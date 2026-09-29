@@ -186,6 +186,7 @@ fn the_policy_refuses_withhold_reasons_that_lack_one_the_router_records() {
         "quiet_hours",
         "budget_spent",
         "no_notifier",
+        "photo_unsupported",
     ] {
         let mut lacking = file();
         let reasons = lacking["withhold"]["reasons"]

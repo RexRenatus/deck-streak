@@ -37,9 +37,10 @@ use crate::ladder::{self, DICE_EMOJI, REACTION_EMOJI, REVEAL_PAUSE, REVEAL_PLACE
 use crate::ledger::{self, ClaimRow, DecisionRow, HeldRow};
 use crate::occasion::{Class, DedupeScope, LapseContext, Occasion, StreakFacts, Surface, Tier};
 use crate::owner_message;
+use crate::photo::{FileId, Photo};
 use crate::policy::Policy;
 use crate::quiet::{in_quiet_hours, local_minute};
-use crate::transport::{BotTransport, Pushed};
+use crate::transport::{BotTransport, Prepared, Pushed};
 
 /// The owner's override of the quiet window's start, in minutes of the day (the predecessor's key).
 pub const QUIET_START_SETTING: &str = "quiet_start_min";
@@ -77,6 +78,8 @@ pub enum Reason {
     BudgetSpent,
     /// No transport answers for the surface.
     NoNotifier,
+    /// The joined transport has no photo call.
+    PhotoUnsupported,
 }
 
 impl Reason {
@@ -100,6 +103,7 @@ impl Reason {
             Self::QuietHours => "quiet_hours",
             Self::BudgetSpent => "budget_spent",
             Self::NoNotifier => "no_notifier",
+            Self::PhotoUnsupported => "photo_unsupported",
         }
     }
 }
@@ -163,6 +167,36 @@ pub enum Decision {
     Withheld {
         /// The surface it would have gone to.
         surface: Surface,
+        /// Why.
+        reason: Reason,
+    },
+}
+
+/// Why a photo was not sent now, though nothing forbids it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum NotNow {
+    /// Inside the quiet window: the caller tries again after it.
+    QuietHours,
+    /// The send failed or the outage breaker is open: the caller tries again later.
+    SendFailed,
+}
+
+/// What [`Router::route_photo`] decided.
+#[must_use]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum PhotoDecision {
+    /// Delivered; Telegram holds the photo under `file_id`.
+    Sent {
+        /// The file id of the largest size.
+        file_id: FileId,
+    },
+    /// Not sent, held nowhere and recorded nowhere: the caller keeps the photo and asks again.
+    NotNow {
+        /// Why.
+        reason: NotNow,
+    },
+    /// Withheld, for `reason`, and recorded.
+    Withheld {
         /// Why.
         reason: Reason,
     },
@@ -315,6 +349,26 @@ impl Router {
     pub fn with_bot(mut self, bot: Arc<dyn BotTransport>) -> Self {
         self.bot = Some(bot);
         self
+    }
+
+    /// Routes `photo` for `occasion` to the owner's chat.
+    ///
+    /// # Errors
+    ///
+    /// [`KernelError::Database`] when the ledger cannot be read or written.
+    pub async fn route_photo(
+        &self,
+        _occasion: &Occasion,
+        _photo: &Photo,
+    ) -> Result<PhotoDecision, KernelError> {
+        Ok(PhotoDecision::Withheld {
+            reason: Reason::NoNotifier,
+        })
+    }
+
+    /// Prepares the photo held as `file` for the owner to share; records nothing.
+    pub async fn prepare_share(&self, _file: &FileId, _caption: &str) -> Prepared {
+        Prepared::Failed
     }
 
     /// Decides `occasion`, delivers it when the decision is to send, and records the decision.

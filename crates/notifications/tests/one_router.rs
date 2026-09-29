@@ -2362,3 +2362,50 @@ fn the_census_classifies_every_method_of_the_pinned_client() {
          only: {faults:#?}"
     );
 }
+
+/// SPEC-132 A15: the policy's bot transport list names every delivery call the port declares, the
+/// photo and the prepared share among them, and the census names where each reaches the Bot API.
+#[test]
+fn the_policy_names_every_bot_call() {
+    let source = fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("src/transport.rs"))
+        .expect("the port's source");
+    let port: Vec<String> = source
+        .split("fn ")
+        .skip(1)
+        .filter_map(|rest| {
+            let name: String = rest
+                .chars()
+                .take_while(|c| c.is_ascii_alphanumeric() || *c == '_')
+                .collect();
+            (name.starts_with("push_") || name == "prepare_share").then_some(name)
+        })
+        .collect();
+    assert!(port.contains(&"push_photo".to_owned()));
+    assert!(port.contains(&"prepare_share".to_owned()));
+
+    let policy = deck_streak_notifications::Policy::compiled().expect("the compiled policy parses");
+    let written = serde_json::to_value(&policy).expect("the policy writes back");
+    let bot: Vec<String> = serde_json::from_value(written["router"]["transport"]["bot"].clone())
+        .expect("the bot's calls");
+    assert_eq!(
+        bot, port,
+        "the policy names every bot call the port declares, in its order"
+    );
+
+    for (function, send) in [
+        ("Transport::send_photo", "sendPhoto"),
+        (
+            "Transport::save_prepared_inline_message",
+            "savePreparedInlineMessage",
+        ),
+    ] {
+        assert!(
+            NAMED_SENDS.iter().any(|&(path, named, name)| {
+                path == "crates/bot/src/transport.rs"
+                    && named == function
+                    && name.replace('_', "").eq_ignore_ascii_case(send)
+            }),
+            "the census names {function} as the call of {send}"
+        );
+    }
+}
