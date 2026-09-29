@@ -58,9 +58,12 @@ async fn the_prune_reads_agent_runs_through_the_created_at_index() {
         !details.iter().any(|d| d.starts_with("SCAN")),
         "the prune scans the table: {details:?}"
     );
+    // The statement as one whole string literal, its closing quote included, so an added
+    // predicate (`... < ?1 OR ...`) is another statement, never a superstring that still matches.
     let source = include_str!("../src/runs.rs");
-    assert!(
-        source.contains(PRUNE),
+    assert_eq!(
+        source.matches(&format!("\"{PRUNE}\"")).count(),
+        1,
         "the tested statement is not the one the repository runs"
     );
 }
