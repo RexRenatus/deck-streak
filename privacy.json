@@ -174,7 +174,7 @@
   "public": {
     "allow": [
       "@tty1.service",
-      "@nightly.timer",
+      "@nightly.timer", "@maintenance.timer",
       "@web.socket",
       "@inbox.path",
       "@usb1.mount",
