@@ -9,10 +9,10 @@
   prepared inline message the owner sends), ADR-054 (no-AI mode is the default) and ADR-135 (this
   wave's: the image pipeline).
 - **Prerequisites:** SPEC-026 (the bot's notifier), SPEC-041 (the one router, its order and its
-  ledger) and SPEC-084 (the ladder, which adds the dice, reaction and pin calls). SPEC-084 is
-  unlanded. **Mutation band:** `S13200-S13299`.
-- **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
-  `docs/specs/` with its tests and `docs/red-first/SPEC-132.md` (ADR-016).
+  ledger) and SPEC-084 (the ladder, which adds the dice, reaction and pin calls). SPEC-084 has landed.
+  **Mutation band:** `S13200-S13299`.
+- **Status:** delivered with its tests, its hand-proved rows and `docs/red-first/SPEC-132.md`
+  (ADR-016).
 
 ## 1. The problem, measured
 
