@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT anchor_newest_review_id AS \"anchor_newest_review_id?\",\n                      anchor_card_count AS \"anchor_card_count?\",\n                      anchor_card_fingerprint AS \"anchor_card_fingerprint?\",\n                      anchor_study_day AS \"anchor_study_day?\",\n                      anchor_recomputed_at AS \"anchor_recomputed_at?\",\n                      anchor_settings_generation AS \"anchor_settings_generation?\",\n                      rescore_pending AS \"rescore_pending!\",\n                      window_floor AS \"window_floor?\",\n                      window_count AS \"window_count?\"\n               FROM ingest_state WHERE id = 1",
+  "query": "SELECT anchor_newest_review_id AS \"anchor_newest_review_id?\",\n                      anchor_card_count AS \"anchor_card_count?\",\n                      anchor_card_fingerprint AS \"anchor_card_fingerprint?\",\n                      anchor_study_day AS \"anchor_study_day?\",\n                      anchor_recomputed_at AS \"anchor_recomputed_at?\",\n                      anchor_settings_generation AS \"anchor_settings_generation?\",\n                      rescore_pending AS \"rescore_pending!\",\n                      refused_at AS \"refused_at?\",\n                      refused_reason AS \"refused_reason?\",\n                      window_floor AS \"window_floor?\",\n                      window_count AS \"window_count?\"\n               FROM ingest_state WHERE id = 1",
   "describe": {
     "columns": [
       {
@@ -81,8 +81,30 @@
         }
       },
       {
-        "name": "window_floor?",
+        "name": "refused_at?",
         "ordinal": 7,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "ingest_state",
+            "name": "refused_at"
+          }
+        }
+      },
+      {
+        "name": "refused_reason?",
+        "ordinal": 8,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ingest_state",
+            "name": "refused_reason"
+          }
+        }
+      },
+      {
+        "name": "window_floor?",
+        "ordinal": 9,
         "type_info": "Integer",
         "origin": {
           "Table": {
@@ -93,7 +115,7 @@
       },
       {
         "name": "window_count?",
-        "ordinal": 8,
+        "ordinal": 10,
         "type_info": "Integer",
         "origin": {
           "Table": {
@@ -115,8 +137,10 @@
       true,
       false,
       true,
+      true,
+      true,
       true
     ]
   },
-  "hash": "d5e13257cd558db8772ff76fd1371f5458f6d9bcc491bc81ce00b96254946f03"
+  "hash": "7cadc4cff8f637ca302d844cb52dc32c76d08729ed831581bb40f98edf7836cf"
 }
