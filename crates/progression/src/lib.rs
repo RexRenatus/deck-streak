@@ -18,6 +18,7 @@
 #![warn(missing_docs, clippy::all)]
 
 pub mod bonus;
+pub mod buffs;
 pub mod consistency;
 pub mod data_rights;
 pub mod economy_config;

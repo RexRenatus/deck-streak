@@ -113,3 +113,94 @@ pub async fn settle(
     .await?;
     Ok(amount)
 }
+
+/// One settled row of a study day, as the day's bonuses read it.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct SettledRow {
+    /// The derived source.
+    pub source: String,
+    /// The track, as `xp_settlement` stores it.
+    pub track: String,
+    /// The XP the row holds.
+    pub amount: u32,
+    /// Whether the day was over when the row was settled.
+    pub closed: bool,
+}
+
+/// The rows settled for `study_day`, in source then track order.
+///
+/// # Errors
+///
+/// [`sqlx::Error`] when the read fails.
+pub async fn settled_of_day(
+    connection: &mut SqliteConnection,
+    study_day: StudyDay,
+) -> Result<Vec<SettledRow>, sqlx::Error> {
+    let day = study_day.epoch_day();
+    let rows = sqlx::query!(
+        r#"SELECT source, track, amount AS "amount!: u32", closed AS "closed!: bool"
+           FROM xp_settlement WHERE study_day = ?1 ORDER BY source, track"#,
+        day
+    )
+    .fetch_all(connection)
+    .await?;
+    Ok(rows
+        .into_iter()
+        .map(|row| SettledRow {
+            source: row.source,
+            track: row.track,
+            amount: row.amount,
+            closed: row.closed,
+        })
+        .collect())
+}
+
+/// The XP `source` holds on `track` for `study_day`, or none when it is not settled.
+///
+/// # Errors
+///
+/// [`sqlx::Error`] when the read fails.
+pub async fn settled_amount(
+    connection: &mut SqliteConnection,
+    study_day: StudyDay,
+    source: &str,
+    track: Track,
+) -> Result<Option<u32>, sqlx::Error> {
+    let day = study_day.epoch_day();
+    let track = track.as_str();
+    sqlx::query_scalar!(
+        r#"SELECT amount AS "amount!: u32" FROM xp_settlement
+           WHERE study_day = ?1 AND source = ?2 AND track = ?3"#,
+        day,
+        source,
+        track
+    )
+    .fetch_optional(connection)
+    .await
+}
+
+/// Every source and amount `study_day` holds in both XP tables, on both tracks: the rows the day
+/// base is taken over (SPEC-072 R17).
+///
+/// # Errors
+///
+/// [`sqlx::Error`] when the read fails.
+pub async fn day_rows(
+    connection: &mut SqliteConnection,
+    study_day: StudyDay,
+) -> Result<Vec<(String, u32)>, sqlx::Error> {
+    let day = study_day.epoch_day();
+    let rows = sqlx::query!(
+        r#"SELECT source AS "source!: String", amount AS "amount!: u32" FROM xp_settlement
+           WHERE study_day = ?1
+           UNION ALL
+           SELECT source, amount FROM xp_ledger WHERE study_day = ?1"#,
+        day
+    )
+    .fetch_all(connection)
+    .await?;
+    Ok(rows
+        .into_iter()
+        .map(|row| (row.source, row.amount))
+        .collect())
+}

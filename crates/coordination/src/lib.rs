@@ -21,6 +21,7 @@ pub mod data_rights_registry;
 pub mod delivery;
 pub mod jobs;
 pub mod ledger;
+pub mod level_up;
 pub mod liveness;
 pub mod maintenance;
 pub mod obligations;
