@@ -85,3 +85,18 @@ AssertionError: {"quote":"> > ","marker":"","fence":"```mermaid"}: expected [] t
 
 The member `>` with no marker and the fence ```` ```mermaid ```` is the string `>```mermaid` that
 review planted by hand, so that plant is one member of the population.
+
+Round 5 replaced the fence-line reader with a CommonMark parse that opens a fence as GitHub does,
+and A5's listed axes with 3,241 members generated at test time from a grammar table and compared
+with GitHub's recorded rendering of each. Its test (A5, two tests, with the grammar table, the
+recorded rendering and the refresh script) was committed alone (63fb9832) against the unchanged
+reader, and the reader change (57bc9aec) turned all eight green; the test file is unchanged
+between those two commits except for the reader, its import and A2. The replay of A5 at 63fb9832,
+over the whole file, printed `Tests  2 failed | 6 passed (8)`:
+
+```red-first
+A5: red at 63fb9832: AssertionError: 1665 of 3241 members read otherwise: expected [ …(3) ] to deeply equal []: the fence-line reader read 1,665 of the 3,241 generated container forms otherwise than GitHub renders them, so both new tests failed
+A5: green at 57bc9aec
+```
+
+At 57bc9aec all eight tests pass and 191 blocks are examined, the same 191 with the same text.
