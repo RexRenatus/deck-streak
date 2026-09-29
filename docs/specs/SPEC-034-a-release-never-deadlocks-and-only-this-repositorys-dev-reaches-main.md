@@ -365,8 +365,8 @@ A16: python3 -m unittest discover -s scripts/tests -p test_rulesets.py -k the_re
 
 A16 reads `RELEASING.md` line by line. The exact line must be the only line that begins
 `Release model:`, and it must be the first non-blank line under the heading of section 5. A sentence
-that only contains the words would satisfy a joined reading and leave the pack refusing, and a second
-declaration ahead of it could leave the pack refusing while the exact line is present, so the
+that only contains the words would satisfy a joined reading and leave the pack refusing, and a
+second declaration ahead of it could leave the pack refusing while the exact line is present, so the
 comparison is line-exact and the declaration is the only one.
 No mutation row is added: the table of `S03400-S03499.json` carries rows for `ci.yml` only, none for a
 document, and a line of a document is judged by A16 and by the pack.
