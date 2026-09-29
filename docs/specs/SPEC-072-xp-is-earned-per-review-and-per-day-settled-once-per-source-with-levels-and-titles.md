@@ -240,6 +240,8 @@ R26. The Mini App's `/level` shows the level bar, today's XP by source with the 
 | A27 | `/level` shows the title, the XP and the consistency line when the multiplier is above 1.0 | `level_shows_the_title_and_the_consistency_bonus` |
 | A28 | the level screen marks today's provisional XP as settling at the day's close | `marks today's provisional XP as settling at the day's close` |
 | A29 | the level screen shows the one-miss preview beside the flame meter | `shows the one-miss preview beside the flame meter` |
+| A30 | a sync cycle whose fold crosses levels announces the level reached once, through the notification router, and a later cycle that crosses none announces nothing (R14) | `a_sync_cycle_announces_a_level_reached_once` |
+| A31 | the daemon's composed router answers the owner `GET /api/level/law-tiers` with the seeded law-track card counts and today's `reviews_law` XP split by card tier, and answers no one else (R24) | `the_composed_router_serves_the_law_tiers_to_the_owner_alone` |
 
 ```acceptance
 A1: cargo test -p deck-streak-progression --test xp_review -- --exact review_xp_matches_the_parity_golden_for_every_combination
@@ -271,6 +273,8 @@ A26: cargo test -p deck-streak-api --test xp_routes -- --exact the_level_routes_
 A27: cargo test -p deck-streak-bot --test xp_commands -- --exact level_shows_the_title_and_the_consistency_bonus
 A28: pnpm exec vitest run web/app/src/lib/level/LevelScreen.test.ts -t "marks today's provisional XP as settling at the day's close"
 A29: pnpm exec vitest run web/app/src/lib/level/LevelScreen.test.ts -t "shows the one-miss preview beside the flame meter"
+A30: cargo test -p deck-streak-coordination --test level_up_cycle -- --exact a_sync_cycle_announces_a_level_reached_once
+A31: cargo test -p deck-streak-daemon --test law_tiers -- --exact the_composed_router_serves_the_law_tiers_to_the_owner_alone
 ```
 
 ## 3a. What the box run judges
@@ -295,12 +299,11 @@ stay enforced; no row is deferred for this delivery.
 | `crates/progression/src/settle.rs` | `deck-streak-progression` | added: the `settle` port, the derived registry, the repository over `xp_settlement` |
 | `crates/progression/src/level.rs` | `deck-streak-progression` | added: level info and titles (SPEC-040's `xp.rs` keeps the curve) |
 | `crates/progression/src/consistency.rs` | `deck-streak-progression` | added: the run, the calendar walk, the multiplier, the preview, the day base |
-| `crates/progression/src/ascendant.rs` | `deck-streak-progression` | added: the arming, the bonus, the repository over `buffs` |
+| `crates/progression/src/buffs.rs` | `deck-streak-progression` | added: the arming, the bonus, the repository over `buffs` |
 | `crates/progression/src/economy_config.rs` | `deck-streak-progression` | added: `economy.json`'s `xp` section, embedded at build time |
 | `crates/progression/src/ledger.rs` | `deck-streak-progression` | changed: the total sums both XP tables |
 | `crates/progression/src/data_rights.rs` | `deck-streak-progression` | changed: `xp_settlement` and `buffs`, exported and erased |
 | `crates/progression/src/lib.rs` | `deck-streak-progression` | changed: the modules above |
-| `crates/progression/Cargo.toml` | `deck-streak-progression` | changed: the workspace dependencies the modules use |
 | `crates/progression/tests/xp_review.rs` | `deck-streak-progression` | added: A1 |
 | `crates/progression/tests/xp_constants.rs` | `deck-streak-progression` | added: A2 |
 | `crates/progression/tests/xp_settle.rs` | `deck-streak-progression` | added: A7 to A11 |
@@ -334,8 +337,49 @@ stay enforced; no row is deferred for this delivery.
 | `web/app/src/lib/routes.ts` | miniapp | changed: the level route joins `ROUTES` |
 | `migrations/007201_progression_xp_settlement.sql` | `deck-streak-progression` | added |
 | `migrations/007202_progression_buffs.sql` | `deck-streak-progression` | added |
-| `.sqlx/` | workspace | changed: the offline cache for the new queries |
-| `Cargo.lock` | workspace | changed |
+| `.sqlx/query-00d4d3c52310751443a6ab29ef28518da77c16dbef37e14934442048cc6c21aa.json` | workspace | added: the offline cache of one checked query |
+| `.sqlx/query-1611fe3acdceb17a40b192927fa53a083b6464a813ee34305fd6ccebc57cbc01.json` | workspace | added: the offline cache of one checked query |
+| `.sqlx/query-3628b11cd4e2f5581759c0dbbd592c8b9fb7fa1b7a88cb05ee25be6ed0687026.json` | workspace | added: the offline cache of one checked query |
+| `.sqlx/query-39292738c76822e580b13eb87b9ecc794b4e535d0d3f6c27b39c2badc4db148f.json` | workspace | added: the offline cache of one checked query |
+| `.sqlx/query-50c38614b29bd47af1ee4b79021cedac6ff8012372a4a9765e93c79ae966ce74.json` | workspace | added: the offline cache of one checked query |
+| `.sqlx/query-91dfa3f1302b2d4a95112ed0bf0310567da90218023b76768b75e263d158d67c.json` | workspace | added: the offline cache of one checked query |
+| `.sqlx/query-9f7c546d1b4c1207ec959ad5ded0a67e6b10872ce7db8034c02e5342e7d280ff.json` | workspace | added: the offline cache of one checked query |
+| `.sqlx/query-bea1916ddb9d8e6a3d27a1bf1ff6141c03ca010922b5633aa4812ffc9753aefe.json` | workspace | added: the offline cache of one checked query |
+| `.sqlx/query-cc7e219feb4c5e11d69d8c49fe344a8106dc0ee0ae40c35ce1e57a8d4fae1abf.json` | workspace | added: the offline cache of one checked query |
+| `.sqlx/query-d289416141deff3a3fa87a7abde501210dbbbd102fe2ca475f7dc74c1721a4e5.json` | workspace | added: the offline cache of one checked query |
+| `.sqlx/query-d47109620f5ee4ef2fce871cd5a188ce4778dbe9abbfc07451c2883500c8586e.json` | workspace | added: the offline cache of one checked query |
+| `.sqlx/query-d9d28ec4fd6ac6430f3136222f557b346797d9725a4b71e70d7db53608a5e9e3.json` | workspace | added: the offline cache of one checked query |
+| `.sqlx/query-f911abf74980386bea70d5e4a4ec1ba8c02f50630bb3e6fc1d1b64a463ed5475.json` | workspace | added: the offline cache of one checked query |
+| `Cargo.lock` | workspace | changed: the daemon's test dependencies (A31) |
+| `crates/coordination/src/level_up.rs` | `deck-streak-coordination` | changed: the level-up occasion for the level a recompute reaches (R14) |
+| `crates/coordination/src/sync_cycle.rs` | `deck-streak-coordination` | changed: the cycle reads the level before and after its recompute and announces the one reached (R14) |
+| `crates/coordination/src/progression/mod.rs` | `deck-streak-coordination` | changed: the law-tiers module |
+| `crates/coordination/src/progression/law_tiers.rs` | `deck-streak-coordination` | added: the law-tiers source over the collection copy (R24) |
+| `crates/coordination/tests/level_up_cycle.rs` | `deck-streak-coordination` | added: A30 |
+| `crates/coordination/tests/law_tiers.rs` | `deck-streak-coordination` | added: the law-tiers source over a seeded copy (R24, killers of three rows) |
+| `crates/coordination/tests/settle_fold.rs` | `deck-streak-coordination` | changed: the fold's fixture carries the new steps |
+| `crates/daemon/Cargo.toml` | `deck-streak-daemon` | changed: the test dependencies A31 uses |
+| `crates/daemon/src/role_api.rs` | `deck-streak-daemon` | changed: the api role gives its router the law-tiers source (R24) |
+| `crates/daemon/tests/law_tiers.rs` | `deck-streak-daemon` | added: A31 |
+| `crates/analytics/tests/rollup_metrics.rs` | `deck-streak-analytics` | changed: the fixture card carries the tier field |
+| `crates/readings/tests/support/mod.rs` | `deck-streak-readings` | changed: the fixture card carries the tier field |
+| `crates/ingest/tests/support/synthetic.rs` | `deck-streak-ingest` | changed: a helper that tags a note in a copy |
+| `crates/api/src/lib.rs` | `deck-streak-api` | changed: the `xp_routes` module is declared |
+| `crates/bot/src/lib.rs` | `deck-streak-bot` | changed: the `xp_commands` module is declared |
+| `crates/bot/tests/commands.rs` | `deck-streak-bot` | changed: the menu names `level` |
+| `crates/bot/tests/messages/help.msg.json` | `deck-streak-bot` | changed: the help message lists `/level` |
+| `crates/bot/tests/messages/start.msg.json` | `deck-streak-bot` | changed: the start message lists `/level` |
+| `crates/notifications/tests/one_router.rs` | `deck-streak-notifications` | changed: the command replies the router census names |
+| `crates/progression/tests/rights.rs` | `deck-streak-progression` | changed: the rights of the two new tables |
+| `crates/progression/tests/xp_reads.rs` | `deck-streak-progression` | added: the reads answer what the tables hold (R6, R8, R17, R20 to R22) |
+| `web/app/messages/en.json` | `web` | changed: the level screen's messages |
+| `web/app/src/lib/api.ts` | `web` | changed: the level read (R23) |
+| `web/app/src/lib/api.test.ts` | `web` | changed: the level read's test |
+| `web/app/src/lib/level/level.test.ts` | `web` | changed: the level view's test |
+| `web/app/src/lib/startapp.ts` | `web` | changed: the start menu names `/level` |
+| `web/app/src/lib/startapp.test.ts` | `web` | changed: the start menu's test |
+| `web/app/src/routes/level.test.ts` | `web` | added: the level screen's test |
+| `web/app/tests/a11y.spec.ts` | `web` | changed: the level screen's accessibility run (R26) |
 | `docs/CONTEXT-MAP.md` | docs | changed: the register of DeckStreak's own tables gains `xp_settlement` and `buffs` |
 | `crates/coordination/src/data_rights_registry.rs` | `deck-streak-coordination` | checked: progression's port is registered by SPEC-040; changed only if it is not |
 | `crates/coordination/tests/data_rights_symmetry.rs` | `deck-streak-coordination` | changed: seeded rows for `xp_settlement` and `buffs` |
@@ -359,7 +403,7 @@ stay enforced; no row is deferred for this delivery.
 | `docs/specs/SPEC-072-xp-is-earned-per-review-and-per-day-settled-once-per-source-with-levels-and-titles.md` | docs | moved from `docs/specs/planned/` |
 | `docs/decisions/ADR-072-derived-xp-is-settled-into-its-own-table-and-a-closed-day-never-falls.md` | docs | changed: accepted |
 | `docs/red-first/SPEC-072.md` | docs | added |
-| `changelog.d/` fragment | repo | added |
+| `changelog.d/feat-xp-072.md` | repo | added: the changelog fragment |
 
 ## 5. What this does NOT do
 
@@ -434,13 +478,31 @@ A target outside a crate (a migration, `economy.json`) is a cargo-killed script 
 
 | row | target | what it guards | killer |
 |---|---|---|---|
-| `S07201-ROUND-HALF-TO-EVEN` | `crates/progression/src/review_xp.rs` | rounding half to even, not half away from zero | `xp_review::review_xp_matches_the_parity_golden_for_every_combination` |
-| `S07202-MATURITY-FROM-THE-NEW-INTERVAL` | `crates/progression/src/review_xp.rs` | a review is mature at 21 days or more of its new interval | `xp_review::review_xp_matches_the_parity_golden_for_every_combination` |
-| `S07203-THE-TIER-ON-LAW-ONLY` | `crates/coordination/src/recompute/xp.rs` | the tier map holds law-track cards only | `xp_steps::an_untagged_law_card_and_a_tagged_language_card_earn_the_base_rate` |
-| `S07204-A-CLOSED-DAY-ONLY-RISES` | `crates/progression/src/settle.rs` | a recompute keeps the larger of the stored and the recomputed amount of a closed day | `xp_settle::a_closed_days_settled_xp_is_raised_and_never_lowered_by_a_recompute` |
-| `S07205-THE-SETTLEMENT-KEY` | `migrations/007201_progression_xp_settlement.sql` | the unique key is study day, source and track | `xp_settle::settle_keeps_one_row_per_study_day_source_and_track` |
-| `S07206-THE-REGISTRY-REFUSES` | `crates/progression/src/settle.rs` | a source outside the derived registry is refused at construction | `xp_settle::settle_refuses_a_source_outside_the_derived_registry` |
-| `S07207-THE-DAY-BASE-EXCLUSIONS` | `crates/progression/src/consistency.rs` | the day base leaves chest XP out, as the predecessor does | `xp_consistency::the_day_base_matches_the_parity_golden_over_both_tables` |
-| `S07208-THE-READINGS-LEAVE-THE-BASE` | `crates/progression/src/consistency.rs` | the day base leaves the readings' grants out | `xp_consistency::the_day_base_leaves_out_the_readings_grants` |
-| `S07209-THE-ON-PACE-WINDOW` | `economy.json` | the run folds the 90 most recent rollups | `xp_consistency::the_consistency_run_and_multiplier_match_the_parity_goldens` |
-| `S07210-THE-STREAK-BONUS-CAP` | `economy.json` | the streak bonus stops at 250 | `xp_bonus::daily_bonus_grants_match_the_parity_golden` |
+| `S07201-REVIEW-XP-ROUNDING` | `src/review_xp.rs` | a review's XP rounds half to even as the predecessor's round() does (SPEC-072 R1, A1) | `xp_review::review_xp_matches_the_parity_golden_for_every_combination` |
+| `S07202-MATURE-BOUNDARY` | `src/review_xp.rs` | a card at the mature interval earns the mature multiplier (SPEC-072 R1, A1) | `xp_review::review_xp_matches_the_parity_golden_for_every_combination` |
+| `S07203-LAW-TIER-ONLY` | `src/recompute/xp.rs` | only a law card's tier scales its XP (SPEC-072 R2, A6) | `xp_steps::an_untagged_law_card_and_a_tagged_language_card_earn_the_base_rate` |
+| `S07204-CLOSED-DAY-NEVER-FALLS` | `src/settle.rs` | a closed day's settled XP is raised and never lowered by a recompute (SPEC-072 R7, A7) | `xp_settle::a_closed_days_settled_xp_is_raised_and_never_lowered_by_a_recompute` |
+| `S07205-SETTLEMENT-KEY` | `(study_day, source, track);` | xp_settlement holds one row per study day, source and track, held by the table's index (SPEC-072 R6, A10) | `xp_settle::settle_keeps_one_row_per_study_day_source_and_track` |
+| `S07206-DERIVED-ONLY` | `src/settle.rs` | settle accepts only a source in the derived registry (SPEC-072 R6, A11) | `xp_settle::settle_refuses_a_source_outside_the_derived_registry` |
+| `S07207-DAY-BASE-CHEST` | `src/consistency.rs` | the day base leaves out the chest source (SPEC-072 R12, A20) | `xp_consistency::the_day_base_matches_the_parity_golden_over_both_tables` |
+| `S07208-DAY-BASE-READING` | `src/consistency.rs` | the day base leaves out the readings' grants (SPEC-072 R12, A22) | `xp_consistency::the_day_base_leaves_out_the_readings_grants` |
+| `S07209-CONSISTENCY-WINDOW` | `"window_days": 90` | the consistency run looks back the predecessor's window (SPEC-072 R12, A19) | `xp_consistency::the_consistency_run_and_multiplier_match_the_parity_goldens` |
+| `S07210-STREAK-CAP` | `"streak_cap": 250,` | the streak bonus is capped at the predecessor's cap (SPEC-072 R13, A14) | `xp_bonus::daily_bonus_grants_match_the_parity_golden` |
+| `S07211-DERIVED-SOURCES` | `src/settle.rs` | the derived registry is the nine sources by their whole value (SPEC-072 R6, A11) | `xp_settle::the_derived_registry_and_the_tables_are_pinned_whole` |
+| `S07212-SETTLEMENT-TABLE` | `src/settle.rs` | the settlement table is named xp_settlement (SPEC-072 R6, A11) | `xp_settle::the_derived_registry_and_the_tables_are_pinned_whole` |
+| `S07213-BUFFS-TABLE` | `src/data_rights.rs` | the buffs table is named buffs (SPEC-072 R9, A24) | `xp_settle::the_derived_registry_and_the_tables_are_pinned_whole` |
+| `S07214-ASCENDANT-KIND` | `src/buffs.rs` | the Ascendant buff is named ascendant (SPEC-072 R13, A24) | `xp_settle::the_derived_registry_and_the_tables_are_pinned_whole` |
+| `S07215-LEVEL-TITLE-ADEPT` | `src/level.rs` | level 30 holds the predecessor's title (SPEC-072 R11, A2) | `xp_constants::the_progression_constants_equal_the_predecessors_and_economy_json` |
+| `S07217-DAY-BASE-2X` | `src/consistency.rs` | the day base leaves out the 2x grants (SPEC-072 R12, A20) | `xp_consistency::the_day_base_matches_the_parity_golden_over_both_tables` |
+| `S07218-XP-STEP-NAME` | `src/recompute/xp.rs` | the base-XP step is registered under its whole name (SPEC-072 R2, A5) | `xp_steps::the_step_names_and_the_level_up_kind_are_pinned_whole` |
+| `S07219-BONUS-STEP-NAME` | `src/recompute/day_bonuses.rs` | the derived-bonuses step is registered under its whole name (SPEC-072 R3, A15) | `xp_steps::the_step_names_and_the_level_up_kind_are_pinned_whole` |
+| `S07220-LEVEL-UP-KIND` | `src/level_up.rs` | the level-up line goes out as a celebration (SPEC-072 R14, A17) | `xp_steps::the_step_names_and_the_level_up_kind_are_pinned_whole` |
+| `S07221-BONUS-SOURCES` | `src/recompute/xp.rs` | the bonus sources settled for a day include studied, backlog_zero, streak and graduations (SPEC-072 R3, A15) | `xp_steps::a_day_settles_the_bonus_sources` |
+| `S07222-LEVEL-PATH` | `src/xp_routes.rs` | the level view is served at /api/level (SPEC-072 R15, A26) | `xp_routes::the_level_routes_answer_only_the_owner` |
+| `S07223-LAW-TIERS-PATH` | `src/xp_routes.rs` | the law-tier counts are served at /api/level/law-tiers (SPEC-072 R15, A26) | `xp_routes::the_level_routes_answer_only_the_owner` |
+| `S07224-BOT-LEVEL-COMMAND` | `src/commands.rs` | the bot menu names the level command (SPEC-072 R15, A27) | `commands::the_menu_is_registered_for_the_owners_chat_only` |
+| `S07225-LEVEL-UP-BEFORE-AFTER` | `src/sync_cycle.rs` | a sync cycle hands the router the level before the recompute and the level after it, in that order (SPEC-072 R14, A30) | `level_up_cycle::a_sync_cycle_announces_a_level_reached_once` |
+| `S07226-LAW-TIERS-LAW-TRACK` | `src/progression/law_tiers.rs` | the law tiers count law-track cards alone, and price law-track reviews alone (SPEC-072 R24, A31) | `law_tiers::a_collection_with_no_law_root_has_no_law_cards_and_no_law_xp` |
+| `S07227-LAW-TIERS-TODAY` | `src/progression/law_tiers.rs` | the law tiers' XP is the study day's reviews alone (SPEC-072 R24, A31) | `law_tiers::the_law_cards_are_counted_by_tier_and_today_s_reviews_are_priced_by_their_card` |
+| `S07228-LAW-TIERS-NONE-SLOT` | `src/progression/law_tiers.rs` | a card with no tier counts in the fifth slot, after T4 (SPEC-072 R24, A31) | `law_tiers::the_law_cards_are_counted_by_tier_and_today_s_reviews_are_priced_by_their_card` |
+| `S07229-LAW-TIERS-WIRED` | `src/role_api.rs` | the api role gives its router the law tiers' source (SPEC-072 R24, A31) | `law_tiers::the_composed_router_serves_the_law_tiers_to_the_owner_alone` |
