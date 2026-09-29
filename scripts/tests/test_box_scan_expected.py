@@ -91,7 +91,7 @@ class TheScanAdmitsAnExpectedRed(unittest.TestCase):
         # Each issue the scan's expectation names is read once, in the run's root.
         done, _ = box.run()
         asked = examined("issue state(s) read", box.gh_calls())
-        self.assertEqual(sorted(call["argv"][2] for call in asked), ["29", "341"])
+        self.assertEqual(sorted(call["argv"][2] for call in asked), ["29", "341", "59"])
         self.assertIn(f"{ISSUE} OPEN", done.stdout)
 
 
@@ -121,6 +121,7 @@ class TheScansExpectationIsRefusedUnlessItIsWellFormed(unittest.TestCase):
         box.set_box(dict(box.box, **{SCAN: {"expected_red": {ROW: ISSUE}, "note": "interim"}}))
         done, _ = box.run()
         self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        wired = dict(box.box)
         for name, entry, takes in (
             (
                 SCAN,
@@ -130,7 +131,7 @@ class TheScansExpectationIsRefusedUnlessItIsWellFormed(unittest.TestCase):
             ("no-apikeyhelper", {"expected_red": {ROW: ISSUE}}, "['note', 'pending']"),
         ):
             with self.subTest(name):
-                box.set_box(dict(box.box, **{name: entry}))
+                box.set_box(dict(wired, **{name: entry}))
                 self.assertIn(f"box.{name} takes only {takes}", refusal(self, box))
 
 
