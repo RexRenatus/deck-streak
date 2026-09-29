@@ -218,7 +218,10 @@ class Tree:
                     self.write(f"scripts/tests/test_{m}.py", TESTS[m])
         for relative, text in (extra or {}).items():
             self.write(relative, text)
-        self.write("scripts/mutation-python.json", json.dumps(mapping or mapped, indent=2) + "\n")
+        self.write(
+            "scripts/mutation-python.json",
+            json.dumps(mapped if mapping is None else mapping, indent=2) + "\n",
+        )
         git(self.root, "init", "-q", "-b", "dev")
         git(self.root, "config", "user.email", "fixture@example.invalid")
         git(self.root, "config", "user.name", "fixture")
@@ -584,7 +587,6 @@ class TheRunnerJudgesEachMutant(unittest.TestCase):
                 }
             ),
         )
-        subprocess.run(["git", "-C", str(tree.root), "add", "-A"], check=True)
         done, report = tree.report(
             "--plan",
             str(plan),
