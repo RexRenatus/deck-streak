@@ -289,6 +289,8 @@ jobs:
       rows: ${{ steps.plan.outputs.rows }}
       shards: ${{ steps.shards.outputs.shards }}
       matrix: ${{ steps.shards.outputs.matrix }}
+      python_shards: ${{ steps.shards.outputs.python_shards }}
+      python_matrix: ${{ steps.shards.outputs.python_matrix }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -326,9 +328,15 @@ jobs:
       - name: the whole tree's mutants, which every record is bound against
         if: ${{ steps.plan.outputs.rust == 'true' }}
         run: cargo mutants --no-shuffle --list --json --timeout 300 --build-timeout 600 > "$RUNNER_TEMP/mutation/whole.json"
+      # The repository's own Python (SPEC-087, ADR-073): the runner lists the diff's mutants and the
+      # whole population's, running no test, and the plan sizes the Python matrix from the first.
+      - name: the diff's Python mutants, as the runner itself lists them
+        run: python3 scripts/mutation_python.py list --plan "$RUNNER_TEMP/mutation/plan.json" --out "$RUNNER_TEMP/mutation/python-listed.json"
+      - name: the whole Python population's mutants, which every Python record is bound against
+        run: python3 scripts/mutation_python.py list --all --out "$RUNNER_TEMP/mutation/python-whole.json"
       - name: the shards, the fewest whose slowest is projected within its bound
         id: shards
-        run: python3 scripts/mutation-verdict.py shards --plan "$RUNNER_TEMP/mutation/plan.json" --listed "$RUNNER_TEMP/mutation/listed.json"
+        run: python3 scripts/mutation-verdict.py shards --plan "$RUNNER_TEMP/mutation/plan.json" --listed "$RUNNER_TEMP/mutation/listed.json" --python-listed "$RUNNER_TEMP/mutation/python-listed.json"
       - name: keep the plan, the diff and the listing for every job after it
         if: ${{ always() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -419,6 +427,51 @@ jobs:
           path: ${{ runner.temp }}/shard/
           if-no-files-found: warn
 
+  # One job per shard of the plan's Python matrix: the runner over the diff's Python mutants, each
+  # shard's mutants round-robin as the plan sized them, stopping a file at its first survivor. It
+  # runs on every event and names its case, is never skipped, and restores no cache and saves none.
+  # Its report is kept whatever the run returned; the verdict's job reads them.
+  mutation-python:
+    needs: [mutation-plan]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ${{ fromJSON(needs.mutation-plan.outputs.python_matrix) }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: mutation-plan
+          path: ${{ runner.temp }}/mutation
+      - name: this shard's case, by name
+        env:
+          CASE: ${{ needs.mutation-plan.outputs.case }}
+          SHARD: ${{ matrix.shard }}
+          SHARDS: ${{ needs.mutation-plan.outputs.python_shards }}
+        run: |
+          echo "mutation-python: shard $SHARD of $SHARDS: $CASE"
+      - name: the runner, one shard of the diff's Python mutants (its exit is recorded; the verdict reads its report)
+        env:
+          SHARD: ${{ matrix.shard }}
+          SHARDS: ${{ needs.mutation-plan.outputs.python_shards }}
+        run: |
+          out="$RUNNER_TEMP/python-shard"
+          mkdir -p "$out"
+          rc=0
+          python3 scripts/mutation_python.py run --plan "$RUNNER_TEMP/mutation/plan.json" --shard "$SHARD/$SHARDS" --failfast --report "$out/report.json" || rc=$?
+          echo "mutation-python exited $rc"
+      - name: keep the shard's report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: mutation-python-shard-${{ matrix.shard }}
+          path: ${{ runner.temp }}/python-shard/
+          if-no-files-found: warn
+
   # The hand-proved rows the diff selects, and the retirement check: no row leaves while its target
   # stays, unless the maintainer approved it.
   mutation-rows:
@@ -489,7 +542,7 @@ jobs:
   # counted, one missing or partial is VOID by name, and the shards' reports must hold every listed
   # mutant once; then the rows, for the Rust class and the oracle's.
   mutation-verdict:
-    needs: [mutation-plan, mutation-rust, mutation-rows]
+    needs: [mutation-plan, mutation-rust, mutation-python, mutation-rows]
     if: ${{ always() }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -507,8 +560,11 @@ jobs:
           status=0
           python3 scripts/mutation-verdict.py judge --plan "$reports/mutation-plan/plan.json" --class rust --shard-reports "$reports" --rows "$reports/mutation-rows/rows.json" --whole "$reports/mutation-plan/whole.json" || status=$?
           oracle=0
-          python3 scripts/mutation-verdict.py judge --plan "$reports/mutation-plan/plan.json" --class oracle --rows "$reports/mutation-rows/rows.json" || oracle=$?
+          python3 scripts/mutation-verdict.py judge --plan "$reports/mutation-plan/plan.json" --class oracle --python "$reports" --rows "$reports/mutation-rows/rows.json" --python-whole "$reports/mutation-plan/python-whole.json" || oracle=$?
           if [ "$status" -eq 0 ]; then status=$oracle; fi
+          scripts=0
+          python3 scripts/mutation-verdict.py judge --plan "$reports/mutation-plan/plan.json" --class scripts --python "$reports" --rows "$reports/mutation-rows/rows.json" --python-whole "$reports/mutation-plan/python-whole.json" || scripts=$?
+          if [ "$status" -eq 0 ]; then status=$scripts; fi
           exit "$status"
 
   # StrykerJS over every web production file the diff changes, whole, so a survivor already on a
@@ -609,7 +665,7 @@ jobs:
 
   ci:
     if: ${{ always() }}
-    needs: [rust, engine, web, hygiene, mutation-plan, mutation-rust, mutation-rows, mutation-verdict, mutation-web, workflow-lint, base-is-dev]
+    needs: [rust, engine, web, hygiene, mutation-plan, mutation-rust, mutation-python, mutation-rows, mutation-verdict, mutation-web, workflow-lint, base-is-dev]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:

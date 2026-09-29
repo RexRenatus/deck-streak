@@ -1057,9 +1057,11 @@ class TheGateRunsInParallelJobs(unittest.TestCase):
         for job in OWNER_LAYOUT:
             self.assertIsNone(workflow["jobs"][job].get("needs"), f"{job} waits on another job")
         needs = workflow["jobs"]["ci"]["needs"]
-        # SPEC-039 adds the five mutation jobs beside the gate's five, each a need of ci.
+        # SPEC-039 adds the five mutation jobs beside the gate's five, each a need of ci; SPEC-087
+        # adds the sixth, the Python runner's shards.
         mutation = [
             "mutation-plan",
+            "mutation-python",
             "mutation-rust",
             "mutation-rows",
             "mutation-verdict",
