@@ -50,6 +50,8 @@ A9: red at 6a9abea: AssertionError: 0 != 1 : apply: deleted i005 (...) (the appl
 A9: green at 499dee8
 A10: red at 7ae7dbc: AssertionError: False is not true : apply: deleted x001 (...), 0 bytes (the apply parsed rules without a protected path, bound the list's rules by a second read, and the item that path protects went)
 A10: green at 28df6ac
+A11: red at f5ae5c8: AssertionError: the inventory did not record the clock, and an unsynchronised clock refused nothing (the crossed-device test failed with it)
+A11: green at 5342bc0
 ```
 
 Two tests beyond the criteria were written with them, red at 3bd0f96 and green at ceaa1b9, and carry
@@ -266,11 +268,12 @@ the whole test module run at each red commit:
 - f5ae5c8: A11, red; 5342bc0: the fix, the inventory records and refuses a clock that does not read
   synchronised, the apply reads it again, and `measure` refuses an entry on another device.
 
-```red-first
+The criterion A11 is new, and its lines are in the `red-first` block above; A5's earlier lines
+stand there, so this round's are given here:
+
+```text
 A5: red at b83a634: AssertionError: 0 != 3 (an entry added below a directory item, a file rewritten inside it, and a file item rewritten with its mtime put back were each deleted)
 A5: green at 5434854
-A11: red at f5ae5c8: AssertionError: the inventory did not record the clock, and an unsynchronised clock refused nothing (the crossed-device test failed with it)
-A11: green at 5342bc0
 ```
 
 Per case, as the subtests read at both commits:
