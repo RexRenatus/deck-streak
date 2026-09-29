@@ -44,6 +44,8 @@ A13: red at 9e913f9: AssertionError: 'other' != 'scripts'
 A13: green at 6b5bd84
 A14: red at 9e913f9: mutation-verdict.py: error: unrecognized arguments: --python-listed
 A14: green at 6b5bd84
+A14: red at d8b6517: AssertionError: 8 != 9 : 321 listed
+A14: green at b9d43e2
 A15: red at 9e913f9: mutation-verdict.py: error: unrecognized arguments: --python-listed
 A15: green at 6b5bd84
 A16: red at 9e913f9: mutation-verdict.py: error: argument --class: invalid choice: 'scripts'
