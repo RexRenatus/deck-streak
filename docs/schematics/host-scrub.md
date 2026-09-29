@@ -13,7 +13,7 @@ repository (R8); the repository holds the tools and `deploy/host-scrub/rules.exa
 | the rules | roots, backup retention, protected paths, packages, health checks | SPEC-060 R3, R7, R9 |
 | the list | one item per path (or per listed package), each with its reason and digest | SPEC-060 R4 |
 | the backup | one boot-disk snapshot, taken after the inventory, named by the approval | SPEC-060 R5 |
-| the apply | all or nothing, before its first deletion | SPEC-060 R6, R7 |
+| the apply | every check passing before its first deletion; each deletion measures its item again and stops there | SPEC-060 R6, R7 |
 | the health checks | read before the inventory and after each apply | SPEC-060 R9 |
 
 ## 1. The files between the tools
@@ -41,8 +41,9 @@ inventory and the plan write their one output each, and the apply writes only it
 
 ## 2. The apply's checks, in order
 
-Every check below runs before the first deletion. One failure refuses the whole run, names the item
-and the reason, and deletes nothing (R6, R7). The rules are the ones the inventory read, bound by
+Every check below runs before the first deletion. One failure refuses the run before its first deletion, names the item
+and the reason, and deletes nothing (R6, R7); the mount table is one of the checks, and an item that
+is or holds a mount point is refused (A12). The rules are the ones the inventory read, bound by
 their digest, which is taken over the very bytes the apply parsed them from in one read (A10), and
 the health checks run through the inventory's read allow list alone; the changing commands the
 apply admits run only for a listed package's item.

@@ -1,5 +1,6 @@
 """The host scrub: an inventory that only reads, a list that binds each item by its digest, and an
-apply that deletes only what the owner approved, all or nothing (SPEC-060; ADR-060, ADR-010).
+apply that deletes only what the owner approved, with every check passing before the first
+deletion (SPEC-060; ADR-060, ADR-010).
 
 Every test builds a synthetic host in a `TemporaryDirectory` at run time, with stub commands first
 on the tools' `PATH`, each recording its argument vector there, so no fixture holds a real path,

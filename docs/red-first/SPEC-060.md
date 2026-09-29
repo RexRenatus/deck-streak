@@ -50,8 +50,10 @@ A9: red at 6a9abea: AssertionError: 0 != 1 : apply: deleted i005 (...) (the appl
 A9: green at 499dee8
 A10: red at 7ae7dbc: AssertionError: False is not true : apply: deleted x001 (...), 0 bytes (the apply parsed rules without a protected path, bound the list's rules by a second read, and the item that path protects went)
 A10: green at 28df6ac
-A11: red at f5ae5c8: AssertionError: the inventory did not record the clock, and an unsynchronised clock refused nothing (the crossed-device test failed with it)
+A11: red at f5ae5c8: AssertionError: None is not True (the inventory did not record the clock, and an unsynchronised clock refused nothing; the crossed-device test failed with it)
 A11: green at 5342bc0
+A12: red at c418299: AssertionError: Lists differ: [{...}] != [] (an item that is a mount point, or holds one, was listed, and the apply's check let it through)
+A12: green at 8ea04d1
 ```
 
 Two tests beyond the criteria were written with them, red at 3bd0f96 and green at ceaa1b9, and carry
@@ -170,7 +172,7 @@ while the apply reads it).
 
 ## Rows
 
-`scripts/mutation-rows.d/S06000-S06099.json` holds 65 rows, S06001 to S06065, one for each check
+`scripts/mutation-rows.d/S06000-S06099.json` holds 67 rows, S06001 to S06067, one for each check
 that stands before a deletion. Each has an anchor that occurs exactly once, one mutant, and a killer
 that selects one test. `python3 scripts/mutation_rows.py prove --band S06000-S06099` proved
 the first 49 at 8843ceb, on the committed tree: `rows: examined 49: killed 49, survived 0, void 0`,
@@ -194,13 +196,17 @@ mutant, and each target was restored byte for byte, checked by its sha256.
 | the plan: a canonical path, within a boundary, holding, a protected link, the rules it read, an environment in use, an item inside another | S06041 to S06049 | A3, A7 |
 | a file a tool parses and binds, read once: the reader's digest, the inventory's record, the plan's rules check and its inventory's digest, the apply's rules check | S06050 to S06054 | A10 |
 
-Not held by a row, each with why: a file system mounted inside an item (R20: the device check
-is green on one file system, and unprivileged mounts are blocked here, so its test fakes `st_dev`
-in the walk and no run crosses a real mount); the Python-version guard for a directory item (no interpreter the
+Not held by a row, each with why: a file system mounted inside an item, crossed for real (unprivileged
+mounts are blocked here, so the device test fakes `st_dev` in the walk, the mount test fakes the
+mount table, and no run crosses a real mount); the Python-version guard for a directory item (no interpreter the
 tests run under tells it apart); a directory removed through its parent's descriptor rather than by
 path (the two differ only inside a window no test holds open); a package's removal run through a
 shell with the same argument vector (no different argument can reach it while the package's name
-is validated); and an item found gone since the list was made (nothing is left to delete).
+is validated); an item found gone since the list was made (nothing is left to delete); and the entry
+check's modification time beside the deletion's re-measure (the digest carries the modification
+time, so the two agree wherever they read one entry, and differ only where the path the re-measure
+reads and the parent's descriptor name different entries, the interval SPEC-060 §7 discloses, which
+no run can hold open).
 
 ## Fix round 2
 
@@ -259,7 +265,7 @@ and was removed; a file the apply binds was read twice in three places the tests
 the tools ran on a clock nobody had checked. The order of work, each red committed before its fix,
 the whole test module run at each red commit:
 
-- b83a634: A5's cases (a) to (d), red; 5434854: the fix, `delete()` measures the item's digest again
+- b83a634: A5's cases (a) to (c), red, and (d) added green; 5434854: the fix, `delete()` measures the item's digest again
   and leaves it when it differs. Every test was green at 5434854.
 - 51f0944: A10's three cases (the apply's rules first, the plan's inventory, the apply's list) and
   the open counts of the apply's list and approval. These were green on arrival, because the head
@@ -282,7 +288,7 @@ Per case, as the subtests read at both commits:
 A5 (a) an entry added under the venv: red at b83a634 (deleted), green at 5434854
 A5 (b) a file inside the venv rewritten: red at b83a634 (deleted), green at 5434854
 A5 (c) a file item rewritten, mtime put back: red at b83a634 (deleted), green at 5434854
-A5 (d) a file item rewritten: green on arrival, the entry's mtime moves; kept by S06055
+A5 (d) a file item rewritten: green on arrival, the entry's mtime moves; kept by the entry check's mtime and the re-measure together, and no single row reds it
 A10 the apply's rules first: green on arrival; pinned by S06057
 A10 the plan's inventory: green on arrival; pinned by S06058
 A10 the apply's list: green on arrival; pinned by S06056
@@ -294,7 +300,7 @@ A11 an entry on another device is never digested or removed: red at f5ae5c8, gre
 ```
 
 Unprivileged mounts are blocked on the box, so the crossed-device case replaces `walk` with a seam
-that reports one entry on another device; it does not cross a real mount (R20, above).
+that reports one entry on another device; it does not cross a real mount (the first entry of "Not held by a row", in the first fix round's section).
 
 The rows S06055 to S06065: the deletion's re-measure (S06055, killed by A5), the apply's list, the
 apply's rules and the plan's inventory each read once (S06056 to S06058, A10), and the clock and
@@ -305,3 +311,44 @@ The whole band was proved at the head of this round with
 round's re-measure and the clock line in the plan's list had moved the anchors of S06019, S06020
 and S06053. They were re-anchored, and each was proved with `--row`: killed, so 65 of 65 rows
 are killed and each target was restored byte for byte, checked by its sha256.
+
+DISCLOSURE, A1 (`test_the_inventory_runs_only_its_read_only_allow_list`): its body changed at 5342bc0, after its green commit: `("timedatectl", "show")` joined the read commands the inventory runs, since the inventory now reads the clock; no other assertion changed.
+
+## Fix round 4
+
+The device check compares each entry's device with the item's own, so it does not see a bind mount,
+which shares the tree's device, or a file mounted over a file. The plan and the apply now read the
+kernel's mount table and refuse an item that is a mount point or holds one. The order of work:
+
+- merge of the base branch, in its own commit (e36c48b), conflicts only;
+- c418299: A12, red, over the whole module, with stubs that compile: only the new test failed, by
+  assertion; 8ea04d1: the fix, `plan.mounted` and its reader `plan.read_mountinfo`, used by the
+  plan's listing and by the apply's entry check;
+- 3eb2997: the rows S06066 and S06067.
+
+```text
+A12: red at c418299: AssertionError: Lists differ: [{...}] != [] (an item that is a mount point, or holds one, was listed, and the apply's check let it through)
+A12: green at 8ea04d1
+```
+
+Per case, as the subtests read at both commits:
+
+```text
+A12 a control with no mount point: green at both commits
+A12 an item that is a mount point: red at c418299, green at 8ea04d1
+A12 an item holding a mount point: red at c418299, green at 8ea04d1
+A12 a mount point that only shares an item's name as a prefix: green at both commits (it pins that it is not refused)
+A12 a mount point with an escaped space, read unescaped: red at c418299, green at 8ea04d1
+A12 a file mounted over a file: red at c418299, green at 8ea04d1
+A12 nothing mounted: green at both commits
+```
+
+The mount table is faked through the reader seam, since the box that runs the tests refuses
+unprivileged mounts; no case crosses a real mount. The rows S06066 (the check for a mount point
+strictly under the item, killed by the holding case) and S06067 (the octal unescape, killed by the
+escaped case), each proved with its full id: killed.
+
+The statements that were absolute in the delivery were reworded: the apply checks everything before
+its first deletion and then measures each item again at its deletion, stopping the run there with
+earlier deletions kept, so no text promises a run that either completes or changes nothing. The runbook's order now puts the
+list before the snapshot, since the plan reads no snapshot.

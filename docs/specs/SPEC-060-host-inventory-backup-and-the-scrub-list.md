@@ -9,7 +9,7 @@
   Nothing here needs a device key (ADR-054).
 - **Status:** judged: delivered with its tests, `docs/red-first/SPEC-060.md`, the runbook and the
   tools' schematic. The delivery made R1, R4, R6, R7, R9 and the manifest exact where the code
-  decided them, and its review's fix rounds added A9, A10 and the hand-proved rows (§8).
+  decided them, and its review's fix rounds added A9 to A12 and the hand-proved rows (§8).
 
 ## 1. The problem, measured
 
@@ -70,8 +70,8 @@ R6. `deploy/host-scrub/apply.py LIST APPROVAL --rules RULES --log FILE` runs dry
     - the approval names a snapshot taken after the inventory;
     - the item's digest, computed again now, equals the listed one.
 R7. `apply.py` never deletes a path outside the approved list, never follows a symbolic link out of
-    an item, and refuses an item under any protected path, or holding one, whatever the approval
-    says. The protected paths come from the private rail's protected-path list, which holds every
+    an item, refuses an item that is a mount point or holds one, and refuses an item under any
+    protected path, or holding one, whatever the approval says. The protected paths come from the private rail's protected-path list, which holds every
     path of the host's other services and their data; the example rules protect `/etc`, `/usr`,
     `/boot`, the credential socket's directory and every DeckStreak release directory, and the tests
     prove the refusal on a synthetic list.
@@ -101,6 +101,7 @@ R10. The only classes W2 deletes are the owner's: backups older than their reten
 | A9 | apply runs as health checks only the read commands of the inventory's allow list, from the rules the inventory read: a changing command given as a health check, or other rules, are refused before any command runs, with 0 package-tool calls | `test_host_scrub.py` |
 | A10 | each tool parses and binds a file from one read, and opens it once: the rules' digest the inventory records, the plan checks and the apply checks is taken over the rules each acts on; the list names its inventory by the bytes the plan parsed; and the apply deletes only items of the list whose digest the approval carries, so a file that serves other bytes to a second read is refused or acted on exactly as its digest says, and nothing the list's rules protect or the approval does not name is deleted | `test_host_scrub.py` |
 | A11 | the inventory refuses to be written, and the apply refuses to delete, while the host clock does not read synchronised or when the inventory did not record that it did; and an item any of whose entries lies on another device than its own is neither digested, listed nor removed | `test_host_scrub.py` |
+| A12 | an item that is a mount point, or holds one (any mount point strictly under it), is not listed by the plan and is refused by the apply, whether it is a directory or a file, and the mount point is read from the kernel's mount table with its octal escapes decoded; an item with no mount point at or under it is listed and passes | `test_host_scrub.py` |
 
 ```acceptance
 A1: python3 -m unittest discover -s scripts/tests -p test_host_scrub.py -k test_the_inventory_runs_only_its_read_only_allow_list
@@ -114,10 +115,11 @@ A8: python3 -m unittest discover -s scripts/tests -p test_host_scrub.py -k test_
 A9: python3 -m unittest discover -s scripts/tests -p test_host_scrub.py -k test_apply_runs_only_read_health_checks_from_the_listed_rules
 A10: python3 -m unittest discover -s scripts/tests -p test_host_scrub.py -k test_each_tool_binds_the_bytes_it_parsed -k test_each_tool_opens_each_file_it_binds_once
 A11: python3 -m unittest discover -s scripts/tests -p test_host_scrub.py -k test_the_tools_refuse_a_clock_that_is_not_synchronised -k test_an_item_holding_another_device_is_never_digested_or_removed
+A12: python3 -m unittest discover -s scripts/tests -p test_host_scrub.py -k test_an_item_that_is_or_holds_a_mount_point_is_refused
 ```
 
 A1 runs the inventory with stub commands first on its `PATH`, each recording its argument vector
-into a `TemporaryDirectory`. A2 to A7, A9, A10 and A11 build a synthetic host tree in a
+into a `TemporaryDirectory`. A2 to A7 and A9 to A12 build a synthetic host tree in a
 `TemporaryDirectory` at run time, and A7 a synthetic protected-path list; no fixture holds a real
 path, size or name. A5 and A7 change the synthetic tree while the apply reads a health check's
 address, which the test serves on the loopback, and A4, A6, A7, A9 and A10 write lists the plan
@@ -127,7 +129,10 @@ committed. A10 runs each tool through a reader that serves a file's bytes differ
 open, in either order, so a tool that parsed one read and bound another would show it. A11 fakes the
 host's time-sync reading through the stub on the tools' `PATH`, changing it between the inventory
 and the apply, and fakes a file system mounted inside an item at the walk's seam, since the box that
-runs the tests refuses unprivileged mounts.
+runs the tests refuses unprivileged mounts. A12 fakes the kernel's mount table through the reader
+the tools read it by (`read_mountinfo`): an item that is a mount point, an item holding one, an
+escaped path, a file mounted over a file, a mount point that only shares an item's name as a
+prefix, and a control with none.
 
 ## 4. The owner's gate and the evidence it records
 
@@ -138,8 +143,8 @@ only.
 | step | what the owner approves | evidence recorded (privately) | rollback |
 |---|---|---|---|
 | E1 | the inventory's first run, read-only | the health-check list read before; the inventory file; the commands it ran | none needed: nothing changed |
-| E2 | the boot-disk snapshot | the snapshot's name, size and ready state | delete the snapshot once the owner releases it |
-| E3 | the deletion list, item by item | the list's digest, and the owner's approval of each item id | none needed: nothing changed |
+| E2 | the deletion list, item by item | the list's digest and the skipped candidates with their reasons | none needed: nothing changed |
+| E3 | the boot-disk snapshot, then the owner's approval | the snapshot's name, size and ready state, and the owner's approval of each item id | delete the snapshot once the owner releases it |
 | E4 | the apply run | the apply log, the health-check list read after, and the free space before and after | restore the item from the snapshot (attach it read-only, copy the item back) |
 
 ## 5. File manifest
@@ -152,7 +157,7 @@ only.
 | `deploy/host-scrub/rules.example.json` | deploy | added: neutral example rules and protected paths |
 | `docs/runbooks/host-scrub.md` | docs | added: the runbook, inventory to apply, and the rollback |
 | `docs/schematics/host-scrub.md` | docs | added at delivery: the tools' data flow and the apply's refusals (§8) |
-| `scripts/tests/test_host_scrub.py` | repo | added: A1 to A10 |
+| `scripts/tests/test_host_scrub.py` | repo | added: A1 to A12 |
 | `scripts/mutation-rows.d/S06000-S06099.json` | repo | added in the fix rounds: the hand-proved rows of the checks that stand before a deletion (§8) |
 | `docs/specs/SPEC-060-host-inventory-backup-and-the-scrub-list.md` | docs | moved from `docs/specs/planned/` |
 | `docs/decisions/ADR-060-the-host-scrub-is-a-runbook-and-approval-gated-tools-behind-a-disk-snapshot.md` | docs | changed: accepted, with the decisions made at delivery |
@@ -170,7 +175,7 @@ only.
 ## 7. Risks
 
 - **An item changes between the list and the apply.** The digest is computed again at apply time,
-  and one changed item refuses the whole run (A5).
+  and one changed item refuses the run before its first deletion (A5).
 - **An item, or a directory above it, changes between the apply's checks and its deletion.** The
   health checks are read between the two, so the window holds every health read. Each deletion
   reads its item again immediately before it deletes, through directories opened one at a time
@@ -183,10 +188,18 @@ only.
   inventory's and with the apply's own clock, so a host clock that is not synchronised can order
   them wrongly. The inventory records whether the time-sync reading says synchronised and refuses to
   be written when it does not, and the apply reads it again and refuses before any deletion when it
-  does not read synchronised now or when the inventory did not record it (A11).
-- **A file system mounted inside an item.** A mount inside a directory item would be walked, digested
-  and removed with the item. `measure` refuses an item any of whose entries lies on another device
-  than its top entry, so the plan skips it with its reason and the apply refuses it (A11).
+  does not read synchronised now or when the inventory did not record it (A11). A host whose time
+  sync is down therefore cannot be scrubbed until it reads synchronised. The reading bounds the
+  clock's error by the kernel's own 16 s and not to zero, and no check here narrows it further.
+- **A file system mounted inside an item, or over it.** A mount inside a directory item would be
+  walked, digested and removed with the item. `measure` refuses an item any of whose entries lies
+  on another device than its top entry, which separates a file system of its own. A bind mount
+  shares its device with the tree around it, and a file mounted over a file leaves a directory-only
+  device check nothing to compare, so the plan and the apply also read the kernel's mount table
+  (`/proc/self/mountinfo`, the mount point field, its octal escapes decoded) and refuse an item that
+  is a mount point or holds one, whatever its device: the plan skips it with its reason and the
+  apply refuses it before any deletion (A11, A12). With it, mounts are refused whatever their
+  device. A mount made after the apply's check is not seen, and belongs to the interval above.
 - **A deletion breaks another service.** The protected-path list refuses that service's paths
   whatever the approval says (A7), the health-check list is read after each apply (R9), and the
   snapshot restores any item.
@@ -296,3 +309,10 @@ Its third fix round amended these statements too:
   open-count test adds the apply's list and approval.
 - **R6, R7: A11.** The clock reading and the crossed device above are new; the clock reading is one
   more read command of the allow list, `timedatectl show -p NTPSynchronized --value`.
+
+Its fourth fix round amended these statements too:
+
+- **R7, A12: a mount point is refused whatever its device.** The plan and the apply read the
+  kernel's mount table through one reader and refuse an item that is a mount point or holds one, so
+  a bind mount, which shares its device, and a file mounted over a file are refused where the device
+  check alone would list and delete them. A12 is new.

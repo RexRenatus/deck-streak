@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""apply: delete the items of a deletion list the owner approved, all or nothing, and only when
-given --apply (SPEC-060 R5, R6, R7, R9; ADR-060).
+"""apply: delete the items of a deletion list the owner approved, with every check passing before
+the first deletion, and only when given --apply (SPEC-060 R5, R6, R7, R9; ADR-060).
 
     python3 apply.py LIST APPROVAL --rules RULES --log FILE [--apply]
 
@@ -19,6 +19,7 @@ first failure, naming the item and the reason:
   deletes;
 - no approved item lies under a protected path of RULES, or holds one, whatever the approval says;
 - no approved item is reached through a symbolic link;
+- no approved item is, or holds, a mount point of the kernel's mount table;
 - each approved item's digest, computed again now, equals the listed one;
 - each approved package would be removed alone (`dpkg --dry-run --remove`), since `dpkg` refuses
   a removal another installed package depends on, where `apt-get` would remove that one too.

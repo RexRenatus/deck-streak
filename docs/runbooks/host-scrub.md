@@ -85,9 +85,28 @@ record privately:
 Copy `inventory.json` back to the private directory. Nothing on the host changed, so no rollback is
 needed.
 
-## E2: the snapshot
+## E2: the list
 
-From the maintainer's machine, after the inventory and before the list is approved:
+On the host, since the plan reads each candidate's content to digest it:
+
+```sh
+sudo nice -n 19 ionice -c3 python3 plan.py inventory.json rules.json --out list.json
+```
+
+The plan refuses rules other than the ones the inventory read (run the inventory again), deletes
+nothing and writes only the list. Each item has an `id`, its `class`, its `path` (or `package`), the
+`rule` and `reason` that selected it, the `bytes` it frees when the whole list is applied (a file
+whose other links survive frees nothing) and its `digest`; `skipped` names each candidate left out,
+with why.
+
+Nothing changed, so no rollback is needed.
+
+## E3: the snapshot, and the owner's approval
+
+The list comes first: the plan only reads, so a host with nothing to scrub costs no snapshot, and the
+approver sees the list before the snapshot is billed. Nothing else fixes the order except that the
+snapshot is taken after the inventory and before the approval, which names it. From the
+maintainer's machine:
 
 ```sh
 gcloud compute snapshots create "$SNAPSHOT" --project "$PROJECT" \
@@ -101,19 +120,7 @@ instant, and the apply refuses a snapshot taken before the inventory. The snapsh
 it is kept; it is kept until the owner releases it after W2's first week, then deleted with
 `gcloud compute snapshots delete "$SNAPSHOT" --project "$PROJECT"`.
 
-## E3: the list, and the owner's approval
-
-On the host, since the plan reads each candidate's content to digest it:
-
-```sh
-sudo nice -n 19 ionice -c3 python3 plan.py inventory.json rules.json --out list.json
-```
-
-The plan refuses rules other than the ones the inventory read (run the inventory again), deletes
-nothing and writes only the list. Each item has an `id`, its `class`, its `path` (or `package`), the
-`rule` and `reason` that selected it, the `bytes` it frees when the whole list is applied (a file
-whose other links survive frees nothing) and its `digest`; `skipped` names each candidate left out,
-with why. Send the owner the list's `digest` and a table of the items. The owner approves item ids,
+Send the owner the list's `digest` and a table of the items. The owner approves item ids,
 one by one; write the approval beside the list:
 
 ```json
@@ -126,7 +133,7 @@ one by one; write the approval beside the list:
 }
 ```
 
-Nothing changed, so no rollback is needed.
+Nothing on the host changed, so no rollback is needed beyond deleting the snapshot once released.
 
 ## E4: the apply
 
@@ -149,12 +156,13 @@ snapshot, one taken at or before the inventory, or one dated later than the appl
 host clock that does not read synchronised now, or an inventory that did not record one; an
 item whose path the apply does not read canonically (named by its id); an item under a protected
 path or holding one; an item reached through a symbolic link; an item holding an entry on another
-device than its own; an item whose digest changed since
+device than its own; an item that is a mount point or holds one, or a mount table that cannot be
+read; an item whose digest changed since
 the list was made; a package that `dpkg --dry-run --remove` would not remove alone. A file or link
 is unlinked, never its target; a directory is removed without following a link inside it; a
 package is removed with `dpkg --remove`, which keeps its configuration files. Each item is read
 again immediately before its deletion, through directories opened without following a link, and
-goes only while it is what its checks read: the apply deletes nothing it did not check.
+goes only while it is what its checks read, and a change found there stops the run with earlier deletions kept.
 
 | exit | meaning | what to do |
 |---|---|---|

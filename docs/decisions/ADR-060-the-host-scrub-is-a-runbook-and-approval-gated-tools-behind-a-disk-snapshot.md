@@ -37,8 +37,10 @@ to what is deleted, and what is the backup?
 Chosen option.
 - **The tools.** `deploy/host-scrub/inventory.py` reads the host with an allow list of read
   commands only; `plan.py` turns the inventory and the private rules into a deletion list with a
-  digest per item; `apply.py` deletes, all or nothing, only items whose approval carries the list's
-  digest and the item's id, whose digest is unchanged, and which lie under no protected path.
+  digest per item; `apply.py` deletes only items whose approval carries the list's
+  digest and the item's id, whose digest is unchanged, and which lie under no protected path, with
+  every check passing before the first deletion; each deletion measures its item again and stops
+  the run there, earlier deletions kept.
   `docs/runbooks/host-scrub.md` is the order of work.
 - **The backup.** One snapshot of the host's boot disk, taken from the maintainer's machine after the
   inventory and before the approval; the approval names it, and `apply.py` refuses an approval that
@@ -145,12 +147,24 @@ alternatives:
   resting on a clock nobody checked.
 - **An item holding another device is never digested or removed.** `measure` refuses an entry whose
   device differs from the item's own. Chosen against following it, which would digest and delete a
-  mounted file system's content that no inventory approved.
+  mounted file system's content that no inventory approved. The device check alone does not see a
+  bind mount, which shares its device, or a file mounted over a file (the fourth round below).
+
+### Decided in the fourth fix round (SPEC-060 §8)
+
+- **An item that is a mount point, or holds one, is refused.** The plan and the apply read the
+  kernel's mount table (`/proc/self/mountinfo`, the mount point field, octal escapes decoded)
+  through one reader, and refuse an item that is a mount point or has a mount point strictly under
+  it, whatever its device; the plan skips it with the reason, the apply refuses it before any
+  deletion, and an unreadable table refuses too. Chosen against the device check alone, which
+  cannot see a mount that shares the tree's device or a file mounted over a file; and against a
+  runbook step that lists mounts with a tool, which leaves the refusal to a reader and not to the
+  code that deletes.
 
 ### Consequences
 
-- Good, because the owner approves bytes, not descriptions, and a changed host is caught before the
-  first deletion.
+- Good, because the owner approves bytes, not descriptions, and a changed host is caught before, or at, its
+  deletion.
 - Good, because the snapshot restores any item, or the whole disk, without room on the host.
 - Bad, because the snapshot is billed while it is kept; the runbook keeps it until the owner releases
   it after W2's first week.
@@ -158,13 +172,18 @@ alternatives:
   descriptor; the runbook names that floor.
 - Bad, because a change made in the interval between the deletion's re-measure and the removal itself
   is not seen; the interval is the removal's own and is not closed by a check.
+- Bad, because a host whose time sync is down cannot be scrubbed until it reads synchronised.
+- Bad, because a synchronised reading bounds the clock's error by the kernel's 16 s and not to zero;
+  no check here narrows it further.
+- Bad, because a mount made after the apply's check is not seen; it belongs to the same removal
+  interval as any other change.
 - Bad, because the digest reads each candidate's content once; the tools run niced,
   off the predecessor's schedule as SPEC-027 R2 defines it, its sync minutes included, off every
   reserved slot, and off DeckStreak's own job slots.
 
 ### Confirmation
 
-SPEC-060's acceptance tests (A1 to A11) and its hand-proved mutation rows
+SPEC-060's acceptance tests (A1 to A12) and its hand-proved mutation rows
 (`scripts/mutation-rows.d/S06000-S06099.json`); the gate-2 evidence E1 to E4, recorded privately.
 
 ## What would make this wrong
