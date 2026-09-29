@@ -312,6 +312,32 @@ class EveryMutationCommandKeepsTheGatesBounds(unittest.TestCase):
         self.assertRegex(lines[0], BOUNDED)
         self.assertNotRegex(lines[1], BOUNDED)
 
+    def test_a_cargo_flag_with_a_separate_value_is_part_of_the_command(self):
+        with plant_workflow("cargo --config net.retry=2 mutants --in-place") as scratch:
+            found = mutants_commands(Path(scratch))
+        self.assertEqual(found, {"planted.yml": ["cargo --config net.retry=2 mutants --in-place"]})
+
+    def test_a_comment_is_no_command_and_bounds_nothing(self):
+        with plant_workflow(f"cargo mutants --in-place # {BOUNDS}") as scratch:
+            found = mutants_commands(Path(scratch))
+        self.assertEqual(found, {"planted.yml": ["cargo mutants --in-place"]})
+        with plant_workflow(f"echo planted # cargo mutants {BOUNDS}") as scratch:
+            found = mutants_commands(Path(scratch))
+        self.assertEqual(found, {})
+        # In a `run: |` block a `#` inside shell quotes is text, so the command after it is read.
+        block = '|\n          echo "a # b" && cargo mutants --in-place'
+        with plant_workflow(block) as scratch:
+            found = mutants_commands(Path(scratch))
+        self.assertEqual(found, {"planted.yml": ["cargo mutants --in-place"]})
+
+    def test_a_valued_flag_spelling_after_a_bounded_command_is_its_own_command(self):
+        with plant_workflow(f"cargo mutants {BOUNDS} && cargo -C crates mutants --in-place") as s:
+            found = mutants_commands(Path(s))
+        lines = found.get("planted.yml", [])
+        self.assertEqual(len(lines), 2, lines)
+        self.assertRegex(lines[0], BOUNDED)
+        self.assertEqual(lines[1], "cargo -C crates mutants --in-place")
+
     def test_every_cargo_mutants_command_carries_the_gates_own_bounds(self):
         found = mutants_commands(WORKFLOWS)
         for name in ("ci.yml", "mutation-weekly.yml"):
