@@ -1,0 +1,100 @@
+name: rust-cache
+
+# Saves the Rust cache in the default branch's scope, so a run on any ref can restore it (SPEC-191,
+# ADR-191, #370). A run restores a cache only from its own ref, its pull request's base branch and
+# the default branch, and a scheduled run executes the default branch's copy of this file, so the
+# entry it saves is one every ref can read. It takes effect when the release pull request carries
+# this file to main: a schedule runs only from the default branch's copy.
+# It checks out dev, asks for ci.yml's exact Rust cache key with a lookup and stops on a hit. On a
+# miss it builds what ci.yml's rust job builds and runs no test: the clippy stage's build, the test
+# and test-engine stages' test binaries (--no-run) and the doctest stage's build (--no-run), all
+# with the stages' own flags, profile and CARGO_INCREMENTAL, so the dependency artifacts land under
+# the fingerprints the stages use. Lints, tests and doctests are ci.yml's; this job saves an entry.
+# It is never triggered by a pull request or a push, so it never saves into a feature branch's scope.
+on:
+  schedule:
+    - cron: "43 */2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# A run waits for the one before it, and none is cancelled while it builds or saves.
+concurrency:
+  group: rust-cache
+  cancel-in-progress: false
+
+jobs:
+  warm:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      # The same setting as ci.yml's rust job: incremental state would only fill the cache.
+      CARGO_INCREMENTAL: "0"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: dev
+          persist-credentials: false
+      - name: look the exact key up, the key ci.yml restores (an exact hit ends the job)
+        id: lookup
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          lookup-only: true
+          key: rust-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-${{ hashFiles('Cargo.lock') }}
+      - name: the pinned Rust toolchain (rust-toolchain.toml)
+        if: ${{ steps.lookup.outputs.cache-hit != 'true' }}
+        run: rustup show
+      - if: ${{ steps.lookup.outputs.cache-hit != 'true' }}
+        uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
+        with:
+          tool: cargo-nextest,cargo-deny
+      - name: protoc 31.1, checksum verified (Anki's engine compiles its protobuf definitions, ADR-022)
+        if: ${{ steps.lookup.outputs.cache-hit != 'true' }}
+        env:
+          PROTOC_SHA256: 96553041f1a91ea0efee963cb16f462f5985b4d65365f3907414c360044d8065
+        run: |
+          curl -fsSL -o /tmp/protoc.zip https://github.com/protocolbuffers/protobuf/releases/download/v31.1/protoc-31.1-linux-x86_64.zip
+          echo "$PROTOC_SHA256  /tmp/protoc.zip" | sha256sum -c -
+          mkdir -p "$HOME/.local/protoc" && unzip -q /tmp/protoc.zip -d "$HOME/.local/protoc"
+          echo "$HOME/.local/protoc/bin" >> "$GITHUB_PATH"
+      - name: restore by ci.yml's prefix, so a lockfile change recompiles only what changed
+        id: warm
+        if: ${{ steps.lookup.outputs.cache-hit != 'true' }}
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: rust-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-${{ hashFiles('Cargo.lock') }}
+          restore-keys: |
+            rust-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-
+      - name: build the clippy stage's targets (no lint level, which changes no dependency's artifacts)
+        if: ${{ steps.lookup.outputs.cache-hit != 'true' }}
+        run: cargo clippy --workspace --all-targets --locked
+      - name: build the test and test-engine stages' test binaries, and run none
+        if: ${{ steps.lookup.outputs.cache-hit != 'true' }}
+        run: cargo nextest run --workspace --locked --no-run
+      - name: build the doctest stage's targets, and run none
+        if: ${{ steps.lookup.outputs.cache-hit != 'true' }}
+        run: cargo test --doc --workspace --locked --no-run
+      - name: keep only the dependencies' artifacts in the cache
+        if: ${{ steps.lookup.outputs.cache-hit != 'true' }}
+        run: cargo clean --workspace
+      - name: save the Rust cache under the exact key
+        if: ${{ steps.lookup.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ steps.warm.outputs.cache-primary-key }}
