@@ -58,9 +58,21 @@ fn declarations_of(source: &str) -> usize {
         .count()
 }
 
-/// Whether `attribute` is conditional. Not yet read: the test below names what it must find.
-fn is_conditional(_attribute: &str) -> bool {
-    false
+/// Whether `attribute` is conditional: the last segment of its path, raw prefix removed, is `cfg`
+/// or `cfg_attr`. `#[cfg(...)]` can compile the enum the scan reads out of the build, and
+/// `#[cfg_attr(...)]` applies its attribute only under its condition, so the pin refuses either
+/// and judges neither.
+fn is_conditional(attribute: &str) -> bool {
+    let inner = attribute.trim().strip_prefix("#[").unwrap_or(attribute);
+    let path = inner
+        .split(['(', '=', ']'])
+        .next()
+        .map(without_raw_prefixes)
+        .unwrap_or_default();
+    matches!(
+        path.rsplit("::").next().map(str::trim),
+        Some("cfg" | "cfg_attr")
+    )
 }
 
 /// The attribute lines directly above `pub enum Verdict` in `source`.
