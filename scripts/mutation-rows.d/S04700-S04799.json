@@ -7,7 +7,7 @@
         "src/xp.rs",
         "pub const READ_XP: u32 = 40;",
         "pub const READ_XP: u32 = 41;",
-        "readings_read_tap::a_second_read_tap_changes_nothing",
+        "reading_xp::the_read_tap_earns_forty",
         "the owner's first tap earns 40 XP, no more (SPEC-047 R6, A1)"
       ],
       [
@@ -16,7 +16,7 @@
         "src/xp.rs",
         "pub const STUDIED_XP: u32 = 60;",
         "pub const STUDIED_XP: u32 = 61;",
-        "readings_settle::a_settle_grants_and_stamps_once_on_crossing_the_threshold",
+        "reading_xp::a_studied_reading_earns_sixty",
         "a studied reading earns 60 XP on crossing (SPEC-047 R6, A6)"
       ],
       [
@@ -52,7 +52,7 @@
         "src/studied.rs",
         "self.study_day.epoch_day() + 2",
         "self.study_day.epoch_day() + 3",
-        "readings_settle::a_retired_reading_turns_studied_on_late_reviews_inside_its_window",
+        "studied::only_reviews_inside_the_two_study_day_window_count",
         "the window closes when study day d + 2 begins (SPEC-047 R5, A7)"
       ],
       [
@@ -70,7 +70,7 @@
         "src/xp.rs",
         "\"reading:{}:read\"",
         "\"reading:{}:studied\"",
-        "readings_settle::a_read_and_studied_reading_earns_exactly_100_xp_once",
+        "reading_xp::the_read_and_studied_sources_are_distinct_per_reading",
         "the read grant and the studied grant have distinct sources (SPEC-047 R6, A8)"
       ],
       [
@@ -79,7 +79,7 @@
         "src/xp.rs",
         "starts_with(\"law/\")",
         "starts_with(\"lawx/\")",
-        "readings_settle::a_settle_grants_and_stamps_once_on_crossing_the_threshold",
+        "reading_xp::a_topic_earns_on_the_track_of_its_prefix",
         "a law topic's XP lands on the law track (SPEC-047 R6, A6)"
       ]
     ]
