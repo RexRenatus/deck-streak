@@ -8,6 +8,7 @@ plants put the fixed 32 back into each place that must read the one count.
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -330,6 +331,106 @@ def plant_workflow(run):
     return scratch
 
 
+# The class (#395) is where a `#` starts a comment, as bash reads it. Its members are generated: a
+# fragment that carries a would-be comment or a would-be closer, in a context (and a group inside
+# each substitution), then a `#` glued or after a blank, then an unbounded command after the bounded
+# one, or the bounds after an unbounded one, or a continued line. Bash reads every member.
+CLASS_WORDS = (
+    "@",
+    "$(@)",
+    "<(@)",
+    ">(@)",
+    "`@`",
+    "$((@))",
+    "${X:-@}",
+    "${X#@}",
+    "${X//@/}",
+    '"@"',
+    "'@'",
+    "$'@'",
+    "<<< @",
+)
+CLASS_GROUPS = ("case x in x) @;; esac", "case x in (x) @;; esac", "{ @; }", "( @ )")
+CLASS_COMMANDS = CLASS_GROUPS + ("(( @ ))", "a=(@)", "[[ x =~ @ ]]")
+CLASS_FRAGMENTS = ("#", ";#", ")#", "}#", '"}"', "')'", '"#"', "\\#", "a#", "\\'", ";;", "true")
+CLASS_SIZE = 2004
+UNBOUNDED = "cargo mutants --in-place"
+# Bash runs each member from a list, without `-e`, with `cargo` a function that logs its words and
+# no other command on the path; a substitution's `cargo` is awaited through the pipe it holds.
+ORACLE = r"""
+cargo() { local a r="$M"; for a in "$@"; do r+=$'\037'"$a"; done; printf '%s\036' "$r" >> "$LOG"; }
+while IFS= read -r f; do
+  M=${f##*/}
+  if "$SHELL_UNDER_TEST" --noprofile --norc -n "$f" 2>/dev/null; then
+    { ( . "$f"; wait ) </dev/null >/dev/null 2>&1; } 9>&1 | { while read -r _; do :; done; }
+  fi
+done < "$LIST"
+"""
+
+
+def class_members():
+    """Every member of the class, as the script bash runs."""
+    words, commands = [], []
+    for context in CLASS_WORDS:
+        quotes = context[-1] in "\"'"
+        words += [context.replace("@", f) for f in CLASS_FRAGMENTS if quotes or f != "\\'"]
+        if context in ("$(@)", "<(@)", ">(@)", "`@`"):
+            for group in CLASS_GROUPS:
+                words += [context.replace("@", group.replace("@", f)) for f in CLASS_FRAGMENTS]
+    for command in CLASS_COMMANDS:
+        commands += [command.replace("@", f) for f in CLASS_FRAGMENTS if f != "\\'"]
+    members = []
+    for text, lead in [(w, f"cargo mutants {BOUNDS} ") for w in words] + [
+        (c, f"cargo mutants {BOUNDS}; ") for c in commands
+    ]:
+        for mark in ("#", " #"):
+            members.append(f"{lead}{text}{mark}; {UNBOUNDED}\n")
+            if text in words:
+                members.append(f"{UNBOUNDED} {text}{mark} {BOUNDS}\n")
+        members.append(f"{lead}{text} \\\n  #; {UNBOUNDED}\n")
+    for group in CLASS_GROUPS:
+        for fragment in CLASS_FRAGMENTS[:-3] + CLASS_FRAGMENTS[-2:]:
+            for mark in ("#", " #"):
+                members.append(f"{group.replace('@', f'{UNBOUNDED} {fragment}')}{mark} {BOUNDS}\n")
+    return list(dict.fromkeys(members))  # `"#"` bare and `#` in `"@"` are one member
+
+
+def unbounded_by_bash(scripts):
+    """The indices of the scripts in which bash runs `cargo mutants` without the gate's bounds."""
+    shell, bounds = shutil.which("bash"), BOUNDS.split()
+    workers = min(8, os.cpu_count() or 1)
+    with tempfile.TemporaryDirectory() as scratch:
+        root = Path(scratch)
+        (root / "empty").mkdir()
+        (root / "oracle.sh").write_text(ORACLE, encoding="utf-8")
+        for n, text in enumerate(scripts):
+            (root / f"m{n}").write_text(text, encoding="utf-8")
+        runs = []
+        for w in range(workers):
+            names = "".join(f"{root / f'm{n}'}\n" for n in range(w, len(scripts), workers))
+            (root / f"list{w}").write_text(names, encoding="utf-8")
+            env = {
+                "PATH": str(root / "empty"),
+                "SHELL_UNDER_TEST": shell,
+                "LIST": str(root / f"list{w}"),
+                "LOG": str(root / f"log{w}"),
+            }
+            runs.append(
+                subprocess.Popen([shell, "--noprofile", "--norc", "oracle.sh"], cwd=root, env=env)
+            )
+        unbounded = set()
+        for w, run in enumerate(runs):
+            run.wait(timeout=600)
+            log = root / f"log{w}"
+            records = log.read_text(encoding="utf-8").split("\x1e")[:-1] if log.exists() else []
+            for record in records:
+                name, *words = record.split("\x1f")
+                mutants = next((word for word in words if word[:1] not in "+-"), None) == "mutants"
+                if mutants and not any(words[k : k + 4] == bounds for k in range(len(words))):
+                    unbounded.add(int(name[1:]))
+        return unbounded
+
+
 class EveryMutationCommandKeepsTheGatesBounds(unittest.TestCase):
     """A6 (R5): every `cargo mutants` command line in every workflow carries the gate's bounds."""
 
@@ -378,6 +479,23 @@ class EveryMutationCommandKeepsTheGatesBounds(unittest.TestCase):
         with plant_workflow(block) as scratch:
             found = mutants_commands(Path(scratch))
         self.assertEqual(found, {"planted.yml": ["cargo mutants --in-place"]})
+
+    def test_every_unbounded_command_bash_runs_past_a_hash_is_found(self):
+        members = examined("class members", class_members())
+        self.assertEqual(len(members), CLASS_SIZE)
+        runs = unbounded_by_bash(members)
+        with tempfile.TemporaryDirectory() as scratch:
+            for n, script in enumerate(members):
+                block = "".join(f"          {line}\n" for line in script.splitlines())
+                text = f"jobs:\n  shard:\n    runs-on: ubuntu-24.04\n    steps:\n      - run: |\n{block}"
+                (Path(scratch) / f"m{n}.yml").write_text(text, encoding="utf-8")
+            found = mutants_commands(Path(scratch))
+        missed = [
+            members[n]
+            for n in sorted(runs)
+            if all(BOUNDED.search(line) for line in found.get(f"m{n}.yml", []))
+        ]
+        self.assertEqual(missed[:1], [], f"{len(missed)} of {len(runs)} unbounded members pass")
 
     def test_a_valued_flag_spelling_after_a_bounded_command_is_its_own_command(self):
         with plant_workflow(f"cargo mutants {BOUNDS} && cargo -C crates mutants --in-place") as s:
