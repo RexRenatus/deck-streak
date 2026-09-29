@@ -103,10 +103,7 @@ Nothing changed, so no rollback is needed.
 
 ## E3: the snapshot, and the owner's approval
 
-The list comes first: the plan only reads, so a host with nothing to scrub costs no snapshot, and the
-approver sees the list before the snapshot is billed. Nothing else fixes the order except that the
-snapshot is taken after the inventory and before the approval, which names it. From the
-maintainer's machine:
+The list comes first, and the snapshot after it: the apply deletes an item only while its digest is the list's, so a snapshot taken after the list holds the version the apply deletes, unless the item changed after the list and changed back before the apply; a snapshot taken before the list misses any change made between the two. The plan only reads, so a host with nothing to scrub costs no snapshot. The apply checks only that the snapshot was taken after the inventory and not later than its own clock, so this order is the runbook's to keep. From the maintainer's machine:
 
 ```sh
 gcloud compute snapshots create "$SNAPSHOT" --project "$PROJECT" \
@@ -156,13 +153,16 @@ snapshot, one taken at or before the inventory, or one dated later than the appl
 host clock that does not read synchronised now, or an inventory that did not record one; an
 item whose path the apply does not read canonically (named by its id); an item under a protected
 path or holding one; an item reached through a symbolic link; an item holding an entry on another
-device than its own; an item that is a mount point or holds one, or a mount table that cannot be
-read; an item whose digest changed since
+device than its own; an item that is a mount point, holds one, or lies inside a bind mount (a mount whose
+root is not `/`), or a mount table that cannot be read; an item whose digest changed since
 the list was made; a package that `dpkg --dry-run --remove` would not remove alone. A file or link
 is unlinked, never its target; a directory is removed without following a link inside it; a
 package is removed with `dpkg --remove`, which keeps its configuration files. Each item is read
 again immediately before its deletion, through directories opened without following a link, and
 goes only while it is what its checks read, and a change found there stops the run with earlier deletions kept.
+
+A host whose root file system is itself mounted from a sub-tree (its mount root is not `/`) refuses
+every item: run the scrub from another host image instead.
 
 | exit | meaning | what to do |
 |---|---|---|
@@ -176,7 +176,7 @@ Copy the log back to the private directory, and remove the temporary directory.
 
 ## Rollback: restore an item from the snapshot
 
-The snapshot restores any item without room on the host. From the maintainer's machine:
+The snapshot restores any item on the boot disk without room on the host. From the maintainer's machine:
 
 ```sh
 gcloud compute disks create "$RESTORE_DISK" --project "$PROJECT" --zone "$ZONE" \

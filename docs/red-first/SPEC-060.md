@@ -352,3 +352,41 @@ The statements that were absolute in the delivery were reworded: the apply check
 its first deletion and then measures each item again at its deletion, stopping the run there with
 earlier deletions kept, so no text promises a run that either completes or changes nothing. The runbook's order now puts the
 list before the snapshot, since the plan reads no snapshot.
+
+## Fix round 5
+
+The fifth review found three gaps in the mount refusal and the criteria around it. The order of
+work:
+
+- merge of the base branch, in its own commit (9f5160b), conflicts only;
+- a3dcc7a: two edits to A12's test, both green at the head (the plants below are what show them
+  red): a subtest for a mount table that cannot be read, and a second escape in the escaped
+  fixture's path (`old env two`);
+- 1be2f05: the bind-mount subtest of A12, red over the whole module (only A12's test failed, by
+  assertion); 19f4d59: the fix, the root-field clause of `plan.mounted` and the reason `plan.mount_reason`
+  that the plan's listing and the apply's entry check both give;
+- db55b72: the rows S06068 to S06071, each proved with its full id: killed.
+
+```text
+A12: red at 1be2f05: AssertionError: Lists differ: [{...}] != [] (an item inside a bind mount was listed, and the apply's check let it through)
+A12: green at 19f4d59
+```
+
+Per case, as the subtests read:
+
+```text
+A12 a mount table that cannot be read refuses the item: not red (the refusal existed; the plants of S06068 and S06069 turn it red)
+A12 an escaped mount point with two escapes in one path: not red (the unescape existed; the plant of S06071 turns it red)
+A12 an item inside a bind mount of another directory: red at 1be2f05, green at 19f4d59
+```
+
+The plants of the unreadable table (the apply's refusal replaced by a pass, then the plan's skip
+replaced by a pass) and of a single-escape unescape were each GREEN over the whole module before
+the two edits and RED after them, each restored by its digest. The rows S06068 (the apply's
+refusal), S06069 (the plan's skip), S06070 (the root-field clause) and S06071 (the unescape reads
+every escape) are proved singly by full id: killed.
+
+A5's criterion said the apply deletes nothing when one approved item changed after the list; it now
+says between the list and the apply's checks, and states that a change after the checks stops the
+run with earlier deletions kept. The runbook's reason for its order is corrected: the apply deletes an
+item only while its digest is the list's, so a snapshot taken after the list holds what is deleted.

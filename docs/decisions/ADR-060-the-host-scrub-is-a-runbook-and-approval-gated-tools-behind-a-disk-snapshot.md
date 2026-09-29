@@ -161,11 +161,24 @@ alternatives:
   runbook step that lists mounts with a tool, which leaves the refusal to a reader and not to the
   code that deletes.
 
+### Decided in the fifth fix round (SPEC-060 §8)
+
+- **An item inside a bind mount is refused.** The plan and the apply refuse an item under a mount
+  point whose root (field 4 of the mount table, octal escapes decoded) is not `/`, with the reason
+  "lies inside the bind mount" and the mount point. Chosen against listing the bind mounts in the
+  runbook and the protected paths (the documentation-only minimum), which leaves the protection of
+  a protected directory bind-mounted elsewhere to an operator's list and is one missed step from
+  deleting protected data; the code fails closed. Its cost: a host whose root file system is
+  mounted from a sub-tree (its root field is not `/`) refuses every item until the maintainer runs
+  the scrub elsewhere.
+- **Not adopted:** a check in the code that the snapshot was taken after the list (it changes the
+  approval's format; the runbook's order states it), and a rename of the test that holds A5.
+
 ### Consequences
 
 - Good, because the owner approves bytes, not descriptions, and a changed host is caught before, or at, its
   deletion.
-- Good, because the snapshot restores any item, or the whole disk, without room on the host.
+- Good, because the snapshot restores any item on the boot disk, or the whole disk, without room on the host.
 - Bad, because the snapshot is billed while it is kept; the runbook keeps it until the owner releases
   it after W2's first week.
 - Bad, because a directory item needs Python 3.11 or later, whose `shutil.rmtree` takes a directory
@@ -175,6 +188,8 @@ alternatives:
 - Bad, because a host whose time sync is down cannot be scrubbed until it reads synchronised.
 - Bad, because a synchronised reading bounds the clock's error by the kernel's 16 s and not to zero;
   no check here narrows it further.
+- Bad, because a host whose root file system is mounted from a sub-tree refuses every item until
+  the scrub runs elsewhere.
 - Bad, because a mount made after the apply's check is not seen; it belongs to the same removal
   interval as any other change.
 - Bad, because the digest reads each candidate's content once; the tools run niced,

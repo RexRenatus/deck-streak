@@ -22,10 +22,10 @@ repository (R8); the repository holds the tools and `deploy/host-scrub/rules.exa
 flowchart LR
   rules[("rules.json: roots, rules, protected paths, health checks")] --> inv
   inv["inventory.py RULES --out"] --> inventory[("inventory.json: space, sizes, stale copies, environments, units, packages, commands, health before")]
-  inventory --> snap["boot-disk snapshot, from the maintainer's machine"]
   inventory --> plan["plan.py INVENTORY RULES --out"]
   rules --> plan
   plan --> list[("list.json: items with reason, bytes and digest; the inventory's instant; its own digest")]
+  list --> snap["boot-disk snapshot, from the maintainer's machine"]
   list --> owner{{"the owner approves item ids (gate 2)"}}
   snap --> owner
   owner --> approval[("approval.json: the list's digest, item ids, approver, date, the snapshot and its instant")]
@@ -43,7 +43,7 @@ inventory and the plan write their one output each, and the apply writes only it
 
 Every check below runs before the first deletion. One failure refuses the run before its first deletion, names the item
 and the reason, and deletes nothing (R6, R7); the mount table is one of the checks, and an item that
-is or holds a mount point is refused (A12). The rules are the ones the inventory read, bound by
+is, holds or lies inside a bind mount is refused (A12). The rules are the ones the inventory read, bound by
 their digest, which is taken over the very bytes the apply parsed them from in one read (A10), and
 the health checks run through the inventory's read allow list alone; the changing commands the
 apply admits run only for a listed package's item.

@@ -803,7 +803,8 @@ class Apply(unittest.TestCase):
             paths = by_path(listing)
             chosen = [host.backups / "nightly-1.tar", host.apps / "probe-1.py"]
             ids = [paths[str(p)]["id"] for p in chosen]
-            # One approved item changed after the list was made: the whole run deletes nothing.
+            # One approved item changed after the list was made, before the apply's checks: the whole run
+            # deletes nothing.
             before = tree(host.root)
             probe = host.apps / "probe-1.py"
             probe.write_bytes(probe.read_bytes() + b"#")
