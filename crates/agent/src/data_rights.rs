@@ -31,12 +31,46 @@ impl DataRights for AgentDataRights {
         &'a self,
         connection: &'a mut SqliteConnection,
     ) -> PortFuture<'a, Vec<ExportedTable>> {
-        let _ = (connection, json!(null));
-        Box::pin(async { Ok(Vec::new()) })
+        Box::pin(async move {
+            let runs = sqlx::query!(
+                r#"SELECT id AS "id!", duty, template, subject, verdict, cause, class, turns,
+                          input_tokens, output_tokens, cost_micro_usd, duration_ms, created_at
+                   FROM agent_runs ORDER BY id"#
+            )
+            .fetch_all(connection)
+            .await?;
+            Ok(vec![ExportedTable {
+                table: AGENT_RUNS_TABLE,
+                rows: runs
+                    .into_iter()
+                    .map(|row| {
+                        json!({
+                            "id": row.id,
+                            "duty": row.duty,
+                            "template": row.template,
+                            "subject": row.subject,
+                            "verdict": row.verdict,
+                            "cause": row.cause,
+                            "class": row.class,
+                            "turns": row.turns,
+                            "input_tokens": row.input_tokens,
+                            "output_tokens": row.output_tokens,
+                            "cost_micro_usd": row.cost_micro_usd,
+                            "duration_ms": row.duration_ms,
+                            "created_at": row.created_at,
+                        })
+                    })
+                    .collect(),
+            }])
+        })
     }
 
     fn erase<'a>(&'a self, connection: &'a mut SqliteConnection) -> PortFuture<'a, ()> {
-        let _ = connection;
-        Box::pin(async { Ok(()) })
+        Box::pin(async move {
+            sqlx::query!("DELETE FROM agent_runs")
+                .execute(connection)
+                .await?;
+            Ok(())
+        })
     }
 }

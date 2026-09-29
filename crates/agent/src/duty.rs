@@ -163,8 +163,42 @@ impl DutyEngine<'_> {
     }
 
     async fn decide(&self, duty: &DutySpec, input: &DutyInput<'_>) -> (Verdict, Option<Telemetry>) {
-        let _ = (duty, input);
-        (Verdict::AiRouteAbsent, None)
+        if !self.route.is_configured() {
+            return (Verdict::AiRouteAbsent, None);
+        }
+        for untrusted in [input.parts.memory, input.parts.cards] {
+            if let GateOutcome::Failed { class, findings } = self.gate.check_input(untrusted).await
+            {
+                return (self.withhold(duty, class, findings), None);
+            }
+        }
+        let Ok(prompt) = compose(&input.parts) else {
+            return (self.unavailable(duty, Cause::RefusedShape), None);
+        };
+        let reply = match self.runner.run(&prompt, &duty.caps).await {
+            Ok(reply) => reply,
+            Err(cause) => return (self.unavailable(duty, cause), None),
+        };
+        let telemetry = reply.telemetry;
+        match self.gate.check(&reply.result, input.parts.template).await {
+            GateOutcome::Failed { class, findings } => {
+                (self.withhold(duty, class, findings), Some(telemetry))
+            }
+            GateOutcome::Passed => {
+                if self
+                    .vault
+                    .deliver(duty.name, input.subject, &reply.result)
+                    .is_err()
+                {
+                    return (self.unavailable(duty, Cause::RunFailed), Some(telemetry));
+                }
+                let delivered = Delivered {
+                    output: reply.result,
+                    telemetry,
+                };
+                (Verdict::Delivered(delivered), Some(telemetry))
+            }
+        }
     }
 
     fn unavailable(&self, duty: &DutySpec, cause: Cause) -> Verdict {

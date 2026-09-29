@@ -22,8 +22,7 @@ impl Setting for AiRoute {
     const SHAPE: &'static str = "proxy, or unset for no AI route";
 
     fn parse(text: &str) -> Option<Self> {
-        let _ = text;
-        None
+        (text == "proxy").then_some(Self::Proxy)
     }
 }
 

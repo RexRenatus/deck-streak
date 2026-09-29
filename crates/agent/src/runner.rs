@@ -96,8 +96,55 @@ impl Runner for ProcessRunner {
 
 impl ProcessRunner {
     async fn launch(&self, file: &std::path::Path, caps: &DutyCaps) -> Result<RunReply, Cause> {
-        let _ = (&self.script, &self.grace, file, caps);
-        Err(Cause::RunFailed)
+        let budget = format!(
+            "{}.{:06}",
+            caps.max_budget_micro_usd / 1_000_000,
+            caps.max_budget_micro_usd % 1_000_000
+        );
+        let mut child = Command::new("bash")
+            .arg(&self.script)
+            .arg(file)
+            .env("DECKSTREAK_AGENT_MAX_TURNS", caps.max_turns.to_string())
+            .env("DECKSTREAK_AGENT_MAX_BUDGET_USD", budget)
+            .env(
+                "DECKSTREAK_AGENT_WALL_SECONDS",
+                caps.wall_clock.as_secs().to_string(),
+            )
+            .stdin(Stdio::null())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .kill_on_drop(true)
+            .spawn()
+            .map_err(|_| Cause::RunFailed)?;
+        let mut stdout = child.stdout.take().ok_or(Cause::RunFailed)?;
+        let mut stderr = child.stderr.take().ok_or(Cause::RunFailed)?;
+        let started = tokio::time::Instant::now();
+        let waited = tokio::time::timeout(caps.wall_clock + self.grace, async {
+            let (mut out, mut err) = (String::new(), String::new());
+            let (read_out, read_err) = tokio::join!(
+                stdout.read_to_string(&mut out),
+                stderr.read_to_string(&mut err)
+            );
+            let status = child.wait().await;
+            (status, read_out.and(read_err), out, err)
+        })
+        .await;
+        let Ok((status, read, out, err)) = waited else {
+            return Err(Cause::TimeCap);
+        };
+        let code = status.map_err(|_| Cause::RunFailed)?.code();
+        read.map_err(|_| Cause::RunFailed)?;
+        let elapsed = u64::try_from(started.elapsed().as_millis()).unwrap_or(u64::MAX);
+        match code {
+            Some(0) => parse_reply(&out, elapsed),
+            Some(1) => Err(Cause::KeyMissing),
+            Some(2) => Err(Cause::RefusedShape),
+            Some(3) => Err(Cause::KeyRejected),
+            Some(4) => Err(Cause::CapacityExhausted),
+            Some(5) => Err(Cause::ProxyUnreachable),
+            Some(6) => Err(failure_cause(&out, &err)),
+            _ => Err(Cause::RunFailed),
+        }
     }
 }
 

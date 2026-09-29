@@ -28,7 +28,7 @@ impl Source {
 #[must_use]
 pub fn encode(text: &str) -> String {
     let json = serde_json::to_string(text).unwrap_or_else(|_| String::from("\"\""));
-    json
+    json.replace('<', "\\u003c").replace('>', "\\u003e")
 }
 
 /// One untrusted input, fenced alone.

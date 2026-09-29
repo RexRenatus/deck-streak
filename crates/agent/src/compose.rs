@@ -44,8 +44,29 @@ pub enum ComposeError {
 /// [`ComposeError`] when the task prompt names an unknown slot, or a trusted piece carries a fence
 /// marker.
 pub fn compose(parts: &Parts<'_>) -> Result<String, ComposeError> {
-    let _ = parts;
-    Ok(String::new())
+    for trusted in [parts.rules, parts.policy, parts.persona, parts.duty] {
+        if trusted.contains("<untrusted") || trusted.contains("</untrusted") {
+            return Err(ComposeError::FenceInTrusted);
+        }
+    }
+    let mut out = String::new();
+    out.push_str(parts.rules.trim_end());
+    out.push_str("\n\n");
+    out.push_str(parts.policy.trim_end());
+    out.push_str("\n\n");
+    let mut rest = parts.template;
+    while let Some(start) = rest.find("{{") {
+        out.push_str(&rest[..start]);
+        let after = &rest[start + 2..];
+        let Some(end) = after.find("}}") else {
+            return Err(ComposeError::UnknownSlot(after.to_owned()));
+        };
+        let name = &after[..end];
+        out.push_str(&slot(parts, name)?);
+        rest = &after[end + 2..];
+    }
+    out.push_str(rest);
+    Ok(out)
 }
 
 fn slot(parts: &Parts<'_>, name: &str) -> Result<String, ComposeError> {

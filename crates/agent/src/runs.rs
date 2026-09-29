@@ -46,8 +46,50 @@ impl AgentRuns {
     ///
     /// [`KernelError::Database`] when the write fails; nothing is written then.
     pub async fn record(&self, run: &RunRecord<'_>) -> Result<i64, KernelError> {
-        let _ = (&self.db, run);
-        Ok(0)
+        let verdict = run.verdict.name();
+        let cause = match run.verdict {
+            Verdict::Unavailable(cause) => Some(cause.as_str()),
+            _ => None,
+        };
+        let class = match run.verdict {
+            Verdict::Withheld(withheld) => Some(withheld.class.as_str()),
+            _ => None,
+        };
+        let telemetry = match run.verdict {
+            Verdict::AiRouteAbsent => None,
+            Verdict::Delivered(delivered) => Some(delivered.telemetry),
+            _ => Some(run.telemetry.unwrap_or_default()),
+        };
+        let turns = telemetry.map(|t| i64::from(t.turns));
+        let input = telemetry.map(|t| i64::try_from(t.input_tokens).unwrap_or(i64::MAX));
+        let output = telemetry.map(|t| i64::try_from(t.output_tokens).unwrap_or(i64::MAX));
+        let cost = telemetry.map(|t| i64::try_from(t.cost_micro_usd).unwrap_or(i64::MAX));
+        let duration = telemetry.map(|t| i64::try_from(t.duration_ms).unwrap_or(i64::MAX));
+        let at = run.at.epoch_millis();
+        let mut write = self.db.write().await?;
+        let id = sqlx::query_scalar!(
+            r#"INSERT INTO agent_runs
+                   (duty, template, subject, verdict, cause, class, turns, input_tokens,
+                    output_tokens, cost_micro_usd, duration_ms, created_at)
+               VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)
+               RETURNING id AS "id!: i64""#,
+            run.duty,
+            run.template,
+            run.subject,
+            verdict,
+            cause,
+            class,
+            turns,
+            input,
+            output,
+            cost,
+            duration,
+            at
+        )
+        .fetch_one(&mut *write)
+        .await?;
+        write.commit().await?;
+        Ok(id)
     }
 
     /// Deletes every run recorded before `cutoff` and returns how many it deleted.
@@ -56,7 +98,12 @@ impl AgentRuns {
     ///
     /// [`KernelError::Database`] when the write fails; nothing is deleted then.
     pub async fn prune_before(&self, cutoff: UtcMillis) -> Result<u64, KernelError> {
-        let _ = cutoff;
-        Ok(0)
+        let cutoff = cutoff.epoch_millis();
+        let mut write = self.db.write().await?;
+        let done = sqlx::query!("DELETE FROM agent_runs WHERE created_at < ?1", cutoff)
+            .execute(&mut *write)
+            .await?;
+        write.commit().await?;
+        Ok(done.rows_affected())
     }
 }

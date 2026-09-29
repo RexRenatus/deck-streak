@@ -162,12 +162,38 @@ fn failed(class: &str, findings: Vec<String>) -> GateOutcome {
 
 impl OutputGate for ProbeGate {
     fn check<'a>(&'a self, output: &'a str, template: &'a str) -> GateFuture<'a> {
-        let _ = (output, template, &self.classes, &self.input_class);
-        Box::pin(async { GateOutcome::Passed })
+        Box::pin(async move {
+            let (Ok(out), Ok(tpl)) = (
+                self.stage("output.md", output).await,
+                self.stage("template.md", template).await,
+            ) else {
+                return failed(CLASS_VOID, Vec::new());
+            };
+            let mut outcome = GateOutcome::Passed;
+            for spec in &self.classes {
+                let one = self.run_class(spec, &out, &tpl).await;
+                if one != GateOutcome::Passed {
+                    outcome = one;
+                    break;
+                }
+            }
+            let _ = std::fs::remove_file(&out);
+            let _ = std::fs::remove_file(&tpl);
+            outcome
+        })
     }
 
     fn check_input<'a>(&'a self, input: &'a str) -> GateFuture<'a> {
-        let _ = input;
-        Box::pin(async { GateOutcome::Passed })
+        Box::pin(async move {
+            let Some(spec) = &self.input_class else {
+                return GateOutcome::Passed;
+            };
+            let Ok(path) = self.stage("input.md", input).await else {
+                return failed(CLASS_VOID, Vec::new());
+            };
+            let outcome = self.run_class(spec, &path, &path).await;
+            let _ = std::fs::remove_file(&path);
+            outcome
+        })
     }
 }
