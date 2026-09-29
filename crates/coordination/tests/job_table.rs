@@ -194,7 +194,7 @@ fn the_daily_sync_slot_keeps_off_the_predecessors_ticks_and_every_other_slot() {
     println!("examined {compared} slot(s) of the other jobs against the sync's");
     assert_eq!(
         compared,
-        24 * 25,
+        24 * 49,
         "every other job's slots, at every rollover hour"
     );
 }

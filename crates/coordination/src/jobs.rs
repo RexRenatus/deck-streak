@@ -93,7 +93,7 @@ pub const DRILL_POSTBACK: Job = Job {
 };
 
 /// The one schedule: every job a timer may start.
-pub const TABLE: [Job; 3] = [SYNC, MAINTENANCE, LIVENESS];
+pub const TABLE: [Job; 4] = [SYNC, MAINTENANCE, LIVENESS, DRILL_POSTBACK];
 
 /// The table's job with `id`, or `None` when the table holds none.
 #[must_use]
