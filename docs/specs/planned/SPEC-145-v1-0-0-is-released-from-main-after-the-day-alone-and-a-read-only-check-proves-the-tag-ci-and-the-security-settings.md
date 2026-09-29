@@ -65,7 +65,8 @@ R5. `RELEASING.md` gains `## 8. v1.0.0, after the cutover`, in this order: the d
     recorded (SPEC-144, `deploy/cutover.md`); the preparation pull request sets `1.0.0` in the
     workspace `Cargo.toml` and every `package.json` that declares a version, and compiles
     `CHANGELOG.md`'s `## [1.0.0]`; the release pull request from `dev` into `main`, merged with a
-    merge commit and never merged back (ADR-034); the annotated tag `v1.0.0` on `main`;
+    merge commit and never merged back (ADR-034); the owner's go (#164), the step before the tag;
+    the annotated tag `v1.0.0` on `main`;
     `python3 scripts/release-check.py v1.0.0 --repo <owner>/<repo>` reads `RELEASE CHECK OK`;
     `bash deploy/deploy.sh v1.0.0` ends `deploy: v1.0.0 is current`; and the restore drill (SPEC-064
     R5) runs once after the deploy and passes, so the backups are proved to cover the database the

@@ -132,8 +132,8 @@ R9. Progression maps the predecessor's ledger by source: the derived sources (re
     of both equals the source ledger's sum (the count rule `sum`). `xp_state` is not read: the total
     and the level are derived at read (SPEC-040 R7, R8). The Ascendant rows of `buffs` go to
     `buffs`; its chest-lock rows are discipline's (SPEC-141). `badges_earned`, `records` and
-    `season_nodes` map as their §8 rows say; `season_targets` and `xp_price_changes` take the
-    predecessor's per-month target keys and its multiplier setting (SPEC-138 §8), the multipliers
+    `season_nodes` map as their §8 rows say; `season_targets` (SPEC-074 §8) and `xp_price_changes`
+    (SPEC-138 §8) take the predecessor's per-month target keys and its multiplier setting, the multipliers
     clamped as the golden `import_xp_multipliers` reads them.
 R10. Progression's `day_base_xp(rows, study_day)` sums a day's imported base XP leaving out the
     families the predecessor's day base leaves out (`readgoal:`, `leech:`, `focus`, `chest`, `2x:`,

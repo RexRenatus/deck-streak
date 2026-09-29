@@ -39,7 +39,9 @@ backup come from, and how does it roll back?
 
 ## Decision Outcome
 
-Chosen option: rehearse on a copy, apply once over a restored backup, roll back by rename. ADR-008's
+Chosen option: rehearse on a copy, apply once over a restored backup, roll back by rename, because
+the rehearsal writes only a copy it discards, as often as the owner likes before the go, and the
+apply's backup is the restore path the owner relies on (ADR-010), proved before it is needed. ADR-008's
 "discards the target while v9 keeps serving" is the rehearsal: the dry run discards its copy while
 the predecessor keeps serving; the apply comes after the go and the retirement (#164). SPEC-142 R5
 to R13 hold it.

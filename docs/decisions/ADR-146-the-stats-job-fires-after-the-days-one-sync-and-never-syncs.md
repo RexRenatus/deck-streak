@@ -37,7 +37,8 @@ the day's sync did not succeed?
 
 ## Decision Outcome
 
-Chosen option: minute 12, after the sync, reading its outcome. A day whose sync did not succeed
+Chosen option: minute 12, after the sync, reading its outcome, because it follows the sync, never
+runs one, and minute 12 is on no predecessor minute and no other slot. A day whose sync did not succeed
 writes nothing and keeps the file as it was; the sync's own failure has paged. The job is gated by
 its checklist item (SPEC-143 R10) until the owner's go makes DeckStreak the file's writer. SPEC-146
 R13 to R15 hold it.

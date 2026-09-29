@@ -36,7 +36,8 @@ and the import, what judges "a day alone", and what enters the ledger?
 
 ## Decision Outcome
 
-Chosen option: the day report after the retirement, recorded by its digest. A failed or void day
+Chosen option: the day report after the retirement, recorded by its digest, because it judges one
+day of the system that stays, and a quiet day cannot pass. A failed or void day
 is the owner's decision (#164), with the import's rollback and an item's revert as the ways back.
 SPEC-144 R3 to R5 hold it.
 

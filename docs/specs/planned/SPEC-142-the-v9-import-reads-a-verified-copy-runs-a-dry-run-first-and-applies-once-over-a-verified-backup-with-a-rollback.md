@@ -369,6 +369,7 @@ table.
 | `drill_grades` | vault (SPEC-110) | `drill_xp_grants` | equal |
 | `drill_answers` (SPEC-110), `drill_mints` (SPEC-111), `inbox_captures` (SPEC-118) | vault | nothing | empty |
 | `agent_runs` (SPEC-043), `leech_remedies` (SPEC-112), `conversation_turns` (SPEC-113), `practice_sets` (SPEC-114), `agent_images` (SPEC-135) | agent | nothing | empty |
+| `vault_card_candidates`, `vault_card_revisions` | vault (SPEC-150) | nothing | empty: the predecessor made no card from a note |
 | `collection_atlas`, `collection_atlas_state` | insights (SPEC-120) | nothing | empty |
 | `linked_identities`, `passkeys`, `identity_revocations` | identity (SPEC-131) | nothing | empty |
 | `publishing_state` | publishing (SPEC-137) | nothing | derived: written with the switch off |
@@ -377,10 +378,16 @@ table.
 The predecessor's other dropped tables, with the plan's reasons: `xp_state` (the total and the
 level are read from the ledger, SPEC-040), `deck_names` (DeckStreak reads each deck's name from
 the collection on every read), and `beeminder_posts` (the money rung is not built, ADR-106,
-#116). The census holds 101 DeckStreak tables: 47 equal, 14 declared, 3 filtered, 4 sum, 7
-derived, 3 not carried, 22 empty and 1 exempt; and all 64 of the predecessor's tables are mapped
+#116). The census holds 103 DeckStreak tables: 47 equal, 14 declared, 3 filtered, 4 sum, 7
+derived, 3 not carried, 24 empty and 1 exempt; and all 64 of the predecessor's tables are mapped
 once (49 transformed, 46 of them equal and 3 filtered; 7 split, 2 by sum and 5 declared; and 8
 dropped).
+
+The universe is every table dev's replayed migrations create, plus every table a planned SPEC's
+migration creates, plus the migration ledger. The planned SPECs' migrations were read from
+their own section 8 rows and manifests, and the W9 plan's SPEC-150 adds two tables
+(`vault_card_candidates` and `vault_card_revisions`), both empty, so a plan that merges after
+this one re-counts the universe and adds each table it creates with its SPEC and its class.
 
 ## 9. Mutation rows
 

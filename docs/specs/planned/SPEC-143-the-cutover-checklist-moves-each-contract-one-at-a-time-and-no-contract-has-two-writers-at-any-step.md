@@ -138,12 +138,12 @@ R9. **Verification.** `verify <item>` prints, in this order and with no row valu
     one delivered or ok run per gate and no failed one; `pending` is no run yet; anything else is
     `fail`.
 R10. **The job runner's gate.** `coordination::runner` returns before claiming a fire of a job
-    named by a `job:` gate whose item has not switched, writing no `cron_fires` row and logging
-    `job=<id> not_moved item=<item>`, and exits 0.
+    named by a `job:` gate whose item's last step is not switched or verified, writing no
+    `cron_fires` row and logging `job=<id> not_moved item=<item>`, and exits 0.
 R11. **The duty's gate.** `deck_streak_vault::staged::Executor::new` takes an `InForce` (the duties
-    whose items have switched, from `coordination::cutover::in_force`), and `apply` refuses a run of
-    a duty outside it with `RunRefusal::NotMoved`, leaving the vault untouched, before the gate
-    runs. A test scans every non-test Rust source for `Executor::new(` and requires
+    whose items' last step is switched or verified, from `coordination::cutover::in_force`), and
+    `apply` refuses a run of a duty outside it with `RunRefusal::NotMoved`, leaving the vault
+    untouched, before the gate runs. A test scans every non-test Rust source for `Executor::new(` and requires
     `cutover::in_force` in the same call.
 R12. **The switches' ports.** `deck_streak_notifications::switches::{open, close, is_open}` write
     and read `notification_settings` by key (`"1"` and `"0"`), refusing a key no policy kind names;
@@ -180,8 +180,8 @@ R15. The eleven anti-goals hold (CHARTER): the checklist grants no XP, sends no 
 | A11 | a verify with no run since the switch is `pending`, exits 3 and records nothing | `a_verify_with_no_run_is_pending` |
 | A12 | a passing verify writes its output with mode 0600, refuses an existing file with `output_exists`, and records the command line and the output's sha256 | `a_passing_verify_records_its_output_digest` |
 | A13 | a verify's output over synthetic runs holds only R9's lines, and none of the synthetic rows' values | `the_verify_output_carries_no_row_value` |
-| A14 | a job gated by an item that has not switched writes no fire row and exits 0 | `a_job_that_has_not_moved_does_not_run` |
-| A15 | a staged run of a duty outside the in-force set is refused with `NotMoved` and leaves the vault untouched | `a_run_of_a_duty_not_moved_is_refused` |
+| A14 | a job gated by an item that has not switched, or whose last step is `reverted`, writes no fire row and exits 0 | `a_job_that_has_not_moved_does_not_run` |
+| A15 | a staged run of a duty outside the in-force set, a reverted item's duty included, is refused with `NotMoved` and leaves the vault untouched | `a_run_of_a_duty_not_moved_is_refused` |
 | A16 | every non-test call of `Executor::new` passes `cutover::in_force` | `every_executor_takes_the_in_force_duties` |
 | A17 | the switches port opens and closes a policy kind's switch and refuses a key no kind names | `a_switch_opens_and_closes_only_a_policy_kind` |
 | A18 | the archive switch port opens and closes the readings archive switch | `the_archive_switch_opens_and_closes` |
@@ -275,6 +275,10 @@ A21: cargo test -p deck-streak-coordination --test cutover -- --exact each_out_o
   census and R4's seeds, and detected by A1, A4, A5 and row S14309. SPEC-102, SPEC-105, SPEC-111
   and SPEC-116 may land before this SPEC; a kind of theirs speaks from its landing to this
   delivery, so each should seed its switch itself (an owner question in the plan).
+  Until SPEC-143 lands, each builder of SPEC-102 (celebrations), SPEC-105, SPEC-111 and SPEC-116 seeds
+  its own switch "0" with `INSERT OR IGNORE` (ADR-011) and a criterion, the jobs and duties of SPEC-110,
+  SPEC-111 and SPEC-116 stay off the box, and no release is cut from dev while any of them is on dev
+  without SPEC-143.
 - **A move recorded without proof.** Prevented by R9's `pass` rule and R6's refusal to record a
   pending or failed run, and detected by A11, A12 and rows S14306 and S14308.
 - **A personal value in a public record.** The output stays in the private record and only its
@@ -291,7 +295,7 @@ goldens.
 
 | table | owner | the predecessor's table | import rule |
 |---|---|---|---|
-| `cutover_steps` | `coordination` | none | not carried: the checklist's record starts with DeckStreak's own go |
+| `cutover_steps` | `coordination` | none | empty: the checklist's record starts with DeckStreak's own go |
 
 `cutover_steps` is exempt from export and erase, as `cron_fires` is (SPEC-027): an erase must never
 reopen a moved contract's gate or re-admit a second writer. It holds item ids, references and

@@ -36,7 +36,8 @@ When is v1.0.0 cut, and how is "the settings are on" proved without changing the
 
 ## Decision Outcome
 
-Chosen option: v1.0.0 after the day alone, and the read-only release check. SPEC-145 holds it.
+Chosen option: v1.0.0 after the day alone, and the read-only release check, because the tag follows
+the evidence, and the check can only read. SPEC-145 holds it.
 
 ### Consequences
 

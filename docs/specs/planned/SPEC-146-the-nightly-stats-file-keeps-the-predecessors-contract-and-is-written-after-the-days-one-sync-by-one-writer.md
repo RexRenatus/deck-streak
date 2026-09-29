@@ -14,7 +14,9 @@
   SPEC-071 (landed); SPEC-053, SPEC-076, SPEC-077, SPEC-078, SPEC-093, SPEC-110 and SPEC-121
   (planned, unlanded: the reserved job slots, the streaks, the law block, the habits summary, the
   leech board, the drills and the law progress this file reports); SPEC-143 (this wave, unlanded:
-  the checklist to which this delivery adds its item, so the job is gated from its first commit).
+  the checklist to which this delivery adds its item, so the job is gated from its first commit);
+  SPEC-100 (planned, unlanded: R28 lets a unit instance name carry `_`, as the instance `vault_stats`
+  does).
   **Mutation band:** `S14600-S14699`.
 - **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
   `docs/specs/` with its tests and `docs/red-first/SPEC-146.md` (ADR-016).
