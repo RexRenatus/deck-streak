@@ -1100,7 +1100,7 @@ def judge_rust(verdict: Verdict, plan: dict, args: argparse.Namespace) -> None:
     excuses = rust_excuses(verdict, args)
     voids = len(verdict.voids)
     whole = whole_reports(verdict, plan, args)
-    complete = len(verdict.voids) == voids
+    deferred: list[str] = []
     stopped: set[tuple[str, str]] = set()
     if args.shard_reports:
         held = dict(whole)
@@ -1110,7 +1110,7 @@ def judge_rust(verdict: Verdict, plan: dict, args: argparse.Namespace) -> None:
             stopped |= {
                 (where, name)
                 for name in memory_cap(
-                    verdict.fail, verdict.void, verdict.say, where, directory, held.get(where)
+                    verdict.fail, deferred.append, verdict.say, where, directory, held.get(where)
                 )
             }
     caught, missed, timeout, unviable, total = (
@@ -1154,7 +1154,9 @@ def judge_rust(verdict: Verdict, plan: dict, args: argparse.Namespace) -> None:
         verdict.fail(f"MISSED {missed - named} mutant(s), unnamed in the report")
     verdict.say(f"missed {missed}: equivalent {equivalent}, unexplained {missed - equivalent}")
     if args.shard_reports:
-        partition(verdict, plan, whole, complete=complete)
+        partition(verdict, plan, whole, complete=len(verdict.voids) == voids)
+    for text in deferred:
+        verdict.void(text)
     verdict.examined = tool - capped + carried
     verdict.say(f"examined {tool - capped} by cargo-mutants and {carried} by rows")
     touched = {mutated_file(o) for _, report in whole for o in report.get("outcomes", [])} - {None}
