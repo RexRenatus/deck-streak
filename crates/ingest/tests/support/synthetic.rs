@@ -569,6 +569,21 @@ pub fn move_due(path: &Path, card: i64, due: i64) {
     });
 }
 
+/// Sets the tags of the note `note` in the collection at `path`, as tagging it on another device
+/// does.
+///
+/// # Panics
+///
+/// When the engine or the statement fails.
+pub fn set_tags(path: &Path, note: i64, tags: &str) {
+    with_engine(path, |col| {
+        col.storage
+            .db()
+            .execute("update notes set tags = ? where id = ?", (tags, note))
+            .expect("the note's tags are set");
+    });
+}
+
 /// Deletes the cards `ids` from the collection at `path`, leaving their reviews behind, as deleting a
 /// card on another device does before its log is pruned.
 ///
