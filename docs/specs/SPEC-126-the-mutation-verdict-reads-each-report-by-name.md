@@ -166,9 +166,14 @@ this section and nothing else. Issue #374.
   `"${reports}"`, `"$reports"/...` and `"$reports"'/...'` all read as the expansion of `reports`;
   `'$reports'` and `\$reports` read as the text `\$reports`; an unquoted `$reports` reads as
   `(unquoted)$reports`, which the test refuses because the shell word-splits it.
+- **The command ends where the shell ends it.** The reader stops at a control operator (`;`, `&` or
+  `|`) or at a `#` that starts a word, outside every quote, and the command's words stay on one
+  line: a line break after `judge` with no backslash is not read as a space. A flag that only a
+  comment or a later command carries is therefore not a flag of the judge line.
 - **Every wrong path is still refused.** A single-quoted or escaped path, a different directory, a
   different variable, an unquoted expansion, a flag moved to the other judge line and a flag dropped
-  from one line each stay refused.
+  from one line each stay refused. Three more are refused: a flag only in a comment, a flag after
+  a control operator, and a line break after `judge` with no backslash (eleven wrong paths in all).
 - **Two checks join A4, both in `test_verdict_download.py`.** The test
   `test_every_spelling_the_shell_reads_alike_passes` builds the verdict job with each of the seven
   spellings issue #374 names (braces, the expansion closed before the slash, a single-quoted tail,
@@ -183,12 +188,12 @@ this section and nothing else. Issue #374.
   test's reader (#374).
 - It adds no mutation-row band, for the reason section 5 gives (#374).
 
-## 10. Acceptance criteria added by the 2026-09-29 amendment
+## 10. Acceptance criteria added by the section 9 amendment
 
 | id | criterion | decided by |
 |---|---|---|
 | A5 | each of the seven spellings issue #374 names passes the judge-line check | `test_verdict_download.py` `every_spelling_the_shell_reads_alike_passes` |
-| A6 | each path the shell reads differently is refused, and the reader keeps an expansion apart from text and from an unquoted expansion | `test_verdict_download.py` `every_path_the_shell_reads_differently_is_refused` |
+| A6 | each path the shell reads differently is refused | `test_verdict_download.py` `every_path_the_shell_reads_differently_is_refused` |
 
 ```acceptance
 A5: python3 -m unittest discover -s scripts/tests -p test_verdict_download.py -k test_every_spelling_the_shell_reads_alike_passes

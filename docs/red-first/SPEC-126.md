@@ -68,7 +68,6 @@ rewritten (the delivery tree's file was never edited).
 ```red-first
 A5: red at 2bf4a9a: '"${reports}/mutation-plan/plan.json"' != '$reports/mutation-plan/plan.json' : the rust judge line does not read --plan at $reports/mutation-plan/plan.json
 A5: green at 11469f9
-A6: not red: the earlier reader compared each word as written, so it already refused every wrong path; the test pins that the new reader still does
 ```
 
 The old reader on a scratch `ci.yml` per spelling, and the new reader on the same:
@@ -96,3 +95,24 @@ an unquoted expansion ............... '(unquoted)$reports/mutation-plan/plan.jso
 --whole moved to the oracle line .... None != '$reports/mutation-plan/whole.json' : the rust judge line does not read --whole
 --rows dropped from the rust line ... None != '$reports/mutation-rows/rows.json' : the rust judge line does not read --rows
 ```
+
+## Addendum, 2026-09-29 (issue #374, fix round 1): A6 for the shell's command end
+
+The lines above stand, except that A6's `not red:` line is replaced by the two lines in the fence
+below. The judge-line reader was tightened after review: it ends the command at a control operator
+or a comment outside every quote and keeps the command's words on one line. Three fixtures joined
+the wrong paths (a flag only in a comment, a flag after a control operator, a line break after
+`judge` with no backslash); the red commit changes only those fixtures, and the reader commit
+changes only the reader (commit 42f81c4 edits the test module because the reader lives there: the
+`JUDGE` pattern and `mark_dollars`, and no fixture or test method). The whole test file at the red commit fails only A6, three subtests, each
+`AssertionError: AssertionError not raised`.
+
+```red-first
+A6: red at 14a6b2a: FAILED (failures=3), AssertionError: AssertionError not raised, for each of "a flag only in a comment", "a flag after a control operator" and "a line break after judge with no backslash"
+A6: green at 42f81c4
+```
+
+The A5 red line above quotes a failure that came from `check_judge` comparing a word to
+`f'"{path}"'`; its comparison changed to `path` between that red (2bf4a9a) and its green (11469f9),
+because the reader's representation changed from quoted words to shell-split words. The fixtures
+and the test methods stayed byte-identical across the change.
