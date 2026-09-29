@@ -474,6 +474,8 @@ class TheRunnerJudgesEachMutant(unittest.TestCase):
             self.assertTrue(entry["void"], path)
             self.assertIn(f"VOID: {path}", done.stdout)
             self.assertTrue(all(m["outcome"] == "void" for m in entry["mutants"]))
+        nothing = next(e for e in report["files"] if e["path"] == "scripts/nothing.py")
+        self.assertEqual(nothing["void"], "the control selected no test")
         self.assertIn("survived", {m["outcome"] for m in mutants_of(report, "scripts/loose.py")})
         self.assertEqual((tree.root / "calls.log").read_text().splitlines(), ["broken"])
 

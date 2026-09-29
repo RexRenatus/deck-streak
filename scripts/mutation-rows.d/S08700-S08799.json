@@ -119,7 +119,7 @@
         "RECORD_FIELDS = (\"file\", \"mutant\", \"anchor\", \"reason\", \"evidence\", \"issue\")",
         "RECORD_FIELDS = (\"file\", \"mutant\", \"anchor\", \"reason\", \"issue\")",
         "an equivalence record carries its evidence, the code fact a reviewer checks its reason against; without it the census refuses the record (SPEC-087 R12, A19)",
-        "test_mutation_python_verdict.TheVerdictReadsThePythonReports.test_a_python_record_excuses_exactly_its_survivor_and_carries_its_argument"
+        "test_mutation_python_verdict.TheVerdictReadsThePythonReports.test_the_census_holds_a_python_record_whole"
       ],
       [
         "S08716-THE-SENTINEL-TEXT",
