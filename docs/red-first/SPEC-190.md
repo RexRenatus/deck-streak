@@ -10,6 +10,8 @@ A1: red at 5a85979: ['changelog.yml: 0 concurrency blocks, so a job's own or non
 A1: green at 6b5c663
 A2: red at 5a85979: 'changelog.yml: two runs of a push to dev share a group' and 'engine-measure.yml: two runs of a push to dev share a group' in a list of 10 that should be empty
 A2: green at 6b5c663
-A3: not red: release.yml was already tag-only and never cancelled; the criterion pins that it stays so
+A3: not red: release.yml was already tag-only and never cancelled a run in progress; the criterion pins that it stays so
 A4: not red: ci.yml's and mutation-weekly.yml's blocks were already the rule's; the criterion pins that they stay so
+A5: not red: the five workflows' names were already distinct; the criterion holds a new workflow to it
+A6: not red: no workflow cancelled a run that is not a pull request's, and no job set a block; the criterion holds a new workflow to it
 ```

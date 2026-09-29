@@ -38,12 +38,20 @@ R4. **A run that is not a pull request's is never cancelled.** For every workflo
 `cancel-in-progress` is false for each.
 
 R5. **`release.yml` keeps `cancel-in-progress: false`.** It runs on a push of a tag only, so it has
-no pull-request trigger and the rule does not apply; it never cancels a run.
+no pull-request trigger and the rule does not apply; it never cancels a run in progress. Its group
+stays its tag's ref, so GitHub's one pending run per group still applies: a third run of one tag
+replaces a second that is waiting, as before this SPEC (#377).
 
 R6. **`ci.yml`'s and `mutation-weekly.yml`'s blocks are unchanged,** byte for byte.
 
-R7. **A test holds every workflow file in the directory to R1, R4 and R5,** present and future, and
-prints how many workflows it examined.
+R7. **A test holds every workflow file in the directory to R1, R4, R5, R8 and R9,** present and
+future, and prints how many workflows it examined.
+
+R8. **No two workflows share a pull request's group.** GitHub reads a group's name without case and
+across every workflow, so two workflows of one name would cancel each other's newest run.
+
+R9. **No workflow file cancels a push, tag, schedule or dispatch run in progress, and no job sets a
+concurrency block,** whether or not the workflow has a pull-request trigger.
 
 ## 3. Acceptance criteria
 
@@ -53,12 +61,16 @@ prints how many workflows it examined.
 | A2 | for every workflow with a `pull_request` trigger, two runs of a push, a tag, a schedule or a dispatch have different groups, and none is cancelled | `test_workflow_concurrency.py` `a_run_that_is_not_a_pull_requests_is_unique_and_never_cancelled` |
 | A3 | `release.yml` has no pull-request trigger and its `cancel-in-progress` is false | `test_workflow_concurrency.py` `the_release_workflow_never_cancels` |
 | A4 | `ci.yml`'s and `mutation-weekly.yml`'s blocks are the rule's, unchanged | `test_workflow_concurrency.py` `the_blocks_that_already_followed_the_rule_are_unchanged` |
+| A5 | no two workflows with a `pull_request` trigger render one group for a pull request, read without case | `test_workflow_concurrency.py` `no_two_workflows_share_a_pull_requests_group` |
+| A6 | no workflow file cancels a push, tag, schedule or dispatch run, and no job sets a concurrency block | `test_workflow_concurrency.py` `no_workflow_cancels_a_run_that_is_not_a_pull_requests` |
 
 ```acceptance
 A1: python3 -m unittest discover -s scripts/tests -p test_workflow_concurrency.py -k every_workflow_with_a_pull_request_trigger_follows_the_rule
 A2: python3 -m unittest discover -s scripts/tests -p test_workflow_concurrency.py -k a_run_that_is_not_a_pull_requests_is_unique_and_never_cancelled
 A3: python3 -m unittest discover -s scripts/tests -p test_workflow_concurrency.py -k the_release_workflow_never_cancels
 A4: python3 -m unittest discover -s scripts/tests -p test_workflow_concurrency.py -k the_blocks_that_already_followed_the_rule_are_unchanged
+A5: python3 -m unittest discover -s scripts/tests -p test_workflow_concurrency.py -k no_two_workflows_share_a_pull_requests_group
+A6: python3 -m unittest discover -s scripts/tests -p test_workflow_concurrency.py -k no_workflow_cancels_a_run_that_is_not_a_pull_requests
 ```
 
 The test reads each workflow with the reader `test_ci_workflows.py` uses and renders the group and
@@ -74,8 +86,8 @@ superseded run differs.
 |---|---|---|
 | `.github/workflows/changelog.yml` | repo | changed: R2, the block |
 | `.github/workflows/engine-measure.yml` | repo | changed: R3, the block |
-| `scripts/tests/test_workflow_concurrency.py` | repo | added: A1 to A4 |
-| `scripts/mutation-rows.d/S19000-S19099.json` | repo | added: three hand-proved rows |
+| `scripts/tests/test_workflow_concurrency.py` | repo | added: A1 to A6 |
+| `scripts/mutation-rows.d/S19000-S19099.json` | repo | added: four hand-proved rows, the fourth (S19004) turning `release.yml`'s `cancel-in-progress: false` to `true`, which the release test alone kills |
 | `docs/specs/SPEC-190-every-workflow-cancels-a-superseded-pull-request-run.md` | repo | added, from `docs/specs/planned/` |
 | `docs/decisions/ADR-190-one-concurrency-rule-for-every-workflow-with-a-pull-request-trigger.md` | repo | added |
 | `docs/specs/SPEC-038-ci-runs-the-gate-in-parallel-jobs-and-only-dev-and-main-save-a-cache.md` | repo | changed: an insert-only amendment at its end |
@@ -93,6 +105,8 @@ No schematic: the change adds no component; the rule is `ci.yml`'s, applied to t
   concurrency blocks (#369).
 - It does not cancel a push, tag, schedule or dispatch run, because a land's full run must finish
   (ADR-055, #369).
+- It does not change `release.yml`'s group, its tag's ref, so a third run of one tag still replaces
+  a waiting second under GitHub's one pending run per group (#377).
 - It changes no check's name and no job, so the set of checks a pull request's newest run reports
   is the one it reported before (#369).
 
@@ -102,8 +116,10 @@ No schematic: the change adds no component; the rule is `ci.yml`'s, applied to t
   cancels a pending second one. That is the intent for a pull request; a push has a group of its
   own, so it is never affected (ADR-055).
 - **A path-filtered workflow on a pull request.** `engine-measure` runs only when its paths change;
-  a newer push that no longer changes them starts no run, so the superseded run is not cancelled and
-  finishes. That is today's behaviour for `ci.yml` too and is left as it is.
+  after a newer push that leaves the pull request no longer changing them (GitHub compares a pull
+  request's three-dot diff), no run starts, so the superseded run is not cancelled and finishes.
+  That is today's behaviour for `mutation-weekly.yml` too (`ci.yml` has no path filter) and is left
+  as it is.
 
 ## 7. References
 

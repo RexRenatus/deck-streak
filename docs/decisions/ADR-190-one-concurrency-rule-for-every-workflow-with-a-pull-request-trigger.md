@@ -17,8 +17,8 @@ push's run is unchanged and no other run is ever cancelled?
 ## Decision Drivers
 
 - The newest push's run of every workflow is unchanged, so every check examines what it did before.
-- A push, tag, schedule or dispatch run is never cancelled, and GitHub keeps one pending run per
-  group, so a shared group would replace a waiting run.
+- A push, tag, schedule or dispatch run is never cancelled while it runs, and GitHub keeps one
+  pending run per group, so a shared group would replace a waiting run.
 - The rule must be testable for every workflow, present and future, without an exception list.
 
 ## Considered Options (the alternatives it was chosen against)
@@ -52,7 +52,7 @@ rule. `test_workflow_concurrency.py` holds every workflow file in the directory 
 
 ### Confirmation
 
-SPEC-190's A1 to A4, three hand-proved rows in band S19000-S19099, and the pull request's own run
+SPEC-190's A1 to A6, four hand-proved rows in band S19000-S19099, and the pull request's own run
 history.
 
 ## What would make this wrong

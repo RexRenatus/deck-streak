@@ -98,6 +98,31 @@ class EveryWorkflowFollowsTheRule(unittest.TestCase):
         self.assertIn("ci.yml", [item[0] for item in judged])
         self.assertEqual(found, [])
 
+    def test_no_two_workflows_share_a_pull_requests_group(self):
+        judged = examined("workflows with a pull_request trigger", with_pull_request(read_all()))
+        owners = {}
+        for name, content, _text in judged:
+            group = (content.get("concurrency") or {}).get("group", "")
+            if group:
+                # GitHub reads a group's name without case, across every workflow of the repository.
+                key = rendered(group, pull_request("dev")).casefold()
+                owners.setdefault(key, []).append(name)
+        self.assertIn("ci.yml", [name for names in owners.values() for name in names])
+        self.assertEqual([names for names in owners.values() if len(names) > 1], [])
+
+    def test_no_workflow_cancels_a_run_that_is_not_a_pull_requests(self):
+        judged = examined("workflows", read_all())
+        found = []
+        for name, content, text in judged:
+            if re.search(r"(?m)^[ \t]+concurrency:", text):
+                found.append(f"{name}: a job sets a concurrency block of its own")
+            cancel = (content.get("concurrency") or {}).get("cancel-in-progress", "false")
+            for scenario, context in other_events("201").items():
+                if condition(cancel, context):
+                    found.append(f"{name}: {scenario} is cancelled")
+        self.assertIn("release.yml", [item[0] for item in judged])
+        self.assertEqual(found, [])
+
     def test_the_release_workflow_never_cancels(self):
         found = [item for item in examined("workflows", read_all()) if item[0] == "release.yml"]
         ((_name, content, _text),) = examined("release workflows", found)
