@@ -219,4 +219,16 @@ async fn a_cycle_without_instruments_stores_no_report() {
             .expect("get")
             .is_none()
     );
+
+    let _report = sync_cycle(&deployment.with, Trigger::Owner)
+        .await
+        .expect("the cycle runs");
+    let stored = deployment
+        .instruments
+        .store()
+        .get("alpha")
+        .await
+        .expect("get")
+        .expect("the same store takes the report once a cycle holds the instruments");
+    assert_eq!(stored.study_day, DAY);
 }
