@@ -210,3 +210,127 @@ fn a_failed_sync_records_a_bounded_reason_code_and_no_error_text() {
         );
     }
 }
+
+/// One attempt, so the reopens are the only retries in play.
+const ONE_ATTEMPT: RetrySchedule = RetrySchedule {
+    attempts: 1,
+    ..RetrySchedule::PREDECESSOR
+};
+
+/// Runs one scheduled sync of `engine` under `schedule` on the paused clock, bounded by a paused
+/// hour so a loop that never ends fails instead of hanging. Returns the run, its waits and the
+/// paused time it took.
+fn one_sync(
+    engine: &ScriptedEngine,
+    schedule: RetrySchedule,
+) -> (deck_streak_ingest::sync_runs::SyncRun, Vec<f64>, Duration) {
+    let fixture = Fixture::new("http://127.0.0.1:9/");
+    let syncer = fixture
+        .syncer(engine.clone(), MemoryRuns::default(), support::clock_at(0))
+        .with_schedule(schedule);
+    paused().block_on(async {
+        let started = tokio::time::Instant::now();
+        let report =
+            tokio::time::timeout(Duration::from_secs(3600), syncer.sync(Trigger::Scheduled))
+                .await
+                .expect("the run ends within a paused hour")
+                .expect("the record is in memory");
+        let SyncReport::Ran { run, waits_seconds } = report else {
+            panic!("a scheduled first sync runs: {report:?}");
+        };
+        (run, waits_seconds, started.elapsed())
+    })
+}
+
+#[test]
+fn a_locked_collection_is_reopened_three_times_with_doubling_waits() {
+    let engine = ScriptedEngine::new([
+        Step::Fail(EngineError::CollectionLocked),
+        Step::Fail(EngineError::CollectionLocked),
+        Step::Fail(EngineError::CollectionLocked),
+        Step::Answer(SyncOutcome::Synced),
+    ]);
+    let (run, waits, taken) = one_sync(&engine, ONE_ATTEMPT);
+    assert_eq!(run.outcome, Ok(()));
+    assert_eq!(run.attempts, 1);
+    assert!(waits.is_empty(), "no attempt failed: {waits:?}");
+    assert_eq!(engine.normal_syncs(), 4, "the first open and three reopens");
+    assert_eq!(taken, Duration::from_secs_f64(0.25 + 0.5 + 1.0));
+}
+
+#[test]
+fn a_collection_locked_past_its_reopens_is_recorded_as_locked() {
+    let engine = ScriptedEngine::new([Step::Fail(EngineError::CollectionLocked)]);
+    let (run, _, taken) = one_sync(&engine, ONE_ATTEMPT);
+    assert_eq!(run.outcome, Err(ReasonCode::CollectionLocked));
+    assert_eq!(engine.normal_syncs(), 4, "the first open and three reopens");
+    assert_eq!(taken, Duration::from_secs_f64(0.25 + 0.5 + 1.0));
+}
+
+#[test]
+fn the_reopen_wait_doubles_from_its_base() {
+    let schedule = RetrySchedule::PREDECESSOR;
+    let waits: Vec<f64> = (0..4).map(|reopen| schedule.reopen_wait(reopen)).collect();
+    assert_eq!(waits, [0.25, 0.5, 1.0, 2.0]);
+    let slower = RetrySchedule {
+        open_retry_base_secs: 3.0,
+        ..schedule
+    };
+    assert_eq!(slower.reopen_wait(2).to_bits(), 12.0_f64.to_bits());
+}
+
+#[test]
+fn the_immediate_schedule_waits_for_nothing_and_keeps_the_predecessors_counts() {
+    let expected = RetrySchedule {
+        attempts: 3,
+        base_secs: 0.0,
+        jitter_frac: 0.0,
+        attempt_timeout_secs: 300.0,
+        open_retries: 3,
+        open_retry_base_secs: 0.0,
+    };
+    assert_eq!(RetrySchedule::IMMEDIATE, expected);
+}
+
+#[test]
+fn the_default_jitter_draws_stay_inside_their_fraction_of_each_wait() {
+    let schedule = RetrySchedule {
+        attempts: 40,
+        base_secs: 1.0,
+        open_retry_base_secs: 0.0,
+        ..RetrySchedule::PREDECESSOR
+    };
+    let fixture = Fixture::new("http://127.0.0.1:9/");
+    let engine = ScriptedEngine::new([Step::Fail(EngineError::ServerError)]);
+    let syncer = fixture
+        .syncer(engine, MemoryRuns::default(), support::clock_at(0))
+        .with_schedule(schedule);
+    let report = paused()
+        .block_on(syncer.sync(Trigger::Scheduled))
+        .expect("the record is in memory");
+    let SyncReport::Ran { waits_seconds, .. } = report else {
+        panic!("a scheduled first sync runs: {report:?}");
+    };
+    assert_eq!(
+        waits_seconds.len(),
+        39,
+        "a wait after every attempt but the last"
+    );
+    for (index, wait) in waits_seconds.iter().enumerate() {
+        let base = 2_f64.powi(i32::try_from(index).expect("a small index"));
+        let draw = (wait - base) / (base * SYNC_RETRY_JITTER_FRAC);
+        assert!(
+            (0.0..1.0).contains(&draw),
+            "wait {index} was {wait}s, a draw of {draw}"
+        );
+    }
+    let draws: std::collections::BTreeSet<u64> = waits_seconds
+        .iter()
+        .enumerate()
+        .map(|(index, wait)| {
+            let base = 2_f64.powi(i32::try_from(index).expect("a small index"));
+            (((wait - base) / base) * 1e9) as u64
+        })
+        .collect();
+    assert!(draws.len() > 30, "the draws were not spread: {draws:?}");
+}

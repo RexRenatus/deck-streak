@@ -513,3 +513,27 @@ fn a_deadline_runs_the_recompute_only_after_the_anchor_and_at_or_before_now() {
         "the first deadline inside the window names the reason"
     );
 }
+
+#[test]
+fn every_run_reason_is_named_as_a_log_line_names_it() {
+    let named = [
+        (RunReason::RescorePending, "rescore_pending"),
+        (RunReason::SyncFailed, "sync_failed"),
+        (RunReason::NoSuccessfulRun, "no_successful_run"),
+        (RunReason::LastRunFailed, "last_run_failed"),
+        (RunReason::AnchorMissing, "anchor_missing"),
+        (RunReason::AnchorUnreadable, "anchor_unreadable"),
+        (RunReason::SettingsChanged, "settings_changed"),
+        (RunReason::StudyDayChanged, "study_day_changed"),
+        (RunReason::NewestReviewChanged, "newest_review_changed"),
+        (RunReason::CardCountChanged, "card_count_changed"),
+        (
+            RunReason::CardFingerprintChanged,
+            "card_fingerprint_changed",
+        ),
+        (RunReason::DeadlineDue { label: "any" }, "deadline_due"),
+    ];
+    for (reason, word) in named {
+        assert_eq!(reason.as_str(), word);
+    }
+}
