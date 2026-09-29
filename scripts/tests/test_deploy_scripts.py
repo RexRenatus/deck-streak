@@ -17,6 +17,7 @@ import json
 import os
 import re
 import signal
+import stat
 import subprocess
 import sys
 import tarfile
@@ -1326,6 +1327,114 @@ class TheCaddyInstall(Case):
         self.assertIn(self.REFUSED, done.stderr, "the undo tolerates an absent block")
         self.assertEqual(caddyfile.read_text(), original, "the Caddyfile is as it was")
         self.assertEqual(sorted(p.name for p in w.caddy_dir.iterdir()), ["Caddyfile"])
+
+    # The directories every write and every undo of the two scripts touch come from the path
+    # SETTINGS, so each setting is an axis of the population below and a new one fails the first
+    # test until it is classified.
+    PATH_SETTINGS = ("DECKSTREAK_DEPLOY_CADDY_DIR", "DECKSTREAK_DEPLOY_CADDYFILE")
+    READ_SETTINGS = ("DECKSTREAK_DEPLOY_CADDY_CONFIG",)
+
+    def test_the_caddy_functions_read_only_the_settings_the_directory_population_varies(self):
+        text = DEPLOY.read_text(encoding="utf-8")
+        start = text.index("caddy_install() {")
+        body = text[start : text.index('case "${1:-}" in')]
+        read = set(re.findall(r"DECKSTREAK_DEPLOY_[A-Z_]+", body))
+        for name, setting in re.findall(
+            r"^([A-Z_]+)=\$\{(DECKSTREAK_DEPLOY_[A-Z_]+):-", text[:start], re.MULTILINE
+        ):
+            if re.search(r"\$\{?" + name + r"\b", body):
+                read.add(setting)
+        self.assertEqual(
+            read, {*self.PATH_SETTINGS, *self.READ_SETTINGS}, "a new setting is an axis"
+        )
+
+    @staticmethod
+    def listing(*directories):
+        """Each directory's mode and each entry's type, mode, link count and bytes."""
+        seen = {}
+        for directory in directories:
+            entries = {}
+            for path in sorted(directory.iterdir()):
+                info = path.lstat()
+                data = path.read_bytes() if stat.S_ISREG(info.st_mode) else None
+                entries[path.name] = (
+                    stat.S_IFMT(info.st_mode),
+                    stat.S_IMODE(info.st_mode),
+                    info.st_nlink,
+                    data,
+                )
+            seen[str(directory)] = (stat.S_IMODE(directory.stat().st_mode), entries)
+        return seen
+
+    def test_every_directory_a_caddy_script_writes_or_undoes_is_checked_before_the_first_write(
+        self,
+    ):
+        stales = {"caddy-dir": ("deck-streak.candidate",), "caddyfile-dir": ("Caddyfile.previous",)}
+        stales["shared"] = stales["caddy-dir"] + stales["caddyfile-dir"]
+        places = (("beside", "shared"), ("apart", "caddy-dir"), ("apart", "caddyfile-dir"))
+        states = ("writable", "read-only", "read-only with a stale writable copy")
+        ops = ("install first", "install again", "removal")
+        triggers = ("none", "the rename fails", "the reload fails")
+        members = [
+            (place, state, op, trigger)
+            for place in places
+            for state in states
+            for op in ops
+            for trigger in triggers
+        ]
+        # A removal whose rename fails in a writable directory exits after its writes and, as
+        # SPEC-127 says, promises no message on every exit of the removal.
+        members = [
+            m
+            for m in members
+            if not (m[1] == "writable" and m[2:] == ("removal", "the rename fails"))
+        ]
+        self.assertEqual(len(members), 78, "3 places x 3 states x 3 ops x 3 triggers, minus 3")
+        for (layout, target), state, op, trigger in examined("directory member(s)", members):
+            with self.subTest(layout=layout, target=target, state=state, op=op, trigger=trigger):
+                w = self.fresh_world()
+                cfdir = w.tmp / "host" / "etc" / "cfdir" if layout == "apart" else w.caddy_dir
+                cfdir.mkdir(exist_ok=True)
+                caddyfile = cfdir / "Caddyfile"
+                caddyfile.write_text("example.org {\n\trespond 200\n}\n", encoding="utf-8")
+                w.ship("v1.0.0")
+                setting = {"DECKSTREAK_DEPLOY_CADDYFILE": str(caddyfile)}
+                if op != "install first":
+                    self.ok(w.run(DEPLOY, "caddy-install", "v1.0.0", **self.config(), **setting))
+                if trigger == "the rename fails":
+                    self.failing_rename(".candidate")
+                if trigger == "the reload fails":
+                    (w.log / "caddy-reload-fails").write_text("1")
+                directory = cfdir if target == "caddyfile-dir" else w.caddy_dir
+                if state.endswith("stale writable copy"):
+                    for name in stales[target]:
+                        (directory / name).write_text("stale\n", encoding="utf-8")
+                if state != "writable":
+                    directory.chmod(0o555)
+                script, args, refusal = (
+                    (ROLLBACK, ("caddy-remove",), self.UNWRITTEN)
+                    if op == "removal"
+                    else (DEPLOY, ("caddy-install", "v1.0.0"), self.REFUSED)
+                )
+                before = self.listing(w.caddy_dir, cfdir)
+                bytes_before = caddyfile.read_bytes()
+                try:
+                    done = w.run(script, *args, **self.config(host="new.example.org"), **setting)
+                except subprocess.TimeoutExpired:
+                    directory.chmod(0o755)
+                    self.fail(f"{script.name} waited")
+                after = self.listing(w.caddy_dir, cfdir)
+                directory.chmod(0o755)
+                if done.returncode == 0:
+                    continue
+                self.assertEqual(done.returncode, 1, done.stdout + done.stderr)
+                said = refusal in done.stderr or (
+                    state == "writable" and "the Caddy reload failed" in done.stderr
+                )
+                self.assertTrue(said, f"no refusal line: {done.stderr!r}")
+                self.assertEqual(after, before, "a directory changed: something was written")
+                self.assertTrue(caddyfile.is_file() and not caddyfile.is_symlink())
+                self.assertEqual(caddyfile.read_bytes(), bytes_before, "the live Caddyfile changed")
 
     def test_the_caddy_block_is_rendered_from_the_tags_own_file(self):
         w = self.world
