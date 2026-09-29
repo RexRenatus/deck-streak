@@ -968,5 +968,51 @@ class TheBinKillerRunsTheBinarysOwnUnitTests(unittest.TestCase):
         self.assertRegex(done.stdout, r"(?m)^examined 3 row")
 
 
+class TheBinKillerFollowsRustcAndRefusesAShadow(unittest.TestCase):
+    """The verifier's plants (v) and (vi) for SPEC-039 section 15: a binary's root named other than
+    `main.rs` declares its modules beside itself, as rustc reads a crate root; and a crate whose
+    `tests/bin.rs` the `bin` kind shadows is refused, never rerouted to the binary's own test."""
+
+    def test_a_module_beside_a_root_not_named_main_resolves(self):
+        manifest = BIN_MANIFEST.replace('path = "src/main.rs"', 'path = "src/other.rs"')
+        files = {
+            "crates/fix/Cargo.toml": manifest,
+            "crates/fix/src/other.rs": "mod helper;\n\nfn main() {}\n",
+            "crates/fix/src/helper.rs": BIN_FILES["crates/fix/src/helper.rs"],
+        }
+        rows = [
+            bin_row(
+                "S00059-BIN-OTHER-ROOT-MODULE",
+                "bin::helper::tests::four_halves_to_two",
+                find="x / 2",
+                replace="x / 3",
+                path="src/helper.rs",
+            )
+        ]
+        fixture = Fixture(self, rows, cargo=True, files=files)
+        done = census(fixture.root)
+        self.assertNotIn("S00059", done.stdout)
+        self.assertRegex(done.stdout, r"(?m)^examined 1 row")
+
+    def test_a_bin_killer_beside_a_tests_bin_rs_is_refused(self):
+        files = dict(
+            BIN_FILES,
+            **{
+                "crates/fix/tests/bin.rs": (
+                    "#[cfg(test)]\nmod tests {\n    #[test]\n    fn three_triples_to_nine() {\n"
+                    "        assert_eq!(9, 9);\n    }\n}\n"
+                )
+            },
+        )
+        fixture = Fixture(self, [bin_row("S00060-BIN-SHADOW", BIN_KILLER)], cargo=True, files=files)
+        done = census(fixture.root)
+        self.assertIn(
+            "census: S00060-BIN-SHADOW: its killer bin::tests::three_triples_to_nine crates/fix "
+            "has a test target bin, which the bin kind shadows",
+            done.stdout,
+        )
+        self.assertRegex(done.stdout, r"(?m)^examined 1 row")
+
+
 if __name__ == "__main__":
     unittest.main()
