@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE in_app_feed SET seen_at = ? WHERE seen_at IS NULL",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "dd54fee83d69a5fc848c35251b04fb4f1b1714c731dca96875950cdec8573720"
+}
