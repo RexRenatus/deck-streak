@@ -23,6 +23,7 @@ inventory, in the form the repository's privacy checks read.
 | `notification-queue` | the celebrations held by quiet hours or a failed send: their text, why and since when they are held, and how often a send failed | delivering them once quiet hours end or sends succeed, and naming every one given up | contract | until account deletion |
 | `in-app-feed` | the celebrations delivered to the Mini App, and when the Mini App fetched them | showing you in the Mini App the celebrations raised there | contract | until account deletion |
 | `notification-settings` | which kinds of message you switched off, and your quiet hours | honouring your choices of what to receive and when to stay quiet | contract | until account deletion |
+| `law-drills` | which law drills you answered, from which surface and on which day, and each graded drill's type, subject, accepted XP and grading day; never a drill's text or your answer, which stay in your own notes | answering each drill once, paying each graded drill once, and telling the agent which drill types and subjects you practised | contract | until account deletion |
 
 The lawful basis of each is the contract (GDPR Article 6(1)(b)): the service you run needs it. None
 is kept for a fixed period. Each is kept until you erase it, which is how an account is deleted here.

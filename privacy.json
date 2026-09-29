@@ -154,6 +154,17 @@
       "retention": {"until": "account-deletion"},
       "export": true,
       "erase": "delete"
+    },
+    {
+      "id": "law-drills",
+      "data": "which law drills the owner answered, from which surface and on which study day, and each graded drill's type, subject, accepted XP and the study day it was graded; never a drill's text or an answer, which stay in the owner's notes",
+      "source": "learner-input",
+      "stores": ["drill_answers.*", "drill_grades.*"],
+      "purpose": "answering each drill once, paying each graded drill once, and telling the agent which drill types and subjects the owner practised",
+      "lawful_basis": "contract",
+      "retention": {"until": "account-deletion"},
+      "export": true,
+      "erase": "delete"
     }
   ],
   "sql": ["migrations/*.sql"],
