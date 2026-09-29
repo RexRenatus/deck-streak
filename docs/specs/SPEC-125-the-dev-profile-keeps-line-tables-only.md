@@ -13,8 +13,9 @@ Measured at `dev` 026d1f3, on a cold build of the daemon and api test targets
 - **The workspace has no `[profile]` section**, so every dev and test build carries full debuginfo
   for every crate, dependencies included (the Cargo book gives `full` as `dev`'s default).
 - **Full debuginfo made the target about 3.6 times the size** of the same build with line tables
-  only in workspace crates and no debuginfo in dependencies. With incremental compilation on, the
-  lever's target was about 64% smaller.
+  only in workspace crates and no debuginfo in dependencies. That ratio compares a build with
+  incremental compilation off against one with it on. The manifest alone, incremental unchanged,
+  makes the target 64% smaller (about 2.8 times).
 - **Nothing else changed.** Both crates' failure sets were empty under both profiles, and a panic
   backtrace under the lever still named a workspace frame's file and line
   (`tests/lifecycle.rs:187:5`).
@@ -39,7 +40,7 @@ R3. A test pins both values by their whole value, and pins that no workflow or s
 | id | criterion | decided by |
 |---|---|---|
 | A1 | the test reads `debug = "line-tables-only"` under `profile.dev` and `debug = false` under `profile.dev.package."*"` from `Cargo.toml`; it is red before the change and green after | `test_build_profile.py` |
-| A2 | the manifest declares the profile, no workflow or script overrides it, and CI's Rust jobs (`rust`, `engine`, `mutation-rust`) pass on the new profile | `test_build_profile.py`, and the CI run of the head |
+| A2 | the manifest declares the profile, no workflow or script overrides it, and the jobs that build Rust on this diff (`rust`, `engine (1)` and `engine (2)`) pass on the new profile; `mutation-rust` builds nothing on a diff that changes no Rust production file | `test_build_profile.py`, and the CI run of the head |
 
 ```acceptance
 A1: python3 -m unittest discover -s scripts/tests -p test_build_profile.py -k test_workspace_crates_build_with_line_tables_only -k test_every_dependency_builds_without_debuginfo

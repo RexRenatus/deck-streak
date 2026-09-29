@@ -11,7 +11,8 @@ decision-makers: "@RexRenatus (owner), the DeckStreak architect"
 The workspace has no `[profile]` section, so every dev and test build carries full debuginfo for
 every crate, dependencies included. On a cold build of two crates' test targets, that made the target
 about 3.6 times the size of the same build with line tables only in workspace crates and none in
-dependencies, with identical test results and backtraces that still name each workspace frame's file
+dependencies (that ratio compares a build with incremental compilation off against one with it on;
+the manifest alone, incremental unchanged, makes the target 64% smaller, about 2.8 times), with identical test results and backtraces that still name each workspace frame's file
 and line (SPEC-125 section 1). Where is the setting made, and to what?
 
 ## Decision Drivers
@@ -31,7 +32,7 @@ and line (SPEC-125 section 1). Where is the setting made, and to what?
   among them) would need them, and two profiles on one target double it.
 - `debug = false` everywhere: rejected, because backtrace frames in workspace crates would lose
   their file and line.
-- Full debuginfo, as today: rejected, because of the ratio above (about 3.6 times the target, for
+- Full debuginfo, as today: rejected, because of the ratio above (about 3.6 times the target with incremental off against on, and about 2.8 times from the manifest alone, for
   information no test or backtrace here reads).
 
 ## Decision Outcome
