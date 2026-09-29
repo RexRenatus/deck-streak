@@ -191,6 +191,7 @@ apiKeyHelper scan's waiting entry is lifted; the JSON diff is handed back with t
 | `agent/duties/daily-reading.duty.md` | agent (public) | added: study-duties' duty template, copied |
 | `agent/redteam/` | agent (public) | added: the red-team cases |
 | `agent/tests/test_run_headless.py` | agent (public) | added |
+| `docs/specs/SPEC-123-the-box-proxy-scan-admits-an-expected-red-that-names-an-open-issue.md` | repo | amended: the VOID case's wording, SPEC-123 R5 and A4 |
 | `agent/tests/fakes/` | agent (public) | added: fake `claude` and `curl`, and a temporary credentials directory, for the runner's tests |
 | `ai-safety.json` | repo | added |
 | `crates/agent/Cargo.toml` | `deck-streak-agent` | changed: the workspace dependencies it uses |
