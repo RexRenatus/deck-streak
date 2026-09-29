@@ -1,0 +1,201 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S04301-THE-AI-ROUTE-SETTING-NAME",
+        "agent",
+        "src/route.rs",
+        "pub const AI_ROUTE: &str = \"DECKSTREAK_AI_ROUTE\";",
+        "pub const AI_ROUTE: &str = \"DECKSTREAK_AI\";",
+        "constants::the_ai_route_setting_is_named_deckstreak_ai_route",
+        "the route setting is read under the name .env.example documents (SPEC-043 R15, ADR-054)"
+      ],
+      [
+        "S04302-THE-ROUTE-STATES-ITS-SHAPE",
+        "agent",
+        "src/route.rs",
+        "const SHAPE: &'static str = \"proxy, or unset for no AI route\";",
+        "const SHAPE: &'static str = \"\";",
+        "constants::the_ai_route_setting_states_its_shape",
+        "a refused route value names the shapes it accepts (SPEC-043 R15)"
+      ],
+      [
+        "S04303-THE-DEFAULT-TURN-CAP",
+        "agent",
+        "src/duty.rs",
+        "pub const DEFAULT_MAX_TURNS: u32 = 30;",
+        "pub const DEFAULT_MAX_TURNS: u32 = 300;",
+        "constants::the_default_turn_cap_is_thirty",
+        "a duty's default turn cap is thirty (SPEC-043 R6)"
+      ],
+      [
+        "S04304-THE-DEFAULT-BUDGET-CAP",
+        "agent",
+        "src/duty.rs",
+        "pub const DEFAULT_MAX_BUDGET_MICRO_USD: u64 = 5_000_000;",
+        "pub const DEFAULT_MAX_BUDGET_MICRO_USD: u64 = 50_000_000;",
+        "constants::the_default_budget_cap_is_five_dollars",
+        "a duty's default budget cap is five dollars (SPEC-043 R6)"
+      ],
+      [
+        "S04305-THE-DEFAULT-WALL-CLOCK",
+        "agent",
+        "src/duty.rs",
+        "pub const DEFAULT_WALL_SECONDS: u64 = 1800;",
+        "pub const DEFAULT_WALL_SECONDS: u64 = 18000;",
+        "constants::the_default_wall_clock_is_eighteen_hundred_seconds",
+        "a duty's default wall clock is 1800 seconds (SPEC-043 R6)"
+      ],
+      [
+        "S04306-THE-DAILY-READING-WALL-CLOCK",
+        "agent",
+        "src/duty.rs",
+        "pub const DAILY_READING_WALL_SECONDS: u64 = 620;",
+        "pub const DAILY_READING_WALL_SECONDS: u64 = 6200;",
+        "constants::the_daily_reading_wall_clock_is_six_hundred_twenty_seconds",
+        "the daily reading's wall clock is 620 seconds (SPEC-043 R6)"
+      ],
+      [
+        "S04307-THE-DAILY-READING-NAME",
+        "agent",
+        "src/duty.rs",
+        "pub const DAILY_READING: &str = \"daily-reading\";",
+        "pub const DAILY_READING: &str = \"reading\";",
+        "constants::the_daily_reading_is_recorded_under_its_name",
+        "agent_runs records the daily reading under its duty name (SPEC-043 R13)"
+      ],
+      [
+        "S04308-THE-WALL-CLOCK-GRACE",
+        "agent",
+        "src/runner.rs",
+        "pub const WALL_CLOCK_GRACE: Duration = Duration::from_secs(45);",
+        "pub const WALL_CLOCK_GRACE: Duration = Duration::from_secs(450);",
+        "constants::the_wall_clock_grace_is_forty_five_seconds",
+        "the runner gives its own script 45 seconds beyond the wall clock to refuse before it is killed (SPEC-043 R7)"
+      ],
+      [
+        "S04309-THE-TURN-CAP-SUBTYPE",
+        "agent",
+        "src/runner.rs",
+        "pub const SUBTYPE_TURN_CAP: &str = \"error_max_turns\";",
+        "pub const SUBTYPE_TURN_CAP: &str = \"error_turns\";",
+        "runner::a_run_past_its_turn_cap_delivers_nothing",
+        "a Claude result of subtype error_max_turns is the turn cap (SPEC-043 A7)"
+      ],
+      [
+        "S04310-THE-BUDGET-CAP-SUBTYPE",
+        "agent",
+        "src/runner.rs",
+        "pub const SUBTYPE_BUDGET_CAP: &str = \"error_max_budget_usd\";",
+        "pub const SUBTYPE_BUDGET_CAP: &str = \"error_budget\";",
+        "runner::a_run_past_its_budget_cap_delivers_nothing",
+        "a Claude result of subtype error_max_budget_usd is the budget cap (SPEC-043 R6)"
+      ],
+      [
+        "S04311-THE-WALL-CLOCK-MARK",
+        "agent",
+        "src/runner.rs",
+        "pub const WALL_CLOCK_MARK: &str = \"wall clock\";",
+        "pub const WALL_CLOCK_MARK: &str = \"wall-clock\";",
+        "runner::a_run_past_its_wall_clock_delivers_nothing",
+        "a runner refusal naming the wall clock is the time cap (SPEC-043 A8)"
+      ],
+      [
+        "S04312-A-VOID-PROBE-IS-NAMED",
+        "agent",
+        "src/gate.rs",
+        "pub const CLASS_VOID: &str = \"void\";",
+        "pub const CLASS_VOID: &str = \"\";",
+        "constants::the_gate_names_a_void_and_an_empty_probe",
+        "a probe that cannot run is withheld under the class void (SPEC-043 R11)"
+      ],
+      [
+        "S04313-AN-EMPTY-PROBE-IS-NAMED",
+        "agent",
+        "src/gate.rs",
+        "pub const CLASS_EMPTY: &str = \"examined-nothing\";",
+        "pub const CLASS_EMPTY: &str = \"\";",
+        "constants::the_gate_names_a_void_and_an_empty_probe",
+        "a probe that examined nothing is withheld under examined-nothing (SPEC-043 R11)"
+      ],
+      [
+        "S04314-THE-AGENT-RUNS-TABLE",
+        "agent",
+        "src/runs.rs",
+        "pub const AGENT_RUNS_TABLE: &str = \"agent_runs\";",
+        "pub const AGENT_RUNS_TABLE: &str = \"runs\";",
+        "constants::the_agent_runs_table_and_context_are_named",
+        "the data-rights port names the table the migration creates (SPEC-043 R13)"
+      ],
+      [
+        "S04315-THE-AGENT-CONTEXT",
+        "agent",
+        "src/data_rights.rs",
+        "pub const AGENT_CONTEXT: &str = \"agent\";",
+        "pub const AGENT_CONTEXT: &str = \"agents\";",
+        "constants::the_agent_runs_table_and_context_are_named",
+        "the data-rights port declares the agent context (SPEC-043 R13)"
+      ],
+      [
+        "S04316-THE-RETENTION-IS-NINETY-DAYS",
+        "agent",
+        "src/runs.rs",
+        "pub const RETENTION_DAYS: i64 = 90;",
+        "pub const RETENTION_DAYS: i64 = 900;",
+        "data_rights::a_run_older_than_the_retention_is_pruned_and_a_newer_one_kept",
+        "agent_runs keeps 90 days, as privacy.json declares"
+      ],
+      [
+        "S04317-A-DAY-IS-EIGHTY-SIX-MILLION-MILLISECONDS",
+        "coordination",
+        "src/maintenance.rs",
+        "const MILLIS_PER_DAY: i64 = 86_400_000;",
+        "const MILLIS_PER_DAY: i64 = 8_640_000;",
+        "maintenance::maintenance_prunes_the_agent_runs_past_their_retention",
+        "the upkeep's retention cutoff counts whole days of milliseconds, the unit agent_runs.created_at is kept in (SPEC-043 R13)"
+      ]
+    ],
+    "SCRIPT_MUTATIONS": [
+      [
+        "S04318-THE-CREDENTIAL-HAS-NO-ENVIRONMENT-FALLBACK",
+        "agent/run-headless.sh",
+        "device_key=\"$(<\"$credential_file\")\"",
+        "device_key=\"${CLAUDE_CODE_OAUTH_TOKEN:-$(<\"$credential_file\")}\"",
+        "the device key is the credential file's content alone, so a token in the environment never replaces it (SPEC-043 A15, ADR-038, issue 341)",
+        "test_run_headless.CredentialComesOnlyFromTheSocket.test_an_environment_token_never_replaces_the_credential"
+      ],
+      [
+        "S04319-THE-CREDENTIAL-IS-READ-FROM-ONE-NAME",
+        "agent/run-headless.sh",
+        "credential_file=\"${CREDENTIALS_DIRECTORY:-}/agent-device-key\"",
+        "credential_file=\"${CREDENTIALS_DIRECTORY:-}/device-key\"",
+        "the runner reads the credential named agent-device-key in the credentials directory and no other file (SPEC-043 A15, ADR-038, issue 341)",
+        "test_run_headless.CredentialComesOnlyFromTheSocket.test_a_token_file_at_any_other_path_is_refused"
+      ],
+      [
+        "S04320-NO-COMMITTED-FILE-NAMES-A-TOKEN-PATH",
+        "agent/settings.json",
+        "\"DISABLE_AUTOUPDATER\": \"1\"",
+        "\"DISABLE_AUTOUPDATER\": \"1\",\n    \"CLAUDE_CODE_OAUTH_TOKEN_FILE\": \"/var/lib/deck-streak/agent-device-key\"",
+        "no committed file under agent/ names a token file on persistent disk (SPEC-043 A15, issue 341)",
+        "test_run_headless.CredentialComesOnlyFromTheSocket.test_no_committed_file_under_agent_carries_a_token_or_a_token_path"
+      ],
+      [
+        "S04321-THE-PROXY-URL-IS-AN-EXACT-LOOPBACK-URL",
+        "agent/run-headless.sh",
+        "[[ \"$url\" =~ ^http://(127\\.0\\.0\\.1|localhost|\\[::1\\])(:[0-9]{1,5})?$ ]] ||",
+        "[[ \"$url\" =~ ^http://.*$ ]] ||",
+        "the runner accepts only an exact loopback proxy URL, host and optional port and nothing after them (SPEC-043 R3, A2)",
+        "test_run_headless.RunnerTest.test_the_runner_accepts_only_an_exact_loopback_url_and_an_absolute_path"
+      ],
+      [
+        "S04322-THE-CAPACITY-PATH-IS-AN-ABSOLUTE-PATH",
+        "agent/run-headless.sh",
+        "[[ \"$capacity_path\" =~ ^/[A-Za-z0-9._/-]*$ ]] || refuse 2 \"the capacity path is not an absolute path\"",
+        ":",
+        "the runner accepts only an absolute capacity path (SPEC-043 R4, A2)",
+        "test_run_headless.RunnerTest.test_the_runner_accepts_only_an_exact_loopback_url_and_an_absolute_path"
+      ]
+    ]
+  }
+}

@@ -89,3 +89,41 @@ async fn maintenance_checkpoints_optimises_and_prunes_the_ledger() {
     assert_eq!(after, 0, "TRUNCATE leaves an empty write-ahead log");
     db.close().await;
 }
+
+#[tokio::test]
+async fn maintenance_prunes_the_agent_runs_past_their_retention() {
+    use deck_streak_agent::runs::{AgentRuns, RETENTION_DAYS, RunRecord};
+    use deck_streak_agent::verdict::Verdict;
+    use deck_streak_kernel::UtcMillis;
+
+    let directory = tempfile::tempdir().expect("a temporary directory");
+    let db = Db::open(&directory.path().join("deck_streak.db"))
+        .await
+        .expect("the database opens");
+    let runs = AgentRuns::new(db.clone());
+    let day_millis = 86_400_000_i64;
+    let verdict = Verdict::AiRouteAbsent;
+    for age in [0, RETENTION_DAYS - 1, RETENTION_DAYS + 1, 200] {
+        runs.record(&RunRecord {
+            duty: "synthetic-duty",
+            template: "t",
+            subject: "s",
+            verdict: &verdict,
+            telemetry: None,
+            at: UtcMillis::from_epoch_millis((TODAY - age) * day_millis),
+        })
+        .await
+        .expect("a planted run");
+    }
+
+    let done = upkeep(&db, FireDate::from_epoch_day(TODAY))
+        .await
+        .expect("the upkeep runs");
+
+    assert_eq!(done.agent_runs_pruned, 2, "{done:?}");
+    let kept: i64 = sqlx::query_scalar("SELECT count(*) FROM agent_runs")
+        .fetch_one(db.reader())
+        .await
+        .expect("the runs count");
+    assert_eq!(kept, 2, "the runs within the retention survive");
+}
