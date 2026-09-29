@@ -829,3 +829,26 @@ binary named other than its package, a unit test in the binary's root file and o
 declares, and a library test the binary does not hold. A42's first test calls the runner's
 functions with `subprocess.run` replaced by a recorder, and reads the argv it built. A43 proves two
 rows with cargo in the fixture's own `target/`, and A44 runs the census over three planted rows. A45's two tests plant a binary rooted at `src/other.rs` with a module beside it, and a `tests/bin.rs` beside the binary, and read the census.
+
+## 17. Amendment, 2026-09-29: a leg with nothing to examine is not started (SPEC-290)
+
+R3 says each of the five jobs "is never skipped, because `ci` reads a skipped need as failed".
+SPEC-290 (ADR-290, #435) makes that false for two of them, and only when the plan's listing gives
+the leg nothing to examine:
+
+- `mutation-rust` runs under `if: ${{ needs.mutation-plan.outputs.listed != '0' }}`. `listed` is a
+  new plan output, written by `mutation-verdict.py shards`: the number of mutants the shards hold,
+  `0` when the Rust class does not apply. The matrix, the shards and the `cargo mutants` line are
+  unchanged.
+- `mutation-rows` runs under
+  `if: ${{ needs.mutation-plan.outputs.rows == 'true' || needs.mutation-plan.outputs.scope == 'diff' }}`,
+  so R11's retirement check still runs on every diff, and the leg is not started only on a
+  `not-applicable` push that selects no row.
+- R4's verdict gains two readings: a shard the listing gives no mutant and that left no artifact is
+  `not started`, and a sum of the reports' mutants that differs from the listing's count is VOID.
+  Its new `legs` verb refuses by name a skipped leg the listing owed work.
+- `ci` admits `skipped` from those two legs alone, once each, beside a `mutation-verdict` that must
+  succeed. `mutation-plan`, `mutation-verdict` and `mutation-web` are still never skipped, and every
+  leg that starts prints its case as R3 says.
+
+This section adds no criterion: SPEC-290's A1 to A7 decide it, and its rows are S29000-S29099.
