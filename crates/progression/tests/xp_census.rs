@@ -152,10 +152,13 @@ fn use_tree(tokens: &[String], at: &mut usize, prefix: &[String], out: &mut Vec<
                 }
             }
         }
+        // `settle::{self as ledger}` renames the module the group is read below: its path is the
+        // group's own prefix, so it is a leaf because it carries a name.
+        let renamed_self = alias.is_some() && path.last().is_some_and(|last| last == "self");
         if path.last().is_some_and(|last| last == "self") {
             path.pop();
         }
-        if !grouped && path.len() > prefix.len() {
+        if !grouped && (path.len() > prefix.len() || renamed_self) {
             out.push(Leaf { path, alias });
         }
         if tokens.get(*at).is_some_and(|next| next == ",") {
