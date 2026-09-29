@@ -314,6 +314,13 @@ green.
   (`on_message`, `on_callback`), and each path that ends in one, and refuses one outside its nine
   named callers; over the tree, each named caller is found. A module on a longer path, such as
   `std::sync`, is not one.
+- The fifth round's classification principle (a5b2684 red, green at 21bb033). Held as text: a
+  `transfer_gift` call from the daemon, an `answer_callback_query` call and a `post_story` call.
+  Each was refused only after the move, which follows one principle: a method is held when it can
+  put new or changed content in front of a user. The gifts, `repostStory`, `postStory`,
+  `setGameScore`, the answers, the profile, title, description, topic and menu methods moved into
+  the held lists (29 send, 46 delivery, 110 classified, 185 in all), and the transport's answer to
+  a callback and its menu of commands became named sends, ten in all. A15's lists changed with it.
 
 These are new cases of A15, not a criterion of its own, so their record stands outside the
 `red-first` fences. Each red is the first assertion of its test that failed; the cases after it in

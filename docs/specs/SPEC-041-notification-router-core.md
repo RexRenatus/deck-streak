@@ -386,8 +386,16 @@ the verdict of a run with that wiring is posted as the `box/packs` status at the
     caption, its media, its live location, its checklist or its keyboard, an ephemeral edit, a
     stopped poll or live location, a pin, a reaction and a Mini App query's answer) are held like
     its send methods. Outside the bot's sources nothing names one; inside them one is named only by
-    its own named send, and the transport's `edit_html` is `editMessageText`'s, the eighth named
+    its own named send, and the transport's `edit_html` is `editMessageText`'s, one of ten named
     send, which the census finds once although no shipped source calls it.
+  - A method is held when it can put new or changed content in front of any user: the gifts, the
+    stories, a game score, a callback, inline, shipping or checkout answer, a suggested post's
+    decision, a chat's title, description or photo, a forum topic, the bot's own name, texts,
+    photo, commands and menu button, and a business account's name, bio, username and photo. The
+    transport's answer to a callback and its menu of commands are named sends. What is only state
+    (permissions, members, tokens, badges, sticker sets, invite links, deletions, reads, prepared
+    objects and `upgradeGift`) is classified, not held. The census now holds 29 send methods, 46
+    delivery methods and 110 that deliver nothing, 185 in all.
   - The pinned client's whole table is listed in the census with the client's version, which a
     bump of the lock turns red until the list is derived again, and every method in it is a send,
     a delivery or not a delivery, in one class only. Deletions, unpins and the other classes of
