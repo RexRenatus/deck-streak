@@ -16,6 +16,11 @@ pub const READING_TOPIC_DAYS_TABLE: &str = "reading_topic_days";
 /// Each resolution run (`migrations/004501_readings_topic_days_and_runs.sql`).
 pub const READING_RUNS_TABLE: &str = "reading_runs";
 
+/// Each topic's stored reading (`migrations/004601_readings_and_attempts.sql`).
+pub const READINGS_TABLE: &str = "readings";
+/// Each model attempt at a reading (`migrations/004601_readings_and_attempts.sql`).
+pub const READING_ATTEMPTS_TABLE: &str = "reading_attempts";
+
 /// Readings' implementation of the kernel's data-rights port.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct ReadingsDataRights;
