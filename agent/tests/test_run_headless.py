@@ -5,7 +5,7 @@ on PATH, so nothing reaches a model, a proxy or the network. The device key is a
 test writes into a temporary credentials directory; it is built from parts at run time.
 """
 
-import os
+import re
 import subprocess
 import tempfile
 import unittest
@@ -33,13 +33,21 @@ def examined(what, items):
 class Run:
     """One launch of the runner, and everything the test may read back afterwards."""
 
-    def __init__(self, root: Path, env: dict[str, str], args: list[str]) -> None:
+    def __init__(
+        self,
+        root: Path,
+        env: dict[str, str | None],
+        args: list[str],
+        credential_files: dict[str, str] | None = None,
+    ) -> None:
         self.records = root / "records"
         self.scratch = root / "scratch"
         self.credentials = root / "credentials"
         for directory in (self.records, self.scratch, self.credentials):
             directory.mkdir(mode=0o700, exist_ok=True)
-        (self.credentials / "agent-device-key").write_text(KEY + "\n")
+        files = {"agent-device-key": KEY + "\n"} if credential_files is None else credential_files
+        for name, text in files.items():
+            (self.credentials / name).write_text(text)
         prompt = root / "prompt.md"
         prompt.write_text("a synthetic prompt\n")
         self.prompt = prompt
@@ -58,6 +66,7 @@ class Run:
             "DECKSTREAK_AGENT_WALL_SECONDS": "20",
         }
         base.update(env)
+        base = {name: value for name, value in base.items() if value is not None}
         argv = args if args else [str(prompt)]
         self.done = subprocess.run(
             ["bash", str(RUNNER), *argv],
@@ -200,6 +209,108 @@ class RunnerTest(unittest.TestCase):
         )
         self.assertEqual(masked.done.returncode, 6, masked.done.stderr)
         self.assertIn("error_max_turns", masked.done.stdout)
+
+
+# A token-shaped prefix, assembled at run time so the secrets scan never sees one literal.
+TOKEN_PREFIX = "-".join(["sk", "ant", "oat01"])
+TOKEN_NAMES = ("CLAUDE_CODE_OAUTH_TOKEN", "ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN")
+TOKEN_LITERAL = re.compile(r"sk-ant-[a-z0-9]+-[A-Za-z0-9_-]{8,}")
+# A path to a token on persistent disk: a home, system or state directory holding a credential.
+TOKEN_PATH = re.compile(
+    r"(?:/(?:home|root|etc|var|opt|srv|mnt)/|~/|\$HOME/)[^\s\"']*"
+    r"(?:device-key|oauth|token|\.credentials|\.key\b)"
+)
+
+
+class CredentialComesOnlyFromTheSocket(unittest.TestCase):
+    """The credential row, substituted for the proxy scan's secret-manager read (issue 341).
+
+    ADR-038 loads the device key through systemd's credentials directory, so the runner reads
+    `$CREDENTIALS_DIRECTORY/agent-device-key` and nothing else. The unit's `LoadCredential=` line
+    (criterion (a)) ships with the unit, in SPEC-063 (issue 43), not in this delivery.
+    """
+
+    def setUp(self) -> None:
+        holder = tempfile.TemporaryDirectory()
+        self.addCleanup(holder.cleanup)
+        self.root = Path(holder.name)
+
+    def script(self) -> str:
+        return RUNNER.read_text(encoding="utf-8")
+
+    def test_an_environment_token_never_replaces_the_credential(self) -> None:
+        planted = "-".join(["planted", "environment", "token"])
+        env = {name: planted for name in TOKEN_NAMES}
+        run = Run(self.root, env, [])
+        self.assertEqual(run.done.returncode, 0, run.done.stderr)
+        self.assertIn(f"CLAUDE_CODE_OAUTH_TOKEN={KEY}", run.record("claude.env"))
+        for name in ("claude.env", "claude.argv", "curl.argv", "curl.stdin"):
+            self.assertNotIn(planted, run.record(name), name)
+        self.assertNotIn(KEY, run.record("claude.argv"), "the token never reaches argv")
+
+    def test_a_token_in_the_environment_without_a_credentials_directory_is_refused(self) -> None:
+        unset = re.search(r"(?m)^unset ((?:.*\\\n)*.*)$", self.script())
+        self.assertIsNotNone(unset, "the runner unsets the names it never accepts")
+        names = examined(
+            "token variable name(s)",
+            {*TOKEN_NAMES, *re.findall(r"[A-Z][A-Z0-9_]+", unset.group(1).replace("\\\n", " "))},
+        )
+        env: dict[str, str | None] = {name: "planted" for name in names}
+        env["CREDENTIALS_DIRECTORY"] = None
+        run = Run(self.root, env, [])
+        self.assertEqual(run.done.returncode, 1, run.done.stderr)
+        self.assertEqual(len(run.refusals()), 1)
+        self.assertEqual(run.record("claude.argv"), "", "claude never ran")
+        self.assertEqual(run.record("curl.argv"), "", "the proxy was never asked")
+
+    def test_a_token_file_at_any_other_path_is_refused(self) -> None:
+        others = {"device-key": KEY, "agent-device-key.txt": KEY, "token": KEY, "key": KEY}
+        run = Run(self.root, {}, [], credential_files=others)
+        elsewhere = self.root / ".config"
+        elsewhere.mkdir()
+        (elsewhere / "agent-device-key").write_text(KEY)
+        self.assertEqual(run.done.returncode, 1, run.done.stderr)
+        self.assertEqual(len(run.refusals()), 1)
+        self.assertEqual(run.record("claude.argv"), "", "claude never ran")
+        self.assertNotIn(KEY, run.done.stderr)
+
+    def test_the_script_has_one_credential_read_and_no_fallback_chain(self) -> None:
+        lines = examined("script line(s)", self.script().splitlines())
+        reads = [line for line in lines if "agent-device-key" in line and "=" in line]
+        reads = [line for line in reads if not line.lstrip().startswith("#")]
+        self.assertEqual(reads, ['credential_file="${CREDENTIALS_DIRECTORY:-}/agent-device-key"'])
+        assignments = [line for line in lines if line.startswith("device_key=")]
+        self.assertEqual(assignments, ['device_key="$(<"$credential_file")"'])
+        for line in lines:
+            if line.lstrip().startswith("#"):
+                continue
+            if "CLAUDE_CODE_OAUTH_TOKEN" in line:
+                self.assertTrue(
+                    line.startswith('CLAUDE_CODE_OAUTH_TOKEN="$device_key" timeout'), line
+                )
+
+    def test_no_committed_file_under_agent_carries_a_token_or_a_token_path(self) -> None:
+        roots = [AGENT]
+        deploy = AGENT.parent / "deploy"
+        files = []
+        for base in roots:
+            files += [
+                path
+                for path in base.rglob("*")
+                if path.is_file() and "__pycache__" not in path.parts
+            ]
+        # deploy/ is read where a file names the agent.
+        for path in deploy.rglob("*") if deploy.is_dir() else []:
+            if not path.is_file():
+                continue
+            text = path.read_text(encoding="utf-8", errors="replace")
+            if re.search(r"deckstreak-agent|DECKSTREAK_AGENT|agent-device-key", text):
+                files.append(path)
+        for path in examined("file(s) under agent/ or naming the agent", files):
+            text = path.read_text(encoding="utf-8", errors="replace")
+            self.assertIsNone(TOKEN_LITERAL.search(text), f"{path}: a token literal")
+            self.assertNotIn(TOKEN_PREFIX, text, f"{path}: a token prefix")
+            self.assertIsNone(TOKEN_PATH.search(text), f"{path}: a token path on disk")
 
 
 if __name__ == "__main__":

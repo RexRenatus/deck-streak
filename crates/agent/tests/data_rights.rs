@@ -3,7 +3,7 @@
 
 use deck_streak_agent::data_rights::{AGENT_CONTEXT, AgentDataRights};
 use deck_streak_agent::runs::{AGENT_RUNS_TABLE, AgentRuns, RunRecord};
-use deck_streak_agent::verdict::{Cause, Telemetry, Verdict};
+use deck_streak_agent::verdict::{Cause, Delivered, Telemetry, Verdict};
 use deck_streak_kernel::{DataRights, Db, Disposition, UtcMillis};
 use serde_json::json;
 
@@ -98,5 +98,45 @@ async fn a_run_older_than_the_retention_is_pruned_and_a_newer_one_kept() {
         .await
         .expect("rows");
     assert_eq!(left, [20, 30]);
+    db.close().await;
+}
+
+#[tokio::test]
+async fn a_delivered_run_records_the_telemetry_its_verdict_carries() {
+    let dir = tempfile::tempdir().expect("a directory");
+    let db = Db::open(&dir.path().join("t.db"))
+        .await
+        .expect("a database");
+    let runs = AgentRuns::new(db.clone());
+    let verdict = Verdict::Delivered(Delivered {
+        output: "text".into(),
+        telemetry: Telemetry {
+            turns: 3,
+            input_tokens: 11,
+            output_tokens: 12,
+            cost_micro_usd: 13,
+            duration_ms: 14,
+        },
+    });
+    let id = runs
+        .record(&RunRecord {
+            duty: "d",
+            template: "t",
+            subject: "s",
+            verdict: &verdict,
+            telemetry: None,
+            at: UtcMillis::from_epoch_millis(1),
+        })
+        .await
+        .expect("a run");
+    let row: (i64, i64, i64, i64, i64) = sqlx::query_as(
+        "SELECT turns, input_tokens, output_tokens, cost_micro_usd, duration_ms \
+         FROM agent_runs WHERE id = ?1",
+    )
+    .bind(id)
+    .fetch_one(db.reader())
+    .await
+    .expect("a row");
+    assert_eq!(row, (3, 11, 12, 13, 14));
     db.close().await;
 }
