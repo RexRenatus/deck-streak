@@ -100,6 +100,16 @@ if [ "$first" = validate ] && [ "$adapter" != caddyfile ]; then
     case "$name" in Caddyfile* | *.caddyfile) ;; *) echo "invalid character: not JSON" >&2; exit 1 ;; esac
 fi
 [ "$first" = validate ] && [ -f "$STUB_LOG/caddy-refuses" ] && exit 1
+if [ "$first" = reload ]; then
+    # the previous copies a reload can see, and a reload that fails on demand: the file holds how many
+    echo "$(ls -1 "$(dirname "$conf")" | grep -c '\.previous$')" >> "$STUB_LOG/reload-sees.log"
+    if [ -f "$STUB_LOG/caddy-reload-fails" ]; then
+        left=$(cat "$STUB_LOG/caddy-reload-fails")
+        if [ "$left" -le 1 ]; then find "$STUB_LOG/caddy-reload-fails" -delete; else echo $((left - 1)) > "$STUB_LOG/caddy-reload-fails"; fi
+        echo "reload refused" >&2
+        exit 1
+    fi
+fi
 exit 0
 """
 LOGGED = r"""#!/bin/bash
@@ -636,6 +646,81 @@ class TheCaddyInstall(Case):
             DEPLOY, "caddy-install", "v1.0.0", DECKSTREAK_DEPLOY_CADDY_CONFIG="/nonexistent"
         )
         self.assertNotEqual(done.returncode, 0, "no private configuration")
+
+    def installed(self, host="app.example.org"):
+        """A Caddyfile and a first successful install; returns (original, after, block text)."""
+        w = self.world
+        caddyfile = w.caddy_dir / "Caddyfile"
+        original = "example.org {\n\trespond 200\n}\n"
+        caddyfile.write_text(original, encoding="utf-8")
+        w.ship("v1.0.0")
+        self.ok(w.run(DEPLOY, "caddy-install", "v1.0.0", **self.config(host=host)))
+        block = w.caddy_dir / "deck-streak.caddy"
+        return original, caddyfile.read_text(), block.read_text()
+
+    def leftovers(self):
+        return sorted(p.name for p in self.world.caddy_dir.iterdir() if "previous" in p.name)
+
+    def test_a_failed_reload_restores_the_previous_block_and_caddyfile(self):
+        w = self.world
+        _original, after, block_text = self.installed()
+        (w.log / "caddy-reload-fails").write_text("1")
+        done = w.run(DEPLOY, "caddy-install", "v1.0.0", **self.config(host="new.example.org"))
+        self.assertNotEqual(done.returncode, 0, "the install refuses")
+        self.assertIn("reload", done.stderr, "the message names the failed reload")
+        self.assertEqual((w.caddy_dir / "deck-streak.caddy").read_text(), block_text)
+        self.assertEqual((w.caddy_dir / "Caddyfile").read_text(), after)
+        self.assertEqual(self.leftovers(), [], "no previous copy is left behind")
+        reloads = [ln for ln in w.text("caddy.log").splitlines() if ln.startswith("caddy reload")]
+        self.assertEqual(len(reloads), 3, "the restored configuration is reloaded")
+
+    def test_a_failed_restoring_reload_is_named_apart_and_still_refuses(self):
+        w = self.world
+        _original, after, block_text = self.installed()
+        (w.log / "caddy-reload-fails").write_text("2")
+        done = w.run(DEPLOY, "caddy-install", "v1.0.0", **self.config(host="new.example.org"))
+        self.assertNotEqual(done.returncode, 0)
+        self.assertIn("restoring reload", done.stderr, "a second failure is named distinctly")
+        self.assertEqual((w.caddy_dir / "deck-streak.caddy").read_text(), block_text)
+        self.assertEqual((w.caddy_dir / "Caddyfile").read_text(), after)
+
+    def test_a_first_install_whose_reload_fails_removes_the_new_block(self):
+        w = self.world
+        caddyfile = w.caddy_dir / "Caddyfile"
+        original = "example.org {\n\trespond 200\n}\n"
+        caddyfile.write_text(original, encoding="utf-8")
+        w.ship("v1.0.0")
+        (w.log / "caddy-reload-fails").write_text("1")
+        done = w.run(DEPLOY, "caddy-install", "v1.0.0", **self.config())
+        self.assertNotEqual(done.returncode, 0)
+        self.assertFalse((w.caddy_dir / "deck-streak.caddy").exists(), "the new block is removed")
+        self.assertEqual(caddyfile.read_text(), original, "the previous Caddyfile is back")
+        self.assertEqual(self.leftovers(), [])
+
+    def test_the_previous_copies_outlive_the_reload_and_go_after_a_good_one(self):
+        w = self.world
+        self.installed()
+        first = w.text("reload-sees.log").split()
+        self.assertEqual(first, ["1"], "a first install keeps the Caddyfile until the reload")
+        self.ok(w.run(DEPLOY, "caddy-install", "v1.0.0", **self.config(host="new.example.org")))
+        seen = w.text("reload-sees.log").split()
+        self.assertEqual(seen[-1], "2", "the block and the Caddyfile are both kept at the reload")
+        self.assertEqual(self.leftovers(), [], "a good reload removes both copies")
+
+    def test_a_failed_reload_of_the_removal_restores_the_block_and_caddyfile(self):
+        w = self.world
+        _original, after, block_text = self.installed()
+        (w.log / "caddy-reload-fails").write_text("1")
+        done = w.run(ROLLBACK, "caddy-remove", **self.config())
+        self.assertNotEqual(done.returncode, 0)
+        self.assertIn("reload", done.stderr)
+        block = w.caddy_dir / "deck-streak.caddy"
+        self.assertEqual(block.read_text() if block.exists() else None, block_text)
+        self.assertEqual((w.caddy_dir / "Caddyfile").read_text(), after)
+        self.assertEqual(self.leftovers(), [])
+        self.ok(w.run(ROLLBACK, "caddy-remove", **self.config()))
+        self.assertFalse((w.caddy_dir / "deck-streak.caddy").exists())
+        self.assertEqual(self.leftovers(), [])
 
     def test_the_caddy_calls_name_the_caddyfile_adapter_for_the_candidate_copy(self):
         w = self.world
