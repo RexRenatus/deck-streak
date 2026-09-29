@@ -719,7 +719,18 @@ byte is kept in order. It inserts this section only.
   at any depth, in the tree and in a revision, naming the file and the key. SPEC-122 decides it and
   ADR-122 records it; the rows are in `S12200-S12299`.
 
-## 14. Amendment, 2026-09-29: the Python is mutated by a runner of its own
+## 14. Amendment, 2026-09-29: the verdict reads each report by name
+
+Made by issue #351's delivery, insert-only under ruling (i) of SPEC-038 section 8: every earlier
+byte is kept in order. It inserts this section only.
+
+- **The verdict's report layout depended on how many artifacts matched.** Its one download was a
+  pattern over every `mutation-*` artifact, and the action extracts a single match flat, so a run
+  in which only the plan had uploaded read `VOID no plan`. The verdict now downloads the plan and
+  the rows' report each by name and the shards by a merged pattern, and reads no `mutation-web`
+  artifact. SPEC-126 decides it and ADR-126 records it.
+
+## 15. Amendment, 2026-09-29: the Python is mutated by a runner of its own
 
 Made by SPEC-087's delivery (issues #218 and #219), insert-only under ruling (i) of SPEC-038
 section 8: every earlier byte is kept in order. It adds:

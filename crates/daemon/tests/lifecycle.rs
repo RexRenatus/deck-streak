@@ -183,6 +183,18 @@ fn the_binary_notifies_ready_watchdog_and_stopping_then_exits_zero() {
 }
 
 #[test]
+fn the_watchdog_is_read_from_the_variables_systemd_sets() {
+    // sd_watchdog_enabled(3): renamed, the heartbeat never arms and systemd kills the role.
+    let armed = Environment::from_vars([("WATCHDOG_USEC", "90000000")]);
+    assert_eq!(
+        watchdog_timeout(&armed, 4242),
+        Some(Duration::from_secs(90))
+    );
+    let another = Environment::from_vars([("WATCHDOG_USEC", "90000000"), ("WATCHDOG_PID", "4343")]);
+    assert_eq!(watchdog_timeout(&another, 4242), None);
+}
+
+#[test]
 fn the_api_role_refuses_start_without_an_identity_credential() {
     // Each of identity's credentials missing in turn: the role exits 1 before it binds, and its
     // first line is an ERROR event naming the missing credential's id and no credential's value.

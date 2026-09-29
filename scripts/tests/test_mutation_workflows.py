@@ -368,7 +368,7 @@ class TheShardsAreThePlans(unittest.TestCase):
             r"(?m)^    needs: \[mutation-plan, mutation-rust, mutation-python, mutation-rows\]$",
         )
         self.assertRegex(verdict, r"(?m)^    if: \$\{\{ always\(\) \}\}$")
-        self.assertRegex(verdict, r"(?m)^\s+pattern: mutation-\*$")
+        self.assertRegex(verdict, r"(?m)^\s+pattern: mutation-rust-shard-\*$")
         self.assertRegex(verdict, r"judge [^\n]*--class rust [^\n]*--shard-reports ")
 
 
