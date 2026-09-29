@@ -1,0 +1,31 @@
+{
+  "records": [
+    {
+      "file": "crates/identity/src/init_data.rs",
+      "mutant": "replace | with ^ in decode",
+      "anchor": "(hex_digit(rest.next()?)? << 4) | hex_digit(rest.next()?)?",
+      "reason": "The two operands of the byte's | share no set bit, so | and ^ produce the same byte for every escape.",
+      "evidence": "hex_digit returns to_digit(16) as u8, at most 15 (git grep -n 'hex_digit(' shows it feeds only this expression, hex_bytes' and its own definition): the left operand, that value shifted left by 4, has its low four bits clear and the right operand has its high four clear, so a | b == a ^ b == a + b.",
+      "reached_by": "init_data::a_payload_signed_with_the_webappdata_key_is_accepted",
+      "issue": "#302"
+    },
+    {
+      "file": "crates/identity/src/init_data.rs",
+      "mutant": "replace | with ^ in hex_bytes",
+      "anchor": "(hex_digit(pair[0])? << 4) | hex_digit(pair[1])?",
+      "reason": "The two operands of the byte's | share no set bit, so | and ^ produce the same byte for every hash pair.",
+      "evidence": "Both operands come from hex_digit, at most 15 as a u8: the left one shifted left by 4 has only its high four bits, the right one only its low four, so no bit is set in both and a | b == a ^ b.",
+      "reached_by": "init_data::a_payload_signed_with_the_webappdata_key_is_accepted",
+      "issue": "#302"
+    },
+    {
+      "file": "crates/identity/src/session.rs",
+      "mutant": "replace | with ^ in id_bytes",
+      "anchor": "(value(pair[0])? << 4) | value(pair[1])?",
+      "reason": "The two operands of the byte's | share no set bit, so | and ^ produce the same byte for every id.",
+      "evidence": "The local closure value returns digit - b'0' for b'0'..=b'9' and digit - b'a' + 10 for b'a'..=b'f', so at most 15 as a u8 (git grep -n 'id_bytes(' finds callers only in admit and end_session, none sets an operand): the left operand has only its high four bits and the right only its low four, so a | b == a ^ b.",
+      "reached_by": "session::each_handshake_issues_a_new_session_id",
+      "issue": "#302"
+    }
+  ]
+}
