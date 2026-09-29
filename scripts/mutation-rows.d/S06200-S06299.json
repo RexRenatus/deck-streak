@@ -208,6 +208,14 @@
         "        if template is not None:\n",
         "two instance drop-in directories of one shipped template are refused, since the unit guards read both into the template (SPEC-062 R14, A21)",
         "test_deploy_templates.CredentialsComeFromTheSocket.test_a_shipped_templates_instance_dropin_directory_is_its_own_and_no_other_is"
+      ],
+      [
+        "S06227-THE-TEMPLATES-OWN-DROPIN-IS-READ-ONCE",
+        "scripts/tests/_units.py",
+        "glob(f\"{stem}@?*.{suffix}.d\")",
+        "glob(f\"{stem}@*.{suffix}.d\")",
+        "a template's own drop-in directory is read once, not also as an instance's (SPEC-062 R14)",
+        "test_deploy_templates.CredentialsComeFromTheSocket.test_a_templates_own_dropin_directory_is_read_once"
       ]
     ]
   }

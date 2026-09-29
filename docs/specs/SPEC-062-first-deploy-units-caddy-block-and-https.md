@@ -228,7 +228,7 @@ this SPEC names each step only.
 | `scripts/tests/_units.py` | repo | changed: R14, a template's instance drop-ins read into the template (A21) |
 | `docs/specs/SPEC-066-the-credential-loader-refuses-an-empty-credential.md` | docs | one dated Amendment line (R14) |
 | the private rail's map, rendered drop-ins and tests (`rail/`) | the maintainer's | changed: R14, committed privately |
-| `scripts/mutation-rows.d/S06200-S06299.json` | repo | added: the mutation rows S06201 to S06226 |
+| `scripts/mutation-rows.d/S06200-S06299.json` | repo | added: the mutation rows S06201 to S06227 |
 | `changelog.d/` fragment | repo | added |
 
 ## 6. What this does NOT do

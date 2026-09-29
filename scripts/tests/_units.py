@@ -380,7 +380,7 @@ def parse_unit(root, path):
         read_into(unit, dropin, dropin.relative_to(root).as_posix())
     if "@." in path.name:
         stem, suffix = path.name.split("@.", 1)
-        for folder in sorted(path.parent.glob(f"{stem}@*.{suffix}.d")):
+        for folder in sorted(path.parent.glob(f"{stem}@?*.{suffix}.d")):
             for dropin in sorted(folder.glob("*.conf")):
                 read_into(unit, dropin, dropin.relative_to(root).as_posix())
     return unit
