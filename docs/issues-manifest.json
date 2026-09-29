@@ -1264,6 +1264,34 @@
       "title": "Host: inventory, backup and the scrub list for the owner",
       "body_sha256": "a2756ce79470a8576ac824e143934d42314ef41d7648d9a7dec11f46a60714b7",
       "parent_linked": 3
+    },
+    "smoke-bombs-perfect-week-spend": {
+      "number": 279,
+      "id": 5616951519,
+      "title": "Smoke bomb spend: one bomb cancels a night's pending coin fines",
+      "body_sha256": "4c0f661458742a3e45d2f2a9fcccd6198e680baedc8d3a70d74ad8b6f2e76250",
+      "parent_linked": 6
+    },
+    "skip-day-switch-and-bridge-cap": {
+      "number": 280,
+      "id": 5616952248,
+      "title": "Skip-day switch and the monthly cap of 3 bridges, enforced",
+      "body_sha256": "6fda0822a281e0b0685d332412108b11124bf6af2b43b7d1ba0672a70c3632c3",
+      "parent_linked": 6
+    },
+    "xp-exchange-rates-repricing": {
+      "number": 281,
+      "id": 5616953024,
+      "title": "Per-source XP re-pricing of future grants",
+      "body_sha256": "f9236811ed3e0c39648d8599d131cefeab91e83208383bdad45de237284750cc",
+      "parent_linked": 8
+    },
+    "charts-and-resources-atlas-series": {
+      "number": 282,
+      "id": 5616953897,
+      "title": "The collection atlas as a data series the agent reads",
+      "body_sha256": "535b2d3e27dcd2ac08b7b4c2bf05c62a34e32bc4aa2508c06c9dfad5b74ab9b8",
+      "parent_linked": 7
     }
   }
 }
