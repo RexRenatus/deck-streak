@@ -739,8 +739,10 @@ const NAMED_SENDS: [(&str, &str, &str); 10] = [
 /// review's: a raw request for a rich message from a new module of the bot, a live photo sent through
 /// the client from a new module of the daemon, and an ephemeral edit through the client. The
 /// fifth round's ruling: a gift transferred to a named user, a callback's answer and a story
-/// posted, each through the client from a new module of the daemon.
-const AROUND_THE_PORT: [(&str, &str); 33] = [
+/// posted, each through the client from a new module of the daemon. The sixth round's ruling: a
+/// Passport error's message and a named invite link, each through the client from a new module of
+/// the daemon.
+const AROUND_THE_PORT: [(&str, &str); 35] = [
     (
         "crates/daemon/src/role_bot.rs",
         r#"/// A celebration sent straight to the owner's chat through the bot's transport, around the router.
@@ -1039,6 +1041,22 @@ async fn celebrate_by_an_answer(bot: &Bot, params: &AnswerCallbackQueryParams) {
         r"/// A celebration posted as a story through the client, around the router.
 async fn celebrate_with_a_story(bot: &Bot, params: &PostStoryParams) {
     let _done = bot.post_story(params).await;
+}
+",
+    ),
+    (
+        "crates/daemon/src/passport.rs",
+        r"/// An error message the owner reads in the Passport screen, written through the client, around the router.
+async fn celebrate_by_a_passport_error(bot: &Bot, errors: &SetPassportDataErrorsParams) {
+    let _told = bot.set_passport_data_errors(errors).await;
+}
+",
+    ),
+    (
+        "crates/daemon/src/invite.rs",
+        r"/// An invite link whose name the chat's administrators read, made through the client, around the router.
+async fn celebrate_by_a_link_name(bot: &Bot, link: &CreateChatInviteLinkParams) {
+    let _made = bot.create_chat_invite_link(link).await;
 }
 ",
     ),
@@ -2045,11 +2063,13 @@ fn no_delivery_goes_around_the_port() {
             "crates/daemon/src/digest.rs:5: names set_message_reaction",
             "crates/daemon/src/ephemeral.rs:3: names edit_ephemeral_message_text",
             "crates/daemon/src/gift.rs:3: names transfer_gift",
+            "crates/daemon/src/invite.rs:3: names create_chat_invite_link",
             "crates/daemon/src/invoice.rs:3: names create_invoice_link",
             "crates/daemon/src/lifecycle.rs:4: calls edit_html in celebrate_by_an_edit, \
              not a named call site",
             "crates/daemon/src/main.rs:6: calls handle in celebrate_by_a_fabricated_command, \
              not a named call site",
+            "crates/daemon/src/passport.rs:3: names set_passport_data_errors",
             "crates/daemon/src/role_bot.rs:4: calls send_html in celebrate_around_the_router, \
              not a named call site",
             "crates/daemon/src/role_bot.rs:10: names api.telegram.org",
@@ -2082,7 +2102,7 @@ fn no_delivery_goes_around_the_port() {
         "the bot's own send, named or called, its edit and its command handler, raw requests to \
          the Bot API and on its base URL, a raw request from inside the bot, writes to the Mini \
          App's feed and to the held queue, the Bot API's copy, edit, forward, pin and reaction, \
-         its rich message, live photo and ephemeral edit, the notifications crate's carrying attributes and re-exports, and the command handler's \
+         its rich message, live photo and ephemeral edit, a Passport error and a named invite link, the notifications crate's carrying attributes and re-exports, and the command handler's \
          replies and dispatch, around the port"
     );
 
