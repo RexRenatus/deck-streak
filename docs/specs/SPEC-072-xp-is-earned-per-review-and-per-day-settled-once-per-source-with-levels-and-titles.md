@@ -557,23 +557,43 @@ fixed there. The rest are decided by ADR-197.
 - **The change.** The census follows a crate alias (`pub use deck_streak_progression as prog;`
   in any crate's `src`, then a source that names `prog` and one of progression's renamings) and a
   `pub type Alias<..> = path::Original<..>;` of the request or the operation. A `)` makes the next
-  `use` public only when it closes `pub(`, so `pub(crate) use` stays a chain link and never a
-  re-export, and an attribute before a private `use` no longer reads as public. The operation is
+  `use` public only when it closes `pub(`, so a `pub(crate) use` is followed as a chain link, and an
+  attribute before a private `use` no longer reads as public. The operation is
   matched as a word, so a caller's own `settled_of_day` and a homonym of a private alias are
   accepted.
+- **Round 2, the class.** The names that denote progression's crate, or its `settle`, are one set
+  for each member crate, read to a fixpoint over every binding form with each identifier
+  normalised first (`r#name` reads as `name`): a manifest's `package` rename (inline, table or
+  dotted key, either quote, `-` read as `_`), an `extern crate ... as`, every `use` leaf (`as x`,
+  `{self as x}`, a chain of them in any file order), and a glob of the crate's root, which opens
+  every file of the member that holds it. A source that reaches `settle` by any of those names
+  (`x::settle`, or a bare `settle` in a member that globs the root) is refused as a direct caller.
+  A member's own function called `settle` in a member that globs the root is refused too, which is
+  a loud failure and not a silent pass.
 - **Still unfollowed.** A public wrapper function that calls `settle` inside progression is a new
-  operation in progression's own code, and a reviewer sees it there. ADR-197 names it.
+  operation in progression's own code, and a reviewer sees it there. A re-export that a
+  `macro_rules!` macro in progression writes is not followed either, because the census does not
+  expand macros; the macro is progression's own code too. ADR-197 names both.
 - **A33.** A planted crate alias is refused by file, alias and original; a planted type alias of
-  the request is refused; an attribute-preceded private `use` and a `pub(crate)` link do not
-  become re-exports; and a name that only begins with the operation is accepted. Its tests are
+  the request is refused; an attribute-preceded private `use` is not a re-export and a `pub(crate)`
+  link is followed; and a name that only begins with the operation is accepted. Its tests are
   `the_census_follows_a_crate_alias`, `the_census_follows_a_type_alias`,
-  `a_private_alias_behind_an_attribute_is_not_a_reexport` and
-  `the_operation_is_matched_as_a_word_not_a_prefix`, in `crates/progression/tests/xp_census.rs`.
+  `a_private_alias_behind_an_attribute_is_not_a_reexport`,
+  `the_operation_is_matched_as_a_word_not_a_prefix`,
+  `the_census_reads_a_raw_identifier_as_its_plain_name`,
+  `the_census_follows_a_crate_alias_however_it_is_written` and
+  `the_census_follows_a_crate_renamed_by_a_manifest`, in `crates/progression/tests/xp_census.rs`.
+  The class is generated as a population by `the_census_refuses_every_member_of_the_binding_population`:
+  ten binding forms crossed with three caller shapes, thirty members, each refused, and each form's
+  control naming another crate in the same spelling accepted.
 - **Rows.** S07230-CENSUS-FIXPOINT (the alias loop runs to a fixpoint), S07231-CENSUS-PUB-CRATE-CLOSE
   (a `)` that closes `pub(` makes a `use` a re-export) and S07232-CENSUS-SELF-RENAME (a
   `{self as X}` is a leaf). Each is killed by
   `xp_census::the_census_follows_a_grouped_module_renaming_and_a_chain_read_before_its_link`
-  and proved KILLED by its full id.
+  and proved KILLED by its full id. Round 2 adds S07233-CENSUS-MANIFEST-RENAME (a manifest's
+  `package` rename is a name of the crate), S07234-CENSUS-GLOB-OPENS-MEMBER (a glob of the crate's
+  root opens the member's files) and S07235-CENSUS-RAW-IDENTIFIER (`r#name` reads as `name`), each
+  killed by one of the new tests and proved KILLED by its full id.
 - **Files.** `crates/progression/tests/xp_census.rs` (A32, A33),
   `scripts/mutation-rows.d/S07200-S07299.json`, `docs/decisions/ADR-197-*.md`,
   `docs/red-first/SPEC-072.md` and `changelog.d/settle-census-397.md`.
@@ -582,7 +602,7 @@ fixed there. The rest are decided by ADR-197.
 
 | id | criterion | decided by |
 |---|---|---|
-| A33 | a crate alias and a type alias of progression's names are followed, a `pub(crate)` link and an attribute-preceded private `use` are not re-exports, and a name that only begins with the operation is accepted | progression `xp_census` tests |
+| A33 | a crate alias of progression's crate is followed however it is written (`as prog` in a `use` or an `extern crate`, `{self as prog}`, `r#prog`, a chain of them, a glob of the crate, or a manifest's `package` rename), a raw alias of its names is read as its plain name, a type alias of them is followed, a `pub(crate)` link is followed as a chain link, an attribute-preceded private `use` is not a re-export, and a name that only begins with the operation is accepted | progression `xp_census` tests: the fence's test, `the_census_follows_a_type_alias`, `a_private_alias_behind_an_attribute_is_not_a_reexport`, `the_operation_is_matched_as_a_word_not_a_prefix`, `the_census_reads_a_raw_identifier_as_its_plain_name`, `the_census_follows_a_crate_alias_however_it_is_written`, `the_census_follows_a_crate_renamed_by_a_manifest` and `the_census_refuses_every_member_of_the_binding_population` |
 
 ```acceptance
 A33: cargo test -p deck-streak-progression --test xp_census -- --exact the_census_follows_a_crate_alias

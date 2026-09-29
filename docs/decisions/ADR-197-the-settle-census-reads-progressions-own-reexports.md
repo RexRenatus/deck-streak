@@ -54,8 +54,11 @@ refusal and examined count as it was.
 - Good, because a source that never names the progression crate cannot be refused for a common
   word, so a homonym elsewhere is not a false refusal.
 - Bad, because the reading is textual: a public wrapper function that calls `settle` inside
-  progression is not a `pub use` or a `pub type` and is not followed. A wrapper is a new
-  operation in progression's own code, and a reviewer sees it there.
+  progression is not a `pub use` or a `pub type` and is not followed, and neither is a re-export that a
+  `macro_rules!` macro in progression writes, since the census does not expand macros (a
+  metavariable such as `$name` in such a macro is read as a name too, which can refuse an
+  unrelated caller: a loud failure, not a silent pass). Both are progression's own code, and a
+  reviewer sees them there.
 
 ### Confirmation
 
@@ -70,6 +73,17 @@ The census also follows a crate alias (`pub use deck_streak_progression as prog;
 private homonym behind an attribute are accepted. It was chosen against leaving each as a known
 gap, which would have left four evasions to be found again, and against a parser such as `syn`,
 which the first decision already rejected. A wrapper function stays a residual.
+
+### Decision, round 2
+
+The census follows a crate alias however it is written: renamed inside a group (`{self as prog}`),
+in raw spelling (`r#prog`), through a chain of aliases read in any file order, by an `extern crate`,
+by a glob of the crate (which opens every file of the member that holds it, since a glob import is
+visible to the whole member as `crate::name`), and by a manifest's `package` rename in the
+workspace's or a member's manifest. It reads a raw identifier as its plain name, so `r#tally` is
+`tally`. It was chosen against naming each spelling a residual, which would leave the crate alias of
+round 1 open in five other spellings, and against refusing every non-canonical spelling at its
+source, which would refuse legitimate code in crates the census does not own.
 
 ## More Information
 
