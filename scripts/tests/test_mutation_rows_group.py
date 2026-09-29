@@ -263,6 +263,7 @@ class ASignalledRunnerEndsTheKillersGroup(Fixture):
             stderr=subprocess.DEVNULL,
             process_group=0,
         )
+        self.addCleanup(self.runner.wait)
         self.addCleanup(stop_by_number, self.runner.pid)
         self.wait_for_grandchild()
         self.assertTrue(running(self.grandchild), "the grandchild runs before the signal")
