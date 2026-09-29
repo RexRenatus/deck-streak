@@ -677,7 +677,7 @@ class TheCaddyInstall(Case):
         (w.log / "caddy-reload-fails").write_text("1")
         done = w.run(DEPLOY, "caddy-install", "v1.0.0", **self.config(host="new.example.org"))
         self.assertNotEqual(done.returncode, 0, "the install refuses")
-        self.assertIn("reload", done.stderr, "the message names the failed reload")
+        self.assertIn("the Caddy reload failed", done.stderr, "the message names the failed reload")
         self.assertEqual((w.caddy_dir / "deck-streak.caddy").read_text(), block_text)
         self.assertEqual((w.caddy_dir / "Caddyfile").read_text(), after)
         self.assertEqual(self.leftovers(), [], "no previous copy is left behind")
@@ -723,7 +723,7 @@ class TheCaddyInstall(Case):
         (w.log / "caddy-reload-fails").write_text("1")
         done = w.run(ROLLBACK, "caddy-remove", **self.config())
         self.assertNotEqual(done.returncode, 0)
-        self.assertIn("reload", done.stderr)
+        self.assertIn("the Caddy reload failed", done.stderr)
         block = w.caddy_dir / "deck-streak.caddy"
         self.assertEqual(block.read_text() if block.exists() else None, block_text)
         self.assertEqual((w.caddy_dir / "Caddyfile").read_text(), after)
@@ -731,6 +731,19 @@ class TheCaddyInstall(Case):
         self.ok(w.run(ROLLBACK, "caddy-remove", **self.config()))
         self.assertFalse((w.caddy_dir / "deck-streak.caddy").exists())
         self.assertEqual(self.leftovers(), [])
+
+    def test_a_failed_restoring_reload_of_the_removal_is_named_apart(self):
+        w = self.world
+        _original, after, block_text = self.installed()
+        (w.log / "caddy-reload-fails").write_text("2")
+        done = w.run(ROLLBACK, "caddy-remove", **self.config())
+        self.assertNotEqual(done.returncode, 0)
+        self.assertIn("restoring reload", done.stderr, "a second failure is named distinctly")
+        reloads = [ln for ln in w.text("caddy.log").splitlines() if ln.startswith("caddy reload")]
+        self.assertEqual(len(reloads), 3, "the install's reload, the removal's, its restoring one")
+        block = w.caddy_dir / "deck-streak.caddy"
+        self.assertEqual(block.read_text() if block.exists() else None, block_text)
+        self.assertEqual((w.caddy_dir / "Caddyfile").read_text(), after)
 
     def failing_rename(self, source_suffix):
         """A `mv` that refuses to rename a `source_suffix` file onto the Caddyfile, and logs it."""
