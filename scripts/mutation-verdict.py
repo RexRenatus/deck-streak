@@ -810,11 +810,7 @@ def size(listed_path: str | None, package: str | None) -> int:
             f"at {max(times)} s of its {SHARD_BOUND_SECONDS} s bound"
         )
     print(f"mutation: size: {count} shard(s) for {note}")
-    output = os.environ.get("GITHUB_OUTPUT")
-    if output:
-        with open(output, "a", encoding="utf-8") as sink:
-            sink.write(f"shards={count}\n")
-            sink.write(f"matrix={json.dumps(list(range(count)))}\n")
+    announce(count)
     return EXIT_OK
 
 
@@ -829,6 +825,16 @@ def read_listing(path: str | None) -> object | None:
     except (OSError, ValueError):
         return None
     return read_json(path)
+
+
+def announce(count: int) -> None:
+    """Write the shard count and its matrix, 0 to count-1, as the step's outputs under GitHub
+    Actions: the one place both the plan's `shards` and a dispatch's `size` say them."""
+    output = os.environ.get("GITHUB_OUTPUT")
+    if output:
+        with open(output, "a", encoding="utf-8") as sink:
+            sink.write(f"shards={count}\n")
+            sink.write(f"matrix={json.dumps(list(range(count)))}\n")
 
 
 def shards(plan_path: pathlib.Path, listed_path: str | None) -> int:
@@ -887,11 +893,7 @@ def shards(plan_path: pathlib.Path, listed_path: str | None) -> int:
         f"mutation: shards: {count} shard(s) for {len(mutants)} listed mutant(s), projected at "
         f"{sum(costs)} s serially; the slowest at {max(times)} s of its {SHARD_BOUND_SECONDS} s bound"
     )
-    output = os.environ.get("GITHUB_OUTPUT")
-    if output:
-        with open(output, "a", encoding="utf-8") as sink:
-            sink.write(f"shards={count}\n")
-            sink.write(f"matrix={json.dumps(list(range(count)))}\n")
+    announce(count)
     return EXIT_OK
 
 
