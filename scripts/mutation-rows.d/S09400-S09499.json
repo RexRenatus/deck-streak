@@ -99,6 +99,51 @@
         "let held = match self.lock.exclusive().await.map(Some) {",
         "instruments_step::a_run_while_one_runs_starts_nothing",
         "a run requested while one runs returns without waiting for the holder (SPEC-094 R8, A15)"
+      ],
+      [
+        "S09413-INSTRUMENTS-STEP-RUNS-AFTER-SYNC",
+        "coordination",
+        "src/sync_cycle.rs",
+        "async fn run_instruments(instruments: &Instruments) {",
+        "async fn run_instruments(instruments: &Instruments) { if std::env::args().count() > 0 { return; }",
+        "instruments_cycle::a_cycle_with_instruments_runs_the_step_after_its_sync",
+        "a sync cycle that holds instruments runs the instruments step after the recompute and stores its reports (SPEC-094 R7)"
+      ],
+      [
+        "S09414-LATE-INSTRUMENTS-FILL",
+        "daemon",
+        "src/wiring.rs",
+        "drop(self.0.set(instruments));",
+        "drop(instruments);",
+        "instruments_wiring::the_late_holder_answers_not_ready_until_it_is_filled",
+        "the api role's holder keeps the instruments it is filled with and answers ready afterwards (SPEC-094 R8)"
+      ],
+      [
+        "S09415-ROLE-WIRES-VALID-INSTRUMENTS",
+        "daemon",
+        "src/wiring.rs",
+        "Ok(instruments) => Ok(Some(instruments)),",
+        "Ok(_) => Ok(None),",
+        "instruments_wiring::a_role_with_valid_settings_gets_the_instruments",
+        "a role whose settings are valid is handed the built instruments and not none (SPEC-094 R1)"
+      ],
+      [
+        "S09416-ONLY-THE-SYNC-JOB-LOADS-CONVENTIONS",
+        "daemon",
+        "src/role_job.rs",
+        "let instruments = if job.id == SYNC.id {",
+        "let instruments = if job.id != SYNC.id {",
+        "roles::only_the_sync_job_loads_the_owners_conventions",
+        "only the sync job builds the instruments and reads the owner's conventions, every other job never does (SPEC-094 R1)"
+      ],
+      [
+        "S09417-BOT-HOLDS-THE-INSTRUMENTS",
+        "bot",
+        "src/commands.rs",
+        "self.instruments.as_ref()",
+        "None",
+        "commands::the_handlers_hold_the_instruments_only_once_they_are_handed_them",
+        "the command handlers answer the instruments they were handed and none before (SPEC-094 R8)"
       ]
     ],
     "CARGO_KILLED_SCRIPT_MUTATIONS": [
