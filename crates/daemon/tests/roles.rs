@@ -540,6 +540,40 @@ fn every_code_the_owner_cycle_refuses_with_is_one_the_job_records() {
     }
 }
 
+#[test]
+fn a_refusal_code_is_a_variant_of_the_closed_enum() {
+    // SPEC-128 amendment (#396): a code defined in a NEW file and recorded through the composition
+    // root must not pass the guard. Plant one in a copy of the daemon's sources and read it the way
+    // `every_code_the_owner_cycle_refuses_with_is_one_the_job_records` reads them.
+    let directory = tempfile::tempdir().expect("a temporary directory");
+    let src = directory.path().join("src");
+    fs::create_dir_all(&src).expect("the copy's directory");
+    let real = concat!(env!("CARGO_MANIFEST_DIR"), "/src/wiring.rs");
+    fs::copy(real, src.join("wiring.rs")).expect("the wiring copies");
+    fs::write(
+        src.join("planted_refusal.rs"),
+        "fn plant(error: &dyn std::fmt::Display) -> SyncRefusal {\n    \
+         super::refused(\"planted_unknown_code\", error)\n}\n",
+    )
+    .expect("the planted file writes");
+    // The sources that criterion reads: the wiring's owner cycle alone.
+    let guarded = fs::read_to_string(src.join("wiring.rs")).expect("the guarded source reads");
+    let start = guarded
+        .find("impl OwnerSyncCycle {")
+        .expect("the owner cycle");
+    let end = guarded
+        .find("/// What the owner is told")
+        .expect("the answer's mapping");
+    let scanned = &guarded[start..end];
+    let planted = fs::read_to_string(src.join("planted_refusal.rs")).expect("the plant reads");
+    let planted_code = planted.split('"').nth(1).expect("the planted literal");
+    assert!(
+        scanned.contains(planted_code),
+        "the scan passed a code defined in a new file: {planted_code} is recorded through \
+         `refused` and no scan reads it"
+    );
+}
+
 #[tokio::test]
 async fn a_refusal_after_the_owners_run_answers_the_request_beside_the_run() {
     use deck_streak_daemon::sync_request::{Progress, RequestLedger as _, SqliteRequestLedger};
