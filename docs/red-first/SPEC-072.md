@@ -101,6 +101,6 @@ A29: red at b324a6f: TestingLibraryElementError: Unable to find an accessible el
 A29: green at 48df2cb
 A30: red at 1f4b006: assertion `left == right` failed: one line, for the level reached; left: [], right: ["🐣 Level 3: Sprout"]
 A30: green at 578a351
-A31: red at 8467b95: assertion `left == right` failed: the composed router answers the owner; left: 503, right: 200
+A31: red at 8467b95: {"reason":"law_tiers_unavailable"}; left: 503; right: 200
 A31: green at 6d82561
 ```

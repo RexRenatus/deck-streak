@@ -71,7 +71,7 @@
         "    \"score90\",\n    \"graduations\",",
         "    \"score91\",\n    \"graduations\",",
         "xp_settle::the_derived_registry_and_the_tables_are_pinned_whole",
-        "the derived registry is the nine sources by their whole value (SPEC-072 R6, A11)"
+        "the derived registry is the nine sources by their whole value (SPEC-072 R7; pinned outside the acceptance fence)"
       ],
       [
         "S07212-SETTLEMENT-TABLE",
@@ -80,7 +80,7 @@
         "XP_SETTLEMENT_TABLE: &str = \"xp_settlement\";",
         "XP_SETTLEMENT_TABLE: &str = \"xp_settlemen\";",
         "xp_settle::the_derived_registry_and_the_tables_are_pinned_whole",
-        "the settlement table is named xp_settlement (SPEC-072 R6, A11)"
+        "the settlement table is named xp_settlement (SPEC-072 R6; pinned outside the acceptance fence)"
       ],
       [
         "S07213-BUFFS-TABLE",
@@ -89,7 +89,7 @@
         "BUFFS_TABLE: &str = \"buffs\";",
         "BUFFS_TABLE: &str = \"buff\";",
         "xp_settle::the_derived_registry_and_the_tables_are_pinned_whole",
-        "the buffs table is named buffs (SPEC-072 R9, A24)"
+        "the buffs table is named buffs (SPEC-072 R20; pinned outside the acceptance fence)"
       ],
       [
         "S07214-ASCENDANT-KIND",
@@ -98,7 +98,7 @@
         "ASCENDANT: &str = \"ascendant\";",
         "ASCENDANT: &str = \"ascendan\";",
         "xp_settle::the_derived_registry_and_the_tables_are_pinned_whole",
-        "the Ascendant buff is named ascendant (SPEC-072 R13, A24)"
+        "the Ascendant buff is named ascendant (SPEC-072 R20; pinned outside the acceptance fence)"
       ],
       [
         "S07215-LEVEL-TITLE-ADEPT",
@@ -125,7 +125,7 @@
         "XP_STEP: &str = \"progression.base_xp\";",
         "XP_STEP: &str = \"progression.base_xq\";",
         "xp_steps::the_step_names_and_the_level_up_kind_are_pinned_whole",
-        "the base-XP step is registered under its whole name (SPEC-072 R2, A5)"
+        "the base-XP step is registered under its whole name (SPEC-072 R19; pinned outside the acceptance fence)"
       ],
       [
         "S07219-BONUS-STEP-NAME",
@@ -134,7 +134,7 @@
         "DAY_BONUSES_STEP: &str = \"progression.derived_bonuses\";",
         "DAY_BONUSES_STEP: &str = \"progression.derived_bonusez\";",
         "xp_steps::the_step_names_and_the_level_up_kind_are_pinned_whole",
-        "the derived-bonuses step is registered under its whole name (SPEC-072 R3, A15)"
+        "the derived-bonuses step is registered under its whole name (SPEC-072 R19; pinned outside the acceptance fence)"
       ],
       [
         "S07220-LEVEL-UP-KIND",
@@ -143,7 +143,7 @@
         "LEVEL_UP_KIND: &str = \"celebration\";",
         "LEVEL_UP_KIND: &str = \"celebratio\";",
         "xp_steps::the_step_names_and_the_level_up_kind_are_pinned_whole",
-        "the level-up line goes out as a celebration (SPEC-072 R14, A17)"
+        "the level-up line goes out as a celebration (SPEC-072 R14; pinned outside the acceptance fence)"
       ],
       [
         "S07221-BONUS-SOURCES",
@@ -152,7 +152,7 @@
         "    \"graduations\",\n];",
         "    \"graduatiox\",\n];",
         "xp_steps::a_day_settles_the_bonus_sources",
-        "the bonus sources settled for a day include studied, backlog_zero, streak and graduations (SPEC-072 R3, A15)"
+        "the bonus sources settled for a day include studied, backlog_zero, streak and graduations (SPEC-072 R11; pinned outside the acceptance fence)"
       ],
       [
         "S07222-LEVEL-PATH",
@@ -179,7 +179,7 @@
         "        command: \"level\",",
         "        command: \"levels\",",
         "commands::the_menu_is_registered_for_the_owners_chat_only",
-        "the bot menu names the level command (SPEC-072 R15, A27)"
+        "the bot menu names the level command (SPEC-072 R25; SPEC-026 A6)"
       ],
       [
         "S07225-LEVEL-UP-BEFORE-AFTER",
@@ -197,7 +197,7 @@
         "card.track == Track::Law",
         "card.track != Track::Law",
         "law_tiers::a_collection_with_no_law_root_has_no_law_cards_and_no_law_xp",
-        "the law tiers count law-track cards alone, and price law-track reviews alone (SPEC-072 R24, A31)"
+        "the law tiers count law-track cards alone, and price law-track reviews alone (SPEC-072 R24; pinned outside the acceptance fence)"
       ],
       [
         "S07227-LAW-TIERS-TODAY",
@@ -206,7 +206,7 @@
         "if day != today {",
         "if day == today {",
         "law_tiers::the_law_cards_are_counted_by_tier_and_today_s_reviews_are_priced_by_their_card",
-        "the law tiers' XP is the study day's reviews alone (SPEC-072 R24, A31)"
+        "the law tiers' XP is the study day's reviews alone (SPEC-072 R24; pinned outside the acceptance fence)"
       ],
       [
         "S07228-LAW-TIERS-NONE-SLOT",
@@ -215,7 +215,7 @@
         "None => 4,",
         "None => 3,",
         "law_tiers::the_law_cards_are_counted_by_tier_and_today_s_reviews_are_priced_by_their_card",
-        "a card with no tier counts in the fifth slot, after T4 (SPEC-072 R24, A31)"
+        "a card with no tier counts in the fifth slot, after T4 (SPEC-072 R24; pinned outside the acceptance fence)"
       ],
       [
         "S07229-LAW-TIERS-WIRED",
