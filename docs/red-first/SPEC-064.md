@@ -16,7 +16,7 @@ The tests were amended after the red run; each amendment is named here with what
 - A4: the failing drill cases reach the census as a dict's items, which fixes the test's own bug, and
   a replica ahead of the live database joined them (stricter).
 - A7: the host-address pattern excludes loopback (`127.`), which names no host, so a loopback address
-  is no longer refused.
+  is no longer refused; and its path alternative refuses every `/opt/` path (stricter).
 
 ```red-first
 A1: red at 4141421: None unexpectedly found in [None, None, None] (the three units are absent)
