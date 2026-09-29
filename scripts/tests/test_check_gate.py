@@ -270,6 +270,8 @@ SPLIT = {"test": "not ({})", "test-engine": "{}"}
 PLANTED_SET = "test(=a_planted_engine_test)"
 # The flags that carry a filterset to nextest.
 FILTERSET_FLAGS = ("-E", "--filterset")
+# The flag that names a test target to build and run (SPEC-038 A21).
+TARGET_FLAG = "--test"
 # What the engine set is made of: whole test binaries, each `binary_id(=<package>::<target>)`.
 ENGINE_BINARY = re.compile(r"binary_id\(=([a-z0-9-]+)::([a-z0-9_]+)\)")
 WHOLE_BINARIES = re.compile(rf"{ENGINE_BINARY.pattern}(?: \| {ENGINE_BINARY.pattern})*")
@@ -345,12 +347,31 @@ def filtersets(argv):
     return found, rest
 
 
+def target_flags(argv):
+    """The `--test <target>` pairs a cargo call names (SPEC-038 A21), and the call without them."""
+    found, rest, at = [], [], 0
+    while at < len(argv):
+        if argv[at] == TARGET_FLAG and at + 1 < len(argv):
+            found.append(argv[at + 1])
+            at += 2
+        else:
+            rest.append(argv[at])
+            at += 1
+    return found, rest
+
+
+def derived_targets(engine):
+    """The test targets a set names, one per whole binary, in the order it names them."""
+    return [target for _, target in ENGINE_BINARY.findall(engine)]
+
+
 def split_problems(check, scratch):
     """What a check.sh gets wrong about the engine set (SPEC-038 R13): a set defined other than
     once, a test stage that does not run it (negated in `test`, as it is in `test-engine`), a stage
     that holds its own copy of it, or two commands that differ in more than the filterset. It runs
     both stages twice, with the definition as written and with PLANTED_SET in its place, so a stage
-    that states the set itself instead of reading the definition stays behind and is seen."""
+    that states the set itself instead of reading the definition stays behind and is seen. The
+    commands are compared without their `--test <target>` pairs, which target_problems judges."""
     definitions = ENGINE_DEFINITION.findall(check)
     if len(definitions) != 1:
         return [f"check.sh defines the engine set {len(definitions)} time(s), not once"]
@@ -370,6 +391,7 @@ def split_problems(check, scratch):
                 )
                 continue
             found, commands[stage] = filtersets(calls[0])
+            commands[stage] = target_flags(commands[stage])[1]
             wanted = form.format(engine)
             if found != [wanted]:
                 problems.append(f"{stage} ({label}) runs the filterset {found}, not [{wanted!r}]")
@@ -377,6 +399,36 @@ def split_problems(check, scratch):
             problems.append(
                 f"the two stages ({label}) differ in more than the filterset: {commands}"
             )
+    return problems
+
+
+def target_problems(check, scratch):
+    """What a check.sh gets wrong about the test targets (SPEC-038 A21): the engine stage must name
+    one `--test <target>` for each whole binary the engine set names, and the test stage none. It
+    runs both stages twice, with the definition as written and with PLANTED_SET in its place, so a
+    stage that writes its targets by hand instead of deriving them from the definition stays behind
+    and is seen: the planted set names no binary, so it wants no target."""
+    definitions = ENGINE_DEFINITION.findall(check)
+    if len(definitions) != 1:
+        return [f"check.sh defines the engine set {len(definitions)} time(s), not once"]
+    planted = ENGINE_DEFINITION.sub(lambda _: f"ENGINE_TESTS='{PLANTED_SET}'", check)
+    problems = []
+    for label, text, engine in (
+        ("as written", check, definitions[0]),
+        ("planted", planted, PLANTED_SET),
+    ):
+        for stage in SPLIT:
+            done, calls = run_recorded(text, stage, scratch / label.replace(" ", "-") / stage)
+            if done.returncode != 0 or len(calls) != 1:
+                said = (summary(done) or done.stdout.strip() or done.stderr.strip())[-160:]
+                problems.append(
+                    f"{stage} ({label}): exit {done.returncode}, {len(calls)} cargo call(s): {said}"
+                )
+                continue
+            found = target_flags(calls[0])[0]
+            wanted = derived_targets(engine) if stage == "test-engine" else []
+            if found != wanted:
+                problems.append(f"{stage} ({label}) names the test targets {found}, not {wanted}")
     return problems
 
 
@@ -427,6 +479,58 @@ PLANTED_SPLITS = [
         "a set defined twice",
         planted_check(NEGATED, AS_IS, ("binary_id(=p::slow)", "binary_id(=p::slower)")),
         ["check.sh defines the engine set 2 time(s), not once"],
+    ),
+]
+
+
+# The engine stage's targets derived from the definition by a loop of the same shape check.sh
+# uses, and the engine stage with the same command but its targets written by hand.
+DERIVES = (
+    r'targets=(); rest="$ENGINE_TESTS"; '
+    r'while [[ "$rest" =~ binary_id\(=[a-z0-9-]+::([a-z0-9_]+)\) ]]; do '
+    r'targets+=(--test "${BASH_REMATCH[1]}"); rest="${rest#*"${BASH_REMATCH[0]}"}"; done; '
+    r'cargo nextest run --workspace -E "$ENGINE_TESTS" ${targets[@]+"${targets[@]}"}'
+)
+HAND_WRITTEN = 'cargo nextest run --workspace -E "$ENGINE_TESTS" {}'
+TWO_BINARIES = ("binary_id(=p::slow) | binary_id(=p::slower)",)
+# Each planted check.sh, and what target_problems must say about it.
+PLANTED_TARGETS = [
+    (
+        "targets derived from the definition",
+        planted_check(NEGATED, DERIVES, TWO_BINARIES),
+        [],
+    ),
+    (
+        "a target list written by hand beside the set",
+        planted_check(NEGATED, HAND_WRITTEN.format("--test slow --test slower"), TWO_BINARIES),
+        ["test-engine (planted) names the test targets ['slow', 'slower'], not []"],
+    ),
+    (
+        "a target the set does not name",
+        planted_check(NEGATED, DERIVES + " --test other", TWO_BINARIES),
+        [
+            "test-engine (as written) names the test targets ['slow', 'slower', 'other'], "
+            "not ['slow', 'slower']",
+            "test-engine (planted) names the test targets ['other'], not []",
+        ],
+    ),
+    (
+        "a target of the set left out",
+        planted_check(NEGATED, HAND_WRITTEN.format("--test slow"), TWO_BINARIES),
+        [
+            "test-engine (as written) names the test targets ['slow'], not ['slow', 'slower']",
+            "test-engine (planted) names the test targets ['slow'], not []",
+        ],
+    ),
+    (
+        "a test stage that narrows to a target",
+        planted_check(
+            NEGATED.replace("--workspace", "--workspace --test slow"), DERIVES, TWO_BINARIES
+        ),
+        [
+            "test (as written) names the test targets ['slow'], not []",
+            "test (planted) names the test targets ['slow'], not []",
+        ],
     ),
 ]
 
@@ -483,6 +587,23 @@ class TheEngineSetSplitsTheTests(unittest.TestCase):
             for at, (name, planted, expected) in enumerate(PLANTED_SPLITS):
                 with self.subTest(planted=name):
                     self.assertEqual(split_problems(planted, where / f"planted-{at}"), expected)
+
+    def test_the_engine_stage_builds_only_the_targets_the_set_names(self):
+        check = CHECK.read_text(encoding="utf-8")
+        definitions = ENGINE_DEFINITION.findall(check)
+        self.assertEqual(len(definitions), 1, "check.sh defines no single engine set")
+        wanted = examined("test targets the engine set names", derived_targets(definitions[0]))
+        with tempfile.TemporaryDirectory() as scratch:
+            where = Path(scratch)
+            self.assertEqual(target_problems(check, where / "check"), [])
+            done, calls = run_recorded(check, "test-engine", where / "engine")
+            self.assertEqual((done.returncode, len(calls)), (0, 1), done.stdout)
+            self.assertEqual(target_flags(calls[0])[0], wanted)
+            self.assertIn("--workspace", calls[0], "the engine stage narrowed its package scope")
+            # The judge refuses each way a check.sh could name its targets other than derived.
+            for at, (name, planted, expected) in enumerate(PLANTED_TARGETS):
+                with self.subTest(planted=name):
+                    self.assertEqual(target_problems(planted, where / f"planted-{at}"), expected)
 
     def test_the_engine_set_names_test_binaries_that_hold_tests(self):
         definitions = ENGINE_DEFINITION.findall(CHECK.read_text(encoding="utf-8"))
