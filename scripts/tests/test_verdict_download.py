@@ -139,6 +139,30 @@ WRONG = {
         CANONICAL[0].replace("judge --plan", "judge\n        --plan"),
         CANONICAL[1],
     ),
+    "a flag as a redirection's target": (
+        CANONICAL[0]
+        .replace(' --rows "$reports/mutation-rows/rows.json"', "")
+        .replace(" ||", ' > --rows "$reports/mutation-rows/rows.json" ||'),
+        CANONICAL[1],
+    ),
+    "a flag inside a command substitution": (
+        CANONICAL[0]
+        .replace(' --rows "$reports/mutation-rows/rows.json"', "")
+        .replace(" ||", ' $( : --rows "$reports/mutation-rows/rows.json" ) ||'),
+        CANONICAL[1],
+    ),
+    "a flag inside backquotes": (
+        CANONICAL[0]
+        .replace(' --rows "$reports/mutation-rows/rows.json"', "")
+        .replace(" ||", ' ` : --rows "$reports/mutation-rows/rows.json" ` ||'),
+        CANONICAL[1],
+    ),
+    "a flag inside a process substitution": (
+        CANONICAL[0]
+        .replace(' --rows "$reports/mutation-rows/rows.json"', "")
+        .replace(" ||", ' <( : --rows "$reports/mutation-rows/rows.json" ) ||'),
+        CANONICAL[1],
+    ),
 }
 
 
