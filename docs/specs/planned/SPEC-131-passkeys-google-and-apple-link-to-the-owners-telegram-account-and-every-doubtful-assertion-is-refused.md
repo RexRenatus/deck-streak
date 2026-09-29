@@ -107,9 +107,11 @@ R8. A verified `link` flow runs R5 inside a `link` session; outside one it is re
     response redirects to the flow's allow-listed target. The email claim is never read, so no
     identity is ever joined by email.
 R9. The provider's HTTP (discovery, keys, the token exchange, Apple's revocation) goes through
-    identity's `ProviderHttp` port: the api role wires the workspace's client with redirects
-    disabled and a 10-second bound per call; the tests wire a double that serves a test issuer's
-    keys and tokens. No test reaches a network.
+    identity's `ProviderHttp` port. The daemon's wiring builds its one adapter over `reqwest` (the
+    0.13 line the bot's client already brings, with rustls), redirects disabled and a 10-second
+    bound per call, and hands it to each role that calls a provider: the api role, and the bot, data
+    and job roles for Apple's revocation (ADR-131). The tests wire a double that serves a test
+    issuer's keys and tokens. No test reaches a network.
 
 Passkeys (ADR-132)
 
@@ -352,7 +354,8 @@ DeckStreak.
 | `crates/api/src/lib.rs` | `deck-streak-api` | changed: the module |
 | `crates/api/tests/linking_routes.rs` | `deck-streak-api` | added: A43, A44 |
 | `crates/daemon/src/role_api.rs` | `deck-streak-daemon` | changed: the api role loads the three credentials through its loader, builds the provider HTTP client and starts the revocation retry |
-| `crates/daemon/src/wiring.rs` | `deck-streak-daemon` | changed: identity's `ProviderHttp` over the workspace's client |
+| `crates/daemon/src/wiring.rs` | `deck-streak-daemon` | changed: identity's `ProviderHttp` adapter over `reqwest`, redirects disabled, 10 seconds per call |
+| `crates/daemon/Cargo.toml` | `deck-streak-daemon` | changed: `reqwest`, for the adapter (ADR-131) |
 | `web/app/src/routes/link/+page.svelte` | miniapp | added: the link page |
 | `web/app/src/routes/link.test.ts` | miniapp | added: A45 |
 | `web/app/src/routes/signin/+page.svelte` | miniapp | added: the sign-in page |
@@ -370,7 +373,7 @@ DeckStreak.
 | `privacy.json` | repo | changed: the three tables' purpose, basis and retention |
 | `PRIVACY.md` | docs | changed: one line per category |
 | `deny.toml` | repo | changed: only if a new licence or source must be allowed, with its reason |
-| `Cargo.toml`, `Cargo.lock`, `.sqlx/` | workspace | changed: the four crates of ADR-131 to ADR-133 |
+| `Cargo.toml`, `Cargo.lock`, `.sqlx/` | workspace | changed: the four crates of ADR-131 to ADR-133, and `reqwest` at the version the lock already holds for the bot's client |
 | `docs/specs/SPEC-131-passkeys-google-and-apple-link-to-the-owners-telegram-account-and-every-doubtful-assertion-is-refused.md` | docs | moved from `docs/specs/planned/` |
 | `docs/schematics/w7-sign-in-and-linking.md` | docs | added by the W7 architect turn; this delivery corrects it only where the code proves it wrong |
 | `docs/red-first/SPEC-131.md` | docs | added |
