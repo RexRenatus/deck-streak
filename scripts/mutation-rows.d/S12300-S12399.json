@@ -1,0 +1,94 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S12301-AN-EXPECTED-RED-ROW-IS-NOT-UNEXPECTED",
+        "scripts/box-packs.sh",
+        "    verdict.unexpected = [ident for ident in reds if ident not in expected]\n",
+        "    verdict.unexpected = [ident for ident in reds]\n",
+        "a red row the scan's entry names under expected_red is expected, so it is not unexpected and does not fail the run (SPEC-123 R2)",
+        "test_box_scan_expected.TheScanAdmitsAnExpectedRed.test_an_expected_red_row_passes_and_the_line_counts_it"
+      ],
+      [
+        "S12302-THE-RED-TOTAL-IS-EXACT",
+        "scripts/box-packs.sh",
+        "red > len(verdict.expected):",
+        "red > len(verdict.expected) + 1:",
+        "the scan's red total may equal the expected rows' count and no more, so one red the file does not expect fails the run (SPEC-123 R4)",
+        "test_box_scan_expected.TheScanAdmitsAnExpectedRed.test_a_red_total_beyond_the_expected_rows_fails"
+      ],
+      [
+        "S12303-AN-EXPECTED-ROW-THAT-DOES-NOT-READ-RED-IS-STALE",
+        "scripts/box-packs.sh",
+        "rows.get(ident) != \"RED\"",
+        "rows.get(ident) == \"GREEN\"",
+        "an expected row that reads green, void or is absent is stale, so a deferral cannot outlive its reason (SPEC-123 R3)",
+        "test_box_scan_expected.TheScanAdmitsAnExpectedRed.test_an_expected_row_that_does_not_read_red_is_stale"
+      ],
+      [
+        "S12304-A-CLOSED-EXPECTATION-IS-NOT-COUNTED-TWICE",
+        "scripts/box-packs.sh",
+        "if issue not in closed and rows.get(ident)",
+        "if rows.get(ident)",
+        "an expectation whose issue is closed is stale once, by the closed-issue rule, and not again as a row that reads red (SPEC-123 R3)",
+        "test_box_scan_expected.TheScanAdmitsAnExpectedRed.test_an_expectation_whose_issue_is_closed_is_stale"
+      ],
+      [
+        "S12305-THE-SCANS-EXPECTED-ISSUE-IS-READ",
+        "scripts/box-packs.sh",
+        "        named.update(box.get(name, {}).get(\"expected_red\", {}).values())\n",
+        "        named.update(())\n",
+        "the issue an expected red names is among the issues the run reads with gh, so its closing is seen (SPEC-123 R3)",
+        "test_box_scan_expected.TheScanAdmitsAnExpectedRed.test_an_expectation_whose_issue_is_closed_is_stale"
+      ],
+      [
+        "S12306-AN-EXPECTATION-BESIDE-PENDING-IS-REFUSED",
+        "scripts/box-packs.sh",
+        "        if \"pending\" in entry:\n            raise Refusal(f\"box.{SCAN} is pending",
+        "        if \"pending\" in entry and not entry:\n            raise Refusal(f\"box.{SCAN} is pending",
+        "the scan's entry is refused when it names expected_red beside pending (SPEC-123 R1)",
+        "test_box_scan_expected.TheScansExpectationIsRefusedUnlessItIsWellFormed.test_an_expected_red_beside_pending_is_refused"
+      ],
+      [
+        "S12307-AN-EXPECTED-RED-VALUE-IS-AN-ISSUE",
+        "scripts/box-packs.sh",
+        "            or not all(ISSUE.match(str(issue)) for issue in expected.values())\n",
+        "            or not expected.values()\n",
+        "the scan's entry is refused unless every expected_red value is an issue, #NNN (SPEC-123 R1)",
+        "test_box_scan_expected.TheScansExpectationIsRefusedUnlessItIsWellFormed.test_an_expectation_that_names_no_issue_is_refused"
+      ],
+      [
+        "S12308-AN-EMPTY-EXPECTATION-IS-REFUSED",
+        "scripts/box-packs.sh",
+        "            or not expected\n",
+        "            or expected is None\n",
+        "the scan's entry is refused when expected_red is an empty mapping (SPEC-123 R1)",
+        "test_box_scan_expected.TheScansExpectationIsRefusedUnlessItIsWellFormed.test_an_expectation_that_names_no_issue_is_refused"
+      ],
+      [
+        "S12309-THE-SCAN-TAKES-NO-OTHER-KEY",
+        "scripts/box-packs.sh",
+        "SCAN_KEYS = {\"expected_red\", \"pending\", \"note\"}\n",
+        "SCAN_KEYS = {\"expected_red\", \"pending\", \"note\", \"waived\"}\n",
+        "the scan's entry takes expected_red, pending and note and no other key (SPEC-123 R1)",
+        "test_box_scan_expected.TheScansExpectationIsRefusedUnlessItIsWellFormed.test_only_the_scan_takes_an_expected_red_and_no_other_key"
+      ],
+      [
+        "S12310-THE-SCAN-TAKES-A-NOTE",
+        "scripts/box-packs.sh",
+        "SCAN_KEYS = {\"expected_red\", \"pending\", \"note\"}\n",
+        "SCAN_KEYS = {\"expected_red\", \"pending\", \"XXnoteXX\"}\n",
+        "the scan's entry still takes a note beside expected_red, by the whole set of keys (SPEC-123 R1)",
+        "test_box_scan_expected.TheScansExpectationIsRefusedUnlessItIsWellFormed.test_only_the_scan_takes_an_expected_red_and_no_other_key"
+      ],
+      [
+        "S12311-THE-HELPER-TAKES-NO-EXPECTED-RED",
+        "scripts/box-packs.sh",
+        "HELPER_KEYS = {\"pending\", \"note\"}\n",
+        "HELPER_KEYS = {\"expected_red\", \"pending\", \"note\"}\n",
+        "the apiKeyHelper scan's entry stays pending and note only: it has no rows to expect (SPEC-123 R1)",
+        "test_box_scan_expected.TheScansExpectationIsRefusedUnlessItIsWellFormed.test_only_the_scan_takes_an_expected_red_and_no_other_key"
+      ]
+    ]
+  }
+}

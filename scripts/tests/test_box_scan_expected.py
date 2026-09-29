@@ -41,7 +41,7 @@ class TheScanAdmitsAnExpectedRed(unittest.TestCase):
         line = pack_line(done.stdout, SCAN)
         self.assertTrue(line.startswith("ok"), line)
         self.assertIn("unexpected 0, expected 1, stale 0", line)
-        self.assertIn("1 settings document(s); blocking 2 green, 1 red, 0 void", line)
+        self.assertIn("1 settings document(s); blocking 2 green, 1 red, 0 void (1 expected)", line)
         self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
         self.assertIn("BOX PACKS OK", done.stdout)
 
@@ -87,6 +87,7 @@ class TheScanAdmitsAnExpectedRed(unittest.TestCase):
         line = pack_line(done.stdout, SCAN)
         self.assertTrue(line.startswith("FAIL"), line)
         self.assertIn(f"{ROW} ({ISSUE} is closed)", line)
+        self.assertIn("unexpected 0, expected 1, stale 1", line)
         self.assertEqual(done.returncode, 1, done.stdout)
         # Each issue the scan's expectation names is read once, in the run's root.
         done, _ = box.run()
