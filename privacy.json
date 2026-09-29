@@ -14,7 +14,7 @@
     },
     {
       "id": "ingest-state",
-      "data": "what the last recompute of the owner's reviews saw (the newest review's id, the card count and its fingerprint, the study day, when it ran and the settings generation it read), whether the owner asked for a rescore, and the base of the review window",
+      "data": "what the last recompute of the owner's reviews saw (the newest review's id, the card count and its fingerprint, the study day, when it ran and the settings generation it read), whether the owner asked for a rescore, the reason and the time a request of the owner was refused, and the base of the review window",
       "source": "derived",
       "stores": ["ingest_state.*"],
       "purpose": "recomputing the owner's scores only when their collection or their settings changed",

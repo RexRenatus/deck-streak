@@ -444,6 +444,198 @@ async fn only_the_sync_job_serves_the_owners_stored_request() {
     );
 }
 
+/// A state directory holding one stored owner request, and the credentials the job reads.
+async fn stored_request(directory: &std::path::Path) -> (std::path::PathBuf, std::path::PathBuf) {
+    let state = directory.join("state");
+    let credentials = directory.join("credentials");
+    for folder in [&state, &credentials] {
+        fs::create_dir_all(folder).expect("a folder");
+    }
+    fs::write(credentials.join(SYNC_USERNAME), "synthetic-owner\n").expect("a credential");
+    fs::write(credentials.join(SYNC_PASSWORD), "synthetic-password\n").expect("a credential");
+    let db = Db::open(&state.join(DATABASE_FILE))
+        .await
+        .expect("the role's database opens");
+    SqliteIngestState::new(db.clone())
+        .request_rescore(SystemClock.now())
+        .await
+        .expect("the request is stored");
+    db.close().await;
+    (state, credentials)
+}
+
+async fn stored_refusal(state: &std::path::Path) -> (bool, Option<String>) {
+    let db = Db::open(&state.join(DATABASE_FILE))
+        .await
+        .expect("the role's database opens");
+    let loaded = SqliteIngestState::new(db.clone())
+        .load()
+        .await
+        .expect("the state reads");
+    db.close().await;
+    (
+        loaded.rescore_pending,
+        loaded
+            .refusal
+            .map(|refusal| refusal.reason.as_str().to_owned()),
+    )
+}
+
+#[tokio::test]
+async fn a_refused_owner_request_is_recorded_and_the_next_run_does_not_retry_it() {
+    let directory = tempfile::tempdir().expect("a temporary directory");
+    let (state, credentials) = stored_request(directory.path()).await;
+    let offset = offset_to_half_past_noon();
+    let environment = [
+        ("STATE_DIRECTORY", state.as_os_str()),
+        ("CREDENTIALS_DIRECTORY", credentials.as_os_str()),
+        (
+            "DECKSTREAK_SYNC_ENDPOINT",
+            OsStr::new("http://127.0.0.1:9/"),
+        ),
+        ("DECKSTREAK_ROLLOVER_HOUR", OsStr::new("12")),
+        ("DECKSTREAK_UTC_OFFSET_MINUTES", OsStr::new(&offset)),
+        (LAW_DECK_ROOT, OsStr::new("Law\u{1f}Evidence")),
+    ];
+    let first = deckstreakd(&["job", "sync"], &environment);
+    assert_eq!(request_events(&first).len(), 1, "{}", describe(&first));
+    assert_eq!(
+        stored_refusal(&state).await,
+        (false, Some("scope_settings_refused".to_owned())),
+        "{}",
+        describe(&first)
+    );
+    let second = deckstreakd(&["job", "sync"], &environment);
+    assert!(
+        request_events(&second).is_empty(),
+        "the refused request is not served again: {}",
+        describe(&second)
+    );
+}
+
+#[test]
+fn every_code_the_owner_cycle_refuses_with_is_one_the_job_records() {
+    // SPEC-128 R1: `serve_owner_request` records only a code `RefusalReason` parses; a code outside
+    // the set is logged and the flag stays set, so every job run would retry the request (#323).
+    let source = fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/src/wiring.rs"))
+        .expect("the wiring's source reads");
+    let start = source
+        .find("impl OwnerSyncCycle {")
+        .expect("the owner cycle");
+    let end = source
+        .find("/// What the owner is told")
+        .expect("the answer's mapping");
+    let codes: Vec<&str> = source[start..end]
+        .split('"')
+        .skip(1)
+        .step_by(2)
+        .filter(|literal| literal.bytes().all(|b| b.is_ascii_lowercase() || b == b'_'))
+        .collect();
+    assert_eq!(codes.len(), 7, "the cycle's refusal codes: {codes:?}");
+    for code in codes {
+        assert!(
+            deck_streak_ingest::state::RefusalReason::parse(code).is_some(),
+            "the owner cycle refuses with {code}, which the job cannot record"
+        );
+    }
+}
+
+#[tokio::test]
+async fn a_refusal_after_the_owners_run_answers_the_request_beside_the_run() {
+    use deck_streak_daemon::sync_request::{Progress, RequestLedger as _, SqliteRequestLedger};
+    let directory = tempfile::tempdir().expect("a temporary directory");
+    let since = SystemClock.now();
+    let (state, credentials) = stored_request(directory.path()).await;
+    // The recompute writes the rollup after the sync's run is on record: a trigger that aborts that
+    // write makes the recompute fail at that point, as a full disk or a locked file would.
+    let db = Db::open(&state.join(DATABASE_FILE))
+        .await
+        .expect("the role's database opens");
+    let mut write = db.write().await.expect("a write");
+    sqlx::query(
+        "CREATE TRIGGER refuse_rollup BEFORE INSERT ON daily_rollup \
+         BEGIN SELECT RAISE(ABORT, 'planted'); END",
+    )
+    .execute(&mut *write)
+    .await
+    .expect("the trigger is planted");
+    write.commit().await.expect("the trigger commits");
+    db.close().await;
+    let offset = offset_to_half_past_noon();
+    let environment = [
+        ("STATE_DIRECTORY", state.as_os_str()),
+        ("CREDENTIALS_DIRECTORY", credentials.as_os_str()),
+        (
+            "DECKSTREAK_SYNC_ENDPOINT",
+            OsStr::new("http://127.0.0.1:9/"),
+        ),
+        ("DECKSTREAK_ROLLOVER_HOUR", OsStr::new("12")),
+        ("DECKSTREAK_UTC_OFFSET_MINUTES", OsStr::new(&offset)),
+    ];
+    let output = deckstreakd(&["job", "sync"], &environment);
+    let db = Db::open(&state.join(DATABASE_FILE))
+        .await
+        .expect("the role's database opens");
+    let progress = SqliteRequestLedger::new(db.clone())
+        .progress(since)
+        .await
+        .expect("reads");
+    let owner_run = SqliteSyncRuns::new(db.clone())
+        .owner_run_since(since)
+        .await
+        .expect("reads");
+    let loaded = SqliteIngestState::new(db.clone())
+        .load()
+        .await
+        .expect("reads");
+    db.close().await;
+    println!(
+        "A11 refusal={:?} owner_run={owner_run:?} progress={progress:?}",
+        loaded.refusal
+    );
+    assert!(
+        owner_run.is_some(),
+        "the owner's run is on record: {}",
+        describe(&output)
+    );
+    let refusal = loaded
+        .refusal
+        .unwrap_or_else(|| panic!("no refusal recorded: {}", describe(&output)));
+    assert!(
+        matches!(
+            progress,
+            Progress::RefusedAfterRun { ref reason, .. } if reason == refusal.reason.as_str()
+        ),
+        "the refusal recorded after the run answers beside it: {progress:?}"
+    );
+}
+
+#[tokio::test]
+async fn a_refused_recompute_setup_is_recorded_for_the_owner() {
+    let directory = tempfile::tempdir().expect("a temporary directory");
+    let (state, credentials) = stored_request(directory.path()).await;
+    let missing = directory.path().join("missing-courses.json");
+    let offset = offset_to_half_past_noon();
+    let environment = [
+        ("STATE_DIRECTORY", state.as_os_str()),
+        ("CREDENTIALS_DIRECTORY", credentials.as_os_str()),
+        (
+            "DECKSTREAK_SYNC_ENDPOINT",
+            OsStr::new("http://127.0.0.1:9/"),
+        ),
+        ("DECKSTREAK_ROLLOVER_HOUR", OsStr::new("12")),
+        ("DECKSTREAK_UTC_OFFSET_MINUTES", OsStr::new(&offset)),
+        ("DECKSTREAK_COURSES_FILE", missing.as_os_str()),
+    ];
+    let output = deckstreakd(&["job", "sync"], &environment);
+    assert_eq!(
+        stored_refusal(&state).await,
+        (false, Some("recompute_refused".to_owned())),
+        "{}",
+        describe(&output)
+    );
+}
+
 #[tokio::test]
 async fn two_planted_request_payloads_change_nothing_the_sync_job_serves() {
     // The doorbell's file holds a payload that pretends to command the job. The job reads the

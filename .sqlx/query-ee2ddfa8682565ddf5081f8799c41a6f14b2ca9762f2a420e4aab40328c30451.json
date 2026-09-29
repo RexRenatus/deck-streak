@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT id AS \"id!\", anchor_newest_review_id, anchor_card_count,\n                          anchor_card_fingerprint, anchor_study_day, anchor_recomputed_at,\n                          anchor_settings_generation, rescore_pending, window_floor, window_count,\n                          created_at\n                   FROM ingest_state ORDER BY id",
+  "query": "SELECT id AS \"id!\", anchor_newest_review_id, anchor_card_count,\n                          anchor_card_fingerprint, anchor_study_day, anchor_recomputed_at,\n                          anchor_settings_generation, rescore_pending, window_floor, window_count,\n                          refused_at, refused_reason, created_at\n                   FROM ingest_state ORDER BY id",
   "describe": {
     "columns": [
       {
@@ -114,8 +114,30 @@
         }
       },
       {
-        "name": "created_at",
+        "name": "refused_at",
         "ordinal": 10,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "ingest_state",
+            "name": "refused_at"
+          }
+        }
+      },
+      {
+        "name": "refused_reason",
+        "ordinal": 11,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ingest_state",
+            "name": "refused_reason"
+          }
+        }
+      },
+      {
+        "name": "created_at",
+        "ordinal": 12,
         "type_info": "Integer",
         "origin": {
           "Table": {
@@ -139,8 +161,10 @@
       false,
       true,
       true,
+      true,
+      true,
       false
     ]
   },
-  "hash": "2999be13a703291c005e1be2c7d4c6921907f656cba34a7bd5ed86c36ae7989b"
+  "hash": "ee2ddfa8682565ddf5081f8799c41a6f14b2ca9762f2a420e4aab40328c30451"
 }
