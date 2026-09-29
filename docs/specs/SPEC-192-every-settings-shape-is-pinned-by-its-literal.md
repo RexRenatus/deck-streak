@@ -25,24 +25,28 @@
 
 ## 2. Requirements
 
-R1. The population is every `impl .*Setting for` under `crates/*/src/`. It is 24 on the base of this
-    delivery and it is enumerated by walking the tree (`pathlib`), because the git pathspec
-    `'crates/*/src'` matches nothing.
-R2. Each implementation's `SHAPE` literal is spelled, whole and quoted, in a test of its crate (or in
-    the test module of its own source file), and the assertion compares the whole refusal against it
-    (the setting's name and the literal), never against the constant.
+R1. The population is every `impl Setting for`, generic (`impl<T> Setting for`), path-qualified
+    (`crate::settings::Setting`) or written by a macro (`impl Setting for $t`), under `crates/*/src/`.
+    It is 24 on the base of this delivery and it is enumerated by walking the tree (`pathlib`),
+    because the git pathspec `'crates/*/src'` matches nothing.
+R2. Each implementation's `SHAPE` literal is spelled, whole and quoted, in a test of its crate (its
+    `tests/`, or the `#[cfg(test)]` module of the implementation's own source file; a comment does
+    not count), and the assertion compares the whole refusal against it (the setting's name and the
+    literal), never against the constant. A literal that two or more implementations of one crate
+    share is pinned only by a mutation row on each implementation's own file.
 R3. The 14 implementations that survived (`LeechThreshold`, `MiniAppUrl`, `ApiUrl`, `SyncEndpoint`,
     ingest `StateDirectory`, `IncludeDecks`, `LawDeckRoot`, `CoursesPath`, `Hour` with `UtcOffset`,
     `OffloadWorkers`, `CredentialsDirectory`, `TaxonomyPath` and `FolderName`) and `RequestFile` gain
     such an assertion, and each also gets a mutation row in this delivery's band (S19200-S19299),
     in one band file with the one `MUTATIONS` table the tree already uses for Rust targets.
 R4. `Freshness` (identity) and `VaultRoot` (vault) are pinned by named tests that already spell the
-    literal; they take no row. `AiRoute` is pinned by S04302 and the five #354 implementations by
-    their rows; none of the six is changed.
+    literal; they take no row. `AiRoute` is pinned by S04302, `RosterPath` by S05766 and the five
+    #354 implementations by their rows; none of the seven is changed.
 R5. A guard under `scripts/tests` enumerates the population, reads each literal, and refuses an
-    implementation whose literal is spelled in no test or source of its crate other than the
-    constant's own line and is the `find` of no row that targets the implementation's file. It
-    prints `examined <N> Setting impl(s)` and refuses zero.
+    implementation whose literal is spelled by no test of its crate (its `tests/` or the
+    `#[cfg(test)]` module of its own file, comments not counting) and is the `find` of no row that
+    targets the implementation's own file, and one whose literal another implementation of the
+    crate shares and that lacks such a row. It prints `examined <N> Setting impl(s)` and refuses zero.
 R6. The delivery changes no production line: `SHAPE` literals, setting names and behaviour are as
     they were.
 
@@ -60,6 +64,7 @@ R6. The delivery changes no production line: `SHAPE` literals, setting names and
 | A8 | a malformed taxonomy path is refused naming its whole shape | `cargo test -p deck-streak-readings --test topics -- --exact a_taxonomy_file_that_names_a_deck_badly_is_refused_whole_and_never_quoted` |
 | A9 | the vault's folder settings state their whole shape | `cargo test -p deck-streak-vault --test confinement -- --exact the_vault_settings_refuse_by_name_and_never_by_value` |
 | A10 | a relative sync request path is refused naming its whole shape | `cargo test -p deck-streak-daemon --test sync_request -- --exact a_relative_request_path_is_refused_naming_its_whole_shape` |
+| A11 | the guard examines a generic and a macro impl, and refuses a shape that only its own constant, a production line, a comment, or a read-back of the constant spells, or that two impls of one crate share without a row on each file, or that only another file's row pins | `python3 -m unittest discover -s scripts/tests -p test_setting_shapes.py -k TheGuardJudgesAPlantedTree` |
 
 ```acceptance
 A1: python3 -m unittest discover -s scripts/tests -p test_setting_shapes.py -k test_every_setting_impl_has_a_shape_literal_that_a_test_or_a_row_pins
@@ -72,6 +77,7 @@ A7: cargo test -p deck-streak-kernel --test settings -- --exact a_malformed_sett
 A8: cargo test -p deck-streak-readings --test topics -- --exact a_taxonomy_file_that_names_a_deck_badly_is_refused_whole_and_never_quoted
 A9: cargo test -p deck-streak-vault --test confinement -- --exact the_vault_settings_refuse_by_name_and_never_by_value
 A10: cargo test -p deck-streak-daemon --test sync_request -- --exact a_relative_request_path_is_refused_naming_its_whole_shape
+A11: python3 -m unittest discover -s scripts/tests -p test_setting_shapes.py -k TheGuardJudgesAPlantedTree
 ```
 
 A2 to A10 pin a literal the code already carries, so each is recorded `not red`; the proof that
@@ -109,10 +115,11 @@ each kills the mutant is its row (R3), run with `python3 scripts/mutation_rows.p
 
 ## 6. Risks
 
-- **A literal shared by two implementations** ("an absolute file path" is `RosterPath`'s,
-  `RequestFile`'s and `CoursesPath`'s) is spelled once and satisfies the guard for all three in one
-  crate. The rows are per file, so each implementation's row still has to kill its own mutant, and
-  the guard's second arm (a row on the implementation's own file) is what tells them apart.
+- **A literal shared by implementations** ("an absolute file path" is `RosterPath`'s in agent,
+  `RequestFile`'s in daemon and `CoursesPath`'s in kernel: one crate each today). Two or more
+  implementations of one crate that share a literal are not pinned by a spelling in a test: the guard
+  asks a mutation row on each implementation's own file, and each row still has to kill its own
+  mutant.
 - **Two open pull requests edit files this delivery edits** (`crates/bot/tests/commands.rs`,
   `crates/analytics/tests/rollup_metrics.rs`); a conflict is resolved by keeping both sides'
   assertions, and each row's `find` is re-checked to occur once after a merge.

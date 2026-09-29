@@ -7,7 +7,9 @@ or a mutation row whose `find` is the constant's line, fails when they change.
 
 The guard enumerates the implementations by walking `crates/*/src` (a git pathspec of that shape
 matches nothing), reads each `const SHAPE` literal, and refuses one that is spelled in no test of
-its crate and in no mutation row that targets the implementation's own file.
+its crate (its `tests/`, or the `#[cfg(test)]` module of the implementation's own file, comments
+not counting) and in no mutation row that targets the implementation's own file. A literal that
+two implementations of one crate share is pinned only by a row on each implementation's file.
 """
 
 import json

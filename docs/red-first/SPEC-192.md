@@ -17,7 +17,26 @@ A7: not red: the hour, offset, worker and credentials settings already carried t
 A8: not red: the taxonomy path already carried the literal; the row S19214 proves the test kills the rewritten literal
 A9: not red: the folder setting already carried the literal; the row S19201 proves the test kills the rewritten literal
 A10: not red: the request file already carried the literal; the row S19215 proves the test kills the rewritten literal
+A11: red at f6a1b59: AssertionError: 1 != 2 ; AssertionError: 0 != 1 ; AssertionError: Lists differ: [] != ['demo::Depth (src/depth.rs) "a whole depth"'] ; AssertionError: 0 != 2 : four of the ten tests in the module fail by assertion
+A11: green at 68c239b
 ```
+
+## Addendum, 2026-09-29: the guard examines every impl and counts only a test's spelling
+
+Criterion A11 joins the fence above. Its four tests were committed alone at f6a1b59, against the
+guard as the first round left it: each fails by assertion, in this order
+`test_a_generic_implementation_is_examined` (`AssertionError: 1 != 2`),
+`test_a_shape_only_a_comment_spells_is_refused` (`AssertionError: 0 != 1`),
+`test_a_shape_only_a_production_line_of_the_crate_spells_is_refused`
+(`AssertionError: Lists differ: [] != ['demo::Depth (src/depth.rs) "a whole depth"']`) and
+`test_a_shape_two_implementations_of_one_crate_share_needs_a_row_of_each_file`
+(`AssertionError: 0 != 2`); the rest of the module passes. The guard change at 68c239b turns the
+whole module green (`Ran 10 tests`, `OK`, `examined 24 Setting impl(s)`).
+
+Disclosure: the bodies of the first round's guard tests changed after the red commit 4fd0748 (a
+presence assertion was added beside each absence, at 5fdf8b2), so the A1 red line above quotes the
+earlier bodies. The later bodies, run at 4fd0748, fail the same way:
+`Lists differ: ['analytics::LeechThreshold (src/settings.[1167 chars]...] != [] / First list contains 15 additional elements`.
 
 ## The population: 24 `impl Setting for`, and how each is pinned
 

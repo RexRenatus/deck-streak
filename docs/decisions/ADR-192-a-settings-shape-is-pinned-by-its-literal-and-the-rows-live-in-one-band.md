@@ -45,8 +45,11 @@ killed by named tests that already spell their literals and need no row.
 - Good, because a rewrite of any shape's words fails a named test, and a new implementation with an
   unspelled shape fails the guard.
 - Good, because no other SPEC's band or text changes.
-- Bad, because a literal shared within a crate ("an absolute file path") is spelled once and
-  satisfies the guard's test arm for each holder; the row arm is per file and tells them apart.
+- Good, because a shape counts as pinned only by a test of the crate (its `tests/`, or the
+  `#[cfg(test)]` module of the impl's own file, comments not counting) or by a row on the impl's own
+  file, and a literal that two impls of one crate share needs a row on each file.
+- Bad, because the guard reads text, not the compiler: a spelling in a test that never asserts on
+  it still counts, and the row is what proves the test kills the mutant.
 
 ### Confirmation
 
