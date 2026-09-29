@@ -21,6 +21,8 @@ pub const CRON_FIRES_RETENTION_DAYS: i64 = 90;
 pub struct Upkeep {
     /// The ledger rows deleted.
     pub pruned: u64,
+    /// The `agent_runs` rows deleted for being older than the agent's retention.
+    pub agent_runs_pruned: u64,
     /// Whether the checkpoint met a reader and completed only in part.
     pub checkpoint_busy: bool,
     /// The frames left in the write-ahead log: zero once a TRUNCATE checkpoint has reset the log,
@@ -52,6 +54,7 @@ pub async fn upkeep(db: &Db, today: FireDate) -> Result<Upkeep, KernelError> {
             .await?;
     Ok(Upkeep {
         pruned,
+        agent_runs_pruned: 0,
         checkpoint_busy: busy != 0,
         log_frames,
         checkpointed_frames,
