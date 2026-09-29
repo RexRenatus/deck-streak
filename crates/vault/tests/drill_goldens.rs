@@ -263,8 +263,8 @@ fn the_graded_parse_matches_the_predecessors_golden() {
 
 #[test]
 fn an_unkeyable_drill_id_is_keyed_by_its_hash() {
-    let long = "x".repeat(129);
-    let fits = "x".repeat(128);
+    let long = "x".repeat(123);
+    let fits = "x".repeat(122);
     let cases = [
         ("law-1", "drill:law-1"),
         ("a:b._c-9", "drill:a:b._c-9"),
@@ -272,7 +272,7 @@ fn an_unkeyable_drill_id_is_keyed_by_its_hash() {
         ("a/b", "drill:h.c14cddc033f64b9dea80ea675cf280a0"),
         ("Drill 1", "drill:h.bd016512d1b37f2388f36cfb76c6182d"),
         ("", "drill:h.e3b0c44298fc1c149afbf4c8996fb924"),
-        (long.as_str(), "drill:h.0ec9eb33e74510bcdd1f2ea55206e82f"),
+        (long.as_str(), "drill:h.5bc55890493627a065efbb2990e2a34a"),
     ];
     for (id, key) in cases {
         assert_eq!(drills::drill_key(id), key, "the key of {id:?}");
@@ -280,7 +280,7 @@ fn an_unkeyable_drill_id_is_keyed_by_its_hash() {
     assert_eq!(
         drills::drill_key(&fits),
         format!("drill:{fits}"),
-        "128 bytes is kept"
+        "a 122-byte id makes a 128-byte key, and is kept"
     );
     assert_eq!(
         drills::drill_key("-a"),

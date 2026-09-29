@@ -46,7 +46,11 @@ const ANSWER_HEADINGS: [&str; 5] = [
 const SELF_CHECK: &str = "Self-Check";
 /// The longest a grade key's id may be to be kept as it is: the source grammar's 128 less the
 /// `drill:` prefix is not what bounds it, the grammar's body is.
-const KEY_BODY_MAX: usize = 128;
+pub const KEY_ID_MAX: usize = 128;
+/// The grant grammar's own limit, as a mirror.
+pub const GRANT_SOURCE_MAX: usize = 128;
+/// The prefix of every drill's grant key.
+pub const KEY_PREFIX: &str = "drill:";
 /// The hex characters of the hash a hashed key carries.
 const KEY_HASH_HEX: usize = 32;
 
@@ -634,7 +638,7 @@ pub fn drill_key(id: &str) -> String {
     let fits = chars
         .next()
         .is_some_and(|c| c.is_ascii_lowercase() || c.is_ascii_digit())
-        && id.len() <= KEY_BODY_MAX
+        && id.len() <= KEY_ID_MAX
         && chars.all(|c| {
             c.is_ascii_lowercase() || c.is_ascii_digit() || matches!(c, ':' | '.' | '_' | '-')
         });

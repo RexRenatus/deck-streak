@@ -255,3 +255,39 @@ async fn an_interrupted_poll_is_completed_without_a_second_pay() {
     assert_eq!(grades.len(), 1, "the next poll completes the grade row");
     assert_eq!(grades[0].3, 20, "at the accepted XP");
 }
+
+#[tokio::test]
+async fn a_drill_whose_kept_key_would_overflow_the_grammar_pays_by_its_hash() {
+    let fx = fixture(true).await;
+    let edge = "d".repeat(122);
+    let over = "e".repeat(123);
+    write(&fx.graded, &edge, &graded(""));
+    write(&fx.graded, &over, &graded(""));
+    write(&fx.graded, "z-last", &graded(""));
+    let report = poll(&fx, at(DAY, 10, 30)).await;
+    assert!(
+        report.pages.is_empty(),
+        "no drill's key is refused: {report:?}"
+    );
+    let sources: Vec<String> = grants(&fx.db)
+        .await
+        .into_iter()
+        .map(|grant| grant.1)
+        .collect();
+    assert_eq!(
+        sources.len(),
+        3,
+        "every graded drill pays, the one sorted last included"
+    );
+    assert!(
+        sources.contains(&format!("drill:{edge}")),
+        "a 128-byte key is kept"
+    );
+    assert!(
+        sources
+            .iter()
+            .any(|source| source.starts_with("drill:h.") && source.len() == 40),
+        "a 129-byte key is hashed"
+    );
+    assert!(sources.contains(&"drill:z-last".to_owned()));
+}

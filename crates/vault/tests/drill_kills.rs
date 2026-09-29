@@ -330,3 +330,313 @@ async fn recent_grades_are_the_newest_of_the_subject_with_every_column() {
     let all = recent_grades(&mut tx, "Torts", 10).await.expect("a read");
     assert_eq!(all, vec![rows[3].clone(), rows[1].clone(), rows[0].clone()]);
 }
+
+const OUTSIDE_NOTE: &str = "---\ntype: drill-irac\nsubject: \"Elsewhere\"\nstatus: graded\nxp: 25\n---\n# Outside\n\nOutside text.\n\n- [ ] **Ready for grading**\n";
+
+#[tokio::test]
+async fn a_link_in_the_drills_folders_is_never_read_or_written_through() {
+    let outside = tempfile::tempdir().expect("a folder outside the vault");
+    let note = outside.path().join("note.md");
+    fs::write(&note, OUTSIDE_NOTE).expect("a note outside the vault");
+    let dir = vault_with(&[]);
+    let drills_folder = dir.path().join("11-Drills");
+    fs::create_dir_all(drills_folder.join(GRADED)).expect("the graded folder");
+    std::os::unix::fs::symlink(&note, drills_folder.join(ACTIVE).join("linked.md"))
+        .expect("a linked active note");
+    std::os::unix::fs::symlink(&note, drills_folder.join(GRADED).join("linked.md"))
+        .expect("a linked graded note");
+    let notes = open(dir.path(), RealFs).expect("opens");
+    assert_eq!(
+        notes.list_active(day(20_500)).expect("a list"),
+        Vec::<DrillMeta>::new(),
+        "a linked note is not listed"
+    );
+    assert!(notes.view("linked", day(20_500)).is_none(), "nor viewed");
+    assert_eq!(
+        notes.graded().expect("the graded drills"),
+        Vec::<GradedDrill>::new(),
+        "nor paid"
+    );
+
+    let linked = vault_with(&[]);
+    let active = linked.path().join("11-Drills").join(ACTIVE);
+    fs::remove_dir(&active).expect("the active folder goes");
+    std::os::unix::fs::symlink(outside.path(), &active).expect("a linked active folder");
+    std::os::unix::fs::symlink(outside.path(), linked.path().join("11-Drills").join(GRADED))
+        .expect("a linked graded folder");
+    let notes = open(linked.path(), RealFs).expect("opens");
+    assert!(matches!(
+        notes.list_active(day(20_500)),
+        Err(VaultError::NotAFolder)
+    ));
+    assert!(matches!(notes.graded(), Err(VaultError::NotAFolder)));
+    assert!(notes.view("note", day(20_500)).is_none());
+    let db = Db::open(&linked.path().join("deck_streak.db"))
+        .await
+        .expect("the database");
+    let answered = notes
+        .answer(
+            &db,
+            "note",
+            "an answer",
+            deck_streak_vault::drill_store::Surface::Bot,
+            day(20_500),
+            "2026-03-01 09:30",
+            UtcMillis::from_epoch_millis(1_770_000_000_000),
+        )
+        .await;
+    assert!(
+        matches!(answered, Err(VaultError::NotAFolder)),
+        "{answered:?}"
+    );
+    assert_eq!(
+        fs::read_to_string(&note).expect("the outside note"),
+        OUTSIDE_NOTE,
+        "nothing is written outside the vault"
+    );
+}
+
+/// What a link in the drills folders points at (the class rule: no link is followed, whatever it
+/// points at, and a link to a place inside the vault is refused too).
+#[derive(Clone, Copy, Debug)]
+enum Target {
+    File,
+    Dir,
+    LinkToLink,
+    Dangling,
+    InsideVault,
+}
+
+/// Where the link sits.
+#[derive(Clone, Copy, Debug)]
+enum Place {
+    NoteInActive,
+    NoteInGraded,
+    ActiveFolder,
+    GradedFolder,
+}
+
+/// What the adapter is asked to do.
+#[derive(Clone, Copy, Debug)]
+enum Op {
+    List,
+    View,
+    Pay,
+    Answer,
+}
+
+const TARGETS: [Target; 5] = [
+    Target::File,
+    Target::Dir,
+    Target::LinkToLink,
+    Target::Dangling,
+    Target::InsideVault,
+];
+const PLACES: [Place; 4] = [
+    Place::NoteInActive,
+    Place::NoteInGraded,
+    Place::ActiveFolder,
+    Place::GradedFolder,
+];
+const OPS: [Op; 4] = [Op::List, Op::View, Op::Pay, Op::Answer];
+
+/// The text no result may carry: it is in every file a link can lead to.
+const SENTINEL: &str = "Outside text.";
+
+/// A vault, a place outside it, and the files whose bytes and times must not change.
+struct Member {
+    vault: tempfile::TempDir,
+    _outside: tempfile::TempDir,
+    watched: Vec<PathBuf>,
+}
+
+/// The link's target for `place`, built beside the vault or inside it.
+fn target_path(target: Target, place: Place, outside: &Path, vault: &Path) -> PathBuf {
+    let folder_place = matches!(place, Place::ActiveFolder | Place::GradedFolder);
+    match target {
+        Target::File => outside.join("note.md"),
+        Target::Dir => outside.join("dir"),
+        Target::LinkToLink if folder_place => outside.join("hop-dir"),
+        Target::LinkToLink => outside.join("hop-note"),
+        Target::Dangling => outside.join("missing"),
+        Target::InsideVault if folder_place => vault.join("elsewhere").join("dir"),
+        Target::InsideVault => vault.join("elsewhere").join("inside.md"),
+    }
+}
+
+/// Builds one member, or names why it cannot be built here.
+fn build(target: Target, place: Place) -> Result<Member, String> {
+    let outside = tempfile::tempdir().expect("a place outside the vault");
+    let vault = tempfile::tempdir().expect("a vault");
+    let out = outside.path();
+    fs::write(out.join("note.md"), OUTSIDE_NOTE).expect("an outside note");
+    fs::create_dir_all(out.join("dir")).expect("an outside folder");
+    fs::write(out.join("dir").join("note.md"), OUTSIDE_NOTE).expect("a note");
+    fs::write(out.join("dir").join("linked.md"), OUTSIDE_NOTE).expect("a note");
+    let inside = vault.path().join("elsewhere");
+    fs::create_dir_all(inside.join("dir")).expect("an inside folder");
+    fs::write(inside.join("inside.md"), OUTSIDE_NOTE).expect("an inside note");
+    fs::write(inside.join("dir").join("note.md"), OUTSIDE_NOTE).expect("a note");
+    fs::write(inside.join("dir").join("linked.md"), OUTSIDE_NOTE).expect("a note");
+    let hop = |name: &str, to: &Path| {
+        std::os::unix::fs::symlink(to, out.join(name)).map_err(|error| error.to_string())
+    };
+    hop("hop-note", &out.join("note.md"))?;
+    hop("hop-dir", &out.join("dir"))?;
+    let drills = vault.path().join("11-Drills");
+    let link_to = target_path(target, place, out, vault.path());
+    let (linked_active, linked_graded) = (
+        matches!(place, Place::ActiveFolder),
+        matches!(place, Place::GradedFolder),
+    );
+    for (name, linked) in [(ACTIVE, linked_active), (GRADED, linked_graded)] {
+        if linked {
+            fs::create_dir_all(&drills).expect("the drills folder");
+            std::os::unix::fs::symlink(&link_to, drills.join(name))
+                .map_err(|error| error.to_string())?;
+        } else {
+            fs::create_dir_all(drills.join(name)).expect("a folder");
+        }
+    }
+    match place {
+        Place::NoteInActive => {
+            std::os::unix::fs::symlink(&link_to, drills.join(ACTIVE).join("linked.md"))
+        }
+        Place::NoteInGraded => {
+            std::os::unix::fs::symlink(&link_to, drills.join(GRADED).join("linked.md"))
+        }
+        Place::ActiveFolder | Place::GradedFolder => Ok(()),
+    }
+    .map_err(|error| error.to_string())?;
+    let watched = vec![
+        out.join("note.md"),
+        out.join("dir").join("note.md"),
+        out.join("dir").join("linked.md"),
+        inside.join("inside.md"),
+        inside.join("dir").join("note.md"),
+        inside.join("dir").join("linked.md"),
+    ];
+    Ok(Member {
+        vault,
+        _outside: outside,
+        watched,
+    })
+}
+
+/// The bytes and modification time of every watched file.
+fn fingerprint(watched: &[PathBuf]) -> Vec<(Vec<u8>, std::time::SystemTime)> {
+    watched
+        .iter()
+        .map(|path| {
+            (
+                fs::read(path).expect("a watched file"),
+                fs::metadata(path)
+                    .and_then(|meta| meta.modified())
+                    .expect("its time"),
+            )
+        })
+        .collect()
+}
+
+#[tokio::test]
+async fn no_link_in_any_placement_is_read_listed_paid_from_or_written_through() {
+    // The control: with no link the same four operations do reach a note, so the refusals below
+    // are the gate's and not an empty fixture's.
+    let control = vault_with(&[("real.md", OUTSIDE_NOTE)]);
+    fs::write(
+        control
+            .path()
+            .join("11-Drills")
+            .join(ACTIVE)
+            .join("real.md"),
+        OUTSIDE_NOTE,
+    )
+    .expect("an active note");
+    let notes = open(control.path(), RealFs).expect("opens");
+    assert_eq!(notes.list_active(day(20_500)).expect("a list").len(), 1);
+    assert!(notes.view("real", day(20_500)).is_some());
+    assert_eq!(notes.graded().expect("graded").len(), 1);
+
+    let mut examined = 0_usize;
+    let mut unbuilt: Vec<String> = Vec::new();
+    for target in TARGETS {
+        for place in PLACES {
+            let member = match build(target, place) {
+                Ok(member) => member,
+                Err(why) => {
+                    unbuilt.extend(
+                        OPS.iter()
+                            .map(|op| format!("{target:?}/{place:?}/{op:?}: {why}")),
+                    );
+                    continue;
+                }
+            };
+            let before = fingerprint(&member.watched);
+            let notes = open(member.vault.path(), RealFs).expect("opens");
+            for op in OPS {
+                let label = format!("{target:?} {place:?} {op:?}");
+                match op {
+                    Op::List => {
+                        if let Ok(listed) = notes.list_active(day(20_500)) {
+                            assert!(listed.is_empty(), "{label}: listed {listed:?}");
+                        }
+                    }
+                    Op::View => {
+                        for id in ["linked", "note"] {
+                            assert!(
+                                notes.view(id, day(20_500)).is_none(),
+                                "{label}: viewed {id}"
+                            );
+                        }
+                    }
+                    Op::Pay => {
+                        if let Ok(graded) = notes.graded() {
+                            assert!(graded.is_empty(), "{label}: paid from {graded:?}");
+                        }
+                    }
+                    Op::Answer => {
+                        let db = Db::open(&member.vault.path().join("deck_streak.db"))
+                            .await
+                            .expect("the database");
+                        for id in ["linked", "note"] {
+                            let outcome = notes
+                                .answer(
+                                    &db,
+                                    id,
+                                    "an answer",
+                                    deck_streak_vault::drill_store::Surface::Bot,
+                                    day(20_500),
+                                    "2026-03-01 09:30",
+                                    UtcMillis::from_epoch_millis(1_770_000_000_000),
+                                )
+                                .await;
+                            assert!(
+                                matches!(
+                                    outcome,
+                                    Err(_) | Ok(deck_streak_vault::drill_notes::AnswerOutcome::NotActive)
+                                ),
+                                "{label}: answered {id}: {outcome:?}"
+                            );
+                            assert!(
+                                !format!("{outcome:?}").contains(SENTINEL),
+                                "{label}: the outside text surfaced"
+                            );
+                        }
+                    }
+                }
+                examined += 1;
+            }
+            assert!(
+                fingerprint(&member.watched) == before,
+                "{target:?} {place:?}: a file behind a link changed"
+            );
+        }
+    }
+    println!("examined {examined} placements; unbuilt on this file system: {unbuilt:?}");
+    assert_eq!(
+        examined + unbuilt.len(),
+        TARGETS.len() * PLACES.len() * OPS.len(),
+        "every member is examined or named"
+    );
+    assert!(examined > 0, "the population is not empty");
+}
