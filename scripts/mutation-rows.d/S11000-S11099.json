@@ -167,10 +167,10 @@
         "S11021-KEY-BODY-MAX",
         "vault",
         "src/drills.rs",
-        "const KEY_BODY_MAX: usize = 128;",
-        "const KEY_BODY_MAX: usize = 129;",
+        "pub const KEY_ID_MAX: usize = GRANT_SOURCE_MAX - KEY_PREFIX.len();",
+        "pub const KEY_ID_MAX: usize = GRANT_SOURCE_MAX - KEY_PREFIX.len() + 1;",
         "drill_goldens::an_unkeyable_drill_id_is_keyed_by_its_hash",
-        "an id longer than the source grammar's body is hashed (SPEC-110 R10, A5)"
+        "the kept-id bound is the grammar's limit less the prefix, so an id of 123 is hashed and 122 is kept (SPEC-110 R10, A5)"
       ],
       [
         "S11022-KEY-HASH-HEX",
@@ -344,13 +344,49 @@
         "the ready marker reads Ready for grading (SPEC-110 R3)"
       ],
       [
-        "S11040-DRILL-POSTBACK-MINUTE",
+        "S11041-DRILL-POSTBACK-MINUTE",
         "coordination",
         "src/jobs.rs",
         "schedule: Schedule::Hourly { minute: 19 },",
         "schedule: Schedule::Hourly { minute: 20 },",
         "job_table::the_job_table_holds_the_drill_postback",
         "the drill post-back runs hourly at minute 19 (SPEC-110 R9)"
+      ],
+      [
+        "S11042-GRANT-SOURCE-MAX",
+        "vault",
+        "src/drills.rs",
+        "pub const GRANT_SOURCE_MAX: usize = 128;",
+        "pub const GRANT_SOURCE_MAX: usize = 129;",
+        "drill_goldens::an_unkeyable_drill_id_is_keyed_by_its_hash",
+        "the grammar's limit the kept-id bound derives from is 128, so a kept key never exceeds it (SPEC-110 R10)"
+      ],
+      [
+        "S11043-CONFINED-ALWAYS-OK",
+        "vault",
+        "src/drill_notes.rs",
+        "            Ok(_) => Err(VaultError::NotAFolder),\n            Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(false),",
+        "            Ok(_) => Ok(true),\n            Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(false),",
+        "drill_kills::no_link_in_any_placement_is_read_listed_paid_from_or_written_through",
+        "a folder that resolves elsewhere is refused, never confined (SPEC-110 R1)"
+      ],
+      [
+        "S11044-REGULAR-FILE-KIND",
+        "vault",
+        "src/drill_notes.rs",
+        "            == Some(EntryKind::File))",
+        "            != Some(EntryKind::Dir))",
+        "drill_kills::no_link_in_any_placement_is_read_listed_paid_from_or_written_through",
+        "a note that is a link is not a regular file and is never read through (SPEC-110 R1)"
+      ],
+      [
+        "S11045-ANSWER-GATE",
+        "vault",
+        "src/drill_notes.rs",
+        "!drills::safe_stem(id) || !self.regular_note(&self.active(), &path)?",
+        "!drills::safe_stem(id)",
+        "drill_kills::no_link_in_any_placement_is_read_listed_paid_from_or_written_through",
+        "an answer passes the one gate before the note is read or written (SPEC-110 R1)"
       ]
     ],
     "CARGO_KILLED_SCRIPT_MUTATIONS": [
