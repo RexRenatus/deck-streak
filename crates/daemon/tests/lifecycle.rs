@@ -140,10 +140,15 @@ impl Drop for Daemon {
             self.signal("TERM");
             if self.exited.recv_timeout(self.bound).is_err() {
                 self.signal("KILL");
+                drop(self.exited.recv_timeout(self.bound));
             }
         }
+        // Joined only once the child is reaped: a child that outlived every signal must fail its
+        // test by assertion, never hang the guard on a thread that waits for it.
         if let Some(waiter) = self.waiter.take() {
-            drop(waiter.join());
+            if self.reaped.load(Ordering::SeqCst) {
+                drop(waiter.join());
+            }
         }
     }
 }
