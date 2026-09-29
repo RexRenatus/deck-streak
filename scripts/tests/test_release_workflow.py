@@ -71,6 +71,11 @@ class TheReleaseRunsOnSemverTags(unittest.TestCase):
         self.assertEqual(checkout["with"]["fetch-depth"], "0", "a full-history checkout")
         ancestor = index_of(steps, "merge-base --is-ancestor")
         self.assertIn("origin/main", steps[ancestor]["run"])
+        self.assertIn(
+            'merge-base --is-ancestor "$GITHUB_SHA" origin/main',
+            steps[ancestor]["run"],
+            "the commit the tag names is the one proved to be on main",
+        )
         self.assertLess(steps.index(checkout), ancestor)
         build = index_of(steps, "cargo build")
         self.assertIn("--release", steps[build]["run"])
