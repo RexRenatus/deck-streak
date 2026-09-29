@@ -846,6 +846,33 @@ class TheCaddyInstall(Case):
         self.assertEqual(block.read_text() if block.exists() else None, block_text)
         self.assertEqual((w.caddy_dir / "Caddyfile").read_text(), after)
 
+    def test_a_removal_whose_caddyfile_cannot_be_read_says_so(self):
+        w = self.world
+        _original, _after, block_text = self.installed()
+        caddyfile = w.caddy_dir / "Caddyfile"
+        caddyfile.unlink()
+        caddyfile.mkdir()
+        done = w.run(ROLLBACK, "caddy-remove", **self.config())
+        self.assertNotEqual(done.returncode, 0, "an unreadable Caddyfile refuses the removal")
+        self.assertIn(
+            "the candidate Caddyfile could not be written",
+            done.stderr,
+            "grep's read failure is a failed write, not a no-match",
+        )
+        self.assertEqual((w.caddy_dir / "deck-streak.caddy").read_text(), block_text)
+        candidates = [p.name for p in w.caddy_dir.iterdir() if "candidate" in p.name]
+        self.assertEqual(candidates, [], "no candidate file is left behind")
+
+    def test_a_removal_from_a_caddyfile_holding_only_the_import_line_is_not_a_failure(self):
+        w = self.world
+        _original, after, _block_text = self.installed()
+        line = next(ln for ln in after.splitlines() if "import" in ln)
+        caddyfile = w.caddy_dir / "Caddyfile"
+        caddyfile.write_text(line + "\n", encoding="utf-8")
+        self.ok(w.run(ROLLBACK, "caddy-remove", **self.config()))
+        self.assertEqual(caddyfile.read_text(), "", "grep found no line to keep")
+        self.assertFalse((w.caddy_dir / "deck-streak.caddy").exists(), "the block is removed")
+
     def refused_with_no_candidate(self, flag):
         w = self.world
         _original, after, block_text = self.installed()
