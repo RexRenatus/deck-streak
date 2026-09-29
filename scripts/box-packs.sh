@@ -974,6 +974,12 @@ def judge_scan(
         verdict.mark, verdict.detail = "FAIL", counts
     elif settings == 0 and pending:
         verdict.mark, verdict.detail = "pending", f"pending {pending}: {counts}"
+    elif settings == 0 and expected:
+        named = ", ".join(sorted(set(expected.values())))
+        verdict.mark = "FAIL"
+        verdict.detail = (
+            f"VOID: {counts}; expected_red names {named}, but no settings document was examined"
+        )
     elif settings == 0:
         verdict.mark, verdict.detail = "FAIL", f"VOID: {counts}, and the wiring names no issue"
     elif pending:
