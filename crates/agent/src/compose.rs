@@ -24,6 +24,12 @@ pub struct Parts<'a> {
     pub memory: &'a str,
     /// Today's new cards, as data.
     pub cards: &'a str,
+    /// The form's instruction (SPEC-046 R3, R4), written by the engine and trusted.
+    pub form: &'a str,
+    /// The prose target, written by the engine and trusted.
+    pub word_target: &'a str,
+    /// The repair on a second attempt, built from engine text only; empty on the first attempt.
+    pub repair: &'a str,
 }
 
 /// Why a prompt could not be composed.

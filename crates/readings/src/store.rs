@@ -13,6 +13,7 @@
 use deck_streak_kernel::{Db, KernelError, StudyDay, UtcMillis};
 
 use crate::day_set::{StudyDayResolution, TopicEnd};
+use crate::reading::ReadingId;
 use crate::state::{Class, CouldNotTell, RunOutcome, TopicState};
 use crate::topic::TopicKey;
 
@@ -136,7 +137,7 @@ fn id_list(ids: &[i64]) -> String {
 /// The readings' tables in the service's own database.
 #[derive(Clone, Debug)]
 pub struct SqliteReadings {
-    db: Db,
+    pub(crate) db: Db,
 }
 
 impl SqliteReadings {
@@ -416,4 +417,104 @@ async fn upsert_topic_day(
     .execute(write)
     .await?;
     Ok(())
+}
+
+/// Whether a reading's vault copy was written (SPEC-046 R9).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum VaultStatus {
+    /// Written, at this path.
+    Written(String),
+    /// The write failed; the reading is kept.
+    Failed,
+}
+
+/// A reading to store.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct NewReading {
+    /// Its id.
+    pub id: ReadingId,
+    /// Its topic.
+    pub topic: TopicKey,
+    /// The study day it was first generated for.
+    pub study_day: StudyDay,
+    /// The day set's digest.
+    pub digest: String,
+    /// The persona that wrote it.
+    pub persona: String,
+    /// The text.
+    pub text: String,
+    /// Its word count.
+    pub word_count: u32,
+    /// Its minutes.
+    pub minutes: u32,
+    /// The new cards it covers.
+    pub card_ids: Vec<i64>,
+    /// The distinct notes it was written from.
+    pub note_count: u32,
+    /// When it was generated.
+    pub generated_at: UtcMillis,
+    /// The vault copy.
+    pub vault: VaultStatus,
+}
+
+/// A stored reading.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct StoredReading {
+    /// What was stored.
+    pub reading: NewReading,
+    /// The nights the reading was carried unchanged.
+    pub carried_nights: u32,
+}
+
+impl SqliteReadings {
+    /// Stores `reading`.
+    ///
+    /// # Errors
+    ///
+    /// [`KernelError::Database`] when the write fails.
+    pub async fn store_reading(&self, reading: &NewReading) -> Result<(), KernelError> {
+        let _ = reading;
+        Ok(())
+    }
+
+    /// The newest stored reading of `topic`.
+    ///
+    /// # Errors
+    ///
+    /// [`StoreError`] when the read fails.
+    pub async fn latest_reading(
+        &self,
+        topic: &TopicKey,
+    ) -> Result<Option<StoredReading>, StoreError> {
+        let _ = topic;
+        Ok(None)
+    }
+
+    /// Carries the reading `id` one more night.
+    ///
+    /// # Errors
+    ///
+    /// [`KernelError::Database`] when the write fails.
+    pub async fn carry_reading(&self, id: &ReadingId) -> Result<(), KernelError> {
+        let _ = id;
+        Ok(())
+    }
+
+    /// Every stored reading, oldest first.
+    ///
+    /// # Errors
+    ///
+    /// [`StoreError`] when the read fails.
+    pub async fn readings(&self) -> Result<Vec<StoredReading>, StoreError> {
+        Ok(Vec::new())
+    }
+
+    /// Every topic the readings' record has named.
+    ///
+    /// # Errors
+    ///
+    /// [`StoreError`] when the read fails.
+    pub async fn known_topics(&self) -> Result<Vec<TopicKey>, StoreError> {
+        Ok(Vec::new())
+    }
 }

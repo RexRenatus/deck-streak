@@ -111,6 +111,9 @@ async fn drive(attack: &str, source: &str, benign: bool) -> (Verdict, Vec<String
             duty: "d",
             memory,
             cards,
+            form: "",
+            word_target: "",
+            repair: "",
         },
     };
     let verdict = engine

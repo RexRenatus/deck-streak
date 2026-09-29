@@ -15,6 +15,9 @@ fn parts<'a>(memory: &'a str, cards: &'a str) -> Parts<'a> {
         duty: "DUTYTEXT",
         memory,
         cards,
+        form: "",
+        word_target: "",
+        repair: "",
     }
 }
 
