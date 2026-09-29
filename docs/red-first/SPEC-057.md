@@ -64,6 +64,7 @@ A28: red at e260627: AssertionError in each of its four subtests, each for its o
 A28: green at 8c87e5b
 A19: red at 8eba7ef: AssertionError: 16 != 0 : deck-streak-identity: 16 unexplained mutant(s) in its row (opening sweep run 36511057164 listed 143, killed 97, equivalent 0, unexplained 16, unviable 30)
 A19: green at a911483
+A21: red at 660dda8 (full sha 660dda874b1aba282f5ffa2f395ce3819c51e79a): AssertionError: 5 != 0 : deck-streak-coordination: 5 unexplained mutant(s) in its row (the opening sweep, run 36526822999 at 36b283a, read listed 409, killed 321, equivalent 0, unexplained 5, unviable 83)
 ```
 
 | requirement | the behaviour a wrong implementation would get wrong | criterion |
@@ -212,3 +213,14 @@ non-`data` name followed by a data command). One is recorded equivalent in
 `table: verdict: ok`, listed 101, killed 71, equivalent 1, unexplained 0, unviable 29. Shard 1
 exited 2 (the one recorded mutant) and the other shards exited 0. Rows S05750 to S05759 are unused:
 the tool mutated every invariant of the crate, so none needed a hand-proved row (R20). No shard exited 3, so no mutant of this crate timed out in the closing sweep.
+
+## The coordination delivery: its row (A21)
+
+A21 is the coordination crate's row of section 7. Its opening sweep, run 36526822999 at the base (dev
+36b283a), listed 409 mutants and left 5 unexplained, in `obligations.rs`, `liveness.rs`, `delivery.rs`
+and `runner.rs` (two). Three were killed by tests: the registry's debug line and the reason renderer
+(`crates/coordination/tests/render.rs`) and the minute-count skew at the lower bound
+(`crates/coordination/tests/liveness.rs`). Two are recorded equivalent in
+`scripts/mutation-equivalent.d/deck-streak-coordination.json`: the type-identical `NoNotifier::counts`
+default and the always-true job guard in `run_job`. The closing sweep, run 36528662545 at e8a8e59, reads
+listed 409, killed 324, equivalent 2, unexplained 0, unviable 83. Rows S05760 to S05764 are unused.
