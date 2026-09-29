@@ -48,6 +48,30 @@
         "        return retired(root, args.base)\n    except (OSError, json.JSONDecodeError, UnresolvableTarget) as refusal:\n",
         "the retirement check exits 2 naming the refusal, as `count` and `ids` do, where a refusal would have been a traceback (SPEC-122 R3)",
         "test_band_repeated_key.TheReaderRefusesARepeatedKey.test_retired_over_a_revision_whose_band_file_repeats_a_key_is_refused"
+      ],
+      [
+        "S12207-PLAN-REFUSES-A-REPEATED-KEY",
+        "scripts/mutation-verdict.py",
+        "        except mutation_rows.PopulationRefused as refusal:\n            print(f\"mutation: plan: REFUSED: {refusal}\", file=sys.stderr)",
+        "        except ZeroDivisionError as refusal:\n            print(f\"mutation: plan: REFUSED: {refusal}\", file=sys.stderr)",
+        "the plan meets a band file that repeats a key with the one-line refusal and exit 1, where the refusal would have been a traceback (SPEC-122 R6)",
+        "test_verdict_repeated_key.ThePlanRefusesARepeatedKey.test_a_band_file_that_repeats_a_key_is_refused_by_the_plan_without_a_traceback"
+      ],
+      [
+        "S12208-RECORDS-READ-BY-THE-ONE-PARSER",
+        "scripts/mutation-verdict.py",
+        "mutation_rows.parse_document(\n                f\"{RECORDS}/{path.name}\", path.read_text(encoding=\"utf-8\")\n            )",
+        "json.loads(path.read_text(encoding=\"utf-8\"))",
+        "an equivalence record is read by the parser that refuses a repeated key, not by a plain json.loads that keeps the last value (SPEC-122 R7)",
+        "test_verdict_repeated_key.TheEquivalenceRecordsRefuseARepeatedKey.test_a_record_fragment_that_repeats_a_key_at_the_top_is_refused"
+      ],
+      [
+        "S12209-RECORD-REFUSAL-IS-A-PROBLEM",
+        "scripts/mutation-verdict.py",
+        "            problems.append(str(refusal))\n            continue\n        except (OSError",
+        "            continue\n        except (OSError",
+        "a record fragment that repeats a key is reported by name as a problem, not dropped in silence (SPEC-122 R7)",
+        "test_verdict_repeated_key.TheEquivalenceRecordsRefuseARepeatedKey.test_a_record_that_repeats_a_key_inside_an_entry_is_refused"
       ]
     ]
   }
