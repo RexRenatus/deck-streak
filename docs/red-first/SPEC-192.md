@@ -19,6 +19,8 @@ A9: not red: the folder setting already carried the literal; the row S19201 prov
 A10: not red: the request file already carried the literal; the row S19215 proves the test kills the rewritten literal
 A11: red at f6a1b59: AssertionError: 1 != 2 ; AssertionError: 0 != 1 ; AssertionError: Lists differ: [] != ['demo::Depth (src/depth.rs) "a whole depth"'] ; AssertionError: 0 != 2 : four of the ten tests in the module fail by assertion
 A11: green at 68c239b
+A12: red at 9212a24: AssertionError: 1 != 2 ; AssertionError: 0 != 1 ; AssertionError: Lists differ: ['demo::Depth (src/depth.rs) "a whole depth"'] != [] ; AssertionError: 0 != 1 ; AssertionError: 0 != 1 : five of the seventeen tests in the module fail by assertion
+A12: green at a8d57e9
 ```
 
 ## Addendum, 2026-09-29: the guard examines every impl and counts only a test's spelling
@@ -36,7 +38,23 @@ whole module green (`Ran 10 tests`, `OK`, `examined 24 Setting impl(s)`).
 Disclosure: the bodies of the first round's guard tests changed after the red commit 4fd0748 (a
 presence assertion was added beside each absence, at 5fdf8b2), so the A1 red line above quotes the
 earlier bodies. The later bodies, run at 4fd0748, fail the same way:
-`Lists differ: ['analytics::LeechThreshold (src/settings.[1167 chars]...] != [] / First list contains 15 additional elements`.
+`Lists differ: ['analytics::LeechThreshold (src/settings.[1167 chars]er"'] != [] / First list contains 15 additional elements`.
+
+## Addendum, 2026-09-29: the guard reads Rust source as the compiler does
+
+Criterion A12 joins the fence above. Its seven tests, the class `TheGuardReadsRustSource`, were
+committed alone at 9212a24, against the guard as the second round left it: five fail by assertion
+and two pass (the plain macro impl and the own-module spelling).
+
+- `test_a_macro_implementation_through_dollar_crate_is_examined`: `AssertionError: 1 != 2`
+- `test_a_production_line_after_the_own_files_test_module_is_refused`: `AssertionError: 0 != 1`
+- `test_a_shape_a_test_spells_after_a_url_on_its_line_is_pinned`: `AssertionError: Lists differ: ['demo::Depth (src/depth.rs) "a whole depth"'] != []`
+- `test_a_shape_only_a_block_comment_spells_is_refused`: `AssertionError: 0 != 1`
+- `test_a_test_attribute_on_a_use_opens_no_test_module`: `AssertionError: 0 != 1`
+
+The guard change at a8d57e9 turns the class green (`Ran 7 tests`, `OK`) and the whole module
+(`Ran 17 tests`, `OK`, `examined 24 Setting impl(s)`). A11's nine tests are unchanged; its
+criterion text now maps one clause to each of them.
 
 ## The population: 24 `impl Setting for`, and how each is pinned
 

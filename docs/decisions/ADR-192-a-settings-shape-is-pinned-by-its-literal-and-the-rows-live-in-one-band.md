@@ -46,8 +46,8 @@ killed by named tests that already spell their literals and need no row.
   unspelled shape fails the guard.
 - Good, because no other SPEC's band or text changes.
 - Good, because a shape counts as pinned only by a test of the crate (its `tests/`, or the
-  `#[cfg(test)]` module of the impl's own file, comments not counting) or by a row on the impl's own
-  file, and a literal that two impls of one crate share needs a row on each file.
+  `#[cfg(test)]` module of the impl's own file, comments of both forms not counting, and nothing
+  after that module) or by a row on the impl's own file, and a literal that two impls of one crate share needs a row on each file.
 - Bad, because the guard reads text, not the compiler: a spelling in a test that never asserts on
   it still counts, and the row is what proves the test kills the mutant.
 

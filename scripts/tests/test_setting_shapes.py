@@ -7,8 +7,11 @@ or a mutation row whose `find` is the constant's line, fails when they change.
 
 The guard enumerates the implementations by walking `crates/*/src` (a git pathspec of that shape
 matches nothing), reads each `const SHAPE` literal, and refuses one that is spelled in no test of
-its crate (its `tests/`, or the `#[cfg(test)]` module of the implementation's own file, comments
-not counting) and in no mutation row that targets the implementation's own file. A literal that
+its crate (its `tests/`, or the `#[cfg(test)]` module of the implementation's own file) and in no
+mutation row that targets the implementation's own file. It reads Rust source as the compiler
+does: comments of both forms (`//` and nested `/* */`) do not count, a `//` inside a string is not a
+comment, and only a `#[cfg(test)]` module of the implementation's own file counts, not a line after
+it. A literal that
 two implementations of one crate share is pinned only by a row on each implementation's file.
 """
 

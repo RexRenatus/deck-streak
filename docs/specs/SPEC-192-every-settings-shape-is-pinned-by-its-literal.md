@@ -26,12 +26,14 @@
 ## 2. Requirements
 
 R1. The population is every `impl Setting for`, generic (`impl<T> Setting for`), path-qualified
-    (`crate::settings::Setting`) or written by a macro (`impl Setting for $t`), under `crates/*/src/`.
+    (`crate::settings::Setting`) or written by a macro (`impl Setting for $t`, also through
+    `$crate::settings::Setting`), under `crates/*/src/`.
     It is 24 on the base of this delivery and it is enumerated by walking the tree (`pathlib`),
     because the git pathspec `'crates/*/src'` matches nothing.
 R2. Each implementation's `SHAPE` literal is spelled, whole and quoted, in a test of its crate (its
-    `tests/`, or the `#[cfg(test)]` module of the implementation's own source file; a comment does
-    not count), and the assertion compares the whole refusal against it (the setting's name and the
+    `tests/`, or the `#[cfg(test)]` module of the implementation's own source file; a comment of
+    either form, `//` or `/* */`, does not count, and only that module of the own file counts, not a
+    line after it), and the assertion compares the whole refusal against it (the setting's name and the
     literal), never against the constant. A literal that two or more implementations of one crate
     share is pinned only by a mutation row on each implementation's own file.
 R3. The 14 implementations that survived (`LeechThreshold`, `MiniAppUrl`, `ApiUrl`, `SyncEndpoint`,
@@ -44,7 +46,8 @@ R4. `Freshness` (identity) and `VaultRoot` (vault) are pinned by named tests tha
     #354 implementations by their rows; none of the seven is changed.
 R5. A guard under `scripts/tests` enumerates the population, reads each literal, and refuses an
     implementation whose literal is spelled by no test of its crate (its `tests/` or the
-    `#[cfg(test)]` module of its own file, comments not counting) and is the `find` of no row that
+    `#[cfg(test)]` module of its own file; comments of both forms not counting) and is the `find`
+    of no row that
     targets the implementation's own file, and one whose literal another implementation of the
     crate shares and that lacks such a row. It prints `examined <N> Setting impl(s)` and refuses zero.
 R6. The delivery changes no production line: `SHAPE` literals, setting names and behaviour are as
@@ -64,7 +67,8 @@ R6. The delivery changes no production line: `SHAPE` literals, setting names and
 | A8 | a malformed taxonomy path is refused naming its whole shape | `cargo test -p deck-streak-readings --test topics -- --exact a_taxonomy_file_that_names_a_deck_badly_is_refused_whole_and_never_quoted` |
 | A9 | the vault's folder settings state their whole shape | `cargo test -p deck-streak-vault --test confinement -- --exact the_vault_settings_refuse_by_name_and_never_by_value` |
 | A10 | a relative sync request path is refused naming its whole shape | `cargo test -p deck-streak-daemon --test sync_request -- --exact a_relative_request_path_is_refused_naming_its_whole_shape` |
-| A11 | the guard examines a generic and a macro impl, and refuses a shape that only its own constant, a production line, a comment, or a read-back of the constant spells, or that two impls of one crate share without a row on each file, or that only another file's row pins | `python3 -m unittest discover -s scripts/tests -p test_setting_shapes.py -k TheGuardJudgesAPlantedTree` |
+| A11 | the guard examines a generic impl, admits a shape a test of the crate spells or a row on the impl's own file finds, and refuses a shape that only its own constant, a read-back of the constant, a production line or a comment spells, that only another file's row pins, or that two impls of one crate share without a row on each file | `python3 -m unittest discover -s scripts/tests -p test_setting_shapes.py -k TheGuardJudgesAPlantedTree` |
+| A12 | the guard examines a macro impl, plain or through `$crate`; admits a shape its own file's `#[cfg(test)]` module spells, and one a test spells after a `//` inside a string; and refuses a shape that only a block comment spells, that only a production line after the own file's test module spells, or that only a production line after a `#[cfg(test)]` opening no module spells | `python3 -m unittest discover -s scripts/tests -p test_setting_shapes.py -k TheGuardReadsRustSource` |
 
 ```acceptance
 A1: python3 -m unittest discover -s scripts/tests -p test_setting_shapes.py -k test_every_setting_impl_has_a_shape_literal_that_a_test_or_a_row_pins
@@ -78,6 +82,7 @@ A8: cargo test -p deck-streak-readings --test topics -- --exact a_taxonomy_file_
 A9: cargo test -p deck-streak-vault --test confinement -- --exact the_vault_settings_refuse_by_name_and_never_by_value
 A10: cargo test -p deck-streak-daemon --test sync_request -- --exact a_relative_request_path_is_refused_naming_its_whole_shape
 A11: python3 -m unittest discover -s scripts/tests -p test_setting_shapes.py -k TheGuardJudgesAPlantedTree
+A12: python3 -m unittest discover -s scripts/tests -p test_setting_shapes.py -k TheGuardReadsRustSource
 ```
 
 A2 to A10 pin a literal the code already carries, so each is recorded `not red`; the proof that
@@ -115,6 +120,10 @@ each kills the mutant is its row (R3), run with `python3 scripts/mutation_rows.p
 
 ## 6. Risks
 
+- **The guard reads text with a small lexer, not the compiler.** It blanks `//` and nested `/* */`
+  comments, keeps strings and character literals, and counts only a `#[cfg(test)]` module of the
+  implementation's own file. A construct the lexer does not know (a `#[cfg(test)]` module written
+  by a macro) is not counted, so the guard errs toward refusing.
 - **A literal shared by implementations** ("an absolute file path" is `RosterPath`'s in agent,
   `RequestFile`'s in daemon and `CoursesPath`'s in kernel: one crate each today). Two or more
   implementations of one crate that share a literal are not pinned by a spelling in a test: the guard
