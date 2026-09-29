@@ -42,12 +42,31 @@ A19: red at da30fb25261d1fafaa295e59e206010bd1063605: AssertionError: 'the Caddy
 A20: red at da30fb25261d1fafaa295e59e206010bd1063605: AssertionError: b'' != b'example.org {\n\trespond 200\n}\nimport deck-streak.caddy\n' : the live Caddyfile is byte for byte
 A21: red at da30fb25261d1fafaa295e59e206010bd1063605: AssertionError: 0 == 0 : a dangling link refuses the removal
 A22: not red: the test was added with the fix already in place (5192f49); see the replay below the fence
+A23: red at 159b1877c6207ef0596e20ea9793276745b3c911: AssertionError: 0 == 0 : a linked candidate refuses the install
+A24: red at 159b1877c6207ef0596e20ea9793276745b3c911: AssertionError: 0 == 0 : a hard-linked block refuses the install
+A25: red at 159b1877c6207ef0596e20ea9793276745b3c911: AssertionError: b'' != b'example.org {\n\trespond 200\n}\nimport deck-streak.caddy\n' : the live Caddyfile is byte for byte
+A26: red at 159b1877c6207ef0596e20ea9793276745b3c911: AssertionError: the removal waited for a reader of a FIFO at its candidate path
+A27: red at 159b1877c6207ef0596e20ea9793276745b3c911: AssertionError: 'the Caddy configuration was refused' not found in "deck-streak-host: line 18: /tmp/tmptfxp_pw2/host/etc/caddy/deck-streak.caddy: Permission denied\nfind: '/tmp/tmptfxp_pw2/host/etc/caddy/deck-streak.caddy': No such file or directory\n" : the refusal is printed
+A28: red at 159b1877c6207ef0596e20ea9793276745b3c911: AssertionError: False is not true : the directory and its file are kept
+A29: red at 159b1877c6207ef0596e20ea9793276745b3c911: AssertionError: 'the Caddy configuration was refused' not found in "cp: cannot create regular file '/tmp/tmpfevq3l54/host/etc/caddy/Caddyfile.previous': Permission denied\n" : the refusal is printed
+A30: red at 159b1877c6207ef0596e20ea9793276745b3c911: AssertionError: 'the Caddy configuration was refused' not found in '' : the refusal is printed
+A32: red at 159b1877c6207ef0596e20ea9793276745b3c911: AssertionError: 'the Caddy configuration was refused' not found in "cp: cannot create regular file '/tmp/tmph36m10n5/host/etc/caddy/deck-streak.caddy.previous': Permission denied\n" : the refusal is printed
+A31: not red: the test passes at dev's and the head's `deploy.sh`, so it is the killer that S12720 needs once the install guard refuses a link before the copy (see the addendum below the fence)
 A16: green at 28588e0fbbb556f5c686ac937c2180377c78bfbd
 A17: green at 28588e0fbbb556f5c686ac937c2180377c78bfbd
 A18: green at 28588e0fbbb556f5c686ac937c2180377c78bfbd
 A19: green at 28588e0fbbb556f5c686ac937c2180377c78bfbd
 A20: green at 28588e0fbbb556f5c686ac937c2180377c78bfbd
 A21: green at 28588e0fbbb556f5c686ac937c2180377c78bfbd
+A23: green at 2c25d22b82dd41f8f38a0754039e3549a496f45d
+A24: green at 2c25d22b82dd41f8f38a0754039e3549a496f45d
+A25: green at 2c25d22b82dd41f8f38a0754039e3549a496f45d
+A26: green at 2c25d22b82dd41f8f38a0754039e3549a496f45d
+A27: green at 2c25d22b82dd41f8f38a0754039e3549a496f45d
+A28: green at 2c25d22b82dd41f8f38a0754039e3549a496f45d
+A29: green at 2c25d22b82dd41f8f38a0754039e3549a496f45d
+A30: green at 2c25d22b82dd41f8f38a0754039e3549a496f45d
+A32: green at 2c25d22b82dd41f8f38a0754039e3549a496f45d
 ```
 
 ## Fix round 1 (PR #357)
@@ -125,16 +144,30 @@ red line of A16 above is the validation test's; the adapt test's is the same mes
 followed (28588e0), which changes `deploy.sh` and edits no test file. After it, thirty-eight tests
 pass. The tests' subprocess now runs in its own session and the whole group is killed on a timeout.
 
-A link to `/dev/full` at the candidate path was not planted: it makes the `caddy` stub's `grep`
-read for ever.
+A link to `/dev/full` at the candidate path was not made a test: the run ends in under a second with a
+non-zero status at dev and at the head, so it pins nothing that a plain unwritable path does not.
 
 A22 covers the install with a link to the live Caddyfile at its candidate path. The row S12720 was
-first killed by A17, which survived the mutant because the later import append refuses a directory
-too, so the test of A22 was added (5192f49, the only later commit that edits a test file) and the
-row's killer moved to it. On dev's `deploy.sh` the test is red by assertion, replayed under `LC_ALL=C`:
+first pinned by A17, whose test still passed with the row's mutant because the later import append
+refuses a directory too, so the test of A22 was added (5192f49, the only later commit that edits a test
+file) and the row's killer moved to it. On dev's `deploy.sh` the test is red by assertion, replayed under `LC_ALL=C`:
 
 ```text
 A22: red on dev's deploy.sh: AssertionError: 'the Caddy configuration was refused' not found in "cp: '/tmp/tmp2vnj2dok/host/etc/caddy/Caddyfile' and '/tmp/tmp2vnj2dok/host/etc/caddy/deck-streak.candidate' are the same file\n" : the refusal is printed
 ```
 
 With it, thirty-nine tests pass at the head.
+
+## Amendment 2026-09-29, second round (issues #423 and #424)
+
+The tests of A23 to A32 were committed first (159b187) against `deploy.sh` as it stood, and run whole
+under `LC_ALL=C`: nine tests were red by assertion, and the thirty-nine that stood stayed green. The
+test of A26 turns a timeout into a failure, so a hang is red by assertion and not an error. The test
+of A31 is green at that commit: it is the killer that the row S12720 needs, because the install guard
+now refuses a link at the candidate path before the copy, which turns A22's test into a no-op for that
+row. The fix followed (2c25d22), which changes `deploy.sh` and edits no test file. After it, forty-nine
+tests pass.
+
+The rows S12701 and S12704 were re-anchored to the changed lines, the killer of S12720 moved to the
+test of A31, and the rows S12723 to S12730 were added; every row of the band is proved killed by its
+full id on a clean committed tree.
