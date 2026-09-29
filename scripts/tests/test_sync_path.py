@@ -2,7 +2,9 @@
 
 import posixpath
 import re
+import tempfile
 import unittest
+from pathlib import Path
 
 from _support import REPO, examined
 
@@ -91,9 +93,9 @@ def request_directory_writers(units):
     )
 
 
-def every_unit():
-    """Every unit file under deploy/systemd, parsed, by file name."""
-    return {path.name: sections(read(path)) for path in sorted(SYSTEMD.iterdir()) if path.is_file()}
+def every_unit(root=SYSTEMD):
+    """Every unit file directly under `root`, parsed, by file name."""
+    return {path.name: sections(read(path)) for path in sorted(root.iterdir()) if path.is_file()}
 
 
 class TheSyncPath(unittest.TestCase):
@@ -155,6 +157,23 @@ class TheSyncPath(unittest.TestCase):
             ["deck-streak-bot.service"],
             "a sibling directory is not the request directory",
         )
+
+    def test_a_drop_in_that_writes_the_request_directory_is_a_writer(self):
+        writes = "[Service]\nReadWritePaths=" + REQUEST_DIRECTORY + "\n"
+        with tempfile.TemporaryDirectory() as scratch:
+            root = Path(scratch)
+            (root / "deck-streak-bot.service").write_text(writes, encoding="utf-8")
+            for directory in ("deck-streak-job@.service.d", "deck-streak-job@sync.service.d"):
+                (root / directory).mkdir()
+                (root / directory / "10-plant.conf").write_text(writes, encoding="utf-8")
+            self.assertEqual(
+                request_directory_writers(every_unit(root)),
+                [
+                    "deck-streak-bot.service",
+                    "deck-streak-job@.service.d/10-plant.conf",
+                    "deck-streak-job@sync.service.d/10-plant.conf",
+                ],
+            )
 
     def test_only_the_bot_unit_writes_the_request_directory(self):
         units = examined("units under deploy/systemd", list(every_unit().items()))
