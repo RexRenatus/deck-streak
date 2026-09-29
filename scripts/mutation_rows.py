@@ -431,8 +431,9 @@ def binary_of(root: pathlib.Path, crate: str) -> tuple[str, str]:
 
 def module_sources(root_file: pathlib.Path) -> list[pathlib.Path]:
     """The source files of the module tree that starts at `root_file`, in declaration order: the
-    file itself, then each `mod name;` it declares, as `name.rs` or `name/mod.rs` beside a root or
-    a `mod.rs`, and under a directory named for the file otherwise. `#[path]` is not followed."""
+    file itself, then each `mod name;` it declares, as `name.rs` or `name/mod.rs` beside the root
+    (whatever its name, as rustc reads a crate root) or a `mod.rs`, and under a directory named for
+    the file otherwise. `#[path]` is not followed."""
     found: list[pathlib.Path] = []
 
     def walk(file: pathlib.Path) -> None:
@@ -440,7 +441,7 @@ def module_sources(root_file: pathlib.Path) -> list[pathlib.Path]:
             return
         found.append(file)
         home = (
-            file.parent if file.name in ("main.rs", "lib.rs", "mod.rs") else file.parent / file.stem
+            file.parent if file == root_file or file.name == "mod.rs" else file.parent / file.stem
         )
         text = file.read_text(encoding="utf-8")
         for name in MOD_DECLARATION.findall(text):
@@ -482,6 +483,11 @@ def locate_killer(root: pathlib.Path, row: Row) -> Killer:
         if target == "lib":
             where = f"crates/{row.crate}/src"
         elif target == "bin":
+            shadowed = [crate / "tests" / "bin.rs", crate / "tests" / "bin" / "main.rs"]
+            if any(candidate.is_file() for candidate in shadowed):
+                raise KillerUnresolved(
+                    f"crates/{row.crate} has a test target bin, which the bin kind shadows"
+                )
             binary, where = binary_of(root, row.crate)
         else:
             candidates = [crate / "tests" / f"{target}.rs", crate / "tests" / target / "main.rs"]
