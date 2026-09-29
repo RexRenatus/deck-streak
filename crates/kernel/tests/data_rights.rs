@@ -130,7 +130,10 @@ async fn the_kernel_port_resets_the_settings_generation_and_exempts_the_schema_t
     let Some(Disposition::ResetInPlace { row: reset_row }) = reset else {
         return;
     };
-    assert_eq!(Value::Object(reset_row.clone()), json!({"generation": 0}));
+    assert_eq!(
+        Value::Object(reset_row.clone()),
+        json!({"generation": 0, "courses_digest": null})
+    );
     let schema = declaration.disposition("_sqlx_migrations");
     assert!(
         matches!(schema, Some(Disposition::Exempt { reason }) if reason.contains("schema version")),

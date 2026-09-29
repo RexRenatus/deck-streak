@@ -10,7 +10,9 @@
 //! of the W0 table sends a message, so the role builds no bot transport and loads no bot token, and
 //! the first job that sends joins wiring's `TransportMarker` (SPEC-026 R10; #20, #27). The `sync`
 //! job's cycle builds its syncer, its reader and its change gate from the sync's own settings only
-//! when `sync` runs, so the other jobs start without them (SPEC-023 R12). No obligation source is registered yet: each deadline-bearing feature
+//! when `sync` runs, so the other jobs start without them (SPEC-023 R12); so it loads its recompute,
+//! wiring's `RecomputeSetup`: the owner's courses, agreed with the readings taxonomy, their digest
+//! recorded, and the fold (SPEC-071 R1, R3, R4, R15). No obligation source is registered yet: each deadline-bearing feature
 //! registers its own.
 
 use std::sync::Arc;
@@ -21,10 +23,9 @@ use deck_streak_coordination::ledger::SqliteCronLedger;
 use deck_streak_coordination::obligations::Obligations;
 use deck_streak_coordination::runner::{Reason, Runner, SyncCycle};
 use deck_streak_coordination::sync_cycle::{CycleError, CycleParts, sync_cycle};
-use deck_streak_daemon::wiring::{self, StateDirectory, WiringError};
+use deck_streak_daemon::wiring::{self, RecomputeSetup, StateDirectory, WiringError};
 use deck_streak_ingest::engine::RslibEngine;
 use deck_streak_ingest::gate::ChangeGate;
-use deck_streak_ingest::reader::CollectionReader;
 use deck_streak_ingest::settings::{ScopeSettings, SyncSettings};
 use deck_streak_ingest::sync::{SyncReport, Syncer};
 use deck_streak_ingest::sync_runs::{SqliteSyncRuns, Trigger};
@@ -101,8 +102,14 @@ impl SyncCycle for ScheduledSync<'_> {
             tracing::error!(%refusal, "the read's scope refuses it");
             Reason::new("scope_settings_refused")
         })?;
+        let recompute = RecomputeSetup::load(self.env, self.db)
+            .await
+            .map_err(|refusal| {
+                tracing::error!(%refusal, "the recompute refuses the sync");
+                Reason::new("recompute_refused")
+            })?;
         let clock = Arc::new(SystemClock);
-        let reader = CollectionReader::new(&settings, scope, self.offload.clone());
+        let reader = recompute.reader(&settings, scope, self.offload.clone());
         let syncer = Syncer::new(
             RslibEngine,
             SqliteSyncRuns::new(self.db.clone()),
@@ -112,7 +119,11 @@ impl SyncCycle for ScheduledSync<'_> {
             self.rule,
         );
         let gate = ChangeGate::new(self.db.clone(), self.rule, clock.clone());
-        let parts = CycleParts::new(syncer, reader, gate, Obligations::new(), clock);
+        let parts = recompute.cycle(
+            CycleParts::new(syncer, reader, gate, Obligations::new(), clock),
+            self.db.clone(),
+            self.rule,
+        );
         sync_cycle(&parts, Trigger::Scheduled)
             .await
             .map(|report| report.sync)
@@ -127,7 +138,9 @@ fn cycle_failed(error: &CycleError) -> Reason {
     Reason::new(match error {
         CycleError::History(_) | CycleError::Sync(_) => "sync_record_failed",
         CycleError::Obligations(_) => "obligations_unreadable",
-        CycleError::Gate(_) | CycleError::Window(_) => "recompute_failed",
+        CycleError::Gate(_) | CycleError::Window(_) | CycleError::Recompute(_) => {
+            "recompute_failed"
+        }
     })
 }
 
@@ -176,6 +189,7 @@ mod tests {
                 CycleError::Window(WindowError::State(cause())),
                 "recompute_failed",
             ),
+            (CycleError::Recompute(cause()), "recompute_failed"),
         ]
     }
 
@@ -188,6 +202,7 @@ mod tests {
             CycleError::Obligations(_) => "obligations",
             CycleError::Gate(_) => "gate",
             CycleError::Window(_) => "window",
+            CycleError::Recompute(_) => "recompute",
         }
     }
 
@@ -197,7 +212,14 @@ mod tests {
         let kinds: BTreeSet<&str> = failures.iter().map(|(error, _)| kind(error)).collect();
         assert_eq!(
             kinds,
-            BTreeSet::from(["gate", "history", "obligations", "sync", "window"]),
+            BTreeSet::from([
+                "gate",
+                "history",
+                "obligations",
+                "recompute",
+                "sync",
+                "window"
+            ]),
             "every kind of failure has a case"
         );
         for (error, code) in &failures {
