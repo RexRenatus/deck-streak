@@ -70,6 +70,22 @@
         ": refuse_empty owner-user-id \"$chat\"\n",
         "the owner's id, the chat the page goes to, is checked before any request (SPEC-066 R3)",
         "test_alert_unit.AnEmptyCredentialFailsTheAlertUnit.test_an_empty_credential_fails_the_alert_unit_before_any_request"
+      ],
+      [
+        "S06609-A-PAGING-UNIT-ADMITS-ONE-RESTART-VALUE",
+        "scripts/tests/_units.py",
+        "PAGING_VALUES = {(\"Service\", \"Restart\"): (\"on-failure\",)}\n",
+        "PAGING_VALUES = {(\"Service\", \"Restart\"): (\"on-failure\", \"always\")}\n",
+        "a paging unit that loads a credential holds only the restart value the table admits, at every assignment, a drop-in's included (SPEC-066 R2)",
+        "test_deploy_templates.ARefusedCredentialFailsItsUnitAndPages.test_a_paging_units_restart_holds_only_the_admitted_value"
+      ],
+      [
+        "S06610-A-PAGING-UNIT-NAMES-ONLY-THE-ALERT",
+        "scripts/tests/test_deploy_templates.py",
+        "if (a.section, a.key) == (\"Unit\", \"OnFailure\") and a.value != ON_FAILURE\n",
+        "if (a.section, a.key) == (\"Unit\", \"OnFailure\") and ON_FAILURE not in a.value.split()\n",
+        "every OnFailure= assignment of a paging unit that loads a credential is exactly the alert template, so a target beside it is refused (SPEC-066 R2)",
+        "test_deploy_templates.ARefusedCredentialFailsItsUnitAndPages.test_a_paging_unit_names_no_failure_target_but_the_alert"
       ]
     ]
   }
