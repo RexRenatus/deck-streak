@@ -137,3 +137,47 @@ it is assembled, and R2 says where that parser stands.
 ## 8. References
 
 Issue #334; SPEC-039 R8 to R11; ADR-057; ADR-016; ADR-122.
+
+## 9. Amendment, 2026-09-29: the verdict's plan and the equivalence records refuse a repeated key
+
+Issue #345. Two readers outside `mutation_rows.py` still met a repeated key in a way §2 does not
+cover. Measured at `dev` b5eb413: `mutation-verdict.py plan` over a tree whose band file repeats a
+key ended in an uncaught `PopulationRefused` traceback (exit 1), and a record fragment under
+`scripts/mutation-equivalent.d/` that repeats a key, at its top or inside one record, was read by a
+plain `json.loads` that keeps the last value and says nothing (the census printed
+`examined 0 record(s)` for a fragment whose first `records` list held one).
+
+- **R6. The plan refuses, in one line.** `plan` catches the `PopulationRefused` that
+  `mutation_rows.load_tree` and `load_revision` raise, prints `mutation: plan: REFUSED: <the
+  sentence>` on stderr and exits 1 with no traceback. The sentence is the one `parse_document`
+  forms, `<where> repeats the key '<key>' in one object`, and the plan writes no `plan.json`.
+- **R7. The equivalence records are read by the same parser.** `load_records` reads each fragment
+  through `mutation_rows.parse_document` with `scripts/mutation-equivalent.d/<name>` as `<where>`,
+  so a key repeated at any depth is a named problem that every verb reading the records reports
+  (the census as a finding, exit 1; `judge` as a failure). The verdict script already imports
+  `mutation_rows`, so it reuses the hook and the sentence; there is no second copy, and nothing
+  moves.
+
+| id | criterion | decided by |
+|---|---|---|
+| A5 | a band file that repeats a key makes `plan` exit 1 with the whole sentence on stderr and no `Traceback`; a well-formed tree is planned and its selected-row count printed | `test_verdict_repeated_key.py` `a_band_file_that_repeats_a_key_is_refused_by_the_plan_without_a_traceback` and `a_well_formed_band_file_is_planned_and_its_row_count_printed` |
+| A6 | a record fragment that repeats a key at its top, and one that repeats a key inside a record, are each refused by the census (exit 1) with the whole sentence and no `Traceback`; a well-formed fragment is read and its record count printed | `test_verdict_repeated_key.py` `a_record_fragment_that_repeats_a_key_at_the_top_is_refused`, `a_record_that_repeats_a_key_inside_an_entry_is_refused` and `a_well_formed_record_fragment_is_read_and_counted` |
+
+```acceptance
+A5: python3 -m unittest discover -s scripts/tests -p test_verdict_repeated_key.py -k a_band_file_that_repeats_a_key_is_refused_by_the_plan_without_a_traceback -k a_well_formed_band_file_is_planned_and_its_row_count_printed
+A6: python3 -m unittest discover -s scripts/tests -p test_verdict_repeated_key.py -k a_record_fragment_that_repeats_a_key_at_the_top_is_refused -k a_record_that_repeats_a_key_inside_an_entry_is_refused -k a_well_formed_record_fragment_is_read_and_counted
+```
+
+The rows join `S12200-S12299` (`SCRIPT_MUTATIONS`), each with one killer that names one test:
+
+| row | mutant | killer |
+|---|---|---|
+| S12207 | the plan's handler names another exception, so the refusal is a traceback again | `a_band_file_that_repeats_a_key_is_refused_by_the_plan_without_a_traceback` |
+| S12208 | `load_records` reads a fragment by `json.loads` | `a_record_fragment_that_repeats_a_key_at_the_top_is_refused` |
+| S12209 | `load_records` drops the refusal instead of reporting it | `a_record_that_repeats_a_key_inside_an_entry_is_refused` |
+
+Files added or changed by this amendment: `scripts/mutation-verdict.py` (changed),
+`scripts/tests/test_verdict_repeated_key.py` (added), `scripts/mutation-rows.d/S12200-S12299.json`
+(three rows), `docs/red-first/SPEC-122.md` (a dated addendum) and
+`changelog.d/fix-verdict-repeated-key-345.md` (added). It still changes no Rust and no workflow
+(#345).
