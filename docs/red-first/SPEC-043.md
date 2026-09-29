@@ -92,7 +92,10 @@ edits two test files: it changes the bodies of those helpers (`prune_pin_problem
 stand: their words are unchanged and the new criteria carry the strengthening.
 
 A21 has two decoys and this fence line quotes the first; the second, a statement with another
-spelling, failed at the red commit as `the second statement is not refused: []` (runs.rs:134).
+spelling, failed at the red commit as `the second statement is not refused: []` (runs.rs:138). The
+commit 2bce259c later changed that test's body to assert the good source as well; with that body
+put onto the red commit the failure is at runs.rs:138, and the fence line quotes the earlier body.
+The same body puts A22's failure at runs.rs:155 where the fence line says 151.
 
 ```red-first
 A21: red at 84146ad3fb5aa57a995f4cf7de9e517ec67e508c: the decoy is not refused: [] (runs.rs:121)
@@ -101,4 +104,27 @@ A22: red at 84146ad3fb5aa57a995f4cf7de9e517ec67e508c: the changed copy is not re
 A22: green at ff7f6cce9ddf398dcb29d3ab4cf7e2881e661937
 A23: red at 84146ad3fb5aa57a995f4cf7de9e517ec67e508c: an item line ending in a comment was read as an attribute: ["#[derive(Clone)]", "#[rustfmt::skip] pub fn decoy() {} // ]", "#[must_use]"] (verdict.rs:56)
 A23: green at ff7f6cce9ddf398dcb29d3ab4cf7e2881e661937
+```
+
+### Fix round 1
+
+The scans still accepted spellings their criteria promised to refuse. Each new test was committed
+alone, beside the helpers as they stood, and failed by assertion before the helpers changed. The
+A21 to A23 fence lines above stand: a criterion has one red and one green line, so the new tests'
+lines are quoted here.
+
+- A23, `a_bracket_inside_a_string_or_a_comment_never_closes_an_attribute` and
+  `a_commented_copy_of_the_enum_above_it_is_refused`: red at the commit that adds only the two tests
+  and a `declarations_of` that asks only whether the enum is declared; green at the commit that
+  changes the helpers (`is_one_whole_attribute` fails closed, `is_a_plain_doc_line` and the real
+  `declarations_of` are added) and no assertion.
+- A21, `a_prune_spelled_around_the_keyword_scan_beside_a_quoted_copy_is_refused`: red at the commit
+  that adds only the test; green at the commit that adds the word count to `prune_pin_problems`.
+
+```text
+A23: red at 25b1a12108b61d743630a57be0304db9e96938e2: a must_use outside the enum's attributes was read as one: ["#[derive(Clone)]", "#[doc = \"[\"] pub fn decoy() {} // ]", "#[must_use]"] (verdict.rs:110)
+A23: red at 25b1a12108b61d743630a57be0304db9e96938e2: assertion `left == right` failed, left: 1, right: 2 (verdict.rs:125)
+A23: green at b2b13fcce4d70a3e8fd98c46313f4b057d037c9a
+A21: red at 4d9ddc5fbc7dcfd0d246923ac0b1456b5ec23101: the decoy is not refused: DELETE FROM main.agent_runs WHERE created_at + 0 < ?1: [] (runs.rs:215)
+A21: green at 0ec2d29665d407e779bcf94df465cd10b57065b9
 ```
