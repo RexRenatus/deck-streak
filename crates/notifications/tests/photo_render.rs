@@ -305,6 +305,55 @@ async fn a_failed_photo_records_nothing() {
 }
 
 #[tokio::test]
+async fn a_failed_photo_opens_the_breaker_for_the_next_photo() {
+    let bot = Photographer::new();
+    bot.answer_photo(PhotoPushed::Failed);
+    let harness = harness_with(&bot).await;
+    let failed = harness.celebration("card-5b", Surface::Bot);
+    let next = harness.celebration("card-5c", Surface::Bot);
+
+    let first = harness
+        .router
+        .route_photo(&failed, &photo("synthetic caption"))
+        .await
+        .expect("the photo is routed");
+    assert_eq!(
+        first,
+        PhotoDecision::NotNow {
+            reason: NotNow::SendFailed
+        }
+    );
+    assert_eq!(bot.photos().len(), 1, "the failed call was made once");
+
+    // The bot would now deliver, and the clock is inside the outage cooldown
+    // (`send_failure.outage_cooldown_ms`, 60,000 ms): the open breaker refuses before any call.
+    bot.answer_photo(PhotoPushed::Delivered {
+        file_id: FileId::new(FILE).expect("a file id"),
+    });
+    harness.clock.advance(Duration::from_millis(1_000));
+    let second = harness
+        .router
+        .route_photo(&next, &photo("synthetic caption"))
+        .await
+        .expect("the photo is routed again");
+
+    assert_eq!(
+        second,
+        PhotoDecision::NotNow {
+            reason: NotNow::SendFailed
+        },
+        "an open breaker answers send_failed, not quiet_hours and not a send"
+    );
+    assert_eq!(
+        bot.photos().len(),
+        1,
+        "no second push_photo inside the cooldown"
+    );
+    assert!(harness.decisions().await.is_empty(), "nothing is recorded");
+    assert!(harness.queue().await.is_empty(), "nothing is held");
+}
+
+#[tokio::test]
 async fn a_delivered_photo_is_recorded_once() {
     let bot = Photographer::new();
     let harness = harness_with(&bot).await;
