@@ -110,7 +110,7 @@ it is assembled, and R2 says where that parser stands.
   (#217), and the census's findings are unchanged.
 - It builds no generated-mutant class for the gate's own Python. `mutation_rows.py` is one of the
   scripts #218 waits to cover, and this delivery adds hand-proved rows, not a mutation class.
-- It changes no Rust and no workflow.
+- It changes no Rust and no workflow, because the defect and its fix are in a Python reader (#334).
 
 ## 6. Risks
 

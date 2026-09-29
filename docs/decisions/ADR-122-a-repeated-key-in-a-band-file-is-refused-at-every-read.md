@@ -28,9 +28,9 @@ Where is a repeated key refused, so that no reader of the population can drop ro
 
 ## Considered Options (the alternatives it was chosen against)
 
-- The reader refuses a repeated key, at any depth, in every document the population is made of,
-  and names the file and the key: chosen, because every reader already goes through the module, so
-  no reader can be left out, and the author is told at once what is wrong.
+- Chosen, because no reader can be left out: the reader refuses a repeated key, at any depth, in
+  every document, naming the file and the key; every reader already goes through the module, and
+  the author is told at once what is wrong.
 - Reading the last key, as `json.loads` does today: rejected, because it silently drops the rows
   under the first occurrence, and the merge that produces it raises no conflict.
 - Merging the repeated tables into one: rejected, because the result depends on the order the keys
