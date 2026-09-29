@@ -106,7 +106,7 @@ R5. Notifications maps:
       `holdout_pct` (SPEC-100 R5), the predecessor's seed replacing one DeckStreak minted side by
       side so the draws continue its sequence (SPEC-100's mint stays `INSERT OR IGNORE`); and
       `widget_mood` as the predecessor's effective reading, `"1"` or `"0"`, equal to the golden
-      `import_switch_effective`.
+      `import_switch_widget_mood`.
 R6. Publishing writes its `publishing_state` singleton with the switch off (SPEC-137 §8), so the owner
     switches it on anew; the predecessor's history baseline key maps to nothing (#348).
 
@@ -122,7 +122,8 @@ R8. No writer writes a checklist-owned switch (ADR-143): the three the predecess
     earlier SPEC seeds `"0"` side by side (SPEC-049 R7, SPEC-100 R27, SPEC-101 R28, SPEC-102 R23).
     Notifications' `import::switch_values(source)` answers, for each of the three kept switches,
     the predecessor's own reading of its stored value as DeckStreak spells it (`"1"` on, `"0"`
-    off), equal to the golden `import_switch_effective`. The checklist (SPEC-143) moves each switch,
+    off), equal to the goldens `import_switch_comeback`, `import_switch_last_chance` and
+    `import_switch_widget`. The checklist (SPEC-143) moves each switch,
     one at a time, to the value its item records.
 R9. The messages are events (ADR-140): a DeckStreak delivery, decision, queue or widget row whose
     key (a delivery's kind, dedupe key and scope; a decision's kind and dedupe key; a widget's
@@ -152,7 +153,7 @@ R11. CHARTER 10's eleven anti-goals bind this SPEC as one block; the ones it tou
 | A8 | the deliveries (a failed send included), decisions, queue rows with their dice, arms, ratings, widget messages and latest owner message map as R5 says, and the seed and percentage take their DeckStreak keys | `the_message_rows_map_to_their_tables` |
 | A9 | a DeckStreak delivery on a day before the cutoff is kept, and a shared dedupe key takes the predecessor's row | `a_sent_message_is_kept_across_the_import` |
 | A10 | no writer writes a checklist-owned switch, whatever the source holds | `no_checklist_switch_is_written` |
-| A11 | the switch values and the widget mood equal the golden for each switch and each stored value | `the_switch_values_match_the_predecessors_golden` |
+| A11 | the switch values and the widget mood equal the four goldens for each stored value | `the_switch_values_match_the_predecessors_golden` |
 | A12 | a setting outside its declaration arrives at its default and is counted by key | `a_setting_outside_its_declaration_arrives_at_its_default` |
 | A13 | the publishing state is written with its switch off and no baseline | `the_publishing_state_arrives_switched_off` |
 | A14 | discipline's count of the buffs names the chest-lock rows it wrote and no other kind | `the_chest_lock_count_is_disciplines_share` |
@@ -198,8 +199,8 @@ A16: cargo test -p deck-streak-notifications --test import -- --exact the_messag
 | `crates/publishing/src/lib.rs` | `deck-streak-publishing` | changed: the module |
 | `crates/publishing/tests/import.rs` | `deck-streak-publishing` | added: A13 |
 | `crates/*/tests/fixtures/import/` | each owner | added: synthetic predecessor rows and settings, invented values only |
-| `tools/parity-oracle/migration/generate.py` | tools | changed: the switch golden |
-| `tools/parity-oracle/migration/goldens/import_switch_effective.json` | tools | added |
+| `tools/parity-oracle/migration/generate.py` | tools | changed: the four switch goldens |
+| `tools/parity-oracle/migration/goldens/import_switch_comeback.json`, `import_switch_last_chance.json`, `import_switch_widget.json`, `import_switch_widget_mood.json` | tools | added |
 | `scripts/mutation-rows.d/S14100-S14199.json` | repo | added: the rows of §9 |
 | `docs/specs/SPEC-141-the-game-the-economy-discipline-and-the-messages-import-their-own-v9-rows-and-the-runtime-settings-split-by-owner.md` | docs | moved from `docs/specs/planned/` |
 | `docs/red-first/SPEC-141.md` | docs | added |
@@ -236,7 +237,10 @@ predecessor at `27ee2bc`, in the data-migration pack's golden shape. Every case 
 
 | golden | the predecessor's function | kind | the adapter builds |
 |---|---|---|---|
-| `import_switch_effective` | `pipeline_layers/nudges.py:NudgesLayer.run_morning_brief` (inside a lapse), `NudgesLayer.run_last_chance_nudge`; `pipeline_layers/showcase.py:ShowcaseLayer._update_widget`, `ShowcaseLayer._widget_payload` | adapter | a stub store per case holding the key absent, `"1"`, `"0"`, an empty string and another word, with every step after the key's gate stubbed, recording whether the gate let the kind (or the mood) through |
+| `import_switch_comeback` | `pipeline_layers/nudges.py:NudgesLayer.run_morning_brief` | adapter | a stub store inside a lapse per case, `comeback_enabled` absent, `"1"`, `"0"`, an empty string and another word, every step after the gate stubbed, recording whether the comeback branch ran |
+| `import_switch_last_chance` | `pipeline_layers/nudges.py:NudgesLayer.run_last_chance_nudge` | adapter | the same five cases for `last_chance_enabled`, recording whether the gate let the nudge through |
+| `import_switch_widget` | `pipeline_layers/showcase.py:ShowcaseLayer._update_widget` | adapter | the same five cases for `widget_enabled`, recording whether the widget was refreshed |
+| `import_switch_widget_mood` | `pipeline_layers/showcase.py:ShowcaseLayer._widget_payload` | adapter | the same five cases for `widget_mood`, recording whether the payload carries a mood |
 
 ## 8. Tables and the v9 import
 
