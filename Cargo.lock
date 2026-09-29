@@ -826,7 +826,7 @@ checksum = "4583a4551df46e2792f82ceeac45e850d2e2d5debba0b91f102385cda5b11f06"
 
 [[package]]
 name = "deck-streak-agent"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "deck-streak-kernel",
  "serde_json",
@@ -837,7 +837,7 @@ dependencies = [
 
 [[package]]
 name = "deck-streak-analytics"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "deck-streak-ingest",
  "deck-streak-kernel",
@@ -850,7 +850,7 @@ dependencies = [
 
 [[package]]
 name = "deck-streak-api"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "axum",
  "deck-streak-coordination",
@@ -870,7 +870,7 @@ dependencies = [
 
 [[package]]
 name = "deck-streak-bot"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "axum",
  "deck-streak-coordination",
@@ -889,7 +889,7 @@ dependencies = [
 
 [[package]]
 name = "deck-streak-coordination"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "deck-streak-agent",
  "deck-streak-analytics",
@@ -922,7 +922,7 @@ dependencies = [
 
 [[package]]
 name = "deck-streak-curriculum"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "deck-streak-ingest",
  "deck-streak-kernel",
@@ -930,7 +930,7 @@ dependencies = [
 
 [[package]]
 name = "deck-streak-daemon"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "axum",
@@ -967,7 +967,7 @@ dependencies = [
 
 [[package]]
 name = "deck-streak-discipline"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "deck-streak-ingest",
  "deck-streak-kernel",
@@ -975,28 +975,28 @@ dependencies = [
 
 [[package]]
 name = "deck-streak-economy"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "deck-streak-kernel",
 ]
 
 [[package]]
 name = "deck-streak-focus"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "deck-streak-kernel",
 ]
 
 [[package]]
 name = "deck-streak-habits"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "deck-streak-kernel",
 ]
 
 [[package]]
 name = "deck-streak-identity"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "axum",
  "deck-streak-kernel",
@@ -1015,7 +1015,7 @@ dependencies = [
 
 [[package]]
 name = "deck-streak-ingest"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anki",
  "deck-streak-kernel",
@@ -1031,7 +1031,7 @@ dependencies = [
 
 [[package]]
 name = "deck-streak-insights"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "deck-streak-ingest",
  "deck-streak-kernel",
@@ -1039,7 +1039,7 @@ dependencies = [
 
 [[package]]
 name = "deck-streak-kernel"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -1053,21 +1053,21 @@ dependencies = [
 
 [[package]]
 name = "deck-streak-markets"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "deck-streak-kernel",
 ]
 
 [[package]]
 name = "deck-streak-notifications"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "deck-streak-kernel",
 ]
 
 [[package]]
 name = "deck-streak-privacy"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "deck-streak-kernel",
  "serde_json",
@@ -1079,7 +1079,7 @@ dependencies = [
 
 [[package]]
 name = "deck-streak-progression"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "deck-streak-ingest",
  "deck-streak-kernel",
@@ -1094,14 +1094,14 @@ dependencies = [
 
 [[package]]
 name = "deck-streak-publishing"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "deck-streak-kernel",
 ]
 
 [[package]]
 name = "deck-streak-quests"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "deck-streak-ingest",
  "deck-streak-kernel",
@@ -1109,7 +1109,7 @@ dependencies = [
 
 [[package]]
 name = "deck-streak-readings"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anki",
  "deck-streak-ingest",
@@ -1126,14 +1126,14 @@ dependencies = [
 
 [[package]]
 name = "deck-streak-streaks"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "deck-streak-kernel",
 ]
 
 [[package]]
 name = "deck-streak-vault"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "deck-streak-kernel",
  "serde",
