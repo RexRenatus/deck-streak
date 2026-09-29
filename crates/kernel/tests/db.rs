@@ -258,3 +258,27 @@ async fn the_settings_generation_moves_only_inside_a_write() {
         before + 2
     );
 }
+
+#[tokio::test]
+async fn a_closed_database_and_a_closed_foreign_file_refuse_a_read() {
+    let directory = tempfile::tempdir().expect("a temporary directory");
+    let db = Db::open(&directory.path().join("gamify.db"))
+        .await
+        .expect("the database opens");
+    let open: i64 = sqlx::query_scalar("SELECT 1")
+        .fetch_one(db.reader())
+        .await
+        .expect("an open pool reads");
+    assert_eq!(open, 1);
+    db.close().await;
+    assert!(db.reader().is_closed());
+
+    let path = directory.path().join("collection.anki2");
+    foreign_file(&path).await;
+    let foreign = Db::open_foreign_read_only(&path)
+        .await
+        .expect("the foreign file opens");
+    assert!(!foreign.reader().is_closed());
+    foreign.close().await;
+    assert!(foreign.reader().is_closed());
+}
