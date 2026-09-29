@@ -314,6 +314,7 @@ table.
 | `skip_days`, `skip_card_snapshot` | ingest (SPEC-083) | the tables of those names | filtered: applied rows only |
 | `skip_settings` | ingest (SPEC-109) | nothing | empty |
 | `cron_fires` | coordination (SPEC-027) | `cron_fires` | not carried (dropped) |
+| `cutover_steps` | coordination (SPEC-143) | nothing | empty: the checklist's record starts with DeckStreak's own go |
 | `instrument_reports` (SPEC-094), `vault_passes` (SPEC-117) | coordination | nothing | empty |
 | `quests`, `quest_offers`, `weekly_quests`, `crown_days`, `race_results`, `ghosts` (SPEC-080), `chests`, `pity`, `xp_tokens`, `inventory` (SPEC-081) | quests | the tables of those names | equal |
 | `quest_state` (SPEC-080), `chest_settings` (SPEC-081) | quests | `settings_kv` | declared |
@@ -344,8 +345,8 @@ table.
 The predecessor's other dropped tables, with the plan's reasons: `xp_state` (the total and the
 level are read from the ledger, SPEC-040), `deck_names` (DeckStreak reads each deck's name from
 the collection on every read), and `beeminder_posts` (the money rung is not built, ADR-106,
-#116). The census holds 100 DeckStreak tables: 47 equal, 14 declared, 3 filtered, 4 sum, 7
-derived, 3 not carried, 21 empty and 1 exempt; and all 64 of the predecessor's tables are mapped
+#116). The census holds 101 DeckStreak tables: 47 equal, 14 declared, 3 filtered, 4 sum, 7
+derived, 3 not carried, 22 empty and 1 exempt; and all 64 of the predecessor's tables are mapped
 once (49 transformed, 46 of them equal and 3 filtered; 7 split, 2 by sum and 5 declared; and 8
 dropped).
 
