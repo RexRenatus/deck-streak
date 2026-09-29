@@ -225,3 +225,20 @@ Fix round 1's reds, each measured on a scratch copy of 96ae492 with its mutant a
 - A41: red at 96ae492: AssertionError: Lists differ: ['cargo', 'bash'] != ['bash', 'cargo'] (measured on a scratch copy at 96ae492, mutant B04: the shell check made after the cargo branch)
 - A41: red at 96ae492: AssertionError: 'sh' is not None (measured on a scratch copy at 96ae492, mutant M10: a target that is not a shell script given sh)
 - A41: red at 8bbeac4: AssertionError: 0 != 3 : S00034-BASH-OPEN-ARRAY: KILLED: its killer passed without the mutant and failed with it (measured on a scratch copy at 8bbeac4, mutant P05: an exit of 1 from the parser read as a parse)
+
+## Addendum, 2026-09-29: the bin killer (issue #352)
+
+A42 to A44 are the acceptance criteria of section 16, made by issue #352's delivery. Each was
+written red at b47b9a3, where `bin` is no killer kind and `scripts/mutation_rows.py` refuses it
+by name, and each is green at 1adadce, which adds the kind. Each red fails by assertion: the tests
+turn the runner's refusal into a failed assertion, and the failures name no path outside the
+repository. The original lines above stand.
+
+```red-first
+A42: red at b47b9a3: AssertionError: a bin killer is refused: crates/fix has no test target bin
+A42: green at 1adadce
+A43: red at b47b9a3: AssertionError: {'S00054-BIN-KILLED': 'VOID', 'S00055-BIN-NO-TEST': 'VOID'} != {'S00054-BIN-KILLED': 'KILLED', 'S00055-BIN-NO-TEST': 'VOID'}
+A43: green at 1adadce
+A44: red at b47b9a3: AssertionError: 'census: S00058-BIN-LIB-TEST: its killer bin::tests::only_in_the_lib names no test' not found in 'census: S00056-BIN-ROOT: its killer bin::tests::three_triples_to_nine crates/fix has no test target bin'
+A44: green at 1adadce
+```
