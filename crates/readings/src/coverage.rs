@@ -107,15 +107,18 @@ fn close_references(text: &str) -> String {
 fn strip_tags(text: &str) -> String {
     let mut out = String::with_capacity(text.len());
     let mut rest = text;
-    while let Some(open) = rest.find('<') {
+    // Bounded by the text's length, as the other walkers are: each pass consumes a whole tag. A `<`
+    // with no `>` after it has none after any later `<` either, so the rest stays as it is.
+    for _ in 0..text.len() {
+        let Some(open) = rest.find('<') else {
+            break;
+        };
+        let Some(close) = rest[open..].find('>') else {
+            break;
+        };
         out.push_str(&rest[..open]);
-        if let Some(close) = rest[open..].find('>') {
-            out.push(' ');
-            rest = &rest[open + close + 1..];
-        } else {
-            out.push('<');
-            rest = &rest[open + 1..];
-        }
+        out.push(' ');
+        rest = &rest[open + close + 1..];
     }
     out.push_str(rest);
     out
