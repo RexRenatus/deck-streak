@@ -385,7 +385,8 @@ Issue #404, a follow-up of the review of section 7's delivery. Sections 1 to 8 s
 this section only adds to them; the two pins it strengthens are R12a's (criterion A18) and R16a's
 (criterion A20), and both still hold for every shape the SPEC promises. What follows refuses the
 decoys named below and the spellings R16b and R12b list. The scans read text, so a decoy spelled
-past what they count stays green. The known classes of that kind are two. For the prune: a copy of
+past what they count stays green. The known classes of that kind are two, and issue #444 tracks
+them. For the prune: a copy of
 the tested statement handed to `sqlx::query!` in code that never executes it (a function nothing
 calls, a query built and dropped, an item compiled out), beside a prune that runs and whose
 `DELETE` keyword the word count cannot read (written with a string escape such as `\x44ELETE` or
