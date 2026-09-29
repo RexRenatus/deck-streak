@@ -51,12 +51,14 @@ from __future__ import annotations
 
 import argparse
 import ast
+import contextlib
 import hashlib
 import json
 import os
 import pathlib
 import posixpath
 import re
+import signal
 import subprocess
 import sys
 import tempfile
@@ -601,6 +603,49 @@ def cargo_flags(killer: Killer) -> list[str]:
     return ["--test", killer.target]
 
 
+def run_in_own_group(
+    command: list[str], *, cwd: pathlib.Path, env: dict[str, str], timeout: float
+) -> subprocess.CompletedProcess[str]:
+    """`command` run to its end or its bound, with its output captured.
+
+    A hung killer's own children are its test binary and whatever that binary started, and killing
+    the direct child alone leaves them running with no parent (#366: `deckstreakd` daemons found
+    long after their runs). The command therefore runs as the leader of a new process group, which
+    holds every descendant that stays in it, and a timeout, or any other way out while the leader
+    still runs, ends the whole group with SIGKILL. A descendant that leaves the group (its own
+    `setsid` or `setpgid`) is not reached.
+
+    Raises:
+        subprocess.TimeoutExpired: The command outran `timeout`; its group is already dead.
+    """
+    process = subprocess.Popen(
+        command,
+        cwd=cwd,
+        env=env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        process_group=0,
+    )
+    try:
+        stdout, stderr = process.communicate(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        kill_group(process)
+        process.communicate()
+        raise
+    finally:
+        if process.poll() is None:
+            kill_group(process)
+            process.wait()
+    return subprocess.CompletedProcess(command, process.returncode, stdout, stderr)
+
+
+def kill_group(process: subprocess.Popen[str]) -> None:
+    """SIGKILL to `process`'s whole process group; a group already gone is not an error."""
+    with contextlib.suppress(ProcessLookupError):
+        os.killpg(process.pid, signal.SIGKILL)
+
+
 def run_killer(root: pathlib.Path, killer: Killer, scratch: pathlib.Path) -> Run:
     """The killer, run alone; its selection is counted from the runner's own output."""
     if killer.kind == "cargo":
@@ -615,15 +660,7 @@ def run_killer(root: pathlib.Path, killer: Killer, scratch: pathlib.Path) -> Run
         env = dict(os.environ, PYTHONDONTWRITEBYTECODE="1", PYTHONPYCACHEPREFIX=cache)
         cwd = root / killer.cwd
     try:
-        done = subprocess.run(
-            command,
-            cwd=cwd,
-            env=env,
-            capture_output=True,
-            text=True,
-            timeout=BUILD_SECONDS + TEST_SECONDS,
-            check=False,
-        )
+        done = run_in_own_group(command, cwd=cwd, env=env, timeout=BUILD_SECONDS + TEST_SECONDS)
     except subprocess.TimeoutExpired:
         return Run(0, False, "it timed out")
     if killer.kind == "cargo":
