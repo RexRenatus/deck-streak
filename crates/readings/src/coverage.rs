@@ -43,7 +43,11 @@ fn close_references(text: &str) -> String {
     let chars: Vec<char> = text.chars().collect();
     let mut out = String::with_capacity(text.len() + 8);
     let mut at = 0;
-    while at < chars.len() {
+    // Bounded by the text's length, so a miscount can never grow the output without limit.
+    for _ in 0..chars.len() {
+        if at >= chars.len() {
+            break;
+        }
         let c = chars[at];
         out.push(c);
         at += 1;
@@ -51,21 +55,19 @@ fn close_references(text: &str) -> String {
             continue;
         }
         if chars.get(at) == Some(&'#') {
-            let mut end = at + 1;
-            let hex = matches!(chars.get(end), Some('x' | 'X'));
-            if hex {
-                end += 1;
-            }
-            let start = end;
-            while chars.get(end).is_some_and(|d| {
-                if hex {
-                    d.is_ascii_hexdigit()
-                } else {
-                    d.is_ascii_digit()
-                }
-            }) {
-                end += 1;
-            }
+            let hex = matches!(chars.get(at + 1), Some('x' | 'X'));
+            let start = at + 1 + usize::from(hex);
+            let digits = chars[start..]
+                .iter()
+                .take_while(|d| {
+                    if hex {
+                        d.is_ascii_hexdigit()
+                    } else {
+                        d.is_ascii_digit()
+                    }
+                })
+                .count();
+            let end = start + digits;
             if end > start {
                 out.extend(&chars[at..end]);
                 if chars.get(end) != Some(&';') {
@@ -75,10 +77,11 @@ fn close_references(text: &str) -> String {
             }
             continue;
         }
-        let mut end = at;
-        while chars.get(end).is_some_and(char::is_ascii_alphanumeric) {
-            end += 1;
-        }
+        let end = at
+            + chars[at..]
+                .iter()
+                .take_while(|d| d.is_ascii_alphanumeric())
+                .count();
         let run: String = chars[at..end].iter().collect();
         let terminated = chars.get(end) == Some(&';');
         if terminated
@@ -125,16 +128,17 @@ fn remove_rail_characters(text: &str) -> String {
     let chars: Vec<char> = text.chars().collect();
     let mut out = String::with_capacity(text.len());
     let mut at = 0;
-    while at < chars.len() {
+    // Bounded by the text's length, so a miscount can never grow the output without limit.
+    for _ in 0..chars.len() {
+        if at >= chars.len() {
+            break;
+        }
         let c = chars[at];
         if matches!(c, '\0' | '`' | '<' | '[' | ']') {
             out.push(' ');
             at += 1;
         } else if c == '~' {
-            let mut end = at;
-            while chars.get(end) == Some(&'~') {
-                end += 1;
-            }
+            let end = at + chars[at..].iter().take_while(|d| **d == '~').count();
             if end - at >= 3 {
                 out.push(' ');
             } else {
