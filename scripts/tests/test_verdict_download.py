@@ -123,6 +123,21 @@ WRONG = {
         CANONICAL[0].replace(' --rows "$reports/mutation-rows/rows.json"', ""),
         CANONICAL[1],
     ),
+    "a flag only in a comment": (
+        CANONICAL[0].replace(' --rows "$reports/mutation-rows/rows.json"', "")
+        + ' # --rows "$reports/mutation-rows/rows.json"',
+        CANONICAL[1],
+    ),
+    "a flag after a control operator": (
+        CANONICAL[0]
+        .replace(' --rows "$reports/mutation-rows/rows.json"', "")
+        .replace(" ||", ' && : --rows "$reports/mutation-rows/rows.json" ||'),
+        CANONICAL[1],
+    ),
+    "a line break after judge with no backslash": (
+        CANONICAL[0].replace("judge --plan", "judge\n        --plan"),
+        CANONICAL[1],
+    ),
 }
 
 
