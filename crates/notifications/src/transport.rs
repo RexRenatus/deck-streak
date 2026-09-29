@@ -19,6 +19,7 @@ use std::future::Future;
 use std::pin::Pin;
 use std::time::Duration;
 
+use crate::photo::{FileId, Photo};
 use crate::router::Pass;
 
 /// A push's future: boxed, so the port stays a trait object the router can hold.
@@ -39,6 +40,42 @@ pub enum Pushed {
 /// The answer of a call a transport does not implement.
 fn unsupported<'a>() -> PushFuture<'a> {
     Box::pin(std::future::ready(Pushed::Unsupported))
+}
+
+/// A photo push's future.
+pub type PhotoFuture<'a> = Pin<Box<dyn Future<Output = PhotoPushed> + Send + 'a>>;
+
+/// A prepared share's future.
+pub type ShareFuture<'a> = Pin<Box<dyn Future<Output = Prepared> + Send + 'a>>;
+
+/// What one photo push came to.
+#[must_use]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum PhotoPushed {
+    /// The photo reached the owner's chat; Telegram holds it by this file id.
+    Delivered {
+        /// The file id of the largest size the Bot API answered.
+        file_id: FileId,
+    },
+    /// It did not: the Bot API refused it or could not be reached.
+    Failed,
+    /// The transport has no such call, so nothing was attempted.
+    Unsupported,
+}
+
+/// What one prepared share came to.
+#[must_use]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Prepared {
+    /// The message is prepared, under this id.
+    Ready {
+        /// The prepared message's id.
+        id: String,
+    },
+    /// The Bot API refused it or could not be reached.
+    Failed,
+    /// The transport has no such call, so nothing was attempted.
+    Unsupported,
 }
 
 /// The bot's delivery calls.
@@ -78,5 +115,25 @@ pub trait BotTransport: Send + Sync {
     /// message delivered; a send that fails is sent anew once as a line.
     fn push_pin<'a>(&'a self, _pass: &'a Pass, _text: &'a str) -> PushFuture<'a> {
         unsupported()
+    }
+
+    /// Sends `photo` with `caption` to the owner's chat.
+    fn push_photo<'a>(
+        &'a self,
+        _pass: &'a Pass,
+        _photo: &'a Photo,
+        _caption: &'a str,
+    ) -> PhotoFuture<'a> {
+        Box::pin(std::future::ready(PhotoPushed::Unsupported))
+    }
+
+    /// Prepares the photo Telegram holds as `file`, with `caption`, for the owner to share.
+    fn prepare_share<'a>(
+        &'a self,
+        _pass: &'a Pass,
+        _file: &'a FileId,
+        _caption: &'a str,
+    ) -> ShareFuture<'a> {
+        Box::pin(std::future::ready(Prepared::Unsupported))
     }
 }

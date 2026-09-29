@@ -48,6 +48,10 @@ public.
 - **The client.** The share control appears only on Bot API 8.0 or later, and only for a card with
   a file id.
 
+Delivered so far (2026-09-29): the transport, by SPEC-132 (`BotTransport::prepare_share`,
+`Router::prepare_share` and the bot's one `savePreparedInlineMessage`). The route and the client
+are SPEC-136's, which accepts this record when it delivers them.
+
 ### Consequences
 
 - Good, because a share needs no public URL and adds no chat the bot writes to.
