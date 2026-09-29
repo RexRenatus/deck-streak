@@ -18,7 +18,7 @@ use deck_streak_progression::consistency::{on_pace_run, projected_multiplier_dro
 use deck_streak_progression::economy_config::xp;
 use deck_streak_progression::ledger::SqliteXpLedger;
 use deck_streak_progression::level::{LevelInfo, level_info};
-use deck_streak_progression::settle::{SettledRow, settled_of_day};
+use deck_streak_progression::{SettledRow, settled_of_day};
 
 /// The owner's level and the day's XP, as the surfaces show them.
 #[derive(Clone, Debug, PartialEq)]
