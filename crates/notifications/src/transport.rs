@@ -124,7 +124,7 @@ pub trait BotTransport: Send + Sync {
         _photo: &'a Photo,
         _caption: &'a str,
     ) -> PhotoFuture<'a> {
-        Box::pin(std::future::ready(PhotoPushed::Failed))
+        Box::pin(std::future::ready(PhotoPushed::Unsupported))
     }
 
     /// Prepares the photo Telegram holds as `file`, with `caption`, for the owner to share.
@@ -134,6 +134,6 @@ pub trait BotTransport: Send + Sync {
         _file: &'a FileId,
         _caption: &'a str,
     ) -> ShareFuture<'a> {
-        Box::pin(std::future::ready(Prepared::Failed))
+        Box::pin(std::future::ready(Prepared::Unsupported))
     }
 }

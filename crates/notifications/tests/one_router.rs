@@ -670,7 +670,7 @@ const LEDGER_NAMES: [&str; 8] = [
 const ALERT_PATH: &str = "deploy/scripts/alert-telegram.sh";
 
 /// Every send, and where it is made: (file, function, send). The census finds each once.
-const NAMED_SENDS: [(&str, &str, &str); 20] = [
+const NAMED_SENDS: [(&str, &str, &str); 24] = [
     // The bot's command replies (#257): the erase prompt, every other reply, and the export.
     (
         "crates/bot/src/commands.rs",
@@ -776,6 +776,28 @@ const NAMED_SENDS: [(&str, &str, &str); 20] = [
         "crates/bot/src/transport.rs",
         "Transport::send_document",
         "sendDocument",
+    ),
+    // The photo (SPEC-132): the port's call of the transport's upload, which is posted by the
+    // transport's own request, and the share's prepared message, which the port's call saves.
+    (
+        "crates/bot/src/transport.rs",
+        "OwnerChat::push_photo",
+        "send_photo",
+    ),
+    (
+        "crates/bot/src/transport.rs",
+        "OwnerChat::prepare_share",
+        "save_prepared_inline_message",
+    ),
+    (
+        "crates/bot/src/transport.rs",
+        "Transport::send_photo",
+        "sendPhoto",
+    ),
+    (
+        "crates/bot/src/transport.rs",
+        "Transport::save_prepared_inline_message",
+        "save_prepared_inline_message",
     ),
 ];
 

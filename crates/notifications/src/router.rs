@@ -40,7 +40,7 @@ use crate::owner_message;
 use crate::photo::{FileId, Photo};
 use crate::policy::Policy;
 use crate::quiet::{in_quiet_hours, local_minute};
-use crate::transport::{BotTransport, Prepared, Pushed};
+use crate::transport::{BotTransport, PhotoPushed, Prepared, Pushed};
 
 /// The owner's override of the quiet window's start, in minutes of the day (the predecessor's key).
 pub const QUIET_START_SETTING: &str = "quiet_start_min";
@@ -84,13 +84,14 @@ pub enum Reason {
 
 impl Reason {
     /// Every reason the router records; the policy must list each (R2).
-    pub const ALL: [Self; 6] = [
+    pub const ALL: [Self; 7] = [
         Self::NudgesDisabled,
         Self::AlreadyRecorded,
         Self::Lapse,
         Self::QuietHours,
         Self::BudgetSpent,
         Self::NoNotifier,
+        Self::PhotoUnsupported,
     ];
 
     /// The reason as the policy and the ledger spell it.
@@ -351,24 +352,91 @@ impl Router {
         self
     }
 
-    /// Routes `photo` for `occasion` to the owner's chat.
+    /// Routes `photo` for `occasion` to the owner's chat, in the rules' order (SPEC-132 R4): the
+    /// kind's switch, the claim of its key, the quiet window and the breaker, then one
+    /// `push_photo`. A photo asks T2 whatever its event asks, so it never spends a T4 or T5 of the
+    /// week's budget (R5). It is held nowhere: in the quiet window or with the breaker open, or
+    /// when its send fails, the answer is [`PhotoDecision::NotNow`], its claim is left free and
+    /// nothing is recorded, so the caller keeps the image and asks again. A transport with no
+    /// photo call records the photo withheld as `photo_unsupported` and sends nothing else (R6).
     ///
     /// # Errors
     ///
     /// [`KernelError::Database`] when the ledger cannot be read or written.
     pub async fn route_photo(
         &self,
-        _occasion: &Occasion,
-        _photo: &Photo,
+        occasion: &Occasion,
+        photo: &Photo,
     ) -> Result<PhotoDecision, KernelError> {
-        Ok(PhotoDecision::Withheld {
-            reason: Reason::NoNotifier,
-        })
+        let now = self.clock.now();
+        let subject = Subject::routed(occasion, Surface::Bot, Tier::T2);
+        let mut write = self.db.write().await?;
+        let claim = match self.decide(&mut write, occasion, Surface::Bot, now).await? {
+            Verdict::Withhold(reason) => {
+                ledger::record(&mut write, &subject.withheld(reason, now)).await?;
+                write.commit().await?;
+                return Ok(PhotoDecision::Withheld { reason });
+            }
+            Verdict::Defer(hold) => {
+                // Dropping the write rolls the claim back: nothing is held or recorded.
+                drop(write);
+                return Ok(PhotoDecision::NotNow {
+                    reason: match hold {
+                        Hold::Quiet => NotNow::QuietHours,
+                        Hold::Send => NotNow::SendFailed,
+                    },
+                });
+            }
+            Verdict::SendInApp => {
+                drop(write);
+                return Ok(PhotoDecision::Withheld {
+                    reason: Reason::NoNotifier,
+                });
+            }
+            Verdict::SendBot(claim) => claim,
+        };
+        write.commit().await?;
+        let pushed = match &self.bot {
+            Some(bot) => bot.push_photo(&PASS, photo, photo.caption()).await,
+            None => PhotoPushed::Unsupported,
+        };
+        let now = self.clock.now();
+        let mut write = self.db.write().await?;
+        let decision = match pushed {
+            PhotoPushed::Delivered { file_id } => {
+                ledger::record(&mut write, &subject.sent(Tier::T2, now)).await?;
+                PhotoDecision::Sent { file_id }
+            }
+            PhotoPushed::Failed => {
+                self.trip(now);
+                ledger::release(&mut write, claim).await?;
+                PhotoDecision::NotNow {
+                    reason: NotNow::SendFailed,
+                }
+            }
+            PhotoPushed::Unsupported => {
+                tracing::warn!(
+                    call = "push_photo",
+                    "the bot transport has no such call: the photo is withheld"
+                );
+                ledger::release(&mut write, claim).await?;
+                let reason = Reason::PhotoUnsupported;
+                ledger::record(&mut write, &subject.withheld(reason, now)).await?;
+                PhotoDecision::Withheld { reason }
+            }
+        };
+        write.commit().await?;
+        Ok(decision)
     }
 
-    /// Prepares the photo held as `file` for the owner to share; records nothing.
-    pub async fn prepare_share(&self, _file: &FileId, _caption: &str) -> Prepared {
-        Prepared::Failed
+    /// Prepares the photo Telegram holds as `file`, captioned `caption`, for the owner to share
+    /// (SPEC-132 R7): one `prepare_share`, no ledger row, no delivery. The transport's outcome is
+    /// the answer, and with no transport joined it is [`Prepared::Unsupported`].
+    pub async fn prepare_share(&self, file: &FileId, caption: &str) -> Prepared {
+        match &self.bot {
+            Some(bot) => bot.prepare_share(&PASS, file, caption).await,
+            None => Prepared::Unsupported,
+        }
     }
 
     /// Decides `occasion`, delivers it when the decision is to send, and records the decision.
