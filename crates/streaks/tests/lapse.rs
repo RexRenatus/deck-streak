@@ -179,3 +179,173 @@ fn the_days_that_open_a_lapse_follow_the_file() {
     assert_eq!(judged(named), None, "four silent days are short of five");
     assert_eq!(judged(LAPSE_AFTER_SILENT_DAYS), Some(day(T - 3)));
 }
+
+/// SPEC-049 R13, in its own words and by a different route from the walk: the window is the days
+/// from the earliest one the caller read up to `today`; the silent run is every day of it after
+/// the latest day that holds a qualifying review (or the whole window when none does); the run's
+/// days that are not skip days are its silent days; and a lapse is open when there are at least
+/// `threshold` of them, with the id the earliest of them. A `today` before the window reads no
+/// day. It never calls `open_lapse`.
+fn r13_oracle(
+    today: i64,
+    rows: &BTreeMap<i64, u32>,
+    skipped: &BTreeSet<i64>,
+    threshold: u32,
+) -> Option<i64> {
+    let first = *rows.keys().next()?;
+    if today < first {
+        return None;
+    }
+    let latest_study = rows
+        .range(first..=today)
+        .filter(|(_, count)| **count > 0)
+        .map(|(number, _)| *number)
+        .max();
+    let run_start = latest_study.map_or(first, |number| number + 1);
+    let silent: Vec<i64> = (run_start..=today)
+        .filter(|number| !skipped.contains(number))
+        .collect();
+    let long_enough = u32::try_from(silent.len()).is_ok_and(|held| held >= threshold);
+    if long_enough {
+        silent.first().copied()
+    } else {
+        None
+    }
+}
+
+/// Judge one member: the walk equals the oracle. Returns the oracle's answer.
+fn judge_window(
+    today: i64,
+    rows: &BTreeMap<i64, u32>,
+    skipped: &BTreeSet<i64>,
+    threshold: u32,
+) -> Option<i64> {
+    let counts: BTreeMap<StudyDay, u32> = rows.iter().map(|(&n, &c)| (day(n), c)).collect();
+    let skips: BTreeSet<StudyDay> = skipped.iter().map(|&n| day(n)).collect();
+    let want = r13_oracle(today, rows, skipped, threshold);
+    let got = open_lapse(day(today), &counts, &skips, threshold).map(StudyDay::epoch_day);
+    assert_eq!(
+        got, want,
+        "today {today}, rows {rows:?}, skipped {skipped:?}, threshold {threshold}: the walk differs from R13"
+    );
+    want
+}
+
+#[test]
+fn a_silent_run_on_the_windows_first_day_is_read() {
+    // The window's only silent run starts on its first day, a row of no reviews.
+    assert_eq!(open(T, &counts(&[], &[T - 3]), &[]), Some(T - 3));
+    assert_eq!(open(T, &counts(&[], &[T - 1]), &[]), None);
+    // One study review at the window's first day is the day the run starts after.
+    assert_eq!(open(T, &counts(&[T - 3], &[]), &[]), Some(T - 2));
+}
+
+#[test]
+fn the_walk_reads_every_day_of_its_window_and_none_outside_it() {
+    let mut examined: u64 = 0;
+    let (mut opened, mut closed) = (0_u64, 0_u64);
+    let threshold = LAPSE_AFTER_SILENT_DAYS;
+    let k = i64::from(threshold);
+    let mut record = |answer: Option<i64>| {
+        examined += 1;
+        if answer.is_some() {
+            opened += 1;
+        } else {
+            closed += 1;
+        }
+    };
+    // Silent runs of one short of the threshold, the threshold and one more, ending on `today`
+    // and starting at every position of a window whose earlier days number 0 to 6.
+    for run_len in [k - 1, k, k + 1] {
+        for before in 0..=6_i64 {
+            let today = T + run_len;
+            let run_start = today - run_len + 1;
+            let first = run_start - before;
+            let run: Vec<i64> = (run_start..=today).collect();
+            // The days before the run, three ways: all studied; only the day right before the run
+            // studied and the rest rows of no reviews; only that day studied and the rest absent
+            // but the window's first day, a row of no reviews.
+            let mut fills: Vec<BTreeMap<i64, u32>> = Vec::new();
+            if before == 0 {
+                // The window's first day is in the run: a row of no reviews there.
+                fills.push(BTreeMap::from([(first, 0)]));
+                fills.push(run.iter().map(|&n| (n, 0)).collect());
+            } else {
+                fills.push((first..run_start).map(|n| (n, 2)).collect());
+                let mut zeros: BTreeMap<i64, u32> = (first..run_start).map(|n| (n, 0)).collect();
+                zeros.insert(run_start - 1, 1);
+                fills.push(zeros);
+                fills.push(BTreeMap::from([(first, 0), (run_start - 1, 1)]));
+            }
+            // Every subset of the run's days as skip days: at its edges, inside it, and all of it.
+            for mask in 0_u32..(1 << run.len()) {
+                let mut skipped: BTreeSet<i64> = run
+                    .iter()
+                    .enumerate()
+                    .filter(|(place, _)| (mask >> place) & 1 == 1)
+                    .map(|(_, &n)| n)
+                    .collect();
+                for skip_the_closing_day in [false, true] {
+                    if skip_the_closing_day && before > 0 {
+                        skipped.insert(run_start - 1);
+                    }
+                    for future_study in [false, true] {
+                        for fill in &fills {
+                            let mut rows = fill.clone();
+                            if future_study {
+                                // A day after `today` is outside the walk.
+                                rows.insert(today + 1, 3);
+                            }
+                            record(judge_window(today, &rows, &skipped, threshold));
+                        }
+                    }
+                    skipped.remove(&(run_start - 1));
+                }
+            }
+        }
+    }
+    // A `today` before the window, and one long past its only row.
+    record(judge_window(
+        T,
+        &BTreeMap::from([(T + 2, 0)]),
+        &BTreeSet::new(),
+        threshold,
+    ));
+    record(judge_window(
+        T,
+        &BTreeMap::from([(T + 2, 1)]),
+        &BTreeSet::new(),
+        threshold,
+    ));
+    record(judge_window(
+        T + 40,
+        &BTreeMap::from([(T, 0)]),
+        &BTreeSet::new(),
+        threshold,
+    ));
+    record(judge_window(
+        T + 40,
+        &BTreeMap::from([(T, 1)]),
+        &BTreeSet::new(),
+        threshold,
+    ));
+    // A threshold of one and of five over the same windows.
+    for other in [1_u32, 5] {
+        for before in 0..=3_i64 {
+            let rows: BTreeMap<i64, u32> = (T - before..T)
+                .map(|n| (n, 1))
+                .chain([(T - before, 0)])
+                .collect();
+            record(judge_window(T, &rows, &BTreeSet::new(), other));
+        }
+    }
+    println!("examined {examined} window member(s)");
+    assert!(
+        examined >= 1_000,
+        "the population is generated, not listed: {examined}"
+    );
+    assert!(
+        opened > 0 && closed > 0,
+        "both answers occur: {opened} open, {closed} none"
+    );
+}
