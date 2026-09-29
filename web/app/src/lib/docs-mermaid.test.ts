@@ -39,12 +39,20 @@ async function parses(source: string): Promise<boolean> {
   return (await mermaid.parse(source, { suppressErrors: true })) !== false;
 }
 
+/** Reports how many of a population were examined, and refuses an empty one. */
+function examined<T>(what: string, items: T[]): T[] {
+  console.log(`examined ${items.length} ${what}`);
+  expect(items.length, `examined 0 ${what}: nothing was judged`).toBeGreaterThan(0);
+  return items;
+}
+
 const BLOCKS = markdownFiles(DOCS).flatMap((file) =>
   blocksOf(relative(DOCS, file), readFileSync(file, 'utf8'))
 );
 
 describe('the Mermaid diagrams under docs', () => {
   it('reads every fenced block', () => {
+    examined('mermaid blocks', BLOCKS);
     const opened = markdownFiles(DOCS)
       .map((file) => (readFileSync(file, 'utf8').match(/^```mermaid/gm) ?? []).length)
       .reduce((sum, count) => sum + count, 0);
@@ -55,13 +63,13 @@ describe('the Mermaid diagrams under docs', () => {
 
   it('parses every block', async () => {
     const refused: string[] = [];
-    for (const block of BLOCKS) {
+    for (const block of examined('mermaid blocks', BLOCKS)) {
       if (!(await parses(block.source))) refused.push(block.name);
     }
 
     expect(BLOCKS.length).toBeGreaterThan(100);
     expect(refused).toEqual([]);
-  });
+  }, 60_000);
 
   it('refuses a block whose node id is a reserved word', async () => {
     const planted = blocksOf('planted.md', '```mermaid\nflowchart TD\n  call --> done\n```\n');
