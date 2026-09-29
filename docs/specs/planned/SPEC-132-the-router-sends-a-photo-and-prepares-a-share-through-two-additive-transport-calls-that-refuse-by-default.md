@@ -41,8 +41,9 @@ R1. `BotTransport` gains `push_photo(&Pass, &Photo, caption: &str) -> PhotoFutur
 R2. `BotTransport` gains `prepare_share(&Pass, &FileId, caption: &str) -> ShareFuture`, whose output
     is `Prepared`: `Ready { id }` (the prepared message's id), `Failed`, or `Unsupported`, with the same
     refusing default.
-R3. A `Photo` holds PNG or JPEG bytes of at most 10 MiB with sides of at most 10,000 pixels, and a
-    caption of at most 1,024 characters after escaping; anything else is refused at construction
+R3. A `Photo` holds PNG or JPEG bytes of at most 10 MB (10,000,000 bytes), whose width and height total at most
+    10,000 pixels with a ratio of at most 20 (Bot API `sendPhoto`), and a caption of at most 1,024
+    characters after escaping; anything else is refused at construction
     `photo_invalid`, before any call. It is never written to a log line (SPEC-041's decision ledger
     records the key, never the bytes).
 
@@ -96,7 +97,7 @@ R11. CHARTER 10's eleven anti-goals bind this SPEC as one block; the ones it tou
 | A6 | a delivered photo is recorded once and a second raise of its key is `already_recorded` | `a_delivered_photo_is_recorded_once` |
 | A7 | a photo asks T2 and spends no T4 or T5 budget | `a_photo_spends_no_celebration_budget` |
 | A8 | a photo with its kind's setting off is withheld `nudges_disabled` and never pushed | `a_photo_with_its_kind_off_is_never_pushed` |
-| A9 | a photo over 10 MiB, over 10,000 pixels a side, or with a caption over 1,024 characters is refused `photo_invalid` | `an_oversized_photo_is_refused_before_any_call` |
+| A9 | a photo of 10,000,001 bytes, of width plus height 10,001 pixels, of a ratio over 20, or with a caption of 1,025 characters is refused `photo_invalid` | `an_oversized_photo_is_refused_before_any_call` |
 | A10 | `prepare_share` records no delivery and answers the transport's outcome | `a_prepared_share_records_no_delivery` |
 | A11 | `Reason::ALL` holds `photo_unsupported` | `every_reason_is_named` |
 | A12 | the bot's `push_photo` is one `sendPhoto` to the owner's chat and answers the largest size's file id | `push_photo_is_one_send_photo_to_the_owner` |
@@ -191,6 +192,6 @@ None. The deliveries go into SPEC-041's decision ledger.
 | `S13205-FAILED-NOT-RECORDED` | `crates/notifications/src/router.rs` | a failed push records nothing | `photo_render::a_failed_photo_records_nothing` |
 | `S13206-DEDUPE` | `crates/notifications/src/router.rs` | a delivered key is `already_recorded` | `photo_render::a_delivered_photo_is_recorded_once` |
 | `S13207-T2` | `crates/notifications/src/router.rs` | a photo asks T2 | `photo_render::a_photo_spends_no_celebration_budget` |
-| `S13208-SIZE-BOUND` | `crates/notifications/src/photo.rs` | 10 MiB; the test names 10 MiB and one byte more | `photo_render::an_oversized_photo_is_refused_before_any_call` |
+| `S13208-SIZE-BOUND` | `crates/notifications/src/photo.rs` | 10,000,000 bytes; the test names 10,000,000 and 10,000,001 | `photo_render::an_oversized_photo_is_refused_before_any_call` |
 | `S13209-SHARE-NO-RECORD` | `crates/notifications/src/router.rs` | a prepared share records no delivery | `photo_render::a_prepared_share_records_no_delivery` |
 | `S13210-LARGEST-SIZE` | `crates/bot/src/transport.rs` | the file id of the largest size | `photo_transport::push_photo_is_one_send_photo_to_the_owner` |
