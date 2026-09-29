@@ -1891,8 +1891,8 @@ def defaults_problems(defaults, where):
 def environment_problems(env, where):
     """An environment whose variables the checker cannot read: an `env` that is set and is not a
     mapping, such as one `${{ }}` expression, which GitHub evaluates when the job or the step runs,
-    so no reading of the file names a variable git reads there. An omitted or empty `env` is no
-    variables."""
+    so no reading of the file names a variable whose name begins with `GIT_` there. An omitted or empty
+    `env` is no variables."""
     if env is None or isinstance(env, dict):
         return []
     return [f"{where}: sets an environment the checker does not read"]
@@ -1915,7 +1915,7 @@ def container_problems(container, where):
 
 
 def git_variables(text):
-    """Each variable git reads that a key or a string names, once, in the order it names them."""
+    """Each variable whose name begins with `GIT_` that a key or a string names, once, in order."""
     return list(dict.fromkeys(GIT_VARIABLE.findall(text)))
 
 
