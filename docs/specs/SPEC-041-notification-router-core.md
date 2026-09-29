@@ -388,14 +388,17 @@ the verdict of a run with that wiring is posted as the `box/packs` status at the
     its send methods. Outside the bot's sources nothing names one; inside them one is named only by
     its own named send, and the transport's `edit_html` is `editMessageText`'s, one of ten named
     send, which the census finds once although no shipped source calls it.
-  - A method is held when it can put new or changed content in front of any user: the gifts, the
-    stories, a game score, a callback, inline, shipping or checkout answer, a suggested post's
-    decision, a chat's title, description or photo, a forum topic, the bot's own name, texts,
-    photo, commands and menu button, and a business account's name, bio, username and photo. The
-    transport's answer to a callback and its menu of commands are named sends. What is only state
-    (permissions, members, tokens, badges, sticker sets, invite links, deletions, reads, prepared
-    objects and `upgradeGift`) is classified, not held. The census now holds 29 send methods, 46
-    delivery methods and 110 that deliver nothing, 185 in all.
+  - A method is held when it can make content the bot chose visible to a user: text, media, a title,
+    a button, a status or a badge's description. That is the gifts, the stories, a game score, the
+    answers to a callback, an inline, shipping or checkout query, a suggested post's decision, a
+    chat's title, description and photo, a forum topic, an administrator's title, a member's tag,
+    the bot's own name, texts, photo, commands and menu button, a business account's name, bio,
+    username and photo, a sticker set's title, media and thumbnail, an emoji status, a badge's
+    description, an invoice's link and a prepared message or button. The transport's answer to a
+    callback and its menu of commands are named sends. Reads, removals, permissions and
+    membership, tokens, webhooks, bare file uploads and the account's own gift state
+    (`upgradeGift` and its kin) are classified, not held. The census holds 29 send methods, 60
+    delivery methods and 96 that deliver nothing, 185 in all.
   - The pinned client's whole table is listed in the census with the client's version, which a
     bump of the lock turns red until the list is derived again, and every method in it is a send,
     a delivery or not a delivery, in one class only. Deletions, unpins and the other classes of

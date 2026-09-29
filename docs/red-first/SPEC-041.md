@@ -321,6 +321,12 @@ green.
   `setGameScore`, the answers, the profile, title, description, topic and menu methods moved into
   the held lists (29 send, 46 delivery, 110 classified, 185 in all), and the transport's answer to
   a callback and its menu of commands became named sends, ten in all. A15's lists changed with it.
+- The held-content rule's second pass (3f5e53e red, green at cc3512f). Held as text: a
+  `set_sticker_set_title` call, a `verify_user` call and a `create_invoice_link` call from new
+  modules of the daemon. Each was refused only after the move. Fourteen methods moved into the
+  delivery list: a sticker set's title, media and thumbnail, an emoji status, a badge's description,
+  an invoice's link, a prepared message and button, an administrator's title and a member's tag.
+  The counts are 29 send, 60 delivery and 96 classified, 185 in all.
 
 These are new cases of A15, not a criterion of its own, so their record stands outside the
 `red-first` fences. Each red is the first assertion of its test that failed; the cases after it in
