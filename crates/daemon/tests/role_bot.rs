@@ -1,7 +1,7 @@
 //! The `bot` role runs the bot's loop under the shared lifecycle: it drains what was queued before
-//! it started, tells systemd it is ready once the first long poll is issued, answers the owner, runs
-//! the owner's `/sync` through the daemon's wiring, and on SIGTERM confirms its offset, says it is
-//! stopping and exits 0 (SPEC-026 R1, R2, R11, R13; ADR-025, ADR-026).
+//! it started, tells systemd it is ready once the first long poll is issued, answers the owner,
+//! requests the owner's `/sync` through the sync job's request file, and on SIGTERM confirms its
+//! offset, says it is stopping and exits 0 (SPEC-026 R1, R2, R11, R13; ADR-025, ADR-026).
 //!
 //! It runs the built binary against the bot's own fake Bot API on a loopback port, with a temporary
 //! state directory, a temporary credentials directory of synthetic credentials, and a temporary
@@ -81,6 +81,12 @@ fn start_role(fake: &FakeBotApi, directory: &Path) -> (Role, UnixDatagram) {
         .env("CREDENTIALS_DIRECTORY", credentials(directory))
         .env("DECKSTREAK_MINI_APP_URL", APP_URL)
         .env("DECKSTREAK_BOT_API_URL", fake.base_url())
+        // A request file whose directory does not exist: the request cannot be rung, so the answer
+        // comes at once instead of after the wait for a job no unit starts here.
+        .env(
+            "DECKSTREAK_SYNC_REQUEST_PATH",
+            directory.join("absent").join("request"),
+        )
         .env("NOTIFY_SOCKET", &socket_path)
         .env(WATCHDOG_USEC, "5000000")
         .stdout(Stdio::null())
@@ -157,7 +163,7 @@ async fn the_bot_role_drains_answers_the_owner_and_stops_on_sigterm() {
         .expect("the first long poll");
     assert_started(&fake.calls());
 
-    // The owner's two commands are answered, the sync through the daemon's own wiring.
+    // The owner's two commands are answered, the sync as a request for the job.
     tokio::time::timeout(
         DEADLINE,
         fake.until(|calls| {
@@ -179,8 +185,8 @@ async fn the_bot_role_drains_answers_the_owner_and_stops_on_sigterm() {
     );
     let sync = sends[1].body["text"].as_str().expect("a text").to_owned();
     assert!(
-        sync.contains("sync_settings_refused"),
-        "no sync endpoint is set, and the answer says so: {sync}"
+        sync.contains("sync_request_unwritten"),
+        "the request could not be written, and the answer says so: {sync}"
     );
     assert!(
         fake.calls_of("sendChatAction").len() == 1,
@@ -216,7 +222,7 @@ async fn the_bot_role_drains_answers_the_owner_and_stops_on_sigterm() {
         "the offset past update 6 was sent: {offsets:?}"
     );
 
-    // The owner's rescore waits for the next cycle, as the wiring marked it.
+    // The owner's rescore waits for the next cycle, as the request marked it.
     let db = Db::open(&directory.path().join("state").join("deck_streak.db"))
         .await
         .expect("the database opens");
