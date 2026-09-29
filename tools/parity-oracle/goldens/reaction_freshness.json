@@ -1,0 +1,359 @@
+{
+  "adapter": "with_a_latest_owner_message",
+  "cases": [
+    {
+      "class": "age",
+      "input": {
+        "fail": [],
+        "owner": {
+          "age_minutes": 0,
+          "id": 9
+        },
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "set_reaction",
+            "\ud83c\udf89"
+          ]
+        ],
+        "outcome": true
+      }
+    },
+    {
+      "class": "age",
+      "input": {
+        "fail": [
+          "set_reaction"
+        ],
+        "owner": {
+          "age_minutes": 0,
+          "id": 9
+        },
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "set_reaction",
+            "\ud83c\udf89"
+          ]
+        ],
+        "outcome": false
+      }
+    },
+    {
+      "class": "age",
+      "input": {
+        "fail": [],
+        "owner": {
+          "age_minutes": 1,
+          "id": 9
+        },
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "set_reaction",
+            "\ud83c\udf89"
+          ]
+        ],
+        "outcome": true
+      }
+    },
+    {
+      "class": "age",
+      "input": {
+        "fail": [
+          "set_reaction"
+        ],
+        "owner": {
+          "age_minutes": 1,
+          "id": 9
+        },
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "set_reaction",
+            "\ud83c\udf89"
+          ]
+        ],
+        "outcome": false
+      }
+    },
+    {
+      "class": "age",
+      "input": {
+        "fail": [],
+        "owner": {
+          "age_minutes": 60,
+          "id": 9
+        },
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "set_reaction",
+            "\ud83c\udf89"
+          ]
+        ],
+        "outcome": true
+      }
+    },
+    {
+      "class": "age",
+      "input": {
+        "fail": [
+          "set_reaction"
+        ],
+        "owner": {
+          "age_minutes": 60,
+          "id": 9
+        },
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "set_reaction",
+            "\ud83c\udf89"
+          ]
+        ],
+        "outcome": false
+      }
+    },
+    {
+      "class": "age",
+      "input": {
+        "fail": [],
+        "owner": {
+          "age_minutes": 1380,
+          "id": 9
+        },
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "set_reaction",
+            "\ud83c\udf89"
+          ]
+        ],
+        "outcome": true
+      }
+    },
+    {
+      "class": "age",
+      "input": {
+        "fail": [
+          "set_reaction"
+        ],
+        "owner": {
+          "age_minutes": 1380,
+          "id": 9
+        },
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "set_reaction",
+            "\ud83c\udf89"
+          ]
+        ],
+        "outcome": false
+      }
+    },
+    {
+      "class": "age",
+      "input": {
+        "fail": [],
+        "owner": {
+          "age_minutes": 1439,
+          "id": 9
+        },
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "set_reaction",
+            "\ud83c\udf89"
+          ]
+        ],
+        "outcome": true
+      }
+    },
+    {
+      "class": "age",
+      "input": {
+        "fail": [
+          "set_reaction"
+        ],
+        "owner": {
+          "age_minutes": 1439,
+          "id": 9
+        },
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "set_reaction",
+            "\ud83c\udf89"
+          ]
+        ],
+        "outcome": false
+      }
+    },
+    {
+      "class": "age",
+      "input": {
+        "fail": [],
+        "owner": {
+          "age_minutes": 1440,
+          "id": 9
+        },
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "set_reaction",
+            "\ud83c\udf89"
+          ]
+        ],
+        "outcome": true
+      }
+    },
+    {
+      "class": "age",
+      "input": {
+        "fail": [
+          "set_reaction"
+        ],
+        "owner": {
+          "age_minutes": 1440,
+          "id": 9
+        },
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "set_reaction",
+            "\ud83c\udf89"
+          ]
+        ],
+        "outcome": false
+      }
+    },
+    {
+      "class": "age",
+      "input": {
+        "fail": [],
+        "owner": {
+          "age_minutes": 1441,
+          "id": 9
+        },
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [],
+        "outcome": null
+      }
+    },
+    {
+      "class": "age",
+      "input": {
+        "fail": [
+          "set_reaction"
+        ],
+        "owner": {
+          "age_minutes": 1441,
+          "id": 9
+        },
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [],
+        "outcome": null
+      }
+    },
+    {
+      "class": "age",
+      "input": {
+        "fail": [],
+        "owner": {
+          "age_minutes": 1800,
+          "id": 9
+        },
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [],
+        "outcome": null
+      }
+    },
+    {
+      "class": "age",
+      "input": {
+        "fail": [
+          "set_reaction"
+        ],
+        "owner": {
+          "age_minutes": 1800,
+          "id": 9
+        },
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [],
+        "outcome": null
+      }
+    },
+    {
+      "class": "absent",
+      "input": {
+        "fail": [],
+        "owner": null,
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [],
+        "outcome": null
+      }
+    },
+    {
+      "class": "open",
+      "input": {
+        "fail": [],
+        "owner": {
+          "age_minutes": 5,
+          "id": 9
+        },
+        "reaction_open": true
+      },
+      "output": {
+        "calls": [],
+        "outcome": null
+      }
+    }
+  ],
+  "function": "pipeline_layers.celebrations.CelebrationsLayer._react_to_owner",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Builds a stand-in layer whose stub store holds the case's latest owner message, the module's clock fixed, the reaction breaker as the case says, and a recording notifier; returns the outcome (attempted and delivered, attempted and refused, or not attempted) and the calls with their emoji; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_084.py",
+  "registry_sha256": "d00303c579ae9b9ccb8e7cb27bff3a49cd1bdae290aa71f875b32cc1832b79cf",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

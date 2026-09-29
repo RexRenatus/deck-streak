@@ -1,0 +1,895 @@
+{
+  "adapter": "with_a_temporary_store",
+  "cases": [
+    {
+      "class": "rendered",
+      "input": {
+        "min_tier": 4,
+        "rows": [
+          {
+            "day": 19995,
+            "held": false,
+            "tier": 0
+          },
+          {
+            "day": 19995,
+            "held": false,
+            "tier": 1
+          },
+          {
+            "day": 19995,
+            "held": false,
+            "tier": 3
+          },
+          {
+            "day": 19995,
+            "held": false,
+            "tier": 4
+          },
+          {
+            "day": 19995,
+            "held": false,
+            "tier": 5
+          },
+          {
+            "day": 19996,
+            "held": false,
+            "tier": 0
+          },
+          {
+            "day": 19996,
+            "held": false,
+            "tier": 1
+          },
+          {
+            "day": 19996,
+            "held": false,
+            "tier": 3
+          },
+          {
+            "day": 19996,
+            "held": false,
+            "tier": 4
+          },
+          {
+            "day": 19996,
+            "held": false,
+            "tier": 5
+          },
+          {
+            "day": 19999,
+            "held": false,
+            "tier": 0
+          },
+          {
+            "day": 19999,
+            "held": false,
+            "tier": 1
+          },
+          {
+            "day": 19999,
+            "held": false,
+            "tier": 3
+          },
+          {
+            "day": 19999,
+            "held": false,
+            "tier": 4
+          },
+          {
+            "day": 19999,
+            "held": false,
+            "tier": 5
+          },
+          {
+            "day": 20002,
+            "held": false,
+            "tier": 0
+          },
+          {
+            "day": 20002,
+            "held": false,
+            "tier": 1
+          },
+          {
+            "day": 20002,
+            "held": false,
+            "tier": 3
+          },
+          {
+            "day": 20002,
+            "held": false,
+            "tier": 4
+          },
+          {
+            "day": 20002,
+            "held": false,
+            "tier": 5
+          },
+          {
+            "day": 20003,
+            "held": false,
+            "tier": 0
+          },
+          {
+            "day": 20003,
+            "held": false,
+            "tier": 1
+          },
+          {
+            "day": 20003,
+            "held": false,
+            "tier": 3
+          },
+          {
+            "day": 20003,
+            "held": false,
+            "tier": 4
+          },
+          {
+            "day": 20003,
+            "held": false,
+            "tier": 5
+          }
+        ],
+        "since_day": 19996
+      },
+      "output": 8
+    },
+    {
+      "class": "held",
+      "input": {
+        "min_tier": 4,
+        "rows": [
+          {
+            "day": 19997,
+            "held": true,
+            "tier": 1
+          },
+          {
+            "day": 19997,
+            "held": true,
+            "tier": 3
+          },
+          {
+            "day": 19997,
+            "held": true,
+            "tier": 4
+          },
+          {
+            "day": 19997,
+            "held": true,
+            "tier": 5
+          }
+        ],
+        "since_day": 19996
+      },
+      "output": 2
+    },
+    {
+      "class": "abandoned",
+      "input": {
+        "min_tier": 4,
+        "rows": [
+          {
+            "abandoned": true,
+            "day": 19997,
+            "held": true,
+            "tier": 5
+          },
+          {
+            "day": 19998,
+            "held": true,
+            "tier": 4
+          },
+          {
+            "day": 19998,
+            "held": false,
+            "tier": 5
+          }
+        ],
+        "since_day": 19996
+      },
+      "output": 2
+    },
+    {
+      "class": "rendered",
+      "input": {
+        "min_tier": 5,
+        "rows": [
+          {
+            "day": 19995,
+            "held": false,
+            "tier": 0
+          },
+          {
+            "day": 19995,
+            "held": false,
+            "tier": 1
+          },
+          {
+            "day": 19995,
+            "held": false,
+            "tier": 3
+          },
+          {
+            "day": 19995,
+            "held": false,
+            "tier": 4
+          },
+          {
+            "day": 19995,
+            "held": false,
+            "tier": 5
+          },
+          {
+            "day": 19996,
+            "held": false,
+            "tier": 0
+          },
+          {
+            "day": 19996,
+            "held": false,
+            "tier": 1
+          },
+          {
+            "day": 19996,
+            "held": false,
+            "tier": 3
+          },
+          {
+            "day": 19996,
+            "held": false,
+            "tier": 4
+          },
+          {
+            "day": 19996,
+            "held": false,
+            "tier": 5
+          },
+          {
+            "day": 19999,
+            "held": false,
+            "tier": 0
+          },
+          {
+            "day": 19999,
+            "held": false,
+            "tier": 1
+          },
+          {
+            "day": 19999,
+            "held": false,
+            "tier": 3
+          },
+          {
+            "day": 19999,
+            "held": false,
+            "tier": 4
+          },
+          {
+            "day": 19999,
+            "held": false,
+            "tier": 5
+          },
+          {
+            "day": 20002,
+            "held": false,
+            "tier": 0
+          },
+          {
+            "day": 20002,
+            "held": false,
+            "tier": 1
+          },
+          {
+            "day": 20002,
+            "held": false,
+            "tier": 3
+          },
+          {
+            "day": 20002,
+            "held": false,
+            "tier": 4
+          },
+          {
+            "day": 20002,
+            "held": false,
+            "tier": 5
+          },
+          {
+            "day": 20003,
+            "held": false,
+            "tier": 0
+          },
+          {
+            "day": 20003,
+            "held": false,
+            "tier": 1
+          },
+          {
+            "day": 20003,
+            "held": false,
+            "tier": 3
+          },
+          {
+            "day": 20003,
+            "held": false,
+            "tier": 4
+          },
+          {
+            "day": 20003,
+            "held": false,
+            "tier": 5
+          }
+        ],
+        "since_day": 19996
+      },
+      "output": 4
+    },
+    {
+      "class": "held",
+      "input": {
+        "min_tier": 5,
+        "rows": [
+          {
+            "day": 19997,
+            "held": true,
+            "tier": 1
+          },
+          {
+            "day": 19997,
+            "held": true,
+            "tier": 3
+          },
+          {
+            "day": 19997,
+            "held": true,
+            "tier": 4
+          },
+          {
+            "day": 19997,
+            "held": true,
+            "tier": 5
+          }
+        ],
+        "since_day": 19996
+      },
+      "output": 1
+    },
+    {
+      "class": "abandoned",
+      "input": {
+        "min_tier": 5,
+        "rows": [
+          {
+            "abandoned": true,
+            "day": 19997,
+            "held": true,
+            "tier": 5
+          },
+          {
+            "day": 19998,
+            "held": true,
+            "tier": 4
+          },
+          {
+            "day": 19998,
+            "held": false,
+            "tier": 5
+          }
+        ],
+        "since_day": 19996
+      },
+      "output": 1
+    },
+    {
+      "input": {
+        "min_tier": 4,
+        "rows": [
+          {
+            "day": 19997,
+            "held": false,
+            "tier": 5
+          },
+          {
+            "day": 19994,
+            "held": false,
+            "tier": 2
+          }
+        ],
+        "since_day": 19996
+      },
+      "output": 1
+    },
+    {
+      "input": {
+        "min_tier": 5,
+        "rows": [],
+        "since_day": 19996
+      },
+      "output": 0
+    },
+    {
+      "input": {
+        "min_tier": 4,
+        "rows": [
+          {
+            "day": 19994,
+            "held": true,
+            "tier": 0
+          },
+          {
+            "day": 20000,
+            "held": false,
+            "tier": 4
+          },
+          {
+            "day": 19996,
+            "held": true,
+            "tier": 1
+          },
+          {
+            "day": 20003,
+            "held": true,
+            "tier": 2
+          },
+          {
+            "day": 19994,
+            "held": false,
+            "tier": 5
+          },
+          {
+            "day": 20000,
+            "held": true,
+            "tier": 3
+          }
+        ],
+        "since_day": 19996
+      },
+      "output": 1
+    },
+    {
+      "input": {
+        "min_tier": 4,
+        "rows": [],
+        "since_day": 19996
+      },
+      "output": 0
+    },
+    {
+      "input": {
+        "min_tier": 5,
+        "rows": [
+          {
+            "day": 19994,
+            "held": true,
+            "tier": 1
+          }
+        ],
+        "since_day": 19996
+      },
+      "output": 0
+    },
+    {
+      "input": {
+        "min_tier": 5,
+        "rows": [
+          {
+            "day": 20004,
+            "held": true,
+            "tier": 2
+          },
+          {
+            "day": 19994,
+            "held": true,
+            "tier": 0
+          },
+          {
+            "day": 19996,
+            "held": false,
+            "tier": 1
+          },
+          {
+            "day": 19993,
+            "held": false,
+            "tier": 0
+          }
+        ],
+        "since_day": 19996
+      },
+      "output": 0
+    },
+    {
+      "input": {
+        "min_tier": 4,
+        "rows": [
+          {
+            "day": 19995,
+            "held": false,
+            "tier": 5
+          },
+          {
+            "day": 20002,
+            "held": false,
+            "tier": 5
+          },
+          {
+            "day": 19995,
+            "held": true,
+            "tier": 5
+          },
+          {
+            "day": 19999,
+            "held": true,
+            "tier": 1
+          }
+        ],
+        "since_day": 19996
+      },
+      "output": 1
+    },
+    {
+      "input": {
+        "min_tier": 4,
+        "rows": [
+          {
+            "day": 20005,
+            "held": false,
+            "tier": 4
+          },
+          {
+            "day": 19996,
+            "held": false,
+            "tier": 0
+          }
+        ],
+        "since_day": 19996
+      },
+      "output": 1
+    },
+    {
+      "input": {
+        "min_tier": 4,
+        "rows": [
+          {
+            "day": 19996,
+            "held": true,
+            "tier": 3
+          },
+          {
+            "day": 19995,
+            "held": true,
+            "tier": 0
+          },
+          {
+            "day": 19997,
+            "held": false,
+            "tier": 0
+          },
+          {
+            "day": 20005,
+            "held": false,
+            "tier": 2
+          },
+          {
+            "day": 19999,
+            "held": false,
+            "tier": 3
+          },
+          {
+            "day": 20005,
+            "held": true,
+            "tier": 5
+          },
+          {
+            "day": 20003,
+            "held": true,
+            "tier": 1
+          },
+          {
+            "day": 20000,
+            "held": true,
+            "tier": 4
+          }
+        ],
+        "since_day": 19996
+      },
+      "output": 2
+    },
+    {
+      "input": {
+        "min_tier": 4,
+        "rows": [
+          {
+            "day": 19994,
+            "held": true,
+            "tier": 2
+          }
+        ],
+        "since_day": 19996
+      },
+      "output": 0
+    },
+    {
+      "input": {
+        "min_tier": 4,
+        "rows": [
+          {
+            "day": 20003,
+            "held": false,
+            "tier": 0
+          },
+          {
+            "day": 19996,
+            "held": false,
+            "tier": 1
+          },
+          {
+            "day": 20004,
+            "held": true,
+            "tier": 0
+          },
+          {
+            "day": 20003,
+            "held": false,
+            "tier": 5
+          }
+        ],
+        "since_day": 19996
+      },
+      "output": 1
+    },
+    {
+      "input": {
+        "min_tier": 4,
+        "rows": [
+          {
+            "day": 19995,
+            "held": true,
+            "tier": 3
+          },
+          {
+            "day": 19999,
+            "held": true,
+            "tier": 0
+          },
+          {
+            "day": 19996,
+            "held": true,
+            "tier": 1
+          },
+          {
+            "day": 19995,
+            "held": true,
+            "tier": 4
+          }
+        ],
+        "since_day": 19996
+      },
+      "output": 0
+    },
+    {
+      "input": {
+        "min_tier": 4,
+        "rows": [
+          {
+            "day": 20000,
+            "held": true,
+            "tier": 3
+          }
+        ],
+        "since_day": 19996
+      },
+      "output": 0
+    },
+    {
+      "input": {
+        "min_tier": 5,
+        "rows": [
+          {
+            "day": 19999,
+            "held": false,
+            "tier": 0
+          },
+          {
+            "day": 19997,
+            "held": true,
+            "tier": 1
+          },
+          {
+            "day": 19997,
+            "held": false,
+            "tier": 1
+          },
+          {
+            "day": 19994,
+            "held": true,
+            "tier": 0
+          }
+        ],
+        "since_day": 19996
+      },
+      "output": 0
+    },
+    {
+      "input": {
+        "min_tier": 5,
+        "rows": [
+          {
+            "day": 20004,
+            "held": true,
+            "tier": 2
+          },
+          {
+            "day": 20000,
+            "held": true,
+            "tier": 0
+          },
+          {
+            "day": 20000,
+            "held": false,
+            "tier": 1
+          },
+          {
+            "day": 19993,
+            "held": false,
+            "tier": 5
+          },
+          {
+            "day": 19994,
+            "held": false,
+            "tier": 4
+          }
+        ],
+        "since_day": 19996
+      },
+      "output": 0
+    },
+    {
+      "input": {
+        "min_tier": 4,
+        "rows": [],
+        "since_day": 19996
+      },
+      "output": 0
+    },
+    {
+      "input": {
+        "min_tier": 4,
+        "rows": [
+          {
+            "day": 19997,
+            "held": false,
+            "tier": 4
+          },
+          {
+            "day": 19994,
+            "held": false,
+            "tier": 0
+          },
+          {
+            "day": 19993,
+            "held": false,
+            "tier": 1
+          },
+          {
+            "day": 20002,
+            "held": false,
+            "tier": 3
+          }
+        ],
+        "since_day": 19996
+      },
+      "output": 1
+    },
+    {
+      "input": {
+        "min_tier": 5,
+        "rows": [
+          {
+            "day": 20005,
+            "held": false,
+            "tier": 2
+          },
+          {
+            "day": 20005,
+            "held": true,
+            "tier": 5
+          },
+          {
+            "day": 20002,
+            "held": false,
+            "tier": 3
+          },
+          {
+            "day": 20001,
+            "held": true,
+            "tier": 3
+          },
+          {
+            "day": 19993,
+            "held": true,
+            "tier": 3
+          }
+        ],
+        "since_day": 19996
+      },
+      "output": 1
+    },
+    {
+      "input": {
+        "min_tier": 4,
+        "rows": [
+          {
+            "day": 19996,
+            "held": true,
+            "tier": 1
+          },
+          {
+            "day": 19998,
+            "held": true,
+            "tier": 3
+          },
+          {
+            "day": 19993,
+            "held": true,
+            "tier": 2
+          },
+          {
+            "day": 19994,
+            "held": false,
+            "tier": 5
+          },
+          {
+            "day": 19993,
+            "held": false,
+            "tier": 0
+          }
+        ],
+        "since_day": 19996
+      },
+      "output": 0
+    },
+    {
+      "input": {
+        "min_tier": 5,
+        "rows": [
+          {
+            "day": 20005,
+            "held": true,
+            "tier": 5
+          },
+          {
+            "day": 20003,
+            "held": true,
+            "tier": 2
+          },
+          {
+            "day": 19995,
+            "held": true,
+            "tier": 0
+          },
+          {
+            "day": 20001,
+            "held": true,
+            "tier": 3
+          }
+        ],
+        "since_day": 19996
+      },
+      "output": 1
+    }
+  ],
+  "function": "database.GamifyStore.celebrations_at_or_above",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Creates the predecessor's own GamifyStore in a temporary directory, records each case row through record_celebration or record_celebration_pending (an abandoned one settled at tier 0) with its study day from its epoch day number, and counts; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_084.py",
+  "registry_sha256": "d00303c579ae9b9ccb8e7cb27bff3a49cd1bdae290aa71f875b32cc1832b79cf",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}
