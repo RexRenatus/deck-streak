@@ -938,6 +938,11 @@ class CredentialsComeFromTheSocket(unittest.TestCase):
                     "[Service]\n"
                     f"LoadCredentialEncrypted{blank}=telegram-bot-token:{SOCKET}\n"
                     f"LoadCredential{blank}=telegram-bot-token:/etc/token\n"
+                    f"LoadCredential{blank}=\n"
+                )
+                (Path(scratch) / "planted.service.d").mkdir()
+                (Path(scratch) / "planted.service.d" / "10-planted.conf").write_text(
+                    f"[Service]\nLoadCredential{blank}=telegram-bot-token:/etc/token\n"
                 )
                 found = credential_lines(scratch)
             self.assertEqual(
@@ -947,6 +952,9 @@ class CredentialsComeFromTheSocket(unittest.TestCase):
                     "(ADR-038)",
                     "planted.service:3: telegram-bot-token is read from '/etc/token', not the "
                     "socket",
+                    "planted.service:4: '' is not a DeckStreak credential id",
+                    "planted.service.d/10-planted.conf:2: telegram-bot-token is read from "
+                    "'/etc/token', not the socket",
                 ],
                 what,
             )
@@ -1531,6 +1539,13 @@ class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
                 "X-Note=kept\n",
                 "",
                 [refusal(3, "Unit", "X-Note", "kept")],
+            ),
+            "alert key of a section off its list": (
+                _units.ALERT_KEYS,
+                "",
+                "",
+                "[Socket]\nExecStart=/bin/true\n",
+                [refusal(7, "Socket", "ExecStart", "/bin/true")],
             ),
             "paging extension key": (
                 _units.PAGING_KEYS,
