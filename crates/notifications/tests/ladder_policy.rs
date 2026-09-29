@@ -141,6 +141,36 @@ fn the_policy_ladder_values_equal_the_parity_goldens() {
         );
     });
     assert!(examined.count > 0);
+    read_from_the_file();
+}
+
+/// Read from the file, never typed beside it: a policy with other bounds moves the reaction's age
+/// and the near-miss units with it.
+fn read_from_the_file() {
+    let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../notifications-policy.json");
+    let mut other: Value =
+        serde_json::from_str(&fs::read_to_string(path).expect("the policy file")).expect("JSON");
+    other["ladder"]["reaction_max_age_hours"] = json!(1);
+    other["near_miss"]["max_units"] = json!(2);
+    let other = Policy::parse(&other.to_string()).expect("the altered policy parses");
+    let now = UtcMillis::from_epoch_millis(1_728_000_000_000);
+    let aged = |minutes: i64| UtcMillis::from_epoch_millis(now.epoch_millis() - minutes * 60_000);
+    assert_eq!(
+        [
+            ladder::reaction_fresh(&other, aged(60), now),
+            ladder::reaction_fresh(&other, aged(61), now)
+        ],
+        [true, false],
+        "a reaction's age is the file's hours"
+    );
+    assert_eq!(
+        [
+            ladder::near_miss_ok(&other, 2.0, 10.0),
+            ladder::near_miss_ok(&other, 2.5, 10.0)
+        ],
+        [true, false],
+        "the near-miss units are the file's"
+    );
 }
 
 /// The bot delivery calls the transport port declares, in its order: every `fn push_` of it.

@@ -105,7 +105,8 @@ def cap_cases(rng):
 
 
 def near_miss_cases(rng):
-    """Gaps at and beyond 5 units and 10 percent, and zero and negative gaps and targets."""
+    """Gaps at and beyond 5 units and 10 percent, each bound once where it alone decides, and zero
+    and negative gaps and targets."""
     cases = []
     for remaining, target in (
         (0, 10),
@@ -114,6 +115,8 @@ def near_miss_cases(rng):
         (1, -5),
         (5, 100),
         (5.0, 1000),
+        (5, 40),
+        (5.5, 40),
         (5.5, 100),
         (6, 100),
         (10, 100),

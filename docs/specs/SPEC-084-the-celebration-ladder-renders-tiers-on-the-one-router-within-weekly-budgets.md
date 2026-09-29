@@ -338,10 +338,14 @@ calls and their non-text arguments only.
 - **R9 and R13: the owner's latest message.** The bot records it when the owner's message is handled
   (`commands.rs`), after the gate admitted it; the gate hands on the message's id. A message id beyond
   the Bot API's 32-bit range is never reacted to: the celebration is held for the next flush.
-- **R11: a failed recap keeps its rows' holds.** The flush's golden keeps the hold of a row that a
-  failed recap only named, so SPEC-041's test of a failed recap now expects the quiet hold the row
-  had (`deferral.rs`, `a_failed_recap_holds_its_rolled_celebration_again`). A failed full render still
-  holds its row with the failed-send hold.
+- **R11: a failed recap keeps its rows' holds (ADR-084).** The flush's golden keeps the hold of a row
+  that a failed recap only named, so SPEC-041's test of a failed recap now expects the quiet hold the
+  row had (`deferral.rs`, `a_failed_recap_holds_its_rolled_celebration_again`). A failed full render
+  still holds its row with the failed-send hold.
+- **A11 and A12: each near-miss bound where it alone decides.** The near-miss golden gains a gap of 5
+  toward 40 and of 5.5 toward 40, where the units bound decides and the fraction does not, and A12
+  parses the policy with other bounds and checks the reaction's age and the near-miss units follow
+  the file.
 - **The census.** SPEC-041 A15's census names each new call at its one call site in the bot's
   transport, and leaves out the parity oracle's tooling (`tools/parity-oracle/`), which ships
   nothing and whose recording stand-ins name the Bot API's calls they record; a directory of the same
@@ -366,4 +370,6 @@ calls and their non-text arguments only.
     strings) and `web/app/src/routes/layout.test.ts` (the layer on every screen);
   - `scripts/mutation-equivalent.d/miniapp.json`: the record excusing `api.ts`'s JSON-error mutant
     names `parseFeed` beside the other two parsers it holds for;
+  - `scripts/mutation-equivalent.d/deck-streak-notifications.json` (added): the guard of
+    `Router::send_bot` recorded equivalent, since a non-celebration reaches it only at T0 or T2;
   - `crates/api/src/notifications_routes.rs` is unchanged: the feed item it serves carries the tier.

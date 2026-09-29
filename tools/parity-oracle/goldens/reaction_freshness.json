@@ -352,7 +352,7 @@
   "kind": "adapter",
   "note": "Builds a stand-in layer whose stub store holds the case's latest owner message, the module's clock fixed, the reaction breaker as the case says, and a recording notifier; returns the outcome (attempted and delivered, attempted and refused, or not attempted) and the calls with their emoji; cases drawn under CPython 3.12.12.",
   "registry": "tools/parity-oracle/registry/spec_084.py",
-  "registry_sha256": "d00303c579ae9b9ccb8e7cb27bff3a49cd1bdae290aa71f875b32cc1832b79cf",
+  "registry_sha256": "d94121fc9e1af11dff03656086884c0469daf7c5443f325a08a51ce9430f21bc",
   "schema": "phx.parity-golden.v1",
   "seed": 20,
   "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"

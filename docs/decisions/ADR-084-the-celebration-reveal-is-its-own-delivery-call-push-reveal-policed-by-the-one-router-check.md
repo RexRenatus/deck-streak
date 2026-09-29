@@ -63,6 +63,20 @@ calls at its one call site; `the_policy_polices_the_reveal_beside_the_other_deli
 in the box run, which reads the six names and goes red on a `push_reveal` call planted outside
 `crates/notifications`.
 
+## A second decision: a failed recap keeps its rows' holds
+
+SPEC-084 R11 carries the predecessor's flush onto the one router: it ranks the held celebrations,
+renders two in full and rolls the rest into one recap line. SPEC-041's test of a failed recap
+(`deferral.rs`, `a_failed_recap_holds_its_rolled_celebration_again`) expected a row the recap only
+named to be held again with the failed-send hold, `send`.
+
+- A failed recap's rolled celebration keeps the row's own hold kind, as the predecessor's flush latches it — chosen: the golden `celebration_flush` (case class `failure`) latches the named row with the hold it had, and a failed full render still holds its own row with the failed-send hold.
+- Keep SPEC-041's failed-send hold `send` for a rolled row — rejected because the predecessor's flush keeps the row's own hold (`celebration_flush`, case class `failure`), so SPEC-084 A10's golden and that assertion cannot both hold.
+
+Confirmation: SPEC-084 A10 (`a_flush_ranks_re_caps_and_rolls_up_as_the_parity_golden_does`) and
+SPEC-041's `a_failed_recap_holds_its_rolled_celebration_again`, which now expects the row's own
+`quiet` hold (SPEC-084 §10, R11).
+
 ## More Information
 
 SPEC-084 (issue #120) R8 cites this decision. ADR-041 and SPEC-041 R1 hold the one router.
