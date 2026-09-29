@@ -16,10 +16,10 @@
   sync a study day) and ADR-012 (the parity oracle).
 - **Prerequisites:** SPEC-105 (discipline's engine switch, the booked windows and their judged
   occurrences), SPEC-082 (the wallet's `purchase`, `credit` and `refund`), SPEC-071 (the rollups),
-  SPEC-072 (the law track's XP in both XP tables), SPEC-076 (the governor's stored verdict and the
-  freeze markers), SPEC-083 (the skip set), SPEC-090 (the adaptive goal), SPEC-084 (the celebration
-  ladder), SPEC-085 (the chart route and component), SPEC-041 (the router) and SPEC-023 (the sync
-  cycle). **Mutation band:** `S10700-S10799`.
+  SPEC-100 (the recent rollups' read), SPEC-072 (the law track's XP in both XP tables), SPEC-076
+  (the governor's stored verdict and the freeze markers), SPEC-083 (the skip set), SPEC-090 (the
+  adaptive goal), SPEC-084 (the celebration ladder), SPEC-085 (the chart route and component),
+  SPEC-041 (the router) and SPEC-023 (the sync cycle). **Mutation band:** `S10700-S10799`.
 - **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
   `docs/specs/` with its tests and `docs/red-first/SPEC-107.md` (ADR-016).
 
@@ -239,14 +239,15 @@ R26. Markets' data-rights port exports and erases `market_positions`, which owes
     files.
 R27. The constants equal the golden `markets.constants`. `economy.json` gains no markets section:
     the game-economy pack's reference stays as it is.
-R28. The reads this SPEC adds to other contexts, each that context's own and a read only: analytics'
-    `RollupStore::recent_before(day, count)`, the most recent stored rollups before a study day,
-    newest first; progression's study days with law-track XP over both XP tables in a range, and the
-    first of them; streaks' freeze markers of a range of study days; discipline's judged occurrences
-    of a window in a range, and each booked window's mask and start; and economy's net of a set of
+R28. The reads this SPEC adds to other contexts, each that context's own and a read only:
+    progression's study days with law-track XP over both XP tables in a range, and the first of
+    them; streaks' freeze markers of a range of study days; discipline's judged occurrences of a
+    window in a range, and each booked window's mask and start; and economy's net of a set of
     sources on or after a study day. The goal, the governor's stored verdict, the skip set, the
     engine switch, the wallet and a range of rollups are read through the reads SPEC-090, SPEC-076,
-    SPEC-083, SPEC-105, SPEC-082 and SPEC-071 already give.
+    SPEC-083, SPEC-105, SPEC-082 and SPEC-071 already give, and the most recent stored rollups
+    before a study day, newest first, through analytics' `RollupStore::recent_before(day, count)`,
+    which SPEC-100 adds.
 
 ## 3. Acceptance criteria
 
@@ -283,15 +284,14 @@ R28. The reads this SPEC adds to other contexts, each that context's own and a r
 | A29 | a lost position whose truth now holds on a later cycle within 7 closed study days is won and paid once, and one outside them is not | `a_lost_position_is_paid_when_its_evidence_now_holds` |
 | A30 | a long shot and a rank-up each raise their celebration once through the router, and neither moves a coin | `a_long_shot_and_a_rank_up_celebrate_once` |
 | A31 | the calibration read model serves the settled positions by settled day and then id, under `oracle_calibration` | `the_calibration_read_model_serves_the_settled_positions` |
-| A32 | the most recent stored rollups before a study day are read newest first, at most the count, none on or after the day | `the_recent_rollups_before_a_day_are_read_newest_first` |
-| A33 | the law track's XP days of a range and the first of them are read from both XP tables, a day of 0 XP excluded | `the_law_track_days_are_read_from_both_xp_tables` |
-| A34 | the freeze markers of a range of study days are read back as the streak wrote them | `the_freeze_markers_of_a_range_are_read_back` |
-| A35 | a window's judged occurrences of a range are read back with their verdicts, and each booked window with its mask and start | `the_judged_occurrences_of_a_range_are_read_back` |
-| A36 | the net of a set of sources on or after a study day sums only those sources' movements from that day | `the_net_of_a_set_of_sources_since_a_day` |
-| A37 | the commands and buttons call their use cases through a stub port, carry the day as an epoch day, relay a refusal's reason unchanged, and malformed data reaches no use case | `market_commands_run_the_use_cases` |
-| A38 | the calibration button opens the markets screen and sends no image | `the_calibration_button_opens_the_markets_screen` |
-| A39 | the markets' routes and the calibration chart answer the owner's session only | `the_market_routes_answer_only_the_owner` |
-| A40 | the screen trades from the board through one ticket, cancels while cancellable, and shows the Oracle card and the calibration chart with its table | `trades from the board and shows the oracle` |
+| A32 | the law track's XP days of a range and the first of them are read from both XP tables, a day of 0 XP excluded | `the_law_track_days_are_read_from_both_xp_tables` |
+| A33 | the freeze markers of a range of study days are read back as the streak wrote them | `the_freeze_markers_of_a_range_are_read_back` |
+| A34 | a window's judged occurrences of a range are read back with their verdicts, and each booked window with its mask and start | `the_judged_occurrences_of_a_range_are_read_back` |
+| A35 | the net of a set of sources on or after a study day sums only those sources' movements from that day | `the_net_of_a_set_of_sources_since_a_day` |
+| A36 | the commands and buttons call their use cases through a stub port, carry the day as an epoch day, relay a refusal's reason unchanged, and malformed data reaches no use case | `market_commands_run_the_use_cases` |
+| A37 | the calibration button opens the markets screen and sends no image | `the_calibration_button_opens_the_markets_screen` |
+| A38 | the markets' routes and the calibration chart answer the owner's session only | `the_market_routes_answer_only_the_owner` |
+| A39 | the screen trades from the board through one ticket, cancels while cancellable, and shows the Oracle card and the calibration chart with its table | `trades from the board and shows the oracle` |
 
 ```acceptance
 A1: cargo test -p deck-streak-markets --test market_goldens -- --exact the_prices_match_the_parity_golden
@@ -325,15 +325,14 @@ A28: cargo test -p deck-streak-coordination --test markets_settle -- --exact the
 A29: cargo test -p deck-streak-coordination --test markets_settle -- --exact a_lost_position_is_paid_when_its_evidence_now_holds
 A30: cargo test -p deck-streak-coordination --test markets_settle -- --exact a_long_shot_and_a_rank_up_celebrate_once
 A31: cargo test -p deck-streak-coordination --test markets_calibration -- --exact the_calibration_read_model_serves_the_settled_positions
-A32: cargo test -p deck-streak-analytics --test rollup_recent -- --exact the_recent_rollups_before_a_day_are_read_newest_first
-A33: cargo test -p deck-streak-progression --test track_days -- --exact the_law_track_days_are_read_from_both_xp_tables
-A34: cargo test -p deck-streak-streaks --test freeze_markers_read -- --exact the_freeze_markers_of_a_range_are_read_back
-A35: cargo test -p deck-streak-discipline --test window_occurrences_read -- --exact the_judged_occurrences_of_a_range_are_read_back
-A36: cargo test -p deck-streak-economy --test wallet_sources -- --exact the_net_of_a_set_of_sources_since_a_day
-A37: cargo test -p deck-streak-bot --test markets_commands -- --exact market_commands_run_the_use_cases
-A38: cargo test -p deck-streak-bot --test markets_commands -- --exact the_calibration_button_opens_the_markets_screen
-A39: cargo test -p deck-streak-api --test markets_routes -- --exact the_market_routes_answer_only_the_owner
-A40: pnpm exec vitest run web/app/src/lib/markets/markets.test.ts -t "trades from the board and shows the oracle"
+A32: cargo test -p deck-streak-progression --test track_days -- --exact the_law_track_days_are_read_from_both_xp_tables
+A33: cargo test -p deck-streak-streaks --test freeze_markers_read -- --exact the_freeze_markers_of_a_range_are_read_back
+A34: cargo test -p deck-streak-discipline --test window_occurrences_read -- --exact the_judged_occurrences_of_a_range_are_read_back
+A35: cargo test -p deck-streak-economy --test wallet_sources -- --exact the_net_of_a_set_of_sources_since_a_day
+A36: cargo test -p deck-streak-bot --test markets_commands -- --exact market_commands_run_the_use_cases
+A37: cargo test -p deck-streak-bot --test markets_commands -- --exact the_calibration_button_opens_the_markets_screen
+A38: cargo test -p deck-streak-api --test markets_routes -- --exact the_market_routes_answer_only_the_owner
+A39: pnpm exec vitest run web/app/src/lib/markets/markets.test.ts -t "trades from the board and shows the oracle"
 ```
 
 ## 3a. What the box run judges
@@ -370,16 +369,14 @@ lifted for this delivery, so the private wiring does not change when it merges.
 | `crates/markets/tests/market_goldens.rs` | `deck-streak-markets` | added: A1 to A15 |
 | `crates/markets/tests/market_rules.rs` | `deck-streak-markets` | added: A16 to A19 |
 | `crates/markets/tests/positions_store.rs` | `deck-streak-markets` | added: A20, A21 |
-| `crates/analytics/src/rollup.rs` | `deck-streak-analytics` | changed: `RollupStore::recent_before` |
-| `crates/analytics/tests/rollup_recent.rs` | `deck-streak-analytics` | added: A32 |
 | `crates/progression/src/ledger.rs` | `deck-streak-progression` | changed: the law track's XP days of a range and the first, over both XP tables |
-| `crates/progression/tests/track_days.rs` | `deck-streak-progression` | added: A33 |
+| `crates/progression/tests/track_days.rs` | `deck-streak-progression` | added: A32 |
 | `crates/streaks/src/store.rs` | `deck-streak-streaks` | changed: the freeze markers of a range of study days, read for the markets and for SPEC-106's stakes |
-| `crates/streaks/tests/freeze_markers_read.rs` | `deck-streak-streaks` | added: A34 |
+| `crates/streaks/tests/freeze_markers_read.rs` | `deck-streak-streaks` | added: A33 |
 | `crates/discipline/src/windows.rs` | `deck-streak-discipline` | changed: a window's judged occurrences of a range, and each booked window's mask and start |
-| `crates/discipline/tests/window_occurrences_read.rs` | `deck-streak-discipline` | added: A35 |
+| `crates/discipline/tests/window_occurrences_read.rs` | `deck-streak-discipline` | added: A34 |
 | `crates/economy/src/wallet.rs` | `deck-streak-economy` | changed: the net of a set of sources on or after a study day |
-| `crates/economy/tests/wallet_sources.rs` | `deck-streak-economy` | added: A36 |
+| `crates/economy/tests/wallet_sources.rs` | `deck-streak-economy` | added: A35 |
 | `crates/coordination/src/markets/mod.rs` | `deck-streak-coordination` | added: the inputs, the board, the trade and the cancel, and the void port |
 | `crates/coordination/src/markets/settle.rs` | `deck-streak-coordination` | added: the markets step, its inputs, its coins and its celebrations |
 | `crates/coordination/src/lib.rs` | `deck-streak-coordination` | changed: the markets module |
@@ -393,15 +390,15 @@ lifted for this delivery, so the private wiring does not change when it merges.
 | `crates/daemon/src/wiring.rs` | `deck-streak-daemon` | changed: the markets' use cases joined to the bot and the API |
 | `crates/bot/src/markets_commands.rs` | `deck-streak-bot` | added: `/predict`, `/oracle` and the `pm:` buttons |
 | `crates/bot/src/commands.rs` | `deck-streak-bot` | changed: the two commands join the command table |
-| `crates/bot/tests/markets_commands.rs` | `deck-streak-bot` | added: A37, A38 |
+| `crates/bot/tests/markets_commands.rs` | `deck-streak-bot` | added: A36, A37 |
 | `crates/api/src/markets_routes.rs` | `deck-streak-api` | added: the markets' routes |
 | `crates/api/src/router.rs` | `deck-streak-api` | changed: the routes, behind the owner's session |
-| `crates/api/tests/markets_routes.rs` | `deck-streak-api` | added: A39 |
+| `crates/api/tests/markets_routes.rs` | `deck-streak-api` | added: A38 |
 | `web/app/src/lib/markets/markets.ts` | miniapp | added: the markets' client |
 | `web/app/src/lib/markets/BoardCard.svelte` | miniapp | added: a market's card |
 | `web/app/src/lib/markets/TradeTicket.svelte` | miniapp | added: the confidence taps and the offered stakes |
 | `web/app/src/lib/markets/OracleCard.svelte` | miniapp | added: the rank, the record and the calibration chart |
-| `web/app/src/lib/markets/markets.test.ts` | miniapp | added: A40 |
+| `web/app/src/lib/markets/markets.test.ts` | miniapp | added: A39 |
 | `web/app/src/routes/markets/+page.svelte` | miniapp | added: the markets screen |
 | `web/app/src/lib/routes.ts` | miniapp | changed: `/markets` joins the route table |
 | `migrations/010701_markets_positions.sql` | repo | added: `market_positions` (SPEC-020 R15, R18) |
