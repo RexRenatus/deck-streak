@@ -1,0 +1,62 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT id AS \"id!\", message_id, arrived_at, created_at\n           FROM owner_last_message ORDER BY id",
+  "describe": {
+    "columns": [
+      {
+        "name": "id!",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "owner_last_message",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "name": "message_id",
+        "ordinal": 1,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "owner_last_message",
+            "name": "message_id"
+          }
+        }
+      },
+      {
+        "name": "arrived_at",
+        "ordinal": 2,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "owner_last_message",
+            "name": "arrived_at"
+          }
+        }
+      },
+      {
+        "name": "created_at",
+        "ordinal": 3,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "owner_last_message",
+            "name": "created_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "bceb267827069a93913f87d038c7f5a21b3dfcfd05625e704a34a8673df1aa2f"
+}

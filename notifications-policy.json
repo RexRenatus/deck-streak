@@ -10,6 +10,7 @@
     "transport": {
       "bot": [
         "push_message",
+        "push_reveal",
         "push_dice",
         "push_reaction",
         "push_pin"

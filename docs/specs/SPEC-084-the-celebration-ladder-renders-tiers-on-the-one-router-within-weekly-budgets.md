@@ -8,13 +8,14 @@
   each occasion and each flush carries); `deck-streak-api` (the feed item's tier); the Mini App
   (`web/app`, the tier animation).
 - **Decided by:** ADR-012 (the parity oracle proves the math), ADR-041 (one router, its surface rule
-  and its in-app feed), and ADR-071 (an occasion is raised at the recompute that settles the study day
-  it was earned on).
+  and its in-app feed), ADR-071 (an occasion is raised at the recompute that settles the study day
+  it was earned on), and ADR-084 (the reveal is its own delivery call, `push_reveal`, policed by the
+  one-router check beside the other five).
 - **Prerequisites:** SPEC-041 (the router, its deferral, its failed-send hold, its decision ledger and
   its five tables), SPEC-026 (the bot's transport and owner gate). SPEC-076 supplies the streak
   facts when it lands; until then the caller passes none. **Mutation band:** `S08400-S08499`.
-- **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
-  `docs/specs/` with its tests and `docs/red-first/SPEC-084.md` (ADR-016).
+- **Status:** delivered with its tests, its hand-proved rows and `docs/red-first/SPEC-084.md`
+  (ADR-016). The delivery settled what the SPEC left open (§10).
 
 ## 1. The problem, measured
 
@@ -89,8 +90,8 @@ R8. On the bot, each tier makes the transport calls of the golden `celebration_t
     (`pipeline_layers.celebrations._REVEAL_SUSPENSE_SECS`) and edits the placeholder into the message,
     sending the message anew when the edit fails; T4 sends a dice with the golden's emoji, then the
     message; T5 sends a dice, the message, and pins it. The calls stay inside the router module
-    (SPEC-041 R1). The reveal's edit is the bot transport's own step behind `push_message`, so the
-    policy's five delivery calls stay five.
+    (SPEC-041 R1). The reveal is its own delivery call, `push_reveal`, which the one-router check
+    polices beside the other five (ADR-084).
 R9. T1 reacts only to an owner message at most `ladder.reaction_max_age_hours` old (the golden of
     `CelebrationsLayer._react_to_owner`); with no such message it makes no attempt and holds the
     celebration. A T1 hold carries no retry count: each flush retries it once, until it lands or the
@@ -312,3 +313,63 @@ calls and their non-text arguments only.
 | `S08408-THE-ROLLUP-SETTLES-AT-T2` | `crates/notifications/src/router.rs` | a rolled-up celebration settles at most at T2 | `ladder_flush::a_flush_ranks_re_caps_and_rolls_up_as_the_parity_golden_does` |
 | `S08409-THE-REACTION-AGE` | `notifications-policy.json` | the reaction's 24-hour age read from the policy (a script-mutation row) | `ladder_policy::the_policy_ladder_values_equal_the_parity_goldens` |
 | `S08410-THE-NEAR-MISS-UNITS` | `notifications-policy.json` | the near-miss gate's five units (a script-mutation row) | `ladder_policy::the_policy_ladder_values_equal_the_parity_goldens` |
+| `S08411-THE-REVEAL-IS-A-POLICED-DELIVERY-CALL` | `notifications-policy.json` | `push_reveal` among the bot's delivery calls the one-router check polices (ADR-084; a script-mutation row) | `ladder_policy::the_policy_polices_the_reveal_beside_the_other_delivery_calls` |
+| `S08412-THE-DICE-IS-THE-SLOT-MACHINE` | `crates/notifications/src/ladder.rs` | the dice, whole (a constant) | `ladder_render::each_tier_makes_the_transport_calls_of_the_parity_golden_in_order` |
+| `S08413-THE-REACTION-IS-A-PARTY-POPPER` | `crates/notifications/src/ladder.rs` | the reaction's emoji, whole (a constant) | `ladder_render::a_reaction_is_attempted_only_on_a_message_within_its_age` |
+| `S08414-THE-REVEAL-PAUSES-2500-MS` | `crates/notifications/src/ladder.rs` | the reveal's pause, whole (a constant) | `ladder_render::each_tier_makes_the_transport_calls_of_the_parity_golden_in_order` |
+| `S08415-THE-REVEAL-OPENS-WITH-ITS-PLACEHOLDER` | `crates/notifications/src/ladder.rs` | the reveal's placeholder, whole (a constant the bot's test pins) | `ladder_transport::a_reveal_edits_its_placeholder_and_falls_back_to_a_new_message` |
+| `S08416-A-REACTION-AGE-IS-IN-HOURS` | `crates/notifications/src/ladder.rs` | the reaction's age counted in hours (a constant) | `ladder_render::a_reaction_is_attempted_only_on_a_message_within_its_age` |
+| `S08417-THE-OWNERS-LATEST-MESSAGE-TABLE` | `crates/notifications/src/ledger.rs` | the port declares the table the migration creates (a constant) | `ladder_rights::the_owners_latest_message_is_exported_and_reset_by_an_erase` |
+| `S08418-THE-INTENSITY-IS-THE-PREDECESSORS-KEY` | `crates/notifications/src/router.rs` | the owner's intensity read under the predecessor's key (a constant) | `ladder_render::each_tier_makes_the_transport_calls_of_the_parity_golden_in_order` |
+
+## 10. Amendments at delivery
+
+- **R8: the reveal's own call (ADR-084).** The bot's port gains `push_reveal`, `push_dice`,
+  `push_reaction` and `push_pin` beside `push_message`, each taking the router's pass. Each has a
+  default that answers `Unsupported`, never a silent delivery, and the bot's transport implements all
+  four; `push_message` and its implementers are unchanged. `notifications-policy.json` names
+  `push_reveal` in `router.transport.bot`, so the policy names six delivery calls. The router records
+  an unsupported call by its name as the ladder's degraded render: a reveal or a pin that cannot be
+  made renders as the line at T2, a dice that cannot be rolled is recorded and the render goes on,
+  and a reaction that cannot be made renders at T0.
+- **R8 and R10: the tier rendered.** The decision records the tier a celebration actually rendered
+  at: a failed reveal or pin that fell back to the line records T2. The in-app feed item carries that
+  tier, read from the ledger's feed row, so the feed route itself is unchanged.
+- **R9 and R13: the owner's latest message.** The bot records it when the owner's message is handled
+  (`commands.rs`), after the gate admitted it; the gate hands on the message's id. A message id beyond
+  the Bot API's 32-bit range is never reacted to: the celebration is held for the next flush.
+- **R11: a failed recap keeps its rows' holds (ADR-084).** The flush's golden keeps the hold of a row
+  that a failed recap only named, so SPEC-041's test of a failed recap now expects the quiet hold the
+  row had (`deferral.rs`, `a_failed_recap_holds_its_rolled_celebration_again`). A failed full render
+  still holds its row with the failed-send hold.
+- **A11 and A12: each near-miss bound where it alone decides.** The near-miss golden gains a gap of 5
+  toward 40 and of 5.5 toward 40, where the units bound decides and the fraction does not, and A12
+  parses the policy with other values and checks that the reaction's age, both near-miss bounds, the
+  streak-break cap, a rarity's tier and a weekly budget follow the file.
+- **The census.** SPEC-041 A15's census names each new call at its one call site in the bot's
+  transport, and leaves out the parity oracle's tooling (`tools/parity-oracle/`), which ships
+  nothing and whose recording stand-ins name the Bot API's calls they record; a directory of the same
+  name anywhere else is still read.
+- **§9: the rows added at delivery.** S08411 holds `push_reveal` in the policy (ADR-084), and
+  S08412 to S08418 plant each module-level constant the delivery adds and pin it by its whole value,
+  since cargo-mutants never mutates a constant. A7 and A14 read the intensity's key and the reveal's
+  placeholder as literals, so each pins its constant rather than reading it back. S08415's constant
+  lives in notifications but only the bot's test pins it, so its row runs the bot's test.
+- **The flush's streak facts.** The sync cycle's flush carries `ladder_facts::streak_facts()`, which
+  is none until SPEC-076 lands.
+- **The manifest.** The delivery also changes:
+  - `notifications-policy.json` (`push_reveal`) and `docs/decisions/ADR-084-*.md`;
+  - `crates/notifications/src/transport.rs` (the port's four calls and their defaults) and
+    `crates/notifications/src/ledger.rs` (the feed item's tier, the week's counts, a relatch that
+    keeps a hold);
+  - `crates/bot/src/commands.rs` (the record), `crates/bot/tests/gate.rs` (the message id) and
+    `crates/bot/tests/support/fake_bot_api.rs` (the dice answered as a message);
+  - the notifications tests `one_router.rs`, `rights.rs`, `router.rs` and `deferral.rs`, and the
+    shared `tests/support/ladder.rs` and `tests/support/mod.rs`;
+  - `web/app/src/lib/api.ts` (the feed's read), `web/app/messages/*.json` (the animation's four
+    strings) and `web/app/src/routes/layout.test.ts` (the layer on every screen);
+  - `scripts/mutation-equivalent.d/miniapp.json`: the record excusing `api.ts`'s JSON-error mutant
+    names `parseFeed` beside the other two parsers it holds for;
+  - `scripts/mutation-equivalent.d/deck-streak-notifications.json` (added): the guard of
+    `Router::send_bot` recorded equivalent, since a non-celebration reaches it only at T0 or T2;
+  - `crates/api/src/notifications_routes.rs` is unchanged: the feed item it serves carries the tier.

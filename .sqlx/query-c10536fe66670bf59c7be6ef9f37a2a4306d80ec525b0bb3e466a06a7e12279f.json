@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT id AS \"id!\", kind, dedupe_key, surface, tier_requested, tier_pending, text, hold,\n                  tries, deferred_at, study_day\n           FROM notification_queue WHERE state = 'held' ORDER BY tier_pending DESC, id ASC",
+  "query": "SELECT id AS \"id!\", kind, dedupe_key, surface, tier_requested, tier_pending, text, hold,\n                  tries, deferred_at, study_day\n           FROM notification_queue WHERE state = 'held' ORDER BY id",
   "describe": {
     "columns": [
       {
@@ -142,5 +142,5 @@
       false
     ]
   },
-  "hash": "d56fab9bcd029a358ac1624f1942d6a38ab740eeecdae228d959ad9b150e74e8"
+  "hash": "c10536fe66670bf59c7be6ef9f37a2a4306d80ec525b0bb3e466a06a7e12279f"
 }
