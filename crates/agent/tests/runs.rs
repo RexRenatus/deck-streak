@@ -21,21 +21,51 @@ const PRUNE: &str = prune_statement!();
 /// The table the prune deletes from, named apart so the fixtures below never write the statement.
 const TABLE: &str = "agent_runs";
 
-/// What is wrong with a prune's source text: an empty list when it is the one statement, quoted
-/// whole exactly once.
+/// `source` lower-cased with every run of whitespace collapsed to one space, so a second
+/// statement cannot hide behind a different case or a wider gap.
+fn normalized(source: &str) -> String {
+    source
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+        .to_lowercase()
+}
+
+/// How many times `source` writes a delete from the run table, quoted or not, code or comment.
+fn delete_statements_in(source: &str) -> usize {
+    normalized(source)
+        .matches(&format!("delete from {TABLE}").to_lowercase())
+        .count()
+}
+
+/// What is wrong with a prune's source text: an empty list when it holds exactly one delete
+/// statement and that statement is the tested one, quoted whole exactly once.
 fn prune_pin_problems(source: &str) -> Vec<String> {
     let mut problems = Vec::new();
     let quoted = source.matches(&format!("\"{PRUNE}\"")).count();
     if quoted != 1 {
         problems.push(format!("the statement is quoted {quoted} times, not once"));
     }
+    let statements = delete_statements_in(source);
+    if statements != 1 {
+        problems.push(format!(
+            "the source holds {statements} delete statements, not one"
+        ));
+    }
     problems
 }
 
 /// What is wrong with this test file's own text: an empty list when only the macro writes the
-/// statement, so the plan's text is derived from it.
-fn own_statement_problems(_test_source: &str) -> Vec<String> {
-    Vec::new()
+/// statement, so the plan's text is derived from it and no changed copy can stand beside it.
+fn own_statement_problems(test_source: &str) -> Vec<String> {
+    let statements = delete_statements_in(test_source);
+    if statements == 1 {
+        Vec::new()
+    } else {
+        vec![format!(
+            "the test file writes the statement {statements} times, not once"
+        )]
+    }
 }
 
 async fn open() -> (tempfile::TempDir, Db) {

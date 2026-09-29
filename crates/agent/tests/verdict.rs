@@ -2,6 +2,29 @@
 //! attribute is pinned because nothing else observes it.
 #![allow(clippy::expect_used)]
 
+/// Whether `line` is one whole attribute: the bracket that closes `#[` is the last character, so
+/// a trailing `// ]` after an item is not read as an attribute's end.
+fn is_one_whole_attribute(line: &str) -> bool {
+    let line = line.trim();
+    if !line.starts_with("#[") {
+        return false;
+    }
+    let mut depth = 0_usize;
+    for (at, ch) in line.char_indices() {
+        match ch {
+            '[' => depth += 1,
+            ']' => {
+                depth = depth.saturating_sub(1);
+                if depth == 0 {
+                    return at + 1 == line.len();
+                }
+            }
+            _ => {}
+        }
+    }
+    false
+}
+
 /// The attribute lines directly above `pub enum Verdict` in `source`.
 fn attributes_of(source: &str) -> Vec<String> {
     let lines: Vec<&str> = source.lines().collect();
@@ -14,8 +37,7 @@ fn attributes_of(source: &str) -> Vec<String> {
         .rev()
         .take_while(|line| {
             // One whole attribute per line: `#[rustfmt::skip] fn f() {}` is an item, not an attribute.
-            let line = line.trim();
-            (line.starts_with("#[") && line.ends_with(']')) || line.starts_with("///")
+            is_one_whole_attribute(line) || line.trim().starts_with("///")
         })
         .filter(|line| line.trim_start().starts_with("#["))
         .map(|line| line.trim().to_owned())
