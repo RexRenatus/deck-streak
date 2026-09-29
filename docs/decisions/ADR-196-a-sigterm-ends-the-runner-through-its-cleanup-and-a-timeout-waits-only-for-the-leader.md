@@ -36,14 +36,10 @@ and close its pipes?
 - `PR_SET_PDEATHSIG` set in the killer through `preexec_fn` — rejected because it fires when the
   runner's thread dies rather than when it is signalled, it is not inherited past the leader, and
   `preexec_fn` is unsafe with threads.
-- `sys.exit(128 + signum)` from a SIGTERM handler, so the exception unwinds through the existing
-  `finally` blocks — chosen because it reuses the one cleanup the interrupt path already has, adds
-  no state, and leaves a shell-conventional exit status.
 - Keep `communicate()` after the kill and bound it — rejected because the output of a timed-out run
   is discarded, so collecting it is unneeded work that an escapee can hold.
-- `wait()` for the leader only on the timed-out path, and close both pipes in the `finally` —
-  chosen because it returns at the bound, needs no timeout of its own, and closes the pipes on
-  every way out.
+
+The two options taken are named under Decision Outcome, not listed here as losers.
 
 ## Decision Outcome
 
