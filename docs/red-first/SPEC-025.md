@@ -54,3 +54,20 @@ A14: green at 33a877a
 A15: red at 6fcf6e0: round 1: role 1 failed to start: Err(Kernel(Migrate(ExecuteMigration(Database(SqliteError { code: 1, message: "table settings_generation already exists" }), 2001))))
 A15: green at 33a877a
 ```
+
+## Addendum, 2026-09-29: a failed lifecycle test leaves no daemon running (issue 366)
+
+The child guard was committed as a stub whose drop did nothing (0af311f), beside the tests; the
+guard followed (07d9b4e). The runner's process-group kill was committed the same way: a test
+beside the unchanged runner (97b11c3), then the kill (9f49316).
+
+```red-first
+A16: red at 0af311f: the daemon was still running after its test failed
+A16: green at 07d9b4e
+A17: red at 97b11c3: the grandchild of a timed-out killer is still running
+A17: green at 9f49316
+```
+
+Two later commits tighten the tests, not the criteria. aba7e3e stops the guard joining a waiter
+whose child outlived every signal, and the killer-group test is bounded in its own thread; both
+because a mutant of the guard or of the kill made its killer wait for ever instead of failing.

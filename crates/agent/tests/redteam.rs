@@ -63,7 +63,9 @@ fn gate(dir: &std::path::Path) -> ProbeGate {
             class("output-identity"),
         ],
         Some(class("output-invisible")),
+        true,
     )
+    .expect("a gate with its classes and its input class")
 }
 
 async fn drive(attack: &str, source: &str, benign: bool) -> (Verdict, Vec<String>, usize) {

@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT OR IGNORE INTO buffs (study_day, kind, created_at) VALUES (?1, 'ascendant', ?2)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "39292738c76822e580b13eb87b9ecc794b4e535d0d3f6c27b39c2badc4db148f"
+}

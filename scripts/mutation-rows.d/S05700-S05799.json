@@ -112,6 +112,15 @@
         "a watchdog armed for another process is ignored through WATCHDOG_PID, the name sd_watchdog_enabled(3) sets, so a renamed constant never applies another process's timeout; cargo-mutants never mutates a constant (SPEC-057 R20)"
       ],
       [
+        "S05754-THE-EXIT-GRACE-IS-ONE-SECOND",
+        "daemon",
+        "src/main.rs",
+        "const EXIT_GRACE: Duration = Duration::from_secs(1);",
+        "const EXIT_GRACE: Duration = Duration::from_secs(2);",
+        "bin::tests::the_exit_grace_is_one_second",
+        "a role that stopped while waiting for the open lock lingers one second at exit, so a longer grace slows every such stop; cargo-mutants never mutates a constant, and the killer is the binary's own unit test (SPEC-057 R20, SPEC-039 section 15, issue #352)"
+      ],
+      [
         "S05755-THE-NOTIFY-ADDRESS-STATES-ITS-SHAPE",
         "daemon",
         "src/lifecycle.rs",
