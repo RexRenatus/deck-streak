@@ -174,3 +174,29 @@ async fn the_ingest_port_resets_its_state_in_place() {
         }
     );
 }
+
+#[test]
+fn the_declared_reset_row_clears_the_anchor_and_the_base_and_no_more() {
+    let declaration = IngestDataRights
+        .declaration()
+        .expect("ingest's declaration is well formed");
+    let Some(Disposition::ResetInPlace { row }) = declaration.disposition(INGEST_STATE_TABLE)
+    else {
+        panic!("ingest_state is reset in place");
+    };
+    let cleared = [
+        "anchor_newest_review_id",
+        "anchor_card_count",
+        "anchor_card_fingerprint",
+        "anchor_study_day",
+        "anchor_recomputed_at",
+        "anchor_settings_generation",
+        "window_floor",
+        "window_count",
+    ];
+    assert_eq!(row.len(), cleared.len() + 1, "{row:?}");
+    for column in cleared {
+        assert_eq!(row.get(column), Some(&Value::Null), "{column}");
+    }
+    assert_eq!(row.get("rescore_pending"), Some(&json!(0)));
+}
