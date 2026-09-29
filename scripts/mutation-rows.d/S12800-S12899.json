@@ -32,8 +32,8 @@
         "S12804-THE-CYCLES-REFUSAL-IS-RECORDED-WITH-THE-FLAG-CLEARED",
         "daemon",
         "src/role_job.rs",
-        "                        record_refusal(db, reason).await;",
-        "                        let _ = reason;",
+        "                    record_refusal(db, reason).await;",
+        "                    let _ = reason;",
         "roles::a_refused_owner_request_is_recorded_and_the_next_run_does_not_retry_it",
         "a refusal that is only logged leaves the flag pending, so every job run serves the same request again (SPEC-128 R1, R2)"
       ],
@@ -72,6 +72,33 @@
         "Your scores were kept (<code>{}</code>).",
         "commands::a_refusal_after_a_run_is_answered_beside_the_syncs_own_line",
         "the owner is told the recompute was refused and that the scores stand; other words change the message the golden fixes (SPEC-128 R5)"
+      ],
+      [
+        "S12809-THE-CYCLES-SETTINGS-REFUSAL-NAMES-ITS-OWN-VARIANT",
+        "daemon",
+        "src/wiring.rs",
+        "refused(RefusalReason::SyncSettingsRefused, &error)",
+        "refused(RefusalReason::CredentialsDirectoryRefused, &error)",
+        "lib::wiring::tests::the_owners_sync_marks_the_rescore_before_it_reads_its_settings",
+        "the owner is told the setting that refused the sync; another variant names a step that did not (SPEC-128 amendment, #396)"
+      ],
+      [
+        "S12810-A-FAILED-OBLIGATIONS-READ-IS-NAMED-BY-ITS-OWN-VARIANT",
+        "daemon",
+        "src/wiring.rs",
+        "CycleError::Obligations(_) => RefusalReason::ObligationsUnreadable,",
+        "CycleError::Obligations(_) => RefusalReason::RecomputeFailed,",
+        "lib::wiring::tests::a_cycle_that_cannot_finish_is_refused_with_its_steps_reason_code",
+        "the answer's line for a refusal after the run must name the step that failed (SPEC-128 R5, amendment #396)"
+      ],
+      [
+        "S12811-THE-REFUSAL-RETURNED-IS-THE-ONE-LOGGED-AND-GIVEN",
+        "daemon",
+        "src/wiring.rs",
+        "\"the owner's sync could not run\");\n    reason\n}",
+        "\"the owner's sync could not run\");\n    RefusalReason::RecomputeFailed\n}",
+        "lib::wiring::tests::the_owners_sync_marks_the_rescore_before_it_reads_its_settings",
+        "the closed enum is the only refusal type, and the site must hand back the variant it was given (SPEC-128 amendment, #396)"
       ]
     ]
   }
