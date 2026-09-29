@@ -27,11 +27,21 @@ fn quoted_spans(finding: &str) -> impl Iterator<Item = &str> {
         .filter(|span| !span.trim().is_empty())
 }
 
+/// Whether a span cannot be proved to be the probe's own words: it is written with an escape or
+/// holds a quote character. A probe prints a value with Python's `repr`, which escapes what it
+/// cannot print (a no-break space as `\xa0`) and picks the other quote for a word that holds one,
+/// while the rejected text holds the word in JSON (`\"`), so neither is found as written in the
+/// rejected text even when it quotes a new word. Such a span is taken as a quote.
+fn is_unproven(span: &str) -> bool {
+    span.contains(['\\', '\'', '"'])
+}
+
 /// Whether a finding would carry rejected text or a fence marker back to the model.
 fn quotes(finding: &str, rejected: &str) -> bool {
     finding.contains("<untrusted")
         || finding.contains("</untrusted")
         || quoted_spans(finding).any(|span| rejected.contains(span))
+        || quoted_spans(finding).any(is_unproven)
         || rejected
             .lines()
             .map(str::trim)
