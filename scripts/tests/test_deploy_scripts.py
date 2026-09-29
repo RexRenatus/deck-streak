@@ -1142,6 +1142,9 @@ class TheCaddyInstall(Case):
         self.failing_rename(".candidate")
         done = self.install_again()
         self.assert_install_undone(done, after, block_text)
+        self.assertTrue(
+            (w.caddy_dir / "Caddyfile").is_file(), "the Caddyfile is still a plain file"
+        )
         self.assertFalse((w.caddy_dir / "deck-streak.candidate").exists(), "no candidate is left")
 
     def test_an_install_whose_caddyfile_cannot_be_read_undoes_and_says_so(self):
@@ -1154,6 +1157,9 @@ class TheCaddyInstall(Case):
         finally:
             caddyfile.chmod(0o644)
         self.assert_install_undone(done, after, block_text)
+        self.assertTrue(
+            (w.caddy_dir / "Caddyfile").is_file(), "the Caddyfile is still a plain file"
+        )
         self.assertFalse((w.caddy_dir / "deck-streak.candidate").exists(), "no candidate is left")
 
     def test_an_install_that_cannot_copy_the_block_in_a_read_only_directory_says_so(self):
