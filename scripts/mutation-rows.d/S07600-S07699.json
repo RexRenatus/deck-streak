@@ -1,0 +1,96 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S07601-A-TRACK-STARTS-WITH-ONE-FREEZE",
+        "streaks",
+        "src/constants.rs",
+        "pub const STREAK_START_FREEZES: u32 = 1;\n",
+        "pub const STREAK_START_FREEZES: u32 = 2;\n",
+        "streak_goldens::the_streak_constants_and_economy_json_match_the_predecessors",
+        "a new track starts with one freeze (SPEC-076 R1)"
+      ],
+      [
+        "S07602-A-FREEZE-EVERY-SEVEN-STREAK-DAYS",
+        "streaks",
+        "src/constants.rs",
+        "pub const STREAK_DAYS_PER_FREEZE: u32 = 7;\n",
+        "pub const STREAK_DAYS_PER_FREEZE: u32 = 8;\n",
+        "streak_goldens::the_language_streak_transitions_match_the_parity_goldens",
+        "a freeze is earned every seven streak days (SPEC-076 R2)"
+      ],
+      [
+        "S07603-THE-HOLD-CAP-IS-THREE",
+        "streaks",
+        "src/constants.rs",
+        "pub const STREAK_FREEZE_CAP: u32 = 3;\n",
+        "pub const STREAK_FREEZE_CAP: u32 = 4;\n",
+        "freeze_port::the_freeze_port_holds_the_hold_cap_and_the_monthly_drop_cap",
+        "no more than three freezes are held (SPEC-076 R3)"
+      ],
+      [
+        "S07604-TWO-REAL-MISSES-BREAK-A-STREAK",
+        "streaks",
+        "src/streak.rs",
+        "        1 if prev.freezes > 0 => GapOutcome::Freeze,\n",
+        "        1 | 2 if prev.freezes > 0 => GapOutcome::Freeze,\n",
+        "streak_goldens::a_day_without_study_breaks_only_an_unsavable_streak",
+        "a freeze saves one real miss and two real misses break the streak (SPEC-076 R4)"
+      ],
+      [
+        "S07605-ONE-DROP-A-MONTH",
+        "streaks",
+        "src/constants.rs",
+        "pub const FREEZE_DROP_MONTHLY_CAP: u32 = 1;\n",
+        "pub const FREEZE_DROP_MONTHLY_CAP: u32 = 2;\n",
+        "freeze_port::the_freeze_port_holds_the_hold_cap_and_the_monthly_drop_cap",
+        "one drop-style freeze is admitted a calendar month (SPEC-076 R5)"
+      ],
+      [
+        "S07606-THE-SHOP-IS-NOT-A-DROP",
+        "streaks",
+        "src/freeze.rs",
+        "        matches!(self, Self::Chest | Self::WeeklyQuest | Self::Season)\n",
+        "        matches!(self, Self::Chest | Self::WeeklyQuest | Self::Season | Self::Shop)\n",
+        "freeze_port::the_drop_gate_matches_the_parity_golden",
+        "the drop reasons are chest, weekly quest and season, never the shop (SPEC-076 R5)"
+      ],
+      [
+        "S07607-THE-LAW-STREAK-IS-ASKED-EVERY-DAY",
+        "coordination",
+        "src/recompute/streaks.rs",
+        "            store::upsert_state(write, \"law\", &law, facts.now).await?;\n",
+        "            if days.law.contains(&day) {\n                store::upsert_state(write, \"law\", &law, facts.now).await?;\n            }\n",
+        "streak_fold::the_law_streak_decays_without_law_study",
+        "the law streak is evaluated on a day with no law review, so it decays (ADR-076)"
+      ],
+      [
+        "S07608-STRENGTH-HALVES-IN-THIRTEEN-DAYS",
+        "streaks",
+        "src/constants.rs",
+        "pub const STRENGTH_HALF_LIFE_DAYS: u32 = 13;\n",
+        "pub const STRENGTH_HALF_LIFE_DAYS: u32 = 14;\n",
+        "governor_goldens::strength_and_the_verdict_match_the_parity_goldens",
+        "habit strength halves in thirteen days (SPEC-076 R8)"
+      ],
+      [
+        "S07609-ONE-STANDBY-NOTICE-A-WEEK",
+        "streaks",
+        "src/governor.rs",
+        "        .is_some_and(|d| input.today.epoch_day() - d.epoch_day() < STANDBY_NOTICE_GAP_DAYS);\n",
+        "        .is_some_and(|d| input.today.epoch_day() - d.epoch_day() <= STANDBY_NOTICE_GAP_DAYS);\n",
+        "governor_goldens::the_standby_notice_rule_matches_the_parity_golden",
+        "no standby notice is sent within seven days of the last (SPEC-076 R10)"
+      ],
+      [
+        "S07610-THE-RELIGHT-NEEDS-THREE-REVIEWS",
+        "streaks",
+        "src/relight.rs",
+        "    let qualifies = reviews.is_some_and(|n| n >= RELIGHT_CARDS) && granted == 0;\n",
+        "    let qualifies = reviews.is_some_and(|n| n > RELIGHT_CARDS) && granted == 0;\n",
+        "relight_rule::the_relight_rule_matches_the_parity_golden",
+        "a return day relights at three reviews (SPEC-076 R12)"
+      ]
+    ]
+  }
+}
