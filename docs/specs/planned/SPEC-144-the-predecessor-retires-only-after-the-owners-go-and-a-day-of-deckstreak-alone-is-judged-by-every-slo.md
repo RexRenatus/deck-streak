@@ -129,7 +129,7 @@ wiring change.
   stop on the owner's go and records it with `retired` (#41, #164).
 - It removes nothing: the predecessor stays disabled until the owner approves its removal (#164).
 - It moves no contract; the checklist does, one at a time (#62).
-- It declares no new SLO and changes no objective (#42).
+- It declares no new SLO and changes no objective: the declaration is SPEC-031's (#24).
 - It tags no release: v1.0.0 follows the day alone (#64).
 
 ## 6. Risks
