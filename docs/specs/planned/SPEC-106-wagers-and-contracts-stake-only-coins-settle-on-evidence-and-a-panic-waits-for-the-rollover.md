@@ -5,10 +5,10 @@
   **Context(s):** `deck-streak-discipline` (the wager's arming, settlement and revision, the
   contract's authoring, verdict, weakening and revision, the pardon, the panic, the engine switch's
   writes and the Sunday review's rule); `deck-streak-coordination` (the stakes' step of the sync
-  cycle, the panic's application across discipline, markets and economy, and the stakes' messages at
-  the discipline tick); `deck-streak-bot` (`/wager`, `/contract`, `/panic`, `/pardon`,
-  `/discipline_on`); `deck-streak-api` (the stakes' routes); the Mini App (`web/app`, the stakes'
-  cards on the `/discipline` screen).
+  cycle, the panic's application across discipline, markets and economy, the stakes' messages at
+  the discipline tick, and the active wager's stake passed to the evening job); `deck-streak-bot`
+  (`/wager`, `/contract`, `/panic`, `/pardon`, `/discipline_on`); `deck-streak-api` (the stakes'
+  routes); the Mini App (`web/app`, the stakes' cards on the `/discipline` screen).
 - **Decided by:** ADR-106 (this SPEC's: the money rung is not built until the owner rules), ADR-104
   (a verdict settles after its evidence and is revised within 7 closed study days: a contract's day
   and a lost wager), ADR-105 (the discipline tick, which raises the stakes' messages), ADR-103 (the
@@ -17,10 +17,11 @@
 - **Prerequisites:** SPEC-105 (discipline's floor: `discipline_state` and its engine switch, the
   kind `discipline`, the tick, and the kept windows of a study day), SPEC-104 (the rail's defections
   of a study day), SPEC-103 (`fine` and `reverse_fine`), SPEC-107 (markets' `void_open_positions`
-  port, and the streak's read of the freeze markers of a range of study days), SPEC-082 (the
-  wallet's `purchase` and `credit`), SPEC-076 (the governor's stored verdict and the freeze
-  markers), SPEC-083 (the skip set), SPEC-071 (the rollup's reviews of a study day), SPEC-084 (the
-  celebration ladder), SPEC-041 (the router) and SPEC-023 (the sync cycle).
+  port, and the streak's read of the freeze markers of a range of study days), SPEC-100 (the evening
+  job and its stakes preview's wager line), SPEC-082 (the wallet's `purchase` and `credit`),
+  SPEC-076 (the governor's stored verdict and the freeze markers), SPEC-083 (the skip set), SPEC-071
+  (the rollup's reviews of a study day), SPEC-084 (the celebration ladder), SPEC-041 (the router)
+  and SPEC-023 (the sync cycle).
   **Mutation band:** `S10600-S10699`.
 - **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
   `docs/specs/` with its tests and `docs/red-first/SPEC-106.md` (ADR-016).
@@ -258,6 +259,10 @@ R24. The weakening stakes equal the constants golden `stakes.constants`; the hor
     change.
 R25. No crate and no screen posts to an outside pledge service or names it, and no setting enables
     one (ADR-106, #116).
+R26. The evening job (SPEC-100 R14) passes the active wager's stake, in whole coins, read from
+    discipline's store of wagers, as the stakes preview's wager input (SPEC-100 R15). It passes none
+    while no wager is `active`, so a won, lost or voided wager draws no line. The stake is the only
+    input this SPEC adds to that job.
 
 ## 3. Acceptance criteria
 
@@ -299,6 +304,7 @@ R25. No crate and no screen posts to an outside pledge service or names it, and 
 | A34 | the stakes' routes answer the owner's session only | `the_stake_routes_answer_only_the_owner` |
 | A35 | the screen arms a wager from the offers and shows a pending weakening's landing day | `arms a wager and shows the landing day` |
 | A36 | an erase empties the five tables and clears the two new state fields | `an_erase_empties_the_stake_tables` |
+| A37 | the evening job passes the active wager's stake to the stakes preview, and none with no wager or with a won, lost or voided one | `the_evening_job_passes_the_active_wagers_stake` |
 
 ```acceptance
 A1: cargo test -p deck-streak-discipline --test stake_goldens -- --exact the_arming_matches_the_parity_golden
@@ -337,6 +343,7 @@ A33: cargo test -p deck-streak-bot --test stake_commands -- --exact stake_comman
 A34: cargo test -p deck-streak-api --test stake_routes -- --exact the_stake_routes_answer_only_the_owner
 A35: pnpm exec vitest run web/app/src/lib/discipline/stakes.test.ts -t "arms a wager and shows the landing day"
 A36: cargo test -p deck-streak-discipline --test stake_rights -- --exact an_erase_empties_the_stake_tables
+A37: cargo test -p deck-streak-coordination --test evening_wager_line -- --exact the_evening_job_passes_the_active_wagers_stake
 ```
 
 ## 3a. What the box run judges
@@ -383,6 +390,8 @@ this delivery, so the private wiring does not change when it merges.
 | `crates/coordination/tests/discipline_stakes.rs` | `deck-streak-coordination` | added: A4, A6, A7, A14, A15, A20 |
 | `crates/coordination/tests/discipline_panic.rs` | `deck-streak-coordination` | added: A23, A24 |
 | `crates/coordination/tests/discipline_stake_messages.rs` | `deck-streak-coordination` | added: A27 to A29 |
+| `crates/coordination/src/nudges/evening.rs` | `deck-streak-coordination` | changed: the active wager's stake passed to the stakes preview (R26) |
+| `crates/coordination/tests/evening_wager_line.rs` | `deck-streak-coordination` | added: A37 |
 | `crates/daemon/src/wiring.rs` | `deck-streak-daemon` | changed: the stakes' use cases joined to the bot and the API, and markets' void port to the panic |
 | `crates/bot/src/discipline_commands.rs` | `deck-streak-bot` | changed: the five commands and the `wg:` and `ct:` buttons join SPEC-105's |
 | `crates/bot/src/commands.rs` | `deck-streak-bot` | changed: the five commands join the command table |

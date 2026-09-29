@@ -82,6 +82,7 @@ sequenceDiagram
   R->>T: one push, or a withhold recorded
 ```
 
+- The evening job passes the active wager's stake from SPEC-106 on (its R26), and none before it.
 - The offer and the chests are digests: neither a lapse nor a hold withholds them, so a held or
   lapsed morning still carries what the owner must act on.
 - A joined route records each passing part once under its own kind; a failed push releases every

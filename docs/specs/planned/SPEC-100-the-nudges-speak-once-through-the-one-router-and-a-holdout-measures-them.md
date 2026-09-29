@@ -22,8 +22,8 @@
   offers and their pick), SPEC-081 (the vaulted chests and their buttons), SPEC-071 (the rollups),
   SPEC-072 (the multiplier's preview and the Ascendant buff), SPEC-076 (the streak state and
   `real_misses`), SPEC-078 (the habit summary, its freshness and the `/habits` screen), SPEC-079
-  (the focus nudge's eligibility), SPEC-083 (the skip set and `/skip`), SPEC-106 (the active wager),
-  SPEC-027 (the job table), SPEC-021 (the six files of a table) and SPEC-029 (the goldens).
+  (the focus nudge's eligibility), SPEC-083 (the skip set and `/skip`), SPEC-027 (the job table),
+  SPEC-021 (the six files of a table) and SPEC-029 (the goldens).
   **Mutation band:** `S10000-S10099`.
 - **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
   `docs/specs/` with its tests and `docs/red-first/SPEC-100.md` (ADR-016).
@@ -209,7 +209,8 @@ R15. The stakes preview: kind `streak_risk`, key `evening`. It declines with `sk
     `NudgesLayer._stake_lines`: the streak line only while the streak is savable (no real miss, or
     one real miss and a freeze left; SPEC-076's `real_misses`), in the predecessor's three forms;
     the multiplier line when the multiplier is above 1.0 (SPEC-072 R18's preview); the wager line
-    when a wager is active (SPEC-106); the due count; and the estimate (R9). Its rows: Study now
+    when the job passes an active wager's stake, which it passes as none until SPEC-106 R26 passes
+    it; the due count; and the estimate (R9). Its rows: Study now
     (the configured study link) and Open app (the token `today`), then Cheat day (`nu:skip`) and
     Snooze 1h (`nu:sn`). It equals the golden `stakes_nudge` (`NudgesLayer._streak_risk_payload`).
     SPEC-109 R4 leaves out the Cheat day row while the skip day is switched off.
@@ -300,9 +301,9 @@ R31. The reads this SPEC adds to other contexts, each that context's own and a r
     writing course and most recent day with minutes of each reading course (R12, R16), from which
     notifications' pure texts apply the 30-day adoption window and the reading gaps. The due count
     and backlog, the streak state and `real_misses`, the multiplier's preview, the Ascendant buff,
-    the active wager, the skip set, the offers, the vaulted chests, the habit summary and the focus
-    eligibility are read through the reads SPEC-071, SPEC-076, SPEC-072, SPEC-106, SPEC-083,
-    SPEC-080, SPEC-081, SPEC-078 and SPEC-079 already give.
+    the skip set, the offers, the vaulted chests, the habit summary and the focus eligibility are
+    read through the reads SPEC-071, SPEC-076, SPEC-072, SPEC-083, SPEC-080, SPEC-081, SPEC-078 and
+    SPEC-079 already give. The active wager's stake is SPEC-106 R26's to pass.
 
 ## 3. Acceptance criteria
 
