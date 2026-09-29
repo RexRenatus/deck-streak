@@ -71,16 +71,15 @@ R5. **The refusal's invariant carries hand-proved rows** in `S12200-S12299` (§7
 
 ```acceptance
 A1: python3 -m unittest discover -s scripts/tests -p test_band_repeated_key.py -k a_merge_git_completes_without_a_conflict_and_the_reader_refuses_the_result
-A2: python3 -m unittest discover -s scripts/tests -p test_band_repeated_key.py -k a_key_repeated_at_the_top_or_inside_tables_is_refused_naming_it
-A3: python3 -m unittest discover -s scripts/tests -p test_band_repeated_key.py -k retired_over_a_revision_whose_band_file_repeats_a_key_is_refused
-A4: python3 -m unittest discover -s scripts/tests -p test_band_repeated_key.py -k a_header_that_repeats_a_key_is_refused_in_the_tree
+A2: python3 -m unittest discover -s scripts/tests -p test_band_repeated_key.py -k a_key_repeated_at_the_top_or_inside_tables_is_refused_naming_it -k a_key_repeated_at_any_depth_is_refused_by_the_parser
+A3: python3 -m unittest discover -s scripts/tests -p test_band_repeated_key.py -k retired_over_a_revision_whose_band_file_repeats_a_key_is_refused -k a_revision_whose_header_repeats_a_key_is_refused
+A4: python3 -m unittest discover -s scripts/tests -p test_band_repeated_key.py -k a_header_that_repeats_a_key_is_refused_in_the_tree -k every_committed_band_file_reads_as_plain_json_reads_it
 ```
 
 A1 builds its repository at run time in a temporary directory and asserts the merge's exit status
-0 before it asserts the refusal, so the fixture proves the hazard is real. A3 also runs
-`a_revision_whose_header_repeats_a_key_is_refused`, and A4 also runs
-`a_header_that_repeats_a_key_is_refused_in_the_tree`, in the same module. A4's control examines
-every committed band file and prints its count.
+0 before it asserts the refusal, so the fixture proves the hazard is real. A2, A3 and A4 each
+select both tests their row names, with two `-k` patterns. A4's control examines every committed
+band file and prints its count.
 
 ## 4. File manifest
 
