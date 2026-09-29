@@ -62,6 +62,8 @@ A20: red at cd59d2a: AssertionError: 8 != 0 : deck-streak-daemon: 8 unexplained 
 A20: green at b42ef34
 A22: red at 3d271a1: AssertionError: 2 != 0 : deck-streak-api: 2 unexplained mutant(s) in its row (the opening sweep, run 36528558184 at 5216bcf, read listed 70, killed 48, equivalent 0, unexplained 2, unviable 20)
 A22: green at ab99ab8
+A23: red at 611eb8e: AssertionError: 1 != 0 : deck-streak-privacy: 1 unexplained mutant(s) in its row (the opening sweep, run 36533127814 at c8d8a30, read listed 29, killed 25, equivalent 0, unexplained 1, unviable 3)
+A23: green at 63f47ca
 A28: red at e260627: AssertionError in each of its four subtests, each for its own reason: 'True is not false : the rust class applies on test lines [31, 36, 43, 47, 53]' (the test-only diff); 'Lists differ: [46, 58] != [58]' (the mixed diff counted its test module's line as production code); "'mutation: plan: rust applies: 3 production code line(s) in 1 file(s)' not found" (the production-only diff's plan named no production line); and '3 != 0 : mutation: shards: VOID the rust class applies and ... holds no cargo-mutants listing' (cargo-mutants' empty --in-diff output read as no listing)
 A28: green at 8c87e5b
 A19: red at 8eba7ef: AssertionError: 16 != 0 : deck-streak-identity: 16 unexplained mutant(s) in its row (opening sweep run 36511057164 listed 143, killed 97, equivalent 0, unexplained 16, unviable 30)
@@ -69,6 +71,7 @@ A19: green at a911483
 A21: red at 660dda8: AssertionError: 5 != 0 : deck-streak-coordination: 5 unexplained mutant(s) in its row (the opening sweep, run 36526822999 at 36b283a, read listed 409, killed 321, equivalent 0, unexplained 5, unviable 83)
 A21: green at c7391f9
 A26: not red: the opening sweep, run 36531093051 at 5216bcf, already read listed 146, killed 111, equivalent 0, unexplained 0, unviable 35, so the row had no unexplained mutant to be red for (R16)
+A27: not red: the opening sweep (run 36533129255 at dev c8d8a30) already read deck-streak-progression unexplained 0 (listed 57, killed 39, equivalent 0, unexplained 0, unviable 18), so no test was needed and the row was only filled
 ```
 
 | requirement | the behaviour a wrong implementation would get wrong | criterion |
@@ -231,6 +234,18 @@ killed 50, equivalent 0, unexplained 0, unviable 20. All 32 shards exited 0 and 
 timeout. No record was needed, and rows S05770 to S05774 are unused: the tool mutated every
 invariant of the crate (R20).
 
+## The privacy delivery: its row (A23)
+
+A23 is the privacy crate's row of section 7. Its opening sweep, run 36533127814 at the base (dev
+c8d8a30), counted 30 of 30 reports whole, listed 29 mutants and left 1 unexplained: the `Display`
+implementation of `ExportProblem`, replaced by an empty `Ok`. Its `table` line is the row committed
+at 611eb8e with A23's test, which read `1 != 0`. It is now killed by a test in
+`crates/privacy/tests/export.rs` that pins the three problem texts and the mismatch message. The
+closing sweep, run 36533533659 at 049f9ba, counted 30 of 30 whole and read `table: verdict: ok`,
+listed 29, killed 26, equivalent 0, unexplained 0, unviable 3. Every shard exited 0 and none
+logged a timeout. No record was needed. Row S05780 pins the export's schema literal, a constant the tool never
+mutates (R20); rows S05781 to S05789 are unused.
+
 ## The coordination delivery: its row (A21)
 
 A21 is the coordination crate's row of section 7. Its opening sweep, run 36526822999 at the base (dev
@@ -253,3 +268,13 @@ figures, with no shard exiting 2 or 3 and no `TIMEOUT` line. Rows S05765 and S05
 `SLOTTED`, one emptying the slot list of each of the identity (its bio slot), voice, personality
 and disclosure sections, each failed `a_template_with_a_filled_slot_is_refused`, so that
 constant's invariant is already pinned by an existing test (R20).
+
+## The progression delivery: its row (A27)
+
+A27 is the progression crate's row of section 7. Its opening sweep, run 36533129255 at the base
+(dev c8d8a30), counted 33 of 33 reports whole, listed 57 mutants and read `table: verdict: ok` with
+unexplained 0: killed 39, equivalent 0, unviable 18. The crate's existing tests already kill every
+viable mutant, so A27's test, which compares the row to its counts, has no unexplained mutant to
+be red for: it is recorded `not red`, and the delivery adds no record and no production change. The closing sweep, run 36534197772 at c3c6484, counted 33 of 33
+whole and read the same figures. All 32 shards and the listing job exited 0, and no shard log
+holds a timeout line. Row S05775 pins `SOURCE_GRAMMAR`, the grammar SPEC-040 R2 states, a constant the tool never mutates and a test read only through itself; S05776 to S05779 are unused. The crate's other five constants were each planted by hand and each failed a named test (R20). A later fix round added one assertion to a test and changed no production file, so the listing and the closing figures stand.
