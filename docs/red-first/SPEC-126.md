@@ -15,3 +15,45 @@ A3: red at 781f4a4: 0 != 1 : the rows' report is not downloaded by name
 A3: green at 2795033
 A4: not red: the judge's command lines and its reports directory were already as the criterion says; it pins that the downloads keep them
 ```
+
+## Addendum, 2026-09-29 (issue #358): A4 asserts per judge line
+
+The original lines above stand. The head is correct, so the per-line assertion cannot be red on it;
+it is proved by plant, in a scratch copy of `ci.yml` that the test module's `CI` constant was
+pointed at (the delivery tree's file was never edited). The old test is the module as it stood
+before this change.
+
+Plant a: `--plan` removed from the `rust` judge line, the `oracle` line still carrying it.
+
+```text
+old test: test_the_judge_reads_the_paths_the_downloads_lay_down ... ok
+new test: AssertionError: None != '"$reports/mutation-plan/plan.json"' : the rust judge line does not read --plan at $reports/mutation-plan/plan.json
+```
+
+Plant b: `--rows` removed from the `oracle` judge line, the `rust` line still carrying it.
+
+```text
+old test: test_the_judge_reads_the_paths_the_downloads_lay_down ... ok
+new test: AssertionError: None != '"$reports/mutation-rows/rows.json"' : the oracle judge line does not read --rows at $reports/mutation-rows/rows.json
+```
+
+The test compares each path as the shell reads it, with its double quotes, and refuses a class
+named by two judge lines. Two further plants record that.
+
+Plant k2: the `rust` line's `--whole` path in single quotes, which the shell does not expand. The
+old test failed it; the test as first written passed it; the test as fixed fails it.
+
+```text
+old test: AssertionError: '--whole "$reports/mutation-plan/whole.json"' not found in the verdict job
+first new test: test_the_judge_reads_the_paths_the_downloads_lay_down ... ok
+new test: AssertionError: "'$reports/mutation-plan/whole.json'" != '"$reports/mutation-plan/whole.json"' : the rust judge line does not read --whole at $reports/mutation-plan/whole.json
+```
+
+Plant m: a wrong `rust` judge line, with no `--whole`, placed before the right one. The old test and
+the test as first written passed it, because the later line replaced the earlier in the table.
+
+```text
+old test: test_the_judge_reads_the_paths_the_downloads_lay_down ... ok
+first new test: test_the_judge_reads_the_paths_the_downloads_lay_down ... ok
+new test: AssertionError: two judge lines of class rust: --plan "$reports/mutation-plan/plan.json" --class rust --shard-reports "$reports" --rows "$reports/mutation-rows/rows.json" --whole "$reports/mutation-plan/whole.json"
+```
