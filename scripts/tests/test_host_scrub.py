@@ -1668,6 +1668,28 @@ class Axes(unittest.TestCase):
                 self.assertEqual(listed, [])
                 self.assertEqual([entry["path"] for entry in skipped], [str(single)])
                 self.assertIsNotNone(refusal)
+            with self.subTest("an item inside a bind mount of another directory"):
+                # The mount's root (field 4) is a directory of the boot disk mounted at an
+                # ancestor of the item: the item is reached at one path and lives at another.
+                item, candidate = cases[venv]
+                point = str(host.apps / "idle")
+                bound = "\n".join(
+                    [
+                        "20 1 8:1 / / rw - ext4 /dev/x rw",
+                        f"31 20 8:1 /srv/kept {point} rw,relatime shared:1 - ext4 /dev/x rw",
+                    ]
+                )
+                listed, skipped, refusal = refused(item, candidate, bound + "\n")
+                self.assertEqual(listed, [])
+                self.assertEqual([entry["path"] for entry in skipped], [venv])
+                self.assertIn("lies inside the bind mount " + point, skipped[0]["reason"])
+                self.assertIsNotNone(refusal)
+                self.assertIn("lies inside the bind mount " + point, refusal)
+                # A mount whose root is `/` shows the whole filesystem: nothing is bound.
+                whole = bound.replace("/srv/kept", "/")
+                listed, skipped, refusal = refused(item, candidate, whole + "\n")
+                self.assertEqual([entry["path"] for entry in listed], [venv], skipped)
+                self.assertIsNone(refusal)
             with self.subTest("a mount table that cannot be read refuses the item"):
                 item, candidate = cases[venv]
 
