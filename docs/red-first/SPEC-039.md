@@ -164,6 +164,8 @@ A39: red at f26c24e: AssertionError: {'S00010-DOUBLE': 'KILLED'} != {'S00010-DOU
 A39: green at 688ae71
 A40: red at 24013e7: AssertionError: 0 != 1 : examined 2 configuration(s) (a second configuration, ignoreStatic and a short mutate list all passed)
 A40: green at a029d19
+A41: red at 6811975: AssertionError: 0 != 3 : S00020-BASH-UNPARSED: KILLED: its killer passed without the mutant and failed with it (a bash, an extensionless bash and a POSIX sh mutant that did not parse all read KILLED)
+A41: green at 270bbaa
 ```
 
 ## The gate's own red first (R17)
@@ -193,3 +195,16 @@ and the job went GREEN.
 Amendment (2026-09-28): the lines of A20 moved into a `` ```retired `` fence, by inserted fence
 lines, because SPEC-057 retired that criterion when ADR-070 replaced the exclusion it held to its
 reason with the equivalence record; SPEC-057 A8 judges that no exclusion hides a mutant.
+
+Amendment (2026-09-29): A41 (SPEC-039 section 12, issue #288). The tests were committed at 6811975
+beside the unchanged runner: of the six in `TheRunnerParseChecksAShellMutant`, the three whose mutant
+does not parse (a bash script, a bash script known by its shebang alone, a POSIX `sh` script)
+failed by assertion, each reading KILLED where VOID was owed, and the other three (the construct
+parses under `bash -n` and not under `sh -n`, and a bash and a POSIX mutant that parse and are
+caught read KILLED) passed, since they pin behaviour the runner already had and guard the fix
+against a checker that always picks `sh -n`. The fix at 270bbaa parse-checks the mutated bytes of a
+shell target before the cargo branch, and all six pass. Five rows pin its decisions, S03929 to
+S03933, each proved KILLED with `scripts/mutation_rows.py` restoring its target byte for byte. The
+five rows the tree already held on a shell target (S05706, S05806, S05807, S05808, S05809, all on
+`scripts/check.sh`) were re-proved at that head: each reads KILLED, so none was a parse failure
+passing for a kill. A8's cargo path is proved by CI's run of the module.
