@@ -168,6 +168,10 @@ now refuses a link at the candidate path before the copy, which turns A22's test
 row. The fix followed (2c25d22), which changes `deploy.sh` and edits no test file. After it, forty-nine
 tests pass.
 
+One later commit edits a test file (5cd0e70): the tests of A30 and A31 gain a presence assertion on the
+live Caddyfile, beside their absence assertions. It changes no verdict: A30 stays red at 159b187 and green
+at 2c25d22, and forty-nine tests still pass.
+
 The rows S12701 and S12704 were re-anchored to the changed lines, the killer of S12720 moved to the
 test of A31, and the rows S12723 to S12730 were added; every row of the band is proved killed by its
 full id on a clean committed tree.
