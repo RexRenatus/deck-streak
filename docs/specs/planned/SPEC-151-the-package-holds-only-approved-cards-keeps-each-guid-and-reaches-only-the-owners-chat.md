@@ -24,8 +24,10 @@
   `MAX_CAPTION_UTF16`, 1,024).
 - **What the engine offers** (the pinned fork at `57382da`, ADR-058): `Collection::export_apkg`
   writes a package of the notes a search selects, with or without scheduling, deck options and media,
-  in the modern or the legacy format, into a temporary file beside its output path, and renames it
-  into place; it returns the number of notes. `CollectionBuilder` with no path gives a collection in
+  in the modern or the legacy format, through two temporary files of its own (a copy of the
+  selected collection, and the package beside its output path), and renames the package into place;
+  the copy is removed when it returns, and it returns the number of notes. Media are gathered only
+  when the options ask for them. `CollectionBuilder` with no path gives a collection in
   memory. `add_or_update_notetype_with_existing_id` keeps a note type's id and modification time,
   where `add_notetype` assigns the present time. `add_note` stamps the present time on the note.
 - **What the owner's import does with it** (the engine's importer, which the owner's Anki runs): a
