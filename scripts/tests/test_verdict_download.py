@@ -169,6 +169,12 @@ WRONG = {
         .replace(" ||", ' "$( : " --rows "$reports/mutation-rows/rows.json" " )" ||'),
         CANONICAL[1],
     ),
+    "a flag inside an ANSI-C string with an escaped quote": (
+        CANONICAL[0]
+        .replace(' --rows "$reports/mutation-rows/rows.json"', "")
+        .replace(" ||", " $'a\\' --rows \"$reports/mutation-rows/rows.json\" '\\' ||"),
+        CANONICAL[1],
+    ),
     "a flag inside double-quoted backquotes": (
         CANONICAL[0]
         .replace(' --rows "$reports/mutation-rows/rows.json"', "")
