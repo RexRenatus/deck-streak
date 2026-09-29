@@ -306,7 +306,10 @@ class CredentialComesOnlyFromTheSocket(unittest.TestCase):
             text = path.read_text(encoding="utf-8", errors="replace")
             if re.search(r"deckstreak-agent|DECKSTREAK_AGENT|agent-device-key", text):
                 files.append(path)
-        for path in examined("file(s) under agent/ or naming the agent", files):
+        scanned = examined("file(s) under agent/ or naming the agent", files)
+        self.assertGreater(len(scanned), 0, "the scan examined files")
+        self.assertIn(Path(__file__).resolve(), [path.resolve() for path in scanned])
+        for path in scanned:
             text = path.read_text(encoding="utf-8", errors="replace")
             self.assertIsNone(TOKEN_LITERAL.search(text), f"{path}: a token literal")
             self.assertNotIn(TOKEN_PREFIX, text, f"{path}: a token prefix")
