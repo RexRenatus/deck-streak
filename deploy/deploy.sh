@@ -263,6 +263,7 @@ undo() {
     exit 1
 }
 [ -w "$dir" ] && [ -f "$file" ] || { echo "deploy: the Caddy configuration was refused" >&2; exit 1; }
+[ -w "$(dirname -- "$file")" ] || { echo "deploy: the Caddy configuration was refused" >&2; exit 1; }
 for path in "$block" "$block.previous" "$copy" "$kept"; do
     { [ ! -e "$path" ] && [ ! -L "$path" ]; } ||
         [ -z "$(find "$path" -maxdepth 0 \( ! -type f -o -links +1 \) -print)" ] ||
@@ -305,6 +306,7 @@ unwritten() {
     exit 1
 }
 [ -w "$dir" ] && [ -f "$file" ] || { echo "deploy: the candidate Caddyfile could not be written" >&2; exit 1; }
+[ -w "$(dirname -- "$file")" ] || { echo "deploy: the candidate Caddyfile could not be written" >&2; exit 1; }
 [ ! -L "$copy" ] || unwritten
 [ ! -e "$copy" ] || [ -z "$(find "$copy" -maxdepth 0 \( -type p -o -type s -o -type b -o -type c -o -type f -links +1 \) -print)" ] ||
     { echo "deploy: the candidate Caddyfile could not be written" >&2; exit 1; }
