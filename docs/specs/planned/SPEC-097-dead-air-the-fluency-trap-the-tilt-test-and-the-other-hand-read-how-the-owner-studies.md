@@ -1,7 +1,7 @@
 # SPEC-097: Dead Air, the Fluency Trap, the Tilt Test and the Other Hand read how the owner studies
 
 - **Wave:** W4. **Issues:** #143, #146, #148, #151 (epic #5). **Context(s):** `deck-streak-kernel`
-  (`pynum` gains CPython's `statistics.mean`, `shuffle` and `math.erfc`); `deck-streak-ingest` (the
+  (`pynum` gains CPython's `shuffle` and `math.erfc`); `deck-streak-ingest` (the
   tilt pairs and the provenance counts); `deck-streak-insights` (the four instruments and their
   registry rows); `deck-streak-coordination` (the session spans passed to Dead Air, the reads'
   floors, the on-demand runs); `deck-streak-bot` (`/fluency`, `/tilt`, `/otherhand`); the Mini App
@@ -46,7 +46,7 @@
     test shuffles outcomes within each card's interval band (young under 21 days, mature at 21 or
     more), and each generator is seeded `20260806` and consumed in the predecessor's order. The
     resamples shrink to fit the two work caps, never below 200. `statistics.mean` rounds the exact
-    mean once, which a running float sum does not.
+    mean once, which a running float sum does not; SPEC-090 ports it.
   - The tilt pairs lag each study event against the same card's previous one over the whole scoped
     log, and count only answers after the window's floor (ADR-095).
   - The Other Hand counts manual and reschedule rows (types 4 and 5) against all rows, fetching at
@@ -70,9 +70,9 @@
 
 The numbers (ADR-090)
 
-R1. `pynum` gains `statistics.mean`, the Mersenne Twister's `shuffle` (each index drawn by
+R1. `pynum` gains the Mersenne Twister's `shuffle` (each index drawn by
     rejection over `getrandbits`, as CPython's `_randbelow` draws it) and `math.erfc`, equal to
-    `goldens/pynum_mean_shuffle_erfc.json`.
+    `goldens/pynum_shuffle_erfc.json`; the Tilt Test's means are SPEC-090's `statistics.mean`.
 
 Dead Air (#143)
 
@@ -129,7 +129,7 @@ R10. The insights screen shows each report as a section: Dead Air's attention sh
 
 | id | criterion | decided by |
 |---|---|---|
-| A1 | `mean`, `shuffle` and `erfc` equal CPython's for every golden case | `mean_shuffle_and_erfc_match_cpythons_golden` |
+| A1 | `shuffle` and `erfc` equal CPython's for every golden case | `shuffle_and_erfc_match_cpythons_golden` |
 | A2 | the session spans equal the golden | `the_session_spans_match_the_predecessors_golden` |
 | A3 | the gap equals the golden, never crossing a session | `the_dead_air_gap_matches_the_predecessors_golden` |
 | A4 | Dead Air's report equals the golden | `the_dead_air_report_matches_the_predecessors_golden` |
@@ -152,7 +152,7 @@ R10. The insights screen shows each report as a section: Dead Air's attention sh
 | A21 | the Fluency Trap renders its deck rows and verdict | `renders the verdict and the deck rows` |
 
 ```acceptance
-A1: cargo test -p deck-streak-kernel --test pynum_statistics -- --exact mean_shuffle_and_erfc_match_cpythons_golden
+A1: cargo test -p deck-streak-kernel --test pynum_statistics -- --exact shuffle_and_erfc_match_cpythons_golden
 A2: cargo test -p deck-streak-coordination --test dead_air_step -- --exact the_session_spans_match_the_predecessors_golden
 A3: cargo test -p deck-streak-insights --test dead_air -- --exact the_dead_air_gap_matches_the_predecessors_golden
 A4: cargo test -p deck-streak-insights --test dead_air -- --exact the_dead_air_report_matches_the_predecessors_golden
@@ -191,7 +191,7 @@ delivery, so the private wiring does not change when it merges.
 
 | file | context | change |
 |---|---|---|
-| `crates/kernel/src/pynum.rs` | `deck-streak-kernel` | changed: `mean`, `shuffle` and `erfc` (ADR-090) |
+| `crates/kernel/src/pynum.rs` | `deck-streak-kernel` | changed: `shuffle` and `erfc` (ADR-090) |
 | `crates/kernel/tests/pynum_statistics.rs` | `deck-streak-kernel` | added: A1 |
 | `crates/ingest/src/review_reads.rs` | `deck-streak-ingest` | changed: the tilt pairs and the provenance counts |
 | `crates/ingest/tests/study_reads.rs` | `deck-streak-ingest` | added: A9, A13 |
@@ -221,7 +221,7 @@ delivery, so the private wiring does not change when it merges.
 | `web/app/src/lib/insights/insights.ts` | miniapp | changed: the four reports' types and the run call |
 | `.sqlx/` | workspace | changed: the offline cache for the new queries |
 | `tools/parity-oracle/registry/spec_097.py` | repo | added: this SPEC's registrations (SPEC-029) |
-| `tools/parity-oracle/goldens/pynum_mean_shuffle_erfc.json` | repo | added: CPython's `statistics.mean`, `random.Random.shuffle` and `math.erfc` (adapter) |
+| `tools/parity-oracle/goldens/pynum_shuffle_erfc.json` | repo | added: CPython's `random.Random.shuffle` and `math.erfc` (adapter) |
 | `tools/parity-oracle/goldens/session_bounds.json` | repo | added: the golden of `chests.py:session_bounds_from_reviews` (adapter; synthetic reviews) |
 | `tools/parity-oracle/goldens/dead_air_gap.json` | repo | added: the golden of `deadair.py:gap_ms` (adapter) |
 | `tools/parity-oracle/goldens/dead_air_report.json` | repo | added: the golden of `deadair.py:build_deadair_report` (adapter; synthetic reviews and sessions) |
@@ -253,7 +253,7 @@ delivery, so the private wiring does not change when it merges.
 - **A gap straddles two sessions.** Detected by A3, whose golden holds two sessions an overnight
   apart.
 - **A pooled tilt rate replaces the paired estimate** and flips the sign. Detected by A10.
-- **A float running sum stands in for `statistics.mean`.** Detected by A1 and A10.
+- **A float running sum stands in for `statistics.mean`.** Detected by SPEC-090's A1 and by A10.
 - **The Other Hand claims a row as DeckStreak's.** Prevented by the empty skip ledger and detected
   by A18.
 
@@ -264,7 +264,7 @@ predecessor at `27ee2bc` (SPEC-029). Every case is synthetic.
 
 | golden | the predecessor's function | kind | the adapter builds |
 |---|---|---|---|
-| `pynum_mean_shuffle_erfc` | CPython's `statistics.mean`, `random.Random.shuffle`, `math.erfc` | adapter | float lists whose running sum differs from the exact mean, shuffles of lists of 1 to 40 items under the tilt seed, and `erfc` across its range |
+| `pynum_shuffle_erfc` | CPython's `random.Random.shuffle`, `math.erfc` | adapter | shuffles of lists of 1 to 40 items under the tilt seed, and `erfc` across its range |
 | `session_bounds` | `chests.py:session_bounds_from_reviews` | adapter | synthetic reviews with gaps at and around 10 minutes |
 | `dead_air_gap` | `deadair.py:gap_ms` | adapter | review pairs with positive, zero and negative gaps |
 | `dead_air_report` | `deadair.py:build_deadair_report` | adapter | synthetic reviews and sessions, each refusal and each bucket |

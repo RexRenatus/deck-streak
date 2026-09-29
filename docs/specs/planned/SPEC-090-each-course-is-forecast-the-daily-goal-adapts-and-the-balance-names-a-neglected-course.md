@@ -61,7 +61,8 @@
 The numeric port (ADR-090)
 
 R1. `crates/kernel/src/pynum.rs` holds CPython's float semantics these ports read: the compensated
-    `sum`, `statistics.median`, `round(x, n)` and the predecessor's nearest-rank percentile
+    `sum`, `statistics.median`, `statistics.mean` (the exact mean, rounded once, which a running
+    float sum is not), `round(x, n)` and the predecessor's nearest-rank percentile
     (`gamification/adaptive.py:percentile`). Each equals its golden (`goldens/pynum_basics.json`,
     `goldens/percentile.json`), and analytics' compensated sum (SPEC-071) delegates to the kernel's,
     keeping its own name.
@@ -127,7 +128,7 @@ R13. Every constant this SPEC uses (the velocity floor, the goal's floor, horizo
 
 | id | criterion | decided by |
 |---|---|---|
-| A1 | the kernel's sum, median and round equal CPython's golden over float edge cases | `the_numeric_basics_match_cpythons_golden` |
+| A1 | the kernel's sum, median, mean and round equal CPython's golden over float edge cases | `the_numeric_basics_match_cpythons_golden` |
 | A2 | the nearest-rank percentile equals the golden of `adaptive.py:percentile`, the float edge included | `the_percentile_matches_the_predecessors_golden` |
 | A3 | the mature velocity equals the golden of `velocity.py:mature_velocity` | `mature_velocity_matches_the_predecessors_golden` |
 | A4 | each course's forecast equals the golden of `velocity.py:compute_velocity` | `the_forecast_matches_the_predecessors_golden` |
@@ -188,7 +189,7 @@ when it merges.
 
 | file | context | change |
 |---|---|---|
-| `crates/kernel/src/pynum.rs` | `deck-streak-kernel` | added: CPython's sum, median, round and the nearest-rank percentile (ADR-090) |
+| `crates/kernel/src/pynum.rs` | `deck-streak-kernel` | added: CPython's sum, median, mean, round and the nearest-rank percentile (ADR-090) |
 | `crates/kernel/src/lib.rs` | `deck-streak-kernel` | changed: the numeric module |
 | `crates/kernel/tests/pynum_goldens.rs` | `deck-streak-kernel` | added: A1, A2 |
 | `crates/analytics/src/metrics.rs` | `deck-streak-analytics` | changed: its compensated sum delegates to the kernel's |
@@ -234,7 +235,7 @@ when it merges.
 | `.sqlx/` | workspace | changed: the offline cache for the new queries |
 | `Cargo.lock` | workspace | changed |
 | `tools/parity-oracle/registry/spec_090.py` | repo | added: this SPEC's registrations (SPEC-029) |
-| `tools/parity-oracle/goldens/pynum_basics.json` | repo | added: CPython's `sum`, `statistics.median` and `round` (adapter; float edge cases) |
+| `tools/parity-oracle/goldens/pynum_basics.json` | repo | added: CPython's `sum`, `statistics.median`, `statistics.mean` and `round` (adapter; float edge cases) |
 | `tools/parity-oracle/goldens/percentile.json` | repo | added: the golden of `gamification/adaptive.py:percentile` (function) |
 | `tools/parity-oracle/goldens/mature_velocity.json` | repo | added: the golden of `velocity.py:mature_velocity` (adapter; rollup rows) |
 | `tools/parity-oracle/goldens/forecast.json` | repo | added: the golden of `velocity.py:compute_velocity` (adapter; synthetic progress) |
@@ -266,6 +267,8 @@ when it merges.
   different histories receive one rate, and by the route's label, which names it the collection's.
 - **A float edge moves a percentile rank or a median.** Detected by A1 and A2, whose goldens hold
   `0.9 * 70` and an even count.
+- **A float running sum stands in for `statistics.mean`.** Detected by A1, whose golden holds lists
+  where the two differ. SPEC-097's Tilt Test and SPEC-098's Divestment Day read this mean.
 - **The balance's window slips a day at the rollover.** Detected by A6, whose cases put reviews at
   03:59 and 04:00 on the window's first and last study days.
 - **The syllabus tool reads the owner's syllabus in public CI.** Prevented: its tests read the
@@ -279,7 +282,7 @@ unit band or syllabus of the owner's.
 
 | golden | the predecessor's function | kind | the adapter builds |
 |---|---|---|---|
-| `pynum_basics` | CPython's `sum`, `statistics.median`, `round` | adapter | float lists with cancellation, even and odd counts, and halves at each digit |
+| `pynum_basics` | CPython's `sum`, `statistics.median`, `statistics.mean`, `round` | adapter | float lists with cancellation, even and odd counts, lists whose running sum differs from the exact mean, and halves at each digit |
 | `percentile` | `gamification/adaptive.py:percentile` | function | none: empty, one value, `0.9` of 70 values, `0.2` and `1.0` |
 | `mature_velocity` | `velocity.py:mature_velocity` | adapter | rollup rows with and without reviews, all-zero graduations, an even count |
 | `forecast` | `velocity.py:compute_velocity` | adapter | synthetic `LanguageProgress` values with gaps, empty bands and a fully achieved course |
