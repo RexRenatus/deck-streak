@@ -969,7 +969,7 @@ class CredentialsComeFromTheSocket(unittest.TestCase):
         planted = [
             "deck-streak-.service.d",
             "service.d",
-            "planted@one.service.d",
+            f"planted{'@'}one.service.d",
             ".d",
             "absent.service.d",
         ]

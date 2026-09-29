@@ -57,10 +57,9 @@ template, and two were considered for it:
   review of a model found a spelling the model read otherwise than systemd, and a census that reads
   a word otherwise than systemd can admit what it means to refuse. A refusal holds for every
   spelling it does not read; a model holds only until its next divergence.
-- Refusing the directives that stop a start one by one (`Requisite=`, `Requires=`, `BindsTo=`,
-  then whichever the next review names): rejected, because a list of refused keys holds only until
-  the next key, while a literal list of the keys each kind of unit uses refuses every other key by
-  its name. The lists are the keys the units use, and a unit that needs another key adds it to its
+- Refusing the dependency directives one by one, then whichever the next review names: rejected,
+  because a list of refused keys holds only until the next key, while a literal list of the keys
+  each kind of unit uses refuses every other key by its name. The lists are the keys the units use, and a unit that needs another key adds it to its
   list in the same change (SPEC-066 R2).
 
 ## Decision Outcome
