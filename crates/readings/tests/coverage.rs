@@ -387,3 +387,15 @@ fn a_document_splits_its_frontmatter_from_its_sections() {
     assert_eq!(doc.section("issue"), Some("third\n"));
     assert_eq!(doc.body.lines().next(), Some("intro"));
 }
+
+#[test]
+fn a_section_with_only_blank_lines_is_empty() {
+    let doc = law_doc(|prose| {
+        prose[1].1 = "  \n ".to_owned();
+    });
+    let checks = own(&law_seed(), &doc);
+    assert_eq!(
+        checks.complete,
+        vec!["the issue section is empty".to_owned()]
+    );
+}
