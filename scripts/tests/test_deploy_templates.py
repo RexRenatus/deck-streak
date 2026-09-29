@@ -497,6 +497,11 @@ def value_refusals(unit, table):
     ]
 
 
+def restart_budget_refusals(unit):
+    """Every key of the restart budget a restarting unit lacks (SPEC-066 R2)."""
+    return []
+
+
 def failure_target_refusals(unit):
     """Every `OnFailure=` assignment of `unit`, its drop-ins included, that is not exactly the alert
     template, an empty one and a target beside the alert's included (SPEC-066 R2)."""
@@ -1759,6 +1764,69 @@ class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
                 "is not a value this unit admits for the key, and is refused"
             ],
         )
+
+    def test_a_restarting_paging_unit_holds_the_whole_restart_budget(self):
+        # A unit that loads a credential and pages, and assigns `Restart=` to anything but `no`,
+        # also holds `StartLimitIntervalSec=`, `StartLimitBurst=` and `RestartSec=`: without the
+        # start limit the default interval is shorter than the restart delay, so the unit never
+        # reaches failed and pages on every restart. A missing key is refused by name (SPEC-066 R2).
+        alert = f"{ALERT_TEMPLATE}@.service"
+        loading = examined(
+            "service unit(s) that load a credential",
+            sorted((unit for unit in subject().services if loads_a_credential(unit)), key=name),
+        )
+        paging = [unit for unit in loading if unit.name != alert]
+        self.assertEqual([r for unit in paging for r in restart_budget_refusals(unit)], [])
+        head = "[Unit]\nDescription=planted\n"
+        page = f"OnFailure={ON_FAILURE}\n"
+        run = "[Service]\nType=oneshot\nExecStart=/bin/true\n"
+        loads = f"LoadCredential=telegram-bot-token:{SOCKET}\n"
+        where = "deploy/systemd/planted.service"
+
+        def refusal(key):
+            return (
+                f"{where}: assigns Restart= and holds no {key}=, which the restart budget needs, "
+                "and is refused"
+            )
+
+        budget = "StartLimitIntervalSec=300\nStartLimitBurst=5\n"
+        plants = {
+            "restart and delay, no start limit": (
+                "",
+                "Restart=on-failure\nRestartSec=15\n",
+                [refusal("StartLimitIntervalSec"), refusal("StartLimitBurst")],
+            ),
+            "restart, no budget at all": (
+                "",
+                "Restart=on-failure\n",
+                [
+                    refusal("StartLimitIntervalSec"),
+                    refusal("StartLimitBurst"),
+                    refusal("RestartSec"),
+                ],
+            ),
+            "restart, no burst": (
+                "StartLimitIntervalSec=300\n",
+                "Restart=on-failure\nRestartSec=15\n",
+                [refusal("StartLimitBurst")],
+            ),
+            "restart, no interval": (
+                "StartLimitBurst=5\n",
+                "Restart=on-failure\nRestartSec=15\n",
+                [refusal("StartLimitIntervalSec")],
+            ),
+            "restart, no delay": (budget, "Restart=on-failure\n", [refusal("RestartSec")]),
+            "restart reset to no, no budget": ("", "Restart=no\n", []),
+            "no restart, no budget": ("", "", []),
+            "restart with the whole budget": (budget, "Restart=on-failure\nRestartSec=15\n", []),
+        }
+        got = {}
+        for label in examined("planted unit(s) held to the restart budget", sorted(plants)):
+            unit_lines, service_lines, _ = plants[label]
+            got[label] = planted_refusals(
+                f"{head}{page}{unit_lines}{run}{loads}{service_lines}", restart_budget_refusals
+            )
+        self.assertEqual(got, {label: plants[label][2] for label in plants})
 
     def test_a_paging_unit_names_no_failure_target_but_the_alert(self):
         # Every `OnFailure=` assignment of a paging unit that loads a credential, in the unit and
