@@ -6,10 +6,17 @@ no Litestream, backup or drill unit, a backup script and a drill script that did
 criteria failed by assertion, each for its own reason, not by a compile error or an empty selection.
 
 
-The tests were amended after the red run, and each amendment made a check stricter or fixed the test's
-own bug, none weakened one: a helper to read a unit by name, a `not None` assertion on the drill's
-argument vector, a dict of failing drill cases, the WAL-sidecar assertions in A2, and a loopback
-exclusion in A7's host-address pattern.
+The tests were amended after the red run; each amendment is named here with what it changed:
+- A1: the drill's expected `ExecStart=` is the script itself, where the red test expected it under
+  `/usr/bin/bash`; the backup unit's `EnvironmentFile=` is asserted empty, where the red test compared
+  a placeholder with itself (stricter); and the replicator's expected `Type=` is `exec`, where it was
+  `simple`.
+- A2: the backups directory is asserted to hold only `.db` copies, beside the red test's exact
+  listing of the state directory, which is unchanged (stricter).
+- A4: the failing drill cases reach the census as a dict's items, which fixes the test's own bug, and
+  a replica ahead of the live database joined them (stricter).
+- A7: the host-address pattern excludes loopback (`127.`), which names no host, so a loopback address
+  is no longer refused.
 
 ```red-first
 A1: red at 4141421: None unexpectedly found in [None, None, None] (the three units are absent)

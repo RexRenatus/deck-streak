@@ -12,8 +12,9 @@
 - **Waits for:** owner gate 7 (#166) for the bucket, and gate 2 (#161) for the units, the grant on
   the bucket and the first drill. SPEC-062's first deploy precedes it, and nothing here needs a
   device key (ADR-054).
-- **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
-  `docs/specs/` with its tests and `docs/red-first/SPEC-064.md` (ADR-016).
+- **Status:** judged: delivered with its tests, its hand-proved rows and `docs/red-first/SPEC-064.md`
+  (ADR-016). The bucket, its grant, the units' first start and the first drill wait for owner gates
+  7 (#166) and 2 (#161).
 
 ## 1. The problem, measured
 

@@ -386,7 +386,11 @@ class BackupUnits(unittest.TestCase):
                 self.assertNotIn(b"COLLECTION-COPY", data)
                 self.assertNotIn(b"CREDENTIAL", data)
             # Beside the backups directory nothing is left: no temporary file, and no WAL sidecar.
-            self.assertEqual([p.name for p in state.iterdir() if p.name.startswith(".backup-")], [])
+            self.assertEqual(
+                sorted(p.name for p in state.iterdir()),
+                ["backups", "collection.anki2", "deck_streak.db"]
+                + sorted(p.name for p in state.iterdir() if p.name.startswith("deck_streak.db-")),
+            )
             self.assertEqual([p.name for p in backups.iterdir() if not p.name.endswith(".db")], [])
 
     def test_a_failed_integrity_check_fails_the_backup_and_keeps_the_old_copies(self):
@@ -624,7 +628,7 @@ class BackupUnits(unittest.TestCase):
         # No file names a project id, a host name or an address of its own.
         forbidden = re.compile(
             r"(?i)\b(?!127\.)(?:\d{1,3}\.){3}\d{1,3}\b|\.internal\b|\.googleapis\.com|\.appspot\.com|"
-            r"/opt/" + "a" + "ol|projects/[a-z][a-z0-9-]{5,}|gs://[a-z0-9]"
+            r"/opt/|projects/[a-z][a-z0-9-]{5,}|gs://[a-z0-9]"
         )
         for path in files:
             for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):

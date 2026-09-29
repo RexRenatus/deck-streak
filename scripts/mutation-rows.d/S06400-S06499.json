@@ -30,7 +30,7 @@
         "deploy/scripts/restore-drill.sh",
         "if copy is None or live is None or copy > live:\n",
         "if copy is None or live is None or copy > live + 1000:\n",
-        "a daily copy ahead of the live database fails the drill (SPEC-064 R6)",
+        "a daily copy ahead of the live database fails the drill (SPEC-064 R5)",
         "test_backup_units.BackupUnits.test_the_drill_restores_checks_and_removes_both_copies"
       ],
       [
@@ -38,7 +38,7 @@
         "deploy/scripts/restore-drill.sh",
         "if replica != live:\n",
         "if replica is None and live is not None:\n",
-        "a replica that is not at the live database's version fails the drill (SPEC-064 R6)",
+        "a replica that is not at the live database's version fails the drill (SPEC-064 R5)",
         "test_backup_units.BackupUnits.test_the_drill_restores_checks_and_removes_both_copies"
       ],
       [
@@ -46,7 +46,7 @@
         "deploy/scripts/restore-drill.sh",
         "trap 'rm -rf -- \"$work\"' EXIT\n",
         "trap ':' EXIT\n",
-        "the drill removes the restored copy and the daily copy whatever the outcome (SPEC-064 R6)",
+        "the drill removes the restored copy and the daily copy whatever the outcome (SPEC-064 R5)",
         "test_backup_units.BackupUnits.test_the_drill_restores_checks_and_removes_both_copies"
       ],
       [
@@ -62,7 +62,7 @@
         "deploy/systemd/deck-streak-backup.timer",
         "OnCalendar=*-*-* 03:24:00 UTC\n",
         "OnCalendar=*-*-* 03:32:00 UTC\n",
-        "the backup's minute of the hour is off every other slot (SPEC-064 R8)",
+        "the backup's minute of the hour is off every other slot (SPEC-064 R6)",
         "test_backup_units.BackupUnits.test_the_backup_and_drill_slots_are_off_every_other_slot"
       ]
     ]
