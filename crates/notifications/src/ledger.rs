@@ -19,6 +19,8 @@ pub const QUEUE_TABLE: &str = "notification_queue";
 pub const FEED_TABLE: &str = "in_app_feed";
 /// The owner's notification settings, by key.
 pub const SETTINGS_TABLE: &str = "notification_settings";
+/// The owner's latest message to the bot, which a T1 celebration reacts to (SPEC-084 R13).
+pub const OWNER_MESSAGE_TABLE: &str = "owner_last_message";
 
 /// A decision's row.
 pub(crate) struct DecisionRow<'a> {
@@ -67,6 +69,8 @@ pub struct FeedItem {
     pub kind: String,
     /// Its text.
     pub text: String,
+    /// The tier it rendered at, which the Mini App animates (SPEC-084 R10).
+    pub tier: String,
     /// When it was appended, in epoch milliseconds.
     pub created_at: i64,
 }
@@ -193,12 +197,12 @@ pub(crate) async fn hold(
     Ok(())
 }
 
-/// The held celebrations, ranked: the loudest pending tier first, then the oldest.
+/// The held celebrations, in the order they were held; the router ranks them.
 pub(crate) async fn held(connection: &mut SqliteConnection) -> Result<Vec<HeldRow>, KernelError> {
     let rows = sqlx::query!(
         r#"SELECT id AS "id!", kind, dedupe_key, surface, tier_requested, tier_pending, text, hold,
                   tries, deferred_at, study_day
-           FROM notification_queue WHERE state = 'held' ORDER BY tier_pending DESC, id ASC"#
+           FROM notification_queue WHERE state = 'held' ORDER BY id"#
     )
     .fetch_all(connection)
     .await?;
@@ -248,16 +252,18 @@ pub(crate) async fn abandon(connection: &mut SqliteConnection, id: i64) -> Resul
     Ok(())
 }
 
-/// Holds the celebration `id` again after a failed send, with `tries` failed sends behind it; its
-/// first deferral time is kept.
+/// Holds the celebration `id` again after a failed send, with `tries` failed sends behind it and
+/// held for `hold`; its first deferral time is kept.
 pub(crate) async fn relatch(
     connection: &mut SqliteConnection,
     id: i64,
     tries: i64,
+    hold: &str,
 ) -> Result<(), KernelError> {
     sqlx::query!(
-        "UPDATE notification_queue SET tries = ?, hold = 'send' WHERE id = ?",
+        "UPDATE notification_queue SET tries = ?, hold = ? WHERE id = ?",
         tries,
+        hold,
         id
     )
     .execute(connection)
@@ -271,6 +277,46 @@ pub(crate) async fn settle(connection: &mut SqliteConnection, id: i64) -> Result
         .execute(connection)
         .await?;
     Ok(())
+}
+
+/// The celebrations of `kind` delivered on study day `since` or later at `min` or above (SPEC-084
+/// R4).
+pub(crate) async fn delivered_at_or_above(
+    connection: &mut SqliteConnection,
+    kind: &str,
+    since: i64,
+    min: Tier,
+) -> Result<i64, KernelError> {
+    let min = min.as_str();
+    Ok(sqlx::query_scalar!(
+        r#"SELECT COUNT(*) AS "count!: i64" FROM notification_decisions
+           WHERE arm = 'send' AND kind = ? AND study_day >= ? AND tier_rendered >= ?"#,
+        kind,
+        since,
+        min,
+    )
+    .fetch_one(connection)
+    .await?)
+}
+
+/// The celebrations of `kind` of study day `since` or later still held at `min` or above: an
+/// abandoned one no longer holds its slot (SPEC-084 R4).
+pub(crate) async fn held_at_or_above(
+    connection: &mut SqliteConnection,
+    kind: &str,
+    since: i64,
+    min: Tier,
+) -> Result<i64, KernelError> {
+    let min = min.as_str();
+    Ok(sqlx::query_scalar!(
+        r#"SELECT COUNT(*) AS "count!: i64" FROM notification_queue
+           WHERE state = 'held' AND kind = ? AND study_day >= ? AND tier_pending >= ?"#,
+        kind,
+        since,
+        min,
+    )
+    .fetch_one(connection)
+    .await?)
 }
 
 /// Appends one item to the in-app feed, unseen.
@@ -306,7 +352,7 @@ pub(crate) async fn append_feed(
 pub async fn take_unseen_feed(db: &Db, now: UtcMillis) -> Result<Vec<FeedItem>, KernelError> {
     let mut write = db.write().await?;
     let rows = sqlx::query!(
-        r#"SELECT id AS "id!", kind, text, created_at FROM in_app_feed
+        r#"SELECT id AS "id!", kind, text, tier, created_at FROM in_app_feed
            WHERE seen_at IS NULL ORDER BY id"#
     )
     .fetch_all(&mut *write)
@@ -324,6 +370,7 @@ pub async fn take_unseen_feed(db: &Db, now: UtcMillis) -> Result<Vec<FeedItem>, 
         .map(|row| FeedItem {
             kind: row.kind,
             text: row.text,
+            tier: row.tier,
             created_at: row.created_at,
         })
         .collect())

@@ -473,7 +473,7 @@ async fn answer(
         let message_id = inner.next_message_id;
         let sends = matches!(
             method.as_str(),
-            "sendMessage" | "editMessageText" | "sendDocument"
+            "sendMessage" | "editMessageText" | "sendDocument" | "sendDice"
         );
         inner.calls.push(Call {
             method: method.clone(),
@@ -513,7 +513,7 @@ async fn unscripted(method: &str, body: &Value, message_id: i64) -> Response {
             tokio::time::sleep(Duration::from_secs(timeout).min(LONG_POLL_HOLD)).await;
             ok(&Value::Array(Vec::new()))
         }
-        "sendMessage" | "editMessageText" | "sendDocument" => {
+        "sendMessage" | "editMessageText" | "sendDocument" | "sendDice" => {
             let chat = body
                 .get("chat_id")
                 .and_then(|chat| chat.as_i64().or_else(|| chat.as_str()?.parse().ok()))

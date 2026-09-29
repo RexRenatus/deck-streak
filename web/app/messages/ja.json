@@ -1,4 +1,8 @@
 {
   "$schema": "https://inlang.com/schema/inlang-message-format",
-  "tagline": "毎日のAnkiの復習を、続けたくなる連続記録に。"
+  "tagline": "毎日のAnkiの復習を、続けたくなる連続記録に。",
+  "ladder_region": "お祝い",
+  "ladder_opening": "開封中…",
+  "ladder_dice": "サイコロ",
+  "ladder_dismiss": "閉じる"
 }

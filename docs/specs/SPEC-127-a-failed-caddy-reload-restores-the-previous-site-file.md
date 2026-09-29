@@ -123,3 +123,30 @@ killed by its full id and each naming one test as its killer:
 ## References
 
 SPEC-062 (R7, whose exclusion this closes), ADR-062, ADR-127; #321.
+
+## Amendment, 2026-09-29: both refusals of a removal say so
+
+Issue #361. `deploy.sh caddy-remove` checks the Caddyfile it will leave behind twice, with
+`caddy validate` and then `caddy adapt --validate`. Only the first refusal printed
+`deploy: refused`; the second removed the candidate and exited non-zero without a message of its own,
+so the operator could not tell which deploy step had stopped. Both refusals now print the removal's
+own message, remove the candidate and exit non-zero. This lifts the fifth exclusion of section 5, which left
+the second refusal's message to #361.
+
+## Acceptance criteria of the 2026-09-29 amendment
+
+| id | criterion | test |
+|---|---|---|
+| A10 | a removal whose adapted configuration is refused exits non-zero, prints `deploy: refused`, leaves the live Caddyfile and the site block unchanged and leaves no candidate file (#361) | `test_deploy_scripts.py` `a_removal_whose_adapted_configuration_is_refused_says_so` |
+| A11 | a removal whose validation is refused exits non-zero, prints `deploy: refused`, leaves the live Caddyfile and the site block unchanged and leaves no candidate file (#361) | `test_deploy_scripts.py` `a_removal_whose_validation_is_refused_says_so` |
+
+```acceptance
+A10: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k a_removal_whose_adapted_configuration_is_refused_says_so
+A11: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k a_removal_whose_validation_is_refused_says_so
+```
+
+The `caddy` stub gains a flag file that makes `adapt` refuse while `validate` passes. Row S12711 in
+`scripts/mutation-rows.d/S12700-S12799.json` pins the message (killer A10), and row S12712 pins the
+first refusal's message (killer A11). Files changed: `deploy/deploy.sh`,
+`scripts/tests/test_deploy_scripts.py`, `scripts/mutation-rows.d/S12700-S12799.json`,
+`docs/red-first/SPEC-127.md` and `changelog.d/fix-caddy-remove-message-361.md`.
