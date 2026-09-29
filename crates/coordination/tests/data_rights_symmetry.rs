@@ -32,7 +32,7 @@ use tempfile::TempDir;
 /// Statements that leave every table of the schema holding rows no erase leaves: 101 rows in each
 /// table that takes rows, so an export that pages or limits its read comes up short (the
 /// predecessor's lesson), and every column a reset writes moved off its reset value.
-const SEEDS: [&str; 9] = [
+const SEEDS: [&str; 14] = [
     "UPDATE settings_generation SET generation = 7, courses_digest = '0123456789abcdef' \
      WHERE id = 1",
     "UPDATE ingest_state SET anchor_newest_review_id = 1700000000123, anchor_card_count = 57, \
@@ -87,6 +87,33 @@ const SEEDS: [&str; 9] = [
      created_at) \
      SELECT 20000 + i, CASE i % 2 WHEN 0 THEN 'qaa' ELSE 'qab' END, i, 7.5 * i, 1, 1, 1000 * i \
      FROM n",
+    "WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 101) \
+     INSERT INTO notification_settings (key, value, created_at) \
+     SELECT 'synthetic_setting_' || i, CASE i % 2 WHEN 0 THEN '0' ELSE '1' END, 1000 * i FROM n",
+    "WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 101) \
+     INSERT INTO notification_deliveries (kind, dedupe_key, scope, surface, study_day, lapse_id, \
+     created_at) \
+     SELECT CASE i % 2 WHEN 0 THEN 'celebration' ELSE 'comeback' END, 'synthetic:' || i, \
+     CASE i % 2 WHEN 0 THEN '' ELSE 'lapse:19990:day:' || (20000 + i) END, \
+     CASE i % 3 WHEN 0 THEN 'mini-app' ELSE 'bot' END, 20000 + i, \
+     CASE i % 2 WHEN 0 THEN NULL ELSE 19990 END, 1000 * i FROM n",
+    "WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 101) \
+     INSERT INTO notification_decisions (dedupe_key, kind, surface, arm, reason, tier_requested, \
+     tier_rendered, study_day, created_at) \
+     SELECT 'synthetic:' || i, CASE i % 3 WHEN 2 THEN 'habit:withheld' ELSE 'celebration' END, \
+     'bot', CASE i % 3 WHEN 0 THEN 'send' WHEN 1 THEN 'defer' ELSE 'withhold' END, \
+     CASE i % 3 WHEN 0 THEN NULL WHEN 1 THEN 'quiet' ELSE 'quiet_hours' END, 'T2', \
+     CASE i % 3 WHEN 0 THEN 'T2' ELSE 'T0' END, 20000 + i, 1000 * i FROM n",
+    "WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 101) \
+     INSERT INTO notification_queue (kind, dedupe_key, surface, tier_requested, tier_pending, text, \
+     hold, tries, state, deferred_at, study_day, created_at) \
+     SELECT 'celebration', 'synthetic:' || i, 'bot', 'T4', 'T2', 'synthetic ' || i, \
+     CASE i % 2 WHEN 0 THEN 'quiet' ELSE 'send' END, i % 3, \
+     CASE i % 5 WHEN 0 THEN 'abandoned' ELSE 'held' END, 1000 * i, 20000 + i, 1000 * i FROM n",
+    "WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 101) \
+     INSERT INTO in_app_feed (dedupe_key, kind, tier, text, seen_at, created_at) \
+     SELECT 'synthetic:' || i, 'celebration', 'T2', 'synthetic ' || i, \
+     CASE i % 2 WHEN 0 THEN NULL ELSE 1000 * i + 1 END, 1000 * i FROM n",
 ];
 
 /// Prints how many items a check examined and refuses zero (the tdd pack's examined contract).
