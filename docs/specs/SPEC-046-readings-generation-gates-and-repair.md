@@ -165,7 +165,16 @@ A19: cargo test -p deck-streak-coordination --test readings_generate -- --exact 
 | `crates/readings/src/reading.rs` | `deck-streak-readings` | added: the reading, its identity and its minutes |
 | `crates/readings/src/attempts.rs` | `deck-streak-readings` | added: `reading_attempts` |
 | `crates/readings/src/store.rs` | `deck-streak-readings` | changed: `readings` |
-| `crates/readings/src/rights.rs` | `deck-streak-readings` | changed: the two new tables |
+| `crates/readings/src/data_rights.rs` | `deck-streak-readings` | changed: the two new tables |
+| `crates/readings/src/state.rs` | `deck-streak-readings` | changed: the topic states the generation ends in |
+| `crates/agent/src/compose.rs` | `deck-streak-agent` | changed: the form, word-target and repair slots are trusted text, fence-checked (amendment; orchestrator ruling) |
+| `crates/agent/tests/compose.rs`, `duty.rs`, `redteam.rs`, `persona.rs` | `deck-streak-agent` | changed: the new slots' tests, and the golden roster names the second law golden |
+| `crates/coordination/src/maintenance.rs` | `deck-streak-coordination` | changed: the nightly upkeep prunes `reading_attempts` past their retention (amendment) |
+| `crates/coordination/tests/maintenance.rs` | `deck-streak-coordination` | changed: the retention test |
+| `crates/coordination/tests/data_rights_symmetry.rs` | `deck-streak-coordination` | changed: the two new tables' seeds |
+| `crates/coordination/src/readings/mod.rs` | `deck-streak-coordination` | changed |
+| `PRIVACY.md` | repo | changed: the two new tables and the card text sent to the model provider |
+| `scripts/mutation-rows.d/S04600-S04699.json` | repo | added: the constants, the word-target bounds, the repair cap and the gate order |
 | `crates/readings/src/lib.rs` | `deck-streak-readings` | changed |
 | `crates/readings/Cargo.toml` | `deck-streak-readings` | changed: `unicode-normalization`, `html-escape`, `unicode-segmentation` |
 | `migrations/004601_readings_and_attempts.sql` | `deck-streak-readings` | added |
