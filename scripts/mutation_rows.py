@@ -512,6 +512,15 @@ def tracked_changes(root: pathlib.Path) -> list[str]:
     return [line[3:] for line in status.splitlines() if line.strip()]
 
 
+def run_in_own_group(
+    command: list[str], *, cwd: pathlib.Path, env: dict[str, str], timeout: float
+) -> subprocess.CompletedProcess[str]:
+    """`command` run to its end or its bound, with its output captured."""
+    return subprocess.run(
+        command, cwd=cwd, env=env, capture_output=True, text=True, timeout=timeout, check=False
+    )
+
+
 def run_killer(root: pathlib.Path, killer: Killer, scratch: pathlib.Path) -> Run:
     """The killer, run alone; its selection is counted from the runner's own output."""
     if killer.kind == "cargo":
@@ -526,15 +535,7 @@ def run_killer(root: pathlib.Path, killer: Killer, scratch: pathlib.Path) -> Run
         env = dict(os.environ, PYTHONDONTWRITEBYTECODE="1", PYTHONPYCACHEPREFIX=cache)
         cwd = root / killer.cwd
     try:
-        done = subprocess.run(
-            command,
-            cwd=cwd,
-            env=env,
-            capture_output=True,
-            text=True,
-            timeout=BUILD_SECONDS + TEST_SECONDS,
-            check=False,
-        )
+        done = run_in_own_group(command, cwd=cwd, env=env, timeout=BUILD_SECONDS + TEST_SECONDS)
     except subprocess.TimeoutExpired:
         return Run(0, False, "it timed out")
     if killer.kind == "cargo":
