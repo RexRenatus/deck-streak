@@ -452,6 +452,7 @@ mod tests {
     use deck_streak_coordination::recompute::Phase;
     use deck_streak_coordination::recompute::analytics_step::ANALYTICS_STEP;
     use deck_streak_coordination::recompute::day_bonuses::DAY_BONUSES_STEP;
+    use deck_streak_coordination::recompute::streaks::STREAKS_STEP;
     use deck_streak_coordination::recompute::xp::XP_STEP;
 
     use super::{
@@ -539,13 +540,14 @@ mod tests {
     }
 
     #[test]
-    fn the_recompute_fold_registers_the_analytics_and_xp_steps_in_their_phases() {
+    fn the_recompute_fold_registers_the_analytics_xp_and_streak_steps_in_their_phases() {
         let fold = recompute_fold(AnalyticsSettings::default()).expect("every step in its phase");
         assert_eq!(
             fold.steps(),
             [
                 (Phase::RollupAndScore, ANALYTICS_STEP),
                 (Phase::BaseXp, XP_STEP),
+                (Phase::StreaksAndGovernor, STREAKS_STEP),
                 (Phase::DerivedBonuses, DAY_BONUSES_STEP),
             ]
         );
