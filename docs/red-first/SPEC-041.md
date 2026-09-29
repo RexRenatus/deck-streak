@@ -327,6 +327,10 @@ green.
   delivery list: a sticker set's title, media and thumbnail, an emoji status, a badge's description,
   an invoice's link, a prepared message and button, an administrator's title and a member's tag.
   The counts are 29 send, 60 delivery and 96 classified, 185 in all.
+- The merge of dev (dd21422). The merge added the owner's `/score` reply, whose `send` the census
+  refused (`calls send in Commands::score, not a named caller`). The fix names `Commands::score`'s
+  `send` and `Commands::on_message`'s `score`, and lists `score` among the handler's replies, so
+  the named callers are eleven.
 
 These are new cases of A15, not a criterion of its own, so their record stands outside the
 `red-first` fences. Each red is the first assertion of its test that failed; the cases after it in
