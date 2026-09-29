@@ -1,4 +1,8 @@
 {
   "$schema": "https://inlang.com/schema/inlang-message-format",
-  "tagline": "Transformez vos révisions Anki quotidiennes en une série que vous aurez envie de prolonger."
+  "tagline": "Transformez vos révisions Anki quotidiennes en une série que vous aurez envie de prolonger.",
+  "ladder_region": "Célébrations",
+  "ladder_opening": "Ouverture…",
+  "ladder_dice": "Un lancer de dé",
+  "ladder_dismiss": "Fermer"
 }

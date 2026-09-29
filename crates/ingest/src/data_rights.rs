@@ -17,8 +17,9 @@ pub const SYNC_RUNS_TABLE: &str = "sync_runs";
 /// (`migrations/002301_ingest_state.sql`).
 pub const INGEST_STATE_TABLE: &str = "ingest_state";
 
-/// The columns an erase clears in `ingest_state`: the anchor and the window's base.
-const INGEST_STATE_CLEARED: [&str; 8] = [
+/// The columns an erase clears in `ingest_state`: the anchor, the window's base and the refused
+/// owner request (SPEC-128 R6).
+const INGEST_STATE_CLEARED: [&str; 10] = [
     "anchor_newest_review_id",
     "anchor_card_count",
     "anchor_card_fingerprint",
@@ -27,9 +28,11 @@ const INGEST_STATE_CLEARED: [&str; 8] = [
     "anchor_settings_generation",
     "window_floor",
     "window_count",
+    "refused_at",
+    "refused_reason",
 ];
 
-/// The row an erase leaves in `ingest_state`: no anchor, no pending rescore, no base.
+/// The row an erase leaves in `ingest_state`: no anchor, no pending rescore, no base, no refused request.
 fn ingest_state_reset() -> Map<String, Value> {
     let mut row: Map<String, Value> = INGEST_STATE_CLEARED
         .iter()
@@ -78,7 +81,7 @@ impl DataRights for IngestDataRights {
                 r#"SELECT id AS "id!", anchor_newest_review_id, anchor_card_count,
                           anchor_card_fingerprint, anchor_study_day, anchor_recomputed_at,
                           anchor_settings_generation, rescore_pending, window_floor, window_count,
-                          created_at
+                          refused_at, refused_reason, created_at
                    FROM ingest_state ORDER BY id"#
             )
             .fetch_all(connection)
@@ -99,6 +102,8 @@ impl DataRights for IngestDataRights {
                             "rescore_pending": row.rescore_pending,
                             "window_floor": row.window_floor,
                             "window_count": row.window_count,
+                            "refused_at": row.refused_at,
+                            "refused_reason": row.refused_reason,
                             "created_at": row.created_at,
                         })
                     })
@@ -141,7 +146,8 @@ impl DataRights for IngestDataRights {
                 "UPDATE ingest_state SET anchor_newest_review_id = NULL, anchor_card_count = NULL, \
                  anchor_card_fingerprint = NULL, anchor_study_day = NULL, \
                  anchor_recomputed_at = NULL, anchor_settings_generation = NULL, \
-                 rescore_pending = 0, window_floor = NULL, window_count = NULL WHERE id = 1"
+                 rescore_pending = 0, window_floor = NULL, window_count = NULL, \
+                 refused_at = NULL, refused_reason = NULL WHERE id = 1"
             )
             .execute(connection)
             .await?;
