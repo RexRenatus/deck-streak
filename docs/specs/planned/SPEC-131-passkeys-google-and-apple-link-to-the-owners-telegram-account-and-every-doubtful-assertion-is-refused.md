@@ -8,8 +8,8 @@
   `deck-streak-api` (the routes and the flow cookie); `deck-streak-bot` (/delete erases through the
   revocation step); `deck-streak-daemon` (the api, bot, data and job roles' loads and wiring); the
   Mini App (`web/app`: `/link`, `/signin` and the settings screen's section).
-- **Decided by:** ADR-131 (this SPEC's: OpenID Connect through `openidconnect` over the workspace's
-  own HTTP client), ADR-132 (this SPEC's: passkeys through `webauthn-rs`, with the Mini App's host as
+- **Decided by:** ADR-131 (this SPEC's: OpenID Connect through `openidconnect` over identity's own
+  HTTP port), ADR-132 (this SPEC's: passkeys through `webauthn-rs`, with the Mini App's host as
   the relying party), ADR-133 (this SPEC's: Apple's refresh token is kept sealed and revoked on
   unlink and erase), ADR-006 (Telegram first, pinned to the owner, other methods linked), ADR-024
   (the in-memory session store) and ADR-130 (the settings screen).
