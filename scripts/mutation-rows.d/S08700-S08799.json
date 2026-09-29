@@ -216,6 +216,38 @@
         "description=__doc__.splitlines()[1]",
         "the usage text opens with the script's first docstring line (SPEC-087 R8)",
         "test_audit_web.TheVerdictScriptStatesItself.test_the_usage_text_opens_with_the_scripts_first_line"
+      ],
+      [
+        "S08762-A-RAN-IS-SLOTTED",
+        "scripts/mutation_python.py",
+        "@dataclass(slots=True)\nclass Ran:",
+        "@dataclass(slots=False)\nclass Ran:",
+        "a child run's report is a slotted dataclass, so a stray attribute on it is refused (SPEC-087 R6)",
+        "test_mutation_python_judge_kills.TheRanReportStartsEmpty.test_a_ran_is_empty_until_a_child_reports"
+      ],
+      [
+        "S08763-A-RAN-HAS-REPORTED-NOTHING",
+        "scripts/mutation_python.py",
+        "    reported: bool = False\n",
+        "    reported: bool = True\n",
+        "a run reads as not reported until the child's report line is found, so a run that printed none is void (SPEC-087 R6)",
+        "test_mutation_python_judge_kills.TheRanReportStartsEmpty.test_a_ran_is_empty_until_a_child_reports"
+      ],
+      [
+        "S08764-A-RAN-HAS-RUN-NOTHING",
+        "scripts/mutation_python.py",
+        "    ran: int = 0\n",
+        "    ran: int = 1\n",
+        "a run reads as having run no test until the child reports a count, so an empty control is void (SPEC-087 R6)",
+        "test_mutation_python_judge_kills.TheRanReportStartsEmpty.test_a_ran_is_empty_until_a_child_reports"
+      ],
+      [
+        "S08765-A-RAN-HAS-BROKEN-NOTHING",
+        "scripts/mutation_python.py",
+        "    broken: int = 0\n",
+        "    broken: int = 1\n",
+        "a run reads as having broken no test until the child reports a count (SPEC-087 R6)",
+        "test_mutation_python_judge_kills.TheRanReportStartsEmpty.test_a_ran_is_empty_until_a_child_reports"
       ]
     ]
   }
