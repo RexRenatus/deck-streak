@@ -379,7 +379,7 @@ def credential_lines(root):
         if path.suffix not in (".service", ".timer", ".conf") or not path.is_file():
             continue
         rel = path.relative_to(root).as_posix()
-        if rel.startswith("tmpfiles.d/"):
+        if rel.startswith("tmpfiles.d/") and path.suffix == ".conf":
             continue
         for _, key, value, number in _units.assignments(_units.unit_text(path), rel):
             if key in keys:
