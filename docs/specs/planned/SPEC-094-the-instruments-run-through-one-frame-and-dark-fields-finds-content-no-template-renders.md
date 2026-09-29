@@ -155,7 +155,7 @@ R13. The Mini App's `/insights` screen shows each stored report as a section. A 
 | A12 | every instrument in the registry has one row, and an inert row never runs | `an_inert_instrument_never_runs` |
 | A13 | a weekly instrument runs after the sync once in seven study days, and not again sooner | `a_weekly_instrument_runs_once_in_seven_study_days` |
 | A14 | one instrument's failure is stored as its failed read and the next still runs | `one_failure_never_stops_the_next_instrument` |
-| A15 | a run requested while one runs, in the same or another role process, starts nothing and says a run is in progress | `a_run_while_one_runs_starts_nothing` |
+| A15 | a run requested while one runs, in the same or another role process, returns without waiting for the holder, starts nothing and says a run is in progress | `a_run_while_one_runs_starts_nothing` |
 | A16 | a second report replaces its instrument's first in one write | `a_report_replaces_its_instruments_previous_one` |
 | A17 | `instrument_reports` is exported and erased by coordination's port | `the_instrument_reports_are_exported_and_erased` |
 | A18 | the insights routes answer the owner and refuse every other caller with no data | `the_insights_routes_answer_only_the_owner` |
@@ -290,7 +290,7 @@ predecessor at `27ee2bc` (SPEC-029). Every case is synthetic.
 |---|---|---|---|
 | `wire_walk` | `darkfields.py:_iter_fields` | function | none: synthetic blobs, well formed and each error case |
 | `safe_name` | `darkfields.py:_safe_name` | function | none: names with each C0 control and DEL |
-| `dark_fields` | `darkfields.py:build_dark_fields_report` | adapter | synthetic template names, encoded configs, declared fields and presence counts; cold, clean, dark, unparseable and failed-read cases |
+| `dark_fields` | `darkfields.py:build_dark_fields_report` | adapter | synthetic template names, encoded configs, declared fields and presence counts; cold, clean, dark, unparseable and failed-read cases, and a field seen in 2, 3 and 4 reviewed notes |
 | `dark_fields_tokens` | `darkfields.py:_extract_config_tokens_ex` | function | none: configs with sections, filter chains, special names and a truncated blob |
 | `dark_fields.constants` | `darkfields.MIN_DARK_NOTES`, `MAX_DARK_FIELDS_SHOWN`, `MAX_UNPARSEABLE_SHOWN`, `SPECIAL_FIELD_NAMES`, `_SECTION_PREFIXES`, `_Q_FORMAT_FIELD`, `_A_FORMAT_FIELD`; `transfer.NOTES_BATCH_SIZE` | constants | none |
 
@@ -312,4 +312,5 @@ predecessor at `27ee2bc` (SPEC-029). Every case is synthetic.
 | `S09406-WEEKLY-SEVEN` | `crates/coordination/src/instruments.rs` | a weekly instrument's 7 study days | `instruments_step::a_weekly_instrument_runs_once_in_seven_study_days` |
 | `S09407-FORBIDDEN-TOKENS` | `crates/kernel/src/conventions.rs` | the three forbidden direction tokens | `conventions::a_forbidden_direction_label_refuses_start` |
 | `S09408-ONE-ROW-PER-INSTRUMENT` | `migrations/009401_coordination_instrument_reports.sql` | the key on `instrument_reports (instrument)` (a script row; the cargo killer) | `instrument_reports::a_report_replaces_its_instruments_previous_one` |
-| `S09409-INSTRUMENT-LOCK-NO-WAIT` | `crates/ingest/src/lock.rs` | the instrument lock's take never waits: the mutant makes it wait for the holder or always succeed | `instruments_step::a_run_while_one_runs_starts_nothing` |
+| `S09409-INSTRUMENT-LOCK-NO-WAIT` | `crates/ingest/src/lock.rs` | the instrument lock's take never waits: the mutant makes the take wait for the holder (`File::lock` for `File::try_lock`); the killer bounds its wait with a timeout that fails the test | `instruments_step::a_run_while_one_runs_starts_nothing` |
+| `S09410-INSTRUMENT-LOCK-ALWAYS-TAKEN` | `crates/ingest/src/lock.rs` | the instrument lock's take holds the lock: the mutant returns from the take without holding it, so a second run starts | `instruments_step::a_run_while_one_runs_starts_nothing` |

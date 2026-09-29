@@ -234,7 +234,7 @@ predecessor at `27ee2bc` (SPEC-029). Every case is synthetic.
 | `direction_classify` | `direction.py:classify` | adapter | patches the three rule tables with synthetic rules, including an arrow and a casefold case |
 | `direction_counts` | `anki_reader.py:read_direction_card_counts`, `read_direction_answer_counts` | adapter | a temporary collection file with suspended, mature and borrowed cards and several answers a day |
 | `direction_language` | `direction.py:_resolve_language` | adapter | patches the course and writing-root tables with synthetic decks |
-| `illusion_ledger` | `direction.py:build_ledger` | adapter | synthetic count rows, names and decks, under and over the coverage gate, one-armed and unmapped |
+| `illusion_ledger` | `direction.py:build_ledger` | adapter | synthetic count rows, names and decks, under, at exactly 60% and over the coverage gate, one-armed and unmapped |
 | `transfer_fold` | `transfer.py:fold` | function | none: every folded character and a character outside the table |
 | `transfer_parse` | `transfer.py:parse_note` | adapter | patches the field-name constants with synthetic names; excluded, choice, rank and meaning fields |
 | `transfer_snippet` | `transfer.py:_snippet_for` | function | none: a character at a field's start, middle and end |

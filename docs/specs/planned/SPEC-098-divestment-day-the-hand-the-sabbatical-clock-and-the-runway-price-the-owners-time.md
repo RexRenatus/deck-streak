@@ -214,7 +214,7 @@ R18. The insights screen shows each report as a section:
 | A23 | the hand labels fallback minutes as estimated | `labels fallback minutes as estimated` |
 | A24 | the clock draws both curves and states each park day or beyond a year | `draws both curves and states each park day` |
 | A25 | the runway shows a reason, never a number, for a zero or unknown rate | `shows a reason and never a number for an unknown rate` |
-| A26 | each instrument is passed the inputs R2 names: the scoped cards, the events of the last 90 days, the last 60 rollups newest first, the presets and each deck's track | `each_instrument_is_passed_its_inputs` |
+| A26 | each instrument is passed the inputs R2 names: Divestment Day the scoped cards, the study events of the last 90 days and the leech threshold; the hand the scoped cards with their memory state, the run's instant and the last 60 rollups newest first; the clock the scoped cards with their memory state and course and the run's study day; and the runway R1's rows, the presets and each deck's track | `each_instrument_is_passed_its_inputs` |
 
 ```acceptance
 A1: cargo test -p deck-streak-ingest --test budget_reads -- --exact the_runway_rows_match_the_predecessors_reader

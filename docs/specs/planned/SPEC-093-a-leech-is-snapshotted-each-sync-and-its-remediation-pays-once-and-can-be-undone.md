@@ -142,6 +142,8 @@ R11. Every constant this SPEC uses (the 40 XP, the board's 15, the protocol's 8.
 | A17 | the breakdown's shape equals the golden of `charts.py:leech_breakdown` | `the_leech_breakdown_matches_the_predecessors_golden` |
 | A18 | the action sheet offers Fix on an active card and Undo on a remediated one | `offers fix on an active leech and undo on a remediated one` |
 | A19 | the list shows card ids and strands and never card content | `shows card ids and strands and never card content` |
+| A20 | once a recompute stores the snapshot, SPEC-077's law block and law mastery pillar read the active law leeches from curriculum's leech port, never their pending value | `the_law_block_reads_the_leech_port` |
+| A21 | the leech step passes the configured leech threshold, so a card is a leech at that many lapses and not one fewer | `the_leech_step_passes_the_configured_threshold` |
 
 ```acceptance
 A1: cargo test -p deck-streak-curriculum --test leech_goldens -- --exact leech_rows_match_the_predecessors_golden
@@ -163,6 +165,8 @@ A16: cargo test -p deck-streak-bot --test leech_commands -- --exact leech_and_un
 A17: cargo test -p deck-streak-insights --test charts_leech -- --exact the_leech_breakdown_matches_the_predecessors_golden
 A18: pnpm exec vitest run web/app/src/lib/leeches/LeechSheet.test.ts -t "offers fix on an active leech and undo on a remediated one"
 A19: pnpm exec vitest run web/app/src/lib/leeches/LeechList.test.ts -t "shows card ids and strands and never card content"
+A20: cargo test -p deck-streak-coordination --test leech_step -- --exact the_law_block_reads_the_leech_port
+A21: cargo test -p deck-streak-coordination --test leech_step -- --exact the_leech_step_passes_the_configured_threshold
 ```
 
 ## 3a. What the box run judges
@@ -204,7 +208,7 @@ change when it merges.
 | `crates/coordination/src/charts/mod.rs` | `deck-streak-coordination` | changed: `leech_breakdown` joins the closed set |
 | `crates/coordination/src/lib.rs` | `deck-streak-coordination` | changed: the module |
 | `crates/coordination/tests/leech_remediation.rs` | `deck-streak-coordination` | added: A7 to A11 |
-| `crates/coordination/tests/leech_step.rs` | `deck-streak-coordination` | added: A12 |
+| `crates/coordination/tests/leech_step.rs` | `deck-streak-coordination` | added: A12, A20, A21 |
 | `crates/api/src/leech_routes.rs` | `deck-streak-api` | added: the three routes |
 | `crates/api/src/router.rs` | `deck-streak-api` | changed: the routes behind the owner's session |
 | `crates/api/tests/leech_routes.rs` | `deck-streak-api` | added: A15 |

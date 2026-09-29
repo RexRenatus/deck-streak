@@ -143,7 +143,7 @@ R11. Every constant this SPEC uses (the index pattern, the mature mastery, the w
 
 ```acceptance
 A1: cargo test -p deck-streak-ingest --test law_subject -- --exact the_law_subject_matches_the_predecessors_golden
-A2: cargo test -p deck-streak-ingest --test law_subject -- --exact a_law_taxonomy_without_a_root_refuses_the_cycles_step
+A2: cargo test -p deck-streak-daemon --test roles -- --exact a_law_taxonomy_without_a_root_refuses_the_cycles_step
 A3: cargo test -p deck-streak-curriculum --test strands_goldens -- --exact the_strand_parse_matches_the_predecessors_golden
 A4: cargo test -p deck-streak-curriculum --test strands_goldens -- --exact strand_stats_match_the_predecessors_golden
 A5: cargo test -p deck-streak-curriculum --test strands_goldens -- --exact weak_spots_match_the_predecessors_golden
@@ -181,7 +181,8 @@ when it merges.
 | `crates/ingest/src/law_subject.rs` | `deck-streak-ingest` | added: a card's law subject and test-prep section |
 | `crates/ingest/src/settings.rs` | `deck-streak-ingest` | changed: the year bands and the test-prep deck beside the law root |
 | `crates/ingest/src/lib.rs` | `deck-streak-ingest` | changed: the law subject module |
-| `crates/ingest/tests/law_subject.rs` | `deck-streak-ingest` | added: A1, A2 |
+| `crates/ingest/tests/law_subject.rs` | `deck-streak-ingest` | added: A1 |
+| `crates/daemon/tests/roles.rs` | `deck-streak-daemon` | changed: A2, beside `the_sync_job_pages_on_a_malformed_scope_before_it_syncs` |
 | `.env.example` | repo | changed: neutral examples of the two settings |
 | `deploy/deck-streak.env.example` | deploy | changed: the same two settings |
 | `crates/coordination/src/law_taxonomy.rs` | `deck-streak-coordination` | added: the start-up agreement of ingest's law settings with the readings taxonomy (R2) |
@@ -265,9 +266,9 @@ owner's.
 | golden | the predecessor's function | kind | the adapter builds |
 |---|---|---|---|
 | `strand_parse` | `strands.py:parse_strand` | function | none: leaves with and without an index token, a letter suffix, and an index alone |
-| `strand_stats` | `strands.py:compute_strand_stats` | adapter | synthetic courses patched into `progress`, cards with memory states and reviews across two study days |
-| `weak_strands` | `strands.py:weak_strands` | adapter | statistics above and below 30 answered and around the 8-point gap |
-| `test_prep_board` | `lsat.py:compute_lsat_board` | adapter | patches the module's law root and `_LSAT_TRACK` with synthetic names; sections, a short path and suspended studied cards |
+| `strand_stats` | `strands.py:compute_strand_stats` | adapter | synthetic courses patched into `progress`, cards with memory states (one at mastery exactly 0.5) and reviews across two study days |
+| `weak_strands` | `strands.py:weak_strands` | adapter | statistics at, above and below 30 answered, and a shortfall of exactly 8 points and one either side |
+| `test_prep_board` | `lsat.py:compute_lsat_board` | adapter | patches the module's law root and `_LSAT_TRACK` with synthetic names; sections, a short path, cards of 0 and of 1 reps and suspended studied cards |
 | `strands.constants` | `strands._STRAND_IDX_RE`, `_MATURE_MASTERY_THRESHOLD`; `weak_strands`' defaults | constants | none |
 
 `law_subject` is SPEC-045's golden (`registry/spec_045.py`, adapter `under_the_synthetic_taxonomy`); ingest's A1

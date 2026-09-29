@@ -161,6 +161,7 @@ R13. The insights screen shows each report as a section. The Echo gives its pool
 | A22 | a null Echo withholds its headline | `withholds the headline of a null echo` |
 | A23 | a failed Bench II part renders its line beside the other two | `renders a failed part beside the other two` |
 | A24 | a failed Docket renders a failure, never an empty docket | `renders a failed docket as a failure` |
+| A25 | each instrument is passed its reads: the Echo the review-type answers with the note type and template names of SPEC-094's structure read, the rest day the study events, and Bench II the presets, the deck kinds, each home deck's card count, the lateness bands and the in-band answers | `each_instrument_is_passed_its_reads` |
 
 ```acceptance
 A1: cargo test -p deck-streak-kernel --test pynum_random -- --exact the_generator_matches_cpythons_golden
@@ -187,6 +188,7 @@ A21: pnpm exec vitest run web/app/src/lib/insights/RestDaySection.test.ts -t "re
 A22: pnpm exec vitest run web/app/src/lib/insights/EchoSection.test.ts -t "withholds the headline of a null echo"
 A23: pnpm exec vitest run web/app/src/lib/insights/BenchSection.test.ts -t "renders a failed part beside the other two"
 A24: pnpm exec vitest run web/app/src/lib/insights/DocketSection.test.ts -t "renders a failed docket as a failure"
+A25: cargo test -p deck-streak-coordination --test docket_step -- --exact each_instrument_is_passed_its_reads
 ```
 
 ## 3a. What the box run judges
@@ -221,7 +223,7 @@ delivery, so the private wiring does not change when it merges.
 | `crates/insights/tests/bench_ii.rs` | `deck-streak-insights` | added: A12 to A17 |
 | `crates/insights/tests/docket.rs` | `deck-streak-insights` | added: A18, A19 |
 | `crates/coordination/src/instruments.rs` | `deck-streak-coordination` | changed: the new reads, and the stored reports passed to the Docket |
-| `crates/coordination/tests/docket_step.rs` | `deck-streak-coordination` | added: A20 |
+| `crates/coordination/tests/docket_step.rs` | `deck-streak-coordination` | added: A20, A25 |
 | `web/app/src/lib/insights/EchoSection.svelte` | miniapp | added |
 | `web/app/src/lib/insights/EchoSection.test.ts` | miniapp | added: A22 |
 | `web/app/src/lib/insights/RestDaySection.svelte` | miniapp | added |
@@ -283,14 +285,14 @@ predecessor at `27ee2bc` (SPEC-029). Every case is synthetic.
 | `pynum_random` | CPython's `random.Random`, `random` and `choices` | adapter | sequences of draws and `choices` over short lists from four seeds |
 | `pynum_lgamma` | CPython's `math.lgamma` | adapter | arguments from 1 to `10**6`, integral and not |
 | `lateness_rows` | `bench2.py:read_lateness_rows` | adapter | a temporary collection file with synthetic review logs at each ratio's edge, sub-day and first reviews |
-| `echo_report` | `echo.py:build_echo_report` | adapter | synthetic answers, a template-name map and a `CollectionConfig` from the case |
+| `echo_report` | `echo.py:build_echo_report` | adapter | synthetic answers, a template-name map and a `CollectionConfig` from the case, and an arm with 19, 20 and 21 answers in a cell |
 | `restday_report` | `restday.py:build_restday_report` | adapter | synthetic study events and a `CollectionConfig`, resolved, unresolved, suppressed and cold |
 | `restday_calendars` | `restday.py:_candidate_calendars` | adapter | configurations with positive, negative and zero offsets |
 | `preset_report` | `bench2.py:build_preset_report` | adapter | preset and deck blobs encoded in the adapter, one malformed |
 | `lateness_report` | `bench2.py:build_lateness_report` | adapter | band rows with a failed read and none |
 | `bakeoff_report` | `bench2.py:build_bakeoff_report` | adapter | per-deck rows and names, one deck unnamed, a surviving pair and a null |
-| `fisher_p` | `bench2.py:_fisher_two_sided_p` | function | none: tables at the 20 floor, identical and extreme |
-| `docket` | `docket.py:build_docket` | adapter | the three reports from their builders over synthetic rows, a source missing, and each entry recorded as its pair and the numbers it quotes |
+| `fisher_p` | `bench2.py:_fisher_two_sided_p` | function | none: tables at the 20 floor, identical and extreme, and a table whose mirror image ties the observed probability to the last bits |
+| `docket` | `docket.py:build_docket` | adapter | the three reports from their builders over synthetic rows, a source missing, a worst deck at exactly 50% and one just above it, and each entry recorded as its pair and the numbers it quotes |
 | `echo.constants`, `restday.constants`, `bench2.constants` | the modules' constants | constants | none |
 
 ## 8. Tables and the v9 import

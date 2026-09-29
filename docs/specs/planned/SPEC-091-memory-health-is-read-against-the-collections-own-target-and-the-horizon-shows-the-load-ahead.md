@@ -31,15 +31,23 @@
     an interval of 21 days or more.
   - Calibration reads the 7 NEWEST rollups (rollups arrive newest first) with at least 5 answers,
     averages their true retention with `sum/len` over floats, compares it with the collection's
-    desired retention within 5 points, and rounds the mean to one place; with none it is no-data.
+    desired retention within 5 points, and rounds the mean to one place. Its four statuses
+    (`coaching.py:_calibration`) are no-data (no rollup qualifies), calibrated (within 5 points of
+    the desired retention), over-studying (above it by more than 5 points) and under-target (below
+    it by more than 5 points).
+  - The retention advice (`coaching.py:_retention_advice`) has four actions: lower, review, hold
+    and none.
   - The desired retention is the MEDIAN of each card's desired retention times 100 (an even count
     averages the two middle values), rounded to one place, and 90.0 when no card carries one.
   - The mature trend reads the 30 newest rollups, skips a day whose mature split is missing or zero
     (a missing split is never 0 %), needs 5 mature answers over the window, and reports the
-    newer half's answer-weighted retention minus the older half's only from 4 data days.
+    newer half's answer-weighted retention minus the older half's only from 4 data days. It has two
+    outcomes (`coaching.py:_mature_trend`): no-data and ok.
   - Input readiness counts only strands whose name starts with "vocab" in any case, through
     SPEC-092's parse; it skips suspended and never-studied new cards, calls a card known at R 0.9 or
-    more, and reads "not enough data yet" below 20 introduced cards.
+    more. Its five verdicts (`comprehension.py:_verdict`) are insufficient-data below 20 introduced
+    cards (rendered "not enough data yet"), extensive-ready at 98 or above, comprehensible at 95 or
+    above, borderline at 90 or above and build-vocab below 90.
   - Stability depth is the median stability in days and the share at 100 days or more.
   - The horizon classifies by queue FIRST: queues −1 to −3 are excluded, a new card (type 0 or
     queue 0) is counted as new, queues 1 and 4 hold epoch seconds and are owed now, a borrowed card
@@ -128,6 +136,7 @@ R12. Every constant this SPEC uses (the retrievable and at-risk edges, the matur
 | A15 | `/memory` states each readout the route states | `memory_states_each_readout` |
 | A16 | each gauge states its value as text beside its meter | `states each gauge value as text` |
 | A17 | the horizon chart states the thirty-day obligation and both levers as text | `states the obligation and both levers as text` |
+| A18 | the step passes the collection's day number, so the horizon buckets by due minus that number | `the_memory_step_passes_the_collections_day_number` |
 
 ```acceptance
 A1: cargo test -p deck-streak-curriculum --test memory_goldens -- --exact memory_health_matches_the_predecessors_golden
@@ -147,6 +156,7 @@ A14: cargo test -p deck-streak-api --test memory_routes -- --exact the_memory_ro
 A15: cargo test -p deck-streak-bot --test memory_commands -- --exact memory_states_each_readout
 A16: pnpm exec vitest run web/app/src/lib/memory/MemoryGauges.test.ts -t "states each gauge value as text"
 A17: pnpm exec vitest run web/app/src/lib/memory/HorizonChart.test.ts -t "states the obligation and both levers as text"
+A18: cargo test -p deck-streak-coordination --test memory_step -- --exact the_memory_step_passes_the_collections_day_number
 ```
 
 ## 3a. What the box run judges
@@ -181,7 +191,7 @@ when it merges.
 | `crates/daemon/src/wiring.rs` | `deck-streak-daemon` | changed: registers the memory step in phase 4 of `recompute_fold` (SPEC-071 R19) |
 | `crates/coordination/src/memory.rs` | `deck-streak-coordination` | added: the memory and horizon read models |
 | `crates/coordination/src/lib.rs` | `deck-streak-coordination` | changed: the read models |
-| `crates/coordination/tests/memory_step.rs` | `deck-streak-coordination` | added: A11, A12 |
+| `crates/coordination/tests/memory_step.rs` | `deck-streak-coordination` | added: A11, A12, A18 |
 | `crates/api/src/memory_routes.rs` | `deck-streak-api` | added: the two routes |
 | `crates/api/src/router.rs` | `deck-streak-api` | changed: the routes behind the owner's session |
 | `crates/api/tests/memory_routes.rs` | `deck-streak-api` | added: A14 |
@@ -244,7 +254,7 @@ predecessor at `27ee2bc` (SPEC-029). Every case is synthetic.
 
 | golden | the predecessor's function | kind | the adapter builds |
 |---|---|---|---|
-| `memory_health` | `coaching.py:_memory_health` | adapter | synthetic cards with and without memory states, suspended, at the edges 0.8 and 0.9, at a fixed `now_sec` |
+| `memory_health` | `coaching.py:_memory_health` | adapter | synthetic cards with and without memory states, suspended, at the edges 0.8 and 0.9, review cards at intervals of 20 and 21 days, at a fixed `now_sec` |
 | `desired_retention` | `coaching.py:_collection_desired_pct` | adapter | synthetic cards whose memory states carry odd and even counts of desired retentions, and none |
 | `calibration` | `coaching.py:_calibration` | function | none: rollups newest first, each status and the tolerance's edges |
 | `retention_advice` | `coaching.py:_retention_advice` | function | none: each status |

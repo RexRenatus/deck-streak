@@ -149,6 +149,7 @@ R13. Every constant this SPEC uses (the velocity floor, the goal's floor, horizo
 | A18 | the tool refuses each malformed synthetic syllabus as `_validate_language_units` does | `test_refusals_match_the_predecessors_golden` |
 | A19 | the syllabus directory is configuration: with neither the flag nor the variable the tool refuses | `test_the_syllabus_directory_is_configuration` |
 | A20 | `--check` exits non-zero and names a course whose configured bands differ from the export | `test_check_names_a_course_that_disagrees` |
+| A21 | the pace step passes the stored rollups (the last 370 for the goal's p90), SPEC-077's stored course progress and the study reviews of the read window with each card's course | `the_pace_step_is_passed_its_inputs` |
 
 ```acceptance
 A1: cargo test -p deck-streak-kernel --test pynum_goldens -- --exact the_numeric_basics_match_cpythons_golden
@@ -171,6 +172,7 @@ A17: python3 -m unittest discover -s scripts/tests -p test_syllabus_bands.py -k 
 A18: python3 -m unittest discover -s scripts/tests -p test_syllabus_bands.py -k test_refusals_match_the_predecessors_golden
 A19: python3 -m unittest discover -s scripts/tests -p test_syllabus_bands.py -k test_the_syllabus_directory_is_configuration
 A20: python3 -m unittest discover -s scripts/tests -p test_syllabus_bands.py -k test_check_names_a_course_that_disagrees
+A21: cargo test -p deck-streak-coordination --test pace_step -- --exact the_pace_step_is_passed_its_inputs
 ```
 
 ## 3a. What the box run judges
@@ -209,7 +211,7 @@ when it merges.
 | `crates/coordination/src/pace.rs` | `deck-streak-coordination` | added: the pace read model |
 | `crates/coordination/src/today/view.rs` | `deck-streak-coordination` | changed: the goal beside today's reviews |
 | `crates/coordination/src/lib.rs` | `deck-streak-coordination` | changed: the pace read model |
-| `crates/coordination/tests/pace_step.rs` | `deck-streak-coordination` | added: A9, A10 |
+| `crates/coordination/tests/pace_step.rs` | `deck-streak-coordination` | added: A9, A10, A21 |
 | `crates/api/src/pace_routes.rs` | `deck-streak-api` | added: `GET /api/curriculum/pace` |
 | `crates/api/src/router.rs` | `deck-streak-api` | changed: the pace route behind the owner's session |
 | `crates/api/tests/pace_routes.rs` | `deck-streak-api` | added: A12 |
@@ -289,8 +291,8 @@ unit band or syllabus of the owner's.
 | `percentile` | `gamification/adaptive.py:percentile` | function | none: empty, one value, `0.9` of 70 values, `0.2` and `1.0` |
 | `mature_velocity` | `velocity.py:mature_velocity` | adapter | rollup rows with and without reviews, all-zero graduations, an even count |
 | `forecast` | `velocity.py:compute_velocity` | adapter | synthetic `LanguageProgress` values with gaps, empty bands and a fully achieved course |
-| `adaptive_goal` | `gamification/adaptive.py:adaptive_daily_goal` | adapter | the remaining sum, the 365-day horizon and `max(percentile_p90(history), 30)` as `compute_all` feeds them |
-| `balance` | `cross_language.py:compute_balance` | adapter | synthetic courses patched into the module's course lookup, reviews either side of the window and the rollover, a long-idle course and an empty window |
+| `adaptive_goal` | `gamification/adaptive.py:adaptive_daily_goal` | adapter | the remaining sum, the 365-day horizon and `max(percentile_p90(history), 30)` as `compute_all` feeds them, a per-day need under 10, at 10 and over it, and a history p90 under 30, at 30 and over it |
+| `balance` | `cross_language.py:compute_balance` | adapter | synthetic courses patched into the module's course lookup, reviews on the window's first and last study day and on the day before it, and either side of the rollover, a course whose share is exactly 5.0 and one just under it, a long-idle course and an empty window |
 | `syllabus_derive` | `tools/syllabus/export_bands.py:derive_language` | function | none: synthetic syllabi |
 | `syllabus_refusals` | `tools/syllabus/export_bands.py:_validate_language_units` | adapter | one synthetic syllabus per refusal; returns which check refused, never the message's path |
 | `pace.constants` | `velocity.MIN_MATURE_VELOCITY`; `coaching._GOAL_HORIZON_DAYS`; `cross_language.NEGLECTED_SHARE_PCT`; `adaptive_daily_goal`'s floor | constants | none |

@@ -36,7 +36,7 @@ Chosen option: "A pass after each sync's recompute, with unlocks recorded once",
 belongs to the study that earned it and the scan never blocks a reader or the fold.
 
 - The pass runs after the recompute commits and before the instruments step (SPEC-094's frame),
-  one at a time through the offload (SPEC-099 R6).
+  once per sync cycle, through the kernel's offload (SPEC-099 R6).
 - `can_do_unlocks` is keyed by statement and course and keeps the first instant; a rung already
   recorded is never rewritten.
 - `can_do_ladder` holds the latest pass, replaced in the same write; a failed read replaces it with
