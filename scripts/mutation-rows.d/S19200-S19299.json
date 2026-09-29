@@ -217,6 +217,30 @@
         "        text = path.read_text(encoding=\"utf-8\")\n",
         "an `impl Setting for` inside a block comment is not an implementation, so it is not examined (SPEC-192 A14)",
         "test_setting_shapes.TheGuardIgnoresAnImplementationInAComment.test_a_block_comment_holding_an_impl_is_not_examined"
+      ],
+      [
+        "S19226-THE-GUARD-BLANKS-LINE-COMMENTS-IN-ITS-SKELETON",
+        "scripts/tests/test_setting_shapes.py",
+        "            end = len(text) if end == -1 else end\n            blank((bare, skeleton), start, end)",
+        "            end = len(text) if end == -1 else end\n            blank((bare,), start, end)",
+        "a brace inside a line comment is not counted when the test module's span is matched, so a production line after the module is not read as inside it (SPEC-192 A15)",
+        "test_setting_shapes.TheGuardReadsRustSource.test_a_production_line_after_the_own_files_test_module_is_refused"
+      ],
+      [
+        "S19227-A-MODULE-FILE-NEEDS-A-CFG-TEST-ATTRIBUTE",
+        "scripts/tests/test_setting_shapes.py",
+        "        if \"#[cfg(test)]\" not in module.group(1):\n            continue\n",
+        "",
+        "a `mod tests;` behind an attribute other than `#[cfg(test)]` is production code, so its file is not read as the implementation's test module (SPEC-192 A13)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_a_file_that_is_no_declared_test_module_is_not_read_as_one"
+      ],
+      [
+        "S19228-A-RAW-STRING-CLOSES-ONLY-AT-ITS-OWN-HASH-COUNT",
+        "scripts/tests/test_setting_shapes.py",
+        "close = text.find('\"' + raw.group(1), raw.end())",
+        "close = text.find('\"', raw.end())",
+        "a raw string with hashes ends at a quote followed by the same number of hashes, so a quote inside it does not end it and a `//` after that quote is still inside the string (SPEC-192 A15)",
+        "test_setting_shapes.TheGuardReadsRustSource.test_a_shape_a_test_spells_after_a_url_on_its_line_is_pinned"
       ]
     ]
   }
