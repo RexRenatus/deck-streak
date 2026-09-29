@@ -160,3 +160,4 @@ the script's sha256 matched. Row S05709 pins it (793e95e): `mutation_rows.py pro
 its killer passing without the mutant and failing with it, with the file restored byte for byte.
 A28's own red and green lines stand, since the plan at dd734e5 read every line as production and
 the new line adds no red of its own.
+A24: green at 1efacb7711855888a3e3b8e762cd8d799f724582 (the row commit; the sweep at d1ffc87, run 36508131543, read listed 367, killed 362, equivalent 5, unexplained 0, unviable 0)
