@@ -1,0 +1,738 @@
+{
+  "cases": [
+    {
+      "class": "plain",
+      "input": {
+        "text": "A bonus for speed"
+      },
+      "output": "A bonus for speed"
+    },
+    {
+      "class": "plain",
+      "input": {
+        "text": "Relevance is a low bar"
+      },
+      "output": "Relevance is a low bar"
+    },
+    {
+      "class": "empty",
+      "input": {
+        "text": ""
+      },
+      "output": ""
+    },
+    {
+      "class": "blank",
+      "input": {
+        "text": "   \t\n  "
+      },
+      "output": ""
+    },
+    {
+      "class": "markup",
+      "input": {
+        "text": "<b>Bold</b> and <i>slanted</i> text of a note"
+      },
+      "output": "Bold and slanted text of a note"
+    },
+    {
+      "class": "markup",
+      "input": {
+        "text": "<div class=\"x\">Inside a div</div><br/>after the break"
+      },
+      "output": "Inside a div after the break"
+    },
+    {
+      "class": "markup",
+      "input": {
+        "text": "text with a lone < bracket and more words after it"
+      },
+      "output": "text with a lone bracket and more words after it"
+    },
+    {
+      "class": "markup",
+      "input": {
+        "text": "text with an unclosed <span tag that never ends"
+      },
+      "output": "text with an unclosed span tag that never ends"
+    },
+    {
+      "class": "markup",
+      "input": {
+        "text": "<>empty tag then a long enough remainder of text"
+      },
+      "output": "empty tag then a long enough remainder of text"
+    },
+    {
+      "class": "markup",
+      "input": {
+        "text": "a <tag> b <tag> c <tag> d <tag> e <tag> f <tag> g <tag> h"
+      },
+      "output": "a b c d e f g h"
+    },
+    {
+      "class": "entity",
+      "input": {
+        "text": "Tom &amp; Jerry &lt;b&gt;bold&lt;/b&gt; &quot;quoted&quot; &#39;single&#39;"
+      },
+      "output": "Tom & Jerry bold \"quoted\" 'single'"
+    },
+    {
+      "class": "entity",
+      "input": {
+        "text": "numeric &#65;&#x42;&#x63; and hex &#X44; entities in a note"
+      },
+      "output": "numeric ABc and hex D entities in a note"
+    },
+    {
+      "class": "entity",
+      "input": {
+        "text": "non-breaking&nbsp;space&nbsp;and&nbsp;more&nbsp;words&nbsp;here"
+      },
+      "output": "non-breaking space and more words here"
+    },
+    {
+      "class": "legacy",
+      "input": {
+        "text": "legacy semicolonless &amp and &lt and &gt and &copy 2024 entities"
+      },
+      "output": "legacy semicolonless & and and \u00a9 2024 entities"
+    },
+    {
+      "class": "legacy",
+      "input": {
+        "text": "caf\u00e9 &eacute and &Eacute and &szlig and &frac12 and &nbsp done"
+      },
+      "output": "caf\u00e9 \u00e9 and \u00c9 and \u00df and 1\u20442 and done"
+    },
+    {
+      "class": "legacy",
+      "input": {
+        "text": "&notit; and &notin; and &not and &ampx are different names"
+      },
+      "output": "\u00acit; and \u2209 and \u00ac and &x are different names"
+    },
+    {
+      "class": "legacy",
+      "input": {
+        "text": "&#65 and &#x42 numeric without a semicolon then text follows it"
+      },
+      "output": "A and B numeric without a semicolon then text fo"
+    },
+    {
+      "class": "entity",
+      "input": {
+        "text": "unknown &nosuchentity; and &amp;amp; double escaped and &;"
+      },
+      "output": "unknown &nosuchentity; and &amp; double escaped "
+    },
+    {
+      "class": "entity",
+      "input": {
+        "text": "an escaped tag &lt;script&gt;alert&lt;/script&gt; decodes then strips"
+      },
+      "output": "an escaped tag alert decodes then strips"
+    },
+    {
+      "class": "fullwidth",
+      "input": {
+        "text": "\uff26\uff35\uff2c\uff2c\uff37\uff29\uff24\uff34\uff28\u3000\uff54\uff45\uff58\uff54\u3000\uff11\uff12\uff13"
+      },
+      "output": "FULLWIDTH text 123"
+    },
+    {
+      "class": "fullwidth",
+      "input": {
+        "text": "\uff3b\uff42\uff52\uff41\uff43\uff4b\uff45\uff54\uff3d\u3000\uff41\uff4e\uff44\u3000\uff40\uff54\uff49\uff43\uff4b\uff40\u3000\uff46\uff4f\uff4c\uff44\u3000\uff54\uff4f\u3000\uff52\uff41\uff49\uff4c"
+      },
+      "output": "bracket and tick fold to rail"
+    },
+    {
+      "class": "fullwidth",
+      "input": {
+        "text": "\uff4a\uff41\uff56\uff41\uff53\uff43\uff52\uff49\uff50\uff54\uff1aalert and more words after the token"
+      },
+      "output": "alert and more words after the token"
+    },
+    {
+      "class": "compat",
+      "input": {
+        "text": "\ufb01nal \ufb02ow \u2460 \u2461 \u338f \u2103 \u00bd text of a note with ligatures"
+      },
+      "output": "final flow 1 2 kg \u00b0C 1\u20442 text of a note with lig"
+    },
+    {
+      "class": "rail",
+      "input": {
+        "text": "code `inline` and [link](target) and more text following"
+      },
+      "output": "code inline and link (target) and more text foll"
+    },
+    {
+      "class": "rail",
+      "input": {
+        "text": "a NUL \u0000 byte inside the text of a long enough note"
+      },
+      "output": "a NUL byte inside the text of a long enough note"
+    },
+    {
+      "class": "rail",
+      "input": {
+        "text": "tilde ~~~ fence and ~~ pair and ~~~~ run of four inside text"
+      },
+      "output": "tilde fence and ~~ pair and run of four inside t"
+    },
+    {
+      "class": "rail",
+      "input": {
+        "text": "JavaScript:alert(1) and JAVASCRIPT: and javascript : spaced"
+      },
+      "output": "alert(1) and and javascript : spaced"
+    },
+    {
+      "class": "rail",
+      "input": {
+        "text": "[[wiki]] ]reversed[ and `` double ticks `` and more text"
+      },
+      "output": "wiki reversed and double ticks and more text"
+    },
+    {
+      "class": "space",
+      "input": {
+        "text": "tab\tseparated\tfields\tin\ta\tnote\twith\tmany\tof\tthem"
+      },
+      "output": "tab separated fields in a note with many of them"
+    },
+    {
+      "class": "space",
+      "input": {
+        "text": "line\nbreaks\r\nand\rcarriage\u000bvertical\ffeeds\u001cand\u001dseparators\u001e\u001f"
+      },
+      "output": "line breaks and carriage vertical feeds and sepa"
+    },
+    {
+      "class": "space",
+      "input": {
+        "text": "ideographic\u3000space\u2003em\u2009thin\u00a0nbsp\u202fnarrow\u2028line"
+      },
+      "output": "ideographic space em thin nbsp narrow line"
+    },
+    {
+      "class": "space",
+      "input": {
+        "text": "\u200bzero width\u200b and \ufeffbom kept or not by split"
+      },
+      "output": "\u200bzero width\u200b and \ufeffbom kept or not by split"
+    },
+    {
+      "class": "space",
+      "input": {
+        "text": "  leading and trailing   spaces   collapse   "
+      },
+      "output": "leading and trailing spaces collapse"
+    },
+    {
+      "class": "boundary",
+      "input": {
+        "text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "output": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    },
+    {
+      "class": "boundary",
+      "input": {
+        "text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "output": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    },
+    {
+      "class": "boundary",
+      "input": {
+        "text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "output": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    },
+    {
+      "class": "boundary",
+      "input": {
+        "text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "output": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    },
+    {
+      "class": "boundary",
+      "input": {
+        "text": "yyyyyyy"
+      },
+      "output": "yyyyyyy"
+    },
+    {
+      "class": "boundary",
+      "input": {
+        "text": "yyyyyyyy"
+      },
+      "output": "yyyyyyyy"
+    },
+    {
+      "class": "boundary",
+      "input": {
+        "text": "zzzzzzzzz"
+      },
+      "output": "zzzzzzzzz"
+    },
+    {
+      "class": "short",
+      "input": {
+        "text": "Hi"
+      },
+      "output": "Hi"
+    },
+    {
+      "class": "short",
+      "input": {
+        "text": "<b>Short</b>"
+      },
+      "output": "Short"
+    },
+    {
+      "class": "short",
+      "input": {
+        "text": "&amp;&amp;&amp;"
+      },
+      "output": "&&&"
+    },
+    {
+      "class": "short",
+      "input": {
+        "text": "`````"
+      },
+      "output": ""
+    },
+    {
+      "class": "astral",
+      "input": {
+        "text": "\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00"
+      },
+      "output": "\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00"
+    },
+    {
+      "class": "astral",
+      "input": {
+        "text": "\ud835\udd18\ud835\udd2b\ud835\udd26\ud835\udd20\ud835\udd2c\ud835\udd21\ud835\udd22 fraktur folds under NFKC to plain letters"
+      },
+      "output": "Unicode fraktur folds under NFKC to plain letter"
+    },
+    {
+      "class": "cjk",
+      "input": {
+        "text": "\u65e5\u672c\u8a9e\u306e\u30c6\u30ad\u30b9\u30c8\u3068\u305d\u306e\u8aad\u307f\u65b9\u3092\u8aac\u660e\u3059\u308b\u9577\u3044\u6587\u7ae0\u304c\u3053\u3053\u306b\u5165\u308a\u307e\u3059\u3002\u4e8c\u6587\u76ee\u3082\u3042\u308a\u307e\u3059\u3002"
+      },
+      "output": "\u65e5\u672c\u8a9e\u306e\u30c6\u30ad\u30b9\u30c8\u3068\u305d\u306e\u8aad\u307f\u65b9\u3092\u8aac\u660e\u3059\u308b\u9577\u3044\u6587\u7ae0\u304c\u3053\u3053\u306b\u5165\u308a\u307e\u3059\u3002\u4e8c\u6587\u76ee\u3082\u3042\u308a\u307e\u3059\u3002"
+    },
+    {
+      "class": "cjk",
+      "input": {
+        "text": "\u4e2d\u6587\u6587\u672c\u548c\u5b83\u7684\u62fc\u97f3\u8bf4\u660e\u5728\u8fd9\u91cc\u51fa\u73b0\uff0c\u8fd8\u6709\u66f4\u591a\u7684\u5b57\u6765\u8d85\u8fc7\u56db\u5341\u516b\u4e2a\u5b57\u7b26\u7684\u754c\u9650\u3002"
+      },
+      "output": "\u4e2d\u6587\u6587\u672c\u548c\u5b83\u7684\u62fc\u97f3\u8bf4\u660e\u5728\u8fd9\u91cc\u51fa\u73b0,\u8fd8\u6709\u66f4\u591a\u7684\u5b57\u6765\u8d85\u8fc7\u56db\u5341\u516b\u4e2a\u5b57\u7b26\u7684\u754c\u9650\u3002"
+    },
+    {
+      "class": "combining",
+      "input": {
+        "text": "e\u0301 combining accent and a\u030a ring folds to composed forms"
+      },
+      "output": "\u00e9 combining accent and \u00e5 ring folds to composed "
+    },
+    {
+      "class": "cut",
+      "input": {
+        "text": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa&amp;tail after the cut"
+      },
+      "output": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa&ta"
+    },
+    {
+      "class": "cut",
+      "input": {
+        "text": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb<i>italic</i>"
+      },
+      "output": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb "
+    },
+    {
+      "class": "cut",
+      "input": {
+        "text": "ccccccccccccccccccccccccccccccccccccccccccccccjavascript:"
+      },
+      "output": "cccccccccccccccccccccccccccccccccccccccccccccc"
+    },
+    {
+      "input": {
+        "text": "\n &lt; [ \n \t &amp; ~~~ &#65; <b> relevance \uff11 \uff11"
+      },
+      "output": "relevance 1 1"
+    },
+    {
+      "input": {
+        "text": "&lt;\n~~~"
+      },
+      "output": ""
+    },
+    {
+      "input": {
+        "text": "\u00e9 \uff11 </b> </b> ~~~ \t \n ~~~ ~~~ \uff11"
+      },
+      "output": "\u00e9 1 1"
+    },
+    {
+      "input": {
+        "text": "\ud83d\ude00\u65e5\u672c\uff21privilege</b>&#65;`hearsay</b>&amp;privilege"
+      },
+      "output": "\ud83d\ude00\u65e5\u672cAprivilege A hearsay &privilege"
+    },
+    {
+      "input": {
+        "text": " ]] ["
+      },
+      "output": ""
+    },
+    {
+      "input": {
+        "text": "&amp;  relevance  [     `  `  &#65;  `  hearsay  relevance"
+      },
+      "output": "& relevance A hearsay relevance"
+    },
+    {
+      "input": {
+        "text": "&lt;\n \n\t\n~~~\n&nbsp;"
+      },
+      "output": ""
+    },
+    {
+      "input": {
+        "text": "\t\n[\n&eacute"
+      },
+      "output": "\u00e9"
+    },
+    {
+      "input": {
+        "text": "<b> \uff21  "
+      },
+      "output": "A"
+    },
+    {
+      "input": {
+        "text": "&lt;&#65;\uff11javascript:`&amp;&nbsp;hearsay\ud83d\ude00</b>\uff11<b>"
+      },
+      "output": "1"
+    },
+    {
+      "input": {
+        "text": "&amp; ]"
+      },
+      "output": "&"
+    },
+    {
+      "input": {
+        "text": "\t ~~~ \n \uff21 \u00e9 \ud83d\ude00 hearsay \n <b> &amp; \u00e9 &eacute ~~~"
+      },
+      "output": "A \u00e9 \ud83d\ude00 hearsay & \u00e9 \u00e9"
+    },
+    {
+      "input": {
+        "text": "&#65; &amp;"
+      },
+      "output": "A &"
+    },
+    {
+      "input": {
+        "text": "[ \t privilege \n ] \n"
+      },
+      "output": "privilege"
+    },
+    {
+      "input": {
+        "text": "relevance</b>`\ud83d\ude00\ud83d\ude00 relevance<b>relevance\n\ud83d\ude00&lt;]"
+      },
+      "output": "relevance \ud83d\ude00\ud83d\ude00 relevance relevance \ud83d\ude00"
+    },
+    {
+      "input": {
+        "text": "[&amp;\uff21&amp;</b>`</b>"
+      },
+      "output": "&A&"
+    },
+    {
+      "input": {
+        "text": "]\n&lt;"
+      },
+      "output": ""
+    },
+    {
+      "input": {
+        "text": "\t\nprivilege\n\u00e9"
+      },
+      "output": "privilege \u00e9"
+    },
+    {
+      "input": {
+        "text": "<b>"
+      },
+      "output": ""
+    },
+    {
+      "input": {
+        "text": "] \uff21 &amp; ] </b> javascript: &nbsp; ] &lt; \n &amp;"
+      },
+      "output": "A & &"
+    },
+    {
+      "input": {
+        "text": "hearsay\n\uff21\njavascript:\n]\n\uff21"
+      },
+      "output": "hearsay A A"
+    },
+    {
+      "input": {
+        "text": "&amp; privilege &#65; \u65e5\u672c </b> relevance   \ud83d\ude00 privilege &eacute &nbsp; ~~~  "
+      },
+      "output": "& privilege A \u65e5\u672c relevance \ud83d\ude00 privilege \u00e9"
+    },
+    {
+      "input": {
+        "text": "[ ] &nbsp;"
+      },
+      "output": ""
+    },
+    {
+      "input": {
+        "text": "hearsay"
+      },
+      "output": "hearsay"
+    },
+    {
+      "input": {
+        "text": "</b>&nbsp;\uff21 &nbsp;privilege&#65;javascript:]\u00e9hearsay\t"
+      },
+      "output": "A privilegeA \u00e9hearsay"
+    },
+    {
+      "input": {
+        "text": "\uff21  &eacute  \uff21  \uff21  [  relevance  \u00e9  privilege  &#65;  \u65e5\u672c"
+      },
+      "output": "A \u00e9 A A relevance \u00e9 privilege A \u65e5\u672c"
+    },
+    {
+      "input": {
+        "text": "</b>\n]\n\u00e9\n~~~"
+      },
+      "output": "\u00e9"
+    },
+    {
+      "input": {
+        "text": "&nbsp; hearsay javascript: &lt;"
+      },
+      "output": "hearsay"
+    },
+    {
+      "input": {
+        "text": "javascript:  relevance  &amp;  \u65e5\u672c  `  &eacute  &lt;  ]  relevance  &lt;  \n  javascript:"
+      },
+      "output": "relevance & \u65e5\u672c \u00e9 relevance"
+    },
+    {
+      "input": {
+        "text": "&lt;  relevance  `  \uff11  \ud83d\ude00  \u00e9  `  \uff21  \uff21"
+      },
+      "output": "relevance 1 \ud83d\ude00 \u00e9 A A"
+    },
+    {
+      "input": {
+        "text": "&nbsp;  \t     ]  &nbsp;  privilege  \t  \u65e5\u672c  ["
+      },
+      "output": "privilege \u65e5\u672c"
+    },
+    {
+      "input": {
+        "text": "&lt; \u00e9 \n ` \u65e5\u672c &lt; javascript: ~~~ \t &eacute &lt; \t"
+      },
+      "output": "\u00e9 \u65e5\u672c \u00e9"
+    },
+    {
+      "input": {
+        "text": "[\n\t\nhearsay\n\ud83d\ude00\n</b>\njavascript:\n\uff21\n</b>\n&eacute\n\ud83d\ude00\n \n]"
+      },
+      "output": "hearsay \ud83d\ude00 A \u00e9 \ud83d\ude00"
+    },
+    {
+      "input": {
+        "text": "<b>&lt;&lt;[relevance&#65;\nprivilege<b>~~~["
+      },
+      "output": ""
+    },
+    {
+      "input": {
+        "text": "\n ~~~ privilege &lt; [ [ &amp; &lt; ] privilege \u65e5\u672c hearsay \ud83d\ude00"
+      },
+      "output": "privilege & privilege \u65e5\u672c hearsay \ud83d\ude00"
+    },
+    {
+      "input": {
+        "text": "\u65e5\u672c  \uff21     \ud83d\ude00  \n  &amp;  \t  &lt;"
+      },
+      "output": "\u65e5\u672c A \ud83d\ude00 &"
+    },
+    {
+      "input": {
+        "text": "&eacute\uff11<b>\u00e9\u00e9\n\ud83d\ude00\u65e5\u672c&lt;"
+      },
+      "output": "\u00e91 \u00e9\u00e9 \ud83d\ude00\u65e5\u672c"
+    },
+    {
+      "input": {
+        "text": "</b>\n]\n&amp;\n</b>"
+      },
+      "output": "&"
+    },
+    {
+      "input": {
+        "text": "\u00e9privilege]\t&eacute&amp;</b>"
+      },
+      "output": "\u00e9privilege \u00e9&"
+    },
+    {
+      "input": {
+        "text": "]  </b>  \ud83d\ude00  ]  \uff11  \u65e5\u672c  &amp;  javascript:  \ud83d\ude00  `  <b>  &eacute"
+      },
+      "output": "\ud83d\ude00 1 \u65e5\u672c & \ud83d\ude00 \u00e9"
+    },
+    {
+      "input": {
+        "text": "&lt;  relevance  ~~~  \uff21  &lt;"
+      },
+      "output": "relevance A"
+    },
+    {
+      "input": {
+        "text": "&lt;  \ud83d\ude00  privilege  <b>  &nbsp;  \ud83d\ude00  \ud83d\ude00  hearsay  &amp;"
+      },
+      "output": "\ud83d\ude00 \ud83d\ude00 hearsay &"
+    },
+    {
+      "input": {
+        "text": "&#65;\nprivilege\n&eacute\n</b>\n&nbsp;\n\n\n\u00e9"
+      },
+      "output": "A privilege \u00e9 \u00e9"
+    },
+    {
+      "input": {
+        "text": " \nhearsay\n \n\n\n<b>\n<b>\n&amp;"
+      },
+      "output": "hearsay &"
+    },
+    {
+      "input": {
+        "text": "&nbsp;\n&#65;\n\t\n]\n<b>\n`\n[\n`\n&amp;\n&amp;\n&eacute\n "
+      },
+      "output": "A & & \u00e9"
+    },
+    {
+      "input": {
+        "text": "~~~ ` &eacute <b> \ud83d\ude00 hearsay \u00e9"
+      },
+      "output": "\u00e9 \ud83d\ude00 hearsay \u00e9"
+    },
+    {
+      "input": {
+        "text": "relevance ] relevance [ javascript: [ ] &eacute \uff21"
+      },
+      "output": "relevance relevance \u00e9 A"
+    },
+    {
+      "input": {
+        "text": "javascript: relevance hearsay &#65; <b> <b> ` \t privilege \u00e9 \uff11"
+      },
+      "output": "relevance hearsay A privilege \u00e9 1"
+    },
+    {
+      "input": {
+        "text": "&nbsp;"
+      },
+      "output": ""
+    },
+    {
+      "input": {
+        "text": "&eacute  &eacute  \u00e9  privilege  ]  \u00e9   "
+      },
+      "output": "\u00e9 \u00e9 \u00e9 privilege \u00e9"
+    },
+    {
+      "input": {
+        "text": "&amp; \u00e9 </b> &lt; &nbsp; \t"
+      },
+      "output": "& \u00e9"
+    },
+    {
+      "input": {
+        "text": "hearsay\njavascript:\n<b>\n\n\n</b>\n<b>\n`\n]\nrelevance\n&amp;\nhearsay\n`"
+      },
+      "output": "hearsay relevance & hearsay"
+    },
+    {
+      "input": {
+        "text": "\t&nbsp;\uff21\n[&nbsp;~~~\t&nbsp;"
+      },
+      "output": "A"
+    },
+    {
+      "input": {
+        "text": "hearsay\nrelevance\nprivilege\n\ud83d\ude00\n\ud83d\ude00\n\ud83d\ude00"
+      },
+      "output": "hearsay relevance privilege \ud83d\ude00 \ud83d\ude00 \ud83d\ude00"
+    },
+    {
+      "input": {
+        "text": "&lt;  </b>  &eacute"
+      },
+      "output": "\u00e9"
+    },
+    {
+      "input": {
+        "text": "&lt;]&amp;"
+      },
+      "output": "&"
+    },
+    {
+      "input": {
+        "text": "]  \u00e9  </b>  privilege  &amp;  &lt;  relevance  &nbsp;  &lt;"
+      },
+      "output": "\u00e9 privilege & relevance"
+    },
+    {
+      "input": {
+        "text": "javascript:\nrelevance\n[\n \nrelevance"
+      },
+      "output": "relevance relevance"
+    },
+    {
+      "input": {
+        "text": "~~~"
+      },
+      "output": ""
+    },
+    {
+      "input": {
+        "text": "\u65e5\u672c\n\u00e9\n]\nhearsay\nrelevance\nhearsay\nprivilege\nrelevance\n\ud83d\ude00\n]\n\uff11\n["
+      },
+      "output": "\u65e5\u672c \u00e9 hearsay relevance hearsay privilege relevan"
+    }
+  ],
+  "function": "preread.anchor_for_note",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "function",
+  "registry": "tools/parity-oracle/registry/spec_046.py",
+  "registry_sha256": "a9155c8bd8fce32c5cc90ed75842417b7faaa9cdbb8aa83bb20f3eb5820cbe43",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}
