@@ -176,8 +176,8 @@ fn the_heat_and_the_comeback_view_match_the_parity_goldens() {
     println!("{heat} {badge} {misses}");
 }
 
-#[test]
-fn the_streak_constants_and_economy_json_match_the_predecessors() {
+/// The economy file names each constant the crate carries: the same numbers, read from the JSON.
+fn economy_json_matches_the_constants() {
     let economy: Value = serde_json::from_str(ECONOMY).expect("economy.json");
     let streak = &economy["streak"];
     let governor = &economy["governor"];
@@ -213,6 +213,11 @@ fn the_streak_constants_and_economy_json_match_the_predecessors() {
     );
     assert_eq!(int(&relight["xp"]), i64::from(RELIGHT_XP));
     assert_eq!(int(&relight["min_reviews"]), i64::from(RELIGHT_CARDS));
+}
+
+#[test]
+fn the_streak_constants_and_economy_json_match_the_predecessors() {
+    economy_json_matches_the_constants();
     let examined = golden::each_case("streaks.constants", |case| {
         let name = case.input["name"].as_str().expect("a name");
         match name {
