@@ -107,7 +107,8 @@ class TheModuleHoldsItsConstants(unittest.TestCase):
         code = (
             "import sys; import mutation_python; print(sys.dont_write_bytecode); print(sys.path[0])"
         )
-        env = {k: v for k, v in os.environ.items() if k != "PYTHONDONTWRITEBYTECODE"}
+        drop = ("PYTHONDONTWRITEBYTECODE", "PYTHONPYCACHEPREFIX")
+        env = {k: v for k, v in os.environ.items() if k not in drop}
         with tempfile.TemporaryDirectory() as scratch:
             for name in ("mutation_python.py", "mutation_rows.py"):
                 (Path(scratch) / name).write_text(
