@@ -122,8 +122,113 @@ EXIT_NAMES = {
 DECIMAL = re.compile(r"0|[1-9][0-9]{0,2}")
 
 
+# The keys each kind of unit that loads a credential may hold, by section, written out by hand
+# rather than read from the tree (SPEC-066 R2, R3). A key off its unit's list, in any section, is
+# refused, so a directive the census does not know cannot skip a start or turn its failure into a
+# success. The alert template's list is its own and names no `OnFailure=`.
+ALERT_KEYS = {
+    "Unit": ("After", "Description", "Documentation", "Wants"),
+    "Service": (
+        "CapabilityBoundingSet",
+        "ExecStart",
+        "Group",
+        "LoadCredential",
+        "LockPersonality",
+        "MemoryDenyWriteExecute",
+        "MemoryHigh",
+        "MemoryMax",
+        "NoNewPrivileges",
+        "PrivateDevices",
+        "PrivateTmp",
+        "ProcSubset",
+        "ProtectClock",
+        "ProtectControlGroups",
+        "ProtectHome",
+        "ProtectHostname",
+        "ProtectKernelLogs",
+        "ProtectKernelModules",
+        "ProtectKernelTunables",
+        "ProtectProc",
+        "ProtectSystem",
+        "RestrictAddressFamilies",
+        "RestrictNamespaces",
+        "RestrictRealtime",
+        "RestrictSUIDSGID",
+        "SupplementaryGroups",
+        "SyslogIdentifier",
+        "SystemCallArchitectures",
+        "SystemCallFilter",
+        "TimeoutStartSec",
+        "Type",
+        "UMask",
+        "User",
+    ),
+}
+PAGING_KEYS = {
+    "Unit": (
+        "After",
+        "Description",
+        "Documentation",
+        "OnFailure",
+        "StartLimitBurst",
+        "StartLimitIntervalSec",
+        "Wants",
+    ),
+    "Install": ("WantedBy",),
+    "Service": (
+        "CPUQuota",
+        "CapabilityBoundingSet",
+        "EnvironmentFile",
+        "ExecStart",
+        "Group",
+        "IOSchedulingClass",
+        "LoadCredential",
+        "LockPersonality",
+        "MemoryDenyWriteExecute",
+        "MemoryHigh",
+        "MemoryMax",
+        "Nice",
+        "NoNewPrivileges",
+        "OOMPolicy",
+        "PrivateDevices",
+        "PrivateTmp",
+        "ProcSubset",
+        "ProtectClock",
+        "ProtectControlGroups",
+        "ProtectHome",
+        "ProtectHostname",
+        "ProtectKernelLogs",
+        "ProtectKernelModules",
+        "ProtectKernelTunables",
+        "ProtectProc",
+        "ProtectSystem",
+        "Restart",
+        "RestartSec",
+        "RestrictAddressFamilies",
+        "RestrictNamespaces",
+        "RestrictRealtime",
+        "RestrictSUIDSGID",
+        "StateDirectory",
+        "SyslogIdentifier",
+        "SystemCallArchitectures",
+        "SystemCallFilter",
+        "TasksMax",
+        "TimeoutStartSec",
+        "TimeoutStopSec",
+        "Type",
+        "UMask",
+        "User",
+        "WatchdogSec",
+    ),
+}
 class Refused(AssertionError):
     """A unit file the reader refuses to read, naming the file and the line (SPEC-066)."""
+
+
+def off_list(pairs, allowed):
+    """For each (section, key) of `pairs`, whether it is off `allowed`, the list of a kind of unit
+    (SPEC-066 R2)."""
+    return [False for _ in pairs]
 
 
 @dataclasses.dataclass(frozen=True, slots=True)

@@ -44,6 +44,7 @@ DIRECT = "skips the failed state on a restart"
 RESTARTS = "restarts the refusal"
 UNLOADS = "can unload the failed instance, which systemctl --failed then no longer lists"
 UNREAD = "is empty or not a known value, which the check refuses"
+OFF_LIST = "is not on this unit's list of keys, and is refused"
 STOPS = (
     "is refused, as every condition and assertion is, since one can stop the start and leave the "
     "instance inactive, not failed"
@@ -681,6 +682,38 @@ class AnEmptyCredentialFailsTheAlertUnit(unittest.TestCase):
                 self.assertEqual(
                     alert_template_refusals(path), [f"{name}:{after}: {why}"], repr(line)
                 )
+
+
+    def test_a_key_off_the_alert_templates_list_is_refused_by_name(self):
+        # The alert template holds only the keys `_units.ALERT_KEYS` lists, each in the section the
+        # list gives it: a key off the list, in any section, is refused by its key (SPEC-066 R3).
+        # The committed template holds none. Planted, one line at a time after the template's
+        # Description= (in [Unit]) or its ExecStart= (in [Service]): the directives that make a
+        # start depend on another unit; a key with no standard meaning; and a key the list holds in
+        # the other section.
+        self.assertEqual(alert_template_refusals(SYSTEMD / ALERT_TEMPLATE), [])
+        name = ALERT_TEMPLATE
+        plants = [
+            ("Description=", "Requisite=missing.service", "Unit", "Requisite", "missing.service"),
+            ("Description=", "Requires=missing.service", "Unit", "Requires", "missing.service"),
+            ("Description=", "BindsTo=missing.service", "Unit", "BindsTo", "missing.service"),
+            ("Description=", "X-Note=kept", "Unit", "X-Note", "kept"),
+            ("Description=", "User=nobody", "Unit", "User", "nobody"),
+            ("ExecStart=", "X-Note=kept", "Service", "X-Note", "kept"),
+            ("ExecStart=", "Wants=network-online.target", "Service", "Wants", "network-online.target"),
+        ]
+        got = {}
+        for anchor, line, section, key, value in examined("planted alert template(s)", plants):
+            with tempfile.TemporaryDirectory() as scratch:
+                path = planted_template(Path(scratch), anchor, line, True)
+                got[line] = alert_template_refusals(path)
+        self.assertEqual(
+            got,
+            {
+                line: [f"{name}: [{section}] {key}={value} {OFF_LIST}"]
+                for _, line, section, key, value in plants
+            },
+        )
 
 
 if __name__ == "__main__":

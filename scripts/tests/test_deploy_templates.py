@@ -443,6 +443,18 @@ def refusal_page_conditions(unit):
     return refused
 
 
+def off_list_refusals(unit, allowed):
+    """Every assignment of `unit`, its drop-ins included, whose section and key are not on
+    `allowed`, each naming its key (SPEC-066 R2)."""
+    off = _units.off_list([(a.section, a.key) for a in unit.assignments], allowed)
+    return [
+        f"{a.source}:{a.line}: [{a.section}] {a.key}={a.value} is not on this unit's list of keys, "
+        "and is refused"
+        for a, refused in zip(unit.assignments, off, strict=True)
+        if refused
+    ]
+
+
 def refusal_page_refusals(unit):
     """The refusals of `refusal_page_conditions`, each without the directive it reads."""
     return [refusal for _, refusal in refusal_page_conditions(unit)]
@@ -1363,6 +1375,130 @@ class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
         )
         read = f"{head}# a note, \u00a7 3\n{page}{run}\t{loads}"
         self.assertIsNone(reader_refusal({"read.service": read}))
+
+
+    def test_a_key_off_its_units_list_is_refused_and_the_trees_units_hold_only_listed_keys(self):
+        # Each unit that loads a credential holds only the keys its kind's list names, in the
+        # section the list gives them; the alert template's list is its own (SPEC-066 R2, R3).
+        alert = f"{ALERT_TEMPLATE}@.service"
+        loading = examined(
+            "service unit(s) that load a credential",
+            sorted((unit for unit in subject().services if loads_a_credential(unit)), key=name),
+        )
+        for unit in loading:
+            allowed = _units.ALERT_KEYS if unit.name == alert else _units.PAGING_KEYS
+            self.assertEqual(off_list_refusals(unit, allowed), [], unit.rel)
+        # Planted units: each key below is off its unit's list and refused by name and line. The
+        # directives that make a start depend on another unit, on the alert template and on a
+        # paging unit; a key with no standard meaning; `OnFailure=` on the alert template, whose
+        # list never holds it; and a key the list holds in another section. A control of each
+        # kind holds only listed keys and is admitted.
+        where = "deploy/systemd/planted.service"
+        head = "[Unit]\nDescription=planted\n"
+        page = f"OnFailure={ON_FAILURE}\n"
+        run = "[Service]\nExecStart=/bin/true\n"
+        loads = f"LoadCredential=telegram-bot-token:{SOCKET}\n"
+
+        def refusal(line, section, key, value):
+            return (
+                f"{where}:{line}: [{section}] {key}={value} is not on this unit's list of keys, "
+                "and is refused"
+            )
+
+        # Each plant: the list, the unit's kind, a line planted at the end of `[Unit]`, and one
+        # planted at the end of `[Service]`, and the refusals it draws.
+        plants = {
+            "alert control": (_units.ALERT_KEYS, "", "", "", []),
+            "paging control": (_units.PAGING_KEYS, page, "", "", []),
+            "alert requisite": (
+                _units.ALERT_KEYS,
+                "",
+                "Requisite=missing.service\n",
+                "",
+                [refusal(3, "Unit", "Requisite", "missing.service")],
+            ),
+            "alert requires": (
+                _units.ALERT_KEYS,
+                "",
+                "Requires=missing.service\n",
+                "",
+                [refusal(3, "Unit", "Requires", "missing.service")],
+            ),
+            "alert binds-to": (
+                _units.ALERT_KEYS,
+                "",
+                "BindsTo=missing.service\n",
+                "",
+                [refusal(3, "Unit", "BindsTo", "missing.service")],
+            ),
+            "paging requisite": (
+                _units.PAGING_KEYS,
+                page,
+                "Requisite=missing.service\n",
+                "",
+                [refusal(3, "Unit", "Requisite", "missing.service")],
+            ),
+            "alert extension key": (
+                _units.ALERT_KEYS,
+                "",
+                "X-Note=kept\n",
+                "",
+                [refusal(3, "Unit", "X-Note", "kept")],
+            ),
+            "paging extension key": (
+                _units.PAGING_KEYS,
+                page,
+                "",
+                "X-Note=kept\n",
+                [refusal(7, "Service", "X-Note", "kept")],
+            ),
+            "alert on-failure": (
+                _units.ALERT_KEYS,
+                "",
+                page,
+                "",
+                [refusal(3, "Unit", "OnFailure", ON_FAILURE)],
+            ),
+            "alert listed key, wrong section": (
+                _units.ALERT_KEYS,
+                "",
+                "User=nobody\n",
+                "",
+                [refusal(3, "Unit", "User", "nobody")],
+            ),
+            "paging listed key, wrong section": (
+                _units.PAGING_KEYS,
+                page,
+                "",
+                "Wants=network-online.target\n",
+                [refusal(7, "Service", "Wants", "network-online.target")],
+            ),
+        }
+        got = {}
+        for label in examined("planted unit(s) held to a list", sorted(plants)):
+            allowed, first, unit_line, service_line, _ = plants[label]
+            text = f"{head}{unit_line}{first}{run}{loads}{service_line}"
+            got[label] = planted_refusals(
+                text, lambda unit, allowed=allowed: off_list_refusals(unit, allowed)
+            )
+        self.assertEqual(got, {label: plants[label][4] for label in plants})
+        # A drop-in of a unit is read with it: a directive planted in one is refused by the drop-in's
+        # file and line.
+        with tempfile.TemporaryDirectory() as scratch:
+            folder = Path(scratch) / "deploy" / "systemd"
+            (folder / "planted.service.d").mkdir(parents=True)
+            (folder / "planted.service").write_text(f"{head}{run}{loads}", encoding="utf-8")
+            (folder / "planted.service.d" / "10-planted.conf").write_text(
+                "[Unit]\nRequires=missing.service\n", encoding="utf-8"
+            )
+            (planted,) = subject(scratch).services
+        self.assertEqual(
+            off_list_refusals(planted, _units.ALERT_KEYS),
+            [
+                "deploy/systemd/planted.service.d/10-planted.conf:2: [Unit] Requires="
+                "missing.service is not on this unit's list of keys, and is refused"
+            ],
+        )
 
 
 if __name__ == "__main__":
