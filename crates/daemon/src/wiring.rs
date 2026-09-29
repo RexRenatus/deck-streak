@@ -286,7 +286,6 @@ pub struct OwnerSyncCycle {
     db: Db,
     offload: Offload,
     rule: StudyDayRule,
-    router: Option<Arc<Router>>,
     recompute: RecomputeSetup,
 }
 
@@ -309,16 +308,8 @@ impl OwnerSyncCycle {
             db,
             offload,
             rule,
-            router: None,
             recompute,
         }
-    }
-
-    /// The owner's sync, flushing `router` after a sync that succeeds (SPEC-041 R7).
-    #[must_use]
-    pub fn with_router(mut self, router: Arc<Router>) -> Self {
-        self.router = Some(router);
-        self
     }
 
     /// Runs the owner's cycle once, in the process that calls it: the sync job's, never the
@@ -356,10 +347,6 @@ impl OwnerSyncCycle {
             self.db.clone(),
             self.rule,
         );
-        let parts = match &self.router {
-            Some(router) => parts.with_flush(Arc::clone(router)),
-            None => parts,
-        };
         let report = sync_cycle(&parts, Trigger::Owner)
             .await
             .map_err(|error| refused(cycle_reason(&error), &error))?;
