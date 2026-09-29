@@ -70,7 +70,7 @@ bash deploy/deploy.sh vX.Y.Z
 ```
 
 The script refuses unless the tag is an annotated SemVer tag whose commit is on `origin/main`
-after a fetch. It downloads the release, verifies the tarball's attestation
+after a fetch (`git merge-base --is-ancestor vX.Y.Z origin/main`). It downloads the release, verifies the tarball's attestation
 (`gh attestation verify --repo` this repository, `--signer-workflow` its release workflow) and its
 digest against `SHA256SUMS`, and only then reaches the host: it unpacks beside the previous
 releases, switches `current` with one `mv -T`, installs the units byte for byte, restarts them and
