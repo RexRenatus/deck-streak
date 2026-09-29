@@ -58,3 +58,24 @@ fbfc7b5.
   the longest by its sides and the smallest by its area, so a reader that takes the widest size
   fails. The body of `push_photo_is_one_send_photo_to_the_owner` did not change. The same commit
   added `crates/notifications/tests/photo_jpeg.rs`, nine tests of the JPEG size reader.
+
+## A test added after green
+
+`a_failed_photo_opens_the_breaker_for_the_next_photo` (740979463dd1, in
+`crates/notifications/tests/photo_render.rs`) pins a behaviour of criterion A5 and R4 that already
+held: a failed photo opens the outage breaker, so the next photo inside the cooldown answers
+`NotNow { send_failed }` with no second `push_photo`. It is green at the commit that added it, so
+its red is quoted from two plants of the production code, each made in a scratch copy and never
+committed:
+
+```text
+plant: the failed-photo arm of route_photo does not open the breaker
+  assertion `left == right` failed: an open breaker answers send_failed, not quiet_hours and not a send
+  left: Sent { file_id: FileId("synthetic-file-id") } right: NotNow { reason: SendFailed }
+plant: the breaker's answer is quiet_hours
+  assertion `left == right` failed: an open breaker answers send_failed, not quiet_hours and not a send
+  left: NotNow { reason: QuietHours } right: NotNow { reason: SendFailed }
+```
+
+Before it, both plants passed every other test of the crate (84 passed, 0 failed each). Row
+S13211 in the band file mutates the same line and names this test as its killer.
