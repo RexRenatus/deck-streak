@@ -12,8 +12,8 @@ A2: not red: the reader finds the blocks on the unfixed tree too, since a block 
 A3: not red: the parser refuses a reserved-word id on any tree; the criterion pins that the check itself can refuse
 A4: red at cbb4047b: AssertionError: expected [] to deeply equal [ 'planted.md block 1' ]: the reader found no block in an indented fence, in a list item or by three spaces, so both new tests failed
 A4: green at 5855fa5b
-A5: red at 9de26193: AssertionError: expected [] to deeply equal [ 'planted.md block 1' ]: the reader found no block in a quoted fence or in one spaced before `mermaid`, so both new tests failed
-A5: green at e39a1d01
+A5: red at 63fb9832: AssertionError: 1665 of 3241 members read otherwise: expected [ …(3) ] to deeply equal []: the fence-line reader read 1,665 of the 3,241 generated container forms otherwise than GitHub renders them, so both new tests failed
+A5: green at 57bc9aec
 ```
 
 The reader was then extended to read an indented fence. Its test (A4) was committed alone
@@ -94,9 +94,11 @@ reader, and the reader change (57bc9aec) turned all eight green; the test file i
 between those two commits except for the reader, its import and A2. The replay of A5 at 63fb9832,
 over the whole file, printed `Tests  2 failed | 6 passed (8)`:
 
-```red-first
+```text
 A5: red at 63fb9832: AssertionError: 1665 of 3241 members read otherwise: expected [ …(3) ] to deeply equal []: the fence-line reader read 1,665 of the 3,241 generated container forms otherwise than GitHub renders them, so both new tests failed
 A5: green at 57bc9aec
 ```
 
 At 57bc9aec all eight tests pass and 191 blocks are examined, the same 191 with the same text.
+
+After the reader change, the test file gained a presence assertion in each A5 test and spells its opener cross-check regular expression with `\x60` for the backtick, so the tdd probe reads the file as written: the assertions and the pattern change no verdict, and the failure quoted above is the failure of the test as committed at 63fb9832.
