@@ -1,0 +1,53 @@
+{
+  "scripts/audit-web-verdict.py": {
+    "dir": "scripts/tests",
+    "modules": [
+      "test_audit_web"
+    ]
+  },
+  "scripts/create-issues.py": {
+    "dir": "scripts/tests",
+    "modules": []
+  },
+  "scripts/mutation-verdict.py": {
+    "dir": "scripts/tests",
+    "modules": [
+      "test_mutation_verdict",
+      "test_mutation_equivalent"
+    ]
+  },
+  "scripts/mutation_python.py": {
+    "dir": "scripts/tests",
+    "modules": [
+      "test_mutation_python"
+    ]
+  },
+  "scripts/mutation_rows.py": {
+    "dir": "scripts/tests",
+    "modules": [
+      "test_mutation_rows",
+      "test_mutation_verdict",
+      "test_mutation_equivalent"
+    ]
+  },
+  "scripts/public-scrub.py": {
+    "dir": "scripts/tests",
+    "modules": [
+      "test_public_scrub",
+      "test_readings_taxonomy_scrub",
+      "test_rail_contract",
+      "test_deploy_templates"
+    ]
+  },
+  "scripts/write-back-issues.py": {
+    "dir": "scripts/tests",
+    "modules": []
+  },
+  "tools/parity-oracle/generate.py": {
+    "dir": "tools/parity-oracle",
+    "modules": [
+      "test_generate",
+      "test_goldens"
+    ]
+  }
+}
