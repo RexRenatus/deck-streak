@@ -10,7 +10,7 @@ use std::sync::Arc;
 use deck_streak_kernel::{Clock, StudyDay, StudyDayRule, UtcMillis};
 use deck_streak_progression::grant::GrantPort;
 use deck_streak_readings::store::{SqliteReadings, VaultTick};
-use deck_streak_readings::studied::Verdict;
+pub use deck_streak_readings::studied::Verdict;
 use deck_streak_readings::topic::TopicKey;
 
 use super::generate::{PortFuture, VaultWriteFailed};
