@@ -568,6 +568,14 @@
         "    raw = re.sub(rb\"\\\\([0-7]{3})\", lambda m: bytes([int(m.group(1), 8) & 0xFF]), os.fsencode(field), count=1)\n",
         "a mount point whose path carries a second octal escape is not matched, so the item goes (SPEC-060 R7, A12)",
         "test_host_scrub.Axes.test_an_item_that_is_or_holds_a_mount_point_is_refused"
+      ],
+      [
+        "S06072-A-FILE-SYSTEM-MOUNTED-WHOLE-TWICE-IS-REFUSED",
+        "deploy/host-scrub/plan.py",
+        "        if whole[fields[2]] > 1 and path.startswith(point.rstrip(\"/\") + \"/\"):\n",
+        "        if False:\n",
+        "an item inside a file system mounted whole at two points (a bind of its root directory) is listed and deleted (SPEC-060 R7, A12)",
+        "test_host_scrub.Axes.test_an_item_that_is_or_holds_a_mount_point_is_refused"
       ]
     ]
   }
