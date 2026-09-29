@@ -1,0 +1,38 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S19101-THE-LOOKUP-ONLY-FLAG-KEEPS-THE-PROBE-FROM-DOWNLOADING",
+        ".github/workflows/rust-cache.yml",
+        "          lookup-only: true\n",
+        "",
+        "the exact-key probe asks only whether the entry exists; without lookup-only it downloads the whole cache on every run (SPEC-191 R4)",
+        "test_rust_cache_workflow.TheRustCacheWorkflow.test_it_looks_the_exact_key_up_and_every_later_step_stops_on_a_hit"
+      ],
+      [
+        "S19102-THE-CLEAN-RUNS-BEFORE-THE-SAVE",
+        ".github/workflows/rust-cache.yml",
+        "run: cargo clean --workspace",
+        "run: true",
+        "the workspace's own artifacts are cleaned before the save, as ci.yml does, so the entry holds dependencies only (SPEC-191 R6)",
+        "test_rust_cache_workflow.TheRustCacheWorkflow.test_it_cleans_the_workspace_before_it_saves_under_the_exact_key"
+      ],
+      [
+        "S19103-THE-JOB-CHECKS-OUT-DEV",
+        ".github/workflows/rust-cache.yml",
+        "          ref: dev\n",
+        "          ref: main\n",
+        "the job computes the key over dev's tree, the tree ci.yml's pushes key over (SPEC-191 R2)",
+        "test_rust_cache_workflow.TheRustCacheWorkflow.test_it_checks_out_dev_without_persisting_credentials"
+      ],
+      [
+        "S19104-THE-KEY-KEEPS-ITS-CARGO-LOCK-TERM",
+        ".github/workflows/rust-cache.yml",
+        "          lookup-only: true\n          key: rust-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-${{ hashFiles('Cargo.lock') }}\n",
+        "          lookup-only: true\n          key: rust-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}\n",
+        "the lookup key equals ci.yml's, Cargo.lock term included, so a new lockfile state is a miss (SPEC-191 R3)",
+        "test_rust_cache_workflow.TheRustCacheWorkflow.test_its_key_and_paths_are_the_ones_ci_and_the_weekly_battery_restore"
+      ]
+    ]
+  }
+}
