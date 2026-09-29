@@ -166,7 +166,9 @@ A host whose root file system is itself mounted from a sub-tree (its mount root 
 every path item (an approved package is still removed): run the scrub from another host image
 instead. A host that mounts one file system whole at two points refuses every path item under either
 point, and a host with a directory bound elsewhere refuses every path item inside or holding that
-directory.
+directory. A directory bound in another mount namespace (a unit's bind path or a container's volume)
+is not in the scrub's own mount table, so the scrub does not refuse its source: put that source in
+the protected list (#372).
 
 | exit | meaning | what to do |
 |---|---|---|

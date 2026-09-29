@@ -216,6 +216,8 @@ alternatives:
   directory.
 - Bad, because a mount made after the apply's check is not seen; it belongs to the same removal
   interval as any other change.
+- Bad, because a directory bound in another mount namespace (a unit's bind path or a container's
+  volume) is not in the scrub's own mount table, so its source must be in the protected list (#372).
 - Bad, because the digest reads each candidate's content once; the tools run niced,
   off the predecessor's schedule as SPEC-027 R2 defines it, its sync minutes included, off every
   reserved slot, and off DeckStreak's own job slots.

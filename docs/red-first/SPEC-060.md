@@ -432,7 +432,7 @@ no clause keyed on the item's own path refused it. The order of work:
 - dde939b: A12's test gains the source direction in the bind subtest, with two controls (the bind
   replaced by another directory, and the bind on another device). Red over the whole module: only
   A12 failed, by assertion;
-- b61d1dc: the fix, a third clause of `plan.mounted` that finds the directory a bind mount shows
+- b61d1dc: the fix, a second block of `plan.mounted`, after the row loop's four conditions, that finds the directory a bind mount shows
   from the table's rows, and the reason for it in `mount_reason`;
 - 35c11a3: the row S06073, proved with its full id: killed.
 
