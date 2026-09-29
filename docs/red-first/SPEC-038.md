@@ -77,3 +77,14 @@ A20: green at 25b102c
 
 Amendment (2026-09-28): the lines of A8 and A9 moved into a `` ```retired `` fence, by inserted
 fence lines, because SPEC-056 retired those criteria when it removed their tests.
+
+Amendment (2026-09-29, #407): A21 was added by the SPEC's second amendment. Its red is the guard
+run at the base with the new test and no change to `scripts/check.sh`; its green is the same test
+after `stage_test_engine` derives the targets. The red commit `26e86e74` also edits A16's helper
+(it compares the two stages without the derived `--test` pairs), so A16 stays green at the base;
+the green commit `39ccff4b` edits `scripts/check.sh` and no test file.
+
+```red-first
+A21: red at 26e86e74: AssertionError: Lists differ: ["test-engine (as written) names the test targets [], not ['sync', 'engine_budget']"] != []
+A21: green at 39ccff4b
+```
