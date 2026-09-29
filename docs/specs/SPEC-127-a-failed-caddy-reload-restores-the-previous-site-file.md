@@ -150,3 +150,46 @@ The `caddy` stub gains a flag file that makes `adapt` refuse while `validate` pa
 first refusal's message (killer A11). Files changed: `deploy/deploy.sh`,
 `scripts/tests/test_deploy_scripts.py`, `scripts/mutation-rows.d/S12700-S12799.json`,
 `docs/red-first/SPEC-127.md` and `changelog.d/fix-caddy-remove-message-361.md`.
+
+## Amendment, 2026-09-29: a failed candidate write is its own refusal
+
+Issue #384, found in the review of #382. `deploy.sh caddy-remove` wrote its candidate Caddyfile with
+`grep ... >"$copy" || true`, and the `|| true` also swallowed a failed write. With no candidate on
+disk, each refusal's `find "$copy" -delete` failed under `set -e` inside the refusal group, so the
+script exited before it printed `deploy: refused`, and both refusals (the validation and the adapt
+check) shared the shape. The strengthened rule: a removal that cannot write its candidate refuses in
+words of its own (`deploy: the candidate Caddyfile could not be written`) and exits non-zero, and each
+refusal prints `deploy: refused` and exits non-zero whether or not the candidate exists.
+
+The write is now two steps, so that a failed redirection is told apart from `grep`'s exit status: an
+empty file is created first (a failure there is the refusal), then `grep` fills it, where status 1
+(no line kept) is not a failure and status 2 (the Caddyfile cannot be read) is the same refusal. The
+refusals' cleanup deletes the candidate only when it is a file. Nothing else in the removal changes.
+
+The criteria that back the rule are A12 to A15, defined in the section below. The insertions this
+amendment makes are these two sections, appended after the file's last line, and nothing above them
+is edited (SPEC-038 section 8, ruling (i)). Row S12713 pins the write's refusal (killer A12), rows
+S12714 and S12715 pin the two `grep` statuses (killers A14 and A15), and rows S12716 and S12717 pin
+the absent-candidate guard of each refusal (killer A13, one test per branch).
+
+## Acceptance criteria of the 2026-09-29 candidate-write amendment
+
+| id | criterion | test |
+|---|---|---|
+| A12 | a removal whose candidate cannot be written exits non-zero, prints `the candidate Caddyfile could not be written` and leaves the live Caddyfile and the site block unchanged (#384) | `test_deploy_scripts.py` `a_removal_whose_candidate_cannot_be_written_says_so` |
+| A13 | a removal refused at validation, and one refused at the adapt check, each exit non-zero and print `deploy: refused` when the candidate is already absent (#384) | `test_deploy_scripts.py` `a_removal_refused_at_validation_with_no_candidate_still_says_so` and `a_removal_refused_at_the_adapt_check_with_no_candidate_still_says_so` |
+| A14 | a removal whose Caddyfile cannot be read is refused with the write's message and leaves no candidate file (#384) | `test_deploy_scripts.py` `a_removal_whose_caddyfile_cannot_be_read_says_so` |
+| A15 | a removal from a Caddyfile holding only the import line succeeds, because `grep` keeping no line is not a failure (#384) | `test_deploy_scripts.py` `a_removal_from_a_caddyfile_holding_only_the_import_line_is_not_a_failure` |
+
+```acceptance
+A12: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k a_removal_whose_candidate_cannot_be_written_says_so
+A13: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k with_no_candidate_still_says_so
+A14: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k a_removal_whose_caddyfile_cannot_be_read_says_so
+A15: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k a_removal_from_a_caddyfile_holding_only_the_import_line_is_not_a_failure
+```
+
+The unwritable candidate is a directory planted at the candidate's path inside the test's own tree;
+the `caddy` stub gains a flag file that deletes the candidate before it refuses. Files changed:
+`deploy/deploy.sh`, `scripts/tests/test_deploy_scripts.py`, `scripts/mutation-rows.d/S12700-S12799.json`
+(rows S12711 and S12712 re-anchored on the changed lines, S12713 to S12717 added),
+`docs/red-first/SPEC-127.md` and `changelog.d/fix-candidate-write-384.md`.
