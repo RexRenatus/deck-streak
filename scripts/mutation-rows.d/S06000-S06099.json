@@ -576,6 +576,14 @@
         "        if False:\n",
         "an item inside a file system mounted whole at two points (a bind of its root directory) is listed and deleted (SPEC-060 R7, A12)",
         "test_host_scrub.Axes.test_an_item_that_is_or_holds_a_mount_point_is_refused"
+      ],
+      [
+        "S06073-AN-ITEM-IN-OR-HOLDING-A-BIND-SOURCE-IS-REFUSED",
+        "deploy/host-scrub/plan.py",
+        "            if other == device and where != point and within(root, shown):\n",
+        "            if False:\n",
+        "an item in, or holding, the source of a directory bound at another point is listed and deleted (SPEC-060 A7, R7, A12)",
+        "test_host_scrub.Axes.test_an_item_that_is_or_holds_a_mount_point_is_refused"
       ]
     ]
   }
