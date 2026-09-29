@@ -20,4 +20,5 @@
 pub mod lifecycle;
 pub mod role_api;
 pub mod role_bot;
+pub mod sync_request;
 pub mod wiring;

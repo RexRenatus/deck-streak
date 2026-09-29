@@ -109,6 +109,15 @@ R7. No workflow reads a secret other than `GITHUB_TOKEN`, and none checks out or
     `GITHUB_TOKEN` is admitted in either form and any case, because GitHub reads a secret's name
     without case. The checker reports how many workflow files, expressions, checkouts and run steps
     it examined, and a directory with no workflow file is VOID, never a pass.
+R8. The required `ci` check is always the pull request's own run, and a push run reports under its
+    own name (ADR-035's note).
+    - The aggregate job of `ci.yml`, whose id stays `ci`, is named
+      `${{ github.event_name == 'pull_request' && 'ci' || 'ci (push)' }}`: `ci` for a pull request
+      and `ci (push)` for a push to `dev` or `main`.
+    - No job of any workflow reports, under an event that is not `pull_request`, a name that either
+      ruleset requires.
+    - The rulesets name the same required contexts. Every reader of a pushed commit's aggregate
+      check reads `ci (push)`.
 
 ## 3. Acceptance criteria
 
@@ -127,6 +136,8 @@ R7. No workflow reads a secret other than `GITHUB_TOKEN`, and none checks out or
 | A11 | this repository's token and checkout are admitted | `test_ci_workflows.py` |
 | A12 | an empty workflow directory is refused | `test_ci_workflows.py` |
 | A13 | a .yaml workflow is held to the same hardening rules, an action is pinned only in its plain form, and the hardening tests read keys the way the checker does | `test_ci_workflows.py` |
+| A14 | the required ci check is always the pull request's own run | `test_ci_workflows.py` |
+| A15 | no push run reports under a required name | `test_ci_workflows.py` |
 
 ```acceptance
 A1: python3 -m unittest discover -s scripts/tests -p test_rulesets.py -k main_does_not_require_an_up_to_date_head
@@ -142,6 +153,8 @@ A10: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k ea
 A11: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k this_repositorys_token_and_checkout_are_admitted
 A12: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k an_empty_workflow_directory_is_refused
 A13: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k a_yaml_workflow_is_held_to_the_same_hardening_rules
+A14: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k the_required_ci_check_is_always_the_pull_requests_own_run
+A15: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k no_push_run_reports_under_a_required_name
 ```
 
 A5 to A7 run `base-is-dev`'s own script, as extracted from `ci.yml`, under `bash -e`.
@@ -221,6 +234,14 @@ function, `workflow_files`, which reads both extensions.
   keys the reader reads, a trigger, and forms the reader does not read. The test that judges each
   plant refuses it by the file's name.
 
+A14 and A15 read both rulesets' required contexts and every workflow through `read_workflow`.
+- A14 asserts the aggregate job's `name` is exactly the expression of R8, and evaluates it for
+  `pull_request` (`ci`) and for `push` (`ci (push)`, which no ruleset requires). The evaluator reads
+  exactly the form `github.event_name == '<event>' && '<a>' || '<b>'`, each arm non-empty, and
+  refuses any other.
+- A15 evaluates every job's name under each event of a workflow that is not `pull_request`, and
+  asserts none is a required context. A job with no `name` reports under its id.
+
 ## 4. File manifest
 
 | file | context | change |
@@ -246,6 +267,13 @@ function, `workflow_files`, which reads both extensions.
 | `docs/specs/SPEC-034-a-release-never-deadlocks-and-only-this-repositorys-dev-reaches-main.md` | `repo` | changed by the amendment: the insertions section 7 lists |
 | `docs/red-first/SPEC-034.md` | `repo` | changed by the amendment: A9 to A13 |
 | `changelog.d/test-ci-no-secrets-216.md` | `repo` | added by the amendment |
+| `.github/workflows/ci.yml` | `repo` | changed by the second amendment (section 8): the aggregate job's name |
+| `scripts/tests/test_ci_workflows.py` | `repo` | changed by the second amendment: A14 and A15 |
+| `scripts/mutation-rows.d/S03400-S03499.json` | `repo` | added by the second amendment: S03401 to S03403 |
+| `docs/decisions/ADR-035-required-checks-come-from-actions-and-forks-never-reach-main.md` | `repo` | changed by the second amendment: an appended note |
+| `RELEASING.md`, `docs/TESTING.md` | `repo` | changed by the second amendment: which run satisfies `ci` |
+| `docs/red-first/SPEC-034.md` | `repo` | changed by the second amendment: A14 and A15 |
+| `changelog.d/fix-pr-own-ci-034.md` | `repo` | added by the second amendment |
 
 ## 5. What this does NOT do
 
@@ -258,6 +286,7 @@ function, `workflow_files`, which reads both extensions.
 - It admits no fork contribution automatically. The maintainer re-lands accepted outside work from
   an internal branch (#160).
 - The amendment changes no workflow: the workflows already comply, and A9 keeps them so (#216).
+- The second amendment changes no ruleset: both keep requiring `ci` and `fragment` from GitHub Actions (#23).
 
 ## 6. Risks
 
@@ -295,3 +324,19 @@ workflows read no secret (their one token is `github.token`, which the survivors
 `mutation-weekly.yml` reads), pass none to another workflow, and check out only this repository,
 17 times, none with `repository`. A9 holds them there, and the planted workflows prove the checker
 red (A10, A12 and A13).
+
+## 8. Amendment, 2026-09-29: the required `ci` check is the pull request's own run
+
+Insert-only under ruling (i) of SPEC-038 section 8: every earlier byte is kept in order. It inserts:
+
+- section 2: R8, after R7;
+- section 3: rows A14 and A15 of the criteria table, lines A14 and A15 of the acceptance fence, and
+  the paragraph that begins "A14 and A15";
+- section 4: the seven rows marked "by the second amendment";
+- section 5: the bullet that begins "The second amendment";
+- this section.
+
+The `ci` workflow runs on a pull request and on a push to `dev` or `main`, and both rulesets
+require the context `ci` from GitHub Actions. The aggregate job's name depends on the event, so
+a pull request's own run is the run that satisfies the required check and a push run reports as
+`ci (push)`. A14 and A15 hold it, and S03401 to S03403 prove them red.

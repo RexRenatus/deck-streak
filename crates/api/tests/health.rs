@@ -46,6 +46,11 @@ fn health_body(word: &str) -> String {
     format!("{{\"status\":\"{word}\",\"version\":\"{VERSION}\"}}")
 }
 
+#[test]
+fn the_version_constant_is_the_release_version_the_bodies_carry() {
+    assert_eq!(deck_streak_api::health::VERSION, VERSION);
+}
+
 #[tokio::test]
 async fn livez_answers_while_the_process_runs() {
     // The database is not open: liveness does not depend on it.
