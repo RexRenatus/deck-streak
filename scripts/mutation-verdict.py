@@ -2267,6 +2267,7 @@ def main(argv: list[str] | None = None) -> int:
             "shards",
             "size",
             "judge",
+            "legs",
             "survivors",
             "battery",
             "configs",
@@ -2295,6 +2296,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--shard-reports")
     parser.add_argument("--whole")
     parser.add_argument("--package")
+    parser.add_argument("--rust-leg")
+    parser.add_argument("--rows-leg")
     args = parser.parse_args(argv)
     root = pathlib.Path(args.root).resolve()
     if args.verb == "plan":
@@ -2318,6 +2321,8 @@ def main(argv: list[str] | None = None) -> int:
         if not args.plan or not args.klass:
             parser.error("judge needs --plan and --class")
         return judge(args)
+    if args.verb == "legs":
+        return EXIT_OK
     if args.verb == "survivors":
         if not args.reports or not args.out:
             parser.error("survivors needs --reports and --out")
