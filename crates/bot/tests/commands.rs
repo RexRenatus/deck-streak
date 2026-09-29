@@ -114,8 +114,10 @@ async fn the_menu_is_registered_for_the_owners_chat_only() {
         .collect();
     assert_eq!(
         registered,
-        BTreeSet::from(["privacy", "export", "delete", "sync", "score"]),
-        "the five commands of the menu"
+        BTreeSet::from([
+            "privacy", "export", "delete", "sync", "score", "drills", "drill"
+        ]),
+        "the seven commands of the menu"
     );
     for (entry, command) in MENU
         .iter()

@@ -24,13 +24,13 @@ use std::future::Future;
 use std::sync::Arc;
 
 use deck_streak_coordination::data_rights_registry::{erase_all, export_all};
-use deck_streak_coordination::drills::{DrillNotes, RealFs};
+use deck_streak_coordination::drills::{self, DrillMeta, DrillNotes, RealFs, Surface};
 use deck_streak_coordination::score::day_score;
 use deck_streak_identity::Owner;
 use deck_streak_kernel::{Clock, Db, Environment, Setting, SettingsError, StudyDayRule};
 use frankenstein::types::{BotCommand, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo};
 
-use crate::drill_commands::{ANSWER_PREFIX, VIEW_PREFIX};
+use crate::drill_commands::{self, ANSWER_PREFIX, VIEW_PREFIX};
 use crate::gate::{self, Admission, OwnerCallback, OwnerMessage};
 use crate::score_commands::{score_failed_reply, score_reply};
 use crate::transport::{Incoming, Sent, Transport, escape_attribute, escape_html};
@@ -57,10 +57,18 @@ pub struct MenuEntry {
 }
 
 /// The owner's menu, in the order the menu shows it.
-pub const MENU: [MenuEntry; 5] = [
+pub const MENU: [MenuEntry; 7] = [
     MenuEntry {
         command: "score",
         description: "Show today's score",
+    },
+    MenuEntry {
+        command: "drills",
+        description: "Answer a law drill",
+    },
+    MenuEntry {
+        command: "drill",
+        description: "Pick a law drill by type",
     },
     MenuEntry {
         command: "sync",
@@ -203,6 +211,8 @@ impl Reply {
 fn command_lines() -> String {
     [
         "/score shows today's score",
+        "/drills lists the law drills to answer",
+        "/drill picks a law drill by type",
         "/sync syncs your collection now",
         "/export sends you a copy of your data",
         "/delete erases your data",
@@ -595,33 +605,106 @@ impl<S: OwnerSync> Commands<S> {
     }
 
     /// `/drills`: the unanswered drills (SPEC-110 R13).
-    #[allow(clippy::unused_async)]
     async fn drills(&self) {
-        let _ = &self.drills;
+        let reply = match self.unanswered() {
+            Some(unanswered) => drill_commands::list_reply("Unanswered drills", &unanswered),
+            None => drill_commands::unavailable_reply(),
+        };
+        self.send(reply).await;
     }
 
-    /// `/drill [code]`: the four types, or one type's active drills (R14).
-    #[allow(clippy::unused_async)]
+    /// `/drill [code]`: the four types, or one type's unanswered drills (R14).
     async fn drill(&self, text: &str) {
-        let _ = text;
+        let reply = match text.split_whitespace().nth(1) {
+            None => drill_commands::types_reply(),
+            Some(code) => match drill_commands::kind_of(code) {
+                None => drill_commands::refusal_reply(),
+                Some(kind) => match self.unanswered() {
+                    Some(all) => {
+                        let of_kind: Vec<_> = all.into_iter().filter(|m| m.kind == kind).collect();
+                        drill_commands::list_reply(kind, &of_kind)
+                    }
+                    None => drill_commands::unavailable_reply(),
+                },
+            },
+        };
+        self.send(reply).await;
     }
 
     /// A tap on a drill's button: its single view (R13).
-    #[allow(clippy::unused_async)]
     async fn drill_view(&self, data: &str) {
-        let _ = data;
+        let reply = match self.named(drill_commands::VIEW_PREFIX, data) {
+            Some(id) => {
+                let today = self.rule.study_day(self.clock.now());
+                self.drills
+                    .as_ref()
+                    .and_then(|notes| notes.view(&id, today))
+                    .map_or_else(drill_commands::gone_reply, |view| {
+                        drill_commands::view_reply(&view)
+                    })
+            }
+            None => drill_commands::gone_reply(),
+        };
+        self.send(reply).await;
     }
 
     /// A tap on a view's Answer button: the next message is the answer (R13).
-    #[allow(clippy::unused_async)]
     async fn drill_ask(&mut self, data: &str) {
-        let _ = (data, &self.pending_drill);
+        let reply = match self.named(drill_commands::ANSWER_PREFIX, data) {
+            Some(id) => {
+                let today = self.rule.study_day(self.clock.now());
+                let view = self
+                    .drills
+                    .as_ref()
+                    .and_then(|notes| notes.view(&id, today))
+                    .filter(|view| !view.meta.answered);
+                if let Some(view) = view {
+                    self.pending_drill = Some(id);
+                    drill_commands::ask_reply(&view.meta.title)
+                } else {
+                    drill_commands::gone_reply()
+                }
+            }
+            None => drill_commands::gone_reply(),
+        };
+        self.send(reply).await;
     }
 
     /// The owner's answer to the pending drill (R13).
-    #[allow(clippy::unused_async)]
     async fn drill_answer(&mut self, text: &str) {
-        let _ = text;
+        let pending = self.pending_drill.take();
+        let reply = match (pending, self.drills.as_ref()) {
+            (Some(id), Some(notes)) => {
+                let at = self.clock.now();
+                match drills::answer(notes, &self.db, &id, text, Surface::Bot, self.rule, at).await
+                {
+                    Ok(outcome) => drill_commands::outcome_reply(&outcome),
+                    Err(error) => {
+                        tracing::error!(%error, "the owner's drill answer could not be recorded");
+                        drill_commands::unavailable_reply()
+                    }
+                }
+            }
+            _ => drill_commands::gone_reply(),
+        };
+        self.send(reply).await;
+    }
+
+    /// The unanswered drills now, or none when the vault is not wired or cannot be read.
+    fn unanswered(&self) -> Option<Vec<DrillMeta>> {
+        let today = self.rule.study_day(self.clock.now());
+        let listed = self.drills.as_ref()?.list_active(today).ok()?;
+        Some(listed.into_iter().filter(|meta| !meta.answered).collect())
+    }
+
+    /// The drill `data` names among those unanswered now (a hashed token needs the list).
+    fn named(&self, prefix: &str, data: &str) -> Option<String> {
+        let offered: Vec<String> = self
+            .unanswered()?
+            .into_iter()
+            .map(|meta| meta.drill_id)
+            .collect();
+        drill_commands::resolve_token(prefix, data, &offered)
     }
 
     /// Sends `reply` to the owner. A reply that gives up is logged by the transport, with its
