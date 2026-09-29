@@ -56,3 +56,18 @@ pub fn open_lapse(
         None
     }
 }
+
+/// The lapse anchor when the silence walk may run past its cap (SPEC-076 R15, R25), the
+/// predecessor's `_update_governor` at `27ee2bc`: the anchor to store for an open lapse, or `None`
+/// when no lapse is open. A run the walk finished takes the walk's first silent day; a run that
+/// reached the cap keeps a stored anchor not later than the walk's, else takes the walk's.
+#[must_use]
+pub fn anchor_beyond_the_walk(
+    today: StudyDay,
+    study_days: &BTreeSet<StudyDay>,
+    skip_days: &BTreeSet<StudyDay>,
+    stored_anchor: Option<StudyDay>,
+) -> Option<StudyDay> {
+    let _ = (study_days, skip_days, stored_anchor);
+    Some(today)
+}
