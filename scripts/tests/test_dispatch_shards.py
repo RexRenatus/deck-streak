@@ -273,39 +273,68 @@ class TheExaminedTotalIsTheListing(unittest.TestCase):
         self.assertEqual(len(taken(count)), len(names))
 
 
+# A `#` after one of these begins a word, so bash may read it as a comment.
+BOUNDARY = " \t;&|()<>`"
+# A here-document's body is no shell: bash starts no comment in it, and runs its substitutions.
+HEREDOC = re.compile(r"(?<!<)<<(?!<)")
+
+
+def opens(line, i, word):
+    """Bash reads on from `line[i]` in a mode this reader does not model: a substitution, an
+    expansion, an ANSI-C string, a backquote, an arithmetic or array parenthesis (a `(` glued to
+    what comes before it), a subscript or `[[`."""
+    char = line[i]
+    return (
+        char == "`"
+        or line.startswith(("$(", "${", "$[", "$'"), i)
+        or (char == "(" and i > 0 and line[i - 1] not in " \t;&|")
+        or (char == "[" and (word or line.startswith("[[", i)))
+    )
+
+
 def uncommented(text):
-    """`text` with each comment cut: a `#` that starts a word outside every quote opens a comment
-    to the end of its line, in YAML and in the shell alike. Its text is no command, and bounds
-    written in it bound nothing. A word starts after a blank or a shell operator (`;`, `&`, `|`,
-    `(`, `)`, `<`, `>`), but a `)` that closes a substitution (`$( )`, `<( )`, `>( )`) ends no
-    word, and inside `${ }` an operator is text. A `#` inside quotes or inside a word is text, so
-    the command after it is still read."""
-    kept = []
+    """`text` with each comment cut, in YAML and in the shell alike, wherever this reader can know
+    that bash starts one. Bash starts a comment at a `#` that begins a word outside every quote,
+    and a `#` inside a word or a quote is text. The reader models quotes, blanks and the operators,
+    and trusts that model on a line only up to the first place bash reads in a mode it lacks (see
+    `opens`), and not at all on a continued line or after a here-document. Before that place a `#`
+    that begins a word cuts the rest of the line: its text is no command, and bounds written in it
+    bound nothing. After it a `#` glued to a word is text, and any other `#` ends the command before
+    it and hides nothing, so a command after it is still read. So a `#` after the `)` that closes a
+    substitution, or after an operator inside `${ }`, is no comment, and the reader can refuse a
+    line bash would pass but never pass a line whose unbounded command bash runs."""
+    kept, continued, heredoc = [], False, False
     for line in text.split("\n"):
-        quote, i, start, parens, braces = None, 0, True, [], 0
+        pieces, piece, i, cut = [], 0, 0, False
+        sure, quote, word = not (continued or heredoc), None, False
         while i < len(line):
             char = line[i]
-            if char == "\\" and quote != "'":
-                i, start = i + 2, False
+            if char == "\\" and not (sure and quote == "'"):
+                i, word = i + 2, True
                 continue
-            if quote is None and char == "#" and start:
-                line = line[:i].rstrip(" \t")
+            if sure and quote == "'":
+                quote = None if char == "'" else quote
+            elif sure and quote == '"':
+                if char == '"':
+                    quote = None
+                elif char == "`" or line.startswith(("$(", "${", "$["), i):
+                    sure, quote = False, None
+            elif sure and char == "#" and not word:
+                cut = True
                 break
-            start = quote is None and not braces and char in " \t;&|()<>"
-            if quote != "'" and line.startswith("${", i):
-                braces += 1
-            elif quote != "'" and braces and char == "}":
-                braces -= 1
-            elif quote is None and not braces and char == "(":
-                parens.append(i > 0 and line[i - 1] in "$<>")
-            elif quote is None and not braces and char == ")":
-                start = not (parens and parens.pop())
-            if quote is None and char in "'\"":
+            elif sure and char in "'\"":
                 quote = char
-            elif quote == char:
-                quote = None
+            elif sure:
+                sure = not opens(line, i, word)
+            elif char == "#" and not word:
+                pieces.append(line[piece:i].rstrip(" \t"))
+                piece = i
+            word = quote is not None or char not in BOUNDARY
             i += 1
-        kept.append(line)
+        pieces.append(line[piece:i].rstrip(" \t") if cut else line[piece:])
+        kept.append("\n".join(pieces))
+        continued = not cut and pieces[-1].endswith("\\")
+        heredoc = heredoc or bool(HEREDOC.search(kept[-1]))
     return "\n".join(kept)
 
 
