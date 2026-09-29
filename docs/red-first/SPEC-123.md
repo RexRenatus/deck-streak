@@ -11,6 +11,12 @@ stricter or equal). A5 then gained a sub-case, a closed issue on a green row, re
 expectation, after row S12304 survived without it (90cd8bf). Each red was read on a `git worktree`
 of ef6f220's tree; every criterion's green is read on e644e16's tree, A5's on 90cd8bf's.
 
+After those greens, d2cc071 tightened two assertions: A1 now pins `0 void (1 expected)`, and A5
+gains `unexpected 0, expected 1, stale 1`. A1's green is read again on d2cc071's tree. A fix round
+then added one test to A4's cell, `an_expectation_with_no_settings_document_names_its_issues`, red by
+assertion at ba05130 (the detail still said "the wiring names no issue" beside a named expectation)
+and green at c3fb53a; it adds no mutation row, because the detail is a string and no gate.
+
 ```red-first
 A1: red at ef6f220: AssertionError: False is not true : <0 lines for proxy-client-scan> (the wiring is refused as VOID)
 A2: red at ef6f220: AssertionError: False is not true : <0 lines for proxy-client-scan>
@@ -28,4 +34,5 @@ A5: green at 90cd8bf0d7b86e45773644faa6427830db86a728
 A6: green at e644e16af8eae8cbe809c821aad52cfc21374095
 A7: green at e644e16af8eae8cbe809c821aad52cfc21374095
 A8: green at e644e16af8eae8cbe809c821aad52cfc21374095
+A1: green at d2cc071f6db48bef9ba3293f2a8604bfa3846177
 ```
