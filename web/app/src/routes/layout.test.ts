@@ -3,9 +3,16 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 // SPEC-057 A24; SPEC-028 R3, R4. The root layout's load routes the first navigation by the launch
 // link's startapp token and no other. The module keeps its "already routed" flag at load, so each
 // scenario imports a fresh copy over a wrapper that answers the token the scenario names.
-async function load(startParam: string | null) {
+async function load(startParam: string | null, reads: string[] = []) {
   vi.resetModules();
-  vi.doMock('$lib/telegram.svelte', () => ({ telegram: { startParam } }));
+  vi.doMock('$lib/telegram.svelte', () => ({
+    telegram: {
+      get startParam() {
+        reads.push('startParam');
+        return startParam;
+      }
+    }
+  }));
   return import('./+layout');
 }
 
@@ -62,12 +69,14 @@ describe('the root layout', () => {
   });
 
   it('opens the path a launch with no token asked for', async () => {
-    const module = await load(null);
+    const reads: string[] = [];
+    const module = await load(null, reads);
 
     const outcome = navigate(module, '/about');
 
     expect(outcome.thrown).toBeUndefined();
     expect(outcome.untrack.mock.calls).toEqual([]);
-    expect(outcome).toEqual({ thrown: undefined, untrack: outcome.untrack });
+    // the token is read once, found absent, and nothing else is asked of the launch
+    expect(reads).toEqual(['startParam']);
   });
 });

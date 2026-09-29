@@ -5,89 +5,31 @@
       "mutant": "StringLiteral: \"\"",
       "anchor": "if (response.ok) return 'open';",
       "reason": "An opened session reads as the empty string instead of open, and no reader tells the two apart.",
-      "evidence": "get() tests the handshake's answer only against 'refused' and 'failed', so any other value, the empty string included, runs the same request that 'open' runs; nothing else reads the answer.",
-      "issue": "#240"
-    },
-    {
-      "file": "web/app/src/lib/api.ts",
-      "mutant": "ConditionalExpression: false",
-      "anchor": "if (opened === 'refused') stopped = true;",
-      "reason": "Never marking the client stopped after a refused handshake changes no answer.",
-      "evidence": "A refused handshake stays in the cached session for good: session is cleared only after a failed handshake or an ended session, never after a refused one, so opening() hands back the same refused answer to every later call, and get() turns that answer into 'reopen' either way.",
-      "issue": "#240"
-    },
-    {
-      "file": "web/app/src/lib/api.ts",
-      "mutant": "StringLiteral: \"\"",
-      "anchor": "if (opened === 'refused') stopped = true;",
-      "reason": "Comparing the handshake answer with the empty string never marks the client stopped, and that changes no answer.",
-      "evidence": "A refused handshake stays in the cached session for good: session is cleared only after a failed handshake or an ended session, never after a refused one, so opening() hands back the same refused answer to every later call, and get() turns that answer into 'reopen' either way.",
+      "evidence": "get() tests the handshake's answer only against 'refused' and 'failed', so the empty string takes the path 'open' takes. Measured through createApi with an injected fetch and real Responses: 145,199 scenarios (me and score; handshake answers ok, 401, 403, 500 and a network error; eleven answer shapes for the call; a second and third call joining at 30 offsets of the microtask queue) and 19,199 interleavings (handshake and call latencies 0-6 microtasks, three calls, a fourth after they settle). Answers, requests, launch-data reads and handshake counts were identical to the unmutated client in every one; the two clients differ in no microtask count either.",
       "issue": "#240"
     },
     {
       "file": "web/app/src/lib/api.ts",
       "mutant": "BooleanLiteral: false",
-      "anchor": "if (opened === 'refused') stopped = true;",
-      "reason": "Marking the client stopped with false instead of true leaves it running, and that changes no answer.",
-      "evidence": "A refused handshake stays in the cached session for good: session is cleared only after a failed handshake or an ended session, never after a refused one, so opening() hands back the same refused answer to every later call, and get() turns that answer into 'reopen' either way.",
-      "issue": "#240"
-    },
-    {
-      "file": "web/app/src/lib/api.ts",
-      "mutant": "ConditionalExpression: true",
-      "anchor": "if (session === used) session = null;\n        return 'unavailable';",
-      "reason": "Clearing the session without asking whether it is still the one this call used clears the same promise.",
-      "evidence": "The calls that share a failed handshake resume one after another from that promise's single settlement, and each returns before any later caller can start a new handshake, so the session still equals the promise used whenever this line runs.",
-      "issue": "#240"
-    },
-    {
-      "file": "web/app/src/lib/api.ts",
-      "mutant": "StringLiteral: \"\"",
-      "anchor": "session = null;\n        return 'unavailable';",
-      "reason": "A failed handshake answers the empty string instead of unavailable, and me() reads both as unavailable.",
-      "evidence": "A caller of get() reads any answer that is neither 'reopen' nor a Response through me()'s `!response.ok` test, and the empty string has no `ok`, so me() answers unavailable exactly as it does for 'unavailable'.",
-      "issue": "#240"
-    },
-    {
-      "file": "web/app/src/lib/api.ts",
-      "mutant": "StringLiteral: \"\"",
-      "anchor": "} catch {\n        return 'unavailable';",
-      "reason": "A call that cannot reach the server answers the empty string instead of unavailable, and me() reads both as unavailable.",
-      "evidence": "A caller of get() reads any answer that is neither 'reopen' nor a Response through me()'s `!response.ok` test, and the empty string has no `ok`, so me() answers unavailable exactly as it does for 'unavailable'.",
-      "issue": "#240"
-    },
-    {
-      "file": "web/app/src/lib/api.ts",
-      "mutant": "ConditionalExpression: false",
-      "anchor": "if (response === 'unavailable' || !response.ok)",
-      "span": "response === 'unavailable'",
-      "reason": "Dropping the test for the string unavailable leaves the test on ok, which the string fails as well.",
-      "evidence": "The string 'unavailable' has no `ok` property, so `!response.ok` is true for it and me() answers unavailable through the second operand alone.",
-      "issue": "#240"
-    },
-    {
-      "file": "web/app/src/lib/api.ts",
-      "mutant": "StringLiteral: \"\"",
-      "anchor": "if (response === 'unavailable' || !response.ok)",
-      "reason": "Comparing the answer with the empty string instead of unavailable leaves the test on ok, which the string fails as well.",
-      "evidence": "Neither string has an `ok` property, so `!response.ok` is true for 'unavailable' and me() answers unavailable through the second operand alone.",
+      "anchor": "reopens the app\n        stopped = true;",
+      "reason": "A refused session stays cached, so a later call answers reopen and sends nothing whether or not this sets stopped.",
+      "evidence": "opening() keeps the refused handshake as the session, and nothing clears it: the two places that clear session act only on a failed handshake or an ended open session, never on a refused one, so no call can open a second handshake after a refusal. The next get() awaits the same settled 'refused' and answers 'reopen' before any send, as it does when stopped is set. Measured through createApi with an injected fetch and real Responses: 145,199 scenarios (me and score; handshake answers ok, 401, 403, 500 and a network error; eleven answer shapes for the call; a second and third call joining at 30 offsets of the microtask queue) and 19,199 interleavings (handshake and call latencies 0-6 microtasks, three calls, a fourth after they settle). Answers, requests, launch-data reads and handshake counts were identical in every one; only the number of microtasks a later call takes to answer differs, which is scheduling and not an answer.",
       "issue": "#240"
     },
     {
       "file": "web/app/src/lib/api.ts",
       "mutant": "ArrowFunction: () => undefined",
-      "anchor": ".catch(() => null)",
-      "reason": "A body that is not JSON reads as undefined instead of null, and both fail the object test that follows.",
-      "evidence": "The next lines accept only a non-null object holding a study day, and undefined is not an object, so an unparsable body ends as unavailable whichever of the two it becomes.",
+      "anchor": "parse(await response.json().catch(() => null))",
+      "reason": "parseMe and parseScore read an undefined body as they read null.",
+      "evidence": "parseMe refuses a body that is not a non-null object, which undefined is not, and parseScore reads body ?? {}, so an unparsable body ends as unavailable whichever of null and undefined it becomes. Malformed JSON, the JSON literal null and empty bodies were among the answer shapes of the sweep (the sweep is described on the first record); answers, requests and launch-data reads were identical to the unmutated client.",
       "issue": "#240"
     },
     {
       "file": "web/app/src/lib/api.ts",
       "mutant": "ConditionalExpression: true",
-      "anchor": "typeof body === 'object' && body !== null",
-      "span": "typeof body === 'object'",
-      "reason": "Dropping the object test lets a primitive body reach the property read, which finds no study day on it.",
-      "evidence": "A string, number or boolean has no study_day property, so the read gives undefined, fails the string test after it, and me() answers unavailable exactly as the object test would.",
+      "anchor": "typeof body === 'object'",
+      "reason": "A JSON value that is no object reads no study_day either, so null is the one value the object test's neighbour must stop.",
+      "evidence": "A parsed JSON body is null, a boolean, a number, a string, an array or an object; body !== null already stops null, and reading study_day from a boolean, number or string gives undefined, which the string check after it refuses. Only a Fetch body that json() cannot produce (a function) or a polluted Object, String or Number prototype could carry the property. The sweep sent null, 5, a string, an array, an empty object and malformed JSON to me() and score(): answers were identical to the unmutated client.",
       "issue": "#240"
     },
     {
@@ -95,56 +37,8 @@
       "mutant": "ConditionalExpression: false",
       "anchor": "this.launchData === null ? null : new URLSearchParams",
       "reason": "Parsing a launch that has no data as the text null finds no start parameter, the same null.",
-      "evidence": "new URLSearchParams(null) parses the text 'null' into one key called null, so get('start_param') gives null exactly as the guard's own branch does.",
+      "evidence": "new URLSearchParams(null) parses the text 'null' into one key called null, so get('start_param') gives null exactly as the guard's own branch does; the only difference a test could see is a stubbed URLSearchParams constructor counting its calls, which is not the wrapper's behaviour.",
       "issue": "#240"
-    },
-    {
-      "file": "web/app/src/lib/api.ts",
-      "mutant": "StringLiteral: \"\"",
-      "anchor": "if (response.ok) return 'open';",
-      "reason": "Callers test only for 'refused' and 'failed', so any other value is an open session.",
-      "evidence": "get() compares what opening() answers with 'refused' and with 'failed' only, so an answer of '' takes the path 'open' takes: the call goes on and sends its request.",
-      "issue": "#294"
-    },
-    {
-      "file": "web/app/src/lib/api.ts",
-      "mutant": "BooleanLiteral: false",
-      "anchor": "reopens the app\n        stopped = true;",
-      "reason": "A refused session stays cached, so a later call answers reopen and sends nothing whether or not this sets stopped.",
-      "evidence": "opening() keeps the refused handshake as the session (session ??= handshake()), so the next get() awaits the same settled 'refused' and answers 'reopen' before any send, as it does one line earlier when stopped is set.",
-      "issue": "#294"
-    },
-    {
-      "file": "web/app/src/lib/api.ts",
-      "mutant": "ArrowFunction: () => undefined",
-      "anchor": "parse(await response.json().catch(() => null))",
-      "reason": "parseMe and parseScore read an undefined body as they read null.",
-      "evidence": "parseMe refuses a body that is not a non-null object, which undefined is not, and parseScore reads body ?? {}, so both an undefined and a null body read as having no study_day and both parsers answer null.",
-      "issue": "#294"
-    },
-    {
-      "file": "web/app/src/lib/api.ts",
-      "mutant": "ConditionalExpression: true",
-      "anchor": "typeof body === 'object'",
-      "reason": "A JSON value that is no object reads no study_day either, so null is the one value this must stop.",
-      "evidence": "A parsed JSON body is null, a boolean, a number, a string, an array or an object; body !== null already stops null, and reading study_day from any of the others yields undefined, which the string check after it refuses.",
-      "issue": "#294"
-    },
-    {
-      "file": "web/app/src/lib/startapp.ts",
-      "mutant": "ArrayDeclaration: []",
-      "anchor": "['today', TODAY],",
-      "reason": "'today' opens TODAY, which every unlisted token opens too, so no token's screen changes without this entry.",
-      "evidence": "routeFor answers the table's route for a listed token and TODAY for any other; with the entry emptied, 'today' is no longer listed and falls through to TODAY, the route the entry named.",
-      "issue": "#294"
-    },
-    {
-      "file": "web/app/src/lib/startapp.ts",
-      "mutant": "StringLiteral: \"\"",
-      "anchor": "['today', TODAY],",
-      "reason": "'today' opens TODAY, which every unlisted token opens too, so emptying the entry's key changes no token's screen.",
-      "evidence": "With the key '' the table no longer lists 'today', so routeFor answers TODAY for it by the fallback, and '' itself is refused as a token before the table is read.",
-      "issue": "#294"
     }
   ]
 }

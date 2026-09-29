@@ -492,6 +492,50 @@ describe('the API client', () => {
     // one session at first, one renewal shared by both: two handshakes, not three
     expect(sent.filter((line) => line === 'POST /api/session')).toHaveLength(2);
   });
+
+  it('a call that meets a handshake another call already abandoned keeps the session opened since', async () => {
+    // A first call's handshake fails. A second call joins that failed handshake before the first
+    // has abandoned it, and a third opens a new session in between. However those three fall
+    // against each other, the second must not discard the third's session: a fourth call opens none.
+    const handshakes: number[] = [];
+    for (let delay = 0; delay < 24; delay += 1) {
+      let fail: ((response: Response) => void) | undefined;
+      let opened = 0;
+      const fetch = vi.fn((input: RequestInfo | URL) => {
+        if (String(input) !== '/api/session') {
+          return Promise.resolve(Response.json({ study_day: STUDY_DAY }));
+        }
+        opened += 1;
+        if (opened > 1) return Promise.resolve(new Response(null, { status: 200 }));
+        return new Promise<Response>((resolve) => {
+          fail = resolve;
+        });
+      });
+      const api = createApi({
+        launchData: () => LAUNCH,
+        fetch: fetch as unknown as typeof globalThis.fetch
+      });
+      const first = api.me();
+      for (let tick = 0; tick < 3; tick += 1) await Promise.resolve();
+      expect(fail).toBeTypeOf('function');
+      fail?.(new Response(null, { status: 503 }));
+      let later: Promise<unknown> = Promise.resolve();
+      let joined: Promise<unknown> = Promise.resolve();
+      let step: Promise<void> = Promise.resolve();
+      for (let tick = 0; tick < delay; tick += 1) step = step.then(() => undefined);
+      await step.then(() => {
+        queueMicrotask(() => {
+          later = api.me();
+        });
+        joined = api.me();
+      });
+      await Promise.all([first, joined, later]);
+      expect(await api.me()).toEqual({ kind: 'ok', value: { studyDay: STUDY_DAY } });
+      handshakes.push(opened);
+    }
+    // the failed handshake and the one that opened: never a third
+    expect(handshakes).toEqual(Array.from({ length: 24 }, () => 2));
+  });
 });
 
 // SPEC-071 R20, R22. The score screen reads the current study day's score through the same
