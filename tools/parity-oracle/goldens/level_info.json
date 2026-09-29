@@ -1,0 +1,496 @@
+{
+  "adapter": "with_the_fields",
+  "cases": [
+    {
+      "class": "at",
+      "input": {
+        "total_xp": 0
+      },
+      "output": {
+        "emoji": "\ud83d\udc23",
+        "level": 1,
+        "title": "Sprout",
+        "total_xp": 0,
+        "xp_for_next": 100,
+        "xp_into_level": 0
+      }
+    },
+    {
+      "class": "at",
+      "input": {
+        "total_xp": 1000
+      },
+      "output": {
+        "emoji": "\ud83c\udf31",
+        "level": 5,
+        "title": "Seedling",
+        "total_xp": 1000,
+        "xp_for_next": 500,
+        "xp_into_level": 0
+      }
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 999
+      },
+      "output": {
+        "emoji": "\ud83d\udc23",
+        "level": 4,
+        "title": "Sprout",
+        "total_xp": 999,
+        "xp_for_next": 400,
+        "xp_into_level": 399
+      }
+    },
+    {
+      "class": "at",
+      "input": {
+        "total_xp": 4500
+      },
+      "output": {
+        "emoji": "\ud83d\udcd7",
+        "level": 10,
+        "title": "Apprentice",
+        "total_xp": 4500,
+        "xp_for_next": 1000,
+        "xp_into_level": 0
+      }
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 4499
+      },
+      "output": {
+        "emoji": "\ud83c\udf31",
+        "level": 9,
+        "title": "Seedling",
+        "total_xp": 4499,
+        "xp_for_next": 900,
+        "xp_into_level": 899
+      }
+    },
+    {
+      "class": "at",
+      "input": {
+        "total_xp": 19000
+      },
+      "output": {
+        "emoji": "\ud83d\udcd8",
+        "level": 20,
+        "title": "Scholar",
+        "total_xp": 19000,
+        "xp_for_next": 2000,
+        "xp_into_level": 0
+      }
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 18999
+      },
+      "output": {
+        "emoji": "\ud83d\udcd7",
+        "level": 19,
+        "title": "Apprentice",
+        "total_xp": 18999,
+        "xp_for_next": 1900,
+        "xp_into_level": 1899
+      }
+    },
+    {
+      "class": "at",
+      "input": {
+        "total_xp": 43500
+      },
+      "output": {
+        "emoji": "\ud83d\udcd9",
+        "level": 30,
+        "title": "Adept",
+        "total_xp": 43500,
+        "xp_for_next": 3000,
+        "xp_into_level": 0
+      }
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 43499
+      },
+      "output": {
+        "emoji": "\ud83d\udcd8",
+        "level": 29,
+        "title": "Scholar",
+        "total_xp": 43499,
+        "xp_for_next": 2900,
+        "xp_into_level": 2899
+      }
+    },
+    {
+      "class": "at",
+      "input": {
+        "total_xp": 78000
+      },
+      "output": {
+        "emoji": "\ud83c\udf93",
+        "level": 40,
+        "title": "Graduate",
+        "total_xp": 78000,
+        "xp_for_next": 4000,
+        "xp_into_level": 0
+      }
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 77999
+      },
+      "output": {
+        "emoji": "\ud83d\udcd9",
+        "level": 39,
+        "title": "Adept",
+        "total_xp": 77999,
+        "xp_for_next": 3900,
+        "xp_into_level": 3899
+      }
+    },
+    {
+      "class": "at",
+      "input": {
+        "total_xp": 122500
+      },
+      "output": {
+        "emoji": "\ud83e\udde0",
+        "level": 50,
+        "title": "Memory Mage",
+        "total_xp": 122500,
+        "xp_for_next": 5000,
+        "xp_into_level": 0
+      }
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 122499
+      },
+      "output": {
+        "emoji": "\ud83c\udf93",
+        "level": 49,
+        "title": "Graduate",
+        "total_xp": 122499,
+        "xp_for_next": 4900,
+        "xp_into_level": 4899
+      }
+    },
+    {
+      "class": "at",
+      "input": {
+        "total_xp": 177000
+      },
+      "output": {
+        "emoji": "\u2694\ufe0f",
+        "level": 60,
+        "title": "Recall Knight",
+        "total_xp": 177000,
+        "xp_for_next": 6000,
+        "xp_into_level": 0
+      }
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 176999
+      },
+      "output": {
+        "emoji": "\ud83e\udde0",
+        "level": 59,
+        "title": "Memory Mage",
+        "total_xp": 176999,
+        "xp_for_next": 5900,
+        "xp_into_level": 5899
+      }
+    },
+    {
+      "class": "at",
+      "input": {
+        "total_xp": 241500
+      },
+      "output": {
+        "emoji": "\ud83d\udee1\ufe0f",
+        "level": 70,
+        "title": "Retention Lord",
+        "total_xp": 241500,
+        "xp_for_next": 7000,
+        "xp_into_level": 0
+      }
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 241499
+      },
+      "output": {
+        "emoji": "\u2694\ufe0f",
+        "level": 69,
+        "title": "Recall Knight",
+        "total_xp": 241499,
+        "xp_for_next": 6900,
+        "xp_into_level": 6899
+      }
+    },
+    {
+      "class": "at",
+      "input": {
+        "total_xp": 316000
+      },
+      "output": {
+        "emoji": "\ud83d\udc09",
+        "level": 80,
+        "title": "Synapse Dragon",
+        "total_xp": 316000,
+        "xp_for_next": 8000,
+        "xp_into_level": 0
+      }
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 315999
+      },
+      "output": {
+        "emoji": "\ud83d\udee1\ufe0f",
+        "level": 79,
+        "title": "Retention Lord",
+        "total_xp": 315999,
+        "xp_for_next": 7900,
+        "xp_into_level": 7899
+      }
+    },
+    {
+      "class": "at",
+      "input": {
+        "total_xp": 400500
+      },
+      "output": {
+        "emoji": "\ud83c\udf0c",
+        "level": 90,
+        "title": "Mind Cosmonaut",
+        "total_xp": 400500,
+        "xp_for_next": 9000,
+        "xp_into_level": 0
+      }
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 400499
+      },
+      "output": {
+        "emoji": "\ud83d\udc09",
+        "level": 89,
+        "title": "Synapse Dragon",
+        "total_xp": 400499,
+        "xp_for_next": 8900,
+        "xp_into_level": 8899
+      }
+    },
+    {
+      "class": "at",
+      "input": {
+        "total_xp": 495000
+      },
+      "output": {
+        "emoji": "\ud83d\udc51",
+        "level": 100,
+        "title": "Grandmaster of Memory",
+        "total_xp": 495000,
+        "xp_for_next": 10000,
+        "xp_into_level": 0
+      }
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 494999
+      },
+      "output": {
+        "emoji": "\ud83c\udf0c",
+        "level": 99,
+        "title": "Mind Cosmonaut",
+        "total_xp": 494999,
+        "xp_for_next": 9900,
+        "xp_into_level": 9899
+      }
+    },
+    {
+      "class": "at",
+      "input": {
+        "total_xp": 599500
+      },
+      "output": {
+        "emoji": "\ud83d\udc51",
+        "level": 110,
+        "title": "Grandmaster of Memory",
+        "total_xp": 599500,
+        "xp_for_next": 11000,
+        "xp_into_level": 0
+      }
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 599499
+      },
+      "output": {
+        "emoji": "\ud83d\udc51",
+        "level": 109,
+        "title": "Grandmaster of Memory",
+        "total_xp": 599499,
+        "xp_for_next": 10900,
+        "xp_into_level": 10899
+      }
+    },
+    {
+      "input": {
+        "total_xp": 158550
+      },
+      "output": {
+        "emoji": "\ud83e\udde0",
+        "level": 56,
+        "title": "Memory Mage",
+        "total_xp": 158550,
+        "xp_for_next": 5600,
+        "xp_into_level": 4550
+      }
+    },
+    {
+      "input": {
+        "total_xp": 272448
+      },
+      "output": {
+        "emoji": "\ud83d\udee1\ufe0f",
+        "level": 74,
+        "title": "Retention Lord",
+        "total_xp": 272448,
+        "xp_for_next": 7400,
+        "xp_into_level": 2348
+      }
+    },
+    {
+      "input": {
+        "total_xp": 106447
+      },
+      "output": {
+        "emoji": "\ud83c\udf93",
+        "level": 46,
+        "title": "Graduate",
+        "total_xp": 106447,
+        "xp_for_next": 4600,
+        "xp_into_level": 2947
+      }
+    },
+    {
+      "input": {
+        "total_xp": 343331
+      },
+      "output": {
+        "emoji": "\ud83d\udc09",
+        "level": 83,
+        "title": "Synapse Dragon",
+        "total_xp": 343331,
+        "xp_for_next": 8300,
+        "xp_into_level": 3031
+      }
+    },
+    {
+      "input": {
+        "total_xp": 177605
+      },
+      "output": {
+        "emoji": "\u2694\ufe0f",
+        "level": 60,
+        "title": "Recall Knight",
+        "total_xp": 177605,
+        "xp_for_next": 6000,
+        "xp_into_level": 605
+      }
+    },
+    {
+      "input": {
+        "total_xp": 28290
+      },
+      "output": {
+        "emoji": "\ud83d\udcd8",
+        "level": 24,
+        "title": "Scholar",
+        "total_xp": 28290,
+        "xp_for_next": 2400,
+        "xp_into_level": 690
+      }
+    },
+    {
+      "input": {
+        "total_xp": 431513
+      },
+      "output": {
+        "emoji": "\ud83c\udf0c",
+        "level": 93,
+        "title": "Mind Cosmonaut",
+        "total_xp": 431513,
+        "xp_for_next": 9300,
+        "xp_into_level": 3713
+      }
+    },
+    {
+      "input": {
+        "total_xp": 426498
+      },
+      "output": {
+        "emoji": "\ud83c\udf0c",
+        "level": 92,
+        "title": "Mind Cosmonaut",
+        "total_xp": 426498,
+        "xp_for_next": 9200,
+        "xp_into_level": 7898
+      }
+    },
+    {
+      "input": {
+        "total_xp": 78651
+      },
+      "output": {
+        "emoji": "\ud83c\udf93",
+        "level": 40,
+        "title": "Graduate",
+        "total_xp": 78651,
+        "xp_for_next": 4000,
+        "xp_into_level": 651
+      }
+    },
+    {
+      "input": {
+        "total_xp": 108263
+      },
+      "output": {
+        "emoji": "\ud83c\udf93",
+        "level": 47,
+        "title": "Graduate",
+        "total_xp": 108263,
+        "xp_for_next": 4700,
+        "xp_into_level": 163
+      }
+    }
+  ],
+  "function": "gamification.xp.level_info",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Calls it and returns each field of the LevelInfo it built; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_072.py",
+  "registry_sha256": "d25c88fa142d319489e7334677aebdbcf5b9e0aca3dfb751f221140bead5b54f",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}
