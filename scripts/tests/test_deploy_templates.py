@@ -986,9 +986,26 @@ class CredentialsComeFromTheSocket(unittest.TestCase):
                 )
         # A directory of the same name elsewhere under deploy/ is refused too, and the one
         # directory the tree holds is refused when it moves.
-        for where in ("deploy/scripts/planted.service.d", "deploy/other/journald.conf.d"):
+        beside = [
+            ("deploy/scripts/planted.service.d", ["deploy/systemd/planted.service"]),
+            ("deploy/other/journald.conf.d", []),
+            ("deploy/journald.conf.d/planted.service.d", []),
+            ("deploy/systemd/nested/planted.service.d", []),
+            ("deploy/scripts/planted.sh.d", ["deploy/scripts/planted.sh"]),
+            (
+                "deploy/systemd/planted.service.d/inner.service.d",
+                [
+                    "deploy/systemd/planted.service",
+                    "deploy/systemd/planted.service.d/inner.service",
+                ],
+            ),
+        ]
+        for where, files in beside:
             with tempfile.TemporaryDirectory() as scratch:
                 (Path(scratch) / where).mkdir(parents=True)
+                for file in files:
+                    (Path(scratch) / file).parent.mkdir(parents=True, exist_ok=True)
+                    (Path(scratch) / file).write_text("[Service]\n", encoding="utf-8")
                 self.assertEqual(dropin_directory_refusals(scratch), [f"{where}: {refused}"], where)
 
 
@@ -1483,6 +1500,16 @@ class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
         for unit in loading:
             allowed = _units.ALERT_KEYS if unit.name == alert else _units.PAGING_KEYS
             self.assertEqual(off_list_refusals(unit, allowed), [], unit.rel)
+        # The lists are the keys the units use: each kind's list is exactly the (section, key)
+        # pairs its shipped units hold, drop-ins included, so a key no unit uses is on no list.
+        used = {"alert": set(), "paging": set()}
+        for unit in loading:
+            used["alert" if unit.name == alert else "paging"] |= {
+                (a.section, a.key) for a in unit.assignments
+            }
+        for kind, keys in (("alert", _units.ALERT_KEYS), ("paging", _units.PAGING_KEYS)):
+            listed = {(section, key) for section, names in keys.items() for key in names}
+            self.assertEqual(listed, used[kind], kind)
         # Planted units: each key below is off its unit's list and refused by name and line. The
         # directives that make a start depend on another unit, on the alert template and on a
         # paging unit; a key with no standard meaning; `OnFailure=` on the alert template, whose
@@ -1505,6 +1532,13 @@ class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
         plants = {
             "alert control": (_units.ALERT_KEYS, "", "", "", []),
             "paging control": (_units.PAGING_KEYS, page, "", "", []),
+            "paging key extending a listed key": (
+                _units.PAGING_KEYS,
+                page,
+                "OnFailureJobMode=fail\n",
+                "",
+                [refusal(3, "Unit", "OnFailureJobMode", "fail")],
+            ),
             "alert requisite": (
                 _units.ALERT_KEYS,
                 "",
