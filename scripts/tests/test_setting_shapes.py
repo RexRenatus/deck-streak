@@ -9,12 +9,15 @@ The guard enumerates the implementations by walking `crates/*/src` (a git pathsp
 matches nothing), reads each `const SHAPE` literal, and refuses one that is spelled in no test of
 its crate (its `tests/`, or the `#[cfg(test)]` module of the implementation's own file) and in no
 mutation row that targets the implementation's own file. It reads Rust source as the compiler
-does: comments of both forms (`//` and nested `/* */`) do not count, a `//` inside a string is not a
-comment, and only a `#[cfg(test)]` module of the implementation's own file counts, not a line after
-it. A literal that
-two implementations of one crate share is pinned only by a row on each implementation's file.
+does: comments of both forms (`//` and nested `/* */`) do not count, and neither does an
+implementation inside one, a `//` inside a string is not a comment, and only a `#[cfg(test)]`
+module of the implementation's own file counts, not a line after it. An out-of-line module
+(`#[cfg(test)] mod tests;`) is that file's own test module, found through `#[path]`, `name.rs` or
+`name/mod.rs`. A literal that two implementations of one crate share is pinned only by a row on
+each implementation's file.
 """
 
+import functools
 import json
 import re
 import tempfile
@@ -31,6 +34,8 @@ TEST_MODULE = re.compile(
 )
 TOKEN = re.compile(r"//|/\*|(?<![\w])b?r#*\"|\"|'")
 RAW = re.compile(r"b?r(#*)\"")
+OUT_OF_LINE = re.compile(r"((?:#\[[^\]]*\]\s*)+)(?:pub(?:\([^)]*\))?\s+)?mod\s+(\w+)\s*;")
+PATH_ATTR = re.compile(r'#\[path\s*=\s*"([^"]*)"\]')
 CHAR = re.compile(r"'(?:\\(?:x[0-9a-fA-F]{2}|u\{[0-9a-fA-F]{1,6}\}|.)|[^\\'\n])'")
 SHAPE = re.compile(r'const\s+SHAPE\s*:\s*&\'static\s+str\s*=\s*("(?:[^"\\]|\\.)*")\s*;')
 BANDS = REPO / "scripts" / "mutation-rows.d"
@@ -44,7 +49,7 @@ def implementations(root):
     """
     found = []
     for path in sorted((root / "crates").glob("*/src/**/*.rs")):
-        text = path.read_text(encoding="utf-8")
+        text, _ = lexed(path.read_text(encoding="utf-8"))
         crate, *inside = path.relative_to(root / "crates").parts
         starts = [(m.start(), m.group(1)) for m in IMPL.finditer(text)]
         for index, (start, name) in enumerate(starts):
@@ -62,6 +67,7 @@ def implementations(root):
     return found
 
 
+@functools.cache
 def lexed(text):
     """`text` with its comments blanked, and `text` with its string and character literals blanked
     as well; both keep every offset. A `//` or `/*` inside a string is not a comment."""
@@ -118,6 +124,27 @@ def cfg_test_spans(skeleton):
     return spans
 
 
+def out_of_line(own):
+    """The files of the `#[cfg(test)] mod name;` modules that `own` declares, where the compiler
+    looks for them: a `#[path]` beside `own`, else `name.rs` or `name/mod.rs` in `own`'s module
+    directory (`own`'s own directory for `lib.rs`, `main.rs` and `mod.rs`)."""
+    bare, skeleton = lexed(own.read_text(encoding="utf-8"))
+    folder = own.parent if own.name in ("lib.rs", "main.rs", "mod.rs") else own.with_suffix("")
+    files = []
+    for module in OUT_OF_LINE.finditer(skeleton):
+        if "#[cfg(test)]" not in module.group(1):
+            continue
+        named = PATH_ATTR.search(bare, module.start(1), module.end(1))
+        name = module.group(2)
+        options = (
+            [own.parent / named.group(1)]
+            if named
+            else [folder / f"{name}.rs", folder / name / "mod.rs"]
+        )
+        files += [path for path in options if path.is_file()]
+    return files
+
+
 def spelled_elsewhere(root, crate, file, literal, own_span):
     """True when `literal` is spelled, quoted, in the crate's tests or inside a `#[cfg(test)]`
     module of the implementation's own source file, outside a comment, and never at any `SHAPE`
@@ -128,7 +155,7 @@ def spelled_elsewhere(root, crate, file, literal, own_span):
         for holder, path, _, _, span in implementations(root)
         if holder == crate and span
     }
-    candidates = sorted((base / "tests").rglob("*.rs")) + [base / file]
+    candidates = sorted((base / "tests").rglob("*.rs")) + [base / file] + out_of_line(base / file)
     for path in candidates:
         bare, skeleton = lexed(path.read_text(encoding="utf-8"))
         spans = cfg_test_spans(skeleton) if path == base / file else [(0, len(bare))]
