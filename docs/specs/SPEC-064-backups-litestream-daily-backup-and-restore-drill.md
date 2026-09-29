@@ -142,8 +142,12 @@ packet; this SPEC names each step only.
 | `privacy.json`, `PRIVACY.md` | repo | changed: the replica and the daily copies, with their window |
 | the box-run packs' private wiring (ADR-069) | the maintainer's | changed: durable-services' three backup deferrals and the Litestream unit's wait ended |
 | `scripts/tests/test_backup_units.py` | repo | added: A1 to A7 |
+| `scripts/tests/test_deploy_templates.py` | repo | changed: the daemon list gains the replicator, the worst case is 672M against the 704M share, and the new units' rows are read from ADR-064's table |
+| `deploy/rail-contract.json` | deploy | changed: the seven neutral values the new units add |
+| `docs/decisions/ADR-032-deploy-templates-and-the-host-budget.md` | docs | changed: one dated note, "the share is 704 MiB", pointing to ADR-064 |
+| `scripts/mutation-rows.d/S06400-S06499.json` | repo | added: the band's mutation rows |
 | `docs/specs/SPEC-064-backups-litestream-daily-backup-and-restore-drill.md` | docs | moved from `docs/specs/planned/` |
-| `docs/decisions/ADR-064-deckstreak-backs-up-with-its-own-units-and-never-the-collection.md` | docs | changed: status accepted |
+| `docs/decisions/ADR-064-deckstreak-backs-up-with-its-own-units-and-never-the-collection.md` | docs | changed: status accepted, the budget table and what it was chosen against |
 | `docs/red-first/SPEC-064.md` | docs | added |
 | `changelog.d/` fragment | repo | added |
 

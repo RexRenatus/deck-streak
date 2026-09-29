@@ -120,3 +120,8 @@ durable-services and observability packs.
 Amended by ADR-061 (proposed): the rail fills the Caddy block's placeholders by rendering the block at
 install and importing the rendered file with one line, so Caddy's environment carries none of their
 values; the committed template keeps its placeholders, valid as written.
+
+## Note, 2026-09-29: the share is 704 MiB
+
+ADR-064 raises DeckStreak's share to 704 MiB to hold the replicator's ceiling of 64 MiB; its budget table
+decides the replicator's, the daily backup's and the restore drill's ceilings.

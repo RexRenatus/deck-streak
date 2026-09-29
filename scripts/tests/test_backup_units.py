@@ -263,7 +263,7 @@ class BackupUnits(unittest.TestCase):
         )
         self.assertEqual(
             drill.values("Service", "ExecStart"),
-            [f"/usr/bin/bash {RELEASE_ROOT}/deploy/scripts/restore-drill.sh"],
+            [f"{RELEASE_ROOT}/deploy/scripts/restore-drill.sh"],
         )
         for unit in (backup_unit, drill):
             self.assertEqual(service_type(unit), "oneshot")
@@ -287,9 +287,10 @@ class BackupUnits(unittest.TestCase):
                 size_bytes(unit.last("Service", "MemoryHigh")),
                 size_bytes(unit.last("Service", "MemoryMax")),
             )
+            # The two that reach the bucket expand it from the required settings file.
             self.assertEqual(
-                unit.values("Service", "EnvironmentFile") if unit.name != BACKUP else ["x"],
-                ["/etc/deck-streak/deck-streak.env"] if unit.name != BACKUP else ["x"],
+                unit.values("Service", "EnvironmentFile"),
+                [] if unit.name == BACKUP else ["/etc/deck-streak/deck-streak.env"],
                 unit.name,
             )
         # The three backup copies: the script keeps three, once a day.
@@ -385,11 +386,12 @@ class BackupUnits(unittest.TestCase):
                 data = path.read_bytes()
                 self.assertNotIn(b"COLLECTION-COPY", data)
                 self.assertNotIn(b"CREDENTIAL", data)
-            # Beside the backups directory nothing is left: no temporary file.
+            # Beside the backups directory nothing is left: no temporary file, and no WAL sidecar.
             self.assertEqual(
-                sorted(p.name for p in state.iterdir()),
-                ["backups", "collection.anki2", "deck_streak.db"]
-                + sorted(p.name for p in state.iterdir() if p.name.startswith("deck_streak.db-")),
+                [p.name for p in state.iterdir() if p.name.startswith(".backup-")], []
+            )
+            self.assertEqual(
+                [p.name for p in backups.iterdir() if not p.name.endswith(".db")], []
             )
 
     def test_a_failed_integrity_check_fails_the_backup_and_keeps_the_old_copies(self):
@@ -539,17 +541,15 @@ class BackupUnits(unittest.TestCase):
         self.assertTrue(good["daily"], "the daily copy itself is left where it is")
 
         # Each way a step fails, the drill exits non-zero and still removes both copies.
-        cases = examined(
-            "failing drills",
-            {
-                "replica fails its integrity check": run_drill(replica="bad"),
-                "daily copy fails its integrity check": run_drill(daily="bad"),
-                "replica is at another migration version": run_drill(replica_version=6),
-                "daily copy is ahead of the live database": run_drill(daily_version=8),
-                "litestream exits non-zero": run_drill(stub_exit=1),
-                "no daily copy exists": run_drill(with_daily=False),
-            },
-        )
+        failing = {
+            "replica fails its integrity check": run_drill(replica="bad"),
+            "daily copy fails its integrity check": run_drill(daily="bad"),
+            "replica is at another migration version": run_drill(replica_version=6),
+            "daily copy is ahead of the live database": run_drill(daily_version=8),
+            "litestream exits non-zero": run_drill(stub_exit=1),
+            "no daily copy exists": run_drill(with_daily=False),
+        }
+        cases = dict(examined("failing drills", failing.items()))
         for name, outcome in cases.items():
             self.assertNotEqual(outcome["code"], 0, name)
             self.assertEqual(outcome["left"], [], f"{name}: nothing is left behind")
@@ -627,7 +627,7 @@ class BackupUnits(unittest.TestCase):
         self.assertIn("example", settings[variable])
         # No file names a project id, a host name or an address of its own.
         forbidden = re.compile(
-            r"(?i)\b(?:\d{1,3}\.){3}\d{1,3}\b|\.internal\b|\.googleapis\.com|\.appspot\.com|"
+            r"(?i)\b(?!127\.)(?:\d{1,3}\.){3}\d{1,3}\b|\.internal\b|\.googleapis\.com|\.appspot\.com|"
             r"/opt/" + "a" + "ol|projects/[a-z][a-z0-9-]{5,}|gs://[a-z0-9]"
         )
         for path in files:

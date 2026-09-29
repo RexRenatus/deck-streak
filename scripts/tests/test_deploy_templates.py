@@ -28,6 +28,14 @@ BUDGET = DEPLOY / "host-budget.json"
 ENV_EXAMPLE = DEPLOY / "deck-streak.env.example"
 SCRUB = REPO / "scripts" / "public-scrub.py"
 ADR = REPO / "docs" / "decisions" / "ADR-032-deploy-templates-and-the-host-budget.md"
+# SPEC-064's units: the replicator's, the daily backup's and the drill's ceilings are decided here,
+# and the share it raised (ADR-032 keeps a dated note).
+ADR_BACKUPS = (
+    REPO / "docs" / "decisions" / "ADR-064-deckstreak-backs-up-with-its-own-units-and-never-the-collection.md"
+)
+LITESTREAM_SERVICE_NAME = "deck-streak-litestream.service"
+BACKUP_SERVICE_NAME = "deck-streak-backup.service"
+DRILL_SERVICE_NAME = "deck-streak-restore-drill.service"
 
 # The one release binary every service runs, from the release root's `current` link (R2).
 BINARY = "/usr/local/lib/deck-streak/current/bin/deckstreakd"
@@ -52,6 +60,9 @@ SCRIPTS = {
         f"/usr/bin/python3 {RELEASE}/deploy/scripts/slo-evaluate.py {RELEASE}/deploy/slo.json"
     ),
     WATCH_SERVICE: f"{RELEASE}/deploy/scripts/memory-watch.sh",
+    # SPEC-064: the daily backup and the weekly drill run scripts of the release as well.
+    BACKUP_SERVICE_NAME: f"/usr/bin/python3 {RELEASE}/deploy/scripts/backup.py",
+    DRILL_SERVICE_NAME: f"{RELEASE}/deploy/scripts/restore-drill.sh",
 }
 # Their lifecycle: a oneshot each, ended before its timer is due again; the two a timer starts
 # yield to the daemons as a job does (resources.batch-priority), and the alert pages at once.
@@ -69,9 +80,35 @@ OBSERVABILITY_SERVICE = {
         "Nice": "10",
         "IOSchedulingClass": "idle",
     },
+    BACKUP_SERVICE_NAME: {
+        "Type": "oneshot",
+        "TimeoutStartSec": "30min",
+        "Nice": "10",
+        "IOSchedulingClass": "idle",
+    },
+    DRILL_SERVICE_NAME: {
+        "Type": "oneshot",
+        "TimeoutStartSec": "1h",
+        "Nice": "10",
+        "IOSchedulingClass": "idle",
+    },
+}
+# SPEC-064 R1: the Litestream daemon, a simple service that restarts on failure and can trip its
+# start limit; it has no watchdog, since Litestream does not notify systemd.
+LITESTREAM_SERVICE = {
+    "Type": "simple",
+    "Restart": "on-failure",
+    "RestartSec": "15",
+    "OOMPolicy": "kill",
 }
 # The timers that start SPEC-031's units, each the service of its own name.
-OBSERVABILITY_TIMERS = {"deck-streak-slo.timer", "deck-streak-memory-watch.timer"}
+OBSERVABILITY_TIMERS = {
+    "deck-streak-slo.timer",
+    "deck-streak-memory-watch.timer",
+    # SPEC-064's daily backup and weekly restore drill.
+    "deck-streak-backup.timer",
+    "deck-streak-restore-drill.timer",
+}
 
 # Where the code declares each credential id a role reads, by the constant's name.
 CREDENTIAL_SOURCES = {
@@ -98,6 +135,9 @@ ROLE_CREDENTIALS = {
     f"{ALERT_TEMPLATE}@.service": ("OWNER_USER_ID", "TELEGRAM_BOT_TOKEN"),
     SLO_SERVICE: (),
     WATCH_SERVICE: (),
+    LITESTREAM_SERVICE_NAME: (),
+    BACKUP_SERVICE_NAME: (),
+    DRILL_SERVICE_NAME: (),
 }
 # The role each service runs (R2); the job template's `%i` is its instance, the job's id.
 ROLES = {
@@ -175,6 +215,10 @@ PER_SERVICE = {
     f"{ALERT_TEMPLATE}@.service": (None, None, ROLES_NETWORK, "systemd-journal"),
     SLO_SERVICE: ("deck-streak-slo", None, "AF_UNIX", "systemd-journal"),
     WATCH_SERVICE: ("deck-streak-memory-watch", None, "AF_UNIX", None),
+    # SPEC-064: the replicator and the drill reach the bucket; the backup opens no socket.
+    LITESTREAM_SERVICE_NAME: ("deck-streak", ENVIRONMENT_FILE, ROLES_NETWORK, None),
+    BACKUP_SERVICE_NAME: ("deck-streak", None, "AF_UNIX", None),
+    DRILL_SERVICE_NAME: ("deck-streak", ENVIRONMENT_FILE, ROLES_NETWORK, None),
 }
 PER_SERVICE_KEYS = (
     "StateDirectory",
@@ -243,12 +287,14 @@ def budget():
 
 
 def adr_budget():
-    """ADR-032's budget table, by unit: (memory_high, memory_max). A row may name the SPEC that
-    ships its unit after the unit's name, as SPEC-031's three rows do."""
-    rows = re.findall(
-        r"(?m)^\| `([^`]+)`(?: \(SPEC-\d{3}\))? \| (\d+M) \| (\d+M) \|",
-        ADR.read_text(encoding="utf-8"),
-    )
+    """ADR-032's budget table with ADR-064's, by unit: (memory_high, memory_max). A row may name the
+    SPEC that ships its unit after the unit's name, as SPEC-031's three rows do."""
+    rows = []
+    for source in (ADR, ADR_BACKUPS):
+        rows += re.findall(
+            r"(?m)^\| `([^`]+)`(?: \(SPEC-\d{3}\))? \| (\d+M) \| (\d+M) \|",
+            source.read_text(encoding="utf-8"),
+        )
     return {unit: (high, ceiling) for unit, high, ceiling in rows}
 
 
@@ -513,7 +559,12 @@ class TheTemplatesFitTheHostBudget(unittest.TestCase):
     def test_the_daemons_and_the_largest_job_fit_the_stack_share(self):
         units = services()
         share = budget()["memory"]
-        self.assertIn(f'"memory": "{share}"', ADR.read_text(encoding="utf-8"), "ADR-032's share")
+        # ADR-064 decides the share and ADR-032 carries a dated note that points to it.
+        self.assertIn(f'"memory": "{share}"', ADR_BACKUPS.read_text(encoding="utf-8"), "the share")
+        self.assertIn(
+            f"## Note, 2026-09-29: the share is {int(share.rstrip('M'))} MiB",
+            ADR.read_text(encoding="utf-8"),
+        )
         ceilings = {}
         for unit in units:
             value = last(unit, "Service", "MemoryMax")
@@ -523,14 +574,26 @@ class TheTemplatesFitTheHostBudget(unittest.TestCase):
             ceilings[unit.name] = size(value)
         daemons = [u.name for u in units if _units.long_running(u)]
         oneshots = [u.name for u in units if not _units.long_running(u)]
-        self.assertEqual(daemons, ["deck-streak-api.service", "deck-streak-bot.service"])
         self.assertEqual(
-            oneshots,
-            [f"{ALERT_TEMPLATE}@.service", f"{JOB_TEMPLATE}@.service", WATCH_SERVICE, SLO_SERVICE],
+            daemons,
+            ["deck-streak-api.service", "deck-streak-bot.service", LITESTREAM_SERVICE_NAME],
+        )
+        self.assertEqual(
+            sorted(oneshots),
+            sorted(
+                [
+                    f"{ALERT_TEMPLATE}@.service",
+                    f"{JOB_TEMPLATE}@.service",
+                    WATCH_SERVICE,
+                    SLO_SERVICE,
+                    BACKUP_SERVICE_NAME,
+                    DRILL_SERVICE_NAME,
+                ]
+            ),
         )
         worst = sum(ceilings[unit] for unit in daemons) + max(ceilings[unit] for unit in oneshots)
-        # ADR-032's arithmetic: 128 + 96 for the daemons, and the job's 384, still the largest.
-        self.assertEqual(worst, size("608M"))
+        # ADR-064's arithmetic: 128 + 96 + 64 for the daemons, and the job's 384, still the largest.
+        self.assertEqual(worst, size("672M"))
         self.assertLessEqual(worst, size(share), "the worst case exceeds DeckStreak's share")
         # The daemons' CPU quotas fit the share's CPUs.
         quotas = [
@@ -638,7 +701,12 @@ class NoSecretInTheEnvironment(unittest.TestCase):
             where = f"{ENV_EXAMPLE.relative_to(REPO)}:{number}"
             self.assertIsNone(_units.SECRET_NAME.search(key), f"{where}: {key} names a secret")
             self.assertNotIn(key, SYSTEMD_SETS, f"{where}: systemd sets {key}")
-            self.assertIn(key, declared | {"RUST_LOG"}, f"{where}: no role reads {key}")
+            self.assertIn(
+                key,
+                # The replica's bucket is read by Litestream's configuration, not by a role.
+                declared | {"RUST_LOG", "DECKSTREAK_REPLICA_BUCKET"},
+                f"{where}: no role reads {key}",
+            )
         self.assertLessEqual(set(REQUIRED_SETTINGS), {key for _, key, _ in settings})
         units = services()
         for unit in units:
@@ -708,6 +776,21 @@ class TheServicesRunTheirRoles(unittest.TestCase):
                 for key, value in OBSERVABILITY_SERVICE[unit.name].items():
                     self.assertEqual(last(unit, "Service", key), value, f"{unit.rel} {key}")
                 self.assertEqual(unit.values("Install", "WantedBy"), [], "a timer or a failure")
+                continue
+            if unit.name == LITESTREAM_SERVICE_NAME:
+                # SPEC-064 R1: the replicator runs the binary the rail provides with the release's
+                # own configuration, and keeps running.
+                self.assertEqual(
+                    unit.values("Service", "ExecStart"),
+                    [f"/usr/local/bin/litestream replicate -config {RELEASE}/deploy/litestream.yml"],
+                    unit.rel,
+                )
+                self.assertEqual(last(unit, "Unit", "OnFailure"), ON_FAILURE, unit.rel)
+                for key, value in LITESTREAM_SERVICE.items():
+                    self.assertEqual(last(unit, "Service", key), value, f"{unit.rel} {key}")
+                for key, value in DAEMON_UNIT.items():
+                    self.assertEqual(last(unit, "Unit", key), value, f"{unit.rel} {key}")
+                self.assertEqual(unit.values("Install", "WantedBy"), ["multi-user.target"])
                 continue
             role = ROLES[unit.name]
             self.assertEqual(unit.values("Service", "ExecStart"), [f"{BINARY} {role}"], unit.rel)
