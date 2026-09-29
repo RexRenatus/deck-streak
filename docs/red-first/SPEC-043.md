@@ -49,3 +49,24 @@ quoted here and not repeated in the block above.
 red at a6f20dc911efbcf5860541860c1cbaede5657c2e: AssertionError: 0 != 2 : (five refusal subtests)
 green at d78d60cd8bd7076f09a493128349e3d7f96485ae: the agent tests pass, with the four loopback forms launching
 ```
+
+## Amendment addendum, 2026-09-29 (issues #362 and #363)
+
+A16 to A20 were committed alone, against inert stubs where a symbol was missing: `ProbeGate::new`
+took the new arguments and returned a `Result` but refused nothing, migration 004302 was absent,
+and for A18 the `#[must_use]` on `Verdict` was removed in the red commit as a plant and restored in
+the green commit, so A18 was red by that plant and not by any earlier state of the tree. The lines
+above stand.
+
+```red-first
+A16: red at a8bdd84ed73f95269f30e14306a595c8d1ca1596: assertion `left == right` failed: left: None right: Some(NoOutputClass) (gate.rs:157)
+A16: green at 745d5fded1d72932e6b5065756bc7d887f099a0d
+A17: red at a8bdd84ed73f95269f30e14306a595c8d1ca1596: assertion `left == right` failed: left: None right: Some(NoInputClass) (gate.rs:181)
+A17: green at 745d5fded1d72932e6b5065756bc7d887f099a0d
+A18: red at a8bdd84ed73f95269f30e14306a595c8d1ca1596: `pub enum Verdict` lost its #[must_use] (verdict.rs:32; red by the disclosed plant)
+A18: green at 745d5fded1d72932e6b5065756bc7d887f099a0d
+A19: red at a8bdd84ed73f95269f30e14306a595c8d1ca1596: assertion `left == right` failed: left: [] (runs.rs:30)
+A19: green at 745d5fded1d72932e6b5065756bc7d887f099a0d
+A20: red at a8bdd84ed73f95269f30e14306a595c8d1ca1596: the prune does not use the index (runs.rs:51)
+A20: green at 745d5fded1d72932e6b5065756bc7d887f099a0d
+```
