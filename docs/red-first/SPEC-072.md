@@ -24,6 +24,16 @@ was replayed from a scratch `git worktree add` tree.
 A12's census failed at a25cc88 with the fold's step not yet calling `settle`; its green is 22f2390,
 after the crate-root re-export left the census needle to the recompute steps alone.
 
+A12 gained an arm in fix round 1: the census now also reads `SettleRequest`, so a grouped import
+of the operation and its request outside the recompute steps is found. Its red is the changed test
+beside a planted grouped import in `level_up.rs` (5dfd74a); its green removes the plant (168c835).
+The base criterion's own red and green above stay as they were.
+
+A30 (R14) and A31 (R24) were added in fix round 1. A30's test covers code already in the head, so
+its red is the test beside a planted swap of the level before and after in `sync_cycle.rs`
+(1f4b006) and its green removes the plant (578a351). A31's red is the composed router answering 503
+`law_tiers_unavailable` (8467b95) and its green wires the law tiers' source (6d82561).
+
 The pins added after the implementation (`the_derived_registry_and_the_tables_are_pinned_whole`,
 `the_step_names_and_the_level_up_kind_are_pinned_whole`, `a_day_settles_the_bonus_sources`) pin
 values the implementation already held, so they are not red: their evidence is the mutation row
@@ -54,6 +64,8 @@ A11: red at a25cc88: a grant's source is not a derived one: 10
 A11: green at de00943
 A12: red at a25cc88: the fold's XP step calls settle; every file that does: {}
 A12: green at 22f2390
+A12: red at 5dfd74a: assertion `left == right` failed; left: ["crates/coordination/src/level_up.rs calls settle outside the recompute steps, and only the owner's correction may"], right: []
+A12: green at 168c835
 A13: red at a25cc88: assertion `left == right` failed: both tables; left: 60, right: 100
 A13: green at de00943
 A14: red at a25cc88: assertion `left == right` failed: the bonuses of {"backlog_zero":true,"graduations":3,"score_total":95,"streak_days":7,"studied":true}; left: []
@@ -88,4 +100,8 @@ A28: red at b324a6f: TestingLibraryElementError: Unable to find an accessible el
 A28: green at 48df2cb
 A29: red at b324a6f: TestingLibraryElementError: Unable to find an accessible element with the role "region" and name "Consistency run"
 A29: green at 48df2cb
+A30: red at 1f4b006: assertion `left == right` failed: one line, for the level reached; left: [], right: ["🐣 Level 3: Sprout"]
+A30: green at 578a351
+A31: red at 8467b95: assertion `left == right` failed: the composed router answers the owner; left: 503, right: 200
+A31: green at 6d82561
 ```
