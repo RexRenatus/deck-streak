@@ -292,6 +292,22 @@ class TheVerdictReadsThePythonReports(unittest.TestCase):
         self.assertEqual(broken.returncode, 3, broken.stdout + broken.stderr)
         self.assertIn("VOID", broken.stdout)
 
+    def test_a_plan_of_python_mutants_and_no_rust_mutant_lists_zero(self):
+        # `listed` is the RUST listing's own count (SPEC-290 R1); the Python shards' mutants are
+        # not in it, or `mutation-rust` would start over nothing (SPEC-087 section 3).
+        fixture = changed_fixture(self)
+        entries = [
+            {"name": f"scripts/guard.py:{n}:1: replace + with - in guard", "file": SCRIPT}
+            for n in range(1, 4)
+        ]
+        _done, written = examined("plans", [shard_the_plan(fixture, entries)])[0]
+        plan = json.loads((fixture.out / "plan.json").read_text(encoding="utf-8"))
+        held = sum(len(shard["mutants"]) for shard in plan["python"]["shards"])
+        self.assertEqual(held, 3)
+        self.assertEqual(written["listed"], "0")
+        self.assertEqual(written["python_shards"], "1")
+        self.assertEqual(written["python_matrix"], "[0]")
+
     def test_a_python_class_that_examined_nothing_is_void(self):
         fixture = changed_fixture(self, both=True)
         shard_the_plan(fixture, listed(SCRIPT, SCRIPT_HEAD) + listed(GENERATOR, GENERATOR_HEAD))
