@@ -9,25 +9,25 @@
   ADR-056 (the packs stay box-only), ADR-059 (public text describes DeckStreak only), ADR-004 and
   ADR-030 (the box run and its verbs).
 - **Prerequisites:** SPEC-030 (the box scan's expectations), SPEC-056 (every pack judged on the
-  box), and the deliveries of #29, #32, #42, #49, #52, #53, #57, #58, #59, #102 and #257, each of
-  which enforces a pack, a row or a scan this SPEC counts on (R2). #42 has closed, and the other ten
-  are open. **Mutation band:** `S13400-S13499`.
+  box), and the deliveries of #29, #32, #42, #49, #52, #53, #57, #58, #59, #102, #257 and #360,
+  each of which enforces a pack, a row or a scan this SPEC counts on (R2). #42 has closed, and the
+  other eleven are open. **Mutation band:** `S13400-S13499`.
 - **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
   `docs/specs/` with its tests and `docs/red-first/SPEC-134.md` (ADR-016).
 
 ## 1. The problem, measured
 
-Measured at dev `dd478d7`, against the public contract of SPEC-056 (R7 to R11) and SPEC-030.
+Measured at dev `f10a483`, against the public contract of SPEC-056 (R7 to R11) and SPEC-030.
 
 - **Packs that wait.** The box run judges every pack the maintainer's private file names. Eight packs
   are not yet enforced, each waiting on the issue that builds its subject: #29 (two packs), #32
   (two), #49, #52 and #53 (one each), and #61 (one, the v9 import, W8). The subscription-proxy
   client scan and the apiKeyHelper scan read pending on #29, because no settings document exists
   for them to examine.
-- **Rows that wait.** Four rows of enforced packs are deferred, one each on #42, #57, #102 and
-  #257. Two rows of one enforced pack are excluded rather than deferred, because they judge a deploy
-  workflow that DeckStreak does not have (ADR-010, ADR-017); an exclusion carries its reason and
-  waits on no issue, so this SPEC keeps both.
+- **Rows that wait.** Five rows of enforced packs are deferred, one each on #42, #57, #102, #257
+  and #360. Two rows of one enforced pack are excluded rather than deferred, because they judge a
+  deploy workflow that DeckStreak does not have (ADR-010, ADR-017); an exclusion carries its reason
+  and waits on no issue, so this SPEC keeps both.
 - **Reds that #60 owns.** Six box-run packs show reds the box run expects on the tree, and these
   name #60 as the issue that settles them:
   - the cyber-pipeline pack finds no threat model, because none is written under
