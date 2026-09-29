@@ -11,8 +11,9 @@ decision-makers: "@RexRenatus (owner), the DeckStreak builder"
 `deploy.sh caddy-install` moves the candidate Caddyfile into place and deletes the previous block
 before `caddy reload` runs, and `caddy-remove` moves the candidate Caddyfile into place and deletes
 the block itself before its reload (SPEC-062 R7). A reload that fails then leaves the disk holding
-the new files while Caddy runs the old configuration, with no previous copy to restore (#321). What must the scripts keep, and when, so that the files on the host match the configuration
-Caddy runs after a failed reload?
+the new files while Caddy runs the old configuration, with no previous copy to restore (#321). What
+must the scripts keep, and when, so that the files on the host match the configuration Caddy runs
+after a failed reload?
 
 ## Decision Drivers
 
@@ -44,14 +45,16 @@ rule (SPEC-127 R4).
 
 ### Consequences
 
-- Good, because the disk and Caddy agree after every outcome but a killed script.
+- Good, because the disk and Caddy agree after every reload outcome; a failed file operation, like a
+  killed script, can leave them apart, with a non-zero exit.
 - Bad, because a failed restoring reload still leaves Caddy on its last good configuration and needs
   a person, which the second message says.
 
 ### Confirmation
 
-SPEC-127's tests A1 to A8, and the script rows S12701 to S12709. A7 and A8 refuse one rename onto
-the Caddyfile and read the disk, so the order above is measured and not read from the script.
+SPEC-127's tests A1 to A9, and the script rows S12701 to S12710. A7 and A8 refuse one rename onto
+the Caddyfile and A9 one onto the block, and each reads the disk, so the order above is measured and
+not read from the script.
 
 ## More Information
 

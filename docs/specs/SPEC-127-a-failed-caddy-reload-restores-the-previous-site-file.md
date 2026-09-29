@@ -25,8 +25,8 @@ the disk side is wrong.
 R1. `caddy-install` keeps the previous block and the previous Caddyfile until the reload succeeds.
 R2. A failed reload restores both, in SPEC-062 R7's order (the Caddyfile first, so that no state
     has it importing a block that is absent, then the block), reloads the restored configuration,
-    and exits non-zero with a message that names the failed reload. If the restoring reload also fails, a second message says
-    so distinctly, and the exit is still non-zero.
+    and exits non-zero with a message that names the failed reload. If the restoring reload also
+    fails, a second message says so distinctly, and the exit is still non-zero.
 R3. A first install (no previous block) whose reload fails removes the new block and restores the
     previous Caddyfile.
 R4. `caddy-remove` follows the same rule: the block and the Caddyfile are kept until its reload
@@ -48,6 +48,7 @@ R5. The previous copies are removed only after a successful reload, and none is 
 | A6 | a failed restoring reload of `caddy-remove` is named apart, the removal refuses and both files are restored | `test_deploy_scripts.py` `a_failed_restoring_reload_of_the_removal_is_named_apart` |
 | A7 | a removal whose rename onto the Caddyfile fails leaves the block in place | `test_deploy_scripts.py` `a_removal_whose_caddyfile_rename_fails_leaves_the_block_in_place` |
 | A8 | a first install whose restore rename fails never leaves a Caddyfile importing a missing block | `test_deploy_scripts.py` `a_first_install_whose_restore_rename_fails_never_imports_a_missing_block` |
+| A9 | a removal whose block restore fails never leaves a Caddyfile importing a missing block | `test_deploy_scripts.py` `a_removal_whose_block_restore_fails_never_imports_a_missing_block` |
 
 ```acceptance
 A1: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k a_failed_reload_restores_the_previous_block_and_caddyfile
@@ -58,19 +59,20 @@ A5: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k a
 A6: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k a_failed_restoring_reload_of_the_removal_is_named_apart
 A7: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k a_removal_whose_caddyfile_rename_fails_leaves_the_block_in_place
 A8: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k a_first_install_whose_restore_rename_fails_never_imports_a_missing_block
+A9: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k a_removal_whose_block_restore_fails_never_imports_a_missing_block
 ```
 
 The tests use the existing fakes: a `caddy` stub whose `reload` fails on demand (the count of
 failures is written to a file, so one file fails the reload once and another twice) and records how
 many previous copies sit beside the configuration at each reload; A7 and A8 swap in a `mv` that
-refuses one rename onto the Caddyfile. No test reaches a host.
+refuses one rename onto the Caddyfile, and A9 one that refuses the rename back onto the block. No test reaches a host.
 
 ## 4. File manifest
 
 | file | context | change |
 |---|---|---|
 | `deploy/deploy.sh` | repo | changed: R1 to R5 (`caddy_install`, `caddy_remove`) |
-| `scripts/tests/test_deploy_scripts.py` | repo | changed: the `caddy` stub, the failing `mv` and A1 to A8 |
+| `scripts/tests/test_deploy_scripts.py` | repo | changed: the `caddy` stub, the failing `mv`s and A1 to A9 |
 | `scripts/mutation-rows.d/S12700-S12799.json` | repo | added: the restore clauses as script rows (section 7) |
 | `deploy/README.md` | repo | changed: one sentence in the Caddy section |
 | `docs/specs/SPEC-127-a-failed-caddy-reload-restores-the-previous-site-file.md` | repo | added |
@@ -116,6 +118,7 @@ killed by its full id and each naming one test as its killer:
 | S12707 | the removal reloads again after restoring and names a second failure | A6 |
 | S12708 | the removal swaps the Caddyfile before it moves the block aside | A7 |
 | S12709 | the install restores the Caddyfile before it takes the new block away | A8 |
+| S12710 | the removal restores the block before the Caddyfile | A9 |
 
 ## References
 
