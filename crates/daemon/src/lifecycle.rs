@@ -274,3 +274,18 @@ impl ShutdownSignal {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{Micros, NotifyAddress, Setting, Text};
+
+    #[test]
+    fn each_private_setting_states_its_shape() {
+        assert_eq!(
+            NotifyAddress::SHAPE,
+            "an absolute socket path, or @ and an abstract socket name"
+        );
+        assert_eq!(Micros::SHAPE, "a whole number of microseconds");
+        assert_eq!(Text::SHAPE, "text");
+    }
+}

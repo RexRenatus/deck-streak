@@ -244,3 +244,5 @@ The retired criteria, why their subject is gone, and what judges it now:
 Amendment (2026-09-28): names of the maintainer's private tooling were replaced with 'the box-run
 packs' and neutral names for their repository, binary and checkout under the public-text rule
 (ADR-059).
+
+Amendment (2026-09-29): SPEC-123 carries R12's expected red, a row named with its open issue, from a pack's entry to the proxy scan's, so R13's scan may defer one red row by name (ADR-123).

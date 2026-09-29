@@ -16,7 +16,6 @@ use axum::Router;
 use axum::body::{Body, to_bytes};
 use axum::http::header::{CONTENT_TYPE, SET_COOKIE};
 use axum::http::{Request, StatusCode};
-use deck_streak_api::notifications_routes::FEED_PATH;
 use deck_streak_api::{ApiState, OwnerAccess, Readiness, router};
 use deck_streak_identity::{Freshness, Owner, OwnerGate, WebAppKey};
 use deck_streak_kernel::{Db, ManualClock, StudyDay, StudyDayRule, TelegramUserId, UtcMillis};
@@ -126,7 +125,15 @@ async fn feed(app: &Router, cookie: Option<&str>) -> Answer {
         .map(|cookie| ("cookie", cookie))
         .into_iter()
         .collect();
-    send(app, "GET", FEED_PATH, &headers, String::new()).await
+    // SPEC-041 R12's path, named whole: the Mini App calls it by this text.
+    send(
+        app,
+        "GET",
+        "/api/notifications/feed",
+        &headers,
+        String::new(),
+    )
+    .await
 }
 
 /// The API as the daemon builds it, over a database the router has delivered one Mini App
