@@ -68,6 +68,7 @@ R8. The bot flushes its notification router, once, when its port observes the ow
 | A7 | the bot flushes its router once after the owner's sync succeeds | `cargo test -p deck-streak-daemon --test sync_request -- --exact the_bot_flushes_its_router_after_the_owners_sync_succeeds` |
 | A7 | the bot never flushes after a failed, reused or unanswered sync | `cargo test -p deck-streak-daemon --test sync_request -- --exact the_bot_never_flushes_after_a_failed_reused_or_unanswered_sync` |
 | A7 | a flush that fails never changes the owner's answer | `cargo test -p deck-streak-daemon --test sync_request -- --exact a_flush_that_fails_never_changes_the_owners_answer` |
+| A7 | the real router flush delivers a celebration quiet hours held | `cargo test -p deck-streak-daemon --test sync_request -- --exact the_real_router_flush_delivers_a_celebration_quiet_hours_held` |
 
 ```acceptance
 A1: cargo test -p deck-streak-daemon --test sync_request -- --exact the_bot_port_requests_the_job_and_never_runs_the_cycle
@@ -81,6 +82,7 @@ A6: cargo test -p deck-streak-coordination --test job_table -- --exact the_job_t
 A7: cargo test -p deck-streak-daemon --test sync_request -- --exact the_bot_flushes_its_router_after_the_owners_sync_succeeds
 A7: cargo test -p deck-streak-daemon --test sync_request -- --exact the_bot_never_flushes_after_a_failed_reused_or_unanswered_sync
 A7: cargo test -p deck-streak-daemon --test sync_request -- --exact a_flush_that_fails_never_changes_the_owners_answer
+A7: cargo test -p deck-streak-daemon --test sync_request -- --exact the_real_router_flush_delivers_a_celebration_quiet_hours_held
 ```
 
 ## 4. File manifest

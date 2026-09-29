@@ -48,3 +48,5 @@ A6: not red: the owner gate (an_update_from_anyone_but_the_owner_is_dropped_with
 A7: red at 16530d5: assertion `left == right` failed: one flush, after the sync that ran and succeeded (left: 0, right: 1)
 A7: green at df7532e
 ```
+
+The fourth A7 test, `the_real_router_flush_delivers_a_celebration_quiet_hours_held`, was written after CI's mutation verdict found that cargo-mutants replaced the body of `impl Flush for Arc<Router>` with `Ok(())` and no test noticed. It was green at once against the real flush, and red (nothing pushed) with the flush body removed.

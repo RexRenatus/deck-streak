@@ -20,7 +20,13 @@ use deck_streak_daemon::sync_request::{
 use deck_streak_ingest::gate::{Anchor, Probe};
 use deck_streak_ingest::state::SqliteIngestState;
 use deck_streak_ingest::sync_runs::{ReasonCode, SqliteSyncRuns, SyncRun, SyncRunStore, Trigger};
-use deck_streak_kernel::{Clock, Db, Environment, KernelError, ManualClock, StudyDay, UtcMillis};
+use deck_streak_kernel::{
+    Clock, Db, Environment, KernelError, ManualClock, StudyDay, StudyDayRule, UtcMillis,
+};
+use deck_streak_notifications::{
+    BotTransport, Decision, DedupeKey, Hold, LapseContext, Occasion, Pass, Policy, PushFuture,
+    Pushed, Router, Surface, Tier,
+};
 
 const START: i64 = 1_800_000_000_000;
 
@@ -429,4 +435,73 @@ async fn a_flush_that_fails_never_changes_the_owners_answer() {
         })
     );
     assert_eq!(flushes.calls(), 1, "the flush was tried");
+}
+
+/// A bot transport that records every push and delivers it.
+#[derive(Default)]
+struct Recording(Mutex<Vec<String>>);
+
+impl BotTransport for Recording {
+    fn push_message<'a>(&'a self, _pass: &'a Pass, text: &'a str) -> PushFuture<'a> {
+        Box::pin(async move {
+            self.0
+                .lock()
+                .expect("the lock is not poisoned")
+                .push(text.to_owned());
+            Pushed::Delivered
+        })
+    }
+}
+
+#[tokio::test]
+async fn the_real_router_flush_delivers_a_celebration_quiet_hours_held() {
+    const DAY: i64 = 20_000;
+    const DAY_MS: i64 = 86_400_000;
+    const MINUTE_MS: i64 = 60_000;
+    let scratch = tempfile::tempdir().expect("a scratch");
+    let db = Db::open(&scratch.path().join("deckstreak.db"))
+        .await
+        .expect("the database");
+    let clock = Arc::new(ManualClock::new(UtcMillis::from_epoch_millis(
+        DAY * DAY_MS + (23 * 60 + 30) * MINUTE_MS,
+    )));
+    let policy = Arc::new(Policy::compiled().expect("the compiled policy parses"));
+    let bot = Arc::new(Recording::default());
+    let router = Router::new(
+        Arc::clone(&policy),
+        db,
+        clock.clone(),
+        StudyDayRule::default(),
+    )
+    .with_bot(bot.clone());
+    let celebration = Occasion::new(
+        policy.kind("celebration").expect("the celebration kind"),
+        DedupeKey::new("level-up:9").expect("a key"),
+        Surface::Bot,
+        Tier::T2,
+        "synthetic level-up",
+        StudyDay::from_epoch_day(DAY),
+        LapseContext::NoLapse,
+    )
+    .expect("an occasion");
+    assert_eq!(
+        router.route(&celebration).await.expect("a decision"),
+        Decision::Deferred {
+            surface: Surface::Bot,
+            hold: Hold::Quiet
+        },
+        "23:30 is inside the quiet window"
+    );
+    clock.set(UtcMillis::from_epoch_millis(
+        (DAY + 1) * DAY_MS + 8 * 60 * MINUTE_MS,
+    ));
+
+    Flush::flush(&Arc::new(router))
+        .await
+        .expect("the flush runs");
+
+    assert_eq!(
+        bot.0.lock().expect("the lock is not poisoned").clone(),
+        ["synthetic level-up"]
+    );
 }
