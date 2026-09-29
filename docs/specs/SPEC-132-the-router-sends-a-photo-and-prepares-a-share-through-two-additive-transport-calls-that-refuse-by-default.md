@@ -144,17 +144,20 @@ each judges. The delivery hands back an empty JSON diff and says so.
 | `crates/notifications/src/transport.rs` | `deck-streak-notifications` | changed: `push_photo` and `prepare_share` with their refusing defaults, `PhotoPushed`, `Prepared` |
 | `crates/notifications/src/photo.rs` | `deck-streak-notifications` | added: `Photo`, `FileId` and their bounds |
 | `crates/notifications/src/router.rs` | `deck-streak-notifications` | changed: `route_photo`, `prepare_share`, `photo_unsupported` |
-| `crates/notifications/src/policy.rs` | `deck-streak-notifications` | changed: the two calls in the typed transport list |
 | `crates/notifications/src/lib.rs` | `deck-streak-notifications` | changed: the module |
 | `crates/notifications/tests/photo_render.rs` | `deck-streak-notifications` | added: A1 to A11 |
 | `crates/notifications/tests/one_router.rs` | `deck-streak-notifications` | changed: A15 |
+| `crates/notifications/tests/ladder_policy.rs` | `deck-streak-notifications` | changed: the port's call list includes the two new calls |
+| `crates/notifications/tests/policy.rs` | `deck-streak-notifications` | changed: the required withhold reasons include `photo_unsupported` |
 | `notifications-policy.json` | repo | changed: `push_photo` and `prepare_share` |
 | `crates/bot/src/transport.rs` | `deck-streak-bot` | changed: the two calls on the Bot API |
 | `crates/bot/tests/photo_transport.rs` | `deck-streak-bot` | added: A12 to A14 |
 | `crates/bot/tests/support/fake_bot_api.rs` | `deck-streak-bot` | changed: answers the two methods |
 | `docs/specs/SPEC-132-the-router-sends-a-photo-and-prepares-a-share-through-two-additive-transport-calls-that-refuse-by-default.md` | docs | moved from `docs/specs/planned/` |
-| `docs/schematics/w7-image-pipeline-and-its-no-provider-path.md` | docs | added by the W7 architect turn; this delivery corrects it only where the code proves it wrong |
+| `docs/schematics/notification-router.md` | docs | changed: the census line names the two new calls |
 | `docs/red-first/SPEC-132.md` | docs | added |
+| `docs/decisions/ADR-135-images-are-drawn-through-a-port-with-no-provider-wired-by-a-sending-job-capped-cached-and-gated.md` | docs | changed: status accepted, for the router's photo path |
+| `docs/decisions/ADR-136-a-share-is-a-prepared-inline-message-the-owner-sends-from-telegrams-share-sheet.md` | docs | changed: status accepted |
 | `scripts/mutation-rows.d/S13200-S13299.json` | repo | added: §9's rows |
 | `changelog.d/` fragment | repo | added |
 
