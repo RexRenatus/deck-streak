@@ -323,52 +323,12 @@
         "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_a_module_file_beside_the_own_file_is_its_test_module"
       ],
       [
-        "S19239-MAIN-RS-IS-A-MODULE-ROOT",
-        "scripts/tests/test_setting_shapes.py",
-        "(\"lib.rs\", \"main.rs\", \"mod.rs\")",
-        "(\"lib.rs\", \"mod.rs\")",
-        "a `mod tests;` in `main.rs` is resolved beside the file, as for `lib.rs` (SPEC-192 A13)",
-        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_the_module_of_a_lib_file_is_read_from_the_crates_src_directory"
-      ],
-      [
-        "S19240-MOD-RS-IS-A-MODULE-ROOT",
-        "scripts/tests/test_setting_shapes.py",
-        "(\"lib.rs\", \"main.rs\", \"mod.rs\")",
-        "(\"lib.rs\", \"main.rs\")",
-        "a `mod tests;` in a `mod.rs` is resolved beside the file, as for `lib.rs` (SPEC-192 A13)",
-        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_the_module_of_a_lib_file_is_read_from_the_crates_src_directory"
-      ],
-      [
         "S19241-A-DECLARATION-IN-A-STRING-DECLARES-NOTHING",
         "scripts/tests/test_setting_shapes.py",
         "for module in OUT_OF_LINE.finditer(skeleton):",
         "for module in OUT_OF_LINE.finditer(bare):",
         "a `#[cfg(test)] mod tests;` spelled inside a string is no declaration, so the file it names is not read as a test module (SPEC-192 A13)",
         "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_a_file_that_is_no_declared_test_module_is_not_read_as_one"
-      ],
-      [
-        "S19242-A-PATH-ATTRIBUTE-BELONGS-TO-ITS-OWN-MODULE",
-        "scripts/tests/test_setting_shapes.py",
-        "named = PATH_ATTR.search(bare, module.start(1), module.end(1))",
-        "named = PATH_ATTR.search(bare)",
-        "a `#[path]` on another module is not the path of the test module, so it does not redirect the file that is read (SPEC-192 A13)",
-        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_a_file_that_is_no_declared_test_module_is_not_read_as_one"
-      ],
-      [
-        "S19243-A-PATH-ATTRIBUTE-REPLACES-THE-DEFAULT-FILE",
-        "scripts/tests/test_setting_shapes.py",
-        "            [own.parent / named.group(1)]\n            if named\n            else [folder / f\"{name}.rs\", folder / name / \"mod.rs\"]",
-        "            ([own.parent / named.group(1)] if named else [])\n            + [folder / f\"{name}.rs\", folder / name / \"mod.rs\"]",
-        "with a `#[path]` the default file is not read, so a stale `tests.rs` beside it pins nothing (SPEC-192 A13)",
-        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_a_file_that_is_no_declared_test_module_is_not_read_as_one"
-      ],
-      [
-        "S19244-A-PATH-ATTRIBUTE-NEEDS-NO-SPACES",
-        "scripts/tests/test_setting_shapes.py",
-        "PATH_ATTR = re.compile(r'#\\[path\\s*=\\s*\"",
-        "PATH_ATTR = re.compile(r'#\\[path = \"",
-        "`#[path=\"...\"]` without spaces names the module file as `#[path = \"...\"]` does (SPEC-192 A13)",
-        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_a_path_attribute_names_the_module_file_from_the_own_files_directory"
       ],
       [
         "S19245-A-TEST-MODULE-SPAN-COUNTS-NESTED-BRACES",
@@ -465,6 +425,54 @@
         "",
         "a `mod tests;` inside an inline module is not resolved beside the file, so a stale top-level file spelling the shape pins nothing (SPEC-192 R8)",
         "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_a_file_that_is_no_declared_test_module_is_not_read_as_one"
+      ],
+      [
+        "S19257-A-PATH-WORD-ON-THE-DECLARATION-IS-NOT-READ",
+        "scripts/tests/test_setting_shapes.py",
+        "        if PATH_WORD.search(module.group(1)):\n            continue\n",
+        "",
+        "a `mod tests;` whose attributes carry `path` in any spelling is not read, so a stale default file beside it pins nothing (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_a_file_that_is_no_declared_test_module_is_not_read_as_one"
+      ],
+      [
+        "S19258-A-MODULE-FILE-BESIDE-THE-OWN-FILE-IS-A-PLACE",
+        "scripts/tests/test_setting_shapes.py",
+        "for folder in (own.with_suffix(\"\"), own.parent)",
+        "for folder in (own.with_suffix(\"\"),)",
+        "a crate root, a `src/bin` file and a `mod.rs` read their modules beside themselves, so the file beside the own file is read (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_the_module_of_a_lib_file_is_read_from_the_crates_src_directory"
+      ],
+      [
+        "S19259-THE-MODULE-DIRECTORY-IS-A-PLACE",
+        "scripts/tests/test_setting_shapes.py",
+        "for folder in (own.with_suffix(\"\"), own.parent)",
+        "for folder in (own.parent,)",
+        "a file that is not a module root reads its modules from its own module directory, so that directory is searched (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_a_module_directory_with_a_mod_file_is_its_test_module"
+      ],
+      [
+        "S19260-AN-AMBIGUOUS-CHOICE-IS-NOT-READ",
+        "scripts/tests/test_setting_shapes.py",
+        "if len(found) == 1:",
+        "if found:",
+        "when rustc could read more than one file for the module none is read, so a stale second file pins nothing (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+      ],
+      [
+        "S19261-A-MODULE-DIRECTORY-MOD-FILE-IS-A-CANDIDATE",
+        "scripts/tests/test_setting_shapes.py",
+        "(folder / f\"{name}.rs\", folder / name / \"mod.rs\")",
+        "(folder / f\"{name}.rs\",)",
+        "`name/mod.rs` is a file rustc could read for the module, so it is read (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_a_module_directory_with_a_mod_file_is_its_test_module"
+      ],
+      [
+        "S19262-A-NAME-RS-FILE-IS-A-CANDIDATE",
+        "scripts/tests/test_setting_shapes.py",
+        "(folder / f\"{name}.rs\", folder / name / \"mod.rs\")",
+        "(folder / name / \"mod.rs\",)",
+        "`name.rs` is a file rustc could read for the module, so it is read (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_a_module_file_beside_the_own_file_is_its_test_module"
       ]
     ]
   }
