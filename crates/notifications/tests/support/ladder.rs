@@ -174,10 +174,11 @@ pub struct Expected {
 
 /// The golden `calls` as the port's calls. The predecessor's `send_html_id` and `send_html` are one
 /// Bot API method, and its reveal, dice message and pinned message are each one call of the port,
-/// whose composition the bot's transport owns (A14): so a run of calls from a `send_html_id` to the
-/// next dice, reaction or message is one call, named by the `tier` it renders (`tier_of` reads the
-/// tier of the call's key, if the golden keys its calls), and it delivers unless its last call is a
-/// failed one other than the pin. A call's answer is a failure when `fail` names its method.
+/// whose composition the bot's transport owns (A14): so a run of calls of one key from a
+/// `send_html_id` to the next dice, reaction or message is one call, named by the `tier` it renders
+/// (`tier_of` reads the tier of the call's key, if the golden keys its calls), and it delivers
+/// unless its last call is a failed one other than the pin. A call of another key, as the rollup's
+/// line is, ends the run. A call's answer is a failure when `fail` names its method.
 pub fn port_calls(
     calls: &[Value],
     fail: &[String],
@@ -200,6 +201,11 @@ pub fn port_calls(
             .to_owned()
     };
     let argument = |call: &Value| call.as_array().and_then(|array| array.last()).cloned();
+    let key = |call: &Value| {
+        call.as_array()
+            .filter(|array| array.len() > 2)
+            .and_then(|array| array[0].as_str().map(str::to_owned))
+    };
     let mut expected = Vec::new();
     let mut at = 0;
     while at < calls.len() {
@@ -235,6 +241,7 @@ pub fn port_calls(
                 let mut pause = None;
                 at += 1;
                 while at < calls.len()
+                    && key(&calls[at]) == key(&calls[start])
                     && matches!(
                         method(&calls[at]).as_str(),
                         "sleep" | "edit_html" | "pin_message" | "send_html"

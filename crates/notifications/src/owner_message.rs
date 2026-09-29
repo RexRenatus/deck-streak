@@ -2,6 +2,7 @@
 //! owner's latest message to the bot and the instant it arrived, which a T1 reacts to.
 
 use deck_streak_kernel::{Db, KernelError, UtcMillis};
+use sqlx::SqliteConnection;
 
 /// The owner's latest message to the bot.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -17,7 +18,17 @@ pub struct LatestMessage {
 /// # Errors
 ///
 /// [`KernelError::Database`] when the write fails.
-pub async fn record(_db: &Db, _message_id: i64, _at: UtcMillis) -> Result<(), KernelError> {
+pub async fn record(db: &Db, message_id: i64, at: UtcMillis) -> Result<(), KernelError> {
+    let arrived_at = at.epoch_millis();
+    let mut write = db.write().await?;
+    sqlx::query!(
+        "UPDATE owner_last_message SET message_id = ?, arrived_at = ? WHERE id = 1",
+        message_id,
+        arrived_at,
+    )
+    .execute(&mut *write)
+    .await?;
+    write.commit().await?;
     Ok(())
 }
 
@@ -26,6 +37,22 @@ pub async fn record(_db: &Db, _message_id: i64, _at: UtcMillis) -> Result<(), Ke
 /// # Errors
 ///
 /// [`KernelError::Database`] when the read fails.
-pub async fn latest(_db: &Db) -> Result<Option<LatestMessage>, KernelError> {
-    Ok(None)
+pub async fn latest(db: &Db) -> Result<Option<LatestMessage>, KernelError> {
+    let mut connection = db.reader().acquire().await?;
+    read(&mut connection).await
+}
+
+/// The owner's latest message, read on `connection`: the router reads it inside its own write.
+pub(crate) async fn read(
+    connection: &mut SqliteConnection,
+) -> Result<Option<LatestMessage>, KernelError> {
+    let row = sqlx::query!("SELECT message_id, arrived_at FROM owner_last_message WHERE id = 1")
+        .fetch_optional(connection)
+        .await?;
+    Ok(row.and_then(|row| {
+        Some(LatestMessage {
+            message_id: row.message_id?,
+            arrived_at: UtcMillis::from_epoch_millis(row.arrived_at?),
+        })
+    }))
 }

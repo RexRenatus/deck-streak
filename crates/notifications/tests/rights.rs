@@ -1,6 +1,7 @@
 //! Notifications' data-rights port (SPEC-041 A14; R11; SPEC-021): the port lists the router's five
-//! tables, each exported and erased; the export carries every row the router wrote; and an erase,
-//! inside the caller's transaction, empties every one of them.
+//! tables, each exported and erased, then the owner's latest message, reset in place (SPEC-084
+//! R14); the export carries every row the router wrote; and an erase, inside the caller's
+//! transaction, empties every one of the five.
 
 // An integration test is test code: its fixtures panic on a failed setup, and it prints the
 // examined count on purpose.
@@ -11,6 +12,7 @@ mod support;
 use deck_streak_kernel::{DataRights, Disposition, TableRights};
 use deck_streak_notifications::data_rights::{NOTIFICATIONS_CONTEXT, NotificationsDataRights};
 use deck_streak_notifications::{LapseContext, Surface, Tier};
+use serde_json::{Map, Value};
 use sqlx::Row;
 use support::{DAY, Harness, at};
 
@@ -42,13 +44,24 @@ async fn the_notification_tables_are_exported_and_erased() {
     let port = NotificationsDataRights;
     let declaration = port.declaration().expect("the port declares its tables");
     assert_eq!(declaration.context(), NOTIFICATIONS_CONTEXT);
+    let mut no_message = Map::new();
+    no_message.insert("message_id".to_owned(), Value::Null);
+    no_message.insert("arrived_at".to_owned(), Value::Null);
+    let mut tables: Vec<TableRights> = TABLES
+        .map(|table| TableRights {
+            table,
+            disposition: Disposition::ExportAndErase,
+        })
+        .into();
+    tables.push(TableRights {
+        table: "owner_last_message",
+        disposition: Disposition::ResetInPlace { row: no_message },
+    });
     assert_eq!(
         declaration.tables(),
-        TABLES.map(|table| TableRights {
-            table,
-            disposition: Disposition::ExportAndErase
-        }),
-        "the router's tables are the owner's data: exported and erased (CHARTER 13)"
+        tables,
+        "the router's tables are the owner's data: exported and erased (CHARTER 13), and the \
+         owner's latest message is reset in place"
     );
 
     // A row in every table: a send to the bot, a Mini App send, a deferral, and a setting.
@@ -95,8 +108,10 @@ async fn the_notification_tables_are_exported_and_erased() {
     port.erase(&mut write).await.expect("the erase");
     write.commit().await.expect("the erase commits");
 
+    let mut exported_before = before.clone();
+    exported_before.push(("owner_last_message", 1));
     assert_eq!(
-        exported, before,
+        exported, exported_before,
         "the export carries every row of every table"
     );
     assert_eq!(

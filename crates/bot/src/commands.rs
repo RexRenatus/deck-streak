@@ -27,6 +27,7 @@ use deck_streak_coordination::data_rights_registry::{erase_all, export_all};
 use deck_streak_coordination::score::day_score;
 use deck_streak_identity::Owner;
 use deck_streak_kernel::{Clock, Db, Environment, Setting, SettingsError, StudyDayRule};
+use deck_streak_notifications::owner_message;
 use frankenstein::types::{BotCommand, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo};
 
 use crate::gate::{self, Admission, OwnerCallback, OwnerMessage};
@@ -451,6 +452,12 @@ impl<S: OwnerSync> Commands<S> {
     }
 
     async fn on_message(&mut self, message: OwnerMessage) {
+        // The owner's latest message, which a T1 celebration reacts to (SPEC-084 R13).
+        let at = self.clock.now();
+        if let Err(error) = owner_message::record(&self.db, i64::from(message.message_id), at).await
+        {
+            tracing::warn!(%error, "the owner's latest message was not recorded");
+        }
         match command_of(&message.text).as_deref() {
             Some("start") => self.send(start_reply(&self.app)).await,
             Some("privacy") => self.send(privacy_reply()).await,

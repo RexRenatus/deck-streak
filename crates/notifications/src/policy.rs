@@ -373,6 +373,14 @@ impl Policy {
         })
     }
 
+    /// The kinds of the celebration class, whose deliveries the weekly budget counts (SPEC-084 R4).
+    pub(crate) fn celebration_kinds(&self) -> impl Iterator<Item = &str> {
+        self.kinds
+            .iter()
+            .filter(|(_, spec)| spec.class == Class::Celebration)
+            .map(|(name, _)| name.as_str())
+    }
+
     /// Every recorded deviation from the pack's baseline.
     #[must_use]
     pub fn deviations(&self) -> &[Deviation] {
