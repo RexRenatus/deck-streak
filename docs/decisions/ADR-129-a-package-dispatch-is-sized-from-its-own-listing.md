@@ -52,7 +52,7 @@ the matrix's limit is refused with its projection, as `shards` refuses, and is n
 
 ### Confirmation
 
-SPEC-129's A1 to A5, the equal-count proof in the pull request, and its live dispatch.
+SPEC-129's A1 to A6, the equal-count proof in the pull request, and its live dispatch.
 
 ## What would make this wrong
 

@@ -51,11 +51,12 @@ R5. **The legs, their `--shard` argument and the battery read the one count.** T
 `needs: size`, its matrix is `fromJSON(needs.size.outputs.matrix)`, its step `env:` sets `SHARD`
 from `matrix.shard` and `SHARDS` from `needs.size.outputs.shards`, and its command passes
 `--shard "$SHARD/$SHARDS"`. The survivors job, which needs `size`, sets `SHARDS` the same way and
-runs `battery --shards "$SHARDS"`. No `${{ }}` expression is interpolated into a `run:` block, and
+runs `mutation-verdict.py battery --reports "$reports" --shards "$SHARDS" …`. No `${{ }}` expression is interpolated into a `run:` block, and
 no `--shard` or `--shards` argument of a rust or survivors command is a literal number. The
 `--timeout 300`, `--build-timeout 600`, `--in-place` and test tool of every leg are unchanged, and
 every `cargo mutants` command line of every workflow file carries `--timeout 300 --build-timeout
-600` literally.
+600` literally: the bounds are read as whole values (`6000` is not `600`), a command continued
+with `\` is read as one line, and a bare `cargo mutants` counts.
 
 R6. **The battery refuses a report set whose shard count differs from n.** A missing report is
 already `MISSING`; a report `mutants-shard-<k>` with `k` at least n is now `FOREIGN` and fails the
@@ -77,7 +78,7 @@ times than it is listed is a failure. The delivery adds no second check of it.
 | A3 | the rust matrix, its `--shard` argument and the battery's `--shards` read the size job's one count, no fixed count remains, and a plant that puts 32 back into any of the three goes red | `test_dispatch_shards.py` `TheWorkflowReadsTheOneCount` |
 | A4 | a report set beyond n fails the battery as `FOREIGN` and a set of exactly n passes | `test_dispatch_shards.py` `TheBatteryRefusesAForeignShardCount` |
 | A5 | the sized shards' mutants are the same set, and the same count, as the 32 shards' | `test_dispatch_shards.py` `TheExaminedTotalIsTheListing` |
-| A6 | every `cargo mutants` command line in every workflow file, at least one in each of `ci.yml` and `mutation-weekly.yml`, carries `--timeout 300 --build-timeout 600` literally | `test_dispatch_shards.py` `EveryMutationCommandKeepsTheGatesBounds` |
+| A6 | every `cargo mutants` command line in every workflow file, at least one in each of `ci.yml` and `mutation-weekly.yml`, carries `--timeout 300 --build-timeout 600` literally, read as whole values, with a `\`-continued command read as one line and a bare `cargo mutants` counted | `test_dispatch_shards.py` `EveryMutationCommandKeepsTheGatesBounds` |
 
 ```acceptance
 A1: python3 -m unittest discover -s scripts/tests -p test_dispatch_shards.py -k test_a_small_package_takes_one_shard_and_a_large_one_the_fewest_within_the_bound
@@ -102,7 +103,7 @@ survivors job, quoted in the pull request.
 | `scripts/mutation-verdict.py` | repo | changed: the shared `fewest_shards`, the `size` verb, and the battery's `FOREIGN` check (R2, R3, R6) |
 | `scripts/tests/test_dispatch_shards.py` | repo | added: A1 to A6 |
 | `scripts/tests/test_mutation_workflows.py` | repo | changed: the three assertions that read the fixed matrix and the fixed divisor now read the sized count |
-| `scripts/mutation-rows.d/S12900-S12999.json` | repo | added: five rows: S12901 to S12903 for the verdict's clauses the per-PR Python gate cannot reach, S12904 and S12905 for the rust leg's `--timeout 300` and `--build-timeout 600` |
+| `scripts/mutation-rows.d/S12900-S12999.json` | repo | added: six rows: S12901 to S12903 for the verdict's clauses the per-PR Python gate cannot reach, S12904 and S12905 for the rust leg's `--timeout 300` and `--build-timeout 600`, and S12906 for the same build timeout raised by an appended digit (`6000`), which only a whole-value read of the bound kills, by `EveryMutationCommandKeepsTheGatesBounds` |
 | `docs/specs/SPEC-129-a-package-dispatch-is-sharded-by-its-projected-weight.md` | repo | added |
 | `docs/decisions/ADR-129-a-package-dispatch-is-sized-from-its-own-listing.md` | repo | added |
 | `docs/specs/planned/SPEC-057-every-surviving-mutant-is-killed-or-recorded-equivalent-before-the-first-mutation-gated-release.md` | repo | changed: a dated amendment at its end (insert-only) |

@@ -31,3 +31,28 @@ rust leg --build-timeout 600 -> 1200: AssertionError: '--timeout 300 --build-tim
 ci.yml   --timeout 300 -> 600:        AssertionError: ... ci.yml: cargo mutants ... --timeout 600 --build-timeout 600 ...
 ci.yml   --build-timeout 600 -> 1200: AssertionError: ... ci.yml: cargo mutants ... --timeout 300 --build-timeout 1200 ...
 ```
+
+Fix round 2 (2026-09-29) made A6 read whole values and every spelling of the command: commands are
+found with `\bcargo\s+mutants\b[^\n]*` on text whose `\`-newline continuations are joined first,
+and the bounds are matched as `(?<![\w-])--timeout 300 --build-timeout 600(?![\w.])`. A6 stays
+`not red:` above, because it is green on every real workflow at every commit. Row S12906 (a build
+timeout of `6000` on the rust leg) is the round's red: it survived the earlier A6 at 507570d, and
+the test commit 6a1d80a kills it. Each plant below was applied to an export of 6a1d80a, and every
+workflow was restored and checked by sha256 after each one:
+
+```text
+S12906 at 507570d (earlier A6): SURVIVED: its killer passed with the mutant installed; rows: examined 1: killed 0, survived 1, void 0
+S12906 at 6a1d80a (new A6):     KILLED: its killer passed without the mutant and failed with it; rows: examined 1: killed 1, survived 0, void 0
+prove --band S12900-S12999 at 6a1d80a: rows: examined 6: killed 6, survived 0, void 0
+V8 new .yml, bare `cargo mutants`:               AssertionError: Regex didn't match: '(?<![\\w-])\\-\\-timeout\\ 300 ...' not found in 'cargo mutants' : extra.yml: cargo mutants
+V9 new .yaml, bare `cargo mutants`:              AssertionError: Regex didn't match: '(?<![\\w-])\\-\\-timeout\\ 300 ...' not found in 'cargo mutants' : extra.yaml: cargo mutants
+M1 rust leg --build-timeout 600 -> 6000:         AssertionError: Regex didn't match: ... not found in 'cargo mutants ... --shard "$SHARD/$SHARDS" --timeout 300 --build-timeout 6000 --output "$RUNNER_TEMP/mutation" || rc=$?'
+M2 ci.yml   --build-timeout 600 -> 6000:         AssertionError: Regex didn't match: ... not found in 'cargo mutants ... --shard "$SHARD/$SHARDS" --timeout 300 --build-timeout 6000 --output "$out" || rc=$?'
+M3 `cargo mutants\` continued, raised bounds:    AssertionError: Regex didn't match: ... not found in 'cargo mutants             --no-shuffle ... --timeout 900 --build-timeout 1800 --output "$RUNNER_TEMP/mutation" || r...'
+M4 new .yml, folded `run: >-`, raised bounds:    AssertionError: Regex didn't match: ... not found in 'cargo mutants' : extra.yml: cargo mutants
+V1 continued with ` \`, the same bounds on line 2: green (rc 0): the command is bounded, so the guard passes it
+```
+
+M4's folded scalar reaches the guard as `cargo mutants` alone, so the bounds on its later lines
+are not read, and the command is refused for want of them. The earlier plants B1 to B4 and V2 to
+V7 stay red with the new A6 as they were with the old one.
