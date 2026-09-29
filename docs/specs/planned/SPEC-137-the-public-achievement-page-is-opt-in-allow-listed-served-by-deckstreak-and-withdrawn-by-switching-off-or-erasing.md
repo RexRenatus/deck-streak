@@ -351,7 +351,11 @@ diff that adds `web/app/src/lib/settings/Publishing.svelte` to the ux-laws popul
 | `deploy/caddy/deck-streak.caddy` | deploy | changed: the /public/* handle, and the site-wide policy moved into the two other handles |
 | `deploy/systemd/deck-streak-job@public_page.timer` | deploy | added: daily at the rollover hour, minute 36 |
 | `deploy/README.md` | deploy | changed: the new placeholder and the timer |
-| `scripts/tests/test_deploy_templates.py` | repo | changed: A40, A41 |
+| `scripts/tests/test_deploy_templates.py` | repo | changed: A40, A41; `WAIVED` gains the durable lint's departures for `deck-streak-job@public_page.timer`; TheCaddyBlock's two tests read the new `handle_path /public/*` child and the policy in each handle |
+| `deploy/rail-contract.json` | deploy | changed: `public_page`'s calendar |
+| `deploy/scripts/render-caddy.py` | deploy | changed: `{$DECKSTREAK_PUBLIC_DIR}` joins `PLACEHOLDERS` (an absolute path) |
+| `scripts/tests/test_caddy_render.py` | repo | changed: the fourth placeholder |
+| `scripts/tests/test_deploy_scripts.py` | repo | changed: the Caddy install tests fill the fourth placeholder |
 | `.env.example`, `deploy/deck-streak.env.example` | repo | changed: `DECKSTREAK_PUBLIC_DIR`, empty |
 | `settings.defaults.json` | repo | changed: `public_achievements` off |
 | `web/app/src/lib/settings/publishing.ts` | miniapp | added: the section's client |
