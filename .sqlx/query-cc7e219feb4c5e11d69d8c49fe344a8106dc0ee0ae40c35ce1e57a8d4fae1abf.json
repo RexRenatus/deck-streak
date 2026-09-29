@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT COALESCE(SUM(amount), 0) AS \"total!: u64\" FROM xp_ledger",
+  "query": "SELECT (SELECT COALESCE(SUM(amount), 0) FROM xp_ledger)\n                    + (SELECT COALESCE(SUM(amount), 0) FROM xp_settlement) AS \"total!: u64\"",
   "describe": {
     "columns": [
       {
@@ -17,5 +17,5 @@
       false
     ]
   },
-  "hash": "cf3c989e0508fedb14a7533581d9bfa2e19ffef186bca9c2fc70c58968de1eff"
+  "hash": "cc7e219feb4c5e11d69d8c49fe344a8106dc0ee0ae40c35ce1e57a8d4fae1abf"
 }

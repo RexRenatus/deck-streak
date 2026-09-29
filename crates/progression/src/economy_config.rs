@@ -6,6 +6,11 @@
 
 use std::sync::LazyLock;
 
+use serde_json::Value;
+
+/// `economy.json`, embedded at build time.
+const ECONOMY_FILE: &str = include_str!("../../../economy.json");
+
 /// Every XP constant of `economy.json`'s `xp` section this crate reads.
 #[derive(Clone, Debug, PartialEq)]
 pub struct XpEconomy {
@@ -60,33 +65,62 @@ pub struct XpEconomy {
 }
 
 /// The constants, parsed once.
+///
+/// # Panics
+///
+/// When the embedded file lacks a constant: a build-time fact, held by the constants test.
 #[must_use]
 pub fn xp() -> &'static XpEconomy {
-    static XP: LazyLock<XpEconomy> = LazyLock::new(|| XpEconomy {
-        base: 0.0,
-        ease: [0.0; 4],
-        mature_interval_days: 0,
-        mature: 0.0,
-        young: 0.0,
-        fresh: 0.0,
-        types: [0.0; 4],
-        tier: [0.0; 4],
-        untagged: 0.0,
-        studied: 0,
-        backlog_zero: 0,
-        streak_per_day: 0,
-        streak_cap: 0,
-        score90: 0,
-        score90_threshold: 0,
-        graduation: 0,
-        on_pace_score: 0,
-        step_per_run_day: 0.0,
-        max_multiplier: 0.0,
-        tier_down_step: 0,
-        window_days: 0,
-        ascendant_fraction: 0.0,
-        ascendant_cap: 0,
-        day_base_excludes: Vec::new(),
-    });
+    static XP: LazyLock<XpEconomy> = LazyLock::new(parse);
     &XP
+}
+
+#[allow(
+    clippy::expect_used,
+    reason = "the embedded file is the build's own, and the constants test reads every field"
+)]
+fn parse() -> XpEconomy {
+    let file: Value = serde_json::from_str(ECONOMY_FILE).expect("economy.json is JSON");
+    let xp = &file["xp"];
+    let number = |value: &Value| value.as_f64().expect("a number in economy.json");
+    let integer = |value: &Value| value.as_i64().expect("an integer in economy.json");
+    let four = |section: &Value, names: [&str; 4]| names.map(|name| number(&section[name]));
+    let consistency = &xp["bonuses"]["consistency"];
+    let ascendant = &xp["bonuses"]["ascendant"];
+    let daily = &xp["daily_bonuses"];
+    XpEconomy {
+        base: number(&xp["base"]),
+        ease: four(&xp["ease_multipliers"], ["again", "hard", "good", "easy"]),
+        mature_interval_days: integer(&xp["maturity"]["mature_interval_days"]),
+        mature: number(&xp["maturity"]["mature"]),
+        young: number(&xp["maturity"]["young"]),
+        fresh: number(&xp["maturity"]["new"]),
+        types: four(
+            &xp["type_multipliers"],
+            ["learn", "review", "relearn", "filtered"],
+        ),
+        tier: four(&xp["tier"]["multipliers"], ["T1", "T2", "T3", "T4"]),
+        untagged: number(&xp["tier"]["untagged"]),
+        studied: integer(&daily["studied"]),
+        backlog_zero: integer(&daily["backlog_zero"]),
+        streak_per_day: integer(&daily["streak_per_day"]),
+        streak_cap: integer(&daily["streak_cap"]),
+        score90: integer(&daily["score90"]),
+        score90_threshold: integer(&daily["score90_threshold"]),
+        graduation: integer(&daily["graduation"]),
+        on_pace_score: integer(&consistency["on_pace_score"]),
+        step_per_run_day: number(&consistency["step_per_run_day"]),
+        max_multiplier: number(&consistency["max_multiplier"]),
+        tier_down_step: integer(&consistency["tier_down_step"]),
+        window_days: usize::try_from(integer(&consistency["window_days"]))
+            .expect("a window of days"),
+        ascendant_fraction: number(&ascendant["fraction"]),
+        ascendant_cap: integer(&ascendant["cap"]),
+        day_base_excludes: xp["day_base_excludes"]
+            .as_array()
+            .expect("the day base's exclusions")
+            .iter()
+            .map(|name| name.as_str().expect("a source name").to_owned())
+            .collect(),
+    }
 }

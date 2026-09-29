@@ -18,6 +18,25 @@ use crate::economy_config::xp;
               non-negative number, as the predecessor's round() returns"
 )]
 pub fn review_xp(review: &Review, tier: Option<Tier>) -> u32 {
-    let _ = (review, tier);
-    0
+    if !is_study_event(review.kind, review.ease) {
+        return 0;
+    }
+    let economy = xp();
+    let ease = match review.ease {
+        1..=4 => economy.ease[usize::try_from(review.ease - 1).unwrap_or(0)],
+        _ => 1.0,
+    };
+    let maturity = if review.interval >= economy.mature_interval_days {
+        economy.mature
+    } else if review.interval > 0 {
+        economy.young
+    } else {
+        economy.fresh
+    };
+    let kind = match review.kind {
+        0..=3 => economy.types[usize::try_from(review.kind).unwrap_or(0)],
+        _ => 1.0,
+    };
+    let tier = tier.map_or(economy.untagged, |tier| economy.tier[tier as usize]);
+    (economy.base * ease * maturity * kind * tier).round_ties_even() as u32
 }

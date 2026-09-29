@@ -26,8 +26,10 @@ const FALLBACK: (&str, &str) = ("Sprout", "\u{1f423}");
 /// The title and emoji `level` holds: the first title whose threshold it reaches.
 #[must_use]
 pub fn level_title(level: Level) -> (&'static str, &'static str) {
-    let _ = level;
-    ("", "")
+    LEVEL_TITLES
+        .iter()
+        .find(|(threshold, ..)| level.get() >= *threshold)
+        .map_or(FALLBACK, |(_, title, emoji)| (*title, *emoji))
 }
 
 /// A total's place on the level curve.
@@ -50,13 +52,17 @@ pub struct LevelInfo {
 /// The level info of `total`.
 #[must_use]
 pub fn level_info(total: XpTotal) -> LevelInfo {
-    let _ = total;
+    let level = level_for(total);
+    let (title, emoji) = level_title(level);
+    let start = xp_to_reach(level).get();
+    // The curve's span from one level's start to the next is `100 x level`.
+    let span = u64::from(level.get()) * 2 * crate::xp::LEVEL_CURVE_QUADRATIC;
     LevelInfo {
-        total_xp: 0,
-        level: level_for(XpTotal::new(0)),
-        title: "",
-        emoji: "",
-        xp_into_level: 0,
-        xp_for_next: 0,
+        total_xp: total.get(),
+        level,
+        title,
+        emoji,
+        xp_into_level: total.get() - start,
+        xp_for_next: span,
     }
 }

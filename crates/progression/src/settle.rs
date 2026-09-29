@@ -75,6 +75,41 @@ pub async fn settle(
     cause: SettleCause,
     at: UtcMillis,
 ) -> Result<u32, SettleError> {
-    let _ = (connection, cause, at);
-    Ok(request.amount)
+    if !DERIVED_SOURCES.contains(&request.source) {
+        return Err(SettleError::NotDerived);
+    }
+    let day = request.study_day.epoch_day();
+    let track = request.track.as_str();
+    let source = request.source;
+    let held = sqlx::query!(
+        r#"SELECT amount AS "amount!: u32", closed AS "closed!: bool" FROM xp_settlement
+           WHERE study_day = ?1 AND source = ?2 AND track = ?3"#,
+        day,
+        source,
+        track
+    )
+    .fetch_optional(&mut *connection)
+    .await?;
+    let (amount, closed) = match (held, cause) {
+        (Some(held), SettleCause::Recompute) if held.closed || request.closed => {
+            (held.amount.max(request.amount), true)
+        }
+        _ => (request.amount, request.closed),
+    };
+    let at = at.epoch_millis();
+    sqlx::query!(
+        "INSERT INTO xp_settlement (study_day, source, track, amount, closed, created_at) \
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6) \
+         ON CONFLICT (study_day, source, track) \
+         DO UPDATE SET amount = excluded.amount, closed = excluded.closed",
+        day,
+        source,
+        track,
+        amount,
+        closed,
+        at
+    )
+    .execute(connection)
+    .await?;
+    Ok(amount)
 }

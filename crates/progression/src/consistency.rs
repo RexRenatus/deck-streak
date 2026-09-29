@@ -23,30 +23,57 @@ const DAY_BASE_LEFT_OUT: [&str; 7] = [
 /// source and an amount, without the sources the base leaves out.
 #[must_use]
 pub fn day_base_xp<'a>(rows: impl IntoIterator<Item = (&'a str, u32)>) -> i64 {
-    let _ = rows;
-    0
+    let economy = xp();
+    rows.into_iter()
+        .filter(|(source, _)| {
+            !DAY_BASE_LEFT_OUT
+                .iter()
+                .any(|prefix| source.starts_with(prefix))
+                && !economy.day_base_excludes.iter().any(|name| name == source)
+        })
+        .map(|(_, amount)| i64::from(amount))
+        .sum()
 }
 
 /// The run after folding `days`, oldest first, each a score and whether it was a skip day: a skip
 /// leaves the run alone, an on-pace day adds one, any other day takes two off, to no less than 0.
 #[must_use]
 pub fn tier_down_run(days: impl IntoIterator<Item = (i64, bool)>) -> i64 {
-    let _ = days;
-    0
+    let economy = xp();
+    days.into_iter().fold(0, |run, (score, skip)| {
+        if skip {
+            run
+        } else if score >= economy.on_pace_score {
+            run + 1
+        } else {
+            (run - economy.tier_down_step).max(0)
+        }
+    })
 }
 
 /// The multiplier a run earns: 1 with no run, else one plus the step per run day, to the most.
 #[must_use]
 pub fn consistency_multiplier(run: i64) -> f64 {
-    let _ = run;
-    1.0
+    let economy = xp();
+    if run <= 0 {
+        return 1.0;
+    }
+    #[allow(
+        clippy::cast_precision_loss,
+        reason = "a run of days is far under 2^52"
+    )]
+    let earned = 1.0 + economy.step_per_run_day * run as f64;
+    earned.min(economy.max_multiplier)
 }
 
 /// The multiplier now and the one a missed day would leave.
 #[must_use]
 pub fn projected_multiplier_drop(run: i64) -> (f64, f64) {
-    let _ = run;
-    (1.0, 1.0)
+    let economy = xp();
+    (
+        consistency_multiplier(run),
+        consistency_multiplier((run - economy.tier_down_step).max(0)),
+    )
 }
 
 /// The run as of the day before `exclude_day`: the newest `window_days` of `rollups` (a day and its
@@ -54,8 +81,26 @@ pub fn projected_multiplier_drop(run: i64) -> (f64, f64) {
 /// a day in `skips` a skip. 0 with no rollups.
 #[must_use]
 pub fn on_pace_run(rollups: &[(i64, i64)], skips: &BTreeSet<i64>, exclude_day: i64) -> i64 {
-    let _ = (rollups, skips, exclude_day);
-    0
+    let mut newest: Vec<(i64, i64)> = rollups.to_vec();
+    newest.sort_by_key(|(day, _)| std::cmp::Reverse(*day));
+    newest.truncate(xp().window_days);
+    let (Some(first), Some(last)) = (
+        newest.iter().map(|(day, _)| *day).min(),
+        newest.iter().map(|(day, _)| *day).max(),
+    ) else {
+        return 0;
+    };
+    let score_of = |day: i64| {
+        newest
+            .iter()
+            .find(|(rolled, _)| *rolled == day)
+            .map_or(0, |(_, score)| *score)
+    };
+    tier_down_run(
+        (first..=last)
+            .filter(|day| *day != exclude_day)
+            .map(|day| (score_of(day), skips.contains(&day))),
+    )
 }
 
 /// The bonuses a day earns over its base.
@@ -71,10 +116,24 @@ pub struct DayBonuses {
 /// reviews of both tracks.
 #[must_use]
 pub fn day_bonuses(base: i64, run: i64, buff: bool, reviews: i64, reviews_law: i64) -> DayBonuses {
-    let _ = (base, run, buff, reviews, reviews_law);
+    let economy = xp();
+    #[allow(
+        clippy::cast_precision_loss,
+        clippy::cast_possible_truncation,
+        reason = "a day's XP is far under 2^52, and the predecessor truncates the product"
+    )]
+    let consistency = ((base as f64) * (consistency_multiplier(run) - 1.0)).trunc() as i64;
+    #[allow(
+        clippy::cast_precision_loss,
+        clippy::cast_possible_truncation,
+        reason = "a day's reviews are far under 2^52, and the predecessor truncates the product"
+    )]
+    let ascendant = (((reviews + reviews_law) as f64) * economy.ascendant_fraction).trunc() as i64;
     DayBonuses {
-        consistency: 0,
-        ascendant: None,
+        consistency: u32::try_from(consistency.max(0)).unwrap_or(u32::MAX),
+        ascendant: buff.then(|| {
+            u32::try_from(ascendant.min(economy.ascendant_cap).max(0)).unwrap_or(u32::MAX)
+        }),
     }
 }
 
@@ -87,6 +146,5 @@ pub fn ascendant_arms(
     rollup_reviews: Option<i64>,
     backlog_zero: i64,
 ) -> bool {
-    let _ = (buff, skip, rollup_reviews, backlog_zero);
-    false
+    !buff && !skip && rollup_reviews.is_some_and(|reviews| reviews > 0) && backlog_zero > 0
 }
