@@ -93,3 +93,5 @@ instance's `.service.d` directory under `deploy/systemd/`, which the deploy inst
 `effective-check.py` accepts a drop-in the release itself ships for an instance, beside the rail's own
 `10-rail.conf`. The rail's map is unchanged: it already answered the login to the `sync` instance
 alone.
+
+The sync login's drop-in was chosen over a separate sync unit file, which would duplicate the template's hardening.

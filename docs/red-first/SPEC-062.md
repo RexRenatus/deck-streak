@@ -17,6 +17,11 @@ A8's assertion that the workflow proves the tagged commit itself is on `main` wa
 after the row S06215 in which that comparison was replaced by a self-comparison survived the test
 as first written. The row is killed with it.
 
+Fix round 1: A13 to A17 were written whole at 40e68bb, before any change to the scripts, and each
+failed by assertion there over the whole test module; their greens are at 52e5aa5. A12 and A18
+execute behaviour that was already right (the readiness gate and the tag guard), so neither has a
+red line; their rows S06216 and S06215 show each fails when its behaviour is removed.
+
 ```red-first
 A1: red at 300eca2: AssertionError: deploy/deploy.sh does not exist
 A1: green at bc0665a
@@ -40,4 +45,16 @@ A10: red at 300eca2: AssertionError: False is not true : deploy/deploy.sh does n
 A10: green at bc0665a
 A11: red at 300eca2: AssertionError: 'anki-sync-username' unexpectedly found: the template requests a sync credential
 A11: green at d55ecd2
+A12: not red: the guard is right at the dispatch head and the test only executes it; the row S06216 proves it fails when the readiness gate is removed
+A13: red at 40e68bb: AssertionError: 'v1.0.0' not found in ['v1.0.1', 'v1.1.0', 'v1.2.0'] : the release it replaced was pruned
+A13: green at 52e5aa5
+A14: red at 40e68bb: AssertionError: False is not true : getty@tty1.service.d/autologin.conf was deleted by a deploy
+A14: green at 52e5aa5
+A15: red at 40e68bb: AssertionError: 0 == 0 : a deploy whose effective view was partial
+A15: green at 52e5aa5
+A16: red at 40e68bb: AssertionError: Lists differ: four unit directories admitted != ['/etc/systemd/system']
+A16: green at 52e5aa5
+A17: red at 40e68bb: AssertionError: 1 != 0 : invalid character: not JSON
+A17: green at 52e5aa5
+A18: not red: the workflow's guard is right and the test only executes it; the row S06215 proves it fails when the guard is weakened
 ```

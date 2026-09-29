@@ -55,7 +55,8 @@ R1. `.github/workflows/release.yml` runs on a push of a SemVer tag (`v1.2.3` adm
     token is read. It may restore the caches that pushes to `main` saved, saves none, and uses no
     action that saves a cache by itself (SPEC-038 R2, ADR-055).
 R2. The tarball holds what the host runs and nothing private: `deckstreakd`, the Mini App's build,
-    `deploy/`, `agent/`, `ai-safety.json`, and a manifest listing every file with its SHA-256. It
+    `deploy/`, `agent/`, `ai-safety.json` once SPEC-043 has added it (the workflow copies it when
+    present), and a manifest listing every file with its SHA-256. It
     holds no pack probe: the output gate's probes reach the host through the private rail, at the
     path the environment file names (SPEC-043 R11, ADR-069).
 R3. `deploy/deploy.sh <tag>` runs on the maintainer's machine. It refuses unless `<tag>` is an
@@ -72,17 +73,22 @@ R3. `deploy/deploy.sh <tag>` runs on the maintainer's machine. It refuses unless
     (ADR-069).
 R4. When readiness does not arrive in time, `deploy/deploy.sh` switches `current` back to the
     release it replaced, reinstalls that release's unit templates, restarts, and exits non-zero
-    naming the unit that did not become ready.
+    naming the unit that did not become ready. A restart that succeeds is not readiness: a
+    release whose readiness never arrives is switched back from all the same. The deploy shows every
+    unit's effective configuration to the check; a unit that cannot be shown refuses the deploy and is
+    named, and the drop-in directories it removes are the rail's own units' alone.
 R5. `deploy/rollback.sh <tag>` makes `<tag>` current again with R3's switch and unit install when
     `releases/<tag>/` is on the host, and otherwise deploys it anew through R3's verification.
 R6. The host keeps the current release and the two before it. The deploy removes an older release
-    directory only after a switch whose readiness succeeded.
+    directory only after a switch whose readiness succeeded, and it never removes the release it
+    replaced or the one it made current.
 R7. `deploy/scripts/render-caddy.py` renders `deploy/caddy/deck-streak.caddy` (SPEC-032 R6) for the
     host by replacing its `{$DECKSTREAK_HOST}`, `{$DECKSTREAK_WEB_ROOT}` and
     `{$DECKSTREAK_API_UPSTREAM}` with values from the private configuration, and refuses output that
     still holds `{$` or an upstream that is not a loopback address (ADR-061). The install adds the
-    rendered file and one `import` line for it to the host's Caddyfile, and changes nothing else in
-    it, only after `caddy validate` and `caddy adapt --validate` pass on a copy of the whole
+    rendered file (rendered from the tag's own `deploy/caddy/deck-streak.caddy`) and one `import` line
+    for it to the host's Caddyfile, and changes nothing else in
+    it, only after `caddy validate` and `caddy adapt --validate`, each with the Caddyfile adapter, pass on a copy of the whole
     configuration; the change is applied by Caddy's graceful reload, which keeps the running
     configuration when the new one fails. The rollback removes the `import` line first and the file
     second, validates and reloads.
@@ -107,10 +113,11 @@ R11. The box-run packs' private wiring moves release-ops to `enforced`, ends its
 R12. The first week's request counts of the API and the runs of the bot and the jobs are recorded in
     the maintainer's private notes, as the evidence the bot's and the jobs' SLOs will be sized from
     (SPEC-031 left them to a measurement on the host).
-R13. The install gives every unit that writes readings one common lock directory (SPEC-048 R2):
-    a directory inside the service's state directory, owned by the service user, named by its
-    setting in the environment file, and present before those units start, since each of them
-    refuses to start without it (SPEC-048's start check).
+R13. When SPEC-048 has landed, the install gives every unit that writes readings one common lock
+    directory (SPEC-048 R2): a directory inside the service's state directory, owned by the service
+    user, named by its setting in the environment file, and present before those units start, since
+    each of them refuses to start without it (SPEC-048's start check). Until then no unit reads it,
+    gate E1 creates it, and this delivery builds no part of it.
 R14. The sync login is loaded by the sync job alone. `deck-streak-job@.service` carries no
     `LoadCredential=` for it; a drop-in in the `.service.d` directory of the `sync` instance, beside the templates in
     `deploy/systemd/`, carries the two lines, so the liveness and maintenance instances request no sync credential (ADR-061,
@@ -133,6 +140,13 @@ R14. The sync login is loaded by the sync job alone. `deck-streak-job@.service` 
 | A9 | the release workflow's top-level permissions are read-only, only its release job may write, it runs on the pinned image, every action is pinned by a full commit SHA, and no step saves a cache (examined count reported) | `test_release_workflow.py` |
 | A10 | no deploy script names a private value, and a planted one is refused by the public scrub | `test_deploy_scripts.py`; `scripts/public-scrub.py` |
 | A11 | the liveness and maintenance instances request no sync credential, the sync instance still requests the sync login, and the pair list and the effective check accept the drop-in | `test_deploy_templates.py` |
+| A12 | a restart that succeeds and readiness that never arrives is switched back from, naming the unit | `test_deploy_scripts.py` |
+| A13 | the release a deploy replaced is never pruned, including after a rollback | `test_deploy_scripts.py` |
+| A14 | another unit's drop-ins survive a deploy, a rollback and a switch back byte for byte | `test_deploy_scripts.py` |
+| A15 | a unit whose effective configuration cannot be shown refuses the deploy, names the unit and leaves `current` unchanged | `test_deploy_scripts.py` |
+| A16 | the effective check admits a shipped drop-in name only in the directory beside the rail's own | `test_deploy_templates.py` |
+| A17 | the Caddy install and removal validate the candidate copy with the Caddyfile adapter | `test_deploy_scripts.py` |
+| A18 | the release workflow's tag guard, run against a synthetic origin, admits an annotated tag on `main` and refuses a lightweight tag and a tag off `main` | `test_release_workflow.py` |
 
 ```acceptance
 A1: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k test_the_deploy_refuses_a_tag_off_main_and_a_lightweight_tag
@@ -146,9 +160,16 @@ A8: python3 -m unittest discover -s scripts/tests -p test_release_workflow.py -k
 A9: python3 -m unittest discover -s scripts/tests -p test_release_workflow.py -k test_the_release_workflow_is_read_only_and_pinned
 A10: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k test_no_deploy_script_names_a_private_value
 A11: python3 -m unittest discover -s scripts/tests -p test_deploy_templates.py -k test_the_sync_login_is_loaded_by_the_sync_job_alone
+A12: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k test_a_restart_that_succeeds_and_readiness_that_never_arrives_switches_back
+A13: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k test_the_release_a_deploy_replaced_is_never_pruned
+A14: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k test_a_deploy_a_rollback_and_a_switch_back_leave_them_byte_for_byte
+A15: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k test_a_unit_that_cannot_be_shown_refuses_the_deploy_and_names_it
+A16: python3 -m unittest discover -s scripts/tests -p test_deploy_templates.py -k test_a_shipped_drop_in_name_is_admitted_beside_the_rails_own_alone
+A17: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k test_the_caddy_calls_name_the_caddyfile_adapter_for_the_candidate_copy
+A18: python3 -m unittest discover -s scripts/tests -p test_release_workflow.py -k test_the_release_refuses_a_tag_off_main_or_lightweight_by_running_its_guard
 ```
 
-A1 to A6 run the scripts against a synthetic repository with its own tags, a synthetic release
+A1 to A6 and A12 to A15 and A17 run the scripts against a synthetic repository with its own tags, a synthetic release
 (tarball, `SHA256SUMS`), a stub `gh` whose attestation verdict each test chooses, and a stub host
 command that applies the host side inside a `TemporaryDirectory` with stub `systemctl` and readiness
 probes. None of them reaches a network or a host. The box-run packs judge the release workflow and
@@ -181,20 +202,20 @@ this SPEC names each step only.
 | `deploy/README.md` | deploy | changed: the deploy, the rollback and the Caddy install |
 | `RELEASING.md` | repo | changed: steps 3, 4 and 7 as built |
 | the box-run packs' private wiring (ADR-069) | the maintainer's | changed: release-ops `enforced`, its rollback row's wait ended, two rows excluded with their reason |
-| `scripts/tests/test_deploy_scripts.py` | repo | added: A1 to A6, A10 |
+| `scripts/tests/test_deploy_scripts.py` | repo | added: A1 to A6, A10, A12 to A15, A17 |
 | `scripts/tests/test_caddy_render.py` | repo | added: A7 |
-| `scripts/tests/test_release_workflow.py` | repo | added: A8 and A9 |
+| `scripts/tests/test_release_workflow.py` | repo | added: A8, A9 and A18 |
 | `docs/specs/SPEC-062-first-deploy-units-caddy-block-and-https.md` | docs | moved from `docs/specs/planned/` |
 | `docs/decisions/ADR-062-a-deploy-installs-only-a-release-whose-provenance-and-digests-verify.md` | docs | changed: status accepted |
 | `docs/decisions/ADR-061-host-values-reach-units-as-drop-ins-and-caddy-as-a-rendered-file.md` | docs | changed: status accepted, if SPEC-061 has not accepted it first |
 | `docs/red-first/SPEC-062.md` | docs | added |
 | `deploy/systemd/deck-streak-job@.service` | deploy | changed: R14, the sync login lines removed |
 | `deploy/systemd/` drop-in `20-sync-login.conf` in the `sync` instance's `.service.d` directory | deploy | added: R14, the sync login |
-| `deploy/scripts/credential-pairs.py`, `deploy/scripts/effective-check.py` | deploy | changed: R14, instance drop-ins |
-| `scripts/tests/test_deploy_templates.py`, `scripts/tests/test_rail_contract.py` | repo | changed: A11 and the role table |
+| `deploy/scripts/credential-pairs.py`, `deploy/scripts/effective-check.py` | deploy | changed: R14, instance drop-ins; the shipped-name rule (A16) |
+| `scripts/tests/test_deploy_templates.py` | repo | changed: A11, A16 |
 | `docs/decisions/ADR-061-...md` | docs | one dated Amendment section (R14) |
 | the private rail's map, rendered drop-ins and tests (`rail/`) | the maintainer's | changed: R14, committed privately |
-| `scripts/mutation-rows.d/S06200-S06299.json` | repo | added: the mutation rows |
+| `scripts/mutation-rows.d/S06200-S06299.json` | repo | added: the mutation rows S06201 to S06222 |
 | `changelog.d/` fragment | repo | added |
 
 ## 6. What this does NOT do
@@ -208,6 +229,7 @@ this SPEC names each step only.
 - It closes no host finding; the deploy waits until the owner has closed every one (#167).
 - It changes nothing of the host's network configuration or DNS records, and resizes nothing (#161).
 - It performs no step of the cutover (#164).
+- It makes a failed Caddy reload after the file swap restore the previous Caddyfile (#321).
 
 ## 7. Risks
 
