@@ -237,8 +237,8 @@ equivalent 0, unexplained 0, unviable 35, every shard exiting 0. The crate was n
 and no mutant of it survives, so no test was added, no record was written and no crate file
 changed. The opening sweep already read unexplained 0, so A26 is disclosed not red, naming that
 run (R16). The closing sweep, run 36531457597 at a69e0af, counted 33 of 33 whole and read the same
-figures, with no shard exiting 2 or 3 and no `TIMEOUT` line. Rows S05765 to S05769 are unused:
-four by-hand plantings in `SLOTTED`, one emptying the slot list of each of the identity (its bio
-slot), voice, personality and disclosure sections, each failed
-`a_template_with_a_filled_slot_is_refused`, so the constant's invariant is already pinned by an
-existing test (R20).
+figures, with no shard exiting 2 or 3 and no `TIMEOUT` line. Row S05765 pins `ROSTER`, the setting name
+SPEC-044 R2 names, which the tool never mutates and which no test named by its literal; S05766 to S05769 are unused. Four by-hand plantings in
+`SLOTTED`, one emptying the slot list of each of the identity (its bio slot), voice, personality
+and disclosure sections, each failed `a_template_with_a_filled_slot_is_refused`, so that
+constant's invariant is already pinned by an existing test (R20).
