@@ -9,6 +9,7 @@
 // on purpose.
 #![allow(clippy::expect_used, clippy::panic, clippy::print_stdout)]
 
+use std::collections::BTreeSet;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 
@@ -18,7 +19,9 @@ use deck_streak_coordination::readings::settle::{
     ReviewsByCard, ReviewsUnreadable, Settle, StudiedStamp,
 };
 use deck_streak_ingest::reader::Review;
-use deck_streak_kernel::{Db, ManualClock, StudyDay, StudyDayRule, Track, UtcMillis};
+use deck_streak_kernel::{
+    Db, Hour, KernelError, ManualClock, StudyDay, StudyDayRule, Track, UtcMillis, UtcOffset,
+};
 use deck_streak_progression::grant::{
     GrantAnswer, GrantPort, GrantRequest, GrantScope, GrantSource,
 };
@@ -50,9 +53,40 @@ impl Calls {
     }
 }
 
+/// The study days a port was handed, as epoch days, in call order.
+#[derive(Clone, Default)]
+struct Days(Arc<Mutex<Vec<i64>>>);
+
+impl Days {
+    fn push(&self, day: StudyDay) {
+        self.0.lock().expect("days").push(day.epoch_day());
+    }
+    fn all(&self) -> Vec<i64> {
+        self.0.lock().expect("days").clone()
+    }
+}
+
+/// The XP ledger, recording the study day of every request it is asked to grant.
+struct RecordingGrant {
+    inner: SqliteXpLedger,
+    days: Days,
+}
+
+impl GrantPort for RecordingGrant {
+    async fn grant(
+        &self,
+        request: &GrantRequest,
+        at: UtcMillis,
+    ) -> Result<GrantAnswer, KernelError> {
+        self.days.push(request.study_day);
+        self.inner.grant(request, at).await
+    }
+}
+
 #[derive(Clone, Default)]
 struct FakeStamp {
     calls: Calls,
+    days: Days,
     failing: Arc<AtomicBool>,
 }
 
@@ -60,9 +94,10 @@ impl StudiedStamp for FakeStamp {
     fn stamp_studied<'a>(
         &'a self,
         _topic: &'a TopicKey,
-        _today: StudyDay,
+        today: StudyDay,
     ) -> PortFuture<'a, Result<(), VaultWriteFailed>> {
         self.calls.bump();
+        self.days.push(today);
         let failing = self.failing.load(Ordering::SeqCst);
         Box::pin(async move {
             if failing {
@@ -75,15 +110,16 @@ impl StudiedStamp for FakeStamp {
 }
 
 #[derive(Clone, Default)]
-struct FakeTick(Calls);
+struct FakeTick(Calls, Days);
 
 impl ReadTick for FakeTick {
     fn tick_read<'a>(
         &'a self,
         _topic: &'a TopicKey,
-        _today: StudyDay,
+        today: StudyDay,
     ) -> PortFuture<'a, Result<(), VaultWriteFailed>> {
         self.0.bump();
+        self.1.push(today);
         Box::pin(async { Ok(()) })
     }
 }
@@ -135,13 +171,21 @@ struct Rig {
     tick: FakeTick,
     reviews: FakeReviews,
     clock: Arc<ManualClock>,
-    settle: Settle<SqliteXpLedger, FakeStamp, FakeReviews>,
-    tap: ReadTap<SqliteXpLedger, FakeTick>,
+    settle: Settle<RecordingGrant, FakeStamp, FakeReviews>,
+    tap: ReadTap<RecordingGrant, FakeTick>,
+    /// The study days the settle's and the tap's XP requests carried.
+    settle_grant_days: Days,
+    tap_grant_days: Days,
     id: ReadingId,
 }
 
 impl Rig {
     async fn new() -> Self {
+        Self::with(StudyDayRule::default(), START).await
+    }
+
+    /// The rig under the configured `rule`, its reading generated at `generated`.
+    async fn with(rule: StudyDayRule, generated: i64) -> Self {
         let scratch = tempfile::tempdir().expect("a scratch directory");
         let db = Db::open(&scratch.path().join("deckstreak.db"))
             .await
@@ -151,13 +195,13 @@ impl Rig {
         let stamp = FakeStamp::default();
         let tick = FakeTick::default();
         let reviews = FakeReviews::default();
-        let clock = Arc::new(ManualClock::new(UtcMillis::from_epoch_millis(START)));
+        let clock = Arc::new(ManualClock::new(UtcMillis::from_epoch_millis(generated)));
         let id = ReadingId::of(TOPIC, 20_000, &"c".repeat(64));
         readings
             .store_reading(&NewReading {
                 id: id.clone(),
                 topic: TopicKey::parse(TOPIC).expect("a topic"),
-                study_day: StudyDayRule::default().study_day(UtcMillis::from_epoch_millis(START)),
+                study_day: rule.study_day(UtcMillis::from_epoch_millis(generated)),
                 digest: "c".repeat(64),
                 persona: "law-synthetic".to_owned(),
                 text: "a synthetic reading".to_owned(),
@@ -165,25 +209,33 @@ impl Rig {
                 minutes: 5,
                 card_ids: vec![1, 2, 3, 4, 5],
                 note_count: 2,
-                generated_at: UtcMillis::from_epoch_millis(START),
+                generated_at: UtcMillis::from_epoch_millis(generated),
                 vault: VaultStatus::Written("readings/20000/synthetic.md".to_owned()),
             })
             .await
             .expect("a stored reading");
+        let settle_grant_days = Days::default();
+        let tap_grant_days = Days::default();
         let settle = Settle::new(
             readings.clone(),
-            SqliteXpLedger::new(db.clone()),
+            RecordingGrant {
+                inner: SqliteXpLedger::new(db.clone()),
+                days: settle_grant_days.clone(),
+            },
             stamp.clone(),
             reviews.clone(),
             clock.clone(),
-            StudyDayRule::default(),
+            rule,
         );
         let tap = ReadTap::new(
             readings.clone(),
-            SqliteXpLedger::new(db),
+            RecordingGrant {
+                inner: SqliteXpLedger::new(db),
+                days: tap_grant_days.clone(),
+            },
             tick.clone(),
             clock.clone(),
-            StudyDayRule::default(),
+            rule,
         );
         Self {
             _scratch: scratch,
@@ -195,6 +247,8 @@ impl Rig {
             clock,
             settle,
             tap,
+            settle_grant_days,
+            tap_grant_days,
             id,
         }
     }
@@ -411,4 +465,132 @@ async fn a_failed_stamp_leaves_the_reading_open_for_the_next_pass() {
     );
     assert_eq!(rig.stamp.calls.count(), 2, "the stamp is retried once");
     assert_eq!(rig.total().await, XpTotal::new(60), "exactly 60 XP");
+}
+
+/// The rollover hours the population takes.
+const HOURS: [i64; 2] = [0, 4];
+/// The offsets, in minutes east of UTC: west, on the half hour, on the quarter hour and east.
+const OFFSETS: [i64; 8] = [-720, -300, -210, 0, 330, 345, 540, 840];
+
+/// The UTC instant study day `day` begins at, with the rollover at `hour` local to `offset` minutes
+/// east of UTC: written from the definition, never through the rule under test.
+fn begins(day: i64, hour: i64, offset: i64) -> i64 {
+    day * DAY_MS + hour * HOUR_MS - offset * 60_000
+}
+
+/// The study day `instant` falls in, from the same definition.
+fn day_of(instant: i64, hour: i64, offset: i64) -> i64 {
+    (instant + offset * 60_000 - hour * HOUR_MS).div_euclid(DAY_MS)
+}
+
+/// Every configured rule of the population: the product of the offsets and the rollover hours,
+/// generated here and never listed.
+fn rules() -> Vec<(i64, i64, StudyDayRule)> {
+    let mut rules = Vec::new();
+    for offset in OFFSETS {
+        for hour in HOURS {
+            let rule = StudyDayRule::new(
+                Hour::new(u8::try_from(hour).expect("an hour")).expect("an hour"),
+                UtcOffset::from_minutes(i16::try_from(offset).expect("minutes"))
+                    .expect("an offset"),
+            );
+            rules.push((offset, hour, rule));
+        }
+    }
+    rules
+}
+
+#[tokio::test]
+async fn the_settle_and_the_tap_read_the_configured_study_day() {
+    let mut examined = 0;
+    let mut instants_examined = 0;
+    for (offset, hour, rule) in rules() {
+        let generated = begins(20_000, hour, offset) + HOUR_MS;
+        let close = begins(20_002, hour, offset);
+
+        // The window: four of five cards reviewed at the last instant of d + 1 count.
+        let inside = Rig::with(rule, generated).await;
+        for card in 1..=4 {
+            inside.reviews.add(card, close - 1);
+        }
+        inside.set_clock(close - 1);
+        let counted = inside.settle.run().await.expect("a settle");
+        assert_eq!(
+            counted.studied, 1,
+            "offset {offset}, hour {hour}: the last instant of d + 1 counts"
+        );
+
+        // The same reviews at the rollover that starts d + 2 do not; the reading stays open until
+        // that instant and retires at it.
+        let outside = Rig::with(rule, generated).await;
+        for card in 1..=4 {
+            outside.reviews.add(card, close);
+        }
+        outside.set_clock(close - 1);
+        let open = outside.settle.run().await.expect("a settle");
+        assert_eq!(
+            (open.studied, open.retired),
+            (0, 0),
+            "offset {offset}, hour {hour}: open before the close"
+        );
+        assert_eq!(outside.progress().await.verdict, Verdict::Open);
+        outside.set_clock(close);
+        let closed = outside.settle.run().await.expect("a settle");
+        assert_eq!(
+            (closed.studied, closed.retired),
+            (0, 1),
+            "offset {offset}, hour {hour}: retired at the rollover that starts d + 2"
+        );
+
+        // The study day: at each instant either side of the configured rollover, and either side
+        // of the default rule's, the day the grant and the stamp carry is the configured day.
+        let mut instants = BTreeSet::new();
+        for day in [20_001, 20_002] {
+            let own = begins(day, hour, offset);
+            let default = day * DAY_MS + 4 * HOUR_MS;
+            instants.extend([own - 1, own, default - 1, default]);
+        }
+        for instant in instants {
+            let rig = Rig::with(rule, generated).await;
+            for card in 1..=4 {
+                rig.reviews.add(card, generated);
+            }
+            rig.set_clock(instant);
+            let day = day_of(instant, hour, offset);
+            let settled = rig.settle.run().await.expect("a settle");
+            assert_eq!(settled.studied, 1, "the reading crosses at {instant}");
+            assert_eq!(
+                rig.settle_grant_days.all(),
+                [day],
+                "offset {offset}, hour {hour}, instant {instant}: the settle's XP is dated by the configured day"
+            );
+            assert_eq!(
+                rig.stamp.days.all(),
+                [day],
+                "offset {offset}, hour {hour}, instant {instant}: the stamp looks the note up by the configured day"
+            );
+            let tapped = rig.tap.tap_reading(rig.id.as_str()).await.expect("a tap");
+            assert!(tapped.first, "the first tap");
+            assert_eq!(
+                rig.tap_grant_days.all(),
+                [day],
+                "offset {offset}, hour {hour}, instant {instant}: the tap's XP is dated by the configured day"
+            );
+            assert_eq!(
+                rig.tick.1.all(),
+                [day],
+                "offset {offset}, hour {hour}, instant {instant}: the tick looks the note up by the configured day"
+            );
+            instants_examined += 1;
+        }
+        examined += 1;
+    }
+    println!("examined {examined} configured rule(s), {instants_examined} instant(s)");
+    assert_eq!(
+        examined,
+        OFFSETS.len() * HOURS.len(),
+        "every offset by every rollover hour"
+    );
+    assert_eq!(examined, 16, "eight offsets by two rollover hours");
+    assert!(instants_examined >= 16 * 4, "each rule is read at its instants");
 }
