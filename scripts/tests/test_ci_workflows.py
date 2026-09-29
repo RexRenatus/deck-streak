@@ -1073,8 +1073,50 @@ def cache_problems(name, workflow):
                 problems.append(f"{where}: pnpm/action-setup saves its store when cache is on")
             elif uses == "actions/cache/save":
                 saves.append(where)
-                problems += save_problems(where, step)
+                if name == "rust-cache.yml" and runs_only_on_schedule(workflow):
+                    problems += scheduled_save_problems(where, step)
+                else:
+                    problems += save_problems(where, step)
     return problems, saves
+
+
+def runs_only_on_schedule(workflow):
+    """Whether a workflow's events are `schedule` and `workflow_dispatch` and nothing else: a run of
+    it executes the default branch's copy and never belongs to a push or a pull request. A workflow
+    that adds any other event is judged by the push rule (SPEC-191 R9)."""
+    on = workflow.get("on")
+    events = [on] if isinstance(on, str) else list(on or [])
+    return "schedule" in events and set(events) <= {"schedule", "workflow_dispatch"}
+
+
+def scheduled_save_problems(where, step):
+    """A scheduled workflow's save that runs when a lookup hit (on a schedule or a dispatch), or that
+    runs under a key other than a restore step's primary key (SPEC-191 R8, R9). The lookups it depends on are the `cache-hit`
+    outputs its condition reads; it must save when they all missed and never when any hit."""
+    problems = []
+    key = str((step.get("with") or {}).get("key", ""))
+    if not re.fullmatch(r"\$\{\{ steps\.[\w-]+\.outputs\.cache-primary-key \}\}", key):
+        problems.append(f"{where}: saves under {key}, not a restore step's primary key")
+    lookups = sorted(
+        set(re.findall(r"steps\.([\w-]+)\.outputs\.cache-hit", str(step.get("if", ""))))
+    )
+    if not lookups:
+        problems.append(f"{where}: saves on a scheduled run whatever a lookup found")
+    base = {"github.event_name": "schedule", "github.ref": "refs/heads/main"}
+    missed = dict(base, **{f"steps.{lookup}.outputs.cache-hit": "false" for lookup in lookups})
+    scenarios = [("a scheduled run that missed its key", missed, True)]
+    for lookup in lookups or ["lookup"]:
+        for event in ("schedule", "workflow_dispatch"):
+            hit = dict(missed, **{f"steps.{lookup}.outputs.cache-hit": "true"})
+            hit["github.event_name"] = event
+            scenarios.append((f"a {event} run whose {lookup} hit", hit, False))
+    for scenario, context, allowed in scenarios:
+        saves = "if" not in step or condition(step["if"], context)
+        if saves and not allowed:
+            problems.append(f"{where}: saves on {scenario}")
+        if allowed and not saves:
+            problems.append(f"{where}: never saves on {scenario}, so the cache never warms")
+    return problems
 
 
 def save_problems(where, step):

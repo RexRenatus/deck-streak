@@ -30,11 +30,12 @@ use deck_streak_daemon::wiring::{
 use deck_streak_ingest::engine::RslibEngine;
 use deck_streak_ingest::gate::ChangeGate;
 use deck_streak_ingest::settings::{ScopeSettings, SyncSettings};
+use deck_streak_ingest::state::{RefusalReason, SqliteIngestState};
 use deck_streak_ingest::sync::{SyncReport, Syncer};
 use deck_streak_ingest::sync_runs::{SqliteSyncRuns, Trigger};
 use deck_streak_kernel::{
-    CredentialLoader, CredentialsDirectory, Db, Environment, KernelError, KernelSettings, Offload,
-    Redactor, SettingsError, StudyDayRule, SystemClock,
+    Clock, CredentialLoader, CredentialsDirectory, Db, Environment, KernelError, KernelSettings,
+    Offload, Redactor, SettingsError, StudyDayRule, SystemClock,
 };
 
 /// Why the `job` role stopped before its job could report.
@@ -101,6 +102,7 @@ async fn serve_owner_request(
                 Ok(recompute) => recompute,
                 Err(error) => {
                     tracing::error!(%error, "the recompute refuses the owner's request");
+                    record_refusal(db, RefusalReason::RecomputeRefused).await;
                     return;
                 }
             };
@@ -116,10 +118,24 @@ async fn serve_owner_request(
                 Ok(answer) => tracing::info!(?answer, "the owner's request was served"),
                 Err(refusal) => {
                     tracing::error!(reason = refusal.reason, "the owner's request was refused");
+                    if let Some(reason) = RefusalReason::parse(refusal.reason) {
+                        record_refusal(db, reason).await;
+                    }
                 }
             }
         }
         Err(error) => tracing::error!(%error, "the owner's request could not be read"),
+    }
+}
+
+/// Records the refusal of the owner's request, so the flag is clear and the owner is answered with
+/// the code (SPEC-128). A failed write is logged and changes nothing else: the scheduled run goes on.
+async fn record_refusal(db: &Db, reason: RefusalReason) {
+    if let Err(error) = SqliteIngestState::new(db.clone())
+        .record_refusal(reason, SystemClock.now())
+        .await
+    {
+        tracing::error!(%error, "the owner's refusal could not be recorded");
     }
 }
 
