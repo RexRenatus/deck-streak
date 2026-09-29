@@ -17,15 +17,6 @@
       "evidence": "The value matched is jobs::job(id), which is TABLE.into_iter().find(..) over jobs::TABLE, a [Job; 3] holding SYNC, MAINTENANCE and LIVENESS (crates/coordination/src/jobs.rs line 88, the function at line 93); git grep -nE '\\bjobs::job\\(' -- '*.rs' finds two lines, the match itself and a table test, and run_job is the only place a Job from that table meets the arms, so Some(job) that failed both earlier guards is LIVENESS, and an id outside the table gives None, which the guard never sees and the last arm answers. Only a fourth entry in TABLE could tell the mutant from the original, and no test may add one to a const.",
       "reached_by": "liveness::a_maintenance_fire_drifting_past_the_tolerance_pages",
       "issue": "#304"
-    },
-    {
-      "file": "crates/coordination/src/instruments.rs",
-      "mutant": "replace <impl std::fmt::Debug for Instruments>::fmt -> std::fmt::Result with Ok(Default::default())",
-      "anchor": "impl std::fmt::Debug for Instruments {\n    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {\n        formatter\n            .debug_struct(\"Instruments\")\n            .field(\"runners\", &self.runners.len())\n            .finish_non_exhaustive()\n    }\n}",
-      "reason": "The Debug text of Instruments is written only into a failure message, and no code path or assertion reads it.",
-      "evidence": "git grep -nE '\\{[a-z_]*:\\?\\}|\\?instruments|unwrap_err|expect_err' over crates/*/src and crates/*/tests finds no formatting of an Instruments or of a type that holds one whose text is compared or parsed; the impl exists so the holders derive Debug, and Ok(Default::default()) at std::fmt::Result writes nothing, which changes no return value any caller matches on.",
-      "reached_by": "instruments_step::a_weekly_instrument_runs_once_in_seven_study_days",
-      "issue": "#403"
     }
   ]
 }

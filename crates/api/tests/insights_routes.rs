@@ -316,3 +316,21 @@ async fn an_unreadable_store_answers_500_with_a_reason_code_alone() {
     assert_eq!(started.status, StatusCode::INTERNAL_SERVER_ERROR);
     assert_eq!(started.body, r#"{"reason":"run_unavailable"}"#);
 }
+
+#[test]
+fn the_state_debug_line_says_which_ports_it_holds() {
+    let bare = format!("{:?}", ApiState::new(Readiness::new()));
+    assert!(bare.starts_with("ApiState { readiness: "), "{bare}");
+    assert!(
+        bare.ends_with(", owner: None, instruments: false, law_tiers: false }"),
+        "{bare}"
+    );
+    let served = format!(
+        "{:?}",
+        ApiState::new(Readiness::new()).with_instruments(Arc::new(Broken))
+    );
+    assert!(
+        served.ends_with(", owner: None, instruments: true, law_tiers: false }"),
+        "{served}"
+    );
+}

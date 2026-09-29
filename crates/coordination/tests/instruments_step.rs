@@ -319,3 +319,12 @@ impl ReadSource<()> for Unit {
         Box::pin(async { Ok(()) })
     }
 }
+
+#[tokio::test]
+async fn the_debug_line_names_the_instruments_and_counts_their_runners() {
+    let rig = rig(&[("alpha", false), ("beta", false)]).await;
+    assert_eq!(
+        format!("{:?}", rig.instruments),
+        "Instruments { runners: 2, .. }"
+    );
+}
