@@ -24,11 +24,13 @@ use std::future::Future;
 use std::sync::Arc;
 
 use deck_streak_coordination::data_rights_registry::{erase_all, export_all};
+use deck_streak_coordination::drills::{DrillNotes, RealFs};
 use deck_streak_coordination::score::day_score;
 use deck_streak_identity::Owner;
 use deck_streak_kernel::{Clock, Db, Environment, Setting, SettingsError, StudyDayRule};
 use frankenstein::types::{BotCommand, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo};
 
+use crate::drill_commands::{ANSWER_PREFIX, VIEW_PREFIX};
 use crate::gate::{self, Admission, OwnerCallback, OwnerMessage};
 use crate::score_commands::{score_failed_reply, score_reply};
 use crate::transport::{Incoming, Sent, Transport, escape_attribute, escape_html};
@@ -374,6 +376,10 @@ pub struct Commands<S> {
     clock: Arc<dyn Clock>,
     /// The latest `/delete` prompt's message id, until its button is tapped.
     pending_erase: Option<i32>,
+    /// The drill notes' reader and the answer's writer, when the daemon wired them (SPEC-110).
+    drills: Option<Arc<DrillNotes<RealFs>>>,
+    /// The one drill the owner's next message answers, in memory only (R13).
+    pending_drill: Option<String>,
 }
 
 impl<S: OwnerSync> Commands<S> {
@@ -398,7 +404,16 @@ impl<S: OwnerSync> Commands<S> {
             rule,
             clock,
             pending_erase: None,
+            drills: None,
+            pending_drill: None,
         }
+    }
+
+    /// These handlers, answering the law drills through `notes` (SPEC-110 R13).
+    #[must_use]
+    pub fn with_drills(mut self, notes: Arc<DrillNotes<RealFs>>) -> Self {
+        self.drills = Some(notes);
+        self
     }
 
     /// The owner's chat: in a private chat, the chat's id is the user's.
@@ -460,18 +475,33 @@ impl<S: OwnerSync> Commands<S> {
     }
 
     async fn on_message(&mut self, message: OwnerMessage) {
-        match command_of(&message.text).as_deref() {
+        let command = command_of(&message.text);
+        if command.is_some() {
+            self.pending_drill = None;
+        }
+        match command.as_deref() {
             Some("start") => self.send(start_reply(&self.app)).await,
             Some("privacy") => self.send(privacy_reply()).await,
             Some("export") => self.export().await,
             Some("delete") => self.ask_erase().await,
             Some("sync") => self.sync().await,
             Some("score") => self.score().await,
+            Some("drills") => self.drills().await,
+            Some("drill") => self.drill(&message.text).await,
+            None if self.pending_drill.is_some() => self.drill_answer(&message.text).await,
             _ => self.send(help_reply()).await,
         }
     }
 
     async fn on_callback(&mut self, callback: OwnerCallback) {
+        if let Some(data) = callback.data.as_deref() {
+            if data.starts_with(VIEW_PREFIX) {
+                return self.drill_view(data).await;
+            }
+            if data.starts_with(ANSWER_PREFIX) {
+                return self.drill_ask(data).await;
+            }
+        }
         if callback.data.as_deref() != Some(CONFIRM_ERASE) {
             tracing::info!(
                 kind = "callback_query",
@@ -562,6 +592,36 @@ impl<S: OwnerSync> Commands<S> {
             }
         };
         self.send(reply).await;
+    }
+
+    /// `/drills`: the unanswered drills (SPEC-110 R13).
+    #[allow(clippy::unused_async)]
+    async fn drills(&self) {
+        let _ = &self.drills;
+    }
+
+    /// `/drill [code]`: the four types, or one type's active drills (R14).
+    #[allow(clippy::unused_async)]
+    async fn drill(&self, text: &str) {
+        let _ = text;
+    }
+
+    /// A tap on a drill's button: its single view (R13).
+    #[allow(clippy::unused_async)]
+    async fn drill_view(&self, data: &str) {
+        let _ = data;
+    }
+
+    /// A tap on a view's Answer button: the next message is the answer (R13).
+    #[allow(clippy::unused_async)]
+    async fn drill_ask(&mut self, data: &str) {
+        let _ = (data, &self.pending_drill);
+    }
+
+    /// The owner's answer to the pending drill (R13).
+    #[allow(clippy::unused_async)]
+    async fn drill_answer(&mut self, text: &str) {
+        let _ = text;
     }
 
     /// Sends `reply` to the owner. A reply that gives up is logged by the transport, with its
