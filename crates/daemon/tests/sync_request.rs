@@ -11,7 +11,7 @@ use std::time::Duration;
 
 use deck_streak_bot::{OwnerSync, Scores, SyncAnswer, SyncOutcome, SyncRefusal};
 use deck_streak_daemon::sync_request::{
-    ANSWER_BOUND_SECS, Doorbell, POLL_SECS, Pause, Progress, RING_GAP_SECS, RequestLedger,
+    ANSWER_BOUND_SECS, Doorbell, Flush, POLL_SECS, Pause, Progress, RING_GAP_SECS, RequestLedger,
     SyncRequester,
 };
 use deck_streak_daemon::sync_request::{
@@ -340,4 +340,93 @@ fn the_doorbell_writes_its_file_and_refuses_an_absent_directory() {
         FileDoorbell::new(absent).ring().is_err(),
         "an absent directory is refused"
     );
+}
+
+/// A flush that counts its calls, and fails when told to.
+#[derive(Clone, Default)]
+struct Flushes {
+    calls: Arc<Mutex<usize>>,
+    broken: bool,
+}
+
+impl Flushes {
+    fn calls(&self) -> usize {
+        *self.calls.lock().expect("the count locks")
+    }
+}
+
+impl Flush for Flushes {
+    async fn flush(&self) -> Result<(), KernelError> {
+        *self.calls.lock().expect("the count locks") += 1;
+        if self.broken {
+            return Err(KernelError::Offload { operation: "flush" });
+        }
+        Ok(())
+    }
+}
+
+fn flushing(script: &Script, flushes: &Flushes) -> impl OwnerSync {
+    let clock = Arc::new(ManualClock::new(UtcMillis::from_epoch_millis(START)));
+    SyncRequester::new(
+        Shared(clock.clone()),
+        script.clone(),
+        Bell::new(&clock, false),
+        Wait(clock),
+    )
+    .with_flush(flushes.clone())
+}
+
+#[tokio::test]
+async fn the_bot_flushes_its_router_after_the_owners_sync_succeeds() {
+    let flushes = Flushes::default();
+    let script = Script::of([Progress::Waiting, Progress::Ran { failure: None }]);
+    let answer = flushing(&script, &flushes).sync_now().await;
+    assert_eq!(
+        answer,
+        Ok(SyncAnswer {
+            sync: SyncOutcome::Synced,
+            scores: Scores::Recomputed,
+        })
+    );
+    assert_eq!(
+        flushes.calls(),
+        1,
+        "one flush, after the sync that ran and succeeded"
+    );
+}
+
+#[tokio::test]
+async fn the_bot_never_flushes_after_a_failed_reused_or_unanswered_sync() {
+    let flushes = Flushes::default();
+    let failed = Script::of([Progress::Ran {
+        failure: Some("server_error".to_owned()),
+    }]);
+    assert!(flushing(&failed, &flushes).sync_now().await.is_ok());
+    let reused = Script::of([Progress::Reused]);
+    assert!(flushing(&reused, &flushes).sync_now().await.is_ok());
+    let unanswered = Script::of([]);
+    let answer = flushing(&unanswered, &flushes).sync_now().await;
+    assert_eq!(
+        answer.map(|answer| answer.sync),
+        Ok(SyncOutcome::StillRunning)
+    );
+    assert_eq!(flushes.calls(), 0, "no flush without a sync that succeeded");
+}
+
+#[tokio::test]
+async fn a_flush_that_fails_never_changes_the_owners_answer() {
+    let flushes = Flushes {
+        broken: true,
+        ..Flushes::default()
+    };
+    let script = Script::of([Progress::Ran { failure: None }]);
+    let answer = flushing(&script, &flushes).sync_now().await;
+    assert_eq!(
+        answer,
+        Ok(SyncAnswer {
+            sync: SyncOutcome::Synced,
+            scores: Scores::Recomputed,
+        })
+    );
+    assert_eq!(flushes.calls(), 1, "the flush was tried");
 }

@@ -8,13 +8,14 @@ use std::fs::OpenOptions;
 use std::future::Future;
 use std::io;
 use std::path::PathBuf;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use deck_streak_bot::{OwnerSync, Scores, SyncAnswer, SyncOutcome, SyncRefusal};
 use deck_streak_ingest::state::SqliteIngestState;
 use deck_streak_ingest::sync_runs::{RunStatus, SqliteSyncRuns};
 use deck_streak_kernel::{Clock, Db, Environment, KernelError, Setting, SettingsError, UtcMillis};
+use deck_streak_notifications::Router;
 
 /// The least gap between two rings of the doorbell, in seconds: under the job unit's start limit,
 /// so a burst of requests never blocks the timer's own start.
@@ -65,18 +66,48 @@ pub trait Pause: Send + Sync {
     fn pause(&self, by: Duration) -> impl Future<Output = ()> + Send;
 }
 
+/// The flush the bot makes when the owner's sync has succeeded: the notification router's, in
+/// production (SPEC-041 R7; SPEC-059 R8). A port so the bot's answer can be tested without one.
+pub trait Flush: Send + Sync {
+    /// Delivers what quiet hours and failed sends held.
+    ///
+    /// # Errors
+    ///
+    /// The store's error, when the queue cannot be read or written.
+    fn flush(&self) -> impl Future<Output = Result<(), KernelError>> + Send;
+}
+
+/// No flush: a requester built without a router.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct NoFlush;
+
+impl Flush for NoFlush {
+    async fn flush(&self) -> Result<(), KernelError> {
+        Ok(())
+    }
+}
+
+impl Flush for Arc<Router> {
+    async fn flush(&self) -> Result<(), KernelError> {
+        let flushed = Router::flush(self).await?;
+        tracing::info!(?flushed, "the notification router flushed");
+        Ok(())
+    }
+}
+
 /// The bot's `/sync` port: a request for the job, never a cycle.
 #[derive(Debug)]
-pub struct SyncRequester<C, L, D, P> {
+pub struct SyncRequester<C, L, D, P, F = NoFlush> {
     clock: C,
     ledger: L,
     doorbell: D,
     pause: P,
+    flush: F,
     last_ring: Mutex<Option<UtcMillis>>,
 }
 
 impl<C: Clock, L: RequestLedger, D: Doorbell, P: Pause> SyncRequester<C, L, D, P> {
-    /// A requester over its four ports.
+    /// A requester over its four ports, with no flush.
     #[must_use]
     pub const fn new(clock: C, ledger: L, doorbell: D, pause: P) -> Self {
         Self {
@@ -84,10 +115,27 @@ impl<C: Clock, L: RequestLedger, D: Doorbell, P: Pause> SyncRequester<C, L, D, P
             ledger,
             doorbell,
             pause,
+            flush: NoFlush,
             last_ring: Mutex::new(None),
         }
     }
 
+    /// The same requester, flushing through `flush` once it observes the owner's request answered
+    /// by a sync that ran and succeeded (SPEC-059 R8).
+    #[must_use]
+    pub fn with_flush<F: Flush>(self, flush: F) -> SyncRequester<C, L, D, P, F> {
+        SyncRequester {
+            clock: self.clock,
+            ledger: self.ledger,
+            doorbell: self.doorbell,
+            pause: self.pause,
+            flush,
+            last_ring: self.last_ring,
+        }
+    }
+}
+
+impl<C: Clock, L: RequestLedger, D: Doorbell, P: Pause, F: Flush> SyncRequester<C, L, D, P, F> {
     /// Rings the doorbell no sooner than [`RING_GAP_SECS`] after the last ring. The slot is
     /// reserved before the wait, so concurrent requests take successive slots.
     async fn ring(&self) -> Result<(), SyncRefusal> {
@@ -157,7 +205,9 @@ impl<C: Clock, L: RequestLedger, D: Doorbell, P: Pause> SyncRequester<C, L, D, P
     }
 }
 
-impl<C: Clock, L: RequestLedger, D: Doorbell, P: Pause> OwnerSync for SyncRequester<C, L, D, P> {
+impl<C: Clock, L: RequestLedger, D: Doorbell, P: Pause, F: Flush> OwnerSync
+    for SyncRequester<C, L, D, P, F>
+{
     fn sync_now(&self) -> impl Future<Output = Result<SyncAnswer, SyncRefusal>> + Send {
         self.answer()
     }
