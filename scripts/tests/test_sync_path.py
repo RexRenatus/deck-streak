@@ -60,7 +60,7 @@ class TheSyncPath(unittest.TestCase):
         self.assertGreaterEqual(len(judge_path_unit(planted)), 3)
 
     def test_the_path_unit_and_its_request_directory(self):
-        path_unit = sections(read(SYSTEMD / "deck-streak-job@" + "sync.path"))
+        path_unit = sections(read(SYSTEMD / ("deck-streak-job@" + "sync.path")))
         bot = sections(read(SYSTEMD / "deck-streak-bot.service"))
         job = sections(read(SYSTEMD / "deck-streak-job@.service"))
         tmpfiles = [
