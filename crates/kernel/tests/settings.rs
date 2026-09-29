@@ -220,3 +220,23 @@ fn the_default_rollover_and_digest_hours_equal_the_notifications_policy() {
     );
     assert_eq!(defaults.digest_hour.get(), DEFAULT_DIGEST_HOUR);
 }
+
+#[test]
+fn the_environment_shows_its_names_in_debug_and_never_a_value() {
+    let shown = format!("{:?}", env(&[("ONLY_NAME", "quiet-value")]));
+    assert_eq!(shown, "Environment { names: [\"ONLY_NAME\"] }");
+}
+
+#[test]
+fn an_offset_just_outside_the_bounds_is_refused_and_each_bound_is_admitted() {
+    assert_eq!(
+        UtcOffset::from_minutes(UtcOffset::MIN_MINUTES).map(UtcOffset::minutes),
+        Some(-720)
+    );
+    assert_eq!(
+        UtcOffset::from_minutes(UtcOffset::MAX_MINUTES).map(UtcOffset::minutes),
+        Some(840)
+    );
+    assert_eq!(UtcOffset::from_minutes(UtcOffset::MIN_MINUTES - 1), None);
+    assert_eq!(UtcOffset::from_minutes(UtcOffset::MAX_MINUTES + 1), None);
+}
