@@ -147,7 +147,32 @@ passed, 4 failed, each by assertion, and each with its own line:
   `crates/quests/src/day.rs calls settle, and only coordination's code may` besides the two owed
   refusals; right holds the two.
 
-Green at 7a6a659d: 7 passed. A12 keeps its examined counts on the real tree through every commit
+Green at 7a6a659d: 7 passed. Both green commits, 311dddede and 7a6a659d, edit a test file,
+`xp_census.rs`, because the census is that file's own code; no assertion changes between either
+red and its green. A12 keeps its examined counts on the real tree through every commit
 (159 crate source files, 15 migrations, 8 planted crate source files), the same as at the base of
 the round. The three rows S07230 to S07232 were proved KILLED by their full ids on a committed
 tree: `rows: examined 3: killed 3, survived 0, void 0`.
+
+Addendum (2026-09-29, round 2 of the review of issue 397). The class of names bound to
+progression's crate was reopened by six spellings, so the fix is one rule and one generated test.
+
+The population test, `the_census_refuses_every_member_of_the_binding_population`, was committed
+alone (a7049a43) beside the unchanged census. Red: `panicked at
+crates/progression/tests/xp_census.rs:953:5:` by assertion, `class members: examined 30`, and all 30
+members escaped the census. The fix (f94ee7eb) makes it green: 11 passed, the same 30 members
+refused and the 10 controls, each a crate that is not progression in the same spelling, accepted.
+Its green commit edits a test file, `xp_census.rs`, because the census is that file's own code. Its
+two helper bindings were renamed (`fill` to `expand`, `file` to `caller`) for clippy's
+`similar_names`; no assertion changed.
+
+The three tests of the class rule replayed red at the same base: 7 passed, 3 failed, each by
+assertion, `the_census_reads_a_raw_identifier_as_its_plain_name`,
+`the_census_follows_a_crate_alias_however_it_is_written` and
+`the_census_follows_a_crate_renamed_by_a_manifest`; green at f94ee7eb.
+
+Rows S07233-CENSUS-MANIFEST-RENAME, S07234-CENSUS-GLOB-OPENS-MEMBER and
+S07235-CENSUS-RAW-IDENTIFIER, each `KILLED: its killer passed without the mutant and failed with it`
+on a committed tree. A12 on the real tree reads 160 crate source files, 15 migrations, 8 planted
+crate source files; the file count is one higher than round 1 because the merged base added a
+source file.
