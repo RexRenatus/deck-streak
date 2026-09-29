@@ -49,3 +49,10 @@ fn the_verdict_type_is_declared_must_use() {
     assert_eq!(Verdict::<&str>::Pass.into_result(), Ok(()));
     assert!(Verdict::<&str>::Pass.is_pass());
 }
+
+#[test]
+fn a_refusal_is_not_a_pass_and_carries_its_reason_up_as_an_error() {
+    let refused: Verdict<&str> = Verdict::Refuse("stale");
+    assert!(!refused.is_pass());
+    assert_eq!(refused.into_result(), Err("stale"));
+}
