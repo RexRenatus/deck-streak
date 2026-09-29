@@ -29,6 +29,7 @@ pub mod router;
 pub mod serve;
 pub mod session_routes;
 pub mod settings;
+pub mod xp_routes;
 
 use deck_streak_kernel::SettingsError;
 
