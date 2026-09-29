@@ -46,7 +46,7 @@ R1. The inbox snapshot lists every capture in the layout's inbox that SPEC-118 r
     kind `journal` is left out of the snapshot, so it is never an input and never moved (ADR-116).
 R2. The task `inbox-curator` (format `other`) passes exactly: the layout's destinations (source
     `config`), and for each snapshot capture its id, kind, attachment name and stub caption (source
-    `vault`). No attachment's bytes and no other note are inputs. It holds no tool; its caps are 300
+    `vault`). No attachment's bytes and no other note are inputs. It holds no tool; its caps are 240
     seconds, 5 turns and SPEC-043 R6's default budget.
 R3. Its output is a filing plan: for each capture id, one destination or `leave`. The engine builds
     the staged run from it: a `move` of the stub and of its attachment, each under its own name, to
@@ -64,12 +64,11 @@ R6. When a run files at least one capture, the occasion `inbox_filed` is raised 
 
 The layout and the daily note (#49)
 
-R7. The layout in force is the file `DECKSTREAK_VAULT_LAYOUT` names (the owner's layout, which is
-    private and never enters the repository), else the vendored default
-    (`crates/vault/data/layout.json`); the engine writes its path into each run record's `layout`
-    (SPEC-042 R4's executor reads it). The vendored default gains the two periodic formats of the
-    vault-duties pack's public layout, `YYYY-MM-DD` daily and `GGGG-[W]WW` weekly, so a layout that
-    names no format names these.
+R7. The layout in force is SPEC-118 R4's: the owner's, by `DECKSTREAK_VAULT_LAYOUT`, else the
+    vendored default. The engine writes its path into each run record's `layout`, which SPEC-042
+    R4's executor reads. The vendored default gains the two periodic formats of the vault-duties
+    pack's public layout, `YYYY-MM-DD` daily and `GGGG-[W]WW` weekly, so a layout that names no
+    format names these.
 R8. The daily note is TOMORROW's: the periodic note of the study day after the one the pass runs
     in, named by the layout's daily format in its daily folder. The engine composes it from
     `agent/duties/daily-note.template.md` (vault-duties' template, copied), with no model:
@@ -90,7 +89,7 @@ R11. Its inputs, as a set, are the week's notes: the readings of the week's stud
     first, at most 30 notes, each read up to 4000 characters (paged; source `vault`), plus
     `agent/duties/weekly-synthesis.template.md` (source `template`). A note under a folder the
     layout names in `journal`, or a capture of kind `journal`, is never an input.
-R12. The task `weekly-synthesis` (format `other`) holds no tool; its caps are 600 seconds, 10 turns
+R12. The task `weekly-synthesis` (format `other`) holds no tool; its caps are 300 seconds, 10 turns
     and SPEC-043 R6's default budget. The engine accepts its output only when `sources` is a subset
     of the inputs, every `themes` and `connections` claim links at least one source, every
     connection links at least two, every source is cited, and the three sections are present;
@@ -123,7 +122,7 @@ R16. CHARTER 10's eleven anti-goals bind this SPEC as one block; the ones it tou
 | A6 | a filed capture keeps its name and its bytes, and its row records the destination | `a_filed_capture_keeps_its_name_and_bytes` |
 | A7 | a run that files a capture raises `inbox_filed` naming the count | `a_filing_run_raises_inbox_filed` |
 | A8 | tomorrow's daily note links the day's readings, the unanswered drills and the day's filed captures, each with a date-free alias | `the_daily_note_links_the_day` |
-| A16 | with `DECKSTREAK_VAULT_LAYOUT` unset the vendored layout and its formats are in force, and with it set the owner's layout is, and its path is in the record | `the_layout_in_force_is_the_owners_or_the_default` |
+| A16 | each run record names the layout in force by its path, and a layout with no periodic format names the pack's defaults | `the_run_record_names_the_layout_in_force` |
 | A9 | an empty section holds its line, never nothing | `an_empty_daily_section_says_nothing_new` |
 | A10 | an existing daily note is skipped and nothing is written | `an_existing_daily_note_is_left_alone` |
 | A11 | the synthesis runs on a Sunday only, once per week | `the_synthesis_runs_once_on_sunday` |
@@ -148,7 +147,7 @@ A12: cargo test -p deck-streak-coordination --test vault_duties -- --exact the_s
 A13: cargo test -p deck-streak-agent --test vault_duties -- --exact an_uncited_synthesis_is_withheld
 A14: cargo test -p deck-streak-coordination --test vault_duties -- --exact a_red_gate_leaves_the_vault_untouched
 A15: cargo test -p deck-streak-coordination --test vault_duties -- --exact with_no_ai_route_only_the_daily_note_is_written
-A16: cargo test -p deck-streak-coordination --test vault_duties -- --exact the_layout_in_force_is_the_owners_or_the_default
+A16: cargo test -p deck-streak-coordination --test vault_duties -- --exact the_run_record_names_the_layout_in_force
 ```
 
 ## 3a. What the box run judges
@@ -192,7 +191,6 @@ hands back that JSON diff. From then on, SPEC-111's staged-run row is judged too
 | `crates/coordination/tests/vault_duties.rs` | `deck-streak-coordination` | added: A2, A6, A7, A10 to A12, A14 to A16 |
 | `notifications-policy.json` | repo | changed: the kind `inbox_filed` |
 | `crates/daemon/src/wiring.rs` | `deck-streak-daemon` | changed: the use cases' ports |
-| `.env.example` | repo | changed: `DECKSTREAK_VAULT_LAYOUT`, by name, unset |
 | `crates/vault/data/layout.json` | `deck-streak-vault` | changed: the two periodic formats of the pack's public layout |
 | `privacy.json`, `PRIVACY.md` | repo | changed: the curator's and the synthesis' processing by route |
 | `scripts/mutation-rows.d/S11600-S11699.json` | repo | added: the rows of §9 |
