@@ -14,8 +14,7 @@ use deck_streak_ingest::engine::{RslibEngine, SyncOutcome};
 use deck_streak_ingest::sync::{OWNER_SYNC_DEBOUNCE_SECS, SyncReport};
 use deck_streak_ingest::sync_runs::{ReasonCode, SqliteSyncRuns, SyncRun, Trigger};
 use deck_streak_kernel::Db;
-use serde_json::Value;
-use support::recording::{Recorded, Recording};
+use support::recording::{Recording, local_change};
 use support::synthetic::{self, Shape, Side};
 use support::{Fixture, ScriptedEngine, Step, SyncServer};
 
@@ -244,36 +243,6 @@ fn a_server_with_no_collection_is_refused_with_full_upload_required() {
         stamp,
         "the copy is untouched"
     );
-}
-
-/// What local change a request carries, if it carries one.
-fn local_change(request: &Recorded) -> Option<String> {
-    let non_empty = |value: &Value| value.as_array().is_some_and(|items| !items.is_empty());
-    let body = &request.body;
-    let carries = match request.method.as_str() {
-        "upload" => true,
-        "applyChanges" => {
-            let changes = &body["changes"];
-            non_empty(&changes["models"])
-                || non_empty(&changes["tags"])
-                || changes["decks"]
-                    .as_array()
-                    .is_some_and(|parts| parts.iter().any(non_empty))
-                || changes.get("conf").is_some()
-                || changes.get("crt").is_some()
-        }
-        "applyGraves" => ["cards", "decks", "notes"]
-            .iter()
-            .any(|kind| non_empty(&body["chunk"][kind])),
-        "applyChunk" => ["revlog", "cards", "notes"]
-            .iter()
-            .any(|kind| non_empty(&body["chunk"][kind])),
-        "start" => ["cards", "decks", "notes"]
-            .iter()
-            .any(|kind| non_empty(&body["graves"][kind])),
-        _ => false,
-    };
-    carries.then(|| format!("{}: {}", request.method, body))
 }
 
 /// The census over one scenario's requests: none uploads or carries a local change, and each

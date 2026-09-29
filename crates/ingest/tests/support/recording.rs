@@ -27,6 +27,150 @@ pub struct Recorded {
     pub body: Value,
 }
 
+/// One card as a push carries it, in the order of the engine's chunk tuple.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct CardRow {
+    /// The card's id.
+    pub id: i64,
+    /// Its deck.
+    pub did: i64,
+    /// Its modification time, in whole seconds.
+    pub mtime: i64,
+    /// Its sync number.
+    pub usn: i64,
+    /// Its type.
+    pub ctype: i64,
+    /// Its queue.
+    pub queue: i64,
+    /// Its due.
+    pub due: i64,
+    /// Its interval, in days.
+    pub ivl: i64,
+    /// Its ease factor.
+    pub factor: i64,
+    /// Its original due.
+    pub odue: i64,
+    /// Its original deck.
+    pub odid: i64,
+    /// Its flags.
+    pub flags: i64,
+    /// Its scheduler data string.
+    pub data: String,
+}
+
+/// One review-log row as a push carries it.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct RevlogRow {
+    /// The row's id, the review's instant in milliseconds.
+    pub id: i64,
+    /// The card it belongs to.
+    pub cid: i64,
+    /// The button pressed; 0 for a manual reschedule.
+    pub ease: i64,
+    /// The review's kind; 4 for a manual reschedule.
+    pub kind: i64,
+}
+
+impl Recorded {
+    /// The cards this request's chunk carries.
+    ///
+    /// # Panics
+    ///
+    /// When a card is not the engine's tuple.
+    #[must_use]
+    pub fn cards(&self) -> Vec<CardRow> {
+        let number = |row: &[Value], at: usize| row[at].as_i64().expect("a card's number");
+        self.body["chunk"]["cards"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .map(|card| {
+                let row = card.as_array().expect("a card is the engine's tuple");
+                CardRow {
+                    id: number(row, 0),
+                    did: number(row, 2),
+                    mtime: number(row, 4),
+                    usn: number(row, 5),
+                    ctype: number(row, 6),
+                    queue: number(row, 7),
+                    due: number(row, 8),
+                    ivl: number(row, 9),
+                    factor: number(row, 10),
+                    odue: number(row, 14),
+                    odid: number(row, 15),
+                    flags: number(row, 16),
+                    data: row[17].as_str().unwrap_or_default().to_owned(),
+                }
+            })
+            .collect()
+    }
+
+    /// The review-log rows this request's chunk carries.
+    ///
+    /// # Panics
+    ///
+    /// When a row is not the engine's tuple.
+    #[must_use]
+    pub fn revlog(&self) -> Vec<RevlogRow> {
+        self.body["chunk"]["revlog"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .map(|entry| {
+                let row = entry
+                    .as_array()
+                    .expect("a review-log row is the engine's tuple");
+                let number = |at: usize| row[at].as_i64().expect("a review-log number");
+                RevlogRow {
+                    id: number(0),
+                    cid: number(1),
+                    ease: number(3),
+                    kind: number(8),
+                }
+            })
+            .collect()
+    }
+
+    /// The settings this request carries whole, when it carries them.
+    #[must_use]
+    pub fn settings(&self) -> Option<serde_json::Map<String, Value>> {
+        self.body["changes"]["conf"].as_object().cloned()
+    }
+}
+
+/// What local change a request carries, if it carries one: an upload, a changed notetype, tag,
+/// deck, setting or creation stamp, a grave, or a chunk of cards, notes or review-log rows. The
+/// census of SPEC-022 and every proof of SPEC-083 share this one classifier (R33).
+#[must_use]
+pub fn local_change(request: &Recorded) -> Option<String> {
+    let non_empty = |value: &Value| value.as_array().is_some_and(|items| !items.is_empty());
+    let body = &request.body;
+    let carries = match request.method.as_str() {
+        "upload" => true,
+        "applyChanges" => {
+            let changes = &body["changes"];
+            non_empty(&changes["models"])
+                || non_empty(&changes["tags"])
+                || changes["decks"]
+                    .as_array()
+                    .is_some_and(|parts| parts.iter().any(non_empty))
+                || changes.get("conf").is_some()
+                || changes.get("crt").is_some()
+        }
+        "applyGraves" => ["cards", "decks", "notes"]
+            .iter()
+            .any(|kind| non_empty(&body["chunk"][kind])),
+        "applyChunk" => ["revlog", "cards", "notes"]
+            .iter()
+            .any(|kind| non_empty(&body["chunk"][kind])),
+        "start" => ["cards", "decks", "notes"]
+            .iter()
+            .any(|kind| non_empty(&body["graves"][kind])),
+        _ => false,
+    };
+    carries.then(|| format!("{}: {}", request.method, body))
+}
+
 /// The recording layer in front of one sync server.
 pub struct Recording {
     endpoint: String,
@@ -229,13 +373,14 @@ async fn read_body(reader: &mut BufReader<TcpStream>, head: &str) -> io::Result<
     Ok(body)
 }
 
-/// A body as the server reads it: zstd-decompressed JSON, or `null` when there is none.
+/// A body as the server reads it: zstd-decompressed JSON, or `null` when there is none or when it
+/// is not JSON (an `upload` carries a whole collection file, which is not).
 fn decoded(body: &[u8]) -> Value {
     if body.is_empty() {
         return Value::Null;
     }
     let json = zstd::decode_all(body).expect("the engine compresses every request body with zstd");
-    serde_json::from_slice(&json).expect("every request body is JSON")
+    serde_json::from_slice(&json).unwrap_or(Value::Null)
 }
 
 /// The server's answer with `connection: close` in its head, so the client never reuses the
