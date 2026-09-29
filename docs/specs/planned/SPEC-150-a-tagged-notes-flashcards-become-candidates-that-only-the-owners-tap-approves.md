@@ -110,8 +110,8 @@ R9. A card's GUID is `vc1-` followed by the first 32 lowercase hex characters of
 
 The candidates and their revisions
 
-R10. `migrations/015001_vault_card_candidates.sql` (`STRICT`, `created_at`, instants in epoch
-    milliseconds, SPEC-020 R18) creates:
+R10. `migrations/015001_vault_card_candidates.sql` (`STRICT`, `created_at`, SPEC-020 R18;
+    instants in epoch milliseconds, `UtcMillis`, SPEC-020 R6) creates:
     - `vault_card_candidates`: `candidate_id` (primary key), `note_identity`, `card_key`, `guid`
       (unique), `note_path` (where the note was last read), `present` (`CHECK` 0 or 1), and a unique
       (`note_identity`, `card_key`);
@@ -131,20 +131,27 @@ R11. The migration holds every guard, so no query can skip one (a key inside `sq
     revision of each present candidate, with its GUID, sides and `decided_at`: SPEC-151's package
     reads nothing else.
 R12. The scan's store step runs in one `Db::write` (SPEC-020 R16), so two scans, or a scan and a
-    decision, serialise. For each card read, with its text digest D:
+    decision, serialise. For each card read, with its text digest D, the scan looks D up among the
+    candidate's `note` revisions only, which the unique index keeps to one row at most:
     - no candidate: the candidate is stored with its GUID, and a `pending` revision with D;
-    - a revision with D that is `pending`: nothing changes;
+    - a `note` revision with D that is `pending`: nothing changes;
     - one that is `approved`: any other `pending` revision is `withdrawn`;
     - one that is `rejected` or `edited`: any other `pending` revision is `withdrawn` and nothing is
       added, because the owner has decided that text;
     - one that is `withdrawn`: it returns to `pending` (its `decided_at` and `surface` cleared), and
       any other `pending` revision is `withdrawn`;
-    - no revision with D: any `pending` revision is `withdrawn` and a `pending` revision with D is
-      added.
-    An `approved` revision of another text stays approved until the owner decides the new one.
+    - no `note` revision with D, and the candidate's `approved` revision is an `owner_edit` with D:
+      any `pending` revision is `withdrawn` and nothing is added, because the note now holds the
+      owner's own edit;
+    - otherwise: any `pending` revision is `withdrawn` and a `pending` revision with D is added.
+    A scan never returns an `owner_edit` revision to `pending` (R11 allows it only `approved` or
+    `withdrawn`). An `approved` revision of another text stays approved until the owner decides the
+    new one.
     `present` becomes 1 for every card read, and 0 when a note that was read no longer holds the
-    card or the tag, or when a walk that was not capped met no note of the candidate's identity; a
-    note refused by R4 changes no presence.
+    card or the tag, or when a walk that was not capped met no note of the candidate's identity. A
+    candidate that becomes absent has its `pending` revision `withdrawn`, so no list offers a card
+    that no package can hold; read again with that text, it returns to `pending` by the `withdrawn`
+    rule above. A note refused by R4 changes no presence.
 R13. The duplicate flag of a new `note` revision is `found` when its front, normalised, equals the
     normalised plain front of an in-scope collection note whose GUID is not the candidate's own (the
     owner's imported card is not its own duplicate), `none` when no such note exists, and
@@ -183,19 +190,22 @@ R17. `/vaultcards` scans, then replies with the report's counts, up to 10 refusa
     name and the reason's words), a line when the walk was capped or duplicates were unchecked, and
     the oldest pending card: its front, its back, its note's file name, the duplicate line when
     `found`, and the buttons Approve, Edit and Reject, whose data are `va:`, `ve:` and `vr:` followed
-    by the revision id. With nothing pending it says so. The walk runs on the kernel's `Offload`.
-R18. Every tap is answered (SPEC-026 R9), decided through R16, and followed by the next oldest pending
-    card or the all-decided line; a tap on a revision that is not pending is answered with the
-    already-decided line and changes nothing. After Edit the bot sends the form (`Q: ` and `A: `
+    by the revision id. With nothing pending it says so. `not_configured` and `vault_missing` each
+    reply with their own line and nothing else. The walk runs on the kernel's `Offload`.
+R18. Every tap is answered (SPEC-026 R9), decided through R16, and followed by the next oldest
+    pending card or the all-decided line; a tap on a revision that is not pending is answered with
+    the already-decided line and changes nothing. After Edit the bot sends the form (`Q: ` and `A: `
     lines with the current sides); the owner's next message that is not a command, in that form, is
-    the edit; a command cancels it; a message not in the form is refused with the form and the edit
-    stays pending. The bot holds at most one pending edit, in memory. Every reply is HTML-escaped
-    (SPEC-026 R6), and /vaultcards is registered for the owner's chat only (SPEC-026 R11).
+    the edit; a command cancels it; a message not in the form, or an edit R16 answers `refused`, is
+    refused with the reason's words and the form, and the edit stays pending. The bot holds at most
+    one pending edit, in memory. Every reply is HTML-escaped (SPEC-026 R6), and /vaultcards is
+    registered for the owner's chat only (SPEC-026 R11).
 R19. `GET /api/vault-cards` (`pending`), `POST /api/vault-cards/scan` (`scan`) and `POST
     /api/vault-cards/{revision}/approve`, `/edit` (a JSON body `{"front", "back"}`) and `/reject`
     (`decide`) answer the authenticated owner only (SPEC-024 R7's `OwnerSession`). Each `POST`
     follows SPEC-024 R9. `not_pending` answers 409, `unknown` 404 and `refused` 422 with the reason;
-    every body is the use case's.
+    the scan's `not_configured` and `vault_missing` answer 200 with the outcome by name and change
+    nothing; every body is the use case's.
 R20. The bot's new replies, their callers and the callback dispatch are named in SPEC-041's census
     (`crates/notifications/tests/one_router.rs`) as command replies. A scan raises no occasion and
     sends nothing the owner did not ask for.
@@ -238,24 +248,24 @@ R24. CHARTER 10's eleven anti-goals bind this SPEC as one block; the ones it tou
 | A12 | a note of 1,048,576 bytes is read, one byte more is `note_too_large`, a non-UTF-8 note is `note_unreadable`, and each leaves its cards' presence as it was | `an_unreadable_note_leaves_its_cards_as_they_were` |
 | A13 | a missing vault root is `vault_missing` and changes nothing | `a_missing_vault_root_changes_nothing` |
 | A14 | a new card is stored `pending` with its GUID, and a rescan of the unchanged note changes nothing | `a_new_card_is_pending_and_a_rescan_changes_nothing` |
-| A15 | each scan transition of R12 holds, for a text that is pending, approved, rejected, edited, withdrawn and new | `each_scan_transition_holds` |
+| A15 | each scan transition of R12 holds, for a text that is pending, approved, rejected, edited, withdrawn and new, the approved owner edit's text, and a withdrawn owner edit's text, which is added as a new `note` revision and never returns the edit to pending | `each_scan_transition_holds` |
 | A16 | approve, reject and edit each move a pending revision as R16 says, the prior approved withdrawn by approve and edit and kept by reject | `each_decision_moves_only_a_pending_revision` |
 | A17 | a decision of a revision that is not pending is `not_pending`, of an unknown one `unknown`, and an edit with a refused side `refused`; none changes a row | `a_decided_revision_is_not_decided_again` |
 | A18 | two handles deciding one revision at once apply one decision, and the other is `not_pending` | `two_decisions_at_once_apply_one` |
 | A19 | the migration refuses a second pending, a second approved, a repeated note text, a pending owner edit, a state outside the set and each transition the trigger forbids | `the_store_refuses_what_its_guards_forbid` |
 | A20 | the approved-cards view holds the approved revision of each present candidate and nothing pending, rejected, edited, withdrawn or absent | `the_approved_view_holds_only_approved_present_cards` |
-| A21 | a card gone from its note, an untagged note and a note gone from a whole walk are absent and leave the view, and a card read again is present | `an_absent_card_leaves_the_view_and_returns` |
+| A21 | a card gone from its note, an untagged note and a note gone from a whole walk are absent, their pending revision withdrawn, and leave the view, and a card read again is present with its text pending again | `an_absent_card_leaves_the_view_and_returns` |
 | A22 | the duplicate flag is `found` for another note's equal front, `none` otherwise, `unchecked` with no fronts, and a note carrying the candidate's own GUID is no duplicate | `the_duplicate_flag_ignores_the_cards_own_note` |
 | A23 | both tables are exported and erased, and an erase deletes no note | `the_vault_card_tables_are_exported_and_erased_and_no_note` |
 | A24 | the fronts are the in-scope notes' first fields with their GUIDs, tags removed, `<br>` a space and entities decoded, and an out-of-scope note is not read | `the_fronts_are_the_in_scope_first_fields` |
 | A25 | with the tag or the vault root unset the scan is `not_configured` and reads no note | `an_unset_tag_or_root_reads_nothing` |
 | A26 | with the copy unreadable the scan stores its cards and every new revision is `unchecked` | `an_unreadable_copy_leaves_the_flag_unchecked` |
 | A27 | the bot's and the API's decisions call `coordination::vault_cards::decide`, and nothing else in either crate writes a revision | `both_surfaces_decide_through_one_use_case` |
-| A28 | /vaultcards replies with the counts, at most 10 refusals, the capped and unchecked lines when they hold, and the oldest pending card with its note's file name, its duplicate line when `found` and its three buttons, each datum within 64 bytes, or the none line; each tap is answered and shows the next card or the all-decided line | `vaultcards_shows_the_oldest_pending_card` |
+| A28 | /vaultcards replies with the counts, at most 10 refusals, the capped and unchecked lines when they hold, and the oldest pending card with its note's file name, its duplicate line when `found` and its three buttons, each datum within 64 bytes, or the none line, and the not-configured and vault-missing lines; each tap is answered and shows the next card or the all-decided line | `vaultcards_shows_the_oldest_pending_card` |
 | A29 | a tap on a decided revision is answered with the already-decided line and changes nothing | `a_stale_tap_is_answered_already_decided` |
-| A30 | after Edit the next message in the form is the edit, a command cancels it, and a message out of the form is refused with the form | `edit_takes_the_next_message_in_the_form` |
+| A30 | after Edit the next message in the form is the edit, a command cancels it, and a message out of the form or a refused edit is refused with the reason and the form | `edit_takes_the_next_message_in_the_form` |
 | A31 | the menu registered for the owner's chat holds /vaultcards | `the_menu_is_registered_for_the_owners_chat_only` |
-| A32 | the routes answer the owner and refuse any other session, a non-JSON or cross-site `POST` is refused, and 409, 404 and 422 answer `not_pending`, `unknown` and `refused` | `the_vault_card_routes_answer_only_the_owner` |
+| A32 | the routes answer the owner and refuse any other session, a non-JSON or cross-site `POST` is refused, 409, 404 and 422 answer `not_pending`, `unknown` and `refused`, and the scan's `not_configured` and `vault_missing` answer 200 by name | `the_vault_card_routes_answer_only_the_owner` |
 | A33 | the scan's report counts read, tagged, new, pending, approved, withdrawn and absent cards, lists the refusals, and says whether the walk was capped and whether duplicates were checked | `the_scan_report_counts_each_field` |
 | A34 | the census names each vault-card reply and its caller as a command reply, and no send in the tree goes around the port | `no_delivery_goes_around_the_port` |
 
@@ -337,19 +347,19 @@ private wiring does not change when it merges.
 | `crates/coordination/tests/data_rights_symmetry.rs` | `deck-streak-coordination` | changed: a seeded row in each table |
 | `crates/coordination/tests/vault_cards.rs` | `deck-streak-coordination` | added: A25 to A27 and A33 |
 | `crates/bot/src/vault_card_commands.rs` | `deck-streak-bot` | added: the buttons, the edit form's parse and the replies' text |
-| `crates/bot/src/commands.rs` | `deck-streak-bot` | changed: gains /vaultcards, the `va:`, `ve:` and `vr:` callbacks and the pending edit; `Commands` gains the vault and ingest settings |
+| `crates/bot/src/commands.rs` | `deck-streak-bot` | changed: gains /vaultcards, the `va:`, `ve:` and `vr:` callbacks and the pending edit; `Commands` gains the coordination use-case handle (the bot depends on kernel, identity, notifications and coordination, not on vault or ingest) |
 | `crates/bot/src/lib.rs` | `deck-streak-bot` | changed: the module |
 | `crates/bot/tests/vault_card_commands.rs` | `deck-streak-bot` | added: A28 to A30 |
 | `crates/bot/tests/commands.rs` | `deck-streak-bot` | changed: A31 holds the menu's new entry |
 | `crates/bot/tests/messages/help.msg.json`, `start.msg.json` | `deck-streak-bot` | changed: the command list gains /vaultcards |
-| `crates/bot/tests/messages/vault-cards-summary.msg.json`, `vault-cards-card.msg.json`, `vault-cards-none.msg.json`, `vault-cards-not-configured.msg.json`, `vault-cards-decided.msg.json`, `vault-cards-edit-form.msg.json` | `deck-streak-bot` | added |
+| `crates/bot/tests/messages/vault-cards-summary.msg.json`, `vault-cards-card.msg.json`, `vault-cards-none.msg.json`, `vault-cards-not-configured.msg.json`, `vault-cards-vault-missing.msg.json`, `vault-cards-decided.msg.json`, `vault-cards-edit-form.msg.json`, `vault-cards-edit-refused.msg.json` | `deck-streak-bot` | added |
 | `crates/notifications/tests/one_router.rs` | `deck-streak-notifications` | changed: the census names the vault-card replies and their callers (A34) |
 | `crates/api/src/vault_card_routes.rs` | `deck-streak-api` | added: the five routes |
-| `crates/api/src/router.rs` | `deck-streak-api` | changed: the routes are mounted; `ApiState` gains the settings |
+| `crates/api/src/router.rs` | `deck-streak-api` | changed: the routes are mounted; `ApiState` gains the coordination use-case handle (the api depends on kernel, identity, notifications and coordination, not on vault or ingest) |
 | `crates/api/src/lib.rs` | `deck-streak-api` | changed: the module |
 | `crates/api/tests/vault_card_routes.rs` | `deck-streak-api` | added: A32 |
-| `crates/daemon/src/role_bot.rs` | `deck-streak-daemon` | changed: the bot role hands the vault and ingest settings to its commands at start |
-| `crates/daemon/src/role_api.rs` | `deck-streak-daemon` | changed: the api role hands the same settings to `ApiState` at start |
+| `crates/daemon/src/role_bot.rs` | `deck-streak-daemon` | changed: the bot role builds the coordination use-case handle from the vault and ingest settings and hands it to its commands at start |
+| `crates/daemon/src/role_api.rs` | `deck-streak-daemon` | changed: the api role hands the same handle to `ApiState` at start |
 | `.env.example` | repo | changed: `DECKSTREAK_VAULT_CARD_TAG`, by name, unset |
 | `docs/CONTEXT-MAP.md` | docs | changed: the own-tables rows, the vault's ownership row, and the "Overloaded words" rows for review and card |
 | `docs/LEXICON.md` | docs | changed: `candidate` and `decision`, their fence lines and glossary rows |

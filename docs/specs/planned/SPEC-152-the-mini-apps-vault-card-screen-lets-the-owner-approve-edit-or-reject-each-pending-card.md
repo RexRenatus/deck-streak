@@ -39,13 +39,15 @@ R3. Approve and Reject post their decision once to SPEC-150's route and then sho
     disabled, so one tap posts once.
 R4. A Scan action posts `POST /api/vault-cards/scan` once, shows the report's counts, refusals
     (up to 10, as the bot shows them), and a line when the walk was capped or duplicates were
-    unchecked, then reads the list again.
+    unchecked, then reads the list again. The scan's `not_configured` and `vault_missing` each show
+    their own line and change nothing.
 R5. The screen says the bot's /vaultpack sends the package to import, and never says a card is in
     Anki (CHARTER 10: no claim the sync cannot honour). No package is downloaded in the Mini App
     (ADR-152).
 R6. `api.ts` gains the vault-card calls: the list, a `GET`, and the scan and the three decisions,
     each a `POST` with `content-type: application/json` on the session, and each answer typed by
-    name (`not_pending`, `unknown`, `refused` with its reason). No other client is added.
+    name (`not_pending`, `unknown`, `refused` with its reason, and the scan's `not_configured` and
+    `vault_missing`). No other client is added.
 R7. Every string is a message in all seven locales; the screen follows the accessibility pack:
     each action's label is in its accessible name, a decision's result is announced as a status
     message, every action is keyboard-operable, and nothing moves when the owner prefers reduced
@@ -59,10 +61,10 @@ R7. Every string is a message in all seven locales; the screen follows the acces
 | A2 | Approve and Reject post their decision once, with the actions disabled while it runs, and the card leaves the list | `approve and reject post the decision once and the card leaves the list` |
 | A3 | Save posts both sides as typed, and a refused edit shows the reason and keeps both fields | `edit posts both sides as typed and a refused edit keeps both fields` |
 | A4 | a card decided elsewhere or gone leaves the list with a status line, and a failed request changes nothing | `a card decided elsewhere leaves the list with a status line` |
-| A5 | Scan posts once and shows the report's counts, its refusals and its capped and unchecked lines | `scan posts once and shows the report` |
+| A5 | Scan posts once and shows the report's counts, its refusals and its capped and unchecked lines, or the not-configured or vault-missing line | `scan posts once and shows the report` |
 | A6 | the screen names the bot's /vaultpack and never says a card is in Anki | `the screen points to the bot for the package and claims nothing of Anki` |
 | A7 | with nothing pending the screen says so and shows the approved count | `with nothing pending the screen says so` |
-| A8 | the list is a `GET`, and the scan and each decision a JSON post, on the session, and 409, 404 and 422 are answered by name | `the vault-card calls post JSON on the session and answer by name` |
+| A8 | the list is a `GET`, and the scan and each decision a JSON post, on the session, and 409, 404 and 422 and the scan's `not_configured` and `vault_missing` are answered by name | `the vault-card calls post JSON on the session and answer by name` |
 | A9 | the token `vaultcards` opens `/vault-cards`, and every token's destination is a route | `every destination is a screen of the route table` |
 | A10 | the accessibility audit covers `/vault-cards` in both colour schemes | `the accessibility audit covers every route in both colour schemes` |
 | A11 | every message the screen shows has a value in each of the seven locales | `every vault-card message is in each of the seven locales` |

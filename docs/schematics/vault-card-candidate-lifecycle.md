@@ -40,7 +40,7 @@ stateDiagram-v2
   Pending --> Approved: the owner approves
   Pending --> Rejected: the owner rejects
   Pending --> Edited: the owner edits, and an owner edit is stored approved
-  Pending --> Withdrawn: a scan reads another text of the card
+  Pending --> Withdrawn: a scan reads another text of the card, or finds the card absent
   Approved --> Withdrawn: the owner approves another revision of the card
   Withdrawn --> Pending: a scan reads this text again
   Rejected --> [*]

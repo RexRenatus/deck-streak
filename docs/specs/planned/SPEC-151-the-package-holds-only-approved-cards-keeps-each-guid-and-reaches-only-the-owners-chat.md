@@ -98,10 +98,11 @@ R5. `/vaultpack` (the owner gate, SPEC-026 R4; registered for the owner's chat o
 R6. A package over `MAX_DOCUMENT_BYTES`, 50,000,000 bytes (Telegram's bound on a bot's uploaded
     document), is refused `package_too_large` and nothing is sent. `not_configured`,
     `nothing_approved` and a build failure each have their own line, and nothing is sent.
-R7. The package is the owner's private file: it exists only in memory and in the one document; no
-    route of the API serves it; no job or schedule builds it; and a log line of the use case, the
-    builder or the command names only counts and outcome words, never a side, a note's name or path,
-    or a GUID.
+R7. The package is the owner's private file: on disk it exists only in the builder's temporary
+    directory and the engine's temporary copy (R3), each removed before the builder returns, and
+    otherwise only in memory and in the one document; no route of the API serves it; no job or
+    schedule builds it; and a log line of the use case, the builder or the command names only
+    counts and outcome words, never a side, a note's name or path, or a GUID.
 R8. The builder has one production caller chain: the bot's `Commands::vault_pack`, then
     `coordination::vault_cards::package`, then `PackageBuilder`. SPEC-041's census
     (`crates/notifications/tests/one_router.rs`) names the reply, its caller, and
