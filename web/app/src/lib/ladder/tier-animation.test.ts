@@ -119,6 +119,8 @@ describe('TierAnimation', () => {
     prefer(false);
     for (const tier of ['T2', 'T3', 'T4'] as const) {
       render(TierAnimation, { props: { item: item(tier) } });
+      // the celebration shows, and nothing in it dismisses it
+      expect(screen.getByText(`A synthetic ${tier}`).closest('[data-tier]')?.getAttribute('data-tier'), tier).toBe(tier);
       expect(screen.queryByRole('button'), tier).toBeNull();
       cleanup();
     }
