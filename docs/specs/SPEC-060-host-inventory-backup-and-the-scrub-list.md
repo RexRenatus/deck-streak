@@ -72,8 +72,8 @@ R6. `deploy/host-scrub/apply.py LIST APPROVAL --rules RULES --log FILE` runs dry
 R7. `apply.py` never deletes a path outside the approved list (a package's own removal scripts, which
     the package manager runs when it removes an approved package, are outside that promise), never
     follows a symbolic link out of an item, refuses an item that is a mount point, holds one, or lies
-    inside a mount whose root is not `/` or inside a file system mounted whole at two points, and
-    refuses an item under any
+    inside a mount whose root is not `/` or inside a file system mounted whole at two points, or is inside,
+    or holds, the directory a bind mount shows, and refuses an item under any
     protected path, or holding one, whatever the approval says. The protected paths come from the private rail's protected-path list, which holds every
     path of the host's other services and their data; the example rules protect `/etc`, `/usr`,
     `/boot`, the credential socket's directory and every DeckStreak release directory, and the tests
@@ -99,12 +99,12 @@ R10. The only classes W2 deletes are the owner's: backups older than their reten
 | A4 | apply with no approval, an approval that does not carry the list's digest, or a list that holds a key twice, deletes nothing and names the reason | `test_host_scrub.py` |
 | A5 | apply deletes exactly the approved items when every digest matches, and deletes nothing when one approved item changed between the list and the apply's checks: a file changed at the same size and modification time, or an entry added inside an approved directory; an item that changes after the apply's checks, at its own entry or anywhere below it, is not deleted, and the run stops there, exit 3, with earlier deletions kept | `test_host_scrub.py` |
 | A6 | apply refuses an approval that names no snapshot, a snapshot taken at or before the inventory's instant, compared as instants whatever offset each is written in, or one dated later than the apply's own clock | `test_host_scrub.py` |
-| A7 | apply refuses an approved item under or holding a protected path however the item's path is written or reached, and refuses an item inside a bind mount of any directory, since a directory bind-mounted elsewhere is reached at a path the protected list does not name; it never follows a symbolic link out of an item, including an item that is itself a link: the link goes, the target stays | `test_host_scrub.py` |
+| A7 | apply refuses an approved item under or holding a protected path however the item's path is written or reached, and refuses an item inside, or holding, the directory a bind mount shows, since a directory bind-mounted elsewhere is reached at a path the protected list does not name; it never follows a symbolic link out of an item, including an item that is itself a link: the link goes, the target stays | `test_host_scrub.py` |
 | A8 | no host-scrub file names a private value, and a planted one is refused by the public scrub | `test_host_scrub.py`; `scripts/public-scrub.py` |
 | A9 | apply runs as health checks only the read commands of the inventory's allow list, from the rules the inventory read: a changing command given as a health check, or other rules, are refused before any command runs, with 0 package-tool calls | `test_host_scrub.py` |
 | A10 | each tool parses and binds a file from one read, and opens it once: the rules' digest the inventory records, the plan checks and the apply checks is taken over the rules each acts on; the list names its inventory by the bytes the plan parsed; and the apply deletes only items of the list whose digest the approval carries, so a file that serves other bytes to a second read is refused or acted on exactly as its digest says, and nothing the list's rules protect or the approval does not name is deleted | `test_host_scrub.py` |
 | A11 | the inventory refuses to be written, and the apply refuses to delete, while the host clock does not read synchronised or when the inventory did not record that it did; and an item any of whose entries lies on another device than its own is neither digested, listed nor removed | `test_host_scrub.py` |
-| A12 | an item that is a mount point, or holds one (any mount point strictly under it), or lies inside a mount whose root is not `/` or inside a file system mounted whole at two points, is not listed by the plan and is refused by the apply, whether it is a directory or a file, and the mount point is read from the kernel's mount table with every octal escape decoded; a mount table that cannot be read refuses every path item, in the plan and in the apply; an item with no mount point at or under it is listed and passes | `test_host_scrub.py` |
+| A12 | an item that is a mount point, or holds one (any mount point strictly under it), or lies inside a mount whose root is not `/` or inside a file system mounted whole at two points, or is inside, or holds, the directory a bind mount shows, is not listed by the plan and is refused by the apply, whether it is a directory or a file, and the mount point is read from the kernel's mount table with every octal escape decoded; a mount table that cannot be read refuses every path item, in the plan and in the apply; an item with no mount point at or under it, and not inside or holding what a bind mount shows, is listed and passes | `test_host_scrub.py` |
 
 ```acceptance
 A1: python3 -m unittest discover -s scripts/tests -p test_host_scrub.py -k test_the_inventory_runs_only_its_read_only_allow_list
@@ -207,10 +207,13 @@ only.
   mount of a directory shows that directory of the disk at that place and no list of protected
   paths is asked to know it (A7, A12); so is an item inside a file system that the table lists
   mounted whole (its root `/`) at two points, which is how a bind of a file system's root
-  directory reads. That refusal has a cost: a host whose root file system is itself mounted from a
+  directory reads; and so is an item inside, or holding, the directory that a bind mount shows, which is
+  found by the mount table's own rows: the row whose root is not `/` names a directory of its file system,
+  and any other row of that file system whose root that directory lies within shows the directory at
+  its own place, whichever end of the bound directory the item is on. That refusal has a cost: a host whose root file system is itself mounted from a
   sub-tree (its root field is not `/`) refuses every path item (an approved package is still
   removed) until the maintainer runs the scrub elsewhere, and a host that mounts one file system
-  whole at two points refuses every path item under either point; both fail closed. A mount made after the apply's check is not seen, and belongs
+  whole at two points refuses every path item under either point, and a host with a directory bound elsewhere refuses every path item inside or holding that directory; all fail closed. A mount made after the apply's check is not seen, and belongs
   to the interval above.
 - **A deletion breaks another service.** The protected-path list refuses that service's paths
   whatever the approval says (A7), the health-check list is read after each apply (R9), and the
@@ -355,3 +358,12 @@ Its sixth fix round amended these statements too:
   item under either point.
 - **R7, A12: what "a bind mount" names.** A mount whose root is not `/` is a mount of a
   sub-tree, which a bind of a directory is; the criteria now say what the code checks.
+
+Its seventh fix round amended these statements too:
+
+- **R7, A7, A12: an item in, or holding, the source of a directory bind.** A directory bound at a
+  protected path is deleted through its source, at a path the protected list does not name and the
+  mount point clauses do not see, since the item lies beside the bind and not under it. The plan and
+  the apply now also refuse an item inside, or holding, the directory a bind mount shows, found by
+  the table's rows. A host with a directory bound elsewhere refuses every path item inside or holding
+  that directory.

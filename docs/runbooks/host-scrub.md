@@ -155,7 +155,7 @@ item whose path the apply does not read canonically (named by its id); an item u
 path or holding one; an item reached through a symbolic link; an item holding an entry on another
 device than its own; an item that is a mount point, holds one, or lies inside a bind mount (a mount whose
 root is not `/`, which a bind of a directory reads, or a file system mounted whole at two points,
-which a bind of a file system's root directory reads), or a mount table that cannot be read; an item whose digest changed since
+which a bind of a file system's root directory reads), or is inside, or holds, the directory a bind mount shows, or a mount table that cannot be read; an item whose digest changed since
 the list was made; a package that `dpkg --dry-run --remove` would not remove alone. A file or link
 is unlinked, never its target; a directory is removed without following a link inside it; a
 package is removed with `dpkg --remove`, which keeps its configuration files. Each item is read
@@ -165,7 +165,8 @@ goes only while it is what its checks read, and a change found there stops the r
 A host whose root file system is itself mounted from a sub-tree (its mount root is not `/`) refuses
 every path item (an approved package is still removed): run the scrub from another host image
 instead. A host that mounts one file system whole at two points refuses every path item under either
-point.
+point, and a host with a directory bound elsewhere refuses every path item inside or holding that
+directory.
 
 | exit | meaning | what to do |
 |---|---|---|

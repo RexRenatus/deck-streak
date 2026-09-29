@@ -185,6 +185,15 @@ alternatives:
   system's root directory deletable in an irreversible class. Its cost: a host that mounts one
   file system whole at two points refuses every path item under either point.
 
+### Decided in the seventh fix round (SPEC-060 §8)
+
+- **An item in, or holding, the source of a directory bind is refused, chosen against narrowing A7 because A7 promises "however the item's path is written or reached" and a bind's source is a way of reaching the item.**
+  A directory bound at a protected path is deleted through its source, which no clause keyed on the
+  item's own path sees. The plan and the apply also refuse an item inside, or holding, the directory
+  a bind mount shows, found by the mount table's rows, with the reason "is or holds what the bind
+  mount" and the point. Its cost: a host with a directory bound elsewhere refuses every path item
+  inside or holding that directory.
+
 ### Consequences
 
 - Good, because the owner approves bytes, not descriptions, and a changed host is caught before, or at, its
@@ -203,6 +212,8 @@ alternatives:
   approved package is still removed) until the scrub runs elsewhere.
 - Bad, because a host that mounts one file system whole at two points refuses every path item under
   either point.
+- Bad, because a host with a directory bound elsewhere refuses every path item inside or holding that
+  directory.
 - Bad, because a mount made after the apply's check is not seen; it belongs to the same removal
   interval as any other change.
 - Bad, because the digest reads each candidate's content once; the tools run niced,
