@@ -4,7 +4,8 @@
 //! The scheduler's daily `sync` job and the owner's `/sync` call it (SPEC-027, SPEC-026); no other
 //! job syncs (ADR-037). In order, it reads the record as it stands (the gate's run-history term is
 //! the run before this cycle's), syncs (the syncer owns the run's guards, retries and record),
-//! collects every registered obligation's deadlines, and asks the change gate. Then it either reads
+//! flushes the notification router when the sync ran and succeeded and the parts carry a router
+//! (SPEC-041 R7), collects every registered obligation's deadlines, and asks the change gate. Then it either reads
 //! the window and recomputes, or leaves the skip the gate recorded. The recompute runs the fold over
 //! the window it read (SPEC-071 R15; [`crate::recompute`]), with the study day in which the latest
 //! successful sync started, so a day closed before that sync is settled and every later day stays
@@ -23,6 +24,7 @@ use deck_streak_ingest::sync::{SyncError, SyncReport, Syncer};
 use deck_streak_ingest::sync_runs::{SqliteSyncRuns, SyncRunStore, Trigger};
 use deck_streak_ingest::window::{WindowError, read_window};
 use deck_streak_kernel::{Clock, Db, KernelError, PortFuture, StudyDayRule, UtcMillis};
+use deck_streak_notifications::Router;
 
 use crate::obligations::{ObligationSource, Obligations};
 use crate::recompute::{Fold, FoldInput};
@@ -69,14 +71,16 @@ impl ObligationSource for OwedSettle {
 }
 
 /// What one cycle needs: the syncer, the reader of its copy, the gate over the service's database,
-/// the registered obligations and the clock. The runner's port for the `sync` job
-/// (`runner::SyncCycle`) is implemented over them in the composition root.
+/// the registered obligations, the clock, and the notification router it flushes, when it has one.
+/// The runner's port for the `sync` job (`runner::SyncCycle`) is implemented over them in the
+/// composition root.
 pub struct CycleParts<E> {
     syncer: Syncer<E, SqliteSyncRuns>,
     reader: CollectionReader,
     gate: ChangeGate,
     obligations: Obligations,
     clock: Arc<dyn Clock>,
+    router: Option<Arc<Router>>,
     fold: Option<CycleFold>,
 }
 
@@ -106,8 +110,16 @@ impl<E: AnkiEngine + Sync> CycleParts<E> {
             gate,
             obligations,
             clock,
+            router: None,
             fold: None,
         }
+    }
+
+    /// These parts, flushing `router` after every sync that ran and succeeded (SPEC-041 R7).
+    #[must_use]
+    pub fn with_flush(mut self, router: Arc<Router>) -> Self {
+        self.router = Some(router);
+        self
     }
 
     /// This cycle, running `fold` after every recompute's read (SPEC-071 R15): its steps write
@@ -220,6 +232,11 @@ where
 {
     let history = cycle.gate.history().await.map_err(CycleError::History)?;
     let sync = cycle.syncer.sync(trigger).await?;
+    if let (Some(router), SyncReport::Ran { run, .. }) = (&cycle.router, &sync)
+        && run.outcome.is_ok()
+    {
+        flush(router).await;
+    }
     let sync_ok = match &sync {
         SyncReport::Ran { run, .. } => run.outcome.is_ok(),
         // A refusal or a debounce made no request: the copy is the last sync's, and the record's
@@ -272,4 +289,13 @@ where
         }
     };
     Ok(CycleReport { sync, recompute })
+}
+
+/// The router's flush, after a sync that ran and succeeded (SPEC-041 R7). A flush that cannot run is
+/// logged and never fails the sync it follows: the queue keeps its holds for the next.
+async fn flush(router: &Router) {
+    match router.flush().await {
+        Ok(flushed) => tracing::info!(?flushed, "the notification router flushed"),
+        Err(error) => tracing::error!(%error, "the notification router could not flush"),
+    }
 }
