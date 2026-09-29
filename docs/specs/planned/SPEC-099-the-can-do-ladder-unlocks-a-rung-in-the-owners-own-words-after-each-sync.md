@@ -80,8 +80,7 @@ The pass (ADR-099)
 
 R6. After each sync's recompute commits, and before the instruments step (SPEC-094 R7),
     coordination runs the unlock pass through the kernel's offload: the read of R1, the rungs of R3,
-    then one write that records each unlocked rung in `can_do_unlocks` with the pass's instant and
-    study day, unless it is already recorded, and replaces `can_do_ladder` with the pass's outcome.
+    then one write that records each unlocked rung in `can_do_unlocks` with the pass's instant and its study day by the kernel's study-day rule, unless it is already recorded, and replaces `can_do_ladder` with the pass's outcome.
     A rung already recorded keeps its first instant.
 R7. `can_do_ladder` holds the latest pass: its instant, whether its read failed and which read, the
     count of unlocked rungs, and every locked rung with its course and cards remaining. A failed
@@ -125,6 +124,7 @@ R11. The Mini App's ladder screen lists every unlock with its date and the locke
 | A14 | `/cando` renders a failed pass as a failure | `cando_renders_a_failed_pass_as_a_failure` |
 | A15 | the ladder lists every unlock with its date and the locked rungs nearest first | `lists every unlock with its date and the locked rungs nearest first` |
 | A16 | the ladder renders a failed pass as a failure, never an empty ladder | `renders a failed pass as a failure` |
+| A17 | the unlock pass records each unlock with the pass's instant and the kernel's study-day rule for its study day | `an_unlock_records_the_study_day_by_the_kernels_rule` |
 
 ```acceptance
 A1: cargo test -p deck-streak-ingest --test can_do_reads -- --exact the_can_do_field_matches_by_the_predecessors_fold
@@ -143,6 +143,7 @@ A13: cargo test -p deck-streak-bot --test can_do_commands -- --exact cando_shows
 A14: cargo test -p deck-streak-bot --test can_do_commands -- --exact cando_renders_a_failed_pass_as_a_failure
 A15: pnpm exec vitest run web/app/src/lib/cando/CanDoLadder.test.ts -t "lists every unlock with its date and the locked rungs nearest first"
 A16: pnpm exec vitest run web/app/src/lib/cando/CanDoLadder.test.ts -t "renders a failed pass as a failure"
+A17: cargo test -p deck-streak-coordination --test can_do_step -- --exact an_unlock_records_the_study_day_by_the_kernels_rule
 ```
 
 ## 3a. What the box run judges
@@ -173,10 +174,10 @@ when it merges.
 | `crates/curriculum/tests/can_do_store.rs` | `deck-streak-curriculum` | added: A6, A7 |
 | `migrations/009901_curriculum_can_do.sql` | `deck-streak-curriculum` | added: `can_do_unlocks` and `can_do_ladder` |
 | `crates/coordination/src/can_do.rs` | `deck-streak-coordination` | added: the unlock pass and the ladder's read model |
-| `crates/coordination/src/sync_cycle.rs` | `deck-streak-coordination` | changed: the pass after the recompute, before the instruments step |
+| `crates/coordination/src/sync_cycle.rs` | `deck-streak-coordination` | changed: the pass after the recompute, before the instruments step, recording each unlock's study day by the kernel's rule (A17) |
 | `crates/daemon/src/wiring.rs` | `deck-streak-daemon` | changed: joins the unlock pass to the sync cycle after the recompute and before the instruments step (R6) |
 | `crates/coordination/src/lib.rs` | `deck-streak-coordination` | changed: the module |
-| `crates/coordination/tests/can_do_step.rs` | `deck-streak-coordination` | added: A8 to A11 |
+| `crates/coordination/tests/can_do_step.rs` | `deck-streak-coordination` | added: A8 to A11, A17 |
 | `crates/api/src/can_do_routes.rs` | `deck-streak-api` | added: the ladder route |
 | `crates/api/src/router.rs` | `deck-streak-api` | changed: the route behind the owner's session |
 | `crates/api/tests/can_do_routes.rs` | `deck-streak-api` | added: A12 |

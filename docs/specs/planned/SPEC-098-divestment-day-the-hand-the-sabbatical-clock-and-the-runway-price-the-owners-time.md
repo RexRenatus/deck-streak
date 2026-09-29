@@ -215,6 +215,7 @@ R18. The insights screen shows each report as a section:
 | A24 | the clock draws both curves and states each park day or beyond a year | `draws both curves and states each park day` |
 | A25 | the runway shows a reason, never a number, for a zero or unknown rate | `shows a reason and never a number for an unknown rate` |
 | A26 | each instrument is passed the inputs R2 names: Divestment Day the scoped cards, the study events of the last 90 days and the leech threshold; the hand the scoped cards with their memory state, the run's instant and the last 60 rollups newest first; the clock the scoped cards with their memory state and course and the run's study day; and the runway R1's rows, the presets and each deck's track | `each_instrument_is_passed_its_inputs` |
+| A27 | the sabbatical clock is passed the collection's desired retention over the same scoped cards and the rollups' pace when it was measured, beside its cards and study day | `the_sabbatical_clock_is_passed_its_retention_and_pace` |
 
 ```acceptance
 A1: cargo test -p deck-streak-ingest --test budget_reads -- --exact the_runway_rows_match_the_predecessors_reader
@@ -243,6 +244,7 @@ A23: pnpm exec vitest run web/app/src/lib/insights/HandSection.test.ts -t "label
 A24: pnpm exec vitest run web/app/src/lib/insights/ParkSection.test.ts -t "draws both curves and states each park day"
 A25: pnpm exec vitest run web/app/src/lib/insights/RunwaySection.test.ts -t "shows a reason and never a number for an unknown rate"
 A26: cargo test -p deck-streak-coordination --test hand_step -- --exact each_instrument_is_passed_its_inputs
+A27: cargo test -p deck-streak-coordination --test hand_step -- --exact the_sabbatical_clock_is_passed_its_retention_and_pace
 ```
 
 ## 3a. What the box run judges
@@ -276,10 +278,10 @@ delivery, so the private wiring does not change when it merges.
 | `crates/insights/tests/hand.rs` | `deck-streak-insights` | added: A6 to A9 |
 | `crates/insights/tests/sabbatical.rs` | `deck-streak-insights` | added: A10 to A13 |
 | `crates/insights/tests/runway.rs` | `deck-streak-insights` | added: A14 to A16 |
-| `crates/coordination/src/time_instruments.rs` | `deck-streak-coordination` | added: the four instruments' inputs and the hand's cleared marks |
+| `crates/coordination/src/time_instruments.rs` | `deck-streak-coordination` | added: the four instruments' inputs, the clock's desired retention and pace (A27) and the hand's cleared marks |
 | `crates/coordination/src/instruments.rs` | `deck-streak-coordination` | changed: the step calls the cleared marks after each sync |
 | `crates/coordination/src/lib.rs` | `deck-streak-coordination` | changed: the module |
-| `crates/coordination/tests/hand_step.rs` | `deck-streak-coordination` | added: A17, A18, A26 |
+| `crates/coordination/tests/hand_step.rs` | `deck-streak-coordination` | added: A17, A18, A26, A27 |
 | `crates/bot/src/time_commands.rs` | `deck-streak-bot` | added: the divest, hand and park commands |
 | `crates/bot/src/commands.rs` | `deck-streak-bot` | changed: the commands join the table |
 | `crates/daemon/src/role_bot.rs` | `deck-streak-daemon` | changed: the bot's commands receive the owner's courses loaded at start, for /park's aliases (R17) |

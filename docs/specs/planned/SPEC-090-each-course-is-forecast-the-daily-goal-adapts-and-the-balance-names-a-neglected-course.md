@@ -150,6 +150,7 @@ R13. Every constant this SPEC uses (the velocity floor, the goal's floor, horizo
 | A19 | the syllabus directory is configuration: with neither the flag nor the variable the tool refuses | `test_the_syllabus_directory_is_configuration` |
 | A20 | `--check` exits non-zero and names a course whose configured bands differ from the export | `test_check_names_a_course_that_disagrees` |
 | A21 | the pace step passes the stored rollups (the last 370 for the goal's p90), SPEC-077's stored course progress and the study reviews of the read window with each card's course | `the_pace_step_is_passed_its_inputs` |
+| A22 | the pace step passes the balance the study reviews of its window, the last 28 study days including today by the kernel's study-day rule at the 04:00 rollover, each with its card's course | `the_pace_step_is_passed_its_balance_window` |
 
 ```acceptance
 A1: cargo test -p deck-streak-kernel --test pynum_goldens -- --exact the_numeric_basics_match_cpythons_golden
@@ -173,6 +174,7 @@ A18: python3 -m unittest discover -s scripts/tests -p test_syllabus_bands.py -k 
 A19: python3 -m unittest discover -s scripts/tests -p test_syllabus_bands.py -k test_the_syllabus_directory_is_configuration
 A20: python3 -m unittest discover -s scripts/tests -p test_syllabus_bands.py -k test_check_names_a_course_that_disagrees
 A21: cargo test -p deck-streak-coordination --test pace_step -- --exact the_pace_step_is_passed_its_inputs
+A22: cargo test -p deck-streak-coordination --test pace_step -- --exact the_pace_step_is_passed_its_balance_window
 ```
 
 ## 3a. What the box run judges
@@ -205,13 +207,13 @@ when it merges.
 | `crates/curriculum/tests/pace_store.rs` | `deck-streak-curriculum` | added: A11 |
 | `crates/curriculum/Cargo.toml` | `deck-streak-curriculum` | changed: serde_json's `float_roundtrip` for the goldens' reader (a dev-dependency) |
 | `migrations/009001_curriculum_pace_readouts.sql` | `deck-streak-curriculum` | added: `pace_readouts` |
-| `crates/coordination/src/recompute/pace.rs` | `deck-streak-coordination` | added: the pace step |
+| `crates/coordination/src/recompute/pace.rs` | `deck-streak-coordination` | added: the pace step and the balance's window start and study-day rule (A22) |
 | `crates/coordination/src/recompute/mod.rs` | `deck-streak-coordination` | changed: declares the pace step's module |
 | `crates/daemon/src/wiring.rs` | `deck-streak-daemon` | changed: registers the pace step in phase 4 of `recompute_fold` (SPEC-071 R19); joins the goal to SPEC-086's today view (R5) |
 | `crates/coordination/src/pace.rs` | `deck-streak-coordination` | added: the pace read model |
 | `crates/coordination/src/today/view.rs` | `deck-streak-coordination` | changed: the goal beside today's reviews |
 | `crates/coordination/src/lib.rs` | `deck-streak-coordination` | changed: the pace read model |
-| `crates/coordination/tests/pace_step.rs` | `deck-streak-coordination` | added: A9, A10, A21 |
+| `crates/coordination/tests/pace_step.rs` | `deck-streak-coordination` | added: A9, A10, A21, A22 |
 | `crates/api/src/pace_routes.rs` | `deck-streak-api` | added: `GET /api/curriculum/pace` |
 | `crates/api/src/router.rs` | `deck-streak-api` | changed: the pace route behind the owner's session |
 | `crates/api/tests/pace_routes.rs` | `deck-streak-api` | added: A12 |
@@ -290,7 +292,7 @@ unit band or syllabus of the owner's.
 | `pynum_basics` | CPython's `sum`, `statistics.median`, `statistics.mean`, `round` | adapter | float lists with cancellation, even and odd counts, lists whose running sum differs from the exact mean, and halves at each digit, and `round(2.675, 2)`, whose shortest decimal is a tie but whose binary value is not (expected 2.67) |
 | `percentile` | `gamification/adaptive.py:percentile` | function | none: empty, one value, `0.9` of 70 values, `0.2` and `1.0`, `0.9` of 7 distinct values (rank 6.3, which the ceiling takes to 7) and `0.0` of 70 values (rank 0, which the floor takes to 1) |
 | `mature_velocity` | `velocity.py:mature_velocity` | adapter | rollup rows with and without reviews, all-zero graduations, an even count |
-| `forecast` | `velocity.py:compute_velocity` | adapter | synthetic `LanguageProgress` values with gaps, empty bands, a fully achieved course and a remaining count the rate does not divide (7 over a rate of 2.0 is 3.5, which the ceiling takes to 4 and the floor to 3) |
+| `forecast` | `velocity.py:compute_velocity` | adapter | synthetic `LanguageProgress` values with gaps, empty bands, a fully achieved course and a remaining count the rate does not divide (7 over a rate of 2.0 is 3.5, which the ceiling takes to 4 and the floor to 3; 7 over a rate of 3.0 is 2.3333333333333335, which the ceiling takes to 3 and the floor, the round and the truncation each to 2) |
 | `adaptive_goal` | `gamification/adaptive.py:adaptive_daily_goal` | adapter | the remaining sum, the 365-day horizon and `max(percentile_p90(history), 30)` as `compute_all` feeds them, a per-day need under 10, at 10 and over it, and a history p90 under 30, at 30 and over it |
 | `balance` | `cross_language.py:compute_balance` | adapter | synthetic courses patched into the module's course lookup, reviews on the window's first and last study day and on the day before it, and either side of the rollover, a course whose share is exactly 5.0 and one just under it, a long-idle course and an empty window |
 | `syllabus_derive` | `tools/syllabus/export_bands.py:derive_language` | function | none: synthetic syllabi |

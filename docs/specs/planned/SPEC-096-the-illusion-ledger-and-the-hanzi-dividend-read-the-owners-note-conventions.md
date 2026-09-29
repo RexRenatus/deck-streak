@@ -76,7 +76,7 @@ R1. A (note type, template) pair's direction equals `goldens/direction_classify.
     (`direction.py:classify`), over the rules of the conventions file (SPEC-094 R1).
 R2. `crates/ingest/src/direction_reads.rs` reads each (home deck, note type, ordinal) cell's cards,
     mature cards and suspended cards, and its first-answer-per-day answers, passes, mature answers
-    and mature passes since a given instant, keeping SPEC-023's scope, equal to
+    and mature passes since a given instant, by a given study-day rule, keeping SPEC-023's scope, equal to
     `goldens/direction_counts.json` (the two `anki_reader.py` reads over a synthetic collection).
 R3. Coordination gives each home deck its language: its course, or a writing root's language,
     equal to `goldens/direction_language.json` (`direction.py:_resolve_language`).
@@ -131,6 +131,8 @@ R9. The insights screen shows the Illusion Ledger per language with its buckets,
 | A14 | the Illusion section is omitted when nothing is classified | `is omitted when nothing is classified` |
 | A15 | the Hanzi section says shares a character with, never same word | `says shares a character with and never same word` |
 | A16 | each Han snippet carries its language | `marks each han snippet with its language` |
+| A17 | the Illusion Ledger is passed its reads: the direction counts since its window's start, 90 days of 86,400,000 ms before the run's instant and never before 0, with the kernel's study-day rule, and a window of 90 days to record | `the_illusion_ledger_is_passed_its_window_and_study_day_rule` |
+| A18 | the Hanzi Dividend is passed its reads: the transfer reads' window of 180 days back from the latest answer, the first answer per card and study day by the kernel's study-day rule, and the tracked roots | `the_hanzi_dividend_is_passed_its_window_and_study_day_rule` |
 
 ```acceptance
 A1: cargo test -p deck-streak-insights --test illusion -- --exact the_direction_classifier_matches_the_predecessors_golden
@@ -149,6 +151,8 @@ A13: cargo test -p deck-streak-coordination --test instrument_languages -- --exa
 A14: pnpm exec vitest run web/app/src/lib/insights/IllusionSection.test.ts -t "is omitted when nothing is classified"
 A15: pnpm exec vitest run web/app/src/lib/insights/HanziSection.test.ts -t "says shares a character with and never same word"
 A16: pnpm exec vitest run web/app/src/lib/insights/HanziSection.test.ts -t "marks each han snippet with its language"
+A17: cargo test -p deck-streak-coordination --test instrument_languages -- --exact the_illusion_ledger_is_passed_its_window_and_study_day_rule
+A18: cargo test -p deck-streak-coordination --test instrument_languages -- --exact the_hanzi_dividend_is_passed_its_window_and_study_day_rule
 ```
 
 ## 3a. What the box run judges
@@ -180,8 +184,8 @@ not change when it merges.
 | `crates/insights/src/lib.rs` | `deck-streak-insights` | changed: the modules |
 | `crates/insights/tests/illusion.rs` | `deck-streak-insights` | added: A1, A4, A5 |
 | `crates/insights/tests/hanzi.rs` | `deck-streak-insights` | added: A8 to A12 |
-| `crates/coordination/src/instruments.rs` | `deck-streak-coordination` | changed: each deck's language and the tracked roots, passed to both instruments |
-| `crates/coordination/tests/instrument_languages.rs` | `deck-streak-coordination` | added: A3, A13 |
+| `crates/coordination/src/instruments.rs` | `deck-streak-coordination` | changed: each deck's language and the tracked roots, passed to both instruments, the Illusion Ledger's window start and study-day rule (A17), and the Hanzi Dividend's window and study-day rule (A18) |
+| `crates/coordination/tests/instrument_languages.rs` | `deck-streak-coordination` | added: A3, A13, A17, A18 |
 | `privacy.json` | repo | changed: the `research-instruments` category names note snippets and meanings |
 | `PRIVACY.md` | repo | changed: the category's line |
 | `web/app/src/lib/insights/IllusionSection.svelte` | miniapp | added |
