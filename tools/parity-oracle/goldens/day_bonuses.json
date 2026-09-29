@@ -1,0 +1,360 @@
+{
+  "adapter": "with_a_stub_day_store",
+  "cases": [
+    {
+      "class": "run",
+      "input": {
+        "base": 1000,
+        "buff": false,
+        "reviews": 800,
+        "reviews_law": 0,
+        "run": 0
+      },
+      "output": {
+        "consistency": 0
+      }
+    },
+    {
+      "class": "run",
+      "input": {
+        "base": 1000,
+        "buff": false,
+        "reviews": 800,
+        "reviews_law": 0,
+        "run": 1
+      },
+      "output": {
+        "consistency": 149
+      }
+    },
+    {
+      "class": "run",
+      "input": {
+        "base": 1000,
+        "buff": false,
+        "reviews": 800,
+        "reviews_law": 0,
+        "run": 2
+      },
+      "output": {
+        "consistency": 300
+      }
+    },
+    {
+      "class": "run",
+      "input": {
+        "base": 1000,
+        "buff": false,
+        "reviews": 800,
+        "reviews_law": 0,
+        "run": 3
+      },
+      "output": {
+        "consistency": 449
+      }
+    },
+    {
+      "class": "run",
+      "input": {
+        "base": 1000,
+        "buff": false,
+        "reviews": 800,
+        "reviews_law": 0,
+        "run": 10
+      },
+      "output": {
+        "consistency": 1500
+      }
+    },
+    {
+      "class": "run",
+      "input": {
+        "base": 1000,
+        "buff": false,
+        "reviews": 800,
+        "reviews_law": 0,
+        "run": 11
+      },
+      "output": {
+        "consistency": 1500
+      }
+    },
+    {
+      "class": "run",
+      "input": {
+        "base": 1000,
+        "buff": false,
+        "reviews": 800,
+        "reviews_law": 0,
+        "run": 12
+      },
+      "output": {
+        "consistency": 1500
+      }
+    },
+    {
+      "class": "run",
+      "input": {
+        "base": 1000,
+        "buff": false,
+        "reviews": 800,
+        "reviews_law": 0,
+        "run": 20
+      },
+      "output": {
+        "consistency": 1500
+      }
+    },
+    {
+      "class": "ascendant",
+      "input": {
+        "base": 900,
+        "buff": true,
+        "reviews": 0,
+        "reviews_law": 0,
+        "run": 4
+      },
+      "output": {
+        "ascendant": 0,
+        "consistency": 540
+      }
+    },
+    {
+      "class": "ascendant",
+      "input": {
+        "base": 900,
+        "buff": true,
+        "reviews": 10,
+        "reviews_law": 0,
+        "run": 4
+      },
+      "output": {
+        "ascendant": 2,
+        "consistency": 540
+      }
+    },
+    {
+      "class": "ascendant",
+      "input": {
+        "base": 900,
+        "buff": true,
+        "reviews": 599,
+        "reviews_law": 0,
+        "run": 4
+      },
+      "output": {
+        "ascendant": 149,
+        "consistency": 540
+      }
+    },
+    {
+      "class": "ascendant",
+      "input": {
+        "base": 900,
+        "buff": true,
+        "reviews": 600,
+        "reviews_law": 0,
+        "run": 4
+      },
+      "output": {
+        "ascendant": 150,
+        "consistency": 540
+      }
+    },
+    {
+      "class": "ascendant",
+      "input": {
+        "base": 900,
+        "buff": true,
+        "reviews": 601,
+        "reviews_law": 0,
+        "run": 4
+      },
+      "output": {
+        "ascendant": 150,
+        "consistency": 540
+      }
+    },
+    {
+      "class": "ascendant",
+      "input": {
+        "base": 900,
+        "buff": true,
+        "reviews": 0,
+        "reviews_law": 700,
+        "run": 4
+      },
+      "output": {
+        "ascendant": 150,
+        "consistency": 540
+      }
+    },
+    {
+      "class": "ascendant",
+      "input": {
+        "base": 900,
+        "buff": true,
+        "reviews": 300,
+        "reviews_law": 300,
+        "run": 4
+      },
+      "output": {
+        "ascendant": 150,
+        "consistency": 540
+      }
+    },
+    {
+      "class": "zero-base",
+      "input": {
+        "base": 0,
+        "buff": true,
+        "reviews": 0,
+        "reviews_law": 0,
+        "run": 5
+      },
+      "output": {
+        "ascendant": 0,
+        "consistency": 0
+      }
+    },
+    {
+      "input": {
+        "base": 1238,
+        "buff": false,
+        "reviews": 207,
+        "reviews_law": 670,
+        "run": 8
+      },
+      "output": {
+        "consistency": 1485
+      }
+    },
+    {
+      "input": {
+        "base": 4693,
+        "buff": true,
+        "reviews": 833,
+        "reviews_law": 153,
+        "run": 5
+      },
+      "output": {
+        "ascendant": 150,
+        "consistency": 3519
+      }
+    },
+    {
+      "input": {
+        "base": 845,
+        "buff": true,
+        "reviews": 1189,
+        "reviews_law": 920,
+        "run": 4
+      },
+      "output": {
+        "ascendant": 150,
+        "consistency": 507
+      }
+    },
+    {
+      "input": {
+        "base": 3374,
+        "buff": true,
+        "reviews": 1280,
+        "reviews_law": 1395,
+        "run": 6
+      },
+      "output": {
+        "ascendant": 150,
+        "consistency": 3036
+      }
+    },
+    {
+      "input": {
+        "base": 2748,
+        "buff": true,
+        "reviews": 1285,
+        "reviews_law": 1060,
+        "run": 10
+      },
+      "output": {
+        "ascendant": 150,
+        "consistency": 4122
+      }
+    },
+    {
+      "input": {
+        "base": 4031,
+        "buff": true,
+        "reviews": 1173,
+        "reviews_law": 496,
+        "run": 12
+      },
+      "output": {
+        "ascendant": 150,
+        "consistency": 6046
+      }
+    },
+    {
+      "input": {
+        "base": 287,
+        "buff": true,
+        "reviews": 389,
+        "reviews_law": 519,
+        "run": 6
+      },
+      "output": {
+        "ascendant": 150,
+        "consistency": 258
+      }
+    },
+    {
+      "input": {
+        "base": 2322,
+        "buff": false,
+        "reviews": 334,
+        "reviews_law": 1277,
+        "run": 9
+      },
+      "output": {
+        "consistency": 3134
+      }
+    },
+    {
+      "input": {
+        "base": 964,
+        "buff": true,
+        "reviews": 479,
+        "reviews_law": 449,
+        "run": 0
+      },
+      "output": {
+        "ascendant": 150,
+        "consistency": 0
+      }
+    },
+    {
+      "input": {
+        "base": 4701,
+        "buff": true,
+        "reviews": 1320,
+        "reviews_law": 1264,
+        "run": 7
+      },
+      "output": {
+        "ascendant": 150,
+        "consistency": 4936
+      }
+    }
+  ],
+  "function": "pipeline_layers.governor.GovernorLayer._apply_day_bonuses",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Runs it on a stand-in layer whose stub store holds the day base, the buff and the review amounts, and whose _on_pace_run answers the case's run; returns the grants written; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_072.py",
+  "registry_sha256": "2786f11a526dda3d1731046af5db3880321fe7e7b345b36dd4b3fce305c87c4e",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

@@ -1,0 +1,256 @@
+{
+  "adapter": "with_a_stub_arming_store",
+  "cases": [
+    {
+      "class": "combination",
+      "input": {
+        "backlog_zero": 0,
+        "buff": false,
+        "rollup_reviews": null,
+        "skip": false
+      },
+      "output": false
+    },
+    {
+      "class": "combination",
+      "input": {
+        "backlog_zero": 100,
+        "buff": false,
+        "rollup_reviews": null,
+        "skip": false
+      },
+      "output": false
+    },
+    {
+      "class": "combination",
+      "input": {
+        "backlog_zero": 0,
+        "buff": false,
+        "rollup_reviews": 0,
+        "skip": false
+      },
+      "output": false
+    },
+    {
+      "class": "combination",
+      "input": {
+        "backlog_zero": 100,
+        "buff": false,
+        "rollup_reviews": 0,
+        "skip": false
+      },
+      "output": false
+    },
+    {
+      "class": "combination",
+      "input": {
+        "backlog_zero": 0,
+        "buff": false,
+        "rollup_reviews": 40,
+        "skip": false
+      },
+      "output": false
+    },
+    {
+      "class": "combination",
+      "input": {
+        "backlog_zero": 100,
+        "buff": false,
+        "rollup_reviews": 40,
+        "skip": false
+      },
+      "output": true
+    },
+    {
+      "class": "combination",
+      "input": {
+        "backlog_zero": 0,
+        "buff": false,
+        "rollup_reviews": null,
+        "skip": true
+      },
+      "output": false
+    },
+    {
+      "class": "combination",
+      "input": {
+        "backlog_zero": 100,
+        "buff": false,
+        "rollup_reviews": null,
+        "skip": true
+      },
+      "output": false
+    },
+    {
+      "class": "combination",
+      "input": {
+        "backlog_zero": 0,
+        "buff": false,
+        "rollup_reviews": 0,
+        "skip": true
+      },
+      "output": false
+    },
+    {
+      "class": "combination",
+      "input": {
+        "backlog_zero": 100,
+        "buff": false,
+        "rollup_reviews": 0,
+        "skip": true
+      },
+      "output": false
+    },
+    {
+      "class": "combination",
+      "input": {
+        "backlog_zero": 0,
+        "buff": false,
+        "rollup_reviews": 40,
+        "skip": true
+      },
+      "output": false
+    },
+    {
+      "class": "combination",
+      "input": {
+        "backlog_zero": 100,
+        "buff": false,
+        "rollup_reviews": 40,
+        "skip": true
+      },
+      "output": false
+    },
+    {
+      "class": "combination",
+      "input": {
+        "backlog_zero": 0,
+        "buff": true,
+        "rollup_reviews": null,
+        "skip": false
+      },
+      "output": false
+    },
+    {
+      "class": "combination",
+      "input": {
+        "backlog_zero": 100,
+        "buff": true,
+        "rollup_reviews": null,
+        "skip": false
+      },
+      "output": false
+    },
+    {
+      "class": "combination",
+      "input": {
+        "backlog_zero": 0,
+        "buff": true,
+        "rollup_reviews": 0,
+        "skip": false
+      },
+      "output": false
+    },
+    {
+      "class": "combination",
+      "input": {
+        "backlog_zero": 100,
+        "buff": true,
+        "rollup_reviews": 0,
+        "skip": false
+      },
+      "output": false
+    },
+    {
+      "class": "combination",
+      "input": {
+        "backlog_zero": 0,
+        "buff": true,
+        "rollup_reviews": 40,
+        "skip": false
+      },
+      "output": false
+    },
+    {
+      "class": "combination",
+      "input": {
+        "backlog_zero": 100,
+        "buff": true,
+        "rollup_reviews": 40,
+        "skip": false
+      },
+      "output": false
+    },
+    {
+      "class": "combination",
+      "input": {
+        "backlog_zero": 0,
+        "buff": true,
+        "rollup_reviews": null,
+        "skip": true
+      },
+      "output": false
+    },
+    {
+      "class": "combination",
+      "input": {
+        "backlog_zero": 100,
+        "buff": true,
+        "rollup_reviews": null,
+        "skip": true
+      },
+      "output": false
+    },
+    {
+      "class": "combination",
+      "input": {
+        "backlog_zero": 0,
+        "buff": true,
+        "rollup_reviews": 0,
+        "skip": true
+      },
+      "output": false
+    },
+    {
+      "class": "combination",
+      "input": {
+        "backlog_zero": 100,
+        "buff": true,
+        "rollup_reviews": 0,
+        "skip": true
+      },
+      "output": false
+    },
+    {
+      "class": "combination",
+      "input": {
+        "backlog_zero": 0,
+        "buff": true,
+        "rollup_reviews": 40,
+        "skip": true
+      },
+      "output": false
+    },
+    {
+      "class": "combination",
+      "input": {
+        "backlog_zero": 100,
+        "buff": true,
+        "rollup_reviews": 40,
+        "skip": true
+      },
+      "output": false
+    }
+  ],
+  "function": "pipeline_layers.governor.GovernorLayer._maybe_grant_ascendant",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Runs it on a stand-in layer whose stub store holds a buff, a skip day, the previous day's rollup reviews and backlog_zero amount; returns whether a buff was set; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_072.py",
+  "registry_sha256": "2786f11a526dda3d1731046af5db3880321fe7e7b345b36dd4b3fce305c87c4e",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

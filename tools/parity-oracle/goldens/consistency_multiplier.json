@@ -1,0 +1,147 @@
+{
+  "cases": [
+    {
+      "class": "below",
+      "input": {
+        "consecutive_on_pace_days": -5
+      },
+      "output": 1.0
+    },
+    {
+      "class": "below",
+      "input": {
+        "consecutive_on_pace_days": -1
+      },
+      "output": 1.0
+    },
+    {
+      "class": "run",
+      "input": {
+        "consecutive_on_pace_days": 0
+      },
+      "output": 1.0
+    },
+    {
+      "class": "run",
+      "input": {
+        "consecutive_on_pace_days": 1
+      },
+      "output": 1.15
+    },
+    {
+      "class": "run",
+      "input": {
+        "consecutive_on_pace_days": 2
+      },
+      "output": 1.3
+    },
+    {
+      "class": "run",
+      "input": {
+        "consecutive_on_pace_days": 3
+      },
+      "output": 1.45
+    },
+    {
+      "class": "run",
+      "input": {
+        "consecutive_on_pace_days": 4
+      },
+      "output": 1.6
+    },
+    {
+      "class": "run",
+      "input": {
+        "consecutive_on_pace_days": 5
+      },
+      "output": 1.75
+    },
+    {
+      "class": "run",
+      "input": {
+        "consecutive_on_pace_days": 6
+      },
+      "output": 1.9
+    },
+    {
+      "class": "run",
+      "input": {
+        "consecutive_on_pace_days": 7
+      },
+      "output": 2.05
+    },
+    {
+      "class": "run",
+      "input": {
+        "consecutive_on_pace_days": 8
+      },
+      "output": 2.2
+    },
+    {
+      "class": "run",
+      "input": {
+        "consecutive_on_pace_days": 9
+      },
+      "output": 2.3499999999999996
+    },
+    {
+      "class": "run",
+      "input": {
+        "consecutive_on_pace_days": 10
+      },
+      "output": 2.5
+    },
+    {
+      "class": "run",
+      "input": {
+        "consecutive_on_pace_days": 11
+      },
+      "output": 2.5
+    },
+    {
+      "class": "run",
+      "input": {
+        "consecutive_on_pace_days": 12
+      },
+      "output": 2.5
+    },
+    {
+      "class": "run",
+      "input": {
+        "consecutive_on_pace_days": 13
+      },
+      "output": 2.5
+    },
+    {
+      "class": "past-the-cap",
+      "input": {
+        "consecutive_on_pace_days": 20
+      },
+      "output": 2.5
+    },
+    {
+      "class": "past-the-cap",
+      "input": {
+        "consecutive_on_pace_days": 100
+      },
+      "output": 2.5
+    },
+    {
+      "class": "past-the-cap",
+      "input": {
+        "consecutive_on_pace_days": 5000
+      },
+      "output": 2.5
+    }
+  ],
+  "function": "gamification.adaptive.consistency_multiplier",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "function",
+  "registry": "tools/parity-oracle/registry/spec_072.py",
+  "registry_sha256": "2786f11a526dda3d1731046af5db3880321fe7e7b345b36dd4b3fce305c87c4e",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

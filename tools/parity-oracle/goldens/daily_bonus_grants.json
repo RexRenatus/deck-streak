@@ -1,0 +1,392 @@
+{
+  "adapter": "with_the_five_inputs",
+  "cases": [
+    {
+      "class": "none",
+      "input": {
+        "backlog_zero": false,
+        "graduations": 0,
+        "score_total": 0,
+        "streak_days": 0,
+        "studied": false
+      },
+      "output": []
+    },
+    {
+      "class": "all",
+      "input": {
+        "backlog_zero": true,
+        "graduations": 3,
+        "score_total": 95,
+        "streak_days": 7,
+        "studied": true
+      },
+      "output": [
+        {
+          "amount": 50,
+          "source": "studied"
+        },
+        {
+          "amount": 100,
+          "source": "backlog_zero"
+        },
+        {
+          "amount": 35,
+          "source": "streak"
+        },
+        {
+          "amount": 200,
+          "source": "score90"
+        },
+        {
+          "amount": 90,
+          "source": "graduations"
+        }
+      ]
+    },
+    {
+      "class": "cap-below",
+      "input": {
+        "backlog_zero": false,
+        "graduations": 0,
+        "score_total": 89,
+        "streak_days": 49,
+        "studied": true
+      },
+      "output": [
+        {
+          "amount": 50,
+          "source": "studied"
+        },
+        {
+          "amount": 245,
+          "source": "streak"
+        }
+      ]
+    },
+    {
+      "class": "cap-at",
+      "input": {
+        "backlog_zero": false,
+        "graduations": 0,
+        "score_total": 90,
+        "streak_days": 50,
+        "studied": true
+      },
+      "output": [
+        {
+          "amount": 50,
+          "source": "studied"
+        },
+        {
+          "amount": 250,
+          "source": "streak"
+        },
+        {
+          "amount": 200,
+          "source": "score90"
+        }
+      ]
+    },
+    {
+      "class": "cap-above",
+      "input": {
+        "backlog_zero": false,
+        "graduations": 1,
+        "score_total": 91,
+        "streak_days": 51,
+        "studied": true
+      },
+      "output": [
+        {
+          "amount": 50,
+          "source": "studied"
+        },
+        {
+          "amount": 250,
+          "source": "streak"
+        },
+        {
+          "amount": 200,
+          "source": "score90"
+        },
+        {
+          "amount": 30,
+          "source": "graduations"
+        }
+      ]
+    },
+    {
+      "class": "score-edge",
+      "input": {
+        "backlog_zero": false,
+        "graduations": 0,
+        "score_total": 89,
+        "streak_days": 0,
+        "studied": false
+      },
+      "output": []
+    },
+    {
+      "class": "streak-negative",
+      "input": {
+        "backlog_zero": false,
+        "graduations": 0,
+        "score_total": 0,
+        "streak_days": -1,
+        "studied": true
+      },
+      "output": [
+        {
+          "amount": 50,
+          "source": "studied"
+        }
+      ]
+    },
+    {
+      "input": {
+        "backlog_zero": false,
+        "graduations": 4,
+        "score_total": 19,
+        "streak_days": 98,
+        "studied": false
+      },
+      "output": [
+        {
+          "amount": 250,
+          "source": "streak"
+        },
+        {
+          "amount": 120,
+          "source": "graduations"
+        }
+      ]
+    },
+    {
+      "input": {
+        "backlog_zero": false,
+        "graduations": 9,
+        "score_total": 41,
+        "streak_days": 12,
+        "studied": false
+      },
+      "output": [
+        {
+          "amount": 60,
+          "source": "streak"
+        },
+        {
+          "amount": 270,
+          "source": "graduations"
+        }
+      ]
+    },
+    {
+      "input": {
+        "backlog_zero": true,
+        "graduations": 1,
+        "score_total": 9,
+        "streak_days": 52,
+        "studied": false
+      },
+      "output": [
+        {
+          "amount": 100,
+          "source": "backlog_zero"
+        },
+        {
+          "amount": 250,
+          "source": "streak"
+        },
+        {
+          "amount": 30,
+          "source": "graduations"
+        }
+      ]
+    },
+    {
+      "input": {
+        "backlog_zero": true,
+        "graduations": 6,
+        "score_total": 57,
+        "streak_days": 74,
+        "studied": true
+      },
+      "output": [
+        {
+          "amount": 50,
+          "source": "studied"
+        },
+        {
+          "amount": 100,
+          "source": "backlog_zero"
+        },
+        {
+          "amount": 250,
+          "source": "streak"
+        },
+        {
+          "amount": 180,
+          "source": "graduations"
+        }
+      ]
+    },
+    {
+      "input": {
+        "backlog_zero": true,
+        "graduations": 5,
+        "score_total": 87,
+        "streak_days": 116,
+        "studied": true
+      },
+      "output": [
+        {
+          "amount": 50,
+          "source": "studied"
+        },
+        {
+          "amount": 100,
+          "source": "backlog_zero"
+        },
+        {
+          "amount": 250,
+          "source": "streak"
+        },
+        {
+          "amount": 150,
+          "source": "graduations"
+        }
+      ]
+    },
+    {
+      "input": {
+        "backlog_zero": true,
+        "graduations": 6,
+        "score_total": 62,
+        "streak_days": 66,
+        "studied": true
+      },
+      "output": [
+        {
+          "amount": 50,
+          "source": "studied"
+        },
+        {
+          "amount": 100,
+          "source": "backlog_zero"
+        },
+        {
+          "amount": 250,
+          "source": "streak"
+        },
+        {
+          "amount": 180,
+          "source": "graduations"
+        }
+      ]
+    },
+    {
+      "input": {
+        "backlog_zero": false,
+        "graduations": 1,
+        "score_total": 25,
+        "streak_days": 4,
+        "studied": true
+      },
+      "output": [
+        {
+          "amount": 50,
+          "source": "studied"
+        },
+        {
+          "amount": 20,
+          "source": "streak"
+        },
+        {
+          "amount": 30,
+          "source": "graduations"
+        }
+      ]
+    },
+    {
+      "input": {
+        "backlog_zero": true,
+        "graduations": 4,
+        "score_total": 36,
+        "streak_days": 97,
+        "studied": true
+      },
+      "output": [
+        {
+          "amount": 50,
+          "source": "studied"
+        },
+        {
+          "amount": 100,
+          "source": "backlog_zero"
+        },
+        {
+          "amount": 250,
+          "source": "streak"
+        },
+        {
+          "amount": 120,
+          "source": "graduations"
+        }
+      ]
+    },
+    {
+      "input": {
+        "backlog_zero": true,
+        "graduations": 4,
+        "score_total": 2,
+        "streak_days": 15,
+        "studied": false
+      },
+      "output": [
+        {
+          "amount": 100,
+          "source": "backlog_zero"
+        },
+        {
+          "amount": 75,
+          "source": "streak"
+        },
+        {
+          "amount": 120,
+          "source": "graduations"
+        }
+      ]
+    },
+    {
+      "input": {
+        "backlog_zero": false,
+        "graduations": 3,
+        "score_total": 73,
+        "streak_days": 28,
+        "studied": false
+      },
+      "output": [
+        {
+          "amount": 140,
+          "source": "streak"
+        },
+        {
+          "amount": 90,
+          "source": "graduations"
+        }
+      ]
+    }
+  ],
+  "function": "gamification.xp.daily_bonus_grants",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Calls it with the case's five inputs and returns each grant as a source and an amount; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_072.py",
+  "registry_sha256": "2786f11a526dda3d1731046af5db3880321fe7e7b345b36dd4b3fce305c87c4e",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

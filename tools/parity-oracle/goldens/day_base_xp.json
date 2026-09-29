@@ -1,0 +1,649 @@
+{
+  "adapter": "with_a_ledger",
+  "cases": [
+    {
+      "class": "empty",
+      "input": {
+        "day": 20000,
+        "rows": []
+      },
+      "output": 0
+    },
+    {
+      "class": "every-source",
+      "input": {
+        "day": 20000,
+        "rows": [
+          {
+            "amount": 10,
+            "day": 20000,
+            "source": "reviews",
+            "track": "language"
+          },
+          {
+            "amount": 11,
+            "day": 20000,
+            "source": "reviews_law",
+            "track": "language"
+          },
+          {
+            "amount": 12,
+            "day": 20000,
+            "source": "studied",
+            "track": "language"
+          },
+          {
+            "amount": 13,
+            "day": 20000,
+            "source": "backlog_zero",
+            "track": "language"
+          },
+          {
+            "amount": 14,
+            "day": 20000,
+            "source": "streak",
+            "track": "language"
+          },
+          {
+            "amount": 15,
+            "day": 20000,
+            "source": "score90",
+            "track": "language"
+          },
+          {
+            "amount": 16,
+            "day": 20000,
+            "source": "graduations",
+            "track": "language"
+          },
+          {
+            "amount": 17,
+            "day": 20000,
+            "source": "consistency",
+            "track": "language"
+          },
+          {
+            "amount": 18,
+            "day": 20000,
+            "source": "ascendant",
+            "track": "language"
+          },
+          {
+            "amount": 19,
+            "day": 20000,
+            "source": "surprise",
+            "track": "language"
+          },
+          {
+            "amount": 20,
+            "day": 20000,
+            "source": "readgoal:fr",
+            "track": "language"
+          },
+          {
+            "amount": 21,
+            "day": 20000,
+            "source": "leech:42",
+            "track": "language"
+          },
+          {
+            "amount": 22,
+            "day": 20000,
+            "source": "focus",
+            "track": "language"
+          },
+          {
+            "amount": 23,
+            "day": 20000,
+            "source": "focusgoal:week",
+            "track": "language"
+          },
+          {
+            "amount": 24,
+            "day": 20000,
+            "source": "focus_combo",
+            "track": "language"
+          },
+          {
+            "amount": 25,
+            "day": 20000,
+            "source": "chest:common",
+            "track": "language"
+          },
+          {
+            "amount": 26,
+            "day": 20000,
+            "source": "chest",
+            "track": "language"
+          },
+          {
+            "amount": 27,
+            "day": 20000,
+            "source": "2x:token",
+            "track": "language"
+          },
+          {
+            "amount": 28,
+            "day": 20000,
+            "source": "read:fr",
+            "track": "language"
+          },
+          {
+            "amount": 29,
+            "day": 20000,
+            "source": "focusing",
+            "track": "language"
+          },
+          {
+            "amount": 30,
+            "day": 20000,
+            "source": "xchest",
+            "track": "language"
+          }
+        ]
+      },
+      "output": 149
+    },
+    {
+      "class": "other-day",
+      "input": {
+        "day": 20000,
+        "rows": [
+          {
+            "amount": 99,
+            "day": 19999,
+            "source": "reviews",
+            "track": "language"
+          },
+          {
+            "amount": 50,
+            "day": 20000,
+            "source": "studied",
+            "track": "language"
+          }
+        ]
+      },
+      "output": 50
+    },
+    {
+      "class": "both-tracks",
+      "input": {
+        "day": 20000,
+        "rows": [
+          {
+            "amount": 120,
+            "day": 20000,
+            "source": "reviews",
+            "track": "language"
+          },
+          {
+            "amount": 300,
+            "day": 20000,
+            "source": "reviews_law",
+            "track": "law"
+          }
+        ]
+      },
+      "output": 420
+    },
+    {
+      "input": {
+        "day": 20000,
+        "rows": [
+          {
+            "amount": 210,
+            "day": 20000,
+            "source": "ascendant",
+            "track": "language"
+          },
+          {
+            "amount": 208,
+            "day": 20000,
+            "source": "backlog_zero",
+            "track": "language"
+          },
+          {
+            "amount": 38,
+            "day": 20000,
+            "source": "readgoal:fr",
+            "track": "language"
+          },
+          {
+            "amount": 52,
+            "day": 20000,
+            "source": "score90",
+            "track": "language"
+          },
+          {
+            "amount": 64,
+            "day": 20000,
+            "source": "reviews",
+            "track": "language"
+          }
+        ]
+      },
+      "output": 324
+    },
+    {
+      "input": {
+        "day": 20000,
+        "rows": [
+          {
+            "amount": 218,
+            "day": 20000,
+            "source": "chest:common",
+            "track": "language"
+          },
+          {
+            "amount": 47,
+            "day": 20000,
+            "source": "read:fr",
+            "track": "language"
+          },
+          {
+            "amount": 321,
+            "day": 20000,
+            "source": "focus_combo",
+            "track": "language"
+          },
+          {
+            "amount": 265,
+            "day": 20000,
+            "source": "focusgoal:week",
+            "track": "language"
+          },
+          {
+            "amount": 412,
+            "day": 20000,
+            "source": "graduations",
+            "track": "language"
+          },
+          {
+            "amount": 430,
+            "day": 20000,
+            "source": "chest",
+            "track": "language"
+          },
+          {
+            "amount": 251,
+            "day": 20000,
+            "source": "score90",
+            "track": "language"
+          },
+          {
+            "amount": 207,
+            "day": 20000,
+            "source": "readgoal:fr",
+            "track": "language"
+          },
+          {
+            "amount": 41,
+            "day": 20000,
+            "source": "2x:token",
+            "track": "language"
+          },
+          {
+            "amount": 105,
+            "day": 20000,
+            "source": "focusing",
+            "track": "language"
+          },
+          {
+            "amount": 293,
+            "day": 20000,
+            "source": "leech:42",
+            "track": "language"
+          }
+        ]
+      },
+      "output": 710
+    },
+    {
+      "input": {
+        "day": 20000,
+        "rows": [
+          {
+            "amount": 145,
+            "day": 20000,
+            "source": "reviews_law",
+            "track": "law"
+          },
+          {
+            "amount": 156,
+            "day": 20000,
+            "source": "graduations",
+            "track": "language"
+          },
+          {
+            "amount": 353,
+            "day": 20000,
+            "source": "backlog_zero",
+            "track": "language"
+          },
+          {
+            "amount": 131,
+            "day": 20000,
+            "source": "studied",
+            "track": "language"
+          },
+          {
+            "amount": 83,
+            "day": 20000,
+            "source": "focusing",
+            "track": "language"
+          },
+          {
+            "amount": 319,
+            "day": 20000,
+            "source": "ascendant",
+            "track": "language"
+          },
+          {
+            "amount": 60,
+            "day": 20000,
+            "source": "leech:42",
+            "track": "language"
+          },
+          {
+            "amount": 463,
+            "day": 20000,
+            "source": "focus",
+            "track": "language"
+          }
+        ]
+      },
+      "output": 785
+    },
+    {
+      "input": {
+        "day": 20000,
+        "rows": [
+          {
+            "amount": 361,
+            "day": 20000,
+            "source": "ascendant",
+            "track": "language"
+          }
+        ]
+      },
+      "output": 0
+    },
+    {
+      "input": {
+        "day": 20000,
+        "rows": [
+          {
+            "amount": 355,
+            "day": 20000,
+            "source": "consistency",
+            "track": "language"
+          },
+          {
+            "amount": 331,
+            "day": 20000,
+            "source": "read:fr",
+            "track": "language"
+          },
+          {
+            "amount": 171,
+            "day": 20000,
+            "source": "xchest",
+            "track": "language"
+          },
+          {
+            "amount": 307,
+            "day": 20000,
+            "source": "reviews_law",
+            "track": "law"
+          },
+          {
+            "amount": 369,
+            "day": 20000,
+            "source": "reviews",
+            "track": "language"
+          },
+          {
+            "amount": 229,
+            "day": 20000,
+            "source": "surprise",
+            "track": "language"
+          },
+          {
+            "amount": 464,
+            "day": 20000,
+            "source": "streak",
+            "track": "language"
+          },
+          {
+            "amount": 78,
+            "day": 20000,
+            "source": "studied",
+            "track": "language"
+          }
+        ]
+      },
+      "output": 1720
+    },
+    {
+      "input": {
+        "day": 20000,
+        "rows": [
+          {
+            "amount": 297,
+            "day": 20000,
+            "source": "2x:token",
+            "track": "language"
+          },
+          {
+            "amount": 219,
+            "day": 20000,
+            "source": "focusgoal:week",
+            "track": "language"
+          },
+          {
+            "amount": 176,
+            "day": 20000,
+            "source": "score90",
+            "track": "language"
+          },
+          {
+            "amount": 114,
+            "day": 20000,
+            "source": "read:fr",
+            "track": "language"
+          },
+          {
+            "amount": 59,
+            "day": 20000,
+            "source": "focus",
+            "track": "language"
+          },
+          {
+            "amount": 464,
+            "day": 20000,
+            "source": "backlog_zero",
+            "track": "language"
+          },
+          {
+            "amount": 311,
+            "day": 20000,
+            "source": "leech:42",
+            "track": "language"
+          },
+          {
+            "amount": 26,
+            "day": 20000,
+            "source": "studied",
+            "track": "language"
+          },
+          {
+            "amount": 265,
+            "day": 20000,
+            "source": "chest",
+            "track": "language"
+          }
+        ]
+      },
+      "output": 780
+    },
+    {
+      "input": {
+        "day": 20000,
+        "rows": [
+          {
+            "amount": 414,
+            "day": 20000,
+            "source": "focusgoal:week",
+            "track": "language"
+          },
+          {
+            "amount": 333,
+            "day": 20000,
+            "source": "score90",
+            "track": "language"
+          },
+          {
+            "amount": 408,
+            "day": 20000,
+            "source": "focusing",
+            "track": "language"
+          },
+          {
+            "amount": 161,
+            "day": 20000,
+            "source": "studied",
+            "track": "language"
+          },
+          {
+            "amount": 344,
+            "day": 20000,
+            "source": "backlog_zero",
+            "track": "language"
+          },
+          {
+            "amount": 373,
+            "day": 20000,
+            "source": "surprise",
+            "track": "language"
+          },
+          {
+            "amount": 205,
+            "day": 20000,
+            "source": "reviews",
+            "track": "language"
+          }
+        ]
+      },
+      "output": 1043
+    },
+    {
+      "input": {
+        "day": 20000,
+        "rows": [
+          {
+            "amount": 43,
+            "day": 20000,
+            "source": "chest",
+            "track": "language"
+          },
+          {
+            "amount": 489,
+            "day": 20000,
+            "source": "reviews_law",
+            "track": "law"
+          },
+          {
+            "amount": 339,
+            "day": 20000,
+            "source": "score90",
+            "track": "language"
+          },
+          {
+            "amount": 399,
+            "day": 20000,
+            "source": "backlog_zero",
+            "track": "language"
+          },
+          {
+            "amount": 154,
+            "day": 20000,
+            "source": "focus_combo",
+            "track": "language"
+          },
+          {
+            "amount": 339,
+            "day": 20000,
+            "source": "readgoal:fr",
+            "track": "language"
+          },
+          {
+            "amount": 22,
+            "day": 20000,
+            "source": "reviews",
+            "track": "language"
+          },
+          {
+            "amount": 403,
+            "day": 20000,
+            "source": "focusing",
+            "track": "language"
+          },
+          {
+            "amount": 13,
+            "day": 20000,
+            "source": "surprise",
+            "track": "language"
+          },
+          {
+            "amount": 99,
+            "day": 20000,
+            "source": "leech:42",
+            "track": "language"
+          },
+          {
+            "amount": 112,
+            "day": 20000,
+            "source": "focusgoal:week",
+            "track": "language"
+          },
+          {
+            "amount": 262,
+            "day": 20000,
+            "source": "chest:common",
+            "track": "language"
+          },
+          {
+            "amount": 259,
+            "day": 20000,
+            "source": "read:fr",
+            "track": "language"
+          },
+          {
+            "amount": 358,
+            "day": 20000,
+            "source": "streak",
+            "track": "language"
+          },
+          {
+            "amount": 6,
+            "day": 20000,
+            "source": "ascendant",
+            "track": "language"
+          }
+        ]
+      },
+      "output": 1866
+    }
+  ],
+  "function": "database.GamifyStore.day_base_xp",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Fills a temporary store with the case's synthetic ledger rows through its own upsert_xp_grant, then reads the day base; each day is an epoch day turned into the store's form inside the adapter; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_072.py",
+  "registry_sha256": "2786f11a526dda3d1731046af5db3880321fe7e7b345b36dd4b3fce305c87c4e",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}
