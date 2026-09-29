@@ -28,6 +28,13 @@ A9: green at b766c2a1308977b850073d346d5e8d96c4968c9c
 A10: red at 3b4267ef6c19a8ef15346e7390de15c0334a61bb: AssertionError: 'deploy: refused' not found in '' : the removal says which step stopped
 A10: green at a224cc8d0fdf1e81a6f0e9bf45670fbf7d00735f
 A11: not red: the removal's first refusal already printed `deploy: refused` at a4036b3; the test pins it (#361)
+A12: red at 87822bc23867f75e83f827f203a04d171aeadd78: AssertionError: 'the candidate Caddyfile could not be written' not found in "deck-streak-host: line 8: .../deck-streak.candidate: Is a directory\n/usr/bin/mv: cannot overwrite non-directory ..." : the removal names the failed write
+A13: red at 87822bc23867f75e83f827f203a04d171aeadd78: AssertionError: 'deploy: refused' not found in "find: '.../deck-streak.candidate': No such file or directory\n" : the removal says so with no candidate left
+A14: red at ce8c72cd3c9090b41513e5ccb35935cfebe51247: AssertionError: 'the candidate Caddyfile could not be written' not found in "grep: .../Caddyfile: Is a directory\ncp: -r not specified; omitting directory '.../Caddyfile'\n" : grep's read failure is a failed write, not a no-match
+A15: not red: grep keeping no line already succeeded at 24b880e; the test pins the status that the two-step write must keep (#384)
+A12: green at dcfcc9cf4f3173bcdbeecfee48f493a66cd7757a
+A13: green at dcfcc9cf4f3173bcdbeecfee48f493a66cd7757a
+A14: green at dcfcc9cf4f3173bcdbeecfee48f493a66cd7757a
 ```
 
 ## Fix round 1 (PR #357)
@@ -84,3 +91,14 @@ found in ''`), its `exit 1` made `exit 0` (`0 == 0 : a refused validation`), its
 (`Lists differ: ['deck-streak.candidate'] != []`), and its echo sent to stdout (`'deploy: refused'
 not found in ''`). The second refusal's echo removed leaves A11 green and turns A10 red, so the two
 tests are independent. Row S12712 pins the first refusal's message (killer A11).
+
+## Amendment 2026-09-29 (issue #384)
+
+A failed write of `caddy-remove`'s candidate file used to be hidden by `|| true`, and each refusal's
+cleanup then failed on the absent candidate before it printed `deploy: refused`. A12 and A13 were
+committed first (87822bc) against the unchanged `deploy.sh`, red by assertion; A14 and A15 followed
+(ce8c72c), A14 red by assertion and A15 recorded `not red` because `grep` keeping no line already
+succeeded. The fix and rows S12713 to S12717 came in dcfcc9c. dcfcc9c changes `deploy.sh` and the rows and edits no test file;
+the one later commit that edits a test file is f369d2f, which adds a presence assertion to A15 (the
+removal's reload ran) so the probe's absence-only rule passes, and A15 stays `not red`. Rows S12711 and
+S12712 keep their killers and are re-anchored on the changed lines.
