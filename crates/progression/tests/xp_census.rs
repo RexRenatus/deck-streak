@@ -532,3 +532,56 @@ fn the_census_reads_progressions_own_reexports_as_it_reads_the_other_crates() {
         ]
     );
 }
+
+#[test]
+fn the_census_follows_a_grouped_module_renaming_and_a_chain_read_before_its_link() {
+    // `a_chain.rs` is read before `lib.rs`, so its renamings of `tally` and of a crate-visible
+    // link are met before either is known. The module is renamed inside a group, by `self`.
+    let planted = tempfile::tempdir().expect("a temporary directory");
+    plant(
+        planted.path(),
+        "crates/progression/src/settle.rs",
+        "const Q: &str = \"INSERT INTO xp_settlement (amount) VALUES (1)\";\n",
+    );
+    plant(
+        planted.path(),
+        "crates/progression/src/a_chain.rs",
+        "pub use crate::tally as tally_early;\npub use crate::crate_link as via_crate;\n",
+    );
+    plant(
+        planted.path(),
+        "crates/progression/src/lib.rs",
+        "pub mod settle;\n\
+         pub mod a_chain;\n\
+         pub use settle::{self as ledger, settle as tally};\n\
+         pub(crate) use settle::settle as crate_link;\n",
+    );
+    plant(
+        planted.path(),
+        "crates/quests/src/early_user.rs",
+        "use deck_streak_progression::a_chain::tally_early;\n",
+    );
+    plant(
+        planted.path(),
+        "crates/quests/src/crate_link_user.rs",
+        "use deck_streak_progression::a_chain::via_crate;\n",
+    );
+    plant(
+        planted.path(),
+        "crates/quests/src/ledger_user.rs",
+        "use deck_streak_progression::ledger;\n",
+    );
+    let refused = census(planted.path());
+    examined("planted crate source file(s)", refused.sources.clone());
+    assert_eq!(
+        refused.refused,
+        [
+            "crates/quests/src/crate_link_user.rs calls settle through via_crate, progression's \
+             alias of settle, and only coordination's code may",
+            "crates/quests/src/early_user.rs calls settle through tally_early, progression's \
+             alias of settle, and only coordination's code may",
+            "crates/quests/src/ledger_user.rs calls settle through ledger, progression's alias \
+             of settle, and only coordination's code may",
+        ]
+    );
+}
