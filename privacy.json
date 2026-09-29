@@ -68,6 +68,17 @@
       "erase": "delete"
     },
     {
+      "id": "agent-runs",
+      "data": "the record of each AI duty run: the duty, the persona template, the subject, how the run ended with its cause or its class, the turns, the tokens and the cost the run reported, and how long it took; never the prompt and never the reply",
+      "source": "derived",
+      "stores": ["agent_runs.*"],
+      "purpose": "showing the owner why a duty delivered nothing, and keeping each run's cost visible",
+      "lawful_basis": "contract",
+      "retention": {"period": "P90D"},
+      "export": true,
+      "erase": "delete"
+    },
+    {
       "id": "daily-rollups",
       "data": "each study day's rollup of the owner's reviews: the counts by kind of answer, the seconds answering, the true retention and its young and mature split, the graduations and the decks studied; the card state recorded for the day with when it was recorded; the five-pillar score, the score the day closed with and when it was settled; and a fingerprint of the day's reviews",
       "source": "derived",
@@ -149,6 +160,7 @@
   "code": ["crates/*/src/**/*.rs", "web/app/src/**/*.ts", "web/app/src/**/*.svelte"],
   "export": {"code": ["crates/*/src/data_rights.rs", "crates/privacy/src/export.rs"], "format": "json"},
   "erase": {"code": ["crates/*/src/data_rights.rs", "crates/privacy/src/erase.rs"]},
+  "purge": {"code": ["crates/agent/src/runs.rs", "crates/coordination/src/maintenance.rs"], "timer": "deploy/systemd/deck-streak-job@maintenance.timer"},
   "backups": {"config": "deploy/litestream.yml", "retention": "P3D"},
   "logs": {"config": "deploy/journald.conf.d/deck-streak.conf", "retention": "P14D"},
   "policy": {
@@ -162,7 +174,7 @@
   "public": {
     "allow": [
       "@tty1.service",
-      "@nightly.timer",
+      "@nightly.timer", "@maintenance.timer",
       "@web.socket",
       "@inbox.path",
       "@usb1.mount",

@@ -18,6 +18,10 @@ workspace = true
 deck-streak-kernel.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
+# ADR-043: agent_runs is written through the kernel's Db, its queries checked into .sqlx/; the runner
+# and the gate launch subprocesses under a time bound.
+sqlx.workspace = true
+tokio = { workspace = true, features = ["process", "time", "io-util", "rt", "macros"] }
 
 # A temporary directory outside the repository for the roster (ADR-020), and the async runtime for
 # the ports' tests (ADR-003). Test support only.

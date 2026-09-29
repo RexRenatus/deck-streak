@@ -141,3 +141,16 @@ proved killed by its full id and each naming one test as its killer:
 
 SPEC-030 (R10 to R14, whose expectation this carries), SPEC-054, SPEC-056, ADR-016, ADR-030,
 ADR-038, ADR-123; #29, #341, #342.
+
+## Amendment (SPEC-043, #338): the VOID case's wording
+
+- R5's VOID sentence reads: A scan whose entry holds `expected_red` and that examined no settings
+  document is VOID and fails the run, whatever the expectation names; when neither an unexpected
+  row nor a red total beyond the expected rows fails it first, its detail names the expectation's
+  issues.
+- A4's criterion reads: an expected row that reads green, void or is absent is stale, and with no
+  settings document examined, and no unexpected row or red total beyond the expected rows, the
+  detail names the expectation's issues.
+- Why: the first wording read universally, but an entry with `pending` and no settings document
+  reads pending (R2, R6), and a scan failed first by an unexpected row or a red total names counts,
+  not issues. The code is unchanged; the sentences now say what it does.

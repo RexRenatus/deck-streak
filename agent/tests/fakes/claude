@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# A fake `claude` for the runner's tests: it records what it was launched with and answers from the
+# test's environment. It calls no model and no network.
+set -u
+records="${FAKE_RECORDS:?the test names a records directory}"
+printf '%s\n' "$@" >"$records/claude.argv"
+printenv >"$records/claude.env"
+cat >"$records/claude.stdin"
+if [ -n "${FAKE_CLAUDE_SLEEP:-}" ]; then
+  exec sleep "$FAKE_CLAUDE_SLEEP"
+fi
+if [ -n "${FAKE_CLAUDE_STDERR:-}" ]; then
+  printf '%s\n' "$FAKE_CLAUDE_STDERR" >&2
+fi
+if [ -n "${FAKE_CLAUDE_JSON:-}" ]; then
+  printf '%s\n' "$FAKE_CLAUDE_JSON"
+else
+  printf '%s\n' '{"type":"result","subtype":"success","is_error":false,"num_turns":1,"total_cost_usd":0.01,"usage":{"input_tokens":10,"output_tokens":20},"result":"a synthetic reply"}'
+fi
+exit "${FAKE_CLAUDE_EXIT:-0}"

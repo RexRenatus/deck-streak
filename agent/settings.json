@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "defaultMode": "dontAsk",
+    "disableBypassPermissionsMode": "disable",
+    "allow": [],
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(**/*.pem)",
+      "Read(**/*.key)",
+      "Bash(gcloud secrets:*)",
+      "Bash(printenv:*)",
+      "Bash(env:*)"
+    ]
+  },
+  "env": {
+    "CLAUDE_CODE_SUBPROCESS_ENV_SCRUB": "1",
+    "DISABLE_AUTOUPDATER": "1"
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "! grep -qiE 'device-key|/environ|secrets|capacity' && exit 0; echo 'REFUSE: the command names a credential, the process environment, Secret Manager or the capacity path' >&2; exit 2"
+          }
+        ]
+      }
+    ],
+    "StopFailure": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "logger -t deckstreak-agent 'a headless run stopped on a failure'"
+          }
+        ]
+      }
+    ]
+  }
+}
