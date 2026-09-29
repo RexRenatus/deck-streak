@@ -39,6 +39,11 @@ provenance. Where does the provenance live?
   history, with its provenance.
 - Treating an unstamped day with counts as recorded: rejected because an absent stamp cannot tell a
   real reading from a fabricated one; the day arrives with NULL counts, counted `unstamped`.
+- Reading a stamp of an unknown prefix as recorded: rejected because DeckStreak's source check
+  admits only `live:<ms>`, and a stamp the predecessor never minted is a reading nobody can vouch
+  for. The predecessor's daily view renders a snapshot for every stamp but an absent one and
+  `void:fossil`; the import refuses an unknown prefix instead (SPEC-140 R14), and the golden's
+  unknown-prefix case carries `diverges` citing this record.
 
 ## Decision Outcome
 
@@ -51,6 +56,9 @@ what the recompute writes or what the source means. SPEC-140 R7 and R8 hold it.
   `Recorded`, `Recovered`, `Voided`), proved by a golden.
 - Bad, because an unstamped day with counts loses them; the owner may choose otherwise (the plan's
   owner question 2), and the conservative answer holds until then.
+- Bad, because on a stamp of an unknown prefix the import departs from the predecessor's view: it
+  refuses the write where the view rendered a snapshot, and the golden records that case as a
+  divergence.
 
 ### Confirmation
 

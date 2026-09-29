@@ -116,11 +116,14 @@ R7. The card state's origin (ADR-141): `migrations/014001_analytics_card_state_o
     `void:fossil` to NULL counts, a NULL source and origin `void`; no stamp with NULL counts to
     NULL; and no stamp with any count (a reading taken before the stamp existed) to NULL counts and a
     NULL source, counted `unstamped` in the analytics report (the conservative answer to owner
-    question 2 of the plan; ADR-141). The recompute never writes the origin.
+    question 2 of the plan; ADR-141). Any other stamp, a prefix the predecessor never minted,
+    refuses the write by the table, the column and the reason (R14), although the predecessor's
+    daily view rendered it as recorded (ADR-141). The recompute never writes the origin.
 R8. Analytics' `card_state_reading(source, origin)` answers `Absent`, `Recorded`, `Recovered` or
-    `Voided`, and equals the golden `import_card_state_reading`: each stamp maps to the reading
-    the predecessor's daily view gave it. The day view and export carry the origin with its row
-    (SPEC-021: the analytics data-rights port exports the new column).
+    `Voided`, and equals the golden `import_card_state_reading`: each stamp R7 maps answers the
+    reading the predecessor's daily view gave it, and the golden's unknown-prefix case, which R7
+    refuses, carries `diverges` citing ADR-141. The day view and export carry the origin with its
+    row (SPEC-021: the analytics data-rights port exports the new column).
 R9. Progression maps the predecessor's ledger by source: the derived sources (review XP, the daily
     bonuses, consistency, Ascendant, and the habit, focus, token and `leech:` sources ADR-072
     names) go to `xp_settlement` as closed days, and every other source to `xp_ledger`, so the sum
@@ -147,8 +150,9 @@ R13. The vault maps `drill_xp_grants` to `drill_grades` row for row with each dr
     `import::drill_xp(source)` reads from the predecessor's `drill:` ledger rows; the vault names no
     ledger.
 R14. Every writer's counts reconcile with its source under its §8 rule, and a writer that cannot map a
-    row (an unknown language code, a day string that is not a date, a value outside its table's
-    check) refuses the whole write by the table, the column and the reason, never skipping it.
+    row (an unknown language code, a day string that is not a date, a card-state stamp of an
+    unknown prefix, a value outside its table's check) refuses the whole write by the table, the
+    column and the reason, never skipping it.
 R15. CHARTER 10's eleven anti-goals bind this SPEC as one block; the ones it touches are no
     fabricated history (a count the predecessor never read arrives NULL) and no unbounded faucet
     (the import mints nothing).
@@ -160,9 +164,9 @@ R15. CHARTER 10's eleven anti-goals bind this SPEC as one block; the ones it tou
 | A1 | the count adds per field, `written` leaves `unchanged` out, and a port's pairs are named by source and target | `the_import_count_adds_and_leaves_unchanged_out` |
 | A2 | over a DeckStreak day equal to the source, one differing, one missing, a DeckStreak-only day on the cutoff and one after it: unchanged, replaced, inserted, superseded and kept | `the_rollup_rows_follow_the_precedence` |
 | A3 | a second write of the same source answers every analytics pair unchanged, and no row's `created_at` or `updated_at` is the clock's | `a_second_rollup_import_writes_nothing` |
-| A4 | each stamp arrives as R7 maps it: live, recovered, void, absent, and an unstamped reading dropped and counted | `each_card_state_stamp_arrives_with_its_provenance` |
+| A4 | each stamp arrives as R7 maps it: live, recovered, void, absent, and an unstamped reading dropped and counted; a stamp of an unknown prefix refuses the write by table, column and reason, and nothing is written | `each_card_state_stamp_arrives_with_its_provenance` |
 | A5 | the origin check refuses `backup` with a NULL source and `void` with a source, and accepts the three legal shapes | `the_origin_check_refuses_a_mismatched_origin` |
-| A6 | the card-state reading equals the golden for every case | `the_card_state_reading_matches_the_predecessors_golden` |
+| A6 | the card-state reading equals the golden for every case but the unknown prefix, whose case carries `diverges` citing ADR-141 (R7 refuses it: A4) | `the_card_state_reading_matches_the_predecessors_golden` |
 | A7 | an imported day inside the window is re-rolled by the next recompute, keeps its card state, its origin and its `settled_at`, and is not settled again | `an_imported_day_is_re_rolled_and_keeps_its_card_state` |
 | A8 | the ledger splits into grants and settled days, and the two sums equal the source's | `the_ledger_splits_into_grants_and_settled_days` |
 | A9 | the day base XP equals the golden, each excluded family and an empty day among its cases | `the_day_base_xp_matches_the_predecessors_golden` |
@@ -295,7 +299,7 @@ SPEC-029's registry, whose house shape adds keys that shape refuses. Every case 
 
 | golden | the predecessor's function | kind | the adapter builds |
 |---|---|---|---|
-| `import_card_state_reading` | `pipeline_layers/base.py:PipelineBase._render_daily_from_rollup` | adapter | one synthetic rollup row per case: an absent stamp, a live stamp, a recovered stamp, a void stamp, an unknown prefix, and an unstamped row with counts; it records whether a snapshot and a learning term are rendered |
+| `import_card_state_reading` | `pipeline_layers/base.py:PipelineBase._render_daily_from_rollup` | adapter | one synthetic rollup row per case: an absent stamp, a live stamp, a recovered stamp, a void stamp, an unknown prefix (a `diverges` case: the predecessor rendered it, R7 refuses it, ADR-141), and an unstamped row with counts; it records whether a snapshot and a learning term are rendered |
 | `import_day_base_xp` | `database.py:GamifyStore.day_base_xp` | adapter | a temporary store with one ledger row of each excluded family, one of each counted source on the day and the day after, and an empty day |
 | `import_xp_multipliers` | `exchange.py:get_multipliers` | adapter | a temporary store whose multiplier setting is missing, malformed JSON, a non-finite value, a value below the clamp, on each bound, and above it |
 
@@ -347,3 +351,4 @@ writers fill these tables; the rule is the count rule SPEC-142 reconciles.
 | `S14017-REFUSE-WHOLE` | `crates/streaks/src/import.rs` | an unmappable row refuses the write rather than skipping it | `import::an_unmappable_row_refuses_the_whole_write` |
 | `S14018-ASCENDANT-ONLY` | `crates/progression/src/import.rs` | only the Ascendant kind of `buffs` is progression's | `import::the_progression_rows_follow_the_precedence` |
 | `S14019-EVENT-KEPT` | `crates/markets/src/import.rs` | a DeckStreak-only row of an event table is kept, never superseded | `import::the_market_positions_follow_the_precedence` |
+| `S14020-UNKNOWN-STAMP` | `crates/analytics/src/import.rs` | a stamp of an unknown prefix refuses the write rather than arriving as recorded | `import::each_card_state_stamp_arrives_with_its_provenance` |
