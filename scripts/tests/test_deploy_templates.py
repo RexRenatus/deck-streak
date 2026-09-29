@@ -834,3 +834,37 @@ class TheSyncLoginIsTheSyncJobsAlone(unittest.TestCase):
                 refused = check(path)
                 self.assertEqual(refused.returncode, 1, path)
                 self.assertIn("a drop-in that is not the rail's", refused.stdout + refused.stderr)
+
+    def test_a_shipped_drop_in_name_is_admitted_beside_the_rails_own_alone(self):
+        checker = DEPLOY / "scripts" / "effective-check.py"
+        contract = json.loads((DEPLOY / "rail-contract.json").read_text(encoding="utf-8"))
+        body = (self.dropin_dir(REPO, "sync") / self.CONF).read_text(encoding="utf-8")
+        with tempfile.TemporaryDirectory() as scratch:
+            root = Path(scratch)
+            (root / "deploy").mkdir()
+            contract["values"] = contract["values"][:1]
+            (root / "deploy" / "rail-contract.json").write_text(json.dumps(contract))
+            shipped = self.dropin_dir(root, "sync")
+            shipped.mkdir(parents=True)
+            (shipped / self.CONF).write_text(body)
+            unit = "[Unit]\nDescription=x\n\n[Service]\nType=oneshot\n"
+            head = f"/etc/systemd/system/{JOB_TEMPLATE}@.service"
+            verdicts = {}
+            for where in (
+                "/etc/systemd/system",
+                "/run/systemd/system",
+                "/etc/systemd/system.control",
+                "/" + "home" + "/someone/.config/systemd/user",
+            ):
+                path = f"{where}/{JOB_TEMPLATE}@sync.service.d/{self.CONF}"
+                done = subprocess.run(
+                    [sys.executable, str(checker), "--root", str(root)],
+                    input=f"# {head}\n{unit}\n# {path}\n{body}",
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+                verdicts[where] = done.returncode
+            self.assertEqual(
+                [w for w, rc in verdicts.items() if rc == 0], ["/etc/systemd/system"], verdicts
+            )

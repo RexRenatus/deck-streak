@@ -4,8 +4,12 @@ on `main` on a full-history checkout, creates a draft, attaches one tarball with
 build-provenance attestation, and publishes after the last upload (A8). Its token is read-only
 except in its one job, every action is pinned, and no step saves a cache (A9)."""
 
+import os
 import re
+import subprocess
+import tempfile
 import unittest
+from pathlib import Path
 
 from _support import REPO, examined
 from test_ci_workflows import PINNED, action, entries, read_hardened
@@ -128,6 +132,57 @@ class TheReleaseWorkflowIsHardened(unittest.TestCase):
         self.assertNotIn("actions/cache/save", text)
         attested = [s for s in steps if action(s) == ATTEST]
         self.assertEqual(len(attested), 1, "one attestation step")
+
+
+def git(*args, cwd, env):
+    done = subprocess.run(["git", *args], cwd=cwd, env=env, capture_output=True, text=True)
+    assert done.returncode == 0, f"git {args}: {done.stderr}"
+    return done.stdout.strip()
+
+
+class TheTagGuardRuns(unittest.TestCase):
+    def test_the_release_refuses_a_tag_off_main_or_lightweight_by_running_its_guard(self):
+        steps = steps_of(read_release())
+        guard = steps[index_of(steps, "merge-base --is-ancestor")]["run"]
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp = Path(tmp)
+            env = {
+                **os.environ,
+                "GIT_CONFIG_GLOBAL": "/dev/null",
+                "GIT_CONFIG_SYSTEM": "/dev/null",
+                "GIT_AUTHOR_NAME": "t",
+                "GIT_AUTHOR_EMAIL": "t@example.org",
+                "GIT_COMMITTER_NAME": "t",
+                "GIT_COMMITTER_EMAIL": "t@example.org",
+            }
+            origin, work = tmp / "origin.git", tmp / "work"
+            git("init", "-q", "--bare", "-b", "main", str(origin), cwd=tmp, env=env)
+            git("clone", "-q", str(origin), str(work), cwd=tmp, env=env)
+            git("checkout", "-q", "-b", "main", cwd=work, env=env)
+            git("commit", "-q", "--allow-empty", "-m", "on main", cwd=work, env=env)
+            git("tag", "-a", "-m", "v1.0.0", "v1.0.0", cwd=work, env=env)
+            git("tag", "v1.1.0", cwd=work, env=env)
+            git("push", "-q", "origin", "main", "v1.0.0", "v1.1.0", cwd=work, env=env)
+            git("checkout", "-q", "-b", "topic", cwd=work, env=env)
+            git("commit", "-q", "--allow-empty", "-m", "off main", cwd=work, env=env)
+            git("tag", "-a", "-m", "v2.0.0", "v2.0.0", cwd=work, env=env)
+            git("push", "-q", "origin", "topic", "v2.0.0", cwd=work, env=env)
+            script = tmp / "guard.sh"
+            script.write_text(guard, encoding="utf-8")
+            verdicts = {}
+            for tag in ("v1.0.0", "v1.1.0", "v2.0.0"):
+                sha = git("rev-parse", f"{tag}^{{commit}}", cwd=work, env=env)
+                done = subprocess.run(
+                    ["bash", "-e", str(script)],
+                    cwd=work,
+                    env={**env, "GITHUB_REF_NAME": tag, "GITHUB_SHA": sha},
+                    capture_output=True,
+                    text=True,
+                )
+                verdicts[tag] = done.returncode
+            self.assertEqual(verdicts["v1.0.0"], 0, f"an annotated tag on main: {verdicts}")
+            self.assertNotEqual(verdicts["v1.1.0"], 0, f"a lightweight tag: {verdicts}")
+            self.assertNotEqual(verdicts["v2.0.0"], 0, f"a tag off main: {verdicts}")
 
 
 if __name__ == "__main__":

@@ -62,13 +62,14 @@ restart)
 cat)
     shift
     for u in "$@"; do
+        [ "$u" = "$STUB_CAT_FAIL" ] && { echo "Failed to cat $u" >&2; exit 1; }
         f="$STUB_UNIT_DIR/$u"
         base=$f
         case "$u" in *@*.service) [ -f "$f" ] || base="$STUB_UNIT_DIR/${u%%@*}@.service" ;; esac
         [ -f "$base" ] || { echo "No files found for $u." >&2; exit 1; }
         echo "# $base"; cat "$base"; echo
         for d in "$base.d" "$f.d"; do
-            for c in "$d"/*.conf; do [ -f "$c" ] && { echo "# $c"; cat "$c"; echo; }; done
+            for c in "$d"/*.conf; do [ -f "$c" ] || continue; echo "# $c"; cat "$c"; echo; done
         done
     done ;;
 *) exit 2 ;;
@@ -80,10 +81,24 @@ echo "probe $* current=$cur releases=$(ls "$STUB_ROOT/releases" | tr '\n' ,)" >>
 [ "$STUB_BAD_UNIT" = deck-streak-api.service ] && [ "$cur" = "$STUB_BAD_TAG" ] && exit 22
 exit 0
 """
+# A release whose restart succeeds and whose readiness never arrives.
+UNREADY_CURL = CURL.replace(
+    "exit 0\n",
+    '[ -n "$STUB_UNREADY_TAG" ] && [ "$cur" = "$STUB_UNREADY_TAG" ] && exit 7\nexit 0\n',
+)
+# Caddy reads `validate` as JSON unless the file is named like a Caddyfile or the adapter is given.
 CADDY = r"""#!/bin/bash
-all="$*"; first=$1; conf=
-while [ $# -gt 0 ]; do [ "$1" = --config ] && conf=$2; shift; done
+all="$*"; first=$1; conf=; adapter=
+while [ $# -gt 0 ]; do
+    [ "$1" = --config ] && conf=$2
+    [ "$1" = --adapter ] && adapter=$2
+    shift
+done
 echo "caddy $all imports=$(grep -c import "$conf" 2>/dev/null)" >> "$STUB_LOG/caddy.log"
+if [ -n "$STUB_CADDY_ADAPTER_RULE" ] && [ "$first" = validate ] && [ "$adapter" != caddyfile ]; then
+    name=$(basename "$conf")
+    case "$name" in Caddyfile* | *.caddyfile) ;; *) echo "invalid character: not JSON" >&2; exit 1 ;; esac
+fi
 [ "$first" = validate ] && [ -f "$STUB_LOG/caddy-refuses" ] && exit 1
 exit 0
 """
@@ -198,6 +213,8 @@ class World:
             "STUB_UNIT_DIR": str(self.units),
             "STUB_BAD_UNIT": "",
             "STUB_BAD_TAG": "",
+            "STUB_CAT_FAIL": "",
+            "STUB_CADDY_ADAPTER_RULE": "",
             "DECKSTREAK_DEPLOY_REPO": SLUG,
             "DECKSTREAK_DEPLOY_HOST": str(self.stub / "bin" / "host"),
             "DECKSTREAK_DEPLOY_ELEVATE": "",
@@ -437,6 +454,24 @@ class TheDeploySwitches(Case):
             last = w.text("events.log").splitlines()[-1]
             self.assertTrue(last.endswith("current=v1.0.0"), f"restarted after the switch: {last}")
 
+    def test_a_restart_that_succeeds_and_readiness_that_never_arrives_switches_back(self):
+        w = self.world
+        w.script("curl", UNREADY_CURL)
+        w.ship("v1.0.0")
+        self.ok(w.deploy("v1.0.0", STUB_UNREADY_TAG=""))
+        w.ship("v2.0.0", marker="unready")
+        done = w.deploy("v2.0.0", STUB_UNREADY_TAG="v2.0.0")
+        restarts = w.text("events.log").splitlines()
+        probes = [p for p in w.text("probes.log").splitlines() if "current=v2.0.0" in p]
+        self.assertTrue(
+            any(r == f"restart {API} current=v2.0.0" for r in restarts), "the restart succeeded"
+        )
+        self.assertGreaterEqual(len(probes), 2, "readiness was polled on the new release")
+        self.assertNotEqual(done.returncode, 0, "a release that never became ready was kept")
+        self.assertIn(API, done.stderr)
+        self.assertEqual(w.current(), "v1.0.0", "current is switched back")
+        self.assertTrue(restarts[-1].endswith("current=v1.0.0"), restarts[-1])
+
     def test_the_deploy_leaves_no_current_when_the_first_release_is_not_ready(self):
         w = self.world
         w.ship("v1.0.0")
@@ -486,6 +521,63 @@ class TheDeploySwitches(Case):
         self.assertEqual(w.current(), "v1.4.0")
         kept = set(w.releases())
         self.assertLessEqual(set(tags[2:]), kept, "a failed switch prunes nothing")
+
+
+class PruneAfterARollback(Case):
+    def test_the_release_a_deploy_replaced_is_never_pruned(self):
+        w = self.world
+        for tag in ("v1.0.0", "v1.1.0", "v1.2.0"):
+            w.ship(tag)
+            self.ok(w.deploy(tag))
+        self.ok(w.rollback("v1.0.0"))
+        self.assertEqual(w.current(), "v1.0.0")
+        w.ship("v1.0.1")
+        self.ok(w.deploy("v1.0.1"))
+        self.assertEqual(w.current(), "v1.0.1")
+        self.assertIn("v1.0.0", w.releases(), f"the release it replaced was pruned: {w.releases()}")
+
+
+class AnotherUnitsDropInsAreLeftAlone(Case):
+    FOREIGN = {
+        "getty@tty1.service.d/autologin.conf": b"[Service]\nExecStart=\n",
+        "other-app@x.service.d/override.conf": b"[Service]\nMemoryMax=1G\n",
+        "user@.service.d/delegate.conf": b"[Service]\nDelegate=yes\n",
+    }
+
+    def intact(self, when):
+        for rel, data in examined("foreign drop-ins", self.FOREIGN.items()):
+            path = self.world.units / rel
+            self.assertTrue(path.is_file(), f"{rel} was deleted by {when}")
+            self.assertEqual(path.read_bytes(), data, f"{rel} changed by {when}")
+
+    def test_a_deploy_a_rollback_and_a_switch_back_leave_them_byte_for_byte(self):
+        w = self.world
+        for rel, data in self.FOREIGN.items():
+            (w.units / rel).parent.mkdir(parents=True, exist_ok=True)
+            (w.units / rel).write_bytes(data)
+        w.ship("v1.0.0")
+        w.ship("v1.1.0", marker="two")
+        w.ship("v2.0.0", marker="bad")
+        self.ok(w.deploy("v1.0.0"))
+        self.intact("a deploy")
+        self.ok(w.deploy("v1.1.0"))
+        self.ok(w.rollback("v1.0.0"))
+        self.intact("a rollback")
+        done = w.deploy("v2.0.0", STUB_BAD_UNIT=API, STUB_BAD_TAG="v2.0.0")
+        self.assertNotEqual(done.returncode, 0)
+        self.intact("a switch back")
+
+
+class APartialEffectiveConfigurationIsRefused(Case):
+    def test_a_unit_that_cannot_be_shown_refuses_the_deploy_and_names_it(self):
+        w = self.world
+        w.ship("v1.0.0")
+        self.ok(w.deploy("v1.0.0"))
+        w.ship("v1.1.0", marker="two")
+        done = w.deploy("v1.1.0", STUB_CAT_FAIL=API)
+        self.assertNotEqual(done.returncode, 0, "a deploy whose effective view was partial")
+        self.assertIn(API, done.stderr, "the refusal names the unit")
+        self.assertEqual(w.current(), "v1.0.0", "current is unchanged")
 
 
 class TheCaddyInstall(Case):
@@ -541,6 +633,18 @@ class TheCaddyInstall(Case):
             DEPLOY, "caddy-install", "v1.0.0", DECKSTREAK_DEPLOY_CADDY_CONFIG="/nonexistent"
         )
         self.assertNotEqual(done.returncode, 0, "no private configuration")
+
+    def test_the_caddy_calls_name_the_caddyfile_adapter_for_the_candidate_copy(self):
+        w = self.world
+        caddyfile = w.caddy_dir / "Caddyfile"
+        caddyfile.write_text("example.org {\n\trespond 200\n}\n", encoding="utf-8")
+        w.ship("v1.0.0")
+        self.ok(w.deploy("v1.0.0"))
+        rule = {"STUB_CADDY_ADAPTER_RULE": "1"}
+        installed = w.run(DEPLOY, "caddy-install", "v1.0.0", **self.config(), **rule)
+        self.assertEqual(installed.returncode, 0, installed.stdout + installed.stderr)
+        removed = w.run(ROLLBACK, "caddy-remove", **self.config(), **rule)
+        self.assertEqual(removed.returncode, 0, removed.stdout + removed.stderr)
 
 
 class NoDeployScriptNamesAPrivateValue(unittest.TestCase):
