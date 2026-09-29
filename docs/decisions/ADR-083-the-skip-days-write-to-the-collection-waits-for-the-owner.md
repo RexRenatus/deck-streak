@@ -59,7 +59,7 @@ make the write so that the guardrails hold by construction?
 - Refuse only near a transition of the zone's offset: rejected, because a write already running is never cancelled mid-sync (SPEC-083 R26), so the moment between a check and the engine's day computation has no bound that a window around a transition could cover.
 - Accepting the daylight-saving moment as a named risk: rejected, because a push could then carry a changed setting, which guardrail (i) forbids, and only the owner may relax an owner clause.
 - Read the process's zone from `TZ` alone, counting an unset `TZ` as UTC: rejected, because the engine reads the zone through chrono's `Local`, which falls back to the host's zone when `TZ` pins none, so such a check could pass while the engine counts from another zone; the checks read the zone through `Local`, and the pin refuses a `TZ` that is not a POSIX rule that names no zone file (SPEC-083 R3, A44).
-- Pin the zone by a zone name in `TZ`: rejected, because chrono opens a zone name's file again on each new thread and falls back to the host's zone when it cannot, so a running process could still read another zone; a POSIX rule is parsed from the string alone, and the pin accepts only a rule that names no zone file (SPEC-083 §1, R3, A44).
+- Pin the zone by a zone name in `TZ`: rejected, because chrono opens a zone name's file again on each new thread and falls back to the host's zone when it cannot, so a running process could still read another zone; a POSIX rule that names no zone file is parsed from the string alone, and the pin accepts only a rule that names no zone file (SPEC-083 §1, R3, A44).
 
 ## Decision Outcome
 
@@ -136,8 +136,9 @@ Chosen option: "(a) an upload path for the skip day alone", the owner's decision
   would count from another day or rewrite that offset, which the push would carry (SPEC-083 R3,
   R23). A rollover in the moment after a check still gets through: the cards then land a day later
   (SPEC-083 §6). A change of the zone's offset in that moment is prevented: R3 refuses a zone that
-  observes daylight saving, and a zone the service's environment does not pin as a POSIX rule that names no zone file, before any request or write, so neither a daylight-saving change nor a change of the host's zone
-  reaches a run in flight (SPEC-083 R3, A40, A44).
+  observes daylight saving, and a zone the service's environment does not pin as a POSIX rule that
+  names no zone file, before any request or write, so neither a daylight-saving change nor a change
+  of the host's zone reaches a run in flight (SPEC-083 R3, A40, A44).
 - Bad, because a push whose answer is lost may already be committed, so its outcome is not known at
   once. The take's row stays `pending` until the private copy's next sync settles it, and the undo
   leaves its skip `applied` until a later undo, which counts the cards already restored as restored;
@@ -153,7 +154,8 @@ configured search moves only the study day's due review cards outside a filtered
 refused when it closes the wrap's group (A38); a take or an undo holds to the study day and changes
 no setting when the engine's day or the collection's configured UTC offset differs or is missing,
 in the private copy or as its converge brings it, and refuses before any request or write in a test
-process whose zone observes daylight saving (A40), and in a process whose `TZ` is not a POSIX rule that names no zone file, reading the zone only through chrono's `Local` (A44); every other path
+process whose zone observes daylight saving (A40), and in a process whose `TZ` is not a POSIX rule
+that names no zone file, reading the zone only through chrono's `Local` (A44); every other path
 records zero uploads (A6), and only the skip's take and undo reach an engine write (A24); a
 full-sync demand aborts a take or an undo, writing nothing (A25, A26, A32); only the owner's
 confirm reaches the take and the undo, once per confirm (A27); the preview lists the cards and
