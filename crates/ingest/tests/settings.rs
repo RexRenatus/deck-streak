@@ -2,7 +2,12 @@
 
 mod support;
 
-use deck_streak_ingest::settings::{STATE_DIRECTORY, SYNC_ENDPOINT, SyncSettings};
+use std::ffi::OsString;
+use std::os::unix::ffi::OsStringExt;
+
+use deck_streak_ingest::settings::{
+    INCLUDE_DECKS, LAW_DECK_ROOT, STATE_DIRECTORY, SYNC_ENDPOINT, ScopeSettings, SyncSettings,
+};
 use deck_streak_kernel::{Environment, SettingsError};
 
 /// A state directory that names no real host path: settings are parsed, never opened, here.
@@ -110,5 +115,53 @@ fn a_cleartext_endpoint_logs_one_warning_that_names_the_setting_and_not_its_valu
     assert!(
         !format!("{:?}", warnings[0]).contains("example"),
         "{warnings:?}"
+    );
+}
+
+/// Each ingest setting of another shape refuses start naming the whole shape it must have: the
+/// text the operator reads, compared as written and never through the setting's constant.
+#[test]
+fn each_malformed_setting_is_refused_naming_its_whole_shape() {
+    let sync = |endpoint: &str, state: &str| {
+        SyncSettings::from_env(&Environment::from_vars([
+            (SYNC_ENDPOINT, endpoint),
+            (STATE_DIRECTORY, state),
+        ]))
+        .map(|_| ())
+    };
+    assert_eq!(
+        sync("ftp://sync.example.invalid/", STATE),
+        Err(SettingsError::Malformed {
+            setting: SYNC_ENDPOINT,
+            expected: "an http: or https: URL that names a host",
+        })
+    );
+    assert_eq!(
+        sync("https://sync.example.invalid/", "relative/state"),
+        Err(SettingsError::Malformed {
+            setting: STATE_DIRECTORY,
+            expected: "an absolute path",
+        })
+    );
+    assert_eq!(
+        ScopeSettings::from_env(&Environment::from_vars([(
+            LAW_DECK_ROOT,
+            "Law\u{1f}Evidence"
+        )])),
+        Err(SettingsError::Malformed {
+            setting: LAW_DECK_ROOT,
+            expected: "a top-level deck name",
+        })
+    );
+    // Any text is a list of prefixes, so only a value that is not UTF-8 is refused.
+    assert_eq!(
+        ScopeSettings::from_env(&Environment::from_vars([(
+            OsString::from(INCLUDE_DECKS),
+            OsString::from_vec(vec![b'L', 0xff]),
+        )])),
+        Err(SettingsError::Malformed {
+            setting: INCLUDE_DECKS,
+            expected: "top-level deck-name prefixes, separated by commas",
+        })
     );
 }

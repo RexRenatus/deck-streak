@@ -46,6 +46,28 @@
       "erase": "delete"
     },
     {
+      "id": "settled-xp",
+      "data": "the XP each study day earned, settled once per source and track: the study day, the source, the track, the amount, whether the day had closed, and when it was written",
+      "source": "derived",
+      "stores": ["xp_settlement.*"],
+      "purpose": "keeping the owner's XP total and level from the reviews and the day's bonuses, settled once per source",
+      "lawful_basis": "contract",
+      "retention": {"until": "account-deletion"},
+      "export": true,
+      "erase": "delete"
+    },
+    {
+      "id": "day-buffs",
+      "data": "the buffs a study day holds: the study day, the kind of buff, and when it was armed",
+      "source": "derived",
+      "stores": ["buffs.*"],
+      "purpose": "carrying the Ascendant bonus from the day that earned it to the day that gets it",
+      "lawful_basis": "contract",
+      "retention": {"until": "account-deletion"},
+      "export": true,
+      "erase": "delete"
+    },
+    {
       "id": "reading-runs",
       "data": "the record of each resolution of the owner's readings for a study day: what started it, the study day, when it ran, its outcome with its class and reason when it was refused as a whole, and how many decks with new cards mapped to no topic",
       "source": "derived",

@@ -1,0 +1,260 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S07201-REVIEW-XP-ROUNDING",
+        "progression",
+        "src/review_xp.rs",
+        ".round_ties_even() as u32",
+        ".round() as u32",
+        "xp_review::review_xp_matches_the_parity_golden_for_every_combination",
+        "a review's XP rounds half to even as the predecessor's round() does (SPEC-072 R1, A1)"
+      ],
+      [
+        "S07202-MATURE-BOUNDARY",
+        "progression",
+        "src/review_xp.rs",
+        "review.interval >= economy.mature_interval_days",
+        "review.interval > economy.mature_interval_days",
+        "xp_review::review_xp_matches_the_parity_golden_for_every_combination",
+        "a card at the mature interval earns the mature multiplier (SPEC-072 R1, A1)"
+      ],
+      [
+        "S07203-LAW-TIER-ONLY",
+        "coordination",
+        "src/recompute/xp.rs",
+        "(card.track == Track::Law).then_some(card.tier).flatten()",
+        "card.tier",
+        "xp_steps::an_untagged_law_card_and_a_tagged_language_card_earn_the_base_rate",
+        "only a law card's tier scales its XP (SPEC-072 R4, A6)"
+      ],
+      [
+        "S07204-CLOSED-DAY-NEVER-FALLS",
+        "progression",
+        "src/settle.rs",
+        "(held.amount.max(request.amount), true)",
+        "(request.amount, true)",
+        "xp_settle::a_closed_days_settled_xp_is_raised_and_never_lowered_by_a_recompute",
+        "a closed day's settled XP is raised and never lowered by a recompute (SPEC-072 R8, A7)"
+      ],
+      [
+        "S07206-DERIVED-ONLY",
+        "progression",
+        "src/settle.rs",
+        "if !DERIVED_SOURCES.contains(&request.source) {",
+        "if DERIVED_SOURCES.is_empty() {",
+        "xp_settle::settle_refuses_a_source_outside_the_derived_registry",
+        "settle accepts only a source in the derived registry (SPEC-072 R7, A11)"
+      ],
+      [
+        "S07207-DAY-BASE-CHEST",
+        "progression",
+        "src/consistency.rs",
+        "    \"chest\",",
+        "    \"chesx\",",
+        "xp_consistency::the_day_base_matches_the_parity_golden_over_both_tables",
+        "the day base leaves out the chest source (SPEC-072 R17, A20)"
+      ],
+      [
+        "S07208-DAY-BASE-READING",
+        "progression",
+        "src/consistency.rs",
+        "    \"reading:\",",
+        "    \"readinx:\",",
+        "xp_consistency::the_day_base_leaves_out_the_readings_grants",
+        "the day base leaves out the readings' grants (SPEC-072 R17, A22)"
+      ],
+      [
+        "S07211-DERIVED-SOURCES",
+        "progression",
+        "src/settle.rs",
+        "    \"score90\",\n    \"graduations\",",
+        "    \"score91\",\n    \"graduations\",",
+        "xp_settle::the_derived_registry_and_the_tables_are_pinned_whole",
+        "the derived registry is the nine sources by their whole value (SPEC-072 R7; pinned outside the acceptance fence)"
+      ],
+      [
+        "S07212-SETTLEMENT-TABLE",
+        "progression",
+        "src/settle.rs",
+        "XP_SETTLEMENT_TABLE: &str = \"xp_settlement\";",
+        "XP_SETTLEMENT_TABLE: &str = \"xp_settlemen\";",
+        "xp_settle::the_derived_registry_and_the_tables_are_pinned_whole",
+        "the settlement table is named xp_settlement (SPEC-072 R6; pinned outside the acceptance fence)"
+      ],
+      [
+        "S07213-BUFFS-TABLE",
+        "progression",
+        "src/data_rights.rs",
+        "BUFFS_TABLE: &str = \"buffs\";",
+        "BUFFS_TABLE: &str = \"buff\";",
+        "xp_settle::the_derived_registry_and_the_tables_are_pinned_whole",
+        "the buffs table is named buffs (SPEC-072 R20; pinned outside the acceptance fence)"
+      ],
+      [
+        "S07214-ASCENDANT-KIND",
+        "progression",
+        "src/buffs.rs",
+        "ASCENDANT: &str = \"ascendant\";",
+        "ASCENDANT: &str = \"ascendan\";",
+        "xp_settle::the_derived_registry_and_the_tables_are_pinned_whole",
+        "the Ascendant buff is named ascendant (SPEC-072 R20; pinned outside the acceptance fence)"
+      ],
+      [
+        "S07215-LEVEL-TITLE-ADEPT",
+        "progression",
+        "src/level.rs",
+        "(30, \"Adept\", ",
+        "(30, \"Adeptx\", ",
+        "xp_constants::the_progression_constants_equal_the_predecessors_and_economy_json",
+        "level 30 holds the predecessor's title (SPEC-072 R13, A2)"
+      ],
+      [
+        "S07217-DAY-BASE-2X",
+        "progression",
+        "src/consistency.rs",
+        "    \"2x:\",",
+        "    \"3x:\",",
+        "xp_consistency::the_day_base_matches_the_parity_golden_over_both_tables",
+        "the day base leaves out the 2x grants (SPEC-072 R17, A20)"
+      ],
+      [
+        "S07218-XP-STEP-NAME",
+        "coordination",
+        "src/recompute/xp.rs",
+        "XP_STEP: &str = \"progression.base_xp\";",
+        "XP_STEP: &str = \"progression.base_xq\";",
+        "xp_steps::the_step_names_and_the_level_up_kind_are_pinned_whole",
+        "the base-XP step is registered under its whole name (SPEC-072 R19; pinned outside the acceptance fence)"
+      ],
+      [
+        "S07219-BONUS-STEP-NAME",
+        "coordination",
+        "src/recompute/day_bonuses.rs",
+        "DAY_BONUSES_STEP: &str = \"progression.derived_bonuses\";",
+        "DAY_BONUSES_STEP: &str = \"progression.derived_bonusez\";",
+        "xp_steps::the_step_names_and_the_level_up_kind_are_pinned_whole",
+        "the derived-bonuses step is registered under its whole name (SPEC-072 R19; pinned outside the acceptance fence)"
+      ],
+      [
+        "S07220-LEVEL-UP-KIND",
+        "coordination",
+        "src/level_up.rs",
+        "LEVEL_UP_KIND: &str = \"celebration\";",
+        "LEVEL_UP_KIND: &str = \"celebratio\";",
+        "xp_steps::the_step_names_and_the_level_up_kind_are_pinned_whole",
+        "the level-up line goes out as a celebration (SPEC-072 R14; pinned outside the acceptance fence)"
+      ],
+      [
+        "S07221-BONUS-SOURCES",
+        "coordination",
+        "src/recompute/xp.rs",
+        "    \"graduations\",\n];",
+        "    \"graduatiox\",\n];",
+        "xp_steps::a_day_settles_the_bonus_sources",
+        "the bonus sources settled for a day include studied, backlog_zero, streak and graduations (SPEC-072 R11; pinned outside the acceptance fence)"
+      ],
+      [
+        "S07222-LEVEL-PATH",
+        "api",
+        "src/xp_routes.rs",
+        "LEVEL_PATH: &str = \"/api/level\";",
+        "LEVEL_PATH: &str = \"/api/levels\";",
+        "xp_routes::the_level_routes_answer_only_the_owner",
+        "the level view is served at /api/level (SPEC-072 R23, A26)"
+      ],
+      [
+        "S07223-LAW-TIERS-PATH",
+        "api",
+        "src/xp_routes.rs",
+        "LAW_TIERS_PATH: &str = \"/api/level/law-tiers\";",
+        "LAW_TIERS_PATH: &str = \"/api/level/law-tier\";",
+        "xp_routes::the_level_routes_answer_only_the_owner",
+        "the law-tier counts are served at /api/level/law-tiers (SPEC-072 R24, A26)"
+      ],
+      [
+        "S07224-BOT-LEVEL-COMMAND",
+        "bot",
+        "src/commands.rs",
+        "        command: \"level\",",
+        "        command: \"levels\",",
+        "commands::the_menu_is_registered_for_the_owners_chat_only",
+        "the bot menu names the level command (SPEC-072 R25; SPEC-026 A6)"
+      ],
+      [
+        "S07225-LEVEL-UP-BEFORE-AFTER",
+        "coordination",
+        "src/sync_cycle.rs",
+        "announce_level_up(router, before, after, today)",
+        "announce_level_up(router, after, before, today)",
+        "level_up_cycle::a_sync_cycle_announces_a_level_reached_once",
+        "a sync cycle hands the router the level before the recompute and the level after it, in that order (SPEC-072 R14, A30)"
+      ],
+      [
+        "S07226-LAW-TIERS-LAW-TRACK",
+        "coordination",
+        "src/progression/law_tiers.rs",
+        "card.track == Track::Law",
+        "card.track != Track::Law",
+        "law_tiers::a_collection_with_no_law_root_has_no_law_cards_and_no_law_xp",
+        "the law tiers count law-track cards alone, and price law-track reviews alone (SPEC-072 R24; pinned outside the acceptance fence)"
+      ],
+      [
+        "S07227-LAW-TIERS-TODAY",
+        "coordination",
+        "src/progression/law_tiers.rs",
+        "if day != today {",
+        "if day == today {",
+        "law_tiers::the_law_cards_are_counted_by_tier_and_today_s_reviews_are_priced_by_their_card",
+        "the law tiers' XP is the study day's reviews alone (SPEC-072 R24; pinned outside the acceptance fence)"
+      ],
+      [
+        "S07228-LAW-TIERS-NONE-SLOT",
+        "coordination",
+        "src/progression/law_tiers.rs",
+        "None => 4,",
+        "None => 3,",
+        "law_tiers::the_law_cards_are_counted_by_tier_and_today_s_reviews_are_priced_by_their_card",
+        "a card with no tier counts in the fifth slot, after T4 (SPEC-072 R24; pinned outside the acceptance fence)"
+      ],
+      [
+        "S07229-LAW-TIERS-WIRED",
+        "daemon",
+        "src/role_api.rs",
+        "Some(source) => state.with_law_tiers(source),",
+        "Some(_source) => state,",
+        "law_tiers::the_composed_router_serves_the_law_tiers_to_the_owner_alone",
+        "the api role gives its router the law tiers' source (SPEC-072 R24, A31)"
+      ]
+    ],
+    "CARGO_KILLED_SCRIPT_MUTATIONS": [
+      [
+        "S07205-SETTLEMENT-KEY",
+        "migrations/007201_progression_xp_settlement.sql",
+        "(study_day, source, track);",
+        "(study_day, source);",
+        "progression",
+        "xp_settle::settle_keeps_one_row_per_study_day_source_and_track",
+        "xp_settlement holds one row per study day, source and track, held by the table's index (SPEC-072 R6, A10)"
+      ],
+      [
+        "S07209-CONSISTENCY-WINDOW",
+        "economy.json",
+        "\"window_days\": 90",
+        "\"window_days\": 89",
+        "progression",
+        "xp_consistency::the_consistency_run_and_multiplier_match_the_parity_goldens",
+        "the consistency run looks back the predecessor's window (SPEC-072 R15, A19)"
+      ],
+      [
+        "S07210-STREAK-CAP",
+        "economy.json",
+        "\"streak_cap\": 250,",
+        "\"streak_cap\": 251,",
+        "progression",
+        "xp_bonus::daily_bonus_grants_match_the_parity_golden",
+        "the streak bonus is capped at the predecessor's cap (SPEC-072 R11, A14)"
+      ]
+    ]
+  }
+}
