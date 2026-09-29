@@ -144,7 +144,7 @@ async fn handshake(app: &Router, init_data: &str) -> Answer {
     .await
 }
 
-fn app(service: Fake) -> Router {
+fn app(service: impl InstrumentService + 'static) -> Router {
     let clock = Arc::new(ManualClock::new(UtcMillis::from_epoch_millis(STARTED_AT)));
     let gate = OwnerGate::new(
         WebAppKey::from_bot_token(BOT_TOKEN),
@@ -269,4 +269,50 @@ async fn a_cross_site_run_is_refused() {
     .await;
     assert_eq!(answer.status, StatusCode::FORBIDDEN);
     assert!(!answer.body.contains(MARKER));
+}
+
+/// A service whose store cannot be read.
+struct Broken;
+
+impl InstrumentService for Broken {
+    fn list(&self) -> BoxFuture<'_, Result<Vec<InstrumentListing>, KernelError>> {
+        Box::pin(async { Err(KernelError::Offload { operation: "list" }) })
+    }
+    fn report<'a>(
+        &'a self,
+        _id: &'a str,
+    ) -> BoxFuture<'a, Result<Option<StoredReport>, KernelError>> {
+        Box::pin(async {
+            Err(KernelError::Offload {
+                operation: "report",
+            })
+        })
+    }
+    fn run<'a>(&'a self, _id: &'a str) -> BoxFuture<'a, Result<StoredReport, OnDemandRefusal>> {
+        Box::pin(async {
+            Err(OnDemandRefusal::Store(KernelError::Offload {
+                operation: "run",
+            }))
+        })
+    }
+}
+
+#[tokio::test]
+async fn an_unreadable_store_answers_500_with_a_reason_code_alone() {
+    let app = app(Broken);
+    let cookie = handshake(&app, OWNER_PAYLOAD)
+        .await
+        .cookie
+        .expect("the owner's session");
+    for path in ["/api/insights", "/api/insights/alpha"] {
+        let answer = get(&app, path, Some(&cookie)).await;
+        assert_eq!(answer.status, StatusCode::INTERNAL_SERVER_ERROR, "{path}");
+        assert_eq!(
+            answer.body, r#"{"reason":"instruments_unreadable"}"#,
+            "{path}"
+        );
+    }
+    let started = run(&app, "/api/insights/alpha/run", Some(&cookie)).await;
+    assert_eq!(started.status, StatusCode::INTERNAL_SERVER_ERROR);
+    assert_eq!(started.body, r#"{"reason":"run_unavailable"}"#);
 }
