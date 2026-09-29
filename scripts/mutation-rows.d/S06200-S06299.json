@@ -1,0 +1,230 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S06201-THE-ATTESTATION-IS-VERIFIED-BEFORE-THE-HOST",
+        "deploy/deploy.sh",
+        "    gh attestation verify \"$dir/$name\" --repo \"$repo\" \\\n",
+        "    true attestation verify \"$dir/$name\" --repo \"$repo\" \\\n",
+        "a tarball whose build provenance does not verify against this repository's release workflow never reaches the host (SPEC-062 R3, A2; ADR-062)",
+        "test_deploy_scripts.TheDeployVerifiesBeforeTheHost.test_the_deploy_refuses_a_bad_digest_or_attestation_before_the_host"
+      ],
+      [
+        "S06202-THE-TARBALL-MUST-MATCH-SHA256SUMS",
+        "deploy/deploy.sh",
+        "    (cd \"$dir\" && printf '%s\\n' \"$listed\" | sha256sum -c --quiet -) ||\n",
+        "    (cd \"$dir\" && printf '%s\\n' \"$listed\" | cat >/dev/null) ||\n",
+        "a tarball that differs from its published digest never reaches the host (SPEC-062 R3, A2; ADR-062)",
+        "test_deploy_scripts.TheDeployVerifiesBeforeTheHost.test_the_deploy_refuses_a_bad_digest_or_attestation_before_the_host"
+      ],
+      [
+        "S06203-A-TAG-MUST-BE-ANNOTATED",
+        "deploy/deploy.sh",
+        "    [ \"$kind\" = tag ] || die \"$tag is not an annotated tag\"\n",
+        "    [ \"$kind\" = tag ] || [ \"$kind\" = commit ] || die \"$tag is not an annotated tag\"\n",
+        "a lightweight tag names no tagger and no date, so it is never deployed (SPEC-062 R3, A1)",
+        "test_deploy_scripts.TheDeployVerifiesBeforeTheHost.test_the_deploy_refuses_a_tag_off_main_and_a_lightweight_tag"
+      ],
+      [
+        "S06204-A-TAG-MUST-BE-ON-MAIN",
+        "deploy/deploy.sh",
+        "    git -C \"$checkout\" merge-base --is-ancestor \"refs/tags/$tag^{commit}\" refs/remotes/origin/main ||\n",
+        "    git -C \"$checkout\" merge-base --is-ancestor \"refs/tags/$tag^{commit}\" \"refs/tags/$tag^{commit}\" ||\n",
+        "only a commit already on origin's main is deployed (SPEC-062 R3, A1)",
+        "test_deploy_scripts.TheDeployVerifiesBeforeTheHost.test_the_deploy_refuses_a_tag_off_main_and_a_lightweight_tag"
+      ],
+      [
+        "S06205-MAIN-IS-FETCHED-BEFORE-THE-CHECK",
+        "deploy/deploy.sh",
+        "        \"+refs/heads/main:refs/remotes/origin/main\" \"+refs/tags/$tag:refs/tags/$tag\" ||\n",
+        "        \"+refs/tags/$tag:refs/tags/$tag\" ||\n",
+        "the on-main check reads origin's main as it is now, not as a stale checkout last saw it (SPEC-062 R3, A1)",
+        "test_deploy_scripts.TheDeployVerifiesBeforeTheHost.test_the_deploy_refuses_a_tag_off_main_and_a_lightweight_tag"
+      ],
+      [
+        "S06206-CURRENT-IS-LINKED-UNDER-A-TEMPORARY-NAME",
+        "deploy/deploy.sh",
+        "    ln -sfn \"$1\" \"$root/.current.$$\"\n",
+        "    ln -sfn \"$1\" \"$root/current\"\n",
+        "current is never rewritten in place: a temporary link is built beside it, then renamed over it (SPEC-062 R3, A3)",
+        "test_deploy_scripts.TheDeploySwitches.test_the_deploy_installs_beside_and_switches_current_atomically"
+      ],
+      [
+        "S06207-CURRENT-IS-REPLACED-BY-ONE-ATOMIC-RENAME",
+        "deploy/deploy.sh",
+        "    mv -T \"$root/.current.$$\" \"$root/current\"\n",
+        "    mv -f \"$root/.current.$$\" \"$root/current\"\n",
+        "the switch is one rename that replaces the link itself, never a move into the directory it points at (SPEC-062 R3, A3)",
+        "test_deploy_scripts.TheDeploySwitches.test_the_deploy_installs_beside_and_switches_current_atomically"
+      ],
+      [
+        "S06208-A-RELEASE-NOT-READY-IS-SWITCHED-BACK-FROM",
+        "deploy/deploy.sh",
+        "        switch_to \"$prev\"\n        install_units \"$prev\"\n",
+        "        switch_to \"$rel\"\n        install_units \"$prev\"\n",
+        "a release that does not become ready leaves current on the release it replaced (SPEC-062 R4, A4)",
+        "test_deploy_scripts.TheDeploySwitches.test_the_deploy_switches_back_when_readiness_does_not_arrive"
+      ],
+      [
+        "S06209-A-SWITCH-BACK-REINSTALLS-THE-PREVIOUS-UNITS",
+        "deploy/deploy.sh",
+        "        switch_to \"$prev\"\n        install_units \"$prev\"\n",
+        "        switch_to \"$prev\"\n        install_units \"$rel\"\n",
+        "the switch back restores the previous release's unit bytes, not the failed release's (SPEC-062 R4, A4)",
+        "test_deploy_scripts.TheDeploySwitches.test_the_deploy_switches_back_when_readiness_does_not_arrive"
+      ],
+      [
+        "S06210-A-KEPT-RELEASE-IS-NOT-FETCHED-AGAIN",
+        "deploy/deploy.sh",
+        "    if on_host 'test -d \"$1/releases/$2\"' \"$ROOT\" \"$tag\" </dev/null; then\n",
+        "    if on_host 'test -d \"$1/releases/$2.absent\"' \"$ROOT\" \"$tag\" </dev/null; then\n",
+        "a rollback to a release the host keeps is a switch and a restart, with no download (SPEC-062 R5, A5)",
+        "test_deploy_scripts.TheDeploySwitches.test_the_rollback_makes_a_kept_release_current_again"
+      ],
+      [
+        "S06211-A-ROLLBACK-TARGET-IS-VERIFIED-LIKE-A-DEPLOY",
+        "deploy/deploy.sh",
+        "rollback_tag() {\n    local tag=$1\n    verify_tag \"$tag\"\n",
+        "rollback_tag() {\n    local tag=$1\n",
+        "a rollback names a SemVer annotated tag on main, so it cannot install a commit a deploy would refuse (SPEC-062 R5, A5)",
+        "test_deploy_scripts.TheDeploySwitches.test_the_rollback_makes_a_kept_release_current_again"
+      ],
+      [
+        "S06212-THE-OLDEST-RELEASES-ARE-PRUNED",
+        "deploy/deploy.sh",
+        "sort -V -r | tail -n +\"$((spare + 1))\")\n",
+        "sort -V | tail -n +\"$((spare + 1))\")\n",
+        "the host keeps the newest releases and removes the oldest, never the reverse (SPEC-062 R6, A6)",
+        "test_deploy_scripts.TheDeploySwitches.test_the_deploy_keeps_three_releases_and_prunes_after_a_ready_switch"
+      ],
+      [
+        "S06213-A-COPY-IS-VALIDATED-BEFORE-THE-RELOAD",
+        "deploy/deploy.sh",
+        "caddy validate --adapter caddyfile --config \"$copy\" || undo\n",
+        "caddy validate --adapter caddyfile --config \"$copy\" || true\n",
+        "a configuration Caddy refuses is never moved over the live Caddyfile (SPEC-062 R7)",
+        "test_deploy_scripts.TheCaddyInstall.test_the_caddy_install_validates_a_copy_first_and_the_removal_reverses_it"
+      ],
+      [
+        "S06214-THE-CADDY-UPSTREAM-IS-LOOPBACK",
+        "deploy/scripts/render-caddy.py",
+        "        if octets[0] != 127 or any(part > 255 for part in octets):\n",
+        "        if octets[0] > 255 or any(part > 255 for part in octets):\n",
+        "the API upstream a block proxies to is a loopback address, never one that reaches outward (SPEC-062 R7, A7; ADR-061)",
+        "test_caddy_render.TheCaddyRender.test_the_render_refuses_placeholders_and_keeps_the_headers"
+      ],
+      [
+        "S06215-THE-RELEASE-WORKFLOW-REQUIRES-MAIN",
+        ".github/workflows/release.yml",
+        "          if ! git merge-base --is-ancestor \"$GITHUB_SHA\" origin/main; then\n",
+        "          if ! git merge-base --is-ancestor \"$GITHUB_SHA\" \"$GITHUB_SHA\"; then\n",
+        "a tag whose commit is not on main builds no release (SPEC-062 R1, A18)",
+        "test_release_workflow.TheTagGuardRuns.test_the_release_refuses_a_tag_off_main_or_lightweight_by_running_its_guard"
+      ],
+      [
+        "S06216-A-READY-RELEASE-IS-REQUIRED",
+        "deploy/deploy.sh",
+        "ready || back deck-streak-api.service",
+        "ready || true",
+        "a restart that succeeds but whose readiness never arrives is switched back from (SPEC-062 R4, A12)",
+        "test_deploy_scripts.TheDeploySwitches.test_a_restart_that_succeeds_and_readiness_that_never_arrives_switches_back"
+      ],
+      [
+        "S06217-THE-REPLACED-RELEASE-IS-KEPT",
+        "deploy/deploy.sh",
+        "-e \"${prevname:-$tag}\"",
+        "-e \"$tag\"",
+        "the release a deploy replaced is never pruned, whatever its version sorts as (SPEC-062 R6, A13)",
+        "test_deploy_scripts.PruneAfterARollback.test_the_release_a_deploy_replaced_is_never_pruned"
+      ],
+      [
+        "S06218-THE-LIVE-TAG-IS-NEVER-PRUNED",
+        "deploy/deploy.sh",
+        "grep -vxF -e \"$tag\" -e \"${prevname:-$tag}\"",
+        "grep -vxF -e \"${prevname:-$tag}\"",
+        "the release a deploy just made current is never in the prune's list (SPEC-062 R6, A6)",
+        "test_deploy_scripts.TheDeploySwitches.test_the_deploy_keeps_three_releases_and_prunes_after_a_ready_switch"
+      ],
+      [
+        "S06219-THE-DROP-IN-CLEANUP-IS-THE-RAILS-UNITS-ALONE",
+        "deploy/deploy.sh",
+        "for d in \"$unitdir\"/deck-streak-*@*.d; do",
+        "for d in \"$unitdir\"/*@*.d; do",
+        "the deploy removes drop-ins only under the rail's own units and touches no other unit's (SPEC-062 R4, A14)",
+        "test_deploy_scripts.AnotherUnitsDropInsAreLeftAlone.test_a_deploy_a_rollback_and_a_switch_back_leave_them_byte_for_byte"
+      ],
+      [
+        "S06220-A-PARTIAL-EFFECTIVE-VIEW-IS-REFUSED",
+        "deploy/deploy.sh",
+        "        { echo \"deploy: ${u%.d} could not be shown\" >&2; : >\"$checked\"; break; }\n",
+        "        true\n",
+        "a unit whose effective configuration cannot be shown refuses the deploy and is named (SPEC-062 R4, A15)",
+        "test_deploy_scripts.APartialEffectiveConfigurationIsRefused.test_a_unit_that_cannot_be_shown_refuses_the_deploy_and_names_it"
+      ],
+      [
+        "S06221-A-SHIPPED-DROP-IN-IS-ADMITTED-BESIDE-THE-RAILS-OWN",
+        "deploy/scripts/effective-check.py",
+        "not (beside and shipped in contract[\"shipped\"])",
+        "not (shipped in contract[\"shipped\"])",
+        "a shipped drop-in name is admitted only in the directory beside the rail's own (SPEC-062 R14, A16)",
+        "test_deploy_templates.TheSyncLoginIsTheSyncJobsAlone.test_a_shipped_drop_in_name_is_admitted_beside_the_rails_own_alone"
+      ],
+      [
+        "S06222-THE-CADDY-COPY-IS-VALIDATED-AS-A-CADDYFILE",
+        "deploy/deploy.sh",
+        "caddy validate --adapter caddyfile --config \"$copy\" || undo\n",
+        "caddy validate --config \"$copy\" || undo\n",
+        "the candidate copy is validated with the Caddyfile adapter, as its name is not one (SPEC-062 R7, A17)",
+        "test_deploy_scripts.TheCaddyInstall.test_the_caddy_calls_name_the_caddyfile_adapter_for_the_candidate_copy"
+      ],
+      [
+        "S06223-THE-CADDY-BLOCK-IS-THE-TAGS-OWN",
+        "deploy/deploy.sh",
+        "git -C \"$checkout\" show \"refs/tags/$tag:deploy/caddy/deck-streak.caddy\" >\"$template\"",
+        "cat \"$here/caddy/deck-streak.caddy\" >\"$template\"",
+        "the Caddy block is rendered from the tag's own file, never the working tree's (SPEC-062 R7, A19)",
+        "test_deploy_scripts.TheCaddyInstall.test_the_caddy_block_is_rendered_from_the_tags_own_file"
+      ],
+      [
+        "S06224-THE-TOKEN-IS-THE-RELEASE-STEPS-ALONE",
+        ".github/workflows/release.yml",
+        "      CARGO_INCREMENTAL: \"0\"\n",
+        "      CARGO_INCREMENTAL: \"0\"\n      GH_TOKEN: ${{ github.token }}\n",
+        "the job's build steps never hold the token; only the three gh release steps do (SPEC-062 R1, A20)",
+        "test_release_workflow.TheReleaseWorkflowIsHardened.test_the_token_reaches_the_three_gh_release_steps_alone"
+      ],
+      [
+        "S06225-THE-DEPLOY-NAMES-A-UNIT-IT-CANNOT-SHOW",
+        "deploy/deploy.sh",
+        "        { echo \"deploy: ${u%.d} could not be shown\" >&2; : >\"$checked\"; break; }\n",
+        "        { : >\"$checked\"; break; }\n",
+        "a unit whose effective configuration cannot be shown is named by the deploy itself (SPEC-062 R4, A15)",
+        "test_deploy_scripts.APartialEffectiveConfigurationIsRefused.test_a_unit_that_cannot_be_shown_refuses_the_deploy_and_names_it"
+      ],
+      [
+        "S06226-TWO-INSTANCES-OF-ONE-TEMPLATE-ARE-REFUSED",
+        "scripts/tests/test_deploy_templates.py",
+        "        if template is not None and instances[template] == 1:\n",
+        "        if template is not None:\n",
+        "two instance drop-in directories of one shipped template are refused, since the unit guards read both into the template (SPEC-062 R14, A21)",
+        "test_deploy_templates.CredentialsComeFromTheSocket.test_a_shipped_templates_instance_dropin_directory_is_its_own_and_no_other_is"
+      ],
+      [
+        "S06227-THE-TEMPLATES-OWN-DROPIN-IS-READ-ONCE",
+        "scripts/tests/_units.py",
+        "glob(f\"{stem}@?*.{suffix}.d\")",
+        "glob(f\"{stem}@*.{suffix}.d\")",
+        "a template's own drop-in directory is read once, not also as an instance's (SPEC-062 R14)",
+        "test_deploy_templates.CredentialsComeFromTheSocket.test_a_templates_own_dropin_directory_is_read_once"
+      ],
+      [
+        "S06228-AN-INSTANCE-DROPIN-SETS-ONLY-ITS-CREDENTIALS",
+        "scripts/tests/test_deploy_templates.py",
+        "        and (a.section, a.key) not in INSTANCE_DROPIN_KEYS\n",
+        "        and False\n",
+        "an instance's drop-in sets only the credentials it loads, since systemd applies it to that instance alone while the unit guards read it with its template (SPEC-062 R14)",
+        "test_deploy_templates.CredentialsComeFromTheSocket.test_an_instance_dropin_sets_only_the_credentials_it_loads"
+      ]
+    ]
+  }
+}

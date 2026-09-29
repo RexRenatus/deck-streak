@@ -171,6 +171,11 @@ R9. **The runner, `scripts/mutation_rows.py prove`,** proves each row it is give
     - it runs the killer on the unmutated tree, which must pass, selecting exactly one test;
     - it installs the mutant once, and treats a mutant that does not build (`cargo test
       --no-run`) or does not parse (Python) as VOID, never a kill;
+    - *Inserted by section 12:* a target that is a shell script, by its `.sh` or `.bash`
+      extension or by a shebang naming `sh`, `bash` or `dash`, has its mutant parse-checked on
+      the mutated bytes, with `bash -n` for a bash script and `sh -n` otherwise (the shebang
+      decides when it names a shell; else `.bash` is bash and `.sh` is sh), and a mutant that
+      fails is VOID, never a kill (A41);
     - it runs only the killer, counting the tests selected from libtest's `running N test` lines
       or unittest's `Ran N test` line, and anything but exactly one is VOID;
     - a killer that fails with the mutant installed is KILLED; one that passes is SURVIVED;
@@ -288,6 +293,7 @@ R18. **The shards, and their bound.** `scripts/mutation-verdict.py shards` sizes
 | A38 | a shard the plan gave no mutant owes no report, and a proved row on the diff's changed line carries it; a shard given mutants still owes its report | `test_mutation_verdict.py` |
 | A39 | the runner proves every row its selectors name together, a band's, a row's by id and a plan's, each once | `test_mutation_rows.py` |
 | A40 | the configuration check refuses a second Stryker configuration, `ignoreStatic` without per-test coverage, and a `mutate` list other than R2's | `test_mutation_workflows.py` |
+| A41 | a shell target's mutant is parse-checked, `bash -n` for a bash script and `sh -n` otherwise (the shebang decides when it names a shell; else `.bash` is bash and `.sh` is sh): one that does not parse is VOID, one that parses and is caught is KILLED, the check reads the mutant and never runs it, a parser that is missing or hangs leaves the mutant VOID, the refusal names the shell's first stderr line, and a cargo killer's row is parsed before it is built | `test_mutation_rows.py` |
 
 ```acceptance
 A1: python3 -m unittest discover -s scripts/tests -p test_mutation_rows.py -k a_tracked_change_is_refused_before_any_mutant_is_installed
@@ -334,6 +340,7 @@ A37: python3 -m unittest discover -s scripts/tests -p test_mutation_workflows.py
 A38: python3 -m unittest discover -s scripts/tests -p test_mutation_verdict.py -k a_diff_the_tool_lists_no_mutant_of_needs_no_shard_report
 A39: python3 -m unittest discover -s scripts/tests -p test_mutation_rows.py -k every_row_its_selectors_name_is_proved_once
 A40: python3 -m unittest discover -s scripts/tests -p test_mutation_workflows.py -k the_configuration_check_refuses_what_stryker_would_read_otherwise
+A41: python3 -m unittest discover -s scripts/tests -p test_mutation_rows.py -k TheRunnerParseChecksAShellMutant
 ```
 
 A1 to A8 run the runner against a fixture repository built at run time in a temporary directory:
@@ -385,6 +392,12 @@ and green are the `mutation-rust` job's two runs.
 | `crates/kernel/src/clock.rs` | `deck-streak-kernel` | changed: `UtcMillis::from_system_time` (R17) |
 | `crates/kernel/tests/clock.rs` | `deck-streak-kernel` | changed: A26 (R17) |
 | `changelog.d/feat-mutation-039.md` | `repo` | added |
+| `scripts/mutation_rows.py` | `repo` | changed by section 12: `builds()` parse-checks a shell target's mutant |
+| `scripts/tests/test_mutation_rows.py` | `repo` | changed by section 12: A41 |
+| `scripts/mutation-rows.d/S03900-S03999.json` | `repo` | changed by section 12: the rows that pin A41's decisions |
+| `docs/decisions/ADR-057-mutation-testing-runs-on-the-diff-in-ci-and-weekly-on-dev.md` | `repo` | changed by section 12: a dated note |
+| `docs/red-first/SPEC-039.md` | `repo` | changed by section 12: A41's record |
+| `changelog.d/fix-shell-mutant-parse-288.md` | `repo` | added by section 12 |
 
 ## 5. What this does NOT do
 
@@ -659,3 +672,60 @@ What it amends, and why:
 
 ADR-070 carries a note of this date that records the decision and what it was chosen against;
 SPEC-057 A28 decides it.
+
+## 12. Amendment, 2026-09-29: a shell mutant that does not parse is VOID
+
+Made by issue #288's delivery, insert-only under ruling (i) of SPEC-038 section 8: every earlier
+byte is kept in order. It inserts:
+
+- R9: the bullet "*Inserted by section 12:* a target that is a shell script, ...", after the
+  bullet on a mutant that does not build or parse;
+- section 3: the row and the command of A41, after A40's;
+- section 4: six manifest rows, after the changelog fragment's;
+- this section.
+
+What it amends, and why:
+
+- **R9 parse-checked a Python mutant and nothing else that is not built.** `builds()` ran
+  `ast.parse` only for a target ending `.py` and `cargo test --no-run` only for a cargo killer,
+  and returned no refusal for any other target. A shell mutant that breaks the script's syntax
+  then made its killer fail, and the row read KILLED although the killer observed nothing about
+  the mutated behaviour, which is the read R9 exists to refuse. The tree holds five rows on a
+  shell target, all on `scripts/check.sh`, and each was proved without a parse check.
+- **A shell target is parse-checked, by the language it is written in.** A target is a shell
+  script when its extension is `.sh` or `.bash`, or its first line is a shebang naming `sh`,
+  `bash` or `dash`, directly or after `env`. The shebang decides when it names a shell; else
+  `.bash` is bash and `.sh` is sh. The mutated bytes are checked with `bash -n` when the script
+  is bash and `sh -n` otherwise, because the two disagree: an array assignment such as
+  `a=(1 2)` passes `bash -n` and fails `sh -n`, so a checker that always picked `sh` would void
+  every bash script that uses an array, and one that always picked `bash` would pass a POSIX
+  script that only bash reads. The check runs before the cargo branch, so a script mutant with a
+  cargo killer is parse-checked and then built. A parser that is not installed is VOID with its
+  reason, and a check that outlives its bound is VOID.
+- **The five existing rows are re-proved at the delivery's head.** Each reads KILLED, so none of
+  them was a parse failure passing for a kill (the red-first record names the run).
+
+ADR-057 carries a note of this date that records the decision and what it was chosen against;
+A41 decides it.
+
+## 13. Amendment, 2026-09-29: a band file that repeats a key is refused
+
+Made by issue #334's delivery, insert-only under ruling (i) of SPEC-038 section 8: every earlier
+byte is kept in order. It inserts this section only.
+
+- **R8's one reader read the last of a repeated key.** Two branches that each add a table under the
+  same key merge in git without a conflict, and `json.loads` kept the later value, so the rows under
+  the earlier table vanished with no failure. The reader now refuses a key repeated in one object,
+  at any depth, in the tree and in a revision, naming the file and the key. SPEC-122 decides it and
+  ADR-122 records it; the rows are in `S12200-S12299`.
+
+## 14. Amendment, 2026-09-29: the verdict reads each report by name
+
+Made by issue #351's delivery, insert-only under ruling (i) of SPEC-038 section 8: every earlier
+byte is kept in order. It inserts this section only.
+
+- **The verdict's report layout depended on how many artifacts matched.** Its one download was a
+  pattern over every `mutation-*` artifact, and the action extracts a single match flat, so a run
+  in which only the plan had uploaded read `VOID no plan`. The verdict now downloads the plan and
+  the rows' report each by name and the shards by a merged pattern, and reads no `mutation-web`
+  artifact. SPEC-126 decides it and ADR-126 records it.

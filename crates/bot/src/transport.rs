@@ -16,6 +16,9 @@
 //! The bot token is part of every request's URL, so nothing here logs a URL, a request or an
 //! answer's body: a line names the method, the attempt and the Bot API's error code, and never a
 //! message's text.
+//!
+//! [`OwnerChat`] is the bot's side of the notification router's transport port (SPEC-041 R13): the
+//! router's pushes go to the owner's chat through the same [`Transport::send_html`].
 
 use std::fmt;
 use std::future::Future;
@@ -25,7 +28,9 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 
+use deck_streak_identity::Owner;
 use deck_streak_kernel::{Environment, Secret, Setting, SettingsError};
+use deck_streak_notifications::{BotTransport, Pass, PushFuture, Pushed};
 use frankenstein::client_reqwest::Bot;
 use frankenstein::methods::{
     AnswerCallbackQueryParams, DeleteMyCommandsParams, DeleteWebhookParams, EditMessageTextParams,
@@ -43,11 +48,12 @@ use serde_json::Value;
 
 use crate::chunk;
 
-/// The Bot API's base URL, without the `/bot<token>` part. Unset, it is [`DEFAULT_API_URL`]; set,
-/// it must be `https:`, or `http:` to a loopback host (a local Bot API server, or a test's fake).
+/// The Bot API's base URL, without the `/bot<token>` part. Unset, it is Telegram's own; set, it
+/// must be `https:`, or `http:` to a loopback host (a local Bot API server, or a test's fake).
 pub const API_URL: &str = "DECKSTREAK_BOT_API_URL";
-/// Telegram's own Bot API.
-pub const DEFAULT_API_URL: &str = "https://api.telegram.org";
+/// Telegram's own Bot API. Private to the bot, so no other crate can build a request on it
+/// (SPEC-041 A15).
+pub(crate) const DEFAULT_API_URL: &str = "https://api.telegram.org";
 
 /// The longest text one message may carry, in UTF-16 units after entity parsing (the Bot API's
 /// `sendMessage`; the telegram-platform pack). The predecessor's `constants.py:TELEGRAM_MAX_LEN`,
@@ -99,7 +105,7 @@ impl ApiUrl {
         (secure || local).then(|| Self(text.to_owned()))
     }
 
-    /// The base URL [`API_URL`] names, or [`DEFAULT_API_URL`] when it is unset.
+    /// The base URL [`API_URL`] names, or Telegram's own when it is unset.
     ///
     /// # Errors
     ///
@@ -654,6 +660,37 @@ impl Transport {
             .into_iter()
             .map(Incoming::from_value)
             .collect())
+    }
+}
+
+/// The bot's side of the notification router's transport port (SPEC-041 R13): every push goes to
+/// the owner's private chat, whose id is the owner's user id, through [`Transport::send_html`], so
+/// a pushed text is HTML, chunked and retried as every message of the bot is. The composition root
+/// joins it to the router; only the router can call it (the router's `Pass`).
+pub struct OwnerChat {
+    transport: Arc<Transport>,
+    chat: i64,
+}
+
+impl OwnerChat {
+    /// The owner's chat, over `transport`.
+    #[must_use]
+    pub const fn new(transport: Arc<Transport>, owner: Owner) -> Self {
+        Self {
+            transport,
+            chat: owner.user().get(),
+        }
+    }
+}
+
+impl BotTransport for OwnerChat {
+    fn push_message<'a>(&'a self, _pass: &'a Pass, text: &'a str) -> PushFuture<'a> {
+        Box::pin(async move {
+            match self.transport.send_html(self.chat, text, None).await {
+                Sent::Delivered { .. } => Pushed::Delivered,
+                Sent::Failed => Pushed::Failed,
+            }
+        })
     }
 }
 

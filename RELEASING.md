@@ -59,9 +59,10 @@ git tag -a vX.Y.Z -m "vX.Y.Z"
 git push origin vX.Y.Z
 ```
 
-From the first deploy on (#42), the tag runs the release workflow. It checks that the tag is on
-`main`, builds the release binary and the Mini App once, and publishes them on a draft release
-before publishing it. Until that workflow exists, a tag marks the release and carries no build.
+The tag runs the release workflow (`.github/workflows/release.yml`). It checks that the tag is
+SemVer and annotated and that its commit is on `main`, builds the release binary and the Mini App
+once, attests the tarball's build provenance, and attaches the tarball and its `SHA256SUMS` to a
+draft release that its last step publishes.
 
 ## 4. Deploy the tag
 
@@ -71,9 +72,13 @@ From the maintainer's machine, with the private deploy rail's configuration load
 bash deploy/deploy.sh vX.Y.Z
 ```
 
-The script proves the tag is on `main` (`git merge-base --is-ancestor vX.Y.Z origin/main`),
-downloads the release's artifacts and checks their digests, installs them beside the previous
-releases on the host, switches `current` atomically, restarts the units and waits for readiness.
+The script refuses unless the tag is an annotated SemVer tag whose commit is on `origin/main`
+after a fetch (`git merge-base --is-ancestor vX.Y.Z origin/main`). It downloads the release, verifies the tarball's attestation
+(`gh attestation verify --repo` this repository, `--signer-workflow` its release workflow) and its
+digest against `SHA256SUMS`, and only then reaches the host: it unpacks beside the previous
+releases, switches `current` with one `mv -T`, installs the units byte for byte, restarts them and
+waits for the API's readiness. A release that does not become ready is switched back from, and the
+deploy names the unit. The host keeps the current release and the two before it.
 The first deploy, and any change to a unit, Caddy or the firewall, needs the owner's go.
 
 ## 5. Nothing is merged back into dev
@@ -90,8 +95,9 @@ holds work that must not ship yet, revert it on `dev` first (ADR-034).
 
 ## 7. Rollback
 
-Re-deploy the previous tag. Its artifacts are still attached to its release, and the host keeps the
-previous release beside the current one.
+Roll back to the previous tag. The host keeps it beside the current release, so the rollback is a
+switch and a restart with no download; a release the host no longer keeps is deployed anew, through
+the same verification a deploy takes. The tag must be an annotated SemVer tag on `main`.
 
 ```sh
 bash deploy/rollback.sh vX.Y.W

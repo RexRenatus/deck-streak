@@ -31,9 +31,10 @@ in one of the unittest roots the gate discovers (`scripts/tests`, `tools/parity-
 PROVE (R9) refuses a tree with a tracked change, since it rewrites a tracked file and restores it.
 For each row it checks the anchor occurs exactly once and records the target's sha256; runs the
 killer without the mutant, which must pass selecting exactly one test; installs the mutant once;
-refuses a mutant that does not build (`cargo test --no-run`) or parse (Python) as VOID, never a
-kill; runs the killer, which must select exactly one test, counted from libtest's `running N test`
-lines or unittest's `Ran N test` line; reads a failure as KILLED and a pass as SURVIVED; then
+refuses a mutant that does not build (`cargo test --no-run`) or parse (Python, or a shell script
+by `bash -n` or `sh -n`, chosen by its shebang or extension) as VOID, never a kill; runs the
+killer, which must select exactly one test, counted from libtest's `running N test` lines or
+unittest's `Ran N test` line; reads a failure as KILLED and a pass as SURVIVED; then
 writes the saved bytes back and checks the sha256 before anything else runs. Exit 0 when every row
 was KILLED, 1 on a survivor, 2 on a refusal, 3 on a VOID with no survivor, 4 when a restore failed.
 
@@ -94,6 +95,9 @@ UNITTEST_RAN = re.compile(r"(?m)^Ran (\d+) tests? in ")
 UNITTEST_SKIPPED = re.compile(r"(?m)^OK \(skipped=([1-9]\d*)\)$")
 #: A cargo build may wait on a busy machine; a killer's test runs under its own bound.
 BUILD_SECONDS = 3600
+PARSE_SECONDS = 60
+#: A shebang that names a shell, directly or after `env`: group 1 is `sh`, `bash` or `dash`.
+SHELL_SHEBANG = re.compile(r"^#!\s*(?:\S*/)?(?:env\s+(?:-\S+\s+)*)?(?:\S*/)?(sh|bash|dash)(?=\s|$)")
 TEST_SECONDS = 900
 
 EXIT_OK, EXIT_SURVIVED, EXIT_REFUSED, EXIT_VOID, EXIT_RESTORE = 0, 1, 2, 3, 4
@@ -190,11 +194,43 @@ def assemble(monolith: object, fragments: list[tuple[str, object]]) -> object:
     return population
 
 
-def _fragment(name: str, text: str) -> tuple[str, object]:
+#: The words of a repeated-key refusal, after the file's name (SPEC-122 R1).
+REPEATED_KEY = "repeats the key"
+
+
+class _RepeatedKey(Exception):
+    """A key seen twice in one object; `parse_document` turns it into a refusal naming the file."""
+
+    def __init__(self, key: str) -> None:
+        super().__init__(key)
+        self.key = key
+
+
+def _refuse_repeats(pairs: list[tuple[str, object]]) -> dict[str, object]:
+    """`json`'s object hook: the object's members, refusing a key the object already holds."""
+    seen: dict[str, object] = {}
+    for key, value in pairs:
+        if key in seen:
+            raise _RepeatedKey(key)
+        seen[key] = value
+    return seen
+
+
+def parse_document(where: str, text: str) -> object:
+    """A document of the population, parsed. `json.loads` keeps the last value of a repeated key
+    and says nothing, and two branches that each add a table under one key merge in git without a
+    conflict (#334), so a key seen twice in one object, at any depth, is a refusal naming `where`
+    and the key. Text that is not JSON is refused by name too (SPEC-122 R1)."""
     try:
-        return name, json.loads(text)
+        return json.loads(text, object_pairs_hook=_refuse_repeats)
+    except _RepeatedKey as repeated:
+        raise PopulationRefused(f"{where} {REPEATED_KEY} {repeated.key!r} in one object") from None
     except json.JSONDecodeError as error:
-        raise PopulationRefused(f"{FRAGMENTS}/{name} is not JSON: {error}") from error
+        raise PopulationRefused(f"{where} is not JSON: {error}") from error
+
+
+def _fragment(name: str, text: str) -> tuple[str, object]:
+    return name, parse_document(f"{FRAGMENTS}/{name}", text)
 
 
 def tree_fragments(root: pathlib.Path | str) -> list[tuple[str, object]]:
@@ -213,7 +249,7 @@ def tree_fragments(root: pathlib.Path | str) -> list[tuple[str, object]]:
 def load_tree(root: pathlib.Path | str) -> object:
     """The population of the tree at `root`: its header, read and parsed, then its fragments."""
     text = (pathlib.Path(root) / MONOLITH).read_text(encoding="utf-8")
-    return assemble(json.loads(text), tree_fragments(root))
+    return assemble(parse_document(MONOLITH, text), tree_fragments(root))
 
 
 def git(root: pathlib.Path, *args: str) -> str:
@@ -228,7 +264,7 @@ def load_revision(root: pathlib.Path | str, revision: str) -> object | None:
     listed = git(root, "ls-tree", "--name-only", revision, "--", MONOLITH)
     if not listed.strip():
         return None
-    monolith = json.loads(git(root, "show", f"{revision}:{MONOLITH}"))
+    monolith = parse_document(MONOLITH, git(root, "show", f"{revision}:{MONOLITH}"))
     names = git(root, "ls-tree", "--name-only", "-z", revision, "--", FRAGMENTS + "/")
     fragments = [
         _fragment(path.rsplit("/", 1)[1], git(root, "show", f"{revision}:{path}"))
@@ -512,6 +548,42 @@ def run_killer(root: pathlib.Path, killer: Killer, scratch: pathlib.Path) -> Run
     return Run(selected, done.returncode == 0)
 
 
+def shell_parser(target: str, text: bytes) -> str | None:
+    """`bash` or `sh` when the target is a shell script, else None. The shebang decides when it
+    names a shell, since a `.sh` file may be bash; else the extension does, and `.bash` is bash."""
+    first = text.split(b"\n", 1)[0].decode("utf-8", errors="replace")
+    named = SHELL_SHEBANG.match(first)
+    if named:
+        return "bash" if named.group(1) == "bash" else "sh"
+    if target.endswith(".bash"):
+        return "bash"
+    if target.endswith(".sh"):
+        return "sh"
+    return None
+
+
+def parses(parser: str, mutated: bytes) -> str | None:
+    """None when the shell reads the mutated bytes, else why it does not: `<parser> -n` reads
+    them from stdin and runs nothing, and a missing shell fails closed."""
+    try:
+        done = subprocess.run(
+            [parser, "-n"],
+            input=mutated,
+            capture_output=True,
+            timeout=PARSE_SECONDS,
+            check=False,
+        )
+    except FileNotFoundError:
+        return f"the mutant is unchecked: {parser} is not installed"
+    except subprocess.TimeoutExpired:
+        return f"the mutant is unchecked: {parser} -n timed out"
+    if done.returncode == 0:
+        return None
+    lines = done.stderr.decode("utf-8", errors="replace").strip().splitlines()
+    why = lines[0] if lines else f"exit {done.returncode}"
+    return f"the mutant does not parse: {parser}: {why}"
+
+
 def builds(root: pathlib.Path, row: Row, killer: Killer, mutated: bytes) -> str | None:
     """None when the installed mutant builds or parses; else why it does not."""
     if row.target.endswith(".py"):
@@ -520,6 +592,11 @@ def builds(root: pathlib.Path, row: Row, killer: Killer, mutated: bytes) -> str 
         except SyntaxError as error:
             return f"the mutant does not parse: {error.msg} at line {error.lineno}"
         return None
+    parser = shell_parser(row.target, mutated)
+    if parser is not None:
+        refusal = parses(parser, mutated)
+        if refusal is not None:
+            return refusal
     if killer.kind == "cargo":
         flags = ["--lib"] if killer.target == "lib" else ["--test", killer.target]
         done = subprocess.run(
@@ -721,7 +798,11 @@ def main(argv: list[str] | None = None) -> int:
         return prove(root, args)
     if not args.base:
         parser.error("retired needs --base")
-    return retired(root, args.base)
+    try:
+        return retired(root, args.base)
+    except (OSError, json.JSONDecodeError, PopulationRefused, UnresolvableTarget) as refusal:
+        print(f"mutation_rows: REFUSED: {refusal}", file=sys.stderr)
+        return EXIT_REFUSED
 
 
 if __name__ == "__main__":

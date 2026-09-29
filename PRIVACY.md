@@ -17,6 +17,11 @@ inventory, in the form the repository's privacy checks read.
 | `reading-topic-days` | each reading topic's state for each study day and why, and for a topic with new cards the ids of those cards and their notes | giving each topic one honest state each day, and the new cards its reading primes | contract | until account deletion |
 | `daily-rollups` | each study day's numbers from your reviews (answers by kind, time, true retention, graduations, decks studied), the card state recorded for it, its score and the score it closed with | scoring each study day once it closes, and showing you each day's numbers and score | contract | until account deletion |
 | `daily-course-stats` | each course's reviews, time, first answers and passes on each study day | showing you how each day's work was split across your courses | contract | until account deletion |
+| `notification-decisions` | every decision about a celebration or a nudge: its key, its kind, where it would go, whether it was sent, held or withheld and why, and the tiers asked for and shown | keeping one record of why each message was sent, held or withheld | contract | until account deletion |
+| `notification-deliveries` | each message delivered: its key, its kind, where it went, the study day and the lapse it belongs to | sending each message at most once across the bot and the Mini App, and capping comebacks | contract | until account deletion |
+| `notification-queue` | the celebrations held by quiet hours or a failed send: their text, why and since when they are held, and how often a send failed | delivering them once quiet hours end or sends succeed, and naming every one given up | contract | until account deletion |
+| `in-app-feed` | the celebrations delivered to the Mini App, and when the Mini App fetched them | showing you in the Mini App the celebrations raised there | contract | until account deletion |
+| `notification-settings` | which kinds of message you switched off, and your quiet hours | honouring your choices of what to receive and when to stay quiet | contract | until account deletion |
 
 The lawful basis of each is the contract (GDPR Article 6(1)(b)): the service you run needs it. None
 is kept for a fixed period. Each is kept until you erase it, which is how an account is deleted here.
@@ -50,6 +55,10 @@ You can also export and erase on the host that runs DeckStreak:
 - **The backup replica** keeps erased data for at most 3 days (`P3D`): Litestream takes a
   snapshot every 24 hours and keeps each for 48 hours, so an erased row leaves the replica within
   72 hours.
+- **The daily copies of the database** keep erased data for at most 3 days (`P3D`): one copy is
+  made each day, the newest three are kept, and the oldest is removed when a fourth is in place, so
+  an erased row leaves them within 3 days. They hold the database and nothing else: not the
+  private copy of your collection.
 - **The service journal** keeps its log lines for at most 14 days (`P14D`), and journald then
   deletes them.
 - **The private copy of your collection** is your own Anki data: an erase leaves it, and the next

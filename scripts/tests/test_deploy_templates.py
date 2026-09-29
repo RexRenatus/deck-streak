@@ -1,6 +1,7 @@
 """The deploy templates: every unit, timer and the Caddy block is hardened, fits the host budget,
 and names no private value (SPEC-032; ADR-007, ADR-010, ADR-025, ADR-032, ADR-038), SPEC-031's
-alert, SLO evaluator and memory watch included (SPEC-031 R6; ADR-031).
+alert, SLO evaluator and memory watch included (SPEC-031 R6; ADR-031); and every unit that loads
+a credential fails and pages when a credential refuses its start (SPEC-066 R2; ADR-067).
 
 The units are read with `_units.py`, DeckStreak's own reader of systemd unit syntax; the
 durable-services pack judges the templates on the maintainer's box (ADR-069, SPEC-056). Every
@@ -16,6 +17,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from collections import Counter
 from pathlib import Path
 
 import _units
@@ -28,6 +30,17 @@ BUDGET = DEPLOY / "host-budget.json"
 ENV_EXAMPLE = DEPLOY / "deck-streak.env.example"
 SCRUB = REPO / "scripts" / "public-scrub.py"
 ADR = REPO / "docs" / "decisions" / "ADR-032-deploy-templates-and-the-host-budget.md"
+# SPEC-064's units: the replicator's, the daily backup's and the drill's ceilings are decided here,
+# and the share it raised (ADR-032 keeps a dated note).
+ADR_BACKUPS = (
+    REPO
+    / "docs"
+    / "decisions"
+    / "ADR-064-deckstreak-backs-up-with-its-own-units-and-never-the-collection.md"
+)
+LITESTREAM_SERVICE_NAME = "deck-streak-litestream.service"
+BACKUP_SERVICE_NAME = "deck-streak-backup.service"
+DRILL_SERVICE_NAME = "deck-streak-restore-drill.service"
 
 # The one release binary every service runs, from the release root's `current` link (R2).
 BINARY = "/usr/local/lib/deck-streak/current/bin/deckstreakd"
@@ -39,6 +52,22 @@ ENVIRONMENT_FILE = "/etc/deck-streak/deck-streak.env"
 SOCKET = "/run/deck-streak-credentials/socket"
 # The alert template every service pages through on failure (R2; SPEC-031 ships it).
 ON_FAILURE = "deck-streak-alert@%n.service"
+# The directives a unit loads a credential with (systemd.exec(5)). A unit holding any of them
+# fails and pages when a credential refuses its start, the alert template excepted (SPEC-066 R2).
+CREDENTIAL_KEYS = (
+    "LoadCredential",
+    "LoadCredentialEncrypted",
+    "SetCredential",
+    "SetCredentialEncrypted",
+    "ImportCredential",
+)
+# The exit of a role that refuses start (SPEC-025 R1) and of the runner's page (SPEC-027 R7),
+# EXIT_FAILURE: no template counts it a success, and the census reads no other spelling of a status
+# (SPEC-066 R2).
+REFUSAL_EXIT = 1
+# The prefixes systemd reads before an ExecStart= path; `-` counts a failure as a success
+# (systemd.service(5)).
+EXEC_PREFIX = re.compile(r"^[-@:+!|]*")
 # The job template, whose instances the timers start (R1).
 JOB_TEMPLATE = "deck-streak-job"
 # SPEC-031's units: the alert template, the SLO evaluator and the memory watch. Each runs a script
@@ -52,6 +81,9 @@ SCRIPTS = {
         f"/usr/bin/python3 {RELEASE}/deploy/scripts/slo-evaluate.py {RELEASE}/deploy/slo.json"
     ),
     WATCH_SERVICE: f"{RELEASE}/deploy/scripts/memory-watch.sh",
+    # SPEC-064: the daily backup and the weekly drill run scripts of the release as well.
+    BACKUP_SERVICE_NAME: f"/usr/bin/python3 {RELEASE}/deploy/scripts/backup.py",
+    DRILL_SERVICE_NAME: f"{RELEASE}/deploy/scripts/restore-drill.sh",
 }
 # Their lifecycle: a oneshot each, ended before its timer is due again; the two a timer starts
 # yield to the daemons as a job does (resources.batch-priority), and the alert pages at once.
@@ -69,9 +101,36 @@ OBSERVABILITY_SERVICE = {
         "Nice": "10",
         "IOSchedulingClass": "idle",
     },
+    BACKUP_SERVICE_NAME: {
+        "Type": "oneshot",
+        "TimeoutStartSec": "30min",
+        "Nice": "10",
+        "IOSchedulingClass": "idle",
+    },
+    DRILL_SERVICE_NAME: {
+        "Type": "oneshot",
+        "TimeoutStartSec": "1h",
+        "Nice": "10",
+        "IOSchedulingClass": "idle",
+    },
+}
+# SPEC-064 R1: the Litestream daemon, an exec service that restarts on failure and can trip its
+# start limit; it has no watchdog, since Litestream does not notify systemd.
+LITESTREAM_SERVICE = {
+    "Type": "exec",
+    "Restart": "on-failure",
+    "RestartSec": "15",
+    "OOMPolicy": "kill",
+    "TimeoutStopSec": "30",
 }
 # The timers that start SPEC-031's units, each the service of its own name.
-OBSERVABILITY_TIMERS = {"deck-streak-slo.timer", "deck-streak-memory-watch.timer"}
+OBSERVABILITY_TIMERS = {
+    "deck-streak-slo.timer",
+    "deck-streak-memory-watch.timer",
+    # SPEC-064's daily backup and weekly restore drill.
+    "deck-streak-backup.timer",
+    "deck-streak-restore-drill.timer",
+}
 
 # Where the code declares each credential id a role reads, by the constant's name.
 CREDENTIAL_SOURCES = {
@@ -82,9 +141,10 @@ CREDENTIAL_SOURCES = {
 }
 # Which credentials each service's role reads: the api's owner gate (SPEC-024, SPEC-025), the bot's
 # transport, owner gate and `/sync` (SPEC-026 R1, R11), and the `sync` job's syncer (SPEC-022,
-# SPEC-027). The job template carries the sync's pair for every instance, and the private rail's map
-# answers them for the `sync` instance alone, the one job that reads them (ADR-038; SPEC-061 §8,
-# A14). SPEC-031's alert reads the bot token and the owner's id, whose private chat it pages (R3);
+# SPEC-027). The job template's `sync` instance carries the sync's pair in its drop-in, which the
+# reader reads with the template (SPEC-062 R14), and the private rail's map answers them for the
+# `sync` instance alone, the one job that reads them (ADR-038; SPEC-061 §8, A14). SPEC-031's alert
+# reads the bot token and the owner's id, whose private chat it pages (R3);
 # the evaluator and the watch read none.
 ROLE_CREDENTIALS = {
     "deck-streak-api.service": ("OWNER_USER_ID", "TELEGRAM_BOT_TOKEN"),
@@ -98,6 +158,9 @@ ROLE_CREDENTIALS = {
     f"{ALERT_TEMPLATE}@.service": ("OWNER_USER_ID", "TELEGRAM_BOT_TOKEN"),
     SLO_SERVICE: (),
     WATCH_SERVICE: (),
+    LITESTREAM_SERVICE_NAME: (),
+    BACKUP_SERVICE_NAME: (),
+    DRILL_SERVICE_NAME: (),
 }
 # The role each service runs (R2); the job template's `%i` is its instance, the job's id.
 ROLES = {
@@ -175,6 +238,10 @@ PER_SERVICE = {
     f"{ALERT_TEMPLATE}@.service": (None, None, ROLES_NETWORK, "systemd-journal"),
     SLO_SERVICE: ("deck-streak-slo", None, "AF_UNIX", "systemd-journal"),
     WATCH_SERVICE: ("deck-streak-memory-watch", None, "AF_UNIX", None),
+    # SPEC-064: the replicator and the drill reach the bucket; the backup opens no socket.
+    LITESTREAM_SERVICE_NAME: ("deck-streak", ENVIRONMENT_FILE, ROLES_NETWORK, None),
+    BACKUP_SERVICE_NAME: ("deck-streak", None, "AF_UNIX", None),
+    DRILL_SERVICE_NAME: ("deck-streak", ENVIRONMENT_FILE, ROLES_NETWORK, None),
 }
 PER_SERVICE_KEYS = (
     "StateDirectory",
@@ -209,16 +276,45 @@ WAIVED = {
     (f"{JOB_TEMPLATE}@liveness.timer", "calendar-not-persistent"),
     ("deck-streak-slo.timer", "calendar-not-persistent"),
     ("deck-streak-memory-watch.timer", "calendar-not-persistent"),
+    ("deck-streak-litestream.service", "watchdog-missing"),
 }
 
 
 def subject(root=REPO):
-    """Every unit under `root`'s deploy/, parsed as systemd reads it."""
+    """Every unit under `root`'s deploy/, through the reader, which refuses a line it cannot
+    read."""
     return _units.load_subject(Path(root))
 
 
 def services(root=REPO):
     return examined("service unit(s) under deploy/", sorted(subject(root).services, key=name))
+
+
+def reader_refusal(files):
+    """The reader's refusal of a `deploy/systemd/` holding `files`, each a file name and its
+    content, or None when it reads every one (SPEC-066)."""
+    with tempfile.TemporaryDirectory() as scratch:
+        folder = Path(scratch) / "deploy" / "systemd"
+        folder.mkdir(parents=True)
+        for file, content in files.items():
+            (folder / file).write_bytes(content.encode("utf-8"))
+        try:
+            subject(scratch)
+        except _units.Refused as refusal:
+            return str(refusal)
+    return None
+
+
+def planted_refusals(text, check):
+    """What `check` refuses of a service unit planted as `text`, or the reader's refusal of it."""
+    rel = "deploy/systemd/planted.service"
+    unit = _units.Unit("planted.service", rel, "service", [])
+    try:
+        for section, key, value, number in _units.assignments(text, rel):
+            unit.assignments.append(_units.Assignment(section, key, value, number, rel))
+    except _units.Refused as refusal:
+        return [str(refusal)]
+    return check(unit)
 
 
 def name(unit):
@@ -243,12 +339,14 @@ def budget():
 
 
 def adr_budget():
-    """ADR-032's budget table, by unit: (memory_high, memory_max). A row may name the SPEC that
-    ships its unit after the unit's name, as SPEC-031's three rows do."""
-    rows = re.findall(
-        r"(?m)^\| `([^`]+)`(?: \(SPEC-\d{3}\))? \| (\d+M) \| (\d+M) \|",
-        ADR.read_text(encoding="utf-8"),
-    )
+    """ADR-032's budget table with ADR-064's, by unit: (memory_high, memory_max). A row may name the
+    SPEC that ships its unit after the unit's name, as SPEC-031's three rows do."""
+    rows = []
+    for source in (ADR, ADR_BACKUPS):
+        rows += re.findall(
+            r"(?m)^\| `([^`]+)`(?: \(SPEC-\d{3}\))? \| (\d+M) \| (\d+M) \|",
+            source.read_text(encoding="utf-8"),
+        )
     return {unit: (high, ceiling) for unit, high, ceiling in rows}
 
 
@@ -280,17 +378,69 @@ def env_example():
 
 def credential_lines(root):
     """Every credential directive of every template under `root`, as (file, line, key, value)."""
-    keys = ("LoadCredential", "LoadCredentialEncrypted", "SetCredential")
-    keys += ("SetCredentialEncrypted", "ImportCredential")
+    keys = CREDENTIAL_KEYS
     found = []
     for path in sorted(Path(root).rglob("*")):
         if path.suffix not in (".service", ".timer", ".conf") or not path.is_file():
             continue
-        for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
-            key, equals, value = line.strip().partition("=")
-            if equals and key in keys:
-                found.append((path.relative_to(root).as_posix(), number, key, value))
+        rel = path.relative_to(root).as_posix()
+        for _, key, value, number in _units.assignments(_units.unit_text(path), rel):
+            if key in keys:
+                found.append((rel, number, key, value))
     return found
+
+
+NON_UNIT_DROPIN = "deploy/journald.conf.d"
+
+
+def dropin_directory_refusals(root):
+    """Every `*.d/` directory under `root`'s deploy/ that is not the drop-in directory of a unit
+    shipped beside it, as one line each: only `<unit name>.d/` is read with a unit (SPEC-066 R2), so
+    any other is refused, and the one directory of a file that is no unit is named here."""
+    refused = []
+    deploy = Path(root) / "deploy"
+    if not deploy.is_dir():
+        return refused
+    entries = sorted(deploy.rglob("*"))
+    shipped = [
+        path
+        for path in entries
+        if path.is_file()
+        and path.suffix in _units.UNIT_KINDS
+        and not path.parent.name.endswith(".d")
+    ]
+    own = {path.parent / f"{path.name}.d" for path in shipped}
+    templates = {(path.parent, *path.name.split("@.", 1)) for path in shipped if "@." in path.name}
+
+    def the_shipped_template_of(path):
+        """systemd reads an instance's drop-ins from `<name>@<instance>.<type>.d/` (SPEC-062 R14)."""
+        stem, at, rest = path.name.removesuffix(".d").partition("@")
+        instance, dot, kind = rest.rpartition(".")
+        template = (path.parent, stem, kind)
+        return template if at and dot and instance and template in templates else None
+
+    folders = [path for path in entries if path.is_dir() and path.name.endswith(".d")]
+    instances = Counter(the_shipped_template_of(path) for path in folders if path not in own)
+    for path in folders:
+        rel = path.relative_to(root).as_posix()
+        if path in own:
+            continue
+        template = the_shipped_template_of(path)
+        # The guards read a template's instance drop-ins into the template (SPEC-062 R14): exact
+        # for one instance, but two are merged where systemd keeps them apart, so both are refused.
+        if template is not None and instances[template] == 1:
+            continue
+        if template is not None:
+            refused.append(
+                f"{rel}: is not the only instance drop-in directory of its template, and is refused"
+            )
+            continue
+        if rel == NON_UNIT_DROPIN:
+            continue
+        refused.append(
+            f"{rel}: is not the drop-in directory of a unit shipped beside it, and is refused"
+        )
+    return refused
 
 
 def socket_form_refusals(lines, ids):
@@ -316,6 +466,226 @@ def environment_refusals(unit, ids):
             if _units.SECRET_NAME.search(variable) or variable.lower().replace("_", "-") in ids:
                 refused.append(f"{unit.rel}: {variable} passes a secret through the environment")
     return refused
+
+
+def loads_a_credential(unit):
+    """Whether `unit` holds a credential directive of any kind, its drop-ins and a template's
+    instance drop-ins included (SPEC-062 R14)."""
+    return any(unit.values("Service", key) for key in CREDENTIAL_KEYS)
+
+
+def names_the_refusal(statuses):
+    """Whether a `SuccessExitStatus=` or `RestartForceExitStatus=` value holds a word the census
+    reads as the refusal's exit, 1: `1` or `FAILURE` (`_units.exit_status`)."""
+    return any(_units.exit_status(word) == REFUSAL_EXIT for word in _units.status_words(statuses))
+
+
+def unread_words(statuses):
+    """The words of a `SuccessExitStatus=` or `RestartForceExitStatus=` value the census does not
+    read as an exit status: neither a decimal of at most 255 nor a status name. Each is refused,
+    since the census reads no other spelling of a status (SPEC-066)."""
+    return [word for word in _units.status_words(statuses) if _units.exit_status(word) is None]
+
+
+def unread_refusal(key, statuses, word):
+    """The census's refusal of `word`, one of `unread_words(statuses)`."""
+    return (
+        f"{key}={statuses} holds {word}, which is neither a decimal of at most 255 nor a status "
+        "name, and is refused"
+    )
+
+
+def refusal_page_conditions(unit):
+    """Why a start of `unit` that a credential refuses would not fail it and start its page
+    (SPEC-066 R2), each refusal beside the directive it reads: no `OnFailure=` naming the alert
+    template, a `[Unit]` condition or assertion or an `ExecCondition=`, any of which can stop the
+    start, an `ExecStart=` whose failure counts as a success, a success exit that holds the
+    refusal's, 1, or a word the census does not read as an exit status, or a restart that skips
+    the failed state, and with it `OnFailure=`. A condition that exits 1 to 254 skips the start,
+    and the unit is not marked failed, and an unmet `[Unit]` condition or assertion leaves it
+    inactive (systemd.service(5), systemd.unit(5)); the census cannot tell what a condition or an
+    assertion tests, so it refuses every one, an empty one included. A `RestartMode=direct`
+    is refused wherever it is assigned, and a `Restart=`, `RestartMode=` or `CollectMode=` that is
+    empty or not a known value is refused, so the census never decides which of two assignments is
+    in force."""
+    refused = []
+
+    def refuse(directive, why):
+        refused.append((directive, f"{unit.rel}: {why}"))
+
+    targets = [word for value in unit.values("Unit", "OnFailure") for word in value.split()]
+    if ON_FAILURE not in targets:
+        refuse("OnFailure", f"OnFailure={' '.join(targets)} does not name {ON_FAILURE}")
+    for assignment in unit.assignments:
+        if assignment.section == "Unit" and assignment.key.startswith(_units.STOPS_A_START):
+            refuse(
+                "Condition",
+                f"{assignment.key}={assignment.value} is refused, as every condition and "
+                "assertion is, since one can stop the start without failing the unit or starting "
+                "OnFailure=",
+            )
+    for command in unit.values("Service", "ExecCondition"):
+        refuse(
+            "ExecCondition",
+            f"ExecCondition={command} can skip the start, which neither fails the unit nor starts "
+            "OnFailure=",
+        )
+    for command in unit.values("Service", "ExecStart"):
+        if "-" in EXEC_PREFIX.match(command).group(0):
+            refuse("ExecStart", f"ExecStart={command} counts a failure as a success")
+    for statuses in unit.values("Service", "SuccessExitStatus"):
+        if names_the_refusal(statuses):
+            refuse(
+                "SuccessExitStatus", f"SuccessExitStatus={statuses} counts the refusal a success"
+            )
+        for word in unread_words(statuses):
+            refuse("SuccessExitStatus", unread_refusal("SuccessExitStatus", statuses, word))
+    for mode in unit.every("Service", "RestartMode"):
+        if mode == "direct":
+            refuse("RestartMode", "RestartMode=direct skips the failed state and OnFailure=")
+    for key, (section, known) in _units.ENUMS.items():
+        for value in unit.every(section, key):
+            if value not in known:
+                refuse(key, f"{key}={value} is empty or not a known value, which the check refuses")
+    return refused
+
+
+def off_list_refusals(unit, allowed):
+    """Every assignment of `unit`, its drop-ins included, whose section and key are not on
+    `allowed`, each naming its key (SPEC-066 R2)."""
+    off = _units.off_list([(a.section, a.key) for a in unit.assignments], allowed)
+    return [
+        f"{a.source}:{a.line}: [{a.section}] {a.key}={a.value} is not on this unit's list of keys, "
+        "and is refused"
+        for a, refused in zip(unit.assignments, off, strict=True)
+        if refused
+    ]
+
+
+# The one key an instance's drop-in may set (SPEC-062 R14). systemd applies an instance's drop-in to
+# that instance alone, while the guards read it into its template, so any other setting there would
+# be judged as the template's other instances' too, which systemd never gives them.
+INSTANCE_DROPIN_KEYS = {("Service", "LoadCredential")}
+
+
+def instance_dropin_refusals(unit):
+    """Every assignment of `unit` read from an instance's drop-in directory, neither the unit file
+    nor its own `<name>.d/`, whose section and key are not on INSTANCE_DROPIN_KEYS (SPEC-062
+    R14)."""
+    own = f"{unit.name}.d"
+    return [
+        f"{a.source}:{a.line}: [{a.section}] {a.key}={a.value} is set in an instance's drop-in, "
+        "which systemd applies to that instance alone, and is refused"
+        for a in unit.assignments
+        if a.source != unit.rel
+        and Path(a.source).parent.name != own
+        and (a.section, a.key) not in INSTANCE_DROPIN_KEYS
+    ]
+
+
+def value_refusals(unit, table):
+    """Every assignment of `unit`, its drop-ins included, of a key `table` bounds whose value is
+    not one it admits, each naming its key and its value (SPEC-066 R2)."""
+    return [
+        f"{a.source}:{a.line}: [{a.section}] {a.key}={a.value} is not a value this unit admits "
+        "for the key, and is refused"
+        for a in unit.assignments
+        if (a.section, a.key) in table and a.value not in table[(a.section, a.key)]
+    ]
+
+
+def restart_budget_refusals(unit):
+    """Every key of the restart budget a restarting unit lacks (SPEC-066 R2): a unit that assigns
+    `Restart=` to anything but `no`, in the unit or a drop-in, holds each key of
+    `_units.RESTART_BUDGET`, each refusal naming the missing key."""
+    if not any(value != "no" for value in unit.every("Service", "Restart")):
+        return []
+    return [
+        f"{unit.rel}: assigns Restart= and holds no {key}=, which the restart budget needs, and "
+        "is refused"
+        for section, key in _units.RESTART_BUDGET
+        if not unit.values(section, key)
+    ]
+
+
+def failure_target_refusals(unit):
+    """Every `OnFailure=` assignment of `unit`, its drop-ins included, that is not exactly the alert
+    template, an empty one and a target beside the alert's included (SPEC-066 R2)."""
+    return [
+        f"{a.source}:{a.line}: [Unit] OnFailure={a.value} is not the alert template "
+        f"{ON_FAILURE}, and is refused"
+        for a in unit.assignments
+        if (a.section, a.key) == ("Unit", "OnFailure") and a.value != ON_FAILURE
+    ]
+
+
+def refusal_page_refusals(unit):
+    """The refusals of `refusal_page_conditions`, each without the directive it reads."""
+    return [refusal for _, refusal in refusal_page_conditions(unit)]
+
+
+def alert_exit_refusals(unit):
+    """Why a refused start of the alert template would count as a success or skip its failed state
+    (SPEC-066 R3): each of R2's conditions but `OnFailure=`, which the alert template must not
+    name. They are told apart by the directive each refusal reads, never by the refusal's text,
+    since the restart mode's refusal names `OnFailure=` too. A `SuccessExitStatus=` whose every
+    word reads as a status other than 1 is refused as well: the alert template names none."""
+    conditions = refusal_page_conditions(unit)
+    refused = [refusal for directive, refusal in conditions if directive != "OnFailure"]
+    for statuses in unit.values("Service", "SuccessExitStatus"):
+        if not names_the_refusal(statuses) and not unread_words(statuses):
+            refused.append(
+                f"{unit.rel}: SuccessExitStatus={statuses} is named, and the alert template names "
+                "none"
+            )
+    return refused
+
+
+def restart_refusals(unit):
+    """Why a refused start of the alert template would not stay failed (SPEC-066 R3): a restart of
+    it. At the default `RestartMode=` a restart only passes through the failed state, and the
+    instance waits for its next start activating, so a loop of restarts settles failed only when
+    its start limit ends it (systemd.service(5), SPEC-031). So no `Restart=` assigns a known value
+    other than `no`, wherever it is assigned, and no `RestartForceExitStatus=` at all: on
+    `Type=oneshot` the service manager refuses a unit that names one outright, as a bad unit file
+    setting, and on another type one naming the refusal's exit forces a restart whatever
+    `Restart=` says. R2's units may restart: each failure a restart passes through still starts
+    their `OnFailure=` page (SPEC-031). An empty or unknown `Restart=` is R2's refusal
+    (`refusal_page_conditions`)."""
+    refused = []
+    for restart in unit.every("Service", "Restart"):
+        if restart in _units.ENUMS["Restart"][1] and restart != "no":
+            refused.append(f"{unit.rel}: Restart={restart} restarts the refusal")
+    oneshot = _units.service_type(unit) == "oneshot"
+    for statuses in unit.values("Service", "RestartForceExitStatus"):
+        if oneshot:
+            why = "makes the service manager refuse the Type=oneshot unit outright"
+            refused.append(f"{unit.rel}: RestartForceExitStatus={statuses} {why}")
+            continue
+        unread = unread_words(statuses)
+        for word in unread:
+            why = unread_refusal("RestartForceExitStatus", statuses, word)
+            refused.append(f"{unit.rel}: {why}")
+        if names_the_refusal(statuses):
+            refused.append(f"{unit.rel}: RestartForceExitStatus={statuses} restarts the refusal")
+        elif not unread:
+            why = "is named, and the alert template names none"
+            refused.append(f"{unit.rel}: RestartForceExitStatus={statuses} {why}")
+    return refused
+
+
+def collect_refusals(unit):
+    """Why the failed alert instance would leave `systemctl --failed` (SPEC-066 R3): its unloading.
+    `CollectMode=inactive-or-failed` unloads a unit once it has failed, where `inactive` keeps a
+    failed unit loaded until its failed state is reset (systemd.unit(5)). So no `CollectMode=`
+    assigns a known value other than `inactive`, wherever it is assigned; an empty or unknown one
+    is R2's refusal (`refusal_page_conditions`)."""
+    return [
+        f"{unit.rel}: CollectMode={mode} can unload the failed instance, which systemctl --failed "
+        "then no longer lists"
+        for mode in unit.every("Unit", "CollectMode")
+        if mode in _units.ENUMS["CollectMode"][1] and mode != "inactive"
+    ]
 
 
 # --- the Caddyfile, read as Caddy's lexer reads it -------------------------------------------
@@ -513,7 +883,12 @@ class TheTemplatesFitTheHostBudget(unittest.TestCase):
     def test_the_daemons_and_the_largest_job_fit_the_stack_share(self):
         units = services()
         share = budget()["memory"]
-        self.assertIn(f'"memory": "{share}"', ADR.read_text(encoding="utf-8"), "ADR-032's share")
+        # ADR-064 decides the share and ADR-032 carries a dated note that points to it.
+        self.assertIn(f'"memory": "{share}"', ADR_BACKUPS.read_text(encoding="utf-8"), "the share")
+        self.assertIn(
+            f"## Note, 2026-09-29: the share is {int(share.rstrip('M'))} MiB",
+            ADR.read_text(encoding="utf-8"),
+        )
         ceilings = {}
         for unit in units:
             value = last(unit, "Service", "MemoryMax")
@@ -523,14 +898,26 @@ class TheTemplatesFitTheHostBudget(unittest.TestCase):
             ceilings[unit.name] = size(value)
         daemons = [u.name for u in units if _units.long_running(u)]
         oneshots = [u.name for u in units if not _units.long_running(u)]
-        self.assertEqual(daemons, ["deck-streak-api.service", "deck-streak-bot.service"])
         self.assertEqual(
-            oneshots,
-            [f"{ALERT_TEMPLATE}@.service", f"{JOB_TEMPLATE}@.service", WATCH_SERVICE, SLO_SERVICE],
+            daemons,
+            ["deck-streak-api.service", "deck-streak-bot.service", LITESTREAM_SERVICE_NAME],
+        )
+        self.assertEqual(
+            sorted(oneshots),
+            sorted(
+                [
+                    f"{ALERT_TEMPLATE}@.service",
+                    f"{JOB_TEMPLATE}@.service",
+                    WATCH_SERVICE,
+                    SLO_SERVICE,
+                    BACKUP_SERVICE_NAME,
+                    DRILL_SERVICE_NAME,
+                ]
+            ),
         )
         worst = sum(ceilings[unit] for unit in daemons) + max(ceilings[unit] for unit in oneshots)
-        # ADR-032's arithmetic: 128 + 96 for the daemons, and the job's 384, still the largest.
-        self.assertEqual(worst, size("608M"))
+        # ADR-064's arithmetic: 128 + 96 + 64 for the daemons, and the job's 384, still the largest.
+        self.assertEqual(worst, size("672M"))
         self.assertLessEqual(worst, size(share), "the worst case exceeds DeckStreak's share")
         # The daemons' CPU quotas fit the share's CPUs.
         quotas = [
@@ -638,7 +1025,12 @@ class NoSecretInTheEnvironment(unittest.TestCase):
             where = f"{ENV_EXAMPLE.relative_to(REPO)}:{number}"
             self.assertIsNone(_units.SECRET_NAME.search(key), f"{where}: {key} names a secret")
             self.assertNotIn(key, SYSTEMD_SETS, f"{where}: systemd sets {key}")
-            self.assertIn(key, declared | {"RUST_LOG"}, f"{where}: no role reads {key}")
+            self.assertIn(
+                key,
+                # The replica's bucket is read by Litestream's configuration, not by a role.
+                declared | {"RUST_LOG", "DECKSTREAK_REPLICA_BUCKET"},
+                f"{where}: no role reads {key}",
+            )
         self.assertLessEqual(set(REQUIRED_SETTINGS), {key for _, key, _ in settings})
         units = services()
         for unit in units:
@@ -689,6 +1081,185 @@ class CredentialsComeFromTheSocket(unittest.TestCase):
             ],
         )
 
+    def test_a_credential_key_with_blanks_before_its_equals_sign_is_read_and_refused(self):
+        # The reader of credential lines is the unit reader, so a space or a tab before `=` is a key
+        # like any other (SPEC-066 R2): each is found, and a form that is not the socket is refused.
+        ids = set(credential_ids().values())
+        blanks = [(" ", "space"), ("\t", "tab")]
+        for blank, what in examined("blank(s) before the equals sign", blanks):
+            with tempfile.TemporaryDirectory() as scratch:
+                planted = Path(scratch) / "planted.service"
+                planted.write_text(
+                    "[Service]\n"
+                    f"LoadCredentialEncrypted{blank}=telegram-bot-token:{SOCKET}\n"
+                    f"LoadCredential{blank}=telegram-bot-token:/etc/token\n"
+                    f"LoadCredential{blank}=\n"
+                )
+                (Path(scratch) / "planted.service.d").mkdir()
+                (Path(scratch) / "planted.service.d" / "10-planted.conf").write_text(
+                    f"[Service]\nLoadCredential{blank}=telegram-bot-token:/etc/token\n"
+                )
+                found = credential_lines(scratch)
+            self.assertEqual(
+                socket_form_refusals(found, ids),
+                [
+                    "planted.service:2: LoadCredentialEncrypted= is refused; use LoadCredential= "
+                    "(ADR-038)",
+                    "planted.service:3: telegram-bot-token is read from '/etc/token', not the "
+                    "socket",
+                    "planted.service:4: '' is not a DeckStreak credential id",
+                    "planted.service.d/10-planted.conf:2: telegram-bot-token is read from "
+                    "'/etc/token', not the socket",
+                ],
+                what,
+            )
+
+    def test_a_shipped_templates_instance_dropin_directory_is_its_own_and_no_other_is(self):
+        # systemd reads an instance's drop-ins from `<name>@<instance>.<type>.d/`, so a shipped
+        # template's is admitted and read with the template: a key planted in it is judged as the
+        # template's own. An instance of a template the tree does not ship is refused, and so are
+        # two instances of a shipped one, which the reader would merge (SPEC-062 R14; SPEC-066
+        # amendment).
+        refused = "is not the drop-in directory of a unit shipped beside it, and is refused"
+        with tempfile.TemporaryDirectory() as scratch:
+            systemd = Path(scratch) / "deploy" / "systemd"
+            systemd.mkdir(parents=True)
+            (systemd / "planted@.service").write_text("[Service]\n", encoding="utf-8")
+            (systemd / "planted@tty1.service.d").mkdir()
+            self.assertEqual(dropin_directory_refusals(scratch), [], "the shipped template's own")
+            (systemd / "planted@tty1.service.d" / "10-planted.conf").write_text(
+                "[Unit]\nRequires=missing.service\n", encoding="utf-8"
+            )
+            (planted,) = subject(scratch).services
+            self.assertEqual(
+                off_list_refusals(planted, _units.PAGING_KEYS),
+                [
+                    "deploy/systemd/planted@tty1.service.d/10-planted.conf:2: [Unit] Requires="
+                    "missing.service is not on this unit's list of keys, and is refused"
+                ],
+                "a key planted in the template's instance drop-in",
+            )
+            (systemd / "other-app@tty1.service.d").mkdir()
+            (systemd / "other-app@tty1.service.d" / "override.conf").write_text(
+                "[Service]\nNice=5\n", encoding="utf-8"
+            )
+            self.assertEqual(
+                dropin_directory_refusals(scratch),
+                [f"deploy/systemd/other-app@tty1.service.d: {refused}"],
+                "an instance of a template the tree does not ship",
+            )
+            (systemd / "planted@test.service.d").mkdir()
+            shared = "is not the only instance drop-in directory of its template, and is refused"
+            self.assertEqual(
+                dropin_directory_refusals(scratch),
+                [
+                    f"deploy/systemd/other-app@tty1.service.d: {refused}",
+                    f"deploy/systemd/planted@test.service.d: {shared}",
+                    f"deploy/systemd/planted@tty1.service.d: {shared}",
+                ],
+                "a second instance of the shipped template",
+            )
+
+    def test_a_templates_own_dropin_directory_is_read_once(self):
+        # `<name>@.<type>.d/` is the template's own directory; the instance glob must not match it
+        # too, or each of its drop-ins is read twice and refused twice (SPEC-062 R14).
+        with tempfile.TemporaryDirectory() as scratch:
+            systemd = Path(scratch) / "deploy" / "systemd"
+            systemd.mkdir(parents=True)
+            (systemd / "planted@.service").write_text("[Service]\n", encoding="utf-8")
+            (systemd / "planted@.service.d").mkdir()
+            (systemd / "planted@.service.d" / "10.conf").write_text(
+                "[Unit]\nRequires=missing.service\n", encoding="utf-8"
+            )
+            (planted,) = subject(scratch).services
+            self.assertEqual(
+                off_list_refusals(planted, _units.PAGING_KEYS),
+                [
+                    "deploy/systemd/planted@.service.d/10.conf:2: [Unit] Requires="
+                    "missing.service is not on this unit's list of keys, and is refused"
+                ],
+                "a key planted in the template's own drop-in directory",
+            )
+
+    def test_an_instance_dropin_sets_only_the_credentials_it_loads(self):
+        # The guards read an instance's drop-in into its template, but systemd applies it to that
+        # instance alone: a setting there would stand in for the template's other instances, so an
+        # instance's drop-in sets only `LoadCredential=` (SPEC-062 R14).
+        units = examined("unit(s) under deploy/", list(subject().units.values()))
+        self.assertEqual([r for unit in units for r in instance_dropin_refusals(unit)], [])
+        with tempfile.TemporaryDirectory() as scratch:
+            systemd = Path(scratch) / "deploy" / "systemd"
+            (systemd / "planted@.service.d").mkdir(parents=True)
+            (systemd / "planted@tty1.service.d").mkdir()
+            (systemd / "planted@.service").write_text("[Service]\nMemoryMax=4G\n", encoding="utf-8")
+            (systemd / "planted@.service.d" / "10.conf").write_text(
+                "[Service]\nMemoryHigh=3G\n", encoding="utf-8"
+            )
+            (systemd / "planted@tty1.service.d" / "10-planted.conf").write_text(
+                f"[Service]\nLoadCredential=telegram-bot-token:{SOCKET}\nMemoryMax=48M\n",
+                encoding="utf-8",
+            )
+            (planted,) = subject(scratch).services
+            self.assertEqual(
+                instance_dropin_refusals(planted),
+                [
+                    "deploy/systemd/planted@tty1.service.d/10-planted.conf:3: [Service] "
+                    "MemoryMax=48M is set in an instance's drop-in, which systemd applies to that "
+                    "instance alone, and is refused"
+                ],
+                "a template's setting restated in its one instance's drop-in",
+            )
+
+    def test_only_a_units_own_dropin_directory_is_shipped_under_deploy(self):
+        # The tree ships the drop-in directories of its units and of the sync instance, and one
+        # directory of a file that is no unit (SPEC-066 R2). Planted beside a unit: a directory
+        # named for no unit, one named for the suffix alone, one named for an instance of a template
+        # of another type, and one named for a unit that is not shipped: each refused by its path.
+        # A unit's own is read, so it is not refused here.
+        self.assertEqual(dropin_directory_refusals(REPO), [])
+        refused = "is not the drop-in directory of a unit shipped beside it, and is refused"
+        planted = [
+            "deck-streak-.service.d",
+            "service.d",
+            f"planted{'@'}one.timer.d",
+            ".d",
+            "absent.service.d",
+        ]
+        for folder in examined("planted drop-in directorie(s)", planted):
+            with tempfile.TemporaryDirectory() as scratch:
+                systemd = Path(scratch) / "deploy" / "systemd"
+                (systemd / folder).mkdir(parents=True)
+                (systemd / "planted@.service").write_text("[Service]\n", encoding="utf-8")
+                (systemd / "planted@.service.d").mkdir()
+                self.assertEqual(
+                    dropin_directory_refusals(scratch),
+                    [f"deploy/systemd/{folder}: {refused}"],
+                    folder,
+                )
+        # A directory of the same name elsewhere under deploy/ is refused too, and the one
+        # directory the tree holds is refused when it moves.
+        beside = [
+            ("deploy/scripts/planted.service.d", ["deploy/systemd/planted.service"]),
+            ("deploy/other/journald.conf.d", []),
+            ("deploy/journald.conf.d/planted.service.d", []),
+            ("deploy/systemd/nested/planted.service.d", []),
+            ("deploy/scripts/planted.sh.d", ["deploy/scripts/planted.sh"]),
+            (
+                "deploy/systemd/planted.service.d/inner.service.d",
+                [
+                    "deploy/systemd/planted.service",
+                    "deploy/systemd/planted.service.d/inner.service",
+                ],
+            ),
+        ]
+        for where, files in beside:
+            with tempfile.TemporaryDirectory() as scratch:
+                (Path(scratch) / where).mkdir(parents=True)
+                for file in files:
+                    (Path(scratch) / file).parent.mkdir(parents=True, exist_ok=True)
+                    (Path(scratch) / file).write_text("[Service]\n", encoding="utf-8")
+                self.assertEqual(dropin_directory_refusals(scratch), [f"{where}: {refused}"], where)
+
 
 class TheServicesRunTheirRoles(unittest.TestCase):
     def test_every_service_runs_its_role_with_the_lifecycle_r1_names(self):
@@ -708,6 +1279,23 @@ class TheServicesRunTheirRoles(unittest.TestCase):
                 for key, value in OBSERVABILITY_SERVICE[unit.name].items():
                     self.assertEqual(last(unit, "Service", key), value, f"{unit.rel} {key}")
                 self.assertEqual(unit.values("Install", "WantedBy"), [], "a timer or a failure")
+                continue
+            if unit.name == LITESTREAM_SERVICE_NAME:
+                # SPEC-064 R1: the replicator runs the binary the rail provides with the release's
+                # own configuration, and keeps running.
+                self.assertEqual(
+                    unit.values("Service", "ExecStart"),
+                    [
+                        f"/usr/local/bin/litestream replicate -config {RELEASE}/deploy/litestream.yml"
+                    ],
+                    unit.rel,
+                )
+                self.assertEqual(last(unit, "Unit", "OnFailure"), ON_FAILURE, unit.rel)
+                for key, value in LITESTREAM_SERVICE.items():
+                    self.assertEqual(last(unit, "Service", key), value, f"{unit.rel} {key}")
+                for key, value in DAEMON_UNIT.items():
+                    self.assertEqual(last(unit, "Unit", key), value, f"{unit.rel} {key}")
+                self.assertEqual(unit.values("Install", "WantedBy"), ["multi-user.target"])
                 continue
             role = ROLES[unit.name]
             self.assertEqual(unit.values("Service", "ExecStart"), [f"{BINARY} {role}"], unit.rel)
@@ -748,5 +1336,916 @@ class TheServicesRunTheirRoles(unittest.TestCase):
             self.assertEqual(unit.values("Service", "AmbientCapabilities"), [], unit.rel)
 
 
+class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
+    def test_every_unit_that_loads_a_credential_fails_and_pages_on_a_refusal(self):
+        alert = f"{ALERT_TEMPLATE}@.service"
+        loading = examined(
+            "service unit(s) that load a credential",
+            sorted((unit for unit in subject().services if loads_a_credential(unit)), key=name),
+        )
+        # The roles that read a credential, and the alert template, which reads two (SPEC-031 R3).
+        self.assertEqual(
+            {unit.name for unit in loading},
+            {unit for unit, constants in ROLE_CREDENTIALS.items() if constants},
+        )
+        paging = [unit for unit in loading if unit.name != alert]
+        for unit in paging:
+            self.assertIn(ON_FAILURE, unit.values("Unit", "OnFailure"), unit.rel)
+        self.assertEqual([r for unit in paging for r in refusal_page_refusals(unit)], [])
+        # The alert template is the one exception: it cannot page about itself, so its own refusal
+        # is its failed state (SPEC-066 R3; test_alert_unit.py holds that route). Its refused start
+        # must still fail it and stay failed: every condition but OnFailure= holds for it, told
+        # apart by the directive each refusal reads and never by its text, it restarts none, and it
+        # is never unloaded while failed.
+        (template,) = [unit for unit in loading if unit.name == alert]
+        self.assertEqual(template.values("Unit", "OnFailure"), [])
+        self.assertEqual(alert_exit_refusals(template), [])
+        self.assertEqual(restart_refusals(template), [])
+        self.assertEqual(collect_refusals(template), [])
+        # Planted templates: one for each condition, and exit statuses the census does not read;
+        # one that meets all five; one that loads no credential and so is not examined; a restart
+        # value that is empty or unknown; a [Unit] condition or assertion; and templates shaped as
+        # the alert template is, which name no OnFailure=, each breaking one thing the alert
+        # template must not: its exit status, a restart mode that skips the failed state beside a
+        # restart, a forced restart, a condition, its collection, a success status and a forced
+        # restart that name no 1, a forced restart on Type=oneshot, an empty or unknown restart or
+        # collect value, and a [Unit] condition or assertion.
+        head = "[Unit]\nDescription=planted\n"
+        page = f"OnFailure={ON_FAILURE}\n"
+        run = "[Service]\nExecStart=/bin/true\n"
+        loads = f"LoadCredential=telegram-bot-token:{SOCKET}\n"
+        condition = "ExecCondition=/bin/true\n"
+        octal = "0o\\ -1777777777777777777777"
+        binary = "0b\\ -" + "1" * 64
+        unmet = "ConditionPathExists=/nonexistent\n"
+        asserted = "AssertPathExists=/nonexistent\n"
+        plants = {
+            "pages.service": f"{head}{page}{run}{loads}",
+            "silent.service": f"{head}{run}{loads}",
+            "condition.service": f"{head}{page}{run}{condition}{loads}",
+            "ignored.service": f"{head}{page}[Service]\nExecStart=-/bin/true\n{loads}",
+            "success.service": f"{head}{page}{run}SuccessExitStatus=2 1\n{loads}",
+            "spelled.service": f"{head}{page}{run}SuccessExitStatus=0x1\n{loads}",
+            "direct.service": f"{head}{page}{run}Restart=on-failure\nRestartMode=direct\n{loads}",
+            "reads-none.service": f"{head}{run}",
+            "alert-shaped.service": f"{head}{run}SuccessExitStatus=1\n{loads}",
+            "alert-spelled.service": f"{head}{run}SuccessExitStatus=01\n{loads}",
+            "alert-restarts.service": f"{head}{run}Restart=on-failure\nRestartMode=direct\n{loads}",
+            "alert-forced.service": f"{head}{run}RestartForceExitStatus=1\n{loads}",
+            "alert-condition.service": f"{head}{run}{condition}{loads}",
+            "alert-collected.service": f"{head}CollectMode=inactive-or-failed\n{run}{loads}",
+            "alert-status.service": (
+                f"{head}{run}SuccessExitStatus=2\nRestartForceExitStatus=2\n{loads}"
+            ),
+            "alert-oneshot.service": f"{head}{run}Type=oneshot\nRestartForceExitStatus=2\n{loads}",
+            "reset-mode.service": (
+                f"{head}{page}{run}Restart=on-failure\nRestartMode=direct\nRestartMode=\n{loads}"
+            ),
+            "unknown.service": f"{head}{page}{run}Restart=On-Failure\n{loads}",
+            "alert-reset-restart.service": (
+                f"{head}{run}Restart=on-failure\nRestartSec=1d\nRestart=\n{loads}"
+            ),
+            "alert-reset-collect.service": (
+                f"{head}CollectMode=inactive-or-failed\nCollectMode=\n{run}{loads}"
+            ),
+            "alert-unknown.service": f"{head}{run}RestartMode=Direct\n{loads}",
+            "wide-octal.service": f"{head}{page}{run}SuccessExitStatus={octal}\n{loads}",
+            "wide-binary.service": f"{head}{page}{run}SuccessExitStatus={binary}\n{loads}",
+            "alert-wide-octal.service": f"{head}{run}SuccessExitStatus={octal}\n{loads}",
+            "alert-forced-spelled.service": f"{head}{run}RestartForceExitStatus=0x1\n{loads}",
+            "unit-condition.service": f"{head}{unmet}{page}{run}{loads}",
+            "unit-condition-reset.service": (
+                f"{head}{unmet}ConditionPathExists=\n{page}{run}{loads}"
+            ),
+            "unit-assert.service": f"{head}{asserted}{page}{run}{loads}",
+            "alert-unit-condition.service": f"{head}{unmet}{run}{loads}",
+            "alert-unit-assert.service": f"{head}{asserted}{run}{loads}",
+        }
+        with tempfile.TemporaryDirectory() as scratch:
+            folder = Path(scratch) / "deploy" / "systemd"
+            folder.mkdir(parents=True)
+            for file, content in plants.items():
+                (folder / file).write_text(content, encoding="utf-8")
+            planted = sorted(subject(scratch).services, key=name)
+        planted_loading = [unit for unit in planted if loads_a_credential(unit)]
+        self.assertEqual(
+            [unit.name for unit in planted_loading],
+            [
+                "alert-collected.service",
+                "alert-condition.service",
+                "alert-forced-spelled.service",
+                "alert-forced.service",
+                "alert-oneshot.service",
+                "alert-reset-collect.service",
+                "alert-reset-restart.service",
+                "alert-restarts.service",
+                "alert-shaped.service",
+                "alert-spelled.service",
+                "alert-status.service",
+                "alert-unit-assert.service",
+                "alert-unit-condition.service",
+                "alert-unknown.service",
+                "alert-wide-octal.service",
+                "condition.service",
+                "direct.service",
+                "ignored.service",
+                "pages.service",
+                "reset-mode.service",
+                "silent.service",
+                "spelled.service",
+                "success.service",
+                "unit-assert.service",
+                "unit-condition-reset.service",
+                "unit-condition.service",
+                "unknown.service",
+                "wide-binary.service",
+                "wide-octal.service",
+            ],
+        )
+        where = "deploy/systemd"
+        # The restart mode's refusal: it skips a paging unit's OnFailure=, and the alert template's
+        # failed state; and the condition's: a skipped start neither fails the unit nor pages.
+        direct_mode = "RestartMode=direct skips the failed state and OnFailure="
+        skip = (
+            "ExecCondition=/bin/true can skip the start, which neither fails the unit nor starts "
+            "OnFailure="
+        )
+        # And a `Restart=`, `RestartMode=` or `CollectMode=` that is empty or not a known value, and
+        # an exit-status word the census does not read.
+        word = "which is neither a decimal of at most 255 nor a status name, and is refused"
+        # And every [Unit] condition and assertion, an empty one included.
+        stops = (
+            "is refused, as every condition and assertion is, since one can stop the start without "
+            "failing the unit or starting OnFailure="
+        )
+        unread = "is empty or not a known value, which the check refuses"
+        self.assertEqual(
+            [r for unit in planted_loading for r in refusal_page_refusals(unit)],
+            [
+                f"{where}/alert-collected.service: OnFailure= does not name {ON_FAILURE}",
+                f"{where}/alert-condition.service: OnFailure= does not name {ON_FAILURE}",
+                f"{where}/alert-condition.service: {skip}",
+                f"{where}/alert-forced-spelled.service: OnFailure= does not name {ON_FAILURE}",
+                f"{where}/alert-forced.service: OnFailure= does not name {ON_FAILURE}",
+                f"{where}/alert-oneshot.service: OnFailure= does not name {ON_FAILURE}",
+                f"{where}/alert-reset-collect.service: OnFailure= does not name {ON_FAILURE}",
+                f"{where}/alert-reset-collect.service: CollectMode= {unread}",
+                f"{where}/alert-reset-restart.service: OnFailure= does not name {ON_FAILURE}",
+                f"{where}/alert-reset-restart.service: Restart= {unread}",
+                f"{where}/alert-restarts.service: OnFailure= does not name {ON_FAILURE}",
+                f"{where}/alert-restarts.service: {direct_mode}",
+                f"{where}/alert-shaped.service: OnFailure= does not name {ON_FAILURE}",
+                f"{where}/alert-shaped.service: SuccessExitStatus=1 counts the refusal a success",
+                f"{where}/alert-spelled.service: OnFailure= does not name {ON_FAILURE}",
+                f"{where}/alert-spelled.service: SuccessExitStatus=01 holds 01, {word}",
+                f"{where}/alert-status.service: OnFailure= does not name {ON_FAILURE}",
+                f"{where}/alert-unit-assert.service: OnFailure= does not name {ON_FAILURE}",
+                f"{where}/alert-unit-assert.service: AssertPathExists=/nonexistent {stops}",
+                f"{where}/alert-unit-condition.service: OnFailure= does not name {ON_FAILURE}",
+                f"{where}/alert-unit-condition.service: ConditionPathExists=/nonexistent {stops}",
+                f"{where}/alert-unknown.service: OnFailure= does not name {ON_FAILURE}",
+                f"{where}/alert-unknown.service: RestartMode=Direct {unread}",
+                f"{where}/alert-wide-octal.service: OnFailure= does not name {ON_FAILURE}",
+                f"{where}/alert-wide-octal.service: SuccessExitStatus={octal} holds 0o\\, {word}",
+                f"{where}/alert-wide-octal.service: SuccessExitStatus={octal} holds "
+                f"{octal[4:]}, {word}",
+                f"{where}/condition.service: {skip}",
+                f"{where}/direct.service: {direct_mode}",
+                f"{where}/ignored.service: ExecStart=-/bin/true counts a failure as a success",
+                f"{where}/reset-mode.service: {direct_mode}",
+                f"{where}/reset-mode.service: RestartMode= {unread}",
+                f"{where}/silent.service: OnFailure= does not name {ON_FAILURE}",
+                f"{where}/spelled.service: SuccessExitStatus=0x1 holds 0x1, {word}",
+                f"{where}/success.service: SuccessExitStatus=2 1 counts the refusal a success",
+                f"{where}/unit-assert.service: AssertPathExists=/nonexistent {stops}",
+                f"{where}/unit-condition-reset.service: ConditionPathExists=/nonexistent {stops}",
+                f"{where}/unit-condition-reset.service: ConditionPathExists= {stops}",
+                f"{where}/unit-condition.service: ConditionPathExists=/nonexistent {stops}",
+                f"{where}/unknown.service: Restart=On-Failure {unread}",
+                f"{where}/wide-binary.service: SuccessExitStatus={binary} holds 0b\\, {word}",
+                f"{where}/wide-binary.service: SuccessExitStatus={binary} holds "
+                f"{binary[4:]}, {word}",
+                f"{where}/wide-octal.service: SuccessExitStatus={octal} holds 0o\\, {word}",
+                f"{where}/wide-octal.service: SuccessExitStatus={octal} holds {octal[4:]}, {word}",
+            ],
+        )
+        # The alert template's own checks refuse each alert-shaped plant for what it breaks alone:
+        # the exit conditions for its exit status, its restart mode or its condition, the restart
+        # check for its restart, and the collection check for its collection. `alert-restarts` is
+        # refused by the exit conditions with exactly its RestartMode= line, though that line, like
+        # its OnFailure= one, names OnFailure=. A success status and a forced restart that name no
+        # 1 are refused too, since the alert template names neither; and on Type=oneshot the
+        # service manager refuses a forced restart outright.
+        shaped = [unit for unit in planted_loading if unit.name.startswith("alert-")]
+        counts = "counts the refusal a success"
+        named = "is named, and the alert template names none"
+        oneshot = "makes the service manager refuse the Type=oneshot unit outright"
+        unloads = "can unload the failed instance, which systemctl --failed then no longer lists"
+        refused = {
+            "alert-collected.service": (
+                [],
+                [],
+                [f"{where}/alert-collected.service: CollectMode=inactive-or-failed {unloads}"],
+            ),
+            "alert-condition.service": ([f"{where}/alert-condition.service: {skip}"], [], []),
+            "alert-forced-spelled.service": (
+                [],
+                [
+                    f"{where}/alert-forced-spelled.service: RestartForceExitStatus=0x1 holds 0x1, "
+                    f"{word}"
+                ],
+                [],
+            ),
+            "alert-forced.service": (
+                [],
+                [f"{where}/alert-forced.service: RestartForceExitStatus=1 restarts the refusal"],
+                [],
+            ),
+            "alert-oneshot.service": (
+                [],
+                [f"{where}/alert-oneshot.service: RestartForceExitStatus=2 {oneshot}"],
+                [],
+            ),
+            "alert-reset-collect.service": (
+                [f"{where}/alert-reset-collect.service: CollectMode= {unread}"],
+                [],
+                [f"{where}/alert-reset-collect.service: CollectMode=inactive-or-failed {unloads}"],
+            ),
+            "alert-reset-restart.service": (
+                [f"{where}/alert-reset-restart.service: Restart= {unread}"],
+                [f"{where}/alert-reset-restart.service: Restart=on-failure restarts the refusal"],
+                [],
+            ),
+            "alert-restarts.service": (
+                [f"{where}/alert-restarts.service: {direct_mode}"],
+                [f"{where}/alert-restarts.service: Restart=on-failure restarts the refusal"],
+                [],
+            ),
+            "alert-shaped.service": (
+                [f"{where}/alert-shaped.service: SuccessExitStatus=1 {counts}"],
+                [],
+                [],
+            ),
+            "alert-spelled.service": (
+                [f"{where}/alert-spelled.service: SuccessExitStatus=01 holds 01, {word}"],
+                [],
+                [],
+            ),
+            "alert-status.service": (
+                [f"{where}/alert-status.service: SuccessExitStatus=2 {named}"],
+                [f"{where}/alert-status.service: RestartForceExitStatus=2 {named}"],
+                [],
+            ),
+            "alert-unit-assert.service": (
+                [f"{where}/alert-unit-assert.service: AssertPathExists=/nonexistent {stops}"],
+                [],
+                [],
+            ),
+            "alert-unit-condition.service": (
+                [f"{where}/alert-unit-condition.service: ConditionPathExists=/nonexistent {stops}"],
+                [],
+                [],
+            ),
+            "alert-unknown.service": (
+                [f"{where}/alert-unknown.service: RestartMode=Direct {unread}"],
+                [],
+                [],
+            ),
+            "alert-wide-octal.service": (
+                [
+                    f"{where}/alert-wide-octal.service: SuccessExitStatus={octal} holds "
+                    f"0o\\, {word}",
+                    f"{where}/alert-wide-octal.service: SuccessExitStatus={octal} holds "
+                    f"{octal[4:]}, {word}",
+                ],
+                [],
+                [],
+            ),
+        }
+        self.assertEqual(
+            {
+                unit.name: (
+                    alert_exit_refusals(unit),
+                    restart_refusals(unit),
+                    collect_refusals(unit),
+                )
+                for unit in shaped
+            },
+            refused,
+        )
+        # The census reads an exit-status word only as a decimal of at most 255, with no sign and
+        # no leading zero, or as a status name `systemd-analyze exit-status` lists, and refuses
+        # every other word: each word below has the reading given, None where the census refuses
+        # it. A value splits into words on spaces and tabs alone, and a backslash or a quote stays
+        # in its word, which the census then refuses.
+        readings = [
+            ("1 FAILURE", 1),
+            ("0 SUCCESS", 0),
+            ("2 INVALIDARGUMENT", 2),
+            ("78 CONFIG", 78),
+            ("200 CHDIR", 200),
+            ("255 EXCEPTION", 255),
+            (
+                "01 0001 0x1 0X01 +1 +0x1 0b1 0B1 0o1 0O1 010 00 -0 0x0 -1 256 1000 08 1.0 1e0 "
+                '"1" \\1 failure Failure SIGKILL KILL \u0661 \u00b9 \uff11 1\u0661 1\uff10 0x 0b '
+                "+ -",
+                None,
+            ),
+        ]
+        for words, reading in readings:
+            for status in words.split(" "):
+                self.assertEqual(_units.exit_status(status), reading, status)
+        words = _units.status_words('\\1 F\\AILURE 0\\ 1 "1"\t2  3\\')
+        self.assertEqual(words, ["\\1", "F\\AILURE", "0\\", "1", '"1"', "2", "3\\"])
+        self.assertEqual(
+            [_units.exit_status(w) for w in words], [None, None, None, 1, None, 2, None]
+        )
+        # A cross-check corpus, refused whole: each word planted as the SuccessExitStatus= of a
+        # paging unit and of an alert-shaped one, and as the RestartForceExitStatus= of an
+        # alert-shaped one, as written and with each space or tab after a backslash, is refused by
+        # the reader or by the census. The words: small and large magnitudes in every base, with
+        # prefixes, signs and whitespace around them.
+        magnitudes = [
+            "1",
+            "01",
+            "256",
+            str(2**32 + 1),
+            str(2**64 - 2),
+            str(2**64 - 1),
+            "100000001",
+            "fffffffffffffffe",
+            "ffffffffffffffff",
+            "1" * 63 + "0",
+            "1" * 64,
+            "1777777777777777777776",
+            "1777777777777777777777",
+        ]
+        corpus = [
+            f"{lead}{prefix}{gap}{sign}{magnitude}"
+            for lead in ("", "\x0b", "\x0c")
+            for prefix in ("", "+", "-", "0x", "0X", "0b", "0B", "0o", "0O")
+            for gap in ("", " ", "\t", "\x0b", "\x0c")
+            for sign in ("", "+", "-")
+            for magnitude in magnitudes
+        ]
+        corpus += [
+            status.replace(" ", "\\ ").replace("\t", "\\\t")
+            for status in corpus
+            if " " in status or "\t" in status
+        ]
+        shapes = [
+            (f"{head}{page}{run}SuccessExitStatus=", refusal_page_refusals),
+            (f"{head}{run}SuccessExitStatus=", alert_exit_refusals),
+            (f"{head}{run}RestartForceExitStatus=", restart_refusals),
+        ]
+        cases = [(shape, check, status) for shape, check in shapes for status in corpus]
+        admitted = [
+            (shape, status)
+            for shape, check, status in examined("cross-check plant(s)", cases)
+            if not planted_refusals(f"{shape}{status}\n{loads}", check)
+        ]
+        self.assertEqual(admitted, [])
+        # The reader refuses a line outside the plain syntax the templates hold, one planted
+        # template at a time, naming the file and the line: a line that ends in a backslash, a
+        # comment's included; a control character other than tab and newline, or whitespace outside
+        # ASCII; and a line that is neither blank, a comment, a section header nor an assignment
+        # inside a section. A tab, and a `§` in a comment, are read.
+        backslash = "ends in a backslash, which the reader refuses"
+        character = "a character the reader refuses"
+        shape = "is neither a section header nor an assignment in a section"
+        misread = {
+            "continued-comment.service": (
+                f"{head}{page}{run}# a note \\\nExecCondition=/bin/true\n{loads}",
+                f"6: {backslash}",
+            ),
+            "escaped-backslash.service": (
+                f"{head}{page}{run}X-Note=kept \\\\\nExecCondition=/bin/true\n{loads}",
+                f"6: {backslash}",
+            ),
+            "alert-continued.service": (
+                f"{head}{run}SuccessExitStatus=2 \\\n1\n{loads}",
+                f"5: {backslash}",
+            ),
+            "spaced-section.service": (
+                f"[ Unit ]\nDescription=planted\n{page}{run}{loads}",
+                f"1: {shape}",
+            ),
+            "no-equals.service": (
+                f"{head}{page}{run}ExecCondition /bin/true\n{loads}",
+                f"6: {shape}",
+            ),
+            "bare-key.service": (f"{head}{page}{run}ExecCondition\n{loads}", f"6: {shape}"),
+            "spaced-key.service": (
+                f"{head}{page}{run}Exec Condition=/bin/true\n{loads}",
+                f"6: {shape}",
+            ),
+            "no-section.service": (f"{page}{head}{run}{loads}", f"1: {shape}"),
+        }
+        for char in "\x0b\x0c\r\x00\x1c\x1d\x1e\x1f\x7f\x85\u00a0\u2009\u2028\u2029\u3000":
+            misread[f"char-{ord(char):04x}.service"] = (
+                f"{head}{page}{run}SuccessExitStatus={char}1 X-Y=z\n{loads}",
+                f"6: holds U+{ord(char):04X}, {character}",
+            )
+        misread["alert-char-000b.service"] = (
+            f"{head}{run}SuccessExitStatus=\x0b1 X-Y=z\n{loads}",
+            f"5: holds U+000B, {character}",
+        )
+        cases = examined("planted template(s) the reader refuses", sorted(misread))
+        self.assertEqual(
+            {file: reader_refusal({file: misread[file][0]}) for file in cases},
+            {file: f"deploy/systemd/{file}:{misread[file][1]}" for file in cases},
+        )
+        read = f"{head}# a note, \u00a7 3\n{page}{run}\t{loads}"
+        self.assertIsNone(reader_refusal({"read.service": read}))
+
+    def test_a_key_off_its_units_list_is_refused_and_the_trees_units_hold_only_listed_keys(self):
+        # Each unit that loads a credential holds only the keys its kind's list names, in the
+        # section the list gives them; the alert template's list is its own (SPEC-066 R2, R3).
+        alert = f"{ALERT_TEMPLATE}@.service"
+        loading = examined(
+            "service unit(s) that load a credential",
+            sorted((unit for unit in subject().services if loads_a_credential(unit)), key=name),
+        )
+        for unit in loading:
+            allowed = _units.ALERT_KEYS if unit.name == alert else _units.PAGING_KEYS
+            self.assertEqual(off_list_refusals(unit, allowed), [], unit.rel)
+        # The lists are the keys the units use: each kind's list is exactly the (section, key)
+        # pairs its shipped units hold, drop-ins included, so a key no unit uses is on no list.
+        used = {"alert": set(), "paging": set()}
+        for unit in loading:
+            used["alert" if unit.name == alert else "paging"] |= {
+                (a.section, a.key) for a in unit.assignments
+            }
+        for kind, keys in (("alert", _units.ALERT_KEYS), ("paging", _units.PAGING_KEYS)):
+            listed = {(section, key) for section, names in keys.items() for key in names}
+            self.assertEqual(listed, used[kind], kind)
+        # Planted units: each key below is off its unit's list and refused by name and line. The
+        # directives that make a start depend on another unit, on the alert template and on a
+        # paging unit; a key with no standard meaning; `OnFailure=` on the alert template, whose
+        # list never holds it; and a key the list holds in another section. A control of each
+        # kind holds only listed keys and is admitted.
+        where = "deploy/systemd/planted.service"
+        head = "[Unit]\nDescription=planted\n"
+        page = f"OnFailure={ON_FAILURE}\n"
+        run = "[Service]\nExecStart=/bin/true\n"
+        loads = f"LoadCredential=telegram-bot-token:{SOCKET}\n"
+
+        def refusal(line, section, key, value):
+            return (
+                f"{where}:{line}: [{section}] {key}={value} is not on this unit's list of keys, "
+                "and is refused"
+            )
+
+        # Each plant: the list, the unit's kind, a line planted at the end of `[Unit]`, and one
+        # planted at the end of `[Service]`, and the refusals it draws.
+        plants = {
+            "alert control": (_units.ALERT_KEYS, "", "", "", []),
+            "paging control": (_units.PAGING_KEYS, page, "", "", []),
+            "paging key extending a listed key": (
+                _units.PAGING_KEYS,
+                page,
+                "OnFailureJobMode=fail\n",
+                "",
+                [refusal(3, "Unit", "OnFailureJobMode", "fail")],
+            ),
+            "alert requisite": (
+                _units.ALERT_KEYS,
+                "",
+                "Requisite=missing.service\n",
+                "",
+                [refusal(3, "Unit", "Requisite", "missing.service")],
+            ),
+            "alert requires": (
+                _units.ALERT_KEYS,
+                "",
+                "Requires=missing.service\n",
+                "",
+                [refusal(3, "Unit", "Requires", "missing.service")],
+            ),
+            "alert binds-to": (
+                _units.ALERT_KEYS,
+                "",
+                "BindsTo=missing.service\n",
+                "",
+                [refusal(3, "Unit", "BindsTo", "missing.service")],
+            ),
+            "paging requisite": (
+                _units.PAGING_KEYS,
+                page,
+                "Requisite=missing.service\n",
+                "",
+                [refusal(3, "Unit", "Requisite", "missing.service")],
+            ),
+            "alert extension key": (
+                _units.ALERT_KEYS,
+                "",
+                "X-Note=kept\n",
+                "",
+                [refusal(3, "Unit", "X-Note", "kept")],
+            ),
+            "alert key of a section off its list": (
+                _units.ALERT_KEYS,
+                "",
+                "",
+                "[Socket]\nExecStart=/bin/true\n",
+                [refusal(7, "Socket", "ExecStart", "/bin/true")],
+            ),
+            "paging extension key": (
+                _units.PAGING_KEYS,
+                page,
+                "",
+                "X-Note=kept\n",
+                [refusal(7, "Service", "X-Note", "kept")],
+            ),
+            "alert on-failure": (
+                _units.ALERT_KEYS,
+                "",
+                page,
+                "",
+                [refusal(3, "Unit", "OnFailure", ON_FAILURE)],
+            ),
+            "alert listed key, wrong section": (
+                _units.ALERT_KEYS,
+                "",
+                "User=nobody\n",
+                "",
+                [refusal(3, "Unit", "User", "nobody")],
+            ),
+            "paging listed key, wrong section": (
+                _units.PAGING_KEYS,
+                page,
+                "",
+                "Wants=network-online.target\n",
+                [refusal(7, "Service", "Wants", "network-online.target")],
+            ),
+        }
+        got = {}
+        for label in examined("planted unit(s) held to a list", sorted(plants)):
+            allowed, first, unit_line, service_line, _ = plants[label]
+            text = f"{head}{unit_line}{first}{run}{loads}{service_line}"
+            got[label] = planted_refusals(
+                text, lambda unit, allowed=allowed: off_list_refusals(unit, allowed)
+            )
+        self.assertEqual(got, {label: plants[label][4] for label in plants})
+        # A drop-in of a unit is read with it: a directive planted in one is refused by the drop-in's
+        # file and line.
+        with tempfile.TemporaryDirectory() as scratch:
+            folder = Path(scratch) / "deploy" / "systemd"
+            (folder / "planted.service.d").mkdir(parents=True)
+            (folder / "planted.service").write_text(f"{head}{run}{loads}", encoding="utf-8")
+            (folder / "planted.service.d" / "10-planted.conf").write_text(
+                "[Unit]\nRequires=missing.service\n", encoding="utf-8"
+            )
+            (planted,) = subject(scratch).services
+        self.assertEqual(
+            off_list_refusals(planted, _units.ALERT_KEYS),
+            [
+                "deploy/systemd/planted.service.d/10-planted.conf:2: [Unit] Requires="
+                "missing.service is not on this unit's list of keys, and is refused"
+            ],
+        )
+
+    def test_a_paging_units_restart_holds_only_the_admitted_value(self):
+        # Every paging unit that loads a credential holds, at every assignment of a bounded key,
+        # only the value the table admits: `Restart=` is `on-failure` and no other, so a restart
+        # value that stops a oneshot unit loading, or turns its failure into a success, is refused
+        # by key and value (SPEC-066 R2).
+        table = _units.PAGING_VALUES
+        alert = f"{ALERT_TEMPLATE}@.service"
+        loading = examined(
+            "service unit(s) that load a credential",
+            sorted((unit for unit in subject().services if loads_a_credential(unit)), key=name),
+        )
+        paging = [unit for unit in loading if unit.name != alert]
+        self.assertEqual([r for unit in paging for r in value_refusals(unit, table)], [])
+        head = "[Unit]\nDescription=planted\n"
+        page = f"OnFailure={ON_FAILURE}\n"
+        run = "[Service]\nType=oneshot\nExecStart=/bin/true\n"
+        loads = f"LoadCredential=telegram-bot-token:{SOCKET}\n"
+        where = "deploy/systemd/planted.service"
+
+        def refusal(line, section, key, value):
+            return (
+                f"{where}:{line}: [{section}] {key}={value} is not a value this unit admits for "
+                "the key, and is refused"
+            )
+
+        # Each plant is (lines added to [Unit], lines added to [Service], refusals). A [Unit] line
+        # sits at line 4, so the [Service] lines that follow it move down one.
+        plants = {
+            "oneshot restart always": (
+                "",
+                "Restart=always\n",
+                [refusal(8, "Service", "Restart", "always")],
+            ),
+            "oneshot restart on-success": (
+                "",
+                "Restart=on-success\n",
+                [refusal(8, "Service", "Restart", "on-success")],
+            ),
+            "restart extending the admitted value": (
+                "",
+                "Restart=on-failure-extra\n",
+                [refusal(8, "Service", "Restart", "on-failure-extra")],
+            ),
+            "restart control": ("", "Restart=on-failure\n", []),
+            "start limit interval unbounded": (
+                "StartLimitIntervalSec=0\n",
+                "",
+                [refusal(4, "Unit", "StartLimitIntervalSec", "0")],
+            ),
+            "start limit burst raised": (
+                "StartLimitBurst=1000\n",
+                "",
+                [refusal(4, "Unit", "StartLimitBurst", "1000")],
+            ),
+            "restart delay removed": (
+                "",
+                "RestartSec=0\n",
+                [refusal(8, "Service", "RestartSec", "0")],
+            ),
+            "ordering names another unit": (
+                "After=other.service\n",
+                "",
+                [refusal(4, "Unit", "After", "other.service")],
+            ),
+            "pull-in names another unit": (
+                "Wants=other.service\n",
+                "",
+                [refusal(4, "Unit", "Wants", "other.service")],
+            ),
+            "restart budget and ordering controls": (
+                "StartLimitIntervalSec=300\nStartLimitBurst=5\n"
+                "After=network-online.target\nWants=network-online.target\n",
+                "RestartSec=15\n",
+                [],
+            ),
+        }
+        got = {}
+        for label in examined("planted unit(s) held to the value table", sorted(plants)):
+            unit_lines, service_lines, _ = plants[label]
+            got[label] = planted_refusals(
+                f"{head}{page}{unit_lines}{run}{loads}{service_lines}",
+                lambda unit: value_refusals(unit, table),
+            )
+        self.assertEqual(got, {label: plants[label][2] for label in plants})
+        # A drop-in is read with its unit: a value planted in one is refused by the drop-in's file
+        # and line.
+        with tempfile.TemporaryDirectory() as scratch:
+            folder = Path(scratch) / "deploy" / "systemd"
+            (folder / "planted.service.d").mkdir(parents=True)
+            (folder / "planted.service").write_text(f"{head}{page}{run}{loads}", encoding="utf-8")
+            (folder / "planted.service.d" / "10-planted.conf").write_text(
+                "[Service]\nRestart=always\n", encoding="utf-8"
+            )
+            (planted,) = subject(scratch).services
+        self.assertEqual(
+            value_refusals(planted, table),
+            [
+                "deploy/systemd/planted.service.d/10-planted.conf:2: [Service] Restart=always "
+                "is not a value this unit admits for the key, and is refused"
+            ],
+        )
+
+    def test_a_restarting_paging_unit_holds_the_whole_restart_budget(self):
+        # A unit that loads a credential and pages, and assigns `Restart=` to anything but `no`,
+        # also holds `StartLimitIntervalSec=`, `StartLimitBurst=` and `RestartSec=`: without the
+        # start limit the default interval is shorter than the restart delay, so the unit never
+        # reaches failed and pages on every restart. A missing key is refused by name (SPEC-066 R2).
+        alert = f"{ALERT_TEMPLATE}@.service"
+        loading = examined(
+            "service unit(s) that load a credential",
+            sorted((unit for unit in subject().services if loads_a_credential(unit)), key=name),
+        )
+        paging = [unit for unit in loading if unit.name != alert]
+        self.assertEqual([r for unit in paging for r in restart_budget_refusals(unit)], [])
+        head = "[Unit]\nDescription=planted\n"
+        page = f"OnFailure={ON_FAILURE}\n"
+        run = "[Service]\nType=oneshot\nExecStart=/bin/true\n"
+        loads = f"LoadCredential=telegram-bot-token:{SOCKET}\n"
+        where = "deploy/systemd/planted.service"
+
+        def refusal(key):
+            return (
+                f"{where}: assigns Restart= and holds no {key}=, which the restart budget needs, "
+                "and is refused"
+            )
+
+        budget = "StartLimitIntervalSec=300\nStartLimitBurst=5\n"
+        plants = {
+            "restart and delay, no start limit": (
+                "",
+                "Restart=on-failure\nRestartSec=15\n",
+                [refusal("StartLimitIntervalSec"), refusal("StartLimitBurst")],
+            ),
+            "restart, no budget at all": (
+                "",
+                "Restart=on-failure\n",
+                [
+                    refusal("StartLimitIntervalSec"),
+                    refusal("StartLimitBurst"),
+                    refusal("RestartSec"),
+                ],
+            ),
+            "restart, no burst": (
+                "StartLimitIntervalSec=300\n",
+                "Restart=on-failure\nRestartSec=15\n",
+                [refusal("StartLimitBurst")],
+            ),
+            "restart, no interval": (
+                "StartLimitBurst=5\n",
+                "Restart=on-failure\nRestartSec=15\n",
+                [refusal("StartLimitIntervalSec")],
+            ),
+            "restart, no delay": (budget, "Restart=on-failure\n", [refusal("RestartSec")]),
+            "restart reset to no, no budget": ("", "Restart=no\n", []),
+            "no restart, no budget": ("", "", []),
+            "restart with the whole budget": (budget, "Restart=on-failure\nRestartSec=15\n", []),
+        }
+        got = {}
+        for label in examined("planted unit(s) held to the restart budget", sorted(plants)):
+            unit_lines, service_lines, _ = plants[label]
+            got[label] = planted_refusals(
+                f"{head}{page}{unit_lines}{run}{loads}{service_lines}", restart_budget_refusals
+            )
+        self.assertEqual(got, {label: plants[label][2] for label in plants})
+
+    def test_a_paging_unit_names_no_failure_target_but_the_alert(self):
+        # Every `OnFailure=` assignment of a paging unit that loads a credential, in the unit and
+        # its drop-ins, is exactly the alert template: a target beside it or in its place is
+        # refused by key and value (SPEC-066 R2).
+        alert = f"{ALERT_TEMPLATE}@.service"
+        loading = examined(
+            "service unit(s) that load a credential",
+            sorted((unit for unit in subject().services if loads_a_credential(unit)), key=name),
+        )
+        paging = [unit for unit in loading if unit.name != alert]
+        self.assertEqual([r for unit in paging for r in failure_target_refusals(unit)], [])
+        head = "[Unit]\nDescription=planted\n"
+        page = f"OnFailure={ON_FAILURE}\n"
+        run = "[Service]\nExecStart=/bin/true\n"
+        loads = f"LoadCredential=telegram-bot-token:{SOCKET}\n"
+        where = "deploy/systemd/planted.service"
+
+        def refusal(line, value):
+            return (
+                f"{where}:{line}: [Unit] OnFailure={value} is not the alert template "
+                f"{ON_FAILURE}, and is refused"
+            )
+
+        plants = {
+            "target control": (page, []),
+            "extra target in one assignment": (
+                f"OnFailure={ON_FAILURE} other.service\n",
+                [refusal(3, f"{ON_FAILURE} other.service")],
+            ),
+            "extra target in a second assignment": (
+                f"{page}OnFailure=other.service\n",
+                [refusal(4, "other.service")],
+            ),
+            "replaced target": ("OnFailure=other.service\n", [refusal(3, "other.service")]),
+            "reset after the alert": (f"{page}OnFailure=\n", [refusal(4, "")]),
+        }
+        got = {}
+        for label in examined("planted unit(s) held to the alert target", sorted(plants)):
+            got[label] = planted_refusals(
+                f"{head}{plants[label][0]}{run}{loads}", failure_target_refusals
+            )
+        self.assertEqual(got, {label: plants[label][1] for label in plants})
+        with tempfile.TemporaryDirectory() as scratch:
+            folder = Path(scratch) / "deploy" / "systemd"
+            (folder / "planted.service.d").mkdir(parents=True)
+            (folder / "planted.service").write_text(f"{head}{page}{run}{loads}", encoding="utf-8")
+            (folder / "planted.service.d" / "10-planted.conf").write_text(
+                "[Unit]\nOnFailure=other.service\n", encoding="utf-8"
+            )
+            (planted,) = subject(scratch).services
+        self.assertEqual(
+            failure_target_refusals(planted),
+            [
+                "deploy/systemd/planted.service.d/10-planted.conf:2: [Unit] OnFailure="
+                f"other.service is not the alert template {ON_FAILURE}, and is refused"
+            ],
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
+
+
+class TheSyncLoginIsTheSyncJobsAlone(unittest.TestCase):
+    """SPEC-062 R14: the sync login is loaded by the sync job alone."""
+
+    SYNC_LOGIN = ("anki-sync-username", "anki-sync-password")
+    CONF = "20-sync-login.conf"
+
+    def dropin_dir(self, root, ident):
+        return Path(root) / "deploy" / "systemd" / f"{JOB_TEMPLATE}@{ident}.service.d"
+
+    def test_the_sync_login_is_loaded_by_the_sync_job_alone(self):
+        template = SYSTEMD / f"{JOB_TEMPLATE}@.service"
+        text = template.read_text(encoding="utf-8")
+        for ident in self.SYNC_LOGIN:
+            self.assertNotIn(ident, text, "the template requests a sync credential")
+        self.assertNotIn("SYNC_", text)
+        # The sync instance's drop-in loads exactly the two, from the socket.
+        dropin = self.dropin_dir(REPO, "sync") / self.CONF
+        self.assertTrue(dropin.is_file(), f"{dropin.relative_to(REPO)} is missing")
+        loaded = re.findall(r"^LoadCredential=(.*)$", dropin.read_text(encoding="utf-8"), re.M)
+        self.assertEqual(sorted(loaded), sorted(f"{i}:{SOCKET}" for i in self.SYNC_LOGIN))
+        # No other instance has a drop-in that loads one.
+        others = [
+            d for d in SYSTEMD.glob(f"{JOB_TEMPLATE}@*.service.d") if d.name != dropin.parent.name
+        ]
+        self.assertEqual(others, [], "an instance other than sync ships a drop-in")
+        # The pair list holds them under the sync instance, and under no other unit.
+        code = subprocess.run(
+            [sys.executable, str(DEPLOY / "scripts" / "credential-pairs.py"), "--root", str(REPO)],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(code.returncode, 0, code.stderr)
+        pairs = json.loads(code.stdout)["pairs"]
+        sync_unit = f"{JOB_TEMPLATE}@sync.service"
+        sync_pairs = {p["credential"] for p in pairs if p["unit"] == sync_unit}
+        self.assertEqual(sync_pairs, set(self.SYNC_LOGIN))
+        self.assertFalse(
+            [p for p in pairs if p["unit"] == f"{JOB_TEMPLATE}@.service"], "the template asks"
+        )
+        for ident in ("liveness", "maintenance"):
+            unit = f"{JOB_TEMPLATE}@{ident}.service"
+            self.assertFalse([p for p in pairs if p["unit"] == unit], f"{ident} asks")
+        examined("pair(s) listed", pairs)
+
+    def test_the_effective_check_accepts_the_shipped_drop_in_and_no_other(self):
+        checker = DEPLOY / "scripts" / "effective-check.py"
+        contract = json.loads((DEPLOY / "rail-contract.json").read_text(encoding="utf-8"))
+        with tempfile.TemporaryDirectory() as scratch:
+            root = Path(scratch)
+            (root / "deploy").mkdir()
+            contract["values"] = contract["values"][:1]
+            (root / "deploy" / "rail-contract.json").write_text(json.dumps(contract))
+            source = self.dropin_dir(REPO, "sync") / self.CONF
+            self.assertTrue(source.is_file(), f"{source.relative_to(REPO)} is missing")
+            shipped = self.dropin_dir(root, "sync")
+            shipped.mkdir(parents=True)
+            (shipped / self.CONF).write_text(source.read_text(encoding="utf-8"))
+            unit = "[Unit]\nDescription=x\n\n[Service]\nType=oneshot\n"
+            head = f"/etc/systemd/system/{JOB_TEMPLATE}@.service"
+            here = f"/etc/systemd/system/{JOB_TEMPLATE}@sync.service.d/{self.CONF}"
+            elsewhere = f"/etc/systemd/system/{JOB_TEMPLATE}@sync.service.d/99-host.conf"
+            other = f"/etc/systemd/system/{JOB_TEMPLATE}@liveness.service.d/{self.CONF}"
+            body = source.read_text(encoding="utf-8")
+
+            def check(dropin_path):
+                out = f"# {head}\n{unit}\n# {dropin_path}\n{body}"
+                return subprocess.run(
+                    [sys.executable, str(checker), "--root", str(root)],
+                    input=out,
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+
+            accepted = check(here)
+            self.assertEqual(accepted.returncode, 0, accepted.stdout + accepted.stderr)
+            # A drop-in the release does not ship is refused, whatever it holds.
+            for path in (elsewhere, other):
+                refused = check(path)
+                self.assertEqual(refused.returncode, 1, path)
+                self.assertIn("a drop-in that is not the rail's", refused.stdout + refused.stderr)
+
+    def test_a_shipped_drop_in_name_is_admitted_beside_the_rails_own_alone(self):
+        checker = DEPLOY / "scripts" / "effective-check.py"
+        contract = json.loads((DEPLOY / "rail-contract.json").read_text(encoding="utf-8"))
+        body = (self.dropin_dir(REPO, "sync") / self.CONF).read_text(encoding="utf-8")
+        with tempfile.TemporaryDirectory() as scratch:
+            root = Path(scratch)
+            (root / "deploy").mkdir()
+            contract["values"] = contract["values"][:1]
+            (root / "deploy" / "rail-contract.json").write_text(json.dumps(contract))
+            shipped = self.dropin_dir(root, "sync")
+            shipped.mkdir(parents=True)
+            (shipped / self.CONF).write_text(body)
+            unit = "[Unit]\nDescription=x\n\n[Service]\nType=oneshot\n"
+            head = f"/etc/systemd/system/{JOB_TEMPLATE}@.service"
+            verdicts = {}
+            for where in (
+                "/etc/systemd/system",
+                "/run/systemd/system",
+                "/etc/systemd/system.control",
+                "/home/user/.config/systemd/user",
+            ):
+                path = f"{where}/{JOB_TEMPLATE}@sync.service.d/{self.CONF}"
+                done = subprocess.run(
+                    [sys.executable, str(checker), "--root", str(root)],
+                    input=f"# {head}\n{unit}\n# {path}\n{body}",
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+                verdicts[where] = done.returncode
+            self.assertEqual(
+                [w for w, rc in verdicts.items() if rc == 0], ["/etc/systemd/system"], verdicts
+            )

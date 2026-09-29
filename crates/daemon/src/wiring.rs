@@ -20,6 +20,9 @@
 //! readings taxonomy, their digest recorded with the settings generation, and the fold with every
 //! step registered in its phase by [`recompute_fold`]. The setup hands the reader its courses and
 //! each cycle its fold.
+//! The notification router's bot transport is the bot's `OwnerChat`, joined to the router here by
+//! [`router`] (SPEC-041 R13), and the owner's `/sync` flushes that router after a sync that
+//! succeeds (R7).
 
 use std::fs::{File, OpenOptions};
 use std::future::Future;
@@ -28,7 +31,9 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use deck_streak_analytics::settings::AnalyticsSettings;
-use deck_streak_bot::{OwnerSync, Scores, SyncAnswer, SyncOutcome, SyncRefusal, Transport};
+use deck_streak_bot::{
+    OwnerChat, OwnerSync, Scores, SyncAnswer, SyncOutcome, SyncRefusal, Transport,
+};
 use deck_streak_coordination::courses::{CoursesDisagree, agree};
 use deck_streak_coordination::delivery::{DeliveryCounts, DeliveryMarker};
 use deck_streak_coordination::obligations::Obligations;
@@ -37,6 +42,7 @@ use deck_streak_coordination::recompute::{Fold, FoldError, Phase};
 use deck_streak_coordination::sync_cycle::{
     CycleError, CycleParts, CycleReport, Recompute, sync_cycle,
 };
+use deck_streak_identity::Owner;
 use deck_streak_ingest::engine::{AnkiEngine, RslibEngine};
 use deck_streak_ingest::gate::ChangeGate;
 use deck_streak_ingest::reader::CollectionReader;
@@ -47,6 +53,7 @@ use deck_streak_kernel::{
     Clock, Courses, CoursesError, CredentialLoader, CredentialsDirectory, Db, Environment,
     KernelError, Offload, Redactor, Setting, SettingsError, StudyDayRule, SystemClock,
 };
+use deck_streak_notifications::{Policy, Router};
 use deck_streak_readings::taxonomy::{Taxonomy, TaxonomyError, TaxonomyPath};
 
 /// The directory systemd gives a unit for its state (`StateDirectory=`), where the database lives.
@@ -282,6 +289,7 @@ pub struct OwnerSyncCycle {
     db: Db,
     offload: Offload,
     rule: StudyDayRule,
+    router: Option<Arc<Router>>,
     recompute: RecomputeSetup,
 }
 
@@ -304,8 +312,16 @@ impl OwnerSyncCycle {
             db,
             offload,
             rule,
+            router: None,
             recompute,
         }
+    }
+
+    /// The owner's sync, flushing `router` after a sync that succeeds (SPEC-041 R7).
+    #[must_use]
+    pub fn with_router(mut self, router: Arc<Router>) -> Self {
+        self.router = Some(router);
+        self
     }
 
     async fn run(&self) -> Result<SyncAnswer, SyncRefusal> {
@@ -337,11 +353,30 @@ impl OwnerSyncCycle {
             self.db.clone(),
             self.rule,
         );
+        let parts = match &self.router {
+            Some(router) => parts.with_flush(Arc::clone(router)),
+            None => parts,
+        };
         let report = sync_cycle(&parts, Trigger::Owner)
             .await
             .map_err(|error| refused(cycle_reason(&error), &error))?;
         Ok(answer_of(&report))
     }
+}
+
+/// The notification router of `policy` over `db`, reading study days by `rule` on the system's
+/// clock, that delivers the bot's occasions to the `owner`'s chat through the bot's `transport`
+/// (SPEC-041 R13).
+#[must_use]
+pub fn router(
+    policy: Policy,
+    db: Db,
+    rule: StudyDayRule,
+    transport: Arc<Transport>,
+    owner: Owner,
+) -> Router {
+    Router::new(Arc::new(policy), db, Arc::new(SystemClock), rule)
+        .with_bot(Arc::new(OwnerChat::new(transport, owner)))
 }
 
 impl OwnerSync for OwnerSyncCycle {

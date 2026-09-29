@@ -1,5 +1,5 @@
 """SPEC-057's campaign table (section 7): each crate's delivery fills its row from the scoped
-battery's `table` line, and a closed row reads no unexplained mutant (A16 to A25).
+battery's `table` line, and a closed row reads no unexplained mutant (A16 to A26).
 
 The reader takes section 7 wherever the SPEC then lives, `docs/specs/planned/` or `docs/specs/`,
 and each row's fragment under `scripts/mutation-equivalent.d/`. A row that is still open, or whose
@@ -71,8 +71,26 @@ class TheCampaignTable(unittest.TestCase):
     def test_the_kernel_row_reads_no_unexplained_mutant(self):
         self.assert_closed("deck-streak-kernel")
 
+    def test_the_daemon_row_reads_no_unexplained_mutant(self):
+        self.assert_closed("deck-streak-daemon")
+
     def test_the_identity_row_reads_no_unexplained_mutant(self):
         self.assert_closed("deck-streak-identity")
+
+    def test_the_api_row_reads_no_unexplained_mutant(self):
+        self.assert_closed("deck-streak-api")
+
+    def test_the_privacy_row_reads_no_unexplained_mutant(self):
+        self.assert_closed("deck-streak-privacy")
+
+    def test_the_coordination_row_reads_no_unexplained_mutant(self):
+        self.assert_closed("deck-streak-coordination")
+
+    def test_the_agent_row_reads_no_unexplained_mutant(self):
+        self.assert_closed("deck-streak-agent")
+
+    def test_the_progression_row_reads_no_unexplained_mutant(self):
+        self.assert_closed("deck-streak-progression")
 
 
 if __name__ == "__main__":

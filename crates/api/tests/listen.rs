@@ -69,3 +69,39 @@ fn a_non_loopback_listen_address_is_refused_by_name() {
         "{malformed:?}"
     );
 }
+
+#[test]
+fn the_listen_address_is_read_from_the_setting_the_unit_sets() {
+    // SPEC-025 R6 and R10: the unit's environment sets DECKSTREAK_API_LISTEN.
+    let accepted = ListenAddress::from_env(&Environment::from_vars([(
+        "DECKSTREAK_API_LISTEN",
+        "127.0.0.1:8080",
+    )]))
+    .ok()
+    .map(ListenAddress::socket_address);
+    let expected: SocketAddr = "127.0.0.1:8080".parse().expect("a socket address");
+    assert_eq!(accepted, Some(expected));
+}
+
+#[test]
+fn a_listen_setting_that_is_not_an_address_is_refused_naming_its_shape() {
+    let refused = listen("localhost:8080");
+    assert!(
+        matches!(
+            refused,
+            Err(ApiError::Settings(SettingsError::Malformed {
+                setting: "DECKSTREAK_API_LISTEN",
+                expected: "a socket address with a port, such as 127.0.0.1:8080",
+            }))
+        ),
+        "{refused:?}"
+    );
+}
+
+#[test]
+fn a_listen_address_displays_as_the_socket_address_it_holds() {
+    for value in ["127.0.0.1:8080", "[::1]:8443"] {
+        let address = listen(value).expect("a loopback address starts");
+        assert_eq!(address.to_string(), value);
+    }
+}

@@ -17,19 +17,25 @@
 mod golden;
 
 use std::collections::{BTreeMap, BTreeSet};
+use std::fmt;
 use std::io::ErrorKind;
+use std::os::linux::net::SocketAddrExt;
+use std::os::unix::net::SocketAddr;
 use std::os::unix::net::UnixDatagram;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output, Stdio};
-use std::sync::mpsc;
+use std::sync::{Arc, Mutex, mpsc};
 use std::time::{Duration, Instant};
 
 use deck_streak_daemon::lifecycle::{
-    HEARTBEAT_DIVISOR, MIN_WATCHDOG, WATCHDOG_PID, WATCHDOG_USEC, watchdog_interval,
-    watchdog_timeout,
+    HEARTBEAT_DIVISOR, MIN_WATCHDOG, NOTIFY_SOCKET, Notifier, NotifyState, WATCHDOG_PID,
+    WATCHDOG_USEC, spawn_heartbeat, watchdog_interval, watchdog_timeout,
 };
 use deck_streak_kernel::Environment;
 use serde_json::{Value, json};
+use tracing::field::{Field, Visit};
+use tracing::span::{Attributes, Id, Record};
+use tracing::{Event, Level, Metadata, Subscriber};
 
 /// The bound on the whole run: generous, because a loaded machine is slow.
 const DEADLINE: Duration = Duration::from_mins(2);
@@ -177,6 +183,18 @@ fn the_binary_notifies_ready_watchdog_and_stopping_then_exits_zero() {
 }
 
 #[test]
+fn the_watchdog_is_read_from_the_variables_systemd_sets() {
+    // sd_watchdog_enabled(3): renamed, the heartbeat never arms and systemd kills the role.
+    let armed = Environment::from_vars([("WATCHDOG_USEC", "90000000")]);
+    assert_eq!(
+        watchdog_timeout(&armed, 4242),
+        Some(Duration::from_secs(90))
+    );
+    let another = Environment::from_vars([("WATCHDOG_USEC", "90000000"), ("WATCHDOG_PID", "4343")]);
+    assert_eq!(watchdog_timeout(&another, 4242), None);
+}
+
+#[test]
 fn the_api_role_refuses_start_without_an_identity_credential() {
     // Each of identity's credentials missing in turn: the role exits 1 before it binds, and its
     // first line is an ERROR event naming the missing credential's id and no credential's value.
@@ -286,4 +304,199 @@ fn the_watchdog_interval_follows_the_predecessors_divisor() {
         assert_eq!(watchdog_timeout(&env, pid), None, "{unarmed:?}");
     }
     assert_eq!(watchdog_timeout(&Environment::default(), pid), None);
+}
+
+/// One event a [`Recorder`] saw: its level and each field's text.
+struct Seen {
+    level: Level,
+    fields: BTreeMap<String, String>,
+}
+
+/// A subscriber that keeps every event it is given, so a test reads what the lifecycle logged.
+#[derive(Clone, Default)]
+struct Recorder(Arc<Mutex<Vec<Seen>>>);
+
+struct Fields(BTreeMap<String, String>);
+
+impl Visit for Fields {
+    fn record_debug(&mut self, field: &Field, value: &dyn fmt::Debug) {
+        self.0.insert(field.name().to_owned(), format!("{value:?}"));
+    }
+
+    fn record_str(&mut self, field: &Field, value: &str) {
+        self.0.insert(field.name().to_owned(), value.to_owned());
+    }
+
+    fn record_u64(&mut self, field: &Field, value: u64) {
+        self.0.insert(field.name().to_owned(), value.to_string());
+    }
+}
+
+impl Recorder {
+    fn seen(&self) -> Vec<(Level, BTreeMap<String, String>)> {
+        let events = self.0.lock().expect("the recorder's lock");
+        events
+            .iter()
+            .map(|seen| (seen.level, seen.fields.clone()))
+            .collect()
+    }
+}
+
+impl Subscriber for Recorder {
+    fn enabled(&self, _metadata: &Metadata<'_>) -> bool {
+        true
+    }
+
+    fn new_span(&self, _attributes: &Attributes<'_>) -> Id {
+        Id::from_u64(1)
+    }
+
+    fn record(&self, _span: &Id, _values: &Record<'_>) {}
+
+    fn record_follows_from(&self, _span: &Id, _follows: &Id) {}
+
+    fn event(&self, event: &Event<'_>) {
+        let mut fields = Fields(BTreeMap::new());
+        event.record(&mut fields);
+        self.0.lock().expect("the recorder's lock").push(Seen {
+            level: *event.metadata().level(),
+            fields: fields.0,
+        });
+    }
+
+    fn enter(&self, _span: &Id) {}
+
+    fn exit(&self, _span: &Id) {}
+}
+
+fn notifier_for(socket: Option<&str>) -> Notifier {
+    let env = match socket {
+        Some(socket) => Environment::from_vars([(NOTIFY_SOCKET, socket)]),
+        None => Environment::default(),
+    };
+    Notifier::from_env(&env)
+}
+
+/// The datagram the socket holds. `send` has returned before a test reads, so a datagram that was
+/// sent is already queued; the bound is only how long a missing one takes to fail the test.
+fn read_datagram(socket: &UnixDatagram) -> String {
+    socket
+        .set_read_timeout(Some(Duration::from_secs(5)))
+        .expect("a read timeout");
+    let mut buffer = [0_u8; 64];
+    let length = socket.recv(&mut buffer).expect("a datagram");
+    String::from_utf8_lossy(&buffer[..length]).into_owned()
+}
+
+#[test]
+fn a_notifier_is_enabled_only_for_a_socket_of_a_form_it_speaks() {
+    let recorder = Recorder::default();
+    let disabled = tracing::subscriber::with_default(recorder.clone(), || {
+        [
+            notifier_for(None),
+            notifier_for(Some("relative/notify.sock")),
+            notifier_for(Some("notify.sock")),
+        ]
+    });
+    for notifier in &disabled {
+        assert!(!notifier.is_enabled());
+        assert!(!notifier.notify(NotifyState::Ready));
+    }
+    let warnings: Vec<_> = recorder
+        .seen()
+        .into_iter()
+        .filter(|(level, _)| *level == Level::WARN)
+        .collect();
+    assert_eq!(
+        warnings.len(),
+        2,
+        "one WARN per socket of a form it does not speak"
+    );
+    assert!(
+        warnings[0].1["message"].contains("a form this service does not speak"),
+        "{:?}",
+        warnings[0].1
+    );
+
+    let directory = tempfile::tempdir().expect("a temporary directory");
+    let path = directory.path().join("notify.sock");
+    let path_text = path.to_str().expect("a UTF-8 path");
+    assert!(notifier_for(Some(path_text)).is_enabled());
+    assert!(notifier_for(Some("@deck-streak-enabled")).is_enabled());
+}
+
+#[test]
+fn a_notifier_delivers_each_state_to_a_path_or_an_abstract_socket() {
+    let directory = tempfile::tempdir().expect("a temporary directory");
+    let path = directory.path().join("notify.sock");
+    let receiver = UnixDatagram::bind(&path).expect("a datagram socket");
+    let notifier = notifier_for(path.to_str());
+    assert!(notifier.notify(NotifyState::Ready));
+    assert_eq!(read_datagram(&receiver), "READY=1");
+    assert!(notifier.notify(NotifyState::Stopping));
+    assert_eq!(read_datagram(&receiver), "STOPPING=1");
+
+    let name = format!("deck-streak-lifecycle-{}", std::process::id());
+    let address = SocketAddr::from_abstract_name(name.as_bytes()).expect("an abstract name");
+    let abstract_receiver = UnixDatagram::bind_addr(&address).expect("an abstract socket");
+    let notifier = notifier_for(Some(&format!("@{name}")));
+    assert!(notifier.notify(NotifyState::Watchdog));
+    assert_eq!(read_datagram(&abstract_receiver), "WATCHDOG=1");
+}
+
+#[test]
+fn a_failed_send_is_logged_once_per_episode_of_failures() {
+    let directory = tempfile::tempdir().expect("a temporary directory");
+    let path = directory.path().join("notify.sock");
+    let notifier = notifier_for(path.to_str());
+    let recorder = Recorder::default();
+    tracing::subscriber::with_default(recorder.clone(), || {
+        let warned = || {
+            recorder
+                .seen()
+                .into_iter()
+                .filter(|(level, fields)| {
+                    *level == Level::WARN && fields["message"].contains("was not sent")
+                })
+                .count()
+        };
+        // Nothing listens: the send fails, and the first failure of the episode is logged.
+        assert!(!notifier.notify(NotifyState::Ready));
+        assert_eq!(warned(), 1);
+        // The episode goes on: the same failure is not logged again.
+        assert!(!notifier.notify(NotifyState::Watchdog));
+        assert_eq!(warned(), 1);
+        // A send that gets through ends the episode, so the next failure is logged afresh.
+        let receiver = UnixDatagram::bind(&path).expect("a datagram socket");
+        assert!(notifier.notify(NotifyState::Watchdog));
+        assert_eq!(read_datagram(&receiver), "WATCHDOG=1");
+        assert_eq!(warned(), 1);
+        drop(receiver);
+        std::fs::remove_file(&path).expect("the socket's file");
+        assert!(!notifier.notify(NotifyState::Stopping));
+        assert_eq!(warned(), 2);
+        let last = recorder.seen().pop().expect("an event");
+        assert_eq!(last.1["state"], "STOPPING=1");
+    });
+}
+
+#[test]
+fn a_watchdog_below_the_minimum_arms_no_heartbeat_and_says_both_times_in_milliseconds() {
+    let recorder = Recorder::default();
+    let env = Environment::from_vars([(WATCHDOG_USEC, "1234000")]);
+    let heartbeat = tracing::subscriber::with_default(recorder.clone(), || {
+        spawn_heartbeat(notifier_for(None), &env)
+    });
+    assert!(heartbeat.is_none());
+    let seen = recorder.seen();
+    let warnings: Vec<_> = seen
+        .iter()
+        .filter(|(level, _)| *level == Level::WARN)
+        .collect();
+    assert_eq!(warnings.len(), 1, "{seen:?}");
+    assert_eq!(warnings[0].1["watchdog_ms"], "1234");
+    assert_eq!(
+        warnings[0].1["minimum_ms"],
+        MIN_WATCHDOG.as_millis().to_string()
+    );
 }

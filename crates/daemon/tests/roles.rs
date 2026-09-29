@@ -20,7 +20,10 @@ use deck_streak_ingest::settings::{LAW_DECK_ROOT, SYNC_PASSWORD, SYNC_USERNAME};
 use deck_streak_ingest::sync_runs::{
     ReasonCode, RunHistory, SqliteSyncRuns, SyncRun, SyncRunStore, Trigger,
 };
-use deck_streak_kernel::{Clock, Db, Offload, OffloadWorkers, StudyDay, SystemClock, UtcMillis};
+use deck_streak_kernel::{
+    Clock, Db, Environment, Offload, OffloadWorkers, SettingsError, StudyDay, SystemClock,
+    UtcMillis,
+};
 use serde_json::Value;
 use tokio::sync::Barrier;
 
@@ -117,6 +120,65 @@ fn the_binary_runs_a_role_by_name_and_refuses_an_unknown_one() {
     assert!(
         refusal.contains("DECKSTREAK_API_LISTEN"),
         "the refusal does not name the setting: {refusal}"
+    );
+}
+
+#[test]
+fn only_the_name_data_runs_the_data_role() {
+    // A name that is not `data`, with the words of a real data command after it, is an unknown role:
+    // exit 2 and the usage line, and no command of the data role runs.
+    let refusals: [&[&str]; 3] = [
+        &["frobnicate", "export"],
+        &["api", "export"],
+        &["exporter", "erase", "--confirm", "ERASE"],
+    ];
+    for arguments in examined("refused invocation(s)", refusals.to_vec()) {
+        let output = deckstreakd(arguments, &[]);
+        assert_eq!(
+            output.status.code(),
+            Some(2),
+            "{arguments:?}: {}",
+            describe(&output)
+        );
+        let lines = events(&output);
+        let usage = lines
+            .first()
+            .map(|line| line.1["message"].as_str().unwrap_or_default().to_owned())
+            .unwrap_or_default();
+        assert!(usage.starts_with("usage: deckstreakd <role>"), "{usage}");
+    }
+}
+
+#[tokio::test]
+async fn the_open_lock_is_a_file_of_its_own_beside_the_database() {
+    // SPEC-025 R11 names it: `deck_streak.db-open.lock`, never the database file itself, whose
+    // descriptors' closing would drop SQLite's own POSIX locks.
+    let directory = tempfile::tempdir().expect("a temporary directory");
+    let state = StateDirectory::new(directory.path()).expect("an absolute path");
+    let workers = OffloadWorkers::new(2).expect("two workers is in range");
+    let offload = Offload::new(workers, Arc::new(SystemClock));
+    let database = open_database(&offload, &state)
+        .await
+        .expect("the database opens");
+    database.close().await;
+    assert!(
+        directory.path().join("deck_streak.db-open.lock").is_file(),
+        "no open lock named deck_streak.db-open.lock beside the database"
+    );
+}
+
+#[test]
+fn a_relative_state_directory_is_refused_naming_the_shape_it_must_have() {
+    let refused = StateDirectory::from_env(&Environment::from_vars([(
+        "STATE_DIRECTORY",
+        "relative/state",
+    )]));
+    assert_eq!(
+        refused,
+        Err(SettingsError::Malformed {
+            setting: "STATE_DIRECTORY",
+            expected: "an absolute directory path",
+        })
     );
 }
 
