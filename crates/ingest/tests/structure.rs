@@ -8,7 +8,9 @@ mod support;
 
 use std::collections::BTreeSet;
 
-use deck_streak_ingest::structure::{NOTES_BATCH_SIZE, READ_DECLARED_FIELDS, safe_name};
+use deck_streak_ingest::structure::{
+    NOTES_BATCH_SIZE, READ_DECLARED_FIELDS, READ_FIELD_PRESENCE, READ_TEMPLATE_CONFIGS, safe_name,
+};
 use deck_streak_ingest::wire::{self, WireValue};
 use support::Fixture;
 use support::synthetic::{self, PlannedCard, PlannedReview};
@@ -249,4 +251,60 @@ fn names_are_made_safe_as_the_predecessor_does() {
         examined += 1;
     });
     assert!(examined >= 20, "examined only {examined} golden cases");
+}
+
+#[tokio::test]
+async fn each_failed_structure_read_is_named_once_in_the_order_it_failed() {
+    // Two different reads fail: both are named, in the order the reads run.
+    let fixture = Fixture::new(ENDPOINT);
+    let copy = fixture.copy();
+    synthetic::build_planned(
+        &copy,
+        &["Law::Evidence"],
+        &IN_SCOPE,
+        &[review(1_700_000_000_001, 2001)],
+    );
+    synthetic::run_sql(&copy, "drop table templates; drop table fields");
+    let reader = synthetic::reader(&fixture.settings(), "Law", None, support::clock_at(0));
+    let broken = reader.read_structure().await.expect("the copy still opens");
+    assert_eq!(
+        broken.failed_reads,
+        vec![
+            READ_TEMPLATE_CONFIGS.to_owned(),
+            READ_DECLARED_FIELDS.to_owned()
+        ]
+    );
+}
+
+#[tokio::test]
+async fn a_presence_read_that_fails_in_every_batch_is_named_once() {
+    // 1000 reviewed notes are three batches; the failing read is recorded once, not per batch.
+    let fixture = Fixture::new(ENDPOINT);
+    let copy = fixture.copy();
+    let cards: Vec<PlannedCard> = (0..1000)
+        .map(|at| PlannedCard {
+            id: 10_000 + at,
+            deck: "Law::Evidence",
+            filtered: false,
+        })
+        .collect();
+    let reviews: Vec<PlannedReview> = cards
+        .iter()
+        .map(|card| review(1_700_000_000_000 + card.id, card.id))
+        .collect();
+    synthetic::build_planned(&copy, &["Law::Evidence"], &cards, &reviews);
+    synthetic::run_sql(&copy, "drop table notes");
+    let reader = synthetic::reader(&fixture.settings(), "Law", None, support::clock_at(0));
+    let broken = reader.read_structure().await.expect("the copy still opens");
+    // The template and field reads join `notes`, so they fail with it; each is named once, and the
+    // presence read, which fails in all three batches, is named once.
+    assert_eq!(
+        broken.failed_reads,
+        vec![
+            READ_TEMPLATE_CONFIGS.to_owned(),
+            READ_DECLARED_FIELDS.to_owned(),
+            READ_FIELD_PRESENCE.to_owned()
+        ]
+    );
+    assert!(broken.presence_batches.is_empty());
 }

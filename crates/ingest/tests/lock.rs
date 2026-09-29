@@ -6,6 +6,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use deck_streak_ingest::engine::SyncOutcome;
+use deck_streak_ingest::lock::CollectionLock;
 use deck_streak_ingest::sync::SyncReport;
 use deck_streak_ingest::sync_runs::Trigger;
 use support::{Fixture, MemoryRuns, ScriptedEngine, Step};
@@ -89,4 +90,22 @@ fn a_second_sync_waits_for_the_collection_lock_and_never_overlaps() {
         1,
         "no two syncs were ever inside the engine at once"
     );
+}
+
+#[tokio::test]
+async fn a_try_take_answers_the_lock_when_free_and_nothing_while_held() {
+    // SPEC-094 R8: the non-waiting take is `Some` on a free lock, `None` while another holder has
+    // it, and `Some` again once that holder releases.
+    let directory = tempfile::tempdir().expect("a directory");
+    let lock = CollectionLock::new(directory.path().join("try.lock"));
+    let first = lock
+        .try_exclusive()
+        .await
+        .expect("the take")
+        .expect("a free lock is taken");
+    let second = lock.try_exclusive().await.expect("the take");
+    assert!(second.is_none(), "a held lock is not taken: {second:?}");
+    first.release().expect("release");
+    let third = lock.try_exclusive().await.expect("the take");
+    assert!(third.is_some(), "a released lock is taken again");
 }

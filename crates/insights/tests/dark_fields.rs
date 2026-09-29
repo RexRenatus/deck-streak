@@ -4,6 +4,8 @@
 #[path = "../../../tools/parity-oracle/golden.rs"]
 mod golden;
 
+use std::collections::BTreeSet;
+
 use deck_streak_ingest::structure::{DeclaredField, StructureReads, Template};
 use deck_streak_insights::dark_fields::{
     self, DarkFields, DarkFieldsInput, build_report, config_tokens,
@@ -263,4 +265,32 @@ fn names_made_safe_at_the_read_are_compared_made_safe() {
     let view = DarkFields.build(&reads);
     assert_eq!(view.dark_fields_total, 0);
     assert_eq!(view.notetypes_checked, 1);
+}
+
+/// A config blob whose front format holds `format` and has no back format.
+fn front_only(format: &str) -> Vec<u8> {
+    let mut blob = vec![0x0a, u8::try_from(format.len()).unwrap()];
+    blob.extend_from_slice(format.as_bytes());
+    blob
+}
+
+#[test]
+fn a_token_needs_two_opening_braces_in_a_row() {
+    // A single opening brace closed by two is no token, and a real one after it still is.
+    let (lone, failed) = config_tokens(Some(&front_only("{name}}")));
+    assert!(lone.is_empty(), "{lone:?}");
+    assert!(!failed);
+    let (both, failed) = config_tokens(Some(&front_only("{name}} {{Real}}")));
+    assert_eq!(both, BTreeSet::from(["Real".to_owned()]));
+    assert!(!failed);
+}
+
+#[test]
+fn the_instrument_names_itself_versions_its_report_and_hands_back_its_failed_reads() {
+    let mut reads = StructureReads::default();
+    reads.failed_reads.push("templates".to_owned());
+    let view = DarkFields.build(&reads);
+    assert_eq!(DarkFields.id(), "dark_fields");
+    assert_eq!(DarkFields.schema_version(), 1);
+    assert_eq!(DarkFields.failed_reads(&view), vec!["templates".to_owned()]);
 }
