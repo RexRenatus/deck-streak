@@ -121,7 +121,7 @@ issue (#360) is closed.
 | file | context | change |
 |---|---|---|
 | `scripts/release-check.py` | repo | added: the read-only check (R1-R4) |
-| `scripts/tests/test_release_check.py` | repo | added: A1-A9, with a stub `gh` on `PATH` that records its arguments |
+| `scripts/tests/test_release_check.py` | repo | added: A1-A9 in the class `TheReleaseCheck`, with a stub `gh` on `PATH` that records its arguments |
 | `scripts/tests/test_release_runbook.py` | repo | added: A10 |
 | `RELEASING.md` | docs | changed: §4's sentence and §8 (R5, R6) |
 | `scripts/mutation-rows.d/S14500-S14599.json` | repo | added: §9's rows |
@@ -167,12 +167,12 @@ No table.
 
 | row | target | what it guards | killer |
 |---|---|---|---|
-| `S14501-ON-MAIN` | `scripts/release-check.py` | the tag's commit is on main | `test_release_check::test_a_tag_not_on_main_is_refused` |
-| `S14502-COMPLETED` | `scripts/release-check.py` | a pending run is not green | `test_release_check::test_a_failed_or_pending_run_on_dev_or_main_is_refused` |
-| `S14503-CONTEXT` | `scripts/release-check.py` | each required context is present and green | `test_release_check::test_a_required_context_missing_is_refused` |
-| `S14504-GET-ONLY` | `scripts/release-check.py` | every call is a read | `test_release_check::test_the_check_only_reads` |
-| `S14505-UNREADABLE` | `scripts/release-check.py` | an unreadable answer refuses | `test_release_check::test_an_unreadable_answer_refuses` |
-| `S14506-PUSH-PROTECTION` | `scripts/release-check.py` | push protection off is refused | `test_release_check::test_each_security_setting_off_is_refused_by_name` |
+| `S14501-ON-MAIN` | `scripts/release-check.py` | the tag's commit is on main | `test_release_check.TheReleaseCheck.test_a_tag_not_on_main_is_refused` |
+| `S14502-COMPLETED` | `scripts/release-check.py` | a pending run is not green | `test_release_check.TheReleaseCheck.test_a_failed_or_pending_run_on_dev_or_main_is_refused` |
+| `S14503-CONTEXT` | `scripts/release-check.py` | each required context is present and green | `test_release_check.TheReleaseCheck.test_a_required_context_missing_is_refused` |
+| `S14504-GET-ONLY` | `scripts/release-check.py` | every call is a read | `test_release_check.TheReleaseCheck.test_the_check_only_reads` |
+| `S14505-UNREADABLE` | `scripts/release-check.py` | an unreadable answer refuses | `test_release_check.TheReleaseCheck.test_an_unreadable_answer_refuses` |
+| `S14506-PUSH-PROTECTION` | `scripts/release-check.py` | push protection off is refused | `test_release_check.TheReleaseCheck.test_each_security_setting_off_is_refused_by_name` |
 
 No killer calls a network: `gh` is a stub on `PATH` that answers from fixtures, and a stub that
 sleeps past `RELEASE_CHECK_TIMEOUT` (1 second in the test) is killed by the check's own

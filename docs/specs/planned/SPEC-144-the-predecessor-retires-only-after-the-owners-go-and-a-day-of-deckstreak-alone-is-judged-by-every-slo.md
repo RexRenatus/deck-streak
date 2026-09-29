@@ -115,7 +115,7 @@ wiring change.
 | `crates/daemon/tests/cutover.rs` | `deck-streak-daemon` | changed: A3, A8 |
 | `crates/daemon/tests/import.rs` | `deck-streak-daemon` | changed: a fixture that runs the role's apply records the go and the retirement first |
 | `deploy/scripts/slo-evaluate.py` | deploy | changed: `--day-report` (R3) |
-| `scripts/tests/test_slo_evaluator.py` | repo | changed: A4-A6 |
+| `scripts/tests/test_slo_evaluator.py` | repo | changed: A4-A6, in a new class `TheDayReport` |
 | `deploy/cutover.md` | deploy | changed: `## Retirement` and `## The day alone` (R5) |
 | `scripts/tests/test_cutover_runbook.py` | repo | added: A9, A10 |
 | `.sqlx/` | repo | changed: the refreshed query cache |
@@ -163,9 +163,9 @@ No table. The two steps are rows of SPEC-143's `cutover_steps`.
 | `S14401-GO-FIRST` | `crates/coordination/src/cutover.rs` | the retirement waits for the go | `retirement::a_retirement_before_the_go_is_refused` |
 | `S14402-ITEMS-VERIFIED` | `crates/coordination/src/cutover.rs` | the retirement waits for every item | `retirement::a_retirement_with_an_item_not_verified_is_refused` |
 | `S14403-APPLY-HELD` | `crates/daemon/src/role_import.rs` | the apply waits for the retirement | `cutover::an_apply_before_the_retirement_is_refused` |
-| `S14404-OBJECTIVE` | `deploy/scripts/slo-evaluate.py` | good over total at least the objective | `test_slo_evaluator::test_a_day_passes_only_when_every_slo_meets_its_objective` |
-| `S14405-VOID` | `deploy/scripts/slo-evaluate.py` | no response is void | `test_slo_evaluator::test_a_day_with_no_response_is_void` |
-| `S14406-NO-PAGE` | `deploy/scripts/slo-evaluate.py` | the day report pages no one | `test_slo_evaluator::test_the_day_report_pages_nothing_and_keeps_no_state` |
+| `S14404-OBJECTIVE` | `deploy/scripts/slo-evaluate.py` | good over total at least the objective | `test_slo_evaluator.TheDayReport.test_a_day_passes_only_when_every_slo_meets_its_objective` |
+| `S14405-VOID` | `deploy/scripts/slo-evaluate.py` | no response is void | `test_slo_evaluator.TheDayReport.test_a_day_with_no_response_is_void` |
+| `S14406-NO-PAGE` | `deploy/scripts/slo-evaluate.py` | the day report pages no one | `test_slo_evaluator.TheDayReport.test_the_day_report_pages_nothing_and_keeps_no_state` |
 | `S14407-AFTER-RETIREMENT` | `crates/coordination/src/cutover.rs` | the day begins after the retirement | `retirement::an_alone_day_needs_a_passing_full_day_after_the_retirement` |
 
 No killer calls a network: the evaluator's tests feed a stub journal, and the Rust tests run

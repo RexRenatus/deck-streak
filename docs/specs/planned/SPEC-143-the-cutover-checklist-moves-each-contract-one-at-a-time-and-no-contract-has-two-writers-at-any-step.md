@@ -301,7 +301,7 @@ digests, never a personal value.
 | `S14306-PENDING` | `crates/coordination/src/cutover.rs` | no run is pending, never pass | `cutover_verify::a_verify_with_no_run_is_pending` |
 | `S14307-RUNNER-GATE` | `crates/coordination/src/runner.rs` | a job not moved does not run | `runner::a_job_that_has_not_moved_does_not_run` |
 | `S14308-DIGEST` | `crates/daemon/src/role_cutover.rs` | the recorded digest is the output's | `cutover::a_passing_verify_records_its_output_digest` |
-| `S14309-SEED` | `migrations/014302_notifications_side_by_side_defaults.sql` | the four switches start at `"0"` (a script-mutation row) | `switches::the_four_switches_are_seeded_off` |
+| `S14309-SEED` | `migrations/014302_notifications_side_by_side_defaults.sql` | the four switches start at `"0"` (a script-mutation row whose cargo killer is in `deck-streak-notifications`) | `switches::the_four_switches_are_seeded_off` |
 | `S14310-NO-VALUE` | `crates/coordination/src/cutover.rs` | the output carries counts only | `cutover_verify::the_verify_output_carries_no_row_value` |
 | `S14311-DUTY-GATE` | `crates/vault/src/staged.rs` | a duty not moved is refused | `in_force::a_run_of_a_duty_not_moved_is_refused` |
 | `S14312-KIND-KEY` | `crates/notifications/src/switches.rs` | only a policy kind's switch is written | `switches::a_switch_opens_and_closes_only_a_policy_kind` |

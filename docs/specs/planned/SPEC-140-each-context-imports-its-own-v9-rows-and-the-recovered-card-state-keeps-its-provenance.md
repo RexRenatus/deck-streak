@@ -178,6 +178,7 @@ R15. CHARTER 10's eleven anti-goals bind this SPEC as one block; the ones it tou
 | A19 | the market positions map row for row, a DeckStreak-only position on the cutoff is kept and counted `kept`, and a second write writes nothing | `the_market_positions_follow_the_precedence` |
 | A20 | a row a writer cannot map refuses the whole write by table, column and reason, and nothing is written | `an_unmappable_row_refuses_the_whole_write` |
 | A21 | an imported history that crosses levels, badges and a record makes progression write no occasion row and call no port | `an_imported_history_raises_nothing` |
+| A22 | an imported rollup row carries the fingerprint `imported`, `settled_at` the source's `updated_at` in epoch milliseconds, and `score_at_close` its score | `an_imported_rollup_row_arrives_settled_with_the_imported_fingerprint` |
 
 ```acceptance
 A1: cargo test -p deck-streak-kernel --test import -- --exact the_import_count_adds_and_leaves_unchanged_out
@@ -201,6 +202,7 @@ A18: cargo test -p deck-streak-vault --test import -- --exact a_drill_grade_carr
 A19: cargo test -p deck-streak-markets --test import -- --exact the_market_positions_follow_the_precedence
 A20: cargo test -p deck-streak-streaks --test import -- --exact an_unmappable_row_refuses_the_whole_write
 A21: cargo test -p deck-streak-progression --test import -- --exact an_imported_history_raises_nothing
+A22: cargo test -p deck-streak-analytics --test import -- --exact an_imported_rollup_row_arrives_settled_with_the_imported_fingerprint
 ```
 
 ## 4. File manifest
@@ -215,7 +217,7 @@ A21: cargo test -p deck-streak-progression --test import -- --exact an_imported_
 | `crates/analytics/src/rollup.rs` | `deck-streak-analytics` | changed: the origin is read with its row and never written by the recompute |
 | `crates/analytics/src/data_rights.rs` | `deck-streak-analytics` | changed: the export carries the origin |
 | `crates/analytics/src/lib.rs` | `deck-streak-analytics` | changed: the module |
-| `crates/analytics/tests/import.rs` | `deck-streak-analytics` | added: A2 to A6 |
+| `crates/analytics/tests/import.rs` | `deck-streak-analytics` | added: A2 to A6 and A22 |
 | `crates/coordination/tests/import_recompute.rs` | `deck-streak-coordination` | added: A7 |
 | `crates/progression/src/import.rs` | `deck-streak-progression` | added: the ledger split, `day_base_xp`, `drill_xp`, the buffs, badges, records, season and multiplier writers |
 | `crates/progression/src/lib.rs` | `deck-streak-progression` | changed: the module |
@@ -278,7 +280,7 @@ A21: cargo test -p deck-streak-progression --test import -- --exact an_imported_
 - **A fabricated count carried as data.** Prevented by R7's void map, and detected by A4 and row
   S14006.
 - **An imported day re-settled, or its card state overwritten**, by the first recompute. Prevented by
-  `settled_at` and SPEC-071 R9, and detected by A7 and rows S14008 and S14009.
+  `settled_at` and SPEC-071 R9, and detected by A7, A22 and rows S14008 and S14009.
 - **A second apply that changes a row** because an instant came from the clock. Prevented by R4, and
   detected by A3 and row S14003.
 - **A celebration storm** after the import. Prevented by R5, and detected by A21 here and by
@@ -329,12 +331,12 @@ writers fill these tables; the rule is the count rule SPEC-142 reconciles.
 | `S14001-UNCHANGED-EQUAL` | `crates/kernel/src/import.rs` | `written` leaves `unchanged` out | `import::the_import_count_adds_and_leaves_unchanged_out` |
 | `S14002-SUPERSEDE-ON-CUTOFF` | `crates/analytics/src/import.rs` | a DeckStreak-only day on the cutoff is superseded, one after it kept | `import::the_rollup_rows_follow_the_precedence` |
 | `S14003-SOURCE-INSTANT` | `crates/analytics/src/import.rs` | `created_at` comes from the source, not the clock | `import::a_second_rollup_import_writes_nothing` |
-| `S14004-ORIGIN-CHECK` | `migrations/014001_analytics_card_state_origin.sql` | the origin's check (a script-mutation row) | `import::the_origin_check_refuses_a_mismatched_origin` |
+| `S14004-ORIGIN-CHECK` | `migrations/014001_analytics_card_state_origin.sql` | the origin's check (a script-mutation row whose cargo killer is in `deck-streak-analytics`) | `import::the_origin_check_refuses_a_mismatched_origin` |
 | `S14005-BACKUP-ORIGIN` | `crates/analytics/src/import.rs` | a recovered stamp keeps origin `backup` | `import::each_card_state_stamp_arrives_with_its_provenance` |
 | `S14006-VOID-NULLS` | `crates/analytics/src/import.rs` | a void stamp arrives with NULL counts | `import::each_card_state_stamp_arrives_with_its_provenance` |
 | `S14007-UNSTAMPED-DROPPED` | `crates/analytics/src/import.rs` | an unstamped count arrives NULL | `import::each_card_state_stamp_arrives_with_its_provenance` |
-| `S14008-FINGERPRINT-IMPORTED` | `crates/analytics/src/import.rs` | the fingerprint literal that forces the re-roll | `import_recompute::an_imported_day_is_re_rolled_and_keeps_its_card_state` |
-| `S14009-SETTLED-AT` | `crates/analytics/src/import.rs` | an imported day arrives settled | `import_recompute::an_imported_day_is_re_rolled_and_keeps_its_card_state` |
+| `S14008-FINGERPRINT-IMPORTED` | `crates/analytics/src/import.rs` | the fingerprint literal that forces the re-roll | `import::an_imported_rollup_row_arrives_settled_with_the_imported_fingerprint` |
+| `S14009-SETTLED-AT` | `crates/analytics/src/import.rs` | an imported day arrives settled | `import::an_imported_rollup_row_arrives_settled_with_the_imported_fingerprint` |
 | `S14010-DERIVED-SPLIT` | `crates/progression/src/import.rs` | a derived source goes to `xp_settlement` | `import::the_ledger_splits_into_grants_and_settled_days` |
 | `S14011-BASE-EXCLUDED` | `crates/progression/src/import.rs` | an excluded family is left out of the day base; the golden names each | `import::the_day_base_xp_matches_the_predecessors_golden` |
 | `S14012-CLAMP-LOW` | `crates/progression/src/import.rs` | the lower clamp; the golden names the bound and below it | `import::the_multipliers_match_the_predecessors_golden` |
