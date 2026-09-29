@@ -2,4 +2,6 @@
 //! rules (docs/CONTEXT-MAP.md).
 
 pub mod generate;
+pub mod read_tap;
 pub mod resolve;
+pub mod settle;
