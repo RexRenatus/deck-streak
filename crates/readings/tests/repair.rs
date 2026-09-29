@@ -2,6 +2,8 @@
 //!
 //! Every reading and finding here is synthetic.
 
+#![allow(clippy::expect_used, clippy::print_stdout)]
+
 use deck_streak_readings::coverage::{
     BAND_CLASS, GateFailure, OwnChecks, PackFailure, ROSTER_CLASSES, first_failure,
 };
