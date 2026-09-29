@@ -430,7 +430,7 @@ impl Router {
     }
 
     /// Prepares the photo Telegram holds as `file`, captioned `caption`, for the owner to share
-    /// (SPEC-132 R7): one `prepare_share`, no ledger row, no delivery. The transport's outcome is
+    /// (SPEC-132 R8): one `prepare_share`, no ledger row, no delivery. The transport's outcome is
     /// the answer, and with no transport joined it is [`Prepared::Unsupported`].
     pub async fn prepare_share(&self, file: &FileId, caption: &str) -> Prepared {
         match &self.bot {
