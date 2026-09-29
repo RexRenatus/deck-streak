@@ -22,3 +22,8 @@ The control, `every_committed_band_file_reads_as_plain_json_reads_it`, is not re
 every committed band file reads as plain `json.load` reads it, which the base already did.
 Rows S12201 to S12206 are companions of the killing tests of A1 to A4, each proved KILLED by its
 full id.
+
+Fix round 1. The acceptance lines of A2, A3 and A4 now select both tests their rows name, with two
+`-k` patterns each (8239dab). The refusal assertions now pin the whole sentence the code forms,
+`<file> repeats the key '<key>' in one object`, instead of three fragments of it (f4cd866). That is
+a test-only tightening after green, not a new red and green pair, so the pairs above stand.
