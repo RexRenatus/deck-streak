@@ -9,10 +9,10 @@
   prepared inline message the owner sends), ADR-054 (no-AI mode is the default) and ADR-135 (this
   wave's: the image pipeline).
 - **Prerequisites:** SPEC-026 (the bot's notifier), SPEC-041 (the one router, its order and its
-  ledger) and SPEC-084 (the ladder, which adds the dice, reaction and pin calls). SPEC-084 is
-  unlanded. **Mutation band:** `S13200-S13299`.
-- **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
-  `docs/specs/` with its tests and `docs/red-first/SPEC-132.md` (ADR-016).
+  ledger) and SPEC-084 (the ladder, which adds the dice, reaction and pin calls). SPEC-084 has landed.
+  **Mutation band:** `S13200-S13299`.
+- **Status:** delivered with its tests, its hand-proved rows and `docs/red-first/SPEC-132.md`
+  (ADR-016).
 
 ## 1. The problem, measured
 
@@ -107,6 +107,7 @@ R11. CHARTER 10's eleven anti-goals bind this SPEC as one block; the ones it tou
 | A13 | the bot's `prepare_share` is one `savePreparedInlineMessage` naming the file id | `prepare_share_is_one_prepared_inline_message` |
 | A14 | a refused or unreachable Bot API answers `Failed` from both calls, with no retry | `a_refused_photo_or_share_answers_failed` |
 | A15 | the policy's bot transport list and the census hold `push_photo` and `prepare_share` | `the_policy_names_every_bot_call` |
+| A16 | a caption is counted in UTF-16 units: 512 characters outside the BMP (1,024 units) are taken, 513 (1,026) are refused `photo_invalid`, and a combining sequence counts each of its units | `a_caption_is_counted_in_utf16_units` |
 
 ```acceptance
 A1: cargo test -p deck-streak-notifications --test photo_render -- --exact a_transport_without_push_photo_answers_unsupported
@@ -124,6 +125,7 @@ A12: cargo test -p deck-streak-bot --test photo_transport -- --exact push_photo_
 A13: cargo test -p deck-streak-bot --test photo_transport -- --exact prepare_share_is_one_prepared_inline_message
 A14: cargo test -p deck-streak-bot --test photo_transport -- --exact a_refused_photo_or_share_answers_failed
 A15: cargo test -p deck-streak-notifications --test one_router -- --exact the_policy_names_every_bot_call
+A16: cargo test -p deck-streak-notifications --test photo_render -- --exact a_caption_is_counted_in_utf16_units
 ```
 
 ## 3a. What the box run judges
@@ -144,17 +146,21 @@ each judges. The delivery hands back an empty JSON diff and says so.
 | `crates/notifications/src/transport.rs` | `deck-streak-notifications` | changed: `push_photo` and `prepare_share` with their refusing defaults, `PhotoPushed`, `Prepared` |
 | `crates/notifications/src/photo.rs` | `deck-streak-notifications` | added: `Photo`, `FileId` and their bounds |
 | `crates/notifications/src/router.rs` | `deck-streak-notifications` | changed: `route_photo`, `prepare_share`, `photo_unsupported` |
-| `crates/notifications/src/policy.rs` | `deck-streak-notifications` | changed: the two calls in the typed transport list |
 | `crates/notifications/src/lib.rs` | `deck-streak-notifications` | changed: the module |
 | `crates/notifications/tests/photo_render.rs` | `deck-streak-notifications` | added: A1 to A11 |
+| `crates/notifications/tests/photo_jpeg.rs` | `deck-streak-notifications` | added: the JPEG size reader's paths, for the mutation gate |
 | `crates/notifications/tests/one_router.rs` | `deck-streak-notifications` | changed: A15 |
+| `crates/notifications/tests/ladder_policy.rs` | `deck-streak-notifications` | changed: the port's call list includes the two new calls |
+| `crates/notifications/tests/policy.rs` | `deck-streak-notifications` | changed: the required withhold reasons include `photo_unsupported` |
 | `notifications-policy.json` | repo | changed: `push_photo` and `prepare_share` |
 | `crates/bot/src/transport.rs` | `deck-streak-bot` | changed: the two calls on the Bot API |
 | `crates/bot/tests/photo_transport.rs` | `deck-streak-bot` | added: A12 to A14 |
-| `crates/bot/tests/support/fake_bot_api.rs` | `deck-streak-bot` | changed: answers the two methods |
+| `crates/bot/tests/support/fake_bot_api.rs` | `deck-streak-bot` | changed: answers the two methods, the photo's sizes ordered by area and by sides differently |
 | `docs/specs/SPEC-132-the-router-sends-a-photo-and-prepares-a-share-through-two-additive-transport-calls-that-refuse-by-default.md` | docs | moved from `docs/specs/planned/` |
-| `docs/schematics/w7-image-pipeline-and-its-no-provider-path.md` | docs | added by the W7 architect turn; this delivery corrects it only where the code proves it wrong |
+| `docs/schematics/notification-router.md` | docs | changed: the census line names the two new calls |
 | `docs/red-first/SPEC-132.md` | docs | added |
+| `docs/decisions/ADR-135-images-are-drawn-through-a-port-with-no-provider-wired-by-a-sending-job-capped-cached-and-gated.md` | docs | changed: the withhold reason, its rejected option and a delivered-so-far line; it stays proposed until SPEC-135 delivers the rest |
+| `docs/decisions/ADR-136-a-share-is-a-prepared-inline-message-the-owner-sends-from-telegrams-share-sheet.md` | docs | changed: a delivered-so-far line; it stays proposed until SPEC-136 delivers the route and the client |
 | `scripts/mutation-rows.d/S13200-S13299.json` | repo | added: §9's rows |
 | `changelog.d/` fragment | repo | added |
 

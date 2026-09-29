@@ -78,7 +78,7 @@ what it names:
   `include!`, a symlink, a test file pulled in by `#[path]` or run by a unit, a re-export other than
   by a `pub use`, and a `pub` wrapper go unread (#297).
 - **A call the policy names, by the box run (§3a B1).** The `one-router` row refuses a call of
-  `push_message`, `push_dice`, `push_reaction`, `push_pin` or `push_in_app` outside `router.rs`.
+  `push_message`, `push_dice`, `push_reaction`, `push_pin`, `push_photo`, `prepare_share` or `push_in_app` outside `router.rs`.
 
 ## A held celebration
 

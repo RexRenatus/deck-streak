@@ -31,12 +31,16 @@ use std::time::Duration;
 
 use deck_streak_identity::Owner;
 use deck_streak_kernel::{Environment, Secret, Setting, SettingsError};
-use deck_streak_notifications::{BotTransport, Pass, PushFuture, Pushed};
+use deck_streak_notifications::{
+    BotTransport, FileId, Pass, Photo, PhotoFuture, PhotoPushed, Prepared, PushFuture, Pushed,
+    ShareFuture,
+};
 use frankenstein::client_reqwest::Bot;
+use frankenstein::inline_mode::{InlineQueryResult, InlineQueryResultCachedPhoto, MaybeCached};
 use frankenstein::methods::{
     AnswerCallbackQueryParams, DeleteMyCommandsParams, DeleteWebhookParams, EditMessageTextParams,
-    GetUpdatesParams, PinChatMessageParams, SendChatActionParams, SendDiceParams,
-    SendMessageParams, SetMessageReactionParams, SetMyCommandsParams,
+    GetUpdatesParams, PinChatMessageParams, SavePreparedInlineMessageParams, SendChatActionParams,
+    SendDiceParams, SendMessageParams, SetMessageReactionParams, SetMyCommandsParams,
 };
 use frankenstein::reqwest;
 use frankenstein::response::{ErrorResponse, MethodResponse};
@@ -619,6 +623,68 @@ impl Transport {
         Sent::Delivered { message_id }
     }
 
+    /// Sends `bytes` to `chat` as a photo with the HTML caption `caption`, in ONE request: a photo
+    /// is never retried, because a lost answer to a send that arrived would send it twice, and the
+    /// router already holds the failure. The image is uploaded from memory as `multipart/form-data`
+    /// (frankenstein's `sendPhoto` uploads only from a path on disk). The answer is the file id of
+    /// the largest size Telegram holds, or `None` on any refusal, rate limit, garbage or silence.
+    pub async fn send_photo(&self, chat: i64, bytes: &[u8], caption: &str) -> Option<String> {
+        self.attempted.fetch_add(1, Ordering::Relaxed);
+        let url = format!("{}/sendPhoto", self.bot.api_url);
+        let form = photo_form(chat, bytes, caption).ok()?;
+        let answer = self
+            .bot
+            .client
+            .post(url)
+            .multipart(form)
+            .send()
+            .await
+            .ok()?;
+        if !answer.status().is_success() {
+            return None;
+        }
+        let body = answer.text().await.ok()?;
+        let sent = serde_json::from_str::<MethodResponse<Message>>(&body).ok()?;
+        let file_id = sent
+            .result
+            .photo?
+            .into_iter()
+            .max_by_key(|size| u64::from(size.width) * u64::from(size.height))?
+            .file_id;
+        self.delivered.fetch_add(1, Ordering::Relaxed);
+        Some(file_id)
+    }
+
+    /// Prepares the photo `file_id` with the HTML caption `caption` as an inline message the owner
+    /// `user` can share, in ONE call: a cached photo result the owner can send to a user, a bot, a
+    /// group or a channel. The id it is prepared under, or `None` on any failure.
+    pub async fn save_prepared_inline_message(
+        &self,
+        user: u64,
+        file_id: &str,
+        caption: &str,
+    ) -> Option<String> {
+        let photo = InlineQueryResultCachedPhoto::builder()
+            .id("share")
+            .photo_file_id(file_id)
+            .caption(caption)
+            .parse_mode(ParseMode::Html)
+            .build();
+        let params = SavePreparedInlineMessageParams::builder()
+            .user_id(user)
+            .result(InlineQueryResult::Photo(MaybeCached::Cached(photo)))
+            .allow_user_chats(true)
+            .allow_bot_chats(true)
+            .allow_group_chats(true)
+            .allow_channel_chats(true)
+            .build();
+        self.bot
+            .save_prepared_inline_message(&params)
+            .await
+            .ok()
+            .map(|answer| answer.result.id)
+    }
+
     /// Answers the callback query `callback_id`, so the client stops its progress indicator (R9).
     /// Whether the Bot API took the answer.
     pub async fn answer_callback(&self, callback_id: &str) -> bool {
@@ -795,6 +861,46 @@ impl BotTransport for OwnerChat {
         })
     }
 
+    fn push_photo<'a>(
+        &'a self,
+        _pass: &'a Pass,
+        photo: &'a Photo,
+        caption: &'a str,
+    ) -> PhotoFuture<'a> {
+        Box::pin(async move {
+            match self
+                .transport
+                .send_photo(self.chat, photo.bytes(), caption)
+                .await
+                .and_then(|id| FileId::new(id).ok())
+            {
+                Some(file_id) => PhotoPushed::Delivered { file_id },
+                None => PhotoPushed::Failed,
+            }
+        })
+    }
+
+    fn prepare_share<'a>(
+        &'a self,
+        _pass: &'a Pass,
+        file: &'a FileId,
+        caption: &'a str,
+    ) -> ShareFuture<'a> {
+        Box::pin(async move {
+            let Ok(user) = u64::try_from(self.chat) else {
+                return Prepared::Failed;
+            };
+            match self
+                .transport
+                .save_prepared_inline_message(user, file.as_str(), caption)
+                .await
+            {
+                Some(id) => Prepared::Ready { id },
+                None => Prepared::Failed,
+            }
+        })
+    }
+
     fn push_reaction<'a>(
         &'a self,
         _pass: &'a Pass,
@@ -851,6 +957,31 @@ fn document_form(
             .text("parse_mode", "HTML")
     };
     Ok(form.part("document", document))
+}
+
+/// The multipart form of a `sendPhoto`: the chat, the HTML caption when there is one, and the image
+/// as a file part whose type is read from its signature.
+fn photo_form(
+    chat: i64,
+    bytes: &[u8],
+    caption: &str,
+) -> Result<reqwest::multipart::Form, reqwest::Error> {
+    let (name, mime) = if bytes.starts_with(&[0xFF, 0xD8]) {
+        ("photo.jpg", "image/jpeg")
+    } else {
+        ("photo.png", "image/png")
+    };
+    let photo = reqwest::multipart::Part::bytes(bytes.to_vec())
+        .file_name(name)
+        .mime_str(mime)?;
+    let form = reqwest::multipart::Form::new().text("chat_id", chat.to_string());
+    let form = if caption.is_empty() {
+        form
+    } else {
+        form.text("caption", caption.to_owned())
+            .text("parse_mode", "HTML")
+    };
+    Ok(form.part("photo", photo))
 }
 
 /// The attempt a `sendDocument` answer comes to: its message id, or its refusal.
