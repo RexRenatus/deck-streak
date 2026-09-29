@@ -414,6 +414,24 @@
         "            if client.contains(name) {",
         "one_router::the_census_classifies_every_method_of_the_pinned_client",
         "a name a class holds that the pinned client does not expose is named and refused, so the classes cannot keep a method the client dropped (SPEC-041 A15); the census is test code, which cargo-mutants never mutates, and the mutant reads the check the wrong way round"
+      ],
+      [
+        "S04148-A-PASSPORT-ERROR-MESSAGE-IS-A-HELD-DELIVERY",
+        "notifications",
+        "tests/one_router.rs",
+        "    \"setPassportDataErrors\",\n    \"createChatInviteLink\",",
+        "    \"createChatInviteLink\",",
+        "one_router::no_delivery_goes_around_the_port",
+        "a Passport error's message is text the bot writes and a user is shown, so the method is held with the sends (SPEC-041 A15); the census is test code, which cargo-mutants never mutates, and the mutant drops it from the held list, letting the planted Passport error through"
+      ],
+      [
+        "S04149-AN-INVITE-LINK-NAME-IS-A-HELD-DELIVERY",
+        "notifications",
+        "tests/one_router.rs",
+        "    \"createChatInviteLink\",\n    \"editChatInviteLink\",",
+        "    \"editChatInviteLink\",",
+        "one_router::no_delivery_goes_around_the_port",
+        "the name an invite link carries is text the bot chooses and administrators see, so the invite-link methods are held with the sends (SPEC-041 A15); the census is test code, which cargo-mutants never mutates, and the mutant drops one from the held list, letting the planted named invite link through"
       ]
     ],
     "CARGO_KILLED_SCRIPT_MUTATIONS": [
