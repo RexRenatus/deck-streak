@@ -372,6 +372,15 @@ fn rendered() -> Vec<(&'static str, Reply)> {
             )),
         ),
         (
+            "sync-scores-refused",
+            sync_reply(&synced(
+                SyncOutcome::Synced,
+                Scores::Refused {
+                    reason: "recompute_failed".to_owned(),
+                },
+            )),
+        ),
+        (
             "sync-still-running",
             sync_reply(&synced(SyncOutcome::StillRunning, Scores::Unchanged)),
         ),
@@ -382,6 +391,33 @@ fn rendered() -> Vec<(&'static str, Reply)> {
             })),
         ),
     ]
+}
+
+#[tokio::test]
+async fn a_refusal_after_a_run_is_answered_beside_the_syncs_own_line() {
+    let bench = Bench::start().await;
+    let mut commands = bench.commands(ScriptedSync::answering([Ok(SyncAnswer {
+        sync: SyncOutcome::Synced,
+        scores: Scores::Refused {
+            reason: "recompute_failed".to_owned(),
+        },
+    })]));
+    commands.handle(incoming(owner_says(1, "/sync"))).await;
+    let sent = last_send(&bench);
+    assert_eq!(
+        sent,
+        golden_send("sync-scores-refused"),
+        "the refusal's golden"
+    );
+    let text = sent["text"].as_str().expect("a text");
+    assert_eq!(
+        text.lines().next(),
+        Some("Synced with your Anki sync server.")
+    );
+    assert!(
+        text.contains("recompute_failed"),
+        "the refusal's code is named: {text}"
+    );
 }
 
 #[tokio::test]

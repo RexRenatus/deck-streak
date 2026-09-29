@@ -16,6 +16,8 @@ use deck_streak_notifications::{
 use sqlx::Row;
 use tempfile::TempDir;
 
+pub mod ladder;
+
 /// One minute, in milliseconds.
 pub const MINUTE_MS: i64 = 60_000;
 /// One day, in milliseconds.

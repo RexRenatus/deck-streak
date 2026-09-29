@@ -37,6 +37,19 @@ pub enum Progress {
     },
     /// The request was served without a sync: the reuse window answered it.
     Reused,
+    /// The job refused the request (SPEC-128); `reason` is the refusal's code.
+    Refused {
+        /// The refusal's code, one of the closed set.
+        reason: String,
+    },
+    /// The job refused after the owner's run was on record (SPEC-128): the run's outcome and the
+    /// refusal stand beside each other.
+    RefusedAfterRun {
+        /// The run's reason code, when it failed.
+        failure: Option<String>,
+        /// The refusal's code, one of the closed set.
+        reason: String,
+    },
 }
 
 /// The store's side of a request.
@@ -178,12 +191,18 @@ impl<C: Clock, L: RequestLedger, D: Doorbell, P: Pause, F: Flush> SyncRequester<
                     reason: "sync_progress_unread",
                 }
             })?;
-            let sync = match progress {
-                Progress::Ran { failure: None } => SyncOutcome::Synced,
-                Progress::Ran {
-                    failure: Some(reason),
-                } => SyncOutcome::Failed { reason },
-                Progress::Reused => SyncOutcome::Reused,
+            let (sync, scores) = match progress {
+                Progress::Ran { failure } => (run_outcome(failure), Scores::Recomputed),
+                Progress::RefusedAfterRun { failure, reason } => {
+                    (run_outcome(failure), Scores::Refused { reason })
+                }
+                Progress::Reused => (SyncOutcome::Reused, Scores::Recomputed),
+                Progress::Refused { reason } => {
+                    return Ok(SyncAnswer {
+                        sync: SyncOutcome::NotRun { reason },
+                        scores: Scores::Unchanged,
+                    });
+                }
                 Progress::Waiting if self.clock.now().epoch_millis() >= deadline => {
                     return Ok(SyncAnswer {
                         sync: SyncOutcome::StillRunning,
@@ -202,12 +221,14 @@ impl<C: Clock, L: RequestLedger, D: Doorbell, P: Pause, F: Flush> SyncRequester<
             {
                 tracing::error!(%error, "the notification router could not flush");
             }
-            return Ok(SyncAnswer {
-                sync,
-                scores: Scores::Recomputed,
-            });
+            return Ok(SyncAnswer { sync, scores });
         }
     }
+}
+
+/// The owner's run as the reply names it: synced, or failed with the run's reason code.
+fn run_outcome(failure: Option<String>) -> SyncOutcome {
+    failure.map_or(SyncOutcome::Synced, |reason| SyncOutcome::Failed { reason })
 }
 
 impl<C: Clock, L: RequestLedger, D: Doorbell, P: Pause, F: Flush> OwnerSync
@@ -246,10 +267,27 @@ impl RequestLedger for SqliteRequestLedger {
         let run = SqliteSyncRuns::new(self.db.clone())
             .owner_run_since(since)
             .await?;
-        Ok(run.map_or(Progress::Reused, |run| Progress::Ran {
-            failure: (run.status == RunStatus::Error)
-                .then(|| run.reason.unwrap_or_else(|| "unknown".to_owned())),
-        }))
+        let failure = run.as_ref().and_then(|run| {
+            (run.status == RunStatus::Error)
+                .then(|| run.reason.clone().unwrap_or_else(|| "unknown".to_owned()))
+        });
+        // A refusal at or after the request answers it even when the owner's run is on record: every
+        // request and every owner cycle clears the record first, so a refusal beside a run was
+        // recorded after it, by the same cycle (SPEC-128 R5).
+        if let Some(refusal) = SqliteIngestState::new(self.db.clone())
+            .load()
+            .await?
+            .refusal
+            && refusal.at >= since
+        {
+            let reason = refusal.reason.as_str().to_owned();
+            return Ok(if run.is_some() {
+                Progress::RefusedAfterRun { failure, reason }
+            } else {
+                Progress::Refused { reason }
+            });
+        }
+        Ok(run.map_or(Progress::Reused, |_| Progress::Ran { failure }))
     }
 }
 
