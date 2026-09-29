@@ -783,3 +783,189 @@ fn the_operation_is_matched_as_a_word_not_a_prefix() {
         ]
     );
 }
+
+/// One way a member binds a name to progression's crate: a label, the files that bind it, and the
+/// name a caller reaches the crate by (`crate` for a glob of the crate root). `{name}` in a text is
+/// the binding's name and `{krate}` is the crate it names.
+struct Binding {
+    label: &'static str,
+    files: &'static [(&'static str, &'static str)],
+    reached_as: &'static str,
+}
+
+/// Every form that binds a name to progression's crate, each with a control that names another
+/// crate in the same spelling.
+const BINDINGS: [Binding; 10] = [
+    Binding {
+        label: "as x",
+        files: &[("src/lib.rs", "pub use {krate} as {name};\n")],
+        reached_as: "{name}",
+    },
+    Binding {
+        label: "as r#x",
+        files: &[("src/lib.rs", "pub use {krate} as r#{name};\n")],
+        reached_as: "{name}",
+    },
+    Binding {
+        label: "{self as x}",
+        files: &[("src/lib.rs", "pub use {krate}::{self as {name}};\n")],
+        reached_as: "{name}",
+    },
+    Binding {
+        label: "{self as r#x}",
+        files: &[("src/lib.rs", "pub use {krate}::{self as r#{name}};\n")],
+        reached_as: "{name}",
+    },
+    Binding {
+        label: "chain of two aliases",
+        files: &[
+            ("src/a_link.rs", "pub use crate::{name}_first as {name};\n"),
+            ("src/lib.rs", "pub use {krate} as {name}_first;\n"),
+        ],
+        reached_as: "{name}",
+    },
+    Binding {
+        label: "extern crate as x",
+        files: &[("src/lib.rs", "extern crate {krate} as {name};\n")],
+        reached_as: "{name}",
+    },
+    Binding {
+        label: "manifest inline package",
+        files: &[(
+            "Cargo.toml",
+            "[dependencies]\n{name} = { package = \"{package}\", path = \"../x\" }\n",
+        )],
+        reached_as: "{name}",
+    },
+    Binding {
+        label: "manifest table package",
+        files: &[(
+            "Cargo.toml",
+            "[dependencies.{name}]\npackage = '{package}'\npath = '../x'\n",
+        )],
+        reached_as: "{name}",
+    },
+    Binding {
+        label: "manifest dotted package",
+        files: &[(
+            "Cargo.toml",
+            "[dependencies]\n{name}.package = \"{package}\"\n{name}.path = \"../x\"\n",
+        )],
+        reached_as: "{name}",
+    },
+    Binding {
+        label: "re-exported glob of the crate root",
+        files: &[("src/lib.rs", "pub use {krate}::*;\n")],
+        reached_as: "crate",
+    },
+];
+
+/// How a caller reaches `settle` through the name its member binds.
+const CALLER_SHAPES: [(&str, &str); 3] = [
+    ("path", "fn call() { let _ = {reached}::settle(); }\n"),
+    (
+        "use then call",
+        "use {reached}::settle;\nfn call() { let _ = settle(); }\n",
+    ),
+    (
+        "use as then call",
+        "use {reached}::{settle as s};\nfn call() { let _ = s(); }\n",
+    ),
+];
+
+/// Plants one binding in member `member`, naming `krate` (and `package` in a manifest), with a
+/// caller of every shape; returns the caller files by their shape.
+fn plant_binding(
+    root: &Path,
+    member: &str,
+    binding: &Binding,
+    krate: &str,
+    package: &str,
+) -> Vec<(&'static str, String)> {
+    let name = format!("bound_{member}");
+    let fill = |text: &str| {
+        text.replace("{name}", &name)
+            .replace("{krate}", krate)
+            .replace("{package}", package)
+    };
+    for (path, text) in binding.files {
+        plant(root, &format!("crates/{member}/{path}"), &fill(text));
+    }
+    let reached = fill(binding.reached_as);
+    CALLER_SHAPES
+        .iter()
+        .map(|(shape, text)| {
+            let file = format!("crates/{member}/src/call_{}.rs", shape.replace(' ', "_"));
+            plant(root, &file, &text.replace("{reached}", &reached));
+            (*shape, file)
+        })
+        .collect()
+}
+
+#[test]
+fn the_census_refuses_every_member_of_the_binding_population() {
+    // The class: a name that denotes progression's crate, by any binding form, reached by any
+    // caller shape. Every product of the two is planted and must be refused; the same spelling
+    // that names another crate is accepted.
+    let planted = tempfile::tempdir().expect("a temporary directory");
+    plant_settle(planted.path());
+    plant(
+        planted.path(),
+        "crates/progression/src/lib.rs",
+        "pub mod settle;\npub use settle::settle as tally;\n",
+    );
+    let mut members = Vec::new();
+    let mut controls = Vec::new();
+    for (index, binding) in BINDINGS.iter().enumerate() {
+        for (shape, file) in plant_binding(
+            planted.path(),
+            &format!("pop{index}"),
+            binding,
+            "deck_streak_progression",
+            "deck-streak-progression",
+        ) {
+            members.push((format!("{} / {shape}", binding.label), file));
+        }
+        for (shape, file) in plant_binding(
+            planted.path(),
+            &format!("ctl{index}"),
+            binding,
+            "deck_streak_other",
+            "deck-streak-other",
+        ) {
+            controls.push((format!("{} / {shape}", binding.label), file));
+        }
+    }
+    let found = census(planted.path());
+    println!("class members: examined {}", members.len());
+    assert_eq!(members.len(), BINDINGS.len() * CALLER_SHAPES.len());
+    let refused_file = |file: &String| {
+        found
+            .refused
+            .iter()
+            .any(|line| line.starts_with(&format!("{file} ")))
+    };
+    let escaping: Vec<&String> = members
+        .iter()
+        .filter(|(_, file)| !refused_file(file))
+        .map(|(label, _)| label)
+        .collect();
+    assert_eq!(
+        escaping,
+        Vec::<&String>::new(),
+        "members that escape the census: {} of {}",
+        escaping.len(),
+        members.len()
+    );
+    let wrongly_refused: Vec<&String> = controls
+        .iter()
+        .filter(|(_, file)| refused_file(file))
+        .map(|(label, _)| label)
+        .collect();
+    assert_eq!(
+        wrongly_refused,
+        Vec::<&String>::new(),
+        "a control naming another crate is accepted"
+    );
+    assert_eq!(controls.len(), members.len());
+}
