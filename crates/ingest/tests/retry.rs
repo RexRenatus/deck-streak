@@ -230,11 +230,10 @@ fn one_sync(
         .with_schedule(schedule);
     paused().block_on(async {
         let started = tokio::time::Instant::now();
-        let report =
-            tokio::time::timeout(Duration::from_secs(3600), syncer.sync(Trigger::Scheduled))
-                .await
-                .expect("the run ends within a paused hour")
-                .expect("the record is in memory");
+        let report = tokio::time::timeout(Duration::from_hours(1), syncer.sync(Trigger::Scheduled))
+            .await
+            .unwrap_or_else(|_| panic!("the run ends within a paused hour"))
+            .unwrap_or_else(|error| panic!("the record is in memory: {error}"));
         let SyncReport::Ran { run, waits_seconds } = report else {
             panic!("a scheduled first sync runs: {report:?}");
         };
@@ -329,7 +328,7 @@ fn the_default_jitter_draws_stay_inside_their_fraction_of_each_wait() {
         .enumerate()
         .map(|(index, wait)| {
             let base = 2_f64.powi(i32::try_from(index).expect("a small index"));
-            (((wait - base) / base) * 1e9) as u64
+            ((wait - base) / base).to_bits()
         })
         .collect();
     assert!(draws.len() > 30, "the draws were not spread: {draws:?}");

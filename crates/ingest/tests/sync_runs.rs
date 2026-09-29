@@ -28,7 +28,7 @@ fn record_of(runs: &[SyncRun]) -> (Fixture, SqliteSyncRuns, tokio::runtime::Runt
     for run in runs {
         runtime
             .block_on(record.record(run))
-            .expect("the run is recorded");
+            .unwrap_or_else(|error| panic!("the run is recorded: {error}"));
     }
     (fixture, record, runtime)
 }

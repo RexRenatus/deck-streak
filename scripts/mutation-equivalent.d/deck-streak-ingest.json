@@ -1,0 +1,31 @@
+{
+  "records": [
+    {
+      "file": "crates/ingest/src/engine.rs",
+      "mutant": "replace engine_client -> Client with Default::default()",
+      "anchor": "fn engine_client<Client: Default>() -> Client {\n    Client::default()\n}",
+      "reason": "The mutant replaces the body Client::default() with Default::default(), which is the same call.",
+      "evidence": "engine_client is generic over Client: Default and returns Client, so Default::default() in return position infers Client and resolves to <Client as Default>::default(), the very function the original body names; the compiled code is identical for every Client, so no input or test can tell them apart.",
+      "reached_by": "sync::the_engine_tells_a_sync_with_no_change_from_one_that_exchanged_changes",
+      "issue": "#300"
+    },
+    {
+      "file": "crates/ingest/src/lock.rs",
+      "mutant": "replace Held::release -> io::Result<()> with Ok(())",
+      "anchor": "pub fn release(mut self) -> io::Result<()> {\n        self.file.take().map_or(Ok(()), |file| file.unlock())\n    }",
+      "reason": "With the body gone, release drops self, and Held's Drop unlocks the same file the body would have unlocked; only the returned Result differs, and the caller discards it.",
+      "evidence": "Held owns the only handle to the lock file and Drop::drop runs file.unlock() on whatever self.file still holds, then File's own close releases the flock. The one caller, Syncer::sync, binds the result to `let _`, and unlock on a valid open descriptor does not fail, so the released state and every observable value are unchanged.",
+      "reached_by": "lock::a_second_sync_waits_for_the_collection_lock_and_never_overlaps",
+      "issue": "#300"
+    },
+    {
+      "file": "crates/ingest/src/lock.rs",
+      "mutant": "replace <impl Drop for Held>::drop with ()",
+      "anchor": "fn drop(&mut self) {\n        if let Some(file) = self.file.take() {\n            let _ = file.unlock();\n        }\n    }",
+      "reason": "Without the explicit unlock in drop, the field's own drop closes the file, and closing the only open file description releases its flock.",
+      "evidence": "Held's file is opened once in take() with O_CLOEXEC and never duplicated or shared, and its fields are private, so no other descriptor of that open file description exists to keep the lock alive after the close. The explicit unlock is a belt against a duplicated handle that the type's public API cannot create; release() still unlocks explicitly on the path that takes the file out.",
+      "reached_by": "lock::a_second_sync_waits_for_the_collection_lock_and_never_overlaps",
+      "issue": "#300"
+    }
+  ]
+}
