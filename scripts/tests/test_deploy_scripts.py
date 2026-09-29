@@ -99,8 +99,10 @@ if [ "$first" = validate ] && [ "$adapter" != caddyfile ]; then
     name=$(basename "$conf")
     case "$name" in Caddyfile* | *.caddyfile) ;; *) echo "invalid character: not JSON" >&2; exit 1 ;; esac
 fi
-[ "$first" = validate ] && [ -f "$STUB_LOG/caddy-refuses" ] && exit 1
-[ "$first" = adapt ] && [ -f "$STUB_LOG/caddy-adapt-refuses" ] && exit 1
+# a refusal can also find the candidate already gone (the flag makes the stub delete it first)
+eat() { [ -f "$STUB_LOG/caddy-eats-candidate" ] && rm -f "$conf"; return 0; }
+[ "$first" = validate ] && [ -f "$STUB_LOG/caddy-refuses" ] && { eat; exit 1; }
+[ "$first" = adapt ] && [ -f "$STUB_LOG/caddy-adapt-refuses" ] && { eat; exit 1; }
 if [ "$first" = reload ]; then
     # the previous copies a reload can see, and a reload that fails on demand: the file holds how many
     echo "$(ls -1 "$(dirname "$conf")" | grep -c '\.previous$')" >> "$STUB_LOG/reload-sees.log"
@@ -828,6 +830,39 @@ class TheCaddyInstall(Case):
         self.assertEqual((w.caddy_dir / "Caddyfile").read_text(), after)
         candidates = [p.name for p in w.caddy_dir.iterdir() if "candidate" in p.name]
         self.assertEqual(candidates, [], "no candidate file is left behind")
+
+    def test_a_removal_whose_candidate_cannot_be_written_says_so(self):
+        w = self.world
+        _original, after, block_text = self.installed()
+        (w.caddy_dir / "deck-streak.candidate").mkdir()
+        done = w.run(ROLLBACK, "caddy-remove", **self.config())
+        self.assertNotEqual(done.returncode, 0, "a failed candidate write refuses the removal")
+        self.assertIn(
+            "the candidate Caddyfile could not be written",
+            done.stderr,
+            "the removal names the failed write",
+        )
+        block = w.caddy_dir / "deck-streak.caddy"
+        self.assertEqual(block.read_text() if block.exists() else None, block_text)
+        self.assertEqual((w.caddy_dir / "Caddyfile").read_text(), after)
+
+    def refused_with_no_candidate(self, flag):
+        w = self.world
+        _original, after, block_text = self.installed()
+        (w.log / flag).write_text("x")
+        (w.log / "caddy-eats-candidate").write_text("x")
+        done = w.run(ROLLBACK, "caddy-remove", **self.config())
+        self.assertNotEqual(done.returncode, 0, "a refused configuration")
+        self.assertIn("deploy: refused", done.stderr, "the removal says so with no candidate left")
+        block = w.caddy_dir / "deck-streak.caddy"
+        self.assertEqual(block.read_text() if block.exists() else None, block_text)
+        self.assertEqual((w.caddy_dir / "Caddyfile").read_text(), after)
+
+    def test_a_removal_refused_at_validation_with_no_candidate_still_says_so(self):
+        self.refused_with_no_candidate("caddy-refuses")
+
+    def test_a_removal_refused_at_the_adapt_check_with_no_candidate_still_says_so(self):
+        self.refused_with_no_candidate("caddy-adapt-refuses")
 
     def test_the_caddy_calls_name_the_caddyfile_adapter_for_the_candidate_copy(self):
         w = self.world
