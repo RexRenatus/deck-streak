@@ -63,13 +63,11 @@ done
 
 url="${DECKSTREAK_AGENT_PROXY_URL:-}"
 [ -n "$url" ] || refuse 1 "the proxy URL is not set"
-case "$url" in
-  http://127.0.0.1 | http://127.0.0.1:* | http://localhost | http://localhost:* | \
-    http://\[::1\] | http://\[::1\]:*) ;;
-  *) refuse 2 "the proxy URL is not a loopback URL" ;;
-esac
+[[ "$url" =~ ^http://(127\.0\.0\.1|localhost|\[::1\])(:[0-9]{1,5})?$ ]] ||
+  refuse 2 "the proxy URL is not a loopback URL"
 capacity_path="${DECKSTREAK_AGENT_CAPACITY_PATH:-}"
 [ -n "$capacity_path" ] || refuse 1 "the capacity path is not set"
+[[ "$capacity_path" =~ ^/[A-Za-z0-9._/-]*$ ]] || refuse 2 "the capacity path is not an absolute path"
 
 turns="${DECKSTREAK_AGENT_MAX_TURNS:-30}"
 budget="${DECKSTREAK_AGENT_MAX_BUDGET_USD:-5}"
