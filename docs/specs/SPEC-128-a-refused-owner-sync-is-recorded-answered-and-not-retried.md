@@ -2,12 +2,12 @@
 
 - **Wave:** W2. **Issue:** #323 (epic #3). **Context(s):** `deck-streak-ingest` (the record, beside
   the pending flag), `deck-streak-daemon` (the job writes it and the bot's port reads it),
-  `deck-streak-bot` (its existing reply carries the answer).
+  `deck-streak-bot` (its reply words the answer, and gains a line for a refusal after a run).
 - **Decided by:** ADR-128 (the refusal lives on the request's own state); ADR-066 (the owner's
   request is a stored flag) and ADR-037 (one scheduled sync per study day plus the owner's
   triggers) hold.
 - **Mutation band:** `S12800-S12899`.
-- **Status:** delivered (SPEC-059 gains an insert-only amendment section at its end that points
+- **Status:** delivered, fix round 1 applied (SPEC-059 gains an insert-only amendment section at its end that points
   here, and its section 5 bullet and section 6 risk stand as the record of the state before it).
 
 ## 1. The problem, measured
@@ -40,12 +40,19 @@ R3. A new request clears the refused record in the same write that sets the flag
 R4. `progress(since)` answers the new `Progress::Refused { reason }` for a refusal recorded at or
     after `since`, and ignores a refusal recorded before `since`. A pending request still answers
     `Waiting`, and a refusal is answered before any run.
-R5. The bot's answer to the owner names the refusal and never says "still running": a refused
-    request is answered `SyncOutcome::NotRun { reason }` with `Scores::Unchanged`, which the bot's
-    existing reply words as "No sync ran" with the code. It does not flush the router (SPEC-059 R8
-    flushes only after a sync that ran and succeeded). The wording is the existing one because a
-    sentence per reason would put the names of internal settings into a chat message, while the
-    code is what the owner reports and what a log line carries.
+R5. The bot's answer to the owner names the refusal and never says "still running". Two replies:
+    - A refusal with no owner run since the request is answered `SyncOutcome::NotRun { reason }`
+      with `Scores::Unchanged`, worded "No sync ran (<code>CODE</code>)."
+    - A refusal recorded at or after the request, by the same cycle, AFTER the owner's run row is
+      answered beside the run: line 1 is the run's own sync line (Synced or Failed), unchanged, and
+      line 2 is "Your scores were not recomputed (<code>CODE</code>), so they stand." This is
+      `Progress::RefusedAfterRun` in the daemon and `Scores::Refused { reason }` in the bot.
+    The post-run code set is `obligations_unreadable` (`CycleError::Obligations`) and
+    `recompute_failed` (`CycleError::Gate`, `Window`, `Recompute`), raised after the cycle's sync
+    and its run row. `sync_record_failed` is at or before the run, and the setup codes come before
+    any run, so they answer "No sync ran". Neither reply flushes the router after a refusal on its
+    own: a run that Synced flushes as SPEC-059 R8 says. The wording is a code because a sentence per
+    reason would put the names of internal settings into a chat message.
 R6. Data rights: `ingest_state` is exported and reset in place (SPEC-023 R13), so the two new
     columns are exported with the row and cleared to NULL by an erase, as the anchor and the
     window's base are.
@@ -67,6 +74,10 @@ of the eight codes, and pairs with `refused_at` (both NULL or both set).
 | A7 | the sync job records a cycle refusal and the next run does not retry it | `cargo test -p deck-streak-daemon --test roles -- --exact a_refused_owner_request_is_recorded_and_the_next_run_does_not_retry_it` |
 | A8 | the sync job records a recompute setup refusal | `cargo test -p deck-streak-daemon --test roles -- --exact a_refused_recompute_setup_is_recorded_for_the_owner` |
 | A9 | the refused record is exported and an erase clears it | `cargo test -p deck-streak-ingest --test data_rights -- --exact the_refused_record_is_exported_and_an_erase_clears_it` |
+| A10 | a refusal recorded after the owner's run answers beside the run, and flushes as the run did | `cargo test -p deck-streak-daemon --test sync_request -- --exact a_refusal_after_the_owners_run_is_answered_beside_the_run` |
+| A11 | the sync job's own refusal after its run answers the request beside the run | `cargo test -p deck-streak-daemon --test roles -- --exact a_refusal_after_the_owners_run_answers_the_request_beside_the_run` |
+| A12 | the bot's reply for a refusal after a run equals its golden | `cargo test -p deck-streak-bot --test commands -- --exact a_refusal_after_a_run_is_answered_beside_the_syncs_own_line` |
+| A13 | every refusal code literal the owner cycle records parses as a `RefusalReason` | `cargo test -p deck-streak-daemon --test roles -- --exact every_code_the_owner_cycle_refuses_with_is_one_the_job_records` |
 
 ```acceptance
 A1: cargo test -p deck-streak-ingest --test refusal -- --exact the_migration_refuses_a_reason_outside_the_closed_set
@@ -78,6 +89,10 @@ A6: cargo test -p deck-streak-daemon --test sync_request -- --exact a_refused_re
 A7: cargo test -p deck-streak-daemon --test roles -- --exact a_refused_owner_request_is_recorded_and_the_next_run_does_not_retry_it
 A8: cargo test -p deck-streak-daemon --test roles -- --exact a_refused_recompute_setup_is_recorded_for_the_owner
 A9: cargo test -p deck-streak-ingest --test data_rights -- --exact the_refused_record_is_exported_and_an_erase_clears_it
+A10: cargo test -p deck-streak-daemon --test sync_request -- --exact a_refusal_after_the_owners_run_is_answered_beside_the_run
+A11: cargo test -p deck-streak-daemon --test roles -- --exact a_refusal_after_the_owners_run_answers_the_request_beside_the_run
+A12: cargo test -p deck-streak-bot --test commands -- --exact a_refusal_after_a_run_is_answered_beside_the_syncs_own_line
+A13: cargo test -p deck-streak-daemon --test roles -- --exact every_code_the_owner_cycle_refuses_with_is_one_the_job_records
 ```
 
 ## 4. File manifest
@@ -90,17 +105,21 @@ A9: cargo test -p deck-streak-ingest --test data_rights -- --exact the_refused_r
 | `crates/ingest/tests/refusal.rs` | `deck-streak-ingest` | added: A1 to A4 |
 | `crates/ingest/tests/data_rights.rs` | `deck-streak-ingest` | changed: A9 |
 | `crates/coordination/tests/data_rights_symmetry.rs` | `deck-streak-coordination` | changed: the seed moves the two columns off their reset value |
-| `crates/daemon/src/sync_request.rs` | `deck-streak-daemon` | changed: `Progress::Refused`, the store's read and the answer |
+| `crates/daemon/src/sync_request.rs` | `deck-streak-daemon` | changed: `Progress::Refused` and `Progress::RefusedAfterRun`, the store's read and the answer |
 | `crates/daemon/src/role_job.rs` | `deck-streak-daemon` | changed: both refusal arms record (R1) |
-| `crates/daemon/tests/sync_request.rs` | `deck-streak-daemon` | changed: A5, A6 |
-| `crates/daemon/tests/roles.rs` | `deck-streak-daemon` | changed: A7, A8 |
+| `crates/daemon/tests/sync_request.rs` | `deck-streak-daemon` | changed: A5, A6, A10 |
+| `crates/daemon/tests/roles.rs` | `deck-streak-daemon` | changed: A7, A8, A11, A13 |
+| `crates/daemon/Cargo.toml`, `Cargo.lock` | `deck-streak-daemon` | changed: `sqlx` as a dev-dependency, for A11's planted trigger (an external crate, not a crate edge) |
+| `crates/bot/src/commands.rs` | `deck-streak-bot` | changed: `Scores::Refused { reason }` and its reply line |
+| `crates/bot/tests/commands.rs`, `crates/bot/tests/messages/sync-scores-refused.msg.json` | `deck-streak-bot` | changed and added: A12 and its golden |
+| `PRIVACY.md` | privacy | changed: names the refused request |
 | `.sqlx/` | `deck-streak-ingest` | changed: the refreshed query cache |
 | `privacy.json` | privacy | changed: the `ingest-state` entry names the refused request |
 | `docs/CONTEXT-MAP.md` | docs | changed: the `ingest_state` row names the refusal in the reset |
 | `docs/specs/SPEC-059-*.md` | docs | changed: an insert-only amendment section at its end |
 | `docs/specs/SPEC-128-*.md`, `docs/decisions/ADR-128-*.md`, `docs/schematics/refused-owner-request.md`, `docs/red-first/SPEC-128.md`, `changelog.d/feat-refused-sync-128.md`, `scripts/mutation-rows.d/S12800-S12899.json` | docs and tests | added |
 
-ADR-066 is not edited. The bot crate changes no file: its reply for `NotRun` is the existing one.
+ADR-066 is not edited. The reply for `NotRun` is the existing one; only a refusal after a run has a new line.
 
 ## 5. What this does NOT do
 
@@ -120,5 +139,8 @@ ADR-066 is not edited. The bot crate changes no file: its reply for `NotRun` is 
   and records itself at a later instant, so it answers both. Both were refused by the same job
   for the same setting, so the answer is right; the record never answers a request made after
   its own instant, because `progress` reads only a refusal at or after `since`.
-- **A code added to the cycle without the set.** The type refuses an unknown code and A4 walks the
-  set; the migration `CHECK` refuses it as a second line (A1).
+- **A code added to the cycle without the set.** Before fix round 1 an unknown code was silently
+  unrecorded: the job logged it and the flag stayed set. A13 now refuses one at the producer: it
+  scans the seven refusal-code literals in `impl OwnerSyncCycle::run` (4) and `cycle_reason` (3)
+  and requires each to parse as a `RefusalReason`. A4 walks the set and the migration `CHECK`
+  refuses an unknown code as a further line (A1).

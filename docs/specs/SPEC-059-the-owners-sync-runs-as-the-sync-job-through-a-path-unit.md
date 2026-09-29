@@ -134,7 +134,7 @@ A7: cargo test -p deck-streak-daemon --test sync_request -- --exact the_real_rou
   answer bound and the next request or the daily timer serves it again. The ledger records no
   refused owner run, and this delivery adds no table for one.
 
-## 7. Amendment (SPEC-128)
+## 7. Amendment, 2026-09-29 (SPEC-128)
 
 The last bullet of section 5 and the third risk of section 6 stand as written for the delivery they
 describe. SPEC-128 (#323) closes what they name: a refusal on the job side is now recorded on
