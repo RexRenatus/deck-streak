@@ -50,7 +50,15 @@ pub enum ComposeError {
 /// [`ComposeError`] when the task prompt names an unknown slot, or a trusted piece carries a fence
 /// marker.
 pub fn compose(parts: &Parts<'_>) -> Result<String, ComposeError> {
-    for trusted in [parts.rules, parts.policy, parts.persona, parts.duty] {
+    for trusted in [
+        parts.rules,
+        parts.policy,
+        parts.persona,
+        parts.duty,
+        parts.form,
+        parts.word_target,
+        parts.repair,
+    ] {
         if trusted.contains("<untrusted") || trusted.contains("</untrusted") {
             return Err(ComposeError::FenceInTrusted);
         }
@@ -79,6 +87,9 @@ fn slot(parts: &Parts<'_>, name: &str) -> Result<String, ComposeError> {
     Ok(match name {
         "persona" => parts.persona.trim_end().to_owned(),
         "duty_rules" => parts.duty.trim_end().to_owned(),
+        "form" => parts.form.trim_end().to_owned(),
+        "word_target" => parts.word_target.trim_end().to_owned(),
+        "repair" => parts.repair.trim_end().to_owned(),
         n if n == format!("{}|json", Source::Memory.as_str()) => encode(parts.memory),
         n if n == format!("{}|json", Source::Cards.as_str()) => encode(parts.cards),
         other => return Err(ComposeError::UnknownSlot(other.to_owned())),
