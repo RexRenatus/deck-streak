@@ -12,8 +12,8 @@ mutation row that targets the implementation's own file. It reads Rust source as
 does: comments of both forms (`//` and nested `/* */`) do not count, and neither does an
 implementation inside one, a `//` inside a string is not a comment, and only a `#[cfg(test)]`
 module of the implementation's own file counts, not a line after it. An out-of-line module
-(`#[cfg(test)] mod tests;`) is that file's own test module, found through `#[path]`, `name.rs` or
-`name/mod.rs`. A literal that two implementations of one crate share is pinned only by a row on
+(`#[cfg(test)] mod tests;`) is that file's own test module, read only from the one file rustc
+could read for it; an ambiguous or attribute-made choice is refused. A literal that two implementations of one crate share is pinned only by a row on
 each implementation's file.
 """
 
@@ -35,7 +35,7 @@ TEST_MODULE = re.compile(
 TOKEN = re.compile(r"//|/\*|(?<![\w])b?r#*\"|\"|'")
 RAW = re.compile(r"b?r(#*)\"")
 OUT_OF_LINE = re.compile(r"((?:#\[[^\]]*\]\s*)+)(?:pub(?:\([^)]*\))?\s+)?mod\s+(\w+)\s*;")
-PATH_ATTR = re.compile(r'#\[path\s*=\s*"([^"]*)"\]')
+PATH_WORD = re.compile(r"\bpath\b")
 CHAR = re.compile(r"'(?:\\(?:x[0-9a-fA-F]{2}|u\{[0-9a-fA-F]{1,6}\}|.)|[^\\'\n])'")
 SHAPE = re.compile(r'const\s+SHAPE\s*:\s*&\'static\s+str\s*=\s*("(?:[^"\\]|\\.)*")\s*;')
 BANDS = REPO / "scripts" / "mutation-rows.d"
@@ -125,26 +125,31 @@ def cfg_test_spans(skeleton):
 
 
 def out_of_line(own):
-    """The files of the `#[cfg(test)] mod name;` modules that `own` declares, where the compiler
-    looks for them: a `#[path]` beside `own`, else `name.rs` or `name/mod.rs` in `own`'s module
-    directory (`own`'s own directory for `lib.rs`, `main.rs` and `mod.rs`). A declaration inside
-    an inline module or a block is not followed."""
+    """The file of each `#[cfg(test)] mod name;` that `own` declares, read only when rustc's choice
+    is not in doubt (R8): of every file rustc could read for it (`name.rs` or `name/mod.rs`, in
+    `own`'s module directory or beside `own`, since a crate root, a `src/bin` file, a `mod.rs` and
+    a file an attribute loaded all read their modules beside themselves), exactly one exists, and
+    no attribute of the declaration carries `path` in any spelling (`#[path]`, a raw string,
+    `cfg_attr` under any predicate). Any other declaration is not read, so a shape only it spells
+    is refused. A declaration inside an inline module or a block is not followed."""
     bare, skeleton = lexed(own.read_text(encoding="utf-8"))
-    folder = own.parent if own.name in ("lib.rs", "main.rs", "mod.rs") else own.with_suffix("")
     files = []
     for module in OUT_OF_LINE.finditer(skeleton):
         if skeleton.count("{", 0, module.start()) != skeleton.count("}", 0, module.start()):
             continue
         if "#[cfg(test)]" not in module.group(1):
             continue
-        named = PATH_ATTR.search(bare, module.start(1), module.end(1))
+        if PATH_WORD.search(module.group(1)):
+            continue
         name = module.group(2)
-        options = (
-            [own.parent / named.group(1)]
-            if named
-            else [folder / f"{name}.rs", folder / name / "mod.rs"]
-        )
-        files += [path for path in options if path.is_file()]
+        found = [
+            path
+            for folder in (own.with_suffix(""), own.parent)
+            for path in (folder / f"{name}.rs", folder / name / "mod.rs")
+            if path.is_file()
+        ]
+        if len(found) == 1:
+            files += found
     return files
 
 
