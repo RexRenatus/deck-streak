@@ -239,6 +239,7 @@ R20. CHARTER 10's eleven anti-goals bind this SPEC as one block; the ones it tou
 | A52 | the job's timer holds the table's calendar | `test_the_link_revocation_timer_holds_the_tables_minute` |
 | A53 | a `link` session is never admitted as an owner session | `a_link_session_is_not_an_owner_session` |
 | A54 | a revoker without Apple's credentials queues the sealed token and reports it queued | `a_revoker_without_the_credential_queues_the_token` |
+| A55 | each role reads exactly R2's credentials: an empty `google-client-secret` refuses the api role's start and no other role's, and an empty `link-token-key` refuses the api, bot and data roles' start and the job `link_revocation`'s run | `each_role_reads_exactly_its_linking_credentials` |
 
 ```acceptance
 A1: cargo test -p deck-streak-identity --test linking -- --exact a_link_code_is_random_and_kept_hashed
@@ -295,6 +296,7 @@ A51: cargo test -p deck-streak-bot --test commands -- --exact delete_revokes_app
 A52: python3 -m unittest discover -s scripts/tests -p test_deploy_templates.py -k test_the_link_revocation_timer_holds_the_tables_minute
 A53: cargo test -p deck-streak-identity --test linking -- --exact a_link_session_is_not_an_owner_session
 A54: cargo test -p deck-streak-identity --test apple -- --exact a_revoker_without_the_credential_queues_the_token
+A55: cargo test -p deck-streak-daemon --test lifecycle -- --exact each_role_reads_exactly_its_linking_credentials
 ```
 
 ## 3a. What the box run judges
@@ -344,6 +346,7 @@ DeckStreak.
 | `crates/daemon/src/role_data.rs` | `deck-streak-daemon` | changed: the data role's erase runs `erase_with_revocation`, with the same optional reads |
 | `crates/daemon/src/role_job.rs` | `deck-streak-daemon` | changed: the job `link_revocation` joins identity's revoker, its two credentials optional |
 | `crates/daemon/tests/roles.rs` | `deck-streak-daemon` | changed: A50 |
+| `crates/daemon/tests/lifecycle.rs` | `deck-streak-daemon` | changed: A55 |
 | `deploy/systemd/deck-streak-job@link_revocation.timer` | deploy | added: hourly at minute 41, on the plain job template |
 | `deploy/rail-contract.json` | deploy | changed: the timer's calendar |
 | `scripts/tests/test_deploy_templates.py` | repo | changed: A52 |
