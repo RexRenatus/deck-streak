@@ -316,3 +316,25 @@ predecessor at `27ee2bc` (SPEC-029). Every case is synthetic.
 | `S09408-ONE-ROW-PER-INSTRUMENT` | `migrations/009401_coordination_instrument_reports.sql` | the key on `instrument_reports (instrument)` (a script row; the cargo killer) | `instrument_reports::a_report_replaces_its_instruments_previous_one` |
 | `S09409-INSTRUMENT-LOCK-NO-WAIT` | `crates/ingest/src/lock.rs` | the instrument lock's take never waits: the mutant makes the take wait for the holder (`File::lock` for `File::try_lock`, with the error converted by `From` so the mutant builds); the killer bounds its wait with a timeout that fails the test | `instruments_step::a_run_while_one_runs_starts_nothing` |
 | `S09410-INSTRUMENT-LOCK-ALWAYS-TAKEN` | `crates/ingest/src/lock.rs` | the instrument lock's take holds the lock: the mutant returns from the take without holding it, so a second run starts | `instruments_step::a_run_while_one_runs_starts_nothing` |
+
+## 10. Amendments
+
+The delivery touched these files beyond the rows above:
+- `crates/api/src/lib.rs`
+- `crates/bot/src/commands.rs`
+- `crates/coordination/Cargo.toml`
+- `crates/coordination/tests/data_rights.rs`
+- `crates/daemon/src/role_job.rs`
+- `crates/ingest/tests/support/synthetic.rs`
+- `tools/parity-oracle/goldens/dark_fields.special_names.json`
+- `web/app/messages/en.json`
+- `web/app/src/lib/api.ts`
+- `web/app/src/lib/startapp.test.ts`
+- `web/app/src/lib/startapp.ts`
+- `docs/decisions/ADR-094-the-instruments-run-weekly-after-the-sync-or-on-demand-and-coordination-stores-the-latest-report.md`
+- `docs/decisions/ADR-095-ingest-walks-the-wire-format-by-hand-and-the-instrument-reads-keep-the-scope.md`
+- `docs/decisions/ADR-096-the-owners-note-conventions-are-private-configuration-the-kernel-loads.md`
+
+Rows the delivery leaves unchanged:
+- `crates/kernel/src/settings.rs` is unchanged; the conventions file is read by the existing loader.
+- `docs/schematics/insights-instrument-frame.md` is unchanged; it landed on dev already.

@@ -66,3 +66,11 @@ because a second table is now declared for export and erasure.
 Disclosure: after its red commit, `the_wire_walk_matches_the_predecessors_golden` in
 `crates/ingest/tests/structure.rs` gained a local `examined` helper call that prints how many golden cases it examined
 (the tdd examined-counts rule). No assertion changed.
+
+Between the reds and greens, three commits edited a test file, disclosed here by their shas:
+- 685c6c8 changed the assertion in `crates/coordination/tests/data_rights.rs` and its symmetry test,
+  because a second table is now declared for export and erasure (the count of named tables grew).
+- b6fadce updated `web/app/src/lib/startapp.test.ts`, because the new `insights` start token and the
+  `/insights` route entry join the lists that test compares.
+- 924f863 changed the `unhex` helper in `crates/ingest/tests/structure.rs` (a clippy pedantic
+  rewrite of the same hex decoding); no expected value changed.
