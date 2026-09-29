@@ -120,6 +120,7 @@ wiring change.
 | `scripts/tests/test_cutover_runbook.py` | repo | added: A9, A10 |
 | `.sqlx/` | repo | changed: the refreshed query cache |
 | `scripts/mutation-rows.d/S14400-S14499.json` | repo | added: §9's rows |
+| `docs/schematics/cutover-checklist-and-sequence.md` | docs | added by the W8 architect turn; this delivery corrects it only where the code proves it wrong |
 | `docs/red-first/SPEC-144.md` | docs | added: the red-first record |
 | `docs/specs/SPEC-144-the-predecessor-retires-only-after-the-owners-go-and-a-day-of-deckstreak-alone-is-judged-by-every-slo.md` | docs | moved from `docs/specs/planned/` |
 | `changelog.d/feat-cutover-day-alone.md` | repo | added: the fragment |

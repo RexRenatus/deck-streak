@@ -239,6 +239,7 @@ A20: cargo test -p deck-streak-daemon --test roles -- --exact only_the_name_cuto
 | `deploy/cutover.md` | deploy | added: the runbook (R14) |
 | `.sqlx/` | repo | changed: the refreshed query cache |
 | `scripts/mutation-rows.d/S14300-S14399.json` | repo | added: §9's rows |
+| `docs/schematics/cutover-checklist-and-sequence.md` | docs | added by the W8 architect turn; this delivery corrects it only where the code proves it wrong |
 | `docs/red-first/SPEC-143.md` | docs | added: the red-first record |
 | `docs/specs/SPEC-143-the-cutover-checklist-moves-each-contract-one-at-a-time-and-no-contract-has-two-writers-at-any-step.md` | docs | moved from `docs/specs/planned/` |
 | `changelog.d/feat-cutover-checklist.md` | repo | added: the fragment |

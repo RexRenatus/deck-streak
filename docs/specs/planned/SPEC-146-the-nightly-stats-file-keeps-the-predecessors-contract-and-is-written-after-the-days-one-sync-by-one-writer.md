@@ -325,6 +325,8 @@ collection; the coordination tests feed each port a stub, and none reads a real 
 | `tools/parity-oracle/registry/spec_146.py` | repo | added: §7's goldens |
 | `tools/parity-oracle/goldens/stats_bridge_*.json`, `stats_bridge.constants.json`, `unopened.constants.json` | repo | added: §7's goldens |
 | `scripts/mutation-rows.d/S14600-S14699.json` | repo | added: §9's rows |
+| `docs/schematics/cutover-checklist-and-sequence.md` | docs | added by the W8 architect turn; this delivery corrects it only where the code proves it wrong |
+| `docs/schematics/vault-stats-bridge.md` | docs | added by the W8 architect turn; this delivery corrects it only where the code proves it wrong |
 | `docs/red-first/SPEC-146.md` | docs | added: the red-first record |
 | `docs/specs/SPEC-146-the-nightly-stats-file-keeps-the-predecessors-contract-and-is-written-after-the-days-one-sync-by-one-writer.md` | docs | moved from `docs/specs/planned/` |
 | `changelog.d/feat-vault-stats-bridge.md` | repo | added: the fragment |

@@ -203,6 +203,7 @@ A16: cargo test -p deck-streak-notifications --test import -- --exact the_messag
 | `tools/parity-oracle/migration/goldens/import_switch_comeback.json`, `import_switch_last_chance.json`, `import_switch_widget.json`, `import_switch_widget_mood.json` | tools | added |
 | `scripts/mutation-rows.d/S14100-S14199.json` | repo | added: the rows of §9 |
 | `docs/specs/SPEC-141-the-game-the-economy-discipline-and-the-messages-import-their-own-v9-rows-and-the-runtime-settings-split-by-owner.md` | docs | moved from `docs/specs/planned/` |
+| `docs/schematics/v9-import-run.md` | docs | added by the W8 architect turn; this delivery corrects it only where the code proves it wrong |
 | `docs/red-first/SPEC-141.md` | docs | added |
 | `changelog.d/` fragment | repo | added |
 

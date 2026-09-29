@@ -125,6 +125,7 @@ issue (#360) is closed.
 | `scripts/tests/test_release_runbook.py` | repo | added: A10 |
 | `RELEASING.md` | docs | changed: §4's sentence and §8 (R5, R6) |
 | `scripts/mutation-rows.d/S14500-S14599.json` | repo | added: §9's rows |
+| `docs/schematics/cutover-checklist-and-sequence.md` | docs | added by the W8 architect turn; this delivery corrects it only where the code proves it wrong |
 | `docs/red-first/SPEC-145.md` | docs | added: the red-first record |
 | `docs/specs/SPEC-145-v1-0-0-is-released-from-main-after-the-day-alone-and-a-read-only-check-proves-the-tag-ci-and-the-security-settings.md` | docs | moved from `docs/specs/planned/` |
 | `changelog.d/feat-release-check.md` | repo | added: the fragment |
