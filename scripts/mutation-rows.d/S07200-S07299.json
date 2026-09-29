@@ -180,6 +180,15 @@
         "        command: \"levels\",",
         "commands::the_menu_is_registered_for_the_owners_chat_only",
         "the bot menu names the level command (SPEC-072 R15)"
+      ],
+      [
+        "S07225-LEVEL-UP-BEFORE-AFTER",
+        "coordination",
+        "src/sync_cycle.rs",
+        "announce_level_up(router, before, after, today)",
+        "announce_level_up(router, after, before, today)",
+        "level_up_cycle::a_sync_cycle_announces_a_level_reached_once",
+        "a sync cycle hands the router the level before the recompute and the level after it, in that order (SPEC-072 R14, A30)"
       ]
     ],
     "CARGO_KILLED_SCRIPT_MUTATIONS": [
