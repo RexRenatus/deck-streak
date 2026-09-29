@@ -91,7 +91,7 @@ pub async fn run(env: &Environment, redactor: &Redactor) -> Result<(), BotRoleEr
     let db = wiring::open_database(&offload, &state)
         .await
         .map_err(BotRoleError::Database)?;
-    let _router = wiring::router(
+    let router = wiring::router(
         policy,
         db.clone(),
         kernel.study_day_rule,
@@ -103,7 +103,8 @@ pub async fn run(env: &Environment, redactor: &Redactor) -> Result<(), BotRoleEr
         SqliteRequestLedger::new(db.clone()),
         FileDoorbell::new(request),
         TokioPause,
-    );
+    )
+    .with_flush(Arc::new(router));
     let mut commands = Commands::new(
         Arc::clone(&transport),
         owner,

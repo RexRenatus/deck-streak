@@ -197,6 +197,11 @@ impl<C: Clock, L: RequestLedger, D: Doorbell, P: Pause, F: Flush> SyncRequester<
                     continue;
                 }
             };
+            if sync == SyncOutcome::Synced
+                && let Err(error) = self.flush.flush().await
+            {
+                tracing::error!(%error, "the notification router could not flush");
+            }
             return Ok(SyncAnswer {
                 sync,
                 scores: Scores::Recomputed,
