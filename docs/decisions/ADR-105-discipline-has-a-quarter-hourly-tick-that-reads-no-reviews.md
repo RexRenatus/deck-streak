@@ -51,7 +51,7 @@ Which clock raises a reminder and the notice, and what does it read?
 Chosen option: "a quarter-hourly tick that reads no reviews", built by SPEC-105.
 
 - **The schedule kind.** The job table gains a quarter-hourly kind: it fires at a minute from 0 to
-  14 and every 15 minutes after it. The job `discipline-tick` fires at minutes 4, 19, 34 and 49,
+  14 and every 15 minutes after it. The job `discipline_tick` fires at minutes 4, 19, 34 and 49,
   none a predecessor minute (the in-process slots and the sync ticks), a reserved minute (0, 25,
   39) or the sync's slot. It does not catch up.
 - **What it does.** It raises each reminder whose window starts 0 to 15 minutes ahead, and a

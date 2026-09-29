@@ -105,7 +105,7 @@ R10. The constants (the debrief's accept window of 3 days, its ratings `1` smoot
 
 The digest (#129, #123)
 
-R11. The job `daily-digest` runs at the digest hour, minute 6, with catch-up. Its target is the
+R11. The job `daily_digest` runs at the digest hour, minute 6, with catch-up. Its target is the
     study day before the current one. When the target has no stored rollup, it raises nothing.
 R12. Otherwise it raises one occasion of kind `digest`, key `digest`. Outside a lapse its text is,
     in this order and each empty block omitted: the law block, the body, the Road to C2 block, the
@@ -144,7 +144,7 @@ R19. `ha:deal`, from the owner only, runs `/hand` (SPEC-098 R17) and answers as 
 
 The weekly report (#130)
 
-R20. The job `weekly-report` runs on Sundays at the digest hour, minute 11, without catch-up. It
+R20. The job `weekly_report` runs on Sundays at the digest hour, minute 11, without catch-up. It
     raises one occasion of kind `weekly`, key `weekly`, for the report's week, from the current
     study day minus 7 to the current study day, labelled `<first> – <last>` with both days.
 R21. Its text is, in this order and each empty block omitted: the law block, the weekly body over
@@ -305,7 +305,7 @@ it, and the message metadata stays deferred (#257): this delivery claims neither
 | `crates/coordination/src/digests/daily.rs` | `deck-streak-coordination` | added: the digest's reads, the lapse path and the occasion |
 | `crates/coordination/src/digests/weekly.rs` | `deck-streak-coordination` | added: the weekly's reads, each block's isolation, the settle and the occasion |
 | `crates/coordination/src/lib.rs` | `deck-streak-coordination` | changed: the digests module |
-| `crates/coordination/src/jobs.rs` | `deck-streak-coordination` | changed: the two schedules and the jobs `daily-digest` and `weekly-report`, which `job_table.rs`'s existing test holds equal to their timers |
+| `crates/coordination/src/jobs.rs` | `deck-streak-coordination` | changed: the two schedules and the jobs `daily_digest` and `weekly_report`, which `job_table.rs`'s existing test holds equal to their timers |
 | `crates/coordination/src/data_rights_registry.rs` | `deck-streak-coordination` | changed: `debrief_ratings` under notifications' port |
 | `crates/coordination/tests/digest_job.rs` | `deck-streak-coordination` | added: A22 to A25 |
 | `crates/coordination/tests/weekly_job.rs` | `deck-streak-coordination` | added: A26 to A29 |
@@ -323,8 +323,8 @@ it, and the message metadata stays deferred (#257): this delivery claims neither
 | `migrations/010101_notifications_debrief_ratings.sql` | `deck-streak-notifications` | added |
 | `migrations/010102_notifications_digests_side_by_side_defaults.sql` | `deck-streak-notifications` | added |
 | `notifications-policy.json` | repo | changed: the kind `weekly` and its deviation |
-| `deploy/systemd/deck-streak-job@daily-digest.timer` | deploy | added |
-| `deploy/systemd/deck-streak-job@weekly-report.timer` | deploy | added |
+| `deploy/systemd/deck-streak-job@daily_digest.timer` | deploy | added |
+| `deploy/systemd/deck-streak-job@weekly_report.timer` | deploy | added |
 | `deploy/rail-contract.json` | deploy | changed: the two calendar keys |
 | `tools/parity-oracle/registry/spec_101.py` | tools | added: the adapters |
 | `tools/parity-oracle/goldens/` | tools | added: the goldens of section 7 |

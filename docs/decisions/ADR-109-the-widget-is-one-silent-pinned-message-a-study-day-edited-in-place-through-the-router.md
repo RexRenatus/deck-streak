@@ -57,8 +57,8 @@ Chosen option: "one message a study day, the kind `widget`, edited in place thro
   modified" counts as edited, and a failed edit sends and pins anew.
 - After a T5 pins its message, the router re-pins the day's widget, as the predecessor's
   `_repin_widget` does.
-- The sync cycle refreshes the widget after its recompute, and the job `widget` refreshes it hourly
-  at minute 44, without catch-up.
+- The sync cycle refreshes the widget after its recompute, and the job `widget_refresh` refreshes
+  it hourly at minute 44, without catch-up.
 - The transport gains `push_widget`, `push_edit` and `push_unpin`, named in the policy's
   `router.transport` and called only in the router module.
 

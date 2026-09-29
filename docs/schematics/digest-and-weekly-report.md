@@ -16,12 +16,12 @@ report settles and reads).
 
 ## The digest
 
-The daily-digest job at the digest hour, minute 6. Coordination gathers each context's read and
-passes plain values; notifications renders the text and raises one occasion.
+The job `daily_digest` runs at the digest hour, minute 6. Coordination gathers each context's
+read and passes plain values; notifications renders the text and raises one occasion.
 
 ```mermaid
 flowchart TD
-  J[daily-digest job] --> T[target is the study day before the current one]
+  J[daily_digest job] --> T[target is the study day before the current one]
   T --> R{a stored rollup for the target}
   R -- no --> N[raise nothing]
   R -- yes --> L{the governor holds an open lapse}
@@ -45,11 +45,11 @@ flowchart TD
 
 ## The weekly report
 
-The weekly-report job on Sundays at the digest hour, minute 11, without catch-up.
+The job `weekly_report` runs on Sundays at the digest hour, minute 11, without catch-up.
 
 ```mermaid
 flowchart TD
-  J[weekly-report job] --> H[settle the holdout]
+  J[weekly_report job] --> H[settle the holdout]
   H --> B1[law block]
   H --> B2[weekly body over 8 rollups]
   H --> B3[Road to C2]

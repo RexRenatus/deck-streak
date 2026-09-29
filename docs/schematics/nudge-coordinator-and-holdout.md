@@ -70,14 +70,14 @@ sequenceDiagram
   participant R as router
   participant T as bot transport
   J->>X: offers, vaulted chests, rollup, streak, habit courses, buff, skip set, wager, multiplier
-  Note over J: morning-nudge at 08:06
+  Note over J: morning_nudge at 08:06
   J->>R: quest_offer with one pick row per offer
   J->>R: morning brief with Open today, holdout decided
   J->>R: chests_vaulted with the first chest's rows
-  Note over J: evening-nudge at 20:06
+  Note over J: evening_nudge at 20:06
   J->>R: route_together of streak_risk, habit and focus
   R->>T: one push of the passing parts with their rows
-  Note over J: last-chance at 22:06
+  Note over J: last_chance_nudge at 22:06
   J->>R: last_chance with the stakes rows
   R->>T: one push, or a withhold recorded
 ```

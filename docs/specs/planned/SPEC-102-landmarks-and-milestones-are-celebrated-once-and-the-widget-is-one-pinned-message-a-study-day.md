@@ -6,7 +6,7 @@
   widget's text and mood, the router's widget refresh and T5 re-pin, the kind `widget`,
   `widget_messages`); `deck-streak-ingest` (the study days of the whole scoped log);
   `deck-streak-coordination` (the landmarks and queue-zero steps of the recompute, the milestone
-  occasions' texts, the widget's inputs, the sync cycle's widget step and the job `widget`);
+  occasions' texts, the widget's inputs, the sync cycle's widget step and the job `widget_refresh`);
   `deck-streak-bot` (the widget's send, edit, pin and unpin calls); `deck-streak-daemon` (the
   wiring).
 - **Decided by:** ADR-109 (this SPEC's: the widget is one silent pinned message a study day, edited
@@ -213,10 +213,11 @@ R19. The bot transport gains `push_widget` (a silent send with its row, answerin
     router module calls them. The census of SPEC-041's A15 names each call's one site in the bot
     transport.
 R20. The sync cycle refreshes the widget after its recompute, and a cycle whose sync failed
-    refreshes nothing. The job `widget` refreshes it every hour at minute 44, without catch-up, off
-    every minute of the predecessor's schedule, the reserved minutes (0, 25, 39), the private rail's
-    reserved slots and the sync's slot (SPEC-027 R2, SPEC-053 R2). Its timer
-    `deck-streak-job@widget.timer` and the rail contract hold its calendar equal to the table.
+    refreshes nothing. The job `widget_refresh` refreshes it every hour at minute 44, without
+    catch-up, off every minute of the predecessor's schedule, the reserved minutes (0, 25, 39), the
+    private rail's reserved slots and the sync's slot (SPEC-027 R2, SPEC-053 R2). Its timer
+    `deck-streak-job@widget_refresh.timer` and the rail contract hold its calendar equal to the
+    table.
 
 Surfaces, tables and names
 
@@ -267,7 +268,7 @@ R23. `migrations/010203_notifications_widget_side_by_side_default.sql` seeds `wi
 | A31 | the level-up occasion carries the reached level's milestone text | `the_level_up_occasion_carries_the_milestone_text` |
 | A32 | the widget reads the rollup's reviews and due-today count, the streak's length, last study day and longest, the strength, the open lapse, the goal, the skip set, the day's quests, the week's quest, the Ascendant day, the token's end, the wager's days and stake and the local hour, and a fixture that changes any one of them changes the text | `the_widget_reads_every_input_it_names` |
 | A33 | the sync cycle refreshes the widget after its recompute, and a failed sync refreshes nothing | `the_sync_cycle_refreshes_the_widget_after_the_recompute` |
-| A34 | the job `widget` fires hourly at minute 44 without catch-up, off every predecessor, reserved and private-rail minute and the sync's slot, and its timer and the rail contract hold the calendar | `the_widget_job_keeps_off_every_reserved_minute` |
+| A34 | the job `widget_refresh` fires hourly at minute 44 without catch-up, off every predecessor, reserved and private-rail minute and the sync's slot, and its timer and the rail contract hold the calendar | `the_widget_job_keeps_off_every_reserved_minute` |
 
 ```acceptance
 A1: cargo test -p deck-streak-notifications --test landmarks -- --exact the_landmarks_match_the_parity_golden
@@ -355,7 +356,7 @@ delivery claims none of it.
 | `crates/coordination/src/progression/level_view.rs` | `deck-streak-coordination` | changed: the level-up occasion's milestone text |
 | `crates/coordination/src/widget.rs` | `deck-streak-coordination` | added: the widget's reads and the refresh |
 | `crates/coordination/src/sync_cycle.rs` | `deck-streak-coordination` | changed: the widget step after the recompute |
-| `crates/coordination/src/jobs.rs` | `deck-streak-coordination` | changed: the job `widget`, which `job_table.rs`'s existing test holds equal to its timer |
+| `crates/coordination/src/jobs.rs` | `deck-streak-coordination` | changed: the job `widget_refresh`, which `job_table.rs`'s existing test holds equal to its timer |
 | `crates/coordination/src/lib.rs` | `deck-streak-coordination` | changed: the widget module |
 | `crates/coordination/src/data_rights_registry.rs` | `deck-streak-coordination` | changed: `widget_messages` under notifications' port |
 | `crates/coordination/tests/landmarks_step.rs` | `deck-streak-coordination` | added: A25 to A27 |
@@ -366,13 +367,13 @@ delivery claims none of it.
 | `crates/coordination/tests/data_rights_symmetry.rs` | `deck-streak-coordination` | changed: a seeded row for `widget_messages` |
 | `crates/bot/src/transport.rs` | `deck-streak-bot` | changed: the widget's send, edit and unpin calls |
 | `crates/bot/tests/widget_transport.rs` | `deck-streak-bot` | added: A22, A23 |
-| `crates/daemon/src/wiring.rs` | `deck-streak-daemon` | changed: the job `widget`, the sync cycle's widget step and the study-days read |
+| `crates/daemon/src/wiring.rs` | `deck-streak-daemon` | changed: the job `widget_refresh`, the sync cycle's widget step and the study-days read |
 | `crates/daemon/tests/roles.rs` | `deck-streak-daemon` | changed: the new ports named |
 | `migrations/010201_notifications_widget_messages.sql` | `deck-streak-notifications` | added |
 | `migrations/010202_notifications_queue_dice.sql` | `deck-streak-notifications` | added |
 | `migrations/010203_notifications_widget_side_by_side_default.sql` | `deck-streak-notifications` | added |
 | `notifications-policy.json` | repo | changed: the kind `widget`, its deviation and the three calls |
-| `deploy/systemd/deck-streak-job@widget.timer` | deploy | added |
+| `deploy/systemd/deck-streak-job@widget_refresh.timer` | deploy | added |
 | `deploy/rail-contract.json` | deploy | changed: the calendar key |
 | `tools/parity-oracle/registry/spec_102.py` | tools | added: the adapters |
 | `tools/parity-oracle/goldens/` | tools | added: the goldens of section 7 |

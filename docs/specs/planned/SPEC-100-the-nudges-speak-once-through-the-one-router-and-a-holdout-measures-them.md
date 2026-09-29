@@ -180,7 +180,7 @@ R9. `crates/notifications/src/estimate.rs` holds `sec_per_card(rows)`, over the 
 
 The morning job (#122)
 
-R10. The job `morning-nudge` runs at 08:06 local, without catch-up. It raises, in this order: the
+R10. The job `morning_nudge` runs at 08:06 local, without catch-up. It raises, in this order: the
     quest offer, when the study day's offers are not yet picked (SPEC-080 R8); the brief; the
     vaulted chests, when any are vaulted (SPEC-081 R7).
 R11. The quest offer: kind `quest_offer`, key `quest_offer`, text `🏆 <b>Choose today's challenge
@@ -201,7 +201,7 @@ R13. The vaulted chests: kind `chests_vaulted`, key `chests_vaulted`, the line n
 
 The evening job (#117, #97)
 
-R14. The job `evening-nudge` runs at 20:06 local, without catch-up, and routes together (R7), in
+R14. The job `evening_nudge` runs at 20:06 local, without catch-up, and routes together (R7), in
     this order, the stakes preview, the habit check-in and the focus nudge.
 R15. The stakes preview: kind `streak_risk`, key `evening`. It declines with `skip_day` on an active
     skip day (SPEC-083), with `below_streak_min` when the language streak's current run is 0, and
@@ -225,7 +225,7 @@ R17. The focus nudge: kind `focus`, key `evening`. It declines with `no_payload`
 
 The last chance (#118)
 
-R18. The job `last-chance` runs at 22:06 local, without catch-up. Kind `last_chance`, key
+R18. The job `last_chance_nudge` runs at 22:06 local, without catch-up. Kind `last_chance`, key
     `last_chance`. It declines with `skip_day`, with `below_streak_min` when the language streak's
     current run is under 4, and with `already_studied`. Its text is `LAST_CHANCE_TEMPLATES[ordinal %
     8]`, the ordinal being the study day's proleptic ordinal (the epoch day plus 719163), over the
@@ -451,7 +451,7 @@ it, and the message metadata stays deferred (#257): this delivery claims neither
 | `crates/coordination/src/nudges/snooze.rs` | `deck-streak-coordination` | added: the snooze's record and fire |
 | `crates/coordination/src/nudges/holdout.rs` | `deck-streak-coordination` | added: the settle use case and the route's read model |
 | `crates/coordination/src/readings/comeback.rs` | `deck-streak-coordination` | changed: the skip day's decline |
-| `crates/coordination/src/jobs.rs` | `deck-streak-coordination` | changed: the jobs `morning-nudge`, `evening-nudge` and `last-chance`, which `job_table.rs`'s existing test holds equal to their timers |
+| `crates/coordination/src/jobs.rs` | `deck-streak-coordination` | changed: the jobs `morning_nudge`, `evening_nudge` and `last_chance_nudge`, which `job_table.rs`'s existing test holds equal to their timers |
 | `crates/coordination/src/runner.rs` | `deck-streak-coordination` | changed: the three jobs run their work by id |
 | `crates/coordination/src/lib.rs` | `deck-streak-coordination` | changed: the module `nudges` |
 | `crates/coordination/src/data_rights_registry.rs` | `deck-streak-coordination` | changed: the two tables |
@@ -486,9 +486,9 @@ it, and the message metadata stays deferred (#257): this delivery claims neither
 | `migrations/010003_notifications_requested_and_buttons.sql` | `deck-streak-notifications` | added |
 | `migrations/010004_notifications_nudges_side_by_side_defaults.sql` | `deck-streak-notifications` | added |
 | `notifications-policy.json` | repo | changed: the three kinds and their deviations |
-| `deploy/systemd/deck-streak-job@morning-nudge.timer` | deploy | added |
-| `deploy/systemd/deck-streak-job@evening-nudge.timer` | deploy | added |
-| `deploy/systemd/deck-streak-job@last-chance.timer` | deploy | added |
+| `deploy/systemd/deck-streak-job@morning_nudge.timer` | deploy | added |
+| `deploy/systemd/deck-streak-job@evening_nudge.timer` | deploy | added |
+| `deploy/systemd/deck-streak-job@last_chance_nudge.timer` | deploy | added |
 | `deploy/rail-contract.json` | deploy | changed: the three calendar keys |
 | `tools/parity-oracle/registry/spec_100.py` | tools | added: the adapters |
 | `tools/parity-oracle/goldens/` | tools | added: the goldens of section 7 |
