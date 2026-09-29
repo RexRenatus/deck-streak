@@ -153,10 +153,12 @@ jobs:
       - name: cargo-mutants, one shard of the workspace, or of the one package a dispatch names
         env:
           PACKAGE: ${{ inputs.package }}
+          SHARD: ${{ matrix.shard }}
+          SHARDS: ${{ needs.size.outputs.shards }}
         run: |
           mkdir -p "$RUNNER_TEMP/mutation"
           rc=0
-          cargo mutants --no-shuffle -vV --in-place ${PACKAGE:+--package "$PACKAGE"} --sharding round-robin --shard ${{ matrix.shard }}/${{ needs.size.outputs.shards }} --timeout 300 --build-timeout 600 --output "$RUNNER_TEMP/mutation" || rc=$?
+          cargo mutants --no-shuffle -vV --in-place ${PACKAGE:+--package "$PACKAGE"} --sharding round-robin --shard "$SHARD/$SHARDS" --timeout 300 --build-timeout 600 --output "$RUNNER_TEMP/mutation" || rc=$?
           echo "$rc" > "$RUNNER_TEMP/mutation/cargo-mutants.exit"
           echo "cargo-mutants exited $rc"
           exit "$rc"
@@ -337,10 +339,11 @@ jobs:
         if: ${{ always() }}
         env:
           PACKAGE: ${{ inputs.package }}
+          SHARDS: ${{ needs.size.outputs.shards }}
         run: |
           reports="$RUNNER_TEMP/reports"
           rc=0
-          python3 scripts/mutation-verdict.py battery --reports "$reports" --shards ${{ needs.size.outputs.shards }} ${PACKAGE:+--package "$PACKAGE"} --listed "$reports/listing/whole.json" || rc=$?
+          python3 scripts/mutation-verdict.py battery --reports "$reports" --shards "$SHARDS" ${PACKAGE:+--package "$PACKAGE"} --listed "$reports/listing/whole.json" || rc=$?
           python3 scripts/mutation-verdict.py table --reports "$reports" ${PACKAGE:+--package "$PACKAGE"} --listed "$reports/listing/whole.json" || rc=$?
           exit "$rc"
 

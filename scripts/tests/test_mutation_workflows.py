@@ -232,10 +232,8 @@ class TheWeeklyBattery(unittest.TestCase):
         rust = found.get("rust", "")
         # The legs are the sized matrix and the denominator is the size step's own count
         # (SPEC-129 R4); a scheduled run and a dispatch with no package size to 32.
-        self.assertRegex(
-            rust,
-            r"--shard \$\{\{ matrix\.shard \}\}/\$\{\{ needs\.size\.outputs\.shards \}\}",
-        )
+        self.assertRegex(rust, r"(?m)^\s+SHARDS: \$\{\{ needs\.size\.outputs\.shards \}\}$")
+        self.assertIn('--shard "$SHARD/$SHARDS"', rust)
         self.assertIn("shard: ${{ fromJSON(needs.size.outputs.matrix) }}", rust)
         mutating = [
             name
@@ -273,7 +271,7 @@ class TheWeeklyBattery(unittest.TestCase):
 
     def test_the_battery_counts_every_report_its_jobs_promise(self):
         found = jobs(workflow(WEEKLY))
-        sized = r"\$\{\{ needs\.size\.outputs\.shards \}\}"
+        sized = r'"\$SHARDS"'
         for name, promised in examined(
             "jobs that judge a battery", [("survivors", sized), ("rehearsal", "1")]
         ):
@@ -499,10 +497,9 @@ class TheBatteryTakesAScope(unittest.TestCase):
         self.assertRegex(rust, r"(?m)^\s+PACKAGE: \$\{\{ inputs\.package \}\}$")
         command = re.search(r"cargo mutants [^\n]*", rust).group(0)
         self.assertIn(SCOPED, command)
-        self.assertRegex(
-            command,
-            r"--shard \$\{\{ matrix\.shard \}\}/\$\{\{ needs\.size\.outputs\.shards \}\}",
-        )
+        self.assertIn('--shard "$SHARD/$SHARDS"', command)
+        self.assertRegex(rust, r"(?m)^\s+SHARD: \$\{\{ matrix\.shard \}\}$")
+        self.assertRegex(rust, r"(?m)^\s+SHARDS: \$\{\{ needs\.size\.outputs\.shards \}\}$")
         for name, job in examined("battery jobs", list(found.items())):
             for block in re.findall(r"(?ms)^        run: [|]?\n?(.*?)(?=^      - |\Z)", job):
                 self.assertNotIn("inputs.package", block, f"{name} interpolates the input")

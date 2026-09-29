@@ -66,17 +66,17 @@ def count_problems(text):
         problems.append("the rust job does not need size")
     if "shard: ${{ fromJSON(needs.size.outputs.matrix) }}" not in rust:
         problems.append("the rust matrix is not the sized one")
-    if f"--shard ${{{{ matrix.shard }}}}/{COUNT}" not in rust:
+    if f"SHARDS: {COUNT}" not in rust or '--shard "$SHARD/$SHARDS"' not in rust:
         problems.append("the rust legs' --shard does not read the sized count")
     survivors = found.get("survivors", "")
     if not re.search(r"(?m)^    needs: \[[^\]]*\bsize\b[^\]]*\]$", survivors):
         problems.append("the survivors job does not need size")
-    if f'battery --reports "$reports" --shards {COUNT}' not in survivors:
+    if f"SHARDS: {COUNT}" not in survivors or '--shards "$SHARDS"' not in survivors:
         problems.append("the battery's --shards does not read the sized count")
     for name, job in found.items():
         if name == "rehearsal":
             continue
-        for hit in re.findall(r"--shards? (?:\$\{\{ matrix\.shard \}\}/)?\d+", job):
+        for hit in re.findall(r"--shards? (?:\"\$SHARD/)?\d+", job):
             problems.append(f"{name}: a fixed count, {hit}")
     return problems
 
@@ -165,16 +165,17 @@ class TheWorkflowReadsTheOneCount(unittest.TestCase):
 
     def test_the_matrix_the_argument_and_the_battery_read_the_sized_count(self):
         text = workflow(WEEKLY)
-        for reader in (f"--shard ${{{{ matrix.shard }}}}/{COUNT}", f"--shards {COUNT}"):
+        for reader in (f"SHARDS: {COUNT}", '--shard "$SHARD/$SHARDS"', '--shards "$SHARDS"'):
             self.assertIn(reader, text)
         self.assertEqual(count_problems(text), [])
 
     def test_a_plant_that_puts_the_fixed_count_back_goes_red(self):
         text = workflow(WEEKLY)
         plants = [
-            (f"--shard ${{{{ matrix.shard }}}}/{COUNT}", "--shard ${{ matrix.shard }}/32"),
+            ('--shard "$SHARD/$SHARDS"', '--shard "$SHARD/32"'),
+            (f"SHARDS: {COUNT}", "SHARDS: 32"),
             ("shard: ${{ fromJSON(needs.size.outputs.matrix) }}", "shard: [0, 1, 2]"),
-            (f"--shards {COUNT}", "--shards 32"),
+            ('--shards "$SHARDS"', "--shards 32"),
         ]
         for original, planted in examined("plants", plants):
             self.assertIn(original, text, f"the workflow lacks {original}")
