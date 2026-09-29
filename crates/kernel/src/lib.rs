@@ -23,7 +23,6 @@ pub mod db;
 pub mod error;
 pub mod ids;
 pub mod logging;
-pub mod memory_cap_plant;
 pub mod offload;
 pub mod redact;
 pub mod settings;
