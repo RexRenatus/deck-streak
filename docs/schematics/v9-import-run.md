@@ -14,7 +14,7 @@ It writes nothing live, so it runs side by side (#62), before the owner's go.
 
 ```mermaid
 flowchart TD
-  copy["the copy and its sha256, delivered by the private rail"] --> check{"sha256 equal, no -wal beside it, user_version 24, the snapshot's tables?"}
+  copy["the copy and its sha256, delivered by the private rail"] --> check{"sha256 equal, no -wal beside it, user_version 24, the snapshot's tables (Litestream's own two left out)?"}
   check -- "any no" --> refuse["IMPORT PLAN REFUSED, by its reason, no row read"]
   check -- "yes" --> read["one read-only transaction on the copy, query_only on: SourceTables"]
   read --> vac["VACUUM INTO: a private copy of DeckStreak's database"]
