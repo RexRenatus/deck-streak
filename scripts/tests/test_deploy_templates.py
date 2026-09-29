@@ -896,6 +896,32 @@ class CredentialsComeFromTheSocket(unittest.TestCase):
         )
 
 
+    def test_a_credential_key_with_blanks_before_its_equals_sign_is_read_and_refused(self):
+        # The reader of credential lines is the unit reader, so a space or a tab before `=` is a key
+        # like any other (SPEC-066 R2): each is found, and a form that is not the socket is refused.
+        ids = set(credential_ids().values())
+        blanks = [(" ", "space"), ("\t", "tab")]
+        for blank, what in examined("blank(s) before the equals sign", blanks):
+            with tempfile.TemporaryDirectory() as scratch:
+                planted = Path(scratch) / "planted.service"
+                planted.write_text(
+                    "[Service]\n"
+                    f"LoadCredentialEncrypted{blank}=telegram-bot-token:{SOCKET}\n"
+                    f"LoadCredential{blank}=telegram-bot-token:/etc/token\n"
+                )
+                found = credential_lines(scratch)
+            self.assertEqual(
+                socket_form_refusals(found, ids),
+                [
+                    "planted.service:2: LoadCredentialEncrypted= is refused; use LoadCredential= "
+                    "(ADR-038)",
+                    "planted.service:3: telegram-bot-token is read from '/etc/token', not the "
+                    "socket",
+                ],
+                what,
+            )
+
+
 class TheServicesRunTheirRoles(unittest.TestCase):
     def test_every_service_runs_its_role_with_the_lifecycle_r1_names(self):
         for unit in services():
