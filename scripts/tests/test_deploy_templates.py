@@ -17,6 +17,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from collections import Counter
 from pathlib import Path
 
 import _units
@@ -410,17 +411,28 @@ def dropin_directory_refusals(root):
     own = {path.parent / f"{path.name}.d" for path in shipped}
     templates = {(path.parent, *path.name.split("@.", 1)) for path in shipped if "@." in path.name}
 
-    def an_instance_of_a_shipped_template(path):
+    def the_shipped_template_of(path):
         """systemd reads an instance's drop-ins from `<name>@<instance>.<type>.d/` (SPEC-062 R14)."""
         stem, at, rest = path.name.removesuffix(".d").partition("@")
         instance, dot, kind = rest.rpartition(".")
-        return bool(at and dot and instance) and (path.parent, stem, kind) in templates
+        template = (path.parent, stem, kind)
+        return template if at and dot and instance and template in templates else None
 
-    for path in entries:
+    folders = [path for path in entries if path.is_dir() and path.name.endswith(".d")]
+    instances = Counter(the_shipped_template_of(path) for path in folders if path not in own)
+    for path in folders:
         rel = path.relative_to(root).as_posix()
-        if not path.is_dir() or not path.name.endswith(".d") or path in own:
+        if path in own:
             continue
-        if an_instance_of_a_shipped_template(path):
+        template = the_shipped_template_of(path)
+        # The guards read a template's instance drop-ins into the template (SPEC-062 R14): exact
+        # for one instance, but two are merged where systemd keeps them apart, so both are refused.
+        if template is not None and instances[template] == 1:
+            continue
+        if template is not None:
+            refused.append(
+                f"{rel}: is not the only instance drop-in directory of its template, and is refused"
+            )
             continue
         if rel == NON_UNIT_DROPIN:
             continue

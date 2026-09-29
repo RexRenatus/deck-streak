@@ -200,6 +200,14 @@
         "        { : >\"$checked\"; break; }\n",
         "a unit whose effective configuration cannot be shown is named by the deploy itself (SPEC-062 R4, A15)",
         "test_deploy_scripts.APartialEffectiveConfigurationIsRefused.test_a_unit_that_cannot_be_shown_refuses_the_deploy_and_names_it"
+      ],
+      [
+        "S06226-TWO-INSTANCES-OF-ONE-TEMPLATE-ARE-REFUSED",
+        "scripts/tests/test_deploy_templates.py",
+        "        if template is not None and instances[template] == 1:\n",
+        "        if template is not None:\n",
+        "two instance drop-in directories of one shipped template are refused, since the unit guards read both into the template (SPEC-062 R14, A21)",
+        "test_deploy_templates.CredentialsComeFromTheSocket.test_a_shipped_templates_instance_dropin_directory_is_its_own_and_no_other_is"
       ]
     ]
   }
