@@ -227,7 +227,7 @@ predecessor at `27ee2bc` (SPEC-029). Every case is synthetic.
 |---|---|---|---|
 | `law_subject_rows` | `vault_bridge.py:_law_subject_rows` | adapter | stubs the store's deck names and the law board with invented subjects: a subject with decks and no leech, one with leeches of each status and no deck, and drill counts keyed by a spelling with `&` and spaces |
 | `subject_fold` | `vault_bridge.py:_fold_subject_key`, `_folded_subject_keys` | function | invented subjects with `&`, spaces, tabs and mixed case, one whose case folding differs from its lower case (`ß`), and one population with a collision |
-| `weekly_history_rows` | `vault_bridge.py:_weekly_history_rows` | function | four synthetic weeks, with today on the current week's Monday and on its Sunday, and observed sets holding none, one and every day of a week |
+| `weekly_history_rows` | `vault_bridge.py:_weekly_history_rows` | function | four synthetic weeks, with today on the current week's Monday and on its Sunday (0 and 6 elapsed days, a past week 7), and observed sets holding none, one and every day of a week |
 | `weekly_trend` | `vault_bridge.py:_weekly_trend` | function | an empty history, one complete week, a partial last week, an unobserved middle week, baselines whose means are 2.5 and 3.5, and deltas of -1, 0 and +1 |
 | `law_progress.constants` | `vault_bridge.WEEKLY_HISTORY_WEEKS`, `WEEKLY_TREND_METRICS`, `_WEEKLY_TREND_BASIS`, `MAX_LAW_SUBJECT_ROWS` | constants | none |
 
@@ -243,7 +243,7 @@ W8's import (#61) fills those.
 
 | row | target | what it guards | killer |
 |---|---|---|---|
-| `S12101-COMPLETE-AT-SEVEN` | `crates/coordination/src/law/progress.rs` | a week is complete only at 7 elapsed days; the golden names 6 | `law_progress::the_weekly_history_matches_the_predecessors_golden` |
+| `S12101-COMPLETE-AT-SEVEN` | `crates/coordination/src/law/progress.rs` | a week is complete only at 7 elapsed days; the golden names 6 and 7 | `law_progress::the_weekly_history_matches_the_predecessors_golden` |
 | `S12102-OBSERVED-ANY-DAY` | `crates/coordination/src/law/progress.rs` | one observed day makes the week observed; the golden names one | `law_progress::the_weekly_history_matches_the_predecessors_golden` |
 | `S12103-TREND-FILTER` | `crates/coordination/src/law/progress.rs` | only complete and observed weeks count; the golden names a partial and an unobserved week | `law_progress::the_weekly_trend_matches_the_predecessors_golden` |
 | `S12104-HALF-EVEN` | `crates/coordination/src/law/progress.rs` | the baseline rounds half to even; the golden names 2.5 and 3.5 | `law_progress::the_weekly_trend_matches_the_predecessors_golden` |

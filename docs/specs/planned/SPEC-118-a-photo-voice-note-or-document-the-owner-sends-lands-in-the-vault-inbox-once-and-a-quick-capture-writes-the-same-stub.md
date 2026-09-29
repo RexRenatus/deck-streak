@@ -246,7 +246,7 @@ predecessor at `27ee2bc` (SPEC-029). Every case is synthetic.
 
 | golden | the predecessor's function | kind | the adapter builds |
 |---|---|---|---|
-| `inbox_capture_stub` | `vault_bridge.py:save_inbox_capture` | adapter | a temporary vault root with its inbox; cases for each kind, an empty and a blank caption, a unique with symbols, one of 40 characters and an empty one, an extension without a dot and an empty one |
+| `inbox_capture_stub` | `vault_bridge.py:save_inbox_capture` | adapter | a temporary vault root with its inbox; cases for each kind, an empty and a blank caption, a unique with symbols, one of 32 characters, one of 40 and an empty one, an extension without a dot and an empty one |
 | `media_capture_choice` | `bot.py:CommandBot._maybe_capture_media` | adapter | a bot built with a synthetic token and chat id whose file capture is recorded; a photo of three sizes, a voice note, a document named with one dot, two dots and none, a message with a photo and a document, an empty photo list, and a text message |
 | `media_capture_replies` | `bot.py:CommandBot._capture_file` | adapter | the same bot, with the download and the inbox writer replaced by fakes that succeed or fail, and the sent lines recorded; a name that needs escaping |
 
