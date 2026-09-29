@@ -95,7 +95,12 @@ impl ProbeGate {
         input_class: Option<GateClassSpec>,
         reads_inputs: bool,
     ) -> Result<Self, GateBuildError> {
-        let _ = reads_inputs;
+        if classes.is_empty() {
+            return Err(GateBuildError::NoOutputClass);
+        }
+        if reads_inputs && input_class.is_none() {
+            return Err(GateBuildError::NoInputClass);
+        }
         Ok(Self {
             root,
             work_dir,
