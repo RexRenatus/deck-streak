@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM daily_lang_stats",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": []
+  },
+  "hash": "b69f9230ac720fbe9260cc5f9d1d41680969e1e835e363cffa2553e705dd8d59"
+}
