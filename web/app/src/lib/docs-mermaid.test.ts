@@ -30,7 +30,7 @@ function markdownFiles(dir: string): string[] {
  * backticks or tildes, blanks, `mermaid`. It is not the reader; it cross-checks the reader on the
  * documents.
  */
-const OPENER_LINE = /^[ \t>*+\-0-9.)]*(?:`{3,}|~{3,})[ \t]*mermaid(?![^ \t])/;
+const OPENER_LINE = /^[ \t>*+\-0-9.)]*(?:\x60{3,}|~{3,})[ \t]*mermaid(?![^ \t])/;
 
 interface Block {
   name: string;
@@ -214,6 +214,7 @@ describe('the Mermaid diagrams under docs', () => {
         : [`${member.id} ${JSON.stringify(member.text)}: read ${JSON.stringify(read)}, GitHub renders ${JSON.stringify(member.rendered)}`];
     });
 
+    expect(members.length).toBe(FENCE_MEMBERS);
     expect(escaped.slice(0, 3), `${escaped.length} of ${members.length} members read otherwise`).toEqual([]);
   });
 
@@ -234,6 +235,7 @@ describe('the Mermaid diagrams under docs', () => {
       if (JSON.stringify(refused) !== JSON.stringify(expected)) wrong.push(`${member.id}: refused ${JSON.stringify(refused)}`);
     }
 
+    expect(planted.length).toBeGreaterThan(0);
     expect(wrong.slice(0, 3), `${wrong.length} of ${planted.length} members judged otherwise`).toEqual([]);
   });
 });
