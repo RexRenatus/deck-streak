@@ -107,6 +107,7 @@ R11. CHARTER 10's eleven anti-goals bind this SPEC as one block; the ones it tou
 | A13 | the bot's `prepare_share` is one `savePreparedInlineMessage` naming the file id | `prepare_share_is_one_prepared_inline_message` |
 | A14 | a refused or unreachable Bot API answers `Failed` from both calls, with no retry | `a_refused_photo_or_share_answers_failed` |
 | A15 | the policy's bot transport list and the census hold `push_photo` and `prepare_share` | `the_policy_names_every_bot_call` |
+| A16 | a caption is counted in UTF-16 units: 512 characters outside the BMP (1,024 units) are taken, 513 (1,026) are refused `photo_invalid`, and a combining sequence counts each of its units | `a_caption_is_counted_in_utf16_units` |
 
 ```acceptance
 A1: cargo test -p deck-streak-notifications --test photo_render -- --exact a_transport_without_push_photo_answers_unsupported
@@ -124,6 +125,7 @@ A12: cargo test -p deck-streak-bot --test photo_transport -- --exact push_photo_
 A13: cargo test -p deck-streak-bot --test photo_transport -- --exact prepare_share_is_one_prepared_inline_message
 A14: cargo test -p deck-streak-bot --test photo_transport -- --exact a_refused_photo_or_share_answers_failed
 A15: cargo test -p deck-streak-notifications --test one_router -- --exact the_policy_names_every_bot_call
+A16: cargo test -p deck-streak-notifications --test photo_render -- --exact a_caption_is_counted_in_utf16_units
 ```
 
 ## 3a. What the box run judges

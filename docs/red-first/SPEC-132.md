@@ -36,6 +36,8 @@ A14: red at fbfc7b57eb9b: assertion `left == right` failed: left: Withheld { rea
 A14: green at caa7cca8e7dc
 A15: red at fbfc7b57eb9b: assertion `left == right` failed: left: [push_message, push_reveal, push_dice, push_reaction, push_pin] right: [push_message, push_reveal, push_dice, push_reaction, push_pin, push_photo, prepare_share]
 A15: green at caa7cca8e7dc
+A16: red at cd05a8b0c3a1: assertion `left == right` failed: 513 emoji are 1,026 units left: None right: Some(Caption)
+A16: green at bf506ce3b394
 ```
 
 ## Test edits after the red commit
