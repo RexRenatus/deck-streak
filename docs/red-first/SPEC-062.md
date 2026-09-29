@@ -67,6 +67,6 @@ A17: green at 52e5aa5
 A18: not red: the workflow's guard is right and the test only executes it; the row S06215 proves it fails when the guard is weakened
 A19: not red: the Caddy install already renders from the tag; the row S06223 proves the test fails when it renders from the working tree
 A20: not red: the token is already scoped to the three release steps; the row S06224 proves the test fails when it is set at job level
-A21: red at 4a49b65: AssertionError: Lists differ: ['deploy/systemd/planted@x.service.d: is n[65 chars]sed'] != [] (the test run against the guard as it stood there)
+A21: red at 4a49b65: AssertionError: Lists differ: [<the planted instance directory>: is n[65 chars]sed'] != [] (the test run against the guard as it stood there)
 A21: green at 3275235
 ```
