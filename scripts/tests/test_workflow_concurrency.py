@@ -79,6 +79,7 @@ class EveryWorkflowFollowsTheRule(unittest.TestCase):
                     "so a superseded pull-request run finishes"
                 )
             found += [f"{name}: {problem}" for problem in concurrency_problems(block)]
+        self.assertIn("ci.yml", [item[0] for item in judged])
         self.assertEqual(found, [])
 
     def test_a_run_that_is_not_a_pull_requests_is_unique_and_never_cancelled(self):
@@ -94,6 +95,7 @@ class EveryWorkflowFollowsTheRule(unittest.TestCase):
                     found.append(f"{name}: two runs of {scenario} share a group")
                 if condition(cancel, first[scenario]):
                     found.append(f"{name}: {scenario} is cancelled")
+        self.assertIn("ci.yml", [item[0] for item in judged])
         self.assertEqual(found, [])
 
     def test_the_release_workflow_never_cancels(self):
