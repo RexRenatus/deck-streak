@@ -94,3 +94,8 @@ Four mutants no test can tell apart are recorded equivalent, each with its reaso
 no caller reads, and the two operator swaps in `tokens_in` (`>` to `>=` at line 180 and `+` to `-`
 at line 182), which change only which bytes are rescanned, never a token. The refresh path's
 mutants also carry rows S09413 to S09417, each proved killed by its full id.
+
+Test edit disclosed: 29dfd0e1 extends `instruments_cycle::a_cycle_without_instruments_stores_no_report`
+with a closing presence assertion (the same deployment, run with instruments, stores the alpha
+report for the study day), because the tdd probe refuses a test whose only assertions are absences.
+No expected value of any earlier assertion changed.
