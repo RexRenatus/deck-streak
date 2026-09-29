@@ -310,6 +310,12 @@ class ALegWithNothingToExamineIsNotStarted(unittest.TestCase):
         diff.head({"README.md": "a fixture, changed\n"})
         document = diff.plan()
         self.assertEqual((document["scope"]["decision"], document["rows"]), ("diff", []))
+        # Before `shards` writes its listing into the plan, no listing says the leg had nothing.
+        unsharded = legs(diff.out / "plan.json", "skipped", "success")
+        self.assertEqual(unsharded.returncode, 3, unsharded.stdout + unsharded.stderr)
+        self.assertIn(
+            "VOID mutation-rust: not started while the plan names no shards", unsharded.stdout
+        )
         run_shards(diff, None)
         retired = legs(diff.out / "plan.json", "skipped", "skipped")
         self.assertEqual(retired.returncode, 3, retired.stdout + retired.stderr)
