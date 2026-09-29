@@ -205,6 +205,11 @@ class TheGuardJudgesAPlantedTree(unittest.TestCase):
     def test_a_shape_only_its_own_constant_spells_is_refused_by_crate_impl_and_literal(self):
         found = unpinned(self.tree())
         self.assertEqual(found, ['demo::Depth (src/depth.rs) "a whole depth"'])
+        double = self.tree()
+        (double / "crates" / "demo" / "src" / "depth.rs").write_text(
+            "#[cfg(test)]\nmod tests {\n" + IMPL_TEXT + "}\n", encoding="utf-8"
+        )
+        self.assertEqual(unpinned(double), ['demo::Depth (src/depth.rs) "a whole depth"'])
 
     def test_a_shape_a_test_of_the_crate_spells_is_pinned(self):
         root = self.tree('const X: &str = "a whole depth";')
@@ -237,7 +242,8 @@ class TheGuardJudgesAPlantedTree(unittest.TestCase):
         self.assertEqual(unpinned(root), ['demo::Wide (src/more.rs) "a whole width"'])
 
     def test_a_shape_only_a_production_line_of_the_crate_spells_is_refused(self):
-        root = self.src(self.tree(), '/// Reads "a whole depth".\npub fn depth() {}\n')
+        code = 'pub fn depth() -> &\'static str {\n    "a whole depth"\n}\n'
+        root = self.src(self.tree(), '/// Reads "a whole depth".\n' + code)
         self.assertEqual(len(implementations(root)), 1)
         self.assertEqual(unpinned(root), ['demo::Depth (src/depth.rs) "a whole depth"'])
 
@@ -253,6 +259,8 @@ class TheGuardJudgesAPlantedTree(unittest.TestCase):
         root = self.tree('// "a whole depth"\nlet shape = Depth::SHAPE;')
         self.assertEqual(len(implementations(root)), 1)
         self.assertEqual(len(unpinned(root)), 1)
+        quote = self.tree('let q = \'"\'; // "a whole depth"\nlet shape = Depth::SHAPE;')
+        self.assertEqual(len(unpinned(quote)), 1)
 
 
 class TheGuardReadsRustSource(unittest.TestCase):
@@ -289,16 +297,26 @@ class TheGuardReadsRustSource(unittest.TestCase):
         root = self.tree('let (url, shape) = ("http://host/", "a whole depth");')
         self.assertEqual(len(implementations(root)), 1)
         self.assertEqual(unpinned(root), [])
+        raw = self.tree('let (r, shape) = (r#"http://host/"#, "a whole depth");')
+        self.assertEqual(unpinned(raw), [])
+        escaped = self.tree('let (e, shape) = ("a \\" //", "a whole depth");')
+        self.assertEqual(unpinned(escaped), [])
 
     def test_a_shape_only_a_block_comment_spells_is_refused(self):
         root = self.tree('/* "a whole depth" */\nlet shape = Depth::SHAPE;')
         self.assertEqual(len(implementations(root)), 1)
         self.assertEqual(len(unpinned(root)), 1)
+        nested = self.tree('/* a /* b */ "a whole depth" */\nlet shape = Depth::SHAPE;')
+        self.assertEqual(len(unpinned(nested)), 1)
 
     def test_a_production_line_after_the_own_files_test_module_is_refused(self):
         module = '#[cfg(test)]\nmod tests {}\n\npub const X: &str = "a whole depth";\n'
         root = self.own(self.tree(), IMPL_TEXT + module)
         self.assertEqual(len(implementations(root)), 1)
+        self.assertEqual(len(unpinned(root)), 1)
+        braces = "#[cfg(test)]\nmod tests {\n    /* { */\n"
+        braces += "    const C: char = '{';\n    const S: &str = \"{\";\n}\n"
+        root = self.own(self.tree(), IMPL_TEXT + braces + 'pub const X: &str = "a whole depth";\n')
         self.assertEqual(len(unpinned(root)), 1)
 
     def test_a_test_attribute_on_a_use_opens_no_test_module(self):
