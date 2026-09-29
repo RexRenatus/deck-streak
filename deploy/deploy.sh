@@ -251,22 +251,35 @@ set -eu
 dir=$1 file=$2 line=$3
 block=$dir/deck-streak.caddy
 copy=$dir/deck-streak.candidate
+kept=$file.previous
 had=
 [ -f "$block" ] && { had=$block.previous; cp -p "$block" "$had"; }
 cat >"$block"
 cp -p "$file" "$copy"
 grep -qxF "$line" "$copy" || printf "%s\n" "$line" >>"$copy"
+put_back_block() {
+    if [ -n "$had" ]; then mv -T "$had" "$block"; else find "$block" -delete; fi
+}
 undo() {
     find "$copy" -delete
-    if [ -n "$had" ]; then mv -T "$had" "$block"; else find "$block" -delete; fi
+    put_back_block
     echo "deploy: the Caddy configuration was refused" >&2
     exit 1
 }
 caddy validate --adapter caddyfile --config "$copy" || undo
 caddy adapt --adapter caddyfile --config "$copy" --validate >/dev/null || undo
+cp -p "$file" "$kept"
 mv -T "$copy" "$file"
+if ! caddy reload --config "$file"; then
+    mv -T "$kept" "$file"
+    put_back_block
+    echo "deploy: the Caddy reload failed; the previous site file and Caddyfile were restored" >&2
+    caddy reload --config "$file" || echo "deploy: the restoring reload also failed" >&2
+    exit 1
+fi
+find "$kept" -delete
 [ -n "$had" ] && find "$had" -delete
-caddy reload --config "$file"
+exit 0
 ' "$CADDY_DIR" "$CADDYFILE" "$IMPORT_LINE"
 }
 
@@ -276,13 +289,26 @@ caddy_remove() {
     on_host '
 set -eu
 dir=$1 file=$2 line=$3
+block=$dir/deck-streak.caddy
 copy=$dir/deck-streak.candidate
+kept=$file.previous
+had=
 grep -vxF "$line" "$file" >"$copy" || true
 caddy validate --adapter caddyfile --config "$copy" || { find "$copy" -delete; echo "deploy: refused" >&2; exit 1; }
 caddy adapt --adapter caddyfile --config "$copy" --validate >/dev/null || { find "$copy" -delete; exit 1; }
+cp -p "$file" "$kept"
 mv -T "$copy" "$file"
-[ -f "$dir/deck-streak.caddy" ] && find "$dir/deck-streak.caddy" -delete
-caddy reload --config "$file"
+[ -f "$block" ] && { had=$block.previous; mv -T "$block" "$had"; }
+if ! caddy reload --config "$file"; then
+    [ -n "$had" ] && mv -T "$had" "$block"
+    mv -T "$kept" "$file"
+    echo "deploy: the Caddy reload failed; the previous site file and Caddyfile were restored" >&2
+    caddy reload --config "$file" || echo "deploy: the restoring reload also failed" >&2
+    exit 1
+fi
+find "$kept" -delete
+[ -n "$had" ] && find "$had" -delete
+exit 0
 ' "$CADDY_DIR" "$CADDYFILE" "$IMPORT_LINE" </dev/null
 }
 

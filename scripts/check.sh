@@ -164,7 +164,7 @@ stage_python() {
     # Both suites run whatever the first found, and the last line gives each one's tests and exit,
     # so a red suite never hides the other's result; a suite that ran no test fails (SPEC-054 R7).
     local suite output code ran failed=0 verdicts=""
-    for suite in scripts/tests tools/parity-oracle; do
+    for suite in scripts/tests tools/parity-oracle agent/tests; do
         output=$(python3 -m unittest discover -s "$suite" -p 'test_*.py' 2>&1)
         code=$?
         printf '%s\n' "$output"

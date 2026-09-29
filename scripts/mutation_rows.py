@@ -71,7 +71,7 @@ BAND_NAME = re.compile(r"S([0-9]+)-S([0-9]+)\.json")
 ID_STEM = re.compile(r"S([0-9]+)")
 ROW_ID = re.compile(r"S[0-9]+-[A-Z0-9]+(?:-[A-Z0-9]+)*")
 #: The unittest roots the gate's python stage discovers (scripts/check.sh).
-TEST_ROOTS = ("scripts/tests", "tools/parity-oracle")
+TEST_ROOTS = ("scripts/tests", "tools/parity-oracle", "agent/tests")
 #: Where each table keeps its find, its replacement, its killer's crate and its killer.
 CELLS = {
     "MUTATIONS": {"find": 3, "replace": 4, "crate": 1, "killer": 5, "description": 6},
