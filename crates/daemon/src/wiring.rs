@@ -570,6 +570,66 @@ mod tests {
         db.close().await;
     }
 
+    #[tokio::test(flavor = "multi_thread")]
+    async fn the_owners_sync_without_a_credentials_directory_is_refused_by_its_own_code() {
+        let directory = tempfile::tempdir().expect("a temporary directory");
+        let db = Db::open(&directory.path().join("deck_streak.db"))
+            .await
+            .expect("the database opens");
+        let workers = OffloadWorkers::new(1).expect("one worker is in range");
+        let env = Environment::from_vars([
+            (
+                "DECKSTREAK_SYNC_ENDPOINT",
+                std::ffi::OsString::from("http://127.0.0.1:9/"),
+            ),
+            ("STATE_DIRECTORY", directory.path().as_os_str().to_owned()),
+        ]);
+        let recompute = RecomputeSetup::load(&env, &db)
+            .await
+            .expect("no courses and no taxonomy are configured");
+        let cycle = OwnerSyncCycle::new(
+            env,
+            Redactor::new(),
+            db.clone(),
+            Offload::new(workers, Arc::new(SystemClock)),
+            StudyDayRule::default(),
+            recompute,
+        );
+        assert_eq!(
+            cycle.run().await,
+            Err(RefusalReason::CredentialsDirectoryRefused),
+            "no credentials directory is set"
+        );
+        db.close().await;
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn the_owners_sync_that_cannot_mark_the_rescore_is_refused_by_its_own_code() {
+        let directory = tempfile::tempdir().expect("a temporary directory");
+        let db = Db::open(&directory.path().join("deck_streak.db"))
+            .await
+            .expect("the database opens");
+        let workers = OffloadWorkers::new(1).expect("one worker is in range");
+        let env = Environment::from_vars(Vec::<(String, String)>::new());
+        let recompute = RecomputeSetup::load(&env, &db)
+            .await
+            .expect("no courses and no taxonomy are configured");
+        let cycle = OwnerSyncCycle::new(
+            env,
+            Redactor::new(),
+            db.clone(),
+            Offload::new(workers, Arc::new(SystemClock)),
+            StudyDayRule::default(),
+            recompute,
+        );
+        db.close().await;
+        assert_eq!(
+            cycle.run().await,
+            Err(RefusalReason::RescoreUnrecorded),
+            "the ledger is closed, so the request cannot be marked"
+        );
+    }
+
     #[tokio::test]
     async fn the_marker_reads_the_transports_counts() {
         let directory = tempfile::tempdir().expect("a temporary directory");
