@@ -245,13 +245,26 @@ class TheVerdictReadsThePythonReports(unittest.TestCase):
 
     def test_the_plan_sizes_the_python_matrix_from_its_listing(self):
         fixture = changed_fixture(self)
-        cases = [(0, 1), (1, 1), (40, 1), (41, 2), (80, 2), (81, 3), (320, 8), (321, 8), (900, 8)]
+        cases = [
+            (0, 1),
+            (1, 1),
+            (40, 1),
+            (41, 2),
+            (80, 2),
+            (81, 3),
+            (320, 8),
+            (321, 9),
+            (840, 21),
+            (1280, 32),
+            (1281, 32),
+            (2000, 32),
+        ]
         for count, shards in examined("listing sizes", cases):
             entries = [
                 {"name": f"scripts/guard.py:{n}:1: replace + with - in guard", "file": SCRIPT}
                 for n in range(1, count + 1)
             ]
-            expected = min(8, max(1, math.ceil(count / 40)))
+            expected = min(32, max(1, math.ceil(count / 40)))
             self.assertEqual(expected, shards, count)
             _done, written = shard_the_plan(fixture, entries)
             plan = json.loads((fixture.out / "plan.json").read_text(encoding="utf-8"))
