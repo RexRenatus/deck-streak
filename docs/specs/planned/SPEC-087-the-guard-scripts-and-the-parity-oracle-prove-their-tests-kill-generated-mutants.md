@@ -390,6 +390,13 @@ A22: python3 -m unittest discover -s scripts/tests -p test_mutation_python_workf
 - It clears no survivor that already stands in a file its own diff does not touch: the first whole
   run's survivors and the 173 uncovered mutants of the two files without a test module are #322's
   campaign.
+- It generates no mutant of the parity oracle's registry modules
+  (`tools/parity-oracle/registry/spec_NNN.py`, the case builders and glue the generator runs),
+  which lie outside SPEC-039's `oracle` class as they lie outside this population. Each golden
+  records its registry module's sha256, so every such mutant first fails `test_goldens.py`'s
+  digest check, which the sentinel names a byte reader (R5); `test_generate.py` builds a synthetic
+  registry of its own and never runs them, and the one test that runs a real registry module is
+  `test_goldens.py`'s round trip of the `{day:N}` token through `spec_042.py`. #325 plans them.
 - It records no equivalent Rust or Mini App mutant: those campaigns are #295 and #294.
 
 ## 6. Risks
@@ -448,4 +455,4 @@ mutant changes an outcome's name, never the bound, so its killer ends within A7'
 SPEC-039 (section 1, R1 to R4, R8, R10, R18, section 5, section 12), SPEC-057 (R4 to R14),
 SPEC-038 section 8 (insert-only amendments), ADR-057 (D1, D4), ADR-070, ADR-073,
 `docs/schematics/mutation-testing.md`, `docs/schematics/mutation-equivalence-record.md`,
-`docs/schematics/mutation-testing-python.md`; #218, #219, #220, #240, #294, #295, #322.
+`docs/schematics/mutation-testing-python.md`; #218, #219, #220, #240, #294, #295, #322, #325.
