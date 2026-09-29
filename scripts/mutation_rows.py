@@ -194,6 +194,15 @@ def assemble(monolith: object, fragments: list[tuple[str, object]]) -> object:
     return population
 
 
+#: The words of a repeated-key refusal, after the file's name.
+REPEATED_KEY = "repeats the key"
+
+
+def parse_document(where: str, text: str) -> object:
+    """Stub: reads `text` as `json.loads` does."""
+    return json.loads(text)
+
+
 def _fragment(name: str, text: str) -> tuple[str, object]:
     try:
         return name, json.loads(text)
