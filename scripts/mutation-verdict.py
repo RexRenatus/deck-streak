@@ -2391,7 +2391,7 @@ def table(args: argparse.Namespace) -> int:
     if scope in (None, MINIAPP):
         read += table_web(root, reports, records, tallies[MINIAPP], fail, void)
     if scope in (None, PYTHON_CLASS):
-        read += table_python(root, reports, tallies, fail, void, bool(scope))
+        read += table_python(root, reports, tallies, fail, void)
     if scope is not None and scope not in tallies:
         void(f"no listing or report holds a mutant of {scope}")
     if voids:
@@ -2412,10 +2412,11 @@ def table(args: argparse.Namespace) -> int:
     return EXIT_FAIL if findings else EXIT_OK
 
 
-def table_python(root, reports, tallies, fail, void, required: bool) -> int:
+def table_python(root, reports, tallies, fail, void) -> int:
     """The Python population's row: each shard's report read, each one unreadable, of another
     schema or restore-failed VOID by name, and each survivor or uncovered mutant no single record
-    binds UNEXPLAINED (R14). With no report, the row is absent unless the scope asked for it."""
+    binds UNEXPLAINED (R14). With no report the row is absent, and `table` voids a scope that
+    asked for it by name."""
     found = sorted(reports.rglob("mutation-python-shard-*/report.json"))
     if not found:
         return 0

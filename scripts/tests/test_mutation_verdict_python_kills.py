@@ -206,15 +206,13 @@ class TheShardReportsAreReadWhole(unittest.TestCase):
             tallies = defaultdict(V.Tally)
             sink = io.StringIO()
             with contextlib.redirect_stdout(sink):
-                read = V.table_python(
-                    root, self.reports([report]), tallies, print, voids.append, False
-                )
+                read = V.table_python(root, self.reports([report]), tallies, print, voids.append)
             self.assertEqual(voids, ["mutation-python-shard-0: a restore failed"] if voided else [])
             self.assertEqual(read, 0 if voided else 1)
         empty = scratch(self) / "none"
         empty.mkdir()
         tallies = defaultdict(V.Tally)
-        self.assertEqual(V.table_python(root, empty, tallies, print, print, False), 0)
+        self.assertEqual(V.table_python(root, empty, tallies, print, print), 0)
         self.assertEqual(dict(tallies), {})
         every = listed(SCRIPT, SCRIPT_HEAD)
         report = report_of(
@@ -232,7 +230,6 @@ class TheShardReportsAreReadWhole(unittest.TestCase):
             tallies,
             findings.append,
             voids.append,
-            False,
         )
         tally = tallies[V.PYTHON_CLASS]
         self.assertEqual((read, len(voids), findings), (1, 1, []))
