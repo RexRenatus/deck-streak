@@ -9,6 +9,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 import mermaid from 'mermaid';
 import { describe, expect, it } from 'vitest';
+import { GRAMMAR, digestOf, fenceMembers } from '../../scripts/docs-mermaid-fences.js';
 
 const DOCS = resolve(import.meta.dirname, '../../../../docs');
 
@@ -61,38 +62,33 @@ function examined<T>(what: string, items: T[]): T[] {
   return items;
 }
 
-/** The size of the quoted-fence population: 5 quote prefixes, 3 list shapes and 2 fence spellings. */
-const QUOTED_MEMBERS = 30;
-
-interface Member {
-  label: string;
-  text: (node: string) => string;
+/**
+ * GitHub's rendering of every generated fence member, recorded by
+ * `web/app/scripts/record-docs-mermaid-fences.js` from the grammar in `docs-mermaid-fences.js`: the
+ * diagram sources of each member (none when GitHub shows it as code), as indices into `sources`.
+ */
+interface Truth {
+  grammar: unknown;
+  members: number;
+  digest: string;
+  sources: string[];
+  renders: Record<string, number[]>;
 }
 
-/**
- * Every quoted fence the opener grammar admits, generated rather than listed: each blockquote prefix
- * up to depth 2 (`>`, `> `, `>` then a tab, `> > `, `>>`), alone and followed by a list marker, with
- * the fence spelled ``` ```mermaid ``` and ``` ``` mermaid ```. `text` builds the block with `node`
- * as the id of its first edge, a reserved word (`call`) or not (`caller`).
- */
-function quotedMembers(): Member[] {
-  const quotes = ['>', '> ', '>\t', '> > ', '>>'];
-  const markers = ['', '- ', '1. '];
-  const fences = ['```mermaid', '``` mermaid'];
-  return quotes.flatMap((quote) =>
-    markers.flatMap((marker) =>
-      fences.map((fence) => ({
-        label: JSON.stringify({ quote, marker, fence }),
-        text: (node: string) => {
-          const indent = ' '.repeat(marker.length);
-          const lead = marker === '' ? [] : [`${quote}${marker}item`, quote.trimEnd()];
-          const body = ['flowchart TD', `  ${node} --> done`];
-          const quoted = [fence, ...body, '```'].map((line) => `${quote}${indent}${line}`);
-          return [...lead, ...quoted, ''].join('\n');
-        }
-      }))
-    )
-  );
+const TRUTH: Truth = JSON.parse(readFileSync(resolve(import.meta.dirname, 'docs-mermaid.fences.json'), 'utf8'));
+
+/** The size of the generated fence population, so a shrunken grammar is visible in the diff. */
+const FENCE_MEMBERS = 3241;
+
+/** Every generated member GitHub renders as a diagram, with the diagram sources GitHub renders. */
+function renderedMembers() {
+  const members = fenceMembers(GRAMMAR);
+  expect(TRUTH.grammar, 'the grammar is not the one recorded: run the refresh script').toEqual(GRAMMAR);
+  expect(members.map((member) => member.id)).toEqual(Object.keys(TRUTH.renders));
+  expect(digestOf(members), 'the members are not the ones recorded: run the refresh script').toBe(TRUTH.digest);
+  expect(members.length).toBe(FENCE_MEMBERS);
+  expect(TRUTH.members).toBe(FENCE_MEMBERS);
+  return members.map((member) => ({ ...member, rendered: TRUTH.renders[member.id].map((at) => TRUTH.sources[at]) }));
 }
 
 const BLOCKS = markdownFiles(DOCS).flatMap((file) =>
@@ -158,30 +154,36 @@ describe('the Mermaid diagrams under docs', () => {
     }
   });
 
-  it('reads every quoted fence the opener grammar admits, and refuses the ones that do not parse', async () => {
-    const members = quotedMembers();
-    console.log(`examined ${members.length} quoted fence forms`);
-    expect(members.length).toBe(QUOTED_MEMBERS);
+  it('reads exactly the fences GitHub renders as diagrams, in every generated container form', () => {
+    const members = renderedMembers();
+    console.log(`examined ${members.length} generated container forms`);
+    const escaped = members.flatMap((member) => {
+      const read = blocksOf('planted.md', member.text).map((block) => block.source);
+      return JSON.stringify(read) === JSON.stringify(member.rendered)
+        ? []
+        : [`${member.id} ${JSON.stringify(member.text)}: read ${JSON.stringify(read)}, GitHub renders ${JSON.stringify(member.rendered)}`];
+    });
 
-    for (const member of members) {
-      const broken = blocksOf('planted.md', member.text('call'));
-      const valid = blocksOf('planted.md', member.text('caller'));
-
-      expect(broken.map((block) => block.name), member.label).toEqual(['planted.md block 1']);
-      expect(await parses(broken[0].source), member.label).toBe(false);
-      expect(valid.map((block) => block.name), member.label).toEqual(['planted.md block 1']);
-      expect(await parses(valid[0].source), member.label).toBe(true);
-    }
-
-    const spaced = blocksOf('planted.md', '``` mermaid\nflowchart TD\n  call --> done\n```\n');
-    expect(spaced.map((block) => block.name)).toEqual(['planted.md block 1']);
-    expect(await parses(spaced[0].source)).toBe(false);
+    expect(escaped.slice(0, 3), `${escaped.length} of ${members.length} members read otherwise`).toEqual([]);
   });
 
-  it('accepts a quoted valid block with a quoted blank line in it', async () => {
-    const planted = blocksOf('planted.md', '> ```mermaid\n> flowchart TD\n>\n>   caller --> done\n> ```\n');
+  it('refuses every generated container form planted unparsable by name, and accepts it planted valid', async () => {
+    const verdicts = new Map<string, boolean>();
+    const verdict = async (source: string) => {
+      if (!verdicts.has(source)) verdicts.set(source, await parses(source));
+      return verdicts.get(source);
+    };
+    const planted = renderedMembers().filter((member) => member.rendered.length > 0 && member.body !== 'lazy');
+    const wrong: string[] = [];
+    for (const member of examined('generated container forms planted', planted)) {
+      const refused: string[] = [];
+      for (const block of blocksOf('planted.md', member.text)) {
+        if (!(await verdict(block.source))) refused.push(block.name);
+      }
+      const expected = member.body === 'broken' ? ['planted.md block 1'] : [];
+      if (JSON.stringify(refused) !== JSON.stringify(expected)) wrong.push(`${member.id}: refused ${JSON.stringify(refused)}`);
+    }
 
-    expect(planted.map((block) => block.name)).toEqual(['planted.md block 1']);
-    expect(await parses(planted[0].source)).toBe(true);
+    expect(wrong.slice(0, 3), `${wrong.length} of ${planted.length} members judged otherwise`).toEqual([]);
   });
 });
