@@ -1,6 +1,6 @@
 """SPEC-046 A2 and A9: the packs' reading rows are green on the golden readings.
 
-The rows run from a checkout of the packs (``PACKS_CHECKOUT``, the box's default when unset); a
+The rows run from a checkout of the packs (``PACKS_CHECKOUT``; the tests skip when it is unset); a
 box without that checkout skips, because the rows are the packs' own and are not copied here.
 """
 
@@ -15,7 +15,7 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-PACKS = Path(os.environ.get("PACKS_CHECKOUT", "/tmp/phx-worktrees/deckstreak-packs-b41ce8e"))
+PACKS = Path(os.environ.get("PACKS_CHECKOUT") or "/nonexistent-packs-checkout")
 EXAMINED = re.compile(r"^examined (\d+)$", re.MULTILINE)
 
 
