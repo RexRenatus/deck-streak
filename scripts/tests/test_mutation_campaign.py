@@ -80,6 +80,9 @@ class TheCampaignTable(unittest.TestCase):
     def test_the_api_row_reads_no_unexplained_mutant(self):
         self.assert_closed("deck-streak-api")
 
+    def test_the_coordination_row_reads_no_unexplained_mutant(self):
+        self.assert_closed("deck-streak-coordination")
+
     def test_the_agent_row_reads_no_unexplained_mutant(self):
         self.assert_closed("deck-streak-agent")
 
