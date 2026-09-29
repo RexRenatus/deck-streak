@@ -344,6 +344,14 @@
         "(sh|bash)(?=",
         "a shebang naming dash makes a target a shell script (SPEC-039 section 12, A41)",
         "test_mutation_rows.TheRunnerParseChecksAShellMutant.test_a_dash_shebang_makes_a_target_a_shell_script"
+      ],
+      [
+        "S03944-A-SHELL-EXIT-OF-ONE-IS-A-REFUSAL",
+        "scripts/mutation_rows.py",
+        "    if done.returncode == 0:\n",
+        "    if done.returncode <= 1:\n",
+        "only an exit of zero is a parse: `bash -n` exits 1 on an array left open at the end of its input, so that mutant is VOID, never a kill (SPEC-039 section 12, A41)",
+        "test_mutation_rows.TheRunnerParseChecksAShellMutant.test_a_bash_mutant_refused_with_exit_one_is_void"
       ]
     ]
   }
