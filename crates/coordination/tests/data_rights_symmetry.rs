@@ -73,11 +73,15 @@ const SEEDS: [&str; 20] = [
     "WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 101) \
      INSERT INTO readings (id, topic, study_day, digest, persona, text, word_count, \
      reading_minutes, new_cards, note_count, card_ids, generated_at, version, vault_status, \
-     vault_path, carried_nights, created_at) \
+     vault_path, carried_nights, read_at, studied_count, studied_verdict, studied_at, \
+     vault_tick, created_at) \
      SELECT printf('%032x', i), 'law/synthetic-' || i, 20000 + i, printf('%064x', i), \
      'law-synthetic', 'a synthetic reading', 900 + i, 5, 1, 1, '[' || i || ']', 1000 * i, 1, \
      CASE i % 2 WHEN 0 THEN 'written' ELSE 'vault_write_failed' END, \
-     CASE i % 2 WHEN 0 THEN 'readings/synthetic-' || i ELSE NULL END, i % 5, 1000 * i FROM n",
+     CASE i % 2 WHEN 0 THEN 'readings/synthetic-' || i ELSE NULL END, i % 5, 2000 * i + 1, \
+     i % 5, CASE i % 3 WHEN 0 THEN 'open' WHEN 1 THEN 'studied' ELSE 'retired' END, \
+     3000 * i + 7, CASE i % 3 WHEN 0 THEN 'none' WHEN 1 THEN 'written' ELSE 'pending' END, \
+     1000 * i FROM n",
     "WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 101) \
      INSERT INTO reading_attempts (run_id, topic, study_day, attempt, repair_gate, verdict, \
      cause, class, gate, turns, input_tokens, output_tokens, cost_micro_usd, duration_ms, \
