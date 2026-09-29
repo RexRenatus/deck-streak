@@ -288,7 +288,7 @@ where
                 if let Some(router) = &cycle.router {
                     let after = ledger.level().await.map_err(CycleError::Recompute)?;
                     let today = fold.rule.study_day(checked.now);
-                    if let Err(error) = announce_level_up(router, before, after, today).await {
+                    if let Err(error) = announce_level_up(router, after, before, today).await {
                         tracing::error!(%error, "the level-up line could not be raised");
                     }
                 }
