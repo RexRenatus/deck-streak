@@ -163,6 +163,18 @@ WRONG = {
         .replace(" ||", ' <( : --rows "$reports/mutation-rows/rows.json" ) ||'),
         CANONICAL[1],
     ),
+    "a flag inside a double-quoted command substitution": (
+        CANONICAL[0]
+        .replace(' --rows "$reports/mutation-rows/rows.json"', "")
+        .replace(" ||", ' "$( : " --rows "$reports/mutation-rows/rows.json" " )" ||'),
+        CANONICAL[1],
+    ),
+    "a flag inside double-quoted backquotes": (
+        CANONICAL[0]
+        .replace(' --rows "$reports/mutation-rows/rows.json"', "")
+        .replace(" ||", ' "` : " --rows "$reports/mutation-rows/rows.json" " `" ||'),
+        CANONICAL[1],
+    ),
 }
 
 
