@@ -15,7 +15,7 @@
         "    put_back_block\n    mv -T \"$kept\" \"$file\"\n",
         "    put_back_block\n    find \"$kept\" -delete\n",
         "a reload that fails leaves the previous Caddyfile in place of the new one (SPEC-127 R2)",
-        "test_deploy_scripts.TheCaddyInstall.test_a_failed_reload_restores_the_previous_block_and_caddyfile"
+        "test_deploy_scripts.TheCaddyInstall.test_a_first_install_whose_reload_fails_removes_the_new_block"
       ],
       [
         "S12703-A-FAILED-RESTORING-RELOAD-STILL-EXITS-NON-ZERO",

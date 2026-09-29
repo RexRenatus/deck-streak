@@ -97,7 +97,7 @@ killed by its full id and each naming one test as its killer:
 | row | the invariant it pins | killer |
 |---|---|---|
 | S12701 | the previous block is put back when the reload fails | A1 |
-| S12702 | the previous Caddyfile is put back when the reload fails | A1 |
+| S12702 | the previous Caddyfile is put back when the reload fails | A3 |
 | S12703 | a failed reload exits non-zero | A2 |
 | S12704 | the previous copies are not deleted before the reload | A4 |
 | S12705 | the removal restores the Caddyfile when its reload fails | A5 |
