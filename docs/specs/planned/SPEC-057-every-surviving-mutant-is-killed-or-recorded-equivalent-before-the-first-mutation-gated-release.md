@@ -589,6 +589,10 @@ closing runs.
 
 A delivered row's PR cell reads `#<pull request> (runs <opening>, <closing>)`.
 
+2026-09-29 note: the `deck-streak-vault` row's counts and its runs are #277's. Pull request #412 (SPEC-110, the law
+drills) has since added vault mutation rows in `S11000-S11099` and edited `drills.rs` and `drill_notes.rs`, so
+the row is not re-measured for it: its counts read the vault at #277.
+
 What each delivery meets first, from section 1:
 
 - **vault**: 218 missed, 145 of them in `rails.rs`, the rails that block executable content in the

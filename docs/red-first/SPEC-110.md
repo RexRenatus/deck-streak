@@ -23,7 +23,7 @@ memory port, a token that encoded to nothing, commands that sent no reply and ro
 
 ```red-first
 A1: red at d1d3acf: assertion `left == right` failed: active of {"notes":{"a-note":""},"today":200}; left: Array []
-A1: green at c493f6e
+A1: green at c479aac
 A2: red at d1d3acf: assertion `left == right` failed: the reason "   "; left: "   ", right: ""
 A2: green at c493f6e
 A3: red at d1d3acf: assertion `left == right` failed: queue of the case-brief notes; left: Array []
@@ -92,3 +92,51 @@ and to fail with it once the new test was added.
   the fallback arm also gives).
 - bf12e2d8 and 80e94331: mutation rows S11028 to S11040 for the pay count, the recent grade's xp, the
   graded folder, the open refusal, the daemon open, the constants and the post-back minute.
+
+## 2026-09-29: amendment
+
+- A1's green line read `c493f6e`. Replayed with its fenced command, A1 fails there by assertion
+  (`active of {"notes":{"a-note":""},"today":200}`, left `[]`) and at `20bfa78`, and passes first at
+  `c479aac`, so the line now names `c479aac`.
+- `c493f6e` changed one assertion of A24's test between its red and its green: the prompt expected
+  `"The prompt."` and now expects `"# A synthetic drill\n\nThe prompt."`. The predecessor's
+  `_drill_prompt` keeps the note's title heading, and every prompt in `goldens/drill_meta.json`
+  begins with it, so the new expectation is the predecessor's. A24's red at `d1d3acf` is on
+  `sections`, which the change does not touch.
+- Four green commits also edited tests that already existed: `91115c9` (the job table's slot census,
+  `24 * 25` to `24 * 49`, for the post-back's 24 hourly slots), `61fe55a` (two drill seeds in
+  `data_rights_symmetry`), `5449642` (the bot's command test and the help and start goldens, for the
+  two drill commands) and `df5ceb0` (an unused constant dropped from `drill_routes`).
+- Five later commits edited or added tests and were not named above: `ada550d3` (the job usage line
+  in the daemon's `roles`), `29ce87d7` (the examined counts of `drill_commands`' note reads),
+  `f840f002` (the deploy and rail-contract tests), `4b6465c7` (`drill_paid_count` and `drill_vault`,
+  for clippy and the absence-only rule) and `7fe70740` (`drill_routes_composed`, the drill routes
+  through the composed router). None is a red-first criterion.
+- This amendment's own tests are not criteria either:
+  `drill_postback::a_drill_whose_kept_key_would_overflow_the_grammar_pays_by_its_hash` (R10) and
+  `drill_kills::a_link_in_the_drills_folders_is_never_read_or_written_through` (R1). Each fails by
+  assertion at `cc91e8e9` and passes with the change.
+
+## 2026-09-29: amendment, round 1 of review
+
+The fix round added tests for two classes, each red before its change and green after it. None is a
+red-first criterion. The reds are at `86028bba`, whose tree holds the tests and a stub of the bound's
+constants; the greens are at `3b492c32`. Each red is by assertion, exit 101.
+
+- The kept-id bound (R10). At `86028bba`: `drill_goldens::an_unkeyable_drill_id_is_keyed_by_its_hash`
+  fails on its 122 and 123 boundary (the key of a 123-character id is kept, not hashed);
+  `drill_postback::a_drill_whose_kept_key_would_overflow_the_grammar_pays_by_its_hash` fails with
+  `no drill's key is refused` (the report carries the `drill_key_refused` page);
+  `drill_key_population::the_kept_id_bound_is_the_grammars_own_limit_less_the_prefix` fails with
+  left 128, right 122; `drill_key_population::every_key_the_post_back_forms_is_a_source_the_grammar_accepts`
+  fails on the first member, `the grammar refuses the key of an id of 123 characters`. At `3b492c32`
+  all four pass, and the population prints `examined 5166 ids (4513 kept, 653 hashed)`.
+- The vault adapter's one gate (R1). At `86028bba`:
+  `drill_kills::a_link_in_the_drills_folders_is_never_read_or_written_through` fails at its first
+  listing (a linked note `linked` is listed), and
+  `drill_kills::no_link_in_any_placement_is_read_listed_paid_from_or_written_through` fails on its
+  first member, `File NoteInActive List: listed [...]`. At `3b492c32` both pass, and the population
+  prints `examined 80 placements; unbuilt on this file system: []`.
+- Manifest and rows. The manifest names `crates/coordination/tests/drill_key_population.rs`. Row
+  `S11021` is re-anchored to the derived expression; the second `S11040` is now `S11041`; rows
+  `S11042` to `S11045` are new.
