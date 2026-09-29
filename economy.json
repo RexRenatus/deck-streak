@@ -73,11 +73,6 @@
       "quests": {
         "q1": 20,
         "q2": 40
-      },
-      "drill_postback": {
-        "xp": 15,
-        "min": 10,
-        "max": 25
       }
     },
     "day_base_excludes": [

@@ -7,7 +7,7 @@ implementation in four commits (81e05e0, c493f6e, 20bfa78, c479aac); the coordin
 (5eeebf4), tests (a2e0e1a) and implementation (91115c9, 61fe55a); the daemon's test (1b8c78e) and
 implementation (3f0b83a, 25eb6f9, 2edd603); the bot's inert shapes (edfe7f2), tests (d876a07) and
 implementation (5449642); the api's inert routes (45e4c60), test (4739275) and implementation
-(df5ceb0); the economy declaration (058671d); the mutation rows (bb90d4d); and the pins of the stem
+(df5ceb0); the mutation rows (bb90d4d); and the pins of the stem
 refusal and the token prefixes (ef4ec29).
 
 The goldens were generated from the predecessor's own functions at `27ee2bc`, with a scratch

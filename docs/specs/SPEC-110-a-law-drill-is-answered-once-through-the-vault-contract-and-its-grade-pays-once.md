@@ -106,7 +106,8 @@ R9. The job `drill_postback` in `coordination::jobs::TABLE` (SPEC-027 R1), hourl
     parsed note, records the grade and asks the grant port (SPEC-040) for the clamped amount on the
     study day of the poll, source `drill:<drill id>`, track `law`, scope `once`. A missing vault
     root is the job's error (SPEC-027 R7 pages it once); a missing `Graded` folder pays nothing.
-    `economy.json` declares the pay once, as `xp.bonuses.drill_postback` (15, between 10 and 25).
+    The pay (15, between 10 and 25) is declared once, as the vault's constants `POSTBACK_XP`, `XP_MIN` and `XP_MAX`
+    (ADR-047's one-home rule: the game-economy pack refuses a key its reference lacks, so `economy.json` does not carry it).
 R10. A drill id is kept as-is when `drill:<id>` fits SPEC-040 R2's grammar (128 characters at most)
     and the id does not begin with `h.`; every other id is keyed `drill:h.` followed by the first 32
     hex characters of the SHA-256 of the id (ADR-110), so a kept key never equals a hashed one.
@@ -218,7 +219,7 @@ when it merges.
 |---|---|---|
 | B1 | over `privacy.json`, `PRIVACY.md` and `crates/vault/src/data_rights.rs`: the `law-drills` category names `drill_answers` and `drill_grades` with purpose, basis and retention, and export and erase cover both | the privacy-gdpr pack |
 | B2 | over `crates/bot/src/drill_commands.rs` and `crates/bot/src/commands.rs`: every callback datum the drill keyboards build is 1 to 64 bytes, and every drill reply stays within the message length | the telegram-platform pack |
-| B3 | over `economy.json`'s `xp` section: the drill pay's 15, 10 and 25 are declared once | the game-economy pack |
+| B3 | over `economy.json`: its `xp` section is unchanged by this delivery and the pack still passes; the drill pay lives in the vault's constants only | the game-economy pack |
 
 ## 4. File manifest
 
@@ -253,7 +254,6 @@ when it merges.
 | `crates/api/src/drill_routes.rs` | `deck-streak-api` | added: the three routes |
 | `crates/api/src/router.rs` | `deck-streak-api` | changed: the routes are mounted; `ApiState` gains the port |
 | `crates/api/tests/drill_routes.rs` | `deck-streak-api` | added: A19 |
-| `economy.json` | repo | changed: `xp.bonuses.drill_postback` |
 | `docs/CONTEXT-MAP.md` | docs | changed: the own-tables rows for `drill_answers` and `drill_grades` |
 | `privacy.json` | repo | changed: the `law-drills` category |
 | `PRIVACY.md` | docs | changed: one line for the category |
@@ -275,6 +275,7 @@ when it merges.
 | `crates/api/src/session_routes.rs`, `crates/api/src/lib.rs` | `deck-streak-api` | changed (amendment): the state-change guard is crate-visible and the module is declared |
 | `crates/bot/tests/messages/help.msg.json`, `crates/bot/tests/messages/start.msg.json` | `deck-streak-bot` | changed (amendment): the menu goldens list the two drill commands |
 | `crates/bot/tests/commands.rs` | `deck-streak-bot` | changed (amendment): the menu entries |
+| `economy.json` | repo | dropped (amendment): ADR-047 keeps an amount v9's template lacks as a constant of its own context, and the game-economy pack refuses the key; R9's pay is the vault's constants, pinned by A21's golden and rows S11004-S11006 |
 
 ## 5. What this does NOT do
 
