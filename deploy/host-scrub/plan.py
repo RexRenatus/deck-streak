@@ -100,10 +100,12 @@ def unescape(field: str) -> str:
 
 
 def mounted(path: str) -> str | None:
-    """The mount point `path` is or holds, or None. A bind mount shares its device with the tree
-    around it, so the device check cannot see it; the mount table can (R7). An item inside a mount
-    whose root (field 4) is not `/` is refused too: it is a bind of some other directory, whose
-    protection an operator's list would have to know. Raises OSError when the table cannot be read,
+    """The mount point `path` is or holds, or None. A bind of a directory shares its device with
+    the tree around it, so the device check cannot see it; the mount table can (R7). An item inside
+    a mount whose root (field 4) is not `/` is refused too: its root names some other directory of
+    the disk, whose protection an operator's list would have to know. So is an item inside a file
+    system the table lists mounted whole (root `/`) at two points, which a bind of its root
+    directory reads. Raises OSError when the table cannot be read,
     since an item is never judged clear of mounts without it."""
     rows = read_mountinfo().splitlines()
     # A file system mounted whole (its root `/`) at two points shows each at the other: a bind of
@@ -131,8 +133,9 @@ def mounted(path: str) -> str | None:
 
 def mount_reason(path: str, point: str) -> str:
     """Why `path` may not be judged against the mount point `point`. A mount point shorter than the
-    path can only lie above it, and a mount above an item whose root is not `/` shows another
-    directory of the disk at that place, so the item's own path is not where it lives (R7)."""
+    path can only lie above it, and a mount above an item whose root is not `/`, or of a file system
+    mounted whole twice, shows another place of the disk there, so the item's own path is not where
+    it lives (R7)."""
     if len(point) < len(path):
         return f"lies inside the bind mount {point}"
     return f"is or holds the mount point {point}"

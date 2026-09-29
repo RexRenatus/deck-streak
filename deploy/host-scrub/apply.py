@@ -20,7 +20,7 @@ first failure, naming the item and the reason:
 - no approved item lies under a protected path of RULES, or holds one, whatever the approval says;
 - no approved item is reached through a symbolic link;
 - no approved item is, holds or lies inside a mount point of the kernel's mount table (inside
-  only when the mount's root is not `/`);
+  only when the mount's root is not `/`, or its file system is mounted whole at two points);
 - each approved item's digest, computed again now, equals the listed one;
 - each approved package would be removed alone (`dpkg --dry-run --remove`), since `dpkg` refuses
   a removal another installed package depends on, where `apt-get` would remove that one too.
