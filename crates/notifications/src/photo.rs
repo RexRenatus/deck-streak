@@ -12,8 +12,10 @@ pub const MAX_BYTES: usize = 10_000_000;
 pub const MAX_DIMENSION_SUM: u64 = 10_000;
 /// The largest ratio of a photo's longer side to its shorter.
 pub const MAX_RATIO: u64 = 20;
-/// The most characters a photo's caption holds.
-pub const MAX_CAPTION_CHARS: usize = 1_024;
+/// The longest caption, in UTF-16 units as written: Telegram counts a caption after entity parsing
+/// in UTF-16 units, so a character outside the Basic Multilingual Plane counts two, and a tag or an
+/// entity counted as written only over-counts (the bot's `MAX_CAPTION_UTF16`).
+pub const MAX_CAPTION_UTF16: usize = 1_024;
 /// The most characters a file id holds.
 pub const MAX_FILE_ID_CHARS: usize = 512;
 
@@ -111,7 +113,7 @@ impl Photo {
             return Err(PhotoError::Ratio);
         }
         let caption = caption.into();
-        if caption.chars().count() > MAX_CAPTION_CHARS {
+        if caption.encode_utf16().count() > MAX_CAPTION_UTF16 {
             return Err(PhotoError::Caption);
         }
         Ok(Self { bytes, caption })
