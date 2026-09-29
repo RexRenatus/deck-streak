@@ -311,6 +311,8 @@ fn a_missing_owner_credential_refuses_start_by_its_id() {
     let malformed = [
         (OWNER_USER_ID, "the-owner", BOT_TOKEN),
         (OWNER_USER_ID, "-4242", BOT_TOKEN),
+        (OWNER_USER_ID, "+4242", BOT_TOKEN),
+        (OWNER_USER_ID, "0", BOT_TOKEN),
         (TELEGRAM_BOT_TOKEN, owner_id.as_str(), "   "),
     ];
     for (id, owner_value, token_value) in examined("malformed credential(s)", malformed.to_vec()) {
@@ -347,4 +349,11 @@ fn a_missing_owner_credential_refuses_start_by_its_id() {
             .map(Owner::user),
         Ok(TelegramUserId::new(OWNER))
     );
+}
+
+/// An owner's `Debug` names the type and shows no user id.
+#[test]
+fn an_owner_debug_shows_no_user_id() {
+    let owner = Owner::new(TelegramUserId::new(OWNER));
+    assert_eq!(format!("{owner:?}"), "Owner(..)");
 }

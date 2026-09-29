@@ -121,6 +121,32 @@ fn the_binary_runs_a_role_by_name_and_refuses_an_unknown_one() {
     );
 }
 
+#[test]
+fn only_the_name_data_runs_the_data_role() {
+    // A name that is not `data`, with the words of a real data command after it, is an unknown role:
+    // exit 2 and the usage line, and no command of the data role runs.
+    let refusals: [&[&str]; 3] = [
+        &["frobnicate", "export"],
+        &["api", "export"],
+        &["exporter", "erase", "--confirm", "ERASE"],
+    ];
+    for arguments in examined("refused invocation(s)", refusals.to_vec()) {
+        let output = deckstreakd(arguments, &[]);
+        assert_eq!(
+            output.status.code(),
+            Some(2),
+            "{arguments:?}: {}",
+            describe(&output)
+        );
+        let lines = events(&output);
+        let usage = lines
+            .first()
+            .map(|line| line.1["message"].as_str().unwrap_or_default().to_owned())
+            .unwrap_or_default();
+        assert!(usage.starts_with("usage: deckstreakd <role>"), "{usage}");
+    }
+}
+
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn two_roles_opening_one_fresh_database_at_once_both_start() {
     for round in examined("round(s)", (1..=ROUNDS).collect()) {

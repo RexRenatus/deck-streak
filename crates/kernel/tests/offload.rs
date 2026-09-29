@@ -155,3 +155,12 @@ async fn a_slow_offload_logs_one_warning_with_its_operation_and_duration() {
         lines[0]
     );
 }
+
+#[test]
+fn the_offload_shows_its_worker_bound_in_debug() {
+    let clock: Arc<dyn Clock> = Arc::new(ManualClock::new(UtcMillis::from_epoch_millis(0)));
+    let offload = Offload::new(OffloadWorkers::new(3).expect("a bound"), clock);
+    let shown = format!("{offload:?}");
+    assert!(shown.starts_with("Offload { workers: "), "{shown}");
+    assert!(shown.contains('3'), "{shown}");
+}
