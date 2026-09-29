@@ -14,8 +14,13 @@ use deck_streak_daemon::sync_request::{
     ANSWER_BOUND_SECS, Doorbell, POLL_SECS, Pause, Progress, RING_GAP_SECS, RequestLedger,
     SyncRequester, owner_request_pending,
 };
+use deck_streak_daemon::sync_request::{
+    DEFAULT_REQUEST_PATH, REQUEST_PATH_ENV, SqliteRequestLedger, request_path,
+};
+use deck_streak_ingest::gate::{Anchor, Probe};
 use deck_streak_ingest::state::SqliteIngestState;
-use deck_streak_kernel::{Clock, Db, KernelError, ManualClock, UtcMillis};
+use deck_streak_ingest::sync_runs::{ReasonCode, SqliteSyncRuns, SyncRun, SyncRunStore, Trigger};
+use deck_streak_kernel::{Clock, Db, Environment, KernelError, ManualClock, StudyDay, UtcMillis};
 
 const START: i64 = 1_800_000_000_000;
 
@@ -61,7 +66,10 @@ impl RequestLedger for Script {
         Ok(())
     }
     async fn progress(&self, _since: UtcMillis) -> Result<Progress, KernelError> {
-        *self.polls.lock().expect("the poll count locks") += 1;
+        let mut polls = self.polls.lock().expect("the poll count locks");
+        *polls += 1;
+        assert!(*polls <= 200, "the wait never ends");
+        drop(polls);
         let next = self
             .steps
             .lock()
@@ -193,8 +201,8 @@ async fn a_second_request_waits_out_the_ring_gap() {
     let rings = bell.rings();
     assert_eq!(rings.len(), 2, "each request rings once");
     assert!(
-        rings[1] - rings[0] >= RING_GAP_SECS * 1000,
-        "two rings are at least {RING_GAP_SECS} s apart: {rings:?}"
+        rings[1] - rings[0] == RING_GAP_SECS * 1000,
+        "two rings are exactly {RING_GAP_SECS} s apart when the first answer was immediate: {rings:?}"
     );
 }
 
@@ -270,5 +278,74 @@ async fn the_owner_is_answered_within_the_bound() {
         Err(SyncRefusal {
             reason: "sync_request_unwritten"
         })
+    );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn the_store_tells_waiting_reused_synced_and_failed_apart() {
+    let directory = tempfile::tempdir().expect("a temporary directory");
+    let db = Db::open(&directory.path().join("deck_streak.db"))
+        .await
+        .expect("the database opens");
+    let ledger = SqliteRequestLedger::new(db.clone());
+    let at = UtcMillis::from_epoch_millis(START);
+    assert_eq!(ledger.progress(at).await.expect("reads"), Progress::Reused);
+    ledger.request(at).await.expect("the request is stored");
+    assert_eq!(ledger.progress(at).await.expect("reads"), Progress::Waiting);
+    let anchor = Anchor {
+        probe: Probe {
+            newest_review_id: 1,
+            card_count: 1,
+            card_fingerprint: 1,
+        },
+        study_day: StudyDay::from_epoch_day(20_000),
+        recomputed_at: at,
+        settings_generation: 1,
+    };
+    SqliteIngestState::new(db.clone())
+        .write_anchor(&anchor, at)
+        .await
+        .expect("the recompute clears the flag");
+    let runs = SqliteSyncRuns::new(db.clone());
+    let record = |outcome| SyncRun {
+        trigger: Trigger::Owner,
+        started_at: UtcMillis::from_epoch_millis(START + 1_000),
+        finished_at: UtcMillis::from_epoch_millis(START + 2_000),
+        study_day: StudyDay::from_epoch_day(20_000),
+        outcome,
+        attempts: 1,
+        full_download: false,
+    };
+    runs.record(&record(Ok(()))).await.expect("recorded");
+    assert_eq!(
+        ledger.progress(at).await.expect("reads"),
+        Progress::Ran { failure: None }
+    );
+    runs.record(&record(Err(ReasonCode::ServerError)))
+        .await
+        .expect("recorded");
+    let Progress::Ran { failure } = ledger.progress(at).await.expect("reads") else {
+        panic!("the owner's run is read");
+    };
+    assert!(failure.is_some(), "a failed run carries its reason");
+    db.close().await;
+}
+
+#[test]
+fn the_request_file_is_the_setting_or_the_default() {
+    let unset = Environment::from_vars(Vec::<(String, String)>::new());
+    assert_eq!(
+        request_path(&unset).expect("the default"),
+        PathBuf::from(DEFAULT_REQUEST_PATH)
+    );
+    let set = Environment::from_vars([(REQUEST_PATH_ENV, "/run/elsewhere/request")]);
+    assert_eq!(
+        request_path(&set).expect("the setting"),
+        PathBuf::from("/run/elsewhere/request")
+    );
+    let relative = Environment::from_vars([(REQUEST_PATH_ENV, "request")]);
+    assert!(
+        request_path(&relative).is_err(),
+        "a relative path is refused"
     );
 }

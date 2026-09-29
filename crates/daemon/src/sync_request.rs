@@ -103,10 +103,8 @@ impl<C: Clock, L: RequestLedger, D: Doorbell, P: Pause> SyncRequester<C, L, D, P
             *last = Some(UtcMillis::from_epoch_millis(slot));
             slot
         };
-        if slot > now {
-            let wait = u64::try_from(slot - now).unwrap_or_default();
-            self.pause.pause(Duration::from_millis(wait)).await;
-        }
+        let wait = u64::try_from(slot - now).unwrap_or_default();
+        self.pause.pause(Duration::from_millis(wait)).await;
         self.doorbell.ring().map_err(|error| {
             tracing::error!(%error, "the sync request could not be written");
             SyncRefusal {
