@@ -195,6 +195,10 @@ before the copy and before the undo, which turns the old killers of those two ro
 followed (dc8e4221), which changes `deploy.sh` and edits no test file. After it, fifty-four tests
 pass.
 
+One later commit edits a test file: the test of A14 plants a file with mode 0 at the Caddyfile in place of
+a directory, because the removal's new precondition refuses a directory first and turned the old plant
+into a no-op for the row S12714. It changes no verdict: fifty-four tests still pass.
+
 The rows S12725 and S12730 moved to the tests of A37 and A36, and the rows S12731 to S12735 were added;
 each moved row's mutant survives its old killer and is killed by its new one, and every row of the band
 is proved killed by its full id on a clean committed tree.
