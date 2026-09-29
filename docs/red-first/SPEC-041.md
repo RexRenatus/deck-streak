@@ -438,5 +438,5 @@ notifications `one_router` target, run at that commit.
 
 Rows S04148 and S04149 (ea4df18, mutants corrected at bfe514d): a Passport error's message and an
 invite link's name, each held with the sends; the killer is `no_delivery_goes_around_the_port`, and
-the mutant swaps the name for a copy of the next name, so `DELIVERY_METHODS` keeps its length and
+the mutant swaps the name for a copy of `editChatInviteLink`, a name no planted case calls, so `DELIVERY_METHODS` keeps its length and
 the target builds.

@@ -71,9 +71,9 @@ what it names:
   tables or its writes to the feed and the queue by a `pub use`. The client's whole table is listed
   with its version and each method in it is a send, a delivery or not a delivery, in one class only;
   the 91 that are not held (the reads, deletions and unpins, bot and session configuration, a
-  sticker's emoji, keywords, mask, position and bare uploads, chat administration without
-  user-visible text, and business, star and gift account state) can make no content the bot chose
-  visible to a user, and are classified, not held (#297). The census guards ordinary code, not code
+  sticker's emoji, keywords, mask, position, bare uploads and a set's removal, chat administration without
+  user-visible text, and business, star and gift account state) carry no content the bot chose
+  that a user sees, and are classified, not held (#297). The census guards ordinary code, not code
   written to evade it, which review catches: a request or a table's name assembled from parts,
   `include!`, a symlink, a test file pulled in by `#[path]` or run by a unit, a re-export other than
   by a `pub use`, and a `pub` wrapper go unread (#297).

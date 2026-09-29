@@ -387,14 +387,8 @@ the verdict of a run with that wiring is posted as the `box/packs` status at the
     `edit_html` is `editMessageText`'s, one of ten named send, which the census finds once although
     no shipped source calls it.
   - A method is held when it can make content the bot chose visible to a user: text, media, a title,
-    a button, a status or a badge's description. That is the gifts, the stories, a game score, the
-    answers to a callback, an inline, shipping or checkout query, a suggested post's decision, a
-    chat's title, description and photo, a forum topic, an administrator's title, a member's tag,
-    the name an invite link carries, a Passport error's message, the bot's own name, texts, photo,
-    commands and menu button, a business account's name, bio, username and photo, a sticker set's
-    title, media and thumbnail, an emoji status, a badge's description, an invoice's link and a
-    prepared message or button. The transport's answer to a callback and its menu of commands are
-    named sends. Reads, removals, permissions and membership, tokens, webhooks, bare file uploads
+    a button, a status or a badge's description. The transport's answer to a callback and its menu of
+    commands are named sends. Reads, removals, permissions and membership, tokens, webhooks, bare file uploads
     and the account's own gift state (`upgradeGift` and its kin) are classified, not held. The
     census holds 29 send methods, 65 delivery methods and 91 that are classified, not held, 185 in
     all.
@@ -403,8 +397,8 @@ the verdict of a run with that wiring is posted as the `box/packs` status at the
     a delivery or not a delivery, in one class only. The 91 that are not held are the reads (32),
     deletions and unpins (11), bot and session configuration (9), a sticker's emoji, keywords, mask,
     position and bare upload and a set's removal (7), chat administration without user-visible
-    text (22), and business, star and gift account state (10). None can make content the bot
-    chose visible to a user, so each is classified, not held (#297).
+    text (22), and business, star and gift account state (10). None carries content the bot chose
+    that a user sees, so each is classified, not held (#297).
   - The notifications crate: no source of it carries `#[path]`, `#[macro_export]` or
     `#[macro_use]`, since each hands the ledger's writes to code the census reads under another
     name; and no `pub` or `pub(...)` `use` in it re-exports the ledger, the constants of its feed's and queue's

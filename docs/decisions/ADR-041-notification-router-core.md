@@ -97,10 +97,10 @@ The delivery decided each question the SPEC left open against its alternatives:
   queue's tables or its writes to the feed and the queue by a `pub use`. The client's whole table is
   listed with its version and every method in it is a send, a delivery or not a delivery, in one
   class only; the 91 that are not held (the reads, deletions and unpins, bot and session
-  configuration, a sticker's emoji, keywords, mask, position and bare uploads, chat administration
-  without user-visible text, and business, star and gift account state) can make no content the bot
-  chose visible to a user, and are classified, not held (#297). A method is held when it can make
-  content the bot chose visible to a user, and an administrator is a user. Chosen against holding
+  configuration, a sticker's emoji, keywords, mask, position, bare uploads and a set's removal, chat administration
+  without user-visible text, and business, star and gift account state) carry no content the bot
+  chose that a user sees, and are classified, not held (#297). A method is held when it can make
+  content the bot chose visible to a user, and an administrator is a user. A method that carries no content of its own is not held even where its effect shows content a held method set earlier, such as `deleteMyCommands` showing a wider scope's commands: that content passed the census when the held method set it. Chosen against holding
   only methods that post a message into a chat, which let a gift, a story, an answer or a title
   reach a user around the port; and the whole table's partition is chosen against a hand-kept list
   of send and delivery methods, which went stale when the client added methods. The census guards

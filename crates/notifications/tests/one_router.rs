@@ -20,9 +20,9 @@
 //! client's whole table is listed with its version, and every method in it is a send, a delivery or
 //! not a delivery, in one class only (`the_census_classifies_every_method_of_the_pinned_client`):
 //! the reads, the deletions and unpins, bot and session configuration, a sticker's emoji, keywords,
-//! mask, position and bare uploads, chat administration without user-visible text, and business,
-//! star and gift account state are the 91 of `NOT_DELIVERIES`, which can make no content the bot
-//! chose visible to a user, and are classified, not held (#297). The bot's `send_html`, its
+//! mask, position, bare uploads and a set's removal, chat administration without user-visible text, and business,
+//! star and gift account state are the 91 of `NOT_DELIVERIES`, which carry no content the bot
+//! chose that a user sees, and are classified, not held (#297). The bot's `send_html`, its
 //! `edit_html` and its command handler are used only at named call sites, and each of the ten named
 //! sends is found exactly once; the handler's replies and its dispatch
 //! are called only by their named callers. Only the router's ledger, router and data-rights
@@ -110,8 +110,8 @@ const BOT_API_HOST: &str = "api.telegram.org";
 const BOT_API_URL: &str = "DEFAULT_API_URL";
 
 /// The pinned client's send methods, in the Bot API's own spelling; a client library spells each in
-/// snake case (`send_message`). A method is held, here or in `DELIVERY_METHODS`, when it can put new
-/// or changed content in front of any user: a message, a gift to a named user, a story.
+/// snake case (`send_message`). A method is held, here or in `DELIVERY_METHODS`, when it can make
+/// content the bot chose visible to a user; an administrator is a user.
 const SEND_METHODS: [&str; 29] = [
     "sendMessage",
     "sendPhoto",
@@ -146,9 +146,7 @@ const SEND_METHODS: [&str; 29] = [
 
 /// The pinned client's other methods that can make content the bot chose visible to a user, in the
 /// Bot API's own spelling; an administrator is a user. The census holds them as it holds a send
-/// method: the bot's messages reshaped or placed (a copy, a forward, an edit, a pin, a reaction),
-/// the answers and decisions a user is shown, and the names, texts, photos, titles, tags and error
-/// messages that a chat, a bot, a business account or an invite link shows.
+/// method; each group's comment names what it shows.
 const DELIVERY_METHODS: [&str; 65] = [
     "copyMessage",
     "copyMessages",
@@ -427,10 +425,10 @@ const CLIENT_METHODS: [&str; 185] = [
     "verifyUser",
 ];
 
-/// The client's methods that put nothing before a user: each is classified, not held, and the
-/// census does not read a name in it. One reason for each group.
+/// The client's methods that carry no content the bot chose that a user sees: each is classified,
+/// not held, and the census does not read a name in it. One reason for each group.
 const NOT_DELIVERIES: [&str; 91] = [
-    // Reads: each returns data to the bot and delivers nothing to a user.
+    // Reads: each returns data to the bot and carries no content of the bot's to a user.
     "getAvailableGifts",
     "getBusinessAccountGifts",
     "getBusinessAccountStarBalance",
@@ -463,8 +461,8 @@ const NOT_DELIVERIES: [&str; 91] = [
     "getUserProfileAudios",
     "getUserProfilePhotos",
     "getWebhookInfo",
-    // Deletions and unpins: each removes or unpins what a user was shown and delivers nothing to a
-    // user.
+    // Deletions and unpins: each removes or unpins what a user was shown and carries no content of
+    // the bot's to a user.
     "deleteAllMessageReactions",
     "deleteBusinessMessages",
     "deleteEphemeralMessage",
