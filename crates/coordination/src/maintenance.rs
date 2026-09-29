@@ -7,7 +7,8 @@
 //! checkpoint runs last, so it truncates the log the prune itself wrote. A checkpoint that meets a
 //! reader (Litestream's read lock) completes partially and reports busy, which is not an error.
 
-use deck_streak_kernel::{Db, KernelError};
+use deck_streak_agent::runs::{AgentRuns, RETENTION_DAYS};
+use deck_streak_kernel::{Db, KernelError, UtcMillis};
 
 use crate::jobs::FireDate;
 use crate::runner::{Done, Fire, Reason, Work};
@@ -16,11 +17,16 @@ use crate::runner::{Done, Fire, Reason, Work};
 /// (`database.py:CRON_FIRES_RETENTION_DAYS`).
 pub const CRON_FIRES_RETENTION_DAYS: i64 = 90;
 
+/// Milliseconds in one day, the unit `agent_runs.created_at` counts in.
+const MILLIS_PER_DAY: i64 = 86_400_000;
+
 /// What one upkeep did.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct Upkeep {
     /// The ledger rows deleted.
     pub pruned: u64,
+    /// The `agent_runs` rows deleted for being older than the agent's retention.
+    pub agent_runs_pruned: u64,
     /// Whether the checkpoint met a reader and completed only in part.
     pub checkpoint_busy: bool,
     /// The frames left in the write-ahead log: zero once a TRUNCATE checkpoint has reset the log,
@@ -45,6 +51,11 @@ pub async fn upkeep(db: &Db, today: FireDate) -> Result<Upkeep, KernelError> {
     // On the connection that just used the ledger, so the planner knows which tables to describe.
     sqlx::query("PRAGMA optimize").execute(&mut *write).await?;
     write.commit().await?;
+    // The agent's runs are kept as long as privacy.json declares; its repository does the delete.
+    let runs_cutoff = (today.epoch_day() - RETENTION_DAYS) * MILLIS_PER_DAY;
+    let agent_runs_pruned = AgentRuns::new(db.clone())
+        .prune_before(UtcMillis::from_epoch_millis(runs_cutoff))
+        .await?;
     // Outside any transaction: a checkpoint cannot run inside one.
     let (busy, log_frames, checkpointed_frames): (i64, i64, i64) =
         sqlx::query_as("PRAGMA wal_checkpoint(TRUNCATE)")
@@ -52,6 +63,7 @@ pub async fn upkeep(db: &Db, today: FireDate) -> Result<Upkeep, KernelError> {
             .await?;
     Ok(Upkeep {
         pruned,
+        agent_runs_pruned,
         checkpoint_busy: busy != 0,
         log_frames,
         checkpointed_frames,
@@ -78,6 +90,7 @@ impl Work for MaintenanceWork<'_> {
             .map_err(|_| Reason::new("maintenance_failed"))?;
         tracing::info!(
             pruned = done.pruned,
+            agent_runs_pruned = done.agent_runs_pruned,
             checkpoint_busy = done.checkpoint_busy,
             log_frames = done.log_frames,
             checkpointed_frames = done.checkpointed_frames,
