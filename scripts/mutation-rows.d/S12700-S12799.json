@@ -136,6 +136,46 @@
         "caddy adapt --adapter caddyfile --config \"$copy\" --validate >/dev/null || { find \"$copy\" -delete; echo \"deploy: refused\" >&2; exit 1; }\n",
         "the adapt refusal prints its message when the candidate is absent (SPEC-127 A13, #384)",
         "test_deploy_scripts.TheCaddyInstall.test_a_removal_refused_at_the_adapt_check_with_no_candidate_still_says_so"
+      ],
+      [
+        "S12718-THE-INSTALL-UNDO-SURVIVES-AN-ABSENT-CANDIDATE",
+        "deploy/deploy.sh",
+        "    [ ! -f \"$copy\" ] || find \"$copy\" -delete\n    put_back_block\n",
+        "    find \"$copy\" -delete\n    put_back_block\n",
+        "the install's undo prints its refusal when the candidate is absent (SPEC-127 A16, #423)",
+        "test_deploy_scripts.TheCaddyInstall.test_an_install_refused_at_validation_with_no_candidate_still_undoes"
+      ],
+      [
+        "S12719-THE-INSTALL-UNDOES-A-BLOCK-THAT-CANNOT-BE-WRITTEN",
+        "deploy/deploy.sh",
+        "cat >\"$block\" || undo\n",
+        "cat >\"$block\"\n",
+        "the install undoes when its block cannot be written (SPEC-127 A18, #423)",
+        "test_deploy_scripts.TheCaddyInstall.test_an_install_whose_block_cannot_be_written_undoes_and_says_so"
+      ],
+      [
+        "S12720-THE-INSTALL-UNDOES-A-CANDIDATE-THAT-CANNOT-BE-WRITTEN",
+        "deploy/deploy.sh",
+        "cp -p \"$file\" \"$copy\" || undo\n",
+        "cp -p \"$file\" \"$copy\"\n",
+        "the install undoes when its candidate cannot be written (SPEC-127 A17, #423)",
+        "test_deploy_scripts.TheCaddyInstall.test_an_install_whose_candidate_path_cannot_be_written_undoes_and_says_so"
+      ],
+      [
+        "S12721-THE-INSTALL-UNDOES-AN-IMPORT-LINE-THAT-CANNOT-BE-ADDED",
+        "deploy/deploy.sh",
+        "printf \"%s\\n\" \"$line\" >>\"$copy\" || undo\n",
+        "printf \"%s\\n\" \"$line\" >>\"$copy\"\n",
+        "the install undoes when the import line cannot be added (SPEC-127 A19, #423)",
+        "test_deploy_scripts.TheCaddyInstall.test_an_install_whose_import_line_cannot_be_added_undoes_and_says_so"
+      ],
+      [
+        "S12722-THE-REMOVAL-REFUSES-A-LINKED-CANDIDATE",
+        "deploy/deploy.sh",
+        "[ ! -L \"$copy\" ] || unwritten\n",
+        "",
+        "the removal refuses a candidate path that is a link before it writes (SPEC-127 A20, #424)",
+        "test_deploy_scripts.TheCaddyInstall.test_a_removal_whose_candidate_is_a_link_to_the_caddyfile_refuses_before_writing"
       ]
     ]
   }
