@@ -158,6 +158,40 @@ class RunnerTest(unittest.TestCase):
                 run = self.run_runner({"DECKSTREAK_AGENT_PROXY_URL": loopback})
                 self.assertEqual(run.done.returncode, 0, run.done.stderr)
 
+    def test_the_runner_accepts_only_an_exact_loopback_url_and_an_absolute_path(self) -> None:
+        refused = (
+            ("http://proxy.example.invalid", "/synthetic-capacity"),
+            ("http://127.0.0.1:9@proxy.example.invalid", "/synthetic-capacity"),
+            ("http://localhost:8477@proxy.example.invalid/", "/synthetic-capacity"),
+            ("http://[::1]:1@proxy.example.invalid", "/synthetic-capacity"),
+            ("http://127.0.0.1:9", "@proxy.example.invalid/synthetic-capacity"),
+            ("http://127.0.0.1", ".proxy.example.invalid/synthetic-capacity"),
+        )
+        for url, path in examined("refused url and path pair(s)", refused):
+            with self.subTest(url=url, path=path), tempfile.TemporaryDirectory() as holder:
+                run = Run(
+                    Path(holder),
+                    {"DECKSTREAK_AGENT_PROXY_URL": url, "DECKSTREAK_AGENT_CAPACITY_PATH": path},
+                    [],
+                )
+                self.assertTrue(run.records.is_dir(), "the records directory is there to read")
+                self.assertEqual(run.done.returncode, 2, run.done.stderr)
+                self.assertEqual(len(run.refusals()), 1, run.done.stderr)
+                self.assertEqual(run.record("curl.argv"), "", "curl is never called")
+                self.assertEqual(run.record("claude.argv"), "", "nothing is launched")
+        accepted = (
+            "http://127.0.0.1",
+            "http://127.0.0.1:8477",
+            "http://localhost:8477",
+            "http://[::1]:8477",
+        )
+        for url in examined("accepted loopback url(s)", accepted):
+            with self.subTest(loopback=url), tempfile.TemporaryDirectory() as holder:
+                run = Run(Path(holder), {"DECKSTREAK_AGENT_PROXY_URL": url}, [])
+                self.assertEqual(run.done.returncode, 0, run.done.stderr)
+                self.assertIn(url + "/synthetic-capacity", run.record("curl.argv"))
+                self.assertNotEqual(run.record("claude.argv"), "", "the launch happened")
+
     def test_the_preflight_reads_the_status_word(self) -> None:
         exhausted = self.run_runner(
             {"FAKE_CURL_BODY": '{"status":"exhausted","retry_after":"2031-01-01T00:00:00Z"}'}
