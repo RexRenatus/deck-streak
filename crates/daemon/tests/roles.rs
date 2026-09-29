@@ -657,6 +657,12 @@ async fn a_refusal_after_the_owners_run_answers_the_request_beside_the_run() {
     let refusal = loaded
         .refusal
         .unwrap_or_else(|| panic!("no refusal recorded: {}", describe(&output)));
+    assert_eq!(
+        refusal.reason,
+        RefusalReason::RecomputeFailed,
+        "the cycle's own refusal is recorded by its own code: {}",
+        describe(&output)
+    );
     assert!(
         matches!(
             progress,

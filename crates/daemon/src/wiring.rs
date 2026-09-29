@@ -422,10 +422,11 @@ mod tests {
     use deck_streak_bot::{ApiUrl, Scores, Sent, SyncOutcome, Transport};
     use deck_streak_coordination::delivery::{DeliveryCounts, DeliveryMarker};
     use deck_streak_coordination::sync_cycle::{CycleError, CycleReport, Recompute};
-    use deck_streak_ingest::gate::RunReason;
+    use deck_streak_ingest::gate::{GateError, RunReason};
     use deck_streak_ingest::state::{RefusalReason, SqliteIngestState};
-    use deck_streak_ingest::sync::SyncReport;
+    use deck_streak_ingest::sync::{SyncError, SyncReport};
     use deck_streak_ingest::sync_runs::{ReasonCode, SyncRun, Trigger};
+    use deck_streak_ingest::window::WindowError;
     use deck_streak_kernel::{
         CredentialLoader, CredentialsDirectory, Db, Environment, KernelError, Offload,
         OffloadWorkers, Redactor, StudyDay, StudyDayRule, SystemClock, UtcMillis,
@@ -512,8 +513,20 @@ mod tests {
             RefusalReason::SyncRecordFailed
         );
         assert_eq!(
+            cycle_reason(&CycleError::Sync(SyncError::Store(cause()))),
+            RefusalReason::SyncRecordFailed
+        );
+        assert_eq!(
             cycle_reason(&CycleError::Obligations(cause())),
             RefusalReason::ObligationsUnreadable
+        );
+        assert_eq!(
+            cycle_reason(&CycleError::Gate(GateError::Record(cause()))),
+            RefusalReason::RecomputeFailed
+        );
+        assert_eq!(
+            cycle_reason(&CycleError::Window(WindowError::State(cause()))),
+            RefusalReason::RecomputeFailed
         );
         assert_eq!(
             cycle_reason(&CycleError::Recompute(cause())),
