@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT id, generation, created_at FROM settings_generation ORDER BY id",
+  "query": "SELECT id, generation, courses_digest, created_at FROM settings_generation ORDER BY id",
   "describe": {
     "columns": [
       {
@@ -26,8 +26,19 @@
         }
       },
       {
-        "name": "created_at",
+        "name": "courses_digest",
         "ordinal": 2,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "settings_generation",
+            "name": "courses_digest"
+          }
+        }
+      },
+      {
+        "name": "created_at",
+        "ordinal": 3,
         "type_info": "Integer",
         "origin": {
           "Table": {
@@ -43,8 +54,9 @@
     "nullable": [
       false,
       false,
+      true,
       false
     ]
   },
-  "hash": "3f02685f3749951a4939d27cfe8f968bcecb312b59c6c82f55de539b2f7987c4"
+  "hash": "1ae36b870ee310d1eaef29e1244003cc2ffd0dbebf01f2c5482e6df9a5815056"
 }

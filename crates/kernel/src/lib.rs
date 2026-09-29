@@ -16,6 +16,7 @@
 #![warn(missing_docs, clippy::all)]
 
 pub mod clock;
+pub mod courses;
 pub mod credentials;
 pub mod data_rights;
 pub mod db;
@@ -30,6 +31,7 @@ pub mod track;
 pub mod verdict;
 
 pub use clock::{Clock, ManualClock, SystemClock, UtcMillis};
+pub use courses::{CourseCode, Courses, CoursesError};
 pub use credentials::{CredentialLoader, Secret};
 pub use data_rights::{
     DataRights, Declaration, Disposition, ExportedTable, KernelDataRights, PortFuture, TableRights,
