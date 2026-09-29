@@ -110,3 +110,18 @@ file at the red commit fails only that test, by assertion.
 A8 replay: red at 3a2383bc: FAILED (failures=1), AssertionError: Lists differ: [] != ['cargo mutants --in-place']
 A8 replay: green at f15ca871: Ran 18 tests, OK, examined 4 in-word hashes, examined 3 ci.yml commands, examined 4 mutation-weekly.yml commands
 ```
+
+## Addendum, 2026-09-29 (issue #395, round 5): the comment class, generated
+
+The lines above stand, and A8 keeps its one red and one green line; this replay is quoted below
+them. The red commit d9cdca86 adds one test, which generates the members of the comment class (a
+fragment that carries a would-be comment or a would-be closer, in each context and in a group
+inside each substitution, then a `#` and an unbounded command, the bounds, or a continued line) and
+has bash read each member; the green commit 3ce1d37d changes only the guard's comment rule and
+its docstrings, in `scripts/tests/test_dispatch_shards.py`, because the guard lives in the test
+module. The whole test file at the red commit fails only that test, by assertion.
+
+```text
+A8 replay: red at d9cdca86: FAILED (failures=1), AssertionError: Lists differ: ['cargo mutants --timeout 300 --build-time[59 chars]e\n'] != []
+A8 replay: green at 3ce1d37d: Ran 19 tests, OK, examined 2004 class members, examined 4 in-word hashes, examined 3 ci.yml commands, examined 4 mutation-weekly.yml commands
+```

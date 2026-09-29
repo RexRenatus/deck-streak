@@ -158,9 +158,16 @@ this section and the next, and nothing else. Issue #395.
   starts a word outside every quote, to the end of its line) is cut before any command is read,
   so it is no command and bounds nothing. A word, and so a comment, starts after a blank or after
   one of `;`, `&`, `|`, `(`, `)`, `<` and `>`, so `cargo mutants --in-place;# <bounds>` is cut
-  at the `#` too. A `)` that closes a substitution (`$( )`, `<( )`, `>( )`, `$(( ))`) starts no
-  word, and inside `${ }` an operator is text, so the `#` in `$(true)#` or `${X//;#/}` is text
-  and the command after it is still read. A `#` inside quotes is text (#395).
+  at the `#` too. The guard trusts that reading of a line only up to the first place where bash
+  reads in a mode the guard does not model: a substitution or an expansion (`$( )`, `${ }`,
+  `$(( ))`, `$[ ]`), a backquote, an ANSI-C string (`$' '`), a `(` glued to what comes before it
+  (`<( )`, `>( )`, `(( ))`, `a=( )`), a subscript or `[[`; and not at all on a continued line or
+  on any line after a here-document. Past that place a `#` glued to a word is text, and any other
+  `#` ends the command before it without hiding what follows. So a `)` that closes a
+  substitution starts no comment, and inside `${ }` an operator is text: the `#` in `$(true)#` or
+  `${X//;#/}` hides nothing, and the command after it is still read. A `#` inside quotes is text.
+  The guard can refuse a line bash would pass, as when the bounds follow such a `#`, but it passes
+  no line whose unbounded command bash runs (#395).
 - **A plant per shape.** Three tests write one workflow each into a temporary directory: one with
   a toolchain spelling, one with the binary form, and one with two commands on a line (the first
   bounded, the second not). Each asserts that every command is found and, for the last, that the
@@ -171,6 +178,15 @@ this section and the next, and nothing else. Issue #395.
   `#` inside shell quotes in a `run: |` block); with a bounded command followed on its line by
   `cargo -C <dir> mutants`; and with the bounds written in a comment that starts right after `;`
   (#395).
+- **The class, generated.** One test generates the members of the class, where a `#` starts a
+  comment as bash reads it: each fragment that carries a would-be comment or a would-be closer
+  (`#`, `;#`, `)#`, `}#`, `"}"`, `')'`, `"#"`, `\#`, `a#`, `\'`, `;;`) in each context (bare, the
+  substitutions, backquotes, `$(( ))`, `${ }`, the three quotes, a here-string, `(( ))`, `a=( )`,
+  `[[ =~ ]]`, and a case, a brace group and a subshell, alone and inside each substitution),
+  followed by a `#` and an unbounded command, by the bounds, or by a continued line. Bash reads
+  every member, run without `-e`, with `cargo` a function that logs its words and no other
+  command on the path, and the guard must find each unbounded command bash runs. The test asserts
+  and prints the member count (#395).
 - **Out of scope, named.** A quote that spans lines is read line by line, and a `#` inside shell
   quotes on a plain `run:` line, where YAML itself cuts a comment, is kept as text (#395).
 - Files: `scripts/tests/test_dispatch_shards.py`, this SPEC, `docs/red-first/SPEC-129.md` and a
@@ -183,7 +199,7 @@ this section and the next, and nothing else. Issue #395.
 | id | criterion | decided by |
 |---|---|---|
 | A7 | the guard finds `cargo +<toolchain> mutants`, `cargo-mutants mutants`, and each of two commands on one line, the second spelled with a valued flag too | `test_dispatch_shards.py` `EveryMutationCommandKeepsTheGatesBounds` |
-| A8 | a cargo flag's separate value word is part of the command, and a comment is no command and bounds nothing | `test_dispatch_shards.py` `EveryMutationCommandKeepsTheGatesBounds` |
+| A8 | a cargo flag's separate value word is part of the command, a comment is no command and bounds nothing, and the guard finds every unbounded command bash runs in the generated members of the comment class | `test_dispatch_shards.py` `EveryMutationCommandKeepsTheGatesBounds` |
 
 ```acceptance
 A7: python3 -m unittest discover -s scripts/tests -p test_dispatch_shards.py -k test_a_command_spelled_with_a_toolchain_is_found
@@ -192,4 +208,5 @@ A7: python3 -m unittest discover -s scripts/tests -p test_dispatch_shards.py -k 
 A7: python3 -m unittest discover -s scripts/tests -p test_dispatch_shards.py -k test_a_valued_flag_spelling_after_a_bounded_command_is_its_own_command
 A8: python3 -m unittest discover -s scripts/tests -p test_dispatch_shards.py -k test_a_cargo_flag_with_a_separate_value_is_part_of_the_command
 A8: python3 -m unittest discover -s scripts/tests -p test_dispatch_shards.py -k test_a_comment_is_no_command_and_bounds_nothing
+A8: python3 -m unittest discover -s scripts/tests -p test_dispatch_shards.py -k test_every_unbounded_command_bash_runs_past_a_hash_is_found
 ```
