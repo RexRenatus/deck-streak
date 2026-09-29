@@ -222,9 +222,9 @@ this SPEC names each step only.
 | `deploy/systemd/deck-streak-job@.service` | deploy | changed: R14, the sync login lines removed |
 | `deploy/systemd/` drop-in `20-sync-login.conf` in the `sync` instance's `.service.d` directory | deploy | added: R14, the sync login |
 | `deploy/scripts/credential-pairs.py`, `deploy/scripts/effective-check.py` | deploy | changed: R14, instance drop-ins; the shipped-name rule (A16) |
-| `scripts/tests/test_deploy_templates.py` | repo | changed: A11, A16, A21; the two SPEC-066 guards for a template's instance drop-ins; plain synthetic literals |
+| `scripts/tests/test_deploy_templates.py` | repo | changed: A11, A16, A21; plain synthetic literals |
 | `docs/decisions/ADR-061-...md` | docs | one dated Amendment section (R14) |
-| `scripts/tests/_units.py` | repo | changed: R14, a template's instance drop-ins read beside it (A21) |
+| `scripts/tests/_units.py` | repo | changed: R14, a template's instance drop-ins read into the template (A21) |
 | `docs/specs/SPEC-066-the-credential-loader-refuses-an-empty-credential.md` | docs | one dated Amendment line (R14) |
 | the private rail's map, rendered drop-ins and tests (`rail/`) | the maintainer's | changed: R14, committed privately |
 | `scripts/mutation-rows.d/S06200-S06299.json` | repo | added: the mutation rows S06201 to S06225 |
