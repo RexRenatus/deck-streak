@@ -20,8 +20,8 @@
       "file": "web/app/src/lib/api.ts",
       "mutant": "ArrowFunction: () => undefined",
       "anchor": "parse(await response.json().catch(() => null))",
-      "reason": "parseMe and parseScore read an undefined body as they read null.",
-      "evidence": "parseMe refuses a body that is not a non-null object, which undefined is not, and parseScore reads body ?? {}, so both an undefined and a null body read as having no study_day and both parsers answer null.",
+      "reason": "parseMe, parseScore and parseFeed read an undefined body as they read null.",
+      "evidence": "parseMe refuses a body that is not a non-null object, which undefined is not, parseScore reads body ?? {}, so both an undefined and a null body read as having no study_day, and parseFeed reads body ?? {} too, so both read as having no items; each parser answers null.",
       "issue": "#294"
     },
     {

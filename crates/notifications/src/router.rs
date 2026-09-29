@@ -20,15 +20,23 @@
 //! the call and records what the call came to after it. [`Router::flush`] delivers what quiet hours
 //! and failed sends held, at most two in full and the rest in one recap line that names every
 //! celebration it rolls up or abandons.
+//!
+//! A celebration's tier is the ladder's (SPEC-084): the tier its event or rarity asks for, after the
+//! owner's weekly budget and the streak-break cap, chosen in the same write before the quiet window
+//! is read, so a celebration held in quiet hours is held at its tier. Each tier renders through the
+//! port's calls of its own: a reaction, the line, the reveal, a dice, and a pinned message.
 
+use std::cmp::Reverse;
 use std::fmt;
 use std::sync::{Arc, Mutex, PoisonError};
 
-use deck_streak_kernel::{Clock, Db, KernelError, StudyDayRule, UtcMillis};
+use deck_streak_kernel::{Clock, Db, KernelError, StudyDay, StudyDayRule, UtcMillis};
 use sqlx::SqliteConnection;
 
+use crate::ladder::{self, DICE_EMOJI, REACTION_EMOJI, REVEAL_PAUSE, REVEAL_PLACEHOLDER};
 use crate::ledger::{self, ClaimRow, DecisionRow, HeldRow};
-use crate::occasion::{Class, DedupeScope, LapseContext, Occasion, Surface, Tier};
+use crate::occasion::{Class, DedupeScope, LapseContext, Occasion, StreakFacts, Surface, Tier};
+use crate::owner_message;
 use crate::policy::Policy;
 use crate::quiet::{in_quiet_hours, local_minute};
 use crate::transport::{BotTransport, Pushed};
@@ -39,6 +47,8 @@ pub const QUIET_START_SETTING: &str = "quiet_start_min";
 pub const QUIET_END_SETTING: &str = "quiet_end_min";
 /// What a withheld occasion's kind is recorded with appended, so it never stands for a delivery.
 pub const WITHHELD_SUFFIX: &str = ":withheld";
+/// The owner's celebration intensity, which picks the weekly budget (the predecessor's key).
+pub const INTENSITY_SETTING: &str = "celebration_intensity";
 
 /// One minute, in milliseconds.
 const MINUTE_MS: i64 = 60_000;
@@ -97,9 +107,9 @@ impl Reason {
 /// Why a celebration is held on the queue.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Hold {
-    /// The quiet window deferred it.
+    /// The quiet window deferred it, or a reaction waits for the owner's next message.
     Quiet,
-    /// A send failed, or the outage breaker was open.
+    /// A send failed or a reaction was refused, or its breaker was open.
     Send,
 }
 
@@ -183,6 +193,17 @@ enum Verdict {
     SendBot(i64),
 }
 
+/// What one render on the bot came to.
+enum Outcome {
+    /// Delivered, rendered at this tier.
+    Delivered(Tier),
+    /// No message was sent: a reaction not attempted, or refused. The celebration is held for this
+    /// reason, its failed sends unchanged.
+    Held(Hold),
+    /// The message failed, which opens the outage breaker.
+    Failed,
+}
+
 /// What one decision is about: an occasion being routed, or a held celebration being flushed.
 struct Subject<'a> {
     key: &'a str,
@@ -193,12 +214,12 @@ struct Subject<'a> {
 }
 
 impl<'a> Subject<'a> {
-    fn routed(occasion: &'a Occasion, surface: Surface) -> Self {
+    fn routed(occasion: &'a Occasion, surface: Surface, requested: Tier) -> Self {
         Self {
             key: occasion.key().as_str(),
             kind: occasion.kind().name(),
             surface,
-            requested: occasion.tier(),
+            requested,
             study_day: occasion.study_day().epoch_day(),
         }
     }
@@ -258,6 +279,9 @@ pub struct Router {
     bot: Option<Arc<dyn BotTransport>>,
     /// When the last bot send failed: the outage breaker is open for the cooldown after it.
     failed_at: Mutex<Option<UtcMillis>>,
+    /// When the last reaction was refused: the reaction breaker is open for the cooldown after it
+    /// (SPEC-084 R9).
+    reaction_failed_at: Mutex<Option<UtcMillis>>,
 }
 
 impl fmt::Debug for Router {
@@ -282,6 +306,7 @@ impl Router {
             rule,
             bot: None,
             failed_at: Mutex::new(None),
+            reaction_failed_at: Mutex::new(None),
         }
     }
 
@@ -305,75 +330,233 @@ impl Router {
         } else {
             Surface::Bot
         };
-        let subject = Subject::routed(occasion, surface);
-        let rendered = rendered(occasion.tier());
+        let requested = self.requested(occasion);
+        let subject = Subject::routed(occasion, surface, requested);
         let mut write = self.db.write().await?;
+        let tier = if celebration {
+            self.ladder_tier(&mut write, occasion, requested).await?
+        } else {
+            rendered(requested)
+        };
         let decision = match self.decide(&mut write, occasion, surface, now).await? {
             Verdict::Withhold(reason) => {
                 ledger::record(&mut write, &subject.withheld(reason, now)).await?;
                 Decision::Withheld { surface, reason }
             }
             Verdict::Defer(hold) => {
-                self.hold(&mut write, &held_row(occasion, surface, hold, 0, now), now)
-                    .await?;
+                let row = held_row(&subject, occasion.text(), tier, hold, 0, now);
+                self.hold(&mut write, &row, now).await?;
                 ledger::record(&mut write, &subject.deferred(hold, now)).await?;
                 Decision::Deferred { surface, hold }
             }
             Verdict::SendInApp => {
-                push_in_app(&mut write, &subject, rendered, occasion.text(), now).await?;
-                ledger::record(&mut write, &subject.sent(rendered, now)).await?;
-                Decision::Sent {
-                    surface,
-                    tier: rendered,
-                }
+                push_in_app(&mut write, &subject, tier, occasion.text(), now).await?;
+                ledger::record(&mut write, &subject.sent(tier, now)).await?;
+                Decision::Sent { surface, tier }
             }
             Verdict::SendBot(claim) => {
                 write.commit().await?;
-                return self.send_bot(occasion, &subject, claim).await;
+                return self.send_bot(occasion, &subject, claim, tier).await;
             }
         };
         write.commit().await?;
         Ok(decision)
     }
 
-    /// Sends `occasion` to the bot after its claim was committed, and records what that came to.
+    /// The tier `occasion` asks for: a celebration's event's or rarity's on the ladder (SPEC-084 R1),
+    /// else the tier it was raised at.
+    fn requested(&self, occasion: &Occasion) -> Tier {
+        occasion.event().map_or_else(
+            || occasion.tier(),
+            |event| ladder::requested_tier(&self.policy, event, occasion.rarity()),
+        )
+    }
+
+    /// The tier the ladder renders the celebration `occasion` at (SPEC-084 R2 to R5): `requested`
+    /// after the owner's weekly budget, counted over the week of its study day, then the
+    /// streak-break cap of that day.
+    async fn ladder_tier(
+        &self,
+        write: &mut SqliteConnection,
+        occasion: &Occasion,
+        requested: Tier,
+    ) -> Result<Tier, KernelError> {
+        let intensity = ledger::setting(write, INTENSITY_SETTING)
+            .await?
+            .unwrap_or_default();
+        let since = ladder::week_start(occasion.study_day());
+        let at_or_above_5 = self.week_count(write, since, Tier::T5).await?;
+        let at_or_above_4 = self.week_count(write, since, Tier::T4).await?;
+        let used = (
+            u32::try_from(at_or_above_4 - at_or_above_5).unwrap_or(u32::MAX),
+            u32::try_from(at_or_above_5).unwrap_or(u32::MAX),
+        );
+        let event = occasion.event().unwrap_or_default();
+        let budgeted = ladder::apply_budget(
+            &self.policy,
+            requested,
+            used,
+            ladder::weekly_budget(&self.policy, &intensity),
+            ladder::budget_exempt(&self.policy, event),
+            ladder::rare_floor(&self.policy, occasion.rarity()),
+        );
+        let broke = ladder::streak_broke_on(occasion.streak(), occasion.study_day());
+        Ok(budgeted.min(ladder::outcome_cap(&self.policy, broke)))
+    }
+
+    /// Renders `occasion` on the bot at `tier` after its claim was committed, and records what that
+    /// came to: a celebration by the ladder's renders (SPEC-084 R8, R9), any other occasion as its
+    /// line.
     async fn send_bot(
         &self,
         occasion: &Occasion,
         subject: &Subject<'_>,
         claim: i64,
+        tier: Tier,
     ) -> Result<Decision, KernelError> {
-        let rendered = rendered(occasion.tier());
-        let pushed = self.push(occasion.text(), rendered).await;
+        let celebration = occasion.kind().class() == Class::Celebration;
+        let outcome = match &self.bot {
+            Some(bot) if celebration => {
+                self.render(bot.as_ref(), occasion.text(), tier, true)
+                    .await?
+            }
+            _ => delivered(self.push(occasion.text(), tier).await, tier),
+        };
         let now = self.clock.now();
         let mut write = self.db.write().await?;
-        let decision = if pushed == Pushed::Delivered {
-            ledger::record(&mut write, &subject.sent(rendered, now)).await?;
-            Decision::Sent {
-                surface: Surface::Bot,
-                tier: rendered,
+        let decision = match outcome {
+            Outcome::Delivered(rendered) => {
+                ledger::record(&mut write, &subject.sent(rendered, now)).await?;
+                Decision::Sent {
+                    surface: Surface::Bot,
+                    tier: rendered,
+                }
             }
-        } else {
-            self.trip(now);
-            if occasion.kind().class() == Class::Celebration {
-                let row = held_row(occasion, Surface::Bot, Hold::Send, 1, now);
+            Outcome::Held(hold) => {
+                let row = held_row(subject, occasion.text(), tier, hold, 0, now);
                 self.hold(&mut write, &row, now).await?;
-                ledger::record(&mut write, &subject.deferred(Hold::Send, now)).await?;
+                ledger::record(&mut write, &subject.deferred(hold, now)).await?;
                 Decision::Deferred {
                     surface: Surface::Bot,
-                    hold: Hold::Send,
+                    hold,
                 }
-            } else {
-                ledger::release(&mut write, claim).await?;
-                ledger::record(&mut write, &subject.withheld(Reason::NoNotifier, now)).await?;
-                Decision::Withheld {
-                    surface: Surface::Bot,
-                    reason: Reason::NoNotifier,
+            }
+            Outcome::Failed => {
+                self.trip(now);
+                if celebration {
+                    let row = held_row(subject, occasion.text(), tier, Hold::Send, 1, now);
+                    self.hold(&mut write, &row, now).await?;
+                    ledger::record(&mut write, &subject.deferred(Hold::Send, now)).await?;
+                    Decision::Deferred {
+                        surface: Surface::Bot,
+                        hold: Hold::Send,
+                    }
+                } else {
+                    ledger::release(&mut write, claim).await?;
+                    ledger::record(&mut write, &subject.withheld(Reason::NoNotifier, now)).await?;
+                    Decision::Withheld {
+                        surface: Surface::Bot,
+                        reason: Reason::NoNotifier,
+                    }
                 }
             }
         };
         write.commit().await?;
         Ok(decision)
+    }
+
+    /// Renders `text` on the bot at `tier` (SPEC-084 R8): nothing at T0; a reaction at T1; the line
+    /// at T2; the reveal at T3, or the line where `reveal` is false, as a flush renders a T3, since a
+    /// reveal replayed hours later holds no suspense; a dice then the line at T4; and a dice then the
+    /// pinned message at T5. A reveal or a pin the transport does not implement degrades to the
+    /// line, at T2.
+    async fn render(
+        &self,
+        bot: &dyn BotTransport,
+        text: &str,
+        tier: Tier,
+        reveal: bool,
+    ) -> Result<Outcome, KernelError> {
+        Ok(match tier {
+            Tier::T0 => Outcome::Delivered(Tier::T0),
+            Tier::T1 => self.react(bot).await?,
+            Tier::T2 => delivered(bot.push_message(&PASS, text).await, Tier::T2),
+            Tier::T3 if !reveal => delivered(bot.push_message(&PASS, text).await, Tier::T3),
+            Tier::T3 => {
+                let pushed = bot
+                    .push_reveal(&PASS, REVEAL_PLACEHOLDER, text, REVEAL_PAUSE)
+                    .await;
+                or_line(bot, pushed, "push_reveal", text, tier).await
+            }
+            Tier::T4 => {
+                dice(bot).await;
+                delivered(bot.push_message(&PASS, text).await, Tier::T4)
+            }
+            Tier::T5 => {
+                dice(bot).await;
+                let pushed = bot.push_pin(&PASS, text).await;
+                or_line(bot, pushed, "push_pin", text, tier).await
+            }
+        })
+    }
+
+    /// The T1 render (SPEC-084 R9): a reaction to the owner's latest message. While the reaction
+    /// breaker is open it is not attempted and the celebration is held for the send; without a
+    /// message at most the ladder's age old it is held for the owner to write. A refused reaction
+    /// opens the reaction breaker, never the outage breaker; a transport without reactions renders
+    /// the celebration silent, since a line would exceed T1.
+    async fn react(&self, bot: &dyn BotTransport) -> Result<Outcome, KernelError> {
+        let now = self.clock.now();
+        if self.reaction_breaker_open(now) {
+            return Ok(Outcome::Held(Hold::Send));
+        }
+        let latest = owner_message::latest(&self.db).await?;
+        let Some(latest) =
+            latest.filter(|latest| ladder::reaction_fresh(&self.policy, latest.arrived_at, now))
+        else {
+            return Ok(Outcome::Held(Hold::Quiet));
+        };
+        Ok(
+            match bot
+                .push_reaction(&PASS, latest.message_id, REACTION_EMOJI)
+                .await
+            {
+                Pushed::Delivered => Outcome::Delivered(Tier::T1),
+                Pushed::Failed => {
+                    stamp(&self.reaction_failed_at, now);
+                    Outcome::Held(Hold::Send)
+                }
+                Pushed::Unsupported => {
+                    tracing::warn!(
+                        call = "push_reaction",
+                        "the bot transport has no such call: the celebration renders silent"
+                    );
+                    Outcome::Delivered(Tier::T0)
+                }
+            },
+        )
+    }
+
+    /// The flush's held T1s (SPEC-084 R11): each reacts in turn, and one delivered is settled and
+    /// recorded at the tier it rendered; a reaction not made leaves its celebration held as it was.
+    /// Answers how many were delivered.
+    async fn flush_reactions(
+        &self,
+        bot: &dyn BotTransport,
+        reactions: &[HeldRow],
+    ) -> Result<u32, KernelError> {
+        let mut sends = 0;
+        for row in reactions {
+            if let Outcome::Delivered(tier) = self.react(bot).await? {
+                let mut write = self.db.write().await?;
+                ledger::settle(&mut write, row.id).await?;
+                let sent = Subject::held(row).sent(tier, self.clock.now());
+                ledger::record(&mut write, &sent).await?;
+                write.commit().await?;
+                sends += 1;
+            }
+        }
+        Ok(sends)
     }
 
     /// The rules of R4 in order: the kind's switch, then the claim, then the rules after it; a
@@ -481,6 +664,20 @@ impl Router {
     ///
     /// [`KernelError::Database`] when the ledger cannot be read or written.
     pub async fn flush(&self) -> Result<Flushed, KernelError> {
+        self.flush_with(None).await
+    }
+
+    /// [`Router::flush`], re-capping each held celebration for the streak's `facts` on the flush's
+    /// study day (SPEC-084 R11). A held T1 first reacts, each in turn, and a reaction not made
+    /// leaves it held as it was; a celebration held at T0, or past the policy's age or the queue's
+    /// bound, is abandoned; of the rest, the two of highest held tier render in full at the smaller
+    /// of that tier and the cap, the older first on a tie and in the order they were held, and the
+    /// recap line settles every other one at most at T2.
+    ///
+    /// # Errors
+    ///
+    /// [`KernelError::Database`] when the ledger cannot be read or written.
+    pub async fn flush_with(&self, facts: Option<StreakFacts>) -> Result<Flushed, KernelError> {
         let Some(bot) = &self.bot else {
             return Ok(Flushed::NoNotifier);
         };
@@ -492,42 +689,59 @@ impl Router {
         if self.breaker_open(now) {
             return Ok(Flushed::BreakerOpen);
         }
+        let broke = ladder::streak_broke_on(facts.as_ref(), self.rule.study_day(now));
+        let cap = ladder::outcome_cap(&self.policy, broke);
         let max_age = i64::from(self.policy.deferral.max_age_minutes) * MINUTE_MS;
-        let mut full = Vec::new();
+        let (mut reactions, mut rest) = (Vec::new(), Vec::new());
         for row in ledger::held(&mut write).await? {
-            if now.epoch_millis() - row.deferred_at > max_age {
+            if now.epoch_millis() - row.deferred_at > max_age || row.tier_pending == Tier::T0 {
                 let reason = Hold::parse(&row.hold).abandoned();
                 self.abandon(&mut write, &row, reason, now).await?;
+            } else if row.tier_pending == Tier::T1 && row.surface == Surface::Bot {
+                reactions.push(row);
             } else {
-                full.push(row);
+                rest.push(row);
             }
         }
+        let bound = usize::try_from(self.policy.deferral.queue_max).unwrap_or(usize::MAX);
+        let mut full = ranked(rest);
+        for row in full.split_off(full.len().min(bound)) {
+            let reason = Hold::parse(&row.hold).abandoned();
+            self.abandon(&mut write, &row, reason, now).await?;
+        }
         write.commit().await?;
+        let mut sends = self.flush_reactions(bot.as_ref(), &reactions).await?;
         let flush_max = usize::try_from(self.policy.deferral.flush_max).unwrap_or(usize::MAX);
         let rolled = full.split_off(full.len().min(flush_max));
         full.sort_by_key(|row| row.id);
-        let mut sends = 0;
         for row in &full {
-            let pushed = match row.surface {
-                Surface::MiniApp => Pushed::Delivered,
-                Surface::Bot => self.push(&row.text, row.tier_pending).await,
+            let tier = row.tier_pending.min(cap);
+            let outcome = match row.surface {
+                Surface::MiniApp => Outcome::Delivered(tier),
+                Surface::Bot => self.render(bot.as_ref(), &row.text, tier, false).await?,
             };
             let now = self.clock.now();
             let mut write = self.db.write().await?;
-            if pushed == Pushed::Failed {
-                self.trip(now);
-                self.retry_or_abandon(&mut write, row, now).await?;
-                write.commit().await?;
-                return Ok(Flushed::Ran { sends });
+            match outcome {
+                Outcome::Delivered(rendered) => {
+                    let subject = Subject::held(row);
+                    if row.surface == Surface::MiniApp {
+                        push_in_app(&mut write, &subject, rendered, &row.text, now).await?;
+                    }
+                    ledger::settle(&mut write, row.id).await?;
+                    ledger::record(&mut write, &subject.sent(rendered, now)).await?;
+                    sends += 1;
+                }
+                Outcome::Held(_) => {}
+                Outcome::Failed => {
+                    self.trip(now);
+                    self.retry_or_abandon(&mut write, row, Hold::Send, now)
+                        .await?;
+                    write.commit().await?;
+                    return Ok(Flushed::Ran { sends });
+                }
             }
-            let subject = Subject::held(row);
-            if row.surface == Surface::MiniApp {
-                push_in_app(&mut write, &subject, row.tier_pending, &row.text, now).await?;
-            }
-            ledger::settle(&mut write, row.id).await?;
-            ledger::record(&mut write, &subject.sent(row.tier_pending, now)).await?;
             write.commit().await?;
-            sends += 1;
         }
         let mut read = self.db.write().await?;
         let abandoned = ledger::abandoned(&mut read).await?;
@@ -540,7 +754,7 @@ impl Router {
         let mut write = self.db.write().await?;
         if pushed == Pushed::Delivered {
             for row in &rolled {
-                let tier = row.tier_pending.min(Tier::T2);
+                let tier = row.tier_pending.min(cap).min(Tier::T2);
                 ledger::settle(&mut write, row.id).await?;
                 ledger::record(&mut write, &Subject::held(row).sent(tier, now)).await?;
             }
@@ -551,11 +765,45 @@ impl Router {
         } else {
             self.trip(now);
             for row in &rolled {
-                self.retry_or_abandon(&mut write, row, now).await?;
+                let hold = Hold::parse(&row.hold);
+                self.retry_or_abandon(&mut write, row, hold, now).await?;
             }
         }
         write.commit().await?;
         Ok(Flushed::Ran { sends })
+    }
+
+    /// How many celebrations of study day `since` or later were delivered at `min` or above, or are
+    /// still held at `min` or above (SPEC-084 R4).
+    ///
+    /// # Errors
+    ///
+    /// [`KernelError::Database`] when the ledger cannot be read.
+    pub async fn celebrations_at_or_above(
+        &self,
+        since: StudyDay,
+        min: Tier,
+    ) -> Result<i64, KernelError> {
+        let mut connection = self.db.reader().acquire().await?;
+        self.week_count(&mut connection, since, min).await
+    }
+
+    /// [`Router::celebrations_at_or_above`], read on `connection`: the delivered ones and the held
+    /// ones of every celebration kind, so a held celebration spends its week's budget (R4).
+    async fn week_count(
+        &self,
+        connection: &mut SqliteConnection,
+        since: StudyDay,
+        min: Tier,
+    ) -> Result<i64, KernelError> {
+        let since = since.epoch_day();
+        let mut count = 0;
+        for kind in self.policy.celebration_kinds() {
+            let delivered = ledger::delivered_at_or_above(connection, kind, since, min).await?;
+            let held = ledger::held_at_or_above(connection, kind, since, min).await?;
+            count += delivered + held;
+        }
+        Ok(count)
     }
 
     /// Holds `row` on the queue, then keeps the queue's bound: past the policy's count of held
@@ -568,7 +816,7 @@ impl Router {
     ) -> Result<(), KernelError> {
         ledger::hold(write, row, now).await?;
         let bound = usize::try_from(self.policy.deferral.queue_max).unwrap_or(usize::MAX);
-        for row in ledger::held(write).await?.iter().skip(bound) {
+        for row in ranked(ledger::held(write).await?).iter().skip(bound) {
             let reason = Hold::parse(&row.hold).abandoned();
             self.abandon(write, row, reason, now).await?;
         }
@@ -594,24 +842,27 @@ impl Router {
         Ok(())
     }
 
-    /// Holds `row` again after a failed send, its first deferral time kept, or abandons it once its
-    /// retries are spent (R8).
+    /// Holds `row` again for `hold` after a failed send, its first deferral time kept, or abandons
+    /// it once its retries are spent (R8). A row whose own message failed is held for the send; a
+    /// row a failed recap only named keeps what held it (SPEC-084 R11).
     async fn retry_or_abandon(
         &self,
         write: &mut SqliteConnection,
         row: &HeldRow,
+        hold: Hold,
         now: UtcMillis,
     ) -> Result<(), KernelError> {
         let tries = row.tries + 1;
-        ledger::relatch(write, row.id, tries).await?;
+        ledger::relatch(write, row.id, tries, hold.as_str()).await?;
         if tries > i64::from(self.policy.send_failure.retry_max) {
             self.abandon(write, row, Hold::Send.abandoned(), now).await
         } else {
-            ledger::record(write, &Subject::held(row).deferred(Hold::Send, now)).await
+            ledger::record(write, &Subject::held(row).deferred(hold, now)).await
         }
     }
 
-    /// Sends `text` to the bot at `rendered`: nothing at T0, which delivers by sending nothing.
+    /// Sends `text` to the bot at `rendered` as a line: nothing at T0, which delivers by sending
+    /// nothing.
     async fn push(&self, text: &str, rendered: Tier) -> Pushed {
         match &self.bot {
             _ if rendered == Tier::T0 => Pushed::Delivered,
@@ -639,10 +890,18 @@ impl Router {
     /// Whether the outage breaker is open: a bot send failed less than the cooldown before `now`.
     /// A clock that stepped back past the failure closes it.
     fn breaker_open(&self, now: UtcMillis) -> bool {
-        let failed_at = *self
-            .failed_at
-            .lock()
-            .unwrap_or_else(PoisonError::into_inner);
+        self.cooling(&self.failed_at, now)
+    }
+
+    /// Whether the reaction breaker is open: a reaction was refused less than the cooldown before
+    /// `now` (SPEC-084 R9).
+    fn reaction_breaker_open(&self, now: UtcMillis) -> bool {
+        self.cooling(&self.reaction_failed_at, now)
+    }
+
+    /// Whether the failure `failed_at` holds came less than the outage cooldown before `now`.
+    fn cooling(&self, failed_at: &Mutex<Option<UtcMillis>>, now: UtcMillis) -> bool {
+        let failed_at = *failed_at.lock().unwrap_or_else(PoisonError::into_inner);
         let cooldown = i64::from(self.policy.send_failure.outage_cooldown_ms);
         failed_at
             .is_some_and(|at| (0..cooldown).contains(&(now.epoch_millis() - at.epoch_millis())))
@@ -650,11 +909,62 @@ impl Router {
 
     /// Opens the outage breaker at `now`.
     fn trip(&self, now: UtcMillis) {
-        *self
-            .failed_at
-            .lock()
-            .unwrap_or_else(PoisonError::into_inner) = Some(now);
+        stamp(&self.failed_at, now);
     }
+}
+
+/// Records a failure at `now` in the breaker `failed_at`.
+fn stamp(failed_at: &Mutex<Option<UtcMillis>>, now: UtcMillis) {
+    *failed_at.lock().unwrap_or_else(PoisonError::into_inner) = Some(now);
+}
+
+/// What the push `pushed` came to, rendered at `tier`: a call the transport lacks delivers nothing.
+const fn delivered(pushed: Pushed, tier: Tier) -> Outcome {
+    match pushed {
+        Pushed::Delivered => Outcome::Delivered(tier),
+        Pushed::Failed | Pushed::Unsupported => Outcome::Failed,
+    }
+}
+
+/// What the ladder's call `call` came to at `tier`, or, when the transport does not implement it,
+/// what the line it degrades to came to, at T2, the call logged by its name (SPEC-084 R8).
+async fn or_line(
+    bot: &dyn BotTransport,
+    pushed: Pushed,
+    call: &'static str,
+    text: &str,
+    tier: Tier,
+) -> Outcome {
+    match pushed {
+        Pushed::Unsupported => {
+            tracing::warn!(
+                call,
+                tier = tier.as_str(),
+                "the bot transport has no such call: the celebration renders degraded, as a line"
+            );
+            delivered(bot.push_message(&PASS, text).await, Tier::T2)
+        }
+        Pushed::Delivered | Pushed::Failed => delivered(pushed, tier),
+    }
+}
+
+/// The dice a T4 and a T5 open with. Its outcome is never a delivery's (SPEC-084 R9); a transport
+/// without it is logged by the call's name, and the tier renders on without it.
+async fn dice(bot: &dyn BotTransport) {
+    match bot.push_dice(&PASS, DICE_EMOJI).await {
+        Pushed::Unsupported => tracing::warn!(
+            call = "push_dice",
+            "the bot transport has no such call: the celebration renders without its dice"
+        ),
+        Pushed::Delivered | Pushed::Failed => {}
+    }
+}
+
+/// `rows` ranked for a flush and the queue's bound: the loudest held tier first, then the oldest
+/// (SPEC-084 R11).
+fn ranked(mut rows: Vec<HeldRow>) -> Vec<HeldRow> {
+    rows.sort_by_key(|row| (Reverse(row.tier_pending), row.id));
+    rows
 }
 
 /// The Mini App's delivery call: appends the item to the in-app feed the owner pulls, inside the
@@ -681,8 +991,8 @@ async fn minutes_setting(
         .unwrap_or(default))
 }
 
-/// The tier an occasion renders at until the ladder's renders (#120): nothing at T0, and a line at
-/// every other tier.
+/// The tier a nudge, a digest or an alert renders at: nothing at T0, and a line at every other tier.
+/// A celebration's is the ladder's (SPEC-084).
 const fn rendered(requested: Tier) -> Tier {
     if matches!(requested, Tier::T0) {
         Tier::T0
@@ -704,26 +1014,28 @@ fn scope(dedupe: DedupeScope, study_day: i64, lapse_id: Option<i64>) -> String {
     }
 }
 
-/// The queue's row for `occasion`, held for `hold` with `tries` failed sends, deferred at `now`.
+/// The queue's row for `subject`, its message `text`, held at `tier` for `hold` with `tries` failed
+/// sends, deferred at `now`.
 fn held_row(
-    occasion: &Occasion,
-    surface: Surface,
+    subject: &Subject<'_>,
+    text: &str,
+    tier: Tier,
     hold: Hold,
     tries: i64,
     now: UtcMillis,
 ) -> HeldRow {
     HeldRow {
         id: 0,
-        kind: occasion.kind().name().to_owned(),
-        dedupe_key: occasion.key().as_str().to_owned(),
-        surface,
-        tier_requested: occasion.tier(),
-        tier_pending: rendered(occasion.tier()),
-        text: occasion.text().to_owned(),
+        kind: subject.kind.to_owned(),
+        dedupe_key: subject.key.to_owned(),
+        surface: subject.surface,
+        tier_requested: subject.requested,
+        tier_pending: tier,
+        text: text.to_owned(),
         hold: hold.as_str().to_owned(),
         tries,
         deferred_at: now.epoch_millis(),
-        study_day: occasion.study_day().epoch_day(),
+        study_day: subject.study_day,
     }
 }
 
