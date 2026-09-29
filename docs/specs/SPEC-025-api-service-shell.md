@@ -283,3 +283,61 @@ the tests that started them.
 A16: cargo test -p deck-streak-daemon --test lifecycle -- --exact a_failing_lifecycle_test_leaves_no_daemon_running
 A17: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_group.py -k test_the_grandchild_of_a_timed_out_killer_is_gone_when_the_run_returns
 ```
+
+## 10. Amendment, 2026-09-29 (2): a signal or a held pipe cannot strand a killer
+
+Issue 409, which follows section 8's process-group kill (issue 366). Review of that change found
+three edges in `run_in_own_group`. This amendment is insert-only under ruling (i) of SPEC-038
+section 8: every earlier byte is kept in order, and this section and section 11 are the only
+insertions.
+
+- **It replaces a stated limit by a guarantee.** Section 8 lists "a SIGTERM of the runner itself"
+  among the cases the group kill does not cover. That limit is withdrawn: a SIGTERM of the runner,
+  to its pid or to its whole process group (as `timeout -s TERM` and a job cancel send it), now
+  leaves no process of the killer's group running. The other limits of section 8 stand, among them
+  a descendant that leaves the group, which is not reached.
+- **The signal (A18).** The killer leads a group of its own, so a signal to the
+  runner's group no longer reaches it, and the default SIGTERM action ends the runner without its
+  `finally` blocks. `main()` now installs a SIGTERM handler that exits with status 128 plus the
+  signal number, so the exception unwinds through `run_in_own_group`'s cleanup, which ends the
+  group exactly as it does on an interrupt. SIGINT is untouched (A21).
+- **The held pipe (A19).** After a timeout the group is killed and the runner used to collect the
+  killer's output. A descendant that left the group and still holds the output pipes kept that
+  collection waiting until it exited, although a timed-out run discards the output. The timed-out
+  path now waits for the killer's leader only, so the run returns at its bound whatever a
+  descendant outside the group holds. Such an escapee is not the runner's to reap: it is neither
+  ended nor waited for, and the test asserts it is still running when the run returns. The test's
+  bound is the killer's bound plus a margin of ten seconds, against an escapee that lives forty:
+  ending the group and reaping its leader take milliseconds, so only a run that waits for the
+  escapee can exceed it.
+- **The pipes (A20).** Every way out of the run (the normal end, a timeout, an interrupt and the
+  exit the SIGTERM handler raises) closes both pipes. The normal path and a timeout with no
+  escapee already closed them through `communicate`; the interrupt and exit paths left both open.
+- **Unchanged.** The killers' output is still captured on the normal path, the examined counts of
+  `count`, `ids` and `census` differ only by the three rows below, a `prove` of the earlier rows
+  reads as before, and no timeout is raised.
+- **Rows** S02506 to S02508, in `scripts/mutation-rows.d/S02500-S02599.json`: the SIGTERM handler
+  removed, `communicate()` restored on the timed-out path, and the pipe close removed. Each
+  killer selects one test, and each row was proved KILLED by its full id.
+- **Files.** `scripts/mutation_rows.py`, `scripts/tests/test_mutation_rows_group.py`,
+  `scripts/mutation-rows.d/S02500-S02599.json`, `docs/red-first/SPEC-025.md`, this SPEC,
+  `docs/decisions/ADR-196-a-sigterm-ends-the-runner-through-its-cleanup-and-a-timeout-waits-only-for-the-leader.md`
+  and `changelog.d/runner-signals-409.md`.
+- **Limits.** A descendant that leaves the group is still not reached, and a SIGKILL of the runner
+  runs no cleanup.
+
+## 11. Acceptance criteria of the 2026-09-29 (2) amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A18 | a SIGTERM of the row runner, to its pid or to its group, leaves no process of the killer's group running | `test_mutation_rows_group` tests |
+| A19 | a timed-out killer whose descendant left the group and holds the output pipes returns at its bound | `test_mutation_rows_group` test |
+| A20 | every path of a killer run closes both pipes: normal, timeout, interrupt and the SIGTERM exit | `test_mutation_rows_group` tests |
+| A21 | a SIGINT of the row runner still ends the killer's group | `test_mutation_rows_group` test |
+
+```acceptance
+A18: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_group.py -k test_sigterm_to_the_runner
+A19: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_group.py -k test_a_timed_out_killer_returns_at_its_bound_whatever_an_escapee_holds
+A20: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_group.py -k APipeIsClosedOnEveryPath
+A21: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_group.py -k test_sigint_to_the_runner_ends_the_killers_group
+```
