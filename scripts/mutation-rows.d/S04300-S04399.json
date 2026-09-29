@@ -1,0 +1,150 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S04301-THE-AI-ROUTE-SETTING-NAME",
+        "agent",
+        "src/route.rs",
+        "pub const AI_ROUTE: &str = \"DECKSTREAK_AI_ROUTE\";",
+        "pub const AI_ROUTE: &str = \"DECKSTREAK_AI\";",
+        "constants::the_ai_route_setting_is_named_deckstreak_ai_route",
+        "the route setting is read under the name .env.example documents (SPEC-043 R1, ADR-054)"
+      ],
+      [
+        "S04302-THE-ROUTE-STATES-ITS-SHAPE",
+        "agent",
+        "src/route.rs",
+        "const SHAPE: &'static str = \"proxy, or unset for no AI route\";",
+        "const SHAPE: &'static str = \"\";",
+        "constants::the_ai_route_setting_states_its_shape",
+        "a refused route value names the shapes it accepts (SPEC-043 R1)"
+      ],
+      [
+        "S04303-THE-DEFAULT-TURN-CAP",
+        "agent",
+        "src/duty.rs",
+        "pub const DEFAULT_MAX_TURNS: u32 = 30;",
+        "pub const DEFAULT_MAX_TURNS: u32 = 300;",
+        "constants::the_default_turn_cap_is_thirty",
+        "a duty's default turn cap is thirty (SPEC-043 R6)"
+      ],
+      [
+        "S04304-THE-DEFAULT-BUDGET-CAP",
+        "agent",
+        "src/duty.rs",
+        "pub const DEFAULT_MAX_BUDGET_MICRO_USD: u64 = 5_000_000;",
+        "pub const DEFAULT_MAX_BUDGET_MICRO_USD: u64 = 50_000_000;",
+        "constants::the_default_budget_cap_is_five_dollars",
+        "a duty's default budget cap is five dollars (SPEC-043 R6)"
+      ],
+      [
+        "S04305-THE-DEFAULT-WALL-CLOCK",
+        "agent",
+        "src/duty.rs",
+        "pub const DEFAULT_WALL_SECONDS: u64 = 1800;",
+        "pub const DEFAULT_WALL_SECONDS: u64 = 18000;",
+        "constants::the_default_wall_clock_is_eighteen_hundred_seconds",
+        "a duty's default wall clock is 1800 seconds (SPEC-043 R6)"
+      ],
+      [
+        "S04306-THE-DAILY-READING-WALL-CLOCK",
+        "agent",
+        "src/duty.rs",
+        "pub const DAILY_READING_WALL_SECONDS: u64 = 620;",
+        "pub const DAILY_READING_WALL_SECONDS: u64 = 6200;",
+        "constants::the_daily_reading_wall_clock_is_six_hundred_twenty_seconds",
+        "the daily reading's wall clock is 620 seconds (SPEC-043 R6)"
+      ],
+      [
+        "S04307-THE-DAILY-READING-NAME",
+        "agent",
+        "src/duty.rs",
+        "pub const DAILY_READING: &str = \"daily-reading\";",
+        "pub const DAILY_READING: &str = \"reading\";",
+        "constants::the_daily_reading_is_recorded_under_its_name",
+        "agent_runs records the daily reading under its duty name (SPEC-043 R9)"
+      ],
+      [
+        "S04308-THE-WALL-CLOCK-GRACE",
+        "agent",
+        "src/runner.rs",
+        "pub const WALL_CLOCK_GRACE: Duration = Duration::from_secs(45);",
+        "pub const WALL_CLOCK_GRACE: Duration = Duration::from_secs(450);",
+        "constants::the_wall_clock_grace_is_forty_five_seconds",
+        "the runner gives its own script 45 seconds beyond the wall clock to refuse before it is killed (SPEC-043 R7)"
+      ],
+      [
+        "S04309-THE-TURN-CAP-SUBTYPE",
+        "agent",
+        "src/runner.rs",
+        "pub const SUBTYPE_TURN_CAP: &str = \"error_max_turns\";",
+        "pub const SUBTYPE_TURN_CAP: &str = \"error_turns\";",
+        "runner::a_run_past_its_turn_cap_delivers_nothing",
+        "a Claude result of subtype error_max_turns is the turn cap (SPEC-043 A7)"
+      ],
+      [
+        "S04310-THE-BUDGET-CAP-SUBTYPE",
+        "agent",
+        "src/runner.rs",
+        "pub const SUBTYPE_BUDGET_CAP: &str = \"error_max_budget_usd\";",
+        "pub const SUBTYPE_BUDGET_CAP: &str = \"error_budget\";",
+        "runner::a_run_past_its_budget_cap_delivers_nothing",
+        "a Claude result of subtype error_max_budget_usd is the budget cap (SPEC-043 R6)"
+      ],
+      [
+        "S04311-THE-WALL-CLOCK-MARK",
+        "agent",
+        "src/runner.rs",
+        "pub const WALL_CLOCK_MARK: &str = \"wall clock\";",
+        "pub const WALL_CLOCK_MARK: &str = \"wall-clock\";",
+        "runner::a_run_past_its_wall_clock_delivers_nothing",
+        "a runner refusal naming the wall clock is the time cap (SPEC-043 A8)"
+      ],
+      [
+        "S04312-A-VOID-PROBE-IS-NAMED",
+        "agent",
+        "src/gate.rs",
+        "pub const CLASS_VOID: &str = \"void\";",
+        "pub const CLASS_VOID: &str = \"\";",
+        "constants::the_gate_names_a_void_and_an_empty_probe",
+        "a probe that cannot run is withheld under the class void (SPEC-043 R8)"
+      ],
+      [
+        "S04313-AN-EMPTY-PROBE-IS-NAMED",
+        "agent",
+        "src/gate.rs",
+        "pub const CLASS_EMPTY: &str = \"examined-nothing\";",
+        "pub const CLASS_EMPTY: &str = \"\";",
+        "constants::the_gate_names_a_void_and_an_empty_probe",
+        "a probe that examined nothing is withheld under examined-nothing (SPEC-043 R8)"
+      ],
+      [
+        "S04314-THE-AGENT-RUNS-TABLE",
+        "agent",
+        "src/runs.rs",
+        "pub const AGENT_RUNS_TABLE: &str = \"agent_runs\";",
+        "pub const AGENT_RUNS_TABLE: &str = \"runs\";",
+        "constants::the_agent_runs_table_and_context_are_named",
+        "the data-rights port names the table the migration creates (SPEC-043 R9)"
+      ],
+      [
+        "S04315-THE-AGENT-CONTEXT",
+        "agent",
+        "src/data_rights.rs",
+        "pub const AGENT_CONTEXT: &str = \"agent\";",
+        "pub const AGENT_CONTEXT: &str = \"agents\";",
+        "constants::the_agent_runs_table_and_context_are_named",
+        "the data-rights port declares the agent context (SPEC-043 R9)"
+      ],
+      [
+        "S04316-THE-RETENTION-IS-NINETY-DAYS",
+        "agent",
+        "src/runs.rs",
+        "pub const RETENTION_DAYS: i64 = 90;",
+        "pub const RETENTION_DAYS: i64 = 900;",
+        "data_rights::a_run_older_than_the_retention_is_pruned_and_a_newer_one_kept",
+        "agent_runs keeps 90 days, as privacy.json declares"
+      ]
+    ]
+  }
+}

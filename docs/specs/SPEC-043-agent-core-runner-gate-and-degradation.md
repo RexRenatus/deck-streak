@@ -203,6 +203,7 @@ subscription-proxy client rows and the apiKeyHelper scan are judged there too.
 | `crates/agent/tests/compose.rs` | `deck-streak-agent` | added |
 | `crates/agent/tests/gate.rs` | `deck-streak-agent` | added |
 | `crates/agent/tests/duty.rs` | `deck-streak-agent` | added: the duty engine's order, A9 and A14 |
+| `crates/agent/tests/constants.rs` | `deck-streak-agent` | added: the configured literals, each asserted written out |
 | `crates/agent/tests/support/mod.rs` | `deck-streak-agent` | added: the recorded alerts, vault, runner and gate fakes |
 | `crates/agent/tests/redteam.rs` | `deck-streak-agent` | added |
 | `crates/agent/tests/data_rights.rs` | `deck-streak-agent` | added |
