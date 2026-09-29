@@ -173,7 +173,8 @@ R9. **The runner, `scripts/mutation_rows.py prove`,** proves each row it is give
       --no-run`) or does not parse (Python) as VOID, never a kill;
     - *Inserted by section 12:* a target that is a shell script, by its `.sh` or `.bash`
       extension or by a shebang naming `sh`, `bash` or `dash`, has its mutant parse-checked on
-      the mutated bytes, with `bash -n` for a bash script and `sh -n` otherwise, and a mutant that
+      the mutated bytes, with `bash -n` for a bash script and `sh -n` otherwise (the shebang
+      decides when it names a shell; else `.bash` is bash and `.sh` is sh), and a mutant that
       fails is VOID, never a kill (A41);
     - it runs only the killer, counting the tests selected from libtest's `running N test` lines
       or unittest's `Ran N test` line, and anything but exactly one is VOID;
@@ -693,8 +694,9 @@ What it amends, and why:
   shell target, all on `scripts/check.sh`, and each was proved without a parse check.
 - **A shell target is parse-checked, by the language it is written in.** A target is a shell
   script when its extension is `.sh` or `.bash`, or its first line is a shebang naming `sh`,
-  `bash` or `dash`, directly or after `env`. The mutated bytes are checked with `bash -n` when
-  the script is bash and `sh -n` otherwise, because the two disagree: an array assignment such as
+  `bash` or `dash`, directly or after `env`. The shebang decides when it names a shell; else
+  `.bash` is bash and `.sh` is sh. The mutated bytes are checked with `bash -n` when the script
+  is bash and `sh -n` otherwise, because the two disagree: an array assignment such as
   `a=(1 2)` passes `bash -n` and fails `sh -n`, so a checker that always picked `sh` would void
   every bash script that uses an array, and one that always picked `bash` would pass a POSIX
   script that only bash reads. The check runs before the cargo branch, so a script mutant with a
