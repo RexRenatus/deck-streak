@@ -135,12 +135,13 @@ R12. Apple's client secret is an ES256 JWT (`kid` the key id; `iss` the team id;
      id; `aud` Apple's issuer; `exp` 300 seconds after `iat`), signed with `apple-signing-key` for
      each exchange and never stored.
 R13. Apple's refresh token from the exchange is sealed with XChaCha20-Poly1305 under
-     `link-token-key`, with a random 24-byte nonce and `(issuer, subject)` as associated data, and
-     stored in `linked_identities.sealed_refresh_token`. No other token of any provider is kept.
+     `link-token-key`, with a random 24-byte nonce and `(issuer, token id)` as associated data, the token id 16 random
+     bytes minted at the seal, and stored in `linked_identities.sealed_refresh_token` beside its
+     `token_id`. No other token of any provider is kept.
 R14. Unlinking Apple, and the erase (R18), call Apple's revocation with the opened token first,
      bounded at 10 seconds, then delete the local row either way. A revocation that fails, times
      out, or cannot be made because the role holds no Apple credential moves the sealed token to
-     `identity_revocations` (the sealed token, its attempt count, its next attempt instant; no
+     `identity_revocations` (the sealed token, its issuer and token id, its attempt count, its next attempt instant; no
      subject and no user id), due an hour later. The job `link_revocation` runs hourly at minute 41
      (SPEC-027 R1's hourly kind, a minute R2 admits) on the plain job template, and tries each due
      row once; a failure, or no credential, counts an attempt and doubles the wait (1, 2, 4, 8 and
@@ -220,7 +221,7 @@ R20. CHARTER 10's eleven anti-goals bind this SPEC as one block; the ones it tou
 | A32 | a passkey sign-in stores the new counter and backup state | `a_passkey_sign_in_stores_its_counter` |
 | A33 | the user handle is 32 random bytes and the display name carries no personal data | `the_user_handle_carries_no_personal_data` |
 | A34 | Apple's client secret is ES256 and expires 300 seconds after it is issued | `the_apple_client_secret_is_es256_for_three_hundred_seconds` |
-| A35 | Apple's refresh token is stored sealed, bound to its issuer and subject, and opens with the key alone | `apples_refresh_token_is_stored_sealed` |
+| A35 | Apple's refresh token is stored sealed, bound to its issuer and token id, opens with the key alone, and does not open under another row's token id | `apples_refresh_token_is_stored_sealed` |
 | A36 | unlinking Apple revokes before it deletes | `unlinking_apple_revokes_before_it_deletes` |
 | A37 | a revocation that times out at 10 seconds is queued and the unlink completes; the test bounds its own wait at 11 seconds | `a_failed_revocation_is_queued_and_the_unlink_completes` |
 | A38 | a queued revocation is tried five times, 1, 2, 4, 8 and 16 hours apart, and the fifth failure drops it and answers the page outcome | `a_queued_revocation_is_tried_five_times_then_dropped` |
@@ -241,6 +242,7 @@ R20. CHARTER 10's eleven anti-goals bind this SPEC as one block; the ones it tou
 | A53 | a `link` session is never admitted as an owner session | `a_link_session_is_not_an_owner_session` |
 | A54 | a revoker without Apple's credentials queues the sealed token and reports it queued | `a_revoker_without_the_credential_queues_the_token` |
 | A55 | each role reads exactly R2's credentials: an empty `google-client-secret` refuses the api role's start and no other role's, and an empty `link-token-key` refuses the api, bot and data roles' start and the job `link_revocation`'s run | `each_role_reads_exactly_its_linking_credentials` |
+| A56 | a queued revocation opens its sealed token without a subject, and Apple's acceptance deletes its row | `a_queued_revocation_opens_without_a_subject_and_is_deleted_on_success` |
 
 ```acceptance
 A1: cargo test -p deck-streak-identity --test linking -- --exact a_link_code_is_random_and_kept_hashed
@@ -298,6 +300,7 @@ A52: python3 -m unittest discover -s scripts/tests -p test_deploy_templates.py -
 A53: cargo test -p deck-streak-identity --test linking -- --exact a_link_session_is_not_an_owner_session
 A54: cargo test -p deck-streak-identity --test apple -- --exact a_revoker_without_the_credential_queues_the_token
 A55: cargo test -p deck-streak-daemon --test lifecycle -- --exact each_role_reads_exactly_its_linking_credentials
+A56: cargo test -p deck-streak-identity --test apple -- --exact a_queued_revocation_opens_without_a_subject_and_is_deleted_on_success
 ```
 
 ## 3a. What the box run judges
@@ -332,10 +335,10 @@ DeckStreak.
 | `crates/identity/tests/oidc.rs` | `deck-streak-identity` | added: A5 to A17 |
 | `crates/identity/tests/linking_config.rs` | `deck-streak-identity` | added: A18 to A20 |
 | `crates/identity/tests/passkeys.rs` | `deck-streak-identity` | added: A27 to A33 |
-| `crates/identity/tests/apple.rs` | `deck-streak-identity` | added: A34 to A38, A54 |
+| `crates/identity/tests/apple.rs` | `deck-streak-identity` | added: A34 to A38, A54, A56 |
 | `crates/identity/tests/rights.rs` | `deck-streak-identity` | added: A40, A41 |
 | `crates/identity/tests/support/mod.rs` | `deck-streak-identity` | added: the test issuer, its keys and tokens, the software authenticator |
-| `migrations/013101_identity_linked_sign_in.sql` | `deck-streak-identity` | added: the three tables |
+| `migrations/013101_identity_linked_sign_in.sql` | `deck-streak-identity` | added: the three tables, `token_id` in both `linked_identities` and `identity_revocations` |
 | `crates/coordination/src/linked_sign_in_erase.rs` | `deck-streak-coordination` | added: the erase's revocation step before the engine |
 | `crates/coordination/src/lib.rs` | `deck-streak-coordination` | changed: the module |
 | `crates/coordination/tests/linked_sign_in_erase.rs` | `deck-streak-coordination` | added: A39, A48 |
@@ -465,3 +468,4 @@ network or a provider.
 | `S13138-LINK-SESSION-SCOPE` | `crates/identity/src/session.rs` | a `link` session is never an owner session | `linking::a_link_session_is_not_an_owner_session` |
 | `S13139-ERASE-REVOKES-FIRST` | `crates/coordination/src/linked_sign_in_erase.rs` | the revocation step runs before the engine | `linked_sign_in_erase::the_erase_revokes_apple_first_and_never_waits_on_a_failure` |
 | `S13140-NO-CREDENTIAL-QUEUES` | `crates/identity/src/apple.rs` | a revoker without the credential queues the token rather than dropping it | `apple::a_revoker_without_the_credential_queues_the_token` |
+| `S13141-QUEUE-OPENS` | `crates/identity/src/apple.rs` | the queued token opens with its issuer and token id | `apple::a_queued_revocation_opens_without_a_subject_and_is_deleted_on_success` |

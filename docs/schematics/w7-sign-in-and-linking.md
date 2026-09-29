@@ -119,7 +119,7 @@ flowchart LR
   req["unlink Apple, or either erase path"] --> open["open the sealed refresh token"]
   open --> rev{"Apple's revocation, bounded at 10 s, with the role's credential"}
   rev -->|accepted| del["delete the local row"]
-  rev -->|failed, timed out or no credential| q["the sealed token moves to identity_revocations, due in 1 h"]
+  rev -->|failed, timed out or no credential| q["the sealed token, its issuer and token id move to identity_revocations, due in 1 h"]
   q --> del
   q --> job["job link_revocation, hourly at minute 41"]
   job --> try{"each due row, tried once"}
