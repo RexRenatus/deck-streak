@@ -83,6 +83,15 @@ SCAN_ROWS = {
         "GREEN settings-no-oauth-token: 1 settings document(s) examined, 0 finding(s)"
     ),
     "red-surface": "RED credential-not-on-disk: 3 surface file(s) examined, 1 finding(s)",
+    "red-secret-manager": (
+        "RED credential-from-secret-manager: 1 settings document(s) examined, 1 finding(s)"
+    ),
+    "green-secret-manager": (
+        "GREEN credential-from-secret-manager: 1 settings document(s) examined, 0 finding(s)"
+    ),
+    "void-secret-manager": (
+        "VOID credential-from-secret-manager: 0 settings document(s) examined; no unit found"
+    ),
 }
 # A stand-in script records its argv and the census of its --root in FAKE_PROBE_LOG.
 RECORDER = """import hashlib, json, os, sys
