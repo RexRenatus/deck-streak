@@ -8,6 +8,7 @@ use std::sync::{Arc, Mutex, PoisonError};
 use std::time::Duration;
 
 use deck_streak_kernel::{StudyDayRule, UtcMillis};
+use deck_streak_notifications::owner_message;
 use deck_streak_notifications::{BotTransport, Pass, PushFuture, Pushed, Router, Tier};
 use serde_json::Value;
 use sqlx::Row;
@@ -305,14 +306,16 @@ pub fn assert_calls(bot: &Scripted, expected: &[Expected], context: &str) {
     assert_eq!(made, wanted, "{context}: the port's calls, in order");
 }
 
-/// Records `message_id`, arrived at `arrived_at`, as the owner's latest message.
+/// Records `message_id`, arrived at `arrived_at`, as the owner's latest message, through the
+/// writer the bot records it with.
 pub async fn seed_owner_message(harness: &Harness, message_id: i64, arrived_at: i64) {
-    sqlx::query("UPDATE owner_last_message SET message_id = ?, arrived_at = ? WHERE id = 1")
-        .bind(message_id)
-        .bind(arrived_at)
-        .execute(harness.db.reader())
-        .await
-        .expect("the owner's latest message is seeded");
+    owner_message::record(
+        &harness.db,
+        message_id,
+        UtcMillis::from_epoch_millis(arrived_at),
+    )
+    .await
+    .expect("the owner's latest message is seeded");
 }
 
 /// Clears the owner's latest message.

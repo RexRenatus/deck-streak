@@ -11,7 +11,26 @@ mod support;
 
 use deck_streak_notifications::{Decision, DedupeKey, LapseContext, Occasion, Surface, Tier};
 use support::ladder::{HeldSeed, scripted, seed_held, seed_sent, tier};
-use support::{DAY, at, day};
+use support::{DAY, Harness, at, day};
+
+/// The Monday that starts `DAY`'s week: `DAY` is a Friday, since the epoch's first day was a
+/// Thursday.
+const MONDAY: i64 = DAY - 4;
+
+/// A ceremony on `DAY`, keyed `next-trophy`, which asks for a T5.
+fn next_trophy(harness: &Harness) -> Occasion {
+    Occasion::new(
+        harness.policy.kind("celebration").expect("a declared kind"),
+        DedupeKey::new("next-trophy").expect("a key"),
+        Surface::Bot,
+        Tier::T2,
+        "synthetic next-trophy",
+        day(DAY),
+        LapseContext::NoLapse,
+    )
+    .expect("an occasion")
+    .with_event("ceremony", None)
+}
 
 #[tokio::test]
 async fn the_week_counts_delivered_and_held_celebrations_as_the_parity_golden_does() {
@@ -68,23 +87,46 @@ async fn the_week_counts_delivered_and_held_celebrations_as_the_parity_golden_do
         study_day: DAY,
     };
     seed_held(&harness, &seed).await;
-    let occasion = Occasion::new(
-        harness.policy.kind("celebration").expect("a declared kind"),
-        DedupeKey::new("next-trophy").expect("a key"),
-        Surface::Bot,
-        Tier::T2,
-        "synthetic next-trophy",
-        day(DAY),
-        LapseContext::NoLapse,
-    )
-    .expect("an occasion")
-    .with_event("ceremony", None);
     assert_eq!(
-        harness.router.route(&occasion).await.expect("a decision"),
+        harness
+            .router
+            .route(&next_trophy(&harness))
+            .await
+            .expect("a decision"),
         Decision::Sent {
             surface: Surface::Bot,
             tier: Tier::T4
         },
         "a held T5 spends the week's one T5"
     );
+
+    // The router counts from the Monday of the occasion's week: a T5 delivered the Sunday before
+    // spends nothing, and one delivered on the Monday spends the week's one T5.
+    for (on, rendered, why) in [
+        (
+            MONDAY - 1,
+            Tier::T5,
+            "a T5 of the week before spends nothing",
+        ),
+        (
+            MONDAY,
+            Tier::T4,
+            "a T5 on the week's Monday spends its one T5",
+        ),
+    ] {
+        let (harness, _bot) = scripted(at(DAY, 12, 0)).await;
+        seed_sent(&harness, "last-trophy", Tier::T5, on).await;
+        assert_eq!(
+            harness
+                .router
+                .route(&next_trophy(&harness))
+                .await
+                .expect("a decision"),
+            Decision::Sent {
+                surface: Surface::Bot,
+                tier: rendered
+            },
+            "{why}"
+        );
+    }
 }

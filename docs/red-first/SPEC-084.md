@@ -31,7 +31,15 @@ the fake Bot API.
 The Mini App followed (5157782), with A16's test pinning the dice and the reduced-motion query by
 their whole literals and T0 asserted to render nothing, so a mutant of either constant or of the
 T0 guard is killed. After green, A7 and A14 were pinned the same way: the owner's intensity by the
-key the predecessor's store uses, and the reveal's placeholder by its whole text.
+key the predecessor's store uses, and the reveal's placeholder by its whole text. The diff's Rust
+mutants then left five alive, and none of them changed what a criterion asserts. A6's test gained
+the week's Monday through the router: a T5 delivered the Sunday before spends nothing, and one
+delivered on the Monday spends the week's one T5, which kills the three mutants of
+`ladder.rs:week_start`. The ladder tests seed the owner's latest message through
+`owner_message::record`, the writer the bot records it with, which kills its `Ok(())` mutant. The
+guard of `Router::send_bot` is recorded equivalent in
+`scripts/mutation-equivalent.d/deck-streak-notifications.json`: a non-celebration reaches it only
+at T0 or T2, where the ladder's render and the line make the same call.
 
 ```red-first
 A1: red at 96383a4: assertion `left == right` failed: the requested tier of "badge" with rarity "common"; left: T0, right: T2
