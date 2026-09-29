@@ -751,7 +751,9 @@ byte is kept in order. It inserts this section and section 16 only.
     binary.
   - **The census resolves the killer statically against the binary's sources.** The sources are
     the module tree from the binary's root file: the file, then each `mod name;` it declares, as
-    `name.rs` or `name/mod.rs`, recursively (`#[path]` is not followed). The last segment of the
+    `name.rs` or `name/mod.rs` beside the root file (whatever its name, as rustc reads a crate
+    root) or beside a `mod.rs`, and under a directory named for any other file, recursively
+    (`#[path]` is not followed). The last segment of the
     test path must be declared under a test attribute exactly once in them; a test of the
     library, or one in a file the binary does not declare, is refused with the census's
     existing sentence, `its killer <killer> names no test: <root file> declares <name> 0 times`.
@@ -762,24 +764,44 @@ byte is kept in order. It inserts this section and section 16 only.
     control run must select exactly one test, counted from libtest's `running N test` line, so a
     `bin::` killer naming a test that does not exist reads VOID, its mutant is never installed,
     and it is never KILLED.
-  - **`bin` joins `lib` as a reserved target name.** A file `tests/bin.rs` or `tests/lib.rs` can
-    no longer be named as a killer's target.
+  - **`bin` joins `lib` as a reserved target name.** A crate that also holds `tests/bin.rs` or
+    `tests/bin/main.rs` is refused for a `bin::` killer by name (`crates/<crate> has a test target
+    bin, which the bin kind shadows`), so a killer written for that file is never run against the
+    binary's own test of the same path.
+  - **What was rejected, and why.**
+    - A killer that names its binary (`bin:<name>::<path>`): rejected because the workspace holds
+      one binary, and a second spelling would need its own parse, resolve and rows; a crate with
+      more than one binary is refused instead.
+    - A kind name that shadows no test target (such as `main`): rejected because `bin` is cargo's
+      own word for the target (`--bin`) and no crate holds a `tests/bin.rs`; the shadow is refused
+      by name instead.
+    - Resolving against every file under `src/`, as `lib` does: rejected because a test of the
+      library would then pass the census and read VOID only when proved (S03948 pins it).
+    - The test path before `--` (`--bin <binary> <path> -- --exact`): rejected because the `lib`
+      and `--test` kinds already pass it after `--`, and one function, `cargo_flags`, serves all
+      three kinds.
+    - A bin-only VOID rule: rejected because the generic rule (the control selects exactly one
+      test) already covers a `bin::` killer; S03946 is a synthetic mutant that exempts `bin` from
+      it.
 - **Row `S05754` is the first user.** In `scripts/mutation-rows.d/S05700-S05799.json`: the anchor
   `const EXIT_GRACE: Duration = Duration::from_secs(1);` in `crates/daemon/src/main.rs`, the
   mutant `from_secs(2)`, and the killer `bin::tests::the_exit_grace_is_one_second`, the binary
   `deckstreakd`'s own unit test. It is the only id this delivery writes in SPEC-057's band (R20:
   each delivery writes only its allotted ids); SPEC-057 stays planned and is not amended here.
-- **Five rows pin the kind's decisions**, in `scripts/mutation-rows.d/S03900-S03999.json`, each
+- **Seven rows pin the kind's decisions**, in `scripts/mutation-rows.d/S03900-S03999.json`, each
   proved KILLED:
   - `S03945`: `--bin <binary>` replaced by `--lib`, killed by A42's argv test;
   - `S03946`: the control's exactly-one-test rule skipped for a `bin` killer, killed by A43;
   - `S03947`: the binary named by the package instead of read from `[[bin]]`, killed by A42's
     manifest test;
   - `S03948`: the binary's sources widened to the whole `src/` directory, killed by A44;
-  - `S03949`: the module walk cut off at the root file, killed by A44.
+  - `S03949`: the module walk cut off at the root file, killed by A44;
+  - `S03950`: `file == root_file or ` removed from the module walk, so a root not named `main.rs`
+    looks for its modules under a directory, killed by A45's module test;
+  - `S03951`: the shadow check's condition replaced by `if False:`, killed by A45's shadow test.
 - **What it does not change.** It adds no killer kind for a binary's integration tests, which
   stay `<target>::...` (#352). It changes no row, no band and no verdict logic other than S05754
-  and the five rows above (#352). It runs no cargo command outside the fixture crates of its own
+  and the seven rows above (#352). It runs no cargo command outside the fixture crates of its own
   tests and the row S05754's proof (#352).
 
 Issue #352 is closed by this delivery.
@@ -791,16 +813,19 @@ Issue #352 is closed by this delivery.
 | A42 | a `bin::<path>` killer on a crate with a binary target resolves against the binary's sources and runs `cargo test --locked -p <package> --bin <binary> -- --exact <path>` (and `--no-run` with the same flags for the mutant's build), the binary read from the manifest and never guessed: the `[[bin]]` name, else the package's own, else a refusal when the crate holds more than one | `test_mutation_rows.py` |
 | A43 | a `bin::` killer that names no test is VOID, never KILLED, and its mutant is never installed, while a `bin::` killer beside it that names a real test reads KILLED | `test_mutation_rows.py` |
 | A44 | a `bin::` killer whose test is not in the binary's module tree is refused by the census with the existing sentence, while the killers in the binary's root file and in a module it declares resolve | `test_mutation_rows.py` |
+| A45 | the module tree of a binary whose root file is not named `main.rs` is walked beside that root, as rustc reads a crate root, so a `bin::` killer in a module the root declares resolves; and a `bin::` killer on a crate that also holds `tests/bin.rs` is refused by name, never run against the binary's own test of the same path | `test_mutation_rows.py` |
 
 ```acceptance
 A42: python3 -m unittest discover -s scripts/tests -p test_mutation_rows.py -k a_bin_killer_runs_cargo_test_on_the_binary_by_its_exact_path
 A42: python3 -m unittest discover -s scripts/tests -p test_mutation_rows.py -k a_bin_killers_binary_is_read_from_its_manifest_and_never_guessed
 A43: python3 -m unittest discover -s scripts/tests -p test_mutation_rows.py -k a_bin_killer_that_selects_no_test_is_void_and_never_killed
 A44: python3 -m unittest discover -s scripts/tests -p test_mutation_rows.py -k a_bin_killer_outside_the_binarys_sources_is_refused_by_the_census
+A45: python3 -m unittest discover -s scripts/tests -p test_mutation_rows.py -k a_module_beside_a_root_not_named_main_resolves
+A45: python3 -m unittest discover -s scripts/tests -p test_mutation_rows.py -k a_bin_killer_beside_a_tests_bin_rs_is_refused
 ```
 
-A42 to A44 run the runner in a fixture repository built at run time: a crate with a library, a
+A42 to A45 run the runner in a fixture repository built at run time: a crate with a library, a
 binary named other than its package, a unit test in the binary's root file and one in a module it
 declares, and a library test the binary does not hold. A42's first test calls the runner's
 functions with `subprocess.run` replaced by a recorder, and reads the argv it built. A43 proves two
-rows with cargo in the fixture's own `target/`, and A44 runs the census over three planted rows.
+rows with cargo in the fixture's own `target/`, and A44 runs the census over three planted rows. A45's two tests plant a binary rooted at `src/other.rs` with a module beside it, and a `tests/bin.rs` beside the binary, and read the census.
