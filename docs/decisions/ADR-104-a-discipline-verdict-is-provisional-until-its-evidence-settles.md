@@ -68,8 +68,9 @@ of the rail's own.
 - **Rewards.** A reward that waits on evidence is drawn and stored when it is offered, and granted
   once, only when the evidence confirms it; unconfirmed, it closes ungranted.
 - **The kind `discipline`.** The policy gains `discipline`: class `nudge`, tier T2, no budget,
-  dedupe `per-incident`, setting `discipline_enabled`. Quiet hours withhold it like any nudge. Its
-  deviation `kinds.discipline` cites this ADR.
+  dedupe `per-incident`, setting `discipline_notices_enabled`. Quiet hours withhold it like any
+  nudge. Its deviation `kinds.discipline` cites this ADR. SPEC-105 adds it, the first discipline
+  SPEC to build.
 
 ### Consequences
 

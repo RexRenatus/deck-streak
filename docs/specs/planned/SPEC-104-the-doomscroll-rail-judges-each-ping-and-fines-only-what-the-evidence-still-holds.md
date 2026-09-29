@@ -314,7 +314,7 @@ so the private wiring does not change when it merges.
 | file | context | change |
 |---|---|---|
 | `crates/discipline/src/lib.rs` | `deck-streak-discipline` | changed: the modules below |
-| `crates/discipline/src/constants.rs` | `deck-streak-discipline` | added: the rail's constants, proved by the golden |
+| `crates/discipline/src/constants.rs` | `deck-streak-discipline` | changed: the rail's constants join SPEC-105's, proved by the golden |
 | `crates/discipline/src/ping.rs` | `deck-streak-discipline` | added: the grammar and the token, pure |
 | `crates/discipline/src/verdict.rs` | `deck-streak-discipline` | added: the verdict's inputs and its fusion, pure |
 | `crates/discipline/src/rail.rs` | `deck-streak-discipline` | added: the events, the state, the binding, the rate and the post's outcomes |
@@ -347,10 +347,10 @@ so the private wiring does not change when it merges.
 | `crates/bot/src/gate.rs` | `deck-streak-bot` | changed: a channel post is admitted as a rail post only |
 | `crates/bot/src/channel.rs` | `deck-streak-bot` | added: a rail post handed to the rail's port |
 | `crates/bot/tests/channel_posts.rs` | `deck-streak-bot` | added: A27 |
-| `crates/bot/src/discipline_commands.rs` | `deck-streak-bot` | added: `/tripwire`, `/confess` and the `tw:` and `cf:` buttons |
+| `crates/bot/src/discipline_commands.rs` | `deck-streak-bot` | changed: `/tripwire`, `/confess` and the `tw:` and `cf:` buttons join SPEC-105's commands |
 | `crates/bot/src/commands.rs` | `deck-streak-bot` | changed: both commands join the command table |
 | `crates/bot/tests/discipline_commands.rs` | `deck-streak-bot` | added: A24 |
-| `crates/api/src/discipline_routes.rs` | `deck-streak-api` | added: the rail's routes |
+| `crates/api/src/discipline_routes.rs` | `deck-streak-api` | changed: the rail's routes join SPEC-105's |
 | `crates/api/src/router.rs` | `deck-streak-api` | changed: the routes, behind the owner's session |
 | `crates/api/tests/discipline_routes.rs` | `deck-streak-api` | added: A23 |
 | `crates/daemon/src/wiring.rs` | `deck-streak-daemon` | changed: the rail joined to coordination, the bot and the secret |
