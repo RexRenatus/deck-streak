@@ -158,6 +158,8 @@ plain `json.loads` that keeps the last value and says nothing (the census printe
   `mutation_rows`, so it reuses the hook and the sentence; there is no second copy, and nothing
   moves.
 
+### 9.1 Acceptance criteria
+
 | id | criterion | decided by |
 |---|---|---|
 | A5 | a band file that repeats a key makes `plan` exit 1 with the whole sentence on stderr and no `Traceback`; a well-formed tree is planned and its selected-row count printed | `test_verdict_repeated_key.py` `a_band_file_that_repeats_a_key_is_refused_by_the_plan_without_a_traceback` and `a_well_formed_band_file_is_planned_and_its_row_count_printed` |
