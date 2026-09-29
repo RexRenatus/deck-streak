@@ -97,6 +97,54 @@
       "reason": "Parsing a launch that has no data as the text null finds no start parameter, the same null.",
       "evidence": "new URLSearchParams(null) parses the text 'null' into one key called null, so get('start_param') gives null exactly as the guard's own branch does.",
       "issue": "#240"
+    },
+    {
+      "file": "web/app/src/lib/api.ts",
+      "mutant": "StringLiteral: \"\"",
+      "anchor": "if (response.ok) return 'open';",
+      "reason": "Callers test only for 'refused' and 'failed', so any other value is an open session.",
+      "evidence": "get() compares what opening() answers with 'refused' and with 'failed' only, so an answer of '' takes the path 'open' takes: the call goes on and sends its request.",
+      "issue": "#294"
+    },
+    {
+      "file": "web/app/src/lib/api.ts",
+      "mutant": "BooleanLiteral: false",
+      "anchor": "reopens the app\n        stopped = true;",
+      "reason": "A refused session stays cached, so a later call answers reopen and sends nothing whether or not this sets stopped.",
+      "evidence": "opening() keeps the refused handshake as the session (session ??= handshake()), so the next get() awaits the same settled 'refused' and answers 'reopen' before any send, as it does one line earlier when stopped is set.",
+      "issue": "#294"
+    },
+    {
+      "file": "web/app/src/lib/api.ts",
+      "mutant": "ArrowFunction: () => undefined",
+      "anchor": "parse(await response.json().catch(() => null))",
+      "reason": "parseMe and parseScore read an undefined body as they read null.",
+      "evidence": "parseMe refuses a body that is not a non-null object, which undefined is not, and parseScore reads body ?? {}, so both an undefined and a null body read as having no study_day and both parsers answer null.",
+      "issue": "#294"
+    },
+    {
+      "file": "web/app/src/lib/api.ts",
+      "mutant": "ConditionalExpression: true",
+      "anchor": "typeof body === 'object'",
+      "reason": "A JSON value that is no object reads no study_day either, so null is the one value this must stop.",
+      "evidence": "A parsed JSON body is null, a boolean, a number, a string, an array or an object; body !== null already stops null, and reading study_day from any of the others yields undefined, which the string check after it refuses.",
+      "issue": "#294"
+    },
+    {
+      "file": "web/app/src/lib/startapp.ts",
+      "mutant": "ArrayDeclaration: []",
+      "anchor": "['today', TODAY],",
+      "reason": "'today' opens TODAY, which every unlisted token opens too, so no token's screen changes without this entry.",
+      "evidence": "routeFor answers the table's route for a listed token and TODAY for any other; with the entry emptied, 'today' is no longer listed and falls through to TODAY, the route the entry named.",
+      "issue": "#294"
+    },
+    {
+      "file": "web/app/src/lib/startapp.ts",
+      "mutant": "StringLiteral: \"\"",
+      "anchor": "['today', TODAY],",
+      "reason": "'today' opens TODAY, which every unlisted token opens too, so emptying the entry's key changes no token's screen.",
+      "evidence": "With the key '' the table no longer lists 'today', so routeFor answers TODAY for it by the fallback, and '' itself is refused as a token before the table is read.",
+      "issue": "#294"
     }
   ]
 }

@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM daily_rollup",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": []
+  },
+  "hash": "868dc9b6c8d826551737f32ef9247a4e1f6ddd4cb9e72390dc472bdff09bf7fb"
+}

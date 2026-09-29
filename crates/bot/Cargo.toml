@@ -30,5 +30,8 @@ tracing.workspace = true
 # reader.
 axum.workspace = true
 serde.workspace = true
+# SPEC-071 A24: /score's test writes synthetic rollup rows into the temporary database, through the
+# kernel's Db, which hands out sqlx types.
+sqlx.workspace = true
 tempfile.workspace = true
 tokio = { workspace = true, features = ["macros", "net", "rt", "sync", "test-util", "time"] }

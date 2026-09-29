@@ -140,6 +140,48 @@ impl Db {
         Ok(generation)
     }
 
+    /// The digest of the owner's courses the settings generation last recorded (SPEC-071 R4), or
+    /// `None` while no courses file was ever loaded.
+    ///
+    /// # Errors
+    ///
+    /// [`KernelError::Database`] when the read fails.
+    pub async fn courses_digest(&self) -> Result<Option<String>, KernelError> {
+        let digest =
+            sqlx::query_scalar!("SELECT courses_digest FROM settings_generation WHERE id = 1")
+                .fetch_one(&self.pool)
+                .await?;
+        Ok(digest)
+    }
+
+    /// Records `digest`, the digest of the courses loaded at start (SPEC-071 R4): when it differs
+    /// from the recorded one, the settings generation is bumped and the digest recorded in the same
+    /// write, so the next cycle's change gate recomputes (SPEC-023). Returns whether it bumped.
+    ///
+    /// # Errors
+    ///
+    /// [`KernelError::Database`] when the write fails.
+    pub async fn record_courses_digest(&self, digest: Option<&str>) -> Result<bool, KernelError> {
+        let mut write = self.write().await?;
+        let recorded =
+            sqlx::query_scalar!("SELECT courses_digest FROM settings_generation WHERE id = 1")
+                .fetch_one(&mut *write)
+                .await?;
+        if recorded.as_deref() == digest {
+            // Nothing changed: the write is dropped, and rolls back having written nothing.
+            return Ok(false);
+        }
+        Self::bump_settings_generation(&mut write).await?;
+        sqlx::query!(
+            "UPDATE settings_generation SET courses_digest = ?1 WHERE id = 1",
+            digest
+        )
+        .execute(&mut *write)
+        .await?;
+        write.commit().await?;
+        Ok(true)
+    }
+
     /// Closes the pool, waiting for its connections to finish.
     pub async fn close(&self) {
         self.pool.close().await;

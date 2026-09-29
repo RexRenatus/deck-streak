@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { routeFor } from './startapp';
+import { isToken, routeFor } from './startapp';
 import { ROUTES, TODAY } from './routes';
 
 // SPEC-028 R3, A2, A3; ADR-028. A startapp token is text anyone can put in a link, so it opens a
@@ -66,11 +66,13 @@ describe('the startapp token map', () => {
     ];
     for (const token of malformed) {
       expect(routeFor(token), `token ${JSON.stringify(token)}`).toBe(TODAY);
+      // SPEC-071 §10: refused by the shape itself, before the table is read
+      expect(isToken(token), `token ${JSON.stringify(token)}`).toBe(false);
     }
   });
 
   it('every destination is a screen of the route table', () => {
-    const destinations = ['today', 'about'].map(routeFor).sort();
+    const destinations = ['today', 'about', 'score'].map(routeFor).sort();
 
     expect(destinations).toEqual([...ROUTES].sort());
   });
@@ -94,5 +96,24 @@ describe('the startapp token map', () => {
     expect(lookups.mock.results.at(-1)?.value).toBe('/');
     expect(routeFor('a'.repeat(64))).toBe('/');
     expect(lookups).toHaveBeenLastCalledWith('a'.repeat(64));
+  });
+
+  // SPEC-071 §10: the table is read by exact key, so no screen shows whether the shape
+  // holds; these pin each part of it (the anchors, the characters, the length) directly.
+  it('a token is one to 64 of A-Z, a-z, 0-9, underscore and hyphen, and nothing else is', () => {
+    const tokens = ['today', 'about', 'score', 'a', 'Z', '0', '_', '-', 'A_b-9', 'a'.repeat(64)];
+    for (const token of tokens) {
+      expect(isToken(token), `token ${JSON.stringify(token)}`).toBe(true);
+    }
+    const none = [null, undefined, '', '!today', 'today!', 'to day', 'today\n', 'a'.repeat(65)];
+    for (const token of none) {
+      expect(isToken(token), `token ${JSON.stringify(token)}`).toBe(false);
+    }
+  });
+
+  // SPEC-071 §10: the tests above compare with TODAY itself, so they hold whatever it names.
+  it('Today is the root screen, and an unknown token opens it', () => {
+    expect(TODAY).toBe('/');
+    expect(routeFor('settings')).toBe('/');
   });
 });

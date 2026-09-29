@@ -123,6 +123,7 @@ pub const fn card(id: i64, deck_id: i64, original_deck_id: i64) -> Card {
         reps: 0,
         lapses: 0,
         track: Track::Language,
+        course: None,
     }
 }
 

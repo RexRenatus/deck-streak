@@ -28,6 +28,9 @@ tower-http = { workspace = true, features = ["catch-panic", "request-id", "sensi
 tracing.workspace = true
 
 [dev-dependencies]
+# SPEC-071 A22, A23: the analytics routes' tests write synthetic rollup rows into ADR-020's temporary
+# database, through the kernel's Db, which hands out sqlx types.
+sqlx.workspace = true
 tempfile.workspace = true
 # The paused clock (test-util) drives the timeout and the bound without sleeping; io-util and net
 # drive the drain over a real loopback socket.
