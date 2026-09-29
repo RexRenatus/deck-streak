@@ -40,6 +40,14 @@
         "--shard \"$SHARD/$SHARDS\" --timeout 300 --build-timeout 1200",
         "the rust leg's build timeout is the 600 seconds the 32-leg dispatch always ran: a raised build timeout is a weakened gate (SPEC-129 R5)",
         "test_dispatch_shards.EveryMutationCommandKeepsTheGatesBounds.test_every_cargo_mutants_command_carries_the_gates_own_bounds"
+      ],
+      [
+        "S12906-THE-RUST-LEG-BUILD-TIMEOUT-IS-A-WHOLE-VALUE",
+        ".github/workflows/mutation-weekly.yml",
+        "--shard \"$SHARD/$SHARDS\" --timeout 300 --build-timeout 600",
+        "--shard \"$SHARD/$SHARDS\" --timeout 300 --build-timeout 6000",
+        "a build timeout raised by an appended digit is a weakened gate, not the 600 seconds the 32-leg dispatch always ran (SPEC-129 R5)",
+        "test_dispatch_shards.EveryMutationCommandKeepsTheGatesBounds.test_every_cargo_mutants_command_carries_the_gates_own_bounds"
       ]
     ]
   }
