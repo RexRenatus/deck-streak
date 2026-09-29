@@ -294,6 +294,17 @@ names no blocking class would pass every output, and a gate with no input class 
 reads inputs would pass every input unchecked, so both refusals happen at construction, with a named
 error, and neither is a panic. A gate for a duty that reads no input still needs no input class.
 
+`reads_inputs` is the caller's statement, and nothing checks it against a duty: `DutySpec` has no
+such field, a `DutyEngine` holds one gate for every duty it runs, and `DutyEngine::decide` runs
+`check_input` on each run's memory and cards whatever the duty. A gate built with `reads_inputs =
+false` and no input class answers `Passed` for every input, so the gate a `DutyEngine` holds is
+always built with `reads_inputs = true`, as R11 requires of both daily-reading tasks, whose sources
+name `memory` and `cards` (R10); `false` is only for a gate that no engine hands untrusted input.
+Rejected: a `reads_inputs` field on `DutySpec`, because the engine's gate is built before any duty
+is known and serves them all, so a duty's field could not decide it; and refusing a missing input
+class always, because a gate for a duty with no untrusted input would then name a class it never
+runs.
+
 The constructor was a `const fn` and is one no longer: it drops its arguments on a refusal, which a
 `const fn` cannot do. Its callers today are this crate's own tests, each changed to build the gate
 with `reads_inputs` and to expect the `Result`. The daemon wires the gate in a later delivery (the
