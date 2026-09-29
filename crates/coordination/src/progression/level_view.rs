@@ -50,10 +50,10 @@ pub async fn level_view(db: &Db, today: StudyDay) -> Result<LevelView, KernelErr
     let rows = settled_of_day(&mut connection, today).await?;
     let ascendant = is_ascendant_day(&mut connection, today).await?;
     let window = xp().window_days;
-    let first = today.epoch_day() - INGEST_WINDOW_DAYS;
+    let first = today.epoch_day().saturating_sub(INGEST_WINDOW_DAYS);
     let mut scores = Vec::new();
     let mut number = today.epoch_day();
-    while scores.len() < window && number >= first {
+    while scores.len() != window && number >= first {
         if let Some(rolled) = stored(&mut connection, StudyDay::from_epoch_day(number)).await? {
             scores.push((number, rolled.score.total));
         }

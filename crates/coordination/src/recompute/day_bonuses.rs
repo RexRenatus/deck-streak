@@ -100,7 +100,7 @@ async fn recent_scores(
         .map_or(day.epoch_day(), |first| first.epoch_day());
     let mut scores = Vec::new();
     let mut number = day.epoch_day();
-    while scores.len() < window && number >= first {
+    while scores.len() != window && number >= first {
         if let Some(rolled) = stored(write, StudyDay::from_epoch_day(number)).await? {
             scores.push((number, rolled.score.total));
         }
