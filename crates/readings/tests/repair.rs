@@ -80,3 +80,24 @@ fn a_finding_quoting_a_span_of_the_rejected_text_is_dropped() {
         "a quoted span absent from the rejected text is kept: {text}"
     );
 }
+
+#[test]
+fn a_finding_quoting_an_escaped_span_is_dropped() {
+    // The word as the rejected text holds it, and as a probe's `repr` prints it: `\xa0`, not the
+    // no-break space itself, so the span is not found as written.
+    let rejected = "x-new-words: [\"casa\u{a0}grande\"]\n";
+    let escaped =
+        "i1-glosses: output.md: x-new-words lists 'casa\\xa0grande', which is not glossed";
+    let plain = "i1-glosses: output.md: the glosses section names 'nothing escaped'";
+    let Step::Repair(text) = next(1, &failure(&[escaped, plain]), rejected) else {
+        panic!("attempt one is repaired");
+    };
+    assert!(
+        !text.contains("grande"),
+        "an escaped span of the rejected text is quoted back: {text}"
+    );
+    assert!(
+        text.contains("- i1-glosses: output.md: the glosses section names 'nothing escaped'"),
+        "a span with no escape and absent from the rejected text is kept: {text}"
+    );
+}

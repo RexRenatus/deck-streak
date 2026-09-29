@@ -765,3 +765,77 @@ async fn an_untrusted_input_is_checked_before_any_call() {
     assert!(attempts.is_empty(), "no attempt is made: {attempts:?}");
     assert!(readings(&rig).await.is_empty());
 }
+
+/// A notes port whose language cards carry new words, as the deck's term fields would.
+struct WordNotes(BTreeMap<i64, String>, Vec<String>);
+
+impl NoteTexts for WordNotes {
+    fn new_words<'a>(
+        &'a self,
+        topic: &'a TopicKey,
+        card_ids: &'a [i64],
+    ) -> PortFuture<'a, Result<Vec<String>, NoteTextsError>> {
+        let _ = (topic, card_ids);
+        let words = self.1.clone();
+        Box::pin(async move { Ok(words) })
+    }
+
+    fn texts<'a>(
+        &'a self,
+        note_ids: &'a [i64],
+    ) -> PortFuture<'a, Result<Vec<SeedNote>, NoteTextsError>> {
+        let notes = note_ids
+            .iter()
+            .filter_map(|id| {
+                self.0.get(id).map(|text| SeedNote {
+                    id: *id,
+                    text: text.clone(),
+                })
+            })
+            .collect();
+        Box::pin(async move { Ok(notes) })
+    }
+}
+
+#[tokio::test]
+async fn a_new_word_is_checked_before_any_call() {
+    let rig = Rig::new(vec![(topic("language/qaa"), vec![21], vec![501])], good()).await;
+    let notes = WordNotes(
+        BTreeMap::from([(501, "A synthetic note about a house".to_owned())]),
+        vec!["casa\u{200b}".to_owned()],
+    );
+    let gate = InputRefusingGate(AtomicUsize::new(0));
+    let parts = GenerateParts {
+        route: AiRoute::Proxy,
+        roster: &rig.roster,
+        runner: &rig.runner,
+        gate: &gate,
+        resolver: &rig.resolver,
+        notes: &notes,
+        vault: &rig.vault,
+        store: rig.store.clone(),
+        clock: Arc::new(ManualClock::new(UtcMillis::from_epoch_millis(START))),
+        rule: StudyDayRule::default(),
+        taxonomy: Some(rig.taxonomy.clone()),
+        prompt: PromptTexts {
+            rules: &rig.texts[0],
+            policy: &rig.texts[1],
+            template: &rig.texts[2],
+            duty: &rig.texts[3],
+        },
+    };
+    let generated = generate_readings(&parts, RunTrigger::Owner)
+        .await
+        .expect("the generation is recorded");
+    assert_eq!(
+        (gate.0.load(Ordering::SeqCst), rig.runner.calls()),
+        (2, 0),
+        "input checks made, model calls made; the topic ended {:?}",
+        state_of(&generated, "language/qaa")
+    );
+    assert_eq!(
+        state_of(&generated, "language/qaa"),
+        TopicState::Failed(FailedReason::GateFailed(ReadingGate::Contract)),
+        "a refused new word ends the topic on the contract gate"
+    );
+}
