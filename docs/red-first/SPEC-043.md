@@ -79,3 +79,26 @@ A19: green at 745d5fded1d72932e6b5065756bc7d887f099a0d
 A20: red at a8bdd84ed73f95269f30e14306a595c8d1ca1596: the prune does not use the index (runs.rs:51)
 A20: green at 745d5fded1d72932e6b5065756bc7d887f099a0d
 ```
+
+## Second amendment addendum, 2026-09-29 (issue #404)
+
+A21, A22 and A23 are new criteria, and each has a planted decoy in a test's own string fixture,
+never in production source. The red commit 84146ad refactored the two pin tests around a helper
+that reads a source text (the base's own check, unchanged) and added the decoys, so each decoy
+failed by assertion while the base's real pins stayed green. The green commit ff7f6cc
+edits two test files: it changes the bodies of those helpers (`prune_pin_problems`,
+`own_statement_problems` and `attributes_of` gain the new rules, with `delete_statements_in` and
+`is_one_whole_attribute` added) and edits no assertion of any test. The A18 and A20 lines above
+stand: their words are unchanged and the new criteria carry the strengthening.
+
+A21 has two decoys and this fence line quotes the first; the second, a statement with another
+spelling, failed at the red commit as `the second statement is not refused: []` (runs.rs:134).
+
+```red-first
+A21: red at 84146ad3fb5aa57a995f4cf7de9e517ec67e508c: the decoy is not refused: [] (runs.rs:121)
+A21: green at ff7f6cce9ddf398dcb29d3ab4cf7e2881e661937
+A22: red at 84146ad3fb5aa57a995f4cf7de9e517ec67e508c: the changed copy is not refused: [] (runs.rs:151)
+A22: green at ff7f6cce9ddf398dcb29d3ab4cf7e2881e661937
+A23: red at 84146ad3fb5aa57a995f4cf7de9e517ec67e508c: an item line ending in a comment was read as an attribute: ["#[derive(Clone)]", "#[rustfmt::skip] pub fn decoy() {} // ]", "#[must_use]"] (verdict.rs:56)
+A23: green at ff7f6cce9ddf398dcb29d3ab4cf7e2881e661937
+```
