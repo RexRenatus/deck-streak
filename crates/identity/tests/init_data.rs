@@ -369,6 +369,9 @@ fn a_malformed_payload_is_refused_with_401() {
         .cloned()
         .collect();
     let not_an_integer = with(&fields, "auth_date", "soon");
+    // A sign is a valid start of an integer to Rust's parser, and never of Telegram's auth_date.
+    let signed_plus = with(&fields, "auth_date", &format!("+{SIGNED_AT}"));
+    let signed_minus = with(&fields, "auth_date", &format!("-{SIGNED_AT}"));
     let malformed = [
         ("empty", String::new()),
         ("no hash", good.replace(&format!("&hash={hash}"), "")),
@@ -405,6 +408,14 @@ fn a_malformed_payload_is_refused_with_401() {
             "an auth_date that is not an integer",
             payload(&not_an_integer, &sign(BOT_TOKEN, &not_an_integer)),
         ),
+        (
+            "an auth_date with a leading plus",
+            payload(&signed_plus, &sign(BOT_TOKEN, &signed_plus)),
+        ),
+        (
+            "an auth_date with a leading minus",
+            payload(&signed_minus, &sign(BOT_TOKEN, &signed_minus)),
+        ),
     ];
     for (what, raw) in examined("malformed payload(s)", malformed.to_vec()) {
         assert_eq!(
@@ -437,4 +448,11 @@ fn the_freshness_bound_is_read_from_its_setting() {
             "{malformed}"
         );
     }
+}
+
+/// A key's `Debug` names the type and shows none of its bytes.
+#[test]
+fn a_web_app_key_debug_shows_no_key_bytes() {
+    let key = WebAppKey::from_bot_token(BOT_TOKEN);
+    assert_eq!(format!("{key:?}"), "WebAppKey(..)");
 }
