@@ -100,8 +100,12 @@ if [ "$first" = validate ] && [ "$adapter" != caddyfile ]; then
     name=$(basename "$conf")
     case "$name" in Caddyfile* | *.caddyfile) ;; *) echo "invalid character: not JSON" >&2; exit 1 ;; esac
 fi
-# a refusal can also find the candidate already gone (the flag makes the stub delete it first)
-eat() { [ -f "$STUB_LOG/caddy-eats-candidate" ] && rm -f "$conf"; return 0; }
+# a refusal can also find the candidate or the block already gone (a flag makes the stub delete it)
+eat() {
+    [ -f "$STUB_LOG/caddy-eats-candidate" ] && rm -f "$conf"
+    [ -f "$STUB_LOG/caddy-eats-block" ] && rm -f "$(dirname "$conf")/deck-streak.caddy"
+    return 0
+}
 [ "$first" = validate ] && [ -f "$STUB_LOG/caddy-refuses" ] && { eat; exit 1; }
 [ "$first" = adapt ] && [ -f "$STUB_LOG/caddy-adapt-refuses" ] && { eat; exit 1; }
 if [ "$first" = reload ]; then
@@ -1191,6 +1195,135 @@ class TheCaddyInstall(Case):
         calls = [ln for ln in w.text("caddy.log").splitlines() if ln.startswith("caddy ")]
         named = [ln for ln in calls if "--adapter caddyfile" in ln]
         self.assertTrue(any(ln.startswith("caddy validate") for ln in named), calls)
+
+    UNWRITTEN = "the candidate Caddyfile could not be written"
+    NOT_PLAIN = ("symlink-to-file", "hard-link-to-file", "symlink-to-dir", "dir-with-file", "fifo")
+
+    def fresh_world(self):
+        """A new World for one member of a population, cleaned up with the test."""
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.world = World(tmp.name)
+        return self.world
+
+    def plant(self, path, kind):
+        """Put a shape that is not a plain file at `path`; returns a file outside the run's names."""
+        other = path.parent / "other.caddy"
+        other.write_text("other.example.org {\n\trespond 204\n}\n", encoding="utf-8")
+        if kind == "symlink-to-file":
+            path.symlink_to(other)
+        elif kind == "hard-link-to-file":
+            os.link(other, path)
+        elif kind == "symlink-to-dir":
+            (path.parent / "adir").mkdir()
+            path.symlink_to(path.parent / "adir")
+        elif kind == "dir-with-file":
+            path.mkdir()
+            (path / "keep.txt").write_text("not the run's\n", encoding="utf-8")
+        else:
+            os.mkfifo(path)
+        return other
+
+    def test_a_removal_refuses_every_previous_copy_that_is_not_a_plain_file(self):
+        for name in ("Caddyfile.previous", "deck-streak.caddy.previous"):
+            for kind in self.NOT_PLAIN:
+                with self.subTest(name=name, kind=kind):
+                    w = self.fresh_world()
+                    _original, _after, block_text = self.installed()
+                    before = (w.caddy_dir / "Caddyfile").read_bytes()
+                    other = self.plant(w.caddy_dir / name, kind)
+                    was = other.read_bytes()
+                    try:
+                        done = w.run(ROLLBACK, "caddy-remove", **self.config())
+                    except subprocess.TimeoutExpired:
+                        self.fail(f"the removal waited on a {kind} at {name}")
+                    self.assertNotEqual(done.returncode, 0, "the removal refuses")
+                    self.assertIn(self.UNWRITTEN, done.stderr, "the refusal is printed")
+                    self.assert_live_caddyfile_kept(before)
+                    self.assertEqual(other.read_bytes(), was, "nothing is written through a link")
+                    self.assertEqual((w.caddy_dir / "deck-streak.caddy").read_text(), block_text)
+                    if kind == "dir-with-file":
+                        self.assertTrue((w.caddy_dir / name / "keep.txt").is_file(), "kept")
+                    if kind == "symlink-to-dir":
+                        self.assertEqual(list((w.caddy_dir / "adir").iterdir()), [], "untouched")
+                    self.assertFalse((w.caddy_dir / "deck-streak.candidate").exists(), "no copy")
+
+    def test_neither_script_waits_on_a_fifo_at_the_live_caddyfile(self):
+        for script, args, message in (
+            (DEPLOY, ("caddy-install", "v1.0.0"), self.REFUSED),
+            (ROLLBACK, ("caddy-remove",), self.UNWRITTEN),
+        ):
+            with self.subTest(script=script.name):
+                w = self.fresh_world()
+                self.installed()
+                caddyfile = w.caddy_dir / "Caddyfile"
+                caddyfile.unlink()
+                os.mkfifo(caddyfile)
+                try:
+                    done = w.run(script, *args, **self.config(host="new.example.org"))
+                except subprocess.TimeoutExpired:
+                    self.fail(f"{script.name} waited on a FIFO at the live Caddyfile")
+                self.assertNotEqual(done.returncode, 0, "the script refuses")
+                self.assertIn(message, done.stderr, "the refusal is printed")
+                self.assertTrue(caddyfile.is_fifo(), "the pipe is left alone")
+                names = sorted(p.name for p in w.caddy_dir.iterdir())
+                self.assertEqual(names, ["Caddyfile", "deck-streak.caddy"], "no copy is left")
+
+    def test_a_read_only_caddy_directory_is_refused_before_any_write(self):
+        for label, script, args, stale, message in (
+            ("first install", DEPLOY, ("caddy-install", "v1.0.0"), "deck-streak.candidate", None),
+            ("install", DEPLOY, ("caddy-install", "v1.0.0"), "deck-streak.caddy.previous", None),
+            ("removal", ROLLBACK, ("caddy-remove",), "deck-streak.candidate", self.UNWRITTEN),
+        ):
+            with self.subTest(label, stale=stale):
+                w = self.fresh_world()
+                if label == "first install":
+                    text = "example.org {\n\trespond 200\n}\n"
+                    (w.caddy_dir / "Caddyfile").write_text(text, encoding="utf-8")
+                    w.ship("v1.0.0")
+                else:
+                    self.installed()
+                (w.caddy_dir / stale).write_text("stale\n", encoding="utf-8")
+                before = {p.name: p.read_bytes() for p in w.caddy_dir.iterdir()}
+                w.caddy_dir.chmod(0o555)
+                try:
+                    done = w.run(script, *args, **self.config(host="new.example.org"))
+                finally:
+                    w.caddy_dir.chmod(0o755)
+                self.assertNotEqual(done.returncode, 0, "the script refuses")
+                self.assertIn(message or self.REFUSED, done.stderr, "the refusal is printed")
+                after = {p.name: p.read_bytes() for p in w.caddy_dir.iterdir()}
+                self.assertEqual(after, before, "no file in the directory changed")
+
+    def test_an_install_whose_block_cannot_be_read_refuses_before_writing(self):
+        w = self.world
+        _original, after, block_text = self.installed()
+        block = w.caddy_dir / "deck-streak.caddy"
+        block.chmod(0)
+        try:
+            done = self.install_again()
+        finally:
+            block.chmod(0o644)
+        self.assertNotEqual(done.returncode, 0, "the install refuses")
+        self.assertIn(self.REFUSED, done.stderr, "the refusal is printed")
+        self.assertEqual(block.read_text(), block_text, "the block is as it was")
+        self.assertEqual((w.caddy_dir / "Caddyfile").read_text(), after)
+        names = sorted(p.name for p in w.caddy_dir.iterdir())
+        self.assertEqual(names, ["Caddyfile", "deck-streak.caddy"], "no copy is left")
+
+    def test_a_first_install_refused_with_its_block_already_gone_still_says_so(self):
+        w = self.world
+        caddyfile = w.caddy_dir / "Caddyfile"
+        original = "example.org {\n\trespond 200\n}\n"
+        caddyfile.write_text(original, encoding="utf-8")
+        w.ship("v1.0.0")
+        (w.log / "caddy-refuses").write_text("x")
+        (w.log / "caddy-eats-block").write_text("x")
+        done = w.run(DEPLOY, "caddy-install", "v1.0.0", **self.config())
+        self.assertNotEqual(done.returncode, 0, "the install refuses")
+        self.assertIn(self.REFUSED, done.stderr, "the undo tolerates an absent block")
+        self.assertEqual(caddyfile.read_text(), original, "the Caddyfile is as it was")
+        self.assertEqual(sorted(p.name for p in w.caddy_dir.iterdir()), ["Caddyfile"])
 
     def test_the_caddy_block_is_rendered_from_the_tags_own_file(self):
         w = self.world
