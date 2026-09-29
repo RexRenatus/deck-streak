@@ -733,7 +733,7 @@ const NAMED_SENDS: [(&str, &str, &str); 10] = [
 /// the client from a new module of the daemon, and an ephemeral edit through the client. The
 /// fifth round's ruling: a gift transferred to a named user, a callback's answer and a story
 /// posted, each through the client from a new module of the daemon.
-const AROUND_THE_PORT: [(&str, &str); 30] = [
+const AROUND_THE_PORT: [(&str, &str); 33] = [
     (
         "crates/daemon/src/role_bot.rs",
         r#"/// A celebration sent straight to the owner's chat through the bot's transport, around the router.
@@ -1032,6 +1032,30 @@ async fn celebrate_by_an_answer(bot: &Bot, params: &AnswerCallbackQueryParams) {
         r"/// A celebration posted as a story through the client, around the router.
 async fn celebrate_with_a_story(bot: &Bot, params: &PostStoryParams) {
     let _done = bot.post_story(params).await;
+}
+",
+    ),
+    (
+        "crates/daemon/src/sticker.rs",
+        r"/// A celebration shown as a sticker set's title through the client, around the router.
+async fn celebrate_by_a_title(bot: &Bot, params: &SetStickerSetTitleParams) {
+    let _done = bot.set_sticker_set_title(params).await;
+}
+",
+    ),
+    (
+        "crates/daemon/src/verify.rs",
+        r"/// A celebration shown as a badge's description through the client, around the router.
+async fn celebrate_by_a_badge(bot: &Bot, params: &VerifyUserParams) {
+    let _done = bot.verify_user(params).await;
+}
+",
+    ),
+    (
+        "crates/daemon/src/invoice.rs",
+        r"/// A celebration put before the owner as an invoice's link through the client, around the router.
+async fn celebrate_by_an_invoice(bot: &Bot, params: &CreateInvoiceLinkParams) {
+    let _done = bot.create_invoice_link(params).await;
 }
 ",
     ),
@@ -2014,6 +2038,7 @@ fn no_delivery_goes_around_the_port() {
             "crates/daemon/src/digest.rs:5: names set_message_reaction",
             "crates/daemon/src/ephemeral.rs:3: names edit_ephemeral_message_text",
             "crates/daemon/src/gift.rs:3: names transfer_gift",
+            "crates/daemon/src/invoice.rs:3: names create_invoice_link",
             "crates/daemon/src/lifecycle.rs:4: calls edit_html in celebrate_by_an_edit, \
              not a named call site",
             "crates/daemon/src/main.rs:6: calls handle in celebrate_by_a_fabricated_command, \
@@ -2026,7 +2051,9 @@ fn no_delivery_goes_around_the_port() {
              not a named call site",
             "crates/daemon/src/role_job.rs:11: calls send_html in celebrate_around_the_router, \
              not a named call site",
+            "crates/daemon/src/sticker.rs:3: names set_sticker_set_title",
             "crates/daemon/src/story.rs:3: names post_story",
+            "crates/daemon/src/verify.rs:3: names verify_user",
             "crates/daemon/src/wiring.rs:4: names DEFAULT_API_URL",
             "crates/notifications/src/data_rights.rs:2: re-exports QUEUE_TABLE",
             "crates/notifications/src/data_rights.rs:2: re-exports ledger",
