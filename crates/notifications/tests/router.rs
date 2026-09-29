@@ -376,9 +376,13 @@ async fn a_celebration_is_delivered_once_ever() {
     );
 }
 
+/// On a transport with the line alone, each tier renders degraded, as the line or as nothing
+/// (SPEC-084 R8): the reaction as nothing, since a line would exceed T1; the reveal and the pin as
+/// the line, at T2; and a T4 as its line without its dice.
 #[tokio::test]
 async fn a_celebration_renders_as_a_line_or_as_nothing_at_t0() {
     let harness = Harness::new(at(DAY, 12, 0)).await;
+    support::ladder::seed_owner_message(&harness, 7, at(DAY, 11, 0).epoch_millis()).await;
     let asking = |key: &str, tier: Tier| {
         harness.occasion(
             "celebration",
@@ -390,43 +394,45 @@ async fn a_celebration_renders_as_a_line_or_as_nothing_at_t0() {
         )
     };
 
-    let silent = harness
-        .router
-        .route(&asking("quiet:one", Tier::T0))
-        .await
-        .expect("a decision");
-    let reaction = harness
-        .router
-        .route(&asking("small:one", Tier::T1))
-        .await
-        .expect("a decision");
-    let trophy = harness
-        .router
-        .route(&asking("big:one", Tier::T5))
-        .await
-        .expect("a decision");
+    let mut decisions = Vec::new();
+    for (key, tier) in [
+        ("quiet:one", Tier::T0),
+        ("small:one", Tier::T1),
+        ("reveal:one", Tier::T3),
+        ("dice:one", Tier::T4),
+        ("big:one", Tier::T5),
+    ] {
+        decisions.push(
+            harness
+                .router
+                .route(&asking(key, tier))
+                .await
+                .expect("a decision"),
+        );
+    }
 
+    let sent = |tier| Decision::Sent {
+        surface: Surface::Bot,
+        tier,
+    };
     assert_eq!(
-        (silent, reaction, trophy),
-        (
-            Decision::Sent {
-                surface: Surface::Bot,
-                tier: Tier::T0
-            },
-            Decision::Sent {
-                surface: Surface::Bot,
-                tier: Tier::T2
-            },
-            Decision::Sent {
-                surface: Surface::Bot,
-                tier: Tier::T2
-            }
-        )
+        decisions,
+        [
+            sent(Tier::T0),
+            sent(Tier::T0),
+            sent(Tier::T2),
+            sent(Tier::T4),
+            sent(Tier::T2)
+        ]
     );
     assert_eq!(
         harness.bot.delivered(),
-        ["synthetic small:one", "synthetic big:one"],
-        "T0 sends nothing"
+        [
+            "synthetic reveal:one",
+            "synthetic dice:one",
+            "synthetic big:one"
+        ],
+        "T0 sends nothing, and a reaction the transport cannot make sends nothing"
     );
     let tiers: Vec<(String, String)> = harness
         .decisions()
@@ -438,7 +444,9 @@ async fn a_celebration_renders_as_a_line_or_as_nothing_at_t0() {
         tiers,
         [
             ("T0".to_owned(), "T0".to_owned()),
-            ("T1".to_owned(), "T2".to_owned()),
+            ("T1".to_owned(), "T0".to_owned()),
+            ("T3".to_owned(), "T2".to_owned()),
+            ("T4".to_owned(), "T4".to_owned()),
             ("T5".to_owned(), "T2".to_owned())
         ]
     );
@@ -750,6 +758,7 @@ async fn the_in_app_feed_serves_each_item_once_in_order() {
     let item = |text: &str| FeedItem {
         kind: "celebration".to_owned(),
         text: text.to_owned(),
+        tier: "T2".to_owned(),
         created_at: at(DAY, 12, 0).epoch_millis(),
     };
     assert_eq!(

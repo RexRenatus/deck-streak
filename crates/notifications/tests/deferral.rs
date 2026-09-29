@@ -257,11 +257,12 @@ async fn a_failed_recap_holds_its_rolled_celebration_again() {
         [Queued {
             key: "gem:c".to_owned(),
             state: "held".to_owned(),
-            hold: "send".to_owned(),
+            hold: "quiet".to_owned(),
             tries: 1,
             deferred_at: at(DAY, 23, 30).epoch_millis(),
         }],
-        "the rolled one is held again, with its first deferral time"
+        "the rolled one is held again for what held it, with its first deferral time: the \
+         flush's golden keeps the hold of a row a failed recap only named (SPEC-084 R11)"
     );
     assert_eq!(second, Flushed::Ran { sends: 1 });
     assert_eq!(

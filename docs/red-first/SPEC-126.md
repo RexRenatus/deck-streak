@@ -57,3 +57,62 @@ old test: test_the_judge_reads_the_paths_the_downloads_lay_down ... ok
 first new test: test_the_judge_reads_the_paths_the_downloads_lay_down ... ok
 new test: AssertionError: two judge lines of class rust: --plan "$reports/mutation-plan/plan.json" --class rust --shard-reports "$reports" --rows "$reports/mutation-rows/rows.json" --whole "$reports/mutation-plan/whole.json"
 ```
+
+## Addendum, 2026-09-29 (issue #374): A5 and A6, the reader splits words as the shell does
+
+The lines above stand. The fixtures are strings in the test, so the red is committed: the fixture
+tests went in first against the reader of the section 8 amendment (2bf4a9a), then the new reader
+(11469f9). Each wrong path is also proved against a scratch copy of `ci.yml` with the judge lines
+rewritten (the delivery tree's file was never edited).
+
+```red-first
+A5: red at 2bf4a9a: '"${reports}/mutation-plan/plan.json"' != '$reports/mutation-plan/plan.json' : the rust judge line does not read --plan at $reports/mutation-plan/plan.json
+A5: green at 11469f9
+```
+
+The old reader on a scratch `ci.yml` per spelling, and the new reader on the same:
+
+```text
+old: braces ............................ '"${reports}/mutation-plan/plan.json"' != '$reports/mutation-plan/plan.json'
+old: expansion closed before the slash . '"$reports"' != '$reports/mutation-plan/plan.json'
+old: tail in single quotes ............. '"$reports"' != '$reports/mutation-plan/plan.json'
+old: quoted flag name .................. a judge line names no --class: "--plan" "$reports/mutation-plan/plan.json" '--class' rust ...
+old: backslash continuation ............ None != '$reports/mutation-rows/rows.json'
+old: --flag=value, value quoted ........ None != '$reports/mutation-plan/plan.json'
+old: --flag=value, quotes close early .. None != '$reports/mutation-plan/plan.json'
+new: all seven ......................... test_the_judge_reads_the_paths_the_downloads_lay_down ... ok
+```
+
+The new reader on the wrong paths:
+
+```text
+'$reports/...' single-quoted ........ '\\$reports/mutation-plan/plan.json' != '$reports/mutation-plan/plan.json'
+'$reports'/... single-quoted head ... '\\$reports/mutation-plan/plan.json' != '$reports/mutation-plan/plan.json'
+"\$reports/..." escaped dollar ...... '\\$reports/mutation-plan/plan.json' != '$reports/mutation-plan/plan.json'
+a different directory ............... '$reports/mutation-plans/plan.json' != '$reports/mutation-plan/plan.json'
+a different variable ................ '$report/mutation-plan/plan.json' != '$reports/mutation-plan/plan.json'
+an unquoted expansion ............... '(unquoted)$reports/mutation-plan/plan.json' != '$reports/mutation-plan/plan.json'
+--whole moved to the oracle line .... None != '$reports/mutation-plan/whole.json' : the rust judge line does not read --whole
+--rows dropped from the rust line ... None != '$reports/mutation-rows/rows.json' : the rust judge line does not read --rows
+```
+
+## Addendum, 2026-09-29 (issue #374, fix round 1): A6 for the shell's command end
+
+The lines above stand, except that A6's `not red:` line is replaced by the two lines in the fence
+below. The judge-line reader was tightened after review: it ends the command at a control operator
+or a comment outside every quote and keeps the command's words on one line. Three fixtures joined
+the wrong paths (a flag only in a comment, a flag after a control operator, a line break after
+`judge` with no backslash); the red commit changes only those fixtures, and the reader commit
+changes only the reader (commit 42f81c4 edits the test module because the reader lives there: the
+`JUDGE` pattern and `mark_dollars`, and no fixture or test method). The whole test file at the red commit fails only A6, three subtests, each
+`AssertionError: AssertionError not raised`.
+
+```red-first
+A6: red at 14a6b2a: FAILED (failures=3), AssertionError: AssertionError not raised, for each of "a flag only in a comment", "a flag after a control operator" and "a line break after judge with no backslash"
+A6: green at 42f81c4
+```
+
+The A5 red line above quotes a failure that came from `check_judge` comparing a word to
+`f'"{path}"'`; its comparison changed to `path` between that red (2bf4a9a) and its green (11469f9),
+because the reader's representation changed from quoted words to shell-split words. The fixtures
+and the test methods stayed byte-identical across the change.

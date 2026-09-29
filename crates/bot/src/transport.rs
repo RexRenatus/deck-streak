@@ -18,7 +18,8 @@
 //! message's text.
 //!
 //! [`OwnerChat`] is the bot's side of the notification router's transport port (SPEC-041 R13): the
-//! router's pushes go to the owner's chat through the same [`Transport::send_html`].
+//! router's pushes go to the owner's chat through the same [`Transport::send_html`], and the
+//! ladder's renders (SPEC-084 R8; ADR-084) through the transport's reveal, dice, reaction and pin.
 
 use std::fmt;
 use std::future::Future;
@@ -34,13 +35,15 @@ use deck_streak_notifications::{BotTransport, Pass, PushFuture, Pushed};
 use frankenstein::client_reqwest::Bot;
 use frankenstein::methods::{
     AnswerCallbackQueryParams, DeleteMyCommandsParams, DeleteWebhookParams, EditMessageTextParams,
-    GetUpdatesParams, SendChatActionParams, SendMessageParams, SetMyCommandsParams,
+    GetUpdatesParams, PinChatMessageParams, SendChatActionParams, SendDiceParams,
+    SendMessageParams, SetMessageReactionParams, SetMyCommandsParams,
 };
 use frankenstein::reqwest;
 use frankenstein::response::{ErrorResponse, MethodResponse};
 use frankenstein::types::{
     AllowedUpdate, BotCommand, BotCommandScope, BotCommandScopeChat, ChatAction,
-    InlineKeyboardMarkup, LinkPreviewOptions, Message, ReplyMarkup,
+    InlineKeyboardMarkup, LinkPreviewOptions, Message, ReactionType, ReactionTypeEmoji,
+    ReplyMarkup,
 };
 use frankenstein::updates::Update;
 use frankenstein::{AsyncTelegramApi, ParseMode};
@@ -515,6 +518,66 @@ impl Transport {
         Sent::Delivered { message_id }
     }
 
+    /// Sends a dice with `emoji` to `chat`, the topper of a T4 and a T5 celebration (SPEC-084 R8).
+    /// Counted as [`Transport::send_html`] counts: a dice is a message.
+    pub async fn send_dice(&self, chat: i64, emoji: &str) -> Sent {
+        self.attempted.fetch_add(1, Ordering::Relaxed);
+        let params = SendDiceParams::builder().chat_id(chat).emoji(emoji).build();
+        let (bot, params) = (&self.bot, &params);
+        let sent = self
+            .with_attempts("sendDice", move || async move {
+                match bot.send_dice(params).await {
+                    Ok(answer) => Attempt::Done(answer.result.message_id),
+                    Err(error) => Attempt::from_error(&error),
+                }
+            })
+            .await;
+        let Some(message_id) = sent else {
+            return Sent::Failed;
+        };
+        self.delivered.fetch_add(1, Ordering::Relaxed);
+        Sent::Delivered { message_id }
+    }
+
+    /// Reacts with `emoji` to the message `message_id` in `chat`, the T1 celebration (SPEC-084 R9).
+    /// A reaction is no message, so it is not counted. Whether the Bot API took it.
+    pub async fn set_message_reaction(&self, chat: i64, message_id: i32, emoji: &str) -> bool {
+        let reaction = ReactionType::Emoji(ReactionTypeEmoji::builder().emoji(emoji).build());
+        let params = SetMessageReactionParams::builder()
+            .chat_id(chat)
+            .message_id(message_id)
+            .reaction(vec![reaction])
+            .build();
+        let (bot, params) = (&self.bot, &params);
+        self.with_attempts("setMessageReaction", move || async move {
+            match bot.set_message_reaction(params).await {
+                Ok(_) => Attempt::Done(()),
+                Err(error) => Attempt::from_error(&error),
+            }
+        })
+        .await
+        .is_some()
+    }
+
+    /// Pins the message `message_id` in `chat` without a notification, the T5 celebration's card
+    /// (SPEC-084 R8). A pin is no message, so it is not counted. Whether the Bot API took it.
+    pub async fn pin_chat_message(&self, chat: i64, message_id: i32) -> bool {
+        let params = PinChatMessageParams::builder()
+            .chat_id(chat)
+            .message_id(message_id)
+            .disable_notification(true)
+            .build();
+        let (bot, params) = (&self.bot, &params);
+        self.with_attempts("pinChatMessage", move || async move {
+            match bot.pin_chat_message(params).await {
+                Ok(_) => Attempt::Done(()),
+                Err(error) => Attempt::from_error(&error),
+            }
+        })
+        .await
+        .is_some()
+    }
+
     /// Sends `bytes` to `chat` as the document `file_name`, with the HTML caption `caption` when it
     /// fits [`MAX_CAPTION_UTF16`]. The document is uploaded from memory as `multipart/form-data`,
     /// through frankenstein's own client and its re-export of reqwest, because frankenstein's
@@ -681,6 +744,15 @@ impl OwnerChat {
             chat: owner.user().get(),
         }
     }
+
+    /// Sends `text` as a line: what a reveal or a pinned message falls back to when its own message
+    /// did not arrive (SPEC-084 R8).
+    async fn line(&self, text: &str) -> Pushed {
+        match self.transport.send_html(self.chat, text, None).await {
+            Sent::Delivered { .. } => Pushed::Delivered,
+            Sent::Failed => Pushed::Failed,
+        }
+    }
 }
 
 impl BotTransport for OwnerChat {
@@ -690,6 +762,72 @@ impl BotTransport for OwnerChat {
                 Sent::Delivered { .. } => Pushed::Delivered,
                 Sent::Failed => Pushed::Failed,
             }
+        })
+    }
+
+    fn push_reveal<'a>(
+        &'a self,
+        _pass: &'a Pass,
+        placeholder: &'a str,
+        text: &'a str,
+        pause: Duration,
+    ) -> PushFuture<'a> {
+        Box::pin(async move {
+            let Sent::Delivered { message_id } =
+                self.transport.send_html(self.chat, placeholder, None).await
+            else {
+                return self.line(text).await;
+            };
+            self.transport.wait(pause).await;
+            match self.transport.edit_html(self.chat, message_id, text).await {
+                Sent::Delivered { .. } => Pushed::Delivered,
+                Sent::Failed => self.line(text).await,
+            }
+        })
+    }
+
+    fn push_dice<'a>(&'a self, _pass: &'a Pass, emoji: &'a str) -> PushFuture<'a> {
+        Box::pin(async move {
+            match self.transport.send_dice(self.chat, emoji).await {
+                Sent::Delivered { .. } => Pushed::Delivered,
+                Sent::Failed => Pushed::Failed,
+            }
+        })
+    }
+
+    fn push_reaction<'a>(
+        &'a self,
+        _pass: &'a Pass,
+        message_id: i64,
+        emoji: &'a str,
+    ) -> PushFuture<'a> {
+        Box::pin(async move {
+            // A message id the Bot API's type cannot hold names no message of the owner's chat.
+            let Ok(message_id) = i32::try_from(message_id) else {
+                return Pushed::Failed;
+            };
+            if self
+                .transport
+                .set_message_reaction(self.chat, message_id, emoji)
+                .await
+            {
+                Pushed::Delivered
+            } else {
+                Pushed::Failed
+            }
+        })
+    }
+
+    fn push_pin<'a>(&'a self, _pass: &'a Pass, text: &'a str) -> PushFuture<'a> {
+        Box::pin(async move {
+            let Sent::Delivered { message_id } =
+                self.transport.send_html(self.chat, text, None).await
+            else {
+                return self.line(text).await;
+            };
+            // The pin is the card's frame, not its message: the message arrived either way.
+            let _pinned = self.transport.pin_chat_message(self.chat, message_id).await;
+            Pushed::Delivered
         })
     }
 }
