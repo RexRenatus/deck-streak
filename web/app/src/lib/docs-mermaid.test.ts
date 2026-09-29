@@ -83,4 +83,29 @@ describe('the Mermaid diagrams under docs', () => {
 
     expect(await parses(planted[0].source)).toBe(true);
   });
+
+  it('reads an indented fence and refuses one that does not parse', async () => {
+    const inList = blocksOf('planted.md', '- item\n\n  ```mermaid\n  flowchart TD\n    call --> done\n  ```\n');
+    const indented = blocksOf('planted.md', '   ```mermaid\n   flowchart TD\n     call --> done\n   ```\n');
+
+    expect(inList.map((block) => block.name)).toEqual(['planted.md block 1']);
+    expect(await parses(inList[0].source)).toBe(false);
+    expect(indented.map((block) => block.name)).toEqual(['planted.md block 1']);
+    expect(await parses(indented[0].source)).toBe(false);
+  });
+
+  it('accepts an indented valid block of each diagram type the docs use', async () => {
+    const sources = [
+      'sequenceDiagram\n  Alice->>Bob: hello\n',
+      'flowchart TD\n  caller --> done\n',
+      'stateDiagram-v2\n  [*] --> Idle\n  Idle --> [*]\n'
+    ];
+    for (const source of sources) {
+      const text = `1. step\n\n   \`\`\`mermaid\n${source.replace(/^(.)/gm, '   $1')}   \`\`\`\n`;
+      const planted = blocksOf('planted.md', text);
+
+      expect(planted.map((block) => block.name)).toEqual(['planted.md block 1']);
+      expect(await parses(planted[0].source)).toBe(true);
+    }
+  });
 });
