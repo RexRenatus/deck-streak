@@ -21,7 +21,6 @@ assertion on the earlier regex (`the scan misses: cargo build --config=profile.d
 Widening the regex to `--config[=\s]+` turned it green. A2's original red and green lines
 above are unchanged.
 
-```red-first
-A2: red at 2c05bc8: the scan missed the equals form: unexpectedly None : the scan misses: cargo build --config=profile.dev.debug=2
-A2: green at 600711e
-```
+The pair, in prose so that A2 keeps its one red and one green line above: red at 2c05bc8, where the
+scan missed the equals form (`unexpectedly None : the scan misses: cargo build
+--config=profile.dev.debug=2`); green at 600711e.
