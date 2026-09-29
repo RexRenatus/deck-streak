@@ -21,8 +21,7 @@ describe('InstrumentSection', () => {
       props: { title: 'Synthetic', envelope: stored(['templates', 'fields'], { found: 0 }), children: body }
     });
     const line = screen.getByRole('alert');
-    expect(line.textContent).toContain('templates');
-    expect(line.textContent).toContain('fields');
+    expect(line.textContent).toContain('templates, fields');
     expect(screen.queryByText(/all clear/i)).toBeNull();
   });
 
@@ -41,5 +40,13 @@ describe('InstrumentSection', () => {
     expect(screen.getByText('All clear: nothing found.')).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Synthetic' })).toBeTruthy();
     expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('renders a report that is null as a failure even when no read is named', () => {
+    render(InstrumentSection, {
+      props: { title: 'Synthetic', envelope: stored([], null), children: body }
+    });
+    expect(screen.getByRole('alert')).toBeTruthy();
+    expect(screen.queryByText(/all clear/i)).toBeNull();
   });
 });

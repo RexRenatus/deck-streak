@@ -47,6 +47,87 @@
       "reason": "'today' opens TODAY, which every unlisted token opens too, so emptying the entry's key changes no token's screen.",
       "evidence": "With the key '' the table no longer lists 'today', so routeFor answers TODAY for it by the fallback, and '' itself is refused as a token before the table is read.",
       "issue": "#294"
+    },
+    {
+      "file": "web/app/src/lib/insights/insights.ts",
+      "mutant": "ConditionalExpression: true",
+      "anchor": "return value !== null && typeof value === 'object' && !Array.isArray(value)",
+      "span": "value !== null && typeof value === 'object' && !Array.isArray(value)",
+      "reason": "A body that is no plain object holds none of the keys the callers read, so the key tests after record() refuse it whether or not record() does.",
+      "evidence": "Every caller reads only named keys from what record() returns and then tests those keys' own types, and a parsed JSON body that is no plain object (null, a boolean, a number, a string or an array) has none of those keys, so each such value is refused by the key test after it exactly as record() refuses it here.",
+      "issue": "#294"
+    },
+    {
+      "file": "web/app/src/lib/insights/insights.ts",
+      "mutant": "LogicalOperator: value !== null && typeof value === 'object' || !Array.isArray(value)",
+      "anchor": "return value !== null && typeof value === 'object' && !Array.isArray(value)",
+      "span": "value !== null && typeof value === 'object' && !Array.isArray(value)",
+      "reason": "A body that is no plain object holds none of the keys the callers read, so the key tests after record() refuse it whether or not record() does.",
+      "evidence": "Every caller reads only named keys from what record() returns and then tests those keys' own types, and a parsed JSON body that is no plain object (null, a boolean, a number, a string or an array) has none of those keys, so each such value is refused by the key test after it exactly as record() refuses it here.",
+      "issue": "#294"
+    },
+    {
+      "file": "web/app/src/lib/insights/insights.ts",
+      "mutant": "ConditionalExpression: true",
+      "anchor": "return value !== null && typeof value === 'object' && !Array.isArray(value)",
+      "span": "value !== null && typeof value === 'object'",
+      "reason": "A body that is no plain object holds none of the keys the callers read, so the key tests after record() refuse it whether or not record() does.",
+      "evidence": "Every caller reads only named keys from what record() returns and then tests those keys' own types, and a parsed JSON body that is no plain object (null, a boolean, a number, a string or an array) has none of those keys, so each such value is refused by the key test after it exactly as record() refuses it here.",
+      "issue": "#294"
+    },
+    {
+      "file": "web/app/src/lib/insights/insights.ts",
+      "mutant": "LogicalOperator: value !== null || typeof value === 'object'",
+      "anchor": "return value !== null && typeof value === 'object' && !Array.isArray(value)",
+      "span": "value !== null && typeof value === 'object'",
+      "reason": "A body that is no plain object holds none of the keys the callers read, so the key tests after record() refuse it whether or not record() does.",
+      "evidence": "Every caller reads only named keys from what record() returns and then tests those keys' own types, and a parsed JSON body that is no plain object (null, a boolean, a number, a string or an array) has none of those keys, so each such value is refused by the key test after it exactly as record() refuses it here.",
+      "issue": "#294"
+    },
+    {
+      "file": "web/app/src/lib/insights/insights.ts",
+      "mutant": "ConditionalExpression: true",
+      "anchor": "return value !== null && typeof value === 'object' && !Array.isArray(value)",
+      "span": "value !== null",
+      "reason": "A body that is no plain object holds none of the keys the callers read, so the key tests after record() refuse it whether or not record() does.",
+      "evidence": "Every caller reads only named keys from what record() returns and then tests those keys' own types, and a parsed JSON body that is no plain object (null, a boolean, a number, a string or an array) has none of those keys, so each such value is refused by the key test after it exactly as record() refuses it here.",
+      "issue": "#294"
+    },
+    {
+      "file": "web/app/src/lib/insights/insights.ts",
+      "mutant": "ConditionalExpression: true",
+      "anchor": "return value !== null && typeof value === 'object' && !Array.isArray(value)",
+      "span": "typeof value === 'object'",
+      "reason": "A body that is no plain object holds none of the keys the callers read, so the key tests after record() refuse it whether or not record() does.",
+      "evidence": "Every caller reads only named keys from what record() returns and then tests those keys' own types, and a parsed JSON body that is no plain object (null, a boolean, a number, a string or an array) has none of those keys, so each such value is refused by the key test after it exactly as record() refuses it here.",
+      "issue": "#294"
+    },
+    {
+      "file": "web/app/src/lib/insights/insights.ts",
+      "mutant": "ConditionalExpression: true",
+      "anchor": "return typeof value === 'number' && Number.isInteger(value) && value >= 0 ? value : null;",
+      "span": "typeof value === 'number'",
+      "reason": "Number.isInteger already answers false for every value that is not a number.",
+      "evidence": "Number.isInteger(x) is false for a string, boolean, null, undefined, object or array, so dropping the typeof test changes no answer of count().",
+      "issue": "#294"
+    },
+    {
+      "file": "web/app/src/lib/insights/insights.ts",
+      "mutant": "ConditionalExpression: false",
+      "anchor": "if (stored === null || failed === null || day === null) return undefined;",
+      "span": "stored === null",
+      "reason": "A null stored report makes failed_reads and study_day undefined, so failed is null and the next test refuses it.",
+      "evidence": "stored === null gives stored?.failed_reads === undefined, which names() answers null for (it is no array), so the failed === null test on the same line returns undefined as the stored === null test did.",
+      "issue": "#294"
+    },
+    {
+      "file": "web/app/src/lib/insights/insights.ts",
+      "mutant": "ConditionalExpression: false",
+      "anchor": "report: stored.report === null ? null : stored.report",
+      "span": "stored.report === null",
+      "reason": "Both arms of the ternary answer null when stored.report is null.",
+      "evidence": "The false arm reads stored.report, which is null exactly when the true arm would answer null.",
+      "issue": "#294"
     }
   ]
 }

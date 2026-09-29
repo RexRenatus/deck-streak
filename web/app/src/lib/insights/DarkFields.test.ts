@@ -50,4 +50,35 @@ describe('DarkFields', () => {
     expect(screen.getByText(/nothing to check/i)).toBeTruthy();
     expect(screen.queryByText(/no dark fields/i)).toBeNull();
   });
+
+  it('says nothing is left out when every dark field is listed', () => {
+    render(DarkFields, {
+      props: {
+        report: report({
+          darkFields: [{ noteType: 'Type A', field: 'Extra', reviewedNotes: 7 }],
+          darkFieldsTotal: 1
+        })
+      }
+    });
+    expect(screen.queryByText(/more not shown/i)).toBeNull();
+    expect(screen.queryByText(/0 more/i)).toBeNull();
+  });
+
+  it('names the note types whose templates could not be verified, and only then', () => {
+    const { unmount } = render(DarkFields, { props: { report: report({}) } });
+    expect(screen.queryByText(/could not be verified/i)).toBeNull();
+    unmount();
+    render(DarkFields, {
+      props: {
+        report: report({
+          unparseable: [
+            { noteType: 'Alpha', noteTypeId: 1 },
+            { noteType: 'Beta', noteTypeId: 2 }
+          ],
+          unparseableTotal: 2
+        })
+      }
+    });
+    expect(screen.getByText(/could not be verified/i).textContent).toContain('Alpha, Beta');
+  });
 });
