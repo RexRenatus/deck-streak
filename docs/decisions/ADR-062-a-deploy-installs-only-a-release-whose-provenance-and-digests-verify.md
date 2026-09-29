@@ -46,7 +46,7 @@ Chosen option.
   annotated and its commit is on `origin/main`; `gh attestation verify` accepts the tarball for this
   repository, signed by this repository's release workflow; every digest in `SHA256SUMS` matches.
   Any failure stops the deploy with the host untouched.
-- **The unit guards** (SPEC-062 R14) model a shipped template's instance drop-ins as systemd reads them, so the sync login stays with the sync instance alone: a template's own instance directory is admitted and every guard reads its drop-ins with the template, a second one refuses both, and an instance of an unshipped template is refused.
+- **The unit guards** (SPEC-062 R14) read a shipped template's instance drop-ins with the template, so the sync login stays with the sync instance alone: a template's own instance directory is admitted and every guard reads its drop-ins with the template, a second one refuses both, an instance's drop-in sets only `LoadCredential=`, and an instance of an unshipped template is refused.
 - **Rollback** verifies the same way whenever it downloads a tag again (SPEC-062 R5); a release
   directory already on the host was verified when it was installed.
 - The owner's repository settings may add immutable releases (release-ops recommends it); the
