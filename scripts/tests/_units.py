@@ -223,6 +223,12 @@ PAGING_KEYS = {
 }
 
 
+# The values a key of a paging unit that loads a credential may hold, at every assignment, its
+# drop-ins included (SPEC-066 R2). `Restart=` is `on-failure`, the one value the tree uses, so a
+# value that stops a oneshot unit loading, or ends a failure in a success, is refused.
+PAGING_VALUES = {("Service", "Restart"): ("on-failure",)}
+
+
 class Refused(AssertionError):
     """A unit file the reader refuses to read, naming the file and the line (SPEC-066)."""
 

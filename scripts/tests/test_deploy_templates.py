@@ -498,7 +498,14 @@ def value_refusals(unit, table):
 
 
 def failure_target_refusals(unit):
-    return []
+    """Every `OnFailure=` assignment of `unit`, its drop-ins included, that is not exactly the alert
+    template, an empty one and a target beside the alert's included (SPEC-066 R2)."""
+    return [
+        f"{a.source}:{a.line}: [Unit] OnFailure={a.value} is not the alert template "
+        f"{ON_FAILURE}, and is refused"
+        for a in unit.assignments
+        if (a.section, a.key) == ("Unit", "OnFailure") and a.value != ON_FAILURE
+    ]
 
 
 def refusal_page_refusals(unit):
@@ -1656,7 +1663,7 @@ class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
         # only the value the table admits: `Restart=` is `on-failure` and no other, so a restart
         # value that stops a oneshot unit loading, or turns its failure into a success, is refused
         # by key and value (SPEC-066 R2).
-        table = getattr(_units, "PAGING_VALUES", {})
+        table = _units.PAGING_VALUES
         alert = f"{ALERT_TEMPLATE}@.service"
         loading = examined(
             "service unit(s) that load a credential",
