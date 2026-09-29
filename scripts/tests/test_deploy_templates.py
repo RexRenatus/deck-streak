@@ -330,10 +330,10 @@ def credential_lines(root):
     for path in sorted(Path(root).rglob("*")):
         if path.suffix not in (".service", ".timer", ".conf") or not path.is_file():
             continue
-        for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
-            key, equals, value = line.strip().partition("=")
-            if equals and key in keys:
-                found.append((path.relative_to(root).as_posix(), number, key, value))
+        rel = path.relative_to(root).as_posix()
+        for _, key, value, number in _units.assignments(_units.unit_text(path), rel):
+            if key in keys:
+                found.append((rel, number, key, value))
     return found
 
 
