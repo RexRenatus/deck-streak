@@ -74,8 +74,8 @@
       [
         "S06609-A-PAGING-UNIT-ADMITS-ONE-RESTART-VALUE",
         "scripts/tests/_units.py",
-        "PAGING_VALUES = {(\"Service\", \"Restart\"): (\"on-failure\",)}\n",
-        "PAGING_VALUES = {(\"Service\", \"Restart\"): (\"on-failure\", \"always\")}\n",
+        "    (\"Service\", \"Restart\"): (\"on-failure\",),\n",
+        "    (\"Service\", \"Restart\"): (\"on-failure\", \"always\"),\n",
         "a paging unit that loads a credential holds only the restart value the table admits, at every assignment, a drop-in's included (SPEC-066 R2)",
         "test_deploy_templates.ARefusedCredentialFailsItsUnitAndPages.test_a_paging_units_restart_holds_only_the_admitted_value"
       ],
@@ -86,6 +86,14 @@
         "if (a.section, a.key) == (\"Unit\", \"OnFailure\") and ON_FAILURE not in a.value.split()\n",
         "every OnFailure= assignment of a paging unit that loads a credential is exactly the alert template, so a target beside it is refused (SPEC-066 R2)",
         "test_deploy_templates.ARefusedCredentialFailsItsUnitAndPages.test_a_paging_unit_names_no_failure_target_but_the_alert"
+      ],
+      [
+        "S06611-A-PAGING-UNIT-HOLDS-ITS-RESTART-BUDGET",
+        "scripts/tests/_units.py",
+        "    (\"Unit\", \"StartLimitIntervalSec\"): (\"300\",),\n",
+        "",
+        "a paging unit that loads a credential holds only the restart budget its units use, so a start limit interval planted beside the admitted one is refused (SPEC-066 R2)",
+        "test_deploy_templates.ARefusedCredentialFailsItsUnitAndPages.test_a_paging_units_restart_holds_only_the_admitted_value"
       ]
     ]
   }
