@@ -144,7 +144,7 @@ Chosen option: "(a) an upload path for the skip day alone", the owner's decision
   leaves its skip `applied` until a later undo, which counts the cards already restored as restored;
   neither answer says that nothing was written (SPEC-083 R25, R26, R32).
 - Bad, because the service skips nothing in a zone that observes daylight saving; such a deployment refuses every skip until its zone is changed. An owner whose devices observe daylight saving has the configured offset rewritten at each change, so no fixed zone matches it all year, and for some offsets no fixed zone exists in the tz database at all; ADR-020 assumes an owner without daylight saving (SPEC-083 R3).
-- Bad, because a deployment whose environment does not pin the zone skips nothing: the preview, the take and the undo refuse until its `TZ` holds a POSIX rule with no daylight period (SPEC-083 R3, A44).
+- Bad, because a deployment whose environment does not pin the zone skips nothing: the preview, the take and the undo refuse until its `TZ` holds a POSIX rule with no daylight period that names no zone file (SPEC-083 R3, A44).
 
 ### Confirmation
 
