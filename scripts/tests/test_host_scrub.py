@@ -1599,7 +1599,7 @@ class Axes(unittest.TestCase):
 
         def table(*points):
             rows = [
-                f"{30 + n} 1 8:1 / {point} rw,relatime shared:1 - ext4 /dev/x rw"
+                f"{30 + n} 1 8:{17 + n} / {point} rw,relatime shared:1 - ext4 /dev/x rw"
                 for n, point in enumerate(points)
             ]
             return "\n".join(["20 1 8:1 / / rw - ext4 /dev/x rw"] + rows) + "\n"
@@ -1686,11 +1686,20 @@ class Axes(unittest.TestCase):
                 self.assertIn("lies inside the bind mount " + point, skipped[0]["reason"])
                 self.assertIsNotNone(refusal)
                 self.assertIn("lies inside the bind mount " + point, refusal)
-                # A mount whose root is `/` shows the whole filesystem: nothing is bound.
-                whole = bound.replace("/srv/kept", "/")
+                # Another file system mounted whole (its root `/`) at an ancestor binds nothing.
+                whole = bound.replace("8:1 /srv/kept", "8:17 /")
                 listed, skipped, refusal = refused(item, candidate, whole + "\n")
                 self.assertEqual([entry["path"] for entry in listed], [venv], skipped)
                 self.assertIsNone(refusal)
+                # The root file system mounted whole a second time (a bind of `/`, root `/` again)
+                # shows every path of the disk at another place too: refused.
+                again = bound.replace("/srv/kept", "/")
+                listed, skipped, refusal = refused(item, candidate, again + "\n")
+                self.assertEqual(listed, [])
+                self.assertEqual([entry["path"] for entry in skipped], [venv])
+                self.assertIn("lies inside the bind mount", skipped[0]["reason"])
+                self.assertIsNotNone(refusal)
+                self.assertIn("lies inside the bind mount", refusal)
             with self.subTest("a mount table that cannot be read refuses the item"):
                 item, candidate = cases[venv]
 
