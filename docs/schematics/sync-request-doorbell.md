@@ -9,8 +9,8 @@ sequenceDiagram
   participant O as owner
   participant B as bot (SyncRequester)
   participant S as store (ingest_state, sync_runs)
-  participant P as deck-streak-job@sync.path
-  participant J as deck-streak-job@sync.service
+  participant P as deck-streak-job@sync (path unit)
+  participant J as deck-streak-job@sync (service unit)
   O->>B: /sync
   B->>S: request_rescore(now)
   B->>B: touch request file (at most once per 15 s)

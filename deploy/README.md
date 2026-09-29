@@ -14,7 +14,7 @@ a unit, reloads Caddy or touches a host; the first deploy is #42's.
 | `systemd/deck-streak-bot.service` | the `bot` role: the Telegram bot's long-polling transport, `Type=notify` with a watchdog |
 | `systemd/deck-streak-job@.service` | one run of one job of coordination's job table, `deckstreakd job <id>`, a `oneshot` |
 | `systemd/deck-streak-job@<id>.timer` | one timer per job of the table (`sync`, `maintenance`, `liveness`), each starting the job instance of its own name |
-| `systemd/deck-streak-job@sync.path` | the owner's `/sync` doorbell: a change of the request file starts `deck-streak-job@sync.service`, and it loads no credential (SPEC-059) |
+| `systemd/deck-streak-job@sync (path unit)` | the owner's `/sync` doorbell: a change of the request file starts `deck-streak-job@sync` (service unit), and it loads no credential (SPEC-059) |
 | `tmpfiles.d/deck-streak-sync-request.conf` | the request directory, the service user's alone, mode `0700`; only the bot unit may write it (SPEC-059) |
 | `systemd/deck-streak-alert@.service` | the one alert path, a `oneshot` every other service names with `OnFailure=`: it pages the owner on Telegram that its instance failed (SPEC-031) |
 | `systemd/deck-streak-slo.service`, `.timer` | the SLO evaluator, every five minutes: it pages once per burn episode of the API's SLO (SPEC-031) |
@@ -107,7 +107,7 @@ job's slot (ADR-027).
 | `liveness` | hourly, minute 14 | `*-*-* *:14:00 UTC` | none, waived with its why |
 
 The owner's `/sync` adds no slot and no timer: the bot stores the request and touches the request
-file, `deck-streak-job@sync.path` starts the sync job, and the job serves the stored request before
+file, `deck-streak-job@sync` (path unit) starts the sync job, and the job serves the stored request before
 its scheduled run, which stays claimed once per study day (SPEC-059, ADR-037).
 
 No job timer carries a random delay: the table already places each job on its own minute, clear of

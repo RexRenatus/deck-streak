@@ -36,7 +36,7 @@ owner asked, when the runner claims only scheduled fires?
 ## Decision Outcome
 
 Chosen: the bot stores the request (`request_rescore`), touches a file only the bot can write, and
-`deck-streak-job@sync.path` starts `deck-streak-job@sync.service`. The job reads the stored flag
+`deck-streak-job@sync` (path unit) starts `deck-streak-job@sync` (service unit). The job reads the stored flag
 and, when set, runs the owner's cycle before the scheduled run. The bot polls the store for the
 outcome within a bound and answers, or says the sync is still running.
 

@@ -1,7 +1,7 @@
 ### Added
 
 - The owner's `/sync` is served by the sync job. The bot stores the request and touches a request
-  file, a path unit (`deck-streak-job@sync.path`) starts the sync job on a change of that file, and
+  file, a path unit (`deck-streak-job@sync` (path unit)) starts the sync job on a change of that file, and
   the job runs the owner's cycle, with the five-minute reuse window, before its scheduled run. The
   owner is answered with the outcome, or told the sync is still running once the bounded wait ends.
   A sync needs more memory than the bot's limit, so the bot no longer runs one.

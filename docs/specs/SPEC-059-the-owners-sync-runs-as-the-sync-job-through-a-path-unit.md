@@ -35,8 +35,8 @@ R1. The bot's `/sync` port (`SyncRequester`) runs no sync cycle: `role_bot.rs` n
 R2. The request is a trigger only. The port records the owner's request in the store
     (`request_rescore`, behind the owner gate) and touches one file; the job reads the stored flag
     and nothing from the file, so a planted file or payload changes nothing.
-R3. A path unit `deck-streak-job@sync.path` with `PathChanged=` on the request file starts
-    `deck-streak-job@sync.service` and loads no credential. The request directory is created by a
+R3. A path unit `deck-streak-job@sync` (path unit) with `PathChanged=` on the request file starts
+    `deck-streak-job@sync` (service unit) and loads no credential. The request directory is created by a
     tmpfiles line, owned by the service user, mode `0700`; only the bot unit has write access to it
     (`ReadWritePaths=`); the job unit has none.
 R4. Requests during a running sync start at most one more run (`PathChanged=` is edge triggered),
@@ -93,7 +93,7 @@ A6: cargo test -p deck-streak-coordination --test job_table -- --exact the_job_t
 | `crates/ingest/tests/owner_run.rs` | `deck-streak-ingest` | changed: the owner's latest run since an instant is read |
 | `.sqlx/` | `deck-streak-ingest` | changed: the refreshed query cache |
 | `scripts/tests/test_deploy_templates.py` | tests | changed: the bot reads no sync credential |
-| `deploy/systemd/deck-streak-job@sync.path` | deploy | added |
+| `deploy/systemd/deck-streak-job@sync (path unit)` | deploy | added |
 | `deploy/systemd/deck-streak-bot.service` | deploy | changed: request directory, no sync login |
 | `deploy/tmpfiles.d/deck-streak-sync-request.conf` | deploy | added |
 | `deploy/README.md`, `deploy/deck-streak.env.example` | deploy | changed |

@@ -31,7 +31,7 @@
       ],
       [
         "S05904-THE-DOORBELL-IS-EDGE-TRIGGERED",
-        "deploy/systemd/deck-streak-job@sync.path",
+        "deploy/systemd/deck-streak-job\u0040sync.path",
         "\nPathChanged=/run/deck-streak-sync/request",
         "\nPathExists=/run/deck-streak-sync/request",
         "PathExists= is level triggered and, with a job that never consumes the file, starts the sync again and again; PathChanged= starts it once per change (SPEC-059 R4)",
