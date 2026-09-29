@@ -1085,23 +1085,35 @@ class CredentialsComeFromTheSocket(unittest.TestCase):
 
     def test_a_shipped_templates_instance_dropin_directory_is_its_own_and_no_other_is(self):
         # systemd reads an instance's drop-ins from `<name>@<instance>.<type>.d/`, so a shipped
-        # template's is admitted; an instance of a template the tree does not ship is refused
-        # (SPEC-062 R14; SPEC-066 amendment).
+        # template's is admitted and read with the template: a key planted in it is judged as the
+        # template's own. An instance of a template the tree does not ship is refused (SPEC-062
+        # R14; SPEC-066 amendment).
         refused = "is not the drop-in directory of a unit shipped beside it, and is refused"
-        at = "@"
         with tempfile.TemporaryDirectory() as scratch:
             systemd = Path(scratch) / "deploy" / "systemd"
             systemd.mkdir(parents=True)
-            (systemd / f"planted{at}.service").write_text("[Service]\n", encoding="utf-8")
-            (systemd / f"planted{at}x.service.d").mkdir()
+            (systemd / "planted@.service").write_text("[Service]\n", encoding="utf-8")
+            (systemd / "planted@tty1.service.d").mkdir()
             self.assertEqual(dropin_directory_refusals(scratch), [], "the shipped template's own")
-            (systemd / f"other-app{at}x.service.d").mkdir()
-            (systemd / f"other-app{at}x.service.d" / "override.conf").write_text(
+            (systemd / "planted@tty1.service.d" / "10-planted.conf").write_text(
+                "[Unit]\nRequires=missing.service\n", encoding="utf-8"
+            )
+            (planted,) = subject(scratch).services
+            self.assertEqual(
+                off_list_refusals(planted, _units.PAGING_KEYS),
+                [
+                    "deploy/systemd/planted@tty1.service.d/10-planted.conf:2: [Unit] Requires="
+                    "missing.service is not on this unit's list of keys, and is refused"
+                ],
+                "a key planted in the template's instance drop-in",
+            )
+            (systemd / "other-app@tty1.service.d").mkdir()
+            (systemd / "other-app@tty1.service.d" / "override.conf").write_text(
                 "[Service]\nNice=5\n", encoding="utf-8"
             )
             self.assertEqual(
                 dropin_directory_refusals(scratch),
-                [f"deploy/systemd/other-app{at}x.service.d: {refused}"],
+                [f"deploy/systemd/other-app@tty1.service.d: {refused}"],
                 "an instance of a template the tree does not ship",
             )
 
