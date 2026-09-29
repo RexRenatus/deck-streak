@@ -828,7 +828,8 @@ def retired(root: pathlib.Path, base: str) -> int:
     record = {}
     path = root / RETIRED
     if path.is_file():
-        for entry in json.loads(path.read_text(encoding="utf-8")).get("retired", []):
+        listed = parse_document(RETIRED, path.read_text(encoding="utf-8"))
+        for entry in listed.get("retired", []):
             if str(entry.get("reason", "")).strip() and str(entry.get("approval", "")).strip():
                 record[entry["id"]] = entry
     base_rows = rows_of(before)
