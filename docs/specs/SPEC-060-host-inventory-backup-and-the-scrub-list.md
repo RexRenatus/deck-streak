@@ -369,3 +369,11 @@ Its seventh fix round amended these statements too:
   the apply now also refuse an item inside, or holding, the directory a bind mount shows, found by
   the table's rows. A host with a directory bound elsewhere refuses every path item inside or holding
   that directory.
+
+Its eighth fix round amended these statements too:
+
+- **R7, A7, A12: the mount table the checks read.** The plan and the apply read the scrub's own
+  mount table (`/proc/self/mountinfo`), and a directory bound in another mount namespace (a unit's
+  bind path or a container's volume) is not listed there, so the scrub does not see that bind. The
+  criteria now name the bind they refuse as one listed in that table, and §7 states the limit: that
+  bind's source must be in the protected list (#372).

@@ -194,6 +194,15 @@ alternatives:
   mount" and the point. Its cost: a host with a directory bound elsewhere refuses every path item
   inside or holding that directory.
 
+### Decided in the eighth fix round (SPEC-060 §8)
+
+- **The mount checks read the scrub's own mount table, and a bind in another mount namespace is a
+  stated limit (#372).** Chosen against reading every namespace's table in this delivery, because
+  that is a new reader with its own refusal (a table it cannot read), test and row, which #372
+  specifies; and against keeping R7, A7 and A12 unqualified, because they promised more than the
+  code reads. Until #372, the source of a directory bound in another namespace (a unit's bind path
+  or a container's volume) is kept only by the protected list, and the runbook says to put it there.
+
 ### Consequences
 
 - Good, because the owner approves bytes, not descriptions, and a changed host is caught before, or at, its
