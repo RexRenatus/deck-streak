@@ -391,6 +391,9 @@ delivery claims none of it.
 - It builds no in-app activity feed of past celebrations and no landmark timeline: both are Mini App
   screens for the wave that polishes the surfaces (#8).
 - It flushes no held celebration when quiet hours end: the router's flush does (#291).
+- It gives the scheduled sync's recompute no router, so a landmark or a queue zero that recompute
+  decides is not raised, like every awards-phase celebration of that recompute (SPEC-072 R14,
+  SPEC-073 R4); whether the scheduled sync gains a router is #291's.
 - It adds no sync: a landmark or a queue zero is raised at the next sync's recompute, the owner's
   `/sync` included (#286).
 - It builds no settings screen for `widget_enabled`, `widget_mood` or the celebrations' switch

@@ -62,7 +62,7 @@ sequenceDiagram
   C->>K: judge each lost position of the 7 closed study days again
   K-->>E: a revised win credited, once with its status
   C->>K: the Brier and the rank after the step
-  K-->>R: a long shot and a rank-up, each celebrated once, no coin moved
+  K-->>R: a long shot and a rank-up raised at the tick (pending first), each once, no coin moved
 ```
 
 - While the engine is off, the step voids every open position and refunds each stake, and settles

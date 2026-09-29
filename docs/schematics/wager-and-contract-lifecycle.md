@@ -13,7 +13,7 @@ It extends four accepted schematics without changing them:
 `docs/schematics/streaks-and-governor-state-machine.md` (the governor that licenses a stake, and the
 freeze markers a wager reads), `docs/schematics/notification-router.md` (quiet hours withhold a
 nudge) and `docs/schematics/celebration-ladder-on-the-router.md` (a won wager and a finished
-contract celebrate). A breach's fine and its refund are
+contract celebrate at the tick). A breach's fine and its refund are
 `docs/schematics/fine-verdict-and-refund.md`; the tick that speaks is
 `docs/schematics/discipline-tick-and-standby-notice.md`.
 

@@ -63,11 +63,13 @@ Chosen option: "a quarter-hourly tick that reads no reviews", built by SPEC-105.
   `discipline` while the verdict is still standby and no lapse is open, clearing the pending day
   and recording the notice's study day in one write. A verdict out of standby, or a lapse, drops it.
 
-- **A sync step's messages.** The rail's step (SPEC-104 R10 and R13's fine message, R20's refund
-  message, R15 and R16) and the markets step (SPEC-107 R16) record each message pending in the
-  ledger, as SPEC-106 R17 does. An owner's sync carries a router, so the step raises the message
-  through that router at once and nothing stays pending; a scheduled sync carries none, so the
-  message waits for `discipline_tick`, which delivers it through the router on its next run.
+- **A sync step's messages.** The rail's step (SPEC-104 R10's kept-sprint notice, R10 and R13's fine
+  message, R14's ransom notice, R20's refund message, R15 and R16) and the markets step (SPEC-107
+  R16) record each message pending in the ledger, as SPEC-106 R17 records the stakes' messages and
+  their two celebrations (R9, R17), which SPEC-106 raises only at the tick. An owner's sync carries a
+  router, so the step raises the message through that router at once and nothing stays pending;
+  a scheduled sync carries none, so the message waits for `discipline_tick`, which delivers it
+  through the router on its next run.
   Rejected:
   - a router for the scheduled sync: rejected because the sync job would load the bot credentials,
     against ADR-124's census that `sync` does not send, and whether it ever does is #291's;
@@ -88,8 +90,8 @@ Chosen option: "a quarter-hourly tick that reads no reviews", built by SPEC-105.
 ### Confirmation
 
 SPEC-105's A14 (the minutes and the calendar), A15 and A16 (the reminder), A17 and A18 (the notice),
-SPEC-104's A30 and SPEC-107's A40 (a scheduled sync's step messages wait for the tick), and the
-hand-proved rows `S10513` and `S10515`.
+SPEC-104's A30, SPEC-106's A29 and SPEC-107's A40 (a scheduled sync's step messages wait for the
+tick), and the hand-proved rows `S10513` and `S10515`.
 
 ## What would make this wrong
 

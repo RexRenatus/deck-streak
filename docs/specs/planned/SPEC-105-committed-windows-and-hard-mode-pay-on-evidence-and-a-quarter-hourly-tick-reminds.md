@@ -128,9 +128,9 @@ R12. The job `discipline_tick` fires every 15 minutes at minutes 4, 19, 34 and 4
     (SPEC-027 R2), and a zone offset that is a multiple of 15 minutes maps the set onto itself. It
     does not catch up. Its timer `deck-streak-job-send@discipline_tick.timer` and the rail contract hold
     its calendar equal to the table. It reads no review and syncs nothing (ADR-037): it raises the
-    reminders (R13) and the standby notice (R14), and later discipline SPECs add only messages a
-    settle or a sync step (SPEC-104, SPEC-107) left pending (SPEC-106's stakes and their Sunday
-    review).
+    reminders (R13) and the standby notice (R14), and later discipline SPECs add only messages and
+    celebrations a settle or a sync step (SPEC-104, SPEC-106, SPEC-107) left pending (SPEC-106's
+    stakes and their Sunday review).
 R13. At each tick, a reminder is raised for each booked window whose occurrence today starts 0 to 15
     minutes after the tick's instant, both ends included, unless today is an active skip day or a
     lapse is open; its dedupe key is `window:<epoch day>:<window id>`. It carries the start as

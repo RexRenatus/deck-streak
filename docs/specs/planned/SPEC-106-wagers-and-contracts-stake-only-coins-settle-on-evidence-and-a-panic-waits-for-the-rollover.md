@@ -150,8 +150,8 @@ R9. At each sync cycle, after the weakenings land (R12), each active contract's 
     where the stake in force on a day is the old stake of the earliest applied weakening that landed
     after that day, or the contract's stake when none did, equal to the golden `contract_stake_on`.
     At the first cycle whose current study day is after its end, the contract becomes `done` and
-    raises the celebration `quest_all` with the key `contract_done:<contract id>` through SPEC-084's
-    ladder. While the engine is off no contract day is judged.
+    leaves the celebration `quest_all` with the key `contract_done:<contract id>` pending on its row
+    for the tick (R17). While the engine is off no contract day is judged.
 R10. At each sync cycle, every `breach` of a contract, whatever its status, on one of the 7 closed
     study days before the current one, whose fine is not reversed, is judged again on R8's rule with
     the rollup, the kept windows, the defections, the skip set and the freeze markers as they now
@@ -211,9 +211,11 @@ R17. A settlement leaves its message pending on its row, and at each tick outsid
     the panic's notice with the re-arm button (`panic:<epoch day>`). A message is cleared when the
     router sends it, or withholds it with `already_recorded`, `nudges_disabled` or `lapse`; any
     other withhold leaves it for the next tick. The router's per-incident key makes each message
-    once, however many ticks run at once. A `won` or `won_early` wager raises the celebration
-    `quest_all` with the key `wager:<wager id>` at its settlement through SPEC-084's ladder, which
-    the router defers inside quiet hours.
+    once, however many ticks run at once. A `won` or `won_early` wager leaves the celebration
+    `quest_all` with the key `wager:<wager id>` pending on its row at its settlement, as a `done`
+    contract leaves `contract_done:<contract id>` (R9); the tick raises each beside the messages,
+    through SPEC-084's ladder, and clears it as it clears a message or when the router defers it,
+    so a scheduled sync, which carries no router, loses neither.
 R18. At each tick outside quiet hours on a study day that is a Sunday, when an active contract, an
     active wager or tonight's booked hard-mode night exists (SPEC-105) and the week's review has not
     been recorded, the review is raised under `discipline` with the key `stakes:<the week's Monday
@@ -247,8 +249,9 @@ R22. The migration `migrations/010601_discipline_stakes.sql` creates `wagers` (o
     most), `contracts`, `contract_days` (unique on contract and study day), `contract_changes` (one
     `pending` row per contract at most) and `pardons` (one row per month), each `STRICT` with
     `created_at`, with `CHECK`s on the statuses, the verdicts, the metrics, the durations and the
-    void reasons, and each row's pending-message flag; and it adds to `discipline_state` the last
-    reviewed week and the pending panic notice (SPEC-020 R15, R18).
+    void reasons, and each row's pending-message flag (a won wager's and a done contract's
+    celebration among them, R17); and it adds to `discipline_state` the last reviewed week and the
+    pending panic notice (SPEC-020 R15, R18).
 R23. Discipline's data-rights port exports and erases the five tables, and the reset of
     `discipline_state` (SPEC-105 R24) clears the two new fields; the five tables owe SPEC-021's six
     files.
@@ -296,7 +299,7 @@ R26. The evening job (SPEC-100 R14) passes the active wager's stake, in whole co
 | A26 | the review's study days and weeks equal the golden `stake_review` | `the_stake_review_matches_the_parity_golden` |
 | A27 | the review is raised once a week outside quiet hours, recorded only when sent, retried after a missing transport, and not raised with no stakes | `the_sunday_review_is_raised_once_a_week_after_a_send` |
 | A28 | each pending message is raised once outside quiet hours, left pending after a missing transport, and cleared when the setting is off | `each_stake_message_is_raised_once_outside_quiet_hours` |
-| A29 | a won wager and a finished contract each raise their celebration once | `wins_and_finished_contracts_celebrate_once` |
+| A29 | a won wager and a finished contract each leave their celebration pending at the sync, which sends nothing, the next tick outside quiet hours raises each once through the ladder, and a second tick raises nothing | `wins_and_finished_contracts_celebrate_once` |
 | A30 | the constants equal the constants golden | `the_stake_constants_match_the_predecessors` |
 | A31 | no file under `crates/*/src/` or `web/app/src/` names the pledge service or its host, and no setting key enables one | `no_path_posts_to_a_pledge_service` |
 | A32 | the wager's constants equal `economy.json`'s `wager` section, key for key | `the_wager_constants_equal_the_economy_declaration` |
@@ -371,7 +374,7 @@ this delivery, so the private wiring does not change when it merges.
 | `crates/discipline/src/state.rs` | `deck-streak-discipline` | changed: the engine switch's writers, the panic's day, the pending panic notice and the last reviewed week |
 | `crates/discipline/src/wager.rs` | `deck-streak-discipline` | added: arming's rules, the offers, the settlement and the revision, pure |
 | `crates/discipline/src/contract.rs` | `deck-streak-discipline` | added: the offer, authoring's rules, the verdict, the days to judge, the stake in force and the landing day, pure |
-| `crates/discipline/src/stakes.rs` | `deck-streak-discipline` | added: the store of wagers, contracts, their days, their changes and the pardons, and the pending messages |
+| `crates/discipline/src/stakes.rs` | `deck-streak-discipline` | added: the store of wagers, contracts, their days, their changes and the pardons, and the pending messages and celebrations (R17) |
 | `crates/discipline/src/panic.rs` | `deck-streak-discipline` | added: the schedule, its cancel, its application and the re-arm |
 | `crates/discipline/src/review.rs` | `deck-streak-discipline` | added: the Sunday review's rule and its lines, pure |
 | `crates/discipline/src/data_rights.rs` | `deck-streak-discipline` | changed: the five tables join discipline's data-rights port |
@@ -381,9 +384,9 @@ this delivery, so the private wiring does not change when it merges.
 | `crates/discipline/tests/stake_rights.rs` | `deck-streak-discipline` | added: A36 |
 | `crates/discipline/tests/money_rung_census.rs` | `deck-streak-discipline` | added: A31 |
 | `crates/coordination/src/discipline/mod.rs` | `deck-streak-coordination` | changed: the stakes' modules |
-| `crates/coordination/src/discipline/stakes.rs` | `deck-streak-coordination` | added: the wager's, the weakenings' and the contract days' step, their inputs, their coins and their revision |
+| `crates/coordination/src/discipline/stakes.rs` | `deck-streak-coordination` | added: the wager's, the weakenings' and the contract days' step, their inputs, their coins, their revision and their pending messages and celebrations (R9, R17) |
 | `crates/coordination/src/discipline/panic.rs` | `deck-streak-coordination` | added: the panic's application across discipline, markets and economy, and the re-arm |
-| `crates/coordination/src/discipline/tick.rs` | `deck-streak-coordination` | changed: the stakes' pending messages and the Sunday review |
+| `crates/coordination/src/discipline/tick.rs` | `deck-streak-coordination` | changed: the stakes' pending messages and celebrations (R17) and the Sunday review |
 | `crates/coordination/src/sync_cycle.rs` | `deck-streak-coordination` | changed: the stakes' step after the rail's and the windows' steps |
 | `crates/coordination/src/data_rights_registry.rs` | `deck-streak-coordination` | unchanged: discipline's port is registered by SPEC-105; listed under SPEC-021's six-file rule |
 | `crates/coordination/tests/data_rights_symmetry.rs` | `deck-streak-coordination` | changed: seeded rows for the five tables |
@@ -488,11 +491,11 @@ instant epoch milliseconds; no golden holds a calendar date or a personal value.
 
 | table | owner | created by | from the predecessor's | export and erase |
 |---|---|---|---|---|
-| `wagers` | `discipline` | `migrations/010601_discipline_stakes.sql` (SPEC-106) | `wagers`, its days as epoch days; a voided row's reason read as `standby` | exported and erased |
-| `contracts` | `discipline` | the same migration | `contracts`, its days as epoch days and its horizon dropped | exported and erased |
-| `contract_days` | `discipline` | the same migration | `contract_days`, one row per contract and study day | exported and erased |
+| `wagers` | `discipline` | `migrations/010601_discipline_stakes.sql` (SPEC-106) | `wagers`, its days as epoch days; a voided row's reason read as `standby`, and its message and celebration read as sent | exported and erased |
+| `contracts` | `discipline` | the same migration | `contracts`, its days as epoch days, its horizon dropped and its celebration read as sent | exported and erased |
+| `contract_days` | `discipline` | the same migration | `contract_days`, one row per contract and study day, its pending message read as sent | exported and erased |
 | `contract_changes` | `discipline` | the same migration | `contract_changes`, its landing day as an epoch day and its message read as sent | exported and erased |
-| `pardons` | `discipline` | the same migration | `pardons`, its month keyed by the epoch day of its first day | exported and erased |
+| `pardons` | `discipline` | the same migration | `pardons`, its month keyed by the epoch day of its first day, its pending message read as sent | exported and erased |
 
 The predecessor's `beeminder_posts` maps to nothing: the money rung is not built (ADR-106).
 
