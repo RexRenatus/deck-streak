@@ -520,6 +520,22 @@
         "        if False:\n",
         "an entry on another device than its item is digested and removed with it (SPEC-060 R7, A11)",
         "test_host_scrub.Axes.test_an_item_holding_another_device_is_never_digested_or_removed"
+      ],
+      [
+        "S06066-A-ITEM-HOLDING-A-MOUNT-POINT-IS-REFUSED",
+        "deploy/host-scrub/plan.py",
+        "        if point.startswith(path.rstrip(\"/\") + \"/\"):\n",
+        "        if False:\n",
+        "an item that holds a mount point is listed and deleted with it (SPEC-060 R7, A12)",
+        "test_host_scrub.Axes.test_an_item_that_is_or_holds_a_mount_point_is_refused"
+      ],
+      [
+        "S06067-A-MOUNT-POINT-IS-READ-UNESCAPED",
+        "deploy/host-scrub/plan.py",
+        "    raw = re.sub(rb\"\\\\([0-7]{3})\", lambda m: bytes([int(m.group(1), 8) & 0xFF]), os.fsencode(field))\n",
+        "    raw = os.fsencode(field)\n",
+        "a mount point whose path carries an octal escape is not matched, so the item goes (SPEC-060 R7, A12)",
+        "test_host_scrub.Axes.test_an_item_that_is_or_holds_a_mount_point_is_refused"
       ]
     ]
   }
