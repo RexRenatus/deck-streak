@@ -158,7 +158,7 @@ plain `json.loads` that keeps the last value and says nothing (the census printe
   `mutation_rows`, so it reuses the hook and the sentence; there is no second copy, and nothing
   moves.
 
-### 9.1 Acceptance criteria
+## 10. Acceptance criteria of the amendment (A5 and A6)
 
 | id | criterion | decided by |
 |---|---|---|
