@@ -275,8 +275,9 @@ class TheExaminedTotalIsTheListing(unittest.TestCase):
 def uncommented(text):
     """`text` with each comment cut: a `#` that starts a word outside every quote opens a comment
     to the end of its line, in YAML and in the shell alike. Its text is no command, and bounds
-    written in it bound nothing. A `#` inside quotes or inside a word is text, so the command
-    after it is still read."""
+    written in it bound nothing. A word starts after a blank or a shell operator (`;`, `&`, `|`,
+    `(`, `)`, `<`, `>`). A `#` inside quotes or inside a word is text, so the command after it is
+    still read."""
     kept = []
     for line in text.split("\n"):
         quote, i, start = None, 0, True
@@ -288,7 +289,7 @@ def uncommented(text):
             if quote is None and char == "#" and start:
                 line = line[:i].rstrip(" \t")
                 break
-            start = quote is None and char in " \t"
+            start = quote is None and char in " \t;&|()<>"
             if quote is None and char in "'\"":
                 quote = char
             elif quote == char:
