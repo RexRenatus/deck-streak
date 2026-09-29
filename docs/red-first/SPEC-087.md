@@ -42,8 +42,6 @@ A12: red at 5c7fcad: AssertionError: 0 != 3 : examined 0
 A12: green at 96eee0b
 A13: red at 9e913f9: AssertionError: 'other' != 'scripts'
 A13: green at 6b5bd84
-A14: red at 9e913f9: mutation-verdict.py: error: unrecognized arguments: --python-listed
-A14: green at 6b5bd84
 A14: red at d8b6517: AssertionError: 8 != 9 : 321 listed
 A14: green at b9d43e2
 A15: red at 9e913f9: mutation-verdict.py: error: unrecognized arguments: --python-listed
