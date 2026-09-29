@@ -23,9 +23,9 @@ live until the attempt?
 
 ## Considered Options (the alternatives it was chosen against)
 
-- Pay a fixed amount once per completed set, keep the key sheet on the server until submission,
-  and leave practice out of the day base: chosen, because no model-written key can move the
-  ledger, the client never holds an answer early, and the pay cannot multiply other bonuses.
+- A fixed pay once per completed set: chosen, because no model-written key can move the ledger,
+  the key sheet stays on the server until submission so the client never holds an answer early,
+  and practice stays out of the day base so the pay cannot multiply other bonuses.
 - Pay per correct answer: rejected because a wrong key the model wrote would pay a wrong answer and
   refuse a right one, and it rewards guessing over finishing.
 - Send the whole set and hide the keys in the screen: rejected because the keys would travel to the

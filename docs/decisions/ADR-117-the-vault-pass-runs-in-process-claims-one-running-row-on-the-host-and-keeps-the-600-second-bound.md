@@ -25,9 +25,9 @@ it to one at a time?
 
 ## Considered Options (the alternatives it was chosen against)
 
-- The pass runs in-process in the triggering role, and claims one `running` row in `vault_passes`
-  under a partial unique index: chosen, because both roles share the ledger, and a row carries the
-  instant that lets a stale claim be abandoned.
+- An in-process pass that claims one `running` row: chosen, because both roles share the ledger,
+  and a row carries the instant that lets a stale claim be abandoned. The pass runs in the
+  triggering role, and a partial unique index in `vault_passes` holds the claim.
 - The issue's shape, one fixed external command through an exact-command privilege rule: rejected
   because the pass is DeckStreak's own code, so a shell-out would add a privilege and a user for
   work the process already does.

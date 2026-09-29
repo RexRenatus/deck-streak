@@ -26,9 +26,9 @@ number the stats do not hold, and how is each state proved?
 
 ## Considered Options (the alternatives it was chosen against)
 
-- A deterministic check of every numeral against the rendered stats, dropping the coaching and
-  sending the degraded digest on a miss: chosen, because the rule is exact, a test can kill it,
-  and the owner still gets the stats and a plain notice.
+- A deterministic check of every numeral: chosen, because the rule is exact and a test can kill
+  it; on a miss the coaching is dropped and the degraded digest is sent, so the owner still gets
+  the stats and a plain notice.
 - Send it and report the advisory row, as the pack alone would: rejected because a wrong number
   would reach the owner, and a report nobody reads does not stop it.
 - Retry the coaching once with a repair instruction: rejected because a retry doubles the run's

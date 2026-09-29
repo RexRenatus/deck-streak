@@ -27,10 +27,10 @@ keep, and what does it change?
 
 ## Considered Options (the alternatives it was chosen against)
 
-- Keep the stem and the stub; claim each capture by a unique stem in `inbox_captures`, write the
-  attachment first and the stub last through the atomic writer, never create the inbox, keep only
-  a plain extension, and let an erase delete the rows but no vault file: chosen, because it keeps
-  the product and removes the three unsafe writes.
+- Keep the stem and the stub, and make every write safe: chosen, because it keeps the product and
+  removes the three unsafe writes. Each capture is claimed by a unique stem in `inbox_captures`,
+  the attachment is written first and the stub last through the atomic writer, the inbox is never
+  created, only a plain extension is kept, and an erase deletes the rows but no vault file.
 - Port the writes as they are: rejected because a document named with separators after its last
   dot would write outside the inbox, and a resent file would overwrite a capture the curator may be
   reading.

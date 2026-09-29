@@ -154,8 +154,7 @@ pack is enforced by SPEC-116, and the rows below judge the files this SPEC adds.
 | id | criterion | decided by |
 |---|---|---|
 | B1 | over `crates/bot/src/vaultops_command.rs`: every reply is escaped for the parse mode and stays within the message length | the telegram-platform pack |
-| B2 | over the migrations under `migrations/`, this one among them: every table has `created_at` | the ledger-sqlite pack |
-| B3 | over `privacy.json`, `PRIVACY.md` and `crates/coordination/src/data_rights.rs`: `vault_passes` is declared with purpose, basis and retention, and export and erase cover it | the privacy-gdpr pack |
+| B2 | over `privacy.json`, `PRIVACY.md` and `crates/coordination/src/data_rights.rs`: `vault_passes` is declared with purpose, basis and retention, and export and erase cover it | the privacy-gdpr pack |
 
 ## 4. File manifest
 

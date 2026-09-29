@@ -24,9 +24,10 @@ prepared, how many at once, and who picks the confusable card?
 
 ## Considered Options (the alternatives it was chosen against)
 
-- A daily job after the sync, ordered by due day, capped per run, stored per card, with the
-  confusable card chosen from engine candidates: chosen, because the soonest reviews are served
-  first, the cost per day is bounded, and every choice the model makes is checked against a set.
+- A daily job after the sync, capped per run: chosen, because the soonest reviews are served
+  first (ordered by due day), the cost per day is bounded, each remedy is stored per card, and
+  every choice the model makes, the confusable card among them, is checked against the engine's
+  candidates.
 - Generate on request, when the owner sends `/remedy`: rejected because a run takes minutes, so the
   remedy is not ready at the review, and a request could start unbounded runs.
 - Generate every leech in one run: rejected because a large snapshot makes one run long and costly,

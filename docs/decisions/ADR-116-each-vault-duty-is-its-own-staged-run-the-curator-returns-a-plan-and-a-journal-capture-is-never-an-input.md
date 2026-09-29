@@ -23,9 +23,10 @@ how many staged runs does one pass make, and how does a journal capture stay out
 
 ## Considered Options (the alternatives it was chosen against)
 
-- Three staged runs, curator first; the curator returns a filing plan the engine checks and turns
-  into moves; the engine composes the daily note; journal captures leave the snapshot: chosen,
-  because each duty's red discards only its own run and no model writes a path or a byte.
+- Three staged runs with a checked plan: chosen, because each duty's red discards only its own
+  run and no model writes a path or a byte. The curator runs first and returns a filing plan the
+  engine checks and turns into moves, the engine composes the daily note, and journal captures
+  leave the snapshot.
 - One staged run for the whole pass: rejected because one red class would discard the other two
   duties' green work, and the owner would get no daily note on a day the curator erred.
 - The model writes the move records itself: rejected because a model-written path or name could

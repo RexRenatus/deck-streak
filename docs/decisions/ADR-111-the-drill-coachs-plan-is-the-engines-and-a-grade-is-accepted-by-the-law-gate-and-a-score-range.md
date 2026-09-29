@@ -27,12 +27,12 @@ counts, and who writes the XP the post-back pays.
 
 ## Considered Options (the alternatives it was chosen against)
 
-- The engine plans, the model writes the drill and integer scores, and the engine maps accepted
-  scores to XP: chosen, because every number that reaches the ledger is computed by a rule a test
-  can kill, and the model's part is only text the gate checks.
-- The model writes the grade's `xp` and the post-back clamps it, as the predecessor's product did:
-  rejected because a clamp bounds a wrong number without refusing it, so a hallucinated 25 pays
-  in full.
+- The engine plans and maps accepted integer scores to XP: chosen, because every number that
+  reaches the ledger is computed by a rule a test can kill, and the model writes only the drill
+  and the integer scores, text the gate checks.
+- The model writes the grade's `xp` and the post-back clamps it: rejected because a clamp bounds
+  a wrong number without refusing it, so a hallucinated 25 pays in full; this was the
+  predecessor's product.
 - The model plans the run (which day, which subject, whether to mint): rejected because the plan
   is configuration and state, a model's choice is not reproducible, and a scripted runner could not
   kill a mutant of it.
