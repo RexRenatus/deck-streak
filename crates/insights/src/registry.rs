@@ -33,11 +33,14 @@ pub const ROWS: &[Row] = &[Row {
 /// The rows that may run, in the registry's order.
 #[must_use]
 pub fn runnable(rows: &[Row]) -> Vec<Row> {
-    rows.to_vec()
+    rows.iter()
+        .copied()
+        .filter(|row| row.state == State::Live)
+        .collect()
 }
 
 /// The runnable row for `id`, or none when it is unknown or inert.
 #[must_use]
 pub fn find(rows: &[Row], id: &str) -> Option<Row> {
-    rows.iter().copied().find(|row| row.id == id)
+    runnable(rows).into_iter().find(|row| row.id == id)
 }

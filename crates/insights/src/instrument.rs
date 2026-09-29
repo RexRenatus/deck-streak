@@ -58,25 +58,24 @@ pub fn envelope<I: Instrument>(
     study_day: i64,
     reads: &I::Reads,
 ) -> Result<ReportEnvelope, serde_json::Error> {
-    let _ = (instrument, study_day, reads);
+    let report = instrument.build(reads);
     Ok(ReportEnvelope {
-        instrument: String::new(),
-        study_day: 0,
-        schema_version: 0,
-        failed_reads: Vec::new(),
-        report: Value::Null,
+        instrument: instrument.id().to_owned(),
+        study_day,
+        schema_version: instrument.schema_version(),
+        failed_reads: instrument.failed_reads(&report),
+        report: serde_json::to_value(&report)?,
     })
 }
 
 /// The envelope of a run that failed: its failed read is the reason, and no report is claimed.
 #[must_use]
 pub fn failure(id: &str, study_day: i64, schema_version: u32, reason: &str) -> ReportEnvelope {
-    let _ = (id, study_day, schema_version, reason);
     ReportEnvelope {
-        instrument: String::new(),
-        study_day: 0,
-        schema_version: 0,
-        failed_reads: Vec::new(),
+        instrument: id.to_owned(),
+        study_day,
+        schema_version,
+        failed_reads: vec![reason.to_owned()],
         report: Value::Null,
     }
 }

@@ -87,7 +87,8 @@ const NOTE_FIELDS: &str =
 
 /// Whether `character` is white space as Python's `str.strip` counts it: Unicode white space and
 /// the four information separators U+001C to U+001F.
-fn is_python_space(character: char) -> bool {
+#[must_use]
+pub fn is_python_space(character: char) -> bool {
     character.is_whitespace() || ('\u{1c}'..='\u{1f}').contains(&character)
 }
 

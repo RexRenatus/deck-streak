@@ -2,7 +2,8 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use deck_streak_ingest::structure::StructureReads;
+use deck_streak_ingest::structure::{StructureReads, is_python_space, safe_name};
+use deck_streak_ingest::wire::{WireValue, walk};
 use serde::Serialize;
 
 use crate::instrument::{Cadence, Instrument};
@@ -10,19 +11,19 @@ use crate::instrument::{Cadence, Instrument};
 /// The instrument's id.
 pub const ID: &str = "dark_fields";
 /// A field is dark only when this many reviewed notes have content in it.
-pub const MIN_DARK_NOTES: i64 = 0;
+pub const MIN_DARK_NOTES: i64 = 3;
 /// The most dark fields a report shows.
-pub const MAX_DARK_FIELDS_SHOWN: usize = 0;
+pub const MAX_DARK_FIELDS_SHOWN: usize = 40;
 /// The most unparseable note types a report shows.
-pub const MAX_UNPARSEABLE_SHOWN: usize = 0;
+pub const MAX_UNPARSEABLE_SHOWN: usize = 20;
 /// Anki's own template names, never field references.
-pub const SPECIAL_FIELD_NAMES: [&str; 0] = [];
+pub const SPECIAL_FIELD_NAMES: [&str; 6] = ["FrontSide", "Tags", "Type", "Deck", "Subdeck", "Card"];
 /// The characters that open a section, stripped before a name.
-pub const SECTION_PREFIXES: &str = "";
+pub const SECTION_PREFIXES: &str = "#/^";
 /// The template config's field number of the front format.
-pub const Q_FORMAT_FIELD: u128 = 0;
+pub const Q_FORMAT_FIELD: u128 = 1;
 /// The template config's field number of the back format.
-pub const A_FORMAT_FIELD: u128 = 0;
+pub const A_FORMAT_FIELD: u128 = 2;
 
 /// Everything the pure build reads.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -103,23 +104,228 @@ pub struct View {
 
 impl From<&StructureReads> for DarkFieldsInput {
     fn from(reads: &StructureReads) -> Self {
-        let _ = reads;
-        Self::default()
+        Self {
+            template_names: reads
+                .templates
+                .iter()
+                .map(|t| {
+                    (
+                        t.note_type_id,
+                        t.ordinal,
+                        t.note_type_name.clone(),
+                        t.name.clone(),
+                    )
+                })
+                .collect(),
+            template_configs: reads
+                .templates
+                .iter()
+                .map(|t| (t.note_type_id, t.ordinal, t.config.clone()))
+                .collect(),
+            declared_fields: reads
+                .fields
+                .iter()
+                .map(|f| (f.note_type_id, f.ordinal, f.name.clone()))
+                .collect(),
+            presence: reads.presence.clone(),
+            reviewed_note_count: i64::try_from(reads.reviewed_notes.len()).unwrap_or(i64::MAX),
+            failed_reads: reads.failed_reads.clone(),
+            names_are_safe: true,
+        }
     }
+}
+
+/// The front and back formats of one config, and whether a non-empty config failed to decode: a
+/// missing or empty config decodes to nothing and is no failure.
+fn decode_formats(config: Option<&[u8]>) -> (String, String, bool) {
+    let Some(config) = config.filter(|bytes| !bytes.is_empty()) else {
+        return (String::new(), String::new(), false);
+    };
+    let Ok(fields) = walk(config) else {
+        return (String::new(), String::new(), true);
+    };
+    let (mut front, mut back) = (String::new(), String::new());
+    for field in fields {
+        let WireValue::Length(bytes) = field.value else {
+            continue;
+        };
+        let target = if field.number == Q_FORMAT_FIELD {
+            &mut front
+        } else if field.number == A_FORMAT_FIELD {
+            &mut back
+        } else {
+            continue;
+        };
+        match std::str::from_utf8(bytes) {
+            Ok(text) => text.clone_into(target),
+            Err(_) => return (String::new(), String::new(), true),
+        }
+    }
+    (front, back, false)
+}
+
+/// Every `{{...}}` whose inside holds no brace, left to right and not overlapping, as the
+/// predecessor's pattern `\{\{([^{}]+)\}\}` finds them.
+fn tokens_in(text: &str) -> Vec<&str> {
+    let bytes = text.as_bytes();
+    let mut found = Vec::new();
+    let mut at = 0;
+    while at + 1 < bytes.len() {
+        if bytes[at] == b'{' && bytes[at + 1] == b'{' {
+            let start = at + 2;
+            let mut end = start;
+            while end < bytes.len() && bytes[end] != b'{' && bytes[end] != b'}' {
+                end += 1;
+            }
+            if end > start && bytes.get(end) == Some(&b'}') && bytes.get(end + 1) == Some(&b'}') {
+                found.push(&text[start..end]);
+                at = end + 2;
+                continue;
+            }
+        }
+        at += 1;
+    }
+    found
+}
+
+/// One captured token as a field name, or none for a special name or an empty one.
+fn normalise(raw: &str) -> Option<String> {
+    let mut name = raw.trim_matches(is_python_space);
+    if name.is_empty() {
+        return None;
+    }
+    if name.starts_with(|first| SECTION_PREFIXES.contains(first)) {
+        name = name[1..].trim_matches(is_python_space);
+    } else if let Some((_, last)) = name.rsplit_once(':') {
+        name = last.trim_matches(is_python_space);
+    }
+    if name.is_empty() || SPECIAL_FIELD_NAMES.contains(&name) {
+        return None;
+    }
+    Some(name.to_owned())
 }
 
 /// The fields one template config references, and whether it failed to decode.
 #[must_use]
 pub fn config_tokens(config: Option<&[u8]>) -> (BTreeSet<String>, bool) {
-    let _ = config;
-    (BTreeSet::new(), false)
+    let (front, back, failed) = decode_formats(config);
+    let tokens = tokens_in(&front)
+        .into_iter()
+        .chain(tokens_in(&back))
+        .filter_map(normalise)
+        .collect();
+    (tokens, failed)
 }
 
-/// The report over `input`.
+/// The report over `input`: per note type, the declared fields no template references, among
+/// those with content in enough reviewed notes. A failed read dominates and claims nothing; a
+/// collection with nothing reviewed or declared is cold.
 #[must_use]
 pub fn build_report(input: &DarkFieldsInput) -> Report {
-    let _ = input;
-    Report::default()
+    let mut report = Report {
+        reviewed_note_count: input.reviewed_note_count,
+        ..Report::default()
+    };
+    if !input.failed_reads.is_empty() {
+        report.failed_reads.clone_from(&input.failed_reads);
+        return report;
+    }
+    if input.reviewed_note_count == 0 || input.declared_fields.is_empty() {
+        report.is_cold = true;
+        return report;
+    }
+
+    let mut order: Vec<i64> = Vec::new();
+    let mut fields: BTreeMap<i64, Vec<(i64, &str)>> = BTreeMap::new();
+    for (ntid, ordinal, name) in &input.declared_fields {
+        if !fields.contains_key(ntid) {
+            order.push(*ntid);
+        }
+        fields.entry(*ntid).or_default().push((*ordinal, name));
+    }
+    let mut tokens: BTreeMap<i64, BTreeSet<String>> = BTreeMap::new();
+    let mut undecodable: BTreeSet<i64> = BTreeSet::new();
+    for (ntid, _, config) in &input.template_configs {
+        let (found, failed) = config_tokens(config.as_deref());
+        tokens.entry(*ntid).or_default().extend(found);
+        if failed {
+            undecodable.insert(*ntid);
+        }
+    }
+    // A template keyed twice keeps its last names, in the first key's place; a note type is
+    // named by its first template.
+    let mut named: Vec<((i64, i64), &str)> = Vec::new();
+    for (ntid, ordinal, note_type, _) in &input.template_names {
+        match named.iter_mut().find(|(key, _)| *key == (*ntid, *ordinal)) {
+            Some(slot) => slot.1 = note_type,
+            None => named.push(((*ntid, *ordinal), note_type)),
+        }
+    }
+
+    for ntid in order {
+        let name = named.iter().find(|((id, _), _)| *id == ntid).map_or_else(
+            || format!("UNKNOWN (ntid {ntid})"),
+            |(_, name)| (*name).to_owned(),
+        );
+        let referenced = tokens.get(&ntid).filter(|set| !set.is_empty());
+        let Some(referenced) = referenced.filter(|_| !undecodable.contains(&ntid)) else {
+            report.unparseable.push(Unparseable {
+                note_type: name,
+                note_type_id: ntid,
+            });
+            continue;
+        };
+        let referenced: BTreeSet<String> = if input.names_are_safe {
+            referenced.iter().map(|token| safe_name(token)).collect()
+        } else {
+            referenced.clone()
+        };
+        report.notetypes_checked += 1;
+        for (ordinal, field) in &fields[&ntid] {
+            if referenced.contains(*field) {
+                continue;
+            }
+            let count = input.presence.get(&(ntid, *ordinal)).copied().unwrap_or(0);
+            if count >= MIN_DARK_NOTES {
+                report.dark_fields.push(DarkField {
+                    note_type: name.clone(),
+                    field: (*field).to_owned(),
+                    reviewed_notes: count,
+                });
+            }
+        }
+    }
+    report
+        .dark_fields
+        .sort_by(|a, b| (&a.note_type, &a.field).cmp(&(&b.note_type, &b.field)));
+    report
+        .unparseable
+        .sort_by(|a, b| (&a.note_type, a.note_type_id).cmp(&(&b.note_type, b.note_type_id)));
+    report
+}
+
+impl Report {
+    /// The report as it is stored and served: the dark fields and unparseable note types capped,
+    /// and every total.
+    #[must_use]
+    pub fn view(self) -> View {
+        let dark_fields_total = self.dark_fields.len();
+        let unparseable_total = self.unparseable.len();
+        let mut dark_fields = self.dark_fields;
+        dark_fields.truncate(MAX_DARK_FIELDS_SHOWN);
+        let mut unparseable = self.unparseable;
+        unparseable.truncate(MAX_UNPARSEABLE_SHOWN);
+        View {
+            dark_fields,
+            dark_fields_total,
+            unparseable,
+            unparseable_total,
+            notetypes_checked: self.notetypes_checked,
+            reviewed_note_count: self.reviewed_note_count,
+            is_cold: self.is_cold,
+            failed_reads: self.failed_reads,
+        }
+    }
 }
 
 /// Dark Fields.
@@ -135,29 +341,18 @@ impl Instrument for DarkFields {
     }
 
     fn cadence(&self) -> Cadence {
-        Cadence::OnDemand
+        Cadence::Weekly
     }
 
     fn schema_version(&self) -> u32 {
-        0
+        1
     }
 
     fn build(&self, reads: &StructureReads) -> View {
-        let _ = reads;
-        View {
-            dark_fields: Vec::new(),
-            dark_fields_total: 0,
-            unparseable: Vec::new(),
-            unparseable_total: 0,
-            notetypes_checked: 0,
-            reviewed_note_count: 0,
-            is_cold: false,
-            failed_reads: Vec::new(),
-        }
+        build_report(&DarkFieldsInput::from(reads)).view()
     }
 
     fn failed_reads(&self, report: &View) -> Vec<String> {
-        let _ = report;
-        Vec::new()
+        report.failed_reads.clone()
     }
 }
