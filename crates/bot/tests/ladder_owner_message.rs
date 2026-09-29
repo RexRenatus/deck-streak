@@ -58,7 +58,7 @@ async fn the_owners_latest_message_is_recorded_and_no_other_chats() {
 
     // Another chat's message, a minute on: a stranger in their own chat, a stranger in the owner's
     // chat, and the owner in a group. The gate admits none of them, so none is recorded.
-    bench.clock.advance(Duration::from_secs(60));
+    bench.clock.advance(Duration::from_mins(1));
     for (update, from, chat, chat_type) in [
         (12, STRANGER, STRANGER, "private"),
         (13, STRANGER, OWNER, "private"),
@@ -75,7 +75,7 @@ async fn the_owners_latest_message_is_recorded_and_no_other_chats() {
     }
 
     // The owner's next message replaces the first: the latest one, at its own instant.
-    bench.clock.advance(Duration::from_secs(60));
+    bench.clock.advance(Duration::from_mins(1));
     commands
         .handle(incoming(said(15, 902, OWNER, OWNER, "private")))
         .await;

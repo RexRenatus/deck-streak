@@ -537,6 +537,28 @@ impl Router {
         )
     }
 
+    /// The flush's held T1s (SPEC-084 R11): each reacts in turn, and one delivered is settled and
+    /// recorded at the tier it rendered; a reaction not made leaves its celebration held as it was.
+    /// Answers how many were delivered.
+    async fn flush_reactions(
+        &self,
+        bot: &dyn BotTransport,
+        reactions: &[HeldRow],
+    ) -> Result<u32, KernelError> {
+        let mut sends = 0;
+        for row in reactions {
+            if let Outcome::Delivered(tier) = self.react(bot).await? {
+                let mut write = self.db.write().await?;
+                ledger::settle(&mut write, row.id).await?;
+                let sent = Subject::held(row).sent(tier, self.clock.now());
+                ledger::record(&mut write, &sent).await?;
+                write.commit().await?;
+                sends += 1;
+            }
+        }
+        Ok(sends)
+    }
+
     /// The rules of R4 in order: the kind's switch, then the claim, then the rules after it; a
     /// withhold after the claim releases it.
     async fn decide(
@@ -688,17 +710,7 @@ impl Router {
             self.abandon(&mut write, &row, reason, now).await?;
         }
         write.commit().await?;
-        let mut sends = 0;
-        for row in &reactions {
-            if let Outcome::Delivered(tier) = self.react(bot.as_ref()).await? {
-                let mut write = self.db.write().await?;
-                ledger::settle(&mut write, row.id).await?;
-                let sent = Subject::held(row).sent(tier, self.clock.now());
-                ledger::record(&mut write, &sent).await?;
-                write.commit().await?;
-                sends += 1;
-            }
-        }
+        let mut sends = self.flush_reactions(bot.as_ref(), &reactions).await?;
         let flush_max = usize::try_from(self.policy.deferral.flush_max).unwrap_or(usize::MAX);
         let rolled = full.split_off(full.len().min(flush_max));
         full.sort_by_key(|row| row.id);

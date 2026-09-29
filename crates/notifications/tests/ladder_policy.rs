@@ -57,8 +57,10 @@ fn the_policy_ladder_values_equal_the_parity_goldens() {
         constants
             .iter()
             .find(|(name, _)| name.ends_with(suffix))
-            .map(|(_, value)| value.clone())
-            .unwrap_or_else(|| panic!("the golden holds {suffix}"))
+            .map_or_else(
+                || panic!("the golden holds {suffix}"),
+                |(_, value)| value.clone(),
+            )
     };
 
     assert_eq!(

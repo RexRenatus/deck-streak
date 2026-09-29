@@ -399,7 +399,7 @@ async fn a_refused_reaction_holds_later_reactions_but_not_other_tiers() {
         "the dice's emoji"
     );
 
-    harness.clock.advance(Duration::from_millis(60_000));
+    harness.clock.advance(Duration::from_mins(1));
     let third = harness
         .router
         .route(&celebration(

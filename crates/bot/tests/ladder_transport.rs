@@ -143,6 +143,10 @@ async fn a_reveal_edits_its_placeholder_and_falls_back_to_a_new_message() {
     println!("examined: 3 reveals");
 }
 
+#[allow(
+    clippy::too_many_lines,
+    reason = "R8 and R9 are three renders on one fake Bot API, each judged call by call in one test"
+)]
 #[tokio::test]
 async fn the_reaction_the_dice_and_the_pin_reach_the_owners_chat() {
     let fake = FakeBotApi::start().await;
