@@ -42,7 +42,8 @@ JUDGE_FLAGS = {
     "oracle": {"--plan": PLAN, "--rows": ROWS},
 }
 JUDGE = re.compile(
-    r"(?m)^\s*python3\s+scripts/mutation-verdict\.py\s+judge\s+(.*?)(?: \|\| \w+=\$\?)?$"
+    r"(?m)^[ \t]*python3[ \t]+scripts/mutation-verdict\.py[ \t]+judge[ \t]+"
+    r"(.*?)(?: \|\| \w+=\$\?)?$"
 )
 # Two private-use characters mark what `shlex` would erase: a `$` the shell reads as text (inside
 # single quotes, or escaped) and a `$` outside every quote, where the shell word-splits the value.
@@ -144,14 +145,18 @@ WRONG = {
 def mark_dollars(command):
     """The command with each `$` the shell reads as text replaced by LITERAL (in single quotes,
     or escaped by a backslash) and each `$` outside every quote preceded by UNQUOTED. `shlex`
-    removes the quotes and the backslash, so this pass keeps the fact it would lose."""
-    out, quote, i = [], None, 0
+    removes the quotes and the backslash, so this pass keeps the fact it would lose. The command
+    ends where the shell ends it: at a control operator or a comment outside every quote."""
+    out, quote, i, start = [], None, 0, True
     while i < len(command):
         char = command[i]
         if char == "\\" and quote != "'" and i + 1 < len(command):
             out.append(LITERAL if command[i + 1] == "$" else char + command[i + 1])
-            i += 2
+            i, start = i + 2, False
             continue
+        if quote is None and (char in ";&|" or (char == "#" and start)):
+            break
+        start = quote is None and char in " \t"
         if quote is None and char in "'\"":
             quote = char
         elif quote == char:
