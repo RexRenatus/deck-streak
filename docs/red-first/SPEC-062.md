@@ -45,6 +45,11 @@ instance glob; a new test, `test_a_templates_own_dropin_directory_is_read_once`,
 assertion at 1dbbc73 (two identical refusal lines where one was expected) and is green at c967a20,
 with the row S06227 pinning the glob and S06226 the count.
 
+Fix round 5: A22 plants a template's setting restated in its one instance's drop-in and asserts
+that the unit guards refuse it, because systemd applies an instance's drop-in to that instance
+alone while the guards read it with the template. It failed by assertion at 4777c36 over the whole
+module (23 tests, one failure) and is green at f369943, with the row S06228 pinning the key rule.
+
 ```red-first
 A1: red at 300eca2: AssertionError: deploy/deploy.sh does not exist
 A1: green at bc0665a
@@ -84,4 +89,6 @@ A19: not red: the Caddy install already renders from the tag; the row S06223 pro
 A20: not red: the token is already scoped to the three release steps; the row S06224 proves the test fails when it is set at job level
 A21: red at 6938671: AssertionError: Lists differ: [] != ["deploy/systemd/planted@tty1.service.d/10[96 chars]sed"]
 A21: green at 59d8186
+A22: red at 4777c36: AssertionError: Lists differ: [] != ["deploy/systemd/planted@tty1.service.d/10[131 chars]sed"]
+A22: green at f369943
 ```
