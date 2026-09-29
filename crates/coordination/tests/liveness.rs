@@ -378,3 +378,14 @@ fn the_watch_pages_just_past_each_of_its_boundaries() {
         [drift(31)]
     );
 }
+
+#[test]
+fn the_skew_of_a_minute_count_at_the_lower_bound_is_the_shortest_signed_distance() {
+    // The rollover offsets the skew is built from are small, but the function takes any minute
+    // count: the shift by half a day must add, so the sum stays inside `i64` at the lower bound.
+    let a = i64::MIN + 100;
+    let reference = (i128::from(a) + 720).rem_euclid(1440) - 720;
+    assert_eq!(i128::from(signed_skew_minutes(a, 0)), reference);
+    assert!((-720..720).contains(&signed_skew_minutes(a, 0)));
+    println!("examined 1 minute count(s) at the lower bound");
+}
