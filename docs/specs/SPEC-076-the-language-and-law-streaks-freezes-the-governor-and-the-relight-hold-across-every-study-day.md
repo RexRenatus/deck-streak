@@ -467,7 +467,7 @@ R25. When the study set is empty, the layer answers as the predecessor's governo
 |---|---|---|
 | A23 | an empty history is answered with the stored anchor or the horizon, equal to the golden `lapse_anchor_beyond_the_walk`'s empty-history cases | `an_empty_history_is_anchored_as_the_predecessor_anchors_it` |
 
-```
+```acceptance
 A23: cargo test -p deck-streak-streaks --test governor_goldens -- --exact an_empty_history_is_anchored_as_the_predecessor_anchors_it
 ```
 
