@@ -240,3 +240,36 @@ fn a_prune_spelled_around_the_keyword_scan_beside_a_quoted_copy_is_refused() {
         );
     }
 }
+
+#[test]
+fn prose_that_names_the_delete_beside_the_prune_is_not_counted() {
+    let good = a_good_prune_source();
+    // A comment or doc line that names the prune in words and holds no double quote is prose: it
+    // runs nothing and quotes nothing, so the good source stays good beside it.
+    for prose in [
+        "/// The delete reads `created_at` through its index.",
+        "// One DELETE, so the index on created_at is used.",
+    ] {
+        assert_eq!(
+            prune_pin_problems(&format!("{prose}\n{good}")),
+            Vec::<String>::new(),
+            "prose was counted: {prose}"
+        );
+    }
+    // The statement count still reads prose: a commented copy of the statement is refused.
+    let copy = format!("/// DELETE FROM {TABLE} WHERE created_at < ?1\n{good}");
+    assert_eq!(
+        prune_pin_problems(&copy),
+        ["the source holds 2 delete statements, not one"],
+        "a commented copy of the statement was not refused as a second statement"
+    );
+    // A comment line that quotes is read, so its copy beside a changed prune is still refused.
+    let decoy = format!(
+        "// \"{PRUNE}\"\nlet done = sqlx::query!(\"DELETE FROM main.{TABLE} WHERE created_at + 0 < ?1\", cutoff);"
+    );
+    let problems = prune_pin_problems(&decoy);
+    assert!(
+        !problems.is_empty(),
+        "a quoting comment was read as prose: {problems:?}"
+    );
+}
