@@ -188,14 +188,21 @@ R13. **The job.** `coordination::jobs::TABLE` gains `vault_stats`,
      which CI proves with a synthetic list, as SPEC-053 R2 does. Its timer
      `deploy/systemd/deck-streak-job@vault_stats.timer` is written at 04:12 UTC, the neutral zone,
      with `Persistent=true` and the job table's waiver line, and `deploy/rail-contract.json` gains
-     its `OnCalendar` row. The drop-in
-     `deploy/systemd/deck-streak-job@vault_stats.service.d/30-after-sync.conf` orders it
-     `After=` the `sync` job's unit, which holds a start back only while a start of the sync
-     is pending, as SPEC-053 R3's generation unit is ordered. Write access reaches the unit only
-     through the optional drop-in `deploy/optional/vault-stats/deck-streak-job@vault_stats.conf`
-     (the vault's group, `UMask=0002`, and write access to the stats file's folder only, with a
-     placeholder path), which the private rail (#41) installs at the item's switch, as SPEC-065 R3
-     does for the readings folder.
+     its `OnCalendar` row. No drop-in for the instance ships under `deploy/systemd/`: SPEC-062
+     R14, A21 and A22 admit one instance directory per template, the sync's, and only
+     `LoadCredential=` in it, and ADR-124 rejected a second. The ordering and the write access
+     both reach the unit through the optional drop-in
+     `deploy/optional/vault-stats/deck-streak-job@vault_stats.conf`, which the private rail (#41)
+     installs at the item's switch, as SPEC-065 R3 does for the readings folder: it orders the
+     unit `After=` the `sync` job's unit, which holds a start back only while a start of the sync
+     is pending, as SPEC-053 R3's generation unit is ordered, and it gives the unit the vault's
+     group, `UMask=0002` and write access to the stats file's folder only, with a placeholder
+     path. Before the switch SPEC-143 R10 holds every fire, so the unit needs neither until then.
+     The `After=` line names the sync's unit as systemd names it, the job template, `@`, `sync`
+     and `.service`, as SPEC-053 R9's generation unit does: the public scrub admits a unit
+     instance name (SPEC-054 R2), which SPEC-032 R10 kept out before it did, and a specifier such
+     as `%p` is refused by `deploy/scripts/effective-check.py`, which expands only `%i`, `%n` and
+     `%N` (SPEC-061 §8).
 R14. **The run.** The work (`coordination::vault_stats::StatsWork`) takes the collection lock in
      its shared mode, so that a sync still in flight ends first, then reads the study day's sync
      outcome (SPEC-027 R5), as SPEC-053 R3's generation does:
@@ -250,7 +257,7 @@ R17. The eleven anti-goals hold (CHARTER): the job grants no XP, sends no messag
 | A25 | the read of a synthetic copy answers its five sets, inside the scope and the study-event rule | `the_unopened_read_answers_its_five_sets` |
 | A26 | a missing or unreadable copy is an error, never an empty read | `an_unreadable_copy_is_an_unopened_read_error` |
 | A27 | the job role runs `vault_stats` with its work: with the stats file unset, the run exits 1 and writes nothing | `the_vault_stats_job_runs_its_work` |
-| A28 | the optional drop-in grants write access to the stats file's folder only | `test_the_stats_drop_in_writes_only_its_folder` |
+| A28 | the optional drop-in orders the unit `After=` the sync job's unit, named with no specifier, and grants write access to the stats file's folder only | `test_the_stats_drop_in_writes_only_its_folder` |
 | A29 | over stub ports, each of R2's first blocks carries its port's value in its key, and a failed one fails the run with no file | `the_first_blocks_carry_their_ports_values` |
 | A30 | over stub ports, each of R3's later blocks carries its port's value in its key | `the_later_blocks_carry_their_ports_values` |
 
@@ -316,11 +323,10 @@ collection; the coordination tests feed each port a stub, and none reads a real 
 | `crates/daemon/src/role_job.rs` | `deck-streak-daemon` | changed: the stats port's wiring (R16) |
 | `crates/daemon/tests/roles.rs` | `deck-streak-daemon` | changed: A27 |
 | `deploy/systemd/deck-streak-job@vault_stats.timer` | deploy | added: the timer (R13) |
-| `deploy/systemd/deck-streak-job@vault_stats.service.d/30-after-sync.conf` | deploy | added: the ordering after the sync (R13) |
-| `deploy/optional/vault-stats/deck-streak-job@vault_stats.conf` | deploy | added: the write access the rail installs at the switch (R13) |
+| `deploy/optional/vault-stats/deck-streak-job@vault_stats.conf` | deploy | added: the ordering after the sync and the write access, which the rail installs at the switch (R13) |
 | `deploy/rail-contract.json` | deploy | changed: the timer's `OnCalendar` row |
 | `deploy/cutover.md` | deploy | changed: the `vault-stats` item's commands (R15) |
-| `scripts/tests/test_deploy_templates.py` | repo | changed: A28 |
+| `scripts/tests/test_deploy_templates.py` | repo | changed: A28, and `WAIVED` gains the stats timer's `randomized-delay-missing` |
 | `.env.example` | repo | changed: `DECKSTREAK_VAULT_STATS_FILE` with its example value |
 | `tools/parity-oracle/registry/spec_146.py` | repo | added: §7's goldens |
 | `tools/parity-oracle/goldens/stats_bridge_*.json`, `stats_bridge.constants.json`, `unopened.constants.json` | repo | added: §7's goldens |
