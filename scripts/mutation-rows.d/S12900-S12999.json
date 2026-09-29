@@ -24,6 +24,22 @@
         "WHOLE_SHARDS = 31\n",
         "a scheduled run and a dispatch with no package are sized to the 32 shards the weekly battery has always run (SPEC-129 R4)",
         "test_dispatch_shards.TheWholeTreeKeepsThirtyTwo.test_no_package_is_thirty_two_shards_whatever_the_listing"
+      ],
+      [
+        "S12904-THE-RUST-LEG-KEEPS-THE-GATES-TIMEOUT",
+        ".github/workflows/mutation-weekly.yml",
+        "--shard \"$SHARD/$SHARDS\" --timeout 300 --build-timeout 600",
+        "--shard \"$SHARD/$SHARDS\" --timeout 600 --build-timeout 600",
+        "the rust leg's per-mutant timeout is the 300 seconds the 32-leg dispatch always ran: a raised timeout is a weakened gate (SPEC-129 R5)",
+        "test_dispatch_shards.EveryMutationCommandKeepsTheGatesBounds.test_every_cargo_mutants_command_carries_the_gates_own_bounds"
+      ],
+      [
+        "S12905-THE-RUST-LEG-KEEPS-THE-GATES-BUILD-TIMEOUT",
+        ".github/workflows/mutation-weekly.yml",
+        "--shard \"$SHARD/$SHARDS\" --timeout 300 --build-timeout 600",
+        "--shard \"$SHARD/$SHARDS\" --timeout 300 --build-timeout 1200",
+        "the rust leg's build timeout is the 600 seconds the 32-leg dispatch always ran: a raised build timeout is a weakened gate (SPEC-129 R5)",
+        "test_dispatch_shards.EveryMutationCommandKeepsTheGatesBounds.test_every_cargo_mutants_command_carries_the_gates_own_bounds"
       ]
     ]
   }

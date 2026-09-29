@@ -15,10 +15,11 @@ import unittest
 from pathlib import Path
 
 from _support import examined
-from test_mutation_workflows import VERDICT, WEEKLY, jobs, listed, shard, workflow
+from test_mutation_workflows import VERDICT, WEEKLY, WORKFLOWS, jobs, listed, shard, workflow
 
 WHOLE = 32
 COUNT = "${{ needs.size.outputs.shards }}"
+BOUNDS = "--timeout 300 --build-timeout 600"
 
 
 def entries(package, count):
@@ -260,6 +261,25 @@ class TheExaminedTotalIsTheListing(unittest.TestCase):
         self.assertGreater(WHOLE, count)
         self.assertEqual(sorted(taken(count)), sorted(taken(WHOLE)))
         self.assertEqual(len(taken(count)), len(names))
+
+
+class EveryMutationCommandKeepsTheGatesBounds(unittest.TestCase):
+    """A6 (R5): every `cargo mutants` command line in every workflow carries the gate's bounds."""
+
+    def test_every_cargo_mutants_command_carries_the_gates_own_bounds(self):
+        found = {}
+        for path in sorted(WORKFLOWS.iterdir()):
+            if path.suffix not in (".yml", ".yaml"):
+                continue
+            lines = re.findall(r"cargo mutants [^\n]*", workflow(path))
+            if lines:
+                found[path.name] = lines
+        for name in ("ci.yml", "mutation-weekly.yml"):
+            self.assertIn(name, found, f"{name} runs no cargo mutants command")
+            self.assertGreaterEqual(len(found[name]), 1, name)
+        for name, lines in examined("workflow files", list(found.items())):
+            for line in examined(f"{name} commands", lines):
+                self.assertIn(BOUNDS, line, f"{name}: {line}")
 
 
 if __name__ == "__main__":
