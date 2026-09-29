@@ -281,6 +281,9 @@ R14. `mutation-weekly.yml` gains a `python` job of 16 shards, each `run --all --
       file makes the table VOID by name;
     - the dispatch input `package` (SPEC-057 R14) also takes `python`, which sweeps only the
       population; a crate's or `miniapp`'s scope runs no Python shard and promises no Python report.
+    - `battery --python-shards N` sets how many Python shard reports the battery promises, `16`
+      unless given: the weekly rehearsal runs one Python shard and passes `--python-shards 1`, and
+      `test_a_rehearsal_promises_the_python_shards_it_ran` covers it.
 
 **Rows and documents**
 
