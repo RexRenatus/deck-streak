@@ -11,7 +11,9 @@
 //! SIGTERM the loop finishes the batch in hand and confirms its offset; the role says `STOPPING=1`,
 //! closes the database and returns.
 //!
-//! The owner's `/sync` runs a sync cycle in this role (R11), through wiring's [`OwnerSyncCycle`].
+//! The owner's `/sync` runs a sync cycle in this role (R11), through wiring's [`OwnerSyncCycle`],
+//! which flushes the notification router joined to this role's transport (SPEC-041 R7, R13). The
+//! compiled notification policy is read at start, and a policy it refuses refuses start by its key.
 //! Its recompute is loaded once, when the database is open: the owner's courses, refused when they
 //! disagree with the readings taxonomy, their digest recorded, and the fold (SPEC-071 R1, R3, R4).
 
@@ -25,6 +27,7 @@ use deck_streak_kernel::{
     Clock, CredentialLoader, CredentialsDirectory, Environment, KernelSettings, Offload, Redactor,
     SettingsError, SystemClock,
 };
+use deck_streak_notifications::{Policy, PolicyError};
 
 use crate::lifecycle::{self, Notifier, NotifyState, ShutdownSignal};
 use crate::wiring::{
@@ -49,6 +52,9 @@ pub enum BotRoleError {
     /// The database could not be opened.
     #[error("the database could not be opened")]
     Database(#[source] WiringError),
+    /// The compiled notification policy refused start, by its key.
+    #[error(transparent)]
+    Policy(#[from] PolicyError),
     /// The recompute could not start: the courses, the readings taxonomy, their agreement, the
     /// courses' digest or the fold refused it (SPEC-071).
     #[error(transparent)]
@@ -81,6 +87,7 @@ pub async fn run(env: &Environment, redactor: &Redactor) -> Result<(), BotRoleEr
         }
         .into());
     }
+    let policy = Policy::compiled()?;
     let transport = Arc::new(Transport::new(&api, &token)?);
     let notifier = Notifier::from_env(env);
     let shutdown = ShutdownSignal::install().map_err(BotRoleError::Signals)?;
@@ -97,6 +104,13 @@ pub async fn run(env: &Environment, redactor: &Redactor) -> Result<(), BotRoleEr
             return Err(error.into());
         }
     };
+    let router = wiring::router(
+        policy,
+        db.clone(),
+        kernel.study_day_rule,
+        Arc::clone(&transport),
+        owner,
+    );
     let sync = OwnerSyncCycle::new(
         env.clone(),
         redactor.clone(),
@@ -104,7 +118,8 @@ pub async fn run(env: &Environment, redactor: &Redactor) -> Result<(), BotRoleEr
         offload,
         kernel.study_day_rule,
         recompute,
-    );
+    )
+    .with_router(Arc::new(router));
     let mut commands = Commands::new(
         Arc::clone(&transport),
         owner,

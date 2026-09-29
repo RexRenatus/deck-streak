@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE notification_queue SET tries = ?, hold = 'send' WHERE id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "86be98d94ae8463d0ec4dda0df7ce5f6ba9b4a590eef3ba7b5c5d69904e50aa8"
+}

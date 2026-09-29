@@ -13,7 +13,8 @@
 //! routes ([`session_routes`]): the handshake, the logout and the owner's day, over identity's
 //! gate, sessions and extractor. SPEC-071 adds the owner's analytics routes
 //! ([`analytics_routes`]): the rollups of a range of study days and the current day's score, over
-//! coordination's score reads.
+//! coordination's score reads. SPEC-041 adds the in-app feed the notification router appends to
+//! ([`notifications_routes`]), served to the owner's session alone.
 //!
 //! The context map (docs/CONTEXT-MAP.md) is binding: this crate depends only on what its line
 //! there declares, and a new edge is an ADR, never a fix to make code compile.
@@ -23,6 +24,7 @@
 
 pub mod analytics_routes;
 pub mod health;
+pub mod notifications_routes;
 pub mod router;
 pub mod serve;
 pub mod session_routes;
