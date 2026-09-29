@@ -17,6 +17,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from collections import Counter
 from pathlib import Path
 
 import _units
@@ -140,9 +141,10 @@ CREDENTIAL_SOURCES = {
 }
 # Which credentials each service's role reads: the api's owner gate (SPEC-024, SPEC-025), the bot's
 # transport, owner gate and `/sync` (SPEC-026 R1, R11), and the `sync` job's syncer (SPEC-022,
-# SPEC-027). The job template carries the sync's pair for every instance, and the private rail's map
-# answers them for the `sync` instance alone, the one job that reads them (ADR-038; SPEC-061 §8,
-# A14). SPEC-031's alert reads the bot token and the owner's id, whose private chat it pages (R3);
+# SPEC-027). The job template's `sync` instance carries the sync's pair in its drop-in, which the
+# reader reads with the template (SPEC-062 R14), and the private rail's map answers them for the
+# `sync` instance alone, the one job that reads them (ADR-038; SPEC-061 §8, A14). SPEC-031's alert
+# reads the bot token and the owner's id, whose private chat it pages (R3);
 # the evaluator and the watch read none.
 ROLE_CREDENTIALS = {
     "deck-streak-api.service": ("OWNER_USER_ID", "TELEGRAM_BOT_TOKEN"),
@@ -400,16 +402,38 @@ def dropin_directory_refusals(root):
     if not deploy.is_dir():
         return refused
     entries = sorted(deploy.rglob("*"))
-    own = {
-        path.parent / f"{path.name}.d"
+    shipped = [
+        path
         for path in entries
         if path.is_file()
         and path.suffix in _units.UNIT_KINDS
         and not path.parent.name.endswith(".d")
-    }
-    for path in entries:
+    ]
+    own = {path.parent / f"{path.name}.d" for path in shipped}
+    templates = {(path.parent, *path.name.split("@.", 1)) for path in shipped if "@." in path.name}
+
+    def the_shipped_template_of(path):
+        """systemd reads an instance's drop-ins from `<name>@<instance>.<type>.d/` (SPEC-062 R14)."""
+        stem, at, rest = path.name.removesuffix(".d").partition("@")
+        instance, dot, kind = rest.rpartition(".")
+        template = (path.parent, stem, kind)
+        return template if at and dot and instance and template in templates else None
+
+    folders = [path for path in entries if path.is_dir() and path.name.endswith(".d")]
+    instances = Counter(the_shipped_template_of(path) for path in folders if path not in own)
+    for path in folders:
         rel = path.relative_to(root).as_posix()
-        if not path.is_dir() or not path.name.endswith(".d") or path in own:
+        if path in own:
+            continue
+        template = the_shipped_template_of(path)
+        # The guards read a template's instance drop-ins into the template (SPEC-062 R14): exact
+        # for one instance, but two are merged where systemd keeps them apart, so both are refused.
+        if template is not None and instances[template] == 1:
+            continue
+        if template is not None:
+            refused.append(
+                f"{rel}: is not the only instance drop-in directory of its template, and is refused"
+            )
             continue
         if rel == NON_UNIT_DROPIN:
             continue
@@ -445,7 +469,8 @@ def environment_refusals(unit, ids):
 
 
 def loads_a_credential(unit):
-    """Whether `unit` holds a credential directive of any kind."""
+    """Whether `unit` holds a credential directive of any kind, its drop-ins and a template's
+    instance drop-ins included (SPEC-062 R14)."""
     return any(unit.values("Service", key) for key in CREDENTIAL_KEYS)
 
 
@@ -534,6 +559,27 @@ def off_list_refusals(unit, allowed):
         "and is refused"
         for a, refused in zip(unit.assignments, off, strict=True)
         if refused
+    ]
+
+
+# The one key an instance's drop-in may set (SPEC-062 R14). systemd applies an instance's drop-in to
+# that instance alone, while the guards read it into its template, so any other setting there would
+# be judged as the template's other instances' too, which systemd never gives them.
+INSTANCE_DROPIN_KEYS = {("Service", "LoadCredential")}
+
+
+def instance_dropin_refusals(unit):
+    """Every assignment of `unit` read from an instance's drop-in directory, neither the unit file
+    nor its own `<name>.d/`, whose section and key are not on INSTANCE_DROPIN_KEYS (SPEC-062
+    R14)."""
+    own = f"{unit.name}.d"
+    return [
+        f"{a.source}:{a.line}: [{a.section}] {a.key}={a.value} is set in an instance's drop-in, "
+        "which systemd applies to that instance alone, and is refused"
+        for a in unit.assignments
+        if a.source != unit.rel
+        and Path(a.source).parent.name != own
+        and (a.section, a.key) not in INSTANCE_DROPIN_KEYS
     ]
 
 
@@ -1068,17 +1114,114 @@ class CredentialsComeFromTheSocket(unittest.TestCase):
                 what,
             )
 
+    def test_a_shipped_templates_instance_dropin_directory_is_its_own_and_no_other_is(self):
+        # systemd reads an instance's drop-ins from `<name>@<instance>.<type>.d/`, so a shipped
+        # template's is admitted and read with the template: a key planted in it is judged as the
+        # template's own. An instance of a template the tree does not ship is refused, and so are
+        # two instances of a shipped one, which the reader would merge (SPEC-062 R14; SPEC-066
+        # amendment).
+        refused = "is not the drop-in directory of a unit shipped beside it, and is refused"
+        with tempfile.TemporaryDirectory() as scratch:
+            systemd = Path(scratch) / "deploy" / "systemd"
+            systemd.mkdir(parents=True)
+            (systemd / "planted@.service").write_text("[Service]\n", encoding="utf-8")
+            (systemd / "planted@tty1.service.d").mkdir()
+            self.assertEqual(dropin_directory_refusals(scratch), [], "the shipped template's own")
+            (systemd / "planted@tty1.service.d" / "10-planted.conf").write_text(
+                "[Unit]\nRequires=missing.service\n", encoding="utf-8"
+            )
+            (planted,) = subject(scratch).services
+            self.assertEqual(
+                off_list_refusals(planted, _units.PAGING_KEYS),
+                [
+                    "deploy/systemd/planted@tty1.service.d/10-planted.conf:2: [Unit] Requires="
+                    "missing.service is not on this unit's list of keys, and is refused"
+                ],
+                "a key planted in the template's instance drop-in",
+            )
+            (systemd / "other-app@tty1.service.d").mkdir()
+            (systemd / "other-app@tty1.service.d" / "override.conf").write_text(
+                "[Service]\nNice=5\n", encoding="utf-8"
+            )
+            self.assertEqual(
+                dropin_directory_refusals(scratch),
+                [f"deploy/systemd/other-app@tty1.service.d: {refused}"],
+                "an instance of a template the tree does not ship",
+            )
+            (systemd / "planted@test.service.d").mkdir()
+            shared = "is not the only instance drop-in directory of its template, and is refused"
+            self.assertEqual(
+                dropin_directory_refusals(scratch),
+                [
+                    f"deploy/systemd/other-app@tty1.service.d: {refused}",
+                    f"deploy/systemd/planted@test.service.d: {shared}",
+                    f"deploy/systemd/planted@tty1.service.d: {shared}",
+                ],
+                "a second instance of the shipped template",
+            )
+
+    def test_a_templates_own_dropin_directory_is_read_once(self):
+        # `<name>@.<type>.d/` is the template's own directory; the instance glob must not match it
+        # too, or each of its drop-ins is read twice and refused twice (SPEC-062 R14).
+        with tempfile.TemporaryDirectory() as scratch:
+            systemd = Path(scratch) / "deploy" / "systemd"
+            systemd.mkdir(parents=True)
+            (systemd / "planted@.service").write_text("[Service]\n", encoding="utf-8")
+            (systemd / "planted@.service.d").mkdir()
+            (systemd / "planted@.service.d" / "10.conf").write_text(
+                "[Unit]\nRequires=missing.service\n", encoding="utf-8"
+            )
+            (planted,) = subject(scratch).services
+            self.assertEqual(
+                off_list_refusals(planted, _units.PAGING_KEYS),
+                [
+                    "deploy/systemd/planted@.service.d/10.conf:2: [Unit] Requires="
+                    "missing.service is not on this unit's list of keys, and is refused"
+                ],
+                "a key planted in the template's own drop-in directory",
+            )
+
+    def test_an_instance_dropin_sets_only_the_credentials_it_loads(self):
+        # The guards read an instance's drop-in into its template, but systemd applies it to that
+        # instance alone: a setting there would stand in for the template's other instances, so an
+        # instance's drop-in sets only `LoadCredential=` (SPEC-062 R14).
+        units = examined("unit(s) under deploy/", list(subject().units.values()))
+        self.assertEqual([r for unit in units for r in instance_dropin_refusals(unit)], [])
+        with tempfile.TemporaryDirectory() as scratch:
+            systemd = Path(scratch) / "deploy" / "systemd"
+            (systemd / "planted@.service.d").mkdir(parents=True)
+            (systemd / "planted@tty1.service.d").mkdir()
+            (systemd / "planted@.service").write_text("[Service]\nMemoryMax=4G\n", encoding="utf-8")
+            (systemd / "planted@.service.d" / "10.conf").write_text(
+                "[Service]\nMemoryHigh=3G\n", encoding="utf-8"
+            )
+            (systemd / "planted@tty1.service.d" / "10-planted.conf").write_text(
+                f"[Service]\nLoadCredential=telegram-bot-token:{SOCKET}\nMemoryMax=48M\n",
+                encoding="utf-8",
+            )
+            (planted,) = subject(scratch).services
+            self.assertEqual(
+                instance_dropin_refusals(planted),
+                [
+                    "deploy/systemd/planted@tty1.service.d/10-planted.conf:3: [Service] "
+                    "MemoryMax=48M is set in an instance's drop-in, which systemd applies to that "
+                    "instance alone, and is refused"
+                ],
+                "a template's setting restated in its one instance's drop-in",
+            )
+
     def test_only_a_units_own_dropin_directory_is_shipped_under_deploy(self):
-        # The tree ships the drop-in directories of no unit, and one directory of a file that is no
-        # unit (SPEC-066 R2). Planted beside a unit: a directory named for no unit, one named for
-        # the suffix alone, one named for a template's instance, and one named for a unit that is
-        # not shipped: each refused by its path. A unit's own is read, so it is not refused here.
+        # The tree ships the drop-in directories of its units and of the sync instance, and one
+        # directory of a file that is no unit (SPEC-066 R2). Planted beside a unit: a directory
+        # named for no unit, one named for the suffix alone, one named for an instance of a template
+        # of another type, and one named for a unit that is not shipped: each refused by its path.
+        # A unit's own is read, so it is not refused here.
         self.assertEqual(dropin_directory_refusals(REPO), [])
         refused = "is not the drop-in directory of a unit shipped beside it, and is refused"
         planted = [
             "deck-streak-.service.d",
             "service.d",
-            f"planted{'@'}one.service.d",
+            f"planted{'@'}one.timer.d",
             ".d",
             "absent.service.d",
         ]
@@ -1988,3 +2131,121 @@ class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TheSyncLoginIsTheSyncJobsAlone(unittest.TestCase):
+    """SPEC-062 R14: the sync login is loaded by the sync job alone."""
+
+    SYNC_LOGIN = ("anki-sync-username", "anki-sync-password")
+    CONF = "20-sync-login.conf"
+
+    def dropin_dir(self, root, ident):
+        return Path(root) / "deploy" / "systemd" / f"{JOB_TEMPLATE}@{ident}.service.d"
+
+    def test_the_sync_login_is_loaded_by_the_sync_job_alone(self):
+        template = SYSTEMD / f"{JOB_TEMPLATE}@.service"
+        text = template.read_text(encoding="utf-8")
+        for ident in self.SYNC_LOGIN:
+            self.assertNotIn(ident, text, "the template requests a sync credential")
+        self.assertNotIn("SYNC_", text)
+        # The sync instance's drop-in loads exactly the two, from the socket.
+        dropin = self.dropin_dir(REPO, "sync") / self.CONF
+        self.assertTrue(dropin.is_file(), f"{dropin.relative_to(REPO)} is missing")
+        loaded = re.findall(r"^LoadCredential=(.*)$", dropin.read_text(encoding="utf-8"), re.M)
+        self.assertEqual(sorted(loaded), sorted(f"{i}:{SOCKET}" for i in self.SYNC_LOGIN))
+        # No other instance has a drop-in that loads one.
+        others = [
+            d for d in SYSTEMD.glob(f"{JOB_TEMPLATE}@*.service.d") if d.name != dropin.parent.name
+        ]
+        self.assertEqual(others, [], "an instance other than sync ships a drop-in")
+        # The pair list holds them under the sync instance, and under no other unit.
+        code = subprocess.run(
+            [sys.executable, str(DEPLOY / "scripts" / "credential-pairs.py"), "--root", str(REPO)],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(code.returncode, 0, code.stderr)
+        pairs = json.loads(code.stdout)["pairs"]
+        sync_unit = f"{JOB_TEMPLATE}@sync.service"
+        sync_pairs = {p["credential"] for p in pairs if p["unit"] == sync_unit}
+        self.assertEqual(sync_pairs, set(self.SYNC_LOGIN))
+        self.assertFalse(
+            [p for p in pairs if p["unit"] == f"{JOB_TEMPLATE}@.service"], "the template asks"
+        )
+        for ident in ("liveness", "maintenance"):
+            unit = f"{JOB_TEMPLATE}@{ident}.service"
+            self.assertFalse([p for p in pairs if p["unit"] == unit], f"{ident} asks")
+        examined("pair(s) listed", pairs)
+
+    def test_the_effective_check_accepts_the_shipped_drop_in_and_no_other(self):
+        checker = DEPLOY / "scripts" / "effective-check.py"
+        contract = json.loads((DEPLOY / "rail-contract.json").read_text(encoding="utf-8"))
+        with tempfile.TemporaryDirectory() as scratch:
+            root = Path(scratch)
+            (root / "deploy").mkdir()
+            contract["values"] = contract["values"][:1]
+            (root / "deploy" / "rail-contract.json").write_text(json.dumps(contract))
+            source = self.dropin_dir(REPO, "sync") / self.CONF
+            self.assertTrue(source.is_file(), f"{source.relative_to(REPO)} is missing")
+            shipped = self.dropin_dir(root, "sync")
+            shipped.mkdir(parents=True)
+            (shipped / self.CONF).write_text(source.read_text(encoding="utf-8"))
+            unit = "[Unit]\nDescription=x\n\n[Service]\nType=oneshot\n"
+            head = f"/etc/systemd/system/{JOB_TEMPLATE}@.service"
+            here = f"/etc/systemd/system/{JOB_TEMPLATE}@sync.service.d/{self.CONF}"
+            elsewhere = f"/etc/systemd/system/{JOB_TEMPLATE}@sync.service.d/99-host.conf"
+            other = f"/etc/systemd/system/{JOB_TEMPLATE}@liveness.service.d/{self.CONF}"
+            body = source.read_text(encoding="utf-8")
+
+            def check(dropin_path):
+                out = f"# {head}\n{unit}\n# {dropin_path}\n{body}"
+                return subprocess.run(
+                    [sys.executable, str(checker), "--root", str(root)],
+                    input=out,
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+
+            accepted = check(here)
+            self.assertEqual(accepted.returncode, 0, accepted.stdout + accepted.stderr)
+            # A drop-in the release does not ship is refused, whatever it holds.
+            for path in (elsewhere, other):
+                refused = check(path)
+                self.assertEqual(refused.returncode, 1, path)
+                self.assertIn("a drop-in that is not the rail's", refused.stdout + refused.stderr)
+
+    def test_a_shipped_drop_in_name_is_admitted_beside_the_rails_own_alone(self):
+        checker = DEPLOY / "scripts" / "effective-check.py"
+        contract = json.loads((DEPLOY / "rail-contract.json").read_text(encoding="utf-8"))
+        body = (self.dropin_dir(REPO, "sync") / self.CONF).read_text(encoding="utf-8")
+        with tempfile.TemporaryDirectory() as scratch:
+            root = Path(scratch)
+            (root / "deploy").mkdir()
+            contract["values"] = contract["values"][:1]
+            (root / "deploy" / "rail-contract.json").write_text(json.dumps(contract))
+            shipped = self.dropin_dir(root, "sync")
+            shipped.mkdir(parents=True)
+            (shipped / self.CONF).write_text(body)
+            unit = "[Unit]\nDescription=x\n\n[Service]\nType=oneshot\n"
+            head = f"/etc/systemd/system/{JOB_TEMPLATE}@.service"
+            verdicts = {}
+            for where in (
+                "/etc/systemd/system",
+                "/run/systemd/system",
+                "/etc/systemd/system.control",
+                "/home/user/.config/systemd/user",
+            ):
+                path = f"{where}/{JOB_TEMPLATE}@sync.service.d/{self.CONF}"
+                done = subprocess.run(
+                    [sys.executable, str(checker), "--root", str(root)],
+                    input=f"# {head}\n{unit}\n# {path}\n{body}",
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+                verdicts[where] = done.returncode
+            self.assertEqual(
+                [w for w, rc in verdicts.items() if rc == 0], ["/etc/systemd/system"], verdicts
+            )

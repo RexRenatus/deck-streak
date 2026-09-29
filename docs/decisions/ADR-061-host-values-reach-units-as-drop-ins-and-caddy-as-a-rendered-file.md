@@ -81,3 +81,17 @@ SPEC-061's A3 to A5 and SPEC-062's A7; at gate 2, `effective-check.py` over ever
 ADR-007; ADR-010; ADR-032 (amended in its Caddy sentence); ADR-038; SPEC-061; SPEC-062; the Caddy
 documentation on `import`, `{$ENV}` placeholders, `caddy validate`, `caddy adapt` and `caddy reload`,
 read through Context7; systemd.unit(5) on drop-in directories.
+
+## Amendment (2026-09-29)
+
+The job template no longer requests the sync login. Every instance of the template used to ask the
+credential socket for it at each start, though only the `sync` instance reads it, so the other
+instances requested a credential they were never answered. The sync login is now loaded by the sync
+job alone: the two `LoadCredential=` lines moved from the template into a drop-in in the `sync`
+instance's `.service.d` directory under `deploy/systemd/`, which the deploy installs byte for byte
+(SPEC-062 R14). `credential-pairs.py` lists that drop-in's pairs under the instance, and
+`effective-check.py` accepts a drop-in the release itself ships for an instance, beside the rail's own
+`10-rail.conf`. The rail's map is unchanged: it already answered the login to the `sync` instance
+alone.
+
+The sync login's drop-in was chosen over a separate sync unit file, which would duplicate the template's hardening.

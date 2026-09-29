@@ -295,6 +295,8 @@ async fn a_source_outside_the_token_grammar_is_refused() {
         "-reading",
         too_long.as_str(),
     ];
+    // The refusal names SPEC-040 R2's grammar by its text, so the constant cannot drift from it.
+    assert_eq!(SOURCE_GRAMMAR, "^[a-z0-9][a-z0-9:._-]{0,127}$");
     let refusal = format!("a grant source is an opaque token matching {SOURCE_GRAMMAR}");
     let verdicts: Vec<(&str, Result<(), String>)> = outside
         .iter()
