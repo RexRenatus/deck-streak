@@ -69,9 +69,9 @@ The fine port (#110, #111, #113)
 R3. `fine(day, reference, requested)` runs in one `BEGIN IMMEDIATE` write through the kernel's
     repository base: when a row of the reference exists it writes nothing and answers that row's
     amount, forgiveness and reversal; otherwise it clips the request exactly as SPEC-082 R5's capped
-    debit does (the wallet, the cap over the wallet at the day's start, and the day's debits), writes
-    the coin movement of source `fine` and the reference when the debited amount is positive, and
-    writes the penalty row with the debited amount, in the same transaction. Its answer and its
+    debit does (the wallet, the cap over the wallet at the day's start, and the day's debits),
+    writes the coin movement of source `fine` and the reference when the debited amount is positive,
+    and writes the penalty row with the debited amount, in the same transaction. Its answer and its
     writes equal the golden of `_debit_fine`.
 R4. A request of 0 or less debits nothing and records a row of amount 0, as the predecessor's clip
     answers 0 for it; a caller that has nothing to fine does not call the port.
@@ -100,8 +100,8 @@ R8. `standing_fines(day)` lists the fines of a study day that are not reversed, 
 
 A fine's surcharge
 
-R9. `extend_surcharge(until)` sets the scroll pass's surcharge end in `economy_state` (SPEC-082
-    R12) to the later of its stored end and `until`, in one write; it never shortens an end and never
+R9. `extend_surcharge(until)` sets the scroll pass's surcharge end in `economy_state` (SPEC-082 R12)
+    to the later of its stored end and `until`, in one write; it never shortens an end and never
     touches the pass's own end. It is the one writer of the surcharge's end, called by the rung-2
     fine (#110), and the price rule stays SPEC-082 R11's.
 
