@@ -264,6 +264,25 @@ impl SqliteSyncRuns {
         Ok(finished.map(UtcMillis::from_epoch_millis))
     }
 
+    /// When the first successful run that started in `day` started, if one did: what the recompute's
+    /// owed settle reads (SPEC-071 R15), since a closed day is settled by the recompute that follows
+    /// a successful sync which started after its close.
+    ///
+    /// # Errors
+    ///
+    /// [`KernelError::Database`] when the read fails.
+    pub async fn first_success_in(&self, day: StudyDay) -> Result<Option<UtcMillis>, KernelError> {
+        let day = day.epoch_day();
+        let started = sqlx::query_scalar!(
+            r#"SELECT min(started_at) AS "started: i64" FROM sync_runs
+               WHERE status = 'ok' AND study_day = ?1"#,
+            day
+        )
+        .fetch_one(self.db.reader())
+        .await?;
+        Ok(started.map(UtcMillis::from_epoch_millis))
+    }
+
     /// The outcome of the syncs that started in `day`, if any did (R10): the day's last success,
     /// or else its last run.
     ///

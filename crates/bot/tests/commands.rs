@@ -19,10 +19,12 @@ use deck_streak_bot::commands::{
     CONFIRM_ERASE, EXPORT_FILE_NAME, MENU, MINI_APP_URL, Reply, erase_done_reply,
     erase_failed_reply, export_caption, export_failed_reply, help_reply, sync_reply,
 };
+use deck_streak_bot::score_commands::{score_failed_reply, score_reply};
 use deck_streak_bot::{MiniAppUrl, Scores, Sent, SyncAnswer, SyncOutcome, SyncRefusal};
 use deck_streak_coordination::data_rights_registry::export_all;
-use deck_streak_kernel::Db;
+use deck_streak_coordination::score::{DayScore, Pillars};
 use deck_streak_kernel::Environment;
+use deck_streak_kernel::{Db, StudyDay};
 use fake_bot_api::{
     APP_URL, Bench, OWNER, STRANGER, ScriptedSync, golden_send, incoming, messages_directory,
     owner_says, owner_taps, payload, tap,
@@ -112,8 +114,8 @@ async fn the_menu_is_registered_for_the_owners_chat_only() {
         .collect();
     assert_eq!(
         registered,
-        BTreeSet::from(["privacy", "export", "delete", "sync"]),
-        "the four commands of the menu"
+        BTreeSet::from(["privacy", "export", "delete", "sync", "score"]),
+        "the five commands of the menu"
     );
     for (entry, command) in MENU
         .iter()
@@ -299,10 +301,44 @@ async fn sync_runs_a_cycle_now_and_forces_one_recompute() {
     );
 }
 
+/// A synthetic day's score: `total` in `grade`, with `reviews` and `retention`.
+const fn scored(
+    total: i64,
+    grade: (&'static str, &'static str),
+    reviews: i64,
+    retention: Option<f64>,
+) -> DayScore {
+    DayScore {
+        day: StudyDay::from_epoch_day(20_102),
+        total,
+        grade_label: grade.0,
+        grade_emoji: grade.1,
+        pillars: Pillars {
+            consistency: 76.0,
+            retention,
+            workload: 70.0,
+            volume: 60.5,
+            mastery: 55.0,
+        },
+        reviews,
+        retention,
+    }
+}
+
 /// Every message the bot renders, by its golden's name.
 fn rendered() -> Vec<(&'static str, Reply)> {
     let synced = |sync, scores| Ok(SyncAnswer { sync, scores });
     vec![
+        (
+            "score",
+            score_reply(Some(&scored(72, ("SOLID", "\u{2705}"), 40, Some(87.5)))),
+        ),
+        (
+            "score-no-retention",
+            score_reply(Some(&scored(12, ("COLD", "\u{1f976}"), 0, None))),
+        ),
+        ("score-none", score_reply(None)),
+        ("score-failed", score_failed_reply()),
         ("help", help_reply()),
         ("export-failed", export_failed_reply()),
         ("erase-done-log-held", erase_done_reply(true)),
