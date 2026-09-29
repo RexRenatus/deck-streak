@@ -116,11 +116,9 @@ async fn serve_owner_request(
             );
             match cycle.run().await {
                 Ok(answer) => tracing::info!(?answer, "the owner's request was served"),
-                Err(refusal) => {
-                    tracing::error!(reason = refusal.reason, "the owner's request was refused");
-                    if let Some(reason) = RefusalReason::parse(refusal.reason) {
-                        record_refusal(db, reason).await;
-                    }
+                Err(reason) => {
+                    tracing::error!(reason = reason.as_str(), "the owner's request was refused");
+                    record_refusal(db, reason).await;
                 }
             }
         }

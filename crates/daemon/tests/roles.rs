@@ -17,7 +17,7 @@ use std::sync::Arc;
 use deck_streak_coordination::ledger::{CronLedger, Outcome, SqliteCronLedger};
 use deck_streak_daemon::wiring::{DATABASE_FILE, StateDirectory, open_database};
 use deck_streak_ingest::settings::{LAW_DECK_ROOT, SYNC_PASSWORD, SYNC_USERNAME};
-use deck_streak_ingest::state::SqliteIngestState;
+use deck_streak_ingest::state::{RefusalReason, SqliteIngestState};
 use deck_streak_ingest::sync_runs::{
     ReasonCode, RunHistory, SqliteSyncRuns, SyncRun, SyncRunStore, Trigger,
 };
@@ -513,65 +513,87 @@ async fn a_refused_owner_request_is_recorded_and_the_next_run_does_not_retry_it(
     );
 }
 
-#[test]
-fn every_code_the_owner_cycle_refuses_with_is_one_the_job_records() {
-    // SPEC-128 R1: `serve_owner_request` records only a code `RefusalReason` parses; a code outside
-    // the set is logged and the flag stays set, so every job run would retry the request (#323).
-    let source = fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/src/wiring.rs"))
-        .expect("the wiring's source reads");
-    let start = source
-        .find("impl OwnerSyncCycle {")
-        .expect("the owner cycle");
-    let end = source
-        .find("/// What the owner is told")
-        .expect("the answer's mapping");
-    let codes: Vec<&str> = source[start..end]
-        .split('"')
+/// The codes the `ingest_state.refused_reason` `CHECK` allows, read from the migration that holds it.
+fn stored_refusal_codes() -> Vec<String> {
+    let migration = fs::read_to_string(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../migrations/012801_ingest_refused_owner_request.sql"
+    ))
+    .expect("the migration reads");
+    let list = migration
+        .split("refused_reason IN (")
+        .nth(1)
+        .and_then(|rest| rest.split(')').next())
+        .expect("the CHECK's list");
+    list.split('\'')
         .skip(1)
         .step_by(2)
-        .filter(|literal| literal.bytes().all(|b| b.is_ascii_lowercase() || b == b'_'))
-        .collect();
-    assert_eq!(codes.len(), 7, "the cycle's refusal codes: {codes:?}");
-    for code in codes {
+        .map(str::to_owned)
+        .collect()
+}
+
+#[test]
+fn every_code_the_owner_cycle_refuses_with_is_one_the_job_records() {
+    // SPEC-128 R1, replacing the source scan (#396): the cycle refuses with a `RefusalReason` and
+    // the job records that value, so the set to check is the enum's variants against the stored codes.
+    let stored = stored_refusal_codes();
+    assert_eq!(stored.len(), 8, "the stored codes: {stored:?}");
+    for code in &stored {
         assert!(
-            deck_streak_ingest::state::RefusalReason::parse(code).is_some(),
-            "the owner cycle refuses with {code}, which the job cannot record"
+            RefusalReason::parse(code).is_some(),
+            "the migration stores {code}, which the enum cannot name"
+        );
+    }
+    for reason in RefusalReason::ALL {
+        assert!(
+            stored.iter().any(|code| code == reason.as_str()),
+            "{} is a variant the migration's CHECK refuses",
+            reason.as_str()
         );
     }
 }
 
 #[test]
 fn a_refusal_code_is_a_variant_of_the_closed_enum() {
-    // SPEC-128 amendment (#396): a code defined in a NEW file and recorded through the composition
-    // root must not pass the guard. Plant one in a copy of the daemon's sources and read it the way
-    // `every_code_the_owner_cycle_refuses_with_is_one_the_job_records` reads them.
-    let directory = tempfile::tempdir().expect("a temporary directory");
-    let src = directory.path().join("src");
-    fs::create_dir_all(&src).expect("the copy's directory");
-    let real = concat!(env!("CARGO_MANIFEST_DIR"), "/src/wiring.rs");
-    fs::copy(real, src.join("wiring.rs")).expect("the wiring copies");
-    fs::write(
-        src.join("planted_refusal.rs"),
-        "fn plant(error: &dyn std::fmt::Display) -> SyncRefusal {\n    \
-         super::refused(\"planted_unknown_code\", error)\n}\n",
-    )
-    .expect("the planted file writes");
-    // The sources that criterion reads: the wiring's owner cycle alone.
-    let guarded = fs::read_to_string(src.join("wiring.rs")).expect("the guarded source reads");
-    let start = guarded
-        .find("impl OwnerSyncCycle {")
-        .expect("the owner cycle");
-    let end = guarded
-        .find("/// What the owner is told")
-        .expect("the answer's mapping");
-    let scanned = &guarded[start..end];
-    let planted = fs::read_to_string(src.join("planted_refusal.rs")).expect("the plant reads");
-    let planted_code = planted.split('"').nth(1).expect("the planted literal");
-    assert!(
-        scanned.contains(planted_code),
-        "the scan passed a code defined in a new file: {planted_code} is recorded through \
-         `refused` and no scan reads it"
-    );
+    // SPEC-128 amendment (#396): the codes stored today are the enum's strings, byte for byte, no
+    // two variants share one, and the owner cycle's only refusal type is the enum (a code outside
+    // it does not compile).
+    const DEV: [(&str, RefusalReason); 8] = [
+        ("rescore_unrecorded", RefusalReason::RescoreUnrecorded),
+        ("sync_settings_refused", RefusalReason::SyncSettingsRefused),
+        (
+            "credentials_directory_refused",
+            RefusalReason::CredentialsDirectoryRefused,
+        ),
+        (
+            "scope_settings_refused",
+            RefusalReason::ScopeSettingsRefused,
+        ),
+        ("recompute_refused", RefusalReason::RecomputeRefused),
+        ("sync_record_failed", RefusalReason::SyncRecordFailed),
+        (
+            "obligations_unreadable",
+            RefusalReason::ObligationsUnreadable,
+        ),
+        ("recompute_failed", RefusalReason::RecomputeFailed),
+    ];
+    assert_eq!(RefusalReason::ALL.len(), DEV.len());
+    for (code, reason) in DEV {
+        assert_eq!(reason.as_str(), code);
+        assert!(RefusalReason::ALL.contains(&reason), "{code} is listed");
+    }
+    let mut codes: Vec<&str> = RefusalReason::ALL.iter().map(|r| r.as_str()).collect();
+    codes.sort_unstable();
+    codes.dedup();
+    assert_eq!(codes.len(), 8, "no two variants share a code");
+    fn refuses_with_the_enum<F>(_run: F)
+    where
+        F: std::future::Future<Output = Result<deck_streak_bot::SyncAnswer, RefusalReason>>,
+    {
+    }
+    let _typed = |cycle: &deck_streak_daemon::wiring::OwnerSyncCycle| {
+        refuses_with_the_enum(cycle.run());
+    };
 }
 
 #[tokio::test]

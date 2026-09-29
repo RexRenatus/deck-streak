@@ -30,7 +30,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use deck_streak_analytics::settings::AnalyticsSettings;
-use deck_streak_bot::{OwnerChat, Scores, SyncAnswer, SyncOutcome, SyncRefusal, Transport};
+use deck_streak_bot::{OwnerChat, Scores, SyncAnswer, SyncOutcome, Transport};
 use deck_streak_coordination::courses::{CoursesDisagree, agree};
 use deck_streak_coordination::delivery::{DeliveryCounts, DeliveryMarker};
 use deck_streak_coordination::obligations::Obligations;
@@ -44,6 +44,7 @@ use deck_streak_ingest::engine::{AnkiEngine, RslibEngine};
 use deck_streak_ingest::gate::ChangeGate;
 use deck_streak_ingest::reader::CollectionReader;
 use deck_streak_ingest::settings::{ScopeSettings, SyncSettings};
+use deck_streak_ingest::state::RefusalReason;
 use deck_streak_ingest::sync::{SyncReport, Syncer};
 use deck_streak_ingest::sync_runs::{SqliteSyncRuns, Trigger};
 use deck_streak_kernel::{
@@ -317,20 +318,21 @@ impl OwnerSyncCycle {
     ///
     /// # Errors
     ///
-    /// The refusal, with its reason code, when the cycle could not run to its end.
-    pub async fn run(&self) -> Result<SyncAnswer, SyncRefusal> {
+    /// The refusal's [`RefusalReason`], when the cycle could not run to its end: a closed set, so a
+    /// code outside it does not compile (SPEC-128 amendment, ADR-193).
+    pub async fn run(&self) -> Result<SyncAnswer, RefusalReason> {
         let clock = Arc::new(SystemClock);
         let gate = ChangeGate::new(self.db.clone(), self.rule, clock.clone());
         gate.state()
             .request_rescore(clock.now())
             .await
-            .map_err(|error| refused("rescore_unrecorded", &error))?;
+            .map_err(|error| refused(RefusalReason::RescoreUnrecorded, &error))?;
         let settings = SyncSettings::from_env(&self.env)
-            .map_err(|error| refused("sync_settings_refused", &error))?;
+            .map_err(|error| refused(RefusalReason::SyncSettingsRefused, &error))?;
         let directory = CredentialsDirectory::from_env(&self.env)
-            .map_err(|error| refused("credentials_directory_refused", &error))?;
+            .map_err(|error| refused(RefusalReason::CredentialsDirectoryRefused, &error))?;
         let scope = ScopeSettings::from_env(&self.env)
-            .map_err(|error| refused("scope_settings_refused", &error))?;
+            .map_err(|error| refused(RefusalReason::ScopeSettingsRefused, &error))?;
         let reader = self
             .recompute
             .reader(&settings, scope, self.offload.clone());
@@ -370,20 +372,20 @@ pub fn router(
 }
 
 /// The refusal `reason`, logged with its cause: the cause names a setting or a step, never a
-/// value.
-fn refused(reason: &'static str, error: &dyn std::fmt::Display) -> SyncRefusal {
-    tracing::error!(reason, %error, "the owner's sync could not run");
-    SyncRefusal { reason }
+/// value. It takes the closed enum, so no other code can be recorded through it.
+fn refused(reason: RefusalReason, error: &dyn std::fmt::Display) -> RefusalReason {
+    tracing::error!(reason = reason.as_str(), %error, "the owner's sync could not run");
+    reason
 }
 
 /// The reason code of a cycle that could not run to its end: the `sync` job's own
 /// (`role_job.rs`). A failed sync is not one: it is a recorded run, answered as such.
-const fn cycle_reason(error: &CycleError) -> &'static str {
+const fn cycle_reason(error: &CycleError) -> RefusalReason {
     match error {
-        CycleError::History(_) | CycleError::Sync(_) => "sync_record_failed",
-        CycleError::Obligations(_) => "obligations_unreadable",
+        CycleError::History(_) | CycleError::Sync(_) => RefusalReason::SyncRecordFailed,
+        CycleError::Obligations(_) => RefusalReason::ObligationsUnreadable,
         CycleError::Gate(_) | CycleError::Window(_) | CycleError::Recompute(_) => {
-            "recompute_failed"
+            RefusalReason::RecomputeFailed
         }
     }
 }
@@ -413,11 +415,11 @@ fn answer_of(report: &CycleReport) -> SyncAnswer {
 mod tests {
     use std::sync::Arc;
 
-    use deck_streak_bot::{ApiUrl, Scores, Sent, SyncOutcome, SyncRefusal, Transport};
+    use deck_streak_bot::{ApiUrl, Scores, Sent, SyncOutcome, Transport};
     use deck_streak_coordination::delivery::{DeliveryCounts, DeliveryMarker};
     use deck_streak_coordination::sync_cycle::{CycleError, CycleReport, Recompute};
     use deck_streak_ingest::gate::RunReason;
-    use deck_streak_ingest::state::SqliteIngestState;
+    use deck_streak_ingest::state::{RefusalReason, SqliteIngestState};
     use deck_streak_ingest::sync::SyncReport;
     use deck_streak_ingest::sync_runs::{ReasonCode, SyncRun, Trigger};
     use deck_streak_kernel::{
@@ -501,15 +503,15 @@ mod tests {
         let cause = || KernelError::LoggingInstalled;
         assert_eq!(
             cycle_reason(&CycleError::History(cause())),
-            "sync_record_failed"
+            RefusalReason::SyncRecordFailed
         );
         assert_eq!(
             cycle_reason(&CycleError::Obligations(cause())),
-            "obligations_unreadable"
+            RefusalReason::ObligationsUnreadable
         );
         assert_eq!(
             cycle_reason(&CycleError::Recompute(cause())),
-            "recompute_failed"
+            RefusalReason::RecomputeFailed
         );
     }
 
@@ -541,9 +543,7 @@ mod tests {
         let answer = cycle.run().await;
         assert_eq!(
             answer,
-            Err(SyncRefusal {
-                reason: "sync_settings_refused"
-            }),
+            Err(RefusalReason::SyncSettingsRefused),
             "no sync endpoint is set"
         );
         let state = SqliteIngestState::new(db.clone())
