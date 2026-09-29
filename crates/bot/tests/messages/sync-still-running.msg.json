@@ -1,0 +1,12 @@
+{
+  "duty": "bot-commands",
+  "schema": "phx.duty.message.v1",
+  "send": {
+    "link_preview_options": {
+      "is_disabled": true
+    },
+    "parse_mode": "HTML",
+    "text": "The sync is still running. Send /sync again in a minute for its outcome."
+  },
+  "x-message": "sync-still-running"
+}
