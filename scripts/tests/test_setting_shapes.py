@@ -328,6 +328,8 @@ class TheGuardReadsRustSource(unittest.TestCase):
         self.assertEqual(unpinned(raw), [])
         escaped = self.tree('let (e, shape) = ("a \\" //", "a whole depth");')
         self.assertEqual(unpinned(escaped), [])
+        hashed = self.tree('let (h, shape) = (r#"a" // "#, "a whole depth");')
+        self.assertEqual(unpinned(hashed), [])
 
     def test_a_shape_only_a_block_comment_spells_is_refused(self):
         root = self.tree('/* "a whole depth" */\nlet shape = Depth::SHAPE;')
@@ -341,7 +343,7 @@ class TheGuardReadsRustSource(unittest.TestCase):
         root = self.own(self.tree(), IMPL_TEXT + module)
         self.assertEqual(len(implementations(root)), 1)
         self.assertEqual(len(unpinned(root)), 1)
-        braces = "#[cfg(test)]\nmod tests {\n    /* { */\n"
+        braces = "#[cfg(test)]\nmod tests {\n    /* { */\n    // {\n"
         braces += "    const C: char = '{';\n    const S: &str = \"{\";\n}\n"
         root = self.own(self.tree(), IMPL_TEXT + braces + 'pub const X: &str = "a whole depth";\n')
         self.assertEqual(len(unpinned(root)), 1)
@@ -402,7 +404,12 @@ class TheGuardReadsOutOfLineTestModules(unittest.TestCase):
 
     def test_a_file_that_is_no_declared_test_module_is_not_read_as_one(self):
         elsewhere = ("depth/tests.rs", self.SPELLING)
-        for declaration in ("", "mod tests;\n", "#[cfg(test)]\nmod other;\n"):
+        for declaration in (
+            "",
+            "mod tests;\n",
+            "#[cfg(test)]\nmod other;\n",
+            "#[allow(dead_code)]\nmod tests;\n",
+        ):
             root = self.declared(declaration, elsewhere)
             self.assertEqual(len(implementations(root)), 1)
             self.assertEqual(len(unpinned(root)), 1, declaration)
