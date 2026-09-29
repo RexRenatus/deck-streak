@@ -613,7 +613,10 @@ def run_in_own_group(
     long after their runs). The command therefore runs as the leader of a new process group, which
     holds every descendant that stays in it, and a timeout, or any other way out while the leader
     still runs, ends the whole group with SIGKILL. A descendant that leaves the group (its own
-    `setsid` or `setpgid`) is not reached.
+    `setsid` or `setpgid`) is not reached, and it is not this function's to reap either: on a
+    timeout the leader is waited for and the collection of the output is dropped (a timed-out run
+    discards it), so an escapee that still holds the pipes cannot hold the run past its bound
+    (#409). Both pipes are closed on every way out.
 
     Raises:
         subprocess.TimeoutExpired: The command outran `timeout`; its group is already dead.
@@ -631,12 +634,14 @@ def run_in_own_group(
         stdout, stderr = process.communicate(timeout=timeout)
     except subprocess.TimeoutExpired:
         kill_group(process)
-        process.communicate()
+        process.wait()
         raise
     finally:
         if process.poll() is None:
             kill_group(process)
             process.wait()
+        for pipe in (process.stdout, process.stderr):
+            pipe.close()
     return subprocess.CompletedProcess(command, process.returncode, stdout, stderr)
 
 
@@ -891,7 +896,18 @@ def retired(root: pathlib.Path, base: str) -> int:
 # --------------------------------------------------------------------------- the command line
 
 
+def end_on_sigterm() -> None:
+    """A SIGTERM ends the runner through its `finally` blocks, so a killer's group ends with it.
+
+    The killer leads a group of its own, so a SIGTERM to the runner, or to the runner's group as
+    `timeout -s TERM` and a job cancel send it, no longer reaches the killer; the default action
+    would end the runner with no cleanup and leave the killer's group running (#409).
+    """
+    signal.signal(signal.SIGTERM, lambda signum, _frame: sys.exit(128 + signum))
+
+
 def main(argv: list[str] | None = None) -> int:
+    end_on_sigterm()
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("verb", choices=["count", "ids", "census", "prove", "retired"])
     parser.add_argument("--root", default=str(pathlib.Path(__file__).resolve().parents[1]))
