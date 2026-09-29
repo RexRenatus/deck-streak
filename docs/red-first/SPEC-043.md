@@ -92,10 +92,11 @@ edits two test files: it changes the bodies of those helpers (`prune_pin_problem
 stand: their words are unchanged and the new criteria carry the strengthening.
 
 A21 has two decoys and this fence line quotes the first; the second, a statement with another
-spelling, failed at the red commit as `the second statement is not refused: []` (runs.rs:138). The
-commit 2bce259c later changed that test's body to assert the good source as well; with that body
-put onto the red commit the failure is at runs.rs:138, and the fence line quotes the earlier body.
-The same body puts A22's failure at runs.rs:155 where the fence line says 151.
+spelling, failed at the red commit as `the second statement is not refused: []` (runs.rs:134), the
+line of the body as committed at 84146ad, which is also the body the A22 fence line's runs.rs:151
+belongs to. The commit 2bce259c later changed that test's body to assert the good source as well.
+A second measurement, with that later body put onto the red commit, moves the same failures to
+runs.rs:138 and runs.rs:155; the lines above quote the body as committed.
 
 ```red-first
 A21: red at 84146ad3fb5aa57a995f4cf7de9e517ec67e508c: the decoy is not refused: [] (runs.rs:121)
@@ -134,4 +135,47 @@ A23: red at 25b1a12108b61d743630a57be0304db9e96938e2: assertion `left == right` 
 A23: green at b2b13fcce4d70a3e8fd98c46313f4b057d037c9a
 A21: red at 4d9ddc5fbc7dcfd0d246923ac0b1456b5ec23101: the decoy is not refused: DELETE FROM main.agent_runs WHERE created_at + 0 < ?1: [] (runs.rs:215)
 A21: green at 0ec2d29665d407e779bcf94df465cd10b57065b9
+```
+
+### Fix round 2
+
+Two more classes were open. The word count read prose as a keyword, and the verdict pin read
+neither a raw-identifier declaration nor a conditional attribute in every spelling. Each rule is one
+sentence and each killer is generated from the rule's population. Each new test was committed alone
+before the helpers changed, and failed by assertion. The A21 and A23 fence lines above stand.
+
+- Class rule, prune pin: the word count reads the source with every prose comment removed, where
+  prose is a comment, in any form, that holds no double quote, and the statement count still reads
+  comments. `a_delete_word_in_any_comment_form_is_not_counted_but_the_statement_in_one_is` was
+  generated from the eight forms of a Rust comment (`//`, `///`, `//!`, `/* */`, `/** */`, `/*! */`,
+  a nested block, a block over several lines): a benign delete word in each is not refused, and the
+  whole statement in each is refused as a second statement.
+- Class rule, verdict pin: identifiers and attribute paths compare after the `r#` prefix is
+  removed, and an attribute is conditional when the last segment of its path is `cfg` or
+  `cfg_attr`. `every_spelling_of_the_declaration_and_of_a_conditional_attribute_is_read` was
+  generated from two declaration spellings (`Verdict`, `r#Verdict`) and four attribute spellings
+  (`cfg`, `r#cfg`, `cfg_attr`, `r#cfg_attr`), each with and without spaces inside the brackets: 16
+  members. Each member was compiled once in a scratch crate and none was rejected.
+- The two named tests, `prose_that_names_the_delete_beside_the_prune_is_not_counted`,
+  `a_raw_identifier_declaration_is_the_verdict_enum` and
+  `a_conditional_attribute_on_the_enum_is_refused`, were committed alone first as well. The
+  conditional test's commit carries a stub `is_conditional` that answers false, so the file
+  compiles and the test fails by assertion; the last verdict helper commit replaces the stub.
+
+Disclosure of the edits between red and green: the scans are helper functions inside the two test
+files, so the green commits edit those files. Commit 1fdacad0 adds `comment_spans`,
+`raw_string_len`, `char_literal_len` and `code_of`, and makes `delete_keywords_in` read `code_of`.
+Commit cb94c178 adds `without_raw_prefixes` and `declares_the_verdict` and uses it in
+`declarations_of` and `attributes_of`. Commit 9fdf9391 replaces the stub `is_conditional`. No commit
+changes an assertion of the tests above.
+
+```text
+A21: red at e34a4e49a57786221353ba20bd5baef6997499fa: prose was counted: /// The delete reads `created_at` through its index.: ["the source writes the word delete 2 times, not once"] (runs.rs:253)
+A21: red at f2d220350de15bb5c41baa56bf999fd54a595506: a benign delete word in a comment was counted: // The delete reads created_at through its index.: ["the source writes the word delete 2 times, not once"] (runs.rs:298)
+A21: green at 1fdacad0bdbae66c1e6af24e5dfb5ca502f179d8
+A23: red at b943730aea15ad5588f469eda7ffee1289cb371b: assertion `left == right` failed, left: 0, right: 1 (verdict.rs:148)
+A23: green at cb94c17866005d69cd8b4b8079bcab4ac9a40be3
+A23: red at 89d84eddc0f7386339680fce6f1400d07d4c49f3: a conditional attribute was not seen: ["#[derive(Clone)]", "#[cfg(any())]", "#[must_use]"] (verdict.rs:182)
+A23: red at 4d11e2e6c80c343534643f7b85407009b3c23ce1: a conditional attribute was not refused: #[must_use] #[cfg(any())] (verdict.rs:220)
+A23: green at 9fdf9391f05e91e1ae1163ba1194c36b79dcf8fa
 ```
