@@ -4,8 +4,8 @@
 - **Decided by:** ADR-006 (owner-only requests), ADR-012 (the parity oracle), ADR-019 (the owner's
   read-tap and XP decisions), and ADR-047 (the studied window, the XP constants' home, the grant
   keys and the tap-only tick).
-- **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
-  `docs/specs/` with its tests and `docs/red-first/SPEC-047.md` (ADR-016).
+- **Status:** promoted from `docs/specs/planned/` by the delivery that builds it, with its tests and
+  `docs/red-first/SPEC-047.md` (ADR-016).
 
 ## 1. The problem, measured
 
@@ -100,7 +100,9 @@ A11: cargo test -p deck-streak-api --test readings_read -- --exact the_read_rout
 | `crates/readings/src/store.rs` | `deck-streak-readings` | changed |
 | `crates/readings/src/lib.rs` | `deck-streak-readings` | changed |
 | `migrations/004701_readings_read_and_studied.sql` | `deck-streak-readings` | added |
+| `crates/readings/src/data_rights.rs` | `deck-streak-readings` | changed: the export carries the new columns |
 | `crates/readings/tests/studied.rs` | `deck-streak-readings` | added |
+| `crates/readings/tests/reading_xp.rs` | `deck-streak-readings` | added: pins the amounts, sources and track |
 | `crates/coordination/src/readings/read_tap.rs` | `deck-streak-coordination` | added |
 | `crates/coordination/src/readings/settle.rs` | `deck-streak-coordination` | added |
 | `crates/coordination/tests/readings_read_tap.rs` | `deck-streak-coordination` | added |
@@ -109,6 +111,8 @@ A11: cargo test -p deck-streak-api --test readings_read -- --exact the_read_rout
 | `crates/api/src/readings_routes.rs` | `deck-streak-api` | added: the read route |
 | `crates/api/src/router.rs`, `crates/api/src/lib.rs` | `deck-streak-api` | changed: mounts the readings routes |
 | `crates/api/tests/readings_read.rs` | `deck-streak-api` | added |
+| `scripts/mutation-rows.d/S04700-S04799.json` | repo | added |
+| `changelog.d/read-tap-047.md` | repo | added |
 | `tools/parity-oracle/registry/spec_047.py` | repo | added: registers `preread_tracking.py:is_studied` (SPEC-029's registry) |
 | `tools/parity-oracle/goldens/is_studied.json` | repo | added |
 | `Cargo.lock`, `.sqlx/` | workspace | changed |
