@@ -136,3 +136,52 @@ each kills the mutant is its row (R3), run with `python3 scripts/mutation_rows.p
 ## 7. References
 
 - Issue #336; ADR-192; ADR-057; SPEC-039; SPEC-057 R20; SPEC-020 (the kernel's settings).
+
+## 8. Amendment, 2026-09-29: every lexer arm of the guard is killed by an assertion
+
+Issue #406. The guard reads Rust with a small lexer, and a review measured eight rewrites of that
+lexer that left the guard green: nested block comments untracked, raw strings unrecognised, character
+literals unrecognised, block comments kept in the skeleton, strings kept in the skeleton, escapes
+inside strings ignored, the implementation's own `SHAPE` constant not excluded from the spellings,
+and every other source file read whole instead of only its test module. This amendment states the
+rule that closes them and the two readings that refused a correct tree.
+
+R7. Each of the eight rewrites turns `test_setting_shapes.py` red by an assertion inside a test that
+already existed, so no test is renamed or removed and A11 and A12 keep their meaning. The
+unmodified guard stays green and prints the same `examined 24 Setting impl(s)`.
+R8. An out-of-line `#[cfg(test)] mod name;`, with or without `#[path = "..."]`, is read as the
+implementation file's own test module. The file is resolved as rustc resolves it: the `#[path]`
+value relative to the implementation file's directory, otherwise `name.rs` or `name/mod.rs` beside
+the file (below the file's own directory for a file that is not `lib.rs`, `main.rs` or `mod.rs`).
+R9. `impl Setting for` is read from comment-free source, so one inside a block comment is not
+examined.
+R10. Each of the eight rewrites has one row in the band S19200-S19299 (S19216 to S19225: ten rows,
+because the two new readings have a row each and a test may serve several), proved by its full id.
+
+Insertions into the criteria of section 3 (the section is not edited, which keeps this file's earlier
+bytes as they were; the criteria are defined below, by insertion of new A-numbers, as SPEC-038 §8
+ruling (i) allows):
+
+- A13 (out-of-line test modules) and A14 (an impl in a comment) are new tests, red first.
+- A15 is the set of assertions added inside the existing tests of A11 and A12, recorded `not red`
+  because the base guard already passed them; the ten rows prove each kills its rewrite.
+
+## 9. Amendment acceptance criteria
+
+| id | criterion | decided by |
+|---|---|---|
+| A13 | an out-of-line `#[cfg(test)] mod`, beside the file, in a `mod.rs` directory, through `#[path]`, or below a `lib.rs`, is the implementation's own test module | `python3 -m unittest discover -s scripts/tests -p test_setting_shapes.py -k TheGuardReadsOutOfLineTestModules` |
+| A14 | an `impl Setting for` inside a block comment is not examined | `python3 -m unittest discover -s scripts/tests -p test_setting_shapes.py -k TheGuardIgnoresAnImplementationInAComment` |
+| A15 | the strengthened assertions of A11 and A12 refuse each of the eight lexer rewrites | `python3 -m unittest discover -s scripts/tests -p test_setting_shapes.py -k TheGuardJudgesAPlantedTree` |
+
+```acceptance
+A13: python3 -m unittest discover -s scripts/tests -p test_setting_shapes.py -k TheGuardReadsOutOfLineTestModules
+A14: python3 -m unittest discover -s scripts/tests -p test_setting_shapes.py -k TheGuardIgnoresAnImplementationInAComment
+A15: python3 -m unittest discover -s scripts/tests -p test_setting_shapes.py -k TheGuardJudgesAPlantedTree
+```
+
+## 10. What this amendment does NOT do
+
+- It does not change any production line, `SHAPE` literal or setting (#406).
+- It does not make the lexer a full Rust parser: a `#[cfg(test)]` module written by a macro is
+  still not counted (#406).

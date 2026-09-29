@@ -56,6 +56,30 @@ The guard change at a8d57e9 turns the class green (`Ran 7 tests`, `OK`) and the 
 (`Ran 17 tests`, `OK`, `examined 24 Setting impl(s)`). A11's nine tests are unchanged; its
 criterion text now maps one clause to each of them.
 
+## Addendum, 2026-09-29: the guard's tests kill every lexer-arm mutant
+
+Criteria A13, A14 and A15 join the fence (SPEC-192 section 9). The eight lexer rewrites of issue #406
+each survived the base guard (`Ran 17 tests`, `OK`, `examined 24 Setting impl(s)`). 7034826c
+strengthens assertions inside the existing tests of A11 and A12, so each rewrite now turns the module
+red by assertion, and the unmodified guard prints the same `examined 24 Setting impl(s)`; that
+commit edits a test file, so A15 is recorded `not red`.
+
+The new tests of A13 (five) and A14 (one) were committed alone at faaf43ec against the guard as
+7034826c left it: all six fail by assertion.
+
+```red-first
+A13: red at faaf43ec: AssertionError: Lists differ: ['demo::Depth (src/depth.rs) "a whole depth"'] != [] : four of the five tests of TheGuardReadsOutOfLineTestModules, each naming the file of the out-of-line module
+A13: green at 77ed28a0
+A14: red at faaf43ec: AssertionError: 2 != 1 : test_a_block_comment_holding_an_impl_is_not_examined
+A14: green at 77ed28a0
+A15: not red: the base guard already passed the assertions added inside A11's and A12's tests; the rows S19216 to S19225 prove each kills its rewrite
+```
+
+The red run (`Ran 23 tests`, `FAILED (failures=5)`; one is the `lib.rs` case, `Lists differ:
+['demo::Depth (src/lib.rs) "a whole depth"'] != []`). The guard change at 77ed28a0 edits the test file itself
+(the guard and its tests are one module: the guard code and its docstring, no assertion); it turns the whole module green (`Ran 23 tests`,
+`OK`, `examined 24 Setting impl(s)`). Ten rows (S19216 to S19225) are proved KILLED by full id.
+
 ## The population: 24 `impl Setting for`, and how each is pinned
 
 The guard's 24 (`examined 24 Setting impl(s)`), from `git grep -n 'impl .*Setting for' -- crates |
