@@ -237,11 +237,31 @@ class TheGuardJudgesAPlantedTree(unittest.TestCase):
             "#[cfg(test)]\nmod tests {\n" + IMPL_TEXT + "}\n", encoding="utf-8"
         )
         self.assertEqual(unpinned(double), ['demo::Depth (src/depth.rs) "a whole depth"'])
+        twin = self.tree()
+        module = "#[cfg(test)]\nmod t {"
+        pad = IMPL_TEXT.index('"a whole depth"') - len(module) - len("const Y: &str = ")
+        module += " " * pad + 'const Y: &str = "a whole depth";\n}\n'
+        (twin / "crates" / "twin" / "src").mkdir(parents=True)
+        (twin / "crates" / "twin" / "src" / "depth.rs").write_text(
+            module + IMPL_TEXT.replace("Depth", "Twin"), encoding="utf-8"
+        )
+        self.assertEqual(unpinned(twin), ['demo::Depth (src/depth.rs) "a whole depth"'])
 
     def test_a_shape_a_test_of_the_crate_spells_is_pinned(self):
         root = self.tree('const X: &str = "a whole depth";')
         self.assertEqual(len(implementations(root)), 1)
         self.assertEqual(unpinned(root), [])
+        deeper = self.tree()
+        (deeper / "crates" / "demo" / "tests" / "sub").mkdir()
+        (deeper / "crates" / "demo" / "tests" / "sub" / "depth.rs").write_text(
+            'const X: &str = "a whole depth";', encoding="utf-8"
+        )
+        self.assertEqual(unpinned(deeper), [])
+        quoted = self.tree('const X: &str = "a \\"q\\" shape";')
+        (quoted / "crates" / "demo" / "src" / "depth.rs").write_text(
+            IMPL_TEXT.replace('"a whole depth"', '"a \\"q\\" shape"'), encoding="utf-8"
+        )
+        self.assertEqual(unpinned(quoted), [])
 
     def test_a_shape_the_test_only_reads_back_from_the_constant_is_refused(self):
         self.assertEqual(len(unpinned(self.tree("let shape = Depth::SHAPE;"))), 1)
@@ -254,6 +274,10 @@ class TheGuardJudgesAPlantedTree(unittest.TestCase):
 
     def test_a_row_of_another_file_does_not_pin_it(self):
         row = ["S00001-DEPTH", "demo", "src/other.rs", 'str = "a whole depth";', "", "t::k", "d"]
+        self.assertEqual(len(unpinned(self.tree(rows=[row]))), 1)
+        row = ["S00001-DEPTH", "demo", "src/depth.rs", 'str = "a whole width";', "", "t::k", "d"]
+        self.assertEqual(len(unpinned(self.tree(rows=[row]))), 1)
+        row = ["S00001-DEPTH", "else", "src/depth.rs", 'str = "a whole depth";', "", "t::k", "d"]
         self.assertEqual(len(unpinned(self.tree(rows=[row]))), 1)
 
     def src(self, root, text):
@@ -281,6 +305,16 @@ class TheGuardJudgesAPlantedTree(unittest.TestCase):
         )
         self.assertEqual(len(implementations(root)), 2)
         self.assertEqual(len(unpinned(root)), 2)
+        named = self.src(
+            self.tree('const X: &str = "a whole depth";\nconst Y: &str = "a whole width";'),
+            "impl Setting for Named {\n    const SHAPE: &'static str = WIDTH;\n}\n"
+            'impl Setting for Wide {\n    const SHAPE: &\'static str = "a whole width";\n}\n',
+        )
+        try:
+            found = unpinned(named)
+        except TypeError as error:
+            self.fail(f"a shape with no literal must be refused, not crash the guard: {error}")
+        self.assertEqual(found, ["demo::Named (src/more.rs) None"])
 
     def test_a_shape_only_a_comment_spells_is_refused(self):
         root = self.tree('// "a whole depth"\nlet shape = Depth::SHAPE;')
@@ -288,6 +322,8 @@ class TheGuardJudgesAPlantedTree(unittest.TestCase):
         self.assertEqual(len(unpinned(root)), 1)
         quote = self.tree('let q = \'"\'; // "a whole depth"\nlet shape = Depth::SHAPE;')
         self.assertEqual(len(unpinned(quote)), 1)
+        escaped = self.tree('let q = \'\\"\'; // "a whole depth"\nlet shape = Depth::SHAPE;')
+        self.assertEqual(len(unpinned(escaped)), 1)
 
 
 class TheGuardReadsRustSource(unittest.TestCase):
@@ -319,6 +355,13 @@ class TheGuardReadsRustSource(unittest.TestCase):
         root = self.own(self.tree(), IMPL_TEXT + module)
         self.assertEqual(len(implementations(root)), 1)
         self.assertEqual(unpinned(root), [])
+        for header in (
+            "mod tests {\n    fn t() {}\n",
+            "#[allow(unused)]\nmod tests {\n",
+            "pub mod tests {\n",
+        ):
+            module = "#[cfg(test)]\n" + header + '    const X: &str = "a whole depth";\n}\n'
+            self.assertEqual(unpinned(self.own(self.tree(), IMPL_TEXT + module)), [], header)
 
     def test_a_shape_a_test_spells_after_a_url_on_its_line_is_pinned(self):
         root = self.tree('let (url, shape) = ("http://host/", "a whole depth");')
@@ -330,6 +373,8 @@ class TheGuardReadsRustSource(unittest.TestCase):
         self.assertEqual(unpinned(escaped), [])
         hashed = self.tree('let (h, shape) = (r#"a" // "#, "a whole depth");')
         self.assertEqual(unpinned(hashed), [])
+        byte = self.tree('let (b, shape) = (br##"a"# // " // "##, "a whole depth");')
+        self.assertEqual(unpinned(byte), [])
 
     def test_a_shape_only_a_block_comment_spells_is_refused(self):
         root = self.tree('/* "a whole depth" */\nlet shape = Depth::SHAPE;')
@@ -337,6 +382,8 @@ class TheGuardReadsRustSource(unittest.TestCase):
         self.assertEqual(len(unpinned(root)), 1)
         nested = self.tree('/* a /* b */ "a whole depth" */\nlet shape = Depth::SHAPE;')
         self.assertEqual(len(unpinned(nested)), 1)
+        slashed = self.tree('/*/ "a whole depth" */\nlet shape = Depth::SHAPE;')
+        self.assertEqual(len(unpinned(slashed)), 1)
 
     def test_a_production_line_after_the_own_files_test_module_is_refused(self):
         module = '#[cfg(test)]\nmod tests {}\n\npub const X: &str = "a whole depth";\n'
@@ -370,6 +417,7 @@ class TheGuardReadsOutOfLineTestModules(unittest.TestCase):
         src = root / "crates" / "demo" / "src"
         if own != "depth.rs":
             (src / "depth.rs").unlink()
+        (src / own).parent.mkdir(parents=True, exist_ok=True)
         (src / own).write_text(text + declaration, encoding="utf-8")
         for name, body in files:
             (src / name).parent.mkdir(parents=True, exist_ok=True)
@@ -380,6 +428,8 @@ class TheGuardReadsOutOfLineTestModules(unittest.TestCase):
         root = self.declared("#[cfg(test)]\nmod tests;\n", ("depth/tests.rs", self.SPELLING))
         self.assertEqual(len(implementations(root)), 1)
         self.assertEqual(unpinned(root), [])
+        public = "#[cfg(test)]\npub(crate) mod tests;\n"
+        self.assertEqual(unpinned(self.declared(public, ("depth/tests.rs", self.SPELLING))), [])
 
     def test_a_module_directory_with_a_mod_file_is_its_test_module(self):
         root = self.declared("#[cfg(test)]\nmod tests;\n", ("depth/tests/mod.rs", self.SPELLING))
@@ -390,6 +440,7 @@ class TheGuardReadsOutOfLineTestModules(unittest.TestCase):
         for declaration in (
             '#[cfg(test)]\n#[path = "words/shape.rs"]\nmod tests;\n',
             '#[path = "words/shape.rs"]\n#[cfg(test)]\nmod tests;\n',
+            '#[cfg(test)]\n#[path="words/shape.rs"]\nmod tests;\n',
         ):
             root = self.declared(declaration, ("words/shape.rs", self.SPELLING))
             self.assertEqual(len(implementations(root)), 1)
@@ -401,6 +452,10 @@ class TheGuardReadsOutOfLineTestModules(unittest.TestCase):
         )
         self.assertEqual(len(implementations(root)), 1)
         self.assertEqual(unpinned(root), [])
+        for own, name in (("main.rs", "tests.rs"), ("a/mod.rs", "a/tests.rs")):
+            root = self.declared("#[cfg(test)]\nmod tests;\n", (name, self.SPELLING), own=own)
+            self.assertEqual(len(implementations(root)), 1, own)
+            self.assertEqual(unpinned(root), [], own)
 
     def test_a_file_that_is_no_declared_test_module_is_not_read_as_one(self):
         elsewhere = ("depth/tests.rs", self.SPELLING)
@@ -408,12 +463,19 @@ class TheGuardReadsOutOfLineTestModules(unittest.TestCase):
             "",
             "mod tests;\n",
             "#[cfg(test)]\nmod other;\n",
+            "mod inner {\n    #[cfg(test)]\n    mod tests;\n}\n",
             "#[allow(dead_code)]\nmod tests;\n",
+            'const D: &str = "#[cfg(test)] mod tests;";\n',
         ):
             root = self.declared(declaration, elsewhere)
             self.assertEqual(len(implementations(root)), 1)
             self.assertEqual(len(unpinned(root)), 1, declaration)
         root = self.declared("#[cfg(test)]\nmod tests;\n", ("depth/tests.rs", "let shape = 1;\n"))
+        self.assertEqual(len(unpinned(root)), 1)
+        other = '#[path = "words.rs"]\nmod words;\n#[cfg(test)]\nmod tests;\n'
+        self.assertEqual(len(unpinned(self.declared(other, ("words.rs", self.SPELLING)))), 1)
+        path = '#[cfg(test)]\n#[path = "words/shape.rs"]\nmod tests;\n'
+        root = self.declared(path, ("words/shape.rs", "let shape = 1;\n"), elsewhere)
         self.assertEqual(len(unpinned(root)), 1)
 
 
@@ -434,6 +496,8 @@ class TheGuardIgnoresAnImplementationInAComment(unittest.TestCase):
         self.assertEqual(len(implementations(line)), 1)
         live = self.src(pinned, ghost)
         self.assertEqual(unpinned(live), ['demo::Ghost (src/more.rs) "a ghost shape"'])
+        after = self.src(pinned, "const A: u8 = 1; /* a\n b */ " + ghost)
+        self.assertEqual(unpinned(after), ['demo::Ghost (src/more.rs) "a ghost shape"'])
 
 
 if __name__ == "__main__":
