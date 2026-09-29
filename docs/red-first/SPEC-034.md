@@ -300,3 +300,19 @@ it, its condition deleted, inverted, widened or narrowed, a list read by its fir
 read, the walk cut short three ways, the finding's place changed, and the `env` refusal dropped or
 made the only one: 19 of 19 killed. At 1ae727b, before the pin, the same 19 left C14 and C19 alive.
 The test file did not change after 9f19b06.
+
+## Second amendment (section 8): A14 and A15
+
+The tests were committed (58574a9) before the workflow changed. In that red run the whole test file
+ran and only A14 and A15 failed.
+
+```red-first
+A14: red at 58574a9: AssertionError: None != "${{ github.event_name == 'pull_request' && 'ci' || 'ci (push)' }}" : the aggregate job's name
+A14: green at 3de33c5
+A15: red at 58574a9: AssertionError: 'ci' unexpectedly found in {'ci', 'fragment'} : ci.yml: push reports ci
+A15: green at 3de33c5
+```
+
+Rows S03401 to S03403 (`scripts/mutation-rows.d/S03400-S03499.json`) were proved with
+`python3 scripts/mutation_rows.py prove --band S03400-S03499`, the file restored by its digest:
+3 examined, 3 killed, 0 survived, 0 VOID. Each row's killer is A14. `census` and `ids` are clean.
