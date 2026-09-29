@@ -38,12 +38,23 @@ fn is_a_plain_doc_line(line: &str) -> bool {
     line.starts_with("///") && !line.contains('"') && !line.contains("/*") && !line.contains("*/")
 }
 
-/// How many lines of `source` declare `pub enum Verdict {`: a copy above the real one, inside a
-/// comment or a string, would lend the real enum the copy's attributes.
+/// `text` with every raw-identifier prefix removed: identifiers and attribute paths compare by the
+/// name the compiler reads, so `r#Verdict` is `Verdict` and `r#cfg` is `cfg`.
+fn without_raw_prefixes(text: &str) -> String {
+    text.replace("r#", "")
+}
+
+/// Whether `line` declares the verdict enum, whichever way its name is spelled.
+fn declares_the_verdict(line: &str) -> bool {
+    without_raw_prefixes(line.trim()) == "pub enum Verdict {"
+}
+
+/// How many lines of `source` declare the verdict enum: a copy above the real one, inside a
+/// comment or a string, or compiled out, would lend the real enum the copy's attributes.
 fn declarations_of(source: &str) -> usize {
     source
         .lines()
-        .filter(|line| line.trim() == "pub enum Verdict {")
+        .filter(|line| declares_the_verdict(line))
         .count()
 }
 
@@ -57,7 +68,7 @@ fn attributes_of(source: &str) -> Vec<String> {
     let lines: Vec<&str> = source.lines().collect();
     let at = lines
         .iter()
-        .position(|line| line.trim() == "pub enum Verdict {")
+        .position(|line| declares_the_verdict(line))
         .expect("the verdict enum is declared in the source");
     lines[..at]
         .iter()
