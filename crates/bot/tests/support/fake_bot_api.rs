@@ -520,7 +520,8 @@ async fn unscripted(method: &str, body: &Value, message_id: i64) -> Response {
                 .and_then(|chat| chat.as_i64().or_else(|| chat.as_str()?.parse().ok()))
                 .unwrap_or(OWNER);
             // The sizes the Bot API answers come smallest to largest; here the largest is in the
-            // middle, so a reader that takes the first or the last size takes the wrong one.
+            // middle, and the last is longest by its sides but smallest by its area, so a reader that
+            // takes the first, the last or the widest size takes the wrong one.
             ok(&json!({
                 "message_id": message_id,
                 "date": 0,
@@ -528,7 +529,7 @@ async fn unscripted(method: &str, body: &Value, message_id: i64) -> Response {
                 "photo": [
                     {"file_id": "size-small", "file_unique_id": "a", "width": 90, "height": 60},
                     {"file_id": "size-large", "file_unique_id": "b", "width": 1280, "height": 853},
-                    {"file_id": "size-medium", "file_unique_id": "c", "width": 320, "height": 213},
+                    {"file_id": "size-wide", "file_unique_id": "c", "width": 4000, "height": 20},
                 ],
             }))
         }
