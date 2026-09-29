@@ -97,7 +97,9 @@ The sentinel's run restores the file the same way before the first mutant. Every
 `PYTHONDONTWRITEBYTECODE=1` and `PYTHONPYCACHEPREFIX` in a temporary directory, and loads each test
 module as `unittest discover` does, so an import that fails is a failed test named for its module.
 The child runs from a copy of the runner and of the `scripts/` modules it imports, taken outside the
-tree before the first mutant, so no mutant of the runner runs as its own child.
+tree before the first mutant, so no mutant of the runner runs as its own child, and drops the
+copy's modules from `sys.modules` before it loads a test module, so a test that imports
+`mutation_rows` by name reads the tree's file, the mutant installed.
 
 ## 3. The weekly battery: the Python shards added
 
