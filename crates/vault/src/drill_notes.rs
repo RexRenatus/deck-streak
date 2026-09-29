@@ -94,10 +94,9 @@ impl<F: VaultFs> DrillNotes<F> {
 
     /// The names of the `.md` notes directly inside `folder`, sorted, or none when it is missing.
     fn notes(&self, folder: &Path) -> Result<Vec<String>, VaultError> {
-        let present = self.confined(folder)?;
+        self.confined(folder)?;
         let entries = match self.fs.list(folder) {
-            Ok(entries) if present => entries,
-            Ok(_) => return Ok(Vec::new()),
+            Ok(entries) => entries,
             Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(Vec::new()),
             Err(error) => return Err(VaultError::io("list a folder")(error)),
         };

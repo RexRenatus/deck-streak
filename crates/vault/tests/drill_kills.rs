@@ -135,6 +135,8 @@ struct Faulty {
     inner: RealFs,
     canonicalize: Option<io::ErrorKind>,
     list: Option<io::ErrorKind>,
+    /// Fail the resolve only for the drill folders, so the vault root still opens.
+    folders_only: bool,
 }
 
 impl VaultFs for Faulty {
@@ -169,9 +171,10 @@ impl VaultFs for Faulty {
         self.inner.remove_dir(path)
     }
     fn canonicalize(&self, path: &Path) -> io::Result<PathBuf> {
+        let is_folder = path.ends_with(ACTIVE) || path.ends_with(GRADED);
         match self.canonicalize {
-            Some(kind) => Err(io::Error::from(kind)),
-            None => self.inner.canonicalize(path),
+            Some(kind) if is_folder || !self.folders_only => Err(io::Error::from(kind)),
+            _ => self.inner.canonicalize(path),
         }
     }
 }
@@ -190,6 +193,7 @@ fn faulty(canonicalize: Option<io::ErrorKind>, list: Option<io::ErrorKind>) -> F
         inner: RealFs,
         canonicalize,
         list,
+        folders_only: false,
     }
 }
 
@@ -238,6 +242,20 @@ fn vault_with(graded: &[(&str, &str)]) -> tempfile::TempDir {
         fs::write(drills.join(GRADED).join(name), text).expect("a note");
     }
     dir
+}
+
+#[test]
+fn a_folder_that_cannot_be_resolved_is_an_io_error_and_only_a_missing_one_is_none() {
+    let dir = vault_with(&[]);
+    let mut fault = faulty(Some(io::ErrorKind::PermissionDenied), None);
+    fault.folders_only = true;
+    let refused = open(dir.path(), fault).expect("the root still opens");
+    let error = refused.graded().expect_err("a resolve failure");
+    assert_eq!(error.to_string(), "the vault could not resolve a folder");
+    let error = refused
+        .list_active(day(20_500))
+        .expect_err("a resolve failure");
+    assert_eq!(error.to_string(), "the vault could not resolve a folder");
 }
 
 #[test]
