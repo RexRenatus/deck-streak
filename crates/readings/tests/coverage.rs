@@ -324,8 +324,8 @@ fn the_first_failure_decides_in_the_gate_order() {
     let failure = first_failure(&checks, Some(&pack("reading-length"))).expect("a failure");
     assert_eq!(
         failure.findings,
-        ["a finding"],
-        "the pack's findings travel"
+        ["the reading-length check refused the reading"],
+        "the check is named in the engine's words; the pack's finding lines never travel"
     );
 }
 

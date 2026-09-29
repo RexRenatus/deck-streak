@@ -432,7 +432,11 @@ async fn a_gate_failure_is_repaired_once_naming_the_gate() {
     assert_eq!(rig.runner.calls(), 2);
     let second = rig.runner.prompt(1);
     assert!(second.contains("band"), "the repair names the gate");
-    assert!(second.contains("the primer prose holds 12 words"));
+    assert!(second.contains("the reading-length check refused the reading"));
+    assert!(
+        !second.contains("the primer prose holds 12 words"),
+        "a pack's finding line never reaches the repair"
+    );
     assert!(
         !second.contains("zebras"),
         "the rejected text is never quoted"
