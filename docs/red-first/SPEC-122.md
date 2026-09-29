@@ -46,7 +46,7 @@ failures counting its two subtests), eight green (the well-formed control is not
 list through `parse_document` (ad32aefc) turned it green. No green commit edits a test file.
 
 ```red-first
-A7: red at f54cabab: a retired list that repeats a key was read as its last value and the verb exited 1 or 0, not 2: 1 != 2 : retired: S00030-DOUBLE: REFUSED: it left while its target scripts/fixmod.py stays, and scripts/mutation-rows.retired.json records no reason and approval for it
+A7: red at f54cabab: a retired list that repeats a key was read as its last value and the verb exited 1 or 0, not 2: 1 != 2 : retired: S00030-DOUBLE: REFUSED: it left while its target scripts/fixmod.py stays, and scripts/mutation-rows.retired.json records no reason and approval for it; approval: 0 != 2 : retired: S00030-DOUBLE: its target stays; retired with approval: another
 A7: green at ad32aefc
 ```
 

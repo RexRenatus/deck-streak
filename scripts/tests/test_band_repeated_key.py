@@ -173,7 +173,7 @@ class TheRetiredListRefusesARepeatedKey(unittest.TestCase):
                 fixture.commit("a retired list that repeats a key")
                 done = fixture.run("retired", "--base", base)
                 self.assertEqual(done.returncode, 2, done.stdout + done.stderr)
-                self.assertIn(sentence(RETIRED_PATH, key), done.stderr)
+                self.assertIn(f"mutation_rows: REFUSED: {sentence(RETIRED_PATH, key)}", done.stderr)
                 self.assertNotIn("Traceback", done.stderr)
                 self.assertNotIn("S00030-DOUBLE", done.stdout, "a refused list retires nothing")
 

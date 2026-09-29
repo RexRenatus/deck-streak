@@ -192,11 +192,14 @@ Issue #385. `mutation_rows.py retired` still read `scripts/mutation-rows.retired
 and said nothing. Measured at `dev` 24b880e: an entry whose `approval` was written twice was
 admitted with the second value (`retired with approval: another`), and a list whose `retired` key
 was written twice retired nothing and exited 1 with the row refused for want of a record, naming
-neither the file nor the key.
+the list only as lacking a record, and never the repeated key.
+
+Made by issue #385's delivery, insert-only under ruling (i) of SPEC-038 section 8: every earlier
+byte is kept in order. It inserts sections 11 and 12 only.
 
 This amendment strengthens the rule of R1 and R2: every document the retirement check reads goes
-through the one parser. It supersedes the first bullet of section 5, which left the retirement
-record on `json.loads`.
+through the one parser. It supersedes the first bullet of section 5 for the retirement record
+only; a `--rows-from` plan still keeps `json.loads`.
 
 - **R8. The retired list is read by the same parser.** `retired` reads
   `scripts/mutation-rows.retired.json` through `mutation_rows.parse_document`, with that path as
