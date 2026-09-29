@@ -293,7 +293,7 @@ R18. **The shards, and their bound.** `scripts/mutation-verdict.py shards` sizes
 | A38 | a shard the plan gave no mutant owes no report, and a proved row on the diff's changed line carries it; a shard given mutants still owes its report | `test_mutation_verdict.py` |
 | A39 | the runner proves every row its selectors name together, a band's, a row's by id and a plan's, each once | `test_mutation_rows.py` |
 | A40 | the configuration check refuses a second Stryker configuration, `ignoreStatic` without per-test coverage, and a `mutate` list other than R2's | `test_mutation_workflows.py` |
-| A41 | a shell target's mutant is parse-checked, `bash -n` for a bash script and `sh -n` otherwise: one that does not parse is VOID, and one that parses and is caught is KILLED | `test_mutation_rows.py` |
+| A41 | a shell target's mutant is parse-checked, `bash -n` for a bash script and `sh -n` otherwise (the shebang decides when it names a shell; else `.bash` is bash and `.sh` is sh): one that does not parse is VOID, one that parses and is caught is KILLED, the check reads the mutant and never runs it, a parser that is missing or hangs leaves the mutant VOID, the refusal names the shell's first stderr line, and a cargo killer's row is parsed before it is built | `test_mutation_rows.py` |
 
 ```acceptance
 A1: python3 -m unittest discover -s scripts/tests -p test_mutation_rows.py -k a_tracked_change_is_refused_before_any_mutant_is_installed

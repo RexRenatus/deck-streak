@@ -165,7 +165,17 @@ A39: green at 688ae71
 A40: red at 24013e7: AssertionError: 0 != 1 : examined 2 configuration(s) (a second configuration, ignoreStatic and a short mutate list all passed)
 A40: green at a029d19
 A41: red at 6811975: AssertionError: 0 != 3 : S00020-BASH-UNPARSED: KILLED: its killer passed without the mutant and failed with it (a bash, an extensionless bash and a POSIX sh mutant that did not parse all read KILLED)
-A41: green at 270bbaa
+A41: red at 96ae492: AssertionError: 0 != 3 : S00025-SH-SHEBANG-BASHISM: KILLED: its killer passed without the mutant and failed with it (measured on a scratch copy at 96ae492, mutant M03: a shebang naming sh always read as bash)
+A41: red at 96ae492: AssertionError: 3 != 0 : S00026-BASH-EXT-CAUGHT: VOID: the mutant does not parse: sh: sh: 1: Syntax error: "(" unexpected (measured on a scratch copy at 96ae492, mutant M05: a .bash target read as sh)
+A41: red at 96ae492: AssertionError: 0 != 3 : S00027-BASH-EXT-UNPARSED: KILLED: its killer passed without the mutant and failed with it (measured on a scratch copy at 96ae492, mutant M06: the .bash branch removed)
+A41: red at 96ae492: AssertionError: 0 != 3 : S00028-SH-EXT-BASHISM: KILLED: its killer passed without the mutant and failed with it (measured on a scratch copy at 96ae492, mutants M07 and M08: a .sh target read as bash, and the .sh branch removed)
+A41: red at 96ae492: AssertionError: 0 != 3 : S00030-DASH-UNPARSED: KILLED: its killer passed without the mutant and failed with it (measured on a scratch copy at 96ae492, mutant M11: dash dropped from the shebang pattern)
+A41: red at 96ae492: AssertionError: Lists differ: ['MARK', '3', 'MARK', 'MARK', '2'] != ['MARK', '3', 'MARK', '2'] (measured on a scratch copy at 96ae492, mutant P01: the parse check without -n executes the mutant)
+A41: red at 96ae492: AssertionError: None != 'the mutant is unchecked: bash is not installed' (measured on a scratch copy at 96ae492, mutants P02 to P04: no bound on the check, and a missing or hung parser passing the mutant)
+A41: red at 96ae492: AssertionError: "the [22 chars] bash: bash: line 1: `if then'" != "the [22 chars] bash: bash: line 1: syntax error near unexpected token `then'" (measured on a scratch copy at 96ae492, mutant P06: the last stderr line in place of the first)
+A41: red at 96ae492: AssertionError: Lists differ: ['cargo', 'bash'] != ['bash', 'cargo'] (measured on a scratch copy at 96ae492, mutants B03 and B04: the shell check skipped for a cargo killer, and made after the cargo branch)
+A41: red at 96ae492: AssertionError: 'sh' is not None (measured on a scratch copy at 96ae492, mutant M10: a target that is not a shell script given sh)
+A41: green at 259f9c4
 ```
 
 ## The gate's own red first (R17)
@@ -204,7 +214,8 @@ parses under `bash -n` and not under `sh -n`, and a bash and a POSIX mutant that
 caught read KILLED) passed, since they pin behaviour the runner already had and guard the fix
 against a checker that always picks `sh -n`. The fix at 270bbaa parse-checks the mutated bytes of a
 shell target before the cargo branch, and all six pass. Five rows pin its decisions, S03929 to
-S03933, each proved KILLED with `scripts/mutation_rows.py` restoring its target byte for byte. The
+S03933, each proved KILLED with `scripts/mutation_rows.py` restoring its target byte for byte.
+Fix round 1 added thirteen tests to the same class at 96ae492, each pinning a branch of `shell_parser()`, `parses()` and the shell check in `builds()` that a hand-mutation sweep of the runner's new code (26 mutants) had left standing: the production code was already right, so each is red only against its mutant, measured on a scratch copy and recorded above, and green at the head. Ten rows, S03934 to S03943, pin the same decisions and each is proved KILLED. One mutant stays equivalent in practice: `== 0` read as `<= 1` in `parses()`, since `bash -n` and `dash -n` both exit 2 on a syntax error and neither exits 1 for one The
 five rows the tree already held on a shell target (S05706, S05806, S05807, S05808, S05809, all on
 `scripts/check.sh`) were re-proved at that head: each reads KILLED, so none was a parse failure
 passing for a kill. A8's cargo path is proved by CI's run of the module.
