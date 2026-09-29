@@ -153,10 +153,11 @@ plain `json.loads` that keeps the last value and says nothing (the census printe
   forms, `<where> repeats the key '<key>' in one object`, and the plan writes no `plan.json`.
 - **R7. The equivalence records are read by the same parser.** `load_records` reads each fragment
   through `mutation_rows.parse_document` with `scripts/mutation-equivalent.d/<name>` as `<where>`,
-  so a key repeated at any depth is a named problem that every verb reading the records reports
-  (the census as a finding, exit 1; `judge` as a failure). The verdict script already imports
-  `mutation_rows`, so it reuses the hook and the sentence; there is no second copy, and nothing
-  moves.
+  so a key repeated at any depth is a named problem: the census reports it as a finding (exit 1),
+  and `judge` and `table` as a failure. `survivors` reads the records only to excuse a survivor
+  and names no record problem, this one included: the refused fragment excuses no mutant, and
+  the verb says nothing of it. The verdict script already imports `mutation_rows`, so it reuses
+  the hook and the sentence; there is no second copy, and nothing moves.
 
 The rows join `S12200-S12299` (`SCRIPT_MUTATIONS`), each with one killer that names one test:
 
@@ -172,7 +173,7 @@ Files added or changed by this amendment: `scripts/mutation-verdict.py` (changed
 `changelog.d/fix-verdict-repeated-key-345.md` (added). It still changes no Rust and no workflow
 (#345).
 
-## 10. Acceptance criteria of the amendment (A5 and A6)
+## 10. Acceptance criteria of the amendment of 2026-09-29 (A5 and A6, #345)
 
 | id | criterion | decided by |
 |---|---|---|
