@@ -380,3 +380,14 @@ async fn a_level_up_is_raised_once_when_a_recompute_crosses_a_threshold() {
         "the level's key is recorded once"
     );
 }
+
+#[test]
+fn the_step_names_and_the_level_up_kind_are_pinned_whole() {
+    use deck_streak_coordination::level_up::LEVEL_UP_KIND;
+    use deck_streak_coordination::recompute::day_bonuses::DAY_BONUSES_STEP;
+    use deck_streak_coordination::recompute::xp::XP_STEP;
+
+    assert_eq!(XP_STEP, "progression.base_xp");
+    assert_eq!(DAY_BONUSES_STEP, "progression.derived_bonuses");
+    assert_eq!(LEVEL_UP_KIND, "celebration");
+}

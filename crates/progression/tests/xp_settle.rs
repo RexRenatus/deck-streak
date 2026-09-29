@@ -167,3 +167,27 @@ async fn settle_refuses_a_source_outside_the_derived_registry() {
         "every derived source settles"
     );
 }
+
+#[test]
+fn the_derived_registry_and_the_tables_are_pinned_whole() {
+    assert_eq!(
+        DERIVED_SOURCES,
+        [
+            "reviews",
+            "reviews_law",
+            "studied",
+            "backlog_zero",
+            "streak",
+            "score90",
+            "graduations",
+            "consistency",
+            "ascendant",
+        ]
+    );
+    assert_eq!(
+        deck_streak_progression::settle::XP_SETTLEMENT_TABLE,
+        "xp_settlement"
+    );
+    assert_eq!(deck_streak_progression::data_rights::BUFFS_TABLE, "buffs");
+    assert_eq!(deck_streak_progression::buffs::ASCENDANT, "ascendant");
+}
