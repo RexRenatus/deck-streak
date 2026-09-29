@@ -1,4 +1,4 @@
-//! The kernel's errors (SPEC-020 R10, R11, R20).
+//! The kernel's errors (SPEC-020 R10, R11, R20; SPEC-066 R1).
 //!
 //! A library returns its own `thiserror` types. No error here ever carries a setting's value or a
 //! secret: a refusal names the setting, the shape it expects or the credential's id, and nothing a
@@ -70,6 +70,13 @@ pub enum CredentialError {
     /// The credentials directory holds no file of that id.
     #[error("the credential {id} is missing from the credentials directory")]
     Missing {
+        /// The credential's id.
+        id: &'static str,
+    },
+    /// The credential's file holds no value: no bytes, or only the one trailing newline the loader
+    /// trims. It refuses start as a missing credential does (SPEC-066 R1; ADR-067).
+    #[error("the credential {id} is empty in the credentials directory")]
+    Empty {
         /// The credential's id.
         id: &'static str,
     },
