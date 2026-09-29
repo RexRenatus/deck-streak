@@ -187,3 +187,34 @@ fn a_changed_copy_of_the_statement_in_the_plan_string_is_refused() {
         "the changed copy is not refused: {problems:?}"
     );
 }
+
+#[test]
+fn a_prune_spelled_around_the_keyword_scan_beside_a_quoted_copy_is_refused() {
+    assert_eq!(
+        prune_pin_problems(&a_good_prune_source()),
+        Vec::<String>::new()
+    );
+    // Each decoy keeps the tested statement quoted once in a comment and runs a prune the index
+    // cannot seek, spelled so that the plain statement text never appears in it: the table is
+    // schema-qualified or quoted, split across two literals, or an SQL comment sits between the
+    // keywords.
+    let spellings = [
+        format!("DELETE FROM main.{TABLE} WHERE created_at + 0 < ?1"),
+        format!("DELETE FROM \\\"{TABLE}\\\" WHERE created_at + 0 < ?1"),
+        "DELETE FROM agent\" + \"_runs WHERE created_at + 0 < ?1".to_owned(),
+        format!("DELETE/**/FROM {TABLE} WHERE created_at + 0 < ?1"),
+    ];
+    for spelling in spellings {
+        let decoy = format!("// \"{PRUNE}\"\nlet done = sqlx::query!(\"{spelling}\", cutoff);");
+        assert_eq!(
+            decoy.matches(&format!("\"{PRUNE}\"")).count(),
+            1,
+            "the decoy does not quote the tested statement once: {decoy}"
+        );
+        let problems = prune_pin_problems(&decoy);
+        assert!(
+            !problems.is_empty(),
+            "the decoy is not refused: {spelling}: {problems:?}"
+        );
+    }
+}
