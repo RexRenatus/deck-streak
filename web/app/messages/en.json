@@ -19,5 +19,9 @@
   "pillar_workload": "Workload",
   "pillar_volume": "Volume",
   "pillar_mastery": "Mastery",
-  "retention_absent": "No review answered yet"
+  "retention_absent": "No review answered yet",
+  "ladder_region": "Celebrations",
+  "ladder_opening": "Opening…",
+  "ladder_dice": "A dice roll",
+  "ladder_dismiss": "Dismiss"
 }

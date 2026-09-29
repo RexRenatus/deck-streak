@@ -143,6 +143,17 @@
       "retention": {"until": "account-deletion"},
       "export": true,
       "erase": "delete"
+    },
+    {
+      "id": "owner-last-message",
+      "data": "the id of the owner's latest message to the bot and when it arrived",
+      "source": "derived",
+      "stores": ["owner_last_message.*"],
+      "purpose": "reacting to the owner's latest message when a small celebration lands",
+      "lawful_basis": "contract",
+      "retention": {"until": "account-deletion"},
+      "export": true,
+      "erase": "anonymise"
     }
   ],
   "sql": ["migrations/*.sql"],

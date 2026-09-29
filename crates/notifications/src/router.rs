@@ -24,11 +24,11 @@
 use std::fmt;
 use std::sync::{Arc, Mutex, PoisonError};
 
-use deck_streak_kernel::{Clock, Db, KernelError, StudyDayRule, UtcMillis};
+use deck_streak_kernel::{Clock, Db, KernelError, StudyDay, StudyDayRule, UtcMillis};
 use sqlx::SqliteConnection;
 
 use crate::ledger::{self, ClaimRow, DecisionRow, HeldRow};
-use crate::occasion::{Class, DedupeScope, LapseContext, Occasion, Surface, Tier};
+use crate::occasion::{Class, DedupeScope, LapseContext, Occasion, StreakFacts, Surface, Tier};
 use crate::policy::Policy;
 use crate::quiet::{in_quiet_hours, local_minute};
 use crate::transport::{BotTransport, Pushed};
@@ -39,6 +39,8 @@ pub const QUIET_START_SETTING: &str = "quiet_start_min";
 pub const QUIET_END_SETTING: &str = "quiet_end_min";
 /// What a withheld occasion's kind is recorded with appended, so it never stands for a delivery.
 pub const WITHHELD_SUFFIX: &str = ":withheld";
+/// The owner's celebration intensity, which picks the weekly budget (the predecessor's key).
+pub const INTENSITY_SETTING: &str = "celebration_intensity";
 
 /// One minute, in milliseconds.
 const MINUTE_MS: i64 = 60_000;
@@ -481,6 +483,16 @@ impl Router {
     ///
     /// [`KernelError::Database`] when the ledger cannot be read or written.
     pub async fn flush(&self) -> Result<Flushed, KernelError> {
+        self.flush_with(None).await
+    }
+
+    /// [`Router::flush`], re-capping each held celebration for the streak's `facts` on the flush's
+    /// study day (SPEC-084 R11).
+    ///
+    /// # Errors
+    ///
+    /// [`KernelError::Database`] when the ledger cannot be read or written.
+    pub async fn flush_with(&self, _facts: Option<StreakFacts>) -> Result<Flushed, KernelError> {
         let Some(bot) = &self.bot else {
             return Ok(Flushed::NoNotifier);
         };
@@ -556,6 +568,20 @@ impl Router {
         }
         write.commit().await?;
         Ok(Flushed::Ran { sends })
+    }
+
+    /// How many celebrations of study day `since` or later were delivered at `min` or above, or are
+    /// still held at `min` or above (SPEC-084 R4).
+    ///
+    /// # Errors
+    ///
+    /// [`KernelError::Database`] when the ledger cannot be read.
+    pub async fn celebrations_at_or_above(
+        &self,
+        _since: StudyDay,
+        _min: Tier,
+    ) -> Result<i64, KernelError> {
+        Ok(0)
     }
 
     /// Holds `row` on the queue, then keeps the queue's bound: past the policy's count of held

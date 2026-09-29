@@ -56,10 +56,10 @@ pub struct Policy {
     surfaces: Vec<Surface>,
     router: RouterSection,
     kinds: BTreeMap<String, KindSpec>,
-    ladder: Ladder,
-    celebration_budgets: CelebrationBudgets,
-    streak_break: StreakBreak,
-    near_miss: NearMiss,
+    pub(crate) ladder: Ladder,
+    pub(crate) celebration_budgets: CelebrationBudgets,
+    pub(crate) streak_break: StreakBreak,
+    pub(crate) near_miss: NearMiss,
     pub(crate) quiet_hours: QuietHours,
     digest: Digest,
     pub(crate) deferral: Deferral,
@@ -95,33 +95,33 @@ struct KindSpec {
 /// The celebration ladder's values, which the ladder's renders read (#120).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-struct Ladder {
+pub(crate) struct Ladder {
     tiers: BTreeMap<Tier, String>,
-    rarity: BTreeMap<String, Tier>,
-    rarity_floor: BTreeMap<String, Tier>,
-    events: BTreeMap<String, Tier>,
-    unknown_event: Tier,
-    reaction_max_age_hours: u32,
+    pub(crate) rarity: BTreeMap<String, Tier>,
+    pub(crate) rarity_floor: BTreeMap<String, Tier>,
+    pub(crate) events: BTreeMap<String, Tier>,
+    pub(crate) unknown_event: Tier,
+    pub(crate) reaction_max_age_hours: u32,
     dedupe: DedupeScope,
 }
 
 /// The weekly budgets of the loud tiers, by intensity.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-struct CelebrationBudgets {
+pub(crate) struct CelebrationBudgets {
     window: String,
-    intensities: BTreeMap<String, BTreeMap<Tier, u32>>,
-    default_intensity: String,
-    downgrade: BTreeMap<Tier, Tier>,
-    exempt_events: Vec<String>,
+    pub(crate) intensities: BTreeMap<String, BTreeMap<Tier, u32>>,
+    pub(crate) default_intensity: String,
+    pub(crate) downgrade: BTreeMap<Tier, Tier>,
+    pub(crate) exempt_events: Vec<String>,
 }
 
 /// The streak-break day's cap. The file's key for its deferral says `fanfare`, a word the
 /// lexicon keeps out of this context's identifiers, so the field is renamed (R14).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-struct StreakBreak {
-    cap: Tier,
+pub(crate) struct StreakBreak {
+    pub(crate) cap: Tier,
     #[serde(rename = "defer_fanfare")]
     defer_celebration: bool,
 }
@@ -129,9 +129,9 @@ struct StreakBreak {
 /// The near-miss copy's bounds.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-struct NearMiss {
-    max_units: u32,
-    max_fraction: f64,
+pub(crate) struct NearMiss {
+    pub(crate) max_units: u32,
+    pub(crate) max_fraction: f64,
 }
 
 /// The quiet window and what it does to each class.

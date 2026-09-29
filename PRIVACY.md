@@ -22,6 +22,7 @@ inventory, in the form the repository's privacy checks read.
 | `notification-queue` | the celebrations held by quiet hours or a failed send: their text, why and since when they are held, and how often a send failed | delivering them once quiet hours end or sends succeed, and naming every one given up | contract | until account deletion |
 | `in-app-feed` | the celebrations delivered to the Mini App, and when the Mini App fetched them | showing you in the Mini App the celebrations raised there | contract | until account deletion |
 | `notification-settings` | which kinds of message you switched off, and your quiet hours | honouring your choices of what to receive and when to stay quiet | contract | until account deletion |
+| `owner-last-message` | the id of your latest message to the bot and when it arrived | reacting to your latest message when a small celebration lands | contract | until account deletion |
 
 The lawful basis of each is the contract (GDPR Article 6(1)(b)): the service you run needs it. None
 is kept for a fixed period. Each is kept until you erase it, which is how an account is deleted here.

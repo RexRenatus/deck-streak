@@ -1,4 +1,8 @@
 {
   "$schema": "https://inlang.com/schema/inlang-message-format",
-  "tagline": "Convierte tus repasos diarios de Anki en una racha que vale la pena mantener."
+  "tagline": "Convierte tus repasos diarios de Anki en una racha que vale la pena mantener.",
+  "ladder_region": "Celebraciones",
+  "ladder_opening": "Abriendo…",
+  "ladder_dice": "Una tirada de dado",
+  "ladder_dismiss": "Cerrar"
 }
