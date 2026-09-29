@@ -9,6 +9,7 @@ ALTER TABLE ingest_state ADD COLUMN refused_reason TEXT CHECK (
     (refused_reason IS NULL AND refused_at IS NULL)
     OR (
         refused_at IS NOT NULL
+        AND refused_reason IS NOT NULL
         AND refused_reason IN (
             'rescore_unrecorded',
             'sync_settings_refused',

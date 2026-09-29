@@ -56,6 +56,15 @@
         "a run on record must not hide the refusal recorded after it: answering the run first tells the owner the scores were recomputed when they were not (SPEC-128 R5)"
       ],
       [
+        "S12807-THE-CHECK-PAIRS-THE-REFUSALS-INSTANT-WITH-ITS-REASON",
+        "ingest",
+        "../../migrations/012801_ingest_refused_owner_request.sql",
+        " AND refused_reason IS NOT NULL",
+        "",
+        "refusal::the_migration_refuses_a_reason_outside_the_closed_set",
+        "an instant with no reason is a refusal the owner cannot be told; the CHECK must refuse it (SPEC-128 R1)"
+      ],
+      [
         "S12808-THE-SCORES-REFUSED-SENTENCE-NAMES-THE-CODE",
         "bot",
         "src/commands.rs",

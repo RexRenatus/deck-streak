@@ -41,6 +41,14 @@ async fn the_migration_refuses_a_reason_outside_the_closed_set() {
             .execute(&mut *write)
             .await;
     assert!(unpaired.is_err(), "a reason without its instant is refused");
+    let instant_only =
+        sqlx::query("UPDATE ingest_state SET refused_at = 5, refused_reason = NULL WHERE id = 1")
+            .execute(&mut *write)
+            .await;
+    assert!(
+        instant_only.is_err(),
+        "an instant without its reason is refused"
+    );
     let inside = sqlx::query(
         "UPDATE ingest_state SET refused_at = 5, refused_reason = 'recompute_failed' WHERE id = 1",
     )
