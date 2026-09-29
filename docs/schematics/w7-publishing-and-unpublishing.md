@@ -27,7 +27,7 @@ page) and what never does (the named drops). No bot command publishes or unpubli
 
 ```mermaid
 flowchart TD
-  fire["job publish, daily at rollover minute 36, catch-up on"] --> sw{"switch on"}
+  fire["job public_page, daily at rollover minute 36, catch-up on"] --> sw{"switch on"}
   sw -->|no| z["writes nothing, exits 0"]
   sw -->|yes| dir{"public directory configured"}
   dir -->|no| pg["exits with the page code"]

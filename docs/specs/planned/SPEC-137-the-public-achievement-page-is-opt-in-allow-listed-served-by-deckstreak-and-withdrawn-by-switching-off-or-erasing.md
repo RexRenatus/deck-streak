@@ -5,7 +5,7 @@
   **Context(s):** `deck-streak-publishing` (the typed pages, the composition, the badges, the
   scrubber, the canonical bytes and the content hash, the page's rendering, the site writer, the
   switch, the tables `publishing_state` and `published_files`); `deck-streak-coordination` (the
-  job `publish`, the erase's withdrawal, the switch in the settings census); `deck-streak-api` (the
+  job `public_page`, the erase's withdrawal, the switch in the settings census); `deck-streak-api` (the
   status and publish-now routes); `deck-streak-bot` (/delete withdraws first); `deck-streak-daemon`
   (the api, bot, data and job roles hand over the site); the Mini App (`web/app`, the publishing
   section of the settings screen); deploy (the Caddy handle and the job's timer).
@@ -143,7 +143,7 @@ R14. Publishing declares the stored runtime setting `public_achievements`, a swi
      writes the switch only.
 R15. `DECKSTREAK_PUBLIC_DIR` is configuration, empty in `.env.example`; unset means publishing is
      off. The api and job roles read it.
-R16. The job `publish` is `DailyAtRollover { minute: 36 }`, `catch_up: true`, on the plain job
+R16. The job `public_page` is `DailyAtRollover { minute: 36 }`, `catch_up: true`, on the plain job
      template (it sends nothing): a minute SPEC-027 R2 admits and no other job holds. With the
      switch off it writes nothing and exits 0. With the switch on and the directory unset it exits
      with the page code (SPEC-027 R7). Otherwise it composes both pages and writes each through
@@ -233,11 +233,11 @@ R24. CHARTER 10's eleven anti-goals bind this SPEC as one block; the ones it tou
 | A30 | a refused page keeps its last written files, the other page is written, and the job fails | `a_refused_page_keeps_the_last_clean_page_and_fails_the_job` |
 | A31 | the erase withdraws every published file before the engine runs | `the_erase_withdraws_every_published_file_first` |
 | A32 | a file that cannot be removed refuses the erase with `withdraw_failed` and erases nothing | `a_file_that_cannot_be_withdrawn_refuses_the_erase` |
-| A33 | the job table holds `publish` daily at minute 36, a minute SPEC-027 R2 admits | `the_publish_job_is_daily_at_a_free_minute` |
+| A33 | the job table holds `public_page` daily at minute 36, a minute SPEC-027 R2 admits | `the_publish_job_is_daily_at_a_free_minute` |
 | A34 | the publishing routes answer 401 without the owner's session, and the run 403 across sites | `the_publishing_routes_are_owner_only` |
 | A35 | the status names each published page, its instant, its file count and its omitted sections | `the_status_names_every_published_page_and_every_omitted_section` |
 | A36 | publish-now answers 409 `publishing_off` and 503 `publishing_unconfigured`, and each page's outcome otherwise | `publish_now_refuses_while_off_or_unconfigured` |
-| A37 | the job role runs `publish` with the switch off and the directory unset, and exits 0 | `the_publish_job_runs_with_publishing_off` |
+| A37 | the job role runs `public_page` with the switch off and the directory unset, and exits 0 | `the_publish_job_runs_with_publishing_off` |
 | A38 | /delete withdraws the public page before it erases, only after the owner confirms | `delete_withdraws_the_public_page_before_it_erases` |
 | A39 | no bot command publishes or unpublishes | `no_bot_command_publishes` |
 | A40 | the job's timer holds the table's calendar | `test_the_publish_timer_holds_the_tables_minute` |
@@ -332,7 +332,7 @@ diff that adds `web/app/src/lib/settings/Publishing.svelte` to the ux-laws popul
 | `crates/publishing/tests/tables.rs` | `deck-streak-publishing` | added: A26, A27 |
 | `migrations/013701_publishing_state_and_files.sql` | `deck-streak-publishing` | added: the two tables, the unique key and the page check |
 | `crates/coordination/src/publishing.rs` | `deck-streak-coordination` | added: the job's use case over the source ports, and `withdraw_published` |
-| `crates/coordination/src/jobs.rs` | `deck-streak-coordination` | changed: the job `publish`, daily at minute 36 |
+| `crates/coordination/src/jobs.rs` | `deck-streak-coordination` | changed: the job `public_page`, daily at minute 36 |
 | `crates/coordination/src/settings_census.rs` | `deck-streak-coordination` | changed: the switch joins the census |
 | `crates/coordination/src/lib.rs` | `deck-streak-coordination` | changed: the module |
 | `crates/coordination/tests/publishing.rs` | `deck-streak-coordination` | added: A28 to A32 |
@@ -346,10 +346,10 @@ diff that adds `web/app/src/lib/settings/Publishing.svelte` to the ux-laws popul
 | `crates/daemon/src/role_api.rs` | `deck-streak-daemon` | changed: the api role reads the directory and hands the site and the source ports to the routes and the census |
 | `crates/daemon/src/role_bot.rs` | `deck-streak-daemon` | changed: the bot role hands the withdrawal to /delete |
 | `crates/daemon/src/role_data.rs` | `deck-streak-daemon` | changed: the data role's erase withdraws first |
-| `crates/daemon/src/role_job.rs` | `deck-streak-daemon` | changed: the job `publish`, with the site and the source ports |
+| `crates/daemon/src/role_job.rs` | `deck-streak-daemon` | changed: the job `public_page`, with the site and the source ports |
 | `crates/daemon/tests/roles.rs` | `deck-streak-daemon` | changed: A37, A44 |
 | `deploy/caddy/deck-streak.caddy` | deploy | changed: the `/public/*` handle, and the site-wide policy moved into the two other handles |
-| `deploy/systemd/deck-streak-job@publish.timer` | deploy | added: daily at the rollover hour, minute 36 |
+| `deploy/systemd/deck-streak-job@public_page.timer` | deploy | added: daily at the rollover hour, minute 36 |
 | `deploy/README.md` | deploy | changed: the new placeholder and the timer |
 | `scripts/tests/test_deploy_templates.py` | repo | changed: A40, A41 |
 | `.env.example`, `deploy/deck-streak.env.example` | repo | changed: `DECKSTREAK_PUBLIC_DIR`, empty |
