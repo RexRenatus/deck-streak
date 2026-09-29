@@ -12,8 +12,8 @@
   files never deleted).
 - **Prerequisites:** SPEC-020, SPEC-021, SPEC-026, SPEC-027, SPEC-029, SPEC-040, SPEC-041, SPEC-042
   and SPEC-044. **Mutation band:** `S11000-S11099`.
-- **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
-  `docs/specs/` with its tests and `docs/red-first/SPEC-110.md` (ADR-016).
+- **Status:** built: moved from `docs/specs/planned/` to `docs/specs/` by the delivery that
+  carries its tests and `docs/red-first/SPEC-110.md` (ADR-016).
 
 ## 1. The problem, measured
 
