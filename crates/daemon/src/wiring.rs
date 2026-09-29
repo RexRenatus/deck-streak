@@ -643,6 +643,50 @@ mod tests {
         );
     }
 
+    #[tokio::test(flavor = "multi_thread")]
+    async fn the_owners_cycle_that_cannot_read_its_run_record_is_refused_by_the_sync_code() {
+        let directory = tempfile::tempdir().expect("a temporary directory");
+        let credentials = directory.path().join("credentials");
+        std::fs::create_dir(&credentials).expect("the credentials directory is made");
+        let db = Db::open(&directory.path().join("deck_streak.db"))
+            .await
+            .expect("the database opens");
+        let mut write = db.write().await.expect("a write");
+        sqlx::query("ALTER TABLE sync_runs RENAME TO sync_runs_unread")
+            .execute(&mut *write)
+            .await
+            .expect("the run record is moved out of the cycle's reach");
+        write.commit().await.expect("the rename commits");
+        let workers = OffloadWorkers::new(1).expect("one worker is in range");
+        let env = Environment::from_vars([
+            (
+                "DECKSTREAK_SYNC_ENDPOINT",
+                std::ffi::OsString::from("http://127.0.0.1:9/"),
+            ),
+            ("STATE_DIRECTORY", directory.path().as_os_str().to_owned()),
+            ("CREDENTIALS_DIRECTORY", credentials.as_os_str().to_owned()),
+        ]);
+        let recompute = RecomputeSetup::load(&env, &db)
+            .await
+            .expect("no courses and no taxonomy are configured");
+        let cycle = OwnerSyncCycle::new(
+            env,
+            Redactor::new(),
+            db.clone(),
+            Offload::new(workers, Arc::new(SystemClock)),
+            StudyDayRule::default(),
+            recompute,
+        );
+        for call in ["first", "second"] {
+            assert_eq!(
+                cycle.run().await,
+                Err(RefusalReason::SyncRecordFailed),
+                "the {call} run: the cycle's first step cannot read the run record"
+            );
+        }
+        db.close().await;
+    }
+
     #[tokio::test]
     async fn the_marker_reads_the_transports_counts() {
         let directory = tempfile::tempdir().expect("a temporary directory");
