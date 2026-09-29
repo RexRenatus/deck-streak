@@ -49,6 +49,7 @@ HANGING = textwrap.dedent(
     class Killer(unittest.TestCase):
         def test_hangs_with_a_grandchild(self):
             grandchild = subprocess.Popen(["sleep", "300"])
+            Path(os.environ["LEADER_PID_FILE"]).write_text(str(os.getpid()))
             Path(os.environ["GRANDCHILD_PID_FILE"]).write_text(str(grandchild.pid))
             time.sleep(300)
 
@@ -81,15 +82,47 @@ class Fixture(unittest.TestCase):
         self.directory = Path(tempfile.mkdtemp(prefix="killer-group-"))
         (self.directory / "hanging_killer.py").write_text(HANGING)
         self.pid_file = self.directory / "grandchild.pid"
-        patcher = mock.patch.dict(os.environ, {"GRANDCHILD_PID_FILE": str(self.pid_file)})
+        self.leader_file = self.directory / "leader.pid"
+        patcher = mock.patch.dict(
+            os.environ,
+            {"GRANDCHILD_PID_FILE": str(self.pid_file), "LEADER_PID_FILE": str(self.leader_file)},
+        )
         patcher.start()
         self.addCleanup(patcher.stop)
         self.grandchild = None
         self.addCleanup(self.stop_grandchild)
 
     def stop_grandchild(self):
-        if self.grandchild is not None:
-            stop_by_number(self.grandchild)
+        """Ends, by number, what a red run would leave: the killer and its grandchild."""
+        for pid in (self.grandchild, self.leader()):
+            if pid is not None:
+                stop_by_number(pid)
+
+    def leader(self):
+        try:
+            return int(self.leader_file.read_text())
+        except (OSError, ValueError):
+            return None
+
+    def within_bound(self, action):
+        """`action`'s outcome, or a failure when it does not return: a runner that leaves the
+        killer's group alive waits on the pipes that group holds, so the run is bounded here."""
+        outcome = {}
+
+        def call():
+            try:
+                outcome["value"] = action()
+            except BaseException as raised:  # noqa: BLE001 - carried to the test's thread
+                outcome["raised"] = raised
+
+        thread = threading.Thread(target=call, daemon=True)
+        thread.start()
+        thread.join(BOUND)
+        if thread.is_alive():
+            self.fail("the run did not return: the killer's group was left running")
+        if "raised" in outcome:
+            raise outcome["raised"]
+        return outcome["value"]
 
     def killer(self, name):
         return runner.Killer(
@@ -131,7 +164,7 @@ class ATimedOutKillerLeavesNothingRunning(Fixture):
             mock.patch.object(runner, "BUILD_SECONDS", 0),
             mock.patch.object(runner, "TEST_SECONDS", SMALL),
         ):
-            result = self.run_killer("test_hangs_with_a_grandchild")
+            result = self.within_bound(lambda: self.run_killer("test_hangs_with_a_grandchild"))
         watcher.join()
 
         # The outcome is what it always was, and the grandchild was alive before the bound.
@@ -149,7 +182,7 @@ class ATimedOutKillerLeavesNothingRunning(Fixture):
 
         with mock.patch.object(subprocess.Popen, "communicate", side_effect=interrupted):
             with self.assertRaises(KeyboardInterrupt):
-                self.run_killer("test_hangs_with_a_grandchild")
+                self.within_bound(lambda: self.run_killer("test_hangs_with_a_grandchild"))
         self.assertTrue(
             self.wait_until_gone(self.grandchild),
             f"the grandchild {self.grandchild} survived an interrupted run",
