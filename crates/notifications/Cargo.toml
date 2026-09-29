@@ -13,3 +13,21 @@ workspace = true
 
 [dependencies]
 deck-streak-kernel.workspace = true
+# SPEC-041: the typed policy is read with serde from the file compiled into the binary, and written
+# back for its round trip (A1); the data-rights port's rows are JSON values (ADR-029).
+serde.workspace = true
+serde_json.workspace = true
+# ADR-003: the router's ledger runs through the kernel's Db, its queries checked into .sqlx/; a
+# refused policy or occasion is this context's own error type (CLAUDE.md); an abandoned celebration
+# is logged.
+sqlx.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+# ADR-020's temporary database; tokio runs the router's tests; ADR-029's golden reader is compiled
+# into the quiet-hours test by path; trybuild proves a delivery call outside the router does not
+# compile (A2).
+tempfile.workspace = true
+tokio = { workspace = true, features = ["macros", "rt", "rt-multi-thread"] }
+trybuild.workspace = true

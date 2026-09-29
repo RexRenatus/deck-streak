@@ -79,6 +79,14 @@ impl OwnerAccess {
     }
 }
 
+impl OwnerAccess {
+    /// The clock the session routes read, for the owner's other routes that need the time
+    /// (SPEC-041's feed).
+    pub(crate) fn clock(&self) -> Arc<dyn Clock> {
+        Arc::clone(&self.clock)
+    }
+}
+
 impl fmt::Debug for OwnerAccess {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("OwnerAccess")
