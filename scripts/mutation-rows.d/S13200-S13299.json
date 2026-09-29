@@ -1,0 +1,114 @@
+{
+ "tables": {
+  "MUTATIONS": [
+   [
+    "S13201-PHOTO-DEFAULT-REFUSES",
+    "notifications",
+    "src/transport.rs",
+    "Box::pin(std::future::ready(PhotoPushed::Unsupported))",
+    "Box::pin(std::future::ready(PhotoPushed::Failed))",
+    "photo_render::a_transport_without_push_photo_answers_unsupported",
+    "a transport that does not implement push_photo answers Unsupported by default, so no photo is silently sent or reported failed (SPEC-132)"
+   ],
+   [
+    "S13202-SHARE-DEFAULT-REFUSES",
+    "notifications",
+    "src/transport.rs",
+    "Box::pin(std::future::ready(Prepared::Unsupported))",
+    "Box::pin(std::future::ready(Prepared::Failed))",
+    "photo_render::a_transport_without_prepare_share_answers_unsupported",
+    "a transport that does not implement prepare_share answers Unsupported by default (SPEC-132)"
+   ],
+   [
+    "S13203-UNSUPPORTED-WITHHELD",
+    "notifications",
+    "src/router.rs",
+    "let reason = Reason::PhotoUnsupported;",
+    "let reason = Reason::NoNotifier;",
+    "photo_render::an_unsupported_photo_is_withheld_by_name_and_sends_nothing",
+    "an unsupported photo is recorded withheld under its own reason, photo_unsupported (SPEC-132)"
+   ],
+   [
+    "S13204-QUIET-NOT-HELD",
+    "notifications",
+    "src/router.rs",
+    "                drop(write);\n                return Ok(PhotoDecision::NotNow {\n                    reason: match hold {",
+    "                write.commit().await?;\n                return Ok(PhotoDecision::NotNow {\n                    reason: match hold {",
+    "photo_render::a_photo_in_quiet_hours_is_not_held",
+    "a photo deferred by quiet hours or a breaker rolls its claim back, so nothing is held or recorded and the caller's retry sends (SPEC-132)"
+   ],
+   [
+    "S13205-FAILED-NOT-RECORDED",
+    "notifications",
+    "src/router.rs",
+    "                self.trip(now);\n                ledger::release(&mut write, claim).await?;\n                PhotoDecision::NotNow {",
+    "                self.trip(now);\n                PhotoDecision::NotNow {",
+    "photo_render::a_failed_photo_records_nothing",
+    "a failed push releases its claim and records nothing, so a later raise is not already_recorded (SPEC-132)"
+   ],
+   [
+    "S13206-DEDUPE",
+    "notifications",
+    "src/router.rs",
+    "                ledger::record(&mut write, &subject.sent(Tier::T2, now)).await?;\n                PhotoDecision::Sent { file_id }",
+    "                PhotoDecision::Sent { file_id }",
+    "photo_render::a_delivered_photo_is_recorded_once",
+    "a delivered photo is recorded as one send in the decision ledger under its key (SPEC-132)"
+   ],
+   [
+    "S13207-T2",
+    "notifications",
+    "src/router.rs",
+    "let subject = Subject::routed(occasion, Surface::Bot, Tier::T2);",
+    "let subject = Subject::routed(occasion, Surface::Bot, Tier::T3);",
+    "photo_render::a_photo_spends_no_celebration_budget",
+    "a photo asks the ladder's T2, the tier that spends no celebration budget (SPEC-132)"
+   ],
+   [
+    "S13208-SIZE-BOUND",
+    "notifications",
+    "src/photo.rs",
+    "if bytes.len() > MAX_BYTES {",
+    "if bytes.len() >= MAX_BYTES {",
+    "photo_render::an_oversized_photo_is_refused_before_any_call",
+    "a photo of exactly the Bot API's byte bound is accepted and one byte over it is refused (SPEC-132)"
+   ],
+   [
+    "S13209-SHARE-NO-RECORD",
+    "notifications",
+    "src/router.rs",
+    "Some(bot) => bot.prepare_share(&PASS, file, caption).await,",
+    "Some(bot) => {\n                let _ = bot.prepare_share(&PASS, file, caption).await;\n                Prepared::Failed\n            }",
+    "photo_render::a_prepared_share_records_no_delivery",
+    "a prepared share is the transport's own outcome, one call, and records no delivery (SPEC-132)"
+   ],
+   [
+    "S13210-LARGEST-SIZE",
+    "bot",
+    "src/transport.rs",
+    ".max_by_key(|size| u64::from(size.width) * u64::from(size.height))",
+    ".min_by_key(|size| u64::from(size.width) * u64::from(size.height))",
+    "photo_transport::push_photo_is_one_send_photo_to_the_owner",
+    "the file id kept is the largest size Telegram answered, wherever it sits in the list (SPEC-132)"
+   ],
+   [
+    "S13211-PHOTO-FAILURE-TRIPS",
+    "notifications",
+    "src/router.rs",
+    "PhotoPushed::Failed => {\n                self.trip(now);\n                ledger::release(&mut write, claim).await?;",
+    "PhotoPushed::Failed => {\n                ledger::release(&mut write, claim).await?;",
+    "photo_render::a_failed_photo_opens_the_breaker_for_the_next_photo",
+    "a failed photo opens the outage breaker, so the next photo inside the cooldown is refused before any call (SPEC-132)"
+   ],
+   [
+    "S13212-CAPTION-UTF16",
+    "notifications",
+    "src/photo.rs",
+    "if caption.encode_utf16().count() > MAX_CAPTION_UTF16 {",
+    "if caption.chars().count() > MAX_CAPTION_UTF16 {",
+    "photo_render::a_caption_is_counted_in_utf16_units",
+    "a caption is counted in UTF-16 units as Telegram counts it, so 513 characters outside the BMP are refused (SPEC-132)"
+   ]
+  ]
+ }
+}
