@@ -1,5 +1,5 @@
 ---
-status: "proposed"
+status: accepted
 date: "2026-09-28"
 decision-makers: "@RexRenatus (owner), the DeckStreak architect"
 ---
@@ -78,7 +78,10 @@ its day was current, whatever the sync cadence, and it never takes back what a c
   one, oldest first, and then evaluates the current study day as far as it has gone.
   - A closed day is settled only by a recompute that follows a successful sync which started after
     that day closed (the study day's sync outcome, ADR-037). Until then it stays owed, and the
-    recompute evaluates only the current day, from the copy as it stands.
+    recompute evaluates only the current day, from the copy as it stands. A cycle in which nothing
+    changed still settles a day left owed: the start of the study day's first successful sync is an
+    obligation's deadline (`owed_settle`), so the change gate runs one recompute after it and none
+    once one has run (SPEC-071 §10, "Continuation").
   - The settle cursor is analytics' own record: a settled day's rollup carries the instant it was
     settled, and the last settled day is the cursor. A recompute never settles a day twice.
   - With no settled day at all (the first recompute), every study day of the window is rolled up

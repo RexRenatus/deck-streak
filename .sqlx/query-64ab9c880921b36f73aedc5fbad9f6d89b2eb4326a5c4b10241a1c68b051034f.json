@@ -1,0 +1,38 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT study_day AS \"study_day!\", fingerprint FROM daily_rollup ORDER BY study_day",
+  "describe": {
+    "columns": [
+      {
+        "name": "study_day!",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "daily_rollup",
+            "name": "study_day"
+          }
+        }
+      },
+      {
+        "name": "fingerprint",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "daily_rollup",
+            "name": "fingerprint"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "64ab9c880921b36f73aedc5fbad9f6d89b2eb4326a5c4b10241a1c68b051034f"
+}

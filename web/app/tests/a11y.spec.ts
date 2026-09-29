@@ -73,6 +73,21 @@ for (const [scheme, themeParams] of Object.entries(THEMES)) {
       await page.route('**/api/me', (intercepted) =>
         intercepted.fulfill({ json: { study_day: '2001-02-03' } })
       );
+      // The score screen's breakdown, with a retention the day does not have (SPEC-071 R22).
+      await page.route('**/api/score', (intercepted) =>
+        intercepted.fulfill({
+          json: {
+            study_day: '2001-02-03',
+            score: {
+              total: 64,
+              grade: { label: 'SOLID', emoji: '\u2705' },
+              pillars: { consistency: 76, retention: null, workload: 70, volume: 60.5, mastery: 55 },
+              reviews: 0,
+              retention: null
+            }
+          }
+        })
+      );
       await page.emulateMedia({ colorScheme: scheme as 'light' | 'dark' });
     });
 
