@@ -34,6 +34,17 @@ Fix round 3: A21 now plants a key in the instance's drop-in and asserts that the
 it, because the reader reads an instance's drop-ins with its template. Its red line is the test run
 against the reader as it stood, and its green commit is the one that changes the reader.
 
+Fix round 4: A21 also plants a second instance directory of the shipped template and asserts that
+both are refused, because the reader merges every instance directory of a template into one unit
+and a second would let one instance's setting mask another's. The record admits one red and one
+green line per criterion, so this round's pair is disclosed here. A21 failed by assertion at
+6b241af over the whole module (21 tests, one failure): `AssertionError: Lists differ` between the
+refusal list and the list holding the two `planted@...` lines, `a second instance of the shipped
+template`. Its green is 062cc5a. The template's own drop-in directory was read twice by the
+instance glob; a new test, `test_a_templates_own_dropin_directory_is_read_once`, failed by
+assertion at 1dbbc73 (two identical refusal lines where one was expected) and is green at c967a20,
+with the row S06227 pinning the glob and S06226 the count.
+
 ```red-first
 A1: red at 300eca2: AssertionError: deploy/deploy.sh does not exist
 A1: green at bc0665a
