@@ -101,7 +101,8 @@ A7: cargo test -p deck-streak-daemon --test sync_request -- --exact a_flush_that
 | `crates/ingest/src/sync_runs.rs` | `deck-streak-ingest` | changed: `owner_run_since` |
 | `crates/ingest/tests/owner_run.rs` | `deck-streak-ingest` | added: the owner's latest run since an instant is read |
 | `.sqlx/` | `deck-streak-ingest` | changed: the refreshed query cache |
-| `scripts/tests/test_deploy_templates.py` | tests | changed: the bot reads no sync credential |
+| `scripts/tests/test_deploy_templates.py` | tests | changed: the bot reads no sync credential; the request directory's tmpfiles entry is no unit |
+| `scripts/tests/_units.py` | tests | changed: `ReadWritePaths` joins the paging units' key list |
 | `deploy/systemd/deck-streak-job@sync (path unit)` | deploy | added |
 | `deploy/systemd/deck-streak-bot.service` | deploy | changed: request directory, no sync login |
 | `deploy/tmpfiles.d/deck-streak-sync-request.conf` | deploy | added |
