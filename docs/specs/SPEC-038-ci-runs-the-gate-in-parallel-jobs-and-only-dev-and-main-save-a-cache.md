@@ -635,3 +635,44 @@ when a lookup of the same key missed, so that a scheduled run in the default bra
 entry a run on any ref can restore. The test that judges R2 (`cache_problems` in `test_ci_workflows.py`)
 judges that shape, in the workflow `rust-cache.yml` only, in scenarios and refuses its planted
 variants and the same shape in any other workflow (SPEC-191 A7).
+
+## 13. Amendment, 2026-09-29: every workflow scan reads both workflow suffixes (#393)
+
+Insert-only under ruling (i) of section 8: every earlier byte is kept in order. It inserts this
+section and the next, and nothing else. Issue #393.
+
+- **The rule.** GitHub runs a workflow saved as `.yml` or as `.yaml`. SPEC-034 R7
+  already has the hardening tests enumerate both through the shared `workflow_files()` of
+  `test_ci_workflows.py`. Every other test that scans the repository's workflows now goes through
+  the same helper, so a workflow saved with the `.yaml` suffix is read by each scan instead of
+  slipping past it. The five scans are the cache save rule (R2, judged by
+  `OnlyAPushSavesACache`), the protoc pin check, the two `cargo mutants` scans of
+  `test_mutation_workflows.py` (the bounded command lines and the nextest install per job), and the
+  cron collision check of `test_rust_cache_workflow.py` (SPEC-191 A8). Each scan is a function of a
+  directory, so a test can point it at a temporary directory.
+- **A plant per scan.** Five tests each write one `.yaml` workflow into a temporary directory and
+  assert that its scan reads it: the planted cache combination is reported, the planted protoc
+  digest is listed, the planted `cargo mutants` command and its job are listed, and the planted
+  cron minute is listed. On the real tree each scan examines the same population as before (11
+  protoc pins, 7 `cargo mutants` commands, 6 jobs that run `cargo mutants`, 4 cache saves, 1 other
+  cron minute).
+- Files: `scripts/tests/test_ci_workflows.py`, `scripts/tests/test_mutation_workflows.py`,
+  `scripts/tests/test_rust_cache_workflow.py`, this SPEC, `docs/red-first/SPEC-038.md` and a
+  changelog fragment (#393).
+- It changes no Rust, no workflow and no Python outside the tests, because the gap is in the
+  scans (#393).
+- It adds no mutation-row band: the change is to test files only (#393).
+
+## 14. Acceptance criteria added by the section 13 amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A21 | each workflow scan reads a workflow saved with the `.yaml` suffix: the cache save rule, the protoc pin check, the two `cargo mutants` scans and the cron collision check | `test_ci_workflows.py`, `test_mutation_workflows.py` and `test_rust_cache_workflow.py`, one planted `.yaml` workflow each |
+
+```acceptance
+A21: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k test_the_cache_scan_reads_a_workflow_saved_with_the_yaml_suffix
+A21: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k test_the_protoc_pin_scan_reads_a_workflow_saved_with_the_yaml_suffix
+A21: python3 -m unittest discover -s scripts/tests -p test_mutation_workflows.py -k test_the_mutants_command_scan_reads_a_workflow_saved_with_the_yaml_suffix
+A21: python3 -m unittest discover -s scripts/tests -p test_mutation_workflows.py -k test_the_mutants_job_scan_reads_a_workflow_saved_with_the_yaml_suffix
+A21: python3 -m unittest discover -s scripts/tests -p test_rust_cache_workflow.py -k test_the_cron_scan_reads_a_workflow_saved_with_the_yaml_suffix
+```

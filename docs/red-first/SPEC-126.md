@@ -116,3 +116,15 @@ The A5 red line above quotes a failure that came from `check_judge` comparing a 
 `f'"{path}"'`; its comparison changed to `path` between that red (2bf4a9a) and its green (11469f9),
 because the reader's representation changed from quoted words to shell-split words. The fixtures
 and the test methods stayed byte-identical across the change.
+
+## Addendum, 2026-09-29 (issue #394): A7 for redirections and substitutions
+
+The lines above stand. The red commit changes only the fixtures (four wrong paths); the green commit
+00c589f9 changes only the reader's break set and its docstring, in `scripts/tests/test_verdict_download.py`,
+because the reader lives in the test module. The whole test file at the red commit fails
+only A7, four subtests, each `AssertionError: AssertionError not raised`.
+
+```red-first
+A7: red at 27515b29: FAILED (failures=4), AssertionError: AssertionError not raised, for each of "a flag as a redirection's target", "a flag inside a command substitution", "a flag inside backquotes" and "a flag inside a process substitution"
+A7: green at 00c589f9
+```

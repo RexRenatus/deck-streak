@@ -142,3 +142,36 @@ a battery), with a listing and a sizing step in front of the legs.
 
 Issue #368; SPEC-057 R14, R18, R22; SPEC-039 R12; ADR-057 D7; ADR-129; cargo-mutants 27.1.0
 (`--shard`, `--sharding round-robin`, `--list --json`).
+
+## 8. Amendment, 2026-09-29: A6 finds every spelling of the command (#395)
+
+Insert-only under ruling (i) of SPEC-038 section 8: every earlier byte is kept in order. It inserts
+this section and the next, and nothing else. Issue #395.
+
+- **The rule.** A6 found each `cargo mutants` command with a pattern that missed three spellings of
+  the same command: `cargo +<toolchain> mutants`, the `cargo-mutants mutants` binary form, and a
+  second command on the same line, which the greedy line pattern merged into the first. A command
+  now starts at `cargo` followed by any run of `+toolchain` or `-flag` words and then `mutants`, or
+  at `cargo-mutants mutants`, and it ends where the next command starts. The bounds are still
+  matched as whole values.
+- **A plant per shape.** Three tests write one workflow each into a temporary directory: one with
+  a toolchain spelling, one with the binary form, and one with two commands on a line (the first
+  bounded, the second not). Each asserts that every command is found and, for the last, that the
+  bounded one and the unbounded one are told apart. On the real tree the guard finds the same
+  commands as before (3 in `ci.yml`, 4 in `mutation-weekly.yml`).
+- Files: `scripts/tests/test_dispatch_shards.py`, this SPEC, `docs/red-first/SPEC-129.md` and a
+  changelog fragment (#395).
+- It changes no Rust, no workflow and no Python outside the test (#395).
+- It adds no mutation-row band: the change is to a test file only (#395).
+
+## 9. Acceptance criteria added by the section 8 amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A7 | the guard finds `cargo +<toolchain> mutants`, `cargo-mutants mutants`, and each of two commands on one line | `test_dispatch_shards.py` `EveryMutationCommandKeepsTheGatesBounds` |
+
+```acceptance
+A7: python3 -m unittest discover -s scripts/tests -p test_dispatch_shards.py -k test_a_command_spelled_with_a_toolchain_is_found
+A7: python3 -m unittest discover -s scripts/tests -p test_dispatch_shards.py -k test_the_cargo_mutants_binary_form_is_found
+A7: python3 -m unittest discover -s scripts/tests -p test_dispatch_shards.py -k test_a_second_command_on_one_line_is_its_own_command
+```

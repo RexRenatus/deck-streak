@@ -56,3 +56,14 @@ V1 continued with ` \`, the same bounds on line 2: green (rc 0): the command is 
 M4's folded scalar reaches the guard as `cargo mutants` alone, so the bounds on its later lines
 are not read, and the command is refused for want of them. The earlier plants B1 to B4 and V2 to
 V7 stay red with the new A6 as they were with the old one.
+
+## Addendum, 2026-09-29 (issue #395): A7 for every spelling of the command
+
+The lines above stand. The red commit moves the guard's scan into a function of a directory and adds
+three planted-workflow tests over the old pattern; the green commit 9a7b2141 changes only the pattern and its
+comment, in `scripts/tests/test_dispatch_shards.py`, because the guard's pattern lives in the test module. The whole test file at the red commit fails only the three new tests, each by assertion.
+
+```red-first
+A7: red at 1b6bc977: AssertionError: {} != {'planted.yml': ['cargo +nightly mutants --in-place']} (toolchain); AssertionError: {} != {'planted.yml': ['cargo-mutants mutants --in-place']} (binary form); AssertionError: 1 != 2 (two commands on one line)
+A7: green at 9a7b2141
+```
