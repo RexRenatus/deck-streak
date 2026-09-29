@@ -436,6 +436,7 @@ notifications `one_router` target, run at that commit.
   moved from `NOT_DELIVERIES` to `DELIVERY_METHODS`; the census holds 29 send methods, 65 delivery
   methods and 91 that are classified, not held, and all three tests pass.
 
-Rows S04148 and S04149 (ea4df18): a Passport error's message and an invite link's name, each held
-with the sends; the killer is `no_delivery_goes_around_the_port`, and the mutant drops the name from
-`DELIVERY_METHODS`.
+Rows S04148 and S04149 (ea4df18, mutants corrected at bfe514d): a Passport error's message and an
+invite link's name, each held with the sends; the killer is `no_delivery_goes_around_the_port`, and
+the mutant swaps the name for a copy of the next name, so `DELIVERY_METHODS` keeps its length and
+the target builds.
