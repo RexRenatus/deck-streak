@@ -182,3 +182,15 @@ this section and nothing else. Issue #374.
 - It changes no Rust, no workflow and no Python outside the test, because the defect is in the
   test's reader (#374).
 - It adds no mutation-row band, for the reason section 5 gives (#374).
+
+## 10. Acceptance criteria added by the 2026-09-29 amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A5 | each of the seven spellings issue #374 names passes the judge-line check | `test_verdict_download.py` `every_spelling_the_shell_reads_alike_passes` |
+| A6 | each path the shell reads differently is refused, and the reader keeps an expansion apart from text and from an unquoted expansion | `test_verdict_download.py` `every_path_the_shell_reads_differently_is_refused` |
+
+```acceptance
+A5: python3 -m unittest discover -s scripts/tests -p test_verdict_download.py -k test_every_spelling_the_shell_reads_alike_passes
+A6: python3 -m unittest discover -s scripts/tests -p test_verdict_download.py -k test_every_path_the_shell_reads_differently_is_refused
+```
