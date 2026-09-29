@@ -1,0 +1,64 @@
+---
+status: "proposed"
+date: "2026-09-28"
+decision-makers: "@RexRenatus (owner), the DeckStreak architect"
+---
+
+# The law taxonomy is private configuration beside the law root, and ingest translates a card's law subject
+
+## Context and Problem Statement
+
+The strands (#88), the test-prep board (#135) and the leech board (#133) read a card's law
+subject, and the runway (#144) groups unseen cards by it. The predecessor derives the subject from
+the deck path (`leeches.py:_law_subject`) with the year bands and the test-prep subtree written as
+literals beside its law root (`leeches._LAW_BANDS`, `lsat._LSAT_TRACK`, predecessor `27ee2bc`).
+Those literals describe the owner's deck layout. SPEC-023 already reads the law root as a setting
+(`DECKSTREAK_LAW_DECK_ROOT`). Where do the year bands and the test-prep subtree live, and which
+context turns a deck path into a law subject?
+
+## Decision Drivers
+
+- CHARTER 11: a personal default is configuration with a neutral example value.
+- ADR-002: curriculum and insights may not depend on each other; a deck path is Anki's language,
+  which ingest translates (ADR-087 did the same for courses).
+- ADR-012: the golden drives the predecessor's function with synthetic bands patched in.
+
+## Considered Options (the alternatives it was chosen against)
+
+- Two scope settings beside the law root, read by ingest, which gives each card its law subject — chosen: the layout stays private, it sits beside the root it refines, and every context receives a subject rather than a deck path.
+- The predecessor's literals — rejected because they are the owner's deck names, which CHARTER 11 keeps out of the repository.
+- The courses file — rejected because it lists language courses (ADR-087), and law is a track, not a course.
+- The note conventions file (ADR-096) — rejected because it describes note types and fields, while the law taxonomy describes decks.
+- Curriculum parsing the deck path itself — rejected because the runway in insights reads the same subject, and a second parser would drift.
+
+## Decision Outcome
+
+Chosen option: "Two scope settings beside the law root, read by ingest", because the taxonomy is
+deck layout, and deck layout is what ingest's scope settings already hold.
+
+- `DECKSTREAK_LAW_YEAR_BANDS` (a comma-separated list) and `DECKSTREAK_LAW_TEST_PREP_DECK` (one
+  deck name) are read with `DECKSTREAK_LAW_DECK_ROOT`; either set without the root refuses start,
+  naming the setting and never a value.
+- `crates/ingest/src/law_subject.rs` gives a card's law subject and, under the test-prep subtree,
+  its section, equal to the golden of `leeches.py:_law_subject` with synthetic bands.
+- `deploy/config/` shows neutral examples.
+
+### Consequences
+
+- Good, because no law deck name of the owner's enters the repository.
+- Good, because curriculum and insights read one subject for a card.
+- Bad, because a change to the bands takes effect at the next start, like every scope setting.
+
+### Confirmation
+
+SPEC-092's A1 and A2: the subject of every synthetic path equals the golden, and a law setting
+without the root refuses start.
+
+## What would make this wrong
+
+- The owner studies a second law syllabus with another layout; the settings then become a small
+  file, as the courses did.
+
+## More Information
+
+ADR-002; ADR-012; ADR-087; SPEC-023; SPEC-092, which builds it; SPEC-093 and SPEC-098, which read it.
