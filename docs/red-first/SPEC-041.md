@@ -376,3 +376,33 @@ the second review's re-export at the crate's root gained two refusals, of its re
 census's helpers changed at c64c491, 6f423f3, 692ae34 and 4bacdd8, into the model the criterion now
 describes, and its module doc at 1a9278b. The earlier planted cases, their refusals, and the other
 assertions over the tree are unchanged.
+
+The fifth review's round widened the census to the pinned client's whole table. Each red is the
+whole notifications `one_router` target, run at that commit.
+
+- The partition (e008cf9, green at b86433d). `CLIENT_METHODS` lists all 185 methods of the pinned
+  client (0.52.1), with the command that derives it, and `CLIENT_VERSION`. The new test
+  `the_census_classifies_every_method_of_the_pinned_client` asserts that the version is the one
+  `Cargo.lock` pins and that `SEND_METHODS`, `DELIVERY_METHODS` and a new `NOT_DELIVERIES` are
+  pairwise disjoint and together equal the list. At e008cf9 only that test failed, by assertion,
+  naming ten unclassified methods; the other two tests passed.
+- Three deliveries planted around the port (373aed1). A raw request naming `sendRichMessage` from a
+  new module of the bot, a `send_live_photo` call and an `edit_ephemeral_message_text` call from new
+  modules of the daemon, each with its expected refusal. Because the partition's red came first,
+  the two failing tests at 373aed1 are the partition test and `no_delivery_goes_around_the_port`,
+  the second by an `assert_eq` mismatch of the refusals; the brief's two reds cannot each show one
+  failing test in a single line of commits, and each was measured on the whole target. The widening
+  (b86433d) put `sendLivePhoto`, `sendRichMessage` and `sendRichMessageDraft` in `SEND_METHODS`, and
+  `editEphemeralMessageText`, `editEphemeralMessageCaption`, `editEphemeralMessageMedia`,
+  `editEphemeralMessageReplyMarkup`, `stopPoll`, `stopMessageLiveLocation` and `answerWebAppQuery`
+  in `DELIVERY_METHODS`; every other method is in `NOT_DELIVERIES`, and all three tests passed.
+- The claims (28e4f50). Each A15 claim now says "every send or delivery method of the pinned
+  client's table", and each re-export claim says "its feed's and queue's tables" and "its writes to
+  the feed and the queue"; §5 gains the bullet that the other classes are classified, not held
+  (#297).
+
+Rows S04143 to S04147 (99543c1): the widened lists, the version, an unclassified method, a method in
+two classes and a name the client does not expose. The band was proved with `mutation_rows.py prove --band S04100-S04199` on the committed tree at 99543c1: examined 47, killed 47, survived 0, VOID 0; each target was restored byte for byte, and the tree was clean after.
+
+DISCLOSURE, A15: its lists and its planted cases changed at 373aed1 and b86433d, after its earlier
+green commits; the earlier cases and their refusals are unchanged. The partition test is new.
