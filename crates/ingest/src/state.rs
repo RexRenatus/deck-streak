@@ -12,6 +12,63 @@ use deck_streak_kernel::{Db, KernelError, StudyDay, UtcMillis};
 use crate::gate::{Anchor, AnchorState, Probe};
 use crate::window::WindowBase;
 
+/// Why the job refused the owner's request (SPEC-128 R1): a closed set, mirrored by the `CHECK` of
+/// `ingest_state.refused_reason`. The cycle's own refusal codes, and the recompute setup's.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum RefusalReason {
+    /// The owner's rescore could not be recorded.
+    RescoreUnrecorded,
+    /// The sync's settings refuse it.
+    SyncSettingsRefused,
+    /// The credentials directory refuses it.
+    CredentialsDirectoryRefused,
+    /// The read's scope refuses it.
+    ScopeSettingsRefused,
+    /// The recompute's setup could not be loaded.
+    RecomputeRefused,
+    /// The sync's record could not be read or written.
+    SyncRecordFailed,
+    /// The obligations could not be read.
+    ObligationsUnreadable,
+    /// The recompute after the sync failed.
+    RecomputeFailed,
+}
+
+impl RefusalReason {
+    /// Every reason, in the order of the migration's `CHECK`.
+    pub const ALL: [Self; 8] = [
+        Self::RescoreUnrecorded,
+        Self::SyncSettingsRefused,
+        Self::CredentialsDirectoryRefused,
+        Self::ScopeSettingsRefused,
+        Self::RecomputeRefused,
+        Self::SyncRecordFailed,
+        Self::ObligationsUnreadable,
+        Self::RecomputeFailed,
+    ];
+
+    /// The reason's code, as stored and as the owner is told.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        "unset"
+    }
+
+    /// The reason a code names, when it is one of the closed set.
+    #[must_use]
+    pub fn parse(_code: &str) -> Option<Self> {
+        None
+    }
+}
+
+/// A refused owner request: why, and when.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Refusal {
+    /// Why the job refused it.
+    pub reason: RefusalReason,
+    /// When it was refused.
+    pub at: UtcMillis,
+}
+
 /// The row, as the gate and the window read it.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct IngestState {
@@ -19,6 +76,8 @@ pub struct IngestState {
     pub anchor: AnchorState,
     /// Whether the owner asked for a rescore that no recompute has served yet.
     pub rescore_pending: bool,
+    /// The owner's request the job refused and no new request has replaced (SPEC-128).
+    pub refusal: Option<Refusal>,
     /// The window's base, once a recount has written one.
     pub window_base: Option<WindowBase>,
 }
@@ -62,6 +121,7 @@ impl SqliteIngestState {
             return Ok(IngestState {
                 anchor: AnchorState::Unreadable,
                 rescore_pending: false,
+                refusal: None,
                 window_base: None,
             });
         };
@@ -100,6 +160,7 @@ impl SqliteIngestState {
         Ok(IngestState {
             anchor,
             rescore_pending: row.rescore_pending != 0,
+            refusal: None,
             window_base,
         })
     }
@@ -121,6 +182,20 @@ impl SqliteIngestState {
         .execute(&mut *write)
         .await?;
         write.commit().await?;
+        Ok(())
+    }
+
+    /// Records that the job refused the owner's request (SPEC-128 R1): the reason and the instant,
+    /// and the pending flag cleared, in one write.
+    ///
+    /// # Errors
+    ///
+    /// [`KernelError::Database`] when the write fails.
+    pub async fn record_refusal(
+        &self,
+        _reason: RefusalReason,
+        _now: UtcMillis,
+    ) -> Result<(), KernelError> {
         Ok(())
     }
 

@@ -37,6 +37,11 @@ pub enum Progress {
     },
     /// The request was served without a sync: the reuse window answered it.
     Reused,
+    /// The job refused the request (SPEC-128); `reason` is the refusal's code.
+    Refused {
+        /// The refusal's code, one of the closed set.
+        reason: String,
+    },
 }
 
 /// The store's side of a request.
@@ -183,7 +188,7 @@ impl<C: Clock, L: RequestLedger, D: Doorbell, P: Pause, F: Flush> SyncRequester<
                 Progress::Ran {
                     failure: Some(reason),
                 } => SyncOutcome::Failed { reason },
-                Progress::Reused => SyncOutcome::Reused,
+                Progress::Reused | Progress::Refused { .. } => SyncOutcome::Reused,
                 Progress::Waiting if self.clock.now().epoch_millis() >= deadline => {
                     return Ok(SyncAnswer {
                         sync: SyncOutcome::StillRunning,

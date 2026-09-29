@@ -444,6 +444,101 @@ async fn only_the_sync_job_serves_the_owners_stored_request() {
     );
 }
 
+/// A state directory holding one stored owner request, and the credentials the job reads.
+async fn stored_request(directory: &std::path::Path) -> (std::path::PathBuf, std::path::PathBuf) {
+    let state = directory.join("state");
+    let credentials = directory.join("credentials");
+    for folder in [&state, &credentials] {
+        fs::create_dir_all(folder).expect("a folder");
+    }
+    fs::write(credentials.join(SYNC_USERNAME), "synthetic-owner\n").expect("a credential");
+    fs::write(credentials.join(SYNC_PASSWORD), "synthetic-password\n").expect("a credential");
+    let db = Db::open(&state.join(DATABASE_FILE))
+        .await
+        .expect("the role's database opens");
+    SqliteIngestState::new(db.clone())
+        .request_rescore(SystemClock.now())
+        .await
+        .expect("the request is stored");
+    db.close().await;
+    (state, credentials)
+}
+
+async fn stored_refusal(state: &std::path::Path) -> (bool, Option<String>) {
+    let db = Db::open(&state.join(DATABASE_FILE))
+        .await
+        .expect("the role's database opens");
+    let loaded = SqliteIngestState::new(db.clone())
+        .load()
+        .await
+        .expect("the state reads");
+    db.close().await;
+    (
+        loaded.rescore_pending,
+        loaded
+            .refusal
+            .map(|refusal| refusal.reason.as_str().to_owned()),
+    )
+}
+
+#[tokio::test]
+async fn a_refused_owner_request_is_recorded_and_the_next_run_does_not_retry_it() {
+    let directory = tempfile::tempdir().expect("a temporary directory");
+    let (state, credentials) = stored_request(directory.path()).await;
+    let offset = offset_to_half_past_noon();
+    let environment = [
+        ("STATE_DIRECTORY", state.as_os_str()),
+        ("CREDENTIALS_DIRECTORY", credentials.as_os_str()),
+        (
+            "DECKSTREAK_SYNC_ENDPOINT",
+            OsStr::new("http://127.0.0.1:9/"),
+        ),
+        ("DECKSTREAK_ROLLOVER_HOUR", OsStr::new("12")),
+        ("DECKSTREAK_UTC_OFFSET_MINUTES", OsStr::new(&offset)),
+        (LAW_DECK_ROOT, OsStr::new("Law\u{1f}Evidence")),
+    ];
+    let first = deckstreakd(&["job", "sync"], &environment);
+    assert_eq!(request_events(&first).len(), 1, "{}", describe(&first));
+    assert_eq!(
+        stored_refusal(&state).await,
+        (false, Some("scope_settings_refused".to_owned())),
+        "{}",
+        describe(&first)
+    );
+    let second = deckstreakd(&["job", "sync"], &environment);
+    assert!(
+        request_events(&second).is_empty(),
+        "the refused request is not served again: {}",
+        describe(&second)
+    );
+}
+
+#[tokio::test]
+async fn a_refused_recompute_setup_is_recorded_for_the_owner() {
+    let directory = tempfile::tempdir().expect("a temporary directory");
+    let (state, credentials) = stored_request(directory.path()).await;
+    let missing = directory.path().join("missing-courses.json");
+    let offset = offset_to_half_past_noon();
+    let environment = [
+        ("STATE_DIRECTORY", state.as_os_str()),
+        ("CREDENTIALS_DIRECTORY", credentials.as_os_str()),
+        (
+            "DECKSTREAK_SYNC_ENDPOINT",
+            OsStr::new("http://127.0.0.1:9/"),
+        ),
+        ("DECKSTREAK_ROLLOVER_HOUR", OsStr::new("12")),
+        ("DECKSTREAK_UTC_OFFSET_MINUTES", OsStr::new(&offset)),
+        ("DECKSTREAK_COURSES_FILE", missing.as_os_str()),
+    ];
+    let output = deckstreakd(&["job", "sync"], &environment);
+    assert_eq!(
+        stored_refusal(&state).await,
+        (false, Some("recompute_refused".to_owned())),
+        "{}",
+        describe(&output)
+    );
+}
+
 #[tokio::test]
 async fn two_planted_request_payloads_change_nothing_the_sync_job_serves() {
     // The doorbell's file holds a payload that pretends to command the job. The job reads the
