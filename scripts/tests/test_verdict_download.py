@@ -46,14 +46,25 @@ def local(path):
     return posixpath.normpath(path.replace("${{ runner.temp }}", TEMP)).strip("/")
 
 
-def shard_artifact(shard):
+FAMILIES = {
+    "rust": (
+        "mutation-rust",
+        "mutation-rust-shard-",
+        ("mutants.out/outcomes.json", "cargo-mutants.exit"),
+    ),
+    "python": ("mutation-python", "mutation-python-shard-", ("report.json",)),
+}
+
+
+def shard_artifact(shard, family="rust"):
     """(name, {file inside the artifact}) for one shard, from the shard job's own text."""
-    rust = jobs(workflow(CI))["mutation-rust"]
-    made = re.search(r'out="\$RUNNER_TEMP/([^"]+)"', rust)
-    upload = next(s for s in steps(rust) if UPLOAD in s and "mutation-rust-shard-" in s)
+    job, stem, leaves = FAMILIES[family]
+    text = jobs(workflow(CI))[job]
+    made = re.search(r'out="\$RUNNER_TEMP/([^"]+)"', text)
+    upload = next(s for s in steps(text) if UPLOAD in s and stem in s)
     given = inputs(upload)
     if made is None or "path" not in given:
-        raise AssertionError("mutation-rust does not name its output directory and its upload")
+        raise AssertionError(f"{job} does not name its output directory and its upload")
     out = local(f"{TEMP}/" + made.group(1).replace("$SHARD", str(shard)))
     root = local(given["path"])
     if out != root and not out.startswith(root + "/"):
@@ -61,7 +72,7 @@ def shard_artifact(shard):
     name = given["name"].replace("${{ matrix.shard }}", str(shard))
     inside = posixpath.relpath(out, root)
     prefix = "" if inside == "." else inside + "/"
-    files = {f"{prefix}mutants.out/outcomes.json", f"{prefix}cargo-mutants.exit"}
+    files = {prefix + leaf for leaf in leaves}
     return name, files
 
 
@@ -69,8 +80,9 @@ def artifacts(shards, rows, web):
     """{artifact name: {file inside it}} the run uploaded, as the jobs' own text produces them."""
     found = {"mutation-plan": {"plan.json", "whole.json", "git.diff"}}
     for shard in range(shards):
-        name, files = shard_artifact(shard)
-        found[name] = files
+        for family in FAMILIES:
+            name, files = shard_artifact(shard, family)
+            found[name] = files
     if rows:
         found["mutation-rows"] = {"rows.json"}
     if web:
@@ -139,6 +151,25 @@ class TheVerdictReadsEachReportByName(unittest.TestCase):
                 )
                 self.assertIn(
                     f"{reports}/mutation-rust-shard-{shard}/cargo-mutants.exit", placed, where
+                )
+                self.assertIn(f"{reports}/mutation-python-shard-{shard}/report.json", placed, where)
+
+    def test_every_needed_job_that_uploads_has_a_matching_download_in_the_verdict(self):
+        ci = workflow(CI)
+        verdict = jobs(ci)["mutation-verdict"]
+        needs = re.search(r"(?m)^    needs: \[(.*)\]$", verdict)
+        self.assertIsNotNone(needs, "the verdict names no needs")
+        needed = [name.strip() for name in needs.group(1).split(",")]
+        wanted = []
+        for step in [s for s in steps(verdict) if DOWNLOAD in s]:
+            given = inputs(step)
+            wanted.append(given.get("name") or given.get("pattern") or "*")
+        for job in examined("needed jobs", needed):
+            for step in [s for s in steps(jobs(ci)[job]) if UPLOAD in s]:
+                name = inputs(step)["name"].replace("${{ matrix.shard }}", "0")
+                self.assertTrue(
+                    any(fnmatch.fnmatchcase(name, pattern) for pattern in wanted),
+                    f"{job} uploads {name} and the verdict downloads nothing that matches it",
                 )
 
     def test_the_verdict_reads_no_artifact_of_a_job_it_does_not_need(self):
