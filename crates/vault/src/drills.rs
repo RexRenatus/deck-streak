@@ -44,13 +44,15 @@ const ANSWER_HEADINGS: [&str; 5] = [
 ];
 /// The heading of the checklist, which is not an answer section.
 const SELF_CHECK: &str = "Self-Check";
-/// The longest a grade key's id may be to be kept as it is: the source grammar's 128 less the
-/// `drill:` prefix is not what bounds it, the grammar's body is.
-pub const KEY_ID_MAX: usize = 128;
-/// The grant grammar's own limit, as a mirror.
+/// The grant grammar's own limit on a source, in bytes (`deck_streak_progression::grant::
+/// SOURCE_MAX_LEN`, SPEC-040 R2). The vault depends on the kernel only, so the limit is mirrored
+/// here and a test in the coordination crate, which sees both, asserts the two are equal.
 pub const GRANT_SOURCE_MAX: usize = 128;
-/// The prefix of every drill's grant key.
+/// The prefix of every drill's grant key: one name for the key builder and the id bound.
 pub const KEY_PREFIX: &str = "drill:";
+/// The longest a grade key's id may be to be kept as it is: the whole key `drill:<id>` must fit the
+/// grant grammar's limit (SPEC-040 R2), so the id holds the limit less the prefix (122 bytes).
+pub const KEY_ID_MAX: usize = GRANT_SOURCE_MAX - KEY_PREFIX.len();
 /// The hex characters of the hash a hashed key carries.
 const KEY_HASH_HEX: usize = 32;
 
@@ -629,9 +631,9 @@ pub fn parse_graded(stem: &str, raw: &str) -> Option<GradedDrill> {
     })
 }
 
-/// The source key a drill's grant carries (R10): `drill:<id>` when the id fits
-/// `^[a-z0-9][a-z0-9:._-]{0,127}$` and does not begin `h.`, else `drill:h.` and the first 32 hex
-/// characters of the SHA-256 of the id. A hashed key can never equal a kept one.
+/// The source key a drill's grant carries (R10): `drill:<id>` when that key fits
+/// `^[a-z0-9][a-z0-9:._-]{0,127}$` and the id does not begin `h.`, else `drill:h.` and the first 32
+/// hex characters of the SHA-256 of the id. A hashed key can never equal a kept one.
 #[must_use]
 pub fn drill_key(id: &str) -> String {
     let mut chars = id.chars();
@@ -643,8 +645,8 @@ pub fn drill_key(id: &str) -> String {
             c.is_ascii_lowercase() || c.is_ascii_digit() || matches!(c, ':' | '.' | '_' | '-')
         });
     if fits && !id.starts_with("h.") {
-        return format!("drill:{id}");
+        return format!("{KEY_PREFIX}{id}");
     }
     let hex = sha256::hex(&sha256::digest(id.as_bytes()));
-    format!("drill:h.{}", &hex[..KEY_HASH_HEX])
+    format!("{KEY_PREFIX}h.{}", &hex[..KEY_HASH_HEX])
 }

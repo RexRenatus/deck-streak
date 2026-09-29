@@ -94,8 +94,10 @@ impl<F: VaultFs> DrillNotes<F> {
 
     /// The names of the `.md` notes directly inside `folder`, sorted, or none when it is missing.
     fn notes(&self, folder: &Path) -> Result<Vec<String>, VaultError> {
+        let present = self.confined(folder)?;
         let entries = match self.fs.list(folder) {
-            Ok(entries) => entries,
+            Ok(entries) if present => entries,
+            Ok(_) => return Ok(Vec::new()),
             Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(Vec::new()),
             Err(error) => return Err(VaultError::io("list a folder")(error)),
         };
@@ -109,15 +111,49 @@ impl<F: VaultFs> DrillNotes<F> {
         Ok(stems)
     }
 
+    /// Whether `folder` is present and resolves to itself, or is missing. This is the ONE gate a
+    /// folder passes before anything in it is listed, read or written: the vault root was resolved
+    /// when it opened, so a folder that resolves elsewhere has a link on its way (R1), and it is
+    /// refused with [`VaultError::NotAFolder`], a link to a place inside the vault included.
+    ///
+    /// `Ok(false)` is a folder that does not exist (nothing to list, read or write).
+    fn confined(&self, folder: &Path) -> Result<bool, VaultError> {
+        match self.fs.canonicalize(folder) {
+            Ok(resolved) if resolved == folder => Ok(true),
+            Ok(_) => Err(VaultError::NotAFolder),
+            Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(false),
+            Err(error) => Err(VaultError::io("resolve a folder")(error)),
+        }
+    }
+
+    /// The ONE gate a note passes before it is read or written: its folder is [`Self::confined`]
+    /// and it is a regular file, read without following a link (a link, dangling or not, and a
+    /// directory are not notes). `Ok(false)` is nothing there to read or write.
+    fn regular_note(&self, folder: &Path, path: &Path) -> Result<bool, VaultError> {
+        if !self.confined(folder)? {
+            return Ok(false);
+        }
+        Ok(self
+            .fs
+            .kind(path)
+            .map_err(VaultError::io("read an entry"))?
+            == Some(EntryKind::File))
+    }
+
     /// The text of the note `stem` in `folder` with universal newlines, or nothing when it cannot
-    /// be read. The reason is logged by its type.
+    /// be read or is not a regular file behind a confined folder. The reason is logged by its type.
     fn read(&self, folder: &Path, stem: &str) -> Option<String> {
         let path = folder.join(format!("{stem}.md"));
-        let outcome = self
-            .fs
-            .read(&path)
-            .map_err(|error| format!("{:?}", error.kind()))
-            .and_then(|bytes| String::from_utf8(bytes).map_err(|_| "NotUtf8".to_owned()));
+        let outcome = match self.regular_note(folder, &path) {
+            Ok(true) => self
+                .fs
+                .read(&path)
+                .map_err(|error| format!("{:?}", error.kind())),
+            Ok(false) => Err("NotARegularFile".to_owned()),
+            Err(VaultError::Io { source, .. }) => Err(format!("{:?}", source.kind())),
+            Err(_) => Err("NotAFolder".to_owned()),
+        }
+        .and_then(|bytes| String::from_utf8(bytes).map_err(|_| "NotUtf8".to_owned()));
         match outcome {
             Ok(text) => Some(drills::universal_newlines(&text)),
             Err(kind) => {
@@ -197,13 +233,7 @@ impl<F: VaultFs> DrillNotes<F> {
             return Ok(AnswerOutcome::EmptyAnswer);
         }
         let path = self.active().join(format!("{id}.md"));
-        if !drills::safe_stem(id)
-            || self
-                .fs
-                .kind(&path)
-                .map_err(VaultError::io("read an entry"))?
-                != Some(EntryKind::File)
-        {
+        if !drills::safe_stem(id) || !self.regular_note(&self.active(), &path)? {
             return Ok(AnswerOutcome::NotActive);
         }
         let bytes = self.fs.read(&path).map_err(VaultError::io("read a note"))?;
