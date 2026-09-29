@@ -60,6 +60,11 @@ indentation, the closing fence carries the same prefix, and a quoted blank line 
 its trailing blanks) becomes an empty line. So is a fence with blanks between the backticks and
 `mermaid`. GitHub renders each of these as a diagram. The check's own test plants an unparsable
 block in each and refuses it by name, and accepts a valid quoted block that holds a quoted blank line.
+The quoted plants are generated from the opener's own prefix grammar rather than listed: every quote
+prefix it admits up to depth 2 (`>`, `> `, `>` then a tab, `> > `, `>>`), alone and followed by a list
+marker (`- `, `1. `), with the fence spelled ```` ```mermaid ```` and ```` ``` mermaid ````, which is 30
+members. Each is planted unparsable and refused by name, and planted valid and accepted, and the test
+asserts the member count so a shrunken generator is visible.
 
 ## 3. Acceptance criteria
 
@@ -69,7 +74,7 @@ block in each and refuses it by name, and accepts a valid quoted block that hold
 | A2 | the check reads every fenced block, and at least 100 of them | `docs-mermaid.test.ts` `reads every fenced block` |
 | A3 | a block whose node id is a reserved word is refused, and the same block with another id is accepted | `docs-mermaid.test.ts` `reserved word` (two tests) |
 | A4 | an indented fence, in a list item or by one to three spaces, is read: an unparsable one is refused by name, and a valid one of each diagram type the documents use is accepted | `docs-mermaid.test.ts` `indented` (two tests) |
-| A5 | a fence in a blockquote, and one spaced before `mermaid`, is read: an unparsable one is refused by name, and a valid quoted one with a quoted blank line is accepted | `docs-mermaid.test.ts` `quoted` (two tests) |
+| A5 | every quoted fence form the opener grammar admits (30 generated members), and one spaced before `mermaid`, is read: an unparsable one is refused by name, and a valid quoted one with a quoted blank line is accepted | `docs-mermaid.test.ts` `quoted` (two tests) |
 
 ```acceptance
 A1: pnpm exec vitest run web/app/src/lib/docs-mermaid.test.ts -t "parses every block"
@@ -141,13 +146,15 @@ No new schematic: the change adds no component; it corrects six existing ones.
   block fewer than the openers) but not a spelling the reader misses. A4 and A5 cover indentation,
   blockquotes and blanks before `mermaid`; a fence in another form, a tilde or four-backtick one,
   stays outside R1 by section 5.
-- **False refusals, on the fail-closed side.** The check goes red on a valid diagram, rather than
-  passing an unread one, in these shapes: a closing fence at a different indentation or quote prefix
-  than its opener (A2's count of openers then differs from the blocks read, without naming a file,
-  and the opener may run on to the next fence and refuse a block by name), an opener such as
-  `mermaidx`, a top-level block indented four spaces or by a tab, and a `mermaid` fence shown inside
-  a four-backtick example (the last three are refused by name). The merged tree holds none of them:
-  the check reads 190 blocks and refuses none.
+- **False refusals, on the fail-closed side.** The check goes red rather than pass an unread block,
+  in two ways. A closing fence at a different indentation or quote prefix than its opener makes it
+  red even on a valid diagram: A2's count of openers then differs from the blocks read, without
+  naming a file, and the opener may run on to the next fence and refuse a block by name. A block
+  that GitHub shows as code rather than as a diagram, but that the reader takes for a `mermaid`
+  block (an opener such as `mermaidx`, a top-level block indented four spaces or by a tab, or a
+  `mermaid` fence shown inside a four-backtick example), is refused by name when its text does not
+  parse, and accepted when it does. The merged tree holds none of them: the check reads 190 blocks
+  and refuses none.
 
 ## 7. References
 
