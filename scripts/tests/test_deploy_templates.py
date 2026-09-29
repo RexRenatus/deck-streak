@@ -337,6 +337,13 @@ def credential_lines(root):
     return found
 
 
+def dropin_directory_refusals(root):
+    """Every `*.d/` directory under `root`'s deploy/ that is not the drop-in directory of a unit
+    shipped beside it, as one line each: only `<unit name>.d/` is read with a unit (SPEC-066 R2), so
+    any other is refused, and the one directory of a file that is no unit is named here."""
+    return []
+
+
 def socket_form_refusals(lines, ids):
     """Every credential line that is not `LoadCredential=<a DeckStreak id>:<the socket>`."""
     refused = []
@@ -920,6 +927,35 @@ class CredentialsComeFromTheSocket(unittest.TestCase):
                 ],
                 what,
             )
+
+
+    def test_only_a_units_own_dropin_directory_is_shipped_under_deploy(self):
+        # The tree ships the drop-in directories of no unit, and one directory of a file that is no
+        # unit (SPEC-066 R2). Planted beside a unit: a directory named for no unit, one named for
+        # the suffix alone, one named for a template's instance, and one named for a unit that is
+        # not shipped: each refused by its path. A unit's own is read, so it is not refused here.
+        self.assertEqual(dropin_directory_refusals(REPO), [])
+        refused = "is not the drop-in directory of a unit shipped beside it, and is refused"
+        planted = ["deck-streak-.service.d", "service.d", "planted@one.service.d", ".d", "absent.service.d"]
+        for folder in examined("planted drop-in directorie(s)", planted):
+            with tempfile.TemporaryDirectory() as scratch:
+                systemd = Path(scratch) / "deploy" / "systemd"
+                (systemd / folder).mkdir(parents=True)
+                (systemd / "planted@.service").write_text("[Service]\n", encoding="utf-8")
+                (systemd / "planted@.service.d").mkdir()
+                self.assertEqual(
+                    dropin_directory_refusals(scratch),
+                    [f"deploy/systemd/{folder}: {refused}"],
+                    folder,
+                )
+        # A directory of the same name elsewhere under deploy/ is refused too, and the one
+        # directory the tree holds is refused when it moves.
+        for where in ("deploy/scripts/planted.service.d", "deploy/other/journald.conf.d"):
+            with tempfile.TemporaryDirectory() as scratch:
+                (Path(scratch) / where).mkdir(parents=True)
+                self.assertEqual(
+                    dropin_directory_refusals(scratch), [f"{where}: {refused}"], where
+                )
 
 
 class TheServicesRunTheirRoles(unittest.TestCase):
