@@ -296,3 +296,9 @@ that reports one entry on another device; it does not cross a real mount (R20, a
 The rows S06055 to S06065: the deletion's re-measure (S06055, killed by A5), the apply's list, the
 apply's rules and the plan's inventory each read once (S06056 to S06058, A10), and the clock and
 device refusals (S06059 to S06065, A11).
+
+The whole band was proved at the head of this round with
+`python3 scripts/mutation_rows.py prove --band S06000-S06099`: 62 killed and 3 void, because the
+round's re-measure and the clock line in the plan's list had moved the anchors of S06019, S06020
+and S06053. They were re-anchored, and each was proved with `--row`: killed, so 65 of 65 rows
+are killed and each target was restored byte for byte, checked by its sha256.
