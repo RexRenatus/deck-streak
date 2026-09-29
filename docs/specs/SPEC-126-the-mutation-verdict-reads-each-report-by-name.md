@@ -215,12 +215,15 @@ this section and the next, and nothing else. Issue #394.
 - **Four refused fixtures.** The wrong paths gain one line per shape: a flag as a redirection's
   target, a flag inside `$( )`, a flag inside backquotes, and a flag inside `<( )`. Each judge line
   keeps its other flags, so only the hidden `--rows` is missing from the words the verdict reads
-  (seventeen wrong paths in all, with the two below).
+  (seventeen wrong paths in all, with the two below; the ANSI-C fixture below makes eighteen).
 - **Two refused fixtures inside double quotes.** A flag inside `"$( ... )"` and a flag inside
   double-quoted backquotes, each with inner quotes that split it into words of its own, reach no
   argument of the verdict either. A flag after a double-quoted word that holds `$(` or a
   backquote is refused too, because the reading ends inside that word: the reader errs toward
   refusing (#394).
+- **An ANSI-C string.** The reader does not parse an ANSI-C string `$'...'`, in which `\'` does not
+  close the quote: it stops reading at one, so a flag after it is refused. That is a fail-closed
+  limit, and the wrong paths gain one line for it (#394).
 - **Out of scope, named.** A heredoc body is not read as words, and a flag after a bare `)` is not
   read at all, because the reader stops at the first break (#394).
 - Files: `scripts/tests/test_verdict_download.py`, this SPEC, `docs/red-first/SPEC-126.md` and a

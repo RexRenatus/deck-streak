@@ -142,3 +142,16 @@ The whole test file at the red commit fails only A7, two subtests, each
 A7 replay: red at e0945c6b: FAILED (failures=2), AssertionError: AssertionError not raised, for each of "a flag inside a double-quoted command substitution" and "a flag inside double-quoted backquotes"
 A7 replay: green at cff9f209: Ran 7 tests, OK, examined 17 wrong paths
 ```
+
+## Addendum, 2026-09-29 (issue #394, round 3): A7 with an ANSI-C string
+
+The lines above stand, and A7 keeps its one red and one green line; this replay is quoted below
+them. The red commit 372f3614 adds only one fixture, a flag inside an ANSI-C string with an escaped
+quote; the green commit 950edffb changes only the reader and its docstring, in
+`scripts/tests/test_verdict_download.py`, because the reader lives in the test module. The whole
+test file at the red commit fails only A7, one subtest, by assertion.
+
+```text
+A7 replay: red at 372f3614: FAILED (failures=1), AssertionError: AssertionError not raised, for "a flag inside an ANSI-C string with an escaped quote"
+A7 replay: green at 950edffb: Ran 7 tests, OK, examined 18 wrong paths
+```

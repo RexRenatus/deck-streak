@@ -156,16 +156,19 @@ this section and the next, and nothing else. Issue #395.
   matched as whole values. A global cargo flag that takes its value as the next word (`--config`,
   `--color`, `-C`, `-Z`) is part of the start together with that word, and a comment (a `#` that
   starts a word outside every quote, to the end of its line) is cut before any command is read,
-  so it is no command and bounds nothing; a `#` inside quotes is text (#395).
+  so it is no command and bounds nothing. A word, and so a comment, starts after a blank or after
+  one of `;`, `&`, `|`, `(`, `)`, `<` and `>`, so `cargo mutants --in-place;# <bounds>` is cut
+  at the `#` too. A `#` inside quotes is text (#395).
 - **A plant per shape.** Three tests write one workflow each into a temporary directory: one with
   a toolchain spelling, one with the binary form, and one with two commands on a line (the first
   bounded, the second not). Each asserts that every command is found and, for the last, that the
   bounded one and the unbounded one are told apart. On the real tree the guard finds the same
   commands as before (3 in `ci.yml`, 4 in `mutation-weekly.yml`).
-- **Three plants more.** One workflow each with `cargo --config <value> mutants`; with the bounds
+- **Four plants more.** One workflow each with `cargo --config <value> mutants`; with the bounds
   written in a comment after an unbounded command (and a comment that holds a whole command, and a
-  `#` inside shell quotes in a `run: |` block); and with a bounded command followed on its line by
-  `cargo -C <dir> mutants` (#395).
+  `#` inside shell quotes in a `run: |` block); with a bounded command followed on its line by
+  `cargo -C <dir> mutants`; and with the bounds written in a comment that starts right after `;`
+  (#395).
 - **Out of scope, named.** A quote that spans lines is read line by line, and a `#` inside shell
   quotes on a plain `run:` line, where YAML itself cuts a comment, is kept as text (#395).
 - Files: `scripts/tests/test_dispatch_shards.py`, this SPEC, `docs/red-first/SPEC-129.md` and a
