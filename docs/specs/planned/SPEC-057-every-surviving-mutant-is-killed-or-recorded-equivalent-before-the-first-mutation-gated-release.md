@@ -674,3 +674,13 @@ A delivery whose measurements prove this plan wrong records it here, dated, with
   (https://github.com/stryker-mutator/stryker-js/blob/master/docs/disable-mutants.md) and its
   per-test coverage, which tells `Survived` from `NoCoverage`
   (https://github.com/stryker-mutator/stryker-js/blob/master/docs/configuration.md).
+
+## 11. Amendment, 2026-09-29: a package dispatch is sharded by its projected weight
+
+Made by issue #368's delivery, insert-only under ruling (i) of SPEC-038 section 8: every earlier
+byte is kept in order. It inserts this section only.
+
+- **R14's dispatch no longer fans a package out to a fixed 32 legs.** A dispatch naming a package
+  sizes its legs from that package's listing with R18's projection, and the battery reads the same
+  count; a scheduled run and a dispatch with no package keep 32. SPEC-129 decides it and ADR-129
+  records it.
