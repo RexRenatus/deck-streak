@@ -256,8 +256,8 @@ delivery, so the private wiring does not change when it merges.
 
 - It sends no weekly report and splices no block into one; the weekly report reads the stored
   reports (#130).
-- It revives neither the Optimiser Ledger nor the Preset Census, which the predecessor never called
-  (#181).
+- It revives neither the Optimiser Ledger nor the Preset Census, each inert in v9 and waiting for
+  the owner's decision (#181).
 - It writes no deck option: turning on sibling burying is the owner's change in Anki (#138).
 - It serves no instrument report to the agent's machine read tool (#157).
 - It imports none of the predecessor's instrument reports; the first weekly run computes them (#61).

@@ -29,7 +29,8 @@ context turns a deck path into a law subject?
 - The predecessor's literals — rejected because they are the owner's deck names, which CHARTER 11 keeps out of the repository.
 - The courses file — rejected because it lists language courses (ADR-087), and law is a track, not a course.
 - The note conventions file (ADR-096) — rejected because it describes note types and fields, while the law taxonomy describes decks.
-- Curriculum parsing the deck path itself — rejected because the runway in insights reads the same subject, and a second parser would drift.
+- Reuse the readings taxonomy file (SPEC-045), which already names the law roots and bands — rejected because ADR-045 makes it the readings context's schema, which ingest may not read.
+- Curriculum parsing the deck path itself — rejected because the runway in insights reads the same subject, and a parser of the curriculum's own text would have no golden: the two ports of `_law_subject` (readings and ingest) are held to one golden.
 
 ## Decision Outcome
 
@@ -41,18 +42,22 @@ deck layout, and deck layout is what ingest's scope settings already hold.
   naming the setting and never a value.
 - `crates/ingest/src/law_subject.rs` gives a card's law subject and, under the test-prep subtree,
   its section, equal to the golden of `leeches.py:_law_subject` with synthetic bands.
-- `deploy/config/` shows neutral examples.
+- `.env.example` shows neutral examples.
 
 ### Consequences
 
 - Good, because no law deck name of the owner's enters the repository.
 - Good, because curriculum and insights read one subject for a card.
+- Good, because the two ports of `_law_subject` (readings and ingest) are held to one golden.
 - Bad, because a change to the bands takes effect at the next start, like every scope setting.
+- **One truth across two files.** The readings taxonomy keeps its own file (ADR-045). Ingest's
+  settings and the readings taxonomy must name the same law roots and bands, and the daemon
+  refuses to start when they disagree, naming both settings (SPEC-092 A17).
 
 ### Confirmation
 
-SPEC-092's A1 and A2: the subject of every synthetic path equals the golden, and a law setting
-without the root refuses start.
+SPEC-092's A1, A2 and A17: the subject of every synthetic path equals the golden, a law setting
+without the root refuses start, and a root or band named differently by the two files refuses start.
 
 ## What would make this wrong
 

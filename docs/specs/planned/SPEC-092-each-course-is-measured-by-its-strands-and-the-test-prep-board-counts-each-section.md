@@ -10,8 +10,8 @@
   configuration), ADR-091 (curriculum's readouts are stored as the latest readout) and ADR-092 (the
   law taxonomy is private configuration beside the law root, and ingest translates a card's law
   subject).
-- **Prerequisites:** SPEC-023 (the scope settings and the law root), SPEC-029, SPEC-071 (the fold and
-  the courses), SPEC-077 (card mastery and the memory state) and SPEC-090 (the kernel's numeric port).
+- **Prerequisites:** SPEC-023 (the scope settings and the law root), SPEC-029, SPEC-045 (the readings
+  taxonomy and its law-subject golden), SPEC-071 (the fold and the courses), SPEC-077 (card mastery and the memory state) and SPEC-090 (the kernel's numeric port).
   **Mutation band:** `S09200-S09299`.
 - **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
   `docs/specs/` with its tests and `docs/red-first/SPEC-092.md` (ADR-016).
@@ -56,7 +56,7 @@
 - **What the parity oracle proves.** The strand parse over synthetic deck names, the statistics and
   weak spots over synthetic cards and reviews, the law subject over synthetic law paths with and
   without year bands, and the board with its unclassified and dormant fields.
-- **Prerequisites.** SPEC-023, SPEC-029, SPEC-071, SPEC-077 and SPEC-090, as the header names them.
+- **Prerequisites.** SPEC-023, SPEC-029, SPEC-045, SPEC-071, SPEC-077 and SPEC-090, as the header names them.
 
 ## 2. Requirements
 
@@ -64,11 +64,16 @@ The law taxonomy (ADR-092)
 
 R1. Ingest's scope settings read `DECKSTREAK_LAW_YEAR_BANDS` (a comma-separated list) and
     `DECKSTREAK_LAW_TEST_PREP_DECK` (one deck name) beside `DECKSTREAK_LAW_DECK_ROOT`. Either set
-    without the root refuses start, naming the setting and never a value; `deploy/config/` shows
+    without the root refuses start, naming the setting and never a value; `.env.example` shows
     neutral examples.
 R2. `crates/ingest/src/law_subject.rs` gives a card's law subject and, under the test-prep subtree,
     its section, equal to `goldens/law_subject.json` (`leeches.py:_law_subject`, with the module's year
-    bands and law root patched to synthetic ones).
+    bands and law root patched to synthetic ones). The readings context already ports the same
+    function (`crates/readings/src/topic.rs`, SPEC-045); ingest ports `_law_subject` again because a
+    context may not read another context's code or schema (the crate graph, ADR-002). The two ports
+    stay equal because both tests read the ONE golden, which SPEC-045 added and this SPEC does not
+    overwrite. When both the readings taxonomy and ingest's settings are configured, a law root or a
+    year band that they name differently refuses start, naming both settings and neither value (A17).
 
 The strands (#88)
 
@@ -129,6 +134,7 @@ R11. Every constant this SPEC uses (the index pattern, the mature mastery, the w
 | A14 | `/lsat` names each section's studied share and discloses the dormant axes | `lsat_states_each_section_and_the_dormant_axes` |
 | A15 | the strand table states each strand's retention as text beside its colour | `states each strand retention as text beside its colour` |
 | A16 | the coverage grid renders a missing board as none found, never as zeros | `renders a missing board as none found` |
+| A17 | a law root or year band that ingest's settings and the readings taxonomy name differently refuses start | `a_law_root_or_band_named_differently_refuses_start` |
 
 ```acceptance
 A1: cargo test -p deck-streak-ingest --test law_subject -- --exact the_law_subject_matches_the_predecessors_golden
@@ -147,6 +153,7 @@ A13: cargo test -p deck-streak-bot --test strands_commands -- --exact weak_is_an
 A14: cargo test -p deck-streak-bot --test strands_commands -- --exact lsat_states_each_section_and_the_dormant_axes
 A15: pnpm exec vitest run web/app/src/lib/strands/StrandTable.test.ts -t "states each strand retention as text beside its colour"
 A16: pnpm exec vitest run web/app/src/lib/law/CoverageGrid.test.ts -t "renders a missing board as none found"
+A17: cargo test -p deck-streak-coordination --test law_taxonomy_agrees -- --exact a_law_root_or_band_named_differently_refuses_start
 ```
 
 ## 3a. What the box run judges
@@ -170,7 +177,9 @@ when it merges.
 | `crates/ingest/src/settings.rs` | `deck-streak-ingest` | changed: the year bands and the test-prep deck beside the law root |
 | `crates/ingest/src/lib.rs` | `deck-streak-ingest` | changed: the law subject module |
 | `crates/ingest/tests/law_subject.rs` | `deck-streak-ingest` | added: A1, A2 |
-| `deploy/config/ingest.example.env` | deploy | changed: neutral examples of the two settings |
+| `.env.example` | repo | changed: neutral examples of the two settings |
+| `crates/coordination/src/law_taxonomy.rs` | `deck-streak-coordination` | added: the start-up agreement of ingest's law settings with the readings taxonomy (R2) |
+| `crates/coordination/tests/law_taxonomy_agrees.rs` | `deck-streak-coordination` | added: A17 |
 | `crates/curriculum/src/strands.rs` | `deck-streak-curriculum` | added: the strand parse, the statistics, the weak spots and the digest's two |
 | `crates/curriculum/src/test_prep.rs` | `deck-streak-curriculum` | added: the test-prep board |
 | `crates/curriculum/src/strands_store.rs` | `deck-streak-curriculum` | added: `strand_readouts`, read and replaced |
@@ -208,7 +217,7 @@ when it merges.
 | `.sqlx/` | workspace | changed: the offline cache for the new queries |
 | `Cargo.lock` | workspace | changed |
 | `tools/parity-oracle/registry/spec_092.py` | repo | added: this SPEC's registrations (SPEC-029) |
-| `tools/parity-oracle/goldens/law_subject.json` | repo | added: the golden of `leeches.py:_law_subject` (adapter; synthetic root and year bands) |
+| `tools/parity-oracle/goldens/law_subject.json` | repo | exists (SPEC-045); ingest's test reads the same golden |
 | `tools/parity-oracle/goldens/strand_parse.json` | repo | added: the golden of `strands.py:parse_strand` (function) |
 | `tools/parity-oracle/goldens/strand_stats.json` | repo | added: the golden of `strands.py:compute_strand_stats` (adapter; synthetic courses, cards and reviews) |
 | `tools/parity-oracle/goldens/weak_strands.json` | repo | added: the golden of `strands.py:weak_strands` (adapter; synthetic statistics) |

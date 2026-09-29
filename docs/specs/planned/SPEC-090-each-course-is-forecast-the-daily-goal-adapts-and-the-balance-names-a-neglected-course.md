@@ -38,8 +38,9 @@
     achieved reports C2 with 0 remaining.
   - The goal's remaining is the SUM of every course's remaining to its next band, over a fixed
     horizon of 365 days; the history p90 is floored at 30 before the goal reads it.
-  - The percentile is nearest-rank, `rank = max(1, ceil(pct * n))`, and `0.9 * 70` is
-    `63.00000000000001` in float, so rank 64, not 63: the golden holds that case.
+  - The percentile is nearest-rank, `rank = max(1, ceil(pct * n))`
+    (`gamification/adaptive.py:14`); `0.9 * 70` is exactly 63.0 in float, so rank 63, and the
+    golden holds that case with the empty list, one value, `0.2` and `1.0`.
   - The balance's window is the last 28 study days INCLUDING today, at the 04:00 rollover; its sort
     is by windowed reviews descending, then by course name.
 - **Corrections to the issues.**
@@ -253,7 +254,8 @@ when it merges.
 
 - It writes no forecast, goal or balance into the daily digest or its coaching (#129, #53).
 - It pays no consistency multiplier on the goal; that is SPEC-072's (#72).
-- It revives no law-versus-language crowd-out statistics (#179).
+- It revives no law-versus-language crowd-out statistics: inert in v9, they wait for the owner's
+  decision (#179).
 - It serves no forecast or balance to the agent's machine read tool (#157).
 - It publishes no course pace on the public page (#156).
 - It stores no history of past readouts; a trend of the pace across weeks belongs to the weekly
@@ -266,7 +268,7 @@ when it merges.
 - **The shared velocity reads as a per-course rate.** Held by A4's cases, where two courses with
   different histories receive one rate, and by the route's label, which names it the collection's.
 - **A float edge moves a percentile rank or a median.** Detected by A1 and A2, whose goldens hold
-  `0.9 * 70` and an even count.
+  an even count and the 0.9-of-70 case.
 - **A float running sum stands in for `statistics.mean`.** Detected by A1, whose golden holds lists
   where the two differ. SPEC-097's Tilt Test and SPEC-098's Divestment Day read this mean.
 - **The balance's window slips a day at the rollover.** Detected by A6, whose cases put reviews at
@@ -282,7 +284,7 @@ unit band or syllabus of the owner's.
 
 | golden | the predecessor's function | kind | the adapter builds |
 |---|---|---|---|
-| `pynum_basics` | CPython's `sum`, `statistics.median`, `statistics.mean`, `round` | adapter | float lists with cancellation, even and odd counts, lists whose running sum differs from the exact mean, and halves at each digit |
+| `pynum_basics` | CPython's `sum`, `statistics.median`, `statistics.mean`, `round` | adapter | float lists with cancellation, even and odd counts, lists whose running sum differs from the exact mean, and halves at each digit, and `round(2.675, 2)`, whose shortest decimal is a tie but whose binary value is not (expected 2.67) |
 | `percentile` | `gamification/adaptive.py:percentile` | function | none: empty, one value, `0.9` of 70 values, `0.2` and `1.0` |
 | `mature_velocity` | `velocity.py:mature_velocity` | adapter | rollup rows with and without reviews, all-zero graduations, an even count |
 | `forecast` | `velocity.py:compute_velocity` | adapter | synthetic `LanguageProgress` values with gaps, empty bands and a fully achieved course |

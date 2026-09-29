@@ -261,8 +261,8 @@ when it merges.
 
 - It splices no report into the weekly report and sends no message for one; the weekly report
   reads the stored reports (#130).
-- It revives no inert instrument: the Unclaimed Effort Ledger stays excluded (#178), and so does
-  the cue ledger (#180).
+- It revives no inert instrument: the Unclaimed Effort Ledger stays excluded, inert in v9 (#178),
+  and so does the cue ledger, inert in v9 (#180); each waits for the owner's decision.
 - It serves no report to the agent's machine read tool (#157).
 - It builds no other instrument; each has its own SPEC (#137, #138, #141, #143, #146).
 - It lets no convention be edited in the Mini App (#57).

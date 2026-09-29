@@ -156,6 +156,8 @@ R11. The clock equals `goldens/sabbatical.json` (`sabbatical.py:compute_sabbatic
 R12. Every course in the courses file has a clock, with zero counts when it has no card.
 R13. The constants (366 days, the horizons 30, 91, 182 and 365, the quantiles 0.10, 0.25 and 0.50,
      the cold floor 0.5 and the tie epsilon 1e-9) equal `goldens/sabbatical.constants.json`.
+     A card with no decay, or a zero one, reads 0.2 (`fsrs.DEFAULT_DECAY`; `sabbatical.py:314`,
+     `fsrs.py:18` at `27ee2bc`), and `goldens/sabbatical.json` holds a card of that case.
 
 The runway (#144)
 
@@ -312,8 +314,8 @@ delivery, so the private wiring does not change when it merges.
 
 - It sends no weekly report; the runway's stored report waits for it (#130).
 - It offers no hand from the lapse digest's button, which arrives with the comeback protocol (#123).
-- It revives neither the Birth Cohort (#177) nor the Peak Day taper (#182), which the predecessor
-  never called; the clock ports only the two primitives it reads.
+- It revives neither the Birth Cohort (#177) nor the Peak Day taper (#182), each inert in v9 and waiting for the
+  owner's decision; the clock ports only the two primitives it reads.
 - It builds no settings screen for the leech threshold or the scope (#57).
 - It serves no instrument to the agent's machine read tool (#157).
 - It imports none of the predecessor's reports (#61).
@@ -348,7 +350,7 @@ and law subjects in where the module reads them, so no name of the owner's enter
 | `hand_size` | `hand.py:hand_size` | function | answered counts below, at and above 14 samples, and at both clamps |
 | `hand` | `hand.py:build_hand` | adapter | synthetic cards in every queue with and without a memory state, ties, and rollups with and without a pace |
 | `elapsed_at_floor` | `peak.py:elapsed_at_floor` | function | stabilities, decays in and out of range, and floors from 0.1 to above 1 |
-| `sabbatical` | `sabbatical.py:compute_sabbatical` | adapter | synthetic courses and cards in every partition, a card of no course, and a review between local and UTC midnight |
+| `sabbatical` | `sabbatical.py:compute_sabbatical` | adapter | synthetic courses and cards in every partition, a card of no course, a card with a missing decay (read as 0.2), and a review between local and UTC midnight |
 | `runways` | `runway.py:build_runways` | adapter | synthetic deck trees, a root shared by two tracks, overrides, a zero and an unknown limit, and more than 8 tracks |
 | `divest.constants`, `hand.constants`, `sabbatical.constants`, `runway.constants` | the modules' constants | constants | none |
 

@@ -9,8 +9,8 @@
   scope), ADR-096 (the owner's note conventions, the Can-Do field among them, load once in the
   kernel) and ADR-099 (the unlock pass runs after each sync's recompute, off its write path, and
   records each unlock once).
-- **Prerequisites:** SPEC-023 (the read and its scope), SPEC-029, SPEC-071 (each card's course) and
-  SPEC-094 (the conventions file and the `unicase` rule). **Mutation band:** `S09900-S09999`.
+- **Prerequisites:** SPEC-023 (the read and its scope), SPEC-029, SPEC-071 (each card's course),
+  SPEC-077 (curriculum's data-rights port) and SPEC-094 (the conventions file and the `unicase` rule). **Mutation band:** `S09900-S09999`.
 - **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
   `docs/specs/` with its tests and `docs/red-first/SPEC-099.md` (ADR-016).
 
@@ -50,7 +50,7 @@
     (ADR-095): a card outside the scope is never read, so it cannot hold a rung locked.
 - **What the parity oracle proves.** The field-name comparison; maturity and the cards remaining;
   the rungs of a synthetic collection; and the constants.
-- **Prerequisites.** SPEC-023, SPEC-029, SPEC-071 and SPEC-094, as the header names them.
+- **Prerequisites.** SPEC-023, SPEC-029, SPEC-071, SPEC-077 and SPEC-094, as the header names them.
 
 ## 2. Requirements
 

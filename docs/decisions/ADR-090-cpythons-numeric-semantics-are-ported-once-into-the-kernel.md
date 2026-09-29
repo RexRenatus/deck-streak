@@ -14,7 +14,7 @@ exact mean, rounded once), `round(x, n)`, the nearest-rank percentile of
 `gamification/adaptive.py:percentile`, the Mersenne Twister behind `random.Random` (seeding,
 `random()`, unweighted `choices`, `shuffle`), `math.lgamma` and `math.erfc`. Each differs from a
 naive Rust expression at an edge: a running float sum is not the compensated one, an even median
-averages the two middle values, `round` rounds half to even on the decimal value, and a generator
+averages the two middle values, `round(x, n)` rounds the float's exact binary value, half to even only on an exact tie, so `round(2.675, 2)` is 2.67, and a generator
 consumed in another order draws other numbers. SPEC-071 already holds a compensated sum in
 analytics. Where do these semantics live, so that curriculum, insights and analytics all read the
 same ones?

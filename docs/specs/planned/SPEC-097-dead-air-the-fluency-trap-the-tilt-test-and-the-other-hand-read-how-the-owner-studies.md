@@ -243,7 +243,7 @@ delivery, so the private wiring does not change when it merges.
 
 - It sends no weekly report; Dead Air's stored report waits for it (#130).
 - It revives neither the Churn Tax (#173), the Latency Debt audit (#174), the Two-Button Grading
-  audit (#175) nor the Shuffle Test (#176), which the predecessor never called.
+  audit (#175) nor the Shuffle Test (#176), each inert in v9 and waiting for the owner's decision.
 - It attributes no collection row to a skip day, because DeckStreak's skip day moves no card (#108).
 - It serves no instrument to the agent's machine read tool (#157).
 - It imports none of the predecessor's reports (#61).
