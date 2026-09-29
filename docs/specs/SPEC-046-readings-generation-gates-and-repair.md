@@ -34,7 +34,8 @@
 
 R1. A topic's seed is its day set's card ids, its distinct notes (each note id and its fields'
     text joined in field order) and its new-card count n; for a language topic also its new words,
-    each note's configured term field with its markup removed.
+    each note's configured term field with its markup removed. A new word is card text: it reaches
+    the model fenced with the cards, on a `new word <i>:` line, and never in a trusted slot.
 R2. The persona is the roster's template for the topic (SPEC-044). A topic whose template lacks the
     daily-reading duty ends `failed` with `form_unregistered`, with no call.
 R3. The law form is an IRAC primer with the sections `reading`, `issue`, `rule`, `application` and
@@ -48,8 +49,10 @@ R4. The language form is the mentor's daily reading, with the sections `reading`
     word band.
 R5. Before any call, a law seed whose every note's anchor is unusable ends `failed` with
     `anchor_unusable_all`, and a seed with no note ends `failed` with `seed_empty`.
-R6. A reading is gated by the task's pack classes (SPEC-043) and by the readings' coverage gates; the
-    first failure decides:
+R6. Before any call, each untrusted input (the memory and the cards, the new words included) is run
+    through the gate's input class (SPEC-043 R11); a refused input ends the topic `failed` with
+    `gate_failed:contract`, with no call and no attempt recorded. A reading is gated by the task's
+    pack classes (SPEC-043) and by the readings' coverage gates; the first failure decides:
     1. complete: the run succeeded with a non-empty result;
     2. roster: every seed note is cited and every citation is a seed note (law: law-professors'
        `citations-resolve` over `sources`; language: language-mentors' `i1-glosses` over `x-new-words`);
@@ -65,7 +68,9 @@ R6. A reading is gated by the task's pack classes (SPEC-043) and by the readings
        the `retrieval` and `glosses` sections are lists by their packs' contracts;
     6. contract: persona-core's `output-contract`.
 R7. A topic whose first attempt fails a gate is regenerated once, with a repair instruction that
-    names the failed gate and its finding lines and never quotes the rejected text. A second failure
+    names the failed gate and its finding lines and never quotes the rejected text: a finding line
+    that carries a fence marker, repeats a rejected line of 16 characters or more, or quotes a span
+    (`'...'` or `"..."`) found in the rejected text is left out. A second failure
     stores nothing, writes nothing and ends the topic `failed` with `gate_failed:<gate>`. An
     unavailable verdict from a configured route ends the topic `failed` with
     `agent_unavailable:<cause>`, with no retry; an absent route is R16's, never a failure.
@@ -154,6 +159,26 @@ A18: cargo test -p deck-streak-coordination --test readings_generate -- --exact 
 A19: cargo test -p deck-streak-coordination --test readings_generate -- --exact an_absent_route_ends_every_topic_ai_route_absent_with_no_attempt
 ```
 
+## 3a. Acceptance criteria of the amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A20 | a new word reaches the model only inside the fence, on a `new word <i>:` line, and the trusted instruction counts the words without naming one | `a_new_word_reaches_the_model_only_inside_the_fence` |
+| A21 | a fence marker inside a new word does not make compose refuse the topic | `a_fence_marker_in_a_new_word_does_not_refuse_the_prompt` |
+| A22 | a finding that quotes the rejected text is left out of the repair instruction | `a_finding_quoting_the_rejected_text_is_dropped_from_the_repair` |
+| A23 | a finding that quotes a new word is left out of the repair instruction | `a_finding_quoting_a_new_word_is_dropped_from_the_repair` |
+| A24 | each untrusted input is checked before any call, and a refused input ends the topic with no call and no attempt | `an_untrusted_input_is_checked_before_any_call` |
+| A25 | an unclosed tag ends the walk of `strip_tags` and leaves the rest of the text as it is | `an_unclosed_tag_leaves_the_rest_of_the_text_as_it_is` |
+
+```acceptance
+A20: cargo test -p deck-streak-coordination --test readings_trust -- --exact a_new_word_reaches_the_model_only_inside_the_fence
+A21: cargo test -p deck-streak-coordination --test readings_trust -- --exact a_fence_marker_in_a_new_word_does_not_refuse_the_prompt
+A22: cargo test -p deck-streak-coordination --test readings_trust -- --exact a_finding_quoting_the_rejected_text_is_dropped_from_the_repair
+A23: cargo test -p deck-streak-coordination --test readings_trust -- --exact a_finding_quoting_a_new_word_is_dropped_from_the_repair
+A24: cargo test -p deck-streak-coordination --test readings_generate -- --exact an_untrusted_input_is_checked_before_any_call
+A25: cargo test -p deck-streak-readings --test coverage -- --exact an_unclosed_tag_leaves_the_rest_of_the_text_as_it_is
+```
+
 ## 4. File manifest
 
 | file | context | change |
@@ -182,6 +207,10 @@ A19: cargo test -p deck-streak-coordination --test readings_generate -- --exact 
 | `crates/readings/tests/coverage.rs` | `deck-streak-readings` | added |
 | `crates/readings/tests/minutes.rs` | `deck-streak-readings` | added |
 | `crates/readings/tests/rights.rs` | `deck-streak-readings` | changed |
+| `crates/readings/tests/repair.rs` | `deck-streak-readings` | added: pins the repair's cap, its quote floor and the quote-span drop |
+| `crates/readings/tests/attempts.rs` | `deck-streak-readings` | added: pins the retention's whole value |
+| `crates/readings/tests/stored.rs` | `deck-streak-readings` | added: pins the reading id's shape |
+| `crates/coordination/tests/readings_trust.rs` | `deck-streak-coordination` | added: the fence and the repair's trust (amendment) |
 | `crates/coordination/src/readings/generate.rs` | `deck-streak-coordination` | added: the generation use case and the nightly roll-forward |
 | `crates/coordination/tests/readings_generate.rs` | `deck-streak-coordination` | added |
 | `agent/prompts/daily-reading.prompt.md` | agent (public) | changed: the form, the word target and the repair slots |
@@ -196,9 +225,9 @@ A19: cargo test -p deck-streak-coordination --test readings_generate -- --exact 
 | `tools/parity-oracle/goldens/is_anchor_usable.json` | repo | added |
 | `docs/CONTEXT-MAP.md` | docs | changed: the ownership register gains `readings` and `reading_attempts` |
 | `privacy.json` | repo | changed: readings, attempts, and card text to the model provider |
-| `docs/schematics/readings-generation-flow.md` | docs | added |
+| `docs/schematics/readings-generation-flow.md` | docs | existing on dev, unchanged here |
 | `docs/specs/SPEC-046-readings-generation-gates-and-repair.md` | docs | moved from `docs/specs/planned/` |
-| `docs/decisions/ADR-046-word-target-coverage-gates-and-one-repair.md` | docs | added |
+| `docs/decisions/ADR-046-word-target-coverage-gates-and-one-repair.md` | docs | existing on dev, changed here |
 | `docs/red-first/SPEC-046.md` | docs | added |
 
 ## 5. What this does NOT do

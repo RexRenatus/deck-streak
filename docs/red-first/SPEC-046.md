@@ -62,6 +62,17 @@ A18: red at 2744b9e: the topic ended the day
 A18: green at 9720d0f
 A19: red at 2744b9e: assertion `left == right` failed: no day set is resolved; left: 0
 A19: green at 9720d0f
+A20: red at 311f7206: the trusted instruction counts the new words
+A20: green at 54020562
+A21: red at 311f7206: a learner's card text makes compose refuse the topic: Err(FenceInTrusted)
+A21: green at 54020562
+A22: red at 311f7206: the repair quotes the rejected text: The previous reading failed the contract gate
+A22: green at 54020562
+A23: red at 311f7206: card text reaches the trusted repair slot: The previous reading failed the roster gate
+A23: green at 54020562
+A24: red at 311f7206: assertion `left == right` failed: input checks made, model calls made; left: (0, 2), right: (2, 0)
+A24: green at 54020562
+A25: not red: the walk's behaviour at the head equals the parent's on every input that ended; the change bounds the loop, and the loop shows only under a mutant (see the DISCLOSURE below)
 ```
 
 DISCLOSURE, the compose amendment (not a criterion): the SPEC's manifest did not list the agent's
@@ -93,3 +104,28 @@ DISCLOSURE, tests added after green (not criteria): `repair.rs` and `attempts.rs
 the hand-proved rows (93035e4). They pass on the code they were written against, which is why they
 are killers for rows and not acceptance tests. The persona test's list of golden readings names the
 second law golden (f957be0).
+
+DISCLOSURE, changes after this record (ece09ce): `ca4a414` names the packs checkout only by the
+environment in `test_reading_rows.py`; `07dfe15` strengthened two assertions after green, A5's
+`a_list_marker_in_the_primer_prose_is_refused` (from a non-empty finding list to exactly one finding
+per marker) and `a_language_roster_needs_each_new_word_glossed_and_used` (from non-empty to the one
+named finding); `c6e1a8f` added `stored.rs` and killers in `attempts.rs`, `coverage.rs`, `form.rs`
+and `readings_generate.rs`; `f2bd490` and `5912854` pinned a blank section and a bare dot or bracket
+in `coverage.rs`; and `f78c242` bounded two text walkers in `coverage.rs`, `close_references` and
+`remove_rail_characters`, by the text's length. Each test
+passes on the code it was written against; none was red first, and none is a criterion.
+
+DISCLOSURE, fix round 1: the tests of A20 to A24 were committed alone at 311f7206 and each fails by
+assertion there. `a_new_word_reaches_the_model_only_inside_the_fence` fails earlier than the fence
+check, at its assertion that the trusted instruction counts the new words, because the parent's
+instruction listed the words. The production change is 54020562. `a_finding_quoting_a_span_of_the_rejected_text_is_dropped`
+and `a_language_instruction_counts_the_new_words_and_never_names_one` (e1bff71b) and
+`an_unclosed_tag_leaves_the_rest_of_the_text_as_it_is` (0c318e2f) pass on the code they were written
+against: they are killers for the rows S04621 to S04626, not red-first tests.
+
+DISCLOSURE, A25 and the bounded walk (5e94816e): at the parent, the `strip_tags` cursor mutant
+`rest = &rest[open * 1..]` does not end, and the test binary was ended by coreutils `timeout` with
+rc 124. At 5e94816e the walk is bounded by the text's length; the same mutant, and the cursor
+mutant `close * 1`, and the two cursor mutants of `close_references` and `remove_rail_characters`
+(`at *= 1`), each end red by assertion (rc 101) in `coverage.rs`. The behaviour at the head is the
+parent's, which is why A25 is not red.
