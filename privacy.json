@@ -187,6 +187,50 @@
       "retention": {"until": "account-deletion"},
       "export": true,
       "erase": "anonymise"
+    },
+    {
+      "id": "streak-state",
+      "data": "each track's streak: the days running now, the longest run, the freezes held, the last study day and whether a comeback is armed",
+      "source": "derived",
+      "stores": ["streak_state.*"],
+      "purpose": "showing you your language and law streaks and keeping them from one study day to the next",
+      "lawful_basis": "contract",
+      "retention": {"until": "account-deletion"},
+      "export": true,
+      "erase": "delete"
+    },
+    {
+      "id": "freeze-events",
+      "data": "each freeze gained or spent: the study day, the change and why it happened",
+      "source": "derived",
+      "stores": ["freeze_events.*"],
+      "purpose": "keeping the count of freezes you hold and limiting how many you can gain in a month",
+      "lawful_basis": "contract",
+      "retention": {"until": "account-deletion"},
+      "export": true,
+      "erase": "delete"
+    },
+    {
+      "id": "habit-strength",
+      "data": "the habit strength of each study day: the study day and its value",
+      "source": "derived",
+      "stores": ["habit_strength.*"],
+      "purpose": "deciding whether the governor is armed and showing you how steady your habit is",
+      "lawful_basis": "contract",
+      "retention": {"until": "account-deletion"},
+      "export": true,
+      "erase": "delete"
+    },
+    {
+      "id": "governor-state",
+      "data": "the governor's one row: the day a lapse began, whether it is on standby and the day you were last told",
+      "source": "derived",
+      "stores": ["governor_state.*"],
+      "purpose": "keeping one lapse and one notice from repeating on every study day",
+      "lawful_basis": "contract",
+      "retention": {"until": "account-deletion"},
+      "export": true,
+      "erase": "anonymise"
     }
   ],
   "sql": ["migrations/*.sql"],

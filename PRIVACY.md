@@ -26,6 +26,10 @@ inventory, in the form the repository's privacy checks read.
 | `in-app-feed` | the celebrations delivered to the Mini App, and when the Mini App fetched them | showing you in the Mini App the celebrations raised there | contract | until account deletion |
 | `notification-settings` | which kinds of message you switched off, and your quiet hours | honouring your choices of what to receive and when to stay quiet | contract | until account deletion |
 | `owner-last-message` | the id of your latest message to the bot and when it arrived | reacting to your latest message when a small celebration lands | contract | until account deletion |
+| `streak-state` | each track's streak: the days running now, the longest run, the freezes held, the last study day and whether a comeback is armed | showing you your language and law streaks and keeping them from one study day to the next | contract | until account deletion |
+| `freeze-events` | each freeze gained or spent: the study day, the change and why it happened | keeping the count of freezes you hold and limiting how many you can gain in a month | contract | until account deletion |
+| `habit-strength` | the habit strength of each study day: the study day and its value | deciding whether the governor is armed and showing you how steady your habit is | contract | until account deletion |
+| `governor-state` | the governor's one row: the day a lapse began, whether it is on standby and the day you were last told | keeping one lapse and one notice from repeating on every study day | contract | until account deletion |
 
 The lawful basis of each is the contract (GDPR Article 6(1)(b)): the service you run needs it. None
 is kept for a fixed period. Each is kept until you erase it, which is how an account is deleted here.

@@ -13,6 +13,7 @@ use deck_streak_notifications::data_rights::NotificationsDataRights;
 use deck_streak_privacy::{Erasure, Export, PrivacyError};
 use deck_streak_progression::data_rights::ProgressionDataRights;
 use deck_streak_readings::data_rights::ReadingsDataRights;
+use deck_streak_streaks::data_rights::StreaksDataRights;
 
 use crate::data_rights::CoordinationDataRights;
 
@@ -32,6 +33,7 @@ static READINGS: ReadingsDataRights = ReadingsDataRights;
 /// The agent's port: the duty runs exported and erased (SPEC-043).
 static AGENT: AgentDataRights = AgentDataRights;
 /// Coordination's own port: the cron-fire ledger exempt.
+static STREAKS: StreaksDataRights = StreaksDataRights;
 static COORDINATION: CoordinationDataRights = CoordinationDataRights;
 
 /// Every stateful context's port, in the order an erase runs them: the kernel, ingest, analytics
@@ -47,6 +49,7 @@ pub fn ports() -> Vec<&'static dyn DataRights> {
         &NOTIFICATIONS,
         &READINGS,
         &AGENT,
+        &STREAKS,
         &COORDINATION,
     ]
 }
