@@ -7,6 +7,7 @@
  */
 import { readdirSync, readFileSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
+import { type Node, Parser } from 'commonmark';
 import mermaid from 'mermaid';
 import { describe, expect, it } from 'vitest';
 import { GRAMMAR, digestOf, fenceMembers } from '../../scripts/docs-mermaid-fences.js';
@@ -24,30 +25,75 @@ function markdownFiles(dir: string): string[] {
     });
 }
 
-/** A `mermaid` opener: indentation and blockquote markers, three backticks, blanks, `mermaid`. */
-const OPENER = '^((?:[ \\t]*>[ \\t]?)*[ \\t]*)```[ \\t]*mermaid';
-const CLOSER = '```[ \\t]*$';
+/**
+ * A line that opens a `mermaid` fence in any container: blanks, `>` and list markers, three or more
+ * backticks or tildes, blanks, `mermaid`. It is not the reader; it cross-checks the reader on the
+ * documents.
+ */
+const OPENER_LINE = /^[ \t>*+\-0-9.)]*(?:`{3,}|~{3,})[ \t]*mermaid(?![^ \t])/;
 
 interface Block {
   name: string;
+  line: number;
   source: string;
 }
 
 /**
- * The fenced `mermaid` blocks of one file, each named `<file> block <n>` counted from 1. The opener's
- * prefix (its indentation and any blockquote markers) is captured, the closer must carry the same,
- * and the prefix is stripped from each body line; a quoted blank line (the prefix without its
- * trailing blanks) becomes an empty line.
+ * commonmark.js 0.31.2's state while it opens a block, which the fence offset below reads: its block
+ * starts (a block quote, an ATX heading, then a fenced code block, ...), the block just opened, and
+ * the offsets into the line.
+ */
+interface ParserState {
+  blockStarts: ((parser: ParserState, container: Node) => number)[];
+  tip: Node & { _fenceOffset: number };
+  offset: number;
+  nextNonspace: number;
+}
+
+const FENCED_CODE = 2;
+
+/**
+ * A CommonMark parser that opens a fenced code block as GitHub's cmark-gfm does. CommonMark counts a
+ * fence's indentation in columns and cmark-gfm in characters, so when a container prefix consumes
+ * part of a tab, GitHub's block keeps the tab's remaining columns on each line. The wrapper runs the
+ * fenced code start and then sets the offset cmark-gfm would.
+ */
+function gfmParser(): Parser {
+  const parser = new Parser();
+  const state = parser as unknown as ParserState;
+  const starts = [...state.blockStarts];
+  const fenced = starts[FENCED_CODE];
+  starts[FENCED_CODE] = (current, container) => {
+    const { offset, nextNonspace } = current;
+    const started = fenced(current, container);
+    if (started === 2) current.tip._fenceOffset = nextNonspace - offset;
+    return started;
+  };
+  state.blockStarts = starts;
+  return parser;
+}
+
+/** The word GitHub keys a diagram on: the info string up to its first ASCII blank. */
+function language(info: string | null): string {
+  return (info ?? '').split(/[ \t\n\v\f\r]/)[0];
+}
+
+/**
+ * The `mermaid` blocks of one file, each named `<file> block <n>` counted from 1: every fenced code
+ * block, in any container, whose language word is `mermaid` and whose text is not blank, with the
+ * text GitHub renders as the diagram. A blank one GitHub shows as code, so it is not a block.
  */
 function blocksOf(name: string, text: string): Block[] {
-  const found = text.matchAll(new RegExp(`${OPENER}[^\\n]*\\n([\\s\\S]*?)^\\1${CLOSER}`, 'gm'));
-  return [...found].map((match, index) => {
-    const prefix = match[1];
-    const bare = prefix.trimEnd();
-    const strip = (line: string) =>
-      line.startsWith(prefix) ? line.slice(prefix.length) : line.trimEnd() === bare ? '' : line;
-    return { name: `${name} block ${index + 1}`, source: match[2].split('\n').map(strip).join('\n') };
-  });
+  const blocks: Block[] = [];
+  const walker = gfmParser().parse(text).walker();
+  for (let step = walker.next(); step; step = walker.next()) {
+    const { node } = step;
+    const source = node.literal ?? '';
+    if (step.entering && node.type === 'code_block' && language(node.info) === 'mermaid' && /[^ \t\n\v\f\r]/.test(source)) {
+      blocks.push({ name: `${name} block ${blocks.length + 1}`, line: node.sourcepos[0][0], source });
+    }
+  }
+  return blocks;
 }
 
 /** Whether Mermaid's own parser accepts the diagram. */
@@ -98,12 +144,16 @@ const BLOCKS = markdownFiles(DOCS).flatMap((file) =>
 describe('the Mermaid diagrams under docs', () => {
   it('reads every fenced block', () => {
     examined('mermaid blocks', BLOCKS);
-    const opened = markdownFiles(DOCS)
-      .map((file) => (readFileSync(file, 'utf8').match(new RegExp(OPENER, 'gm')) ?? []).length)
-      .reduce((sum, count) => sum + count, 0);
+    const read = new Set(BLOCKS.map((block) => `${block.name.replace(/ block \d+$/, '')}:${block.line}`));
+    const unread = markdownFiles(DOCS).flatMap((file) =>
+      readFileSync(file, 'utf8')
+        .split('\n')
+        .flatMap((line, at) => (OPENER_LINE.test(line) ? [`${relative(DOCS, file)}:${at + 1}`] : []))
+        .filter((opener) => !read.has(opener))
+    );
 
     expect(BLOCKS.length).toBeGreaterThan(100);
-    expect(BLOCKS.length).toBe(opened);
+    expect(unread).toEqual([]);
   });
 
   it('parses every block', async () => {
