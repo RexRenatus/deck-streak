@@ -36,9 +36,10 @@
   and no proxy. Enabling the route must not need a redeploy: SPEC-053 R9 already names what the rail
   adds, the route setting and the base URL in the environment file and the device key as a
   credential in a drop-in beside the readings unit's template.
-- **The box-run packs judge the rail's forward, not this repository.** They refuse a forward that
-  binds anything but loopback. They run on the maintainer's box only (ADR-069), where the rail is;
-  this repository ships no forward for them to judge, and its own test refuses one (A7).
+- **The box run judges this repository's tree, not the rail's forward.** It reads the committed
+  tree only (ADR-069), whose rows refuse a forward that binds anything but loopback; this tree
+  ships no forward, and its own test refuses one (A7). The rail's forward is confirmed on the
+  host's loopback only at gate 2, privately (E4).
 - **The CLI is large.** One native build of Claude Code is about 234 MB on disk (234,082,616 and
   234,119,480 bytes for two builds, measured on the maintainer's machine). Its memory for one
   headless, tool-less run is unmeasured, so R10 measures it at gate 3 before the route stays on.
@@ -56,7 +57,7 @@ R1. The forward is the private rail's. The agent reaches the proxy through the l
     never committed (section 5).
 R2. The route's endpoint is a setting, and its key is a credential. `ai-route.env.example` names
     the route setting and a loopback base URL, `http://127.0.0.1:<port>`, with neutral values, and
-    the runner reads the URL from its environment (SPEC-043 R1). The device key is a credential from
+    the runner reads the URL from its environment (SPEC-043 R3). The device key is a credential from
     the socket (R5, ADR-038). Enabling the route needs the owner's device key (#162) and, on the
     host, a loopback admission for the readings unit, which is the rail's (E3); this repository
     plans no proxy restart.
@@ -105,12 +106,12 @@ R11. The live proof: with the forward up, one capped run delivers one gated read
 | id | criterion | decided by |
 |---|---|---|
 | A1 | the AI-route drop-in, merged with the readings unit's template by the units reader (`scripts/tests/_units.py`), sets only `LoadCredential=`, `RuntimeDirectory=`, `MemoryHigh=` and `MemoryMax=`, so it weakens none of the template's settings | `test_ai_route.py` |
-| A2 | the drop-in's one credential is `agent-device-key` in the socket form, and nothing under `deploy/optional/ai-route/` sets an `apiKeyHelper`, `ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN` or a non-loopback base URL | `test_ai_route.py` |
+| A2 | the drop-in's one credential is `agent-device-key` in the socket form; `ai-route.env.example` names the route setting (`DECKSTREAK_AI_ROUTE`) and a base URL on `127.0.0.1`; and nothing under `deploy/optional/ai-route/` sets an `apiKeyHelper`, `ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN` or a non-loopback base URL | `test_ai_route.py` |
 | A3 | enabling the route adds exactly one credential pair, the readings unit's `agent-device-key`, and changes no other unit's pairs | `test_ai_route.py` |
 | A4 | the runner refuses to launch when the guard check fails: exit 2, one `REFUSE:` line naming the file, and the fake `claude` records no call | `test_run_headless.py` |
 | A5 | the runner points the CLI's `HOME` at the run's runtime directory | `test_run_headless.py` |
 | A6 | no file of the AI route names a private value, and a planted one is refused by the public scrub | `test_ai_route.py`; `scripts/public-scrub.py` |
-| A7 | nothing under `deploy/` or `agent/` ships a tunnel unit, an `authorized_keys` line, an sshd drop-in or a second forward: the real trees hold none (and the scan examined files), and a planted one of each is refused under its own shape's name and no other | `test_ai_route.py` |
+| A7 | no file under `deploy/` or `agent/` other than Markdown ships a tunnel unit, an `authorized_keys` line, an sshd drop-in or a second forward: the real trees hold none (and the scan examined files), and a planted one of each is refused under its own shape's name and no other | `test_ai_route.py` |
 
 ```acceptance
 A1: python3 -m unittest discover -s scripts/tests -p test_ai_route.py -k test_the_ai_route_drop_in_sets_only_its_credential_runtime_and_ceilings
@@ -122,7 +123,9 @@ A6: python3 -m unittest discover -s scripts/tests -p test_ai_route.py -k test_no
 A7: python3 -m unittest discover -s scripts/tests -p test_ai_route.py -k test_no_deploy_or_agent_file_ships_a_tunnel_a_key_line_a_server_drop_in_or_a_second_forward
 ```
 
-A7's scan is a small function in `test_ai_route.py` with one refusal per shape, each named: a unit
+A7's scan is a small function in `test_ai_route.py` that judges every file under `deploy/` and
+`agent/` except Markdown (so `deploy/README.md` may describe the rail), with one refusal per shape,
+each named: a unit
 whose `ExecStart=` runs `ssh` or `autossh` is `tunnel-unit`; a line carrying `permitlisten=` or
 `permitopen=`, or a file named `authorized_keys`, is `key-line`; a file under an `sshd_config.d`
 directory, or a line opening `Match User`, `PermitListen`, `AllowTcpForwarding` or `GatewayPorts`,
@@ -132,8 +135,8 @@ own shape. The scan returns the count of files it read, and the test fails when 
 
 A4 and A5 use SPEC-043's fakes and a guard manifest built in a `TemporaryDirectory`. The live proof
 (R11) runs on the host at gate 3 and is recorded privately; no test here reaches a proxy. The
-box-run packs judge the merged unit and the rail's forward as well (ADR-069); that verdict is the
-delivery's evidence, not a criterion here.
+box-run packs judge the merged unit as well (ADR-069); that verdict is the delivery's evidence, not
+a criterion here. The box run never reads the rail's forward, which E4 confirms privately.
 
 ## 4. The owner's gates and the evidence they record
 

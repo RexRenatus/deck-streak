@@ -18,7 +18,7 @@ held by one forward at a time. The forward is host configuration the private rai
 repository's tests cannot judge it (ADR-069). Who specifies the forward, and how does the agent
 reach the proxy?
 
-This amends ADR-015's "a reverse SSH tunnel opened from the maintainer's machine" only as far as who
+This amends ADR-015's "a reverse SSH tunnel opened FROM the maintainer's machine" only as far as who
 specifies the tunnel: the rail does, not this repository.
 
 ## Decision Drivers
@@ -27,8 +27,9 @@ specifies the tunnel: the rail does, not this repository.
   `ExitOnForwardFailure` check and its unit restarts in a loop.
 - The proxy tells its clients apart by device key, so the agent needs its own key and needs no
   forward of its own.
-- The forward, its account and its server-side settings are host configuration, which the box run
-  judges on the maintainer's box only (ADR-069); a public test cannot judge them.
+- The forward, its account and its server-side settings are host configuration outside this
+  repository's tree: neither a public test nor the box run, which reads the committed tree only
+  (ADR-069), can judge them; the maintainer confirms them privately.
 - The host holds no credential to the maintainer's machine, and the forward listens on loopback
   only (ADR-015).
 - The route is optional and `Absent` by default (ADR-054), and the device key is a credential from
@@ -53,7 +54,7 @@ proxy with the fewest moving parts and leaves each thing with the party that can
   setting and a loopback base URL with neutral values (SPEC-063 R2).
 - **The key is a credential from the socket.** The device key is the owner's, added to the proxy's
   roster by the maintainer with the owner's go, and reaches the readings unit as a credential
-  (ADR-038); SPEC-063 R5 is unchanged.
+  (ADR-038); SPEC-063 R5 keeps the key's path; only its proxy restart is gone.
 - **A test keeps it so.** A planted tunnel unit, key line, server drop-in or second forward under
   `deploy/` or `agent/` is refused (SPEC-063 A7).
 
@@ -73,8 +74,8 @@ proxy with the fewest moving parts and leaves each thing with the party that can
 ### Confirmation
 
 SPEC-063 A7 (nothing under `deploy/` or `agent/` ships one of the four shapes, and a planted one of
-each is refused) with its mutation row S06301; the box run judges the rail's forward on the
-maintainer's box (ADR-069); the live proof (SPEC-063 R11).
+each is refused) with its mutation row S06301; the rail's forward, on the host's loopback only,
+confirmed privately at gate 2 (SPEC-063 E4); the live proof (SPEC-063 R11).
 
 ## More Information
 
