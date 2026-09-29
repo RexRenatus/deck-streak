@@ -11,7 +11,10 @@
 - **Prerequisites:** SPEC-021 (`PRIVACY.md`, which the privacy page states), SPEC-022 (the sync the
   page describes), SPEC-028 (the pnpm workspace and the root Vitest configuration), SPEC-030 (whose
   exclusion hands the site's build for the box run to #59), SPEC-056 (the box run) and SPEC-058
-  (the web audit, which judges the site's packages). All six have landed. The page is built and
+  (the web audit, which judges the site's packages), and the features its fixed copy names (R4,
+  R8): SPEC-072 (XP per review and levels), SPEC-073 (badges), SPEC-076 (streaks), SPEC-080
+  (quests) and SPEC-101 (the daily digest). The first six have landed; SPEC-072, SPEC-073,
+  SPEC-076, SPEC-080 and SPEC-101 are unlanded. The page is built and
   gated now, and served only once the owner has a domain (#168). **Mutation band:**
   `S13900-S13999`.
 - **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
@@ -90,7 +93,9 @@ R9. Each `<h2>` of the landing page names a feature, and `web/site/src/features.
     `docs/specs/planned/`, or that names no SPEC, is refused, so the page claims nothing the product
     does not do (binding decision 11). A later delivery adds its own heading when its SPEC moves.
     The two headings that describe no single feature, `How DeckStreak reads your Anki reviews`
-    (SPEC-022) and `Privacy` (SPEC-021), map to their SPECs the same way.
+    (SPEC-022) and `Privacy` (SPEC-021), map to their SPECs the same way. R16's checker
+    reads the title, the meta description and the `<h1` the same way: each feature they name maps in `features.json` to a
+    delivered SPEC, or is a finding (A8).
 R10. Every page's footer is ADR-014's notice, `Anki® is a registered trademark of Ankitects Pty Ltd.
      DeckStreak is not affiliated with or endorsed by Anki.`, with links to `/privacy.html` and
      `/terms.html`.
