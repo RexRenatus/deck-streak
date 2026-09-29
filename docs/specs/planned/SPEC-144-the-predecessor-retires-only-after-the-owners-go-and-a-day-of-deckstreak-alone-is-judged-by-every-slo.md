@@ -9,8 +9,9 @@
   and kept disabled until the owner approves its removal), ADR-031 (an SLO sized for one owner),
   ADR-143 (the cutover ledger's steps) and ADR-144 (the day alone is judged by a report over one
   full day after the import, recorded by its digest, and a day with no traffic proves nothing).
-- **Prerequisites:** SPEC-027 and SPEC-031 (landed); SPEC-142 and SPEC-143 (this wave, unlanded:
-  the import role and the cutover ledger). **Mutation band:** `S14400-S14499`.
+- **Prerequisites:** SPEC-027 and SPEC-031 (landed); SPEC-142, SPEC-143 and SPEC-146 (this wave,
+  unlanded: the import role, the cutover ledger, and the stats job's item, without which the
+  retirement could pass with the stats contract unmoved). **Mutation band:** `S14400-S14499`.
 - **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
   `docs/specs/` with its tests and `docs/red-first/SPEC-144.md` (ADR-016).
 
@@ -118,7 +119,7 @@ wiring change.
 | `deploy/cutover.md` | deploy | changed: `## Retirement` and `## The day alone` (R5) |
 | `scripts/tests/test_cutover_runbook.py` | repo | added: A9, A10 |
 | `.sqlx/` | repo | changed: the refreshed query cache |
-| `scripts/mutation-rows.d/S144.tsv` | repo | added: §9's rows |
+| `scripts/mutation-rows.d/S14400-S14499.json` | repo | added: §9's rows |
 | `docs/red-first/SPEC-144.md` | docs | added: the red-first record |
 | `docs/specs/SPEC-144-the-predecessor-retires-only-after-the-owners-go-and-a-day-of-deckstreak-alone-is-judged-by-every-slo.md` | docs | moved from `docs/specs/planned/` |
 | `changelog.d/feat-cutover-day-alone.md` | repo | added: the fragment |

@@ -124,7 +124,7 @@ issue (#360) is closed.
 | `scripts/tests/test_release_check.py` | repo | added: A1-A9, with a stub `gh` on `PATH` that records its arguments |
 | `scripts/tests/test_release_runbook.py` | repo | added: A10 |
 | `RELEASING.md` | docs | changed: §4's sentence and §8 (R5, R6) |
-| `scripts/mutation-rows.d/S145.tsv` | repo | added: §9's rows |
+| `scripts/mutation-rows.d/S14500-S14599.json` | repo | added: §9's rows |
 | `docs/red-first/SPEC-145.md` | docs | added: the red-first record |
 | `docs/specs/SPEC-145-v1-0-0-is-released-from-main-after-the-day-alone-and-a-read-only-check-proves-the-tag-ci-and-the-security-settings.md` | docs | moved from `docs/specs/planned/` |
 | `changelog.d/feat-release-check.md` | repo | added: the fragment |

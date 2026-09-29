@@ -15,8 +15,8 @@
 - **Prerequisites:** SPEC-020, SPEC-021, SPEC-027, SPEC-041, SPEC-042 and SPEC-043 (landed);
   SPEC-049, SPEC-053, SPEC-100, SPEC-101, SPEC-102, SPEC-105, SPEC-110, SPEC-111 and SPEC-116
   (planned, unlanded: each adds a kind, a duty's writer or a job this checklist gates); SPEC-142
-  (this wave, unlanded: the `import` role beside which the `cutover` role is added). **Mutation
-  band:** `S14300-S14399`.
+  (this wave, unlanded: the `import` role beside which the `cutover` role is added). SPEC-146
+  (this wave) builds after it and adds its own item. **Mutation band:** `S14300-S14399`.
 - **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
   `docs/specs/` with its tests and `docs/red-first/SPEC-143.md` (ADR-016).
 
@@ -62,9 +62,11 @@ R2. The planned items, confirmed against the populations R3 reads at the build's
       `last_chance`, `habit`, `comeback`, `focus`, `quest_offer`, `chests_vaulted`, `weekly`,
       `widget`, `discipline`, `drill_ready` and `inbox_filed` (15);
     - `moves`, one item per vault contract: `readings-folder` (`archive:readings_vault_archive`,
-      `duty:daily-reading`; its `stopped` is the rail's record that ADR-065's fences are proved), `drills` (`duty:drill-coach`, `job:drill_postback`), `inbox`
-      (`duty:inbox-curator`), `daily-note` (`duty:daily-note`), `weekly-synthesis`
-      (`duty:weekly-synthesis`) and `vault-stats` (`job:vault_stats`, SPEC-146) (6);
+      `duty:daily-reading`; its `stopped` is the rail's record that ADR-065's fences are
+      proved), `drills` (`duty:drill-coach`, `job:drill_postback`), `inbox`
+      (`duty:inbox-curator`), `daily-note` (`duty:daily-note`) and `weekly-synthesis`
+      (`duty:weekly-synthesis`) (5). SPEC-146 adds a sixth, `vault-stats` (`job:vault_stats`),
+      in the delivery that adds the job, so the job is gated from its first commit;
     - `deckstreak_only`: `reading_ready` (ADR-041: DeckStreak's own kind) and `alert` (ADR-050:
       DeckStreak's pages about its own health) (2).
     A kind whose predecessor source the builder cannot name stays `moves` (the conservative answer:
@@ -236,7 +238,7 @@ A20: cargo test -p deck-streak-daemon --test roles -- --exact only_the_name_cuto
 | `crates/daemon/tests/roles.rs` | `deck-streak-daemon` | changed: A20 |
 | `deploy/cutover.md` | deploy | added: the runbook (R14) |
 | `.sqlx/` | repo | changed: the refreshed query cache |
-| `scripts/mutation-rows.d/S143.tsv` | repo | added: §9's rows |
+| `scripts/mutation-rows.d/S14300-S14399.json` | repo | added: §9's rows |
 | `docs/red-first/SPEC-143.md` | docs | added: the red-first record |
 | `docs/specs/SPEC-143-the-cutover-checklist-moves-each-contract-one-at-a-time-and-no-contract-has-two-writers-at-any-step.md` | docs | moved from `docs/specs/planned/` |
 | `changelog.d/feat-cutover-checklist.md` | repo | added: the fragment |
