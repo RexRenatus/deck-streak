@@ -16,20 +16,23 @@ old configuration, and no previous copy to restore: the files and the running co
 until some later reload succeeds. `caddy_remove` has the same order and the same gap: it moves the
 candidate over the Caddyfile and deletes the block before its reload. The judgment: the gap is the
 same, the issue's intent (files that match what Caddy runs) covers both, and so R4 includes it.
-Caddy's own documentation says that on a reload with errors it "automatically reverts to the last
-known working configuration" (Caddy, Getting started: Reloading config), which is why the running
-side is safe and only the disk side is wrong.
+Caddy's own documentation says "If there are any errors loading the new config, Caddy rolls back to
+the last working config." (Caddy, Getting started), which is why the running side is safe and only
+the disk side is wrong.
 
 ## 2. Requirements
 
 R1. `caddy-install` keeps the previous block and the previous Caddyfile until the reload succeeds.
-R2. A failed reload restores both, reloads the restored configuration, and exits non-zero with a
-    message that names the failed reload. If the restoring reload also fails, a second message says
+R2. A failed reload restores both, in SPEC-062 R7's order (the Caddyfile first, so that no state
+    has it importing a block that is absent, then the block), reloads the restored configuration,
+    and exits non-zero with a message that names the failed reload. If the restoring reload also fails, a second message says
     so distinctly, and the exit is still non-zero.
 R3. A first install (no previous block) whose reload fails removes the new block and restores the
     previous Caddyfile.
 R4. `caddy-remove` follows the same rule: the block and the Caddyfile are kept until its reload
-    succeeds, and a failed reload restores both, as R2 says.
+    succeeds, and a failed reload restores both, as R2 says. It moves the block aside only after
+    the Caddyfile without the import is in place, in SPEC-062 R7's order, so no step leaves the
+    live Caddyfile importing a missing block; a restore returns the block before the Caddyfile.
 R5. The previous copies are removed only after a successful reload, and none is left behind after a
     success or a restored failure.
 
@@ -41,7 +44,10 @@ R5. The previous copies are removed only after a successful reload, and none is 
 | A2 | a failed restoring reload is named distinctly and the install still refuses | `test_deploy_scripts.py` `a_failed_restoring_reload_is_named_apart_and_still_refuses` |
 | A3 | a first install whose reload fails removes the new block and restores the Caddyfile | `test_deploy_scripts.py` `a_first_install_whose_reload_fails_removes_the_new_block` |
 | A4 | the previous copies exist at the reload and are gone after a good one | `test_deploy_scripts.py` `the_previous_copies_outlive_the_reload_and_go_after_a_good_one` |
-| A5 | a failed reload of `caddy-remove` restores the block and the Caddyfile, and a good one removes them | `test_deploy_scripts.py` `a_failed_reload_of_the_removal_restores_the_block_and_caddyfile` |
+| A5 | a failed reload of `caddy-remove` restores the block and the Caddyfile, names the failed reload, and a good one removes them | `test_deploy_scripts.py` `a_failed_reload_of_the_removal_restores_the_block_and_caddyfile` |
+| A6 | a failed restoring reload of `caddy-remove` is named apart, the removal refuses and both files are restored | `test_deploy_scripts.py` `a_failed_restoring_reload_of_the_removal_is_named_apart` |
+| A7 | a removal whose rename onto the Caddyfile fails leaves the block in place | `test_deploy_scripts.py` `a_removal_whose_caddyfile_rename_fails_leaves_the_block_in_place` |
+| A8 | a first install whose restore rename fails never leaves a Caddyfile importing a missing block | `test_deploy_scripts.py` `a_first_install_whose_restore_rename_fails_never_imports_a_missing_block` |
 
 ```acceptance
 A1: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k a_failed_reload_restores_the_previous_block_and_caddyfile
@@ -49,23 +55,27 @@ A2: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k a
 A3: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k a_first_install_whose_reload_fails_removes_the_new_block
 A4: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k the_previous_copies_outlive_the_reload_and_go_after_a_good_one
 A5: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k a_failed_reload_of_the_removal_restores_the_block_and_caddyfile
+A6: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k a_failed_restoring_reload_of_the_removal_is_named_apart
+A7: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k a_removal_whose_caddyfile_rename_fails_leaves_the_block_in_place
+A8: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k a_first_install_whose_restore_rename_fails_never_imports_a_missing_block
 ```
 
 The tests use the existing fakes: a `caddy` stub whose `reload` fails on demand (the count of
 failures is written to a file, so one file fails the reload once and another twice) and records how
-many previous copies sit beside the configuration at each reload. No test reaches a host.
+many previous copies sit beside the configuration at each reload; A7 and A8 swap in a `mv` that
+refuses one rename onto the Caddyfile. No test reaches a host.
 
 ## 4. File manifest
 
 | file | context | change |
 |---|---|---|
 | `deploy/deploy.sh` | repo | changed: R1 to R5 (`caddy_install`, `caddy_remove`) |
-| `scripts/tests/test_deploy_scripts.py` | repo | changed: the `caddy` stub and A1 to A5 |
+| `scripts/tests/test_deploy_scripts.py` | repo | changed: the `caddy` stub, the failing `mv` and A1 to A8 |
 | `scripts/mutation-rows.d/S12700-S12799.json` | repo | added: the restore clauses as script rows (section 7) |
 | `deploy/README.md` | repo | changed: one sentence in the Caddy section |
 | `docs/specs/SPEC-127-a-failed-caddy-reload-restores-the-previous-site-file.md` | repo | added |
 | `docs/decisions/ADR-127-a-caddy-reload-that-fails-restores-the-copies-kept-until-it-succeeds.md` | repo | added |
-| `docs/decisions/ADR-062-a-deploy-installs-only-a-release-whose-provenance-and-digests-verify.md` | repo | changed: the unit-guards bullet replaced (the advisory); one bullet |
+| `docs/decisions/ADR-062-a-deploy-installs-only-a-release-whose-provenance-and-digests-verify.md` | repo | changed: amended (appended): one dated line at its end, the unit-guards bullet unchanged |
 | `docs/specs/SPEC-062-first-deploy-units-caddy-block-and-https.md` | repo | changed: one dated amendment line at its end (insert-only) |
 | `docs/red-first/SPEC-127.md` | repo | added |
 | `changelog.d/fix-caddy-restore-127.md` | repo | added |
@@ -80,6 +90,7 @@ many previous copies sit beside the configuration at each reload. No test reache
   swap and the reload; the next `caddy-install` starts from the files on disk (#321).
 - It does not change the validation of the candidate copy, the rendering of the block or the
   release install path (#321).
+- It adds no message of its own to the removal's second refusal (#361).
 - It performs no step of the cutover (#164).
 
 ## 6. Risks
@@ -101,6 +112,10 @@ killed by its full id and each naming one test as its killer:
 | S12703 | a failed reload exits non-zero | A2 |
 | S12704 | the previous copies are not deleted before the reload | A4 |
 | S12705 | the removal restores the Caddyfile when its reload fails | A5 |
+| S12706 | the install names a failed reload in words of its own | A1 |
+| S12707 | the removal reloads again after restoring and names a second failure | A6 |
+| S12708 | the removal swaps the Caddyfile before it moves the block aside | A7 |
+| S12709 | the install restores the Caddyfile before it takes the new block away | A8 |
 
 ## References
 

@@ -177,7 +177,9 @@ host no longer keeps through the same verification. `deploy.sh caddy-install vX.
 block with `scripts/render-caddy.py` from the private configuration (`DECKSTREAK_DEPLOY_CADDY_CONFIG`,
 a JSON object with `host`, `web_root` and `api_upstream`), adds it and one `import` line to a copy
 of the Caddyfile, runs `caddy validate` and `caddy adapt --validate` on the copy, moves it into
-place and reloads; a refusal leaves the live file as it was, and a reload that fails puts the previous block and Caddyfile back, reloads them and exits non-zero (SPEC-127). `rollback.sh caddy-remove` reverses it under the same rule.
+place and reloads; a refusal leaves the live file as it was, and a reload that fails puts the
+previous block and Caddyfile back, reloads them and exits non-zero (SPEC-127).
+`rollback.sh caddy-remove` reverses it under the same rule.
 
 ## The host budget
 
