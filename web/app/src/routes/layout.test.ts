@@ -27,8 +27,11 @@ describe('the root layout', () => {
   it('renders in the browser only, and never at build', async () => {
     const module = await load(null);
 
-    expect(module.ssr).toBe(false);
-    expect(module.prerender).toBe(false);
+    expect({ ssr: module.ssr, prerender: module.prerender }).toEqual({
+      ssr: false,
+      prerender: false,
+    });
+    expect(typeof module.load).toBe('function');
   });
 
   it('opens the screen a listed token names, once, from another path', async () => {
@@ -64,6 +67,7 @@ describe('the root layout', () => {
     const outcome = navigate(module, '/about');
 
     expect(outcome.thrown).toBeUndefined();
-    expect(outcome.untrack).not.toHaveBeenCalled();
+    expect(outcome.untrack.mock.calls).toEqual([]);
+    expect(outcome).toEqual({ thrown: undefined, untrack: outcome.untrack });
   });
 });
