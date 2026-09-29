@@ -128,7 +128,8 @@ R12. The job `discipline-tick` fires every 15 minutes at minutes 4, 19, 34 and 4
     (SPEC-027 R2), and a zone offset that is a multiple of 15 minutes maps the set onto itself. It
     does not catch up. Its timer `deck-streak-job@discipline-tick.timer` and the rail contract hold
     its calendar equal to the table. It reads no review and syncs nothing (ADR-037): it raises the
-    reminders (R13) and the standby notice (R14), and nothing else.
+    reminders (R13) and the standby notice (R14), and later discipline SPECs add only messages a
+    settle left pending (SPEC-106's stakes and their Sunday review).
 R13. At each tick, a reminder is raised for each booked window whose occurrence today starts 0 to 15
     minutes after the tick's instant, both ends included, unless today is an active skip day or a
     lapse is open; its dedupe key is `window:<epoch day>:<window id>`. It carries the start as
@@ -220,7 +221,7 @@ R25. The constants (the masks, the grace, the cap of 2 windows, the lookahead, t
 | A23 | a broken night turns kept when a late review meets the floor, and pays 15 coins once; kept, suppressed and cancelled nights are never re-judged | `a_broken_night_is_revised_to_kept` |
 | A24 | the constants equal the constants golden | `the_window_constants_match_the_predecessors` |
 | A25 | the kind `discipline` is a nudge of tier T2, per incident, behind its own setting, recorded as a deviation | `the_discipline_kind_is_a_recorded_deviation` |
-| A26 | `/windows` and `/hardmode` run the use cases, and every refusal names its reason | `windows_and_hardmode_commands_run_the_use_cases` |
+| A26 | `/windows` and `/hardmode` call their use cases through a stub port and relay a refusal's reason unchanged | `windows_and_hardmode_commands_run_the_use_cases` |
 | A27 | discipline's routes answer the owner's session only | `the_discipline_routes_answer_only_the_owner` |
 | A28 | the screen books a window from the form and shows the week's bookings against the cap | `books a window and shows the hard mode cap` |
 | A29 | an erase empties the three tables and resets the state row | `an_erase_empties_the_windows_and_resets_the_state` |

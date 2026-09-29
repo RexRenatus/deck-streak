@@ -32,7 +32,8 @@ does the rail speak?
 
 - A false fine is worse than a missed fine: every verdict that fines is time-boxed and revisable,
   with an automatic refund, and a sensor's silence never fines.
-- ADR-037's cadence is the owner's decision at cutover (#164): the rail must be right at any cadence.
+- ADR-037's cadence is the owner's decision at cutover (#164): the rail must be right at any
+  cadence.
 - ADR-040: an XP grant is written once and never lowered.
 - ADR-071: a settled study day's value never falls without a recorded reason.
 - Every message goes through the one router, with quiet hours and an owner-facing setting.
@@ -64,7 +65,9 @@ of the rail's own.
 - **Revision.** At each sync cycle, every unreversed fine of the current study day or the 7 closed
   study days before it is judged again on the evidence as it stands, and reversed through SPEC-103's
   port with the reason `revision` when it no longer holds. SPEC-104 and SPEC-106 name each
-  fine's rules. The rung, a lock and a surcharge stand.
+  fine's rules. The rung, a lock and a surcharge stand. A lost wager is revised the same way:
+  when a day of the gap its streak break closed turns out to hold a study review within the 7
+  closed study days, SPEC-106 voids it and refunds its stake, and the streak stays as settled.
 - **Rewards.** A reward that waits on evidence is drawn and stored when it is offered, and granted
   once, only when the evidence confirms it; unconfirmed, it closes ungranted.
 - **The kind `discipline`.** The policy gains `discipline`: class `nudge`, tier T2, no budget,
@@ -96,4 +99,5 @@ rows `S10412` and `S10413`.
 ## More Information
 
 Cites ADR-037 (the cadence), ADR-040 (the grant's key and amount), ADR-071, ADR-103 (the fine port)
-and SPEC-041 (the router and its policy). The schematic is `docs/schematics/fine-verdict-and-refund.md`.
+and SPEC-041 (the router and its policy). The schematics are
+`docs/schematics/fine-verdict-and-refund.md` and `docs/schematics/wager-and-contract-lifecycle.md`.

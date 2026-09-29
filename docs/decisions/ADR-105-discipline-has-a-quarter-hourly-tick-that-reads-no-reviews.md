@@ -56,7 +56,8 @@ Chosen option: "a quarter-hourly tick that reads no reviews", built by SPEC-105.
   39) or the sync's slot. It does not catch up.
 - **What it does.** It raises each reminder whose window starts 0 to 15 minutes ahead, and a
   pending standby notice. It reads no review, syncs nothing and judges nothing: every verdict stays
-  with the sync cycle (ADR-104).
+  with the sync cycle (ADR-104). SPEC-106 joins it with the stakes' messages a settle left pending
+  and the Sunday review.
 - **The notice.** The governor's step of a settle stores the notice as pending when SPEC-076's
   rule holds with quiet hours set aside. The first tick outside quiet hours raises it under the kind
   `discipline` while the verdict is still standby and no lapse is open, clearing the pending day
