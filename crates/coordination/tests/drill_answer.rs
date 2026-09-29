@@ -7,7 +7,7 @@ use std::fs;
 use std::path::PathBuf;
 
 use deck_streak_coordination::drills::{self, AnswerOutcome, DrillNotes, RealFs, Surface};
-use deck_streak_kernel::{Db, Environment, StudyDayRule, UtcMillis};
+use deck_streak_kernel::{Db, Environment, Hour, StudyDayRule, UtcMillis, UtcOffset};
 use deck_streak_vault::config::{ARCHIVE_FOLDER, READINGS_FOLDER, VAULT_ROOT};
 use deck_streak_vault::{Rails, VaultSettings};
 use tempfile::TempDir;
@@ -87,4 +87,36 @@ async fn a_second_answer_from_either_surface_is_refused() {
     assert_eq!(after, text, "a refused answer leaves the note as it was");
     assert!(!after.contains("Another."), "the second text never lands");
     println!("examined 3 answer(s) through the one use case");
+}
+
+#[tokio::test]
+async fn the_answer_heading_names_the_local_clock_of_the_rule() {
+    let at = UtcMillis::from_epoch_millis(1_770_000_000_000);
+    let hour = Hour::new(3).expect("an hour");
+    for (offset, expected) in [
+        (0, "2026-02-02 02:40"),
+        (150, "2026-02-02 05:10"),
+        (-300, "2026-02-01 21:40"),
+    ] {
+        let fx = fixture().await;
+        let rule = StudyDayRule::new(hour, UtcOffset::from_minutes(offset).expect("an offset"));
+        drills::answer(
+            &fx.notes,
+            &fx.db,
+            "irac-1",
+            "The duty is owed.",
+            Surface::Bot,
+            rule,
+            at,
+        )
+        .await
+        .expect("an answer");
+        let written = fs::read_to_string(&fx.note).expect("the note");
+        assert!(
+            written.ends_with(&format!(
+                "\n\n## Your Answer (via Telegram {expected})\n\nThe duty is owed.\n"
+            )),
+            "offset {offset}: {written}"
+        );
+    }
 }
