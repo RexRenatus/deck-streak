@@ -343,8 +343,6 @@ The delivery touched these files beyond the rows above:
 - `crates/daemon/tests/instruments_wiring.rs`
 - `crates/daemon/tests/roles.rs`
 - `crates/ingest/tests/lock.rs`
-- `scripts/mutation-equivalent.d/deck-streak-api.json`
-- `scripts/mutation-equivalent.d/deck-streak-coordination.json`
 - `scripts/mutation-equivalent.d/deck-streak-insights.json`
 
 Rows the delivery leaves unchanged:
