@@ -17,7 +17,13 @@
 #![deny(unused_must_use)]
 #![warn(missing_docs, clippy::all)]
 
+pub mod bonus;
+pub mod consistency;
 pub mod data_rights;
+pub mod economy_config;
 pub mod grant;
 pub mod ledger;
+pub mod level;
+pub mod review_xp;
+pub mod settle;
 pub mod xp;
