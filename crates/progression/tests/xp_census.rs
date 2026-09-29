@@ -13,7 +13,7 @@
 // examined count on purpose.
 #![allow(clippy::expect_used, clippy::print_stdout)]
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -28,6 +28,11 @@ const OPERATION: &str = "deck_streak_progression::settle";
 /// The request type `settle` takes. A grouped import never spells `OPERATION` contiguously, and
 /// nothing can call `settle` without building this by name.
 const REQUEST: &str = "SettleRequest";
+/// The crate's name in a path: a source that never names it cannot reach progression's re-exports.
+const PROGRESSION_CRATE: &str = "deck_streak_progression";
+/// The names progression's own re-exports and aliases are followed from: the operation, its
+/// request type, and (through `settle`) its module.
+const ORIGINALS: [&str; 2] = ["settle", REQUEST];
 /// Where a recompute step lives inside coordination.
 const RECOMPUTE_DIR: &str = "crates/coordination/src/recompute/";
 /// The cause a caller outside the recompute steps passes.
@@ -92,6 +97,118 @@ fn sql_names_the_table(text: &str) -> bool {
         .any(|line| line.split("--").next().unwrap_or_default().contains(TABLE))
 }
 
+/// The tokens of Rust `text` that a `use` tree is read from: identifiers, and the punctuation that
+/// shapes a tree. A path separator is dropped, because the identifiers in a row are the path.
+fn tokens(text: &str) -> Vec<String> {
+    let mut found = Vec::new();
+    let mut word = String::new();
+    for character in text.chars().chain(std::iter::once(' ')) {
+        if character.is_alphanumeric() || character == '_' {
+            word.push(character);
+            continue;
+        }
+        if !word.is_empty() {
+            found.push(std::mem::take(&mut word));
+        }
+        if matches!(character, '{' | '}' | ',' | ';' | '*' | '(' | ')') {
+            found.push(character.to_string());
+        }
+    }
+    found
+}
+
+/// One leaf of a `use` tree: the path to it, and the name it is bound under when it is renamed.
+struct Leaf {
+    path: Vec<String>,
+    alias: Option<String>,
+}
+
+/// Reads the tree that starts at `at` (grouped, nested, with or without `as`) below `prefix`, into
+/// `out`, and stops before the `}` or `;` that ends it.
+fn use_tree(tokens: &[String], at: &mut usize, prefix: &[String], out: &mut Vec<Leaf>) {
+    loop {
+        let mut path = prefix.to_vec();
+        let mut alias = None;
+        let mut grouped = false;
+        while let Some(token) = tokens.get(*at) {
+            match token.as_str() {
+                "," | "}" | ";" => break,
+                "{" => {
+                    *at += 1;
+                    use_tree(tokens, at, &path, out);
+                    grouped = true;
+                    if tokens.get(*at).is_some_and(|next| next == "}") {
+                        *at += 1;
+                    }
+                }
+                "as" => {
+                    alias = tokens.get(*at + 1).cloned();
+                    *at += 2;
+                }
+                "*" => *at += 1,
+                name => {
+                    path.push(name.to_owned());
+                    *at += 1;
+                }
+            }
+        }
+        if path.last().is_some_and(|last| last == "self") {
+            path.pop();
+        }
+        if !grouped && path.len() > prefix.len() {
+            out.push(Leaf { path, alias });
+        }
+        if tokens.get(*at).is_some_and(|next| next == ",") {
+            *at += 1;
+        } else {
+            return;
+        }
+    }
+}
+
+/// Every leaf of every `pub use` (of any visibility, at any depth of module) in Rust `text`.
+fn reexports(text: &str) -> Vec<Leaf> {
+    let words = tokens(&code_lines(text).join(" "));
+    let mut leaves = Vec::new();
+    for (index, word) in words.iter().enumerate() {
+        let public = index > 0 && matches!(words[index - 1].as_str(), "pub" | ")");
+        if word == "use" && public {
+            use_tree(&words, &mut (index + 1), &[], &mut leaves);
+        }
+    }
+    leaves
+}
+
+/// The names progression's own `src` gives `settle`, its request and its module by a renaming
+/// `pub use`, each with the original it stands for. A renamed name is followed too, so a chain of
+/// renamings ends at the original.
+fn progression_aliases(root: &Path) -> BTreeMap<String, String> {
+    let leaves: Vec<Leaf> = files(&root.join("crates").join(OWNER).join("src"), "rs")
+        .iter()
+        .flat_map(|source| reexports(&fs::read_to_string(source).expect("a readable source")))
+        .collect();
+    let mut aliases: BTreeMap<String, String> = BTreeMap::new();
+    loop {
+        let before = aliases.len();
+        for leaf in &leaves {
+            let (Some(last), Some(alias)) = (leaf.path.last(), &leaf.alias) else {
+                continue;
+            };
+            let original = if ORIGINALS.contains(&last.as_str()) {
+                last.clone()
+            } else if let Some(original) = aliases.get(last) {
+                original.clone()
+            } else {
+                continue;
+            };
+            aliases.entry(alias.clone()).or_insert(original);
+        }
+        if aliases.len() == before {
+            return aliases;
+        }
+    }
+}
+
 /// The census of a tree at `root`.
 struct Census {
     sources: Vec<String>,
@@ -109,6 +226,7 @@ fn census(root: &Path) -> Census {
         calling: BTreeSet::new(),
         refused: Vec::new(),
     };
+    let aliases = progression_aliases(root);
     let mut members: Vec<PathBuf> = fs::read_dir(root.join("crates"))
         .expect("crates/ is readable")
         .map(|entry| entry.expect("a directory entry").path())
@@ -132,12 +250,34 @@ fn census(root: &Path) -> Census {
                         .push(format!("{name} names {TABLE}, and only {OWNER}'s code may"));
                 }
             }
-            if context != OWNER && (rust_names(&text, OPERATION) || rust_names(&text, REQUEST)) {
+            let direct = rust_names(&text, OPERATION) || rust_names(&text, REQUEST);
+            // A source that names progression's crate and one of progression's own renamings
+            // reaches `settle` without spelling it.
+            let words: BTreeSet<String> =
+                tokens(&code_lines(&text).join(" ")).into_iter().collect();
+            let through: Vec<(&String, &String)> =
+                if context != OWNER && !direct && words.contains(PROGRESSION_CRATE) {
+                    aliases
+                        .iter()
+                        .filter(|(alias, _)| words.contains(*alias))
+                        .collect()
+                } else {
+                    Vec::new()
+                };
+            if context != OWNER && (direct || !through.is_empty()) {
                 census.calling.insert(name.clone());
                 if context != CALLER {
-                    census
-                        .refused
-                        .push(format!("{name} calls settle, and only {CALLER}'s code may"));
+                    if direct {
+                        census
+                            .refused
+                            .push(format!("{name} calls settle, and only {CALLER}'s code may"));
+                    }
+                    for (alias, original) in through {
+                        census.refused.push(format!(
+                            "{name} calls settle through {alias}, {OWNER}'s alias of {original}, \
+                             and only {CALLER}'s code may"
+                        ));
+                    }
                 } else if !name.starts_with(RECOMPUTE_DIR)
                     && (!rust_names(&text, CORRECTION_CAUSE) || rust_names(&text, RECOMPUTE_CAUSE))
                 {
