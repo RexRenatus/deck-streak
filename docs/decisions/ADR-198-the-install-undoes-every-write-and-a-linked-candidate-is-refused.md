@@ -35,13 +35,14 @@ stop safely at every early exit?
 Chosen option: "refuse a path that is not a plain file with one link" for both scripts and "an explicit
 `|| undo` per write" for the install, because each keeps the script's control flow readable and gives
 every guard one test and one mutation row. The install checks its four fixed names (the block, the
-block's previous copy, the candidate and the Caddyfile's previous copy) before its first write; the
-removal checks its candidate. The undo tolerates an absent candidate and an absent block, never
+block's previous copy, the candidate and the Caddyfile's previous copy) before its first write, and
+the removal checks the same four names; both scripts also refuse, before any write, a Caddy directory
+they cannot write and a live Caddyfile that is not a regular file. The undo tolerates an absent candidate and an absent block, never
 deletes a block path that is not a file, and its helpers are defined before the first write.
 
 ### Consequences
 
-- Good, because every early exit of the install prints the refusal and restores the previous block.
+- Good, because every early exit of the install prints the refusal and restores the previous block; the removal makes no such promise for every exit and prints the write's own message when its four-name guard refuses.
 - Good, because a link, a directory, a pipe or a file with a second link at a path the install writes
   changes nothing: the run refuses first.
 - Good, because the removal refuses a candidate that is a link, a pipe, a socket, a device or a file
@@ -54,7 +55,7 @@ deletes a block path that is not a file, and its helpers are defined before the 
 
 ### Confirmation
 
-SPEC-127 criteria A16 to A32 in `scripts/tests/test_deploy_scripts.py`, and rows S12718 to S12730,
+SPEC-127 criteria A16 to A37 in `scripts/tests/test_deploy_scripts.py`, and rows S12718 to S12735,
 each proved killed by its full id.
 
 ## More Information

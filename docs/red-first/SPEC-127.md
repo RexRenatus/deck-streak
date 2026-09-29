@@ -51,7 +51,12 @@ A28: red at 159b1877c6207ef0596e20ea9793276745b3c911: AssertionError: False is n
 A29: red at 159b1877c6207ef0596e20ea9793276745b3c911: AssertionError: 'the Caddy configuration was refused' not found in "cp: cannot create regular file '/tmp/tmpfevq3l54/host/etc/caddy/Caddyfile.previous': Permission denied\n" : the refusal is printed
 A30: red at 159b1877c6207ef0596e20ea9793276745b3c911: AssertionError: 'the Caddy configuration was refused' not found in '' : the refusal is printed
 A32: red at 159b1877c6207ef0596e20ea9793276745b3c911: AssertionError: 'the Caddy configuration was refused' not found in "cp: cannot create regular file '/tmp/tmph36m10n5/host/etc/caddy/deck-streak.caddy.previous': Permission denied\n" : the refusal is printed
-A31: not red: the test passes at dev's and the head's `deploy.sh`, so it is the killer that S12720 needs once the install guard refuses a link before the copy (see the addendum below the fence)
+A31: not red: the test passes at 159b187's and the head's `deploy.sh` (on dev's it fails: the install there has no undo for the copy), so it is the killer that S12720 needs once the install guard refuses a link before the copy (see the addendum below the fence)
+A33: red at 9c1ac0df482428d364ced130cbad6447fecc1ffe: AssertionError: 0 == 0 : the removal refuses
+A34: red at 9c1ac0df482428d364ced130cbad6447fecc1ffe: AssertionError: deploy.sh waited on a FIFO at the live Caddyfile
+A35: red at 9c1ac0df482428d364ced130cbad6447fecc1ffe: AssertionError: 'the Caddy configuration was refused' not found in "deck-streak-host: line 23: /tmp/tmp96dogtc2/host/etc/caddy/deck-streak.caddy: Permission denied\nfind: cannot delete '/tmp/tmp96dogtc2/host/etc/caddy/deck-streak.candidate': Permission denied\n" : the refusal is printed
+A36: not red: the test passes at the head's `deploy.sh`, whose install already refuses a block it cannot copy aside, so it is the killer that S12730 needs once the install guard refuses a directory it cannot write (see the addendum below the fence)
+A37: not red: the test passes at the head's `deploy.sh`, whose undo already tolerates an absent block, so it is the killer that S12725 needs once the install guard refuses before the undo runs (see the addendum below the fence)
 A16: green at 28588e0fbbb556f5c686ac937c2180377c78bfbd
 A17: green at 28588e0fbbb556f5c686ac937c2180377c78bfbd
 A18: green at 28588e0fbbb556f5c686ac937c2180377c78bfbd
@@ -67,6 +72,9 @@ A28: green at 2c25d22b82dd41f8f38a0754039e3549a496f45d
 A29: green at 2c25d22b82dd41f8f38a0754039e3549a496f45d
 A30: green at 2c25d22b82dd41f8f38a0754039e3549a496f45d
 A32: green at 2c25d22b82dd41f8f38a0754039e3549a496f45d
+A33: green at dc8e42216b229361a1def85bd1230884c9f11e00
+A34: green at dc8e42216b229361a1def85bd1230884c9f11e00
+A35: green at dc8e42216b229361a1def85bd1230884c9f11e00
 ```
 
 ## Fix round 1 (PR #357)
@@ -175,3 +183,18 @@ at 2c25d22, and forty-nine tests still pass.
 The rows S12701 and S12704 were re-anchored to the changed lines, the killer of S12720 moved to the
 test of A31, and the rows S12723 to S12730 were added; every row of the band is proved killed by its
 full id on a clean committed tree.
+
+## Amendment 2026-09-29, third round (issues #423 and #424)
+
+The tests of A33 to A37 were committed first (9c1ac0df) against `deploy.sh` as it stood, and run whole
+under `LC_ALL=C`: fifteen subtests of three tests were red by assertion (A33 ten, A34 two, A35 three),
+with no error, and the fifty-one other tests stayed green. Every pipe case turns a timeout
+into a failure, so a hang is red by assertion and not an error. The tests of A36 and A37 are green at
+that commit: they are the killers that the rows S12730 and S12725 need, because the guard now refuses
+before the copy and before the undo, which turns the old killers of those two rows into no-ops. The fix
+followed (dc8e4221), which changes `deploy.sh` and edits no test file. After it, fifty-four tests
+pass.
+
+The rows S12725 and S12730 moved to the tests of A37 and A36, and the rows S12731 to S12735 were added;
+each moved row's mutant survives its old killer and is killed by its new one, and every row of the band
+is proved killed by its full id on a clean committed tree.

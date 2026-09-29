@@ -225,6 +225,14 @@ directory there; the class is every candidate path that is not a plain file with
 and A21 pin the two links that changed the live state and A22 to A26 pin the rest. `cp -p` alone is
 not a guard: it writes through a link to any other existing file.
 
+Both scripts also check, before their first write and with nothing written or deleted when a check
+fails, that the Caddy directory is writable and that the live Caddyfile is a regular file (a pipe there
+would hang the run). The removal checks the same four names as the install, the block, the block's
+previous copy, the candidate and the Caddyfile's previous copy, each absent or a plain file with one
+link, and refuses with the write's own message. Only the install promises the refusal on every early
+exit; the removal promises no message on every exit. A33 to A37 pin these guards and the two tests that
+the moved rows S12725 and S12730 need.
+
 The insertions this amendment makes are these two sections, appended after the file's last line,
 and nothing above them is edited (SPEC-038 section 8, ruling (i)).
 
@@ -249,6 +257,11 @@ and nothing above them is edited (SPEC-038 section 8, ruling (i)).
 | A30 | an install whose candidate cannot be renamed onto the Caddyfile exits non-zero, prints the refusal, puts the previous block back and leaves the live Caddyfile unchanged and no candidate or previous copy (#423) | `test_deploy_scripts.py` `an_install_whose_candidate_rename_fails_undoes_and_says_so` |
 | A31 | an install whose live Caddyfile cannot be read exits non-zero, prints the refusal, puts the previous block back and leaves no candidate or previous copy (#423) | `test_deploy_scripts.py` `an_install_whose_caddyfile_cannot_be_read_undoes_and_says_so` |
 | A32 | an install that cannot copy the previous block aside exits non-zero, prints the refusal, leaves the block and the live Caddyfile unchanged and leaves no previous copy (#423) | `test_deploy_scripts.py` `an_install_that_cannot_copy_the_block_in_a_read_only_directory_says_so` |
+| A33 | a removal whose block copy, or whose Caddyfile copy, is a link of either kind, a directory or a pipe, or a file with more than one link, exits non-zero, prints the write's own message and leaves the live Caddyfile and the block unchanged (#423, #424) | `test_deploy_scripts.py` `a_removal_refuses_every_previous_copy_that_is_not_a_plain_file` |
+| A34 | neither script waits on a pipe at the live Caddyfile: each exits non-zero with its own refusal and writes nothing (#423, #424) | `test_deploy_scripts.py` `neither_script_waits_on_a_fifo_at_the_live_caddyfile` |
+| A35 | a first install, a re-install and a removal in a Caddy directory that cannot be written, with a stale file in it, exit non-zero with their own refusal before any write and leave the stale file and the live Caddyfile as they were (#423, #424) | `test_deploy_scripts.py` `a_read_only_caddy_directory_is_refused_before_any_write` |
+| A36 | an install whose block cannot be read exits non-zero, prints the refusal and leaves the block, the live Caddyfile and every other file as they were (#423) | `test_deploy_scripts.py` `an_install_whose_block_cannot_be_read_refuses_before_writing` |
+| A37 | a first install refused at validation with its block already gone still exits non-zero and prints the refusal (#423) | `test_deploy_scripts.py` `a_first_install_refused_with_its_block_already_gone_still_says_so` |
 
 ```acceptance
 A16: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k with_no_candidate_still_undoes
@@ -268,15 +281,21 @@ A29: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k 
 A30: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k an_install_whose_candidate_rename_fails_undoes_and_says_so
 A31: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k an_install_whose_caddyfile_cannot_be_read_undoes_and_says_so
 A32: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k an_install_that_cannot_copy_the_block_in_a_read_only_directory_says_so
+A33: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k a_removal_refuses_every_previous_copy_that_is_not_a_plain_file
+A34: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k neither_script_waits_on_a_fifo_at_the_live_caddyfile
+A35: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k a_read_only_caddy_directory_is_refused_before_any_write
+A36: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k an_install_whose_block_cannot_be_read_refuses_before_writing
+A37: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k a_first_install_refused_with_its_block_already_gone_still_says_so
 ```
 
 The test file's `World.run` now starts the script in its own session and kills the whole group on a
-timeout, so a stuck stub cannot orphan the host script. Rows S12718 to S12730 in
+timeout, so a stuck stub cannot orphan the host script. Rows S12718 to S12735 in
 `scripts/mutation-rows.d/S12700-S12799.json` pin the absent-candidate guard of the undo (killer A16),
 the undo after the block write (A18), after the candidate copy (A22) and after the import append
 (A19), the removal's link guard (A20), the install's path guard (A23, A24), the absent-block undo
-(A27), the undo of the kept copy and of the rename (A29, A30), the removal's guard for a hard link or
-a pipe (A25) and the refusal of a block copy that fails (A32). Files changed: `deploy/deploy.sh`,
+(A37), the undo of the kept copy and of the rename (A29, A30), the removal's guard for a hard link or
+a pipe (A25), the refusal of a block copy that fails (A36), the directory and Caddyfile checks of both
+scripts (A34, A35) and the removal's four-name guard (A33). Files changed: `deploy/deploy.sh`,
 `scripts/tests/test_deploy_scripts.py`, `scripts/mutation-rows.d/S12700-S12799.json`,
 `docs/red-first/SPEC-127.md`, `docs/decisions/ADR-198-the-install-undoes-every-write-and-a-linked-candidate-is-refused.md`
 and `changelog.d/fix-caddy-undo-423.md`.

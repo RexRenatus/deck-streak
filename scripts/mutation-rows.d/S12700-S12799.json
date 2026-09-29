@@ -199,7 +199,7 @@
         "else [ ! -f \"$block\" ] || find \"$block\" -delete; fi\n",
         "else find \"$block\" -delete; fi\n",
         "a first install whose block was never written still prints the refusal (#423)",
-        "test_deploy_scripts.TheCaddyInstall.test_a_first_install_into_a_read_only_caddy_directory_says_so"
+        "test_deploy_scripts.TheCaddyInstall.test_a_first_install_refused_with_its_block_already_gone_still_says_so"
       ],
       [
         "S12726-THE-INSTALL-UNDOES-A-FAILED-PREVIOUS-COPY",
@@ -239,7 +239,47 @@
         "cp -p \"$block\" \"$had\" || { echo \"deploy: the Caddy configuration was refused\" >&2; exit 1; }; }\n",
         "cp -p \"$block\" \"$had\"; }\n",
         "a site block that cannot be copied aside stops the install with its refusal (#423)",
-        "test_deploy_scripts.TheCaddyInstall.test_an_install_that_cannot_copy_the_block_in_a_read_only_directory_says_so"
+        "test_deploy_scripts.TheCaddyInstall.test_an_install_whose_block_cannot_be_read_refuses_before_writing"
+      ],
+      [
+        "S12731-THE-INSTALL-REFUSES-A-DIRECTORY-IT-CANNOT-WRITE",
+        "deploy/deploy.sh",
+        "[ -w \"$dir\" ] && [ -f \"$file\" ] || { echo \"deploy: the Caddy configuration was refused\"",
+        "[ -f \"$file\" ] || { echo \"deploy: the Caddy configuration was refused\"",
+        "the install refuses a Caddy directory it cannot write before its first write",
+        "test_deploy_scripts.TheCaddyInstall.test_a_read_only_caddy_directory_is_refused_before_any_write"
+      ],
+      [
+        "S12732-THE-INSTALL-REFUSES-A-CADDYFILE-THAT-IS-NOT-A-FILE",
+        "deploy/deploy.sh",
+        "[ -w \"$dir\" ] && [ -f \"$file\" ] || { echo \"deploy: the Caddy configuration was refused\"",
+        "[ -w \"$dir\" ] || { echo \"deploy: the Caddy configuration was refused\"",
+        "the install refuses a live Caddyfile that is not a regular file (a pipe would hang it)",
+        "test_deploy_scripts.TheCaddyInstall.test_neither_script_waits_on_a_fifo_at_the_live_caddyfile"
+      ],
+      [
+        "S12733-THE-REMOVAL-REFUSES-A-DIRECTORY-IT-CANNOT-WRITE",
+        "deploy/deploy.sh",
+        "[ -w \"$dir\" ] && [ -f \"$file\" ] || { echo \"deploy: the candidate Caddyfile could not be written\"",
+        "[ -f \"$file\" ] || { echo \"deploy: the candidate Caddyfile could not be written\"",
+        "the removal refuses a Caddy directory it cannot write before its first write",
+        "test_deploy_scripts.TheCaddyInstall.test_a_read_only_caddy_directory_is_refused_before_any_write"
+      ],
+      [
+        "S12734-THE-REMOVAL-REFUSES-A-CADDYFILE-THAT-IS-NOT-A-FILE",
+        "deploy/deploy.sh",
+        "[ -w \"$dir\" ] && [ -f \"$file\" ] || { echo \"deploy: the candidate Caddyfile could not be written\"",
+        "[ -w \"$dir\" ] || { echo \"deploy: the candidate Caddyfile could not be written\"",
+        "the removal refuses a live Caddyfile that is not a regular file (a pipe would hang it)",
+        "test_deploy_scripts.TheCaddyInstall.test_neither_script_waits_on_a_fifo_at_the_live_caddyfile"
+      ],
+      [
+        "S12735-THE-REMOVAL-REFUSES-A-PREVIOUS-COPY-THAT-IS-NOT-A-PLAIN-FILE",
+        "deploy/deploy.sh",
+        "for name in \"$block\" \"$block.previous\" \"$kept\"; do",
+        "for name in; do",
+        "the removal refuses a block, block copy or Caddyfile copy that is a link, a directory or a pipe",
+        "test_deploy_scripts.TheCaddyInstall.test_a_removal_refuses_every_previous_copy_that_is_not_a_plain_file"
       ]
     ]
   }
