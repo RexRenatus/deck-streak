@@ -7,9 +7,7 @@ import { createApi } from '../api';
 import TierAnimation from './TierAnimation.svelte';
 import {
   BEATS,
-  DICE,
   FEED_PATH,
-  REDUCED_MOTION,
   celebrations,
   parseFeed,
   reducedMotion,
@@ -30,7 +28,7 @@ function examined<T>(what: string, items: T[]): T[] {
 /** The device's answer to the reduced-motion query: `reduce` for that query, and no other. */
 function prefer(reduce: boolean): void {
   vi.stubGlobal('matchMedia', (query: string) => ({
-    matches: reduce && query === REDUCED_MOTION,
+    matches: reduce && query === '(prefers-reduced-motion: reduce)',
     media: query,
     addEventListener: () => undefined,
     removeEventListener: () => undefined
@@ -85,15 +83,17 @@ describe('TierAnimation', () => {
       expect(still.content, tier).toEqual(moving.content);
     }
     // the content itself: the dice, the message, and the card's dismissal
-    expect(shown('T5', false).content).toEqual([DICE, 'A synthetic T5', 'Dismiss']);
+    expect(shown('T5', false).content).toEqual(['\u{1f3b0}', 'A synthetic T5', 'Dismiss']);
     expect(shown('T3', false).content).toEqual(['A synthetic T3']);
-    expect(shown('T0', false).beats).toEqual([]);
+    // a T0 shows nothing at all, not even an empty item
+    const silent = shown('T0', false);
+    expect([silent.beats, silent.motion]).toEqual([[], null]);
   });
 
   it('names the dice and hides the reveal placeholder from a screen reader', () => {
     prefer(false);
     render(TierAnimation, { props: { item: item('T4') } });
-    expect(screen.getByRole('img', { name: 'A dice roll' }).textContent).toBe(DICE);
+    expect(screen.getByRole('img', { name: 'A dice roll' }).textContent).toBe('\u{1f3b0}');
     cleanup();
 
     render(TierAnimation, { props: { item: item('T3') } });

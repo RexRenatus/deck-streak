@@ -30,27 +30,44 @@ export const REDUCED_MOTION = '(prefers-reduced-motion: reduce)';
 /** Each tier's beats, in the order the animation shows them. */
 export const BEATS: Readonly<Record<Tier, readonly Beat[]>> = {
   T0: [],
-  T1: [],
-  T2: [],
-  T3: [],
-  T4: [],
-  T5: []
+  T1: ['message'],
+  T2: ['message'],
+  T3: ['placeholder', 'message'],
+  T4: ['dice', 'message'],
+  T5: ['dice', 'message', 'card']
 };
 
-/** Whether the device asks for reduced motion. */
+/** Every tier the router writes; an item of any other is not the feed's. */
+const TIERS: readonly unknown[] = Object.keys(BEATS);
+
+/**
+ * Whether the device asks for reduced motion: a device with no media queries, as a test's document
+ * may be, asks for nothing.
+ */
 export function reducedMotion(): boolean {
-  return false;
+  return typeof matchMedia === 'function' && matchMedia(REDUCED_MOTION).matches;
 }
 
-/** The body of the feed's route, or null when it is not one. */
-export function parseFeed(_body: unknown): FeedItem[] | null {
-  return null;
+/** Whether `candidate` is an item of the feed: a kind, a text and a tier the router writes. */
+function isItem(candidate: unknown): candidate is FeedItem {
+  const { kind, text, tier } = (candidate ?? {}) as Record<string, unknown>;
+  return typeof kind === 'string' && typeof text === 'string' && TIERS.includes(tier);
 }
 
-/** The items the feed serves, or none when it serves nothing. */
+/**
+ * The body of the feed's route, or null when it is not one. An item that is not one is skipped,
+ * and each item keeps only what the animation reads.
+ */
+export function parseFeed(body: unknown): FeedItem[] | null {
+  const { items } = (body ?? {}) as Record<string, unknown>;
+  if (!Array.isArray(items)) return null;
+  return items.filter(isItem).map(({ kind, text, tier }) => ({ kind, text, tier }));
+}
+
+/** The items the feed serves, or none when it serves nothing: a feed it cannot read shows nothing. */
 export async function celebrations(source: {
   feed(): Promise<Answer<FeedItem[]>>;
 }): Promise<FeedItem[]> {
-  await source.feed();
-  return [];
+  const answer = await source.feed();
+  return answer.kind === 'ok' ? answer.value : [];
 }
