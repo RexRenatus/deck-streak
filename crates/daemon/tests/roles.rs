@@ -553,6 +553,13 @@ fn every_code_the_owner_cycle_refuses_with_is_one_the_job_records() {
     }
 }
 
+/// Compile-time proof that the owner cycle refuses with the closed enum and nothing looser.
+fn typed_refusal(
+    cycle: &deck_streak_daemon::wiring::OwnerSyncCycle,
+) -> impl std::future::Future<Output = Result<deck_streak_bot::SyncAnswer, RefusalReason>> + '_ {
+    cycle.run()
+}
+
 #[test]
 fn a_refusal_code_is_a_variant_of_the_closed_enum() {
     // SPEC-128 amendment (#396): the codes stored today are the enum's strings, byte for byte, no
@@ -586,14 +593,7 @@ fn a_refusal_code_is_a_variant_of_the_closed_enum() {
     codes.sort_unstable();
     codes.dedup();
     assert_eq!(codes.len(), 8, "no two variants share a code");
-    fn refuses_with_the_enum<F>(_run: F)
-    where
-        F: std::future::Future<Output = Result<deck_streak_bot::SyncAnswer, RefusalReason>>,
-    {
-    }
-    let _typed = |cycle: &deck_streak_daemon::wiring::OwnerSyncCycle| {
-        refuses_with_the_enum(cycle.run());
-    };
+    let _ = typed_refusal;
 }
 
 #[tokio::test]

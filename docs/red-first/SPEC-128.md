@@ -68,3 +68,7 @@ A14: green at d34307d
 ```
 
 A13 keeps its earlier `not red` line above; its body changed at d34307d as said.
+
+A later commit, the one that follows 3eca7dc4, edits `crates/daemon/tests/roles.rs` again: it moves the
+compile-time type assertion into a named helper so clippy passes with `-D warnings`. The test body is
+otherwise unchanged and green.
