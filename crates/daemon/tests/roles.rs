@@ -826,3 +826,38 @@ async fn the_data_role_writes_the_export_as_one_line_of_standard_output() {
     assert_eq!(document["settings_generation"][0]["generation"], 0);
     assert!(document.get("cron_fires").is_none(), "{document}");
 }
+
+#[tokio::test]
+async fn only_the_sync_job_loads_the_owners_conventions() {
+    // The conventions file the setting names does not exist. The sync job builds the instruments,
+    // so it refuses to start on it; a job that builds none never reads the file and runs.
+    let directory = tempfile::tempdir().expect("a temporary directory");
+    let state = directory.path().join("state");
+    fs::create_dir_all(&state).expect("a folder");
+    let missing = directory.path().join("absent-conventions.json");
+    let environment = [
+        ("STATE_DIRECTORY", state.as_os_str()),
+        ("DECKSTREAK_CONVENTIONS_FILE", missing.as_os_str()),
+    ];
+
+    let sync = deckstreakd(&["job", "sync"], &environment);
+    assert_eq!(sync.status.code(), Some(1), "{}", describe(&sync));
+    let stopped: Vec<String> = events(&sync)
+        .into_iter()
+        .filter(|(_, event)| event["message"] == "the role stopped with an error")
+        .map(|(_, event)| event["error"].to_string())
+        .collect();
+    assert_eq!(stopped.len(), 1, "{}", describe(&sync));
+    assert!(
+        stopped[0].contains("the job role") && stopped[0].contains("DECKSTREAK_CONVENTIONS_FILE"),
+        "{stopped:?}"
+    );
+
+    let maintenance = deckstreakd(&["job", "maintenance"], &environment);
+    assert_eq!(
+        maintenance.status.code(),
+        Some(0),
+        "{}",
+        describe(&maintenance)
+    );
+}
