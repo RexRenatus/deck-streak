@@ -382,3 +382,12 @@ fn each_way_an_export_differs_from_its_declaration_reads_in_words() {
         "the context omitting's export left out a table it declares exported: alpha_singleton"
     );
 }
+
+#[tokio::test]
+async fn the_export_names_its_format_deckstreak_export_v1() {
+    let (_directory, db) = fixture().await;
+    let exported = export(&db, &[&Alpha, &Beta]).await.expect("the export");
+    // The literal, never the constant: the owner's export format is `deckstreak.export.v1`
+    // under the key `schema` (SPEC-021 R2), so a renamed constant is a new format, caught here.
+    assert_eq!(exported.as_json()["schema"], "deckstreak.export.v1");
+}

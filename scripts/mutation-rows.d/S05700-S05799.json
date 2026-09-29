@@ -92,6 +92,15 @@
         "const SHAPE: &'static str = \"an absolute file path PLANTED\";",
         "persona::a_roster_outside_the_repository_fills_the_four_slots",
         "a malformed roster setting is refused naming the shape it must have, an absolute file path, so the operator reads what to set; cargo-mutants never mutates a constant"
+      ],
+      [
+        "S05780-THE-EXPORT-NAMES-ITS-FORMAT-V1",
+        "privacy",
+        "src/export.rs",
+        "pub const EXPORT_SCHEMA: &str = \"deckstreak.export.v1\";",
+        "pub const EXPORT_SCHEMA: &str = \"deckstreak.export.v2\";",
+        "export::the_export_names_its_format_deckstreak_export_v1",
+        "the owner's export names its format deckstreak.export.v1 under the key schema (SPEC-021 R2), so a renamed constant never changes the format silently; cargo-mutants never mutates a constant"
       ]
     ]
   }

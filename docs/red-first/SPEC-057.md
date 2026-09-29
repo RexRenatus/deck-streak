@@ -242,8 +242,8 @@ at 611eb8e with A23's test, which read `1 != 0`. It is now killed by a test in
 `crates/privacy/tests/export.rs` that pins the three problem texts and the mismatch message. The
 closing sweep, run 36533533659 at 049f9ba, counted 30 of 30 whole and read `table: verdict: ok`,
 listed 29, killed 26, equivalent 0, unexplained 0, unviable 3. Every shard exited 0 and none
-logged a timeout. No record was needed, and rows S05780 to S05789 are unused: the tool mutated
-every invariant of the crate (R20).
+logged a timeout. No record was needed. Row S05780 pins the export's schema literal, a constant the tool never
+mutates (R20); rows S05781 to S05789 are unused.
 
 ## The coordination delivery: its row (A21)
 
