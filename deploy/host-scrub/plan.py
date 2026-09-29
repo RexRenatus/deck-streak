@@ -105,7 +105,15 @@ def mounted(path: str) -> str | None:
     whose root (field 4) is not `/` is refused too: it is a bind of some other directory, whose
     protection an operator's list would have to know. Raises OSError when the table cannot be read,
     since an item is never judged clear of mounts without it."""
-    for row in read_mountinfo().splitlines():
+    rows = read_mountinfo().splitlines()
+    # A file system mounted whole (its root `/`) at two points shows each at the other: a bind of
+    # its root directory, `/` or a protected directory that is itself a mount point, reads `/`.
+    whole = Counter(
+        fields[2]
+        for fields in (row.split() for row in rows)
+        if len(fields) >= 5 and unescape(fields[3]) == "/"
+    )
+    for row in rows:
         fields = row.split()
         if len(fields) < 5:
             continue
@@ -115,6 +123,8 @@ def mounted(path: str) -> str | None:
         if point.startswith(path.rstrip("/") + "/"):
             return point
         if unescape(fields[3]) != "/" and path.startswith(point.rstrip("/") + "/"):
+            return point
+        if whole[fields[2]] > 1 and path.startswith(point.rstrip("/") + "/"):
             return point
     return None
 
