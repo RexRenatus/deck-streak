@@ -13,13 +13,15 @@
     "dir": "scripts/tests",
     "modules": [
       "test_mutation_verdict",
-      "test_mutation_equivalent"
+      "test_mutation_equivalent",
+      "test_mutation_python_verdict"
     ]
   },
   "scripts/mutation_python.py": {
     "dir": "scripts/tests",
     "modules": [
-      "test_mutation_python"
+      "test_mutation_python",
+      "test_mutation_python_verdict"
     ]
   },
   "scripts/mutation_rows.py": {
