@@ -60,3 +60,23 @@ fn a_finding_carrying_a_fence_marker_is_dropped() {
     assert!(!text.contains("untrusted"), "{text}");
     assert!(text.contains("- plain"), "{text}");
 }
+
+#[test]
+fn a_finding_quoting_a_span_of_the_rejected_text_is_dropped() {
+    let rejected = "The deadline is 2027-03-01 for this synthetic card\n";
+    // A probe writes a fragment with its `repr`: single quotes, or double when the text holds one.
+    let single = "output.md:1: date-iso '2027-03-01'";
+    let double = "output.md:1: date-iso \"2027-03-01\"";
+    let unrelated = "output.md:1: length 'nothing of the rejected text'";
+    let Step::Repair(text) = next(1, &failure(&[single, double, unrelated]), rejected) else {
+        panic!("attempt one is repaired");
+    };
+    assert!(
+        !text.contains("2027-03-01"),
+        "a span found in the rejected text is quoted back: {text}"
+    );
+    assert!(
+        text.contains("- output.md:1: length 'nothing of the rejected text'"),
+        "a quoted span absent from the rejected text is kept: {text}"
+    );
+}

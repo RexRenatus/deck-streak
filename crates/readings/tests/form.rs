@@ -132,6 +132,21 @@ fn the_instruction_names_the_sections_and_never_the_rejected_text() {
 }
 
 #[test]
+fn a_language_instruction_counts_the_new_words_and_never_names_one() {
+    let instruction = Form::of(Track::Language).instruction(&seed());
+    assert!(
+        instruction.contains("Gloss each of the 2 new words"),
+        "the instruction counts the new words: {instruction}"
+    );
+    for word in ["casa", "perro"] {
+        assert!(
+            !instruction.contains(word),
+            "a new word is card text and stays out of the trusted instruction: {instruction}"
+        );
+    }
+}
+
+#[test]
 fn the_corpus_names_the_subject_and_every_note_as_a_source() {
     let seed = Seed {
         card_ids: vec![1, 2],
