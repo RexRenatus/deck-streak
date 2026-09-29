@@ -114,7 +114,7 @@ R14. The typed policy reads every key of the file, and names the key `defer_fanf
 | A12 | a flush renders at most 2 deferred celebrations in full and one rollup line naming the rest; the queue never exceeds 20 | `a_flush_renders_two_and_rolls_up_the_rest` |
 | A13 | the in-app feed serves its items to the owner's session and refuses any other caller with no item | `the_in_app_feed_answers_only_the_owner` |
 | A14 | the notifications data-rights port lists its five tables as exported and erased, and an erase empties them | `the_notification_tables_are_exported_and_erased` |
-| A15 | the census reads every shipped source of these kinds: the Rust, Python and web source files, the Mini App's HTML among them, the shell scripts by extension or by a `#!` first line, and the systemd units of every type and their drop-ins; it leaves out symlinks, test files, test directories outside a `src/`, and in a Rust file its comments and `#[cfg(test)]` modules. In what it reads, no name it holds appears outside its place: outside the bot's sources nothing names the Bot API's host, one of its send methods or its other delivery methods (a copy, a forward, an edit, a pin or a reaction), or the bot's `DEFAULT_API_URL`, SPEC-031's alert path aside; inside them such a method is named only by its own named send; the bot's `send_html`, `edit_html` and command handler are used only at named sites, and the handler's own replies and dispatch are called only by their named callers; only the router's modules name the in-app feed or the held queue, and in the notifications crate only they name its ledger, the root's declaration of it aside; no source of that crate carries `#[path]`, `#[macro_export]` or `#[macro_use]`, or re-exports the ledger, its tables or its writes to the feed and the queue by a `pub use`; and each of the eight named sends is found once | `no_delivery_goes_around_the_port` |
+| A15 | the census reads every shipped source of these kinds: the Rust, Python and web source files, the Mini App's HTML among them, the shell scripts by extension or by a `#!` first line, and the systemd units of every type and their drop-ins; it leaves out symlinks, test files, test directories outside a `src/`, and in a Rust file its comments and `#[cfg(test)]` modules. In what it reads, no name it holds appears outside its place: outside the bot's sources nothing names the Bot API's host, one of the send or delivery methods of the pinned client's table (a send, a copy, a forward, an edit, an ephemeral edit, a stopped poll or live location, a pin, a reaction or a Mini App query's answer), or the bot's `DEFAULT_API_URL`, SPEC-031's alert path aside; inside them such a method is named only by its own named send; the bot's `send_html`, `edit_html` and command handler are used only at named sites, and the handler's own replies and dispatch are called only by their named callers; only the router's modules name the in-app feed or the held queue, and in the notifications crate only they name its ledger, the root's declaration of it aside; no source of that crate carries `#[path]`, `#[macro_export]` or `#[macro_use]`, or re-exports the ledger, its feed's and queue's tables or its writes to the feed and the queue by a `pub use`; every method of the pinned client's table is a send, a delivery or not a delivery, in one class only; and each of the eight named sends is found once | `no_delivery_goes_around_the_port` |
 
 ```acceptance
 A1: cargo test -p deck-streak-notifications --test policy -- --exact the_typed_policy_reads_every_key_of_the_file
@@ -239,7 +239,7 @@ the verdict of a run with that wiring is posted as the `box/packs` status at the
   row (§3a B1) for a call the policy names, and by A15's census for a delivery around the port by a
   name it holds, in the sources of the kinds it reads: the bot's own send, edit or command handler,
   or a call of the handler's replies beside its dispatch; a raw request to the Bot API, or a call of
-  one of its send or other delivery methods; or a write to the Mini App's feed or to the held queue.
+  one of the send or delivery methods of the pinned client's table; or a write to the Mini App's feed or to the held queue.
   Code written to evade the census goes unread, and review catches it (§5, #297).
 - **The lapse context is empty until the governor exists**, so a nudge could reach an owner in a
   real lapse. Detected by SPEC-049's lapse tests, which run over the minimal lapse-episode slice
@@ -382,15 +382,21 @@ the verdict of a run with that wiring is posted as the `box/packs` status at the
     path, a mount and a unit named as a test file are read; the Mini App's HTML, whose inline
     scripts run in the owner's browser; a CommonJS TypeScript module (`.cts`); and a script by its
     `.bash` or `.zsh` extension.
-  - The Bot API's other delivery methods (a copy, a forward, an edit of a message, its caption, its
-    media, its live location, its checklist or its keyboard, a pin and a reaction) are held like
+  - The delivery methods of the pinned client's table (a copy, a forward, an edit of a message, its
+    caption, its media, its live location, its checklist or its keyboard, an ephemeral edit, a
+    stopped poll or live location, a pin, a reaction and a Mini App query's answer) are held like
     its send methods. Outside the bot's sources nothing names one; inside them one is named only by
     its own named send, and the transport's `edit_html` is `editMessageText`'s, the eighth named
     send, which the census finds once although no shipped source calls it.
+  - The pinned client's whole table is listed in the census with the client's version, which a
+    bump of the lock turns red until the list is derived again, and every method in it is a send,
+    a delivery or not a delivery, in one class only. Deletions, unpins and the other classes of
+    `NOT_DELIVERIES` (reads, configuration, answers to a query, stickers, chat administration,
+    business accounts and stories) deliver nothing to a user, and are classified, not held (#297).
   - The notifications crate: no source of it carries `#[path]`, `#[macro_export]` or
     `#[macro_use]`, since each hands the ledger's writes to code the census reads under another
-    name; and no `pub` or `pub(...)` `use` in it re-exports the ledger, its tables' constants or its
-    writes to the feed and the queue, under any name.
+    name; and no `pub` or `pub(...)` `use` in it re-exports the ledger, the constants of its feed's and queue's
+    tables or its writes to the feed and the queue, under any name.
   - The command handler: its replies (`send`, and `export`, `ask_erase` and `sync`, which send one)
     and its dispatch (`on_message`, `on_callback`) are called only by their named callers, the
     handler and the dispatch, each of which the census finds in the tree.

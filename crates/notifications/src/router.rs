@@ -3,15 +3,16 @@
 //! delivered through the port's calls: the bot transport's, which take this module's [`Pass`], so a
 //! call of one elsewhere does not compile (SPEC-041 A2), and [`push_in_app`], which is private to
 //! it. A census (A15) reads the shipped sources of the kinds A15 names and refuses in them a
-//! delivery around the port by a name it holds: the bot's own send, edit or command handler outside
-//! their named call sites, and the handler's replies outside their named callers; a Bot API send or
-//! other delivery method named anywhere but its named send, and the Bot API's host named outside
-//! the bot's sources; the in-app feed or the held queue named outside this module, the ledger and
-//! the data-rights port, which own their writes, or in this crate the ledger named outside them,
-//! its root's declaration aside; and in this crate `#[path]`, `#[macro_export]`, `#[macro_use]`, or
-//! a `pub use` of the ledger or its writes. It guards ordinary code, not code written to evade it,
-//! such as a request or a table's name assembled from parts, or a `pub` wrapper under another name,
-//! which review catches (#297).
+//! delivery around the port by a name it holds: the bot's own send, edit or command handler
+//! outside their named call sites, and the handler's replies outside their named callers; one of
+//! the send or delivery methods of the pinned client's table named anywhere but its named send,
+//! and the Bot API's host named outside the bot's sources; the in-app feed or the held queue
+//! named outside this module, the ledger and the data-rights port, which own their writes, or in
+//! this crate the ledger named outside them, its root's declaration aside; and in this crate
+//! `#[path]`, `#[macro_export]`, `#[macro_use]`, or a `pub use` of the ledger, its feed's and
+//! queue's tables or its writes to the feed and the queue. It guards ordinary code, not code
+//! written to evade it, such as a request or a table's name assembled from parts, or a `pub`
+//! wrapper under another name, which review catches (#297).
 //!
 //! [`Router::route`] decides one occasion inside one `BEGIN IMMEDIATE` write: the kind's switch;
 //! the claim of its key in its dedupe scope, which a later withhold releases; the lapse; the quiet

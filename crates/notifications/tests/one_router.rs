@@ -14,19 +14,24 @@
 //! and the shell scripts by their extensions, a script with none by its `#!` first line, and the
 //! systemd units of every type and their drop-ins. It leaves out symlinks, test files, test
 //! directories outside a `src/`, and in a Rust file its comments and `#[cfg(test)]` modules.
-//! Outside the bot's sources nothing may name the Bot API's host, one of its send methods or its
-//! other delivery methods (a copy, a forward, an edit, a pin or a reaction), in the API's spelling
-//! or a client's, or the bot's `DEFAULT_API_URL`, SPEC-031's alert path aside; inside them such a
-//! method is named only by its own named send. The bot's `send_html`, its `edit_html` and its
-//! command handler are used only at named call sites, and each of the eight named sends is found
-//! exactly once; the handler's replies and its dispatch are called only by their named callers.
-//! Only the router's ledger, router and data-rights modules, which own their writes, name the Mini
-//! App's feed or the held queue, which a flush delivers; because the ledger's writes to the queue
-//! are private to the notifications crate, only they name the ledger in that crate's sources, the
-//! root's declaration of it aside; and no source of that crate carries `#[path]`,
-//! `#[macro_export]` or `#[macro_use]`, or re-exports the ledger, its tables or its writes to the
-//! feed and the queue by a `pub use`. The refusals are proved on the reviews' deliveries around the
-//! port, which the test holds as text, and on a tree it writes for the walker.
+//! Outside the bot's sources nothing may name the Bot API's host, one of the send or delivery
+//! methods of the pinned client's table (a send, a copy, a forward, an edit, an ephemeral edit, a
+//! stopped poll or live location, a pin, a reaction or a Mini App query's answer), in the API's
+//! spelling or a client's, or the bot's `DEFAULT_API_URL`, SPEC-031's alert path aside; inside
+//! them such a method is named only by its own named send. The client's whole table is listed with
+//! its version, and every method in it is a send, a delivery or not a delivery, in one class only
+//! (`the_census_classifies_every_method_of_the_pinned_client`): deletions, unpins and the other
+//! classes of `NOT_DELIVERIES` deliver nothing to a user, and are classified, not held (#297). The
+//! bot's `send_html`, its `edit_html` and its command handler are used only at named call sites,
+//! and each of the eight named sends is found exactly once; the handler's replies and its dispatch
+//! are called only by their named callers. Only the router's ledger, router and data-rights
+//! modules, which own their writes, name the Mini App's feed or the held queue, which a flush
+//! delivers; because the ledger's writes to the queue are private to the notifications crate, only
+//! they name the ledger in that crate's sources, the root's declaration of it aside; and no source
+//! of that crate carries `#[path]`, `#[macro_export]` or `#[macro_use]`, or re-exports the ledger,
+//! its feed's and queue's tables or its writes to the feed and the queue by a `pub use`. The
+//! refusals are proved on the reviews' deliveries around the port, which the test holds as text,
+//! and on a tree it writes for the walker.
 //!
 //! The census guards ordinary code, not code written to evade it, which review catches. A text
 //! census reads names, not requests, statements or what the compiler resolves, so these go unread
@@ -705,7 +710,9 @@ const NAMED_SENDS: [(&str, &str, &str); 8] = [
 /// handed to the modules beside it, the ledger compiled a second time by an escaped `#[path]`, the
 /// ledger's hold re-exported from the router under another name, and the held queue's table
 /// re-exported under another name; and in the bot's command handler, its reply sent, its dispatch
-/// run and its erase's prompt sent by callers of their own, which no update asked for.
+/// run and its erase's prompt sent by callers of their own, which no update asked for. The fourth
+/// review's: a raw request for a rich message from a new module of the bot, a live photo sent through
+/// the client from a new module of the daemon, and an ephemeral edit through the client.
 const AROUND_THE_PORT: [(&str, &str); 27] = [
     (
         "crates/daemon/src/role_bot.rs",
@@ -1440,13 +1447,14 @@ fn visible(before: &str) -> bool {
         .is_some_and(|rest| rest.chars().next_back().is_none_or(|c| !ident(c)))
 }
 
-/// The Bot API's methods the census holds: its send methods and its other delivery methods.
+/// The methods of the pinned client the census holds: its send methods and its other delivery
+/// methods.
 fn methods() -> impl Iterator<Item = &'static str> {
     SEND_METHODS.into_iter().chain(DELIVERY_METHODS)
 }
 
-/// Each name of a Bot API send or other delivery method in `code`, in either spelling, as the byte
-/// it starts at and the name.
+/// Each name of a send or delivery method of the pinned client in `code`, in either spelling, as
+/// the byte it starts at and the name.
 fn names_of_a_send(code: &str) -> Vec<(usize, String)> {
     let mut named = Vec::new();
     for method in methods() {
@@ -1993,7 +2001,7 @@ fn no_delivery_goes_around_the_port() {
         "the bot's own send, named or called, its edit and its command handler, raw requests to \
          the Bot API and on its base URL, a raw request from inside the bot, writes to the Mini \
          App's feed and to the held queue, the Bot API's copy, edit, forward, pin and reaction, \
-         the notifications crate's carrying attributes and re-exports, and the command handler's \
+         its rich message, live photo and ephemeral edit, the notifications crate's carrying attributes and re-exports, and the command handler's \
          replies and dispatch, around the port"
     );
 
