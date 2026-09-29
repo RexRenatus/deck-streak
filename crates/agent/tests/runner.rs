@@ -1,6 +1,7 @@
 //! The process runner (SPEC-043 A1 to A3, A7, A8): each exit of the shell runner maps to its cause,
 //! and a run past a cap delivers nothing. The scripts are fakes; no proxy and no model is reached.
-#![allow(clippy::expect_used)]
+// Integration test code: helpers panic on a failed fixture, and the examined counts are printed on purpose.
+#![allow(clippy::expect_used, clippy::print_stdout)]
 
 mod support;
 
@@ -16,6 +17,16 @@ fn caps(seconds: u64) -> DutyCaps {
         wall_clock: Duration::from_secs(seconds),
         ..DutyCaps::default()
     }
+}
+
+/// Prints how many items a check examined and refuses zero (the tdd pack's examined contract).
+fn examined<T>(what: &str, items: Vec<T>) -> Vec<T> {
+    println!("examined {} {what}", items.len());
+    assert!(
+        !items.is_empty(),
+        "examined 0 {what}: the population is empty, so nothing was judged"
+    );
+    items
 }
 
 async fn run_script(body: &str, seconds: u64, grace: Duration) -> Result<String, Cause> {
@@ -132,9 +143,12 @@ async fn the_prompt_is_left_only_on_a_private_file_that_is_removed() {
             .trim(),
         "600"
     );
-    let left: Vec<_> = std::fs::read_dir(dir.path())
+    let entries: Vec<_> = std::fs::read_dir(dir.path())
         .expect("a listing")
         .flatten()
+        .collect();
+    let left: Vec<_> = examined("file(s) in the work directory", entries)
+        .into_iter()
         .filter(|e| e.file_name().to_string_lossy().starts_with("prompt-"))
         .collect();
     assert!(left.is_empty(), "the prompt file is removed after the run");

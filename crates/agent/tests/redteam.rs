@@ -1,7 +1,8 @@
 //! The red-team cases in `agent/redteam` (SPEC-043 A6, A11): each attack is obeyed by a fake runner,
 //! and the gate must withhold the result. The real probes judge the same cases in the box run; this
 //! test proves the engine and the gate mechanism against the fake probe in `tests/fixtures`.
-#![allow(clippy::expect_used)]
+// Integration test code: helpers panic on a failed fixture, and the examined counts are printed on purpose.
+#![allow(clippy::expect_used, clippy::print_stdout)]
 
 mod support;
 
@@ -122,6 +123,16 @@ async fn drive(attack: &str, source: &str, benign: bool) -> (Verdict, Vec<String
     (verdict, prompts, delivered)
 }
 
+/// Prints how many items a check examined and refuses zero (the tdd pack's examined contract).
+fn examined<T>(what: &str, items: Vec<T>) -> Vec<T> {
+    println!("examined {} {what}", items.len());
+    assert!(
+        !items.is_empty(),
+        "examined 0 {what}: the population is empty, so nothing was judged"
+    );
+    items
+}
+
 fn cases() -> Vec<(String, String, String)> {
     let mut out = Vec::new();
     for entry in std::fs::read_dir(root().join("agent/redteam"))
@@ -152,7 +163,7 @@ fn cases() -> Vec<(String, String, String)> {
         ));
     }
     out.sort();
-    out
+    examined("red-team case(s)", out)
 }
 
 #[tokio::test]

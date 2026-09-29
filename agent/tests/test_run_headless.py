@@ -21,6 +21,15 @@ KEY = "-".join(["synthetic", "device", "key", "0f3a9c"])
 READY = '{"status":"ready"}'
 
 
+def examined(what, items):
+    """Print how many items a check examined and refuse zero (the tdd pack's contract)."""
+    items = list(items)
+    print(f"examined {len(items)} {what}")
+    if not items:
+        raise AssertionError(f"examined 0 {what}: the population is empty, so nothing was judged")
+    return items
+
+
 class Run:
     """One launch of the runner, and everything the test may read back afterwards."""
 
@@ -91,9 +100,11 @@ class RunnerTest(unittest.TestCase):
             self.assertNotIn(f"{name}=", run.record("claude.env"))
         self.assertIn("CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=1", run.record("claude.env"))
         # No file the run leaves behind holds the key: its scratch directory, its stdout, stderr.
-        for path in run.scratch.rglob("*"):
-            if path.is_file():
-                self.assertNotIn(KEY, path.read_text(errors="replace"), str(path))
+        for path in examined(
+            "file(s) the run left behind",
+            [run.prompt, *(path for path in run.scratch.rglob("*") if path.is_file())],
+        ):
+            self.assertNotIn(KEY, path.read_text(errors="replace"), str(path))
         self.assertNotIn(KEY, run.done.stdout)
         self.assertNotIn(KEY, run.done.stderr)
         self.assertEqual(list(run.scratch.iterdir()), [], "the runner removes its work directory")
