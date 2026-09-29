@@ -114,6 +114,8 @@ fn the_drill_token_matches_the_predecessors_golden() {
         );
     });
     assert_eq!(examined.count, 25);
+    assert_eq!(VIEW_PREFIX, "dv:");
+    assert_eq!(ANSWER_PREFIX, "da:");
 
     // The boundary: 64 bytes are kept whole, 65 are hashed to twenty hex characters.
     let kept = "a".repeat(MAX_CALLBACK_DATA - VIEW_PREFIX.len());

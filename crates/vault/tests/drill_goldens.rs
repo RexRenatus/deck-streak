@@ -177,6 +177,12 @@ fn the_drill_views_match_the_predecessors_golden() {
     });
     println!("examined {} drill_meta cases", examined.count);
     assert!(examined.count > 0, "examined 0 drill_meta cases");
+
+    // A stem is refused for a separator or two dots, and one plain stem is kept.
+    assert!(drills::safe_stem("plain-stem"));
+    for refused in ["", "a/b", "a\\b", "a..b", ".."] {
+        assert!(!drills::safe_stem(refused), "a stem of {refused:?}");
+    }
 }
 
 #[test]
