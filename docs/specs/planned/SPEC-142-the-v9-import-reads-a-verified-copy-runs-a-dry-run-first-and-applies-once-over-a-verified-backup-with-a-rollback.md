@@ -114,11 +114,16 @@ R10. The report is one line per source table, `table=<name> action=<action> rule
     `IMPORT PLAN OK`, `IMPORT PLAN REFUSED: <n>`, `IMPORT APPLIED` or `IMPORT REFUSED: <n>`. A
     refusal names the table, the column or key and the reason, and never a row's value. The
     owner's recorded report holds counts of personal data and stays private.
-R11. `deckstreakd import rollback --backup <file>` restores the backup: it refuses a backup whose
-    `PRAGMA integrity_check` is not `ok`, renames the live file and its `-wal` and `-shm` aside with
-    the suffix `.failed-import` (kept for the owner, never deleted by the tool), renames the backup
-    to the live name in the same directory, syncs the directory, and checks the result with
-    `PRAGMA integrity_check`. It copies no file.
+R11. `deckstreakd import rollback --backup <file>` restores the backup. Before it renames anything
+    it refuses, each by its reason with exit code 1: a backup that is not a file in the live
+    database's own directory (a rename across filesystems fails after the live file has moved
+    aside, leaving no database at the live name); a `.failed-import` name already taken (a second
+    rollback would replace the file the first one kept); and a backup whose `PRAGMA
+    integrity_check` is not `ok`. It then renames the live file and its `-wal` and `-shm` aside
+    with the suffix `.failed-import` (kept for the owner, never deleted or replaced by the tool),
+    renames the backup to the live name, syncs the directory, and checks the result with `PRAGMA
+    integrity_check`; a result that is not `ok` exits 1 naming both files, and keeps both. It
+    copies no file.
 R12. `crates/daemon/src/role_import.rs` runs the role: `Role::Import(ImportCommand)`, `NAMES`
     gains `import`, and the database is the one the other roles open from `STATE_DIRECTORY`. Its
     exit codes are 0 (reconciled, applied, rolled back), 1 (refused, differs, or a fault after the
@@ -129,11 +134,17 @@ R13. The runbook `deploy/v9-import.md` gives the order, each step a command in a
     after the checklist's last move (SPEC-143) and after the predecessor stops (the private rail,
     #41): the dry run of the final copy; DeckStreak's writers stopped (the API, the bot, the job
     timers and the path unit; the Litestream daemon keeps running); the backup, `litestream restore
-    -config <DeckStreak's configuration> -o <backup> <database>`, and `PRAGMA integrity_check` on
-    the restored file through Python's standard library, read-only, as the restore drill does
-    (SPEC-064 R5); the apply; the writers started. A `## Rollback` section stops the Litestream
-    daemon, runs R11, resets Litestream's local tracking for the replaced file as its documentation
-    directs for a replaced database, and starts the daemon and the writers. It copies no database
+    -config <DeckStreak's configuration> -o <backup> <database>` with `<backup>` a new file in the
+    database's own directory, and `PRAGMA integrity_check` on the restored file through Python's
+    standard library, read-only, as the restore drill does (SPEC-064 R5); the apply (a backup it
+    refuses as different, R6, is restored again after the daemon's next sync); the writers
+    started. A `## Rollback` section stops the Litestream daemon, runs R11, resets Litestream's
+    local tracking for the replaced file as its documentation directs for a replaced database, and
+    starts the daemon and the writers; it gives each of R11's refusals and its failure a reply: a
+    backup outside the directory is restored again into it, a taken `.failed-import` name is moved
+    by the owner to a name of their choosing, and a backup or a result that fails its check is
+    restored again from the replica at the point before the import, each followed by R11 again,
+    with the writers still stopped. It copies no database
     file with `cp`, `rsync` or `scp`, and every step after the dry run names #164 as its gate. The
     builder confirms each Litestream subcommand it names against the version the private rail
     records (SPEC-064 R1), with Context7.
@@ -172,6 +183,7 @@ R15. CHARTER 10's eleven anti-goals bind this SPEC as one block; the ones it tou
 | A19 | the report of a planted refusal names its table, column and reason, and carries none of the synthetic rows' values | `the_report_carries_no_row_value` |
 | A20 | an imported database runs the recompute with no grant, no occasion and no delivery, and its imported days unchanged | `an_imported_database_recomputes_without_a_message` |
 | A21 | only the name `import` runs the import role, and it refuses arguments it does not take with the usage code | `only_the_name_import_runs_the_import_role` |
+| A22 | a rollback whose backup is in another directory, and one whose `.failed-import` name is taken, are refused with exit code 1 and nothing renamed | `a_rollback_that_cannot_rename_in_place_is_refused` |
 
 ```acceptance
 A1: cargo test -p deck-streak-migration --test source -- --exact a_copy_whose_digest_differs_is_refused
@@ -195,6 +207,7 @@ A18: cargo test -p deck-streak-migration --test plan -- --exact every_plan_pair_
 A19: cargo test -p deck-streak-migration --test plan -- --exact the_report_carries_no_row_value
 A20: cargo test -p deck-streak-daemon --test import -- --exact an_imported_database_recomputes_without_a_message
 A21: cargo test -p deck-streak-daemon --test roles -- --exact only_the_name_import_runs_the_import_role
+A22: cargo test -p deck-streak-migration --test run -- --exact a_rollback_that_cannot_rename_in_place_is_refused
 ```
 
 ## 3a. What the box run judges
@@ -223,7 +236,7 @@ request.
 | `crates/migration/v9/schema-24.sql` | `deck-streak-migration` | added: the snapshot (R2) |
 | `crates/migration/v9/settings-keys.json` | `deck-streak-migration` | added: the keys not carried (R4) |
 | `crates/migration/tests/source.rs` | `deck-streak-migration` | added: A1 to A5 |
-| `crates/migration/tests/run.rs` | `deck-streak-migration` | added: A6 to A12 |
+| `crates/migration/tests/run.rs` | `deck-streak-migration` | added: A6 to A12, and A22 |
 | `crates/migration/tests/reconcile.rs` | `deck-streak-migration` | added: A13 to A16 |
 | `crates/migration/tests/plan.rs` | `deck-streak-migration` | added: A17 to A19 |
 | `crates/migration/tests/support/mod.rs` | `deck-streak-migration` | added: builds the synthetic predecessor database from the snapshot and the owners' fixtures |
@@ -371,3 +384,4 @@ dropped).
 | `S14215-NO-VALUE` | `crates/migration/src/report.rs` | a refusal prints its column, never its value | `plan::the_report_carries_no_row_value` |
 | `S14216-XP-SUM` | `crates/migration/src/reconcile.rs` | the two ledgers' imported XP equals the source's | `reconcile::the_split_ledger_keeps_the_sources_xp` |
 | `S14217-ROLE-NAME` | `crates/daemon/src/main.rs` | only `import` selects the role | `roles::only_the_name_import_runs_the_import_role` |
+| `S14218-ROLLBACK-IN-PLACE` | `crates/migration/src/lib.rs` | a backup outside the live file's directory, or a taken `.failed-import` name, is refused before any rename | `run::a_rollback_that_cannot_rename_in_place_is_refused` |

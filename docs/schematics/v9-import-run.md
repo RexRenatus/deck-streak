@@ -56,14 +56,16 @@ sequenceDiagram
 
 ```mermaid
 flowchart TD
-  start["deckstreakd import rollback, the backup named"] --> bchk{"the backup's integrity_check ok?"}
-  bchk -- "no" --> no["refused, nothing renamed"]
+  start["deckstreakd import rollback, the backup named"] --> place{"the backup in the live file's directory, and no .failed-import name taken?"}
+  place -- "no" --> no["refused, exit 1, nothing renamed; the runbook's reply, then the rollback again"]
+  place -- "yes" --> bchk{"the backup's integrity_check ok?"}
+  bchk -- "no" --> no
   bchk -- "yes" --> aside["the live file and its -wal and -shm renamed aside, suffix .failed-import, kept for the owner"]
   aside --> swap["the backup renamed to the live name, in the same directory"]
   swap --> sync["the directory synced"]
   sync --> after{"integrity_check ok on the live name?"}
   after -- "yes" --> done["rolled back: no file copied, the replica's tracking reset by the runbook"]
-  after -- "no" --> fail["exit 1, both files kept"]
+  after -- "no" --> fail["exit 1, both files named and kept; the backup restored again from the replica, then the rollback again"]
 ```
 
 ## Who writes which rows
