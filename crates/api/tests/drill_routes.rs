@@ -53,8 +53,6 @@ const FORGED_PAYLOAD: &str = concat!(
 );
 /// 2025-01-15T03:30:10Z, ten seconds after the payloads were signed, in milliseconds.
 const STARTED_AT: i64 = 1_736_911_810_000;
-/// The server's study day at [`STARTED_AT`]: 2025-01-14, as an epoch day.
-const TODAY: i64 = 20_102;
 
 /// An answer: its status, its headers and its body.
 struct Answer {

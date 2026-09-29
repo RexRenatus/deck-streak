@@ -84,7 +84,12 @@ pub async fn run(env: &Environment, redactor: &Redactor) -> Result<(), ApiRoleEr
     let clock: Arc<dyn Clock> = Arc::new(SystemClock);
     let readiness = Readiness::new();
     let access = OwnerAccess::new(gate, Arc::clone(&clock), kernel.study_day_rule);
-    let router = deck_streak_api::router(ApiState::new(readiness.clone()).with_owner(access));
+    let api_state = ApiState::new(readiness.clone()).with_owner(access);
+    let api_state = match crate::drill_vault::open(env) {
+        Some(notes) => api_state.with_drills(notes),
+        None => api_state,
+    };
+    let router = deck_streak_api::router(api_state);
     tracing::info!(listen = %bound, "the api role serves");
     notifier.notify(NotifyState::Ready);
     let heartbeat = lifecycle::spawn_heartbeat(notifier.clone(), env);
