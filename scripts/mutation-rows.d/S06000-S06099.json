@@ -148,16 +148,16 @@
       [
         "S06019-ITEM-DIGEST-COMPARED",
         "deploy/host-scrub/apply.py",
-        "    if digest != item[\"digest\"]:\n",
-        "    if False:\n",
+        "    if digest != item[\"digest\"]:\n        raise Refusal(\"its digest changed since the list was made\", item)\n",
+        "    if False:\n        raise Refusal(\"its digest changed since the list was made\", item)\n",
         "an item whose digest changed since the list is refused (SPEC-060 R6, A5)",
         "test_host_scrub.Apply.test_apply_deletes_exactly_the_approved_items_or_nothing"
       ],
       [
         "S06020-DIRECTORY-DIGEST-COMPARED",
         "deploy/host-scrub/apply.py",
-        "    if digest != item[\"digest\"]:\n",
-        "    if digest != item[\"digest\"] and not stat.S_ISDIR(st.st_mode):\n",
+        "    if digest != item[\"digest\"]:\n        raise Refusal(\"its digest changed since the list was made\", item)\n",
+        "    if digest != item[\"digest\"] and not stat.S_ISDIR(st.st_mode):\n        raise Refusal(\"its digest changed since the list was made\", item)\n",
         "a directory item whose digest changed since the list is refused (SPEC-060 R6, A5)",
         "test_host_scrub.Apply.test_apply_deletes_exactly_the_approved_items_or_nothing"
       ],
@@ -420,8 +420,8 @@
       [
         "S06053-THE-PLAN-NAMES-THE-INVENTORY-IT-PARSED",
         "deploy/host-scrub/plan.py",
-        "        \"inventory\": {\"digest\": inventory_digest, \"taken_at\": inventory[\"taken_at\"]},\n",
-        "        \"inventory\": {\"digest\": read_json(args.inventory, \"inventory\")[1], \"taken_at\": inventory[\"taken_at\"]},\n",
+        "            \"digest\": inventory_digest,\n",
+        "            \"digest\": read_json(args.inventory, \"inventory\")[1],\n",
         "the list names its inventory by the digest of the bytes the plan parsed (SPEC-060 R4, A10)",
         "test_host_scrub.OneRead.test_each_tool_binds_the_bytes_it_parsed"
       ],
