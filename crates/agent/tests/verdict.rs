@@ -6,7 +6,13 @@
 /// a trailing `// ]` after an item is not read as an attribute's end.
 fn is_one_whole_attribute(line: &str) -> bool {
     let line = line.trim();
-    if !line.starts_with("#[") {
+    // A bracket inside a string, a character or a comment would be counted as the attribute's
+    // own, so a line holding a quote or a comment marker is never one whole attribute: it fails
+    // closed, and the scan stops there.
+    if !line.starts_with("#[") || line.contains(['"', '\'']) || line.contains("//") {
+        return false;
+    }
+    if line.contains("/*") || line.contains("*/") {
         return false;
     }
     let mut depth = 0_usize;
@@ -25,14 +31,20 @@ fn is_one_whole_attribute(line: &str) -> bool {
     false
 }
 
-/// How many lines of `source` declare `pub enum Verdict {`. The head's scan only asks whether one
-/// does, so a second declaration is not seen.
+/// Whether `line` is a doc comment the scan may pass: one that cannot close a string or a block
+/// comment opened above it, so an attribute hidden inside either is never read.
+fn is_a_plain_doc_line(line: &str) -> bool {
+    let line = line.trim();
+    line.starts_with("///") && !line.contains('"') && !line.contains("/*") && !line.contains("*/")
+}
+
+/// How many lines of `source` declare `pub enum Verdict {`: a copy above the real one, inside a
+/// comment or a string, would lend the real enum the copy's attributes.
 fn declarations_of(source: &str) -> usize {
-    usize::from(
-        source
-            .lines()
-            .any(|line| line.trim() == "pub enum Verdict {"),
-    )
+    source
+        .lines()
+        .filter(|line| line.trim() == "pub enum Verdict {")
+        .count()
 }
 
 /// The attribute lines directly above `pub enum Verdict` in `source`.
@@ -47,7 +59,7 @@ fn attributes_of(source: &str) -> Vec<String> {
         .rev()
         .take_while(|line| {
             // One whole attribute per line: `#[rustfmt::skip] fn f() {}` is an item, not an attribute.
-            is_one_whole_attribute(line) || line.trim().starts_with("///")
+            is_one_whole_attribute(line) || is_a_plain_doc_line(line)
         })
         .filter(|line| line.trim_start().starts_with("#["))
         .map(|line| line.trim().to_owned())
@@ -61,6 +73,11 @@ fn attributes_of_the_verdict() -> Vec<String> {
 
 #[test]
 fn the_verdict_type_is_must_use() {
+    assert_eq!(
+        declarations_of(include_str!("../src/verdict.rs")),
+        1,
+        "the verdict enum is not declared exactly once"
+    );
     let attributes = attributes_of_the_verdict();
     // The positive fact: the enum was found and its attributes were read, derive included.
     assert!(
