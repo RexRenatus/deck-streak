@@ -56,14 +56,15 @@ file, and no template carries a secret's value.
 |---|---|---|
 | `deck-streak-api.service` | `owner-user-id`, `telegram-bot-token` | the owner gate over Telegram's launch data (SPEC-024) |
 | `deck-streak-bot.service` | `owner-user-id`, `telegram-bot-token`, `anki-sync-username`, `anki-sync-password` | the transport and the owner gate, and the owner's `/sync`, which runs a sync cycle in this role (SPEC-026) |
-| `deck-streak-job@.service` | `anki-sync-username`, `anki-sync-password` | the `sync` job's account (SPEC-022); only that job reads it, and the rail's map answers it to the `sync` instance alone |
+| `deck-streak-job@.service` | none | the sync login is loaded by the sync job alone: its instance's drop-in in `systemd/` carries `anki-sync-username` and `anki-sync-password` (SPEC-022, SPEC-062 R14), and the rail's map answers them to that instance alone |
 | `deck-streak-alert@.service` | `owner-user-id`, `telegram-bot-token` | the page: the bot's token, and the owner's id, which is the owner's private chat (SPEC-031) |
 
 systemd names the unit in the address it binds for each credential, so a job's credentials reach
 the socket under the job instance's name. The rail's map names the template, and an instance
 matches its template's row; a row is never a pattern over unit names (SPEC-061 R4). The sync
-login's rows name the `sync` instance instead, the one job that reads it: the other job instances
-still ask for it at every start, and the socket answers them nothing (SPEC-061 §8).
+login's rows name the `sync` instance instead, the one job that reads it, and the sync login is
+loaded by the sync job alone: the job template requests no credential, and the `sync` instance's
+drop-in under `systemd/` carries the two `LoadCredential=` lines (SPEC-061 §8, SPEC-062 R14).
 
 ## The rail's contract
 
