@@ -74,3 +74,23 @@ Between the reds and greens, three commits edited a test file, disclosed here by
   `/insights` route entry join the lists that test compares.
 - 924f863 changed the `unhex` helper in `crates/ingest/tests/structure.rs` (a clippy pedantic
   rewrite of the same hex decoding); no expected value changed.
+
+## Addendum, 2026-09-29: the missed mutants on the diff get killers (PR #403)
+
+The diff's mutants were listed and run per file with cargo-mutants after the criteria were green,
+and the survivors each got a whole-value test in the crate that holds the mutant. These are not
+new criteria, so the block above keeps its one red line and one green line per criterion. Each
+killer was run against its mutant: it survived before the test and was caught after it.
+
+| commit | killer tests | mutants they kill |
+|---|---|---|
+| e246a7c5 | `lock::a_try_take_answers_the_lock_when_free_and_nothing_while_held`; `structure::each_failed_structure_read_is_named_once_in_the_order_it_failed`, `structure::a_presence_read_that_fails_in_every_batch_is_named_once`; `dark_fields::a_token_needs_two_opening_braces_in_a_row`, `dark_fields::the_instrument_names_itself_versions_its_report_and_hands_back_its_failed_reads` | `try_exclusive`, `StructureReads::fail`, `tokens_in` (174), `DarkFields::id`, `schema_version`, `failed_reads` |
+| 090c47b0 | `instruments_step::a_frame_answers_the_id_and_version_of_its_instrument`; `instruments_cycle::a_cycle_with_instruments_runs_the_step_after_its_sync`, `instruments_cycle::a_cycle_without_instruments_stores_no_report` | `Frame::id`, `Frame::schema_version`, `run_instruments` |
+| eb415974 | `insights_routes::an_unreadable_store_answers_500_with_a_reason_code_alone`; `commands::the_handlers_hold_the_instruments_only_once_they_are_handed_them` | `unreadable`, `Commands::instruments` |
+| 4bb144d9 | `instruments_wiring::a_role_with_valid_settings_gets_the_instruments`, `instruments_wiring::the_late_holder_answers_not_ready_until_it_is_filled`; `roles::only_the_sync_job_loads_the_owners_conventions` | `instruments_for_role`, `LateInstruments::fill`, `role_job` gate |
+
+Four mutants no test can tell apart are recorded equivalent, each with its reason, in
+`scripts/mutation-equivalent.d/`: the two `Debug` impls of `Instruments` and `ApiState`, whose text
+no caller reads, and the two operator swaps in `tokens_in` (`>` to `>=` at line 180 and `+` to `-`
+at line 182), which change only which bytes are rescanned, never a token. The refresh path's
+mutants also carry rows S09413 to S09417, each proved killed by its full id.
