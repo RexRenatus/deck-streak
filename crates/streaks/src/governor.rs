@@ -5,6 +5,9 @@ use std::collections::BTreeSet;
 
 use deck_streak_kernel::StudyDay;
 
+use crate::constants::{SILENCE_WALK_CAP_DAYS, STANDBY_NOTICE_GAP_DAYS, STRENGTH_ARM_THRESHOLD};
+use crate::lapse::LAPSE_AFTER_SILENT_DAYS;
+
 /// The governor's verdict.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Verdict {
@@ -22,7 +25,7 @@ impl Verdict {
     /// Whether neither standby nor a lapse holds.
     #[must_use]
     pub const fn armed(&self) -> bool {
-        self.standby
+        !self.standby && !self.lapse
     }
 }
 
@@ -32,8 +35,8 @@ pub fn assess(strength: f64, silent_days: u32) -> Verdict {
     Verdict {
         strength,
         silent_days,
-        standby: false,
-        lapse: false,
+        standby: strength < STRENGTH_ARM_THRESHOLD,
+        lapse: silent_days >= LAPSE_AFTER_SILENT_DAYS,
     }
 }
 
@@ -66,9 +69,22 @@ pub struct NoticeInput {
 /// Whether a standby notice is due, and the notice day to store.
 #[must_use]
 pub fn standby_notice(input: &NoticeInput) -> NoticeDecision {
+    let recently = input
+        .notified_day
+        .is_some_and(|d| input.today.epoch_day() - d.epoch_day() < STANDBY_NOTICE_GAP_DAYS);
+    let sent = input.verdict.standby
+        && !input.was_standby
+        && !input.verdict.lapse
+        && !recently
+        && input.notifier
+        && !input.quiet_hours;
     NoticeDecision {
-        sent: true,
-        notified_day: input.notified_day,
+        sent,
+        notified_day: if sent {
+            Some(input.today)
+        } else {
+            input.notified_day
+        },
     }
 }
 
@@ -90,10 +106,22 @@ pub fn silence_walk(
     study_days: &BTreeSet<StudyDay>,
     skip_days: &BTreeSet<StudyDay>,
 ) -> Silence {
-    let _ = (study_days, skip_days);
+    let mut silent: u32 = 0;
+    let mut first_silent = today;
+    let mut number = today.epoch_day();
+    while !study_days.contains(&StudyDay::from_epoch_day(number))
+        && today.epoch_day() - number <= SILENCE_WALK_CAP_DAYS
+    {
+        let day = StudyDay::from_epoch_day(number);
+        if !skip_days.contains(&day) {
+            silent = silent.saturating_add(1);
+            first_silent = day;
+        }
+        number -= 1;
+    }
     Silence {
-        silent_days: u32::MAX,
-        first_silent: today,
-        exhausted: true,
+        silent_days: silent,
+        first_silent,
+        exhausted: !study_days.contains(&StudyDay::from_epoch_day(number)),
     }
 }

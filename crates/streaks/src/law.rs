@@ -15,8 +15,24 @@ pub fn bridged_streak(
     today: StudyDay,
     skips: &BTreeSet<StudyDay>,
 ) -> u32 {
-    let _ = (days, today, skips);
-    u32::MAX
+    let Some(oldest) = days.iter().next().copied() else {
+        return 0;
+    };
+    let mut cursor = today.epoch_day();
+    if !days.contains(&today) {
+        cursor -= 1;
+    }
+    let mut run: u32 = 0;
+    while cursor >= oldest.epoch_day() {
+        let day = StudyDay::from_epoch_day(cursor);
+        if days.contains(&day) {
+            run = run.saturating_add(1);
+        } else if !skips.contains(&day) {
+            break;
+        }
+        cursor -= 1;
+    }
+    run
 }
 
 /// The law row after `today`: the run it holds, its longest, and the freezes it started with.
@@ -27,9 +43,16 @@ pub fn law_state(
     today: StudyDay,
     skips: &BTreeSet<StudyDay>,
 ) -> StreakState {
-    let _ = (days, today, skips);
+    let current = bridged_streak(days, today, skips);
     StreakState {
-        freezes: prev.freezes + 1,
-        ..*prev
+        current,
+        longest: prev.longest.max(current),
+        freezes: prev.freezes,
+        last_study_day: days
+            .range(..=today)
+            .next_back()
+            .copied()
+            .or(prev.last_study_day),
+        comeback_armed: false,
     }
 }

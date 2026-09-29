@@ -68,6 +68,12 @@ pub fn anchor_beyond_the_walk(
     skip_days: &BTreeSet<StudyDay>,
     stored_anchor: Option<StudyDay>,
 ) -> Option<StudyDay> {
-    let _ = (study_days, skip_days, stored_anchor);
-    Some(today)
+    let walk = crate::governor::silence_walk(today, study_days, skip_days);
+    if walk.silent_days < LAPSE_AFTER_SILENT_DAYS {
+        return None;
+    }
+    match stored_anchor {
+        Some(prev) if walk.exhausted && prev <= walk.first_silent => Some(prev),
+        _ => Some(walk.first_silent),
+    }
 }

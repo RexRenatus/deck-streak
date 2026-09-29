@@ -4,7 +4,21 @@
 
 use deck_streak_kernel::StudyDay;
 
+use crate::constants::{FREEZE_DROP_MONTHLY_CAP, STREAK_FREEZE_CAP};
 use crate::streak::{StreakState, Transition};
+
+/// The (year, month) of a study day, by the proleptic Gregorian calendar (Hinnant's civil-from-days).
+fn civil_month(day: StudyDay) -> (i64, i64) {
+    let z = day.epoch_day() + 719_468;
+    let era = z.div_euclid(146_097);
+    let doe = z.rem_euclid(146_097);
+    let yoe = (doe - doe / 1_460 + doe / 36_524 - doe / 146_096) / 365;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let month = if mp < 10 { mp + 3 } else { mp - 9 };
+    let year = yoe + era * 400 + i64::from(month <= 2);
+    (year, month)
+}
 
 /// Why a freeze event was written.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -43,14 +57,22 @@ impl FreezeReason {
     /// The reason for a stored name.
     #[must_use]
     pub fn parse(name: &str) -> Option<Self> {
-        let _ = name;
-        None
+        Some(match name {
+            "consumed" => Self::Consumed,
+            "streak_break" => Self::StreakBreak,
+            "streak_earn" => Self::StreakEarn,
+            "chest" => Self::Chest,
+            "weekly_quest" => Self::WeeklyQuest,
+            "season" => Self::Season,
+            "shop" => Self::Shop,
+            _ => return None,
+        })
     }
 
     /// Whether the reason is a drop, counted against the monthly cap.
     #[must_use]
     pub const fn is_drop(self) -> bool {
-        false
+        matches!(self, Self::Chest | Self::WeeklyQuest | Self::Season)
     }
 }
 
@@ -72,12 +94,29 @@ pub fn freeze_events_for(
     next: &Transition,
     today: StudyDay,
 ) -> Vec<FreezeEvent> {
-    let _ = (prev, next, today);
-    vec![FreezeEvent {
-        day: today,
-        delta: 0,
-        reason: FreezeReason::Shop,
-    }]
+    let mut out = Vec::new();
+    let mut push = |delta: i32, reason: FreezeReason| {
+        out.push(FreezeEvent {
+            day: today,
+            delta,
+            reason,
+        });
+    };
+    if next.froze_today {
+        push(-1, FreezeReason::Consumed);
+    }
+    if next.broke_today {
+        push(0, FreezeReason::StreakBreak);
+    }
+    let spent = i64::from(next.froze_today);
+    let earned = i64::from(next.state.freezes) - i64::from(prev.freezes) + spent;
+    if earned > 0 {
+        push(
+            i32::try_from(earned).unwrap_or(i32::MAX),
+            FreezeReason::StreakEarn,
+        );
+    }
+    out
 }
 
 /// The cap that stopped a freeze.
@@ -92,8 +131,12 @@ pub enum Refusal {
 /// Drop-style freezes `events` hold in the calendar month of `day`.
 #[must_use]
 pub fn drops_in_month(events: &[FreezeEvent], day: StudyDay) -> u32 {
-    let _ = (events, day);
-    u32::MAX
+    let month = civil_month(day);
+    let count = events
+        .iter()
+        .filter(|e| e.delta > 0 && e.reason.is_drop() && civil_month(e.day) == month)
+        .count();
+    u32::try_from(count).unwrap_or(u32::MAX)
 }
 
 /// Whether a freeze of `reason` may be granted on `day`.
@@ -107,7 +150,12 @@ pub fn admit(
     day: StudyDay,
     events: &[FreezeEvent],
 ) -> Result<(), Refusal> {
-    let _ = (held, reason, day, events);
+    if held >= STREAK_FREEZE_CAP {
+        return Err(Refusal::HoldCap);
+    }
+    if reason.is_drop() && drops_in_month(events, day) >= FREEZE_DROP_MONTHLY_CAP {
+        return Err(Refusal::MonthlyDropCap);
+    }
     Ok(())
 }
 
@@ -128,6 +176,10 @@ pub fn pick_epic_prize(
     day: StudyDay,
     events: &[FreezeEvent],
 ) -> EpicPrize {
-    let _ = (held, day, events);
-    choice
+    match choice {
+        EpicPrize::Freeze if admit(held, FreezeReason::Chest, day, events).is_err() => {
+            EpicPrize::Token
+        }
+        other => other,
+    }
 }
