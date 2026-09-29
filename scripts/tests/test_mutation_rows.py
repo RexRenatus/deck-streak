@@ -566,6 +566,21 @@ class TheRunnerParseChecksAShellMutant(unittest.TestCase):
         # Only the control ran: the mutant never reached its killer.
         self.assertEqual(fixture.observed(), ["3"])
 
+    def test_a_bash_mutant_refused_with_exit_one_is_void(self):
+        # `bash -n` exits 1, not 2, on an array assignment left open at the end of its input.
+        row = script_row(
+            "S00034-BASH-OPEN-ARRAY",
+            "a=(1 2)",
+            "a=(1 2",
+            "test_fixtool.Tool.test_bash_sums_to_three",
+            target=BASH_TARGET,
+        )
+        fixture, done = self.prove(row)
+        self.assertEqual(done.returncode, 3, done.stdout + done.stderr)
+        self.assertEqual(verdicts(done), {"S00034-BASH-OPEN-ARRAY": "VOID"})
+        self.assertIn("unexpected EOF while looking for matching", done.stdout)
+        self.assertEqual(fixture.observed(), ["3"])
+
     def test_a_bash_mutant_that_parses_and_is_caught_is_killed(self):
         row = script_row(
             "S00021-BASH-CAUGHT",
