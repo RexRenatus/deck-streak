@@ -1073,7 +1073,7 @@ def cache_problems(name, workflow):
                 problems.append(f"{where}: pnpm/action-setup saves its store when cache is on")
             elif uses == "actions/cache/save":
                 saves.append(where)
-                if runs_only_on_schedule(workflow):
+                if name == "rust-cache.yml" and runs_only_on_schedule(workflow):
                     problems += scheduled_save_problems(where, step)
                 else:
                     problems += save_problems(where, step)
@@ -1090,8 +1090,8 @@ def runs_only_on_schedule(workflow):
 
 
 def scheduled_save_problems(where, step):
-    """A scheduled workflow's save that runs when a lookup hit, or that runs under a key other than a
-    restore step's primary key (SPEC-191 R8, R9). The lookups it depends on are the `cache-hit`
+    """A scheduled workflow's save that runs when a lookup hit (on a schedule or a dispatch), or that
+    runs under a key other than a restore step's primary key (SPEC-191 R8, R9). The lookups it depends on are the `cache-hit`
     outputs its condition reads; it must save when they all missed and never when any hit."""
     problems = []
     key = str((step.get("with") or {}).get("key", ""))
@@ -1106,8 +1106,10 @@ def scheduled_save_problems(where, step):
     missed = dict(base, **{f"steps.{lookup}.outputs.cache-hit": "false" for lookup in lookups})
     scenarios = [("a scheduled run that missed its key", missed, True)]
     for lookup in lookups or ["lookup"]:
-        hit = dict(missed, **{f"steps.{lookup}.outputs.cache-hit": "true"})
-        scenarios.append((f"a scheduled run whose {lookup} hit", hit, False))
+        for event in ("schedule", "workflow_dispatch"):
+            hit = dict(missed, **{f"steps.{lookup}.outputs.cache-hit": "true"})
+            hit["github.event_name"] = event
+            scenarios.append((f"a {event} run whose {lookup} hit", hit, False))
     for scenario, context, allowed in scenarios:
         saves = "if" not in step or condition(step["if"], context)
         if saves and not allowed:

@@ -32,6 +32,14 @@
         "          lookup-only: true\n          key: rust-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}\n",
         "the lookup key equals ci.yml's, Cargo.lock term included, so a new lockfile state is a miss (SPEC-191 R3)",
         "test_rust_cache_workflow.TheRustCacheWorkflow.test_its_key_and_paths_are_the_ones_ci_and_the_weekly_battery_restore"
+      ],
+      [
+        "S19105-THE-SCHEDULED-SAVE-ADMISSION-IS-SCOPED-TO-RUST-CACHE-YML",
+        "scripts/tests/test_ci_workflows.py",
+        "name == \"rust-cache.yml\" and ",
+        "",
+        "the scheduled-save admission applies to rust-cache.yml alone, so no other scheduled workflow's save is admitted (SPEC-191 R9)",
+        "test_rust_cache_workflow.TheRustCacheWorkflow.test_the_save_rule_admits_a_scheduled_save_only_when_a_lookup_missed"
       ]
     ]
   }
