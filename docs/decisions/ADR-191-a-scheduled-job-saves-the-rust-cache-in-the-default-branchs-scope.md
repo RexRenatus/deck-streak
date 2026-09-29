@@ -46,8 +46,10 @@ key over that tree (the same expression, which a test compares character for cha
 `ci.yml` and `mutation-weekly.yml` restore steps), looks it up with `lookup-only: true` and skips
 every later step on a hit. On a miss it installs what `ci.yml`'s `rust` job installs, restores by
 `ci.yml`'s prefix, runs `cargo clippy --workspace --all-targets --locked`, `cargo nextest run
---workspace --locked --no-run` and `cargo test --doc --workspace --locked --no-run`, runs `cargo
-clean --workspace` and saves under the key.
+--workspace --locked --no-run`, runs `cargo clean --workspace` and saves under the key. It has no
+step for the doctest stage: cargo refuses `cargo test --doc --no-run`, and dropping `--no-run` would
+run the doctests, so a failing doctest would block the save; the stage uses the `test` profile whose
+dependency artifacts the nextest build made.
 
 It takes effect when the release pull request carries the workflow to `main`, because a schedule runs
 only from the default branch's copy.
@@ -65,7 +67,7 @@ only from the default branch's copy.
 
 - `dev` becoming the default branch: then a push to `dev` saves in the scope every ref reads, and
   this job would be redundant.
-- A build in the stages whose dependency fingerprints differ from the three commands here: the entry
+- A build in the stages whose dependency fingerprints differ from the two commands here: the entry
   would restore and still recompile, and the live proof of a later `ci.yml` run would show it.
 
 ## More Information

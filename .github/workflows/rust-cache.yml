@@ -7,9 +7,11 @@ name: rust-cache
 # this file to main: a schedule runs only from the default branch's copy.
 # It checks out dev, asks for ci.yml's exact Rust cache key with a lookup and stops on a hit. On a
 # miss it builds what ci.yml's rust job builds and runs no test: the clippy stage's build, the test
-# and test-engine stages' test binaries (--no-run) and the doctest stage's build (--no-run), all
-# with the stages' own flags, profile and CARGO_INCREMENTAL, so the dependency artifacts land under
-# the fingerprints the stages use. Lints, tests and doctests are ci.yml's; this job saves an entry.
+# and test-engine stages' test binaries (--no-run), both with the stages' own flags, profile and
+# CARGO_INCREMENTAL, so the dependency artifacts land under the fingerprints the stages use. The
+# doctest stage has no build-only form (cargo refuses --no-run for doctests), and it uses the test
+# profile whose dependency artifacts the nextest build already made. Lints, tests and doctests are
+# ci.yml's; this job saves an entry.
 # It is never triggered by a pull request or a push, so it never saves into a feature branch's scope.
 on:
   schedule:
@@ -82,9 +84,6 @@ jobs:
       - name: build the test and test-engine stages' test binaries, and run none
         if: ${{ steps.lookup.outputs.cache-hit != 'true' }}
         run: cargo nextest run --workspace --locked --no-run
-      - name: build the doctest stage's targets, and run none
-        if: ${{ steps.lookup.outputs.cache-hit != 'true' }}
-        run: cargo test --doc --workspace --locked --no-run
       - name: keep only the dependencies' artifacts in the cache
         if: ${{ steps.lookup.outputs.cache-hit != 'true' }}
         run: cargo clean --workspace

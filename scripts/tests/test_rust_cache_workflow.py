@@ -30,7 +30,6 @@ KEY_TAIL = "${{ hashFiles('Cargo.lock') }}"
 COMPILES = [
     "cargo clippy --workspace --all-targets --locked",
     "cargo nextest run --workspace --locked --no-run",
-    "cargo test --doc --workspace --locked --no-run",
 ]
 TOOLS = "cargo-nextest,cargo-deny"
 

@@ -48,11 +48,13 @@ R5. On a miss it installs what `ci.yml`'s `rust` job installs before it builds (
 R6. It compiles what `ci.yml`'s `rust` job compiles and runs no test: `cargo clippy --workspace
     --all-targets --locked` (the `clippy` stage's build, minus `-D warnings`, which changes no
     dependency's artifacts and would only stop the job on a lint), `cargo nextest run --workspace
-    --locked --no-run` (the `test` and `test-engine` stages' test binaries, built and not run) and
-    `cargo test --doc --workspace --locked --no-run` (the `doctest` stage's build). The dependency
-    graph, the profile, the features, the target and `CARGO_INCREMENTAL: "0"` are the ones the
-    stages use, so the dependency artifacts land under the same fingerprints. `audit-rust` builds
-    nothing.
+    --locked --no-run` (the `test` and `test-engine` stages' test binaries, built and not run). The
+    `doctest` stage has no build-only form: cargo refuses `cargo test --doc --no-run` with "can't
+    skip running doc tests with --no-run", and the stage uses the `test` profile, whose dependency
+    artifacts the nextest build already made, so no step stands for it and `ci.yml`'s own
+    `doctest` stage is unchanged. The dependency graph, the profile, the features, the target and
+    `CARGO_INCREMENTAL: "0"` are the ones the stages use, so the dependency artifacts land under
+    the same fingerprints. `audit-rust` builds nothing.
 R7. It runs `cargo clean --workspace`, as `ci.yml` does, after the builds and before the save, so
     the entry holds the dependencies' artifacts and not the workspace's own.
 R8. It saves the same paths with `actions/cache/save`, under `${{ steps.<id>.outputs.cache-primary-key
@@ -71,7 +73,7 @@ R9. SPEC-038 R2's rule stands for every other workflow: a cache is saved only by
 | A2 | the job checks out `dev` first, without persisting credentials | `test_rust_cache_workflow.py` `it_checks_out_dev_without_persisting_credentials` |
 | A3 | the key it looks up is `ci.yml`'s and `mutation-weekly.yml`'s, character for character, and its paths are theirs | `test_rust_cache_workflow.py` `its_key_and_paths_are_the_ones_ci_and_the_weekly_battery_restore` |
 | A4 | the lookup is `lookup-only` on that key with no `restore-keys`, and every later step runs only on a miss | `test_rust_cache_workflow.py` `it_looks_the_exact_key_up_and_every_later_step_stops_on_a_hit` |
-| A5 | on a miss it installs what `ci.yml` installs, restores by `ci.yml`'s prefix, and compiles the three builds of R6 with no test run | `test_rust_cache_workflow.py` `it_installs_restores_by_prefix_and_compiles_without_running_a_test` |
+| A5 | on a miss it installs what `ci.yml` installs, restores by `ci.yml`'s prefix, and compiles the two builds of R6 with no test run | `test_rust_cache_workflow.py` `it_installs_restores_by_prefix_and_compiles_without_running_a_test` |
 | A6 | `cargo clean --workspace` is the step before the save, after every build, and the save is keyed on the exact key's primary-key output | `test_rust_cache_workflow.py` `it_cleans_the_workspace_before_it_saves_under_the_exact_key` |
 | A7 | the save-rule test admits this shape and only this one: planted scheduled workflows with no condition, with a push trigger or with a pull request trigger are refused | `test_rust_cache_workflow.py` `the_save_rule_admits_a_scheduled_save_only_when_a_lookup_missed` |
 | A8 | its cron minute is no other workflow's cron minute | `test_rust_cache_workflow.py` `its_cron_minute_collides_with_no_other_workflows` |
@@ -137,8 +139,10 @@ and who can restore it.
 - **A build flag that changes fingerprints.** R6 uses the stages' own flags, and A5 pins the
   commands; if a stage's build changes, its test fails a compare only as far as the commands are
   copied, so the tests name each stage the command stands for.
-- **`--no-run` for the doctests.** The flag is not exercised locally (no build here); the live
-  proof's first run is the check, and a refusal there is a red run, not a bad cache.
+- **The doctest stage has no step here.** Its dependency artifacts are argued to be the ones the
+  nextest build made (the Cargo book: `cargo test` uses the `test` profile, and the selected profile
+  applies to all Cargo targets); that is not built here. The first `ci.yml` run after the release
+  restores the entry: its `doctest` stage compiling no dependency confirms it.
 
 ## 7. References
 
