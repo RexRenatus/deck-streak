@@ -27,7 +27,7 @@ one row of the scan without hiding the others and without outliving its issue?
 
 - The scan's entry admits `expected_red` as a pack's does — chosen: it carries a decided semantics (SPEC-030 R12) to the one entry that lacked it, defers exactly one row, and goes stale by rule when the issue closes or the row stops reading red.
 - Keep the row unexpected and hold #29 — rejected because it blocks a delivery that follows ADR-038 on a reading gap in a pinned scanner, and the maintainer ruled the row substituted, not waived.
-- `pending` with a settings document — rejected because the runner already marks that stale the moment the scan examines a row, and `pending` would hide every row of the scan, not the one.
+- `pending` with a settings document — rejected because the runner marks `pending` stale once the scan examines a settings document, which #29 makes it do, and `pending` defers no row: a red row fails the run beside it.
 - A local fork of the scan with the row's check changed — rejected because the scan is pinned from its upstream and a fork drifts from it, and it changes the judge to fit one deferral.
 - Move the runner to a secret-manager read inside the application — rejected because ADR-038 rejects a secret-manager read in the application, and the row would then read green for a shape the decision forbids.
 
@@ -36,10 +36,10 @@ one row of the scan without hiding the others and without outliving its issue?
 Chosen option: the scan's entry admits `expected_red`.
 
 - The entry is a mapping of a row id to `#NNN`. It is refused beside `pending`, when empty, and when
-  a value is no issue. The scan takes no other key beyond `pending` and `note`; the helper's entry
-  takes no `expected_red`.
+  a value is no issue. The scan takes no other key beyond `expected_red`, `pending` and `note`; the
+  helper's entry takes no `expected_red`.
 - A red row the mapping names is expected and counted on the scan's line. Any other red row is
-  unexpected. The red total must equal the expected count.
+  unexpected. The red total may not exceed the expected count.
 - The expectation is stale when its issue is closed or its row does not read RED.
 
 ### Consequences

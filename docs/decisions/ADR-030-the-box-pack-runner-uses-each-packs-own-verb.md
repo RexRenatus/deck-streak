@@ -118,3 +118,5 @@ replaces this script is retired; this script is the permanent box runner.
 Amendment (2026-09-28): names of the maintainer's private tooling were replaced with 'the box-run
 packs' and neutral names for their repository, binary and checkout under the public-text rule
 (ADR-059).
+
+Amended by ADR-123: the scan's entry also admits `expected_red`, a row-to-issue mapping, beside `pending` and `note`.

@@ -24,8 +24,8 @@ where ADR-038 loads each credential into systemd's credentials directory at unit
 a secret-manager read in the application. The maintainer ruled the row substituted and not waived:
 #29 carries a test that pins ADR-038's shape, and the run defers the one row to #341 until the scan
 learns the socket. The deferral cannot be written, and the two ways left both fail: `pending` is
-stale the moment the scan examines a row, and an unexpected row holds #29 on a reading gap in a
-pinned scanner (ADR-123).
+stale the moment the scan examines a settings document, and an unexpected row holds #29 on a
+reading gap in a pinned scanner (ADR-123).
 
 ## 2. Requirements
 
@@ -44,8 +44,8 @@ R4. The expectation is stale, and fails the run, when its issue is closed (the r
     expectation, never two.
 R5. The scan's own summary counts every red row, the expected ones included. The scan's line names
     how many rows are expected, in the words a pack's line uses, and its parseable shape is
-    unchanged. A red total that equals the number of expected rows, with no unexpected row, is not a
-    failure; a red total beyond the rows the scan printed is.
+    unchanged. The red total may not exceed the number of expected rows: a total beyond them
+    fails the run, and a total within them, with no unexpected row, does not.
 R6. Nothing else changes: `pending` reads as SPEC-030 R13 states it, the helper's judgment, the
     packs' judgment and the private wiring's schema name.
 
@@ -55,7 +55,7 @@ R6. Nothing else changes: `pending` reads as SPEC-030 R13 states it, the helper'
 |---|---|---|
 | A1 | an expected red row passes, and the scan's line counts it as expected | `test_box_scan_expected.py` `an_expected_red_row_passes_and_the_line_counts_it` |
 | A2 | an unexpected red row beside an expected one still fails the run, by name | `test_box_scan_expected.py` `an_unexpected_red_row_beside_an_expected_one_still_fails` |
-| A3 | a red total beyond the rows the scan printed fails, and one equal to the expected rows does not | `test_box_scan_expected.py` `a_red_total_beyond_the_expected_rows_fails` |
+| A3 | a red total beyond the rows the scan printed fails, and one that does not exceed the expected rows does not | `test_box_scan_expected.py` `a_red_total_beyond_the_expected_rows_fails` |
 | A4 | an expected row that reads green, void or is absent is stale | `test_box_scan_expected.py` `an_expected_row_that_does_not_read_red_is_stale` |
 | A5 | an expectation whose issue is closed is stale, once, on a red row and on a green one | `test_box_scan_expected.py` `an_expectation_whose_issue_is_closed_is_stale` |
 | A6 | `expected_red` beside `pending` is refused | `test_box_scan_expected.py` `an_expected_red_beside_pending_is_refused` |
@@ -110,8 +110,9 @@ three planted scan rows the new module reads.
   each stale, and a stale expectation fails the run (R4).
 - **A second red row hides behind the first.** It cannot: a red row the expectation does not name
   is unexpected, and the red total is held to the expected count (R3, R5).
-- **The scan's summary changes shape.** The line keeps the words the parser reads, and the expected
-  count is appended in the pack line's words, so the two regexes still read it (A1).
+- **The scan's summary changes shape.** The scan's own output does not change, so `SCAN_ROW` and
+  `SCAN_ALL` read it as before; the expected count is appended to the runner's pack line, which
+  keeps its shape (A1).
 
 ## 7. Mutation rows
 
