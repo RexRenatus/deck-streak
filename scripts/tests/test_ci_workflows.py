@@ -2,22 +2,26 @@
 on pull requests into dev and main and pushes to both (SPEC-030 A1), and only this repository's dev
 reaches main (SPEC-034 A5 to A7). The gate runs in parallel jobs, each stage in exactly one, the
 engine's slow tests in a job of their own, a cache is saved only by a push to dev or main, and every
-job that compiles Rust installs the protoc Anki's engine needs (SPEC-038)."""
+job that compiles Rust installs the protoc Anki's engine needs (SPEC-038). No workflow reads a
+secret but the default token, or checks out or fetches another repository (SPEC-034 A9 to A12), and
+a `.yaml` workflow is held to the hardening rules as a `.yml` one is, the hardening tests reading
+keys the way the checker does (A13)."""
 
 import math
 import os
 import re
 import subprocess
+import sys
 import tempfile
 import textwrap
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from _support import REPO, examined
 
 WORKFLOWS = REPO / ".github" / "workflows"
-USES = re.compile(r"^\s*-?\s*uses:\s*([^\s#]+)", re.M)
-PINNED = re.compile(r"^[\w.-]+/[\w./-]+@[0-9a-f]{40}$")
+PINNED = re.compile(r"^[\w.-]+/[\w.-]+(?:/[\w.-]+)*@[0-9a-f]{40}$")
 STAGES = re.compile(r"^STAGES_ALL=\(([^)]*)\)", re.M)
 THIS_REPOSITORY = "RexRenatus/deck-streak"
 # A pull request into main, as the github context presents it; each test changes what it needs.
@@ -63,27 +67,45 @@ CACHE_BY_THEMSELVES = (
 )
 
 
+def workflow_files(directory):
+    """The workflow files of a directory: every `.yml` and `.yaml` file in it, as GitHub reads both
+    (SPEC-034 R7). A directory with none is VOID, never a pass."""
+    return examined(
+        "workflow files",
+        sorted(path for path in directory.iterdir() if path.suffix in (".yml", ".yaml")),
+    )
+
+
 class WorkflowsAreHardened(unittest.TestCase):
     def setUp(self):
-        self.files = examined("workflow files", sorted(WORKFLOWS.glob("*.yml")))
+        self.files = workflow_files(WORKFLOWS)
 
     def test_every_workflow_defaults_to_a_read_only_token(self):
         for path in self.files:
-            self.assertRegex(path.read_text(), r"(?m)^permissions:\n  contents: read$", path.name)
+            permissions = read_hardened(path).get("permissions")
+            self.assertEqual(
+                permissions,
+                {"contents": "read"},
+                f"{path.name} defaults its token to {permissions}",
+            )
 
     def test_every_action_is_pinned_by_a_full_commit_sha(self):
-        uses = [(path.name, ref) for path in self.files for ref in USES.findall(path.read_text())]
+        uses = [
+            (path.name, ref) for path in self.files for ref in entries(read_hardened(path), "uses")
+        ]
         for name, ref in examined("action references", uses):
             self.assertRegex(ref, PINNED, f"{name} uses {ref}")
 
     def test_no_workflow_uses_a_self_hosted_runner_or_a_privileged_trigger(self):
         runners = []
         for path in self.files:
+            workflow = read_hardened(path)
             code = re.sub(r"(?m)#.*$", "", path.read_text())
             self.assertNotIn("pull_request_target", code, path.name)
-            runners += [(path.name, runner) for runner in re.findall(r"runs-on:\s*(.+)", code)]
+            runners += [(path.name, runner) for runner in entries(workflow, "runs-on")]
         for name, runner in examined("runs-on values", runners):
-            self.assertRegex(runner.strip(), r"^ubuntu-\d\d\.\d\d$", f"{name} runs on {runner}")
+            # A list or a mapping of labels is read as its text, so the pattern refuses it by name.
+            self.assertRegex(str(runner), r"^ubuntu-\d\d\.\d\d$", f"{name} runs on {runner}")
 
     def test_ci_runs_every_stage_of_the_local_gate(self):
         stages = STAGES.search((REPO / "scripts" / "check.sh").read_text()).group(1).split()
@@ -99,6 +121,366 @@ class WorkflowsAreHardened(unittest.TestCase):
         self.assertIn("if: ${{ always() }}", aggregate)
         for job in examined("jobs", [j for j in jobs if j != "ci"]):
             self.assertIn(job, aggregate, f"the aggregate ci job does not need {job}")
+
+    def test_no_workflow_reads_a_secret_or_checks_out_another_repository(self):
+        problems, judged = secret_and_checkout_problems(WORKFLOWS)
+        self.assertEqual(problems, [])
+        examined("workflow expressions", judged["expressions"])
+        examined("run steps", judged["run steps"])
+        for where, repository in examined("checkouts", judged["checkouts"]):
+            self.assertEqual(repository, THIS_REPOSITORY, where)
+
+    def test_each_planted_secret_or_foreign_repository_is_refused_by_name(self):
+        problems, _ = secret_and_checkout_problems(PLANTED / "refused")
+        # The planted custom shell: it clones another repository before it runs the script.
+        custom = (
+            'bash -c "git clone https://github.com/example-org/other-repository.git && bash {0}"'
+        )
+        self.assertEqual(
+            problems,
+            [
+                "another-repository-in-other-forms.yml:jobs.build.steps[0]: checks out "
+                "example-org/other-repository, not this repository",
+                "another-repository-in-other-forms.yml:jobs.build.steps[1]: clones a repository: "
+                "git -C work clone https://github.com/example-org/other-repository.git",
+                "another-repository-in-other-forms.yml:jobs.build.steps[2]: points git at a URL: "
+                "git fetch git@example-host:example-org/other-repository.git",
+                "another-repository-in-other-forms.yml:jobs.build.steps[3]: points git at a URL: "
+                "git fetch github.com:example-org/other-repository.git main",
+                "another-repository-in-other-forms.yml:jobs.build.steps[4]: checks out "
+                "example-org/other-repository, not this repository",
+                "another-repository-in-other-forms.yml:jobs.build.steps[5]: checks out "
+                "example-org/other-repository, not this repository",
+                "another-repository-in-other-forms.yml:jobs.build.steps[6]: checks out from "
+                "another server: https://example-host.example",
+                "another-repository-in-other-forms.yml:jobs.build.steps[7]: checks out from "
+                "another server: https://example-host.example",
+                "another-repository-in-other-forms.yml:jobs.build.steps[8]: checks out "
+                "example-org/other-repository, not this repository",
+                "another-repository-in-other-forms.yml:jobs.build.steps[9]: checks out "
+                "example-org/other-repository, not this repository",
+                "another-repository-in-other-forms.yml:jobs.build.steps[10]: checks out "
+                "example-org/other-repository, not this repository",
+                "another-repository-in-other-forms.yml:jobs.build.steps[11]: checks out "
+                "example-org/other-repository, not this repository",
+                "checkout-of-another-repository.yml:jobs.build.steps[0]: checks out "
+                "example-org/other-repository, not this repository",
+                "checkout-of-another-repository.yml:jobs.build.steps[1]: checks out "
+                "${{ github.event.pull_request.head.repo.full_name }}, not this repository",
+                "checkout-whose-inputs-are-one-expression.yml:jobs.build.steps[0]: checks out "
+                "with inputs the checker does not read",
+                "checkout-whose-inputs-are-one-expression.yml:jobs.build.steps[2]: checks out "
+                "with inputs the checker does not read",
+                "checkout-whose-inputs-are-one-expression.yml:jobs.build.steps[3]: checks out "
+                "with inputs the checker does not read",
+                "clone-in-a-custom-shell.yml:defaults.run.shell: runs a shell the checker does "
+                f"not read: {custom}",
+                "clone-in-a-custom-shell.yml:jobs.build.defaults.run.shell: runs a shell the "
+                f"checker does not read: {custom}",
+                "clone-in-a-custom-shell.yml:jobs.build.steps[0].shell: runs a shell the checker "
+                f"does not read: {custom}",
+                "clone-in-a-custom-shell.yml:jobs.build.steps[1].parallel[0].shell: runs a shell "
+                f"the checker does not read: {custom}",
+                "clone-in-a-custom-shell.yml:jobs.build.steps[2].shell: runs a shell the checker "
+                "does not read: BASH",
+                "clone-in-a-custom-shell.yml:jobs.dynamic.defaults.run: runs a shell the checker "
+                "does not read: ${{ fromJSON(needs.build.outputs.defaults) }}",
+                "clone-in-a-custom-shell.yml:jobs.unread.defaults: runs a shell the checker does "
+                "not read: ${{ fromJSON(vars.PLANTED_DEFAULTS) }}",
+                f"clone-in-a-custom-shell.yml:defaults.run.shell: clones a repository: {custom}",
+                "clone-in-a-custom-shell.yml:jobs.build.defaults.run.shell: clones a repository: "
+                f"{custom}",
+                "clone-in-a-custom-shell.yml:jobs.build.steps[0].shell: clones a repository: "
+                f"{custom}",
+                "clone-in-a-custom-shell.yml:jobs.build.steps[1].parallel[0].shell: clones a "
+                f"repository: {custom}",
+                "clone-of-another-repository.yml:jobs.build.steps[0]: clones a repository: "
+                "git clone --depth 1 https://github.com/example-org/other-repository.git",
+                "clone-of-another-repository.yml:jobs.build.steps[1]: clones a repository: "
+                "gh repo clone example-org/other-repository",
+                "clone-of-another-repository.yml:jobs.build.steps[2]: clones a repository: "
+                "git clone https://github.com/example-org/other-repository.git",
+                "clone-of-another-repository.yml:jobs.build.steps[0].name: clones a repository: "
+                "git clone",
+                "clone-of-another-repository.yml:jobs.build.steps[1].name: clones a repository: "
+                "gh repo clone",
+                "clone-of-another-repository.yml:jobs.build.steps[2].name: clones a repository: "
+                "git clone after an empty env",
+                "clone-outside-a-run-step.yml:env.BASH_ENV: clones a repository: "
+                "$(git clone https://github.com/example-org/other-repository.git)",
+                "clone-outside-a-run-step.yml:jobs.build.env.BASH_ENV: clones a repository: "
+                "$(git clone https://github.com/example-org/other-repository.git)",
+                "clone-outside-a-run-step.yml:jobs.build.steps[0].env.BASH_ENV: clones a "
+                "repository: $(git clone https://github.com/example-org/other-repository.git)",
+                "clone-outside-a-run-step.yml:jobs.build.steps[1].env.BASH_ENV: points git at a "
+                "URL: $(git fetch https://github.com/example-org/other-repository.git main)",
+                "environment-the-checker-does-not-read.yml:env: sets an environment the checker "
+                "does not read",
+                "environment-the-checker-does-not-read.yml:jobs.build.env: sets an environment the "
+                "checker does not read",
+                "environment-the-checker-does-not-read.yml:jobs.build.container: runs in a "
+                "container the checker does not read",
+                "environment-the-checker-does-not-read.yml:jobs.build.steps[0].env: sets an "
+                "environment the checker does not read",
+                "environment-the-checker-does-not-read.yml:jobs.contained.container.env: sets an "
+                "environment the checker does not read",
+                "environment-the-checker-does-not-read.yml:jobs.given-options.container.options: "
+                "runs in a container the checker does not read",
+                "environment-the-checker-does-not-read.yml:jobs.holding-options.container.options: "
+                "runs in a container the checker does not read",
+                "environment-the-checker-does-not-read.yml:jobs.given-image.container.image: runs "
+                "in a container the checker does not read",
+                "environment-the-checker-does-not-read.yml:jobs.holding-image.container.image: "
+                "runs in a container the checker does not read",
+                "environment-the-checker-does-not-read.yml:jobs.given-ports.container.ports: runs "
+                "in a container the checker does not read",
+                "environment-the-checker-does-not-read.yml:jobs.holding-ports.container.ports: "
+                "runs in a container the checker does not read",
+                "environment-the-checker-does-not-read.yml:jobs.given-volumes.container.volumes: "
+                "runs in a container the checker does not read",
+                "environment-the-checker-does-not-read.yml:jobs.holding-volumes.container.volumes: "
+                "runs in a container the checker does not read",
+                "environment-the-checker-does-not-read.yml:jobs.given-every-property.container."
+                "env: sets an environment the checker does not read",
+                "environment-the-checker-does-not-read.yml:jobs.given-every-property.container."
+                "image: runs in a container the checker does not read",
+                "environment-the-checker-does-not-read.yml:jobs.given-every-property.container."
+                "options: runs in a container the checker does not read",
+                "environment-the-checker-does-not-read.yml:jobs.given-every-property.container."
+                "ports: runs in a container the checker does not read",
+                "environment-the-checker-does-not-read.yml:jobs.given-every-property.container."
+                "volumes: runs in a container the checker does not read",
+                "every-secret.yml:jobs.build.steps[0].env.CHOSEN: reads the whole secrets "
+                "context, or a secret named at run time",
+                "every-secret.yml:jobs.build.steps[0].run: reads the whole secrets context, or a "
+                "secret named at run time",
+                "fetch-of-a-url.yml:jobs.build.steps[1]: points git at a URL: git fetch "
+                "https://github.com/example-org/other-repository.git main",
+                "fetch-of-a-url.yml:jobs.build.steps[2]: points git at a URL: git pull --ff-only "
+                "https://github.com/example-org/other-repository.git main",
+                "git-configured-from-the-environment.yml:env.GIT_CONFIG_COUNT: names a git "
+                "variable: GIT_CONFIG_COUNT",
+                "git-configured-from-the-environment.yml:env.GIT_CONFIG_KEY_0: names a git "
+                "variable: GIT_CONFIG_KEY_0",
+                "git-configured-from-the-environment.yml:env.GIT_CONFIG_VALUE_0: names a git "
+                "variable: GIT_CONFIG_VALUE_0",
+                "git-configured-from-the-environment.yml:jobs.build.env.GIT_CONFIG_PARAMETERS: "
+                "names a git variable: GIT_CONFIG_PARAMETERS",
+                "git-configured-from-the-environment.yml:jobs.build.container.env.GIT_SSH_COMMAND: "
+                "names a git variable: GIT_SSH_COMMAND",
+                "git-configured-from-the-environment.yml:jobs.build.container.options: names a git "
+                "variable: GIT_CONFIG_GLOBAL",
+                "git-configured-from-the-environment.yml:jobs.build.steps[0].env.git_ssh_command: "
+                "names a git variable: git_ssh_command",
+                "git-configured-from-the-environment.yml:jobs.build.steps[1].run: names a git "
+                "variable: GIT_ASKPASS",
+                "key-the-reader-refuses.yml:line 18: a key that is not a plain name is not read",
+                "key-the-reader-refuses.yml:line 20: a key that is not a plain name is not read",
+                "key-the-reader-refuses.yml:line 22: a key that is not a plain name is not read",
+                "key-the-reader-refuses.yml:line 25: a key that is not a plain name is not read",
+                "key-the-reader-refuses.yml:line 31: a key that is not a plain name is not read",
+                "key-the-reader-refuses.yml:jobs.build.steps[0].: clones a repository: git clone "
+                "https://github.com/example-org/other-repository.git",
+                "key-the-reader-refuses.yml:jobs.build.steps[1].: clones a repository: git clone "
+                "https://github.com/example-org/other-repository.git",
+                "key-the-reader-refuses.yml:jobs.build.steps[2].: clones a repository: git clone "
+                "https://github.com/example-org/other-repository.git",
+                "run-by-alias.yml:line 17: an anchor, alias or tag is not read",
+                "run-by-alias.yml:line 19: an anchor, alias or tag is not read",
+                "run-by-alias.yml:line 20: an anchor, alias or tag is not read",
+                "run-by-alias.yml:line 21: an anchor, alias or tag is not read",
+                "second-of-each.yml:jobs.second.steps[0].env.EITHER: reads the secret "
+                "EXAMPLE_TOKEN",
+                "second-of-each.yml:jobs.second.steps[0].run: reads the secret EXAMPLE_TOKEN",
+                "second-of-each.yml:jobs.second.steps[1]: clones a repository: git clone "
+                "https://github.com/example-org/other-repository.git",
+                "secret-in-a-form-the-reader-refuses.yml:line 20: a quoted value that does not end "
+                "at its closing quote is not read",
+                "secret-in-a-form-the-reader-refuses.yml:line 24: an anchor, alias or tag is not "
+                "read",
+                "secret-in-a-form-the-reader-refuses.yml:line 25: a flow list whose items are not "
+                "plain is not read",
+                "secret-in-a-form-the-reader-refuses.yml:line 28: a flow mapping is not read",
+                "secret-in-a-form-the-reader-refuses.yml:line 32: a flow list whose items are not "
+                "plain is not read",
+                "secret-in-a-form-the-reader-refuses.yml:line 33: a flow list whose items are not "
+                "plain is not read",
+                "secret-in-a-form-the-reader-refuses.yml:line 34: a flow list whose items are not "
+                "plain is not read",
+                "secret-in-a-form-the-reader-refuses.yml:line 35: a flow list whose items are not "
+                "plain is not read",
+                "secret-in-a-form-the-reader-refuses.yml:jobs.build.steps[1].env: sets an "
+                "environment the checker does not read",
+                "secret-in-a-larger-expression.yml:jobs.build.steps[0].env.EITHER: reads the "
+                "secret EXAMPLE_TOKEN",
+                "secret-in-a-larger-expression.yml:jobs.build.steps[0].env.FORMATTED: reads the "
+                "secret EXAMPLE_KEY",
+                "secret-in-a-quoted-value.yml:line 21: a double-quoted value that holds an escape "
+                "is not read",
+                "secret-in-a-quoted-value.yml:line 22: a double-quoted value that holds an escape "
+                "is not read",
+                "secret-in-a-quoted-value.yml:jobs.build.steps[0].env.SINGLE: reads the secret "
+                "EXAMPLE_TOKEN",
+                "secret-in-a-quoted-value.yml:jobs.build.steps[0].env.FORMATTED: reads the secret "
+                "EXAMPLE_KEY",
+                "secret-in-any-spacing.yml:jobs.build.steps[0].env.SPACED: reads the secret "
+                "EXAMPLE_TOKEN",
+                "secret-in-any-spacing.yml:jobs.build.steps[0].env.UNSPACED: reads the secret "
+                "EXAMPLE_KEY",
+                "secret-in-any-spacing.yml:jobs.build.steps[0].env.WIDE: reads the secret "
+                "EXAMPLE_VALUE",
+                "secret-in-any-spacing.yml:jobs.build.steps[0].env.CAPITALS: reads the secret "
+                "Example_Token",
+                "secret-in-any-spacing.yml:jobs.build.steps[0].env.HASHED: reads the secret "
+                "EXAMPLE_TOKEN",
+                "secret-in-brackets.yml:jobs.build.steps[0].env.INDEXED: reads the secret "
+                "EXAMPLE_TOKEN",
+                "secrets-inherited.yaml:jobs.call.secrets: passes every secret to the workflow "
+                "it calls",
+                "steps-in-a-parallel-block.yml:jobs.build.steps[0].parallel[0]: checks out "
+                "example-org/other-repository, not this repository",
+                "steps-in-a-parallel-block.yml:jobs.build.steps[0].parallel[1].parallel[0]: checks "
+                "out from another server: https://example-host.example",
+                "steps-in-a-parallel-block.yml:jobs.build.steps[0].parallel[2]: clones a "
+                "repository: git clone https://github.com/example-org/other-repository.git",
+            ],
+        )
+        # A character outside printable ASCII, planted from a Python escape so no committed file
+        # holds one: each line that holds one is refused by its line, and what YAML reads there is
+        # judged as well. The checker reads a script's space as a space and its break as the end of
+        # a command, so the two kinds name a clone's command apart.
+        clone = "#||git clone https://github.com/example-org/other-repository.git"
+        planted = [(name, c, "false ", "planted ") for name, c in PLANTED_SPACES.items()]
+        planted += [(name, c, "", "") for name, c in PLANTED_BREAKS.items()]
+        for name, character, run, block in planted:
+            with self.subTest(name):
+                self.assertEqual(
+                    planted_problems(PLANTED_CHARACTERS.replace("<C>", character)),
+                    [
+                        *(
+                            f"planted.yml:line {n}: a character the reader does not read"
+                            for n in (12, 13, 14, 15, 16, 17, 19, 22)
+                        ),
+                        "planted.yml:line 15: a flow list whose items are not plain is not read",
+                        "planted.yml:line 16: a quoted value that does not end at its closing "
+                        "quote is not read",
+                        "planted.yml:line 19: a key that is not a plain name is not read",
+                        "planted.yml:jobs.build.steps[0].env.AFTER: reads the secret EXAMPLE_TOKEN",
+                        "planted.yml:jobs.build.steps[0].env.BEFORE: reads the secret "
+                        "EXAMPLE_TOKEN",
+                        "planted.yml:jobs.build.steps[0].env.COLON: reads the secret EXAMPLE_TOKEN",
+                        f"planted.yml:jobs.build.steps[0]: clones a repository: {run}{clone}",
+                        f"planted.yml:jobs.build.steps[2]: clones a repository: {block}{clone}",
+                        # The clone the refused key holds is still read, as every string is.
+                        "planted.yml:jobs.build.steps[1].: clones a repository: git clone "
+                        "https://github.com/example-org/other-repository.git",
+                    ],
+                )
+        # A block's end and its indent read only a space or a tab as white space: a line of one of
+        # the characters above is refused by its line and is still the block's text, so the secret
+        # the block names over two lines keeps the indent that line sets.
+        for form, (template, line, secret) in PLANTED_BLOCK_LINES.items():
+            for name, character in {**PLANTED_SPACES, **PLANTED_BREAKS}.items():
+                with self.subTest(f"{form}: {name}"):
+                    self.assertEqual(
+                        planted_problems(template.replace("<C>", character)),
+                        [
+                            f"planted.yml:line {line}: a character the reader does not read",
+                            "planted.yml:jobs.build.steps[0].run: reads the secret "
+                            + secret.replace("<C>", character),
+                        ],
+                    )
+        # A line the reader cannot place refuses the whole file at once, naming the line and why.
+        for form, (template, why) in PLANTED_UNPLACED_CHARACTERS.items():
+            for name, character in {**PLANTED_SPACES, **PLANTED_BREAKS}.items():
+                with self.subTest(f"{form}: {name}"), self.assertRaisesRegex(AssertionError, why):
+                    planted_problems(template.replace("<C>", character))
+        for form, (text, why) in PLANTED_UNPLACED.items():
+            with self.subTest(form), self.assertRaisesRegex(AssertionError, why):
+                planted_problems(text)
+
+    def test_this_repositorys_token_and_checkout_are_admitted(self):
+        problems, judged = secret_and_checkout_problems(PLANTED / "admitted")
+        self.assertEqual(problems, [])
+        read = [text for _, text in examined("workflow expressions", judged["expressions"])]
+        for token in (
+            "secrets.GITHUB_TOKEN",
+            "secrets.github_token",
+            "secrets['GITHUB_TOKEN']",
+            "github.token",
+            # Not the secrets context: a step's output named `secrets`, and a longer word.
+            "steps.scan.outputs.secrets",
+            "hashFiles('secrets-scan.toml')",
+        ):
+            self.assertIn(token, read)
+        examined("run steps", judged["run steps"])
+        for where, repository in examined("checkouts", judged["checkouts"]):
+            self.assertEqual(repository, THIS_REPOSITORY, where)
+
+    def test_an_empty_workflow_directory_is_refused(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            # A file that is not a workflow is not counted: the directory still holds none.
+            (Path(scratch) / "README.md").write_text("Not a workflow.\n", encoding="utf-8")
+            with self.assertRaisesRegex(AssertionError, "examined 0 workflow files"):
+                secret_and_checkout_problems(Path(scratch))
+
+    def test_a_yaml_workflow_is_held_to_the_same_hardening_rules(self):
+        # GitHub reads a `.yaml` workflow as it reads a `.yml` one (SPEC-034 R7): each hardening
+        # test above, run through its own setUp over the planted workflows, refuses the `.yaml` one
+        # by its name, beside a hardened `.yml` control.
+        for test in (
+            "test_every_workflow_defaults_to_a_read_only_token",
+            "test_every_action_is_pinned_by_a_full_commit_sha",
+            "test_no_workflow_uses_a_self_hosted_runner_or_a_privileged_trigger",
+        ):
+            workflows = mock.patch.object(sys.modules[__name__], "WORKFLOWS", PLANTED_HARDENING)
+            with self.subTest(test), workflows:
+                case = WorkflowsAreHardened(test)
+                case.setUp()
+                with self.assertRaisesRegex(AssertionError, r"unhardened\.yaml"):
+                    getattr(case, test)()
+        # The SHA-pin test admits an action only in its plain form: the hardened control, its action
+        # written with an empty part, a trailing slash or a backslash, or its SHA cut short, is
+        # refused by that reference.
+        control = (PLANTED_HARDENING / "hardened.yml").read_text(encoding="utf-8")
+        pinned = CONTROL_STEP.split("uses: ", 1)[1]
+        for written in (
+            pinned.replace("actions/checkout@", "actions//checkout@"),
+            pinned.replace("actions/checkout@", "actions/checkout/@"),
+            pinned.replace("actions/checkout@", "actions\\checkout@"),
+            pinned[: pinned.index("@") + 8],
+        ):
+            with self.subTest(written), tempfile.TemporaryDirectory() as scratch:
+                planted = control.replace(pinned, written)
+                (Path(scratch) / "planted.yml").write_text(planted, encoding="utf-8")
+                with mock.patch.object(sys.modules[__name__], "WORKFLOWS", Path(scratch)):
+                    case = WorkflowsAreHardened("test_every_action_is_pinned_by_a_full_commit_sha")
+                    case.setUp()
+                    with self.assertRaisesRegex(AssertionError, re.escape(f"uses {written}") + "$"):
+                        case.test_every_action_is_pinned_by_a_full_commit_sha()
+        # The hardening tests read keys the way the checker does (SPEC-034 R7): the control, one
+        # line rewritten by each planted key, is judged beside the live workflows, and the test
+        # named refuses it with the refusal named.
+        live = [(path.name, path.read_bytes()) for path in workflow_files(WORKFLOWS)]
+        for test, line, planted, refusal in PLANTED_KEYS:
+            with self.subTest(test=test, planted=planted), tempfile.TemporaryDirectory() as scratch:
+                self.assertEqual(control.count(line), 1, line)
+                for name, text in live:
+                    (Path(scratch) / name).write_bytes(text)
+                (Path(scratch) / "planted.yml").write_text(
+                    control.replace(line, planted), encoding="utf-8"
+                )
+                with mock.patch.object(sys.modules[__name__], "WORKFLOWS", Path(scratch)):
+                    case = WorkflowsAreHardened(test)
+                    case.setUp()
+                    with self.assertRaisesRegex(AssertionError, refusal):
+                        getattr(case, test)()
+        # The walk the SHA-pin and runner tests read through collects every value a key holds,
+        # wherever it sits: a `uses` nested in a `uses` is collected after the value that holds it.
+        nested = read_workflow(PLANTED_JOB + "      - uses:\n          uses: actions/checkout@v4\n")
+        self.assertEqual(
+            entries(nested, "uses"), [{"uses": "actions/checkout@v4"}, "actions/checkout@v4"]
+        )
 
 
 def triggers(workflow):
@@ -170,17 +552,44 @@ class OnlyThisRepositorysDevReachesMain(unittest.TestCase):
 
 # ------------------------------------------------------------------ reading a workflow (SPEC-038)
 
+# A key the reader reads: a plain name, bare or in matching quotes (SPEC-034 R7).
+KEY = re.compile(r"(['\"]?)([\w.-]+)\1")
+
+
+class Unread(AssertionError):
+    """A workflow that holds forms the reader does not read, each refusal as `line N: why`. It
+    carries the rest of the workflow as read, each refused key or value read as '', so a checker
+    can name every refusal and still judge everything else (SPEC-034 R7)."""
+
+    def __init__(self, refused, workflow):
+        super().__init__("the reader does not read " + "; ".join(refused))
+        self.refused, self.workflow = refused, workflow
+
 
 def read_workflow(text):
     """A workflow as dicts, lists and strings, read without a YAML library. It reads the block YAML
-    the workflows here use: mappings, `- ` sequences, `|` block scalars, flow lists, and plain or
-    quoted scalars. Blank lines, comment lines and a ` #` comment after a plain value are dropped;
-    a line it cannot place refuses the whole file."""
-    lines = text.splitlines()
-    value, at = _mapping(lines, _skip(lines, 0), 0)
+    the workflows here use: mappings keyed by plain names, `- ` sequences, `|` block scalars, flow
+    lists of plain items, and plain or quoted one-line scalars, a quote doubled inside single
+    quotes read as one. Blank lines, comment lines and a ` #` comment after a value are dropped.
+    It ends a line only at a line feed or a carriage return, and reads a space or a tab as white
+    space and nothing else, as YAML does.
+    It fails closed (SPEC-034 R7). A line that holds a character other than a tab or printable
+    ASCII, a double-quoted value that holds an escape, a quoted value that does not end at its
+    closing quote, an anchor, alias or tag, a flow mapping, a flow list whose items are not plain,
+    and a key that is not a plain name are each refused by their line, never guessed at, and the
+    file raises Unread once it is read. A line it cannot place refuses the whole file at once."""
+    lines = re.split(r"\r\n|\r|\n", text)
+    refused = [
+        f"line {at + 1}: a character the reader does not read"
+        for at, line in enumerate(lines)
+        if re.search(r"[^\t\x20-\x7e]", line)
+    ]
+    value, at = _mapping(lines, _skip(lines, 0), 0, refused)
     at = _skip(lines, at)
     if at < len(lines):
         raise AssertionError(f"line {at + 1} was not read: {lines[at]!r}")
+    if refused:
+        raise Unread(refused, value)
     return value
 
 
@@ -189,33 +598,83 @@ def _indent(line):
 
 
 def _skip(lines, at):
-    while at < len(lines) and (not lines[at].strip() or lines[at].lstrip().startswith("#")):
+    while at < len(lines) and (
+        not lines[at].strip(" \t") or lines[at].lstrip(" \t").startswith("#")
+    ):
         at += 1
     return at
 
 
+def _read(reader, text, at, refused):
+    """What `reader` reads of line `at`'s text, or '' with its refusal recorded by the line."""
+    try:
+        return reader(text)
+    except ValueError as why:
+        refused.append(f"line {at + 1}: {why}")
+        return ""
+
+
+def _key(text):
+    key = KEY.fullmatch(text.strip(" \t"))
+    if not key:
+        raise ValueError("a key that is not a plain name is not read")
+    return key.group(2)
+
+
 def _scalar(text):
-    text = text.strip()
+    """A one-line scalar or flow list as YAML reads it, or ValueError naming a form the reader does
+    not read: an anchor, alias or tag, a flow mapping, a flow list whose items are not plain (a
+    quoted or nested item, or a `#`, `:` or `?` inside it), and a plain value that holds `: `, which
+    YAML reads as a key."""
+    text = text.strip(" \t")
+    if text[:1] in ("&", "*", "!"):
+        raise ValueError("an anchor, alias or tag is not read")
     if text[:1] in ("'", '"'):
-        end = text.find(text[0], 1)
-        return text[1:end] if end > 0 else text
-    text = re.sub(r"\s#.*$", "", text).strip()
-    if text.startswith("[") and text.endswith("]"):
-        return [_scalar(part) for part in text[1:-1].split(",") if part.strip()]
+        return _quoted(text)
+    if text[:1] == "{":
+        raise ValueError("a flow mapping is not read")
+    if text[:1] == "[":
+        items = re.fullmatch(r"\[([^\[\]{}'\"#:?]*)\](?:[ \t]+#.*)?", text)
+        if not items:
+            raise ValueError("a flow list whose items are not plain is not read")
+        return [_scalar(part) for part in items.group(1).split(",") if part.strip()]
+    text = re.sub(r"[ \t]#.*$", "", text).strip(" \t")
+    if re.search(r":(?:[ \t]|$)", text):
+        raise ValueError("a key that is not a plain name is not read")
     return text
 
 
-def _block(lines, at, indent):
-    if lines[at][indent:].startswith("-"):
-        return _sequence(lines, at, indent)
-    return _mapping(lines, at, indent)
+def _quoted(text):
+    """A quoted one-line scalar that ends at its closing quote, with at most a comment after it. A
+    quote doubled inside single quotes is one quote; a double-quoted value is read only when it
+    holds no escape, since YAML decodes one there."""
+    single = text[0] == "'"
+    body = r"'((?:[^']|'')*)'" if single else r'"((?:[^"\\]|\\.)*)"'
+    quoted = re.fullmatch(body + r"(?:[ \t]+#.*)?", text)
+    if not quoted:
+        raise ValueError("a quoted value that does not end at its closing quote is not read")
+    if not single and "\\" in quoted.group(1):
+        raise ValueError("a double-quoted value that holds an escape is not read")
+    return quoted.group(1).replace("''", "'") if single else quoted.group(1)
 
 
-def _mapping(lines, at, indent):
+def _item(line, indent):
+    """Whether a line holds a sequence item at `indent`: a dash and a space, as YAML reads one.
+    `-x: y` is a key, and a bare dash is a line the reader cannot place."""
+    return line[indent:].startswith("- ")
+
+
+def _block(lines, at, indent, refused):
+    if _item(lines[at], indent):
+        return _sequence(lines, at, indent, refused)
+    return _mapping(lines, at, indent, refused)
+
+
+def _mapping(lines, at, indent, refused):
     found = {}
     while True:
         at = _skip(lines, at)
-        if at >= len(lines) or _indent(lines[at]) != indent or lines[at][indent:].startswith("-"):
+        if at >= len(lines) or _indent(lines[at]) != indent or _item(lines[at], indent):
             return found, at
         text = lines[at][indent:]
         if ": " in text:
@@ -224,50 +683,70 @@ def _mapping(lines, at, indent):
             key, rest = text[:-1], ""
         else:
             raise AssertionError(f"line {at + 1} is not a mapping entry: {lines[at]!r}")
-        key, rest = key.strip().strip("'\""), rest.strip()
+        key, rest = _read(_key, key, at, refused), rest.strip(" \t")
         if rest in ("|", "|-"):
             at += 1
             body = []
-            while at < len(lines) and (not lines[at].strip() or _indent(lines[at]) > indent):
+            while at < len(lines) and (not lines[at].strip(" \t") or _indent(lines[at]) > indent):
                 body.append(lines[at])
                 at += 1
-            while body and not body[-1].strip():
+            while body and not body[-1].strip(" \t"):
                 body.pop()
-            width = min(_indent(line) for line in body if line.strip())
-            found[key] = "\n".join(line[width:] for line in body) + "\n"
+            width = min((_indent(line) for line in body if line.strip(" \t")), default=0)
+            found[key] = "".join(line[width:] + "\n" for line in body)
         elif not rest or rest.startswith("#"):
             child = _skip(lines, at + 1)
             if child < len(lines) and _indent(lines[child]) > indent:
-                found[key], at = _block(lines, child, _indent(lines[child]))
+                found[key], at = _block(lines, child, _indent(lines[child]), refused)
             else:
                 found[key], at = None, at + 1
         else:
-            found[key], at = _scalar(rest), at + 1
+            found[key], at = _read(_scalar, rest, at, refused), at + 1
 
 
-def _sequence(lines, at, indent):
+def _sequence(lines, at, indent, refused):
     found = []
     while True:
         at = _skip(lines, at)
-        if (
-            at >= len(lines)
-            or _indent(lines[at]) != indent
-            or not lines[at][indent:].startswith("-")
-        ):
+        if at >= len(lines) or _indent(lines[at]) != indent or not _item(lines[at], indent):
             return found, at
         body = lines[at][indent + 1 :].lstrip(" ")
         inner = len(lines[at]) - len(body)
         if re.match(r"^['\"]?[\w.-]+['\"]?:(?: |$)", body):
             # A mapping item: its first entry sits on the dash's line, its others below it.
             lines[at] = " " * inner + body
-            item, at = _mapping(lines, at, inner)
+            item, at = _mapping(lines, at, inner, refused)
         else:
-            item, at = _scalar(body), at + 1
+            item, at = _read(_scalar, body, at, refused), at + 1
         found.append(item)
 
 
 def load(name):
     return read_workflow((WORKFLOWS / name).read_text(encoding="utf-8"))
+
+
+def read_hardened(path):
+    """A workflow as the hardening tests read it: through `read_workflow`, the checker's reader, so
+    they read its keys the way the checker does (SPEC-034 R7). A form the reader does not read, or a
+    line it cannot place, fails the test that reads it, named by the file and the line."""
+    try:
+        return read_workflow(path.read_text(encoding="utf-8"))
+    except AssertionError as refused:
+        raise AssertionError(f"{path.name}: {refused}") from None
+
+
+def entries(value, key):
+    """Every value a read workflow holds under `key`, in the order it holds them, wherever it sits:
+    each `uses`, or each `runs-on`."""
+    if isinstance(value, dict):
+        return [
+            found
+            for name, item in value.items()
+            for found in ([item] if name == key else []) + entries(item, key)
+        ]
+    if isinstance(value, list):
+        return [found for item in value for found in entries(item, key)]
+    return []
 
 
 def action(step):
@@ -1012,6 +1491,521 @@ class TheEngineSetRunsInSlices(unittest.TestCase):
                 "[${{ matrix.slice }}/${{ strategy.job-total }}]",
             ],
         )
+
+
+# ------------------------------------------ no secret, no other repository (SPEC-034 A9 to A12)
+
+# The planted workflows: those the checker refuses (A10) and those it admits (A11).
+PLANTED = REPO / "scripts" / "tests" / "fixtures" / "secrets-and-checkouts"
+PLANTED_HARDENING = REPO / "scripts" / "tests" / "fixtures" / "workflow-hardening"
+# The hardening tests read a workflow's keys the way the checker does (SPEC-034 R7). A13 plants each
+# of these in the hardened control, beside the live workflows, as (the test that judges it, the
+# control's line, the lines planted in its place, the refusal the test raises): keys the reader
+# reads, a block read whole, a trigger, and forms the reader does not read, which fail closed.
+HARDENING_PIN, HARDENING_RUNNER, HARDENING_TOKEN = (
+    "test_every_action_is_pinned_by_a_full_commit_sha",
+    "test_no_workflow_uses_a_self_hosted_runner_or_a_privileged_trigger",
+    "test_every_workflow_defaults_to_a_read_only_token",
+)
+CONTROL_STEP = "      - uses: actions/checkout@0123456789abcdef0123456789abcdef01234567"
+PLANTED_KEYS = (
+    (
+        HARDENING_PIN,
+        CONTROL_STEP,
+        "      - 'uses': actions/checkout@v4",
+        r"planted\.yml uses actions/checkout@v4$",
+    ),
+    (
+        HARDENING_PIN,
+        CONTROL_STEP,
+        '      - "uses": actions/checkout@v4',
+        r"planted\.yml uses actions/checkout@v4$",
+    ),
+    (
+        HARDENING_PIN,
+        CONTROL_STEP,
+        '      - "us\\x65s": actions/checkout@v4',
+        r"^planted\.yml: line 17 was not read",
+    ),
+    (
+        HARDENING_PIN,
+        CONTROL_STEP,
+        '      - name: planted\n        "us\\x65s": actions/checkout@v4',
+        r"^planted\.yml: the reader does not read line 17: a key that is not a plain name",
+    ),
+    (
+        HARDENING_RUNNER,
+        "    runs-on: ubuntu-24.04",
+        "    'runs-on': self-hosted",
+        r"planted\.yml runs on self-hosted$",
+    ),
+    (
+        HARDENING_RUNNER,
+        "    runs-on: ubuntu-24.04",
+        '    "runs-on": [self-hosted, linux]',
+        r"planted\.yml runs on \['self-hosted', 'linux'\]$",
+    ),
+    (
+        HARDENING_RUNNER,
+        "  pull_request:",
+        '  "pull_request\\x5ftarget":',
+        r"^planted\.yml: the reader does not read line 6: a key that is not a plain name",
+    ),
+    (
+        HARDENING_RUNNER,
+        "  pull_request:",
+        "  pull_request_target:",
+        r"unexpectedly found in .* : planted\.yml$",
+    ),
+    (
+        HARDENING_TOKEN,
+        "  contents: read",
+        "  contents: read\n  pull-requests: write",
+        r"planted\.yml defaults its token to \{'contents': 'read', 'pull-requests': 'write'\}$",
+    ),
+    (
+        HARDENING_TOKEN,
+        "  contents: read",
+        '  contents: read\n  "pull\\x2drequests": write',
+        r"^planted\.yml: the reader does not read line 11: a key that is not a plain name",
+    ),
+)
+# The characters the reader refuses (SPEC-034 R7), which A10 plants at test time from these escapes,
+# so no committed file holds one: white space that YAML reads as text, and characters that end a
+# line of a script where YAML reads none.
+PLANTED_SPACES = {
+    "no-break space": "\xa0",
+    "em space": "\N{EM SPACE}",
+    "narrow no-break space": "\N{NARROW NO-BREAK SPACE}",
+    "ideographic space": "\N{IDEOGRAPHIC SPACE}",
+}
+PLANTED_BREAKS = {
+    "form feed": "\x0c",
+    "line tabulation": "\x0b",
+    "file separator": "\x1c",
+    "group separator": "\x1d",
+    "record separator": "\x1e",
+    "next line": "\x85",
+    "line separator": "\N{LINE SEPARATOR}",
+    "paragraph separator": "\N{PARAGRAPH SEPARATOR}",
+}
+# A planted job's first lines; its steps follow.
+PLANTED_JOB = """\
+name: planted
+on:
+  pull_request:
+    branches: [dev]
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+"""
+# A planted workflow whose lines each hold <C>, one of the characters above: a secret or a clone
+# that YAML reads there, beside a flow list, a quoted value and a key that the character leaves
+# unread. The names are synthetic.
+PLANTED_CHARACTERS = (
+    PLANTED_JOB
+    + """\
+      - env:
+          AFTER: planted<C>#${{ secrets.EXAMPLE_TOKEN }}
+          BEFORE: <C>*${{ secrets.EXAMPLE_TOKEN }}
+          COLON: ${{ secrets.EXAMPLE_TOKEN }}:<C>
+          LISTED: [planted]<C># planted
+          QUOTED: 'planted'<C># ${{ secrets.EXAMPLE_TOKEN }}
+        run: false<C>#||git clone https://github.com/example-org/other-repository.git
+      - name: planted
+        run<C>: git clone https://github.com/example-org/other-repository.git
+      - run: |
+          echo planted
+          planted<C>#||git clone https://github.com/example-org/other-repository.git
+"""
+)
+# Planted workflows with a line the reader cannot place, and the refusal each raises: a block it
+# does not read, before a clone, and a plain value over two lines, the second a secret. The names
+# are synthetic.
+PLANTED_UNPLACED = {
+    "a folded block": (
+        PLANTED_JOB
+        + """\
+      - run: >
+          echo planted
+      - run: git clone https://github.com/example-org/other-repository.git
+""",
+        r"^line 12 was not read",
+    ),
+    "a plain value over two lines": (
+        PLANTED_JOB
+        + """\
+      - env:
+          PLANTED: planted
+            ${{ secrets.EXAMPLE_TOKEN }}
+        run: echo planted
+""",
+        r"^line 13 was not read",
+    ),
+}
+# Planted workflows with a line the reader cannot place, and the refusal each raises: a continuation
+# line that begins with <C>, and a line of <C> alone in a mapping and in a block.
+PLANTED_UNPLACED_CHARACTERS = {
+    "a continuation": (
+        PLANTED_JOB
+        + """\
+      - env:
+          CONTINUED: planted
+            <C># ${{ secrets.EXAMPLE_TOKEN }}
+        run: echo planted
+""",
+        r"^line 13 was not read",
+    ),
+    "a line in a mapping": (
+        PLANTED_JOB
+        + """\
+      - env:
+          PLANTED: planted
+          <C>
+        run: echo planted
+""",
+        r"^line 13 is not a mapping entry",
+    ),
+    "a line in a block": (
+        PLANTED_JOB
+        + """\
+      - run: |
+          echo planted
+<C>
+          git clone https://github.com/example-org/other-repository.git
+""",
+        r"^line 13 is not a mapping entry",
+    ),
+}
+# Planted `|` blocks that each hold a line of <C> alone, one column less indented than the block's
+# other lines, and a secret whose name the block writes over two lines, as (the planted workflow,
+# the line of <C>, the secret's name as the checker reports it). The character check refuses the
+# line, and the block's end and indent read only a space or a tab as white space, so the line is the
+# block's text: at the block's end and inside it, it sets the indent the name keeps. The names are
+# synthetic.
+PLANTED_BLOCK_LINES = {
+    "a line of <C> at a block's end": (
+        PLANTED_JOB
+        + """\
+      - run: |
+          echo ${{ secrets['EXAMPLE
+          TOKEN'] }}
+         <C>
+""",
+        14,
+        "EXAMPLE\n TOKEN",
+    ),
+    "a line of <C> inside a block": (
+        PLANTED_JOB
+        + """\
+      - run: |
+          echo ${{ secrets['EXAMPLE
+         <C>
+          TOKEN'] }}
+""",
+        13,
+        "EXAMPLE\n<C>\n TOKEN",
+    ),
+}
+# The secrets context in an expression, in any case: `secrets.NAME` (group 1), `secrets['NAME']`
+# (group 2), or the context whole, which names no secret: `toJSON(secrets)`, `secrets.*`, or an
+# index computed at run time.
+SECRET = re.compile(r"(?<![\w.-])secrets(?![\w-])(?:\.([A-Za-z_][\w-]*)|\['([^']*)'\])?", re.I)
+# A command that clones a repository, and a git command given a URL: one with a scheme, or git's
+# scp-like form, `user@host:path`, or `host:path` whose host is a dotted name. A refspec, such as
+# `main:refs/heads/main` or `v1.0:refs/tags/v1.0`, names no host.
+CLONE = re.compile(r"\bgit\b[^;&|]*?\bclone\b|\bgh\s+repo\s+clone\b")
+GIT_URL = re.compile(
+    r"\bgit\b[^;&|]*?(?:\w+://|(?<![\w/.:@-])"
+    r"(?:[\w.-]+@[\w.-]+|[\w-]+(?:\.[\w-]+)*\.[A-Za-z][\w-]*):)"
+)
+# GitHub's built-in shell keywords, as written. The runner runs any other `shell` as a command
+# template, its first word the command and `{0}` the script's path, so it runs a command the
+# checker does not read.
+SHELLS = ("bash", "sh", "pwsh", "powershell", "python", "cmd")
+# A variable git reads, named in any case: git takes configuration, and commands it runs, from
+# variables whose names begin with `GIT_`, such as `GIT_CONFIG_COUNT`, `GIT_CONFIG_KEY_<n>`,
+# `GIT_CONFIG_VALUE_<n>`, `GIT_CONFIG_PARAMETERS` and `GIT_SSH_COMMAND`.
+GIT_VARIABLE = re.compile(r"(?<![A-Za-z0-9_])GIT_[A-Za-z0-9_]*", re.I)
+# The properties of a job's container, in GitHub's workflow schema, that the runner creates the
+# container from, besides its `env`: its `image`, `options`, `ports` and `volumes`. Its registry
+# `credentials` are read to pull the image, and no step reads them.
+CONTAINER_CREATED_WITH = ("image", "options", "ports", "volumes")
+
+
+def expressions_in(text):
+    """Every `${{ }}` expression in a value, as GitHub delimits one: a `}}` inside a quoted string
+    does not close it (an escaped `''` toggles the quote twice), and one never closed runs to the
+    value's end."""
+    found, at = [], 0
+    while (start := text.find("${{", at)) >= 0:
+        at, quoted = start + 3, False
+        while at < len(text) and (quoted or not text.startswith("}}", at)):
+            if text[at] == "'":
+                quoted = not quoted
+            at += 1
+        found.append(text[start + 3 : at].strip())
+        at += 2
+    return found
+
+
+def strings(value, where=""):
+    """(place, text) for every string a read workflow holds, its place dotted from the root, as in
+    `jobs.build.steps[0].env.TOKEN`."""
+    if isinstance(value, dict):
+        return [
+            found
+            for key, item in value.items()
+            for found in strings(item, f"{where}.{key}" if where else key)
+        ]
+    if isinstance(value, list):
+        return [found for n, item in enumerate(value) for found in strings(item, f"{where}[{n}]")]
+    return [(where, value)] if isinstance(value, str) else []
+
+
+def texts(value, where=""):
+    """(place, text) for every key and every string a read workflow holds, in its order, a key
+    placed as its value is, as in `jobs.build.steps[0].env.GIT_SSH_COMMAND`."""
+    if isinstance(value, dict):
+        found = []
+        for key, item in value.items():
+            place = f"{where}.{key}" if where else str(key)
+            found += [(place, str(key)), *texts(item, place)]
+        return found
+    if isinstance(value, list):
+        return [found for n, item in enumerate(value) for found in texts(item, f"{where}[{n}]")]
+    return [(where, value)] if isinstance(value, str) else []
+
+
+def step_inputs(step):
+    """A step's `with` inputs, each name in lower case: the runner reads an input's name in any
+    case. Inputs that are not a mapping are none here, and the checker refuses a checkout whose
+    inputs are not a mapping: GitHub evaluates a `with` that is one `${{ }}` expression when the
+    step runs, so no reading of the file names what it holds. An omitted or empty `with` is no
+    inputs."""
+    given = step.get("with")
+    if not isinstance(given, dict):
+        return {}
+    return {str(name).lower(): value for name, value in given.items()}
+
+
+def steps_in(steps, where):
+    """(place, step) for every step of a list of steps, a step inside a `parallel` block at any
+    depth included, each placed as in `jobs.build.steps[0].parallel[1]`: GitHub's workflow schema
+    reads a `parallel` step's list as steps, and one of them may be another `parallel` step."""
+    for n, step in enumerate(steps if isinstance(steps, list) else []):
+        place = f"{where}[{n}]"
+        yield place, step
+        if isinstance(step, dict):
+            yield from steps_in(step.get("parallel"), f"{place}.parallel")
+
+
+def is_checkout(step):
+    """Whether a step uses actions/checkout, its `uses` read as the runner reads it: split at each
+    `/` and `\\`, empty parts dropped, and the owner and name in any case. An action at a path
+    inside that repository is a checkout too."""
+    parts = [
+        part for part in re.split(r"[/\\]", str(step.get("uses", "")).split("@", 1)[0]) if part
+    ]
+    return [part.lower() for part in parts[:2]] == ["actions", "checkout"]
+
+
+def checked_out(step):
+    """The repository a checkout step checks out. An omitted or empty `repository`, and
+    `${{ github.repository }}`, are this repository, as actions/checkout defaults it."""
+    given = str(step_inputs(step).get("repository") or "").strip()
+    if not given or re.fullmatch(r"\$\{\{\s*github\.repository\s*\}\}", given):
+        return THIS_REPOSITORY
+    return given
+
+
+def checked_out_from(step):
+    """The server a checkout step checks out from when it is another, else ''. An omitted or empty
+    `github-server-url`, and `${{ github.server_url }}`, are this server, as actions/checkout
+    defaults it."""
+    given = str(step_inputs(step).get("github-server-url") or "").strip()
+    return "" if re.fullmatch(r"\$\{\{\s*github\.server_url\s*\}\}", given) else given
+
+
+def secret_reads(expression):
+    """What an expression reads from the secrets context, other than GITHUB_TOKEN. GitHub reads a
+    secret's name without case, so `secrets.github_token` is the default token too."""
+    found = []
+    for match in SECRET.finditer(expression):
+        name = match.group(1) if match.group(1) is not None else match.group(2)
+        if name is None:
+            found.append("reads the whole secrets context, or a secret named at run time")
+        elif name.upper() != "GITHUB_TOKEN":
+            found.append(f"reads the secret {name}")
+    return found
+
+
+def commands(script):
+    """A run script's commands, one per line: a line continued with a backslash is joined to the
+    next, and each command's whitespace is collapsed."""
+    lines = script.replace("\\\n", " ").splitlines()
+    return [" ".join(line.split()) for line in lines if line.strip()]
+
+
+def reaches(script):
+    """Each command of a run script, or of any other string, that clones a repository or gives git a
+    URL: a workflow reaches this repository through actions/checkout and origin, and no other."""
+    found = []
+    for command in commands(script):
+        if CLONE.search(command):
+            found.append(f"clones a repository: {command}")
+        elif GIT_URL.search(command):
+            found.append(f"points git at a URL: {command}")
+    return found
+
+
+def shell_problems(given, where):
+    """A `shell` that is not one of GitHub's built-in keywords, as written. The runner runs any
+    other as a command, so what a custom shell runs is a command the checker does not read. An
+    omitted or empty `shell` is none: the runner falls back to the defaults, which are judged
+    where they are."""
+    if given is None or given == "" or given in SHELLS:
+        return []
+    return [f"{where}: runs a shell the checker does not read: {given}"]
+
+
+def defaults_problems(defaults, where):
+    """A `defaults.run.shell` that `shell_problems` refuses, and defaults whose shell the checker
+    cannot read: a `defaults` or a `defaults.run` that is set and is not a mapping, such as one
+    `${{ }}` expression, which GitHub evaluates when the job runs."""
+    if defaults is None:
+        return []
+    if not isinstance(defaults, dict):
+        return [f"{where}: runs a shell the checker does not read: {defaults}"]
+    run = defaults.get("run")
+    if run is None:
+        return []
+    if not isinstance(run, dict):
+        return [f"{where}.run: runs a shell the checker does not read: {run}"]
+    return shell_problems(run.get("shell"), f"{where}.run.shell")
+
+
+def environment_problems(env, where):
+    """An environment whose variables the checker cannot read: an `env` that is set and is not a
+    mapping, such as one `${{ }}` expression, which GitHub evaluates when the job or the step runs,
+    so no reading of the file names a variable whose name begins with `GIT_` there. An omitted or
+    empty `env` is no variables."""
+    if env is None or isinstance(env, dict):
+        return []
+    return [f"{where}: sets an environment the checker does not read"]
+
+
+def container_problems(container, where):
+    """A job's container whose environment the checker cannot read: one `${{ }}` expression, an
+    `env` that `environment_problems` refuses, or one of `CONTAINER_CREATED_WITH` that is or holds
+    a `${{ }}` expression, which GitHub evaluates when the job runs. The steps of a job with a
+    container run inside it, in its environment. A container named by its image alone has no `env`
+    to read."""
+    if container is None or (isinstance(container, str) and "${{" not in container):
+        return []
+    if isinstance(container, dict):
+        problems = environment_problems(container.get("env"), f"{where}.env")
+        for name in CONTAINER_CREATED_WITH:
+            if "${{" in str(container.get(name, "")):
+                problems.append(f"{where}.{name}: runs in a container the checker does not read")
+        return problems
+    return [f"{where}: runs in a container the checker does not read"]
+
+
+def git_variables(text):
+    """Each variable whose name begins with `GIT_` that a key or a string names, once, in order."""
+    return list(dict.fromkeys(GIT_VARIABLE.findall(text)))
+
+
+def secret_and_checkout_problems(directory):
+    """Every read of a secret other than GITHUB_TOKEN, every `secrets: inherit`, and every checkout,
+    clone or fetch of another repository in the workflows of `directory`, each named by its file
+    and its place, with what was judged: (problems, {population: [...]}). Every step of a job is
+    judged, a step inside a `parallel` block at any depth included, and a checkout whose inputs are
+    not a mapping is a problem, as `step_inputs` says. A clone or a fetch is read in every string
+    the workflow holds, not only a run step's script. A shell that is not a built-in keyword, git
+    configured from the environment, and an environment the checker cannot read are problems too,
+    as `shell_problems`, `defaults_problems`, `environment_problems`, `container_problems` and
+    `git_variables` say. A form the reader does not read is a problem named by its line, and the
+    rest of that file is judged as read. A directory with no workflow file is VOID, never a
+    pass."""
+    files = workflow_files(directory)
+    problems = []
+    judged = {"expressions": [], "checkouts": [], "run steps": []}
+    for path in files:
+        try:
+            workflow, refused = read_workflow(path.read_text(encoding="utf-8")), []
+        except Unread as unread:
+            workflow, refused = unread.workflow, unread.refused
+        problems += [f"{path.name}:{why}" for why in refused]
+        for where, text in strings(workflow):
+            for expression in expressions_in(text):
+                judged["expressions"].append((f"{path.name}:{where}", expression))
+                problems += [f"{path.name}:{where}: {read}" for read in secret_reads(expression)]
+        problems += defaults_problems(workflow.get("defaults"), f"{path.name}:defaults")
+        problems += environment_problems(workflow.get("env"), f"{path.name}:env")
+        scripts = set()
+        for job_id, job in (workflow.get("jobs") or {}).items():
+            # A job or step that is not a mapping is not judged: the reader has named its line, or
+            # GitHub refuses the workflow.
+            if not isinstance(job, dict):
+                continue
+            if job.get("secrets") == "inherit":
+                problems.append(
+                    f"{path.name}:jobs.{job_id}.secrets: passes every secret to the workflow it "
+                    "calls"
+                )
+            problems += defaults_problems(
+                job.get("defaults"), f"{path.name}:jobs.{job_id}.defaults"
+            )
+            problems += environment_problems(job.get("env"), f"{path.name}:jobs.{job_id}.env")
+            problems += container_problems(
+                job.get("container"), f"{path.name}:jobs.{job_id}.container"
+            )
+            for where, step in steps_in(job.get("steps"), f"{path.name}:jobs.{job_id}.steps"):
+                if not isinstance(step, dict):
+                    continue
+                if is_checkout(step):
+                    if step.get("with") is not None and not isinstance(step["with"], dict):
+                        problems.append(
+                            f"{where}: checks out with inputs the checker does not read"
+                        )
+                    repository = checked_out(step)
+                    judged["checkouts"].append((where, repository))
+                    if repository != THIS_REPOSITORY:
+                        problems.append(f"{where}: checks out {repository}, not this repository")
+                    if server := checked_out_from(step):
+                        problems.append(f"{where}: checks out from another server: {server}")
+                if "run" in step:
+                    judged["run steps"].append(where)
+                    scripts.add(f"{where}.run")
+                    problems += [f"{where}: {reach}" for reach in reaches(str(step["run"]))]
+                problems += shell_problems(step.get("shell"), f"{where}.shell")
+                problems += environment_problems(step.get("env"), f"{where}.env")
+        # Every other string is read for the same commands: a value a shell runs, such as
+        # `BASH_ENV`, which bash expands before a step's script, holds a command as a script does.
+        for where, text in strings(workflow):
+            if f"{path.name}:{where}" not in scripts:
+                problems += [f"{path.name}:{where}: {reach}" for reach in reaches(text)]
+        # A variable whose name begins with `GIT_`, set or named anywhere, configures git from the
+        # environment: an `env` key at any level, a container's options, or a script that
+        # exports one.
+        for where, text in texts(workflow):
+            problems += [
+                f"{path.name}:{where}: names a git variable: {name}" for name in git_variables(text)
+            ]
+    return problems, judged
+
+
+def planted_problems(text):
+    """What the checker finds in one planted workflow, written to a scratch directory at test time
+    (SPEC-034 A10)."""
+    with tempfile.TemporaryDirectory() as scratch:
+        (Path(scratch) / "planted.yml").write_text(text, encoding="utf-8")
+        return secret_and_checkout_problems(Path(scratch))[0]
 
 
 if __name__ == "__main__":
