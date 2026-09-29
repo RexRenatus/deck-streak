@@ -216,6 +216,46 @@
         "description=__doc__.splitlines()[1]",
         "the usage text opens with the script's first docstring line (SPEC-087 R8)",
         "test_audit_web.TheVerdictScriptStatesItself.test_the_usage_text_opens_with_the_scripts_first_line"
+      ],
+      [
+        "S08742-THE-RUNNER-STOPS-BYTECODE-BEFORE-IT-IMPORTS",
+        "scripts/mutation_python.py",
+        "sys.dont_write_bytecode = True\n",
+        "sys.dont_write_bytecode = False\n",
+        "the runner turns bytecode off before it imports the rows module, so an import writes no cache beside the tree it mutates (SPEC-087 R5)",
+        "test_mutation_python_lister_kills.TheModuleHoldsItsConstants.test_importing_the_runner_stops_bytecode_and_puts_its_directory_first"
+      ],
+      [
+        "S08743-THE-RUNNER-DIRECTORY-COMES-FIRST-ON-THE-PATH",
+        "scripts/mutation_python.py",
+        "sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))\n",
+        "sys.path.insert(1, str(pathlib.Path(__file__).resolve().parent))\n",
+        "the runner's own directory is first on the import path, so its sibling modules load from it and not from a same-named module found earlier (SPEC-087 R5)",
+        "test_mutation_python_lister_kills.TheModuleHoldsItsConstants.test_importing_the_runner_stops_bytecode_and_puts_its_directory_first"
+      ],
+      [
+        "S08744-THE-LONGEST-OLD-TEXT-IS-FORTY-CHARACTERS",
+        "scripts/mutation_python.py",
+        "LONGEST_OLD = 40\n",
+        "LONGEST_OLD = 41\n",
+        "a mutant's old text is shown whole to forty characters and cut to thirty-seven and three dots beyond, so a record's name stays short and stable (SPEC-087 R3)",
+        "test_mutation_python_lister_kills.TheModuleHoldsItsConstants.test_the_longest_old_text_is_forty_characters_and_cut_to_thirty_seven_and_dots"
+      ],
+      [
+        "S08745-A-MUTANT-RECORD-IS-FROZEN",
+        "scripts/mutation_python.py",
+        "@dataclass(frozen=True, slots=True)\nclass Mutant:",
+        "@dataclass(frozen=False, slots=True)\nclass Mutant:",
+        "a listed mutant cannot be reassigned, so the record a plan selects is the record the run installs (SPEC-087 R3)",
+        "test_mutation_python_lister_kills.TheModuleHoldsItsConstants.test_a_mutant_is_frozen_and_has_slots"
+      ],
+      [
+        "S08746-A-MUTANT-RECORD-HAS-SLOTS",
+        "scripts/mutation_python.py",
+        "@dataclass(frozen=True, slots=True)\nclass Mutant:",
+        "@dataclass(frozen=True, slots=False)\nclass Mutant:",
+        "a listed mutant holds only its declared fields, so a stray attribute cannot ride into a report (SPEC-087 R3)",
+        "test_mutation_python_lister_kills.TheModuleHoldsItsConstants.test_a_mutant_is_frozen_and_has_slots"
       ]
     ]
   }

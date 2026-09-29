@@ -21,7 +21,8 @@
     "dir": "scripts/tests",
     "modules": [
       "test_mutation_python",
-      "test_mutation_python_verdict"
+      "test_mutation_python_verdict",
+      "test_mutation_python_lister_kills"
     ]
   },
   "scripts/mutation_rows.py": {
