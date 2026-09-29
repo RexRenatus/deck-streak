@@ -189,6 +189,42 @@
         "announce_level_up(router, after, before, today)",
         "level_up_cycle::a_sync_cycle_announces_a_level_reached_once",
         "a sync cycle hands the router the level before the recompute and the level after it, in that order (SPEC-072 R14, A30)"
+      ],
+      [
+        "S07226-LAW-TIERS-LAW-TRACK",
+        "coordination",
+        "src/progression/law_tiers.rs",
+        "card.track == Track::Law",
+        "card.track != Track::Law",
+        "law_tiers::a_collection_with_no_law_root_has_no_law_cards_and_no_law_xp",
+        "the law tiers count law-track cards alone, and price law-track reviews alone (SPEC-072 R24, A31)"
+      ],
+      [
+        "S07227-LAW-TIERS-TODAY",
+        "coordination",
+        "src/progression/law_tiers.rs",
+        "if day != today {",
+        "if day == today {",
+        "law_tiers::the_composed_router_serves_the_law_tiers_to_the_owner_alone",
+        "the law tiers' XP is the study day's reviews alone (SPEC-072 R24, A31)"
+      ],
+      [
+        "S07228-LAW-TIERS-NONE-SLOT",
+        "coordination",
+        "src/progression/law_tiers.rs",
+        "None => 4,",
+        "None => 3,",
+        "law_tiers::the_composed_router_serves_the_law_tiers_to_the_owner_alone",
+        "a card with no tier counts in the fifth slot, after T4 (SPEC-072 R24, A31)"
+      ],
+      [
+        "S07229-LAW-TIERS-WIRED",
+        "daemon",
+        "src/role_api.rs",
+        "Some(source) => state.with_law_tiers(source),",
+        "Some(_source) => state,",
+        "law_tiers::the_composed_router_serves_the_law_tiers_to_the_owner_alone",
+        "the api role gives its router the law tiers' source (SPEC-072 R24, A31)"
       ]
     ],
     "CARGO_KILLED_SCRIPT_MUTATIONS": [
