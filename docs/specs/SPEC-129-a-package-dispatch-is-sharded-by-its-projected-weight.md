@@ -96,8 +96,8 @@ survivors job, quoted in the pull request.
 | `.github/workflows/mutation-weekly.yml` | repo | changed: the `size` job, the rust matrix and `--shard`, the survivors job's `--shards` (R1, R4, R5) |
 | `scripts/mutation-verdict.py` | repo | changed: the shared `fewest_shards`, the `size` verb, and the battery's `FOREIGN` check (R2, R3, R6) |
 | `scripts/tests/test_dispatch_shards.py` | repo | added: A1 to A5 |
-| `scripts/tests/test_mutation_workflows.py` | repo | changed: the three assertions that read the fixed matrix and `/32` now read the sized count |
-| `scripts/mutation-rows.d/S12900-S12999.json` | repo | added: two rows for the verdict's clauses the per-PR Python gate cannot reach |
+| `scripts/tests/test_mutation_workflows.py` | repo | changed: the three assertions that read the fixed matrix and the fixed divisor now read the sized count |
+| `scripts/mutation-rows.d/S12900-S12999.json` | repo | added: three rows for the verdict's clauses the per-PR Python gate cannot reach |
 | `docs/specs/SPEC-129-a-package-dispatch-is-sharded-by-its-projected-weight.md` | repo | added |
 | `docs/decisions/ADR-129-a-package-dispatch-is-sized-from-its-own-listing.md` | repo | added |
 | `docs/specs/planned/SPEC-057-every-surviving-mutant-is-killed-or-recorded-equivalent-before-the-first-mutation-gated-release.md` | repo | changed: a dated amendment at its end (insert-only) |

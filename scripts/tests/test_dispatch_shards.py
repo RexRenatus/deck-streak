@@ -165,6 +165,8 @@ class TheWorkflowReadsTheOneCount(unittest.TestCase):
 
     def test_the_matrix_the_argument_and_the_battery_read_the_sized_count(self):
         text = workflow(WEEKLY)
+        for reader in (f"--shard ${{{{ matrix.shard }}}}/{COUNT}", f"--shards {COUNT}"):
+            self.assertIn(reader, text)
         self.assertEqual(count_problems(text), [])
 
     def test_a_plant_that_puts_the_fixed_count_back_goes_red(self):
