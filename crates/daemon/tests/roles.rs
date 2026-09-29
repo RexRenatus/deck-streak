@@ -17,6 +17,7 @@ use std::sync::Arc;
 use deck_streak_coordination::ledger::{CronLedger, Outcome, SqliteCronLedger};
 use deck_streak_daemon::wiring::{DATABASE_FILE, StateDirectory, open_database};
 use deck_streak_ingest::settings::{LAW_DECK_ROOT, SYNC_PASSWORD, SYNC_USERNAME};
+use deck_streak_ingest::state::SqliteIngestState;
 use deck_streak_ingest::sync_runs::{
     ReasonCode, RunHistory, SqliteSyncRuns, SyncRun, SyncRunStore, Trigger,
 };
@@ -313,6 +314,72 @@ async fn the_sync_job_pages_on_a_malformed_scope_before_it_syncs() {
         }
     );
     db.close().await;
+}
+
+/// The messages of `output` that say the owner's stored request was served or refused.
+fn request_events(output: &Output) -> Vec<Value> {
+    events(output)
+        .into_iter()
+        .map(|(_, event)| event)
+        .filter(|event| {
+            event["message"]
+                .as_str()
+                .is_some_and(|message| message.starts_with("the owner's request"))
+        })
+        .collect()
+}
+
+#[tokio::test]
+async fn only_the_sync_job_serves_the_owners_stored_request() {
+    // A request is stored, as the bot leaves it. The scope is malformed on purpose, so a served
+    // request ends in a refusal the log names, without a network.
+    let directory = tempfile::tempdir().expect("a temporary directory");
+    let state = directory.path().join("state");
+    let credentials = directory.path().join("credentials");
+    for folder in [&state, &credentials] {
+        fs::create_dir_all(folder).expect("a folder");
+    }
+    fs::write(credentials.join(SYNC_USERNAME), "synthetic-owner\n").expect("a credential");
+    fs::write(credentials.join(SYNC_PASSWORD), "synthetic-password\n").expect("a credential");
+    let db = Db::open(&state.join(DATABASE_FILE))
+        .await
+        .expect("the role's database opens");
+    SqliteIngestState::new(db.clone())
+        .request_rescore(SystemClock.now())
+        .await
+        .expect("the request is stored");
+    db.close().await;
+    let offset = offset_to_half_past_noon();
+    let environment = [
+        ("STATE_DIRECTORY", state.as_os_str()),
+        ("CREDENTIALS_DIRECTORY", credentials.as_os_str()),
+        (
+            "DECKSTREAK_SYNC_ENDPOINT",
+            OsStr::new("http://127.0.0.1:9/"),
+        ),
+        ("DECKSTREAK_ROLLOVER_HOUR", OsStr::new("12")),
+        ("DECKSTREAK_UTC_OFFSET_MINUTES", OsStr::new(&offset)),
+        (LAW_DECK_ROOT, OsStr::new("Law\u{1f}Evidence")),
+    ];
+
+    // Another job leaves the request where it is.
+    let other = deckstreakd(&["job", "liveness"], &environment);
+    assert_eq!(other.status.code(), Some(0), "{}", describe(&other));
+    assert!(request_events(&other).is_empty(), "{}", describe(&other));
+
+    // The sync job serves it: one owner cycle, refused here for the scope, and the log says so.
+    let output = deckstreakd(&["job", "sync"], &environment);
+    let served = request_events(&output);
+    assert_eq!(served.len(), 1, "{}", describe(&output));
+    assert_eq!(
+        (&served[0]["message"], &served[0]["reason"]),
+        (
+            &Value::from("the owner's request was refused"),
+            &Value::from("scope_settings_refused")
+        ),
+        "{}",
+        describe(&output)
+    );
 }
 
 /// A database in `directory`, where a role finds it, holding one synthetic sync run: the owner's
