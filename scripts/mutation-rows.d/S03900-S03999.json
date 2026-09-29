@@ -408,6 +408,94 @@
         "            if False:\n",
         "a crate holding `tests/bin.rs` or `tests/bin/main.rs` is refused for a `bin::` killer by name, so a killer written for that file never runs the binary's own test of the same path (SPEC-039 section 15, A45)",
         "test_mutation_rows.TheBinKillerFollowsRustcAndRefusesAShadow.test_a_bin_killer_beside_a_tests_bin_rs_is_refused"
+      ],
+      [
+        "S03960-A46-MISSING-TOOL-READS-AS-A-SURVIVOR",
+        "scripts/mutation_rows.py",
+        "            print(f\"prove: REFUSED: {refusal}\")\n            return EXIT_REFUSED\n",
+        "            print(f\"prove: REFUSED: {refusal}\")\n            return EXIT_SURVIVED\n",
+        "a missing tool ends the prove verb with the survivor's exit code, where #431 crashed into it (SPEC-039 A46)",
+        "test_mutation_rows_missing_tool.TheMissingToolPopulation.test_a_tool_the_runner_cannot_run_is_a_refusal_at_every_site_mode_and_verb"
+      ],
+      [
+        "S03961-A46-MISSING-TOOL-READS-AS-VOID",
+        "scripts/mutation_rows.py",
+        "            print(f\"prove: REFUSED: {refusal}\")\n            return EXIT_REFUSED\n",
+        "            print(f\"prove: REFUSED: {refusal}\")\n            return EXIT_VOID\n",
+        "a missing tool ends the prove verb as a VOID report would, not as the refusal it is (SPEC-039 A46)",
+        "test_mutation_rows_missing_tool.TheMissingToolPopulation.test_a_tool_the_runner_cannot_run_is_a_refusal_at_every_site_mode_and_verb"
+      ],
+      [
+        "S03962-A46-RETIRED-MISSING-TOOL-READS-AS-OK",
+        "scripts/mutation_rows.py",
+        "        print(f\"retired: REFUSED: {refusal}\")\n        return EXIT_REFUSED\n",
+        "        print(f\"retired: REFUSED: {refusal}\")\n        return EXIT_OK\n",
+        "a missing tool ends the retirement check as a pass (SPEC-039 A46)",
+        "test_mutation_rows_missing_tool.TheMissingToolPopulation.test_a_tool_the_runner_cannot_run_is_a_refusal_at_every_site_mode_and_verb"
+      ],
+      [
+        "S03963-A47-GIT-SPAWNS-WITHOUT-THE-CHECK",
+        "scripts/mutation_rows.py",
+        "    return run_tool(\n        [\"git\", \"-C\"",
+        "    return subprocess.run(\n        [\"git\", \"-C\"",
+        "the git helper spawns around the tool check, so a missing git is a traceback (SPEC-039 A46, A47)",
+        "test_mutation_rows_missing_tool.TheMissingToolPopulation.test_a_tool_the_runner_cannot_run_is_a_refusal_at_every_site_mode_and_verb"
+      ],
+      [
+        "S03964-A47-PARSER-SPAWNS-WITHOUT-THE-CHECK",
+        "scripts/mutation_rows.py",
+        "        done = run_tool(\n            [parser, \"-n\"],",
+        "        done = subprocess.run(\n            [parser, \"-n\"],",
+        "the parse check spawns around the tool check, so a missing shell is a traceback (SPEC-039 A46, A47)",
+        "test_mutation_rows_missing_tool.TheMissingToolPopulation.test_a_tool_the_runner_cannot_run_is_a_refusal_at_every_site_mode_and_verb"
+      ],
+      [
+        "S03965-A47-BUILD-SPAWNS-WITHOUT-THE-CHECK",
+        "scripts/mutation_rows.py",
+        "        done = run_tool(\n            [\"cargo\", \"test\", \"--locked\", \"-p\", killer.package, *flags, \"--no-run\"],",
+        "        done = subprocess.run(\n            [\"cargo\", \"test\", \"--locked\", \"-p\", killer.package, *flags, \"--no-run\"],",
+        "the mutant's build spawns around the tool check, so a missing cargo is a traceback (SPEC-039 A46, A47)",
+        "test_mutation_rows_missing_tool.TheMissingToolPopulation.test_a_tool_the_runner_cannot_run_is_a_refusal_at_every_site_mode_and_verb"
+      ],
+      [
+        "S03966-A46-KILLER-GROUP-SPAWNS-WITHOUT-RESOLVING",
+        "scripts/mutation_rows.py",
+        "    resolve_tool(command, env)\n    try:\n        process = subprocess.Popen(",
+        "    try:\n        process = subprocess.Popen(",
+        "the killer's process group is started without resolving its executable, so the refusal loses its reason (SPEC-039 A46)",
+        "test_mutation_rows_missing_tool.TheMissingToolPopulation.test_a_tool_the_runner_cannot_run_is_a_refusal_at_every_site_mode_and_verb"
+      ],
+      [
+        "S03967-A46-A-REFUSED-PROOF-KEEPS-ITS-MUTANT",
+        "scripts/mutation_rows.py",
+        "    finally:\n        target.write_bytes(original)\n",
+        "    finally:\n        if sys.exc_info()[0] is not ToolMissing:\n            target.write_bytes(original)\n",
+        "a refusal that ends a proof leaves the mutant installed in the target (SPEC-039 A46)",
+        "test_mutation_rows_missing_tool.TheMissingToolPopulation.test_a_tool_the_runner_cannot_run_is_a_refusal_at_every_site_mode_and_verb"
+      ],
+      [
+        "S03968-A46-THE-REFUSAL-LINE-DROPS-THE-TOOL",
+        "scripts/mutation_rows.py",
+        "print(f\"prove: REFUSED: {refusal}\")",
+        "print(\"prove: REFUSED\")",
+        "the refusal line does not name the missing tool (SPEC-039 A46)",
+        "test_mutation_rows_missing_tool.TheMissingToolPopulation.test_a_tool_the_runner_cannot_run_is_a_refusal_at_every_site_mode_and_verb"
+      ],
+      [
+        "S03969-A46-A-FILE-WITHOUT-THE-EXECUTE-BIT-RESOLVES",
+        "scripts/mutation_rows.py",
+        "            if os.access(candidate, os.X_OK):",
+        "            if os.access(candidate, os.F_OK):",
+        "a file that is not executable is taken for a tool that can run (SPEC-039 A46)",
+        "test_mutation_rows_missing_tool.TheMissingToolPopulation.test_a_tool_the_runner_cannot_run_is_a_refusal_at_every_site_mode_and_verb"
+      ],
+      [
+        "S03970-A46-A-DIRECTORY-READS-AS-ABSENT",
+        "scripts/mutation_rows.py",
+        "        if candidate.is_dir():\n            failure = \"is a directory\"\n        elif candidate.is_file():",
+        "        if candidate.is_file():",
+        "a directory at the tool's name is reported as an absent tool, not as what it is (SPEC-039 A46)",
+        "test_mutation_rows_missing_tool.TheMissingToolPopulation.test_a_tool_the_runner_cannot_run_is_a_refusal_at_every_site_mode_and_verb"
       ]
     ]
   }
