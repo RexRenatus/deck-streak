@@ -349,16 +349,27 @@ def dropin_directory_refusals(root):
     if not deploy.is_dir():
         return refused
     entries = sorted(deploy.rglob("*"))
-    own = {
-        path.parent / f"{path.name}.d"
+    shipped = [
+        path
         for path in entries
         if path.is_file()
         and path.suffix in _units.UNIT_KINDS
         and not path.parent.name.endswith(".d")
-    }
+    ]
+    own = {path.parent / f"{path.name}.d" for path in shipped}
+    templates = {(path.parent, *path.name.split("@.", 1)) for path in shipped if "@." in path.name}
+
+    def an_instance_of_a_shipped_template(path):
+        """systemd reads an instance's drop-ins from `<name>@<instance>.<type>.d/` (SPEC-062 R14)."""
+        stem, at, rest = path.name.removesuffix(".d").partition("@")
+        instance, dot, kind = rest.rpartition(".")
+        return bool(at and dot and instance) and (path.parent, stem, kind) in templates
+
     for path in entries:
         rel = path.relative_to(root).as_posix()
         if not path.is_dir() or not path.name.endswith(".d") or path in own:
+            continue
+        if an_instance_of_a_shipped_template(path):
             continue
         if rel == NON_UNIT_DROPIN:
             continue
@@ -394,8 +405,12 @@ def environment_refusals(unit, ids):
 
 
 def loads_a_credential(unit):
-    """Whether `unit` holds a credential directive of any kind."""
-    return any(unit.values("Service", key) for key in CREDENTIAL_KEYS)
+    """Whether the unit's effective configuration holds a credential directive of any kind: the
+    unit itself, a drop-in of it, or a drop-in of one of its instances if it is a template
+    (SPEC-062 R14)."""
+    return any(unit.values("Service", key) for key in CREDENTIAL_KEYS) or any(
+        a.section == "Service" and a.key in CREDENTIAL_KEYS for a in unit.instance_dropins
+    )
 
 
 def names_the_refusal(statuses):
@@ -995,17 +1010,40 @@ class CredentialsComeFromTheSocket(unittest.TestCase):
                 what,
             )
 
+    def test_a_shipped_templates_instance_dropin_directory_is_its_own_and_no_other_is(self):
+        # systemd reads an instance's drop-ins from `<name>@<instance>.<type>.d/`, so a shipped
+        # template's is admitted; an instance of a template the tree does not ship is refused
+        # (SPEC-062 R14; SPEC-066 amendment).
+        refused = "is not the drop-in directory of a unit shipped beside it, and is refused"
+        at = "@"
+        with tempfile.TemporaryDirectory() as scratch:
+            systemd = Path(scratch) / "deploy" / "systemd"
+            systemd.mkdir(parents=True)
+            (systemd / f"planted{at}.service").write_text("[Service]\n", encoding="utf-8")
+            (systemd / f"planted{at}x.service.d").mkdir()
+            self.assertEqual(dropin_directory_refusals(scratch), [], "the shipped template's own")
+            (systemd / f"other-app{at}x.service.d").mkdir()
+            (systemd / f"other-app{at}x.service.d" / "override.conf").write_text(
+                "[Service]\nNice=5\n", encoding="utf-8"
+            )
+            self.assertEqual(
+                dropin_directory_refusals(scratch),
+                [f"deploy/systemd/other-app{at}x.service.d: {refused}"],
+                "an instance of a template the tree does not ship",
+            )
+
     def test_only_a_units_own_dropin_directory_is_shipped_under_deploy(self):
-        # The tree ships the drop-in directories of no unit, and one directory of a file that is no
-        # unit (SPEC-066 R2). Planted beside a unit: a directory named for no unit, one named for
-        # the suffix alone, one named for a template's instance, and one named for a unit that is
-        # not shipped: each refused by its path. A unit's own is read, so it is not refused here.
+        # The tree ships the drop-in directories of its units and of the sync instance, and one
+        # directory of a file that is no unit (SPEC-066 R2). Planted beside a unit: a directory
+        # named for no unit, one named for the suffix alone, one named for an instance of a template
+        # of another type, and one named for a unit that is not shipped: each refused by its path.
+        # A unit's own is read, so it is not refused here.
         self.assertEqual(dropin_directory_refusals(REPO), [])
         refused = "is not the drop-in directory of a unit shipped beside it, and is refused"
         planted = [
             "deck-streak-.service.d",
             "service.d",
-            f"planted{'@'}one.service.d",
+            f"planted{'@'}one.timer.d",
             ".d",
             "absent.service.d",
         ]
@@ -1111,9 +1149,12 @@ class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
             sorted((unit for unit in subject().services if loads_a_credential(unit)), key=name),
         )
         # The roles that read a credential, and the alert template, which reads two (SPEC-031 R3).
+        # The job template holds none itself: the sync instance's drop-in loads the sync login, so
+        # the template's effective unit does (SPEC-062 R14).
         self.assertEqual(
             {unit.name for unit in loading},
-            {unit for unit, constants in ROLE_CREDENTIALS.items() if constants},
+            {unit for unit, constants in ROLE_CREDENTIALS.items() if constants}
+            | {f"{JOB_TEMPLATE}@.service"},
         )
         paging = [unit for unit in loading if unit.name != alert]
         for unit in paging:
