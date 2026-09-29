@@ -59,8 +59,13 @@ template, and two were considered for it:
   spelling it does not read; a model holds only until its next divergence.
 - Refusing the dependency directives one by one, then whichever the next review names: rejected,
   because a list of refused keys holds only until the next key, while a literal list of the keys
-  each kind of unit uses refuses every other key by its name. The lists are the keys the units use, and a unit that needs another key adds it to its
-  list in the same change (SPEC-066 R2).
+  each kind of unit uses refuses every other key by its name. The lists are the keys those units use,
+  the units that load a credential and page on failure, each list is held equal to the keys its units
+  hold, and a unit that needs another key adds it to its list in the same change (SPEC-066 R2).
+- Bounding only the keys, and leaving the value of a listed key free: rejected, because a listed key
+  can hold a value that changes what a unit does, and a list of keys cannot say so. A table holds the
+  one `Restart=` value those units use, and their `OnFailure=` is the alert template alone (SPEC-066
+  R2).
 
 ## Decision Outcome
 
@@ -117,7 +122,7 @@ SPEC-066's acceptance tests: the loader's refusal in each empty form and its mes
 the census of the templates (A4), which plants each refusal and a cross-check corpus of exit-status
 words and admits none of the corpus, the alert unit's route (A5), and the sync's login, which reads
 through the loader, never reaching the engine with an empty value (A6). Hand-proved rows S06601
-to S06608 kill the mutants cargo-mutants does not make.
+to S06610 kill the mutants cargo-mutants does not make.
 
 ## What would make this wrong
 

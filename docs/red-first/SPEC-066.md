@@ -282,6 +282,42 @@ service list, the credential lines' empty value, and the `.conf` files' suffix),
 plants kill each; one anchor did not occur and was dropped. The checks are test code and take no
 hand-proved row, and rows S06605 to S06608, whose killer is A5, were proved again at the head.
 
+## Round 6: the lists are the keys, and a value and a target are bounded
+
+Each addition pins what the templates already declare, so each is disclosed not red on the tree. The
+plants of the value table and of the target were committed red first, beside the unchanged
+`_units.py`: both whole modules ran at each red commit, and only the tests named failed, by
+assertion.
+
+| item | red commit | what failed at the red | green commit |
+|---|---|---|---|
+| each list equal to the keys its units hold, a key extending a listed key planted, each drop-in directory case the only refusal | not red: the lists are the keys the units hold, and the added cases pin what the check already refuses | none | 4bb2078 |
+| a table of the admitted `Restart=` value | 593ee63 | `test_a_paging_units_restart_holds_only_the_admitted_value`: the plants `Restart=always` and `Restart=on-success` on a `Type=oneshot` unit came back with no refusal, the table being empty | 5de252b |
+| every `OnFailure=` of a unit that pages is the alert template alone | 593ee63 | `test_a_paging_unit_names_no_failure_target_but_the_alert`: the plants for a target beside the alert's, in its place, after it and reset came back with no refusal, the stub checker refusing none | 5de252b |
+
+The plants of the value table: `Restart=always` and `Restart=on-success` on a `Type=oneshot` unit
+that pages, `Restart=always` in a drop-in, `Restart=on-failure-extra` (a value extending the admitted
+one, added at 3e176bf), and the admitted control `Restart=on-failure`. The plants of the target: a
+second target in one assignment, a second `OnFailure=`, a replaced target, an empty reset after the
+alert's, a drop-in's `OnFailure=`, and the admitted control.
+
+**Hand mutants.** 192 hand mutants of the round's checks and of every earlier round's, in
+`_units.py`, `test_alert_unit.py` and `test_deploy_templates.py`, each run against both whole
+modules on a worker copy of the head's full-tree export, the file restored by its sha256 after each:
+192 killed, 0 survived at 3e176bf. By class: a listed key dropped 88 of 88; an extra key admitted to
+either list 70 of 70 (the round-5 head killed 19 of them, the equality assertion kills each);
+`off_list` implementations 4 of 4; the drop-in exemption, own-directory match and walk 11 of 11; the
+spaced-key read 3 of 3; A4 and A5 wiring 5 of 5; the value table and its check 6 of 6; the target
+check 5 of 5. One value-check mutant survived the first plants and 3e176bf's plant kills it.
+The box's `service.oneshot-restart` row, which refused the restart plants before, still does.
+
+**The rows.** The value table and the target check are guards no existing row's killer reaches, so
+S06609 (`scripts/tests/_units.py`, the table admitting a second restart value) and S06610
+(`scripts/tests/test_deploy_templates.py`, the check admitting a target beside the alert's) are
+added, each with the round's own test as its killer. Rows S06605 to S06610 were each proved with
+`prove --row <id>` on the committed head, KILLED, `PYTHONDONTWRITEBYTECODE=1`, each target restored
+by its sha256.
+
 ## Mutants of the changed code
 
 **The rows.** `python3 scripts/mutation_rows.py prove --band S06600-S06699` at e0cdf9f, on the
@@ -300,6 +336,8 @@ read the same at c916846, after A5, the killer of S06605 to S06608, gained its e
 | S06606 | `deploy/scripts/alert-telegram.sh` | the refusal exits 0 | A5 |
 | S06607 | `deploy/scripts/alert-telegram.sh` | the token's check removed | A5 |
 | S06608 | `deploy/scripts/alert-telegram.sh` | the owner id's check removed | A5 |
+| S06609 | `scripts/tests/_units.py` | the restart table admits a second value | A4's value test |
+| S06610 | `scripts/tests/test_deploy_templates.py` | the target check admits a target beside the alert's | A4's target test |
 
 **cargo-mutants on the loader's file.** `cargo mutants --package deck-streak-kernel --file
 crates/kernel/src/credentials.rs -j 1` (cargo-mutants 27.1.0), on the committed tree:

@@ -92,11 +92,19 @@ R2. The refusal fails the unit that loads the credential, and that unit's `OnFai
         lists, each read at every assignment, so the census never decides which of two is in
         force;
       - a key that is off the list of its unit's kind. The tests hold a literal list of
-        `(section, key)` pairs for the alert template and another for the units that page on
-        failure, `OnFailure=` being on the second alone. Every assignment of a unit, its own
-        drop-ins included, is checked against its list, and one off it, in any section, is refused
-        by its key: a `Requisite=`, a `Requires=`, a `BindsTo=`, an `X-` key, or a key the list
-        holds in another section. The lists are the keys the units use;
+        `(section, key)` pairs for the alert template and another for the units that load a
+        credential and page on failure, `OnFailure=` being on the second alone. Every assignment
+        of a unit, its own drop-ins included, is checked against its list, and one off it, in any
+        section, is refused by its key: a `Requisite=`, a `Requires=`, a `BindsTo=`, an `X-` key,
+        or a key the list holds in another section. The lists are the keys those units use, and
+        the tests hold each list equal to the `(section, key)` pairs its units hold, drop-ins
+        included;
+      - a value off the table of a key of a unit that loads a credential and pages on failure:
+        `Restart=` holds `on-failure`, the one value those units use, at every assignment, its
+        drop-ins included, and any other value is refused by its key and value;
+      - an `OnFailure=` of such a unit that is not exactly the alert template, at every
+        assignment, its drop-ins included: a target beside it, in its place, or an empty one is
+        refused by its key and value;
       - a `*.d/` directory under `deploy/` that is not the `<unit name>.d/` of a unit shipped
         beside it, the one directory of a file that is no unit excepted by name. Only a unit's own
         drop-in directory is read with it;
@@ -137,7 +145,9 @@ R4. ADR-067 records the decision and what it was chosen against. ADR-038 takes o
 R5. Where cargo-mutants makes no mutant, hand-proved rows in
     `scripts/mutation-rows.d/S06600-S06699.json` guard the refusal (SPEC-039 R8): the loader's
     check, the variant it returns, the id in its `Display`, the bound that admits a value of one
-    character, and the script's check, its exit and its check of each of its two credentials.
+    character, and the script's check, its exit and its check of each of its two credentials, the
+    table of the one restart value the units that page admit, and the check that their
+    `OnFailure=` is the alert template alone.
 R6. The engine probe (`crates/ingest/examples/engine_probe.rs`) reads the sync's two credentials
     through the loader, by the ids `deck_streak_ingest::settings` declares, as the sync's login
     does. A refusal ends it before it builds a login: it writes the refusal's `Display`, which names
@@ -168,7 +178,12 @@ A4 reads the templates with `_units.py`, as the rest of the census does. Its rea
 model how systemd reads a unit file: it reads the plain syntax the templates hold, and refuses each
 line R2 lists by its file and line (`logical_lines`, `assignments`). A5 reads the alert template
 with the same reader, so the two cannot drift, and both hold a unit to the literal list of its
-kind (`ALERT_KEYS`, `PAGING_KEYS`), refusing any key off it by name; only a unit's own `<name>.d/`
+kind (`ALERT_KEYS`, `PAGING_KEYS`), refusing any key off it by name, and A4 holds each list equal to the pairs its units hold; a
+table (`PAGING_VALUES`) holds the one `Restart=` value the units that page admit, and every
+`OnFailure=` of those units is the alert template alone, each checked at every assignment, drop-ins
+included, with plants for `Restart=always` and `Restart=on-success` on a `Type=oneshot` unit, for
+`Restart=always` in a drop-in, for a restart value extending the admitted one, for a target beside
+the alert's, in its place, after it and reset, and in a drop-in, and the admitted controls; only a unit's own `<name>.d/`
 is read with it, and A4 refuses any other `*.d/` directory under `deploy/`. A value splits into exit-status words at spaces and
 tabs alone (`status_words`), and a word is read only as a decimal of at most 255, with no sign and
 no leading zero, or as a status name `systemd-analyze exit-status` lists (`exit_status`); the
@@ -227,7 +242,7 @@ is proved with `python3 scripts/mutation_rows.py prove --band S06600-S06699`.
 | `deploy/README.md` | deploy | changed: an empty credential refuses start, and the alert unit's own refusal |
 | `scripts/tests/test_deploy_templates.py` | repo | changed: A4, the key lists' check, the drop-in directory check and the credential lines' reader |
 | `scripts/tests/test_alert_unit.py` | repo | changed: A5, and `run_alert` plants a credential's content; `unit_file` reads through `_units.py`'s reader |
-| `scripts/tests/_units.py` | repo | changed: one reader for A4 and A5 that refuses the lines R2 lists (`logical_lines`, `assignments`), an exit-status word read only as a decimal of at most 255 or a status name (`exit_status`, `status_words`), every assignment of a key (`Unit.every`), and the literal lists of keys per kind of unit (`ALERT_KEYS`, `PAGING_KEYS`, `off_list`) |
+| `scripts/tests/_units.py` | repo | changed: one reader for A4 and A5 that refuses the lines R2 lists (`logical_lines`, `assignments`), an exit-status word read only as a decimal of at most 255 or a status name (`exit_status`, `status_words`), every assignment of a key (`Unit.every`), and the literal lists of keys per kind of unit (`ALERT_KEYS`, `PAGING_KEYS`, `off_list`) and the table of admitted values (`PAGING_VALUES`) |
 | `scripts/mutation-rows.d/S06600-S06699.json` | repo | added: R5 |
 | `docs/schematics/startup-settings-and-secrets.md` | repo | changed: the loader's refusal of an empty credential |
 | `docs/schematics/alert-and-slo-path.md` | repo | changed: the alert unit's own refusal |
@@ -315,8 +330,10 @@ is proved with `python3 scripts/mutation_rows.py prove --band S06600-S06699`.
 - **Any key off a unit's list is refused, and only its own drop-in directory is read.** R2 and R3
   hold every unit to a literal list of `(section, key)` pairs for its kind, which closes the
   directives that stop a start without failing the unit (`Requisite=`, `Requires=`, `BindsTo=`)
-  along with every key the lists do not name; the lists are the keys the units use, and the alert
-  template's carries no `OnFailure=`. A4 refuses a `*.d/` directory under `deploy/` that is not a
+  along with every key the lists do not name; the lists are the keys those units use, the units
+  that load a credential and page on failure (a test holds each list equal to the pairs its units
+  hold), and the alert template's carries no `OnFailure=`. A table holds the one restart value
+  those units use, and their `OnFailure=` is the alert template alone. A4 refuses a `*.d/` directory under `deploy/` that is not a
   shipped unit's own `<unit name>.d/`, and the credential lines are read by the unit reader. Each
   addition pins what the templates already declare, so it is disclosed not red, with its plants
   committed red before each refusal (`docs/red-first/SPEC-066.md`).
