@@ -148,7 +148,7 @@ pub fn router(state: ApiState) -> Router {
                 law_tiers,
             ))
             .merge(session_routes::routes(access.clone()))
-            .merge(notifications_routes::routes(access.clone(), readiness)),
+            .merge(notifications_routes::routes(access, readiness)),
         None => routes,
     };
     let routes = match (owner_for_readings, readings) {
