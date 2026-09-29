@@ -152,18 +152,42 @@ already existed, so no test is renamed or removed and A11 and A12 keep their mea
 of three further arm rewrites: a `//` comment kept in the skeleton, the `#[cfg(test)]` requirement
 deleted from the out-of-line reading, and a raw string closed without its hashes. The unmodified
 guard stays green and prints the same `examined 24 Setting impl(s)`.
+
+A second review measured 72 rewrites of the guard's reader, in the lexer, in the out-of-line reading
+and in the selection of spellings, and 27 of them left the tests green while changing the guard's
+verdict on a tree of valid Rust. Assertions added to existing tests, and one line for the depth check
+of R8, turn 66 of the 73 rewrites red (the 72 and the depth check), and the unmodified guard still
+prints `examined 24`. Each of the seven that stay green is equivalent on valid Rust:
+
+- deleting the look-behind of the raw-string token (X11) differs only on a C raw string
+  `cr#"..."#`, which the rewrite reads more correctly, and #434 tracks that misreading;
+- swapping the two comment alternatives of the token pattern (T8) is inert, because `//` and `/*`
+  cannot both match at one place;
+- closing a raw string without its hashes (R3) leaves the closing hashes visible, and no valid Rust
+  puts a `[` after them;
+- ending an unterminated raw string at the failed search (R4) concerns a string that valid Rust does
+  not hold;
+- reading a backslash as a plain character (C3) is never reached, because the escape alternative
+  comes first;
+- allowing a raw newline in a character literal (C4) concerns a literal that valid Rust does not
+  hold;
+- leaving a `//` comment at the end of a file with no newline unhandled (L1) leaves at most the
+  file's last character unblanked, and one character spells no shape.
 R8. An out-of-line `#[cfg(test)] mod name;`, with or without `#[path = "..."]`, is read as the
 implementation file's own test module. The guard resolves the file the way rustc does for a
 declaration at the top level of the file: the `#[path]` value relative to the implementation file's
 directory, otherwise `name.rs` or `name/mod.rs` beside the file (below the file's own directory for a
 file that is not `lib.rs`, `main.rs` or `mod.rs`). It does not follow a `mod tests;` declared inside
-an inline `mod inner { }`: it reads `src/tests.rs` there, not `src/inner/tests.rs`, so the shape
-stays refused. That limit fails closed, and #406 tracks it.
+an inline `mod inner { }`: it reads no file for it, so a shape only that module spells stays
+refused. That limit fails closed, and #433 tracks it.
 R9. `impl Setting for` is read from comment-free source, so one inside a block comment is not
 examined.
 R10. Each of the eight rewrites and each of the three further arm rewrites has one row in the band
 S19200-S19299 (S19216 to S19228: thirteen rows, because the two new readings have a row each and a
-test may serve several), proved by its full id.
+test may serve several). So does each of the 28 arms of the reader that a second review found
+unpinned: nine of the lexer, seven of the out-of-line reading, eleven of the selection of spellings,
+and the depth check of R8 (S19229 to S19256). That is forty-one rows, S19216 to S19256, each proved
+by its full id.
 
 Insertions into the criteria of section 3 (the section is not edited, which keeps this file's earlier
 bytes as they were; the criteria are defined below, by insertion of new A-numbers, as SPEC-038 §8
@@ -171,7 +195,7 @@ ruling (i) allows):
 
 - A13 (out-of-line test modules) and A14 (an impl in a comment) are new tests, red first.
 - A15 is the set of assertions added inside the existing tests of A11 and A12, recorded `not red`
-  because the base guard already passed them; the thirteen rows prove each kills its rewrite.
+  because the base guard already passed them; the forty-one rows prove each kills its rewrite.
 
 ## 9. Amendment acceptance criteria
 
@@ -192,3 +216,7 @@ A15: python3 -m unittest discover -s scripts/tests -p test_setting_shapes.py -k 
 - It does not change any production line, `SHAPE` literal or setting (#406).
 - It does not make the lexer a full Rust parser: a `#[cfg(test)]` module written by a macro is
   still not counted (#406).
+- It does not follow a `mod tests;` declared inside an inline module, so a shape only that module
+  spells stays refused (#433).
+- It does not read a C raw string `cr#"..."#`: the guard misreads it, and the misreading fails
+  closed (#434).

@@ -110,7 +110,7 @@ A13: red at faaf43ec: AssertionError: Lists differ: ['demo::Depth (src/depth.rs)
 A13: green at 77ed28a0
 A14: red at faaf43ec: AssertionError: 2 != 1 : test_a_block_comment_holding_an_impl_is_not_examined
 A14: green at 77ed28a0
-A15: not red: the base guard already passed the assertions added inside A11's and A12's tests; the rows S19216 to S19228 prove each kills its rewrite
+A15: not red: the base guard already passed the assertions added inside A11's and A12's tests; the rows S19216 to S19256 prove each kills its rewrite
 ```
 
 The red run (`Ran 23 tests`, `FAILED (failures=5)`; one is the `lib.rs` case, `Lists differ:
@@ -121,11 +121,12 @@ The red run (`Ran 23 tests`, `FAILED (failures=5)`; one is the `lib.rs` case, `L
 ## Addendum, 2026-09-29, round 1 fix: three more arms are pinned
 
 Three rewrites of the guard were planted in a scratch copy, one at a time, and each one survived the
-tests as the head had them (`Ran 23 tests`, `OK`). e195540e adds one fixture line to each of three
-existing tests (no test is renamed or removed), so each rewrite now turns the module red by
+tests as the head had them (`Ran 23 tests`, `OK`). e195540e adds a fixture line and an assertion (X10), edits an existing
+string (X2) and adds a tuple element (H3) in three existing tests (no test is renamed or removed), so each rewrite now turns the module red by
 assertion; the unmodified guard prints `Ran 23 tests`, `OK`, `examined 24 Setting impl(s)`. The
-commit edits a test file, so these arms are recorded here and not as new criteria: they belong to
-A13 and A15, whose fence lines are unchanged. Rows S19226 to S19228 are proved KILLED by full id.
+commit edits a test file. It also changed the A13 and A15 fence lines and SPEC-192's A15
+acceptance line (6f04f76d); these arms are recorded here and not as new criteria: they belong to
+A13 and A15. Rows S19226 to S19228 are proved KILLED by full id.
 
 ```text
 X2 (a `//` comment kept in the skeleton): survives before; after, line 349, AssertionError: 0 != 1 : test_a_production_line_after_the_own_files_test_module_is_refused
@@ -135,3 +136,32 @@ X10 (a raw string closed without its hashes): survives before; after, line 332, 
 
 A15's decider now selects `TheGuardJudgesAPlantedTree` and `TheGuardReadsRustSource` (16 tests, `OK`).
 Run under that selection alone, each of the eight rewrites turns it red.
+
+## Addendum, 2026-09-29, round 2: the guard's tests kill every arm of its reader
+
+A second mutation review planted 72 rewrites of the guard's reader in a scratch copy. At the head
+(6f04f76d) 27 of them changed a verdict on a valid Rust tree and survived: nine of the lexer, seven
+of the out-of-line reading and eleven of the selection of spellings. Seven more are equivalent on
+valid Rust and are named in SPEC-192 section 8. Criteria A13 and A15 cover them; this round adds no
+criterion.
+
+The new assertions and fixture lines were committed alone at 58448ad2, against the guard as the head
+left it. Only one is red there, by assertion: the guard follows a `mod tests;` declared inside an
+inline `mod inner { }`, and reads a file the compiler would not.
+
+```text
+A13: red at 58448ad2: Ran 23 tests, FAILED (failures=1): AssertionError: 0 != 1 : mod inner {  (test_a_file_that_is_no_declared_test_module_is_not_read_as_one)
+A13: green at 45515771: Ran 23 tests, OK, examined 24 Setting impl(s)
+```
+
+Every other new assertion passes at 58448ad2 (`not red`): each pins behaviour the head already had,
+and the head's tests did not check it, so the proof is the row, not a red run. The guard change at
+45515771 is the depth check in `out_of_line`: a declaration at brace depth above zero is skipped.
+
+The replay ran the 73 rewrites (the 72, with the depth check deleted as the seventy-third) against
+the committed tests: 66 turn the module red, and exactly the seven equivalents survive (X11, T8, R3,
+R4, C3, C4, L1). S12 turns red by assertion, not by an error: the killer now catches the guard's
+TypeError and fails with `a shape with no literal must be refused, not crash the guard`.
+
+The 28 rows S19229 to S19256 are proved KILLED by full id; the band holds forty-one script rows,
+S19216 to S19256.
