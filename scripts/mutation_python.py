@@ -61,7 +61,6 @@ CONTROL_SECONDS = 900.0
 #: A mutant's bound is the larger of this floor and five times the control's seconds.
 BOUND_FLOOR = 60.0
 BOUND_FACTOR = 5
-LISTED_SHARDS_MAX = 8
 OUTCOMES = ("killed", "survived", "uncovered", "unviable", "timeout", "void")
 EXIT_OK, EXIT_SURVIVED, EXIT_USAGE, EXIT_VOID, EXIT_RESTORE = 0, 1, 2, 3, 4
 NEWLINE = re.compile(r"\r\n|\r|\n")
