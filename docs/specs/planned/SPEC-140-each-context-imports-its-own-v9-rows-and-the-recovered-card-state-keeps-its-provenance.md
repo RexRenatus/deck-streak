@@ -21,8 +21,8 @@
   recovered card state keeps its origin in its own column).
 - **Prerequisites:** SPEC-020, SPEC-021, SPEC-029, SPEC-040, SPEC-045 and SPEC-071 (landed); SPEC-046,
   SPEC-047, SPEC-072, SPEC-073, SPEC-074, SPEC-076, SPEC-077, SPEC-078, SPEC-079, SPEC-083,
-  SPEC-093, SPEC-099, SPEC-107 and SPEC-110 (planned, unlanded), and SPEC-138 (W7, in its plan's
-  review, unlanded). **Mutation band:** `S14000-S14099`.
+  SPEC-093, SPEC-099, SPEC-107 and SPEC-110 (planned, unlanded), and SPEC-138 (W7, planned,
+  unlanded). **Mutation band:** `S14000-S14099`.
 - **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
   `docs/specs/` with its tests and `docs/red-first/SPEC-140.md` (ADR-016).
 

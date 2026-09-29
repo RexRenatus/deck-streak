@@ -17,7 +17,7 @@
   checklist moves each side-by-side switch, one at a time, after the owner's go).
 - **Prerequisites:** SPEC-021 and SPEC-041 (landed); SPEC-080, SPEC-081, SPEC-082, SPEC-084, SPEC-100,
   SPEC-101, SPEC-102, SPEC-103, SPEC-104, SPEC-105 and SPEC-106 (planned, unlanded); SPEC-130 and
-  SPEC-137 (W7, in its plan's review, unlanded); and SPEC-140 (this wave, unlanded).
+  SPEC-137 (W7, planned, unlanded); and SPEC-140 (this wave, unlanded).
   **Mutation band:** `S14100-S14199`.
 - **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
   `docs/specs/` with its tests and `docs/red-first/SPEC-141.md` (ADR-016).
