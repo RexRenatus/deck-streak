@@ -33,6 +33,7 @@ describe('insight parsers', () => {
   });
 
   it('refuses a listing that is not one', () => {
+    expect(parseListings({ instruments: [] })).toEqual([]);
     expect(parseListings(null)).toBeNull();
     expect(parseListings([])).toBeNull();
     expect(parseListings({})).toBeNull();
@@ -84,6 +85,7 @@ describe('insight parsers', () => {
 
   it('refuses Dark Fields that are not the stored shape', () => {
     const bad = (over: Record<string, unknown>) => parseDarkFields({ ...STORED, ...over });
+    expect(bad({})?.darkFieldsTotal).toBe(9);
     expect(parseDarkFields(null)).toBeNull();
     expect(parseDarkFields([])).toBeNull();
     expect(bad({ dark_fields: 'x' })).toBeNull();

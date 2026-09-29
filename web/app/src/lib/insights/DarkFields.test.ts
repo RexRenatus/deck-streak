@@ -60,6 +60,7 @@ describe('DarkFields', () => {
         })
       }
     });
+    expect(screen.getAllByRole('listitem')).toHaveLength(1);
     expect(screen.queryByText(/more not shown/i)).toBeNull();
     expect(screen.queryByText(/0 more/i)).toBeNull();
   });

@@ -329,6 +329,10 @@ The delivery touched these files beyond the rows above:
 - `tools/parity-oracle/goldens/dark_fields.special_names.json`
 - `web/app/messages/en.json`
 - `web/app/src/lib/api.ts`
+- `web/app/src/lib/api.test.ts`
+- `web/app/src/lib/insights-page.test.ts`
+- `web/app/src/lib/insights/insights.test.ts`
+- `scripts/mutation-equivalent.d/miniapp.json`
 - `web/app/src/lib/startapp.test.ts`
 - `web/app/src/lib/startapp.ts`
 - `docs/decisions/ADR-094-the-instruments-run-weekly-after-the-sync-or-on-demand-and-coordination-stores-the-latest-report.md`
