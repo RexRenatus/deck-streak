@@ -55,6 +55,10 @@ You can also export and erase on the host that runs DeckStreak:
 - **The backup replica** keeps erased data for at most 3 days (`P3D`): Litestream takes a
   snapshot every 24 hours and keeps each for 48 hours, so an erased row leaves the replica within
   72 hours.
+- **The daily copies of the database** keep erased data for at most 3 days (`P3D`): one copy is
+  made each day, the newest three are kept, and the oldest is removed when a fourth is in place, so
+  an erased row leaves them within 3 days. They hold the database and nothing else: not the
+  private copy of your collection.
 - **The service journal** keeps its log lines for at most 14 days (`P14D`), and journald then
   deletes them.
 - **The private copy of your collection** is your own Anki data: an erase leaves it, and the next
