@@ -229,6 +229,7 @@ A25: cargo test -p deck-streak-readings --test coverage -- --exact an_unclosed_t
 | `docs/specs/SPEC-046-readings-generation-gates-and-repair.md` | docs | moved from `docs/specs/planned/` |
 | `docs/decisions/ADR-046-word-target-coverage-gates-and-one-repair.md` | docs | existing on dev, changed here |
 | `docs/red-first/SPEC-046.md` | docs | added |
+| `changelog.d/feat-readings-046.md` | repo | added |
 
 ## 5. What this does NOT do
 
