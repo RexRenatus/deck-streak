@@ -6,8 +6,7 @@
   device key as a credential from the credential socket), ADR-054 (the AI route is optional, and
   no-AI mode is the default and a first-class path), and ADR-043 (a shell runner, the gate as the
   packs' own probes, the duty caps).
-- **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
-  `docs/specs/` with its tests and `docs/red-first/SPEC-043.md` (ADR-016).
+- **Status:** built (`docs/red-first/SPEC-043.md`, ADR-016).
 
 ## 1. The problem, measured
 
@@ -138,7 +137,7 @@ R17. None of R1 to R14's proxy-runner criteria is a precondition for the crate's
 | A6 | each red-team case (instruction override, fence breakout, exfiltration link) is withheld by the gate | ai-content-safety `redteam-present`; `every_redteam_case_is_withheld_by_the_gate` |
 | A7 | a run that reaches its turn cap is stopped and delivers nothing, and its verdict names `turn_cap` | `a_run_past_its_turn_cap_delivers_nothing` |
 | A8 | a run that reaches its wall clock is stopped and delivers nothing, and its verdict names `time_cap` | `a_run_past_its_wall_clock_delivers_nothing` |
-| A9 | an output failing a blocking class is withheld, the class is recorded in `agent_runs`, and the fake vault and router receive nothing | `an_output_failing_a_blocking_class_is_withheld_and_recorded` |
+| A9 | an output failing a blocking class is withheld, the class is recorded in `agent_runs`, the fake vault receives nothing, and the router receives ONE alert carrying only the class, never the content | `an_output_failing_a_blocking_class_is_withheld_and_recorded` |
 | A10 | every untrusted input is fenced alone, JSON-encoded, with `<` and `>` escaped, and no system file holds untrusted text | `every_untrusted_input_is_fenced_alone_and_encoded` |
 | A11 | the prompt is composed in persona-core's order | `the_prompt_is_composed_in_the_persona_order` |
 | A12 | an unreachable proxy yields an unavailable verdict with `proxy_unreachable`, one alert, and nothing delivered | `an_unreachable_proxy_is_unavailable_with_its_cause` |
@@ -154,13 +153,25 @@ A5: python3 -m unittest discover -s scripts/tests -p test_ai_safety_rows.py -k t
 A6: cargo test -p deck-streak-agent --test redteam -- --exact every_redteam_case_is_withheld_by_the_gate
 A7: cargo test -p deck-streak-agent --test runner -- --exact a_run_past_its_turn_cap_delivers_nothing
 A8: cargo test -p deck-streak-agent --test runner -- --exact a_run_past_its_wall_clock_delivers_nothing
-A9: cargo test -p deck-streak-agent --test gate -- --exact an_output_failing_a_blocking_class_is_withheld_and_recorded
+A9: cargo test -p deck-streak-agent --test duty -- --exact an_output_failing_a_blocking_class_is_withheld_and_recorded
 A10: cargo test -p deck-streak-agent --test compose -- --exact every_untrusted_input_is_fenced_alone_and_encoded
 A11: cargo test -p deck-streak-agent --test compose -- --exact the_prompt_is_composed_in_the_persona_order
 A12: cargo test -p deck-streak-agent --test runner -- --exact an_unreachable_proxy_is_unavailable_with_its_cause
-A13: cargo test -p deck-streak-agent --test rights -- --exact the_agent_runs_are_exported_and_erased
-A14: cargo test -p deck-streak-agent --test runner -- --exact an_absent_route_records_ai_route_absent_and_alerts_nothing
+A13: cargo test -p deck-streak-agent --test data_rights -- --exact the_agent_runs_are_exported_and_erased
+A14: cargo test -p deck-streak-agent --test duty -- --exact an_absent_route_records_ai_route_absent_and_alerts_nothing
 ```
+
+## 3a. What the box run judges
+
+The ai-content-safety probes are box-only (ADR-069). `test_every_ai_content_safety_row_is_green`
+checks the structure of `ai-safety.json` and the red-team cases on every run, and runs the real
+probes only when the packs' scripts are present (`DECKSTREAK_PACKS_SCRIPTS`); the box run is where
+each row is judged over `ai-safety.json`, none VOID. The rows it names: `redteam-present` (the five
+cases in `agent/redteam/`), `disclosure-first-contact` (the learner's first contact is the bot's
+`/start` reply, which says
+the coach is an AI; no web change here) and every other ai-content-safety row the pack lists over
+`ai-safety.json`, including the blocking output classes the gate runs before any delivery. The
+subscription-proxy client rows and the apiKeyHelper scan are judged there too.
 
 ## 4. File manifest
 
@@ -186,13 +197,15 @@ A14: cargo test -p deck-streak-agent --test runner -- --exact an_absent_route_re
 | `crates/agent/src/gate.rs` | `deck-streak-agent` | added: the output gate over the box-run packs' probes |
 | `crates/agent/src/verdict.rs` | `deck-streak-agent` | added: the verdict and its closed causes |
 | `crates/agent/src/runs.rs` | `deck-streak-agent` | added: the `agent_runs` repository |
-| `crates/agent/src/rights.rs` | `deck-streak-agent` | added: the data-rights port |
+| `crates/agent/src/data_rights.rs` | `deck-streak-agent` | added: the data-rights port |
 | `migrations/004301_agent_runs.sql` | `deck-streak-agent` | added |
 | `crates/agent/tests/runner.rs` | `deck-streak-agent` | added |
 | `crates/agent/tests/compose.rs` | `deck-streak-agent` | added |
 | `crates/agent/tests/gate.rs` | `deck-streak-agent` | added |
+| `crates/agent/tests/duty.rs` | `deck-streak-agent` | added: the duty engine's order, A9 and A14 |
+| `crates/agent/tests/support/mod.rs` | `deck-streak-agent` | added: the recorded alerts, vault, runner and gate fakes |
 | `crates/agent/tests/redteam.rs` | `deck-streak-agent` | added |
-| `crates/agent/tests/rights.rs` | `deck-streak-agent` | added |
+| `crates/agent/tests/data_rights.rs` | `deck-streak-agent` | added |
 | `crates/agent/tests/fixtures/` | `deck-streak-agent` | added: the fake runner and its canned replies |
 | `scripts/tests/test_ai_safety_rows.py` | repo | added |
 | `scripts/check.sh` | repo | changed: the python stage also discovers `agent/tests` |
@@ -203,6 +216,9 @@ A14: cargo test -p deck-streak-agent --test runner -- --exact an_absent_route_re
 | `Cargo.lock`, `.sqlx/` | workspace | changed |
 | `docs/schematics/agent-duty-run.md` | docs | added |
 | `docs/specs/SPEC-043-agent-core-runner-gate-and-degradation.md` | docs | moved from `docs/specs/planned/` |
+| `changelog.d/feat-agent-core-043.md` | docs | added |
+| `scripts/mutation-rows.d/S04300-S04399.json` | repo | added: the constants' rows |
+| `PRIVACY.md` | docs | changed: the agent-runs row |
 | `docs/decisions/ADR-043-shell-runner-pack-gate-and-duty-caps.md` | docs | added |
 | `docs/red-first/SPEC-043.md` | docs | added |
 
