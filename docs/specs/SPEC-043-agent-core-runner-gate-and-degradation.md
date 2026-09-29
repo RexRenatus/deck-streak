@@ -163,15 +163,19 @@ A14: cargo test -p deck-streak-agent --test duty -- --exact an_absent_route_reco
 
 ## 3a. What the box run judges
 
-The ai-content-safety probes are box-only (ADR-069). `test_every_ai_content_safety_row_is_green`
-checks the structure of `ai-safety.json` and the red-team cases on every run, and runs the real
-probes only when the packs' scripts are present (`DECKSTREAK_PACKS_SCRIPTS`); the box run is where
-each row is judged over `ai-safety.json`, none VOID. The rows it names: `redteam-present` (the five
-cases in `agent/redteam/`), `disclosure-first-contact` (the learner's first contact is the bot's
-`/start` reply, which says
-the coach is an AI; no web change here) and every other ai-content-safety row the pack lists over
-`ai-safety.json`, including the blocking output classes the gate runs before any delivery. The
-subscription-proxy client rows and the apiKeyHelper scan are judged there too.
+The ai-content-safety probes are box-only (ADR-069). The tree's own test checks the structure of
+`ai-safety.json` and the red-team cases on every run, and runs the real probes only when the
+packs' scripts are present; the box run is where each row is judged over `ai-safety.json`, none VOID.
+
+| id | what it judges | population it must examine |
+|---|---|---|
+| B1 | the pack's `redteam-present` row: every case in `agent/redteam/` is present and is a case the gate withholds | the 5 red-team cases under `agent/redteam/` |
+| B2 | the pack's `disclosure-first-contact` row: the learner's first contact says the coach is an AI (the bot's `/start` reply; no web change here) | the 1 disclosure surface `ai-safety.json` names |
+| B3 | every other ai-content-safety row the pack lists, including the blocking output classes the gate runs before any delivery | the 1 duty (the daily reading) and its 2 prompt templates in `ai-safety.json` |
+| B4 | the subscription-proxy client rows and the apiKeyHelper scan | the 1 runner `agent/run-headless.sh` and the 1 settings template `agent/settings.json` |
+
+The private wiring change that enforces them: the ai-content-safety pack becomes `enforced`, and the
+apiKeyHelper scan's waiting entry is lifted; the JSON diff is handed back with this delivery.
 
 ## 4. File manifest
 
