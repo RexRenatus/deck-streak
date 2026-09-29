@@ -16,7 +16,7 @@
 #
 # Configuration (environment; only the first two are needed on the maintainer's machine):
 #   DECKSTREAK_DEPLOY_REPO           owner/name of the repository whose release is installed
-#   DECKSTREAK_DEPLOY_HOST           the command that runs a shell on the host (ssh with its target)
+#   DECKSTREAK_DEPLOY_HOST           a command that runs its argv on the host as given (the private rail's host command)
 #   DECKSTREAK_DEPLOY_ELEVATE        the host's privilege command, default sudo (empty for none)
 #   DECKSTREAK_DEPLOY_CHECKOUT       the checkout whose tags are read, default this script's tree
 #   DECKSTREAK_DEPLOY_ROOT, _UNIT_DIR, _ENV_FILE, _CADDY_DIR, _CADDYFILE, _CADDY_CONFIG,
@@ -53,8 +53,10 @@ on_host() {
 }
 
 # The tag is SemVer, annotated, and on origin's main. Nothing has been fetched from the release.
+# It leaves `checkout` set: the checkout whose tag the Caddy block is later read from.
+checkout=
 verify_tag() {
-    local tag=$1 checkout kind
+    local tag=$1 kind
     [[ $tag =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] ||
         die "$tag is not a SemVer tag (vMAJOR.MINOR.PATCH)"
     checkout=${DECKSTREAK_DEPLOY_CHECKOUT:-$(git -C "$here" rev-parse --show-toplevel)}
@@ -92,7 +94,7 @@ install_units() {
             [ -f "$c" ] && install -m 0644 "$c" "$unitdir/$n/$(basename "$c")"
         done
     done
-    for d in "$unitdir"/*@*.d; do
+    for d in "$unitdir"/deck-streak-*@*.d; do
         [ -d "$d" ] || continue
         n=$(basename "$d")
         for c in "$d"/*.conf; do
@@ -156,8 +158,8 @@ checked=$(mktemp)
 for f in "$rel"/deploy/systemd/*.service "$rel"/deploy/systemd/*@*.d; do
     [ -e "$f" ] || continue
     u=$(basename "$f")
-    # The exit status is not read: the effective check refuses an output that shows no unit.
-    systemctl cat "${u%.d}" >>"$checked" || true
+    systemctl cat "${u%.d}" >>"$checked" ||
+        { echo "deploy: ${u%.d} could not be shown" >&2; : >"$checked"; break; }
 done
 python3 "$rel/deploy/scripts/effective-check.py" --root "$rel" "$checked" ||
     { echo "deploy: the effective configuration is refused" >&2; find "$checked" -delete
@@ -171,7 +173,12 @@ ready || back deck-streak-api.service
 restart deck-streak-bot.service || back deck-streak-bot.service
 
 if [ "$mode" = install ]; then
-    doomed=$(ls "$root/releases" | grep -v '^\.' | grep -vxF "$tag" | sort -V -r | tail -n +"$keep")
+    prevname=
+    [ -n "$prev" ] && prevname=$(basename "$prev")
+    spare=$((keep - 1))
+    [ -n "$prevname" ] && spare=$((keep - 2))
+    doomed=$(find "$root/releases" -mindepth 1 -maxdepth 1 -printf '%f\n' | grep -v '^\.' | grep -v '\.partial$' |
+        grep -vxF -e "$tag" -e "${prevname:-$tag}" | sort -V -r | tail -n +"$((spare + 1))")
     for old in $doomed; do
         find "$root/releases/$old" -delete
     done
@@ -219,6 +226,7 @@ rollback_tag() {
     local tag=$1
     verify_tag "$tag"
     need_host
+    # shellcheck disable=SC2016  # a literal script for the host
     if on_host 'test -d "$1/releases/$2"' "$ROOT" "$tag" </dev/null; then
         run_host switch "$tag" </dev/null
     else
@@ -227,12 +235,17 @@ rollback_tag() {
 }
 
 caddy_install() {
-    local tag=$1 config=${DECKSTREAK_DEPLOY_CADDY_CONFIG:-} block
+    local tag=$1 config=${DECKSTREAK_DEPLOY_CADDY_CONFIG:-} block template
     verify_tag "$tag"
     [ -n "$config" ] && [ -f "$config" ] || die "the private Caddy configuration is missing"
     need_host
-    block=$(python3 "$here/scripts/render-caddy.py" --config "$config" --template "$here/caddy/deck-streak.caddy") ||
+    release_tmp=$(mktemp -d)
+    template=$release_tmp/deck-streak.caddy
+    git -C "$checkout" show "refs/tags/$tag:deploy/caddy/deck-streak.caddy" >"$template" ||
+        die "$tag holds no Caddy block"
+    block=$(python3 "$here/scripts/render-caddy.py" --config "$config" --template "$template") ||
         die "the Caddy block was not rendered"
+    # shellcheck disable=SC2016  # a literal script for the host
     printf '%s\n' "$block" | on_host '
 set -eu
 dir=$1 file=$2 line=$3
@@ -249,8 +262,8 @@ undo() {
     echo "deploy: the Caddy configuration was refused" >&2
     exit 1
 }
-caddy validate --config "$copy" || undo
-caddy adapt --config "$copy" --validate >/dev/null || undo
+caddy validate --adapter caddyfile --config "$copy" || undo
+caddy adapt --adapter caddyfile --config "$copy" --validate >/dev/null || undo
 mv -T "$copy" "$file"
 [ -n "$had" ] && find "$had" -delete
 caddy reload --config "$file"
@@ -259,13 +272,14 @@ caddy reload --config "$file"
 
 caddy_remove() {
     need_host
+    # shellcheck disable=SC2016  # a literal script for the host
     on_host '
 set -eu
 dir=$1 file=$2 line=$3
 copy=$dir/deck-streak.candidate
 grep -vxF "$line" "$file" >"$copy" || true
-caddy validate --config "$copy" || { find "$copy" -delete; echo "deploy: refused" >&2; exit 1; }
-caddy adapt --config "$copy" --validate >/dev/null || { find "$copy" -delete; exit 1; }
+caddy validate --adapter caddyfile --config "$copy" || { find "$copy" -delete; echo "deploy: refused" >&2; exit 1; }
+caddy adapt --adapter caddyfile --config "$copy" --validate >/dev/null || { find "$copy" -delete; exit 1; }
 mv -T "$copy" "$file"
 [ -f "$dir/deck-streak.caddy" ] && find "$dir/deck-streak.caddy" -delete
 caddy reload --config "$file"

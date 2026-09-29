@@ -207,9 +207,14 @@ def instance_dropins(deploy):
     for folder in sorted(deploy.rglob("*.d")):
         stem = folder.name.removesuffix(".d")
         head, at, tail = stem.partition("@")
-        if folder.is_dir() and at and head and tail.count(".") == 1 and tail.endswith(
-            tuple(UNIT_TYPES)
-        ) and not tail.startswith("."):
+        if (
+            folder.is_dir()
+            and at
+            and head
+            and tail.count(".") == 1
+            and tail.endswith(tuple(UNIT_TYPES))
+            and not tail.startswith(".")
+        ):
             yield stem, sorted(folder.glob("*.conf"))
 
 

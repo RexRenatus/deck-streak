@@ -30,7 +30,6 @@ jobs:
       attestations: write
     env:
       CARGO_INCREMENTAL: "0"
-      GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -97,11 +96,17 @@ jobs:
             echo "Tarball: $(stat -c %s "$out/deck-streak-$tag.tar.gz") bytes."
           } >> "$GITHUB_STEP_SUMMARY"
       - name: a draft release, so nothing is visible until the last upload
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: gh release create "$GITHUB_REF_NAME" --draft --verify-tag --title "$GITHUB_REF_NAME" --notes "Release $GITHUB_REF_NAME"
       - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-path: ${{ env.OUT }}/deck-streak-${{ github.ref_name }}.tar.gz
       - name: attach the tarball and its digests
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: gh release upload "$GITHUB_REF_NAME" "$OUT/deck-streak-$GITHUB_REF_NAME.tar.gz" "$OUT/SHA256SUMS"
       - name: publish, last
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: gh release edit "$GITHUB_REF_NAME" --draft=false

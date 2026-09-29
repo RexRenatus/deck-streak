@@ -423,7 +423,8 @@ def judge(unit_file, dropins, contract):
             refuse(f"a file shown twice: {source}; a name that holds a newline can print its path")
         seen.add(source)
         shipped = (PurePosixPath(source).parent.name, PurePosixPath(source).name)
-        if source not in (path, own) and shipped not in contract["shipped"]:
+        beside = PurePosixPath(source).parent.parent == PurePosixPath(path).parent
+        if source not in (path, own) and not (beside and shipped in contract["shipped"]):
             refuse(f"a drop-in that is not the rail's: {source}")
         for header in glued:
             refuse(f"a file header not after an empty line: {header}")

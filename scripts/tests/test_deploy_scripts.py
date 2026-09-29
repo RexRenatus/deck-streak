@@ -32,8 +32,8 @@ SLUG = "owner/synthetic"
 API = "deck-streak-api.service"
 BOT = "deck-streak-bot.service"
 JOB = "deck-streak-job"
-# Built from parts: this file names no private word either.
-PRIVATE_PATHS = "/opt/" + "aol|g" + "cloud|\\bprivate-" + "deny"
+# No shipped deploy file names a path under /opt.
+PRIVATE_PATHS = "/opt/"
 SYSTEMD = "deploy/systemd"
 
 GH = r"""#!/bin/bash
@@ -95,7 +95,7 @@ while [ $# -gt 0 ]; do
     shift
 done
 echo "caddy $all imports=$(grep -c import "$conf" 2>/dev/null)" >> "$STUB_LOG/caddy.log"
-if [ -n "$STUB_CADDY_ADAPTER_RULE" ] && [ "$first" = validate ] && [ "$adapter" != caddyfile ]; then
+if [ "$first" = validate ] && [ "$adapter" != caddyfile ]; then
     name=$(basename "$conf")
     case "$name" in Caddyfile* | *.caddyfile) ;; *) echo "invalid character: not JSON" >&2; exit 1 ;; esac
 fi
@@ -214,7 +214,6 @@ class World:
             "STUB_BAD_UNIT": "",
             "STUB_BAD_TAG": "",
             "STUB_CAT_FAIL": "",
-            "STUB_CADDY_ADAPTER_RULE": "",
             "DECKSTREAK_DEPLOY_REPO": SLUG,
             "DECKSTREAK_DEPLOY_HOST": str(self.stub / "bin" / "host"),
             "DECKSTREAK_DEPLOY_ELEVATE": "",
@@ -253,6 +252,9 @@ class World:
     def commit(self, message):
         self.n = getattr(self, "n", 0) + 1
         (self.other / "f.txt").write_text(f"{message} {self.n}\n", encoding="utf-8")
+        block = self.other / "deploy" / "caddy" / "deck-streak.caddy"
+        block.parent.mkdir(parents=True, exist_ok=True)
+        block.write_bytes((REPO / "deploy" / "caddy" / "deck-streak.caddy").read_bytes())
         self.git("add", "-A", cwd=self.other)
         self.git("commit", "-q", "-m", message, cwd=self.other)
 
@@ -640,10 +642,9 @@ class TheCaddyInstall(Case):
         caddyfile.write_text("example.org {\n\trespond 200\n}\n", encoding="utf-8")
         w.ship("v1.0.0")
         self.ok(w.deploy("v1.0.0"))
-        rule = {"STUB_CADDY_ADAPTER_RULE": "1"}
-        installed = w.run(DEPLOY, "caddy-install", "v1.0.0", **self.config(), **rule)
+        installed = w.run(DEPLOY, "caddy-install", "v1.0.0", **self.config())
         self.assertEqual(installed.returncode, 0, installed.stdout + installed.stderr)
-        removed = w.run(ROLLBACK, "caddy-remove", **self.config(), **rule)
+        removed = w.run(ROLLBACK, "caddy-remove", **self.config())
         self.assertEqual(removed.returncode, 0, removed.stdout + removed.stderr)
 
 
