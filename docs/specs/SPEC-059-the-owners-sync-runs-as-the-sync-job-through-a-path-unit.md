@@ -133,3 +133,10 @@ A7: cargo test -p deck-streak-daemon --test sync_request -- --exact the_real_rou
   scope) leaves the request pending too, so the owner is told the sync is still running until the
   answer bound and the next request or the daily timer serves it again. The ledger records no
   refused owner run, and this delivery adds no table for one.
+
+## 7. Amendment (SPEC-128)
+
+The last bullet of section 5 and the third risk of section 6 stand as written for the delivery they
+describe. SPEC-128 (#323) closes what they name: a refusal on the job side is now recorded on
+`ingest_state` beside the pending flag, the flag is cleared in the same write, and the owner is
+answered with the refusal's code instead of being told the sync is still running.
