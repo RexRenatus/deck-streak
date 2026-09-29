@@ -356,7 +356,7 @@ delivery claims none of it.
 | `crates/coordination/src/progression/level_view.rs` | `deck-streak-coordination` | changed: the level-up occasion's milestone text |
 | `crates/coordination/src/widget.rs` | `deck-streak-coordination` | added: the widget's reads and the refresh |
 | `crates/coordination/src/sync_cycle.rs` | `deck-streak-coordination` | changed: the widget step after the recompute |
-| `crates/coordination/src/jobs.rs` | `deck-streak-coordination` | changed: the job `widget_refresh`, which `job_table.rs`'s existing test holds equal to its timer |
+| `crates/coordination/src/jobs.rs` | `deck-streak-coordination` | changed: the job `widget_refresh`, which `job_table.rs`'s test, as SPEC-100 changes it, holds equal to its timer on the sending template |
 | `crates/coordination/src/lib.rs` | `deck-streak-coordination` | changed: the widget module |
 | `crates/coordination/src/data_rights_registry.rs` | `deck-streak-coordination` | changed: `widget_messages` under notifications' port |
 | `crates/coordination/tests/landmarks_step.rs` | `deck-streak-coordination` | added: A25 to A27 |

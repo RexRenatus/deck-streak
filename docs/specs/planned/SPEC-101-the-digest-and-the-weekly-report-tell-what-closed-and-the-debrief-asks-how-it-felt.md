@@ -305,7 +305,7 @@ it, and the message metadata stays deferred (#257): this delivery claims neither
 | `crates/coordination/src/digests/daily.rs` | `deck-streak-coordination` | added: the digest's reads, the lapse path and the occasion |
 | `crates/coordination/src/digests/weekly.rs` | `deck-streak-coordination` | added: the weekly's reads, each block's isolation, the settle and the occasion |
 | `crates/coordination/src/lib.rs` | `deck-streak-coordination` | changed: the digests module |
-| `crates/coordination/src/jobs.rs` | `deck-streak-coordination` | changed: the two schedules and the jobs `daily_digest` and `weekly_report`, which `job_table.rs`'s existing test holds equal to their timers |
+| `crates/coordination/src/jobs.rs` | `deck-streak-coordination` | changed: the two schedules and the jobs `daily_digest` and `weekly_report`, which `job_table.rs`'s test, as SPEC-100 changes it, holds equal to their timers on the sending template |
 | `crates/coordination/src/data_rights_registry.rs` | `deck-streak-coordination` | changed: `debrief_ratings` under notifications' port |
 | `crates/coordination/tests/digest_job.rs` | `deck-streak-coordination` | added: A22 to A25 |
 | `crates/coordination/tests/weekly_job.rs` | `deck-streak-coordination` | added: A26 to A29 |

@@ -96,7 +96,11 @@ R1. The bot asks for channel posts beside the owner's messages and taps. Its gat
     app's name (lowercased, its first 24 characters, letters, digits, `_` and `-`) and the kinds
     `ds`, `de`, `ao` and `test` equal the golden of `parse`.
 R2. A ping is valid when its token equals the first 8 characters of the rail's secret and its
-    instant lies within 15 hours of now (the golden of `valid`). The secret is the credential `tripwire-secret`, read at start by the bot role through its credential loader (ADR-038). A missing credential reads as none, so no ping is valid; an empty one refuses start (SPEC-066 R1). No unit names it until a source is bound (#170): the delivery that binds one adds the bot unit's `LoadCredential=` line and the rail's answer.
+    instant lies within 15 hours of now (the golden of `valid`). The secret is the credential
+    `tripwire-secret`, read at start by the bot role through its credential loader (ADR-038). A
+    missing credential reads as none, so no ping is valid; an empty one refuses start (SPEC-066 R1).
+    No unit names it until a source is bound (#170): the delivery that binds one adds the bot unit's
+    `LoadCredential=` line and the rail's answer.
 R3. While no source is bound, a valid test ping binds its source and every other ping is ignored:
     nothing is recorded, nothing answers and nothing fines. A ping from any other source than the
     bound one is ignored. An invalid ping from the bound source records `spoof` and answers nothing.
@@ -215,7 +219,11 @@ R22. Discipline owns `tripwire_events` (the app, the instant, the verdict, the s
     the instant, lifted or consumed), each `STRICT` with `created_at`, created by
     `migrations/010401_discipline_tripwire.sql`.
 R23. Every rail message goes through the router under the policy's kind `discipline` (SPEC-105,
-    ADR-104), except the free spin's celebration (R18). The rail's defections inside a committed
+    ADR-104), except the free spin's celebration (R18). The sync's rail step (R15's step-down
+    notice, R16's canary notice) records each message pending in the ledger, as SPEC-106 R17 does:
+    when the cycle carries a router (the owner's sync), the cycle's flush delivers it at once;
+    otherwise it waits for `discipline_tick` (SPEC-105 R12), which delivers it through the router on
+    its next run. The rail's defections inside a committed
     window or a hard-mode night are passed to their evaluation (SPEC-105), so a window's `red` and a
     night's pings count them from this delivery on; neither fines them again.
 R24. `/tripwire` shows the rail's state (bound, verified, suspended, the rung, today's counts) and
@@ -259,7 +267,8 @@ R25. Discipline's data-rights port exports and erases the four tables (`tripwire
 | A26 | an erase empties the four tables, resets the state row and unbinds the source | `an_erase_empties_the_rail_and_unbinds_it` |
 | A27 | the poll asks for channel posts, and the gate admits a channel post as a rail post only, never as the owner's message or command, and drops one over the cap | `a_channel_post_reaches_only_the_rail` |
 | A28 | an idle-only defection whose study reviews before its instant reach 15 is cleared at settlement and fines nothing, one at 14 is fined, and a window defection is fined whatever the reviews; nothing settles before its cycle | `an_idle_defection_with_its_reviews_is_cleared_at_settlement` |
-| A29 | a bot role started with no `tripwire-secret` starts and refuses every ping, and one started with an empty one refuses start, each through the credential loader and never the environment | `the_bot_role_reads_the_rails_secret_through_the_loader` |
+| A29 | a bot role started with no `tripwire-secret` starts and refuses every ping, and one started with an empty one refuses start, each through the credential loader and never the environment: a decoy environment variable `TRIPWIRE_SECRET` carrying a different value is never read, and the loaded file's value, or its absence, decides | `the_bot_role_reads_the_rails_secret_through_the_loader` |
+| A30 | a scheduled sync (no router) records the rail step's message pending and sends nothing, the next `discipline_tick` delivers it exactly once, and an owner's sync delivers it at once and leaves nothing pending | `a_scheduled_sync_leaves_the_rails_messages_pending_for_the_tick` |
 
 ```acceptance
 A1: cargo test -p deck-streak-discipline --test rail_goldens -- --exact the_ping_grammar_and_token_match_the_parity_goldens
@@ -291,6 +300,7 @@ A26: cargo test -p deck-streak-discipline --test rail_rights -- --exact an_erase
 A27: cargo test -p deck-streak-bot --test channel_posts -- --exact a_channel_post_reaches_only_the_rail
 A28: cargo test -p deck-streak-discipline --test rail_revision -- --exact an_idle_defection_with_its_reviews_is_cleared_at_settlement
 A29: cargo test -p deck-streak-daemon --test roles -- --exact the_bot_role_reads_the_rails_secret_through_the_loader
+A30: cargo test -p deck-streak-coordination --test discipline_rail -- --exact a_scheduled_sync_leaves_the_rails_messages_pending_for_the_tick
 ```
 
 ## 3a. What the box run judges
@@ -340,7 +350,7 @@ so the private wiring does not change when it merges.
 | `crates/coordination/src/lib.rs` | `deck-streak-coordination` | changed: the module above |
 | `crates/coordination/src/data_rights_registry.rs` | `deck-streak-coordination` | unchanged: discipline's port is registered by SPEC-105; listed under SPEC-021's six-file rule |
 | `crates/coordination/tests/data_rights_symmetry.rs` | `deck-streak-coordination` | changed: seeded rows for the four tables |
-| `crates/coordination/tests/discipline_rail.rs` | `deck-streak-coordination` | added: A5, A6, A20, A22 |
+| `crates/coordination/tests/discipline_rail.rs` | `deck-streak-coordination` | added: A5, A6, A20, A22, A30 |
 | `crates/coordination/tests/discipline_fines.rs` | `deck-streak-coordination` | added: A11, A19 |
 | `crates/coordination/tests/discipline_spin.rs` | `deck-streak-coordination` | added: A17 |
 | `crates/bot/src/poll.rs` | `deck-streak-bot` | changed: the channel post joins the kinds of update asked for |

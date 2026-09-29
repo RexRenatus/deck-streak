@@ -181,7 +181,10 @@ R16. A won position, settled or revised, whose price is 25 or less raises the ce
     `quest_all` with the key `market:<id>`. The Brier rank is computed before and after the step,
     and a rank after the step that is the first or a higher band raises `quest_all` with the key
     `oracle_rank:<name>`. Both go through SPEC-084's ladder on the router (SPEC-041), and neither
-    moves a coin.
+    moves a coin. The markets step records each raise pending in the ledger, as SPEC-106 R17 does:
+    when the cycle carries a router (the owner's sync), the cycle's flush delivers it at once;
+    otherwise it waits for `discipline_tick` (SPEC-105 R12), which delivers it through the router on
+    its next run.
 R17. `void_open_positions(day)`, which coordination's markets module holds, runs in its caller's
     transaction: each open position becomes `voided` with its settled day, and its stake is refunded
     through `refund(day, "market_refund", "<id>", stake)`; it answers the number voided. SPEC-106's
@@ -292,6 +295,7 @@ R28. The reads this SPEC adds to other contexts, each that context's own and a r
 | A37 | the calibration button opens the markets screen and sends no image | `the_calibration_button_opens_the_markets_screen` |
 | A38 | the markets' routes and the calibration chart answer the owner's session only | `the_market_routes_answer_only_the_owner` |
 | A39 | the screen trades from the board through one ticket, cancels while cancellable, and shows the Oracle card and the calibration chart with its table | `trades from the board and shows the oracle` |
+| A40 | a scheduled sync (no router) records the markets step's raises pending and sends nothing, the next `discipline_tick` delivers each exactly once, and an owner's sync delivers them at once and leaves nothing pending | `a_scheduled_sync_leaves_the_markets_raises_pending_for_the_tick` |
 
 ```acceptance
 A1: cargo test -p deck-streak-markets --test market_goldens -- --exact the_prices_match_the_parity_golden
@@ -333,6 +337,7 @@ A36: cargo test -p deck-streak-bot --test markets_commands -- --exact market_com
 A37: cargo test -p deck-streak-bot --test markets_commands -- --exact the_calibration_button_opens_the_markets_screen
 A38: cargo test -p deck-streak-api --test markets_routes -- --exact the_market_routes_answer_only_the_owner
 A39: pnpm exec vitest run web/app/src/lib/markets/markets.test.ts -t "trades from the board and shows the oracle"
+A40: cargo test -p deck-streak-coordination --test markets_settle -- --exact a_scheduled_sync_leaves_the_markets_raises_pending_for_the_tick
 ```
 
 ## 3a. What the box run judges
@@ -385,7 +390,7 @@ lifted for this delivery, so the private wiring does not change when it merges.
 | `crates/coordination/src/data_rights_registry.rs` | `deck-streak-coordination` | changed: `market_positions` registered |
 | `crates/coordination/tests/data_rights_symmetry.rs` | `deck-streak-coordination` | changed: a seeded row of `market_positions` |
 | `crates/coordination/tests/markets_trade.rs` | `deck-streak-coordination` | added: A22 to A25 |
-| `crates/coordination/tests/markets_settle.rs` | `deck-streak-coordination` | added: A26 to A30 |
+| `crates/coordination/tests/markets_settle.rs` | `deck-streak-coordination` | added: A26 to A30 and A40 |
 | `crates/coordination/tests/markets_calibration.rs` | `deck-streak-coordination` | added: A31 |
 | `crates/daemon/src/wiring.rs` | `deck-streak-daemon` | changed: the markets' use cases joined to the bot and the API |
 | `crates/bot/src/markets_commands.rs` | `deck-streak-bot` | added: /predict, /oracle and the `pm:` buttons |

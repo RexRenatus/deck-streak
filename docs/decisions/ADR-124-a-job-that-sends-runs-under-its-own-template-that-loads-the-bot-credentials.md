@@ -11,8 +11,8 @@ decision-makers: "the DeckStreak architect (the W5 fix round)"
 The job role builds no bot transport and loads no bot token: "no job of the W0 table sends a
 message, so the role builds no bot transport and loads no bot token, and the first job that sends
 joins wiring's `TransportMarker`" (`crates/daemon/src/role_job.rs`, its module comment; SPEC-026
-R10; SPEC-041 R13). Without a transport the router records a failed push of a non-celebration as
-`Withheld{NoNotifier}` (`crates/notifications/src/router.rs`).
+R10; SPEC-041 R13). Without a transport the router withholds every bot occasion as
+`Withheld{NoNotifier}` before any push (`crates/notifications/src/router.rs`, `decide`).
 
 W5 adds the first jobs that send: `morning_nudge`, `evening_nudge`, `last_chance_nudge`,
 `daily_digest`, `weekly_report`, `widget_refresh` and `discipline_tick` (SPEC-100, SPEC-101,
@@ -59,11 +59,22 @@ Chosen option: "a second job template that loads the bot's two credentials", bui
 - **The rail.** The rail's map answers the two ids to the sending template's instances alone, in
   the form of SPEC-061 R4.
 
+- **The budget.** `deck-streak-job-send@.service` equals the job template's ceilings, in the row
+  below, which `deploy/host-budget.json` holds equal and the deploy-template test's `adr_budget()`
+  reads beside ADR-032's and ADR-064's tables.
+
+The sending template's ceilings, in the form of ADR-064's table:
+
+| unit | MemoryHigh | MemoryMax | CPUQuota |
+|---|---|---|---|
+| `deck-streak-job-send@.service` | 320M | 384M | none (a job) |
+
 ### Consequences
 
 - Good, because a sending job records `sent` in production and not `no_notifier`.
 - Good, because the liveness, maintenance and sync jobs never hold the bot's token.
-- Good, because SPEC-062's unit guards, verified over six rounds, stay as they are.
+- Good, because the unit guards keep every rule of SPEC-062; they learn the second template's name,
+  credentials and budget, and the pin test holds the two templates equal.
 - Bad, because two templates must not drift, which the pin test guards.
 - Bad, because the template needs its own entries in the host budget and the rail contract.
 

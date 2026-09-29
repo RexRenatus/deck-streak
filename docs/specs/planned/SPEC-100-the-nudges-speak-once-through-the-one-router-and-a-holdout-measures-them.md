@@ -367,9 +367,9 @@ R31. The reads this SPEC adds to other contexts, each that context's own and a r
 | A44 | the bot renders each row kind, a token as the deep link and the study link from its configuration, omitting it when unset | `the_bot_renders_every_button_row` |
 | A45 | the holdout route answers the owner's session only, and serves the readout and the silence ages | `the_holdout_route_answers_only_the_owner` |
 | A46 | the startapp token `habits` opens `/habits` | `opens the habits screen from its token` |
-| A47 | a nudge job run by the job role with the two credentials routes through a joined transport and records `sent`, not `no_notifier`, and a job that sends nothing builds no transport; the test's environment carries the two credentials as files in a credentials directory, never as values in the environment | `a_sending_job_routes_through_the_joined_transport` |
-| A48 | a sending job started without either credential refuses start, through the credential loader and never the environment | `a_sending_job_without_its_credentials_refuses_start` |
-| A49 | the two job templates differ only by the two `LoadCredential=` lines, and the sending template's lines are the alert template's form | `test_the_two_job_templates_differ_only_by_the_credential_lines` |
+| A47 | a nudge job run by the job role with the two credentials routes through a joined transport and records `sent`, not `no_notifier`, and a job that sends nothing builds no transport; the test's environment carries the two credentials as files in a credentials directory, never as values in the environment, and a decoy environment variable `TELEGRAM_BOT_TOKEN` carrying a different value never reaches the transport, which carries the loaded file's value | `a_sending_job_routes_through_the_joined_transport` |
+| A48 | a sending job started without either credential refuses start, through the credential loader and never the environment: a decoy environment variable `TELEGRAM_BOT_TOKEN` carrying a value never stands in for the missing file | `a_sending_job_without_its_credentials_refuses_start` |
+| A49 | the two job templates differ only by the two `LoadCredential=` lines, and the sending template's lines are the alert template's form; the test compares the files' parsed assignments (key and value per line, comments and blank lines ignored), never their raw text | `test_the_two_job_templates_differ_only_by_the_credential_lines` |
 
 ```acceptance
 A1: cargo test -p deck-streak-notifications --test nudge_router -- --exact the_reasons_are_the_policys_in_its_order
@@ -470,7 +470,8 @@ it, and the message metadata stays deferred (#257): this delivery claims neither
 | `crates/coordination/src/nudges/snooze.rs` | `deck-streak-coordination` | added: the snooze's record and fire |
 | `crates/coordination/src/nudges/holdout.rs` | `deck-streak-coordination` | added: the settle use case and the route's read model |
 | `crates/coordination/src/readings/comeback.rs` | `deck-streak-coordination` | changed: the skip day's decline |
-| `crates/coordination/src/jobs.rs` | `deck-streak-coordination` | changed: the jobs `morning_nudge`, `evening_nudge` and `last_chance_nudge`, which `job_table.rs`'s existing test holds equal to their timers |
+| `crates/coordination/src/jobs.rs` | `deck-streak-coordination` | changed: the jobs `morning_nudge`, `evening_nudge` and `last_chance_nudge`, and the field that marks each job as sending (R28), which `job_table.rs`'s test, as this SPEC changes it, holds equal to their timers |
+| `crates/coordination/tests/job_table.rs` | `deck-streak-coordination` | changed: the timers of both job templates are read, and a job's timer is on `deck-streak-job-send@` exactly when the table marks it sending (R28) |
 | `crates/coordination/src/runner.rs` | `deck-streak-coordination` | changed: the three jobs run their work by id |
 | `crates/coordination/src/lib.rs` | `deck-streak-coordination` | changed: the module `nudges` |
 | `crates/coordination/src/data_rights_registry.rs` | `deck-streak-coordination` | changed: the two tables |
@@ -512,9 +513,10 @@ it, and the message metadata stays deferred (#257): this delivery claims neither
 | `deploy/systemd/deck-streak-job-send@.service` | deploy | added: the sending template, `deck-streak-job@.service` with the two `LoadCredential=` lines of the alert template's form (R28, ADR-124) |
 | `deploy/README.md` | deploy | changed: the sending template's credential ids and why |
 | `deploy/host-budget.json` | deploy | changed: the sending template's entry, equal to the job template's (ADR-032) |
-| `deploy/rail-contract.json` | deploy | changed: the sending template's neutral values, equal to the job template's (SPEC-061 R7) |
-| `scripts/tests/test_deploy_templates.py` | repo | changed: A49, the two job templates differ only by the credential lines |
-| `deploy/rail-contract.json` | deploy | changed: the three calendar keys |
+| `deploy/rail-contract.json` | deploy | changed: the sending template's neutral values, equal to the job template's (SPEC-061 R7), and the three calendar keys |
+| `scripts/tests/test_deploy_templates.py` | repo | changed: A49; the sending template joins ROLE_CREDENTIALS (`owner-user-id`, `telegram-bot-token`), ROLES (`job %i`), PER_SERVICE, the credential-loading units, the stack-share test's oneshot list and the job-timer prefix check; `adr_budget()` reads ADR-124's budget row; WAIVED gains the two waivers of each of the seven sending timers (`morning_nudge`, `evening_nudge`, `last_chance_nudge`, `daily_digest`, `weekly_report`, `widget_refresh`, `discipline_tick`) |
+| `scripts/tests/test_rail_contract.py` | repo | changed: `test_only_the_sync_job_reads_the_sync_login` admits the bot's two credentials loaded for a sending job outside sync's cycle, and still holds the sync login to `run_scheduled` (R28) |
+| `deploy/scripts/effective-check.py` | deploy | changed: an instance's name may carry `_`, as the job ids do (R28); `INSTANCE` becomes `^[a-z0-9][a-z0-9_-]*$` |
 | `tools/parity-oracle/registry/spec_100.py` | tools | added: the adapters |
 | `tools/parity-oracle/goldens/` | tools | added: the goldens of section 7 |
 | `scripts/mutation-rows.d/S10000-S10099.json` | scripts | added: the rows of section 9 |

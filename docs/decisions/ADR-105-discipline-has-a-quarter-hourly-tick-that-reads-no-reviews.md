@@ -63,6 +63,18 @@ Chosen option: "a quarter-hourly tick that reads no reviews", built by SPEC-105.
   `discipline` while the verdict is still standby and no lapse is open, clearing the pending day
   and recording the notice's study day in one write. A verdict out of standby, or a lapse, drops it.
 
+- **A sync step's messages.** The rail's step (SPEC-104 R15 and R16) and the markets step (SPEC-107
+  R16) record each message pending in the ledger, as SPEC-106 R17 does. An owner's sync carries a
+  router, so the cycle's flush delivers the message at once and nothing stays pending; a scheduled
+  sync carries none, so the message waits for `discipline_tick`, which delivers it through the
+  router on its next run. Rejected:
+  - a router for the scheduled sync: rejected because the sync job would load the bot credentials,
+    against ADR-124's census that `sync` does not send, and whether it ever does is #291's;
+  - leave the messages to #291: rejected because the plan would carry a known hole where a scheduled
+    sync's rail and market messages are never sent;
+  - a new sending job that only flushes: rejected because `discipline_tick` already runs
+    quarter-hourly on the sending template and already flushes pending discipline messages.
+
 ### Consequences
 
 - Good, because reminders keep the predecessor's 15-minute lookahead without a sync.
@@ -74,8 +86,9 @@ Chosen option: "a quarter-hourly tick that reads no reviews", built by SPEC-105.
 
 ### Confirmation
 
-SPEC-105's A14 (the minutes and the calendar), A15 and A16 (the reminder), A17 and A18 (the
-notice), and the hand-proved rows `S10513` and `S10515`.
+SPEC-105's A14 (the minutes and the calendar), A15 and A16 (the reminder), A17 and A18 (the notice),
+SPEC-104's A30 and SPEC-107's A40 (a scheduled sync's step messages wait for the tick), and the
+hand-proved rows `S10513` and `S10515`.
 
 ## What would make this wrong
 
