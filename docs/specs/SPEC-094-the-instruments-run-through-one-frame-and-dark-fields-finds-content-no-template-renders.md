@@ -338,6 +338,14 @@ The delivery touched these files beyond the rows above:
 - `docs/decisions/ADR-094-the-instruments-run-weekly-after-the-sync-or-on-demand-and-coordination-stores-the-latest-report.md`
 - `docs/decisions/ADR-095-ingest-walks-the-wire-format-by-hand-and-the-instrument-reads-keep-the-scope.md`
 - `docs/decisions/ADR-096-the-owners-note-conventions-are-private-configuration-the-kernel-loads.md`
+- `crates/bot/tests/commands.rs`
+- `crates/coordination/tests/instruments_cycle.rs`
+- `crates/daemon/tests/instruments_wiring.rs`
+- `crates/daemon/tests/roles.rs`
+- `crates/ingest/tests/lock.rs`
+- `scripts/mutation-equivalent.d/deck-streak-api.json`
+- `scripts/mutation-equivalent.d/deck-streak-coordination.json`
+- `scripts/mutation-equivalent.d/deck-streak-insights.json`
 
 Rows the delivery leaves unchanged:
 - `crates/kernel/src/settings.rs` is unchanged; the conventions file is read by the existing loader.
