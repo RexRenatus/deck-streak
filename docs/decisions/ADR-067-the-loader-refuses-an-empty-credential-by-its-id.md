@@ -64,8 +64,8 @@ template, and two were considered for it:
   hold, and a unit that needs another key adds it to its list in the same change (SPEC-066 R2).
 - Bounding only the keys, and leaving the value of a listed key free: rejected, because a listed key
   can hold a value that changes what a unit does, and a list of keys cannot say so. A table holds the
-  one `Restart=` value those units use, and their `OnFailure=` is the alert template alone (SPEC-066
-  R2).
+  values those units use for `Restart=`, their restart budget and their ordering, and their
+  `OnFailure=` is the alert template alone (SPEC-066 R2).
 
 ## Decision Outcome
 

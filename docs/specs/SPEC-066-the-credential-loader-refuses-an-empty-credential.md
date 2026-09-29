@@ -100,8 +100,10 @@ R2. The refusal fails the unit that loads the credential, and that unit's `OnFai
         the tests hold each list equal to the `(section, key)` pairs its units hold, drop-ins
         included;
       - a value off the table of a key of a unit that loads a credential and pages on failure:
-        `Restart=` holds `on-failure`, the one value those units use, at every assignment, its
-        drop-ins included, and any other value is refused by its key and value;
+        `Restart=` holds `on-failure`, and the restart budget and ordering hold the values those units
+        use (`StartLimitIntervalSec=300`, `StartLimitBurst=5`, `RestartSec=15`,
+        `After=` and `Wants=` `network-online.target`), at every assignment, its drop-ins
+        included, and any other value is refused by its key and value;
       - an `OnFailure=` of such a unit that is not exactly the alert template, at every
         assignment, its drop-ins included: a target beside it, in its place, or an empty one is
         refused by its key and value;
@@ -146,8 +148,8 @@ R5. Where cargo-mutants makes no mutant, hand-proved rows in
     `scripts/mutation-rows.d/S06600-S06699.json` guard the refusal (SPEC-039 R8): the loader's
     check, the variant it returns, the id in its `Display`, the bound that admits a value of one
     character, and the script's check, its exit and its check of each of its two credentials, the
-    table of the one restart value the units that page admit, and the check that their
-    `OnFailure=` is the alert template alone.
+    table of the values the units that load a credential and page on failure admit, and the check
+    that their `OnFailure=` is the alert template alone.
 R6. The engine probe (`crates/ingest/examples/engine_probe.rs`) reads the sync's two credentials
     through the loader, by the ids `deck_streak_ingest::settings` declares, as the sync's login
     does. A refusal ends it before it builds a login: it writes the refusal's `Display`, which names
@@ -179,10 +181,13 @@ model how systemd reads a unit file: it reads the plain syntax the templates hol
 line R2 lists by its file and line (`logical_lines`, `assignments`). A5 reads the alert template
 with the same reader, so the two cannot drift, and both hold a unit to the literal list of its
 kind (`ALERT_KEYS`, `PAGING_KEYS`), refusing any key off it by name, and A4 holds each list equal to the pairs its units hold; a
-table (`PAGING_VALUES`) holds the one `Restart=` value the units that page admit, and every
-`OnFailure=` of those units is the alert template alone, each checked at every assignment, drop-ins
+table (`PAGING_VALUES`) holds the values the units that load a credential and page on failure
+admit (their one `Restart=` value and their restart budget and ordering), and every `OnFailure=` of
+those units is the alert template alone, each checked at every assignment, drop-ins
 included, with plants for `Restart=always` and `Restart=on-success` on a `Type=oneshot` unit, for
-`Restart=always` in a drop-in, for a restart value extending the admitted one, for a target beside
+`Restart=always` in a drop-in, for a restart value extending the admitted one, for a start limit
+interval, a start limit burst, a restart delay and an ordering or pull-in other than the admitted
+one, for a target beside
 the alert's, in its place, after it and reset, and in a drop-in, and the admitted controls; only a unit's own `<name>.d/`
 is read with it, and A4 refuses any other `*.d/` directory under `deploy/`. A value splits into exit-status words at spaces and
 tabs alone (`status_words`), and a word is read only as a decimal of at most 255, with no sign and
@@ -284,22 +289,28 @@ is proved with `python3 scripts/mutation_rows.py prove --band S06600-S06699`.
 
 ## 7. Amended in delivery
 
-- **R5 names eight rows, not five.** Beside the loader's check, its variant, the id in its message,
-  and the script's check and exit, three rows guard what those five do not name: S06604, a
-  refusal that reaches past an empty value to one of a single character (A2's killer), and S06607
-  and S06608, the script's check of each of its two credentials removed in turn (A5's killer).
+- **R5 names eleven rows, not five.** Beside the loader's check, its variant, the id in its message,
+  and the script's check and exit, six rows guard what those five do not name: S06604, a
+  refusal that reaches past an empty value to one of a single character (A2's killer); S06607
+  and S06608, the script's check of each of its two credentials removed in turn (A5's killer);
+  S06609 and S06611, the value table admitting a second `Restart=` value and dropping a key of
+  the restart budget (A4's value test); and S06610, the target check admitting a target beside
+  the alert's (A4's target test).
   Each was proved KILLED with its target restored (`docs/red-first/SPEC-066.md`).
 - **A2 and A4 are disclosed not red.** Each pins what the base already did, and what the change
   must leave as it was: A2 the missing and unreadable refusals and the loaded values, A4 the
   templates' `OnFailure=` and exit handling. Row S06604 and the census's planted templates give
   each its killing case.
-- **Two mutants the loader's file already let survive are killed.** `cargo mutants --file
+- **The loader's file carries no survivor, and two kills are dev's.** `cargo mutants --file
   crates/kernel/src/credentials.rs` at 5e67962 reported 12 mutants: 9 caught, 1 unviable and 2
-  missed, both on lines this delivery does not change. `Secret`'s `Debug` replaced by an empty
-  write survived an assertion of absence alone, so SPEC-020's test now also asserts what it shows,
-  `Ok(Secret(..))`; and the `NotFound` guard replaced by `true`, which reads every failed read as
-  missing, survived because no test planted an unreadable credential, which A2 now does. A file
-  this delivery touches carries no survivor (`docs/red-first/SPEC-066.md`).
+  missed, both on lines this delivery does not change: `Secret`'s `Debug` replaced by an empty
+  write, and the `NotFound` guard replaced by `true`. dev now carries a killer of each
+  (`a_secret_shows_no_value_in_debug` and
+  `a_credential_that_exists_and_cannot_be_read_is_unreadable_and_not_missing`). This delivery's
+  tests state the same two facts where they touch: SPEC-020's test also asserts `Ok(Secret(..))`,
+  and A2 plants a directory at a credential's path, refused as `Unreadable`. They add no kill dev's
+  do not, so this delivery claims none of its own for the two; it guards its refusal by rows
+  S06601 to S06604 (`docs/red-first/SPEC-066.md`).
 - **A fourth reader, and R6.** The engine probe reads the sync's two credentials, so §1 counts it,
   R6 moves its read onto the loader, and §4 lists its file. It takes no criterion: the loader's A1
   to A3 hold the refusal it now takes.

@@ -269,7 +269,7 @@ commit, and only the tests named failed, by assertion.
 | a `*.d/` directory of no unit refused | 997fcf9 | `test_only_a_units_own_dropin_directory_is_shipped_under_deploy`, the stub refusing none | 8000f00 |
 
 The plants of the list: a `Requisite=`, a `Requires=` and a `BindsTo=` on the alert template, a
-`Requisite=` on a unit that pages, an `X-` key on each kind, a key of the other section on each kind,
+`Requisite=` on a unit that loads a credential and pages, an `X-` key on each kind, a key of the other section on each kind,
 a key of a section no list holds, and a drop-in's `Requires=`. The alert template's existing
 plants, which add a line the list also refuses, expect that line beside the refusal they had. A
 follow-up commit (3018669) adds the plants that kill the hand mutants below: a section off the
@@ -293,7 +293,7 @@ assertion.
 |---|---|---|---|
 | each list equal to the keys its units hold, a key extending a listed key planted, each drop-in directory case the only refusal | not red: the lists are the keys the units hold, and the added cases pin what the check already refuses | none | 4bb2078 |
 | a table of the admitted `Restart=` value | 593ee63 | `test_a_paging_units_restart_holds_only_the_admitted_value`: the plants `Restart=always` and `Restart=on-success` on a `Type=oneshot` unit came back with no refusal, the table being empty | 5de252b |
-| every `OnFailure=` of a unit that pages is the alert template alone | 593ee63 | `test_a_paging_unit_names_no_failure_target_but_the_alert`: the plants for a target beside the alert's, in its place, after it and reset came back with no refusal, the stub checker refusing none | 5de252b |
+| every `OnFailure=` of a unit that loads a credential and pages is the alert template alone | 593ee63 | `test_a_paging_unit_names_no_failure_target_but_the_alert`: the plants for a target beside the alert's, in its place, after it and reset came back with no refusal, the stub checker refusing none | 5de252b |
 
 The plants of the value table: `Restart=always` and `Restart=on-success` on a `Type=oneshot` unit
 that pages, `Restart=always` in a drop-in, `Restart=on-failure-extra` (a value extending the admitted
@@ -301,7 +301,7 @@ one, added at 3e176bf), and the admitted control `Restart=on-failure`. The plant
 second target in one assignment, a second `OnFailure=`, a replaced target, an empty reset after the
 alert's, a drop-in's `OnFailure=`, and the admitted control.
 
-**Hand mutants.** 192 hand mutants of the round's checks and of every earlier round's, in
+**Hand mutants.** 192 hand mutants of the round's checks and of round 5's, in
 `_units.py`, `test_alert_unit.py` and `test_deploy_templates.py`, each run against both whole
 modules on a worker copy of the head's full-tree export, the file restored by its sha256 after each:
 192 killed, 0 survived at 3e176bf. By class: a listed key dropped 88 of 88; an extra key admitted to
@@ -318,10 +318,37 @@ added, each with the round's own test as its killer. Rows S06605 to S06610 were 
 `prove --row <id>` on the committed head, KILLED, `PYTHONDONTWRITEBYTECODE=1`, each target restored
 by its sha256.
 
+## Round 7: the restart budget and the ordering are bounded
+
+The table gains the keys a crash loop's paging depends on and the keys that order a unit: the start
+limit interval (300), the start limit burst (5), the restart delay (15), and `After=` and `Wants=`
+(`network-online.target`), each value the one the shipped units hold. It pins what the templates
+already declare, so it is disclosed not red on the tree. The plants were committed red first, beside
+the unchanged `_units.py` (95acbbb): the three modules ran whole, and only
+`test_a_paging_units_restart_holds_only_the_admitted_value` failed, by assertion, the new plants
+coming back with no refusal. The table followed at 44b52f0, all three modules green at 16, 8 and 14
+tests.
+
+| item | red commit | what failed at the red | green commit |
+|---|---|---|---|
+| a table of the restart budget and the ordering | 95acbbb | `test_a_paging_units_restart_holds_only_the_admitted_value`: the plants for a start limit interval of 0, a burst of 1000, a restart delay of 0, and an `After=` and a `Wants=` naming another unit came back with no refusal | 44b52f0 |
+
+The plants: `StartLimitIntervalSec=0`, `StartLimitBurst=1000`, `RestartSec=0`,
+`After=other.service` and `Wants=other.service` on a planted unit that loads a credential and pages,
+and the admitted control holding all five admitted values. Row S06611 (6b48194) drops the interval
+entry of the table, killed by the plants, and S06609's anchor moved with the table's layout.
+
+**Hand mutants.** 210 hand mutants of the round's checks and of round 5's and 6's, in `_units.py`,
+`test_alert_unit.py` and `test_deploy_templates.py`, each run against both whole modules on a worker
+copy of the head's full-tree export, the file restored by its sha256 after each: 210 killed, 0
+survived. Beside round 6's 192, the round adds 18: for each of the six bounded keys, the entry
+dropped, a second value admitted, and the value check blind to the key.
+
 ## Mutants of the changed code
 
 **The rows.** `python3 scripts/mutation_rows.py prove --band S06600-S06699` at e0cdf9f, on the
-committed tree: `rows: examined 8: killed 8, survived 0, void 0`. Each row's killer passed without
+committed tree: `rows: examined 8: killed 8, survived 0, void 0` (`examined 11: killed 11` with rows
+S06609 to S06611, at the round-7 head). Each row's killer passed without
 its mutant and failed with it, and the tool restored each target byte for byte before the next. The
 four script mutants were also checked to parse (`sh -n`), since the tool parses only Python. It
 read the same at c916846, after A5, the killer of S06605 to S06608, gained its exit check.
@@ -336,8 +363,9 @@ read the same at c916846, after A5, the killer of S06605 to S06608, gained its e
 | S06606 | `deploy/scripts/alert-telegram.sh` | the refusal exits 0 | A5 |
 | S06607 | `deploy/scripts/alert-telegram.sh` | the token's check removed | A5 |
 | S06608 | `deploy/scripts/alert-telegram.sh` | the owner id's check removed | A5 |
-| S06609 | `scripts/tests/_units.py` | the restart table admits a second value | A4's value test |
+| S06609 | `scripts/tests/_units.py` | the restart entry of the value table admits a second value | A4's value test |
 | S06610 | `scripts/tests/test_deploy_templates.py` | the target check admits a target beside the alert's | A4's target test |
+| S06611 | `scripts/tests/_units.py` | the value table drops its `StartLimitIntervalSec=` entry | A4's value test |
 
 **cargo-mutants on the loader's file.** `cargo mutants --package deck-streak-kernel --file
 crates/kernel/src/credentials.rs -j 1` (cargo-mutants 27.1.0), on the committed tree:
@@ -349,6 +377,9 @@ crates/kernel/src/credentials.rs -j 1` (cargo-mutants 27.1.0), on the committed 
 - eb0b28a adds what kills both: SPEC-020's test asserts the `Debug` a secret shows,
   `Ok(Secret(..))`, and A2 plants a directory at a credential's path, refused as `Unreadable`;
 - at eb0b28a: 12 mutants, 11 caught, 1 unviable (the same body), 0 missed.
+- dev's own tests now kill the same two (`a_secret_shows_no_value_in_debug` and
+  `a_credential_that_exists_and_cannot_be_read_is_unreadable_and_not_missing`), so this delivery's
+  assertions restate them and claim no kill of their own.
 
 cargo-mutants lists no mutant of `crates/kernel/src/error.rs`, and none of the refusal's `if` or
 its variant (the same listing at the base shows none of the trim's `if`): rows S06601 to S06604
