@@ -111,4 +111,25 @@ describe('the Mermaid diagrams under docs', () => {
       expect(await parses(planted[0].source)).toBe(true);
     }
   });
+
+  it('reads a quoted fence and one spaced before its info string, and refuses one that does not parse', async () => {
+    const plants = [
+      '> ```mermaid\n> flowchart TD\n>   call --> done\n> ```\n',
+      '> - item\n>\n>   ```mermaid\n>   flowchart TD\n>     call --> done\n>   ```\n',
+      '``` mermaid\nflowchart TD\n  call --> done\n```\n'
+    ];
+    for (const text of plants) {
+      const planted = blocksOf('planted.md', text);
+
+      expect(planted.map((block) => block.name)).toEqual(['planted.md block 1']);
+      expect(await parses(planted[0].source)).toBe(false);
+    }
+  });
+
+  it('accepts a quoted valid block with a quoted blank line in it', async () => {
+    const planted = blocksOf('planted.md', '> ```mermaid\n> flowchart TD\n>\n>   caller --> done\n> ```\n');
+
+    expect(planted.map((block) => block.name)).toEqual(['planted.md block 1']);
+    expect(await parses(planted[0].source)).toBe(true);
+  });
 });
