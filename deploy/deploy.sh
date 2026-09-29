@@ -262,6 +262,7 @@ undo() {
     echo "deploy: the Caddy configuration was refused" >&2
     exit 1
 }
+[ -w "$dir" ] && [ -f "$file" ] || { echo "deploy: the Caddy configuration was refused" >&2; exit 1; }
 for path in "$block" "$block.previous" "$copy" "$kept"; do
     { [ ! -e "$path" ] && [ ! -L "$path" ]; } ||
         [ -z "$(find "$path" -maxdepth 0 \( ! -type f -o -links +1 \) -print)" ] ||
@@ -303,9 +304,16 @@ unwritten() {
     echo "deploy: the candidate Caddyfile could not be written" >&2
     exit 1
 }
+[ -w "$dir" ] && [ -f "$file" ] || { echo "deploy: the candidate Caddyfile could not be written" >&2; exit 1; }
 [ ! -L "$copy" ] || unwritten
 [ ! -e "$copy" ] || [ -z "$(find "$copy" -maxdepth 0 \( -type p -o -type s -o -type b -o -type c -o -type f -links +1 \) -print)" ] ||
     { echo "deploy: the candidate Caddyfile could not be written" >&2; exit 1; }
+for name in "$block" "$block.previous" "$kept"; do
+    if [ -e "$name" ] || [ -L "$name" ]; then
+        [ -z "$(find "$name" -maxdepth 0 \( -links +1 -o ! -type f \) -print)" ] ||
+            { echo "deploy: the candidate Caddyfile could not be written" >&2; exit 1; }
+    fi
+done
 : >"$copy" || unwritten
 grep -vxF "$line" "$file" >"$copy" || [ "$?" -eq 1 ] || unwritten
 caddy validate --adapter caddyfile --config "$copy" || { [ ! -f "$copy" ] || find "$copy" -delete; echo "deploy: refused" >&2; exit 1; }
