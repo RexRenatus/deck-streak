@@ -185,3 +185,44 @@ fn a_conditional_attribute_on_the_enum_is_refused() {
         );
     }
 }
+
+#[test]
+fn every_spelling_of_the_declaration_and_of_a_conditional_attribute_is_read() {
+    // The population: two declaration spellings, four attribute names (each a spelling the
+    // compiler accepts, checked once in a scratch crate), each written with and without spaces
+    // inside the brackets. Every member compiles.
+    let mut members = 0;
+    for name in ["Verdict", "r#Verdict"] {
+        let plain = format!("#[must_use]\n#[derive(Clone)]\npub enum {name} {{");
+        assert_eq!(declarations_of(&plain), 1, "not declared: {name}");
+        let read = attributes_of(&plain);
+        assert!(read.iter().any(|a| a == "#[must_use]"), "{name}: {read:?}");
+        assert!(!read.iter().any(|a| is_conditional(a)), "{name}: {read:?}");
+        for (attribute, argument) in [
+            ("cfg", "any()"),
+            ("r#cfg", "any()"),
+            ("cfg_attr", "test, must_use"),
+            ("r#cfg_attr", "test, must_use"),
+        ] {
+            for written in [
+                format!("#[{attribute}({argument})]"),
+                format!("#[ {attribute} ({argument}) ]"),
+            ] {
+                members += 1;
+                let source =
+                    format!("#[must_use]\n{written}\n#[derive(Clone)]\npub enum {name} {{");
+                assert_eq!(declarations_of(&source), 1, "not declared: {source}");
+                let read = attributes_of(&source);
+                assert!(
+                    read.iter().any(|a| a.starts_with("#[derive(")),
+                    "the enum's own derive was not read: {source}"
+                );
+                assert!(
+                    read.iter().any(|a| is_conditional(a)),
+                    "a conditional attribute was not refused: {source}"
+                );
+            }
+        }
+    }
+    assert_eq!(members, 16, "the population changed");
+}
