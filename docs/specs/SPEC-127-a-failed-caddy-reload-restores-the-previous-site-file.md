@@ -193,3 +193,67 @@ the `caddy` stub gains a flag file that deletes the candidate before it refuses.
 `deploy/deploy.sh`, `scripts/tests/test_deploy_scripts.py`, `scripts/mutation-rows.d/S12700-S12799.json`
 (rows S12711 and S12712 re-anchored on the changed lines, S12713 to S12717 added),
 `docs/red-first/SPEC-127.md` and `changelog.d/fix-candidate-write-384.md`.
+
+## Amendment, 2026-09-29: the install undoes every write it made, and a linked candidate is refused
+
+Issues #423 and #424, both found in the review of #415. The install's `undo` began with an unguarded
+`find "$copy" -delete`; with the candidate absent that `find` failed under `set -e`, and the script
+exited before it printed `deploy: the Caddy configuration was refused`, the same shape #384 removed
+from the removal. Three writes of the install also had no undo at all: the block's `cat >"$block"`,
+the candidate's `cp -p "$file" "$copy"` and the import line's append. A failure of any of them left
+the new block, or a half-written candidate, in place with a silent exit. The strengthened rule: every
+write the install makes is followed by the undo, the undo tolerates an absent candidate, and every
+path that undoes prints the refusal and exits non-zero. The helpers the undo uses are defined before
+the first write.
+
+The removal's `: >"$copy"` follows a symbolic link. A link at the candidate path that names the live
+Caddyfile made the write empty the live Caddyfile, and a link to nowhere made the write create its
+target, so the later rename put the link itself in the live Caddyfile's place. The removal now
+refuses a candidate path that is a link, with the write's own message, before any write.
+
+The class A12 covers: A12 pins a candidate path that cannot be written, and its test plants a
+directory at that path. The class is every candidate path that is not a plain writable file, so a
+link at the path, whether it names the live Caddyfile, a missing file or a directory, is a second
+member of it. A20 and A21 pin the two links that changed the live state, and a link to a directory
+is refused by the same guard (measured by a scratch run). The install needs no link guard of its
+own: its `cp -p` refuses to write through a link that names the live Caddyfile or a missing
+file, and the refusal is then the undo's (A17).
+
+The insertions this amendment makes are these two sections, appended after the file's last line,
+and nothing above them is edited (SPEC-038 section 8, ruling (i)).
+
+## Acceptance criteria of the 2026-09-29 install-undo amendment
+
+| id | criterion | test |
+|---|---|---|
+| A16 | an install refused at validation, and one refused at the adapt check, each exit non-zero, print `the Caddy configuration was refused`, put the previous block back and leave no candidate or previous file when the candidate is already absent (#423) | `test_deploy_scripts.py` `an_install_refused_at_validation_with_no_candidate_still_undoes` and `an_install_refused_at_the_adapt_check_with_no_candidate_still_undoes` |
+| A17 | an install whose candidate path cannot be written exits non-zero, prints the refusal, puts the previous block back and leaves the live Caddyfile unchanged (#423) | `test_deploy_scripts.py` `an_install_whose_candidate_path_cannot_be_written_undoes_and_says_so` |
+| A18 | an install whose block cannot be written exits non-zero, prints the refusal and leaves the previous block's text and the live Caddyfile unchanged (#423) | `test_deploy_scripts.py` `an_install_whose_block_cannot_be_written_undoes_and_says_so` |
+| A19 | an install whose import line cannot be added exits non-zero, prints the refusal, removes the new block and leaves the live Caddyfile unchanged (#423) | `test_deploy_scripts.py` `an_install_whose_import_line_cannot_be_added_undoes_and_says_so` |
+| A20 | a removal whose candidate path is a link to the live Caddyfile exits non-zero, prints the write's message and leaves the live Caddyfile byte for byte unchanged (#424) | `test_deploy_scripts.py` `a_removal_whose_candidate_is_a_link_to_the_caddyfile_refuses_before_writing` |
+| A21 | a removal whose candidate path is a link to a missing file exits non-zero, prints the write's message, leaves the live Caddyfile unchanged and creates nothing at the link's target (#424) | `test_deploy_scripts.py` `a_removal_whose_candidate_is_a_dangling_link_refuses_before_writing` |
+
+```acceptance
+A16: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k with_no_candidate_still_undoes
+A17: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k an_install_whose_candidate_path_cannot_be_written_undoes_and_says_so
+A18: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k an_install_whose_block_cannot_be_written_undoes_and_says_so
+A19: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k an_install_whose_import_line_cannot_be_added_undoes_and_says_so
+A20: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k a_removal_whose_candidate_is_a_link_to_the_caddyfile_refuses_before_writing
+A21: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k a_removal_whose_candidate_is_a_dangling_link_refuses_before_writing
+```
+
+The test file's `World.run` now starts the script in its own session and kills the whole group on a
+timeout, so a stuck stub cannot orphan the host script. Rows S12718 to S12722 in
+`scripts/mutation-rows.d/S12700-S12799.json` pin the absent-candidate guard of the undo (killer A16),
+the undo after the block write (A18), after the candidate copy (A17) and after the import append
+(A19), and the removal's link guard (A20). Files changed: `deploy/deploy.sh`,
+`scripts/tests/test_deploy_scripts.py`, `scripts/mutation-rows.d/S12700-S12799.json`,
+`docs/red-first/SPEC-127.md`, `docs/decisions/ADR-198-the-install-undoes-every-write-and-a-linked-candidate-is-refused.md`
+and `changelog.d/fix-caddy-undo-423.md`.
+
+### What this amendment does NOT do
+
+- It does not undo a failed `cp -p "$block" "$had"`, the copy that keeps the previous block (#423).
+- It does not make a read-only Caddy directory with a stale candidate print a refusal: that shape
+  fails at the `.previous` copy, before any undo exists (#423).
+- It does not guard the install against a link at the candidate path, because `cp -p` refuses it (#423).
