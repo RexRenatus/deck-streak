@@ -82,4 +82,4 @@ templates differ by the credential lines alone), and the rows `S10022` and `S100
 ## More Information
 
 Cites ADR-027 (jobs are timers with a ledger), ADR-032 (the host budget), ADR-038, ADR-061,
-SPEC-026, SPEC-041, SPEC-061, SPEC-062 (planned, #319) and SPEC-100.
+SPEC-026, SPEC-041, SPEC-061, SPEC-062 and SPEC-100.

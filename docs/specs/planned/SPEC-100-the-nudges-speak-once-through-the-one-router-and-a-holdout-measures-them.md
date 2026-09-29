@@ -22,7 +22,7 @@
   SPEC-072 (the multiplier's preview and the Ascendant buff), SPEC-076 (the streak state and
   `real_misses`), SPEC-078 (the habit summary, its freshness and the `/habits` screen), SPEC-079
   (the focus nudge's eligibility), SPEC-083 (the skip set and `/skip`), SPEC-027 (the job table),
-  SPEC-021 (the six files of a table), SPEC-029 (the goldens) and SPEC-062 (the unit guards the sending template must pass; planned, #319).
+  SPEC-021 (the six files of a table), SPEC-029 (the goldens) and SPEC-062 (the unit guards the sending template must pass).
   **Mutation band:** `S10000-S10099`.
 - **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
   `docs/specs/` with its tests and `docs/red-first/SPEC-100.md` (ADR-016).
