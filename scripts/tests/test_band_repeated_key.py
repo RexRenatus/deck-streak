@@ -11,7 +11,7 @@ import sys
 import unittest
 
 from _support import REPO, examined
-from test_mutation_rows import Fixture, git
+from test_mutation_rows import Fixture, git, script_row
 
 sys.path.insert(0, str(REPO / "scripts"))
 import mutation_rows  # noqa: E402
@@ -19,6 +19,7 @@ import mutation_rows  # noqa: E402
 BAND = "S00000-S00099.json"
 BAND_PATH = f"scripts/mutation-rows.d/{BAND}"
 HEADER_PATH = "scripts/mutation-rows.json"
+RETIRED_PATH = "scripts/mutation-rows.retired.json"
 BASE = '{\n  "tables": {\n    "SCRIPT_MUTATIONS": [],\n    "CARGO_KILLED_SCRIPT_MUTATIONS": []\n  }\n}\n'
 BRANCH_A = (
     '{\n  "tables": {\n    "MUTATIONS": [],\n    "SCRIPT_MUTATIONS": [],\n'
@@ -144,6 +145,51 @@ class TheReaderRefusesARepeatedKey(unittest.TestCase):
         held = plain + sum(len(rows) for rows in header["tables"].values())
         self.assertEqual(len(rows), held)
         self.assertGreater(len(rows), 0)
+
+
+class TheRetiredListRefusesARepeatedKey(unittest.TestCase):
+    """`retired` reads the retirement list through the one parser (SPEC-122, #385)."""
+
+    def leaving_row(self):
+        """A fixture whose one row leaves while its target stays, and the base it leaves from."""
+        row = script_row(
+            "S00030-DOUBLE", "x * 2", "x * 3", "test_fixmod.Double.test_two_doubles_to_four"
+        )
+        fixture = Fixture(self, [("SCRIPT_MUTATIONS", row)])
+        base = git(fixture.root, "rev-parse", "HEAD").strip()
+        fixture.rows([])
+        return fixture, base
+
+    def test_a_retired_list_that_repeats_a_key_is_refused_naming_it(self):
+        entry = '{"id": "S00030-DOUBLE", "reason": "moved", "approval": "the maintainer"'
+        planted = {
+            "retired": '{"retired": [], "retired": []}\n',
+            "approval": '{"retired": [' + entry + ', "approval": "another"}]}\n',
+        }
+        for key, text in examined("planted retired lists", planted.items()):
+            with self.subTest(key=key):
+                fixture, base = self.leaving_row()
+                fixture.write(RETIRED_PATH, text)
+                fixture.commit("a retired list that repeats a key")
+                done = fixture.run("retired", "--base", base)
+                self.assertEqual(done.returncode, 2, done.stdout + done.stderr)
+                self.assertIn(sentence(RETIRED_PATH, key), done.stderr)
+                self.assertNotIn("Traceback", done.stderr)
+                self.assertNotIn("S00030-DOUBLE", done.stdout, "a refused list retires nothing")
+
+    def test_a_well_formed_retired_list_still_admits_its_row(self):
+        fixture, base = self.leaving_row()
+        record = {
+            "retired": [
+                {"id": "S00030-DOUBLE", "reason": "moved", "approval": "the maintainer, in #1"}
+            ]
+        }
+        fixture.write(RETIRED_PATH, json.dumps(record) + "\n")
+        fixture.commit("the maintainer approved the retirement")
+        done = fixture.run("retired", "--base", base)
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        self.assertIn("retired with approval: the maintainer, in #1", done.stdout)
+        self.assertRegex(done.stdout, r"(?m)^examined 1\b")
 
 
 if __name__ == "__main__":
