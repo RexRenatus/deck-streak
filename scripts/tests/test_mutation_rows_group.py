@@ -11,6 +11,7 @@ grandchild's pid from a file the killer writes.
 import contextlib
 import importlib.util
 import os
+import shutil
 import signal
 import subprocess
 import sys
@@ -80,6 +81,7 @@ def stop_by_number(pid):
 class Fixture(unittest.TestCase):
     def setUp(self):
         self.directory = Path(tempfile.mkdtemp(prefix="killer-group-"))
+        self.addCleanup(shutil.rmtree, self.directory, ignore_errors=True)
         (self.directory / "hanging_killer.py").write_text(HANGING)
         self.pid_file = self.directory / "grandchild.pid"
         self.leader_file = self.directory / "leader.pid"
