@@ -52,7 +52,29 @@ fn prune_pin_problems(source: &str) -> Vec<String> {
             "the source holds {statements} delete statements, not one"
         ));
     }
+    let keywords = delete_keywords_in(source);
+    if keywords != 1 {
+        problems.push(format!(
+            "the source writes the word delete {keywords} times, not once"
+        ));
+    }
     problems
+}
+
+/// How many times `source` writes `delete` as a word of its own, in any case, whatever follows
+/// it: a table spelled `main.agent_runs` or `"agent_runs"`, or an SQL comment after the keyword,
+/// still counts, where `delete_statements_in` sees only the one spelling.
+fn delete_keywords_in(source: &str) -> usize {
+    let lower = source.to_lowercase();
+    let bytes = lower.as_bytes();
+    let is_word = |at: Option<&u8>| at.is_some_and(|b| b.is_ascii_alphanumeric() || *b == b'_');
+    lower
+        .match_indices("delete")
+        .filter(|(at, _)| {
+            let before = at.checked_sub(1).and_then(|i| bytes.get(i));
+            !is_word(before) && !is_word(bytes.get(at + "delete".len()))
+        })
+        .count()
 }
 
 /// What is wrong with this test file's own text: an empty list when only the macro writes the
