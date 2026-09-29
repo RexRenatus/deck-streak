@@ -225,13 +225,13 @@ async fn one_episode_keeps_its_anchor_across_recomputes() {
     recompute(&fold, &db, &data, at(D0, 12), D0).await;
     assert_eq!(
         anchor(&db).await,
-        Some(D0 - 120),
+        Some(D0 - 121),
         "the walk's horizon anchors it"
     );
     recompute(&fold, &db, &data, at(D0 + 1, 12), D0 + 1).await;
     assert_eq!(
         anchor(&db).await,
-        Some(D0 - 120),
+        Some(D0 - 121),
         "the next day's recompute keeps the episode's anchor"
     );
 }

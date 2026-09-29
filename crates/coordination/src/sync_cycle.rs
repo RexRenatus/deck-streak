@@ -30,7 +30,9 @@ use deck_streak_progression::ledger::SqliteXpLedger;
 use crate::ladder_facts;
 use crate::level_up::announce_level_up;
 use crate::obligations::{ObligationSource, Obligations};
+use crate::recompute::streaks::RelightDue;
 use crate::recompute::{Fold, FoldInput};
+use crate::relight::announce_relight;
 
 /// The name of the settle a closed study day is owed, as an obligation (SPEC-071 R15): the source's
 /// name, and the label of its deadline, which the gate's reason and the log carry.
@@ -85,6 +87,7 @@ pub struct CycleParts<E> {
     clock: Arc<dyn Clock>,
     router: Option<Arc<Router>>,
     fold: Option<CycleFold>,
+    relights: Option<RelightDue>,
 }
 
 /// The fold a cycle's recompute runs (SPEC-071 R15): the fold with its registered steps, the
@@ -115,6 +118,7 @@ impl<E: AnkiEngine + Sync> CycleParts<E> {
             clock,
             router: None,
             fold: None,
+            relights: None,
         }
     }
 
@@ -149,6 +153,14 @@ impl<E: AnkiEngine + Sync> CycleParts<E> {
             rule,
             courses_digest,
         });
+        self
+    }
+
+    /// This cycle, routing the relights `due` names after each fold's commit (SPEC-076 R27), as the
+    /// level-up is announced.
+    #[must_use]
+    pub fn with_relights(mut self, due: RelightDue) -> Self {
+        self.relights = Some(due);
         self
     }
 
@@ -291,6 +303,13 @@ where
                     let today = fold.rule.study_day(checked.now);
                     if let Err(error) = announce_level_up(router, before, after, today).await {
                         tracing::error!(%error, "the level-up line could not be raised");
+                    }
+                    if let Some(due) = &cycle.relights {
+                        for day in due.take() {
+                            if let Err(error) = announce_relight(router, day, today).await {
+                                tracing::error!(%error, "the relight line could not be raised");
+                            }
+                        }
                     }
                 }
             }

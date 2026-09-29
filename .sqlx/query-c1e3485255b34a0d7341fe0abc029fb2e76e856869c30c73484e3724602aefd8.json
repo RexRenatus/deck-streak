@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT OR IGNORE INTO freeze_events (study_day, delta, reason, created_at)\n             VALUES (?1, ?2, ?3, ?4)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 4
+    },
+    "nullable": []
+  },
+  "hash": "c1e3485255b34a0d7341fe0abc029fb2e76e856869c30c73484e3724602aefd8"
+}

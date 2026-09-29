@@ -19,5 +19,7 @@ pub mod governor;
 pub mod lapse;
 pub mod law;
 pub mod relight;
+pub mod replay;
+pub mod store;
 pub mod streak;
 pub mod strength;

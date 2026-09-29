@@ -1,7 +1,7 @@
 -- SPEC-076 R17 to R20: the tables streaks owns (docs/CONTEXT-MAP.md).
 --
 -- `streak_state` is the derived cache of each track's streak, one row per track. `freeze_events`
--- is the freeze ledger: a signed delta with the reason it was paid for; the three reasons the fold
+-- is the freeze ledger: a signed delta (zero for a break marker) with the reason it was paid for; the three reasons the fold
 -- itself writes (consumed, streak_break, streak_earn) are unique per day, so a recompute writes
 -- each once. `habit_strength` is the strength the governor folded for a day, and `governor_state`
 -- is the governor's one row: the lapse anchor, whether it stood by, and the day it last said so.
@@ -20,7 +20,7 @@ CREATE TABLE streak_state (
 CREATE TABLE freeze_events (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     study_day INTEGER NOT NULL,
-    delta INTEGER NOT NULL CHECK (delta <> 0),
+    delta INTEGER NOT NULL,
     reason TEXT NOT NULL CHECK (
         reason IN ('consumed', 'streak_break', 'streak_earn', 'chest', 'weekly_quest', 'season', 'shop')
     ),
