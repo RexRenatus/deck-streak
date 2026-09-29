@@ -32,13 +32,14 @@ use tempfile::TempDir;
 /// Statements that leave every table of the schema holding rows no erase leaves: 101 rows in each
 /// table that takes rows, so an export that pages or limits its read comes up short (the
 /// predecessor's lesson), and every column a reset writes moved off its reset value.
-const SEEDS: [&str; 14] = [
+const SEEDS: [&str; 15] = [
     "UPDATE settings_generation SET generation = 7, courses_digest = '0123456789abcdef' \
      WHERE id = 1",
     "UPDATE ingest_state SET anchor_newest_review_id = 1700000000123, anchor_card_count = 57, \
      anchor_card_fingerprint = 9001, anchor_study_day = 20000, \
      anchor_recomputed_at = 1700000000456, anchor_settings_generation = 7, rescore_pending = 1, \
      window_floor = 1690000000000, window_count = 12 WHERE id = 1",
+    "UPDATE owner_last_message SET message_id = 4242, arrived_at = 1700000000789 WHERE id = 1",
     "WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 101) \
      INSERT INTO sync_runs (trigger, study_day, started_at, finished_at, status, reason, \
      attempts, full_download, created_at) \
