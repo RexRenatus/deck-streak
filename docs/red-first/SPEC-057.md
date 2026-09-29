@@ -261,8 +261,6 @@ A27 is the progression crate's row of section 7. Its opening sweep, run 36533129
 (dev c8d8a30), counted 33 of 33 reports whole, listed 57 mutants and read `table: verdict: ok` with
 unexplained 0: killed 39, equivalent 0, unviable 18. The crate's existing tests already kill every
 viable mutant, so A27's test, which compares the row to its counts, has no unexplained mutant to
-be red for: it is recorded `not red`, and the delivery adds no killing test, no record and no
-production change. The closing sweep, run 36534197772 at the branch head (c3c6484), counted 33 of 33
+be red for: it is recorded `not red`, and the delivery adds no record and no production change. The closing sweep, run 36534197772 at c3c6484, counted 33 of 33
 whole and read the same figures. All 32 shards and the listing job exited 0, and no shard log
-holds a timeout line. Rows S05775 to S05779 are unused: the tool mutated every invariant of the
-crate (R20).
+holds a timeout line. Row S05775 pins `SOURCE_GRAMMAR`, the grammar SPEC-040 R2 states, a constant the tool never mutates and a test read only through itself; S05776 to S05779 are unused. The crate's other five constants were each planted by hand and each failed a named test (R20). A later fix round added one assertion to a test and changed no production file, so the listing and the closing figures stand.
