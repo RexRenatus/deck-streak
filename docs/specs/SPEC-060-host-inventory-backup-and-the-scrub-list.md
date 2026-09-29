@@ -72,7 +72,8 @@ R6. `deploy/host-scrub/apply.py LIST APPROVAL --rules RULES --log FILE` runs dry
 R7. `apply.py` never deletes a path outside the approved list (a package's own removal scripts, which
     the package manager runs when it removes an approved package, are outside that promise), never
     follows a symbolic link out of an item, refuses an item that is a mount point, holds one, or lies
-    inside a mount whose root is not `/`, and refuses an item under any
+    inside a mount whose root is not `/` or inside a file system mounted whole at two points, and
+    refuses an item under any
     protected path, or holding one, whatever the approval says. The protected paths come from the private rail's protected-path list, which holds every
     path of the host's other services and their data; the example rules protect `/etc`, `/usr`,
     `/boot`, the credential socket's directory and every DeckStreak release directory, and the tests
@@ -103,7 +104,7 @@ R10. The only classes W2 deletes are the owner's: backups older than their reten
 | A9 | apply runs as health checks only the read commands of the inventory's allow list, from the rules the inventory read: a changing command given as a health check, or other rules, are refused before any command runs, with 0 package-tool calls | `test_host_scrub.py` |
 | A10 | each tool parses and binds a file from one read, and opens it once: the rules' digest the inventory records, the plan checks and the apply checks is taken over the rules each acts on; the list names its inventory by the bytes the plan parsed; and the apply deletes only items of the list whose digest the approval carries, so a file that serves other bytes to a second read is refused or acted on exactly as its digest says, and nothing the list's rules protect or the approval does not name is deleted | `test_host_scrub.py` |
 | A11 | the inventory refuses to be written, and the apply refuses to delete, while the host clock does not read synchronised or when the inventory did not record that it did; and an item any of whose entries lies on another device than its own is neither digested, listed nor removed | `test_host_scrub.py` |
-| A12 | an item that is a mount point, or holds one (any mount point strictly under it), or lies inside a mount whose root is not `/` (a bind mount), is not listed by the plan and is refused by the apply, whether it is a directory or a file, and the mount point is read from the kernel's mount table with every octal escape decoded; a mount table that cannot be read refuses every path item, in the plan and in the apply; an item with no mount point at or under it is listed and passes | `test_host_scrub.py` |
+| A12 | an item that is a mount point, or holds one (any mount point strictly under it), or lies inside a mount whose root is not `/` or inside a file system mounted whole at two points, is not listed by the plan and is refused by the apply, whether it is a directory or a file, and the mount point is read from the kernel's mount table with every octal escape decoded; a mount table that cannot be read refuses every path item, in the plan and in the apply; an item with no mount point at or under it is listed and passes | `test_host_scrub.py` |
 
 ```acceptance
 A1: python3 -m unittest discover -s scripts/tests -p test_host_scrub.py -k test_the_inventory_runs_only_its_read_only_allow_list
@@ -133,8 +134,8 @@ host's time-sync reading through the stub on the tools' `PATH`, changing it betw
 and the apply, and fakes a file system mounted inside an item at the walk's seam, since the box that
 runs the tests refuses unprivileged mounts. A12 fakes the kernel's mount table through the reader
 the tools read it by (`read_mountinfo`): an item that is a mount point, an item holding one, an
-escaped paths (two escapes in one path), a file mounted over a file, an item inside a bind mount, a
-mount table that cannot be read, a mount point that only shares an item's name as a prefix, and a
+escaped paths (two escapes in one path), a file mounted over a file, an item inside a bind mount, an item inside a
+file system mounted whole at two points, a mount table that cannot be read, a mount point that only shares an item's name as a prefix, and a
 control with none.
 
 ## 4. The owner's gate and the evidence it records
@@ -200,13 +201,16 @@ only.
   shares its device with the tree around it, and a file mounted over a file leaves a directory-only
   device check nothing to compare, so the plan and the apply also read the kernel's mount table
   (`/proc/self/mountinfo`, the mount point field, its octal escapes decoded) and refuse an item that
-  is a mount point or holds one (or lies inside a bind mount, below), whatever its device: the plan skips it with its reason and the
+  is a mount point or holds one (or lies inside a bind mount or a file system mounted whole at two points, below), whatever its device: the plan skips it with its reason and the
   apply refuses it before any deletion (A11, A12). With it, a mount at or under an item is refused
   whatever its device. An item inside a mount whose root is not `/` is refused too, since a bind
-  mount shows another directory of the disk at that place and no list of protected paths is asked
-  to know it (A7, A12). That refusal has a cost: a host whose root file system is itself mounted
-  from a sub-tree (its root field is not `/`) refuses every item until the maintainer runs the
-  scrub elsewhere, which fails closed. A mount made after the apply's check is not seen, and belongs
+  mount of a directory shows that directory of the disk at that place and no list of protected
+  paths is asked to know it (A7, A12); so is an item inside a file system that the table lists
+  mounted whole (its root `/`) at two points, which is how a bind of a file system's root
+  directory reads. That refusal has a cost: a host whose root file system is itself mounted from a
+  sub-tree (its root field is not `/`) refuses every path item (an approved package is still
+  removed) until the maintainer runs the scrub elsewhere, and a host that mounts one file system
+  whole at two points refuses every path item under either point; both fail closed. A mount made after the apply's check is not seen, and belongs
   to the interval above.
 - **A deletion breaks another service.** The protected-path list refuses that service's paths
   whatever the approval says (A7), the health-check list is read after each apply (R9), and the
@@ -333,8 +337,21 @@ Its fifth fix round amended these statements too:
 - **R7, A7, A12: an item inside a bind mount is refused.** A mount whose root is not `/` shows another
   directory of the disk at its mount point, so an item under such a mount is refused by the plan and
   the apply, whatever the protected list says. A host whose root is itself mounted from a sub-tree
-  refuses every item. A12 also holds an unreadable mount table, in the plan and in the apply, and
+  refuses every path item (an approved package is still removed). A12 also holds an unreadable mount table, in the plan and in the apply, and
   an escape in each of two places of one path.
 - **R7: a package's removal scripts.** The promise never to delete a path outside the approved list
   does not cover what a package's own removal scripts do when the package manager runs them.
 - **The snapshot restores an item on the boot disk.** A path on another disk is not in the snapshot.
+
+Its sixth fix round amended these statements too:
+
+- **R7, A7, A12: a file system mounted whole at two points.** A bind of a file system's root
+  directory, of `/` or of a protected directory that is itself a mount point, reads `/` in the
+  mount table's root field, so the root-field clause of the fifth round did not see it, and the
+  device check compares an item with a device the whole item lies on. The plan and the apply now
+  also refuse an item under any mount point of a file system the table lists mounted whole at two
+  points. A12 fakes each mount on its own device, since one device for every row models a bind of
+  `/` as the control. A host that mounts one file system whole at two points refuses every path
+  item under either point.
+- **R7, A12: what "a bind mount" names.** A mount whose root is not `/` is a mount of a
+  sub-tree, which a bind of a directory is; the criteria now say what the code checks.

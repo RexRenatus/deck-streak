@@ -25,7 +25,7 @@ to what is deleted, and what is the backup?
 
 ## Considered Options (the alternatives it was chosen against)
 
-- A runbook and three tools, inventory, plan and apply, with each item's digest in the approval and one boot-disk snapshot as the backup: chosen, because the approval binds the exact bytes approved, a changed item refuses the whole run, and the snapshot covers the whole disk without using any of it.
+- A runbook and three tools, inventory, plan and apply, with each item's digest in the approval and one boot-disk snapshot as the backup: chosen, because the approval binds the exact bytes approved, an item changed before the checks refuses the whole run and one changed after them stops it, and the snapshot covers the whole disk without using any of it.
 - A checklist inside the release-ops pack: rejected because the packs are the maintainer's and judged in the box run (ADR-069), so DeckStreak cannot add a row to one, and one host's one-off chore does not belong in a portable pack.
 - A pack of DeckStreak's own: rejected because the pack-wave method's research, coverage matrix and planted-defect fixtures buy nothing for three tools whose own tests are the checks, used in W2 and again at cutover.
 - Deleting by hand from a written checklist: rejected because nothing then ties the owner's approval to what is deleted, and a file that changed after the list was read would be deleted anyway.
@@ -169,10 +169,21 @@ alternatives:
   runbook and the protected paths (the documentation-only minimum), which leaves the protection of
   a protected directory bind-mounted elsewhere to an operator's list and is one missed step from
   deleting protected data; the code fails closed. Its cost: a host whose root file system is
-  mounted from a sub-tree (its root field is not `/`) refuses every item until the maintainer runs
-  the scrub elsewhere.
-- **Not adopted:** a check in the code that the snapshot was taken after the list (it changes the
-  approval's format; the runbook's order states it), and a rename of the test that holds A5.
+  mounted from a sub-tree (its root field is not `/`) refuses every path item (an approved package
+  is still removed) until the maintainer runs the scrub elsewhere.
+- **Not adopted:** a rename of the test that holds A5 (it cascades the row ids that name it), and a
+  check in the code that the snapshot was taken after the list (it changes the approval's format;
+  the runbook's order states it).
+
+### Decided in the sixth fix round (SPEC-060 §8)
+
+- **An item inside a file system mounted whole at two points is refused.** A bind of a file
+  system's root directory, `/` or a protected directory that is itself a mount point, reads `/` in
+  the root field, so the fifth round's clause did not see it. The plan and the apply also refuse an
+  item under a mount point of a file system that the table lists with root `/` at more than one
+  point. Chosen against narrowing A7 and disclosing the hole, which leaves a bind of a file
+  system's root directory deletable in an irreversible class. Its cost: a host that mounts one
+  file system whole at two points refuses every path item under either point.
 
 ### Consequences
 
@@ -188,8 +199,10 @@ alternatives:
 - Bad, because a host whose time sync is down cannot be scrubbed until it reads synchronised.
 - Bad, because a synchronised reading bounds the clock's error by the kernel's 16 s and not to zero;
   no check here narrows it further.
-- Bad, because a host whose root file system is mounted from a sub-tree refuses every item until
-  the scrub runs elsewhere.
+- Bad, because a host whose root file system is mounted from a sub-tree refuses every path item (an
+  approved package is still removed) until the scrub runs elsewhere.
+- Bad, because a host that mounts one file system whole at two points refuses every path item under
+  either point.
 - Bad, because a mount made after the apply's check is not seen; it belongs to the same removal
   interval as any other change.
 - Bad, because the digest reads each candidate's content once; the tools run niced,

@@ -154,7 +154,8 @@ host clock that does not read synchronised now, or an inventory that did not rec
 item whose path the apply does not read canonically (named by its id); an item under a protected
 path or holding one; an item reached through a symbolic link; an item holding an entry on another
 device than its own; an item that is a mount point, holds one, or lies inside a bind mount (a mount whose
-root is not `/`), or a mount table that cannot be read; an item whose digest changed since
+root is not `/`, which a bind of a directory reads, or a file system mounted whole at two points,
+which a bind of a file system's root directory reads), or a mount table that cannot be read; an item whose digest changed since
 the list was made; a package that `dpkg --dry-run --remove` would not remove alone. A file or link
 is unlinked, never its target; a directory is removed without following a link inside it; a
 package is removed with `dpkg --remove`, which keeps its configuration files. Each item is read
@@ -162,7 +163,9 @@ again immediately before its deletion, through directories opened without follow
 goes only while it is what its checks read, and a change found there stops the run with earlier deletions kept.
 
 A host whose root file system is itself mounted from a sub-tree (its mount root is not `/`) refuses
-every item: run the scrub from another host image instead.
+every path item (an approved package is still removed): run the scrub from another host image
+instead. A host that mounts one file system whole at two points refuses every path item under either
+point.
 
 | exit | meaning | what to do |
 |---|---|---|

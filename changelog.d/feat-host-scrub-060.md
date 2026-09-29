@@ -7,7 +7,7 @@
   check passing before the first deletion (and each deletion measuring its item again and stopping
   the run there, earlier deletions kept), after checking the list's digest, the rules the inventory read, a boot-disk snapshot
   taken after the inventory, a host clock that reads synchronised, an item that lies on another
-  device or is, holds or lies inside a mount point, the protected paths, links out of an item and every item's digest
+  device or is or holds a mount point or lies inside a bind mount, the protected paths, links out of an item and every item's digest
   again, and it stops the scrub when a health check turns red. It runs only read commands as health
   checks, refuses a path it does not read canonically, and deletes nothing it did not check first: each
   item is read again, through directories opened without following a link, just before it goes.
