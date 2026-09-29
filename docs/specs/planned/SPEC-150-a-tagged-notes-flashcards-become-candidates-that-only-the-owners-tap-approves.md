@@ -193,13 +193,15 @@ R17. `/vaultcards` scans, then replies with the report's counts, up to 10 refusa
     by the revision id. With nothing pending it says so. `not_configured` and `vault_missing` each
     reply with their own line and nothing else. The walk runs on the kernel's `Offload`.
 R18. Every tap is answered (SPEC-026 R9), decided through R16, and followed by the next oldest
-    pending card or the all-decided line; a tap on a revision that is not pending is answered with
-    the already-decided line and changes nothing. After Edit the bot sends the form (`Q: ` and `A: `
-    lines with the current sides); the owner's next message that is not a command, in that form, is
-    the edit; a command cancels it; a message not in the form, or an edit R16 answers `refused`, is
-    refused with the reason's words and the form, and the edit stays pending. The bot holds at most
-    one pending edit, in memory. Every reply is HTML-escaped (SPEC-026 R6), and /vaultcards is
-    registered for the owner's chat only (SPEC-026 R11).
+    pending card or the all-decided line; a tap on a revision that is not pending, or that no longer
+    exists, is answered with the already-decided line and changes nothing. After Edit the bot sends
+    the form (`Q: ` and `A: ` lines with the current sides); the owner's next message that is not a
+    command, in that form, is the edit; a command cancels it; a message not in the form, or an edit
+    R16 answers `refused`, is refused with the reason's words and the form, and the edit stays
+    pending; an edit R16 answers `not_pending` or `unknown` (the revision was decided, withdrawn or
+    erased meanwhile) is answered with the already-decided line, ends the edit and changes nothing.
+    The bot holds at most one pending edit, in memory. Every reply is HTML-escaped (SPEC-026 R6),
+    and /vaultcards is registered for the owner's chat only (SPEC-026 R11).
 R19. `GET /api/vault-cards` (`pending`), `POST /api/vault-cards/scan` (`scan`) and `POST
     /api/vault-cards/{revision}/approve`, `/edit` (a JSON body `{"front", "back"}`) and `/reject`
     (`decide`) answer the authenticated owner only (SPEC-024 R7's `OwnerSession`). Each `POST`
@@ -262,8 +264,8 @@ R24. CHARTER 10's eleven anti-goals bind this SPEC as one block; the ones it tou
 | A26 | with the copy unreadable the scan stores its cards and every new revision is `unchecked` | `an_unreadable_copy_leaves_the_flag_unchecked` |
 | A27 | the bot's and the API's decisions call `coordination::vault_cards::decide`, and nothing else in either crate writes a revision | `both_surfaces_decide_through_one_use_case` |
 | A28 | /vaultcards replies with the counts, at most 10 refusals, the capped and unchecked lines when they hold, and the oldest pending card with its note's file name, its duplicate line when `found` and its three buttons, each datum within 64 bytes, or the none line, and the not-configured and vault-missing lines; each tap is answered and shows the next card or the all-decided line | `vaultcards_shows_the_oldest_pending_card` |
-| A29 | a tap on a decided revision is answered with the already-decided line and changes nothing | `a_stale_tap_is_answered_already_decided` |
-| A30 | after Edit the next message in the form is the edit, a command cancels it, and a message out of the form or a refused edit is refused with the reason and the form | `edit_takes_the_next_message_in_the_form` |
+| A29 | a tap on a decided revision, or on one that no longer exists, is answered with the already-decided line and changes nothing | `a_stale_tap_is_answered_already_decided` |
+| A30 | after Edit the next message in the form is the edit, a command cancels it, a message out of the form or a refused edit is refused with the reason and the form, and an edit of a revision decided or withdrawn meanwhile is answered with the already-decided line and ends the edit | `edit_takes_the_next_message_in_the_form` |
 | A31 | the menu registered for the owner's chat holds /vaultcards | `the_menu_is_registered_for_the_owners_chat_only` |
 | A32 | the routes answer the owner and refuse any other session, a non-JSON or cross-site `POST` is refused, 409, 404 and 422 answer `not_pending`, `unknown` and `refused`, and the scan's `not_configured` and `vault_missing` answer 200 by name | `the_vault_card_routes_answer_only_the_owner` |
 | A33 | the scan's report counts read, tagged, new, pending, approved, withdrawn and absent cards, lists the refusals, and says whether the walk was capped and whether duplicates were checked | `the_scan_report_counts_each_field` |
