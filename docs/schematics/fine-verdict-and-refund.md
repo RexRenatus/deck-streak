@@ -61,7 +61,7 @@ sequenceDiagram
   D-->>G: the references whose evidence failed
   G->>E: reverse each with the reason revision
   E-->>G: the refund, once
-  G->>R: one message per settled or reversed fine, kind discipline
+  G->>R: each fine's and refund's message recorded pending, raised now or at the tick
 ```
 
 - The recompute runs because each open deadline is registered with the obligation port, so a

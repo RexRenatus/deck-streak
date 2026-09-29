@@ -67,7 +67,8 @@ sequenceDiagram
 
 - While the engine is off, the step voids every open position and refunds each stake, and settles
   nothing.
-- The step sends no message of its own: the digest's Oracle block reports what settled.
+- The step records each raise pending; an owner's sync raises it through its router at once,
+  a scheduled sync leaves it for `discipline_tick`. The digest's Oracle block reports what settled.
 
 ## A trade
 

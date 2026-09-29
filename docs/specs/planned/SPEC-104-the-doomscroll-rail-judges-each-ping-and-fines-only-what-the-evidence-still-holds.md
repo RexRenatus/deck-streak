@@ -212,20 +212,23 @@ R21. The rail's deadlines (a sprint's deadline plus 15 minutes, an unanswered de
 Tables, surfaces and rights
 
 R22. Discipline owns `tripwire_events` (the app, the instant, the verdict, the study day, the fine,
-    the session's seconds, graced), `tripwire_state` (one row: the bound source, the verified study
-    day, suspended, the last ping, the snooze's end and study day, the rung, its clean count and its
-    last judged and stepped study days, the spin's study day, instant, amount and outcome, and the
-    scope), `sprints` (one per event: tap, deadline, status) and `chest_locks` (one per study day:
-    the instant, lifted or consumed), each `STRICT` with `created_at`, created by
-    `migrations/010401_discipline_tripwire.sql`.
+    the session's seconds, graced, and the fine's and the refund's pending messages of R23),
+    `tripwire_state` (one row: the bound source, the verified study day, suspended, the last ping,
+    the snooze's end and study day, the rung, its clean count and its last judged and stepped study
+    days, the spin's study day, instant, amount and outcome, the scope, and the pending step-down
+    and canary notices of R23), `sprints` (one per event: tap, deadline, status) and `chest_locks`
+    (one per study day: the instant, lifted or consumed), each `STRICT` with `created_at`, created
+    by `migrations/010401_discipline_tripwire.sql`.
 R23. Every rail message goes through the router under the policy's kind `discipline` (SPEC-105,
-    ADR-104), except the free spin's celebration (R18). The sync's rail step (R15's step-down
-    notice, R16's canary notice) records each message pending in the ledger, as SPEC-106 R17 does:
-    when the cycle carries a router (the owner's sync), the cycle's flush delivers it at once;
-    otherwise it waits for `discipline_tick` (SPEC-105 R12), which delivers it through the router on
-    its next run. The rail's defections inside a committed
-    window or a hard-mode night are passed to their evaluation (SPEC-105), so a window's `red` and a
-    night's pings count them from this delivery on; neither fines them again.
+    ADR-104), except the free spin's celebration (R18). Each message the sync's rail step raises
+    (the fine's message of a fine the settlement books, R10 and R13; the refund's message of a fine
+    the revision reverses, R20; R15's step-down notice; R16's canary notice) is recorded pending on
+    its row (R22), as SPEC-106 R17 does: when the cycle carries a router (the owner's sync), the
+    step raises it through that router at once; otherwise it waits for `discipline_tick` (SPEC-105
+    R12), which raises it through the router on its next run outside quiet hours; either path clears
+    it as SPEC-106 R17 does. The rail's defections inside a committed window or a hard-mode night
+    are passed to their evaluation (SPEC-105), so a window's `red` and a night's pings count them
+    from this delivery on; neither fines them again.
 R24. `/tripwire` shows the rail's state (bound, verified, suspended, the rung, today's counts) and
     how to send a test; `/confess` offers the four durations as buttons (`cf:<bucket>`). The buttons
     of R8 and R17 run the same use cases as the routes. `GET /api/discipline/rail` and `POST
@@ -268,7 +271,7 @@ R25. Discipline's data-rights port exports and erases the four tables (`tripwire
 | A27 | the poll asks for channel posts, and the gate admits a channel post as a rail post only, never as the owner's message or command, and drops one over the cap | `a_channel_post_reaches_only_the_rail` |
 | A28 | an idle-only defection whose study reviews before its instant reach 15 is cleared at settlement and fines nothing, one at 14 is fined, and a window defection is fined whatever the reviews; nothing settles before its cycle | `an_idle_defection_with_its_reviews_is_cleared_at_settlement` |
 | A29 | a bot role started with no `tripwire-secret` starts and refuses every ping, and one started with an empty one refuses start, each through the credential loader and never the environment: a decoy environment variable `TRIPWIRE_SECRET` carrying a different value is never read, and the loaded file's value, or its absence, decides | `the_bot_role_reads_the_rails_secret_through_the_loader` |
-| A30 | a scheduled sync (no router) records the rail step's message pending and sends nothing, the next `discipline_tick` delivers it exactly once, and an owner's sync delivers it at once and leaves nothing pending | `a_scheduled_sync_leaves_the_rails_messages_pending_for_the_tick` |
+| A30 | a scheduled sync (no router) records the rail step's message pending and sends nothing, the next `discipline_tick` delivers it exactly once, and a second tick sends nothing, and an owner's sync delivers it at once and, outside quiet hours (a quiet-hours withhold keeps it pending, SPEC-106 R17), leaves nothing pending | `a_scheduled_sync_leaves_the_rails_messages_pending_for_the_tick` |
 
 ```acceptance
 A1: cargo test -p deck-streak-discipline --test rail_goldens -- --exact the_ping_grammar_and_token_match_the_parity_goldens
@@ -327,7 +330,7 @@ so the private wiring does not change when it merges.
 | `crates/discipline/src/constants.rs` | `deck-streak-discipline` | changed: the rail's constants join SPEC-105's, proved by the golden |
 | `crates/discipline/src/ping.rs` | `deck-streak-discipline` | added: the grammar and the token, pure |
 | `crates/discipline/src/verdict.rs` | `deck-streak-discipline` | added: the verdict's inputs and its fusion, pure |
-| `crates/discipline/src/rail.rs` | `deck-streak-discipline` | added: the events, the state, the binding, the rate and the post's outcomes |
+| `crates/discipline/src/rail.rs` | `deck-streak-discipline` | added: the events, the state, the binding, the rate, the post's outcomes and the pending messages (R23) |
 | `crates/discipline/src/sprint.rs` | `deck-streak-discipline` | added: sprints, the snooze and the unanswered defections |
 | `crates/discipline/src/rung.rs` | `deck-streak-discipline` | added: the booking's refusals, the rung, the base, the de-escalation and the canary |
 | `crates/discipline/src/lock.rs` | `deck-streak-discipline` | added: the chest lock, its ransom and its port |
@@ -345,7 +348,8 @@ so the private wiring does not change when it merges.
 | `crates/coordination/src/discipline/rail.rs` | `deck-streak-coordination` | added: the post's use case, its inputs and its reply |
 | `crates/coordination/src/discipline/fines.rs` | `deck-streak-coordination` | added: the booking, the confession, the grace and the revision step |
 | `crates/coordination/src/discipline/spin.rs` | `deck-streak-coordination` | added: the spin's celebration and its grant at confirmation |
-| `crates/coordination/src/sync_cycle.rs` | `deck-streak-coordination` | changed: the rail's step after the recompute |
+| `crates/coordination/src/discipline/tick.rs` | `deck-streak-coordination` | changed: the rail's pending messages raised at the tick (R23, A30) |
+| `crates/coordination/src/sync_cycle.rs` | `deck-streak-coordination` | changed: the rail's step after the recompute, raising its pending messages through the cycle's router when it carries one (R23) |
 | `crates/coordination/src/obligations.rs` | `deck-streak-coordination` | changed: the rail's deadline source |
 | `crates/coordination/src/lib.rs` | `deck-streak-coordination` | changed: the module above |
 | `crates/coordination/src/data_rights_registry.rs` | `deck-streak-coordination` | unchanged: discipline's port is registered by SPEC-105; listed under SPEC-021's six-file rule |
@@ -448,8 +452,8 @@ real source id or a real token.
 
 | table | owner | created by | from the predecessor's | export and erase |
 |---|---|---|---|---|
-| `tripwire_events` | `discipline` | `migrations/010401_discipline_tripwire.sql` (SPEC-104) | `tripwire_events`, one row per ping or confession, its day as an epoch day | exported and erased |
-| `tripwire_state` | `discipline` | the same migration | `tripwire_state`, with the bound source, the scope, the snooze's day and the spin's day and instant, which the predecessor keeps as runtime settings | reset in place: unbound, unverified, rung 0 |
+| `tripwire_events` | `discipline` | `migrations/010401_discipline_tripwire.sql` (SPEC-104) | `tripwire_events`, one row per ping or confession, its day as an epoch day, and no pending message | exported and erased |
+| `tripwire_state` | `discipline` | the same migration | `tripwire_state`, with the bound source, the scope, the snooze's day and the spin's day and instant, which the predecessor keeps as runtime settings, and no pending message | reset in place: unbound, unverified, rung 0 |
 | `sprints` | `discipline` | the same migration | `sprints`, one per event | exported and erased |
 | `chest_locks` | `discipline` | the same migration | the chest-lock rows of `buffs`, one per study day with its instant | exported and erased |
 

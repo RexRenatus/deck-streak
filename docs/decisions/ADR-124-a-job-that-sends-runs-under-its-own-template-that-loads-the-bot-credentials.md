@@ -11,8 +11,9 @@ decision-makers: "the DeckStreak architect (the W5 fix round)"
 The job role builds no bot transport and loads no bot token: "no job of the W0 table sends a
 message, so the role builds no bot transport and loads no bot token, and the first job that sends
 joins wiring's `TransportMarker`" (`crates/daemon/src/role_job.rs`, its module comment; SPEC-026
-R10; SPEC-041 R13). Without a transport the router withholds every bot occasion as
-`Withheld{NoNotifier}` before any push (`crates/notifications/src/router.rs`, `decide`).
+R10; SPEC-041 R13). Without a transport the router withholds every bot occasion that passes the
+router's earlier rules as `Withheld{NoNotifier}` before any push
+(`crates/notifications/src/router.rs`, `decide`).
 
 W5 adds the first jobs that send: `morning_nudge`, `evening_nudge`, `last_chance_nudge`,
 `daily_digest`, `weekly_report`, `widget_refresh` and `discipline_tick` (SPEC-100, SPEC-101,

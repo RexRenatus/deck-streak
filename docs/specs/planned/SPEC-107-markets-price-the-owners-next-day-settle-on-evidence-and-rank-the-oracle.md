@@ -181,10 +181,10 @@ R16. A won position, settled or revised, whose price is 25 or less raises the ce
     `quest_all` with the key `market:<id>`. The Brier rank is computed before and after the step,
     and a rank after the step that is the first or a higher band raises `quest_all` with the key
     `oracle_rank:<name>`. Both go through SPEC-084's ladder on the router (SPEC-041), and neither
-    moves a coin. The markets step records each raise pending in the ledger, as SPEC-106 R17 does:
-    when the cycle carries a router (the owner's sync), the cycle's flush delivers it at once;
-    otherwise it waits for `discipline_tick` (SPEC-105 R12), which delivers it through the router on
-    its next run.
+    moves a coin. The markets step records each raise pending (R25), as SPEC-106 R17 does: when the
+    cycle carries a router (the owner's sync), the step raises it through that router at once;
+    otherwise it waits for `discipline_tick` (SPEC-105 R12), which raises it through the router on
+    its next run; either path clears it as SPEC-106 R17 does.
 R17. `void_open_positions(day)`, which coordination's markets module holds, runs in its caller's
     transaction: each open position becomes `voided` with its settled day, and its stake is refunded
     through `refund(day, "market_refund", "<id>", stake)`; it answers the number voided. SPEC-106's
@@ -236,8 +236,9 @@ R25. The migration `migrations/010701_markets_positions.sql` creates `market_pos
     with `created_at` (SPEC-020 R15, R18): an `AUTOINCREMENT` id, the key, the threshold (present
     exactly for `reviews:goal`), the outcome day, the price (15..90), the confidence (60, 70, 80 or
     90), the stake (above 0), the payout (above the stake), the status (`open`, `won`, `lost`,
-    `voided`), the settled day, the revision day and the trade's study day, with a unique index on
-    the key and the outcome day.
+    `voided`), the settled day, the revision day, the trade's study day, the pending `market:<id>`
+    raise of R16, and the pending `oracle_rank:<name>` raise of R16 (the rank's name, carried on the
+    last position the step settled), with a unique index on the key and the outcome day.
 R26. Markets' data-rights port exports and erases `market_positions`, which owes SPEC-021's six
     files.
 R27. The constants equal the golden `markets.constants`. `economy.json` gains no markets section:
@@ -295,7 +296,7 @@ R28. The reads this SPEC adds to other contexts, each that context's own and a r
 | A37 | the calibration button opens the markets screen and sends no image | `the_calibration_button_opens_the_markets_screen` |
 | A38 | the markets' routes and the calibration chart answer the owner's session only | `the_market_routes_answer_only_the_owner` |
 | A39 | the screen trades from the board through one ticket, cancels while cancellable, and shows the Oracle card and the calibration chart with its table | `trades from the board and shows the oracle` |
-| A40 | a scheduled sync (no router) records the markets step's raises pending and sends nothing, the next `discipline_tick` delivers each exactly once, and an owner's sync delivers them at once and leaves nothing pending | `a_scheduled_sync_leaves_the_markets_raises_pending_for_the_tick` |
+| A40 | a scheduled sync (no router) records the markets step's raises pending and sends nothing, the next `discipline_tick` delivers each exactly once, and a second tick sends nothing, and an owner's sync delivers them at once and, outside quiet hours (a quiet-hours withhold keeps them pending, SPEC-106 R17), leaves nothing pending | `a_scheduled_sync_leaves_the_markets_raises_pending_for_the_tick` |
 
 ```acceptance
 A1: cargo test -p deck-streak-markets --test market_goldens -- --exact the_prices_match_the_parity_golden
@@ -368,7 +369,7 @@ lifted for this delivery, so the private wiring does not change when it merges.
 | `crates/markets/src/trade.rs` | `deck-streak-markets` | added: the trade's and the cancel's verdicts and the offers, pure |
 | `crates/markets/src/settle.rs` | `deck-streak-markets` | added: the mercy, the truth, the settlement, the revision and the rank's rise, pure |
 | `crates/markets/src/oracle.rs` | `deck-streak-markets` | added: the summary, the digest block, the weekly line and the calibration series, pure |
-| `crates/markets/src/store.rs` | `deck-streak-markets` | added: the repository over `market_positions`, through the kernel's base |
+| `crates/markets/src/store.rs` | `deck-streak-markets` | added: the repository over `market_positions`, through the kernel's base, and the pending raises of R16 |
 | `crates/markets/src/data_rights.rs` | `deck-streak-markets` | added: the markets data-rights port |
 | `crates/markets/Cargo.toml` | `deck-streak-markets` | changed: the workspace dependencies it uses (`sqlx`, `thiserror`, `tokio`); `serde` and `serde_json` with `float_roundtrip` as dev-dependencies for the golden reader |
 | `crates/markets/tests/market_goldens.rs` | `deck-streak-markets` | added: A1 to A15 |
@@ -385,7 +386,8 @@ lifted for this delivery, so the private wiring does not change when it merges.
 | `crates/coordination/src/markets/mod.rs` | `deck-streak-coordination` | added: the inputs, the board, the trade and the cancel, and the void port |
 | `crates/coordination/src/markets/settle.rs` | `deck-streak-coordination` | added: the markets step, its inputs, its coins and its celebrations |
 | `crates/coordination/src/lib.rs` | `deck-streak-coordination` | changed: the markets module |
-| `crates/coordination/src/sync_cycle.rs` | `deck-streak-coordination` | changed: the markets step after discipline's |
+| `crates/coordination/src/sync_cycle.rs` | `deck-streak-coordination` | changed: the markets step after discipline's, raising its pending raises through the cycle's router when it carries one (R16) |
+| `crates/coordination/src/discipline/tick.rs` | `deck-streak-coordination` | changed: the markets' pending raises (`market:<id>`, `oracle_rank:<name>`) raised at the tick through SPEC-084's ladder (R16, A40) |
 | `crates/coordination/src/charts/mod.rs` | `deck-streak-coordination` | changed: `oracle_calibration` joins the closed set |
 | `crates/coordination/src/data_rights_registry.rs` | `deck-streak-coordination` | changed: `market_positions` registered |
 | `crates/coordination/tests/data_rights_symmetry.rs` | `deck-streak-coordination` | changed: a seeded row of `market_positions` |
@@ -490,7 +492,7 @@ holds a calendar date or a personal value.
 
 | table | owner | created by | from the predecessor's | export and erase |
 |---|---|---|---|---|
-| `market_positions` | `markets` | `migrations/010701_markets_positions.sql` (SPEC-107) | `market_positions`, its days as epoch days, its forecast as the confidence, a `reviews:goal` row's threshold the goal read at the import, and no revision day | exported and erased |
+| `market_positions` | `markets` | `migrations/010701_markets_positions.sql` (SPEC-107) | `market_positions`, its days as epoch days, its forecast as the confidence, a `reviews:goal` row's threshold the goal read at the import, and no revision day, and no pending raise | exported and erased |
 
 ## 9. Mutation rows
 

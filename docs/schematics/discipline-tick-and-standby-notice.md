@@ -29,10 +29,11 @@ sequenceDiagram
   participant R as notifications router
   S->>C: run the cycle
   C->>C: recompute, the governor's step stores the pending notice
+  C->>C: the rail and markets steps record their messages pending, raised now with a router
   C->>D: judge every occurrence and night whose end plus 15 minutes passed
   D-->>C: verdicts, and the kept ones to credit once
   T->>D: windows starting within 15 minutes, and a pending notice
-  D-->>T: reminders to raise, and the notice claimed once
+  D-->>T: reminders, the notice and the steps' pending messages, each claimed once
   T->>R: kind discipline, withheld in quiet hours or a lapse
 ```
 
