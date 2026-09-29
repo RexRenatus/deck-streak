@@ -36,15 +36,15 @@ def read(path):
 
 
 def judge_path_unit(unit):
-    """The problems a path unit has as the sync job's doorbell."""
+    """The problems a path unit has as the sync job's doorbell.
+
+    The [Path] section is the exact watch set: one PathChanged= on the request file and no other
+    key, so a level trigger (PathExists, PathExistsGlob, DirectoryNotEmpty), another edge
+    (PathModified) or a redirected Unit= are each refused without being named.
+    """
     problems = []
-    if values(unit, "Path", "PathChanged") != [REQUEST_FILE]:
-        problems.append("PathChanged must be the request file alone")
-    if any(
-        key in ("PathExists", "PathExistsGlob", "DirectoryNotEmpty")
-        for key, _ in unit.get("Path", [])
-    ):
-        problems.append("a level trigger restarts the job while the file remains")
+    if unit.get("Path") != [("PathChanged", REQUEST_FILE)]:
+        problems.append("the [Path] section is exactly PathChanged=" + REQUEST_FILE)
     if values(unit, "Path", "Unit"):
         problems.append("Unit= must stay unset so the instance's own service starts")
     text = repr(unit)
@@ -54,10 +54,59 @@ def judge_path_unit(unit):
     return problems
 
 
+def request_directory_writers(units):
+    """The names of the units whose ReadWritePaths= names the request directory."""
+    return sorted(
+        name
+        for name, unit in units.items()
+        if any(REQUEST_DIRECTORY in value for value in values(unit, "Service", "ReadWritePaths"))
+    )
+
+
+def every_unit():
+    """Every unit file under deploy/systemd, parsed, by file name."""
+    return {path.name: sections(read(path)) for path in sorted(SYSTEMD.iterdir()) if path.is_file()}
+
+
 class TheSyncPath(unittest.TestCase):
     def test_a_planted_bad_path_unit_is_refused(self):
         planted = sections("[Path]\nPathExists=" + REQUEST_FILE + "\nLoadCredential=x:y\n")
-        self.assertGreaterEqual(len(judge_path_unit(planted)), 3)
+        self.assertEqual(len(judge_path_unit(planted)), 2, judge_path_unit(planted))
+        good = "[Path]\nPathChanged=" + REQUEST_FILE + "\n"
+        self.assertEqual(judge_path_unit(sections(good)), [])
+        for extra in (
+            "PathModified=/run/deck-streak-sync/other",
+            "PathExistsGlob=/run/deck-streak-sync/*",
+            "DirectoryNotEmpty=/run/deck-streak-sync",
+            "MakeDirectory=true",
+        ):
+            self.assertTrue(
+                judge_path_unit(sections(good + extra + "\n")),
+                extra + " widens the watch set and is refused",
+            )
+
+    def test_a_planted_second_writer_of_the_request_directory_is_refused(self):
+        bot = sections("[Service]\nReadWritePaths=" + REQUEST_DIRECTORY + "\n")
+        api = sections("[Service]\nReadWritePaths=/var/lib/deck-streak\n")
+        planted = sections("[Service]\nReadWritePaths=/var/lib/x " + REQUEST_DIRECTORY + "\n")
+        self.assertEqual(
+            request_directory_writers({"deck-streak-bot.service": bot, "a.service": api}),
+            ["deck-streak-bot.service"],
+        )
+        self.assertEqual(
+            request_directory_writers(
+                {"deck-streak-bot.service": bot, "deck-streak-api.service": planted}
+            ),
+            ["deck-streak-api.service", "deck-streak-bot.service"],
+        )
+
+    def test_only_the_bot_unit_writes_the_request_directory(self):
+        units = examined("units under deploy/systemd", list(every_unit().items()))
+        self.assertEqual(
+            request_directory_writers(dict(units)),
+            ["deck-streak-bot.service"],
+            "only deck-streak-bot.service names the request directory in ReadWritePaths=",
+        )
 
     def test_the_path_unit_and_its_request_directory(self):
         path_unit = sections(read(SYSTEMD / ("deck-streak-job@" + "sync.path")))
