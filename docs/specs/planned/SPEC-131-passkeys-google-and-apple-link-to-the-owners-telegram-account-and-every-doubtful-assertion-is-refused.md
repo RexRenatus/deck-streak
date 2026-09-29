@@ -118,7 +118,8 @@ Passkeys (ADR-132)
 
 R10. The relying party is the host of `DECKSTREAK_PUBLIC_ORIGIN`, and the expected origin that
      origin exactly. Registration (inside a `link` session) asks for user verification `required`,
-     attestation `none`, and a user handle of 32 random bytes minted once for the owner and reused,
+     attestation `none`, and a user handle that is a random version-4 UUID (16 bytes, the `Uuid` webauthn-rs 0.5's
+     `start_passkey_registration` takes as `user_unique_id`), minted once for the owner and reused,
      with a fixed display name that carries no personal data. The ceremony's state is kept on the
      server under the flow id, never sent to the browser, and lives 300 seconds.
 R11. A registration or an assertion refuses: an unknown or already used ceremony,
@@ -219,7 +220,7 @@ R20. CHARTER 10's eleven anti-goals bind this SPEC as one block; the ones it tou
 | A30 | a ceremony at 300 seconds is refused `challenge_expired`, and at 299 is not | `a_passkey_challenge_expires_at_three_hundred_seconds` |
 | A31 | an assertion whose counter does not advance is refused `counter_regressed` | `a_regressed_counter_is_refused` |
 | A32 | a passkey sign-in stores the new counter and backup state | `a_passkey_sign_in_stores_its_counter` |
-| A33 | the user handle is 32 random bytes and the display name carries no personal data | `the_user_handle_carries_no_personal_data` |
+| A33 | the user handle is a random version-4 UUID and the display name carries no personal data | `the_user_handle_carries_no_personal_data` |
 | A34 | Apple's client secret is ES256 and expires 300 seconds after it is issued | `the_apple_client_secret_is_es256_for_three_hundred_seconds` |
 | A35 | Apple's refresh token is stored sealed, bound to its issuer and token id, opens with the key alone, and does not open under another row's token id | `apples_refresh_token_is_stored_sealed` |
 | A36 | unlinking Apple revokes before it deletes | `unlinking_apple_revokes_before_it_deletes` |

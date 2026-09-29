@@ -44,7 +44,8 @@ it is the maintained relying-party implementation whose passkey type makes user 
 requirement rather than an option.
 
 - **Registration** runs inside a `link` session, asks user verification `required` and attestation
-  `none`, and uses a user handle of 32 random bytes minted once for the owner, with a display name
+  `none`, and uses a user handle that is a random version-4 UUID (16 bytes, the `Uuid` webauthn-rs 0.5's
+  `start_passkey_registration` takes as `user_unique_id`) minted once for the owner, with a display name
   that carries no personal data.
 - **State.** Each ceremony's state is kept on the server under the flow id, never sent to the
   browser, and lives 300 seconds.
