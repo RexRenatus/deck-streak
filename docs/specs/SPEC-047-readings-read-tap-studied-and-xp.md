@@ -65,7 +65,7 @@ R9. The reading view the API serves carries its `covered` and `studied` counts a
 | id | criterion | decided by |
 |---|---|---|
 | A1 | a first tap sets `read_at`, grants 40 XP and ticks the vault line; a second tap changes nothing, grants nothing and writes nothing | `a_second_read_tap_changes_nothing` |
-| A2 | the read tick is called only by the tap use case (a census with a planted caller refused), and a settle, a roll and a regeneration leave the line as they found it | `the_read_line_is_written_only_by_the_tap` |
+| A2 | the read tick is called only by the tap use case (a census with a planted caller refused), and the settle names no read tick; a roll and a regeneration leave the line as they found it by SPEC-042's A5 and A13 | `the_read_line_is_written_only_by_the_tap` |
 | A3 | a later tap retries only a vault tick that failed, and grants nothing again | `a_later_tap_retries_only_a_failed_vault_tick` |
 | A4 | the studied rule equals the golden of `preread_tracking.py:is_studied` | `the_studied_rule_matches_the_parity_golden` |
 | A5 | reviews made after study day d + 1, or before the generation instant, do not count (injected clock) | `only_reviews_inside_the_two_study_day_window_count` |
@@ -75,6 +75,8 @@ R9. The reading view the API serves carries its `covered` and `studied` counts a
 | A9 | no XP is granted for a failed topic or an unknown reading id | `no_xp_is_granted_for_a_failed_or_missing_reading` |
 | A10 | no module of the readings use cases names the streaks context (a census with a planted import refused, examined count reported) | `the_reading_use_cases_touch_no_streak` |
 | A11 | the read route answers only the owner, and a stranger gets no state change | `the_read_route_answers_only_the_owner` |
+| A12 | the window is read in the configured offset and rollover hour: with the rollover at UTC+9, the last instant of study day d + 1 counts and the instant the next study day begins does not, and the window is over exactly then | `the_window_follows_the_configured_offset` |
+| A13 | a reading whose stamp of the Studied line failed is not counted studied and its verdict stays open with no studied instant; the next pass stamps it, counts it once and grants nothing again | `a_failed_stamp_leaves_the_reading_open_for_the_next_pass` |
 
 ```acceptance
 A1: cargo test -p deck-streak-coordination --test readings_read_tap -- --exact a_second_read_tap_changes_nothing
@@ -88,6 +90,8 @@ A8: cargo test -p deck-streak-coordination --test readings_settle -- --exact a_r
 A9: cargo test -p deck-streak-coordination --test readings_read_tap -- --exact no_xp_is_granted_for_a_failed_or_missing_reading
 A10: cargo test -p deck-streak-coordination --test readings_census -- --exact the_reading_use_cases_touch_no_streak
 A11: cargo test -p deck-streak-api --test readings_read -- --exact the_read_route_answers_only_the_owner
+A12: cargo test -p deck-streak-readings --test studied -- --exact the_window_follows_the_configured_offset
+A13: cargo test -p deck-streak-coordination --test readings_settle -- --exact a_failed_stamp_leaves_the_reading_open_for_the_next_pass
 ```
 
 ## 4. File manifest
@@ -96,28 +100,31 @@ A11: cargo test -p deck-streak-api --test readings_read -- --exact the_read_rout
 |---|---|---|
 | `crates/readings/src/studied.rs` | `deck-streak-readings` | added: the rule and the window |
 | `crates/readings/src/xp.rs` | `deck-streak-readings` | added: the amounts and the grant sources |
-| `crates/readings/src/reading.rs` | `deck-streak-readings` | changed: the read and studied state |
-| `crates/readings/src/store.rs` | `deck-streak-readings` | changed |
+| `crates/readings/src/store.rs` | `deck-streak-readings` | changed: the read and studied state, and its reads and writes |
 | `crates/readings/src/lib.rs` | `deck-streak-readings` | changed |
 | `migrations/004701_readings_read_and_studied.sql` | `deck-streak-readings` | added |
 | `crates/readings/src/data_rights.rs` | `deck-streak-readings` | changed: the export carries the new columns |
 | `crates/readings/tests/studied.rs` | `deck-streak-readings` | added |
 | `crates/readings/tests/reading_xp.rs` | `deck-streak-readings` | added: pins the amounts, sources and track |
+| `crates/readings/tests/progress.rs` | `deck-streak-readings` | added: the stored read and studied state |
+| `crates/coordination/src/readings/mod.rs` | `deck-streak-coordination` | changed: declares the tap and the settle |
 | `crates/coordination/src/readings/read_tap.rs` | `deck-streak-coordination` | added |
 | `crates/coordination/src/readings/settle.rs` | `deck-streak-coordination` | added |
 | `crates/coordination/tests/readings_read_tap.rs` | `deck-streak-coordination` | added |
 | `crates/coordination/tests/readings_settle.rs` | `deck-streak-coordination` | added |
+| `crates/coordination/tests/data_rights_symmetry.rs` | `deck-streak-coordination` | changed: the seeded reading rows carry distinct read and studied values |
 | `crates/coordination/tests/readings_census.rs` | `deck-streak-coordination` | added |
 | `crates/api/src/readings_routes.rs` | `deck-streak-api` | added: the read route |
 | `crates/api/src/router.rs`, `crates/api/src/lib.rs` | `deck-streak-api` | changed: mounts the readings routes |
 | `crates/api/tests/readings_read.rs` | `deck-streak-api` | added |
+| `crates/api/tests/state_debug.rs` | `deck-streak-api` | added: pins the state's hand-written `Debug` |
 | `scripts/mutation-rows.d/S04700-S04799.json` | repo | added |
 | `changelog.d/read-tap-047.md` | repo | added |
 | `tools/parity-oracle/registry/spec_047.py` | repo | added: registers `preread_tracking.py:is_studied` (SPEC-029's registry) |
 | `tools/parity-oracle/goldens/is_studied.json` | repo | added |
 | `Cargo.lock`, `.sqlx/` | workspace | changed |
 | `docs/specs/SPEC-047-readings-read-tap-studied-and-xp.md` | docs | moved from `docs/specs/planned/` |
-| `docs/decisions/ADR-047-studied-window-xp-constants-and-tap-only-tick.md` | docs | added |
+| `docs/decisions/ADR-047-studied-window-xp-constants-and-tap-only-tick.md` | docs | changed: accepted |
 | `docs/red-first/SPEC-047.md` | docs | added |
 
 ## 5. What this does NOT do
@@ -127,6 +134,11 @@ A11: cargo test -p deck-streak-api --test readings_read -- --exact the_read_rout
 - It celebrates no level reached through reading XP (#128).
 - It shows reading XP on no progress screen (#70).
 - It schedules no settle step (#39).
+- It composes neither use case into the daemon: the api role mounts no read route, and no vault
+  or review adapter behind `ReadTick`, `StudiedStamp` or `ReviewsByCard` is built, so the route
+  answers the owner only once they are composed (#39, #45). Composing an adapter that forwards to
+  the vault tree's `tick_read` must also narrow A2's census, which allows exactly one caller of
+  the read tick in the crates' sources.
 - It offers no comeback reading; a comeback reading read by the owner earns its 40 XP through this
   same tap (#35).
 
@@ -137,5 +149,7 @@ A11: cargo test -p deck-streak-api --test readings_read -- --exact the_read_rout
   and both grants are `once`-scoped; A8 replays them.
 - **The vault is unreachable at the tap.** The read state and the XP stand, the tick is recorded
   `pending`, and only the owner's next tap retries it (A3); the Mini App shows it pending (SPEC-051).
-- **A settle pass is slow on a large backlog of readings.** Each pass reads only open windows and
-  the windows a sync's reviews touch; the pass's duration is logged per sync.
+- **A settle pass is slow on a large backlog of readings.** Each pass reads every reading not yet
+  studied, retired ones included, and asks the review port only for their covered cards since
+  generation; narrowing a pass to the windows a sync's reviews touch, and logging its duration,
+  belong to the job that schedules it (#39).

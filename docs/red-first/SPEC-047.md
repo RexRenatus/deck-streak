@@ -47,4 +47,57 @@ A10: red at 50452a9: read_tap.rs is not in the examined population
 A10: green at 56c49f7
 A11: red at 831ff6e: assertion `left == right` failed: left: 501, right: 200
 A11: green at c27e169
+A12: not red: the studied window already read the configured offset, so the test passes at the code it was written against (c265d2d3); the plant that turns it red is P06 below
+A13: not red: the settle already leaves a reading whose stamp failed open and uncounted, so the test passes at the code it was written against (c265d2d3); the plants that turn it red are P10 and P11 below
 ```
+
+## Round 1 additions
+
+Two tests were added after the first verification round and made criteria A12 and A13. The code
+predates them, so each is not red at the head; the record is the plant that turns each red, run
+on the tree with the tests committed at `c265d2d3` and reverted afterwards.
+
+```text
+P06 (the window computed in the default rule instead of the configured one; A12)
+-            && (0..=1).contains(&(rule.study_day(at).epoch_day() - self.study_day.epoch_day()))
++            && (0..=1).contains(&(StudyDayRule::default().study_day(at).epoch_day() - self.study_day.epoch_day()))
+-        rule.study_day(now).epoch_day() >= self.study_day.epoch_day() + 2
++        StudyDayRule::default().study_day(now).epoch_day() >= self.study_day.epoch_day() + 2
+red:   thread 'the_window_follows_the_configured_offset' panicked at crates/readings/tests/studied.rs:119:5:
+       the rollover that starts d + 2, in the configured offset
+       test result: FAILED. 2 passed; 1 failed
+P10 (a reading whose stamp failed is counted studied; A13)
+-                        .record_measure(&reading.id, count, reading.verdict, None)
++                        .record_measure(&reading.id, count, reading.verdict, { report.studied += 1; None })
+red:   thread 'a_failed_stamp_leaves_the_reading_open_for_the_next_pass' panicked at crates/coordination/tests/readings_settle.rs:383:5:
+       assertion `left == right` failed: a reading whose stamp failed is not counted studied
+       test result: FAILED. 4 passed; 1 failed
+P11 (the verdict and the studied instant are recorded on a failed stamp; A13)
+-                        .record_measure(&reading.id, count, reading.verdict, None)
++                        .record_measure(&reading.id, count, Verdict::Studied, Some(now))
+red:   thread 'a_failed_stamp_leaves_the_reading_open_for_the_next_pass' panicked at crates/coordination/tests/readings_settle.rs:388:5:
+       assertion `left == right` failed: the verdict waits for the stamp
+       test result: FAILED. 4 passed; 1 failed
+```
+
+The data-rights seeds gave the new reading columns their defaults, so an export that swapped
+`read_at` and `studied_at` passed the symmetry probe. `2af0059e` gives the seeded rows distinct
+read, studied and verdict values; the test is green at the head with it and not red at the code
+it was written against, so it is recorded here and not as a criterion. Under the plant below
+(`crates/readings/src/data_rights.rs`, the two columns swapped in the export) it is red:
+
+```text
+-                                "read_at": row.read_at,
++                                "read_at": row.studied_at,
+-                                "studied_at": row.studied_at,
++                                "studied_at": row.read_at,
+red:   thread 'the_exported_tables_equal_the_erased_tables_over_every_port' panicked at crates/coordination/tests/data_rights_symmetry.rs:365:5:
+       assertion `left == right` failed: the export carries whole exactly the tables the erase clears or resets
+       (the readings table is missing from the exported set)
+       test result: FAILED. 3 passed; 1 failed
+green: the same test at the head with the plant reverted: test result: ok. 4 passed; 0 failed
+```
+
+Two red-to-green test edits in `c27e169b` were not disclosed above: `Duration::from_hours(1)`
+replaces `Duration::from_secs(3_600)` in `readings_read_tap.rs`, and `.copied()` replaces `.cloned()`
+in `readings_settle.rs`. Both are form changes that clippy asked for; no assertion changed.
