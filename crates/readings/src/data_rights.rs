@@ -50,6 +50,7 @@ impl DataRights for ReadingsDataRights {
         )
     }
 
+    #[allow(clippy::too_many_lines)] // one query per table, each with its own columns
     fn export<'a>(
         &'a self,
         connection: &'a mut SqliteConnection,

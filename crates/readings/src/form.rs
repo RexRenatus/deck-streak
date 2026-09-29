@@ -1,5 +1,7 @@
 //! The form a reading takes and the word target it is written to (SPEC-046 R3, R4).
 
+use std::fmt::Write as _;
+
 use crate::seed::{Seed, Track};
 
 /// The band's floor, in primer words: the `reading-length` gate's lower bound.
@@ -89,7 +91,7 @@ impl Form {
              heading of the form `## Title <!-- section:NAME -->`:\n",
         );
         for name in self.sections() {
-            text.push_str(&format!("- `<!-- section:{name} -->`\n"));
+            let _ = writeln!(text, "- `<!-- section:{name} -->`");
         }
         match self.track {
             Track::Law => {
@@ -98,7 +100,7 @@ impl Form {
                      Quote each note's opening words in the prose:\n",
                 );
                 for key in seed.source_keys() {
-                    text.push_str(&format!("- `[@{key}]`\n"));
+                    let _ = writeln!(text, "- `[@{key}]`");
                 }
             }
             Track::Language => {
@@ -107,7 +109,7 @@ impl Form {
                      reading:\n",
                 );
                 for word in &seed.new_words {
-                    text.push_str(&format!("- {word}\n"));
+                    let _ = writeln!(text, "- {word}");
                 }
             }
         }

@@ -5,7 +5,7 @@
 
 // An integration test is test code: its helpers panic on a failed fixture, and it prints the
 // examined count on purpose.
-#![allow(clippy::expect_used, clippy::print_stdout)]
+#![allow(clippy::expect_used, clippy::format_push_string, clippy::print_stdout)]
 
 #[path = "../../../tools/parity-oracle/golden.rs"]
 mod golden;

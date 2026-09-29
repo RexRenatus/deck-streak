@@ -9,6 +9,8 @@
 
 use deck_streak_agent::runs::{AgentRuns, RETENTION_DAYS};
 use deck_streak_kernel::{Db, KernelError, UtcMillis};
+use deck_streak_readings::attempts::retention_cutoff;
+use deck_streak_readings::store::SqliteReadings;
 
 use crate::jobs::FireDate;
 use crate::runner::{Done, Fire, Reason, Work};
@@ -27,6 +29,8 @@ pub struct Upkeep {
     pub pruned: u64,
     /// The `agent_runs` rows deleted for being older than the agent's retention.
     pub agent_runs_pruned: u64,
+    /// The `reading_attempts` rows deleted for being older than their retention.
+    pub reading_attempts_pruned: u64,
     /// Whether the checkpoint met a reader and completed only in part.
     pub checkpoint_busy: bool,
     /// The frames left in the write-ahead log: zero once a TRUNCATE checkpoint has reset the log,
@@ -56,6 +60,11 @@ pub async fn upkeep(db: &Db, today: FireDate) -> Result<Upkeep, KernelError> {
     let agent_runs_pruned = AgentRuns::new(db.clone())
         .prune_before(UtcMillis::from_epoch_millis(runs_cutoff))
         .await?;
+    // The readings' attempts are kept as long as privacy.json declares (SPEC-046 R12).
+    let now = UtcMillis::from_epoch_millis(today.epoch_day() * MILLIS_PER_DAY);
+    let reading_attempts_pruned = SqliteReadings::new(db.clone())
+        .prune_attempts_before(retention_cutoff(now))
+        .await?;
     // Outside any transaction: a checkpoint cannot run inside one.
     let (busy, log_frames, checkpointed_frames): (i64, i64, i64) =
         sqlx::query_as("PRAGMA wal_checkpoint(TRUNCATE)")
@@ -64,6 +73,7 @@ pub async fn upkeep(db: &Db, today: FireDate) -> Result<Upkeep, KernelError> {
     Ok(Upkeep {
         pruned,
         agent_runs_pruned,
+        reading_attempts_pruned,
         checkpoint_busy: busy != 0,
         log_frames,
         checkpointed_frames,
@@ -91,6 +101,7 @@ impl Work for MaintenanceWork<'_> {
         tracing::info!(
             pruned = done.pruned,
             agent_runs_pruned = done.agent_runs_pruned,
+            reading_attempts_pruned = done.reading_attempts_pruned,
             checkpoint_busy = done.checkpoint_busy,
             log_frames = done.log_frames,
             checkpointed_frames = done.checkpointed_frames,

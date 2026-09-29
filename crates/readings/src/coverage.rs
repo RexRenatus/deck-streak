@@ -106,15 +106,12 @@ fn strip_tags(text: &str) -> String {
     let mut rest = text;
     while let Some(open) = rest.find('<') {
         out.push_str(&rest[..open]);
-        match rest[open..].find('>') {
-            Some(close) => {
-                out.push(' ');
-                rest = &rest[open + close + 1..];
-            }
-            None => {
-                out.push('<');
-                rest = &rest[open + 1..];
-            }
+        if let Some(close) = rest[open..].find('>') {
+            out.push(' ');
+            rest = &rest[open + close + 1..];
+        } else {
+            out.push('<');
+            rest = &rest[open + 1..];
         }
     }
     out.push_str(rest);
@@ -229,7 +226,7 @@ impl Document {
         if let Some(rest) = text.strip_prefix("---\n")
             && let Some(close) = rest.find("\n---")
         {
-            frontmatter = rest[..close].to_owned();
+            rest[..close].clone_into(&mut frontmatter);
             let after = &rest[close + "\n---".len()..];
             body = after.strip_prefix('\n').unwrap_or(after);
         }

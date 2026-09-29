@@ -6,7 +6,12 @@
 //! vault are fakes, and every note text and reading here is synthetic.
 
 // An integration test is test code: its helpers panic on a failed fixture.
-#![allow(clippy::expect_used, clippy::unwrap_used, clippy::panic)]
+#![allow(
+    clippy::expect_used,
+    clippy::format_push_string,
+    clippy::panic,
+    clippy::unwrap_used
+)]
 
 use std::collections::BTreeMap;
 use std::fs;
@@ -528,6 +533,7 @@ async fn an_unusable_seed_fails_before_any_model_call() {
     ];
     let mut rig = Rig::new(topics, good()).await;
     rig.notes.0.insert(403, "short".to_owned());
+    rig.notes.0.remove(&9_999);
     let generated = rig.generate(AiRoute::Proxy).await;
     assert_eq!(
         state_of(&generated, "law/unbound"),

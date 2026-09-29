@@ -1,5 +1,7 @@
 //! What a stored reading is (SPEC-046 R9): its id, its word count and its minutes.
 
+use std::fmt::Write as _;
+
 use sha2::{Digest, Sha256};
 use unicode_segmentation::UnicodeSegmentation;
 
@@ -23,7 +25,7 @@ impl ReadingId {
         let hash = Sha256::digest(format!("{topic}\n{first_day}\n{digest}").as_bytes());
         let mut hex = String::with_capacity(ID_HEX_DIGITS);
         for byte in hash.iter().take(ID_HEX_DIGITS / 2) {
-            hex.push_str(&format!("{byte:02x}"));
+            let _ = write!(hex, "{byte:02x}");
         }
         Self(hex)
     }
