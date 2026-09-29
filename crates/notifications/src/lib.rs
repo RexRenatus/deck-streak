@@ -15,6 +15,9 @@
 //! whose calls only the router can make ([`transport`]), and the data-rights port over its tables
 //! ([`data_rights`]).
 //!
+//! SPEC-084 adds the celebration ladder the router applies ([`ladder`]) and the owner's latest
+//! message a T1 reacts to ([`owner_message`]).
+//!
 //! The context map (docs/CONTEXT-MAP.md) is binding: this crate depends only on what its line
 //! there declares, and a new edge is an ADR, never a fix to make code compile.
 #![forbid(unsafe_code)]
@@ -22,15 +25,18 @@
 #![warn(missing_docs, clippy::all)]
 
 pub mod data_rights;
+pub mod ladder;
 pub mod ledger;
 pub mod occasion;
+pub mod owner_message;
 pub mod policy;
 pub mod quiet;
 pub mod router;
 pub mod transport;
 
 pub use occasion::{
-    Class, DedupeKey, DedupeScope, Kind, LapseContext, Occasion, OccasionError, Surface, Tier,
+    Class, DedupeKey, DedupeScope, Kind, LapseContext, Occasion, OccasionError, StreakFacts,
+    Surface, Tier,
 };
 pub use policy::{Policy, PolicyError};
 pub use router::{Decision, Flushed, Hold, Pass, Reason, Router};
