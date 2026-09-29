@@ -86,3 +86,21 @@ SPEC-076; ADR-071; the predecessor's `analytics.py:bridged_streak` and
 `pipeline_layers/digests.py:DigestsLayer._update_law_streak` at `27ee2bc`;
 `docs/schematics/streaks-and-governor-state-machine.md` and
 `docs/schematics/streaks-governor-and-freezes-in-w3.md`; #82.
+
+## Amendment, 2026-09-29: the relight's grant and celebration meet the fold's one transaction
+
+The recompute's fold holds one write transaction while its steps run (ADR-071). The relight's XP
+grant and its celebration cannot each open a writer of their own inside it. The decision, made on
+the orchestrator's ruling at the third dispatch (SPEC-076, section 12):
+
+- The relight's XP is written on the fold's connection, through a connection-level `grant_on` that
+  carries the grant port's two queries unchanged, in phase 3, so the XP is in the day's base before
+  the derived bonuses and the mint read it in the same recompute. Chosen because it keeps the
+  grant port's once scope and the same-recompute base.
+- The celebration is routed after the fold's commit, under the policy's `celebration` kind with the
+  key `relight:<epoch day>`, on every settle that qualifies. Chosen because the router's once-ever
+  dedupe gives one send per episode and a crash between the commit and the route is recovered at
+  the next recompute.
+- Rejected: a grant after the fold has run, because R18's same-recompute base would not hold.
+- Rejected: a second write inside the fold, because the one writer would deadlock against the fold's
+  held transaction.

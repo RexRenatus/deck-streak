@@ -470,3 +470,41 @@ R25. When the study set is empty, the layer answers as the predecessor's governo
 ```
 A23: cargo test -p deck-streak-streaks --test governor_goldens -- --exact an_empty_history_is_anchored_as_the_predecessor_anchors_it
 ```
+
+## 12. Amendment, 2026-09-29: the relight is granted on the fold's connection and celebrated after its commit
+
+Made on the orchestrator's ruling at the third dispatch, insert-only, after section 11. It corrects
+R18's wording only where the code proved it incomplete: the fold holds one write transaction while
+its steps run, so a step that opens a second writer for the grant, or asks the router to record a
+send, waits on a lock its own caller holds.
+
+R26. The relight's XP is written on the fold's own connection. `crates/progression/src/ledger.rs`
+    gains `grant_on(connection, request, at)`, which carries the grant port's two queries verbatim, so
+    the offline query cache is unchanged, and `SqliteXpLedger::grant` opens its write, calls
+    `grant_on` and commits. The streak step calls `grant_on` in phase 3, on the fold's write, so the
+    relight's XP is in the day's base before phase 5's derived bonuses and phase 6's mint read it in
+    the same recompute (R18). The source, scope and track stay R18's (`relight:<epoch day>`, `once`,
+    `language`).
+R27. The relight's celebration is routed after the fold commits. The streak step answers the relight
+    as due, and the caller routes it after the fold runs, as the level-up is announced. The policy has
+    no `record` kind, so the celebration is routed under the policy's `celebration` kind (once-ever
+    dedupe) with the key `relight:<epoch day>`; `record` stays the predecessor's event name inside the
+    relight rule's answer, which the golden asserts. The caller routes on every settle that
+    qualifies, whether the grant answered `Granted` or `AlreadyGranted`: the router's dedupe gives one
+    send per episode, and a crash between the commit and the route is recovered at the next
+    recompute. `notifications-policy.json` gains no kind.
+
+Manifest additions: `crates/progression/src/ledger.rs` (changed: `grant_on`), and the test file
+`crates/coordination/tests/relight_settle.rs` gains the two criteria of section 13.
+
+## 13. Acceptance criteria of the 2026-09-29 relight amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A24 | a recompute that relights completes with the grant written on the fold's connection, on a pool that holds one connection, so a second writer would hang | `a_relight_is_granted_on_the_folds_connection` |
+| A25 | a second recompute of the return day routes the celebration again and the router answers it as already sent, so exactly one send is recorded | `a_second_recompute_routes_the_relight_and_one_send_is_recorded` |
+
+```acceptance
+A24: cargo test -p deck-streak-coordination --test relight_settle -- --exact a_relight_is_granted_on_the_folds_connection
+A25: cargo test -p deck-streak-coordination --test relight_settle -- --exact a_second_recompute_routes_the_relight_and_one_send_is_recorded
+```
