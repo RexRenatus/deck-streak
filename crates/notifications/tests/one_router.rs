@@ -23,7 +23,7 @@
 //! (`the_census_classifies_every_method_of_the_pinned_client`): deletions, unpins and the other
 //! classes of `NOT_DELIVERIES` deliver nothing to a user, and are classified, not held (#297). The
 //! bot's `send_html`, its `edit_html` and its command handler are used only at named call sites,
-//! and each of the eight named sends is found exactly once; the handler's replies and its dispatch
+//! and each of the ten named sends is found exactly once; the handler's replies and its dispatch
 //! are called only by their named callers. Only the router's ledger, router and data-rights
 //! modules, which own their writes, name the Mini App's feed or the held queue, which a flush
 //! delivers; because the ledger's writes to the queue are private to the notifications crate, only
@@ -109,8 +109,9 @@ const BOT_API_HOST: &str = "api.telegram.org";
 const BOT_API_URL: &str = "DEFAULT_API_URL";
 
 /// The pinned client's send methods, in the Bot API's own spelling; a client library spells each in
-/// snake case (`send_message`).
-const SEND_METHODS: [&str; 25] = [
+/// snake case (`send_message`). A method is held, here or in `DELIVERY_METHODS`, when it can put new
+/// or changed content in front of any user: a message, a gift to a named user, a story.
+const SEND_METHODS: [&str; 29] = [
     "sendMessage",
     "sendPhoto",
     "sendAudio",
@@ -136,13 +137,19 @@ const SEND_METHODS: [&str; 25] = [
     "sendLivePhoto",
     "sendRichMessage",
     "sendRichMessageDraft",
+    "giftPremiumSubscription",
+    "transferGift",
+    "postStory",
+    "repostStory",
 ];
 
 /// The pinned client's other methods that put a message before the owner, in the Bot API's own
 /// spelling: a copy, a forward, an edit, an ephemeral edit, a stopped poll or live location, a pin,
-/// a reaction, and a Mini App query's answer, which sends a message into the chat on the user's
-/// behalf. The census holds them as it holds a send method.
-const DELIVERY_METHODS: [&str; 19] = [
+/// a reaction, a Mini App query's answer, which sends a message into the chat on the user's
+/// behalf, the answers to a callback, an inline, a shipping or a checkout query, a game's score, a
+/// story's edit, a suggested post's decision, and the name, description, photo, commands or menu
+/// that a chat, a bot or a business account shows. The census holds them as it holds a send method.
+const DELIVERY_METHODS: [&str; 46] = [
     "copyMessage",
     "copyMessages",
     "forwardMessage",
@@ -162,6 +169,33 @@ const DELIVERY_METHODS: [&str; 19] = [
     "stopPoll",
     "stopMessageLiveLocation",
     "answerWebAppQuery",
+    "setGameScore",
+    "editStory",
+    "answerCallbackQuery",
+    "answerInlineQuery",
+    "answerShippingQuery",
+    "answerPreCheckoutQuery",
+    "answerGuestQuery",
+    "answerChatJoinRequestQuery",
+    "sendChatJoinRequestWebApp",
+    "approveSuggestedPost",
+    "declineSuggestedPost",
+    "setChatTitle",
+    "setChatDescription",
+    "setChatPhoto",
+    "createForumTopic",
+    "editForumTopic",
+    "editGeneralForumTopic",
+    "setMyName",
+    "setMyDescription",
+    "setMyShortDescription",
+    "setMyProfilePhoto",
+    "setMyCommands",
+    "setChatMenuButton",
+    "setBusinessAccountName",
+    "setBusinessAccountBio",
+    "setBusinessAccountUsername",
+    "setBusinessAccountProfilePhoto",
 ];
 
 /// The version of the Bot API client the census's method list was read from. The test
@@ -371,7 +405,7 @@ const CLIENT_METHODS: [&str; 185] = [
 
 /// The client's methods that put nothing before a user: each is classified, not held, and the
 /// census does not read a name in it. One reason for each group.
-const NOT_DELIVERIES: [&str; 141] = [
+const NOT_DELIVERIES: [&str; 110] = [
     // Reads: each returns data to the bot and delivers nothing to a user.
     "getAvailableGifts",
     "getBusinessAccountGifts",
@@ -418,35 +452,23 @@ const NOT_DELIVERIES: [&str; 141] = [
     "unpinAllForumTopicMessages",
     "unpinAllGeneralForumTopicMessages",
     "unpinChatMessage",
-    // Answers to a callback, an inline query, a checkout or a join request, and a prepared button:
-    // each answers the query it was raised by, or prepares an object a user later sends, and posts
-    // nothing into a chat itself.
-    "answerCallbackQuery",
-    "answerChatJoinRequestQuery",
-    "answerGuestQuery",
-    "answerInlineQuery",
-    "answerPreCheckoutQuery",
-    "answerShippingQuery",
+    // Invoice links and prepared objects: each makes an object a user later sends or opens, and
+    // shows a user nothing itself. The answers to a callback, an inline query, a checkout, a
+    // shipping query or a join request show a user content, so they are held.
     "createInvoiceLink",
     "savePreparedInlineMessage",
     "savePreparedKeyboardButton",
-    "sendChatJoinRequestWebApp",
-    // Bot and session configuration: the bot's webhook, commands, profile and menu, and its
-    // process.
+    // Bot and session configuration: the bot's webhook, tokens, rights and process, and removing
+    // its profile photo. Its name, descriptions, photo, commands and menu button are content a
+    // user reads, so they are held.
     "close",
     "deleteMyCommands",
     "deleteWebhook",
     "logOut",
     "removeMyProfilePhoto",
     "replaceManagedBotToken",
-    "setChatMenuButton",
     "setManagedBotAccessSettings",
-    "setMyCommands",
     "setMyDefaultAdministratorRights",
-    "setMyDescription",
-    "setMyName",
-    "setMyProfilePhoto",
-    "setMyShortDescription",
     "setPassportDataErrors",
     "setWebhook",
     // Stickers: a sticker set is authored, not sent into a chat.
@@ -463,8 +485,9 @@ const NOT_DELIVERIES: [&str; 141] = [
     "setStickerSetThumbnail",
     "setStickerSetTitle",
     "uploadStickerFile",
-    // Chat administration: members, permissions, titles, forum topics, invite links and join
-    // requests change how a chat is run and post no message.
+    // Chat administration: members, permissions, invite links, join requests and closing or hiding
+    // a topic change how a chat is run and show a user no new content. A chat's title,
+    // description and photo and a topic's creation or edit show one, so they are held.
     "approveChatJoinRequest",
     "banChatMember",
     "banChatSenderChat",
@@ -472,15 +495,12 @@ const NOT_DELIVERIES: [&str; 141] = [
     "closeGeneralForumTopic",
     "createChatInviteLink",
     "createChatSubscriptionInviteLink",
-    "createForumTopic",
     "declineChatJoinRequest",
     "deleteChatPhoto",
     "deleteChatStickerSet",
     "deleteForumTopic",
     "editChatInviteLink",
     "editChatSubscriptionInviteLink",
-    "editForumTopic",
-    "editGeneralForumTopic",
     "exportChatInviteLink",
     "hideGeneralForumTopic",
     "leaveChat",
@@ -490,40 +510,26 @@ const NOT_DELIVERIES: [&str; 141] = [
     "restrictChatMember",
     "revokeChatInviteLink",
     "setChatAdministratorCustomTitle",
-    "setChatDescription",
     "setChatMemberTag",
     "setChatPermissions",
-    "setChatPhoto",
     "setChatStickerSet",
-    "setChatTitle",
     "setUserEmojiStatus",
     "unbanChatMember",
     "unbanChatSenderChat",
     "unhideGeneralForumTopic",
-    // Business accounts, stories, gifts, stars, games, verification and suggested posts: each acts
-    // on an account's own state or another product surface, and puts no message in the chat
-    // (#297).
-    "approveSuggestedPost",
+    // Business accounts, gifts, stars, verification and stories: each acts on an account's own
+    // state, its money or its badges, and shows a user no new content. A gift sent to a user, a
+    // story, a game's score, a suggested post's decision and a business profile's name, bio,
+    // username and photo show one, so they are held (#297).
     "convertGiftToStars",
-    "declineSuggestedPost",
-    "editStory",
     "editUserStarSubscription",
-    "giftPremiumSubscription",
-    "postStory",
     "readBusinessMessage",
     "refundStarPayment",
     "removeBusinessAccountProfilePhoto",
     "removeChatVerification",
     "removeUserVerification",
-    "repostStory",
-    "setBusinessAccountBio",
     "setBusinessAccountGiftSettings",
-    "setBusinessAccountName",
-    "setBusinessAccountProfilePhoto",
-    "setBusinessAccountUsername",
-    "setGameScore",
     "transferBusinessAccountStars",
-    "transferGift",
     "upgradeGift",
     "verifyChat",
     "verifyUser",
@@ -647,7 +653,7 @@ const LEDGER_NAMES: [&str; 8] = [
 const ALERT_PATH: &str = "deploy/scripts/alert-telegram.sh";
 
 /// Every send, and where it is made: (file, function, send). The census finds each once.
-const NAMED_SENDS: [(&str, &str, &str); 8] = [
+const NAMED_SENDS: [(&str, &str, &str); 10] = [
     // The bot's command replies (#257): the erase prompt, every other reply, and the export.
     (
         "crates/bot/src/commands.rs",
@@ -682,6 +688,18 @@ const NAMED_SENDS: [(&str, &str, &str); 8] = [
         "crates/bot/src/transport.rs",
         "Transport::edit_html",
         "edit_message_text",
+    ),
+    // The transport's answer to a callback, which the owner sees as the button's progress ending,
+    // and its menu of commands, which the owner reads.
+    (
+        "crates/bot/src/transport.rs",
+        "Transport::answer_callback",
+        "answer_callback_query",
+    ),
+    (
+        "crates/bot/src/transport.rs",
+        "Transport::set_chat_menu",
+        "set_my_commands",
     ),
     // The export's document, posted by the transport's own request.
     (
