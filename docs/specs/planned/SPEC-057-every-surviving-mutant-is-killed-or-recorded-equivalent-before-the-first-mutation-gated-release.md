@@ -585,7 +585,7 @@ closing runs.
 | 8 | `deck-streak-agent` | 146 | unmeasured | 0 | unmeasured | unmeasured | open |
 | 9 | `deck-streak-progression` | 57 | unmeasured | 0 | unmeasured | unmeasured | open |
 | 10 | `deck-streak-privacy` | 29 | unmeasured | 0 | unmeasured | unmeasured | open |
-| 11 | `miniapp` | 274 | 193 | 0 | 81 | 0 | open (#240) |
+| 11 | `miniapp` | 274 | 262 | 12 | 0 | 0 | #309 (runs 36499404209, 36501076143) |
 
 A delivered row's PR cell reads `#<pull request> (runs <opening>, <closing>)`.
 
