@@ -26,7 +26,7 @@ use deck_streak_bot::transport::{
     escape_attribute, escape_html,
 };
 use deck_streak_bot::{ApiUrl, Scores, SendCounts, Sent, SyncAnswer, SyncOutcome, TransportError};
-use deck_streak_kernel::Environment;
+use deck_streak_kernel::{Environment, SettingsError};
 use fake_bot_api::{Answer, FakeBotApi, OWNER, TOKEN, payload};
 use serde_json::{Value, json};
 
@@ -407,9 +407,13 @@ fn the_api_url_is_https_or_loopback_http() {
         Ok("http://127.0.0.1:9".to_owned())
     );
     let plain = Environment::from_vars([(API_URL, "http://api.telegram.org")]);
-    assert!(
-        ApiUrl::from_env(&plain).is_err(),
-        "cleartext to a remote host is refused"
+    // Cleartext to a remote host is refused, and the refusal names the whole shape, as written.
+    assert_eq!(
+        ApiUrl::from_env(&plain).map(|api| api.as_str().to_owned()),
+        Err(SettingsError::Malformed {
+            setting: API_URL,
+            expected: "an https: URL, or an http: URL of a loopback host, with no path",
+        })
     );
 }
 

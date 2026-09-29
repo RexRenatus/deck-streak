@@ -19,6 +19,8 @@
 //! `recompute/`, and the composition root registers it with [`Fold::register`] in its phase.
 
 pub mod analytics_step;
+pub mod day_bonuses;
+pub mod xp;
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
