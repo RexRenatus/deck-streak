@@ -581,7 +581,7 @@ closing runs.
 | 4 | `deck-streak-identity` | 143 | 110 | 3 | 0 | 30 | #317 (runs 36511057164, 36511654824) |
 | 5 | `deck-streak-daemon` | 101 | 71 | 1 | 0 | 29 | #318 (runs 36515002230, 36517001675) |
 | 6 | `deck-streak-coordination` | 282 | 240 | 0 | 5 | 37 | open |
-| 7 | `deck-streak-api` | 50 | 33 | 0 | 3 | 14 | open |
+| 7 | `deck-streak-api` | 70 | 48 | 0 | 2 | 20 | open |
 | 8 | `deck-streak-agent` | 146 | unmeasured | 0 | unmeasured | unmeasured | open |
 | 9 | `deck-streak-progression` | 57 | unmeasured | 0 | unmeasured | unmeasured | open |
 | 10 | `deck-streak-privacy` | 29 | unmeasured | 0 | unmeasured | unmeasured | open |
