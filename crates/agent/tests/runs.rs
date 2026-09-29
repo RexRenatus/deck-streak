@@ -156,6 +156,10 @@ fn a_comment_quoting_the_prune_beside_a_prune_that_skips_the_index_is_refused() 
 
 #[test]
 fn a_second_delete_statement_is_refused_however_it_is_spelled() {
+    assert_eq!(
+        prune_pin_problems(&a_good_prune_source()),
+        Vec::<String>::new()
+    );
     let decoy = format!(
         "{}\nsqlx::query(\"delete  from {TABLE}\");",
         a_good_prune_source()
