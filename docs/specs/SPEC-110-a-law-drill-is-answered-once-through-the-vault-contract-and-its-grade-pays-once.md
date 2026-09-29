@@ -237,7 +237,7 @@ when it merges.
 | `migrations/011001_vault_drills.sql` | `deck-streak-vault` | added: `drill_answers` and `drill_grades` |
 | `crates/coordination/src/drills.rs` | `deck-streak-coordination` | added: the answer use case and the post-back step |
 | `crates/coordination/src/jobs.rs` | `deck-streak-coordination` | changed: `drill_postback` |
-| `crates/coordination/src/runner.rs` | `deck-streak-coordination` | dropped (amendment): the job's entrance is `role_job.rs`, which dispatches `drill_postback` |
+| `crates/coordination/src/runner.rs` | `deck-streak-coordination` | dropped (amendment): the job's entrance is the daemon's job role, which dispatches the drill post-back |
 | `crates/coordination/src/lib.rs` | `deck-streak-coordination` | changed: the module |
 | `crates/coordination/src/data_rights_registry.rs` | `deck-streak-coordination` | changed: the vault's port and its two tables |
 | `crates/coordination/tests/data_rights_symmetry.rs` | `deck-streak-coordination` | changed: a seeded row in each table |
