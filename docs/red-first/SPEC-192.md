@@ -165,3 +165,29 @@ TypeError and fails with `a shape with no literal must be refused, not crash the
 
 The 28 rows S19229 to S19256 are proved KILLED by full id; the band holds forty-one script rows,
 S19216 to S19256.
+
+## Addendum, 2026-09-29, round 3: the guard reads a module's file as rustc does, or refuses
+
+R8's class is "the file the guard reads for an out-of-line test module". A third review found that a
+stale `tests.rs` spelling could still pin the guard where rustc reads a different file, through
+`cfg_attr`, other spellings of a `path` attribute, a `src/bin` file and a file loaded through
+`#[path]`. The class rule is the union rule: the guard lists every file rustc could read for the
+declaration and reads the one that exists; two, none, or any `path` attribute in any spelling read
+none, so the shape stays refused. The population test generates the class: six declaring-file kinds,
+seven attributes, a stale spelling at each other place rustc could look, and the shape spelled or not,
+408 members. Criteria A13 and A15 cover it; this round adds no criterion.
+
+The population test and the renamed path-attribute test were committed alone at 202a9529, against the
+guard as the head left it. Both are red by assertion there.
+
+```text
+A13: red at 202a9529: Ran 24 tests, FAILED (failures=2): AssertionError: 0 != 1 : #[cfg(test)] #[path = "words/shape.rs"] mod tests; (test_a_module_whose_file_an_attribute_chooses_is_not_read, line 452)
+A13: red at 202a9529: AssertionError: [tests.rs, tests/mod.rs] not found in ([tests.rs], []) : lib.rs '' stale=tests/mod.rs spelled=True (test_every_module_file_choice_is_read_from_rustcs_file_or_refused, line 526, the first member rejected)
+A13: green at 52c898f7: Ran 24 tests, OK, examined 24 Setting impl(s), R8 population: 408 members
+```
+
+The five rows that read a `#[path]` value (S19239, S19240, S19242, S19243, S19244) lost their finds
+with that reading and are deleted. Six rows pin the arms of the union rule (S19257 to S19262), each
+proved KILLED by full id, and each red by assertion under its mutant. None of the six finds exists at
+the previous head, so their survival there is not measurable; the killer's red under each mutant, on
+the new code, is the evidence. The band holds forty-two script rows.
