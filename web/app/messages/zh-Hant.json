@@ -1,4 +1,8 @@
 {
   "$schema": "https://inlang.com/schema/inlang-message-format",
-  "tagline": "把每天的Anki複習變成值得堅持的連續紀錄。"
+  "tagline": "把每天的Anki複習變成值得堅持的連續紀錄。",
+  "ladder_region": "慶祝",
+  "ladder_opening": "正在打開…",
+  "ladder_dice": "擲骰子",
+  "ladder_dismiss": "關閉"
 }

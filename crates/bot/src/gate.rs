@@ -27,6 +27,8 @@ pub const MAX_CALLBACK_DATA_BYTES: usize = 64;
 pub struct OwnerMessage {
     /// The text as sent.
     pub text: String,
+    /// Its id in the owner's chat, which a T1 celebration reacts to (SPEC-084 R13).
+    pub message_id: i32,
 }
 
 /// The owner's callback, from a button the bot sent.
@@ -103,7 +105,10 @@ fn admit_message(message: &Message, owner: Owner) -> Admission {
     if text.chars().count() > MAX_INBOUND_TEXT {
         return dropped("message", "text_over_cap");
     }
-    Admission::Message(OwnerMessage { text: text.clone() })
+    Admission::Message(OwnerMessage {
+        text: text.clone(),
+        message_id: message.message_id,
+    })
 }
 
 fn admit_callback(callback: &CallbackQuery, owner: Owner) -> Admission {

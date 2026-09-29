@@ -1,0 +1,38 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S19001-A-SUPERSEDED-ENGINE-MEASURE-RUN-IS-CANCELLED",
+        ".github/workflows/engine-measure.yml",
+        "  cancel-in-progress: ${{ github.event_name == 'pull_request' }}\n",
+        "  cancel-in-progress: false\n",
+        "engine-measure cancels the run a newer push to a pull request supersedes, so the superseded run does not finish and hold a slot (SPEC-190 R3)",
+        "test_workflow_concurrency.EveryWorkflowFollowsTheRule.test_every_workflow_with_a_pull_request_trigger_follows_the_rule"
+      ],
+      [
+        "S19002-CHANGELOG-CARRIES-THE-CONCURRENCY-BLOCK",
+        ".github/workflows/changelog.yml",
+        "concurrency:\n  group: changelog-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}\n  cancel-in-progress: ${{ github.event_name == 'pull_request' }}\n\n",
+        "",
+        "changelog carries the workflow-level concurrency block, so a superseded pull-request run is cancelled (SPEC-190 R2)",
+        "test_workflow_concurrency.EveryWorkflowFollowsTheRule.test_every_workflow_with_a_pull_request_trigger_follows_the_rule"
+      ],
+      [
+        "S19003-A-NON-PULL-REQUEST-RUN-HAS-A-GROUP-OF-ITS-OWN",
+        ".github/workflows/engine-measure.yml",
+        "github.ref || github.run_id }}",
+        "github.ref }}",
+        "a push, tag, schedule or dispatch run takes its run id as its group, so two of them never share one and a waiting run is never replaced (SPEC-190 R4)",
+        "test_workflow_concurrency.EveryWorkflowFollowsTheRule.test_a_run_that_is_not_a_pull_requests_is_unique_and_never_cancelled"
+      ],
+      [
+        "S19004-THE-RELEASE-WORKFLOW-NEVER-CANCELS-A-RUN",
+        ".github/workflows/release.yml",
+        "  cancel-in-progress: false\n",
+        "  cancel-in-progress: true\n",
+        "release.yml keeps cancel-in-progress false, so a queued run of a tag is never cancelled while it runs (SPEC-190 R5)",
+        "test_workflow_concurrency.EveryWorkflowFollowsTheRule.test_the_release_workflow_never_cancels"
+      ]
+    ]
+  }
+}
