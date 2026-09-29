@@ -83,7 +83,7 @@ pub struct LawTiers {
 }
 
 /// Where the law tiers come from: the collection, which only the cycle that reads it can open.
-pub trait LawTierSource: Send + Sync {
+pub trait LawTierSource: Send + Sync + std::fmt::Debug {
     /// The law tiers as of `today`.
     fn law_tiers<'a>(
         &'a self,
