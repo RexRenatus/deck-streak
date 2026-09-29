@@ -15,6 +15,7 @@ import unittest
 from pathlib import Path
 
 from _support import REPO, examined
+from test_ci_workflows import workflow_files
 
 WORKFLOWS = REPO / ".github" / "workflows"
 WEEKLY = WORKFLOWS / "mutation-weekly.yml"
@@ -372,7 +373,7 @@ def mutants_commands(directory):
     """(workflow name, command line) for every `cargo mutants` line of the directory's workflows."""
     return [
         (path.name, command)
-        for path in sorted(directory.glob("*.yml"))
+        for path in workflow_files(directory)
         for command in re.findall(r"cargo mutants [^\n]*", path.read_text(encoding="utf-8"))
     ]
 
@@ -381,7 +382,7 @@ def mutants_jobs(directory):
     """(workflow name, job name, job block) for every job that runs `cargo mutants`."""
     return [
         (path.name, name, job)
-        for path in sorted(directory.glob("*.yml"))
+        for path in workflow_files(directory)
         for name, job in jobs(path.read_text(encoding="utf-8")).items()
         if "cargo mutants" in job
     ]

@@ -23,6 +23,7 @@ from test_ci_workflows import (
     lines_of,
     paths,
     read_workflow,
+    workflow_files,
 )
 
 CACHE_WORKFLOW = "rust-cache.yml"
@@ -82,7 +83,7 @@ def other_cron_minutes(directory):
     """(workflow name, minute) for each cron minute a workflow of the directory schedules, the
     cache workflow itself left out."""
     found = []
-    for path in sorted(directory.glob("*.yml")):
+    for path in workflow_files(directory):
         if path.name != CACHE_WORKFLOW:
             on = read_workflow(path.read_text(encoding="utf-8")).get("on") or {}
             found += [

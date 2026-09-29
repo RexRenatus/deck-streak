@@ -1243,7 +1243,7 @@ class TheGateRunsInParallelJobs(unittest.TestCase):
 def cache_scan(directory):
     """`cache_problems` over every workflow of a directory: the problems, then the saves found."""
     problems, saves = [], []
-    for path in sorted(directory.glob("*.yml")):
+    for path in workflow_files(directory):
         found_problems, found = cache_problems(path.name, read_workflow(path.read_text("utf-8")))
         problems += found_problems
         saves += found
@@ -1254,7 +1254,7 @@ def protoc_pins(directory):
     """(workflow name, digest) for every `PROTOC_SHA256` a workflow of the directory pins."""
     return [
         (path.name, digest)
-        for path in sorted(directory.glob("*.yml"))
+        for path in workflow_files(directory)
         for digest in re.findall(r"PROTOC_SHA256: ([0-9a-f]+)", path.read_text())
     ]
 
