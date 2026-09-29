@@ -72,6 +72,14 @@
         "            continue\n        except (OSError",
         "a record fragment that repeats a key is reported by name as a problem, not dropped in silence (SPEC-122 R7)",
         "test_verdict_repeated_key.TheEquivalenceRecordsRefuseARepeatedKey.test_a_record_that_repeats_a_key_inside_an_entry_is_refused"
+      ],
+      [
+        "S12210-RETIRED-LIST-READ-BY-THE-ONE-PARSER",
+        "scripts/mutation_rows.py",
+        "listed = parse_document(RETIRED, path.read_text(encoding=\"utf-8\"))",
+        "listed = json.loads(path.read_text(encoding=\"utf-8\"))",
+        "the retirement list is read by the parser that refuses a repeated key, not by a plain json.loads that keeps the last value (SPEC-122 R8)",
+        "test_band_repeated_key.TheRetiredListRefusesARepeatedKey.test_a_retired_list_that_repeats_a_key_is_refused_naming_it"
       ]
     ]
   }

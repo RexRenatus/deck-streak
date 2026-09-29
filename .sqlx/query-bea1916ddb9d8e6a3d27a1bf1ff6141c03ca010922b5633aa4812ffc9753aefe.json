@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO xp_settlement (study_day, source, track, amount, closed, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6) ON CONFLICT (study_day, source, track) DO UPDATE SET amount = excluded.amount, closed = excluded.closed",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 6
+    },
+    "nullable": []
+  },
+  "hash": "bea1916ddb9d8e6a3d27a1bf1ff6141c03ca010922b5633aa4812ffc9753aefe"
+}
