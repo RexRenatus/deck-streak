@@ -62,6 +62,8 @@ A20: red at cd59d2a: AssertionError: 8 != 0 : deck-streak-daemon: 8 unexplained 
 A20: green at b42ef34
 A22: red at 3d271a1: AssertionError: 2 != 0 : deck-streak-api: 2 unexplained mutant(s) in its row (the opening sweep, run 36528558184 at 5216bcf, read listed 70, killed 48, equivalent 0, unexplained 2, unviable 20)
 A22: green at ab99ab8
+A23: red at 611eb8e: AssertionError: 1 != 0 : deck-streak-privacy: 1 unexplained mutant(s) in its row (the opening sweep, run 36533127814 at c8d8a30, read listed 29, killed 25, equivalent 0, unexplained 1, unviable 3)
+A23: green at 63f47ca
 A28: red at e260627: AssertionError in each of its four subtests, each for its own reason: 'True is not false : the rust class applies on test lines [31, 36, 43, 47, 53]' (the test-only diff); 'Lists differ: [46, 58] != [58]' (the mixed diff counted its test module's line as production code); "'mutation: plan: rust applies: 3 production code line(s) in 1 file(s)' not found" (the production-only diff's plan named no production line); and '3 != 0 : mutation: shards: VOID the rust class applies and ... holds no cargo-mutants listing' (cargo-mutants' empty --in-diff output read as no listing)
 A28: green at 8c87e5b
 A19: red at 8eba7ef: AssertionError: 16 != 0 : deck-streak-identity: 16 unexplained mutant(s) in its row (opening sweep run 36511057164 listed 143, killed 97, equivalent 0, unexplained 16, unviable 30)
@@ -231,6 +233,18 @@ sweep, run 36529229929 at 618a392, counted 33 of 33 whole and read `table: verdi
 killed 50, equivalent 0, unexplained 0, unviable 20. All 32 shards exited 0 and none logged a
 timeout. No record was needed, and rows S05770 to S05774 are unused: the tool mutated every
 invariant of the crate (R20).
+
+## The privacy delivery: its row (A23)
+
+A23 is the privacy crate's row of section 7. Its opening sweep, run 36533127814 at the base (dev
+c8d8a30), counted 30 of 30 reports whole, listed 29 mutants and left 1 unexplained: the `Display`
+implementation of `ExportProblem`, replaced by an empty `Ok`. Its `table` line is the row committed
+at 611eb8e with A23's test, which read `1 != 0`. It is now killed by a test in
+`crates/privacy/tests/export.rs` that pins the three problem texts and the mismatch message. The
+closing sweep, run 36533533659 at 049f9ba, counted 30 of 30 whole and read `table: verdict: ok`,
+listed 29, killed 26, equivalent 0, unexplained 0, unviable 3. Every shard exited 0 and none
+logged a timeout. No record was needed. Row S05780 pins the export's schema literal, a constant the tool never
+mutates (R20); rows S05781 to S05789 are unused.
 
 ## The coordination delivery: its row (A21)
 
