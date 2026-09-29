@@ -116,6 +116,8 @@ const fn review_at(t: i64) -> Review {
     }
 }
 
+// A helper of test code: a constant outside the configurable range is a malformed population.
+#[allow(clippy::expect_used)]
 fn rule(offset: i64, hour: i64) -> StudyDayRule {
     StudyDayRule::new(
         Hour::new(u8::try_from(hour).expect("an hour")).expect("an hour of the day"),
