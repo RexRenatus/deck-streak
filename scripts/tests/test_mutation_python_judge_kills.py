@@ -17,7 +17,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from _support import REPO
+from _support import REPO, examined
 
 RUNNER = REPO / "scripts" / "mutation_python.py"
 
@@ -92,8 +92,7 @@ class TheJudgeSetsUp(Base):
         self.addCleanup(sys.modules.pop, "mutation_python_judge_copy", None)
         judge = module.Judge(self.root, {}, self.args())
         self.addCleanup(shutil.rmtree, judge.scratch, ignore_errors=True)
-        copied = sorted(p.name for p in judge.copy.iterdir())
-        print(f"examined {len(copied)} copied files")
+        copied = sorted(examined("copied files", (p.name for p in judge.copy.iterdir())))
         self.assertEqual(copied, ["helper.py", "mutation_python.py", "mutation_rows.py"])
 
 

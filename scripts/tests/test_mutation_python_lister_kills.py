@@ -16,7 +16,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from _support import REPO
+from _support import REPO, examined
 
 SCRIPT = REPO / "scripts" / "mutation_python.py"
 MAP = "scripts/mutation-python.json"
@@ -126,7 +126,7 @@ class TheModuleHoldsItsConstants(unittest.TestCase):
             written = sorted(
                 p.name for p in Path(scratch).rglob("*") if p.name.startswith("mutation_rows")
             )
-        print(f"examined {len(written)} bytecode-free rows modules")
+        examined("rows modules in the scratch tree", written)
         self.assertEqual(ran.stdout.split("\n")[:2], ["True", scratch], ran.stderr)
         self.assertEqual(written, ["mutation_rows.py"])
 
