@@ -350,6 +350,10 @@ class EveryMutationCommandKeepsTheGatesBounds(unittest.TestCase):
         with plant_workflow(f"cargo mutants --in-place # {BOUNDS}") as scratch:
             found = mutants_commands(Path(scratch))
         self.assertEqual(found, {"planted.yml": ["cargo mutants --in-place"]})
+        # A `#` right after an operator (`;`, `&`, `)`) starts a word too, so it opens a comment.
+        with plant_workflow(f"cargo mutants --in-place;# {BOUNDS}") as scratch:
+            found = mutants_commands(Path(scratch))
+        self.assertEqual(found, {"planted.yml": ["cargo mutants --in-place;"]})
         with plant_workflow(f"echo planted # cargo mutants {BOUNDS}") as scratch:
             found = mutants_commands(Path(scratch))
         self.assertEqual(found, {})
