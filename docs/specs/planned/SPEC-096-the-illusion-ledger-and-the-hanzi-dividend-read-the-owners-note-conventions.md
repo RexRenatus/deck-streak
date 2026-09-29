@@ -87,7 +87,7 @@ R4. The ledger equals `goldens/illusion_ledger.json` (`direction.py:build_ledger
 The Hanzi Dividend (#140)
 
 R5. `crates/ingest/src/transfer_reads.rs` reads the reviewed notes' per-note aggregates over 180 days
-    back from the latest answer, reduced to the first answer per card and study day while reading;
+    back from the latest answer, reduced to the first answer per card and study day by a given study-day rule while reading;
     the text of the source languages' notes 400 at a time, stopping at 100,000; the decks ever
     reviewed; and the gap census, stopping at 200,000 notes. Each read keeps SPEC-023's scope,
     returns the name of every read that failed and states when it stopped at a bound.

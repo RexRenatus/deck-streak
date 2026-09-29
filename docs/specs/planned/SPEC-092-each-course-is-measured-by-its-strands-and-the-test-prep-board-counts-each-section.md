@@ -140,6 +140,7 @@ R11. Every constant this SPEC uses (the index pattern, the mature mastery, the w
 | A15 | the strand table states each strand's retention as text beside its colour | `states each strand retention as text beside its colour` |
 | A16 | the coverage grid renders a missing board as none found, never as zeros | `renders a missing board as none found` |
 | A17 | a law root or year band that ingest's settings and the readings taxonomy name differently refuses start (the readings `law.roots` list must equal the one-element list of ingest's root) | `a_law_root_or_band_named_differently_refuses_start` |
+| A18 | the strands step passes the strand statistics the scoped cards with their memory state and home deck, the study reviews of the read window, the kernel's study-day rule and the run's instant, so each card's first review answer of a study day counts once and mastery reads the same clock | `the_strands_step_is_passed_its_reads_and_study_day_rule` |
 
 ```acceptance
 A1: cargo test -p deck-streak-ingest --test law_subject -- --exact the_law_subject_matches_the_predecessors_golden
@@ -159,6 +160,7 @@ A14: cargo test -p deck-streak-bot --test strands_commands -- --exact lsat_state
 A15: pnpm exec vitest run web/app/src/lib/strands/StrandTable.test.ts -t "states each strand retention as text beside its colour"
 A16: pnpm exec vitest run web/app/src/lib/law/CoverageGrid.test.ts -t "renders a missing board as none found"
 A17: cargo test -p deck-streak-coordination --test law_taxonomy_agrees -- --exact a_law_root_or_band_named_differently_refuses_start
+A18: cargo test -p deck-streak-coordination --test strands_step -- --exact the_strands_step_is_passed_its_reads_and_study_day_rule
 ```
 
 ## 3a. What the box run judges
@@ -197,12 +199,12 @@ when it merges.
 | `crates/curriculum/tests/test_prep_board.rs` | `deck-streak-curriculum` | added: A8 |
 | `crates/curriculum/tests/strands_store.rs` | `deck-streak-curriculum` | added: A11 |
 | `migrations/009201_curriculum_strand_readouts.sql` | `deck-streak-curriculum` | added: `strand_readouts` |
-| `crates/coordination/src/recompute/strands.rs` | `deck-streak-coordination` | added: the strands step |
+| `crates/coordination/src/recompute/strands.rs` | `deck-streak-coordination` | added: the strands step, and the cards, the read window's study reviews, the kernel's study-day rule and the run's instant it passes the strand statistics (A18) |
 | `crates/coordination/src/recompute/mod.rs` | `deck-streak-coordination` | changed: declares the strands step's module |
 | `crates/daemon/src/wiring.rs` | `deck-streak-daemon` | changed: `RecomputeSetup::load` checks ingest's law root and year bands against the readings taxonomy and refuses start when they disagree (R2, A17); registers the strands step in phase 4 of `recompute_fold` (SPEC-071 R19) |
 | `crates/coordination/src/strands.rs` | `deck-streak-coordination` | added: the strands and board read models |
 | `crates/coordination/src/lib.rs` | `deck-streak-coordination` | changed: the read models and the `law_taxonomy` module |
-| `crates/coordination/tests/strands_step.rs` | `deck-streak-coordination` | added: A10 |
+| `crates/coordination/tests/strands_step.rs` | `deck-streak-coordination` | added: A10, A18 |
 | `crates/api/src/strands_routes.rs` | `deck-streak-api` | added: the two routes |
 | `crates/api/src/router.rs` | `deck-streak-api` | changed: the routes behind the owner's session |
 | `crates/api/tests/strands_routes.rs` | `deck-streak-api` | added: A12 |

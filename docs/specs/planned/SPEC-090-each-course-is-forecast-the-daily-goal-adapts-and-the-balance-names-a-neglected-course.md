@@ -150,7 +150,7 @@ R13. Every constant this SPEC uses (the velocity floor, the goal's floor, horizo
 | A19 | the syllabus directory is configuration: with neither the flag nor the variable the tool refuses | `test_the_syllabus_directory_is_configuration` |
 | A20 | `--check` exits non-zero and names a course whose configured bands differ from the export | `test_check_names_a_course_that_disagrees` |
 | A21 | the pace step passes the stored rollups (the last 370 for the goal's p90), SPEC-077's stored course progress and the study reviews of the read window with each card's course | `the_pace_step_is_passed_its_inputs` |
-| A22 | the pace step passes the balance the study reviews of its window, the last 28 study days including today by the kernel's study-day rule at the 04:00 rollover, each with its card's course | `the_pace_step_is_passed_its_balance_window` |
+| A22 | the pace step passes the balance the study reviews of the read window, each with its card's course, the run's instant and the kernel's study-day rule at the 04:00 rollover, from which the balance counts the last 28 study days including today and each course's days idle | `the_pace_step_is_passed_its_balance_window` |
 
 ```acceptance
 A1: cargo test -p deck-streak-kernel --test pynum_goldens -- --exact the_numeric_basics_match_cpythons_golden
@@ -207,7 +207,7 @@ when it merges.
 | `crates/curriculum/tests/pace_store.rs` | `deck-streak-curriculum` | added: A11 |
 | `crates/curriculum/Cargo.toml` | `deck-streak-curriculum` | changed: serde_json's `float_roundtrip` for the goldens' reader (a dev-dependency) |
 | `migrations/009001_curriculum_pace_readouts.sql` | `deck-streak-curriculum` | added: `pace_readouts` |
-| `crates/coordination/src/recompute/pace.rs` | `deck-streak-coordination` | added: the pace step and the balance's window start and study-day rule (A22) |
+| `crates/coordination/src/recompute/pace.rs` | `deck-streak-coordination` | added: the pace step, and the read window's study reviews, the run's instant and the kernel's study-day rule it passes the balance (A22) |
 | `crates/coordination/src/recompute/mod.rs` | `deck-streak-coordination` | changed: declares the pace step's module |
 | `crates/daemon/src/wiring.rs` | `deck-streak-daemon` | changed: registers the pace step in phase 4 of `recompute_fold` (SPEC-071 R19); joins the goal to SPEC-086's today view (R5) |
 | `crates/coordination/src/pace.rs` | `deck-streak-coordination` | added: the pace read model |

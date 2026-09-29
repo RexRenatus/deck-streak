@@ -90,8 +90,8 @@ R4. The audit equals `goldens/fluency_audit.json` (`fluency.py:audit`) over the 
 
 The Tilt Test (#148)
 
-R5. `crates/ingest/src/review_reads.rs` reads the tilt pairs: each study event after the window's
-    floor with its card, ease, last interval, home deck and the same card's previous ease over the
+R5. `crates/ingest/src/review_reads.rs` reads the tilt pairs: each study event after SPEC-023's
+    ingest floor with its card, ease, last interval, home deck and the same card's previous ease over the
     whole scoped log, equal to `goldens/tilt_rows.json` (`tilt.py:read_tilt_rows` over a synthetic
     collection).
 R6. The report equals `goldens/tilt_report.json` (`tilt.py:build_tilt_report`), with the verdict
@@ -149,7 +149,7 @@ R10. The insights screen shows each report as a section: Dead Air's attention sh
 | A23 | the skip ledger's read returns every skip, an undone one included, with its creation and its snapshot's cards | `the_skip_ledger_read_returns_every_skip_with_its_snapshot` |
 | A24 | the Fluency Trap reads the scoped reviews and cards of the last 180 days and Dead Air the events of the last 30, each through SPEC-023's read at its own floor | `each_instrument_reads_at_its_own_floor` |
 | A25 | coordination joins the skip ledger's read, an undone skip included, with each skip's creation and snapshot cards, to the census it passes the Other Hand | `the_other_hand_is_passed_the_skip_ledger` |
-| A26 | the Fluency Trap and the Tilt Test are passed the kernel's study-day rule beside their floors, so a follow-up on a later study day is judged by the same day boundary as the rest of the plan | `the_fluency_trap_and_the_tilt_test_are_passed_the_study_day_rule` |
+| A26 | the Fluency Trap is passed the kernel's study-day rule beside its floor, so a follow-up on a later study day is judged by the same day boundary as the rest of the plan | `the_fluency_trap_is_passed_the_study_day_rule` |
 
 ```acceptance
 A1: cargo test -p deck-streak-kernel --test pynum_statistics -- --exact shuffle_and_erfc_match_cpythons_golden
@@ -177,7 +177,7 @@ A22: cargo test -p deck-streak-insights --test other_hand -- --exact the_provena
 A23: cargo test -p deck-streak-ingest --test study_reads -- --exact the_skip_ledger_read_returns_every_skip_with_its_snapshot
 A24: cargo test -p deck-streak-coordination --test dead_air_step -- --exact each_instrument_reads_at_its_own_floor
 A25: cargo test -p deck-streak-coordination --test dead_air_step -- --exact the_other_hand_is_passed_the_skip_ledger
-A26: cargo test -p deck-streak-coordination --test dead_air_step -- --exact the_fluency_trap_and_the_tilt_test_are_passed_the_study_day_rule
+A26: cargo test -p deck-streak-coordination --test dead_air_step -- --exact the_fluency_trap_is_passed_the_study_day_rule
 ```
 
 ## 3a. What the box run judges
@@ -211,7 +211,7 @@ delivery, so the private wiring does not change when it merges.
 | `crates/insights/tests/fluency.rs` | `deck-streak-insights` | added: A6 to A8 |
 | `crates/insights/tests/tilt.rs` | `deck-streak-insights` | added: A10 to A12 |
 | `crates/insights/tests/other_hand.rs` | `deck-streak-insights` | added: A14, A15, A22 |
-| `crates/coordination/src/instruments.rs` | `deck-streak-coordination` | changed: the floors, the sessions' spans, the Other Hand's join of the skip ledger (R8), the study-day rule passed to the Fluency Trap and the Tilt Test (A26) and the on-demand runs |
+| `crates/coordination/src/instruments.rs` | `deck-streak-coordination` | changed: the floors, the sessions' spans, the Other Hand's join of the skip ledger (R8), the study-day rule passed to the Fluency Trap (A26) and the on-demand runs |
 | `crates/coordination/tests/dead_air_step.rs` | `deck-streak-coordination` | added: A2, A16, A24, A25, A26 |
 | `crates/bot/src/instrument_commands.rs` | `deck-streak-bot` | added: the three on-demand commands |
 | `crates/bot/src/commands.rs` | `deck-streak-bot` | changed: the commands join the table |
