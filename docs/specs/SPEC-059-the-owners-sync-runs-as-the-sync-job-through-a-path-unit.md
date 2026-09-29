@@ -108,6 +108,7 @@ A7: cargo test -p deck-streak-daemon --test sync_request -- --exact a_flush_that
 | `deploy/README.md`, `deploy/deck-streak.env.example` | deploy | changed: the units, the request directory and the first-deploy order |
 | `scripts/tests/test_sync_path.py` | tests | added |
 | `scripts/mutation-rows.d/S05900-S05999.json` | tests | added |
+| `docs/specs/SPEC-041-notification-router-core.md` | docs | changed: one amendment line after R13's note |
 | `docs/specs/SPEC-059-*.md`, `docs/decisions/ADR-066-*.md`, `docs/schematics/sync-request-doorbell.md`, `docs/red-first/SPEC-059.md`, `changelog.d/feat-sync-path-059.md` | docs | added |
 
 ## 5. What this does NOT do
