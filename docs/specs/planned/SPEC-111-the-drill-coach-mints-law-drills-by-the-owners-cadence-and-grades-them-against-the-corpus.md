@@ -209,6 +209,7 @@ does not change when it merges.
 | `docs/schematics/law-drill-answer-grade-and-pay.md` | docs | added by the W6 architect turn; this delivery corrects it only where the code proves it wrong |
 | `docs/schematics/w6-duty-run-and-its-degradation.md` | docs | added by the W6 architect turn; this delivery corrects it only where the code proves it wrong |
 | `docs/red-first/SPEC-111.md` | docs | added |
+| `crates/daemon/src/role_job.rs` | `deck-streak-daemon` | changed: the `job` role dispatches `drill_coach` |
 | `changelog.d/` fragment | repo | added |
 
 ## 5. What this does NOT do

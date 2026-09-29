@@ -26,10 +26,9 @@ the handler's immediate reply. How does each shape reach the owner, without a se
 
 ## Considered Options (the alternatives it was chosen against)
 
-- A requested duty answers as its command's reply: a placeholder at once, then one edit of that
-  message with the result; a prepared duty's ping is a router occasion of its own kind: chosen,
-  because both stay on the paths the census and the router already hold, and each gets the rules
-  its shape needs.
+- A requested duty answers as its command's reply: chosen, because it stays on the paths the census
+  and the router hold. A placeholder comes at once, then one edit of that message with the result;
+  a prepared duty's ping is a router occasion of its own kind, with the rules its shape needs.
 - Deliver a requested answer as a router nudge: rejected because quiet hours and an open lapse
   would withhold a reply the owner is waiting for, and a per-day dedupe would drop a second answer.
 - Deliver it as a router alert: rejected because an alert is for the product's failures, and it

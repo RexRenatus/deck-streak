@@ -179,12 +179,12 @@ pack's state and the private wiring does not change when it merges.
 | `crates/coordination/tests/data_rights_symmetry.rs` | `deck-streak-coordination` | changed: a seeded row |
 | `crates/coordination/tests/writing_tutor.rs` | `deck-streak-coordination` | added: A1 to A4 |
 | `crates/coordination/tests/conversation.rs` | `deck-streak-coordination` | added: A7, A8, A10 |
-| `crates/bot/src/duty_commands.rs` | `deck-streak-bot` | added: `/correct` and `/talk`, the placeholder and its edit |
-| `crates/bot/src/commands.rs` | `deck-streak-bot` | changed: the commands join the table |
+| `crates/bot/src/duty_commands.rs` | `deck-streak-bot` | added: /correct and /talk, the placeholder and its edit |
+| `crates/bot/src/commands.rs` | `deck-streak-bot` | changed: the commands join the table; `Commands` gains the port |
 | `crates/bot/tests/duty_commands.rs` | `deck-streak-bot` | added: A11, A12 |
 | `crates/notifications/tests/one_router.rs` | `deck-streak-notifications` | changed: the census names the placeholder and its edit |
 | `crates/api/src/duty_routes.rs` | `deck-streak-api` | added: the two routes |
-| `crates/api/src/router.rs` | `deck-streak-api` | changed: the routes behind the owner's session |
+| `crates/api/src/router.rs` | `deck-streak-api` | changed: the routes behind the owner's session; `ApiState` gains the port |
 | `crates/api/tests/duty_routes.rs` | `deck-streak-api` | added: A13, A14 |
 | `crates/daemon/src/wiring.rs` | `deck-streak-daemon` | changed: the use cases' ports |
 | `web/app/src/routes/conversation/+page.svelte` | miniapp | added: the chat screen |
@@ -199,6 +199,8 @@ pack's state and the private wiring does not change when it merges.
 | `docs/specs/SPEC-113-the-writing-tutor-corrects-a-sample-and-the-conversation-partner-answers-one-turn-each-at-the-owners-level.md` | docs | moved from `docs/specs/planned/` |
 | `docs/schematics/w6-duty-run-and-its-degradation.md` | docs | added by the W6 architect turn; this delivery corrects it only where the code proves it wrong |
 | `docs/red-first/SPEC-113.md` | docs | added |
+| `crates/daemon/src/role_bot.rs` | `deck-streak-daemon` | changed: the bot role hands the runner-backed use cases to its commands at start (/correct, /talk) |
+| `crates/daemon/src/role_api.rs` | `deck-streak-daemon` | changed: the api role hands the runner-backed use cases to `ApiState` at start (the two routes) |
 | `changelog.d/` fragment | repo | added |
 
 The agent's data-rights port is the file SPEC-043's delivery adds (named `rights.rs` in its

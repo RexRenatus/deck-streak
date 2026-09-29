@@ -71,7 +71,7 @@ R7. `POST /api/practice/{id}/answers` takes one answer or a skip per item, recor
 R8. A completed set is granted once through the grant port (SPEC-040): the amount
     `xp.bonuses.practice_set` from `economy.json`, the submission's study day, source
     `practice:<set id>`, track `law`, scope `once`, in the submission's write. The count correct
-    never changes the amount. `economy.json` names `practice` in `xp.day_base_excludes`.
+    never changes the amount. The value is the plan's recommended default, 20, for the owner's question (ADR-114); it is not the predecessor's. `economy.json` names `practice` in `xp.day_base_excludes`.
 R9. The Mini App's practice screen shows the questions, the pace clock (minutes used against the
     limit, counting up, never a date), one answer or skip per item, and after submission each
     item's key and explanations beside the owner's answer.
@@ -169,11 +169,11 @@ their own features (#29, #32) before it.
 | `crates/coordination/src/data_rights_registry.rs` | `deck-streak-coordination` | changed: `practice_sets` under the agent's port |
 | `crates/coordination/tests/data_rights_symmetry.rs` | `deck-streak-coordination` | changed: a seeded row |
 | `crates/coordination/tests/practice.rs` | `deck-streak-coordination` | added: A1 to A4, A10 to A13 |
-| `crates/bot/src/duty_commands.rs` | `deck-streak-bot` | changed: `/practice` |
-| `crates/bot/src/commands.rs` | `deck-streak-bot` | changed: the command joins the table |
-| `crates/notifications/tests/one_router.rs` | `deck-streak-notifications` | changed: the census names `/practice`'s replies |
+| `crates/bot/src/duty_commands.rs` | `deck-streak-bot` | changed: /practice |
+| `crates/bot/src/commands.rs` | `deck-streak-bot` | changed: the command joins the table; `Commands` gains the port |
+| `crates/notifications/tests/one_router.rs` | `deck-streak-notifications` | changed: the census names /practice's replies |
 | `crates/api/src/practice_routes.rs` | `deck-streak-api` | added: the four routes |
-| `crates/api/src/router.rs` | `deck-streak-api` | changed: the routes behind the owner's session |
+| `crates/api/src/router.rs` | `deck-streak-api` | changed: the routes behind the owner's session; `ApiState` gains the port |
 | `crates/api/tests/practice_routes.rs` | `deck-streak-api` | added: A9, A15 |
 | `crates/daemon/src/wiring.rs` | `deck-streak-daemon` | changed: the use cases' ports |
 | `web/app/src/routes/practice/+page.svelte` | miniapp | added: the practice screen |
@@ -190,6 +190,8 @@ their own features (#29, #32) before it.
 | `docs/specs/SPEC-114-a-practice-set-is-generated-on-request-its-keys-are-held-until-it-is-attempted-and-its-completion-pays-once.md` | docs | moved from `docs/specs/planned/` |
 | `docs/schematics/w6-duty-run-and-its-degradation.md` | docs | added by the W6 architect turn; this delivery corrects it only where the code proves it wrong |
 | `docs/red-first/SPEC-114.md` | docs | added |
+| `crates/daemon/src/role_bot.rs` | `deck-streak-daemon` | changed: the bot role hands the practice use case to its commands at start (/practice) |
+| `crates/daemon/src/role_api.rs` | `deck-streak-daemon` | changed: the api role hands the practice use case to `ApiState` at start (POST /api/practice) |
 | `changelog.d/` fragment | repo | added |
 
 The agent's data-rights port is the file SPEC-043's delivery adds, as SPEC-112's manifest note says.

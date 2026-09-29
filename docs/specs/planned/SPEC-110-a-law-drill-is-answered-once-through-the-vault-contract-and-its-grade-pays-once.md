@@ -142,8 +142,7 @@ R17. `drill_answers` and `drill_grades` are user data: registered in the context
     in coordination's data-rights registry and its symmetry test, declared in `privacy.json` and
     `PRIVACY.md` (category `law-drills`), and exported and erased by the vault's new data-rights
     port `crates/vault/src/data_rights.rs`. The drill notes are the owner's files in the owner's
-    vault: an erase deletes these rows, and never a note (ADR-118). This amends SPEC-042 R12: the
-    vault context owns these two tables and still depends on the kernel only.
+    vault: an erase deletes these rows, and never a note (ADR-118). This amends SPEC-042 R12: the vault context owns these two tables and still depends on the kernel only. The amendment is owed: the delivery that builds SPEC-110 adds SPEC-042's dated amendment line, and SPEC-042 itself is not edited by the plan.
 R18. For the v9 import (#61): `drill_grades` maps from the predecessor's `drill_xp_grants`, row for
     row, its XP read from the matching `drill:` row of the predecessor's XP ledger; `drill_answers`
     maps from nothing, because the predecessor kept the answer only in the note, whose marker R4
@@ -248,11 +247,11 @@ when it merges.
 | `crates/daemon/src/wiring.rs` | `deck-streak-daemon` | changed: the drill-grades memory port and the vault's data-rights port |
 | `crates/daemon/tests/drill_memory.rs` | `deck-streak-daemon` | added: A15 |
 | `crates/bot/src/drill_commands.rs` | `deck-streak-bot` | added: the tokens, the keyboards and the replies' text |
-| `crates/bot/src/commands.rs` | `deck-streak-bot` | changed: `/drills`, `/drill`, the `dv:` and `da:` callbacks and the pending answer |
+| `crates/bot/src/commands.rs` | `deck-streak-bot` | changed: /drills, /drill, the `dv:` and `da:` callbacks and the pending answer; `Commands` gains the port |
 | `crates/bot/tests/drill_commands.rs` | `deck-streak-bot` | added: A16 to A18 |
 | `crates/notifications/tests/one_router.rs` | `deck-streak-notifications` | changed: the census names the drill replies and their callers |
 | `crates/api/src/drill_routes.rs` | `deck-streak-api` | added: the three routes |
-| `crates/api/src/router.rs` | `deck-streak-api` | changed: the routes are mounted |
+| `crates/api/src/router.rs` | `deck-streak-api` | changed: the routes are mounted; `ApiState` gains the port |
 | `crates/api/tests/drill_routes.rs` | `deck-streak-api` | added: A19 |
 | `economy.json` | repo | changed: `xp.bonuses.drill_postback` |
 | `docs/CONTEXT-MAP.md` | docs | changed: the own-tables rows for `drill_answers` and `drill_grades` |
@@ -265,6 +264,9 @@ when it merges.
 | `docs/specs/SPEC-110-a-law-drill-is-answered-once-through-the-vault-contract-and-its-grade-pays-once.md` | docs | moved from `docs/specs/planned/` |
 | `docs/schematics/law-drill-answer-grade-and-pay.md` | docs | added by the W6 architect turn; this delivery corrects it only where the code proves it wrong |
 | `docs/red-first/SPEC-110.md` | docs | added |
+| `crates/daemon/src/role_job.rs` | `deck-streak-daemon` | changed: the `job` role dispatches `drill_postback` |
+| `crates/daemon/src/role_bot.rs` | `deck-streak-daemon` | changed: the bot role hands the drill notes' reader and the answer's writer to its commands at start (R13) |
+| `crates/daemon/src/role_api.rs` | `deck-streak-daemon` | changed: the api role hands the drill notes' reader and the answer's writer to `ApiState` at start |
 | `changelog.d/` fragment | repo | added |
 
 ## 5. What this does NOT do

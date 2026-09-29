@@ -128,7 +128,7 @@ R14. SPEC-085's A14 is amended by a dated amendment note appended to SPEC-085 in
 | A7 | a refresh inserts a new card's row, replaces the row of a card whose stamp rose and of one whose stamp fell, deletes the row of a card gone from the copy, and reads no card whose stamp is unchanged | `a_refresh_reads_exactly_the_changed_cards` |
 | A8 | a renamed deck sets the family of its cards' rows, and no other row changes | `a_renamed_deck_rewrites_its_cards_family` |
 | A9 | a refresh whose read fails keeps every row and stores `measured` false, and the next refresh restores every row and `measured` true | `a_failed_refresh_keeps_the_rows_and_is_unmeasured` |
-| A10 | `as_of` equals its golden: 03:59:59 and 04:00:00 local and noon, at offsets of 0, +540 and -300 minutes | `as_of_matches_the_golden` |
+| A10 | `as_of` equals its golden: 03:59:59 and 04:00:00 local and noon, at offsets of 0, +330 and -300 minutes | `as_of_matches_the_golden` |
 | A11 | the rows of every page joined, and `measured`, equal the golden in each of its three cases | `the_pages_match_the_golden` |
 | A12 | before the first refresh and after a failed one, the row count reads 0 and page 0 answers no rows | `an_unmeasured_series_answers_no_rows` |
 | A13 | 0 rows answer one empty page; 2000 rows answer one page; 2001 rows answer pages of 2000 and 1; page 2 of 2001 is refused | `the_pages_hold_2000_rows` |
@@ -207,6 +207,7 @@ delivery changes no pack's state, so the private wiring does not change when it 
 | `docs/specs/SPEC-120-the-collection-atlas-is-a-series-refreshed-from-changed-cards-after-each-sync-and-the-agent-reads-it-in-pages.md` | docs | moved from `docs/specs/planned/` |
 | `docs/red-first/SPEC-120.md` | docs | added |
 | `docs/schematics/collection-atlas-refresh.md` | docs | added by the W6 architect turn; this delivery corrects it only where the code proves it wrong |
+| `crates/daemon/src/role_job.rs` | `deck-streak-daemon` | changed: the `sync` job's cycle parts carry the atlas refresh (`CycleParts::new(...)` in `ScheduledSync::run_scheduled`, R10) |
 | `changelog.d/` fragment | repo | added |
 
 ## 5. What this does NOT do
@@ -242,7 +243,7 @@ predecessor at `27ee2bc` (SPEC-029). Every case is synthetic.
 |---|---|---|---|
 | `collection_atlas_rows` | `charts.py:read_collection_atlas` | adapter | three synthetic collection files: one with nested decks, a filtered deck, notes created out of id order, several templates per note, a card with no memory state, a card with an unparsable one, and a card whose deck id names no deck; one with no cards table (no rows, unmeasured); and one with no card (no rows, measured). Each answers its rows and `measured` |
 | `atlas_family` | `charts.py:_deck_family` | function | synthetic names: a top-level deck, a nested one, and the empty name |
-| `atlas_as_of` | `charts.py:_rollover_instant` | function | instants at 03:59:59, 04:00:00 and 12:00:00 local, at offsets of 0, +540 and -300 minutes, rollover hour 4 |
+| `atlas_as_of` | `charts.py:_rollover_instant` | function | instants at 03:59:59, 04:00:00 and 12:00:00 local, at offsets of 0, +330 and -300 minutes, rollover hour 4 |
 
 The image (`charts.py:collection_atlas`, `render_collection_atlas`) is left out on purpose (R12).
 

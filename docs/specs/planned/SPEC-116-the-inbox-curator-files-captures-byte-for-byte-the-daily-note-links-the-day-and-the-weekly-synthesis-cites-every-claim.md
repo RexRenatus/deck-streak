@@ -44,7 +44,7 @@ The inbox curator (#50)
 R1. The inbox snapshot lists every capture in the layout's inbox that SPEC-118 recorded with state
     `captured`: its stub, its attachment (if any), each file's SHA-256 and its kind. A capture of
     kind `journal` is left out of the snapshot, so it is never an input and never moved (ADR-116).
-R2. The task `inbox-curator` (format `other`) passes exactly: the layout's destinations (source
+R2. The task `inbox-curator` (format `other`) is gated by the ai-content-safety pack's every-task classes, `output-links`, `output-invisible` and `output-marked`, and passes exactly: the layout's destinations (source
     `config`), and for each snapshot capture its id, kind, attachment name and stub caption (source
     `vault`). No attachment's bytes and no other note are inputs. It holds no tool; its caps are 240
     seconds, 5 turns and SPEC-043 R6's default budget.
@@ -89,7 +89,7 @@ R11. Its inputs, as a set, are the week's notes: the readings of the week's stud
     first, at most 30 notes, each read up to 4000 characters (paged; source `vault`), plus
     `agent/duties/weekly-synthesis.template.md` (source `template`). A note under a folder the
     layout names in `journal`, or a capture of kind `journal`, is never an input.
-R12. The task `weekly-synthesis` (format `other`) holds no tool; its caps are 300 seconds, 10 turns
+R12. The task `weekly-synthesis` (format `other`) is gated by the ai-content-safety pack's every-task classes, `output-links`, `output-invisible` and `output-marked`, and holds no tool; its caps are 300 seconds, 10 turns
     and SPEC-043 R6's default budget. The engine accepts its output only when `sources` is a subset
     of the inputs, every `themes` and `connections` claim links at least one source, every
     connection links at least two, every source is cited, and the three sections are present;

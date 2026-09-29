@@ -197,10 +197,10 @@ private wiring does not change when it merges.
 | `deploy/systemd/deck-streak-job@leech_doctor.timer` | deploy | added |
 | `crates/daemon/src/wiring.rs` | `deck-streak-daemon` | changed: the job's ports and the `leeches` memory port |
 | `crates/daemon/tests/leech_memory.rs` | `deck-streak-daemon` | added: A18 |
-| `crates/bot/src/remedy_command.rs` | `deck-streak-bot` | added: `/remedy` |
+| `crates/bot/src/remedy_command.rs` | `deck-streak-bot` | added: /remedy |
 | `crates/bot/src/commands.rs` | `deck-streak-bot` | changed: the command joins the table |
 | `crates/bot/tests/remedy_command.rs` | `deck-streak-bot` | added: A2, A16 |
-| `crates/notifications/tests/one_router.rs` | `deck-streak-notifications` | changed: the census names `/remedy`'s reply |
+| `crates/notifications/tests/one_router.rs` | `deck-streak-notifications` | changed: the census names /remedy's reply |
 | `crates/api/src/remedy_route.rs` | `deck-streak-api` | added |
 | `crates/api/src/router.rs` | `deck-streak-api` | changed: the route behind the owner's session |
 | `crates/api/tests/remedy_route.rs` | `deck-streak-api` | added: A17 |
@@ -212,6 +212,7 @@ private wiring does not change when it merges.
 | `docs/specs/SPEC-112-the-leech-doctor-prepares-a-remedy-for-each-failing-card-before-its-next-review.md` | docs | moved from `docs/specs/planned/` |
 | `docs/schematics/w6-duty-run-and-its-degradation.md` | docs | added by the W6 architect turn; this delivery corrects it only where the code proves it wrong |
 | `docs/red-first/SPEC-112.md` | docs | added |
+| `crates/daemon/src/role_job.rs` | `deck-streak-daemon` | changed: the `job` role dispatches `leech_doctor` |
 | `changelog.d/` fragment | repo | added |
 
 The agent's data-rights port is the file SPEC-043's delivery adds. SPEC-043's manifest names it

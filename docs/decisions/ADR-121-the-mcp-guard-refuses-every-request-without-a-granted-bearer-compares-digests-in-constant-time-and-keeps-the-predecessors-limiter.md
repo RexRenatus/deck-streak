@@ -10,9 +10,7 @@ decision-makers: "@RexRenatus (owner), the DeckStreak architect"
 
 #158 asks for fail-closed bearer auth on the law-track and drill tools: per-scope tokens from the
 secret store, a constant-time comparison, one denial word, and the predecessor's limiter of five
-failures a minute over at most 512 buckets (`mcp_auth.py:DrillAuth.require`, at `27ee2bc`). The
-predecessor passes the token as a tool ARGUMENT and leaves its other 32 tools, erase among them,
-open to anything that reaches the port. DeckStreak loads secrets only through the credential loader
+failures a minute over at most 512 buckets (`mcp_auth.py:DrillAuth.require`, at `27ee2bc`). #157's server also carries erase and every read (SPEC-119 R15). DeckStreak loads secrets only through the credential loader
 (SPEC-066). What does the guard cover, where does the token travel, how is it compared, and what
 does a refusal look like?
 
@@ -30,9 +28,7 @@ does a refusal look like?
   or drills); SHA-256 digests are compared with `subtle`'s `ct_eq`; a 401 answers before the
   server sees the request; a tool error answers a scope the token lacks; and the limiter is the
   predecessor's.
-- The predecessor's shape, a token argument on three tools and the rest open: rejected because erase
-  and every read would answer anything that reaches the port, and an argument is written into the
-  client's transcript.
+- A token argument on the law-track and drill tools only: rejected because erase and every read would answer without a bearer, and an argument is written into the client's transcript.
 - Compare the tokens themselves with `ct_eq`: rejected because `subtle` answers a length difference
   at once, so a token's length would leak; every digest has one length.
 - A 401 for a missing scope too, read from the body: rejected because it puts a second protocol
@@ -62,7 +58,7 @@ that closes every tool while keeping each of #158's numbers.
   are identical" in the layer only, and the word is the same.
 - **The limiter.** Match first, then the bucket; five fresh failures in 60 seconds limit a bucket;
   a limited failure records nothing; 10 timestamps a bucket; 512 buckets, oldest evicted. Its effect
-  is the log's and the memory bound's, as in the predecessor, because the response never changes.
+  is the log's and the memory bound's, because the response never changes.
 
 ### Consequences
 
@@ -70,8 +66,8 @@ that closes every tool while keeping each of #158's numbers.
 - Good, because the journal holds a 16-character bucket, never a token.
 - Bad, because a client must be configured with a header rather than an argument. The owner's
   client configuration changes once, at the cutover (#62).
-- Bad, because a guesser who varies the token gets a fresh bucket each time, as in the predecessor.
-  The 32-character floor is what makes guessing hopeless; the limiter only bounds memory.
+- Bad, because a guesser who varies the token gets a fresh bucket each time.
+  The 32-character floor is the plan's choice, because 32 characters of a generated token carry 128 bits when hex-encoded, and it is what makes guessing hopeless; the limiter only bounds memory.
 
 ### Confirmation
 

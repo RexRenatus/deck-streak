@@ -25,15 +25,12 @@
   and a closed world (`server.py:_RO`); a writer's `{"ok": false}` becomes a tool error
   (`server.py:_raise_on_error`); three tools clamp their arguments; and thirteen chart resources
   answer images (`server.py:_CHART_RESOURCES`).
-- **Its guard covers three tools.** `mcp_auth.py:DrillAuth.require` checks a token passed as a tool
-  ARGUMENT against per-scope tokens (`law_track`, `drills`) with `hmac.compare_digest`, denies with
-  the one message `unauthorized`, and counts failures per bucket: five in 60 seconds, 512 buckets,
-  ten timestamps a bucket. The other 32 tools answer anyone who reaches the port.
+- **Its guard.** `mcp_auth.py:DrillAuth.require` checks per-scope tokens (`law_track`, `drills`), denies with the one message `unauthorized`, and counts failures per bucket: five in 60 seconds, 512 buckets, ten timestamps a bucket (#158).
 - **DeckStreak has no such surface.** No crate speaks MCP, and the agent context cannot hold one:
   a tool calls a use case of `coordination`, and `coordination` depends on `agent`, so the edge would
   be a cycle (ADR-119). The Mini App's routes answer an owner session (SPEC-024), which a machine
   client does not have.
-- **What changes, and why.** Every request needs a granted bearer, not only three tools; the bearer
+- **What changes, and why.** Every request needs a granted bearer; the bearer
   travels in the `Authorization` header, never in a tool argument that a client writes into its
   transcript; the comparison is over digests, so a token's length leaks nothing; and the chart
   resources answer the JSON series SPEC-085 serves, never an image (SPEC-085 R1, R11). Each change
@@ -53,7 +50,7 @@ R2. `deckstreakd mcp` is a role (`crates/daemon/src/role_mcp.rs`), run by
 R3. The listen address is the setting `DECKSTREAK_MCP_LISTEN`, which must be a loopback address and
     port. Unset, unparseable or not loopback, the role refuses start and names the setting
     (`McpError::Listen`), the shape of the API's own setting (SPEC-025 R6).
-R4. At most 8 requests are in flight; a ninth is shed with 503 at once, never queued (ADR-025's
+R4. At most 8 requests are in flight (the plan's bound: one owner's agent needs few, and a small bound sheds a runaway client before it holds the listener); a ninth is shed with 503 at once, never queued (ADR-025's
     pattern: a global concurrency limit inside a load shed).
 R5. No tool runs a model, so every tool answers the same with the AI route absent (ADR-054), and no
     W6 duty is given an MCP tool (SPEC-043 R5's `--strict-mcp-config`).
@@ -337,8 +334,7 @@ not change when it merges.
 
 ## 6. Risks
 
-- **A token guessed by varying it on every attempt.** Each guess gets a fresh bucket, as in the
-  predecessor, so the limiter bounds memory rather than guessing; R7's 32-character floor makes a
+- **A token guessed by varying it on every attempt.** Each guess gets a fresh bucket, so the limiter bounds memory rather than guessing; R7's 32-character floor makes a
   guess hopeless. Detected by A5 and A17.
 - **A leaked core token erases the ledger.** The word `ERASE`, the loopback listener and the
   32-character floor all stand between; detected by A1, A5 and A30.

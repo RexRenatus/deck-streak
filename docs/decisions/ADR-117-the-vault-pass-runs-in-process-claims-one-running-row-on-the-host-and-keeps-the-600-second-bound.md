@@ -28,9 +28,8 @@ it to one at a time?
 - An in-process pass that claims one `running` row: chosen, because both roles share the ledger,
   and a row carries the instant that lets a stale claim be abandoned. The pass runs in the
   triggering role, and a partial unique index in `vault_passes` holds the claim.
-- The issue's shape, one fixed external command through an exact-command privilege rule: rejected
-  because the pass is DeckStreak's own code, so a shell-out would add a privilege and a user for
-  work the process already does.
+- The issue's shape, an exact-command privilege rule: rejected because a shell-out would add a privilege
+  and a user for work the process already does, since the pass is DeckStreak's own code.
 - Start the nightly job's unit from the bot: rejected because controlling a unit needs a privilege
   rule of its own, and the reply could see the outcome only by polling.
 - Queue a request row that the job role polls: rejected because the reply would wait on a poll

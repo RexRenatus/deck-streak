@@ -20,7 +20,7 @@
 - **The predecessor's trigger** (`bot.py:CommandBot._run_vaultops`, at `27ee2bc`) posts a
   placeholder, runs the pass in the background under a 600-second bound
   (`bot.py:_VAULT_OPS_TIMEOUT_SECS`), and edits the placeholder to one of four lines: completed,
-  timed out after 600 s, an exit status with a pointer to its service log, or failed unexpectedly.
+  timed out after 600 s, an exit status with a pointer to its log, or failed unexpectedly.
   `bot.py:CommandBot._deliver_vaultops` sends instead of editing when the placeholder has no
   message id. Its pass was an external program; DeckStreak's pass is its own code (ADR-117).
 - **Two processes can reach a pass.** The nightly job runs in the `job` role and `/vaultops` in the
@@ -53,8 +53,7 @@ R4. **The outcome.** `completed` when the pass reached its end, whatever each du
 
 The nightly job
 
-R5. The job `vault_pass` in `coordination::jobs::TABLE` (SPEC-027 R1) runs daily at 21 hours local
-    time, at a minute the census admits (SPEC-027 R2), not `catch_up`, with trigger `nightly` for
+R5. The job `vault_pass` in `coordination::jobs::TABLE` (SPEC-027 R1) runs daily at 21 hours local time (the plan's conservative choice, held for the owner's question with the others, not a predecessor number), at a minute the census admits (SPEC-027 R2), not `catch_up`, with trigger `nightly` for
     the study day it fires in. It reads the study day's sync outcome as every job does and runs
     whatever it is, because no vault duty reads the collection. Its unit is
     `deploy/systemd/deck-streak-job@vault_pass.timer`.
@@ -71,7 +70,7 @@ R7. The bot replies at once with the placeholder "⏳ Running vault-ops…", run
     A placeholder that has no message id is followed by a send instead of an edit. The placeholder
     and the edit join the census's command replies (ADR-113), so quiet hours and a lapse never hold
     them (#155).
-R8. The predecessor's fourth line, an exit status with a pointer to its service log, is not ported:
+R8. The predecessor's fourth line, an exit status with a pointer to its log, is not ported:
     an in-process pass has no exit status, and the pointer names the predecessor's operations
     (ADR-059). Every failure reads the failed line.
 R9. With the route absent, `/vaultops` runs the pass: the daily note needs no model, and the
@@ -108,7 +107,7 @@ R12. CHARTER 10's eleven anti-goals bind this SPEC as one block; the ones it tou
 | A6 | a pass whose vault is unreadable records `failed`, and its error reaches the log only | `a_failing_pass_records_failed_and_logs_its_error` |
 | A7 | the claim deletes a pass that finished 91 days earlier and keeps one that finished 90 days earlier | `the_claim_drops_passes_older_than_ninety_days` |
 | A8 | the pass's bound equals the predecessor's golden | `the_vault_pass_bound_is_the_predecessors` |
-| A9 | the job table holds `vault_pass` at 21 hours, off every reserved minute, not `catch_up` | `the_job_table_holds_the_vault_pass` |
+| A9 | the job table holds `vault_pass` at 21 hours (R5's plan choice), off every reserved minute, not `catch_up` | `the_job_table_holds_the_vault_pass` |
 | A10 | with the route absent a pass completes and writes the daily note | `a_pass_with_no_ai_route_completes` |
 | A11 | `/vaultops` replies with the placeholder and edits it once to each outcome's line, equal to the golden's | `vaultops_edits_its_placeholder_to_the_outcome` |
 | A12 | `/vaultops` from anyone but the owner runs nothing | `vaultops_from_anyone_but_the_owner_runs_nothing` |
@@ -171,8 +170,8 @@ pack is enforced by SPEC-116, and the rows below judge the files this SPEC adds.
 | `crates/coordination/tests/data_rights_symmetry.rs` | `deck-streak-coordination` | changed: a seeded `vault_passes` row |
 | `docs/CONTEXT-MAP.md` | docs | changed: `vault_passes` in coordination's own tables |
 | `privacy.json`, `PRIVACY.md` | repo | changed: `vault_passes` |
-| `crates/bot/src/vaultops_command.rs` | `deck-streak-bot` | added: `/vaultops` |
-| `crates/bot/src/commands.rs` | `deck-streak-bot` | changed: the command registered |
+| `crates/bot/src/vaultops_command.rs` | `deck-streak-bot` | added: /vaultops |
+| `crates/bot/src/commands.rs` | `deck-streak-bot` | changed: the command registered; `Commands` gains the port |
 | `crates/bot/src/lib.rs` | `deck-streak-bot` | changed: the module |
 | `crates/bot/tests/vaultops_command.rs` | `deck-streak-bot` | added: A11 to A17 |
 | `crates/notifications/tests/one_router.rs` | `deck-streak-notifications` | changed: the census names the placeholder and its edit |
@@ -188,6 +187,8 @@ pack is enforced by SPEC-116, and the rows below judge the files this SPEC adds.
 | `docs/specs/SPEC-117-the-vault-pass-runs-nightly-and-on-vaultops-one-at-a-time-on-the-host-bounded-at-600-seconds.md` | docs | moved from `docs/specs/planned/` |
 | `docs/schematics/w6-duty-run-and-its-degradation.md` | docs | added by the W6 architect turn; this delivery corrects it only where the code proves it wrong |
 | `docs/red-first/SPEC-117.md` | docs | added |
+| `crates/daemon/src/role_job.rs` | `deck-streak-daemon` | changed: the `job` role dispatches `vault_pass` |
+| `crates/daemon/src/role_bot.rs` | `deck-streak-daemon` | changed: the bot role hands the pass to its commands at start (/vaultops) |
 | `changelog.d/` fragment | repo | added |
 
 ## 5. What this does NOT do
@@ -195,8 +196,7 @@ pack is enforced by SPEC-116, and the rows below judge the files this SPEC adds.
 - It runs no external program and needs no privilege rule; the issue's exact-command shape is
   replaced by the in-process pass (ADR-117, #155).
 - It builds no Mini App admin action; the settings screen that shows the last status is W7's (#57).
-- It changes nothing in the predecessor's own nightly, which keeps running until the cutover's first
-  verified week (#62).
+- It retires nothing of the predecessor; the cutover does (#62).
 - It builds none of the duties themselves (#49, #50).
 
 ## 6. Risks
