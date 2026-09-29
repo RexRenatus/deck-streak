@@ -234,7 +234,8 @@ fn a_list_marker_in_the_primer_prose_is_refused() {
         );
     }
     for fine in [
-        "-item", "1.item", "a - b", "12 items", "**bold**", "a. item", "a) item",
+        "-item", "1.item", "a - b", "12 items", "**bold**", "a. item", "a) item", ". item",
+        ") item",
     ] {
         let doc = law_doc(|prose| {
             prose[2].1.push_str(&format!("\n{fine}"));
