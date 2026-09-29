@@ -572,7 +572,15 @@ def instance_dropin_refusals(unit):
     """Every assignment of `unit` read from an instance's drop-in directory, neither the unit file
     nor its own `<name>.d/`, whose section and key are not on INSTANCE_DROPIN_KEYS (SPEC-062
     R14)."""
-    return []
+    own = f"{unit.name}.d"
+    return [
+        f"{a.source}:{a.line}: [{a.section}] {a.key}={a.value} is set in an instance's drop-in, "
+        "which systemd applies to that instance alone, and is refused"
+        for a in unit.assignments
+        if a.source != unit.rel
+        and Path(a.source).parent.name != own
+        and (a.section, a.key) not in INSTANCE_DROPIN_KEYS
+    ]
 
 
 def value_refusals(unit, table):

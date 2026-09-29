@@ -216,6 +216,14 @@
         "glob(f\"{stem}@*.{suffix}.d\")",
         "a template's own drop-in directory is read once, not also as an instance's (SPEC-062 R14)",
         "test_deploy_templates.CredentialsComeFromTheSocket.test_a_templates_own_dropin_directory_is_read_once"
+      ],
+      [
+        "S06228-AN-INSTANCE-DROPIN-SETS-ONLY-ITS-CREDENTIALS",
+        "scripts/tests/test_deploy_templates.py",
+        "        and (a.section, a.key) not in INSTANCE_DROPIN_KEYS\n",
+        "        and False\n",
+        "an instance's drop-in sets only the credentials it loads, since systemd applies it to that instance alone while the unit guards read it with its template (SPEC-062 R14)",
+        "test_deploy_templates.CredentialsComeFromTheSocket.test_an_instance_dropin_sets_only_the_credentials_it_loads"
       ]
     ]
   }

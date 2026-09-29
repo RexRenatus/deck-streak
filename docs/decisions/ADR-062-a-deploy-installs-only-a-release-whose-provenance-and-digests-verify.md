@@ -34,6 +34,7 @@ host, so that the host runs exactly what this repository's release workflow buil
 - Admitting every `@<instance>` drop-in directory: rejected because a foreign instance directory would pass the unit guards.
 - Reading an instance's drop-ins for the credential guard alone: rejected because a key planted in the drop-in would escape every other unit guard.
 - Admitting any number of a template's instance directories: rejected because the guards read them all into the template, so one instance's setting would mask another's that systemd applies to that instance alone.
+- Bounding a template to one instance directory alone: rejected because that directory's setting would still be read as the template's for its other instances, which systemd never gives them.
 
 ## Decision Outcome
 

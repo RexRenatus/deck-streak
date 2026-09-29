@@ -124,11 +124,14 @@ R14. The sync login is loaded by the sync job alone. `deck-streak-job@.service` 
     amended). `deploy/scripts/credential-pairs.py` lists the drop-in's pairs under the instance,
     and `deploy/scripts/effective-check.py` accepts a shipped drop-in beside the rail's own. The
     deploy installs the drop-in directories byte for byte with the unit templates. The unit
-    guards model a template's instance drop-ins as systemd reads them: a shipped template's own
+    guards read a template's instance drop-ins with the template: a shipped template's own
     instance directory `<name>@<instance>.<type>.d` is that template's, every unit guard reads
     the drop-ins in it with the template, a template has at most one such directory (two would be
     read as one unit where systemd keeps them apart, so both are refused), and the directory of
     an instance of a template the tree does not ship stays refused (A21; SPEC-066, amended).
+    systemd applies an instance's drop-in to that instance alone, so a setting there would stand
+    in for the template's other instances: an instance's drop-in sets only `LoadCredential=`, and
+    any other key in it is refused (A22).
 
 ## 3. Acceptance criteria
 
@@ -155,6 +158,7 @@ R14. The sync login is loaded by the sync job alone. `deck-streak-job@.service` 
 | A19 | the Caddy install renders the block from the tag's own `deploy/caddy/deck-streak.caddy`, never from the working tree | `test_deploy_scripts.py` |
 | A20 | the release token reaches the three `gh release` steps alone: not the workflow, the job or any other step | `test_release_workflow.py` |
 | A21 | a shipped template's instance drop-in directory is admitted as its own and read with the template, so a key planted in it is refused by the unit guards; two instance directories of one template are both refused; and the directory of an instance of an unshipped template is refused | `test_deploy_templates.py` |
+| A22 | an instance's drop-in sets only `LoadCredential=`: a template's setting restated there is refused, since systemd applies it to that instance alone while the unit guards read it with the template | `test_deploy_templates.py` |
 
 ```acceptance
 A1: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k test_the_deploy_refuses_a_tag_off_main_and_a_lightweight_tag
@@ -178,6 +182,7 @@ A18: python3 -m unittest discover -s scripts/tests -p test_release_workflow.py -
 A19: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k test_the_caddy_block_is_rendered_from_the_tags_own_file
 A20: python3 -m unittest discover -s scripts/tests -p test_release_workflow.py -k test_the_token_reaches_the_three_gh_release_steps_alone
 A21: python3 -m unittest discover -s scripts/tests -p test_deploy_templates.py -k test_a_shipped_templates_instance_dropin_directory_is_its_own_and_no_other_is
+A22: python3 -m unittest discover -s scripts/tests -p test_deploy_templates.py -k test_an_instance_dropin_sets_only_the_credentials_it_loads
 ```
 
 A1 to A6, A12 to A15, A17 and A19 run the scripts against a synthetic repository with its own tags, a synthetic release
