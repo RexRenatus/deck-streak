@@ -1138,6 +1138,27 @@ class CredentialsComeFromTheSocket(unittest.TestCase):
                 "a second instance of the shipped template",
             )
 
+    def test_a_templates_own_dropin_directory_is_read_once(self):
+        # `<name>@.<type>.d/` is the template's own directory; the instance glob must not match it
+        # too, or each of its drop-ins is read twice and refused twice (SPEC-062 R14).
+        with tempfile.TemporaryDirectory() as scratch:
+            systemd = Path(scratch) / "deploy" / "systemd"
+            systemd.mkdir(parents=True)
+            (systemd / "planted@.service").write_text("[Service]\n", encoding="utf-8")
+            (systemd / "planted@.service.d").mkdir()
+            (systemd / "planted@.service.d" / "10.conf").write_text(
+                "[Unit]\nRequires=missing.service\n", encoding="utf-8"
+            )
+            (planted,) = subject(scratch).services
+            self.assertEqual(
+                off_list_refusals(planted, _units.PAGING_KEYS),
+                [
+                    "deploy/systemd/planted@.service.d/10.conf:2: [Unit] Requires="
+                    "missing.service is not on this unit's list of keys, and is refused"
+                ],
+                "a key planted in the template's own drop-in directory",
+            )
+
     def test_only_a_units_own_dropin_directory_is_shipped_under_deploy(self):
         # The tree ships the drop-in directories of its units and of the sync instance, and one
         # directory of a file that is no unit (SPEC-066 R2). Planted beside a unit: a directory
