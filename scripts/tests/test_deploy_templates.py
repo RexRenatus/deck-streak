@@ -1686,6 +1686,10 @@ class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
         plants = {
             "oneshot restart always": ("Restart=always\n", [refusal(8, "always")]),
             "oneshot restart on-success": ("Restart=on-success\n", [refusal(8, "on-success")]),
+            "restart extending the admitted value": (
+                "Restart=on-failure-extra\n",
+                [refusal(8, "on-failure-extra")],
+            ),
             "restart control": ("Restart=on-failure\n", []),
         }
         got = {}
