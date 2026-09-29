@@ -152,6 +152,7 @@ fn card(row: &Value) -> Card {
         lapses: field(5),
         track: Track::Language,
         course: None,
+        tier: None,
     }
 }
 

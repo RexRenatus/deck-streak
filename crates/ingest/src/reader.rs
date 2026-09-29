@@ -106,6 +106,9 @@ pub struct Card {
     /// The card's course: the course whose deck root is its home deck's top-level name, or none
     /// (SPEC-071 R2). Only the code travels with the card.
     pub course: Option<CourseCode>,
+    /// The Bloom tier of the card's note (SPEC-072 R3), reduced from its tags inside the read; the
+    /// tags themselves never leave ingest.
+    pub tier: Option<crate::tier::Tier>,
 }
 
 impl Card {
@@ -298,6 +301,7 @@ impl CollectionReader {
                         lapses: row.10,
                         track: Track::Language,
                         course: None,
+                        tier: None,
                     };
                     card.track = track(card.home_deck_id());
                     card.course = course_of(&courses, name_of(card.home_deck_id()));
