@@ -13,6 +13,7 @@
 #![warn(missing_docs, clippy::all)]
 
 pub mod constants;
+pub mod data_rights;
 pub mod freeze;
 pub mod governor;
 pub mod lapse;

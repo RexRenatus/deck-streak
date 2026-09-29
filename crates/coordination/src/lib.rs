@@ -30,6 +30,7 @@ pub mod obligations;
 pub mod progression;
 pub mod readings;
 pub mod recompute;
+pub mod relight;
 pub mod runner;
 pub mod score;
 pub mod sync_cycle;

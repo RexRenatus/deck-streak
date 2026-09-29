@@ -491,6 +491,7 @@ impl<S: OwnerSync> Commands<S> {
             Some("sync") => self.sync().await,
             Some("score") => self.score().await,
             Some("level") => self.level().await,
+            Some("streak") => self.streak().await,
             _ => self.send(help_reply()).await,
         }
     }
@@ -599,6 +600,12 @@ impl<S: OwnerSync> Commands<S> {
             }
         };
         self.send(reply).await;
+    }
+
+    /// `/streak`: both tracks, the law track first when it has activity (SPEC-076 R22).
+    async fn streak(&self) {
+        self.send(Reply::text("Streaks are not built yet.".to_owned()))
+            .await;
     }
 
     /// Sends `reply` to the owner. A reply that gives up is logged by the transport, with its
