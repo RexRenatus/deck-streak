@@ -78,4 +78,5 @@ plant: the breaker's answer is quiet_hours
 ```
 
 Before it, both plants passed every other test of the crate (84 passed, 0 failed each). Row
-S13211 in the band file mutates the same line and names this test as its killer.
+S13211 in the band file mutates the same line and names this test as its killer. A later commit
+changed only the test's `Duration` literal, one second written as `from_secs(1)`, for clippy.

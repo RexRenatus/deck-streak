@@ -330,7 +330,7 @@ async fn a_failed_photo_opens_the_breaker_for_the_next_photo() {
     bot.answer_photo(PhotoPushed::Delivered {
         file_id: FileId::new(FILE).expect("a file id"),
     });
-    harness.clock.advance(Duration::from_millis(1_000));
+    harness.clock.advance(Duration::from_secs(1));
     let second = harness
         .router
         .route_photo(&next, &photo("synthetic caption"))
