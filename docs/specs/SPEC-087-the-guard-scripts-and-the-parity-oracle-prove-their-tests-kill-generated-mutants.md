@@ -409,6 +409,8 @@ A23: python3 -m unittest discover -s scripts/tests -p test_verdict_download.py -
   registry of its own and never runs them, and the one test that runs a real registry module is
   `test_goldens.py`'s round trip of the `{day:N}` token through `spec_042.py`. #325 plans them.
 - It records no equivalent Rust or Mini App mutant: those campaigns are #295 and #294.
+- It does not cross-check each Python shard report's `shard` field against the slot it was downloaded
+  from and against the listing it reports: #438.
 
 ## 6. Risks
 
@@ -481,6 +483,21 @@ SPEC-038 section 8 (insert-only amendments), ADR-057 (D1, D4), ADR-070, ADR-073,
   `scripts/tests/test_mutation_python_cli_kills.py`, each named in `scripts/mutation-python.json` under the
   file it kills for. Rows S08728 to S08799 of `scripts/mutation-rows.d/S08700-S08799.json` and the
   records of `scripts/mutation-equivalent.d/python.json` are the same work's other artifacts.
+- **Three of the verdict script's first seven survivors were rewritten, not killed** (#340). Kill
+  commit 7da3f419 killed four of the seven (the four fields of the row `python_reached` builds, by
+  a spy on the killer's resolution) and changed the three sites of the others, each
+  behaviour-preserving: `pathlib.Path(directory or "")` behind `if not directory` (the fallback is
+  unreachable, and `directory or "x"` there leaves the 52 tests of the script's four modules
+  green), `row.killer.split(".", 1)[0]` (`split(".", 2)[0]` is the same first element, and it too
+  left the 52 green), and `table_python`'s `required` argument, which nothing read (its
+  docstring's claim, that a scope asking for the Python row with no report is VOID, is the
+  caller's `scope not in tallies` check in `table`, and the argument and its three dead `False`
+  calls are removed). The four records of `python.json` first held equivalent were re-tried by
+  direct call: three are killed by `TheListerHoldsItsBoundsAndItsSkips` and dropped, and the one
+  kept (`Path("")` equals `Path(".")`) leaves its five mapped modules green.
+- **The shard ceiling changed in place.** R9 and A14 first clamped the Python matrix to 1 to 8
+  shards and now clamp it to 1 to 32 (`d8b6517`, `b9d43e2`); the SPEC's text was amended with the
+  code, and this delivery lists it as an amendment.
 - **Two guard tests changed where they read text this delivery changed.** `scripts/tests/test_ci_workflows.py`
   and `scripts/tests/test_verdict_download.py` assert the jobs, needs and downloads of `ci.yml`, and
   `scripts/tests/test_audit_web.py` gained cases for the two mutants of `scripts/audit-web-verdict.py`

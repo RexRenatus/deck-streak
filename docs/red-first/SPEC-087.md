@@ -15,6 +15,35 @@ committed, so their red was measured by restoring the base `ci.yml` and `mutatio
 beside the committed tests; A22's red is the base documents. A1-A12 were run again after the merge
 of `dev` and read green (18 tests, OK).
 
+A15 to A19, re-measured after review. The sentence above holds for A1-A14 and A20-A23 as
+committed. At 9e913f9 the verdict's parser refused `--python-listed` and `--class scripts`, so
+A15, A17 and A18 stopped in the fixture helper `shard_the_plan` and A16 at its first exit check,
+each on a usage error before any assertion of its own criterion; SPEC section 3's stub, which
+accepts the flags and reads nothing, was not committed. Their red was therefore measured after
+the fact with the tests of 6b5bd84 beside 9e913f9's verdict plus that stub (the diff below), and
+each of A15 to A19, and A13, then ran one test and failed by assertion for its own criterion,
+with the lines in the block after it.
+
+A19's test also changed between the red commit and the green one, so the criterion was not held
+fixed: 9e913f9 asserted `battery: counted 1 of 1 reports whole` and 6b5bd84 asserts `battery:
+counted 2 of 2 reports whole`; 9e913f9 asserted `table: VOID mutation-python-shard-3: <outcome>:
+<mutant>` and 6b5bd84 asserts `table: VOID mutation-python-shard-1: <outcome>: <mutant>`, because
+its fixture now gives each shard its own slice of the listing (`slot=(shard, 16)`) instead of the
+whole listing in every shard. The A16 test also gained a `shard_the_plan` call and an empty
+`python.json` before 6b5bd84. The A19 line below was read with 6b5bd84's version of the test.
+
+```diff
+--- a/scripts/mutation-verdict.py
++++ b/scripts/mutation-verdict.py
+-    {"rust": judge_rust, "web": judge_web, "oracle": judge_oracle}[args.klass](verdict, plan, args)
++    {"rust": judge_rust, "web": judge_web, "oracle": judge_oracle, "scripts": lambda v, p, a: None}[args.klass](verdict, plan, args)
+-    parser.add_argument("--class", dest="klass", choices=["rust", "web", "oracle"])
++    parser.add_argument("--class", dest="klass", choices=["rust", "web", "oracle", "scripts"])
++    parser.add_argument("--python")
++    parser.add_argument("--python-listed")
++    parser.add_argument("--python-whole")
+```
+
 A23, recorded in prose because the probe reads one fenced block: it was red at 6394621, where
 `test_every_needed_job_that_uploads_has_a_matching_download_in_the_verdict` failed with
 `AssertionError: False is not true : mutation-python uploads mutation-python-shard-0 and the verdict
@@ -52,13 +81,13 @@ A13: red at 9e913f9: AssertionError: 'other' != 'scripts'
 A13: green at 6b5bd84
 A14: red at d8b6517: AssertionError: 8 != 9 : 321 listed
 A14: green at b9d43e2
-A15: red at 9e913f9: mutation-verdict.py: error: unrecognized arguments: --python-listed
+A15: red at 9e913f9: AssertionError: 0 != 3 : mutation: scripts: verdict: ok
 A15: green at 6b5bd84
-A16: red at 9e913f9: mutation-verdict.py: error: argument --class: invalid choice: 'scripts'
+A16: red at 9e913f9: AssertionError: 'EQUIVALENT scripts/guard.py:2:14: replace + with - in guard' not found in 'mutation: scripts: verdict: ok\nexamined 0\n'
 A16: green at 6b5bd84
-A17: red at 9e913f9: mutation-verdict.py: error: unrecognized arguments: --python-listed
+A17: red at 9e913f9: AssertionError: Regex didn't match: '(?m)^examined 9$' not found in 'mutation: scripts: verdict: ok\nexamined 0\n'
 A17: green at 6b5bd84
-A18: red at 9e913f9: mutation-verdict.py: error: unrecognized arguments: --python-listed
+A18: red at 9e913f9: AssertionError: 0 != 1 : mutation: scripts: verdict: ok
 A18: green at 6b5bd84
 A19: red at 9e913f9: AssertionError: 'battery: MISSING mutation-python-shard-7: no report.json' not found
 A19: green at 6b5bd84
