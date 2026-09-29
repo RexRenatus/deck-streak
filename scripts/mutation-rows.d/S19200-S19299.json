@@ -1,0 +1,141 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S19201-THE-FOLDER-SETTING-STATES-ITS-SHAPE",
+        "vault",
+        "src/config.rs",
+        "\"one folder name: not empty, not hidden, and with no slash or control character\";",
+        "\"one folder name: not empty, not hidden, and with no slash or control character PLANTED\";",
+        "confinement::the_vault_settings_refuse_by_name_and_never_by_value",
+        "a refused FolderName value names the shape the setting accepts, word for word (SPEC-192 R3, A9)"
+      ],
+      [
+        "S19202-THE-SYNC-ENDPOINT-STATES-ITS-SHAPE",
+        "ingest",
+        "src/settings.rs",
+        "const SHAPE: &'static str = \"an http: or https: URL that names a host\";",
+        "const SHAPE: &'static str = \"an http: or https: URL that names a host PLANTED\";",
+        "settings::each_malformed_setting_is_refused_naming_its_whole_shape",
+        "a refused SyncEndpoint value names the shape the setting accepts, word for word (SPEC-192 R3, A5)"
+      ],
+      [
+        "S19203-THE-STATE-DIRECTORY-STATES-ITS-SHAPE",
+        "ingest",
+        "src/settings.rs",
+        "const SHAPE: &'static str = \"an absolute path\";",
+        "const SHAPE: &'static str = \"an absolute path PLANTED\";",
+        "settings::each_malformed_setting_is_refused_naming_its_whole_shape",
+        "a refused StateDirectory value names the shape the setting accepts, word for word (SPEC-192 R3, A5)"
+      ],
+      [
+        "S19204-THE-INCLUDE-LIST-STATES-ITS-SHAPE",
+        "ingest",
+        "src/settings.rs",
+        "const SHAPE: &'static str = \"top-level deck-name prefixes, separated by commas\";",
+        "const SHAPE: &'static str = \"top-level deck-name prefixes, separated by commas PLANTED\";",
+        "settings::each_malformed_setting_is_refused_naming_its_whole_shape",
+        "a refused IncludeDecks value names the shape the setting accepts, word for word (SPEC-192 R3, A5)"
+      ],
+      [
+        "S19205-THE-LAW-ROOT-STATES-ITS-SHAPE",
+        "ingest",
+        "src/settings.rs",
+        "const SHAPE: &'static str = \"a top-level deck name\";",
+        "const SHAPE: &'static str = \"a top-level deck name PLANTED\";",
+        "settings::each_malformed_setting_is_refused_naming_its_whole_shape",
+        "a refused LawDeckRoot value names the shape the setting accepts, word for word (SPEC-192 R3, A5)"
+      ],
+      [
+        "S19206-THE-COURSES-FILE-STATES-ITS-SHAPE",
+        "kernel",
+        "src/courses.rs",
+        "const SHAPE: &'static str = \"an absolute file path\";",
+        "const SHAPE: &'static str = \"an absolute file path PLANTED\";",
+        "courses_config::the_courses_file_refuses_a_duplicate_or_overlapping_course",
+        "a refused CoursesPath value names the shape the setting accepts, word for word (SPEC-192 R3, A6)"
+      ],
+      [
+        "S19207-THE-HOUR-SETTING-STATES-ITS-SHAPE",
+        "kernel",
+        "src/settings.rs",
+        "const SHAPE: &'static str = \"a whole hour from 0 to 23\";",
+        "const SHAPE: &'static str = \"a whole hour from 0 to 23 PLANTED\";",
+        "settings::a_malformed_setting_is_refused_by_name_without_its_value",
+        "a refused Hour value names the shape the setting accepts, word for word (SPEC-192 R3, A7)"
+      ],
+      [
+        "S19208-THE-UTC-OFFSET-STATES-ITS-SHAPE",
+        "kernel",
+        "src/settings.rs",
+        "const SHAPE: &'static str = \"whole minutes east of UTC, from -720 to 840\";",
+        "const SHAPE: &'static str = \"whole minutes east of UTC, from -720 to 840 PLANTED\";",
+        "settings::a_malformed_setting_is_refused_by_name_without_its_value",
+        "a refused UtcOffset value names the shape the setting accepts, word for word (SPEC-192 R3, A7)"
+      ],
+      [
+        "S19209-THE-OFFLOAD-WORKERS-STATE-THEIR-SHAPE",
+        "kernel",
+        "src/settings.rs",
+        "const SHAPE: &'static str = \"a whole number of workers from 1 to 512\";",
+        "const SHAPE: &'static str = \"a whole number of workers from 1 to 512 PLANTED\";",
+        "settings::a_malformed_setting_is_refused_by_name_without_its_value",
+        "a refused OffloadWorkers value names the shape the setting accepts, word for word (SPEC-192 R3, A7)"
+      ],
+      [
+        "S19210-THE-CREDENTIALS-DIRECTORY-STATES-ITS-SHAPE",
+        "kernel",
+        "src/settings.rs",
+        "const SHAPE: &'static str = \"an absolute directory path\";",
+        "const SHAPE: &'static str = \"an absolute directory path PLANTED\";",
+        "settings::a_malformed_setting_is_refused_by_name_without_its_value",
+        "a refused CredentialsDirectory value names the shape the setting accepts, word for word (SPEC-192 R3, A7)"
+      ],
+      [
+        "S19211-THE-LEECH-THRESHOLD-STATES-ITS-SHAPE",
+        "analytics",
+        "src/settings.rs",
+        "const SHAPE: &'static str = \"a whole number of lapses from 1 to 1000\";",
+        "const SHAPE: &'static str = \"a whole number of lapses from 1 to 1000 PLANTED\";",
+        "rollup_metrics::a_malformed_leech_threshold_is_refused_naming_its_whole_shape",
+        "a refused LeechThreshold value names the shape the setting accepts, word for word (SPEC-192 R3, A2)"
+      ],
+      [
+        "S19212-THE-MINI-APP-URL-STATES-ITS-SHAPE",
+        "bot",
+        "src/commands.rs",
+        "const SHAPE: &'static str = \"an https: URL that names a host\";",
+        "const SHAPE: &'static str = \"an https: URL that names a host PLANTED\";",
+        "commands::the_mini_app_url_is_https",
+        "a refused MiniAppUrl value names the shape the setting accepts, word for word (SPEC-192 R3, A3)"
+      ],
+      [
+        "S19213-THE-API-URL-STATES-ITS-SHAPE",
+        "bot",
+        "src/transport.rs",
+        "const SHAPE: &'static str = \"an https: URL, or an http: URL of a loopback host, with no path\";",
+        "const SHAPE: &'static str = \"an https: URL, or an http: URL of a loopback host, with no path PLANTED\";",
+        "transport::the_api_url_is_https_or_loopback_http",
+        "a refused ApiUrl value names the shape the setting accepts, word for word (SPEC-192 R3, A4)"
+      ],
+      [
+        "S19214-THE-TAXONOMY-PATH-STATES-ITS-SHAPE",
+        "readings",
+        "src/taxonomy.rs",
+        "const SHAPE: &'static str = \"an absolute path to the taxonomy file\";",
+        "const SHAPE: &'static str = \"an absolute path to the taxonomy file PLANTED\";",
+        "topics::a_taxonomy_file_that_names_a_deck_badly_is_refused_whole_and_never_quoted",
+        "a refused TaxonomyPath value names the shape the setting accepts, word for word (SPEC-192 R3, A8)"
+      ],
+      [
+        "S19215-THE-REQUEST-FILE-STATES-ITS-SHAPE",
+        "daemon",
+        "src/sync_request.rs",
+        "const SHAPE: &'static str = \"an absolute file path\";",
+        "const SHAPE: &'static str = \"an absolute file path PLANTED\";",
+        "sync_request::a_relative_request_path_is_refused_naming_its_whole_shape",
+        "a refused RequestFile value names the shape the setting accepts, word for word (SPEC-192 R3, A10)"
+      ]
+    ]
+  }
+}

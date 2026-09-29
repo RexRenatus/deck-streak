@@ -316,13 +316,13 @@ fn a_taxonomy_file_that_names_a_deck_badly_is_refused_whole_and_never_quoted() {
         .expect("the setting is set");
     assert_eq!(path.as_path(), file.as_path());
     let relative = Environment::from_vars([(READINGS_TAXONOMY, "taxonomy.json")]);
-    assert!(matches!(
+    assert_eq!(
         TaxonomyPath::from_env(&relative),
         Err(SettingsError::Malformed {
             setting: READINGS_TAXONOMY,
-            ..
+            expected: "an absolute path to the taxonomy file",
         })
-    ));
+    );
     assert_eq!(TaxonomyPath::from_env(&Environment::default()), Ok(None));
     // A file that is not there cannot be read; one that is reads as the taxonomy it holds.
     assert!(matches!(
