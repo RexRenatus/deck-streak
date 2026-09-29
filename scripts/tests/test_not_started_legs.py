@@ -417,6 +417,39 @@ class ALegWithNothingToExamineIsNotStarted(unittest.TestCase):
                 if expected == 0 and results[leg] == "skipped":
                     self.assertIn(f"ci: {leg} was not started", done.stdout, where)
 
+    def test_ci_admits_a_skip_from_the_two_legs_and_from_no_other_need(self):
+        # The population is every entry of `ci`'s needs, read from the YAML, so a need added later
+        # is judged too. `mutation-python` has no job-level condition: it is never skipped by
+        # design, and `ci` admits no skip from it (SPEC-039 section 18).
+        found = jobs(workflow(CI))
+        self.assertEqual(job_condition(found.get("mutation-python", "")), [])
+        aggregate = found.get("ci", "")
+        needs = needs_of(aggregate)
+        self.assertIn("mutation-python", needs)
+        (step,) = steps(aggregate)
+        script = step_script(step)
+        beside = {
+            "alone": {},
+            "beside both admitted skips": dict.fromkeys(LEGS, "skipped"),
+        }
+        members = [
+            (need, result, context)
+            for need in needs
+            for result in ("success", "failure", "cancelled", "skipped")
+            for context in beside
+        ]
+        for need, result, context in examined("need results of ci", members):
+            results = dict(dict.fromkeys(needs, "success"), **beside[context])
+            results[need] = result
+            admitted = all(
+                value == "success" or (name in LEGS and value == "skipped")
+                for name, value in results.items()
+            )
+            env = dict(rendered_env(step, needs, results), PATH=os.environ["PATH"])
+            done = bash(script, env)
+            where = f"{need} {result}, {context}"
+            self.assertEqual(done.returncode, 0 if admitted else 1, f"{where}: {done.stdout}")
+
     def test_the_verdict_step_fails_on_the_legs_check(self):
         job = jobs(workflow(CI)).get("mutation-verdict", "")
         (step,) = [s for s in steps(job) if "mutation-verdict.py judge" in s]

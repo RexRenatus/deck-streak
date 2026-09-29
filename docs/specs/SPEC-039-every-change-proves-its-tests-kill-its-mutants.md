@@ -863,7 +863,10 @@ section 8: every earlier byte is kept in order. It adds:
   runner;
 - the job `mutation-python`, a need of `mutation-verdict` and of `ci`, which runs
   `scripts/mutation_python.py` over the diff's mutants, one job per shard, and the weekly
-  battery's `python` job, which sweeps every listed file in 16 shards;
+  battery's `python` job, which sweeps every listed file in 16 shards. `mutation-python` has no
+  job-level condition and is never skipped by design, and `ci` admits no skip from it: only
+  `mutation-rust` and `mutation-rows`, the two legs SPEC-290's listing can leave empty, may read
+  `skipped`;
 - `judge --class scripts` and `judge --class oracle`, each reading the shards' reports, where a
   report that is missing, partial or of exit 4 (a failed restore) is VOID by name;
 - the equivalence record `scripts/mutation-equivalent.d/python.json`, held to the same census as
