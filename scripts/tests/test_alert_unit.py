@@ -377,7 +377,9 @@ def alert_template_refusals(path):
             if value not in known:
                 refuse(f"{key}={value} {UNREAD}")
     pairs = [(at, named) for at, named, _, _ in read]
-    for (at, named, value, _), off in zip(read, _units.off_list(pairs, _units.ALERT_KEYS), strict=True):
+    for (at, named, value, _), off in zip(
+        read, _units.off_list(pairs, _units.ALERT_KEYS), strict=True
+    ):
         if off:
             refuse(f"[{at}] {named}={value} {OFF_LIST}")
     return refused
@@ -632,7 +634,9 @@ class AnEmptyCredentialFailsTheAlertUnit(unittest.TestCase):
             with tempfile.TemporaryDirectory() as scratch:
                 path = planted_template(Path(scratch), anchor, line, keep)
                 extra = off(*off_planted[line]) if line in off_planted else []
-                self.assertEqual(alert_template_refusals(path), [f"{name}: {refusal}"] + extra, line)
+                self.assertEqual(
+                    alert_template_refusals(path), [f"{name}: {refusal}"] + extra, line
+                )
         # A reset or an unknown value of Restart=, RestartMode= or CollectMode= is refused beside
         # what it follows (SPEC-066 R3).
         unread = "is empty or not a known value, which the check refuses"
@@ -692,7 +696,9 @@ class AnEmptyCredentialFailsTheAlertUnit(unittest.TestCase):
                 off("Unit", "ConditionPathExists=/nonexistent", "ConditionPathExists="),
             ),
         ]
-        for line, refusals, extra in examined("planted alert template(s) with a condition", stopped):
+        for line, refusals, extra in examined(
+            "planted alert template(s) with a condition", stopped
+        ):
             with tempfile.TemporaryDirectory() as scratch:
                 path = planted_template(Path(scratch), "Description=", line, True)
                 self.assertEqual(
@@ -721,7 +727,6 @@ class AnEmptyCredentialFailsTheAlertUnit(unittest.TestCase):
                     alert_template_refusals(path), [f"{name}:{after}: {why}"], repr(line)
                 )
 
-
     def test_a_key_off_the_alert_templates_list_is_refused_by_name(self):
         # The alert template holds only the keys `_units.ALERT_KEYS` lists, each in the section the
         # list gives it: a key off the list, in any section, is refused by its key (SPEC-066 R3).
@@ -738,7 +743,13 @@ class AnEmptyCredentialFailsTheAlertUnit(unittest.TestCase):
             ("Description=", "X-Note=kept", "Unit", "X-Note", "kept"),
             ("Description=", "User=nobody", "Unit", "User", "nobody"),
             ("ExecStart=", "X-Note=kept", "Service", "X-Note", "kept"),
-            ("ExecStart=", "Wants=network-online.target", "Service", "Wants", "network-online.target"),
+            (
+                "ExecStart=",
+                "Wants=network-online.target",
+                "Service",
+                "Wants",
+                "network-online.target",
+            ),
         ]
         got = {}
         for anchor, line, section, key, value in examined("planted alert template(s)", plants):

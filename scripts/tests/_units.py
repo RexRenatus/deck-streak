@@ -221,6 +221,8 @@ PAGING_KEYS = {
         "WatchdogSec",
     ),
 }
+
+
 class Refused(AssertionError):
     """A unit file the reader refuses to read, naming the file and the line (SPEC-066)."""
 

@@ -337,11 +337,35 @@ def credential_lines(root):
     return found
 
 
+NON_UNIT_DROPIN = "deploy/journald.conf.d"
+
+
 def dropin_directory_refusals(root):
     """Every `*.d/` directory under `root`'s deploy/ that is not the drop-in directory of a unit
     shipped beside it, as one line each: only `<unit name>.d/` is read with a unit (SPEC-066 R2), so
     any other is refused, and the one directory of a file that is no unit is named here."""
-    return []
+    refused = []
+    deploy = Path(root) / "deploy"
+    if not deploy.is_dir():
+        return refused
+    entries = sorted(deploy.rglob("*"))
+    own = {
+        path.parent / f"{path.name}.d"
+        for path in entries
+        if path.is_file()
+        and path.suffix in _units.UNIT_KINDS
+        and not path.parent.name.endswith(".d")
+    }
+    for path in entries:
+        rel = path.relative_to(root).as_posix()
+        if not path.is_dir() or not path.name.endswith(".d") or path in own:
+            continue
+        if rel == NON_UNIT_DROPIN:
+            continue
+        refused.append(
+            f"{rel}: is not the drop-in directory of a unit shipped beside it, and is refused"
+        )
+    return refused
 
 
 def socket_form_refusals(lines, ids):
@@ -902,7 +926,6 @@ class CredentialsComeFromTheSocket(unittest.TestCase):
             ],
         )
 
-
     def test_a_credential_key_with_blanks_before_its_equals_sign_is_read_and_refused(self):
         # The reader of credential lines is the unit reader, so a space or a tab before `=` is a key
         # like any other (SPEC-066 R2): each is found, and a form that is not the socket is refused.
@@ -928,7 +951,6 @@ class CredentialsComeFromTheSocket(unittest.TestCase):
                 what,
             )
 
-
     def test_only_a_units_own_dropin_directory_is_shipped_under_deploy(self):
         # The tree ships the drop-in directories of no unit, and one directory of a file that is no
         # unit (SPEC-066 R2). Planted beside a unit: a directory named for no unit, one named for
@@ -936,7 +958,13 @@ class CredentialsComeFromTheSocket(unittest.TestCase):
         # not shipped: each refused by its path. A unit's own is read, so it is not refused here.
         self.assertEqual(dropin_directory_refusals(REPO), [])
         refused = "is not the drop-in directory of a unit shipped beside it, and is refused"
-        planted = ["deck-streak-.service.d", "service.d", "planted@one.service.d", ".d", "absent.service.d"]
+        planted = [
+            "deck-streak-.service.d",
+            "service.d",
+            "planted@one.service.d",
+            ".d",
+            "absent.service.d",
+        ]
         for folder in examined("planted drop-in directorie(s)", planted):
             with tempfile.TemporaryDirectory() as scratch:
                 systemd = Path(scratch) / "deploy" / "systemd"
@@ -953,9 +981,7 @@ class CredentialsComeFromTheSocket(unittest.TestCase):
         for where in ("deploy/scripts/planted.service.d", "deploy/other/journald.conf.d"):
             with tempfile.TemporaryDirectory() as scratch:
                 (Path(scratch) / where).mkdir(parents=True)
-                self.assertEqual(
-                    dropin_directory_refusals(scratch), [f"{where}: {refused}"], where
-                )
+                self.assertEqual(dropin_directory_refusals(scratch), [f"{where}: {refused}"], where)
 
 
 class TheServicesRunTheirRoles(unittest.TestCase):
@@ -1437,7 +1463,6 @@ class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
         )
         read = f"{head}# a note, \u00a7 3\n{page}{run}\t{loads}"
         self.assertIsNone(reader_refusal({"read.service": read}))
-
 
     def test_a_key_off_its_units_list_is_refused_and_the_trees_units_hold_only_listed_keys(self):
         # Each unit that loads a credential holds only the keys its kind's list names, in the
