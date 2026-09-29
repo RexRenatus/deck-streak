@@ -61,6 +61,40 @@ function examined<T>(what: string, items: T[]): T[] {
   return items;
 }
 
+/** The size of the quoted-fence population: 5 quote prefixes, 3 list shapes and 2 fence spellings. */
+const QUOTED_MEMBERS = 30;
+
+interface Member {
+  label: string;
+  text: (node: string) => string;
+}
+
+/**
+ * Every quoted fence the opener grammar admits, generated rather than listed: each blockquote prefix
+ * up to depth 2 (`>`, `> `, `>` then a tab, `> > `, `>>`), alone and followed by a list marker, with
+ * the fence spelled ``` ```mermaid ``` and ``` ``` mermaid ```. `text` builds the block with `node`
+ * as the id of its first edge, a reserved word (`call`) or not (`caller`).
+ */
+function quotedMembers(): Member[] {
+  const quotes = ['>', '> ', '>\t', '> > ', '>>'];
+  const markers = ['', '- ', '1. '];
+  const fences = ['```mermaid', '``` mermaid'];
+  return quotes.flatMap((quote) =>
+    markers.flatMap((marker) =>
+      fences.map((fence) => ({
+        label: JSON.stringify({ quote, marker, fence }),
+        text: (node: string) => {
+          const indent = ' '.repeat(marker.length);
+          const lead = marker === '' ? [] : [`${quote}${marker}item`, quote.trimEnd()];
+          const body = ['flowchart TD', `  ${node} --> done`];
+          const quoted = [fence, ...body, '```'].map((line) => `${quote}${indent}${line}`);
+          return [...lead, ...quoted, ''].join('\n');
+        }
+      }))
+    )
+  );
+}
+
 const BLOCKS = markdownFiles(DOCS).flatMap((file) =>
   blocksOf(relative(DOCS, file), readFileSync(file, 'utf8'))
 );
@@ -124,18 +158,24 @@ describe('the Mermaid diagrams under docs', () => {
     }
   });
 
-  it('reads a quoted fence and one spaced before its info string, and refuses one that does not parse', async () => {
-    const plants = [
-      '> ```mermaid\n> flowchart TD\n>   call --> done\n> ```\n',
-      '> - item\n>\n>   ```mermaid\n>   flowchart TD\n>     call --> done\n>   ```\n',
-      '``` mermaid\nflowchart TD\n  call --> done\n```\n'
-    ];
-    for (const text of plants) {
-      const planted = blocksOf('planted.md', text);
+  it('reads every quoted fence the opener grammar admits, and refuses the ones that do not parse', async () => {
+    const members = quotedMembers();
+    console.log(`examined ${members.length} quoted fence forms`);
+    expect(members.length).toBe(QUOTED_MEMBERS);
 
-      expect(planted.map((block) => block.name)).toEqual(['planted.md block 1']);
-      expect(await parses(planted[0].source)).toBe(false);
+    for (const member of members) {
+      const broken = blocksOf('planted.md', member.text('call'));
+      const valid = blocksOf('planted.md', member.text('caller'));
+
+      expect(broken.map((block) => block.name), member.label).toEqual(['planted.md block 1']);
+      expect(await parses(broken[0].source), member.label).toBe(false);
+      expect(valid.map((block) => block.name), member.label).toEqual(['planted.md block 1']);
+      expect(await parses(valid[0].source), member.label).toBe(true);
     }
+
+    const spaced = blocksOf('planted.md', '``` mermaid\nflowchart TD\n  call --> done\n```\n');
+    expect(spaced.map((block) => block.name)).toEqual(['planted.md block 1']);
+    expect(await parses(spaced[0].source)).toBe(false);
   });
 
   it('accepts a quoted valid block with a quoted blank line in it', async () => {
