@@ -41,12 +41,12 @@ flowchart TD
   o2 -->|no| o3{"the study day's cap reached, shared by both kinds"}
   o3 -->|yes| cp["capped, no call"]
   o3 -->|no| cnt["the draw is counted on the study day, in its own write"]
-  cnt --> call["the provider's call, bounded at 90 s"]
-  call -->|no answer in time| to["timeout"]
-  call -->|a refusal| rf["refused"]
-  call -->|no answer| un["unreachable"]
-  call -->|no image in the answer| up["unparseable"]
-  call -->|an image| gate{"the output gate, the task's classes"}
+  cnt --> draw["the provider's call, bounded at 90 s"]
+  draw -->|no answer in time| to["timeout"]
+  draw -->|a refusal| rf["refused"]
+  draw -->|no answer| un["unreachable"]
+  draw -->|no image in the answer| up["unparseable"]
+  draw -->|an image| gate{"the output gate, the task's classes"}
   gate -->|a class fails| wh["withheld, the image discarded"]
   gate -->|every class passes| rd["ready, the image stored"]
 ```
