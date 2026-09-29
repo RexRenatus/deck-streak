@@ -4,7 +4,7 @@
 -- the runner and the caps name; `class` is set for a withheld run alone (never the content). A run
 -- with no AI route configured is `ai_route_absent`: nothing ran, so it carries no telemetry.
 -- Instants are epoch milliseconds and cost is millionths of a US dollar. The table is exported and
--- erased (R14), and it is retained 90 days (privacy.json).
+-- erased (R13), and it is retained 90 days (privacy.json).
 CREATE TABLE agent_runs (
     id INTEGER PRIMARY KEY,
     duty TEXT NOT NULL CHECK (length(duty) > 0),
