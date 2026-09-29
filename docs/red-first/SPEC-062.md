@@ -22,6 +22,11 @@ failed by assertion there over the whole test module; their greens are at 52e5aa
 execute behaviour that was already right (the readiness gate and the tag guard), so neither has a
 red line; their rows S06216 and S06215 show each fails when its behaviour is removed.
 
+Fix round 2: A19 and A20 read behaviour that was already right (the Caddy block's source and the
+token's scope), so neither has a red line; their rows S06223 and S06224 show each fails when its
+behaviour is removed, and S06225 shows A15 fails when the deploy stops naming the unit it cannot
+show. After the green commit, two test files were changed, as a later commit in the same round.
+
 ```red-first
 A1: red at 300eca2: AssertionError: deploy/deploy.sh does not exist
 A1: green at bc0665a
@@ -52,9 +57,11 @@ A14: red at 40e68bb: AssertionError: False is not true : getty@tty1.service.d/au
 A14: green at 52e5aa5
 A15: red at 40e68bb: AssertionError: 0 == 0 : a deploy whose effective view was partial
 A15: green at 52e5aa5
-A16: red at 40e68bb: AssertionError: Lists differ: four unit directories admitted != ['/etc/systemd/system']
+A16: red at 40e68bb: AssertionError: Lists differ: ['/etc/systemd/system', '/run/systemd/system', '/etc/systemd/sy[47 chars]ser'] != ['/etc/systemd/system']
 A16: green at 52e5aa5
 A17: red at 40e68bb: AssertionError: 1 != 0 : invalid character: not JSON
 A17: green at 52e5aa5
 A18: not red: the workflow's guard is right and the test only executes it; the row S06215 proves it fails when the guard is weakened
+A19: not red: the Caddy install already renders from the tag; the row S06223 proves the test fails when it renders from the working tree
+A20: not red: the token is already scoped to the three release steps; the row S06224 proves the test fails when it is set at job level
 ```

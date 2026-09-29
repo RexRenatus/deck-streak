@@ -147,6 +147,8 @@ R14. The sync login is loaded by the sync job alone. `deck-streak-job@.service` 
 | A16 | the effective check admits a shipped drop-in name only in the directory beside the rail's own | `test_deploy_templates.py` |
 | A17 | the Caddy install and removal validate the candidate copy with the Caddyfile adapter | `test_deploy_scripts.py` |
 | A18 | the release workflow's tag guard, run against a synthetic origin, admits an annotated tag on `main` and refuses a lightweight tag and a tag off `main` | `test_release_workflow.py` |
+| A19 | the Caddy install renders the block from the tag's own `deploy/caddy/deck-streak.caddy`, never from the working tree | `test_deploy_scripts.py` |
+| A20 | the release token reaches the three `gh release` steps alone: not the workflow, the job or any other step | `test_release_workflow.py` |
 
 ```acceptance
 A1: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k test_the_deploy_refuses_a_tag_off_main_and_a_lightweight_tag
@@ -167,9 +169,11 @@ A15: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k 
 A16: python3 -m unittest discover -s scripts/tests -p test_deploy_templates.py -k test_a_shipped_drop_in_name_is_admitted_beside_the_rails_own_alone
 A17: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k test_the_caddy_calls_name_the_caddyfile_adapter_for_the_candidate_copy
 A18: python3 -m unittest discover -s scripts/tests -p test_release_workflow.py -k test_the_release_refuses_a_tag_off_main_or_lightweight_by_running_its_guard
+A19: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k test_the_caddy_block_is_rendered_from_the_tags_own_file
+A20: python3 -m unittest discover -s scripts/tests -p test_release_workflow.py -k test_the_token_reaches_the_three_gh_release_steps_alone
 ```
 
-A1 to A6 and A12 to A15 and A17 run the scripts against a synthetic repository with its own tags, a synthetic release
+A1 to A6, A12 to A15, A17 and A19 run the scripts against a synthetic repository with its own tags, a synthetic release
 (tarball, `SHA256SUMS`), a stub `gh` whose attestation verdict each test chooses, and a stub host
 command that applies the host side inside a `TemporaryDirectory` with stub `systemctl` and readiness
 probes. None of them reaches a network or a host. The box-run packs judge the release workflow and
@@ -202,9 +206,9 @@ this SPEC names each step only.
 | `deploy/README.md` | deploy | changed: the deploy, the rollback and the Caddy install |
 | `RELEASING.md` | repo | changed: steps 3, 4 and 7 as built |
 | the box-run packs' private wiring (ADR-069) | the maintainer's | changed: release-ops `enforced`, its rollback row's wait ended, two rows excluded with their reason |
-| `scripts/tests/test_deploy_scripts.py` | repo | added: A1 to A6, A10, A12 to A15, A17 |
-| `scripts/tests/test_caddy_render.py` | repo | added: A7 |
-| `scripts/tests/test_release_workflow.py` | repo | added: A8, A9 and A18 |
+| `scripts/tests/test_deploy_scripts.py` | repo | added: A1 to A6, A10, A12 to A15, A17, A19 |
+| `scripts/tests/test_caddy_render.py` | repo | added: A7; a plain documentation-range literal |
+| `scripts/tests/test_release_workflow.py` | repo | added: A8, A9, A18 and A20 |
 | `docs/specs/SPEC-062-first-deploy-units-caddy-block-and-https.md` | docs | moved from `docs/specs/planned/` |
 | `docs/decisions/ADR-062-a-deploy-installs-only-a-release-whose-provenance-and-digests-verify.md` | docs | changed: status accepted |
 | `docs/decisions/ADR-061-host-values-reach-units-as-drop-ins-and-caddy-as-a-rendered-file.md` | docs | changed: status accepted, if SPEC-061 has not accepted it first |
@@ -212,10 +216,10 @@ this SPEC names each step only.
 | `deploy/systemd/deck-streak-job@.service` | deploy | changed: R14, the sync login lines removed |
 | `deploy/systemd/` drop-in `20-sync-login.conf` in the `sync` instance's `.service.d` directory | deploy | added: R14, the sync login |
 | `deploy/scripts/credential-pairs.py`, `deploy/scripts/effective-check.py` | deploy | changed: R14, instance drop-ins; the shipped-name rule (A16) |
-| `scripts/tests/test_deploy_templates.py` | repo | changed: A11, A16 |
+| `scripts/tests/test_deploy_templates.py` | repo | changed: A11, A16; plain synthetic literals |
 | `docs/decisions/ADR-061-...md` | docs | one dated Amendment section (R14) |
 | the private rail's map, rendered drop-ins and tests (`rail/`) | the maintainer's | changed: R14, committed privately |
-| `scripts/mutation-rows.d/S06200-S06299.json` | repo | added: the mutation rows S06201 to S06222 |
+| `scripts/mutation-rows.d/S06200-S06299.json` | repo | added: the mutation rows S06201 to S06225 |
 | `changelog.d/` fragment | repo | added |
 
 ## 6. What this does NOT do
@@ -229,7 +233,7 @@ this SPEC names each step only.
 - It closes no host finding; the deploy waits until the owner has closed every one (#167).
 - It changes nothing of the host's network configuration or DNS records, and resizes nothing (#161).
 - It performs no step of the cutover (#164).
-- It makes a failed Caddy reload after the file swap restore the previous Caddyfile (#321).
+- It does not make a failed Caddy reload after the file swap restore the previous Caddyfile (#321).
 
 ## 7. Risks
 
