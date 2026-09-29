@@ -196,5 +196,60 @@ class TheGuardJudgesAPlantedTree(unittest.TestCase):
         self.assertEqual(len(unpinned(root)), 1)
 
 
+class TheGuardReadsRustSource(unittest.TestCase):
+    """Macro impls, comments, strings and test modules as the compiler reads them (A12)."""
+
+    tree = TheGuardJudgesAPlantedTree.tree
+    src = TheGuardJudgesAPlantedTree.src
+
+    def own(self, root, text):
+        (root / "crates" / "demo" / "src" / "depth.rs").write_text(text, encoding="utf-8")
+        return root
+
+    def macro(self, trait):
+        body = 'impl TRAIT for $t {\n    const SHAPE: &\'static str = "a whole width";\n}\n'
+        return self.src(self.tree('const X: &str = "a whole depth";'), body.replace("TRAIT", trait))
+
+    def test_a_macro_implementation_is_examined(self):
+        root = self.macro("Setting")
+        self.assertEqual(len(implementations(root)), 2)
+        self.assertEqual(unpinned(root), ['demo::$t (src/more.rs) "a whole width"'])
+
+    def test_a_macro_implementation_through_dollar_crate_is_examined(self):
+        root = self.macro("$crate::settings::Setting")
+        self.assertEqual(len(implementations(root)), 2)
+        self.assertEqual(unpinned(root), ['demo::$t (src/more.rs) "a whole width"'])
+
+    def test_a_shape_the_own_files_test_module_spells_is_pinned(self):
+        module = '#[cfg(test)]\nmod tests {\n    const X: &str = "a whole depth";\n}\n'
+        root = self.own(self.tree(), IMPL_TEXT + module)
+        self.assertEqual(len(implementations(root)), 1)
+        self.assertEqual(unpinned(root), [])
+
+    def test_a_shape_a_test_spells_after_a_url_on_its_line_is_pinned(self):
+        root = self.tree('let (url, shape) = ("http://host/", "a whole depth");')
+        self.assertEqual(len(implementations(root)), 1)
+        self.assertEqual(unpinned(root), [])
+
+    def test_a_shape_only_a_block_comment_spells_is_refused(self):
+        root = self.tree('/* "a whole depth" */\nlet shape = Depth::SHAPE;')
+        self.assertEqual(len(implementations(root)), 1)
+        self.assertEqual(len(unpinned(root)), 1)
+
+    def test_a_production_line_after_the_own_files_test_module_is_refused(self):
+        module = '#[cfg(test)]\nmod tests {}\n\npub const X: &str = "a whole depth";\n'
+        root = self.own(self.tree(), IMPL_TEXT + module)
+        self.assertEqual(len(implementations(root)), 1)
+        self.assertEqual(len(unpinned(root)), 1)
+
+    def test_a_test_attribute_on_a_use_opens_no_test_module(self):
+        text = (
+            "#[cfg(test)]\nuse std::fmt;\n" + IMPL_TEXT + 'pub const X: &str = "a whole depth";\n'
+        )
+        root = self.own(self.tree(), text)
+        self.assertEqual(len(implementations(root)), 1)
+        self.assertEqual(len(unpinned(root)), 1)
+
+
 if __name__ == "__main__":
     unittest.main()
