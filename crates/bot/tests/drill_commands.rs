@@ -15,7 +15,7 @@ mod fake_bot_api;
 mod golden;
 
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use deck_streak_bot::commands::Commands;
@@ -58,6 +58,28 @@ async fn start(notes: &[(String, &str)]) -> (Bench, Commands<ScriptedSync>, Path
         .commands(ScriptedSync::default())
         .with_drills(Arc::new(opened));
     (bench, commands, active)
+}
+
+/// Prints how many items a check examined and refuses zero (the tdd pack's examined contract).
+fn examined<T>(what: &str, items: Vec<T>) -> Vec<T> {
+    println!("examined {} {what}", items.len());
+    assert!(
+        !items.is_empty(),
+        "examined 0 {what}: the population is empty, so nothing was judged"
+    );
+    items
+}
+
+/// The notes of a folder whose text holds `needle`, out of every note the folder holds.
+fn notes_holding(folder: &Path, needle: &str) -> Vec<String> {
+    let notes: Vec<String> = fs::read_dir(folder)
+        .expect("the folder")
+        .map(|entry| fs::read_to_string(entry.expect("an entry").path()).expect("a note"))
+        .collect();
+    examined("drill note(s)", notes)
+        .into_iter()
+        .filter(|body| body.contains(needle))
+        .collect()
 }
 
 /// The payload of the last `sendMessage`.
@@ -165,22 +187,14 @@ async fn drills_lists_twelve_and_takes_the_next_message() {
         .handle(incoming(owner_says(4, "The duty is owed.")))
         .await;
     assert!(bench.fake.calls_of("sendMessage").len() > sends_before);
-    let answered: Vec<String> = fs::read_dir(&active)
-        .expect("the folder")
-        .map(|entry| fs::read_to_string(entry.expect("an entry").path()).expect("a note"))
-        .filter(|body| body.contains("The duty is owed."))
-        .collect();
+    let answered: Vec<String> = notes_holding(&active, "The duty is owed.");
     assert_eq!(answered.len(), 1, "exactly one note took the answer");
 
     // A second plain message is nobody's answer.
     commands
         .handle(incoming(owner_says(5, "Another line.")))
         .await;
-    let count: usize = fs::read_dir(&active)
-        .expect("the folder")
-        .map(|entry| fs::read_to_string(entry.expect("an entry").path()).expect("a note"))
-        .filter(|body| body.contains("Another line."))
-        .count();
+    let count = notes_holding(&active, "Another line.").len();
     assert_eq!(count, 0, "the pending answer was spent");
 
     // A command cancels a pending answer.
@@ -189,11 +203,7 @@ async fn drills_lists_twelve_and_takes_the_next_message() {
     commands.handle(incoming(owner_taps(7, &ask[0], 13))).await;
     commands.handle(incoming(owner_says(8, "/score"))).await;
     commands.handle(incoming(owner_says(9, "Too late."))).await;
-    let late = fs::read_dir(&active)
-        .expect("the folder")
-        .map(|entry| fs::read_to_string(entry.expect("an entry").path()).expect("a note"))
-        .filter(|body| body.contains("Too late."))
-        .count();
+    let late = notes_holding(&active, "Too late.").len();
     assert_eq!(late, 0, "a command cancelled the pending answer");
 }
 
