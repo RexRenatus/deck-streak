@@ -71,3 +71,24 @@ A23: green at 20bfa78
 A24: red at d1d3acf: assertion `left == right` failed; left: [], right: ["Free Recall", "Rule"]
 A24: green at c493f6e
 ```
+
+## 2026-09-29: post-green killer tests
+
+These tests were added after the criteria were green, to kill the mutants the land bar's
+mutation-verdict named missed (274 examined, 30 missed). They are disclosed here and are not
+red-first criteria. Each was shown to pass with the mutant applied to the tests then in the tree,
+and to fail with it once the new test was added.
+
+- cdf44965: `drill_kills` in the vault, ten tests: the frontmatter strip and the comment cut, the
+  answer headings, the deferral reason, the rollup tie, the ready label and self-check heading, the
+  open refusal, the missing-folder list, the graded and active folders, and the recent grades.
+- e278dc0c: `drill_paid_count::a_poll_reports_how_many_it_graded_and_how_many_it_paid` and
+  `drill_answer::the_answer_heading_names_the_local_clock_of_the_rule` in coordination.
+- cdd877b6: `drill_replies` in the bot, four tests: the button label, the list tail, the prompt cut
+  and the view's deferral and answer button.
+- c1edcd25: `drill_routes::the_list_counts_what_awaits_grading_and_what_is_deferred` in the api.
+- 8a79433b: `drill_vault::a_configured_vault_opens_over_its_active_drills` in the daemon.
+- 0fe0f0d1: two equivalence records for `type_of` (a date at the stem's start gives the empty prefix
+  the fallback arm also gives).
+- bf12e2d8 and 80e94331: mutation rows S11028 to S11040 for the pay count, the recent grade's xp, the
+  graded folder, the open refusal, the daemon open, the constants and the post-back minute.
