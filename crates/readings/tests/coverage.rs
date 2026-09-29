@@ -400,3 +400,18 @@ fn a_section_with_only_blank_lines_is_empty() {
         vec!["the issue section is empty".to_owned()]
     );
 }
+
+#[test]
+fn an_unclosed_tag_leaves_the_rest_of_the_text_as_it_is() {
+    // A closed tag becomes a space; a `<` with no `>` after it ends the walk and the rest stays.
+    assert_eq!(
+        deck_streak_readings::coverage::normalise("<b>bold</b> then <tail of the note"),
+        "bold then tail of the note",
+        "the text after an unclosed tag is kept"
+    );
+    assert_eq!(
+        deck_streak_readings::coverage::normalise("no tag <"),
+        "no tag",
+        "a lone less-than sign at the end ends the walk"
+    );
+}
