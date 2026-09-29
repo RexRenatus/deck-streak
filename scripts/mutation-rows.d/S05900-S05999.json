@@ -27,6 +27,15 @@
         "        let _ = OpenOptions::new();\n        Ok(())",
         "sync_request::the_doorbell_writes_its_file_and_refuses_an_absent_directory",
         "a ring that reports success without writing the request file never starts the sync job, so the owner's request is stored and never served; the doorbell test reads the file the ring must leave (SPEC-059 R2)"
+      ],
+      [
+        "S05907-THE-BOT-FLUSHES-AFTER-THE-OWNERS-SYNC-SUCCEEDS",
+        "daemon",
+        "src/sync_request.rs",
+        "                && let Err(error) = self.flush.flush().await",
+        "                && let Err(error) = NoFlush.flush().await",
+        "sync_request::the_bot_flushes_its_router_after_the_owners_sync_succeeds",
+        "a requester that never flushes leaves the notifications the quiet hours and failed sends held undelivered after the owner's sync succeeded, which regresses SPEC-041 R7 for the owner's /sync; the killer counts the flush the requester makes once the job's run succeeded (SPEC-059 R8)"
       ]
     ],
     "SCRIPT_MUTATIONS": [

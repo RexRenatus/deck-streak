@@ -34,6 +34,8 @@ unit under `deploy/systemd` refuses zero examined and names the units that write
 directory. A `PathModified=` line in the path unit and a `ReadWritePaths=` line in the API unit each
 left the old suite green and turn the new one red. The census resolves a directory above the request directory, a BindPaths= source and a RuntimeDirectory= as write access; six such plants on another unit each fail it.
 
+Fix round 3 added R8 and A7 after the dev merge (22f4f7f) brought the notification router into the bot role. The three flush tests and a stub that compiles and does not flush (`with_flush` stores the port and never calls it) were committed first (16530d5): over the whole test file, the flush test and the failing-flush test failed by assertion (one flush expected, none made) and the other eight tests passed; the never-flush test passes at the stub by construction, and what decides it is the mutant that flushes on every `Ran`. The implementation followed (df7532e). The census gained four spellings of the request directory that systemd resolves to the same path (a quoted value, a `.` segment, a doubled slash and the `/var/run` link); the head's census named none of them on a second unit, and the corrected census names all four.
+
 ```red-first
 A1: red at ca3b54b: panicked at crates/daemon/tests/sync_request.rs:146: the bot role runs no cycle in its own process
 A1: green at f6afb08
@@ -43,4 +45,6 @@ A3: green at f6afb08
 A4: not red: the stub at ca3b54b refused every request unbuilt, so the ring-count and gap assertions of the gap test never ran, and the reuse test failed on Err(unbuilt) against Ok(Reused)
 A5: not red: the stub at ca3b54b refused every request unbuilt, so the bound, StillRunning and elapsed-time assertions never ran
 A6: not red: the owner gate (an_update_from_anyone_but_the_owner_is_dropped_without_a_reply) and the job table's one daily slot are SPEC-026 and SPEC-027 facts, green at the base and unchanged by this delivery
+A7: red at 16530d5: assertion `left == right` failed: one flush, after the sync that ran and succeeded (left: 0, right: 1)
+A7: green at df7532e
 ```

@@ -32,6 +32,8 @@ owner asked, when the runner claims only scheduled fires?
   directory, and a level trigger restarts the job while the file remains.
 - A new request table. Rejected: the pending flag already exists and clears with the recompute.
 - An owner-specific job id. Rejected: it changes the job table ADR-037 holds.
+- The sync job joins a notification router, to flush after the owner's sync (SPEC-041 R7). Rejected: it puts the bot token and the owner id into the job unit, which widens its credentials.
+- The owner's `/sync` flushes nothing until #39. Rejected: it regresses SPEC-041 R7 and R13's stated behaviour for the owner's `/sync`.
 
 ## Decision Outcome
 
@@ -39,6 +41,8 @@ Chosen: the bot stores the request (`request_rescore`), touches a file only the 
 `deck-streak-job@sync` (path unit) starts `deck-streak-job@sync` (service unit). The job reads the stored flag
 and, when set, runs the owner's cycle before the scheduled run. The bot polls the store for the
 outcome within a bound and answers, or says the sync is still running.
+
+The bot keeps its router and flushes it when its port observes the owner's request answered by a sync that ran and succeeded, before it answers the owner. It never flushes after a failed run, a reused answer or an answer that is still running, and a flush that cannot run is logged and never changes the owner's answer. The job never holds the bot credential, and the job's scheduled cycle still carries no router (SPEC-041 R13, #39).
 
 ### Consequences
 

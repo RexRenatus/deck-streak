@@ -51,6 +51,7 @@ R6. When the store holds a pending flag, `deckstreakd job sync` runs the owner's
     (ADR-037). No timer, calendar or schedule is added. Only the owner reaches the port (ADR-026,
     unchanged).
 R7. The bot unit loses the sync login (`anki-sync-*` credentials), which only the job needs.
+R8. The bot flushes its notification router, once, when its port observes the owner's request answered by a sync that ran and succeeded (`Progress::Ran { failure: None }`), before it answers the owner; it never flushes after a failed run, a reused answer or one still running, and a flush that cannot run is logged and never changes the answer (SPEC-041 R7, R13). The job holds no bot credential and carries no router.
 
 ## 3. Acceptance criteria
 
@@ -64,6 +65,9 @@ R7. The bot unit loses the sync login (`anki-sync-*` credentials), which only th
 | A5 | the owner is answered by the bound, on an injected clock | `cargo test -p deck-streak-daemon --test sync_request -- --exact the_owner_is_answered_within_the_bound` |
 | A6 | only the owner reaches the port | `cargo test -p deck-streak-bot --test gate -- --exact an_update_from_anyone_but_the_owner_is_dropped_without_a_reply` |
 | A6 | the job table keeps one daily sync slot | `cargo test -p deck-streak-coordination --test job_table -- --exact the_job_table_holds_sync_to_one_daily_slot_claimed_per_study_day` |
+| A7 | the bot flushes its router once after the owner's sync succeeds | `cargo test -p deck-streak-daemon --test sync_request -- --exact the_bot_flushes_its_router_after_the_owners_sync_succeeds` |
+| A7 | the bot never flushes after a failed, reused or unanswered sync | `cargo test -p deck-streak-daemon --test sync_request -- --exact the_bot_never_flushes_after_a_failed_reused_or_unanswered_sync` |
+| A7 | a flush that fails never changes the owner's answer | `cargo test -p deck-streak-daemon --test sync_request -- --exact a_flush_that_fails_never_changes_the_owners_answer` |
 
 ```acceptance
 A1: cargo test -p deck-streak-daemon --test sync_request -- --exact the_bot_port_requests_the_job_and_never_runs_the_cycle
@@ -74,18 +78,21 @@ A4: cargo test -p deck-streak-daemon --test sync_request -- --exact a_request_in
 A5: cargo test -p deck-streak-daemon --test sync_request -- --exact the_owner_is_answered_within_the_bound
 A6: cargo test -p deck-streak-bot --test gate -- --exact an_update_from_anyone_but_the_owner_is_dropped_without_a_reply
 A6: cargo test -p deck-streak-coordination --test job_table -- --exact the_job_table_holds_sync_to_one_daily_slot_claimed_per_study_day
+A7: cargo test -p deck-streak-daemon --test sync_request -- --exact the_bot_flushes_its_router_after_the_owners_sync_succeeds
+A7: cargo test -p deck-streak-daemon --test sync_request -- --exact the_bot_never_flushes_after_a_failed_reused_or_unanswered_sync
+A7: cargo test -p deck-streak-daemon --test sync_request -- --exact a_flush_that_fails_never_changes_the_owners_answer
 ```
 
 ## 4. File manifest
 
 | file | context | change |
 |---|---|---|
-| `crates/daemon/src/sync_request.rs` | `deck-streak-daemon` | added: `SyncRequester`, the ring, the wait |
+| `crates/daemon/src/sync_request.rs` | `deck-streak-daemon` | added: `SyncRequester`, the ring, the wait, the flush port (R8) |
 | `crates/daemon/src/lib.rs` | `deck-streak-daemon` | changed: one module line |
 | `crates/daemon/src/wiring.rs` | `deck-streak-daemon` | changed: the cycle is no bot port |
-| `crates/daemon/src/role_bot.rs` | `deck-streak-daemon` | changed: builds the requester |
+| `crates/daemon/src/role_bot.rs` | `deck-streak-daemon` | changed: builds the requester and hands it the router (R8) |
 | `crates/daemon/src/role_job.rs` | `deck-streak-daemon` | changed: the owner cycle first when pending |
-| `crates/daemon/tests/sync_request.rs` | `deck-streak-daemon` | added: the port, the ring, the wait and the doorbell's file |
+| `crates/daemon/tests/sync_request.rs` | `deck-streak-daemon` | added: the port, the ring, the wait, the doorbell's file and the flush (A7) |
 | `crates/daemon/tests/roles.rs` | `deck-streak-daemon` | changed: only the sync job serves the stored request, and two planted payloads change nothing (A2) |
 | `crates/daemon/tests/role_bot.rs` | `deck-streak-daemon` | changed: the bot answers a request |
 | `crates/bot/src/commands.rs` | `deck-streak-bot` | changed: the `StillRunning` outcome and reply |

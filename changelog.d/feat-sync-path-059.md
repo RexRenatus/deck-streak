@@ -12,3 +12,5 @@
 
 - The bot unit no longer loads the sync login. Requests during a running sync start at most one more
   run, and the job table keeps its one scheduled sync per study day.
+- The bot flushes its notification router when it observes the owner's sync succeed, as it did when it
+  ran the sync itself.
