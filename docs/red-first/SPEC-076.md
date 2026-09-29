@@ -50,13 +50,14 @@ A20: green at 5ac898b6
 A21: red at 46b3a57d: thread 'streak_shows_both_tracks_law_first_when_law_is_active' (3128120) panicked at crates/bot/tests/streak_commands.rs:61:35:
 A21: green at 5ac898b6
 A22: red at 46b3a57d: AssertionError: the two tracks are shown: expected +0 to be 2 // Object.is equality (measured in an export with its own install; the replay's own line for A22 was a module-resolution error, not an assertion)
-A22: green at 5ac898b6: the criterion's one test passes, and the whole web suite passes at the head (see the addendum)
+A22: green at 5ac898b6
 A23: red at 46b3a57d: assertion `left == right` failed: class Some("empty-history-no-stored-anchor"), input {"skip_days":[],"stored_anchor":null,"study_days":[],"today":20000} ; left: Some(20000) ; right: Some(19880) (measured by hand: the criterion's fence carried no acceptance tag until this delivery)
-A23: green at 5ac898b6: the criterion's test passes in the whole streaks crate run
+A23: green at 5ac898b6
 A24: red at 46b3a57d: thread 'a_relight_is_granted_on_the_folds_connection' (3180787) panicked at crates/coordination/tests/relight_settle.rs:214:5:
 A24: green at 5ac898b6
 A25: red at 46b3a57d: thread 'a_second_recompute_routes_the_relight_and_one_send_is_recorded' (3198922) panicked at crates/coordination/tests/relight_settle.rs:263:9:
-A25: green at 5ac898b6```
+A25: green at 5ac898b6
+```
 
 ## Disclosures
 

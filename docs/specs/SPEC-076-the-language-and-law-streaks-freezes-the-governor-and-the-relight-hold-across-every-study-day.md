@@ -464,9 +464,7 @@ R25. When the study set is empty, the layer answers as the predecessor's governo
     lives in `crates/streaks/src/lapse.rs` beside the slice's function and leaves the slice's
     answers unchanged.
 
-| id | criterion | decided by |
-|---|---|---|
-| A23 | an empty history is answered with the stored anchor or the horizon, equal to the golden `lapse_anchor_beyond_the_walk`'s empty-history cases | `an_empty_history_is_anchored_as_the_predecessor_anchors_it` |
+The criterion of this amendment, A23, is stated in section 14.
 
 ```acceptance
 A23: cargo test -p deck-streak-streaks --test governor_goldens -- --exact an_empty_history_is_anchored_as_the_predecessor_anchors_it
@@ -509,3 +507,9 @@ Manifest additions: `crates/progression/src/ledger.rs` (changed: `grant_on`), an
 A24: cargo test -p deck-streak-coordination --test relight_settle -- --exact a_relight_is_granted_on_the_folds_connection
 A25: cargo test -p deck-streak-coordination --test relight_settle -- --exact a_second_recompute_routes_the_relight_and_one_send_is_recorded
 ```
+
+## 14. Acceptance criteria of the 2026-09-29 empty-history amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A23 | an empty history is answered with the stored anchor or the horizon, equal to the golden `lapse_anchor_beyond_the_walk`'s empty-history cases | `an_empty_history_is_anchored_as_the_predecessor_anchors_it` |
