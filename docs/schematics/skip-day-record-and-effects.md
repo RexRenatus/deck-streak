@@ -54,7 +54,7 @@ The push also carries the collection's settings and creation stamp whole, becaus
 is newer, each as the server held it at the converge, the engine's own last-unburied day aside
 (SPEC-083 R23, R24). A preview, a take or an undo refuses before any request or write while the
 engine's own day is not the study day, or while the collection's configured UTC offset is missing
-or is not the process's zone, or while the process's zone observes daylight saving or is not pinned as a fixed rule by `TZ` in the service's environment, and the take and the undo check the first two again on the converged working
+or is not the process's zone, or while the process's zone observes daylight saving or is not pinned as a fixed rule (a POSIX rule that names no zone file) by `TZ` in the service's environment, and the take and the undo check the first two again on the converged working
 copy before any card changes, so a converge that brings another client's setting that fails either
 ends the take before its push and the undo with nothing written (R3). A take that aborts, or fails
 before its push's first request, records the skip
@@ -107,7 +107,7 @@ flowchart TD
   pend -- "no" --> latest{"an applied skip not undone?"}
   latest -- "no" --> none["nothing_to_undo"]
   latest -- "yes" --> ask["ask, naming the study day it undoes, and the owner confirms"]
-  ask --> check{"the engine's day the study day, the configured UTC offset present and the process's zone, and the zone pinned as a fixed rule without daylight saving?"}
+  ask --> check{"the engine's day the study day, the configured UTC offset present and the process's zone, and the zone pinned as a fixed rule, a POSIX rule that names no zone file, without daylight saving?"}
   check -- "no" --> refused["refused with its reason, before any request or write"]
   check -- "yes" --> conv["copy the private copy, then converge by one normal sync"]
   conv --> full1{"a full or one-way sync demand?"}
