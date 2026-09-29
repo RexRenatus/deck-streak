@@ -198,6 +198,7 @@ context each migration names equal to the owner this register gives each table i
 | `notification_settings` | `notifications` | `migrations/004101_notifications_router.sql` (SPEC-041) | exported and erased |
 | `reading_runs` | `readings` | `migrations/004501_readings_topic_days_and_runs.sql` (SPEC-045) | exported and erased |
 | `reading_topic_days` | `readings` | `migrations/004501_readings_topic_days_and_runs.sql` (SPEC-045) | exported and erased |
+| `agent_runs` | `agent` | `migrations/004301_agent_runs.sql` (SPEC-043) | exported and erased |
 | `daily_rollup` | `analytics` | `migrations/007101_analytics_daily_rollup.sql` (SPEC-071) | exported and erased |
 | `daily_lang_stats` | `analytics` | `migrations/007101_analytics_daily_rollup.sql` (SPEC-071) | exported and erased |
 

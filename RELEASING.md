@@ -24,6 +24,9 @@ The preparation is a pull request into `dev`, from a branch such as `chore/relea
 Open the release pull request from `dev` into `main`, and merge it with a merge commit once its
 checks are green. A squash or a rebase would replay the commits of `dev` on every later release.
 
+The release pull request's required `ci` is its own run, and the push run on `dev` reports as
+`ci (push)`.
+
 `main`'s ruleset does not require an up-to-date head. Only this repository's `dev` can reach
 `main`, and GitHub keeps one open pull request per head and base, so `main` cannot move between the
 release pull request's checks and its merge. Those checks run on the pull request's merge ref,

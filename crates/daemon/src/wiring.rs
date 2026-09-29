@@ -11,9 +11,9 @@
 //! (`docs/schematics/service-lifecycle.md`).
 //!
 //! The bot's transport counts what it sent; [`TransportMarker`] hands those counts to
-//! coordination's `DeliveryMarker` (SPEC-027 R6). The bot's `/sync` asks an [`OwnerSync`];
-//! [`OwnerSyncCycle`] answers it with ingest's sync and coordination's cycle, which the bot cannot
-//! name (docs/CONTEXT-MAP.md).
+//! coordination's `DeliveryMarker` (SPEC-027 R6). The owner's cycle, [`OwnerSyncCycle`], is run by
+//! the sync job when a request is stored (SPEC-059); the bot's `/sync` port only requests it
+//! (`sync_request.rs`).
 //!
 //! Every cycle recomputes through the fold (SPEC-071 R15, R19). A role that runs cycles loads a
 //! [`RecomputeSetup`] once, at its start: the owner's courses, refused when they disagree with the
@@ -25,15 +25,12 @@
 //! succeeds (R7).
 
 use std::fs::{File, OpenOptions};
-use std::future::Future;
 use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use deck_streak_analytics::settings::AnalyticsSettings;
-use deck_streak_bot::{
-    OwnerChat, OwnerSync, Scores, SyncAnswer, SyncOutcome, SyncRefusal, Transport,
-};
+use deck_streak_bot::{OwnerChat, Scores, SyncAnswer, SyncOutcome, SyncRefusal, Transport};
 use deck_streak_coordination::courses::{CoursesDisagree, agree};
 use deck_streak_coordination::delivery::{DeliveryCounts, DeliveryMarker};
 use deck_streak_coordination::obligations::Obligations;
@@ -293,7 +290,6 @@ pub struct OwnerSyncCycle {
     db: Db,
     offload: Offload,
     rule: StudyDayRule,
-    router: Option<Arc<Router>>,
     recompute: RecomputeSetup,
 }
 
@@ -316,19 +312,17 @@ impl OwnerSyncCycle {
             db,
             offload,
             rule,
-            router: None,
             recompute,
         }
     }
 
-    /// The owner's sync, flushing `router` after a sync that succeeds (SPEC-041 R7).
-    #[must_use]
-    pub fn with_router(mut self, router: Arc<Router>) -> Self {
-        self.router = Some(router);
-        self
-    }
-
-    async fn run(&self) -> Result<SyncAnswer, SyncRefusal> {
+    /// Runs the owner's cycle once, in the process that calls it: the sync job's, never the
+    /// bot's (SPEC-059).
+    ///
+    /// # Errors
+    ///
+    /// The refusal, with its reason code, when the cycle could not run to its end.
+    pub async fn run(&self) -> Result<SyncAnswer, SyncRefusal> {
         let clock = Arc::new(SystemClock);
         let gate = ChangeGate::new(self.db.clone(), self.rule, clock.clone());
         gate.state()
@@ -357,10 +351,6 @@ impl OwnerSyncCycle {
             self.db.clone(),
             self.rule,
         );
-        let parts = match &self.router {
-            Some(router) => parts.with_flush(Arc::clone(router)),
-            None => parts,
-        };
         let report = sync_cycle(&parts, Trigger::Owner)
             .await
             .map_err(|error| refused(cycle_reason(&error), &error))?;
@@ -381,12 +371,6 @@ pub fn router(
 ) -> Router {
     Router::new(Arc::new(policy), db, Arc::new(SystemClock), rule)
         .with_bot(Arc::new(OwnerChat::new(transport, owner)))
-}
-
-impl OwnerSync for OwnerSyncCycle {
-    fn sync_now(&self) -> impl Future<Output = Result<SyncAnswer, SyncRefusal>> + Send {
-        self.run()
-    }
 }
 
 /// The refusal `reason`, logged with its cause: the cause names a setting or a step, never a
@@ -433,7 +417,7 @@ fn answer_of(report: &CycleReport) -> SyncAnswer {
 mod tests {
     use std::sync::Arc;
 
-    use deck_streak_bot::{ApiUrl, OwnerSync, Scores, Sent, SyncOutcome, SyncRefusal, Transport};
+    use deck_streak_bot::{ApiUrl, Scores, Sent, SyncOutcome, SyncRefusal, Transport};
     use deck_streak_coordination::delivery::{DeliveryCounts, DeliveryMarker};
     use deck_streak_coordination::sync_cycle::{CycleError, CycleReport, Recompute};
     use deck_streak_ingest::gate::RunReason;
@@ -567,7 +551,7 @@ mod tests {
             StudyDayRule::default(),
             recompute,
         );
-        let answer = cycle.sync_now().await;
+        let answer = cycle.run().await;
         assert_eq!(
             answer,
             Err(SyncRefusal {
