@@ -31,6 +31,103 @@ fn normalized(source: &str) -> String {
         .to_lowercase()
 }
 
+/// The byte ranges of every comment in `source`, in every form: `//`, `///`, `//!`, and `/* */`
+/// with its doc forms, nested blocks included. A marker inside a string, a raw string or a
+/// character literal opens none, so a prune written after one is never hidden.
+fn comment_spans(source: &str) -> Vec<(usize, usize)> {
+    let bytes = source.as_bytes();
+    let mut spans = Vec::new();
+    let mut at = 0;
+    while at < bytes.len() {
+        if !source.is_char_boundary(at) {
+            at += 1;
+            continue;
+        }
+        let rest = &source[at..];
+        if rest.starts_with("//") {
+            let end = rest.find('\n').map_or(bytes.len(), |n| at + n);
+            spans.push((at, end));
+            at = end;
+        } else if rest.starts_with("/*") {
+            let (mut depth, mut end) = (0_usize, at);
+            while end < bytes.len() {
+                if bytes[end..].starts_with(b"/*") {
+                    depth += 1;
+                    end += 2;
+                } else if bytes[end..].starts_with(b"*/") {
+                    depth -= 1;
+                    end += 2;
+                    if depth == 0 {
+                        break;
+                    }
+                } else {
+                    end += 1;
+                }
+            }
+            spans.push((at, end));
+            at = end;
+        } else if bytes[at] == b'r' && raw_string_len(rest).is_some() {
+            at += raw_string_len(rest).unwrap_or(1);
+        } else if bytes[at] == b'"' {
+            at += 1;
+            while at < bytes.len() && bytes[at] != b'"' {
+                at += if bytes[at] == b'\\' { 2 } else { 1 };
+            }
+            at += 1;
+        } else if bytes[at] == b'\'' {
+            at += char_literal_len(rest);
+        } else {
+            at += 1;
+        }
+    }
+    spans
+}
+
+/// The length of the raw string `rest` opens (`r"..."`, `r#"..."#`), or `None` when it opens none.
+fn raw_string_len(rest: &str) -> Option<usize> {
+    let hashes = rest[1..].bytes().take_while(|b| *b == b'#').count();
+    if rest.as_bytes().get(1 + hashes) != Some(&b'"') {
+        return None;
+    }
+    let closer = format!("\"{}", "#".repeat(hashes));
+    let body = 2 + hashes;
+    Some(
+        rest[body..]
+            .find(&closer)
+            .map_or(rest.len(), |n| body + n + closer.len()),
+    )
+}
+
+/// The length of the character literal `rest` opens, or 1 when the quote is a lifetime's.
+fn char_literal_len(rest: &str) -> usize {
+    let mut chars = rest[1..].chars();
+    match chars.next() {
+        Some('\\') => rest[2..].find('\'').map_or(1, |n| 2 + n + 1),
+        Some(c) if rest[1 + c.len_utf8()..].starts_with('\'') => 2 + c.len_utf8(),
+        _ => 1,
+    }
+}
+
+/// `source` without its prose: every comment, in any form, that holds no double quote. Such a
+/// comment can neither run a statement nor quote the tested one, so the word count does not read
+/// it, and a comment that calls the prune one delete writes no second keyword. A comment that
+/// quotes is kept: a quoted copy of the statement beside a changed prune is still read.
+fn code_of(source: &str) -> String {
+    let mut code = String::new();
+    let mut from = 0;
+    for (start, end) in comment_spans(source) {
+        code.push_str(&source[from..start]);
+        if source[start..end].contains('"') {
+            code.push_str(&source[start..end]);
+        } else {
+            code.push(' ');
+        }
+        from = end;
+    }
+    code.push_str(&source[from..]);
+    code
+}
+
 /// How many times `source` writes a delete from the run table, quoted or not, code or comment.
 fn delete_statements_in(source: &str) -> usize {
     normalized(source)
@@ -63,9 +160,9 @@ fn prune_pin_problems(source: &str) -> Vec<String> {
 
 /// How many times `source` writes `delete` as a word of its own, in any case, whatever follows
 /// it: a table spelled `main.agent_runs` or `"agent_runs"`, or an SQL comment after the keyword,
-/// still counts, where `delete_statements_in` sees only the one spelling.
+/// still counts, where `delete_statements_in` sees only the one spelling. Prose is not read.
 fn delete_keywords_in(source: &str) -> usize {
-    let lower = source.to_lowercase();
+    let lower = code_of(source).to_lowercase();
     let bytes = lower.as_bytes();
     let is_word = |at: Option<&u8>| at.is_some_and(|b| b.is_ascii_alphanumeric() || *b == b'_');
     lower
