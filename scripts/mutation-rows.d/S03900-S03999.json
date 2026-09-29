@@ -264,6 +264,86 @@
         "    if done.returncode != 0:\n        return None\n",
         "a mutant the shell reads without error goes on to its killer, and one it refuses does not (SPEC-039 section 12, A41)",
         "test_mutation_rows.TheRunnerParseChecksAShellMutant.test_a_posix_sh_mutant_that_parses_and_is_caught_is_killed"
+      ],
+      [
+        "S03934-THE-PARSER-IS-ASKED-TO-READ-NOT-RUN",
+        "scripts/mutation_rows.py",
+        "            [parser, \"-n\"],\n",
+        "            [parser],\n",
+        "the parse check passes `-n`, so it reads the mutant and never executes it (SPEC-039 section 12, A41)",
+        "test_mutation_rows.TheRunnerParseChecksAShellMutant.test_the_parse_check_reads_the_mutant_and_never_runs_it"
+      ],
+      [
+        "S03935-A-MISSING-PARSER-FAILS-CLOSED",
+        "scripts/mutation_rows.py",
+        "        return f\"the mutant is unchecked: {parser} is not installed\"\n",
+        "        return None\n",
+        "a shell that is not installed leaves the mutant unchecked and VOID, never passed (SPEC-039 section 12, A41)",
+        "test_mutation_rows.TheRunnerParseChecksAShellMutant.test_a_missing_parser_leaves_the_mutant_unchecked_and_void"
+      ],
+      [
+        "S03936-A-HUNG-PARSER-FAILS-CLOSED",
+        "scripts/mutation_rows.py",
+        "        return f\"the mutant is unchecked: {parser} -n timed out\"\n",
+        "        return None\n",
+        "a parse check that outlives its bound leaves the mutant unchecked and VOID, never passed (SPEC-039 section 12, A41)",
+        "test_mutation_rows.TheRunnerParseChecksAShellMutant.test_a_parser_that_hangs_leaves_the_mutant_unchecked_and_void"
+      ],
+      [
+        "S03937-A-BASH-EXTENSION-IS-A-BASH-SCRIPT",
+        "scripts/mutation_rows.py",
+        "    if target.endswith(\".bash\"):\n",
+        "    if False:\n",
+        "a `.bash` target with no shebang is a shell script, so its unparsed mutant is VOID (SPEC-039 section 12, A41)",
+        "test_mutation_rows.TheRunnerParseChecksAShellMutant.test_a_bash_extension_mutant_that_does_not_parse_is_void"
+      ],
+      [
+        "S03938-AN-SH-EXTENSION-IS-A-SHELL-SCRIPT",
+        "scripts/mutation_rows.py",
+        "    if target.endswith(\".sh\"):\n",
+        "    if False:\n",
+        "a `.sh` target with no shebang is a shell script, so its unparsed mutant is VOID (SPEC-039 section 12, A41)",
+        "test_mutation_rows.TheRunnerParseChecksAShellMutant.test_an_sh_extension_mutant_that_does_not_parse_is_void"
+      ],
+      [
+        "S03939-AN-SH-EXTENSION-IS-READ-BY-SH",
+        "scripts/mutation_rows.py",
+        "    if target.endswith(\".sh\"):\n        return \"sh\"\n",
+        "    if target.endswith(\".sh\"):\n        return \"bash\"\n",
+        "a `.sh` target with no shebang is read by sh, so a construct only bash reads is VOID (SPEC-039 section 12, A41)",
+        "test_mutation_rows.TheRunnerParseChecksAShellMutant.test_an_sh_extension_with_no_shebang_is_read_by_sh"
+      ],
+      [
+        "S03940-A-BASH-EXTENSION-IS-READ-BY-BASH",
+        "scripts/mutation_rows.py",
+        "    if target.endswith(\".bash\"):\n        return \"bash\"\n",
+        "    if target.endswith(\".bash\"):\n        return \"sh\"\n",
+        "a `.bash` target with no shebang is read by bash, so an array it uses does not void a caught mutant (SPEC-039 section 12, A41)",
+        "test_mutation_rows.TheRunnerParseChecksAShellMutant.test_a_bash_extension_with_no_shebang_is_read_by_bash"
+      ],
+      [
+        "S03941-A-CARGO-KILLED-SHELL-MUTANT-IS-PARSED",
+        "scripts/mutation_rows.py",
+        "    if parser is not None:\n",
+        "    if parser is not None and killer.kind != \"cargo\":\n",
+        "a shell target with a cargo killer is parse-checked before it is built (SPEC-039 section 12, A41)",
+        "test_mutation_rows.TheRunnerParseChecksAShellMutant.test_a_shell_target_with_a_cargo_killer_is_parsed_first_and_built_second"
+      ],
+      [
+        "S03942-AN-SH-SHEBANG-IS-READ-BY-SH",
+        "scripts/mutation_rows.py",
+        "        return \"bash\" if named.group(1) == \"bash\" else \"sh\"\n",
+        "        return \"bash\"\n",
+        "a script whose shebang names sh is read by sh, so a construct only bash reads is VOID (SPEC-039 section 12, A41)",
+        "test_mutation_rows.TheRunnerParseChecksAShellMutant.test_a_bash_only_mutant_of_an_sh_shebang_script_is_void"
+      ],
+      [
+        "S03943-A-DASH-SHEBANG-NAMES-A-SHELL",
+        "scripts/mutation_rows.py",
+        "(sh|bash|dash)(?=",
+        "(sh|bash)(?=",
+        "a shebang naming dash makes a target a shell script (SPEC-039 section 12, A41)",
+        "test_mutation_rows.TheRunnerParseChecksAShellMutant.test_a_dash_shebang_makes_a_target_a_shell_script"
       ]
     ]
   }
