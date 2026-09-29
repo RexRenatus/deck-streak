@@ -352,6 +352,46 @@
         "    if done.returncode <= 1:\n",
         "only an exit of zero is a parse: `bash -n` exits 1 on an array left open at the end of its input, so that mutant is VOID, never a kill (SPEC-039 section 12, A41)",
         "test_mutation_rows.TheRunnerParseChecksAShellMutant.test_a_bash_mutant_refused_with_exit_one_is_void"
+      ],
+      [
+        "S03945-A-BIN-KILLER-RUNS-CARGO-WITH-BIN",
+        "scripts/mutation_rows.py",
+        "        return [\"--bin\", killer.binary]\n",
+        "        return [\"--lib\"]\n",
+        "a `bin::` killer runs `cargo test --bin <binary>`, the binary's own unit tests, never the library's (SPEC-039 section 15, A42)",
+        "test_mutation_rows.TheBinKillerRunsTheBinarysOwnUnitTests.test_a_bin_killer_runs_cargo_test_on_the_binary_by_its_exact_path"
+      ],
+      [
+        "S03946-A-BIN-KILLER-SELECTING-NOTHING-IS-VOID",
+        "scripts/mutation_rows.py",
+        "    if control.selected != 1:\n",
+        "    if control.selected != 1 and killer.target != \"bin\":\n",
+        "a `bin::` killer that selects no test is VOID and its mutant is never installed, so a plant that selects nothing never reads KILLED (SPEC-039 section 15, A43)",
+        "test_mutation_rows.TheBinKillerRunsTheBinarysOwnUnitTests.test_a_bin_killer_that_selects_no_test_is_void_and_never_killed"
+      ],
+      [
+        "S03947-A-BIN-KILLERS-BINARY-IS-READ-FROM-ITS-MANIFEST",
+        "scripts/mutation_rows.py",
+        "        entry = declared[0]\n",
+        "        entry = {\"name\": package}\n",
+        "a `bin::` killer's binary is the one the crate's `[[bin]]` table names, never the package's name by guess (SPEC-039 section 15, A42)",
+        "test_mutation_rows.TheBinKillerRunsTheBinarysOwnUnitTests.test_a_bin_killers_binary_is_read_from_its_manifest_and_never_guessed"
+      ],
+      [
+        "S03948-A-BIN-KILLER-IS-RESOLVED-IN-THE-BINARYS-SOURCES",
+        "scripts/mutation_rows.py",
+        "            sources = module_sources(root / killer.file)\n",
+        "            sources = sorted((root / killer.file).parent.rglob(\"*.rs\"))\n",
+        "a `bin::` killer names a test in the binary's own module tree, so a test of the library beside it is refused by the census (SPEC-039 section 15, A44)",
+        "test_mutation_rows.TheBinKillerRunsTheBinarysOwnUnitTests.test_a_bin_killer_outside_the_binarys_sources_is_refused_by_the_census"
+      ],
+      [
+        "S03949-A-BINARYS-MODULES-ARE-FOLLOWED",
+        "scripts/mutation_rows.py",
+        "        for name in MOD_DECLARATION.findall(text):\n",
+        "        for name in ():\n",
+        "a `bin::` killer in a module the binary's root declares resolves, because the module tree is followed from the root (SPEC-039 section 15, A44)",
+        "test_mutation_rows.TheBinKillerRunsTheBinarysOwnUnitTests.test_a_bin_killer_outside_the_binarys_sources_is_refused_by_the_census"
       ]
     ]
   }
