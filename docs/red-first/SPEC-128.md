@@ -50,3 +50,21 @@ reason is refused. Replayed against the old migration it failed at
 `crates/ingest/tests/refusal.rs:48:5` with "an instant without its reason is refused", because a
 `CHECK` that evaluates to NULL passes; the migration's second disjunct now requires
 `refused_reason IS NOT NULL`, and A1 is green at 03cb5de.
+
+## Addendum, 2026-09-29: the reason is a closed enum (#396, ADR-193)
+
+The gap was planted first (e1c6a03): a refusal code defined in a new file and recorded through
+`refused` is not read by the scan A13 ran, so the criterion passed while the code bypassed it. The
+fix (d34307d) makes `refused` and the owner cycle's error take `RefusalReason`. A14's body at the
+red commit is that plant; the green commit edits `crates/daemon/tests/roles.rs`, replacing the plant
+with the variants test (the string of each variant equals the code stored today, no two share one,
+the cycle's refusal type is the enum) and replacing A13's source scan with a read of the migration's
+`CHECK`. The variants test carries a type assertion that does not compile against the old code, so
+its own failure at the red commit cannot be quoted, and the red line quotes the plant's.
+
+```red-first
+A14: red at e1c6a03: roles::a_refusal_code_is_a_variant_of_the_closed_enum panicked at crates/daemon/tests/roles.rs:570:5: the scan passed a code defined in a new file: planted_unknown_code is recorded through `refused` and no scan reads it
+A14: green at d34307d
+```
+
+A13 keeps its earlier `not red` line above; its body changed at d34307d as said.

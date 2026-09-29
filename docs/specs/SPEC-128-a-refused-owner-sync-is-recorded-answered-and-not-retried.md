@@ -144,3 +144,43 @@ ADR-066 is not edited. The reply for `NotRun` is the existing one; only a refusa
   scans the seven refusal-code literals in `impl OwnerSyncCycle::run` (4) and `cycle_reason` (3)
   and requires each to parse as a `RefusalReason`. A4 walks the set and the migration `CHECK`
   refuses an unknown code as a further line (A1).
+
+## 7. Amendment, 2026-09-29: a refusal's reason is a closed enum
+
+Made by ADR-193 and issue #396, insert-only under ruling (i) of SPEC-038 section 8: every earlier
+byte is kept in order, so the amendment is these two new last sections and nothing above them is
+edited. It inserts no line into section 3's table or fence; its one new criterion, A14, is defined
+in the section below.
+
+- **The strengthened rule.** R1 says the closed set is enforced by the type `RefusalReason`. That held
+  where a reason is stored and read; where a reason is PRODUCED it was a string, and the guard on
+  it was A13's scan of the sources of `impl OwnerSyncCycle` for code literals. A code defined in
+  a new file and recorded through the composition root was not read by that scan, so A13 passed while
+  the code bypassed it. The rule now holds at the producer: `OwnerSyncCycle::run` returns
+  `Result<SyncAnswer, RefusalReason>`, the private `refused` and `cycle_reason` in `wiring.rs` take and
+  give a `RefusalReason`, and the job records the value it is given, with no `parse` on that path. A
+  code outside the eight does not compile. `RefusalReason::parse` stays for reading a stored row.
+- **No stored code changes.** Each variant's string form equals the code the migration's `CHECK`
+  already allows, byte for byte (A14 holds the table), so there is no migration and no `.sqlx/` change.
+  The bot's own two reasons for a `/sync` that could not be asked (`sync_request_unwritten`,
+  `sync_progress_unread`) are not refusals the job records and are not part of the set (#396).
+- **A13's test is replaced, not renamed.** Its function name and its fence line stand. Its body no
+  longer scans sources: it reads the codes the migration's `CHECK` allows and requires that each
+  parses as a `RefusalReason` and that each variant is one of them. The third risk in section 6
+  stands as the record of the state before this amendment.
+- **Rows.** `S12809` to `S12811` in the band file, and `S12804`'s anchor moves to the arm's new
+  indentation.
+- **Files this amendment touches.** `crates/daemon/src/wiring.rs`, `crates/daemon/src/role_job.rs`,
+  `crates/daemon/src/sync_request.rs`, `crates/daemon/tests/roles.rs`,
+  `scripts/mutation-rows.d/S12800-S12899.json`, `docs/red-first/SPEC-128.md`,
+  `docs/decisions/ADR-193-*.md` and `changelog.d/fix-refusal-enum-396.md`.
+
+## 8. Acceptance criteria of the 2026-09-29 amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A14 | each variant's string form is the code stored today, no two variants share one, and the owner cycle's refusal type is the enum | `cargo test -p deck-streak-daemon --test roles -- --exact a_refusal_code_is_a_variant_of_the_closed_enum` |
+
+```acceptance
+A14: cargo test -p deck-streak-daemon --test roles -- --exact a_refusal_code_is_a_variant_of_the_closed_enum
+```
