@@ -108,7 +108,7 @@ class TheWeeklyBatterySweepsThePython(unittest.TestCase):
         self.assertTrue(uploads_always(python), "the report is not kept whatever the run returned")
         self.assertRegex(python, r"(?m)^\s+name: mutation-python-shard-\$\{\{ matrix\.shard \}\}$")
         self.assertRegex(listing, r"mutation_python\.py list --all --out ")
-        self.assertRegex(survivors, r"(?m)^    needs: \[rust, python, web, rows, listing\]$")
+        self.assertRegex(survivors, r"(?m)^    needs: \[size, rust, python, web, rows, listing\]$")
         # A scope names what runs: a crate's or the Mini App's runs no Python shard, and `python`
         # runs no Rust shard and no Stryker sweep.
         self.assertRegex(
