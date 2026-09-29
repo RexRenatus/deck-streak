@@ -207,6 +207,42 @@
         "\"EXPLAIN QUERY PLAN DELETE FROM agent_runs WHERE created_at <= ?1\"",
         "runs::the_prune_reads_agent_runs_through_the_created_at_index",
         "the plan check runs the statement the file's one literal holds, never a separately typed copy (SPEC-043 amendment, issue 404)"
+      ],
+      [
+        "S04331-THE-ATTRIBUTE-SCAN-FAILS-CLOSED-ON-A-QUOTE-OR-A-COMMENT",
+        "agent",
+        "tests/verdict.rs",
+        "if !line.starts_with(\"#[\") || line.contains(['\"', '\\'']) || line.contains(\"//\") {",
+        "if !line.starts_with(\"#[\") {",
+        "verdict::a_bracket_inside_a_string_or_a_comment_never_closes_an_attribute",
+        "a line holding a quote, a character literal or a comment marker is never one whole attribute, so a bracket inside a string never closes it (SPEC-043 amendment, issue 404)"
+      ],
+      [
+        "S04332-THE-VERDICT-ENUM-IS-DECLARED-ONCE",
+        "agent",
+        "tests/verdict.rs",
+        ".filter(|line| line.trim() == \"pub enum Verdict {\")\n        .count()",
+        ".filter(|line| line.trim() == \"pub enum Verdict {\")\n        .count()\n        .min(1)",
+        "verdict::a_commented_copy_of_the_enum_above_it_is_refused",
+        "the declaration count sees every line that declares the verdict enum, so a commented copy above the real one is a second declaration (SPEC-043 amendment, issue 404)"
+      ],
+      [
+        "S04333-A-DOC-LINE-CLOSING-A-BLOCK-COMMENT-IS-NOT-PASSED",
+        "agent",
+        "tests/verdict.rs",
+        " && !line.contains(\"*/\")\n}",
+        "\n}",
+        "verdict::a_bracket_inside_a_string_or_a_comment_never_closes_an_attribute",
+        "a doc line holding a block-comment closer is not passed by the scan, so a must_use inside a block comment that line closes is never read (SPEC-043 amendment, issue 404)"
+      ],
+      [
+        "S04334-THE-PRUNE-SOURCE-WRITES-THE-WORD-DELETE-ONCE",
+        "agent",
+        "tests/runs.rs",
+        "if keywords != 1 {",
+        "if false {",
+        "runs::a_prune_spelled_around_the_keyword_scan_beside_a_quoted_copy_is_refused",
+        "the prune's source writes the word delete once, so a schema-qualified, quoted or comment-split statement beside a quoted copy is refused (SPEC-043 amendment, issue 404)"
       ]
     ],
     "SCRIPT_MUTATIONS": [
