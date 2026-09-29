@@ -88,6 +88,14 @@
         "HELPER_KEYS = {\"expected_red\", \"pending\", \"note\"}\n",
         "the apiKeyHelper scan's entry stays pending and note only: it has no rows to expect (SPEC-123 R1)",
         "test_box_scan_expected.TheScansExpectationIsRefusedUnlessItIsWellFormed.test_only_the_scan_takes_an_expected_red_and_no_other_key"
+      ],
+      [
+        "S12312-A-VOID-SCAN-WITH-AN-EXPECTATION-FAILS",
+        "scripts/box-packs.sh",
+        "        verdict.mark = \"FAIL\"\n        verdict.detail = (\n",
+        "        verdict.mark = \"ok\"\n        verdict.detail = (\n",
+        "a scan that examined no settings document while expected_red names an issue is VOID and its mark is FAIL, never ok, even when no expectation is stale (SPEC-123 R5)",
+        "test_box_scan_expected.TheScanAdmitsAnExpectedRed.test_an_expectation_with_no_settings_document_names_its_issues"
       ]
     ]
   }
