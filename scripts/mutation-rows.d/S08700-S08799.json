@@ -200,6 +200,22 @@
         "",
         "the endmarker token carries no code, so a line holding only it is quiet and no operator site sits on it (SPEC-087 R3)",
         "test_mutation_python.TheRunnersConstantsAreNamedWhole.test_the_quiet_tokens_are_the_six_kinds_that_carry_no_code"
+      ],
+      [
+        "S08726-THE-VERDICT-WRITES-NO-BYTECODE",
+        "scripts/audit-web-verdict.py",
+        "sys.dont_write_bytecode = True",
+        "sys.dont_write_bytecode = False",
+        "the verdict script writes no bytecode beside the tree it judges (SPEC-087 R8)",
+        "test_audit_web.TheVerdictScriptStatesItself.test_the_verdict_script_writes_no_bytecode"
+      ],
+      [
+        "S08727-THE-VERDICT-USAGE-OPENS-WITH-THE-FIRST-LINE",
+        "scripts/audit-web-verdict.py",
+        "description=__doc__.splitlines()[0]",
+        "description=__doc__.splitlines()[1]",
+        "the usage text opens with the script's first docstring line (SPEC-087 R8)",
+        "test_audit_web.TheVerdictScriptStatesItself.test_the_usage_text_opens_with_the_scripts_first_line"
       ]
     ]
   }

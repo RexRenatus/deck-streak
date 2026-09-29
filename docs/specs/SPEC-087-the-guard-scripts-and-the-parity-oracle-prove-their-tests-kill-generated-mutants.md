@@ -320,6 +320,7 @@ R16. The delivery sets ADR-073 `accepted`; appends to SPEC-039 a dated amendment
 | A20 | `ci.yml`'s `mutation-plan` runs `list --plan`, `list --all` and `shards --python-listed`; `mutation-python` needs it, runs its matrix with `--plan`, `--shard` and `--failfast`, prints the plan's case, has no job-level `if`, a `timeout-minutes`, an `if: always()` upload and no cache step, and is a need of `mutation-verdict` and `ci`, whose verdict step runs `judge --class scripts` and `--class oracle` each with `--python` and `--rows` | `test_mutation_python_workflows.py` (the workflow's text) |
 | A21 | `mutation-weekly.yml`'s `python` job runs 16 shards with `--all` and no `--failfast`, uploads under `if: always()`, `listing` lists the whole population, `survivors` needs it, `battery` counts its 16 reports, the `package` input's crate and `miniapp` scopes run no Python shard, and its `python` scope runs no Rust shard and no Stryker sweep | `test_mutation_python_workflows.py` |
 | A22 | `docs/BUILDER-BRIEF.md` teaches a survivor's two resolutions and names no comment or setting that skips a mutant; `docs/TESTING.md` names the Python run; SPEC-039 carries the dated amendment and ADR-057 the note, each naming ADR-073; and ADR-073 reads `accepted` | `test_mutation_python_workflows.py` (the documents' text) |
+| A23 | every job the verdict `needs:` that uploads an artifact has a matching `download-artifact` step in the verdict, the Python shards' artifacts included, and the pinned action's layout puts each `mutation-python-shard-<i>/report.json` where the judge reads it, for every shard count, with and without the rows' report and `mutation-web` | `test_verdict_download.py` |
 
 ```acceptance
 A1: python3 -m unittest discover -s scripts/tests -p test_mutation_python.py -k the_runner_lists_exactly_the_operator_sets_mutants
@@ -344,6 +345,7 @@ A19: python3 -m unittest discover -s scripts/tests -p test_mutation_python_verdi
 A20: python3 -m unittest discover -s scripts/tests -p test_mutation_python_workflows.py -k the_python_job_runs_the_plans_shards_and_the_verdict_reads_them
 A21: python3 -m unittest discover -s scripts/tests -p test_mutation_python_workflows.py -k the_weekly_battery_sweeps_the_whole_python_population
 A22: python3 -m unittest discover -s scripts/tests -p test_mutation_python_workflows.py -k the_builder_brief_and_the_amendments_teach_the_python_run
+A23: python3 -m unittest discover -s scripts/tests -p test_verdict_download.py -k test_every_needed_job_that_uploads_has_a_matching_download_in_the_verdict
 ```
 
 - **Where each asserted text is minted.** A1 to A12 assert text and reports that

@@ -15,6 +15,14 @@ committed, so their red was measured by restoring the base `ci.yml` and `mutatio
 beside the committed tests; A22's red is the base documents. A1-A12 were run again after the merge
 of `dev` and read green (18 tests, OK).
 
+A23, recorded in prose because the probe reads one fenced block: it was red at 6394621, where
+`test_every_needed_job_that_uploads_has_a_matching_download_in_the_verdict` failed with
+`AssertionError: False is not true : mutation-python uploads mutation-python-shard-0 and the verdict
+downloads nothing that matches it`, and `test_the_layout_holds_for_every_count_of_artifacts` failed
+with `'T/reports/mutation-python-shard-0/report.json' not found`; both were green at 63b9336, which
+adds the verdict's download of `mutation-python-shard-*` and the shard's `python-shards/` output
+directory. The number is A23 because A5 was already the runner's sentinel criterion.
+
 ```red-first
 A1: red at 5c7fcad: AssertionError: 'mutation-python: listed 0' != 'mutation-python: listed 29'
 A1: green at 96eee0b
