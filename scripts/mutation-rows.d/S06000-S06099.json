@@ -536,6 +536,38 @@
         "    raw = os.fsencode(field)\n",
         "a mount point whose path carries an octal escape is not matched, so the item goes (SPEC-060 R7, A12)",
         "test_host_scrub.Axes.test_an_item_that_is_or_holds_a_mount_point_is_refused"
+      ],
+      [
+        "S06068-AN-UNREADABLE-MOUNT-TABLE-REFUSES-THE-APPLY",
+        "deploy/host-scrub/apply.py",
+        "        raise Refusal(f\"the mount table cannot be read: {error}\", item) from error\n",
+        "        point = None\n",
+        "an apply that cannot read the mount table deletes the item all the same (SPEC-060 R7, A12)",
+        "test_host_scrub.Axes.test_an_item_that_is_or_holds_a_mount_point_is_refused"
+      ],
+      [
+        "S06069-AN-UNREADABLE-MOUNT-TABLE-SKIPS-THE-ITEM",
+        "deploy/host-scrub/plan.py",
+        "                skipped.append({\"path\": path, \"reason\": f\"the mount table cannot be read: {error}\"})\n                continue\n",
+        "                point = None\n",
+        "a plan that cannot read the mount table lists the item all the same (SPEC-060 R7, A12)",
+        "test_host_scrub.Axes.test_an_item_that_is_or_holds_a_mount_point_is_refused"
+      ],
+      [
+        "S06070-AN-ITEM-INSIDE-A-BIND-MOUNT-IS-REFUSED",
+        "deploy/host-scrub/plan.py",
+        "        if unescape(fields[3]) != \"/\" and path.startswith(point.rstrip(\"/\") + \"/\"):\n",
+        "        if False:\n",
+        "an item inside a bind mount of another directory is listed and deleted (SPEC-060 R7, A12)",
+        "test_host_scrub.Axes.test_an_item_that_is_or_holds_a_mount_point_is_refused"
+      ],
+      [
+        "S06071-EVERY-ESCAPE-IN-A-MOUNT-POINT-IS-READ",
+        "deploy/host-scrub/plan.py",
+        "    raw = re.sub(rb\"\\\\([0-7]{3})\", lambda m: bytes([int(m.group(1), 8) & 0xFF]), os.fsencode(field))\n",
+        "    raw = re.sub(rb\"\\\\([0-7]{3})\", lambda m: bytes([int(m.group(1), 8) & 0xFF]), os.fsencode(field), count=1)\n",
+        "a mount point whose path carries a second octal escape is not matched, so the item goes (SPEC-060 R7, A12)",
+        "test_host_scrub.Axes.test_an_item_that_is_or_holds_a_mount_point_is_refused"
       ]
     ]
   }
