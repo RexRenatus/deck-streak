@@ -18,8 +18,9 @@ literal in the repository?
 ## Decision Drivers
 
 - CHARTER 11: a personal default is configuration with a neutral example value.
-- ADR-002: ingest, curriculum and insights all read these names, and ingest depends only on the
-  kernel, so the kernel is the one crate all three reach.
+- ADR-002: ingest, curriculum and insights all read these names. The kernel already loads the
+  owner's private files (`crates/kernel/src/courses.rs`, ADR-087), and a note convention is the
+  owner's configuration, not a collection fact.
 - ADR-012: the goldens patch synthetic conventions into the predecessor's modules.
 - A rule the predecessor enforces in code (the forbidden direction tokens) stays code.
 
@@ -27,6 +28,7 @@ literal in the repository?
 
 - A private conventions file, schema `deckstreak.conventions.v1`, loaded once by the kernel into `Conventions` — chosen: one typed value every context reads, with no owner name in the repository.
 - The predecessor's literals — rejected because they are the owner's note and field names.
+- Ingest loads it — rejected because a note convention is the owner's configuration, not a collection fact, and the kernel already loads the owner's private files (`crates/kernel/src/courses.rs`, ADR-087).
 - The courses file — rejected because it describes decks and courses (ADR-087), not note types and fields, and a change to one would reroll the other's days.
 - Environment variables — rejected because rule lists with patterns and exemptions do not fit one variable without a second parser.
 - A table the owner edits — rejected because there is no settings screen until #57.

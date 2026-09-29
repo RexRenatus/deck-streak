@@ -124,7 +124,7 @@ R11. Every constant this SPEC uses (the index pattern, the mature mastery, the w
 | id | criterion | decided by |
 |---|---|---|
 | A1 | the law subject of every synthetic path equals the golden of `leeches.py:_law_subject` | `the_law_subject_matches_the_predecessors_golden` |
-| A2 | a year-band or test-prep setting without the law root refuses the cycle's step with `scope_settings_refused`, naming the setting only | `a_law_taxonomy_without_a_root_refuses_start` |
+| A2 | a year-band or test-prep setting without the law root refuses the cycle's step with `scope_settings_refused`, naming the setting only | `a_law_taxonomy_without_a_root_refuses_the_cycles_step` |
 | A3 | the strand of every synthetic deck name equals the golden of `strands.py:parse_strand` | `the_strand_parse_matches_the_predecessors_golden` |
 | A4 | every course's strand statistics equal the golden of `strands.py:compute_strand_stats` | `strand_stats_match_the_predecessors_golden` |
 | A5 | the weak spots equal the golden of `strands.py:weak_strands` | `weak_spots_match_the_predecessors_golden` |
@@ -143,7 +143,7 @@ R11. Every constant this SPEC uses (the index pattern, the mature mastery, the w
 
 ```acceptance
 A1: cargo test -p deck-streak-ingest --test law_subject -- --exact the_law_subject_matches_the_predecessors_golden
-A2: cargo test -p deck-streak-ingest --test law_subject -- --exact a_law_taxonomy_without_a_root_refuses_start
+A2: cargo test -p deck-streak-ingest --test law_subject -- --exact a_law_taxonomy_without_a_root_refuses_the_cycles_step
 A3: cargo test -p deck-streak-curriculum --test strands_goldens -- --exact the_strand_parse_matches_the_predecessors_golden
 A4: cargo test -p deck-streak-curriculum --test strands_goldens -- --exact strand_stats_match_the_predecessors_golden
 A5: cargo test -p deck-streak-curriculum --test strands_goldens -- --exact weak_spots_match_the_predecessors_golden

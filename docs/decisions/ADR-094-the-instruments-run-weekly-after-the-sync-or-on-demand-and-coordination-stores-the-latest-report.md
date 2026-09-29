@@ -4,7 +4,7 @@ date: "2026-09-28"
 decision-makers: "@RexRenatus (owner), the DeckStreak architect"
 ---
 
-# The instruments run weekly after the sync or on demand, one at a time, and coordination stores each one's latest report
+# The instruments run weekly after the sync or on demand, one at a time on the host, and coordination stores each one's latest report
 
 ## Context and Problem Statement
 
@@ -19,7 +19,7 @@ where does its report live?
 ## Decision Drivers
 
 - A full read is slow: instruments must not run inside every sync's recompute, and two must not
-  read at once.
+  read at once on the host, which is one small machine and the instruments are its heaviest reads.
 - The weekly report (#130) and the Mini App read reports without waiting on a read.
 - An instrument's inputs come from several contexts (ingest's reads, analytics' rollups,
   curriculum's desired retention), and ADR-002 lets only coordination join them.
@@ -27,7 +27,9 @@ where does its report live?
 
 ## Considered Options (the alternatives it was chosen against)
 
-- A frame: insights defines pure instruments and one registry row each; coordination runs a weekly instrument after a sync's recompute when its report is 7 study days old, runs an on-demand one when asked, one at a time through the offload, and stores the latest report in `instrument_reports` — chosen: one read at a time, a report always ready, and reviving an inert instrument is one registry row.
+- A frame: insights defines pure instruments and one registry row each; coordination runs a weekly instrument after a sync's recompute when its report is 7 study days old, runs an on-demand one when asked, one at a time on the host through the offload, and stores the latest report in `instrument_reports` — chosen: one read at a time on the host, a report always ready, and reviving an inert instrument is one registry row.
+- A guard in each role process — rejected because the job, api and bot processes could each read at once, three of the heaviest reads on one small host.
+- A waiting host-wide lock — rejected because an on-demand request would hang behind a weekly run instead of answering that a run is in progress.
 - Every instrument inside each sync's recompute — rejected because it multiplies the sync's reads for studies that change weekly at most.
 - Every instrument on demand with nothing stored — rejected because the weekly report and the Mini App would each wait on a full read.
 - One table per instrument — rejected because each would owe six files for a report the frame never queries inside.
@@ -43,16 +45,17 @@ instrument in coordination", because it bounds the reads and keeps every report 
 - After each sync's recompute, coordination runs each weekly instrument whose report is absent or
   at least 7 study days older than the sync's study day; a failure of one is its report's failed
   read and never stops the next.
-- An on-demand run answers a route or a command; a request while any instrument runs in the same role
-  process is answered that a run is in progress and starts nothing; role processes each hold their own
-  guard, and a run in another process may overlap under the collection lock's shared side.
+- Every instrument run, weekly or on demand and in any role process, first takes an exclusive `flock`
+  on `<state directory>/instruments.lock` without waiting (SPEC-094 R8); an on-demand request that
+  finds it held is answered that a run is in progress and starts nothing, and a weekly turn that finds
+  it held leaves the instrument due for the next sync's step.
 - `instrument_reports` holds the latest report per instrument (id, study day, schema version, JSON),
   replaced in one write, in the `research-instruments` category.
 - A registry row marked inert never runs; reviving it is that row.
 
 ### Consequences
 
-- Good, because at most one instrument reads at a time, and never inside the recompute.
+- Good, because at most one instrument reads at a time on the host, and never inside the recompute.
 - Good, because W5's weekly report reads stored reports and sends them through the one router.
 - Bad, because a weekly report is up to 7 study days old; its section shows its study day.
 - Bad, because one latest report per instrument keeps no history; a trend over reports would need

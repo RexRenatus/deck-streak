@@ -29,10 +29,12 @@
 - **Traps a hand port falls into.**
   - A direction comes only from the conventions' curated rules, over names NFC-normalised,
     casefolded, with `->` rewritten to an arrow and whitespace collapsed: the (note type, template)
-    pair first, then the template alone, then a note-type substring, else unknown. There is no
+    pair first, then the template alone, then a note-type substring, else unknown; the four
+    outcomes are recognition, cued recall, production and unknown. There is no
     default bucket, and the words recall, recognition and recognize are never evidence (SPEC-094
     R2 refuses a rule that would use them).
-  - An unresolved cloze ordinal falls back to ordinal 0, as the Echo's cells do.
+  - An unresolved cloze ordinal falls back to ordinal 0, as the Echo's cells do, and a card is unknown
+    only when ordinal 0 has no template either.
   - A card's language is its course (SPEC-071 R2); a deck under a readings writing root whose
     second segment is a language's display name takes that language (SPEC-045 R2). Anything else is
     counted as unmapped, never folded into a bucket.

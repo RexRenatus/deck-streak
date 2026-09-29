@@ -7,8 +7,7 @@
   step, the on-demand run, `instrument_reports`); `deck-streak-api` and the Mini App (the insights
   routes and screen).
 - **Decided by:** ADR-012 (the parity oracle proves the math), ADR-085 (charts render on the
-  client), ADR-094 (the instruments run weekly after the sync or on demand, one at a time, and
-  coordination stores each one's latest report), ADR-095 (ingest walks the protobuf wire format by
+  client), ADR-094 (the instruments run weekly after the sync or on demand, one at a time on the host, and coordination stores each one's latest report), ADR-095 (ingest walks the protobuf wire format by
   hand) and ADR-096 (the owner's note conventions are private configuration the kernel loads).
 - **Prerequisites:** SPEC-020 (the offload), SPEC-023 (the read and its scope), SPEC-027 (the
   sync's study day), SPEC-029 and SPEC-071 (the recompute the step follows). **Mutation band:**
@@ -108,14 +107,9 @@ R6. `crates/insights/src/instrument.rs` defines the instrument port: an instrume
     row per instrument; a row marked inert never runs, and reviving it is that one row (ADR-094).
 R7. After each sync's recompute, coordination's instruments step runs each weekly instrument whose
     stored report is absent or at least 7 study days older than the sync's study day. Instruments
-    run one at a time through the kernel's offload, named by their id, and a failure of one is
+    run one at a time on the host through the kernel's offload (R8), named by their id, and a failure of one is
     recorded as its report's failed read and never stops the next.
-R8. An on-demand run (the route below, or an instrument's command from a later SPEC) runs one
-    instrument through the same offload; a request while any instrument runs in the same role
-    process is answered that a run is in progress and starts nothing. Across role processes the
-    guard does not reach: ingest's collection lock is shared by readers (SPEC-022 R7), so a weekly
-    run in the job process and an on-demand run in the api or bot process may overlap, each reading
-    under the shared lock and each replacing only its own instrument's report (R9).
+R8. An on-demand run (the route below, or an instrument's command from a later SPEC) runs one instrument through the same offload. Every instrument run, weekly or on demand and in any role process, first takes an exclusive `flock` on `<state directory>/instruments.lock` without waiting (the collection lock's pattern, SPEC-022 R7, released by an explicit unlock), so no two instruments read at once on the host: an on-demand request that finds it held is answered that a run is in progress and starts nothing, and a weekly turn that finds it held leaves the instrument due for the next sync's step.
 R9. `instrument_reports` holds the latest report per instrument (the instrument id, the study day,
     the report's schema version and its JSON), replaced in one write. It is a `STRICT` table with
     `created_at`, created by `migrations/009401_coordination_instrument_reports.sql`; it is
@@ -161,7 +155,7 @@ R13. The Mini App's `/insights` screen shows each stored report as a section. A 
 | A12 | every instrument in the registry has one row, and an inert row never runs | `an_inert_instrument_never_runs` |
 | A13 | a weekly instrument runs after the sync once in seven study days, and not again sooner | `a_weekly_instrument_runs_once_in_seven_study_days` |
 | A14 | one instrument's failure is stored as its failed read and the next still runs | `one_failure_never_stops_the_next_instrument` |
-| A15 | a run requested while one runs in the same role process starts nothing and says a run is in progress | `a_run_while_one_runs_starts_nothing` |
+| A15 | a run requested while one runs, in the same or another role process, starts nothing and says a run is in progress | `a_run_while_one_runs_starts_nothing` |
 | A16 | a second report replaces its instrument's first in one write | `a_report_replaces_its_instruments_previous_one` |
 | A17 | `instrument_reports` is exported and erased by coordination's port | `the_instrument_reports_are_exported_and_erased` |
 | A18 | the insights routes answer the owner and refuse every other caller with no data | `the_insights_routes_answer_only_the_owner` |
@@ -227,7 +221,8 @@ when it merges.
 | `crates/insights/tests/dark_fields.rs` | `deck-streak-insights` | added: A9 to A11 |
 | `crates/insights/tests/registry.rs` | `deck-streak-insights` | added: A12 |
 | `migrations/009401_coordination_instrument_reports.sql` | `deck-streak-coordination` | added: `instrument_reports` |
-| `crates/coordination/src/instruments.rs` | `deck-streak-coordination` | added: the step, the on-demand run and the store |
+| `crates/ingest/src/lock.rs` | `deck-streak-ingest` | changed: a non-waiting exclusive take, `try_exclusive`, beside the waiting ones, so an instrument run that finds the host's instrument lock held starts nothing (SPEC-094 R8) |
+| `crates/coordination/src/instruments.rs` | `deck-streak-coordination` | added: the step, the on-demand run and the store; each run takes `<state directory>/instruments.lock` through `try_exclusive` before it reads (R8) |
 | `crates/coordination/src/sync_cycle.rs` | `deck-streak-coordination` | changed: the instruments step after the recompute |
 | `crates/daemon/src/wiring.rs` | `deck-streak-daemon` | changed: loads `DECKSTREAK_CONVENTIONS_FILE` once at start and refuses start on a malformed file or a forbidden direction label (R1, R2, A3); joins the instruments step to the sync cycle after the recompute (R7); builds the on-demand run over the private copy's reader in scope, the offload and the conventions, for the api and the bot, which cannot name ingest, as OwnerSyncCycle answers /sync (R8) |
 | `crates/coordination/src/data_rights.rs` | `deck-streak-coordination` | changed: the port exports and erases `instrument_reports` |
@@ -282,7 +277,7 @@ when it merges.
 - **The presence read holds the collection's notes.** Detected by A6, whose fixture counts the notes
   held per batch, and by the memory watch.
 - **A decode failure calls every field dark.** Detected by A9's unparseable case.
-- **Two runs at once in one process double the memory.** Detected by A15; a run in another role process is bounded by that process's own guard and the memory watch.
+- **Two runs at once on the host double the memory.** Prevented by the instrument lock (R8) and detected by A15, in one process or across two, and by the memory watch.
 - **An owner's note-type name reaches a golden or an example.** Prevented by the synthetic adapters
   and the neutral example file, and detected by the public scrub.
 
@@ -317,3 +312,4 @@ predecessor at `27ee2bc` (SPEC-029). Every case is synthetic.
 | `S09406-WEEKLY-SEVEN` | `crates/coordination/src/instruments.rs` | a weekly instrument's 7 study days | `instruments_step::a_weekly_instrument_runs_once_in_seven_study_days` |
 | `S09407-FORBIDDEN-TOKENS` | `crates/kernel/src/conventions.rs` | the three forbidden direction tokens | `conventions::a_forbidden_direction_label_refuses_start` |
 | `S09408-ONE-ROW-PER-INSTRUMENT` | `migrations/009401_coordination_instrument_reports.sql` | the key on `instrument_reports (instrument)` (a script row; the cargo killer) | `instrument_reports::a_report_replaces_its_instruments_previous_one` |
+| `S09409-INSTRUMENT-LOCK-NO-WAIT` | `crates/ingest/src/lock.rs` | the instrument lock's take never waits: the mutant makes it wait for the holder or always succeed | `instruments_step::a_run_while_one_runs_starts_nothing` |

@@ -52,7 +52,7 @@
     most 100,000 manual rows and naming a truncation; a bulk act is a run of such rows with gaps
     under 60 seconds.
 - **Corrections to the issues.**
-  - #151 attributes rows to the service's skip days by their moved cards, and so does this census: DeckStreak's skip day writes one type-4 review-log row per card it moves (SPEC-083 R18, ADR-089), so a manual row belongs to a skip day when its card is in that skip's snapshot and its id falls between that skip's creation and the next skip's (`provenance.py:build_skip_evidence`, ADR-097), and an undone skip's rows are named undone; every other manual row is the owner's edits or an earlier tool's.
+  - #151 attributes rows to the service's skip days by their moved cards, and so does this census: DeckStreak's skip day writes one type-4 review-log row per card it moves (SPEC-083 R18, ADR-089), so a manual row belongs to a skip day when its card is in that skip's snapshot and its id falls between that skip's creation and the next skip's (`provenance.py:build_skip_evidence`, ADR-097), and an undone skip's rows are named undone; a manual row whose card is in no snapshot is the owner's edits or an earlier tool's, and one whose card is in a snapshot but in no one window of a skip holding it is counted apart as unresolved (`compute_provenance`'s misattributed count).
   - #151 says the census is whole-collection. Here it covers the owner's scope (ADR-095), which is
     the whole collection when `DECKSTREAK_INCLUDE_DECKS` is unset; the report states which, and
     over which window.
@@ -105,7 +105,7 @@ R7. `crates/ingest/src/review_reads.rs` reads the provenance counts: all rows an
     the window's floor, the manual rows' ids and cards up to 100,000, and the cards whose first row
     is manual, keeping the scope, equal to `goldens/provenance_counts.json`
     (`anki_reader.py:read_due_date_provenance` over a synthetic collection).
-R8. The census equals `goldens/provenance_report.json` (`provenance.py:compute_provenance`) with an empty skip ledger, and equals `goldens/provenance_report_skips.json` over a synthetic ledger of two skips, one undone, read from ingest's `skip_days` and its card snapshot (SPEC-083 R1, ADR-097). The report states the rows it attributes to DeckStreak's skip days, whether
+R8. The census equals `goldens/provenance_report.json` (`provenance.py:compute_provenance`) with an empty skip ledger, and equals `goldens/provenance_report_skips.json` over a synthetic ledger of two skips, one undone, read from ingest's `skip_days` and its card snapshot (SPEC-083 R1 and R22, ADR-097). The report states the rows it attributes to DeckStreak's skip days and the rows it cannot resolve, whether
     it covers the whole collection or the owner's scope, and its window; its constants (100,000 and
     60,000 ms) equal `goldens/provenance.constants.json`.
 
@@ -130,7 +130,7 @@ R10. The insights screen shows each report as a section: Dead Air's attention sh
 | A4 | Dead Air's report equals the golden | `the_dead_air_report_matches_the_predecessors_golden` |
 | A5 | Dead Air's constants equal the predecessor's | `the_dead_air_constants_equal_the_predecessors` |
 | A6 | the fluency audit equals the golden | `the_fluency_audit_matches_the_predecessors_golden` |
-| A7 | the audit reads inflates, protects and no effect on synthetic data | `the_audit_reads_inflates_protects_and_no_effect` |
+| A7 | the audit reads inflates, protects, no effect and insufficient data on synthetic data | `the_audit_reads_every_verdict_on_synthetic_data` |
 | A8 | the fluency constants equal the predecessor's | `the_fluency_constants_equal_the_predecessors` |
 | A9 | the tilt pairs over a synthetic collection equal the predecessor's reader | `the_tilt_pairs_match_the_predecessors_reader` |
 | A10 | the tilt report equals the golden | `the_tilt_report_matches_the_predecessors_golden` |
@@ -146,6 +146,8 @@ R10. The insights screen shows each report as a section: Dead Air's attention sh
 | A20 | a Dead Air refusal renders its reason | `renders each refusal with its reason` |
 | A21 | the Fluency Trap renders its deck rows and verdict | `renders the verdict and the deck rows` |
 | A22 | the census over a ledger of two skips, one undone, equals the golden | `the_provenance_census_with_skips_matches_the_predecessors_golden` |
+| A23 | the skip ledger's read returns every skip, an undone one included, with its creation and its snapshot's cards | `the_skip_ledger_read_returns_every_skip_with_its_snapshot` |
+| A24 | the Fluency Trap reads the scoped reviews and cards of the last 180 days and Dead Air the events of the last 30, each through SPEC-023's read at its own floor | `each_instrument_reads_at_its_own_floor` |
 
 ```acceptance
 A1: cargo test -p deck-streak-kernel --test pynum_statistics -- --exact shuffle_and_erfc_match_cpythons_golden
@@ -154,7 +156,7 @@ A3: cargo test -p deck-streak-insights --test dead_air -- --exact the_dead_air_g
 A4: cargo test -p deck-streak-insights --test dead_air -- --exact the_dead_air_report_matches_the_predecessors_golden
 A5: cargo test -p deck-streak-insights --test dead_air -- --exact the_dead_air_constants_equal_the_predecessors
 A6: cargo test -p deck-streak-insights --test fluency -- --exact the_fluency_audit_matches_the_predecessors_golden
-A7: cargo test -p deck-streak-insights --test fluency -- --exact the_audit_reads_inflates_protects_and_no_effect
+A7: cargo test -p deck-streak-insights --test fluency -- --exact the_audit_reads_every_verdict_on_synthetic_data
 A8: cargo test -p deck-streak-insights --test fluency -- --exact the_fluency_constants_equal_the_predecessors
 A9: cargo test -p deck-streak-ingest --test study_reads -- --exact the_tilt_pairs_match_the_predecessors_reader
 A10: cargo test -p deck-streak-insights --test tilt -- --exact the_tilt_report_matches_the_predecessors_golden
@@ -170,6 +172,8 @@ A19: pnpm exec vitest run web/app/src/lib/insights/TiltSection.test.ts -t "reads
 A20: pnpm exec vitest run web/app/src/lib/insights/DeadAirSection.test.ts -t "renders each refusal with its reason"
 A21: pnpm exec vitest run web/app/src/lib/insights/FluencySection.test.ts -t "renders the verdict and the deck rows"
 A22: cargo test -p deck-streak-insights --test other_hand -- --exact the_provenance_census_with_skips_matches_the_predecessors_golden
+A23: cargo test -p deck-streak-ingest --test study_reads -- --exact the_skip_ledger_read_returns_every_skip_with_its_snapshot
+A24: cargo test -p deck-streak-coordination --test dead_air_step -- --exact each_instrument_reads_at_its_own_floor
 ```
 
 ## 3a. What the box run judges
@@ -191,7 +195,8 @@ delivery, so the private wiring does not change when it merges.
 | `crates/kernel/src/pynum.rs` | `deck-streak-kernel` | changed: `shuffle` and `erfc` (ADR-090) |
 | `crates/kernel/tests/pynum_statistics.rs` | `deck-streak-kernel` | added: A1 |
 | `crates/ingest/src/review_reads.rs` | `deck-streak-ingest` | changed: the tilt pairs and the provenance counts |
-| `crates/ingest/tests/study_reads.rs` | `deck-streak-ingest` | added: A9, A13 |
+| `crates/ingest/src/skip.rs` | `deck-streak-ingest` | changed: the skip ledger's read for the census: every skip's id, study day, creation, moved count and undone flag, with its snapshot's card ids, in id order (R8) |
+| `crates/ingest/tests/study_reads.rs` | `deck-streak-ingest` | added: A9, A13, A23 |
 | `crates/insights/src/dead_air.rs` | `deck-streak-insights` | added: Dead Air |
 | `crates/insights/src/fluency.rs` | `deck-streak-insights` | added: the Fluency Trap |
 | `crates/insights/src/tilt.rs` | `deck-streak-insights` | added: the Tilt Test |
@@ -202,8 +207,8 @@ delivery, so the private wiring does not change when it merges.
 | `crates/insights/tests/fluency.rs` | `deck-streak-insights` | added: A6 to A8 |
 | `crates/insights/tests/tilt.rs` | `deck-streak-insights` | added: A10 to A12 |
 | `crates/insights/tests/other_hand.rs` | `deck-streak-insights` | added: A14, A15, A22 |
-| `crates/coordination/src/instruments.rs` | `deck-streak-coordination` | changed: the floors, the sessions' spans and the on-demand runs |
-| `crates/coordination/tests/dead_air_step.rs` | `deck-streak-coordination` | added: A2, A16 |
+| `crates/coordination/src/instruments.rs` | `deck-streak-coordination` | changed: the floors, the sessions' spans, the Other Hand's join of the skip ledger (R8) and the on-demand runs |
+| `crates/coordination/tests/dead_air_step.rs` | `deck-streak-coordination` | added: A2, A16, A24 |
 | `crates/bot/src/instrument_commands.rs` | `deck-streak-bot` | added: the three on-demand commands |
 | `crates/bot/src/commands.rs` | `deck-streak-bot` | changed: the commands join the table |
 | `crates/bot/tests/instrument_commands.rs` | `deck-streak-bot` | added: A17 |
@@ -270,7 +275,7 @@ predecessor at `27ee2bc` (SPEC-029). Every case is synthetic.
 | `tilt_report` | `tilt.py:build_tilt_report` | adapter | synthetic rows for each verdict, a failed read and both work caps |
 | `provenance_counts` | `anki_reader.py:read_due_date_provenance` | adapter | a temporary collection file with manual, reschedule and study rows, and a small cap |
 | `provenance_report` | `provenance.py:compute_provenance` | adapter | synthetic rows, deck names and an empty skip ledger, truncated and not |
-| `provenance_report_skips` | `provenance.py:compute_provenance`, `build_skip_evidence` | adapter | synthetic rows and a ledger of two skips, one undone, with card snapshots, rows inside and outside each window |
+| `provenance_report_skips` | `provenance.py:compute_provenance`, `build_skip_evidence` | adapter | synthetic rows and a ledger of two skips, one undone, with card snapshots, rows inside and outside each window, and rows whose card is in a snapshot but in no one window (the report carries the unresolved, misattributed count beside the attributed ones) |
 | `dead_air.constants`, `fluency.constants`, `tilt.constants`, `provenance.constants` | the modules' constants | constants | none |
 
 ## 8. Tables and the v9 import
@@ -285,8 +290,9 @@ imported (#61).
 | `S09701-GAP-SUBTRACTS-TIME` | `crates/insights/src/dead_air.rs` | the gap subtracts the answer's time | `dead_air::the_dead_air_gap_matches_the_predecessors_golden` |
 | `S09702-NEGATIVE-GAP-KEPT` | `crates/insights/src/dead_air.rs` | a negative gap is counted, never clamped | `dead_air::the_dead_air_report_matches_the_predecessors_golden` |
 | `S09703-SNAP-THRESHOLD` | `crates/insights/src/fluency.rs` | the smaller of 1500 ms and 0.35 of the median | `fluency::the_fluency_audit_matches_the_predecessors_golden` |
-| `S09704-LATER-DAY-FOLLOW-UP` | `crates/insights/src/fluency.rs` | a follow-up is on a later study day | `fluency::the_audit_reads_inflates_protects_and_no_effect` |
+| `S09704-LATER-DAY-FOLLOW-UP` | `crates/insights/src/fluency.rs` | a follow-up is on a later study day | `fluency::the_audit_reads_every_verdict_on_synthetic_data` |
 | `S09705-PAIRED-DELTA` | `crates/insights/src/tilt.rs` | the per-card delta is averaged, never pooled | `tilt::the_tilt_report_matches_the_predecessors_golden` |
 | `S09706-MIN-RESAMPLES` | `crates/insights/src/tilt.rs` | the resamples never fall below 200 | `tilt::the_tilt_constants_equal_the_predecessors` |
 | `S09707-ACT-GAP` | `crates/insights/src/other_hand.rs` | a bulk act splits at 60 seconds | `other_hand::the_provenance_census_matches_the_predecessors_golden` |
 | `S09708-TILT-LAG-BEFORE-FLOOR` | `crates/ingest/src/review_reads.rs` | the previous ease is lagged before the window's floor applies | `study_reads::the_tilt_pairs_match_the_predecessors_reader` |
+| `S09709-WINDOW-HALF-OPEN` | `crates/insights/src/other_hand.rs` | a skip's window is `created_at(S) <= r.id < created_at(next)`; the mutant makes either bound inclusive or exclusive the other way | `other_hand::the_provenance_census_with_skips_matches_the_predecessors_golden` |

@@ -17,7 +17,7 @@ flowchart TD
   cando --> step["the instruments step (SPEC-094)"]
   step --> cleared["mark the dealt hand's cards answered after the deal as cleared (SPEC-098)"]
   cleared --> due{"a weekly instrument whose report is absent or 7 study days old?"}
-  due -- "yes, the next in registry order" --> run["run it through the offload, one at a time"]
+  due -- "yes, the next in registry order" --> run["run it through the offload, one at a time on the host"]
   run --> store["replace its row in instrument_reports"]
   store --> due
   due -- "none left" --> done["the step ends"]
@@ -31,8 +31,8 @@ events. A failure of one instrument is stored as its report's failed read and ne
 
 ```mermaid
 flowchart LR
-  ask["a weekly turn, a route or a command"] --> busy{"is any instrument running?"}
-  busy -- "yes" --> refuse["answer that a run is in progress, start nothing"]
+  ask["a weekly turn, a route or a command"] --> busy{"does another run hold the host's instrument lock?"}
+  busy -- "yes" --> refuse["an on-demand request is answered that a run is in progress; a weekly turn leaves the instrument due; start nothing"]
   busy -- "no" --> reads["coordination gathers the reads: ingest, analytics rollups, curriculum"]
   reads --> build["insights builds the report, a pure function of its reads"]
   build --> write["one write: the report, its study day and schema version"]

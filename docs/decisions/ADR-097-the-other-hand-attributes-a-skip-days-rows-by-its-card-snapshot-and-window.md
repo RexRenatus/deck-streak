@@ -20,16 +20,15 @@ that skip's creation and the next skip's, and an undone skip is flagged.
 
 ## Decision Drivers
 
-- SPEC-083 R1 gives ingest the `skip_days` record and its card snapshot; insights depends on the
-  kernel and ingest (ADR-002), so the read is legal.
-- ADR-089 permits the reschedule write and nothing else into the owner's collection.
+- SPEC-083 R1 and R22 give ingest the `skip_days` record and its card snapshot (`skip_card_snapshot`); insights depends on the kernel and ingest (ADR-002).
+- ADR-089 permits only the reschedule and its exact inverse into the owner's collection.
 - The census exists to report the owner's behaviour on every day, skip days included.
 
 ## Considered Options (the alternatives it was chosen against)
 
 - A row is the skip day's when its card is in that skip's snapshot and its id falls between that skip's creation and the next skip's; an undone skip's rows are named undone — chosen: it reuses records that already exist and it separates the two authors of one row shape.
 - Every ease-0 type-4 row is DeckStreak's — rejected because the owner's own Set Due Date writes the same row shape, so it would attribute the owner's edits to the service.
-- A marker written into the collection with each row — rejected because ADR-089 permits the reschedule write only, and a marker is a second write to the owner's collection.
+- A marker written into the collection with each row — rejected because ADR-089 permits only the reschedule and its exact inverse, and a marker is a third kind of write to the owner's collection.
 - No attribution, the census counting every type-4 row as the owner's — rejected because it misreports the owner's behaviour on every skip day, which is what the Other Hand exists to measure.
 
 ## Decision Outcome
@@ -41,7 +40,7 @@ who authored a row.
   id lies between that skip's creation and the next skip's creation (the last skip's window is open
   at the end).
 - The rows of an undone skip are counted as that skip's and named undone.
-- Every other manual row is the owner's edits or an earlier tool's.
+- A manual row whose card is in no skip's snapshot is the owner's edits or an earlier tool's; a row whose card is in a snapshot but in no one window of a skip holding it is counted apart as unresolved, never as the owner's or the service's (`compute_provenance`'s misattributed count).
 - The report states the rows it attributes to DeckStreak's skip days and never claims a row outside
   a window.
 
@@ -65,5 +64,5 @@ SPEC-097 R8 and A22: the census over a synthetic ledger of two skips, one undone
 
 ## More Information
 
-SPEC-083 R1 and R18; ADR-089; ADR-002; SPEC-097, which builds the census; the predecessor function
+SPEC-083 R1, R18 and R22; ADR-089; ADR-002; SPEC-097, which builds the census; the predecessor function
 `build_skip_evidence`.
