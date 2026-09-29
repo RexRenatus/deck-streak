@@ -53,6 +53,7 @@ axum.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 # SPEC-072 A31: the composed router is driven in process, over a seeded collection copy.
+# SPEC-128 A11 plants one trigger in the job's own database so the recompute fails after the sync.
 sqlx.workspace = true
 tempfile.workspace = true
 tower = { workspace = true, features = ["util"] }

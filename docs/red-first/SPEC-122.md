@@ -27,3 +27,15 @@ Fix round 1. The acceptance lines of A2, A3 and A4 now select both tests their r
 `-k` patterns each (8239dab). The refusal assertions now pin the whole sentence the code forms,
 `<file> repeats the key '<key>' in one object`, instead of three fragments of it (f4cd866). That is
 a test-only tightening after green, not a new red and green pair, so the pairs above stand.
+
+Addendum, 2026-09-29 (issue #345, the amendment's A5 and A6). The tests of A5 and A6 were
+committed alone (3c9dfb6) against the unchanged verdict script; the whole file ran five tests,
+three red by assertion, two green (the well-formed controls, which are not red). The refusal in
+`plan` and in `load_records` (3af853b) turned them green.
+
+```red-first
+A5: red at 3c9dfb6: plan over a band file that repeats a key ended in an uncaught PopulationRefused traceback on stderr: 'Traceback' unexpectedly found
+A5: green at 3af853b
+A6: red at 3c9dfb6: a record fragment that repeats a key was read as its last value and the census exited 0: 0 != 1 : examined 0 record(s)
+A6: green at 3af853b
+```

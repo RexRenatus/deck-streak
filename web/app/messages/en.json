@@ -39,5 +39,9 @@
   "level_run_days": "{days} days on pace",
   "level_multiplier": "Multiplier x{value}",
   "level_one_miss": "After one missed day: x{value}",
-  "level_ascendant": "Ascendant day: today's XP earns a bonus"
+  "level_ascendant": "Ascendant day: today's XP earns a bonus",
+  "ladder_region": "Celebrations",
+  "ladder_opening": "Opening…",
+  "ladder_dice": "A dice roll",
+  "ladder_dismiss": "Dismiss"
 }

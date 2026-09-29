@@ -1,3 +1,4 @@
+import { FEED_PATH, parseFeed, type FeedItem } from './ladder/feed';
 import { parseLevel, type LevelView } from './level/level';
 import { parseScore, type ScoreToday } from './score/score';
 import { telegram } from './telegram.svelte';
@@ -45,6 +46,8 @@ export interface Api {
   score(): Promise<Answer<ScoreToday>>;
   /** The owner's level, today's XP and the consistency run (SPEC-072 R23). */
   level(): Promise<Answer<LevelView>>;
+  /** The owner's unseen in-app celebrations, each with its tier (SPEC-084 R10). */
+  feed(): Promise<Answer<FeedItem[]>>;
 }
 
 /** How opening a session ended: a session, a refusal only reopening the app can answer, or no answer. */
@@ -134,7 +137,8 @@ export function createApi(options: ApiOptions): Api {
   return {
     me: () => read('/api/me', parseMe),
     score: () => read('/api/score', parseScore),
-    level: () => read('/api/level', parseLevel)
+    level: () => read('/api/level', parseLevel),
+    feed: () => read(FEED_PATH, parseFeed)
   };
 }
 

@@ -543,13 +543,22 @@ const NOT_DELIVERIES: [&str; 91] = [
 /// The bot's own send, which takes no pass.
 const BOT_SEND: &str = "send_html";
 
+/// The bot's own edit of a message, which takes no pass: a call of it is a send, as the reveal's
+/// edit of its placeholder is (SPEC-084 R8).
+const BOT_EDIT: &str = "edit_html";
+
+/// The parity oracle's tooling, from the tree's root (SPEC-084 section 7): the goldens' generator
+/// and its registry of the predecessor's functions, whose recording stand-ins name the Bot API's
+/// methods. It runs in no deployment, so it ships nothing.
+const ORACLE: &str = "tools/parity-oracle";
+
 /// The bot's sources, where the Bot API is named: a send method only by its own named send.
 const BOT_SOURCES: &str = "crates/bot/src/";
 
 /// The bot's own ways to reach the owner's chat that take no pass, each with the file that defines
 /// it: every use of one is its definition there or at a named call site. Its send; its edit of a
-/// message, which no shipped source calls, so it has no named call site; and its command handler,
-/// which answers an update with a reply the router never decides.
+/// message, which only the port's reveal calls (SPEC-084 R8); and its command handler, which
+/// answers an update with a reply the router never decides.
 const GUARDED: [(&str, &str); 3] = [
     (BOT_SEND, "crates/bot/src/transport.rs"),
     ("edit_html", "crates/bot/src/transport.rs"),
@@ -664,7 +673,7 @@ const LEDGER_NAMES: [&str; 8] = [
 const ALERT_PATH: &str = "deploy/scripts/alert-telegram.sh";
 
 /// Every send, and where it is made: (file, function, send). The census finds each once.
-const NAMED_SENDS: [(&str, &str, &str); 10] = [
+const NAMED_SENDS: [(&str, &str, &str); 20] = [
     // The bot's command replies (#257): the erase prompt, every other reply, and the export.
     (
         "crates/bot/src/commands.rs",
@@ -683,6 +692,43 @@ const NAMED_SENDS: [(&str, &str, &str); 10] = [
         "OwnerChat::push_message",
         "send_html",
     ),
+    // The ladder's renders (SPEC-084 R8, R9): the reveal's placeholder and its edit, the dice, the
+    // reaction, the pinned message and its pin, and the line a reveal or a pin falls back to.
+    (
+        "crates/bot/src/transport.rs",
+        "OwnerChat::push_reveal",
+        "send_html",
+    ),
+    (
+        "crates/bot/src/transport.rs",
+        "OwnerChat::push_reveal",
+        "edit_html",
+    ),
+    (
+        "crates/bot/src/transport.rs",
+        "OwnerChat::push_dice",
+        "send_dice",
+    ),
+    (
+        "crates/bot/src/transport.rs",
+        "OwnerChat::push_reaction",
+        "set_message_reaction",
+    ),
+    (
+        "crates/bot/src/transport.rs",
+        "OwnerChat::push_pin",
+        "send_html",
+    ),
+    (
+        "crates/bot/src/transport.rs",
+        "OwnerChat::push_pin",
+        "pin_chat_message",
+    ),
+    (
+        "crates/bot/src/transport.rs",
+        "OwnerChat::line",
+        "send_html",
+    ),
     // The transport's own requests.
     (
         "crates/bot/src/transport.rs",
@@ -694,11 +740,27 @@ const NAMED_SENDS: [(&str, &str, &str); 10] = [
         "Transport::send_typing",
         "send_chat_action",
     ),
-    // The transport's edit of a message, which no shipped source calls.
+    // The transport's edit of a message, which the port's reveal calls.
     (
         "crates/bot/src/transport.rs",
         "Transport::edit_html",
         "edit_message_text",
+    ),
+    // The transport's dice, reaction and pin, which the port's ladder renders call.
+    (
+        "crates/bot/src/transport.rs",
+        "Transport::send_dice",
+        "send_dice",
+    ),
+    (
+        "crates/bot/src/transport.rs",
+        "Transport::set_message_reaction",
+        "set_message_reaction",
+    ),
+    (
+        "crates/bot/src/transport.rs",
+        "Transport::pin_chat_message",
+        "pin_chat_message",
     ),
     // The transport's answer to a callback, which the owner sees as the button's progress ending,
     // and its menu of commands, which the owner reads.
@@ -1173,8 +1235,10 @@ pub use crate::ledger::QUEUE_TABLE as HELD_TABLE;
 /// extension but a `#!` first line; and a drop-in of the bot's unit. The third review's kinds: a
 /// bash and a zsh script with no `#!` first line; a socket unit, a path unit and a mount unit; a
 /// service unit whose name reads as a test's; the Mini App's HTML shell with an inline script; and a
-/// `.cts` module.
-const WALKED: [(&str, &str); 12] = [
+/// `.cts` module. SPEC-084's: the parity oracle's registry, whose recording stand-in names the Bot
+/// API's dice, which the walker leaves out, and a script in a directory named as it is but under
+/// `deploy/`, which the walker reads.
+const WALKED: [(&str, &str); 14] = [
     (
         "crates/daemon/src/fixtures/celebrate.rs",
         AROUND_THE_PORT_IN_A_MODULE,
@@ -1232,6 +1296,21 @@ ExecStart=/usr/bin/curl -fsS "https://api.telegram.org/bot${BOT_TOKEN}/sendMessa
   </head>
   <body></body>
 </html>
+"#,
+    ),
+    (
+        "tools/parity-oracle/registry/spec_celebrate.py",
+        r#"# A recording stand-in of the predecessor's notifier: the goldens record what it was asked.
+class Recording:
+    async def send_dice(self, emoji):
+        self.calls.append(("send_dice", emoji))
+"#,
+    ),
+    (
+        "deploy/parity-oracle/registry/celebrate.py",
+        r#"# A celebration posted straight to the Bot API, around the router.
+import urllib.request
+urllib.request.urlopen("https://api.telegram.org/bot" + TOKEN + "/sendMessage")
 "#,
     ),
     (
@@ -1579,9 +1658,11 @@ fn sends(code: &str, structure: &str) -> Vec<(usize, String)> {
 }
 
 /// Each call of a send in `structure`, a definition aside, as the byte it starts at and the send:
-/// the bot's own, and the Bot API's in a client's spelling.
+/// the bot's own send and edit, and the Bot API's in a client's spelling.
 fn send_calls(structure: &str) -> Vec<(usize, String)> {
-    let sends = std::iter::once(BOT_SEND.to_owned()).chain(methods().map(snake));
+    let sends = [BOT_SEND.to_owned(), BOT_EDIT.to_owned()]
+        .into_iter()
+        .chain(methods().map(snake));
     let mut calls = Vec::new();
     for send in sends {
         for at in identifiers(structure, &send) {
@@ -1951,7 +2032,8 @@ fn shipped_sources(root: &Path) -> Vec<(String, String)> {
                 let left_out = !under_sources
                     && (SKIPPED_DIRECTORIES.contains(&name.as_str())
                         || TEST_DIRECTORIES.contains(&name.as_str()));
-                if !left_out {
+                let oracle = relative(root, &entry.path()).join("/") == ORACLE;
+                if !left_out && !oracle {
                     pending.push(entry.path());
                 }
             } else if kind.is_file()
@@ -2127,6 +2209,7 @@ fn no_delivery_goes_around_the_port() {
         paths,
         [
             "crates/daemon/src/fixtures/celebrate.rs",
+            "deploy/parity-oracle/registry/celebrate.py",
             "deploy/scripts/celebrate",
             "deploy/scripts/celebrate.bash",
             "deploy/scripts/celebrate.zsh",
@@ -2140,13 +2223,15 @@ fn no_delivery_goes_around_the_port() {
         ],
         "the walker reads every directory under src/, a script by its extension or its first line, \
          a unit of every type and a drop-in, the Mini App's HTML and a CommonJS TypeScript module, \
-         and no test directory outside src/"
+         and no test directory outside src/ and not the parity oracle's tooling"
     );
     assert_eq!(
         census(&walked).refused(),
         [
             "crates/daemon/src/fixtures/celebrate.rs:6: calls send_html in \
              celebrate_around_the_router, not a named call site",
+            "deploy/parity-oracle/registry/celebrate.py:3: names api.telegram.org",
+            "deploy/parity-oracle/registry/celebrate.py:3: names sendMessage",
             "deploy/scripts/celebrate:4: names api.telegram.org",
             "deploy/scripts/celebrate:4: names sendMessage",
             "deploy/scripts/celebrate.bash:2: names api.telegram.org",

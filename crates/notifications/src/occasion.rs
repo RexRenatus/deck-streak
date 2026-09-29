@@ -309,6 +309,21 @@ pub struct Occasion {
     text: String,
     study_day: StudyDay,
     lapse: LapseContext,
+    event: Option<String>,
+    rarity: Option<String>,
+    streak: Option<StreakFacts>,
+}
+
+/// The language streak's facts on a study day, which the streaks context supplies (SPEC-076) and
+/// the ladder reads for the streak-break cap (SPEC-084 R5). None arrive until SPEC-076 lands.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct StreakFacts {
+    /// The streak's last study day, if it has one.
+    pub last_study_day: Option<StudyDay>,
+    /// The streak's current length, in study days.
+    pub current: u32,
+    /// The streak's longest length, in study days.
+    pub longest: u32,
 }
 
 impl Occasion {
@@ -342,7 +357,46 @@ impl Occasion {
             text: text.into(),
             study_day,
             lapse,
+            event: None,
+            rarity: None,
+            streak: None,
         })
+    }
+
+    /// This celebration, naming the ladder's `event` and, for a chest, its `rarity` (SPEC-084 R1):
+    /// the router then derives the tier it asks for from them, not from the tier it was built with.
+    #[must_use]
+    pub fn with_event(mut self, event: impl Into<String>, rarity: Option<&str>) -> Self {
+        self.event = Some(event.into());
+        self.rarity = rarity
+            .filter(|rarity| !rarity.is_empty())
+            .map(str::to_owned);
+        self
+    }
+
+    /// This occasion, carrying the streak's facts on its study day (SPEC-084 R5).
+    #[must_use]
+    pub const fn with_streak(mut self, facts: StreakFacts) -> Self {
+        self.streak = Some(facts);
+        self
+    }
+
+    /// The ladder's event this celebration names, if any.
+    #[must_use]
+    pub fn event(&self) -> Option<&str> {
+        self.event.as_deref()
+    }
+
+    /// The chest's rarity this celebration names, if any.
+    #[must_use]
+    pub fn rarity(&self) -> Option<&str> {
+        self.rarity.as_deref()
+    }
+
+    /// The streak's facts this occasion carries, if any.
+    #[must_use]
+    pub const fn streak(&self) -> Option<&StreakFacts> {
+        self.streak.as_ref()
     }
 
     /// The kind.

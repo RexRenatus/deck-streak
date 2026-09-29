@@ -1,4 +1,8 @@
 {
   "$schema": "https://inlang.com/schema/inlang-message-format",
-  "tagline": "매일의 Anki 복습을 이어 가고 싶은 연속 기록으로 만드세요."
+  "tagline": "매일의 Anki 복습을 이어 가고 싶은 연속 기록으로 만드세요.",
+  "ladder_region": "축하",
+  "ladder_opening": "여는 중…",
+  "ladder_dice": "주사위 굴리기",
+  "ladder_dismiss": "닫기"
 }
