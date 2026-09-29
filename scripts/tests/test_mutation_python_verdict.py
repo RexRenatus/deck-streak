@@ -551,6 +551,24 @@ class TheVerdictReadsThePythonReports(unittest.TestCase):
         self.assertEqual(outside.returncode, 1)
         self.assertIn("lies outside the population", outside.stdout)
 
+    def test_a_rehearsal_promises_the_python_shards_it_ran(self):
+        fixture = changed_fixture(self)
+        reports = fixture.out / "rehearsal"
+        entry = file_entry(SCRIPT, SCRIPT_HEAD, {PLUS: "killed"}, slot=(0, 1))
+        write_shard(reports, 0, report_of([entry], shard="0/1"))
+        base = ("battery", "--reports", str(reports), "--shards", "0", "--package", "python")
+        for extra, code, line in examined(
+            "python shard promises",
+            [
+                (("--python-shards", "1"), 0, "battery: counted 1 of 1 reports whole"),
+                ((), 1, "battery: MISSING mutation-python-shard-1: no report.json"),
+                (("--python-shards", "2"), 1, "battery: MISSING mutation-python-shard-1"),
+            ],
+        ):
+            done = fixture.verdict(*base, *extra)
+            self.assertEqual(done.returncode, code, done.stdout + done.stderr)
+            self.assertIn(line, done.stdout, extra)
+
     def test_the_battery_the_table_and_the_survivors_read_the_python_reports(self):
         fixture = changed_fixture(self)
         plus = mutant_named(SCRIPT, SCRIPT_HEAD, PLUS)

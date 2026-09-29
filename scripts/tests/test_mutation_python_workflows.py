@@ -119,6 +119,19 @@ class TheWeeklyBatterySweepsThePython(unittest.TestCase):
         self.assertIn("python", workflow(WEEKLY).split("package:", 1)[1].split("\n", 2)[1])
 
 
+class TheRehearsalRunsOnePythonShard(unittest.TestCase):
+    def test_the_rehearsal_runs_one_python_file_and_the_battery_counts_that_shard(self):
+        rehearsal = jobs(workflow(WEEKLY)).get("rehearsal", "")
+        command = re.search(r"mutation_python\.py run [^\n]*", rehearsal)
+        self.assertIsNotNone(command, "the rehearsal runs no python runner")
+        for flag in examined(
+            "rehearsal runner flags",
+            ["--file scripts/audit-web-verdict.py", "--shard 0/1", "mutation-python-shard-0"],
+        ):
+            self.assertIn(flag, rehearsal, flag)
+        self.assertRegex(rehearsal, r"mutation-verdict\.py battery [^\n]*--python-shards 1\b")
+
+
 class TheDocumentsTeachThePythonRun(unittest.TestCase):
     def test_the_builder_brief_and_the_amendments_teach_the_python_run(self):
         brief, testing = text(BRIEF), text(TESTING)
