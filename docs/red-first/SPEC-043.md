@@ -179,3 +179,35 @@ A23: red at 89d84eddc0f7386339680fce6f1400d07d4c49f3: a conditional attribute wa
 A23: red at 4d11e2e6c80c343534643f7b85407009b3c23ce1: a conditional attribute was not refused: #[must_use] #[cfg(any())] (verdict.rs:220)
 A23: green at 9fdf9391f05e91e1ae1163ba1194c36b79dcf8fa
 ```
+
+## Round 3
+
+Two more classes were open. The prune pin's exception for quoted comments let a moved prune escape
+beside a quoted copy, and an escaped character literal desynced its scan. The verdict pin let a
+copy of the enum in a comment, or compiled out, lend its attributes beside a respelled live enum,
+and refused a raw `#[r#must_use]`. Each rule is one sentence, and each killer is generated from
+its rule's population.
+
+- Class rule, prune pin: every count reads the code with every comment removed, whatever the
+  comment holds; the run count takes only the literal handed to `sqlx::query!`; a character literal
+  is measured to its closing quote, escaped ones included. Populations, each printed and asserted
+  by its test: 21 copies of the statement that does not run beside 3 prunes that run elsewhere (63
+  members), 13 character literals, and the 16 comment forms.
+- Class rule, verdict pin: a declaration is the word `enum` followed, across whitespace and
+  comments, by `Verdict` with the raw prefix removed, on every line, and `must_use` is compared
+  after the raw prefix is removed. Population: 12 copies of the enum times 6 spellings of the live
+  one, 72 members.
+- The tests were committed alone first, against the head's helper bodies (the round's red tree is
+  the tests with `char_literal_len`, `code_of`, `statements_run_in`, `declarations_in` and
+  `is_must_use` as they stood at 229cf0c1), and the helpers followed in the green commit.
+  No assertion changed between the two.
+
+```text
+A21: red at 616bd997928bfc9cd990eb172feb788cf78f523e: a copy that does not run was read as the prune: // "DELETE FROM agent_runs WHERE created_at < ?1": [] (runs.rs:495)
+A21: red at 616bd997928bfc9cd990eb172feb788cf78f523e: a character literal hid a second statement: '\'': left [] right ["the source writes the word delete 2 times, not once"] (runs.rs:534)
+A21: red at 616bd997928bfc9cd990eb172feb788cf78f523e: prose was counted: // The "prune" is one delete, through the index on created_at.: left ["the source writes the word delete 2 times, not once"] right [] (runs.rs:377)
+A21: red at 616bd997928bfc9cd990eb172feb788cf78f523e: a benign delete word in a comment was counted: // The "prune" is one delete, through the index on created_at.: left ["the source writes the word delete 2 times, not once"] right [] (runs.rs:430)
+A21: green at 2ebc705c3b2679f421b300c9f5910668b2f604f9
+A23: red at 616bd997928bfc9cd990eb172feb788cf78f523e: #[r#must_use] #[derive(Clone)] pub enum Verdict {: ["#[derive(Clone)]", "#[r#must_use]"] (verdict.rs:357)
+A23: green at 2ebc705c3b2679f421b300c9f5910668b2f604f9
+```
