@@ -31,7 +31,7 @@ run, so that a new unparsable block is refused before merge without adding a job
   faults are three unrelated shapes and a static rule misses the next one; a reserved word passes a
   static check and fails to render.
 - Parsing under plain Node with no DOM: rejected, because the parser sanitises labels through the
-  document, and 100 blocks that are valid are refused without one.
+  document, and 153 of the 183 blocks, every one of them valid, are refused without one.
 
 ## Decision Outcome
 
