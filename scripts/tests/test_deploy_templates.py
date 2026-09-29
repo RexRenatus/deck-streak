@@ -96,13 +96,14 @@ OBSERVABILITY_SERVICE = {
         "IOSchedulingClass": "idle",
     },
 }
-# SPEC-064 R1: the Litestream daemon, a simple service that restarts on failure and can trip its
+# SPEC-064 R1: the Litestream daemon, an exec service that restarts on failure and can trip its
 # start limit; it has no watchdog, since Litestream does not notify systemd.
 LITESTREAM_SERVICE = {
-    "Type": "simple",
+    "Type": "exec",
     "Restart": "on-failure",
     "RestartSec": "15",
     "OOMPolicy": "kill",
+    "TimeoutStopSec": "30",
 }
 # The timers that start SPEC-031's units, each the service of its own name.
 OBSERVABILITY_TIMERS = {
@@ -256,6 +257,7 @@ WAIVED = {
     (f"{JOB_TEMPLATE}@liveness.timer", "calendar-not-persistent"),
     ("deck-streak-slo.timer", "calendar-not-persistent"),
     ("deck-streak-memory-watch.timer", "calendar-not-persistent"),
+    ("deck-streak-litestream.service", "watchdog-missing"),
 }
 
 

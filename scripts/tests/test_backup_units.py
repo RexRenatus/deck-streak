@@ -248,7 +248,7 @@ class BackupUnits(unittest.TestCase):
             exec_start[0],
             rf"^/\S*litestream replicate -config {re.escape(RELEASE_ROOT)}/deploy/litestream\.yml$",
         )
-        self.assertEqual(service_type(litestream), "simple")
+        self.assertEqual(service_type(litestream), "exec")
         self.assertEqual(litestream.last("Service", "Restart"), "on-failure")
         self.assertEqual(litestream.last("Service", "RestartSec"), "15")
         self.assertEqual(litestream.last("Unit", "StartLimitIntervalSec"), "300")
