@@ -276,10 +276,10 @@
       [
         "S03935-A-MISSING-PARSER-FAILS-CLOSED",
         "scripts/mutation_rows.py",
-        "        return f\"the mutant is unchecked: {parser} is not installed\"\n",
-        "        return None\n",
-        "a shell that is not installed leaves the mutant unchecked and VOID, never passed (SPEC-039 section 12, A41)",
-        "test_mutation_rows.TheRunnerParseChecksAShellMutant.test_a_missing_parser_leaves_the_mutant_unchecked_and_void"
+        "        done = run_tool(\n            [parser, \"-n\"],\n",
+        "        done = subprocess.run(\n            [parser, \"-n\"],\n",
+        "a shell that cannot be run is a refusal naming it, never a traceback and never a pass (SPEC-039 A46, superseding A41's VOID for a missing parser)",
+        "test_mutation_rows.TheRunnerParseChecksAShellMutant.test_a_missing_parser_is_a_refusal_naming_it"
       ],
       [
         "S03936-A-HUNG-PARSER-FAILS-CLOSED",
