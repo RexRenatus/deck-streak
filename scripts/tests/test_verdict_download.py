@@ -170,7 +170,8 @@ def mark_dollars(command):
     """The command with each `$` the shell reads as text replaced by LITERAL (in single quotes,
     or escaped by a backslash) and each `$` outside every quote preceded by UNQUOTED. `shlex`
     removes the quotes and the backslash, so this pass keeps the fact it would lose. The command
-    ends where the shell ends it: at a control operator or a comment outside every quote."""
+    ends where the shell ends it, at a control operator or a comment outside every quote, and the
+    reading ends at a redirection or a command substitution, whose words are not arguments."""
     out, quote, i, start = [], None, 0, True
     while i < len(command):
         char = command[i]
@@ -178,7 +179,7 @@ def mark_dollars(command):
             out.append(LITERAL if command[i + 1] == "$" else char + command[i + 1])
             i, start = i + 2, False
             continue
-        if quote is None and (char in ";&|" or (char == "#" and start)):
+        if quote is None and (char in ";&|()<>`" or (char == "#" and start)):
             break
         start = quote is None and char in " \t"
         if quote is None and char in "'\"":
