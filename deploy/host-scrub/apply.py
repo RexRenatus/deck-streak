@@ -66,7 +66,7 @@ from inventory import (
     parse_packages,
     read_health,
 )
-from plan import conflict, list_digest, measure, package_digest
+from plan import conflict, list_digest, measure, mounted, package_digest
 
 SCHEMA = "deck-streak-host-scrub-apply/1"
 #: Each directory on the way to an item is opened without following a symbolic link (R7).
@@ -194,6 +194,12 @@ def check_item(item: dict, protected: list[str], runner: Runner) -> tuple | None
     link = linked_ancestor(path)
     if link is not None:
         raise Refusal(f"is reached through the symbolic link {link}", item)
+    try:
+        point = mounted(path)
+    except OSError as error:
+        raise Refusal(f"the mount table cannot be read: {error}", item) from error
+    if point is not None:
+        raise Refusal(f"is or holds the mount point {point}", item)
     if not os.path.lexists(path):
         raise Refusal("is gone since the list was made", item)
     st = os.lstat(path)

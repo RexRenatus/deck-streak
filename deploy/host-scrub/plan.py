@@ -53,6 +53,8 @@ from inventory import (
 )
 
 SCHEMA = "deck-streak-host-scrub-list/1"
+#: The kernel's table of mounts, whose fifth field is a mount point.
+MOUNTINFO = "/proc/self/mountinfo"
 #: The order classes are listed in, which gives each item its id.
 ORDER = ("backup", "loose", "venv", "worktree", "package")
 #: A loaded unit's settings that name what it runs, and the directory it runs in.
@@ -87,11 +89,29 @@ def conflict(path: str, protected: list[str]) -> str | None:
 
 def read_mountinfo() -> str:
     """The kernel's table of mounts, through one seam so a test can fake it (R7)."""
-    return ""
+    return Path(MOUNTINFO).read_text(encoding="utf-8", errors="surrogateescape")
+
+
+def unescape(field: str) -> str:
+    """A mount table field with its octal escapes (`\\040` for a space) read as the bytes they
+    name."""
+    raw = re.sub(rb"\\([0-7]{3})", lambda m: bytes([int(m.group(1), 8) & 0xFF]), os.fsencode(field))
+    return os.fsdecode(raw)
 
 
 def mounted(path: str) -> str | None:
-    """The mount point `path` is or holds, or None."""
+    """The mount point `path` is or holds, or None. A bind mount shares its device with the tree
+    around it, so the device check cannot see it; the mount table can (R7). Raises OSError when the
+    table cannot be read, since an item is never judged clear of mounts without it."""
+    for row in read_mountinfo().splitlines():
+        fields = row.split()
+        if len(fields) < 5:
+            continue
+        point = unescape(fields[4])
+        if point == path:
+            return point
+        if point.startswith(path.rstrip("/") + "/"):
+            return point
     return None
 
 
@@ -226,6 +246,14 @@ def items_of(chosen: list[dict], skipped: list[dict]) -> list[dict]:
             item["inodes"] = []
         else:
             path = candidate["path"]
+            try:
+                point = mounted(path)
+            except OSError as error:
+                skipped.append({"path": path, "reason": f"the mount table cannot be read: {error}"})
+                continue
+            if point is not None:
+                skipped.append({"path": path, "reason": f"is or holds the mount point {point}"})
+                continue
             try:
                 digest, inodes = measure(path)
             except OSError as error:
