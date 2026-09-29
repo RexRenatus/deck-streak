@@ -279,3 +279,102 @@ apiKeyHelper scan's waiting entry is lifted; the JSON diff is handed back with t
 - **A mistyped route would silently turn the readings off.** An unknown value refuses start by name
   (R15), so only an unset route is `Absent`, and the surfaces then say readings are not enabled,
   never that something failed (ADR-054).
+
+## 7. Amendment, 2026-09-29: the gate refuses a missing input class, the verdict's must_use is pinned, and agent_runs is indexed for its prune
+
+Issues #362 and #363, both follow-ups of the review of this SPEC's build. Sections 1 to 6 stand as
+written; the two bullets of section 5 that name #362 and #363 record what the first delivery left
+out, and this amendment delivers them.
+
+**R11a. The gate refuses to be built unchecked.** `ProbeGate::new` returns a `Result` and takes one
+more argument, `reads_inputs`, which says whether the duty the gate serves reads untrusted inputs.
+It returns `GateBuildError::NoOutputClass` for an empty list of blocking output classes, and
+`GateBuildError::NoInputClass` when `reads_inputs` holds and no input class was given. A gate that
+names no blocking class would pass every output, and a gate with no input class for a duty that
+reads inputs would pass every input unchecked, so both refusals happen at construction, with a named
+error, and neither is a panic. A gate for a duty that reads no input still needs no input class.
+
+`reads_inputs` is the caller's statement, and nothing checks it against a duty: `DutySpec` has no
+such field, a `DutyEngine` holds one gate for every duty it runs, and `DutyEngine::decide` runs
+`check_input` on each run's memory and cards whatever the duty. A gate built with `reads_inputs =
+false` and no input class answers `Passed` for every input, so the gate a `DutyEngine` holds is
+always built with `reads_inputs = true`, as R11 requires of both daily-reading tasks, whose sources
+name `memory` and `cards` (R10); `false` is only for a gate that no engine hands untrusted input.
+Rejected: a `reads_inputs` field on `DutySpec`, because the engine's gate is built before any duty
+is known and serves them all, so a duty's field could not decide it; and refusing a missing input
+class always, because a gate for a duty with no untrusted input would then name a class it never
+runs.
+
+The constructor was a `const fn` and is one no longer: it drops its arguments on a refusal, which a
+`const fn` cannot do. Its callers today are this crate's own tests, each changed to build the gate
+with `reads_inputs` and to expect the `Result`. The daemon wires the gate in a later delivery (the
+agent's path is W2's, section 5); that wiring propagates the refusal, so a daemon that cannot build
+its gate refuses to start, loudly, and never falls back to a gate that passes.
+
+**R12a. The verdict's `#[must_use]` is pinned.** `Verdict` stays `#[must_use]`, and a test reads the
+attributes above `pub enum Verdict` in `crates/agent/src/verdict.rs` and asserts the attribute is
+there, beside a positive fact: the enum was found and its `derive` was read. The alternative
+rejected is a `compile_fail` doctest under `#![deny(unused_must_use)]`: it would observe the
+behaviour and not the text, but the mutation-row runner selects a killer as an integration-test
+target or a unittest id, so no row could name a doctest, and an attribute pinned by no row is the
+gap this issue reports.
+
+**R16a. `agent_runs` is indexed on `created_at`.** Migration `004302_agent_runs_created_at_index.sql`
+creates `agent_runs_by_created_at`, so the daily prune's `DELETE FROM agent_runs WHERE created_at <
+?1` seeks the old rows and never scans the table. It adds no table and no column, so the
+six-file rule of a new table does not apply, and it changes no query, so `.sqlx/` is unchanged.
+The premise of #363, that the other run tables carry an index on the column their prune reads, was
+measured and does not hold for any of them:
+
+| table | prune | the column's index |
+|---|---|---|
+| `cron_fires` | `DELETE FROM cron_fires WHERE fire_date < ?1` in `crates/coordination/src/maintenance.rs` | none: `fire_date` is the second column of the primary key `(job_id, fire_date)`, so the range cannot seek it |
+| `reading_runs` | none (only the erase deletes every row) | none needed |
+| `sync_runs` | none (only the erase deletes every row) | none needed |
+
+The index on `agent_runs` is wanted either way, since a daily range delete over an unindexed column
+scans the table. `cron_fires` has the same shape and is not changed here: it is another context's
+table, and it holds about a row per job per day.
+
+**Files.**
+
+| file | context | change |
+|---|---|---|
+| `crates/agent/src/gate.rs` | `deck-streak-agent` | changed: `GateBuildError`, and `ProbeGate::new` returns a `Result` |
+| `crates/agent/tests/gate.rs` | `deck-streak-agent` | changed: the callers, and the two refusals |
+| `crates/agent/tests/redteam.rs` | `deck-streak-agent` | changed: its gate is built with the new argument |
+| `crates/agent/tests/verdict.rs` | `deck-streak-agent` | added: the verdict's attribute pin |
+| `crates/agent/tests/runs.rs` | `deck-streak-agent` | added: the index exists and the prune uses it |
+| `migrations/004302_agent_runs_created_at_index.sql` | `deck-streak-agent` | added |
+| `scripts/mutation-rows.d/S04300-S04399.json` | repo | changed: rows S04323 to S04327 |
+| `docs/red-first/SPEC-043.md` | docs | changed: the amendment's red and green lines |
+| `changelog.d/fix-agent-gate-362.md` | docs | added |
+
+**Rows.** S04323 skips the empty-list refusal and S04324 skips the reads-inputs refusal (both in
+`gate.rs`, killed by `gate::an_empty_class_list_is_refused_at_construction` and
+`gate::a_duty_that_reads_inputs_needs_an_input_class`); S04325 removes `#[must_use]` from `Verdict`
+(killed by `verdict::the_verdict_type_is_must_use`); S04326 replaces the migration's `CREATE INDEX`
+with a no-op and S04327 moves the index to another column (killed by
+`runs::agent_runs_is_indexed_on_created_at` and
+`runs::the_prune_reads_agent_runs_through_the_created_at_index`).
+
+This amendment does not change any other requirement: #362 and #363 own what it delivers, and the
+gate's daemon wiring stays with the agent's W2 path (#162).
+
+## 8. Acceptance criteria of the 2026-09-29 amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A16 | building the gate with an empty list of blocking output classes is refused with `NoOutputClass`, and the same call with one class is built | `an_empty_class_list_is_refused_at_construction` |
+| A17 | building the gate without an input class for a duty that reads inputs is refused with `NoInputClass`, while a duty that reads none, and a duty with the class, are built | `a_duty_that_reads_inputs_needs_an_input_class` |
+| A18 | `pub enum Verdict` carries `#[must_use]`, read from its source beside its `derive` | `the_verdict_type_is_must_use` |
+| A19 | after the migrations, `agent_runs_by_created_at` exists on `agent_runs` and covers `created_at` alone | `agent_runs_is_indexed_on_created_at` |
+| A20 | the plan of the prune's exact statement names `agent_runs_by_created_at` and holds no table scan | `the_prune_reads_agent_runs_through_the_created_at_index` |
+
+```acceptance
+A16: cargo test -p deck-streak-agent --test gate -- --exact an_empty_class_list_is_refused_at_construction
+A17: cargo test -p deck-streak-agent --test gate -- --exact a_duty_that_reads_inputs_needs_an_input_class
+A18: cargo test -p deck-streak-agent --test verdict -- --exact the_verdict_type_is_must_use
+A19: cargo test -p deck-streak-agent --test runs -- --exact agent_runs_is_indexed_on_created_at
+A20: cargo test -p deck-streak-agent --test runs -- --exact the_prune_reads_agent_runs_through_the_created_at_index
+```

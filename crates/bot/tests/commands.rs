@@ -23,8 +23,8 @@ use deck_streak_bot::score_commands::{score_failed_reply, score_reply};
 use deck_streak_bot::{MiniAppUrl, Scores, Sent, SyncAnswer, SyncOutcome, SyncRefusal};
 use deck_streak_coordination::data_rights_registry::export_all;
 use deck_streak_coordination::score::{DayScore, Pillars};
-use deck_streak_kernel::Environment;
 use deck_streak_kernel::{Db, StudyDay};
+use deck_streak_kernel::{Environment, SettingsError};
 use fake_bot_api::{
     APP_URL, Bench, OWNER, STRANGER, ScriptedSync, golden_send, incoming, messages_directory,
     owner_says, owner_taps, payload, tap,
@@ -521,8 +521,12 @@ fn the_mini_app_url_is_https() {
     let unset = Environment::from_vars(Vec::<(String, String)>::new());
     assert!(MiniAppUrl::from_env(&unset).is_err(), "the bot requires it");
     let plain = Environment::from_vars([(MINI_APP_URL, "http://deckstreak.example/app")]);
-    assert!(
-        MiniAppUrl::from_env(&plain).is_err(),
-        "a web_app button opens only https"
+    // A web_app button opens only https, and the refusal names the whole shape, as written.
+    assert_eq!(
+        MiniAppUrl::from_env(&plain).map(|app| app.as_str().to_owned()),
+        Err(SettingsError::Malformed {
+            setting: MINI_APP_URL,
+            expected: "an https: URL that names a host",
+        })
     );
 }

@@ -21,7 +21,8 @@ use deck_streak_ingest::gate::{Anchor, Probe};
 use deck_streak_ingest::state::{RefusalReason, SqliteIngestState};
 use deck_streak_ingest::sync_runs::{ReasonCode, SqliteSyncRuns, SyncRun, SyncRunStore, Trigger};
 use deck_streak_kernel::{
-    Clock, Db, Environment, KernelError, ManualClock, StudyDay, StudyDayRule, UtcMillis,
+    Clock, Db, Environment, KernelError, ManualClock, SettingsError, StudyDay, StudyDayRule,
+    UtcMillis,
 };
 use deck_streak_notifications::{
     BotTransport, Decision, DedupeKey, Hold, LapseContext, Occasion, Pass, Policy, PushFuture,
@@ -439,6 +440,18 @@ fn the_request_file_is_the_setting_or_the_default() {
     assert!(
         request_path(&relative).is_err(),
         "a relative path is refused"
+    );
+}
+
+#[test]
+fn a_relative_request_path_is_refused_naming_its_whole_shape() {
+    let relative = Environment::from_vars([(REQUEST_PATH_ENV, "request")]);
+    assert_eq!(
+        request_path(&relative),
+        Err(SettingsError::Malformed {
+            setting: REQUEST_PATH_ENV,
+            expected: "an absolute file path",
+        })
     );
 }
 
