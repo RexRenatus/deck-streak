@@ -365,9 +365,11 @@ fn notifier_for(socket: Option<&str>) -> Notifier {
     Notifier::from_env(&env)
 }
 
+/// The datagram the socket holds. `send` has returned before a test reads, so a datagram that was
+/// sent is already queued; the bound is only how long a missing one takes to fail the test.
 fn read_datagram(socket: &UnixDatagram) -> String {
     socket
-        .set_read_timeout(Some(DEADLINE))
+        .set_read_timeout(Some(Duration::from_secs(5)))
         .expect("a read timeout");
     let mut buffer = [0_u8; 64];
     let length = socket.recv(&mut buffer).expect("a datagram");
