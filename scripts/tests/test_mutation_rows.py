@@ -816,5 +816,208 @@ class TheRunnerParseChecksAShellMutant(unittest.TestCase):
         self.assertEqual(runner.shell_parser("scripts/x.sh", b"select 1;\n"), "sh")
 
 
+BIN_MANIFEST = (
+    '[package]\nname = "fix"\nversion = "0.1.0"\nedition = "2021"\n\n'
+    '[[bin]]\nname = "fixbin"\npath = "src/main.rs"\n'
+)
+#: A crate with a library and one binary, the binary named other than the package, with a unit test
+#: in its root file and one in a module it declares; the library holds a test the binary does not.
+BIN_FILES = {
+    "crates/fix/Cargo.toml": BIN_MANIFEST,
+    "crates/fix/src/lib.rs": (
+        "pub fn double(x: i64) -> i64 {\n    x * 2\n}\n\n"
+        "#[cfg(test)]\nmod tests {\n    #[test]\n    fn only_in_the_lib() {\n"
+        "        assert_eq!(super::double(2), 4);\n    }\n}\n"
+    ),
+    "crates/fix/src/main.rs": (
+        "mod helper;\n\nfn triple(x: i64) -> i64 {\n    x * 3\n}\n\n"
+        'fn main() {\n    println!("{}", triple(2) + helper::halve(4));\n}\n\n'
+        "#[cfg(test)]\nmod tests {\n    #[test]\n    fn three_triples_to_nine() {\n"
+        "        assert_eq!(super::triple(3), 9);\n    }\n}\n"
+    ),
+    "crates/fix/src/helper.rs": (
+        "pub fn halve(x: i64) -> i64 {\n    x / 2\n}\n\n"
+        "#[cfg(test)]\nmod tests {\n    #[test]\n    fn four_halves_to_two() {\n"
+        "        assert_eq!(super::halve(4), 2);\n    }\n}\n"
+    ),
+}
+BIN_KILLER = "bin::tests::three_triples_to_nine"
+
+
+def bin_row(identifier, killer, find="x * 3", replace="x * 4", path="src/main.rs"):
+    return (
+        "MUTATIONS",
+        [identifier, "fix", path, find, replace, killer, DESCRIPTION],
+    )
+
+
+class TheBinKillerRunsTheBinarysOwnUnitTests(unittest.TestCase):
+    """SPEC-039 A42 to A44 (issue #352): a killer `bin::<test path>` names one unit test of the
+    crate's binary, resolved against the binary's own sources and run with `--bin`."""
+
+    def located(self, fixture, index=0):
+        runner = runner_module()
+        rows = runner.rows_of(runner.load_tree(fixture.root))
+        try:
+            return runner, rows[index], runner.locate_killer(fixture.root, rows[index])
+        except runner.KillerUnresolved as refusal:
+            self.fail(f"a bin killer is refused: {refusal}")
+
+    def test_a_bin_killer_runs_cargo_test_on_the_binary_by_its_exact_path(self):
+        fixture = Fixture(self, [bin_row("S00050-BIN", BIN_KILLER)], cargo=True, files=BIN_FILES)
+        runner, row, killer = self.located(fixture)
+        self.assertEqual((killer.package, killer.binary), ("fix", "fixbin"))
+        calls = []
+
+        def record(command, **kwargs):
+            calls.append((command, kwargs["cwd"]))
+            return subprocess.CompletedProcess(command, 0, "running 1 test\n", "")
+
+        # The killer runs in its own process group (#366) and the build through `subprocess.run`;
+        # both are recorded, so no real cargo runs and the order is the runner's own.
+        with (
+            mock.patch.object(runner.subprocess, "run", side_effect=record),
+            mock.patch.object(runner, "run_in_own_group", side_effect=record),
+        ):
+            run = runner.run_killer(fixture.root, killer, Path("."))
+            self.assertIsNone(runner.builds(fixture.root, row, killer, b"x"))
+        self.assertEqual((run.selected, run.passed), (1, True))
+        self.assertEqual(
+            calls[0][0],
+            ["cargo", "test", "--locked", "-p", "fix", "--bin", "fixbin"]
+            + ["--", "--exact", "tests::three_triples_to_nine"],
+        )
+        self.assertEqual(
+            calls[1][0],
+            ["cargo", "test", "--locked", "-p", "fix", "--bin", "fixbin", "--no-run"],
+        )
+        self.assertEqual(calls[0][1], fixture.root)
+
+    def test_a_bin_killers_binary_is_read_from_its_manifest_and_never_guessed(self):
+        fixture = Fixture(self, [bin_row("S00051-BIN", BIN_KILLER)], cargo=True, files=BIN_FILES)
+        self.assertEqual(self.located(fixture)[2].binary, "fixbin")
+        # No [[bin]] table: the binary is the package's own, named by the package.
+        plain = Fixture(
+            self,
+            [bin_row("S00052-BIN", BIN_KILLER)],
+            cargo=True,
+            files=dict(BIN_FILES, **{"crates/fix/Cargo.toml": BIN_MANIFEST.split("\n[[bin]]")[0]}),
+        )
+        self.assertEqual(self.located(plain)[2].binary, "fix")
+        # Two binaries: the killer names none of them, so it is refused, not guessed.
+        two = Fixture(
+            self,
+            [bin_row("S00053-BIN", BIN_KILLER)],
+            cargo=True,
+            files=dict(
+                BIN_FILES,
+                **{
+                    "crates/fix/Cargo.toml": BIN_MANIFEST
+                    + '\n[[bin]]\nname = "other"\npath = "src/other.rs"\n'
+                },
+            ),
+        )
+        runner = runner_module()
+        with self.assertRaisesRegex(runner.KillerUnresolved, "2 binaries"):
+            runner.locate_killer(two.root, runner.rows_of(runner.load_tree(two.root))[0])
+
+    def test_a_bin_killer_that_selects_no_test_is_void_and_never_killed(self):
+        rows = [
+            bin_row("S00054-BIN-KILLED", BIN_KILLER),
+            bin_row("S00055-BIN-NO-TEST", "bin::tests::no_such_test", replace="x * 5"),
+        ]
+        fixture = Fixture(self, rows, cargo=True, files=BIN_FILES)
+        before = (fixture.root / "crates/fix/src/main.rs").read_bytes()
+        done = fixture.run("prove", "--all", "--report", str(fixture.root / "report.json"))
+        self.assertEqual(done.returncode, 3, done.stdout + done.stderr)
+        self.assertEqual(
+            verdicts(done), {"S00054-BIN-KILLED": "KILLED", "S00055-BIN-NO-TEST": "VOID"}
+        )
+        self.assertIn("selected 0 tests, not one", done.stdout)
+        report = {entry["id"]: entry for entry in fixture.report()}
+        self.assertEqual(report["S00054-BIN-KILLED"]["mutant"], {"selected": 1, "passed": False})
+        # The plant that selects nothing never reached its mutant: only the control ran.
+        self.assertIsNone(report["S00055-BIN-NO-TEST"]["mutant"])
+        self.assertEqual((fixture.root / "crates/fix/src/main.rs").read_bytes(), before)
+
+    def test_a_bin_killer_outside_the_binarys_sources_is_refused_by_the_census(self):
+        rows = [
+            bin_row("S00056-BIN-ROOT", BIN_KILLER),
+            bin_row(
+                "S00057-BIN-MODULE",
+                "bin::helper::tests::four_halves_to_two",
+                find="x / 2",
+                replace="x / 3",
+                path="src/helper.rs",
+            ),
+            bin_row(
+                "S00058-BIN-LIB-TEST",
+                "bin::tests::only_in_the_lib",
+                find="x * 2",
+                replace="x * 5",
+                path="src/lib.rs",
+            ),
+        ]
+        fixture = Fixture(self, rows, cargo=True, files=BIN_FILES)
+        done = census(fixture.root)
+        self.assertEqual(done.returncode, 1, done.stdout + done.stderr)
+        self.assertIn(
+            "census: S00058-BIN-LIB-TEST: its killer bin::tests::only_in_the_lib names no test: "
+            "crates/fix/src/main.rs declares only_in_the_lib 0 times",
+            done.stdout,
+        )
+        # The two killers the binary holds, one in its root file and one in a module it declares,
+        # resolve: they are not named.
+        self.assertNotIn("S00056", done.stdout)
+        self.assertNotIn("S00057", done.stdout)
+        self.assertRegex(done.stdout, r"(?m)^examined 3 row")
+
+
+class TheBinKillerFollowsRustcAndRefusesAShadow(unittest.TestCase):
+    """The verifier's plants (v) and (vi) for SPEC-039 section 15: a binary's root named other than
+    `main.rs` declares its modules beside itself, as rustc reads a crate root; and a crate whose
+    `tests/bin.rs` the `bin` kind shadows is refused, never rerouted to the binary's own test."""
+
+    def test_a_module_beside_a_root_not_named_main_resolves(self):
+        manifest = BIN_MANIFEST.replace('path = "src/main.rs"', 'path = "src/other.rs"')
+        files = {
+            "crates/fix/Cargo.toml": manifest,
+            "crates/fix/src/other.rs": "mod helper;\n\nfn main() {}\n",
+            "crates/fix/src/helper.rs": BIN_FILES["crates/fix/src/helper.rs"],
+        }
+        rows = [
+            bin_row(
+                "S00059-BIN-OTHER-ROOT-MODULE",
+                "bin::helper::tests::four_halves_to_two",
+                find="x / 2",
+                replace="x / 3",
+                path="src/helper.rs",
+            )
+        ]
+        fixture = Fixture(self, rows, cargo=True, files=files)
+        done = census(fixture.root)
+        self.assertNotIn("S00059", done.stdout)
+        self.assertRegex(done.stdout, r"(?m)^examined 1 row")
+
+    def test_a_bin_killer_beside_a_tests_bin_rs_is_refused(self):
+        files = dict(
+            BIN_FILES,
+            **{
+                "crates/fix/tests/bin.rs": (
+                    "#[cfg(test)]\nmod tests {\n    #[test]\n    fn three_triples_to_nine() {\n"
+                    "        assert_eq!(9, 9);\n    }\n}\n"
+                )
+            },
+        )
+        fixture = Fixture(self, [bin_row("S00060-BIN-SHADOW", BIN_KILLER)], cargo=True, files=files)
+        done = census(fixture.root)
+        self.assertIn(
+            "census: S00060-BIN-SHADOW: its killer bin::tests::three_triples_to_nine crates/fix "
+            "has a test target bin, which the bin kind shadows",
+            done.stdout,
+        )
+        self.assertRegex(done.stdout, r"(?m)^examined 1 row")
+
+
 if __name__ == "__main__":
     unittest.main()
