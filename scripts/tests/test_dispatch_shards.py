@@ -1,4 +1,4 @@
-"""A package dispatch is sharded by its projected weight (SPEC-129 A1 to A5).
+"""A package dispatch is sharded by its projected weight (SPEC-129 A1 to A6).
 
 The sizing verb is run as the workflow runs it, on fixture listings written to a temporary
 directory; the workflow is read as text with the helpers `test_mutation_workflows.py` uses. The
@@ -20,6 +20,10 @@ from test_mutation_workflows import VERDICT, WEEKLY, WORKFLOWS, jobs, listed, sh
 WHOLE = 32
 COUNT = "${{ needs.size.outputs.shards }}"
 BOUNDS = "--timeout 300 --build-timeout 600"
+# A command is `cargo mutants` wherever it sits on its line, argument or none; the bounds are
+# matched whole, so a digit or a decimal appended to either value is not the gate's bound.
+COMMAND = re.compile(r"\bcargo\s+mutants\b[^\n]*")
+BOUNDED = re.compile(r"(?<![\w-])" + re.escape(BOUNDS) + r"(?![\w.])")
 
 
 def entries(package, count):
@@ -271,7 +275,8 @@ class EveryMutationCommandKeepsTheGatesBounds(unittest.TestCase):
         for path in sorted(WORKFLOWS.iterdir()):
             if path.suffix not in (".yml", ".yaml"):
                 continue
-            lines = re.findall(r"cargo mutants [^\n]*", workflow(path))
+            # A shell continuation is one command: join it before the command is read.
+            lines = COMMAND.findall(workflow(path).replace("\\\n", " "))
             if lines:
                 found[path.name] = lines
         for name in ("ci.yml", "mutation-weekly.yml"):
@@ -279,7 +284,7 @@ class EveryMutationCommandKeepsTheGatesBounds(unittest.TestCase):
             self.assertGreaterEqual(len(found[name]), 1, name)
         for name, lines in examined("workflow files", list(found.items())):
             for line in examined(f"{name} commands", lines):
-                self.assertIn(BOUNDS, line, f"{name}: {line}")
+                self.assertRegex(line, BOUNDED, f"{name}: {line}")
 
 
 if __name__ == "__main__":
