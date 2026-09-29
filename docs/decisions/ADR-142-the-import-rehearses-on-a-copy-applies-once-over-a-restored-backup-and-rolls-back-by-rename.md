@@ -53,8 +53,9 @@ to R13 hold it.
 
 ### Confirmation
 
-SPEC-142's dry-run, idempotency, backup-refusal and rollback criteria, and the runbook test that
-names no `cp`, `rsync` or `scp` of a database file.
+SPEC-142's dry-run, idempotency, backup-refusal and rollback criteria, and the runbook test (A25)
+that gates the apply on the final dry run's `IMPORT PLAN OK` and names no `cp`, `rsync` or `scp`
+of a database file.
 
 ## More Information
 

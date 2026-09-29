@@ -132,25 +132,29 @@ R12. `crates/daemon/src/role_import.rs` runs the role: `Role::Import(ImportComma
     exit codes are 0 (reconciled, applied, rolled back), 1 (refused, differs, or a fault after the
     apply) and the house `USAGE` 2 (arguments it does not take). No job, timer, route or command
     of the bot runs it: the import runs by hand, from the runbook, once.
-R13. The runbook `deploy/v9-import.md` gives the order, each step a command in a code block:
-    the dry run, as often as the owner likes before the go; then, after the owner's go (#164),
-    after the checklist's last move (SPEC-143) and after the predecessor stops (the private rail,
-    #41): the dry run of the final copy; DeckStreak's writers stopped (the API, the bot, the job
-    timers and the path unit; the Litestream daemon keeps running); the backup, `litestream restore
-    -config <DeckStreak's configuration> -o <backup> <database>` with `<backup>` a new file in the
-    database's own directory, and `PRAGMA integrity_check` on the restored file through Python's
-    standard library, read-only, as the restore drill does (SPEC-064 R5); the apply (a backup it
-    refuses as different, R6, is restored again after the daemon's next sync); the writers
-    started. A `## Rollback` section stops the Litestream daemon, runs R11, resets Litestream's
-    local tracking for the replaced file as its documentation directs for a replaced database, and
-    starts the daemon and the writers; it gives each of R11's refusals and its failure a reply: a
-    backup outside the directory is restored again into it, a taken `.failed-import` name is moved
-    by the owner to a name of their choosing, and a backup or a result that fails its check is
-    restored again from the replica at the point before the import, each followed by R11 again,
-    with the writers still stopped. It copies no database
-    file with `cp`, `rsync` or `scp`, and every step after the dry run names #164 as its gate. The
-    builder confirms each Litestream subcommand it names against the version the private rail
-    records (SPEC-064 R1), with Context7.
+R13. The runbook `deploy/v9-import.md` gives the order, each step a command in a code block: the dry
+    run, as often as the owner likes before the go; then, after the owner's go (#164), after the
+    checklist's last move (SPEC-143) and after the predecessor stops (the private rail, #41): the
+    dry run of the final copy, whose report must end `IMPORT PLAN OK` (on `IMPORT PLAN REFUSED: <n>`
+    the runbook stops there with the writers untouched, and resumes at this dry run after a fix,
+    since only the dry run proves that a second apply writes nothing); DeckStreak's writers stopped
+    (the API, the bot, the job timers and the path unit; the Litestream daemon keeps running); the
+    backup, `litestream restore -config <DeckStreak's configuration> -o <backup> <database>` with
+    `<backup>` a new file in the database's own directory, and `PRAGMA integrity_check` on the
+    restored file through Python's standard library, read-only, as the restore drill does (SPEC-064
+    R5); the apply (a backup it refuses as different, R6, is restored again after the daemon's next
+    sync; on `IMPORT REFUSED: <n>`, which wrote nothing, the writers are started and the runbook
+    resumes at the final dry run after a fix; exit code 1 after the commit, R8, keeps the writers
+    stopped for the owner's decision (#164), whose way back is `## Rollback`); on `IMPORT APPLIED`,
+    the writers started. A `## Rollback` section stops the Litestream daemon, runs R11, resets
+    Litestream's local tracking for the replaced file as its documentation directs for a replaced
+    database, and starts the daemon and the writers; it gives each of R11's refusals and its failure
+    a reply: a backup outside the directory is restored again into it, a taken `.failed-import` name
+    is moved by the owner to a name of their choosing, and a backup or a result that fails its check
+    is restored again from the replica at the point before the import, each followed by R11 again,
+    with the writers still stopped. It copies no database file with `cp`, `rsync` or `scp`, and
+    every step after the dry run names #164 as its gate. The builder confirms each Litestream
+    subcommand it names against the version the private rail records (SPEC-064 R1), with Context7.
 R14. `docs/CONTEXT-MAP.md`: the migration crate's line gives its built edges (kernel, ingest,
     analytics, progression, streaks, curriculum, economy, quests, habits, focus, discipline,
     markets, notifications, readings, vault and publishing: ingest's skipped days and publishing's
@@ -189,6 +193,7 @@ R15. CHARTER 10's eleven anti-goals bind this SPEC as one block; the ones it tou
 | A22 | a rollback whose backup is in another directory, and one whose `.failed-import` name is taken, are refused with exit code 1 and nothing renamed | `a_rollback_that_cannot_rename_in_place_is_refused` |
 | A23 | a copy holding Litestream's `_litestream_seq` and `_litestream_lock` beside the snapshot's tables is read, and one holding any other extra table is refused naming it | `a_copy_holding_litestreams_own_tables_is_read` |
 | A24 | a backup whose `_litestream_seq` row differs from the live file's, and nothing else, is accepted, and one differing in any other table is refused naming it | `a_backup_differing_only_in_litestreams_own_tables_is_accepted` |
+| A25 | the runbook's code blocks run the dry run before the apply, and its text gates the apply on the final dry run's `IMPORT PLAN OK`, gives `IMPORT PLAN REFUSED`, `IMPORT REFUSED`, the exit code 1 after the commit (the writers held for the owner's decision) and each of R11's refusals and its failure a reply, names #164 on every step after the dry run, and copies no database file with `cp`, `rsync` or `scp` | `test_the_v9_import_runbook_gates_each_step_on_its_outcome` |
 
 ```acceptance
 A1: cargo test -p deck-streak-migration --test source -- --exact a_copy_whose_digest_differs_is_refused
@@ -215,6 +220,7 @@ A21: cargo test -p deck-streak-daemon --test roles -- --exact only_the_name_impo
 A22: cargo test -p deck-streak-migration --test run -- --exact a_rollback_that_cannot_rename_in_place_is_refused
 A23: cargo test -p deck-streak-migration --test source -- --exact a_copy_holding_litestreams_own_tables_is_read
 A24: cargo test -p deck-streak-migration --test run -- --exact a_backup_differing_only_in_litestreams_own_tables_is_accepted
+A25: python3 -m unittest discover -s scripts/tests -p test_v9_import_runbook.py -k test_the_v9_import_runbook_gates_each_step_on_its_outcome
 ```
 
 ## 3a. What the box run judges
@@ -256,6 +262,7 @@ request.
 | `crates/notifications/Cargo.toml` | `deck-streak-notifications` | changed: serde_json's `float_roundtrip` for its golden reader, as every crate that reads the plan's goldens has it |
 | `data-migration.json` | repo | added: the plan (R3) |
 | `deploy/v9-import.md` | deploy | added: the runbook (R13) |
+| `scripts/tests/test_v9_import_runbook.py` | repo | added: A25 |
 | `tools/parity-oracle/migration/generate.py` | tools | changed: `--schema` writes the snapshot (R2) |
 | `docs/CONTEXT-MAP.md` | docs | changed: the migration and daemon lines (R14) |
 | `Cargo.lock` | workspace | changed |
