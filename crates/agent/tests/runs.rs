@@ -273,3 +273,51 @@ fn prose_that_names_the_delete_beside_the_prune_is_not_counted() {
         "a quoting comment was read as prose: {problems:?}"
     );
 }
+
+/// Every form a Rust comment takes, each wrapping `text`: line, outer doc, inner doc, block, outer
+/// doc block, inner doc block, a block nested in a block, and a block over several lines.
+fn every_comment_form(text: &str) -> Vec<String> {
+    vec![
+        format!("// {text}"),
+        format!("/// {text}"),
+        format!("//! {text}"),
+        format!("/* {text} */"),
+        format!("/** {text} */"),
+        format!("/*! {text} */"),
+        format!("/* /* {text} */ */"),
+        format!("/*\n {text}\n*/"),
+    ]
+}
+
+#[test]
+fn a_delete_word_in_any_comment_form_is_not_counted_but_the_statement_in_one_is() {
+    let good = a_good_prune_source();
+    let forms = every_comment_form("The delete reads created_at through its index.");
+    assert_eq!(forms.len(), 8, "the population changed");
+    for comment in &forms {
+        assert_eq!(
+            prune_pin_problems(&format!("{comment}\n{good}")),
+            Vec::<String>::new(),
+            "a benign delete word in a comment was counted: {comment}"
+        );
+    }
+    // The statement itself inside each form is a second delete statement, and only that.
+    for comment in every_comment_form(PRUNE) {
+        assert_eq!(
+            prune_pin_problems(&format!("{comment}\n{good}")),
+            ["the source holds 2 delete statements, not one"],
+            "a commented copy of the statement was not refused: {comment}"
+        );
+    }
+    // Comment markers inside a string or a character literal open no comment: a prune written
+    // after them on the same line is still read.
+    for opener in ["\"// \"", "\"/* \"", "'\"'", "r#\"//\"#"] {
+        let decoy = format!(
+            "let _ = {opener}; let done = sqlx::query!(\"DELETE FROM main.{TABLE} WHERE created_at + 0 < ?1\", cutoff);\n{good}"
+        );
+        assert!(
+            !prune_pin_problems(&decoy).is_empty(),
+            "a comment marker in a literal hid a prune: {opener}"
+        );
+    }
+}
