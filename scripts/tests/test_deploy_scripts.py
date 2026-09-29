@@ -16,6 +16,7 @@ import io
 import json
 import os
 import re
+import signal
 import subprocess
 import sys
 import tarfile
@@ -334,15 +335,24 @@ class World:
         self.publish(tag, marker)
 
     def run(self, script, *args, **env):
-        return subprocess.run(
+        """Run a script in a session of its own, so a timeout ends the script and its children."""
+        child = subprocess.Popen(
             ["bash", str(script), *args],
             cwd=self.tmp,
             env={**self.env, **env},
-            capture_output=True,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
             text=True,
-            check=False,
-            timeout=60,
+            start_new_session=True,
         )
+        try:
+            out, err = child.communicate(timeout=60)
+        except subprocess.TimeoutExpired:
+            os.killpg(child.pid, signal.SIGKILL)
+            child.communicate()
+            raise
+        return subprocess.CompletedProcess(child.args, child.returncode, out, err)
 
     def deploy(self, tag, **env):
         assert DEPLOY.is_file(), f"{DEPLOY.relative_to(REPO)} does not exist"
@@ -892,6 +902,108 @@ class TheCaddyInstall(Case):
 
     def test_a_removal_refused_at_the_adapt_check_with_no_candidate_still_says_so(self):
         self.refused_with_no_candidate("caddy-adapt-refuses")
+
+    REFUSED = "the Caddy configuration was refused"
+
+    def install_again(self, **extra):
+        return self.world.run(
+            DEPLOY, "caddy-install", "v1.0.0", **self.config(host="new.example.org", **extra)
+        )
+
+    def assert_install_undone(self, done, after, block_text):
+        """The refusal is printed and the previous block, Caddyfile and no copies are on disk."""
+        w = self.world
+        self.assertNotEqual(done.returncode, 0, "the install refuses")
+        self.assertIn(self.REFUSED, done.stderr, "the refusal is printed")
+        block = w.caddy_dir / "deck-streak.caddy"
+        self.assertTrue(block.is_file(), "the previous block is on disk")
+        self.assertEqual(block.read_text(), block_text, "the previous block is back")
+        self.assertEqual((w.caddy_dir / "Caddyfile").read_text(), after)
+        self.assertEqual(self.leftovers(), [], "no previous copy is left behind")
+
+    def install_refused_with_no_candidate(self, flag):
+        w = self.world
+        _original, after, block_text = self.installed()
+        (w.log / flag).write_text("x")
+        (w.log / "caddy-eats-candidate").write_text("x")
+        done = self.install_again()
+        self.assert_install_undone(done, after, block_text)
+        self.assertTrue(w.text("caddy.log"), "caddy ran, so the refusal came from a check")
+
+    def test_an_install_refused_at_validation_with_no_candidate_still_undoes(self):
+        self.install_refused_with_no_candidate("caddy-refuses")
+
+    def test_an_install_refused_at_the_adapt_check_with_no_candidate_still_undoes(self):
+        self.install_refused_with_no_candidate("caddy-adapt-refuses")
+
+    def test_an_install_whose_candidate_path_cannot_be_written_undoes_and_says_so(self):
+        w = self.world
+        _original, after, block_text = self.installed()
+        (w.caddy_dir / "deck-streak.candidate").mkdir()
+        done = self.install_again()
+        self.assert_install_undone(done, after, block_text)
+        self.assertTrue((w.caddy_dir / "deck-streak.candidate").is_dir(), "a directory is kept")
+
+    def test_an_install_whose_block_cannot_be_written_undoes_and_says_so(self):
+        w = self.world
+        _original, after, block_text = self.installed()
+        (w.caddy_dir / "deck-streak.caddy").chmod(0o444)
+        done = self.install_again()
+        self.assert_install_undone(done, after, block_text)
+
+    def test_an_install_whose_import_line_cannot_be_added_undoes_and_says_so(self):
+        w = self.world
+        caddyfile = w.caddy_dir / "Caddyfile"
+        original = "example.org {\n\trespond 200\n}\n"
+        caddyfile.write_text(original, encoding="utf-8")
+        caddyfile.chmod(0o444)
+        w.ship("v1.0.0")
+        done = w.run(DEPLOY, "caddy-install", "v1.0.0", **self.config())
+        self.assertNotEqual(done.returncode, 0, "the install refuses")
+        self.assertIn(self.REFUSED, done.stderr, "the refusal is printed")
+        self.assertEqual(caddyfile.read_text(), original, "the Caddyfile is as it was")
+        self.assertFalse((w.caddy_dir / "deck-streak.caddy").exists(), "the new block is removed")
+        self.assertEqual(
+            sorted(p.name for p in w.caddy_dir.iterdir()), ["Caddyfile"], "nothing else is left"
+        )
+
+    def test_a_removal_whose_candidate_is_a_link_to_the_caddyfile_refuses_before_writing(self):
+        w = self.world
+        _original, after, block_text = self.installed()
+        caddyfile = w.caddy_dir / "Caddyfile"
+        before = caddyfile.read_bytes()
+        candidate = w.caddy_dir / "deck-streak.candidate"
+        candidate.symlink_to(caddyfile)
+        done = w.run(ROLLBACK, "caddy-remove", **self.config())
+        self.assertNotEqual(done.returncode, 0, "a linked candidate refuses the removal")
+        self.assertIn(
+            "the candidate Caddyfile could not be written", done.stderr, "the write's message"
+        )
+        self.assertEqual(caddyfile.read_bytes(), before, "the live Caddyfile is byte for byte")
+        self.assertTrue(before, "the live Caddyfile is not empty")
+        self.assertFalse(caddyfile.is_symlink(), "the live Caddyfile is still a file")
+        self.assertEqual((w.caddy_dir / "deck-streak.caddy").read_text(), block_text)
+        self.assertEqual(caddyfile.read_text(), after)
+        reloads = [ln for ln in w.text("caddy.log").splitlines() if ln.startswith("caddy reload")]
+        self.assertEqual(len(reloads), 1, "only the install reloaded")
+
+    def test_a_removal_whose_candidate_is_a_dangling_link_refuses_before_writing(self):
+        w = self.world
+        _original, after, block_text = self.installed()
+        caddyfile = w.caddy_dir / "Caddyfile"
+        before = caddyfile.read_bytes()
+        target = w.caddy_dir / "nowhere"
+        (w.caddy_dir / "deck-streak.candidate").symlink_to(target)
+        done = w.run(ROLLBACK, "caddy-remove", **self.config())
+        self.assertNotEqual(done.returncode, 0, "a dangling link refuses the removal")
+        self.assertIn(
+            "the candidate Caddyfile could not be written", done.stderr, "the write's message"
+        )
+        self.assertEqual(caddyfile.read_bytes(), before, "the live Caddyfile is byte for byte")
+        self.assertFalse(caddyfile.is_symlink(), "the live Caddyfile is still a file")
+        self.assertFalse(target.exists(), "nothing was written through the link")
+        self.assertEqual((w.caddy_dir / "deck-streak.caddy").read_text(), block_text)
+        self.assertEqual(caddyfile.read_text(), after)
 
     def test_the_caddy_calls_name_the_caddyfile_adapter_for_the_candidate_copy(self):
         w = self.world
