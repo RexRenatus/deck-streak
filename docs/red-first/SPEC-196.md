@@ -40,3 +40,19 @@ A16: red at 95907c06: 0 != 1 : mutation: rust: crates/fix/src/lib.rs: 1 changed 
 A16: green at c30e673b
 A17: not red: the rehearsal's command, its file and its examined sum were already the ones before this SPEC; the criterion pins that they stay so
 ```
+
+## Measured on the runner
+
+- Probe (3b10e34e, run 36634258307): the scope was in force; cargo-mutants examined 6 without it (n0 = 6).
+- Green state (e258e28c, run 36639697316): the rehearsal ran inside the scope, the kernel stopped 0
+  processes at the cap, and `rehearsal: cargo-mutants examined 6` (n1 = 6, equal to n0).
+- Plant (131c2bdd, run 36640720516): the plant gave nine mutants, and exactly one never ended,
+  `replace > with >= in plant_chunks`. The leg's scope record read `in_force` true with one
+  kernel stop, and the leg's log read `stopped 1 process(es) at the cap`. The verdict held one
+  failure, `mutation-rust-shard-0: MEMORY-CAP crates/kernel/src/memory_cap_plant.rs:11:13: replace > with >= in plant_chunks: the memory cap stopped its tests; neither caught nor a timeout`,
+  no VOID, and `examined 8 by cargo-mutants` (nine less the one). Only `mutation-verdict` and the `ci`
+  aggregate were red at that sha; the plant was removed by the next commit.
+- Fixture change: the real status line and its summary repeat both carry the `(n/m)` counter
+  (`SIGKILL [ ...s] (58/58) <binary> <test>`). The A12 and A16 summary fixture had no counter, so
+  it follows the real line (63428d94). The verdict's reading accepted both shapes, so no verdict
+  code changed.

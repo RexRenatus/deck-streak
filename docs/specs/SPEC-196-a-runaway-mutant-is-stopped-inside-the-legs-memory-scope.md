@@ -4,8 +4,8 @@
 - **Decided by:** ADR-199 (this SPEC's own: a memory scope around the mutants step, a cap kill as a named failure, and what
   each was chosen against), SPEC-039 and ADR-057 (cargo-mutants in place, in shards, with the gate's bounds), SPEC-038 (the CI
   jobs; its schematic takes an insert-only amendment).
-- **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to `docs/specs/` with its tests
-  and `docs/red-first/SPEC-196.md` (ADR-016).
+- **Status:** delivered. It waited in `docs/specs/planned/` from its own commit until this delivery moved it to
+  `docs/specs/` with its tests and `docs/red-first/SPEC-196.md` (ADR-016).
 
 ## 1. The problem, measured
 
