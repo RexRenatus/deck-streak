@@ -42,10 +42,12 @@ R4. The expectation is stale, and fails the run, when its issue is closed (the r
     `closed_expectations` already applies to a pack's), or when its row does not read RED: green,
     void or absent from the scan's rows. A closed issue and a row that is not red are one stale
     expectation, never two.
-R5. The scan's own summary counts every red row, the expected ones included. The scan's line names
+R5. The runner compares the scan's red total with the expected count. The scan's line names
     how many rows are expected, in the words a pack's line uses, and its parseable shape is
     unchanged. The red total may not exceed the number of expected rows: a total beyond them
     fails the run, and a total within them, with no unexpected row, does not.
+    A scan that examined no settings document is VOID and fails the run whatever `expected_red`
+    names; its detail names the expectation's issues.
 R6. Nothing else changes: `pending` reads as SPEC-030 R13 states it, the helper's judgment, the
     packs' judgment and the private wiring's schema name.
 
@@ -55,7 +57,7 @@ R6. Nothing else changes: `pending` reads as SPEC-030 R13 states it, the helper'
 |---|---|---|
 | A1 | an expected red row passes, and the scan's line counts it as expected | `test_box_scan_expected.py` `an_expected_red_row_passes_and_the_line_counts_it` |
 | A2 | an unexpected red row beside an expected one still fails the run, by name | `test_box_scan_expected.py` `an_unexpected_red_row_beside_an_expected_one_still_fails` |
-| A3 | a red total beyond the rows the scan printed fails, and one that does not exceed the expected rows does not | `test_box_scan_expected.py` `a_red_total_beyond_the_expected_rows_fails` |
+| A3 | a red total beyond the expected rows fails, and one that does not exceed the expected rows does not | `test_box_scan_expected.py` `a_red_total_beyond_the_expected_rows_fails` |
 | A4 | an expected row that reads green, void or is absent is stale, and with no settings document examined the detail names the expectation's issues | `test_box_scan_expected.py` `an_expected_row_that_does_not_read_red_is_stale`, `an_expectation_with_no_settings_document_names_its_issues` |
 | A5 | an expectation whose issue is closed is stale, once, on a red row and on a green one | `test_box_scan_expected.py` `an_expectation_whose_issue_is_closed_is_stale` |
 | A6 | `expected_red` beside `pending` is refused | `test_box_scan_expected.py` `an_expected_red_beside_pending_is_refused` |
@@ -88,6 +90,7 @@ three planted scan rows the new module reads.
 | `scripts/mutation-rows.d/S12300-S12399.json` | repo | added: the scan's expectation invariants, as hand-proved rows (section 7) |
 | `docs/decisions/ADR-123-the-scan-carries-an-expected-red-as-a-packs-entry-does.md` | repo | added |
 | `docs/specs/SPEC-123-the-box-proxy-scan-admits-an-expected-red-that-names-an-open-issue.md` | repo | added |
+| `docs/decisions/ADR-030-the-box-pack-runner-uses-each-packs-own-verb.md` | repo | changed: one amendment line at its end (insert-only) |
 | `docs/specs/SPEC-030-repository-hygiene-and-wiring-honesty.md` | repo | changed: one dated amendment line at its end (insert-only) |
 | `docs/red-first/SPEC-123.md` | repo | added |
 | `changelog.d/fix-box-scan-expected-123.md` | repo | added |
@@ -116,13 +119,13 @@ three planted scan rows the new module reads.
 
 ## 7. Mutation rows
 
-`scripts/mutation-rows.d/S12300-S12399.json` holds eleven rows on `scripts/box-packs.sh`, each
+`scripts/mutation-rows.d/S12300-S12399.json` holds twelve rows on `scripts/box-packs.sh`, each
 proved killed by its full id and each naming one test as its killer:
 
 | row | the invariant it pins | killer |
 |---|---|---|
 | S12301 | an expected row is not unexpected | A1 |
-| S12302 | the red total is exact | A3 |
+| S12302 | the red total may not exceed the expected count | A3 |
 | S12303 | a row that does not read red is stale | A4 |
 | S12304 | a closed expectation is not counted twice | A5 |
 | S12305 | the scan's expected issue is read | A5 |
@@ -132,6 +135,7 @@ proved killed by its full id and each naming one test as its killer:
 | S12309 | the scan takes no other key | A8 |
 | S12310 | the scan takes a note | A8 |
 | S12311 | the helper takes no `expected_red` | A8 |
+| S12312 | a scan with no settings document and an expectation fails, whatever it names | A4 |
 
 ## References
 
