@@ -180,6 +180,60 @@
         "                continue;",
         "readings_generate::an_unavailable_route_ends_the_topic_with_no_retry",
         "an unavailable verdict ends the topic failed:agent_unavailable with no retry (SPEC-046 R7, A11)"
+      ],
+      [
+        "S04621-EVERY-UNTRUSTED-INPUT-IS-CHECKED-BEFORE-A-CALL",
+        "coordination",
+        "src/readings/generate.rs",
+        "    for untrusted in [NO_MEMORY, cards.as_str()] {",
+        "    for untrusted in [NO_MEMORY; 0] {",
+        "readings_generate::an_untrusted_input_is_checked_before_any_call",
+        "each untrusted input of a topic goes through the input check before any model call (SPEC-046 R6, SPEC-043 R11)"
+      ],
+      [
+        "S04622-A-FAILED-INPUT-CHECK-ENDS-THE-TOPIC-WITH-NO-CALL",
+        "coordination",
+        "src/readings/generate.rs",
+        "        if let GateOutcome::Failed { .. } = parts.gate.check_input(untrusted).await {",
+        "        if let GateOutcome::Passed = parts.gate.check_input(untrusted).await {",
+        "readings_generate::an_untrusted_input_is_checked_before_any_call",
+        "a failed input check fails the topic with no model call and no attempt (SPEC-046 R6)"
+      ],
+      [
+        "S04623-A-FINDING-QUOTING-THE-REJECTED-TEXT-IS-DROPPED",
+        "readings",
+        "src/repair.rs",
+        "        || quoted_spans(finding).any(|span| rejected.contains(span))",
+        "        || quoted_spans(finding).any(|span| span.is_empty())",
+        "repair::a_finding_quoting_a_span_of_the_rejected_text_is_dropped",
+        "a finding that quotes a span of the rejected text never reaches the repair (SPEC-046 R7)"
+      ],
+      [
+        "S04624-THE-NEW-WORDS-STAY-OUT-OF-THE-TRUSTED-INSTRUCTION",
+        "readings",
+        "src/form.rs",
+        "                    seed.new_words.len()",
+        "                    seed.new_words.join(\", \")",
+        "form::a_language_instruction_counts_the_new_words_and_never_names_one",
+        "the language instruction names the count of new words and never a word itself (SPEC-046 R1)"
+      ],
+      [
+        "S04625-AN-UNCLOSED-TAG-KEEPS-THE-REST-OF-THE-TEXT",
+        "readings",
+        "src/coverage.rs",
+        "        let Some(close) = rest[open..].find('>') else {\n            break;",
+        "        let Some(close) = rest[open..].find('>') else {\n            return out;",
+        "coverage::an_unclosed_tag_leaves_the_rest_of_the_text_as_it_is",
+        "a less-than sign with no greater-than after it ends the tag walk and the rest stays (SPEC-046 R6)"
+      ],
+      [
+        "S04626-A-READING-ID-IS-NOT-LONGER-THAN-32-HEX-DIGITS",
+        "readings",
+        "src/reading.rs",
+        "pub const ID_HEX_DIGITS: usize = 32;",
+        "pub const ID_HEX_DIGITS: usize = 33;",
+        "stored::a_reading_id_parses_only_as_thirty_two_lowercase_hex_digits",
+        "a stored reading's id parses at exactly 32 hex digits, so a longer id is refused (SPEC-046 R9, A16)"
       ]
     ]
   }
