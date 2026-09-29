@@ -91,6 +91,16 @@ fn rust_names(text: &str, needle: &str) -> bool {
     code_lines(text).iter().any(|line| line.contains(needle))
 }
 
+/// Whether Rust source text names the operation's path itself, not a longer name that begins with
+/// it (`settled_of_day`).
+fn names_the_operation(text: &str) -> bool {
+    code_lines(text).iter().any(|line| {
+        line.match_indices(OPERATION).any(|(at, _)| {
+            !line[at + OPERATION.len()..].starts_with(|c: char| c.is_alphanumeric() || c == '_')
+        })
+    })
+}
+
 /// Whether SQL text names the table outside a `--` comment.
 fn sql_names_the_table(text: &str) -> bool {
     text.lines()
@@ -110,7 +120,10 @@ fn tokens(text: &str) -> Vec<String> {
         if !word.is_empty() {
             found.push(std::mem::take(&mut word));
         }
-        if matches!(character, '{' | '}' | ',' | ';' | '*' | '(' | ')') {
+        if matches!(
+            character,
+            '{' | '}' | ',' | ';' | '*' | '(' | ')' | '=' | '<'
+        ) {
             found.push(character.to_string());
         }
     }
@@ -174,9 +187,34 @@ fn reexports(text: &str) -> Vec<Leaf> {
     let words = tokens(&code_lines(text).join(" "));
     let mut leaves = Vec::new();
     for (index, word) in words.iter().enumerate() {
-        let public = index > 0 && matches!(words[index - 1].as_str(), "pub" | ")");
+        let public = index > 0
+            && match words[index - 1].as_str() {
+                "pub" => true,
+                ")" => words[..index - 1]
+                    .iter()
+                    .rposition(|open| open == "(")
+                    .is_some_and(|open| open > 0 && words[open - 1] == "pub"),
+                _ => false,
+            };
         if word == "use" && public {
             use_tree(&words, &mut (index + 1), &[], &mut leaves);
+        }
+        // `pub type Alias<'a> = path::Original<'a>;` names the original as `Alias`.
+        if word == "type" && public {
+            let equals = words[index..].iter().position(|next| next == "=");
+            if let (Some(alias), Some(equals)) = (words.get(index + 1), equals) {
+                let path: Vec<String> = words[index + equals + 1..]
+                    .iter()
+                    .take_while(|next| !matches!(next.as_str(), "<" | ";"))
+                    .cloned()
+                    .collect();
+                if !path.is_empty() {
+                    leaves.push(Leaf {
+                        path,
+                        alias: Some(alias.clone()),
+                    });
+                }
+            }
         }
     }
     leaves
@@ -212,6 +250,24 @@ fn progression_aliases(root: &Path) -> BTreeMap<String, String> {
     }
 }
 
+/// The names a source reaches progression's crate by: its own, and every
+/// `deck_streak_progression as <name>` (a `use` or an `extern crate`) in any crate's `src`.
+fn crate_names(root: &Path) -> BTreeSet<String> {
+    let mut names = BTreeSet::from([PROGRESSION_CRATE.to_owned()]);
+    for member in fs::read_dir(root.join("crates")).expect("crates/ is readable") {
+        for source in files(&member.expect("a directory entry").path().join("src"), "rs") {
+            let text = fs::read_to_string(&source).expect("a readable source");
+            let words = tokens(&code_lines(&text).join(" "));
+            for window in words.windows(3) {
+                if window[0] == PROGRESSION_CRATE && window[1] == "as" {
+                    names.insert(window[2].clone());
+                }
+            }
+        }
+    }
+    names
+}
+
 /// The census of a tree at `root`.
 struct Census {
     sources: Vec<String>,
@@ -230,6 +286,7 @@ fn census(root: &Path) -> Census {
         refused: Vec::new(),
     };
     let aliases = progression_aliases(root);
+    let crate_names = crate_names(root);
     let mut members: Vec<PathBuf> = fs::read_dir(root.join("crates"))
         .expect("crates/ is readable")
         .map(|entry| entry.expect("a directory entry").path())
@@ -253,20 +310,24 @@ fn census(root: &Path) -> Census {
                         .push(format!("{name} names {TABLE}, and only {OWNER}'s code may"));
                 }
             }
-            let direct = rust_names(&text, OPERATION) || rust_names(&text, REQUEST);
+            let direct = names_the_operation(&text) || rust_names(&text, REQUEST);
             // A source that names progression's crate and one of progression's own renamings
             // reaches `settle` without spelling it.
             let words: BTreeSet<String> =
                 tokens(&code_lines(&text).join(" ")).into_iter().collect();
-            let through: Vec<(&String, &String)> =
-                if context != OWNER && !direct && words.contains(PROGRESSION_CRATE) {
-                    aliases
-                        .iter()
-                        .filter(|(alias, _)| words.contains(*alias))
-                        .collect()
-                } else {
-                    Vec::new()
-                };
+            let through: Vec<(&String, &String)> = if context != OWNER
+                && !direct
+                && crate_names
+                    .iter()
+                    .any(|crate_name| words.contains(crate_name))
+            {
+                aliases
+                    .iter()
+                    .filter(|(alias, _)| words.contains(*alias))
+                    .collect()
+            } else {
+                Vec::new()
+            };
             if context != OWNER && (direct || !through.is_empty()) {
                 census.calling.insert(name.clone());
                 if context != CALLER {
