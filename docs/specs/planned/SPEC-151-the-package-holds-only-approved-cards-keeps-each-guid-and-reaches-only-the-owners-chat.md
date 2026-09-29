@@ -135,10 +135,11 @@ R11. CHARTER 10's eleven anti-goals bind this SPEC as one block; the ones it tou
 | A10 | a stored card that fails the side checks is left out and counted, and the rest are built | `a_card_failing_the_checks_is_left_out_and_counted` |
 | A11 | the use case's log lines hold counts and outcome words, and no side, note name, path or GUID | `the_package_logs_counts_only` |
 | A12 | `coordination::vault_cards::package` is called only by the bot's `Commands::vault_pack`, and `PackageBuilder` only by the use case | `the_package_has_one_caller_chain` |
-| A13 | /vaultpack sends `vault-cards.apkg` into the command's chat with the counts caption, and replies with its own line for `not_configured`, `nothing_approved` and a failed build, sending nothing | `vaultpack_sends_the_package_to_the_owners_chat` |
+| A13 | /vaultpack sends `vault-cards.apkg` into the command's chat with a caption of the card count and the count left out within `MAX_CAPTION_UTF16`, and replies with its own line for `not_configured`, `nothing_approved` and a failed build, sending nothing | `vaultpack_sends_the_package_to_the_owners_chat` |
 | A14 | a package of exactly the limit is sent, one byte more is `package_too_large` with nothing sent, and `MAX_DOCUMENT_BYTES` is 50,000,000 | `a_package_over_the_limit_is_not_sent` |
 | A15 | the menu registered for the owner's chat holds /vaultpack | `the_menu_is_registered_for_the_owners_chat_only` |
 | A16 | /vaultpack from anyone but the owner is dropped: nothing is built and nothing is sent | `a_vaultpack_from_another_user_sends_nothing` |
+| A17 | the census names the package's reply, its caller and its document, and no send in the tree goes around the port | `no_delivery_goes_around_the_port` |
 
 ```acceptance
 A1: cargo test -p deck-streak-ingest --test package -- --exact the_package_imports_as_one_note_per_card_with_its_guid
@@ -157,6 +158,7 @@ A13: cargo test -p deck-streak-bot --test vault_pack_commands -- --exact vaultpa
 A14: cargo test -p deck-streak-bot --test vault_pack_commands -- --exact a_package_over_the_limit_is_not_sent
 A15: cargo test -p deck-streak-bot --test commands -- --exact the_menu_is_registered_for_the_owners_chat_only
 A16: cargo test -p deck-streak-bot --test vault_pack_commands -- --exact a_vaultpack_from_another_user_sends_nothing
+A17: cargo test -p deck-streak-notifications --test one_router -- --exact no_delivery_goes_around_the_port
 ```
 
 ## 3a. What the box run judges
@@ -191,7 +193,7 @@ when it merges.
 | `crates/bot/tests/commands.rs` | `deck-streak-bot` | changed: A15 holds the menu's new entry |
 | `crates/bot/tests/messages/help.msg.json`, `start.msg.json` | `deck-streak-bot` | changed: the command list gains /vaultpack |
 | `crates/bot/tests/messages/vault-pack-caption.msg.json`, `vault-pack-none.msg.json`, `vault-pack-not-configured.msg.json`, `vault-pack-too-large.msg.json`, `vault-pack-failed.msg.json` | `deck-streak-bot` | added |
-| `crates/notifications/tests/one_router.rs` | `deck-streak-notifications` | changed: the census names the reply, its caller and its document |
+| `crates/notifications/tests/one_router.rs` | `deck-streak-notifications` | changed: the census names the reply, its caller and its document (A17) |
 | `crates/daemon/src/role_bot.rs` | `deck-streak-daemon` | changed: the bot role builds the package use case over the engine and hands it to its commands at start |
 | `.env.example` | repo | changed: `DECKSTREAK_VAULT_CARD_DECK`, by name, unset |
 | `docs/CONTEXT-MAP.md` | docs | changed: the "Overloaded words" row for package |
@@ -207,8 +209,8 @@ when it merges.
 
 - It makes, stores and decides no candidate; SPEC-150 does (#65).
 - It builds no package on a schedule and pushes none: the owner asks with /vaultpack (#379).
-- It never writes the owner's collection or its copy, and never talks to the predecessor's Anki
-  sync; the owner imports the file (#65).
+- It never writes the owner's collection or its copy, and never delivers a card through a sync;
+  the owner imports the file (#65).
 - It carries no media, scheduling or deck options in the package (#65).
 - It offers no download from the Mini App; the document comes from the bot (#65).
 - It keeps no record of which packages were sent, so it adds no table (#65).

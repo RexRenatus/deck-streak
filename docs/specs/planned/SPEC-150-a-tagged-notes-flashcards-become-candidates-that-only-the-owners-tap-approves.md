@@ -98,8 +98,9 @@ R7. A card's outcome set is exactly {candidate, `answer_missing`, `key_missing`,
     than LF and TAB; `identity_shared` refuses every card of two notes with one identity (R8). A side
     is never cut: a front over 1,000 UTF-16 code units or a back over 2,500 is `side_too_long`
     (chosen: a card with its note's name and its buttons then fits one Telegram message of 4,096,
-    SPEC-026 R7, and a card is meant to be answered at a glance). Refusals are reported with the
-    note's file name and the reason's words, and a log line names only the reason and a count.
+    `MAX_TEXT_UTF16`, SPEC-026 R6, and a card is meant to be answered at a glance). Refusals are
+    reported with the note's file name and the reason's words, and a log line names only the reason
+    and a count.
 R8. A note's identity is `id:` and its frontmatter `id` when that is 1 to 128 of `A-Z`, `a-z`, `0-9`,
     `.`, `_` and `-`, and `path:` and its vault-relative path, with `/` between folders, otherwise.
 R9. A card's GUID is `vc1-` followed by the first 32 lowercase hex characters of the SHA-256 of
@@ -247,14 +248,16 @@ R24. CHARTER 10's eleven anti-goals bind this SPEC as one block; the ones it tou
 | A22 | the duplicate flag is `found` for another note's equal front, `none` otherwise, `unchecked` with no fronts, and a note carrying the candidate's own GUID is no duplicate | `the_duplicate_flag_ignores_the_cards_own_note` |
 | A23 | both tables are exported and erased, and an erase deletes no note | `the_vault_card_tables_are_exported_and_erased_and_no_note` |
 | A24 | the fronts are the in-scope notes' first fields with their GUIDs, tags removed, `<br>` a space and entities decoded, and an out-of-scope note is not read | `the_fronts_are_the_in_scope_first_fields` |
-| A25 | with the tag unset the scan is `not_configured` and reads no note | `an_unset_tag_reads_nothing` |
+| A25 | with the tag or the vault root unset the scan is `not_configured` and reads no note | `an_unset_tag_or_root_reads_nothing` |
 | A26 | with the copy unreadable the scan stores its cards and every new revision is `unchecked` | `an_unreadable_copy_leaves_the_flag_unchecked` |
 | A27 | the bot's and the API's decisions call `coordination::vault_cards::decide`, and nothing else in either crate writes a revision | `both_surfaces_decide_through_one_use_case` |
-| A28 | /vaultcards replies with the counts and the oldest pending card with its three buttons, each datum within 64 bytes, and each tap is answered and shows the next card | `vaultcards_shows_the_oldest_pending_card` |
+| A28 | /vaultcards replies with the counts, at most 10 refusals, the capped and unchecked lines when they hold, and the oldest pending card with its note's file name, its duplicate line when `found` and its three buttons, each datum within 64 bytes, or the none line; each tap is answered and shows the next card or the all-decided line | `vaultcards_shows_the_oldest_pending_card` |
 | A29 | a tap on a decided revision is answered with the already-decided line and changes nothing | `a_stale_tap_is_answered_already_decided` |
 | A30 | after Edit the next message in the form is the edit, a command cancels it, and a message out of the form is refused with the form | `edit_takes_the_next_message_in_the_form` |
 | A31 | the menu registered for the owner's chat holds /vaultcards | `the_menu_is_registered_for_the_owners_chat_only` |
 | A32 | the routes answer the owner and refuse any other session, a non-JSON or cross-site `POST` is refused, and 409, 404 and 422 answer `not_pending`, `unknown` and `refused` | `the_vault_card_routes_answer_only_the_owner` |
+| A33 | the scan's report counts read, tagged, new, pending, approved, withdrawn and absent cards, lists the refusals, and says whether the walk was capped and whether duplicates were checked | `the_scan_report_counts_each_field` |
+| A34 | the census names each vault-card reply and its caller as a command reply, and no send in the tree goes around the port | `no_delivery_goes_around_the_port` |
 
 ```acceptance
 A1: cargo test -p deck-streak-vault --test vault_card_parse -- --exact the_flashcards_section_yields_each_keyed_card
@@ -281,7 +284,7 @@ A21: cargo test -p deck-streak-vault --test vault_card_store -- --exact an_absen
 A22: cargo test -p deck-streak-vault --test vault_card_store -- --exact the_duplicate_flag_ignores_the_cards_own_note
 A23: cargo test -p deck-streak-vault --test vault_card_store -- --exact the_vault_card_tables_are_exported_and_erased_and_no_note
 A24: cargo test -p deck-streak-ingest --test fronts -- --exact the_fronts_are_the_in_scope_first_fields
-A25: cargo test -p deck-streak-coordination --test vault_cards -- --exact an_unset_tag_reads_nothing
+A25: cargo test -p deck-streak-coordination --test vault_cards -- --exact an_unset_tag_or_root_reads_nothing
 A26: cargo test -p deck-streak-coordination --test vault_cards -- --exact an_unreadable_copy_leaves_the_flag_unchecked
 A27: cargo test -p deck-streak-coordination --test vault_cards -- --exact both_surfaces_decide_through_one_use_case
 A28: cargo test -p deck-streak-bot --test vault_card_commands -- --exact vaultcards_shows_the_oldest_pending_card
@@ -289,6 +292,8 @@ A29: cargo test -p deck-streak-bot --test vault_card_commands -- --exact a_stale
 A30: cargo test -p deck-streak-bot --test vault_card_commands -- --exact edit_takes_the_next_message_in_the_form
 A31: cargo test -p deck-streak-bot --test commands -- --exact the_menu_is_registered_for_the_owners_chat_only
 A32: cargo test -p deck-streak-api --test vault_card_routes -- --exact the_vault_card_routes_answer_only_the_owner
+A33: cargo test -p deck-streak-coordination --test vault_cards -- --exact the_scan_report_counts_each_field
+A34: cargo test -p deck-streak-notifications --test one_router -- --exact no_delivery_goes_around_the_port
 ```
 
 ## 3a. What the box run judges
@@ -330,7 +335,7 @@ private wiring does not change when it merges.
 | `crates/coordination/src/lib.rs` | `deck-streak-coordination` | changed: the module |
 | `crates/coordination/src/data_rights_registry.rs` | `deck-streak-coordination` | changed: the two tables |
 | `crates/coordination/tests/data_rights_symmetry.rs` | `deck-streak-coordination` | changed: a seeded row in each table |
-| `crates/coordination/tests/vault_cards.rs` | `deck-streak-coordination` | added: A25 to A27 |
+| `crates/coordination/tests/vault_cards.rs` | `deck-streak-coordination` | added: A25 to A27 and A33 |
 | `crates/bot/src/vault_card_commands.rs` | `deck-streak-bot` | added: the buttons, the edit form's parse and the replies' text |
 | `crates/bot/src/commands.rs` | `deck-streak-bot` | changed: gains /vaultcards, the `va:`, `ve:` and `vr:` callbacks and the pending edit; `Commands` gains the vault and ingest settings |
 | `crates/bot/src/lib.rs` | `deck-streak-bot` | changed: the module |
@@ -338,7 +343,7 @@ private wiring does not change when it merges.
 | `crates/bot/tests/commands.rs` | `deck-streak-bot` | changed: A31 holds the menu's new entry |
 | `crates/bot/tests/messages/help.msg.json`, `start.msg.json` | `deck-streak-bot` | changed: the command list gains /vaultcards |
 | `crates/bot/tests/messages/vault-cards-summary.msg.json`, `vault-cards-card.msg.json`, `vault-cards-none.msg.json`, `vault-cards-not-configured.msg.json`, `vault-cards-decided.msg.json`, `vault-cards-edit-form.msg.json` | `deck-streak-bot` | added |
-| `crates/notifications/tests/one_router.rs` | `deck-streak-notifications` | changed: the census names the vault-card replies and their callers |
+| `crates/notifications/tests/one_router.rs` | `deck-streak-notifications` | changed: the census names the vault-card replies and their callers (A34) |
 | `crates/api/src/vault_card_routes.rs` | `deck-streak-api` | added: the five routes |
 | `crates/api/src/router.rs` | `deck-streak-api` | changed: the routes are mounted; `ApiState` gains the settings |
 | `crates/api/src/lib.rs` | `deck-streak-api` | changed: the module |
