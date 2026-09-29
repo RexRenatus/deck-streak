@@ -1,0 +1,26 @@
+{
+  "cases": [
+    {
+      "input": {
+        "broke_today": false
+      },
+      "output": 5
+    },
+    {
+      "input": {
+        "broke_today": true
+      },
+      "output": 1
+    }
+  ],
+  "function": "gamification.ladder.outcome_cap",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "function",
+  "registry": "tools/parity-oracle/registry/spec_084.py",
+  "registry_sha256": "ec4e63ab3770e92fbeff61c4be674c447f3454279f51daf13bd9d4a6d3234f29",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}
