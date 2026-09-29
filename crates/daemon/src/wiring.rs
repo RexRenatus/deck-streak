@@ -613,8 +613,17 @@ impl deck_streak_agent::MemoryPort for DrillGradesMemory {
         subject: &'a deck_streak_agent::Subject,
     ) -> deck_streak_kernel::PortFuture<'a, Vec<String>> {
         Box::pin(async move {
-            let _ = (&self.db, subject);
-            Ok(Vec::new())
+            let mut connection = self.db.reader().acquire().await?;
+            let grades = deck_streak_vault::drill_store::recent_grades(
+                &mut connection,
+                subject.as_str(),
+                DRILL_GRADES_LIMIT,
+            )
+            .await?;
+            Ok(grades
+                .into_iter()
+                .map(|grade| format!("{} xp {}", grade.drill_type, grade.xp))
+                .collect())
         })
     }
 }
