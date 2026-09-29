@@ -4,7 +4,8 @@ DeckStreak's systemd units and timers, its Caddy site block and its host budget 
 file here is a template: it holds neutral values that are valid as written, so the packs judge
 exactly the units that will run, and the private deploy rail replaces each neutral value with the
 deployment's own when it installs the templates (ADR-032, #41). Nothing in this repository installs
-a unit, reloads Caddy or touches a host; the first deploy is #42's.
+a unit, reloads Caddy or touches a host on its own: `deploy.sh` and `rollback.sh` do, from the
+maintainer's machine, only when run there (SPEC-062, below).
 
 ## The files
 
@@ -58,14 +59,15 @@ file, and no template carries a secret's value.
 |---|---|---|
 | `deck-streak-api.service` | `owner-user-id`, `telegram-bot-token` | the owner gate over Telegram's launch data (SPEC-024) |
 | `deck-streak-bot.service` | `owner-user-id`, `telegram-bot-token` | the transport and the owner gate (SPEC-026); the owner's `/sync` holds no login, it asks the sync job (SPEC-059) |
-| `deck-streak-job@.service` | `anki-sync-username`, `anki-sync-password` | the `sync` job's account (SPEC-022), which serves the owner's `/sync` too (SPEC-059); only that job reads it, and the rail's map answers it to the `sync` instance alone |
+| `deck-streak-job@.service` | none | the sync login is loaded by the sync job alone: its instance's drop-in in `systemd/` carries `anki-sync-username` and `anki-sync-password` (SPEC-022, SPEC-062 R14), and the rail's map answers them to that instance alone |
 | `deck-streak-alert@.service` | `owner-user-id`, `telegram-bot-token` | the page: the bot's token, and the owner's id, which is the owner's private chat (SPEC-031) |
 
 systemd names the unit in the address it binds for each credential, so a job's credentials reach
 the socket under the job instance's name. The rail's map names the template, and an instance
 matches its template's row; a row is never a pattern over unit names (SPEC-061 R4). The sync
-login's rows name the `sync` instance instead, the one job that reads it: the other job instances
-still ask for it at every start, and the socket answers them nothing (SPEC-061 §8).
+login's rows name the `sync` instance instead, the one job that reads it, and the sync login is
+loaded by the sync job alone: the job template requests no credential, and the `sync` instance's
+drop-in under `systemd/` carries the two `LoadCredential=` lines (SPEC-061 §8, SPEC-062 R14).
 
 ## The rail's contract
 
@@ -157,6 +159,36 @@ carries HSTS, `nosniff`, the page's `same-origin` referrer policy, `X-Robots-Tag
 Content-Security-Policy of `frame-ancestors https://web.telegram.org; object-src 'none'; base-uri
 'self'`, and Caddy's `Server` header is removed. The script sources are the page's own meta policy,
 with its build's hashes (SPEC-028), so the header sets none.
+
+## Deploying a release
+
+`deploy/deploy.sh vX.Y.Z` and `deploy/rollback.sh vX.Y.Z` run on the maintainer's machine and reach
+the host only through the host command they are given (SPEC-062; ADR-062). They are configured by
+environment variables: `DECKSTREAK_DEPLOY_REPO` (the repository whose release is installed) and
+`DECKSTREAK_DEPLOY_HOST` (a command that runs its argv on the host as given: the private rail's host command) are the
+two a maintainer sets; `DECKSTREAK_DEPLOY_ELEVATE` (default `sudo`), `_CHECKOUT`, `_ROOT`,
+`_UNIT_DIR`, `_ENV_FILE`, `_CADDY_DIR`, `_CADDYFILE`, `_READY_SECONDS`, `_READY_POLL` and `_KEEP`
+default to the host layout the templates assume, and a test points them at a temporary tree.
+
+Before the host is touched, the tag must be SemVer, annotated, and its commit an ancestor of
+`origin/main` after a fetch; the tarball's build attestation must verify against this repository's
+release workflow; and the tarball's digest must match a line of `SHA256SUMS` that names it. Any
+failure stops the deploy with the host untouched. On the host the tarball is unpacked as
+`releases/<tag>.partial`, checked against its `MANIFEST.sha256`, renamed to `releases/<tag>`, and
+`current` is replaced by one `mv -T` of a link built beside it. The units are installed byte for
+byte (a drop-in the release no longer ships is removed; the rail's own `10-rail.conf` is left),
+systemd is reloaded, `effective-check.py` judges every unit, and the API then the bot restart. The
+API must answer `/api/readyz` on its loopback listener within the bound. When a unit does not
+become ready, `current` goes back to the release it replaced, that release's units are reinstalled,
+the units restart and the deploy exits non-zero naming the unit. The host keeps the current release
+and the two before it, and prunes only after a ready switch.
+
+`rollback.sh vX.Y.W` makes a kept release current again with no download, or deploys a release the
+host no longer keeps through the same verification. `deploy.sh caddy-install vX.Y.Z` renders the
+block with `scripts/render-caddy.py` from the private configuration (`DECKSTREAK_DEPLOY_CADDY_CONFIG`,
+a JSON object with `host`, `web_root` and `api_upstream`), adds it and one `import` line to a copy
+of the Caddyfile, runs `caddy validate` and `caddy adapt --validate` on the copy, moves it into
+place and reloads; a refusal leaves the live file as it was. `rollback.sh caddy-remove` reverses it.
 
 ## The host budget
 

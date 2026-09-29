@@ -31,7 +31,8 @@ this check refuses:
 * every other route a value takes into the unit's process: a `PassEnvironment=` whose name says it
   carries a secret, `StandardInputText=`, `StandardInputData=`, `StandardInput=file:`, and a second
   `EnvironmentFile=` in force (R6 gives a unit one);
-* a drop-in other than the rail's own, `<unit>.d/10-rail.conf` beside the unit's file, and a file
+* a drop-in other than the rail's own, `<unit>.d/10-rail.conf` beside the unit's file, or one the
+  release ships for an instance under `deploy/systemd/` (SPEC-062 R14), and a file
   shown twice, since a drop-in whose name holds a newline can print another file's path.
 
 A refused line is named by its key and its variable, never its value.
@@ -280,7 +281,20 @@ def load_contract(root):
         listed.append((row["section"], row["key"], row["neutral"]))
     if not rows:
         raise Unjudgeable(f"{path} lists no neutral value")
-    return {**data, "rows": rows}
+    return {**data, "rows": rows, "shipped": shipped_dropins(root)}
+
+
+def shipped_dropins(root):
+    """The instance drop-ins the release itself ships, `<template>@<instance>.<type>.d/<file>.conf`
+    under `deploy/`, as `(directory name, file name)`: byte-for-byte files the deploy installs, so
+    they are the release's own and not a drop-in a host grew (SPEC-062 R14)."""
+    found = set()
+    for path in sorted((root / "deploy").rglob("*.conf")):
+        folder = path.parent.name
+        head, at, tail = folder.removesuffix(".d").partition("@")
+        if folder.endswith(".d") and head and at and tail and "optional" not in path.parts:
+            found.add((folder, path.name))
+    return found
 
 
 def unit_of(row):
@@ -408,7 +422,9 @@ def judge(unit_file, dropins, contract):
         if source in seen:
             refuse(f"a file shown twice: {source}; a name that holds a newline can print its path")
         seen.add(source)
-        if source not in (path, own):
+        shipped = (PurePosixPath(source).parent.name, PurePosixPath(source).name)
+        beside = PurePosixPath(source).parent.parent == PurePosixPath(path).parent
+        if source not in (path, own) and not (beside and shipped in contract["shipped"]):
             refuse(f"a drop-in that is not the rail's: {source}")
         for header in glued:
             refuse(f"a file header not after an empty line: {header}")

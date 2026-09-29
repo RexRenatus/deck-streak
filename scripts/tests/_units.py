@@ -371,11 +371,19 @@ def read_into(unit, path, source):
 
 
 def parse_unit(root, path):
-    """The unit at `path`, with the drop-ins of its `<name>.d/` directory read after it."""
+    """The unit at `path`, with the drop-ins of its `<name>.d/` directory read after it, and, for a
+    template `<name>@.<type>`, those of each instance's `<name>@<instance>.<type>.d/` directory
+    read after those: systemd reads them with the instance, so every guard judges them as the
+    template's own (SPEC-062 R14)."""
     unit = Unit(path.name, path.relative_to(root).as_posix(), UNIT_KINDS[path.suffix], [])
     read_into(unit, path, unit.rel)
     for dropin in sorted((path.parent / f"{path.name}.d").glob("*.conf")):
         read_into(unit, dropin, dropin.relative_to(root).as_posix())
+    if "@." in path.name:
+        stem, suffix = path.name.split("@.", 1)
+        for folder in sorted(path.parent.glob(f"{stem}@?*.{suffix}.d")):
+            for dropin in sorted(folder.glob("*.conf")):
+                read_into(unit, dropin, dropin.relative_to(root).as_posix())
     return unit
 
 
