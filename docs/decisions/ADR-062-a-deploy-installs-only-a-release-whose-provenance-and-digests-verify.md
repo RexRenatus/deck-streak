@@ -76,3 +76,5 @@ SPEC-062's A2 and A8; cyber-pipeline's `cp.release-provenance` on the box.
 ADR-010; ADR-017; ADR-034; RELEASING.md; SPEC-062; the release-ops pack's release rows and
 cyber-pipeline's `cp.release-provenance`; the GitHub CLI's `gh attestation verify`, with its
 `--repo` and `--signer-workflow` options, read through Context7.
+
+Amendment (2026-09-29): the unit-guards bullet above, on the drop-ins a template's instance carries, is read as follows (SPEC-127, ADR-127): the guards read a shipped template's instance drop-ins with the template, so the sync login stays with the sync instance alone; a template's own instance directory is admitted, a second one refuses both, an instance's drop-in sets only `LoadCredential=`, and an instance of an unshipped template is refused.
