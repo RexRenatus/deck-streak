@@ -110,3 +110,53 @@ each job uploads them as its own artifact, whatever the verdict.
 
 Amendment (2026-09-28): SPEC-056 removed the `packs` job and stage this schematic draws, so
 four gate jobs run; every pack is judged on the maintainer's box run (ADR-069).
+
+## The mutants step, inside its memory scope, and the verdict's reading of it (SPEC-196, ADR-199)
+
+A `mutation-rust` leg, a weekly rust leg and the `rehearsal` run `cargo mutants` through `scripts/memory_scope.py`, with the
+arguments they ran before. The script puts its own process in a transient scope, checks the cap from inside, and runs
+cargo-mutants as its child, so the command keeps the caller's user, groups and environment.
+
+```mermaid
+flowchart TD
+  leg["a mutation-rust leg, a weekly rust leg or the rehearsal"] --> ms["python3 scripts/memory_scope.py --report DIR -- cargo mutants ARGS"]
+  ms --> cap["the cap: MemTotal from /proc/meminfo x 15/16, whole pages"]
+  cap --> unitcall["sudo busctl call StartTransientUnit: a scope holding the script's own process; MemoryMax = cap, MemorySwapMax = 0, OOMPolicy = continue"]
+  unitcall --> check{"from inside: the unit holds the script; memory.max = cap; memory.swap.max = 0; memory.oom.group = 0; oom and oom_kill = 0; OOMPolicy = continue"}
+  check -->|"no"| refused["REFUSED: exit 78, nothing run; record in_force false with the reason"]
+  check -->|"yes"| begun["record: in_force true, state running"]
+  begun --> cm["cargo mutants ARGS, the script's child, unchanged"]
+  cm --> base["the unmutated baseline: build and test, under the cap"]
+  base --> each["each mutant: build, then its tests under nextest"]
+  each -->|"a test grows to the cap"| kill["the kernel stops the largest process in the scope, the runaway test; the scope and cargo-mutants go on"]
+  kill --> status["nextest: the test's status reads SIGKILL; cargo-mutants records the outcome and tests the next mutant"]
+  each --> report["mutants.out: outcomes.json and one log per scenario, as before"]
+  status --> report
+  report --> done["record: state done; oom, oom_kill and max counts; peak as a percentage of the cap"]
+  done --> exit["the script exits with cargo-mutants' own exit, which the step records as before"]
+```
+
+```mermaid
+flowchart TD
+  shard["each shard the run promised, in judge, battery and table"] --> has{"a report or a cargo-mutants.exit?"}
+  has -->|"no"| before0["judged as before"]
+  has -->|"yes"| rec{"memory-scope.json present, readable and done?"}
+  rec -->|"no"| void1["VOID by name: a cap kill cannot be excluded"]
+  rec -->|"in_force false"| void2["VOID by name, with the scope's reason"]
+  rec -->|"yes"| touched{"oom or oom_kill above 0?"}
+  touched -->|"no"| before["judged exactly as before; no log read"]
+  touched -->|"yes"| place["place kills: distinct tests whose nextest status is SIGKILL, in each scenario log"]
+  place --> agree{"placed kills = oom_kill?"}
+  agree -->|"no"| ambiguous["FAIL: MEMORY-CAP AMBIGUOUS, both counts and every placed scenario; no mutant scored"]
+  agree -->|"yes, in a mutant"| score["score_memory_cap: FAIL MEMORY-CAP mutant; not examined"]
+  agree -->|"yes, in the baseline"| baseline["FAIL: MEMORY-CAP the unmutated baseline"]
+  score --> rest["every other outcome in the shard judged as before; examined = the tool's count less the named mutants"]
+  rest --> unchanged["unchanged: a missing or partial report VOID; the partition of listed against tested; zero examined VOID"]
+```
+
+The scope holds the whole cargo-mutants tree, so the kernel's out-of-memory choice is made among our processes, the largest
+first, before the machine is under pressure; the runner is outside it. `OOMPolicy=continue` leaves `memory.oom.group` at `0`,
+so one process is stopped, never the scope. A listing (`cargo mutants --list`) runs no test and is not wrapped. A mutant the
+cap stops is never caught and never a timeout: its leg fails naming it, and every other result in the leg stands. How a
+named kill is scored is decided in `score_memory_cap` alone. The timeouts, the listing, the partition and the baseline are
+the ones in the sections above; the scope adds a bound on memory and changes no bound on time.

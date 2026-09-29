@@ -1,0 +1,42 @@
+# Red-first record: SPEC-196
+
+The SPEC, in `docs/specs/planned/`, and ADR-199 were committed alone (b83f753a). A probe of the
+runner's memory scope followed (3b10e34e) and was removed (75665275). Then came the tests of A1
+to A17 (95907c06) against the unchanged scripts and workflows, so every test ran and each red
+failed by assertion. The script (607fd3f5) turned A1 to A6 green, the verdict (c30e673b) turned A9
+to A16 green, and the workflows (e81e1c05) turned A7 green. The replay ran both test files on
+95907c06's tree: seventeen criteria, fourteen red by assertion.
+
+```red-first
+A1: red at 95907c06: 'scripts/memory_scope.py is absent: the memory scope is not built'
+A1: green at 607fd3f5
+A2: red at 95907c06: 'scripts/memory_scope.py is absent: the memory scope is not built'
+A2: green at 607fd3f5
+A3: red at 95907c06: 'scripts/memory_scope.py is absent: the memory scope is not built'
+A3: green at 607fd3f5
+A4: red at 95907c06: 'scripts/memory_scope.py is absent: the memory scope is not built'
+A4: green at 607fd3f5
+A5: red at 95907c06: 'scripts/memory_scope.py is absent: the memory scope is not built'
+A5: green at 607fd3f5
+A6: red at 95907c06: 'scripts/memory_scope.py is absent: the memory scope is not built'
+A6: green at 607fd3f5
+A7: red at 95907c06: Lists differ: ['ci.yml:413: a run that runs tests is not[162 chars]ope'] != []
+A7: green at e81e1c05
+A8: not red: the arguments of the three wrapped commands and the four listing commands were already the pinned ones; the criterion pins that they stay so
+A9: red at 95907c06: 0 != 3 : mutation: rust: crates/fix/src/lib.rs: 1 changed code line(s)
+A9: green at c30e673b
+A10: not red: a shard the cap never touched was already judged as the criterion says; the criterion pins that it stays so
+A11: red at 95907c06: 'mutation-rust-shard-0: MEMORY-CAP' naming the stopped mutant is missing from a list that should hold it
+A11: green at c30e673b
+A12: red at 95907c06: 0 != 1 : mutation: rust: crates/fix/src/lib.rs: 1 changed code line(s)
+A12: green at c30e673b
+A13: red at 95907c06: 0 != 1 : mutation: rust: crates/fix/src/lib.rs: 1 changed code line(s)
+A13: green at c30e673b
+A14: red at 95907c06: 'battery: mutants-shard-0: MEMORY-CAP crates/fix/src/lib.rs:3:5: replace double -> i64 with 3: the memory cap stopped its tests; neither caught nor a timeout' not found in the battery's lines
+A14: green at c30e673b
+A15: red at 95907c06: 'REPLACED crates/fix/src/lib.rs:3:5: replace double -> i64 with 3' not found in the verdict's output, so the replaced scorer is not followed
+A15: green at c30e673b
+A16: red at 95907c06: 0 != 1 : mutation: rust: crates/fix/src/lib.rs: 1 changed code line(s)
+A16: green at c30e673b
+A17: not red: the rehearsal's command, its file and its examined sum were already the ones before this SPEC; the criterion pins that they stay so
+```
