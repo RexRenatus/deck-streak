@@ -18,10 +18,11 @@ use deck_streak_daemon::sync_request::{
     DEFAULT_REQUEST_PATH, FileDoorbell, REQUEST_PATH_ENV, SqliteRequestLedger, request_path,
 };
 use deck_streak_ingest::gate::{Anchor, Probe};
-use deck_streak_ingest::state::SqliteIngestState;
+use deck_streak_ingest::state::{RefusalReason, SqliteIngestState};
 use deck_streak_ingest::sync_runs::{ReasonCode, SqliteSyncRuns, SyncRun, SyncRunStore, Trigger};
 use deck_streak_kernel::{
-    Clock, Db, Environment, KernelError, ManualClock, StudyDay, StudyDayRule, UtcMillis,
+    Clock, Db, Environment, KernelError, ManualClock, SettingsError, StudyDay, StudyDayRule,
+    UtcMillis,
 };
 use deck_streak_notifications::{
     BotTransport, Decision, DedupeKey, Hold, LapseContext, Occasion, Pass, Policy, PushFuture,
@@ -314,6 +315,115 @@ async fn the_store_tells_waiting_reused_synced_and_failed_apart() {
     db.close().await;
 }
 
+#[tokio::test(flavor = "multi_thread")]
+async fn the_store_answers_a_refusal_at_or_after_the_request_only() {
+    let directory = tempfile::tempdir().expect("a temporary directory");
+    let db = Db::open(&directory.path().join("deck_streak.db"))
+        .await
+        .expect("the database opens");
+    let ledger = SqliteRequestLedger::new(db.clone());
+    let state = SqliteIngestState::new(db.clone());
+    let asked = UtcMillis::from_epoch_millis(START);
+    ledger.request(asked).await.expect("the request is stored");
+    state
+        .record_refusal(RefusalReason::RecomputeRefused, asked)
+        .await
+        .expect("the refusal is recorded");
+    assert_eq!(
+        ledger.progress(asked).await.expect("reads"),
+        Progress::Refused {
+            reason: "recompute_refused".to_owned()
+        },
+        "a refusal at the request's own instant answers it"
+    );
+    let later = UtcMillis::from_epoch_millis(START + 1);
+    assert_eq!(
+        ledger.progress(later).await.expect("reads"),
+        Progress::Reused,
+        "a refusal before the request is ignored"
+    );
+    db.close().await;
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_refusal_after_the_owners_run_is_answered_beside_the_run() {
+    let directory = tempfile::tempdir().expect("a temporary directory");
+    let db = Db::open(&directory.path().join("deck_streak.db"))
+        .await
+        .expect("the database opens");
+    let ledger = SqliteRequestLedger::new(db.clone());
+    let asked = UtcMillis::from_epoch_millis(START);
+    ledger.request(asked).await.expect("the request is stored");
+    // The owner cycle's sync ran and succeeded, then its recompute failed after it.
+    SqliteSyncRuns::new(db.clone())
+        .record(&SyncRun {
+            trigger: Trigger::Owner,
+            started_at: UtcMillis::from_epoch_millis(START + 1_000),
+            finished_at: UtcMillis::from_epoch_millis(START + 2_000),
+            study_day: StudyDay::from_epoch_day(20_000),
+            outcome: Ok(()),
+            attempts: 1,
+            full_download: false,
+        })
+        .await
+        .expect("the run is recorded");
+    SqliteIngestState::new(db.clone())
+        .record_refusal(
+            RefusalReason::RecomputeFailed,
+            UtcMillis::from_epoch_millis(START + 3_000),
+        )
+        .await
+        .expect("the refusal is recorded");
+    let progress = ledger.progress(asked).await.expect("reads");
+    assert_eq!(
+        progress,
+        Progress::RefusedAfterRun {
+            failure: None,
+            reason: "recompute_failed".to_owned()
+        },
+        "a refusal recorded after the owner's run answers the request beside the run"
+    );
+    let flushes = Flushes::default();
+    let script = Script::of([progress]);
+    let answer = flushing(&script, &flushes).sync_now().await;
+    assert_eq!(
+        answer,
+        Ok(SyncAnswer {
+            sync: SyncOutcome::Synced,
+            scores: Scores::Refused {
+                reason: "recompute_failed".to_owned()
+            },
+        }),
+        "the run's own line stands and the scores are said not recomputed"
+    );
+    assert_eq!(
+        flushes.calls(),
+        1,
+        "the copy was refreshed, so the router flushes"
+    );
+    db.close().await;
+}
+
+#[tokio::test]
+async fn a_refused_request_is_answered_with_its_reason_and_never_flushes() {
+    let flushes = Flushes::default();
+    let script = Script::of([Progress::Refused {
+        reason: "scope_settings_refused".to_owned(),
+    }]);
+    let answer = flushing(&script, &flushes).sync_now().await;
+    assert_eq!(
+        answer,
+        Ok(SyncAnswer {
+            sync: SyncOutcome::NotRun {
+                reason: "scope_settings_refused".to_owned()
+            },
+            scores: Scores::Unchanged,
+        })
+    );
+    assert_eq!(flushes.calls(), 0, "a refusal is not a sync that succeeded");
+    assert_eq!(script.polls(), 1, "the refusal ends the wait");
+}
+
 #[test]
 fn the_request_file_is_the_setting_or_the_default() {
     let unset = Environment::from_vars(Vec::<(String, String)>::new());
@@ -330,6 +440,18 @@ fn the_request_file_is_the_setting_or_the_default() {
     assert!(
         request_path(&relative).is_err(),
         "a relative path is refused"
+    );
+}
+
+#[test]
+fn a_relative_request_path_is_refused_naming_its_whole_shape() {
+    let relative = Environment::from_vars([(REQUEST_PATH_ENV, "request")]);
+    assert_eq!(
+        request_path(&relative),
+        Err(SettingsError::Malformed {
+            setting: REQUEST_PATH_ENV,
+            expected: "an absolute file path",
+        })
     );
 }
 

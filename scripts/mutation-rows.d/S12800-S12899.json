@@ -1,0 +1,78 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S12801-A-REFUSAL-AT-THE-REQUESTS-OWN-INSTANT-ANSWERS-IT",
+        "daemon",
+        "src/sync_request.rs",
+        "&& refusal.at >= since",
+        "&& refusal.at > since",
+        "sync_request::the_store_answers_a_refusal_at_or_after_the_request_only",
+        "a refusal recorded in the same millisecond as the request answers it; a strict comparison leaves the owner told the request was reused (SPEC-128 R4)"
+      ],
+      [
+        "S12802-A-REFUSAL-BEFORE-THE-REQUEST-IS-IGNORED",
+        "daemon",
+        "src/sync_request.rs",
+        "&& refusal.at >= since",
+        "&& true",
+        "sync_request::the_store_answers_a_refusal_at_or_after_the_request_only",
+        "an old refusal must never answer a newer request; a comparison that always holds answers every request with the last refusal (SPEC-128 R4)"
+      ],
+      [
+        "S12803-THE-RECOMPUTE-SETUP-REFUSAL-IS-RECORDED-UNDER-ITS-OWN-CODE",
+        "daemon",
+        "src/role_job.rs",
+        "record_refusal(db, RefusalReason::RecomputeRefused).await;",
+        "record_refusal(db, RefusalReason::RecomputeFailed).await;",
+        "roles::a_refused_recompute_setup_is_recorded_for_the_owner",
+        "the owner is told the code of the refusal that happened; a wrong code names a failure that did not (SPEC-128 R1)"
+      ],
+      [
+        "S12804-THE-CYCLES-REFUSAL-IS-RECORDED-WITH-THE-FLAG-CLEARED",
+        "daemon",
+        "src/role_job.rs",
+        "                        record_refusal(db, reason).await;",
+        "                        let _ = reason;",
+        "roles::a_refused_owner_request_is_recorded_and_the_next_run_does_not_retry_it",
+        "a refusal that is only logged leaves the flag pending, so every job run serves the same request again (SPEC-128 R1, R2)"
+      ],
+      [
+        "S12805-THE-STORED-REASON-IS-THE-REFUSALS-OWN-CODE",
+        "ingest",
+        "src/state.rs",
+        "        let code = reason.as_str();\n        let mut write",
+        "        let code = \"recompute_failed\";\n        let mut write",
+        "refusal::every_reason_round_trips_through_its_code",
+        "the store keeps the code the caller gave; a constant code answers every refusal with one reason (SPEC-128 R1)"
+      ],
+      [
+        "S12806-A-REFUSAL-AFTER-THE-OWNERS-RUN-IS-NOT-HIDDEN-BY-THE-RUN",
+        "daemon",
+        "src/sync_request.rs",
+        "            return Ok(if run.is_some() {",
+        "            if run.is_some() {\n                return Ok(Progress::Ran { failure });\n            }\n            return Ok(if run.is_some() {",
+        "sync_request::a_refusal_after_the_owners_run_is_answered_beside_the_run",
+        "a run on record must not hide the refusal recorded after it: answering the run first tells the owner the scores were recomputed when they were not (SPEC-128 R5)"
+      ],
+      [
+        "S12807-THE-CHECK-PAIRS-THE-REFUSALS-INSTANT-WITH-ITS-REASON",
+        "ingest",
+        "../../migrations/012801_ingest_refused_owner_request.sql",
+        " AND refused_reason IS NOT NULL",
+        "",
+        "refusal::the_migration_refuses_a_reason_outside_the_closed_set",
+        "an instant with no reason is a refusal the owner cannot be told; the CHECK must refuse it (SPEC-128 R1)"
+      ],
+      [
+        "S12808-THE-SCORES-REFUSED-SENTENCE-NAMES-THE-CODE",
+        "bot",
+        "src/commands.rs",
+        "Your scores were not recomputed (<code>{}</code>), so they stand.",
+        "Your scores were kept (<code>{}</code>).",
+        "commands::a_refusal_after_a_run_is_answered_beside_the_syncs_own_line",
+        "the owner is told the recompute was refused and that the scores stand; other words change the message the golden fixes (SPEC-128 R5)"
+      ]
+    ]
+  }
+}

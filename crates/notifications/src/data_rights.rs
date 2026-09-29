@@ -1,15 +1,18 @@
 //! Notifications' data-rights port (SPEC-041 R11; SPEC-021): the router's five tables are the
-//! owner's data, each exported whole and erased, through the kernel's port that `privacy` drives
+//! owner's data, each exported whole and erased, and the owner's latest message is exported and
+//! reset in place to no message (SPEC-084 R14), through the kernel's port that `privacy` drives
 //! (CHARTER 13).
 
 use deck_streak_kernel::{
     DataRights, DataRightsError, Declaration, Disposition, ExportedTable, KernelError, PortFuture,
     TableRights,
 };
-use serde_json::json;
+use serde_json::{Map, Value, json};
 use sqlx::SqliteConnection;
 
-use crate::ledger::{DECISIONS_TABLE, DELIVERIES_TABLE, FEED_TABLE, QUEUE_TABLE, SETTINGS_TABLE};
+use crate::ledger::{
+    DECISIONS_TABLE, DELIVERIES_TABLE, FEED_TABLE, OWNER_MESSAGE_TABLE, QUEUE_TABLE, SETTINGS_TABLE,
+};
 
 /// The context this port speaks for.
 pub const NOTIFICATIONS_CONTEXT: &str = "notifications";
@@ -20,6 +23,13 @@ pub struct NotificationsDataRights;
 
 impl DataRights for NotificationsDataRights {
     fn declaration(&self) -> Result<Declaration, DataRightsError> {
+        let mut no_message = Map::new();
+        no_message.insert("message_id".to_owned(), Value::Null);
+        no_message.insert("arrived_at".to_owned(), Value::Null);
+        let reset = TableRights {
+            table: OWNER_MESSAGE_TABLE,
+            disposition: Disposition::ResetInPlace { row: no_message },
+        };
         Declaration::new(
             NOTIFICATIONS_CONTEXT,
             [
@@ -34,6 +44,7 @@ impl DataRights for NotificationsDataRights {
                 table,
                 disposition: Disposition::ExportAndErase,
             })
+            .chain([reset])
             .collect(),
         )
     }
@@ -49,6 +60,7 @@ impl DataRights for NotificationsDataRights {
                 queue(connection).await?,
                 feed(connection).await?,
                 settings(connection).await?,
+                owner_message(connection).await?,
             ])
         })
     }
@@ -71,6 +83,11 @@ impl DataRights for NotificationsDataRights {
             sqlx::query!("DELETE FROM notification_settings")
                 .execute(&mut *connection)
                 .await?;
+            sqlx::query!(
+                "UPDATE owner_last_message SET message_id = NULL, arrived_at = NULL WHERE id = 1"
+            )
+            .execute(&mut *connection)
+            .await?;
             Ok(())
         })
     }
@@ -210,6 +227,30 @@ async fn settings(connection: &mut SqliteConnection) -> Result<ExportedTable, Ke
                 json!({
                     "key": row.key,
                     "value": row.value,
+                    "created_at": row.created_at,
+                })
+            })
+            .collect(),
+    })
+}
+
+/// The owner's latest message: its one row.
+async fn owner_message(connection: &mut SqliteConnection) -> Result<ExportedTable, KernelError> {
+    let rows = sqlx::query!(
+        r#"SELECT id AS "id!", message_id, arrived_at, created_at
+           FROM owner_last_message ORDER BY id"#
+    )
+    .fetch_all(connection)
+    .await?;
+    Ok(ExportedTable {
+        table: OWNER_MESSAGE_TABLE,
+        rows: rows
+            .into_iter()
+            .map(|row| {
+                json!({
+                    "id": row.id,
+                    "message_id": row.message_id,
+                    "arrived_at": row.arrived_at,
                     "created_at": row.created_at,
                 })
             })

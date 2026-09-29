@@ -41,22 +41,186 @@ JUDGE_FLAGS = {
     },
     "oracle": {"--plan": PLAN, "--rows": ROWS},
 }
-JUDGE = re.compile(r"(?m)^\s*python3 scripts/mutation-verdict\.py judge (.*?)(?: \|\| \w+=\$\?)?$")
+JUDGE = re.compile(
+    r"(?m)^[ \t]*python3[ \t]+scripts/mutation-verdict\.py[ \t]+judge[ \t]+"
+    r"(.*?)(?: \|\| \w+=\$\?)?$"
+)
+# Two private-use characters mark what `shlex` would erase: a `$` the shell reads as text (inside
+# single quotes, or escaped) and a `$` outside every quote, where the shell word-splits the value.
+LITERAL = "\ue000"
+UNQUOTED = "\ue001"
+BRACED = re.compile(r"\$\{(\w+)\}")
+CONTINUATION = re.compile(r"(?<!\\)((?:\\\\)*)\\\n")
+
+JUDGE_CMD = "python3 scripts/mutation-verdict.py judge"
+
+
+def judge_pair(sub, reports='"$reports"', flags=("--plan", "--class", "--rows", "--whole")):
+    """The verdict's `rust` and `oracle` judge lines as ci.yml writes them, with `sub(path)`
+    spelling each path under the reports directory and `flags` spelling the four flag names."""
+    plan, cls, rows, whole = flags
+    rust = (
+        f"{JUDGE_CMD} {plan} {sub('mutation-plan/plan.json')} {cls} rust "
+        f"--shard-reports {reports} {rows} {sub('mutation-rows/rows.json')} "
+        f"{whole} {sub('mutation-plan/whole.json')} || status=$?"
+    )
+    oracle = (
+        f"{JUDGE_CMD} {plan} {sub('mutation-plan/plan.json')} {cls} oracle "
+        f"{rows} {sub('mutation-rows/rows.json')} || oracle=$?"
+    )
+    return rust, oracle
+
+
+def double_quoted(path):
+    return f'"$reports/{path}"'
+
+
+def as_verdict(pair):
+    """A verdict job's text around a pair of judge lines, indented as in a `run: |` block."""
+    return f'        reports="$RUNNER_TEMP/reports"\n        {pair[0]}\n        {pair[1]}\n'
+
+
+CANONICAL = judge_pair(double_quoted)
+# The spellings issue #374 names: each is an argument list the shell builds identically to the
+# canonical one, so the test must accept every one of them.
+EQUIVALENT = {
+    "braces": judge_pair(lambda p: f'"${{reports}}/{p}"', reports='"${reports}"'),
+    "the expansion closed before the slash": judge_pair(lambda p: f'"$reports"/{p}'),
+    "the tail in single quotes": judge_pair(lambda p: f"\"$reports\"'/{p}'"),
+    "a quoted flag name": judge_pair(
+        double_quoted, flags=('"--plan"', "'--class'", '"--rows"', "--whole")
+    ),
+    "a backslash continuation": tuple(
+        line.replace(" --rows", " \\\n          --rows") for line in CANONICAL
+    ),
+    "--flag=value with the value quoted": tuple(
+        line.replace("--plan ", "--plan=")
+        .replace("--rows ", "--rows=")
+        .replace("--whole ", "--whole=")
+        for line in CANONICAL
+    ),
+    "--flag=value with the quotes closing early": tuple(
+        line.replace('--plan "$reports/', '--plan="$reports"/').replace(
+            'mutation-plan/plan.json"', "mutation-plan/plan.json"
+        )
+        for line in CANONICAL
+    ),
+}
+# The paths the shell reads differently: each must stay refused.
+WRONG = {
+    "a single-quoted path is literal text": judge_pair(lambda p: f"'$reports/{p}'"),
+    "a single-quoted head with an unquoted tail": judge_pair(lambda p: f"'$reports'/{p}"),
+    "an escaped dollar is literal text": judge_pair(lambda p: f'"\\$reports/{p}"'),
+    "a path in a different directory": judge_pair(
+        lambda p: double_quoted(p.replace("mutation-plan", "mutation-plans"))
+    ),
+    "a different variable": judge_pair(lambda p: f'"$report/{p}"'),
+    "an unquoted expansion": judge_pair(lambda p: f"$reports/{p}"),
+    "a flag moved to the other judge line": (
+        CANONICAL[0].replace(' --whole "$reports/mutation-plan/whole.json"', ""),
+        CANONICAL[1].replace(" ||", ' --whole "$reports/mutation-plan/whole.json" ||'),
+    ),
+    "a flag dropped from one line": (
+        CANONICAL[0].replace(' --rows "$reports/mutation-rows/rows.json"', ""),
+        CANONICAL[1],
+    ),
+    "a flag only in a comment": (
+        CANONICAL[0].replace(' --rows "$reports/mutation-rows/rows.json"', "")
+        + ' # --rows "$reports/mutation-rows/rows.json"',
+        CANONICAL[1],
+    ),
+    "a flag after a control operator": (
+        CANONICAL[0]
+        .replace(' --rows "$reports/mutation-rows/rows.json"', "")
+        .replace(" ||", ' && : --rows "$reports/mutation-rows/rows.json" ||'),
+        CANONICAL[1],
+    ),
+    "a line break after judge with no backslash": (
+        CANONICAL[0].replace("judge --plan", "judge\n        --plan"),
+        CANONICAL[1],
+    ),
+}
+
+
+def mark_dollars(command):
+    """The command with each `$` the shell reads as text replaced by LITERAL (in single quotes,
+    or escaped by a backslash) and each `$` outside every quote preceded by UNQUOTED. `shlex`
+    removes the quotes and the backslash, so this pass keeps the fact it would lose. The command
+    ends where the shell ends it: at a control operator or a comment outside every quote."""
+    out, quote, i, start = [], None, 0, True
+    while i < len(command):
+        char = command[i]
+        if char == "\\" and quote != "'" and i + 1 < len(command):
+            out.append(LITERAL if command[i + 1] == "$" else char + command[i + 1])
+            i, start = i + 2, False
+            continue
+        if quote is None and (char in ";&|" or (char == "#" and start)):
+            break
+        start = quote is None and char in " \t"
+        if quote is None and char in "'\"":
+            quote = char
+        elif quote == char:
+            quote = None
+        if char == "$":
+            out.append(LITERAL if quote == "'" else (UNQUOTED if quote is None else "") + char)
+        else:
+            out.append(char)
+        i += 1
+    return "".join(out)
+
+
+def shell_words(command):
+    """The words the shell splits `command` into (quote removal, backslash-newline continuations
+    joined). An expansion reads `$name` whether it was written `$name` or `${name}`; one outside
+    every quote reads `(unquoted)$name`; a `$` that is text reads `\\$`."""
+    joined = CONTINUATION.sub(r"\1", command)
+    words = shlex.split(mark_dollars(joined), comments=False, posix=True)
+    return [
+        BRACED.sub(r"$\1", w).replace(UNQUOTED, "(unquoted)").replace(LITERAL, "\\$") for w in words
+    ]
+
+
+def judge_flags(words):
+    """{flag: value} for the `--flag value` and `--flag=value` pairs among `words`."""
+    flags = {}
+    for i, word in enumerate(words):
+        if not word.startswith("--"):
+            continue
+        name, equals, value = word.partition("=")
+        if equals:
+            flags[name] = value
+        elif i + 1 < len(words):
+            flags[name] = words[i + 1]
+    return flags
 
 
 def judge_lines(verdict):
-    """{class: {flag: value}} for each `mutation-verdict.py judge` command line of the verdict
-    job, read one line at a time; a line with no `--class` is refused, and zero lines is too."""
+    """{class: {flag: value}} for each `mutation-verdict.py judge` command of the verdict job,
+    read as the shell splits it; a command with no `--class` is refused, and zero commands too."""
     found = {}
-    for command in examined("judge command lines", JUDGE.findall(verdict)):
-        words = shlex.split(command, posix=False)
-        flags = {w: words[i + 1] for i, w in enumerate(words[:-1]) if w.startswith("--")}
+    joined = CONTINUATION.sub(r"\1", verdict)
+    for command in examined("judge command lines", JUDGE.findall(joined)):
+        flags = judge_flags(shell_words(command))
         if "--class" not in flags:
             raise AssertionError(f"a judge line names no --class: {command}")
         if flags["--class"] in found:
             raise AssertionError(f"two judge lines of class {flags['--class']}: {command}")
         found[flags["--class"]] = flags
     return found
+
+
+def check_judge(verdict):
+    """Assert each named class's judge line reads its flags at the paths JUDGE_FLAGS names."""
+    lines = judge_lines(verdict)
+    for cls, wanted in examined("judge classes asserted", list(JUDGE_FLAGS.items())):
+        if cls not in lines:
+            raise AssertionError(f"the verdict has no judge line for class {cls}")
+        for flag, path in wanted.items():
+            if lines[cls].get(flag) != path:
+                raise AssertionError(
+                    f"{lines[cls].get(flag)!r} != {path!r} : "
+                    f"the {cls} judge line does not read {flag} at {path}"
+                )
 
 
 class StepFailed(Exception):
@@ -212,21 +376,37 @@ class TheVerdictReadsEachReportByName(unittest.TestCase):
     def test_the_judge_reads_the_paths_the_downloads_lay_down(self):
         verdict = jobs(workflow(CI))["mutation-verdict"]
         self.assertIn('reports="$RUNNER_TEMP/reports"', verdict)
-        lines = judge_lines(verdict)
-        for cls, wanted in examined("judge classes asserted", list(JUDGE_FLAGS.items())):
-            self.assertIn(cls, lines, f"the verdict has no judge line for class {cls}")
-            for flag, path in wanted.items():
-                self.assertEqual(
-                    lines[cls].get(flag),
-                    f'"{path}"',
-                    f"the {cls} judge line does not read {flag} at {path}",
-                )
+        check_judge(verdict)
         for step in [s for s in steps(verdict) if DOWNLOAD in s]:
             destination = local(inputs(step).get("path", ""))
             self.assertTrue(
                 destination == f"{TEMP}/reports" or destination.startswith(f"{TEMP}/reports/"),
                 f"a download lands outside the judge's reports directory: {destination}",
             )
+
+    def test_every_spelling_the_shell_reads_alike_passes(self):
+        for name, pair in examined("equivalent spellings", EQUIVALENT.items()):
+            with self.subTest(spelling=name):
+                check_judge(as_verdict(pair))
+
+    def test_every_path_the_shell_reads_differently_is_refused(self):
+        check_judge(as_verdict(CANONICAL))
+        for name, pair in examined("wrong paths", WRONG.items()):
+            with self.subTest(wrong=name):
+                with self.assertRaises(AssertionError):
+                    check_judge(as_verdict(pair))
+
+    def test_an_expansion_is_kept_apart_from_text_and_from_an_unquoted_one(self):
+        spelled = {
+            '"$reports"': "$reports",
+            '"${reports}"': "$reports",
+            "\"$reports\"'/x'": "$reports/x",
+            "'$reports'": "\\$reports",
+            "\\$reports": "\\$reports",
+            "$reports": "(unquoted)$reports",
+        }
+        for written, read in examined("spellings of an expansion", spelled.items()):
+            self.assertEqual(shell_words(written), [read], written)
 
 
 if __name__ == "__main__":
