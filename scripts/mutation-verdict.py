@@ -1107,7 +1107,8 @@ def partition(verdict: Verdict, plan: dict, whole: list[tuple[str, dict]], compl
 def examined_sum(verdict: Verdict, plan: dict, whole: list[tuple[str, dict]]) -> None:
     """The mutants the whole reports count, caught, missed, timed out and unviable, are the ones
     the plan's shards list, no more and no fewer (SPEC-290 R5): a leg is read as not started only
-    from the listing, so the reports must account for the listing exactly."""
+    from the listing, so the reports must account for the listing exactly. It runs once every
+    promised report was whole and every listed mutant tested, so it names no gap twice."""
     planned = (plan.get("shards") or {}).get("shards") or []
     listed = sum(len(shard["mutants"]) for shard in planned)
     counted = sum(
@@ -1172,9 +1173,9 @@ def judge_rust(verdict: Verdict, plan: dict, args: argparse.Namespace) -> None:
         verdict.fail(f"MISSED {missed - named} mutant(s), unnamed in the report")
     verdict.say(f"missed {missed}: equivalent {equivalent}, unexplained {missed - equivalent}")
     if args.shard_reports:
-        complete = len(verdict.voids) == voids
-        partition(verdict, plan, whole, complete=complete)
-        if complete:
+        partition(verdict, plan, whole, complete=len(verdict.voids) == voids)
+        # Checked once nothing the shards promised is missing, partial or never tested.
+        if len(verdict.voids) == voids:
             examined_sum(verdict, plan, whole)
     verdict.examined = tool + carried
     verdict.say(f"examined {tool} by cargo-mutants and {carried} by rows")
