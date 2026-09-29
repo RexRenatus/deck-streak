@@ -64,6 +64,8 @@ A28: red at e260627: AssertionError in each of its four subtests, each for its o
 A28: green at 8c87e5b
 A19: red at 8eba7ef: AssertionError: 16 != 0 : deck-streak-identity: 16 unexplained mutant(s) in its row (opening sweep run 36511057164 listed 143, killed 97, equivalent 0, unexplained 16, unviable 30)
 A19: green at a911483
+A26: red at a69e0af: AssertionError: unexpectedly None : deck-streak-agent: 'open' names no pull request and runs (the opening sweep, run 36531093051 at 5216bcf, read listed 146, killed 111, equivalent 0, unexplained 0, unviable 35)
+A26: green at f0e5f02
 ```
 
 | requirement | the behaviour a wrong implementation would get wrong | criterion |
