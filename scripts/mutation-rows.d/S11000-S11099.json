@@ -225,6 +225,123 @@
         "pub const DRILL_GRADES_LIMIT: i64 = 11;",
         "drill_memory::the_drill_grades_port_gives_types_and_xp_only",
         "the coach's memory reads the ten newest grades (SPEC-110 R12, A15)"
+      ],
+      [
+        "S11028-PAID-COUNT",
+        "coordination",
+        "src/drills.rs",
+        "paid += 1;",
+        "paid -= 1;",
+        "drill_paid_count::a_poll_reports_how_many_it_graded_and_how_many_it_paid",
+        "a poll counts each grade it paid, once (SPEC-110 R11, A21)"
+      ],
+      [
+        "S11029-RECENT-XP",
+        "vault",
+        "src/drill_store.rs",
+        "xp: row.xp,",
+        "xp: 0,",
+        "drill_kills::recent_grades_are_the_newest_of_the_subject_with_every_column",
+        "a recent grade carries the xp its row paid (SPEC-110 R12, A15)"
+      ],
+      [
+        "S11030-GRADED-FOLDER",
+        "vault",
+        "src/drill_notes.rs",
+        "let folder = self.folder.join(GRADED);",
+        "let folder = self.folder.join(ACTIVE);",
+        "drill_kills::the_graded_folder_is_read_and_the_active_folder_is_not",
+        "the graded read lists the graded folder and not the active one (SPEC-110 R6, A22)"
+      ],
+      [
+        "S11031-OPEN-MISSING-ROOT",
+        "vault",
+        "src/drill_notes.rs",
+        "Err(error) if error.kind() == io::ErrorKind::NotFound => {\n                return Err(StartRefusal",
+        "Err(error) if error.kind() != io::ErrorKind::NotFound => {\n                return Err(StartRefusal",
+        "drill_kills::a_missing_root_refuses_to_start_and_any_other_failure_is_an_io_error",
+        "only a missing vault root refuses to start; any other failure is an io error (SPEC-110 R13)"
+      ],
+      [
+        "S11032-DAEMON-OPEN",
+        "daemon",
+        "src/drill_vault.rs",
+        "Ok(notes) => Some(Arc::new(notes)),",
+        "Ok(_notes) => None,",
+        "drill_vault::a_configured_vault_opens_over_its_active_drills",
+        "a configured vault opens over its drills (SPEC-110 R13)"
+      ],
+      [
+        "S11033-LABEL-LIMIT",
+        "bot",
+        "src/drill_commands.rs",
+        "const LABEL_LIMIT: usize = 40;",
+        "const LABEL_LIMIT: usize = 41;",
+        "drill_replies::a_button_shows_forty_characters_of_the_title",
+        "a button shows forty characters of the title (SPEC-110 R11)"
+      ],
+      [
+        "S11034-PROMPT-LIMIT",
+        "bot",
+        "src/drill_commands.rs",
+        "const PROMPT_LIMIT: usize = 3_000;",
+        "const PROMPT_LIMIT: usize = 3_001;",
+        "drill_replies::a_view_cuts_the_prompt_at_three_thousand_characters",
+        "a view cuts the prompt at three thousand characters (SPEC-110 R11)"
+      ],
+      [
+        "S11035-LIST-PATH",
+        "api",
+        "src/drill_routes.rs",
+        "pub const LIST_PATH: &str = \"/api/drills\";",
+        "pub const LIST_PATH: &str = \"/api/drillz\";",
+        "drill_routes::the_list_counts_what_awaits_grading_and_what_is_deferred",
+        "the drill list answers on /api/drills (SPEC-110 R14)"
+      ],
+      [
+        "S11036-ACTIVE-FOLDER",
+        "vault",
+        "src/drills.rs",
+        "pub const ACTIVE: &str = \"Active\";",
+        "pub const ACTIVE: &str = \"Activf\";",
+        "drill_kills::the_graded_folder_is_read_and_the_active_folder_is_not",
+        "the active drills sit in Active (SPEC-110 R13)"
+      ],
+      [
+        "S11037-GRADED-NAME",
+        "vault",
+        "src/drills.rs",
+        "pub const GRADED: &str = \"Graded\";",
+        "pub const GRADED: &str = \"Gradee\";",
+        "drill_kills::the_graded_folder_is_read_and_the_active_folder_is_not",
+        "the graded drills sit in Graded (SPEC-110 R6)"
+      ],
+      [
+        "S11038-ANSWER-HEADING",
+        "vault",
+        "src/drills.rs",
+        "\"## Court & Year\",",
+        "\"## Court & Yeas\",",
+        "drill_kills::a_prompt_ends_at_each_answer_heading",
+        "a prompt ends at the Court & Year heading (SPEC-110 R3)"
+      ],
+      [
+        "S11039-SELF-CHECK",
+        "vault",
+        "src/drills.rs",
+        "const SELF_CHECK: &str = \"Self-Check\";",
+        "const SELF_CHECK: &str = \"Self-Chick\";",
+        "drill_kills::the_ready_label_and_the_self_check_heading_are_read_as_written",
+        "the checklist heading is Self-Check (SPEC-110 R3)"
+      ],
+      [
+        "S11040-READY-LABEL",
+        "vault",
+        "src/drills.rs",
+        "const READY_LABEL: &str = \"**Ready for grading**\";",
+        "const READY_LABEL: &str = \"**Ready for gradinf**\";",
+        "drill_kills::the_ready_label_and_the_self_check_heading_are_read_as_written",
+        "the ready marker reads Ready for grading (SPEC-110 R3)"
       ]
     ],
     "CARGO_KILLED_SCRIPT_MUTATIONS": [
