@@ -247,11 +247,9 @@ listed 409, killed 324, equivalent 2, unexplained 0, unviable 83. Rows S05760 to
 A26 is the agent crate's row of section 7. Its opening sweep, run 36531093051 at the base (dev
 5216bcf), counted 33 of 33 reports whole and read `table: verdict: ok`: listed 146, killed 111,
 equivalent 0, unexplained 0, unviable 35, every shard exiting 0. The crate was never swept before,
-and no mutant of it survives, so no test was added, no record was written and no crate file
-changed. The opening sweep already read unexplained 0, so A26 is disclosed not red, naming that
+and no mutant of it survives, so no test was added, no record was written and no production file of the crate changed. The opening sweep already read unexplained 0, so A26 is disclosed not red, naming that
 run (R16). The closing sweep, run 36531457597 at a69e0af, counted 33 of 33 whole and read the same
-figures, with no shard exiting 2 or 3 and no `TIMEOUT` line. Row S05765 pins `ROSTER`, the setting name SPEC-044 R2 names, which the tool never mutates and
-which no test named by its literal; S05766 to S05769 are unused. Four by-hand plantings in
+figures, with no shard exiting 2 or 3 and no `TIMEOUT` line. Rows S05765 and S05766 pin `ROSTER`, the setting name SPEC-044 R2 names, and `RosterPath`'s `SHAPE`, the shape a malformed roster setting is refused with: the tool never mutates either constant, and no test named either by its literal; S05767 to S05769 are unused. Four by-hand plantings in
 `SLOTTED`, one emptying the slot list of each of the identity (its bio slot), voice, personality
 and disclosure sections, each failed `a_template_with_a_filled_slot_is_refused`, so that
 constant's invariant is already pinned by an existing test (R20).

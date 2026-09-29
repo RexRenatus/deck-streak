@@ -430,7 +430,10 @@ fn a_roster_outside_the_repository_fills_the_four_slots() {
     let relative = Environment::from_vars([(ROSTER, "agent/roster.json")]);
     assert!(matches!(
         relative.required::<RosterPath>(ROSTER),
-        Err(SettingsError::Malformed { .. })
+        Err(SettingsError::Malformed {
+            expected: "an absolute file path",
+            ..
+        })
     ));
 }
 
