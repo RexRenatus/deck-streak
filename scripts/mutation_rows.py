@@ -24,8 +24,9 @@ is read by its table's declared spelling: the header's `_` states, one line per 
 {cell 1}`, and a table with no such line is refused rather than read under a guess.
 
 A KILLER names one test. A cargo killer is `<target>::<test path>`: an integration-test target of
-the row's crate (`crates/<crate>/tests/<target>.rs`), or `lib` for the crate's unit tests, then the
-test's path in it. A script killer is `<module>.<Class>.<method>`, a unittest id whose module lives
+the row's crate (`crates/<crate>/tests/<target>.rs`), `lib` for the crate's unit tests, or `bin`
+for its binary's own unit tests (the binary the crate's manifest names, one only), then the test's
+path in it. A script killer is `<module>.<Class>.<method>`, a unittest id whose module lives
 in one of the unittest roots the gate discovers (`scripts/tests`, `tools/parity-oracle`).
 
 PROVE (R9) refuses a tree with a tracked change, since it rewrites a tracked file and restores it.
@@ -84,6 +85,7 @@ CELLS = {
     },
     "SCRIPT_MUTATIONS": {"find": 2, "replace": 3, "crate": None, "killer": 5, "description": 4},
 }
+MOD_DECLARATION = re.compile(r"(?m)^\s*(?:pub(?:\([^)]*\))?\s+)?mod\s+([A-Za-z_][A-Za-z0-9_]*)\s*;")
 CARGO_KILLER = re.compile(r"[A-Za-z_][A-Za-z0-9_]*(?:::[A-Za-z_][A-Za-z0-9_]*)+")
 SCRIPT_KILLER = re.compile(
     r"[A-Za-z_][A-Za-z0-9_]*\.[A-Za-z_][A-Za-z0-9_]*\.[A-Za-z_][A-Za-z0-9_]*"
@@ -344,6 +346,7 @@ class Killer:
     file: str
     package: str | None = None
     target: str | None = None
+    binary: str | None = None
     cwd: str | None = None
 
 
@@ -385,6 +388,71 @@ def package_of(root: pathlib.Path, crate: str) -> str:
         raise KillerUnresolved(f"crates/{crate} holds no readable Cargo package") from error
 
 
+def binary_of(root: pathlib.Path, crate: str) -> tuple[str, str]:
+    """The one binary of `crates/<crate>`: its name and its root source, from the manifest.
+
+    A `[[bin]]` table names it; a manifest with none holds the package's own binary at
+    `src/main.rs`. A crate with two binaries, or with any under `src/bin/`, is refused, since a
+    `bin::` killer names no binary and the runner never guesses one."""
+    where = f"crates/{crate}"
+    try:
+        manifest = tomllib.loads((root / where / "Cargo.toml").read_text(encoding="utf-8"))
+        package = manifest["package"]["name"]
+    except (OSError, KeyError, tomllib.TOMLDecodeError) as error:
+        raise KillerUnresolved(f"{where} holds no readable Cargo package") from error
+    declared = manifest.get("bin", [])
+    discovered = (
+        sorted((root / where / "src" / "bin").glob("*"))
+        if (root / where / "src" / "bin").is_dir()
+        else []
+    )
+    binaries = (
+        len(declared)
+        + len(discovered)
+        + (0 if declared else int((root / where / "src" / "main.rs").is_file()))
+    )
+    if binaries > 1:
+        raise KillerUnresolved(
+            f"{where} holds {binaries} binaries, and a bin killer names none of them"
+        )
+    if not declared:
+        entry: dict = {"name": package}
+    else:
+        entry = declared[0]
+    name, path = entry.get("name"), entry.get("path", "src/main.rs")
+    if not isinstance(name, str) or not isinstance(path, str):
+        raise KillerUnresolved(f"{where} declares a binary with no name or path")
+    if not (root / where / path).is_file():
+        raise KillerUnresolved(
+            f"{where} declares the binary {name} at {path}, which does not exist"
+        )
+    return name, f"{where}/{path}"
+
+
+def module_sources(root_file: pathlib.Path) -> list[pathlib.Path]:
+    """The source files of the module tree that starts at `root_file`, in declaration order: the
+    file itself, then each `mod name;` it declares, as `name.rs` or `name/mod.rs` beside a root or
+    a `mod.rs`, and under a directory named for the file otherwise. `#[path]` is not followed."""
+    found: list[pathlib.Path] = []
+
+    def walk(file: pathlib.Path) -> None:
+        if file in found:
+            return
+        found.append(file)
+        home = (
+            file.parent if file.name in ("main.rs", "lib.rs", "mod.rs") else file.parent / file.stem
+        )
+        text = file.read_text(encoding="utf-8")
+        for name in MOD_DECLARATION.findall(text):
+            for child in (home / f"{name}.rs", home / name / "mod.rs"):
+                if child.is_file():
+                    walk(child)
+                    break
+
+    walk(root_file)
+    return found
+
+
 def test_functions(text: str, name: str) -> int:
     """How many functions named `name` the Rust source `text` declares under a test attribute."""
     lines = text.splitlines()
@@ -410,15 +478,18 @@ def locate_killer(root: pathlib.Path, row: Row) -> Killer:
         except KillerUnresolved:
             package = None
         crate = root / "crates" / row.crate
+        binary = None
         if target == "lib":
             where = f"crates/{row.crate}/src"
+        elif target == "bin":
+            binary, where = binary_of(root, row.crate)
         else:
             candidates = [crate / "tests" / f"{target}.rs", crate / "tests" / target / "main.rs"]
             files = [candidate for candidate in candidates if candidate.is_file()]
             if not files:
                 raise KillerUnresolved(f"crates/{row.crate} has no test target {target}")
             where = files[0].relative_to(root).as_posix()
-        return Killer("cargo", path, where, package=package, target=target)
+        return Killer("cargo", path, where, package=package, target=target, binary=binary)
     module = row.killer.split(".", 1)[0]
     homes = [base for base in TEST_ROOTS if (root / base / f"{module}.py").is_file()]
     if len(homes) != 1:
@@ -435,6 +506,9 @@ def resolve_killer(root: pathlib.Path, row: Row) -> Killer:
         name = killer.name.rsplit("::", 1)[-1]
         if killer.target == "lib":
             sources = sorted((root / killer.file).rglob("*.rs"))
+            count = sum(test_functions(s.read_text(encoding="utf-8"), name) for s in sources)
+        elif killer.target == "bin":
+            sources = module_sources(root / killer.file)
             count = sum(test_functions(s.read_text(encoding="utf-8"), name) for s in sources)
         else:
             count = test_functions((root / killer.file).read_text(encoding="utf-8"), name)
@@ -512,10 +586,19 @@ def tracked_changes(root: pathlib.Path) -> list[str]:
     return [line[3:] for line in status.splitlines() if line.strip()]
 
 
+def cargo_flags(killer: Killer) -> list[str]:
+    """The cargo target flags that select the killer's test target."""
+    if killer.target == "lib":
+        return ["--lib"]
+    if killer.target == "bin":
+        return ["--bin", killer.binary]
+    return ["--test", killer.target]
+
+
 def run_killer(root: pathlib.Path, killer: Killer, scratch: pathlib.Path) -> Run:
     """The killer, run alone; its selection is counted from the runner's own output."""
     if killer.kind == "cargo":
-        flags = ["--lib"] if killer.target == "lib" else ["--test", killer.target]
+        flags = cargo_flags(killer)
         command = ["cargo", "test", "--locked", "-p", killer.package, *flags]
         command += ["--", "--exact", killer.name]
         env = dict(os.environ, CARGO_TERM_COLOR="never")
@@ -598,7 +681,7 @@ def builds(root: pathlib.Path, row: Row, killer: Killer, mutated: bytes) -> str 
         if refusal is not None:
             return refusal
     if killer.kind == "cargo":
-        flags = ["--lib"] if killer.target == "lib" else ["--test", killer.target]
+        flags = cargo_flags(killer)
         done = subprocess.run(
             ["cargo", "test", "--locked", "-p", killer.package, *flags, "--no-run"],
             cwd=root,
