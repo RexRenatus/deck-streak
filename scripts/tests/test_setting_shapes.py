@@ -21,10 +21,14 @@ from pathlib import Path
 from _support import REPO, examined
 
 IMPL = re.compile(
-    r"^\s*impl\b\s*(?:<[^{};]*>)?\s*(?:[\w:]+::)?Setting\s+for\s+(\$?\w+)", re.MULTILINE
+    r"^\s*impl\b\s*(?:<[^{};]*>)?\s*(?:\$?[\w:]+::)?Setting\s+for\s+(\$?\w+)", re.MULTILINE
 )
-TEST_MODULE = re.compile(r"^\s*#\[cfg\(test\)\]", re.MULTILINE)
-COMMENT = re.compile(r"//[^\n]*")
+TEST_MODULE = re.compile(
+    r"#\[cfg\(test\)\]\s*(?:#\[[^\]]*\]\s*)*(?:pub(?:\([^)]*\))?\s+)?mod\s+\w+\s*\{"
+)
+TOKEN = re.compile(r"//|/\*|(?<![\w])b?r#*\"|\"|'")
+RAW = re.compile(r"b?r(#*)\"")
+CHAR = re.compile(r"'(?:\\(?:x[0-9a-fA-F]{2}|u\{[0-9a-fA-F]{1,6}\}|.)|[^\\'\n])'")
 SHAPE = re.compile(r'const\s+SHAPE\s*:\s*&\'static\s+str\s*=\s*("(?:[^"\\]|\\.)*")\s*;')
 BANDS = REPO / "scripts" / "mutation-rows.d"
 
@@ -55,9 +59,66 @@ def implementations(root):
     return found
 
 
+def lexed(text):
+    """`text` with its comments blanked, and `text` with its string and character literals blanked
+    as well; both keep every offset. A `//` or `/*` inside a string is not a comment."""
+    bare, skeleton = list(text), list(text)
+
+    def blank(buffers, start, end):
+        for buffer in buffers:
+            buffer[start:end] = [c if c == "\n" else " " for c in text[start:end]]
+
+    at = 0
+    while (token := TOKEN.search(text, at)) is not None:
+        start, kind = token.start(), token.group(0)
+        if kind == "//":
+            end = text.find("\n", start)
+            end = len(text) if end == -1 else end
+            blank((bare, skeleton), start, end)
+        elif kind == "/*":
+            depth, end = 1, start + 2
+            while end < len(text) and depth:
+                step = text[end : end + 2]
+                depth += {"/*": 1, "*/": -1}.get(step, 0)
+                end += 2 if step in ("/*", "*/") else 1
+            blank((bare, skeleton), start, end)
+        elif kind == "'":
+            char = CHAR.match(text, start)
+            end = char.end() if char else start + 1
+            if char:
+                blank((skeleton,), start, end)
+        else:
+            raw = RAW.match(text, start)
+            if raw:
+                close = text.find('"' + raw.group(1), raw.end())
+                end = len(text) if close == -1 else close + 1 + len(raw.group(1))
+            else:
+                end = start + 1
+                while end < len(text) and text[end] != '"':
+                    end += 2 if text[end] == "\\" else 1
+                end = min(end + 1, len(text))
+            blank((skeleton,), start, end)
+        at = max(end, start + 1)
+    return "".join(bare), "".join(skeleton)
+
+
+def cfg_test_spans(skeleton):
+    """The spans of the `#[cfg(test)] mod name { ... }` blocks, braces matched outside comments and
+    literals."""
+    spans = []
+    for module in TEST_MODULE.finditer(skeleton):
+        depth, end = 1, module.end()
+        while end < len(skeleton) and depth:
+            depth += {"{": 1, "}": -1}.get(skeleton[end], 0)
+            end += 1
+        spans.append((module.start(), end))
+    return spans
+
+
 def spelled_elsewhere(root, crate, file, literal, own_span):
-    """True when `literal` is spelled, quoted, in the crate's tests or in the test module of the
-    implementation's own source file, outside a comment, and never at any `SHAPE` constant."""
+    """True when `literal` is spelled, quoted, in the crate's tests or inside a `#[cfg(test)]`
+    module of the implementation's own source file, outside a comment, and never at any `SHAPE`
+    constant."""
     base = root / "crates" / crate
     constants = {
         (path, span)
@@ -66,17 +127,12 @@ def spelled_elsewhere(root, crate, file, literal, own_span):
     }
     candidates = sorted((base / "tests").rglob("*.rs")) + [base / file]
     for path in candidates:
-        text = path.read_text(encoding="utf-8")
-        start = 0
-        if path == base / file:
-            module = TEST_MODULE.search(text)
-            if module is None:
-                continue
-            start = module.start()
-        bare = COMMENT.sub(lambda m: " " * len(m.group(0)), text)
-        at = bare.find(literal, start)
+        bare, skeleton = lexed(path.read_text(encoding="utf-8"))
+        spans = cfg_test_spans(skeleton) if path == base / file else [(0, len(bare))]
+        at = bare.find(literal)
         while at != -1:
-            if (path.relative_to(base), (at, at + len(literal))) not in constants:
+            inside = any(start <= at and at + len(literal) <= end for start, end in spans)
+            if inside and (path.relative_to(base), (at, at + len(literal))) not in constants:
                 return True
             at = bare.find(literal, at + 1)
     return False
