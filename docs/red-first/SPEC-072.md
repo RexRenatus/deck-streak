@@ -105,6 +105,8 @@ A31: red at 8467b95: {"reason":"law_tiers_unavailable"}; left: 503; right: 200
 A31: green at 6d82561
 A32: red at eb6119fa: assertion `left == right` failed; left: [], right: ["crates/coordination/src/shortcut.rs calls settle outside the recompute steps, and only the owner's correction may", "crates/quests/src/chained_user.rs calls settle through tally_again, progression's alias of settle, and only coordination's code may", ...]
 A32: green at d2697435
+A33: red at 99fbf46d: assertion `left == right` failed; left: [], right: ["crates/markets/src/via_prog.rs calls settle through tally, progression's alias of settle, and only coordination's code may"]
+A33: green at 7a6a659d
 ```
 
 Addendum (2026-09-29, issue 397): A32 was added by the census amendment (ADR-197). Its test was
@@ -114,3 +116,38 @@ its own test failing. The green commit (d2697435) edits a test file, `xp_census.
 census is that file's own code: it reads progression's re-exports there. A12 stays green through
 both commits, with the same examined counts on the real tree (157 crate source files, 15
 migrations, 8 planted crate source files).
+
+Addendum (2026-09-29, round 1 of the review of issue 397). Two fixes, each with its tests committed
+alone first, at a head where each failed by assertion, then its code.
+
+The grouped module renaming and the chain read before its link (A32's second test). Red at
+3742e717: `panicked at crates/progression/tests/xp_census.rs:576:5:` with
+"assertion `left == right` failed", the left list holding the `crate_link_user.rs` and
+`early_user.rs` refusals and lacking `crates/quests/src/ledger_user.rs calls settle through
+ledger, progression's alias of settle, and only coordination's code may`; 2 passed, 1 failed.
+Green at 311dddede: 3 passed. Two mutants of the census survived the census before this test and
+are killed by it: the alias loop run as a single pass (`M1-fixpoint-single-pass: SURVIVED (2
+passed)`) and a `)` that never counts as public (`M14-restricted-pub-not-public: SURVIVED (2
+passed)`); after it, each is KILLED by
+`the_census_follows_a_grouped_module_renaming_and_a_chain_read_before_its_link`.
+
+The crate alias, the type alias, the `pub(` close and the word match (A33). Red at 99fbf46d: 3
+passed, 4 failed, each by assertion, and each with its own line:
+
+- `the_census_follows_a_crate_alias`, at `xp_census.rs:624:5`: `left: []`, `right:
+  ["crates/markets/src/via_prog.rs calls settle through tally, progression's alias of settle, and
+  only coordination's code may"]`.
+- `the_census_follows_a_type_alias`, at `xp_census.rs:650:5`: `left: []`, `right:
+  ["crates/quests/src/typed.rs calls settle through Wrapped, progression's alias of
+  SettleRequest, and only coordination's code may"]`.
+- `a_private_alias_behind_an_attribute_is_not_a_reexport`, at `xp_census.rs:686:5`: left holds
+  `crates/quests/src/homonym.rs calls settle through gated` and the `link.rs` refusal; right holds
+  the `link.rs` refusal alone.
+- `the_operation_is_matched_as_a_word_not_a_prefix`, at `xp_census.rs:717:5`: left holds
+  `crates/quests/src/day.rs calls settle, and only coordination's code may` besides the two owed
+  refusals; right holds the two.
+
+Green at 7a6a659d: 7 passed. A12 keeps its examined counts on the real tree through every commit
+(159 crate source files, 15 migrations, 8 planted crate source files), the same as at the base of
+the round. The three rows S07230 to S07232 were proved KILLED by their full ids on a committed
+tree: `rows: examined 3: killed 3, survived 0, void 0`.

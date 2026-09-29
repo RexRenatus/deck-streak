@@ -53,17 +53,23 @@ refusal and examined count as it was.
   the alias and the original.
 - Good, because a source that never names the progression crate cannot be refused for a common
   word, so a homonym elsewhere is not a false refusal.
-- Bad, because the reading is textual: a `pub type` alias of the request, or a public wrapper
-  function that calls `settle` inside progression, is not a `pub use` and is not followed. A
-  wrapper is a new operation in progression's own code, and a reviewer sees it there.
-- Bad, because the operation's path is still matched as a prefix, so `deck_streak_progression::`
-  followed by a name that begins with `settle` reads as a call; that predates this decision and is
-  left as it was.
+- Bad, because the reading is textual: a public wrapper function that calls `settle` inside
+  progression is not a `pub use` or a `pub type` and is not followed. A wrapper is a new
+  operation in progression's own code, and a reviewer sees it there.
 
 ### Confirmation
 
-`crates/progression/tests/xp_census.rs`: the planted-tree test named in SPEC-072 A32 (red before
+`crates/progression/tests/xp_census.rs`: the planted-tree tests named in SPEC-072 A32 and A33 (red before
 the change, green after), and A12's census, whose examined counts on the real tree are unchanged.
+
+### Decision, round 1
+
+The census also follows a crate alias (`pub use deck_streak_progression as prog;`) and a
+`pub type` alias of the request or the operation, treats a `)` as public only when it closes
+`pub(`, and matches the operation as a word, so a name that merely begins with `settle` and a
+private homonym behind an attribute are accepted. It was chosen against leaving each as a known
+gap, which would have left four evasions to be found again, and against a parser such as `syn`,
+which the first decision already rejected. A wrapper function stays a residual.
 
 ## More Information
 

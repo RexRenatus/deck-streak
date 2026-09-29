@@ -532,8 +532,9 @@ gave an outside caller two names that the census never looks for, and the caller
 - **A32.** A tree with a renamed, chained, module-level and nested-module re-export in progression
   and callers that import only the new names is refused by name, and the accepted shapes above are
   not. The test is `crates/progression/tests/xp_census.rs`, beside A12's.
-- **Rows.** None. The change is confined to a test file, so the diff holds no production path and
-  the mutation job reads `not-applicable` by name (SPEC-039 section 11; SPEC-057 R22).
+- **Rows.** Three, S07230 to S07232 in this SPEC's band (section 12): the mutation job reads a
+  test-only diff as `not-applicable` (SPEC-039 section 11; SPEC-057 R22), so the census's own
+  fixpoint, its `pub(` close and its grouped `self` rename are pinned by hand-proved rows.
 - **Files.** `crates/progression/tests/xp_census.rs` (A32), `docs/decisions/ADR-197-*.md`,
   `docs/red-first/SPEC-072.md` and `changelog.d/settle-census-397.md`.
 
@@ -541,8 +542,48 @@ gave an outside caller two names that the census never looks for, and the caller
 
 | id | criterion | decided by |
 |---|---|---|
-| A32 | a renamed re-export of `settle`, its request or its module in progression's `src` is followed, and a caller outside coordination that names only the new names is refused by file, alias and original | progression `xp_census` test |
+| A32 | a renamed re-export of `settle`, its request or its module in progression's `src` is followed, including a module renamed inside a group (`settle::{self as ledger}`) and a chain whose link is read after the alias that uses it, and a caller outside coordination that names only the new names is refused by file, alias and original | progression `xp_census` tests: the fence's test, and `the_census_follows_a_grouped_module_renaming_and_a_chain_read_before_its_link` |
 
 ```acceptance
 A32: cargo test -p deck-streak-progression --test xp_census -- --exact the_census_reads_progressions_own_reexports_as_it_reads_the_other_crates
+```
+
+## 12. Amendment, 2026-09-29, round 1: the census follows a crate alias and a type alias
+
+Review of the census (section 10) found two promised shapes missed, and four evasions left over.
+The two, a module renamed inside a group and a chain read before its link, are A32's and are
+fixed there. The rest are decided by ADR-197.
+
+- **The change.** The census follows a crate alias (`pub use deck_streak_progression as prog;`
+  in any crate's `src`, then a source that names `prog` and one of progression's renamings) and a
+  `pub type Alias<..> = path::Original<..>;` of the request or the operation. A `)` makes the next
+  `use` public only when it closes `pub(`, so `pub(crate) use` stays a chain link and never a
+  re-export, and an attribute before a private `use` no longer reads as public. The operation is
+  matched as a word, so a caller's own `settled_of_day` and a homonym of a private alias are
+  accepted.
+- **Still unfollowed.** A public wrapper function that calls `settle` inside progression is a new
+  operation in progression's own code, and a reviewer sees it there. ADR-197 names it.
+- **A33.** A planted crate alias is refused by file, alias and original; a planted type alias of
+  the request is refused; an attribute-preceded private `use` and a `pub(crate)` link do not
+  become re-exports; and a name that only begins with the operation is accepted. Its tests are
+  `the_census_follows_a_crate_alias`, `the_census_follows_a_type_alias`,
+  `a_private_alias_behind_an_attribute_is_not_a_reexport` and
+  `the_operation_is_matched_as_a_word_not_a_prefix`, in `crates/progression/tests/xp_census.rs`.
+- **Rows.** S07230-CENSUS-FIXPOINT (the alias loop runs to a fixpoint), S07231-CENSUS-PUB-CRATE-CLOSE
+  (a `)` that closes `pub(` makes a `use` a re-export) and S07232-CENSUS-SELF-RENAME (a
+  `{self as X}` is a leaf). Each is killed by
+  `xp_census::the_census_follows_a_grouped_module_renaming_and_a_chain_read_before_its_link`
+  and proved KILLED by its full id.
+- **Files.** `crates/progression/tests/xp_census.rs` (A32, A33),
+  `scripts/mutation-rows.d/S07200-S07299.json`, `docs/decisions/ADR-197-*.md`,
+  `docs/red-first/SPEC-072.md` and `changelog.d/settle-census-397.md`.
+
+## 13. Acceptance criteria of the round 1 amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A33 | a crate alias and a type alias of progression's names are followed, a `pub(crate)` link and an attribute-preceded private `use` are not re-exports, and a name that only begins with the operation is accepted | progression `xp_census` tests |
+
+```acceptance
+A33: cargo test -p deck-streak-progression --test xp_census -- --exact the_census_follows_a_crate_alias
 ```
