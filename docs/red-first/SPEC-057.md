@@ -55,7 +55,7 @@ A15: green at 5c4d6b6
 A16: red at bfae431: AssertionError: 225 != 0 : deck-streak-vault: 225 unexplained mutant(s) in its row (the opening sweep, run 36438243392 at 5767fbe, read listed 939, killed 647, equivalent 0, unexplained 225, unviable 67)
 A16: green at 6abff4a
 A24: red at 74c32fd: AssertionError: 81 != 0 : miniapp: 81 unexplained mutant(s) in its row (the opening sweep, run 36499404209 at a7b8025, read listed 274, killed 193, equivalent 0, unexplained 81, unviable 0)
-A24: green at 3195635
+A24: green at 1efacb7
 A28: red at e260627: AssertionError in each of its four subtests, each for its own reason: 'True is not false : the rust class applies on test lines [31, 36, 43, 47, 53]' (the test-only diff); 'Lists differ: [46, 58] != [58]' (the mixed diff counted its test module's line as production code); "'mutation: plan: rust applies: 3 production code line(s) in 1 file(s)' not found" (the production-only diff's plan named no production line); and '3 != 0 : mutation: shards: VOID the rust class applies and ... holds no cargo-mutants listing' (cargo-mutants' empty --in-diff output read as no listing)
 A28: green at 8c87e5b
 ```
@@ -160,4 +160,7 @@ the script's sha256 matched. Row S05709 pins it (793e95e): `mutation_rows.py pro
 its killer passing without the mutant and failing with it, with the file restored byte for byte.
 A28's own red and green lines stand, since the plan at dd734e5 read every line as production and
 the new line adds no red of its own.
-A24: green at 1efacb7711855888a3e3b8e762cd8d799f724582 (the row commit; the sweep at d1ffc87, run 36508131543, read listed 367, killed 362, equivalent 5, unexplained 0, unviable 0)
+
+A24's green line names 1efacb7, the row commit, in place of 3195635: the dev merge at 5a6b1ae read
+`12 != 18` and d1ffc87 read `12 != 5` until the row was refilled from run 36508131543 at d1ffc87
+(listed 367, killed 362, equivalent 5, unexplained 0, unviable 0).
