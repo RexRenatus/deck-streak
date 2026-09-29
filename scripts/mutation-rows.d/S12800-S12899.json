@@ -117,6 +117,42 @@
         "        let _ = gate.state().request_rescore(clock.now()).await;\n",
         "lib::wiring::tests::the_owners_sync_that_cannot_mark_the_rescore_is_refused_by_its_own_code",
         "a rescore request that cannot be marked must refuse the sync, or the owner's request is lost while the cycle goes on (SPEC-128 amendment, #396)"
+      ],
+      [
+        "S12814-THE-CYCLES-OWN-REFUSAL-IS-RECORDED-BY-THE-CODE-ITS-STEP-GIVES",
+        "daemon",
+        "src/wiring.rs",
+        ".map_err(|error| refused(cycle_reason(&error), &error))?;",
+        ".map_err(|error| refused(match cycle_reason(&error) { RefusalReason::RecomputeFailed => RefusalReason::SyncRecordFailed, other => other }, &error))?;",
+        "roles::a_refusal_after_the_owners_run_answers_the_request_beside_the_run",
+        "the code recorded for a cycle that could not finish is the one its failing step gives; a remap that still calls the mapper stores another code with the refusal present (SPEC-128 amendment, #396)"
+      ],
+      [
+        "S12815-A-SYNC-STEP-FAILURE-IS-REFUSED-BY-THE-SYNC-CODE",
+        "daemon",
+        "src/wiring.rs",
+        "CycleError::History(_) | CycleError::Sync(_) => RefusalReason::SyncRecordFailed,",
+        "CycleError::History(_) => RefusalReason::SyncRecordFailed,\n        CycleError::Sync(_) => RefusalReason::RecomputeFailed,",
+        "lib::wiring::tests::a_cycle_that_cannot_finish_is_refused_with_its_steps_reason_code",
+        "the sync step's failure is named by the sync code, not the recompute code (SPEC-128 amendment, #396)"
+      ],
+      [
+        "S12816-A-GATE-STEP-FAILURE-IS-REFUSED-BY-THE-RECOMPUTE-CODE",
+        "daemon",
+        "src/wiring.rs",
+        "CycleError::Gate(_) | CycleError::Window(_) | CycleError::Recompute(_) => {",
+        "CycleError::Gate(_) => RefusalReason::SyncRecordFailed,\n        CycleError::Window(_) | CycleError::Recompute(_) => {",
+        "lib::wiring::tests::a_cycle_that_cannot_finish_is_refused_with_its_steps_reason_code",
+        "the gate step's failure is named by the recompute code, not the sync code (SPEC-128 amendment, #396)"
+      ],
+      [
+        "S12817-A-WINDOW-STEP-FAILURE-IS-REFUSED-BY-THE-RECOMPUTE-CODE",
+        "daemon",
+        "src/wiring.rs",
+        "CycleError::Gate(_) | CycleError::Window(_) | CycleError::Recompute(_) => {",
+        "CycleError::Window(_) => RefusalReason::SyncRecordFailed,\n        CycleError::Gate(_) | CycleError::Recompute(_) => {",
+        "lib::wiring::tests::a_cycle_that_cannot_finish_is_refused_with_its_steps_reason_code",
+        "the window step's failure is named by the recompute code, not the sync code (SPEC-128 amendment, #396)"
       ]
     ]
   }
