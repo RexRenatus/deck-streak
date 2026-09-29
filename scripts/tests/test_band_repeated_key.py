@@ -28,7 +28,11 @@ BRANCH_B = (
     '{\n  "tables": {\n    "SCRIPT_MUTATIONS": [],\n    "CARGO_KILLED_SCRIPT_MUTATIONS": [],\n'
     '    "MUTATIONS": []\n  }\n}\n'
 )
-WORDS = "repeats the key"
+
+
+def sentence(where, key):
+    """The whole refusal `parse_document` forms, so a test pins every word of it, not a part."""
+    return f"{where} repeats the key '{key}' in one object"
 
 
 def with_repeat(document, key):
@@ -43,12 +47,10 @@ class TheReaderRefusesARepeatedKey(unittest.TestCase):
         done = fixture.run("ids")
         self.assertEqual(done.returncode, 2, done.stdout + done.stderr)
         self.assertEqual(done.stdout, "", "a refused population lists no id")
-        for word in (where, f"'{key}'", WORDS):
-            self.assertIn(word, done.stderr)
+        self.assertIn(sentence(where, key), done.stderr)
         with self.assertRaises(mutation_rows.PopulationRefused) as raised:
             mutation_rows.load_tree(fixture.root)
-        for word in (where, f"'{key}'", WORDS):
-            self.assertIn(word, str(raised.exception))
+        self.assertEqual(str(raised.exception), sentence(where, key))
 
     def test_a_merge_git_completes_without_a_conflict_and_the_reader_refuses_the_result(self):
         fixture = Fixture(self)
@@ -73,7 +75,7 @@ class TheReaderRefusesARepeatedKey(unittest.TestCase):
         text = (fixture.root / BAND_PATH).read_text(encoding="utf-8")
         self.assertEqual(text.count('"MUTATIONS"'), 2, "the merge holds the key twice")
         self.assertIn("MUTATIONS", json.loads(text)["tables"], "and json.load still reads it")
-        self.refused(fixture, BAND, "MUTATIONS")
+        self.refused(fixture, BAND_PATH, "MUTATIONS")
 
     def test_a_key_repeated_at_the_top_or_inside_tables_is_refused_naming_it(self):
         planted = {
@@ -84,14 +86,13 @@ class TheReaderRefusesARepeatedKey(unittest.TestCase):
             with self.subTest(key=key):
                 fixture = Fixture(self)
                 fixture.write(BAND_PATH, text)
-                self.refused(fixture, BAND, key)
+                self.refused(fixture, BAND_PATH, key)
 
     def test_a_key_repeated_at_any_depth_is_refused_by_the_parser(self):
         deep = '{"a": {"b": [1, {"c": [{"key": 1, "key": 2}]}]}}'
         with self.assertRaises(mutation_rows.PopulationRefused) as raised:
             mutation_rows.parse_document("scripts/deep.json", deep)
-        for word in ("scripts/deep.json", "'key'", WORDS):
-            self.assertIn(word, str(raised.exception))
+        self.assertEqual(str(raised.exception), sentence("scripts/deep.json", "key"))
         self.assertEqual(
             mutation_rows.parse_document("x.json", '{"a": {"b": 1}, "b": {"a": 1}}'),
             {"a": {"b": 1}, "b": {"a": 1}},
@@ -113,8 +114,7 @@ class TheReaderRefusesARepeatedKey(unittest.TestCase):
         self.assertEqual(fixture.run("ids").returncode, 0, "the tree itself is sound")
         done = fixture.run("retired", "--base", bad)
         self.assertEqual(done.returncode, 2, done.stdout + done.stderr)
-        for word in (BAND, "'MUTATIONS'", WORDS):
-            self.assertIn(word, done.stderr)
+        self.assertIn(sentence(BAND_PATH, "MUTATIONS"), done.stderr)
         self.assertNotIn("Traceback", done.stderr)
 
     def test_a_revision_whose_header_repeats_a_key_is_refused(self):
@@ -126,8 +126,7 @@ class TheReaderRefusesARepeatedKey(unittest.TestCase):
         fixture.commit("the header reads")
         with self.assertRaises(mutation_rows.PopulationRefused) as raised:
             mutation_rows.load_revision(fixture.root, bad)
-        for word in (HEADER_PATH, "'arities'", WORDS):
-            self.assertIn(word, str(raised.exception))
+        self.assertEqual(str(raised.exception), sentence(HEADER_PATH, "arities"))
         done = fixture.run("retired", "--base", bad)
         self.assertEqual(done.returncode, 2, done.stdout + done.stderr)
 
