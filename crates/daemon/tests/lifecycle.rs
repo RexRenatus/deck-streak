@@ -145,23 +145,21 @@ impl Drop for Daemon {
         }
         // Joined only once the child is reaped: a child that outlived every signal must fail its
         // test by assertion, never hang the guard on a thread that waits for it.
-        if let Some(waiter) = self.waiter.take() {
-            if self.reaped.load(Ordering::SeqCst) {
-                drop(waiter.join());
-            }
+        if let Some(waiter) = self.waiter.take()
+            && self.reaped.load(Ordering::SeqCst)
+        {
+            drop(waiter.join());
         }
     }
 }
 
 /// Whether process `pid` is running: a zombie awaiting its parent is not.
 fn is_running(pid: u32) -> bool {
-    std::fs::read_to_string(format!("/proc/{pid}/stat"))
-        .map(|stat| {
-            stat.rsplit_once(')')
-                .and_then(|(_, rest)| rest.split_whitespace().next().map(|state| state != "Z"))
-                .unwrap_or(false)
-        })
-        .unwrap_or(false)
+    std::fs::read_to_string(format!("/proc/{pid}/stat")).is_ok_and(|stat| {
+        stat.rsplit_once(')')
+            .and_then(|(_, rest)| rest.split_whitespace().next().map(|state| state != "Z"))
+            .unwrap_or(false)
+    })
 }
 
 /// Reads the socket until it receives `wanted`, recording every message in `seen`.
