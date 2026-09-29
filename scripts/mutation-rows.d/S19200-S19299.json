@@ -136,6 +136,88 @@
         "sync_request::a_relative_request_path_is_refused_naming_its_whole_shape",
         "a refused RequestFile value names the shape the setting accepts, word for word (SPEC-192 R3, A10)"
       ]
+    ],
+    "SCRIPT_MUTATIONS": [
+      [
+        "S19216-THE-GUARD-TRACKS-NESTED-BLOCK-COMMENTS",
+        "scripts/tests/test_setting_shapes.py",
+        "depth += {\"/*\": 1, \"*/\": -1}.get(step, 0)",
+        "depth += {\"*/\": -1}.get(step, 0)",
+        "a block comment nested in another ends only at its own outermost close, so a shape spelled after an inner close but still inside the comment does not count (SPEC-192 A15)",
+        "test_setting_shapes.TheGuardReadsRustSource.test_a_shape_only_a_block_comment_spells_is_refused"
+      ],
+      [
+        "S19217-THE-GUARD-RECOGNISES-RAW-STRINGS",
+        "scripts/tests/test_setting_shapes.py",
+        "raw = RAW.match(text, start)",
+        "raw = None",
+        "a raw string holding a `//` is a string, so a shape a test spells after it still counts (SPEC-192 A15)",
+        "test_setting_shapes.TheGuardReadsRustSource.test_a_shape_a_test_spells_after_a_url_on_its_line_is_pinned"
+      ],
+      [
+        "S19218-THE-GUARD-RECOGNISES-CHAR-LITERALS",
+        "scripts/tests/test_setting_shapes.py",
+        "char = CHAR.match(text, start)",
+        "char = None",
+        "a quote character literal opens no string, so a comment after it is still a comment and its spelling does not count (SPEC-192 A15)",
+        "test_setting_shapes.TheGuardJudgesAPlantedTree.test_a_shape_only_a_comment_spells_is_refused"
+      ],
+      [
+        "S19219-THE-GUARD-BLANKS-BLOCK-COMMENTS-IN-ITS-SKELETON",
+        "scripts/tests/test_setting_shapes.py",
+        "                end += 2 if step in (\"/*\", \"*/\") else 1\n            blank((bare, skeleton), start, end)",
+        "                end += 2 if step in (\"/*\", \"*/\") else 1\n            blank((bare,), start, end)",
+        "a brace inside a block comment is not counted when the test module's span is matched, so a production line after the module is not read as inside it (SPEC-192 A15)",
+        "test_setting_shapes.TheGuardReadsRustSource.test_a_production_line_after_the_own_files_test_module_is_refused"
+      ],
+      [
+        "S19220-THE-GUARD-BLANKS-STRINGS-IN-ITS-SKELETON",
+        "scripts/tests/test_setting_shapes.py",
+        "                end = min(end + 1, len(text))\n            blank((skeleton,), start, end)",
+        "                end = min(end + 1, len(text))\n            pass",
+        "a brace inside a string is not counted when the test module's span is matched, so a production line after the module is not read as inside it (SPEC-192 A15)",
+        "test_setting_shapes.TheGuardReadsRustSource.test_a_production_line_after_the_own_files_test_module_is_refused"
+      ],
+      [
+        "S19221-THE-GUARD-READS-ESCAPES-INSIDE-STRINGS",
+        "scripts/tests/test_setting_shapes.py",
+        "end += 2 if text[end] == \"\\\\\" else 1",
+        "end += 1",
+        "an escaped quote does not end a string, so a `//` after it is still inside the string and a shape a test spells later still counts (SPEC-192 A15)",
+        "test_setting_shapes.TheGuardReadsRustSource.test_a_shape_a_test_spells_after_a_url_on_its_line_is_pinned"
+      ],
+      [
+        "S19222-THE-OWN-SHAPE-CONSTANT-IS-NEVER-A-SPELLING",
+        "scripts/tests/test_setting_shapes.py",
+        "if inside and (path.relative_to(base), (at, at + len(literal))) not in constants:",
+        "if inside:",
+        "the implementation's own `SHAPE` constant is never a spelling of itself, even inside a test module, so a shape only that constant spells is refused (SPEC-192 A15)",
+        "test_setting_shapes.TheGuardJudgesAPlantedTree.test_a_shape_only_its_own_constant_spells_is_refused_by_crate_impl_and_literal"
+      ],
+      [
+        "S19223-NO-OTHER-SOURCE-FILE-IS-A-SPELLING",
+        "scripts/tests/test_setting_shapes.py",
+        "+ [base / file]",
+        "+ sorted((base / \"src\").rglob(\"*.rs\"))",
+        "a source file of the crate other than the implementation's own is not read for a spelling, so a production line there does not pin a shape (SPEC-192 A15)",
+        "test_setting_shapes.TheGuardJudgesAPlantedTree.test_a_shape_only_a_production_line_of_the_crate_spells_is_refused"
+      ],
+      [
+        "S19224-THE-GUARD-READS-THE-OUT-OF-LINE-TEST-MODULE",
+        "scripts/tests/test_setting_shapes.py",
+        " + out_of_line(base / file)\n",
+        "\n",
+        "the file of a `#[cfg(test)] mod tests;` the implementation's own file declares is read as its test module (SPEC-192 A13)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_a_module_file_beside_the_own_file_is_its_test_module"
+      ],
+      [
+        "S19225-THE-GUARD-READS-IMPLEMENTATIONS-FROM-COMMENT-FREE-SOURCE",
+        "scripts/tests/test_setting_shapes.py",
+        "        text, _ = lexed(path.read_text(encoding=\"utf-8\"))\n",
+        "        text = path.read_text(encoding=\"utf-8\")\n",
+        "an `impl Setting for` inside a block comment is not an implementation, so it is not examined (SPEC-192 A14)",
+        "test_setting_shapes.TheGuardIgnoresAnImplementationInAComment.test_a_block_comment_holding_an_impl_is_not_examined"
+      ]
     ]
   }
 }
