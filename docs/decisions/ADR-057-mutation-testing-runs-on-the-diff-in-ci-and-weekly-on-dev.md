@@ -260,6 +260,6 @@ dropped the rows silently. ADR-122 decides it and records what it was chosen aga
 
 The Python of the repository is mutated too, by a runner of its own, `scripts/mutation_python.py`,
 which restores each file by digest and runs its tests once per mutant; its shards are the CI job
-`mutation-python`. This is ADR-073 (SPEC-087, SPEC-039 section 13). The decisions above are
+`mutation-python`. This is ADR-073 (SPEC-087, SPEC-039 section 14). The decisions above are
 unchanged: a survivor still fails, an equivalent mutant is still recorded and never skipped, and
 no annotation hides a mutant.
