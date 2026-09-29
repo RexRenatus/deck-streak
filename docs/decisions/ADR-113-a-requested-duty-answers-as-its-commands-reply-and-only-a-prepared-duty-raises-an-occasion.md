@@ -55,7 +55,9 @@ occasion", because it keeps one path and gives each shape its own rules.
   budget, dedupe per study day, its own setting), so quiet hours, a lapse and the setting apply.
   Each new kind's `deviations` entry names this ADR.
 - **With the route absent** a requested duty's placeholder is skipped: the reply is the
-  not-enabled line (ADR-054), and a prepared duty raises nothing, because nothing was prepared.
+  not-enabled line (ADR-054), and a prepared duty raises nothing, because nothing was prepared. A
+  requested pass that holds a duty needing no model (the vault pass, SPEC-117) still runs, and its
+  model duties record their absent route.
 
 ### Consequences
 
