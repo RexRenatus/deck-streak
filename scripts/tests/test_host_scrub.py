@@ -1619,7 +1619,7 @@ class Axes(unittest.TestCase):
         with tempfile.TemporaryDirectory() as scratch:
             host = Host(scratch)
             venv = str(host.apps / "idle" / ".venv")
-            spaced = host.apps / "idle" / "old env"
+            spaced = host.apps / "idle" / "old env two"
             write(spaced / "lib" / "site.py", 300)
             single = host.apps / "idle" / "one.bak"
             write(single, 200)
@@ -1668,6 +1668,24 @@ class Axes(unittest.TestCase):
                 self.assertEqual(listed, [])
                 self.assertEqual([entry["path"] for entry in skipped], [str(single)])
                 self.assertIsNotNone(refusal)
+            with self.subTest("a mount table that cannot be read refuses the item"):
+                item, candidate = cases[venv]
+
+                def unreadable():
+                    raise PermissionError(13, "Permission denied", "/proc/self/mountinfo")
+
+                plan_tool.read_mountinfo = unreadable
+                try:
+                    skipped = []
+                    listed = plan_tool.items_of([candidate], skipped)
+                    with self.assertRaises(apply_tool.Refusal) as raised:
+                        apply_tool.check_item(item, [], apply_tool.Runner())
+                finally:
+                    plan_tool.read_mountinfo = real_reader
+                self.assertEqual(listed, [])
+                self.assertEqual([entry["path"] for entry in skipped], [venv])
+                self.assertIn("mount table", skipped[0]["reason"])
+                self.assertIn("mount table", str(raised.exception))
             with self.subTest("the same items are listed and pass when nothing is mounted"):
                 for path, (item, candidate) in cases.items():
                     listed, skipped, refusal = refused(item, candidate, table())
