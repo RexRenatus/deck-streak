@@ -816,6 +816,19 @@ class TheCaddyInstall(Case):
         candidates = [p.name for p in w.caddy_dir.iterdir() if "candidate" in p.name]
         self.assertEqual(candidates, [], "no candidate file is left behind")
 
+    def test_a_removal_whose_validation_is_refused_says_so(self):
+        w = self.world
+        _original, after, block_text = self.installed()
+        (w.log / "caddy-refuses").write_text("x")
+        done = w.run(ROLLBACK, "caddy-remove", **self.config())
+        self.assertNotEqual(done.returncode, 0, "a refused validation")
+        self.assertIn("deploy: refused", done.stderr, "the removal says which step stopped")
+        block = w.caddy_dir / "deck-streak.caddy"
+        self.assertEqual(block.read_text() if block.exists() else None, block_text)
+        self.assertEqual((w.caddy_dir / "Caddyfile").read_text(), after)
+        candidates = [p.name for p in w.caddy_dir.iterdir() if "candidate" in p.name]
+        self.assertEqual(candidates, [], "no candidate file is left behind")
+
     def test_the_caddy_calls_name_the_caddyfile_adapter_for_the_candidate_copy(self):
         w = self.world
         caddyfile = w.caddy_dir / "Caddyfile"
