@@ -944,6 +944,21 @@ class TheCaddyInstall(Case):
         self.assert_install_undone(done, after, block_text)
         self.assertTrue((w.caddy_dir / "deck-streak.candidate").is_dir(), "a directory is kept")
 
+    def test_an_install_whose_candidate_is_a_link_to_the_caddyfile_refuses_and_undoes(self):
+        w = self.world
+        _original, after, block_text = self.installed()
+        caddyfile = w.caddy_dir / "Caddyfile"
+        before = caddyfile.read_bytes()
+        (w.caddy_dir / "deck-streak.candidate").symlink_to(caddyfile)
+        done = self.install_again()
+        self.assertNotEqual(done.returncode, 0, "a linked candidate refuses the install")
+        self.assertIn(self.REFUSED, done.stderr, "the refusal is printed")
+        self.assertFalse(caddyfile.is_symlink(), "the live Caddyfile is still a file")
+        self.assertEqual(caddyfile.read_bytes(), before, "the live Caddyfile is byte for byte")
+        self.assertTrue(before, "the live Caddyfile is not empty")
+        self.assertEqual((w.caddy_dir / "deck-streak.caddy").read_text(), block_text)
+        self.assertEqual(caddyfile.read_text(), after)
+
     def test_an_install_whose_block_cannot_be_written_undoes_and_says_so(self):
         w = self.world
         _original, after, block_text = self.installed()

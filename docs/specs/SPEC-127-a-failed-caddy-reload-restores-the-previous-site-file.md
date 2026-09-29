@@ -217,7 +217,7 @@ link at the path, whether it names the live Caddyfile, a missing file or a direc
 member of it. A20 and A21 pin the two links that changed the live state, and a link to a directory
 is refused by the same guard (measured by a scratch run). The install needs no link guard of its
 own: its `cp -p` refuses to write through a link that names the live Caddyfile or a missing
-file, and the refusal is then the undo's (A17).
+file, and the refusal is then the undo's (A22).
 
 The insertions this amendment makes are these two sections, appended after the file's last line,
 and nothing above them is edited (SPEC-038 section 8, ruling (i)).
@@ -232,6 +232,7 @@ and nothing above them is edited (SPEC-038 section 8, ruling (i)).
 | A19 | an install whose import line cannot be added exits non-zero, prints the refusal, removes the new block and leaves the live Caddyfile unchanged (#423) | `test_deploy_scripts.py` `an_install_whose_import_line_cannot_be_added_undoes_and_says_so` |
 | A20 | a removal whose candidate path is a link to the live Caddyfile exits non-zero, prints the write's message and leaves the live Caddyfile byte for byte unchanged (#424) | `test_deploy_scripts.py` `a_removal_whose_candidate_is_a_link_to_the_caddyfile_refuses_before_writing` |
 | A21 | a removal whose candidate path is a link to a missing file exits non-zero, prints the write's message, leaves the live Caddyfile unchanged and creates nothing at the link's target (#424) | `test_deploy_scripts.py` `a_removal_whose_candidate_is_a_dangling_link_refuses_before_writing` |
+| A22 | an install whose candidate path is a link to the live Caddyfile exits non-zero, prints the refusal, puts the previous block back and leaves the live Caddyfile a file with its bytes unchanged (#423) | `test_deploy_scripts.py` `an_install_whose_candidate_is_a_link_to_the_caddyfile_refuses_and_undoes` |
 
 ```acceptance
 A16: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k with_no_candidate_still_undoes
@@ -240,12 +241,13 @@ A18: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k 
 A19: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k an_install_whose_import_line_cannot_be_added_undoes_and_says_so
 A20: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k a_removal_whose_candidate_is_a_link_to_the_caddyfile_refuses_before_writing
 A21: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k a_removal_whose_candidate_is_a_dangling_link_refuses_before_writing
+A22: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k an_install_whose_candidate_is_a_link_to_the_caddyfile_refuses_and_undoes
 ```
 
 The test file's `World.run` now starts the script in its own session and kills the whole group on a
 timeout, so a stuck stub cannot orphan the host script. Rows S12718 to S12722 in
 `scripts/mutation-rows.d/S12700-S12799.json` pin the absent-candidate guard of the undo (killer A16),
-the undo after the block write (A18), after the candidate copy (A17) and after the import append
+the undo after the block write (A18), after the candidate copy (A22) and after the import append
 (A19), and the removal's link guard (A20). Files changed: `deploy/deploy.sh`,
 `scripts/tests/test_deploy_scripts.py`, `scripts/mutation-rows.d/S12700-S12799.json`,
 `docs/red-first/SPEC-127.md`, `docs/decisions/ADR-198-the-install-undoes-every-write-and-a-linked-candidate-is-refused.md`
