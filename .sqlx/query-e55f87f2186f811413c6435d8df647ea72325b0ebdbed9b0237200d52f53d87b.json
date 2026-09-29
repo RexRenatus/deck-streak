@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE readings SET studied_count = ?2, studied_verdict = ?3, studied_at = COALESCE(?4, studied_at) WHERE id = ?1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 4
+    },
+    "nullable": []
+  },
+  "hash": "e55f87f2186f811413c6435d8df647ea72325b0ebdbed9b0237200d52f53d87b"
+}

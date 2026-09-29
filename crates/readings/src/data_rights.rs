@@ -73,7 +73,8 @@ impl DataRights for ReadingsDataRights {
             let readings = sqlx::query!(
                 r#"SELECT id, topic, study_day, digest, persona, text, word_count,
                           reading_minutes, new_cards, note_count, card_ids, generated_at, version,
-                          vault_status, vault_path, carried_nights, created_at
+                          vault_status, vault_path, carried_nights, read_at, studied_count,
+                          studied_verdict, studied_at, vault_tick, created_at
                    FROM readings ORDER BY generated_at, rowid"#
             )
             .fetch_all(&mut *connection)
@@ -151,6 +152,11 @@ impl DataRights for ReadingsDataRights {
                                 "vault_status": row.vault_status,
                                 "vault_path": row.vault_path,
                                 "carried_nights": row.carried_nights,
+                                "read_at": row.read_at,
+                                "studied_count": row.studied_count,
+                                "studied_verdict": row.studied_verdict,
+                                "studied_at": row.studied_at,
+                                "vault_tick": row.vault_tick,
                                 "created_at": row.created_at,
                             })
                         })

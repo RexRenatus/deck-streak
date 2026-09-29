@@ -8,10 +8,13 @@
 use std::sync::Arc;
 
 use deck_streak_kernel::{Clock, StudyDay, StudyDayRule, UtcMillis};
-use deck_streak_progression::grant::GrantPort;
-use deck_streak_readings::store::{SqliteReadings, VaultTick};
+use deck_streak_progression::grant::{GrantPort, GrantRequest, GrantScope, GrantSource};
+use deck_streak_progression::xp::XpAmount;
+use deck_streak_readings::reading::ReadingId;
+use deck_streak_readings::store::{ReadingProgress, SqliteReadings, VaultTick};
 pub use deck_streak_readings::studied::Verdict;
 use deck_streak_readings::topic::TopicKey;
+use deck_streak_readings::xp::{READ_XP, read_source, track_of};
 
 use super::generate::{PortFuture, VaultWriteFailed};
 
@@ -93,16 +96,87 @@ impl<G: GrantPort, V: ReadTick> ReadTap<G, V> {
     /// [`TapError::NotFound`] for an unknown id, [`TapError::Unavailable`] when the record or the
     /// ledger fails.
     pub async fn tap_reading(&self, id: &str) -> Result<TapAnswer, TapError> {
-        let _ = (
-            &self.readings,
-            &self.grants,
-            &self.vault,
-            &self.clock,
-            self.rule,
-            id,
-        );
-        let _ = VaultTick::None;
-        Err(TapError::NotFound)
+        let id = ReadingId::parse(id).ok_or(TapError::NotFound)?;
+        let progress = self.progress(&id).await?;
+        let now = self.clock.now();
+        let today = self.rule.study_day(now);
+
+        // A later tap changes nothing: it answers the first instant, and retries only a vault
+        // tick that never landed.
+        if let Some(read_at) = progress.read_at {
+            if progress.vault_tick != VaultTick::Written {
+                self.tick(&id, &progress.topic, today).await?;
+            }
+            return Ok(answer(&progress, read_at, false));
+        }
+
+        // The grant is once-scoped and idempotent, so a crash between it and the mark is safe: the
+        // next tap grants nothing new and marks.
+        let request = GrantRequest {
+            study_day: today,
+            source: GrantSource::new(&read_source(&id)).map_err(|_| TapError::Unavailable)?,
+            track: track_of(&progress.topic),
+            amount: XpAmount::new(READ_XP),
+            scope: GrantScope::Once,
+        };
+        let _ = self
+            .grants
+            .grant(&request, now)
+            .await
+            .map_err(|_| TapError::Unavailable)?;
+        let first = self
+            .readings
+            .mark_read(&id, now)
+            .await
+            .map_err(|_| TapError::Unavailable)?;
+        // The first writer wins: a tap that lost the race answers the winner's instant.
+        let stored = if first {
+            progress
+        } else {
+            self.progress(&id).await?
+        };
+        let read_at = stored.read_at.unwrap_or(now);
+        self.tick(&id, &stored.topic, today).await?;
+        Ok(answer(&stored, read_at, first))
+    }
+
+    async fn progress(&self, id: &ReadingId) -> Result<ReadingProgress, TapError> {
+        self.readings
+            .progress(id)
+            .await
+            .map_err(|_| TapError::Unavailable)?
+            .ok_or(TapError::NotFound)
+    }
+
+    /// Ticks the vault line and records whether it landed. A failed tick is not a failed tap.
+    async fn tick(
+        &self,
+        id: &ReadingId,
+        topic: &TopicKey,
+        today: StudyDay,
+    ) -> Result<(), TapError> {
+        let landed = self.vault.tick_read(topic, today).await.is_ok();
+        let state = if landed {
+            VaultTick::Written
+        } else {
+            VaultTick::Pending
+        };
+        self.readings
+            .set_vault_tick(id, state)
+            .await
+            .map_err(|_| TapError::Unavailable)
+    }
+}
+
+/// A reading's tap answer at `read_at`.
+fn answer(progress: &ReadingProgress, read_at: UtcMillis, first: bool) -> TapAnswer {
+    TapAnswer {
+        id: progress.id.as_str().to_owned(),
+        read_at,
+        first,
+        covered: u32::try_from(progress.card_ids.len()).unwrap_or(u32::MAX),
+        studied: progress.studied_count,
+        verdict: progress.verdict,
     }
 }
 

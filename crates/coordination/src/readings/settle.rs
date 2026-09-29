@@ -9,9 +9,12 @@ use std::sync::Arc;
 
 use deck_streak_ingest::reader::Review;
 use deck_streak_kernel::{Clock, KernelError, StudyDay, StudyDayRule, UtcMillis};
-use deck_streak_progression::grant::GrantPort;
-use deck_streak_readings::store::SqliteReadings;
+use deck_streak_progression::grant::{GrantPort, GrantRequest, GrantScope, GrantSource};
+use deck_streak_progression::xp::XpAmount;
+use deck_streak_readings::store::{SqliteReadings, StoreError};
+use deck_streak_readings::studied::{Verdict, Window, is_studied, studied_count};
 use deck_streak_readings::topic::TopicKey;
+use deck_streak_readings::xp::{STUDIED_XP, studied_source, track_of};
 
 use super::generate::{PortFuture, VaultWriteFailed};
 
@@ -83,18 +86,84 @@ impl<G: GrantPort, S: StudiedStamp, R: ReviewsByCard> Settle<G, S, R> {
 
     /// Measures every reading that is not yet studied.
     ///
+    /// A reading whose reviews cannot be read is left as it was and measured on the next pass.
+    ///
     /// # Errors
     ///
     /// [`KernelError`] when the record or the ledger fails.
     pub async fn run(&self) -> Result<SettleReport, KernelError> {
-        let _ = (
-            &self.readings,
-            &self.grants,
-            &self.stamps,
-            &self.reviews,
-            &self.clock,
-            self.rule,
-        );
-        Ok(SettleReport::default())
+        let mut report = SettleReport::default();
+        let now = self.clock.now();
+        let today = self.rule.study_day(now);
+        for reading in self.readings.unsettled().await.map_err(store_failed)? {
+            let Ok(reviews) = self
+                .reviews
+                .reviews(&reading.card_ids, reading.generated_at)
+                .await
+            else {
+                continue;
+            };
+            let window = Window {
+                generated_at: reading.generated_at,
+                study_day: reading.study_day,
+            };
+            let count = studied_count(&window, self.rule, &reading.card_ids, &reviews);
+            let covered = u32::try_from(reading.card_ids.len()).unwrap_or(u32::MAX);
+            report.measured += 1;
+            if is_studied(count, covered) {
+                let request = GrantRequest {
+                    study_day: today,
+                    source: GrantSource::new(&studied_source(&reading.id)).map_err(|_| {
+                        KernelError::Offload {
+                            operation: "a reading's grant source",
+                        }
+                    })?,
+                    track: track_of(&reading.topic),
+                    amount: XpAmount::new(STUDIED_XP),
+                    scope: GrantScope::Once,
+                };
+                let _ = self.grants.grant(&request, now).await?;
+                // The verdict turns only once the line is stamped, so a failed stamp is retried by
+                // the next pass; the grant above is once-scoped, so the retry earns nothing twice.
+                if self
+                    .stamps
+                    .stamp_studied(&reading.topic, today)
+                    .await
+                    .is_ok()
+                {
+                    self.readings
+                        .record_measure(&reading.id, count, Verdict::Studied, Some(now))
+                        .await?;
+                    report.studied += 1;
+                } else {
+                    self.readings
+                        .record_measure(&reading.id, count, reading.verdict, None)
+                        .await?;
+                }
+            } else {
+                let verdict = if window.is_over(self.rule, now) {
+                    Verdict::Retired
+                } else {
+                    Verdict::Open
+                };
+                if verdict == Verdict::Retired && reading.verdict != Verdict::Retired {
+                    report.retired += 1;
+                }
+                self.readings
+                    .record_measure(&reading.id, count, verdict, None)
+                    .await?;
+            }
+        }
+        Ok(report)
+    }
+}
+
+/// A failed read of the record, as the kernel's error the pass answers with.
+fn store_failed(error: StoreError) -> KernelError {
+    match error {
+        StoreError::Kernel(error) => error,
+        StoreError::Unreadable { .. } => KernelError::Offload {
+            operation: "reading a stored reading",
+        },
     }
 }

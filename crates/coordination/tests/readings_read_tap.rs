@@ -189,7 +189,7 @@ async fn a_later_tap_retries_only_a_failed_vault_tick() {
     assert_eq!(pending.read_at, Some(UtcMillis::from_epoch_millis(START)));
 
     // A later tap with the vault still failing retries the tick alone.
-    rig.clock.advance(Duration::from_secs(3_600));
+    rig.clock.advance(Duration::from_hours(1));
     let second = must_tap(&rig).await;
     assert!(!second.first);
     assert_eq!(second.read_at, first.read_at);

@@ -121,7 +121,7 @@ impl ReviewsByCard for FakeReviews {
             .filter(|review| {
                 card_ids.contains(&review.card_id) && review.id >= since.epoch_millis()
             })
-            .cloned()
+            .copied()
             .collect();
         Box::pin(async move { Ok(found) })
     }

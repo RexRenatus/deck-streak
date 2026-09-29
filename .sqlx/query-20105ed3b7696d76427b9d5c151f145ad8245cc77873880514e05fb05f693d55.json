@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE readings SET read_at = ?2 WHERE id = ?1 AND read_at IS NULL",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "20105ed3b7696d76427b9d5c151f145ad8245cc77873880514e05fb05f693d55"
+}

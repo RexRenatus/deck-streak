@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT id, topic, study_day, digest, persona, text, word_count,\n                          reading_minutes, new_cards, note_count, card_ids, generated_at, version,\n                          vault_status, vault_path, carried_nights, created_at\n                   FROM readings ORDER BY generated_at, rowid",
+  "query": "SELECT id, topic, study_day, digest, persona, text, word_count,\n                          reading_minutes, new_cards, note_count, card_ids, generated_at, version,\n                          vault_status, vault_path, carried_nights, read_at, studied_count,\n                          studied_verdict, studied_at, vault_tick, created_at\n                   FROM readings ORDER BY generated_at, rowid",
   "describe": {
     "columns": [
       {
@@ -180,8 +180,63 @@
         }
       },
       {
-        "name": "created_at",
+        "name": "read_at",
         "ordinal": 16,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "readings",
+            "name": "read_at"
+          }
+        }
+      },
+      {
+        "name": "studied_count",
+        "ordinal": 17,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "readings",
+            "name": "studied_count"
+          }
+        }
+      },
+      {
+        "name": "studied_verdict",
+        "ordinal": 18,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "readings",
+            "name": "studied_verdict"
+          }
+        }
+      },
+      {
+        "name": "studied_at",
+        "ordinal": 19,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "readings",
+            "name": "studied_at"
+          }
+        }
+      },
+      {
+        "name": "vault_tick",
+        "ordinal": 20,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "readings",
+            "name": "vault_tick"
+          }
+        }
+      },
+      {
+        "name": "created_at",
+        "ordinal": 21,
         "type_info": "Integer",
         "origin": {
           "Table": {
@@ -211,8 +266,13 @@
       false,
       true,
       false,
+      true,
+      false,
+      false,
+      true,
+      false,
       false
     ]
   },
-  "hash": "e1828a016b99e1d17184ee8e3ccfb29c5e5bc5ccefa2b7b19e59e5538040f1ba"
+  "hash": "6b4380d75da684af1be5b6b882f4729def7b12aada737278f83e6fd5caaf2b11"
 }

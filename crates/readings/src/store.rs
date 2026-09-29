@@ -691,6 +691,17 @@ impl VaultTick {
             Self::Pending => "pending",
         }
     }
+
+    /// The tick state a stored text is.
+    #[must_use]
+    pub fn parse(text: &str) -> Option<Self> {
+        match text {
+            "none" => Some(Self::None),
+            "written" => Some(Self::Written),
+            "pending" => Some(Self::Pending),
+            _ => None,
+        }
+    }
 }
 
 /// A stored reading's read line and studied measure (SPEC-047 R8, R9).
@@ -725,8 +736,31 @@ impl SqliteReadings {
     ///
     /// [`StoreError`] when the read fails, or the row was not written here.
     pub async fn progress(&self, id: &ReadingId) -> Result<Option<ReadingProgress>, StoreError> {
-        let _ = id;
-        Ok(None)
+        let id = id.as_str();
+        let row = sqlx::query!(
+            r#"SELECT id, topic, study_day, generated_at, card_ids, read_at, studied_count,
+                      studied_verdict, studied_at, vault_tick
+               FROM readings WHERE id = ?1"#,
+            id
+        )
+        .fetch_optional(self.db.reader())
+        .await?;
+        row.map(|row| {
+            read_progress(
+                &row.id,
+                &row.topic,
+                (row.study_day, row.generated_at),
+                &row.card_ids,
+                (row.read_at, row.studied_at),
+                row.studied_count,
+                (&row.studied_verdict, &row.vault_tick),
+            )
+            .ok_or(StoreError::Unreadable {
+                table: "readings",
+                id: 0,
+            })
+        })
+        .transpose()
     }
 
     /// The state of every reading whose verdict is not yet `studied`, oldest first.
@@ -735,17 +769,54 @@ impl SqliteReadings {
     ///
     /// [`StoreError`] when the read fails, or a row was not written here.
     pub async fn unsettled(&self) -> Result<Vec<ReadingProgress>, StoreError> {
-        Ok(Vec::new())
+        let rows = sqlx::query!(
+            r#"SELECT id, topic, study_day, generated_at, card_ids, read_at, studied_count,
+                      studied_verdict, studied_at, vault_tick
+               FROM readings WHERE studied_verdict <> 'studied'
+               ORDER BY generated_at, rowid"#
+        )
+        .fetch_all(self.db.reader())
+        .await?;
+        rows.into_iter()
+            .map(|row| {
+                read_progress(
+                    &row.id,
+                    &row.topic,
+                    (row.study_day, row.generated_at),
+                    &row.card_ids,
+                    (row.read_at, row.studied_at),
+                    row.studied_count,
+                    (&row.studied_verdict, &row.vault_tick),
+                )
+                .ok_or(StoreError::Unreadable {
+                    table: "readings",
+                    id: 0,
+                })
+            })
+            .collect()
     }
 
     /// Sets `read_at` of the reading `id` to `at` when it is unset; true when this call set it.
+    ///
+    /// The first writer wins: the update names `read_at IS NULL`, so a second tap can never move
+    /// the instant.
     ///
     /// # Errors
     ///
     /// [`KernelError::Database`] when the write fails.
     pub async fn mark_read(&self, id: &ReadingId, at: UtcMillis) -> Result<bool, KernelError> {
-        let _ = (id, at);
-        Ok(false)
+        let id = id.as_str();
+        let at = at.epoch_millis();
+        let mut write = self.db.write().await?;
+        let done = sqlx::query!(
+            "UPDATE readings SET read_at = ?2 WHERE id = ?1 AND read_at IS NULL",
+            id,
+            at
+        )
+        .execute(&mut *write)
+        .await?;
+        write.commit().await?;
+        Ok(done.rows_affected() == 1)
     }
 
     /// Records whether the tap's vault tick was written.
@@ -754,7 +825,17 @@ impl SqliteReadings {
     ///
     /// [`KernelError::Database`] when the write fails.
     pub async fn set_vault_tick(&self, id: &ReadingId, tick: VaultTick) -> Result<(), KernelError> {
-        let _ = (id, tick);
+        let id = id.as_str();
+        let tick = tick.as_str();
+        let mut write = self.db.write().await?;
+        sqlx::query!(
+            "UPDATE readings SET vault_tick = ?2 WHERE id = ?1",
+            id,
+            tick
+        )
+        .execute(&mut *write)
+        .await?;
+        write.commit().await?;
         Ok(())
     }
 
@@ -771,7 +852,50 @@ impl SqliteReadings {
         verdict: Verdict,
         studied_at: Option<UtcMillis>,
     ) -> Result<(), KernelError> {
-        let _ = (id, count, verdict, studied_at);
+        let id = id.as_str();
+        let count = i64::from(count);
+        let verdict = verdict.as_str();
+        let studied_at = studied_at.map(UtcMillis::epoch_millis);
+        let mut write = self.db.write().await?;
+        sqlx::query!(
+            "UPDATE readings SET studied_count = ?2, studied_verdict = ?3, \
+             studied_at = COALESCE(?4, studied_at) WHERE id = ?1",
+            id,
+            count,
+            verdict,
+            studied_at
+        )
+        .execute(&mut *write)
+        .await?;
+        write.commit().await?;
         Ok(())
     }
+}
+
+/// A `readings` row's read and studied columns as a progress record, or `None` when a column holds
+/// what this context never wrote.
+fn read_progress(
+    id: &str,
+    topic: &str,
+    days: (i64, i64),
+    card_ids: &str,
+    instants: (Option<i64>, Option<i64>),
+    studied_count: i64,
+    states: (&str, &str),
+) -> Option<ReadingProgress> {
+    let (study_day, generated_at) = days;
+    let (read_at, studied_at) = instants;
+    let (verdict, tick) = states;
+    Some(ReadingProgress {
+        id: ReadingId::parse(id)?,
+        topic: TopicKey::parse(topic)?,
+        study_day: StudyDay::from_epoch_day(study_day),
+        generated_at: UtcMillis::from_epoch_millis(generated_at),
+        card_ids: serde_json::from_str(card_ids).ok()?,
+        read_at: read_at.map(UtcMillis::from_epoch_millis),
+        studied_count: u32::try_from(studied_count).ok()?,
+        verdict: Verdict::parse(verdict)?,
+        studied_at: studied_at.map(UtcMillis::from_epoch_millis),
+        vault_tick: VaultTick::parse(tick)?,
+    })
 }
