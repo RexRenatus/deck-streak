@@ -253,6 +253,7 @@ when it merges.
 | `tools/parity-oracle/goldens/dark_fields.constants.json` | repo | added: the constants this SPEC uses (constants) |
 | `scripts/mutation-rows.d/S09400-S09499.json` | repo | added: the rows of §9 |
 | `docs/specs/SPEC-094-the-instruments-run-through-one-frame-and-dark-fields-finds-content-no-template-renders.md` | docs | moved from `docs/specs/planned/` |
+| `docs/schematics/insights-instrument-frame.md` | docs | added by the W4 architect turn; this delivery corrects it only where the code proves it wrong |
 | `docs/red-first/SPEC-094.md` | docs | added |
 | `changelog.d/` fragment | repo | added |
 

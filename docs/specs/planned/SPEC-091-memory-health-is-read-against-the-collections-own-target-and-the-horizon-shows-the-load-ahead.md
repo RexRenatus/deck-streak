@@ -214,6 +214,7 @@ when it merges.
 | `tools/parity-oracle/goldens/memory.constants.json` | repo | added: the constants this SPEC uses (constants) |
 | `scripts/mutation-rows.d/S09100-S09199.json` | repo | added: the rows of §9 |
 | `docs/specs/SPEC-091-memory-health-is-read-against-the-collections-own-target-and-the-horizon-shows-the-load-ahead.md` | docs | moved from `docs/specs/planned/` |
+| `docs/schematics/curriculum-readouts-and-the-can-do-pass.md` | docs | added by the W4 architect turn; this delivery corrects it only where the code proves it wrong |
 | `docs/red-first/SPEC-091.md` | docs | added |
 | `changelog.d/` fragment | repo | added |
 

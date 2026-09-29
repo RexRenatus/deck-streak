@@ -1,4 +1,4 @@
-# SPEC-099: The Can-Do ladder unlocks a rung in the owner's own words after each sync
+# SPEC-099: the Can-Do ladder unlocks a rung in the owner's own words after each sync
 
 - **Wave:** W4. **Issues:** #92 (epic #5). **Context(s):** `deck-streak-ingest` (the Can-Do read);
   `deck-streak-curriculum` (the rungs, maturity, `can_do_unlocks` and `can_do_ladder`);
@@ -199,6 +199,7 @@ when it merges.
 | `tools/parity-oracle/goldens/can_do.constants.json` | repo | added: the ladder's constants (constants) |
 | `scripts/mutation-rows.d/S09900-S09999.json` | repo | added: the rows of §9 |
 | `docs/specs/SPEC-099-the-can-do-ladder-unlocks-a-rung-in-the-owners-own-words-after-each-sync.md` | docs | moved from `docs/specs/planned/` |
+| `docs/schematics/curriculum-readouts-and-the-can-do-pass.md` | docs | added by the W4 architect turn; this delivery corrects it only where the code proves it wrong |
 | `docs/red-first/SPEC-099.md` | docs | added |
 | `changelog.d/` fragment | repo | added |
 

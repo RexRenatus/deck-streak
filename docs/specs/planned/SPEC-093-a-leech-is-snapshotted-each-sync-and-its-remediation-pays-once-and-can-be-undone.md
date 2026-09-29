@@ -56,8 +56,9 @@
     not in the snapshot is refused. DeckStreak never writes to the collection.
 - **Corrections to the accepted documents.** `docs/schematics/leeches-state-machine.md` says an undo
   removes "the XP grant"; here the XP is a settlement an undo sets to zero on its day (ADR-093), which
-  a new schematic records beside it. `docs/LEXICON.md` glosses a leech as not suspended, which is the
-  card snapshot's count; the board's leech includes suspended cards, and the gloss says both.
+  `docs/schematics/leech-remediation-settles-once.md` records beside it. `docs/LEXICON.md` glosses a
+  leech as not suspended, which is the card snapshot's count; the board's leech includes suspended
+  cards, and the gloss says both.
 - **What the parity oracle proves.** The rows over synthetic cards, law paths and courses; the board
   over every status and tie; the protocol at its edges; the summary's capped counts and tie; the
   breakdown's bars; and the constants.
@@ -233,6 +234,7 @@ change when it merges.
 | `tools/parity-oracle/goldens/leeches.constants.json` | repo | added: the constants this SPEC uses (constants) |
 | `scripts/mutation-rows.d/S09300-S09399.json` | repo | added: the rows of §9 |
 | `docs/specs/SPEC-093-a-leech-is-snapshotted-each-sync-and-its-remediation-pays-once-and-can-be-undone.md` | docs | moved from `docs/specs/planned/` |
+| `docs/schematics/leech-remediation-settles-once.md` | docs | added by the W4 architect turn; this delivery corrects it only where the code proves it wrong |
 | `docs/red-first/SPEC-093.md` | docs | added |
 | `changelog.d/` fragment | repo | added |
 
