@@ -8,6 +8,13 @@ from _support import REPO, examined
 
 MANIFEST = REPO / "Cargo.toml"
 OVERRIDE = re.compile(r"CARGO_PROFILE_|--config\s+['\"]?profile\.")
+PLANTED = (
+    "CARGO_PROFILE_DEV_DEBUG=2",
+    "cargo build --config profile.dev.debug=2",
+    "cargo build --config 'profile.dev.debug=2'",
+    "cargo build --config=profile.dev.debug=2",
+    "cargo build --config='profile.dev.debug=2'",
+)
 
 
 def profile():
@@ -40,6 +47,11 @@ class BuildProfile(unittest.TestCase):
         for path in examined("workflow and script files", held):
             text = path.read_text(encoding="utf-8", errors="replace")
             self.assertIsNone(OVERRIDE.search(text), f"{path} overrides the build profile")
+
+    def test_the_override_scan_catches_every_planted_spelling(self):
+        """A2: the scan's own cases, the equals form of --config included."""
+        for planted in PLANTED:
+            self.assertIsNotNone(OVERRIDE.search(planted), f"the scan misses: {planted}")
 
 
 if __name__ == "__main__":
