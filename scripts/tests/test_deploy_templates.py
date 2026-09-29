@@ -377,6 +377,8 @@ def credential_lines(root):
         if path.suffix not in (".service", ".timer", ".conf") or not path.is_file():
             continue
         rel = path.relative_to(root).as_posix()
+        if rel.startswith("tmpfiles.d/"):
+            continue
         for _, key, value, number in _units.assignments(_units.unit_text(path), rel):
             if key in keys:
                 found.append((rel, number, key, value))
@@ -384,12 +386,13 @@ def credential_lines(root):
 
 
 NON_UNIT_DROPIN = "deploy/journald.conf.d"
+NON_UNIT_DIRECTORIES = (NON_UNIT_DROPIN, "deploy/tmpfiles.d")
 
 
 def dropin_directory_refusals(root):
     """Every `*.d/` directory under `root`'s deploy/ that is not the drop-in directory of a unit
     shipped beside it, as one line each: only `<unit name>.d/` is read with a unit (SPEC-066 R2), so
-    any other is refused, and the one directory of a file that is no unit is named here."""
+    any other is refused, and the directories of files that are no unit (journald, tmpfiles.d) are named here."""
     refused = []
     deploy = Path(root) / "deploy"
     if not deploy.is_dir():
@@ -406,7 +409,7 @@ def dropin_directory_refusals(root):
         rel = path.relative_to(root).as_posix()
         if not path.is_dir() or not path.name.endswith(".d") or path in own:
             continue
-        if rel == NON_UNIT_DROPIN:
+        if rel in NON_UNIT_DIRECTORIES:
             continue
         refused.append(
             f"{rel}: is not the drop-in directory of a unit shipped beside it, and is refused"

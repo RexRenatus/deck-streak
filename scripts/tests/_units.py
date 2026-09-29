@@ -202,6 +202,7 @@ PAGING_KEYS = {
         "ProtectKernelTunables",
         "ProtectProc",
         "ProtectSystem",
+        "ReadWritePaths",
         "Restart",
         "RestartSec",
         "RestrictAddressFamilies",
