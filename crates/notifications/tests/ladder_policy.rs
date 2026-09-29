@@ -200,7 +200,7 @@ fn read_from_the_file() {
     );
 }
 
-/// The bot delivery calls the transport port declares, in its order: every `fn push_` of it.
+/// The bot delivery calls the transport port declares, in its order: every `fn push_` of it and its `prepare_share`.
 fn port_calls() -> Vec<String> {
     let source = fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("src/transport.rs"))
         .expect("the port's source");
@@ -212,7 +212,7 @@ fn port_calls() -> Vec<String> {
                 .chars()
                 .take_while(|c| c.is_ascii_alphanumeric() || *c == '_')
                 .collect();
-            name.starts_with("push_").then_some(name)
+            (name.starts_with("push_") || name == "prepare_share").then_some(name)
         })
         .collect()
 }
@@ -235,7 +235,9 @@ fn the_policy_polices_the_reveal_beside_the_other_delivery_calls() {
             "push_reveal",
             "push_dice",
             "push_reaction",
-            "push_pin"
+            "push_pin",
+            "push_photo",
+            "prepare_share"
         ],
         "the reveal is its own delivery call, beside the other bot calls"
     );

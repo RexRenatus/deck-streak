@@ -66,12 +66,25 @@ fn the_reading_ready_kind_is_a_recorded_deviation() {
         "reading_ready is a nudge of tier T2, per study day, behind its own switch"
     );
     let adr = "docs/decisions/ADR-041-notification-router-core.md";
+    let photo_adr = "docs/decisions/ADR-135-images-are-drawn-through-a-port-with-no-provider-wired-by-a-sending-job-capped-cached-and-gated.md";
     assert_eq!(
         policy.deviations(),
-        [Deviation {
-            key: "kinds.reading_ready".to_owned(),
-            adr: adr.to_owned()
-        }]
+        [
+            Deviation {
+                key: "kinds.reading_ready".to_owned(),
+                adr: adr.to_owned()
+            },
+            Deviation {
+                key: "withhold.reasons".to_owned(),
+                adr: photo_adr.to_owned()
+            }
+        ]
+    );
+    let photo_record =
+        fs::read_to_string(root().join(photo_adr)).expect("the photo deviation's ADR exists");
+    assert!(
+        photo_record.contains("withhold.reasons"),
+        "the ADR names the key it decided"
     );
     let record = fs::read_to_string(root().join(adr)).expect("the deviation's ADR exists");
     assert!(
@@ -186,6 +199,7 @@ fn the_policy_refuses_withhold_reasons_that_lack_one_the_router_records() {
         "quiet_hours",
         "budget_spent",
         "no_notifier",
+        "photo_unsupported",
     ] {
         let mut lacking = file();
         let reasons = lacking["withhold"]["reasons"]
