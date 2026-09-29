@@ -166,10 +166,14 @@ A18 is the kernel's row of section 7. Its opening sweep, the weekly battery disp
 reports whole, and left 17 unexplained across `redact.rs` (5), `study_day.rs` (4), `db.rs`, `verdict.rs` and
 `credentials.rs` (2 each), `offload.rs` and `settings.rs` (one each); its `table` line was the row
 committed at 2311afa with A18's test, which read `17 != 0`. Every one is observed by a test and none is
-recorded equivalent: the tests, at d702900, read `66 mutants tested in 5m: 61 caught, 3 unviable, 2
-timeouts` in place on a `git archive` export of that commit, none missed. The closing sweep (run
-36504494908 at d702900) read 33 of 33 reports whole, `listed 368, killed 320,
-equivalent 0, unexplained 0, unviable 48` and `table: verdict: ok`; eight shards exited 3 for one timeout
-each, all in `redact_tokens` and counted killed, and the rest exited 0. Its table line is the row
-committed at 41fca01, where A18's test passes. Rows S05730 to S05739 are unused: every mutant was
+recorded equivalent: the tests, at d702900, read `66 mutants tested: 61 caught, 3 unviable, 2
+timeouts` in place on a `git archive` export of that commit, none missed. A merge of dev then added
+`courses.rs` and two `Db` methods, so the crate at the head lists 423 mutants (55 more than the 368,
+of which 49 are in `courses.rs` and 6 in `db.rs`), and the sweep of d702900 no longer measured the
+head. The closing sweep (run 36508893368 at 592bc43) read 33 of 33 reports whole, `listed 423, killed
+367, equivalent 0, unexplained 0, unviable 56` and `table: verdict: ok`; eight shards exited 3 for
+one timeout each, counted killed (six in `redact_tokens`: `redact.rs` 204:12, 205:16, 209:21 twice,
+210:19 and 215:21; two in `OffloadWorkers::get`: `settings.rs` 157:9, returning 0 and 1), and the
+other twenty-four exited 0. The same eight also timed out in the opening sweep. Its table line is the
+row committed at ROWSHA, where A18's test passes. Rows S05730 to S05739 are unused: every mutant was
 mutable and killed by a test.
