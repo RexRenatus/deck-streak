@@ -6,8 +6,8 @@
   against), ADR-057 (the rows, the reader and the runner; it takes a dated note naming ADR-122),
   ADR-016 (a planned SPEC is promoted by the delivery that builds it) and SPEC-039 R8 to R11 (the
   rows, the one reader, the census and the retirement check; it takes a dated amendment).
-- **Status:** written with its delivery: it waited in `docs/specs/planned/` from its own commit
-  until its tests were green, and the delivery moves it to `docs/specs/` (ADR-016: "the delivery
+- **Status:** delivered. It waited in `docs/specs/planned/` from its own commit
+  until its tests were green, and the delivery moved it to `docs/specs/` (ADR-016: "the delivery
   that builds it moves it into `docs/specs/` in the same pull request as its tests and its
   red-first record"). It holds `docs/red-first/SPEC-122.md`.
 
@@ -65,7 +65,7 @@ R5. **The refusal's invariant carries hand-proved rows** in `S12200-S12299` (§7
 | id | criterion | decided by |
 |---|---|---|
 | A1 | a base band file with two tables, two branches that each add a table under the key `MUTATIONS` at different places in the file, and a `git merge` that completes without a conflict: the merged file is still valid JSON, and the reader refuses it naming the file and the key | `test_band_repeated_key.py` `a_merge_git_completes_without_a_conflict_and_the_reader_refuses_the_result` |
-| A2 | a key repeated inside a fragment's `tables` object and one repeated at the fragment's top are each refused naming the file and the key, at the verb (`ids`, exit 2) and by the library | `test_band_repeated_key.py` `a_key_repeated_at_the_top_or_inside_tables_is_refused_naming_it` |
+| A2 | a key repeated inside a fragment's `tables` object and one repeated at the fragment's top are each refused naming the file and the key, at the verb (`ids`, exit 2) and by the library | `test_band_repeated_key.py` `a_key_repeated_at_the_top_or_inside_tables_is_refused_naming_it` and `a_key_repeated_at_any_depth_is_refused_by_the_parser` |
 | A3 | `retired --base <rev>`, over a revision whose band file repeats a key, exits 2 naming the file and the key; and a revision whose header repeats a key is refused | `test_band_repeated_key.py` `retired_over_a_revision_whose_band_file_repeats_a_key_is_refused` and `a_revision_whose_header_repeats_a_key_is_refused` |
 | A4 | the header in the tree, repeating a key, is refused naming it, and every committed band file reads as a plain `json.load` reads it (the same rows, none dropped) | `test_band_repeated_key.py` `a_header_that_repeats_a_key_is_refused_in_the_tree` and `every_committed_band_file_reads_as_plain_json_reads_it` |
 
@@ -73,7 +73,7 @@ R5. **The refusal's invariant carries hand-proved rows** in `S12200-S12299` (§7
 A1: python3 -m unittest discover -s scripts/tests -p test_band_repeated_key.py -k a_merge_git_completes_without_a_conflict_and_the_reader_refuses_the_result
 A2: python3 -m unittest discover -s scripts/tests -p test_band_repeated_key.py -k a_key_repeated_at_the_top_or_inside_tables_is_refused_naming_it
 A3: python3 -m unittest discover -s scripts/tests -p test_band_repeated_key.py -k retired_over_a_revision_whose_band_file_repeats_a_key_is_refused
-A4: python3 -m unittest discover -s scripts/tests -p test_band_repeated_key.py -k every_committed_band_file_reads_as_plain_json_reads_it
+A4: python3 -m unittest discover -s scripts/tests -p test_band_repeated_key.py -k a_header_that_repeats_a_key_is_refused_in_the_tree
 ```
 
 A1 builds its repository at run time in a temporary directory and asserts the merge's exit status
