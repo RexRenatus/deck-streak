@@ -436,7 +436,7 @@ class TheRunnerProvesEverySelectedRow(unittest.TestCase):
 
 #: A bash script that uses an array, which `sh -n` refuses and `bash -n` accepts, and prints 3.
 BASH_TARGET = "scripts/fixtool.sh"
-BASH_TEXT = '#!/usr/bin/env bash\na=(1 2)\necho $(( ${a[0]} + ${a[1]} ))\n'
+BASH_TEXT = "#!/usr/bin/env bash\na=(1 2)\necho $(( ${a[0]} + ${a[1]} ))\n"
 #: The same, kept by its shebang alone: no `.sh` or `.bash` extension.
 BASH_SHEBANG_TARGET = "scripts/fixtool"
 #: A POSIX script that prints 3.
@@ -504,11 +504,15 @@ class TheRunnerParseChecksAShellMutant(unittest.TestCase):
         bash = subprocess.run(["bash", "-n", str(script)], capture_output=True, text=True)
         posix = subprocess.run(["sh", "-n", str(script)], capture_output=True, text=True)
         self.assertEqual(bash.returncode, 0, bash.stderr)
-        self.assertNotEqual(posix.returncode, 0, "sh reads the array, so the fixture proves nothing")
+        self.assertNotEqual(
+            posix.returncode, 0, "sh reads the array, so the fixture proves nothing"
+        )
 
     def test_a_bash_mutant_that_does_not_parse_is_void_not_a_kill(self):
         row = script_row(
-            "S00020-BASH-UNPARSED", *UNPARSED, "test_fixtool.Tool.test_bash_sums_to_three",
+            "S00020-BASH-UNPARSED",
+            *UNPARSED,
+            "test_fixtool.Tool.test_bash_sums_to_three",
             target=BASH_TARGET,
         )
         fixture, done = self.prove(row)
@@ -521,8 +525,11 @@ class TheRunnerParseChecksAShellMutant(unittest.TestCase):
 
     def test_a_bash_mutant_that_parses_and_is_caught_is_killed(self):
         row = script_row(
-            "S00021-BASH-CAUGHT", "+ ${a[1]}", "* ${a[1]}",
-            "test_fixtool.Tool.test_bash_sums_to_three", target=BASH_TARGET,
+            "S00021-BASH-CAUGHT",
+            "+ ${a[1]}",
+            "* ${a[1]}",
+            "test_fixtool.Tool.test_bash_sums_to_three",
+            target=BASH_TARGET,
         )
         fixture, done = self.prove(row)
         self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
@@ -532,8 +539,10 @@ class TheRunnerParseChecksAShellMutant(unittest.TestCase):
 
     def test_a_shebang_alone_makes_a_target_a_shell_script(self):
         row = script_row(
-            "S00022-SHEBANG-UNPARSED", *UNPARSED,
-            "test_fixtool.Tool.test_bash_shebang_sums_to_three", target=BASH_SHEBANG_TARGET,
+            "S00022-SHEBANG-UNPARSED",
+            *UNPARSED,
+            "test_fixtool.Tool.test_bash_shebang_sums_to_three",
+            target=BASH_SHEBANG_TARGET,
         )
         fixture, done = self.prove(row)
         self.assertEqual(done.returncode, 3, done.stdout + done.stderr)
@@ -543,7 +552,9 @@ class TheRunnerParseChecksAShellMutant(unittest.TestCase):
 
     def test_a_posix_sh_mutant_that_does_not_parse_is_void_not_a_kill(self):
         row = script_row(
-            "S00023-SH-UNPARSED", *UNPARSED, "test_fixtool.Tool.test_sh_sums_to_three",
+            "S00023-SH-UNPARSED",
+            *UNPARSED,
+            "test_fixtool.Tool.test_sh_sums_to_three",
             target=SH_TARGET,
         )
         fixture, done = self.prove(row)
@@ -554,7 +565,10 @@ class TheRunnerParseChecksAShellMutant(unittest.TestCase):
 
     def test_a_posix_sh_mutant_that_parses_and_is_caught_is_killed(self):
         row = script_row(
-            "S00024-SH-CAUGHT", "1 + 2", "1 * 2", "test_fixtool.Tool.test_sh_sums_to_three",
+            "S00024-SH-CAUGHT",
+            "1 + 2",
+            "1 * 2",
+            "test_fixtool.Tool.test_sh_sums_to_three",
             target=SH_TARGET,
         )
         fixture, done = self.prove(row)
