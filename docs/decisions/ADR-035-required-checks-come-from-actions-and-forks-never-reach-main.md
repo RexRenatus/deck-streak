@@ -77,3 +77,27 @@ Chosen option.
 
 SPEC-034; ADR-017 (the branch model); ADR-034 (the release flow); the release-ops and
 cyber-pipeline packs' ruleset and workflow rows.
+
+## Note, 2026-09-29: the required `ci` is the pull request's own run
+
+Recorded by SPEC-034's amendment (its section 8, R8, A14 and A15). This decision is unchanged; the
+note decides which run satisfies the required `ci`.
+
+The `ci` workflow runs on a pull request and on a push to `dev` or `main`, from the same app. The
+aggregate job keeps its id `ci`, which every `needs` reader uses, and takes the name
+`${{ github.event_name == 'pull_request' && 'ci' || 'ci (push)' }}`. A pull request's own run
+reports as `ci`, the check both rulesets require, and a push run reports as `ci (push)`. No job
+of any workflow reports a required name under an event that is not `pull_request`. GitHub's
+contexts reference lists the `github` context among those available to a job's keys, and a job's
+`name` is what its check run displays, so the name follows the event that started the run.
+
+Chosen against:
+- **A new pull-request-only required context in both rulesets.** Rejected: the name every document
+  and tool reads would move, and the rulesets would have to change in step with the workflow.
+- **Skipping the aggregate job on a push.** Rejected: a skipped job still reports under its name,
+  and a push to `dev` would carry no aggregate verdict.
+- **Leaving it to the maintainer's merge tooling.** Rejected: the ruleset, not a script, is the
+  enforcement.
+
+Confirmation: `scripts/tests/test_ci_workflows.py` A14 and A15, and the mutation rows S03401 to
+S03403.
