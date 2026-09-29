@@ -588,3 +588,137 @@ fn the_census_follows_a_grouped_module_renaming_and_a_chain_read_before_its_link
         ]
     );
 }
+
+/// Plants progression's `settle` module, the file every advisory case reads its names from.
+fn plant_settle(root: &Path) {
+    plant(
+        root,
+        "crates/progression/src/settle.rs",
+        "const Q: &str = \"INSERT INTO xp_settlement (amount) VALUES (1)\";\n",
+    );
+}
+
+#[test]
+fn the_census_follows_a_crate_alias() {
+    // `prog` is progression's crate under another name, so `use crate::prog::tally` reaches the
+    // renamed `settle` without ever spelling the crate's own name.
+    let planted = tempfile::tempdir().expect("a temporary directory");
+    plant_settle(planted.path());
+    plant(
+        planted.path(),
+        "crates/progression/src/lib.rs",
+        "pub mod settle;\npub use settle::settle as tally;\n",
+    );
+    plant(
+        planted.path(),
+        "crates/markets/src/prog.rs",
+        "pub use deck_streak_progression as prog;\n",
+    );
+    plant(
+        planted.path(),
+        "crates/markets/src/via_prog.rs",
+        "use crate::prog::tally;\n",
+    );
+    let refused = census(planted.path());
+    examined("planted crate source file(s)", refused.sources.clone());
+    assert_eq!(
+        refused.refused,
+        [
+            "crates/markets/src/via_prog.rs calls settle through tally, progression's alias of \
+             settle, and only coordination's code may",
+        ]
+    );
+}
+
+#[test]
+fn the_census_follows_a_type_alias() {
+    // `pub type Wrapped<'a> = ...SettleRequest<'a>` names the request under another name.
+    let planted = tempfile::tempdir().expect("a temporary directory");
+    plant_settle(planted.path());
+    plant(
+        planted.path(),
+        "crates/progression/src/wrapped.rs",
+        "pub type Wrapped<'a> = crate::settle::SettleRequest<'a>;\n",
+    );
+    plant(
+        planted.path(),
+        "crates/quests/src/typed.rs",
+        "use deck_streak_progression::wrapped::Wrapped;\n",
+    );
+    let refused = census(planted.path());
+    examined("planted crate source file(s)", refused.sources.clone());
+    assert_eq!(
+        refused.refused,
+        [
+            "crates/quests/src/typed.rs calls settle through Wrapped, progression's alias of \
+             SettleRequest, and only coordination's code may",
+        ]
+    );
+}
+
+#[test]
+fn a_private_alias_behind_an_attribute_is_not_a_reexport() {
+    // The `)` that closes `#[cfg(test)]` is not the `)` that closes `pub(crate)`: the alias behind
+    // it is private, so a caller's own function of the same name is a homonym and stays accepted,
+    // while the `pub(crate)` link is followed.
+    let planted = tempfile::tempdir().expect("a temporary directory");
+    plant_settle(planted.path());
+    plant(
+        planted.path(),
+        "crates/progression/src/lib.rs",
+        "pub mod settle;\n\
+         #[cfg(test)]\n\
+         use settle::settle as gated;\n\
+         pub(crate) use settle::settle as crate_link;\n",
+    );
+    plant(
+        planted.path(),
+        "crates/quests/src/homonym.rs",
+        "use deck_streak_progression::SettledRow;\nfn gated() {}\n",
+    );
+    plant(
+        planted.path(),
+        "crates/quests/src/link.rs",
+        "use deck_streak_progression::crate_link;\n",
+    );
+    let refused = census(planted.path());
+    examined("planted crate source file(s)", refused.sources.clone());
+    assert_eq!(
+        refused.refused,
+        [
+            "crates/quests/src/link.rs calls settle through crate_link, progression's alias of \
+             settle, and only coordination's code may",
+        ]
+    );
+}
+
+#[test]
+fn the_operation_is_matched_as_a_word_not_a_prefix() {
+    // `settled_of_day` begins with the operation's path and is another function.
+    let planted = tempfile::tempdir().expect("a temporary directory");
+    plant_settle(planted.path());
+    plant(
+        planted.path(),
+        "crates/quests/src/day.rs",
+        "use deck_streak_progression::settled_of_day;\n",
+    );
+    plant(
+        planted.path(),
+        "crates/streaks/src/bare.rs",
+        "use deck_streak_progression::settle;\n",
+    );
+    plant(
+        planted.path(),
+        "crates/streaks/src/direct.rs",
+        "use deck_streak_progression::settle::settle;\n",
+    );
+    let refused = census(planted.path());
+    examined("planted crate source file(s)", refused.sources.clone());
+    assert_eq!(
+        refused.refused,
+        [
+            "crates/streaks/src/bare.rs calls settle, and only coordination's code may",
+            "crates/streaks/src/direct.rs calls settle, and only coordination's code may",
+        ]
+    );
+}
