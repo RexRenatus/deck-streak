@@ -31,7 +31,7 @@ from test_mutation_verdict import (
 
 CAP_TEXT = "the memory cap stopped its tests; neither caught nor a timeout"
 IN_RUN = "     SIGKILL [   4.209s] (1/1) fix tests::doubles"
-SUMMARY = "     SIGKILL [   4.209s] fix tests::doubles"
+SUMMARY = "     SIGKILL [   4.209s] (1/1) fix tests::doubles"
 OTHER = "     SIGKILL [   5.110s] (2/3) fix tests::triples"
 PLANT_FILE = "crates/kernel/src/memory_cap_plant.rs"
 PLANT_MUTANTS = [
