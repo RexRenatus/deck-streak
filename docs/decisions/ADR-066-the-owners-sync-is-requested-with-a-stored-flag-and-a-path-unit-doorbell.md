@@ -45,9 +45,14 @@ outcome within a bound and answers, or says the sync is still running.
 - The file is a doorbell: its content is never read, so a planted payload changes nothing.
 - Requests coalesce: an edge trigger starts at most one more run; the reuse window still answers.
 - The bot unit drops the sync login and adds one writable directory.
+- A refusal on the job side (a recompute load error, or a cycle refusal such as a malformed sync
+  scope) leaves the request pending, so the owner is told the sync is still running until the
+  answer bound; the next request or the daily timer serves it again. No refused owner run is
+  recorded, and no table is added to record one.
 - The path unit's live behaviour is cited from `systemd.path(5)`; a user manager was not available
   to measure it in the build sandbox.
 
 ### Confirmation
 
-`crates/daemon/tests/sync_request.rs` and `scripts/tests/test_sync_path.py`, and the S059xx rows.
+`crates/daemon/tests/roles.rs` (the job is told by the flag alone), `crates/daemon/tests/sync_request.rs`
+and `scripts/tests/test_sync_path.py`, and the S059xx rows.

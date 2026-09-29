@@ -57,8 +57,8 @@ R7. The bot unit loses the sync login (`anki-sync-*` credentials), which only th
 | id | criterion | decided by |
 |---|---|---|
 | A1 | the port requests the job and never calls the cycle | `cargo test -p deck-streak-daemon --test sync_request -- --exact the_bot_port_requests_the_job_and_never_runs_the_cycle` |
-| A2 | a planted request payload changes nothing; only the stored flag starts an owner cycle | `cargo test -p deck-streak-daemon --test sync_request -- --exact a_planted_request_payload_changes_nothing` |
-| A3 | the path unit, the directory's owner and mode, and the bot-only write access | `python3 -m unittest discover -s scripts/tests -p test_sync_path.py -k the_path_unit_and_its_request_directory` |
+| A2 | a planted request payload changes nothing; only the stored flag starts an owner cycle, decided by running the job | `cargo test -p deck-streak-daemon --test roles -- --exact two_planted_request_payloads_change_nothing_the_sync_job_serves` |
+| A3 | the path unit's exact watch set, the directory's owner and mode, and the bot-only write access by a census of every unit | `python3 -m unittest discover -s scripts/tests -p test_sync_path.py` |
 | A4 | a second request inside the gap rings no second time | `cargo test -p deck-streak-daemon --test sync_request -- --exact a_second_request_waits_out_the_ring_gap` |
 | A4 | a request inside the reuse window is answered `Reused` | `cargo test -p deck-streak-daemon --test sync_request -- --exact a_request_inside_the_reuse_window_is_answered_reused` |
 | A5 | the owner is answered by the bound, on an injected clock | `cargo test -p deck-streak-daemon --test sync_request -- --exact the_owner_is_answered_within_the_bound` |
@@ -67,8 +67,8 @@ R7. The bot unit loses the sync login (`anki-sync-*` credentials), which only th
 
 ```acceptance
 A1: cargo test -p deck-streak-daemon --test sync_request -- --exact the_bot_port_requests_the_job_and_never_runs_the_cycle
-A2: cargo test -p deck-streak-daemon --test sync_request -- --exact a_planted_request_payload_changes_nothing
-A3: python3 -m unittest discover -s scripts/tests -p test_sync_path.py -k the_path_unit_and_its_request_directory
+A2: cargo test -p deck-streak-daemon --test roles -- --exact two_planted_request_payloads_change_nothing_the_sync_job_serves
+A3: python3 -m unittest discover -s scripts/tests -p test_sync_path.py
 A4: cargo test -p deck-streak-daemon --test sync_request -- --exact a_second_request_waits_out_the_ring_gap
 A4: cargo test -p deck-streak-daemon --test sync_request -- --exact a_request_inside_the_reuse_window_is_answered_reused
 A5: cargo test -p deck-streak-daemon --test sync_request -- --exact the_owner_is_answered_within_the_bound
@@ -85,10 +85,12 @@ A6: cargo test -p deck-streak-coordination --test job_table -- --exact the_job_t
 | `crates/daemon/src/wiring.rs` | `deck-streak-daemon` | changed: the cycle is no bot port |
 | `crates/daemon/src/role_bot.rs` | `deck-streak-daemon` | changed: builds the requester |
 | `crates/daemon/src/role_job.rs` | `deck-streak-daemon` | changed: the owner cycle first when pending |
-| `crates/daemon/tests/sync_request.rs` | `deck-streak-daemon` | added |
+| `crates/daemon/tests/sync_request.rs` | `deck-streak-daemon` | added: the port, the ring, the wait and the doorbell's file |
+| `crates/daemon/tests/roles.rs` | `deck-streak-daemon` | changed: only the sync job serves the stored request, and two planted payloads change nothing (A2) |
 | `crates/daemon/tests/role_bot.rs` | `deck-streak-daemon` | changed: the bot answers a request |
 | `crates/bot/src/commands.rs` | `deck-streak-bot` | changed: the `StillRunning` outcome and reply |
-| `crates/bot/tests/messages/` | `deck-streak-bot` | changed: the golden for that reply |
+| `crates/bot/tests/commands.rs` | `deck-streak-bot` | changed: the `StillRunning` reply is sent |
+| `crates/bot/tests/messages/sync-still-running.msg.json` | `deck-streak-bot` | added: the golden for that reply |
 | `crates/ingest/src/sync_runs.rs` | `deck-streak-ingest` | changed: `owner_run_since` |
 | `crates/ingest/tests/owner_run.rs` | `deck-streak-ingest` | changed: the owner's latest run since an instant is read |
 | `.sqlx/` | `deck-streak-ingest` | changed: the refreshed query cache |
@@ -96,7 +98,7 @@ A6: cargo test -p deck-streak-coordination --test job_table -- --exact the_job_t
 | `deploy/systemd/deck-streak-job@sync (path unit)` | deploy | added |
 | `deploy/systemd/deck-streak-bot.service` | deploy | changed: request directory, no sync login |
 | `deploy/tmpfiles.d/deck-streak-sync-request.conf` | deploy | added |
-| `deploy/README.md`, `deploy/deck-streak.env.example` | deploy | changed |
+| `deploy/README.md`, `deploy/deck-streak.env.example` | deploy | changed: the units, the request directory and the first-deploy order |
 | `scripts/tests/test_sync_path.py` | tests | added |
 | `scripts/mutation-rows.d/S05900-S05999.json` | tests | added |
 | `docs/specs/SPEC-059-*.md`, `docs/decisions/ADR-066-*.md`, `docs/schematics/sync-request-doorbell.md`, `docs/red-first/SPEC-059.md`, `changelog.d/feat-sync-path-059.md` | docs | added |
@@ -115,3 +117,7 @@ A6: cargo test -p deck-streak-coordination --test job_table -- --exact the_job_t
 - A change written while a sync runs can be missed by the edge trigger; the stored flag stays
   pending, so the next request or the daily timer serves it, and the owner's wait answers
   `StillRunning`.
+- A refusal on the job side (a recompute load error, or a cycle refusal such as a malformed sync
+  scope) leaves the request pending too, so the owner is told the sync is still running until the
+  answer bound and the next request or the daily timer serves it again. The ledger records no
+  refused owner run, and this delivery adds no table for one.
