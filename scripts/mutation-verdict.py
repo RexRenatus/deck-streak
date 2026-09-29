@@ -1528,7 +1528,11 @@ def read_exit(path: pathlib.Path) -> int | None:
 
 
 def battery(
-    reports: pathlib.Path, shards: int, package: str | None = None, listed: str | None = None
+    reports: pathlib.Path,
+    shards: int,
+    package: str | None = None,
+    listed: str | None = None,
+    python_shards: int = PYTHON_WEEKLY_SHARDS,
 ) -> int:
     """Every report the weekly battery's jobs promise, counted whole (R12): each shard's
     `outcomes.json` with an exit of 0, 2 or 3 and counts that sum to its total, the rows' report
@@ -1537,7 +1541,8 @@ def battery(
     fails the battery, rather than read as a shard with no survivor. A dispatch scoped to one
     package (SPEC-057 R14) promises the shards its scope gave a mutant, which the whole tree's
     listing counts, since shard k holds a mutant when the scope lists more than k; scoped to the
-    Mini App it promises the Stryker sweep alone."""
+    Mini App it promises the Stryker sweep alone. The weekly battery's python job runs
+    `PYTHON_WEEKLY_SHARDS` shards; its rehearsal runs fewer, and says how many."""
     findings: list[str] = []
     whole = promised = 0
     owed = range(shards)
@@ -1586,7 +1591,7 @@ def battery(
             else:
                 whole += 1
     if package in (None, PYTHON_CLASS):
-        for shard in range(PYTHON_WEEKLY_SHARDS):
+        for shard in range(python_shards):
             name = f"mutation-python-shard-{shard}"
             promised += 1
             report = read_json(str(reports / name / "report.json"))
@@ -2554,6 +2559,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--base-ref", default="")
     parser.add_argument("--subject", default="")
     parser.add_argument("--shards", type=int)
+    parser.add_argument("--python-shards", type=int, default=PYTHON_WEEKLY_SHARDS)
     parser.add_argument("--listed")
     parser.add_argument("--shard-reports")
     parser.add_argument("--whole")
@@ -2582,7 +2588,9 @@ def main(argv: list[str] | None = None) -> int:
     if args.verb == "battery":
         if not args.reports or args.shards is None or args.shards < 1:
             parser.error("battery needs --reports and --shards, at least 1")
-        return battery(pathlib.Path(args.reports), args.shards, args.package, args.listed)
+        return battery(
+            pathlib.Path(args.reports), args.shards, args.package, args.listed, args.python_shards
+        )
     if args.verb == "configs":
         return configs(root)
     if args.verb == "census":

@@ -556,7 +556,7 @@ class TheVerdictReadsThePythonReports(unittest.TestCase):
         reports = fixture.out / "rehearsal"
         entry = file_entry(SCRIPT, SCRIPT_HEAD, {PLUS: "killed"}, slot=(0, 1))
         write_shard(reports, 0, report_of([entry], shard="0/1"))
-        base = ("battery", "--reports", str(reports), "--shards", "0", "--package", "python")
+        base = ("battery", "--reports", str(reports), "--shards", "1", "--package", "python")
         for extra, code, line in examined(
             "python shard promises",
             [

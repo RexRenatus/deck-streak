@@ -396,6 +396,13 @@ jobs:
           mkdir -p "$RUNNER_TEMP/reports/stryker"
           cp -r reports/mutation "$RUNNER_TEMP/reports/stryker/stryker"
           echo "StrykerJS exited $rc"
+      - name: the Python runner on one guard script, one shard, as the weekly job runs it
+        run: |
+          out="$RUNNER_TEMP/reports/mutation-python-shard-0"
+          mkdir -p "$out"
+          rc=0
+          python3 scripts/mutation_python.py run --file scripts/audit-web-verdict.py --shard 0/1 --report "$out/report.json" || rc=$?
+          echo "mutation-python exited $rc"
       - name: each tool measured something, and the drafts pass the scrub; nothing is filed
         run: |
           python3 - <<'PY'
@@ -424,4 +431,4 @@ jobs:
           if-no-files-found: warn
       - name: the one shard, the row and the Stryker file reported whole, as the battery counts them
         if: ${{ always() }}
-        run: python3 scripts/mutation-verdict.py battery --reports "$RUNNER_TEMP/reports" --shards 1
+        run: python3 scripts/mutation-verdict.py battery --reports "$RUNNER_TEMP/reports" --shards 1 --python-shards 1
