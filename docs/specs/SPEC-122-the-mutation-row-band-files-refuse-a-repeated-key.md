@@ -117,7 +117,7 @@ it is assembled, and R2 says where that parser stands.
   committed band file and the header, and a band file written by hand holds one key per table
   (SPEC-039 R8).
 - **The refusal is a text match on a key, not a structural rule.** It refuses two spellings of
-  one key only when they are the same string after JSON's own unescaping (`"a"` and `"a"`
+  one key only when they are the same string after JSON's own unescaping (`"a"` and `"\u0061"`
   are one key to the parser), which is what a consumer that keeps the last value would also
   fold together.
 
