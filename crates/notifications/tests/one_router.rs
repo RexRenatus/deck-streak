@@ -712,8 +712,10 @@ const NAMED_SENDS: [(&str, &str, &str); 8] = [
 /// re-exported under another name; and in the bot's command handler, its reply sent, its dispatch
 /// run and its erase's prompt sent by callers of their own, which no update asked for. The fourth
 /// review's: a raw request for a rich message from a new module of the bot, a live photo sent through
-/// the client from a new module of the daemon, and an ephemeral edit through the client.
-const AROUND_THE_PORT: [(&str, &str); 27] = [
+/// the client from a new module of the daemon, and an ephemeral edit through the client. The
+/// fifth round's ruling: a gift transferred to a named user, a callback's answer and a story
+/// posted, each through the client from a new module of the daemon.
+const AROUND_THE_PORT: [(&str, &str); 30] = [
     (
         "crates/daemon/src/role_bot.rs",
         r#"/// A celebration sent straight to the owner's chat through the bot's transport, around the router.
@@ -988,6 +990,30 @@ async fn celebrate_with_a_live_photo(bot: &Bot, photo: &SendLivePhotoParams) {
         r"/// A celebration put before the owner as an ephemeral edit through the client, around the router.
 async fn celebrate_by_an_ephemeral_edit(bot: &Bot, edit: &EditEphemeralMessageTextParams) {
     let _edited = bot.edit_ephemeral_message_text(edit).await;
+}
+",
+    ),
+    (
+        "crates/daemon/src/gift.rs",
+        r"/// A celebration sent as a gift to a named user through the client, around the router.
+async fn celebrate_with_a_gift(bot: &Bot, params: &TransferGiftParams) {
+    let _done = bot.transfer_gift(params).await;
+}
+",
+    ),
+    (
+        "crates/daemon/src/callback.rs",
+        r"/// A celebration shown as a callback's answer through the client, around the router.
+async fn celebrate_by_an_answer(bot: &Bot, params: &AnswerCallbackQueryParams) {
+    let _done = bot.answer_callback_query(params).await;
+}
+",
+    ),
+    (
+        "crates/daemon/src/story.rs",
+        r"/// A celebration posted as a story through the client, around the router.
+async fn celebrate_with_a_story(bot: &Bot, params: &PostStoryParams) {
+    let _done = bot.post_story(params).await;
 }
 ",
     ),
@@ -1963,11 +1989,13 @@ fn no_delivery_goes_around_the_port() {
             "crates/bot/src/transport.rs:9: names edit_message_text in \
              Transport::celebrate_by_an_edit, not a named call site",
             "crates/coordination/src/sync_cycle.rs:6: names QUEUE_TABLE",
+            "crates/daemon/src/callback.rs:3: names answer_callback_query",
             "crates/daemon/src/celebrate_client.rs:3: names send_live_photo",
             "crates/daemon/src/digest.rs:3: names forward_message",
             "crates/daemon/src/digest.rs:4: names pin_chat_message",
             "crates/daemon/src/digest.rs:5: names set_message_reaction",
             "crates/daemon/src/ephemeral.rs:3: names edit_ephemeral_message_text",
+            "crates/daemon/src/gift.rs:3: names transfer_gift",
             "crates/daemon/src/lifecycle.rs:4: calls edit_html in celebrate_by_an_edit, \
              not a named call site",
             "crates/daemon/src/main.rs:6: calls handle in celebrate_by_a_fabricated_command, \
@@ -1980,6 +2008,7 @@ fn no_delivery_goes_around_the_port() {
              not a named call site",
             "crates/daemon/src/role_job.rs:11: calls send_html in celebrate_around_the_router, \
              not a named call site",
+            "crates/daemon/src/story.rs:3: names post_story",
             "crates/daemon/src/wiring.rs:4: names DEFAULT_API_URL",
             "crates/notifications/src/data_rights.rs:2: re-exports QUEUE_TABLE",
             "crates/notifications/src/data_rights.rs:2: re-exports ledger",
