@@ -1,0 +1,31 @@
+{
+  "records": [
+    {
+      "file": "crates/coordination/src/recompute/day_bonuses.rs",
+      "mutant": "replace < with <= in recent_scores",
+      "anchor": "while scores.len() < window && number >= first {",
+      "reason": "The window bound admits one score more under <=, and the consumer keeps only the newest window scores, so the extra one is discarded before it is read.",
+      "evidence": "The loop pushes the scores newest first, and on_pace_run (crates/progression/src/consistency.rs) sorts them newest first and truncates to xp().window_days before it reads them, so one extra, oldest score is dropped and the run is the same. The scores are pushed while number falls, so the extra score is the oldest.",
+      "reached_by": "xp_steps::the_derived_bonuses_follow_the_run_the_buff_and_the_state_of_the_day",
+      "issue": "#70"
+    },
+    {
+      "file": "crates/coordination/src/progression/level_view.rs",
+      "mutant": "replace < with <= in level_view",
+      "anchor": "while scores.len() < window && number >= first {",
+      "reason": "The window bound admits one score more under <=, and the consumer keeps only the newest window scores, so the extra one is discarded before it is read.",
+      "evidence": "The loop pushes the scores newest first, and on_pace_run (crates/progression/src/consistency.rs) sorts them newest first and truncates to xp().window_days before it reads them, so one extra, oldest score is dropped and the run is the same. level_view hands the scores to on_pace_run and reads nothing else of them.",
+      "reached_by": "xp_steps::the_derived_bonuses_follow_the_run_the_buff_and_the_state_of_the_day",
+      "issue": "#70"
+    },
+    {
+      "file": "crates/coordination/src/progression/level_view.rs",
+      "mutant": "replace - with / in level_view",
+      "anchor": "let first = today.epoch_day() - INGEST_WINDOW_DAYS;",
+      "reason": "The floor only stops the walk at the ingest window; with the quotient the walk stops at the window count or at a floor far below any stored rollup, and a rollup older than the ingest window cannot change the run.",
+      "evidence": "Days older than INGEST_WINDOW_DAYS (400) are never rolled up, so the walk finds no score below the original floor. Were one stored, on_pace_run zero-fills the days between it and the newer scores and tiers the run down by tier_down_step per missed day, so more than 300 zero days leave no run to carry.",
+      "reached_by": "xp_steps::the_derived_bonuses_follow_the_run_the_buff_and_the_state_of_the_day",
+      "issue": "#70"
+    }
+  ]
+}
