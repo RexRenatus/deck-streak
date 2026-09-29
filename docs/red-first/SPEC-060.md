@@ -389,4 +389,36 @@ every escape) are proved singly by full id: killed.
 A5's criterion said the apply deletes nothing when one approved item changed after the list; it now
 says between the list and the apply's checks, and states that a change after the checks stops the
 run with earlier deletions kept. The runbook's reason for its order is corrected: the apply deletes an
-item only while its digest is the list's, so a snapshot taken after the list holds what is deleted.
+item only while its digest is the list's, so a snapshot taken after the list holds what is deleted, unless the item changed after the list and changed back before the apply.
+
+## Fix round 6
+
+The sixth review found that a bind of a file system's root directory, `/` or a protected directory
+that is itself a mount point, reads `/` in the mount table's root field, so the fifth round's clause
+did not see it, and A12's fixture gave every mount one device, so its control was such a bind. The
+order of work:
+
+- 8f569b9: A12's test with each faked mount on its own device, and the whole-file-system case
+  split in two: another file system mounted whole at an ancestor binds nothing (listed), and the
+  root file system mounted whole a second time is refused. Red over the whole module: only A12
+  failed, by assertion;
+- 8fb8f0c: the fix, a second clause of `plan.mounted` for a file system the table lists mounted
+  whole at two points;
+- 253364e: the row S06072, proved with its full id: killed. The row S06070 is proved again by
+  full id: killed.
+
+```text
+A12: red at 8f569b9: AssertionError: Lists differ: [{...}] != [] (an item inside a file system mounted whole at two points was listed, and the apply's check let it through)
+A12: green at 8fb8f0c
+```
+
+Per case, as the subtest reads:
+
+```text
+A12 an item inside a bind mount of another directory: red at 8f569b9, green at 8fb8f0c (the edited subtest; its earlier cases are green at both)
+```
+
+Two records of the same criterion are given, as in rounds 4 and 5: the pair above is the latest,
+and the earlier pairs stand for the cases they added. The documents state what the code now
+refuses: A12 gains the file-system case, the disclosed cost names both hosts it refuses, and a
+package is still removed on such a host, since the refusal is of path items.
