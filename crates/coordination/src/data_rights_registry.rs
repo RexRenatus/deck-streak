@@ -5,6 +5,7 @@
 //! A delivery that creates a table adds it to its context's port, and a context with a port adds
 //! it here, in the same change: `tests/data_rights_symmetry.rs` fails until it does.
 
+use deck_streak_analytics::data_rights::AnalyticsDataRights;
 use deck_streak_ingest::data_rights::IngestDataRights;
 use deck_streak_kernel::{DataRights, Db, KernelDataRights};
 use deck_streak_privacy::{Erasure, Export, PrivacyError};
@@ -17,6 +18,8 @@ use crate::data_rights::CoordinationDataRights;
 static KERNEL: KernelDataRights = KernelDataRights;
 /// Ingest's port: the sync record exported and erased, its state reset in place.
 static INGEST: IngestDataRights = IngestDataRights;
+/// Analytics' port: the daily rollups and per-course statistics exported and erased (SPEC-071).
+static ANALYTICS: AnalyticsDataRights = AnalyticsDataRights;
 /// Progression's port: the XP ledger exported and erased (SPEC-040).
 static PROGRESSION: ProgressionDataRights = ProgressionDataRights;
 /// Readings' port: the topic days and the runs exported and erased (SPEC-045).
@@ -24,12 +27,19 @@ static READINGS: ReadingsDataRights = ReadingsDataRights;
 /// Coordination's own port: the cron-fire ledger exempt.
 static COORDINATION: CoordinationDataRights = CoordinationDataRights;
 
-/// Every stateful context's port, in the order an erase runs them: the kernel, ingest, progression
-/// (SPEC-040), readings (SPEC-045) and coordination. Identity keeps its sessions in memory (ADR-024),
+/// Every stateful context's port, in the order an erase runs them: the kernel, ingest, analytics
+/// (SPEC-071), progression (SPEC-040), readings (SPEC-045) and coordination. Identity keeps its sessions in memory (ADR-024),
 /// so it has no table and no port.
 #[must_use]
 pub fn ports() -> Vec<&'static dyn DataRights> {
-    vec![&KERNEL, &INGEST, &PROGRESSION, &READINGS, &COORDINATION]
+    vec![
+        &KERNEL,
+        &INGEST,
+        &ANALYTICS,
+        &PROGRESSION,
+        &READINGS,
+        &COORDINATION,
+    ]
 }
 
 /// The owner's export: every table a port exports or resets, as one JSON document

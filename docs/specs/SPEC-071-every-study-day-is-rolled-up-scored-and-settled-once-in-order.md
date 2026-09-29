@@ -15,8 +15,8 @@
   owner's session), SPEC-026 (the bot's command table), SPEC-027 (the sync job), SPEC-029 (the
   golden reader); SPEC-045 when the readings taxonomy is configured (R3). **Mutation band:**
   `S07100-S07199`.
-- **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
-  `docs/specs/` with its tests and `docs/red-first/SPEC-071.md` (ADR-016).
+- **Status:** in delivery: moved to `docs/specs/` with its tests and `docs/red-first/SPEC-071.md`
+  (ADR-016).
 
 ## 1. The problem, measured
 
@@ -202,7 +202,7 @@ R23. Analytics' data-rights port lists `daily_rollup` and `daily_lang_stats` as 
 | A10 | the grade band, the raw streak, the volume baseline and the baseline's window equal their goldens | `the_grade_raw_streak_and_baseline_match_their_goldens` |
 | A11 | the collection day number equals the golden of `analytics.py:today_day_number` | `the_collection_day_number_matches_the_predecessors_golden` |
 | A12 | a card's course is the course whose deck root equals its home deck's top-level name, or none | `a_cards_course_is_the_course_whose_root_is_its_top_level_name` |
-| A13 | the courses file loads the example, and refuses a duplicate code, alias or deck root and overlapping or unordered unit bands, naming the setting and never a value | `the_courses_file_refuses_a_duplicate_or_overlapping_course` |
+| A13 | the courses file loads the example, and refuses a file it cannot read, a malformed file, a duplicate code, alias or deck root and overlapping or unordered unit bands, each naming the setting and never a value | `the_courses_file_refuses_a_duplicate_or_overlapping_course` |
 | A14 | a changed courses file bumps the settings generation once at start, and an unchanged one does not | `a_changed_courses_file_bumps_the_settings_generation_once` |
 | A15 | a readings-taxonomy language deck mapped to another code than the courses file's refuses start | `a_taxonomy_language_mapped_to_another_code_refuses_start` |
 | A16 | the fold settles each closed day after the cursor exactly once, oldest first, and a second recompute settles no day | `the_fold_settles_each_closed_day_once_oldest_first` |
@@ -338,6 +338,37 @@ privacy-gdpr and accessibility packs stay enforced, and no row is deferred for i
 | `docs/decisions/ADR-087-the-owners-courses-are-private-configuration-passed-to-the-predecessors-own-codes.md` | docs | changed: accepted |
 | `docs/red-first/SPEC-071.md` | docs | added |
 | `changelog.d/` fragment | repo | added |
+| `crates/coordination/src/score.rs` | `deck-streak-coordination` | added at delivery (§10): the score reads the API and the bot share |
+| `crates/coordination/tests/score_reads.rs` | `deck-streak-coordination` | added at delivery (§10): the score reads' own tests, the ones cargo-mutants runs on this package |
+| `crates/api/src/session_routes.rs` | `deck-streak-api` | changed at delivery (§10): the owner's study day, `OwnerAccess::study_day` |
+| `crates/api/src/lib.rs` | `deck-streak-api` | changed at delivery (§10): the analytics routes' module |
+| `crates/api/Cargo.toml` | `deck-streak-api` | changed at delivery (§10): `sqlx` as a dev-dependency |
+| `crates/bot/src/lib.rs` | `deck-streak-bot` | changed at delivery (§10): the /score module |
+| `crates/bot/Cargo.toml` | `deck-streak-bot` | changed at delivery (§10): `sqlx` as a dev-dependency |
+| `crates/bot/tests/commands.rs` | `deck-streak-bot` | changed at delivery (§10): the menu of five, and the score's goldens covered |
+| `crates/bot/tests/support/fake_bot_api.rs` | `deck-streak-bot` | changed at delivery (§10): the bench's clock |
+| `crates/bot/tests/messages/start.msg.json` | `deck-streak-bot` | changed at delivery (§10): the command lines name /score |
+| `crates/bot/tests/messages/help.msg.json` | `deck-streak-bot` | changed at delivery (§10): the command lines name /score |
+| `crates/bot/tests/messages/score.msg.json` | `deck-streak-bot` | added at delivery (§10): /score's golden |
+| `crates/bot/tests/messages/score-no-retention.msg.json` | `deck-streak-bot` | added at delivery (§10): /score's golden for an absent retention |
+| `crates/bot/tests/messages/score-none.msg.json` | `deck-streak-bot` | added at delivery (§10): /score's golden for a day with no score |
+| `crates/bot/tests/messages/score-failed.msg.json` | `deck-streak-bot` | added at delivery (§10): /score's golden for a failed read |
+| `crates/daemon/src/role_job.rs` | `deck-streak-daemon` | changed at delivery (§10): the sync job loads its recompute; the new error's reason |
+| `crates/daemon/src/role_bot.rs` | `deck-streak-daemon` | changed at delivery (§10): the recompute loaded at start; the bot's clock and rule |
+| `crates/kernel/tests/data_rights.rs` | `deck-streak-kernel` | changed at delivery (§10): the pinned reset row names `courses_digest` |
+| `crates/readings/tests/support/mod.rs` | `deck-streak-readings` | changed at delivery (§10): a card literal names its `course` |
+| `web/app/src/lib/api.ts` | miniapp | changed at delivery (§10): `score()`, through the one session; a refusal stops the client in the call that met it, and a call with no answer reads null; its equivalent mutants recorded in `scripts/mutation-equivalent.d/miniapp.json` |
+| `web/app/src/lib/api.test.ts` | miniapp | changed at delivery (§10): `score()`'s tests, and the tests that kill the client's older survivors, the failed handshake's interleaving among them |
+| `web/app/src/lib/score/score.test.ts` | miniapp | added at delivery (§10): the score body's reading |
+| `web/app/src/routes/score.test.ts` | miniapp | added at delivery (§10): the score screen's states |
+| `web/app/src/lib/startapp.ts` | miniapp | changed at delivery (§10): the `score` token; the shape check is `isToken`, tested on its own; the `today` entry's equivalent mutants recorded in `scripts/mutation-equivalent.d/miniapp.json` |
+| `web/app/src/lib/startapp.test.ts` | miniapp | changed at delivery (§10): the token list names `score`; Today's own path; `isToken`'s own tests |
+| `scripts/mutation-equivalent.d/deck-streak-analytics.json` | repo | added at delivery (§10): the one Rust equivalent's record (#295), in SPEC-057's form |
+| `scripts/mutation-equivalent.d/miniapp.json` | repo | added at delivery (§10): the Mini App's equivalent mutants' records (#294), in SPEC-057's form |
+| `web/app/messages/en.json` | miniapp | changed at delivery (§10): the score screen's messages |
+| `web/app/tests/a11y.spec.ts` | miniapp | changed at delivery (§10): the score route answered, so the audit renders the breakdown |
+| `crates/ingest/src/sync_runs.rs` | `deck-streak-ingest` | changed at delivery (§10, Continuation): `first_success_in`, the start of a study day's first successful sync |
+| `crates/ingest/tests/gate.rs` | `deck-streak-ingest` | changed at delivery (§10, Continuation): `first_success_in`'s own test, the one cargo-mutants runs on this package |
 
 ## 5. What this does NOT do
 
@@ -417,3 +448,224 @@ milliseconds (SPEC-029 R3).
 | `S07108-SETTLE-ONCE` | `crates/coordination/src/recompute/mod.rs` | the fold settles only the days after the cursor | `settle_fold::the_fold_settles_each_closed_day_once_oldest_first` |
 | `S07109-PHASE-ORDER` | `crates/coordination/src/recompute/mod.rs` | the declared order of the seven phases | `settle_fold::the_steps_run_in_their_phase_order` |
 | `S07110-ROLLUP-KEY` | `migrations/007101_analytics_daily_rollup.sql` | one row per study day, held by the table's key (a script mutation of the migration with a cargo killer) | `rollup_store::rerolling_a_day_with_the_same_reviews_writes_identical_rows` |
+| `S07111-SETTLE-ONE-WRITE` | `crates/coordination/src/recompute/mod.rs` | a settle records its cursor in the same write as its steps (added at delivery, §10) | `settle_fold::a_settle_whose_cursor_is_refused_commits_none_of_its_steps_work` |
+| `S07112-SYNC-START-DAY` | `crates/coordination/src/sync_cycle.rs` | the fold is handed the study day the latest successful sync started in (added at delivery, §10) | `settle_fold::cycle::a_sync_across_the_rollover_leaves_the_day_it_started_in_owed` |
+| `S07113-OWED-SETTLE-DUE` | `crates/coordination/src/sync_cycle.rs` | a cycle that runs the fold collects the settle a closed day is owed as an obligation (added at delivery, §10, Continuation) | `settle_fold::cycle::the_scheduled_sync_after_a_sync_across_the_rollover_settles_the_owed_day` |
+
+## 10. Amendments at delivery
+
+- **The score reads are one coordination use case** (`crates/coordination/src/score.rs`). The API's
+  routes and the bot's `/score` both call `day_score`, and the days route calls `day_rollups`, so the
+  two surfaces cannot show two scores for one study day (A23, A24). Chosen against each surface
+  reading analytics' repository itself: `api` and `bot` depend on coordination and never on
+  analytics (docs/CONTEXT-MAP.md), and two reads could drift. The use case says what is absent: a
+  card state no recompute recorded, and, on a day with no answered review, both the day's true
+  retention and its retention pillar (R10, R22). Chosen against rendering the pillar's stored 0,
+  which would claim a measurement nobody made.
+- **The routes (R20).** `GET /api/analytics/days?from=<ISO date>&to=<ISO date>` answers the rollups
+  of the days that have one, oldest first, and refuses a range that ends before it starts
+  (`range_invalid`) or spans more than the window's 400 study days (`range_too_long`) with 400.
+  `GET /api/score` answers `{"study_day": ..., "score": ...}`, whose `score` is null while no
+  recompute rolled the day up. The session is checked before anything else, so a request without
+  the owner's live session learns nothing, not even whether the database is open (503
+  `database_not_open` answers the owner alone). The owner's study day comes from
+  `OwnerAccess::study_day`, which `GET /api/me` now reads too.
+- **`/score` (R21).** The bot's handlers take the study-day rule and a clock, so `/score` names the
+  current study day as `GET /api/score` does. It answers the total, the grade, the reviews and the
+  true retention to one decimal, or says the retention is absent; a day with no rollup yet is said to
+  have no score, naming `/sync`. `/score` joins the owner's menu and the command lines `/start` and
+  the help answer list, so their goldens change, and each of its four messages has a golden.
+- **The score screen (R22).** `/score` joins the route table and the startapp token map (token
+  `score`), which `a11y-coverage.test.ts` and `startapp.test.ts` hold equal to the screens, and the
+  audit answers `/api/score` with a day whose retention is absent, so both colour schemes audit the
+  breakdown. The client reads the score through the one session (`api.ts`), sharing one read with
+  `GET /api/me`. Each pillar shows its name, its value as text and a `<meter>` named by the text; an
+  absent retention shows its name and a sentence, and no value or bar.
+- **R15: the fold runs after a sync.** `CycleParts::with_fold` gives the cycle a fold shared by every
+  cycle of a role, and the recompute runs it after the window read with the study day of the latest
+  successful sync on record (`SyncRunStore::last_success`), then writes the anchor; a fold that fails
+  is `CycleError::Recompute`, recorded as `recompute_failed`, and leaves the anchor as it was, so the
+  next cycle recomputes. No test of A16 to A21 runs a sync cycle, so the cycle's own test,
+  `settle_fold::cycle::a_sync_cycle_runs_the_fold_and_settles_only_after_a_successful_sync`, is
+  recorded under A18 in `docs/red-first/SPEC-071.md`: a cycle whose sync fails evaluates the current
+  day and settles nothing, and the next one, whose sync succeeds, settles the day that closed.
+- **The courses load where a cycle runs.** The daemon's `RecomputeSetup` loads the courses (R1),
+  checks them against the readings taxonomy (R3), records their digest (R4) and builds the fold, at
+  the `bot` role's start and when the `sync` job runs, and hands the reader its courses. Chosen
+  against loading them at every job's start, because the other jobs start without the sync's
+  settings (SPEC-023 R12), and a malformed courses file would then refuse the maintenance jobs too.
+- **How a step registers (R19).** A later SPEC implements `DayStep` in its own file under
+  `crates/coordination/src/recompute/` and registers it in `crates/daemon/src/wiring.rs`'s
+  `recompute_fold` with `Fold::register(phase, step)`; the fold refuses a step registered outside its
+  phase (A20), and no later SPEC edits the fold. Chosen against a registry the fold discovers, which
+  would hide the order of registration from the composition root that owns it.
+- **Two privacy categories.** `daily_rollup` is the category `daily-rollups` and `daily_lang_stats`
+  the category `daily-course-stats`, each with its line in `PRIVACY.md`; §3a B1's one category over
+  both tables is refused by the data-rights symmetry census, whose planted check removes the first
+  table's category and expects exactly one refusal. Chosen against one category, which that census
+  cannot judge table by table.
+- **No CHECK ties `score_at_close` to `settled_at`.** The closing day's step records the score it
+  closed with before the fold records the settle, in the same write, and SQLite checks a CHECK at
+  each statement, not at the commit. Chosen against recording the settle before the steps, because
+  the cursor moves only once every step of the day ran (R16).
+- **The first recompute's backfill (R17).** It rolls up, in the historical form, the past study days
+  of the window before the most recently closed day; that day is then settled with its end-of-day
+  state, the current day is evaluated, and a revisit re-rolls every past day whose fingerprint changed
+  and re-scores every past study day of the window (R14, R18).
+- **Two parity traps.** The predecessor's `sum` of floats is CPython's compensated summation
+  (Neumaier's, since 3.12), so the seconds are summed by `metrics.rs`'s port of it, never by a
+  running sum, which the bit-exact goldens reject in the last place; and serde_json's default float
+  parser can land one unit in the last place away, so analytics' tests parse the goldens with its
+  `float_roundtrip` feature.
+- **The manifest.** Beside the files above, the pinned reset row of `crates/kernel/tests/data_rights.rs`
+  names `courses_digest: null`, a card literal of `crates/readings/tests/support/mod.rs` names
+  `course: None`, and the API's and the bot's tests write synthetic rollup rows through the kernel's
+  `Db`, which hands out sqlx types, so both crates take `sqlx` as a dev-dependency: no new crate and
+  no new edge of the context map.
+- **Commit b822d12 carries code under a `docs(analytics)` subject.** Beside the amendments, the
+  red-first lines and the changelog fragment, it refactors the score body's reader
+  (`web/app/src/lib/score/score.ts`: the `isRecord` guard becomes destructuring over `?? {}`) and
+  changes two tests: `ScoreBreakdown.test.ts` casts the meter it reads to `HTMLMeterElement`, a type
+  alone, and `score.test.ts` gains the case of a study day in an array. The history is kept as it is.
+  The refactor reads every body as before: a JSON value that is not an object answers `undefined`
+  for any field, so `null` is the one value that needed the default, and the reader before it
+  (2f51341) and the reader after it pass the same 24 tests of the score module, the score screen and
+  the client; StrykerJS kills all 56 of its mutants.
+- **The mutation jobs' survivors (SPEC-039).** The diff-scoped jobs mutate every file the delivery
+  changed, whole, so the survivors of the three older client modules it touched are its own.
+  `mutation-web` found 31 at 97823b2: 19 survived and 4 uncovered in `api.ts`, 7 in `startapp.ts`
+  and 1 in `routes.ts`. Tests now kill every mutant of the three that a test can observe: a
+  handshake and a call the network drops, a handshake refused with 403, two calls whose session
+  ended together sharing one new handshake, a failed `/api/me` whose body reads as a session,
+  `/api/me` bodies that are no JSON object or carry a malformed day, Today's own path, a failed
+  handshake's interleaving, and the token's shape. Six mutants no test can observe were recorded in
+  place as `EQUIVALENT (#294)`, each with its reason on its line, and are now records of
+  `scripts/mutation-equivalent.d/miniapp.json` ("Continuation: the equivalents" below): the `'open'` literal, which no
+  caller compares with; `stopped` left unset after a refusal, since a refused session stays cached
+  and a later call answers reopen and sends nothing either way; the `null` an unreadable body falls
+  back to, which both parsers read as they read `undefined`; the `typeof` beside `body !== null`,
+  since a JSON value that is no object reads no `study_day`; and the `today` entry removed or its
+  key emptied, since `today` opens `TODAY` as every unlisted token does. At 8a12cf4 StrykerJS over
+  the three modules kills 142 mutants, times out 1, and ignores 6, the records alone; none survives
+  and none is uncovered.
+- **A record hides only its own mutants.** StrykerJS disables a mutator for every mutant whose node
+  starts on the line its comment names (instrumenter 10.0.0). At 47172da seven mutants the tests
+  kill started where a recorded one did, since a condition's two forced values start at one node,
+  as a regular expression's mutants do, and no line split can part them. Three places are
+  restructured instead, each answering as before, and the seven are killed again:
+  - a refusal stops the client in the call that met it (`get`), not in a callback on the shared
+    handshake, and the refused session stays cached as before; the refusal's condition now decides
+    the answer, so both its forced values are killed. The tests of a handshake refused with 403, a
+    page opened outside Telegram and a call the new session refuses too pin it.
+  - a call that got no answer reads `null`, not the string `'unavailable'`, so the read's refusal,
+    `response === null || !response.ok`, holds no part that another implies. The tests of a
+    handshake and a call the network drops, a server that fails and a failed `/api/me` whose body
+    reads as a session pin it.
+  - the token's shape is `isToken`, and `routeFor` reads the table through a conditional on it.
+    The table is read by exact key, so no screen shows whether the shape holds; `isToken`'s own
+    test pins its anchors, its characters and its length, beside the tests of unknown and
+    malformed tokens.
+
+  The mutant that forces the failed handshake's `session === used` true is killed by a test that
+  sweeps the offsets of the microtask queue after a dropped handshake: at one offset, a call that
+  joined the failing attempt resumes only after another call has opened a newer session, and the
+  mutant then forgets that session, so a later call sends a handshake of its own. Against the mutant
+  the test fails at that offset, the later call sending `POST /api/session` before its
+  `GET /api/me`; it refuses a sweep that never reaches the interleaving.
+- **`mutation-rust`** missed 51 mutants at 97823b2, and timed out 3, which it counts as examined.
+  cargo-mutants runs only the mutated package's tests, and several functions were tested only
+  through their callers in other packages, so 49 of them are now killed by a test in their own
+  package: analytics' store reads and writes, fingerprint, conversions and leech setting, and
+  its Python ports' ties and overflow (unit tests in `metrics.rs` and `score.rs`); coordination's
+  score reads (`tests/score_reads.rs`) and the fold's evaluations, step order, `Debug` and
+  `Display`, a clock stepped back, its error log and the cycle's fold; the courses file's
+  boundaries and a course code's formatting; and the API's refusals. `seconds_of` caps each answer
+  with the crate's one port of Python's `min`, `score.rs`'s `py_min`, which it matched line for line,
+  so its tie is proved by `py_min`'s own test rather than standing as an equivalent. The last one
+  is a mutant no test can observe: in `card_snapshot`, the test `card.interval < MATURE_IVL_DAYS`
+  sits inside the branch that only a card younger than `MATURE_IVL_DAYS` reaches, so `<=` there
+  admits no other card. It was recorded in the form SPEC-039 R5 held in force: one `exclude_re`
+  entry in `.cargo/mutants.toml`, with `EQUIVALENT: <reason> (#295)` on the line above, anchored to
+  the whole name cargo-mutants' listing prints,
+  `crates/analytics/src/snapshot.rs:75:58: replace < with <= in card_snapshot`. The listing no
+  longer named it and still named the line's six other mutants. SPEC-057 (#277) replaced this
+  form, and this delivery converts the entry ("Continuation: the equivalents" below). At 47172da the job read examined 465 (caught 461,
+  missed 1, timeout 3), unviable 101, of 566; the missed one is this mutant.
+- **Fix round 1: six defects no test observed.** The first review planted six defects that every
+  test passed, on code that is right in all six places, so the round adds tests and no production
+  code. Each test is green on the real code and red under its plant (`docs/red-first/SPEC-071.md`,
+  "Fix round 1"), and each is recorded under the criterion it serves:
+  - R9, under A6: `settle_fold::a_late_review_rerolls_a_settled_day_and_keeps_what_it_closed_with`.
+    A late review re-rolls a settled day after its cards moved, and the day keeps the card state,
+    the provenance and the score it closed with; a backfilled day re-rolled the same way keeps no
+    card state. A6's own test holds analytics' store to this, and this one holds the fold's steps.
+  - R16, under A16: `settle_fold::a_settle_whose_cursor_is_refused_commits_none_of_its_steps_work`.
+    A trigger the test installs refuses the cursor's write, the one statement that names
+    `settled_at`. The settle then commits none of its steps' work, and the recompute that settles
+    the day at last commits it once. A failure inside a step could not tell the settle's one write
+    from two.
+  - R15, under A18: `settle_fold::cycle::a_sync_across_the_rollover_leaves_the_day_it_started_in_owed`.
+    A successful sync that started before the rollover and finished after it leaves the day that
+    closed owed, and the owner's next sync, which starts after the close, settles it.
+  - R18, under A21: `settle_fold::a_change_to_any_review_field_or_to_the_courses_rerolls_the_day`.
+    A change to any one of a review's eight fields, or to the courses file's digest, changes the
+    day's fingerprint, and the next recompute rolls the day up again. cargo-mutants never removes
+    one element of the list the fingerprint digests, so each field has its own row in the table.
+  - R1, in A13's own test: every malformed file's refusal names the setting and quotes none of the
+    file's values, as a contradiction's refusal already did. The malformed files grow from 11 to 19,
+    so that every place the reader refuses a file's shape is reached by one of them. The one value a
+    refusal may name is the schema's published name, `COURSES_SCHEMA`, as the shape it expects.
+    A13's text in §3 grows to say so, because its test now observes it; R1 is unchanged.
+  - R4, under A14: `settle_fold::cycle::cycles_with_an_unchanged_courses_file_leave_the_settings_generation_alone`.
+    Two runs of the sync job with the courses file unchanged each record the digest at their start
+    and run their cycle, and the settings generation stays where the first start put it.
+
+  Two of the six hold a settlement invariant that cargo-mutants cannot produce, and they take rows
+  (§9): S07111 holds R16's one write, and S07112 holds the start day R15 reads. The other four take
+  none. R9's and R4's defects each add a call, which no constant, string, attribute or `new` method
+  holds, and their tests hold them. A row for R18 would need its killer in analytics' own package,
+  where no fold test runs. R1's defect leaks a value into a `&'static str` through `Box::leak`,
+  which is contrived, and A13 itself now kills it.
+- **Continuation: a day left owed by a sync across the rollover was settled late.** After the
+  owner's sync that started before the rollover and finished after it, the anchor is written after
+  the close. The next scheduled sync starts after the close, but nothing in the collection changed
+  since that anchor, so the change gate skipped the recompute and the closed day stayed owed until
+  some later recompute settled it with a later card state. R15 asks the recompute after every
+  successful sync, scheduled or the owner's, to settle each closed day, so the code was short of R15
+  and R15 stays as written. A cycle given the fold now registers an obligation, `owed_settle`
+  (`crates/coordination/src/sync_cycle.rs`), whose one deadline is the start of the current study
+  day's first successful sync (`SqliteSyncRuns::first_success_in`). While no recompute has run
+  since that start, the gate runs one for it (`DeadlineDue`), and its fold settles the day that
+  closed; once one has, the deadline has passed and the gate is back to its other terms. The tests,
+  both recorded under A18 in `docs/red-first/SPEC-071.md`, "Continuation":
+  - `settle_fold::cycle::the_scheduled_sync_after_a_sync_across_the_rollover_settles_the_owed_day`:
+    after a sync across the rollover, the scheduled sync that starts after the close, with no
+    rescore marked and nothing changed, runs one recompute for `owed_settle`, which settles the
+    closed day with the card state at that sync; the next scheduled run that day is refused and
+    the day is settled once. It is red at 83cceb7 and green at 2d76848.
+  - `settle_fold::cycle::the_scheduled_sync_after_a_settle_still_skips_the_recompute`: after the
+    owner's sync that started after the close settled the day, the day's scheduled sync, with
+    nothing changed, costs no recompute, and the settled day is as it was.
+
+  The S3 test of fix round 1 stays: its second cycle is the owner's sync, which marks a rescore, and
+  it is S07112's killer; the new test adds the scheduled path. `first_success_in` has its own test in
+  ingest's package, `gate::a_study_days_first_success_is_its_earliest_successful_start`. Row S07113
+  (§9) holds the registration, which no function-level mutant removes. Chosen against a deadline
+  per owed day, the start of the first successful sync after that day's close: it would read the
+  fold's cursor as well as the sync record, and the one deadline already comes due at the cycle the
+  first test observes. Chosen against the latest successful sync on record: it comes due again
+  after every successful sync, so the day's scheduled sync after the owner's settle would recompute
+  with nothing owed; planted in its place, the second test goes red.
+- **Continuation: the equivalents move to SPEC-057's record.** `dev` gained SPEC-057 (#277) while
+  this delivery was open, so the branch absorbs `dev` at dd98601 in a merge commit (ef80ba5) that
+  resolves its one conflict, `.cargo/mutants.toml`, with `dev`'s text: no `exclude_re` key. The
+  seven equivalents are then records under `scripts/mutation-equivalent.d/`, each with its file,
+  mutant, anchor, reason, evidence and issue: the #295 mutant in `deck-streak-analytics.json`
+  (reached by `rollup_metrics::the_card_snapshot_matches_the_predecessors_golden`), and the six
+  #294 mutants in `miniapp.json`, their `Stryker disable` comments removed from `api.ts` and
+  `startapp.ts`. `python3 scripts/mutation-verdict.py exclusions` refused those five comments on the
+  merge and reads no finding after the move; `census` reads each record whole. StrykerJS over
+  `api.ts` and `startapp.ts` now runs the six: 141 killed, 1 timed out and 6 survived, and each
+  survivor is bound by exactly one record, which binds no other mutant of the run. cargo-mutants'
+  listing of `snapshot.rs` names the #295 mutant again, and its record binds it alone, not the
+  line's other `replace < with <= in card_snapshot` at column 25.
