@@ -73,11 +73,11 @@ sequenceDiagram
   pv->>db: PRAGMA secure_delete = ON, refused unless it answers 1
   loop every port
     pv->>p: erase
-    p->>db: DELETE FROM each exported table; the reset row over each singleton
+    p->>db: DELETE FROM each exported table#59; the reset row over each singleton
   end
   loop every port
     pv->>p: export, inside the same transaction
-    pv->>pv: each exported table empty; each singleton one row holding its reset values
+    pv->>pv: each exported table empty#59; each singleton one row holding its reset values
   end
   pv->>db: COMMIT
   pv->>db: VACUUM

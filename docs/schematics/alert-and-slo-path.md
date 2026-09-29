@@ -17,7 +17,7 @@ flowchart LR
   watch -->|new oom_kill or max| fail2[exit 1]
   watch -->|new high, or crossing 90 percent of memory.max| journal
   units[api, bot, job units: exit non-zero, a watchdog or an OOM kill] --> fail3[unit failed]
-  fail1 & fail2 & fail3 -->|OnFailure=deck-streak-alert@%n.service| alert[alert-telegram.sh]
+  fail1 & fail2 & fail3 -->|"OnFailure=deck-streak-alert@%n.service"| alert[alert-telegram.sh]
   journal -->|the failed run's last five error lines| alert
   creds[$CREDENTIALS_DIRECTORY: telegram-bot-token, owner-user-id] --> alert
   alert -->|URL and fields through curl --config on stdin| tg((Telegram sendMessage))
@@ -55,7 +55,7 @@ sequenceDiagram
   end
   alert->>journal: that run's error lines (the unit's, when no run is named)
   journal-->>alert: at most the last five
-  alert->>alert: the text: unit, result, lines; at most 3500 bytes, cut at a character boundary
+  alert->>alert: the text: unit, result, lines#59; at most 3500 bytes, cut at a character boundary
   alert->>curl: --config - on stdin: url, chat_id, text (never argv)
   curl->>curl: POST sendMessage, three retries
 ```
