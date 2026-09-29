@@ -237,7 +237,7 @@ when it merges.
 | `migrations/011001_vault_drills.sql` | `deck-streak-vault` | added: `drill_answers` and `drill_grades` |
 | `crates/coordination/src/drills.rs` | `deck-streak-coordination` | added: the answer use case and the post-back step |
 | `crates/coordination/src/jobs.rs` | `deck-streak-coordination` | changed: `drill_postback` |
-| `crates/coordination/src/runner.rs` | `deck-streak-coordination` | changed: the job's entrance |
+| `crates/coordination/src/runner.rs` | `deck-streak-coordination` | dropped (amendment): the job's entrance is `role_job.rs`, which dispatches `drill_postback` |
 | `crates/coordination/src/lib.rs` | `deck-streak-coordination` | changed: the module |
 | `crates/coordination/src/data_rights_registry.rs` | `deck-streak-coordination` | changed: the vault's port and its two tables |
 | `crates/coordination/tests/data_rights_symmetry.rs` | `deck-streak-coordination` | changed: a seeded row in each table |
@@ -262,7 +262,7 @@ when it merges.
 | `scripts/mutation-rows.d/S11000-S11099.json` | repo | added: the rows of §9 |
 | `Cargo.lock`, `.sqlx/` | workspace | changed |
 | `docs/specs/SPEC-110-a-law-drill-is-answered-once-through-the-vault-contract-and-its-grade-pays-once.md` | docs | moved from `docs/specs/planned/` |
-| `docs/schematics/law-drill-answer-grade-and-pay.md` | docs | added by the W6 architect turn; this delivery corrects it only where the code proves it wrong |
+| `docs/schematics/law-drill-answer-grade-and-pay.md` | docs | unchanged (amendment): added by the W6 architect turn; the code proved no correction necessary |
 | `docs/red-first/SPEC-110.md` | docs | added |
 | `crates/daemon/src/role_job.rs` | `deck-streak-daemon` | changed: the `job` role dispatches `drill_postback` |
 | `crates/daemon/src/role_bot.rs` | `deck-streak-daemon` | changed: the bot role hands the drill notes' reader and the answer's writer to its commands at start (R13) |
@@ -276,6 +276,17 @@ when it merges.
 | `crates/bot/tests/messages/help.msg.json`, `crates/bot/tests/messages/start.msg.json` | `deck-streak-bot` | changed (amendment): the menu goldens list the two drill commands |
 | `crates/bot/tests/commands.rs` | `deck-streak-bot` | changed (amendment): the menu entries |
 | `economy.json` | repo | dropped (amendment): ADR-047 keeps an amount v9's template lacks as a constant of its own context, and the game-economy pack refuses the key; R9's pay is the vault's constants, pinned by A21's golden and rows S11004-S11006 |
+| `crates/bot/src/lib.rs` | deck-streak-bot | changed (amendment): the drill modules are declared |
+| `crates/daemon/src/lib.rs` | deck-streak-daemon | changed (amendment): the `drill_vault` module is declared |
+| `crates/vault/src/drill_notes.rs` | deck-streak-vault | added (amendment): the drill notes' reader and answer writer |
+| `crates/vault/src/unicode_other_tests.rs` | deck-streak-vault | added (amendment): the literal boundary tests of the Unicode table |
+| `deploy/rail-contract.json` | deploy | changed (amendment): the `drill_postback` timer joins the rail census |
+| `deploy/README.md` | deploy | changed (amendment): the job list and table name `drill_postback` |
+| `deploy/scripts/effective-check.py` | deploy | changed (amendment): the instance pattern admits an underscore |
+| `scripts/tests/test_deploy_templates.py` | repo | changed (amendment): two waivers for the `drill_postback` timer |
+| `scripts/tests/test_rail_contract.py` | repo | changed (amendment): the `run_job` arms test excludes the drill post-back, which the job role dispatches |
+| `docs/decisions/ADR-110-a-graded-drill-is-recorded-once-and-paid-as-a-once-grant-keyed-by-its-drill.md` | docs | changed (amendment): accepted, with the Unicode amendment |
+| `docs/specs/SPEC-042-vault-adapter-core-and-readings-date-tree.md` | docs | changed (amendment): the dated amendment line R12 is owed |
 
 ## 5. What this does NOT do
 
