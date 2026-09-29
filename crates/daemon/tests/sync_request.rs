@@ -12,10 +12,10 @@ use std::time::Duration;
 use deck_streak_bot::{OwnerSync, Scores, SyncAnswer, SyncOutcome, SyncRefusal};
 use deck_streak_daemon::sync_request::{
     ANSWER_BOUND_SECS, Doorbell, POLL_SECS, Pause, Progress, RING_GAP_SECS, RequestLedger,
-    SyncRequester, owner_request_pending,
+    SyncRequester,
 };
 use deck_streak_daemon::sync_request::{
-    DEFAULT_REQUEST_PATH, REQUEST_PATH_ENV, SqliteRequestLedger, request_path,
+    DEFAULT_REQUEST_PATH, FileDoorbell, REQUEST_PATH_ENV, SqliteRequestLedger, request_path,
 };
 use deck_streak_ingest::gate::{Anchor, Probe};
 use deck_streak_ingest::state::SqliteIngestState;
@@ -163,29 +163,6 @@ fn the_bot_port_requests_the_job_and_never_runs_the_cycle() {
         !wiring.contains("impl OwnerSync for"),
         "the cycle is not a port the bot can be given"
     );
-}
-
-#[tokio::test(flavor = "multi_thread")]
-async fn a_planted_request_payload_changes_nothing() {
-    let directory = tempfile::tempdir().expect("a temporary directory");
-    let planted = directory.path().join("request");
-    std::fs::write(&planted, br#"{"trigger":"owner","force":true}"#).expect("a planted file");
-    let db = Db::open(&directory.path().join("deck_streak.db"))
-        .await
-        .expect("the database opens");
-    assert!(
-        !owner_request_pending(&db).await.expect("the state reads"),
-        "a file and its payload start no owner cycle"
-    );
-    SqliteIngestState::new(db.clone())
-        .request_rescore(UtcMillis::from_epoch_millis(START))
-        .await
-        .expect("the owner's request is stored");
-    assert!(
-        owner_request_pending(&db).await.expect("the state reads"),
-        "the stored request does"
-    );
-    db.close().await;
 }
 
 #[tokio::test]
@@ -347,5 +324,20 @@ fn the_request_file_is_the_setting_or_the_default() {
     assert!(
         request_path(&relative).is_err(),
         "a relative path is refused"
+    );
+}
+
+#[test]
+fn the_doorbell_writes_its_file_and_refuses_an_absent_directory() {
+    let directory = tempfile::tempdir().expect("a temporary directory");
+    let file = directory.path().join("request");
+    FileDoorbell::new(file.clone())
+        .ring()
+        .expect("the ring is written");
+    assert!(file.is_file(), "the ring leaves the request file");
+    let absent = directory.path().join("absent").join("request");
+    assert!(
+        FileDoorbell::new(absent).ring().is_err(),
+        "an absent directory is refused"
     );
 }

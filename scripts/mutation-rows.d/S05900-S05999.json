@@ -7,8 +7,8 @@
         "src/sync_request.rs",
         "        .rescore_pending)",
         "        .rescore_pending || true)",
-        "sync_request::a_planted_request_payload_changes_nothing",
-        "the job runs an owner cycle only for the stored request; a mutant that reads pending without it starts one for any ring, so a planted file's payload would change what runs (SPEC-059 R2)"
+        "roles::two_planted_request_payloads_change_nothing_the_sync_job_serves",
+        "the job runs an owner cycle only for the stored request; a mutant that reads pending without it starts one for any ring, so a planted file's payload would change what runs; the killer runs the job through the binary (SPEC-059 R2)"
       ],
       [
         "S05902-THE-SYNC-COMMAND-IS-THE-OWNERS-ALONE",
@@ -18,6 +18,15 @@
         "is_ok_and(|_id| true)",
         "gate::an_update_from_anyone_but_the_owner_is_dropped_without_a_reply",
         "a request for the job is made only after the owner gate admits the update; a gate that admits anyone lets a stranger ring the doorbell (SPEC-026 R4; SPEC-059 A6)"
+      ],
+      [
+        "S05906-THE-DOORBELL-WRITES-ITS-FILE",
+        "daemon",
+        "src/sync_request.rs",
+        "        OpenOptions::new()\n            .write(true)\n            .create(true)\n            .truncate(true)\n            .open(&self.path)\n            .map(drop)",
+        "        let _ = OpenOptions::new();\n        Ok(())",
+        "sync_request::the_doorbell_writes_its_file_and_refuses_an_absent_directory",
+        "a ring that reports success without writing the request file never starts the sync job, so the owner's request is stored and never served; the doorbell test reads the file the ring must leave (SPEC-059 R2)"
       ]
     ],
     "SCRIPT_MUTATIONS": [
