@@ -577,6 +577,7 @@ class TheRequiredCiCheckIsThePullRequestsOwn(unittest.TestCase):
                     name = job_name_for(job_id, job, event)
                     judged.append((path.name, event, name))
                     self.assertNotIn(name, required, f"{path.name}: {event} reports {name}")
+        self.assertIn(("ci.yml", "push", "ci (push)"), judged)
         examined("job names under a non-pull_request event", judged)
 
 

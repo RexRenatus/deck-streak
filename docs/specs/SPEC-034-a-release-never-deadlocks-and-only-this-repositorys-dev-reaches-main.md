@@ -285,7 +285,7 @@ A14 and A15 read both rulesets' required contexts and every workflow through `re
 - It admits no fork contribution automatically. The maintainer re-lands accepted outside work from
   an internal branch (#160).
 - The amendment changes no workflow: the workflows already comply, and A9 keeps them so (#216).
-- The second amendment changes no ruleset: both keep requiring `ci` and `fragment` from GitHub Actions.
+- The second amendment changes no ruleset: both keep requiring `ci` and `fragment` from GitHub Actions (#23).
 
 ## 6. Risks
 
