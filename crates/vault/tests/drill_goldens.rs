@@ -319,5 +319,5 @@ fn the_single_view_carries_the_answer_sections_and_the_self_check() {
         view.self_check,
         vec!["the rule stated".to_owned(), "the facts applied".to_owned()]
     );
-    assert_eq!(view.prompt, "The prompt.");
+    assert_eq!(view.prompt, "# A synthetic drill\n\nThe prompt.");
 }
