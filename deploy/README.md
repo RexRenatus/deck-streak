@@ -92,6 +92,12 @@ everything passes, 1 on a refusal, and 2 when they judged nothing; `guards-check
 since a manifest that is absent, unreadable or names no file is itself refused, and the agent's
 launch never starts on it (SPEC-061 R8).
 
+A credential that arrives empty, with no bytes or only a newline, refuses start by its id as a
+missing one does (SPEC-066, ADR-067). A role refuses it through the kernel's loader, and the page
+quotes the line that names it; the `sync` job records it as `missing_credentials`. The alert unit
+refuses one in its script before any request, and stays failed in `systemctl --failed`, since
+nothing pages about the alert unit itself (#285).
+
 ## The schedule
 
 Coordination's job table (`crates/coordination/src/jobs.rs`) is the one schedule, and every timer is
