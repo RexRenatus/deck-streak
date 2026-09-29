@@ -506,3 +506,43 @@ A target outside a crate (a migration, `economy.json`) is a cargo-killed script 
 | `S07227-LAW-TIERS-TODAY` | `src/progression/law_tiers.rs` | the law tiers' XP is the study day's reviews alone (SPEC-072 R24; pinned outside the acceptance fence) | `law_tiers::the_law_cards_are_counted_by_tier_and_today_s_reviews_are_priced_by_their_card` |
 | `S07228-LAW-TIERS-NONE-SLOT` | `src/progression/law_tiers.rs` | a card with no tier counts in the fifth slot, after T4 (SPEC-072 R24; pinned outside the acceptance fence) | `law_tiers::the_law_cards_are_counted_by_tier_and_today_s_reviews_are_priced_by_their_card` |
 | `S07229-LAW-TIERS-WIRED` | `src/role_api.rs` | the api role gives its router the law tiers' source (SPEC-072 R24, A31) | `law_tiers::the_composed_router_serves_the_law_tiers_to_the_owner_alone` |
+
+## 10. Amendment, 2026-09-29: the settle census reads progression's own re-exports
+
+Issue 397, decided by ADR-197. A12's census (R9) refuses a call of `settle` outside coordination by
+the two names a caller cannot avoid, the operation's path and the request type `SettleRequest`, in
+every crate but progression. Progression's own `src` was never read for what it exports, so a
+renamed `pub use` there (`pub use settle::{settle as tally, SettleRequest as TallyRequest};`)
+gave an outside caller two names that the census never looks for, and the caller was not refused.
+
+- **Measured.** A planted renamed re-export in progression's `src`, with a planted caller in
+  another crate that imports only the new names, produced no refusal at the base of this
+  amendment: the refused list was empty where six refusals were owed.
+- **The change.** The census collects the names progression's own `src` gives `settle`,
+  `SettleRequest` and the `settle` module by a renaming `pub use`, whether the `use` is grouped or
+  nested, sits in a nested module, or renames a name an earlier renaming made (a chain ends at its
+  original). A source outside progression that names the progression crate and one of those names
+  is refused as a call of `settle`, exactly as the originals are: a crate but coordination is
+  refused by file, alias and original, and a coordination file outside the recompute steps keeps
+  the owner's-correction rule.
+- **No false refusal.** Progression's own use of its names, a coordination caller by the same
+  rules as before, a mention in a comment, a source that never names the progression crate, and a
+  `pub use` that renames nothing of the settlement stay accepted. Every earlier refusal and every
+  examined count on the real tree are unchanged.
+- **A32.** A tree with a renamed, chained, module-level and nested-module re-export in progression
+  and callers that import only the new names is refused by name, and the accepted shapes above are
+  not. The test is `crates/progression/tests/xp_census.rs`, beside A12's.
+- **Rows.** None. The change is confined to a test file, so the diff holds no production path and
+  the mutation job reads `not-applicable` by name (SPEC-039 section 11; SPEC-057 R22).
+- **Files.** `crates/progression/tests/xp_census.rs` (A32), `docs/decisions/ADR-197-*.md`,
+  `docs/red-first/SPEC-072.md` and `changelog.d/settle-census-397.md`.
+
+## 11. Acceptance criteria of the 2026-09-29 amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A32 | a renamed re-export of `settle`, its request or its module in progression's `src` is followed, and a caller outside coordination that names only the new names is refused by file, alias and original | progression `xp_census` test |
+
+```acceptance
+A32: cargo test -p deck-streak-progression --test xp_census -- --exact the_census_reads_progressions_own_reexports_as_it_reads_the_other_crates
+```

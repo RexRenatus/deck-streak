@@ -103,4 +103,14 @@ A30: red at 1f4b006: assertion `left == right` failed: one line, for the level r
 A30: green at 578a351
 A31: red at 8467b95: {"reason":"law_tiers_unavailable"}; left: 503; right: 200
 A31: green at 6d82561
+A32: red at eb6119fa: assertion `left == right` failed; left: [], right: ["crates/coordination/src/shortcut.rs calls settle outside the recompute steps, and only the owner's correction may", "crates/quests/src/chained_user.rs calls settle through tally_again, progression's alias of settle, and only coordination's code may", ...]
+A32: green at d2697435
 ```
+
+Addendum (2026-09-29, issue 397): A32 was added by the census amendment (ADR-197). Its test was
+committed alone beside the unchanged census (eb6119fa), where the planted renamed re-exports and
+their callers produced no refusal, and it failed by assertion, over the whole test file with only
+its own test failing. The green commit (d2697435) edits a test file, `xp_census.rs`, because the
+census is that file's own code: it reads progression's re-exports there. A12 stays green through
+both commits, with the same examined counts on the real tree (157 crate source files, 15
+migrations, 8 planted crate source files).
