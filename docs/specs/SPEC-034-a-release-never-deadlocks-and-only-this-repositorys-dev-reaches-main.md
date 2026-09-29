@@ -353,6 +353,8 @@ R9. `RELEASING.md` declares its release model in one line of its own, directly u
     its section 5, exactly `Release model: no-back-merge (ADR-034)`. It restates R2 in the form the
     pack reads (#360).
 
+### 9a. Acceptance criteria
+
 | id | criterion | decided by |
 |---|---|---|
 | A16 | the release runbook declares its release model | `test_rulesets.py` |
