@@ -107,9 +107,9 @@ fn fold() -> Fold {
         Box::new(AnalyticsStep::new(AnalyticsSettings::default())),
     )
     .expect("analytics' step is phase 1's");
-    fold.register(Phase::BaseXp, Box::new(XpStep::default()))
+    fold.register(Phase::BaseXp, Box::new(XpStep))
         .expect("the XP step is phase 2's");
-    fold.register(Phase::DerivedBonuses, Box::new(DayBonusesStep::default()))
+    fold.register(Phase::DerivedBonuses, Box::new(DayBonusesStep))
         .expect("the bonus step is phase 5's");
     fold
 }

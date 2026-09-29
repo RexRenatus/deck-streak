@@ -21,7 +21,7 @@ static KERNEL: KernelDataRights = KernelDataRights;
 static INGEST: IngestDataRights = IngestDataRights;
 /// Analytics' port: the daily rollups and per-course statistics exported and erased (SPEC-071).
 static ANALYTICS: AnalyticsDataRights = AnalyticsDataRights;
-/// Progression's port: the XP ledger exported and erased (SPEC-040).
+/// Progression's port: the XP ledger, the settled XP and the day buffs exported and erased (SPEC-040, SPEC-072).
 static PROGRESSION: ProgressionDataRights = ProgressionDataRights;
 /// Notifications' port: the router's decisions, deliveries, queue, feed and settings exported and
 /// erased (SPEC-041).
