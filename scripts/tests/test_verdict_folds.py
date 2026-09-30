@@ -40,7 +40,7 @@ def verdict_step():
 
 
 def commands_of(script):
-    """[(key, the variable its exit is collected into, or None)] for each verdict-tool command."""
+    """[(key, the variable its exit is collected into, or None, its line)] per verdict command."""
     found = []
     for line in script.splitlines():
         if RUN not in line:
@@ -49,8 +49,13 @@ def commands_of(script):
         klass = re.search(r"--class (\w+)", line)
         key = f"{verb}:{klass.group(1)}" if klass else verb
         into = re.search(r"\|\| (\w+)=\$\?", line)
-        found.append((key, into.group(1) if into else None))
+        found.append((key, into.group(1) if into else None, line))
     return found
+
+
+def census(script):
+    """Every command whose exit the step captures (the first cut: the verdict tool's own)."""
+    return commands_of(script)
 
 
 def nonzero_exits():
@@ -61,47 +66,103 @@ def nonzero_exits():
     return sorted(value for value in values.values() if value != 0)
 
 
-class TheVerdictStepFailsOnEachJudgeAlone(unittest.TestCase):
-    def test_the_step_fails_when_any_one_command_alone_fails_with_any_of_its_exits(self):
-        job, step = verdict_step()
-        script = step_script(step)
-        commands = commands_of(script)
-        print(f"found {len(commands)} verdict-tool commands in the step: {commands}")
-        self.assertEqual(len(commands), script.count(RUN), "a command was not read")
-        self.assertGreater(len(commands), 0)
-        for key, into in commands:
-            self.assertIsNotNone(into, f"{key}: the step records its exit nowhere")
-        exits = nonzero_exits()
-        self.assertEqual(exits[0], 1)
+#: Each pass-through pipe form, inserted before a command's `||` capture, `{n}` numbering a log.
+PIPES = [' | tee "$RUNNER_TEMP/{n}.log"', " | cat", " 2>&1 | cat"]
+
+
+def keyed(script):
+    """[(key, line)] for each verdict-tool command."""
+    return [(key, line) for key, _, line in census(script)]
+
+
+def piped(script, key, form, n):
+    """The script with `form` piped onto the one command whose key is `key`, in memory."""
+    lines = script.splitlines()
+    (where,) = [i for i, line in enumerate(lines) if (key, line) in keyed(script)]
+    head, tail = lines[where].rsplit(" || ", 1)
+    lines[where] = f"{head}{form.format(n=n)} || {tail}"
+    return "\n".join(lines) + "\n"
+
+
+class Driver:
+    """Runs the verdict step's script with the shim standing in for the verdict tool."""
+
+    def __init__(self, case):
         scratch = tempfile.TemporaryDirectory()
-        self.addCleanup(scratch.cleanup)
-        root = Path(scratch.name)
-        (root / "bin").mkdir()
-        shim = root / "bin" / "python3"
+        case.addCleanup(scratch.cleanup)
+        self.root = Path(scratch.name)
+        (self.root / "bin").mkdir()
+        shim = self.root / "bin" / "python3"
         shim.write_text(SHIM, encoding="utf-8")
         shim.chmod(0o700)
+        self.runs = 0
+        self.job, self.step = verdict_step()
+
+    def run(self, script, key, rc):
         results = {
             "mutation-plan": "success",
             "mutation-rust": "success",
             "mutation-rows": "success",
         }
+        self.runs += 1
+        log = self.root / f"calls-{self.runs}.log"
+        env = dict(
+            rendered_env(self.step, needs_of(self.job), results),
+            PATH=f"{self.root / 'bin'}{os.pathsep}{os.environ['PATH']}",
+            RUNNER_TEMP=str(self.root),
+            SHIM_LOG=str(log),
+            FAIL_KEY=key or "",
+            FAIL_RC=str(rc),
+        )
+        done = bash(script, env)
+        return done, log.read_text(encoding="utf-8").splitlines()
+
+
+class TheVerdictStepFailsOnEachJudgeAlone(unittest.TestCase):
+    def test_the_step_fails_when_any_one_command_alone_fails_with_any_of_its_exits(self):
+        driver = Driver(self)
+        script = step_script(driver.step)
+        commands = census(script)
+        print(f"found {len(commands)} verdict-tool commands in the step: {commands}")
+        self.assertEqual(len(commands), script.count(RUN), "a command was not read")
+        self.assertGreater(len(commands), 0)
+        for key, into, _ in commands:
+            self.assertIsNotNone(into, f"{key}: the step records its exit nowhere")
+        exits = nonzero_exits()
+        self.assertEqual(exits[0], 1)
         population = [("no command", None, 0)] + [
-            (f"{key} alone, exit {rc}", key, rc) for key, _ in commands for rc in exits
+            (f"{key} alone, exit {rc}", key, rc) for key, _, _ in commands for rc in exits
         ]
-        for n, (where, key, rc) in enumerate(examined("verdict step runs", population)):
-            log = root / f"calls-{n}.log"
-            env = dict(
-                rendered_env(step, needs_of(job), results),
-                PATH=f"{root / 'bin'}{os.pathsep}{os.environ['PATH']}",
-                RUNNER_TEMP=str(root),
-                SHIM_LOG=str(log),
-                FAIL_KEY=key or "",
-                FAIL_RC=str(rc),
-            )
-            done = bash(script, env)
+        for where, key, rc in examined("verdict step runs", population):
+            done, calls = driver.run(script, key, rc)
             self.assertEqual(done.returncode, rc, f"{where}: {done.stdout}{done.stderr}")
-            calls = log.read_text(encoding="utf-8").splitlines()
             self.assertEqual(len(calls), len(commands), f"{where}: a command never ran: {calls}")
+
+    def test_the_harness_sees_a_pipe_that_loses_a_recorded_exit(self):
+        driver = Driver(self)
+        script = step_script(driver.step)
+        commands = census(script)
+        exits = nonzero_exits()
+        pairs = [(key, form) for key, _, _ in commands for form in PIPES]
+        pairs = examined("pass-through pipes applied to the step's commands", pairs)
+        self.assertEqual(len(pairs), len(commands) * len(PIPES))
+        for n, (key, form) in enumerate(pairs):
+            mutated = piped(script, key, form, n)
+            self.assertNotEqual(mutated, script, f"{key}: the pipe was not applied")
+            for rc in exits:
+                done, _ = driver.run(mutated, key, rc)
+                self.assertNotEqual(
+                    done.returncode, rc, f"{key} piped through{form} kept its exit {rc}"
+                )
+
+    def test_a_captured_command_the_harness_cannot_drive_is_refused_by_name(self):
+        script = step_script(verdict_step()[1])
+        planted = script.replace('exit "$status"', 'other=0\npytest -q || other=$?\nexit "$status"')
+        self.assertNotEqual(planted, script)
+        with self.assertRaises(AssertionError) as refused:
+            census(planted)
+        print(f"census refused: {refused.exception}")
+        self.assertIn("pytest -q || other=$?", str(refused.exception))
 
 
 if __name__ == "__main__":
