@@ -505,6 +505,113 @@ class TheMissingToolPopulation(unittest.TestCase):
             f"{len(benign)} benign source(s), refused none"
         )
 
+    def test_the_census_names_each_way_of_reaching_a_name_built_at_run_time(self):
+        """Each dynamic-reach refusal is read WHOLE: its exact text for every name, attribute and
+        module of the census's own tables, as a module and as a dotted submodule, by `import`
+        (alone and behind another name) and by `from ... import`; and nothing for a node that
+        reaches no name built at run time. An exception is a value compared, not an error."""
+
+        def reach(source):
+            try:
+                return [r for r in map(dynamic_reach, ast.walk(ast.parse(source))) if r]
+            except Exception as error:  # noqa: BLE001 - a crash of the census is a wrong value
+                return [f"raised {type(error).__name__}"]
+
+        members = [(f"{name}\n", f"dynamic reach: {name}") for name in sorted(DYNAMIC_NAMES)]
+        members += [(f"x.{a}\n", f"dynamic reach: .{a}") for a in sorted(DYNAMIC_ATTRIBUTES)]
+        for module in sorted(DYNAMIC_MODULES):
+            for dotted in (module, f"{module}.sub"):
+                members += [
+                    (f"import {dotted}\n", f"dynamic reach: import {dotted}"),
+                    (f"import json, {dotted}\n", f"dynamic reach: import {dotted}"),
+                    (f"from {dotted} import thing\n", f"dynamic reach: from {dotted} import"),
+                ]
+        members += [
+            ("from sys import modules\n", "dynamic reach: from sys import modules"),
+            ("from sys import path, modules\n", "dynamic reach: from sys import modules"),
+            ("from sys import *\n", "dynamic reach: from sys import *"),
+        ]
+        quiet = ("from sys import path\n", "from . import thing\n", "import json\n", "x.y\n")
+        members += [(source, None) for source in quiet + ("from json import modules\n",)]
+        examined("dynamic reach text member(s)", members)
+        expected = len(DYNAMIC_NAMES) + len(DYNAMIC_ATTRIBUTES) + 6 * len(DYNAMIC_MODULES) + 3 + 5
+        self.assertEqual(len(members), expected)
+        for source, want in members:
+            with self.subTest(source=source):
+                self.assertEqual(reach(source), [want] if want else [])
+
+    def test_the_census_refuses_a_spawner_it_reaches_by_reference_or_through_another_module(self):
+        """A spawner the source REFERS to other than by calling it is a spawn the census cannot
+        read: held in a name, passed, defaulted, stored, subclassed, reached by a dunder or by a
+        reflective accessor, or reached through another module's attribute. Each form is crossed
+        with every documented spawner and each refusal names the spawner's module."""
+        forms = (
+            "import {m}\nalias = {m}\nalias.{n}(x)\n",
+            "import {m}\nf = {m}.{n}\nf(x)\n",
+            "import {m}\nimport functools\nfunctools.partial({m}.{n}, x)()\n",
+            "import {m}\nfrom functools import partial\npartial({m}.{n}, x)()\n",
+            "import {m}\ndef g(f={m}.{n}):\n    f(x)\n",
+            "import {m}\nlist(map({m}.{n}, [x]))\n",
+            "import {m}\nheld = [{m}.{n}]\nheld[0](x)\n",
+            "import {m}\n{m}.{n}.__call__(x)\n",
+            'import {m}\nimport operator\noperator.attrgetter("{n}")({m})(x)\n',
+            'import {m}\n{m}.__getattribute__("{n}")(x)\n',
+            "import posixpath\nposixpath.{m}.{n}(x)\n",
+            "import os\nos.path.{m}.{n}(x)\n",
+            "import {m}\nclass Held({m}.{n}):\n    pass\nHeld(x)\n",
+        )
+        members = [
+            (module, name, form)
+            for module, names in DOCUMENTED_SPAWNERS.items()
+            for name in names
+            for form in forms
+        ]
+        examined("spawner reference member(s)", members)
+        self.assertEqual(len(members), len(forms) * sum(map(len, DOCUMENTED_SPAWNERS.values())))
+        for module, name, form in members:
+            source = form.format(m=module, n=name)
+            with self.subTest(source=source):
+                outside = raw_spawns(source)[1]
+                self.assertNotEqual(outside, [], source)
+                self.assertTrue(any(module in line for line in outside), (source, outside))
+
+    def test_the_census_refuses_an_import_it_has_not_read(self):
+        """A module that starts a process for its caller (`multiprocessing`, `concurrent.futures`,
+        `webbrowser`, `ctypes.util.find_library`) spawns where no call names a spawner; the census
+        cannot read inside it, so every standard-library module the runner does not import is
+        refused at its import, by `import` and by `from ... import`."""
+        own = {
+            (alias.name.split(".")[0])
+            for node in ast.walk(ast.parse(MODULE.read_text(encoding="utf-8")))
+            if isinstance(node, ast.Import)
+            for alias in node.names
+        } | {
+            (node.module or "").split(".")[0]
+            for node in ast.walk(ast.parse(MODULE.read_text(encoding="utf-8")))
+            if isinstance(node, ast.ImportFrom)
+        }
+        unread = sorted(set(sys.stdlib_module_names) - own)
+        members = [
+            (name, form) for name in unread for form in ("import {}\n", "from {} import x\n")
+        ]
+        examined("unread import member(s)", members)
+        self.assertEqual(len(members), 2 * len(unread))
+        for name, form in members:
+            source = form.format(name)
+            with self.subTest(source=source):
+                outside = raw_spawns(source)[1]
+                self.assertNotEqual(outside, [], source)
+                self.assertTrue(any(name in line for line in outside), (source, outside))
+        for source in (
+            "import multiprocessing\nmultiprocessing.Process(target=f).start()\n",
+            "import concurrent.futures\nconcurrent.futures.ProcessPoolExecutor().submit(f)\n",
+            "import webbrowser\nwebbrowser.open(x)\n",
+            "import ctypes.util\nctypes.util.find_library(x)\n",
+        ):
+            with self.subTest(source=source):
+                self.assertNotEqual(raw_spawns(source)[1], [], source)
+        self.assertEqual(raw_spawns()[1], [])
+
     def test_a_path_entry_the_runner_cannot_look_at_is_passed_over_as_the_spawn_passes_it(self):
         member = Member(
             self, "git", "git", "absent", "prove-id", position="behind an entry it cannot look at"

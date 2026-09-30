@@ -74,6 +74,46 @@ def go(route, command, env, cwd):
     return runner.run_in_own_group(command, cwd=cwd, env=env, timeout=30)
 
 
+#: The `PATH` entries a spawn reads in the child's working directory, not the runner's.
+RELATIVE_ENTRIES = ("", ".", "rel")
+#: What sits at a candidate: nothing, a program that runs, a file without the execute bit, a directory.
+STATES = ("absent", "runnable", "not executable", "a directory")
+#: The reason a candidate in a state gives when no later candidate runs.
+WHY_STATE = {"not executable": "not executable", "a directory": "is a directory"}
+#: The routes that hand the spawn a working directory.
+CWD_ROUTES = ("run_tool", "run_tool checked", "run_in_own_group")
+
+
+def plant(path, state, label):
+    """Put a candidate in `state` at `path`; a runnable one prints `label`."""
+    if state == "absent":
+        return
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if state == "a directory":
+        path.mkdir()
+        return
+    path.write_text(f"#!/bin/sh\necho {label}\n", encoding="utf-8")
+    path.chmod(0o755 if state == "runnable" else 0o644)
+
+
+def outcome(call):
+    """What `call` ended with, as one value: ("returned", its code), or ("raised", the type, the
+    text, the tool, the cause's type, the code) for ANY exception, so a test compares it whole."""
+    try:
+        done = call()
+    except Exception as error:  # noqa: BLE001 - every way out is a value to compare
+        cause = type(error.__cause__).__name__ if error.__cause__ is not None else None
+        return (
+            "raised",
+            type(error).__name__,
+            str(error),
+            getattr(error, "tool", None),
+            cause,
+            getattr(error, "returncode", None),
+        )
+    return ("returned", getattr(done, "returncode", None))
+
+
 def executable(path, exit_code=0):
     """An executable script at `path` that ends with `exit_code`."""
     path.write_text(f"#!/bin/sh\nexit {exit_code}\n", encoding="utf-8")
@@ -172,6 +212,68 @@ class TheRefusalIsReadWhole(unittest.TestCase):
         with self.assertRaises(runner.ToolMissing):
             runner.resolve_tool([TOOL], {})
 
+    def test_a_relative_candidate_is_read_in_the_directory_the_child_runs_in(self):
+        """The empty, `.` and relative `PATH` entries, and a relative name holding a slash, are read
+        by the spawn in the CHILD's working directory (`cwd=`), so resolution reads them there too:
+        the file the runner judges is the file the spawn runs, or the refusal names why none runs."""
+        slash = "a relative name holding a slash"
+        members = [
+            (entry, here, there, later, route)
+            for entry in RELATIVE_ENTRIES + (slash,)
+            for here in STATES
+            for there in STATES
+            for later in ("absent", "runnable")
+            for route in CWD_ROUTES
+        ]
+        examined("child working directory member(s)", members)
+        self.assertEqual(
+            len(members), 2 * (len(RELATIVE_ENTRIES) + 1) * len(STATES) ** 2 * len(CWD_ROUTES)
+        )
+        before = Path.cwd()
+        self.addCleanup(os.chdir, before)
+        for number, (entry, here, there, later, route) in enumerate(members):
+            with self.subTest(
+                entry=entry, runner_cwd=here, child_cwd=there, later=later, route=route
+            ):
+                base = self.root / f"cwd-{number}"
+                runner_cwd, child_cwd, later_dir = base / "runner", base / "child", base / "later"
+                for directory in (runner_cwd, child_cwd, later_dir):
+                    directory.mkdir(parents=True)
+                if entry == slash:
+                    command, relative = [f"sub/{TOOL}"], Path("sub") / TOOL
+                    env, failure = {"PATH": str(later_dir)}, "no such file"
+                else:
+                    command, relative = [TOOL], Path(entry) / TOOL
+                    env, failure = (
+                        {"PATH": entry + os.pathsep + str(later_dir)},
+                        "not found on PATH",
+                    )
+                plant(runner_cwd / relative, here, "RUNNER")
+                plant(child_cwd / relative, there, "CHILD")
+                searched = [(there, "CHILD")]
+                # A name holding a slash is never searched on PATH, even where PATH holds it.
+                plant(later_dir / (relative if entry == slash else TOOL), later, "LATER")
+                if entry != slash:
+                    searched.append((later, "LATER"))
+                want = ("refused", f"missing tool: {command[0]}: {failure}")
+                for state, label in searched:
+                    if state == "runnable":
+                        want = ("ran", label)
+                        break
+                    if state in WHY_STATE:
+                        want = ("refused", f"missing tool: {command[0]}: {WHY_STATE[state]}")
+                os.chdir(runner_cwd)
+                try:
+                    done = go(route, command, env, child_cwd)
+                except runner.ToolMissing as refusal:
+                    got = ("refused", str(refusal))
+                else:
+                    out = done.stdout.decode() if isinstance(done.stdout, bytes) else done.stdout
+                    got = ("ran", out.strip())
+                finally:
+                    os.chdir(before)
+                self.assertEqual(got, want)
+
     def test_every_errno_at_the_spawn_is_the_same_refusal_naming_the_tool(self):
         members = [(number, route) for number in ERRNOS for route in ("run_tool", "own_group")]
         examined("spawn errno member(s)", members)
@@ -255,6 +357,28 @@ class TheRefusalIsReadWhole(unittest.TestCase):
                 else:
                     done = go(route, [TOOL], self.env, self.root)
                     self.assertEqual(done.returncode, code)
+
+    def test_every_exit_at_every_route_is_one_whole_outcome(self):
+        """Each exit at each route ends as ONE value compared whole: the code it returned, or the
+        type, text, tool, cause and code of what it raised. A wrong exception, or a refusal
+        without its tool, is then an assertion that fails, never an error beside the assertions."""
+        members = [(code, route) for code in EXITS for route in ROUTES[1:]]
+        examined("whole outcome member(s)", members)
+        self.assertEqual(len(members), len(EXITS) * len(ROUTES[1:]))
+        tool = self.bin / TOOL
+        for code, route in members:
+            executable(tool, code)
+            with self.subTest(exit=code, route=route):
+                if code in REFUSED_EXITS:
+                    cause = "CalledProcessError" if route == "run_tool checked" else None
+                    text = f"missing tool: {TOOL}: {REFUSED_EXITS[code]}"
+                    want = ("raised", "ToolMissing", text, TOOL, cause, None)
+                elif route == "run_tool checked" and code:
+                    text = str(subprocess.CalledProcessError(code, [TOOL]))
+                    want = ("raised", "CalledProcessError", text, None, None, code)
+                else:
+                    want = ("returned", code)
+                self.assertEqual(outcome(lambda: go(route, [TOOL], self.env, self.root)), want)
 
     def test_the_exit_refusal_is_a_value_of_the_code_and_the_command(self):
         command = [TOOL, "second-argument"]
