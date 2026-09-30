@@ -1450,6 +1450,9 @@ fn census(sources: &[(String, String)]) -> Census {
                     ));
                 }
             }
+            if rust {
+                request_refusals(&mut found, path, &code, &structure);
+            }
         } else if path != ALERT_PATH {
             for (at, name) in names_of_the_bot_api(&code) {
                 found
@@ -2222,6 +2225,7 @@ fn no_delivery_goes_around_the_port() {
             "crates/bot/src/celebrate.rs:5: names sendMessage in celebrate, not a named call site",
             "crates/bot/src/celebrate.rs:5: reads api_url inside a literal in celebrate, not a named \
              call site",
+            "crates/bot/src/celebrate.rs:7: names reqwest in celebrate, not a named request site",
             "crates/bot/src/commands.rs:4: calls send in Commands::celebrate, not a named caller",
             "crates/bot/src/commands.rs:9: calls on_message in Commands::celebrate_by_a_command, \
              not a named caller",
@@ -2231,11 +2235,13 @@ fn no_delivery_goes_around_the_port() {
             "crates/bot/src/copy.rs:5: names copyMessage in celebrate, not a named call site",
             "crates/bot/src/copy.rs:5: reads api_url inside a literal in celebrate, not a named call \
              site",
+            "crates/bot/src/copy.rs:7: names reqwest in celebrate, not a named request site",
             "crates/bot/src/rich.rs:4: uses api_url in no function, not a named call site",
             "crates/bot/src/rich.rs:5: names sendRichMessage in celebrate_richly, not a named call \
              site",
             "crates/bot/src/rich.rs:5: reads api_url inside a literal in celebrate_richly, not a \
              named call site",
+            "crates/bot/src/rich.rs:7: names reqwest in celebrate_richly, not a named request site",
             "crates/bot/src/transport.rs:9: names edit_message_text in \
              Transport::celebrate_by_an_edit, not a named call site",
             "crates/coordination/src/sync_cycle.rs:6: names QUEUE_TABLE",
@@ -2390,6 +2396,16 @@ fn no_delivery_goes_around_the_port() {
     assert_eq!(
         tree.api_urls, api_urls,
         "the bot's base URL is read once at each named site, and nowhere else"
+    );
+    let mut requests: Vec<(String, String, String)> = REQUEST_SITES
+        .iter()
+        .map(|&(path, function, name)| (path.to_owned(), function.to_owned(), name.to_owned()))
+        .collect();
+    requests.sort();
+    assert_eq!(
+        tree.requests, requests,
+        "each name of a request the census cannot read is found at its named site, as often as \
+         the site names it, and nowhere else"
     );
 
     // The one exception is needed: the alert path's text is refused anywhere else.
