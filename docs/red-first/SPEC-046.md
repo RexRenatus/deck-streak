@@ -168,3 +168,14 @@ against three lines (6 members); the configured classes are covered by
 the rule already holds at the parent. Planted against `first_failure` at 3c9657b5, a branch that lets
 those two classes' findings through ends it red with `the void class's finding reaches the trusted
 repair slot`. The SPEC's class paragraph was shortened in the same round.
+
+DISCLOSURE, fix round 5: `a_gate_outcome_class_reaches_the_repair_only_as_the_name_of_the_check`
+was extended and `a_gate_outcome_class_reaches_the_prompt_only_as_the_name_of_the_check` was added
+(`readings_trust.rs`, not criteria). The rule already held at their parent, so both were committed
+at efe415e0 beside a planted copy of `named()` that takes a gate class from a finding's head. At
+efe415e0 the first fails with `the examined-nothing class's failure is not the engine's words
+naming the check`. The second fails with `the examined-nothing class's second prompt is not the
+first plus the engine's repair`. 6f971f64 removes the plant, and both pass. Each test reads its
+classes from source when it runs, 16 of them at 6f971f64. Each class meets ten hostile lines
+under its own name and under a forged one, and a failure with no finding line: 336 members in each
+test.

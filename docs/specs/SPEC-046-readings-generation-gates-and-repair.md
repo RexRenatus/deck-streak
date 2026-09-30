@@ -190,12 +190,18 @@ A28: cargo test -p deck-streak-readings --test repair -- --exact a_pack_finding_
 
 The class behind A28 is one rule, provenance: a pack gate's failure reaches the repair only as the
 engine's words naming the check. `every_pack_class_reaches_the_repair_only_as_the_name_of_the_check`
-in `crates/readings/tests/repair.rs` generates its members when it runs: every pack class the engine
-configures, read from `ai-safety.json` and from the classes `first_failure` ranks, against hostile
-lines, each under the class's own name and under a forged one.
+in `crates/readings/tests/repair.rs` generates its members when it runs. They are every pack class
+the engine configures, read from `ai-safety.json` and from the classes `first_failure` ranks, each
+against hostile lines under the class's own name and under a forged one.
 `a_gate_outcome_class_reaches_the_repair_only_as_the_name_of_the_check` in
-`crates/coordination/tests/readings_trust.rs` does the same for the two classes the gate itself
-reports, `CLASS_VOID` and `CLASS_EMPTY`.
+`crates/coordination/tests/readings_trust.rs` does the same for every class the gate can report. It
+reads them from source when it runs: the configured classes, and each constant the gate passes to
+`failed(..)`, which are `CLASS_VOID` and `CLASS_EMPTY`. A constant the gate adds becomes a member
+with no test edit. Each class also meets a failure with no finding line, and the test checks the
+whole repair text, its header included.
+`a_gate_outcome_class_reaches_the_prompt_only_as_the_name_of_the_check` runs the same members
+through the attempt loop in `generate.rs`. There the second prompt is the first plus exactly that
+repair text.
 
 Two more tests pin the rule that the repair slot drops an escaped span:
 `a_finding_quoting_an_escaped_span_is_dropped` in `crates/readings/tests/repair.rs` and
@@ -252,6 +258,41 @@ Two more tests pin the rule that the repair slot drops an escaped span:
 | `docs/decisions/ADR-046-word-target-coverage-gates-and-one-repair.md` | docs | existing on dev, changed here |
 | `docs/red-first/SPEC-046.md` | docs | added |
 | `changelog.d/feat-readings-046.md` | repo | added |
+
+**Rows.** Band S04600-S04699 holds 40 rows, each proved killed. S04601 to S04603 pin the word band's
+floor, ceiling and step (killed by `form::the_word_target_grows_with_new_cards_inside_the_band`).
+S04604 and S04605 pin the anchor bounds (killed by `coverage::the_anchor_bounds_are_pinned`). S04606
+pins the reading id's length (killed by
+`minutes::the_reading_id_is_32_hex_digits_of_the_topic_the_first_day_and_the_digest`). S04607 pins
+the reading rate (killed by `minutes::reading_minutes_count_words_at_200_per_minute`). S04608 and
+S04609 pin the Chinese and Japanese rates (killed by
+`minutes::chinese_and_japanese_count_characters_at_a_word_rate`). S04610 and S04611 pin the
+attempts' retention (killed by `attempts::an_attempt_is_kept_for_exactly_ninety_whole_days`).
+S04612 and S04613 pin the repair cap (killed by
+`repair::a_topic_gets_the_first_attempt_and_exactly_one_repair`). S04614 pins the quoted line's
+floor (killed by `repair::a_finding_that_repeats_a_long_rejected_line_is_dropped`). S04615 to S04619
+pin the gate order (killed by `coverage::the_first_failure_decides_in_the_gate_order`). S04620 pins
+the unavailable verdict's end (killed by
+`readings_generate::an_unavailable_route_ends_the_topic_with_no_retry`). S04621 and S04622 pin the
+input check (killed by `readings_generate::an_untrusted_input_is_checked_before_any_call`). S04623
+pins the rejected-text drop (killed by
+`repair::a_finding_quoting_a_span_of_the_rejected_text_is_dropped`). S04624 pins the count-only
+instruction (killed by `form::a_language_instruction_counts_the_new_words_and_never_names_one`).
+S04625 pins the unclosed tag (killed by
+`coverage::an_unclosed_tag_leaves_the_rest_of_the_text_as_it_is`). S04626 pins the stored id's
+shape (killed by
+`stored::a_reading_id_parses_only_as_thirty_two_lowercase_hex_digits`). S04627 pins the escaped-span
+drop (killed by `repair::a_finding_quoting_an_escaped_span_is_dropped`). S04628 pins the engine's
+words in `named()` (killed by `repair::a_pack_finding_never_reaches_the_trusted_repair_slot`).
+S04629 pins the quote-in-span drop (killed by
+`repair::a_finding_quoting_a_span_that_holds_a_quote_is_dropped`). S04630 pins the contract gate's
+words for the configured classes (killed by
+`repair::every_pack_class_reaches_the_repair_only_as_the_name_of_the_check`). S04631 to S04633 and
+S04636 to S04638 pin how a class the gate reports is named in the failure (killed by
+`readings_trust::a_gate_outcome_class_reaches_the_repair_only_as_the_name_of_the_check`). S04639
+and S04640 pin how the gate reports a class (killed by the same test). S04634 and S04635 pin the
+repair text the attempt loop sends (killed by
+`readings_trust::a_gate_outcome_class_reaches_the_prompt_only_as_the_name_of_the_check`).
 
 ## 5. What this does NOT do
 
