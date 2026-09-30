@@ -188,17 +188,19 @@ A19 replay: green at 5ed1c5eeefe1fcee6abd453f4647605db1289c25: examined 2252 win
 
 Row S04929 carries the plant; it is KILLED by full id on the committed tree.
 
-### Fix round 3: every boundary each judge compares
+### Fix round 3: the members at each boundary read from the day and the walk
 
 The two populations pinned one boundary each, or none, while their judges compare derived values
-at several. The class rule is one sentence: a population pins, by its own oracle over the arguments
-its judge is handed, how many members sit at each boundary that judge compares. It asserts each
-count beside the examined and distinct counts and prints it. The boundaries were read from the
-code (the study day's floor on a review's instant, on now and on the day judge's instant; in the
-walk, the empty window, a day's count against none, the skip days, the walk's reach and the
-threshold), and the folds that test the rule were generated one input at one call site at a time.
-A20 now pins eight boundary counts and A19 seven; "empty windows" pins 0, because A19's
-population never reaches that boundary, and `an_empty_window_holds_no_lapse` decides it.
+at several. Round 3's rule was that a population pins, by its own oracle over the arguments its
+judge is handed, how many members sit at each boundary read from its judge's code, and asserts each
+count beside the examined and distinct counts and prints it. The boundaries it read were the study
+day's floor on a review's instant, on now and on the day judge's instant, and, in the walk, the
+empty window, a day's count against none, the skip days, the walk's reach and the threshold. It did
+not read the lapse judge's study-event rule on a review's kind and ease; fix round 4 adds it. The
+folds that test the rule were generated one input at one call site at a time. A20 now pins eight
+boundary counts and A19 seven; "empty windows" pins 0, because A19's population never reaches that
+boundary, and `an_empty_window_holds_no_lapse` decides it. Fix round 4 shows that a count of the
+members at a boundary does not pin it, and adds the counts that do.
 
 The counts were committed in c3c4c1007c81d2ee9b3aced1b569224a5d016c25 with no plant beside them. Three folds were planted in an
 uncommitted tree over that test, one at the study day's floor on a review's instant (a review at
@@ -214,4 +216,45 @@ A20 replay: green at c3c4c1007c81d2ee9b3aced1b569224a5d016c25: examined 448 roll
 A20 replay: green at c3c4c1007c81d2ee9b3aced1b569224a5d016c25: boundary members: {"day instants a millisecond before one": 16, "day instants at a rollover": 16, "nows a millisecond before one": 224, "nows at a rollover": 224, "reviews a millisecond before one": 64, "reviews at a rollover": 64, "runs of silent days at the threshold": 224, "runs of silent days one short of it": 224}
 A19 replay: green at c3c4c1007c81d2ee9b3aced1b569224a5d016c25: examined 2252 window member(s), 1916 distinct
 A19 replay: green at c3c4c1007c81d2ee9b3aced1b569224a5d016c25: boundary members: {"closing days of one review": 1349, "empty windows": 0, "runs of silent days at the threshold": 403, "runs of silent days one short of it": 800, "todays before the window": 2, "walks that end at the window's first day": 229, "walks that pass a skip day": 2000}
+```
+
+### Fix round 4: the members each line of a judge decides
+
+A count of the members at a boundary does not pin it: a fold can move the members whose side of the
+boundary decides their answer off it, park as many others on it whose side decides nothing, keep
+every count, and let the row that moves that boundary survive. Each population now holds a table of
+moves of its judge, each one line of the judge changed: a boundary it compares moved one step each
+way both sides exist, or a line one of its rows replaces. Over its distinct members it counts, and
+pins, how many answers each move changes, and asserts that each count is more than none; on every
+distinct member it first asserts that the judge equals a copy of its rule with no move. The mutant
+of each row on the judges' lines answers every member as one of the moves does, so it fails that
+check on the first member its move decides, and the pin keeps at least one such member. A20 holds 28
+moves and A19 14; the pins are re-derived by a generator outside the tests. The one comparison fix
+round 3 did not read, the lapse judge's study-event rule on a review's kind and ease, is now
+decided: A20 also hands, under each of its sixteen rules, both reviews at every kind from -1 to 4
+and every ease from 0 to 2 (576 more members). Row S04930 reads an answer of ease 1 as no study
+review at the lapse judge's call; it is KILLED by full id on the committed tree and survives A20 at
+the base.
+
+The counts were committed in f46af4cc0b5413d7a55bb42f56cf284fcc107682 with no plant beside them. Five folds were planted in an
+uncommitted tree over those tests, each a trade that keeps every count of fix round 3: in A20, the
+review at a rollover moved two milliseconds after it while the earlier review of the members a
+millisecond after one moved onto a rollover; the same trade a millisecond before a rollover; both at
+once; and the deciding day handed two reviews while two far days were handed one each. In A19, each
+closing day of one review was made a skip day, with the day before it given two reviews or more.
+Each plant was red by the decisive assertion, and each was removed with the files restored byte for
+byte.
+
+```text
+A20 replay: red under the uncommitted plant off the rollover: panicked at crates/coordination/tests/lapse.rs:289:5, the members each move decides: "a review a millisecond earlier": 256, where the pin is 320
+A20 replay: red under the uncommitted plant off a millisecond before one: panicked at crates/coordination/tests/lapse.rs:289:5, the members each move decides: "a review a millisecond later": 0, where the pin is 32
+A20 replay: red under the uncommitted plant of both: panicked at crates/coordination/tests/lapse.rs:289:5, the members each move decides: "a review a millisecond earlier": 256 and "a review a millisecond later": 0, where the pins are 320 and 32
+A20 replay: red under the uncommitted plant of the deciding day: panicked at crates/coordination/tests/lapse.rs:289:5, the members each move decides: "a day closing the run at two reviews": 256, "a review a millisecond earlier": 256, "a review by the default rule": 512 and "a review on its UTC date": 434, where the pins are 704, 320, 524 and 458
+A19 replay: red under the uncommitted plant of the closing days: panicked at crates/streaks/tests/lapse.rs:295:5, the members each edit decides: "a day closing the run at 101 reviews": 1494, "a day closing the run at two reviews": 0 and "the walk passing two days a step": 410, where the pins are 1557, 1001 and 559
+A20 replay: green at f46af4cc0b5413d7a55bb42f56cf284fcc107682: examined 1024 rollover member(s), 1024 distinct, over 112 distinct day member(s), 2048 study day(s) holding one review
+A20 replay: green at f46af4cc0b5413d7a55bb42f56cf284fcc107682: boundary members: {"day instants a millisecond before one": 16, "day instants at a rollover": 16, "nows a millisecond before one": 224, "nows at a rollover": 800, "reviews a millisecond before one": 64, "reviews at a rollover": 640, "runs of silent days at the threshold": 352, "runs of silent days one short of it": 352}
+A20 replay: green at f46af4cc0b5413d7a55bb42f56cf284fcc107682: members each move decides: {"a day closing the run at 101 reviews": 704, "a day closing the run at two reviews": 704, "a review a millisecond earlier": 320, "a review a millisecond later": 32, "a review an hour later": 64, "a review by the default rule": 524, "a review eight hours earlier": 832, "a review on its UTC date": 458, "a review with the offset twice": 448, "ease 0 a study answer": 128, "ease 1 no study answer": 128, "every day closing the run": 672, "every review a study review": 320, "kind -1 a study kind": 64, "kind 0 no study kind": 64, "kind 3 no study kind": 64, "kind 4 a study kind": 64, "now a millisecond earlier": 240, "now a millisecond later": 112, "one fewer silent day to open": 352, "one more silent day to open": 352, "the id the first silent day met": 672, "the walk begun a day after today": 352, "the walk begun a day before today": 352, "the walk passing two days a step": 512, "the window begun a day earlier": 320, "the window begun a day later": 320, "the window begun at its latest day": 320}
+A19 replay: green at f46af4cc0b5413d7a55bb42f56cf284fcc107682: examined 2252 window member(s), 1916 distinct
+A19 replay: green at f46af4cc0b5413d7a55bb42f56cf284fcc107682: boundary members: {"closing days of one review": 1349, "empty windows": 0, "runs of silent days at the threshold": 403, "runs of silent days one short of it": 800, "todays before the window": 2, "walks that end at the window's first day": 229, "walks that pass a skip day": 2000}
+A19 replay: green at f46af4cc0b5413d7a55bb42f56cf284fcc107682: members each edit decides: {"a day closing the run at 101 reviews": 1557, "a day closing the run at two reviews": 1001, "every day closing the run": 414, "every silent day read as a skip day": 414, "every skip day read as silent": 1292, "one fewer silent day to open": 680, "one more silent day to open": 343, "the id the first silent day met": 411, "the walk begun a day after today": 544, "the walk begun a day before today": 275, "the walk passing two days a step": 559, "the window begun a day earlier": 67, "the window begun a day later": 23, "the window begun at its latest day": 210}
 ```

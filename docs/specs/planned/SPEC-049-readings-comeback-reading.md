@@ -344,10 +344,13 @@ A18: cargo test -p deck-streak-streaks --test lapse -- --exact a_silent_run_on_t
 
 Made for issue #453, insert-only: every earlier byte is kept in order, and the sections below are new
 last sections. It decides nothing new. The two generated populations of section 8 each assert how
-many members they generate; this amendment says what that count pins, and adds the counts that pin
-every boundary the two judges compare: the study day's floor on a review's instant, on now and on
-the day judge's instant, the silent run against the threshold and one short of it, a day's count
-against none, the skip days a walk passes, and where a walk ends against the window's first day.
+many members they generate; this amendment says what that count pins, and adds, for each line of
+the two lapse judges that a comparison or a row changes, the count of members whose answer that
+line decides. The comparisons are the study day's floor on a review's instant and on now, whether a
+review is a study event (its kind from 0 to 3 and its ease at least 1), where the walk begins and
+where its window begins, a day's count against none, the skip days a walk passes, and the silent run
+against the threshold. The day judge's one comparison, the floor on its own instant, is pinned by
+the members on each side of it, which for that judge are the members whose answer it decides.
 
 - **What the examined count pins.** It is the number of times the generator's loops reach the
   judge: the product of their axes. A generator that keeps its loops but changes what they produce
@@ -365,23 +368,53 @@ against none, the skip days a walk passes, and where a walk ends against the win
   different, such as an input made one constant value, keeps the count, and the count does not
   catch it. A count kept over the generator's loop variables cannot see a fold of one judge's
   input while the other judge still reads the value.
-- **What the one-review-day count pins.** The walk asks whether a study day holds more than no
-  review, so a day that holds exactly one is its boundary. A20 also counts, over the reviews each
-  member hands the lapse judge, the study days that hold exactly one, reading each review's day with
-  the test's own definition of the day: 896, two for each member. Moving the earlier review onto
-  the day of the later one keeps every member different and leaves no such day.
+- **What the one-review-day count pins.** A20 also counts, over the reviews each member hands the
+  lapse judge, the study days that hold exactly one review, reading each review's day with the
+  test's own definition of the day: 2,048, two for each member. Moving the earlier review onto the
+  day of the later one keeps every member different and leaves no such day, and the count shows it.
+  It counts where reviews sit, not whose answer turns there, so it does not pin the walk's closing
+  comparison; the moves "a day closing the run at two reviews" and "every day closing the run"
+  below pin it.
 - **What the boundary counts pin.** Each population also counts, by its own oracle over the
-  arguments its judge is handed, how many members sit at each boundary that judge compares, asserts
-  each count beside the examined and distinct counts, and prints them. A20 counts eight (reviews,
-  nows and day instants at a rollover and a millisecond before one, and silent runs at the
-  threshold and one short of it). A19 counts seven (closing days of one review, empty windows,
-  silent runs at the threshold and one short of it, todays before the window, walks that end at the
-  window's first day, and walks that pass a skip day). A generator fold that keeps every member
-  different and moves members across one boundary fails the count of that boundary. The class rule
-  is one sentence: a population pins how many members sit at each boundary its judge compares.
-  The boundaries were read from the judges' code, and the folds that test them were generated one
-  input at one call site at a time. "Empty windows" pins 0, because A19's population never reaches
-  that boundary; the test `an_empty_window_holds_no_lapse` decides it.
+  arguments its judge is handed, how many members sit on each side of a boundary, asserts each count
+  beside the examined and distinct counts, and prints them. A20 counts eight (reviews, nows and day
+  instants at a rollover and a millisecond before one, and silent runs at the threshold and one
+  short of it). A19 counts seven (closing days of one review, empty windows, silent runs at the
+  threshold and one short of it, todays before the window, walks that end at the window's first
+  day, and walks that pass a skip day). A count of members at a boundary cannot tell a member whose
+  side decides its answer from one parked there: a fold can move members off a boundary, park as
+  many others on it, keep every such count, and let the row that moves that boundary survive. These
+  counts show where a population sits; the decisive counts below pin the boundaries. "Empty
+  windows" pins 0, because A19's population never reaches that boundary; the test
+  `an_empty_window_holds_no_lapse` decides it.
+- **What the decisive counts pin.** Each test holds a table of moves of its judge, and each move is
+  one line of the judge changed: a boundary it compares moved one step each way both sides exist,
+  or a line one of the judge's rows replaces. A20's lapse judge has 28: a review a millisecond
+  earlier and later; now a millisecond earlier and later; kinds -1 and 4 read as study kinds and
+  kinds 0 and 3 as not; ease 0 read as a study answer and ease 1 as not; the window begun a day
+  later, a day earlier and at its latest day; the walk begun a day before and a day after today; a
+  day closing the run at two reviews, and every day closing it; one more and one fewer silent day to
+  open; and the lines its rows replace (a review eight hours earlier and an hour later, on its UTC
+  date, by the default rule and with the offset twice, every review a study review, a day closing
+  the run at 101 reviews, the walk passing two days a step, and the id of the first silent day
+  met). A19's walk has 14: the same moves of the walk, and its skip days read as silent and its
+  silent days read as skip days. For every distinct member the test first asserts that the judge's
+  own answer equals a copy of its rule with no move; then it counts the members whose answer each
+  move changes, and asserts that each count equals its pin and is more than none. The pins are
+  re-derived by a generator outside the test. The mutant of each row on the judges' lines (S04901
+  to S04919 and S04930) answers every member as one of these moves does, so under it the judge and
+  the copy disagree on each member that move decides, and the first of them fails. A fold that
+  keeps every decisive count keeps at least one such member for every move, so it kills every row;
+  a fold that loses them changes that move's count and fails it. The class rule is one sentence:
+  for each line of a judge that a comparison or a row changes, the population pins how many of its
+  distinct members that line decides, and first asserts on each of them that the judge equals the
+  copy of its rule.
+- **The study-event block.** A20's judge asks whether each review is a study event, but section 8's
+  population hands only study reviews (kind 1, ease 3), so no member's answer turned on that
+  comparison. A20 now also hands, under each of its sixteen rules, both reviews at every kind from
+  -1 to 4 and every ease from 0 to 2, with now on the third and on the second day after the later
+  one: a study event there closes the run, and without one the run begins on the window's first
+  day. That is 576 more members, and each edge of a study event decides 64 or 128 of them.
 - **Why members of the walk's population repeat.** 336 of the 2,252 members repeat an earlier one,
   for two reasons. The days before a run are filled three ways when the window has earlier days,
   and two ways when it has none. When the window has one or two earlier days (`before` of 1 or 2),
@@ -393,12 +426,14 @@ against none, the skip days a walk passes, and where a walk ends against the win
   population is 1,916. The judge is pure and
   each repeat follows its first occurrence, so no repeat changes a verdict, and the repeats are
   kept because removing them would change the examined count of A16 for no gain. The rollover
-  population has no repeat: its 448 lapse members are 448 distinct, and its day members are 112,
+  population has no repeat: its 1,024 lapse members are 1,024 distinct, and its day members are 112,
   sixteen rules by seven instants.
 - **Criteria.** A19 asserts A16's population is 2,252 members and 1,916 distinct, and prints both.
-  A20 asserts A17's population is 448 members, 448 distinct lapse members and 112 distinct day
-  members, and prints all three; it also asserts, and prints, that the members hold 896 study days
-  of one review. A19 and A20 each also assert and print their boundary counts.
+  A20 asserts A17's population, with the study-event block, is 1,024 members, 1,024 distinct lapse
+  members and 112 distinct day members, and prints all three; it also asserts, and prints, that the
+  members hold 2,048 study days of one review. A19 and A20 each also assert and print their boundary
+  counts and the members each move decides, assert that the judge equals the copy of its rule on
+  every distinct member, and assert that every decisive count is more than none.
 - **Rows.** This amendment writes S04921 to S04929 of this SPEC's band, one for each class of
   generator fold: a skip mask that never reaches the run's first day, a fill replaced by a copy of
   another, and an axis collapsed to one value, on the walk's population (A19); two offsets made
@@ -407,15 +442,18 @@ against none, the skip days a walk passes, and where a walk ends against the win
   the lapse judge is handed folded to its day's first instant while the day judge still reads every
   instant, and the reverse; and one that moves the earlier review onto the later one's day, which
   keeps every member different and leaves no study day of one review. Each row's mutant edits the
-  test's generator, and its killer is the same test. The remainder's rows start at S04930.
+  test's generator, and its killer is the same test. It also writes S04930, which reads an answer of
+  ease 1 as no study review at the lapse judge's call of the study-event rule, a line of
+  coordination's; A20 kills it through the study-event block, and it survives A20 at the base, which
+  hands no review of ease 1. The remainder's rows start at S04931.
 
 Files this amendment adds or changes:
 
 | file | package | what |
 |---|---|---|
-| `crates/streaks/tests/lapse.rs` | `deck-streak-streaks` | A19: the distinct count of A16's population |
-| `crates/coordination/tests/lapse.rs` | `deck-streak-coordination` | A20: the distinct count of A17's population |
-| `scripts/mutation-rows.d/S04900-S04999.json` | repo | nine rows |
+| `crates/streaks/tests/lapse.rs` | `deck-streak-streaks` | A19: the distinct, boundary and decisive counts of A16's population |
+| `crates/coordination/tests/lapse.rs` | `deck-streak-coordination` | A20: the distinct, boundary and decisive counts of A17's population, and its study-event block |
+| `scripts/mutation-rows.d/S04900-S04999.json` | repo | ten rows |
 | `docs/red-first/SPEC-049.md` | docs | an insert-only addendum |
 | `changelog.d/lapse-spread-453.md` | repo | the fragment |
 
@@ -429,8 +467,8 @@ Not covered here, each with its owner:
 
 | id | criterion | decided by |
 |---|---|---|
-| A19 | the walk's generated population holds 2,252 members of which 1,916 are distinct, both counts printed, so a fold that leaves fewer different members fails while the examined count holds | `the_walk_reads_every_day_of_its_window_and_none_outside_it` |
-| A20 | the mapping's generated population holds 448 members of which 448 are distinct lapse members, over 112 distinct day members, and 896 study days of one review, all four counts printed, so a fold that leaves fewer different members of either judge, or no study day of one review, fails while the examined count holds | `a_review_counts_on_the_study_day_the_rule_gives_at_every_boundary` |
+| A19 | the walk's generated population holds 2,252 members of which 1,916 are distinct, both counts printed, so a fold that leaves fewer different members fails while the examined count holds; the walk equals the copy of its rule on every distinct member, and the members each of its 14 moves decides equal their pins, each more than none | `the_walk_reads_every_day_of_its_window_and_none_outside_it` |
+| A20 | the mapping's generated population, with its study-event block, holds 1,024 members of which 1,024 are distinct lapse members, over 112 distinct day members, and 2,048 study days of one review, all four counts printed, so a fold that leaves fewer different members of either judge, or no study day of one review, fails while the examined count holds; the judge equals the copy of its rule on every distinct member, and the members each of its 28 moves decides equal their pins, each more than none | `a_review_counts_on_the_study_day_the_rule_gives_at_every_boundary` |
 
 ```acceptance
 A19: cargo test -p deck-streak-streaks --test lapse -- --exact the_walk_reads_every_day_of_its_window_and_none_outside_it
