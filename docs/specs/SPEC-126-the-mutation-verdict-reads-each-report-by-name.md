@@ -281,3 +281,40 @@ this section and section 14 and nothing else. Issue #438.
 A8: python3 -m unittest discover -s scripts/tests -p test_mutation_python_shard_binding.py -k test_a_report_counts_only_in_its_own_slot
 A9: python3 -m unittest discover -s scripts/tests -p test_mutation_python_shard_binding.py -k test_a_report_counts_only_the_mutants_its_shard_lists
 ```
+
+## 15. Amendment, 2026-09-30: one reader yields what the verdict judges
+
+Insert-only under ruling (i) of SPEC-038 section 8: every earlier byte is kept in order. It inserts
+this section and section 16 and nothing else. Issue #438, fix round 1.
+
+- **The class rule, widened to the layout.** The verdict reads the report in a shard's slot only
+  when the report's shard field equals the slot and the mutants the verdict will judge from it
+  equal the plan's listing for that shard, as a multiset. Any other layout is VOID, naming the
+  shard, and never a traceback and never exit 0.
+- **One reader.** `read_python_shard` in `scripts/mutation-verdict.py` yields exactly the records
+  the judge will judge, and the slot binding and the judge both use that yield; there is no second
+  reader. It refuses, naming the shard, any container of another JSON type (`files`, an entry, its
+  `mutants`, its `byte_readers`, a record), any listed mutant whose outcome is not one of the
+  runner's `OUTCOMES` (read from the runner module, never copied), and any listed mutant filed
+  under an entry whose path the class does not read. The classes it serves are `scripts` and
+  `oracle` whose plan entry applies, so "the class does not read" is taken as the union of those
+  two. An absent container reads as empty.
+- **A correction to section 13.** Its sentence "A plan that lists no mutants for the shard
+  refuses the report as well" holds for a plan with no entry for the shard, an entry with no
+  listing, and a listing that is not a list. It does not hold for an empty list: a shard that lists
+  no mutants and whose report is well formed and empty is read, and the class then goes VOID
+  because nothing was examined. A `files` that is not a list is refused by name.
+- **Nothing else moves.** The runner, the plan, the workflow and the Rust lane are unchanged; a
+  correct layout is judged as before.
+
+## 16. Acceptance criteria added by the section 15 amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A10 | the binding and the judge read one report: a container of another type, an outcome off the runner's vocabulary and a mutant filed under an unread path are each refused by name | `test_mutation_python_shard_binding.py` `test_a_report_is_read_as_the_judge_reads_it` |
+| A11 | a shard that lists no mutant reads its well-formed empty report and the class is VOID as unexamined; a non-list `files` is refused by name | `test_mutation_python_shard_binding.py` `test_a_shard_that_lists_no_mutant_reads_its_empty_report` |
+
+```acceptance
+A10: python3 -m unittest discover -s scripts/tests -p test_mutation_python_shard_binding.py -k test_a_report_is_read_as_the_judge_reads_it
+A11: python3 -m unittest discover -s scripts/tests -p test_mutation_python_shard_binding.py -k test_a_shard_that_lists_no_mutant_reads_its_empty_report
+```
