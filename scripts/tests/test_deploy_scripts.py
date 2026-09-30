@@ -2429,7 +2429,7 @@ exec /usr/bin/@NAME@ "$@"
         for name in ("tools.log", "args.log"):
             (w.log / name).write_text("", encoding="utf-8")
 
-    def world(self, tmp, verb, state):
+    def situation(self, tmp, verb, state):
         """A world in `state`, armed, and the argv of `verb` in it."""
         w = World(tmp)
         good = self.good(w)
@@ -2482,7 +2482,7 @@ exec /usr/bin/@NAME@ "$@"
                 if (verb, state) in self.NOT_A_STATE:
                     continue
                 with tempfile.TemporaryDirectory() as tmp:
-                    w, good, argv = self.world(tmp, verb, state)
+                    w, good, argv = self.situation(tmp, verb, state)
                     self.ok(w.run(*argv, **good))
                     calls = self.writing_calls(w)
                 reached |= {tool for tool, _ in calls}
@@ -2493,7 +2493,7 @@ exec /usr/bin/@NAME@ "$@"
         for verb, state, tool, index in examined("state-and-call member(s)", members):
             with self.subTest(verb=verb, state=state, tool=tool, index=index):
                 with tempfile.TemporaryDirectory() as tmp:
-                    w, good, argv = self.world(tmp, verb, state)
+                    w, good, argv = self.situation(tmp, verb, state)
                     planted = {**good, "TOOL_FAILS": f"{tool}:host:{index}"}
                     done, before, after = self.outcome(w, argv, planted, [])
                     self.judge(
@@ -2503,7 +2503,7 @@ exec /usr/bin/@NAME@ "$@"
     def test_a_first_install_into_a_parent_that_cannot_take_a_write_leaves_the_host_as_found(self):
         for verb in examined("first-install place member(s)", ["install", "rollback-unkept"]):
             with self.subTest(verb=verb), tempfile.TemporaryDirectory() as tmp:
-                w, good, argv = self.world(tmp, verb, "first-install")
+                w, good, argv = self.situation(tmp, verb, "first-install")
                 parent = w.root.parent
                 parent.mkdir(parents=True, exist_ok=True)
                 modes = [(parent, stat.S_IMODE(parent.lstat().st_mode))]
@@ -2515,7 +2515,7 @@ exec /usr/bin/@NAME@ "$@"
     def test_a_stale_unpack_in_a_releases_directory_that_cannot_take_a_write_is_refused(self):
         for verb in examined("stale-unpack member(s)", ["install", "rollback-unkept"]):
             with self.subTest(verb=verb), tempfile.TemporaryDirectory() as tmp:
-                w, good, argv = self.world(tmp, verb, "installed")
+                w, good, argv = self.situation(tmp, verb, "installed")
                 releases = w.root / "releases"
                 stale = releases / f"{argv[-1]}.partial"
                 stale.mkdir()
@@ -2528,7 +2528,7 @@ exec /usr/bin/@NAME@ "$@"
     def test_a_failed_switch_leaves_no_unit_only_the_new_release_ships(self):
         for verb in examined("new-unit member(s)", ["install", "rollback-unkept"]):
             with self.subTest(verb=verb), tempfile.TemporaryDirectory() as tmp:
-                w, good, argv = self.world(tmp, verb, "new-unit")
+                w, good, argv = self.situation(tmp, verb, "new-unit")
                 planted = {**good, "TOOL_FAILS": "mv:host:2"}
                 done, before, after = self.outcome(w, argv, planted, [])
                 self.judge(f"{verb} / new unit / failed switch", done, before, after, "host step")
