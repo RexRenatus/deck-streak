@@ -215,6 +215,7 @@ that commit, because it reads the settings and passes at the head's `deploy.sh`.
 (b46e2daa), which changes `deploy.sh` and edits no test file. After it, fifty-six tests pass and A38
 examines seventy-eight members.
 
-The rows S12736 and S12737 were added in the next commit; each mutant survives the fifty-four tests
-that the previous head held and is killed by the test of A38, and every row of the band is proved
-killed by its full id on a clean committed tree.
+The rows S12736 and S12737 were added in the next commit, and the rows S12731 and S12733 moved to the
+test of A38, because the new line turns the old killer of each into a no-op. Each of the four mutants
+survives the tests that the previous head held and is killed by the test of A38, and every row of the
+band is proved killed by its full id on a clean committed tree.
