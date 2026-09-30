@@ -833,6 +833,9 @@ class EveryReleaseWorkflowQueuesEveryRun(unittest.TestCase):
                 continue
             if not any("does not define there" in p for p in problems):
                 missed.append(f"{variant} for {where}.{key}")
+        cancelling = release.replace("cancel-in-progress: false", "cancel-in-progress: true", 1)
+        refusal = closed_by_construction("release.yml", read_workflow(cancelling), [])
+        self.assertIn("not false as written", " ".join(refusal))
         self.assertEqual(missed, [])
 
 
