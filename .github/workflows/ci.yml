@@ -291,6 +291,7 @@ jobs:
       rows: ${{ steps.plan.outputs.rows }}
       shards: ${{ steps.shards.outputs.shards }}
       matrix: ${{ steps.shards.outputs.matrix }}
+      listed: ${{ steps.shards.outputs.listed }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -341,9 +342,11 @@ jobs:
 
   # One job per shard of the plan: cargo-mutants over the same diff, in place, the shard's mutants
   # round-robin as the plan projected them. Its exit is recorded and its report kept; the verdict's
-  # job reads them.
+  # job reads them. It is not started when the plan's listing holds no mutant, which the verdict's
+  # `legs` check reads from the listing, never from the leg's absence (SPEC-290 R2).
   mutation-rust:
     needs: [mutation-plan]
+    if: ${{ needs.mutation-plan.outputs.listed != '0' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     strategy:
@@ -422,9 +425,11 @@ jobs:
           if-no-files-found: warn
 
   # The hand-proved rows the diff selects, and the retirement check: no row leaves while its target
-  # stays, unless the maintainer approved it.
+  # stays, unless the maintainer approved it. It is not started only when the plan selects no row
+  # and no retirement check is due, which is a push that merges a pull request (SPEC-290 R3).
   mutation-rows:
     needs: [mutation-plan]
+    if: ${{ needs.mutation-plan.outputs.rows == 'true' || needs.mutation-plan.outputs.scope == 'diff' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     env:
@@ -522,6 +527,9 @@ jobs:
           merge-multiple: true
           path: ${{ runner.temp }}/reports
       - name: the verdict, from every shard's report and the rows' (the plan names a not-applicable case)
+        env:
+          RUST_LEG: ${{ needs.mutation-rust.result }}
+          ROWS_LEG: ${{ needs.mutation-rows.result }}
         run: |
           reports="$RUNNER_TEMP/reports"
           status=0
@@ -529,6 +537,9 @@ jobs:
           oracle=0
           python3 scripts/mutation-verdict.py judge --plan "$reports/mutation-plan/plan.json" --class oracle --rows "$reports/mutation-rows/rows.json" || oracle=$?
           if [ "$status" -eq 0 ]; then status=$oracle; fi
+          legs=0
+          python3 scripts/mutation-verdict.py legs --plan "$reports/mutation-plan/plan.json" --rust-leg "$RUST_LEG" --rows-leg "$ROWS_LEG" || legs=$?
+          if [ "$status" -eq 0 ]; then status=$legs; fi
           exit "$status"
 
   # StrykerJS over every web production file the diff changes, whole, so a survivor already on a
@@ -634,7 +645,27 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
+      # A skipped job reads as passing to a required check, so a skip is admitted from the two legs
+      # the plan's listing can give nothing and from nowhere else, once for each leg whose own
+      # result is `skipped`; `mutation-verdict`, which must succeed, judged each against the listing
+      # (SPEC-290 R8).
       - name: every required job succeeded
         env:
           RESULTS: ${{ join(needs.*.result, ' ') }}
-        run: for result in $RESULTS; do test "$result" = success || exit 1; done
+          RUST_LEG: ${{ needs.mutation-rust.result }}
+          ROWS_LEG: ${{ needs.mutation-rows.result }}
+        run: |
+          admitted=0
+          for leg in "mutation-rust:$RUST_LEG" "mutation-rows:$ROWS_LEG"; do
+            if [ "${leg#*:}" = skipped ]; then
+              echo "ci: ${leg%%:*} was not started; mutation-verdict judged it against the plan's listing"
+              admitted=$((admitted + 1))
+            fi
+          done
+          for result in $RESULTS; do
+            if [ "$result" = skipped ] && [ "$admitted" -gt 0 ]; then
+              admitted=$((admitted - 1))
+              continue
+            fi
+            test "$result" = success || exit 1
+          done

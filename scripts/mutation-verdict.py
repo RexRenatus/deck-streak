@@ -10,17 +10,18 @@ R6, R10, R12; ADR-057).
                                              [--outcomes FILE] [--tool-exit N]
                                              [--shard-reports DIR]
                                              [--stryker FILE] [--rows FILE]
+    python3 scripts/mutation-verdict.py legs --plan FILE --rust-leg RESULT --rows-leg RESULT
     python3 scripts/mutation-verdict.py survivors --reports DIR --out DIR [--open-titles FILE]
     python3 scripts/mutation-verdict.py battery --reports DIR --shards N
     python3 scripts/mutation-verdict.py configs [--root DIR]
     python3 scripts/mutation-verdict.py exclusions [--root DIR]
 
-PLAN first decides the run's scope from the event that started it (R3), because a job is never
-skipped: `ci` reads a skipped need as failed. A pull request into `dev` is judged on its diff, and
-a release pull request into `main` on its merge diff, every change `dev` carries since the last
-release; a push that merges a pull request (`Merge pull request #N`) is not-applicable, naming
-`#N`, whose jobs judged that same tree; a push that names none is judged on its first-parent
-diff. For a diff it reads `git diff BASE...HEAD` (on a pull request's merge
+PLAN first decides the run's scope from the event that started it (R3), each case by name, because
+`ci` fails on a skipped need but a leg LEGS reads as not started. A pull request into `dev` is
+judged on its diff, and a release pull request into `main` on its merge diff, every change `dev`
+carries since the last release; a push that merges a pull request (`Merge pull request #N`) is
+not-applicable, naming `#N`, whose jobs judged that same tree; a push that names none is judged on
+its first-parent diff. For a diff it reads `git diff BASE...HEAD` (on a pull request's merge
 ref, BASE is `HEAD^1`) and writes `plan.json` and `git.diff` into `--out`: every changed path with
 its class (R2), each production file's changed lines split into code lines, blank or comment lines
 and, in Rust, test-only lines, those inside an item cargo-mutants never mutates for a test attribute
@@ -32,22 +33,30 @@ SHARDS sizes the Rust run from cargo-mutants' own listing of the diff's mutants 
 --in-diff`), so no shard reaches its job's timeout (R18). Each round-robin shard's time is projected
 as the unmutated baseline's plus its mutants' measured costs, mutant `i` in shard `i mod n` as the
 tool assigns them, and the fewest shards whose slowest is projected within the bound are written
-into the plan, with each shard's mutants, and as the step outputs `shards` and `matrix`. A diff that
-needs more shards than a job matrix holds is refused with its projection, never capped. A listing
-file that holds nothing is the tool's own empty listing, since it prints nothing when no mutant
-overlaps the diff; a missing listing is VOID (SPEC-057 R22).
+into the plan, with each shard's mutants, and as the step outputs `shards` and `matrix`, beside
+`listed`, the number of mutants the shards hold (SPEC-290 R1). A diff that needs more shards than
+a job matrix holds is refused with its projection, never capped. A listing file that holds nothing
+is the tool's own empty listing, since it prints nothing when no mutant overlaps the diff; a
+missing listing is VOID (SPEC-057 R22).
 
 JUDGE reads a tool's own report, never its exit alone (R4); under `--shard-reports`, every shard's
 the plan promised, from `0` to `n-1`, each missing or partial one VOID by name, and the reports
-together must hold every listed mutant once (R18). Examined is caught plus missed plus
-timed out (Stryker: killed, survived, no coverage and timed out); an unviable mutant, a compile or
-runtime error, is not examined. A missed or uncovered mutant, or a selected row that was not
+together must hold every listed mutant once (R18) and count exactly as many mutants as the listing
+holds (SPEC-290 R5); a shard the listing gives no mutant and that left nothing was not started
+(SPEC-290 R4). Examined is caught plus missed plus timed out (Stryker: killed, survived, no
+coverage and timed out); an unviable mutant, a compile or runtime error, is not examined. A missed or uncovered mutant, or a selected row that was not
 KILLED, fails (exit 1). A class whose production files changed a code line and whose examined
 count, the tool's and the rows' on its changed lines, is zero is VOID (exit 3). So is a missing
 report, and a partial one: cargo-mutants writes its report as it goes, so a report is read only when
 the tool's exit is 0, 2 or 3 and its caught, missed, timed-out and unviable counts sum to its total.
 A class whose changed lines are all blank or comments, or only deletions, or in Rust test-only,
 reads `not-applicable` by name, with its count.
+
+LEGS judges the two legs a plan can give nothing to examine against that plan, from GitHub's result
+for each (SPEC-290 R6). `mutation-rust` is not started only when the plan's shards list no mutant,
+and `mutation-rows` only when the plan selects no row and no retirement check is due; any other
+skipped leg is VOID by name, and so is a result that is not a job's. The plan's step output
+`listed`, which SHARDS writes, is the count each leg's job-level condition reads.
 
 SURVIVORS turns the weekly battery's reports into one issue draft per file, titled
 `Mutation survivors: <path>`, and marks a draft whose title is already an open issue (R12). The
@@ -119,8 +128,9 @@ SQUASH_SUBJECT = re.compile(r" \(#(\d+)\)$")
 
 
 def scope_of(event: str, base_ref: str, subject: str) -> tuple[str, str]:
-    """(`diff` or `not-applicable`, why) for the event that started the run (SPEC-039 R3). A job is
-    never skipped, because `ci` reads a skipped need as failed, so each case says why by name."""
+    """(`diff` or `not-applicable`, why) for the event that started the run (SPEC-039 R3). The
+    plan's own job is never skipped, and each case says why by name; a leg the plan's listing gives
+    nothing is not started, which `legs` judges against the plan (SPEC-290 R2, R3 and R6)."""
     if event == "pull_request" and base_ref == "main":
         return (
             "diff",
@@ -894,6 +904,12 @@ def shards(plan_path: pathlib.Path, listed_path: str | None) -> int:
         f"{sum(costs)} s serially; the slowest at {max(times)} s of its {SHARD_BOUND_SECONDS} s bound"
     )
     announce(count)
+    output = os.environ.get("GITHUB_OUTPUT")
+    if output:
+        # The listing's own count, the one fact each leg's job-level condition reads: 0 when the
+        # class does not apply and when its listing is empty (SPEC-290 R1).
+        with open(output, "a", encoding="utf-8") as sink:
+            sink.write(f"listed={len(mutants)}\n")
     return EXIT_OK
 
 
@@ -1016,8 +1032,8 @@ def partial_reason(report: object, code: int | None, source: str) -> str | None:
 def whole_reports(verdict: Verdict, plan: dict, args: argparse.Namespace) -> list[tuple[str, dict]]:
     """(where, report) for each whole cargo-mutants report the run promised; each one missing or
     partial is VOID, by name. Under --shard-reports it promised every shard's, from 0 to n-1 (R18),
-    but a shard the plan gave no mutant, which cargo-mutants leaves without a report; else the one
-    --outcomes names."""
+    but a shard the plan gave no mutant, which cargo-mutants leaves without a report and whose leg
+    is not started when no shard has one (SPEC-290 R4); else the one --outcomes names."""
     if not args.shard_reports:
         promised = [
             ("", read_json(args.outcomes), args.tool_exit, args.outcomes or "no --outcomes")
@@ -1042,6 +1058,11 @@ def whole_reports(verdict: Verdict, plan: dict, args: argparse.Namespace) -> lis
             listed.append(len(planned[shard]["mutants"]))
     whole = []
     for (where, report, code, source), mutants in zip(promised, listed, strict=True):
+        if report is None and code is None and mutants == 0:
+            # A leg the listing gave nothing is not started, so it leaves no artifact; a shard
+            # that lists a mutant and left nothing is still VOID below (SPEC-290 R4).
+            verdict.say(f"{where}not started: the plan lists no mutant for it")
+            continue
         if report is None and code == 0 and mutants == 0:
             # cargo-mutants exits 0 and writes no report when it has no mutant to test.
             verdict.say(f"{where}no mutant listed, and cargo-mutants reports none")
@@ -1081,6 +1102,24 @@ def partition(verdict: Verdict, plan: dict, whole: list[tuple[str, dict]], compl
         for name, times in sorted(listed.items()):
             if len(tested.get(name, [])) < times:
                 verdict.void(f"never tested: {name}, listed for {home[name]}")
+
+
+def examined_sum(verdict: Verdict, plan: dict, whole: list[tuple[str, dict]]) -> None:
+    """The mutants the whole reports count, caught, missed, timed out and unviable, are the ones
+    the plan's shards list, no more and no fewer (SPEC-290 R5): a leg is read as not started only
+    from the listing, so the reports must account for the listing exactly. It runs once every
+    promised report was whole and every listed mutant tested, so it names no gap twice."""
+    planned = (plan.get("shards") or {}).get("shards") or []
+    listed = sum(len(shard["mutants"]) for shard in planned)
+    counted = sum(
+        int(report.get(key, 0))
+        for _, report in whole
+        for key in ("caught", "missed", "timeout", "unviable")
+    )
+    if counted != listed:
+        verdict.void(
+            f"the shards' reports count {counted} mutant(s), and the plan's listing holds {listed}"
+        )
 
 
 def judge_rust(verdict: Verdict, plan: dict, args: argparse.Namespace) -> None:
@@ -1155,6 +1194,9 @@ def judge_rust(verdict: Verdict, plan: dict, args: argparse.Namespace) -> None:
     verdict.say(f"missed {missed}: equivalent {equivalent}, unexplained {missed - equivalent}")
     if args.shard_reports:
         partition(verdict, plan, whole, complete=len(verdict.voids) == voids)
+        # Checked once nothing the shards promised is missing, partial or never tested.
+        if len(verdict.voids) == voids:
+            examined_sum(verdict, plan, whole)
     for text in deferred:
         verdict.void(text)
     verdict.examined = tool - capped + carried
@@ -1373,6 +1415,65 @@ def judge(args: argparse.Namespace) -> int:
         verdict.say(f"not-applicable: {scope.get('reason')}")
         return verdict.close()
     {"rust": judge_rust, "web": judge_web, "oracle": judge_oracle}[args.klass](verdict, plan, args)
+    return verdict.close()
+
+
+#: What GitHub gives a needed job as its result: "success, failure, cancelled, or skipped" (the
+#: `needs` context).
+LEG_RESULTS = ("success", "failure", "cancelled", "skipped")
+
+
+def rust_leg_owed(plan: dict) -> str | None:
+    """Why the plan owes `mutation-rust` a run, or None when its listing gives the leg nothing."""
+    planned = (plan.get("shards") or {}).get("shards") or []
+    if not planned:
+        return "the plan names no shards, so no listing says it had nothing to examine"
+    listed = sum(len(shard["mutants"]) for shard in planned)
+    if listed:
+        return f"the plan lists {listed} mutant(s) across {len(planned)} shard(s)"
+    return None
+
+
+def rows_leg_owed(plan: dict) -> str | None:
+    """Why the plan owes `mutation-rows` a run, or None when it selects no row and no retirement
+    check is due: the retirement check runs on every diff (SPEC-039 R11)."""
+    if plan.get("rows"):
+        return f"the plan selects {len(plan['rows'])} row(s)"
+    if (plan.get("scope") or {}).get("decision") == "diff":
+        return "the scope is diff, whose retirement check is due"
+    return None
+
+
+def legs(args: argparse.Namespace) -> int:
+    """Each leg's result against the plan (SPEC-290 R6): a leg is read as not started only when
+    the plan's listing gave it nothing, and a skip the plan owed work is VOID by name. A leg that
+    started is judged by its own job, its reports and `ci`."""
+    verdict = Verdict("legs")
+    plan = read_json(args.plan)
+    if not isinstance(plan, dict) or "classes" not in plan:
+        verdict.void(f"no plan: {args.plan} is not a mutation plan")
+        return verdict.close()
+    for leg, result, owed, nothing in (
+        ("mutation-rust", args.rust_leg, rust_leg_owed, "the plan lists no Rust mutant"),
+        (
+            "mutation-rows",
+            args.rows_leg,
+            rows_leg_owed,
+            "the plan selects no row and no retirement check is due",
+        ),
+    ):
+        if result not in LEG_RESULTS:
+            verdict.void(f"{leg}: {result!r} is not a job's result")
+            continue
+        verdict.examined += 1
+        if result != "skipped":
+            verdict.say(f"{leg}: started, {result}")
+            continue
+        reason = owed(plan)
+        if reason is None:
+            verdict.say(f"{leg}: not started: {nothing}")
+        else:
+            verdict.void(f"{leg}: not started while {reason}")
     return verdict.close()
 
 
@@ -2421,6 +2522,7 @@ def main(argv: list[str] | None = None) -> int:
             "shards",
             "size",
             "judge",
+            "legs",
             "survivors",
             "battery",
             "configs",
@@ -2449,6 +2551,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--shard-reports")
     parser.add_argument("--whole")
     parser.add_argument("--package")
+    parser.add_argument("--rust-leg")
+    parser.add_argument("--rows-leg")
     args = parser.parse_args(argv)
     root = pathlib.Path(args.root).resolve()
     if args.verb == "plan":
@@ -2472,6 +2576,10 @@ def main(argv: list[str] | None = None) -> int:
         if not args.plan or not args.klass:
             parser.error("judge needs --plan and --class")
         return judge(args)
+    if args.verb == "legs":
+        if not args.plan or args.rust_leg is None or args.rows_leg is None:
+            parser.error("legs needs --plan, --rust-leg and --rows-leg")
+        return legs(args)
     if args.verb == "survivors":
         if not args.reports or not args.out:
             parser.error("survivors needs --reports and --out")

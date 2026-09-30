@@ -32,6 +32,19 @@ ZERO_SCOPE = {
 }
 EXAMINED = re.compile(r"^examined (\d+)", re.MULTILINE)
 INSTALL = re.compile(r"(?m)^\s*tool: cargo-mutants@27\.1\.0$")
+#: Each mutation job's job-level conditions (SPEC-290): the plan and the web job always start, the
+#: verdict runs whatever its needs returned, and a leg is not started only when the plan's listing
+#: gives it nothing to examine.
+JOB_CONDITIONS = {
+    "mutation-plan": [],
+    "mutation-rust": ["${{ needs.mutation-plan.outputs.listed != '0' }}"],
+    "mutation-rows": [
+        "${{ needs.mutation-plan.outputs.rows == 'true' || "
+        "needs.mutation-plan.outputs.scope == 'diff' }}"
+    ],
+    "mutation-verdict": ["${{ always() }}"],
+    "mutation-web": [],
+}
 
 
 def workflow(path):
@@ -305,11 +318,12 @@ class TheMutationJobsGateEveryPullRequest(unittest.TestCase):
             job = found[name]
             self.assertRegex(aggregate, rf"needs: \[[^\]]*\b{name}\b", f"ci does not need {name}")
             self.assertNotRegex(job, r"actions/cache@|actions/cache/save@", name)
-            # A job-level if may only make a job run: ci reads a skipped need as failed.
+            # A job-level if may only make a job run, but on the plan's listing: ci reads a skipped
+            # need as failed, and admits a skip from the two legs a listing can leave with nothing
+            # to examine (SPEC-290 R2, R3, R8). Each condition is admitted by job name, and only it.
             conditions = re.findall(r"(?m)^    if: (.*)$", job)
-            allowed = ["${{ always() }}"] if name == "mutation-verdict" else []
             self.assertEqual(
-                conditions, allowed, f"{name} may be skipped, which ci reads as failed"
+                conditions, JOB_CONDITIONS[name], f"{name} may be skipped, which ci reads as failed"
             )
             if name != "mutation-verdict":
                 self.assertTrue(uploads_always(job), f"{name} keeps no report when it fails")
