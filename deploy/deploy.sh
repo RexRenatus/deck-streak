@@ -114,6 +114,10 @@ prev=
 [ "$prev" != "$rel" ] || { echo "deploy: $tag is already current" >&2; exit 1; }
 port=$(sed -n 's/^DECKSTREAK_API_LISTEN=.*:\([0-9][0-9]*\)$/\1/p' "$envfile" 2>/dev/null | tail -n 1)
 port=${port:-8080}
+# The check file is made before the first write, so a temporary directory that cannot be used
+# leaves the host as it was (ADR-297); every exit deletes it.
+checked=$(mktemp) || { echo "deploy: the host step could not make its check file" >&2; exit 1; }
+trap '[ ! -f "$checked" ] || find "$checked" -delete' EXIT
 
 install_units() {
     local src=$1/deploy/systemd f d n c base
@@ -188,7 +192,6 @@ fi
 
 install_units "$rel"
 systemctl daemon-reload
-checked=$(mktemp)
 for f in "$rel"/deploy/systemd/*.service "$rel"/deploy/systemd/*@*.d; do
     [ -e "$f" ] || continue
     u=$(basename "$f")
@@ -251,7 +254,7 @@ run_host() {
 
 install_tag() {
     local tag=$1
-    release_tmp=$(mktemp -d)
+    release_tmp=$(mktemp -d) || die "the release step could not make its working directory"
     fetch_release "$tag" "$release_tmp"
     run_host install "$tag" <"$release_tmp/deck-streak-$tag.tar.gz"
 }
@@ -273,7 +276,7 @@ caddy_install() {
     verify_tag "$tag"
     [ -n "$config" ] && [ -f "$config" ] || die "the private Caddy configuration is missing"
     need_host
-    release_tmp=$(mktemp -d)
+    release_tmp=$(mktemp -d) || die "the Caddy step could not make its working directory"
     template=$release_tmp/deck-streak.caddy
     git -C "$checkout" show "refs/tags/$tag:deploy/caddy/deck-streak.caddy" >"$template" ||
         die "$tag holds no Caddy block"
