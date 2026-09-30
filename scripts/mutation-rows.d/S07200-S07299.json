@@ -621,6 +621,96 @@
         "let mut refused = { build_scripts(root, &metadata)?; Vec::new() };",
         "xp_census::the_census_refuses_every_build_script_that_can_name_settle",
         "the refusals of the graph are the census's own (SPEC-072 A35)"
+      ],
+      [
+        "S07290-CENSUS-FINDS-THE-OWNER-BY-PATH",
+        "progression",
+        "tests/xp_census.rs",
+        ".is_some_and(|path| canonical(Path::new(path)) == manifest)",
+        ".is_some_and(|path| !path.is_empty())",
+        "xp_census::the_owner_is_the_member_at_its_manifest_and_every_other_lookup_is_unique_or_refused",
+        "the owner is the workspace member whose manifest is progression's, never another member (SPEC-072 A36)"
+      ],
+      [
+        "S07291-CENSUS-REFUSES-A-DECOY",
+        "progression",
+        "tests/xp_census.rs",
+        "&& (package[\"name\"] == PROGRESSION_PACKAGE || package[\"name\"] == owner_name)",
+        "&& package[\"name\"] == \"no package carries this name\"",
+        "xp_census::a_git_package_carrying_the_owners_name_beside_a_members_script_is_refused_by_name",
+        "any other package of the graph that carries the owner's name is refused by name, whatever its version or source (SPEC-072 A36)"
+      ],
+      [
+        "S07292-CENSUS-REFUSES-A-RENAMED-OWNER",
+        "progression",
+        "tests/xp_census.rs",
+        "if owner_name != PROGRESSION_PACKAGE {",
+        "if owner_name == \"no package carries this name\" {",
+        "xp_census::the_owners_manifest_under_another_package_name_is_refused_by_name",
+        "an owner whose manifest names another package is refused by name (SPEC-072 A36)"
+      ],
+      [
+        "S07293-CENSUS-REFUSES-AN-OWNER-WITHOUT-A-SCRIPT",
+        "progression",
+        "tests/xp_census.rs",
+        "[] => refused.push(format!(",
+        "[] => drop(format!(",
+        "xp_census::an_owner_without_a_build_script_is_refused_by_name",
+        "an owner with no build script sets no cfg and is refused by name (SPEC-072 A36)"
+      ],
+      [
+        "S07294-CENSUS-REFUSES-AN-AMBIGUOUS-OWNER",
+        "progression",
+        "tests/xp_census.rs",
+        "let [owner_package] = owners.as_slice() else {",
+        "let [owner_package, ..] = owners.as_slice() else {",
+        "xp_census::the_owner_is_the_member_at_its_manifest_and_every_other_lookup_is_unique_or_refused",
+        "the owner lookup is unique or refused, never a first match (SPEC-072 A36)"
+      ],
+      [
+        "S07295-CENSUS-COMPILES-IN-AN-EMPTY-TARGET",
+        "progression",
+        "tests/xp_census.rs",
+        "match fresh.and_then(|fresh| compiled_uses(root, fresh.path())) {",
+        "match fresh.and_then(|_fresh| compiled_uses(root, target)) {",
+        "xp_census::the_order_pair_p3_is_judged_alike_in_both_orders_on_one_target",
+        "each census compiles in an empty target of its own, so no other build's output serves it (SPEC-072 A36)"
+      ],
+      [
+        "S07296-CENSUS-CLEARS-THE-ENVIRONMENT",
+        "progression",
+        "tests/xp_census.rs",
+        "command.env_clear();",
+        "let _ = &mut command;",
+        "xp_census::a_variable_the_tree_does_not_set_does_not_move_the_verdict",
+        "the census's cargo inherits only the variables it names (SPEC-072 A36)"
+      ],
+      [
+        "S07297-CENSUS-REFUSES-A-CONFIG-ABOVE-THE-TREE",
+        "progression",
+        "tests/xp_census.rs",
+        "for folder in tree.ancestors() {",
+        "for folder in tree.ancestors().take(1) {",
+        "xp_census::a_cargo_configuration_above_the_tree_is_refused_by_name",
+        "a cargo configuration in any folder above the tree is refused by name (SPEC-072 A36)"
+      ],
+      [
+        "S07298-CENSUS-REFUSES-A-HOME-CONFIG",
+        "progression",
+        "tests/xp_census.rs",
+        "let home = std::env::var_os(\"CARGO_HOME\")",
+        "let home = std::env::var_os(\"CARGO_HOME_OF_NO_ONE\")",
+        "xp_census::a_cargo_configuration_in_cargos_home_is_refused_by_name",
+        "a cargo configuration in cargo's home is refused by name (SPEC-072 A36)"
+      ],
+      [
+        "S07299-CENSUS-REFUSES-A-HOST-VARIABLE-READ",
+        "progression",
+        "tests/xp_census.rs",
+        "if INHERITED.contains(&name) {",
+        "if INHERITED.contains(&\"a variable no host sets\") {",
+        "xp_census::a_members_code_reading_a_variable_the_host_sets_is_refused_by_name",
+        "code of the tree that reads a variable the host sets is refused by name (SPEC-072 A36)"
       ]
     ],
     "CARGO_KILLED_SCRIPT_MUTATIONS": [
