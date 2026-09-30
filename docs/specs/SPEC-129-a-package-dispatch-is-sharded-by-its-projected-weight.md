@@ -145,8 +145,9 @@ Issue #368; SPEC-057 R14, R18, R22; SPEC-039 R12; ADR-057 D7; ADR-129; cargo-mut
 
 ## 8. Amendment, 2026-09-29: A6 finds every spelling of the command (#395)
 
-Insert-only under ruling (i) of SPEC-038 section 8: every earlier byte is kept in order. It inserts
-this section and the next, and nothing else. Issues #395 and #447.
+Insert-only against dev under ruling (i) of SPEC-038 section 8: every byte of dev's file is kept in
+order, and this amendment inserts this section and the next after it, and nothing else. Section 8
+and the next are this PR's own text, and round 8 rewrites their earlier rounds' words. Issues #395 and #447.
 
 - **The rule.** A6 found each `cargo mutants` command with a pattern that missed three spellings of
   the same command: `cargo +<toolchain> mutants`, the `cargo-mutants mutants` binary form, and a
