@@ -132,7 +132,7 @@
         "readings",
         "src/coverage.rs",
         "    if let Some(p) = pack_of(&[BAND_CLASS]) {",
-        "    if let Some(p) = pack_of(&[\"no-such-class\"]) {",
+        "    if let Some(p) = pack_of(&[GateClass::Void]) {",
         "coverage::the_first_failure_decides_in_the_gate_order",
         "the band gate is the pack's reading-length class, ranked after the anchors and before the list markers (SPEC-046 R6, A5)"
       ],
@@ -140,8 +140,8 @@
         "S04616-THE-ROSTER-GATE-READS-THE-PACK-ROSTER-CLASSES",
         "readings",
         "src/coverage.rs",
-        "pub const ROSTER_CLASSES: [&str; 2] = [\"citations-resolve\", \"i1-glosses\"];",
-        "pub const ROSTER_CLASSES: [&str; 2] = [\"citations-resolve\", \"no-such-class\"];",
+        "pub const ROSTER_CLASSES: [GateClass; 2] = [GateClass::CitationsResolve, GateClass::I1Glosses];",
+        "pub const ROSTER_CLASSES: [GateClass; 2] = [GateClass::CitationsResolve, GateClass::Void];",
         "coverage::the_first_failure_decides_in_the_gate_order",
         "the roster gate is the pack's citations-resolve and i1-glosses classes, ranked before the anchors (SPEC-046 R6, A5)"
       ],
@@ -248,7 +248,7 @@
         "S04628-A-PACK-FINDING-NEVER-REACHES-THE-REPAIR",
         "readings",
         "src/coverage.rs",
-        "    vec![format!(\"the {} check refused the reading\", pack.class)]",
+        "    let class = pack.class.name();\n    vec![format!(\"the {class} check refused the reading\")]",
         "    pack.findings.clone()",
         "repair::a_pack_finding_never_reaches_the_trusted_repair_slot",
         "a pack gate's failure carries the engine's words naming the check, never a probe's finding line (SPEC-046 R7)"
@@ -276,7 +276,7 @@
         "coordination",
         "../readings/src/coverage.rs",
         "        findings: named(p),",
-        "        findings: if matches!(p.class.as_str(), \"void\" | \"examined-nothing\") { p.findings.clone() } else { named(p) },",
+        "        findings: if matches!(p.class, GateClass::Void | GateClass::ExaminedNothing) { p.findings.clone() } else { named(p) },",
         "readings_trust::a_gate_outcome_class_reaches_the_repair_only_as_the_name_of_the_check",
         "the contract gate's failure carries the engine's words naming the check, for the gate's own classes too (SPEC-046 R7, A28)"
       ],
@@ -284,8 +284,8 @@
         "S04632-A-FORGED-HEAD-NEVER-NAMES-THE-CHECK",
         "coordination",
         "../readings/src/coverage.rs",
-        "    vec![format!(\"the {} check refused the reading\", pack.class)]",
-        "    let class = if matches!(pack.class.as_str(), \"void\" | \"examined-nothing\") {\n        pack.findings.first().and_then(|f| f.split(':').next()).unwrap_or(&pack.class)\n    } else {\n        &pack.class\n    };\n    vec![format!(\"the {class} check refused the reading\")]",
+        "    let class = pack.class.name();\n    vec![format!(\"the {class} check refused the reading\")]",
+        "    let class = if matches!(pack.class, GateClass::Void | GateClass::ExaminedNothing) {\n        pack.findings.first().and_then(|f| f.split(':').next()).unwrap_or(pack.class.name())\n    } else {\n        pack.class.name()\n    };\n    vec![format!(\"the {class} check refused the reading\")]",
         "readings_trust::a_gate_outcome_class_reaches_the_repair_only_as_the_name_of_the_check",
         "the check a failure names is the gate's own class, never a head a probe's output wrote (SPEC-046 R7, A28)"
       ],
@@ -294,7 +294,7 @@
         "coordination",
         "../readings/src/coverage.rs",
         "        findings: named(p),",
-        "        findings: {\n            let mut named = named(p);\n            if matches!(p.class.as_str(), \"void\" | \"examined-nothing\") {\n                named.extend(p.findings.iter().rev().find(|f| f.starts_with(\"examined\")).cloned());\n            }\n            named\n        },",
+        "        findings: {\n            let mut named = named(p);\n            if matches!(p.class, GateClass::Void | GateClass::ExaminedNothing) {\n                named.extend(p.findings.iter().rev().find(|f| f.starts_with(\"examined\")).cloned());\n            }\n            named\n        },",
         "readings_trust::a_gate_outcome_class_reaches_the_repair_only_as_the_name_of_the_check",
         "the contract gate's failure carries no line of the probe's report, not even its examined count (SPEC-046 R7, A28)"
       ],
@@ -303,7 +303,7 @@
         "coordination",
         "src/readings/generate.rs",
         "                repair_text = text;",
-        "                repair_text = match &pack {\n                    Some(p) if matches!(p.class.as_str(), \"void\" | \"examined-nothing\") => {\n                        format!(\"{text}\\n- {}\", p.findings.join(\" \"))\n                    }\n                    _ => text,\n                };",
+        "                repair_text = match &pack {\n                    Some(p) if matches!(\n                        p.class,\n                        deck_streak_kernel::GateClass::Void\n                            | deck_streak_kernel::GateClass::ExaminedNothing\n                    ) => {\n                        format!(\"{text}\\n- {}\", p.findings.join(\" \"))\n                    }\n                    _ => text,\n                };",
         "readings_trust::a_gate_outcome_class_reaches_the_prompt_only_as_the_name_of_the_check",
         "the attempt loop sends the repair text as the engine wrote it, adding no finding of the gate's own classes (SPEC-046 R7, A28)"
       ],
@@ -312,7 +312,7 @@
         "coordination",
         "src/readings/generate.rs",
         "                repair_text = text;",
-        "                repair_text = match &pack {\n                    Some(p) if p.class == \"output-links\" => {\n                        format!(\"{text}\\n- {}\", p.findings.join(\" \"))\n                    }\n                    _ => text,\n                };",
+        "                repair_text = match &pack {\n                    Some(p) if p.class == deck_streak_kernel::GateClass::OutputLinks => {\n                        format!(\"{text}\\n- {}\", p.findings.join(\" \"))\n                    }\n                    _ => text,\n                };",
         "readings_trust::a_gate_outcome_class_reaches_the_prompt_only_as_the_name_of_the_check",
         "the attempt loop sends the repair text as the engine wrote it, adding no finding of a configured class (SPEC-046 R7, A28)"
       ],
@@ -320,8 +320,8 @@
         "S04636-THE-NAME-OF-A-GATE-CLASS-IS-ENGINE-TEXT",
         "coordination",
         "../readings/src/coverage.rs",
-        "    vec![format!(\"the {} check refused the reading\", pack.class)]",
-        "    if matches!(pack.class.as_str(), \"void\" | \"examined-nothing\") {\n        return vec![pack.findings.join(\" \")];\n    }\n    vec![format!(\"the {} check refused the reading\", pack.class)]",
+        "    let class = pack.class.name();\n    vec![format!(\"the {class} check refused the reading\")]",
+        "    if matches!(pack.class, GateClass::Void | GateClass::ExaminedNothing) {\n        return vec![pack.findings.join(\" \")];\n    }\n    let class = pack.class.name();\n    vec![format!(\"the {class} check refused the reading\")]",
         "readings_trust::a_gate_outcome_class_reaches_the_repair_only_as_the_name_of_the_check",
         "the gate's own classes are named by the engine's words, never by the probe's report (SPEC-046 R7, A28)"
       ],
@@ -329,8 +329,8 @@
         "S04637-NO-CLASS-IS-READ-FROM-A-FINDING-HEAD",
         "coordination",
         "../readings/src/coverage.rs",
-        "    vec![format!(\"the {} check refused the reading\", pack.class)]",
-        "    let class = pack.findings.first().and_then(|f| f.split(':').next()).unwrap_or(&pack.class);\n    vec![format!(\"the {class} check refused the reading\")]",
+        "    let class = pack.class.name();\n    vec![format!(\"the {class} check refused the reading\")]",
+        "    let class = pack.findings.first().and_then(|f| f.split(':').next()).unwrap_or(pack.class.name());\n    vec![format!(\"the {class} check refused the reading\")]",
         "readings_trust::a_gate_outcome_class_reaches_the_repair_only_as_the_name_of_the_check",
         "the check a failure names is the class the gate reported, for every class, never a finding's head (SPEC-046 R7, A28)"
       ],
@@ -338,28 +338,55 @@
         "S04638-A-SILENT-FAILURE-STILL-NAMES-THE-CHECK",
         "coordination",
         "../readings/src/coverage.rs",
-        "    vec![format!(\"the {} check refused the reading\", pack.class)]",
-        "    if pack.findings.is_empty() {\n        return Vec::new();\n    }\n    vec![format!(\"the {} check refused the reading\", pack.class)]",
+        "    let class = pack.class.name();\n    vec![format!(\"the {class} check refused the reading\")]",
+        "    if pack.findings.is_empty() {\n        return Vec::new();\n    }\n    let class = pack.class.name();\n    vec![format!(\"the {class} check refused the reading\")]",
         "readings_trust::a_gate_outcome_class_reaches_the_repair_only_as_the_name_of_the_check",
         "a failure with no finding line still names its check, so the repair is never an empty instruction (SPEC-046 R7, A28)"
       ],
       [
         "S04639-THE-VOID-CLASS-IS-NEVER-READ-FROM-A-PROBE",
-        "coordination",
-        "../agent/src/gate.rs",
-        "            _ => failed(CLASS_VOID, findings),",
-        "            _ => failed(text.lines().next().unwrap_or(CLASS_VOID), findings),",
-        "readings_trust::a_gate_outcome_class_reaches_the_repair_only_as_the_name_of_the_check",
-        "a class the gate reports is a constant it names, never a line of the probe's output (SPEC-046 R7, A28)"
+        "agent",
+        "src/gate.rs",
+        "            _ => failed(GateClass::Void, findings),",
+        "            _ => failed(\n                text.lines()\n                    .next()\n                    .and_then(|line| line.split(':').next())\n                    .and_then(|name| name.parse().ok())\n                    .unwrap_or(GateClass::Void),\n                findings,\n            ),",
+        "gate::a_probe_that_cannot_run_or_examined_nothing_fails_closed",
+        "a probe that cannot report is void, never a class its output names (SPEC-043 R9, SPEC-046 R7)"
       ],
       [
-        "S04640-A-FAILURE-IS-BUILT-ONLY-BY-FAILED",
+        "S04641-AN-ABSENT-ROUTE-ENDS-THE-CONFIGURED-STUDY-DAY",
         "coordination",
-        "../agent/src/gate.rs",
-        "            _ => failed(CLASS_VOID, findings),",
-        "            Some(2) => GateOutcome::Failed {\n                class: \"misuse\".to_owned(),\n                findings,\n            },\n            _ => failed(CLASS_VOID, findings),",
+        "src/readings/generate.rs",
+        "        let day = TopicDay {\n            study_day,\n            topic: topic.clone(),\n            state: TopicState::AiRouteAbsent,",
+        "        let day = TopicDay {\n            study_day: StudyDayRule::default().study_day(now),\n            topic: topic.clone(),\n            state: TopicState::AiRouteAbsent,",
+        "readings_generate::an_absent_route_ends_every_topic_on_the_configured_study_day",
+        "with the route absent, every topic ends the configured study day, not the default rule's (SPEC-046 R16)"
+      ],
+      [
+        "S04642-TEXT-BECOMES-A-CLASS-ONLY-AS-A-DECLARED-NAME",
+        "coordination",
+        "../kernel/src/gate_class.rs",
+        "            .find(|class| class.name() == name)",
+        "            .find(|class| name.starts_with(class.name()))",
+        "readings_trust::a_name_no_class_declares_never_reaches_the_repair_or_the_prompt",
+        "text becomes a gate class only when it is a declared name, exactly (SPEC-046 R7, A28)"
+      ],
+      [
+        "S04643-ALL-LISTS-EVERY-DECLARED-CLASS",
+        "coordination",
+        "../kernel/src/gate_class.rs",
+        "            pub const ALL: &'static [Self] = &[$(Self::$variant,)+];",
+        "            pub const ALL: &'static [Self] = &[Self::Void, Self::ExaminedNothing];",
         "readings_trust::a_gate_outcome_class_reaches_the_repair_only_as_the_name_of_the_check",
-        "every failure the gate reports is built by `failed(..)`, so each class it can carry is read (SPEC-046 R7, A28)"
+        "the population walks every class the declaration yields (SPEC-046 R7, A28)"
+      ],
+      [
+        "S04644-A-CLASS-IS-NAMED-AS-THE-PACKS-SPELL-IT",
+        "coordination",
+        "../kernel/src/gate_class.rs",
+        "                    $(Self::$variant => $name,)+",
+        "                    $(Self::$variant => stringify!($variant),)+",
+        "readings_trust::a_gate_outcome_class_reaches_the_repair_only_as_the_name_of_the_check",
+        "a class's name is the name the packs and the probe protocol spell (SPEC-046 R7, A28)"
       ]
     ]
   }

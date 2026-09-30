@@ -104,7 +104,7 @@
         "S04312-A-VOID-PROBE-IS-NAMED",
         "agent",
         "src/gate.rs",
-        "pub const CLASS_VOID: &str = \"void\";",
+        "pub const CLASS_VOID: &str = GateClass::Void.name();",
         "pub const CLASS_VOID: &str = \"\";",
         "constants::the_gate_names_a_void_and_an_empty_probe",
         "a probe that cannot run is withheld under the class void (SPEC-043 R11)"
@@ -113,7 +113,7 @@
         "S04313-AN-EMPTY-PROBE-IS-NAMED",
         "agent",
         "src/gate.rs",
-        "pub const CLASS_EMPTY: &str = \"examined-nothing\";",
+        "pub const CLASS_EMPTY: &str = GateClass::ExaminedNothing.name();",
         "pub const CLASS_EMPTY: &str = \"\";",
         "constants::the_gate_names_a_void_and_an_empty_probe",
         "a probe that examined nothing is withheld under examined-nothing (SPEC-043 R11)"
