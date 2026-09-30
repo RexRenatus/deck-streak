@@ -51,7 +51,6 @@ A12: not red: the studied window already read the configured offset, so the test
 A13: not red: the settle already leaves a reading whose stamp failed open and uncounted, so the test passes at the code it was written against (c265d2d3); the plants that turn it red are P10 and P11 below
 A14: not red: the settle and the tap already read the configured rule at every point, so the test passes at the code it was written against (09e1dfc2); the plants that turn it red are P22 to P27 below
 A15: not red: generation already dates its run and readings in the configured rule, so the test passes at the code it was written against (09e1dfc2); the plants that turn it red are P28 and P29 below
-A15 note: the test first lived in readings_generate.rs and moved to readings_generate_rule.rs, because the stacked change (#386) edits readings_generate.rs and the two would conflict; it drives the same entry point, and P28 and P29 were re-measured against the new file
 A16: not red: the resolution already reads its pause window and dates its run in the configured rule, so the test passes at the code it was written against (09e1dfc2); the plants that turn it red are P30 to P33 below
 A17: not red: the export already writes every reading column from its own column, so the test passes at the code it was written against (09e1dfc2); the plants that turn it red are the 462 swap plants below
 ```
@@ -135,6 +134,8 @@ Plants P28 to P31 were not red under the settle test alone, so generation and th
 gained a test on the same generated population (A15 and A16). Plants P26 and P27 were already killed at the head by the studied tests of A12 (rows S04710 and
 S04711 own them), so they take no new row. Plants P24 and P25 keep the head's
 choice of day (the instant the pass runs at); they change only which rule reads it.
+
+The A15 test first lived in `readings_generate.rs` and moved to `readings_generate_rule.rs`: the stacked change edits `readings_generate.rs`, and the two would conflict. It drives the same entry point, and P28 and P29 were re-measured against the new file.
 
 ```text
 P22 (the settle counts reviews in the default rule; A14)
