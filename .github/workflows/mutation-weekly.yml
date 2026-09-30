@@ -160,7 +160,7 @@ jobs:
         run: |
           mkdir -p "$RUNNER_TEMP/mutation"
           rc=0
-          cargo mutants --no-shuffle -vV --in-place ${PACKAGE:+--package "$PACKAGE"} --sharding round-robin --shard "$SHARD/$SHARDS" --timeout 300 --build-timeout 600 --output "$RUNNER_TEMP/mutation" || rc=$?
+          python3 scripts/memory_scope.py --report "$RUNNER_TEMP/mutation" -- cargo mutants --no-shuffle -vV --in-place ${PACKAGE:+--package "$PACKAGE"} --sharding round-robin --shard "$SHARD/$SHARDS" --timeout 300 --build-timeout 600 --output "$RUNNER_TEMP/mutation" || rc=$?
           echo "$rc" > "$RUNNER_TEMP/mutation/cargo-mutants.exit"
           echo "cargo-mutants exited $rc"
           exit "$rc"
@@ -426,7 +426,7 @@ jobs:
           shard="$RUNNER_TEMP/reports/mutants-shard-0"
           mkdir -p "$shard"
           rc=0
-          cargo mutants --no-shuffle -vV --in-place -f crates/kernel/src/clock.rs --timeout 300 --build-timeout 600 --output "$shard" || rc=$?
+          python3 scripts/memory_scope.py --report "$shard" -- cargo mutants --no-shuffle -vV --in-place -f crates/kernel/src/clock.rs --timeout 300 --build-timeout 600 --output "$shard" || rc=$?
           echo "$rc" > "$shard/cargo-mutants.exit"
           echo "cargo-mutants exited $rc"
       - name: one row, as the rows job proves it
