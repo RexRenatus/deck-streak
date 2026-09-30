@@ -555,12 +555,18 @@ const ORACLE: &str = "tools/parity-oracle";
 /// The bot's sources, where the Bot API is named: a send method only by its own named send.
 const BOT_SOURCES: &str = "crates/bot/src/";
 
+/// The bot's base URL for the Bot API, read from the pinned client's builder: a request URL built
+/// from it is a send the client never makes, so it is a way around the port whatever it builds.
+const API_URL: &str = "api_url";
+
 /// The bot's own ways to reach the owner's chat that take no pass, each with the file that defines
 /// it: every use of one is its definition there or at a named call site. Its send; its edit of a
-/// message, which only the port's reveal calls (SPEC-084 R8); and its command handler, which
-/// answers an update with a reply the router never decides.
-const GUARDED: [(&str, &str); 3] = [
+/// message, which only the port's reveal calls (SPEC-084 R8); its command handler, which answers
+/// an update with a reply the router never decides; and its base URL, which only the two
+/// multipart sends and the constructor read (SPEC-041 A16).
+const GUARDED: [(&str, &str); 4] = [
     (BOT_SEND, "crates/bot/src/transport.rs"),
+    (API_URL, TRANSPORT),
     ("edit_html", "crates/bot/src/transport.rs"),
     ("handle", "crates/bot/src/commands.rs"),
 ];
@@ -1377,6 +1383,8 @@ struct Census {
     /// Each named caller of the command handler's replies and dispatch found, as (path, function,
     /// what it calls), in order and once.
     callers: Vec<(String, String, String)>,
+    /// Each read of the bot's base URL at a named site, as (path, function), in order.
+    api_urls: Vec<(String, String)>,
 }
 
 impl Census {
@@ -1443,7 +1451,11 @@ fn census(sources: &[(String, String)]) -> Census {
                         continue;
                     }
                     let function = enclosing(&structure, at);
-                    if !at_a_named_site(path, &function, name) {
+                    if at_a_named_site(path, &function, name) {
+                        if name == API_URL {
+                            found.api_urls.push((path.clone(), function));
+                        }
+                    } else {
                         let how = if called(&structure, at, name) {
                             "calls"
                         } else {
@@ -1453,6 +1465,23 @@ fn census(sources: &[(String, String)]) -> Census {
                             path.clone(),
                             line_of(&code, at),
                             format!("{how} {name} in {function}, not a named call site"),
+                        ));
+                    }
+                }
+            }
+            // A form the census cannot read is refused: the base URL named inside a string
+            // literal (an inline format argument) is blanked in `structure`, so the identifier
+            // search above cannot see it.
+            for at in identifiers(&code, API_URL) {
+                if structure[at..at + API_URL.len()].trim().is_empty() {
+                    let function = enclosing(&structure, at);
+                    if !at_a_named_site(path, &function, API_URL) {
+                        found.refusals.push((
+                            path.clone(),
+                            line_of(&code, at),
+                            format!(
+                                "reads {API_URL} inside a literal in {function}, not a named call site"
+                            ),
                         ));
                     }
                 }
@@ -1480,6 +1509,7 @@ fn census(sources: &[(String, String)]) -> Census {
     found.sends.sort();
     found.callers.sort();
     found.callers.dedup();
+    found.api_urls.sort();
     found
 }
 
@@ -1510,7 +1540,9 @@ fn command_callers(found: &mut Census, path: &str, code: &str, structure: &str) 
 /// Whether `name` is used in `function` of `path` at one of its named call sites: a named send, or
 /// the command handler's entry.
 fn at_a_named_site(path: &str, function: &str, name: &str) -> bool {
-    NAMED_SENDS.contains(&(path, function, name)) || HANDLER_ENTRY == (path, function, name)
+    NAMED_SENDS.contains(&(path, function, name))
+        || HANDLER_ENTRY == (path, function, name)
+        || API_URL_SITES.contains(&(path, function, name))
 }
 
 /// Whether the Bot API method `name`, in either spelling, is named in `function` of `path` by the
@@ -2152,15 +2184,24 @@ fn no_delivery_goes_around_the_port() {
             "crates/api/src/notifications_routes.rs:3: names api.telegram.org",
             "crates/api/src/notifications_routes.rs:3: names sendMessage",
             "crates/api/src/router.rs:6: names FEED_TABLE",
+            "crates/bot/src/celebrate.rs:4: uses api_url in no function, not a named call site",
             "crates/bot/src/celebrate.rs:5: names sendMessage in celebrate, not a named call site",
+            "crates/bot/src/celebrate.rs:5: reads api_url inside a literal in celebrate, not a named \
+             call site",
             "crates/bot/src/commands.rs:4: calls send in Commands::celebrate, not a named caller",
             "crates/bot/src/commands.rs:9: calls on_message in Commands::celebrate_by_a_command, \
              not a named caller",
             "crates/bot/src/commands.rs:14: calls ask_erase in Commands::celebrate_by_a_prompt, \
              not a named caller",
+            "crates/bot/src/copy.rs:4: uses api_url in no function, not a named call site",
             "crates/bot/src/copy.rs:5: names copyMessage in celebrate, not a named call site",
+            "crates/bot/src/copy.rs:5: reads api_url inside a literal in celebrate, not a named call \
+             site",
+            "crates/bot/src/rich.rs:4: uses api_url in no function, not a named call site",
             "crates/bot/src/rich.rs:5: names sendRichMessage in celebrate_richly, not a named call \
              site",
+            "crates/bot/src/rich.rs:5: reads api_url inside a literal in celebrate_richly, not a \
+             named call site",
             "crates/bot/src/transport.rs:9: names edit_message_text in \
              Transport::celebrate_by_an_edit, not a named call site",
             "crates/coordination/src/sync_cycle.rs:6: names QUEUE_TABLE",
@@ -2305,6 +2346,16 @@ fn no_delivery_goes_around_the_port() {
     assert_eq!(
         tree.callers, callers,
         "every named caller of the command handler's replies and dispatch calls it"
+    );
+
+    let mut api_urls: Vec<(String, String)> = API_URL_SITES
+        .iter()
+        .map(|&(path, function, _)| (path.to_owned(), function.to_owned()))
+        .collect();
+    api_urls.sort();
+    assert_eq!(
+        tree.api_urls, api_urls,
+        "the bot's base URL is read once at each named site, and nowhere else"
     );
 
     // The one exception is needed: the alert path's text is refused anywhere else.
