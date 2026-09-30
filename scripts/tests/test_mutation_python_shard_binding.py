@@ -345,6 +345,18 @@ def reader_members(plan):
             read_entry(slots[k])
             slots[k]["files"].append(entry_value)
             yield "entry", f"shard {k}: an entry that is {entry_value!r}", slots, {k}
+        slots = plan.correct()
+        slots[k]["files"].append({"path": "README.md", "mutants": [ghost(9900 + k)]})
+        yield (
+            "unread extra",
+            f"shard {k}: a mutant the plan never listed, under README.md",
+            slots,
+            {k},
+        )
+        for value in (5, True, "abc", {"reader": 1}):
+            slots = plan.correct()
+            read_entry(slots[k])["byte_readers"] = value
+            yield "byte readers", f"shard {k}: its entry's byte readers is {value!r}", slots, {k}
         for index in (0,) if held else ():
             for value in OFF_VOCABULARY:
                 slots = plan.correct()
@@ -355,6 +367,15 @@ def reader_members(plan):
                     record["outcome"] = value
                 shown = "absent" if value is ABSENT else repr(value)
                 yield "outcome", f"shard {k}: mutant {index}'s outcome is {shown}", slots, {k}
+            for value in (5, None, ABSENT):
+                slots = plan.correct()
+                record = slots[k]["files"][0]["mutants"][index]
+                if value is ABSENT:
+                    del record["name"]
+                else:
+                    record["name"] = value
+                shown = "absent" if value is ABSENT else repr(value)
+                yield "name", f"shard {k}: mutant {index}'s name is {shown}", slots, {k}
             for path in UNREAD_PATHS:
                 for outcome in ("killed", "survived"):
                     slots = plan.correct()
@@ -424,7 +445,17 @@ class TheBindingAndTheJudgeReadOneReport(unittest.TestCase):
             print(f"  {bucket}: {family}: {label}")
         self.assertEqual(
             sorted(families),
-            ["entry", "extra entry", "files", "mutants", "outcome", "unread entry"],
+            [
+                "byte readers",
+                "entry",
+                "extra entry",
+                "files",
+                "mutants",
+                "name",
+                "outcome",
+                "unread entry",
+                "unread extra",
+            ],
         )
         self.assertEqual(totals["refused"], total, totals)
 
