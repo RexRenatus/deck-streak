@@ -207,7 +207,7 @@ defined in the section below.
     (`gate_record`);
   - the copy's decks renamed away, a table the gate's probe does not read (`window_read`);
   - a trigger refusing the window's base (`window_base`);
-  - the XP ledger renamed away (`recompute`).
+  - the analytics rollup renamed away, the first table the fold reads (`recompute`).
 
   A17's test, `the_table_has_a_row_for_every_step_that_refuses_the_owners_sync`, counts the `?` in
   `run` and the kinds of cycle error named in `Step::of`'s arms. It fails when a step has no row, or a

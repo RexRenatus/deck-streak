@@ -248,7 +248,7 @@ unreachable.
 | `gate_record` | the cycle's site, `GateError::Record` | `recompute_failed` | a trigger refusing the gate's anchor, after the window and the recompute have run |
 | `window_read` | the cycle's site, `WindowError::Read` | `recompute_failed` | the copy's decks renamed away, a table the gate's probe does not read |
 | `window_base` | the cycle's site, `WindowError::State` | `recompute_failed` | a trigger refusing the window's base |
-| `recompute` | the cycle's site, `CycleError::Recompute` | `recompute_failed` | the XP ledger renamed away |
+| `recompute` | the cycle's site, `CycleError::Recompute` | `recompute_failed` | the analytics rollup renamed away, the first table the fold reads (the XP ledger at bea2ca4f and b9c597c7; a fixture in the daemon may not name that table, SPEC-040 R10) |
 
 Round 4's row for `obligations_unreadable` at the cycle's site is replaced by this table's
 `obligations` row.

@@ -802,10 +802,10 @@ mod tests {
     const REFUSED_WINDOW: &str = "CREATE TRIGGER refused_window \
          BEFORE UPDATE OF window_floor ON ingest_state BEGIN SELECT RAISE(ABORT, 'refused'); END";
 
-    /// The XP ledger moved out of the recompute's reach, after the window was read.
-    /// The table's name is split so that the progression census, which reads every crate's source
-    /// for that name, does not take a fixture in the daemon for a writer of the ledger.
-    const UNREAD_XP: &str = concat!("ALTER TABLE xp_", "ledger RENAME TO xp_", "ledger_unread");
+    /// The analytics rollup moved out of the recompute's reach, after the window was read: it is
+    /// the first table the fold reads. The fault names no table a census reserves to its owner, so
+    /// it needs no exemption.
+    const UNREAD_ROLLUP: &str = "ALTER TABLE daily_rollup RENAME TO daily_rollup_unread";
 
     /// An owner's sync on a fresh ledger and state directory, with one step's fault installed.
     struct Refusing {
@@ -859,7 +859,7 @@ mod tests {
             }
             "recompute" => {
                 copy = Some(&[]);
-                ledger = &[UNREAD_XP];
+                ledger = &[UNREAD_ROLLUP];
             }
             _ => return None,
         }
