@@ -408,6 +408,86 @@
         "            if False:\n",
         "a crate holding `tests/bin.rs` or `tests/bin/main.rs` is refused for a `bin::` killer by name, so a killer written for that file never runs the binary's own test of the same path (SPEC-039 section 15, A45)",
         "test_mutation_rows.TheBinKillerFollowsRustcAndRefusesAShadow.test_a_bin_killer_beside_a_tests_bin_rs_is_refused"
+      ],
+      [
+        "S03986-A-CARGO-INFERS-TARGETS-ONLY-WHILE-AUTODISCOVERY-IS-ON",
+        "scripts/mutation_rows.py",
+        "            for name, path in (inferred.items() if auto else [])\n",
+        "            for name, path in inferred.items()\n",
+        "a crate that sets `autobins` or `autotests` to false builds no inferred target, so the census does not count one (SPEC-039 section 19, A46)",
+        "test_bin_kind_census.TheBinKindReadsWhatTheCompilerBuilds.test_every_layout_agrees_with_cargo_and_the_compiler_or_is_refused_by_name"
+      ],
+      [
+        "S03987-A-AN-INFERRED-TARGET-YIELDS-TO-AN-EXPLICIT-ONE-OF-ITS-NAME",
+        "scripts/mutation_rows.py",
+        "            if name not in names and path not in paths\n",
+        "            if path not in paths\n",
+        "an inferred target is dropped when an explicit table has its name, as cargo drops it (SPEC-039 section 19, A46)",
+        "test_bin_kind_census.TheBinKindReadsWhatTheCompilerBuilds.test_every_layout_agrees_with_cargo_and_the_compiler_or_is_refused_by_name"
+      ],
+      [
+        "S03988-A-AN-INFERRED-TARGET-YIELDS-TO-AN-EXPLICIT-ONE-AT-ITS-PATH",
+        "scripts/mutation_rows.py",
+        "            if name not in names and path not in paths\n",
+        "            if name not in names\n",
+        "an inferred target is dropped when an explicit table has its path, as cargo drops it (SPEC-039 section 19, A46)",
+        "test_bin_kind_census.TheBinKindReadsWhatTheCompilerBuilds.test_every_layout_agrees_with_cargo_and_the_compiler_or_is_refused_by_name"
+      ],
+      [
+        "S03989-A-CFG-TEST-IS-TRUE-IN-A-TEST-BUILD",
+        "scripts/mutation_rows.py",
+        "    if tokens == [\"test\"]:\n        return True\n",
+        "    if tokens == [\"test\"]:\n        return False\n",
+        "`cfg(test)` holds in the `--test` build the binary's unit tests run in, so a module behind it is read (SPEC-039 section 19, A51)",
+        "test_bin_kind_census.TheCfgPredicatesAgreeWithTheCompiler.test_every_decided_predicate_is_what_rustc_builds_and_the_rest_is_undecided"
+      ],
+      [
+        "S03990-A-CFG-ARGUMENTS-SPLIT-AT-TOP-LEVEL-COMMAS",
+        "scripts/mutation_rows.py",
+        "            if token == \",\" and depth == 0:\n",
+        "            if token == \",\":\n",
+        "the arguments of `all` and `any` split at the commas outside a nested call, so `all(any(a, b), c)` is read as two arguments (SPEC-039 section 19, A51)",
+        "test_bin_kind_census.TheCfgPredicatesAgreeWithTheCompiler.test_every_decided_predicate_is_what_rustc_builds_and_the_rest_is_undecided"
+      ],
+      [
+        "S03991-A-A-MODULE-IN-AN-INLINE-MODULE-SITS-IN-ITS-DIRECTORY",
+        "scripts/mutation_rows.py",
+        "                base = home.joinpath(*frames)\n",
+        "                base = home\n",
+        "a `mod x;` inside an inline `mod outer { }` reads `outer/x.rs`, as rustc does (SPEC-039 section 19, A46)",
+        "test_bin_kind_census.TheBinKindReadsWhatTheCompilerBuilds.test_every_layout_agrees_with_cargo_and_the_compiler_or_is_refused_by_name"
+      ],
+      [
+        "S03992-A-AN-INNER-ATTRIBUTE-IS-NOT-AN-ITEMS-ATTRIBUTE",
+        "scripts/mutation_rows.py",
+        "            if not inner and \"skip\" not in frames:\n",
+        "            if \"skip\" not in frames:\n",
+        "an inner attribute such as `#![allow(..)]` does not attach to the next module declaration (SPEC-039 section 19, A46)",
+        "test_bin_kind_census.TheBinKindReadsWhatTheCompilerBuilds.test_every_layout_agrees_with_cargo_and_the_compiler_or_is_refused_by_name"
+      ],
+      [
+        "S03993-A-INCLUDE-IS-REFUSED-ONLY-AS-A-MACRO-CALL",
+        "scripts/mutation_rows.py",
+        "        if token == \"include\" and tokens[index + 1 : index + 2] == [\"!\"]:\n",
+        "        if token == \"include\":\n",
+        "`include!` is refused by name and an identifier named `include` is not (SPEC-039 section 19, A46)",
+        "test_bin_kind_census.TheBinKindReadsWhatTheCompilerBuilds.test_every_layout_agrees_with_cargo_and_the_compiler_or_is_refused_by_name"
+      ],
+      [
+        "S03994-A-THE-BINARY-COUNT-IS-CARGOS",
+        "scripts/mutation_rows.py",
+        "    if len(binaries) != 1:\n",
+        "    if len(binaries) > 1:\n",
+        "a crate that builds no binary is refused with its count of zero, as one that builds two is (SPEC-039 section 19, A49)",
+        "test_bin_kind_census.ThePlantedShapesOfTheIssue.test_what_the_reader_cannot_decide_is_refused_by_name"
+      ],
+      [
+        "S03995-A-A-RAW-STRING-ENDS-AT-ITS-OWN-HASHES",
+        "scripts/mutation_rows.py",
+        "            close = text.find('\"' + match.group(\"hashes\"), position)\n",
+        "            close = text.find('\"', position)\n",
+        "a raw string ends at the quote followed by its own number of hashes, so a quoted declaration inside it is not read (SPEC-039 section 19, A46)",
+        "test_bin_kind_census.TheBinKindReadsWhatTheCompilerBuilds.test_every_layout_agrees_with_cargo_and_the_compiler_or_is_refused_by_name"
       ]
     ]
   }
