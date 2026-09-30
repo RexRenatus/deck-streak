@@ -159,3 +159,12 @@ lines written under the class's own name and under a forged one (280 members). A
 an assertion changed at eb537f24, after their green: the pack's finding line is replaced by the
 engine's words naming the check, with a negative assertion on the line. Both fail at the parent of
 9c39377b and pass at it.
+
+DISCLOSURE, fix round 4: the test `a_gate_outcome_class_reaches_the_repair_only_as_the_name_of_the_check`
+(`readings_trust.rs`, not a criterion) was committed alone at 3c9657b5. It generates its members when
+it runs: the two classes the gate itself reports, read from `CLASS_VOID` and `CLASS_EMPTY`, each
+against three lines (6 members); the configured classes are covered by
+`every_pack_class_reaches_the_repair_only_as_the_name_of_the_check`. It is not red: it pins, because
+the rule already holds at the parent. Planted against `first_failure` at 3c9657b5, a branch that lets
+those two classes' findings through ends it red with `the void class's finding reaches the trusted
+repair slot`. The SPEC's class paragraph was shortened in the same round.

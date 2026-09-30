@@ -189,11 +189,13 @@ A28: cargo test -p deck-streak-readings --test repair -- --exact a_pack_finding_
 ```
 
 The class behind A28 is one rule, provenance: a pack gate's failure reaches the repair only as the
-engine's words naming the check, because a probe prints the model's text folded, joined or unquoted,
-so no rule about spans can prove who wrote one. `every_pack_class_reaches_the_repair_only_as_the_name_of_the_check`
+engine's words naming the check. `every_pack_class_reaches_the_repair_only_as_the_name_of_the_check`
 in `crates/readings/tests/repair.rs` generates its members when it runs: every pack class the engine
 configures, read from `ai-safety.json` and from the classes `first_failure` ranks, against hostile
 lines, each under the class's own name and under a forged one.
+`a_gate_outcome_class_reaches_the_repair_only_as_the_name_of_the_check` in
+`crates/coordination/tests/readings_trust.rs` does the same for the two classes the gate itself
+reports, `CLASS_VOID` and `CLASS_EMPTY`.
 
 Two more tests pin the rule that the repair slot drops an escaped span:
 `a_finding_quoting_an_escaped_span_is_dropped` in `crates/readings/tests/repair.rs` and
