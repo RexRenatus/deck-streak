@@ -169,9 +169,27 @@ exec "$@"
 ELEVATE = "DECKSTREAK_DEPLOY_ELEVATE"
 
 
+def sourced_names(sourced):
+    """The variable names a file sourced before the script sets, judged by its EFFECT: only
+    straight-line `NAME=value` and `export NAME=value` lines (and blanks and comments) are read.
+    A line of any other shape (a branch, an `unset`, a call) could undo or hide a name, so a file
+    holding one is refused rather than guessed at."""
+    names = set()
+    for line in Path(sourced).read_bytes().splitlines():
+        if not line.strip() or line.lstrip().startswith(b"#"):
+            continue
+        match = re.fullmatch(rb"(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)=.*", line)
+        if match is None:
+            raise AssertionError(
+                f"a sourced file holds a line that is not a plain setting: {line!r}"
+            )
+        names.add(match.group(1))
+    return names
+
+
 def setting_names(received, sourced=None):
     """The variable names an environment sets: a mapping's keys, a list's `NAME=value` entries (a
-    bare name is not a variable), and the `NAME=` lines of a file sourced before the script."""
+    bare name is not a variable), and the names a file sourced before the script sets."""
     if isinstance(received, dict):
         names = {os.fsencode(key) for key in received}
     else:
@@ -179,20 +197,23 @@ def setting_names(received, sourced=None):
             os.fsencode(entry).split(b"=", 1)[0] for entry in received if b"=" in os.fsencode(entry)
         }
     if sourced is not None:
-        for line in Path(sourced).read_bytes().splitlines():
-            match = re.match(rb"([A-Za-z_][A-Za-z0-9_]*)=", line)
-            if match:
-                names.add(match.group(1))
+        names |= sourced_names(sourced)
     return names
 
 
 def launch(argv, received, *, sourced=None, cwd=None, env=None, text=False):
     """Start a deploy script in a session of its own, so a timeout ends it and its children.
 
-    The ONE place a deploy script is started. An environment that does not name the elevation
-    setting is refused, so the script's own fallback can never be what a test runs."""
-    if ELEVATE.encode() not in setting_names(received, sourced):
+    The ONE place a deploy script is started. The environment the program will SEE (`env`, and
+    the file sourced before it) must name the elevation setting, and so must the entries the
+    caller says it received; otherwise the script's own fallback could be what a test runs. An
+    `env` of None is refused: the child would inherit whatever the test process holds."""
+    wanted = ELEVATE.encode()
+    if env is None:
         raise AssertionError(f"the environment does not name {ELEVATE}")
+    for seen in (received, env):
+        if wanted not in setting_names(seen, sourced):
+            raise AssertionError(f"the environment does not name {ELEVATE}")
     child = subprocess.Popen(
         argv,
         cwd=cwd,
@@ -1674,6 +1695,7 @@ sys.exit(f"execve failed: errno {ctypes.get_errno()}")
                     entries,
                     sourced=held if lead else None,
                     cwd=w.tmp,
+                    env=dict(entry.split(b"=", 1) for entry in entries if b"=" in entry),
                 )
                 self.assertEqual(done.returncode, 1, f"{case}, {args[0]}: {done.stderr!r}")
                 self.assertIn(said, done.stderr, f"{case}, {args[0]}")

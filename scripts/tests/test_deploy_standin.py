@@ -207,6 +207,14 @@ class TheFallbackIsNeverReachedByTheTests(unittest.TestCase):
             self.assertEqual(set(seen), derived_argv0(), "a host step ran behind a command")
 
 
+def as_mapping(environment):
+    """The environment a program would see for what a caller received: a mapping as it is, a list
+    of `NAME=value` entries as a mapping of those (a bare name sets nothing)."""
+    if isinstance(environment, dict):
+        return environment
+    return dict(entry.split(b"=", 1) for entry in environment if b"=" in entry)
+
+
 class EveryEnvironmentNamesTheSetting(unittest.TestCase):
     UNNAMED_SHAPES = 0
 
@@ -234,10 +242,10 @@ class EveryEnvironmentNamesTheSetting(unittest.TestCase):
                 unset.append([name.encode() + b"="])
             for environment in examined("environment(s) that leave the setting unset", unset):
                 with self.assertRaises(AssertionError, msg=repr(environment)) as caught:
-                    launch([absent], environment)
+                    launch([absent], environment, env=as_mapping(environment))
                 self.assertIn(ELEVATE, str(caught.exception), "the refusal does not name it")
             with self.assertRaises(AssertionError, msg="a sourced file that names another"):
-                launch([absent], [], sourced=held)
+                launch([absent], [], sourced=held, env={})
             named = [
                 {ELEVATE: ""},
                 {ELEVATE: "x"},
@@ -247,10 +255,10 @@ class EveryEnvironmentNamesTheSetting(unittest.TestCase):
             ]
             for environment in examined("environment(s) that name the setting", named):
                 with self.assertRaises(FileNotFoundError, msg=repr(environment)):
-                    launch([absent], environment)
+                    launch([absent], environment, env=as_mapping(environment))
             held.write_text(ELEVATE + "=''\n", encoding="utf-8")
             with self.assertRaises(FileNotFoundError, msg="a sourced file that names it"):
-                launch([absent], [], sourced=held)
+                launch([absent], [], sourced=held, env={})
 
     def test_the_shared_environment_names_the_setting(self):
         launch = getattr(deploy_tests, "launch", None)
@@ -273,7 +281,7 @@ class EveryEnvironmentNamesTheSetting(unittest.TestCase):
             w = deploy_tests.World(tmp)
             self.assertIn(ELEVATE, w.env, "a world's environment does not name the setting")
             with self.assertRaises(FileNotFoundError):
-                launch([str(Path(tmp) / "absent-program")], w.env)
+                launch([str(Path(tmp) / "absent-program")], w.env, env=w.env)
 
 
 def tests_texts():
