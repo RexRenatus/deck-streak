@@ -185,10 +185,10 @@
         "S04328-A-SECOND-DELETE-IN-THE-PRUNE-SOURCE-IS-REFUSED",
         "agent",
         "src/runs.rs",
-        "/// Deletes every run recorded before `cutoff` and returns how many it deleted.",
-        "/// Deletes every run recorded before `cutoff` and returns how many it deleted.\n    /// DELETE FROM agent_runs WHERE created_at < ?1",
+        "    /// Deletes every run recorded before `cutoff` and returns how many it deleted.",
+        "    const _SECOND: &str = \"DELETE FROM agent_runs WHERE created_at < ?1\";\n\n    /// Deletes every run recorded before `cutoff` and returns how many it deleted.",
         "runs::the_prune_reads_agent_runs_through_the_created_at_index",
-        "the prune's source holds exactly one delete from agent_runs, so a second statement or a copy of it in a comment is refused (SPEC-043 amendment, issue 404)"
+        "the prune's source writes the word delete once in its code, so a second statement held by a constant beside the one prune is refused (SPEC-043 amendment, issue 404; re-pointed in the fifth round, since a doc comment is prose)"
       ],
       [
         "S04329-AN-ITEM-LINE-IS-NOT-THE-VERDICTS-ATTRIBUTE",
@@ -209,31 +209,31 @@
         "the plan check runs the statement the file's one literal holds, never a separately typed copy (SPEC-043 amendment, issue 404)"
       ],
       [
-        "S04331-THE-ATTRIBUTE-SCAN-FAILS-CLOSED-ON-A-QUOTE-OR-A-COMMENT",
+        "S04331-AN-ATTRIBUTE-READS-THE-SAME-HOWEVER-IT-IS-SPACED",
         "agent",
         "tests/verdict.rs",
-        "if !line.starts_with(\"#[\") || line.contains(['\"', '\\'']) || line.contains(\"//\") {",
-        "if !line.starts_with(\"#[\") {",
-        "verdict::a_bracket_inside_a_string_or_a_comment_never_closes_an_attribute",
-        "a line holding a quote, a character literal or a comment marker is never one whole attribute, so a bracket inside a string never closes it (SPEC-043 amendment, issue 404)"
+        "if text.ends_with(word) && piece.starts_with(word) {",
+        "if !text.is_empty() {",
+        "verdict::the_verdict_type_is_must_use",
+        "an attribute is written out from its tokens with a space only between two words, so the enum's derive and must_use are read whatever whitespace rustc skipped inside them (SPEC-043 fifth round, issue 404)"
       ],
       [
-        "S04332-THE-VERDICT-ENUM-IS-DECLARED-ONCE",
+        "S04332-A-DECLARATION-AT-ANY-DEPTH-IS-COUNTED",
         "agent",
         "tests/verdict.rs",
-        "    declarations_in(source).len()",
-        "    declarations_in(source).len().min(1)",
-        "verdict::a_commented_copy_of_the_enum_above_it_is_refused",
-        "the declaration count reads every line and every spelling, so a copy of the enum above the real one is a second declaration (SPEC-043 amendment, issue 404)"
+        "                        declarations(&group.stream().into_iter().collect::<Vec<_>>())\n",
+        "                        { let _ = group; 0 }\n",
+        "verdict::a_copy_of_the_enum_in_code_is_a_declaration_and_in_a_comment_or_a_literal_is_none",
+        "the declaration count reads every token group, so a copy of the enum in a module, a function or a macro's body is a second declaration (SPEC-043 fifth round, issue 404)"
       ],
       [
-        "S04333-A-DOC-LINE-CLOSING-A-BLOCK-COMMENT-IS-NOT-PASSED",
+        "S04333-EVERY-ATTRIBUTE-ABOVE-THE-ENUM-IS-READ",
         "agent",
         "tests/verdict.rs",
-        " && !line.contains(\"*/\")\n}",
-        "\n}",
-        "verdict::a_bracket_inside_a_string_or_a_comment_never_closes_an_attribute",
-        "a doc line holding a block-comment closer is not passed by the scan, so a must_use inside a block comment that line closes is never read (SPEC-043 amendment, issue 404)"
+        "attributes.push(format!(\"#[{}]\", rendered(body.stream())));\n                first -= 2;",
+        "attributes.push(format!(\"#[{}]\", rendered(body.stream())));\n                first = 0;",
+        "verdict::the_verdict_type_is_must_use",
+        "the attributes are read pair by pair up to the first token that is not one, so a must_use above the derive is the enum's (SPEC-043 fifth round, issue 404)"
       ],
       [
         "S04334-THE-PRUNE-SOURCE-WRITES-THE-WORD-DELETE-ONCE",
@@ -245,31 +245,31 @@
         "the prune's source writes the word delete once, so a schema-qualified, quoted or comment-split statement beside a copy of the tested statement handed to a sqlx::query! that never runs is refused (SPEC-043 amendment, issue 404)"
       ],
       [
-        "S04335-A-PROSE-COMMENT-IS-NOT-READ-BY-THE-WORD-COUNT",
+        "S04335-A-DOC-ATTRIBUTE-IS-PROSE",
         "agent",
         "tests/runs.rs",
-        "        code.push(' ');\n        from = end;",
-        "        code.push_str(&source[start..end]);\n        from = end;",
-        "runs::prose_that_names_the_delete_beside_the_prune_is_not_counted",
-        "the word count drops every comment, whatever it holds, so a comment naming the delete beside the one prune is not a second keyword (SPEC-043 verifier's fix, issue 404)"
+        "    group.delimiter() == Delimiter::Bracket\n        && hash",
+        "    group.delimiter() == Delimiter::Parenthesis\n        && hash",
+        "runs::a_comment_of_any_kind_holding_the_statement_is_not_read",
+        "a doc attribute, which every outer doc comment becomes, is prose, so a copy of the call in one is not read as code (SPEC-043 fifth round, issue 404)"
       ],
       [
-        "S04336-A-BLOCK-COMMENT-IS-A-COMMENT-TOO",
+        "S04336-AN-INNER-DOC-ATTRIBUTE-IS-PROSE-TOO",
         "agent",
         "tests/runs.rs",
-        "} else if rest.starts_with(\"/*\") {",
-        "} else if false {",
-        "runs::a_delete_word_in_any_comment_form_is_not_counted_but_the_statement_in_one_is",
-        "the comment scan recognises a block comment, doc forms and nesting included, so a delete word inside one is prose (SPEC-043 second fix round, issue 404)"
+        "[.., before_bang, _] if is_punct(before.last(), '!') => is_punct(Some(before_bang), '#'),",
+        "[.., _, _] if is_punct(before.last(), '!') => false,",
+        "runs::a_comment_of_any_kind_holding_the_statement_is_not_read",
+        "an inner doc attribute, which every inner doc comment becomes, is prose too, so a copy of the call in one is not read as code (SPEC-043 fifth round, issue 404)"
       ],
       [
         "S04337-A-RAW-IDENTIFIER-DECLARES-THE-VERDICT",
         "agent",
         "tests/verdict.rs",
-        "let rest = rest.strip_prefix(\"r#\").unwrap_or(rest);",
-        "let rest = rest.strip_prefix(\"r#r#\").unwrap_or(rest);",
+        "without_raw_prefixes(&name.to_string()) == \"Verdict\"",
+        "name.to_string() == \"Verdict\"",
         "verdict::a_raw_identifier_declaration_is_the_verdict_enum",
-        "a declaration's name compares after the raw-identifier prefix is removed, so `pub enum r#Verdict {` is the verdict enum and counts as a declaration (SPEC-043 second fix round, issue 404)"
+        "a declaration's name compares after the raw-identifier prefix is removed, so `pub enum r#Verdict {` is the verdict enum (SPEC-043 second fix round, issue 404; re-anchored in the fifth round)"
       ],
       [
         "S04338-A-CFG-ON-THE-VERDICT-IS-REFUSED",
@@ -290,40 +290,148 @@
         "an attribute whose path ends in cfg_attr is conditional, in any spelling, so a must_use given only under a condition does not count (SPEC-043 second fix round, issue 404)"
       ],
       [
-        "S04340-A-COPY-THAT-DOES-NOT-RUN-IS-NOT-THE-PRUNE",
+        "S04340-ONLY-THE-STATEMENT-HANDED-TO-THE-QUERY-IS-THE-CALL",
         "agent",
         "tests/runs.rs",
-        ".filter(|(at, _)| code[..*at].trim_end().ends_with(\"sqlx::query!(\"))",
-        ".filter(|_| true)",
-        "runs::a_copy_of_the_statement_that_does_not_run_is_not_the_tested_statement",
-        "only the literal the code hands to sqlx::query! is the tested statement, so a copy in a comment, a constant or a doc attribute beside a prune that skips the index is refused (SPEC-043 verifier's fix, issue 404)"
+        "syn::Lit::Str(text) if text.value() == PRUNE)",
+        "syn::Lit::Str(_))",
+        "runs::a_comment_quoting_the_prune_beside_a_prune_that_skips_the_index_is_refused",
+        "only a string literal whose cooked text is the tested statement, handed to sqlx::query!, is the call, so a prune that runs a changed statement is refused (SPEC-043 fifth round, issue 404)"
       ],
       [
-        "S04341-AN-ESCAPED-QUOTE-CHARACTER-IS-MEASURED-WHOLE",
+        "S04341-A-STRING-IS-READ-AS-ITS-COOKED-TEXT",
         "agent",
         "tests/runs.rs",
-        ".map_or(1, |n| 3 + n + 1),",
-        ".map_or(1, |n| 3 + n),",
-        "runs::no_character_literal_hides_a_second_statement_in_the_string_after_it",
-        "an escaped character literal is measured to its closing quote, so a string after it cannot hide a second statement behind comment markers (SPEC-043 verifier's fix, issue 404)"
+        "syn::Lit::Str(text) => Some(text.value()),",
+        "syn::Lit::Str(_) => None,",
+        "runs::a_prune_spelled_by_an_escape_a_continuation_or_tokens_beside_a_dead_copy_is_refused",
+        "a string literal's text is the value rustc cooks, so a delete keyword written with an escape or a line continuation is counted (SPEC-043 fifth round, issue 404)"
       ],
       [
-        "S04342-A-COMMENT-BETWEEN-THE-WORDS-STILL-DECLARES",
+        "S04342-A-RESTRICTED-VISIBILITY-IS-READ",
         "agent",
         "tests/verdict.rs",
-        "} else if rest.starts_with(\"/*\") {",
-        "} else if false {",
-        "verdict::every_copy_of_the_enum_beside_every_spelling_of_it_is_a_second_declaration",
-        "a comment between `enum` and the name is skipped, so an enum spelled with one is still a declaration and a copy beside it is a second (SPEC-043 verifier's fix, issue 404)"
+        "        && is_pub(tokens.get(first - 2))",
+        "        && false",
+        "verdict::a_copy_of_the_enum_in_code_is_a_declaration_and_in_a_comment_or_a_literal_is_none",
+        "a `pub(..)` visibility before the declaration is passed over, so the attributes of `pub(crate) enum Verdict` are read (SPEC-043 fifth round, issue 404)"
       ],
       [
         "S04343-A-RAW-MUST-USE-IS-MUST-USE",
         "agent",
         "tests/verdict.rs",
-        "without_raw_prefixes(attribute) == \"#[must_use]\"",
-        "attribute == \"#[must_use]\"",
-        "verdict::every_copy_of_the_enum_beside_every_spelling_of_it_is_a_second_declaration",
-        "the must_use attribute compares after the raw prefix is removed, so `#[r#must_use]` is read as the verdict's must_use (SPEC-043 verifier's fix, issue 404)"
+        "    let attribute = without_raw_prefixes(attribute);\n    attribute == \"#[must_use]\"",
+        "    attribute == \"#[must_use]\"",
+        "verdict::every_gap_rustc_reads_between_the_enums_tokens_is_whitespace",
+        "the must_use attribute compares after the raw prefix is removed, so `#[r#must_use]` is read as the verdict's must_use (SPEC-043 verifier's fix, issue 404; re-anchored in the fifth round)"
+      ],
+      [
+        "S04344-A-BYTE-STRING-IS-READ-AS-ITS-COOKED-TEXT",
+        "agent",
+        "tests/runs.rs",
+        "syn::Lit::ByteStr(bytes) => Some(String::from_utf8_lossy(&bytes.value()).into_owned()),",
+        "syn::Lit::ByteStr(_) => None,",
+        "runs::a_literal_of_any_kind_holding_the_call_is_not_the_call",
+        "a byte string's text is read, so a delete written in one beside the one prune is counted (SPEC-043 fifth round, issue 404)"
+      ],
+      [
+        "S04345-A-C-STRING-IS-READ-AS-ITS-COOKED-TEXT",
+        "agent",
+        "tests/runs.rs",
+        "syn::Lit::CStr(text) => Some(text.value().to_string_lossy().into_owned()),",
+        "syn::Lit::CStr(_) => None,",
+        "runs::a_literal_of_any_kind_holding_the_call_is_not_the_call",
+        "a C string's text is read, so a delete written in one beside the one prune is counted (SPEC-043 fifth round, issue 404)"
+      ],
+      [
+        "S04346-THE-WORD-COUNT-READS-EVERY-GROUP",
+        "agent",
+        "tests/runs.rs",
+        "                code_texts(&tokens_in(group), texts);",
+        "                let _ = group;",
+        "runs::the_prune_reads_agent_runs_through_the_created_at_index",
+        "the word count reads the texts inside every token group, so the prune's own statement inside the macro call is counted (SPEC-043 fifth round, issue 404)"
+      ],
+      [
+        "S04347-THE-RUN-COUNT-READS-EVERY-GROUP",
+        "agent",
+        "tests/runs.rs",
+        "                statements_run_in(&tokens_in(group))\n                    + usize::from(",
+        "                usize::from(",
+        "runs::the_prune_reads_agent_runs_through_the_created_at_index",
+        "the run count reads every token group, so the call inside the prune's function body is counted (SPEC-043 fifth round, issue 404)"
+      ],
+      [
+        "S04348-A-SOURCE-THAT-DOES-NOT-LEX-IS-REFUSED",
+        "agent",
+        "tests/runs.rs",
+        "Err(error) => return vec![format!(\"the source does not lex as Rust: {error}\")],",
+        "Err(_) => return Vec::new(),",
+        "runs::a_source_that_does_not_lex_is_refused",
+        "a source the lexer refuses is refused by the pin, never read as having no problem (SPEC-043 fifth round, issue 404)"
+      ],
+      [
+        "S04349-A-WORD-ENDS-AT-ANY-NON-WORD-CHARACTER",
+        "agent",
+        "tests/runs.rs",
+        "text.split(|ch: char| !(ch.is_ascii_alphanumeric() || ch == '_'))",
+        "text.split(' ')",
+        "runs::a_prune_spelled_around_the_keyword_scan_beside_a_quoted_copy_is_refused",
+        "the word count splits a text at every character that is not a letter, a digit or an underscore, so `DELETE/**/FROM` writes the word delete (SPEC-043 fifth round, issue 404)"
+      ],
+      [
+        "S04350-A-RAW-IDENTIFIER-IN-THE-CALL-IS-THE-CALL",
+        "agent",
+        "tests/runs.rs",
+        "name.strip_prefix(\"r#\")",
+        "name.strip_prefix(\"r#r#\")",
+        "runs::every_spelling_of_the_call_rustc_reads_as_the_call_is_the_call",
+        "an identifier compares after its raw prefix is removed, so `r#sqlx::r#query!` is the call (SPEC-043 fifth round, issue 404)"
+      ],
+      [
+        "S04351-A-DOC-ATTRIBUTE-IS-NAMED-DOC",
+        "agent",
+        "tests/runs.rs",
+        "if name_of(doc) == \"doc\")",
+        "if name_of(doc) == \"dock\")",
+        "runs::prose_that_names_the_delete_beside_the_prune_is_not_counted",
+        "a bracket group after `#` whose first identifier is `doc` is a doc attribute, so a doc comment naming the delete is prose (SPEC-043 fifth round, issue 404)"
+      ],
+      [
+        "S04352-THE-TEST-FILE-READS-ITS-OWN-LITERALS",
+        "agent",
+        "tests/runs.rs",
+        "    if let Ok(tokens) = tokens_of(test_source) {\n        code_texts(&tokens, &mut texts);",
+        "    if let Ok(tokens) = tokens_of(test_source) {\n        code_texts(&tokens[..0], &mut texts);",
+        "runs::a_changed_copy_of_the_statement_in_the_plan_string_is_refused",
+        "the test file's own statement count reads every literal's cooked text, so a changed copy written beside the macro is counted (SPEC-043 fifth round, issue 404)"
+      ],
+      [
+        "S04353-A-STATEMENT-READS-THE-SAME-HOWEVER-IT-IS-SPACED",
+        "agent",
+        "tests/runs.rs",
+        "        .join(\" \")\n        .to_lowercase()",
+        "        .join(\"  \")\n        .to_lowercase()",
+        "runs::a_changed_copy_of_the_statement_in_the_plan_string_is_refused",
+        "a statement's whitespace collapses to one space before it is compared, so the macro's statement is found in any spacing (SPEC-043 fifth round, issue 404)"
+      ],
+      [
+        "S04354-ONLY-AN-ENUM-NAMED-VERDICT-IS-THE-VERDICT",
+        "agent",
+        "tests/verdict.rs",
+        "if *keyword == \"enum\" && without_raw_prefixes(&name.to_string()) == \"Verdict\"",
+        "if *keyword == \"enum\"",
+        "verdict::the_verdict_type_is_must_use",
+        "a declaration is `enum` followed by the name Verdict, so another enum in the module is not a second declaration (SPEC-043 fifth round, issue 404)"
+      ],
+      [
+        "S04355-A-MUST-USE-WITH-A-REASON-IS-MUST-USE",
+        "agent",
+        "tests/verdict.rs",
+        ".is_some_and(|reason| reason.starts_with('\"') && reason.ends_with(\"\\\"]\"))",
+        ".is_some_and(|_| false)",
+        "verdict::every_gap_rustc_reads_between_the_enums_tokens_is_whitespace",
+        "`#[must_use = \"..\"]` with a string reason is must_use (SPEC-043 fifth round, issue 404)"
       ]
     ],
     "SCRIPT_MUTATIONS": [
