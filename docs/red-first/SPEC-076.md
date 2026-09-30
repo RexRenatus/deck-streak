@@ -136,3 +136,8 @@ A38: not red: the test pins a rule the code already held, so it is green at the 
 A39: not red: the test pins a rule the code already held, so it is green at the head; the mutant that turns it red is named in this addendum
 A40: not red: the test pins a rule the code already held, so it is green at the head; the mutant that turns it red is named in this addendum
 ```
+
+- **A40's two refusal tests, paired with a valid body.** Not red: they pin that the governor reader
+  answers a well-formed body with the exact view, beside the refusals that assert only a null; their
+  red is `parseGovernor` returning null for every body (a `return null;` at the head of the
+  function), which fails both with `expected null to deeply equal { verdict: 'armed', ... }`.

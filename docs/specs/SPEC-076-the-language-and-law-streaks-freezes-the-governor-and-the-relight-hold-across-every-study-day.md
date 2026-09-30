@@ -596,7 +596,7 @@ A36: cargo test -p deck-streak-bot --test streak_commands -- --exact the_law_lea
 A37: cargo test -p deck-streak-api --test streak_routes -- --exact the_streak_routes_name_why_they_cannot_answer
 A38: cargo test -p deck-streak-streaks --test silence_walk_bound -- --exact the_bounded_walk_answers_what_the_reference_walk_answers
 A39: cargo test -p deck-streak-streaks --test silence_walk_bound -- --exact the_walk_stops_at_the_cap_from_the_specs_words
-A40: pnpm exec vitest run web/app/src/lib/streak/streak.test.ts web/app/src/lib/streak/streak-screen-population.test.ts web/app/src/lib/api-streak.test.ts web/app/src/routes/streak.test.ts
+A40: pnpm exec vitest run web/app/src/lib/streak/streak.test.ts -t "refuses a body that is not an object, or that lacks any key"
 ```
 
 The silence walk's bound is not a timeout. Two alternatives were rejected: leaving the open loop
