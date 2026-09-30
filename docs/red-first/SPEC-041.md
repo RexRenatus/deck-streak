@@ -495,3 +495,12 @@ of a verdict changes.
 A18: red at 031e72526af5: clippy.toml does not name reqwest::Client under disallowed-types, and the bot transport carries none of its 2 named #[expect] sites
 A18: green at 41932f6d3623
 ```
+
+Two post-green commits that edit a test line are named here by sha, appended and read from
+`git show`. The commit 682716c9 is the one whose sentence above says it "changes no assertion":
+it did add one. Its `examined()` helper asserts that the examined list of workspace files is
+non-empty, and it prints the count, so the walk now refuses an empty population (the file also
+widens its `allow` to `clippy::print_stdout`). No assertion of a verdict and no member changed; the
+test file's numstat for it is 12 inserted and 2 deleted. The commit 029fc3e7 is a formatter-only
+edit of the same test file: it splits one chained call over three lines, changes no assertion and no
+member, and its numstat is 3 inserted and 1 deleted.
