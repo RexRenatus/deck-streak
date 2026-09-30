@@ -132,8 +132,8 @@
       [
         "S19616-WEEKLY-LEG-WRAPPED",
         ".github/workflows/mutation-weekly.yml",
-        "python3 scripts/memory_scope.py --report \"$RUNNER_TEMP/mutation\" -- ",
-        "",
+        "python3 scripts/memory_scope.py --report \"$RUNNER_TEMP/mutation\" -- cargo mutants --no-shuffle -vV --in-place --package=",
+        "cargo mutants --no-shuffle -vV --in-place --package=",
         "the weekly battery's rust leg runs inside the memory scope (SPEC-196 R6)",
         "test_memory_scope.TheWorkflows.test_every_mutants_run_that_runs_tests_is_inside_the_scope"
       ],
