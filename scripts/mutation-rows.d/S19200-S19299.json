@@ -149,7 +149,7 @@
       [
         "S19217-THE-GUARD-RECOGNISES-RAW-STRINGS",
         "scripts/tests/test_setting_shapes.py",
-        "raw = RAW.match(text, start)",
+        "raw = RAW.match(text, end) if name in (\"r\", \"br\", \"cr\") else None",
         "raw = None",
         "a raw string holding a `//` is a string, so a shape a test spells after it still counts (SPEC-192 A15)",
         "test_setting_shapes.TheGuardReadsRustSource.test_a_shape_a_test_spells_after_a_url_on_its_line_is_pinned"
@@ -157,32 +157,16 @@
       [
         "S19218-THE-GUARD-RECOGNISES-CHAR-LITERALS",
         "scripts/tests/test_setting_shapes.py",
-        "char = CHAR.match(text, start)",
-        "char = None",
+        "        literal = CHAR.match(text, at)\n        if literal:\n            return \"literal\", suffix(text, literal.end())\n",
+        "",
         "a quote character literal opens no string, so a comment after it is still a comment and its spelling does not count (SPEC-192 A15)",
         "test_setting_shapes.TheGuardJudgesAPlantedTree.test_a_shape_only_a_comment_spells_is_refused"
       ],
       [
-        "S19219-THE-GUARD-BLANKS-BLOCK-COMMENTS-IN-ITS-SKELETON",
-        "scripts/tests/test_setting_shapes.py",
-        "                end += 2 if step in (\"/*\", \"*/\") else 1\n            blank((bare, skeleton), start, end)",
-        "                end += 2 if step in (\"/*\", \"*/\") else 1\n            blank((bare,), start, end)",
-        "a brace inside a block comment is not counted when the test module's span is matched, so a production line after the module is not read as inside it (SPEC-192 A15)",
-        "test_setting_shapes.TheGuardReadsRustSource.test_a_production_line_after_the_own_files_test_module_is_refused"
-      ],
-      [
-        "S19220-THE-GUARD-BLANKS-STRINGS-IN-ITS-SKELETON",
-        "scripts/tests/test_setting_shapes.py",
-        "                end = min(end + 1, len(text))\n            blank((skeleton,), start, end)",
-        "                end = min(end + 1, len(text))\n            pass",
-        "a brace inside a string is not counted when the test module's span is matched, so a production line after the module is not read as inside it (SPEC-192 A15)",
-        "test_setting_shapes.TheGuardReadsRustSource.test_a_production_line_after_the_own_files_test_module_is_refused"
-      ],
-      [
         "S19221-THE-GUARD-READS-ESCAPES-INSIDE-STRINGS",
         "scripts/tests/test_setting_shapes.py",
-        "end += 2 if text[end] == \"\\\\\" else 1",
-        "end += 1",
+        "QUOTED = re.compile(r'\"(?:[^\"\\\\]|\\\\.)*\"', re.DOTALL)",
+        "QUOTED = re.compile(r'\"[^\"]*\"', re.DOTALL)",
         "an escaped quote does not end a string, so a `//` after it is still inside the string and a shape a test spells later still counts (SPEC-192 A15)",
         "test_setting_shapes.TheGuardReadsRustSource.test_a_shape_a_test_spells_after_a_url_on_its_line_is_pinned"
       ],
@@ -197,8 +181,8 @@
       [
         "S19223-NO-OTHER-SOURCE-FILE-IS-A-SPELLING",
         "scripts/tests/test_setting_shapes.py",
-        "+ [base / file]",
-        "+ sorted((base / \"src\").rglob(\"*.rs\"))",
+        "candidates += [base / file]",
+        "candidates += sorted((base / \"src\").rglob(\"*.rs\"))",
         "a source file of the crate other than the implementation's own is not read for a spelling, so a production line there does not pin a shape (SPEC-192 A15)",
         "test_setting_shapes.TheGuardJudgesAPlantedTree.test_a_shape_only_a_production_line_of_the_crate_spells_is_refused"
       ],
@@ -213,24 +197,16 @@
       [
         "S19225-THE-GUARD-READS-IMPLEMENTATIONS-FROM-COMMENT-FREE-SOURCE",
         "scripts/tests/test_setting_shapes.py",
-        "        text, _ = lexed(path.read_text(encoding=\"utf-8\"))\n",
+        "        text = lexed(path.read_text(encoding=\"utf-8\"))\n",
         "        text = path.read_text(encoding=\"utf-8\")\n",
         "an `impl Setting for` inside a block comment is not an implementation, so it is not examined (SPEC-192 A14)",
         "test_setting_shapes.TheGuardIgnoresAnImplementationInAComment.test_a_block_comment_holding_an_impl_is_not_examined"
       ],
       [
-        "S19226-THE-GUARD-BLANKS-LINE-COMMENTS-IN-ITS-SKELETON",
-        "scripts/tests/test_setting_shapes.py",
-        "            end = len(text) if end == -1 else end\n            blank((bare, skeleton), start, end)",
-        "            end = len(text) if end == -1 else end\n            blank((bare,), start, end)",
-        "a brace inside a line comment is not counted when the test module's span is matched, so a production line after the module is not read as inside it (SPEC-192 A15)",
-        "test_setting_shapes.TheGuardReadsRustSource.test_a_production_line_after_the_own_files_test_module_is_refused"
-      ],
-      [
         "S19227-A-MODULE-FILE-NEEDS-A-CFG-TEST-ATTRIBUTE",
         "scripts/tests/test_setting_shapes.py",
-        "            if test_only(attributes(skeleton, module, file, 0)):\n",
-        "            if True:\n",
+        "    return [file for file, attributes in declared(own) if test_only(attributes)]",
+        "    return [file for file, attributes in declared(own)]",
         "a `mod tests;` whose attributes do not make it a test module is production code, so its file is not read as the implementation's test module (SPEC-192 A13)",
         "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_a_file_that_is_no_declared_test_module_is_not_read_as_one"
       ],
@@ -245,33 +221,17 @@
       [
         "S19229-A-BYTE-RAW-STRING-IS-A-TOKEN",
         "scripts/tests/test_setting_shapes.py",
-        "TOKEN = re.compile(r\"//|/\\*|(?<![\\w])b?r#*\\\"|\\\"|'\")",
-        "TOKEN = re.compile(r\"//|/\\*|(?<![\\w])r#*\\\"|\\\"|'\")",
+        "if name in (\"r\", \"br\", \"cr\") else None",
+        "if name in (\"r\", \"cr\") else None",
         "a byte raw string holding a `//` is a string, so the token pattern must open on `br`, and a shape a test spells after it still counts (SPEC-192 A15)",
         "test_setting_shapes.TheGuardReadsRustSource.test_a_shape_a_test_spells_after_a_url_on_its_line_is_pinned"
       ],
       [
         "S19230-A-RAW-STRING-TOKEN-TAKES-ANY-HASH-COUNT",
         "scripts/tests/test_setting_shapes.py",
-        "TOKEN = re.compile(r\"//|/\\*|(?<![\\w])b?r#*\\\"|\\\"|'\")",
-        "TOKEN = re.compile(r\"//|/\\*|(?<![\\w])b?r#?\\\"|\\\"|'\")",
+        "RAW = re.compile(r\"(#*)\\\"\")",
+        "RAW = re.compile(r\"(#?)\\\"\")",
         "a raw string fenced by two or more hashes is a string, so the token pattern must open on any hash count (SPEC-192 A15)",
-        "test_setting_shapes.TheGuardReadsRustSource.test_a_shape_a_test_spells_after_a_url_on_its_line_is_pinned"
-      ],
-      [
-        "S19231-THE-RAW-READER-TAKES-A-BYTE-PREFIX",
-        "scripts/tests/test_setting_shapes.py",
-        "RAW = re.compile(r\"b?r(#*)\\\"\")",
-        "RAW = re.compile(r\"r(#*)\\\"\")",
-        "the raw-string reader accepts the `b` of `br#\"`, so a byte raw string is read to its close and not to a quote inside it (SPEC-192 A15)",
-        "test_setting_shapes.TheGuardReadsRustSource.test_a_shape_a_test_spells_after_a_url_on_its_line_is_pinned"
-      ],
-      [
-        "S19232-THE-RAW-READER-TAKES-ANY-HASH-COUNT",
-        "scripts/tests/test_setting_shapes.py",
-        "RAW = re.compile(r\"b?r(#*)\\\"\")",
-        "RAW = re.compile(r\"b?r(#?)\\\"\")",
-        "the raw-string reader counts every hash of the opening fence, so a string fenced by two hashes closes at two (SPEC-192 A15)",
         "test_setting_shapes.TheGuardReadsRustSource.test_a_shape_a_test_spells_after_a_url_on_its_line_is_pinned"
       ],
       [
@@ -317,32 +277,32 @@
       [
         "S19238-AN-OUT-OF-LINE-MODULE-MAY-BE-PUB",
         "scripts/tests/test_setting_shapes.py",
-        "r\"((?:#\\[[^\\]]*\\]\\s*)*)(?:pub(?:\\([^)]*\\))?\\s+)?mod\\s+(?:r#)?(\\w+)\\s*([;{])\"",
-        "r\"((?:#\\[[^\\]]*\\]\\s*)*)(?:pub\\s+)?mod\\s+(?:r#)?(\\w+)\\s*([;{])\"",
+        "    if at >= first and found[at][:2] == (\"close\", \")\"):\n        at = pairs[at] - 1\n        if found[at][:2] != (\"word\", \"pub\"):\n            return None\n",
+        "",
         "a `#[cfg(test)] pub(crate) mod tests;` is a test module too, so its file is read for a spelling (SPEC-192 A13)",
         "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_a_module_file_beside_the_own_file_is_its_test_module"
       ],
       [
         "S19245-A-TEST-MODULE-SPAN-COUNTS-NESTED-BRACES",
         "scripts/tests/test_setting_shapes.py",
-        "depth += {\"{\": 1, \"}\": -1}.get(skeleton[end], 0)",
-        "depth += {\"}\": -1}.get(skeleton[end], 0)",
+        "            stack.pop()\n",
+        "            stack.pop(0)\n",
         "a brace that opens inside the test module is counted, so the module's span ends at its own closing brace (SPEC-192 A12)",
         "test_setting_shapes.TheGuardReadsRustSource.test_a_shape_the_own_files_test_module_spells_is_pinned"
       ],
       [
         "S19246-A-TEST-MODULE-MAY-CARRY-OTHER-ATTRIBUTES",
         "scripts/tests/test_setting_shapes.py",
-        "r\"((?:#\\[[^\\]]*\\]\\s*)*)(?:pub(?:\\([^)]*\\))?\\s+)?mod\\s+(?:r#)?(\\w+)\\s*([;{])\"",
-        "r\"((?:#\\[[^\\]]*\\]\\s*)?)(?:pub(?:\\([^)]*\\))?\\s+)?mod\\s+(?:r#)?(\\w+)\\s*([;{])\"",
+        "            at = pairs[at] - 2\n",
+        "            at = pairs[at] - 2\n            break\n",
         "a `#[cfg(test)]` followed by another attribute still opens the test module (SPEC-192 A12)",
         "test_setting_shapes.TheGuardReadsRustSource.test_a_shape_the_own_files_test_module_spells_is_pinned"
       ],
       [
         "S19247-A-TEST-MODULE-MAY-BE-PUB",
         "scripts/tests/test_setting_shapes.py",
-        "r\"((?:#\\[[^\\]]*\\]\\s*)*)(?:pub(?:\\([^)]*\\))?\\s+)?mod\\s+(?:r#)?(\\w+)\\s*([;{])\"",
-        "r\"((?:#\\[[^\\]]*\\]\\s*)*)mod\\s+(?:r#)?(\\w+)\\s*([;{])\"",
+        "    at -= at >= first and found[at][:2] == (\"word\", \"pub\")\n",
+        "",
         "a `#[cfg(test)] pub mod tests {` opens the test module too (SPEC-192 A12)",
         "test_setting_shapes.TheGuardReadsRustSource.test_a_shape_the_own_files_test_module_spells_is_pinned"
       ],
@@ -413,16 +373,16 @@
       [
         "S19256-A-DECLARATION-INSIDE-A-BLOCK-IS-NOT-FOLLOWED",
         "scripts/tests/test_setting_shapes.py",
-        "        if skeleton.count(\"{\", 0, module.start()) != skeleton.count(\"}\", 0, module.start()):\n            continue\n",
-        "",
+        "        at = pairs[at] + 1 if found[at][0] == \"open\" else at + 1\n",
+        "        at += 1\n",
         "a `mod tests;` inside an inline module is not resolved beside the file, so a stale top-level file spelling the shape pins nothing (SPEC-192 R8)",
         "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
       ],
       [
         "S19257-A-PATH-WORD-ON-THE-DECLARATION-IS-NOT-READ",
         "scripts/tests/test_setting_shapes.py",
-        "        if PATH_WORD.search(module.group(1)):\n            continue\n",
-        "",
+        "        if run is None or any(w.removeprefix(\"r#\") == \"path\" for each in run for w in each):\n",
+        "        if run is None:\n",
         "a `mod tests;` whose attributes carry `path` in any spelling is not read, so a stale default file beside it pins nothing (SPEC-192 R8)",
         "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_a_file_that_is_no_declared_test_module_is_not_read_as_one"
       ],
@@ -499,34 +459,18 @@
         "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
       ],
       [
-        "S19267-AN-ATTRIBUTE-RUN-IS-READ-WHOLE",
-        "scripts/tests/test_setting_shapes.py",
-        "    if skeleton[: declaration.start()].rstrip(SPACE)[-1:] not in (\"\", \";\", \"}\"):\n        return None\n",
-        "",
-        "a declaration whose attribute run is not read from an item's end decides nothing, so an attribute the reader stopped short of cannot keep a removed module (SPEC-192 R8)",
-        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
-      ],
-      [
         "S19268-THE-MODULES-INNER-ATTRIBUTES-DECIDE-TOO",
         "scripts/tests/test_setting_shapes.py",
-        "    return ATTRIBUTE.findall(declaration.group(1)) + inner\n",
-        "    return ATTRIBUTE.findall(declaration.group(1))\n",
+        "            files.append((found[0], inner + run + leading(body, pairs, 0, len(body))[0]))\n",
+        "            files.append((found[0], inner + run))\n",
         "the inner attributes that open a module's body or file are part of its run, so `#![cfg(any())]` makes no test module (SPEC-192 R8)",
-        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
-      ],
-      [
-        "S19269-A-PARTLY-READ-INNER-RUN-DECIDES-NOTHING",
-        "scripts/tests/test_setting_shapes.py",
-        "    if body[at:].lstrip(SPACE).startswith((\"#!\", \"]\")):\n        return None\n",
-        "",
-        "an inner attribute the reader cannot read whole leaves the run undecided, so the module is not read (SPEC-192 R8)",
         "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
       ],
       [
         "S19270-A-KEY-VALUE-OPTION-IS-UNKNOWN",
         "scripts/tests/test_setting_shapes.py",
-        "        return None, at + 2\n",
-        "        return False, at + 2\n",
+        "        return None, at + 3\n",
+        "        return False, at + 3\n",
         "a key-value option such as `feature = \"slow\"` is unknown, so `#[cfg(any(test, feature = \"slow\"))]` makes no test module (SPEC-192 R8)",
         "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
       ],
@@ -555,25 +499,17 @@
         "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
       ],
       [
-        "S19274-AN-INLINE-MODULE-INSIDE-ANOTHER-IS-NOT-READ",
-        "scripts/tests/test_setting_shapes.py",
-        "        if skeleton[: block.start()].count(\"{\") != skeleton[: block.start()].count(\"}\"):\n            continue\n",
-        "",
-        "an inline test module declared inside another module is not read, so a removed outer module cannot pin a shape (SPEC-192 R8, #433)",
-        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
-      ],
-      [
         "S19275-AN-OUT-OF-LINE-DECLARATION-OPENS-NO-SPAN",
         "scripts/tests/test_setting_shapes.py",
-        "        if block.group(3) != \"{\":\n            continue\n",
+        "        if found[at + 2][1] != \"{\":\n            continue\n",
         "",
         "`mod tests;` opens no inline span, so the production lines after it are not read as test code (SPEC-192 R8)",
-        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_a_module_file_beside_the_own_file_is_its_test_module"
       ],
       [
         "S19276-AN-INLINE-DECLARATION-READS-NO-FILE",
         "scripts/tests/test_setting_shapes.py",
-        "        if module.group(3) != \";\":\n            continue\n",
+        "        if tokens[at + 2][1] != \";\":\n            continue\n",
         "",
         "`mod tests { ... }` reads no module file, so a stale `tests.rs` beside it pins nothing (SPEC-192 R8)",
         "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
@@ -581,10 +517,186 @@
       [
         "S19277-A-RAW-MODULE-NAME-IS-READ",
         "scripts/tests/test_setting_shapes.py",
-        "mod\\s+(?:r#)?(\\w+)\\s*([;{])",
-        "mod\\s+(\\w+)\\s*([;{])",
+        "name = found[at + 1][1].removeprefix(\"r#\")",
+        "name = found[at + 1][1]",
         "`mod r#tests;` names the module `tests`, so its file is read as the test module (SPEC-192 R8)",
         "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+      ],
+      [
+        "S19278-A-BYTE-ORDER-MARK-IS-NO-TOKEN",
+        "scripts/tests/test_setting_shapes.py",
+        "    at = 1 if text.startswith(\"\\ufeff\") else 0\n",
+        "    at = 0\n",
+        "a byte order mark that opens a file is stripped, as rustc strips it, so the file is read and not refused (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+      ],
+      [
+        "S19279-A-SHEBANG-LINE-IS-NO-ATTRIBUTE",
+        "scripts/tests/test_setting_shapes.py",
+        "    if text.startswith(\"#!\", at) and not following(text, at + 2).startswith(\"[\"):\n",
+        "    if False:\n",
+        "a first line `#!` that no `[` follows is a shebang, which rustc removes, so the inner attributes after it are still read (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+      ],
+      [
+        "S19280-AN-INNER-ATTRIBUTE-THAT-OPENS-A-FILE-IS-NO-SHEBANG",
+        "scripts/tests/test_setting_shapes.py",
+        " and not following(text, at + 2).startswith(\"[\")",
+        "",
+        "a `#!` that a `[` follows opens an inner attribute and is no shebang, so it is read and the file is not refused (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+      ],
+      [
+        "S19281-A-COMMENT-AFTER-A-SHEBANG-MARK-IS-SKIPPED",
+        "scripts/tests/test_setting_shapes.py",
+        "        elif end is not None and documents(text, at) is None:\n            at = end\n",
+        "",
+        "a plain comment between `#!` and `[` does not make the `#!` a shebang, so `#!/**/[cfg(any())]` removes the file (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+      ],
+      [
+        "S19282-AN-INNER-DOC-COMMENT-IS-AN-INNER-ATTRIBUTE",
+        "scripts/tests/test_setting_shapes.py",
+        "        return \"inner\"\n",
+        "        return \"outer\"\n",
+        "`//!` and `/*! */` are inner doc attributes, so an inner run read over one reaches the `#![cfg(...)]` after it (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+      ],
+      [
+        "S19283-AN-OUTER-DOC-COMMENT-IS-AN-OUTER-ATTRIBUTE",
+        "scripts/tests/test_setting_shapes.py",
+        "        return \"outer\"\n",
+        "        return \"inner\"\n",
+        "`///` and `/** */` are outer doc attributes, so an outer run read back over one reaches the attributes before it (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+      ],
+      [
+        "S19284-A-LINE-SEPARATOR-IS-WHITESPACE",
+        "scripts/tests/test_setting_shapes.py",
+        "SPACE = \"\\t\\n\\x0b\\x0c\\r \\x85\\u200e\\u200f\\u2028\\u2029\"",
+        "SPACE = \"\\t\\n\\x0b\\x0c\\r \\x85\\u200e\\u200f\"",
+        "the Reference's whitespace holds U+2028 and U+2029, so a file whose tokens one separates is read and not refused (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+      ],
+      [
+        "S19285-A-RAW-IDENTIFIER-IS-ONE-TOKEN",
+        "scripts/tests/test_setting_shapes.py",
+        "        if name == \"r\" and after == \"#\":\n",
+        "        if False:\n",
+        "`r#name` is one identifier and no reserved prefix, so a file that holds one is read and not refused (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+      ],
+      [
+        "S19286-A-C-STRING-IS-ONE-TOKEN",
+        "scripts/tests/test_setting_shapes.py",
+        "{\"b\": (QUOTED, CHAR), \"c\": (QUOTED,)}",
+        "{\"b\": (QUOTED, CHAR)}",
+        "a C string `c\"...\"` is one literal, so a `//` or `/*` inside it opens no comment (SPEC-192 R8, #434)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+      ],
+      [
+        "S19287-A-RAW-C-STRING-IS-ONE-TOKEN",
+        "scripts/tests/test_setting_shapes.py",
+        "if name in (\"r\", \"br\", \"cr\") else None",
+        "if name in (\"r\", \"br\") else None",
+        "a raw C string `cr#\"...\"#` is one literal, closed at its own fence, so a `//` or `/*` inside it opens no comment (SPEC-192 R8, #434)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+      ],
+      [
+        "S19288-A-BYTE-CHARACTER-IS-ONE-TOKEN",
+        "scripts/tests/test_setting_shapes.py",
+        "{\"b\": (QUOTED, CHAR), \"c\": (QUOTED,)}",
+        "{\"b\": (QUOTED,), \"c\": (QUOTED,)}",
+        "a byte character `b'\"'` is one literal, so the quote inside it opens no string (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+      ],
+      [
+        "S19289-AN-INNER-ATTRIBUTE-MAY-BE-SPACED",
+        "scripts/tests/test_setting_shapes.py",
+        "        elif [t[:2] for t in found[at : at + 3]] == [\n",
+        "        elif found[at][3] == found[at + 1][2] == found[at + 2][2] - 1 and [t[:2] for t in found[at : at + 3]] == [\n",
+        "whitespace or a comment may stand between an inner attribute's `#`, `!` and `[`, so `# ![cfg(any())]` still removes the module (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+      ],
+      [
+        "S19290-AN-OUTER-ATTRIBUTE-MAY-BE-SPACED",
+        "scripts/tests/test_setting_shapes.py",
+        "and pairs[at] > first and is_pound(found[pairs[at] - 1])",
+        "and pairs[at] > first and is_pound(found[pairs[at] - 1]) and found[pairs[at] - 1][3] == found[pairs[at]][2]",
+        "whitespace or a comment may stand between an outer attribute's `#` and `[`, so `# [cfg(test)]` is read as rustc reads it (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+      ],
+      [
+        "S19291-AN-INLINE-MODULES-INNER-ATTRIBUTES-DECIDE-TOO",
+        "scripts/tests/test_setting_shapes.py",
+        "own + run + inner",
+        "own + run",
+        "the inner attributes that open an inline module's body are part of its run, so `mod tests { #![cfg(any())] }` makes no test module (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+      ],
+      [
+        "S19292-ONLY-A-FILE-A-CRATE-ROOT-REACHES-IS-READ",
+        "scripts/tests/test_setting_shapes.py",
+        "    if base / file in reached(base / \"src\"):\n",
+        "    if True:\n",
+        "the own file's test modules are read only when a crate root reaches the file through modules kept under `--cfg test`, so a file rustc does not compile under test pins nothing (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+      ],
+      [
+        "S19293-THE-WALK-FOLLOWS-ONLY-KEPT-DECLARATIONS",
+        "scripts/tests/test_setting_shapes.py",
+        "            if kept is True:\n                todo.append(path)\n",
+        "            todo.append(path)\n",
+        "the walk from the crate roots follows a declaration only when its attributes keep it under `--cfg test`, so a file below `#[cfg(any())] mod a;` is not reached (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+      ],
+      [
+        "S19294-THE-WALK-JUDGES-UNDER-TEST",
+        "scripts/tests/test_setting_shapes.py",
+        "condition(each, True) for each in attributes])\n            except",
+        "condition(each, False) for each in attributes])\n            except",
+        "the walk judges each declaration with `test` set, so a module kept only without `--cfg test` is not reached (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+      ],
+      [
+        "S19295-CFG-IN-ANOTHER-SPELLING-DECIDES-NOTHING",
+        "scripts/tests/test_setting_shapes.py",
+        "        if any(word.removeprefix(\"r#\") in (\"cfg\", \"cfg_attr\") for word in words):\n            raise ValueError(words)\n",
+        "",
+        "an attribute that names `cfg` or `cfg_attr` in a spelling the guard does not evaluate (`r#cfg`, a path) leaves the run undecided, so the module is not read (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+      ],
+      [
+        "S19296-AN-INNER-RUN-IS-READ-TO-ITS-END",
+        "scripts/tests/test_setting_shapes.py",
+        "            at = pairs[at + 2] + 1\n",
+        "            at = pairs[at + 2] + 1\n            break\n",
+        "an inner run is read past its first attribute, so `#![doc = ...]` then `#![cfg(x)]` leaves the module undecided (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+      ],
+      [
+        "S19297-A-KEY-VALUE-OPTION-ENDS-AFTER-ITS-VALUE",
+        "scripts/tests/test_setting_shapes.py",
+        "        return None, at + 3\n",
+        "        return None, at + 2\n",
+        "a key-value option `feature = \"slow\"` is read to the end of its value, so a `cfg_attr` under one still decides the run (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+      ],
+      [
+        "S19298-A-NUMBER-IS-ONE-TOKEN",
+        "scripts/tests/test_setting_shapes.py",
+        "    number = NUMBER.match(text, at)\n",
+        "    number = None\n",
+        "a number literal with its suffix is one token, so a file that holds one is read and not refused (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardIgnoresAnImplementationInAComment.test_a_block_comment_holding_an_impl_is_not_examined"
+      ],
+      [
+        "S19299-A-LIFETIME-OPENS-NO-CHARACTER",
+        "scripts/tests/test_setting_shapes.py",
+        "        return \"lifetime\", name.end()\n",
+        "        raise ValueError(at)\n",
+        "a lifetime `'a` is one token and opens no character literal, so a file that holds one is read and not refused (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardJudgesAPlantedTree.test_a_generic_implementation_is_examined"
       ]
     ]
   }
