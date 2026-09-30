@@ -12,14 +12,21 @@ run here: each report is written in the runner's own schema, with the real coord
 `list_source` gives.
 """
 
+import contextlib
 import copy
+import importlib.util
+import io
 import itertools
 import json
+import sys
+import traceback
+import types
 import unittest
 
 from _support import examined
 from test_mutation_python_verdict import (
     SCRIPT,
+    VERDICT,
     changed_fixture,
     file_entry,
     judged,
@@ -45,6 +52,51 @@ MALFORMED = (
     ("empty", ""),
     ("negative", "-{k}/{n}"),
 )
+
+
+def verdict_program():
+    """scripts/mutation-verdict.py loaded once as a module: the same `main` the program runs."""
+    loaded = sys.modules.get("mutation_verdict_in_process")
+    if loaded is None:
+        spec = importlib.util.spec_from_file_location("mutation_verdict_in_process", VERDICT)
+        loaded = importlib.util.module_from_spec(spec)
+        sys.modules[spec.name] = loaded
+        spec.loader.exec_module(loaded)
+    return loaded
+
+
+def judge_in_process(fixture, klass, reports):
+    """`fixture.judge(klass, "--python", reports)` without a process: the program's own `main`
+    over the same argv, its stdout and stderr captured, its exit code returned. A crash reads as
+    the program reads it: exit 1 and the traceback on stderr."""
+    argv = [
+        "judge",
+        "--plan",
+        str(fixture.out / "plan.json"),
+        "--class",
+        klass,
+        "--root",
+        str(fixture.root),
+        "--python",
+        str(reports),
+    ]
+    out, err = io.StringIO(), io.StringIO()
+    with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+        try:
+            code = verdict_program().main(argv)
+        except SystemExit as stop:
+            code = stop.code if isinstance(stop.code, int) else 1
+        except Exception:
+            code = 1
+            err.write(traceback.format_exc())
+    return types.SimpleNamespace(returncode=code, stdout=out.getvalue(), stderr=err.getvalue())
+
+
+def run_controls(chosen):
+    """One end-to-end control per family: the first member of each, judged by the program itself.
+    It runs after a test's own counts are asserted, so a miscount is read before a routing one."""
+    for family, (plan, label, slots, wrong) in chosen.items():
+        plan.control(family, label, slots, wrong)
 
 
 def population_text(count):
@@ -94,10 +146,9 @@ class Plan:
     def mutants(self, report):
         return report["files"][0]["mutants"]
 
-    def lay(self, slots):
+    def write(self, slots):
         """Write `slots` (slot -> document, raw text, or None for no report) into a directory of
-        its own, judge the `scripts` class over it, and return (exit, the slots the verdict named,
-        stdout). A directory is never reused."""
+        its own and return it. A directory is never reused."""
         self.laid += 1
         directory = self.fixture.out / f"layout-{self.laid}"
         for slot, document in slots.items():
@@ -107,9 +158,38 @@ class Plan:
                 write_shard(directory, slot, None, raw=document)
             else:
                 write_shard(directory, slot, document)
-        done = judged(self.fixture, "scripts", directory)
+        return directory
+
+    def read(self, done):
+        """(exit, the slots the verdict named, stdout and stderr) of one judgement."""
         named = {k for k in range(self.count) if f"VOID mutation-python-shard-{k}: " in done.stdout}
         return done.returncode, named, done.stdout + done.stderr
+
+    def lay(self, slots, cli=False):
+        """Judge the `scripts` class over `slots`. A member is judged by the program's own `main`
+        in this process; `cli=True` runs the program itself, the control that its entry routes
+        through that same `main`."""
+        directory = self.write(slots)
+        if cli:
+            return self.read(judged(self.fixture, "scripts", directory))
+        return self.read(judge_in_process(self.fixture, "scripts", directory))
+
+    def control(self, family, label, slots, wrong):
+        """The end-to-end control of a family: the program itself, argv in and exit code and
+        stdout out, refuses the member naming exactly its wrong slots, and says what the
+        in-process judgement said over the same directory, byte for byte."""
+        directory = self.write(slots)
+        inside = judge_in_process(self.fixture, "scripts", directory)
+        outside = judged(self.fixture, "scripts", directory)
+        code, named, output = self.read(outside)
+        self.test.assertEqual(
+            (code, named), (3, wrong), f"the program, {family}: {label}: {output}"
+        )
+        self.test.assertEqual(
+            (inside.returncode, inside.stdout, inside.stderr),
+            (outside.returncode, outside.stdout, outside.stderr),
+            f"the program and its in-process judgement differ, {family}: {label}",
+        )
 
     def correct(self):
         return {k: copy.deepcopy(self.reports[k]) for k in range(self.count)}
@@ -183,9 +263,10 @@ class TheReportIsBoundToItsSlotAndItsListing(unittest.TestCase):
         """Judge the correct layout, then every member of `members` over each plan; each member must
         be refused, naming exactly its wrong slots. `expected` gives each family's member count."""
         total = refused = accepted = 0
+        controlled = {}
         for count in COUNTS:
             plan = Plan(self, count)
-            code, named, output = plan.lay(plan.correct())
+            code, named, output = plan.lay(plan.correct(), cli=True)
             self.assertEqual((code, named), (0, set()), f"the control, {count} shards: {output}")
             self.assertRegex(output, rf"(?m)^examined {len(plan.listing)}$", output)
             found = list(members(plan))
@@ -196,6 +277,7 @@ class TheReportIsBoundToItsSlotAndItsListing(unittest.TestCase):
             for family, label, slots, wrong in examined(f"{name} members of {count} shards", found):
                 total += 1
                 code, named, output = plan.lay(slots)
+                controlled.setdefault(family, (plan, label, slots, wrong))
                 if code == 0:
                     accepted += 1
                     continue
@@ -205,6 +287,7 @@ class TheReportIsBoundToItsSlotAndItsListing(unittest.TestCase):
         print(f"{name}: {total} members, {refused} refused, {accepted} accepted")
         self.assertEqual(accepted, 0, f"{accepted} of {total} members accepted")
         self.assertEqual(refused, total)
+        run_controls(controlled)
         return total
 
     def test_a_report_counts_only_in_its_own_slot(self):
@@ -255,7 +338,7 @@ class TheReportIsBoundToItsSlotAndItsListing(unittest.TestCase):
                 document = json.loads(original)
                 document["python"]["shards"] = change(document["python"]["shards"])
                 path.write_text(json.dumps(document), encoding="utf-8")
-                code, named, output = plan.lay(plan.correct())
+                code, named, output = plan.lay(plan.correct(), cli=True)
                 self.assertEqual((code, named), (3, {1}), f"{label}: {output}")
                 self.assertIn(
                     "mutation-python-shard-1: the plan lists no mutants for this shard", output
@@ -267,7 +350,7 @@ class TheReportIsBoundToItsSlotAndItsListing(unittest.TestCase):
         plan = Plan(self, 2)
         slots = plan.correct()
         plan.mutants(slots[0]).append("not an object")
-        code, named, output = plan.lay(slots)
+        code, named, output = plan.lay(slots, cli=True)
         self.assertEqual((code, named), (3, {0}), output)
         self.assertIn("a mutant record of", output)
         self.assertIn("not an object", output)
@@ -402,7 +485,7 @@ class TheBindingAndTheJudgeReadOneReport(unittest.TestCase):
     containers are of another JSON type, whose outcome is off the runner's vocabulary, or whose
     listed mutant sits under an entry the lane does not read, is VOID naming its shard."""
 
-    def tally(self, plan, members, what):
+    def tally(self, plan, members, what, controlled):
         """Judge every member; each lands in exactly one bucket: refused (exit 3 naming exactly its
         wrong slots), crashed (a traceback), accepted (exit 0) or other. A crash is caught and
         counted here, never raised, so the count reads the rule and not the harness."""
@@ -410,6 +493,7 @@ class TheBindingAndTheJudgeReadOneReport(unittest.TestCase):
         firsts = {}
         for family, label, slots, wrong in examined(what, list(members)):
             code, named, output = plan.lay(slots)
+            controlled.setdefault(family, (plan, label, slots, wrong))
             if code == 1 and "Traceback" in output:
                 bucket = "crashed"
             elif code == 0:
@@ -431,12 +515,15 @@ class TheBindingAndTheJudgeReadOneReport(unittest.TestCase):
         totals = {"refused": 0, "crashed": 0, "accepted": 0, "other": 0}
         firsts = {}
         families = set()
+        controlled = {}
         for count in READER_COUNTS:
             plan = Plan(self, count)
-            code, named, output = plan.lay(plan.correct())
+            code, named, output = plan.lay(plan.correct(), cli=True)
             self.assertEqual((code, named), (0, set()), f"the control, {count} shards: {output}")
             families |= {member[0] for member in reader_members(plan)}
-            counts, found = self.tally(plan, reader_members(plan), f"members of {count} shards")
+            counts, found = self.tally(
+                plan, reader_members(plan), f"members of {count} shards", controlled
+            )
             firsts.update({key: label for key, label in found.items() if key not in firsts})
             for bucket, number in counts.items():
                 totals[bucket] += number
@@ -463,13 +550,15 @@ class TheBindingAndTheJudgeReadOneReport(unittest.TestCase):
             ],
         )
         self.assertEqual(totals["refused"], total, totals)
+        run_controls(controlled)
 
     def test_a_shard_that_lists_no_mutant_reads_its_empty_report_and_refuses_the_rest(self):
         plan = EmptyReaderPlan(self)
-        code, named, output = plan.lay(plan.correct())
+        code, named, output = plan.lay(plan.correct(), cli=True)
         self.assertEqual((code, named), (3, set()), output)
         self.assertIn("the scripts class applies and nothing was examined", output)
-        counts, firsts = self.tally(plan, reader_members(plan), "empty-listing members")
+        controlled = {}
+        counts, firsts = self.tally(plan, reader_members(plan), "empty-listing members", controlled)
         total = sum(counts.values())
         print(
             f"examined {total} member(s), {counts['refused']} refused, {counts['crashed']} "
@@ -478,6 +567,83 @@ class TheBindingAndTheJudgeReadOneReport(unittest.TestCase):
         for (family, bucket), label in sorted(firsts.items()):
             print(f"  {bucket}: {family}: {label}")
         self.assertEqual(counts["refused"], total, counts)
+        run_controls(controlled)
+
+
+class TheInProcessJudgeIsTheProgram(unittest.TestCase):
+    """The populations above judge each member by the program's own `main` in this process, which
+    is what keeps them cheap. This is the checked-in proof that doing so loses nothing: over a
+    pinned subset, the program itself and the in-process judgement give the same exit code, stdout
+    and stderr for the same directory."""
+
+    def pinned(self, plan, sources):
+        """Per family, its first and its last member, and the first member of every outcome the
+        in-process judge gives inside it; then the correct layout, an accepted member."""
+        picked = [("control", "the correct layout", plan.correct())]
+        for members in sources:
+            by_family = {}
+            for family, label, slots, _ in members(plan):
+                by_family.setdefault(family, []).append((family, label, slots))
+            for family, found in by_family.items():
+                chosen = {0, len(found) - 1}
+                seen = {}
+                for index, (_, _, slots) in enumerate(found):
+                    code, named, _ = plan.lay(slots)
+                    seen.setdefault((code, len(named)), index)
+                chosen |= set(seen.values())
+                picked += [found[index] for index in sorted(chosen)]
+        return picked
+
+    def test_the_program_and_its_in_process_judgement_agree(self):
+        subset = []
+        for plan in (Plan(self, 2), Plan(self, 3)):
+            for member in self.pinned(plan, (slot_members, listing_members, reader_members)):
+                subset.append((plan, member))
+        empty = EmptyReaderPlan(self)
+        subset += [(empty, member) for member in self.pinned(empty, (reader_members,))]
+        families = {member[0] for _, member in subset}
+        self.assertEqual(
+            sorted(families),
+            sorted(
+                [
+                    "byte readers",
+                    "control",
+                    "copy",
+                    "entry",
+                    "extra",
+                    "extra entry",
+                    "field",
+                    "files",
+                    "missing",
+                    "mutants",
+                    "name",
+                    "outcome",
+                    "record",
+                    "swap",
+                    "swapped",
+                    "trim",
+                    "unread entry",
+                    "unread extra",
+                ]
+            ),
+        )
+        codes = set()
+        different = 0
+        for plan, (family, label, slots) in examined("pinned members", subset):
+            directory = plan.write(slots)
+            inside = judge_in_process(plan.fixture, "scripts", directory)
+            outside = judged(plan.fixture, "scripts", directory)
+            codes.add(outside.returncode)
+            if (inside.returncode, inside.stdout, inside.stderr) != (
+                outside.returncode,
+                outside.stdout,
+                outside.stderr,
+            ):
+                different += 1
+                self.fail(f"{family}: {label}: the program and the in-process judge differ")
+        print(f"pinned {len(subset)} member(s), {different} differ, exit codes {sorted(codes)}")
+        self.assertEqual(different, 0)
+        self.assertEqual(codes, {0, 3})
 
 
 class EmptyReaderPlan(Plan):
