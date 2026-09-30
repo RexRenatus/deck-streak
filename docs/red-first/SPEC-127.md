@@ -283,3 +283,6 @@ reaches it, three failure modes) read the tool's bare message with no `deploy:` 
 A40: red at 0929355b58816672227e2bbd645f3eb94b8df11b: AssertionError: 0 != 1 : install_tag / install / absent
 A40: green at 53764d6320c899ae41d30518363d150c5a414a89
 ```
+
+The `EXIT` trap that deletes the check file is outside this class, which is about a temporary path
+that cannot be made: it acts only after a check file was made, so the test of A40 does not reach it and no row pins it.
