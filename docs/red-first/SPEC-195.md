@@ -14,6 +14,8 @@ A4: red at cbb4047b: AssertionError: expected [] to deeply equal [ 'planted.md b
 A4: green at 5855fa5b
 A5: red at a5881aba: AssertionError: 946 of 8750 members read otherwise: expected [ …(3) ] to deeply equal []: round 5's reader read 946 of the 8,750 generated members otherwise than GitHub renders them and refused none by name, so all three A5 tests failed
 A5: green at 071043ea
+A6: red at dca03020: AssertionError: expected [ …(2) ] to deeply equal []: the received list was "reads every fenced block" and "parses every block", each coming before a generated-population test, so the order test failed
+A6: green at c2fa5aa0
 ```
 
 The reader was then extended to read an indented fence. Its test (A4) was committed alone
@@ -120,3 +122,5 @@ A5: green at 55227769
 ```
 
 At the reader's commit all nine tests pass, the reader reads 2,934 of the 8,994 generated members and refuses the other 6,060 by name, and 191 blocks are examined, the same 191 with the same text.
+
+Round 8 measured that the mutation run's cost was the order of the tests, not the reader: a mutant is tried against the tests that cover it in file order and stops at the first that fails, and the two docs-wide tests, which take seconds, stood before the generated-population tests that kill nearly every mutant. The guard (A6) was committed alone (dca03020) against the old order, so the order test failed by assertion while the other two passed. The next commit (c2fa5aa0) moves the three generated-population tests first and edits no test: each of the nine `it` blocks is byte-equal to its block at cea1f3b8, and the file's sorted lines are equal. The guard also fails under each of three plants, a docs-wide test moved first, a title deleted and a title duplicated, and it holds the populations: 8,994 members, 2,934 read, 6,060 refused, `READ_DIGEST` and the recorded `digest`.

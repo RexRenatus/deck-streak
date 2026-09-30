@@ -143,6 +143,7 @@ and fourteen members' refusals are asserted form for form and line for line.
 | A3 | a block whose node id is a reserved word is refused, and the same block with another id is accepted | `docs-mermaid.test.ts` `reserved word` (two tests) |
 | A4 | an indented fence, in a list item or by one to three spaces, is read: an unparsable one is refused by name, and a valid one of each diagram type the documents use is accepted | `docs-mermaid.test.ts` `indented` (two tests) |
 | A5 | in each of 8,994 container forms generated at test time from the grammar table and the reader's lists, the check either refuses the form by name or reads exactly the fences GitHub renders as diagrams, with GitHub's text, and none GitHub shows as code, and it reads 2,934 of them, the set the test pins by digest; each rendered form it reads planted unparsable is refused by name, and planted valid is accepted; a grammar the generator cannot write is refused by name, and fourteen refused forms are named with their lines | `docs-mermaid.test.ts` `generated container form` (three tests) |
+| A6 | the tests of `docs-mermaid.test.ts` are nine, each once, and the three generated-population tests come before the two docs-wide ones, so the mutation run reaches the test that kills a mutant first; the generated populations are the recorded ones (8,994 members, 2,934 read, 6,060 refused, `READ_DIGEST` and the recorded `digest`) | `docs-mermaid.order.test.ts` (three tests) |
 
 ```acceptance
 A1: pnpm exec vitest run web/app/src/lib/docs-mermaid.test.ts -t "parses every block"
@@ -150,9 +151,10 @@ A2: pnpm exec vitest run web/app/src/lib/docs-mermaid.test.ts -t "reads every fe
 A3: pnpm exec vitest run web/app/src/lib/docs-mermaid.test.ts -t "reserved word"
 A4: pnpm exec vitest run web/app/src/lib/docs-mermaid.test.ts -t "indented"
 A5: pnpm exec vitest run web/app/src/lib/docs-mermaid.test.ts -t "generated container form"
+A6: pnpm exec vitest run web/app/src/lib/docs-mermaid.order.test.ts
 ```
 
-Each fence line selects its tests: A1 one test, A2 one, A3 two, A4 two and A5 three, and no test is
+Each fence line selects its tests: A1 one test, A2 one, A3 two, A4 two, A5 three and A6 three, and no test is
 selected by two lines.
 
 The command-line renderer is the oracle for R6: it is run once, by hand, over the extracted blocks
@@ -163,7 +165,8 @@ part of the gate.
 
 | file | context | change |
 |---|---|---|
-| `web/app/src/lib/docs-mermaid.test.ts` | repo | added: A1 to A5 |
+| `web/app/src/lib/docs-mermaid.test.ts` | repo | added: A1 to A5; its tests are ordered by A6 |
+| `web/app/src/lib/docs-mermaid.order.test.ts` | repo | added: A6, the guard of the order and of the set of tests |
 | `web/app/src/lib/docs-mermaid.fences.json` | repo | added: A5, GitHub's recorded rendering of the generated members |
 | `web/app/src/lib/docs-mermaid-fences.js` | repo | added: A5, the grammar table and the member generator |
 | `web/app/src/lib/docs-mermaid-read.js` | repo | added: R4, R9, the reader and its exported lists |
