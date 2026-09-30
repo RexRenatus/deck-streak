@@ -137,7 +137,7 @@
         "the settle retires a reading at the rollover that starts d + 2 in the configured rule, never the default rule's (SPEC-047 R4, A14)"
       ],
       [
-        "S4718-THE-SETTLE-DATES-ITS-PASS-IN-THE-CONFIGURED-RULE",
+        "S04718-THE-SETTLE-DATES-ITS-PASS-IN-THE-CONFIGURED-RULE",
         "coordination",
         "src/readings/settle.rs",
         "let today = self.rule.study_day(now);",
@@ -146,7 +146,7 @@
         "the day the settle hands the XP grant and the stamp's note lookup is the configured study day (SPEC-047 R4, A14)"
       ],
       [
-        "S4719-THE-TAP-DATES-ITS-GRANT-IN-THE-CONFIGURED-RULE",
+        "S04719-THE-TAP-DATES-ITS-GRANT-IN-THE-CONFIGURED-RULE",
         "coordination",
         "src/readings/read_tap.rs",
         "let today = self.rule.study_day(now);",
@@ -155,7 +155,7 @@
         "the day the tap hands its XP grant is the configured study day (SPEC-047 R6, A14)"
       ],
       [
-        "S4722-GENERATION-READS-THE-TOPIC-DAYS-IN-THE-CONFIGURED-RULE",
+        "S04722-GENERATION-READS-THE-TOPIC-DAYS-IN-THE-CONFIGURED-RULE",
         "coordination",
         "src/readings/generate.rs",
         "parts.rule.study_day(parts.clock.now())",
@@ -164,7 +164,7 @@
         "generation reads the topic's days by the configured rule (SPEC-047 A15)"
       ],
       [
-        "S4723-GENERATION-DATES-ITS-RUN-IN-THE-CONFIGURED-RULE",
+        "S04723-GENERATION-DATES-ITS-RUN-IN-THE-CONFIGURED-RULE",
         "coordination",
         "src/readings/generate.rs",
         "let study_day = parts.rule.study_day(now);",
@@ -173,7 +173,7 @@
         "generation dates its run and its readings by the configured rule (SPEC-047 A15)"
       ],
       [
-        "S4724-THE-RESOLUTION-DATES-ITS-RUN-IN-THE-CONFIGURED-RULE",
+        "S04724-THE-RESOLUTION-DATES-ITS-RUN-IN-THE-CONFIGURED-RULE",
         "coordination",
         "src/readings/resolve.rs",
         "parts.rule.study_day(started_at)",
@@ -182,7 +182,7 @@
         "the resolution dates its run by the configured rule (SPEC-047 A16)"
       ],
       [
-        "S4725-THE-RESOLUTION-READS-ITS-WINDOW-IN-THE-CONFIGURED-RULE",
+        "S04725-THE-RESOLUTION-READS-ITS-WINDOW-IN-THE-CONFIGURED-RULE",
         "coordination",
         "src/readings/resolve.rs",
         "rule: parts.rule,",
@@ -211,7 +211,7 @@
         "the export carries studied_count as its own column, not carried_nights; the seeded rows give the two distinct values (SPEC-047 R8)"
       ],
       [
-        "S4720-THE-STUDIED-RULE-COUNTS-IN-THE-CONFIGURED-RULE",
+        "S04720-THE-STUDIED-RULE-COUNTS-IN-THE-CONFIGURED-RULE",
         "crates/readings/src/studied.rs",
         "(0..=1).contains(&(rule.study_day(at)",
         "(0..=1).contains(&(StudyDayRule::default().study_day(at)",
@@ -220,7 +220,7 @@
         "a review counts by the study day of the configured rule, read through the settle (SPEC-047 R3, A14)"
       ],
       [
-        "S4721-THE-STUDIED-RULE-CLOSES-IN-THE-CONFIGURED-RULE",
+        "S04721-THE-STUDIED-RULE-CLOSES-IN-THE-CONFIGURED-RULE",
         "crates/readings/src/studied.rs",
         "rule.study_day(now).epoch_day() >= self",
         "StudyDayRule::default().study_day(now).epoch_day() >= self",
@@ -229,7 +229,7 @@
         "a window closes by the configured rule's study day, read through the settle (SPEC-047 R4, A14)"
       ],
       [
-        "S4726-THE-PAUSE-GATE-READS-IN-THE-CONFIGURED-RULE",
+        "S04726-THE-PAUSE-GATE-READS-IN-THE-CONFIGURED-RULE",
         "crates/readings/src/gates.rs",
         "window.contains(&rule.study_day(",
         "window.contains(&StudyDayRule::default().study_day(",
@@ -238,7 +238,7 @@
         "the pause window gate reads a review by the configured rule (SPEC-047 A16)"
       ],
       [
-        "S4727-THE-DAY-SET-GATES-IN-THE-CONFIGURED-RULE",
+        "S04727-THE-DAY-SET-GATES-IN-THE-CONFIGURED-RULE",
         "crates/readings/src/day_set.rs",
         "gates::studied_before(&data.reviews, inputs.today, inputs.rule)",
         "gates::studied_before(&data.reviews, inputs.today, StudyDayRule::default())",
@@ -247,7 +247,7 @@
         "the day set gates studied-before by the configured rule (SPEC-047 A16)"
       ],
       [
-        "S4728-THE-EXPORT-KEEPS-GENERATED-AT-ITS-OWN",
+        "S04728-THE-EXPORT-KEEPS-GENERATED-AT-ITS-OWN",
         "crates/readings/src/data_rights.rs",
         "\"generated_at\": row.generated_at,",
         "\"generated_at\": row.read_at,",
@@ -256,7 +256,7 @@
         "the export carries generated_at as its own column, not read_at (SPEC-047 R8, A17)"
       ],
       [
-        "S4729-THE-EXPORT-KEEPS-CARRIED-NIGHTS-ITS-OWN",
+        "S04729-THE-EXPORT-KEEPS-CARRIED-NIGHTS-ITS-OWN",
         "crates/readings/src/data_rights.rs",
         "\"carried_nights\": row.carried_nights,",
         "\"carried_nights\": row.studied_count,",
