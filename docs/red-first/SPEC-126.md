@@ -124,7 +124,12 @@ changes nothing else: the correct layout passes as the control, and the verdict 
 129 slot-binding members and 302 of the 311 listing-binding members (only the missing-report family
 was refused). Both tests fail by assertion. The green commit changes `python_reports` in the
 verdict and the fixtures of five earlier tests that laid one report in several slots or listed no
-shards; the population then reads 129 refused of 129 and 311 refused of 311, none accepted.
+shards. Commit 7fa6ed7 edits those two test files, `test_mutation_python_verdict.py` and
+`test_mutation_verdict_python_kills.py`, and each edit gives a plan the shard listing its report
+examined and the report its own slot's `shard` field, the layout the rule now requires. One
+assertion is rewritten with its fixture: the expected `examined` count of the whole layout is now
+the literal 81, the listing's size, where it was three times the mutants of one full report. No
+assertion is dropped or weakened. The population then reads 129 refused of 129 and 311 refused of 311, none accepted.
 
 ```red-first
 A15: red at 11ab33f: AssertionError: 129 != 0 : 129 of 129 members accepted
