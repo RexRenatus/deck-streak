@@ -247,7 +247,7 @@
         "[ -w \"$dir\" ] && [ -f \"$file\" ] || { echo \"deploy: the Caddy configuration was refused\"",
         "[ -f \"$file\" ] || { echo \"deploy: the Caddy configuration was refused\"",
         "the install refuses a Caddy directory it cannot write before its first write",
-        "test_deploy_scripts.TheCaddyInstall.test_a_read_only_caddy_directory_is_refused_before_any_write"
+        "test_deploy_scripts.TheCaddyInstall.test_every_directory_a_caddy_script_writes_or_undoes_is_checked_before_the_first_write"
       ],
       [
         "S12732-THE-INSTALL-REFUSES-A-CADDYFILE-THAT-IS-NOT-A-FILE",
@@ -263,7 +263,7 @@
         "[ -w \"$dir\" ] && [ -f \"$file\" ] || { echo \"deploy: the candidate Caddyfile could not be written\"",
         "[ -f \"$file\" ] || { echo \"deploy: the candidate Caddyfile could not be written\"",
         "the removal refuses a Caddy directory it cannot write before its first write",
-        "test_deploy_scripts.TheCaddyInstall.test_a_read_only_caddy_directory_is_refused_before_any_write"
+        "test_deploy_scripts.TheCaddyInstall.test_every_directory_a_caddy_script_writes_or_undoes_is_checked_before_the_first_write"
       ],
       [
         "S12734-THE-REMOVAL-REFUSES-A-CADDYFILE-THAT-IS-NOT-A-FILE",
