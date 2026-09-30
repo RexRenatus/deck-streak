@@ -1,9 +1,11 @@
 """SPEC-295: the repository declares its formal-check settings in `config/formal.json`, holding the
 fields the formal checker reads and no other, with each value and type as ADR-295 decided."""
 
+import ast
 import copy
 import json
 import unittest
+from pathlib import Path
 
 from _support import REPO, examined
 
@@ -38,7 +40,11 @@ FIELDS = [
 
 
 class Refused(Exception):
-    """The reader refuses the document."""
+    """The reader refuses the document, and names the arm that refused it."""
+
+    def __init__(self, arm, message):
+        super().__init__(message)
+        self.arm = arm
 
 
 def is_posint(value):
@@ -63,10 +69,9 @@ def get(doc, path):
 
 
 def read(doc):
-    """The test's own reader of the file: refuses an unknown field, a missing required one, a
-    value of the wrong kind, a non-positive integer and an axiom the declared list lacks."""
-    if not isinstance(doc, dict):
-        raise Refused("not an object")
+    """The test's own reader of the file: refuses an object level that is not an object, an
+    unknown field, a missing required one, a value of the wrong kind, a non-positive integer and
+    an axiom the declared list lacks. The root is the empty prefix, so it is an object level."""
     objects = {()} | {path[:depth] for path, _, _ in FIELDS for depth in range(1, len(path))}
     known = {path for path, _, _ in FIELDS}
     for prefix in objects:
@@ -74,32 +79,32 @@ def read(doc):
         if not present:
             continue
         if not isinstance(node, dict):
-            raise Refused(f"{'.'.join(prefix)} is not an object")
+            raise Refused("wrong-kind-object", f"{'.'.join(prefix)} is not an object")
         for key in node:
             child = prefix + (key,)
             if child not in known and child not in objects:
-                raise Refused(f"unknown field {'.'.join(child)}")
+                raise Refused("unknown-field", f"unknown field {'.'.join(child)}")
     for path, kind, required in FIELDS:
         value, present = get(doc, path)
         name = ".".join(path)
         if not present:
             if required:
-                raise Refused(f"missing required field {name}")
+                raise Refused("missing-field", f"missing required field {name}")
             continue
         if kind == "posint" and not is_posint(value):
-            raise Refused(f"{name} is not a positive integer")
+            raise Refused("posint", f"{name} is not a positive integer")
         if kind == "posint-map" and not (
             isinstance(value, dict) and all(is_posint(v) for v in value.values())
         ):
-            raise Refused(f"{name} is not a map of positive integers")
+            raise Refused("posint-map", f"{name} is not a map of positive integers")
         if kind == "strings":
             if not (isinstance(value, list) and all(isinstance(v, str) for v in value)):
-                raise Refused(f"{name} is not a list of strings")
+                raise Refused("strings-list", f"{name} is not a list of strings")
             extra = [v for v in value if v not in EXPECTED["axioms"]]
             if extra:
-                raise Refused(f"{name} adds {extra}")
+                raise Refused("axiom-added", f"{name} adds {extra}")
         if kind == "path" and not is_repo_relative(value):
-            raise Refused(f"{name} is not a repo-relative path")
+            raise Refused("path", f"{name} is not a repo-relative path")
     return doc
 
 
@@ -139,8 +144,11 @@ def without(path):
 
 
 def planted_faults():
-    """Every fault the table implies: an extra field at each object level, each required field
-    missing, each integer field at zero, negative and boolean, and an added axiom."""
+    """Every fault the table implies, one set per kind, so each refusal arm of the reader is
+    reached: an extra field and a non-object at each object level, each required field missing,
+    each integer field at zero, negative and boolean, a map of integers with a bad value or of
+    the wrong kind, a list of strings that is no list or holds a non-string, an added axiom and
+    each bad signers path."""
     faults = []
     for prefix in {()} | {p[:d] for p, _, _ in FIELDS for d in range(1, len(p))}:
         doc = copy.deepcopy(EXPECTED)
@@ -148,7 +156,10 @@ def planted_faults():
         for step in prefix:
             node = node[step]
         node["planted_field"] = 1
-        faults.append((f"extra field under {'.'.join(prefix) or 'root'}", doc))
+        label = ".".join(prefix) or "root"
+        faults.append((f"extra field under {label}", doc))
+        for bad in ([], 1):
+            faults.append((f"{label} = {bad!r}", bad if not prefix else with_value(prefix, bad)))
     for path, kind, required in FIELDS:
         name = ".".join(path)
         if required:
@@ -156,14 +167,37 @@ def planted_faults():
         if kind == "posint":
             for bad in (0, -1, True):
                 faults.append((f"{name} = {bad!r}", with_value(path, bad)))
+        if kind == "posint-map":
+            for bad in (0, -1, True):
+                faults.append((f"{name} holds {bad!r}", with_value(path, {"planted_entry": bad})))
+            for bad in ([], 1, "x"):
+                faults.append((f"{name} = {bad!r}", with_value(path, bad)))
         if kind == "strings":
             faults.append(
                 (f"{name} gains an axiom", with_value(path, EXPECTED["axioms"] + ["sorryAx"]))
+            )
+            for bad in ({axiom: 1 for axiom in EXPECTED["axioms"]}, 1, "propext"):
+                faults.append((f"{name} = {bad!r}", with_value(path, bad)))
+            faults.append(
+                (f"{name} holds a non-string", with_value(path, EXPECTED["axioms"] + [1]))
             )
         if kind == "path":
             for bad in ("/abs", "../up", "a/../b"):
                 faults.append((f"{name} = {bad!r}", with_value(path, bad)))
     return faults
+
+
+def reader_arms():
+    """Every refusal arm of `read`, found in its own source: each `raise Refused(<arm>, ...)`."""
+    source = ast.parse(Path(__file__).read_text(encoding="utf-8"))
+    reader = next(
+        n for n in ast.walk(source) if isinstance(n, ast.FunctionDef) and n.name == "read"
+    )
+    return [
+        node.exc.args[0].value
+        for node in ast.walk(reader)
+        if isinstance(node, ast.Raise) and isinstance(node.exc, ast.Call)
+    ]
 
 
 class FormalConfig(unittest.TestCase):
@@ -195,14 +229,22 @@ class FormalConfig(unittest.TestCase):
         self.assertIs(read(load()) is not None, True, "presence control: the file is admitted")
         faults = examined("planted faults", planted_faults())
         admitted = []
+        reached = set()
         for name, doc in faults:
             try:
                 read(doc)
-            except Refused:
+            except Refused as refusal:
+                reached.add(refusal.arm)
+                continue
+            except Exception as error:  # a crash is not a refusal
+                admitted.append(f"{name}: crashed with {error!r}")
                 continue
             admitted.append(name)
         self.assertEqual(admitted, [], "the reader admitted planted faults")
         self.assertGreaterEqual(len(faults), 20)
+        arms = examined("refusal arms of the reader", reader_arms())
+        self.assertEqual(set(arms) - reached, set(), "a refusal arm no planted fault reaches")
+        self.assertEqual(reached - set(arms), set())
 
 
 if __name__ == "__main__":
