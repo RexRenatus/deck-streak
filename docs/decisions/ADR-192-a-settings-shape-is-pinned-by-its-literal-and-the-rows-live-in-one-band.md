@@ -60,3 +60,18 @@ Setting impl(s)` and passes; `python3 scripts/mutation_rows.py prove` reads KILL
 ## More Information
 
 Issue #336; SPEC-192; ADR-057; SPEC-057 R20.
+
+## Amendment (2026-09-30): the band continues at S19300 to S19309
+
+SPEC-192's band, S19200 to S19299, is full, and five more rows pin arms of the guard's reader
+(SPEC-192 section 11). They take the ids S19300 to S19309, the continuation of this delivery's band,
+in `scripts/mutation-rows.d/S19300-S19399.json`, a file whose name spans S19300 to S19399 and that
+holds only ids from S19300 to S19309. The rows still live in the delivering SPEC's band, as the
+decision above requires; only the band's end moves. The file's name is a hundred wide because
+`scripts/mutation_rows.py` refuses a fragment that is not named for one SPEC's band,
+`S<NNN>00-S<NNN>99.json` (ADR-057), so a ten-wide `S19300-S19309.json` is refused.
+
+- Chosen: the continuation S19300 to S19309 in `scripts/mutation-rows.d/S19300-S19399.json`, because the rows are this delivery's work and the loader reads only a hundred-wide file name.
+- Rejected, a ten-wide file `scripts/mutation-rows.d/S19300-S19309.json`, because the loader refuses a fragment not named `S<NNN>00-S<NNN>99.json`.
+- Rejected, the five rows in another SPEC's band, because a band belongs to the delivery whose SPEC allots it (the second decision driver above).
+- Rejected, retiring rows of S19200 to S19299 to free their ids, because `retired` refuses a row that leaves while its target file stays, and each of those rows still kills a mutant.
