@@ -18,10 +18,18 @@
 #![deny(unused_must_use)]
 #![warn(missing_docs, clippy::all)]
 
+pub mod attempts;
+pub mod coverage;
 pub mod data_rights;
 pub mod day_set;
+pub mod form;
 pub mod gates;
+pub mod reading;
+pub mod repair;
+pub mod seed;
 pub mod state;
 pub mod store;
+pub mod studied;
 pub mod taxonomy;
 pub mod topic;
+pub mod xp;

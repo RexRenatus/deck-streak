@@ -127,3 +127,51 @@ async fn maintenance_prunes_the_agent_runs_past_their_retention() {
         .expect("the runs count");
     assert_eq!(kept, 2, "the runs within the retention survive");
 }
+
+#[tokio::test]
+async fn maintenance_prunes_reading_attempts_past_their_retention() {
+    use deck_streak_kernel::{StudyDay, UtcMillis};
+    use deck_streak_readings::attempts::{AttemptOutcome, AttemptRecord, AttemptTelemetry};
+    use deck_streak_readings::state::RunOutcome;
+    use deck_streak_readings::store::{ReadingRun, RunTrigger, SqliteReadings};
+    use deck_streak_readings::topic::TopicKey;
+
+    const DAY_MS: i64 = 86_400_000;
+    let directory = tempfile::tempdir().expect("a temporary directory");
+    let db = Db::open(&directory.path().join("deck_streak.db"))
+        .await
+        .expect("the database opens");
+    let store = SqliteReadings::new(db.clone());
+    let now = UtcMillis::from_epoch_millis(TODAY * DAY_MS);
+    let run = store
+        .record_run(&ReadingRun {
+            trigger: RunTrigger::Scheduled,
+            study_day: StudyDay::from_epoch_day(TODAY),
+            started_at: now,
+            finished_at: now,
+            outcome: RunOutcome::Resolved,
+            unmapped_decks: 0,
+        })
+        .await
+        .expect("a run");
+    for (number, age) in [(1_u32, 0_i64), (2, 89), (3, 91), (4, 200)] {
+        store
+            .record_attempt(&AttemptRecord {
+                run,
+                topic: TopicKey::parse(&format!("law/topic-{number}")).expect("a topic"),
+                study_day: StudyDay::from_epoch_day(TODAY),
+                attempt: 1,
+                repair_gate: None,
+                outcome: AttemptOutcome::Passed,
+                telemetry: AttemptTelemetry::default(),
+                at: UtcMillis::from_epoch_millis((TODAY - age) * DAY_MS),
+            })
+            .await
+            .expect("an attempt");
+    }
+    let done = upkeep(&db, FireDate::from_epoch_day(TODAY))
+        .await
+        .expect("the upkeep runs");
+    assert_eq!(done.reading_attempts_pruned, 2);
+    assert_eq!(store.attempts(run).await.expect("attempts").len(), 2);
+}

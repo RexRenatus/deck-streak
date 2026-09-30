@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 date: "2026-09-27"
 decision-makers: "@RexRenatus (owner), the DeckStreak architect"
 ---
@@ -54,7 +54,7 @@ decoding for anchors) and `unicode-segmentation` (word counts for reading minute
 ### Confirmation
 
 SPEC-046's tests, the goldens of `preread.py:anchor_for_note` and `preread.py:is_anchor_usable`, and
-the study-duties, learning-science, law-professors and language-mentors rows over the golden readings.
+the blocking rows of study-duties, learning-science, law-professors and language-mentors that apply to the daily-reading duty, over the golden readings. The rows that judge the drill and practice duties are enforced by the deliveries that add those goldens (#46, #52).
 
 ## What would make this wrong
 

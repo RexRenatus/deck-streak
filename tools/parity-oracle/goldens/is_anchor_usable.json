@@ -1,0 +1,218 @@
+{
+  "cases": [
+    {
+      "class": "empty",
+      "input": {
+        "anchor": ""
+      },
+      "output": false
+    },
+    {
+      "class": "below",
+      "input": {
+        "anchor": "aaaaaaa"
+      },
+      "output": false
+    },
+    {
+      "class": "bound",
+      "input": {
+        "anchor": "aaaaaaaa"
+      },
+      "output": true
+    },
+    {
+      "class": "above",
+      "input": {
+        "anchor": "aaaaaaaaa"
+      },
+      "output": true
+    },
+    {
+      "class": "full",
+      "input": {
+        "anchor": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "output": true
+    },
+    {
+      "class": "astral",
+      "input": {
+        "anchor": "\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00"
+      },
+      "output": false
+    },
+    {
+      "class": "astral",
+      "input": {
+        "anchor": "\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00"
+      },
+      "output": true
+    },
+    {
+      "class": "wide",
+      "input": {
+        "anchor": "\u65e5\u672c\u8a9e\u306e\u30c6\u30ad\u30b9\u30c8"
+      },
+      "output": true
+    },
+    {
+      "class": "wide",
+      "input": {
+        "anchor": "\u65e5\u672c\u8a9e\u306e\u30c6\u30ad\u30b9"
+      },
+      "output": false
+    },
+    {
+      "class": "combining",
+      "input": {
+        "anchor": "e\u0301e\u0301e\u0301e\u0301"
+      },
+      "output": true
+    },
+    {
+      "class": "combining",
+      "input": {
+        "anchor": "e\u0301e\u0301e\u0301"
+      },
+      "output": false
+    },
+    {
+      "class": "space",
+      "input": {
+        "anchor": "            "
+      },
+      "output": true
+    },
+    {
+      "input": {
+        "anchor": "\ud83d\ude00b \ud83d\ude00\ud83d\ude00a \u65e5ba\u00e9"
+      },
+      "output": true
+    },
+    {
+      "input": {
+        "anchor": "aab \u00e9\u65e5"
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "anchor": "\u00e9bb \ud83d\ude00\ud83d\ude00 "
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "anchor": "\u00e9a\ud83d\ude00\u65e5\u00e9"
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "anchor": "ab\u65e5bab"
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "anchor": "a"
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "anchor": " \ud83d\ude00 "
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "anchor": "\ud83d\ude00 b\u65e5"
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "anchor": "a"
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "anchor": "\ud83d\ude00bb\u65e5"
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "anchor": "aa\ud83d\ude00"
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "anchor": "  b\ud83d\ude00\ud83d\ude00 \u65e5\ud83d\ude00\u00e9"
+      },
+      "output": true
+    },
+    {
+      "input": {
+        "anchor": "\ud83d\ude00 "
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "anchor": "\u00e9bb\u00e9\ud83d\ude00a\ud83d\ude00b"
+      },
+      "output": true
+    },
+    {
+      "input": {
+        "anchor": "\u65e5\u00e9 ba\u65e5a\u65e5b\u00e9bb"
+      },
+      "output": true
+    },
+    {
+      "input": {
+        "anchor": "aa a\ud83d\ude00 \ud83d\ude00\ud83d\ude00\u00e9\u00e9\u65e5\ud83d\ude00a"
+      },
+      "output": true
+    },
+    {
+      "input": {
+        "anchor": "\ud83d\ude00ba\u00e9\u65e5 aa\u65e5\ud83d\ude00aa "
+      },
+      "output": true
+    },
+    {
+      "input": {
+        "anchor": "\ud83d\ude00a\ud83d\ude00 "
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "anchor": "aabb\u65e5\u65e5\ud83d\ude00aba"
+      },
+      "output": true
+    },
+    {
+      "input": {
+        "anchor": "\ud83d\ude00\u65e5b b\u00e9 a\u00e9a"
+      },
+      "output": true
+    }
+  ],
+  "function": "preread.is_anchor_usable",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "function",
+  "registry": "tools/parity-oracle/registry/spec_046.py",
+  "registry_sha256": "a9155c8bd8fce32c5cc90ed75842417b7faaa9cdbb8aa83bb20f3eb5820cbe43",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

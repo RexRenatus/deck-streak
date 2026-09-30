@@ -26,6 +26,9 @@ fn input() -> DutyInput<'static> {
             duty: "d",
             memory: "m",
             cards: "c",
+            form: "",
+            word_target: "",
+            repair: "",
         },
     }
 }

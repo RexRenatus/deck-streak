@@ -25,6 +25,7 @@
 pub mod analytics_routes;
 pub mod health;
 pub mod notifications_routes;
+pub mod readings_routes;
 pub mod router;
 pub mod serve;
 pub mod session_routes;

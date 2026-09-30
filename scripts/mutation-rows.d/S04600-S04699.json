@@ -1,0 +1,186 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S04601-THE-BAND-FLOOR-IS-800-WORDS",
+        "readings",
+        "src/form.rs",
+        "pub const BAND_FLOOR_WORDS: u32 = 800;",
+        "pub const BAND_FLOOR_WORDS: u32 = 799;",
+        "form::the_word_target_grows_with_new_cards_inside_the_band",
+        "the word band's floor is 800 words, and one new card sits on it (SPEC-046 R2, A1)"
+      ],
+      [
+        "S04602-THE-BAND-CEILING-IS-1500-WORDS",
+        "readings",
+        "src/form.rs",
+        "pub const BAND_CEILING_WORDS: u32 = 1500;",
+        "pub const BAND_CEILING_WORDS: u32 = 1501;",
+        "form::the_word_target_grows_with_new_cards_inside_the_band",
+        "the word band's ceiling is 1500 words however many cards are new (SPEC-046 R2, A1)"
+      ],
+      [
+        "S04603-EACH-NEW-CARD-ADDS-FIFTY-WORDS",
+        "readings",
+        "src/form.rs",
+        "pub const WORDS_PER_NEW_CARD: u32 = 50;",
+        "pub const WORDS_PER_NEW_CARD: u32 = 51;",
+        "form::the_word_target_grows_with_new_cards_inside_the_band",
+        "each further new card adds fifty words to the target (SPEC-046 R2, A1)"
+      ],
+      [
+        "S04604-AN-ANCHOR-IS-CUT-TO-48-CHARACTERS",
+        "readings",
+        "src/coverage.rs",
+        "pub const ANCHOR_MAX_CHARS: usize = 48;",
+        "pub const ANCHOR_MAX_CHARS: usize = 49;",
+        "coverage::the_anchor_bounds_are_pinned",
+        "an anchor is the note's text cut to 48 characters (SPEC-046 R6, A6)"
+      ],
+      [
+        "S04605-AN-ANCHOR-IS-USABLE-AT-8-CHARACTERS",
+        "readings",
+        "src/coverage.rs",
+        "pub const ANCHOR_MIN_USABLE_CHARS: usize = 8;",
+        "pub const ANCHOR_MIN_USABLE_CHARS: usize = 9;",
+        "coverage::the_anchor_bounds_are_pinned",
+        "an anchor is usable at 8 characters or more (SPEC-046 R6, A6)"
+      ],
+      [
+        "S04606-A-READING-ID-KEEPS-32-HEX-DIGITS",
+        "readings",
+        "src/reading.rs",
+        "pub const ID_HEX_DIGITS: usize = 32;",
+        "pub const ID_HEX_DIGITS: usize = 31;",
+        "minutes::the_reading_id_is_32_hex_digits_of_the_topic_the_first_day_and_the_digest",
+        "a reading's id is the first 32 hex digits of the digest (SPEC-046 R9, A16)"
+      ],
+      [
+        "S04607-A-LEARNER-READS-200-WORDS-A-MINUTE",
+        "readings",
+        "src/reading.rs",
+        "pub const WORDS_PER_MINUTE: u32 = 200;",
+        "pub const WORDS_PER_MINUTE: u32 = 201;",
+        "minutes::reading_minutes_count_words_at_200_per_minute",
+        "minutes are counted at 200 words a minute (SPEC-046 R9, A16)"
+      ],
+      [
+        "S04608-CHINESE-COUNTS-15-TENTHS-PER-WORD",
+        "readings",
+        "src/reading.rs",
+        "const ZH_CHARS_PER_WORD_TENTHS: u32 = 15;",
+        "const ZH_CHARS_PER_WORD_TENTHS: u32 = 16;",
+        "minutes::chinese_and_japanese_count_characters_at_a_word_rate",
+        "Chinese characters count at a word rate of 1.5 to a word (SPEC-046 R9, A16)"
+      ],
+      [
+        "S04609-JAPANESE-COUNTS-20-TENTHS-PER-WORD",
+        "readings",
+        "src/reading.rs",
+        "const JA_CHARS_PER_WORD_TENTHS: u32 = 20;",
+        "const JA_CHARS_PER_WORD_TENTHS: u32 = 21;",
+        "minutes::chinese_and_japanese_count_characters_at_a_word_rate",
+        "Japanese characters count at a word rate of 2 to a word (SPEC-046 R9, A16)"
+      ],
+      [
+        "S04610-AN-ATTEMPT-IS-KEPT-NINETY-DAYS",
+        "readings",
+        "src/attempts.rs",
+        "pub const RETAIN_DAYS: i64 = 90;",
+        "pub const RETAIN_DAYS: i64 = 91;",
+        "attempts::an_attempt_is_kept_for_exactly_ninety_whole_days",
+        "reading_attempts are retained 90 days (SPEC-046 R10, A17)"
+      ],
+      [
+        "S04611-A-RETENTION-DAY-IS-86400000-MILLISECONDS",
+        "readings",
+        "src/attempts.rs",
+        "const DAY_MILLIS: i64 = 86_400_000;",
+        "const DAY_MILLIS: i64 = 86_400_001;",
+        "attempts::an_attempt_is_kept_for_exactly_ninety_whole_days",
+        "the retention cutoff counts whole days of 86 400 000 milliseconds (SPEC-046 R10)"
+      ],
+      [
+        "S04612-A-TOPIC-GETS-TWO-ATTEMPTS",
+        "readings",
+        "src/repair.rs",
+        "pub const MAX_ATTEMPTS: u32 = 2;",
+        "pub const MAX_ATTEMPTS: u32 = 3;",
+        "repair::a_topic_gets_the_first_attempt_and_exactly_one_repair",
+        "a topic gets the first attempt and one repair, never more (SPEC-046 R7, A8)"
+      ],
+      [
+        "S04613-A-SECOND-FAILURE-ENDS-THE-TOPIC",
+        "readings",
+        "src/repair.rs",
+        "    if attempt >= MAX_ATTEMPTS {",
+        "    if attempt > MAX_ATTEMPTS {",
+        "repair::a_topic_gets_the_first_attempt_and_exactly_one_repair",
+        "the attempt that reaches the cap ends the topic instead of asking for another repair (SPEC-046 R7, A8)"
+      ],
+      [
+        "S04614-A-QUOTE-IS-A-LINE-OF-16-CHARACTERS",
+        "readings",
+        "src/repair.rs",
+        "const QUOTE_MIN_CHARS: usize = 16;",
+        "const QUOTE_MIN_CHARS: usize = 17;",
+        "repair::a_finding_that_repeats_a_long_rejected_line_is_dropped",
+        "a finding that repeats a rejected line of 16 characters or more is not sent back (SPEC-046 R7, A14)"
+      ],
+      [
+        "S04615-THE-BAND-GATE-FOLLOWS-THE-ANCHORS",
+        "readings",
+        "src/coverage.rs",
+        "    if let Some(p) = pack_of(&[BAND_CLASS]) {",
+        "    if let Some(p) = pack_of(&[\"no-such-class\"]) {",
+        "coverage::the_first_failure_decides_in_the_gate_order",
+        "the band gate is the pack's reading-length class, ranked after the anchors and before the list markers (SPEC-046 R6, A5)"
+      ],
+      [
+        "S04616-THE-ROSTER-GATE-READS-THE-PACK-ROSTER-CLASSES",
+        "readings",
+        "src/coverage.rs",
+        "pub const ROSTER_CLASSES: [&str; 2] = [\"citations-resolve\", \"i1-glosses\"];",
+        "pub const ROSTER_CLASSES: [&str; 2] = [\"citations-resolve\", \"no-such-class\"];",
+        "coverage::the_first_failure_decides_in_the_gate_order",
+        "the roster gate is the pack's citations-resolve and i1-glosses classes, ranked before the anchors (SPEC-046 R6, A5)"
+      ],
+      [
+        "S04617-THE-LIST-MARKERS-COME-BEFORE-THE-CONTRACT",
+        "readings",
+        "src/coverage.rs",
+        "    if !own.no_list_markers.is_empty() {",
+        "    if false {",
+        "coverage::the_first_failure_decides_in_the_gate_order",
+        "a list marker is refused before the contract's own class is read (SPEC-046 R6, A5)"
+      ],
+      [
+        "S04618-A-COMPLETE-GATE-COMES-FIRST",
+        "readings",
+        "src/coverage.rs",
+        "    if !own.complete.is_empty() {",
+        "    if false {",
+        "coverage::the_first_failure_decides_in_the_gate_order",
+        "an incomplete reading fails the complete gate before any other (SPEC-046 R6, A5)"
+      ],
+      [
+        "S04619-THE-ANCHORS-GATE-FOLLOWS-THE-ROSTER",
+        "readings",
+        "src/coverage.rs",
+        "    if !own.anchors.is_empty() {",
+        "    if false {",
+        "coverage::the_first_failure_decides_in_the_gate_order",
+        "a reading missing an anchor fails the anchors gate after the roster and before the band (SPEC-046 R6, A5)"
+      ],
+      [
+        "S04620-AN-UNAVAILABLE-VERDICT-IS-NOT-RETRIED",
+        "coordination",
+        "src/readings/generate.rs",
+        "                return Ok(TopicState::Failed(FailedReason::AgentUnavailable(cause)));",
+        "                continue;",
+        "readings_generate::an_unavailable_route_ends_the_topic_with_no_retry",
+        "an unavailable verdict ends the topic failed:agent_unavailable with no retry (SPEC-046 R7, A11)"
+      ]
+    ]
+  }
+}

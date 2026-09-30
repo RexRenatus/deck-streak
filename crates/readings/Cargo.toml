@@ -21,6 +21,10 @@ serde_json.workspace = true
 # SPEC-045 R3: a topic's digest is SHA-256. sha2 entered the workspace for identity (ADR-006, on
 # ADR-024's 0.11 line); ADR-045 admits it to readings for the day-set digest.
 sha2.workspace = true
+# ADR-046: the anchor normaliser (entities, NFKC) and the word counter behind the band and the minutes.
+html-escape.workspace = true
+unicode-normalization.workspace = true
+unicode-segmentation.workspace = true
 # ADR-003: the topic days and runs are written through the kernel's Db, their queries checked into
 # .sqlx/, and every refusal is this context's own error type, as every library's (CLAUDE.md).
 sqlx.workspace = true

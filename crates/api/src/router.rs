@@ -46,9 +46,12 @@ use tower_http::timeout::TimeoutLayer;
 use tower_http::trace::{DefaultOnResponse, TraceLayer};
 use tracing::Level;
 
+use deck_streak_coordination::readings::read_tap::ReadTapPort;
+
 use crate::analytics_routes;
 use crate::health::{self, Readiness};
 use crate::notifications_routes;
+use crate::readings_routes;
 use crate::session_routes::{self, OwnerAccess};
 use crate::xp_routes;
 
@@ -65,11 +68,24 @@ pub const BODY_LIMIT_BYTES: usize = 2 * 1024 * 1024;
 pub const REQUEST_ID_HEADER: &str = "x-request-id";
 
 /// What the API's handlers share.
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct ApiState {
     readiness: Readiness,
     owner: Option<OwnerAccess>,
     law_tiers: Option<Arc<dyn LawTierSource>>,
+    readings: Option<Arc<dyn ReadTapPort>>,
+}
+
+impl std::fmt::Debug for ApiState {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter
+            .debug_struct("ApiState")
+            .field("readiness", &self.readiness)
+            .field("owner", &self.owner)
+            .field("law_tiers", &self.law_tiers.is_some())
+            .field("readings", &self.readings.is_some())
+            .finish()
+    }
 }
 
 impl ApiState {
@@ -80,6 +96,7 @@ impl ApiState {
             readiness,
             owner: None,
             law_tiers: None,
+            readings: None,
         }
     }
 
@@ -97,6 +114,13 @@ impl ApiState {
         self
     }
 
+    /// This state, serving the owner's read tap over `tap` too (SPEC-047).
+    #[must_use]
+    pub fn with_readings(mut self, tap: Arc<dyn ReadTapPort>) -> Self {
+        self.readings = Some(tap);
+        self
+    }
+
     /// Whether the API can answer from its database.
     #[must_use]
     pub const fn readiness(&self) -> &Readiness {
@@ -110,8 +134,10 @@ impl ApiState {
 /// owner's credentials. A router built for the health routes alone needs none.
 pub fn router(state: ApiState) -> Router {
     let owner = state.owner.clone();
+    let owner_for_readings = state.owner.clone();
     let readiness = state.readiness.clone();
     let law_tiers = state.law_tiers.clone();
+    let readings = state.readings.clone();
     let routes = health::routes().with_state(state);
     let routes = match owner {
         Some(access) => routes
@@ -124,6 +150,10 @@ pub fn router(state: ApiState) -> Router {
             .merge(session_routes::routes(access.clone()))
             .merge(notifications_routes::routes(access, readiness)),
         None => routes,
+    };
+    let routes = match (owner_for_readings, readings) {
+        (Some(access), Some(tap)) => routes.merge(readings_routes::routes(access, tap)),
+        _ => routes,
     };
     layered(routes)
 }

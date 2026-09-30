@@ -1,0 +1,134 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT id, topic, study_day, generated_at, card_ids, read_at, studied_count,\n                      studied_verdict, studied_at, vault_tick\n               FROM readings WHERE studied_verdict <> 'studied'\n               ORDER BY generated_at, rowid",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "readings",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "name": "topic",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "readings",
+            "name": "topic"
+          }
+        }
+      },
+      {
+        "name": "study_day",
+        "ordinal": 2,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "readings",
+            "name": "study_day"
+          }
+        }
+      },
+      {
+        "name": "generated_at",
+        "ordinal": 3,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "readings",
+            "name": "generated_at"
+          }
+        }
+      },
+      {
+        "name": "card_ids",
+        "ordinal": 4,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "readings",
+            "name": "card_ids"
+          }
+        }
+      },
+      {
+        "name": "read_at",
+        "ordinal": 5,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "readings",
+            "name": "read_at"
+          }
+        }
+      },
+      {
+        "name": "studied_count",
+        "ordinal": 6,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "readings",
+            "name": "studied_count"
+          }
+        }
+      },
+      {
+        "name": "studied_verdict",
+        "ordinal": 7,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "readings",
+            "name": "studied_verdict"
+          }
+        }
+      },
+      {
+        "name": "studied_at",
+        "ordinal": 8,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "readings",
+            "name": "studied_at"
+          }
+        }
+      },
+      {
+        "name": "vault_tick",
+        "ordinal": 9,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "readings",
+            "name": "vault_tick"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      true,
+      false
+    ]
+  },
+  "hash": "29abada65da944774c7d35a686f4e3db2cd5f29df24a059cc30286f23884aec1"
+}

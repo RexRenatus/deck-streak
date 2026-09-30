@@ -1,0 +1,278 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT id, topic, study_day, digest, persona, text, word_count,\n                          reading_minutes, new_cards, note_count, card_ids, generated_at, version,\n                          vault_status, vault_path, carried_nights, read_at, studied_count,\n                          studied_verdict, studied_at, vault_tick, created_at\n                   FROM readings ORDER BY generated_at, rowid",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "readings",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "name": "topic",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "readings",
+            "name": "topic"
+          }
+        }
+      },
+      {
+        "name": "study_day",
+        "ordinal": 2,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "readings",
+            "name": "study_day"
+          }
+        }
+      },
+      {
+        "name": "digest",
+        "ordinal": 3,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "readings",
+            "name": "digest"
+          }
+        }
+      },
+      {
+        "name": "persona",
+        "ordinal": 4,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "readings",
+            "name": "persona"
+          }
+        }
+      },
+      {
+        "name": "text",
+        "ordinal": 5,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "readings",
+            "name": "text"
+          }
+        }
+      },
+      {
+        "name": "word_count",
+        "ordinal": 6,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "readings",
+            "name": "word_count"
+          }
+        }
+      },
+      {
+        "name": "reading_minutes",
+        "ordinal": 7,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "readings",
+            "name": "reading_minutes"
+          }
+        }
+      },
+      {
+        "name": "new_cards",
+        "ordinal": 8,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "readings",
+            "name": "new_cards"
+          }
+        }
+      },
+      {
+        "name": "note_count",
+        "ordinal": 9,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "readings",
+            "name": "note_count"
+          }
+        }
+      },
+      {
+        "name": "card_ids",
+        "ordinal": 10,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "readings",
+            "name": "card_ids"
+          }
+        }
+      },
+      {
+        "name": "generated_at",
+        "ordinal": 11,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "readings",
+            "name": "generated_at"
+          }
+        }
+      },
+      {
+        "name": "version",
+        "ordinal": 12,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "readings",
+            "name": "version"
+          }
+        }
+      },
+      {
+        "name": "vault_status",
+        "ordinal": 13,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "readings",
+            "name": "vault_status"
+          }
+        }
+      },
+      {
+        "name": "vault_path",
+        "ordinal": 14,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "readings",
+            "name": "vault_path"
+          }
+        }
+      },
+      {
+        "name": "carried_nights",
+        "ordinal": 15,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "readings",
+            "name": "carried_nights"
+          }
+        }
+      },
+      {
+        "name": "read_at",
+        "ordinal": 16,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "readings",
+            "name": "read_at"
+          }
+        }
+      },
+      {
+        "name": "studied_count",
+        "ordinal": 17,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "readings",
+            "name": "studied_count"
+          }
+        }
+      },
+      {
+        "name": "studied_verdict",
+        "ordinal": 18,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "readings",
+            "name": "studied_verdict"
+          }
+        }
+      },
+      {
+        "name": "studied_at",
+        "ordinal": 19,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "readings",
+            "name": "studied_at"
+          }
+        }
+      },
+      {
+        "name": "vault_tick",
+        "ordinal": 20,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "readings",
+            "name": "vault_tick"
+          }
+        }
+      },
+      {
+        "name": "created_at",
+        "ordinal": 21,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "readings",
+            "name": "created_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      true,
+      false,
+      false,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "6b4380d75da684af1be5b6b882f4729def7b12aada737278f83e6fd5caaf2b11"
+}

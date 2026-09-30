@@ -21,7 +21,8 @@ use deck_streak_ingest::reader::CollectionReader;
 use deck_streak_ingest::settings::{STATE_DIRECTORY, SYNC_ENDPOINT, ScopeSettings, SyncSettings};
 use deck_streak_ingest::sync_runs::{ReasonCode, SqliteSyncRuns, SyncRun, SyncRunStore, Trigger};
 use deck_streak_kernel::{
-    Db, Environment, ManualClock, Offload, OffloadWorkers, StudyDay, StudyDayRule, UtcMillis,
+    Db, Environment, Hour, ManualClock, Offload, OffloadWorkers, StudyDay, StudyDayRule, UtcMillis,
+    UtcOffset,
 };
 use deck_streak_readings::day_set::EngineQueue;
 use deck_streak_readings::state::{CouldNotTell, RunOutcome, TopicState};
@@ -89,6 +90,11 @@ impl Deployment {
 
     /// The use case's parts, reading the taxonomy at `taxonomy`.
     fn parts(&self, taxonomy: Option<&Path>) -> ResolveParts<RslibEngine> {
+        self.parts_with(taxonomy, StudyDayRule::default())
+    }
+
+    /// The use case's parts, configured with `rule`.
+    fn parts_with(&self, taxonomy: Option<&Path>, rule: StudyDayRule) -> ResolveParts<RslibEngine> {
         let offload = Offload::new(
             OffloadWorkers::new(1).expect("one worker"),
             self.clock.clone(),
@@ -107,7 +113,7 @@ impl Deployment {
             self.store.clone(),
             taxonomy.map(Path::to_path_buf),
             self.clock.clone(),
-            StudyDayRule::default(),
+            rule,
         )
     }
 
@@ -251,4 +257,81 @@ async fn an_unreadable_copy_records_a_rail_that_could_not_open_it() {
     );
     assert_eq!(days.len(), 0, "no topic is named without a read");
     deployment.db.close().await;
+}
+
+/// The UTC instant study day `day` begins at, written from the definition.
+fn begins(day: i64, hour: i64, offset: i64) -> i64 {
+    day * DAY_MS + hour * HOUR_MS - offset * 60_000
+}
+
+/// Answers a card at `at` in the copy's review log, as a study review the pause gate counts.
+async fn review_at(deployment: &Deployment, at: i64) {
+    use sqlx::Connection;
+    let options =
+        sqlx::sqlite::SqliteConnectOptions::new().filename(deployment.settings.copy_path());
+    let mut connection = sqlx::sqlite::SqliteConnection::connect_with(&options)
+        .await
+        .expect("the copy opens");
+    sqlx::query(
+        "INSERT INTO cards (id, nid, did, ord, mod, usn, type, queue, due, ivl, factor, reps, \
+         lapses, left, odue, odid, flags, data) \
+         VALUES (1, 1, 1, 0, 0, 0, 2, 2, 1, 1, 2500, 1, 0, 0, 0, 0, 0, '')",
+    )
+    .execute(&mut connection)
+    .await
+    .expect("a card of the default deck");
+    sqlx::query(
+        "INSERT INTO revlog (id, cid, usn, ease, ivl, lastIvl, factor, time, type) \
+         VALUES (?, 1, 0, 3, 1, 0, 2500, 1000, 1)",
+    )
+    .bind(at)
+    .execute(&mut connection)
+    .await
+    .expect("a review");
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn the_resolution_reads_the_pause_window_and_the_day_in_the_configured_rule() {
+    let mut examined = 0;
+    for offset in [-720_i64, -300, -210, 0, 330, 345, 540, 840] {
+        for hour in [0_i64, 4] {
+            let rule = StudyDayRule::new(
+                Hour::new(u8::try_from(hour).expect("an hour")).expect("an hour"),
+                UtcOffset::from_minutes(i16::try_from(offset).expect("minutes"))
+                    .expect("an offset"),
+            );
+            let today = begins(20_002, hour, offset) + HOUR_MS;
+            // The window is study days 20001 and 20000: a review at the rollover that starts 20000
+            // is inside it, and one a millisecond earlier is not.
+            for (at, outcome) in [
+                (begins(20_000, hour, offset), RunOutcome::Resolved),
+                (begins(20_000, hour, offset) - 1, RunOutcome::Paused),
+            ] {
+                let deployment = Deployment::new().await;
+                deployment.synced(Ok(())).await;
+                review_at(&deployment, at).await;
+                deployment.clock.set(UtcMillis::from_epoch_millis(today));
+                let Resolved { resolution, .. } = resolve_study_day(
+                    &deployment.parts_with(Some(&deployment.taxonomy), rule),
+                    RunTrigger::Owner,
+                )
+                .await
+                .expect("the resolution is recorded");
+                assert_eq!(
+                    resolution.outcome, outcome,
+                    "offset {offset}, hour {hour}, review {at}: the pause window is read in the configured rule"
+                );
+                let runs = deployment.store.runs().await.expect("the runs");
+                assert_eq!(
+                    runs[0].1.study_day,
+                    StudyDay::from_epoch_day(20_002),
+                    "offset {offset}, hour {hour}: the run is dated by the configured day"
+                );
+                deployment.db.close().await;
+            }
+            examined += 1;
+        }
+    }
+    println!("examined {examined} configured rule(s)");
+    assert_eq!(examined, 16, "eight offsets by two rollover hours");
 }

@@ -4,6 +4,10 @@ Write today's reading for the learner, in the persona's voice and following your
 
 {{duty_rules}}
 
+{{form}}
+
+The reading's prose aims at {{word_target}} words.
+
 The learner's memory for this subject, as the engine read it:
 <untrusted source="memory">
 {{memory|json}}
@@ -13,3 +17,5 @@ Today's new cards, as the learner's deck stores them:
 <untrusted source="cards">
 {{cards|json}}
 </untrusted>
+
+{{repair}}

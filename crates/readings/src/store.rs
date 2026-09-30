@@ -13,7 +13,9 @@
 use deck_streak_kernel::{Db, KernelError, StudyDay, UtcMillis};
 
 use crate::day_set::{StudyDayResolution, TopicEnd};
+use crate::reading::ReadingId;
 use crate::state::{Class, CouldNotTell, RunOutcome, TopicState};
+use crate::studied::Verdict;
 use crate::topic::TopicKey;
 
 /// What asked for a resolution.
@@ -136,7 +138,7 @@ fn id_list(ids: &[i64]) -> String {
 /// The readings' tables in the service's own database.
 #[derive(Clone, Debug)]
 pub struct SqliteReadings {
-    db: Db,
+    pub(crate) db: Db,
 }
 
 impl SqliteReadings {
@@ -416,4 +418,484 @@ async fn upsert_topic_day(
     .execute(write)
     .await?;
     Ok(())
+}
+
+/// Whether a reading's vault copy was written (SPEC-046 R9).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum VaultStatus {
+    /// Written, at this path.
+    Written(String),
+    /// The write failed; the reading is kept.
+    Failed,
+}
+
+/// A reading to store.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct NewReading {
+    /// Its id.
+    pub id: ReadingId,
+    /// Its topic.
+    pub topic: TopicKey,
+    /// The study day it was first generated for.
+    pub study_day: StudyDay,
+    /// The day set's digest.
+    pub digest: String,
+    /// The persona that wrote it.
+    pub persona: String,
+    /// The text.
+    pub text: String,
+    /// Its word count.
+    pub word_count: u32,
+    /// Its minutes.
+    pub minutes: u32,
+    /// The new cards it covers.
+    pub card_ids: Vec<i64>,
+    /// The distinct notes it was written from.
+    pub note_count: u32,
+    /// When it was generated.
+    pub generated_at: UtcMillis,
+    /// The vault copy.
+    pub vault: VaultStatus,
+}
+
+/// A stored reading.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct StoredReading {
+    /// What was stored.
+    pub reading: NewReading,
+    /// The nights the reading was carried unchanged.
+    pub carried_nights: u32,
+}
+
+impl SqliteReadings {
+    /// Stores `reading`.
+    ///
+    /// # Errors
+    ///
+    /// [`KernelError::Database`] when the write fails.
+    pub async fn store_reading(&self, reading: &NewReading) -> Result<(), KernelError> {
+        let id = reading.id.as_str();
+        let topic = reading.topic.as_str();
+        let study_day = reading.study_day.epoch_day();
+        let word_count = i64::from(reading.word_count);
+        let minutes = i64::from(reading.minutes);
+        let new_cards = i64::try_from(reading.card_ids.len()).unwrap_or(i64::MAX);
+        let note_count = i64::from(reading.note_count);
+        let card_ids = id_list(&reading.card_ids);
+        let generated_at = reading.generated_at.epoch_millis();
+        let (status, path) = match &reading.vault {
+            VaultStatus::Written(path) => ("written", Some(path.as_str())),
+            VaultStatus::Failed => ("vault_write_failed", None),
+        };
+        let mut write = self.db.write().await?;
+        sqlx::query!(
+            "INSERT INTO readings \
+             (id, topic, study_day, digest, persona, text, word_count, reading_minutes, new_cards, \
+              note_count, card_ids, generated_at, version, vault_status, vault_path, created_at) \
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, 1, ?13, ?14, ?12)",
+            id,
+            topic,
+            study_day,
+            reading.digest,
+            reading.persona,
+            reading.text,
+            word_count,
+            minutes,
+            new_cards,
+            note_count,
+            card_ids,
+            generated_at,
+            status,
+            path
+        )
+        .execute(&mut *write)
+        .await?;
+        write.commit().await?;
+        Ok(())
+    }
+
+    /// The newest stored reading of `topic`.
+    ///
+    /// # Errors
+    ///
+    /// [`StoreError`] when the read fails, or the row was not written here.
+    pub async fn latest_reading(
+        &self,
+        topic: &TopicKey,
+    ) -> Result<Option<StoredReading>, StoreError> {
+        let topic = topic.as_str();
+        let row = sqlx::query!(
+            r#"SELECT id, topic, study_day, digest, persona, text, word_count, reading_minutes,
+                      note_count, card_ids, generated_at, vault_status, vault_path, carried_nights
+               FROM readings WHERE topic = ?1 ORDER BY generated_at DESC, rowid DESC LIMIT 1"#,
+            topic
+        )
+        .fetch_optional(self.db.reader())
+        .await?;
+        row.map(|row| {
+            let unreadable = || StoreError::Unreadable {
+                table: "readings",
+                id: 0,
+            };
+            read_reading(
+                &row.id,
+                &row.topic,
+                row.study_day,
+                row.digest,
+                row.persona,
+                row.text,
+                (row.word_count, row.reading_minutes, row.note_count),
+                &row.card_ids,
+                row.generated_at,
+                (&row.vault_status, row.vault_path),
+                row.carried_nights,
+            )
+            .ok_or_else(unreadable)
+        })
+        .transpose()
+    }
+
+    /// Carries the reading `id` one more night.
+    ///
+    /// # Errors
+    ///
+    /// [`KernelError::Database`] when the write fails.
+    pub async fn carry_reading(&self, id: &ReadingId) -> Result<(), KernelError> {
+        let id = id.as_str();
+        let mut write = self.db.write().await?;
+        sqlx::query!(
+            "UPDATE readings SET carried_nights = carried_nights + 1 WHERE id = ?1",
+            id
+        )
+        .execute(&mut *write)
+        .await?;
+        write.commit().await?;
+        Ok(())
+    }
+
+    /// Every stored reading, oldest first.
+    ///
+    /// # Errors
+    ///
+    /// [`StoreError`] when the read fails, or a row was not written here.
+    pub async fn readings(&self) -> Result<Vec<StoredReading>, StoreError> {
+        let rows = sqlx::query!(
+            r#"SELECT id, topic, study_day, digest, persona, text, word_count, reading_minutes,
+                      note_count, card_ids, generated_at, vault_status, vault_path, carried_nights
+               FROM readings ORDER BY generated_at, rowid"#
+        )
+        .fetch_all(self.db.reader())
+        .await?;
+        rows.into_iter()
+            .map(|row| {
+                read_reading(
+                    &row.id,
+                    &row.topic,
+                    row.study_day,
+                    row.digest,
+                    row.persona,
+                    row.text,
+                    (row.word_count, row.reading_minutes, row.note_count),
+                    &row.card_ids,
+                    row.generated_at,
+                    (&row.vault_status, row.vault_path),
+                    row.carried_nights,
+                )
+                .ok_or(StoreError::Unreadable {
+                    table: "readings",
+                    id: 0,
+                })
+            })
+            .collect()
+    }
+
+    /// Every topic the readings' record has named, in a topic day or a reading.
+    ///
+    /// # Errors
+    ///
+    /// [`StoreError`] when the read fails.
+    pub async fn known_topics(&self) -> Result<Vec<TopicKey>, StoreError> {
+        let rows = sqlx::query!(
+            r#"SELECT topic AS "topic!" FROM (
+                   SELECT topic FROM reading_topic_days UNION SELECT topic FROM readings
+               ) ORDER BY topic"#
+        )
+        .fetch_all(self.db.reader())
+        .await?;
+        Ok(rows
+            .into_iter()
+            .filter_map(|row| TopicKey::parse(&row.topic))
+            .collect())
+    }
+}
+
+/// A `readings` row as a stored reading, or `None` when a column holds what this context never
+/// wrote.
+#[allow(clippy::too_many_arguments, reason = "one row's columns, read once")]
+fn read_reading(
+    id: &str,
+    topic: &str,
+    study_day: i64,
+    digest: String,
+    persona: String,
+    text: String,
+    counts: (i64, i64, i64),
+    card_ids: &str,
+    generated_at: i64,
+    vault: (&str, Option<String>),
+    carried_nights: i64,
+) -> Option<StoredReading> {
+    let (word_count, minutes, note_count) = counts;
+    let vault = match vault {
+        ("written", Some(path)) => VaultStatus::Written(path),
+        ("vault_write_failed", None) => VaultStatus::Failed,
+        _ => return None,
+    };
+    Some(StoredReading {
+        reading: NewReading {
+            id: ReadingId::parse(id)?,
+            topic: TopicKey::parse(topic)?,
+            study_day: StudyDay::from_epoch_day(study_day),
+            digest,
+            persona,
+            text,
+            word_count: u32::try_from(word_count).ok()?,
+            minutes: u32::try_from(minutes).ok()?,
+            card_ids: serde_json::from_str(card_ids).ok()?,
+            note_count: u32::try_from(note_count).ok()?,
+            generated_at: UtcMillis::from_epoch_millis(generated_at),
+            vault,
+        },
+        carried_nights: u32::try_from(carried_nights).ok()?,
+    })
+}
+
+/// Whether the tap's vault tick was written (SPEC-047 R8).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum VaultTick {
+    /// No tap yet, so nothing to write.
+    None,
+    /// The `I read it` line was ticked.
+    Written,
+    /// The tap happened and the tick failed; the next tap retries it.
+    Pending,
+}
+
+impl VaultTick {
+    /// The stored text.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::None => "none",
+            Self::Written => "written",
+            Self::Pending => "pending",
+        }
+    }
+
+    /// The tick state a stored text is.
+    #[must_use]
+    pub fn parse(text: &str) -> Option<Self> {
+        match text {
+            "none" => Some(Self::None),
+            "written" => Some(Self::Written),
+            "pending" => Some(Self::Pending),
+            _ => None,
+        }
+    }
+}
+
+/// A stored reading's read line and studied measure (SPEC-047 R8, R9).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ReadingProgress {
+    /// Its id.
+    pub id: ReadingId,
+    /// Its topic.
+    pub topic: TopicKey,
+    /// The study day it was generated for.
+    pub study_day: StudyDay,
+    /// When it was generated.
+    pub generated_at: UtcMillis,
+    /// The covered cards.
+    pub card_ids: Vec<i64>,
+    /// When the owner tapped it, if they did.
+    pub read_at: Option<UtcMillis>,
+    /// How many covered cards the last settle found studied.
+    pub studied_count: u32,
+    /// Its verdict as of the last settle.
+    pub verdict: Verdict,
+    /// When it turned studied.
+    pub studied_at: Option<UtcMillis>,
+    /// Whether the tap's vault tick was written.
+    pub vault_tick: VaultTick,
+}
+
+impl SqliteReadings {
+    /// The read and studied state of the reading `id`, or `None` when no such reading is stored.
+    ///
+    /// # Errors
+    ///
+    /// [`StoreError`] when the read fails, or the row was not written here.
+    pub async fn progress(&self, id: &ReadingId) -> Result<Option<ReadingProgress>, StoreError> {
+        let id = id.as_str();
+        let row = sqlx::query!(
+            r#"SELECT id, topic, study_day, generated_at, card_ids, read_at, studied_count,
+                      studied_verdict, studied_at, vault_tick
+               FROM readings WHERE id = ?1"#,
+            id
+        )
+        .fetch_optional(self.db.reader())
+        .await?;
+        row.map(|row| {
+            read_progress(
+                &row.id,
+                &row.topic,
+                (row.study_day, row.generated_at),
+                &row.card_ids,
+                (row.read_at, row.studied_at),
+                row.studied_count,
+                (&row.studied_verdict, &row.vault_tick),
+            )
+            .ok_or(StoreError::Unreadable {
+                table: "readings",
+                id: 0,
+            })
+        })
+        .transpose()
+    }
+
+    /// The state of every reading whose verdict is not yet `studied`, oldest first.
+    ///
+    /// # Errors
+    ///
+    /// [`StoreError`] when the read fails, or a row was not written here.
+    pub async fn unsettled(&self) -> Result<Vec<ReadingProgress>, StoreError> {
+        let rows = sqlx::query!(
+            r#"SELECT id, topic, study_day, generated_at, card_ids, read_at, studied_count,
+                      studied_verdict, studied_at, vault_tick
+               FROM readings WHERE studied_verdict <> 'studied'
+               ORDER BY generated_at, rowid"#
+        )
+        .fetch_all(self.db.reader())
+        .await?;
+        rows.into_iter()
+            .map(|row| {
+                read_progress(
+                    &row.id,
+                    &row.topic,
+                    (row.study_day, row.generated_at),
+                    &row.card_ids,
+                    (row.read_at, row.studied_at),
+                    row.studied_count,
+                    (&row.studied_verdict, &row.vault_tick),
+                )
+                .ok_or(StoreError::Unreadable {
+                    table: "readings",
+                    id: 0,
+                })
+            })
+            .collect()
+    }
+
+    /// Sets `read_at` of the reading `id` to `at` when it is unset; true when this call set it.
+    ///
+    /// The first writer wins: the update names `read_at IS NULL`, so a second tap can never move
+    /// the instant.
+    ///
+    /// # Errors
+    ///
+    /// [`KernelError::Database`] when the write fails.
+    pub async fn mark_read(&self, id: &ReadingId, at: UtcMillis) -> Result<bool, KernelError> {
+        let id = id.as_str();
+        let at = at.epoch_millis();
+        let mut write = self.db.write().await?;
+        let done = sqlx::query!(
+            "UPDATE readings SET read_at = ?2 WHERE id = ?1 AND read_at IS NULL",
+            id,
+            at
+        )
+        .execute(&mut *write)
+        .await?;
+        write.commit().await?;
+        Ok(done.rows_affected() == 1)
+    }
+
+    /// Records whether the tap's vault tick was written.
+    ///
+    /// # Errors
+    ///
+    /// [`KernelError::Database`] when the write fails.
+    pub async fn set_vault_tick(&self, id: &ReadingId, tick: VaultTick) -> Result<(), KernelError> {
+        let id = id.as_str();
+        let tick = tick.as_str();
+        let mut write = self.db.write().await?;
+        sqlx::query!(
+            "UPDATE readings SET vault_tick = ?2 WHERE id = ?1",
+            id,
+            tick
+        )
+        .execute(&mut *write)
+        .await?;
+        write.commit().await?;
+        Ok(())
+    }
+
+    /// Records the settle's measure of the reading `id`: its studied count and verdict, with the
+    /// instant it turned studied when it did.
+    ///
+    /// # Errors
+    ///
+    /// [`KernelError::Database`] when the write fails.
+    pub async fn record_measure(
+        &self,
+        id: &ReadingId,
+        count: u32,
+        verdict: Verdict,
+        studied_at: Option<UtcMillis>,
+    ) -> Result<(), KernelError> {
+        let id = id.as_str();
+        let count = i64::from(count);
+        let verdict = verdict.as_str();
+        let studied_at = studied_at.map(UtcMillis::epoch_millis);
+        let mut write = self.db.write().await?;
+        sqlx::query!(
+            "UPDATE readings SET studied_count = ?2, studied_verdict = ?3, \
+             studied_at = COALESCE(?4, studied_at) WHERE id = ?1",
+            id,
+            count,
+            verdict,
+            studied_at
+        )
+        .execute(&mut *write)
+        .await?;
+        write.commit().await?;
+        Ok(())
+    }
+}
+
+/// A `readings` row's read and studied columns as a progress record, or `None` when a column holds
+/// what this context never wrote.
+fn read_progress(
+    id: &str,
+    topic: &str,
+    days: (i64, i64),
+    card_ids: &str,
+    instants: (Option<i64>, Option<i64>),
+    studied_count: i64,
+    states: (&str, &str),
+) -> Option<ReadingProgress> {
+    let (study_day, generated_at) = days;
+    let (read_at, studied_at) = instants;
+    let (verdict, tick) = states;
+    Some(ReadingProgress {
+        id: ReadingId::parse(id)?,
+        topic: TopicKey::parse(topic)?,
+        study_day: StudyDay::from_epoch_day(study_day),
+        generated_at: UtcMillis::from_epoch_millis(generated_at),
+        card_ids: serde_json::from_str(card_ids).ok()?,
+        read_at: read_at.map(UtcMillis::from_epoch_millis),
+        studied_count: u32::try_from(studied_count).ok()?,
+        verdict: Verdict::parse(verdict)?,
+        studied_at: studied_at.map(UtcMillis::from_epoch_millis),
+        vault_tick: VaultTick::parse(tick)?,
+    })
 }

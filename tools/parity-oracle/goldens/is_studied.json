@@ -1,0 +1,1206 @@
+{
+  "cases": [
+    {
+      "class": "empty",
+      "input": {
+        "covered": 0,
+        "studied": 0
+      },
+      "output": false
+    },
+    {
+      "class": "empty",
+      "input": {
+        "covered": 0,
+        "studied": 3
+      },
+      "output": false
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 1,
+        "studied": 0
+      },
+      "output": false
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 1,
+        "studied": 1
+      },
+      "output": true
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 1,
+        "studied": 2
+      },
+      "output": true
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 2,
+        "studied": 0
+      },
+      "output": false
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 2,
+        "studied": 1
+      },
+      "output": false
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 2,
+        "studied": 2
+      },
+      "output": true
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 2,
+        "studied": 3
+      },
+      "output": true
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 3,
+        "studied": 0
+      },
+      "output": false
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 3,
+        "studied": 1
+      },
+      "output": false
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 3,
+        "studied": 2
+      },
+      "output": false
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 3,
+        "studied": 3
+      },
+      "output": true
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 3,
+        "studied": 4
+      },
+      "output": true
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 4,
+        "studied": 0
+      },
+      "output": false
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 4,
+        "studied": 1
+      },
+      "output": false
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 4,
+        "studied": 2
+      },
+      "output": false
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 4,
+        "studied": 3
+      },
+      "output": false
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 4,
+        "studied": 4
+      },
+      "output": true
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 4,
+        "studied": 5
+      },
+      "output": true
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 5,
+        "studied": 0
+      },
+      "output": false
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 5,
+        "studied": 1
+      },
+      "output": false
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 5,
+        "studied": 2
+      },
+      "output": false
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 5,
+        "studied": 3
+      },
+      "output": false
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 5,
+        "studied": 4
+      },
+      "output": true
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 5,
+        "studied": 5
+      },
+      "output": true
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 5,
+        "studied": 6
+      },
+      "output": true
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 6,
+        "studied": 0
+      },
+      "output": false
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 6,
+        "studied": 1
+      },
+      "output": false
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 6,
+        "studied": 2
+      },
+      "output": false
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 6,
+        "studied": 3
+      },
+      "output": false
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 6,
+        "studied": 4
+      },
+      "output": false
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 6,
+        "studied": 5
+      },
+      "output": true
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 6,
+        "studied": 6
+      },
+      "output": true
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 6,
+        "studied": 7
+      },
+      "output": true
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 7,
+        "studied": 0
+      },
+      "output": false
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 7,
+        "studied": 1
+      },
+      "output": false
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 7,
+        "studied": 2
+      },
+      "output": false
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 7,
+        "studied": 3
+      },
+      "output": false
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 7,
+        "studied": 4
+      },
+      "output": false
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 7,
+        "studied": 5
+      },
+      "output": false
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 7,
+        "studied": 6
+      },
+      "output": true
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 7,
+        "studied": 7
+      },
+      "output": true
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 7,
+        "studied": 8
+      },
+      "output": true
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 8,
+        "studied": 0
+      },
+      "output": false
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 8,
+        "studied": 1
+      },
+      "output": false
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 8,
+        "studied": 2
+      },
+      "output": false
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 8,
+        "studied": 3
+      },
+      "output": false
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 8,
+        "studied": 4
+      },
+      "output": false
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 8,
+        "studied": 5
+      },
+      "output": false
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 8,
+        "studied": 6
+      },
+      "output": false
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 8,
+        "studied": 7
+      },
+      "output": true
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 8,
+        "studied": 8
+      },
+      "output": true
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 8,
+        "studied": 9
+      },
+      "output": true
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 9,
+        "studied": 0
+      },
+      "output": false
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 9,
+        "studied": 1
+      },
+      "output": false
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 9,
+        "studied": 2
+      },
+      "output": false
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 9,
+        "studied": 3
+      },
+      "output": false
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 9,
+        "studied": 4
+      },
+      "output": false
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 9,
+        "studied": 5
+      },
+      "output": false
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 9,
+        "studied": 6
+      },
+      "output": false
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 9,
+        "studied": 7
+      },
+      "output": false
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 9,
+        "studied": 8
+      },
+      "output": true
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 9,
+        "studied": 9
+      },
+      "output": true
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 9,
+        "studied": 10
+      },
+      "output": true
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 10,
+        "studied": 0
+      },
+      "output": false
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 10,
+        "studied": 1
+      },
+      "output": false
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 10,
+        "studied": 2
+      },
+      "output": false
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 10,
+        "studied": 3
+      },
+      "output": false
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 10,
+        "studied": 4
+      },
+      "output": false
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 10,
+        "studied": 5
+      },
+      "output": false
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 10,
+        "studied": 6
+      },
+      "output": false
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 10,
+        "studied": 7
+      },
+      "output": false
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 10,
+        "studied": 8
+      },
+      "output": true
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 10,
+        "studied": 9
+      },
+      "output": true
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 10,
+        "studied": 10
+      },
+      "output": true
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 10,
+        "studied": 11
+      },
+      "output": true
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 11,
+        "studied": 0
+      },
+      "output": false
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 11,
+        "studied": 1
+      },
+      "output": false
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 11,
+        "studied": 2
+      },
+      "output": false
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 11,
+        "studied": 3
+      },
+      "output": false
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 11,
+        "studied": 4
+      },
+      "output": false
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 11,
+        "studied": 5
+      },
+      "output": false
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 11,
+        "studied": 6
+      },
+      "output": false
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 11,
+        "studied": 7
+      },
+      "output": false
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 11,
+        "studied": 8
+      },
+      "output": false
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 11,
+        "studied": 9
+      },
+      "output": true
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 11,
+        "studied": 10
+      },
+      "output": true
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 11,
+        "studied": 11
+      },
+      "output": true
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 11,
+        "studied": 12
+      },
+      "output": true
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 12,
+        "studied": 0
+      },
+      "output": false
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 12,
+        "studied": 1
+      },
+      "output": false
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 12,
+        "studied": 2
+      },
+      "output": false
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 12,
+        "studied": 3
+      },
+      "output": false
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 12,
+        "studied": 4
+      },
+      "output": false
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 12,
+        "studied": 5
+      },
+      "output": false
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 12,
+        "studied": 6
+      },
+      "output": false
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 12,
+        "studied": 7
+      },
+      "output": false
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 12,
+        "studied": 8
+      },
+      "output": false
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 12,
+        "studied": 9
+      },
+      "output": false
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 12,
+        "studied": 10
+      },
+      "output": true
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 12,
+        "studied": 11
+      },
+      "output": true
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 12,
+        "studied": 12
+      },
+      "output": true
+    },
+    {
+      "class": "small",
+      "input": {
+        "covered": 12,
+        "studied": 13
+      },
+      "output": true
+    },
+    {
+      "class": "hundred",
+      "input": {
+        "covered": 100,
+        "studied": 78
+      },
+      "output": false
+    },
+    {
+      "class": "hundred",
+      "input": {
+        "covered": 100,
+        "studied": 79
+      },
+      "output": false
+    },
+    {
+      "class": "hundred",
+      "input": {
+        "covered": 100,
+        "studied": 80
+      },
+      "output": true
+    },
+    {
+      "class": "hundred",
+      "input": {
+        "covered": 100,
+        "studied": 81
+      },
+      "output": true
+    },
+    {
+      "class": "hundred",
+      "input": {
+        "covered": 100,
+        "studied": 100
+      },
+      "output": true
+    },
+    {
+      "class": "seeded",
+      "input": {
+        "covered": 371,
+        "studied": 351
+      },
+      "output": true
+    },
+    {
+      "class": "seeded",
+      "input": {
+        "covered": 393,
+        "studied": 77
+      },
+      "output": false
+    },
+    {
+      "class": "seeded",
+      "input": {
+        "covered": 134,
+        "studied": 25
+      },
+      "output": false
+    },
+    {
+      "class": "seeded",
+      "input": {
+        "covered": 168,
+        "studied": 146
+      },
+      "output": true
+    },
+    {
+      "class": "seeded",
+      "input": {
+        "covered": 87,
+        "studied": 3
+      },
+      "output": false
+    },
+    {
+      "class": "seeded",
+      "input": {
+        "covered": 211,
+        "studied": 104
+      },
+      "output": false
+    },
+    {
+      "class": "seeded",
+      "input": {
+        "covered": 39,
+        "studied": 6
+      },
+      "output": false
+    },
+    {
+      "class": "seeded",
+      "input": {
+        "covered": 65,
+        "studied": 40
+      },
+      "output": false
+    },
+    {
+      "class": "seeded",
+      "input": {
+        "covered": 243,
+        "studied": 243
+      },
+      "output": true
+    },
+    {
+      "class": "seeded",
+      "input": {
+        "covered": 298,
+        "studied": 230
+      },
+      "output": false
+    },
+    {
+      "class": "seeded",
+      "input": {
+        "covered": 211,
+        "studied": 53
+      },
+      "output": false
+    },
+    {
+      "class": "seeded",
+      "input": {
+        "covered": 103,
+        "studied": 40
+      },
+      "output": false
+    },
+    {
+      "class": "seeded",
+      "input": {
+        "covered": 321,
+        "studied": 171
+      },
+      "output": false
+    },
+    {
+      "class": "seeded",
+      "input": {
+        "covered": 169,
+        "studied": 109
+      },
+      "output": false
+    },
+    {
+      "class": "seeded",
+      "input": {
+        "covered": 48,
+        "studied": 40
+      },
+      "output": true
+    },
+    {
+      "class": "seeded",
+      "input": {
+        "covered": 266,
+        "studied": 251
+      },
+      "output": true
+    },
+    {
+      "class": "seeded",
+      "input": {
+        "covered": 208,
+        "studied": 20
+      },
+      "output": false
+    },
+    {
+      "class": "seeded",
+      "input": {
+        "covered": 106,
+        "studied": 73
+      },
+      "output": false
+    },
+    {
+      "class": "seeded",
+      "input": {
+        "covered": 125,
+        "studied": 8
+      },
+      "output": false
+    },
+    {
+      "class": "seeded",
+      "input": {
+        "covered": 104,
+        "studied": 12
+      },
+      "output": false
+    },
+    {
+      "class": "seeded",
+      "input": {
+        "covered": 43,
+        "studied": 12
+      },
+      "output": false
+    },
+    {
+      "class": "seeded",
+      "input": {
+        "covered": 130,
+        "studied": 72
+      },
+      "output": false
+    },
+    {
+      "class": "seeded",
+      "input": {
+        "covered": 157,
+        "studied": 65
+      },
+      "output": false
+    },
+    {
+      "class": "seeded",
+      "input": {
+        "covered": 84,
+        "studied": 79
+      },
+      "output": true
+    },
+    {
+      "class": "seeded",
+      "input": {
+        "covered": 61,
+        "studied": 2
+      },
+      "output": false
+    },
+    {
+      "class": "seeded",
+      "input": {
+        "covered": 137,
+        "studied": 59
+      },
+      "output": false
+    },
+    {
+      "class": "seeded",
+      "input": {
+        "covered": 113,
+        "studied": 73
+      },
+      "output": false
+    },
+    {
+      "class": "seeded",
+      "input": {
+        "covered": 122,
+        "studied": 7
+      },
+      "output": false
+    },
+    {
+      "class": "seeded",
+      "input": {
+        "covered": 7,
+        "studied": 10
+      },
+      "output": true
+    },
+    {
+      "class": "seeded",
+      "input": {
+        "covered": 317,
+        "studied": 153
+      },
+      "output": false
+    },
+    {
+      "class": "seeded",
+      "input": {
+        "covered": 144,
+        "studied": 35
+      },
+      "output": false
+    },
+    {
+      "class": "seeded",
+      "input": {
+        "covered": 356,
+        "studied": 331
+      },
+      "output": true
+    },
+    {
+      "class": "seeded",
+      "input": {
+        "covered": 172,
+        "studied": 153
+      },
+      "output": true
+    },
+    {
+      "class": "seeded",
+      "input": {
+        "covered": 370,
+        "studied": 229
+      },
+      "output": false
+    },
+    {
+      "class": "seeded",
+      "input": {
+        "covered": 79,
+        "studied": 81
+      },
+      "output": true
+    },
+    {
+      "class": "seeded",
+      "input": {
+        "covered": 141,
+        "studied": 142
+      },
+      "output": true
+    },
+    {
+      "class": "seeded",
+      "input": {
+        "covered": 222,
+        "studied": 40
+      },
+      "output": false
+    },
+    {
+      "class": "seeded",
+      "input": {
+        "covered": 85,
+        "studied": 51
+      },
+      "output": false
+    },
+    {
+      "class": "seeded",
+      "input": {
+        "covered": 362,
+        "studied": 61
+      },
+      "output": false
+    },
+    {
+      "class": "seeded",
+      "input": {
+        "covered": 354,
+        "studied": 64
+      },
+      "output": false
+    }
+  ],
+  "function": "preread_tracking.is_studied",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "function",
+  "registry": "tools/parity-oracle/registry/spec_047.py",
+  "registry_sha256": "d0f1bccff240337431b144191d71abf107aaac34cb787c7bfad604737249cd1e",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

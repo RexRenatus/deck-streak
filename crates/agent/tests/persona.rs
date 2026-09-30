@@ -707,6 +707,7 @@ async fn the_golden_readings_open_with_the_frontmatter_the_engine_writes() {
         names,
         [
             "language/language-mentor-es.output.md",
+            "law/law-evidence-scale.output.md",
             "law/law-evidence.output.md"
         ],
         "each golden reading is held to the engine's frontmatter below"
@@ -740,7 +741,11 @@ async fn the_golden_readings_open_with_the_frontmatter_the_engine_writes() {
         .await
         .expect("the roster's band");
     let language = Frontmatter::new(&mentor, band, empty.reads());
-    for (path, frontmatter) in [(&goldens[1], law), (&goldens[0], language)] {
+    for (path, frontmatter) in [
+        (&goldens[2], &law),
+        (&goldens[1], &law),
+        (&goldens[0], &language),
+    ] {
         let golden = fs::read_to_string(path).expect("a golden reading");
         let opening = format!("---\n{}", frontmatter.lines());
         assert!(
