@@ -357,6 +357,22 @@ class TheRefusalIsReadWhole(unittest.TestCase):
                         got = self.spawned(route, env, child)
                 self.assertEqual(got, ("ran", "JUDGED"))
 
+    def test_the_judged_file_reads_the_same_from_any_directory(self):
+        """A relative working directory and a relative entry judge a file the child reads from
+        another directory, so the resolver returns the file as an absolute path and the spawn,
+        which changes directory before it runs it, runs that file."""
+        back = os.getcwd()
+        self.addCleanup(os.chdir, back)
+        base = self.root / "from-any"
+        (base / "child" / "rel").mkdir(parents=True)
+        plant(base / "child" / "rel" / TOOL, "runnable", "JUDGED")
+        os.chdir(base)
+        env = {"PATH": "rel"}
+        judged = runner.resolve_tool([TOOL], env, "child")
+        self.assertEqual(judged, str(base / "child" / "rel" / TOOL))
+        done = runner.run_tool([TOOL], env=env, cwd="child", capture_output=True, text=True)
+        self.assertEqual(done.stdout.strip(), "JUDGED")
+
     def test_every_errno_at_the_spawn_is_the_same_refusal_naming_the_tool(self):
         members = [(number, route) for number in ERRNOS for route in ("run_tool", "own_group")]
         examined("spawn errno member(s)", members)
