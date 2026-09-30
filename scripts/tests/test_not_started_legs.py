@@ -126,10 +126,38 @@ def rendered_env(step, needs, results):
     return env
 
 
-def bash(script, env):
-    """A script as a GitHub-hosted runner's default shell runs it."""
+#: The argv GitHub runs a step's script with, by the `shell:` the workflow text resolves to. An
+#: explicit `bash` runs with pipefail; the unspecified default does not.
+SHELLS = {
+    "bash": ["bash", "--noprofile", "--norc", "-eo", "pipefail"],
+    "sh": ["sh", "-e"],
+    None: ["bash", "-e"],
+}
+
+
+def shell_of(step, job, text):
+    """The argv of the shell GitHub resolves for a step from the workflow text.
+
+    The step's `shell:`, else the job's and then the workflow's `defaults.run.shell`, else the
+    unspecified default `bash -e {0}`. A `shell:` value no scenario models is refused by name.
+    """
+    header = text.split("\njobs:\n", 1)[0]
+    placements = [
+        re.search(r"(?m)^        shell: (\S+)\s*$", step),
+        re.search(r"(?m)^    defaults:\n      run:\n        shell: (\S+)\s*$", job),
+        re.search(r"(?m)^defaults:\n  run:\n    shell: (\S+)\s*$", header),
+    ]
+    named = next((found.group(1) for found in placements if found), None)
+    if named not in SHELLS:
+        raise AssertionError(f"the workflow names the shell {named}, which no scenario models")
+    return SHELLS[named]
+
+
+def bash(script, env, shell):
+    """A step's script as GitHub runs it: the step's `shell:`, else the job's and then the
+    workflow's `defaults.run.shell`, else the unspecified default `bash -e {0}`."""
     return subprocess.run(
-        ["bash", "--noprofile", "--norc", "-eo", "pipefail", "-c", script],
+        [*shell, "-c", script],
         env=env,
         capture_output=True,
         text=True,
@@ -411,7 +439,7 @@ class ALegWithNothingToExamineIsNotStarted(unittest.TestCase):
         for where, changed, expected in examined("need results", scenarios):
             results = dict(dict.fromkeys(needs, "success"), **changed)
             env = dict(rendered_env(step, needs, results), PATH=os.environ["PATH"])
-            done = bash(script, env)
+            done = bash(script, env, shell_of(step, aggregate, workflow(CI)))
             self.assertEqual(done.returncode, expected, f"{where}: {done.stdout}{done.stderr}")
             for leg in LEGS:
                 if expected == 0 and results[leg] == "skipped":
@@ -446,7 +474,7 @@ class ALegWithNothingToExamineIsNotStarted(unittest.TestCase):
                 for name, value in results.items()
             )
             env = dict(rendered_env(step, needs, results), PATH=os.environ["PATH"])
-            done = bash(script, env)
+            done = bash(script, env, shell_of(step, aggregate, workflow(CI)))
             where = f"{need} {result}, {context}"
             self.assertEqual(done.returncode, 0 if admitted else 1, f"{where}: {done.stdout}")
 
@@ -483,7 +511,7 @@ class ALegWithNothingToExamineIsNotStarted(unittest.TestCase):
                 ORACLE_RC=str(oracle),
                 LEGS_RC=str(legs_rc),
             )
-            done = bash(script, env)
+            done = bash(script, env, shell_of(step, job, workflow(CI)))
             self.assertEqual(done.returncode, expected, f"{where}: {done.stdout}{done.stderr}")
             calls = log.read_text(encoding="utf-8").splitlines()
             checked = [call for call in calls if " legs " in f" {call} "]

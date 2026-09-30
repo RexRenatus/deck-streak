@@ -14,7 +14,7 @@ from pathlib import Path
 
 from _support import REPO, examined
 from test_mutation_workflows import CI, jobs, steps, workflow
-from test_not_started_legs import bash, needs_of, rendered_env, step_script
+from test_not_started_legs import bash, needs_of, rendered_env, shell_of, step_script
 
 TOOL = REPO / "scripts" / "mutation-verdict.py"
 RUN = "python3 scripts/mutation-verdict.py"
@@ -54,7 +54,14 @@ def commands_of(script):
 
 
 def census(script):
-    """Every command whose exit the step captures (the first cut: the verdict tool's own)."""
+    """Every command whose exit the step captures, each one a command the harness can drive.
+
+    A capture (`$?` or PIPESTATUS) on a line that runs no verdict-tool command is a command the
+    shim cannot fail, so it is refused by name rather than passed over.
+    """
+    for line in script.splitlines():
+        if RUN not in line and re.search(r"\$\?|PIPESTATUS", line):
+            raise AssertionError(f"the step captures an exit the test cannot drive: {line.strip()}")
     return commands_of(script)
 
 
@@ -114,7 +121,7 @@ class Driver:
             FAIL_KEY=key or "",
             FAIL_RC=str(rc),
         )
-        done = bash(script, env)
+        done = bash(script, env, shell_of(self.step, self.job, workflow(CI)))
         return done, log.read_text(encoding="utf-8").splitlines()
 
 
@@ -163,6 +170,47 @@ class TheVerdictStepFailsOnEachJudgeAlone(unittest.TestCase):
             census(planted)
         print(f"census refused: {refused.exception}")
         self.assertIn("pytest -q || other=$?", str(refused.exception))
+
+
+def planted(workflow_shell=None, job_shell=None, step_shell=None):
+    """A workflow's text with a `shell:` at each named placement, and its job and step."""
+    header = f"defaults:\n  run:\n    shell: {workflow_shell}\n" if workflow_shell else ""
+    defaults = f"    defaults:\n      run:\n        shell: {job_shell}\n" if job_shell else ""
+    own = f"        shell: {step_shell}\n" if step_shell else ""
+    text = (
+        f"name: t\non: push\n{header}jobs:\n  a:\n    runs-on: x\n{defaults}    steps:\n"
+        f"      - name: s\n{own}        run: echo hi\n"
+    )
+    job = jobs(text)["a"]
+    return text, job, steps(job)[0]
+
+
+class TheShellIsResolvedFromTheWorkflowText(unittest.TestCase):
+    def test_each_placement_and_the_precedence_resolve_to_the_shell_github_runs(self):
+        explicit = ["bash", "--noprofile", "--norc", "-eo", "pipefail"]
+        cases = [
+            ("a step's shell", ("", "", "bash"), explicit),
+            ("a job's default", ("", "bash", ""), explicit),
+            ("the workflow's default", ("bash", "", ""), explicit),
+            ("no shell named", ("", "", ""), ["bash", "-e"]),
+            ("the step over the job", ("", "sh", "bash"), explicit),
+            ("the job over the workflow", ("bash", "sh", ""), ["sh", "-e"]),
+            ("the step over the job and the workflow", ("sh", "sh", "bash"), explicit),
+            ("the workflow's, the job silent", ("sh", "", ""), ["sh", "-e"]),
+        ]
+        for where, (in_workflow, in_job, in_step), argv in examined("shell placements", cases):
+            text, job, step = planted(in_workflow, in_job, in_step)
+            self.assertEqual(shell_of(step, job, text), argv, where)
+
+    def test_a_shell_no_scenario_models_is_refused_by_name(self):
+        text, job, step = planted(step_shell="pwsh")
+        with self.assertRaises(AssertionError) as refused:
+            shell_of(step, job, text)
+        self.assertIn("pwsh", str(refused.exception))
+
+    def test_the_verdict_step_runs_under_bash_e_while_ci_names_no_shell(self):
+        job, step = verdict_step()
+        self.assertEqual(shell_of(step, job, workflow(CI)), ["bash", "-e"])
 
 
 if __name__ == "__main__":
