@@ -28,24 +28,19 @@ judged?
 
 ## Considered Options (the alternatives it was chosen against)
 
-- The reader implements the compiler's and cargo's rules (the target census, `cfg` for a test
-  build, `#[path]`, inline-module directories, lexemes), and a generated population judged by
-  `cargo metadata` and `rustc --emit=dep-info` holds it to them: chosen, because the oracle, and
-  not a reviewer's memory, decides each member, and a new axis row joins by itself (#405).
-- A hand list of layouts, each with an expected answer: rejected, because the list holds the shapes
-  its author thought of, which is how the three gaps arose, and its expected answers are a second
-  reading of the rules with no check against the tools (#405).
-- Following `#[path]` with the runner's own resolver, so the path module's file is read: rejected,
-  because a second resolver is another reading of the rules that can drift from the compiler's, and
-  the kind needs to know which files the walk reads, which `#[path]` modules it does not read
-  (#405).
-- Reading only the workspace's current layouts, asking cargo and the compiler on the workspace:
-  rejected, because it would judge today's crates and no other, runs the tools on the workspace,
-  and gives a layout no member until a crate has it (#405).
-- Keeping the oracle in a scratch measurement and pinning its answers in a table: rejected, because
-  a pinned table is a hand list whose answers were once measured, and cannot notice a change in the
-  tools; the checked-in test therefore runs `cargo metadata` and `rustc` itself, in scratch crates
-  only (#405).
+- The compiler's and cargo's own rules in the reader, held to them by a generated oracle population: chosen, because the oracle,
+  and not a reviewer's memory, decides each member, and a new axis row joins by itself (#405). The reader implements the target
+  census, `cfg` for a test build, `#[path]`, inline-module directories and lexemes, and `cargo metadata --no-deps` and
+  `rustc --emit=dep-info` judge it.
+- A hand list of layouts, each with an expected answer: rejected, because the list holds the shapes its author thought of, which is
+  how the three gaps arose, and its expected answers are a second reading of the rules with no check against the tools (#405).
+- Following `#[path]` with the runner's own resolver: rejected, because a second resolver is another reading of the rules that can
+  drift from the compiler's, and the kind needs to know which files the walk reads, which `#[path]` modules it does not read (#405).
+- Reading only the workspace's current layouts: rejected, because asking cargo and the compiler on the workspace would judge
+  today's crates and no other, runs the tools on the workspace, and gives a layout no member until a crate has it (#405).
+- A scratch measurement with its answers pinned in a table: rejected, because a pinned table is a hand list whose answers were once
+  measured and cannot notice a change in the tools; the checked-in test therefore runs `cargo metadata` and `rustc` itself, in
+  scratch crates only (#405).
 
 ## Decision Outcome
 

@@ -267,13 +267,20 @@ for its own reason. The runner's fix went green at 9595183f. The population was 
 349d2423) and A50's refusals and A51's predicate test were added with them (A51 at da82cca3), each green on arrival against the fixed
 reader and proved by the mutants listed in the pull request.
 
-```text
+```red-first
 A46: red at a3d4ff9b: AssertionError: 75 != 165 : a member was neither agreed nor refused
-A46: red at a3d4ff9b: AssertionError: 'crates/fix has a test target bin, which the bin kind shadows' is not None : cargo builds exactly one binary: [('fix', 'src/main.rs')]
+A46: green at 9595183f
 A47: red at a3d4ff9b: AssertionError: Lists differ: ['src/main.rs', 'src/x.rs'] != ['src/main.rs']
+A47: green at 9595183f
 A48: red at a3d4ff9b: AssertionError: KillerUnresolved not raised
+A48: green at 9595183f
 A49: red at a3d4ff9b: AssertionError: "holds 2 binaries," does not match "crates/fix holds 3 binaries, and a bin killer names none of them"
-A46: green at 9595183f: examined 207 generated crate layouts / agreed with the oracle 186, refused by name 21
-A46: green at da82cca3: examined 268 generated crate layouts / agreed with the oracle 247, refused by name 21
-A51: green at da82cca3: examined 2406 predicates / 329 decided, every one equal to rustc's value
+A49: green at 9595183f
+A50: not red: its first cases passed against the unchanged runner, and the cases added with the fix's widening (a file module in a block, a malformed declaration, a missing binary file) test code the fix introduced
+A51: not red: it tests `cfg_value`, which the fix introduced and `dev` does not have, so there is no runner to fail; mutants of the function prove it instead
 ```
+
+The examined lines: at the fix (9595183f) the population read `examined 207 generated crate
+layouts` and `agreed with the oracle 186, refused by name 21`; at da82cca3 it reads `examined 289
+generated crate layouts` and `agreed with the oracle 268, refused by name 21`, and A51 reads
+`examined 2406 predicates` with `329 decided, every one equal to rustc's value`.
