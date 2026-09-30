@@ -477,18 +477,11 @@ def binary_of(root: pathlib.Path, crate: str) -> tuple[str, str]:
 
 def cfg_value(tokens: list[str]) -> bool | None:
     """The value of the cfg predicate `tokens` in a `--test` build, or None when the reader
-    cannot decide it (a feature, a target, any name but `test`)."""
-    if not tokens:
-        return None
-    head = tokens[0]
-    if head == "test" and len(tokens) == 1:
+    cannot decide it: only `test` is decided, under `not`, `all` and `any`, and a name that
+    holds in no build of a test (a feature, a target, any other name) is never guessed."""
+    if tokens == ["test"]:
         return True
-    if (
-        head in ("not", "all", "any")
-        and len(tokens) >= 3
-        and tokens[1] == "("
-        and tokens[-1] == ")"
-    ):
+    if tokens[:1] in (["not"], ["all"], ["any"]) and tokens[1:2] == ["("]:
         parts: list[list[str]] = [[]]
         depth = 0
         for token in tokens[2:-1]:
@@ -497,18 +490,12 @@ def cfg_value(tokens: list[str]) -> bool | None:
                 parts.append([])
             else:
                 parts[-1].append(token)
-        if parts[-1] == []:
-            parts.pop()
-        values = [cfg_value(part) for part in parts]
-        if head == "not":
-            return None if len(values) != 1 or values[0] is None else not values[0]
-        if head == "all":
-            if False in values:
-                return False
-            return None if None in values else True
-        if True in values:
-            return True
-        return None if None in values else False
+        values = [cfg_value(part) for part in parts if part]
+        if tokens[0] == "not":
+            return None if values == [None] else not values[0]
+        if tokens[0] == "all":
+            return False if False in values else (None if None in values else True)
+        return True if True in values else (None if None in values else False)
     return None
 
 

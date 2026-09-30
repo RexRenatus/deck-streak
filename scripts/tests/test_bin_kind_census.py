@@ -627,5 +627,92 @@ class ThePlantedShapesOfTheIssue(unittest.TestCase):
             runner.module_sources(weird.crate / "src/main.rs")
 
 
+class TheCfgPredicatesAgreeWithTheCompiler(unittest.TestCase):
+    """SPEC-039 section 19: a predicate the reader decides is the value rustc gives it."""
+
+    ATOMS = (
+        "test",
+        "unix",
+        "windows",
+        'feature = "f"',
+        "zzz",
+        "all",
+        'any = "x"',
+        'test = "x"',
+    )
+
+    def predicates(self):
+        """Every predicate over the atoms under not, all and any to a depth of two."""
+        level = list(self.ATOMS)
+        found = list(level)
+        for _ in range(2):
+            grown = []
+            for first in level:
+                grown.append(f"not({first})")
+                grown.append(f"all({first})")
+                grown.append(f"any({first})")
+                for second in self.ATOMS:
+                    grown.append(f"all({first}, {second})")
+                    grown.append(f"any({first}, {second})")
+            found += grown
+            level = [g for g in grown if g.startswith("not(") or len(g) < 24]
+            if len(found) > 3000:
+                break
+        found += ["all()", "any()", "all(test,)", "any(test,)", "not(not(test))"]
+        return sorted(set(found))
+
+    def test_every_decided_predicate_is_what_rustc_builds_and_the_rest_is_undecided(self):
+        runner = runner_module()
+        predicates = self.predicates()
+        with tempfile.TemporaryDirectory() as raw:
+            crate = Path(raw)
+            lines = []
+            for number, predicate in enumerate(predicates):
+                lines.append(f"#[cfg({predicate})]\nmod m{number};\n")
+                (crate / f"m{number}.rs").write_text("", encoding="utf-8")
+            (crate / "main.rs").write_text("".join(lines), encoding="utf-8")
+            done = subprocess.run(
+                ["rustc", "--edition", "2021", "--test", "--crate-name", "preds"]
+                + ["--emit=dep-info", "--out-dir", str(crate), str(crate / "main.rs")],
+                cwd=crate,
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=300,
+            )
+            self.assertEqual(done.returncode, 0, done.stderr)
+            built = {
+                line[:-1]
+                for line in (crate / "preds.d").read_text(encoding="utf-8").splitlines()
+                if line.endswith(":")
+            }
+        decided = 0
+        for number, predicate in enumerate(predicates):
+            value = runner.cfg_value(runner.rust_tokens(predicate))
+            truth = any(name.endswith(f"m{number}.rs") for name in built)
+            over_test_only = self.over_test_only(runner.rust_tokens(predicate))
+            with self.subTest(predicate=predicate):
+                if over_test_only:
+                    self.assertIs(value, truth)
+                if value is not None:
+                    decided += 1
+                    self.assertIs(value, truth)
+        examined("predicates", predicates)
+        print(f"{decided} decided, every one equal to rustc's value")
+
+    @staticmethod
+    def over_test_only(tokens):
+        """True when every name in the predicate is `test` or a not, all or any call."""
+        for index, token in enumerate(tokens):
+            after = tokens[index + 1 : index + 2]
+            if token in ("not", "all", "any") and after == ["("]:
+                continue
+            if token == "test" and after != ["="]:
+                continue
+            if token not in ("(", ")", ","):
+                return False
+        return True
+
+
 if __name__ == "__main__":
     unittest.main()
