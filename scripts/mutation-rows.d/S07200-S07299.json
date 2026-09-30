@@ -257,8 +257,8 @@
         "S07233-CENSUS-MANIFEST-RENAME",
         "progression",
         "tests/xp_census.rs",
-        "names.extend(manifest_names(root));",
-        "names.extend(BTreeSet::<String>::new());",
+        "let renames = manifest_renames(root);",
+        "let renames: Vec<(String, String)> = Vec::new();",
         "xp_census::the_census_follows_a_crate_renamed_by_a_manifest",
         "a manifest's `package` rename of progression's crate is a name that denotes it (SPEC-072 A33)"
       ],
@@ -266,7 +266,7 @@
         "S07234-CENSUS-GLOB-OPENS-MEMBER",
         "progression",
         "tests/xp_census.rs",
-        "&& (globbed.contains(&context)",
+        "&& (globbed.contains(context)",
         "&& (false",
         "xp_census::the_census_follows_a_crate_alias_however_it_is_written",
         "a glob of progression's crate root opens every file of the member that holds it (SPEC-072 A33)"
@@ -279,6 +279,51 @@
         "if false {",
         "xp_census::the_census_reads_a_raw_identifier_as_its_plain_name",
         "`r#name` is read as `name`, so a raw alias denotes the same name (SPEC-072 A33)"
+      ],
+      [
+        "S07236-CENSUS-EXPORT-NAMES-HOLDER",
+        "progression",
+        "tests/xp_census.rs",
+        "names.extend(exported.iter().cloned());",
+        "let _ = exported;",
+        "xp_census::the_census_refuses_every_member_of_the_binding_population",
+        "a member's plain `pub use` or `pub extern crate` through a name of progression's crate makes the holder's crate name, or its module, a name of the crate (SPEC-072 A33)"
+      ],
+      [
+        "S07237-CENSUS-NESTED-COMMENT",
+        "progression",
+        "tests/xp_census.rs",
+        "if opened == '/' && at_char(at + 1) == Some('*') {",
+        "if opened == '/' && at_char(at + 1) == Some('*') && depth == 0 {",
+        "xp_census::the_census_refuses_every_member_of_the_binding_population",
+        "a block comment nests, so the census reads no code inside a nested comment (SPEC-072 A33)"
+      ],
+      [
+        "S07238-CENSUS-TOML-COMMENT",
+        "progression",
+        "tests/xp_census.rs",
+        "None if character == '#' => {",
+        "None if false => {",
+        "xp_census::the_census_refuses_every_member_of_the_binding_population",
+        "a manifest comment is removed outside strings before a header or key is read (SPEC-072 A33)"
+      ],
+      [
+        "S07239-CENSUS-OPERATION-EXPORT",
+        "progression",
+        "tests/xp_census.rs",
+        "|| (reaches && leaf.path.last().is_some_and(operation))",
+        "|| (reaches && false && leaf.path.last().is_some_and(operation))",
+        "xp_census::the_census_refuses_every_member_of_the_binding_population",
+        "a member's plain `pub use` of the operation or one of its renamings makes the holder's crate name, or its module, a name of the crate (SPEC-072 A33)"
+      ],
+      [
+        "S07240-CENSUS-LITERAL-EMPTIED",
+        "progression",
+        "tests/xp_census.rs",
+        "code.push_str(\"\\\"\\\"\");",
+        "code.extend(&characters[at..end]);",
+        "xp_census::the_census_refuses_every_member_of_the_binding_population",
+        "a literal is emptied before any name is read, so a path written in a string is not a call (SPEC-072 A33)"
       ]
     ],
     "CARGO_KILLED_SCRIPT_MUTATIONS": [
