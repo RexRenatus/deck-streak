@@ -16,6 +16,7 @@ import io
 import json
 import os
 import re
+import shlex
 import signal
 import stat
 import subprocess
@@ -1398,6 +1399,19 @@ runpy.run_path(sys.argv[0], run_name="__main__")
         'exec "$here/deploy.sh" caddy-remove',
     )
     REFUSAL = "for name in ${!DECKSTREAK_DEPLOY_@}"
+    # Exec argv with exactly the entries given, in order, through libc's execve: a mapping, as
+    # subprocess and os.execve take, cannot hold a name twice or an entry without "=".
+    EXEC_ENTRIES = r"""import ctypes, shutil, sys
+entries = [bytes.fromhex(entry) for entry in sys.argv[1].split()]
+argv = [shutil.which("bash").encode(), *(arg.encode() for arg in sys.argv[2:])]
+libc = ctypes.CDLL(None, use_errno=True)
+libc.execve(
+    argv[0],
+    (ctypes.c_char_p * (len(argv) + 1))(*argv, None),
+    (ctypes.c_char_p * (len(entries) + 1))(*entries, None),
+)
+sys.exit(f"execve failed: errno {ctypes.get_errno()}")
+"""
 
     @staticmethod
     def tree(root):
@@ -1531,26 +1545,101 @@ runpy.run_path(sys.argv[0], run_name="__main__")
                 strict=True,
             )
         )
-        unnamed = {self.PREFIX} | {n + extra for n in self.settings() for extra in ("2", "_BACKUP")}
+        # The names the refusal must refuse, drawn from the environment's own grammar: the bare
+        # prefix, each listed setting with a suffix, and the prefix with each byte a name may hold
+        # (any but NUL and "=") first, in the middle and last. Bash makes no variable of most of
+        # them, and hands every one to each program it runs.
+        listed = {os.fsencode(name) for name in self.settings()}
+        prefix = os.fsencode(self.PREFIX)
+        unnamed = {prefix} | {name + extra for name in listed for extra in (b"2", b"_BACKUP")}
+        for byte in (bytes([b]) for b in range(1, 256) if b != ord("=")):
+            unnamed |= {
+                prefix + byte,
+                prefix + b"CADDY" + byte + b"DIR",
+                prefix + b"CADDY_DIR" + byte,
+            }
         # Without an unnamed setting both steps succeed, so a refusal below is the setting's.
         steps = {step[0]: step for step in self.STEPS}
         plain = {**self.config(), "DECKSTREAK_DEPLOY_CADDYFILE": str(cfdir / "Caddyfile")}
         for op in ("install first", "removal"):
             script, args = steps[op][1:3]
             self.ok(w.run(script, *args, **plain))
-        for i, name in enumerate(
-            examined("unnamed setting(s)", sorted(unnamed - {*self.settings()}))
-        ):
-            (w.tmp / "unnamed" / name).mkdir(parents=True)
+        (w.tmp / "unnamed").mkdir()
+        made = w.stub / "made.bash"
+        made.write_text(self.PREFIX + "=made\n", encoding="utf-8")
+        held = w.stub / "held.bash"
+        held.write_text(
+            "".join(
+                f"{key}={shlex.quote(value)}\n"
+                for key, value in {**w.env, **plain}.items()
+                if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", key)
+            ),
+            encoding="utf-8",
+        )
+        before = self.tree(w.tmp)
+        environ = {os.fsencode(k): os.fsencode(v) for k, v in {**w.env, **plain}.items()}
+        for i, name in enumerate(examined("unnamed setting(s)", sorted(unnamed - listed))):
             script, args = steps[("install first", "removal")[i % 2]][1:3]
-            step = {**plain, name: str(w.tmp / "unnamed" / name)}
-            before = self.tree(w.tmp)
-            done = w.run(script, *args, **step)
-            self.assertEqual(
-                done.returncode, 1, f"{name} : a step ran with a setting it does not name"
+            done = subprocess.run(
+                ["bash", str(script), *args],
+                cwd=w.tmp,
+                env={**environ, name: os.fsencode(w.tmp / "unnamed")},
+                stdin=subprocess.DEVNULL,
+                capture_output=True,
+                timeout=60,
+                check=False,
             )
-            self.assertIn(f"deploy: {name} is not a setting", done.stderr)
-            self.assertEqual(self.tree(w.tmp), before, f"{name} : the refusal changed the tree")
+            self.assertEqual(
+                done.returncode, 1, f"{name!r} : a step ran with a setting it does not name"
+            )
+            self.assertIn(b"deploy: " + name + b" is not a setting", done.stderr)
+        # A refused step writes nothing, so what any refusal wrote would still be there.
+        self.assertEqual(self.tree(w.tmp), before, "a refusal changed the tree")
+        # A listed setting given twice or without a value, a prefixed entry without "=", an
+        # environment the step cannot read, and a deploy variable made before the step starts
+        # (by the file BASH_ENV names) are refused too. The first three reach deploy.sh as given
+        # only when it is run directly: rollback.sh's bash passes one entry per name, with "=".
+        # The step that cannot read its environment received none: its settings are variables of
+        # the shell that sources it, so were the refusal to let it run, it would run in the world.
+        given = [k + b"=" + v for k, v in environ.items()]
+        absent = next(name for name in sorted(listed) if name not in environ)
+        sourced = ["-c", 'set -a; . "$1"; set +a; shift; . "$@"', "bash", str(held)]
+        odd = {
+            "given twice": (
+                [*given, b"DECKSTREAK_DEPLOY_CADDY_DIR=" + os.fsencode(w.tmp)],
+                [],
+                b" is given twice",
+            ),
+            "without a value": ([*given, absent], [], b" is given without a value"),
+            "no =": ([*given, prefix + b"CADDY-DIR"], [], b" is not a setting"),
+            "nothing received": ([], sourced, b"could not be read"),
+            "made before": (
+                [*given, b"BASH_ENV=" + os.fsencode(made)],
+                [],
+                b" is not a setting",
+            ),
+        }
+        for case, (entries, lead, said) in examined("odd environment(s)", sorted(odd.items())):
+            for args in (("caddy-install", "v1.0.0"), ("caddy-remove",)):
+                done = subprocess.run(
+                    [
+                        sys.executable,
+                        "-c",
+                        self.EXEC_ENTRIES,
+                        " ".join(entry.hex() for entry in entries),
+                        *lead,
+                        str(DEPLOY),
+                        *args,
+                    ],
+                    cwd=w.tmp,
+                    stdin=subprocess.DEVNULL,
+                    capture_output=True,
+                    timeout=60,
+                    check=False,
+                )
+                self.assertEqual(done.returncode, 1, f"{case}, {args[0]}: {done.stderr!r}")
+                self.assertIn(said, done.stderr, f"{case}, {args[0]}")
+                self.assertEqual(self.tree(w.tmp), before, f"{case}, {args[0]}: the tree changed")
         # Nothing a step runs before its refusal is anything but what ROLLBACK_RUN and deploy.sh
         # declare, so no read, in any form, comes before the refusal can stop it.
         runs = {}
