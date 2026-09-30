@@ -80,6 +80,11 @@ impl OwnerAccess {
 }
 
 impl OwnerAccess {
+    /// The study-day rule the owner's routes read, for the answer route (SPEC-110).
+    pub(crate) const fn rule(&self) -> StudyDayRule {
+        self.rule
+    }
+
     /// The clock the session routes read, for the owner's other routes that need the time
     /// (SPEC-041's feed).
     pub(crate) fn clock(&self) -> Arc<dyn Clock> {
@@ -174,7 +179,7 @@ async fn me(_owner: OwnerSession, State(access): State<OwnerAccess>) -> Response
 /// that sends JSON must pass a CORS preflight, which this origin never grants; `SameSite=Strict`
 /// keeps the cookie off a cross-site request besides. `Sec-Fetch-Site`, which every current browser
 /// sends, names a cross-site request outright; a client that sends none is judged by the rest.
-struct StateChange;
+pub(crate) struct StateChange;
 
 impl<S> FromRequestParts<S> for StateChange
 where

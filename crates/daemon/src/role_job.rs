@@ -18,7 +18,8 @@
 use std::sync::Arc;
 
 use deck_streak_coordination::delivery::NoNotifier;
-use deck_streak_coordination::jobs::{Job, SYNC};
+use deck_streak_coordination::drills::{DrillNotes, DrillPostbackWork, RealFs};
+use deck_streak_coordination::jobs::{DRILL_POSTBACK, Job, SYNC};
 use deck_streak_coordination::ledger::SqliteCronLedger;
 use deck_streak_coordination::obligations::Obligations;
 use deck_streak_coordination::runner::{Reason, Runner, SyncCycle};
@@ -37,6 +38,8 @@ use deck_streak_kernel::{
     Clock, CredentialLoader, CredentialsDirectory, Db, Environment, KernelError, KernelSettings,
     Offload, Redactor, SettingsError, StudyDayRule, SystemClock,
 };
+use deck_streak_progression::ledger::SqliteXpLedger;
+use deck_streak_vault::{Rails, RailsError, VaultSettings};
 
 /// Why the `job` role stopped before its job could report.
 #[derive(Debug, thiserror::Error)]
@@ -50,6 +53,9 @@ pub enum JobRoleError {
     /// The ledger or the study day's outcome could not be read or written.
     #[error("the job's ledger could not be read or written")]
     Ledger(#[source] KernelError),
+    /// The vault's content rails could not be read (SPEC-110).
+    #[error("the vault's content rails could not be read")]
+    Rails(#[source] RailsError),
 }
 
 /// Runs `job` once, and returns the process's exit code.
@@ -79,7 +85,19 @@ pub async fn run(env: &Environment, redactor: &Redactor, job: &Job) -> Result<u8
     if job.id == SYNC.id {
         serve_owner_request(env, redactor, &db, &offload, rule).await;
     }
-    let report = runner.run_job(job.id, &cycle, &db).await;
+    let report = if job.id == DRILL_POSTBACK.id {
+        // The drill post-back joins the table without a sync cycle (SPEC-110 R9): its work is the
+        // vault's graded drills, so it runs through the runner's own `run`.
+        let settings = VaultSettings::from_env(env)?;
+        let rails = Rails::vendored().map_err(JobRoleError::Rails)?;
+        let notes = DrillNotes::open(&settings, RealFs, rails);
+        let grants = SqliteXpLedger::new(db.clone());
+        runner
+            .run(job, &DrillPostbackWork::new(notes, &db, &grants))
+            .await
+    } else {
+        runner.run_job(job.id, &cycle, &db).await
+    };
     db.close().await;
     Ok(report.map_err(JobRoleError::Ledger)?.exit_code())
 }
