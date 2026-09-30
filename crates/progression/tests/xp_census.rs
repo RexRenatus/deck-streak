@@ -1553,6 +1553,34 @@ fn the_census_names_each_use_in_its_package_and_file() {
             .map(str::to_owned)
         )
     );
+    // The same workspace with a correction that coordination's build script writes and a recompute
+    // step includes, which no file of the repository holds: coordination can name settle and now
+    // has a build script, so the census refuses it by name before it compiles anything.
+    plant(
+        planted.path(),
+        "crates/coordination/build.rs",
+        "fn main() {\n    let out = std::env::var(\"OUT_DIR\").expect(\"OUT_DIR\");\n    \
+         let step = \"pub fn made() -> usize {\\n    \
+         let _ = deck_streak_progression::settle::SettleCause::OwnersCorrection;\\n    \
+         deck_streak_progression::settle()\\n}\\n\";\n    \
+         std::fs::write(std::path::Path::new(&out).join(\"step.rs\"), step).expect(\"step.rs\");\n}\n",
+    );
+    plant(
+        planted.path(),
+        "crates/coordination/src/recompute/mod.rs",
+        "macro_rules! step {\n    () => {\n        deck_streak_progression::settle()\n    };\n}\n\
+         pub fn fold() -> usize { step!() }\n\
+         include!(concat!(env!(\"OUT_DIR\"), \"/step.rs\"));\n",
+    );
+    let written = census(planted.path());
+    assert_eq!(
+        written.refused,
+        [
+            "deck-streak-coordination has a build script and can name settle, and a build script's \
+             cfg is one the census's passes never set"
+        ]
+    );
+    assert_eq!(written.calling, BTreeSet::new());
 }
 
 #[test]
@@ -3482,6 +3510,13 @@ impl KillerWorker {
     }
 }
 
+/// The count and the digest of the killer's population, pinned together (main's round-7 addendum,
+/// condition 2): a population that loses or changes a tree fails here, not only one that shrinks.
+const KILLER_POPULATION: (usize, &str) = (
+    2218,
+    "eaafc8da1c7d34a8bfa4d8794360caf5b930097866d62bf0f88e1e5e5f4e44ca",
+);
+
 #[test]
 fn the_census_refuses_every_caller_the_compiler_finds() {
     let started = std::time::Instant::now();
@@ -3560,10 +3595,20 @@ fn the_census_refuses_every_caller_the_compiler_finds() {
         started.elapsed(),
         wrong.len() - escaping
     );
-    assert!(
-        cases.len() >= 2218,
-        "the killer's population holds {} tree(s), fewer than the 2218 it was measured with",
-        cases.len()
+    let digest = population_digest(cases.iter().map(|case| {
+        (
+            format!(
+                "{}\0{}\0{}\0{}",
+                case.axis, case.label, case.member, case.refused
+            ),
+            case.files.as_slice(),
+        )
+    }));
+    println!("the killer's population digest: {digest}");
+    assert_eq!(
+        (cases.len(), digest.as_str()),
+        KILLER_POPULATION,
+        "the killer's population is not the one pinned"
     );
     assert_eq!(
         wrong.first(),
@@ -4034,4 +4079,1724 @@ fn the_git_dependency_build_scripts_are_measured_and_the_kind_is_disclosed() {
         judged.iter().filter(|refused| !refused.is_empty()).count()
     );
     assert_eq!(judged.len(), BE_KEYS.len());
+}
+
+/// A build script that sets the cfg `k` only in a release build, which no census pass is.
+fn r7_script() -> String {
+    "fn main() {\n    println!(\"cargo::rustc-check-cfg=cfg(k)\");\n    \
+     if std::env::var(\"PROFILE\").as_deref() == Ok(\"release\") {\n        \
+     println!(\"cargo::rustc-cfg=k\");\n    }\n}\n"
+        .to_owned()
+}
+
+/// A package manifest: its name, `extra` lines in `[package]`, then `rest`.
+fn r7_pkg(name: &str, extra: &str, rest: &str) -> String {
+    format!(
+        "[package]\nname = \"{name}\"\nversion = \"0.1.0\"\nedition = \"2024\"\n{extra}\n{rest}"
+    )
+}
+
+/// A gated call to `settle` of `krate` under the cfg `k`.
+fn r7_gated(krate: &str) -> String {
+    format!("#[cfg(k)]\npub fn call() -> usize {{\n    {krate}::settle()\n}}\n")
+}
+
+/// A `[dependencies]` table on progression by its path.
+const R7_ON_PROGRESSION: &str =
+    "[dependencies]\ndeck-streak-progression = { path = \"../progression\" }\n";
+
+/// A planted file: its path under the workspace and its text.
+fn r7f(path: &str, text: &str) -> (String, String) {
+    (path.to_owned(), text.to_owned())
+}
+
+/// A planted tree's files, each a path and its text.
+type TreeFiles = Vec<(String, String)>;
+
+/// One case of round 7's population: its name, what the census answers, and its files.
+type R7Case = (&'static str, &'static str, TreeFiles);
+
+/// Verify round 7's hostile population (46 trees) of the graph refusal, the owner, the pin and the
+/// fail-closed arm, as that verifier generated it: each case's name, what the census answers with
+/// the owner found by path, and its files.
+#[allow(clippy::too_many_lines)]
+fn r7_population() -> Vec<R7Case> {
+    let script = r7_script();
+    let gated = r7_gated("deck_streak_progression");
+    let m = |rest: &str| r7_pkg("deck-streak-m", "", rest);
+    let decoy = |version: &str| {
+        vec![
+            r7f(
+                "../git/Cargo.toml",
+                &format!(
+                    "[package]\nname = \"deck-streak-progression\"\nversion = \"{version}\"\nedition = \"2024\"\n"
+                ),
+            ),
+            r7f("../git/src/lib.rs", "pub fn noop() {}\n"),
+            r7f(
+                "crates/d/Cargo.toml",
+                &r7_pkg(
+                    "deck-streak-d",
+                    "",
+                    "[dependencies]\ndecoy = { package = \"deck-streak-progression\", git = \"@GIT@\" }\n",
+                ),
+            ),
+            r7f("crates/d/src/lib.rs", "pub fn d() {}\n"),
+        ]
+    };
+    let macro_pair = |outside: &str| {
+        format!(
+            "{KILLER_LIB}#[cfg(not(settle_census))]\n#[macro_export]\nmacro_rules! tally_all {{\n    () => {{\n        {outside}\n    }};\n}}\n\
+             #[cfg(settle_census)]\n#[macro_export]\nmacro_rules! tally_all {{\n    () => {{\n        0\n    }};\n}}\n"
+        )
+    };
+    let mut cases: Vec<R7Case> = Vec::new();
+    // Graph refusal: every edge and manifest shape.
+    cases.push((
+        "H01 normal edge",
+        "refused",
+        vec![
+            r7f("crates/m/Cargo.toml", &m(R7_ON_PROGRESSION)),
+            r7f("crates/m/build.rs", &script),
+            r7f("crates/m/src/lib.rs", &gated),
+        ],
+    ));
+    cases.push(("H02 build edge only", "refused", vec![
+        r7f("crates/m/Cargo.toml", &m("[build-dependencies]\ndeck-streak-progression = { path = \"../progression\" }\n")),
+        r7f("crates/m/build.rs", &script),
+        r7f("crates/m/src/lib.rs", "pub fn call() {}\n"),
+    ]));
+    cases.push((
+        "H03 dev edge only, gated test",
+        "refused",
+        vec![
+            r7f(
+                "crates/m/Cargo.toml",
+                &m("[dev-dependencies]\ndeck-streak-progression = { path = \"../progression\" }\n"),
+            ),
+            r7f("crates/m/build.rs", &script),
+            r7f("crates/m/src/lib.rs", "pub fn nothing() {}\n"),
+            r7f(
+                "crates/m/tests/t.rs",
+                "#[cfg(k)]\n#[test]\nfn t() {\n    let _ = deck_streak_progression::settle();\n}\n",
+            ),
+        ],
+    ));
+    cases.push(("H04 target-specific edge cfg(unix)", "refused", vec![
+        r7f("crates/m/Cargo.toml", &m("[target.'cfg(unix)'.dependencies]\ndeck-streak-progression = { path = \"../progression\" }\n")),
+        r7f("crates/m/build.rs", &script),
+        r7f("crates/m/src/lib.rs", &gated),
+    ]));
+    cases.push(("H05 target-specific edge cfg(windows)", "either", vec![
+        r7f("crates/m/Cargo.toml", &m("[target.'cfg(windows)'.dependencies]\ndeck-streak-progression = { path = \"../progression\" }\n")),
+        r7f("crates/m/build.rs", &script),
+        r7f("crates/m/src/lib.rs", "#[cfg(all(k, windows))]\npub fn call() -> usize {\n    deck_streak_progression::settle()\n}\n"),
+    ]));
+    cases.push(("H06 renamed dependency", "refused", vec![
+        r7f("crates/m/Cargo.toml", &m("[dependencies]\nprog = { package = \"deck-streak-progression\", path = \"../progression\" }\n")),
+        r7f("crates/m/build.rs", &script),
+        r7f("crates/m/src/lib.rs", &r7_gated("prog")),
+    ]));
+    cases.push(("H07 optional dependency behind a feature", "refused", vec![
+        r7f("crates/m/Cargo.toml", &m("[dependencies]\ndeck-streak-progression = { path = \"../progression\", optional = true }\n\n[features]\np = [\"dep:deck-streak-progression\"]\n")),
+        r7f("crates/m/build.rs", &script),
+        r7f("crates/m/src/lib.rs", "#[cfg(all(k, feature = \"p\"))]\npub fn call() -> usize {\n    deck_streak_progression::settle()\n}\n"),
+    ]));
+    cases.push(("H08 optional dependency on by default", "refused", vec![
+        r7f("crates/m/Cargo.toml", &m("[dependencies]\ndeck-streak-progression = { path = \"../progression\", optional = true }\n\n[features]\ndefault = [\"p\"]\np = [\"dep:deck-streak-progression\"]\n")),
+        r7f("crates/m/build.rs", &script),
+        r7f("crates/m/src/lib.rs", "#[cfg(all(k, feature = \"p\"))]\npub fn call() -> usize {\n    deck_streak_progression::settle()\n}\n"),
+    ]));
+    cases.push(("H09 workspace-inherited dependency", "refused", vec![
+        r7f("Cargo.toml", &format!("{KILLER_WORKSPACE}\n[workspace.dependencies]\ndeck-streak-progression = {{ path = \"crates/progression\" }}\n")),
+        r7f("crates/m/Cargo.toml", &m("[dependencies]\ndeck-streak-progression.workspace = true\n")),
+        r7f("crates/m/build.rs", &script),
+        r7f("crates/m/src/lib.rs", &gated),
+    ]));
+    cases.push(("H10 path dependency outside crates/ inside the root", "refused", vec![
+        r7f("vendor/x/Cargo.toml", &r7_pkg("deck-streak-x", "", "[dependencies]\ndeck-streak-progression = { path = \"../../crates/progression\" }\n")),
+        r7f("vendor/x/build.rs", &script),
+        r7f("vendor/x/src/lib.rs", &gated),
+        r7f("crates/m/Cargo.toml", &m("[dependencies]\ndeck-streak-x = { path = \"../../vendor/x\" }\n")),
+        r7f("crates/m/src/lib.rs", "pub fn call() {}\n"),
+    ]));
+    cases.push(("H10b path dependency outside the workspace root", "refused", vec![
+        r7f("../git/x/Cargo.toml", &r7_pkg("deck-streak-x", "", "[dependencies]\ndeck-streak-progression = { path = \"../../ws/crates/progression\" }\n")),
+        r7f("../git/x/build.rs", &script),
+        r7f("../git/x/src/lib.rs", &gated),
+        r7f("crates/m/Cargo.toml", &m("[dependencies]\ndeck-streak-x = { path = \"../../../git/x\" }\n")),
+        r7f("crates/m/src/lib.rs", "pub fn call() {}\n"),
+    ]));
+    cases.push((
+        "H11 build = \"gen.rs\"",
+        "refused",
+        vec![
+            r7f(
+                "crates/m/Cargo.toml",
+                &r7_pkg("deck-streak-m", "build = \"gen.rs\"", R7_ON_PROGRESSION),
+            ),
+            r7f("crates/m/gen.rs", &script),
+            r7f("crates/m/src/lib.rs", &gated),
+        ],
+    ));
+    cases.push(("H12 build = the pinned file of progression, in another package", "refused", vec![
+        r7f("crates/m/Cargo.toml", &r7_pkg("deck-streak-m", "build = \"../progression/build.rs\"", R7_ON_PROGRESSION)),
+        r7f("crates/m/src/lib.rs", "#[cfg(not(settle_census))]\npub fn call() -> usize {\n    deck_streak_progression::settle()\n}\n"),
+    ]));
+    cases.push((
+        "H13 build = false with a build.rs present",
+        "accepted",
+        vec![
+            r7f(
+                "crates/m/Cargo.toml",
+                &r7_pkg("deck-streak-m", "build = false", R7_ON_PROGRESSION),
+            ),
+            r7f("crates/m/build.rs", &script),
+            r7f("crates/m/src/lib.rs", &gated),
+        ],
+    ));
+    cases.push(("H14 proc-macro with a build script", "refused", vec![
+        r7f("crates/m/Cargo.toml", &m("[lib]\nproc-macro = true\n\n[dependencies]\ndeck-streak-progression = { path = \"../progression\" }\n")),
+        r7f("crates/m/build.rs", &script),
+        r7f("crates/m/src/lib.rs", "#[cfg(k)]\n#[allow(dead_code)]\nfn call() -> usize {\n    deck_streak_progression::settle()\n}\n"),
+    ]));
+    cases.push((
+        "H15 links package",
+        "refused",
+        vec![
+            r7f(
+                "crates/m/Cargo.toml",
+                &r7_pkg("deck-streak-m", "links = \"deckm\"", R7_ON_PROGRESSION),
+            ),
+            r7f("crates/m/build.rs", &script),
+            r7f("crates/m/src/lib.rs", &gated),
+        ],
+    ));
+    cases.push((
+        "H16 links with build = false",
+        "refused",
+        vec![
+            r7f(
+                "crates/m/Cargo.toml",
+                &r7_pkg(
+                    "deck-streak-m",
+                    "links = \"deckm\"\nbuild = false",
+                    R7_ON_PROGRESSION,
+                ),
+            ),
+            r7f("crates/m/src/lib.rs", "pub fn call() {}\n"),
+        ],
+    ));
+    cases.push((
+        "H17 two-hop chain through a re-export",
+        "refused",
+        vec![
+            r7f(
+                "crates/mid/Cargo.toml",
+                &r7_pkg("deck-streak-mid", "", R7_ON_PROGRESSION),
+            ),
+            r7f(
+                "crates/mid/src/lib.rs",
+                "pub use deck_streak_progression::settle;\n",
+            ),
+            r7f(
+                "crates/m/Cargo.toml",
+                &m("[dependencies]\ndeck-streak-mid = { path = \"../mid\" }\n"),
+            ),
+            r7f("crates/m/build.rs", &script),
+            r7f("crates/m/src/lib.rs", &r7_gated("deck_streak_mid")),
+        ],
+    ));
+    cases.push((
+        "H18 three-hop chain",
+        "refused",
+        vec![
+            r7f(
+                "crates/b/Cargo.toml",
+                &r7_pkg("deck-streak-b", "", R7_ON_PROGRESSION),
+            ),
+            r7f(
+                "crates/b/src/lib.rs",
+                "pub use deck_streak_progression::settle;\n",
+            ),
+            r7f(
+                "crates/a/Cargo.toml",
+                &r7_pkg(
+                    "deck-streak-a",
+                    "",
+                    "[dependencies]\ndeck-streak-b = { path = \"../b\" }\n",
+                ),
+            ),
+            r7f("crates/a/src/lib.rs", "pub use deck_streak_b::settle;\n"),
+            r7f(
+                "crates/m/Cargo.toml",
+                &m("[dependencies]\ndeck-streak-a = { path = \"../a\" }\n"),
+            ),
+            r7f("crates/m/build.rs", &script),
+            r7f("crates/m/src/lib.rs", &r7_gated("deck_streak_a")),
+        ],
+    ));
+    cases.push(("H19 the root package with a build script", "refused", vec![
+        r7f("Cargo.toml", &format!("[package]\nname = \"deck-streak-root\"\nversion = \"0.1.0\"\nedition = \"2024\"\n\n[dependencies]\ndeck-streak-progression = {{ path = \"crates/progression\" }}\n\n{KILLER_WORKSPACE}")),
+        r7f("build.rs", &script),
+        r7f("src/lib.rs", &gated),
+    ]));
+    cases.push((
+        "H20 [patch] of a git dependency by a member",
+        "refused",
+        vec![
+            r7f("../git/Cargo.toml", &r7_pkg("g", "", "")),
+            r7f("../git/src/lib.rs", "pub fn noop() {}\n"),
+            r7f(
+                "Cargo.toml",
+                &format!("{KILLER_WORKSPACE}\n[patch.\"@GIT@\"]\ng = {{ path = \"crates/gp\" }}\n"),
+            ),
+            r7f("crates/gp/Cargo.toml", &r7_pkg("g", "", R7_ON_PROGRESSION)),
+            r7f("crates/gp/build.rs", &script),
+            r7f("crates/gp/src/lib.rs", &gated),
+            r7f(
+                "crates/m/Cargo.toml",
+                &m("[dependencies]\ng = { git = \"@GIT@\" }\n"),
+            ),
+            r7f("crates/m/src/lib.rs", "pub fn call() {}\n"),
+        ],
+    ));
+    // The owner found by name: a git package that carries progression's name.
+    let mut h21 = decoy("0.0.1");
+    h21.extend([
+        r7f("crates/m/Cargo.toml", &m(R7_ON_PROGRESSION)),
+        r7f("crates/m/build.rs", &script),
+        r7f("crates/m/src/lib.rs", &gated),
+    ]);
+    cases.push((
+        "H21 a git package named as progression, version 0.0.1, beside a member's build script",
+        "refused",
+        h21,
+    ));
+    let mut h22 = decoy("0.2.0");
+    h22.extend([
+        r7f("crates/m/Cargo.toml", &m(R7_ON_PROGRESSION)),
+        r7f("crates/m/build.rs", &script),
+        r7f("crates/m/src/lib.rs", &gated),
+    ]);
+    cases.push(("H22 the same, version 0.2.0", "refused", h22));
+    let mut h23 = decoy("0.0.1");
+    h23.push(r7f(
+        "crates/progression/build.rs",
+        &format!("{KILLER_BUILD} "),
+    ));
+    cases.push((
+        "H23 the 0.0.1 git package beside a one-byte edit of the pinned script",
+        "refused",
+        h23,
+    ));
+    let mut h23b = decoy("0.0.1");
+    h23b.extend([
+        r7f("crates/progression/build.rs", "fn main() {}\n"),
+        r7f("crates/m/Cargo.toml", &m(R7_ON_PROGRESSION)),
+        r7f(
+            "crates/m/src/lib.rs",
+            "pub fn call() -> usize {\n    deck_streak_progression::settle()\n}\n",
+        ),
+    ]);
+    cases.push(("H23b the 0.0.1 git package beside a disarmed progression script and a member calling settle", "refused", h23b));
+    let mut at_020 = decoy("0.2.0");
+    at_020.extend([
+        r7f("crates/progression/build.rs", "fn main() {}\n"),
+        r7f("crates/m/Cargo.toml", &m(R7_ON_PROGRESSION)),
+        r7f(
+            "crates/m/src/lib.rs",
+            "pub fn call() -> usize {\n    deck_streak_progression::settle()\n}\n",
+        ),
+    ]);
+    cases.push((
+        "H23c control of H23b: the git package at 0.2.0",
+        "refused",
+        at_020,
+    ));
+    // The pinned script's own cfg, read by progression's code.
+    cases.push((
+        "H24 progression's macro expands settle only without settle_census",
+        "disclosed",
+        vec![
+            r7f(
+                "crates/progression/src/lib.rs",
+                &macro_pair("$crate::settle()"),
+            ),
+            r7f("crates/m/Cargo.toml", &m(R7_ON_PROGRESSION)),
+            r7f(
+                "crates/m/src/lib.rs",
+                "pub fn call() -> usize {\n    deck_streak_progression::tally_all!()\n}\n",
+            ),
+        ],
+    ));
+    cases.push(("H24b progression re-exports settle as step only without settle_census", "disclosed", vec![
+        r7f("crates/progression/src/lib.rs", &format!("{KILLER_LIB}#[cfg(not(settle_census))]\npub use settle::settle as step;\n#[cfg(settle_census)]\npub use settle::settled_of_day as step;\n")),
+        r7f("crates/m/Cargo.toml", &m(R7_ON_PROGRESSION)),
+        r7f("crates/m/src/lib.rs", "pub fn call() -> usize {\n    deck_streak_progression::step()\n}\n"),
+    ]));
+    cases.push((
+        "H25 control: the macro's other arm names settled_of_day",
+        "accepted",
+        vec![
+            r7f(
+                "crates/progression/src/lib.rs",
+                &macro_pair("$crate::settle::settled_of_day()"),
+            ),
+            r7f("crates/m/Cargo.toml", &m(R7_ON_PROGRESSION)),
+            r7f(
+                "crates/m/src/lib.rs",
+                "pub fn call() -> usize {\n    deck_streak_progression::tally_all!()\n}\n",
+            ),
+        ],
+    ));
+    cases.push((
+        "H26 sanity: a member calls settle",
+        "refused",
+        vec![
+            r7f("crates/m/Cargo.toml", &m(R7_ON_PROGRESSION)),
+            r7f(
+                "crates/m/src/lib.rs",
+                "pub fn call() -> usize {\n    deck_streak_progression::settle()\n}\n",
+            ),
+        ],
+    ));
+    // The pin.
+    cases.push((
+        "H27 pin: a trailing newline",
+        "refused",
+        vec![r7f(
+            "crates/progression/build.rs",
+            &format!("{KILLER_BUILD}\n"),
+        )],
+    ));
+    cases.push((
+        "H28 pin: CRLF line endings",
+        "refused",
+        vec![r7f(
+            "crates/progression/build.rs",
+            &KILLER_BUILD.replace('\n', "\r\n"),
+        )],
+    ));
+    cases.push((
+        "H29 pin: one byte in a comment",
+        "refused",
+        vec![r7f(
+            "crates/progression/build.rs",
+            &KILLER_BUILD.replacen("Arms", "arms", 1),
+        )],
+    ));
+    cases.push((
+        "H30 pin: build = b2.rs holding the pinned bytes",
+        "accepted",
+        vec![
+            r7f(
+                "crates/progression/Cargo.toml",
+                &format!("{}build = \"b2.rs\"\n", killer_package(OWNER)),
+            ),
+            r7f("crates/progression/b2.rs", KILLER_BUILD),
+        ],
+    ));
+    cases.push((
+        "H31 progression build = false and a member calls settle",
+        "refused",
+        vec![
+            r7f(
+                "crates/progression/Cargo.toml",
+                &format!("{}build = false\n", killer_package(OWNER)),
+            ),
+            r7f("crates/m/Cargo.toml", &m(R7_ON_PROGRESSION)),
+            r7f(
+                "crates/m/src/lib.rs",
+                "pub fn call() -> usize {\n    deck_streak_progression::settle()\n}\n",
+            ),
+        ],
+    ));
+    cases.push((
+        "H32 progression build = none.rs, an empty script",
+        "refused",
+        vec![
+            r7f(
+                "crates/progression/Cargo.toml",
+                &format!("{}build = \"none.rs\"\n", killer_package(OWNER)),
+            ),
+            r7f("crates/progression/none.rs", "fn main() {}\n"),
+        ],
+    ));
+    // Fail closed.
+    cases.push((
+        "H33 fail closed: a member manifest cargo cannot parse",
+        "refused",
+        vec![
+            r7f(
+                "crates/m/Cargo.toml",
+                "[package\nname = \"deck-streak-m\"\n",
+            ),
+            r7f("crates/m/src/lib.rs", "pub fn call() {}\n"),
+        ],
+    ));
+    cases.push((
+        "H34 fail closed: a lock file with no package",
+        "refused",
+        vec![r7f("Cargo.lock", "version = 4\n")],
+    ));
+    cases.push(("H35 fail closed: a locked git source never fetched (offline)", "refused", vec![
+        r7f("crates/m/Cargo.toml", &m("[dependencies]\ng = { git = \"file:///nonexistent/v7-never\" }\n")),
+        r7f("crates/m/src/lib.rs", "pub fn call() {}\n"),
+        r7f("Cargo.lock", "version = 4\n\n[[package]]\nname = \"deck-streak-m\"\nversion = \"0.1.0\"\ndependencies = [\n \"g\",\n]\n\n[[package]]\nname = \"deck-streak-other\"\nversion = \"0.1.0\"\n\n[[package]]\nname = \"deck-streak-progression\"\nversion = \"0.1.0\"\n\n[[package]]\nname = \"g\"\nversion = \"0.1.0\"\nsource = \"git+file:///nonexistent/v7-never#0123456789abcdef0123456789abcdef01234567\"\n"),
+    ]));
+    cases.push(("H36 the owner under another package name", "refused", vec![
+        r7f("crates/progression/Cargo.toml", "[package]\nname = \"deck-streak-progress\"\nversion = \"0.1.0\"\nedition = \"2024\"\n"),
+        r7f("crates/m/Cargo.toml", &m("[dependencies]\ndeck-streak-progress = { path = \"../progression\" }\n")),
+        r7f("crates/m/build.rs", &script),
+        r7f("crates/m/src/lib.rs", &r7_gated("deck_streak_progress")),
+    ]));
+    // Controls and the disclosed kind.
+    cases.push((
+        "H37 control: a build script in a package progression depends on",
+        "accepted",
+        vec![
+            r7f(
+                "crates/progression/Cargo.toml",
+                &format!(
+                    "{}\n[dependencies]\ndeck-streak-x = {{ path = \"../x\" }}\n",
+                    killer_package(OWNER)
+                ),
+            ),
+            r7f("crates/x/Cargo.toml", &r7_pkg("deck-streak-x", "", "")),
+            r7f("crates/x/build.rs", &script),
+            r7f("crates/x/src/lib.rs", "pub fn x() {}\n"),
+        ],
+    ));
+    cases.push((
+        "H38 control: a member with a build script reaching the other crate",
+        "accepted",
+        vec![
+            r7f(
+                "crates/m/Cargo.toml",
+                &m("[dependencies]\ndeck-streak-other = { path = \"../other\" }\n"),
+            ),
+            r7f("crates/m/build.rs", &script),
+            r7f("crates/m/src/lib.rs", &r7_gated("deck_streak_other")),
+        ],
+    ));
+    let exported = |key: &str| {
+        vec![
+            r7f("crates/g/Cargo.toml", &r7_pkg("deck-streak-g", "", "")),
+            r7f(
+                "crates/g/build.rs",
+                &format!(
+                    "fn main() {{\n    println!(\"cargo::rustc-check-cfg=cfg(k)\");\n    if {key} {{\n        println!(\"cargo::rustc-cfg=k\");\n    }}\n}}\n"
+                ),
+            ),
+            r7f(
+                "crates/g/src/lib.rs",
+                "#[cfg(k)]\n#[macro_export]\nmacro_rules! call {\n    () => {\n        deck_streak_progression::settle()\n    };\n}\n#[cfg(not(k))]\n#[macro_export]\nmacro_rules! call {\n    () => {\n        0\n    };\n}\n",
+            ),
+            r7f(
+                "crates/m/Cargo.toml",
+                &m(
+                    "[dependencies]\ndeck-streak-progression = { path = \"../progression\" }\ndeck-streak-g = { path = \"../g\" }\n",
+                ),
+            ),
+            r7f(
+                "crates/m/src/lib.rs",
+                "pub fn call() -> usize {\n    deck_streak_g::call!()\n}\n",
+            ),
+        ]
+    };
+    cases.push((
+        "H39 disclosed kind, workspace package: release-keyed cfg read by an exported macro",
+        "disclosed",
+        exported(r#"std::env::var("PROFILE").as_deref() == Ok("release")"#),
+    ));
+    cases.push((
+        "H40 disclosed kind, workspace package: a cfg keyed on the census's variable",
+        "disclosed",
+        exported(r#"std::env::var_os("SETTLE_CENSUS").is_none()"#),
+    ));
+    cases.push(("H41 round 6's names_each_use case: a member's build script writes OUT_DIR code a module includes", "refused", vec![
+        r7f("crates/m/Cargo.toml", &m(R7_ON_PROGRESSION)),
+        r7f("crates/m/build.rs", "fn main() {\n    let out = std::env::var(\"OUT_DIR\").expect(\"OUT_DIR\");\n    std::fs::write(std::path::Path::new(&out).join(\"step.rs\"), \"pub fn made() -> usize {\\n    deck_streak_progression::settle()\\n}\\n\").expect(\"step.rs\");\n}\n"),
+        r7f("crates/m/src/lib.rs", "include!(concat!(env!(\"OUT_DIR\"), \"/step.rs\"));\n"),
+    ]));
+    cases.push(("H42 progression's const fn pointer to settle only without settle_census, called by a member", "disclosed", vec![
+        r7f("crates/progression/src/lib.rs", &format!("{KILLER_LIB}#[cfg(not(settle_census))]\npub const STEP: fn() -> usize = settle::settle;\n#[cfg(settle_census)]\npub const STEP: fn() -> usize = settle::settled_of_day;\n")),
+        r7f("crates/m/Cargo.toml", &m(R7_ON_PROGRESSION)),
+        r7f("crates/m/src/lib.rs", "pub fn call() -> usize {\n    (deck_streak_progression::STEP)()\n}\n"),
+    ]));
+    cases
+}
+// Round 8 (main's round-7 ruling and its addendum; SPEC-072 §12, ADR-197): the census finds its
+// owner by path and refuses, by name, every graph where that cannot be told; every lookup it makes
+// is unique or refused; and its verdict depends only on the tree it judges. Every census compiles
+// in an empty target of its own, with only the environment it names, and refuses a cargo
+// configuration from outside the tree and code that reads a file outside the tree or a variable
+// the host sets. The killers below hold verify round 7's population, its order and copy pairs, and
+// the carried-state generation main named for round 8.
+
+/// The SHA-256, in lowercase hex, of a population: each case's name, then each file's path and
+/// text, every field closed by a NUL and every case by a one, so that each count pin is paired with
+/// the set it counts (main's round-7 addendum, condition 2).
+fn population_digest<'a>(
+    cases: impl IntoIterator<Item = (String, &'a [(String, String)])>,
+) -> String {
+    let mut hasher = Sha256::new();
+    for (name, files) in cases {
+        hasher.update(name.as_bytes());
+        hasher.update([0]);
+        for (path, text) in files {
+            hasher.update(path.as_bytes());
+            hasher.update([0]);
+            hasher.update(text.as_bytes());
+            hasher.update([0]);
+        }
+        hasher.update([1]);
+    }
+    hasher
+        .finalize()
+        .iter()
+        .fold(String::new(), |mut hex, byte| {
+            write!(hex, "{byte:02x}").expect("a string takes every write");
+            hex
+        })
+}
+
+/// Plants `stub` (a stub file only when its text differs, so that its modification time holds)
+/// and then `files` at `root`, a file under `../git/` in the folder `git` beside it, committed
+/// when it exists and named by its URL wherever a file says `@GIT@` (and by its folder wherever a
+/// file's text says `../git/`); writes the lock file unless the tree holds one, leaving a lock
+/// cargo cannot write to the census's `--locked` read to refuse; and answers what the census
+/// refuses when it compiles the tree in `target`, each refusal as [`planted_text`] writes it.
+fn census_of_tree(
+    root: &Path,
+    git: &str,
+    target: &Path,
+    stub: &[(String, String)],
+    files: &[(String, String)],
+) -> Vec<String> {
+    let folder = root.with_file_name(git);
+    let url = format!("file://{}", folder.display());
+    for (path, text) in stub {
+        if fs::read_to_string(root.join(path)).ok().as_deref() != Some(text) {
+            plant(root, path, text);
+        }
+    }
+    for (path, text) in files {
+        let beside = format!("../{git}/");
+        let text = text.replace("@GIT@", &url).replace("../git/", &beside);
+        plant(root, &path.replace("../git/", &beside), &text);
+    }
+    if folder.exists() {
+        committed(&folder);
+    }
+    if !root.join("Cargo.lock").exists() {
+        let _unwritten = cargo(root, &["generate-lockfile".to_owned()], CARGO_LIMIT);
+    }
+    census_in(root, target)
+        .refused
+        .iter()
+        .map(|refusal| planted_text(refusal, root, &folder))
+        .collect()
+}
+
+/// `refusal` with the planted workspace's path written `@WS@`, and its git folder's path, URL and
+/// revision written `@GIT@`, so that one tree's verdict reads alike wherever it is planted: the
+/// differential compares verdicts, not the temporary paths a refusal names.
+fn planted_text(refusal: &str, root: &Path, folder: &Path) -> String {
+    let mut text = refusal
+        .replace(&format!("file://{}", folder.display()), "@GIT@")
+        .replace(&folder.display().to_string(), "@GIT@")
+        .replace(&root.display().to_string(), "@WS@");
+    // A git source names its revision after `#`, which the commit's time moves.
+    while let Some(at) = text.find("@GIT@#") {
+        let start = at + "@GIT@#".len();
+        let end = text[start..]
+            .find(|character: char| !character.is_ascii_hexdigit())
+            .map_or(text.len(), |length| start + length);
+        text.replace_range(at + "@GIT@".len()..end, "");
+    }
+    text
+}
+
+/// What the census refuses in `files`, judged in a workspace path and a target nobody has used.
+fn census_fresh(stub: &[(String, String)], files: &[(String, String)]) -> Vec<String> {
+    let planted = tempfile::tempdir().expect("a temporary directory");
+    let root = planted.path().join("ws");
+    census_of_tree(
+        &root,
+        "git",
+        &root.join("target").join("settle-census"),
+        stub,
+        files,
+    )
+}
+
+/// What the census refuses in each of `trees`, judged in turn at one workspace path and in one
+/// target, as a worker that kept its target between trees would judge them: before each tree,
+/// everything but the stub and the target is removed, and each tree has a git folder of its own.
+fn census_chain(stub: &[(String, String)], trees: &[&[(String, String)]]) -> Vec<Vec<String>> {
+    let planted = tempfile::tempdir().expect("a temporary directory");
+    let root = planted.path().join("ws");
+    let target = root.join("target").join("settle-census");
+    trees
+        .iter()
+        .enumerate()
+        .map(|(number, files)| {
+            if root.exists() {
+                let kept: BTreeSet<PathBuf> =
+                    stub.iter().map(|(path, _)| root.join(path)).collect();
+                KillerWorker::prune(&root, &root, &kept);
+            }
+            census_of_tree(&root, &format!("git{number}"), &target, stub, files)
+        })
+        .collect()
+}
+
+/// `judge` of every item of `items`, on up to eight threads, answered in the items' order.
+fn in_parallel<T: Sync, R: Send>(items: &[T], judge: impl Fn(&T) -> R + Sync) -> Vec<R> {
+    let next = std::sync::atomic::AtomicUsize::new(0);
+    let threads = std::thread::available_parallelism()
+        .map_or(1, usize::from)
+        .min(8);
+    let judge = &judge;
+    let next = &next;
+    let mut done: Vec<(usize, R)> = std::thread::scope(|scope| {
+        let workers: Vec<_> = (0..threads)
+            .map(|_| {
+                scope.spawn(move || {
+                    let mut done = Vec::new();
+                    loop {
+                        let at = next.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                        let Some(item) = items.get(at) else {
+                            break;
+                        };
+                        done.push((at, judge(item)));
+                    }
+                    done
+                })
+            })
+            .collect();
+        workers
+            .into_iter()
+            .flat_map(|worker| worker.join().expect("a judging thread"))
+            .collect()
+    });
+    done.sort_by_key(|(at, _)| *at);
+    done.into_iter().map(|(_, result)| result).collect()
+}
+
+/// Whether the census could not judge a tree at all: it could not compile it or read its graph.
+fn unjudged(refused: &[String]) -> bool {
+    refused.iter().any(|refusal| {
+        refusal.starts_with("the workspace does not compile")
+            || refusal.starts_with("cargo metadata cannot give the graph")
+    })
+}
+
+/// The refusal each named case of verify round 7's population carries with the owner found by path,
+/// by the start of the case's name. A case named here is refused by that refusal; `H05` may go
+/// either way; the controls and the disclosed kinds are listed apart.
+const R7_NAMED: [(&str, &str); 35] = [
+    (
+        "H01 ",
+        "deck-streak-m has a build script and can name settle",
+    ),
+    (
+        "H02 ",
+        "deck-streak-m has a build script and can name settle",
+    ),
+    (
+        "H03 ",
+        "deck-streak-m has a build script and can name settle",
+    ),
+    (
+        "H04 ",
+        "deck-streak-m has a build script and can name settle",
+    ),
+    (
+        "H06 ",
+        "deck-streak-m has a build script and can name settle",
+    ),
+    ("H07 ", "crates/m/Cargo.toml declares a feature"),
+    (
+        "H08 ",
+        "deck-streak-m has a build script and can name settle",
+    ),
+    (
+        "H09 ",
+        "deck-streak-m has a build script and can name settle",
+    ),
+    (
+        "H10 ",
+        "deck-streak-x has a build script and can name settle",
+    ),
+    (
+        "H10b ",
+        "deck-streak-x has a build script and can name settle",
+    ),
+    (
+        "H11 ",
+        "deck-streak-m has a build script and can name settle",
+    ),
+    (
+        "H12 ",
+        "deck-streak-m has a build script and can name settle",
+    ),
+    ("H14 ", "crates/m is a proc-macro crate"),
+    (
+        "H15 ",
+        "deck-streak-m has a build script and can name settle",
+    ),
+    ("H16 ", "cargo metadata cannot give the graph"),
+    (
+        "H17 ",
+        "deck-streak-m has a build script and can name settle",
+    ),
+    (
+        "H18 ",
+        "deck-streak-m has a build script and can name settle",
+    ),
+    (
+        "H19 ",
+        "deck-streak-root has a build script and can name settle",
+    ),
+    ("H20 ", "g has a build script and can name settle"),
+    (
+        "H21 ",
+        "another package of the graph carries the owner's name",
+    ),
+    (
+        "H22 ",
+        "another package of the graph carries the owner's name",
+    ),
+    (
+        "H23 ",
+        "another package of the graph carries the owner's name",
+    ),
+    (
+        "H23b ",
+        "another package of the graph carries the owner's name",
+    ),
+    (
+        "H23c ",
+        "another package of the graph carries the owner's name",
+    ),
+    ("H26 ", "crates/m/src/lib.rs calls settle"),
+    ("H27 ", "is not the one pinned by PROGRESSION_BUILD_SHA256"),
+    ("H28 ", "is not the one pinned by PROGRESSION_BUILD_SHA256"),
+    ("H29 ", "is not the one pinned by PROGRESSION_BUILD_SHA256"),
+    ("H31 ", "deck-streak-progression has no build script"),
+    ("H32 ", "is not the one pinned by PROGRESSION_BUILD_SHA256"),
+    ("H33 ", "cargo metadata cannot give the graph"),
+    ("H34 ", "cargo metadata cannot give the graph"),
+    ("H35 ", "cargo metadata cannot give the graph"),
+    (
+        "H36 ",
+        "names its package deck-streak-progress, not deck-streak-progression",
+    ),
+    (
+        "H41 ",
+        "deck-streak-m has a build script and can name settle",
+    ),
+];
+
+/// The controls of verify round 7's population, which the census accepts.
+const R7_ACCEPTED: [&str; 5] = ["H13 ", "H25 ", "H30 ", "H37 ", "H38 "];
+
+/// The cases of verify round 7's population that are disclosed kinds (SPEC-072 §12): progression's
+/// own code reading the census's cfg (`H24`, `H24b`, `H42`), and a build script's cfg of a package
+/// that cannot name `settle` read through its macro (`H39`, `H40`). Each is judged, and its verdict
+/// is printed and never asserted.
+const R7_DISCLOSED: [&str; 5] = ["H24 ", "H24b ", "H39 ", "H40 ", "H42 "];
+
+/// The count and the digest of verify round 7's population, pinned together.
+const R7_POPULATION: (usize, &str) = (
+    46,
+    "b0fbee86a359b5cc5b3a963a38cd1e1afb629c2d7b18ab00c5242d103c4d28f0",
+);
+
+/// The seed of the differential's order over verify round 7's population.
+const DIFFERENTIAL_SEED: u64 = 0x0425_0008;
+
+/// A permutation of `0..count` from `seed`, by Fisher and Yates over a 64-bit linear congruential
+/// generator (Knuth's MMIX constants), so that the differential's order is stated and repeatable.
+fn seeded_order(count: usize, seed: u64) -> Vec<usize> {
+    let mut state = seed;
+    let mut order: Vec<usize> = (0..count).collect();
+    for at in (1..count).rev() {
+        state = state
+            .wrapping_mul(6_364_136_223_846_793_005)
+            .wrapping_add(1_442_695_040_888_963_407);
+        let pick = usize::try_from((state >> 33) % (at as u64 + 1)).expect("an index");
+        order.swap(at, pick);
+    }
+    order
+}
+
+/// The macro body of tree `A` of verify round 7's order pair P3, which calls progression's `settle`.
+const P3_A: &str = "deck_streak_progression::settle()";
+
+/// The macro body of tree `B` of the pair, which calls the other crate's, padded to `A`'s length.
+const P3_B: &str = "deck_streak_other::settle()      ";
+
+/// Verify round 7's order pair P3: a path package's build script writes its macro into `OUT_DIR`
+/// only when the file is absent, whose body is `call`: progression's `settle` in tree `A`, and the
+/// other crate's, padded to the same length, in tree `B`.
+fn p3_tree(call: &str) -> Vec<(String, String)> {
+    vec![
+        r7f(
+            "crates/m/Cargo.toml",
+            "[package]\nname = \"deck-streak-m\"\nversion = \"0.1.0\"\nedition = \"2024\"\n\n\
+             [dependencies]\ndeck-streak-progression = { path = \"../progression\" }\n\
+             deck-streak-other = { path = \"../other\" }\ndeck-streak-g = { path = \"../g\" }\n",
+        ),
+        r7f(
+            "crates/m/src/lib.rs",
+            "pub fn call() -> usize {\n    deck_streak_g::call!()\n}\n",
+        ),
+        r7f(
+            "crates/g/Cargo.toml",
+            "[package]\nname = \"deck-streak-g\"\nversion = \"0.1.0\"\nedition = \"2024\"\n",
+        ),
+        r7f(
+            "crates/g/build.rs",
+            &format!(
+                "fn main() {{\n    let out = std::path::Path::new(&std::env::var(\"OUT_DIR\")\
+                 .expect(\"OUT_DIR\")).join(\"mac.rs\");\n    if !out.exists() {{\n        \
+                 std::fs::write(&out, \"#[macro_export]\\nmacro_rules! call {{\\n    () => \
+                 {{\\n        {call}\\n    }};\\n}}\\n\").expect(\"mac.rs\");\n    }}\n}}\n"
+            ),
+        ),
+        r7f(
+            "crates/g/src/lib.rs",
+            "include!(concat!(env!(\"OUT_DIR\"), \"/mac.rs\"));\n",
+        ),
+    ]
+}
+
+#[test]
+fn verify_round_seven_population_is_judged_as_each_case_expects_on_any_target() {
+    // Each of the 46 trees is judged alone in a target nobody has used, and must answer as its case
+    // expects: refused by its named refusal, a control accepted, a disclosed kind judged. Then the
+    // differential (main's round-7 addendum, condition 2): the same trees in the seeded order
+    // DIFFERENTIAL_SEED, dealt into chains that each keep one target, with the P3 pair in both
+    // orders as chains of their own; every tree's verdict in a chain must equal its verdict alone.
+    let stub = killer_stub();
+    let cases = r7_population();
+    let digest = population_digest(
+        cases
+            .iter()
+            .map(|(id, expect, files)| (format!("{id}\0{expect}"), files.as_slice())),
+    );
+    println!(
+        "examined {} case(s) of verify round 7's population, digest {digest}",
+        cases.len()
+    );
+    let (a, b) = (p3_tree(P3_A), p3_tree(P3_B));
+    let mut trees: Vec<&[(String, String)]> =
+        cases.iter().map(|(_, _, files)| files.as_slice()).collect();
+    trees.extend([a.as_slice(), b.as_slice()]);
+    let fresh = in_parallel(&trees, |files| census_fresh(&stub, files));
+    let mut wrong = Vec::new();
+    for ((id, expect, _), refused) in cases.iter().zip(&fresh) {
+        let named = R7_NAMED
+            .iter()
+            .find(|(case, _)| id.starts_with(case))
+            .map(|(_, named)| *named);
+        let listed = |list: &[&str]| list.iter().any(|case| id.starts_with(case));
+        let verdict = refused.first().map_or("accepted", String::as_str);
+        if let Some(named) = named {
+            if !refused.iter().any(|refusal| refusal.contains(named)) {
+                wrong.push(format!("{id}: not refused by \"{named}\" | {verdict}"));
+            }
+        } else if listed(&R7_ACCEPTED) {
+            if let Some(first) = refused.first() {
+                wrong.push(format!("control {id}: refused | {first}"));
+            }
+        } else if listed(&R7_DISCLOSED) {
+            println!("disclosed {id} ({expect}): {verdict}");
+            if unjudged(refused) {
+                wrong.push(format!("disclosed {id}: not judged | {verdict}"));
+            }
+        } else if !id.starts_with("H05 ") {
+            wrong.push(format!("{id}: no expectation"));
+        }
+    }
+    let seeded = seeded_order(cases.len(), DIFFERENTIAL_SEED);
+    let threads = std::thread::available_parallelism()
+        .map_or(1, usize::from)
+        .clamp(1, 8);
+    let mut chains: Vec<Vec<usize>> = (0..threads)
+        .map(|chain| {
+            seeded
+                .iter()
+                .skip(chain)
+                .step_by(threads)
+                .copied()
+                .collect()
+        })
+        .collect();
+    chains.extend([
+        vec![cases.len(), cases.len() + 1],
+        vec![cases.len() + 1, cases.len()],
+    ]);
+    let warm = in_parallel(&chains, |chain| {
+        let files: Vec<&[(String, String)]> = chain.iter().map(|at| trees[*at]).collect();
+        census_chain(&stub, &files)
+    });
+    let mut compared = 0;
+    let mut disagreements = Vec::new();
+    for (chain, verdicts) in chains.iter().zip(&warm) {
+        for (step, (at, verdict)) in chain.iter().zip(verdicts).enumerate().skip(1) {
+            compared += 1;
+            if *verdict != fresh[*at] {
+                disagreements.push(format!(
+                    "tree {at} after tree {}: {} on a warmed target, {} alone",
+                    chain[step - 1],
+                    verdict.first().map_or("accepted", String::as_str),
+                    fresh[*at].first().map_or("accepted", String::as_str)
+                ));
+            }
+        }
+    }
+    println!(
+        "differential: seed {DIFFERENTIAL_SEED:#x}, {} chain(s), {compared} warmed verdict(s) \
+         compared with the fresh one; disagreements: {}",
+        chains.len(),
+        disagreements.len()
+    );
+    for line in wrong.iter().chain(&disagreements) {
+        println!("wrong: {line}");
+    }
+    assert_eq!(
+        (cases.len(), digest.as_str()),
+        R7_POPULATION,
+        "verify round 7's population is not the one pinned"
+    );
+    assert!(
+        wrong.is_empty() && disagreements.is_empty(),
+        "cases judged wrongly: {}; disagreements: {}",
+        wrong.len(),
+        disagreements.len()
+    );
+}
+#[test]
+fn the_order_pair_p3_is_judged_alike_in_both_orders_on_one_target() {
+    // Verify round 7's P3: a build script that writes its macro only when the file is absent, in
+    // two trees that differ in that script alone. Judged in either order on one target, each tree
+    // must answer as it does alone.
+    let stub = killer_stub();
+    let (a, b) = (p3_tree(P3_A), p3_tree(P3_B));
+    let alone = [census_fresh(&stub, &a), census_fresh(&stub, &b)];
+    let orders = [
+        census_chain(&stub, &[a.as_slice(), b.as_slice()]),
+        census_chain(&stub, &[b.as_slice(), a.as_slice()]),
+    ];
+    assert_eq!(
+        alone,
+        [
+            vec!["crates/m/src/lib.rs calls settle, and only coordination's code may".to_owned()],
+            Vec::new()
+        ],
+        "the pair's trees alone"
+    );
+    assert_eq!(
+        [&orders[0][1], &orders[1][1]],
+        [&alone[1], &alone[0]],
+        "the second tree of each order on a target the first tree used"
+    );
+}
+
+#[test]
+fn a_target_copied_from_another_trees_census_does_not_move_the_verdict() {
+    // Verify round 7's S1-2b: the census of tree one leaves its target; a copy of it, as a cache
+    // restores one, then serves the census of tree two, which differs from tree one in one build
+    // script. Tree two must answer on the copy as it does in a target nobody has used.
+    let stub = killer_stub();
+    let (one, two) = (p3_tree(P3_B), p3_tree(P3_A));
+    let planted = tempfile::tempdir().expect("a temporary directory");
+    let root = planted.path().join("ws");
+    let first = planted.path().join("first");
+    census_of_tree(&root, "git", &first, &stub, &one);
+    let copied = planted.path().join("copied");
+    let status = Command::new("cp")
+        .arg("-a")
+        .arg(&first)
+        .arg(&copied)
+        .status()
+        .expect("cp runs");
+    assert!(status.success(), "cp -a {}", first.display());
+    for (path, text) in &two {
+        plant(&root, path, text);
+    }
+    let on_the_copy = census_in(&root, &copied).refused;
+    assert_eq!(
+        on_the_copy,
+        census_fresh(&stub, &two),
+        "tree two on a copy of tree one's target, and alone"
+    );
+    assert_eq!(
+        on_the_copy,
+        ["crates/m/src/lib.rs calls settle, and only coordination's code may"]
+    );
+}
+
+/// Judges the case of verify round 7's population whose name starts with `case`, alone.
+fn r7_case(case: &str) -> Vec<String> {
+    let files = r7_population()
+        .into_iter()
+        .find(|(id, _, _)| id.starts_with(case))
+        .map(|(_, _, files)| files)
+        .expect("a case of the population");
+    census_fresh(&killer_stub(), &files)
+}
+
+/// Whether one refusal of `refused` names `named`.
+fn names(refused: &[String], named: &str) -> bool {
+    refused.iter().any(|refusal| refusal.contains(named))
+}
+
+#[test]
+fn a_git_package_carrying_the_owners_name_beside_a_members_script_is_refused_by_name() {
+    // H21: a git package at version 0.0.1 carries progression's name, and a member that can name
+    // settle has a build script. The owner is found by its manifest, and the decoy is refused.
+    let refused = r7_case("H21 ");
+    assert!(
+        names(
+            &refused,
+            "another package of the graph carries the owner's name"
+        ) && names(
+            &refused,
+            "deck-streak-m has a build script and can name settle"
+        ),
+        "{refused:?}"
+    );
+}
+
+#[test]
+fn a_git_package_carrying_the_owners_name_beside_an_edited_pin_is_refused_by_name() {
+    // H23: the same decoy beside a one-byte edit of progression's pinned build script.
+    let refused = r7_case("H23 ");
+    assert!(
+        names(
+            &refused,
+            "another package of the graph carries the owner's name"
+        ) && names(
+            &refused,
+            "is not the one pinned by PROGRESSION_BUILD_SHA256"
+        ),
+        "{refused:?}"
+    );
+}
+
+#[test]
+fn a_git_package_carrying_the_owners_name_beside_a_disarmed_owner_is_refused_by_name() {
+    // H23b: the same decoy beside a progression build script that sets no cfg, and a member that
+    // calls settle, which that script would hide.
+    let refused = r7_case("H23b ");
+    assert!(
+        names(
+            &refused,
+            "another package of the graph carries the owner's name"
+        ) && names(
+            &refused,
+            "is not the one pinned by PROGRESSION_BUILD_SHA256"
+        ),
+        "{refused:?}"
+    );
+}
+
+#[test]
+fn the_owners_manifest_under_another_package_name_is_refused_by_name() {
+    // H36: crates/progression/Cargo.toml names its package otherwise, and a member with a build
+    // script depends on it. The owner is found by its manifest, and the name is refused.
+    let refused = r7_case("H36 ");
+    assert!(
+        names(
+            &refused,
+            "crates/progression/Cargo.toml names its package deck-streak-progress, not \
+             deck-streak-progression"
+        ) && names(
+            &refused,
+            "deck-streak-m has a build script and can name settle"
+        ),
+        "{refused:?}"
+    );
+}
+
+#[test]
+fn an_owner_without_a_build_script_is_refused_by_name() {
+    // H31: progression says `build = false`, so no cfg is ever set and no use of settle is
+    // reported, while a member calls it.
+    let refused = r7_case("H31 ");
+    assert!(
+        names(&refused, "deck-streak-progression has no build script"),
+        "{refused:?}"
+    );
+}
+
+/// A package of a synthetic graph: its id, name, version, source (`None` for a path), manifest,
+/// and its targets, each a kind and a source path.
+fn synthetic_package(
+    id: &str,
+    name: &str,
+    version: &str,
+    source: Option<&str>,
+    manifest: &Path,
+    targets: &[(&str, &Path)],
+) -> Value {
+    serde_json::json!({
+        "id": id,
+        "name": name,
+        "version": version,
+        "source": source,
+        "manifest_path": manifest.to_string_lossy(),
+        "dependencies": [],
+        "features": {},
+        "targets": targets
+            .iter()
+            .map(|(kind, path)| serde_json::json!({
+                "kind": [kind],
+                "name": name,
+                "src_path": path.to_string_lossy(),
+            }))
+            .collect::<Vec<_>>(),
+    })
+}
+
+/// A synthetic graph of `packages` rooted at `root`, whose members are `members`, each package a
+/// node with no edges.
+fn synthetic_graph(root: &Path, packages: Vec<Value>, members: &[&str]) -> Value {
+    let nodes: Vec<Value> = packages
+        .iter()
+        .map(|package| serde_json::json!({"id": package["id"], "deps": []}))
+        .collect();
+    serde_json::json!({
+        "packages": Value::Array(packages),
+        "workspace_members": members,
+        "workspace_root": root.to_string_lossy(),
+        "resolve": {"nodes": nodes},
+    })
+}
+
+#[test]
+#[allow(clippy::too_many_lines)]
+fn the_owner_is_the_member_at_its_manifest_and_every_other_lookup_is_unique_or_refused() {
+    // Synthetic graphs, which cargo would never give, for every arm of the owner lookup: absent,
+    // ambiguous, renamed (the synthetic H36), a decoy by each source (path, git and registry,
+    // listed before the owner), no build script (H31) and two, and the control.
+    let planted = tempfile::tempdir().expect("a temporary directory");
+    let root = planted.path();
+    plant(
+        root,
+        "crates/progression/Cargo.toml",
+        &killer_package(OWNER),
+    );
+    plant(root, "crates/progression/build.rs", KILLER_BUILD);
+    plant(root, "crates/progression/src/lib.rs", KILLER_LIB);
+    let manifest = root.join("crates/progression/Cargo.toml");
+    let script = root.join("crates/progression/build.rs");
+    let lib = root.join("crates/progression/src/lib.rs");
+    let owner = |id: &str, name: &str, targets: &[(&str, &Path)]| {
+        synthetic_package(id, name, "0.1.0", None, &manifest, targets)
+    };
+    let scripted = [("lib", lib.as_path()), ("custom-build", script.as_path())];
+    let elsewhere = root.join("vendor/p/Cargo.toml");
+    let decoy = |source: Option<&str>| {
+        synthetic_package(
+            "decoy",
+            PROGRESSION_PACKAGE,
+            "0.0.1",
+            source,
+            &elsewhere,
+            &[("lib", lib.as_path())],
+        )
+    };
+    let cases: Vec<(&str, Value, Option<&str>)> = vec![
+        (
+            "the owner's manifest is no member's",
+            synthetic_graph(root, vec![owner("p", PROGRESSION_PACKAGE, &scripted)], &[]),
+            Some("is the manifest of no workspace member"),
+        ),
+        (
+            "two members have the owner's manifest",
+            synthetic_graph(
+                root,
+                vec![
+                    owner("p", PROGRESSION_PACKAGE, &scripted),
+                    owner("q", PROGRESSION_PACKAGE, &scripted),
+                ],
+                &["p", "q"],
+            ),
+            Some("2 workspace members have the manifest crates/progression/Cargo.toml"),
+        ),
+        (
+            "the owner renamed",
+            synthetic_graph(
+                root,
+                vec![owner("p", "deck-streak-progress", &scripted)],
+                &["p"],
+            ),
+            Some("names its package deck-streak-progress, not deck-streak-progression"),
+        ),
+        (
+            "a path decoy",
+            synthetic_graph(
+                root,
+                vec![decoy(None), owner("p", PROGRESSION_PACKAGE, &scripted)],
+                &["p"],
+            ),
+            Some("carries the owner's name (deck-streak-progression 0.0.1 (a path))"),
+        ),
+        (
+            "a git decoy",
+            synthetic_graph(
+                root,
+                vec![
+                    decoy(Some("git+file:///decoy#0123")),
+                    owner("p", PROGRESSION_PACKAGE, &scripted),
+                ],
+                &["p"],
+            ),
+            Some("carries the owner's name (deck-streak-progression 0.0.1 (git+file:///decoy"),
+        ),
+        (
+            "a registry decoy",
+            synthetic_graph(
+                root,
+                vec![
+                    decoy(Some(
+                        "registry+https://github.com/rust-lang/crates.io-index",
+                    )),
+                    owner("p", PROGRESSION_PACKAGE, &scripted),
+                ],
+                &["p"],
+            ),
+            Some("carries the owner's name (deck-streak-progression 0.0.1 (registry+"),
+        ),
+        (
+            "no build script",
+            synthetic_graph(
+                root,
+                vec![owner("p", PROGRESSION_PACKAGE, &[("lib", lib.as_path())])],
+                &["p"],
+            ),
+            Some("deck-streak-progression has no build script"),
+        ),
+        (
+            "two build scripts",
+            synthetic_graph(
+                root,
+                vec![owner(
+                    "p",
+                    PROGRESSION_PACKAGE,
+                    &[
+                        ("lib", lib.as_path()),
+                        ("custom-build", script.as_path()),
+                        ("custom-build", script.as_path()),
+                    ],
+                )],
+                &["p"],
+            ),
+            Some("deck-streak-progression has 2 build scripts"),
+        ),
+        (
+            "the control, beside another member",
+            synthetic_graph(
+                root,
+                vec![
+                    owner("p", PROGRESSION_PACKAGE, &scripted),
+                    synthetic_package(
+                        "o",
+                        "deck-streak-other",
+                        "0.1.0",
+                        None,
+                        &root.join("crates/other/Cargo.toml"),
+                        &[("lib", lib.as_path())],
+                    ),
+                ],
+                &["p", "o"],
+            ),
+            None,
+        ),
+    ];
+    let mut wrong = Vec::new();
+    for (case, graph, named) in examined("synthetic graph(s)", cases) {
+        let answer = build_scripts(root, &graph);
+        let refused = match &answer {
+            Ok(refused) | Err(refused) => refused,
+        };
+        let right = match named {
+            Some(named) => names(refused, named),
+            None => matches!(&answer, Ok(refused) if refused.is_empty()),
+        };
+        if !right {
+            wrong.push(format!("{case}: {answer:?}"));
+        }
+    }
+    assert_eq!(wrong, Vec::<String>::new());
+}
+
+/// Main's round-8 generation of an input the tree does not hold: a package that cannot name
+/// `settle` sets its cfg `k` unless the variable `R8_KEY` is set, and its macro, which a member
+/// expands, calls `settle` under `k`. Alone, the tree is refused for the member's call.
+fn variable_tree() -> Vec<(String, String)> {
+    vec![
+        r7f("crates/g/Cargo.toml", &r7_pkg("deck-streak-g", "", "")),
+        r7f(
+            "crates/g/build.rs",
+            "fn main() {\n    println!(\"cargo::rustc-check-cfg=cfg(k)\");\n    \
+             println!(\"cargo::rerun-if-env-changed=R8_KEY\");\n    \
+             if std::env::var_os(\"R8_KEY\").is_none() {\n        \
+             println!(\"cargo::rustc-cfg=k\");\n    }\n}\n",
+        ),
+        r7f(
+            "crates/g/src/lib.rs",
+            "#[cfg(k)]\n#[macro_export]\nmacro_rules! call {\n    () => {\n        \
+             deck_streak_progression::settle()\n    };\n}\n#[cfg(not(k))]\n#[macro_export]\n\
+             macro_rules! call {\n    () => {\n        0\n    };\n}\n",
+        ),
+        r7f(
+            "crates/m/Cargo.toml",
+            &r7_pkg(
+                "deck-streak-m",
+                "",
+                "[dependencies]\ndeck-streak-progression = { path = \"../progression\" }\n\
+                 deck-streak-g = { path = \"../g\" }\n",
+            ),
+        ),
+        r7f(
+            "crates/m/src/lib.rs",
+            "pub fn call() -> usize {\n    deck_streak_g::call!()\n}\n",
+        ),
+    ]
+}
+
+/// The refusal a member's call to `settle` carries.
+const M_CALLS_SETTLE: &str = "crates/m/src/lib.rs calls settle, and only coordination's code may";
+
+#[test]
+#[ignore = "run by the killers of an input the tree does not hold, in a process of its own"]
+fn census_of_the_variable_tree_in_a_process_of_its_own() {
+    // The census of `variable_tree`, in a fresh workspace, printed for the process that started
+    // this one with the environment it chose.
+    if std::env::var_os("R8_CHILD").is_some() {
+        let refused = census_fresh(&killer_stub(), &variable_tree());
+        println!(
+            "R8 REFUSED {}",
+            serde_json::to_string(&refused).expect("a list of strings")
+        );
+    }
+}
+
+/// What the census of `variable_tree` refuses in a process of its own, with `set` added to its
+/// environment and `unset` removed.
+fn census_in_a_child(set: &[(&str, &Path)], unset: &[&str]) -> Vec<String> {
+    let mut command = Command::new(std::env::current_exe().expect("this test's program"));
+    command.args([
+        "--exact",
+        "census_of_the_variable_tree_in_a_process_of_its_own",
+        "--ignored",
+        "--nocapture",
+        "--test-threads",
+        "1",
+    ]);
+    command.env("R8_CHILD", "1");
+    for (name, value) in set {
+        command.env(name, value);
+    }
+    for name in unset {
+        command.env_remove(name);
+    }
+    let output = command.output().expect("the child runs");
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let line = stdout
+        .lines()
+        .find_map(|line| line.split_once("R8 REFUSED ").map(|(_, verdict)| verdict))
+        .unwrap_or_else(|| panic!("the child printed no verdict: {stdout}"));
+    serde_json::from_str(line).expect("the child's verdict")
+}
+
+#[test]
+fn a_variable_the_tree_does_not_set_does_not_move_the_verdict() {
+    // The same tree, judged with `R8_KEY` set and unset in the census's own environment, must
+    // answer alike: a variable the tree does not set never reaches a build script.
+    let unset = census_in_a_child(&[], &["R8_KEY"]);
+    let set = census_in_a_child(&[("R8_KEY", Path::new("1"))], &[]);
+    assert_eq!(set, unset, "the variable tree with R8_KEY set, and unset");
+    assert_eq!(unset, [M_CALLS_SETTLE]);
+}
+
+#[test]
+fn a_cargo_configuration_in_cargos_home_is_refused_by_name() {
+    // A cargo home whose configuration sets `R8_KEY` for every build script: the census refuses it
+    // by name rather than judge the tree under it.
+    let home = tempfile::tempdir().expect("a temporary directory");
+    plant(home.path(), "config.toml", "[env]\nR8_KEY = \"1\"\n");
+    let refused = census_in_a_child(&[("CARGO_HOME", home.path())], &["R8_KEY"]);
+    assert!(
+        names(&refused, "configures cargo from its home"),
+        "{refused:?}"
+    );
+}
+
+#[test]
+fn a_members_code_reading_a_variable_the_host_sets_is_refused_by_name() {
+    // A member's code reads `HOME` at compile time, which the host sets and the tree does not: the
+    // census refuses it by name rather than judge a verdict the host's value could move.
+    let refused = census_fresh(
+        &killer_stub(),
+        &[
+            r7f("crates/m/Cargo.toml", &r7_pkg("deck-streak-m", "", "")),
+            r7f(
+                "crates/m/src/lib.rs",
+                "pub fn home() -> &'static str {\n    env!(\"HOME\")\n}\n",
+            ),
+        ],
+    );
+    assert!(
+        names(
+            &refused,
+            "crates/m's code reads the variable HOME, which the host sets"
+        ),
+        "{refused:?}"
+    );
+}
+
+#[test]
+fn a_cargo_configuration_above_the_tree_is_refused_by_name() {
+    // A configuration in a folder above the tree, which cargo reads, sets `R8_KEY` for every build
+    // script: the census refuses it by name rather than judge the tree under it.
+    let planted = tempfile::tempdir().expect("a temporary directory");
+    plant(
+        planted.path(),
+        ".cargo/config.toml",
+        "[env]\nR8_KEY = \"1\"\n",
+    );
+    let root = planted.path().join("ws");
+    let refused = census_of_tree(
+        &root,
+        "git",
+        &root.join("target").join("settle-census"),
+        &killer_stub(),
+        &variable_tree(),
+    );
+    assert!(
+        names(
+            &refused,
+            "configures cargo, and the census compiles with cargo's own defaults"
+        ),
+        "{refused:?}"
+    );
+}
+
+#[test]
+fn a_git_url_reused_with_other_content_is_judged_as_a_fresh_url() {
+    // Main's warm cargo home: two trees fetch one git URL with other content, into one cargo home
+    // and one target. The second must answer as it does alone at a URL cargo has never seen.
+    let stub = killer_stub();
+    let tree = |settle: &str| {
+        vec![
+            r7f(
+                "../git/Cargo.toml",
+                "[package]\nname = \"g\"\nversion = \"0.1.0\"\nedition = \"2024\"\n",
+            ),
+            r7f(
+                "../git/src/lib.rs",
+                &format!(
+                    "#[macro_export]\nmacro_rules! call {{\n    () => {{\n        {settle}()\n    \
+                     }};\n}}\n"
+                ),
+            ),
+            r7f(
+                "crates/m/Cargo.toml",
+                &r7_pkg(
+                    "deck-streak-m",
+                    "",
+                    "[dependencies]\ndeck-streak-progression = { path = \"../progression\" }\n\
+                     deck-streak-other = { path = \"../other\" }\ng = { git = \"@GIT@\" }\n",
+                ),
+            ),
+            r7f(
+                "crates/m/src/lib.rs",
+                "pub fn call() -> usize {\n    g::call!()\n}\n",
+            ),
+        ]
+    };
+    let (one, two) = (
+        tree("deck_streak_other::settle"),
+        tree("deck_streak_progression::settle"),
+    );
+    let planted = tempfile::tempdir().expect("a temporary directory");
+    let root = planted.path().join("ws");
+    let target = root.join("target").join("settle-census");
+    census_of_tree(&root, "git", &target, &stub, &one);
+    fs::remove_file(root.join("Cargo.lock")).expect("tree one's lock file");
+    let second = census_of_tree(&root, "git", &target, &stub, &two);
+    assert!(!unjudged(&second) && !second.is_empty(), "{second:?}");
+    assert_eq!(
+        second,
+        census_fresh(&stub, &two),
+        "tree two after tree one, and alone"
+    );
+}
+
+#[test]
+fn main_round_seven_generation_is_refused_by_name() {
+    // Main's round-7 generation, each tree alone: two members with one name, a decoy as a path
+    // dependency, as a git dependency, in dev-dependencies only and on another target, the owner's
+    // build script under another name (refused off the pin, accepted on it), the owner excluded
+    // from the workspace, and a member excluded. The registry decoy is the synthetic graph's.
+    let stub = killer_stub();
+    let decoy_git = |section: &str| {
+        vec![
+            r7f(
+                "../git/Cargo.toml",
+                "[package]\nname = \"deck-streak-progression\"\nversion = \"0.0.1\"\n\
+                 edition = \"2024\"\n",
+            ),
+            r7f("../git/src/lib.rs", "pub fn noop() {}\n"),
+            r7f(
+                "crates/d/Cargo.toml",
+                &r7_pkg(
+                    "deck-streak-d",
+                    "",
+                    &format!(
+                        "{section}\ndecoy = {{ package = \"deck-streak-progression\", git = \
+                         \"@GIT@\" }}\n"
+                    ),
+                ),
+            ),
+            r7f("crates/d/src/lib.rs", "pub fn d() {}\n"),
+        ]
+    };
+    let excluded = |folder: &str| {
+        r7f(
+            "Cargo.toml",
+            &format!(
+                "[workspace]\nmembers = [\"crates/*\"]\nexclude = [\"crates/{folder}\"]\n\
+                 resolver = \"3\"\n"
+            ),
+        )
+    };
+    let cases: Vec<(&str, TreeFiles, Option<&str>)> = vec![
+        (
+            "two members with one name",
+            vec![
+                r7f("crates/n/Cargo.toml", &r7_pkg("deck-streak-other", "", "")),
+                r7f("crates/n/src/lib.rs", "pub fn n() {}\n"),
+            ],
+            Some("cargo metadata cannot give the graph"),
+        ),
+        (
+            "two members with the owner's name",
+            vec![
+                r7f(
+                    "crates/n/Cargo.toml",
+                    &r7_pkg("deck-streak-progression", "", ""),
+                ),
+                r7f("crates/n/src/lib.rs", "pub fn n() {}\n"),
+            ],
+            Some("cargo metadata cannot give the graph"),
+        ),
+        (
+            "a decoy as a path dependency",
+            vec![
+                r7f(
+                    "../git/p/Cargo.toml",
+                    "[package]\nname = \"deck-streak-progression\"\nversion = \"0.0.1\"\n\
+                     edition = \"2024\"\n",
+                ),
+                r7f("../git/p/src/lib.rs", "pub fn noop() {}\n"),
+                r7f(
+                    "crates/d/Cargo.toml",
+                    &r7_pkg(
+                        "deck-streak-d",
+                        "",
+                        "[dependencies]\ndecoy = { package = \"deck-streak-progression\", path \
+                         = \"../../../git/p\" }\n",
+                    ),
+                ),
+                r7f("crates/d/src/lib.rs", "pub fn d() {}\n"),
+            ],
+            Some("another package of the graph carries the owner's name"),
+        ),
+        (
+            "a decoy as a git dependency",
+            decoy_git("[dependencies]"),
+            Some("another package of the graph carries the owner's name"),
+        ),
+        (
+            "a decoy in dev-dependencies only",
+            decoy_git("[dev-dependencies]"),
+            Some("another package of the graph carries the owner's name"),
+        ),
+        (
+            "a decoy on another target",
+            decoy_git("[target.'cfg(windows)'.dependencies]"),
+            Some("another package of the graph carries the owner's name"),
+        ),
+        (
+            "the owner's script as custom.rs off the pin",
+            vec![
+                r7f(
+                    "crates/progression/Cargo.toml",
+                    &format!("{}build = \"custom.rs\"\n", killer_package(OWNER)),
+                ),
+                r7f("crates/progression/custom.rs", "fn main() {}\n"),
+            ],
+            Some("is not the one pinned by PROGRESSION_BUILD_SHA256"),
+        ),
+        (
+            "the owner's script as custom.rs on the pin",
+            vec![
+                r7f(
+                    "crates/progression/Cargo.toml",
+                    &format!("{}build = \"custom.rs\"\n", killer_package(OWNER)),
+                ),
+                r7f("crates/progression/custom.rs", KILLER_BUILD),
+            ],
+            None,
+        ),
+        (
+            "the owner excluded from the workspace",
+            vec![excluded("progression")],
+            Some("is the manifest of no workspace member"),
+        ),
+        (
+            "a member excluded from the workspace",
+            vec![
+                excluded("x"),
+                r7f(
+                    "crates/x/Cargo.toml",
+                    &r7_pkg("deck-streak-x", "", R7_ON_PROGRESSION),
+                ),
+                r7f("crates/x/build.rs", &r7_script()),
+                r7f("crates/x/src/lib.rs", &r7_gated("deck_streak_progression")),
+                r7f(
+                    "crates/m/Cargo.toml",
+                    &r7_pkg(
+                        "deck-streak-m",
+                        "",
+                        "[dependencies]\ndeck-streak-x = { path = \"../x\" }\n",
+                    ),
+                ),
+                r7f("crates/m/src/lib.rs", "pub fn m() {}\n"),
+            ],
+            Some("deck-streak-x has a build script and can name settle"),
+        ),
+    ];
+    let cases = examined("tree(s) of main's round-7 generation", cases);
+    let judged = in_parallel(&cases, |(_, files, _)| census_fresh(&stub, files));
+    let wrong: Vec<String> = cases
+        .iter()
+        .zip(&judged)
+        .filter(|((_, _, named), refused)| match named {
+            Some(named) => !names(refused, named),
+            None => !refused.is_empty(),
+        })
+        .map(|((case, _, _), refused)| format!("{case}: {refused:?}"))
+        .collect();
+    assert_eq!(wrong, Vec::<String>::new());
 }
