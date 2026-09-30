@@ -3,7 +3,8 @@
 //! router decides it. The properties, over every case below: at most one celebration per relight
 //! day (S1); no celebration without a committed grant (S2); and every committed grant is celebrated
 //! once the recomputes run (L1), also when a crash falls between the fold's commit and the route.
-//! Every review, card and instant is synthetic and set by hand.
+//! A route that fails for a committed grant leaves its day due, so a later cycle celebrates it once
+//! (A51, A52). Every review, card and instant is synthetic and set by hand.
 
 // An integration test is test code: its helpers panic on a failed fixture, and it prints the
 // examined count on purpose.
@@ -29,6 +30,10 @@ const DAY_MS: i64 = 86_400_000;
 const HOUR_MS: i64 = 3_600_000;
 const D0: i64 = 20_000;
 const CREATED: i64 = D0 - 1_000;
+/// The second return day of [`two_returns`]: five silent days after the first reopen the lapse.
+const SECOND: i64 = D0 + 6;
+/// The day of the sync that first reads both returns and commits both grants.
+const SYNC: i64 = D0 + 7;
 
 const fn at(day: i64, hour: i64) -> i64 {
     day * DAY_MS + hour * HOUR_MS
@@ -76,6 +81,17 @@ fn data(reviews: Vec<Review>) -> CollectionData {
 fn history(returned: i64) -> CollectionData {
     let mut reviews: Vec<Review> = (D0 - 20..=D0 - 16).map(|d| review(at(d, 9))).collect();
     reviews.extend((0..returned).map(|n| review(at(D0, 8 + n))));
+    data(reviews)
+}
+
+/// [`history`] with a return of three reviews on `D0`, five silent days that reopen the lapse, and
+/// a second return of three reviews on [`SECOND`]: one fold at [`SYNC`] grants both relights, so
+/// two days are due in one route.
+fn two_returns() -> CollectionData {
+    let mut reviews: Vec<Review> = (D0 - 20..=D0 - 16).map(|d| review(at(d, 9))).collect();
+    for day in [D0, SECOND] {
+        reviews.extend((0..3).map(|n| review(at(day, 8 + n))));
+    }
     data(reviews)
 }
 
@@ -211,6 +227,44 @@ async fn cycle(
     now: i64,
     crash: bool,
 ) -> Ended {
+    let today = match fold(world, process, data, now, crash).await {
+        Ok(today) => today,
+        Err(ended) => return ended,
+    };
+    route_due_relights(&world.router, &process.due, &world.db, today)
+        .await
+        .expect("the due relights route");
+    Ended::Routed
+}
+
+/// [`cycle`] as the daemon's cycle runs it: a route that answers an error is logged and the cycle
+/// goes on, as `sync_cycle` does, so a failed route is judged by what later cycles send.
+async fn logged_cycle(
+    world: &World,
+    process: &mut Process,
+    data: &CollectionData,
+    now: i64,
+    crash: bool,
+) -> Ended {
+    let today = match fold(world, process, data, now, crash).await {
+        Ok(today) => today,
+        Err(ended) => return ended,
+    };
+    if let Err(error) = route_due_relights(&world.router, &process.due, &world.db, today).await {
+        println!("the due relights could not be read: {error}");
+    }
+    Ended::Routed
+}
+
+/// The fold of one cycle at `now` over `data`, then the crash when `crash`: the study day to route
+/// on when the fold committed and the process lives on, else how the cycle ended.
+async fn fold(
+    world: &World,
+    process: &mut Process,
+    data: &CollectionData,
+    now: i64,
+    crash: bool,
+) -> Result<StudyDay, Ended> {
     let rule = StudyDayRule::default();
     let today = rule.study_day(UtcMillis::from_epoch_millis(now));
     world.clock.set(UtcMillis::from_epoch_millis(now));
@@ -228,16 +282,13 @@ async fn cycle(
         )
         .await;
     if ran.is_err() {
-        return Ended::Failed;
+        return Err(Ended::Failed);
     }
     if crash {
         *process = start();
-        return Ended::Crashed;
+        return Err(Ended::Crashed);
     }
-    route_due_relights(&world.router, &process.due, &world.db, today)
-        .await
-        .expect("the due relights route");
-    Ended::Routed
+    Ok(today)
 }
 
 /// The study days of every relight grant the ledger holds.
@@ -415,5 +466,338 @@ async fn every_failure_point_later_sync_and_crash_keeps_one_celebration_per_comm
         broken,
         Vec::<String>::new(),
         "S1, S2 and L1 hold in every case"
+    );
+}
+
+/// The route-failure seam (A51, A52), created by the test in its own database: a table of the keys
+/// whose route fails, and a trigger on each write of the router's ledger. A key listed under
+/// `claim` fails the router's claim of it, so nothing is claimed or sent; a key listed under
+/// `record` fails the decision record written after its claim committed and its line was pushed.
+/// Either failure answers the route of that day with an error, as any failed write of the router's
+/// ledger does, and the production code carries no hook for it.
+const ROUTE_FAILURE_SEAM: &str = "
+    CREATE TABLE route_failures (
+        dedupe_key TEXT NOT NULL,
+        ledger TEXT NOT NULL CHECK (ledger IN ('claim', 'record')),
+        created_at INTEGER NOT NULL
+    ) STRICT;
+    CREATE TRIGGER the_claim_fails BEFORE INSERT ON notification_deliveries
+    WHEN EXISTS (SELECT 1 FROM route_failures
+                 WHERE ledger = 'claim' AND dedupe_key = NEW.dedupe_key)
+    BEGIN SELECT RAISE(ABORT, 'the claim of this key fails'); END;
+    CREATE TRIGGER the_record_fails BEFORE INSERT ON notification_decisions
+    WHEN EXISTS (SELECT 1 FROM route_failures
+                 WHERE ledger = 'record' AND dedupe_key = NEW.dedupe_key)
+    BEGIN SELECT RAISE(ABORT, 'the decision record of this key fails'); END;
+";
+
+/// Which write of the router's ledger fails for a failing day's key.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum LedgerWrite {
+    /// The claim: nothing is claimed and nothing is sent.
+    Claim,
+    /// The decision record, after the claim committed and the line was pushed.
+    Record,
+}
+
+impl LedgerWrite {
+    const fn as_str(self) -> &'static str {
+        match self {
+            Self::Claim => "claim",
+            Self::Record => "record",
+        }
+    }
+}
+
+/// Creates the seam in `db`, with no key failing yet.
+async fn seam(db: &Db) {
+    let mut write = db.write().await.expect("a write");
+    sqlx::raw_sql(ROUTE_FAILURE_SEAM)
+        .execute(&mut *write)
+        .await
+        .expect("the seam is created");
+    write.commit().await.expect("the commit");
+}
+
+/// Fails `write` for the key of each of `days` until [`disarm`].
+async fn arm(db: &Db, days: &[i64], write: LedgerWrite) {
+    let mut connection = db.write().await.expect("a write");
+    for day in days {
+        sqlx::query(
+            "INSERT INTO route_failures (dedupe_key, ledger, created_at) VALUES (?1, ?2, ?3)",
+        )
+        .bind(format!("relight:{day}"))
+        .bind(write.as_str())
+        .bind(at(D0, 0))
+        .execute(&mut *connection)
+        .await
+        .expect("the failure is armed");
+    }
+    connection.commit().await.expect("the commit");
+}
+
+/// Lets every write of the router's ledger succeed again.
+async fn disarm(db: &Db) {
+    let mut write = db.write().await.expect("a write");
+    sqlx::query("DELETE FROM route_failures")
+        .execute(&mut *write)
+        .await
+        .expect("the failures are disarmed");
+    write.commit().await.expect("the commit");
+}
+
+/// For the relight of `day`: how many claims its key holds, and how many sends were recorded.
+async fn decided(db: &Db, day: i64) -> (i64, i64) {
+    let mut write = db.write().await.expect("a write");
+    let row = sqlx::query(
+        "SELECT (SELECT COUNT(*) FROM notification_deliveries WHERE dedupe_key = ?1), \
+                (SELECT COUNT(*) FROM notification_decisions \
+                 WHERE dedupe_key = ?1 AND arm = 'send')",
+    )
+    .bind(format!("relight:{day}"))
+    .fetch_one(&mut *write)
+    .await
+    .expect("the router's ledger reads");
+    (row.get(0), row.get(1))
+}
+
+/// The keys of every relight the router claimed.
+async fn claimed(db: &Db) -> Vec<String> {
+    let mut write = db.write().await.expect("a write");
+    sqlx::query(
+        "SELECT dedupe_key FROM notification_deliveries WHERE dedupe_key LIKE 'relight:%' \
+         ORDER BY id",
+    )
+    .fetch_all(&mut *write)
+    .await
+    .expect("the claims read")
+    .into_iter()
+    .map(|row| row.get(0))
+    .collect()
+}
+
+/// Which of the two due days fails its route.
+#[derive(Clone, Copy, Debug)]
+enum FailingDay {
+    First,
+    Second,
+    Both,
+}
+
+/// Which cycle's route fails first: the one whose fold commits both grants, or the next one, after
+/// a restart between that fold's commit and its route.
+#[derive(Clone, Copy, Debug)]
+enum FailingCycle {
+    Grant,
+    AfterRestart,
+}
+
+#[derive(Clone, Copy, Debug)]
+struct RouteCase {
+    cycle: FailingCycle,
+    day: FailingDay,
+    write: LedgerWrite,
+    consecutive: u32,
+    crash_before_retry: bool,
+}
+
+/// Every failing cycle × failing day × failing ledger write × one or two consecutive failed routes
+/// × a restart, or none, between the last failed route and the retry.
+fn route_population() -> Vec<RouteCase> {
+    let mut cases = Vec::new();
+    for cycle in [FailingCycle::Grant, FailingCycle::AfterRestart] {
+        for day in [FailingDay::First, FailingDay::Second, FailingDay::Both] {
+            for write in [LedgerWrite::Claim, LedgerWrite::Record] {
+                for consecutive in [1, 2] {
+                    for crash_before_retry in [false, true] {
+                        cases.push(RouteCase {
+                            cycle,
+                            day,
+                            write,
+                            consecutive,
+                            crash_before_retry,
+                        });
+                    }
+                }
+            }
+        }
+    }
+    cases
+}
+
+/// Runs `case` and answers the properties it breaks: the eve opens the lapse; the sync at [`SYNC`]
+/// commits both grants; the case's routes fail; then, with nothing failing, a restart when the case
+/// says and two fair cycles route what is still due.
+async fn run_route(case: RouteCase) -> Vec<String> {
+    let world = world().await;
+    let mut process = start();
+    let ended = cycle(&world, &mut process, &history(0), at(D0 - 1, 12), false).await;
+    assert_eq!(ended, Ended::Routed, "the eve's cycle routes");
+    seam(&world.db).await;
+    let failing = match case.day {
+        FailingDay::First => vec![D0],
+        FailingDay::Second => vec![SECOND],
+        FailingDay::Both => vec![D0, SECOND],
+    };
+    arm(&world.db, &failing, case.write).await;
+    let data = two_returns();
+    let mut hour = 12;
+    if matches!(case.cycle, FailingCycle::AfterRestart) {
+        let ended = logged_cycle(&world, &mut process, &data, at(SYNC, hour), true).await;
+        assert_eq!(
+            ended,
+            Ended::Crashed,
+            "{case:?}: the grants commit, then the restart"
+        );
+        hour += 1;
+    }
+    for _ in 0..case.consecutive {
+        let ended = logged_cycle(&world, &mut process, &data, at(SYNC, hour), false).await;
+        assert_eq!(ended, Ended::Routed, "{case:?}: the failing cycle routes");
+        hour += 1;
+    }
+    assert_eq!(
+        grants(&world.db).await,
+        vec![D0, SECOND],
+        "{case:?}: both grants committed"
+    );
+    // The route of each failing day failed where the case says: its claim holds nothing, or its
+    // claim holds and no send was recorded.
+    for &day in &failing {
+        let (claims, sends) = decided(&world.db, day).await;
+        match case.write {
+            LedgerWrite::Claim => assert_eq!(claims, 0, "{case:?}: relight:{day} unclaimed"),
+            LedgerWrite::Record => assert_eq!(sends, 0, "{case:?}: relight:{day} unrecorded"),
+        }
+    }
+    disarm(&world.db).await;
+    if case.crash_before_retry {
+        let ended = logged_cycle(&world, &mut process, &data, at(SYNC, hour), true).await;
+        assert_eq!(
+            ended,
+            Ended::Crashed,
+            "{case:?}: the restart before the retry"
+        );
+        hour += 1;
+    }
+    for _ in 0..2 {
+        logged_cycle(&world, &mut process, &data, at(SYNC, hour), false).await;
+        hour += 1;
+    }
+    judge(&world, &process, case).await
+}
+
+/// S1, S2 and L1 over the world's two grants, and the due list emptied by the fair cycles.
+async fn judge(world: &World, process: &Process, case: RouteCase) -> Vec<String> {
+    let granted: Vec<String> = grants(&world.db)
+        .await
+        .into_iter()
+        .map(|day| format!("relight:{day}"))
+        .collect();
+    let claimed = claimed(&world.db).await;
+    let mut broken = Vec::new();
+    for key in &granted {
+        match claimed.iter().filter(|claim| *claim == key).count() {
+            0 => broken.push(format!("L1 {case:?}: {key} was never celebrated")),
+            1 => {}
+            n => broken.push(format!("S1 {case:?}: {key} was claimed {n} times")),
+        }
+    }
+    for key in claimed.iter().filter(|claim| !granted.contains(claim)) {
+        broken.push(format!(
+            "S2 {case:?}: {key} was celebrated with no committed grant"
+        ));
+    }
+    let pushed = world.bot.sends();
+    if pushed != granted.len() {
+        broken.push(format!(
+            "S1/L1 {case:?}: {pushed} lines pushed for {} grants",
+            granted.len()
+        ));
+    }
+    let due = process.due.pending(&world.db).await.expect("the due read");
+    if !due.is_empty() {
+        broken.push(format!(
+            "R27 {case:?}: {due:?} still due after two fair cycles"
+        ));
+    }
+    broken
+}
+
+/// A51: the router's claim of a committed grant's key fails, so its route answers an error: the day
+/// stays due, and once the claim can be written again the next cycle celebrates it, once.
+#[tokio::test]
+async fn a_route_that_fails_leaves_the_day_due_and_a_later_cycle_celebrates_it_once() {
+    let world = world().await;
+    let mut process = start();
+    cycle(&world, &mut process, &history(0), at(D0 - 1, 12), false).await;
+    seam(&world.db).await;
+    arm(&world.db, &[D0], LedgerWrite::Claim).await;
+    let ended = logged_cycle(&world, &mut process, &history(3), at(D0 + 1, 12), false).await;
+    assert_eq!(
+        ended,
+        Ended::Routed,
+        "the settle's fold commits and the route runs"
+    );
+    assert_eq!(grants(&world.db).await, vec![D0], "the grant committed");
+    assert_eq!(
+        decided(&world.db, D0).await,
+        (0, 0),
+        "the route failed at the claim"
+    );
+    assert_eq!(world.bot.sends(), 0, "nothing was pushed");
+    assert_eq!(
+        process.due.pending(&world.db).await.expect("the due read"),
+        vec![StudyDay::from_epoch_day(D0)],
+        "a day whose route fails stays due"
+    );
+    disarm(&world.db).await;
+    let ended = logged_cycle(&world, &mut process, &history(3), at(D0 + 1, 18), false).await;
+    assert_eq!(ended, Ended::Routed, "the later cycle routes");
+    assert_eq!(
+        decided(&world.db, D0).await,
+        (1, 1),
+        "the later cycle sent it"
+    );
+    assert_eq!(
+        world.bot.sends(),
+        1,
+        "the committed grant is celebrated once"
+    );
+    assert_eq!(
+        process.due.pending(&world.db).await.expect("the due read"),
+        Vec::<StudyDay>::new(),
+        "the decided day leaves the list"
+    );
+}
+
+/// A52: over every failing cycle, failing day, failing ledger write, run of consecutive failed
+/// routes and restart before the retry, each committed grant is celebrated once, no other day is,
+/// and the due list empties.
+#[tokio::test]
+async fn every_failed_route_leaves_its_day_due_until_one_celebration() {
+    let cases = route_population();
+    let claims = cases
+        .iter()
+        .filter(|case| case.write == LedgerWrite::Claim)
+        .count();
+    println!(
+        "examined {} failed-route case(s), {claims} failing the claim and {} the record",
+        cases.len(),
+        cases.len() - claims
+    );
+    assert_eq!(
+        cases.len(),
+        48,
+        "2 cycles x 3 days x 2 writes x 2 runs x 2 restarts"
+    );
+    let mut broken = Vec::new();
+    for case in cases {
+        broken.extend(run_route(case).await);
+    }
+    assert_eq!(
+        broken,
+        Vec::<String>::new(),
+        "S1, S2 and L1 hold, and the due list empties, in every case"
     );
 }
