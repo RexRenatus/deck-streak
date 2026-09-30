@@ -24,8 +24,8 @@
 set -euo pipefail
 
 # Every setting the script reads, named once (ADR-198). A Caddy step refuses any other deploy
-# setting in its environment before it reads or writes anything, so a name it does not list can
-# never choose where it writes.
+# setting, in the environment it received or among its variables, before it reads or writes
+# anything, so a name it does not list can never choose where it writes.
 SETTINGS='
 DECKSTREAK_DEPLOY_REPO DECKSTREAK_DEPLOY_HOST DECKSTREAK_DEPLOY_ELEVATE DECKSTREAK_DEPLOY_CHECKOUT
 DECKSTREAK_DEPLOY_ROOT DECKSTREAK_DEPLOY_UNIT_DIR DECKSTREAK_DEPLOY_ENV_FILE
@@ -38,6 +38,21 @@ caddy-install | caddy-remove)
         named=
         for setting in $SETTINGS; do [ "$name" != "$setting" ] || named=1; done
         [ -n "$named" ] || { echo "deploy: $name is not a setting of deploy.sh" >&2; exit 1; }
+    done
+    # Bash makes a variable only of a name it can spell, yet hands every other entry to what it
+    # runs, so the refusal also reads each entry the step received, as the kernel keeps it.
+    mapfile -t -d '' received </proc/self/environ && [ "${#received[@]}" -gt 0 ] ||
+        { echo "deploy: the environment this step received could not be read" >&2; exit 1; }
+    given=' '
+    for entry in "${received[@]}"; do
+        key=${entry%%=*}
+        case $key in DECKSTREAK_DEPLOY_*) ;; *) continue ;; esac
+        named=
+        for setting in $SETTINGS; do [ "$key" != "$setting" ] || named=1; done
+        [ -n "$named" ] || { echo "deploy: $key is not a setting of deploy.sh" >&2; exit 1; }
+        [ "$key" != "$entry" ] || { echo "deploy: $key is given without a value" >&2; exit 1; }
+        case $given in *" $key "*) echo "deploy: $key is given twice" >&2; exit 1 ;; esac
+        given="$given$key "
     done
     ;;
 esac
