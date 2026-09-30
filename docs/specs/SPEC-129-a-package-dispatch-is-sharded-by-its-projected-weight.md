@@ -162,14 +162,18 @@ this section and the next, and nothing else. Issue #395.
   reads in a mode the guard does not model: a substitution or an expansion (`$( )`, `${ }`,
   `$(( ))`, `$[ ]`), a backquote, an ANSI-C string (`$' '`), a `(` glued to what comes before it
   (`<( )`, `>( )`, `(( ))`, `a=( )`), a subscript or `[[`; and not at all on a continued line, on
-  any line after a here-document, or on a line after one that ends inside a quote or past such a
-  place, where bash may still be inside it. Past that place a `#` glued to a word is text, and any
-  other `#` ends the command before it without hiding what follows. So a `)` that closes a
-  substitution starts no comment, on its own line or on a later one, and inside `${ }` an operator
-  is text: the `#` in `$(true)#` or `${X//;#/}` hides nothing, and the command after it is still
-  read. A `#` inside quotes is text. The guard can refuse a line bash would pass, as when the
-  bounds follow such a `#`, or when a comment on a later line holds a command, but it hides no
-  command that bash runs (#395).
+  any line after a here-document, or on any line after one that ends inside a quote or past such a
+  place, to the end of the file. It reads the whole workflow file so, the YAML outside a `run:`
+  block too: a `${{ }}` expression or an unpaired apostrophe in a YAML value is such a place, and
+  every workflow in the tree holds a `${{ }}` expression, so each is read so after its first one.
+  Before that place a `#` inside quotes is text. Past it a `#` glued to a word is text, and any
+  other `#`, inside quotes too, ends the command before it without hiding what follows. So a `)`
+  that closes a substitution starts no comment, on its own line or on a later one, and inside
+  `${ }` an operator is text: the `#` in `$(true)#` or `${X//;#/}` hides nothing, and the command
+  after it is still read. The guard can refuse a line bash would pass: past that place it refuses
+  every later command with such a `#` between its start and its bounds, and every later comment
+  that holds an unbounded command, to the end of the file. It hides no command that bash runs
+  (#395).
 - **A plant per shape.** Three tests write one workflow each into a temporary directory: one with
   a toolchain spelling, one with the binary form, and one with two commands on a line (the first
   bounded, the second not). Each asserts that every command is found and, for the last, that the
@@ -192,7 +196,9 @@ this section and the next, and nothing else. Issue #395.
   command on the path, and the guard must find each unbounded command bash runs. The test asserts
   and prints the member count (#395).
 - **Out of scope, named.** A `#` inside shell quotes on a plain `run:` line, where YAML itself
-  cuts a comment, is kept as text (#395).
+  cuts a comment, is kept as text (#395). The four readings #447 tracks stay open, among them a
+  `run:` line in YAML double quotes: YAML removes the quotes, so bash reads a `#` in them as a
+  comment, while the guard reads that `#` inside quotes and takes the bounds after it (#447).
 - Files: `scripts/tests/test_dispatch_shards.py`, this SPEC, `docs/red-first/SPEC-129.md` and a
   changelog fragment (#395).
 - It changes no Rust, no workflow and no Python outside the test (#395).
@@ -203,7 +209,7 @@ this section and the next, and nothing else. Issue #395.
 | id | criterion | decided by |
 |---|---|---|
 | A7 | the guard finds `cargo +<toolchain> mutants`, `cargo-mutants mutants`, and each of two commands on one line, the second spelled with a valued flag too | `test_dispatch_shards.py` `EveryMutationCommandKeepsTheGatesBounds` |
-| A8 | a cargo flag's separate value word is part of the command, a comment is no command and bounds nothing, and the guard finds every unbounded command bash runs in the generated members of the comment class | `test_dispatch_shards.py` `EveryMutationCommandKeepsTheGatesBounds` |
+| A8 | a cargo flag's separate value word is part of the command, a comment the guard cuts is no command and bounds nothing, and the guard finds every unbounded command bash runs in the generated members of the comment class | `test_dispatch_shards.py` `EveryMutationCommandKeepsTheGatesBounds` |
 
 ```acceptance
 A7: python3 -m unittest discover -s scripts/tests -p test_dispatch_shards.py -k test_a_command_spelled_with_a_toolchain_is_found
