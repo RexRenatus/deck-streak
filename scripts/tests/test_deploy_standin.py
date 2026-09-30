@@ -294,7 +294,7 @@ def tests_texts():
 class NoOtherCallSiteStartsAProgram(unittest.TestCase):
     def test_only_the_helper_the_git_wrapper_and_the_scrub_call_start_a_program(self):
         sites = checks.check_census(tests_texts(), deploy_tests.__name__)
-        examined("call site(s) that start a program", sites)
+        examined("call site(s) that start a program", range(sites))
 
     def test_the_helper_names_the_setting_before_it_starts_anything(self):
         tree = ast.parse(SOURCE.read_text(encoding="utf-8"))
