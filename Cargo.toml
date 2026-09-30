@@ -63,6 +63,11 @@ tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", default-features = false, features = ["fmt", "json", "env-filter"] }
 # ADR-020: a temporary database or collection, in tests only.
 tempfile = "3.27.0"
+# ADR-293: the agent's source pins read Rust as tokens (SPEC-043 R12b, R16b): proc-macro2's lexer
+# and syn's literal values, both already in the lock through the workspace's derive and query
+# macros, with no default feature. In tests only.
+proc-macro2 = { version = "1.0.107", default-features = false }
+syn = { version = "2.0.119", default-features = false }
 # ADR-003 and ADR-025: the API service (SPEC-025). axum carries only what a loopback HTTP/1.1
 # service behind Caddy needs; tower brings the concurrency bound, the load shed and, for tests,
 # `ServiceExt::oneshot`; tower-http brings the layers ADR-003 names. A member adds features as it
