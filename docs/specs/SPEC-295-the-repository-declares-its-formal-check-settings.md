@@ -40,6 +40,10 @@
   no key.
 - **R5.** `k`, the axioms and the signers path are ratcheted once committed: a change to `k`, an
   added axiom or a changed signers path is itself a weakening.
+- **R6.** `config/formal.json` names the formal checker's toolchain by its identity: a `toolchain`
+  object whose one field `identity` is 64 lowercase hex digits (#504). The formal check then uses the
+  checker's own tool pin when the two identities are equal, refuses a checker built with another pin
+  as drift, and refuses a tree that also commits a pin file. No pin file is committed.
 
 ## 3. Acceptance criteria
 
@@ -146,4 +150,51 @@ that refuses a valid document turns a test red. The generated faults of the thir
 ```acceptance
 A4: python3 -m unittest discover -s scripts/tests -p test_formal_config.py -k every_value_type_a_kind_refuses_is_planted_and_refused_by_name
 A5: python3 -m unittest discover -s scripts/tests -p test_formal_config.py -k the_reader_refuses_each_planted_fault
+```
+
+## 11. Amendment, 2026-09-30: the file names the checker's toolchain by identity
+
+Issue #504. Sections 1 to 10 stand as written and this section only adds to them. Section 5 says
+this SPEC adds no toolchain pin, and that stays true: the delivery commits no pin file. The formal
+checker now carries its own tool pin and lets a repository name that pin's identity in
+`config/formal.json` instead of committing a pin file. Until a tree names it, every TLA+ and Lean
+check stops at its tool stage, so no model is ever checked (#504).
+
+**What changes.** R1's table gains one field, `toolchain`, an object with exactly one key,
+`identity`, whose value is 64 lowercase hex digits, and the file is R1's text plus that field, one
+field per line. The checker refuses the field whole when it is not such an object, so a mistyped
+digest never reads as no identity named. A named identity that differs from the checker's own is
+drift, and a tree that commits a pin file and names an identity is refused as having two sources
+(R6).
+
+**The class.** The test's field table gains a kind for a 64-digit lowercase hex string, and every
+generated plant follows from the table with no list edited by hand: the extra key beside
+`identity` and the non-object `toolchain` come from the object-level plants, and every JSON value
+type the kind does not admit comes from the admitted-types table. The string values it refuses are
+derived from the declared digest by one edit each: one digit short, one digit long, an uppercase
+digit, a non-hex digit, an empty string and a trailing newline. The count of the third criterion's
+generated faults grows from 158 to 180 and the fourth criterion's planted value types from 144 to
+158, so no plant is dropped.
+
+**Not done here.** It commits no pin file and no `formal/` directory, and it changes no CI job
+(#504). It adds no mutation-row band: the nine rows of the earlier amendment keep their anchors,
+each occurring once (#504).
+
+| file | context | change |
+|---|---|---|
+| `config/formal.json` | repo | changed: gains the `toolchain` field |
+| `scripts/tests/test_formal_config.py` | repo | changed: the table gains the field and a kind, and A6 is added |
+| `docs/specs/SPEC-295-the-repository-declares-its-formal-check-settings.md` | repo | amended: R6, this section and A6 |
+| `docs/decisions/ADR-295-the-repository-declares-its-formal-check-settings.md` | repo | amended: a dated addendum |
+| `docs/red-first/SPEC-295.md` | repo | amended: this round's record |
+| `changelog.d/chore-formal-toolchain-504.md` | repo | added |
+
+## 12. Acceptance criteria of the 2026-09-30 toolchain amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A6 | the committed file's `toolchain.identity` is present and is 64 lowercase hex digits, the `toolchain` object holds that one key, and the test's own reader admits the file (the presence control) and refuses, each by the digest kind's own arm or the object kinds' arms, a `toolchain` that is not an object, an extra key beside `identity`, a missing identity, an identity of each JSON type but a string, one of 63 or of 65 digits, one with an uppercase or a non-hex digit, an empty one and one with a trailing newline, all generated from the field table | `test_formal_config.py` `the_toolchain_identity_is_named_and_a_malformed_one_is_refused` |
+
+```acceptance
+A6: python3 -m unittest discover -s scripts/tests -p test_formal_config.py -k the_toolchain_identity_is_named_and_a_malformed_one_is_refused
 ```

@@ -61,3 +61,32 @@ plant: the list-element test made vacuous   earlier test OK (Ran 4)   this test 
 plant: a refusal naming another field       earlier test OK (Ran 4)   this test FAILED (A4)
 plant: a map judged by its keys             earlier test OK (Ran 4)   this test FAILED (the admission test)
 ```
+
+## Amendment addendum, 2026-09-30 (issue #504, the toolchain identity)
+
+The test of A6 and the field table's new row were committed alone (bd9f84c0) with `config/formal.json`
+unchanged, so the module read `FAILED (failures=3)`, each by assertion and none by error: A1 and the
+presence control of A3 because the file names no toolchain, and A6 because its identity is absent.
+The presence control of A3 was made to fail by assertion (`self.fail`) and not by the reader's
+refusal escaping as an error. The field (e4521f8b) turned them green.
+
+```red-first
+A6: red at bd9f84c0: AssertionError: False is not true : toolchain.identity is named
+A6: green at e4521f8b
+```
+
+A1 and A3 are recorded once above, at their own first commits, so this round's replay of them is
+quoted as prose and as text.
+
+```text
+A1 at bd9f84c0: AssertionError: False is not true : ('toolchain', 'identity')
+A3 at bd9f84c0: AssertionError: presence control: the file is refused: missing required field toolchain.identity
+A1, A3 and A6 at e4521f8b: Ran 6 tests ... OK
+```
+
+The green run prints `examined 158 planted value types` (it was 144), `examined 7 planted values of the
+kind hex64 at 1 fields`, `examined 28 planted values of the kind object at 4 fields`,
+`examined 10 declared fields`, `examined 180 planted faults` (it was 158), `examined 9 refusal
+arms of the reader` (it was 8) and `examined 22 planted digest faults`. The nine mutant rows
+S29500 to S29508 keep their anchors, each occurring once in the test file.
+

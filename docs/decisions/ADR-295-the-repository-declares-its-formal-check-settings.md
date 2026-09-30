@@ -67,3 +67,26 @@ SPEC-295's A1 to A3 (`scripts/tests/test_formal_config.py`).
 ## More Information
 
 SPEC-295, issue #468.
+
+## Addendum, 2026-09-30: the repository names the checker's toolchain by identity (#504)
+
+The formal checker carries its own tool pin, and a repository may name that pin's identity in
+`config/formal.json` as `"toolchain": {"identity": "<64 lowercase hex digits>"}`. The decision: the
+repository names the identity and commits no pin file, so the checker uses its own pin when the two
+are equal, refuses a checker built with another pin as drift, and refuses a tree that names an
+identity and also commits a pin file. The considered options:
+
+- Name the checker's toolchain by its identity in `config/formal.json`: chosen, because the pin
+  stays in one place, the checker, and the repository states which build it was written against, so
+  a change of build is a reviewed change here (#504).
+- Commit a pin file beside the settings: rejected, because it duplicates what the checker already
+  carries and drifts from it silently, and a tree that commits one while naming an identity is
+  refused as two sources (#504).
+- Name nothing: rejected, because every TLA+ and Lean check then stays at its tool stage and no
+  model is ever checked (#504).
+- Name a version string instead of a digest: rejected, because a version cannot tell two builds of
+  one version apart (#504).
+
+Cost: a checker rebuilt with another pin refuses every check as drift until this field is changed,
+and that change is reviewed here. Confirmation: SPEC-295's A1, A3 and A6.
+
