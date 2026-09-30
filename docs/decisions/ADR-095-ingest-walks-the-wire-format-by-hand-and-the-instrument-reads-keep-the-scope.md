@@ -1,5 +1,5 @@
 ---
-status: "proposed"
+status: "accepted"
 date: "2026-09-28"
 decision-makers: "@RexRenatus (owner), the DeckStreak architect"
 ---
@@ -74,3 +74,43 @@ scoped counts; SPEC-099's scoped Can-Do read.
 ## More Information
 
 ADR-012; SPEC-023; SPEC-094 to SPEC-099.
+
+## Amendment 2026-09-29: the wire walk refuses a pass that does not advance
+
+The walk loop took its next position from a callee. A mutant, or a future edit, that let a pass
+return the position it started from would push one field per pass without bound. That is an
+allocation problem, not a time one, and the per-run timeout of the mutation lane does not protect a
+small runner from it. Measured with a 240 s timeout on `varint -> Ok((0, 0))`: 247 s of test time
+and a peak resident size of about 116 GB.
+
+Decision: `walk(data)` stays the public entry and calls `walk_with(data, step)`, which refuses a
+pass that does not strictly advance with the named refusal `NO_PROGRESS` before keeping its field.
+The guard's own mutants are killed by `crates/ingest/tests/wire_progress.rs`, three readers (one
+that stays, one that steps back, one that advances by one), so no equivalent record is added and
+the closed campaign row for `deck-streak-ingest` keeps its count.
+
+Chosen against:
+
+- A workflow `--exclude-re`, a timeout change or a memory change: each weakens the lane and needs
+  the owner's signed ruling.
+- A bound on the field count, with equivalent records: it is untested unreachable code, and the
+  campaign row for the crate is closed.
+- Relying on the runner's timeout: it does not protect a small runner from memory.
+
+The same guard is applied to the template token scan of Dark Fields (`tokens_with` over `token_step`
+in `crates/insights/src/dark_fields.rs`), whose stalled mutants spun a test for its whole timeout:
+`tokens_with` refuses a step that does not strictly advance with the named refusal
+`TOKEN_NO_PROGRESS`, and `config_tokens_with` marks that template failed, as a wire walk's
+`NO_PROGRESS` does, so its note type is named unparseable. Its tests are
+`crates/insights/tests/token_progress.rs`. Chosen against for the scan: ending it with `break` and
+answering the tokens it kept. A stalled scan then judges a note type on part of its templates and
+reports fields they do render as dark, with no failure named.
+
+The class rule, as a guard: `scripts/tests/test_callee_offset_loops.py` enumerates every loop under
+`crates/*/src` whose integer position comes from a callee (two: `walk_with` and `tokens_with`), and
+refuses one with no strict-advance compare, or one whose compare does not return an `Err`.
+
+Class sweep of the loops this delivery adds or touches (ingest and insights): `wire.rs` `varint` (each pass takes one byte
+from `data` and ends at its end), `wire.rs` `walk_with` (guarded) and `dark_fields.rs` `tokens_with` (guarded). Three loops, two guarded, one bounded by its input.
+The sweep names only loops in files this delivery changes, and its count is the `while` and `loop` constructs the delivery adds under
+`crates/ingest/src` and `crates/insights/src`, counted by script.

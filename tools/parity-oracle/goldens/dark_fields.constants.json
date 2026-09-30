@@ -1,0 +1,56 @@
+{
+  "cases": [
+    {
+      "input": {
+        "name": "darkfields.MIN_DARK_NOTES"
+      },
+      "output": 3
+    },
+    {
+      "input": {
+        "name": "darkfields.MAX_DARK_FIELDS_SHOWN"
+      },
+      "output": 40
+    },
+    {
+      "input": {
+        "name": "darkfields.MAX_UNPARSEABLE_SHOWN"
+      },
+      "output": 20
+    },
+    {
+      "input": {
+        "name": "darkfields._SECTION_PREFIXES"
+      },
+      "output": "#/^"
+    },
+    {
+      "input": {
+        "name": "darkfields._Q_FORMAT_FIELD"
+      },
+      "output": 1
+    },
+    {
+      "input": {
+        "name": "darkfields._A_FORMAT_FIELD"
+      },
+      "output": 2
+    },
+    {
+      "input": {
+        "name": "transfer.NOTES_BATCH_SIZE"
+      },
+      "output": 400
+    }
+  ],
+  "function": "dark_fields.constants",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "constants",
+  "registry": "tools/parity-oracle/registry/spec_094.py",
+  "registry_sha256": "65b653c5282152fc891e68568d1df2e994b7beb4822b1cd96a6bbac9b2bae5e6",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

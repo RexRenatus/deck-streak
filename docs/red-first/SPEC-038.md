@@ -93,3 +93,19 @@ ways, the same test names in each slice, and the amended leg's `Compiling` lines
 A21: red at 26e86e74: AssertionError: Lists differ: ["test-engine (as written) names the test targets [], not ['sync', 'engine_budget']"] != []
 A21: green at 39ccff4b
 ```
+
+## Addendum, 2026-09-29 (issue #393): A22 for the `.yaml` suffix
+
+The lines above stand. The criterion was A21 when the red and green commits below were made, and was renumbered A22 when the amendment for #407 took A21 first. The red commit turns each of the five scans into a function of a directory
+that still reads only `.yml` files, and adds one test per scan that plants a `.yaml` workflow; the
+green commit 63412384 switches the scans to `workflow_files()` and so edits the scan helpers that
+live in `scripts/tests/test_ci_workflows.py`, `scripts/tests/test_mutation_workflows.py` and
+`scripts/tests/test_rust_cache_workflow.py` (the scans are the code under test and sit in the test
+modules); it changes no test method and no planted workflow, except that the planted workflow of
+`test_mutation_workflows.py` gained a `name:` line before the red commit was made. The whole of each of the
+three test files at the red commit fails only the new tests, each by assertion.
+
+```red-first
+A22: red at adcf4179: AssertionError: 'planted.yaml:build:combined' not found in [] (the cache scan); Lists differ: [] != [('planted.yaml', '0123abcd')] (the protoc pins); Lists differ: [] != [('planted.yaml', 'cargo mutants --in-place')] (the mutants commands); Lists differ: [] != [('planted.yaml', 'shard')] (the mutants jobs); Lists differ: [] != [('planted.yaml', '43')] (the cron minutes)
+A22: green at 63412384
+```

@@ -200,6 +200,48 @@ A5: python3 -m unittest discover -s scripts/tests -p test_verdict_download.py -k
 A6: python3 -m unittest discover -s scripts/tests -p test_verdict_download.py -k test_every_path_the_shell_reads_differently_is_refused
 ```
 
+## 11. Amendment, 2026-09-29: the judge-line reader stops at redirections and substitutions (#394)
+
+Insert-only under ruling (i) of SPEC-038 section 8: every earlier byte is kept in order. It inserts
+this section and the next, and nothing else. Issue #394.
+
+- **The rule.** Section 9's reader ended a judge command at a control operator or a comment, but
+  took a word after a redirection (`>`, `<( )`) or inside a command substitution (`$( )`,
+  backquotes) for an argument of the verdict command. The shell does not: such a flag never reaches
+  the verdict. The reader's break set now holds `(`, `)`, `<`, `>` and the backquote, outside every
+  quote, and its docstring says that redirection and substitution words are not arguments.
+  Inside double quotes, `$(` and the backquote still open a command substitution, so the reading
+  ends there too, and the double quote it ends in is closed first (#394).
+- **Four refused fixtures.** The wrong paths gain one line per shape: a flag as a redirection's
+  target, a flag inside `$( )`, a flag inside backquotes, and a flag inside `<( )`. Each judge line
+  keeps its other flags, so only the hidden `--rows` is missing from the words the verdict reads
+  (seventeen wrong paths in all, with the two below; the ANSI-C fixture below makes eighteen).
+- **Two refused fixtures inside double quotes.** A flag inside `"$( ... )"` and a flag inside
+  double-quoted backquotes, each with inner quotes that split it into words of its own, reach no
+  argument of the verdict either. A flag after a double-quoted word that holds `$(` or a
+  backquote is refused too, because the reading ends inside that word: the reader errs toward
+  refusing (#394).
+- **An ANSI-C string.** The reader does not parse an ANSI-C string `$'...'`, in which `\'` does not
+  close the quote: it stops reading at one, so a flag after it is refused. That is a fail-closed
+  limit, and the wrong paths gain one line for it (#394).
+- **Out of scope, named.** A heredoc body is not read as words, and a flag after a bare `)` is not
+  read at all, because the reader stops at the first break (#394).
+- Files: `scripts/tests/test_verdict_download.py`, this SPEC, `docs/red-first/SPEC-126.md` and a
+  changelog fragment (#394).
+- It changes no Rust, no workflow and no Python outside the test, because the defect is in the
+  test's reader (#394).
+- It adds no mutation-row band, for the reason section 5 gives (#394).
+
+## 12. Acceptance criteria added by the section 11 amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A7 | a judge line that hides `--rows` in a redirection target, `$( )`, backquotes or `<( )` is refused, and so is one that hides it in `$( )` or backquotes inside double quotes | `test_verdict_download.py` `every_path_the_shell_reads_differently_is_refused` |
+
+```acceptance
+A7: python3 -m unittest discover -s scripts/tests -p test_verdict_download.py -k test_every_path_the_shell_reads_differently_is_refused
+```
+
 ## 13. Amendment, 2026-09-30: a report counts only in its own shard's slot
 
 Insert-only under ruling (i) of SPEC-038 section 8: every earlier byte is kept in order. It inserts
