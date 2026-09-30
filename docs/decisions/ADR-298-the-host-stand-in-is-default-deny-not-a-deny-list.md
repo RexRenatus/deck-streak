@@ -40,6 +40,9 @@ stand-in decide what it runs, and how do the tests make sure the setting is alwa
   the script's own host call and the test module's elevation values (#502).
 - Refusing an unnamed environment with a default that fills the setting in: rejected, because a
   default hides the gap that the refusal is there to show (#502).
+- Checks that recognise the spellings the tests use today and pass the rest: rejected, because a
+  spelling the author did not think of passes, which is the gap the stand-in exists to close; a check
+  that cannot read a text refuses it (#502).
 
 ## Decision Outcome
 
@@ -48,18 +51,25 @@ compares `argv[0]` to each entry as a string, so a glob or a path prefix never m
 list refuses everything. The stand-in logs each `argv[0]` it receives, and a test compares the set it
 logged over a deploy, a second deploy and a rollback with the list and with the set derived from the
 script. `launch` is the one place a deploy script starts; it raises naming the setting when the
-environment does not set it, reading a mapping, a list of entries and a sourced file. A census over
-the module's syntax tree fails any other call that starts a program.
+environment the started program will see does not set it, reading the `env` it is given (an `env` of
+`None` is refused), a list of entries and a sourced file judged by its effect. A census over the
+syntax tree of the module and of every module that imports it fails any other call that starts a
+program. Each check that enumerates a class (the stub scan, the derivation, the census and the
+refusal in `launch`) is a function of the text it reads, in `scripts/tests/_standin_checks.py`, and
+refuses what it cannot read instead of passing it; a generated population of the class, planted into
+copies of that text, is what proves each one.
 
 ### Consequences
 
 - Good, because a command the stand-in was not written for is refused by name and never run.
 - Good, because a test environment without the setting cannot start a deploy script.
 - Bad, because a new legitimate host shape needs a list entry; A1 names it when it is missing.
+- Bad, because a spelling the checks cannot read is refused even when harmless; the reviewed lists
+  are where a reviewed shape is added, with a reason.
 
 ### Confirmation
 
-`scripts/tests/test_deploy_standin.py` (SPEC-298 A1 to A9) and the rows S29800 to S29808, each proved
+`scripts/tests/test_deploy_standin.py` (SPEC-298 A1 to A13) and the rows S29800 to S29813, each proved
 by the mutation job.
 
 ## More Information
