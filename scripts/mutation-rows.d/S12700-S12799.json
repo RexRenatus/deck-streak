@@ -296,6 +296,30 @@
         "[ -w \"$dir\" ] || { echo \"deploy: the candidate Caddyfile could not be written\"",
         "the removal refuses a directory holding the live Caddyfile that it cannot write, before its first write (SPEC-127 A38)",
         "test_deploy_scripts.TheCaddyInstall.test_every_directory_a_caddy_script_writes_or_undoes_is_checked_before_the_first_write"
+      ],
+      [
+        "S12738-A-CADDY-STEP-STOPS-ON-A-SETTING-IT-DOES-NOT-LIST",
+        "deploy/deploy.sh",
+        "[ -n \"$named\" ] || { echo \"deploy: $name is not a setting of deploy.sh\" >&2; exit 1; }",
+        "[ -n \"$named\" ] || { echo \"deploy: $name is not a setting of deploy.sh\" >&2; }",
+        "a Caddy step stops on a deploy setting deploy.sh does not list, before it reads or writes anything (SPEC-127 A39)",
+        "test_deploy_scripts.TheCaddyInstall.test_a_caddy_step_reads_only_the_settings_it_names_and_refuses_any_other"
+      ],
+      [
+        "S12739-THE-REMOVAL-REFUSES-A-SETTING-IT-DOES-NOT-LIST",
+        "deploy/deploy.sh",
+        "caddy-install | caddy-remove)\n",
+        "caddy-install)\n",
+        "the removal refuses a deploy setting deploy.sh does not list, as the install does (SPEC-127 A39)",
+        "test_deploy_scripts.TheCaddyInstall.test_a_caddy_step_reads_only_the_settings_it_names_and_refuses_any_other"
+      ],
+      [
+        "S12740-THE-REFUSAL-READS-THE-WHOLE-DEPLOY-PREFIX",
+        "deploy/deploy.sh",
+        "for name in ${!DECKSTREAK_DEPLOY_@}; do",
+        "for name in ${!DECKSTREAK_DEPLOY_CADDY@}; do",
+        "a Caddy step refuses every unlisted name with the deploy prefix, not only a narrower one (SPEC-127 A39)",
+        "test_deploy_scripts.TheCaddyInstall.test_a_caddy_step_reads_only_the_settings_it_names_and_refuses_any_other"
       ]
     ]
   }
