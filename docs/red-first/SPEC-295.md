@@ -100,11 +100,11 @@ presence controls (00937178) turned them green.
 A7: red at bfa66c37: AssertionError: the sources each combination names, as the checker reads them (R6): the combination of the field named and a pin file committed lists one source, not two
 A7: green at 00937178
 A8: red at bfa66c37: AssertionError: ['test_the_toolchain_identity_is_named_and_a_malformed_one_is_refused line 493'] != [] : a call of the reader whose refusal would escape as an error
-A8: red at bfa66c37: AssertionError: a refusal escaped a test as an error, not a failure, for 159 of the 182 planted refusals of the committed file
 A8: green at 00937178
 ```
 
 The green run reads `Ran 9 tests ... OK` and prints `examined 4 toolchain source combinations`,
 `examined 182 planted refusals of the committed file`, `examined 5 tests that load the committed
 file`, `examined 6 calls of the reader` and `examined 2 presence controls of the committed file`.
-The rows S29510 to S29513 are each killed on a clean committed detached head.
+At the same commit the second test of A8 reads `AssertionError: a refusal escaped a test as an error, not
+a failure` for 159 of its 182 planted refusals of the committed file. The rows S29510 to S29513 are each killed on a clean committed detached head.
