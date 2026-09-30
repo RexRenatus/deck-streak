@@ -969,8 +969,10 @@ mod tests {
     }
 
     impl tracing::Subscriber for Refusals {
-        fn enabled(&self, _metadata: &tracing::Metadata<'_>) -> bool {
-            true
+        // Error events only: the service's alert quotes the journal's error lines, so a refusal
+        // logged below error is not one the table may count as named.
+        fn enabled(&self, metadata: &tracing::Metadata<'_>) -> bool {
+            *metadata.level() == tracing::Level::ERROR
         }
 
         fn new_span(&self, _span: &tracing::span::Attributes<'_>) -> tracing::span::Id {
