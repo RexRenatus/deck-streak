@@ -829,3 +829,50 @@ binary named other than its package, a unit test in the binary's root file and o
 declares, and a library test the binary does not hold. A42's first test calls the runner's
 functions with `subprocess.run` replaced by a recorder, and reads the argv it built. A43 proves two
 rows with cargo in the fixture's own `target/`, and A44 runs the census over three planted rows. A45's two tests plant a binary rooted at `src/other.rs` with a module beside it, and a `tests/bin.rs` beside the binary, and read the census.
+
+## 17. Amendment, 2026-09-29: a leg with nothing to examine is not started (SPEC-290)
+
+R3 says each of the five jobs "is never skipped, because `ci` reads a skipped need as failed".
+SPEC-290 (ADR-290, #435) makes that false for two of them, and only when the plan's listing gives
+the leg nothing to examine:
+
+- `mutation-rust` runs under `if: ${{ needs.mutation-plan.outputs.listed != '0' }}`. `listed` is a
+  new plan output, written by `mutation-verdict.py shards`: the number of mutants the shards hold,
+  `0` when the Rust class does not apply. The matrix, the shards and the `cargo mutants` line are
+  unchanged.
+- `mutation-rows` runs under
+  `if: ${{ needs.mutation-plan.outputs.rows == 'true' || needs.mutation-plan.outputs.scope == 'diff' }}`,
+  so R11's retirement check still runs on every diff, and the leg is not started only on a
+  `not-applicable` push that selects no row.
+- R4's verdict gains two readings: a shard the listing gives no mutant and that left no artifact is
+  `not started`, and a sum of the reports' mutants that differs from the listing's count is VOID.
+  Its new `legs` verb refuses by name a skipped leg the listing owed work.
+- `ci` admits `skipped` from those two legs alone, once each, beside a `mutation-verdict` that must
+  succeed. `mutation-plan`, `mutation-verdict` and `mutation-web` are still never skipped, and every
+  leg that starts prints its case as R3 says.
+
+This section adds no criterion: SPEC-290's A1 to A7 decide it, and its rows are S29000-S29099.
+
+## 18. Amendment, 2026-09-29: the Python is mutated by a runner of its own
+
+Made by SPEC-087's delivery (issues #218 and #219), insert-only under ruling (i) of SPEC-038
+section 8: every earlier byte is kept in order. It adds:
+
+- a Python class beside the Rust, the Mini App and the parity oracle: `scripts/*.py` (a guard
+  script, never its tests) is the class `scripts`, and the oracle's Python is judged by the same
+  runner;
+- the job `mutation-python`, a need of `mutation-verdict` and of `ci`, which runs
+  `scripts/mutation_python.py` over the diff's mutants, one job per shard, and the weekly
+  battery's `python` job, which sweeps every listed file in 16 shards. `mutation-python` has no
+  job-level condition and is never skipped by design, and `ci` admits no skip from it: only
+  `mutation-rust` and `mutation-rows`, the two legs SPEC-290's listing can leave empty, may read
+  `skipped`;
+- `judge --class scripts` and `judge --class oracle`, each reading the shards' reports, where a
+  report that is missing, partial or of exit 4 (a failed restore) is VOID by name;
+- the equivalence record `scripts/mutation-equivalent.d/python.json`, held to the same census as
+  the Rust and Mini App records (SPEC-057, ADR-070), and the rows `S08700-S08799`.
+
+What it amends, and why: the Python that guards the repository was proved only by hand-proved
+rows, so a weak test of a guard script had no measure. The decision and what it was chosen
+against are ADR-073; the requirements and criteria are SPEC-087's. The criteria of this SPEC
+stand; SPEC-087's A1 to A22 are added beside them.
