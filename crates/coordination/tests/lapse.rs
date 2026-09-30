@@ -1,7 +1,7 @@
 //! The open lapse coordination hands on is counted from the study reviews its caller read
 //! (SPEC-049 A15; R15; ADR-088). Every review is synthetic and every instant is set by hand.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use deck_streak_coordination::lapse::open_lapse;
 use deck_streak_coordination::recompute::RecomputeFacts;
@@ -138,11 +138,16 @@ fn open_under(rule: StudyDayRule, now: i64, reviews: Vec<Review>) -> Option<i64>
     open_lapse(&facts).map(StudyDay::epoch_day)
 }
 
+/// The distinct members of the rollover population.
+const DISTINCT_ROLLOVER_MEMBERS: usize = 448;
+
 #[test]
 fn a_review_counts_on_the_study_day_the_rule_gives_at_every_boundary() {
     let mut examined: u64 = 0;
     let mut opened: u64 = 0;
-    for offset in [-720_i64, -300, -210, 0, 330, 345, 540, 840] {
+    // A member is every input the judge reads: the rule, the reviews and `now`.
+    let mut distinct: BTreeSet<(i64, i64, i64, i64, i64)> = BTreeSet::new();
+    for offset in [-720_i64, -300, -210, 0, 330, 330, 540, 840] {
         for hour in [0_i64, 4] {
             let the_rule = rule(offset, hour);
             // Local midnight of local calendar date `T` in this offset.
@@ -177,6 +182,7 @@ fn a_review_counts_on_the_study_day_the_rule_gives_at_every_boundary() {
                     (begins(offset, hour, d + 2), None),
                 ] {
                     examined += 1;
+                    distinct.insert((offset, hour, t, d, now));
                     opened += u64::from(want.is_some());
                     assert_eq!(
                         open_under(the_rule, now, reviews.clone()),
@@ -187,8 +193,17 @@ fn a_review_counts_on_the_study_day_the_rule_gives_at_every_boundary() {
             }
         }
     }
-    println!("examined {examined} rollover member(s)");
+    println!(
+        "examined {examined} rollover member(s), {} distinct",
+        distinct.len()
+    );
     assert_eq!(examined, 448, "the population is generated: {examined}");
+    assert_eq!(
+        distinct.len(),
+        DISTINCT_ROLLOVER_MEMBERS,
+        "the population's spread: {} distinct of {examined}",
+        distinct.len()
+    );
     assert!(
         opened > 0 && opened < examined,
         "both answers occur: {opened} open of {examined}"

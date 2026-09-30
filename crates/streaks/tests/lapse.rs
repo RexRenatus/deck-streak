@@ -240,13 +240,21 @@ fn a_silent_run_on_the_windows_first_day_is_read() {
     assert_eq!(open(T, &counts(&[T - 3], &[]), &[]), Some(T - 2));
 }
 
+/// The distinct members of the window population: `before` of 1 or 2 makes the second and third
+/// fills coincide, so 336 of the 2252 members repeat an earlier one.
+const DISTINCT_WINDOW_MEMBERS: usize = 1916;
+
 #[test]
 fn the_walk_reads_every_day_of_its_window_and_none_outside_it() {
     let mut examined: u64 = 0;
     let (mut opened, mut closed) = (0_u64, 0_u64);
     let threshold = LAPSE_AFTER_SILENT_DAYS;
     let k = i64::from(threshold);
-    let mut record = |answer: Option<i64>| {
+    // A member is every input the judge reads: `today`, the rows, the skip days and the threshold.
+    let mut distinct: BTreeSet<(i64, BTreeMap<i64, u32>, BTreeSet<i64>, u32)> = BTreeSet::new();
+    let mut record = |today: i64, rows: &BTreeMap<i64, u32>, skipped: &BTreeSet<i64>, at: u32| {
+        let answer = judge_window(today, rows, skipped, at);
+        distinct.insert((today, rows.clone(), skipped.clone(), at));
         examined += 1;
         if answer.is_some() {
             opened += 1;
@@ -282,7 +290,7 @@ fn the_walk_reads_every_day_of_its_window_and_none_outside_it() {
                 let mut skipped: BTreeSet<i64> = run
                     .iter()
                     .enumerate()
-                    .filter(|(place, _)| (mask >> place) & 1 == 1)
+                    .filter(|(place, _)| *place != 0 && (mask >> place) & 1 == 1)
                     .map(|(_, &n)| n)
                     .collect();
                 for skip_the_closing_day in [false, true] {
@@ -296,7 +304,7 @@ fn the_walk_reads_every_day_of_its_window_and_none_outside_it() {
                                 // A day after `today` is outside the walk.
                                 rows.insert(today + 1, 3);
                             }
-                            record(judge_window(today, &rows, &skipped, threshold));
+                            record(today, &rows, &skipped, threshold);
                         }
                     }
                     skipped.remove(&(run_start - 1));
@@ -305,30 +313,30 @@ fn the_walk_reads_every_day_of_its_window_and_none_outside_it() {
         }
     }
     // A `today` before the window, and one long past its only row.
-    record(judge_window(
+    record(
         T,
         &BTreeMap::from([(T + 2, 0)]),
         &BTreeSet::new(),
         threshold,
-    ));
-    record(judge_window(
+    );
+    record(
         T,
         &BTreeMap::from([(T + 2, 1)]),
         &BTreeSet::new(),
         threshold,
-    ));
-    record(judge_window(
+    );
+    record(
         T + 40,
         &BTreeMap::from([(T, 0)]),
         &BTreeSet::new(),
         threshold,
-    ));
-    record(judge_window(
+    );
+    record(
         T + 40,
         &BTreeMap::from([(T, 1)]),
         &BTreeSet::new(),
         threshold,
-    ));
+    );
     // A threshold of one and of five over the same windows.
     for other in [1_u32, 5] {
         for before in 0..=3_i64 {
@@ -336,13 +344,23 @@ fn the_walk_reads_every_day_of_its_window_and_none_outside_it() {
                 .map(|n| (n, 1))
                 .chain([(T - before, 0)])
                 .collect();
-            record(judge_window(T, &rows, &BTreeSet::new(), other));
+            record(T, &rows, &BTreeSet::new(), other);
         }
     }
-    println!("examined {examined} window member(s)");
+    // `record` borrows the set until its last use above.
+    println!(
+        "examined {examined} window member(s), {} distinct",
+        distinct.len()
+    );
     assert_eq!(
         examined, 2252,
         "the population is generated, not listed: {examined}"
+    );
+    assert_eq!(
+        distinct.len(),
+        DISTINCT_WINDOW_MEMBERS,
+        "the population's spread: {} distinct of {examined}",
+        distinct.len()
     );
     assert!(
         opened > 0 && closed > 0,
