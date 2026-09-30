@@ -205,7 +205,7 @@ fn a_review_counts_on_the_study_day_the_rule_gives_at_every_boundary() {
                 // One study review long ago and one at `t`; the run after `t` is what the day
                 // decides: silent on d+1, d+2, d+3 opens a lapse with id d+1.
                 let reviews = vec![
-                    review_at(t),
+                    review_at(begins(offset, hour, d - 10) + HOUR_MS),
                     review_at(t),
                 ];
                 for (now, want) in [
