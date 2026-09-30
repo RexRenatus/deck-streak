@@ -548,98 +548,160 @@ gave an outside caller two names that the census never looks for, and the caller
 A32: cargo test -p deck-streak-progression --test xp_census -- --exact the_census_reads_progressions_own_reexports_as_it_reads_the_other_crates
 ```
 
-## 12. Amendment, 2026-09-29, round 1: the census follows a crate alias and a type alias
+## 12. Amendment, 2026-09-30, round 6: the compiler is the census
 
-Review of the census (section 10) found two promised shapes missed, and four evasions left over.
-The two, a module renamed inside a group and a chain read before its link, are A32's and are
-fixed there. The rest are decided by ADR-197.
+Issue 397, decided by ADR-197 (its decision of round 6). Section 10's census, and the three rounds
+of review that widened it, found a caller by reading Rust and TOML as text: it followed the names
+progression's crate and its `settle` were bound to, form by form. Each review generated a new
+population, and each found a form the reader did not follow. Round 5 generated one from Cargo's
+documentation, TOML 1.0 and the Rust Reference (2390 cases), and round 3's rule missed 786 of its
+members under each of three repairs. This amendment replaces the reader: the compiler finds every
+caller, and the census reads no Rust to find one. Section 10's change and the reader's rows (S07230
+to S07240, which never reached dev) are withdrawn with it; section 10's and 11's criterion, A32,
+stands, and the compiler decides it.
 
-- **The change.** The census follows a crate alias (`pub use deck_streak_progression as prog;`
-  in any crate's `src`, then a source that names `prog` and one of progression's renamings) and a
-  `pub type Alias<..> = path::Original<..>;` of the request or the operation. A `)` makes the next
-  `use` public only when it closes `pub(`, so a `pub(crate) use` is followed as a chain link, and an
-  attribute before a private `use` no longer reads as public. The operation is
-  matched as a word, so a caller's own `settled_of_day` and a homonym of a private alias are
-  accepted.
-- **Round 2, the class.** The names that denote progression's crate, or its `settle`, are one set
-  for the workspace, read to a fixpoint over every binding form with each identifier
-  normalised first (`r#name` reads as `name`): a manifest's `package` rename (inline, table or
-  dotted key, either quote, `-` read as `_`), an `extern crate ... as`, every `use` leaf (`as x`,
-  `{self as x}`, a chain of them in any file order), and a glob of the crate's root, which opens
-  every file of the member that holds it. A source that reaches `settle` by any of those names
-  (`x::settle`, or a bare `settle` in a member that globs the root) is refused as a direct caller.
-  A member's own function called `settle`, or a homonym of one of progression's renamings, in a
-  member that globs the root is refused too, which is a loud failure and not a silent pass.
-- **Round 3, across members and past every comment.** A member that exports progression's crate
-  root to another member gives the crate a new name. A plain `pub use` or `pub extern crate` whose
-  path passes through a name of the crate (a glob `pub use prog::*;` or an alias `pub use prog as
-  p;`, at the member's root or in a module) makes the holder's crate name (its directory's under
-  the workspace prefix, and its `[package]` and `[lib]` names, `-` read as `_`), or the module it
-  sits in, a name of the crate. So does a plain `pub use` of the operation or one of its renamings
-  by any path (`pub mod p { pub use crate::settle; }` in a member whose root globs the crate) in
-  progression or in a member that names the crate. The set runs to one
-  fixpoint across every member, so a chain of holders and coordination's own re-export are
-  followed. Rust is read by one lexer before any name is: every comment (line, block, nested block,
-  doc) is a space and every literal (string, raw, byte or C string, character) is empty, so a
-  comment between a path's tokens hides nothing, and a path written in a comment or a literal is not
-  a call. Manifests are read by one TOML reader: comments are removed outside strings, a header or a
-  key may be bare, quoted or dotted, an inline table may span lines, and a manifest the reader cannot
-  read to its end is refused rather than let it hide a rename.
-- **The set is global, and fails closed.** A name bound to the crate in one member, or a module
-  name another member exports the crate by, is followed in every member, so a member's own module of
-  that name that holds its own `settle` is refused. This, and the glob refusal above, narrow section
-  10's "no false refusal" to a source in a member that neither globs the root nor names a name of the
-  crate. Each is a loud failure. A set for each member plus the names each exports was measured and
-  rejected, because a file another member compiles by `#[path]` escapes it (ADR-197).
-- **Still unfollowed.** A public wrapper function that calls `settle` inside progression is a new
-  operation in progression's own code, and a reviewer sees it there. A re-export that a
-  `macro_rules!` macro in progression writes is not followed either, because the census does not
-  expand macros; the macro is progression's own code too. ADR-197 names both, and issue 445 tracks
-  them.
-- **A33.** A planted crate alias is refused by file, alias and original; a planted type alias of
-  the request is refused; an attribute-preceded private `use` is not a re-export and a `pub(crate)`
-  link is followed; and a name that only begins with the operation is accepted. Its tests are
-  `the_census_follows_a_crate_alias`, `the_census_follows_a_type_alias`,
-  `a_private_alias_behind_an_attribute_is_not_a_reexport`,
-  `the_operation_is_matched_as_a_word_not_a_prefix`,
-  `the_census_reads_a_raw_identifier_as_its_plain_name`,
-  `the_census_follows_a_crate_alias_however_it_is_written` and
-  `the_census_follows_a_crate_renamed_by_a_manifest`, in `crates/progression/tests/xp_census.rs`.
-  The class is generated as a population by `the_census_refuses_every_member_of_the_binding_population`,
-  from tables the test holds: forty-eight binding forms crossed with three caller shapes; a comment
-  of each of seven kinds in every token gap, where Rust admits it, of every form's files and of every
-  caller; a comment in every place of every manifest, and a `#` inside a string in each; ten
-  literals before each form's caller; fourteen export routes, each
-  held by a member and by coordination, reached by four spellings of the holder and three caller
-  shapes; progression's own module re-exporting the operation, by the three caller shapes; a file
-  another member compiles by `#[path]`; and a glob member's homonym in another module. It prints
-  `class members: examined 12307`, and each member is refused. Each member's control names another
-  crate in the same spelling, but for progression's own module (its name is a name of the crate
-  wherever it is written), and the private-glob, own-homonym and literal controls stand alone; the
-  12338 controls are each accepted, and every manifest is read to its end.
-- **Rows.** S07230-CENSUS-FIXPOINT (the alias loop runs to a fixpoint), S07231-CENSUS-PUB-CRATE-CLOSE
-  (a `)` that closes `pub(` makes a `use` a re-export) and S07232-CENSUS-SELF-RENAME (a
-  `{self as X}` is a leaf). Each is killed by
-  `xp_census::the_census_follows_a_grouped_module_renaming_and_a_chain_read_before_its_link`
-  and proved KILLED by its full id. Round 2 adds S07233-CENSUS-MANIFEST-RENAME (a manifest's
-  `package` rename is a name of the crate), S07234-CENSUS-GLOB-OPENS-MEMBER (a glob of the crate's
-  root opens the member's files) and S07235-CENSUS-RAW-IDENTIFIER (`r#name` reads as `name`), each
-  killed by one of the new tests and proved KILLED by its full id. Round 3 re-anchors S07233 and
-  S07234 on the census's new text and adds S07236-CENSUS-EXPORT-NAMES-HOLDER (a member's export of
-  the crate names the holder), S07237-CENSUS-NESTED-COMMENT (a block comment nests),
-  S07238-CENSUS-TOML-COMMENT (a manifest comment is removed before a key is read),
-  S07239-CENSUS-OPERATION-EXPORT (a re-export of the operation names the holder) and
-  S07240-CENSUS-LITERAL-EMPTIED (a literal is not code), each killed by the population test.
-- **Files.** `crates/progression/tests/xp_census.rs` (A32, A33),
+- **The probe.** `crates/progression/build.rs` gives progression alone the cfg `settle_census` when
+  the variable `SETTLE_CENSUS` is set, and under it `settle` carries `#[deprecated]` with the note
+  "the settle census's probe". Without the variable, as in every ordinary build, the cfg is unset
+  and the attribute is absent, so no build but the census's compiles differently.
+- **The census.** It asks `cargo metadata` for the workspace, then has cargo check every target of
+  every workspace package (`cargo check --workspace --all-targets`, with `--locked` when the tree
+  holds a `Cargo.lock`) in a target directory of its own, with `SETTLE_CENSUS` set and `--force-warn
+  deprecated` for every crate, which no `allow`, `expect`, `deny`, `forbid` or `--cap-lints` can
+  silence. It runs four passes: debug assertions on and off, each with the unwind and the abort
+  panic strategy, the only two settings of a profile that stable rustc offers as a cfg
+  (`debug_assertions` and `panic`). Each pass names every package the workspace compiles,
+  progression and every dependency among them, with its setting, so every build script and every
+  macro compiles in it as the members do, and a macro expands as the crate that defines it wrote it
+  for that state. When a member has a dev-dependency, the census runs the four passes again over the
+  libraries and binaries alone (`cargo check --workspace`), which resolver 2 compiles without the
+  features a dev-dependency asks for, as a build without tests does. Cargo's own defaults compile
+  it: the census removes `RUSTC`, `RUSTC_WRAPPER`, `RUSTC_WORKSPACE_WRAPPER`, `RUSTFLAGS`,
+  `CARGO_ENCODED_RUSTFLAGS` and every `CARGO_BUILD_*`, `CARGO_PROFILE_*`, `CARGO_TARGET_*` and
+  `CARGO_UNSTABLE_*` variable from cargo's environment. Each `--config` setting is a `dev` one,
+  which the `test` profile of tests and benches inherits. A package's named setting stands above the
+  manifest's `package."*"`, `build-override` and base settings, and a `--config` setting above the
+  manifest's own named one, `[profile.test]`'s among them; a manifest that names a package by
+  another spec (`name@version`) gives it two settings, which cargo refuses (`the workspace does not
+  compile`).
+- **The callers.** Every deprecation rustc reports with the probe's note is a use of `settle`, in
+  the package cargo compiled it in. Progression's own is accepted. Any other package's but
+  coordination's is refused as `<file> calls settle, and only coordination's code may`. A use is
+  named by the outermost file of the repository it is written in: rustc's span, then each macro call
+  site and each `include!` it expanded from, each by its real path (every `..` and link resolved).
+  Coordination's use by a test, a bench or an example is accepted. Any other use by coordination is
+  refused as `<file> calls settle outside the recompute steps, and only the owner's correction may`,
+  unless every repository file of its expansion lies in `crates/coordination/src/recompute/` or
+  names `SettleCause::OwnersCorrection` and never `SettleCause::Recompute` in its code (comments and
+  literals aside). A use written in no file of the repository is named by its target's root and
+  refused, a build script's output among them: rustc names an item a build script writes and
+  `include!` reads by that output file alone, which lies in the census's own target directory, so
+  the file that includes it cannot make it a recompute step's or a correction.
+- **Refused by design.** What cargo is not asked to compile, or what rustc cannot report, the census
+  refuses by name before it reads a use, rather than guess:
+  - a workspace cargo cannot read, a `Cargo.lock` cargo would have to update among them (`cargo
+    cannot read the workspace`), or one that does not compile in any pass (`the workspace does not
+    compile`);
+  - a member that declares a feature, since the census compiles none (`declares a feature, and the
+    census compiles none`);
+  - a proc-macro member, since rustc reports no deprecation inside a derive's expansion (`is a
+    proc-macro crate`);
+  - a `Cargo.toml` in the repository that is not a workspace member, and a path package that is not
+    one (`is a package outside the workspace, which the census does not compile`);
+  - a registry or git package that depends on progression (`depends on progression from outside the
+    workspace`);
+  - a `.cargo/config` or `.cargo/config.toml` at the repository's root, the one cargo reads there
+    (`configures cargo, and the census compiles with cargo's own defaults`);
+  - a use expanded through more than 1024 macro calls, and a cargo run past 1800 seconds, each a
+    failure by name rather than a walk or a wait without end.
+- **Out of the census's reach.** Each is disclosed, and issue 445 tracks them:
+  - a wrapper function, a function pointer or a generic in progression's own code that calls
+    `settle`: it is a new operation in the owner's code, which rustc reports as progression's own
+    use, and a reviewer sees it there;
+  - code no `cargo check --all-targets` compiles here: a doctest, a compile trybuild runs while a
+    test runs, and code under a cfg the census's build never sets (another target, `doc`, `miri`);
+  - code a build script or a proc-macro writes only when it sees the census's variable or flags;
+  - a registry or git package's own code, a derive from one among it; such a package is a
+    dependency, and ADR-022's supply-chain rule admits it;
+  - a build that compiles its packages in different debug-assertion states (a manifest's per-package
+    or custom profile, `[profile.release.package.<dependency>]` among them, or the invoking
+    machine's configuration), where a dependency's or another member's macro or re-export reaches
+    `settle` only in a state its caller is not compiled in: the census compiles every package in one
+    state per pass;
+  - a build that selects some members only (`cargo build -p <member>`), whose dependencies resolve
+    fewer features than the workspace's, where a dependency's macro reaches `settle` only without a
+    feature another member asks for: the census compiles the workspace's own resolution;
+  - the machine that runs the census: its toolchain, and the cargo configuration of its `CARGO_HOME`
+    and of the folders above the repository.
+- **The four-quote strings.** TOML 1.0 lets a multi-line string close with one or two quotes more
+  than its delimiter. Cargo reads each manifest itself, so the census reads such a manifest exactly
+  as cargo does and refuses none by design; round 5's two cases are in the killer's manifest axis,
+  and each is judged right.
+- **The killer.** `the_census_refuses_every_caller_the_compiler_finds` judges one generated
+  population, each tree alone: round 5's 2095 valid cases (1049 members, 1046 controls: its 2390
+  less the 291 cargo or rustc refused, two members the compiler reported elsewhere and their two
+  controls) and 123 cases of the axes round 5 did not measure (54 members, 69 controls, 11 of them
+  refused by construction): build scripts, proc-macro crates, tests, benches and examples, path and
+  git dependencies, macros, cargo configuration, silencing lints, and coordination's attribution. It
+  prints `examined N member(s) and M control(s) of <axis>` for each of its 17 axes, and `killer
+  examined 2218 tree(s)` with no member escaping and no control judged wrongly; the 11 controls
+  refused by construction (8 in a proc-macro crate, a feature, a cargo configuration and a path
+  package outside the workspace) are refusals the census owes by design. At this section's base (the
+  census of round 3) it fails: `members escaping: 815; controls judged wrongly: 14`.
+- **The census's own trees.** `the_census_refuses_what_the_compiler_is_not_asked` plants ten trees:
+  one for each refusal by design above, the two bounds aside (a `.cargo/config` and a
+  `.cargo/config.toml` each, and a `Cargo.lock` cargo would have to update for a workspace it cannot
+  read), and one for a use no file of the repository places. Each is refused by name, and alone.
+  `the_census_fails_by_name_past_its_expansion_limit` and
+  `the_census_fails_by_name_past_its_cargo_limit` hold the two bounds: a chain one call past the
+  limit, and a cargo run given no time, each fail by name.
+  `the_census_names_each_use_in_its_package_and_file` plants one workspace whose manifest sets debug
+  assertions for tests and pins them on for one member, for progression and for a git dependency,
+  with a use in each pass, selection, target kind, macro and file the rules above name: among them a
+  use through progression's re-export and one through the git dependency's macro, each of which
+  exists only without debug assertions, one through the git dependency's macro that exists only
+  without the feature a member's dev-dependency asks for, and a correction coordination's build
+  script writes and a recompute step includes, refused by coordination's root.
+- **Round 4's population.** Round 4's 12307 members and 12338 controls, round 3's 144 and 144 among
+  them, completed into cargo workspaces, were judged once, on 2026-09-30, outside CI, by the census
+  this pull request commits at `078fc173` (the design judged the same census source): each of the
+  12307 members was refused by its own caller's file and each of the 12338 controls was accepted.
+  They are not in the killer: the census compiles every tree it judges, so judged each alone, as the
+  killer judges its trees, they would run past the `rust` job's 60-minute timeout, for binding forms
+  rustc resolves by the same name resolution the killer's identifier, export and manifest axes
+  already exercise.
+- **Cost.** The census compiles every member, so it costs build time where rounds 1 to 3 cost none:
+  A12 runs eight passes (four over every target, four over libraries and binaries, since members
+  have dev-dependencies), and the killer judges its 2218 trees, each by its own compile. Both run in
+  the `rust` job beside `check.sh`'s own build and tests, and the census's target directory lies
+  under the job's `target/tmp`, which its cache keeps. The pull request's body carries the `rust`
+  job's wall time before and after, read from CI. The `mutation-rows` job proves the rows a diff
+  selects one after another within its 90 minutes; S07274 and S07275 each compile the real tree
+  twice. The mutation battery (SPEC-039) runs progression's tests for each mutant of progression's
+  code under a timeout of 300 s, which the killer alone exceeds, so a mutant no faster test kills
+  would be reported as a timeout rather than as missed: the pull request's verdict passes a timeout,
+  and the weekly table counts one as killed. This amendment does not take that decision; ADR-197's
+  round 6 brings it to the owner.
+- **Rows.** Thirty-five, S07241 to S07275 in this SPEC's band: S07241 to S07252 pin each refusal by
+  design and the census's return of them; S07253, S07254 and S07256 to S07271 its passes, the
+  packages each names, its flags, its reading of rustc's report and its attribution; S07255 and
+  S07273 its scrubbed environment; S07272 its expansion bound; and S07274 and S07275 the probe
+  itself (the build script's arming and the attribute on `settle`). Each is killed by a test of
+  `xp_census.rs`, S07274 and S07275 by A12's own, and each was proved KILLED by its full id on a
+  committed tree.
+- **Files.** `crates/progression/build.rs` (new), `crates/progression/src/settle.rs` (the probe),
+  `crates/progression/tests/xp_census.rs` (A12, A32, A33, A34),
   `scripts/mutation-rows.d/S07200-S07299.json`, `docs/decisions/ADR-197-*.md`,
   `docs/red-first/SPEC-072.md` and `changelog.d/settle-census-397.md`.
 
-## 13. Acceptance criteria of the round 1 amendment
+## 13. Acceptance criteria of section 12's amendment
 
 | id | criterion | decided by |
 |---|---|---|
-| A33 | a crate alias of progression's crate is followed in every binding form the population generates (`as prog` in a `use` or an `extern crate`, `{self as prog}`, `r#prog`, a chain of them in any file order, a glob of the crate, a manifest's `package` rename in any quoting, table or dotted key, and another member's crate name or module when that member re-exports the crate or its operation), past any comment between its tokens and not from a comment or a literal, a raw alias of its names is read as its plain name, a type alias of them is followed, a `pub(crate)` link is followed as a chain link, an attribute-preceded private `use` is not a re-export, a name that only begins with the operation is accepted, and a manifest the census cannot read to its end is refused | progression `xp_census` tests: the fence's test, `the_census_follows_a_type_alias`, `a_private_alias_behind_an_attribute_is_not_a_reexport`, `the_operation_is_matched_as_a_word_not_a_prefix`, `the_census_reads_a_raw_identifier_as_its_plain_name`, `the_census_follows_a_crate_alias_however_it_is_written`, `the_census_follows_a_crate_renamed_by_a_manifest` and `the_census_refuses_every_member_of_the_binding_population` |
+| A33 | a crate alias of progression's crate (`pub use deck_streak_progression as prog;` in another member) does not hide its caller: the caller that reaches `settle` through it is refused by file | progression `xp_census` tests: `the_census_follows_a_crate_alias` and the killer's identifier, export and manifest axes |
+| A34 | every use of `settle` rustc reports in any target of any workspace package, in any of its passes, is a caller: refused in a package but progression and coordination, and judged by the cause rule in coordination; a tree the compiler is not asked about is refused by name; the census compiles with cargo's own defaults, and bounds its cargo runs and its expansion chains with a failure by name | progression `xp_census` tests: `the_census_refuses_every_caller_the_compiler_finds`, `the_census_refuses_what_the_compiler_is_not_asked`, `the_census_names_each_use_in_its_package_and_file`, `the_census_compiles_with_cargos_own_defaults`, `the_census_fails_by_name_past_its_expansion_limit`, `the_census_fails_by_name_past_its_cargo_limit` and `the_killer_plants_progressions_own_probe` |
 
 ```acceptance
 A33: cargo test -p deck-streak-progression --test xp_census -- --exact the_census_follows_a_crate_alias
+A34: cargo test -p deck-streak-progression --test xp_census -- --exact the_census_refuses_every_caller_the_compiler_finds
 ```

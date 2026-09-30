@@ -1,9 +1,13 @@
 ### Fixed
 
-- The settle census (SPEC-072 A12, issue 397) now reads progression's own re-exports. A renamed
-  `pub use` of `settle`, its request or its module, however grouped, nested or chained, a crate
-  alias in each binding form the census's test generates (a `use` or `extern crate` alias, raw,
-  grouped or chained, a glob, a manifest's rename), another member's re-export of the crate or its
-  operation, or a type alias of them, no longer lets a caller outside coordination pass by naming
-  only the new names, and no comment between a path's tokens hides one; the refusal names the file,
-  the alias and the original, and a manifest the census cannot read is refused (ADR-197).
+- The settle census (SPEC-072 A12, issue 397) is now the compiler. Progression's `settle` carries a
+  deprecation under a cfg that progression's build script sets only for the census, and the census
+  has cargo check every target of every workspace package in four passes (debug assertions on and
+  off in every package, each with the unwind and the abort panic strategy), and again over libraries
+  and binaries alone when a member has a dev-dependency, with the deprecation forced to warn. So
+  rustc names every caller outside progression however it reaches `settle`: through a re-export, an
+  alias, a glob, a macro, an `include!`, a manifest's rename, a test, a bench, an example or a build
+  script. A caller outside coordination is refused by file, and coordination's callers keep the
+  owner's-correction rule. What the compiler is not asked to compile (a member's feature, a
+  proc-macro member, a package outside the workspace, a cargo configuration) is refused by name
+  (ADR-197).

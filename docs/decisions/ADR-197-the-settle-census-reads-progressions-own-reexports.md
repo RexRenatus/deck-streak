@@ -125,6 +125,110 @@ crates' dependencies, and making either a dependency of the test is a new edge, 
 above rule out. A wrapper function and a macro-written re-export stay the residuals named above,
 tracked by issue 445.
 
+### Decision, round 6: the compiler is the census
+
+Round 5's review generated a population from Cargo's documentation, TOML 1.0 and the Rust Reference
+(2390 cases; 2095 compile and are labelled by the compiler's own report) and found the rule of round
+3 open again under each of three repairs. Five rounds each widened a textual reader of Rust and TOML
+by one more shape, and each new population found the next. This round closes the class by
+construction, so the census reads no Rust to find a caller: the compiler does.
+
+**The closure argument.** Progression's build script gives progression alone the cfg `settle_census`
+when the census compiles, and under it `settle` carries a deprecation. Rustc reports a use of a
+deprecated item wherever a path resolves to it, through every re-export, alias, glob, macro
+expansion and `include!`, in every file cargo compiles, and `--force-warn deprecated` makes that
+report one no `allow`, `expect`, `deny`, `forbid` or `--cap-lints` can silence. The census has cargo
+check every target of every workspace package (libraries, binaries, tests, benches, examples and
+build scripts) in the four cfg states a profile can set on stable rustc: debug assertions on and
+off, each with the unwind and the abort panic strategy. Each pass names every package with its
+state, progression and every dependency among them, so a macro or a re-export compiles as the crate
+that defines it wrote it for that state; and when a member has a dev-dependency, the census compiles
+the libraries and binaries alone as well, which resolver 2 compiles without the dev-dependency's
+features, as a build without tests does. Every use it reports outside progression's package is a
+caller: coordination's goes to the cause rule, and any other package's is refused. What cargo is not
+asked to compile is refused before it runs: a workspace cargo cannot read or that does not compile,
+a member's feature (the census compiles none), a proc-macro member (rustc reports no deprecation
+inside a derive's expansion), a `Cargo.toml` in the repository outside the workspace, a path package
+that is not a member, a registry or git package that depends on progression, and a `.cargo/config`.
+A caller in a build the census compiles is therefore either reported by rustc or sits in something
+the census refuses by name. There is no third place, and no list of spellings to extend. Two kinds
+of build it does not compile are named rather than guessed, and SPEC-072 section 12 discloses both:
+one that compiles its packages in different debug-assertion states, and one that selects some
+members only, whose dependencies resolve fewer features than the workspace's.
+
+The options were each measured over round 5's population (VR5: its 2095 valid cases of 2390), the
+axes round 5 left unmeasured (S2: 123 cases of build scripts, proc-macro crates, targets, path and
+git dependencies, macros, cargo configuration, silencing, and coordination's attribution), round 4's
+population (12307 members and 12338 controls, round 3's 144 and 144 among them) and the real tree.
+ESCAPE is a member the option accepts, and FALSE REFUSAL is a control it refuses.
+
+| option | VR5 | S2 | round 4 | real tree |
+|---|---|---|---|---|
+| (A) round 5's rule (every file Cargo builds, read as rustc reads it, or refused) | ESCAPE 0, FALSE REFUSAL 0 | ESCAPE 20, FALSE REFUSAL 13 (119 cases as first generated) | not measured: rejected on S2 | 0 refusals |
+| (B) a declared narrow grammar | not measured | not measured | not measured | refuses kernel's build script, 156 test, bench and example files and 51 files with `#[path]` (dev: 170 and 53) |
+| (C) the compiler as the census | ESCAPE 0, FALSE REFUSAL 0 | ESCAPE 0, FALSE REFUSAL 0 (11 controls refused by design: 8 in a proc-macro crate, a feature, a cargo configuration, a path package outside the workspace) | ESCAPE 0, FALSE REFUSAL 0 | 0 refusals |
+| (D) issue 406's reader (PR 419's token reader and crate-root walk) | ESCAPE 258, FALSE REFUSAL 787 (fail-closed: 174 and 871) | ESCAPE 37, FALSE REFUSAL 24 (fail-closed: 7 and 51) | ESCAPE 12271, FALSE REFUSAL 51 (fail-closed: 3 and 12335) | 3 files refused (fail-closed: 1207) |
+
+- (A) lost because it escapes on the axes it never measured: tests, benches and examples, found by
+  Cargo's auto-discovery or declared (10), a proc-macro crate's function-like, attribute and derive
+  macros and a name joined inside one (4), a build script reached through `[build-dependencies]` or
+  named by `package.build` (2), a git dependency patched onto a workspace crate, a build script's
+  own debug assertions, a feature and a cfg set by cargo's configuration. Each is one more shape for
+  a textual reader to learn, which is the treadmill this round ends.
+- (B) lost on the real tree: the grammar it needs refuses files dev holds today, and a false refusal
+  of a real dev file is a failure. Widening it to admit them re-opens the axes (A) escapes on.
+- (D) lost because it reads tokens and follows no binding: it cannot see a re-export, a `pub use`
+  tree, a glob across members, a manifest's rename or a macro-generated item, so it escapes almost
+  every member of round 4 and refuses three files of the real tree, and its fail-closed form refuses
+  almost every control. PR 419's reader answers another question (which files a crate root reaches,
+  and which tokens they hold). One reader could serve a Python test and this Rust test only across a
+  process boundary (the Rust test running `python3`, or a Rust binary the Python test runs), which
+  would add a runtime to the `rust` job and still not close the class, so nothing of it is shared.
+- (C) was chosen: ESCAPE 0 and FALSE REFUSAL 0 over every population, and no refusal on the real
+  tree. It adds no dependency edge: `serde_json`, which reads cargo's JSON, and `tempfile` are
+  progression's dev-dependencies already.
+
+**Consequences.**
+
+- Good, because every earlier round's shape (a renamed, grouped, chained or globbed re-export, a
+  crate alias, a manifest rename, a comment or a literal in any place, another member's re-export, a
+  `#[path]`, a macro) is now followed by name resolution itself, and a new spelling of the same call
+  needs no new code in the census.
+- Good, because the macro-written re-export that issue 445 tracked is now followed: a macro in
+  progression that writes a `pub use` of `settle` expands before rustc resolves the caller's path.
+- Bad, because progression gains production text: a build script that sets the cfg only when the
+  census's variable is present, and a `cfg_attr` on `settle`. Neither changes an ordinary build:
+  without the variable, the cfg is unset and the attribute is absent.
+- Bad, because the census now compiles the workspace: four `cargo check` passes of every target, and
+  four of the libraries and binaries alone when a member has a dev-dependency (the real tree has),
+  in a target directory of its own, in the `rust` CI job, beside the test that drives it. The killer
+  compiles each of its 2218 trees alone, so the `rust` job grows by minutes (SPEC-072 section 12
+  gives the times measured).
+- Bad, because a test that runs for minutes meets the mutation battery's per-mutant timeout of 300
+  s: a mutant of progression that no faster test kills would be reported as a timeout rather than as
+  missed, and a timeout neither fails the pull request's verdict nor counts as a survivor in the
+  weekly table. This round names that decision and does not take it: the owner chooses between a
+  nextest filter in `.cargo/mutants.toml` that runs progression's other tests for its mutants
+  without `xp_census` (a mutant only the census kills is then reported missed, which is loud), and a
+  separate test crate for the census (a new crate and its edges, which this round may not add).
+  Either runs fewer tests for a mutant of progression, which ADR-199's rule counts a weakening that
+  only the owner's signed ruling takes, as it counts a changed timeout. Keeping the timeout as it is
+  would let a survivor pass as killed, so it is not offered.
+- Bad, because some code is out of the compiler's reach, and the census says so rather than guess: a
+  member's feature, a proc-macro member, a package outside the workspace and a cargo configuration
+  are refused by construction; a wrapper function, a function pointer or a generic in progression's
+  own code that calls `settle` is a new operation in progression's own code and stays issue 445's;
+  and the census judges the code of this repository compiled by this toolchain on this platform, in
+  builds that compile every package in one state and resolve the workspace's features, not doctests,
+  not code a build script or a proc-macro writes only when it sees the census's variable, not a
+  registry or git package's own code, and not a compile trybuild runs at test time. SPEC-072 section
+  12 lists each.
+
+The textual census of rounds 1 to 3 is removed with its tables, its population test and its rows
+S07230 to S07240. Round 6's rows, S07241 to S07275, pin the census's refusals by design, its passes,
+its attribution, its bounds, its environment and the probe itself, each killed by a planted-tree
+test.
+
 ## More Information
 
 Issue 397; SPEC-072 (its amendment of 2026-09-29); ADR-072; issue 350, which delivered the census.

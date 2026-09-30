@@ -107,6 +107,8 @@ A32: red at eb6119fa: assertion `left == right` failed; left: [], right: ["crate
 A32: green at d2697435
 A33: red at 99fbf46d: assertion `left == right` failed; left: [], right: ["crates/markets/src/via_prog.rs calls settle through tally, progression's alias of settle, and only coordination's code may"]
 A33: green at 7a6a659d
+A34: red at 05cfedf2: assertion `left == right` failed: trees the census judges wrongly: 829 (members escaping: 815; controls judged wrongly: 14)
+A34: green at 078fc173
 ```
 
 Addendum (2026-09-29, issue 397): A32 was added by the census amendment (ADR-197). Its test was
@@ -206,3 +208,35 @@ control, which is compiled beside progression and calls its holder's own functio
 
 A12 on the real tree reads 160 crate source files, 15 migrations, 8 planted crate source files, and
 refuses none, as before the round.
+
+Addendum (2026-09-30, round 6 of the review of issue 397). Round 5's review generated a population
+from Cargo's documentation, TOML 1.0 and the Rust Reference and found the textual census open again,
+so the compiler becomes the census (ADR-197, its decision of round 6; section 12).
+
+The killer, `the_census_refuses_every_caller_the_compiler_finds`, was committed alone (05cfedf2)
+beside the unchanged census of round 3. Red, by assertion: `panicked at
+crates/progression/tests/xp_census.rs:4211:5:` with "assertion `left == right` failed: trees the
+census judges wrongly: 829", the left side naming the first tree judged wrongly that a worker
+reported (an escaping member of the reading-scope axis in each run measured), the test printing
+`killer examined 2218 tree(s)` with `members escaping: 815; controls judged wrongly: 14`; 11 passed,
+1 failed. The census of round 6 (078fc173) makes it green: `killer examined 2218 tree(s)` with
+`members escaping: 0; controls judged wrongly: 0`, each of its 17 axes printing its examined members
+and controls. The green commit edits a test file, `xp_census.rs`, because the census is that file's
+own code, and it adds the probe to progression's production code: the build script
+`crates/progression/build.rs` and the `cfg_attr` on `settle`, neither of which changes a build
+without the census's variable. No assertion of the killer changed between the red and the green.
+
+The population's validity was confirmed under the pinned toolchain (cargo and rustc 1.97.0, edition
+2024) apart from the census, in four builds of each case (debug assertions on and off, each with the
+unwind and the abort panic strategy): round 5's cases were labelled by its own compile of every
+case, and a stratified sample of 142 cases, one member and one control of each of round 5's axes and
+every case of the axes this round adds, gave rc 0 in all four builds for 141. The one other,
+`concat_idents!`, gave rc 101 in each, since the macro is unstable on a stable toolchain, and it is
+not in the population: no caller can write it on this toolchain.
+
+Round 4's population (12307 members and 12338 controls, round 3's 144 and 144 among them) was judged
+by this census once, outside CI: every member refused by its own caller's file and every control
+accepted.
+
+A12 on the real tree compiles every target of every workspace package in the four passes, and its
+libraries and binaries alone in four more, since members have dev-dependencies, and refuses none.
