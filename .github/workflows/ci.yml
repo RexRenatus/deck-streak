@@ -597,6 +597,7 @@ jobs:
           if [ "$status" -eq 0 ]; then status=$oracle; fi
           scripts=0
           python3 scripts/mutation-verdict.py judge --plan "$reports/mutation-plan/plan.json" --class scripts --python "$reports" --rows "$reports/mutation-rows/rows.json" --python-whole "$reports/mutation-plan/python-whole.json" || scripts=$?
+          if [ "$status" -eq 0 ]; then status=$scripts; fi
           legs=0
           python3 scripts/mutation-verdict.py legs --plan "$reports/mutation-plan/plan.json" --rust-leg "$RUST_LEG" --rows-leg "$ROWS_LEG" || legs=$?
           if [ "$status" -eq 0 ]; then status=$legs; fi
