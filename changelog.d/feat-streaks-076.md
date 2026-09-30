@@ -7,3 +7,6 @@
   walk and the streak counters can no longer spin, and the streak screen, its readers and its page
   carry generated-population tests, so the mutation checks of the streak files leave only recorded
   equivalents standing.
+- The relight's celebration is due in the same write as its grant, so it is sent once for each
+  committed grant, also across a failed sync or a restart; nothing is at stake once the day has a
+  study review; and every value the streak and governor routes serve is read in its own place.

@@ -134,3 +134,55 @@ A41). `open_lapse` now walks the window's days by a counted range, newest first.
   ends, and one test that reached it would cost a shard its whole budget as the silence walk did.
 - Rejected: converting it without the smallest-day guard, because that answers a lapse at the
   smallest epoch day where the earlier loop answered none (A41 is red under it).
+
+## Amendment, 2026-09-30: the relight's celebration is due in the grant's own write
+
+The amendment of 2026-09-29 answered a relight day as due in memory, inside the fold's per-day
+write and before that write committed. A day could then be celebrated for a grant that rolled
+back, and a day held in memory was lost at a restart between the commit and the route. The order
+was chosen by a TLA+ model of the per-day write, the due list, the cycle's take and route, the
+router's once-ever key and a restart between any two steps, checked for three properties: at most
+one celebration per relight day (S1), none without a committed grant (S2), and every committed
+grant celebrated under fair recompute (L1) (SPEC-076 R27 restated, R28; the proof is #477).
+
+- Chosen: the day is due in the grant's own write, because only this order kept S1, S2 and L1
+  with a failure or a restart between any two steps. The cycle reads the list after the fold
+  commits and clears a day once the router has decided it, and the router's once-ever key still
+  answers a day routed twice.
+- Rejected: answering the day as due after the write commits, held in memory, because a restart
+  between the commit and the route loses the day, so L1 fails.
+- Rejected: clearing the due list when a fold fails, because it also drops a day an earlier write
+  committed, so L1 fails even with no restart.
+- Rejected: deriving the due days from the ledger's relight grants, because an imported history's
+  grants would be celebrated (SPEC-140 R5), and the router would need a read of what it decided.
+- Rejected: one stored slot for the due day, because a second relight day overwrites the first
+  before its route, so L1 fails.
+- Rejected: routing inside the fold, because a send would then leave from a write that can still
+  roll back, and the one-router census (SPEC-041) names the cycle as the router's caller.
+- Rejected: a window of due days bounded by a cursor, because it drops an older committed day the
+  cursor has already passed.
+
+## Amendment, 2026-09-30: the walks' domain is stated, and their proof is #478
+
+The silence walk steps at most `SILENCE_WALK_CAP_DAYS + 1` days below today, and the law bridge
+and the law replay one day. For a today that close to the smallest epoch day, the subtraction
+leaves the day type. No caller passes such a day: a study day is an instant's day, and its epoch
+day number lies within 2^37 of the epoch (SPEC-076 R32).
+
+- Chosen: the domain is stated, because no caller can pass a day outside it, so a guard would
+  answer at days no one reaches. Each function's doc and R32 state it, and the proof is #478.
+- Rejected: guarding each walk as `open_lapse` is guarded, because that invents an answer the
+  predecessor never gave: its date arithmetic raises at its smallest date. Each guard would also
+  be new mutation surface, pinned only by a test at days no caller reaches.
+
+## Amendment, 2026-09-30: the calendar is a follow-up
+
+SPEC-076 R20, R23 and section 4 promised a calendar with freeze, skip and break markers, which
+this delivery does not serve or draw (SPEC-076 section 18).
+
+- Chosen: the calendar is excluded and follows as #486, because none of #81 to #84 lists it in its
+  acceptance, and adding a served surface now would reopen the served-pairs rule (R31) mid-review.
+- Rejected: delivering the calendar in this delivery, because it adds a route body, markers and a
+  screen section that no acceptance of #81 to #84 asks for.
+- Rejected: moving #81 from `Closes` to `Refs`, because its acceptance list is met; the calendar
+  appears only in its prose.

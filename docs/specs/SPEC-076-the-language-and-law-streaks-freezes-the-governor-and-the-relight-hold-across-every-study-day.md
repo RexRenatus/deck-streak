@@ -648,3 +648,107 @@ A43: cargo test -p deck-streak-coordination --test streak_fold -- --exact the_ou
 Manifest additions: `crates/streaks/src/lapse.rs` (changed: `open_lapse` walks a counted range);
 `crates/streaks/tests/open_lapse_bound.rs` (added: A41); `crates/bot/tests/streak_commands.rs`
 (changed: A42).
+
+## 18. Amendment, 2026-09-30: R20, R21 and R23 as this delivery serves them
+
+Insert-only: every earlier byte is kept in order, and this section is the only insertion.
+
+- The calendar is not in this delivery. `GET /api/streak` serves no study days and no freeze, skip
+  or break markers, and the streak screen draws no calendar. This supersedes R20's "the window's
+  study days with their freeze, skip and break markers", R23's "the calendar with its markers", and
+  the words "the calendar" in section 4's row for `web/app/src/lib/streak/StreakScreen.svelte`. The
+  calendar is #486.
+- The relight count is served by `GET /api/governor` as `relight_cards`, during a lapse only, and
+  not by `GET /api/streak`. This supersedes R20's last sentence.
+- No route serves a reason string for a disarmed governor. `GET /api/governor` serves the verdict,
+  `standby`, `lapse` and `lapse_since`, and the streak screen states the reason from them. That is
+  how R21's "why the governor is disarmed when it is" is met.
+
+## 19. Amendment, 2026-09-30: the relight's celebration is due in the grant's own write, and five sentences are corrected
+
+Insert-only: every earlier byte is kept in order, and this section is the only insertion.
+
+R27 (restated). The relight's celebration is due in the grant's own write. The streak step records
+    the relight's study day in `relight_due` in the fold's per-day write that grants the relight
+    (R26), so the day is due exactly when that write commits, and a write that rolls back leaves no
+    day due. After the fold's commit, the cycle reads every day still due, oldest first, and
+    routes each under R27's kind and key (`celebration`, `relight:<epoch day>`). Once the router has
+    decided a day, as sent or as already sent, the day leaves the list. A day whose route fails
+    stays due, and so does a day whose route a restart interrupts, so the next cycle routes it. This
+    supersedes R27's answer held in memory and its sentence on crash recovery: a day answered before
+    its write committed could be celebrated after that write rolled back, and a day held in memory
+    was lost at a restart.
+R28. Over a fold that fails at any step after the streak step, a later sync in which the day still
+    qualifies or no longer qualifies, and a restart between any two steps: at most one celebration
+    is sent for each relight day (S1); no celebration is sent for a day whose grant did not commit
+    (S2); and every committed grant is celebrated while recomputes keep running (L1). The proof of
+    the three is #477.
+R29. The migration `migrations/007602_streaks_relight_due.sql` creates `relight_due`, `STRICT` with
+    `created_at` (SPEC-020 R15, R18). It is exported and erased, registered in the context map's
+    ownership register, declared in `privacy.json` and listed in the streaks data-rights port. This
+    adds to R24.
+R30. R20's `none` for a day that already has a study review is served: the streak view, and so
+    `GET /api/streak`, answers `none` for a track whose last study day is the open study day,
+    whatever its run and freezes (A49).
+R31. Every value `GET /api/streak` and `GET /api/governor` serve is judged, by the api's route test
+    and by the web reader's test, over one generated population in which each pair of served values
+    differs in some member, so a route or a reader that puts one served value in another's place is
+    red (A47, A48). The bot's reply is judged the same way by A42.
+R32. The silence walk, the law bridge and the law replay are defined on the study days an instant
+    maps to, whose epoch day numbers lie within 2^37 of the epoch. The silence walk steps at most
+    `SILENCE_WALK_CAP_DAYS + 1` days below today, and the bridge and the replay one day, so none of
+    them leaves the day type there. A today closer than that to the smallest epoch day is outside
+    their domain, and each function's doc says so; `open_lapse` alone answers there (section 16).
+    The proof of the walks' arithmetic is #478.
+
+- Section 10's last bullet names "the two `lapse.rs` files". This delivery changes only
+  `crates/streaks/src/lapse.rs`; `crates/coordination/src/lapse.rs` is read and unchanged.
+- `open_lapse`'s doc now states its one exception: a walk that reaches the smallest epoch day
+  without meeting a study review answers no lapse (section 16, A41).
+- A30's named mutant, the heat's `days >= *threshold` replaced by `days > *threshold`, matches two
+  sites. The failure the red-first record quotes is `heat_tier`'s; `heat_for`'s mutant passes A30
+  and fails A3. The record's addendum of this date names both.
+- A33's store population gains the due list. `put_relight_due`, `relight_due` and
+  `clear_relight_due` are called only from coordination, and a mutant is judged by its own
+  package's tests, so `store_effects` reads each back with a raw query: a day is kept at its first
+  write, the list is read oldest first, a cleared day leaves it, and a write that rolls back leaves
+  no day due.
+
+Manifest additions: `migrations/007602_streaks_relight_due.sql` (added: R29);
+`crates/streaks/src/store.rs` (changed: the due list is written, read and cleared);
+`crates/streaks/src/data_rights.rs` (changed: the due list is exported and erased);
+`crates/coordination/src/recompute/streaks.rs` (changed: the step records the due day in the
+grant's write); `crates/coordination/src/relight.rs` and `crates/coordination/src/sync_cycle.rs`
+(changed: the cycle routes the stored due days and clears each decided one);
+`crates/coordination/src/streak_views.rs` (changed: R30); `crates/streaks/src/governor.rs`,
+`law.rs`, `replay.rs` and `lapse.rs` (changed: their docs state the domain of R32 and section 16);
+`crates/coordination/tests/relight_order.rs` (added: A44 to A46);
+`crates/coordination/tests/relight_settle.rs`, `crates/coordination/tests/data_rights_symmetry.rs`
+and `crates/streaks/tests/streak_rights.rs` (changed: the stored due list);
+`crates/streaks/tests/store_effects.rs` (changed: A33 reads the due list back);
+`crates/coordination/tests/streak_views.rs` (changed: A49); `crates/api/tests/streak_routes.rs`
+(changed: A47);
+`web/app/src/lib/streak/streak-served-population.test.ts` (added: A48); `privacy.json`,
+`PRIVACY.md` and `docs/CONTEXT-MAP.md` (changed: R29); the offline query cache (five queries
+added); the rows `S07617` to `S07621`; and `docs/red-first/SPEC-076.md` (changed: the addendum of
+this date).
+
+## 20. Acceptance criteria of the 2026-09-30 relight-order amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A44 | a fold that fails after the relight's grant, followed by a sync in which the day no longer qualifies, sends no celebration | `a_celebration_is_sent_only_for_a_grant_that_committed` |
+| A45 | a restart between the fold's commit and the route leaves the day due, and the next cycle sends its one celebration | `a_crash_between_the_commit_and_the_route_is_recovered_at_the_next_cycle` |
+| A46 | over every failure point, later-sync outcome and restart, each committed grant is celebrated once and no other day is | `every_failure_point_later_sync_and_crash_keeps_one_celebration_per_committed_grant` |
+| A47 | the streak and governor routes serve each value in its own place, over a generated population in which each pair of served values differs | `every_served_value_is_read_where_each_pair_of_served_values_differs` |
+| A48 | the web reader reads each served value into its own place, over the same population | `web/app/src/lib/streak/streak-served-population.test.ts` |
+| A49 | the view puts nothing at stake on a track whose open study day has a study review, over every run, freeze count and studied flag of both tracks | `a_studied_day_puts_nothing_at_stake_on_either_track` |
+
+```acceptance
+A44: cargo test -p deck-streak-coordination --test relight_order -- --exact a_celebration_is_sent_only_for_a_grant_that_committed
+A45: cargo test -p deck-streak-coordination --test relight_order -- --exact a_crash_between_the_commit_and_the_route_is_recovered_at_the_next_cycle
+A46: cargo test -p deck-streak-coordination --test relight_order -- --exact every_failure_point_later_sync_and_crash_keeps_one_celebration_per_committed_grant
+A47: cargo test -p deck-streak-api --test streak_routes -- --exact every_served_value_is_read_where_each_pair_of_served_values_differs
+A48: pnpm exec vitest run web/app/src/lib/streak/streak-served-population.test.ts
+A49: cargo test -p deck-streak-coordination --test streak_views -- --exact a_studied_day_puts_nothing_at_stake_on_either_track
+```

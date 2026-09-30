@@ -10,7 +10,10 @@
 //! every day of one episode reports one id.
 //!
 //! The walk stops at the window's first day, the earliest day the caller read. A run that reaches
-//! back past it is the anchor SPEC-076 stores (R15, R16), not this function's.
+//! back past it is the anchor SPEC-076 stores (R15, R16), not this function's. One exception
+//! holds at the smallest epoch day: a walk that reaches it without meeting a study review answers
+//! no lapse, whatever its run holds, because the day type has no day before it (SPEC-076
+//! section 16, A41).
 
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -27,7 +30,8 @@ pub const LAPSE_AFTER_SILENT_DAYS: u32 = 3;
 /// reviews, and its earliest key is the window's first day. A day without a key, or with a count
 /// of zero, holds no study review. `skip_days` are the declared rest days, which stay empty until
 /// the skip day exists (#108). A run of at least `silent_days_to_open` silent days opens a lapse;
-/// callers pass [`LAPSE_AFTER_SILENT_DAYS`].
+/// callers pass [`LAPSE_AFTER_SILENT_DAYS`]. A walk that reaches the smallest epoch day without
+/// meeting a study review answers `None`, as the earlier checked step did.
 #[must_use]
 pub fn open_lapse(
     today: StudyDay,

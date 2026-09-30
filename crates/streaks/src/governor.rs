@@ -100,6 +100,10 @@ pub struct Silence {
 }
 
 /// Walk back from `today` while the day holds no study, at most the cap.
+///
+/// Its domain is the study days an instant maps to, whose epoch day numbers lie within 2^37 of the
+/// epoch. The walk steps at most `SILENCE_WALK_CAP_DAYS + 1` days below `today`, so a `today` fewer
+/// days than that above the smallest epoch day is outside it (SPEC-076 R32).
 #[must_use]
 pub fn silence_walk(
     today: StudyDay,

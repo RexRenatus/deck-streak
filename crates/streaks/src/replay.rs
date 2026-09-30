@@ -47,6 +47,9 @@ pub fn language(
 }
 
 /// The law row after `through`: the run it holds and the longest run any earlier day held.
+///
+/// Its domain is [`law_state`]'s, which reads the day before `through`, so a `through` at the
+/// smallest epoch day is outside it (SPEC-076 R32).
 #[must_use]
 pub fn law(
     days: &BTreeSet<StudyDay>,

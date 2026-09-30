@@ -9,6 +9,9 @@ use crate::streak::StreakState;
 
 /// The run of law study days ending today, or yesterday when today has none yet, with skip days
 /// bridging it.
+///
+/// Its domain is the study days an instant maps to. It reads the day before `today`, so a
+/// `today` at the smallest epoch day is outside it (SPEC-076 R32).
 #[must_use]
 pub fn bridged_streak(
     days: &BTreeSet<StudyDay>,
