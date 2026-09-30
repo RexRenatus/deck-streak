@@ -421,6 +421,58 @@ class TheMissingToolPopulation(unittest.TestCase):
         self.assertEqual(examined, expected)
         print(f"examined {examined} spawner spelling(s)")
 
+    def test_the_census_refuses_every_spelling_it_cannot_read_by_every_way_of_reaching_a_spawner(
+        self,
+    ):
+        """A spawner reached by a NAME built at run time is a spawn the census cannot read, so it
+        refuses the way of reaching one rather than listing spellings: `getattr`, `__import__`,
+        `importlib`, `vars`/`globals`/`locals` and `__dict__`/`sys.modules` subscripts, `eval` and
+        `exec`, each crossed with every documented spawner and every way of writing it."""
+        dynamic = (
+            'import {m}\ngetattr({m}, "{n}")(x)\n',
+            "import {m}\ngetattr({m}, name)(x)\n",
+            "import {m}\nfetch = getattr\nfetch({m}, name)(x)\n",
+            'import {m}\nvars({m})["{n}"](x)\n',
+            'import {m}\nglobals()["{m}"].{n}(x)\n',
+            'import {m}\nlocals()["{n}"](x)\n',
+            'import {m}\n{m}.__dict__["{n}"](x)\n',
+            'import sys\nsys.modules["{m}"].{n}(x)\n',
+            'from sys import modules\nmodules["{m}"].{n}(x)\n',
+            '__import__("{m}").{n}(x)\n',
+            'import builtins\nbuiltins.__import__("{m}").{n}(x)\n',
+            'import importlib\nimportlib.import_module("{m}").{n}(x)\n',
+            'from importlib import import_module\nimport_module("{m}").{n}(x)\n',
+            'import importlib as il\nil.import_module("{m}").{n}(x)\n',
+            'eval("{m}.{n}(x)")\n',
+            'exec("import {m}; {m}.{n}(x)")\n',
+            'compile("{m}.{n}(x)", "f", "exec")\n',
+        )
+        examined_forms = 0
+        for module, names in DOCUMENTED_SPAWNERS.items():
+            for name in names:
+                for form in dynamic:
+                    source = form.format(m=module, n=name)
+                    with self.subTest(source=source):
+                        self.assertNotEqual(raw_spawns(source)[1], [], source)
+                        examined_forms += 1
+        expected = len(dynamic) * sum(map(len, DOCUMENTED_SPAWNERS.values()))
+        self.assertEqual(examined_forms, expected)
+        # No false refusal: the module itself, and code that reaches nothing by a built name.
+        benign = (
+            MODULE.read_text(encoding="utf-8"),
+            "x = str(1)\ny = {}\ny['a'] = x\n",
+            "import json\njson.dumps({})\n",
+            "from pathlib import Path\nPath('a').read_text()\n",
+            "modules = []\nmodules.append(1)\n",
+        )
+        for source in benign:
+            with self.subTest(benign=source[:40]):
+                self.assertEqual(raw_spawns(source)[1], [])
+        print(
+            f"examined {examined_forms} dynamic spelling(s), refused all; "
+            f"{len(benign)} benign source(s), refused none"
+        )
+
     def test_a_path_entry_the_runner_cannot_look_at_is_passed_over_as_the_spawn_passes_it(self):
         member = Member(
             self, "git", "git", "absent", "prove-id", position="behind an entry it cannot look at"
