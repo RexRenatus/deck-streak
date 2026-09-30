@@ -184,9 +184,10 @@ verdict. The generated population lays a wrong container, an outcome off the run
 and a mutant under an unread path, per shard, over plans of one to four shards; the verdict refuses
 70 of 450, crashes on 90 and accepts 290. The empty-listing population refuses 2 of 22, crashes on
 12 and reads 8 otherwise. The green commit adds the shared reader and the binding and the judge
-both read its yield; both populations are then refused in full. The rows commit adds three
-families (a byte-readers container of another type, a mutant name of another type, and a listed
-mutant filed under an unread path), so the populations read 530 of 530 and 27 of 27.
+both read its yield; both populations are then refused in full. The later commits add four
+families (a byte-readers container of another type, a mutant name of another type, a mutant record
+of another type, and a listed mutant filed under an unread path), so the populations read 570 of
+570 and 27 of 27.
 
 ```red-first
 A10: red at 1c4c0d45: AssertionError: 70 != 450 : {'refused': 70, 'crashed': 90, 'accepted': 290, 'other': 0}
