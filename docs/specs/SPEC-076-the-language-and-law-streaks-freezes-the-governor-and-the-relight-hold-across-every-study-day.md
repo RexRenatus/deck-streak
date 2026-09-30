@@ -752,3 +752,10 @@ A47: cargo test -p deck-streak-api --test streak_routes -- --exact every_served_
 A48: pnpm exec vitest run web/app/src/lib/streak/streak-served-population.test.ts
 A49: cargo test -p deck-streak-coordination --test streak_views -- --exact a_studied_day_puts_nothing_at_stake_on_either_track
 ```
+
+## 21. Amendments: the files the relight-order amendment adds
+
+The relight-order amendment (sections 18 to 20) adds three files that no row of section 4 names:
+`crates/coordination/tests/relight_order.rs` (added: A44 to A46),
+`migrations/007602_streaks_relight_due.sql` (added: R29, the relight's due day stored in the
+grant's own write) and `web/app/src/lib/streak/streak-served-population.test.ts` (added: A48).
