@@ -199,9 +199,8 @@ class TheStandInRefusesWhatItDoesNotKnow(unittest.TestCase):
                     timeout=60,
                     check=False,
                 )
-                self.assertFalse(
-                    record.exists(), f"{name!r}: a program was run: {record.read_text()}"
-                )
+                if record.exists():
+                    self.fail(f"{name!r}: a program was run: {record.read_text()}")
                 self.assertNotEqual(done.returncode, 0, f"{name!r}: the stand-in did not refuse")
                 self.assertEqual(done.stdout, "", f"{name!r}: the stand-in printed on stdout")
                 self.assertEqual(done.stderr, refusal(name), f"{name!r}: not one line naming it")
