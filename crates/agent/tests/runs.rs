@@ -382,12 +382,13 @@ fn prose_that_names_the_delete_beside_the_prune_is_not_counted() {
             "prose was counted: {prose}"
         );
     }
-    // The statement count still reads prose: a commented copy of the statement is refused.
+    // A comment runs nothing, a copy of the statement in it included: beside the good prune it
+    // changes nothing.
     let copy = format!("/// DELETE FROM {TABLE} WHERE created_at < ?1\n{good}");
     assert_eq!(
         prune_pin_problems(&copy),
-        ["the source holds 2 delete statements, not one"],
-        "a commented copy of the statement was not refused as a second statement"
+        Vec::<String>::new(),
+        "a commented copy of the statement was read as code"
     );
     // A comment that quotes the statement is not the statement that runs, so beside a changed
     // prune the code hands the tested statement to nothing.
@@ -417,7 +418,7 @@ fn every_comment_form(text: &str) -> Vec<String> {
 }
 
 #[test]
-fn a_delete_word_in_any_comment_form_is_not_counted_but_the_statement_in_one_is() {
+fn a_delete_word_or_the_statement_in_any_comment_form_is_not_counted() {
     let good = a_good_prune_source();
     // Two prose texts, one holding a quote, in each of the eight forms: none is read.
     let forms: Vec<String> = [
@@ -436,14 +437,13 @@ fn a_delete_word_in_any_comment_form_is_not_counted_but_the_statement_in_one_is(
             "a benign delete word in a comment was counted: {comment}"
         );
     }
-    // The statement itself inside each form, bare or quoted, is a second delete statement, and
-    // only that.
+    // The statement itself inside each form, bare or quoted, is prose too: no comment is code.
     for text in [PRUNE.to_owned(), format!("\"{PRUNE}\"")] {
         for comment in every_comment_form(&text) {
             assert_eq!(
                 prune_pin_problems(&format!("{comment}\n{good}")),
-                ["the source holds 2 delete statements, not one"],
-                "a commented copy of the statement was not refused: {comment}"
+                Vec::<String>::new(),
+                "a commented copy of the statement was read as code: {comment}"
             );
         }
     }
@@ -546,4 +546,291 @@ fn no_character_literal_hides_a_second_statement_in_the_string_after_it() {
             "a character literal hid a second statement: {literal}"
         );
     }
+}
+
+/// The prune the tests set beside a holder: the good one, the statement handed whole to
+/// `sqlx::query!`, and one that runs a statement written in another module, so that only a copy
+/// can make the source look like the prune.
+fn the_two_prunes() -> [String; 2] {
+    [
+        a_good_prune_source(),
+        "let done = sqlx::query(crate::prune_sql::INDEX_SKIPPING).bind(cutoff);".to_owned(),
+    ]
+}
+
+/// The string-like literal kinds rustc lexes as one token whatever they hold, each an opener, a
+/// closer and the type of a constant holding it: a string, raw strings with none to three hashes,
+/// a byte string and a raw one, a C string and a raw one.
+const LITERAL_KINDS: [(&str, &str, &str); 11] = [
+    ("\"", "\"", "&str"),
+    ("r\"", "\"", "&str"),
+    ("r#\"", "\"#", "&str"),
+    ("r##\"", "\"##", "&str"),
+    ("r###\"", "\"###", "&str"),
+    ("b\"", "\"", "&[u8]"),
+    ("br\"", "\"", "&[u8]"),
+    ("br#\"", "\"#", "&[u8]"),
+    ("c\"", "\"", "&core::ffi::CStr"),
+    ("cr\"", "\"", "&core::ffi::CStr"),
+    ("cr#\"", "\"#", "&core::ffi::CStr"),
+];
+
+/// `text` written as the literal `open`..`close`: escaped where the kind escapes, as written where
+/// it is raw, or `None` where a raw kind cannot hold `text` because `text` holds its closer.
+fn literal_holding(open: &str, close: &str, text: &str) -> Option<String> {
+    if open.trim_start_matches(['b', 'c']).starts_with('r') {
+        (!text.contains(close)).then(|| format!("{open}{text}{close}"))
+    } else {
+        let escaped = text.replace('\\', "\\\\").replace('"', "\\\"");
+        Some(format!("{open}{escaped}{close}"))
+    }
+}
+
+/// Where a holder closes against the code after it: a holder on one line of its own; one that
+/// spans lines and closes on the line before; one that spans lines and closes on the code's own
+/// line. Each is the text before and after the held text, then what separates the holder from
+/// the code.
+const CLOSES: [(&str, &str, &str); 3] = [("", "", "\n"), ("\n", "\n", "\n"), ("\n", "\n", " ")];
+
+/// Every comment kind rustc lexes, as an opener and a closer: line, a line of four slashes, outer
+/// doc, inner doc, block, nested block, outer doc block and inner doc block. A line kind holds one
+/// line and closes where the line ends.
+const COMMENT_KINDS: [(&str, &str); 8] = [
+    ("// ", ""),
+    ("//// ", ""),
+    ("/// ", ""),
+    ("//! ", ""),
+    ("/* ", " */"),
+    ("/* /* ", " */ */"),
+    ("/** ", " */"),
+    ("/*! ", " */"),
+];
+
+/// A copy of the call, the way the prune writes it.
+fn a_copy_of_the_call() -> String {
+    format!("sqlx::query!(\"{PRUNE}\", cutoff)")
+}
+
+/// Every literal holding a copy of the call, of every kind that can hold it, as a statement, a
+/// constant, a static or a doc attribute, closing in each place `CLOSES` names.
+fn every_literal_holding_the_call() -> Vec<String> {
+    let mut holders = Vec::new();
+    for (open, close, kind) in LITERAL_KINDS {
+        for (before, after, separator) in CLOSES {
+            let text = format!("{before}{}{after}", a_copy_of_the_call());
+            let Some(literal) = literal_holding(open, close, &text) else {
+                continue;
+            };
+            holders.push(format!("let _ = {literal};{separator}"));
+            holders.push(format!("const _COPY: {kind} = {literal};{separator}"));
+            holders.push(format!("static _COPY: {kind} = {literal};{separator}"));
+            if kind == "&str" {
+                holders.push(format!(
+                    "#[doc = {literal}]\nfn _documented() {{}}{separator}"
+                ));
+            }
+        }
+    }
+    holders
+}
+
+#[test]
+fn a_literal_of_any_kind_holding_the_call_is_not_the_call() {
+    // Beside the good prune, a doc attribute is prose and changes nothing, and any other literal's
+    // word delete is still counted: such a literal can be handed to `sqlx::query` and run, so the
+    // source is refused on the count, never on the call. Beside a prune written elsewhere, the
+    // literal is no call, so the code hands the statement to none.
+    let holders = every_literal_holding_the_call();
+    assert_eq!(holders.len(), 84, "the population changed");
+    let [good, elsewhere] = the_two_prunes();
+    let counted = ["the source writes the word delete 2 times, not once"];
+    let mut members = 0;
+    for holder in &holders {
+        let expected: &[&str] = if holder.starts_with("#[doc") {
+            &[]
+        } else {
+            &counted
+        };
+        assert_eq!(
+            prune_pin_problems(&format!("{holder}{good}")),
+            expected,
+            "a literal holding the call was not counted, or was read as the call: {holder}"
+        );
+        let problems = prune_pin_problems(&format!("{holder}{elsewhere}"));
+        assert!(
+            problems.contains(
+                &"the code hands the statement to sqlx::query! 0 times, not once".to_owned()
+            ),
+            "a literal holding the call was read as the call: {holder}: {problems:?}"
+        );
+        members += 2;
+    }
+    assert_eq!(members, 168, "the population changed");
+    eprintln!("examined {members} literal holders");
+}
+
+/// Every comment holding a copy of the call or the bare statement, of every kind, closing in each
+/// place `CLOSES` names that the kind can close.
+fn every_comment_holding_the_statement() -> Vec<String> {
+    let mut holders = Vec::new();
+    for (open, close) in COMMENT_KINDS {
+        for text in [a_copy_of_the_call(), PRUNE.to_owned()] {
+            for (before, after, separator) in CLOSES {
+                if close.is_empty() && !before.is_empty() {
+                    continue;
+                }
+                let separator = if close.is_empty() { "\n" } else { separator };
+                holders.push(format!("{open}{before}{text}{after}{close}{separator}"));
+            }
+        }
+    }
+    holders
+}
+
+#[test]
+fn a_comment_of_any_kind_holding_the_statement_is_not_read() {
+    // A comment runs nothing, whatever it holds: beside the good prune it changes nothing, and
+    // beside a prune written elsewhere it is no call.
+    let holders = every_comment_holding_the_statement();
+    assert_eq!(holders.len(), 32, "the population changed");
+    let [good, elsewhere] = the_two_prunes();
+    let mut members = 0;
+    for holder in &holders {
+        assert_eq!(
+            prune_pin_problems(&format!("{holder}{good}")),
+            Vec::<String>::new(),
+            "a comment was read as code: {holder}"
+        );
+        let problems = prune_pin_problems(&format!("{holder}{elsewhere}"));
+        assert!(
+            problems.contains(
+                &"the code hands the statement to sqlx::query! 0 times, not once".to_owned()
+            ),
+            "a comment was read as the call: {holder}: {problems:?}"
+        );
+        members += 2;
+    }
+    assert_eq!(members, 64, "the population changed");
+    eprintln!("examined {members} comment holders");
+}
+
+/// Rustc's whitespace, `Pattern_White_Space`: the eleven code points its lexer skips between
+/// tokens. NBSP and U+3000 are not among them, and rustc refuses either between tokens.
+const RUSTC_WHITESPACE: [char; 11] = [
+    '\t', '\n', '\u{b}', '\u{c}', '\r', ' ', '\u{85}', '\u{200e}', '\u{200f}', '\u{2028}',
+    '\u{2029}',
+];
+
+/// Every spelling of the good call that rustc reads as the same tokens: each whitespace code point
+/// in each gap between the tokens the pin reads, then each path spelling with each literal
+/// spelling of the statement (raw with none to three hashes, an escape, a line continuation).
+fn every_spelling_of_the_call() -> Vec<String> {
+    let mut spellings = Vec::new();
+    let pieces = [
+        "let done = sqlx".to_owned(),
+        "::".to_owned(),
+        "query".to_owned(),
+        "!".to_owned(),
+        "(".to_owned(),
+        format!("\"{PRUNE}\""),
+        ", cutoff);".to_owned(),
+    ];
+    for w in RUSTC_WHITESPACE {
+        for gap in 1..pieces.len() {
+            let mut spelling = pieces[..gap].concat();
+            spelling.push(w);
+            spelling.push_str(&pieces[gap..].concat());
+            spellings.push(spelling);
+        }
+    }
+    let paths = [
+        "sqlx::query!(@)",
+        "sqlx::query! (@)",
+        "sqlx :: query!(@)",
+        "sqlx :: query ! (@)",
+        "sqlx::query!(\n    @)",
+        "sqlx::query![@]",
+        "sqlx::query!{@}",
+        "r#sqlx::r#query!(@)",
+    ];
+    let literals = [
+        format!("\"{PRUNE}\""),
+        format!("r\"{PRUNE}\""),
+        format!("r#\"{PRUNE}\"#"),
+        format!("r##\"{PRUNE}\"##"),
+        format!("r###\"{PRUNE}\"###"),
+        format!("\"{}\"", PRUNE.replacen('D', "\\x44", 1)),
+        format!("\"{}\"", PRUNE.replacen('D', "\\u{44}", 1)),
+        format!("\"{}\"", PRUNE.replacen(" WHERE", " \\\n    WHERE", 1)),
+    ];
+    for path in paths {
+        for literal in &literals {
+            let call = path.replacen('@', &format!("{literal}, cutoff"), 1);
+            spellings.push(format!("let done = {call};"));
+        }
+    }
+    spellings
+}
+
+#[test]
+fn every_spelling_of_the_call_rustc_reads_as_the_call_is_the_call() {
+    let spellings = every_spelling_of_the_call();
+    assert_eq!(spellings.len(), 130, "the population changed");
+    for spelling in &spellings {
+        assert_eq!(
+            prune_pin_problems(spelling),
+            Vec::<String>::new(),
+            "a spelling rustc reads as the call was refused: {spelling:?}"
+        );
+    }
+    eprintln!("examined {} spellings", spellings.len());
+}
+
+#[test]
+fn a_prune_spelled_by_an_escape_a_continuation_or_tokens_beside_a_dead_copy_is_refused() {
+    // Each prune runs a statement the index cannot seek, its keyword spelled so that no text scan
+    // reads the word: an escape, a line continuation inside the word, or the words as tokens
+    // through `stringify!`. Beside each stands a copy of the call that never runs.
+    let moved = format!("DELETE FROM {TABLE} WHERE created_at + 0 < ?1");
+    let lives = [
+        format!("\"{}\"", moved.replacen('D', "\\x44", 1)),
+        format!("\"{}\"", moved.replacen('D', "\\u{44}", 1)),
+        format!("\"{}\"", moved.replacen("DELETE", "DE\\\nLETE", 1)),
+        format!("r#\"{moved}\"#"),
+        format!("stringify!({moved})"),
+    ];
+    let call = a_copy_of_the_call();
+    let dead = [
+        format!("fn _unused(cutoff: i64) {{ let _ = {call}; }}\n"),
+        format!("#[cfg(any())]\nfn _dead(cutoff: i64) {{ let _ = {call}; }}\n"),
+        format!("macro_rules! _never {{ ($c:expr) => {{ sqlx::query!(\"{PRUNE}\", $c) }}; }}\n"),
+        format!("let _unused = {call};\n"),
+    ];
+    let mut members = 0;
+    for live in &lives {
+        for copy in &dead {
+            let source = format!("{copy}let done = sqlx::query({live}).bind(cutoff);");
+            assert_eq!(
+                prune_pin_problems(&source),
+                ["the source writes the word delete 2 times, not once"],
+                "a prune spelled around the word count was not refused: {source}"
+            );
+            members += 1;
+        }
+    }
+    assert_eq!(members, 20, "the population changed");
+    eprintln!("examined {members} spelled prunes");
+}
+
+#[test]
+fn a_source_that_does_not_lex_is_refused() {
+    // An unclosed delimiter: the pin cannot read where the call ends, so it refuses the source.
+    let source = format!("let done = sqlx::query!(\"{PRUNE}\", cutoff;");
+    let problems = prune_pin_problems(&source);
+    assert!(
+        problems
+            .iter()
+            .any(|problem| problem.starts_with("the source does not lex as Rust")),
+        "a source that does not lex was read: {source}: {problems:?}"
+    );
 }

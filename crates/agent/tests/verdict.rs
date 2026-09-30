@@ -152,41 +152,51 @@ fn attributes_of(source: &str) -> Vec<String> {
         .collect()
 }
 
-/// The attribute lines directly above `pub enum Verdict`, read from the source.
-fn attributes_of_the_verdict() -> Vec<String> {
-    attributes_of(include_str!("../src/verdict.rs"))
+/// What is wrong with a module's declaration of the verdict enum (SPEC-043 R12b): an empty list
+/// when the module declares it exactly once, its attributes are read, derive included, one is
+/// `#[must_use]` and none is conditional.
+fn verdict_pin_problems(source: &str) -> Vec<String> {
+    let declarations = declarations_of(source);
+    if declarations != 1 {
+        return vec![format!(
+            "the verdict enum is declared {declarations} times, not once"
+        )];
+    }
+    let attributes = attributes_of(source);
+    let mut problems = Vec::new();
+    if !attributes.iter().any(|a| a.starts_with("#[derive(")) {
+        problems.push(format!(
+            "the enum's attributes were not read: {attributes:?}"
+        ));
+    }
+    if !attributes.iter().any(|a| is_must_use(a)) {
+        problems.push(format!("the enum lost its #[must_use]: {attributes:?}"));
+    }
+    if attributes.iter().any(|a| is_conditional(a)) {
+        problems.push(format!(
+            "the enum carries a conditional attribute: {attributes:?}"
+        ));
+    }
+    problems
 }
 
 #[test]
 fn the_verdict_type_is_must_use() {
+    // The enum is declared once, its attributes are read, derive included, one is `#[must_use]`
+    // and none is conditional.
     assert_eq!(
-        declarations_of(include_str!("../src/verdict.rs")),
-        1,
-        "the verdict enum is not declared exactly once"
-    );
-    let attributes = attributes_of_the_verdict();
-    // The positive fact: the enum was found and its attributes were read, derive included.
-    assert!(
-        attributes.iter().any(|a| a.starts_with("#[derive(")),
-        "the attributes of `pub enum Verdict` were not read: {attributes:?}"
-    );
-    assert!(
-        attributes.iter().any(|a| is_must_use(a)),
-        "`pub enum Verdict` lost its #[must_use]: {attributes:?}"
-    );
-    assert!(
-        !attributes.iter().any(|a| is_conditional(a)),
-        "`pub enum Verdict` carries a conditional attribute: {attributes:?}"
+        verdict_pin_problems(include_str!("../src/verdict.rs")),
+        Vec::<String>::new()
     );
 }
 
 #[test]
 fn an_item_ending_in_a_bracket_comment_is_not_an_attribute() {
-    let good = "#[must_use]\n#[derive(Clone)]\npub enum Verdict {";
+    let good = "#[must_use]\n#[derive(Clone)]\npub enum Verdict { A }";
     assert!(attributes_of(good).iter().any(|a| a == "#[must_use]"));
     // `#[must_use]` here belongs to the function line, which merely ends in `]`; the enum itself
     // carries only its derive.
-    let decoy = "#[must_use]\n#[rustfmt::skip] pub fn decoy() {} // ]\n#[derive(Clone)]\npub enum Verdict {";
+    let decoy = "#[must_use]\n#[rustfmt::skip] pub fn decoy() {} // ]\n#[derive(Clone)]\npub enum Verdict { A }";
     let attributes = attributes_of(decoy);
     assert!(
         attributes.iter().any(|a| a == "#[derive(Clone)]"),
@@ -200,14 +210,14 @@ fn an_item_ending_in_a_bracket_comment_is_not_an_attribute() {
 
 #[test]
 fn a_bracket_inside_a_string_or_a_comment_never_closes_an_attribute() {
-    let good = "#[must_use]\n#[derive(Clone)]\npub enum Verdict {";
+    let good = "#[must_use]\n#[derive(Clone)]\npub enum Verdict { A }";
     assert!(attributes_of(good).iter().any(|a| a == "#[must_use]"));
     // Each decoy leaves the enum without a `#[must_use]` of its own: the first gives it to a
     // function, the second and third hide it in a raw string and in a block comment.
     for decoy in [
-        "#[must_use]\n#[doc = \"[\"] pub fn decoy() {} // ]\n#[derive(Clone)]\npub enum Verdict {",
-        "pub const DECOY: &str = r#\"\n#[must_use]\n#[\"#; #[derive(Clone)] // ]\n#[derive(Debug)]\npub enum Verdict {",
-        "/*\n#[must_use]\n/// */\n#[derive(Clone)]\npub enum Verdict {",
+        "#[must_use]\n#[doc = \"[\"] pub fn decoy() {} // ]\n#[derive(Clone)]\npub enum Verdict { A }",
+        "pub const DECOY: &str = r#\"\n#[must_use]\n#[\"#; #[derive(Clone)] // ]\n#[derive(Debug)]\npub enum Verdict { A }",
+        "/*\n#[must_use]\n/// */\n#[derive(Clone)]\npub enum Verdict { A }",
     ] {
         let attributes = attributes_of(decoy);
         assert!(
@@ -224,36 +234,39 @@ fn a_bracket_inside_a_string_or_a_comment_never_closes_an_attribute() {
 #[test]
 fn a_commented_copy_of_the_enum_above_it_is_refused() {
     assert_eq!(
-        declarations_of("#[must_use]\n#[derive(Clone)]\npub enum Verdict {"),
-        1
+        verdict_pin_problems("#[must_use]\n#[derive(Clone)]\npub enum Verdict { A }"),
+        Vec::<String>::new()
     );
     // The copy inside the comment carries the `#[must_use]`; the enum that compiles carries none.
-    let decoy = "/*\n#[must_use]\n#[derive(Clone)]\npub enum Verdict {\n*/\n#[derive(Clone)]\npub enum Verdict {";
-    assert_eq!(declarations_of(decoy), 2);
+    let decoy = "/*\n#[must_use]\n#[derive(Clone)]\npub enum Verdict {\n*/\n#[derive(Clone)]\npub enum Verdict { A }";
+    assert!(
+        !verdict_pin_problems(decoy).is_empty(),
+        "the commented copy stood in for the enum: {decoy}"
+    );
 }
 
 #[test]
 fn a_raw_identifier_declaration_is_the_verdict_enum() {
-    let raw = "#[must_use]\n#[derive(Clone)]\npub enum r#Verdict {";
+    let raw = "#[must_use]\n#[derive(Clone)]\npub enum r#Verdict { A }";
     assert_eq!(declarations_of(raw), 1);
     assert!(attributes_of(raw).iter().any(|a| a == "#[must_use]"));
     // The copy the scan reaches first is compiled out; the enum that compiles is spelled with the
     // raw identifier and carries no `#[must_use]`, so it is a second declaration.
-    let decoy = "#[must_use]\n#[cfg(any())]\n#[derive(Clone)]\npub enum Verdict {\n}\n#[derive(Clone)]\npub enum r#Verdict {";
+    let decoy = "#[must_use]\n#[cfg(any())]\n#[derive(Clone)]\npub enum Verdict {\n}\n#[derive(Clone)]\npub enum r#Verdict { A }";
     assert_eq!(declarations_of(decoy), 2);
 }
 
 #[test]
 fn a_conditional_attribute_on_the_enum_is_refused() {
-    let good = attributes_of("#[must_use]\n#[derive(Clone)]\npub enum Verdict {");
+    let good = attributes_of("#[must_use]\n#[derive(Clone)]\npub enum Verdict { A }");
     assert!(good.iter().any(|a| a == "#[must_use]"));
     assert!(!good.iter().any(|a| is_conditional(a)));
     // A copy compiled out by `cfg`, in either spelling, and a `must_use` given only under a
     // `cfg_attr` condition: each is read, and each is conditional.
     for decoy in [
-        "#[must_use]\n#[cfg(any())]\n#[derive(Clone)]\npub enum Verdict {",
-        "#[must_use]\n#[r#cfg(any())]\n#[derive(Clone)]\npub enum Verdict {",
-        "#[cfg_attr(test, must_use)]\n#[derive(Clone)]\npub enum Verdict {",
+        "#[must_use]\n#[cfg(any())]\n#[derive(Clone)]\npub enum Verdict { A }",
+        "#[must_use]\n#[r#cfg(any())]\n#[derive(Clone)]\npub enum Verdict { A }",
+        "#[cfg_attr(test, must_use)]\n#[derive(Clone)]\npub enum Verdict { A }",
     ] {
         let attributes = attributes_of(decoy);
         assert!(
@@ -274,7 +287,7 @@ fn every_spelling_of_the_declaration_and_of_a_conditional_attribute_is_read() {
     // inside the brackets. Every member compiles.
     let mut members = 0;
     for name in ["Verdict", "r#Verdict"] {
-        let plain = format!("#[must_use]\n#[derive(Clone)]\npub enum {name} {{");
+        let plain = format!("#[must_use]\n#[derive(Clone)]\npub enum {name} {{ A }}");
         assert_eq!(declarations_of(&plain), 1, "not declared: {name}");
         let read = attributes_of(&plain);
         assert!(read.iter().any(|a| a == "#[must_use]"), "{name}: {read:?}");
@@ -291,7 +304,7 @@ fn every_spelling_of_the_declaration_and_of_a_conditional_attribute_is_read() {
             ] {
                 members += 1;
                 let source =
-                    format!("#[must_use]\n{written}\n#[derive(Clone)]\npub enum {name} {{");
+                    format!("#[must_use]\n{written}\n#[derive(Clone)]\npub enum {name} {{ A }}");
                 assert_eq!(declarations_of(&source), 1, "not declared: {source}");
                 let read = attributes_of(&source);
                 assert!(
@@ -312,12 +325,12 @@ fn every_spelling_of_the_declaration_and_of_a_conditional_attribute_is_read() {
 /// Every spelling of the enum that compiles: plain, raw, a wider gap, a line break or a comment
 /// between the words (each under `#[rustfmt::skip]`, which keeps them), and another visibility.
 const LIVE: [&str; 6] = [
-    "pub enum Verdict {",
-    "pub enum r#Verdict {",
-    "#[rustfmt::skip]\npub  enum Verdict {",
-    "#[rustfmt::skip]\npub enum\nVerdict {",
-    "#[rustfmt::skip]\npub enum /* the verdict */ Verdict {",
-    "pub(crate) enum Verdict {",
+    "pub enum Verdict { A }",
+    "pub enum r#Verdict { A }",
+    "#[rustfmt::skip]\npub  enum Verdict { A }",
+    "#[rustfmt::skip]\npub enum\nVerdict { A }",
+    "#[rustfmt::skip]\npub enum /* the verdict */ Verdict { A }",
+    "pub(crate) enum Verdict { A }",
 ];
 
 /// Every place a copy of the enum carrying `#[must_use]` can stand above the enum that compiles:
@@ -347,9 +360,12 @@ fn every_copy_of_the_enum() -> Vec<String> {
 }
 
 #[test]
-fn every_copy_of_the_enum_beside_every_spelling_of_it_is_a_second_declaration() {
+fn a_copy_of_the_enum_in_code_is_a_declaration_and_in_a_comment_or_a_literal_is_none() {
     let copies = every_copy_of_the_enum();
     assert_eq!(copies.len(), 12, "the copies changed");
+    // The first nine copies are code, compiled out or not; the last three are a block comment,
+    // line comments and a string.
+    let (code, held) = copies.split_at(9);
     let mut members = 0;
     for live in LIVE {
         for must_use in ["#[must_use]", "#[r#must_use]"] {
@@ -358,7 +374,7 @@ fn every_copy_of_the_enum_beside_every_spelling_of_it_is_a_second_declaration() 
             let read = attributes_of(&alone);
             assert!(read.iter().any(|a| is_must_use(a)), "{alone}: {read:?}");
         }
-        for copy in &copies {
+        for copy in code {
             members += 1;
             let source = format!("{copy}\n#[derive(Clone)]\n{live}");
             assert_eq!(
@@ -367,7 +383,230 @@ fn every_copy_of_the_enum_beside_every_spelling_of_it_is_a_second_declaration() 
                 "a copy stood in for the enum: {source}"
             );
         }
+        for copy in held {
+            members += 1;
+            let source = format!("{copy}\n#[derive(Clone)]\n{live}");
+            assert_eq!(
+                declarations_of(&source),
+                1,
+                "a copy in a comment or a literal was read as a declaration: {source}"
+            );
+            let problems = verdict_pin_problems(&source);
+            assert!(
+                problems.len() == 1 && problems[0].starts_with("the enum lost its #[must_use]"),
+                "a held copy lent the enum its #[must_use]: {source}: {problems:?}"
+            );
+        }
     }
     assert_eq!(members, 72, "the population changed");
-    eprintln!("members: {members} copies-by-spellings");
+    eprintln!("examined {members} copies-by-spellings");
+}
+
+/// The enum that compiles, with `attributes` above it.
+fn the_enum_under(attributes: &str) -> String {
+    format!("{attributes}\npub enum Verdict {{\n    A,\n}}\n")
+}
+
+/// `holder`, then the enum that compiles: its `#[must_use]` when `must_use`, its derive and its
+/// declaration, on the line the holder closes on when the holder ends in a space, on the lines
+/// after it otherwise.
+fn the_enum_after(holder: &str, must_use: bool) -> String {
+    let gap = if holder.ends_with(' ') { " " } else { "\n" };
+    let must_use = if must_use {
+        format!("#[must_use]{gap}")
+    } else {
+        String::new()
+    };
+    format!("{holder}{must_use}#[derive(Clone, Debug)]{gap}pub enum Verdict {{\n    A,\n}}\n")
+}
+
+/// The string-like literal kinds rustc lexes as one token whatever they hold, each an opener, a
+/// closer and the type of a constant holding it: a string, raw strings with none to three hashes,
+/// a byte string and a raw one, a C string and a raw one.
+const LITERAL_KINDS: [(&str, &str, &str); 11] = [
+    ("\"", "\"", "&str"),
+    ("r\"", "\"", "&str"),
+    ("r#\"", "\"#", "&str"),
+    ("r##\"", "\"##", "&str"),
+    ("r###\"", "\"###", "&str"),
+    ("b\"", "\"", "&[u8]"),
+    ("br\"", "\"", "&[u8]"),
+    ("br#\"", "\"#", "&[u8]"),
+    ("c\"", "\"", "&core::ffi::CStr"),
+    ("cr\"", "\"", "&core::ffi::CStr"),
+    ("cr#\"", "\"#", "&core::ffi::CStr"),
+];
+
+/// `text` written as the literal `open`..`close`: escaped where the kind escapes, as written where
+/// it is raw, or `None` where a raw kind cannot hold `text` because `text` holds its closer.
+fn literal_holding(open: &str, close: &str, text: &str) -> Option<String> {
+    if open.trim_start_matches(['b', 'c']).starts_with('r') {
+        (!text.contains(close)).then(|| format!("{open}{text}{close}"))
+    } else {
+        let escaped = text.replace('\\', "\\\\").replace('"', "\\\"");
+        Some(format!("{open}{escaped}{close}"))
+    }
+}
+
+/// Where a holder closes against the enum after it: a holder on one line of its own; one that
+/// spans lines and closes on the line before; one that spans lines and closes on the
+/// declaration's own line. Each is the text before and after the held text, then what separates
+/// the holder from the enum.
+const CLOSES: [(&str, &str, &str); 3] = [("", "", "\n"), ("\n", "\n", "\n"), ("\n", "\n", " ")];
+
+/// Every comment kind rustc lexes that may stand among a module's items, as an opener and a
+/// closer: line, a line of four slashes, outer doc, block, nested block and outer doc block. A
+/// line kind closes where its line ends, so it holds a text of several lines one line each.
+const COMMENT_KINDS: [(&str, &str); 6] = [
+    ("// ", ""),
+    ("//// ", ""),
+    ("/// ", ""),
+    ("/* ", " */"),
+    ("/* /* ", " */ */"),
+    ("/** ", " */"),
+];
+
+/// Every holder of `text`: each literal kind as a constant, each string kind as a doc attribute,
+/// and each comment kind, closing in each place `CLOSES` names that the holder can close. Each
+/// holder ends with the separator the code after it takes.
+fn every_holder_of(text: &str) -> Vec<String> {
+    let mut holders = Vec::new();
+    for (before, after, separator) in CLOSES {
+        let held = format!("{before}{text}{after}");
+        for (open, close, kind) in LITERAL_KINDS {
+            if let Some(literal) = literal_holding(open, close, &held) {
+                holders.push(format!("const _HELD: {kind} = {literal};{separator}"));
+                if kind == "&str" {
+                    holders.push(format!("#[doc = {literal}]{separator}"));
+                }
+            }
+        }
+        for (open, close) in COMMENT_KINDS {
+            if !close.is_empty() {
+                holders.push(format!("{open}{held}{close}{separator}"));
+            } else if before.is_empty() {
+                holders.push(
+                    held.lines()
+                        .fold(String::new(), |text, line| text + open + line + "\n"),
+                );
+            }
+        }
+    }
+    holders
+}
+
+#[test]
+fn a_must_use_held_by_a_literal_or_a_comment_is_not_the_enums() {
+    // The holder carries a `#[must_use]` and a derive; the enum that compiles carries only its
+    // own derive, so each member is refused. The same holder above an enum with its own
+    // `#[must_use]` is read as nothing and the enum passes.
+    let holders = every_holder_of("#[must_use]\n#[derive(Clone)]");
+    assert_eq!(holders.len(), 60, "the population changed");
+    let mut members = 0;
+    for holder in &holders {
+        let weak = the_enum_after(holder, false);
+        assert!(
+            !verdict_pin_problems(&weak).is_empty(),
+            "a held #[must_use] was read as the enum's: {weak}"
+        );
+        let strong = the_enum_after(holder, true);
+        assert_eq!(
+            verdict_pin_problems(&strong),
+            Vec::<String>::new(),
+            "a holder above the enum was read as code: {strong}"
+        );
+        members += 2;
+    }
+    assert_eq!(members, 120, "the population changed");
+    eprintln!("examined {members} attribute holders");
+}
+
+#[test]
+fn a_copy_of_the_enum_held_by_a_literal_or_a_comment_is_no_declaration() {
+    // A copy carrying `#[must_use]` inside a literal or a comment declares nothing: beside an
+    // enum without one the source is refused on the enum's own attributes, and beside an enum
+    // with one it passes.
+    let holders = every_holder_of(&the_enum_under("#[must_use]\n#[derive(Clone)]"));
+    assert_eq!(holders.len(), 60, "the population changed");
+    let mut members = 0;
+    for holder in &holders {
+        let weak = the_enum_after(holder, false);
+        let problems = verdict_pin_problems(&weak);
+        assert!(
+            problems.len() == 1 && problems[0].starts_with("the enum lost its #[must_use]"),
+            "a held copy was read as a declaration: {weak}: {problems:?}"
+        );
+        let strong = the_enum_after(holder, true);
+        assert_eq!(
+            verdict_pin_problems(&strong),
+            Vec::<String>::new(),
+            "a held copy was read as a second declaration: {strong}"
+        );
+        members += 2;
+    }
+    assert_eq!(members, 120, "the population changed");
+    eprintln!("examined {members} held copies");
+}
+
+/// Rustc's whitespace, `Pattern_White_Space`: the eleven code points its lexer skips between
+/// tokens. NBSP and U+3000 are not among them, and rustc refuses either between tokens.
+const RUSTC_WHITESPACE: [char; 11] = [
+    '\t', '\n', '\u{b}', '\u{c}', '\r', ' ', '\u{85}', '\u{200e}', '\u{200f}', '\u{2028}',
+    '\u{2029}',
+];
+
+#[test]
+fn every_gap_rustc_reads_between_the_enums_tokens_is_whitespace() {
+    // Each whitespace code point in each gap between the tokens the pin reads, in an enum with
+    // its `#[must_use]`: each is read and passes. The three gaps of the declaration again in an
+    // enum without one, under a commented copy that has one: each is refused.
+    let mut members = 0;
+    for w in RUSTC_WHITESPACE {
+        let strong = [
+            format!("#[must_use]\n#[derive(Clone)]\npub{w}enum Verdict {{\n    A,\n}}\n"),
+            format!("#[must_use]\n#[derive(Clone)]\npub enum{w}Verdict {{\n    A,\n}}\n"),
+            format!("#[must_use]\n#[derive(Clone)]\npub enum Verdict{w}{{\n    A,\n}}\n"),
+            format!("#{w}[must_use]\n#[derive(Clone)]\npub enum Verdict {{\n    A,\n}}\n"),
+            format!("#[{w}must_use]\n#[derive(Clone)]\npub enum Verdict {{\n    A,\n}}\n"),
+            format!("#[must_use{w}]\n#[derive(Clone)]\npub enum Verdict {{\n    A,\n}}\n"),
+            format!("#[must_use]{w}#[derive(Clone)]\npub enum Verdict {{\n    A,\n}}\n"),
+        ];
+        for source in &strong {
+            assert_eq!(
+                verdict_pin_problems(source),
+                Vec::<String>::new(),
+                "whitespace rustc skips was not skipped: {source:?}"
+            );
+            members += 1;
+        }
+        let copy = "/*\n#[must_use]\n#[derive(Clone)]\npub enum Verdict {\n    A,\n}\n*/\n";
+        let weak = [
+            format!("{copy}#[derive(Clone)]\npub{w}enum Verdict {{\n    A,\n}}\n"),
+            format!("{copy}#[derive(Clone)]\npub enum{w}Verdict {{\n    A,\n}}\n"),
+            format!("{copy}#[derive(Clone)]\npub enum Verdict{w}{{\n    A,\n}}\n"),
+        ];
+        for source in &weak {
+            assert!(
+                !verdict_pin_problems(source).is_empty(),
+                "a commented copy stood in for the enum: {source:?}"
+            );
+            members += 1;
+        }
+    }
+    // The attribute's other spellings rustc reads as `#[must_use]`.
+    for attribute in [
+        "#[must_use = \"a run's end is read\"]",
+        "#[r#must_use]",
+        "# [ must_use ]",
+    ] {
+        let source = the_enum_under(&format!("{attribute}\n#[derive(Clone)]"));
+        assert_eq!(
+            verdict_pin_problems(&source),
+            Vec::<String>::new(),
+            "a spelling of #[must_use] was not read: {source}"
+        );
+        members += 1;
+    }
+    assert_eq!(members, 113, "the population changed");
+    eprintln!("examined {members} gaps and spellings");
 }
