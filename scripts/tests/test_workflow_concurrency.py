@@ -147,6 +147,21 @@ class EveryWorkflowFollowsTheRule(unittest.TestCase):
         self.assertEqual(found["mutation-weekly.yml"]["name"], "mutation-weekly")
 
 
+# The events whose run can hold a tag's ref, as GitHub's events page gives GITHUB_REF for each.
+TAG_REF_EVENTS = (
+    "push",
+    "create",
+    "release",
+    "workflow_dispatch",
+    "registry_package",
+    "deployment",
+    "deployment_status",
+)
+# The keys GitHub's workflow parser defines for a concurrency block. It reads a key with case, and
+# refuses the whole workflow for a key it does not define.
+BLOCK_KEYS = ("group", "cancel-in-progress", "queue")
+
+
 def tag_events(content):
     """The events that start a run of a workflow for a tag, as GitHub's workflow syntax reads its
     filters: a push whose filters admit a tag (a `tags` or `tags-ignore` filter, or neither a
@@ -232,6 +247,15 @@ def release_problems(content, text, others=()):
     return found
 
 
+def second_workflow(on, group="publish-${{ github.ref }}", name="publish", queue=""):
+    """A planted workflow, with the default queue unless `queue` sets one: `on` is its triggers."""
+    return (
+        f"name: {name}\n\n{on}\npermissions:\n  contents: read\n\nconcurrency:\n"
+        f"  group: {group}\n  cancel-in-progress: false\n{queue}\njobs:\n  publish:\n"
+        "    runs-on: ubuntu-24.04\n    timeout-minutes: 5\n    steps:\n      - run: echo publish\n"
+    )
+
+
 def planted(old, new):
     """release.yml's text with one shape planted in place of the ADR-292 shape."""
     text = (WORKFLOWS / "release.yml").read_text(encoding="utf-8")
@@ -252,6 +276,78 @@ class EveryReleaseWorkflowQueuesEveryRun(unittest.TestCase):
             others = [(other, c) for other, c, _t in everything if other != name]
             found += [f"{name}: {problem}" for problem in release_problems(content, text, others)]
         self.assertEqual(found, [])
+
+    def test_the_release_class_is_read_as_github_reads_it(self):
+        """The class as GitHub reads it, by a population planted on a workflow of its own, never on
+        the live file: every event the docs run for a tag, in each form `on:` takes; every event
+        whose ref can be a tag, beside a group spelt through the workflow's name or its event;
+        every block key in another case or misspelt; and every key held twice, without case."""
+        tags = "on:\n  push:\n    tags: [v1]\n"
+        release = second_workflow(tags, "release-${{ github.ref }}", "release", "  queue: max\n")
+        self.assertEqual(release_problems(read_workflow(release), release), [])
+        missed = []
+        forms = {"a name": "on: {}\n", "a list": "on: [{}]\n", "a mapping": "on:\n  {}:\n"}
+        runs_for_a_tag = [
+            (event, form, on.format(event))
+            for event in ("push", "create", "release")
+            for form, on in forms.items()
+        ]
+        for event, form, on in examined("events that run for a tag, in each form", runs_for_a_tag):
+            content = read_workflow(second_workflow(on))
+            problems = release_problems(content, second_workflow(on))
+            if tag_events(content) != [event] or not any("queue is None" in p for p in problems):
+                missed.append(f"{event} as {form}: {problems}")
+        for on in ("on:\n  workflow_dispatch:\n", "on:\n  push:\n    branches: [dev]\n"):
+            if tag_events(read_workflow(second_workflow(on))):
+                missed.append(f"{on!r} is not a tag's run, yet it is in the class")
+        spellings = [
+            (event, name, group)
+            for event in TAG_REF_EVENTS
+            for name, group in (
+                ("Release", "${{ github.workflow }}-${{ github.ref }}"),
+                (
+                    "publish",
+                    f"${{{{ github.event_name == '{event}' && 'release-' || 'x-' }}}}"
+                    "${{ github.ref }}",
+                ),
+            )
+        ]
+        for event, name, group in examined("groups another workflow spells", spellings):
+            other = read_workflow(second_workflow(f"on:\n  {event}:\n", group, name))
+            problems = release_problems(read_workflow(release), release, [("publish.yml", other)])
+            if not any("renders as publish.yml's" in problem for problem in problems):
+                missed.append(f"{event}, {name}, {group}: {problems}")
+            text = second_workflow(f"on:\n  {event}:\n", "${{ github.workflow }}-${{ github.ref }}")
+            pair = [("publish.yml", read_workflow(text))]
+            if release_problems(read_workflow(release), release, pair):
+                missed.append(f"{event}: a group of another name is refused")
+        keys = [
+            (key, spelt) for key in BLOCK_KEYS for spelt in (key.upper(), key.title(), key[:-1])
+        ]
+        for key, spelt in examined("block keys GitHub's parser does not define", keys):
+            text = release.replace(f"\n  {key}:", f"\n  {spelt}:", 1)
+            problems = release_problems(read_workflow(text), text)
+            if text == release or not any("does not define" in p for p in problems):
+                missed.append(f"{spelt} for {key}: {problems}")
+        twice = [(f"  {key}:", f"  {spelt}:") for key in BLOCK_KEYS for spelt in (key, key.upper())]
+        twice += [("concurrency:", "'concurrency':"), ("concurrency:", "Concurrency:")]
+        block = release[release.index("\nconcurrency:\n") + 1 :].split("\n\n", 1)[0]
+        for old, spelt in examined("keys held twice", twice):
+            held = block
+            if old != "concurrency:":
+                held = next(line for line in block.splitlines() if line.startswith(old))
+            try:
+                read_workflow(release.replace(held, held + "\n" + held.replace(old, spelt, 1), 1))
+            except Unread:
+                continue
+            missed.append(f"{spelt.strip()} held twice is read")
+        jobs = "\njobs:\n  publish:\n"
+        text = release.replace(jobs, jobs + "    Concurrency:\n      group: x\n", 1)
+        if not any("of its own" in p for p in release_problems(read_workflow(text), text)):
+            missed.append("a job's Concurrency key is read")
+        self.assertEqual(missed, [])
+        every = read_workflow(second_workflow("on: [create, push, release, workflow_dispatch]\n"))
+        self.assertEqual(tag_events(every), ["push", "create", "release"])
 
     def test_a_shape_that_replaces_drops_or_runs_two_at_once_is_refused(self):
         queue = "  queue: max\n"
