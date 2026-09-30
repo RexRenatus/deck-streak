@@ -313,10 +313,9 @@ Two tests are green by design at the red commit: the one that names each use in 
 (the restore of a test the census's earlier change had weakened, red under the plant of S07284), and
 the one that judges a reused git URL as a fresh URL, which the lock file already pins.
 
+At 8632611d the population prints `examined 46 case(s) of verify round 7's population, digest b0fbee86a359b5cc5b3a963a38cd1e1afb629c2d7b18ab00c5242d103c4d28f0`, the differential `seed 0x4250008, 10 chain(s), 40 warmed verdict(s) compared with the fresh one; disagreements: 0`, and the killer `examined 2218 tree(s)` with `members escaping: 0; controls judged wrongly: 0`.
+
 ```red-first
-A36: red at 09c160bb: the_owner_is_the_member_at_its_manifest_and_every_other_lookup_is_unique_or_refused: assertion `left == right` failed; right: []
-A36: red at 09c160bb: a_target_copied_from_another_trees_census_does_not_move_the_verdict: assertion `left == right` failed: tree two on a copy of tree one's target, and alone
-A36: red at 09c160bb: the_order_pair_p3_is_judged_alike_in_both_orders_on_one_target: assertion `left == right` failed: the second tree of each order on a target the first tree used
-A36: red at 09c160bb: verify_round_seven_population_is_judged_as_each_case_expects_on_any_target: cases judged wrongly: 7; disagreements: 2
-A36: green at 8632611d: examined 46 case(s) of verify round 7's population, digest b0fbee86a359b5cc5b3a963a38cd1e1afb629c2d7b18ab00c5242d103c4d28f0 / differential: seed 0x4250008, 10 chain(s), 40 warmed verdict(s) compared with the fresh one; disagreements: 0 / killer examined 2218 tree(s); members escaping: 0; controls judged wrongly: 0
+A36: red at 09c160bb: assertion `left == right` failed: cases judged wrongly: 7; disagreements: 2
+A36: green at 8632611d
 ```
