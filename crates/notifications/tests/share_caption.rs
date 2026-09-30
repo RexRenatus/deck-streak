@@ -5,12 +5,12 @@
 //! carry.
 
 // An integration test is test code: its fixtures panic on a failed setup.
-#![allow(clippy::expect_used)]
+#![allow(clippy::expect_used, clippy::print_stdout)]
 
 mod support;
 
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
@@ -243,6 +243,13 @@ async fn a_share_caption_is_bounded_as_the_photo_caption_is() {
     );
 }
 
+/// Reports how many members a population holds, and refuses an empty one.
+fn examined<T>(what: &str, items: Vec<T>) -> Vec<T> {
+    println!("examined {} {what}", items.len());
+    assert!(!items.is_empty(), "examined 0 {what}: nothing was judged");
+    items
+}
+
 #[test]
 fn the_share_and_the_photo_read_one_bound_function() {
     let sources = Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
@@ -253,9 +260,13 @@ fn the_share_and_the_photo_read_one_bound_function() {
             .collect::<Vec<_>>()
             .join("\n")
     };
+    let files: Vec<PathBuf> = fs::read_dir(&sources)
+        .expect("the source directory")
+        .map(|entry| entry.expect("an entry").path())
+        .collect();
+    let files = examined("notifications source file(s)", files);
     let mut counted = 0;
-    for entry in fs::read_dir(&sources).expect("the source directory") {
-        let path = entry.expect("an entry").path();
+    for path in files {
         let text = fs::read_to_string(&path).expect("a source");
         counted += code(&text).matches("encode_utf16").count();
     }
