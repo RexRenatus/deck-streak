@@ -17,7 +17,8 @@ R6, R10, R12; ADR-057).
     python3 scripts/mutation-verdict.py exclusions [--root DIR]
 
 PLAN first decides the run's scope from the event that started it (R3), each case by name, because
-`ci` fails on a skipped need but a leg LEGS reads as not started. A pull request into `dev` is
+`ci` fails on a skipped need, except for the two legs the plan's listing can give nothing, which
+LEGS reads as not started. A pull request into `dev` is
 judged on its diff, and a release pull request into `main` on its merge diff, every change `dev`
 carries since the last release; a push that merges a pull request (`Merge pull request #N`) is
 not-applicable, naming `#N`, whose jobs judged that same tree; a push that names none is judged on
