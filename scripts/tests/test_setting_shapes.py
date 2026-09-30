@@ -8,15 +8,18 @@ or a mutation row whose `find` is the constant's line, fails when they change.
 The guard enumerates the implementations by walking `crates/*/src` (a git pathspec of that shape
 matches nothing), reads each `const SHAPE` literal, and refuses one that is spelled in no test of
 its crate (its `tests/`, or the `#[cfg(test)]` module of the implementation's own file) and in no
-mutation row that targets the implementation's own file. It reads Rust source as the compiler
-does: comments of both forms (`//` and nested `/* */`) do not count, and neither does an
-implementation inside one, a `//` inside a string is not a comment, and only a `#[cfg(test)]`
-module of the implementation's own file counts, not a line after it. A module is a test module
-when its attributes keep it under `--cfg test` and remove it without, read in three-valued logic
-in which every option but `test` is unknown (R8). An out-of-line one (`mod tests;`) is read only
-from the one file rustc could read for it; an ambiguous or attribute-made choice is refused. A
-literal that two implementations of one crate share is pinned only by a row on each
-implementation's file.
+mutation row that targets the implementation's own file. It reads Rust source with rustc's lexer,
+the Reference's token grammar: comments of both forms (`//` and nested `/* */`) do not count, and
+neither does an implementation inside one; a `//` inside a literal of any prefix and hash count
+is not a comment; whitespace and comments may stand between an attribute's `#`, `!` and `[`; and
+a source it cannot tokenize is refused. Only a test module of the implementation's own file
+counts, not a line after it, and only when a crate root reaches that file through modules kept
+under `--cfg test`. A module is a test module when its attributes keep it under `--cfg test` and
+remove it without, read in three-valued logic in which every option but `test` is unknown and
+`true` and `false` hold their values (R8). An out-of-line one (`mod tests;`) is read only from
+the one file rustc could read for it; an ambiguous or attribute-made choice is refused. A literal
+that two implementations of one crate share is pinned only by a row on each implementation's
+file.
 """
 
 import functools
@@ -32,24 +35,23 @@ from pathlib import Path
 from _support import REPO, examined
 
 IMPL = re.compile(
-    r"^\s*impl\b\s*(?:<[^{};]*>)?\s*(?:\$?[\w:]+::)?Setting\s+for\s+(\$?\w+)", re.MULTILINE
+    r"^\s*impl\b\s*(?:<[^{};]*>)?\s*(?:\$?[\w:]+::)?Setting\s+for\s+(\$?\w+)",
+    re.MULTILINE,
 )
-DECLARATION = re.compile(
-    r"((?:#\[[^\]]*\]\s*)*)(?:pub(?:\([^)]*\))?\s+)?mod\s+(?:r#)?(\w+)\s*([;{])"
-)
-ATTRIBUTE = re.compile(r"#\[([^\]]*)\]")
-INNER = re.compile(r"\s*#!\[([^\]]*)\]")
-WORD = re.compile(r"(?:r#)?(\w+)|::|\S")
-SPACE = " \t\n\r\x0b\x0c\x85\u200e\u200f\u2028\u2029\ufeff"
+SPACE = "\t\n\x0b\x0c\r \x85\u200e\u200f\u2028\u2029"
+WHITE = re.compile(f"[{SPACE}]+")
 KLEENE = {
     "all": lambda values: False if False in values else None if None in values else True,
     "any": lambda values: True if True in values else None if None in values else False,
     "not": lambda values: None if len(values) != 1 or values[0] is None else not values[0],
 }
-TOKEN = re.compile(r"//|/\*|(?<![\w])b?r#*\"|\"|'")
-RAW = re.compile(r"b?r(#*)\"")
-PATH_WORD = re.compile(r"\bpath\b")
+IDENT = re.compile(r"[^\W\d]\w*")
+NUMBER = re.compile(r"\d\w*(?:\.\d\w*)?")
+QUOTED = re.compile(r'"(?:[^"\\]|\\.)*"', re.DOTALL)
+RAW = re.compile(r"(#*)\"")
 CHAR = re.compile(r"'(?:\\(?:x[0-9a-fA-F]{2}|u\{[0-9a-fA-F]{1,6}\}|.)|[^\\'\n])'")
+PUNCT = "!#$%&*+,-./:;<=>?@^|~"
+PAIRS = {")": "(", "]": "[", "}": "{"}
 SHAPE = re.compile(r'const\s+SHAPE\s*:\s*&\'static\s+str\s*=\s*("(?:[^"\\]|\\.)*")\s*;')
 BANDS = REPO / "scripts" / "mutation-rows.d"
 
@@ -62,7 +64,7 @@ def implementations(root):
     """
     found = []
     for path in sorted((root / "crates").glob("*/src/**/*.rs")):
-        text, _ = lexed(path.read_text(encoding="utf-8"))
+        text = lexed(path.read_text(encoding="utf-8"))
         crate, *inside = path.relative_to(root / "crates").parts
         starts = [(m.start(), m.group(1)) for m in IMPL.finditer(text)]
         for index, (start, name) in enumerate(starts):
@@ -80,53 +82,176 @@ def implementations(root):
     return found
 
 
+def comment(text, start):
+    """The end of the comment at `start` (a `//` line, or a `/* */` block that nests), or None
+    when no comment starts there. ValueError when a block is never closed."""
+    if text.startswith("//", start):
+        end = text.find("\n", start)
+        return len(text) if end == -1 else end
+    if not text.startswith("/*", start):
+        return None
+    depth, end = 1, start + 2
+    while depth:
+        if end >= len(text):
+            raise ValueError("a block comment is never closed")
+        step = text[end : end + 2]
+        depth += {"/*": 1, "*/": -1}.get(step, 0)
+        end += 2 if step in ("/*", "*/") else 1
+    return end
+
+
+def documents(text, start):
+    """ "outer" or "inner" for the doc comment at `start` (`///`, `/** */`, `//!`, `/*! */`), and
+    None for a plain one (`////`, `/**/` and `/***` open plain comments)."""
+    opening, after = text[start : start + 3], text[start + 3 : start + 4]
+    if opening in ("//!", "/*!"):
+        return "inner"
+    if opening == "///" and after != "/" or opening == "/**" and after not in ("*", "/"):
+        return "outer"
+    return None
+
+
+def suffix(text, end):
+    """The end of a literal's suffix (`"s"x`, `1u8`), which is part of the literal's token."""
+    word = IDENT.match(text, end)
+    return word.end() if word else end
+
+
+@functools.cache
+def scanned(text):
+    """`text` read with rustc's lexer (the Reference's Lexical structure): its tokens as (kind,
+    word, start, end), each delimiter's partner index, and the spans a comment covers.
+
+    A kind is "word" (an identifier or keyword; a raw one keeps its `r#`), "literal" (a char,
+    byte, string, raw, byte string, C string or number, of any prefix, hash count and suffix),
+    "lifetime", "punct" (one character), "open", "close", or "outer" or "inner" for a doc
+    comment, which rustc reads as a `doc` attribute. A plain comment, whitespace, a leading byte
+    order mark and a shebang are no tokens. Whatever rustc's lexer refuses (a comment or literal
+    never closed, a reserved prefix, a character no token starts with, a delimiter unpaired)
+    raises ValueError, so a source the guard cannot tokenize is never read as a test.
+    """
+    found, pairs, stack, comments = [], {}, [], []
+    at = 1 if text.startswith("\ufeff") else 0
+    if text.startswith("#!", at) and not following(text, at + 2).startswith("["):
+        end = text.find("\n", at)
+        comments.append((at, len(text) if end == -1 else end))
+        at = comments[-1][1]
+    while at < len(text):
+        white = WHITE.match(text, at)
+        if white:
+            at = white.end()
+            continue
+        end = comment(text, at)
+        if end is not None:
+            comments.append((at, end))
+            kind = documents(text, at)
+            if kind:
+                found.append((kind, text[at:end], at, end))
+            at = end
+            continue
+        kind, end = token(text, at)
+        if kind == "open":
+            stack.append(len(found))
+        elif kind == "close":
+            if not stack or found[stack[-1]][1] != PAIRS[text[at]]:
+                raise ValueError(f"an unpaired {text[at]!r}")
+            pairs[stack[-1]], pairs[len(found)] = len(found), stack[-1]
+            stack.pop()
+        found.append((kind, text[at:end], at, end))
+        at = end
+    if stack:
+        raise ValueError("a delimiter is never closed")
+    return found, pairs, comments
+
+
+def following(text, at):
+    """`text` from the first character at or after `at` that is no whitespace and no plain
+    comment: the test that tells a shebang (`#!/usr/bin/env`) from an inner attribute (`#! [`)."""
+    while at < len(text):
+        end = comment(text, at)
+        if text[at] in SPACE:
+            at += 1
+        elif end is not None and documents(text, at) is None:
+            at = end
+        else:
+            break
+    return text[at:]
+
+
+def token(text, at):
+    """The kind and end of the one token that starts at `at`."""
+    char = text[at]
+    number = NUMBER.match(text, at)
+    if number:
+        return "literal", number.end()
+    word = IDENT.match(text, at)
+    if word:
+        name, end = word.group(), word.end()
+        after = text[end : end + 1]
+        raw = RAW.match(text, end) if name in ("r", "br", "cr") else None
+        if raw:
+            close = text.find('"' + raw.group(1), raw.end())
+            if close == -1:
+                raise ValueError(f"a raw literal is never closed at {at}")
+            return "literal", suffix(text, close + 1 + len(raw.group(1)))
+        if name == "r" and after == "#":
+            ident = IDENT.match(text, end + 1)
+            if ident is None or ident.group() in (
+                "_",
+                "crate",
+                "self",
+                "Self",
+                "super",
+            ):
+                raise ValueError(f"no raw identifier at {at}")
+            return "word", ident.end()
+        quoted = {"b": (QUOTED, CHAR), "c": (QUOTED,)}.get(name, ())
+        literal = next((m for m in (p.match(text, end) for p in quoted) if m), None)
+        if literal:
+            return "literal", suffix(text, literal.end())
+        if after in ("#", '"', "'"):
+            raise ValueError(f"a reserved prefix {name}{after} at {at}")
+        return "word", end
+    if char == "'":
+        literal = CHAR.match(text, at)
+        if literal:
+            return "literal", suffix(text, literal.end())
+        raw = text.startswith("r#", at + 1)
+        name = IDENT.match(text, at + 1 + 2 * raw)
+        if name is None or text[name.end() : name.end() + 1] in ("'", "#"):
+            raise ValueError(f"no character or lifetime at {at}")
+        return "lifetime", name.end()
+    if char == '"':
+        literal = QUOTED.match(text, at)
+        if literal is None:
+            raise ValueError(f"a string is never closed at {at}")
+        return "literal", suffix(text, literal.end())
+    if char == "#" and text[at + 1 : at + 2] in ("#", '"'):
+        raise ValueError(f"a reserved guarded literal at {at}")
+    if char in "([{":
+        return "open", at + 1
+    if char in ")]}":
+        return "close", at + 1
+    if char in PUNCT:
+        return "punct", at + 1
+    raise ValueError(f"no token starts with {char!r} at {at}")
+
+
 @functools.cache
 def lexed(text):
-    """`text` with its comments blanked, and `text` with its string and character literals blanked
-    as well; both keep every offset. A `//` or `/*` inside a string is not a comment."""
-    bare, skeleton = list(text), list(text)
-
-    def blank(buffers, start, end):
-        for buffer in buffers:
-            buffer[start:end] = [c if c == "\n" else " " for c in text[start:end]]
-
-    at = 0
-    while (token := TOKEN.search(text, at)) is not None:
-        start, kind = token.start(), token.group(0)
-        if kind == "//":
-            end = text.find("\n", start)
-            end = len(text) if end == -1 else end
-            blank((bare, skeleton), start, end)
-        elif kind == "/*":
-            depth, end = 1, start + 2
-            while end < len(text) and depth:
-                step = text[end : end + 2]
-                depth += {"/*": 1, "*/": -1}.get(step, 0)
-                end += 2 if step in ("/*", "*/") else 1
-            blank((bare, skeleton), start, end)
-        elif kind == "'":
-            char = CHAR.match(text, start)
-            end = char.end() if char else start + 1
-            if char:
-                blank((skeleton,), start, end)
-        else:
-            raw = RAW.match(text, start)
-            if raw:
-                close = text.find('"' + raw.group(1), raw.end())
-                end = len(text) if close == -1 else close + 1 + len(raw.group(1))
-            else:
-                end = start + 1
-                while end < len(text) and text[end] != '"':
-                    end += 2 if text[end] == "\\" else 1
-                end = min(end + 1, len(text))
-            blank((skeleton,), start, end)
-        at = max(end, start + 1)
-    return "".join(bare), "".join(skeleton)
+    """`text` with its comments blanked, keeping every offset and newline. A `//` or `/*` inside a
+    literal is no comment, and a quote inside a comment opens no literal, because both are read
+    from `scanned`'s tokens."""
+    bare = list(text)
+    for start, end in scanned(text)[2]:
+        bare[start:end] = [c if c == "\n" else " " for c in text[start:end]]
+    return "".join(bare)
 
 
 def predicate(words, at, test):
     """The configuration predicate at `words[at]` and the index after it. `test` is the one option
-    known here; any other option or key-value is None (unknown), and `all`, `any` and `not` combine
+    known here, and the literals `true` and `false` hold their values; any other option or
+    key-value is None (unknown), and so is a raw identifier, and `all`, `any` and `not` combine
     values in three-valued logic, so a True or False holds whatever else is configured."""
     word = words[at]
     if word in KLEENE and words[at + 1] == "(":
@@ -138,10 +263,12 @@ def predicate(words, at, test):
                 raise ValueError(words[at])
             at += words[at] == ","
         return KLEENE[word](values), at + 1
-    if not word.isidentifier():
+    if word in ("true", "false") and words[at + 1] in (",", ")"):
+        return word == "true", at + 1
+    if not word.removeprefix("r#").isidentifier():
         raise ValueError(word)
     if words[at + 1] == "=":
-        return None, at + 2
+        return None, at + 3
     return (test if word == "test" else None), at + 1
 
 
@@ -159,8 +286,12 @@ def applied(words):
 
 def condition(words, test):
     """Whether one attribute keeps its item: a `cfg` when its predicate holds, a `cfg_attr` when its
-    predicate fails or every attribute it applies keeps the item, and any other attribute always."""
+    predicate fails or every attribute it applies keeps the item, and any other attribute always,
+    unless it names `cfg` or `cfg_attr` in some other spelling (a path, a raw identifier, inside
+    `unsafe(...)`), which the guard does not read."""
     if words[0] not in ("cfg", "cfg_attr"):
+        if any(word.removeprefix("r#") in ("cfg", "cfg_attr") for word in words):
+            raise ValueError(words)
         return True
     if words[1] != "(" or words[-1] != ")":
         raise ValueError(words)
@@ -181,69 +312,120 @@ def test_only(attributes):
     decides nothing, so the module is not read."""
     if attributes is None:
         return False
-    words = [[word.group(1) or word.group(0) for word in WORD.finditer(a)] for a in attributes]
     try:
-        held = [KLEENE["all"]([condition(each, test) for each in words]) for test in (True, False)]
+        held = [
+            KLEENE["all"]([condition(each, test) for each in attributes]) for test in (True, False)
+        ]
     except (IndexError, ValueError):
         return False
     return held == [True, False]
 
 
-def attributes(skeleton, declaration, body, at):
-    """The attributes that decide whether `declaration` is compiled: its outer run, and the inner
-    attributes that open its body (`body` from `at`). None when either run may not be whole: the
-    outer one when something other than an item's end comes before it, the inner one when an
-    attribute is left unread."""
-    if skeleton[: declaration.start()].rstrip(SPACE)[-1:] not in ("", ";", "}"):
-        return None
-    inner = []
-    while (attribute := INNER.match(body, at)) is not None:
-        inner.append(attribute.group(1))
-        at = attribute.end()
-    if body[at:].lstrip(SPACE).startswith(("#!", "]")):
-        return None
-    return ATTRIBUTE.findall(declaration.group(1)) + inner
+def leading(found, pairs, at, end):
+    """The inner attributes that open a body (`found[at:end]`), each as its words (a doc comment is
+    `doc`), and the index after them: `#`, `!` and `[` are three tokens, so whitespace and
+    comments between them change nothing."""
+    run = []
+    while at < end:
+        if found[at][0] == "inner":
+            run.append(["doc"])
+            at += 1
+        elif [t[:2] for t in found[at : at + 3]] == [
+            ("punct", "#"),
+            ("punct", "!"),
+            ("open", "["),
+        ]:
+            run.append([word for _, word, _, _ in found[at + 3 : pairs[at + 2]]])
+            at = pairs[at + 2] + 1
+        else:
+            break
+    return run, at
 
 
-def cfg_test_spans(skeleton):
+def outer(found, pairs, first, at):
+    """The outer attributes of the item whose keyword is `found[at]`, read back over its visibility
+    (`pub`, `pub(...)`), or None when what stands before them is no item's end (`;`, `}`, or the
+    file's inner attributes), so the run may not be whole."""
+    at -= 1
+    if at >= first and found[at][:2] == ("close", ")"):
+        at = pairs[at] - 1
+        if found[at][:2] != ("word", "pub"):
+            return None
+    at -= at >= first and found[at][:2] == ("word", "pub")
+    run = []
+    while at >= first:
+        if found[at][0] == "outer":
+            run.append(["doc"])
+            at -= 1
+        elif (
+            found[at][:2] == ("close", "]") and pairs[at] > first and is_pound(found[pairs[at] - 1])
+        ):
+            run.append([word for _, word, _, _ in found[pairs[at] + 1 : at]])
+            at = pairs[at] - 2
+        else:
+            break
+    if at >= first and found[at][:2] not in (("punct", ";"), ("close", "}")):
+        return None
+    return run[::-1]
+
+
+def is_pound(token):
+    """True for a `#` punctuation token."""
+    return token[:2] == ("punct", "#")
+
+
+def modules(text):
+    """The file's own inner attributes, and each module it declares at its top level (a declaration
+    inside an inline module or a block is not followed, #433): (name, outer attributes or None,
+    index of the `mod` keyword)."""
+    found, pairs, _ = scanned(text)
+    own, first = leading(found, pairs, 0, len(found))
+    declared, at = [], first
+    while at < len(found):
+        if found[at][:2] == ("word", "mod") and [t[0] for t in found[at + 1 : at + 3]] in (
+            ["word", "punct"],
+            ["word", "open"],
+        ):
+            name = found[at + 1][1].removeprefix("r#")
+            declared.append((name, outer(found, pairs, first, at), at))
+        at = pairs[at] + 1 if found[at][0] == "open" else at + 1
+    return own, declared
+
+
+def cfg_test_spans(text):
     """The spans of the file's top-level inline test modules (`mod name { ... }` that only
-    `--cfg test` compiles), braces matched outside comments and literals. One declared inside
-    another module is not read (#433)."""
+    `--cfg test` compiles, with the file's own inner attributes), read from `scanned`'s tokens.
+    One declared inside another module is not read (#433)."""
+    found, pairs, _ = scanned(text)
+    own, declared = modules(text)
     spans = []
-    for block in DECLARATION.finditer(skeleton):
-        if block.group(3) != "{":
+    for _, run, at in declared:
+        if found[at + 2][1] != "{":
             continue
-        if skeleton[: block.start()].count("{") != skeleton[: block.start()].count("}"):
-            continue
-        if not test_only(attributes(skeleton, block, skeleton, block.end())):
-            continue
-        depth, end = 1, block.end()
-        while end < len(skeleton) and depth:
-            depth += {"{": 1, "}": -1}.get(skeleton[end], 0)
-            end += 1
-        spans.append((block.start(), end))
+        inner, _ = leading(found, pairs, at + 3, pairs[at + 2])
+        if test_only(None if run is None else own + run + inner):
+            spans.append((found[at][2], found[pairs[at + 2]][3]))
     return spans
 
 
-def out_of_line(own):
-    """The file of each out-of-line test module (`mod name;`) that `own` declares, read only when
-    rustc's choice is not in doubt (R8): of every file rustc could read for it (`name.rs` or
+def declared(own):
+    """(file, attributes) for each out-of-line module (`mod name;`) at `own`'s top level whose file
+    rustc's choice leaves in no doubt (R8): of every file rustc could read for it (`name.rs` or
     `name/mod.rs`, in `own`'s module directory or beside `own`, since a crate root, a `src/bin`
     file, a `mod.rs` and a file an attribute loaded all read their modules beside themselves),
-    exactly one exists, no attribute of the declaration carries `path` in any spelling (`#[path]`,
-    a raw string, `cfg_attr` under any predicate), and the declaration's attributes with that
-    file's inner ones make it a test module. Any other declaration is not read, so a shape only it
-    spells is refused. A declaration inside an inline module or a block is not followed (#433)."""
-    bare, skeleton = lexed(own.read_text(encoding="utf-8"))
+    exactly one exists and rustc's lexer reads it, and no attribute of the declaration carries
+    `path` in any spelling (`#[path]`, a raw identifier, `cfg_attr` under any predicate). The
+    attributes are `own`'s inner ones, the declaration's, and that file's inner ones. A
+    declaration inside an inline module or a block is not followed (#433)."""
+    text = own.read_text(encoding="utf-8")
+    tokens = scanned(text)[0]
+    inner, modules_ = modules(text)
     files = []
-    for module in DECLARATION.finditer(skeleton):
-        if skeleton.count("{", 0, module.start()) != skeleton.count("}", 0, module.start()):
+    for name, run, at in modules_:
+        if tokens[at + 2][1] != ";":
             continue
-        if module.group(3) != ";":
+        if run is None or any(w.removeprefix("r#") == "path" for each in run for w in each):
             continue
-        if PATH_WORD.search(module.group(1)):
-            continue
-        name = module.group(2)
         found = [
             path
             for folder in (own.with_suffix(""), own.parent)
@@ -251,10 +433,46 @@ def out_of_line(own):
             if path.is_file()
         ]
         if len(found) == 1:
-            _, file = lexed(found[0].read_text(encoding="utf-8"))
-            if test_only(attributes(skeleton, module, file, 0)):
-                files += found
+            try:
+                body, pairs, _ = scanned(found[0].read_text(encoding="utf-8"))
+            except ValueError:
+                continue
+            files.append((found[0], inner + run + leading(body, pairs, 0, len(body))[0]))
     return files
+
+
+def out_of_line(own):
+    """The file of each out-of-line test module that `own` declares (`declared`), read only when
+    its attributes make it a test module. Any other declaration is not read, so a shape only it
+    spells is refused."""
+    return [file for file, attributes in declared(own) if test_only(attributes)]
+
+
+def reached(src):
+    """Every file of the crate at `src` that rustc compiles under `--cfg test` whatever else is
+    configured: its roots (`lib.rs`, `main.rs`, `bin/*.rs`, `bin/*/main.rs`), and each file a
+    reached file declares (`declared`) whose attributes keep it under test. A file that only an
+    inline module, a `#[path]`, an undecided attribute or a source rustc refuses reaches is not
+    in it, so its test modules are not read."""
+    roots = [src / "lib.rs", src / "main.rs", *src.glob("bin/*.rs"), *src.glob("bin/*/main.rs")]
+    todo, seen = [root for root in roots if root.is_file()], set()
+    while todo:
+        file = todo.pop()
+        if file in seen:
+            continue
+        seen.add(file)
+        try:
+            files = declared(file)
+        except ValueError:
+            continue
+        for path, attributes in files:
+            try:
+                kept = KLEENE["all"]([condition(each, True) for each in attributes])
+            except (IndexError, ValueError):
+                kept = None
+            if kept is True:
+                todo.append(path)
+    return seen
 
 
 def spelled_elsewhere(root, crate, file, literal, own_span):
@@ -267,10 +485,13 @@ def spelled_elsewhere(root, crate, file, literal, own_span):
         for holder, path, _, _, span in implementations(root)
         if holder == crate and span
     }
-    candidates = sorted((base / "tests").rglob("*.rs")) + [base / file] + out_of_line(base / file)
+    candidates = sorted((base / "tests").rglob("*.rs"))
+    if base / file in reached(base / "src"):
+        candidates += [base / file] + out_of_line(base / file)
     for path in candidates:
-        bare, skeleton = lexed(path.read_text(encoding="utf-8"))
-        spans = cfg_test_spans(skeleton) if path == base / file else [(0, len(bare))]
+        text = path.read_text(encoding="utf-8")
+        bare = lexed(text)
+        spans = cfg_test_spans(text) if path == base / file else [(0, len(bare))]
         at = bare.find(literal)
         while at != -1:
             inside = any(start <= at and at + len(literal) <= end for start, end in spans)
