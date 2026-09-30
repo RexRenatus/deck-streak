@@ -710,13 +710,13 @@ stands, and the compiler decides it.
   would be reported as a timeout rather than as missed: the pull request's verdict passes a timeout,
   and the weekly table counts one as killed. This amendment does not take that decision; ADR-197's
   round 6 brings it to the owner.
-- **Rows.** Forty-five, S07241 to S07285 in this SPEC's band: S07241 to S07252 pin each refusal by
+- **Rows.** Forty-four, S07241 to S07284 in this SPEC's band: S07241 to S07252 pin each refusal by
   design and the census's return of them; S07253, S07254 and S07256 to S07271 its passes, the
   packages each names, its flags, its reading of rustc's report and its attribution; S07255 and
   S07273 its scrubbed environment; S07272 its expansion bound; S07274 and S07275 the probe
-  itself (the build script's arming and the attribute on `settle`); and S07276 to S07285 the graph
+  itself (the build script's arming and the attribute on `settle`); and S07276 to S07284 the graph
   refusal (the reached package, its name, the pin, the build-script target, the transitive walk, its
-  start, each edge, the locked graph, the pinned digest and the refusals it returns). Each is killed by a test of
+  start, each edge, the pinned digest and the refusals it returns). Each is killed by a test of
   `xp_census.rs`, S07274 and S07275 by A12's own, and each was proved KILLED by its full id on a
   committed tree.
 - **Files.** `crates/progression/build.rs` (new), `crates/progression/src/settle.rs` (the probe),

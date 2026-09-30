@@ -302,17 +302,17 @@
         "S07249-CENSUS-KEEPS-THE-LOCK",
         "progression",
         "tests/xp_census.rs",
-        "let locked = root.join(\"Cargo.lock\").exists();",
-        "let locked = false;",
+        "[\"metadata\", \"--format-version\", \"1\", \"--locked\", \"--offline\"]",
+        "[\"metadata\", \"--format-version\", \"1\", \"--offline\"]",
         "xp_census::the_census_refuses_what_the_compiler_is_not_asked",
-        "a tree with a Cargo.lock is compiled --locked, so a lock cargo would have to change is refused (SPEC-072 A34)"
+        "a tree with a Cargo.lock is read --locked, so a lock cargo would have to change is refused (SPEC-072 A34)"
       ],
       [
         "S07250-CENSUS-REFUSES-AN-UNREAD-WORKSPACE",
         "progression",
         "tests/xp_census.rs",
-        "    if !ok {\n        return Err(vec![format!(\n            \"cargo cannot read the workspace",
-        "    if false {\n        return Err(vec![format!(\n            \"cargo cannot read the workspace",
+        "    if !ok {\n        return Err(vec![format!(\n            \"cargo metadata cannot give the graph",
+        "    if false {\n        return Err(vec![format!(\n            \"cargo metadata cannot give the graph",
         "xp_census::the_census_refuses_what_the_compiler_is_not_asked",
         "a workspace cargo metadata cannot read is refused with cargo's own error (SPEC-072 A34)"
       ],
@@ -605,16 +605,7 @@
         "a dependency edge is read from the dependent to what it depends on, of any kind (SPEC-072 A35)"
       ],
       [
-        "S07283-CENSUS-LOCKS-THE-GRAPH",
-        "progression",
-        "tests/xp_census.rs",
-        "[\"metadata\", \"--format-version\", \"1\", \"--locked\", \"--offline\"]",
-        "[\"metadata\", \"--format-version\", \"1\", \"--offline\"]",
-        "xp_census::the_census_refuses_what_the_compiler_is_not_asked",
-        "cargo metadata runs with the lock file as it is, never resolving a new one (SPEC-072 A35)"
-      ],
-      [
-        "S07284-CENSUS-PIN-IS-THE-BUILD-SCRIPT",
+        "S07283-CENSUS-PIN-IS-THE-BUILD-SCRIPT",
         "progression",
         "tests/xp_census.rs",
         "\"a55c986660b4a75d5f8be32d91e3ae82b8140245eb7e40cba6d5306eb9c3815a\"",
@@ -623,7 +614,7 @@
         "the pinned digest is that of the build script the tree holds (SPEC-072 A35)"
       ],
       [
-        "S07285-CENSUS-RETURNS-THE-BUILD-SCRIPT-REFUSALS",
+        "S07284-CENSUS-RETURNS-THE-BUILD-SCRIPT-REFUSALS",
         "progression",
         "tests/xp_census.rs",
         "let mut refused = build_scripts(root, &metadata)?;",
