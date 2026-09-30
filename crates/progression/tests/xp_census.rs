@@ -15,6 +15,12 @@
 //! by construction: a workspace that does not build, a member's feature, a cargo configuration, a
 //! package in the repository outside the workspace, and a package from outside it that depends on
 //! progression.
+//!
+//! The census's verdict depends only on the tree it judges (SPEC-072 §12, round 8). Progression is
+//! found by its manifest's path, never by its package's name, and a graph where that cannot be told
+//! is refused by name. Each census compiles in an empty target of its own, and its cargo inherits
+//! only the variables it names; a cargo configuration in the tree, above it or in cargo's home is
+//! refused, and so is code of the tree that reads a file outside it or a variable the host sets.
 
 // An integration test is test code: its helpers panic on an unreadable tree, and it prints the
 // examined count on purpose.
@@ -78,6 +84,20 @@ const SCRUBBED_PREFIXES: [&str; 4] = [
     "CARGO_TARGET_",
     "CARGO_UNSTABLE_",
 ];
+/// The only variables of the census's own environment its cargo inherits: where the programs, the
+/// home, cargo's home and rustup's home are, and the toolchain rustup chose to run this test, which
+/// the repository pins. Every other variable is dropped, so that no variable the tree does not set
+/// reaches a build script, a macro or rustc in the census's build (SPEC-072 §12, round 8).
+const INHERITED: [&str; 5] = [
+    "PATH",
+    "HOME",
+    "CARGO_HOME",
+    "RUSTUP_HOME",
+    "RUSTUP_TOOLCHAIN",
+];
+/// The owner's manifest, by which the census finds the owner: never by its package's name, which
+/// any other package of the graph can carry (main's round-7 ruling, condition 1).
+const OWNER_MANIFEST: &str = "crates/progression/Cargo.toml";
 
 /// Prints how many items a check examined and refuses zero (the tdd pack's examined contract).
 fn examined<T>(what: &str, items: Vec<T>) -> Vec<T> {
@@ -260,11 +280,19 @@ fn scrubbed(name: &str) -> bool {
             .any(|prefix| name.starts_with(prefix))
 }
 
+/// Whether cargo, run by the census, inherits the variable `name` from the census's environment:
+/// only a name of [`INHERITED`], and never one that would compile the build apart from cargo's
+/// defaults.
+fn inherited(name: &str) -> bool {
+    INHERITED.contains(&name) && !scrubbed(name)
+}
+
 /// Runs the cargo that runs this test with `arguments` in `root`, with the census's flags and its
-/// arming, and answers whether it succeeded, its standard output and its standard error. The
-/// variables that would configure the build apart from the census are removed, so the build is
-/// cargo's own with the census's flags. The run is bounded: past `limit` (`CARGO_LIMIT`, which the
-/// census passes) the child is stopped and the census fails by name.
+/// arming, and answers whether it succeeded, its standard output and its standard error. Cargo
+/// starts from an empty environment and inherits only the names [`inherited`] admits, so the build
+/// is cargo's own with the census's flags, and no variable the tree does not set can move the
+/// verdict. The run is bounded: past `limit` (`CARGO_LIMIT`, which the census passes) the child is
+/// stopped and the census fails by name.
 fn cargo(
     root: &Path,
     arguments: &[String],
@@ -272,14 +300,16 @@ fn cargo(
 ) -> Result<(bool, String, String), String> {
     let program = std::env::var_os("CARGO").unwrap_or_else(|| "cargo".into());
     let mut command = Command::new(program);
-    for (name, _) in std::env::vars_os() {
-        if scrubbed(&name.to_string_lossy()) {
-            command.env_remove(&name);
+    command.env_clear();
+    for (name, value) in std::env::vars_os() {
+        if inherited(&name.to_string_lossy()) {
+            command.env(&name, &value);
         }
     }
     let mut child = command
         .args(arguments)
         .current_dir(root)
+        .env("CARGO_INCREMENTAL", "0")
         .env("CARGO_ENCODED_RUSTFLAGS", RUSTFLAGS.join("\u{1f}"))
         .env(ARMING, "1")
         .stdin(Stdio::null())
@@ -449,12 +479,54 @@ fn pass(on: bool, abort: bool, packages: &BTreeSet<String>) -> Vec<String> {
 const PROGRESSION_BUILD_SHA256: &str =
     "a55c986660b4a75d5f8be32d91e3ae82b8140245eb7e40cba6d5306eb9c3815a";
 
+/// `path` with every `..` and link resolved, or `path` itself when it names nothing, so that two
+/// spellings of one file compare equal.
+fn canonical(path: &Path) -> PathBuf {
+    fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf())
+}
+
+/// The build-script target of `package`, if it has one: cargo gives a package one build script at
+/// most, and a target list holding more is refused by the caller.
+fn scripts_of(package: &Value) -> Vec<&Value> {
+    package["targets"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter(|target| {
+            target["kind"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .any(|kind| kind == "custom-build")
+        })
+        .collect()
+}
+
+/// The SHA-256 of the file at `path`, in lowercase hex, or why it cannot be read.
+fn sha256_of(path: &Path) -> std::io::Result<String> {
+    fs::read(path).map(|bytes| {
+        Sha256::digest(&bytes)
+            .iter()
+            .fold(String::new(), |mut hex, byte| {
+                write!(hex, "{byte:02x}").expect("a string takes every write");
+                hex
+            })
+    })
+}
+
 /// Refuses, by name, every package that has a build script and can name `settle`: the package that
 /// defines it, or one that depends on it by a normal, a build or a dev edge, at any depth. A build
 /// script's cfg reaches only its own package, and the census's passes never set a cfg from the
-/// build environment, so such a package could hold code the passes never compile. The defining
-/// package's own script is admitted at [`PROGRESSION_BUILD_SHA256`] alone. A graph cargo cannot
-/// give is a refusal, never a skipped check.
+/// build environment, so such a package could hold code the passes never compile. The owner is the
+/// one workspace member whose manifest is [`OWNER_MANIFEST`], found by that path and never by a
+/// name (main's round-7 ruling, condition 1): the census refuses, by name, a graph where that
+/// member is absent or ambiguous, where its package is not [`PROGRESSION_PACKAGE`], where any other
+/// package carries its name, whatever its version or source, and where it has no build script or
+/// more than one. Its own script is admitted at [`PROGRESSION_BUILD_SHA256`] alone. A package from
+/// outside the workspace that reaches the owner through the graph is refused, whatever it names.
+/// A graph cargo cannot give is a refusal, never a skipped check, and no graph without its owner
+/// is ever accepted.
+#[allow(clippy::too_many_lines)]
 fn build_scripts(root: &Path, metadata: &Value) -> Result<Vec<String>, Vec<String>> {
     let unreadable = |what: &str| vec![format!("cargo metadata cannot give the graph ({what})")];
     let nodes = metadata["resolve"]["nodes"]
@@ -475,10 +547,94 @@ fn build_scripts(root: &Path, metadata: &Value) -> Result<Vec<String>, Vec<Strin
     let packages = metadata["packages"]
         .as_array()
         .ok_or_else(|| unreadable("it holds no packages"))?;
-    let owner = packages
+    let workspace = metadata["workspace_root"]
+        .as_str()
+        .map(PathBuf::from)
+        .ok_or_else(|| unreadable("it names no workspace root"))?;
+    let member_ids: BTreeSet<&str> = metadata["workspace_members"]
+        .as_array()
+        .ok_or_else(|| unreadable("it names no workspace members"))?
         .iter()
-        .find(|package| package["name"] == PROGRESSION_PACKAGE)
-        .and_then(|package| package["id"].as_str());
+        .filter_map(Value::as_str)
+        .collect();
+    let manifest = canonical(&root.join(OWNER_MANIFEST));
+    let owners: Vec<&Value> = packages
+        .iter()
+        .filter(|package| {
+            package["id"]
+                .as_str()
+                .is_some_and(|id| member_ids.contains(id))
+                && package["manifest_path"]
+                    .as_str()
+                    .is_some_and(|path| canonical(Path::new(path)) == manifest)
+        })
+        .collect();
+    let [owner_package] = owners.as_slice() else {
+        return Err(vec![if owners.is_empty() {
+            format!(
+                "{OWNER_MANIFEST} is the manifest of no workspace member, so the census has no \
+                 owner and cannot tell its callers"
+            )
+        } else {
+            format!(
+                "{} workspace members have the manifest {OWNER_MANIFEST}, so the census cannot \
+                 tell its owner",
+                owners.len()
+            )
+        }]);
+    };
+    let owner = owner_package["id"].as_str();
+    let owner_name = owner_package["name"].as_str().unwrap_or_default();
+    let mut refused = Vec::new();
+    if owner_name != PROGRESSION_PACKAGE {
+        refused.push(format!(
+            "{OWNER_MANIFEST} names its package {owner_name}, not {PROGRESSION_PACKAGE}, so the \
+             census cannot tell its owner by the name the graph's other packages use"
+        ));
+    }
+    let decoys: Vec<String> = packages
+        .iter()
+        .filter(|package| {
+            package["id"] != owner_package["id"]
+                && (package["name"] == PROGRESSION_PACKAGE || package["name"] == owner_name)
+        })
+        .map(|package| {
+            format!(
+                "{} {} ({})",
+                package["name"].as_str().unwrap_or_default(),
+                package["version"].as_str().unwrap_or_default(),
+                package["source"].as_str().unwrap_or("a path")
+            )
+        })
+        .collect();
+    if !decoys.is_empty() {
+        refused.push(format!(
+            "another package of the graph carries the owner's name ({}), so the census cannot \
+             tell the owner's callers by name",
+            decoys.join(", ")
+        ));
+    }
+    match scripts_of(owner_package).as_slice() {
+        [] => refused.push(format!(
+            "{owner_name} has no build script, so the census's cfg is never set and no use of \
+             settle is reported"
+        )),
+        [script] => {
+            let path = Path::new(script["src_path"].as_str().unwrap_or_default());
+            let digest = sha256_of(path);
+            if digest.ok().as_deref() != Some(PROGRESSION_BUILD_SHA256) {
+                refused.push(format!(
+                    "{owner_name}'s build script ({}) is not the one pinned by \
+                     PROGRESSION_BUILD_SHA256",
+                    under(&workspace, path)
+                ));
+            }
+        }
+        more => refused.push(format!(
+            "{owner_name} has {} build scripts, so the census cannot tell which it pins",
+            more.len()
+        )),
+    }
     let mut reaching: BTreeSet<&str> = BTreeSet::new();
     let mut queue: Vec<&str> = owner.into_iter().collect();
     while let Some(id) = queue.pop() {
@@ -486,56 +642,39 @@ fn build_scripts(root: &Path, metadata: &Value) -> Result<Vec<String>, Vec<Strin
             queue.extend(dependents.get(id).into_iter().flatten());
         }
     }
-    let mut refused = Vec::new();
     for package in packages {
         let id = package["id"].as_str().unwrap_or_default();
         let name = package["name"].as_str().unwrap_or_default();
-        let script = package["targets"]
-            .as_array()
-            .into_iter()
-            .flatten()
-            .find(|target| {
-                target["kind"]
-                    .as_array()
-                    .into_iter()
-                    .flatten()
-                    .any(|kind| kind == "custom-build")
-            });
-        let Some(script) = script else { continue };
+        if Some(id) == owner {
+            continue;
+        }
+        if !package["source"].is_null() && reaching.contains(id) {
+            refused.push(format!(
+                "{name} comes from {} and reaches the owner through the graph, so the census \
+                 cannot name its callers",
+                package["source"].as_str().unwrap_or_default()
+            ));
+        }
+        if scripts_of(package).is_empty() {
+            continue;
+        }
         if !reaching.contains(id) {
             continue;
         }
-        if name != PROGRESSION_PACKAGE {
-            refused.push(format!(
-                "{name} has a build script and can name settle, and a build script's cfg is one \
-                 the census's passes never set"
-            ));
-            continue;
-        }
-        let path = script["src_path"].as_str().unwrap_or_default();
-        let digest = fs::read(path).map(|bytes| {
-            Sha256::digest(&bytes)
-                .iter()
-                .fold(String::new(), |mut hex, byte| {
-                    write!(hex, "{byte:02x}").expect("a string takes every write");
-                    hex
-                })
-        });
-        if digest.ok().as_deref() != Some(PROGRESSION_BUILD_SHA256) {
-            refused.push(format!(
-                "{name}'s build script ({}) is not the one pinned by PROGRESSION_BUILD_SHA256",
-                relative(root, Path::new(path))
-            ));
-        }
+        refused.push(format!(
+            "{name} has a build script and can name settle, and a build script's cfg is one \
+             the census's passes never set"
+        ));
     }
     Ok(refused)
 }
 
-/// Every use of `settle` in the code the workspace at `root` compiles, or the reasons the census
-/// cannot see them all. `target` is the census's own target directory, apart from every other
-/// build.
+/// Every use of `settle` in the code the workspace at `root` compiles, with the files outside the
+/// tree that the workspace's own code read (each a refusal that does not stop the census naming
+/// its uses), or the reasons the census cannot see them all. `target` is the census's own target
+/// directory, made empty for this census alone and apart from every other build.
 #[allow(clippy::too_many_lines)]
-fn compiled_uses(root: &Path, target: &Path) -> Result<Vec<Use>, Vec<String>> {
+fn compiled_uses(root: &Path, target: &Path) -> Result<(Vec<Use>, Vec<String>), Vec<String>> {
     let arguments: Vec<String> = ["metadata", "--format-version", "1", "--locked", "--offline"]
         .map(str::to_owned)
         .to_vec();
@@ -551,6 +690,14 @@ fn compiled_uses(root: &Path, target: &Path) -> Result<Vec<Use>, Vec<String>> {
         .map_err(|error| vec![format!("cargo metadata cannot give the graph ({error})")])?;
     let mut refused = build_scripts(root, &metadata)?;
     let workspace = PathBuf::from(metadata["workspace_root"].as_str().unwrap_or_default());
+    let tree = canonical(root);
+    if canonical(&workspace) != tree {
+        refused.push(format!(
+            "cargo reads the workspace at {}, a manifest above the tree, and the census judges \
+             the tree alone",
+            workspace.display()
+        ));
+    }
     let member_ids: BTreeSet<&str> = metadata["workspace_members"]
         .as_array()
         .into_iter()
@@ -620,10 +767,30 @@ fn compiled_uses(root: &Path, target: &Path) -> Result<Vec<Use>, Vec<String>> {
             ));
         }
     }
-    for config in [".cargo/config", ".cargo/config.toml"] {
-        if root.join(config).exists() {
+    // Cargo reads its configuration from the folder it runs in and every folder above it, and from
+    // its home (https://doc.rust-lang.org/cargo/reference/config.html#hierarchical-structure).
+    let home = std::env::var_os("CARGO_HOME")
+        .map(PathBuf::from)
+        .or_else(|| std::env::var_os("HOME").map(|home| PathBuf::from(home).join(".cargo")));
+    for folder in tree.ancestors() {
+        for config in [".cargo/config", ".cargo/config.toml"] {
+            if folder.join(config).exists() {
+                refused.push(format!(
+                    "{} configures cargo, and the census compiles with cargo's own defaults",
+                    under(&tree, &folder.join(config))
+                ));
+            }
+        }
+    }
+    for file in ["config", "config.toml"]
+        .iter()
+        .filter_map(|config| home.as_ref().map(|home| home.join(config)))
+    {
+        if file.exists() {
             refused.push(format!(
-                "{config} configures cargo, and the census compiles with cargo's own defaults"
+                "{} configures cargo from its home, and the census compiles with cargo's own \
+                 defaults",
+                file.display()
             ));
         }
     }
@@ -638,6 +805,7 @@ fn compiled_uses(root: &Path, target: &Path) -> Result<Vec<Use>, Vec<String>> {
         selections.push(&[]);
     }
     let mut uses = Vec::new();
+    let mut read = BTreeMap::new();
     for selection in selections {
         for (on, abort) in [(true, false), (false, false), (true, true), (false, true)] {
             let mut arguments: Vec<String> = [
@@ -664,6 +832,31 @@ fn compiled_uses(root: &Path, target: &Path) -> Result<Vec<Use>, Vec<String>> {
                 let Ok(message) = serde_json::from_str::<Value>(line) else {
                     continue;
                 };
+                if message["reason"] == "compiler-artifact"
+                    && message["package_id"]
+                        .as_str()
+                        .is_some_and(|id| member_ids.contains(id))
+                    && message["target"]["kind"] != serde_json::json!(["custom-build"])
+                {
+                    for file in message["filenames"].as_array().into_iter().flatten() {
+                        let file = Path::new(file.as_str().unwrap_or_default());
+                        let stem = file
+                            .file_stem()
+                            .map(|stem| stem.to_string_lossy().into_owned())
+                            .unwrap_or_default();
+                        let info = file.with_file_name(format!(
+                            "{}.d",
+                            stem.strip_prefix("lib").unwrap_or(&stem)
+                        ));
+                        let folder = message["package_id"]
+                            .as_str()
+                            .and_then(|id| folders.get(id))
+                            .cloned()
+                            .unwrap_or_default();
+                        read.insert(info, folder);
+                    }
+                    continue;
+                }
                 if message["reason"] != "compiler-message"
                     || message["message"]["code"]["code"] != "deprecated"
                     || !message["message"]["message"]
@@ -680,10 +873,12 @@ fn compiled_uses(root: &Path, target: &Path) -> Result<Vec<Use>, Vec<String>> {
                         .and_then(|id| folders.get(id))
                         .cloned()
                         .unwrap_or_default(),
-                    kind: message["target"]["kind"][0]
-                        .as_str()
-                        .unwrap_or_default()
-                        .to_owned(),
+                    // A target of one kind is named by it; a target of several is named by none,
+                    // so it is never taken for a test, a bench or an example.
+                    kind: match message["target"]["kind"].as_array().map(Vec::as_slice) {
+                        Some([kind]) => kind.as_str().unwrap_or_default().to_owned(),
+                        _ => String::new(),
+                    },
                     file: chain.last().cloned().unwrap_or_else(|| {
                         under(
                             &workspace,
@@ -695,7 +890,64 @@ fn compiled_uses(root: &Path, target: &Path) -> Result<Vec<Use>, Vec<String>> {
             }
         }
     }
-    Ok(uses)
+    Ok((
+        uses,
+        outside_the_tree(&tree, &workspace, &canonical(target), &read),
+    ))
+}
+
+/// Every file outside the tree, and every variable the host sets, that the workspace's own code
+/// read, as rustc's dep-info for each member's compile names them (`read` maps each dep-info file
+/// to its member's folder), each a refusal: a file that no path of the tree holds, one in the
+/// tree's own build output, or a variable of [`INHERITED`] could move the verdict while the tree
+/// stays as it is. The census's own target, made empty for this census, holds only what this
+/// census's build wrote.
+fn outside_the_tree(
+    tree: &Path,
+    workspace: &Path,
+    target: &Path,
+    read: &BTreeMap<PathBuf, String>,
+) -> Vec<String> {
+    let mut refused = Vec::new();
+    for (info, folder) in read {
+        let Ok(text) = fs::read_to_string(info) else {
+            refused.push(format!(
+                "rustc wrote no dep-info for {folder} ({}), so the census cannot tell what its \
+                 code read",
+                info.display()
+            ));
+            continue;
+        };
+        for line in text.lines() {
+            if let Some(variable) = line.strip_prefix("# env-dep:") {
+                let name = variable.split_once('=').map_or(variable, |(name, _)| name);
+                if INHERITED.contains(&name) {
+                    refused.push(format!(
+                        "{folder}'s code reads the variable {name}, which the host sets, and the \
+                         census judges the tree alone"
+                    ));
+                }
+                continue;
+            }
+            let Some(file) = line.strip_suffix(':') else {
+                continue;
+            };
+            if file.is_empty() || line.starts_with('#') {
+                continue;
+            }
+            let path = workspace.join(file.replace("\\ ", " "));
+            let resolved = fs::canonicalize(&path).unwrap_or(path);
+            let inside = resolved.starts_with(target)
+                || (resolved.starts_with(tree) && !resolved.starts_with(tree.join("target")));
+            if !inside {
+                refused.push(format!(
+                    "{folder}'s code reads {file}, which lies outside the tree, and the census \
+                     judges the tree alone"
+                ));
+            }
+        }
+    }
+    refused
 }
 
 /// What the census found: the sources and migrations it read, the files that name the table, the
@@ -783,9 +1035,26 @@ fn census_in(root: &Path, target: &Path) -> Census {
             census.sources.push(name);
         }
     }
-    match compiled_uses(root, target) {
+    // Each census compiles in a target directory of its own, made empty under `target` and removed
+    // when the census ends, so no build output, build-script output or fingerprint that another
+    // build wrote can serve this one (SPEC-072 §12, round 8).
+    let fresh = fs::create_dir_all(target)
+        .and_then(|()| {
+            tempfile::Builder::new()
+                .prefix("census-")
+                .tempdir_in(target)
+        })
+        .map_err(|error| {
+            vec![format!(
+                "the census cannot make an empty target under {} ({error}), so it cannot see its \
+                 callers",
+                target.display()
+            )]
+        });
+    match fresh.and_then(|fresh| compiled_uses(root, fresh.path())) {
         Err(reasons) => census.refused.extend(reasons),
-        Ok(uses) => {
+        Ok((uses, read)) => {
+            census.refused.extend(read);
             for used in uses {
                 if used.folder == format!("crates/{OWNER}") {
                     continue;
@@ -1203,6 +1472,9 @@ fn the_census_follows_a_grouped_module_renaming_and_a_chain_read_before_its_link
     );
 }
 
+/// A tree planted over the workspace's files, and the refusals the census owes it.
+type PlantedRefusal<'a> = (Vec<(&'a str, &'a str)>, Vec<&'a str>);
+
 #[test]
 #[allow(clippy::too_many_lines)]
 fn the_census_refuses_what_the_compiler_is_not_asked() {
@@ -1211,8 +1483,10 @@ fn the_census_refuses_what_the_compiler_is_not_asked() {
     // a package in the repository outside the workspace, a proc-macro member, a path package
     // outside the repository, a git package that depends on progression, a lock file cargo would
     // have to change, code that does not compile, and coordination's use of `settle` in a file
-    // outside the repository, which no file of the repository places. Each is refused by name, and
-    // alone.
+    // outside the repository, which no file of the repository places. Each is refused by name,
+    // with exactly the refusals its case names: a git package that reaches progression is refused
+    // for its dependency and for the graph edge, and coordination's file outside the repository for
+    // its cause and for being read from outside the tree.
     const HABITS: &str =
         "[package]\nname = \"deck-streak-habits\"\nversion = \"0.1.0\"\nedition = \"2024\"\n\n";
     let features = format!("{HABITS}[features]\nquiet = []\n");
@@ -1228,31 +1502,40 @@ fn the_census_refuses_what_the_compiler_is_not_asked() {
     );
     let git_progression = killer_package(OWNER);
     let coordination = manifest_of(CALLER, &[OWNER]);
-    let trees: [(Vec<(&str, &str)>, &str); 10] = [
+    let trees: [PlantedRefusal<'_>; 10] = [
         (
             vec![("ws/crates/habits/Cargo.toml", &features)],
-            "crates/habits/Cargo.toml declares a feature, and the census compiles none",
+            vec!["crates/habits/Cargo.toml declares a feature, and the census compiles none"],
         ),
         (
             vec![("ws/.cargo/config.toml", "[build]\nincremental = false\n")],
-            ".cargo/config.toml configures cargo, and the census compiles with cargo's own defaults",
+            vec![
+                ".cargo/config.toml configures cargo, and the census compiles with cargo's own \
+                 defaults",
+            ],
         ),
         (
             vec![("ws/.cargo/config", "[build]\nincremental = false\n")],
-            ".cargo/config configures cargo, and the census compiles with cargo's own defaults",
+            vec![
+                ".cargo/config configures cargo, and the census compiles with cargo's own defaults",
+            ],
         ),
         (
             vec![(
                 "ws/tools/aside/Cargo.toml",
                 "[package]\nname = \"aside\"\nversion = \"0.1.0\"\nedition = \"2024\"\n\n[workspace]\n",
             )],
-            "tools/aside/Cargo.toml is a package outside the workspace, which the census does not \
-             compile",
+            vec![
+                "tools/aside/Cargo.toml is a package outside the workspace, which the census does \
+                 not compile",
+            ],
         ),
         (
             vec![("ws/crates/habits/Cargo.toml", &proc_macro)],
-            "crates/habits is a proc-macro crate, and rustc reports no deprecation inside a derive's \
-             expansion",
+            vec![
+                "crates/habits is a proc-macro crate, and rustc reports no deprecation inside a \
+                 derive's expansion",
+            ],
         ),
         (
             vec![
@@ -1263,7 +1546,7 @@ fn the_census_refuses_what_the_compiler_is_not_asked() {
                 ),
                 ("aside/src/lib.rs", "pub fn quiet() {}\n"),
             ],
-            "aside is a package outside the workspace, which the census does not compile",
+            vec!["aside is a package outside the workspace, which the census does not compile"],
         ),
         (
             vec![
@@ -1274,19 +1557,24 @@ fn the_census_refuses_what_the_compiler_is_not_asked() {
                 ("git/p/Cargo.toml", &git_progression),
                 ("git/p/src/lib.rs", "pub fn settle() -> usize {\n    1\n}\n"),
             ],
-            "depends on progression from outside the workspace, whose callers the census cannot \
-             name",
+            vec![
+                "depends on progression from outside the workspace, whose callers the census \
+                 cannot name",
+                "deck-streak-g comes from git+file://",
+            ],
         ),
         (
             vec![("ws/Cargo.lock", "version = 4\n")],
-            "because --locked was passed to prevent this), so the census cannot see its callers",
+            vec![
+                "because --locked was passed to prevent this), so the census cannot see its callers",
+            ],
         ),
         (
             vec![(
                 "ws/crates/habits/src/lib.rs",
                 "pub fn broken() -> usize {\n    \"not a number\"\n}\n",
             )],
-            "the workspace does not compile (error: could not compile `deck-streak-habits`",
+            vec!["the workspace does not compile (error: could not compile `deck-streak-habits`"],
         ),
         (
             vec![
@@ -1302,11 +1590,15 @@ fn the_census_refuses_what_the_compiler_is_not_asked() {
                      deck_streak_progression::settle() }\n",
                 ),
             ],
-            "crates/coordination/src/lib.rs calls settle outside the recompute steps, and only the \
-             owner's correction may",
+            vec![
+                "crates/coordination/src/lib.rs calls settle outside the recompute steps, and only \
+                 the owner's correction may",
+                "crates/coordination's code reads crates/coordination/src/../../../../outside.rs, \
+                 which lies outside the tree",
+            ],
         ),
     ];
-    for (files, line) in examined("tree(s) the census does not compile", Vec::from(trees)) {
+    for (files, lines) in examined("tree(s) the census does not compile", Vec::from(trees)) {
         let planted = tempfile::tempdir().expect("a temporary directory");
         let root = planted.path().join("ws");
         let git = planted.path().join("git");
@@ -1321,7 +1613,10 @@ fn the_census_refuses_what_the_compiler_is_not_asked() {
         }
         let refused = census(&root).refused;
         assert!(
-            refused.len() == 1 && refused.iter().all(|refusal| refusal.contains(line)),
+            refused.len() == lines.len()
+                && lines
+                    .iter()
+                    .all(|line| refused.iter().any(|refusal| refusal.contains(line))),
             "planted {files:?}: {refused:?}"
         );
     }
@@ -3428,12 +3723,13 @@ fn committed(directory: &Path) {
     }
 }
 
-/// One judging thread's workspace, planted at one fixed path for every tree it judges, with a
-/// target directory the census keeps between them. A tree is still judged alone: before each one,
-/// everything in the workspace but the stub and the target is removed (the previous tree's members,
-/// its `Cargo.lock` and its git repository), and a stub file is rewritten only when its text
-/// differs, so the stub's modification times hold and cargo recompiles only what a tree changed.
-/// Cargo's fingerprints decide what to recompile, so a tree's report is the one a fresh build gives.
+/// One judging thread's workspace, planted at one fixed path for every tree it judges. A tree is
+/// judged alone: before each one, everything in the workspace but the stub and the target is
+/// removed (the previous tree's members, its `Cargo.lock` and its git repository), and a stub file
+/// is rewritten only when its text differs. The census compiles each tree in an empty target of its
+/// own under the workspace's target directory (`census_in`), so nothing an earlier tree built,
+/// fingerprints and build-script output included, reaches a later tree's report (SPEC-072 §12,
+/// round 8).
 struct KillerWorker {
     _planted: tempfile::TempDir,
     root: PathBuf,
