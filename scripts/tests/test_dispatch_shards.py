@@ -2175,9 +2175,11 @@ class TheWeeklySweepNamesItsPackageInLiteralWords(unittest.TestCase):
 
     def test_the_rewritten_blocks_are_the_only_package_words_in_the_two_cargo_commands(self):
         text = workflow(WEEKLY)
-        self.assertNotIn(
-            "${PACKAGE:+--package", "\n".join(re.findall(r"cargo mutants [^\n]*", text))
+        commands = examined(
+            "weekly cargo mutants commands", re.findall(r"cargo mutants [^\n]*", text)
         )
+        self.assertNotIn("${PACKAGE:+--package", "\n".join(commands))
+        self.assertTrue(any("--package=" in command for command in commands))
 
 
 # R5 (#465's remainder, closed by refusal): a word before the bounds that bash can expand to exactly
@@ -2283,6 +2285,8 @@ class AComputedWordBeforeTheBoundsIsRefused(unittest.TestCase):
         self.assertEqual(
             wrong[:1], [], f"{len(wrong)} of {len(members)} members differ from the rule"
         )
+        rules = [r5_refused_by_rule(segments) for segments, _, _ in members]
+        self.assertTrue(any(rules) and not all(rules), "the rule both refuses and accepts members")
 
     def test_the_designs_three_members_are_refused(self):
         scripts = [

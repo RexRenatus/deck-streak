@@ -183,13 +183,13 @@ guard. The whole test file at 903b9cd2 fails only the R5 tests. The green line i
 at 154d51e8.
 
 ```red-first
-A13: red at 484c8da0 (plant: the set branch drops the package word): AssertionError: Lists differ: [b'mu[47 chars] b'--sharding', b'round-robin', b'--shard', b'[82 chars]ion'] != [b'mu[47 chars] b'--package=deck-streak-agent', b'--sharding'[114 chars]ion']
-A13: green at 484c8da0: Ran 25 tests, OK, examined 6 mutation-weekly.yml commands, examined 40 package values, examined 80 old-against-new argvs, examined 6 dash-led values
+A13: not red: the pin test is added with the workflow it pins, so it is green at the one commit that has it, and its plant of the set branch dropping the package word turns it red by assertion
 A12: red at 903b9cd2: AssertionError: Lists differ: ['X=--; set -- --; cargo mutants --in-plac[37 chars]0\n'] != [] : 20 of 20 members that lose the bounds pass
 A12: green at 154d51e8
 ```
 
 ```text
+A13 replay: red at 484c8da0 (plant: the set branch drops the package word), green at 484c8da0: Ran 25 tests, OK, examined 6 mutation-weekly.yml commands, examined 40 package values, examined 80 old-against-new argvs, examined 6 dash-led values
 A12 replay: red at 903b9cd2: FAILED (failures=3), AssertionError: Lists differ: [False, False, False] != [True, True, True]
 A12 replay: green at 154d51e8: Ran 29 tests, OK, examined 980 R5 members, examined 20 R5 members bash runs without the bounds, examined 3 named R5 members, examined 6 weekly commands, examined 9 real-tree commands, examined 6485 grammar members, examined 4291 class members, examined 6 mutation-weekly.yml commands, examined 3 ci.yml commands
 ```
