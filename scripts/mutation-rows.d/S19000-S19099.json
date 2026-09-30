@@ -304,6 +304,22 @@
         "      CARGO_INCREMENTAL: \"0\"\n      true: \"1\"\n",
         "every key in release.yml is a plain name YAML types as a string, never a boolean, null or number (SPEC-190 R12)",
         "test_workflow_concurrency.EveryReleaseWorkflowQueuesEveryRun.test_every_workflow_that_can_hold_two_runs_of_a_release_queues_them"
+      ],
+      [
+        "S19039-A-COMMENT-LINE-HAS-NO-TAB-INDENT",
+        ".github/workflows/release.yml",
+        "          echo \"$HOME/.local/protoc/bin\" >> \"$GITHUB_PATH\"\n",
+        "          echo \"$HOME/.local/protoc/bin\" >> \"$GITHUB_PATH\"\n\t# the tool directory\n",
+        "no line of release.yml, a comment line after a block scalar's text included, holds a tab in its indentation (SPEC-190 R12)",
+        "test_workflow_concurrency.EveryReleaseWorkflowQueuesEveryRun.test_every_workflow_that_can_hold_two_runs_of_a_release_queues_them"
+      ],
+      [
+        "S19040-A-CARRIAGE-RETURN-DOES-NOT-END-A-LINE",
+        ".github/workflows/release.yml",
+        "  cancel-in-progress: false\n  queue: max\n",
+        "  cancel-in-progress: false\r  queue: max\n",
+        "a line of release.yml ends at a line feed alone, so a carriage return that does not end a line is refused (SPEC-190 R12)",
+        "test_workflow_concurrency.EveryReleaseWorkflowQueuesEveryRun.test_every_workflow_that_can_hold_two_runs_of_a_release_queues_them"
       ]
     ]
   }
