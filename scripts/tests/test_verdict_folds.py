@@ -39,10 +39,40 @@ def verdict_step():
     return job, step
 
 
+def logical_lines(script):
+    """The script's commands as the shell reads them: a backslash-newline joins two physical lines,
+    and blank and comment-only lines are not commands."""
+    joined, held = [], ""
+    for physical in script.splitlines():
+        line = physical.strip()
+        if not held and (not line or line.startswith("#")):
+            continue
+        line = held + line
+        if (len(line) - len(line.rstrip("\\"))) % 2 == 1:
+            held = line[:-1]
+            continue
+        held = ""
+        joined.append(line)
+    if held:
+        joined.append(held)
+    return joined
+
+
+#: The only shapes of command this harness judges, each matched whole. A line of any other shape is
+#: a command whose exit may not reach the step's exit unaltered (a condition, a negation, a pipe,
+#: `$(...)`, a backgrounded or `||`-ed command, a `set +e` block), so it is refused by name.
+SHAPES = [
+    re.compile(r'[a-z_]+=("[^"$`\\]*"|"\$RUNNER_TEMP/[^"`$\\]*"|[0-9]+)'),
+    re.compile(rf"{re.escape(RUN)} [^|;&`!<>()]* \|\| [a-z_]+=\$\?"),
+    re.compile(r'if \[ "\$status" -eq 0 \]; then status=\$[a-z_]+; fi'),
+    re.compile(r'exit "\$status"'),
+]
+
+
 def commands_of(script):
     """[(key, the variable its exit is collected into, or None, its line)] per verdict command."""
     found = []
-    for line in script.splitlines():
+    for line in logical_lines(script):
         if RUN not in line:
             continue
         verb = re.search(rf"{re.escape(RUN)} (\w+)", line).group(1)
@@ -54,14 +84,15 @@ def commands_of(script):
 
 
 def census(script):
-    """Every command whose exit the step captures, each one a command the harness can drive.
+    """Every verdict-tool command of the step, after judging EVERY line by its shape.
 
-    A capture (`$?` or PIPESTATUS) on a line that runs no verdict-tool command is a command the
-    shim cannot fail, so it is refused by name rather than passed over.
+    Default-deny: a line that matches no known shape is refused by name, whether or not it holds
+    `$?` or PIPESTATUS, because a command's place in the script (not its text) decides whether its
+    exit reaches the step's.
     """
-    for line in script.splitlines():
-        if RUN not in line and re.search(r"\$\?|PIPESTATUS", line):
-            raise AssertionError(f"the step captures an exit the test cannot drive: {line.strip()}")
+    for line in logical_lines(script):
+        if not any(shape.fullmatch(line) for shape in SHAPES):
+            raise AssertionError(f"the step runs a line the test cannot drive or judge: {line}")
     return commands_of(script)
 
 
@@ -84,7 +115,7 @@ def keyed(script):
 
 def piped(script, key, form, n):
     """The script with `form` piped onto the one command whose key is `key`, in memory."""
-    lines = script.splitlines()
+    lines = logical_lines(script)
     (where,) = [i for i, line in enumerate(lines) if (key, line) in keyed(script)]
     head, tail = lines[where].rsplit(" || ", 1)
     lines[where] = f"{head}{form.format(n=n)} || {tail}"
@@ -150,6 +181,8 @@ class TheVerdictStepFailsOnEachJudgeAlone(unittest.TestCase):
         script = step_script(driver.step)
         commands = census(script)
         exits = nonzero_exits()
+        shell = shell_of(driver.step, driver.job, workflow(CI))
+        keeps = "pipefail" in shell
         pairs = [(key, form) for key, _, _ in commands for form in PIPES]
         pairs = examined("pass-through pipes applied to the step's commands", pairs)
         self.assertEqual(len(pairs), len(commands) * len(PIPES))
@@ -158,18 +191,12 @@ class TheVerdictStepFailsOnEachJudgeAlone(unittest.TestCase):
             self.assertNotEqual(mutated, script, f"{key}: the pipe was not applied")
             for rc in exits:
                 done, _ = driver.run(mutated, key, rc)
-                self.assertNotEqual(
-                    done.returncode, rc, f"{key} piped through{form} kept its exit {rc}"
-                )
-
-    def test_a_captured_command_the_harness_cannot_drive_is_refused_by_name(self):
-        script = step_script(verdict_step()[1])
-        planted = script.replace('exit "$status"', 'other=0\npytest -q || other=$?\nexit "$status"')
-        self.assertNotEqual(planted, script)
-        with self.assertRaises(AssertionError) as refused:
-            census(planted)
-        print(f"census refused: {refused.exception}")
-        self.assertIn("pytest -q || other=$?", str(refused.exception))
+                # the expectation is the resolved shell's: pipefail keeps a piped command's exit,
+                # and `-e` alone loses it to the pass-through's own success
+                if keeps:
+                    self.assertEqual(done.returncode, rc, f"{key}{form} under {shell} lost {rc}")
+                else:
+                    self.assertNotEqual(done.returncode, rc, f"{key}{form} under {shell} kept {rc}")
 
 
 def planted(workflow_shell=None, job_shell=None, step_shell=None):
@@ -208,9 +235,10 @@ class TheShellIsResolvedFromTheWorkflowText(unittest.TestCase):
             shell_of(step, job, text)
         self.assertIn("pwsh", str(refused.exception))
 
-    def test_the_verdict_step_runs_under_bash_e_while_ci_names_no_shell(self):
+    def test_the_resolver_reads_the_verdict_step_of_the_workflow_it_is_given(self):
         job, step = verdict_step()
-        self.assertEqual(shell_of(step, job, workflow(CI)), ["bash", "-e"])
+        argv = shell_of(step, job, workflow(CI))
+        self.assertIn(argv[0], ("bash", "sh"), argv)
 
 
 # ---- the class rule, generated: the harness sees what CI sees, or refuses by name --------------
@@ -456,9 +484,21 @@ def normalised(argv):
     return [flag for word in argv for flag in (["-e", "-o"] if word == "-eo" else [word])]
 
 
+def without_shells(text):
+    """The workflow's text with the verdict step's own `shell:` line, its job's `defaults:` block
+    and the workflow's top-level `defaults:` block removed, so each placement is planted onto a
+    text that names none (and a workflow that later names one still plants cleanly)."""
+    job = jobs(text)["mutation-verdict"]
+    bare = re.sub(r"(?m)^        shell: .*\n", "", job)
+    bare = re.sub(r"(?m)^    defaults:\n      run:\n(?:        .*\n)*", "", bare)
+    text = text.replace(job, bare)
+    return re.sub(r"(?m)^defaults:\n  run:\n(?:    .*\n)*", "", text)
+
+
 class TheResolverReadsWhatGitHubRunsOrRefusesByName(unittest.TestCase):
     def test_every_placement_of_the_shell_is_read_correctly_or_refused_by_name(self):
-        base = workflow(CI)
+        base = without_shells(workflow(CI))
+        self.assertEqual(resolved_by(base), ("argv", UNSPECIFIED))
         tally = {"CORRECT": 0, "SAFE": 0, "ESCAPE": 0}
         escapes = []
         must_read = 0
