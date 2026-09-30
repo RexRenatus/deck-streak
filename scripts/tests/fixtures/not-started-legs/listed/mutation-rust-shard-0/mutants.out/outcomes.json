@@ -1,0 +1,65 @@
+{
+  "total_mutants": 5,
+  "caught": 1,
+  "missed": 0,
+  "timeout": 0,
+  "unviable": 4,
+  "success": 0,
+  "cargo_mutants_version": "27.1.0",
+  "outcomes": [
+    {
+      "scenario": "Baseline",
+      "summary": "Success"
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "crates/daemon/src/sync_request.rs:178:9: replace SyncRequester<C, L, D, P, F>::answer -> Result<SyncAnswer, SyncRefusal> with Ok(Default::default())",
+          "package": "deck-streak-daemon",
+          "file": "crates/daemon/src/sync_request.rs"
+        }
+      },
+      "summary": "Unviable"
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "crates/daemon/src/wiring.rs:328:9: replace OwnerSyncCycle::run -> Result<SyncAnswer, RefusalReason> with Ok(Default::default())",
+          "package": "deck-streak-daemon",
+          "file": "crates/daemon/src/wiring.rs"
+        }
+      },
+      "summary": "Unviable"
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "crates/daemon/src/wiring.rs:381:5: replace refused -> RefusalReason with Default::default()",
+          "package": "deck-streak-daemon",
+          "file": "crates/daemon/src/wiring.rs"
+        }
+      },
+      "summary": "Unviable"
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "crates/daemon/src/wiring.rs:388:5: replace cycle_reason -> RefusalReason with Default::default()",
+          "package": "deck-streak-daemon",
+          "file": "crates/daemon/src/wiring.rs"
+        }
+      },
+      "summary": "Unviable"
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "crates/daemon/src/role_job.rs:98:5: replace serve_owner_request with ()",
+          "package": "deck-streak-daemon",
+          "file": "crates/daemon/src/role_job.rs"
+        }
+      },
+      "summary": "CaughtMutant"
+    }
+  ]
+}

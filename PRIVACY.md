@@ -30,6 +30,7 @@ inventory, in the form the repository's privacy checks read.
 | `freeze-events` | each freeze gained or spent: the study day, the change and why it happened | keeping the count of freezes you hold and limiting how many you can gain in a month | contract | until account deletion |
 | `habit-strength` | the habit strength of each study day: the study day and its value | deciding whether the governor is armed and showing you how steady your habit is | contract | until account deletion |
 | `governor-state` | the governor's one row: the day a lapse began, whether it is on standby and the day you were last told | keeping one lapse and one notice from repeating on every study day | contract | until account deletion |
+| `law-drills` | which law drills you answered, from which surface and on which day, and each graded drill's type, subject, accepted XP and grading day; never a drill's text or your answer, which stay in your own notes | answering each drill once, paying each graded drill once, and telling the agent which drill types and subjects you practised | contract | until account deletion |
 
 The lawful basis of each is the contract (GDPR Article 6(1)(b)): the service you run needs it. None
 is kept for a fixed period. Each is kept until you erase it, which is how an account is deleted here.

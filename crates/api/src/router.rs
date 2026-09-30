@@ -32,6 +32,7 @@ use axum::extract::{DefaultBodyLimit, MatchedPath, Request};
 use axum::http::header::{AUTHORIZATION, COOKIE, SET_COOKIE};
 use axum::http::{HeaderName, StatusCode};
 use axum::{BoxError, Router};
+use deck_streak_coordination::drills::{DrillNotes, RealFs};
 use deck_streak_coordination::progression::level_view::LawTierSource;
 use tower::ServiceBuilder;
 use tower::limit::GlobalConcurrencyLimitLayer;
@@ -47,6 +48,7 @@ use tower_http::trace::{DefaultOnResponse, TraceLayer};
 use tracing::Level;
 
 use crate::analytics_routes;
+use crate::drill_routes;
 use crate::health::{self, Readiness};
 use crate::notifications_routes;
 use crate::session_routes::{self, OwnerAccess};
@@ -71,6 +73,7 @@ pub struct ApiState {
     readiness: Readiness,
     owner: Option<OwnerAccess>,
     law_tiers: Option<Arc<dyn LawTierSource>>,
+    drills: Option<Arc<DrillNotes<RealFs>>>,
 }
 
 impl ApiState {
@@ -81,6 +84,7 @@ impl ApiState {
             readiness,
             owner: None,
             law_tiers: None,
+            drills: None,
         }
     }
 
@@ -95,6 +99,14 @@ impl ApiState {
     #[must_use]
     pub fn with_law_tiers(mut self, source: Arc<dyn LawTierSource>) -> Self {
         self.law_tiers = Some(source);
+        self
+    }
+
+    /// This state, serving the drill routes over the vault's drill notes (SPEC-110). Without them
+    /// the routes answer 503 `vault_not_open`.
+    #[must_use]
+    pub fn with_drills(mut self, notes: Arc<DrillNotes<RealFs>>) -> Self {
+        self.drills = Some(notes);
         self
     }
 
@@ -113,6 +125,7 @@ pub fn router(state: ApiState) -> Router {
     let owner = state.owner.clone();
     let readiness = state.readiness.clone();
     let law_tiers = state.law_tiers.clone();
+    let drills = state.drills.clone();
     let routes = health::routes().with_state(state);
     let routes = match owner {
         Some(access) => routes
@@ -124,6 +137,11 @@ pub fn router(state: ApiState) -> Router {
             ))
             .merge(streak_routes::routes(access.clone(), readiness.clone()))
             .merge(session_routes::routes(access.clone()))
+            .merge(drill_routes::routes(
+                access.clone(),
+                readiness.clone(),
+                drills,
+            ))
             .merge(notifications_routes::routes(access, readiness)),
         None => routes,
     };
