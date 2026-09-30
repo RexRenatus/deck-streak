@@ -351,29 +351,41 @@ that pins the rest.
   judge: the product of their axes. A generator that keeps its loops but changes what they produce
   leaves it unchanged, so it cannot notice a fold, an axis that has collapsed to one value, or a
   member replaced by a copy of another.
-- **What the distinct count pins.** A member's identity is every input the judge reads. For the
-  walk's population (A16) that is the current study day, the days that carry a row and each row's
-  count, the skip days and the threshold. For the mapping's population (A17) it is the offset, the
-  rollover hour, the review's instant, its study day and the instant of now. The distinct count is
-  the number of different such members, so it pins the coverage: every axis holds all its values
-  and no member is a copy.
-- **Why members of the walk's population repeat.** The days before a run are filled three ways
-  when the window has earlier days, and two ways when it has none. When the window has one or two
-  earlier days (`before` of 1 or 2), the second fill (every earlier day a row of no reviews but the
-  day right before the run, studied) and the third (only the first day a row of no reviews, and the
-  day right before the run studied) are the same map, so the third repeats the second. That is 336
-  of the 2,252 members, and the distinct count of the population is 1,916. The judge is pure and
+- **What the distinct count pins.** A member's identity is every input its judge is handed,
+  recorded from the arguments that judge is handed and not from the generator's loop variables. For
+  the walk's population (A16) that is the current study day, the days that carry a row and each
+  row's count, the skip days and the threshold. The mapping's population (A17) has two judges, and
+  one generator value feeds both: the instant is the day judge's instant and the lapse judge's
+  review. Its lapse member is the rule (the offset and the rollover hour), the instant of now and
+  each review the lapse is handed (its instant, kind and ease); its day member is the rule and the
+  instant the day judge is handed. Each judge's distinct count is the number of different such
+  members, so it pins that judge's coverage: every axis it reads holds all its values and no member
+  is a copy. A count kept over the generator's loop variables cannot see a fold of one judge's
+  input while the other judge still reads the value.
+- **Why members of the walk's population repeat.** 336 of the 2,252 members repeat an earlier one,
+  for two reasons. The days before a run are filled three ways when the window has earlier days,
+  and two ways when it has none. When the window has one or two earlier days (`before` of 1 or 2),
+  the second fill (every earlier day a row of no reviews but the day right before the run, studied)
+  and the third (only the first day a row of no reviews, and the day right before the run studied)
+  are the same map, so the third repeats the second: 224 members. When the window has no earlier
+  day (`before` of 0), there is no closing day to skip, so the pass that skips it hands the judge
+  the same skip days as the pass before it, and repeats it: 112 members. The distinct count of the
+  population is 1,916. The judge is pure and
   each repeat follows its first occurrence, so no repeat changes a verdict, and the repeats are
   kept because removing them would change the examined count of A16 for no gain. The rollover
-  population has no repeat: its 448 members are 448 distinct.
+  population has no repeat: its 448 lapse members are 448 distinct, and its day members are 112,
+  sixteen rules by seven instants.
 - **Criteria.** A19 asserts A16's population is 2,252 members and 1,916 distinct, and prints both.
-  A20 asserts A17's population is 448 members and 448 distinct, and prints both.
-- **Rows.** This amendment writes S04921 to S04926 of this SPEC's band, one for each class of
+  A20 asserts A17's population is 448 members, 448 distinct lapse members and 112 distinct day
+  members, and prints all three.
+- **Rows.** This amendment writes S04921 to S04928 of this SPEC's band, one for each class of
   generator fold: a skip mask that never reaches the run's first day, a fill replaced by a copy of
   another, and an axis collapsed to one value, on the walk's population (A19); two offsets made
   equal, the hour axis collapsed to one value, and one instant of now replaced by a copy of another,
-  on the mapping's (A20). Each row's mutant edits the test's generator, and its killer is the same
-  test. The remainder's rows start at S04927.
+  on the mapping's (A20); and two that fold one judge's input at a time on the mapping's, the review
+  the lapse judge is handed folded to its day's first instant while the day judge still reads every
+  instant, and the reverse. Each row's mutant edits the test's generator, and its killer is the same
+  test. The remainder's rows start at S04929.
 
 Files this amendment adds or changes:
 
@@ -381,7 +393,7 @@ Files this amendment adds or changes:
 |---|---|---|
 | `crates/streaks/tests/lapse.rs` | `deck-streak-streaks` | A19: the distinct count of A16's population |
 | `crates/coordination/tests/lapse.rs` | `deck-streak-coordination` | A20: the distinct count of A17's population |
-| `scripts/mutation-rows.d/S04900-S04999.json` | repo | six rows |
+| `scripts/mutation-rows.d/S04900-S04999.json` | repo | eight rows |
 | `docs/red-first/SPEC-049.md` | docs | an insert-only addendum |
 | `changelog.d/lapse-spread-453.md` | repo | the fragment |
 
@@ -396,7 +408,7 @@ Not covered here, each with its owner:
 | id | criterion | decided by |
 |---|---|---|
 | A19 | the walk's generated population holds 2,252 members of which 1,916 are distinct, both counts printed, so a fold of its generator fails while the examined count holds | `the_walk_reads_every_day_of_its_window_and_none_outside_it` |
-| A20 | the mapping's generated population holds 448 members of which 448 are distinct, both counts printed, so a fold of its generator fails while the examined count holds | `a_review_counts_on_the_study_day_the_rule_gives_at_every_boundary` |
+| A20 | the mapping's generated population holds 448 members of which 448 are distinct lapse members, over 112 distinct day members, all three counts printed, so a fold of its generator, or of one judge's input alone, fails while the examined count holds | `a_review_counts_on_the_study_day_the_rule_gives_at_every_boundary` |
 
 ```acceptance
 A19: cargo test -p deck-streak-streaks --test lapse -- --exact the_walk_reads_every_day_of_its_window_and_none_outside_it

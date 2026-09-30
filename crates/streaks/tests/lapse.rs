@@ -243,8 +243,9 @@ fn a_silent_run_on_the_windows_first_day_is_read() {
 /// A window member: `today`, the rows, the skip days and the threshold.
 type Member = (i64, BTreeMap<i64, u32>, BTreeSet<i64>, u32);
 
-/// The distinct members of the window population: `before` of 1 or 2 makes the second and third
-/// fills coincide, so 336 of the 2252 members repeat an earlier one.
+/// The distinct members of the window population. 336 of the 2252 members repeat an earlier one:
+/// 224 because `before` of 1 or 2 makes the second and third fills coincide, and 112 because with
+/// `before` of 0 there is no closing day to skip, so that pass repeats the one before it.
 const DISTINCT_WINDOW_MEMBERS: usize = 1916;
 
 #[test]

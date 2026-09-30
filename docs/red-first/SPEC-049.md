@@ -113,8 +113,10 @@ A20: green at 2ad7e316058f2b958f4985a857c063d67e3b6feb
 
 Printed lines on the green tree: `examined 2252 window member(s), 1916 distinct` and
 `examined 448 rollover member(s), 448 distinct`. At the base the walk's population also holds 1916
-distinct members of 2252: 336 repeat, because for one or two earlier days the second and third fills
-are the same map, and each repeat follows its first occurrence, so none changes a verdict.
+distinct members of 2252: 336 repeat, 224 because for one or two earlier days the second and third
+fills are the same map, and 112 because with no earlier day the pass that skips the closing day
+skips nothing more and repeats the pass before it. Each repeat follows its first occurrence, so none
+changes a verdict.
 
 Further plants, each applied to a clean copy of the tests at 2ad7e316058f2b958f4985a857c063d67e3b6feb
 (the line numbers are that file's; a later commit only fits the walk's test to clippy's line limit),
@@ -138,3 +140,25 @@ examined assertion, as before. No plant stayed green, so none is recorded as equ
 to S04926 carry one plant of each class (the walk's mask fold, fill copy and axis collapse; the
 mapping's offset fold, hour collapse and now copy). Each is KILLED by full id on the committed tree,
 and each survives over the base tests, which assert no distinct count.
+
+### Fix round 1: each judge records its own member
+
+The rollover test recorded a member from the generator's loop variables, so a fold of one judge's
+input kept every count. Each judge now records its member from the arguments it is handed: the lapse
+member is the rule, the instant of now and each review's instant, kind and ease (448 distinct), and
+the day member is the rule and the instant (112 distinct, the new `DISTINCT_DAY_MEMBERS`). The
+criterion is A20, whose red and green lines above stay as they are; this replay is prose.
+
+The per-judge counts were committed beside two planted folds (e38cc56247459e21e96badb210a5341630c94626): the review the lapse judge
+is handed folded to its day's first instant, and the instant the day judge is handed folded the same
+way. Each keeps the examined count and drops one judge's distinct count. The plants were removed in
+76d4aac219157962e3b58c03c34f3dc9949a8d76.
+
+```text
+A20 replay: red at e38cc56247459e21e96badb210a5341630c94626: the population's spread: 128 distinct of 448 (left: 128, right: 448); the two plants together, the lapse count is the first assertion to fail
+A20 replay: red at e38cc56247459e21e96badb210a5341630c94626: the day judge's spread: 32 distinct (left: 32, right: 112), read with the lapse plant removed, because the lapse count fails first when both stand
+A20 replay: green at 76d4aac219157962e3b58c03c34f3dc9949a8d76: examined 448 rollover member(s), 448 distinct, over 112 distinct day member(s)
+```
+
+Rows S04927 and S04928 carry the two folds; each is KILLED by full id on the committed tree. The
+window test is unchanged and still prints `examined 2252 window member(s), 1916 distinct`.
