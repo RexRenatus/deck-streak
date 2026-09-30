@@ -415,7 +415,8 @@ async fn a_link_in_the_drills_folders_is_never_read_or_written_through() {
 }
 
 /// What a link in the drills folders points at (the class rule: no link is followed, whatever it
-/// points at, and a link to a place inside the vault is refused too).
+/// points at, and a link to a place inside the vault is refused too). `Loop` and `ThroughFile`
+/// resolve neither to a place nor to nothing: a cycle of links, and a path through a file.
 #[derive(Clone, Copy, Debug)]
 enum Target {
     File,
@@ -423,6 +424,12 @@ enum Target {
     LinkToLink,
     Dangling,
     InsideVault,
+    Loop,
+    ThroughFile,
+    /// A path through a folder this user may not search.
+    NoSearch,
+    /// A path with a name longer than the file system allows.
+    TooLong,
 }
 
 /// Where the link sits.
@@ -443,12 +450,16 @@ enum Op {
     Answer,
 }
 
-const TARGETS: [Target; 5] = [
+const TARGETS: [Target; 9] = [
     Target::File,
     Target::Dir,
     Target::LinkToLink,
     Target::Dangling,
     Target::InsideVault,
+    Target::Loop,
+    Target::ThroughFile,
+    Target::NoSearch,
+    Target::TooLong,
 ];
 const PLACES: [Place; 4] = [
     Place::NoteInActive,
@@ -466,6 +477,17 @@ struct Member {
     vault: tempfile::TempDir,
     _outside: tempfile::TempDir,
     watched: Vec<PathBuf>,
+    /// A folder built with no search permission, opened again when the member goes.
+    locked: Option<PathBuf>,
+}
+
+impl Drop for Member {
+    fn drop(&mut self) {
+        if let Some(locked) = &self.locked {
+            let _ =
+                fs::set_permissions(locked, std::os::unix::fs::PermissionsExt::from_mode(0o700));
+        }
+    }
 }
 
 /// The link's target for `place`, built beside the vault or inside it.
@@ -479,6 +501,10 @@ fn target_path(target: Target, place: Place, outside: &Path, vault: &Path) -> Pa
         Target::Dangling => outside.join("missing"),
         Target::InsideVault if folder_place => vault.join("elsewhere").join("dir"),
         Target::InsideVault => vault.join("elsewhere").join("inside.md"),
+        Target::Loop => outside.join("loop-a"),
+        Target::ThroughFile => outside.join("note.md").join("under"),
+        Target::NoSearch => outside.join("locked").join("dir"),
+        Target::TooLong => outside.join("a".repeat(300)),
     }
 }
 
@@ -501,6 +527,9 @@ fn build(target: Target, place: Place) -> Result<Member, String> {
     };
     hop("hop-note", &out.join("note.md"))?;
     hop("hop-dir", &out.join("dir"))?;
+    hop("loop-a", &out.join("loop-b"))?;
+    hop("loop-b", &out.join("loop-a"))?;
+    fs::create_dir_all(out.join("locked").join("dir")).expect("a folder to lock");
     let drills = vault.path().join("11-Drills");
     let link_to = target_path(target, place, out, vault.path());
     let (linked_active, linked_graded) = (
@@ -526,6 +555,19 @@ fn build(target: Target, place: Place) -> Result<Member, String> {
         Place::ActiveFolder | Place::GradedFolder => Ok(()),
     }
     .map_err(|error| error.to_string())?;
+    let locked = matches!(target, Target::NoSearch).then(|| out.join("locked"));
+    if let Some(locked) = &locked {
+        let open_up = |mode: u32| {
+            fs::set_permissions(locked, std::os::unix::fs::PermissionsExt::from_mode(mode))
+        };
+        open_up(0o000).map_err(|error| error.to_string())?;
+        if fs::metadata(locked.join("dir")).is_ok() {
+            open_up(0o700).map_err(|error| error.to_string())?;
+            return Err(
+                "the folder can be searched here (permissions are not enforced)".to_owned(),
+            );
+        }
+    }
     let watched = vec![
         out.join("note.md"),
         out.join("dir").join("note.md"),
@@ -538,31 +580,61 @@ fn build(target: Target, place: Place) -> Result<Member, String> {
         vault,
         _outside: outside,
         watched,
+        locked,
     })
 }
 
-/// Whether `op` reads the folder the link replaces, and so must be refused with
-/// [`VaultError::NotAFolder`] before that folder is listed (R1). A dangling link resolves nowhere,
-/// so it reads as a missing folder, which lists empty (R1); every other member lists empty too.
-fn refused(target: Target, place: Place, op: Op) -> bool {
-    let linked_folder = match op {
-        Op::List => matches!(place, Place::ActiveFolder),
-        Op::Pay => matches!(place, Place::GradedFolder),
-        Op::View | Op::Answer => false,
-    };
-    linked_folder && !matches!(target, Target::Dangling)
+/// How a member reads (R1): a link at a folder is read by its resolve, and nothing is followed.
+#[derive(Clone, Copy, Debug)]
+enum Expect {
+    /// The link resolves to another place: [`VaultError::NotAFolder`].
+    Refused,
+    /// The resolve fails other than `NotFound` (a loop, a path through a file): an I/O error at
+    /// the step `resolve a folder`.
+    Unresolved,
+    /// The resolve finds nothing, or the operation never reads the linked folder: an empty list,
+    /// and `NotActive` for an answer.
+    Missing,
 }
 
-/// A member's listing: [`VaultError::NotAFolder`] when `refused`, else an empty list (R1).
-fn check_listing<T: std::fmt::Debug>(label: &str, refused: bool, got: Result<Vec<T>, VaultError>) {
-    if refused {
-        assert!(
+/// What `op` must return for a link to `target` at `place` (R1). Only an operation that reads the
+/// linked folder meets the link: List and Answer read `Active`, Pay reads `Graded`.
+fn expected(target: Target, place: Place, op: Op) -> Expect {
+    let linked_folder = match op {
+        Op::List | Op::Answer => matches!(place, Place::ActiveFolder),
+        Op::Pay => matches!(place, Place::GradedFolder),
+        Op::View => false,
+    };
+    match target {
+        _ if !linked_folder => Expect::Missing,
+        Target::Dangling => Expect::Missing,
+        Target::Loop | Target::ThroughFile | Target::NoSearch | Target::TooLong => {
+            Expect::Unresolved
+        }
+        Target::File | Target::Dir | Target::LinkToLink | Target::InsideVault => Expect::Refused,
+    }
+}
+
+/// Whether `got` is the I/O error of a folder's resolve.
+fn unresolved(got: &VaultError) -> bool {
+    matches!(got, VaultError::Io { step, .. } if *step == "resolve a folder")
+}
+
+/// A member's listing, exactly as `expected` says (R1).
+fn check_listing<T: std::fmt::Debug>(label: &str, expect: Expect, got: Result<Vec<T>, VaultError>) {
+    match expect {
+        Expect::Refused => assert!(
             matches!(got, Err(VaultError::NotAFolder)),
             "{label}: a linked folder is refused before it is listed: {got:?}"
-        );
-    } else {
-        let got = got.expect("a listing");
-        assert!(got.is_empty(), "{label}: listed {got:?}");
+        ),
+        Expect::Unresolved => assert!(
+            matches!(&got, Err(error) if unresolved(error)),
+            "{label}: a folder that cannot be resolved is an I/O error: {got:?}"
+        ),
+        Expect::Missing => {
+            let got = got.expect("a listing");
+            assert!(got.is_empty(), "{label}: listed {got:?}");
+        }
     }
 }
 
@@ -621,7 +693,7 @@ async fn no_link_in_any_placement_is_read_listed_paid_from_or_written_through() 
                 match op {
                     Op::List => check_listing(
                         &label,
-                        refused(target, place, op),
+                        expected(target, place, op),
                         notes.list_active(day(20_500)),
                     ),
                     Op::View => {
@@ -632,7 +704,7 @@ async fn no_link_in_any_placement_is_read_listed_paid_from_or_written_through() 
                             );
                         }
                     }
-                    Op::Pay => check_listing(&label, refused(target, place, op), notes.graded()),
+                    Op::Pay => check_listing(&label, expected(target, place, op), notes.graded()),
                     Op::Answer => {
                         let db = Db::open(&member.vault.path().join("deck_streak.db"))
                             .await
@@ -649,13 +721,17 @@ async fn no_link_in_any_placement_is_read_listed_paid_from_or_written_through() 
                                     UtcMillis::from_epoch_millis(1_770_000_000_000),
                                 )
                                 .await;
-                            assert!(
-                                matches!(
+                            let exact = match expected(target, place, op) {
+                                Expect::Refused => matches!(outcome, Err(VaultError::NotAFolder)),
+                                Expect::Unresolved => {
+                                    matches!(&outcome, Err(error) if unresolved(error))
+                                }
+                                Expect::Missing => matches!(
                                     outcome,
-                                    Err(_) | Ok(deck_streak_vault::drill_notes::AnswerOutcome::NotActive)
+                                    Ok(deck_streak_vault::drill_notes::AnswerOutcome::NotActive)
                                 ),
-                                "{label}: answered {id}: {outcome:?}"
-                            );
+                            };
+                            assert!(exact, "{label}: answered {id}: {outcome:?}");
                             assert!(
                                 !format!("{outcome:?}").contains(SENTINEL),
                                 "{label}: the outside text surfaced"

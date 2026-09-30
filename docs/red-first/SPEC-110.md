@@ -165,3 +165,19 @@ criterion.
   listing, and an empty list from every other member. A post-green test edit, not a criterion: with
   the `notes()` gate removed it fails by assertion on `File ActiveFolder List`, exit 101; at the head
   it passes.
+
+## 2026-09-30: amendment, round 3 of review
+
+- `drill_kills::no_link_in_any_placement_is_read_listed_paid_from_or_written_through` gains four
+  targets, a cycle of links (`Loop`), a link through a file (`ThroughFile`), a link into a folder
+  the test user may not search (`NoSearch`) and a link whose name is longer than the file system
+  allows (`TooLong`), and asserts one
+  exact outcome for every member: `NotAFolder` for a link at a folder that resolves to another
+  place, the I/O error `resolve a folder` for a link at a folder whose resolve fails other than
+  `NotFound`, and an empty list, or `NotActive` for an answer, for every other member. An answer
+  through a linked `Active` folder is held to the same outcome as its listing, where it accepted any
+  error or `NotActive`. A post-green test edit, not a criterion. Not red: it pins the third outcome
+  of a folder's resolve, an I/O error; its red is row `S11049`'s mutant, `answer()` reading the gate's I/O error
+  as `NotActive`: the test fails by assertion on `Loop ActiveFolder Answer`, exit 101. At the head
+  it passes and prints `examined 144 placements; unbuilt on this file system: []`.
+- Row `S11049` pins that `answer()` returns the gate's I/O error and never reads it as `NotActive`.

@@ -66,12 +66,14 @@ R1. The drills folder is the layout's `drill-coach` folder (`crates/vault/data/l
     and a stem that is empty or holds `/`, `\` or `..` is refused before any read
     (`vault_bridge.py:_safe_stem`). Amended after review: every path the adapter lists, reads or
     writes passes one gate (`DrillNotes::confined`, then the kind check of `regular_note`). It
-    refuses a link to a file, a link to a directory, a link to a link, a dangling link and a link to
-    a place inside the vault, whether the link is the note or the `Active` or `Graded` folder that
-    holds it (the adapter's rule, `crates/vault/src/fs.rs`), where the predecessor followed links. A
-    dangling link at the `Active` or `Graded` folder resolves nowhere, so it reads as a missing
-    folder (an empty list, and `NotActive` for an answer) and nothing is followed; every other link
-    at a folder is refused with `NotAFolder`.
+    follows no link, whether to a file, a directory, a link, nothing or a place inside the vault,
+    and whether the link is the note or the `Active` or `Graded` folder that holds it (the
+    adapter's rule, `crates/vault/src/fs.rs`), where the predecessor followed links. A link that is
+    the note reads as no note. A link at the `Active` or `Graded` folder is read by its resolve: a
+    link that resolves to another place is refused with `NotAFolder`; a link whose resolve finds
+    nothing (`NotFound`, a dangling link) reads as a missing folder (an empty list, and `NotActive`
+    for an answer); and a link whose resolve fails in any other way (a cycle of links, a path
+    through a file, a folder it may not search, a name too long) is an I/O error at the step `resolve a folder`.
     The gate stands before `list_active`, `graded`, `view` and `answer` reach the file system.
 R2. The list, the unanswered list and the single view equal `goldens/drill_meta.json`
     (`vault_bridge.py:_read_drill_meta`, `list_active_drills`, `list_unanswered_drills`,
