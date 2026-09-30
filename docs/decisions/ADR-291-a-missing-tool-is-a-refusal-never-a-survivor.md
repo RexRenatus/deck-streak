@@ -56,7 +56,7 @@ which section 12 (A41) reads as VOID, belong to the same rule?
   The census refuses the ways of reaching a spawner by a name built at run time instead
   (`getattr`, `__import__`, `importlib`, `vars`/`globals`/`locals`, `__dict__` and `sys.modules`,
   `eval`, `exec`), whatever they are given, so a spelling not yet invented is refused by default.
-- Assert only that a refusal happened, or that its line holds a word of the reason - lost: CI
+- Assert only that a refusal happened, or that its line holds a word of the reason — lost: CI
   generated 14 surviving mutants of the refusal's text and branches (round 1). Every refusal is
   compared whole, over populations read from the operating system's own tables (every errno, every
   exit).
