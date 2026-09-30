@@ -11,7 +11,7 @@ use std::sync::Mutex;
 
 use deck_streak_agent::compose::Parts;
 use deck_streak_agent::duty::{DutyCaps, DutyEngine, DutyInput, DutySpec};
-use deck_streak_agent::gate::{GateClassSpec, ProbeGate};
+use deck_streak_agent::gate::{GateClass, GateClassSpec, ProbeGate};
 use deck_streak_agent::route::AiRoute;
 use deck_streak_agent::runner::{RunFuture, RunReply, Runner};
 use deck_streak_agent::runs::AgentRuns;
@@ -49,20 +49,20 @@ fn root() -> PathBuf {
 
 fn gate(dir: &std::path::Path) -> ProbeGate {
     let probe = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/fake-probe.py");
-    let class = |c: &str| GateClassSpec {
+    let class = |c: GateClass| GateClassSpec {
         probe: probe.clone(),
-        class: c.to_owned(),
+        class: c,
         with_template: false,
     };
     ProbeGate::new(
         dir.to_path_buf(),
         dir.to_path_buf(),
         vec![
-            class("output-links"),
-            class("output-invisible"),
-            class("output-identity"),
+            class(GateClass::OutputLinks),
+            class(GateClass::OutputInvisible),
+            class(GateClass::NoHumanClaim),
         ],
-        Some(class("output-invisible")),
+        Some(class(GateClass::OutputInvisible)),
         true,
     )
     .expect("a gate with its classes and its input class")

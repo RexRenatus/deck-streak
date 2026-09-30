@@ -21,7 +21,7 @@ use std::sync::Mutex;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use deck_streak_agent::duty::DutyCaps;
-use deck_streak_agent::gate::{GateFuture, GateOutcome, OutputGate};
+use deck_streak_agent::gate::{GateClass, GateFuture, GateOutcome, OutputGate};
 use deck_streak_agent::persona::TemplateSet;
 use deck_streak_agent::roster::Roster;
 use deck_streak_agent::route::AiRoute;
@@ -158,15 +158,15 @@ struct FakeGate;
 impl OutputGate for FakeGate {
     fn check<'a>(&'a self, output: &'a str, _template: &'a str) -> GateFuture<'a> {
         let refusal = if output.contains("TOOSHORT") {
-            Some(("reading-length", "the primer prose holds 12 words"))
+            Some((GateClass::ReadingLength, "the primer prose holds 12 words"))
         } else if output.contains("COUNTDOWN") {
-            Some(("no-dates", "the reading counts down to a date"))
+            Some((GateClass::NoDates, "the reading counts down to a date"))
         } else {
             None
         };
         let outcome = refusal.map_or(GateOutcome::Passed, |(class, finding)| {
             GateOutcome::Failed {
-                class: class.to_owned(),
+                class,
                 findings: vec![finding.to_owned()],
             }
         });
@@ -750,7 +750,7 @@ impl OutputGate for InputRefusingGate {
         self.0.fetch_add(1, Ordering::SeqCst);
         let outcome = if input.contains('\u{200b}') {
             GateOutcome::Failed {
-                class: "output-invisible".to_owned(),
+                class: GateClass::OutputInvisible,
                 findings: vec!["an invisible character".to_owned()],
             }
         } else {

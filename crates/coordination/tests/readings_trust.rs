@@ -11,7 +11,7 @@ use std::sync::{Arc, Mutex};
 
 use deck_streak_agent::compose::{Parts, compose};
 use deck_streak_agent::duty::DutyCaps;
-use deck_streak_agent::gate::{CLASS_EMPTY, CLASS_VOID, GateFuture, GateOutcome, OutputGate};
+use deck_streak_agent::gate::{GateClass, GateFuture, GateOutcome, OutputGate};
 use deck_streak_agent::persona::TemplateSet;
 use deck_streak_agent::roster::Roster;
 use deck_streak_agent::route::AiRoute;
@@ -377,19 +377,19 @@ const FORGED_HEAD: &str = "zqxj-forged-class";
 /// The classes at this head, counted when the population was designed: a floor, never a list.
 const MEASURED_CLASSES: usize = 16;
 
-/// The classes the gate can hand a reading's attempt, read from source when the test runs.
+/// The classes the gate can hand a reading's attempt: every value of the closed class type.
 ///
-/// They are the reading duties' gate lists in `ai-safety.json`, the classes `first_failure` ranks
-/// by name, and each class the agent's gate passes to `failed(..)`. An argument to `failed(..)` that
-/// names no constant fails the test, and so does a failure the gate builds anywhere else: a class is
-/// never left out in silence.
-fn boundary_classes() -> Vec<String> {
+/// A failure's class is a `GateClass`, and `GateClass::ALL` comes from the one declaration that
+/// also yields its variants, so a class the gate adds is a member here with no test edit and a class
+/// outside the type does not compile. Each class the registry configures for a reading, and each
+/// class `first_failure` ranks, is a value of the type; the names are unique, and they are read in
+/// a const context, so no name is text read while the engine runs.
+fn boundary_classes() -> Vec<GateClass> {
+    const OWN: [&str; 2] = [GateClass::Void.name(), GateClass::ExaminedNothing.name()];
     let registry: serde_json::Value = serde_json::from_str(
         &fs::read_to_string(repo().join("ai-safety.json")).expect("the safety registry"),
     )
     .expect("the registry is JSON");
-    let mut classes: BTreeSet<String> = ROSTER_CLASSES.iter().map(|c| (*c).to_owned()).collect();
-    classes.insert(BAND_CLASS.to_owned());
     for task in registry["tasks"]
         .as_array()
         .expect("the registry has tasks")
@@ -403,65 +403,35 @@ fn boundary_classes() -> Vec<String> {
         for entry in task["gate"].as_array().expect("a duty has a gate list") {
             let entry = entry.as_str().expect("a gate entry is a string");
             let (_, class) = entry.split_once(':').expect("an entry is pack:class");
-            classes.insert(class.to_owned());
+            assert!(
+                class.parse::<GateClass>().is_ok(),
+                "the registry configures {class}, which is no gate class"
+            );
         }
     }
-    let gate = fs::read_to_string(repo().join("crates/agent/src/gate.rs")).expect("the gate");
+    let classes = GateClass::ALL.to_vec();
+    let names: BTreeSet<&str> = classes.iter().map(|class| class.name()).collect();
     assert_eq!(
-        gate.matches("GateOutcome::Failed {").count(),
-        1,
-        "the gate builds a failure outside `failed(..)`, so its class is not read here"
+        names.len(),
+        classes.len(),
+        "two classes share a name: {names:?}"
     );
-    for (at, _) in gate.match_indices("failed(") {
-        // The first argument ends at the first comma or parenthesis that closes no inner call.
-        let rest = &gate[at + "failed(".len()..];
-        let mut depth = 0_usize;
-        let end = rest
-            .char_indices()
-            .find(|&(_, c)| match c {
-                '(' => {
-                    depth += 1;
-                    false
-                }
-                ')' | ',' if depth == 0 => true,
-                ')' => {
-                    depth -= 1;
-                    false
-                }
-                _ => false,
-            })
-            .map_or(rest.len(), |(i, _)| i);
-        let argument = rest[..end].trim();
-        // The function's own parameter, and a configured class, which the registry gave above.
-        if argument == "class: &str" || argument == "&spec.class" {
-            continue;
-        }
-        let class = gate
-            .lines()
-            .find_map(|line| {
-                line.trim()
-                    .strip_prefix("pub const ")?
-                    .strip_prefix(argument)?
-                    .strip_prefix(": &str = \"")?
-                    .strip_suffix("\";")
-            })
-            .unwrap_or_else(|| panic!("the gate reports `{argument}`, which names no constant"));
-        classes.insert(class.to_owned());
-    }
     assert!(
-        classes.contains(CLASS_VOID) && classes.contains(CLASS_EMPTY),
-        "the gate's own classes were read: {classes:?}"
+        OWN.iter().all(|own| names.contains(own))
+            && ROSTER_CLASSES.iter().all(|class| classes.contains(class))
+            && classes.contains(&BAND_CLASS),
+        "the gate's own and the ranked classes are members: {names:?}"
     );
     assert!(
         classes.len() >= MEASURED_CLASSES,
-        "the boundary's classes were read: {classes:?}"
+        "the boundary's classes were read: {names:?}"
     );
-    classes.into_iter().collect()
+    classes
 }
 
 /// The whole repair text a class's failure may become: the gate's header, then the engine's words
 /// naming the check, and nothing else.
-fn engine_repair(class: &str) -> String {
+fn engine_repair(class: GateClass) -> String {
     let gate = if ROSTER_CLASSES.contains(&class) {
         ReadingGate::Roster
     } else if class == BAND_CLASS {
@@ -471,32 +441,33 @@ fn engine_repair(class: &str) -> String {
     };
     format!(
         "The previous reading failed the {} gate. Write the whole reading again and fix this:\n\
-         - the {class} check refused the reading",
-        gate.as_str()
+         - the {} check refused the reading",
+        gate.as_str(),
+        class.name()
     )
 }
 
 /// One member: a class the boundary carries, and the finding lines a probe's output gave it.
 struct Member {
-    class: String,
+    class: GateClass,
     findings: Vec<String>,
 }
 
 /// Every boundary class against every hostile line, under its own head and a forged one, and once
 /// with no finding line, as the gate reports a probe that could not run.
-fn population(classes: &[String]) -> Vec<Member> {
+fn population(classes: &[GateClass]) -> Vec<Member> {
     let mut members = Vec::new();
-    for class in classes {
+    for &class in classes {
         for line in HOSTILE_LINES {
-            for head in [class.as_str(), FORGED_HEAD] {
+            for head in [class.name(), FORGED_HEAD] {
                 members.push(Member {
-                    class: class.clone(),
+                    class,
                     findings: vec![format!("{head}: {line}"), "examined 1".to_owned()],
                 });
             }
         }
         members.push(Member {
-            class: class.clone(),
+            class,
             findings: Vec::new(),
         });
     }
@@ -511,9 +482,9 @@ fn a_gate_outcome_class_reaches_the_repair_only_as_the_name_of_the_check() {
     let rejected = "The reading holds nothing the findings quote.\n";
     let mut examined = 0_usize;
     for member in population(&classes) {
-        let class = member.class.as_str();
+        let class = member.class.name();
         let pack = PackFailure {
-            class: class.to_owned(),
+            class: member.class,
             findings: member.findings.clone(),
         };
         let failure = first_failure(&OwnChecks::default(), Some(&pack)).expect("a failure");
@@ -528,7 +499,7 @@ fn a_gate_outcome_class_reaches_the_repair_only_as_the_name_of_the_check() {
         };
         assert_eq!(
             text,
-            engine_repair(class),
+            engine_repair(member.class),
             "the {class} class's repair is not the header and the engine's words: {:?}",
             member.findings
         );
@@ -630,7 +601,7 @@ impl Runner for RecordingRunner {
 /// A gate double that refuses the marked reading with one member's class and finding lines, the
 /// way the probe gate reports them, and passes every other text.
 struct MemberGate {
-    class: String,
+    class: GateClass,
     findings: Vec<String>,
 }
 
@@ -638,7 +609,7 @@ impl OutputGate for MemberGate {
     fn check<'a>(&'a self, output: &'a str, _template: &'a str) -> GateFuture<'a> {
         let outcome = if output.contains(REFUSE_MARKER) {
             GateOutcome::Failed {
-                class: self.class.clone(),
+                class: self.class,
                 findings: self.findings.clone(),
             }
         } else {
@@ -766,7 +737,7 @@ async fn generate_member(member: &Member) -> (Vec<(TopicKey, TopicState)>, Vec<S
         .expect("the prompt template");
     let runner = RecordingRunner::default();
     let gate = MemberGate {
-        class: member.class.clone(),
+        class: member.class,
         findings: member.findings.clone(),
     };
     let generated = generate_readings(
@@ -813,7 +784,7 @@ fn gained<'a>(first: &str, second: &'a str) -> &'a str {
     second.get(head..second.len() - tail).unwrap_or(second)
 }
 
-/// At the one production caller, each class the gate can hand a reading's attempt reaches the
+/// In the attempt loop, each class the gate can hand a reading's attempt reaches the
 /// second prompt only as the repair's header and the engine's words naming the check (SPEC-046 R7,
 /// A28): the second prompt is the first plus exactly that text.
 #[tokio::test]
@@ -821,7 +792,7 @@ async fn a_gate_outcome_class_reaches_the_prompt_only_as_the_name_of_the_check()
     let classes = boundary_classes();
     let mut examined = 0_usize;
     for member in population(&classes) {
-        let class = member.class.as_str();
+        let class = member.class.name();
         let (topics, prompts) = generate_member(&member).await;
         assert_eq!(
             topics.iter().map(|(_, state)| *state).collect::<Vec<_>>(),
@@ -832,7 +803,7 @@ async fn a_gate_outcome_class_reaches_the_prompt_only_as_the_name_of_the_check()
         let [first, second] = prompts.as_slice() else {
             panic!("the {class} class's failure made {} calls", prompts.len())
         };
-        let repair = engine_repair(class);
+        let repair = engine_repair(member.class);
         assert!(
             second.replacen(&repair, "", 1) == *first,
             "the {class} class's second prompt is not the first plus the engine's repair: {:?}; \

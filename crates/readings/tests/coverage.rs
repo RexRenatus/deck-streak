@@ -256,7 +256,7 @@ fn a_list_marker_in_the_primer_prose_is_refused() {
 #[test]
 fn the_first_failure_decides_in_the_gate_order() {
     let pack = |class: &str| PackFailure {
-        class: class.to_owned(),
+        class: class.parse().expect("a gate class"),
         findings: vec!["a finding".to_owned()],
     };
     let line = || vec!["a finding".to_owned()];

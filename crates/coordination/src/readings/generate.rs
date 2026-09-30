@@ -404,9 +404,10 @@ async fn generate_topic(
                 .await?;
             return finish(parts, study_day, active, &persona, &document).await;
         };
-        let class = pack
-            .as_ref()
-            .map_or_else(|| failure.gate.as_str().to_owned(), |p| p.class.clone());
+        let class = pack.as_ref().map_or_else(
+            || failure.gate.as_str().to_owned(),
+            |p| p.class.name().to_owned(),
+        );
         parts
             .store
             .record_attempt(&record(

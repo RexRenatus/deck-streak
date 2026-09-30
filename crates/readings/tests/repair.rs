@@ -4,6 +4,7 @@
 
 #![allow(clippy::expect_used, clippy::print_stdout)]
 
+use deck_streak_kernel::GateClass;
 use deck_streak_readings::coverage::{
     BAND_CLASS, GateFailure, OwnChecks, PackFailure, ROSTER_CLASSES, first_failure,
 };
@@ -129,7 +130,7 @@ fn a_pack_finding_never_reaches_the_trusted_repair_slot() {
     ];
     for (class, rejected, line) in cases {
         let pack = PackFailure {
-            class: class.to_owned(),
+            class: class.parse().expect("a gate class"),
             findings: vec![line.to_owned()],
         };
         let failure = first_failure(&OwnChecks::default(), Some(&pack)).expect("a failure");
@@ -169,15 +170,13 @@ fn a_finding_quoting_a_span_that_holds_a_quote_is_dropped() {
 
 /// The pack classes the engine configures for a reading: the reading duties' gate lists in
 /// `ai-safety.json`, and the classes `first_failure` ranks by name.
-fn configured_pack_classes() -> Vec<String> {
+fn configured_pack_classes() -> Vec<GateClass> {
     let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../ai-safety.json");
     let text = std::fs::read_to_string(&path).expect("the safety registry is readable");
     let registry: serde_json::Value = serde_json::from_str(&text).expect("the registry is JSON");
-    let mut classes: std::collections::BTreeSet<String> = ROSTER_CLASSES
-        .iter()
-        .map(|class| (*class).to_owned())
-        .collect();
-    classes.insert(BAND_CLASS.to_owned());
+    let mut classes: std::collections::BTreeSet<&str> =
+        ROSTER_CLASSES.iter().map(|class| class.name()).collect();
+    classes.insert(BAND_CLASS.name());
     let tasks = registry["tasks"]
         .as_array()
         .expect("the registry has tasks");
@@ -189,10 +188,16 @@ fn configured_pack_classes() -> Vec<String> {
         for entry in task["gate"].as_array().expect("a duty has a gate list") {
             let entry = entry.as_str().expect("a gate entry is a string");
             let (_, class) = entry.split_once(':').expect("an entry is pack:class");
-            classes.insert(class.to_owned());
+            let class: GateClass = class
+                .parse()
+                .unwrap_or_else(|_| panic!("the registry names {class}, which is no gate class"));
+            classes.insert(class.name());
         }
     }
-    classes.into_iter().collect()
+    classes
+        .into_iter()
+        .map(|name| name.parse().expect("a gate class"))
+        .collect()
 }
 
 #[test]
@@ -220,13 +225,14 @@ fn every_pack_class_reaches_the_repair_only_as_the_name_of_the_check() {
     ];
     let rejected = "The reading holds nothing the findings quote.\n";
     let mut members = 0_usize;
-    for class in &classes {
+    for &member in &classes {
+        let class = member.name();
         let named = format!("the {class} check refused the reading");
         for line in lines {
-            for head in [class.as_str(), "zqxj-forged-class"] {
+            for head in [class, "zqxj-forged-class"] {
                 let finding = format!("{head}: {line}");
                 let pack = PackFailure {
-                    class: class.clone(),
+                    class: member,
                     findings: vec![finding.clone(), "examined 1".to_owned()],
                 };
                 let failure = first_failure(&OwnChecks::default(), Some(&pack)).expect("a failure");

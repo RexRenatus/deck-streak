@@ -8,6 +8,7 @@
 
 use std::collections::BTreeSet;
 
+use deck_streak_kernel::GateClass;
 use unicode_normalization::UnicodeNormalization;
 
 use crate::form::Form;
@@ -421,16 +422,16 @@ fn check_language(seed: &Seed, document: &Document, checks: &mut OwnChecks) {
 /// What the pack gate refused: its class and its finding lines.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PackFailure {
-    /// The failing class.
-    pub class: String,
+    /// The failing class: a value of a closed type, so never text a probe wrote.
+    pub class: GateClass,
     /// Its finding lines.
     pub findings: Vec<String>,
 }
 
 /// The pack class that judges the word band.
-pub const BAND_CLASS: &str = "reading-length";
+pub const BAND_CLASS: GateClass = GateClass::ReadingLength;
 /// The pack classes that judge the roster.
-pub const ROSTER_CLASSES: [&str; 2] = ["citations-resolve", "i1-glosses"];
+pub const ROSTER_CLASSES: [GateClass; 2] = [GateClass::CitationsResolve, GateClass::I1Glosses];
 
 /// The gate that failed first and its findings.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -445,7 +446,8 @@ pub struct GateFailure {
 /// finding lines are a probe's output about the model's text, so none of them is a finding here
 /// (SPEC-046 R7).
 fn named(pack: &PackFailure) -> Vec<String> {
-    vec![format!("the {} check refused the reading", pack.class)]
+    let class = pack.class.name();
+    vec![format!("the {class} check refused the reading")]
 }
 
 /// The first failure across the own gates and the pack gate, in the gate order: complete, roster,
@@ -458,7 +460,7 @@ pub fn first_failure(own: &OwnChecks, pack: Option<&PackFailure>) -> Option<Gate
             findings: findings.to_vec(),
         })
     };
-    let pack_of = |classes: &[&str]| pack.filter(|p| classes.contains(&p.class.as_str()));
+    let pack_of = |classes: &[GateClass]| pack.filter(|p| classes.contains(&p.class));
     if !own.complete.is_empty() {
         return failure(ReadingGate::Complete, &own.complete);
     }
