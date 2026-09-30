@@ -97,6 +97,12 @@ DOCUMENTED_SPAWNERS = {
     "asyncio": ["create_subprocess_exec", "create_subprocess_shell"],
 }
 SPAWNING_MODULES = ("subprocess", "os", "pty", "asyncio")
+#: The modules the census has read and found to start no process for their caller: the runner's
+#: own imports. Any other import is refused until a reading adds it here.
+READ_MODULES = frozenset(
+    "__future__ argparse ast contextlib dataclasses hashlib json os pathlib posixpath re signal "
+    "subprocess sys tempfile tomllib".split()
+)
 #: The ways of reaching a name that is built at run time. A spawner reached by one is a spawn the
 #: census cannot read, so each is refused wherever it appears, whatever it is given: the census
 #: refuses what it cannot read rather than listing the spellings it can (ADR-291).
@@ -224,7 +230,62 @@ def raw_spawns(source=None):
             where = inside.get(id(node))
             spawn = f"{where or 'outside the helpers'}: {ast.unparse(node.func)}"
             (owned if where else outside).append(spawn)
+    outside += referenced(tree, inside)
     return owned, outside
+
+
+def referenced(tree, inside):
+    """Every place `tree` reaches a spawner without calling it by name, and every import of a
+    module the census has not read: a spawning module or a documented spawner is read only as
+    `module.attribute` (a non-spawner, non-dunder, non-module attribute) or as the function of a
+    call; anything else (a value, an argument, a default, a base class, a dunder, a module reached
+    through another module's attribute) is a spawn the census cannot read, and so is refused."""
+    parents = {id(child): node for node in ast.walk(tree) for child in ast.iter_child_nodes(node)}
+    annotations = set()
+    for node in ast.walk(tree):
+        held = []
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.returns:
+            held.append(node.returns)
+        if isinstance(node, ast.arg) and node.annotation:
+            held.append(node.annotation)
+        if isinstance(node, ast.AnnAssign):
+            held.append(node.annotation)
+        annotations.update(id(sub) for part in held for sub in ast.walk(part))
+    spawners = {f"{m}.{n}" for m, names in DOCUMENTED_SPAWNERS.items() for n in names}
+    found = []
+    for node in ast.walk(tree):
+        if id(node) in annotations:
+            continue
+        where = inside.get(id(node), "outside the helpers")
+        if isinstance(node, ast.Import):
+            found += [
+                f"{where}: import {alias.name}: a module the census has not read"
+                for alias in node.names
+                if alias.name.split(".")[0] not in READ_MODULES
+            ]
+        elif isinstance(node, ast.ImportFrom):
+            if (node.module or "").split(".")[0] not in READ_MODULES:
+                found.append(
+                    f"{where}: from {node.module} import: a module the census has not read"
+                )
+        elif isinstance(node, ast.Attribute) and node.attr in SPAWNING_MODULES:
+            found.append(
+                f"{where}: {ast.unparse(node)}: {node.attr} reached through another module"
+            )
+        elif isinstance(node, ast.Name) and node.id in SPAWNING_MODULES:
+            parent = parents.get(id(node))
+            read = (
+                isinstance(parent, ast.Attribute)
+                and parent.value is node
+                and not parent.attr.startswith("__")
+            )
+            if read and f"{node.id}.{parent.attr}" in spawners:
+                call = parents.get(id(parent))
+                read = isinstance(call, ast.Call) and call.func is parent
+            if not read:
+                shown = ast.unparse(parent if isinstance(parent, ast.Attribute) else node)
+                found.append(f"{where}: {shown}: {node.id} reached as a value, not called")
+    return found
 
 
 CARGO_SHIM = """#!{python}

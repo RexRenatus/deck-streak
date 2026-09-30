@@ -270,20 +270,25 @@ class ToolMissing(Exception):
         self.tool = tool
 
 
-def resolve_tool(command: list[str], env: dict[str, str] | None) -> None:
+def resolve_tool(
+    command: list[str], env: dict[str, str] | None, cwd: pathlib.Path | str | None = None
+) -> None:
     """Raise ToolMissing unless `command[0]` names something the spawn can run.
 
     A name with a slash is the path itself; a bare name is searched along the `PATH` the child
     will get (`env`, else this process's), as the spawn would. A candidate that cannot even be
     looked at (an entry the runner may not search, a name too long) is passed over, as the spawn's
-    own search passes over it: it is neither the tool nor a reason to stop looking.
+    own search passes over it: it is neither the tool nor a reason to stop looking. A relative
+    candidate (an empty, `.` or relative entry, or a relative name with a slash) is read in `cwd`,
+    the directory the child runs in, because that is where the spawn reads it.
     """
+    base = pathlib.Path(cwd) if cwd is not None else pathlib.Path()
     name = command[0]
     if "/" in name:
-        candidates = [pathlib.Path(name)]
+        candidates = [base / name]
     else:
         path = (env if env is not None else os.environ).get("PATH", os.defpath)
-        candidates = [pathlib.Path(part) / name for part in path.split(os.pathsep)]
+        candidates = [base / part / name for part in path.split(os.pathsep)]
     failure = "not found on PATH" if "/" not in name else "no such file"
     for candidate in candidates:
         try:
@@ -327,7 +332,7 @@ def _exit_refusal(returncode: int, command: list[str]) -> ToolMissing | None:
 def run_tool(command: list[str], **kwargs) -> subprocess.CompletedProcess:
     """`subprocess.run` with the executable resolved first; every spawn but the process-group
     one goes through here, so no call site can skip the check."""
-    resolve_tool(command, kwargs.get("env"))
+    resolve_tool(command, kwargs.get("env"), kwargs.get("cwd"))
     try:
         done = subprocess.run(command, **kwargs)
     except subprocess.CalledProcessError as error:
@@ -711,7 +716,7 @@ def run_in_own_group(
     Raises:
         subprocess.TimeoutExpired: The command outran `timeout`; its group is already dead.
     """
-    resolve_tool(command, env)
+    resolve_tool(command, env, cwd)
     try:
         process = subprocess.Popen(
             command,
