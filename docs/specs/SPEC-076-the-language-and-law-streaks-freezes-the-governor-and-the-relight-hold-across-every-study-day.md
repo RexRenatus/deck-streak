@@ -341,6 +341,8 @@ accessibility packs stay enforced, and no row is deferred for this delivery.
 | `tools/parity-oracle/goldens/relight.json` | repo | added: the golden of `pipeline_layers/showcase.py:ShowcaseLayer._relight` (adapter over a stub store) |
 | `tools/parity-oracle/goldens/streaks.constants.json` | repo | added: the constants golden (constants) |
 | `scripts/mutation-rows.d/S07600-S07699.json` | repo | added: the hand-proved rows (section 9) |
+| `crates/streaks/tests/open_lapse_bound.rs` | `deck-streak-streaks` | added: A41, the generated population that pins the open lapse walk against the earlier loop (section 16) |
+| `scripts/mutation-rows.d/S04900-S04999.json` | repo | changed: three lapse rows re-anchored on the counted range, ids and killers unchanged (section 16) |
 | `docs/CONTEXT-MAP.md` | docs | changed: the register of DeckStreak's own tables gains the four tables |
 | `privacy.json` | repo | changed: the categories `streaks` and `governor` |
 | `PRIVACY.md` | repo | changed: one line for each of the two categories |
