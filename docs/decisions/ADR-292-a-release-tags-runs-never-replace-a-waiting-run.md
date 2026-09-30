@@ -47,22 +47,30 @@ silently dropped?
 `cancel-in-progress: false`, `queue: max`. `test_workflow_concurrency.py` derives from the directory
 every workflow that runs for a tag, as GitHub's docs read it: a `release` or a `create` trigger, or a
 `push` trigger with a `tags` or `tags-ignore` filter or with neither a branch nor a tag filter. It
-prints how many it examined and holds each to that shape: one workflow-level block and no job's own,
-only the keys GitHub's parser defines, spelt with their case, and no key held twice, a group that is
-present, one for two runs of one tag under each event that runs it for a tag and no other workflow's
-(each rendered with its own name, under each event it declares whose ref can be a tag), no
-cancellation, `queue: max`. A workflow the reader cannot read, or a group it cannot render, is
-refused. Six hand-proved rows (S19005 to S19010) prove the killer.
+prints how many it examined and closes that class by construction (SPEC-190 R11), never by rendering
+a sample of another workflow's group: every key the workflow holds at the root, under `on:`, in a
+push or release filter and in a job is one GitHub's parser defines there, read with case; its group
+reads `github.ref` and nothing else (a leading `github.workflow` too, where no workflow can call it);
+its `cancel-in-progress` is the literal `false`; `queue` is `max`; and no other concurrency block, a
+workflow's or a job's, under any key spelling and in any workflow file, starts with text the release
+group's start can also be, read without case, while a block with no literal text of its own is
+refused. A workflow the reader cannot read is refused. Ten hand-proved rows (S19005 to S19014) prove
+the killers. A key deeper than a job and an upper-case workflow file extension are follow-up #464's.
 
 ### Consequences
 
 - Good, because a tag's re-run waits its turn and is never replaced.
-- Good, because a new tag-triggered workflow cannot land with the default queue.
-- Bad, because the key is newer than the default behaviour; a run beyond a hundred waiting is cancelled.
+- Good, because each part of the rule (keys, group, cancellation, other blocks) is closed from the
+  group's own text, so a new tag-triggered workflow, a called workflow or a job's block cannot land
+  with the default queue or share a release's group.
+- Bad, because the key is newer than the default behaviour; a run beyond a hundred waiting is
+  cancelled, and shows as cancelled.
+- Bad, because a model of the queue's interleavings is owed until `covers` accepts a workflow file
+  (#467).
 
 ### Confirmation
 
-SPEC-190's A7 and A8, rows S19005 to S19010, and the first real tag run's history.
+SPEC-190's A7, A8 and A9, rows S19005 to S19014, and the first real tag run's history.
 
 ## What would make this wrong
 
@@ -70,4 +78,4 @@ SPEC-190's A7 and A8, rows S19005 to S19010, and the first real tag run's histor
 
 ## More Information
 
-SPEC-190 R10, ADR-190, ADR-055, issue #377.
+SPEC-190 R10, R11, ADR-190, ADR-055, issue #377.

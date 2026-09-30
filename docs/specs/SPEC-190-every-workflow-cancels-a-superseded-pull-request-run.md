@@ -174,3 +174,63 @@ A8: python3 -m unittest discover -s scripts/tests -p test_workflow_concurrency.p
 | `docs/decisions/ADR-292-a-release-tags-runs-never-replace-a-waiting-run.md` | repo | added |
 | `docs/red-first/SPEC-190.md` | repo | changed: A7, A8 |
 | `changelog.d/ci-release-queue-377.md` | repo | added |
+
+## 10. Amendment of 2026-09-30 (round 3): the release class closed by construction (ADR-292, #377)
+
+This amendment is insert-only and supersedes two sentences of section 8. R10's sentence that a
+release workflow's group "is no other workflow's, read without case" and is checked by rendering
+another workflow's group "with its own name as `github.workflow`", in a run of each event it
+declares, is superseded by R11(4): sampling a rendering misses a workflow that a caller calls (a
+called workflow reads its caller's context; the reusable-workflows page says
+"the `github` context is always associated with the caller workflow."), a job's own block, a literal group for
+another tag and a group with no text of its own. A7's clause "no other workflow's" is superseded by
+A9 in the same way. Every other line of section 8 stands.
+
+R11. **A release workflow is closed by construction.** For every workflow that runs for a tag (R10):
+1. every key it holds at the root, under `on:`, in a `push` or a `release` filter and in a job is one
+   that GitHub's workflow parser defines there, read with its case;
+2. its group reads `github.ref` and nothing else, plus a leading `github.workflow` where no workflow
+   can call it, so every run of one tag takes one group whatever its event or its tag value;
+3. its `cancel-in-progress` is the literal `false`, as written, never an expression;
+4. no other concurrency block, a workflow's or a job's, under any key spelling and in any workflow
+   file, starts with text that the release group's start can also be, read without case, and a block
+   with no literal text of its own is refused, since it can render as any group.
+
+Because the rule closes the class from the group's own text, the test never renders a sample of
+another workflow's group, and a new workflow that could share a release's group is refused whatever
+its name, its events or its caller. GitHub documents that group names are "case insensitive", which
+is why part 4 reads without case. The test derives its population from constants of the parser's
+keys, of the events that run for a tag and of the `github` context's properties, and lists none of
+its members; it prints how many groups, cancellations, blocks, blocks of text of their own and keys
+it examined.
+
+Disclosed remainder. The rule reads keys down to a job and a call-job. A key deeper than a job, and
+a workflow file whose extension is upper-case, are read by follow-up #464 and not by this test. A
+model of the tag queue, its interleavings of a running run, a waiting run and a run beyond the
+queue, is owed once `covers` accepts a workflow file, which follow-up #467 tracks; `covers` today
+takes only `.rs`, `.py` and `.sh`.
+
+A run of a tag is never lost without a trace. GitHub's workflow syntax page says
+"Up to 100 jobs or workflow runs can be `pending` in the concurrency group." and that once the queue is full, further
+runs are canceled; a cancelled run is listed as cancelled. The `release tags` ruleset lets a `v*` tag
+be pushed once and never moved, so only re-runs of one tag's run can wait.
+
+## 11. Acceptance criteria of the 2026-09-30 round 3 amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A9 | the class is closed by construction (R11), by a population generated from constants and never listed: each key of the parser's schema misspelt, in another case or missing at the root, under `on:`, in a filter and in a job; a group reading any `github` property other than `github.ref`, in each place the group is read; a `cancel-in-progress` that is an expression; another workflow's block, a job's block, a block under a key of another case, a group with no literal text of its own and a group whose text starts as the release group's can, are each refused, and the live workflows are held to the same rule | `test_workflow_concurrency.py` `the_release_class_is_closed_by_construction` |
+
+```acceptance
+A9: python3 -m unittest discover -s scripts/tests -p test_workflow_concurrency.py -k the_release_class_is_closed_by_construction
+```
+
+### File manifest of the round 3 amendment
+
+| file | context | change |
+|---|---|---|
+| `scripts/tests/test_workflow_concurrency.py` | repo | changed: R11, A9 and its generated population |
+| `scripts/mutation-rows.d/S19000-S19099.json` | repo | changed: S19011 to S19014, one row per part of R11 |
+| `docs/decisions/ADR-292-a-release-tags-runs-never-replace-a-waiting-run.md` | repo | changed: Decision Outcome and Consequences hold for R11 |
+| `docs/red-first/SPEC-190.md` | repo | changed: A9 |
+| `changelog.d/ci-release-queue-377.md` | repo | changed: the rule of R11 |

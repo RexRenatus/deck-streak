@@ -40,3 +40,21 @@ events, the block's keys with their case and a key held twice (d09c26b) turned i
 A8: red at ff6c290: ["create as a name: ['queue is None, so a third run of a tag replaces the waiting second']", ...] (33 shapes) != []
 A8: green at d09c26b
 ```
+
+## Addendum: A9, the class closed by construction (#456, verification round 3)
+
+The test of A9 (`the_release_class_is_closed_by_construction`, 4835abf) ran with its constants and
+helpers and with `closed_by_construction` returning no problem: it failed by assertion, naming 1313
+planted members the class did not refuse, the first a group reading `github.action`. It was the only
+test of `test_workflow_concurrency.py` that failed (14 ran, one failed). The rule (445354c) turned it
+green: 14 ran and all passed.
+
+The advisory of the A7 addendum above, "the final test body", meant the body of
+`test_workflow_concurrency.py` (with `test_ci_workflows.py`) at d09c26b, run on b51b933's tree: two
+tests of that one file failed, A7's and `test_a_shape_that_replaces_drops_or_runs_two_at_once_is_refused`
+(13 ran), and no test of another file was run.
+
+```red-first
+A9: red at 4835abf: ['a group reading github.action', ...] (1313 members) != []
+A9: green at 445354c
+```
