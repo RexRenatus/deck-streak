@@ -322,29 +322,48 @@ restored byte for byte, its sha256
 ## 8. Amendment, 2026-09-30: the predecessor's register counts to its prose
 
 Issue #420. The ownership register in `docs/CONTEXT-MAP.md` starts from the predecessor's 64 tables,
-and two rows that belong to DeckStreak's own schema (`xp_settlement` and `buffs`) had been added to
-it, so it named 66 rows (65 unique names) where its prose counts 64. Nothing read the register, and
-the v9 import maps the predecessor's tables one by one from it.
+and two rows had been added to it for DeckStreak's own schema: `xp_settlement`, a table only
+DeckStreak has, and a second `buffs` row beside the predecessor's own. It named 66 rows (65 unique
+names) where its prose counts 64. No test read the predecessor's register, and the v9 import maps
+the predecessor's tables one by one from it.
 
 R16. Every count the section's prose states (a number beside `tables`, `rows` or `names`) equals
-the unique names of the register it describes; no name repeats inside one register; and a name in
-both the predecessor's register and DeckStreak's own is a carried table, which both give the same
-owning context. A register with a qualifier in its header (`v9 table`) pairs with the count
-sentence that says the same word before its number, and a sentence or a qualified register that
-pairs with nothing is refused by name. The predecessor's register loses the two rows, and the
-section "DeckStreak's own tables" is unchanged byte for byte.
+the unique names of the register it describes; no name repeats inside one register; the
+predecessor's register names exactly the predecessor's 64 tables, the set the register's first
+binding text named (the context map of 2026-09-27), so a table only DeckStreak has cannot enter it
+however the counts read; and a name in both registers is a predecessor table whose name one of
+DeckStreak's own tables keeps, which both registers give the same owning context. A register with a
+qualifier in its header (`v9 table`) pairs with the count sentence that says the same word before
+its number, and a sentence or a qualified register that pairs with nothing is refused by name. The
+predecessor's register loses the two rows, and the section "DeckStreak's own tables" is unchanged
+byte for byte.
 
-Two readings of the class are stated because the file decides them. Five names sit in both
-registers on purpose (`sync_runs`, `xp_ledger`, `cron_fires`, `daily_rollup`, `daily_lang_stats`),
-tables the predecessor had and DeckStreak keeps under the same name, so the rule is "same owner in
-both", and a strict disjointness would refuse the file the issue asks for. DeckStreak's own register
-states no count, so a row dropped from it is not expressible as a mismatch.
+Two readings of the class are stated because the file decides them. Six names sit in both registers
+on purpose (`buffs`, `cron_fires`, `daily_lang_stats`, `daily_rollup`, `sync_runs`, `xp_ledger`):
+tables the predecessor had whose names DeckStreak's own tables keep, so a strict disjointness would
+refuse the file the issue asks for. Whether the import carries a table's rows is SPEC-142's to say,
+not this register's. A same owner in both registers cannot tell such a name from one only DeckStreak
+has: at the base, `xp_settlement` had the same owner in both, and only the count and the repeated
+`buffs` refused the file. So the predecessor's register is held to a closed set. The predecessor is
+frozen and no copy of its schema is in the repository, so the set is the one the register first
+named.
+
+DeckStreak's own register states no count, so a row dropped from it is not a mismatch this check
+can see. Other tests hold it: A23 (`crates/kernel/tests/schema.rs`) refuses a migration whose table
+the register does not give the migration's context, and SPEC-021 A2
+(`crates/coordination/tests/data_rights_symmetry.rs`) refuses a table of the migrated schema,
+`_sqlx_migrations` included, whose port is not the owner the register names.
 
 The check is `scripts/tests/test_context_map_registers.py`. Its population was generated from the
-file: one altered copy per register row (dropped, repeated, moved to the other register) and one per
-count sentence (one more, one fewer), 257 in all. 236 turned the check red by an assertion, and the
-21 that did not are the rows dropped from DeckStreak's own register. The file was unchanged by
-sha256 after every copy.
+file: one altered copy per register row (dropped, repeated, moved to the other register) and one
+per count sentence (one more, one fewer), 257 copies; and copies that keep every count while
+breaking the rule: a predecessor-only row swapped with a DeckStreak-only row (870), a predecessor
+row replaced by a DeckStreak-only name (960), a shared name renamed in one register only (12), a
+predecessor-only row renamed (58), a shared name's owner changed in one register (12), and
+`xp_settlement` added to the predecessor's register with its count moved to 65 (1). That is 2170
+in all. 2143 turned the check red by an assertion. The 27 that did not are the 21 rows dropped from
+DeckStreak's own register and the 6 shared names renamed in DeckStreak's own register only, rows
+A23 and SPEC-021 A2 hold. The file was unchanged by sha256 after every copy.
 
 Files: `scripts/tests/test_context_map_registers.py` (new), `docs/CONTEXT-MAP.md` (two rows
 removed), `docs/red-first/SPEC-020.md`, `changelog.d/predecessor-register-420.md`.
@@ -353,7 +372,7 @@ removed), `docs/red-first/SPEC-020.md`, `changelog.d/predecessor-register-420.md
 
 | id | criterion | decided by |
 |---|---|---|
-| A27 | the predecessor's register holds as many unique names as its prose counts, repeats none, and shares with DeckStreak's own register only names both give the same owner | `python3 -m unittest discover -s scripts/tests -p test_context_map_registers.py` |
+| A27 | the predecessor's register names exactly the predecessor's 64 tables, holds as many unique names as its prose counts, repeats none, and shares with DeckStreak's own register only names both give the same owner | `python3 -m unittest discover -s scripts/tests -p test_context_map_registers.py` |
 
 ```acceptance
 A27: python3 -m unittest discover -s scripts/tests -p test_context_map_registers.py

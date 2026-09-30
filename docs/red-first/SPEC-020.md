@@ -82,3 +82,10 @@ The 2026-09-30 amendment (#420) adds A27. The test was committed against the fil
 A27: red at 589bf0bd9fedf6692a6464edfde277cfe5a41b3c: AssertionError: Lists differ: ["register 'v9 table' repeats buffs", "register 'v9 table' has 65 unique names, prose says 64"] != []
 A27: green at d5bdc47255dce7645382d3c3390d5892af9085d4
 ```
+
+The arm that holds the predecessor's register to the predecessor's 64 tables came after, and its
+red is a plant, because the file it guards was already right. A copy of the file with
+`xp_settlement` added to the predecessor's register and its count moved to 65 passed the check
+without the arm and failed it with the arm, by assertion: `AssertionError: Lists differ:
+["register 'v9 table' names xp_settlement, which is not one of the predecessor's"] != []`. The
+copy was read through `CONTEXT_MAP_PATH`, and the file itself was not edited.
