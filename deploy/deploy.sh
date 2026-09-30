@@ -129,14 +129,13 @@ refuse() { echo "deploy: the host step $*" >&2; exit 1; }
 # shell early.
 host_cleanup() {
     [ ! -f "$checked" ] || find "$checked" -delete
-    [ ! -d "$saved" ] || find "$saved" -delete
+    [ ! -f "$saved" ] || find "$saved" -delete
     [ ! -L "$root/.current.$$" ] || find "$root/.current.$$" -delete
     [ -z "$made_partial" ] || [ ! -e "$rel.partial" ] || find "$rel.partial" -delete
     [ -z "$made_top" ] || [ -n "$finished" ] || [ ! -e "$made_top" ] || find "$made_top" -delete
     return 0
 }
 trap host_cleanup EXIT
-mkdir -m 0700 "$saved" || refuse "could not make its directory for the saved unit files"
 
 # The directories the unit files are written in must take a write, checked before the first write
 # so that a host that cannot be written in is refused with nothing changed. One argument: a
@@ -161,14 +160,16 @@ drop_release() {
     [ "$mode" != install ] || find "$rel" -delete || return 1
 }
 
-# The unit files as the host had them, kept in the saved directory before the first write to the
-# unit directory, so that an undo puts back exactly what was there (and removes what was not).
+# The unit files as the host had them, kept as one archive before the first write to the unit
+# directory, so that an undo puts back exactly what was there (and removes what was not). One file
+# is removed or left whole, never half of a directory tree.
 save_units() {
     local f
     for f in "$unitdir"/deck-streak-*; do
         [ -e "$f" ] || [ -L "$f" ] || continue
-        cp -a "$f" "$saved/" || return 1
+        set -- "$@" "${f##*/}"
     done
+    [ "$#" -eq 0 ] || tar -C "$unitdir" -cf "$saved" -- "$@"
 }
 
 # Put the unit files back as saved, reload, and drop an install's new release.
@@ -178,10 +179,7 @@ unwind() {
         [ -e "$f" ] || [ -L "$f" ] || continue
         find "$f" -delete || return 1
     done
-    for f in "$saved"/*; do
-        [ -e "$f" ] || [ -L "$f" ] || continue
-        cp -a "$f" "$unitdir/" || return 1
-    done
+    [ ! -f "$saved" ] || tar -C "$unitdir" -xpf "$saved" || return 1
     systemctl daemon-reload
     drop_release
 }

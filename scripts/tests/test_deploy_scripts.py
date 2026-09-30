@@ -2039,22 +2039,22 @@ exec /usr/bin/@NAME@ "$@"
         "install": {
             ("mktemp", "local"): 1,
             ("mktemp", "host"): 1,
-            ("mkdir", "host"): 3,
-            ("tar", "host"): 1,
+            ("mkdir", "host"): 2,
+            ("tar", "host"): 2,
             ("ln", "host"): 1,
             ("mv", "host"): 2,
         },
         "rollback-unkept": {
             ("mktemp", "local"): 1,
             ("mktemp", "host"): 1,
-            ("mkdir", "host"): 3,
-            ("tar", "host"): 1,
+            ("mkdir", "host"): 2,
+            ("tar", "host"): 2,
             ("ln", "host"): 1,
             ("mv", "host"): 2,
         },
         "rollback-kept": {
             ("mktemp", "host"): 1,
-            ("mkdir", "host"): 1,
+            ("tar", "host"): 1,
             ("ln", "host"): 1,
             ("mv", "host"): 1,
         },
@@ -2285,7 +2285,7 @@ class EveryStateAVerbStartsFromAndEveryToolTheHostStepWritesWithIsRefused(Case):
     SYSTEMCTL_READS_AND_RELOADS = frozenset({"daemon-reload", "restart", "cat"})
     FIND_WRITES = frozenset({"-delete", "-exec", "-execdir", "-ok", "-fprint", "-fprintf", "-fls"})
     # The tools the members run, and the writers the body holds that no verb run reaches.
-    HANDLED = ("mktemp", "mkdir", "tar", "ln", "mv", "install", "find", "cp")
+    HANDLED = ("mktemp", "mkdir", "tar", "ln", "mv", "install", "find")
     UNREACHED = {"rm": "reached only when the service does not become ready"}
     EXTRA = {f"{SYSTEMD}/deck-streak-extra.timer": b"[Timer]\nOnCalendar=daily\n"}
     TOOL = r"""#!/bin/bash
@@ -2397,11 +2397,11 @@ exec /usr/bin/@NAME@ "$@"
         self.assertEqual(len(targets), 2, "the redirections into the check file")
         self.assertEqual(
             found,
-            {"mktemp": 1, "find": 14, "mkdir": 3, "ln": 1, "cp": 2, "install": 3, "mv": 2}
-            | {"rm": 1, "tar": 1},
+            {"mktemp": 1, "find": 14, "mkdir": 2, "ln": 1, "install": 3, "mv": 2}
+            | {"rm": 1, "tar": 3},
             "the command sites of the host body that can write a path, by tool",
         )
-        self.assertEqual(sum(found.values()), 28, "the command sites that can write a path")
+        self.assertEqual(sum(found.values()), 27, "the command sites that can write a path")
 
     def test_a_tool_the_census_does_not_know_turns_it_red(self):
         body = self.host_body()
@@ -2456,7 +2456,19 @@ exec /usr/bin/@NAME@ "$@"
             (w.log / name).write_text("", encoding="utf-8")
         return w, good, argv
 
-    def writing_calls(self, w):
+    @staticmethod
+    def after_the_switch(args, tag):
+        """True for a delete the script makes once `current` points at the new release: the
+        exit trap's removal of the saved unit files, and the prune of an older release. A run that
+        got this far has finished its switch, so a failure there has nothing left to undo (#451)."""
+        paths = [a for a in args if a.startswith("/")]
+        return any(
+            p.endswith(".saved")
+            or ("/releases/" in p and not p.endswith((f"/{tag}", f"/{tag}.partial")))
+            for p in paths
+        )
+
+    def writing_calls(self, w, tag):
         """(tool, index) of each host call that writes a path, from the run's own log."""
         seen, calls = {}, []
         for line in (w.log / "args.log").read_text(encoding="utf-8").splitlines():
@@ -2465,6 +2477,8 @@ exec /usr/bin/@NAME@ "$@"
                 continue
             seen[tool] = seen.get(tool, 0) + 1
             if tool == "find" and not self.FIND_WRITES & set(args.split()):
+                continue
+            if tool == "find" and self.after_the_switch(args.split(), tag):
                 continue
             calls.append((tool, int(index)))
         counted = sum(
@@ -2484,7 +2498,7 @@ exec /usr/bin/@NAME@ "$@"
                 with tempfile.TemporaryDirectory() as tmp:
                     w, good, argv = self.situation(tmp, verb, state)
                     self.ok(w.run(*argv, **good))
-                    calls = self.writing_calls(w)
+                    calls = self.writing_calls(w, argv[-1])
                 reached |= {tool for tool, _ in calls}
                 expected += len(calls)
                 members += [(verb, state, tool, index) for tool, index in calls]

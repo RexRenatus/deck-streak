@@ -602,11 +602,11 @@
         "test_deploy_scripts.EveryStateAVerbStartsFromAndEveryToolTheHostStepWritesWithIsRefused.test_every_state_and_every_writing_call_of_the_host_step_is_refused"
       ],
       [
-        "S12776-A-THE-SAVED-UNITS-DIRECTORY-IS-GUARDED",
+        "S12776-A-THE-SAVE-OF-THE-UNITS-IS-CHECKED",
         "deploy/deploy.sh",
-        "mkdir -m 0700 \"$saved\" || refuse \"could not make its directory for the saved unit files\"",
-        "mkdir -m 0700 \"$saved\" || true",
-        "a directory for the saved unit files that cannot be made is a named refusal (SPEC-127 A42)",
+        "[ \"$#\" -eq 0 ] || tar -C \"$unitdir\" -cf \"$saved\" -- \"$@\"",
+        "[ \"$#\" -eq 0 ] || tar -C \"$unitdir\" -cf \"$saved\" -- \"$@\" || true",
+        "an archive of the unit files that cannot be made fails the save (SPEC-127 A42)",
         "test_deploy_scripts.EveryStateAVerbStartsFromAndEveryToolTheHostStepWritesWithIsRefused.test_every_state_and_every_writing_call_of_the_host_step_is_refused"
       ],
       [
@@ -620,9 +620,9 @@
       [
         "S12778-A-EACH-UNIT-FILE-IS-SAVED-OR-THE-SAVE-FAILS",
         "deploy/deploy.sh",
-        "cp -a \"$f\" \"$saved/\" || return 1",
-        "cp -a \"$f\" \"$saved/\" || true",
-        "a unit file that cannot be saved fails the save (SPEC-127 A42)",
+        "set -- \"$@\" \"${f##*/}\"",
+        "true",
+        "each unit file the host had is named in the saved archive (SPEC-127 A42)",
         "test_deploy_scripts.EveryStateAVerbStartsFromAndEveryToolTheHostStepWritesWithIsRefused.test_every_state_and_every_writing_call_of_the_host_step_is_refused"
       ],
       [
@@ -636,9 +636,9 @@
       [
         "S12780-A-THE-UNDO-PUTS-THE-SAVED-UNITS-BACK",
         "deploy/deploy.sh",
-        "cp -a \"$f\" \"$unitdir/\" || return 1",
+        "[ ! -f \"$saved\" ] || tar -C \"$unitdir\" -xpf \"$saved\" || return 1",
         "true",
-        "the undo restores the unit files as saved (SPEC-127 A42)",
+        "the undo extracts the saved archive back over the unit directory (SPEC-127 A42)",
         "test_deploy_scripts.EveryStateAVerbStartsFromAndEveryToolTheHostStepWritesWithIsRefused.test_every_state_and_every_writing_call_of_the_host_step_is_refused"
       ],
       [

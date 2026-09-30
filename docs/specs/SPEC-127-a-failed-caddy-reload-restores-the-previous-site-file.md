@@ -396,9 +396,9 @@ separate shell without `die`, so its guards end with `refuse "..."`, which print
 `deploy: the host step ...` and exits 1. The check file is the first thing the host script makes,
 before any write to the host, so a temporary directory that cannot be used leaves the host as it
 was. The script then checks that the unit directory and every existing unit drop-in directory take a
-write, saves the unit files it may replace into a directory it makes beside the check file, and
+write, saves the unit files it may replace into one archive named beside the check file, and
 stages the pid-named link before the unit files are installed. An `EXIT` trap deletes the check
-file, the saved copy, the pid-named link and an unfinished unpack, and, when the run did not finish,
+file, the saved archive, the pid-named link and an unfinished unpack, and, when the run did not finish,
 the topmost directory the run had to make (a first install's release root). Every `install` and
 `find -delete` the unit files need ends with `|| return 1`, and a failure after the first change to
 the host (a failed unit install, a failed rename over `current`, a check file that cannot be
@@ -462,7 +462,7 @@ name. S12753 to S12771 pin the guards the first fix round added (the releases di
 partial directory, the unpack, the rename into place, the link, the pre-check of the directories
 and the undo of a failed switch), the local refusal lines, the release step's name and the exit of
 each refusal. S12772 to S12792 pin the trap, the check file's deletion on exit, the directory test,
-the marker of an unpack this run made, the saved copy of the unit files and each step that makes
+the marker of an unpack this run made, the saved archive of the unit files and each step that makes
 and uses it, the undo's two halves, the record of the release root a run made and its removal, the
 mark of a finished run, the writable check of the releases directory, and each `install` and the
 check file's `find -delete` in the unit installation. Each row is killed by the test named in it.
@@ -474,7 +474,7 @@ pre-checks whose refusals the place members of A41 already reach. Files changed:
 `docs/decisions/ADR-297-every-temporary-path-deploy-sh-makes-is-guarded-by-a-named-refusal.md` and
 `changelog.d/fix-release-tmp-451.md`.
 
-### What this amendment does NOT do
+### What this amendment does NOT do (2026-09-30)
 
 - It does not change what a successful install or removal does when every deploy setting in the
   environment is listed (#423, #424).
@@ -488,6 +488,7 @@ pre-checks whose refusals the place members of A41 already reach. Files changed:
   import when the Caddyfile is set apart (#452).
 - It does not guard a temporary path that a tool `deploy.sh` runs makes for itself, such as the
   scratch files of `git` or `caddy` (#451).
+- It does not undo the exit trap's removal of the saved archive, which runs after the switch, and the test leaves a failure of that removal out of its members, because the host is already in its new state and the removal cannot put it back (#451).
 - It does not undo the prune of old releases after a finished run, nor the removals `back()` makes
   when the service does not become ready, which run with errexit off and are reached only after the
   same link was staged and renamed a moment before (#451).

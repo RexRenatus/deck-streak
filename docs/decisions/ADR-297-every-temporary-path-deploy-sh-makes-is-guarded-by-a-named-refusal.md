@@ -33,7 +33,7 @@ and every path as it was?
 - One shared helper that makes the path and dies — because the host script is a separate shell and cannot call the controller's helper, so the form would be written twice anyway, it lost.
 - Keep the link where it was, after the unit files, and add an undo of the units — because with no previous release the install leaves units the existing undo does not remove, it adds writes to undo instead of removing the need, it lost; the link is now made before the units, and the undo that remains is for what can only be tried after them.
 - Undo a failed switch by removing the new release's units only — because a rollback from a host that already holds units has units whose bytes differ from the release's, so a removal leaves a path that is not as it was, it lost against a copy of the unit files saved before the first change to a unit file and put back on the undo.
-- Save the unit files in a second `mktemp` directory — because a second `mktemp` would add a site to the ones the test of A40 reads and a way to fail before the check file, it lost against a `mkdir` of a directory named beside the check file, which the same exit trap removes.
+- Save the unit files as a `cp -a` copy in a directory, or in a second `mktemp` directory — because a `cp -a` of a read-only drop-in directory leaves a saved directory the trap cannot delete, and a second `mktemp` would add a site to the ones the test of A40 reads, it lost against one `tar` archive named beside the check file, which the same exit trap removes.
 - Put inline guards at each undo site — because a guard repeated at each of several failing calls drifts, it lost against one `undo_and_refuse` that every failing call after the first change goes through.
 - Restore a partly deleted stale unpack when its `find -delete` fails — because a half-restored unpack is not the unpack that was there, it lost against a check that the releases directory takes a write before the stale unpack is touched.
 - Leave a first install's release root where the run made it — because a refused first install would leave a root that did not exist, it lost against recording the topmost missing directory and removing it on every exit of a run that did not finish.
@@ -45,8 +45,8 @@ to the host's paths, make the pid-named link before the unit files, and delete w
 The controller's calls end with `|| die "..."`. The host script's guards end with `refuse "..."`,
 which prints `deploy: the host step ...` and exits 1. The host script checks the unit directory and
 every unit drop-in directory before it writes any path of the host (the check file's `mktemp` comes first), stages the pid-named link before
-the unit files are installed, saves the unit files it may replace into a directory it makes beside
-the check file, and an `EXIT` function deletes the check file, the saved copy, the link, an
+the unit files are installed, saves the unit files it may replace into one archive named beside
+the check file, and an `EXIT` function deletes the check file, the saved archive, the link, an
 unfinished unpack and, when the run did not finish, the topmost directory the run had to make. Every
 `install` and `find -delete` of the unit installation ends with `|| return 1`, and a failure after the
 first change to the host (a failed rename over `current`, a unit that cannot be installed, a check
@@ -60,7 +60,7 @@ step or the host step).
 - Good, because the test measures the directories a verb writes in from a real run and fails each, so a new write location in a measured run turns the test red until its expectation names it; a path the measured runs do not reach is not covered. The test of A42 reads the host body for every command that can write a path and turns red on a tool it neither fails nor names as unreached, so a new tool needs a test edit that says so.
 - Bad, because the host form repeats what `die` does, since the host script cannot reach `die`.
 - Bad, because the directory pre-check reads permissions before the writes, so a directory that changes between the check and the write is not seen by it; the proof of that check-then-act surface is follow-up #505.
-- Bad, because the saved copy adds a write (the directory and the copies) before the first change to the host.
+- Bad, because the saved archive adds a write before the first change to the host.
 
 ### Confirmation
 
