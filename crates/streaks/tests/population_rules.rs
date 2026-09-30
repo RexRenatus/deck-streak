@@ -288,7 +288,7 @@ fn step(track: &mut Track, number: i64, studied: bool) -> Vec<(i32, FreezeReason
                 }
             }
         }
-        if !broke && track.current % 7 == 0 {
+        if !broke && track.current.is_multiple_of(7) {
             track.freezes += 1;
         }
         track.freezes = track.freezes.min(3);
@@ -296,7 +296,7 @@ fn step(track: &mut Track, number: i64, studied: bool) -> Vec<(i32, FreezeReason
         track.last = Some(number);
     } else if let Some(last) = before.last {
         // Two real misses in a row lose a live run; one miss waits for a freeze.
-        if number - last - 1 >= 2 && before.current > 0 {
+        if number - last > 2 && before.current > 0 {
             broke = true;
             track.armed |= before.current >= 7;
             track.current = 0;
