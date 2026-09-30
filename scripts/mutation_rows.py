@@ -87,7 +87,6 @@ CELLS = {
     },
     "SCRIPT_MUTATIONS": {"find": 2, "replace": 3, "crate": None, "killer": 5, "description": 4},
 }
-MOD_DECLARATION = re.compile(r"(?m)^\s*(?:pub(?:\([^)]*\))?\s+)?mod\s+([A-Za-z_][A-Za-z0-9_]*)\s*;")
 CARGO_KILLER = re.compile(r"[A-Za-z_][A-Za-z0-9_]*(?:::[A-Za-z_][A-Za-z0-9_]*)+")
 SCRIPT_KILLER = re.compile(
     r"[A-Za-z_][A-Za-z0-9_]*\.[A-Za-z_][A-Za-z0-9_]*\.[A-Za-z_][A-Za-z0-9_]*"
@@ -390,40 +389,85 @@ def package_of(root: pathlib.Path, crate: str) -> str:
         raise KillerUnresolved(f"crates/{crate} holds no readable Cargo package") from error
 
 
-def binary_of(root: pathlib.Path, crate: str) -> tuple[str, str]:
-    """The one binary of `crates/<crate>`: its name and its root source, from the manifest.
-
-    A `[[bin]]` table names it; a manifest with none holds the package's own binary at
-    `src/main.rs`. A crate with two binaries, or with any under `src/bin/`, is refused, since a
-    `bin::` killer names no binary and the runner never guesses one."""
+def manifest_of(root: pathlib.Path, crate: str) -> dict:
+    """The parsed manifest of `crates/<crate>`, refused by name when it has no package."""
     where = f"crates/{crate}"
     try:
         manifest = tomllib.loads((root / where / "Cargo.toml").read_text(encoding="utf-8"))
-        package = manifest["package"]["name"]
+        manifest["package"]["name"]
     except (OSError, KeyError, tomllib.TOMLDecodeError) as error:
         raise KillerUnresolved(f"{where} holds no readable Cargo package") from error
-    declared = manifest.get("bin", [])
-    discovered = (
-        sorted((root / where / "src" / "bin").glob("*"))
-        if (root / where / "src" / "bin").is_dir()
-        else []
-    )
-    binaries = (
-        len(declared)
-        + len(discovered)
-        + (0 if declared else int((root / where / "src" / "main.rs").is_file()))
-    )
-    if binaries > 1:
+    return manifest
+
+
+def inferred_targets(crate_dir: pathlib.Path, folder: str) -> dict[str, str]:
+    """Cargo's auto-discovery under `folder`: each `<name>.rs` and each `<name>/main.rs`, as
+    `name -> path` relative to the crate."""
+    found: dict[str, str] = {}
+    directory = crate_dir / folder
+    if directory.is_dir():
+        for entry in sorted(directory.iterdir()):
+            if entry.is_file() and entry.suffix == ".rs":
+                found[entry.stem] = f"{folder}/{entry.name}"
+            elif entry.is_dir() and (entry / "main.rs").is_file():
+                found[entry.name] = f"{folder}/{entry.name}/main.rs"
+    return found
+
+
+def cargo_targets(root: pathlib.Path, crate: str) -> tuple[list[tuple[str, str]], list[str]]:
+    """The binaries (name, path) and the test target names of `crates/<crate>`, as cargo builds
+    them: the manifest's `[[bin]]` and `[[test]]` tables, then the auto-discovered targets unless
+    `autobins` or `autotests` is false, an inferred target dropped when an explicit one has its
+    name or its path. A table with no path takes the auto-discovered path of its name."""
+    where = f"crates/{crate}"
+    manifest = manifest_of(root, crate)
+    package = manifest["package"]
+    crate_dir = root / where
+    bins = inferred_targets(crate_dir, "src/bin")
+    if (crate_dir / "src" / "main.rs").is_file():
+        bins[package["name"]] = "src/main.rs"
+    tests = inferred_targets(crate_dir, "tests")
+    targets: dict[str, list[tuple[str, str]]] = {}
+    for kind, table, inferred, switch, fallback in (
+        ("bin", "bin", bins, "autobins", "src/main.rs"),
+        ("test", "test", tests, "autotests", None),
+    ):
+        auto = package.get(switch, True)
+        if not isinstance(auto, bool):
+            raise KillerUnresolved(f"{where} sets {switch} to something other than a boolean")
+        explicit: list[tuple[str, str]] = []
+        for entry in manifest.get(table, []):
+            name, path = entry.get("name"), entry.get("path")
+            if path is None and isinstance(name, str):
+                path = inferred.get(name, fallback or f"tests/{name}.rs")
+            if not isinstance(name, str) or not isinstance(path, str):
+                raise KillerUnresolved(f"{where} declares a {kind} with no name or path")
+            explicit.append((name, posixpath.normpath(path)))
+        names = {name for name, _path in explicit}
+        paths = {path for _name, path in explicit}
+        found = [
+            (name, path)
+            for name, path in (inferred.items() if auto else [])
+            if name not in names and posixpath.normpath(path) not in paths
+        ]
+        targets[kind] = explicit + found
+    return targets["bin"], [name for name, _path in targets["test"]]
+
+
+def binary_of(root: pathlib.Path, crate: str) -> tuple[str, str]:
+    """The one binary of `crates/<crate>`: its name and its root source, as cargo builds it.
+
+    The binaries are counted as cargo counts them (`cargo_targets`): a `[[bin]]` table, the
+    package's own `src/main.rs`, and each auto-discovered `src/bin/<name>.rs` and
+    `src/bin/<name>/main.rs`, never a module file beside them. A crate with no binary or two is
+    refused, since a `bin::` killer names no binary and the runner never guesses one."""
+    where = f"crates/{crate}"
+    binaries, _tests = cargo_targets(root, crate)
+    if len(binaries) != 1:
         raise KillerUnresolved(
-            f"{where} holds {binaries} binaries, and a bin killer names none of them"
+            f"{where} holds {len(binaries)} binaries, and a bin killer names none of them"
         )
-    if not declared:
-        entry: dict = {"name": package}
-    else:
-        entry = declared[0]
-    name, path = entry.get("name"), entry.get("path", "src/main.rs")
-    if not isinstance(name, str) or not isinstance(path, str):
-        raise KillerUnresolved(f"{where} declares a binary with no name or path")
+    name, path = binaries[0]
     if not (root / where / path).is_file():
         raise KillerUnresolved(
             f"{where} declares the binary {name} at {path}, which does not exist"
@@ -431,26 +475,191 @@ def binary_of(root: pathlib.Path, crate: str) -> tuple[str, str]:
     return name, f"{where}/{path}"
 
 
+def cfg_value(tokens: list[str]) -> bool | None:
+    """The value of the cfg predicate `tokens` in a `--test` build, or None when the reader
+    cannot decide it (a feature, a target, any name but `test`)."""
+    if not tokens:
+        return None
+    head = tokens[0]
+    if head == "test" and len(tokens) == 1:
+        return True
+    if (
+        head in ("not", "all", "any")
+        and len(tokens) >= 3
+        and tokens[1] == "("
+        and tokens[-1] == ")"
+    ):
+        parts: list[list[str]] = [[]]
+        depth = 0
+        for token in tokens[2:-1]:
+            depth += {"(": 1, ")": -1}.get(token, 0)
+            if token == "," and depth == 0:
+                parts.append([])
+            else:
+                parts[-1].append(token)
+        if parts[-1] == []:
+            parts.pop()
+        values = [cfg_value(part) for part in parts]
+        if head == "not":
+            return None if len(values) != 1 or values[0] is None else not values[0]
+        if head == "all":
+            if False in values:
+                return False
+            return None if None in values else True
+        if True in values:
+            return True
+        return None if None in values else False
+    return None
+
+
+RUST_TOKEN = re.compile(
+    r"""
+      (?P<space>\s+)
+    | (?P<line>//[^\n]*)
+    | (?P<raw>(?:br|cr|r)(?P<hashes>\#*)")
+    | (?P<string>(?:b|c)?")
+    | (?P<char>b?'(?:\\[^\n]+?|[^\\\n])')
+    | (?P<lifetime>'[A-Za-z_][A-Za-z0-9_]*)
+    | (?P<ident>(?:r\#)?[A-Za-z_][A-Za-z0-9_]*|[0-9][A-Za-z0-9_.]*)
+    | (?P<block>/\*)
+    | (?P<punct>.)
+    """,
+    re.VERBOSE | re.DOTALL,
+)
+
+
+def rust_tokens(text: str) -> list[str]:
+    """The tokens of Rust source `text` with comments dropped and every string, character and
+    lifetime reduced to the placeholder `"lit"`, so that a `mod` inside one is never read."""
+    tokens: list[str] = []
+    position = 0
+    while position < len(text):
+        match = RUST_TOKEN.match(text, position)
+        assert match is not None
+        kind = match.lastgroup if match.lastgroup != "hashes" else "raw"
+        position = match.end()
+        if kind == "raw":
+            close = text.find('"' + match.group("hashes"), position)
+            position = len(text) if close < 0 else close + 1 + len(match.group("hashes"))
+            tokens.append("lit")
+        elif kind == "string":
+            while position < len(text) and text[position] != '"':
+                position += 2 if text[position] == "\\" else 1
+            position += 1
+            tokens.append("lit")
+        elif kind == "block":
+            depth = 1
+            while depth and position < len(text):
+                if text.startswith("/*", position):
+                    depth, position = depth + 1, position + 2
+                elif text.startswith("*/", position):
+                    depth, position = depth - 1, position + 2
+                else:
+                    position += 1
+        elif kind in ("char", "lifetime"):
+            tokens.append("lit")
+        elif kind not in ("space", "line"):
+            tokens.append(match.group(0))
+    return tokens
+
+
+def module_files(file: pathlib.Path, root_file: pathlib.Path) -> list[pathlib.Path]:
+    """The files the module declarations of `file` name, as rustc resolves them in a `--test`
+    build. A declaration behind `#[cfg(not(test))]`, or carrying `#[path]`, contributes none
+    (a `#[path]` file is one the reader does not follow); one the reader cannot decide, a cfg
+    other than `test`, an `include!`, a `mod` inside a block or a `cfg_attr` on a module, is
+    refused by name."""
+    where = file.as_posix()
+    tokens = rust_tokens(file.read_text(encoding="utf-8"))
+    home = file.parent if file == root_file or file.name == "mod.rs" else file.parent / file.stem
+    frames: list[str] = []  # one per open brace: a module's name, "skip" or "block"
+    attributes: list[list[str]] = []
+    children: list[pathlib.Path] = []
+    index = 0
+    while index < len(tokens):
+        token = tokens[index]
+        if token == "#":
+            inner = tokens[index + 1] == "!" if index + 1 < len(tokens) else False
+            start = index + (2 if inner else 1)
+            if start >= len(tokens) or tokens[start] != "[":
+                index += 1
+                continue
+            depth, end = 0, start
+            while end < len(tokens):
+                depth += {"[": 1, "]": -1}.get(tokens[end], 0)
+                if depth == 0:
+                    break
+                end += 1
+            body = tokens[start + 1 : end]
+            if inner and body[:1] == ["cfg"]:
+                raise KillerUnresolved(
+                    f"{where} carries an inner cfg attribute the reader cannot decide"
+                )
+            if not inner and "skip" not in frames:
+                attributes.append(body)
+            index = end + 1
+            continue
+        if token == "include" and tokens[index + 1 : index + 2] == ["!"]:
+            raise KillerUnresolved(
+                f"{where} includes source with include!, which the reader does not follow"
+            )
+        if token == "{":
+            frames.append("block")
+        elif token == "}":
+            if frames:
+                frames.pop()
+        if token == "mod" and "skip" not in frames:
+            name = tokens[index + 1] if index + 1 < len(tokens) else ""
+            after = tokens[index + 2] if index + 2 < len(tokens) else ""
+            if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", name) or after not in (";", "{"):
+                raise KillerUnresolved(f"{where} holds a mod declaration the reader cannot decide")
+            built, followed = True, True
+            for attribute in attributes:
+                if attribute[:1] == ["cfg_attr"]:
+                    raise KillerUnresolved(f"{where} holds a cfg_attr on mod {name}")
+                if attribute[:1] == ["cfg"]:
+                    value = cfg_value(attribute[2:-1] if attribute[1:2] == ["("] else [])
+                    if value is None:
+                        raise KillerUnresolved(
+                            f"{where} holds a cfg on mod {name} the reader cannot decide"
+                        )
+                    built = built and value
+                if attribute[:2] == ["path", "="]:
+                    followed = False
+            attributes = []
+            if after == "{":
+                frames.append(name if built and followed else "skip")
+                index += 3
+                continue
+            if "block" in frames:
+                raise KillerUnresolved(f"{where} declares mod {name} inside a block")
+            if built and followed:
+                base = home.joinpath(*[f for f in frames if f not in ("block", "skip")])
+                for child in (base / f"{name}.rs", base / name / "mod.rs"):
+                    if child.is_file():
+                        children.append(child)
+                        break
+            index += 3
+            continue
+        if token in (";", "{", "}"):
+            attributes = []
+        index += 1
+    return children
+
+
 def module_sources(root_file: pathlib.Path) -> list[pathlib.Path]:
     """The source files of the module tree that starts at `root_file`, in declaration order: the
-    file itself, then each `mod name;` it declares, as `name.rs` or `name/mod.rs` beside the root
-    (whatever its name, as rustc reads a crate root) or a `mod.rs`, and under a directory named for
-    the file otherwise. `#[path]` is not followed."""
+    file itself, then each module it declares (`module_files`), as `name.rs` or `name/mod.rs`
+    beside the root (whatever its name, as rustc reads a crate root) or a `mod.rs`, and under a
+    directory named for the file otherwise. A module with `#[path]` adds no file."""
     found: list[pathlib.Path] = []
 
     def walk(file: pathlib.Path) -> None:
         if file in found:
             return
         found.append(file)
-        home = (
-            file.parent if file == root_file or file.name == "mod.rs" else file.parent / file.stem
-        )
-        text = file.read_text(encoding="utf-8")
-        for name in MOD_DECLARATION.findall(text):
-            for child in (home / f"{name}.rs", home / name / "mod.rs"):
-                if child.is_file():
-                    walk(child)
-                    break
+        for child in module_files(file, root_file):
+            walk(child)
 
     walk(root_file)
     return found
@@ -485,8 +694,7 @@ def locate_killer(root: pathlib.Path, row: Row) -> Killer:
         if target == "lib":
             where = f"crates/{row.crate}/src"
         elif target == "bin":
-            shadowed = [crate / "tests" / "bin.rs", crate / "tests" / "bin" / "main.rs"]
-            if any(candidate.is_file() for candidate in shadowed):
+            if "bin" in cargo_targets(root, row.crate)[1]:
                 raise KillerUnresolved(
                     f"crates/{row.crate} has a test target bin, which the bin kind shadows"
                 )
