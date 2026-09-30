@@ -18,8 +18,11 @@ each implementation's file.
 """
 
 import functools
+import itertools
 import json
 import re
+import shutil
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -36,6 +39,11 @@ TOKEN = re.compile(r"//|/\*|(?<![\w])b?r#*\"|\"|'")
 RAW = re.compile(r"b?r(#*)\"")
 OUT_OF_LINE = re.compile(r"((?:#\[[^\]]*\]\s*)+)(?:pub(?:\([^)]*\))?\s+)?mod\s+(\w+)\s*;")
 PATH_WORD = re.compile(r"\bpath\b")
+KLEENE = {
+    "all": lambda values: False if False in values else None if None in values else True,
+    "any": lambda values: True if True in values else None if None in values else False,
+    "not": lambda values: None if len(values) != 1 or values[0] is None else not values[0],
+}
 CHAR = re.compile(r"'(?:\\(?:x[0-9a-fA-F]{2}|u\{[0-9a-fA-F]{1,6}\}|.)|[^\\'\n])'")
 SHAPE = re.compile(r'const\s+SHAPE\s*:\s*&\'static\s+str\s*=\s*("(?:[^"\\]|\\.)*")\s*;')
 BANDS = REPO / "scripts" / "mutation-rows.d"
@@ -492,8 +500,8 @@ class TheGuardReadsOutOfLineTestModules(unittest.TestCase):
         ("lib.rs", (), "tests.rs"),
         ("main.rs", (), "tests.rs"),
         ("bin/tool.rs", (), "bin/tests.rs"),
-        ("a/depth.rs", (), "a/depth/tests.rs"),
-        ("a/mod.rs", (), "a/tests.rs"),
+        ("a/depth.rs", (("lib.rs", "mod a;\n"), ("a/mod.rs", "mod depth;\n")), "a/depth/tests.rs"),
+        ("a/mod.rs", (("lib.rs", "mod a;\n"),), "a/tests.rs"),
         ("x/depth.rs", (("lib.rs", '#[path = "x/depth.rs"]\nmod depth;\n'),), "x/tests.rs"),
     )
     ATTRIBUTES = (
@@ -505,33 +513,173 @@ class TheGuardReadsOutOfLineTestModules(unittest.TestCase):
         '#[cfg_attr(test, path = "t.rs")]\n',
         '#[cfg_attr(all(test, unix), path = "t.rs")]\n',
     )
+    LEAVES = ("test", "x", 'feature = "slow"')
+    UNKNOWN = re.compile(r"\bx\b|\bfeature\b")
+    CARRIERS = (
+        'const _: &str = "{}";',
+        'const _: &[u8] = b"{}";',
+        "const _: char = '{}';",
+        'const _: &str = r#"{}"#;',
+        "/* {} */",
+        "// {}",
+    )
 
-    def test_every_module_file_choice_is_read_from_rustcs_file_or_refused(self):
-        """R8's population: each declaring-file kind, each attribute that can choose the file, and
-        a stale spelling at each other place rustc could look. The guard reads rustc's file or
-        nothing; it never pins a shape from a file rustc does not read."""
-        members = 0
+    def predicates(self):
+        """Every predicate to depth two over the leaves, built from the guard's own operators, each
+        at every arity it evaluates (so `not` takes exactly one argument)."""
+        arity = {op: [n for n in range(3) if KLEENE[op]([True] * n) is not None] for op in KLEENE}
+
+        def calls(op, parts, n):
+            return [f"{op}({', '.join(args)})" for args in itertools.product(parts, repeat=n)]
+
+        one = [*self.LEAVES] + [
+            p for op in KLEENE for n in arity[op] for p in calls(op, self.LEAVES, n)
+        ]
+        two = [f"{op}({p})" for op in KLEENE if 1 in arity[op] for p in one]
+        two += [
+            f"{op}({p}, {q})" for op in KLEENE if 2 in arity[op] for p in one for q in self.LEAVES
+        ]
+        return one, one + two
+
+    def members(self):
+        """R8's population, generated: (case, files, root, own, decided). Every module source rustc
+        could compile holds a probe naming its place, and the declaring file ends with one that
+        every build compiles, so rustc names each source it compiles. A decided member names no
+        option but `test` and leaves the guard one candidate file, so the guard must read exactly
+        what rustc compiles only under test; any other member it may refuse.
+        """
+        found = []
+
+        def add(case, files, own, decided, root=None):
+            files = {**files, own: files[own] + probe("own")}
+            files = {
+                path: text.replace("PROBE ", f"PROBE {len(found)} ") for path, text in files.items()
+            }
+            found.append((case, files, root or own, own, decided))
+
+        def probe(place):
+            return f'compile_error!("PROBE {place}");\n'
+
+        gate = f"#[cfg({self.LEAVES[0]})]\n"
+        one, every = self.predicates()
+        negated = [*self.LEAVES, *(f"not({leaf})" for leaf in self.LEAVES)]
+        attributes = [f"cfg({p})" for p in every]
+        attributes += [f"cfg_attr({p}, cfg({q}))" for p in negated for q in negated]
+        attributes += [f"cfg_attr({p}, allow(dead_code))" for p in self.LEAVES]
+        runs = []
+        for a in attributes:
+            known = not self.UNKNOWN.search(a)
+            runs += [(f"#[{a}]\n{gate}", "", known), (f"{gate}#[{a}]\n", "", known)]
+            runs += [(gate, f"#![{a}]\n", known), (f"#[{a}]\n", "", known)]
+        bracket = 'doc = concat!["a"]'
+        for p in one:
+            runs += [(f"#[cfg({p})]\n#[{bracket}]\n{gate}", "", False)]
+            runs += [(gate, f"#![{bracket}]\n#![cfg({p})]\n", False)]
+        runs += [(gate + vis, "", True) for vis in ("pub ", "pub(crate) ")]
+        for outer, inner, known in runs:
+            for name in ("tests", "r#tests") if outer.endswith(" ") else ("tests",):
+                declaration = f"{outer}mod {name}"
+                for place, decides in (("tests.rs", known), ("lib/tests.rs", False)):
+                    files = {"lib.rs": declaration + ";\n", place: inner + probe(place)}
+                    add(f"lib.rs {declaration}; {inner!r} at {place}", files, "lib.rs", decides)
+                files = {"lib.rs": f"{declaration} {{\n{inner}{probe('inline')}}}\n"}
+                files["tests.rs"] = probe("tests.rs")
+                add(f"lib.rs {declaration} {{ {inner!r} }}", files, "lib.rs", known)
+        for wrapper in ("", "#[cfg(any())]\n"):
+            for carrier in ("", *(c.format(b) for c in self.CARRIERS for b in "{}")):
+                opened = f"{wrapper}mod inner {{\n{carrier}\n{gate}mod tests"
+                files = {"lib.rs": opened + ";\n}\n", "inner/tests.rs": probe("inner/tests.rs")}
+                add(f"{opened}; }}", {**files, "tests.rs": probe("tests.rs")}, "lib.rs", False)
+                inline = f"{opened} {{\n{probe('inline')}}}\n}}\n"
+                add(f"{opened} {{ }} }}", {"lib.rs": inline}, "lib.rs", False)
         for own, extra, default in self.KINDS:
             stem, folder = Path(own).with_suffix(""), Path(own).parent
             places = [p / leaf for p in (stem, folder) for leaf in ("tests.rs", "tests/mod.rs")]
+            root = next((path for path, _ in extra if path == "lib.rs"), own)
             for attribute in self.ATTRIBUTES:
                 chosen = (folder / "t.rs").as_posix() if attribute else default
                 stale = [p.as_posix() for p in places if p.as_posix() != chosen]
                 for misplaced in (None, *stale):
-                    for spelled in (True, False):
-                        members += 1
-                        text = self.SPELLING if spelled else "let shape = 1;\n"
-                        files = [*extra, (chosen, text)]
-                        if misplaced:
-                            files.append((misplaced, self.SPELLING))
-                        declaration = f"#[cfg(test)]\n{attribute}mod tests;\n"
-                        root = self.declared(declaration, *files, own=own)
-                        src = root / "crates" / "demo" / "src"
-                        case = f"{own} {attribute!r} stale={misplaced} spelled={spelled}"
-                        self.assertIn(out_of_line(src / own), ([src / chosen], []), case)
-                        if not spelled:
-                            self.assertEqual(len(unpinned(root)), 1, case)
-        print(f"R8 population: {members} members")
+                    files = {**dict(extra), own: f"{gate}{attribute}mod tests;\n"}
+                    files.update({place: probe(place) for place in (chosen, misplaced) if place})
+                    decided = not attribute and misplaced is None
+                    add(f"{own} {attribute!r} stale={misplaced}", files, own, decided, root)
+        return found
+
+    def compiled(self, src, count):
+        """What rustc compiles of each member under every setting of `test`, `x` and a feature:
+        (compiled in every run with `--cfg test`, compiled in any run without, members in error)."""
+        rustc = shutil.which("rustc")
+        if rustc is None:
+            self.fail("rustc is not on PATH, so R8's oracle cannot run: this test never skips")
+        switches = (("--cfg", "test"), ("--cfg", "x"), ("--cfg", 'feature="slow"'))
+        runs = []
+        for chosen in itertools.product((False, True), repeat=len(switches)):
+            flags = [flag for on, pair in zip(chosen, switches) if on for flag in pair]
+            log = (src.parent / f"{len(runs)}.log").open("w", encoding="utf-8")
+            command = [rustc, "--edition", "2024", "--crate-type", "lib", "-A", "warnings"]
+            command += ["--error-format=json", "--emit=dep-info", "-o", f"{log.name}.d", *flags]
+            process = subprocess.Popen([*command, str(src / "lib.rs")], cwd=REPO, stderr=log)
+            runs.append((chosen[0], process, log))
+        under, without, broken = [None] * count, [set() for _ in range(count)], set()
+        for test, process, log in runs:
+            process.wait()
+            log.close()
+            places = [set() for _ in range(count)]
+            for line in Path(log.name).read_text(encoding="utf-8").splitlines():
+                message = json.loads(line) if line.startswith("{") else {}
+                if message.get("level") != "error":
+                    continue
+                words = message["message"].split(" ", 2)
+                if words[0] == "PROBE":
+                    places[int(words[1])].add(words[2])
+                    continue
+                owners = {re.search(r"/m(\d+)/", s["file_name"]) for s in message["spans"]}
+                if None in owners or not owners and not words[0].startswith("aborting"):
+                    self.fail(f"rustc failed outside the population: {message['message']}")
+                broken |= {int(owner.group(1)) for owner in owners}
+            for index, compiled in enumerate(places):
+                if test:
+                    under[index] = compiled if under[index] is None else under[index] & compiled
+                else:
+                    without[index] |= compiled
+        return under, without, broken
+
+    def test_every_module_file_choice_is_read_from_rustcs_file_or_refused(self):
+        """R8's class, generated from the guard's grammar and judged by rustc: the guard reads only
+        a source that rustc compiles under `--cfg test` and never without it, whatever else is
+        configured, and a decided member exactly that source; otherwise it refuses."""
+        members = self.members()
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        src = Path(directory.name) / "src"
+        roots = []
+        for index, (_, files, root, _, _) in enumerate(members):
+            for path, text in files.items():
+                (src / f"m{index}" / path).parent.mkdir(parents=True, exist_ok=True)
+                (src / f"m{index}" / path).write_text(text, encoding="utf-8")
+            roots.append(f'#[path = "m{index}/{root}"]\nmod m{index};\n')
+        (src / "lib.rs").write_text("".join(roots), encoding="utf-8")
+        under, without, broken = self.compiled(src, len(members))
+        wrong, judged = [], []
+        for index, (case, _, _, own, decided) in enumerate(members):
+            if decided and index in broken:
+                wrong.append(f"{case}: a decided member does not compile")
+            if index in broken:
+                continue
+            judged.append(case)
+            base = src / f"m{index}"
+            text = (base / own).read_text(encoding="utf-8")
+            reads = {path.relative_to(base).as_posix() for path in out_of_line(base / own)}
+            spans = cfg_test_spans(lexed(text)[1])
+            probes = re.finditer(r'PROBE \d+ (\S+)"', text)
+            reads |= {p.group(1) for p in probes for s, e in spans if s <= p.start() < e}
+            only = under[index] - without[index]
+            if not reads <= only or (decided and reads != only):
+                wrong.append(f"{case}: reads {sorted(reads)}, only under test {sorted(only)}")
+        examined("R8 member(s) judged against rustc", judged)
+        self.assertGreater(len(judged), 0)
+        self.assertEqual(wrong[:1], [], f"{len(wrong)} of {len(members)} members")
 
 
 class TheGuardIgnoresAnImplementationInAComment(unittest.TestCase):
