@@ -347,3 +347,14 @@ along `PATH` (`if False:` for the path branch of `resolve_tool`). The runner spa
 `sys.executable`, an absolute path, and `pathlib` discards the `PATH` part when the name it joins
 is absolute, so the search reaches the same file; measured green, `OK` over 100 members. A relative
 name with a slash is never spawned by the runner.
+
+**Two existing tests gained a patch, and lost no assertion.**
+`test_a_bin_killer_runs_cargo_test_on_the_binary_by_its_exact_path` and
+`test_a_shell_target_with_a_cargo_killer_is_parsed_first_and_built_second` replace
+`runner.subprocess.run` with a recorder so that no real cargo runs, and they hold with the
+recorder alone only while a `cargo` is on the machine's `PATH`: the runner now resolves the
+executable before the spawn it records. Each gains `mock.patch.object(runner, "resolve_tool")`
+beside the recorder, so that they read the same fact on a machine without cargo, where they
+errored at the rule's own refusal (`mutation_rows.ToolMissing: missing tool: cargo: not found on PATH`)
+in the failure-set measurement. Every assertion stands, and the measurement without cargo on `PATH`
+now differs from dev's by the new tests alone.

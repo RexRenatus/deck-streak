@@ -791,7 +791,10 @@ class TheRunnerParseChecksAShellMutant(unittest.TestCase):
             calls.append(command)
             return subprocess.CompletedProcess(command, 0, b"", b"")
 
-        with mock.patch.object(runner.subprocess, "run", side_effect=record):
+        with (
+            mock.patch.object(runner.subprocess, "run", side_effect=record),
+            mock.patch.object(runner, "resolve_tool"),
+        ):
             self.assertIsNone(runner.builds(Path("."), row, killer, text))
         self.assertEqual([call[0] for call in calls], ["bash", "cargo"])
         self.assertEqual(calls[0], ["bash", "-n"])
@@ -879,6 +882,7 @@ class TheBinKillerRunsTheBinarysOwnUnitTests(unittest.TestCase):
         with (
             mock.patch.object(runner.subprocess, "run", side_effect=record),
             mock.patch.object(runner, "run_in_own_group", side_effect=record),
+            mock.patch.object(runner, "resolve_tool"),
         ):
             run = runner.run_killer(fixture.root, killer, Path("."))
             self.assertIsNone(runner.builds(fixture.root, row, killer, b"x"))
