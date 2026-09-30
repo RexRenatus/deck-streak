@@ -219,3 +219,12 @@ The rows S12736 and S12737 were added in the next commit, and the rows S12731 an
 test of A38, because the new line turns the old killer of each into a no-op. Each of the four mutants
 survives the tests that the previous head held and is killed by the test of A38, and every row of the
 band is proved killed by its full id on a clean committed tree.
+
+The fourth round's next change derives the places of A38 from the path settings through a map, and the
+test asserts that the map's keys equal the settings list. It is a test-only strengthening that pins
+behaviour already so at the head, with no production change. Its red is a further path setting in the
+script and in the settings list, and the test of A39 has its own red with the setting in the script alone.
+With the setting in both, A38 fails with
+the line `a setting is no place`, and A39 passes. With the setting in the
+script only, A39 fails with the line `a new setting is an axis`. Both plants
+were run in a scratch copy, never in the worktree.
