@@ -1523,7 +1523,14 @@ runpy.run_path(sys.argv[0], run_name="__main__")
         record = w.log / "record"
         self.assertTrue(record.is_file(), "bash recorded no command: nothing was recorded")
         fields = [field.decode() for field in record.read_bytes().split(b"\0")[:-1]]
-        records = list(zip(fields[0::3], fields[1::3], fields[2::3], strict=True))
+        records = list(
+            zip(
+                fields[0 : len(fields) : 3],
+                fields[1 : len(fields) : 3],
+                fields[2 : len(fields) : 3],
+                strict=True,
+            )
+        )
         unnamed = {self.PREFIX} | {n + extra for n in self.settings() for extra in ("2", "_BACKUP")}
         # Without an unnamed setting both steps succeed, so a refusal below is the setting's.
         steps = {step[0]: step for step in self.STEPS}
