@@ -43,12 +43,13 @@ use deck_streak_coordination::sync_cycle::{
 };
 use deck_streak_identity::Owner;
 use deck_streak_ingest::engine::{AnkiEngine, RslibEngine};
-use deck_streak_ingest::gate::ChangeGate;
+use deck_streak_ingest::gate::{ChangeGate, GateError};
 use deck_streak_ingest::reader::CollectionReader;
 use deck_streak_ingest::settings::{ScopeSettings, SyncSettings};
 use deck_streak_ingest::state::RefusalReason;
-use deck_streak_ingest::sync::{SyncReport, Syncer};
+use deck_streak_ingest::sync::{SyncError, SyncReport, Syncer};
 use deck_streak_ingest::sync_runs::{SqliteSyncRuns, Trigger};
+use deck_streak_ingest::window::WindowError;
 use deck_streak_kernel::{
     Clock, Courses, CoursesError, CredentialLoader, CredentialsDirectory, Db, Environment,
     KernelError, Offload, Redactor, Setting, SettingsError, StudyDayRule, SystemClock,
@@ -330,13 +331,13 @@ impl OwnerSyncCycle {
         gate.state()
             .request_rescore(clock.now())
             .await
-            .map_err(|error| refused(RefusalReason::RescoreUnrecorded, &error))?;
-        let settings = SyncSettings::from_env(&self.env)
-            .map_err(|error| refused(RefusalReason::SyncSettingsRefused, &error))?;
+            .map_err(|error| refused(Step::Rescore, &error))?;
+        let settings =
+            SyncSettings::from_env(&self.env).map_err(|error| refused(Step::Settings, &error))?;
         let directory = CredentialsDirectory::from_env(&self.env)
-            .map_err(|error| refused(RefusalReason::CredentialsDirectoryRefused, &error))?;
-        let scope = ScopeSettings::from_env(&self.env)
-            .map_err(|error| refused(RefusalReason::ScopeSettingsRefused, &error))?;
+            .map_err(|error| refused(Step::Credentials, &error))?;
+        let scope =
+            ScopeSettings::from_env(&self.env).map_err(|error| refused(Step::Scope, &error))?;
         let reader = self
             .recompute
             .reader(&settings, scope, self.offload.clone());
@@ -355,7 +356,7 @@ impl OwnerSyncCycle {
         );
         let report = sync_cycle(&parts, Trigger::Owner)
             .await
-            .map_err(|error| refused(cycle_reason(&error), &error))?;
+            .map_err(|error| refused(Step::of(&error), &error))?;
         Ok(answer_of(&report))
     }
 }
@@ -375,23 +376,103 @@ pub fn router(
         .with_bot(Arc::new(OwnerChat::new(transport, owner)))
 }
 
-/// The refusal `reason`, logged with its cause: the cause names a setting or a step, never a
-/// value. It takes the closed enum, so no other code can be recorded through it.
-fn refused(reason: RefusalReason, error: &dyn std::fmt::Display) -> RefusalReason {
-    tracing::error!(reason = reason.as_str(), %error, "the owner's sync could not run");
-    reason
+/// A step of the owner's sync whose failure refuses it (SPEC-128 A16; ADR-193): the four reads
+/// `run` makes before the cycle, then one step for each kind of the cycle's own step errors. The
+/// refusal is logged under the step's name, so two steps that give one code are told apart.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Step {
+    /// Marking the owner's rescore pending.
+    Rescore,
+    /// Reading the sync's settings.
+    Settings,
+    /// Reading the credentials directory.
+    Credentials,
+    /// Reading the scope's settings.
+    Scope,
+    /// Reading the run record before the sync.
+    History,
+    /// Running the sync and recording its run.
+    Sync,
+    /// Reading the registered obligations' deadlines.
+    Obligations,
+    /// The change gate's probe of the copy.
+    GateProbe,
+    /// The change gate's read of its state and record of its decision or anchor.
+    GateRecord,
+    /// Reading the window from the copy.
+    WindowRead,
+    /// Reading or writing the window's base.
+    WindowBase,
+    /// The recompute's fold.
+    Recompute,
 }
 
-/// The reason code of a cycle that could not run to its end: the `sync` job's own
-/// (`role_job.rs`). A failed sync is not one: it is a recorded run, answered as such.
-const fn cycle_reason(error: &CycleError) -> RefusalReason {
-    match error {
-        CycleError::History(_) | CycleError::Sync(_) => RefusalReason::SyncRecordFailed,
-        CycleError::Obligations(_) => RefusalReason::ObligationsUnreadable,
-        CycleError::Gate(_) | CycleError::Window(_) | CycleError::Recompute(_) => {
-            RefusalReason::RecomputeFailed
+impl Step {
+    /// The cycle's step whose failure `error` is: each kind of each step's error is named, so a
+    /// kind added to one does not compile until it is given a step.
+    const fn of(error: &CycleError) -> Self {
+        match error {
+            CycleError::History(_) => Self::History,
+            CycleError::Sync(SyncError::Store(_)) => Self::Sync,
+            CycleError::Obligations(_) => Self::Obligations,
+            CycleError::Gate(GateError::Read(_)) => Self::GateProbe,
+            CycleError::Gate(GateError::Record(_)) => Self::GateRecord,
+            CycleError::Window(WindowError::Read(_)) => Self::WindowRead,
+            CycleError::Window(WindowError::State(_)) => Self::WindowBase,
+            CycleError::Recompute(_) => Self::Recompute,
         }
     }
+
+    /// The step's name in the refusal's log.
+    const fn name(self) -> &'static str {
+        match self {
+            Self::Rescore => "rescore",
+            Self::Settings => "settings",
+            Self::Credentials => "credentials",
+            Self::Scope => "scope",
+            Self::History => "history",
+            Self::Sync => "sync",
+            Self::Obligations => "obligations",
+            Self::GateProbe => "gate_probe",
+            Self::GateRecord => "gate_record",
+            Self::WindowRead => "window_read",
+            Self::WindowBase => "window_base",
+            Self::Recompute => "recompute",
+        }
+    }
+
+    /// The code the step's refusal records. A cycle's step gives the `sync` job's own
+    /// (`role_job.rs`); a failed sync is not a step's failure: it is a recorded run, answered as
+    /// such.
+    const fn reason(self) -> RefusalReason {
+        match self {
+            Self::Rescore => RefusalReason::RescoreUnrecorded,
+            Self::Settings => RefusalReason::SyncSettingsRefused,
+            Self::Credentials => RefusalReason::CredentialsDirectoryRefused,
+            Self::Scope => RefusalReason::ScopeSettingsRefused,
+            Self::History | Self::Sync => RefusalReason::SyncRecordFailed,
+            Self::Obligations => RefusalReason::ObligationsUnreadable,
+            Self::GateProbe
+            | Self::GateRecord
+            | Self::WindowRead
+            | Self::WindowBase
+            | Self::Recompute => RefusalReason::RecomputeFailed,
+        }
+    }
+}
+
+/// The refusal of `step`, logged under the step's name with its code and its cause: the cause
+/// names a setting or a step, never a value. The code is the step's own, from the closed enum, so
+/// no other code can be recorded through it.
+fn refused(step: Step, error: &dyn std::fmt::Display) -> RefusalReason {
+    let reason = step.reason();
+    tracing::error!(
+        step = step.name(),
+        reason = reason.as_str(),
+        %error,
+        "the owner's sync could not run"
+    );
+    reason
 }
 
 /// What the owner is told of `report`: the sync, then the recompute.
