@@ -116,3 +116,42 @@ The A5 red line above quotes a failure that came from `check_judge` comparing a 
 `f'"{path}"'`; its comparison changed to `path` between that red (2bf4a9a) and its green (11469f9),
 because the reader's representation changed from quoted words to shell-split words. The fixtures
 and the test methods stayed byte-identical across the change.
+
+## Addendum, 2026-09-29 (issue #394): A7 for redirections and substitutions
+
+The lines above stand. The red commit changes only the fixtures (four wrong paths); the green commit
+00c589f9 changes only the reader's break set and its docstring, in `scripts/tests/test_verdict_download.py`,
+because the reader lives in the test module. The whole test file at the red commit fails
+only A7, four subtests, each `AssertionError: AssertionError not raised`.
+
+```red-first
+A7: red at 27515b29: FAILED (failures=4), AssertionError: AssertionError not raised, for each of "a flag as a redirection's target", "a flag inside a command substitution", "a flag inside backquotes" and "a flag inside a process substitution"
+A7: green at 00c589f9
+```
+
+## Addendum, 2026-09-29 (issue #394, round 2): A7 inside double quotes
+
+The lines above stand, and A7 keeps its one red and one green line; this replay is quoted below
+them. The red commit e0945c6b adds only two fixtures, a flag inside a double-quoted `$( )` and a
+flag inside double-quoted backquotes; the green commit cff9f209 changes only the reader and its
+docstring, in `scripts/tests/test_verdict_download.py`, because the reader lives in the test module.
+The whole test file at the red commit fails only A7, two subtests, each
+`AssertionError: AssertionError not raised`.
+
+```text
+A7 replay: red at e0945c6b: FAILED (failures=2), AssertionError: AssertionError not raised, for each of "a flag inside a double-quoted command substitution" and "a flag inside double-quoted backquotes"
+A7 replay: green at cff9f209: Ran 7 tests, OK, examined 17 wrong paths
+```
+
+## Addendum, 2026-09-29 (issue #394, round 3): A7 with an ANSI-C string
+
+The lines above stand, and A7 keeps its one red and one green line; this replay is quoted below
+them. The red commit 372f3614 adds only one fixture, a flag inside an ANSI-C string with an escaped
+quote; the green commit 950edffb changes only the reader and its docstring, in
+`scripts/tests/test_verdict_download.py`, because the reader lives in the test module. The whole
+test file at the red commit fails only A7, one subtest, by assertion.
+
+```text
+A7 replay: red at 372f3614: FAILED (failures=1), AssertionError: AssertionError not raised, for "a flag inside an ANSI-C string with an escaped quote"
+A7 replay: green at 950edffb: Ran 7 tests, OK, examined 18 wrong paths
+```
