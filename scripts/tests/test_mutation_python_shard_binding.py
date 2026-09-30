@@ -367,6 +367,10 @@ def reader_members(plan):
                     record["outcome"] = value
                 shown = "absent" if value is ABSENT else repr(value)
                 yield "outcome", f"shard {k}: mutant {index}'s outcome is {shown}", slots, {k}
+            for value in (5, None, "abc", []):
+                slots = plan.correct()
+                slots[k]["files"][0]["mutants"][index] = value
+                yield "record", f"shard {k}: mutant {index} is {value!r}", slots, {k}
             for value in (5, None, ABSENT):
                 slots = plan.correct()
                 record = slots[k]["files"][0]["mutants"][index]
@@ -453,6 +457,7 @@ class TheBindingAndTheJudgeReadOneReport(unittest.TestCase):
                 "mutants",
                 "name",
                 "outcome",
+                "record",
                 "unread entry",
                 "unread extra",
             ],
