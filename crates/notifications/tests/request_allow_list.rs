@@ -20,7 +20,7 @@
 //! resolving. Its population is generated: every spelling of a lint, in every form of an
 //! attribute, at every place, planted in the bot's shipped sources.
 
-#![allow(clippy::expect_used)]
+#![allow(clippy::expect_used, clippy::print_stdout)]
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -574,7 +574,17 @@ fn workspace_files(root: &Path) -> Vec<(String, String)> {
         }
     }
     found.sort();
-    found
+    examined("workspace files that can carry a suppression", found)
+}
+
+/// Prints how many items a check examined and refuses zero (the tdd pack's examined contract).
+fn examined<T>(what: &str, items: Vec<T>) -> Vec<T> {
+    println!("examined {} {what}", items.len());
+    assert!(
+        !items.is_empty(),
+        "examined 0 {what}: the population is empty, so nothing was judged"
+    );
+    items
 }
 
 /// The refusals of a set of files, and the named sites found in them.
