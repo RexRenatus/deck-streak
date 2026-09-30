@@ -5,7 +5,7 @@
 //! The lock is released by an explicit unlock before the file closes, never by the close alone: a
 //! lock another handle to the same file still held would otherwise outlive its holder.
 
-use std::fs::{File, OpenOptions};
+use std::fs::{File, OpenOptions, TryLockError};
 use std::io;
 use std::path::{Path, PathBuf};
 
@@ -41,6 +41,32 @@ impl CollectionLock {
     /// The operating system's error when the file cannot be opened or locked.
     pub async fn exclusive(&self) -> io::Result<Held> {
         self.take(File::lock).await
+    }
+
+    /// Takes the lock exclusively without waiting: `None` when another holder has it, so a caller
+    /// that finds it held starts nothing (SPEC-094 R8). The lock is released by an explicit unlock.
+    ///
+    /// # Errors
+    ///
+    /// The operating system's error when the file cannot be opened or locked for a reason other
+    /// than being held.
+    pub async fn try_exclusive(&self) -> io::Result<Option<Held>> {
+        let path = self.path.clone();
+        tokio::task::spawn_blocking(move || {
+            let file = OpenOptions::new()
+                .read(true)
+                .write(true)
+                .create(true)
+                .truncate(false)
+                .open(&path)?;
+            match file.try_lock() {
+                Ok(()) => Ok(Some(Held { file: Some(file) })),
+                Err(TryLockError::WouldBlock) => Ok(None),
+                Err(TryLockError::Error(error)) => Err(error),
+            }
+        })
+        .await
+        .map_err(io::Error::other)?
     }
 
     /// Takes the lock shared, waiting for an exclusive holder to release it.

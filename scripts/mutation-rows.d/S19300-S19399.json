@@ -1,0 +1,46 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S19300-A-SHEBANG-AFTER-A-BYTE-ORDER-MARK-IS-SKIPPED",
+        "scripts/tests/test_setting_shapes.py",
+        "    if text.startswith(\"#!\", at) and not following(text, at + 2).startswith(\"[\"):\n",
+        "    if text.startswith(\"#!\") and not following(text, at + 2).startswith(\"[\"):\n",
+        "a shebang line that follows a byte order mark is skipped, so the inner attributes below it still decide whether the file is compiled under test (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+      ],
+      [
+        "S19301-THE-WALK-FOLLOWS-NO-UNDECIDED-DECLARATION",
+        "scripts/tests/test_setting_shapes.py",
+        "            if kept is True:\n                todo.append(path)\n",
+        "            if kept is not False:\n                todo.append(path)\n",
+        "a declaration whose attribute leaves its file undecided is not followed by the walk, so its file is not read as reached (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+      ],
+      [
+        "S19302-A-RAW-PATH-WORD-CHOOSES-A-FILE",
+        "scripts/tests/test_setting_shapes.py",
+        "        if run is None or any(w.removeprefix(\"r#\") == \"path\" for each in run for w in each):\n",
+        "        if run is None or any(w == \"path\" for each in run for w in each):\n",
+        "a `path` attribute spelled as a raw identifier chooses a file like any other, so its module is not read (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+      ],
+      [
+        "S19303-A-TRIPLE-STAR-COMMENT-IS-NO-DOC-COMMENT",
+        "scripts/tests/test_setting_shapes.py",
+        "    if opening == \"///\" and after != \"/\" or opening == \"/**\" and after not in (\"*\", \"/\"):\n",
+        "    if opening == \"///\" and after != \"/\" or opening == \"/**\" and after != \"/\":\n",
+        "a block comment that opens with three stars is a plain comment, not a doc comment, so it is skipped before an inner attribute (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+      ],
+      [
+        "S19304-A-CFG-ATTR-APPLIES-EVERY-ATTRIBUTE",
+        "scripts/tests/test_setting_shapes.py",
+        "    kept = [condition(attribute, test) for attribute in applied(words[at + 1 : -1])]\n",
+        "    kept = [condition(attribute, test) for attribute in applied(words[at + 1 : -1])[:1]]\n",
+        "a `cfg_attr` applies every attribute it lists once its predicate holds, not only the first (SPEC-192 R8)",
+        "test_setting_shapes.TheGuardReadsOutOfLineTestModules.test_every_module_file_choice_is_read_from_rustcs_file_or_refused"
+      ]
+    ]
+  }
+}

@@ -187,6 +187,28 @@
       "retention": {"until": "account-deletion"},
       "export": true,
       "erase": "anonymise"
+    },
+    {
+      "id": "law-drills",
+      "data": "which law drills the owner answered, from which surface and on which study day, and each graded drill's type, subject, accepted XP and the study day it was graded; never a drill's text or an answer, which stay in the owner's notes",
+      "source": "learner-input",
+      "stores": ["drill_answers.*", "drill_grades.*"],
+      "purpose": "answering each drill once, paying each graded drill once, and telling the agent which drill types and subjects the owner practised",
+      "lawful_basis": "contract",
+      "retention": {"until": "account-deletion"},
+      "export": true,
+      "erase": "delete"
+    },
+    {
+      "id": "research-instruments",
+      "data": "the latest report of each research instrument that reads the owner's collection: the study day it was built for, its shape version, its findings about the owner's own cards and note types, and the name of each read that failed",
+      "source": "derived",
+      "stores": ["instrument_reports.*"],
+      "purpose": "showing the owner what each instrument last found, and running each weekly instrument once in seven study days",
+      "lawful_basis": "contract",
+      "retention": {"until": "account-deletion"},
+      "export": true,
+      "erase": "delete"
     }
   ],
   "sql": ["migrations/*.sql"],

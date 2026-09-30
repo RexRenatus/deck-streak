@@ -91,3 +91,8 @@ ai-content-safety pack ("The gate", "Agency"); docs/schematics/agent-duty-run.md
 
 Amended by ADR-056 (2026-09-28): no pack runner will be published, so its first "what would
 make this wrong" premise is retired.
+
+Amended by ADR-293 (2026-09-30): the agent's source pins (SPEC-043 A21 and A23) read Rust through
+`proc-macro2`'s lexer and `syn`'s literal values, as test-only dependencies already in the lock,
+rather than through a lexer written by hand; the hand lexer with more rules and a rustc-compiled
+reader were measured and rejected.

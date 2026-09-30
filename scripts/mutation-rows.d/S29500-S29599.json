@@ -1,0 +1,78 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S29500-THE-READER-ADMITS-AN-INTEGRAL-FLOAT",
+        "scripts/tests/test_formal_config.py",
+        "isinstance(value, int) and not isinstance(value, bool) and value >= 1",
+        "(isinstance(value, int) or (isinstance(value, float) and value.is_integer())) and not isinstance(value, bool) and value >= 1",
+        "a positive-integer field that admits 20.0, an integral float Python reads as a float, is not refused by name (SPEC-295 A3 and A4)",
+        "test_formal_config.FormalConfig.test_the_reader_refuses_each_planted_fault"
+      ],
+      [
+        "S29501-THE-READER-ADMITS-A-NULL-MAP-VALUE",
+        "scripts/tests/test_formal_config.py",
+        "all(is_posint(v) for v in value.values())",
+        "all(v is None or is_posint(v) for v in value.values())",
+        "an integer map that admits a null value is not refused by name (SPEC-295 A3 and A4)",
+        "test_formal_config.FormalConfig.test_the_reader_refuses_each_planted_fault"
+      ],
+      [
+        "S29502-THE-READER-ADMITS-A-FLOAT-MAP-VALUE",
+        "scripts/tests/test_formal_config.py",
+        "all(is_posint(v) for v in value.values())",
+        "all(is_posint(v) or isinstance(v, float) for v in value.values())",
+        "an integer map that admits a float value, 1.5 or 20.0, is not refused by name (SPEC-295 A3 and A4)",
+        "test_formal_config.FormalConfig.test_the_reader_refuses_each_planted_fault"
+      ],
+      [
+        "S29503-THE-READER-ADMITS-AN-INTEGRAL-FLOAT-MAP-VALUE",
+        "scripts/tests/test_formal_config.py",
+        "all(is_posint(v) for v in value.values())",
+        "all(is_posint(v) or (isinstance(v, float) and v.is_integer()) for v in value.values())",
+        "an integer map that admits the integral float 20.0 as a value is not refused by name (SPEC-295 A3 and A4)",
+        "test_formal_config.FormalConfig.test_the_reader_refuses_each_planted_fault"
+      ],
+      [
+        "S29504-THE-READER-ADMITS-A-STRING-MAP-VALUE",
+        "scripts/tests/test_formal_config.py",
+        "all(is_posint(v) for v in value.values())",
+        "all(is_posint(v) or isinstance(v, str) for v in value.values())",
+        "an integer map that admits a string value is not refused by name (SPEC-295 A3 and A4)",
+        "test_formal_config.FormalConfig.test_the_reader_refuses_each_planted_fault"
+      ],
+      [
+        "S29505-THE-READER-ADMITS-AN-ARRAY-MAP-VALUE",
+        "scripts/tests/test_formal_config.py",
+        "all(is_posint(v) for v in value.values())",
+        "all(is_posint(v) or isinstance(v, list) for v in value.values())",
+        "an integer map that admits an array value is not refused by name (SPEC-295 A3 and A4)",
+        "test_formal_config.FormalConfig.test_the_reader_refuses_each_planted_fault"
+      ],
+      [
+        "S29506-THE-READER-ADMITS-AN-OBJECT-MAP-VALUE",
+        "scripts/tests/test_formal_config.py",
+        "all(is_posint(v) for v in value.values())",
+        "all(is_posint(v) or isinstance(v, dict) for v in value.values())",
+        "an integer map that admits an object value is not refused by name (SPEC-295 A3 and A4)",
+        "test_formal_config.FormalConfig.test_the_reader_refuses_each_planted_fault"
+      ],
+      [
+        "S29507-THE-READER-JUDGES-ONLY-THE-FIRST-MAP-VALUE",
+        "scripts/tests/test_formal_config.py",
+        "all(is_posint(v) for v in value.values())",
+        "all(is_posint(v) for v in list(value.values())[:1])",
+        "an integer map judged by its first value alone admits a bad value that follows a good one (SPEC-295 A3 and A4)",
+        "test_formal_config.FormalConfig.test_the_reader_refuses_each_planted_fault"
+      ],
+      [
+        "S29508-THE-READER-JUDGES-ONLY-THE-LAST-MAP-VALUE",
+        "scripts/tests/test_formal_config.py",
+        "all(is_posint(v) for v in value.values())",
+        "all(is_posint(v) for v in list(value.values())[-1:])",
+        "an integer map judged by its last value alone admits a bad value that precedes a good one (SPEC-295 A3 and A4)",
+        "test_formal_config.FormalConfig.test_the_reader_refuses_each_planted_fault"
+      ]
+    ]
+  }
+}

@@ -139,6 +139,48 @@ WRONG = {
         CANONICAL[0].replace("judge --plan", "judge\n        --plan"),
         CANONICAL[1],
     ),
+    "a flag as a redirection's target": (
+        CANONICAL[0]
+        .replace(' --rows "$reports/mutation-rows/rows.json"', "")
+        .replace(" ||", ' > --rows "$reports/mutation-rows/rows.json" ||'),
+        CANONICAL[1],
+    ),
+    "a flag inside a command substitution": (
+        CANONICAL[0]
+        .replace(' --rows "$reports/mutation-rows/rows.json"', "")
+        .replace(" ||", ' $( : --rows "$reports/mutation-rows/rows.json" ) ||'),
+        CANONICAL[1],
+    ),
+    "a flag inside backquotes": (
+        CANONICAL[0]
+        .replace(' --rows "$reports/mutation-rows/rows.json"', "")
+        .replace(" ||", ' ` : --rows "$reports/mutation-rows/rows.json" ` ||'),
+        CANONICAL[1],
+    ),
+    "a flag inside a process substitution": (
+        CANONICAL[0]
+        .replace(' --rows "$reports/mutation-rows/rows.json"', "")
+        .replace(" ||", ' <( : --rows "$reports/mutation-rows/rows.json" ) ||'),
+        CANONICAL[1],
+    ),
+    "a flag inside a double-quoted command substitution": (
+        CANONICAL[0]
+        .replace(' --rows "$reports/mutation-rows/rows.json"', "")
+        .replace(" ||", ' "$( : " --rows "$reports/mutation-rows/rows.json" " )" ||'),
+        CANONICAL[1],
+    ),
+    "a flag inside an ANSI-C string with an escaped quote": (
+        CANONICAL[0]
+        .replace(' --rows "$reports/mutation-rows/rows.json"', "")
+        .replace(" ||", " $'a\\' --rows \"$reports/mutation-rows/rows.json\" '\\' ||"),
+        CANONICAL[1],
+    ),
+    "a flag inside double-quoted backquotes": (
+        CANONICAL[0]
+        .replace(' --rows "$reports/mutation-rows/rows.json"', "")
+        .replace(" ||", ' "` : " --rows "$reports/mutation-rows/rows.json" " `" ||'),
+        CANONICAL[1],
+    ),
 }
 
 
@@ -146,7 +188,11 @@ def mark_dollars(command):
     """The command with each `$` the shell reads as text replaced by LITERAL (in single quotes,
     or escaped by a backslash) and each `$` outside every quote preceded by UNQUOTED. `shlex`
     removes the quotes and the backslash, so this pass keeps the fact it would lose. The command
-    ends where the shell ends it: at a control operator or a comment outside every quote."""
+    ends where the shell ends it, at a control operator or a comment outside every quote, and the
+    reading ends at a redirection or a command substitution, whose words are not arguments. Inside
+    double quotes `$(` and the backquote still open a substitution, so the reading ends there too,
+    and the double quote it ends in is closed first so that the words before it still split. An
+    ANSI-C string `$'...'`, where `\\'` does not close the quote, ends the reading too."""
     out, quote, i, start = [], None, 0, True
     while i < len(command):
         char = command[i]
@@ -154,7 +200,12 @@ def mark_dollars(command):
             out.append(LITERAL if command[i + 1] == "$" else char + command[i + 1])
             i, start = i + 2, False
             continue
-        if quote is None and (char in ";&|" or (char == "#" and start)):
+        if quote is None and (char in ";&|()<>`" or (char == "#" and start)):
+            break
+        if quote is None and command.startswith("$'", i):
+            break
+        if quote == '"' and (char == "`" or command.startswith("$(", i)):
+            out.append(quote)
             break
         start = quote is None and char in " \t"
         if quote is None and char in "'\"":
@@ -270,6 +321,10 @@ def shard_artifact(shard, family="rust"):
     inside = posixpath.relpath(out, root)
     prefix = "" if inside == "." else inside + "/"
     files = {prefix + leaf for leaf in leaves}
+    if family == "rust":
+        # The Rust leg runs inside the memory scope, which writes its record beside the report
+        # (SPEC-196 R8).
+        files.add(f"{prefix}memory-scope.json")
     return name, files
 
 

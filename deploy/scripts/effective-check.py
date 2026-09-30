@@ -124,7 +124,7 @@ UNIT_NAMES = frozenset("inN")
 # A `..` segment, which systemd keeps in a command's path and the kernel then follows.
 UP_LEVEL = re.compile(r"(?:^|[/\s])\.\.(?:[/\s]|$)")
 NAME = re.compile(r"^[A-Za-z][A-Za-z0-9-]*$")
-INSTANCE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
+INSTANCE = re.compile(r"^[a-z0-9][a-z0-9_-]*$")
 DROP_IN = re.compile(r"^[0-9]{2}-[a-z0-9-]+\.conf$")
 
 

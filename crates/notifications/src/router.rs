@@ -37,7 +37,7 @@ use crate::ladder::{self, DICE_EMOJI, REACTION_EMOJI, REVEAL_PAUSE, REVEAL_PLACE
 use crate::ledger::{self, ClaimRow, DecisionRow, HeldRow};
 use crate::occasion::{Class, DedupeScope, LapseContext, Occasion, StreakFacts, Surface, Tier};
 use crate::owner_message;
-use crate::photo::{FileId, Photo};
+use crate::photo::{FileId, Photo, check_caption};
 use crate::policy::Policy;
 use crate::quiet::{in_quiet_hours, local_minute};
 use crate::transport::{BotTransport, PhotoPushed, Prepared, Pushed};
@@ -431,8 +431,12 @@ impl Router {
 
     /// Prepares the photo Telegram holds as `file`, captioned `caption`, for the owner to share
     /// (SPEC-132 R8): one `prepare_share`, no ledger row, no delivery. The transport's outcome is
-    /// the answer, and with no transport joined it is [`Prepared::Unsupported`].
+    /// the answer, and with no transport joined it is [`Prepared::Unsupported`]. A caption over the
+    /// Bot API's bound, the photo's own, is [`Prepared::Refused`] before any call is made.
     pub async fn prepare_share(&self, file: &FileId, caption: &str) -> Prepared {
+        if let Err(refusal) = check_caption(caption) {
+            return Prepared::Refused(refusal);
+        }
         match &self.bot {
             Some(bot) => bot.prepare_share(&PASS, file, caption).await,
             None => Prepared::Unsupported,

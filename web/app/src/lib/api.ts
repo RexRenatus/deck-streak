@@ -1,4 +1,10 @@
 import { FEED_PATH, parseFeed, type FeedItem } from './ladder/feed';
+import {
+  parseEnvelope,
+  parseListings,
+  type Envelope,
+  type Listing
+} from './insights/insights';
 import { parseLevel, type LevelView } from './level/level';
 import { parseScore, type ScoreToday } from './score/score';
 import { telegram } from './telegram.svelte';
@@ -48,6 +54,10 @@ export interface Api {
   level(): Promise<Answer<LevelView>>;
   /** The owner's unseen in-app celebrations, each with its tier (SPEC-084 R10). */
   feed(): Promise<Answer<FeedItem[]>>;
+  /** The instruments the owner can read (SPEC-094 R18). */
+  insights(): Promise<Answer<Listing[]>>;
+  /** One instrument's latest report; null when it has not run yet. */
+  insight(id: string): Promise<Answer<Envelope | null>>;
 }
 
 /** How opening a session ended: a session, a refusal only reopening the app can answer, or no answer. */
@@ -138,7 +148,15 @@ export function createApi(options: ApiOptions): Api {
     me: () => read('/api/me', parseMe),
     score: () => read('/api/score', parseScore),
     level: () => read('/api/level', parseLevel),
-    feed: () => read(FEED_PATH, parseFeed)
+    feed: () => read(FEED_PATH, parseFeed),
+    insights: () => read('/api/insights', parseListings),
+    insight: (id) =>
+      read(`/api/insights/${encodeURIComponent(id)}`, (body) => {
+        const parsed = parseEnvelope(body);
+        return parsed === undefined ? null : { value: parsed };
+      }).then((answer) =>
+        answer.kind === 'ok' ? { kind: 'ok', value: answer.value.value } : answer
+      )
   };
 }
 
