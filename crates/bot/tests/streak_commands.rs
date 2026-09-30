@@ -195,3 +195,72 @@ async fn each_line_names_its_own_run_and_best_and_the_law_leads_by_its_run() {
     assert_eq!(cases, 27);
     assert_eq!(idle_law_with_a_best, 6);
 }
+
+/// A rule (A50): the language line carries its run's heat in the heat's own place, between the run
+/// and the best, and nothing there at a run of zero. Language runs 0, 3, 9 and 45 cross the empty
+/// heat and three heat bands, each with a best in the band above, at one freeze and at two, beside
+/// a law run of 2: every value on the line differs from the heat, and the whole line is read.
+#[tokio::test]
+async fn the_language_line_carries_its_runs_heat_in_the_heats_own_place() {
+    // Each run's heat is written out here, not read from the streak crate, so a band the reply
+    // gets wrong cannot agree with the oracle it is judged by.
+    let bands: [(i64, i64, &str); 4] = [
+        (0, 3, ""),
+        (3, 9, " \u{1f525}"),
+        (9, 45, " \u{1f525}\u{1f525}"),
+        (45, 120, " \u{1f525}\u{1f525}\u{1f525}"),
+    ];
+    let mut cases = 0_u32;
+    let mut heats = std::collections::BTreeSet::new();
+    for (run, best, heat) in bands {
+        for freezes in [1_i64, 2] {
+            let bench = Bench::start().await;
+            {
+                let mut write = bench.db.write().await.expect("a write");
+                for (track, current, longest, held) in [
+                    ("language", run, best, freezes),
+                    ("law", 2_i64, 2_i64, 0_i64),
+                ] {
+                    sqlx::query(
+                        "INSERT INTO streak_state \
+                         (track, current_days, longest_days, freezes, last_study_day, comeback_armed, created_at) \
+                         VALUES (?1, ?2, ?3, ?4, ?5, 0, 1000)",
+                    )
+                    .bind(track)
+                    .bind(current)
+                    .bind(longest)
+                    .bind(held)
+                    .bind(TODAY - 1)
+                    .execute(&mut *write)
+                    .await
+                    .expect("the synthetic streak row is written");
+                }
+                write.commit().await.expect("the commit");
+            }
+            bench
+                .clock
+                .set(UtcMillis::from_epoch_millis(TODAY * DAY_MS + 5 * 3_600_000));
+            let mut commands = bench.commands(ScriptedSync::default());
+            commands.handle(incoming(owner_says(1, "/streak"))).await;
+            let text = last_text(&bench);
+            let lines: Vec<&str> = text.split('\n').collect();
+            assert_eq!(lines.len(), 3, "{text}");
+            // The law run is above zero, so the law line leads and the language line is the last.
+            assert_eq!(lines[1], "Law: 2 (best 2)", "{text}");
+            let noun = if freezes == 1 { "freeze" } else { "freezes" };
+            assert_eq!(
+                lines[2],
+                format!("Language: {run}{heat} (best {best}, {freezes} {noun})"),
+                "language run {run} in {text}"
+            );
+            heats.insert(heat);
+            cases += 1;
+        }
+    }
+    println!(
+        "streak-reply heat population: {cases} replies over {} heats",
+        heats.len()
+    );
+    assert_eq!(cases, 8);
+    assert_eq!(heats.len(), 4, "the empty heat and three bands");
+}
