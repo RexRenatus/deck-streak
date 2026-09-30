@@ -107,8 +107,6 @@ that does so updates this register in the same change.
 | `daily_rollup` | `analytics` | user-data |
 | `xp_state` | `progression` | singleton |
 | `xp_ledger` | `progression` | user-data |
-| `xp_settlement` | `progression` | user-data |
-| `buffs` | `progression` | user-data |
 | `streak_state` | `streaks` | singleton (all tracks reset) |
 | `badges_earned` | `progression` | user-data |
 | `notifications` | `notifications` | user-data |
