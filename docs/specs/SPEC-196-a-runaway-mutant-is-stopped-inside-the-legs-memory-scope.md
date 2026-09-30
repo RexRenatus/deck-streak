@@ -84,7 +84,7 @@ names (every scenario log under `mutants.out/log/` when the report is not whole)
 binary and name, whose nextest status reads `SIGKILL`, counted once however often nextest repeats the line. When the placed
 kills equal `oom_kill`, each mutant holding one is a named memory-cap failure (R11), and a kill placed in the unmutated
 baseline fails naming the baseline. In a shard whose report is not whole, a placed kill is named by the outcome whose log
-holds it, or else by the scenario its log names on its first line. Otherwise the leg fails as `MEMORY-CAP AMBIGUOUS`,
+holds it, or else by the scenario its log names on its first non-blank line. Otherwise the leg fails as `MEMORY-CAP AMBIGUOUS`,
 naming both counts and every placed scenario, and no mutant is scored.
 
 R11. **A named memory-cap failure is decided in one place.** The verdict scores a mutant the cap stopped only through one

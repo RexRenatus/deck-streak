@@ -1211,7 +1211,7 @@ def placed_kills(mutants_out: pathlib.Path, report: dict | None) -> set[tuple[st
     """Each distinct (scenario, binary, test) a scenario log shows the kernel stopped: a nextest
     status line whose first token is SIGKILL, and the summary repeat of it counts once. A scenario
     is named by the outcome whose `log_path` names its log when the report is whole, else by the
-    `*** <scenario>` line the log opens with."""
+    `*** <scenario>` line the log opens with; cargo-mutants writes a blank line before it."""
     named: dict[str, str] = {}
     for outcome in (report or {}).get("outcomes", []):
         if not isinstance(outcome, dict) or not isinstance(outcome.get("log_path"), str):
@@ -1229,7 +1229,8 @@ def placed_kills(mutants_out: pathlib.Path, report: dict | None) -> set[tuple[st
             lines = log.read_text(encoding="utf-8", errors="replace").splitlines()
         except OSError:
             continue
-        first = lines[0].removeprefix("*** ").strip() if lines else ""
+        opening = next((line for line in lines if line.strip()), "")
+        first = opening.removeprefix("*** ").strip()
         scenario = named.get(log.name) or first or log.stem
         for line in lines[1:]:
             status = KILL_STATUS.match(line)
