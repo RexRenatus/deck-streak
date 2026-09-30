@@ -113,8 +113,8 @@
         "S04114-A-SEND-IS-CALLED-ONLY-AT-ITS-NAMED-CALL-SITE",
         "notifications",
         "tests/one_router.rs",
-        "                    if !at_a_named_site(path, &function, name) {",
         "                    if at_a_named_site(path, &function, name) {",
+        "                    if !at_a_named_site(path, &function, name) {",
         "one_router::no_delivery_goes_around_the_port",
         "a use of the bot's send_html, edit_html or command handler anywhere but its named call site is refused (SPEC-041 A15); the census is test code, which cargo-mutants never mutates, and the mutant lets the planted sends through the bot's own transport"
       ],
