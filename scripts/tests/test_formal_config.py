@@ -38,6 +38,26 @@ FIELDS = [
     (("tlc_slot", "wait_seconds"), "posint", False),
 ]
 
+# One value of every JSON type. A kind admits the types named here, and a value of any other type is
+# a fault planted at every field of that kind and at every object level.
+JSON_TYPES = {
+    "null": None,
+    "boolean": True,
+    "integer": 1,
+    "number": 1.5,
+    "string": "x",
+    "array": [],
+    "object": {},
+}
+ADMITS = {
+    "object": {"object"},
+    "posint": {"integer"},
+    "posint-map": {"object"},
+    "strings": {"array"},
+    "path": {"string"},
+}
+BAD_PATHS = ("/abs", "../up", "a/../b", "")
+
 
 class Refused(Exception):
     """The reader refuses the document, and names the arm that refused it."""
@@ -144,10 +164,10 @@ def without(path):
 
 
 def planted_faults():
-    """Every fault the table implies, one set per kind, so each refusal arm of the reader is
-    reached: an extra field and a non-object at each object level, each required field missing,
-    each integer field at zero, negative and boolean, a map of integers with a bad value or of
-    the wrong kind, a list of strings that is no list or holds a non-string, an added axiom and
+    """The faults generated from the table, per kind, so each refusal arm of the reader is
+    reached: an extra field at each object level, each required field missing, a value of every
+    JSON type its kind does not admit at each field and each object level, each integer field at
+    zero and negative, a map holding a bad integer, a list holding a non-string, an added axiom and
     each bad signers path."""
     faults = []
     for prefix in {()} | {p[:d] for p, _, _ in FIELDS for d in range(1, len(p))}:
@@ -158,31 +178,42 @@ def planted_faults():
         node["planted_field"] = 1
         label = ".".join(prefix) or "root"
         faults.append((f"extra field under {label}", doc))
-        for bad in ([], 1):
-            faults.append((f"{label} = {bad!r}", bad if not prefix else with_value(prefix, bad)))
+        for kind_name, bad in JSON_TYPES.items():
+            if kind_name not in ADMITS["object"]:
+                faults.append(
+                    (
+                        f"{label} = {bad!r}",
+                        bad if not prefix else with_value(prefix, bad),
+                    )
+                )
     for path, kind, required in FIELDS:
         name = ".".join(path)
         if required:
             faults.append((f"missing {name}", without(path)))
+        for kind_name, bad in JSON_TYPES.items():
+            if kind_name not in ADMITS[kind]:
+                faults.append((f"{name} = {bad!r}", with_value(path, bad)))
         if kind == "posint":
-            for bad in (0, -1, True):
+            for bad in (0, -1):
                 faults.append((f"{name} = {bad!r}", with_value(path, bad)))
         if kind == "posint-map":
             for bad in (0, -1, True):
                 faults.append((f"{name} holds {bad!r}", with_value(path, {"planted_entry": bad})))
-            for bad in ([], 1, "x"):
-                faults.append((f"{name} = {bad!r}", with_value(path, bad)))
         if kind == "strings":
             faults.append(
-                (f"{name} gains an axiom", with_value(path, EXPECTED["axioms"] + ["sorryAx"]))
+                (
+                    f"{name} gains an axiom",
+                    with_value(path, EXPECTED["axioms"] + ["sorryAx"]),
+                )
             )
-            for bad in ({axiom: 1 for axiom in EXPECTED["axioms"]}, 1, "propext"):
-                faults.append((f"{name} = {bad!r}", with_value(path, bad)))
             faults.append(
-                (f"{name} holds a non-string", with_value(path, EXPECTED["axioms"] + [1]))
+                (
+                    f"{name} holds a non-string",
+                    with_value(path, EXPECTED["axioms"] + [1]),
+                )
             )
         if kind == "path":
-            for bad in ("/abs", "../up", "a/../b"):
+            for bad in BAD_PATHS:
                 faults.append((f"{name} = {bad!r}", with_value(path, bad)))
     return faults
 
@@ -219,9 +250,7 @@ class FormalConfig(unittest.TestCase):
         self.assertTrue(is_repo_relative(value), value)
         self.assertFalse(value.startswith("/"))
         self.assertNotIn("..", value.split("/"))
-        refused = examined(
-            "bad paths", [p for p in ("/abs", "../up", "a/../b", "") if not is_repo_relative(p)]
-        )
+        refused = examined("bad paths", [p for p in BAD_PATHS if not is_repo_relative(p)])
         self.assertEqual(len(refused), 4)
 
     def test_the_reader_refuses_each_planted_fault(self):
