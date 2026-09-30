@@ -627,3 +627,40 @@ async fn the_real_router_flush_delivers_a_celebration_quiet_hours_held() {
         ["synthetic level-up"]
     );
 }
+
+/// A store that cannot record the owner's request.
+#[derive(Clone)]
+struct Unstored;
+
+impl RequestLedger for Unstored {
+    async fn request(&self, _at: UtcMillis) -> Result<(), KernelError> {
+        Err(KernelError::LoggingInstalled)
+    }
+    async fn progress(&self, _since: UtcMillis) -> Result<Progress, KernelError> {
+        Ok(Progress::Waiting)
+    }
+}
+
+#[tokio::test]
+async fn a_request_the_store_cannot_record_is_refused_with_the_rescore_code() {
+    // SPEC-128 amendment (#396): the bot's port answers this refusal itself, with the enum's
+    // string form, byte for byte the code the job would store.
+    let clock = Arc::new(ManualClock::new(UtcMillis::from_epoch_millis(START)));
+    let bell = Bell::new(&clock, false);
+    let port = SyncRequester::new(
+        Shared(clock.clone()),
+        Unstored,
+        bell.clone(),
+        Wait(clock.clone()),
+    );
+    assert_eq!(
+        port.sync_now().await,
+        Err(SyncRefusal {
+            reason: "rescore_unrecorded"
+        })
+    );
+    assert!(
+        bell.rings().is_empty(),
+        "nothing was stored, so the job is not rung"
+    );
+}

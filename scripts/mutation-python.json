@@ -9,13 +9,20 @@
     "dir": "scripts/tests",
     "modules": []
   },
+  "scripts/memory_scope.py": {
+    "dir": "scripts/tests",
+    "modules": [
+      "test_memory_scope"
+    ]
+  },
   "scripts/mutation-verdict.py": {
     "dir": "scripts/tests",
     "modules": [
       "test_mutation_verdict",
       "test_mutation_equivalent",
       "test_mutation_python_verdict",
-      "test_mutation_verdict_python_kills"
+      "test_mutation_verdict_python_kills",
+      "test_memory_cap_verdict"
     ]
   },
   "scripts/mutation_python.py": {

@@ -1,5 +1,5 @@
 ---
-status: "proposed"
+status: "accepted"
 date: "2026-09-29"
 decision-makers: "@RexRenatus (owner), the DeckStreak architect"
 ---
@@ -87,3 +87,13 @@ and A11 (the key rule), and its rows S11008, S11009 and S11016.
 
 SPEC-040 (the grant port), SPEC-110 (the drills), ADR-072 (derived settlements, which this is not),
 ADR-012 (the goldens), the W6 schematic `docs/schematics/law-drill-answer-grade-and-pay.md`.
+
+## Amendment (2026-09-29): the deferral reason's Unicode category C
+
+The predecessor's sanitiser drops every character of Unicode general category C (Cc, Cf, Cs, Cn, Co),
+using Python 3.12's `unicodedata` (Unicode 15.0). Rust's standard library answers only for Cc.
+
+- Chosen: a sorted range table of Cc, Cf, Cn and Co in its own module, `crates/vault/src/unicode_other.rs`, searched by binary
+  search, pinned by the parity golden and by literal boundary tests. Cs is omitted because a Rust `str` cannot hold a surrogate.
+- Rejected, a workspace crate for general categories: its Unicode version can drift from Python 3.12's 15.0, which breaks parity, and it adds a dependency edge.
+- Rejected, hand-listing Cf only: Cn and Co characters would then pass where the predecessor drops them.
