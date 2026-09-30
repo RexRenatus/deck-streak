@@ -541,6 +541,31 @@ fn build(target: Target, place: Place) -> Result<Member, String> {
     })
 }
 
+/// Whether `op` reads the folder the link replaces, and so must be refused with
+/// [`VaultError::NotAFolder`] before that folder is listed (R1). A dangling link resolves nowhere,
+/// so it reads as a missing folder, which lists empty (R1); every other member lists empty too.
+fn refused(target: Target, place: Place, op: Op) -> bool {
+    let linked_folder = match op {
+        Op::List => matches!(place, Place::ActiveFolder),
+        Op::Pay => matches!(place, Place::GradedFolder),
+        Op::View | Op::Answer => false,
+    };
+    linked_folder && !matches!(target, Target::Dangling)
+}
+
+/// A member's listing: [`VaultError::NotAFolder`] when `refused`, else an empty list (R1).
+fn check_listing<T: std::fmt::Debug>(label: &str, refused: bool, got: Result<Vec<T>, VaultError>) {
+    if refused {
+        assert!(
+            matches!(got, Err(VaultError::NotAFolder)),
+            "{label}: a linked folder is refused before it is listed: {got:?}"
+        );
+    } else {
+        let got = got.expect("a listing");
+        assert!(got.is_empty(), "{label}: listed {got:?}");
+    }
+}
+
 /// The bytes and modification time of every watched file.
 fn fingerprint(watched: &[PathBuf]) -> Vec<(Vec<u8>, std::time::SystemTime)> {
     watched
@@ -594,11 +619,11 @@ async fn no_link_in_any_placement_is_read_listed_paid_from_or_written_through() 
             for op in OPS {
                 let label = format!("{target:?} {place:?} {op:?}");
                 match op {
-                    Op::List => {
-                        if let Ok(listed) = notes.list_active(day(20_500)) {
-                            assert!(listed.is_empty(), "{label}: listed {listed:?}");
-                        }
-                    }
+                    Op::List => check_listing(
+                        &label,
+                        refused(target, place, op),
+                        notes.list_active(day(20_500)),
+                    ),
                     Op::View => {
                         for id in ["linked", "note"] {
                             assert!(
@@ -607,11 +632,7 @@ async fn no_link_in_any_placement_is_read_listed_paid_from_or_written_through() 
                             );
                         }
                     }
-                    Op::Pay => {
-                        if let Ok(graded) = notes.graded() {
-                            assert!(graded.is_empty(), "{label}: paid from {graded:?}");
-                        }
-                    }
+                    Op::Pay => check_listing(&label, refused(target, place, op), notes.graded()),
                     Op::Answer => {
                         let db = Db::open(&member.vault.path().join("deck_streak.db"))
                             .await

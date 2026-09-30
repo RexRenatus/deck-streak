@@ -140,3 +140,28 @@ constants; the greens are at `3b492c32`. Each red is by assertion, exit 101.
 - Manifest and rows. The manifest names `crates/coordination/tests/drill_key_population.rs`. Row
   `S11021` is re-anchored to the derived expression; the second `S11040` is now `S11041`; rows
   `S11042` to `S11045` are new.
+
+## 2026-09-29: amendment, round 1 of review, the second CI round
+
+`6f2522c3` came after green and changed a production line and a test file. Neither is a red-first
+criterion.
+
+- Production: `notes()` no longer binds `present` from `confined()`, and its arm that returned an
+  empty list for a folder that was not present is gone; it calls `confined()` and lists. The two
+  differ only for a folder that appears between its resolve and its listing.
+- Test: `drill_kills::a_folder_that_cannot_be_resolved_is_an_io_error_and_only_a_missing_one_is_none`
+  is a post-green killer. Not red: it pins. It has no red at the code before it: it passes at `3b492c32`, whose
+  `confined()` already made a resolve failure other than `NotFound` an I/O error. Its red is the
+  mutant CI's `mutation-verdict` named at `90347860`, the `NotFound` guard in `confined()` replaced
+  with `true`: the test fails by assertion with `a resolve failure: []`, exit 101. At `6f2522c3` it
+  passes.
+
+## 2026-09-29: amendment, round 2 of review
+
+- Rows `S11046` to `S11048` pin the gate's three other call sites: `notes()` before a folder is
+  listed, `regular_note()` before a note's kind is read, and `read()` before a note is read.
+- `drill_kills::no_link_in_any_placement_is_read_listed_paid_from_or_written_through` now requires
+  `NotAFolder` from a listing of a linked `Active` or `Graded` folder, where it accepted any empty
+  listing, and an empty list from every other member. A post-green test edit, not a criterion: with
+  the `notes()` gate removed it fails by assertion on `File ActiveFolder List`, exit 101; at the head
+  it passes.

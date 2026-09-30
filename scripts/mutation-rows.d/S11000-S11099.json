@@ -387,6 +387,33 @@
         "!drills::safe_stem(id)",
         "drill_kills::no_link_in_any_placement_is_read_listed_paid_from_or_written_through",
         "an answer passes the one gate before the note is read or written (SPEC-110 R1)"
+      ],
+      [
+        "S11046-NOTES-GATE",
+        "vault",
+        "src/drill_notes.rs",
+        "        self.confined(folder)?;\n        let entries = match self.fs.list(folder) {",
+        "        let entries = match self.fs.list(folder) {",
+        "drill_kills::no_link_in_any_placement_is_read_listed_paid_from_or_written_through",
+        "a linked Active or Graded folder is refused before it is listed, never listed through (SPEC-110 R1)"
+      ],
+      [
+        "S11047-NOTE-GATE-FOLDER",
+        "vault",
+        "src/drill_notes.rs",
+        "        if !self.confined(folder)? {\n            return Ok(false);\n        }\n        Ok(self",
+        "        let _ = folder;\n        Ok(self",
+        "drill_kills::no_link_in_any_placement_is_read_listed_paid_from_or_written_through",
+        "a note is read only behind a confined folder, so a note under a linked folder is never read (SPEC-110 R1)"
+      ],
+      [
+        "S11048-READ-GATE",
+        "vault",
+        "src/drill_notes.rs",
+        "        let outcome = match self.regular_note(folder, &path) {",
+        "        let outcome = match Ok::<bool, VaultError>(true) {",
+        "drill_kills::no_link_in_any_placement_is_read_listed_paid_from_or_written_through",
+        "a listed or viewed note passes the one gate before it is read (SPEC-110 R1)"
       ]
     ],
     "CARGO_KILLED_SCRIPT_MUTATIONS": [
