@@ -1329,10 +1329,14 @@ class TheCaddyInstall(Case):
         self.assertEqual(sorted(p.name for p in w.caddy_dir.iterdir()), ["Caddyfile"])
 
     # The directories every write and every undo of the two scripts touch come from the path
-    # SETTINGS, so each setting is an axis of the population below and a new one fails the first
-    # test until it is classified.
+    # SETTINGS, so each setting is an axis of the population below: a new one fails the first
+    # test until it is classified, and the second until its directory is a place.
     PATH_SETTINGS = ("DECKSTREAK_DEPLOY_CADDY_DIR", "DECKSTREAK_DEPLOY_CADDYFILE")
     READ_SETTINGS = ("DECKSTREAK_DEPLOY_CADDY_CONFIG",)
+    DIRECTORY_OF = {
+        "DECKSTREAK_DEPLOY_CADDY_DIR": "caddy-dir",
+        "DECKSTREAK_DEPLOY_CADDYFILE": "caddyfile-dir",
+    }
 
     def test_the_caddy_functions_read_only_the_settings_the_directory_population_varies(self):
         text = DEPLOY.read_text(encoding="utf-8")
@@ -1371,7 +1375,9 @@ class TheCaddyInstall(Case):
     ):
         stales = {"caddy-dir": ("deck-streak.candidate",), "caddyfile-dir": ("Caddyfile.previous",)}
         stales["shared"] = stales["caddy-dir"] + stales["caddyfile-dir"]
-        places = (("beside", "shared"), ("apart", "caddy-dir"), ("apart", "caddyfile-dir"))
+        self.assertEqual(set(self.DIRECTORY_OF), set(self.PATH_SETTINGS), "a setting is no place")
+        places = (("beside", "shared"),)
+        places += tuple(("apart", self.DIRECTORY_OF[s]) for s in self.PATH_SETTINGS)
         states = ("writable", "read-only", "read-only with a stale writable copy")
         ops = ("install first", "install again", "removal")
         triggers = ("none", "the rename fails", "the reload fails")
@@ -1405,7 +1411,8 @@ class TheCaddyInstall(Case):
                     self.failing_rename(".candidate")
                 if trigger == "the reload fails":
                     (w.log / "caddy-reload-fails").write_text("1")
-                directory = cfdir if target == "caddyfile-dir" else w.caddy_dir
+                where = {"shared": cfdir, "caddy-dir": w.caddy_dir, "caddyfile-dir": cfdir}
+                directory = where[target]
                 if state.endswith("stale writable copy"):
                     for name in stales[target]:
                         (directory / name).write_text("stale\n", encoding="utf-8")
