@@ -191,24 +191,25 @@ R11. **A release workflow is closed by construction.** For every workflow that r
    that GitHub's workflow parser defines there, read with its case;
 2. its group reads `github.ref` and nothing else, plus a leading `github.workflow` where no workflow
    can call it, so every run of one tag takes one group whatever its event or its tag value;
-3. its `cancel-in-progress` is the literal `false`, as written, never an expression;
+3. its `cancel-in-progress` is absent or the boolean `false` as GitHub's parser types it, never a
+   quoted string and never an expression (R12);
 4. no other concurrency block, a workflow's or a job's, under any key spelling and in any workflow
    file, starts with text that the release group's start can also be, read without case, and a block
    with no literal text of its own is refused, since it can render as any group.
 
 Because the rule closes the class from the group's own text, the test never renders a sample of
 another workflow's group, and a new workflow that could share a release's group is refused whatever
-its name, its events or its caller. GitHub documents that group names are "case insensitive", which
-is why part 4 reads without case. The test derives its population from constants of the parser's
-keys, of the events that run for a tag and of the `github` context's properties, and lists none of
-its members; it prints how many groups, cancellations, blocks, blocks of text of their own and keys
-it examined.
+its name, its events or its caller, where every call is to a workflow file of this repository that
+the rule reads; R12 refuses any other call. GitHub documents that group names are
+"case insensitive", which is why part 4 reads without case. The test derives its population from
+constants of the parser's keys, of the events that run for a tag and of the `github` context's
+properties, and lists none of its members; it prints how many groups, cancellations, blocks, blocks
+of text of their own and keys it examined.
 
-Disclosed remainder. The rule reads keys down to a job and a call-job. A key deeper than a job, and
-a workflow file whose extension is upper-case, are read by follow-up #464 and not by this test. A
-model of the tag queue, its interleavings of a running run, a waiting run and a run beyond the
-queue, is owed once `covers` accepts a workflow file, which follow-up #467 tracks; `covers` today
-takes only `.rs`, `.py` and `.sh`.
+Disclosed remainder. R12 (section 12) names what the rule does not read and the follow-up that
+reads each part. A model of the tag queue, its interleavings of a running run, a waiting run and a
+run beyond the queue, is owed once `covers` accepts a workflow file, which follow-up #467 tracks;
+`covers` today takes only `.rs`, `.py` and `.sh`.
 
 Eviction, as `release.yml`'s block configures it. That block sets `queue: max`, so the depth of its
 group is a hundred and not the default's one: GitHub's workflow syntax page (read 2026-09-30) says
@@ -237,3 +238,92 @@ A9: python3 -m unittest discover -s scripts/tests -p test_workflow_concurrency.p
 | `docs/decisions/ADR-292-a-release-tags-runs-never-replace-a-waiting-run.md` | repo | changed: Decision Outcome and Consequences hold for R11 |
 | `docs/red-first/SPEC-190.md` | repo | changed: A9 |
 | `changelog.d/ci-release-queue-377.md` | repo | changed: the rule of R11 |
+
+## 12. Amendment of 2026-09-30 (round 5): the release class read as GitHub parses it (ADR-292, #377)
+
+This amendment adds R12 and A10. It corrects three sentences of section 10 in place: R11(3), the
+sentence on a new workflow's caller, and the disclosed remainder, which now points here. R11's other
+parts stand; where R11 and R12 differ, R12 decides.
+
+R12. **No run a tag can start is cancelled, or replaced while it waits below the queue's depth, by
+any concurrency block of this repository.**
+
+Membership. A release workflow is one a tag can start (a `push` whose filters admit a tag, a
+`create` or a `release`, as R10 reads them), and every workflow such a workflow calls, at any depth.
+Every run of a release workflow is a release run, whatever its event, a dispatch included. Every
+other workflow is a reacher, and a person-dispatched run of a workflow no tag starts is not a release
+run: a reacher's blocks are judged only by whether they can reach a release run's group. Two groups
+can be equal when, read without case and with leading space dropped, the text every rendering of one
+starts with is a start of the other's. A leading `github.workflow` renders the name of the workflow
+whose run holds the block, which for a called workflow is its caller's (the reusable-workflows page:
+"the `github` context is always associated with the caller workflow."). `github.ref`, `inputs`,
+`vars` and every other expression can render as any text.
+
+The rule, over every workflow file:
+1. Reading. Each file is read as GitHub's parser reads it, with YAML 1.2's core schema: a quoted or
+   block `false` is a string, `no` and `off` are strings, and `False` is the boolean false. A tab in
+   a line's indentation, a block scalar's line indented less than its first line of text, and a blank
+   line above that text indented more than it are refused, as YAML refuses them. A form the reader
+   does not read (an anchor or alias, a flow mapping, a `---`, an escape or a byte-order mark) is
+   refused (SPEC-034 R7).
+2. Schema. Every value a release workflow holds is of a type GitHub's workflow parser defines there,
+   read with case: each key, each constant, and each mapping, sequence or scalar. This holds from its
+   root through `on:` and every event's mapping, `permissions`, `defaults`, `env`, `concurrency` and
+   each job, a call job included, down to the job's own keys. A job's `permissions` scopes are in the
+   class; round 3 left them to #464. A `${{` with no closing `}}`, in any string of a release
+   workflow, steps included, is refused.
+3. Calls. Every call in every workflow that runs is `./.github/workflows/<file>`, with that file
+   present and taking `workflow_call`, walked to its end with no cycle. Any other call, a remote one
+   or this repository's own pinned by commit, is refused, since what it would run in the caller's
+   context cannot be read.
+4. Blocks. A release workflow holds no job-level block. Every workflow-level block a release run
+   holds, its own or a callee's, is read in that run's context. Its group starts with text of its own
+   and then reads `github.ref` (or `github['ref']`) and nothing else. Its `cancel-in-progress` is
+   absent or the boolean false. It sets `queue: max`, a callee's block included, since the docs do not
+   say how a called workflow's group queues within its caller's run.
+5. Collisions. No other block, a reacher's, a job's, or a callee's in another caller's run, starts
+   with text a release block's start can be, read without case.
+
+Advisory over-refusals. The rule refuses some shapes GitHub runs with a tag's runs kept:
+- a reacher's block that can equal a release group only under an event that never holds a tag's ref
+  (a schedule, a pull request, a branch push, `workflow_run` or `repository_dispatch`), since the
+  rule does not read which events reach a group;
+- a reacher's group with no text of its own, such as `${{ github.ref }}` alone;
+- a `cancel-in-progress` expression that evaluates to false, since the rule evaluates none;
+- a form the reader does not read (part 1), and a tab between a key's colon and its value;
+- a reacher's call GitHub would refuse, to a missing file or in a cycle;
+- a callee that one release job calls once, with the default queue (part 4);
+- two release workflows' blocks that can share a group, though both queue;
+- a step's text holding a line that starts `concurrency:`, which section 8's count of blocks reads.
+
+Disclosed remainder. The rule does not read:
+- the contents of a job's `steps`, `strategy`, `container` and `services`, or the mappings of
+  `runs-on`, `environment` and `snapshot`; expression grammar, function names, or the contexts a bare
+  `if:` reads; or a workflow file the directory scan does not select, one with an upper-case
+  extension or one named `.yml` or `.yaml` alone. Follow-up #464 reads them;
+- a tag whose push starts no run, which follow-up #475 tracks;
+- a model of the tag queue's interleavings, owed once `covers` accepts a workflow file (#467).
+
+The docs are silent on a group read through `GITHUB.REF`, a group with a leading space and a group
+that renders empty; the rule refuses all three.
+
+## 13. Acceptance criteria of the 2026-09-30 round 5 amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A10 | the class is read as GitHub parses it (R12), by a population generated from constants and never listed, each member a set of workflow files beside a release workflow: each `cancel-in-progress` and `queue` a YAML 1.2 reader types, quoted, in a block or as a YAML 1.1 word; a tab in each line's indentation, and a block scalar's line indented less than its text or a blank line above it indented more, against a tab inside a value; each unclosed expression; every event of the parser's schema with each wrong kind of value, and each root and job key with one; callees one to three calls deep, local, remote, missing and in a cycle, and a callee holding a key the parser does not define; a release group that splits one tag's runs, and a job's own block; and every block that can render as a release group, in each context and event. A member GitHub refuses, or whose tag run can be cancelled or replaced, is refused, and a member GitHub runs with its tag's runs kept is not. The membership census is derived from R12's rule, never pinned by name | `test_workflow_concurrency.py` `the_release_class_is_read_as_github_parses_it` |
+
+```acceptance
+A10: python3 -m unittest discover -s scripts/tests -p test_workflow_concurrency.py -k the_release_class_is_read_as_github_parses_it
+```
+
+### File manifest of the round 5 amendment
+
+| file | context | change |
+|---|---|---|
+| `scripts/tests/test_workflow_concurrency.py` | repo | changed: R12 and A10; A7 applies R12 to every workflow file; the membership census is derived from R12 |
+| `scripts/tests/test_ci_workflows.py` | repo | changed: the reader keeps a scalar's quoting and types it by YAML 1.2's core schema, and refuses a tab in a line's indentation and a block scalar's line indented against its text |
+| `scripts/mutation-rows.d/S19000-S19099.json` | repo | changed: S19015 to S19026, one row per arm of R12 |
+| `docs/decisions/ADR-292-a-release-tags-runs-never-replace-a-waiting-run.md` | repo | changed: Decision Outcome, Consequences and considered options hold for R12 |
+| `docs/red-first/SPEC-190.md` | repo | changed: A10 |
+| `changelog.d/ci-release-queue-377.md` | repo | changed: the rule of R12 |

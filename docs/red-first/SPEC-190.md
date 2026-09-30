@@ -58,3 +58,19 @@ tests of that one file failed, A7's and `test_a_shape_that_replaces_drops_or_run
 A9: red at 4835abf: ['a group reading github.action', ...] (1313 members) != []
 A9: green at 445354c
 ```
+
+## Addendum: A10, the class read as GitHub parses it (#456, verification round 4)
+
+The test of A10 (`the_release_class_is_read_as_github_parses_it`, a36ab6d) ran with the membership
+census derived from the rule, and with `calls`, `membership` and `release_class_problems` returning
+nothing: it failed by assertion, naming 289 members the class did not refuse, the first a
+`cancel-in-progress` of `'false'`, and the census failed by assertion on its empty population. They
+were the two tests of `test_workflow_concurrency.py` that failed (15 ran, two failed). The rule and
+the reader (3a0eb6d) turned both green: 15 ran and all passed.
+
+```red-first
+A10: red at a36ab6d: ["types: cancel 'false' is accepted", ...] (289 members) != []
+A10: green at 3a0eb6d
+```
+
+DISCLOSURE, a test body changed after its green: test_only_the_tag_or_release_workflows_are_in_the_class gained a planted fixture at 229cf07. A second workflow a tag starts and a workflow the release calls must each be classed as release workflows, and a reacher must not. With membership reduced to the tag-started workflows, or to release.yml alone, the test fails.
