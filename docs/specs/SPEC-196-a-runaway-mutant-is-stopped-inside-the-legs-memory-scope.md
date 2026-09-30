@@ -98,12 +98,16 @@ tallied nowhere), and every other outcome in the shard is judged as before. The 
 shard is VOID, one tested more often than listed fails), the whole-report rule (a missing report, an exit
 other than 0, 2 or 3, or counts short of the report's total is VOID) and the zero-examined VOID are unchanged.
 
-R13. **A count the scope reads after the command is required, and its absence is not a clean run.** After the command,
-`run()` reads `memory.events` and `memory.peak`. An `oom`, `oom_kill` or `max` count that is absent, an unreadable or
-malformed `memory.events`, and a `memory.peak` that is absent, unreadable or not a whole number each write the record
-with `in_force` false, `state` `done`, a `reason` naming the value it lacks and zero counts, and print
-`memory-scope: NOT IN FORCE after the command: <reason>`. The command's exit status is still the script's. The consumers
-already void a record that is not in force, by name.
+R13. **A count the scope reads is whole, or the record is not in force.** The scope reads `memory.events` and `memory.peak`
+before the command (in `check_in_force`) and after it (in `run()`), by one parse. `memory.events` is whole only when every
+line reads `<key> <ASCII decimal digits>` (at most 20 digits, a kernel counter), each key appears once, and `oom`,
+`oom_kill` and, after the command, `max` are all present. `memory.peak` is whole only when it is one line of ASCII decimal
+digits. Any other shape (a duplicated key, whether the two lines agree or not, a digit that is not ASCII, bytes that are not
+UTF-8, a CRLF or a trailing blank, an empty file, a missing key or file) is not whole: the record is written with
+`in_force` false, `state` `done`, a `reason` naming the value it lacks and zero counts, and `memory-scope: NOT IN FORCE after
+the command: <reason>` is printed; before the command nothing runs. The parse never raises and never takes the last of two
+lines, and the command's exit status is still the script's. The consumers already void a record that is not in force, by
+name.
 
 ## 3. Acceptance criteria
 
@@ -127,6 +131,7 @@ already void a record that is not in force, by name.
 | A16 | the plant: a shard modelled on the proof (the plant's mutants caught but one, whose log holds nextest's `SIGKILL` status line and its summary repeat, and a record counting one kill) fails with exactly one finding, `MEMORY-CAP` naming that mutant, and an examined count one less than the plant's viable mutants; and, on this pull request's own CI at the plant commit, the `mutation-verdict` log names that mutant and only it | `test_memory_cap_verdict.py` `the_plant_fails_its_leg_naming_that_mutant_and_only_it`, and the CI run of the plant commit |
 | A17 | the `rehearsal` step's wrapped command, its file and the sum it prints as examined are the ones before this SPEC, and on this pull request's own CI that job, whose cargo-mutants runs inside the scope, prints the same examined count as the same job printed for dev's tree and command in this pull request's first run | `test_memory_scope.py` `the_rehearsal_counts_what_it_counted_before`, and the CI run of the head |
 | A18 | across a generated population of every state of `memory.events` (present, absent, unreadable, garbage, each of `oom`, `max` and `oom_kill` missing, `oom_kill` not a number) crossed with every state of `memory.peak` (present, absent, unreadable, garbage, empty, negative), each altered by the command after the scope began, the record is in force only when both are whole, and otherwise `in_force` is false with a reason and the exit status is the command's; the test prints the member count and asserts it | `test_memory_scope.py` `a_count_read_after_the_command_that_is_missing_or_unreadable_is_not_in_force` |
+| A19 | across a generated population of every state of `memory.events` (34: whole, each key missing, a duplicated key with the same value or with 1 then 0 or 0 then 1, a non-ASCII digit, bytes that are not UTF-8, CRLF, a trailing blank, empty, absent) crossed with every state of `memory.peak` (15), the record is in force only when both are whole, and otherwise `in_force` is false with the reason and zero counts and the exit status is the command's; a counter is at most 20 ASCII digits; the counts read before the command are whole or nothing runs; each test prints its member count and asserts the exact number, so a population that loses a member fails | `test_memory_scope.py` `the_counts_read_after_the_command_are_whole_or_the_record_is_not_in_force`, `a_counter_is_at_most_twenty_ascii_digits`, `the_counts_read_before_the_command_are_whole_or_nothing_runs` |
 
 ```acceptance
 A1: python3 -m unittest discover -s scripts/tests -p test_memory_scope.py -k the_cap_is_fifteen_sixteenths_of_the_machine_in_whole_pages_and_never_given
@@ -147,6 +152,9 @@ A15: python3 -m unittest discover -s scripts/tests -p test_memory_cap_verdict.py
 A16: python3 -m unittest discover -s scripts/tests -p test_memory_cap_verdict.py -k the_plant_fails_its_leg_naming_that_mutant_and_only_it
 A17: python3 -m unittest discover -s scripts/tests -p test_memory_scope.py -k the_rehearsal_counts_what_it_counted_before
 A18: python3 -m unittest discover -s scripts/tests -p test_memory_scope.py -k a_count_read_after_the_command_that_is_missing_or_unreadable_is_not_in_force
+A19: python3 -m unittest discover -s scripts/tests -p test_memory_scope.py -k the_counts_read_after_the_command_are_whole_or_the_record_is_not_in_force
+A19: python3 -m unittest discover -s scripts/tests -p test_memory_scope.py -k a_counter_is_at_most_twenty_ascii_digits
+A19: python3 -m unittest discover -s scripts/tests -p test_memory_scope.py -k the_counts_read_before_the_command_are_whole_or_nothing_runs
 ```
 
 The script tests plant a `/proc/meminfo` text, a control-group directory and a `sudo` and a `systemctl` that record their
@@ -172,7 +180,7 @@ count the same job printed for dev's tree and dev's command, in this pull reques
 | file | context | change |
 |---|---|---|
 | `scripts/memory_scope.py` | repo | added: R1 to R5, R13 |
-| `scripts/tests/test_memory_scope.py` | repo | added: A1 to A8, A17, A18 |
+| `scripts/tests/test_memory_scope.py` | repo | added: A1 to A8, A17 to A19 |
 | `scripts/mutation-verdict.py` | repo | changed: R8 to R12, in `judge`'s rust class, `battery` and `table`; the whole-report rule, the partition and the exit sets unchanged |
 | `scripts/tests/test_memory_cap_verdict.py` | repo | added: A9 to A16 |
 | `scripts/tests/test_mutation_verdict.py` | repo | changed: its shard fixtures write the record every leg now writes, with no kill counted (R8, R9); no assertion changes |

@@ -41,7 +41,15 @@ A16: green at c30e673b
 A17: not red: the rehearsal's command, its file and its examined sum were already the ones before this SPEC; the criterion pins that they stay so
 A18: red at 4c5d005f: True is not False : {'in_force': True, 'max': 0, 'oom': 0, 'oom_kill': 0, 'peak_percent': 0, 'reason': None, 'state': 'done'}
 A18: green at a85509f7
+A19: red at 2f723b97: the script crashed: ValueError: invalid literal for int() with base 10: '²'
+A19: green at 3a7f8459
 ```
+
+Round 2 reopened the class (R13): after the command a duplicated key kept its last line, a digit that
+is not ASCII reached `int()` and bytes that are not UTF-8 raised. The tests of A19 (2f723b97) came alone, on the merged tree:
+456 failures, none an import error, among them the crash above and `True is not False` for a duplicated `oom_kill`. The rule
+(3a7f8459) turned all of them green: 13 tests, the populations printing `examined 510 counts read after the command, whole
+or not`, `examined 37 control-group files read before the command` and `examined 3 counters at the width of a kernel counter`.
 
 ## Measured on the runner
 
