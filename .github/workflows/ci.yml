@@ -275,8 +275,12 @@ jobs:
   # Mutation testing on the diff (SPEC-039 R3 and R18, ADR-057): a plan, one job per shard of the
   # diff's Rust mutants, the hand-proved rows, and a verdict read from the tools' own reports, where
   # a class that applies and examined nothing is VOID. A release pull request into main is judged on
-  # its merge diff like any other. Every job runs on every event and says by name why it has
-  # nothing to do, because a skipped job reads as failed to ci; each restores caches and saves none.
+  # its merge diff like any other. Every job but two runs on every event and says by name why it has
+  # nothing to do, because `ci` fails on a skipped need. The two are `mutation-rust`, which is not
+  # started when the plan's shards list no mutant, and `mutation-rows`, which is not started when
+  # the plan selects no row and no retirement check is due; `ci` admits a skip from those two and
+  # from nowhere else, and `mutation-verdict` judges each against the plan. Each job that runs
+  # restores caches and saves none.
   #
   # The plan: the event's case, the diff, and, when Rust changed, the shards. cargo-mutants lists
   # the diff's mutants (building nothing) and the plan takes the fewest round-robin shards whose

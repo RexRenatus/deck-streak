@@ -108,6 +108,42 @@
     "if caption.chars().count() > MAX_CAPTION_UTF16 {",
     "photo_render::a_caption_is_counted_in_utf16_units",
     "a caption is counted in UTF-16 units as Telegram counts it, so 513 characters outside the BMP are refused (SPEC-132)"
+   ],
+   [
+    "S13213-THE-SHARE-ASKS-THE-BOUND",
+    "notifications",
+    "src/router.rs",
+    "if let Err(refusal) = check_caption(caption) {",
+    "if let Err(refusal) = check_caption(\"\") {",
+    "share_caption::a_share_caption_is_bounded_as_the_photo_caption_is",
+    "the prepared share asks the same bound function the photo asks, so a caption over the Bot API's limit is refused before any call (SPEC-132 A17, #430); the mutant asks it of an empty caption, so every over-long caption reaches the transport"
+   ],
+   [
+    "S13214-THE-SHARE-REFUSES-BY-NAME",
+    "notifications",
+    "src/router.rs",
+    "return Prepared::Refused(refusal);",
+    "return Prepared::Failed;",
+    "share_caption::a_share_caption_is_bounded_as_the_photo_caption_is",
+    "an over-long share caption answers `Refused` with the photo's own refusal, not the Bot API's `Failed`, so the caller knows the caption is at fault and nothing was attempted (SPEC-132 A17, #430)"
+   ],
+   [
+    "S13215-THE-PHOTO-ASKS-THE-SAME-BOUND",
+    "notifications",
+    "src/photo.rs",
+    "check_caption(&caption)?;",
+    "check_caption(\"\")?;",
+    "share_caption::a_share_caption_is_bounded_as_the_photo_caption_is",
+    "the photo and the share ask one bound function, so what the photo accepts the share accepts, member by member (SPEC-132 A17, #430); the mutant makes the photo take any caption, so the two paths disagree on every over-long one"
+   ],
+   [
+    "S13216-A-CAPTION-AT-THE-LIMIT-IS-TAKEN",
+    "notifications",
+    "src/photo.rs",
+    "if caption.encode_utf16().count() > MAX_CAPTION_UTF16 {",
+    "if caption.encode_utf16().count() >= MAX_CAPTION_UTF16 {",
+    "share_caption::a_share_caption_is_bounded_as_the_photo_caption_is",
+    "the limit is inclusive, as the Bot API's 0-1024 is, so a caption of exactly 1,024 UTF-16 units is taken by the photo and the share alike (SPEC-132 A17, #430)"
    ]
   ]
  }
